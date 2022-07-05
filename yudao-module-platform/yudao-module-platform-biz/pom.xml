@@ -22,7 +22,18 @@
             <artifactId>yudao-module-platform-api</artifactId>
             <version>${revision}</version>
         </dependency>
+        <!--只是引用了system 的API模块，API模块一定定义了对外暴露的枚举、接口之类的。所以不会造成互相循环引用依赖问题-->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-module-system-api</artifactId>
+            <version>${revision}</version>
+        </dependency>
 
+        <!-- 操作日志相关 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-biz-operatelog</artifactId>
+        </dependency>
         <!-- security权限 相关 -->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
