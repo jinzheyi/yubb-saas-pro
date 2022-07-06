@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.service.auth;
 
-import cn.iocoder.yudao.module.platform.controller.admin.auth.vo.AuthLoginReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.auth.vo.AuthLoginRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.auth.vo.AuthLoginReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.auth.vo.AuthLoginRespVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

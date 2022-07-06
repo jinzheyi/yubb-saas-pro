@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.system.service.common;
 import cn.hutool.captcha.CaptchaUtil;
 import cn.hutool.captcha.CircleCaptcha;
 import cn.hutool.core.util.IdUtil;
+import cn.iocoder.yudao.module.system.api.common.dto.CaptchaImageRespDTO;
 import cn.iocoder.yudao.module.system.convert.common.CaptchaConvert;
 import cn.iocoder.yudao.module.system.framework.captcha.config.CaptchaProperties;
 import cn.iocoder.yudao.module.system.controller.admin.common.vo.CaptchaImageRespVO;
@@ -45,6 +46,22 @@ public class CaptchaServiceImpl implements CaptchaService {
         captchaRedisDAO.set(uuid, captcha.getCode(), captchaProperties.getTimeout());
         // 返回
         return CaptchaConvert.INSTANCE.convert(uuid, captcha).setEnable(enable);
+    }
+
+    @Override
+    public CaptchaImageRespDTO getCenterCaptchaImage() {
+        //todo 现阶段配置大部分读的还是租户端配置、后面慢慢改
+        if (!Boolean.TRUE.equals(enable)) {
+            return CaptchaConvert.INSTANCE.convertVOToDTO(CaptchaImageRespVO.builder().enable(enable).build());
+        }
+        // 生成验证码
+        CircleCaptcha captcha = CaptchaUtil.createCircleCaptcha(captchaProperties.getWidth(), captchaProperties.getHeight());
+        // 缓存到 Redis 中
+        String uuid = IdUtil.fastSimpleUUID();
+        captchaRedisDAO.set(uuid, captcha.getCode(), captchaProperties.getTimeout());
+        // 返回
+        return CaptchaConvert.INSTANCE.convertVOToDTO(
+                CaptchaImageRespVO.builder().uuid(uuid).img(captcha.getImageBase64()).enable(enable).build());
     }
 
     @Override

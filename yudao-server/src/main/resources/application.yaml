@@ -81,6 +81,11 @@ yudao:
     app-api:
       prefix: /app-api
       controller: '**.controller.app.**'
+    platform-api:
+      prefix: /platform-api
+      controller: '**.controller.center.**'
+    platform-ui:
+      url:
     admin-ui:
       url: http://dashboard.yudao.iocoder.cn # Admin 管理后台 UI 的地址
   swagger:
