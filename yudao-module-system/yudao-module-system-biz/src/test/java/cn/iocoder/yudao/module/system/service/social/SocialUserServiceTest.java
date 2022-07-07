@@ -7,7 +7,7 @@ import cn.iocoder.yudao.module.system.dal.dataobject.social.SocialUserBindDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.social.SocialUserDO;
 import cn.iocoder.yudao.module.system.dal.mysql.social.SocialUserBindMapper;
 import cn.iocoder.yudao.module.system.dal.mysql.social.SocialUserMapper;
-import cn.iocoder.yudao.module.system.enums.social.SocialTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.SocialTypeEnum;
 import com.xkcoding.justauth.AuthRequestFactory;
 import me.zhyd.oauth.enums.AuthResponseStatus;
 import me.zhyd.oauth.model.AuthCallback;

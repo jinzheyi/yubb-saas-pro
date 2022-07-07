@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.system.controller.admin.user.vo.user;
 
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.*;
@@ -16,6 +17,9 @@ public class UserRespVO extends UserBaseVO {
     @ApiModelProperty(value = "用户编号", required = true, example = "1")
     private Long id;
 
+    /**
+     * 状态 {@link CommonStatusEnum}
+     */
     @ApiModelProperty(value = "状态", required = true, example = "1", notes = "参见 CommonStatusEnum 枚举类")
     private Integer status;
 

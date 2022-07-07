@@ -1,4 +1,4 @@
-package cn.iocoder.yudao.module.system.enums.social;
+package cn.iocoder.yudao.framework.common.enums;
 
 import cn.hutool.core.util.ArrayUtil;
 import cn.iocoder.yudao.framework.common.core.IntArrayValuable;
@@ -6,9 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * 社交平台的类型枚举
