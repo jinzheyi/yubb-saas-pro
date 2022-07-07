@@ -6,10 +6,12 @@ import cn.iocoder.yudao.module.platform.controller.center.auth.vo.AuthLoginRespV
 import javax.validation.Valid;
 
 /**
- * 管理平台的认证 Service 接口
+ * 平台管理的认证 Service 接口
  *
- * 提供平台用户的登录、登出的能力
  * @author 朱述勇
+ * @since 2022/7/7 2:13 PM
+ * @copyright: 版权所有 开源组织 gitee(https://gitee.com/jinzheyi)作者：朱述勇<br/>
+ * GitHub(https://github.com/jinzheyi)作者：朱述勇 。
  */
 public interface PlatformAuthService {
 

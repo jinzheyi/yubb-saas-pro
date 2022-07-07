@@ -3,7 +3,10 @@ package cn.iocoder.yudao.module.system.enums;
 /**
  * System 字典类型的枚举类
  *
- * @author 芋道源码
+ * @author 朱述勇
+ * @since 2022/7/7 3:40 PM
+ * @copyright: 版权所有 开源组织 gitee(https://gitee.com/jinzheyi)作者：朱述勇<br/>
+ * GitHub(https://github.com/jinzheyi)作者：朱述勇 。
  */
 public interface DictTypeConstants {
 

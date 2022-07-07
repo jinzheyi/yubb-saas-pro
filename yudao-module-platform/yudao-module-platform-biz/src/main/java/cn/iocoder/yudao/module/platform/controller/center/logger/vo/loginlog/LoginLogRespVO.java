@@ -1,4 +1,4 @@
-package cn.iocoder.yudao.module.system.controller.admin.logger.vo.loginlog;
+package cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog;
 
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import io.swagger.annotations.ApiModel;
@@ -10,7 +10,7 @@ import lombok.ToString;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
 
-@ApiModel("管理后台 - 登录日志 Response VO")
+@ApiModel("平台管理后台 - 登录日志 Response VO")
 @Data
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)

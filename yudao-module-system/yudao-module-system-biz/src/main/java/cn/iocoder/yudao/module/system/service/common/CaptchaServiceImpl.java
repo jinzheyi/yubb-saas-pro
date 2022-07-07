@@ -50,7 +50,7 @@ public class CaptchaServiceImpl implements CaptchaService {
 
     @Override
     public CaptchaImageRespDTO getCenterCaptchaImage() {
-        //todo 现阶段配置大部分读的还是租户端配置、后面慢慢改
+        // TODO 现阶段配置大部分读的还是租户端配置、后面慢慢改
         if (!Boolean.TRUE.equals(enable)) {
             return CaptchaConvert.INSTANCE.convertVOToDTO(CaptchaImageRespVO.builder().enable(enable).build());
         }

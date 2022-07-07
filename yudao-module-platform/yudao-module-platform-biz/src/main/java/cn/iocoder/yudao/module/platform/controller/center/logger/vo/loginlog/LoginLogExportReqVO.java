@@ -1,4 +1,4 @@
-package cn.iocoder.yudao.module.system.controller.admin.logger.vo.loginlog;
+package cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -9,7 +9,7 @@ import java.util.Date;
 
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 
-@ApiModel("管理后台 - 登录日志分页列表 Request VO")
+@ApiModel("平台管理后台 - 登录日志分页列表 Request VO")
 @Data
 public class LoginLogExportReqVO {
 

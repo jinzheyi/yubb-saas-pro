@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.system.service.auth;
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
@@ -131,7 +132,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         // 验证码不存在
         final LoginLogTypeEnum logTypeEnum = LoginLogTypeEnum.LOGIN_USERNAME;
         String code = captchaService.getCaptchaCode(reqVO.getUuid());
-        if (code == null) {
+        if (StrUtil.isBlankOrUndefined(code)) {
             // 创建登录失败日志（验证码不存在）
             createLoginLog(null, reqVO.getUsername(), logTypeEnum, LoginResultEnum.CAPTCHA_NOT_FOUND);
             throw exception(AUTH_LOGIN_CAPTCHA_NOT_FOUND);

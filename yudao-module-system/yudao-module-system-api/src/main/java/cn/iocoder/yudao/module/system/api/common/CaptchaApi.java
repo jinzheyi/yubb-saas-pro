@@ -19,4 +19,12 @@ public interface CaptchaApi {
      */
     CaptchaImageRespDTO getCenterCaptchaImage();
 
+    /**
+     * 获得 uuid 对应的平台验证码
+     *
+     * @param uuid 平台验证码验证编号
+     * @return 平台验证码
+     */
+    String getCenterCaptchaCode(String uuid);
+
 }

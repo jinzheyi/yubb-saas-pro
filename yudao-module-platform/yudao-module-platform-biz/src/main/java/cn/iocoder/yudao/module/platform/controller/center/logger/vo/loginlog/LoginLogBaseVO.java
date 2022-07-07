@@ -1,7 +1,7 @@
-package cn.iocoder.yudao.module.system.controller.admin.logger.vo.loginlog;
+package cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog;
 
-import cn.iocoder.yudao.module.system.enums.logger.LoginLogTypeEnum;
-import cn.iocoder.yudao.module.system.enums.logger.LoginResultEnum;
+import cn.iocoder.yudao.module.platform.enums.logger.PlatformLoginLogTypeEnum;
+import cn.iocoder.yudao.module.platform.enums.logger.PlatformLoginResultEnum;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -13,14 +13,19 @@ import javax.validation.constraints.Size;
 /**
  * 登录日志 Base VO，提供给添加、修改、详细的子 VO 使用
  * 如果子 VO 存在差异的字段，请不要添加到这里，影响 Swagger 文档生成
+ *
+ * @author 朱述勇
+ * @since 2022/7/7 3:24 PM
+ * @copyright: 版权所有 开源组织 gitee(https://gitee.com/jinzheyi)作者：朱述勇<br/>
+ * GitHub(https://github.com/jinzheyi)作者：朱述勇 。
  */
 @Data
 public class LoginLogBaseVO {
 
     /**
-     * 日志类型 {@link LoginLogTypeEnum}
+     * 日志类型 {@link PlatformLoginLogTypeEnum}
      */
-    @ApiModelProperty(value = "日志类型", required = true, example = "1", notes = "参见 LoginLogTypeEnum 枚举类")
+    @ApiModelProperty(value = "日志类型", required = true, example = "1", notes = "参见 PlatformLoginLogTypeEnum 枚举类")
     @NotNull(message = "日志类型不能为空")
     private Integer logType;
 
@@ -34,9 +39,9 @@ public class LoginLogBaseVO {
     private String username;
 
     /**
-     * 登录结果 {@link LoginResultEnum}
+     * 登录结果 {@link PlatformLoginResultEnum}
      */
-    @ApiModelProperty(value = "登录结果", required = true, example = "1", notes = "参见 LoginResultEnum 枚举类")
+    @ApiModelProperty(value = "登录结果", required = true, example = "1", notes = "参见 PlatformLoginResultEnum 枚举类")
     @NotNull(message = "登录结果不能为空")
     private Integer result;
 

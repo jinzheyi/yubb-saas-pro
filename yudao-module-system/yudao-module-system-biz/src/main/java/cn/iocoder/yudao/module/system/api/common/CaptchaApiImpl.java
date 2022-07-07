@@ -25,4 +25,9 @@ public class CaptchaApiImpl implements CaptchaApi {
         return captchaService.getCenterCaptchaImage();
     }
 
+    @Override
+    public String getCenterCaptchaCode(String uuid) {
+        return captchaService.getCaptchaCode(uuid);
+    }
+
 }

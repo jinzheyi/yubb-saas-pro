@@ -18,4 +18,19 @@ public interface PlatformCaptchaService {
      */
     CaptchaImageRespVO getCaptchaImage();
 
+    /**
+     * 是否开启图片验证码
+     *
+     * @return 是否
+     */
+    Boolean isCaptchaEnable();
+
+    /**
+     * 获得 uuid 对应的验证码
+     *
+     * @param uuid 验证码编号
+     * @return 验证码
+     */
+    String getCaptchaCode(String uuid);
+
 }

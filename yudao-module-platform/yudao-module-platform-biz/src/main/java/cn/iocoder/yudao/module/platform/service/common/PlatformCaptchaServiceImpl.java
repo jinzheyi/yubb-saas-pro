@@ -28,4 +28,15 @@ public class PlatformCaptchaServiceImpl implements PlatformCaptchaService {
         return CaptchaConvert.INSTANCE.convert(captchaApi.getCenterCaptchaImage());
     }
 
+    @Override
+    public Boolean isCaptchaEnable() {
+        // TODO 暂时写死，后面再改
+        return true;
+    }
+
+    @Override
+    public String getCaptchaCode(String uuid) {
+        return captchaApi.getCenterCaptchaCode(uuid);
+    }
+
 }

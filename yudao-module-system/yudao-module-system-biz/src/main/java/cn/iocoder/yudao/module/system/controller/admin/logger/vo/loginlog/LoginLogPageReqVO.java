@@ -19,7 +19,7 @@ public class LoginLogPageReqVO extends PageParam {
     @ApiModelProperty(value = "用户 IP", example = "127.0.0.1", notes = "模拟匹配")
     private String userIp;
 
-    @ApiModelProperty(value = "用户账号", example = "芋道", notes = "模拟匹配")
+    @ApiModelProperty(value = "用户账号", example = "圣钰SaaS", notes = "模拟匹配")
     private String username;
 
     @ApiModelProperty(value = "操作状态", example = "true")

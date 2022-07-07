@@ -1,8 +1,10 @@
-package cn.iocoder.yudao.module.system.controller.admin.logger.vo.loginlog;
+package cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog;
 
+import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
@@ -11,7 +13,8 @@ import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_
 
 @ApiModel("管理后台 - 登录日志分页列表 Request VO")
 @Data
-public class LoginLogExportReqVO {
+@EqualsAndHashCode(callSuper = true)
+public class LoginLogPageReqVO extends PageParam {
 
     @ApiModelProperty(value = "用户 IP", example = "127.0.0.1", notes = "模拟匹配")
     private String userIp;
