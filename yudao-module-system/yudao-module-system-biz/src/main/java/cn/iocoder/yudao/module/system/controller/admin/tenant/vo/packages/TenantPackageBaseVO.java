@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.system.controller.admin.tenant.vo.packages;
 
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -17,6 +18,9 @@ public class TenantPackageBaseVO {
     @NotNull(message = "套餐名不能为空")
     private String name;
 
+    /**
+     * 状态 {@link CommonStatusEnum}
+     */
     @ApiModelProperty(value = "状态", required = true, example = "1", notes = "参见 CommonStatusEnum 枚举")
     @NotNull(message = "状态不能为空")
     private Integer status;

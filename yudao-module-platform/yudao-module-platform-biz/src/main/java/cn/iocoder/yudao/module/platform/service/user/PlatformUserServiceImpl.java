@@ -9,23 +9,21 @@ import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.module.infra.api.file.FileApi;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdatePasswordReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
+import cn.iocoder.yudao.module.platform.convert.user.UserConvert;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.UserPostDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
+import cn.iocoder.yudao.module.platform.dal.mapper.dept.PlatformUserPostMapper;
 import cn.iocoder.yudao.module.platform.dal.mapper.user.PlatformUserMapper;
-import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
-import cn.iocoder.yudao.module.system.convert.user.UserConvert;
-import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.dept.UserPostDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.system.dal.mysql.dept.UserPostMapper;
-import cn.iocoder.yudao.module.system.dal.mysql.user.AdminUserMapper;
-import cn.iocoder.yudao.module.system.service.dept.DeptService;
-import cn.iocoder.yudao.module.system.service.dept.PostService;
-import cn.iocoder.yudao.module.system.service.permission.PermissionService;
-import cn.iocoder.yudao.module.system.service.tenant.TenantService;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformPostService;
+import cn.iocoder.yudao.module.platform.service.permission.PlatformPermissionService;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +35,7 @@ import java.util.*;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.platform.enums.PlatformErrorCodeConstants.*;
 
 /**
  * 后台用户 Service 实现类
@@ -51,6 +49,7 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 @Service
 public class PlatformUserServiceImpl implements PlatformUserService {
 
+    // TODO 这里是租户的参数设置，需要考虑改掉
     @Value("${sys.user.init-password:yudaoyuanma}")
     private String userInitPassword;
 
@@ -58,19 +57,16 @@ public class PlatformUserServiceImpl implements PlatformUserService {
     private PlatformUserMapper userMapper;
 
     @Resource
-    private DeptService deptService;
+    private PlatformDeptService deptService;
     @Resource
-    private PostService postService;
+    private PlatformPostService postService;
     @Resource
-    private PermissionService permissionService;
+    private PlatformPermissionService permissionService;
     @Resource
     private PasswordEncoder passwordEncoder;
-    @Resource
-    @Lazy // 延迟，避免循环依赖报错
-    private TenantService tenantService;
 
     @Resource
-    private UserPostMapper userPostMapper;
+    private PlatformUserPostMapper userPostMapper;
 
     @Resource
     private FileApi fileApi;
@@ -78,18 +74,11 @@ public class PlatformUserServiceImpl implements PlatformUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createUser(UserCreateReqVO reqVO) {
-        // 校验账户配合
-        tenantService.handleTenantInfo(tenant -> {
-            long count = userMapper.selectCount();
-            if (count >= tenant.getAccountCount()) {
-                throw exception(USER_COUNT_MAX, tenant.getAccountCount());
-            }
-        });
         // 校验正确性
         checkCreateOrUpdate(null, reqVO.getUsername(), reqVO.getMobile(), reqVO.getEmail(),
                 reqVO.getDeptId(), reqVO.getPostIds());
         // 插入用户
-        AdminUserDO user = UserConvert.INSTANCE.convert(reqVO);
+        PlatformUserDO user = UserConvert.INSTANCE.convert(reqVO);
         user.setStatus(CommonStatusEnum.ENABLE.getStatus()); // 默认开启
         user.setPassword(passwordEncoder.encode(reqVO.getPassword())); // 加密密码
         userMapper.insert(user);
@@ -108,20 +97,20 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         checkCreateOrUpdate(reqVO.getId(), reqVO.getUsername(), reqVO.getMobile(), reqVO.getEmail(),
                 reqVO.getDeptId(), reqVO.getPostIds());
         // 更新用户
-        AdminUserDO updateObj = UserConvert.INSTANCE.convert(reqVO);
+        PlatformUserDO updateObj = UserConvert.INSTANCE.convert(reqVO);
         userMapper.updateById(updateObj);
         // 更新岗位
         updateUserPost(reqVO, updateObj);
     }
 
-    private void updateUserPost(UserUpdateReqVO reqVO, AdminUserDO updateObj) {
+    private void updateUserPost(UserUpdateReqVO reqVO, PlatformUserDO updateObj) {
         Long userId = reqVO.getId();
         Set<Long> dbPostIds = convertSet(userPostMapper.selectListByUserId(userId), UserPostDO::getPostId);
         // 计算新增和删除的岗位编号
         Set<Long> postIds = updateObj.getPostIds();
         Collection<Long> createPostIds = CollUtil.subtract(postIds, dbPostIds);
         Collection<Long> deletePostIds = CollUtil.subtract(dbPostIds, postIds);
-        // 执行新增和删除。对于已经授权的菜单，不用做任何处理
+        // 执行新增和删除。
         if (!CollectionUtil.isEmpty(createPostIds)) {
             userPostMapper.insertBatch(convertList(createPostIds,
                     postId -> new UserPostDO().setUserId(userId).setPostId(postId)));
@@ -133,7 +122,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
 
     @Override
     public void updateUserLogin(Long id, String loginIp) {
-        userMapper.updateById(new AdminUserDO().setId(id).setLoginIp(loginIp).setLoginDate(new Date()));
+        userMapper.updateById(new PlatformUserDO().setId(id).setLoginIp(loginIp).setLoginDate(new Date()));
     }
 
     @Override
@@ -151,7 +140,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         // 校验旧密码密码
         checkOldPassword(id, reqVO.getOldPassword());
         // 执行更新
-        AdminUserDO updateObj = new AdminUserDO().setId(id);
+        PlatformUserDO updateObj = new PlatformUserDO().setId(id);
         updateObj.setPassword(encodePassword(reqVO.getNewPassword())); // 加密密码
         userMapper.updateById(updateObj);
     }
@@ -162,7 +151,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         // 存储文件
         String avatar = fileApi.createFile(IoUtil.readBytes(avatarFile));
         // 更新路径
-        AdminUserDO sysUserDO = new AdminUserDO();
+        PlatformUserDO sysUserDO = new PlatformUserDO();
         sysUserDO.setId(id);
         sysUserDO.setAvatar(avatar);
         userMapper.updateById(sysUserDO);
@@ -174,7 +163,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         // 校验用户存在
         checkUserExists(id);
         // 更新密码
-        AdminUserDO updateObj = new AdminUserDO();
+        PlatformUserDO updateObj = new PlatformUserDO();
         updateObj.setId(id);
         updateObj.setPassword(encodePassword(password)); // 加密密码
         userMapper.updateById(updateObj);
@@ -185,7 +174,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         // 校验用户存在
         checkUserExists(id);
         // 更新状态
-        AdminUserDO updateObj = new AdminUserDO();
+        PlatformUserDO updateObj = new PlatformUserDO();
         updateObj.setId(id);
         updateObj.setStatus(status);
         userMapper.updateById(updateObj);
@@ -205,27 +194,27 @@ public class PlatformUserServiceImpl implements PlatformUserService {
     }
 
     @Override
-    public AdminUserDO getUserByUsername(String username) {
+    public PlatformUserDO getUserByUsername(String username) {
         return userMapper.selectByUsername(username);
     }
 
     @Override
-    public AdminUserDO getUserByMobile(String mobile) {
+    public PlatformUserDO getUserByMobile(String mobile) {
         return userMapper.selectByMobile(mobile);
     }
 
     @Override
-    public PageResult<AdminUserDO> getUserPage(UserPageReqVO reqVO) {
+    public PageResult<PlatformUserDO> getUserPage(UserPageReqVO reqVO) {
         return userMapper.selectPage(reqVO, getDeptCondition(reqVO.getDeptId()));
     }
 
     @Override
-    public AdminUserDO getUser(Long id) {
+    public PlatformUserDO getUser(Long id) {
         return userMapper.selectById(id);
     }
 
     @Override
-    public List<AdminUserDO> getUsersByDeptIds(Collection<Long> deptIds) {
+    public List<PlatformUserDO> getUsersByDeptIds(Collection<Long> deptIds) {
         if (CollUtil.isEmpty(deptIds)) {
             return Collections.emptyList();
         }
@@ -233,7 +222,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
     }
 
     @Override
-    public List<AdminUserDO> getUsersByPostIds(Collection<Long> postIds) {
+    public List<PlatformUserDO> getUsersByPostIds(Collection<Long> postIds) {
         if (CollUtil.isEmpty(postIds)) {
             return Collections.emptyList();
         }
@@ -245,7 +234,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
     }
 
     @Override
-    public List<AdminUserDO> getUsers(Collection<Long> ids) {
+    public List<PlatformUserDO> getUsers(Collection<Long> ids) {
         if (CollUtil.isEmpty(ids)) {
             return Collections.emptyList();
         }
@@ -258,11 +247,11 @@ public class PlatformUserServiceImpl implements PlatformUserService {
             return;
         }
         // 获得岗位信息
-        List<AdminUserDO> users = userMapper.selectBatchIds(ids);
-        Map<Long, AdminUserDO> userMap = CollectionUtils.convertMap(users, AdminUserDO::getId);
+        List<PlatformUserDO> users = userMapper.selectBatchIds(ids);
+        Map<Long, PlatformUserDO> userMap = CollectionUtils.convertMap(users, PlatformUserDO::getId);
         // 校验
         ids.forEach(id -> {
-            AdminUserDO user = userMap.get(id);
+            PlatformUserDO user = userMap.get(id);
             if (user == null) {
                 throw exception(USER_NOT_EXISTS);
             }
@@ -273,17 +262,17 @@ public class PlatformUserServiceImpl implements PlatformUserService {
     }
 
     @Override
-    public List<AdminUserDO> getUsers(UserExportReqVO reqVO) {
+    public List<PlatformUserDO> getUsers(UserExportReqVO reqVO) {
         return userMapper.selectList(reqVO, getDeptCondition(reqVO.getDeptId()));
     }
 
     @Override
-    public List<AdminUserDO> getUsersByNickname(String nickname) {
+    public List<PlatformUserDO> getUsersByNickname(String nickname) {
         return userMapper.selectListByNickname(nickname);
     }
 
     @Override
-    public List<AdminUserDO> getUsersByUsername(String username) {
+    public List<PlatformUserDO> getUsersByUsername(String username) {
         return userMapper.selectListByUsername(username);
     }
 
@@ -323,7 +312,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         if (id == null) {
             return;
         }
-        AdminUserDO user = userMapper.selectById(id);
+        PlatformUserDO user = userMapper.selectById(id);
         if (user == null) {
             throw exception(USER_NOT_EXISTS);
         }
@@ -334,7 +323,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         if (StrUtil.isBlank(username)) {
             return;
         }
-        AdminUserDO user = userMapper.selectByUsername(username);
+        PlatformUserDO user = userMapper.selectByUsername(username);
         if (user == null) {
             return;
         }
@@ -352,7 +341,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         if (StrUtil.isBlank(email)) {
             return;
         }
-        AdminUserDO user = userMapper.selectByEmail(email);
+        PlatformUserDO user = userMapper.selectByEmail(email);
         if (user == null) {
             return;
         }
@@ -370,7 +359,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         if (StrUtil.isBlank(mobile)) {
             return;
         }
-        AdminUserDO user = userMapper.selectByMobile(mobile);
+        PlatformUserDO user = userMapper.selectByMobile(mobile);
         if (user == null) {
             return;
         }
@@ -390,7 +379,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
      */
     @VisibleForTesting
     public void checkOldPassword(Long id, String oldPassword) {
-        AdminUserDO user = userMapper.selectById(id);
+        PlatformUserDO user = userMapper.selectById(id);
         if (user == null) {
             throw exception(USER_NOT_EXISTS);
         }
@@ -417,7 +406,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
                 return;
             }
             // 判断如果不存在，在进行插入
-            AdminUserDO existUser = userMapper.selectByUsername(importUser.getUsername());
+            PlatformUserDO existUser = userMapper.selectByUsername(importUser.getUsername());
             if (existUser == null) {
                 userMapper.insert(UserConvert.INSTANCE.convert(importUser)
                         .setPassword(encodePassword(userInitPassword))); // 设置默认密码
@@ -429,7 +418,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
                 respVO.getFailureUsernames().put(importUser.getUsername(), USER_USERNAME_EXISTS.getMsg());
                 return;
             }
-            AdminUserDO updateUser = UserConvert.INSTANCE.convert(importUser);
+            PlatformUserDO updateUser = UserConvert.INSTANCE.convert(importUser);
             updateUser.setId(existUser.getId());
             userMapper.updateById(updateUser);
             respVO.getUpdateUsernames().add(importUser.getUsername());
@@ -438,7 +427,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
     }
 
     @Override
-    public List<AdminUserDO> getUsersByStatus(Integer status) {
+    public List<PlatformUserDO> getUsersByStatus(Integer status) {
         return userMapper.selectListByStatus(status);
     }
 

@@ -1,11 +1,11 @@
-package cn.iocoder.yudao.module.system.controller.admin.dept;
+package cn.iocoder.yudao.module.platform.controller.center.dept;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.dept.*;
-import cn.iocoder.yudao.module.system.convert.dept.DeptConvert;
-import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.system.service.dept.DeptService;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.*;
+import cn.iocoder.yudao.module.platform.convert.dept.DeptConvert;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -22,16 +22,16 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 
 @Api(tags = "管理后台 - 部门")
 @RestController
-@RequestMapping("/system/dept")
+@RequestMapping("/platform/dept")
 @Validated
 public class DeptController {
 
     @Resource
-    private DeptService deptService;
+    private PlatformDeptService deptService;
 
     @PostMapping("create")
     @ApiOperation("创建部门")
-    @PreAuthorize("@ss.hasPermission('system:dept:create')")
+    @PreAuthorize("@ss.hasPermission('platform:dept:create')")
     public CommonResult<Long> createDept(@Valid @RequestBody DeptCreateReqVO reqVO) {
         Long deptId = deptService.createDept(reqVO);
         return success(deptId);
@@ -39,7 +39,7 @@ public class DeptController {
 
     @PutMapping("update")
     @ApiOperation("更新部门")
-    @PreAuthorize("@ss.hasPermission('system:dept:update')")
+    @PreAuthorize("@ss.hasPermission('platform:dept:update')")
     public CommonResult<Boolean> updateDept(@Valid @RequestBody DeptUpdateReqVO reqVO) {
         deptService.updateDept(reqVO);
         return success(true);
@@ -48,7 +48,7 @@ public class DeptController {
     @DeleteMapping("delete")
     @ApiOperation("删除部门")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('system:dept:delete')")
+    @PreAuthorize("@ss.hasPermission('platform:dept:delete')")
     public CommonResult<Boolean> deleteDept(@RequestParam("id") Long id) {
         deptService.deleteDept(id);
         return success(true);
@@ -56,7 +56,7 @@ public class DeptController {
 
     @GetMapping("/list")
     @ApiOperation("获取部门列表")
-    @PreAuthorize("@ss.hasPermission('system:dept:query')")
+    @PreAuthorize("@ss.hasPermission('platform:dept:query')")
     public CommonResult<List<DeptRespVO>> listDepts(DeptListReqVO reqVO) {
         List<DeptDO> list = deptService.getSimpleDepts(reqVO);
         list.sort(Comparator.comparing(DeptDO::getSort));
@@ -78,7 +78,7 @@ public class DeptController {
     @GetMapping("/get")
     @ApiOperation("获得部门信息")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('system:dept:query')")
+    @PreAuthorize("@ss.hasPermission('platform:dept:query')")
     public CommonResult<DeptRespVO> getDept(@RequestParam("id") Long id) {
         return success(DeptConvert.INSTANCE.convert(deptService.getDept(id)));
     }

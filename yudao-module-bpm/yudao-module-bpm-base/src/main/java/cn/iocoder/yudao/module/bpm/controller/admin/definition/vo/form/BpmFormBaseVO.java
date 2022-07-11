@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.form;
 
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import lombok.*;
 import io.swagger.annotations.*;
 import javax.validation.constraints.*;
@@ -15,6 +16,9 @@ public class BpmFormBaseVO {
     @NotNull(message = "表单名称不能为空")
     private String name;
 
+    /**
+     * 表单状态 {@link CommonStatusEnum}
+     */
     @ApiModelProperty(value = "表单状态", required = true, notes = "参见 CommonStatusEnum 枚举", example = "1")
     @NotNull(message = "表单状态不能为空")
     private Integer status;

@@ -4,15 +4,14 @@ import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.dept.DeptCreateReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.dept.DeptListReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.dept.DeptUpdateReqVO;
-import cn.iocoder.yudao.module.system.convert.dept.DeptConvert;
-import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.system.dal.mysql.dept.DeptMapper;
-import cn.iocoder.yudao.module.system.enums.dept.DeptIdEnum;
-import cn.iocoder.yudao.module.system.mq.producer.dept.DeptProducer;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptListReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptUpdateReqVO;
+import cn.iocoder.yudao.module.platform.convert.dept.DeptConvert;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.dal.mapper.dept.PlatformDeptMapper;
+import cn.iocoder.yudao.module.platform.enums.dept.PlatformDeptIdEnum;
+import cn.iocoder.yudao.module.platform.mq.producer.dept.PlatformDeptProducer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
@@ -27,17 +26,20 @@ import javax.annotation.Resource;
 import java.util.*;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.platform.enums.PlatformErrorCodeConstants.*;
 
 /**
  * 部门 Service 实现类
  *
- * @author 芋道源码
+ * @author 朱述勇
+ * @since 2022/7/9 10:41 AM
+ * @copyright: 版权所有 开源组织 gitee(https://gitee.com/jinzheyi)作者：朱述勇<br/>
+ * GitHub(https://github.com/jinzheyi)作者：朱述勇 。
  */
 @Service
 @Validated
 @Slf4j
-public class DeptServiceImpl implements DeptService {
+public class PlatformDeptServiceImpl implements PlatformDeptService {
 
     /**
      * 定时执行 {@link #schedulePeriodicRefresh()} 的周期
@@ -67,18 +69,20 @@ public class DeptServiceImpl implements DeptService {
     private volatile Date maxUpdateTime;
 
     @Resource
-    private DeptMapper deptMapper;
+    private PlatformDeptMapper deptMapper;
 
     @Resource
-    private DeptProducer deptProducer;
+    private PlatformDeptProducer deptProducer;
 
     @Resource
     @Lazy // 注入自己，所以延迟加载
-    private DeptService self;
+    private PlatformDeptService self;
 
+    /**
+     * 初始化缓存
+     */
     @Override
     @PostConstruct
-    @TenantIgnore // 初始化缓存，无需租户过滤
     public synchronized void initLocalCache() {
         // 获取部门列表，如果有更新
         List<DeptDO> deptList = loadDeptIfUpdate(maxUpdateTime);
@@ -89,13 +93,14 @@ public class DeptServiceImpl implements DeptService {
         // 构建缓存
         ImmutableMap.Builder<Long, DeptDO> builder = ImmutableMap.builder();
         ImmutableMultimap.Builder<Long, DeptDO> parentBuilder = ImmutableMultimap.builder();
-        deptList.forEach(sysRoleDO -> {
-            builder.put(sysRoleDO.getId(), sysRoleDO);
-            parentBuilder.put(sysRoleDO.getParentId(), sysRoleDO);
+        deptList.forEach(deptDO -> {
+            builder.put(deptDO.getId(), deptDO);
+            parentBuilder.put(deptDO.getParentId(), deptDO);
         });
         // 设置缓存
         deptCache = builder.build();
         parentDeptCache = parentBuilder.build();
+        //获取 deptList 部门数据中 最大的更新时间
         maxUpdateTime = CollectionUtils.getMaxValue(deptList, DeptDO::getUpdateTime);
         log.info("[initLocalCache][初始化 Dept 数量为 {}]", deptList.size());
     }
@@ -115,12 +120,12 @@ public class DeptServiceImpl implements DeptService {
     protected List<DeptDO> loadDeptIfUpdate(Date maxUpdateTime) {
         // 第一步，判断是否要更新。
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
-            log.info("[loadMenuIfUpdate][首次加载全量部门]");
+            log.info("[loadDeptIfUpdate][首次加载全量部门]");
         } else { // 判断数据库中是否有更新的部门
             if (deptMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
                 return null;
             }
-            log.info("[loadMenuIfUpdate][增量加载全量部门]");
+            log.info("[loadDeptIfUpdate][增量加载全量部门]");
         }
         // 第二步，如果有更新，则从数据库加载所有部门
         return deptMapper.selectList();
@@ -128,9 +133,9 @@ public class DeptServiceImpl implements DeptService {
 
     @Override
     public Long createDept(DeptCreateReqVO reqVO) {
-        // 校验正确性
+        // 校验正确性.如果父级ID为空则设置父级ID为最顶级部门
         if (reqVO.getParentId() == null) {
-            reqVO.setParentId(DeptIdEnum.ROOT.getId());
+            reqVO.setParentId(PlatformDeptIdEnum.ROOT.getId());
         }
         checkCreateOrUpdate(null, reqVO.getParentId(), reqVO.getName());
         // 插入部门
@@ -143,9 +148,9 @@ public class DeptServiceImpl implements DeptService {
 
     @Override
     public void updateDept(DeptUpdateReqVO reqVO) {
-        // 校验正确性
+        // 校验正确性.不传父级部门ID，默认取顶级部门ID
         if (reqVO.getParentId() == null) {
-            reqVO.setParentId(DeptIdEnum.ROOT.getId());
+            reqVO.setParentId(PlatformDeptIdEnum.ROOT.getId());
         }
         checkCreateOrUpdate(reqVO.getId(), reqVO.getParentId(), reqVO.getName());
         // 更新部门
@@ -222,14 +227,14 @@ public class DeptServiceImpl implements DeptService {
     }
 
     private void checkParentDeptEnable(Long id, Long parentId) {
-        if (parentId == null || DeptIdEnum.ROOT.getId().equals(parentId)) {
+        if (parentId == null || PlatformDeptIdEnum.ROOT.getId().equals(parentId)) {
             return;
         }
         // 不能设置自己为父部门
         if (parentId.equals(id)) {
             throw ServiceExceptionUtil.exception(DEPT_PARENT_ERROR);
         }
-        // 父岗位不存在
+        // 父部门不存在
         DeptDO dept = deptMapper.selectById(parentId);
         if (dept == null) {
             throw ServiceExceptionUtil.exception(DEPT_PARENT_NOT_EXITS);
@@ -256,15 +261,15 @@ public class DeptServiceImpl implements DeptService {
     }
 
     private void checkDeptNameUnique(Long id, Long parentId, String name) {
-        DeptDO menu = deptMapper.selectByParentIdAndName(parentId, name);
-        if (menu == null) {
+        DeptDO deptDO = deptMapper.selectByParentIdAndName(parentId, name);
+        if (deptDO == null) {
             return;
         }
         // 如果 id 为空，说明不用比较是否为相同 id 的岗位
         if (id == null) {
             throw ServiceExceptionUtil.exception(DEPT_NAME_DUPLICATE);
         }
-        if (!menu.getId().equals(id)) {
+        if (!deptDO.getId().equals(id)) {
             throw ServiceExceptionUtil.exception(DEPT_NAME_DUPLICATE);
         }
     }
@@ -284,7 +289,7 @@ public class DeptServiceImpl implements DeptService {
         if (CollUtil.isEmpty(ids)) {
             return;
         }
-        // 获得科室信息
+        // 获得部门信息
         List<DeptDO> depts = deptMapper.selectBatchIds(ids);
         Map<Long, DeptDO> deptMap = CollectionUtils.convertMap(depts, DeptDO::getId);
         // 校验

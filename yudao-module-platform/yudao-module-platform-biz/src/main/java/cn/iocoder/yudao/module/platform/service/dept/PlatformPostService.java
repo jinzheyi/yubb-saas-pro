@@ -1,12 +1,12 @@
-package cn.iocoder.yudao.module.platform.dal.mapper.dept;
+package cn.iocoder.yudao.module.platform.service.dept;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.post.PostCreateReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.post.PostExportReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.post.PostPageReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.post.PostUpdateReqVO;
-import cn.iocoder.yudao.module.system.dal.dataobject.dept.PostDO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostUpdateReqVO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
 import org.springframework.lang.Nullable;
 
 import java.util.Collection;
@@ -17,9 +17,12 @@ import static cn.iocoder.yudao.framework.common.util.collection.SetUtils.asSet;
 /**
  * 岗位 Service 接口
  *
- * @author 芋道源码
+ * @author 朱述勇
+ * @since 2022/7/9 4:06 PM
+ * @copyright: 版权所有 开源组织 gitee(https://gitee.com/jinzheyi)作者：朱述勇<br/>
+ * GitHub(https://github.com/jinzheyi)作者：朱述勇 。
  */
-public interface PostService {
+public interface PlatformPostService {
 
     /**
      * 创建岗位

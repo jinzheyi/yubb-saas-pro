@@ -14,7 +14,7 @@ import java.util.Map;
 public abstract class AbstractRedisMessage {
 
     /**
-     * 头
+     * 消息的 Header 中请求头
      */
     private Map<String, String> headers = new HashMap<>();
 

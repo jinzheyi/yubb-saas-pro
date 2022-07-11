@@ -3,9 +3,10 @@ package cn.iocoder.yudao.module.platform.service.user;
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
-import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdatePasswordReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 
 import javax.validation.Valid;
 import java.io.InputStream;
@@ -97,7 +98,7 @@ public interface PlatformUserService {
      * @param username 用户名
      * @return 用户对象信息
      */
-    AdminUserDO getUserByUsername(String username);
+    PlatformUserDO getUserByUsername(String username);
 
     /**
      * 通过手机号获取用户
@@ -105,7 +106,7 @@ public interface PlatformUserService {
      * @param mobile 手机号
      * @return 用户对象信息
      */
-    AdminUserDO getUserByMobile(String mobile);
+    PlatformUserDO getUserByMobile(String mobile);
 
     /**
      * 获得用户分页列表
@@ -113,7 +114,7 @@ public interface PlatformUserService {
      * @param reqVO 分页条件
      * @return 分页列表
      */
-    PageResult<AdminUserDO> getUserPage(UserPageReqVO reqVO);
+    PageResult<PlatformUserDO> getUserPage(UserPageReqVO reqVO);
 
     /**
      * 通过用户 ID 查询用户
@@ -121,7 +122,7 @@ public interface PlatformUserService {
      * @param id 用户ID
      * @return 用户对象信息
      */
-    AdminUserDO getUser(Long id);
+    PlatformUserDO getUser(Long id);
 
     /**
      * 获得指定部门的用户数组
@@ -129,7 +130,7 @@ public interface PlatformUserService {
      * @param deptIds 部门数组
      * @return 用户数组
      */
-    List<AdminUserDO> getUsersByDeptIds(Collection<Long> deptIds);
+    List<PlatformUserDO> getUsersByDeptIds(Collection<Long> deptIds);
 
     /**
      * 获得指定岗位的用户数组
@@ -137,7 +138,7 @@ public interface PlatformUserService {
      * @param postIds 岗位数组
      * @return 用户数组
      */
-    List<AdminUserDO> getUsersByPostIds(Collection<Long> postIds);
+    List<PlatformUserDO> getUsersByPostIds(Collection<Long> postIds);
 
     /**
      * 获得用户列表
@@ -145,7 +146,7 @@ public interface PlatformUserService {
      * @param ids 用户编号数组
      * @return 用户列表
      */
-    List<AdminUserDO> getUsers(Collection<Long> ids);
+    List<PlatformUserDO> getUsers(Collection<Long> ids);
 
     /**
      * 校验用户们是否有效。如下情况，视为无效：
@@ -162,11 +163,12 @@ public interface PlatformUserService {
      * @param ids 用户编号数组
      * @return 用户 Map
      */
-    default Map<Long, AdminUserDO> getUserMap(Collection<Long> ids) {
+    default Map<Long, PlatformUserDO> getUserMap(Collection<Long> ids) {
         if (CollUtil.isEmpty(ids)) {
             return new HashMap<>();
         }
-        return CollectionUtils.convertMap(getUsers(ids), AdminUserDO::getId);
+        //list转换成map，key是用户ID
+        return CollectionUtils.convertMap(getUsers(ids), PlatformUserDO::getId);
     }
 
     /**
@@ -175,7 +177,7 @@ public interface PlatformUserService {
      * @param reqVO 列表请求
      * @return 用户列表
      */
-    List<AdminUserDO> getUsers(UserExportReqVO reqVO);
+    List<PlatformUserDO> getUsers(UserExportReqVO reqVO);
 
     /**
      * 获得用户列表，基于昵称模糊匹配
@@ -183,7 +185,7 @@ public interface PlatformUserService {
      * @param nickname 昵称
      * @return 用户列表
      */
-    List<AdminUserDO> getUsersByNickname(String nickname);
+    List<PlatformUserDO> getUsersByNickname(String nickname);
 
     /**
      * 获得用户列表，基于用户账号模糊匹配
@@ -191,7 +193,7 @@ public interface PlatformUserService {
      * @param username 用户账号
      * @return 用户列表
      */
-    List<AdminUserDO> getUsersByUsername(String username);
+    List<PlatformUserDO> getUsersByUsername(String username);
 
     /**
      * 批量导入用户
@@ -208,7 +210,7 @@ public interface PlatformUserService {
      * @param status 状态
      * @return 用户们
      */
-    List<AdminUserDO> getUsersByStatus(Integer status);
+    List<PlatformUserDO> getUsersByStatus(Integer status);
 
     /**
      * 判断密码是否匹配

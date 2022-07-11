@@ -17,6 +17,10 @@ public class TenantRedisMessageInterceptor implements RedisMessageInterceptor {
 
     private static final String HEADER_TENANT_ID = "tenant-id";
 
+    /**
+     * 发送消息前置处理，设置租户ID
+     * @param message 抽象Redis消息
+     */
     @Override
     public void sendMessageBefore(AbstractRedisMessage message) {
         Long tenantId = TenantContextHolder.getTenantId();
@@ -25,6 +29,10 @@ public class TenantRedisMessageInterceptor implements RedisMessageInterceptor {
         }
     }
 
+    /**
+     * 消费消息前置处理
+     * @param message 抽象Redis消息
+     */
     @Override
     public void consumeMessageBefore(AbstractRedisMessage message) {
         String tenantIdStr = message.getHeader(HEADER_TENANT_ID);
@@ -33,6 +41,10 @@ public class TenantRedisMessageInterceptor implements RedisMessageInterceptor {
         }
     }
 
+    /**
+     * 消费者消息后置处理
+     * @param message 抽象Redis消息
+     */
     @Override
     public void consumeMessageAfter(AbstractRedisMessage message) {
         // 注意，Consumer 是一个逻辑的入口，所以不考虑原本上下文就存在租户编号的情况

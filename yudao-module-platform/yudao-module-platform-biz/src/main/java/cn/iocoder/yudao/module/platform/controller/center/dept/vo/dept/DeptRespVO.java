@@ -1,5 +1,6 @@
-package cn.iocoder.yudao.module.system.controller.admin.dept.vo.dept;
+package cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept;
 
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -15,6 +16,9 @@ public class DeptRespVO extends DeptBaseVO {
     @ApiModelProperty(value = "部门编号", required = true, example = "1024")
     private Long id;
 
+    /**
+     * 状态 {@link CommonStatusEnum}
+     */
     @ApiModelProperty(value = "状态", required = true, example = "1", notes = "参见 CommonStatusEnum 枚举类")
     private Integer status;
 

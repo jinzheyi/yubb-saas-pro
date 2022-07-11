@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.system.controller.admin.oauth2.vo.client;
 
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import lombok.*;
 import io.swagger.annotations.*;
 import cn.iocoder.yudao.framework.common.pojo.PageParam;
@@ -13,6 +14,9 @@ public class OAuth2ClientPageReqVO extends PageParam {
     @ApiModelProperty(value = "应用名", example = "土豆", notes = "模糊匹配")
     private String name;
 
+    /**
+     * 状态 {@link CommonStatusEnum}
+     */
     @ApiModelProperty(value = "状态", example = "1", notes = "参见 CommonStatusEnum 枚举")
     private Integer status;
 

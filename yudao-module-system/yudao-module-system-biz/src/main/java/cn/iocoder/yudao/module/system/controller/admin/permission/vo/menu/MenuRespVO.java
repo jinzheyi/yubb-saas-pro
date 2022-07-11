@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.system.controller.admin.permission.vo.menu;
 
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -19,6 +20,9 @@ public class MenuRespVO extends MenuBaseVO {
     @ApiModelProperty(value = "菜单编号", required = true, example = "1024")
     private Long id;
 
+    /**
+     * 状态 {@link CommonStatusEnum}
+     */
     @ApiModelProperty(value = "状态", required = true, example = "1", notes = "参见 CommonStatusEnum 枚举类")
     private Integer status;
 

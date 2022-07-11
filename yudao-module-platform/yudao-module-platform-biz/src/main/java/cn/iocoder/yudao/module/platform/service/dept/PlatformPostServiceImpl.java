@@ -4,13 +4,13 @@ import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.post.PostCreateReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.post.PostExportReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.post.PostPageReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.post.PostUpdateReqVO;
-import cn.iocoder.yudao.module.system.convert.dept.PostConvert;
-import cn.iocoder.yudao.module.system.dal.dataobject.dept.PostDO;
-import cn.iocoder.yudao.module.system.dal.mysql.dept.PostMapper;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostUpdateReqVO;
+import cn.iocoder.yudao.module.platform.convert.dept.PostConvert;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
+import cn.iocoder.yudao.module.platform.dal.mapper.dept.PlatformPostMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -21,19 +21,22 @@ import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.platform.enums.PlatformErrorCodeConstants.*;
 
 /**
  * 岗位 Service 实现类
  *
- * @author 芋道源码
+ * @author 朱述勇
+ * @since 2022/7/9 4:08 PM
+ * @copyright: 版权所有 开源组织 gitee(https://gitee.com/jinzheyi)作者：朱述勇<br/>
+ * GitHub(https://github.com/jinzheyi)作者：朱述勇 。
  */
 @Service
 @Validated
-public class PostServiceImpl implements PostService {
+public class PlatformPostServiceImpl implements PlatformPostService {
 
     @Resource
-    private PostMapper postMapper;
+    private PlatformPostMapper postMapper;
 
     @Override
     public Long createPost(PostCreateReqVO reqVO) {

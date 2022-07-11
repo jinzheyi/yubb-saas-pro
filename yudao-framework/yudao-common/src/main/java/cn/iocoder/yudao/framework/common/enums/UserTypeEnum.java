@@ -21,7 +21,7 @@ public enum UserTypeEnum implements IntArrayValuable {
     /**
      * 面向平台用户
      */
-    PLATFORM_ADMIN(1, "平台管理员")
+    PLATFORM_ADMIN(0, "平台管理员")
 
     ;
 

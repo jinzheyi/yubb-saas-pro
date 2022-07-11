@@ -1,4 +1,4 @@
-package cn.iocoder.yudao.module.system.controller.admin.dept.vo.dept;
+package cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;

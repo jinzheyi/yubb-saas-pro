@@ -5,21 +5,21 @@ import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
-import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileRespVO;
-import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
-import cn.iocoder.yudao.module.system.convert.user.UserConvert;
-import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.dept.PostDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.social.SocialUserDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.system.service.dept.DeptService;
-import cn.iocoder.yudao.module.system.service.dept.PostService;
-import cn.iocoder.yudao.module.system.service.permission.PermissionService;
-import cn.iocoder.yudao.module.system.service.permission.RoleService;
-import cn.iocoder.yudao.module.system.service.social.SocialUserService;
-import cn.iocoder.yudao.module.system.service.user.AdminUserService;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdatePasswordReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdateReqVO;
+import cn.iocoder.yudao.module.platform.convert.user.UserConvert;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformPostService;
+import cn.iocoder.yudao.module.platform.service.permission.PlatformPermissionService;
+import cn.iocoder.yudao.module.platform.service.permission.PlatformRoleService;
+import cn.iocoder.yudao.module.platform.service.social.PlatformSocialUserService;
+import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -37,30 +37,31 @@ import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.FILE_IS_EMP
 
 @Api(tags = "管理后台 - 用户个人中心")
 @RestController
-@RequestMapping("/system/user/profile")
+@RequestMapping("/platform/user/profile")
 @Validated
 @Slf4j
 public class UserProfileController {
 
     @Resource
-    private AdminUserService userService;
+    private PlatformUserService userService;
     @Resource
-    private DeptService deptService;
+    private PlatformDeptService deptService;
     @Resource
-    private PostService postService;
+    private PlatformPostService postService;
     @Resource
-    private PermissionService permissionService;
+    private PlatformPermissionService permissionService;
     @Resource
-    private RoleService roleService;
+    private PlatformRoleService roleService;
     @Resource
-    private SocialUserService socialService;
+    private PlatformSocialUserService socialService;
 
+    // TODO 这里的@DataPermission数据权限注解要考虑下平台是否需要单独区分出来
     @GetMapping("/get")
     @ApiOperation("获得登录用户信息")
     @DataPermission(enable = false) // 关闭数据权限，避免只查看自己时，查询不到部门。
     public CommonResult<UserProfileRespVO> profile() {
         // 获得用户基本信息
-        AdminUserDO user = userService.getUser(getLoginUserId());
+        PlatformUserDO user = userService.getUser(getLoginUserId());
         UserProfileRespVO resp = UserConvert.INSTANCE.convert03(user);
         // 获得用户角色
         List<RoleDO> userRoles = roleService.getRolesFromCache(permissionService.getUserRoleIdListByUserId(user.getId()));

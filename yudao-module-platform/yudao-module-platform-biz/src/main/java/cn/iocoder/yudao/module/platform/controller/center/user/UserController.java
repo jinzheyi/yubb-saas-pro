@@ -6,13 +6,13 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.MapUtils;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
-import cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog;
-import cn.iocoder.yudao.module.system.convert.user.UserConvert;
-import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.framework.common.enums.SexEnum;
-import cn.iocoder.yudao.module.system.service.dept.DeptService;
-import cn.iocoder.yudao.module.system.service.user.AdminUserService;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
+import cn.iocoder.yudao.module.platform.convert.user.UserConvert;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
+import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -35,18 +35,18 @@ import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.E
 
 @Api(tags = "管理后台 - 用户")
 @RestController
-@RequestMapping("/system/user")
+@RequestMapping("/platform/user")
 @Validated
 public class UserController {
 
     @Resource
-    private AdminUserService userService;
+    private PlatformUserService userService;
     @Resource
-    private DeptService deptService;
+    private PlatformDeptService deptService;
 
     @PostMapping("/create")
     @ApiOperation("新增用户")
-    @PreAuthorize("@ss.hasPermission('system:user:create')")
+    @PreAuthorize("@ss.hasPermission('platform:user:create')")
     public CommonResult<Long> createUser(@Valid @RequestBody UserCreateReqVO reqVO) {
         Long id = userService.createUser(reqVO);
         return success(id);
@@ -54,7 +54,7 @@ public class UserController {
 
     @PutMapping("update")
     @ApiOperation("修改用户")
-    @PreAuthorize("@ss.hasPermission('system:user:update')")
+    @PreAuthorize("@ss.hasPermission('platform:user:update')")
     public CommonResult<Boolean> updateUser(@Valid @RequestBody UserUpdateReqVO reqVO) {
         userService.updateUser(reqVO);
         return success(true);
@@ -63,7 +63,7 @@ public class UserController {
     @DeleteMapping("/delete")
     @ApiOperation("删除用户")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('system:user:delete')")
+    @PreAuthorize("@ss.hasPermission('platform:user:delete')")
     public CommonResult<Boolean> deleteUser(@RequestParam("id") Long id) {
         userService.deleteUser(id);
         return success(true);
@@ -71,7 +71,7 @@ public class UserController {
 
     @PutMapping("/update-password")
     @ApiOperation("重置用户密码")
-    @PreAuthorize("@ss.hasPermission('system:user:update-password')")
+    @PreAuthorize("@ss.hasPermission('platform:user:update-password')")
     public CommonResult<Boolean> updateUserPassword(@Valid @RequestBody UserUpdatePasswordReqVO reqVO) {
         userService.updateUserPassword(reqVO.getId(), reqVO.getPassword());
         return success(true);
@@ -79,7 +79,7 @@ public class UserController {
 
     @PutMapping("/update-status")
     @ApiOperation("修改用户状态")
-    @PreAuthorize("@ss.hasPermission('system:user:update')")
+    @PreAuthorize("@ss.hasPermission('platform:user:update')")
     public CommonResult<Boolean> updateUserStatus(@Valid @RequestBody UserUpdateStatusReqVO reqVO) {
         userService.updateUserStatus(reqVO.getId(), reqVO.getStatus());
         return success(true);
@@ -87,16 +87,16 @@ public class UserController {
 
     @GetMapping("/page")
     @ApiOperation("获得用户分页列表")
-    @PreAuthorize("@ss.hasPermission('system:user:list')")
+    @PreAuthorize("@ss.hasPermission('platform:user:list')")
     public CommonResult<PageResult<UserPageItemRespVO>> getUserPage(@Valid UserPageReqVO reqVO) {
         // 获得用户分页列表
-        PageResult<AdminUserDO> pageResult = userService.getUserPage(reqVO);
+        PageResult<PlatformUserDO> pageResult = userService.getUserPage(reqVO);
         if (CollUtil.isEmpty(pageResult.getList())) {
             return success(new PageResult<>(pageResult.getTotal())); // 返回空
         }
 
         // 获得拼接需要的数据
-        Collection<Long> deptIds = convertList(pageResult.getList(), AdminUserDO::getDeptId);
+        Collection<Long> deptIds = convertList(pageResult.getList(), PlatformUserDO::getDeptId);
         Map<Long, DeptDO> deptMap = deptService.getDeptMap(deptIds);
         // 拼接结果返回
         List<UserPageItemRespVO> userList = new ArrayList<>(pageResult.getList().size());
@@ -112,7 +112,7 @@ public class UserController {
     @ApiOperation(value = "获取用户精简信息列表", notes = "只包含被开启的用户，主要用于前端的下拉选项")
     public CommonResult<List<UserSimpleRespVO>> getSimpleUsers() {
         // 获用户门列表，只要开启状态的
-        List<AdminUserDO> list = userService.getUsersByStatus(CommonStatusEnum.ENABLE.getStatus());
+        List<PlatformUserDO> list = userService.getUsersByStatus(CommonStatusEnum.ENABLE.getStatus());
         // 排序后，返回给前端
         return success(UserConvert.INSTANCE.convertList04(list));
     }
@@ -120,24 +120,25 @@ public class UserController {
     @GetMapping("/get")
     @ApiOperation("获得用户详情")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('system:user:query')")
+    @PreAuthorize("@ss.hasPermission('platform:user:query')")
     public CommonResult<UserRespVO> getInfo(@RequestParam("id") Long id) {
         return success(UserConvert.INSTANCE.convert(userService.getUser(id)));
     }
 
     @GetMapping("/export")
     @ApiOperation("导出用户")
-    @PreAuthorize("@ss.hasPermission('system:user:export')")
-    @OperateLog(type = EXPORT)
+    @PreAuthorize("@ss.hasPermission('platform:user:export')")
+    //TODO 这里需要考虑是否创建一个平台的日志记录切面
+    //@OperateLog(type = EXPORT)
     public void exportUsers(@Validated UserExportReqVO reqVO,
                             HttpServletResponse response) throws IOException {
         // 获得用户列表
-        List<AdminUserDO> users = userService.getUsers(reqVO);
+        List<PlatformUserDO> users = userService.getUsers(reqVO);
 
         // 获得拼接需要的数据
-        Collection<Long> deptIds = convertList(users, AdminUserDO::getDeptId);
+        Collection<Long> deptIds = convertList(users, PlatformUserDO::getDeptId);
         Map<Long, DeptDO> deptMap = deptService.getDeptMap(deptIds);
-        Map<Long, AdminUserDO> deptLeaderUserMap = userService.getUserMap(
+        Map<Long, PlatformUserDO> deptLeaderUserMap = userService.getUserMap(
                 convertSet(deptMap.values(), DeptDO::getLeaderUserId));
         // 拼接数据
         List<UserExcelVO> excelUsers = new ArrayList<>(users.size());
@@ -178,7 +179,7 @@ public class UserController {
             @ApiImplicitParam(name = "file", value = "Excel 文件", required = true, dataTypeClass = MultipartFile.class),
             @ApiImplicitParam(name = "updateSupport", value = "是否支持更新，默认为 false", example = "true", dataTypeClass = Boolean.class)
     })
-    @PreAuthorize("@ss.hasPermission('system:user:import')")
+    @PreAuthorize("@ss.hasPermission('platform:user:import')")
     public CommonResult<UserImportRespVO> importExcel(@RequestParam("file") MultipartFile file,
                                                       @RequestParam(value = "updateSupport", required = false, defaultValue = "false") Boolean updateSupport) throws Exception {
         List<UserImportExcelVO> list = ExcelUtils.read(file, UserImportExcelVO.class);

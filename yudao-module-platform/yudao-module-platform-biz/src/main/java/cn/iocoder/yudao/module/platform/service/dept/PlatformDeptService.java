@@ -2,10 +2,10 @@ package cn.iocoder.yudao.module.platform.service.dept;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.dept.DeptCreateReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.dept.DeptListReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.dept.vo.dept.DeptUpdateReqVO;
-import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptListReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptUpdateReqVO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -17,7 +17,7 @@ import java.util.Map;
  *
  * @author 芋道源码
  */
-public interface DeptService {
+public interface PlatformDeptService {
 
     /**
      * 初始化部门的本地缓存

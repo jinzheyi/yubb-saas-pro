@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.system.controller.admin.sms.vo.template;
 
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -16,6 +17,9 @@ public class SmsTemplateBaseVO {
     @NotNull(message = "短信类型不能为空")
     private Integer type;
 
+    /**
+     * 开启状态 {@link CommonStatusEnum}
+     */
     @ApiModelProperty(value = "开启状态", required = true, example = "1", notes = "参见 CommonStatusEnum 枚举类")
     @NotNull(message = "开启状态不能为空")
     private Integer status;
