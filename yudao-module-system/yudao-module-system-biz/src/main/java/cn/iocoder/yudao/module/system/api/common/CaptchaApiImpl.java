@@ -30,4 +30,9 @@ public class CaptchaApiImpl implements CaptchaApi {
         return captchaService.getCaptchaCode(uuid);
     }
 
+    @Override
+    public void deleteCaptchaCode(String uuid) {
+        captchaService.deleteCaptchaCode(uuid);
+    }
+
 }

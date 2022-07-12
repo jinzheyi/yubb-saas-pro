@@ -39,4 +39,9 @@ public class PlatformCaptchaServiceImpl implements PlatformCaptchaService {
         return captchaApi.getCenterCaptchaCode(uuid);
     }
 
+    @Override
+    public void deleteCaptchaCode(String uuid) {
+        captchaApi.deleteCaptchaCode(uuid);
+    }
+
 }
