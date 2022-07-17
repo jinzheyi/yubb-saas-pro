@@ -23,14 +23,20 @@
             <version>${revision}</version>
         </dependency>
         <!--只是引用了system 的API模块，API模块一定定义了对外暴露的枚举、接口之类的。所以不会造成互相循环引用依赖问题-->
-        <dependency>
-            <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-module-system-api</artifactId>
-            <version>${revision}</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>cn.iocoder.boot</groupId>-->
+<!--            <artifactId>yudao-module-system-api</artifactId>-->
+<!--            <version>${revision}</version>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-module-infra-api</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <!--此模块提供一些基础的底层封装好的功能，供多个平台调用-->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-module-base-api</artifactId>
             <version>${revision}</version>
         </dependency>
 

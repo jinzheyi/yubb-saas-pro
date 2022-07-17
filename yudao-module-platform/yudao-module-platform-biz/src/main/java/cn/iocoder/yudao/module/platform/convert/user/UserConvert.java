@@ -8,7 +8,7 @@ import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.social.SocialUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.platform.service.auth;
 
 import cn.iocoder.yudao.module.platform.controller.center.auth.vo.AuthLoginReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.auth.vo.AuthLoginRespVO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 
 import javax.validation.Valid;
 
@@ -14,6 +15,15 @@ import javax.validation.Valid;
  * GitHub(https://github.com/jinzheyi)作者：朱述勇 。
  */
 public interface PlatformAuthService {
+
+    /**
+     * 验证账号 + 密码。如果通过，则返回用户
+     *
+     * @param username 账号
+     * @param password 密码
+     * @return 用户
+     */
+    PlatformUserDO authenticate(String username, String password);
 
     /**
      * 账号登录

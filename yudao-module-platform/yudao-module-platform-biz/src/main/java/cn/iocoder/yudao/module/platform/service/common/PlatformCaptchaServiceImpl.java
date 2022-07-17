@@ -1,8 +1,9 @@
 package cn.iocoder.yudao.module.platform.service.common;
 
+import cn.iocoder.yudao.module.base.api.common.dto.CaptchaImageReqDTO;
 import cn.iocoder.yudao.module.platform.controller.center.common.vo.CaptchaImageRespVO;
 import cn.iocoder.yudao.module.platform.convert.common.CaptchaConvert;
-import cn.iocoder.yudao.module.system.api.common.CaptchaApi;
+import cn.iocoder.yudao.module.base.api.common.CaptchaApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -25,7 +26,9 @@ public class PlatformCaptchaServiceImpl implements PlatformCaptchaService {
 
     @Override
     public CaptchaImageRespVO getCaptchaImage() {
-        return CaptchaConvert.INSTANCE.convert(captchaApi.getCenterCaptchaImage());
+        CaptchaImageReqDTO reqDTO = new CaptchaImageReqDTO();
+        // TODO 这块的验证码还需要传入一些参数，后续处理
+        return CaptchaConvert.INSTANCE.convert(captchaApi.getCaptchaImage(reqDTO));
     }
 
     @Override
@@ -36,7 +39,7 @@ public class PlatformCaptchaServiceImpl implements PlatformCaptchaService {
 
     @Override
     public String getCaptchaCode(String uuid) {
-        return captchaApi.getCenterCaptchaCode(uuid);
+        return captchaApi.getCaptchaCode(uuid);
     }
 
     @Override

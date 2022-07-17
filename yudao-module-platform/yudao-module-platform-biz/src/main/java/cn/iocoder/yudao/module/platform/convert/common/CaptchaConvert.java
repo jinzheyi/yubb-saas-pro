@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.convert.common;
 
 import cn.iocoder.yudao.module.platform.controller.center.common.vo.CaptchaImageRespVO;
-import cn.iocoder.yudao.module.system.api.common.dto.CaptchaImageRespDTO;
+import cn.iocoder.yudao.module.base.api.common.dto.CaptchaImageRespDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
