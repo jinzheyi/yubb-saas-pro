@@ -87,10 +87,6 @@ export function getTenantId() {
   return localStorage.getItem(TenantIdKey)
 }
 
-export function setTenantId(username) {
-  localStorage.setItem(TenantIdKey, username)
-}
-
 export function removeTenantId() {
   localStorage.removeItem(TenantIdKey)
 }
