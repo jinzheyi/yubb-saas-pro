@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.mq.producer.tenant;
 
 import cn.iocoder.yudao.framework.mq.core.RedisMQTemplate;
-import cn.iocoder.yudao.module.platform.mq.message.tenant.PlatformTenantRefreshMessage;
+import cn.iocoder.yudao.module.platform.mq.message.tenant.TenantRefreshMessage;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -12,16 +12,16 @@ import javax.annotation.Resource;
  * @author 芋道源码
  */
 @Component
-public class PlatformTenantProducer {
+public class TenantProducer {
 
     @Resource
     private RedisMQTemplate redisMQTemplate;
 
     /**
-     * 发送 {@link PlatformTenantRefreshMessage} 消息
+     * 发送 {@link TenantRefreshMessage} 消息
      */
     public void sendTenantRefreshMessage() {
-        PlatformTenantRefreshMessage message = new PlatformTenantRefreshMessage();
+        TenantRefreshMessage message = new TenantRefreshMessage();
         redisMQTemplate.send(message);
     }
 

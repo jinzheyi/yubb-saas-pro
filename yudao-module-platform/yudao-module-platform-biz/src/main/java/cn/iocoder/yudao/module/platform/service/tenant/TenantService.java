@@ -1,8 +1,8 @@
 package cn.iocoder.yudao.module.platform.service.tenant;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-//import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
-//import cn.iocoder.yudao.framework.tenant.core.service.TenantFrameworkService;
+import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
+import cn.iocoder.yudao.framework.tenant.core.service.TenantFrameworkService;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantPageReqVO;
@@ -20,7 +20,7 @@ import java.util.Set;
  *
  * @author 芋道源码
  */
-public interface PlatformTenantService extends TenantFrameworkService {
+public interface TenantService extends TenantFrameworkService {
 
     /**
      * 初始化租户的本地缓存
@@ -46,7 +46,7 @@ public interface PlatformTenantService extends TenantFrameworkService {
      * 更新租户的角色菜单
      *
      * @param tenantId 租户编号
-     * @param menuIds 菜单编号数组
+     * @param menuIds 调整后的菜单编号数组
      */
     void updateTenantRoleMenu(Long tenantId, Set<Long> menuIds);
 

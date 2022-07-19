@@ -6,7 +6,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.*;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantPackageConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
-import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantPackageService;
+import cn.iocoder.yudao.module.platform.service.tenant.TenantPackageService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -27,7 +27,7 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 public class TenantPackageController {
 
     @Resource
-    private PlatformTenantPackageService tenantPackageService;
+    private TenantPackageService tenantPackageService;
 
     @PostMapping("/create")
     @ApiOperation("创建租户套餐")

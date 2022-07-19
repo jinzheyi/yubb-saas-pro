@@ -7,7 +7,7 @@ import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.*;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
-import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantService;
+import cn.iocoder.yudao.module.platform.service.tenant.TenantService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -29,7 +29,7 @@ import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.E
 public class TenantController {
 
     @Resource
-    private PlatformTenantService tenantService;
+    private TenantService tenantService;
 
     @GetMapping("/get-id-by-name")
     @ApiOperation(value = "使用租户名，获得租户编号", notes = "登录界面，根据用户的租户名，获得租户编号")
@@ -83,7 +83,8 @@ public class TenantController {
     @GetMapping("/export-excel")
     @ApiOperation("导出租户 Excel")
     @PreAuthorize("@ss.hasPermission('platform:tenant:export')")
-    @OperateLog(type = EXPORT)
+    // TODO 更改为平台日志
+    //@OperateLog(type = EXPORT)
     public void exportTenantExcel(@Valid TenantExportReqVO exportReqVO,
                                   HttpServletResponse response) throws IOException {
         List<TenantDO> list = tenantService.getTenantList(exportReqVO);

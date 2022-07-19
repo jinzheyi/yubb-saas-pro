@@ -7,9 +7,9 @@ import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
-//import cn.iocoder.yudao.framework.tenant.config.TenantProperties;
-//import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
-//import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
+import cn.iocoder.yudao.framework.tenant.config.TenantProperties;
+import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
+import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantExportReqVO;
@@ -20,10 +20,11 @@ import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
-import cn.iocoder.yudao.module.platform.dal.mapper.tenant.PlatformTenantMapper;
+import cn.iocoder.yudao.module.platform.dal.mapper.tenant.TenantMapper;
 //import cn.iocoder.yudao.module.system.enums.permission.RoleCodeEnum;
 //import cn.iocoder.yudao.module.system.enums.permission.RoleTypeEnum;
-import cn.iocoder.yudao.module.platform.mq.producer.tenant.PlatformTenantProducer;
+import cn.iocoder.yudao.module.platform.enums.permission.PlatformRoleCodeEnum;
+import cn.iocoder.yudao.module.platform.mq.producer.tenant.TenantProducer;
 //import cn.iocoder.yudao.module.platform.service.permission.MenuService;
 //import cn.iocoder.yudao.module.platform.service.permission.PermissionService;
 //import cn.iocoder.yudao.module.platform.service.permission.RoleService;
@@ -59,7 +60,7 @@ import static java.util.Collections.singleton;
 @Service
 @Validated
 @Slf4j
-public class PlatformTenantServiceImpl implements PlatformTenantService {
+public class TenantServiceImpl implements TenantService {
 
     /**
      * 定时执行 {@link #schedulePeriodicRefresh()} 的周期
@@ -86,22 +87,22 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     private TenantProperties tenantProperties;
 
     @Resource
-    private PlatformTenantMapper tenantMapper;
+    private TenantMapper tenantMapper;
 
     @Resource
-    private PlatformTenantPackageService tenantPackageService;
+    private TenantPackageService tenantPackageService;
     @Resource
     @Lazy // 延迟，避免循环依赖报错
     private AdminUserService userService;
     @Resource
     private RoleService roleService;
     @Resource
-    private MenuService menuService;
+    private TenantMenuService menuService;
     @Resource
     private PermissionService permissionService;
 
     @Resource
-    private PlatformTenantProducer tenantProducer;
+    private TenantProducer tenantProducer;
 
     /**
      * 初始化 {@link #tenantCache} 缓存
@@ -241,20 +242,23 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     @Transactional(rollbackFor = Exception.class)
     public void updateTenantRoleMenu(Long tenantId, Set<Long> menuIds) {
         TenantUtils.execute(tenantId, () -> {
-            // 获得所有角色
+            // 获得租户所有角色
             List<RoleDO> roles = roleService.getRoles(null);
+            // 兜底校验
             roles.forEach(role -> Assert.isTrue(tenantId.equals(role.getTenantId()), "角色({}/{}) 租户不匹配",
-                    role.getId(), role.getTenantId(), tenantId)); // 兜底校验
+                    role.getId(), role.getTenantId(), tenantId));
             // 重新分配每个角色的权限
             roles.forEach(role -> {
                 // 如果是租户管理员，重新分配其权限为租户套餐的权限
-                if (Objects.equals(role.getCode(), RoleCodeEnum.TENANT_ADMIN.getCode())) {
+                if (Objects.equals(role.getCode(), PlatformRoleCodeEnum.TENANT_ADMIN.getCode())) {
+                    //调整租户对应角色的菜单数据
                     permissionService.assignRoleMenu(role.getId(), menuIds);
                     log.info("[updateTenantRoleMenu][租户管理员({}/{}) 的权限修改为({})]", role.getId(), role.getTenantId(), menuIds);
                     return;
                 }
-                // 如果是其他角色，则去掉超过套餐的权限
+                // 如果是其他角色，则去掉超过套餐的权限。这里理解为已经被分配过的角色处理
                 Set<Long> roleMenuIds = permissionService.getRoleMenuIds(role.getId());
+                //roleMenuIds这块的关联数据如果在menuIds中不存在，则会被剔除掉
                 roleMenuIds = CollUtil.intersectionDistinct(roleMenuIds, menuIds);
                 permissionService.assignRoleMenu(role.getId(), roleMenuIds);
                 log.info("[updateTenantRoleMenu][角色({}/{}) 的权限修改为({})]", role.getId(), role.getTenantId(), roleMenuIds);

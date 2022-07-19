@@ -10,7 +10,7 @@ import java.util.List;
 public interface TenantFrameworkService {
 
     /**
-     * 获得所有租户
+     * 获得所有租户编号
      *
      * @return 租户编号数组
      */

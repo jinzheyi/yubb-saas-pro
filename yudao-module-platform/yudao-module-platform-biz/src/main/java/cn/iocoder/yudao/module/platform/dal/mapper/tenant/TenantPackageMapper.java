@@ -15,7 +15,7 @@ import java.util.List;
  * @author 芋道源码
  */
 @Mapper
-public interface PlatformTenantPackageMapper extends BaseMapperX<TenantPackageDO> {
+public interface TenantPackageMapper extends BaseMapperX<TenantPackageDO> {
 
     default PageResult<TenantPackageDO> selectPage(TenantPackagePageReqVO reqVO) {
         return selectPage(reqVO, new LambdaQueryWrapperX<TenantPackageDO>()
