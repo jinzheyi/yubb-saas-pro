@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.system.service.permission;
 
 import cn.iocoder.yudao.module.system.api.permission.dto.DeptDataPermissionRespDTO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.MenuDO;
+import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleMenuDO;
 import org.springframework.lang.Nullable;
 
 import java.util.Collection;
@@ -51,6 +52,13 @@ public interface PermissionService {
      * @return 菜单编号集合
      */
     Set<Long> getRoleMenuIds(Long roleId);
+
+    /**
+     * 根据菜单id查询是否有租户使用了这个菜单
+     * @param menuId 菜单id
+     * @return 布尔值 true存在 false不存在
+     */
+    Boolean hasAnyRoleMenu(Long menuId);
 
     /**
      * 获得拥有多个角色的用户编号集合

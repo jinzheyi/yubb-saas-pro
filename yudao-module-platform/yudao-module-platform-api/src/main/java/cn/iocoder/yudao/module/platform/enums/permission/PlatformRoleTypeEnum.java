@@ -8,7 +8,7 @@ import lombok.Getter;
 public enum PlatformRoleTypeEnum {
 
     /**
-     * 内置角色
+     * 平台内置角色
      */
     SYSTEM(1),
     /**

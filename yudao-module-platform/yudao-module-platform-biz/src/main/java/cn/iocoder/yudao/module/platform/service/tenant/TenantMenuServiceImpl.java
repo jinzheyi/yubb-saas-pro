@@ -13,6 +13,7 @@ import cn.iocoder.yudao.module.platform.dal.mapper.tenant.TenantMenuMapper;
 import cn.iocoder.yudao.module.platform.enums.tenant.TenantMenuIdEnum;
 import cn.iocoder.yudao.module.platform.enums.tenant.TenantMenuTypeEnum;
 import cn.iocoder.yudao.module.platform.mq.producer.tenant.TenantMenuProducer;
+import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
@@ -29,6 +30,7 @@ import javax.annotation.Resource;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.platform.enums.PlatformErrorCodeConstants.*;
 
 /**
@@ -71,6 +73,9 @@ public class TenantMenuServiceImpl implements TenantMenuService {
 
     @Resource
     private TenantMenuProducer menuProducer;
+
+    @Resource
+    private PermissionApi permissionApi;
 
     /**
      * 初始化 {@link #menuCache} 和 {@link #permissionMenuCache} 缓存。该方法标注了@PostContruct
@@ -193,11 +198,12 @@ public class TenantMenuServiceImpl implements TenantMenuService {
         if (menuMapper.selectById(menuId) == null) {
             throw ServiceExceptionUtil.exception(MENU_NOT_EXISTS);
         }
+        //校验该菜单是否有租户在使用
+        this.validateRoleMenu(menuId);
         // 标记删除
         menuMapper.deleteById(menuId);
         // 删除授予给角色的权限
-        // TODO 这里要思考下如何处理，因为这里是租户的菜单，租户还有套餐菜单
-//        permissionService.processMenuDeleted(menuId);
+        permissionApi.processMenuDeleted(menuId);
         // 发送刷新消息. 注意，需要事务提交后，在进行发送刷新消息。不然 db 还未提交，结果缓存先刷新了
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -321,6 +327,12 @@ public class TenantMenuServiceImpl implements TenantMenuService {
             menu.setComponent("");
             menu.setIcon("");
             menu.setPath("");
+        }
+    }
+
+    private void validateRoleMenu(Long menuId) {
+        if (permissionApi.hasAnyRoleMenu(menuId)) {
+            throw exception(TENANT_MENU_USED);
         }
     }
 

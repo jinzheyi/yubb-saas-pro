@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.system.service.common;
 
-import cn.iocoder.yudao.module.system.api.common.dto.CaptchaImageRespDTO;
 import cn.iocoder.yudao.module.system.controller.admin.common.vo.CaptchaImageRespVO;
 
 /**
@@ -14,12 +13,6 @@ public interface CaptchaService {
      * @return 验证码图片
      */
     CaptchaImageRespVO getCaptchaImage();
-
-    /**
-     * 获得平台验证码图片
-     * @return 平台验证码图片
-     */
-    CaptchaImageRespDTO getCenterCaptchaImage();
 
     /**
      * 是否开启图片验证码

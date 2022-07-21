@@ -103,8 +103,6 @@ public interface PlatformErrorCodeConstants {
     ErrorCode TENANT_NOT_EXISTS = new ErrorCode(1002015000, "租户不存在");
     ErrorCode TENANT_DISABLE = new ErrorCode(1002015001, "名字为【{}】的租户已被禁用");
     ErrorCode TENANT_EXPIRE = new ErrorCode(1002015002, "名字为【{}】的租户已过期");
-    ErrorCode TENANT_CAN_NOT_UPDATE_SYSTEM = new ErrorCode(1002015003, "系统租户不能进行修改、删除等操作！");
-
     // ========== 租户套餐 1002016000 ==========
     ErrorCode TENANT_PACKAGE_NOT_EXISTS = new ErrorCode(1002016000, "租户套餐不存在");
     ErrorCode TENANT_PACKAGE_USED = new ErrorCode(1002016001, "租户正在使用该套餐，请给租户重新设置套餐后再尝试删除");
@@ -141,5 +139,8 @@ public interface PlatformErrorCodeConstants {
     // ========== OAuth2 授权 1002022000 =========
     ErrorCode OAUTH2_CODE_NOT_EXISTS = new ErrorCode(1002022000, "code 不存在");
     ErrorCode OAUTH2_CODE_EXPIRE = new ErrorCode(1002022000, "code 已过期");
+
+    // ========== 租户菜单 ========================
+    ErrorCode TENANT_MENU_USED = new ErrorCode(1002023000, "租户正在使用该菜单，请给租户重新设置没有选择该菜单的套餐后再尝试删除");
 
 }

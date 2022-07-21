@@ -7,6 +7,7 @@ import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.Tenan
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantUpdateReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.UserCreateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
+import cn.iocoder.yudao.module.system.api.user.dto.AdminUserCreateReqDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -34,11 +35,12 @@ public interface TenantConvert {
 
     List<TenantExcelVO> convertList02(List<TenantDO> list);
 
-    default UserCreateReqVO convert02(TenantCreateReqVO bean) {
-        UserCreateReqVO reqVO = new UserCreateReqVO();
+    default AdminUserCreateReqDTO convert02(TenantCreateReqVO bean) {
+        AdminUserCreateReqDTO reqVO = new AdminUserCreateReqDTO();
         reqVO.setUsername(bean.getUsername());
         reqVO.setPassword(bean.getPassword());
-        reqVO.setNickname(bean.getContactName()).setMobile(bean.getContactMobile());
+        reqVO.setNickname(bean.getContactName())
+                .setMobile(bean.getContactMobile());
         return reqVO;
     }
 

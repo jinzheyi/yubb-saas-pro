@@ -39,4 +39,29 @@ public class PermissionApiImpl implements PermissionApi {
         return permissionService.getDeptDataPermission(userId);
     }
 
+    @Override
+    public void assignRoleMenu(Long roleId, Set<Long> menuIds) {
+        permissionService.assignRoleMenu(roleId, menuIds);
+    }
+
+    @Override
+    public void assignUserRole(Long userId, Set<Long> roleIds) {
+        permissionService.assignUserRole(userId, roleIds);
+    }
+
+    @Override
+    public Set<Long> getRoleMenuIds(Long roleId) {
+        return permissionService.getRoleMenuIds(roleId);
+    }
+
+    @Override
+    public void processMenuDeleted(Long menuId) {
+        permissionService.processMenuDeleted(menuId);
+    }
+
+    @Override
+    public Boolean hasAnyRoleMenu(Long menuId) {
+        return permissionService.hasAnyRoleMenu(menuId);
+    }
+
 }

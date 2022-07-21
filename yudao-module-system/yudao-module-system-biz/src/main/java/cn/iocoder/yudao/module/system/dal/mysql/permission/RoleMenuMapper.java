@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.system.dal.mysql.permission;
 
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
+import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleMenuDO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -21,6 +22,10 @@ public interface RoleMenuMapper extends BaseMapperX<RoleMenuDO> {
 
     default List<RoleMenuDO> selectListByRoleId(Long roleId) {
         return selectList(new QueryWrapper<RoleMenuDO>().eq("role_id", roleId));
+    }
+
+    default List<RoleMenuDO> selectListByMenuId(Long menuId) {
+        return selectList(new LambdaQueryWrapperX<RoleMenuDO>().eq(RoleMenuDO::getMenuId, menuId));
     }
 
     default void deleteListByRoleIdAndMenuIds(Long roleId, Collection<Long> menuIds) {

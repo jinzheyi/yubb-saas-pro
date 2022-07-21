@@ -275,6 +275,11 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     @Override
+    public Boolean hasAnyRoleMenu(Long menuId) {
+        return Objects.nonNull(menuRoleCache.get(menuId));
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void assignRoleMenu(Long roleId, Set<Long> menuIds) {
         // 获得角色拥有菜单编号

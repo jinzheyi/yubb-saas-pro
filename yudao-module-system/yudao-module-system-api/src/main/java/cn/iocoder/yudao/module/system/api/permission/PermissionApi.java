@@ -46,4 +46,41 @@ public interface PermissionApi {
      */
     DeptDataPermissionRespDTO getDeptDataPermission(Long userId);
 
+    /**
+     * 创建租户的角色菜单权限
+     * @param roleId 角色id
+     * @param menuIds 权限菜单id集合
+     */
+    void assignRoleMenu(Long roleId, Set<Long> menuIds);
+
+    /**
+     * 设置用户角色
+     *
+     * @param userId 角色编号
+     * @param roleIds 角色编号集合
+     */
+    void assignUserRole(Long userId, Set<Long> roleIds);
+
+    /**
+     * 获得租户角色拥有的菜单编号集合
+     *
+     * @param roleId 角色编号
+     * @return 菜单编号集合
+     */
+    Set<Long> getRoleMenuIds(Long roleId);
+
+    /**
+     * 处理租户菜单删除时，删除租户角色菜单关联授权数据
+     *
+     * @param menuId 菜单编号
+     */
+    void processMenuDeleted(Long menuId);
+
+    /**
+     * 根据菜单id查询是否有租户使用了这个菜单
+     * @param menuId 菜单id
+     * @return 布尔值 true存在 false不存在
+     */
+    Boolean hasAnyRoleMenu(Long menuId);
+
 }
