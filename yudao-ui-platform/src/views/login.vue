@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <div class="logo"></div>
+    <div class="logo">平台端</div>
     <!-- 登录区域 -->
     <div class="content">
       <!-- 配图 -->

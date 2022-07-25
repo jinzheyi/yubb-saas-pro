@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 查询字典类型列表
 export function listType(query) {
   return request({
-    url: '/system/dict-type/page',
+    url: '/platform/dict-type/page',
     method: 'get',
     params: query
   })
@@ -12,7 +12,7 @@ export function listType(query) {
 // 查询字典类型详细
 export function getType(dictId) {
   return request({
-    url: '/system/dict-type/get?id=' + dictId,
+    url: '/platform/dict-type/get?id=' + dictId,
     method: 'get'
   })
 }
@@ -20,7 +20,7 @@ export function getType(dictId) {
 // 新增字典类型
 export function addType(data) {
   return request({
-    url: '/system/dict-type/create',
+    url: '/platform/dict-type/create',
     method: 'post',
     data: data
   })
@@ -29,7 +29,7 @@ export function addType(data) {
 // 修改字典类型
 export function updateType(data) {
   return request({
-    url: '/system/dict-type/update',
+    url: '/platform/dict-type/update',
     method: 'put',
     data: data
   })
@@ -38,7 +38,7 @@ export function updateType(data) {
 // 删除字典类型
 export function delType(dictId) {
   return request({
-    url: '/system/dict-type/delete?id=' + dictId,
+    url: '/platform/dict-type/delete?id=' + dictId,
     method: 'delete'
   })
 }
@@ -46,7 +46,7 @@ export function delType(dictId) {
 // 导出字典类型
 export function exportType(query) {
   return request({
-    url: '/system/dict-type/export',
+    url: '/platform/dict-type/export',
     method: 'get',
     params: query,
     responseType: 'blob'
@@ -56,7 +56,7 @@ export function exportType(query) {
 // 获取字典选择框列表
 export function listAllSimple() {
   return request({
-    url: '/system/dict-type/list-all-simple',
+    url: '/platform/dict-type/list-all-simple',
     method: 'get'
   })
 }

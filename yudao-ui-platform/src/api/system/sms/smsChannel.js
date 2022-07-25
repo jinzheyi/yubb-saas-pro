@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 创建短信渠道
 export function createSmsChannel(data) {
   return request({
-    url: '/system/sms-channel/create',
+    url: '/platform/sms-channel/create',
     method: 'post',
     data: data
   })
@@ -12,7 +12,7 @@ export function createSmsChannel(data) {
 // 更新短信渠道
 export function updateSmsChannel(data) {
   return request({
-    url: '/system/sms-channel/update',
+    url: '/platform/sms-channel/update',
     method: 'put',
     data: data
   })
@@ -21,7 +21,7 @@ export function updateSmsChannel(data) {
 // 删除短信渠道
 export function deleteSmsChannel(id) {
   return request({
-    url: '/system/sms-channel/delete?id=' + id,
+    url: '/platform/sms-channel/delete?id=' + id,
     method: 'delete'
   })
 }
@@ -29,7 +29,7 @@ export function deleteSmsChannel(id) {
 // 获得短信渠道
 export function getSmsChannel(id) {
   return request({
-    url: '/system/sms-channel/get?id=' + id,
+    url: '/platform/sms-channel/get?id=' + id,
     method: 'get'
   })
 }
@@ -37,7 +37,7 @@ export function getSmsChannel(id) {
 // 获得短信渠道分页
 export function getSmsChannelPage(query) {
   return request({
-    url: '/system/sms-channel/page',
+    url: '/platform/sms-channel/page',
     method: 'get',
     params: query
   })
@@ -46,7 +46,7 @@ export function getSmsChannelPage(query) {
 // 获得短信渠道精简列表
 export function getSimpleSmsChannels() {
   return request({
-    url: '/system/sms-channel/list-all-simple',
+    url: '/platform/sms-channel/list-all-simple',
     method: 'get',
   })
 }

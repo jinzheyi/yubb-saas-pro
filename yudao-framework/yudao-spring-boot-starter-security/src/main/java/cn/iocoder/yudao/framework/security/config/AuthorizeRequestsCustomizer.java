@@ -20,10 +20,29 @@ public abstract class AuthorizeRequestsCustomizer
     @Resource
     private WebProperties webProperties;
 
+    /**
+     * platform 模块
+     * @param url
+     * @return
+     */
+    protected String buildPlatformApi(String url) {
+        return webProperties.getPlatformApi().getPrefix() + url;
+    }
+
+    /**
+     * system 模块
+     * @param url
+     * @return
+     */
     protected String buildAdminApi(String url) {
         return webProperties.getAdminApi().getPrefix() + url;
     }
 
+    /**
+     * member 模块
+     * @param url
+     * @return
+     */
     protected String buildAppApi(String url) {
         return webProperties.getAppApi().getPrefix() + url;
     }

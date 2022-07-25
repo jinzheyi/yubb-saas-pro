@@ -105,10 +105,11 @@ public class YudaoWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdap
                     // 静态资源，可匿名访问
                     .antMatchers(HttpMethod.GET, "/*.html", "/**/*.html", "/**/*.css", "/**/*.js").permitAll()
                     .antMatchers(HttpMethod.GET, "/admin-ui/**").permitAll()
+                    .antMatchers(HttpMethod.GET, "/platform-ui/**").permitAll()
                     // 设置 App API 无需认证
                     .antMatchers(buildAppApi("/**")).permitAll()
                 // ②：每个项目的自定义规则
-                .and().authorizeRequests(registry -> // 下面，循环设置自定义规则
+                .and().authorizeRequests(registry -> // 下面，循环设置自定义规则,这里的规则是各自模块的SecurityConfiguration配置
                         authorizeRequestsCustomizers.forEach(customizer -> customizer.customize(registry)))
                 // ③：兜底规则，必须认证
                 .authorizeRequests()

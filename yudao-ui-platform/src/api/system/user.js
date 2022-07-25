@@ -4,7 +4,7 @@ import { praseStrEmpty } from "@/utils/ruoyi";
 // 查询用户列表
 export function listUser(query) {
   return request({
-    url: '/system/user/page',
+    url: '/platform/user/page',
     method: 'get',
     params: query
   })
@@ -13,7 +13,7 @@ export function listUser(query) {
 // 获取用户精简信息列表
 export function listSimpleUsers() {
   return request({
-    url: '/system/user/list-all-simple',
+    url: '/platform/user/list-all-simple',
     method: 'get'
   })
 }
@@ -21,7 +21,7 @@ export function listSimpleUsers() {
 // 查询用户详细
 export function getUser(userId) {
   return request({
-    url: '/system/user/get?id=' + praseStrEmpty(userId),
+    url: '/platform/user/get?id=' + praseStrEmpty(userId),
     method: 'get'
   })
 }
@@ -29,7 +29,7 @@ export function getUser(userId) {
 // 新增用户
 export function addUser(data) {
   return request({
-    url: '/system/user/create',
+    url: '/platform/user/create',
     method: 'post',
     data: data
   })
@@ -38,7 +38,7 @@ export function addUser(data) {
 // 修改用户
 export function updateUser(data) {
   return request({
-    url: '/system/user/update',
+    url: '/platform/user/update',
     method: 'put',
     data: data
   })
@@ -47,7 +47,7 @@ export function updateUser(data) {
 // 删除用户
 export function delUser(userId) {
   return request({
-    url: '/system/user/delete?id=' + userId,
+    url: '/platform/user/delete?id=' + userId,
     method: 'delete'
   })
 }
@@ -55,7 +55,7 @@ export function delUser(userId) {
 // 导出用户
 export function exportUser(query) {
   return request({
-    url: '/system/user/export',
+    url: '/platform/user/export',
     method: 'get',
     params: query,
     responseType: 'blob'
@@ -69,7 +69,7 @@ export function resetUserPwd(id, password) {
     password
   }
   return request({
-    url: '/system/user/update-password',
+    url: '/platform/user/update-password',
     method: 'put',
     data: data
   })
@@ -82,7 +82,7 @@ export function changeUserStatus(id, status) {
     status
   }
   return request({
-    url: '/system/user/update-status',
+    url: '/platform/user/update-status',
     method: 'put',
     data: data
   })
@@ -91,7 +91,7 @@ export function changeUserStatus(id, status) {
 // 查询用户个人信息
 export function getUserProfile() {
   return request({
-    url: '/system/user/profile/get',
+    url: '/platform/user/profile/get',
     method: 'get'
   })
 }
@@ -99,7 +99,7 @@ export function getUserProfile() {
 // 修改用户个人信息
 export function updateUserProfile(data) {
   return request({
-    url: '/system/user/profile/update',
+    url: '/platform/user/profile/update',
     method: 'put',
     data: data
   })
@@ -112,7 +112,7 @@ export function updateUserPwd(oldPassword, newPassword) {
     newPassword
   }
   return request({
-    url: '/system/user/profile/update-password',
+    url: '/platform/user/profile/update-password',
     method: 'put',
     data: data
   })
@@ -121,7 +121,7 @@ export function updateUserPwd(oldPassword, newPassword) {
 // 用户头像上传
 export function uploadAvatar(data) {
   return request({
-    url: '/system/user/profile/update-avatar',
+    url: '/platform/user/profile/update-avatar',
     method: 'put',
     data: data
   })
@@ -130,7 +130,7 @@ export function uploadAvatar(data) {
 // 下载用户导入模板
 export function importTemplate() {
   return request({
-    url: '/system/user/get-import-template',
+    url: '/platform/user/get-import-template',
     method: 'get',
     responseType: 'blob'
   })

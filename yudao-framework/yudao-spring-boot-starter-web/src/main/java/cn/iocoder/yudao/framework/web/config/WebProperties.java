@@ -18,6 +18,8 @@ public class WebProperties {
     private Api appApi;
     @NotNull(message = "Admin API 不能为空")
     private Api adminApi;
+    @NotNull(message = "Platform API 不能为空")
+    private Api platformApi;
 
     @NotNull(message = "Admin UI 不能为空")
     private Ui adminUi;

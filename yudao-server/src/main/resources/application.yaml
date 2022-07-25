@@ -58,6 +58,7 @@ flowable:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true # 虽然默认为 true ，但是还是显示去指定下。
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     db-config:
       id-type: NONE # “智能”模式，基于 IdTypeEnvironmentPostProcessor + 数据源的类型，自动适配成 AUTO、INPUT 模式。
@@ -107,6 +108,7 @@ yudao:
       - cn.iocoder.yudao.module.member.enums.ErrorCodeConstants
       - cn.iocoder.yudao.module.pay.enums.ErrorCodeConstants
       - cn.iocoder.yudao.module.system.enums.ErrorCodeConstants
+      - cn.iocoder.yudao.module.platform.enums.PlatformErrorCodeConstants
   tenant: # 多租户相关配置项
     enable: true
     ignore-urls:
@@ -114,6 +116,8 @@ yudao:
       - /admin-api/system/captcha/get-image # 获取图片验证码，和租户无关
       - /admin-api/infra/file/*/get/** # 获取图片，和租户无关
       - /admin-api/system/sms/callback/* # 短信回调接口，无法带上租户编号
+      - /platform-api/platform/captcha/get-image # 获取图片验证码，和租户无关
+      - /platform-api/platform/sms/callback/* # 短信回调接口，无法带上租户编号
     ignore-tables:
       - system_tenant
       - system_tenant_package

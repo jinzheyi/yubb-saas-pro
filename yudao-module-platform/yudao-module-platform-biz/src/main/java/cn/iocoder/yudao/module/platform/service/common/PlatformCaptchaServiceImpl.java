@@ -1,9 +1,12 @@
 package cn.iocoder.yudao.module.platform.service.common;
 
-import cn.iocoder.yudao.module.base.api.common.dto.CaptchaImageReqDTO;
+import cn.hutool.captcha.CaptchaUtil;
+import cn.hutool.captcha.CircleCaptcha;
+import cn.hutool.core.util.IdUtil;
 import cn.iocoder.yudao.module.platform.controller.center.common.vo.CaptchaImageRespVO;
 import cn.iocoder.yudao.module.platform.convert.common.CaptchaConvert;
-import cn.iocoder.yudao.module.base.api.common.CaptchaApi;
+import cn.iocoder.yudao.module.platform.dal.redis.common.CaptchaRedisDAO;
+import cn.iocoder.yudao.module.platform.framework.captcha.config.CaptchaProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -22,29 +25,39 @@ import javax.annotation.Resource;
 public class PlatformCaptchaServiceImpl implements PlatformCaptchaService {
 
     @Resource
-    private CaptchaApi captchaApi;
+    private CaptchaProperties captchaProperties;
+
+    @Resource
+    private CaptchaRedisDAO captchaRedisDAO;
 
     @Override
     public CaptchaImageRespVO getCaptchaImage() {
-        CaptchaImageReqDTO reqDTO = new CaptchaImageReqDTO();
-        // TODO 这块的验证码还需要传入一些参数，后续处理
-        return CaptchaConvert.INSTANCE.convert(captchaApi.getCaptchaImage(reqDTO));
+        Boolean enable = this.isCaptchaEnable();
+        if (!Boolean.TRUE.equals(enable)) {
+            return CaptchaImageRespVO.builder().enable(enable).build();
+        }
+        // 生成验证码
+        CircleCaptcha captcha = CaptchaUtil.createCircleCaptcha(captchaProperties.getWidth(), captchaProperties.getHeight());
+        // 缓存到 Redis 中
+        String uuid = IdUtil.fastSimpleUUID();
+        captchaRedisDAO.set(uuid, captcha.getCode(), captchaProperties.getTimeout());
+        // 返回
+        return CaptchaConvert.INSTANCE.convert(uuid, captcha).setEnable(enable);
     }
 
     @Override
     public Boolean isCaptchaEnable() {
-        // TODO 暂时写死，后面再改
         return true;
     }
 
     @Override
     public String getCaptchaCode(String uuid) {
-        return captchaApi.getCaptchaCode(uuid);
+        return captchaRedisDAO.get(uuid);
     }
 
     @Override
     public void deleteCaptchaCode(String uuid) {
-        captchaApi.deleteCaptchaCode(uuid);
+        captchaRedisDAO.delete(uuid);
     }
 
 }

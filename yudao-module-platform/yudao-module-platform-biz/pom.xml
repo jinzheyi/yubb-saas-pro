@@ -33,12 +33,6 @@
             <artifactId>yudao-module-infra-api</artifactId>
             <version>${revision}</version>
         </dependency>
-        <!--此模块提供一些基础的底层封装好的功能，供多个平台调用-->
-        <dependency>
-            <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-module-base-api</artifactId>
-            <version>${revision}</version>
-        </dependency>
 
         <!-- 依赖的相关组件 -->
 

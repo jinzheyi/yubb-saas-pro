@@ -10,8 +10,8 @@ pipeline {
   }
 
   environment {
-    APP_NAME = 'yudao-admin'
-    PROJECT_DIR='yudao-admin-ui'
+    APP_NAME = 'yudao-platform'
+    PROJECT_DIR='yudao-platform-ui'
     NGINX_WORKDIR = '/home/pi/mydata/nginx/html/'
   }
 

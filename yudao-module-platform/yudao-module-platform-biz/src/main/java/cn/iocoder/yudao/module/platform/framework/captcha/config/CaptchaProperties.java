@@ -1,27 +1,24 @@
-package cn.iocoder.yudao.module.base.api.common.dto;
+package cn.iocoder.yudao.module.platform.framework.captcha.config;
 
 import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.NotNull;
-import java.io.Serializable;
 import java.time.Duration;
 
-/**
- * 获取验证码入参
- * @author 朱述勇
- * @since 2022/7/16 17:43
- * @copyright: 版权所有 开源组织 gitee(https://gitee.com/jinzheyi)作者：朱述勇<br/>
- * GitHub(https://github.com/jinzheyi)作者：朱述勇 。
- */
+@ConfigurationProperties(prefix = "yudao.captcha")
+@Validated
 @Data
-public class CaptchaImageReqDTO implements Serializable {
+public class CaptchaProperties {
+
+    private static final Boolean ENABLE_DEFAULT = true;
 
     /**
-     * 是否开启验证码
+     * 是否开启
+     * 注意，这里仅仅是后端 Server 是否校验，暂时不控制前端的逻辑
      */
-    @NotNull(message = "是否开启验证码不为空")
-    private Boolean enable;
-
+    private Boolean enable = ENABLE_DEFAULT;
     /**
      * 验证码的过期时间
      */

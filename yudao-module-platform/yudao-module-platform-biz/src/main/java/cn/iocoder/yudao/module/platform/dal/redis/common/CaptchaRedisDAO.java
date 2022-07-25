@@ -1,10 +1,12 @@
-package cn.iocoder.yudao.module.base.redis.common;
+package cn.iocoder.yudao.module.platform.dal.redis.common;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
+
 import javax.annotation.Resource;
 import java.time.Duration;
-import static cn.iocoder.yudao.module.base.redis.RedisKeyConstants.CAPTCHA_CODE;
+
+import static cn.iocoder.yudao.module.platform.dal.redis.RedisKeyConstants.CAPTCHA_CODE;
 
 /**
  * 验证码的 Redis DAO

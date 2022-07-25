@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 创建短信模板
 export function createSmsTemplate(data) {
   return request({
-    url: '/system/sms-template/create',
+    url: '/platform/sms-template/create',
     method: 'post',
     data: data
   })
@@ -12,7 +12,7 @@ export function createSmsTemplate(data) {
 // 更新短信模板
 export function updateSmsTemplate(data) {
   return request({
-    url: '/system/sms-template/update',
+    url: '/platform/sms-template/update',
     method: 'put',
     data: data
   })
@@ -21,7 +21,7 @@ export function updateSmsTemplate(data) {
 // 删除短信模板
 export function deleteSmsTemplate(id) {
   return request({
-    url: '/system/sms-template/delete?id=' + id,
+    url: '/platform/sms-template/delete?id=' + id,
     method: 'delete'
   })
 }
@@ -29,7 +29,7 @@ export function deleteSmsTemplate(id) {
 // 获得短信模板
 export function getSmsTemplate(id) {
   return request({
-    url: '/system/sms-template/get?id=' + id,
+    url: '/platform/sms-template/get?id=' + id,
     method: 'get'
   })
 }
@@ -37,7 +37,7 @@ export function getSmsTemplate(id) {
 // 获得短信模板分页
 export function getSmsTemplatePage(query) {
   return request({
-    url: '/system/sms-template/page',
+    url: '/platform/sms-template/page',
     method: 'get',
     params: query
   })
@@ -46,7 +46,7 @@ export function getSmsTemplatePage(query) {
 // 创建短信模板
 export function sendSms(data) {
   return request({
-    url: '/system/sms-template/send-sms',
+    url: '/platform/sms-template/send-sms',
     method: 'post',
     data: data
   })
@@ -55,7 +55,7 @@ export function sendSms(data) {
 // 导出短信模板 Excel
 export function exportSmsTemplateExcel(query) {
   return request({
-    url: '/system/sms-template/export-excel',
+    url: '/platform/sms-template/export-excel',
     method: 'get',
     params: query,
     responseType: 'blob'

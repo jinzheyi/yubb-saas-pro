@@ -11,7 +11,7 @@ export function login(username, password, code, uuid) {
     uuid
   }
   return request({
-    url: '/system/auth/login',
+    url: '/platform/auth/login',
     method: 'post',
     data: data
   })
@@ -20,7 +20,7 @@ export function login(username, password, code, uuid) {
 // 获取用户详细信息
 export function getInfo() {
   return request({
-    url: '/system/auth/get-permission-info',
+    url: '/platform/auth/get-permission-info',
     method: 'get'
   })
 }
@@ -28,7 +28,7 @@ export function getInfo() {
 // 退出方法
 export function logout() {
   return request({
-    url: '/system/auth/logout',
+    url: '/platform/auth/logout',
     method: 'post'
   })
 }
@@ -36,7 +36,7 @@ export function logout() {
 // 获取验证码
 export function getCodeImg() {
   return request({
-    url: '/system/captcha/get-image',
+    url: '/platform/captcha/get-image',
     method: 'get',
     timeout: 20000
   })
@@ -45,7 +45,7 @@ export function getCodeImg() {
 // 社交授权的跳转
 export function socialAuthRedirect(type, redirectUri) {
   return request({
-    url: '/system/auth/social-auth-redirect?type=' + type + '&redirectUri=' + redirectUri,
+    url: '/platform/auth/social-auth-redirect?type=' + type + '&redirectUri=' + redirectUri,
     method: 'get'
   })
 }
@@ -53,7 +53,7 @@ export function socialAuthRedirect(type, redirectUri) {
 // 社交快捷登录，使用 code 授权码
 export function socialQuickLogin(type, code, state) {
   return request({
-    url: '/system/auth/social-quick-login',
+    url: '/platform/auth/social-quick-login',
     method: 'post',
     data: {
       type,
@@ -66,7 +66,7 @@ export function socialQuickLogin(type, code, state) {
 // 社交绑定登录，使用 code 授权码 + + 账号密码
 export function socialBindLogin(type, code, state, username, password) {
   return request({
-    url: '/system/auth/social-bind-login',
+    url: '/platform/auth/social-bind-login',
     method: 'post',
     data: {
       type,
@@ -81,7 +81,7 @@ export function socialBindLogin(type, code, state, username, password) {
 // 获取登录验证码
 export function sendSmsCode(mobile, scene) {
   return request({
-    url: '/system/auth/send-sms-code',
+    url: '/platform/auth/send-sms-code',
     method: 'post',
     data: {
       mobile,
@@ -93,7 +93,7 @@ export function sendSmsCode(mobile, scene) {
 // 短信验证码登录
 export function smsLogin(mobile, code) {
   return request({
-    url: '/system/auth/sms-login',
+    url: '/platform/auth/sms-login',
     method: 'post',
     data: {
       mobile,
@@ -105,7 +105,7 @@ export function smsLogin(mobile, code) {
 // 刷新访问令牌
 export function refreshToken() {
   return service({
-    url: '/system/auth/refresh-token?refreshToken=' + getRefreshToken(),
+    url: '/platform/auth/refresh-token?refreshToken=' + getRefreshToken(),
     method: 'post'
   })
 }
@@ -114,7 +114,7 @@ export function refreshToken() {
 
 export function getAuthorize(clientId) {
   return request({
-    url: '/system/oauth2/authorize?clientId=' + clientId,
+    url: '/platform/oauth2/authorize?clientId=' + clientId,
     method: 'get'
   })
 }
@@ -131,7 +131,7 @@ export function authorize(responseType, clientId, redirectUri, state,
   }
   // 发起请求
   return service({
-    url: '/system/oauth2/authorize',
+    url: '/platform/oauth2/authorize',
     headers:{
       'Content-type': 'application/x-www-form-urlencoded',
     },
