@@ -1,7 +1,10 @@
 package cn.iocoder.yudao.framework.tenant.core.web;
 
 import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
+import cn.iocoder.yudao.framework.web.config.WebProperties;
+import cn.iocoder.yudao.framework.web.core.filter.ApiRequestFilter;
 import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
@@ -16,9 +19,14 @@ import java.io.IOException;
  *
  * @author 芋道源码
  */
-public class TenantContextWebFilter extends OncePerRequestFilter {
+@Slf4j
+public class TenantContextWebFilter extends ApiRequestFilter {
 
     private static final String HEADER_TENANT_ID = "tenant-id";
+
+    public TenantContextWebFilter(WebProperties webProperties) {
+        super(webProperties);
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)

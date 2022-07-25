@@ -51,9 +51,9 @@ public class YudaoTenantAutoConfiguration {
     // ========== WEB ==========
 
     @Bean
-    public FilterRegistrationBean<TenantContextWebFilter> tenantContextWebFilter() {
+    public FilterRegistrationBean<TenantContextWebFilter> tenantContextWebFilter(WebProperties webProperties) {
         FilterRegistrationBean<TenantContextWebFilter> registrationBean = new FilterRegistrationBean<>();
-        registrationBean.setFilter(new TenantContextWebFilter());
+        registrationBean.setFilter(new TenantContextWebFilter(webProperties));
         registrationBean.setOrder(WebFilterOrderEnum.TENANT_CONTEXT_FILTER);
         return registrationBean;
     }

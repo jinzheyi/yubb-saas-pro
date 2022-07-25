@@ -8,11 +8,14 @@ import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.security.config.SecurityProperties;
 import cn.iocoder.yudao.framework.security.core.LoginUser;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
+import cn.iocoder.yudao.framework.web.config.WebProperties;
+import cn.iocoder.yudao.framework.web.core.filter.ApiRequestFilter;
 import cn.iocoder.yudao.framework.web.core.handler.GlobalExceptionHandler;
 import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
 import cn.iocoder.yudao.module.system.api.oauth2.OAuth2TokenApi;
 import cn.iocoder.yudao.module.system.api.oauth2.dto.OAuth2AccessTokenCheckRespDTO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -28,14 +31,24 @@ import java.io.IOException;
  *
  * @author 芋道源码
  */
-@RequiredArgsConstructor
-public class TokenAuthenticationFilter extends OncePerRequestFilter {
+@Slf4j
+public class TokenAuthenticationFilter extends ApiRequestFilter {
 
     private final SecurityProperties securityProperties;
 
     private final GlobalExceptionHandler globalExceptionHandler;
 
     private final OAuth2TokenApi oauth2TokenApi;
+
+    public TokenAuthenticationFilter(WebProperties webProperties,
+                                     SecurityProperties securityProperties,
+                                     GlobalExceptionHandler globalExceptionHandler,
+                                     OAuth2TokenApi oauth2TokenApi) {
+        super(webProperties);
+        this.securityProperties = securityProperties;
+        this.globalExceptionHandler = globalExceptionHandler;
+        this.oauth2TokenApi = oauth2TokenApi;
+    }
 
     @Override
     @SuppressWarnings("NullableProblems")
