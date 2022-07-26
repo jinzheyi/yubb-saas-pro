@@ -94,6 +94,9 @@ public class WebFrameworkUtils {
         if (request.getRequestURI().startsWith(properties.getAppApi().getPrefix())) {
             return UserTypeEnum.MEMBER.getValue();
         }
+        if (request.getRequestURI().startsWith(properties.getPlatformApi().getPrefix())) {
+            return UserTypeEnum.PLATFORM_ADMIN.getValue();
+        }
         return null;
     }
 

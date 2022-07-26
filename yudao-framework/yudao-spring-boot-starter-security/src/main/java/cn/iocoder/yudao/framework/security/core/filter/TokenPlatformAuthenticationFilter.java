@@ -6,14 +6,14 @@ import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.security.config.SecurityProperties;
-import cn.iocoder.yudao.framework.security.core.LoginUser;
+import cn.iocoder.yudao.framework.security.core.PlatformLoginUser;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.framework.web.config.WebProperties;
-import cn.iocoder.yudao.framework.web.core.filter.ApiRequestFilter;
+import cn.iocoder.yudao.framework.web.core.filter.ApiPlatformRequestFilter;
 import cn.iocoder.yudao.framework.web.core.handler.GlobalExceptionHandler;
 import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
-import cn.iocoder.yudao.module.system.api.oauth2.OAuth2TokenApi;
-import cn.iocoder.yudao.module.system.api.oauth2.dto.OAuth2AccessTokenCheckRespDTO;
+import cn.iocoder.yudao.module.platform.api.oauth2.PlatformOAuth2TokenApi;
+import cn.iocoder.yudao.module.platform.api.oauth2.dto.PlatformOAuth2AccessTokenCheckRespDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 
@@ -24,24 +24,24 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * 重构为租户端Token 过滤器，验证 token 的有效性
- * 验证通过后，获得 {@link LoginUser} 信息，并加入到 Spring Security 上下文
+ * 平台系统端的Token 过滤器，验证 token 的有效性
+ * 验证通过后，获得 {@link PlatformLoginUser} 信息，并加入到 Spring Security 上下文
  *
  * @author 芋道源码
  */
 @Slf4j
-public class TokenAuthenticationFilter extends ApiRequestFilter {
+public class TokenPlatformAuthenticationFilter extends ApiPlatformRequestFilter {
 
     private final SecurityProperties securityProperties;
 
     private final GlobalExceptionHandler globalExceptionHandler;
 
-    private final OAuth2TokenApi oauth2TokenApi;
+    private final PlatformOAuth2TokenApi oauth2TokenApi;
 
-    public TokenAuthenticationFilter(WebProperties webProperties,
-                                     SecurityProperties securityProperties,
-                                     GlobalExceptionHandler globalExceptionHandler,
-                                     OAuth2TokenApi oauth2TokenApi) {
+    public TokenPlatformAuthenticationFilter(WebProperties webProperties,
+                                             SecurityProperties securityProperties,
+                                             GlobalExceptionHandler globalExceptionHandler,
+                                             PlatformOAuth2TokenApi oauth2TokenApi) {
         super(webProperties);
         this.securityProperties = securityProperties;
         this.globalExceptionHandler = globalExceptionHandler;
@@ -57,12 +57,7 @@ public class TokenAuthenticationFilter extends ApiRequestFilter {
             Integer userType = WebFrameworkUtils.getLoginUserType(request);
             try {
                 // 1.1 基于 token 构建登录用户
-                LoginUser loginUser = buildLoginUserByToken(token, userType);
-                // 1.2 模拟 Login 功能，方便日常开发调试
-                if (loginUser == null) {
-                    loginUser = mockLoginUser(request, token, userType);
-                }
-
+                PlatformLoginUser loginUser = buildLoginUserByToken(token, userType);
                 // 2. 设置当前用户
                 if (loginUser != null) {
                     SecurityFrameworkUtils.setLoginUser(loginUser, request);
@@ -78,9 +73,9 @@ public class TokenAuthenticationFilter extends ApiRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private LoginUser buildLoginUserByToken(String token, Integer userType) {
+    private PlatformLoginUser buildLoginUserByToken(String token, Integer userType) {
         try {
-            OAuth2AccessTokenCheckRespDTO accessToken = oauth2TokenApi.checkAccessToken(token);
+            PlatformOAuth2AccessTokenCheckRespDTO accessToken = oauth2TokenApi.checkAccessToken(token);
             if (accessToken == null) {
                 return null;
             }
@@ -89,36 +84,14 @@ public class TokenAuthenticationFilter extends ApiRequestFilter {
                 throw new AccessDeniedException("错误的用户类型");
             }
             // 构建登录用户
-            return LoginUser.builder().id(accessToken.getUserId()).userType(accessToken.getUserType())
-                    .tenantId(accessToken.getTenantId()).scopes(accessToken.getScopes()).build();
+            return PlatformLoginUser.builder()
+                    .id(accessToken.getUserId())
+                    .userType(accessToken.getUserType())
+                    .scopes(accessToken.getScopes()).build();
         } catch (ServiceException serviceException) {
             // 校验 Token 不通过时，考虑到一些接口是无需登录的，所以直接返回 null 即可
             return null;
         }
-    }
-
-    /**
-     * 模拟登录用户，方便日常开发调试
-     *
-     * 注意，在线上环境下，一定要关闭该功能！！！
-     *
-     * @param request 请求
-     * @param token 模拟的 token，格式为 {@link SecurityProperties#getMockSecret()} + 用户编号
-     * @param userType 用户类型
-     * @return 模拟的 LoginUser
-     */
-    private LoginUser mockLoginUser(HttpServletRequest request, String token, Integer userType) {
-        if (!securityProperties.getMockEnable()) {
-            return null;
-        }
-        // 必须以 mockSecret 开头
-        if (!token.startsWith(securityProperties.getMockSecret())) {
-            return null;
-        }
-        // 构建模拟用户
-        Long userId = Long.valueOf(token.substring(securityProperties.getMockSecret().length()));
-        return LoginUser.builder().id(userId).userType(userType)
-                .tenantId(WebFrameworkUtils.getTenantId(request)).build();
     }
 
 }

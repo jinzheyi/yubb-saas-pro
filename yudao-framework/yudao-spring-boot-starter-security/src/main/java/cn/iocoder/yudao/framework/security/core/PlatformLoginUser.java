@@ -8,20 +8,15 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * 登录用户信息
- *
- * @author 芋道源码
+ * 平台系统用户信息
+ * @author zhusy
+ * @since 2022/7/26
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder(toBuilder = true)
 @EqualsAndHashCode(callSuper = true)
-public class LoginUser extends LoginBase {
-
-    /**
-     * 租户编号
-     */
-    private Long tenantId;
+public class PlatformLoginUser extends LoginBase {
 
 }

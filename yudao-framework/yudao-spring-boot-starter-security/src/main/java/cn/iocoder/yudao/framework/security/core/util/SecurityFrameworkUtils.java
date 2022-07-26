@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.framework.security.core.util;
 
 import cn.iocoder.yudao.framework.security.core.LoginUser;
+import cn.iocoder.yudao.framework.security.core.PlatformLoginUser;
 import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -84,24 +85,24 @@ public class SecurityFrameworkUtils {
     /**
      * 设置当前用户
      *
-     * @param loginUser 登录用户
+     * @param loginBase 登录用户
      * @param request 请求
      */
-    public static void setLoginUser(LoginUser loginUser, HttpServletRequest request) {
+    public static void setLoginUser(LoginBase loginBase, HttpServletRequest request) {
         // 创建 Authentication，并设置到上下文
-        Authentication authentication = buildAuthentication(loginUser, request);
+        Authentication authentication = buildAuthentication(loginBase, request);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         // 额外设置到 request 中，用于 ApiAccessLogFilter 可以获取到用户编号；
         // 原因是，Spring Security 的 Filter 在 ApiAccessLogFilter 后面，在它记录访问日志时，线上上下文已经没有用户编号等信息
-        WebFrameworkUtils.setLoginUserId(request, loginUser.getId());
-        WebFrameworkUtils.setLoginUserType(request, loginUser.getUserType());
+        WebFrameworkUtils.setLoginUserId(request, loginBase.getId());
+        WebFrameworkUtils.setLoginUserType(request, loginBase.getUserType());
     }
 
-    private static Authentication buildAuthentication(LoginUser loginUser, HttpServletRequest request) {
+    private static Authentication buildAuthentication(LoginBase loginBase, HttpServletRequest request) {
         // 创建 UsernamePasswordAuthenticationToken 对象
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                loginUser, null, Collections.emptyList());
+                loginBase, null, Collections.emptyList());
         authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         return authenticationToken;
     }
