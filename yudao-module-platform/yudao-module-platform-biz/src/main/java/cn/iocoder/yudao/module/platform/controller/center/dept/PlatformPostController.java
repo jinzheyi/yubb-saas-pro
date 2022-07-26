@@ -31,7 +31,7 @@ import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.E
 @RestController
 @RequestMapping("/platform/post")
 @Validated
-public class PostController {
+public class PlatformPostController {
 
     @Resource
     private PlatformPostService postService;

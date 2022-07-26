@@ -5,7 +5,7 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.*;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantMenuConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantMenuDO;
-import cn.iocoder.yudao.module.platform.service.tenant.TenantMenuService;
+import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantMenuService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -24,10 +24,10 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 @RestController
 @RequestMapping("/platform/tenant-menu")
 @Validated
-public class TenantMenuController {
+public class PlatformTenantMenuController {
 
     @Resource
-    private TenantMenuService menuService;
+    private PlatformTenantMenuService menuService;
 
     @PostMapping("/create")
     @ApiOperation("创建菜单")

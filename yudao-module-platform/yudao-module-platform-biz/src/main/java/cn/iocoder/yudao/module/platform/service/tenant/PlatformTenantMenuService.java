@@ -13,7 +13,7 @@ import java.util.List;
  *
  * @author 芋道源码
  */
-public interface TenantMenuService {
+public interface PlatformTenantMenuService {
 
     /**
      * 初始化菜单的本地缓存

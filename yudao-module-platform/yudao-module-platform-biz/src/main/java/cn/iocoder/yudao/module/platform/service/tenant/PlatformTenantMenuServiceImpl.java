@@ -9,10 +9,10 @@ import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantM
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantMenuConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantMenuDO;
-import cn.iocoder.yudao.module.platform.dal.mapper.tenant.TenantMenuMapper;
+import cn.iocoder.yudao.module.platform.dal.mapper.tenant.PlatformTenantMenuMapper;
 import cn.iocoder.yudao.module.platform.enums.tenant.TenantMenuIdEnum;
 import cn.iocoder.yudao.module.platform.enums.tenant.TenantMenuTypeEnum;
-import cn.iocoder.yudao.module.platform.mq.producer.tenant.TenantMenuProducer;
+import cn.iocoder.yudao.module.platform.mq.producer.tenant.PlatformTenantMenuProducer;
 import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -40,7 +40,7 @@ import static cn.iocoder.yudao.module.platform.enums.PlatformErrorCodeConstants.
  */
 @Service
 @Slf4j
-public class TenantMenuServiceImpl implements TenantMenuService {
+public class PlatformTenantMenuServiceImpl implements PlatformTenantMenuService {
 
     /**
      * 定时执行 {@link #schedulePeriodicRefresh()} 的周期
@@ -69,10 +69,10 @@ public class TenantMenuServiceImpl implements TenantMenuService {
     private volatile Date maxUpdateTime;
 
     @Resource
-    private TenantMenuMapper menuMapper;
+    private PlatformTenantMenuMapper menuMapper;
 
     @Resource
-    private TenantMenuProducer menuProducer;
+    private PlatformTenantMenuProducer menuProducer;
 
     @Resource
     private PermissionApi permissionApi;

@@ -17,7 +17,8 @@ import java.util.Set;
  *
  * @author 芋道源码
  */
-public interface TenantService extends TenantFrameworkService {
+//TODO 这里为了能启动，暂时注释掉，后期需要把租户端去掉
+public interface PlatformTenantService /*extends TenantFrameworkService*/ {
 
     /**
      * 初始化租户的本地缓存

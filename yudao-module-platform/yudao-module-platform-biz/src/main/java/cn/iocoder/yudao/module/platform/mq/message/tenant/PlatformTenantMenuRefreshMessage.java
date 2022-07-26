@@ -11,7 +11,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class TenantMenuRefreshMessage extends AbstractChannelMessage {
+public class PlatformTenantMenuRefreshMessage extends AbstractChannelMessage {
 
     @Override
     public String getChannel() {

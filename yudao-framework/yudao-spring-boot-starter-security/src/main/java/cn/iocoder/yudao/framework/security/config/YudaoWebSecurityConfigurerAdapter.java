@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.framework.security.config;
 
 import cn.iocoder.yudao.framework.security.core.filter.TokenAuthenticationFilter;
+import cn.iocoder.yudao.framework.security.core.filter.TokenPlatformAuthenticationFilter;
 import cn.iocoder.yudao.framework.web.config.WebProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -45,6 +46,9 @@ public class YudaoWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdap
      */
     @Resource
     private TokenAuthenticationFilter authenticationTokenFilter;
+
+    @Resource
+    private TokenPlatformAuthenticationFilter platformAuthenticationFilter;
 
     /**
      * 自定义的权限映射 Bean 们
@@ -118,6 +122,7 @@ public class YudaoWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdap
 
         // 添加 JWT Filter
         httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
+        httpSecurity.addFilterBefore(platformAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
     }
     
     private String buildAppApi(String url) {

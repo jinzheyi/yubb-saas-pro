@@ -5,7 +5,7 @@ import cn.hutool.captcha.CircleCaptcha;
 import cn.hutool.core.util.IdUtil;
 import cn.iocoder.yudao.module.platform.controller.center.common.vo.CaptchaImageRespVO;
 import cn.iocoder.yudao.module.platform.convert.common.CaptchaConvert;
-import cn.iocoder.yudao.module.platform.dal.redis.common.CaptchaRedisDAO;
+import cn.iocoder.yudao.module.platform.dal.redis.common.PlatformCaptchaRedisDAO;
 import cn.iocoder.yudao.module.platform.framework.captcha.config.CaptchaProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,7 @@ public class PlatformCaptchaServiceImpl implements PlatformCaptchaService {
     private CaptchaProperties captchaProperties;
 
     @Resource
-    private CaptchaRedisDAO captchaRedisDAO;
+    private PlatformCaptchaRedisDAO captchaRedisDAO;
 
     @Override
     public CaptchaImageRespVO getCaptchaImage() {

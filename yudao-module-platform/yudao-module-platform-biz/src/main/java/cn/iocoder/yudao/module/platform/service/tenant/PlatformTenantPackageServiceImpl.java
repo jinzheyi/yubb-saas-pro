@@ -9,7 +9,7 @@ import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.Ten
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantPackageConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
-import cn.iocoder.yudao.module.platform.dal.mapper.tenant.TenantPackageMapper;
+import cn.iocoder.yudao.module.platform.dal.mapper.tenant.PlatformTenantPackageMapper;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,14 +28,14 @@ import static cn.iocoder.yudao.module.platform.enums.PlatformErrorCodeConstants.
  */
 @Service
 @Validated
-public class TenantPackageServiceImpl implements TenantPackageService {
+public class PlatformTenantPackageServiceImpl implements PlatformTenantPackageService {
 
     @Resource
-    private TenantPackageMapper tenantPackageMapper;
+    private PlatformTenantPackageMapper tenantPackageMapper;
 
     @Resource
     @Lazy // 避免循环依赖的报错
-    private TenantService tenantService;
+    private PlatformTenantService tenantService;
 
     @Override
     public Long createTenantPackage(TenantPackageCreateReqVO createReqVO) {

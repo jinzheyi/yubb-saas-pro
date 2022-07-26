@@ -7,7 +7,7 @@ import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.*;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
-import cn.iocoder.yudao.module.platform.service.tenant.TenantService;
+import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -21,15 +21,14 @@ import java.io.IOException;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.EXPORT;
 
 @Api(tags = "管理后台 - 租户")
 @RestController
 @RequestMapping("/platform/tenant")
-public class TenantController {
+public class PlatformTenantController {
 
     @Resource
-    private TenantService tenantService;
+    private PlatformTenantService tenantService;
 
     @GetMapping("/get-id-by-name")
     @ApiOperation(value = "使用租户名，获得租户编号", notes = "登录界面，根据用户的租户名，获得租户编号")

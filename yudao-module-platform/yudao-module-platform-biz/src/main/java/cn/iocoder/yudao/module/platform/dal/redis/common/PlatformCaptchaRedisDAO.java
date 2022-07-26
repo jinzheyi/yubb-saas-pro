@@ -14,7 +14,7 @@ import static cn.iocoder.yudao.module.platform.dal.redis.RedisKeyConstants.CAPTC
  * @author 芋道源码
  */
 @Repository
-public class CaptchaRedisDAO {
+public class PlatformCaptchaRedisDAO {
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;

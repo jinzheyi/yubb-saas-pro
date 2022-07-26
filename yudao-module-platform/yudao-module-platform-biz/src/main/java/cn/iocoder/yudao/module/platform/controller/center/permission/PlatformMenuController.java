@@ -24,7 +24,7 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 @RestController
 @RequestMapping("/platform/menu")
 @Validated
-public class MenuController {
+public class PlatformMenuController {
 
     @Resource
     private PlatformMenuService menuService;

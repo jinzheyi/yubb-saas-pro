@@ -71,6 +71,15 @@ public class SecurityFrameworkUtils {
         return authentication.getPrincipal() instanceof LoginUser ? (LoginUser) authentication.getPrincipal() : null;
     }
 
+    @Nullable
+    public static PlatformLoginUser getPlatformLoginUser() {
+        Authentication authentication = getAuthentication();
+        if (authentication == null) {
+            return null;
+        }
+        return authentication.getPrincipal() instanceof PlatformLoginUser ? (PlatformLoginUser) authentication.getPrincipal() : null;
+    }
+
     /**
      * 获得当前用户的编号，从上下文中
      *
@@ -78,8 +87,12 @@ public class SecurityFrameworkUtils {
      */
     @Nullable
     public static Long getLoginUserId() {
-        LoginUser loginUser = getLoginUser();
-        return loginUser != null ? loginUser.getId() : null;
+        Authentication authentication = getAuthentication();
+        if (authentication == null) {
+            return null;
+        }
+        LoginBase loginBase = authentication.getPrincipal() instanceof LoginBase ? (LoginBase) authentication.getPrincipal() : null;
+        return loginBase != null ? loginBase.getId() : null;
     }
 
     /**

@@ -5,5 +5,5 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties(CaptchaProperties.class)
-public class CaptchaConfig {
+public class PlatformCaptchaConfig {
 }

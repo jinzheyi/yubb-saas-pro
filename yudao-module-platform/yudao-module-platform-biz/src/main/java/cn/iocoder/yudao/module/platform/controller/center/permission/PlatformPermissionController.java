@@ -26,7 +26,7 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 @Api(tags = "管理后台 - 权限")
 @RestController
 @RequestMapping("/platform/permission")
-public class PermissionController {
+public class PlatformPermissionController {
 
     @Resource
     private PlatformPermissionService permissionService;

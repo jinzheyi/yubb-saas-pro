@@ -40,7 +40,7 @@ import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.FILE_IS_EMP
 @RequestMapping("/platform/user/profile")
 @Validated
 @Slf4j
-public class UserProfileController {
+public class PlatformUserProfileController {
 
     @Resource
     private PlatformUserService userService;

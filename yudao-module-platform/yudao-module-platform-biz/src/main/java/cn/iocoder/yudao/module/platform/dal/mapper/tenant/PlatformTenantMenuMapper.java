@@ -12,7 +12,7 @@ import java.util.Date;
 import java.util.List;
 
 @Mapper
-public interface TenantMenuMapper extends BaseMapperX<TenantMenuDO> {
+public interface PlatformTenantMenuMapper extends BaseMapperX<TenantMenuDO> {
 
     default TenantMenuDO selectByParentIdAndName(Long parentId, String name) {
         return selectOne(new LambdaQueryWrapper<TenantMenuDO>().eq(TenantMenuDO::getParentId, parentId)

@@ -24,7 +24,7 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 @RestController
 @RequestMapping("/platform/dept")
 @Validated
-public class DeptController {
+public class PlatformDeptController {
 
     @Resource
     private PlatformDeptService deptService;

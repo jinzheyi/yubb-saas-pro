@@ -20,7 +20,7 @@ import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUti
 @RestController
 @RequestMapping("/system/social-user")
 @Validated
-public class SocialUserController {
+public class PlatformSocialUserController {
 
     @Resource
     private PlatformSocialUserService socialUserService;

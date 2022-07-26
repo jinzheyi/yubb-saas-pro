@@ -24,13 +24,12 @@ import java.util.Comparator;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.EXPORT;
 
 @Api(tags = "管理后台 - 角色")
 @RestController
 @RequestMapping("/platform/role")
 @Validated
-public class RoleController {
+public class PlatformRoleController {
 
     @Resource
     private PlatformRoleService roleService;

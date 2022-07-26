@@ -31,13 +31,12 @@ import java.util.*;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.EXPORT;
 
 @Api(tags = "管理后台 - 用户")
 @RestController
 @RequestMapping("/platform/user")
 @Validated
-public class UserController {
+public class PlatformUserController {
 
     @Resource
     private PlatformUserService userService;

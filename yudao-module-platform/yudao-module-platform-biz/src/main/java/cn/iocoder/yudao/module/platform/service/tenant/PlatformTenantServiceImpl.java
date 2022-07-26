@@ -15,8 +15,8 @@ import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.Tenan
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
-import cn.iocoder.yudao.module.platform.dal.mapper.tenant.TenantMapper;
-import cn.iocoder.yudao.module.platform.mq.producer.tenant.TenantProducer;
+import cn.iocoder.yudao.module.platform.dal.mapper.tenant.PlatformTenantMapper;
+import cn.iocoder.yudao.module.platform.mq.producer.tenant.PlatformTenantProducer;
 import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
 import cn.iocoder.yudao.module.system.api.permission.RoleApi;
 import cn.iocoder.yudao.module.system.api.permission.dto.RoleCreateReqDTO;
@@ -52,7 +52,7 @@ import static java.util.Collections.singleton;
 @Service
 @Validated
 @Slf4j
-public class TenantServiceImpl implements TenantService {
+public class PlatformTenantServiceImpl implements PlatformTenantService {
 
     /**
      * 定时执行 {@link #schedulePeriodicRefresh()} 的周期
@@ -79,22 +79,22 @@ public class TenantServiceImpl implements TenantService {
     private TenantProperties tenantProperties;
 
     @Resource
-    private TenantMapper tenantMapper;
+    private PlatformTenantMapper tenantMapper;
 
     @Resource
-    private TenantPackageService tenantPackageService;
+    private PlatformTenantPackageService tenantPackageService;
 
     @Resource
     private AdminUserApi adminUserApi;
     @Resource
     private RoleApi roleApi;
     @Resource
-    private TenantMenuService menuService;
+    private PlatformTenantMenuService menuService;
     @Resource
     private PermissionApi permissionApi;
 
     @Resource
-    private TenantProducer tenantProducer;
+    private PlatformTenantProducer tenantProducer;
 
     /**
      * 初始化 {@link #tenantCache} 缓存
@@ -140,24 +140,24 @@ public class TenantServiceImpl implements TenantService {
         return tenantMapper.selectList();
     }
 
-    @Override
-    public List<Long> getTenantIds() {
-        return new ArrayList<>(tenantCache.keySet());
-    }
-
-    @Override
-    public void validTenant(Long id) {
-        TenantDO tenant = tenantCache.get(id);
-        if (tenant == null) {
-            throw exception(TENANT_NOT_EXISTS);
-        }
-        if (tenant.getStatus().equals(CommonStatusEnum.DISABLE.getStatus())) {
-            throw exception(TENANT_DISABLE, tenant.getName());
-        }
-        if (DateUtils.isExpired(tenant.getExpireTime())) {
-            throw exception(TENANT_EXPIRE, tenant.getName());
-        }
-    }
+//    @Override
+//    public List<Long> getTenantIds() {
+//        return new ArrayList<>(tenantCache.keySet());
+//    }
+//
+//    @Override
+//    public void validTenant(Long id) {
+//        TenantDO tenant = tenantCache.get(id);
+//        if (tenant == null) {
+//            throw exception(TENANT_NOT_EXISTS);
+//        }
+//        if (tenant.getStatus().equals(CommonStatusEnum.DISABLE.getStatus())) {
+//            throw exception(TENANT_DISABLE, tenant.getName());
+//        }
+//        if (DateUtils.isExpired(tenant.getExpireTime())) {
+//            throw exception(TENANT_EXPIRE, tenant.getName());
+//        }
+//    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)

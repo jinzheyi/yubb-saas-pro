@@ -24,7 +24,7 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 @RequestMapping("/platform/auth")
 @Validated
 @Slf4j
-public class AuthController {
+public class PlatformAuthController {
 
     @Resource
     private PlatformAuthService platformAuthService;

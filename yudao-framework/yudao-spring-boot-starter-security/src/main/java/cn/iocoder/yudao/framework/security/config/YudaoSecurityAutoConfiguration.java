@@ -3,12 +3,14 @@ package cn.iocoder.yudao.framework.security.config;
 import cn.iocoder.yudao.framework.security.core.aop.PreAuthenticatedAspect;
 import cn.iocoder.yudao.framework.security.core.context.TransmittableThreadLocalSecurityContextHolderStrategy;
 import cn.iocoder.yudao.framework.security.core.filter.TokenAuthenticationFilter;
+import cn.iocoder.yudao.framework.security.core.filter.TokenPlatformAuthenticationFilter;
 import cn.iocoder.yudao.framework.security.core.handler.AccessDeniedHandlerImpl;
 import cn.iocoder.yudao.framework.security.core.handler.AuthenticationEntryPointImpl;
 import cn.iocoder.yudao.framework.security.core.service.SecurityFrameworkService;
 import cn.iocoder.yudao.framework.security.core.service.SecurityFrameworkServiceImpl;
 import cn.iocoder.yudao.framework.web.config.WebProperties;
 import cn.iocoder.yudao.framework.web.core.handler.GlobalExceptionHandler;
+import cn.iocoder.yudao.module.platform.api.oauth2.PlatformOAuth2TokenApi;
 import cn.iocoder.yudao.module.system.api.oauth2.OAuth2TokenApi;
 import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
 import org.springframework.beans.factory.config.MethodInvokingFactoryBean;
@@ -80,6 +82,12 @@ public class YudaoSecurityAutoConfiguration {
     public TokenAuthenticationFilter authenticationTokenFilter(WebProperties webProperties, GlobalExceptionHandler globalExceptionHandler,
                                                                OAuth2TokenApi oauth2TokenApi) {
         return new TokenAuthenticationFilter(webProperties, securityProperties, globalExceptionHandler, oauth2TokenApi);
+    }
+
+    @Bean
+    public TokenPlatformAuthenticationFilter platformAuthenticationFilter(WebProperties webProperties, GlobalExceptionHandler globalExceptionHandler,
+                                                                          PlatformOAuth2TokenApi platformOAuth2TokenApi) {
+        return new TokenPlatformAuthenticationFilter(webProperties, securityProperties, globalExceptionHandler, platformOAuth2TokenApi);
     }
 
     @Bean("ss") // 使用 Spring Security 的缩写，方便使用

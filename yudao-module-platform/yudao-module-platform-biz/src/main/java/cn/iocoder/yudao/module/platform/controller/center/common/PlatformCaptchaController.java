@@ -16,7 +16,7 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 @Api(tags = "平台管理后台 - 验证码")
 @RestController
 @RequestMapping("/platform/captcha")
-public class CaptchaController {
+public class PlatformCaptchaController {
 
     @Resource
     private PlatformCaptchaService platformCaptchaService;

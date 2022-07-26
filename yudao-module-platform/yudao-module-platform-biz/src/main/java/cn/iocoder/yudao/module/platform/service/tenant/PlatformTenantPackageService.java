@@ -14,7 +14,7 @@ import java.util.List;
  *
  * @author 芋道源码
  */
-public interface TenantPackageService {
+public interface PlatformTenantPackageService {
 
     /**
      * 创建租户套餐
