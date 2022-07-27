@@ -19,6 +19,8 @@ public class TenantDatabaseInterceptor implements TenantLineHandler {
 
     private final Set<String> ignoreTables = new HashSet<>();
 
+    private final Set<String> ignoreTablesPrefix = new HashSet<>();
+
     public TenantDatabaseInterceptor(TenantProperties properties) {
         // 不同 DB 下，大小写的习惯不同，所以需要都添加进去
         properties.getIgnoreTables().forEach(table -> {
@@ -27,6 +29,10 @@ public class TenantDatabaseInterceptor implements TenantLineHandler {
         });
         // 在 OracleKeyGenerator 中，生成主键时，会查询这个表，查询这个表后，会自动拼接 TENANT_ID 导致报错
         ignoreTables.add("DUAL");
+        //需要忽略的表前缀
+        properties.getIgnoreTablesPrefix().forEach(tablesPrefix -> {
+            ignoreTablesPrefix.add(tablesPrefix);
+        });
     }
 
     @Override
@@ -36,6 +42,10 @@ public class TenantDatabaseInterceptor implements TenantLineHandler {
 
     @Override
     public boolean ignoreTable(String tableName) {
+        boolean isIgnore = Boolean.FALSE;
+        ignoreTablesPrefix.stream().forEach(tp -> {
+            isIgnore = tableName.startsWith(tp);
+        });
         return TenantContextHolder.isIgnore() // 情况一，全局忽略多租户
             || CollUtil.contains(ignoreTables, tableName); // 情况二，忽略多租户的表
     }
