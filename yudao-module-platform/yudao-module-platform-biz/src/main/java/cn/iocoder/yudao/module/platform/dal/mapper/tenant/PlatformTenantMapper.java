@@ -52,8 +52,7 @@ public interface PlatformTenantMapper extends BaseMapperX<PlatformTenantDO> {
         return selectList(PlatformTenantDO::getPackageId, packageId);
     }
 
-    //TODO 群友说这块改成mybatis-plus会有乐观锁字段的概念，需要后续研究下问题所在(经过查找，文档中写了为啥一定要写原生sql，后续优化再根据文档来)
-    @Select("SELECT COUNT(*) FROM system_tenant WHERE update_time > #{maxUpdateTime}")
+    @Select("SELECT COUNT(*) FROM tenant WHERE update_time > #{maxUpdateTime}")
     Long selectCountByUpdateTimeGt(Date maxUpdateTime);
 
 }

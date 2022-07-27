@@ -6,6 +6,7 @@ import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptListR
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.Date;
 import java.util.List;
@@ -29,11 +30,7 @@ public interface PlatformDeptMapper extends BaseMapperX<PlatformDeptDO> {
         return selectCount(PlatformDeptDO::getParentId, parentId);
     }
 
-    //TODO 看测试效果，是否能这么改
-    //@Select("SELECT COUNT(*) FROM system_dept WHERE update_time > #{maxUpdateTime}")
-    default Long selectCountByUpdateTimeGt(Date maxUpdateTime) {
-        return selectCount(new LambdaQueryWrapperX<PlatformDeptDO>()
-                .gt(PlatformDeptDO::getUpdateTime, maxUpdateTime));
-    };
+    @Select("SELECT COUNT(*) FROM platform_dept WHERE update_time > #{maxUpdateTime}")
+    Long selectCountByUpdateTimeGt(Date maxUpdateTime);
 
 }

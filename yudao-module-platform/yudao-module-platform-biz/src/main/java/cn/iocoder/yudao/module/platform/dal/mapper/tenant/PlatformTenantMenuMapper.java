@@ -28,8 +28,7 @@ public interface PlatformTenantMenuMapper extends BaseMapperX<PlatformTenantMenu
                 .eqIfPresent(PlatformTenantMenuDO::getStatus, reqVO.getStatus()));
     }
 
-    // 这里之所以使用原生sql是因为如果使用mybatis-plus对象操作会自动添加delete字段，查的数据会有问题
-    @Select("SELECT COUNT(*) FROM system_menu WHERE update_time > #{maxUpdateTime}")
+    @Select("SELECT COUNT(*) FROM tenant_menu WHERE update_time > #{maxUpdateTime}")
     Long selectCountByUpdateTimeGt(Date maxUpdateTime);
 
 }

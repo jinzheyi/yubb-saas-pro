@@ -4,6 +4,8 @@ import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformUserRoleDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -37,11 +39,7 @@ public interface PlatformUserRoleMapper extends BaseMapperX<PlatformUserRoleDO> 
         return selectList(PlatformUserRoleDO::getRoleId, roleIds);
     }
 
-    // TODO 看测试情况，是否能这么改，先标记一下
-    //@Select("SELECT COUNT(*) FROM system_user_role WHERE update_time > #{maxUpdateTime}")
-    default Long selectCountByUpdateTimeGt(Date maxUpdateTime) {
-        return selectCount(new LambdaQueryWrapperX<PlatformUserRoleDO>()
-                .gt(PlatformUserRoleDO::getUpdateTime, maxUpdateTime));
-    };
+    @Select("SELECT COUNT(*) FROM platform_user_role WHERE update_time > #{maxUpdateTime}")
+    Long selectCountByUpdateTimeGt(Date maxUpdateTime);
 
 }

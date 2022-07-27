@@ -5,6 +5,7 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleMenuDO;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
@@ -35,11 +36,7 @@ public interface PlatformRoleMenuMapper extends BaseMapperX<PlatformRoleMenuDO> 
         delete(new LambdaQueryWrapperX<PlatformRoleMenuDO>().eq(PlatformRoleMenuDO::getRoleId, roleId));
     }
 
-    // TODO 看测试情况，是否能这么改，先标记一下
-    //@Select("SELECT COUNT(*) FROM system_role_menu WHERE update_time > #{maxUpdateTime}")
-    default Long selectCountByUpdateTimeGt(Date maxUpdateTime){
-        return selectCount(new LambdaQueryWrapperX<PlatformRoleMenuDO>()
-                .gt(PlatformRoleMenuDO::getUpdateTime, maxUpdateTime));
-    };
+    @Select("SELECT COUNT(*) FROM platform_role_menu WHERE update_time > #{maxUpdateTime}")
+    Long selectCountByUpdateTimeGt(Date maxUpdateTime);
 
 }

@@ -6,6 +6,7 @@ import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.Men
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformMenuDO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.Date;
 import java.util.List;
@@ -27,11 +28,7 @@ public interface PlatformMenuMapper extends BaseMapperX<PlatformMenuDO> {
                 .eqIfPresent(PlatformMenuDO::getStatus, reqVO.getStatus()));
     }
 
-    // TODO 看测试情况，是否能这么改，先标记一下
-    //@Select("SELECT COUNT(*) FROM system_menu WHERE update_time > #{maxUpdateTime}")
-    default Long selectCountByUpdateTimeGt(Date maxUpdateTime){
-        return selectCount(new LambdaQueryWrapperX<PlatformMenuDO>()
-                .gt(PlatformMenuDO::getUpdateTime, maxUpdateTime));
-    };
+    @Select("SELECT COUNT(*) FROM platform_menu WHERE update_time > #{maxUpdateTime}")
+    Long selectCountByUpdateTimeGt(Date maxUpdateTime);
 
 }

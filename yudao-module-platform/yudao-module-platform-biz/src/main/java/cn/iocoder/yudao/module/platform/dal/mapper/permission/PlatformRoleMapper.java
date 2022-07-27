@@ -8,6 +8,7 @@ import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.Rol
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RolePageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 import org.springframework.lang.Nullable;
 
 import java.util.Collection;
@@ -46,11 +47,7 @@ public interface PlatformRoleMapper extends BaseMapperX<PlatformRoleDO> {
         return selectList(PlatformRoleDO::getStatus, statuses);
     }
 
-    // TODO 看测试情况，是否能这么改，先标记一下
-    //@Select("SELECT COUNT(*) FROM system_role WHERE update_time > #{maxUpdateTime}")
-    default Long selectCountByUpdateTimeGt(Date maxUpdateTime){
-        return selectCount(new LambdaQueryWrapperX<PlatformRoleDO>()
-                .gt(PlatformRoleDO::getUpdateTime, maxUpdateTime));
-    };
+    @Select("SELECT COUNT(*) FROM platform_role WHERE update_time > #{maxUpdateTime}")
+    Long selectCountByUpdateTimeGt(Date maxUpdateTime);
 
 }

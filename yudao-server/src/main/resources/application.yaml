@@ -116,7 +116,6 @@ yudao:
       - /admin-api/system/captcha/get-image # 获取图片验证码，和租户无关
       - /admin-api/infra/file/*/get/** # 获取图片，和租户无关
       - /admin-api/system/sms/callback/* # 短信回调接口，无法带上租户编号
-      - /platform-api/platform/* # 平台不需要租户id
     ignore-tables:
       - system_tenant
       - system_tenant_package

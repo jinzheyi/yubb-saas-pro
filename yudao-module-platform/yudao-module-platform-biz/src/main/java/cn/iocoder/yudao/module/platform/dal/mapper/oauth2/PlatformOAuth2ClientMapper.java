@@ -6,6 +6,7 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth2ClientPageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2ClientDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.Date;
 
@@ -28,11 +29,7 @@ public interface PlatformOAuth2ClientMapper extends BaseMapperX<PlatformOAuth2Cl
         return selectOne(PlatformOAuth2ClientDO::getClientId, clientId);
     }
 
-    // TODO 改成Java对象形式调用
-    //@Select("SELECT COUNT(*) FROM system_oauth2_client WHERE update_time > #{maxUpdateTime}")
-    default Long selectCountByUpdateTimeGt(Date maxUpdateTime) {
-        return selectCount(new LambdaQueryWrapperX<PlatformOAuth2ClientDO>()
-                .gt(PlatformOAuth2ClientDO::getUpdateTime, maxUpdateTime));
-    };
+    @Select("SELECT COUNT(*) FROM platform_oauth2_client WHERE update_time > #{maxUpdateTime}")
+    Long selectCountByUpdateTimeGt(Date maxUpdateTime);
 
 }
