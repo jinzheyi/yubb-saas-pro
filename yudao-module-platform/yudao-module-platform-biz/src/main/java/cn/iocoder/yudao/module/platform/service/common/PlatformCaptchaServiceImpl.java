@@ -28,7 +28,7 @@ public class PlatformCaptchaServiceImpl implements PlatformCaptchaService {
     private CaptchaProperties captchaProperties;
 
     @Resource
-    private PlatformCaptchaRedisDAO captchaRedisDAO;
+    private PlatformCaptchaRedisDAO platformCaptchaRedisDAO;
 
     @Override
     public CaptchaImageRespVO getCaptchaImage() {
@@ -40,7 +40,7 @@ public class PlatformCaptchaServiceImpl implements PlatformCaptchaService {
         CircleCaptcha captcha = CaptchaUtil.createCircleCaptcha(captchaProperties.getWidth(), captchaProperties.getHeight());
         // 缓存到 Redis 中
         String uuid = IdUtil.fastSimpleUUID();
-        captchaRedisDAO.set(uuid, captcha.getCode(), captchaProperties.getTimeout());
+        platformCaptchaRedisDAO.set(uuid, captcha.getCode(), captchaProperties.getTimeout());
         // 返回
         return CaptchaConvert.INSTANCE.convert(uuid, captcha).setEnable(enable);
     }
@@ -52,12 +52,12 @@ public class PlatformCaptchaServiceImpl implements PlatformCaptchaService {
 
     @Override
     public String getCaptchaCode(String uuid) {
-        return captchaRedisDAO.get(uuid);
+        return platformCaptchaRedisDAO.get(uuid);
     }
 
     @Override
     public void deleteCaptchaCode(String uuid) {
-        captchaRedisDAO.delete(uuid);
+        platformCaptchaRedisDAO.delete(uuid);
     }
 
 }

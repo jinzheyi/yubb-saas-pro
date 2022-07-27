@@ -4,7 +4,7 @@ import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.Men
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuRespVO;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuSimpleRespVO;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformMenuDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -15,14 +15,14 @@ public interface MenuConvert {
 
     MenuConvert INSTANCE = Mappers.getMapper(MenuConvert.class);
 
-    List<MenuRespVO> convertList(List<MenuDO> list);
+    List<MenuRespVO> convertList(List<PlatformMenuDO> list);
 
-    MenuDO convert(MenuCreateReqVO bean);
+    PlatformMenuDO convert(MenuCreateReqVO bean);
 
-    MenuDO convert(MenuUpdateReqVO bean);
+    PlatformMenuDO convert(MenuUpdateReqVO bean);
 
-    MenuRespVO convert(MenuDO bean);
+    MenuRespVO convert(PlatformMenuDO bean);
 
-    List<MenuSimpleRespVO> convertList02(List<MenuDO> list);
+    List<MenuSimpleRespVO> convertList02(List<PlatformMenuDO> list);
 
 }

@@ -8,15 +8,15 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 角色和菜单关联
+ * 用户和角色关联
  *
  * @author ruoyi
  */
-@TableName("platform_role_menu")
-@KeySequence("platform_role_menu_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
+@TableName("platform_user_role")
+@KeySequence("platform_user_role_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class RoleMenuDO extends BaseDO {
+public class PlatformUserRoleDO extends BaseDO {
 
     /**
      * 自增主键
@@ -24,12 +24,12 @@ public class RoleMenuDO extends BaseDO {
     @TableId
     private Long id;
     /**
-     * 角色ID
+     * 用户 ID
+     */
+    private Long userId;
+    /**
+     * 角色 ID
      */
     private Long roleId;
-    /**
-     * 菜单ID
-     */
-    private Long menuId;
 
 }

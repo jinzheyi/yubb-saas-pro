@@ -6,7 +6,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.*;
 import cn.iocoder.yudao.module.platform.convert.permission.RoleConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
 import cn.iocoder.yudao.module.platform.service.permission.PlatformRoleService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -70,14 +70,14 @@ public class PlatformRoleController {
     @ApiOperation("获得角色信息")
     @PreAuthorize("@ss.hasPermission('platform:role:query')")
     public CommonResult<RoleRespVO> getRole(@RequestParam("id") Long id) {
-        RoleDO role = roleService.getRole(id);
+        PlatformRoleDO role = roleService.getRole(id);
         return success(RoleConvert.INSTANCE.convert(role));
     }
 
     @GetMapping("/page")
     @ApiOperation("获得角色分页")
     @PreAuthorize("@ss.hasPermission('platform:role:query')")
-    public CommonResult<PageResult<RoleDO>> getRolePage(RolePageReqVO reqVO) {
+    public CommonResult<PageResult<PlatformRoleDO>> getRolePage(RolePageReqVO reqVO) {
         return success(roleService.getRolePage(reqVO));
     }
 
@@ -85,9 +85,9 @@ public class PlatformRoleController {
     @ApiOperation(value = "获取角色精简信息列表", notes = "只包含被开启的角色，主要用于前端的下拉选项")
     public CommonResult<List<RoleSimpleRespVO>> getSimpleRoles() {
         // 获得角色列表，只要开启状态的
-        List<RoleDO> list = roleService.getRoles(Collections.singleton(CommonStatusEnum.ENABLE.getStatus()));
+        List<PlatformRoleDO> list = roleService.getRoles(Collections.singleton(CommonStatusEnum.ENABLE.getStatus()));
         // 排序后，返回给前端
-        list.sort(Comparator.comparing(RoleDO::getSort));
+        list.sort(Comparator.comparing(PlatformRoleDO::getSort));
         return success(RoleConvert.INSTANCE.convertList02(list));
     }
 
@@ -96,7 +96,7 @@ public class PlatformRoleController {
     //@OperateLog(type = EXPORT)
     @PreAuthorize("@ss.hasPermission('platform:role:export')")
     public void export(HttpServletResponse response, @Validated RoleExportReqVO reqVO) throws IOException {
-        List<RoleDO> list = roleService.getRoleList(reqVO);
+        List<PlatformRoleDO> list = roleService.getRoleList(reqVO);
         List<RoleExcelVO> data = RoleConvert.INSTANCE.convertList03(list);
         // 输出
         ExcelUtils.write(response, "角色数据.xls", "角色列表", RoleExcelVO.class, data);

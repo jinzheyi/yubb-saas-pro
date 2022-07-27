@@ -4,30 +4,30 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.Date;
 import java.util.List;
 
 @Mapper
-public interface PlatformOAuth2AccessTokenMapper extends BaseMapperX<OAuth2AccessTokenDO> {
+public interface PlatformOAuth2AccessTokenMapper extends BaseMapperX<PlatformOAuth2AccessTokenDO> {
 
-    default OAuth2AccessTokenDO selectByAccessToken(String accessToken) {
-        return selectOne(OAuth2AccessTokenDO::getAccessToken, accessToken);
+    default PlatformOAuth2AccessTokenDO selectByAccessToken(String accessToken) {
+        return selectOne(PlatformOAuth2AccessTokenDO::getAccessToken, accessToken);
     }
 
-    default List<OAuth2AccessTokenDO> selectListByRefreshToken(String refreshToken) {
-        return selectList(OAuth2AccessTokenDO::getRefreshToken, refreshToken);
+    default List<PlatformOAuth2AccessTokenDO> selectListByRefreshToken(String refreshToken) {
+        return selectList(PlatformOAuth2AccessTokenDO::getRefreshToken, refreshToken);
     }
 
-    default PageResult<OAuth2AccessTokenDO> selectPage(OAuth2AccessTokenPageReqVO reqVO) {
-        return selectPage(reqVO, new LambdaQueryWrapperX<OAuth2AccessTokenDO>()
-                .eqIfPresent(OAuth2AccessTokenDO::getUserId, reqVO.getUserId())
-                .eqIfPresent(OAuth2AccessTokenDO::getUserType, reqVO.getUserType())
-                .likeIfPresent(OAuth2AccessTokenDO::getClientId, reqVO.getClientId())
-                .gt(OAuth2AccessTokenDO::getExpiresTime, new Date())
-                .orderByDesc(OAuth2AccessTokenDO::getId));
+    default PageResult<PlatformOAuth2AccessTokenDO> selectPage(OAuth2AccessTokenPageReqVO reqVO) {
+        return selectPage(reqVO, new LambdaQueryWrapperX<PlatformOAuth2AccessTokenDO>()
+                .eqIfPresent(PlatformOAuth2AccessTokenDO::getUserId, reqVO.getUserId())
+                .eqIfPresent(PlatformOAuth2AccessTokenDO::getUserType, reqVO.getUserType())
+                .likeIfPresent(PlatformOAuth2AccessTokenDO::getClientId, reqVO.getClientId())
+                .gt(PlatformOAuth2AccessTokenDO::getExpiresTime, new Date())
+                .orderByDesc(PlatformOAuth2AccessTokenDO::getId));
     }
 
 }

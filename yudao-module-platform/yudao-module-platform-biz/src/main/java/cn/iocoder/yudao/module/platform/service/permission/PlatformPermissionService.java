@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.service.permission;
 
 import cn.iocoder.yudao.module.platform.api.permission.dto.PlatformDeptDataPermissionRespDTO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformMenuDO;
 import org.springframework.lang.Nullable;
 
 import java.util.Collection;
@@ -32,8 +32,8 @@ public interface PlatformPermissionService {
      * @param menusStatuses 菜单状态数组
      * @return 菜单列表
      */
-    List<MenuDO> getRoleMenuListFromCache(Collection<Long> roleIds, Collection<Integer> menuTypes,
-                                          Collection<Integer> menusStatuses);
+    List<PlatformMenuDO> getRoleMenuListFromCache(Collection<Long> roleIds, Collection<Integer> menuTypes,
+                                                  Collection<Integer> menusStatuses);
 
     /**
      * 获得用户拥有的角色编号集合，从缓存中获取

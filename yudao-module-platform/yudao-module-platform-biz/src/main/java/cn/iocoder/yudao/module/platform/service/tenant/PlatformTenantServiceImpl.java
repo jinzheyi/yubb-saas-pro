@@ -3,9 +3,7 @@ package cn.iocoder.yudao.module.platform.service.tenant;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.framework.tenant.config.TenantProperties;
 import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantCreateReqVO;
@@ -13,8 +11,8 @@ import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.Tenan
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantPackageDO;
 import cn.iocoder.yudao.module.platform.dal.mapper.tenant.PlatformTenantMapper;
 import cn.iocoder.yudao.module.platform.mq.producer.tenant.PlatformTenantProducer;
 import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
@@ -62,12 +60,12 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
 
     /**
      * 角色缓存
-     * key：角色编号 {@link TenantDO#getId()}
+     * key：角色编号 {@link PlatformTenantDO#getId()}
      *
      * 这里声明 volatile 修饰的原因是，每次刷新时，直接修改指向
      */
     @Getter
-    private volatile Map<Long, TenantDO> tenantCache;
+    private volatile Map<Long, PlatformTenantDO> tenantCache;
     /**
      * 缓存角色的最大更新时间，用于后续的增量轮询，判断是否有更新
      */
@@ -79,10 +77,10 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     private TenantProperties tenantProperties;
 
     @Resource
-    private PlatformTenantMapper tenantMapper;
+    private PlatformTenantMapper platformTenantMapper;
 
     @Resource
-    private PlatformTenantPackageService tenantPackageService;
+    private PlatformTenantPackageService platformTenantPackageService;
 
     @Resource
     private AdminUserApi adminUserApi;
@@ -94,7 +92,7 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     private PermissionApi permissionApi;
 
     @Resource
-    private PlatformTenantProducer tenantProducer;
+    private PlatformTenantProducer platformTenantProducer;
 
     /**
      * 初始化 {@link #tenantCache} 缓存
@@ -103,14 +101,14 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     @PostConstruct
     public void initLocalCache() {
         // 获取租户列表，如果有更新
-        List<TenantDO> tenantList = loadTenantIfUpdate(maxUpdateTime);
+        List<PlatformTenantDO> tenantList = loadTenantIfUpdate(maxUpdateTime);
         if (CollUtil.isEmpty(tenantList)) {
             return;
         }
 
         // 写入缓存
-        tenantCache = convertImmutableMap(tenantList, TenantDO::getId);
-        maxUpdateTime = getMaxValue(tenantList, TenantDO::getUpdateTime);
+        tenantCache = convertImmutableMap(tenantList, PlatformTenantDO::getId);
+        maxUpdateTime = getMaxValue(tenantList, PlatformTenantDO::getUpdateTime);
         log.info("[initLocalCache][初始化 Tenant 数量为 {}]", tenantList.size());
     }
 
@@ -126,18 +124,18 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
      * @param maxUpdateTime 当前租户的最大更新时间
      * @return 租户列表
      */
-    private List<TenantDO> loadTenantIfUpdate(Date maxUpdateTime) {
+    private List<PlatformTenantDO> loadTenantIfUpdate(Date maxUpdateTime) {
         // 第一步，判断是否要更新。
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
             log.info("[loadTenantIfUpdate][首次加载全量租户]");
         } else { // 判断数据库中是否有更新的租户
-            if (tenantMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
+            if (platformTenantMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
                 return null;
             }
             log.info("[loadTenantIfUpdate][增量加载全量租户]");
         }
         // 第二步，如果有更新，则从数据库加载所有租户
-        return tenantMapper.selectList();
+        return platformTenantMapper.selectList();
     }
 
 //    @Override
@@ -163,23 +161,23 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     @Transactional(rollbackFor = Exception.class)
     public Long createTenant(TenantCreateReqVO createReqVO) {
         // 校验套餐被禁用
-        TenantPackageDO tenantPackage = tenantPackageService.validTenantPackage(createReqVO.getPackageId());
+        PlatformTenantPackageDO tenantPackage = platformTenantPackageService.validTenantPackage(createReqVO.getPackageId());
         // 创建租户
-        TenantDO tenant = TenantConvert.INSTANCE.convert(createReqVO);
-        tenantMapper.insert(tenant);
+        PlatformTenantDO tenant = TenantConvert.INSTANCE.convert(createReqVO);
+        platformTenantMapper.insert(tenant);
         TenantUtils.execute(tenant.getId(), () -> {
             // 创建角色
             Long roleId = createRole(tenantPackage);
             // 创建用户，并分配角色
             Long userId = createUser(roleId, createReqVO);
             // 修改租户的管理员
-            tenantMapper.updateById(new TenantDO().setId(tenant.getId()).setContactUserId(userId));
+            platformTenantMapper.updateById(new PlatformTenantDO().setId(tenant.getId()).setContactUserId(userId));
         });
         // 发送刷新消息
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                tenantProducer.sendTenantRefreshMessage();
+                platformTenantProducer.sendTenantRefreshMessage();
             }
         });
         return tenant.getId();
@@ -193,7 +191,7 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
         return userId;
     }
 
-    private Long createRole(TenantPackageDO tenantPackage) {
+    private Long createRole(PlatformTenantPackageDO tenantPackage) {
         // 创建角色
         RoleCreateReqDTO reqDTO = new RoleCreateReqDTO();
         reqDTO.setName(RoleCodeEnum.TENANT_ADMIN.getName())
@@ -210,13 +208,13 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     @Transactional(rollbackFor = Exception.class)
     public void updateTenant(TenantUpdateReqVO updateReqVO) {
         // 校验存在
-        TenantDO tenant = checkUpdateTenant(updateReqVO.getId());
+        PlatformTenantDO tenant = checkUpdateTenant(updateReqVO.getId());
         // 校验套餐被禁用
-        TenantPackageDO tenantPackage = tenantPackageService.validTenantPackage(updateReqVO.getPackageId());
+        PlatformTenantPackageDO tenantPackage = platformTenantPackageService.validTenantPackage(updateReqVO.getPackageId());
 
         // 更新租户
-        TenantDO updateObj = TenantConvert.INSTANCE.convert(updateReqVO);
-        tenantMapper.updateById(updateObj);
+        PlatformTenantDO updateObj = TenantConvert.INSTANCE.convert(updateReqVO);
+        platformTenantMapper.updateById(updateObj);
         // 如果套餐发生变化，则修改其角色的权限
         if (ObjectUtil.notEqual(tenant.getPackageId(), updateReqVO.getPackageId())) {
             updateTenantRoleMenu(tenant.getId(), tenantPackage.getMenuIds());
@@ -225,7 +223,7 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                tenantProducer.sendTenantRefreshMessage();
+                platformTenantProducer.sendTenantRefreshMessage();
             }
         });
     }
@@ -263,11 +261,11 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
         // 校验存在
         checkUpdateTenant(id);
         // 删除
-        tenantMapper.deleteById(id);
+        platformTenantMapper.deleteById(id);
     }
 
-    private TenantDO checkUpdateTenant(Long id) {
-        TenantDO tenant = tenantMapper.selectById(id);
+    private PlatformTenantDO checkUpdateTenant(Long id) {
+        PlatformTenantDO tenant = platformTenantMapper.selectById(id);
         if (tenant == null) {
             throw exception(TENANT_NOT_EXISTS);
         }
@@ -275,33 +273,33 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     }
 
     @Override
-    public TenantDO getTenant(Long id) {
-        return tenantMapper.selectById(id);
+    public PlatformTenantDO getTenant(Long id) {
+        return platformTenantMapper.selectById(id);
     }
 
     @Override
-    public PageResult<TenantDO> getTenantPage(TenantPageReqVO pageReqVO) {
-        return tenantMapper.selectPage(pageReqVO);
+    public PageResult<PlatformTenantDO> getTenantPage(TenantPageReqVO pageReqVO) {
+        return platformTenantMapper.selectPage(pageReqVO);
     }
 
     @Override
-    public List<TenantDO> getTenantList(TenantExportReqVO exportReqVO) {
-        return tenantMapper.selectList(exportReqVO);
+    public List<PlatformTenantDO> getTenantList(TenantExportReqVO exportReqVO) {
+        return platformTenantMapper.selectList(exportReqVO);
     }
 
     @Override
-    public TenantDO getTenantByName(String name) {
-        return tenantMapper.selectByName(name);
+    public PlatformTenantDO getTenantByName(String name) {
+        return platformTenantMapper.selectByName(name);
     }
 
     @Override
     public Long getTenantCountByPackageId(Long packageId) {
-        return tenantMapper.selectCountByPackageId(packageId);
+        return platformTenantMapper.selectCountByPackageId(packageId);
     }
 
     @Override
-    public List<TenantDO> getTenantListByPackageId(Long packageId) {
-        return tenantMapper.selectListByPackageId(packageId);
+    public List<PlatformTenantDO> getTenantListByPackageId(Long packageId) {
+        return platformTenantMapper.selectListByPackageId(packageId);
     }
 
 }

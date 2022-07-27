@@ -7,9 +7,9 @@ import cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstant
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2ClientDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2RefreshTokenDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2ClientDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2RefreshTokenDO;
 import cn.iocoder.yudao.module.platform.dal.mapper.oauth2.PlatformOAuth2AccessTokenMapper;
 import cn.iocoder.yudao.module.platform.dal.mapper.oauth2.PlatformOAuth2RefreshTokenMapper;
 import cn.iocoder.yudao.module.platform.dal.redis.oauth2.PlatformOAuth2AccessTokenRedisDAO;
@@ -32,50 +32,50 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 public class PlatformOAuth2TokenServiceImpl implements PlatformOAuth2TokenService {
 
     @Resource
-    private PlatformOAuth2AccessTokenMapper oauth2AccessTokenMapper;
+    private PlatformOAuth2AccessTokenMapper platformOAuth2AccessTokenMapper;
     @Resource
-    private PlatformOAuth2RefreshTokenMapper oauth2RefreshTokenMapper;
+    private PlatformOAuth2RefreshTokenMapper platformOAuth2RefreshTokenMapper;
 
     @Resource
-    private PlatformOAuth2AccessTokenRedisDAO oauth2AccessTokenRedisDAO;
+    private PlatformOAuth2AccessTokenRedisDAO platformOAuth2AccessTokenRedisDAO;
 
     @Resource
-    private PlatformOAuth2ClientService oauth2ClientService;
+    private PlatformOAuth2ClientService platformOAuth2ClientService;
 
     @Override
     @Transactional
-    public OAuth2AccessTokenDO createAccessToken(Long userId, Integer userType, String clientId, List<String> scopes) {
-        OAuth2ClientDO clientDO = oauth2ClientService.validOAuthClientFromCache(clientId);
+    public PlatformOAuth2AccessTokenDO createAccessToken(Long userId, Integer userType, String clientId, List<String> scopes) {
+        PlatformOAuth2ClientDO clientDO = platformOAuth2ClientService.validOAuthClientFromCache(clientId);
         // 创建刷新令牌
-        OAuth2RefreshTokenDO refreshTokenDO = createOAuth2RefreshToken(userId, userType, clientDO, scopes);
+        PlatformOAuth2RefreshTokenDO refreshTokenDO = createOAuth2RefreshToken(userId, userType, clientDO, scopes);
         // 创建访问令牌
         return createOAuth2AccessToken(refreshTokenDO, clientDO);
     }
 
     @Override
-    public OAuth2AccessTokenDO refreshAccessToken(String refreshToken, String clientId) {
+    public PlatformOAuth2AccessTokenDO refreshAccessToken(String refreshToken, String clientId) {
         // 查询访问令牌
-        OAuth2RefreshTokenDO refreshTokenDO = oauth2RefreshTokenMapper.selectByRefreshToken(refreshToken);
+        PlatformOAuth2RefreshTokenDO refreshTokenDO = platformOAuth2RefreshTokenMapper.selectByRefreshToken(refreshToken);
         if (refreshTokenDO == null) {
             throw exception0(GlobalErrorCodeConstants.BAD_REQUEST.getCode(), "无效的刷新令牌");
         }
 
         // 校验 Client 匹配
-        OAuth2ClientDO clientDO = oauth2ClientService.validOAuthClientFromCache(clientId);
+        PlatformOAuth2ClientDO clientDO = platformOAuth2ClientService.validOAuthClientFromCache(clientId);
         if (ObjectUtil.notEqual(clientId, refreshTokenDO.getClientId())) {
             throw exception0(GlobalErrorCodeConstants.BAD_REQUEST.getCode(), "刷新令牌的客户端编号不正确");
         }
 
         // 移除相关的访问令牌
-        List<OAuth2AccessTokenDO> accessTokenDOs = oauth2AccessTokenMapper.selectListByRefreshToken(refreshToken);
+        List<PlatformOAuth2AccessTokenDO> accessTokenDOs = platformOAuth2AccessTokenMapper.selectListByRefreshToken(refreshToken);
         if (CollUtil.isNotEmpty(accessTokenDOs)) {
-            oauth2AccessTokenMapper.deleteBatchIds(convertSet(accessTokenDOs, OAuth2AccessTokenDO::getId));
-            oauth2AccessTokenRedisDAO.deleteList(convertSet(accessTokenDOs, OAuth2AccessTokenDO::getAccessToken));
+            platformOAuth2AccessTokenMapper.deleteBatchIds(convertSet(accessTokenDOs, PlatformOAuth2AccessTokenDO::getId));
+            platformOAuth2AccessTokenRedisDAO.deleteList(convertSet(accessTokenDOs, PlatformOAuth2AccessTokenDO::getAccessToken));
         }
 
         // 已过期的情况下，删除刷新令牌
         if (DateUtils.isExpired(refreshTokenDO.getExpiresTime())) {
-            oauth2RefreshTokenMapper.deleteById(refreshTokenDO.getId());
+            platformOAuth2RefreshTokenMapper.deleteById(refreshTokenDO.getId());
             throw exception0(GlobalErrorCodeConstants.UNAUTHORIZED.getCode(), "刷新令牌已过期");
         }
 
@@ -84,25 +84,25 @@ public class PlatformOAuth2TokenServiceImpl implements PlatformOAuth2TokenServic
     }
 
     @Override
-    public OAuth2AccessTokenDO getAccessToken(String accessToken) {
+    public PlatformOAuth2AccessTokenDO getAccessToken(String accessToken) {
         // 优先从 Redis 中获取
-        OAuth2AccessTokenDO accessTokenDO = oauth2AccessTokenRedisDAO.get(accessToken);
+        PlatformOAuth2AccessTokenDO accessTokenDO = platformOAuth2AccessTokenRedisDAO.get(accessToken);
         if (accessTokenDO != null) {
             return accessTokenDO;
         }
 
         // 获取不到，从 MySQL 中获取
-        accessTokenDO = oauth2AccessTokenMapper.selectByAccessToken(accessToken);
+        accessTokenDO = platformOAuth2AccessTokenMapper.selectByAccessToken(accessToken);
         // 如果在 MySQL 存在，则往 Redis 中写入
         if (accessTokenDO != null && !DateUtils.isExpired(accessTokenDO.getExpiresTime())) {
-            oauth2AccessTokenRedisDAO.set(accessTokenDO);
+            platformOAuth2AccessTokenRedisDAO.set(accessTokenDO);
         }
         return accessTokenDO;
     }
 
     @Override
-    public OAuth2AccessTokenDO checkAccessToken(String accessToken) {
-        OAuth2AccessTokenDO accessTokenDO = getAccessToken(accessToken);
+    public PlatformOAuth2AccessTokenDO checkAccessToken(String accessToken) {
+        PlatformOAuth2AccessTokenDO accessTokenDO = getAccessToken(accessToken);
         if (accessTokenDO == null) {
             throw exception0(GlobalErrorCodeConstants.UNAUTHORIZED.getCode(), "访问令牌不存在");
         }
@@ -113,42 +113,42 @@ public class PlatformOAuth2TokenServiceImpl implements PlatformOAuth2TokenServic
     }
 
     @Override
-    public OAuth2AccessTokenDO removeAccessToken(String accessToken) {
+    public PlatformOAuth2AccessTokenDO removeAccessToken(String accessToken) {
         // 删除访问令牌
-        OAuth2AccessTokenDO accessTokenDO = oauth2AccessTokenMapper.selectByAccessToken(accessToken);
+        PlatformOAuth2AccessTokenDO accessTokenDO = platformOAuth2AccessTokenMapper.selectByAccessToken(accessToken);
         if (accessTokenDO == null) {
             return null;
         }
-        oauth2AccessTokenMapper.deleteById(accessTokenDO.getId());
-        oauth2AccessTokenRedisDAO.delete(accessToken);
+        platformOAuth2AccessTokenMapper.deleteById(accessTokenDO.getId());
+        platformOAuth2AccessTokenRedisDAO.delete(accessToken);
         // 删除刷新令牌
-        oauth2RefreshTokenMapper.deleteByRefreshToken(accessTokenDO.getRefreshToken());
+        platformOAuth2RefreshTokenMapper.deleteByRefreshToken(accessTokenDO.getRefreshToken());
         return accessTokenDO;
     }
 
     @Override
-    public PageResult<OAuth2AccessTokenDO> getAccessTokenPage(OAuth2AccessTokenPageReqVO reqVO) {
-        return oauth2AccessTokenMapper.selectPage(reqVO);
+    public PageResult<PlatformOAuth2AccessTokenDO> getAccessTokenPage(OAuth2AccessTokenPageReqVO reqVO) {
+        return platformOAuth2AccessTokenMapper.selectPage(reqVO);
     }
 
-    private OAuth2AccessTokenDO createOAuth2AccessToken(OAuth2RefreshTokenDO refreshTokenDO, OAuth2ClientDO clientDO) {
-        OAuth2AccessTokenDO accessTokenDO = new OAuth2AccessTokenDO().setAccessToken(generateAccessToken())
+    private PlatformOAuth2AccessTokenDO createOAuth2AccessToken(PlatformOAuth2RefreshTokenDO refreshTokenDO, PlatformOAuth2ClientDO clientDO) {
+        PlatformOAuth2AccessTokenDO accessTokenDO = new PlatformOAuth2AccessTokenDO().setAccessToken(generateAccessToken())
                 .setUserId(refreshTokenDO.getUserId()).setUserType(refreshTokenDO.getUserType())
                 .setClientId(clientDO.getClientId()).setScopes(refreshTokenDO.getScopes())
                 .setRefreshToken(refreshTokenDO.getRefreshToken())
                 .setExpiresTime(DateUtils.addDate(Calendar.SECOND, clientDO.getAccessTokenValiditySeconds()));
-        oauth2AccessTokenMapper.insert(accessTokenDO);
+        platformOAuth2AccessTokenMapper.insert(accessTokenDO);
         // 记录到 Redis 中
-        oauth2AccessTokenRedisDAO.set(accessTokenDO);
+        platformOAuth2AccessTokenRedisDAO.set(accessTokenDO);
         return accessTokenDO;
     }
 
-    private OAuth2RefreshTokenDO createOAuth2RefreshToken(Long userId, Integer userType, OAuth2ClientDO clientDO, List<String> scopes) {
-        OAuth2RefreshTokenDO refreshToken = new OAuth2RefreshTokenDO().setRefreshToken(generateRefreshToken())
+    private PlatformOAuth2RefreshTokenDO createOAuth2RefreshToken(Long userId, Integer userType, PlatformOAuth2ClientDO clientDO, List<String> scopes) {
+        PlatformOAuth2RefreshTokenDO refreshToken = new PlatformOAuth2RefreshTokenDO().setRefreshToken(generateRefreshToken())
                 .setUserId(userId).setUserType(userType)
                 .setClientId(clientDO.getClientId()).setScopes(scopes)
                 .setExpiresTime(DateUtils.addDate(Calendar.SECOND, clientDO.getRefreshTokenValiditySeconds()));
-        oauth2RefreshTokenMapper.insert(refreshToken);
+        platformOAuth2RefreshTokenMapper.insert(refreshToken);
         return refreshToken;
     }
 

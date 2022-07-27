@@ -11,7 +11,7 @@ import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformLoginLogCreateReq
 import cn.iocoder.yudao.module.platform.controller.center.auth.vo.AuthLoginReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.auth.vo.AuthLoginRespVO;
 import cn.iocoder.yudao.module.platform.convert.auth.AuthConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.module.platform.enums.logger.PlatformLoginLogTypeEnum;
 import cn.iocoder.yudao.module.platform.enums.logger.PlatformLoginResultEnum;
@@ -44,13 +44,13 @@ import static cn.iocoder.yudao.module.platform.enums.PlatformErrorCodeConstants.
 public class PlatformAuthServiceImpl implements PlatformAuthService {
 
     @Resource
-    private PlatformUserService userService;
+    private PlatformUserService platformUserService;
     @Resource
     private PlatformCaptchaService platformCaptchaService;
     @Resource
-    private PlatformLoginLogService loginLogService;
+    private PlatformLoginLogService platformLoginLogService;
     @Resource
-    private PlatformOAuth2TokenService oauth2TokenService;
+    private PlatformOAuth2TokenService platformOAuth2TokenService;
     @Resource
     private Validator validator;
 
@@ -58,12 +58,12 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     public PlatformUserDO authenticate(String username, String password) {
         final PlatformLoginLogTypeEnum logTypeEnum = PlatformLoginLogTypeEnum.LOGIN_USERNAME;
         // 校验账号是否存在
-        PlatformUserDO user = userService.getUserByUsername(username);
+        PlatformUserDO user = platformUserService.getUserByUsername(username);
         if (user == null) {
             createLoginLog(null, username, logTypeEnum, PlatformLoginResultEnum.BAD_CREDENTIALS);
             throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
         }
-        if (!userService.isPasswordMatch(password, user.getPassword())) {
+        if (!platformUserService.isPasswordMatch(password, user.getPassword())) {
             createLoginLog(user.getId(), username, logTypeEnum, PlatformLoginResultEnum.BAD_CREDENTIALS);
             throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
         }
@@ -125,10 +125,10 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         reqDTO.setUserAgent(ServletUtils.getUserAgent());
         reqDTO.setUserIp(ServletUtils.getClientIP());
         reqDTO.setResult(loginResult.getResult());
-        loginLogService.createLoginLog(reqDTO);
+        platformLoginLogService.createLoginLog(reqDTO);
         // 更新最后登录时间
         if (userId != null && Objects.equals(PlatformLoginResultEnum.SUCCESS.getResult(), loginResult.getResult())) {
-            userService.updateUserLogin(userId, ServletUtils.getClientIP());
+            platformUserService.updateUserLogin(userId, ServletUtils.getClientIP());
         }
     }
 
@@ -136,7 +136,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         // 插入登陆日志
         createLoginLog(userId, username, logType, PlatformLoginResultEnum.SUCCESS);
         // 创建访问令牌
-        OAuth2AccessTokenDO accessTokenDO = oauth2TokenService.createAccessToken(userId, getUserType().getValue(),
+        PlatformOAuth2AccessTokenDO accessTokenDO = platformOAuth2TokenService.createAccessToken(userId, getUserType().getValue(),
                 PlatformOAuth2ClientConstants.CLIENT_ID_DEFAULT, null);
         // 构建返回结果
         return AuthConvert.INSTANCE.convert(accessTokenDO);

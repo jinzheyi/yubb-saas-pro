@@ -1,12 +1,11 @@
 package cn.iocoder.yudao.module.platform.service.tenant;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.tenant.core.service.TenantFrameworkService;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantDO;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -61,7 +60,7 @@ public interface PlatformTenantService /*extends TenantFrameworkService*/ {
      * @param id 编号
      * @return 租户
      */
-    TenantDO getTenant(Long id);
+    PlatformTenantDO getTenant(Long id);
 
     /**
      * 获得租户分页
@@ -69,7 +68,7 @@ public interface PlatformTenantService /*extends TenantFrameworkService*/ {
      * @param pageReqVO 分页查询
      * @return 租户分页
      */
-    PageResult<TenantDO> getTenantPage(TenantPageReqVO pageReqVO);
+    PageResult<PlatformTenantDO> getTenantPage(TenantPageReqVO pageReqVO);
 
     /**
      * 获得租户列表, 用于 Excel 导出
@@ -77,7 +76,7 @@ public interface PlatformTenantService /*extends TenantFrameworkService*/ {
      * @param exportReqVO 查询条件
      * @return 租户列表
      */
-    List<TenantDO> getTenantList(TenantExportReqVO exportReqVO);
+    List<PlatformTenantDO> getTenantList(TenantExportReqVO exportReqVO);
 
     /**
      * 获得名字对应的租户
@@ -85,7 +84,7 @@ public interface PlatformTenantService /*extends TenantFrameworkService*/ {
      * @param name 组户名
      * @return 租户
      */
-    TenantDO getTenantByName(String name);
+    PlatformTenantDO getTenantByName(String name);
 
     /**
      * 获得使用指定套餐的租户数量
@@ -101,6 +100,6 @@ public interface PlatformTenantService /*extends TenantFrameworkService*/ {
      * @param packageId 租户套餐编号
      * @return 租户数组
      */
-    List<TenantDO> getTenantListByPackageId(Long packageId);
+    List<PlatformTenantDO> getTenantListByPackageId(Long packageId);
 
 }

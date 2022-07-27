@@ -7,8 +7,8 @@ import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.Ten
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackagePageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackageUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantPackageConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantPackageDO;
 import cn.iocoder.yudao.module.platform.dal.mapper.tenant.PlatformTenantPackageMapper;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -31,17 +31,17 @@ import static cn.iocoder.yudao.module.platform.enums.PlatformErrorCodeConstants.
 public class PlatformTenantPackageServiceImpl implements PlatformTenantPackageService {
 
     @Resource
-    private PlatformTenantPackageMapper tenantPackageMapper;
+    private PlatformTenantPackageMapper platformTenantPackageMapper;
 
     @Resource
     @Lazy // 避免循环依赖的报错
-    private PlatformTenantService tenantService;
+    private PlatformTenantService platformTenantService;
 
     @Override
     public Long createTenantPackage(TenantPackageCreateReqVO createReqVO) {
         // 插入
-        TenantPackageDO tenantPackage = TenantPackageConvert.INSTANCE.convert(createReqVO);
-        tenantPackageMapper.insert(tenantPackage);
+        PlatformTenantPackageDO tenantPackage = TenantPackageConvert.INSTANCE.convert(createReqVO);
+        platformTenantPackageMapper.insert(tenantPackage);
         // 返回
         return tenantPackage.getId();
     }
@@ -50,16 +50,16 @@ public class PlatformTenantPackageServiceImpl implements PlatformTenantPackageSe
     @Transactional(rollbackFor = Exception.class)
     public void updateTenantPackage(TenantPackageUpdateReqVO updateReqVO) {
         // 校验存在
-        TenantPackageDO tenantPackage = validateTenantPackageExists(updateReqVO.getId());
+        PlatformTenantPackageDO tenantPackage = validateTenantPackageExists(updateReqVO.getId());
         // 更新
-        TenantPackageDO updateObj = TenantPackageConvert.INSTANCE.convert(updateReqVO);
-        tenantPackageMapper.updateById(updateObj);
+        PlatformTenantPackageDO updateObj = TenantPackageConvert.INSTANCE.convert(updateReqVO);
+        platformTenantPackageMapper.updateById(updateObj);
         // 如果菜单发生变化，则修改每个租户的菜单
         if (!CollUtil.isEqualList(tenantPackage.getMenuIds(), updateReqVO.getMenuIds())) {
             //根据套餐编号查出使用了这个套餐的租户
-            List<TenantDO> tenants = tenantService.getTenantListByPackageId(tenantPackage.getId());
+            List<PlatformTenantDO> tenants = platformTenantService.getTenantListByPackageId(tenantPackage.getId());
             //updateReqVO.getMenuIds()调整的菜单id
-            tenants.forEach(tenant -> tenantService.updateTenantRoleMenu(tenant.getId(), updateReqVO.getMenuIds()));
+            tenants.forEach(tenant -> platformTenantService.updateTenantRoleMenu(tenant.getId(), updateReqVO.getMenuIds()));
         }
     }
 
@@ -70,11 +70,11 @@ public class PlatformTenantPackageServiceImpl implements PlatformTenantPackageSe
         // 校验正在使用
         this.validateTenantUsed(id);
         // 删除
-        tenantPackageMapper.deleteById(id);
+        platformTenantPackageMapper.deleteById(id);
     }
 
-    private TenantPackageDO validateTenantPackageExists(Long id) {
-        TenantPackageDO tenantPackage = tenantPackageMapper.selectById(id);
+    private PlatformTenantPackageDO validateTenantPackageExists(Long id) {
+        PlatformTenantPackageDO tenantPackage = platformTenantPackageMapper.selectById(id);
         if (tenantPackage == null) {
             throw exception(TENANT_PACKAGE_NOT_EXISTS);
         }
@@ -82,24 +82,24 @@ public class PlatformTenantPackageServiceImpl implements PlatformTenantPackageSe
     }
 
     private void validateTenantUsed(Long id) {
-        if (tenantService.getTenantCountByPackageId(id) > 0) {
+        if (platformTenantService.getTenantCountByPackageId(id) > 0) {
             throw exception(TENANT_PACKAGE_USED);
         }
     }
 
     @Override
-    public TenantPackageDO getTenantPackage(Long id) {
-        return tenantPackageMapper.selectById(id);
+    public PlatformTenantPackageDO getTenantPackage(Long id) {
+        return platformTenantPackageMapper.selectById(id);
     }
 
     @Override
-    public PageResult<TenantPackageDO> getTenantPackagePage(TenantPackagePageReqVO pageReqVO) {
-        return tenantPackageMapper.selectPage(pageReqVO);
+    public PageResult<PlatformTenantPackageDO> getTenantPackagePage(TenantPackagePageReqVO pageReqVO) {
+        return platformTenantPackageMapper.selectPage(pageReqVO);
     }
 
     @Override
-    public TenantPackageDO validTenantPackage(Long id) {
-        TenantPackageDO tenantPackage = tenantPackageMapper.selectById(id);
+    public PlatformTenantPackageDO validTenantPackage(Long id) {
+        PlatformTenantPackageDO tenantPackage = platformTenantPackageMapper.selectById(id);
         if (tenantPackage == null) {
             throw exception(TENANT_PACKAGE_NOT_EXISTS);
         }
@@ -110,8 +110,8 @@ public class PlatformTenantPackageServiceImpl implements PlatformTenantPackageSe
     }
 
     @Override
-    public List<TenantPackageDO> getTenantPackageListByStatus(Integer status) {
-        return tenantPackageMapper.selectListByStatus(status);
+    public List<PlatformTenantPackageDO> getTenantPackageListByStatus(Integer status) {
+        return platformTenantPackageMapper.selectListByStatus(status);
     }
 
 }

@@ -1,40 +1,41 @@
-package cn.iocoder.yudao.module.platform.dal.dataobject.dict;
+package cn.iocoder.yudao.module.platform.dal.dataobject.dept;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
- * 字典类型表
+ * 岗位表
  *
  * @author ruoyi
  */
-@TableName("platform_dict_type")
-@KeySequence("platform_dict_type_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
+@TableName("platform_post")
+@KeySequence("platform_post_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
 @EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class DictTypeDO extends BaseDO {
+public class PlatformPostDO extends BaseDO {
 
     /**
-     * 字典主键
+     * 岗位序号
      */
     @TableId
     private Long id;
     /**
-     * 字典名称
+     * 岗位名称
      */
     private String name;
     /**
-     * 字典类型
+     * 岗位编码
      */
-    private String type;
+    private String code;
+    /**
+     * 岗位排序
+     */
+    private Integer sort;
     /**
      * 状态
      *

@@ -4,7 +4,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackageCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackagePageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackageUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantPackageDO;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -44,7 +44,7 @@ public interface PlatformTenantPackageService {
      * @param id 编号
      * @return 租户套餐
      */
-    TenantPackageDO getTenantPackage(Long id);
+    PlatformTenantPackageDO getTenantPackage(Long id);
 
     /**
      * 获得租户套餐分页
@@ -52,7 +52,7 @@ public interface PlatformTenantPackageService {
      * @param pageReqVO 分页查询
      * @return 租户套餐分页
      */
-    PageResult<TenantPackageDO> getTenantPackagePage(TenantPackagePageReqVO pageReqVO);
+    PageResult<PlatformTenantPackageDO> getTenantPackagePage(TenantPackagePageReqVO pageReqVO);
 
     /**
      * 校验租户套餐
@@ -60,7 +60,7 @@ public interface PlatformTenantPackageService {
      * @param id 编号
      * @return 租户套餐
      */
-    TenantPackageDO validTenantPackage(Long id);
+    PlatformTenantPackageDO validTenantPackage(Long id);
 
     /**
      * 获得指定状态的租户套餐列表
@@ -68,6 +68,6 @@ public interface PlatformTenantPackageService {
      * @param status 状态
      * @return 租户套餐
      */
-    List<TenantPackageDO> getTenantPackageListByStatus(Integer status);
+    List<PlatformTenantPackageDO> getTenantPackageListByStatus(Integer status);
 
 }

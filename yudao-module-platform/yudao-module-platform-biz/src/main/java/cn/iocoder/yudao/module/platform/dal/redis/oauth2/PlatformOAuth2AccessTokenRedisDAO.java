@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.dal.redis.oauth2;
 
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 import static cn.iocoder.yudao.module.platform.dal.redis.RedisKeyConstants.OAUTH2_ACCESS_TOKEN;
 
 /**
- * {@link OAuth2AccessTokenDO} 的 RedisDAO
+ * {@link PlatformOAuth2AccessTokenDO} 的 RedisDAO
  *
  * @author 芋道源码
  */
@@ -24,12 +24,12 @@ public class PlatformOAuth2AccessTokenRedisDAO {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
-    public OAuth2AccessTokenDO get(String accessToken) {
+    public PlatformOAuth2AccessTokenDO get(String accessToken) {
         String redisKey = formatKey(accessToken);
-        return JsonUtils.parseObject(stringRedisTemplate.opsForValue().get(redisKey), OAuth2AccessTokenDO.class);
+        return JsonUtils.parseObject(stringRedisTemplate.opsForValue().get(redisKey), PlatformOAuth2AccessTokenDO.class);
     }
 
-    public void set(OAuth2AccessTokenDO accessTokenDO) {
+    public void set(PlatformOAuth2AccessTokenDO accessTokenDO) {
         String redisKey = formatKey(accessTokenDO.getAccessToken());
         // 清理多余字段，避免缓存
         accessTokenDO.setUpdater(null).setUpdateTime(null).setCreateTime(null).setCreator(null).setDeleted(null);

@@ -5,7 +5,7 @@ import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.Ten
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackageRespVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackageSimpleRespVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackageUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantPackageDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -21,16 +21,16 @@ public interface TenantPackageConvert {
 
     TenantPackageConvert INSTANCE = Mappers.getMapper(TenantPackageConvert.class);
 
-    TenantPackageDO convert(TenantPackageCreateReqVO bean);
+    PlatformTenantPackageDO convert(TenantPackageCreateReqVO bean);
 
-    TenantPackageDO convert(TenantPackageUpdateReqVO bean);
+    PlatformTenantPackageDO convert(TenantPackageUpdateReqVO bean);
 
-    TenantPackageRespVO convert(TenantPackageDO bean);
+    TenantPackageRespVO convert(PlatformTenantPackageDO bean);
 
-    List<TenantPackageRespVO> convertList(List<TenantPackageDO> list);
+    List<TenantPackageRespVO> convertList(List<PlatformTenantPackageDO> list);
 
-    PageResult<TenantPackageRespVO> convertPage(PageResult<TenantPackageDO> page);
+    PageResult<TenantPackageRespVO> convertPage(PageResult<PlatformTenantPackageDO> page);
 
-    List<TenantPackageSimpleRespVO> convertList02(List<TenantPackageDO> list);
+    List<TenantPackageSimpleRespVO> convertList02(List<PlatformTenantPackageDO> list);
 
 }

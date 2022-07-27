@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.platform.service.permission;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuListReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformMenuDO;
 
 import java.util.Collection;
 import java.util.List;
@@ -47,7 +47,7 @@ public interface PlatformMenuService {
      *
      * @return 菜单列表
      */
-    List<MenuDO> getMenus();
+    List<PlatformMenuDO> getMenus();
 
     /**
      * 筛选菜单列表
@@ -55,7 +55,7 @@ public interface PlatformMenuService {
      * @param reqVO 筛选条件请求 VO
      * @return 菜单列表
      */
-    List<MenuDO> getMenus(MenuListReqVO reqVO);
+    List<PlatformMenuDO> getMenus(MenuListReqVO reqVO);
 
     /**
      * 获得所有菜单，从缓存中
@@ -66,7 +66,7 @@ public interface PlatformMenuService {
      * @param menusStatuses 菜单状态数组
      * @return 菜单列表
      */
-    List<MenuDO> getMenuListFromCache(Collection<Integer> menuTypes, Collection<Integer> menusStatuses);
+    List<PlatformMenuDO> getMenuListFromCache(Collection<Integer> menuTypes, Collection<Integer> menusStatuses);
 
     /**
      * 获得指定编号的菜单数组，从缓存中
@@ -78,8 +78,8 @@ public interface PlatformMenuService {
      * @param menusStatuses 菜单状态数组
      * @return 菜单数组
      */
-    List<MenuDO> getMenuListFromCache(Collection<Long> menuIds, Collection<Integer> menuTypes,
-                                      Collection<Integer> menusStatuses);
+    List<PlatformMenuDO> getMenuListFromCache(Collection<Long> menuIds, Collection<Integer> menuTypes,
+                                              Collection<Integer> menusStatuses);
 
     /**
      * 获得权限对应的菜单数组
@@ -87,7 +87,7 @@ public interface PlatformMenuService {
      * @param permission 权限标识
      * @return 数组
      */
-    List<MenuDO> getMenuListByPermissionFromCache(String permission);
+    List<PlatformMenuDO> getMenuListByPermissionFromCache(String permission);
 
     /**
      * 获得菜单
@@ -95,6 +95,6 @@ public interface PlatformMenuService {
      * @param id 菜单编号
      * @return 菜单
      */
-    MenuDO getMenu(Long id);
+    PlatformMenuDO getMenu(Long id);
 
 }

@@ -4,7 +4,7 @@ import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptCreat
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptRespVO;
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptSimpleRespVO;
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
 import cn.iocoder.yudao.module.system.api.dept.dto.DeptRespDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -17,20 +17,20 @@ public interface DeptConvert {
 
     DeptConvert INSTANCE = Mappers.getMapper(DeptConvert.class);
 
-    List<DeptRespVO> convertList(List<DeptDO> list);
+    List<DeptRespVO> convertList(List<PlatformDeptDO> list);
 
-    List<DeptSimpleRespVO> convertList02(List<DeptDO> list);
+    List<DeptSimpleRespVO> convertList02(List<PlatformDeptDO> list);
 
-    DeptRespVO convert(DeptDO bean);
+    DeptRespVO convert(PlatformDeptDO bean);
 
-    DeptDO convert(DeptCreateReqVO bean);
+    PlatformDeptDO convert(DeptCreateReqVO bean);
 
-    DeptDO convert(DeptUpdateReqVO bean);
+    PlatformDeptDO convert(DeptUpdateReqVO bean);
 
-    List<DeptRespDTO> convertList03(List<DeptDO> list);
+    List<DeptRespDTO> convertList03(List<PlatformDeptDO> list);
 
-    DeptRespDTO convert03(DeptDO bean);
+    DeptRespDTO convert03(PlatformDeptDO bean);
 
-    Map<Long, DeptRespDTO> convertMap(Map<Long, DeptDO> map);
+    Map<Long, DeptRespDTO> convertMap(Map<Long, PlatformDeptDO> map);
 
 }

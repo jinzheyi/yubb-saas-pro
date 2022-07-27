@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.platform.service.tenant;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuListReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantMenuDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantMenuDO;
 
 import java.util.Collection;
 import java.util.List;
@@ -47,7 +47,7 @@ public interface PlatformTenantMenuService {
      *
      * @return 菜单列表
      */
-    List<TenantMenuDO> getMenus();
+    List<PlatformTenantMenuDO> getMenus();
 
     /**
      * 筛选菜单列表
@@ -55,7 +55,7 @@ public interface PlatformTenantMenuService {
      * @param reqVO 筛选条件请求 VO
      * @return 菜单列表
      */
-    List<TenantMenuDO> getMenus(TenantMenuListReqVO reqVO);
+    List<PlatformTenantMenuDO> getMenus(TenantMenuListReqVO reqVO);
 
     /**
      * 获得所有菜单，从缓存中
@@ -66,7 +66,7 @@ public interface PlatformTenantMenuService {
      * @param menusStatuses 菜单状态数组
      * @return 菜单列表
      */
-    List<TenantMenuDO> getMenuListFromCache(Collection<Integer> menuTypes, Collection<Integer> menusStatuses);
+    List<PlatformTenantMenuDO> getMenuListFromCache(Collection<Integer> menuTypes, Collection<Integer> menusStatuses);
 
     /**
      * 获得指定编号的菜单数组，从缓存中
@@ -78,8 +78,8 @@ public interface PlatformTenantMenuService {
      * @param menusStatuses 菜单状态数组
      * @return 菜单数组
      */
-    List<TenantMenuDO> getMenuListFromCache(Collection<Long> menuIds, Collection<Integer> menuTypes,
-                                      Collection<Integer> menusStatuses);
+    List<PlatformTenantMenuDO> getMenuListFromCache(Collection<Long> menuIds, Collection<Integer> menuTypes,
+                                                    Collection<Integer> menusStatuses);
 
     /**
      * 获得权限对应的菜单数组
@@ -87,7 +87,7 @@ public interface PlatformTenantMenuService {
      * @param permission 权限标识
      * @return 数组
      */
-    List<TenantMenuDO> getMenuListByPermissionFromCache(String permission);
+    List<PlatformTenantMenuDO> getMenuListByPermissionFromCache(String permission);
 
     /**
      * 获得菜单
@@ -95,6 +95,6 @@ public interface PlatformTenantMenuService {
      * @param id 菜单编号
      * @return 菜单
      */
-    TenantMenuDO getMenu(Long id);
+    PlatformTenantMenuDO getMenu(Long id);
 
 }

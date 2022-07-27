@@ -4,7 +4,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformLoginLogCreateReqDTO;
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog.LoginLogExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog.LoginLogPageReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.logger.LoginLogDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.logger.PlatformLoginLogDO;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -20,7 +20,7 @@ public interface PlatformLoginLogService {
      * @param reqVO 分页条件
      * @return 登录日志分页
      */
-    PageResult<LoginLogDO> getLoginLogPage(LoginLogPageReqVO reqVO);
+    PageResult<PlatformLoginLogDO> getLoginLogPage(LoginLogPageReqVO reqVO);
 
     /**
      * 获得登录日志列表
@@ -28,7 +28,7 @@ public interface PlatformLoginLogService {
      * @param reqVO 列表条件
      * @return 登录日志列表
      */
-    List<LoginLogDO> getLoginLogList(LoginLogExportReqVO reqVO);
+    List<PlatformLoginLogDO> getLoginLogList(LoginLogExportReqVO reqVO);
 
     /**
      * 创建登录日志

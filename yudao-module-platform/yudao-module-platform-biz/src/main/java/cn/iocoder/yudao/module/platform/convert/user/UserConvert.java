@@ -5,10 +5,10 @@ import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserPr
 import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdateReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformPostDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.social.PlatformSocialUserDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -23,7 +23,7 @@ public interface UserConvert {
 
     UserPageItemRespVO convert(PlatformUserDO bean);
 
-    UserPageItemRespVO.Dept convert(DeptDO bean);
+    UserPageItemRespVO.Dept convert(PlatformDeptDO bean);
 
     PlatformUserDO convert(UserCreateReqVO bean);
 
@@ -35,18 +35,18 @@ public interface UserConvert {
 
     UserProfileRespVO convert03(PlatformUserDO bean);
 
-    List<UserProfileRespVO.Role> convertList(List<RoleDO> list);
+    List<UserProfileRespVO.Role> convertList(List<PlatformRoleDO> list);
 
-    UserProfileRespVO.Dept convert02(DeptDO bean);
+    UserProfileRespVO.Dept convert02(PlatformDeptDO bean);
 
     PlatformUserDO convert(UserProfileUpdateReqVO bean);
 
     PlatformUserDO convert(UserProfileUpdatePasswordReqVO bean);
 
-    List<UserProfileRespVO.Post> convertList02(List<PostDO> list);
+    List<UserProfileRespVO.Post> convertList02(List<PlatformPostDO> list);
 
     //TODO 这里先标记一下平台是否需要社交账号
-    List<UserProfileRespVO.SocialUser> convertList03(List<SocialUserDO> list);
+    List<UserProfileRespVO.SocialUser> convertList03(List<PlatformSocialUserDO> list);
 
     List<UserSimpleRespVO> convertList04(List<PlatformUserDO> list);
 

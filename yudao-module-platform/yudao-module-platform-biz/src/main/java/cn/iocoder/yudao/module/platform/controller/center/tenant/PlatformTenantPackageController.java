@@ -5,7 +5,7 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.*;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantPackageConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantPackageDO;
 import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantPackageService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -58,7 +58,7 @@ public class PlatformTenantPackageController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('platform:tenant-package:query')")
     public CommonResult<TenantPackageRespVO> getTenantPackage(@RequestParam("id") Long id) {
-        TenantPackageDO tenantPackage = tenantPackageService.getTenantPackage(id);
+        PlatformTenantPackageDO tenantPackage = tenantPackageService.getTenantPackage(id);
         return success(TenantPackageConvert.INSTANCE.convert(tenantPackage));
     }
 
@@ -66,7 +66,7 @@ public class PlatformTenantPackageController {
     @ApiOperation("获得租户套餐分页")
     @PreAuthorize("@ss.hasPermission('platform:tenant-package:query')")
     public CommonResult<PageResult<TenantPackageRespVO>> getTenantPackagePage(@Valid TenantPackagePageReqVO pageVO) {
-        PageResult<TenantPackageDO> pageResult = tenantPackageService.getTenantPackagePage(pageVO);
+        PageResult<PlatformTenantPackageDO> pageResult = tenantPackageService.getTenantPackagePage(pageVO);
         return success(TenantPackageConvert.INSTANCE.convertPage(pageResult));
     }
 
@@ -74,7 +74,7 @@ public class PlatformTenantPackageController {
     @ApiOperation(value = "获取租户套餐精简信息列表", notes = "只包含被开启的租户套餐，主要用于前端的下拉选项")
     public CommonResult<List<TenantPackageSimpleRespVO>> getTenantPackageList() {
         // 获得角色列表，只要开启状态的
-        List<TenantPackageDO> list = tenantPackageService.getTenantPackageListByStatus(CommonStatusEnum.ENABLE.getStatus());
+        List<PlatformTenantPackageDO> list = tenantPackageService.getTenantPackageListByStatus(CommonStatusEnum.ENABLE.getStatus());
         return success(TenantPackageConvert.INSTANCE.convertList02(list));
     }
 

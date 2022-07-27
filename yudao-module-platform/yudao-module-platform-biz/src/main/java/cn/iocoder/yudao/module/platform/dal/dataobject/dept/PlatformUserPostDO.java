@@ -17,7 +17,7 @@ import lombok.EqualsAndHashCode;
 @KeySequence("platform_user_post_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class UserPostDO extends BaseDO {
+public class PlatformUserPostDO extends BaseDO {
 
     /**
      * 自增主键
@@ -33,7 +33,7 @@ public class UserPostDO extends BaseDO {
     /**
      * 角色 ID
      *
-     * 关联 {@link PostDO#getId()}
+     * 关联 {@link PlatformPostDO#getId()}
      */
     private Long postId;
 

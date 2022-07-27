@@ -23,7 +23,7 @@ import java.util.Set;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class TenantPackageDO extends BaseDO {
+public class PlatformTenantPackageDO extends BaseDO {
 
     /**
      * 套餐编号，自增

@@ -5,8 +5,7 @@ import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.Tenan
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantExcelVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantRespVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantUpdateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.UserCreateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantDO;
 import cn.iocoder.yudao.module.system.api.user.dto.AdminUserCreateReqDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -23,17 +22,17 @@ public interface TenantConvert {
 
     TenantConvert INSTANCE = Mappers.getMapper(TenantConvert.class);
 
-    TenantDO convert(TenantCreateReqVO bean);
+    PlatformTenantDO convert(TenantCreateReqVO bean);
 
-    TenantDO convert(TenantUpdateReqVO bean);
+    PlatformTenantDO convert(TenantUpdateReqVO bean);
 
-    TenantRespVO convert(TenantDO bean);
+    TenantRespVO convert(PlatformTenantDO bean);
 
-    List<TenantRespVO> convertList(List<TenantDO> list);
+    List<TenantRespVO> convertList(List<PlatformTenantDO> list);
 
-    PageResult<TenantRespVO> convertPage(PageResult<TenantDO> page);
+    PageResult<TenantRespVO> convertPage(PageResult<PlatformTenantDO> page);
 
-    List<TenantExcelVO> convertList02(List<TenantDO> list);
+    List<TenantExcelVO> convertList02(List<PlatformTenantDO> list);
 
     default AdminUserCreateReqDTO convert02(TenantCreateReqVO bean) {
         AdminUserCreateReqDTO reqVO = new AdminUserCreateReqDTO();

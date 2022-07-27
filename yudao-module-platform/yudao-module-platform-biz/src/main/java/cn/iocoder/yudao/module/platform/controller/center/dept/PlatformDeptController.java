@@ -4,7 +4,7 @@ import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.*;
 import cn.iocoder.yudao.module.platform.convert.dept.DeptConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
 import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -58,8 +58,8 @@ public class PlatformDeptController {
     @ApiOperation("获取部门列表")
     @PreAuthorize("@ss.hasPermission('platform:dept:query')")
     public CommonResult<List<DeptRespVO>> listDepts(DeptListReqVO reqVO) {
-        List<DeptDO> list = deptService.getSimpleDepts(reqVO);
-        list.sort(Comparator.comparing(DeptDO::getSort));
+        List<PlatformDeptDO> list = deptService.getSimpleDepts(reqVO);
+        list.sort(Comparator.comparing(PlatformDeptDO::getSort));
         return success(DeptConvert.INSTANCE.convertList(list));
     }
 
@@ -69,9 +69,9 @@ public class PlatformDeptController {
         // 获得部门列表，只要开启状态的
         DeptListReqVO reqVO = new DeptListReqVO();
         reqVO.setStatus(CommonStatusEnum.ENABLE.getStatus());
-        List<DeptDO> list = deptService.getSimpleDepts(reqVO);
+        List<PlatformDeptDO> list = deptService.getSimpleDepts(reqVO);
         // 排序后，返回给前端
-        list.sort(Comparator.comparing(DeptDO::getSort));
+        list.sort(Comparator.comparing(PlatformDeptDO::getSort));
         return success(DeptConvert.INSTANCE.convertList02(list));
     }
 

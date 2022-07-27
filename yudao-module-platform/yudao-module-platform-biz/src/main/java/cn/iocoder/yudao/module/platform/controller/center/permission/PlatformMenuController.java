@@ -4,7 +4,7 @@ import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.*;
 import cn.iocoder.yudao.module.platform.convert.permission.MenuConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformMenuDO;
 import cn.iocoder.yudao.module.platform.service.permission.PlatformMenuService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -58,8 +58,8 @@ public class PlatformMenuController {
     @ApiOperation(value = "获取菜单列表", notes = "用于【菜单管理】界面")
     @PreAuthorize("@ss.hasPermission('platform:menu:query')")
     public CommonResult<List<MenuRespVO>> getMenus(MenuListReqVO reqVO) {
-        List<MenuDO> list = menuService.getMenus(reqVO);
-        list.sort(Comparator.comparing(MenuDO::getSort));
+        List<PlatformMenuDO> list = menuService.getMenus(reqVO);
+        list.sort(Comparator.comparing(PlatformMenuDO::getSort));
         return success(MenuConvert.INSTANCE.convertList(list));
     }
 
@@ -69,9 +69,9 @@ public class PlatformMenuController {
         // 获得菜单列表，只要开启状态的
         MenuListReqVO reqVO = new MenuListReqVO();
         reqVO.setStatus(CommonStatusEnum.ENABLE.getStatus());
-        List<MenuDO> list = menuService.getMenus(reqVO);
+        List<PlatformMenuDO> list = menuService.getMenus(reqVO);
         // 排序后，返回给前端
-        list.sort(Comparator.comparing(MenuDO::getSort));
+        list.sort(Comparator.comparing(PlatformMenuDO::getSort));
         return success(MenuConvert.INSTANCE.convertList02(list));
     }
 
@@ -79,7 +79,7 @@ public class PlatformMenuController {
     @ApiOperation("获取菜单信息")
     @PreAuthorize("@ss.hasPermission('platform:menu:query')")
     public CommonResult<MenuRespVO> getMenu(Long id) {
-        MenuDO menu = menuService.getMenu(id);
+        PlatformMenuDO menu = menuService.getMenu(id);
         return success(MenuConvert.INSTANCE.convert(menu));
     }
 

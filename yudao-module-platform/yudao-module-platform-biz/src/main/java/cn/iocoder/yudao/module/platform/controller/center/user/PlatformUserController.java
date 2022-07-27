@@ -9,7 +9,7 @@ import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
 import cn.iocoder.yudao.framework.common.enums.SexEnum;
 import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
 import cn.iocoder.yudao.module.platform.convert.user.UserConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
 import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
@@ -96,7 +96,7 @@ public class PlatformUserController {
 
         // 获得拼接需要的数据
         Collection<Long> deptIds = convertList(pageResult.getList(), PlatformUserDO::getDeptId);
-        Map<Long, DeptDO> deptMap = deptService.getDeptMap(deptIds);
+        Map<Long, PlatformDeptDO> deptMap = deptService.getDeptMap(deptIds);
         // 拼接结果返回
         List<UserPageItemRespVO> userList = new ArrayList<>(pageResult.getList().size());
         pageResult.getList().forEach(user -> {
@@ -136,9 +136,9 @@ public class PlatformUserController {
 
         // 获得拼接需要的数据
         Collection<Long> deptIds = convertList(users, PlatformUserDO::getDeptId);
-        Map<Long, DeptDO> deptMap = deptService.getDeptMap(deptIds);
+        Map<Long, PlatformDeptDO> deptMap = deptService.getDeptMap(deptIds);
         Map<Long, PlatformUserDO> deptLeaderUserMap = userService.getUserMap(
-                convertSet(deptMap.values(), DeptDO::getLeaderUserId));
+                convertSet(deptMap.values(), PlatformDeptDO::getLeaderUserId));
         // 拼接数据
         List<UserExcelVO> excelUsers = new ArrayList<>(users.size());
         users.forEach(user -> {

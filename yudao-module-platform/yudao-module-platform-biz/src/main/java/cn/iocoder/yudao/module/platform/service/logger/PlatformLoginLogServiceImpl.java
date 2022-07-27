@@ -5,7 +5,7 @@ import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformLoginLogCreateReq
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog.LoginLogExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog.LoginLogPageReqVO;
 import cn.iocoder.yudao.module.platform.convert.logger.LoginLogConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.logger.LoginLogDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.logger.PlatformLoginLogDO;
 import cn.iocoder.yudao.module.platform.dal.mapper.logger.PlatformLoginLogMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -21,22 +21,22 @@ import java.util.List;
 public class PlatformLoginLogServiceImpl implements PlatformLoginLogService {
 
     @Resource
-    private PlatformLoginLogMapper loginLogMapper;
+    private PlatformLoginLogMapper platformLoginLogMapper;
 
     @Override
-    public PageResult<LoginLogDO> getLoginLogPage(LoginLogPageReqVO reqVO) {
-        return loginLogMapper.selectPage(reqVO);
+    public PageResult<PlatformLoginLogDO> getLoginLogPage(LoginLogPageReqVO reqVO) {
+        return platformLoginLogMapper.selectPage(reqVO);
     }
 
     @Override
-    public List<LoginLogDO> getLoginLogList(LoginLogExportReqVO reqVO) {
-        return loginLogMapper.selectList(reqVO);
+    public List<PlatformLoginLogDO> getLoginLogList(LoginLogExportReqVO reqVO) {
+        return platformLoginLogMapper.selectList(reqVO);
     }
 
     @Override
     public void createLoginLog(PlatformLoginLogCreateReqDTO reqDTO) {
-        LoginLogDO loginLog = LoginLogConvert.INSTANCE.convert(reqDTO);
-        loginLogMapper.insert(loginLog);
+        PlatformLoginLogDO loginLog = LoginLogConvert.INSTANCE.convert(reqDTO);
+        platformLoginLogMapper.insert(loginLog);
     }
 
 }

@@ -4,7 +4,7 @@ import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.*;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantMenuConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantMenuDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantMenuDO;
 import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantMenuService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -58,8 +58,8 @@ public class PlatformTenantMenuController {
     @ApiOperation(value = "获取菜单列表", notes = "用于【菜单管理】界面")
     @PreAuthorize("@ss.hasPermission('platform:tenant-menu:query')")
     public CommonResult<List<TenantMenuRespVO>> getMenus(TenantMenuListReqVO reqVO) {
-        List<TenantMenuDO> list = menuService.getMenus(reqVO);
-        list.sort(Comparator.comparing(TenantMenuDO::getSort));
+        List<PlatformTenantMenuDO> list = menuService.getMenus(reqVO);
+        list.sort(Comparator.comparing(PlatformTenantMenuDO::getSort));
         return success(TenantMenuConvert.INSTANCE.convertList(list));
     }
 
@@ -69,9 +69,9 @@ public class PlatformTenantMenuController {
         // 获得菜单列表，只要开启状态的
         TenantMenuListReqVO reqVO = new TenantMenuListReqVO();
         reqVO.setStatus(CommonStatusEnum.ENABLE.getStatus());
-        List<TenantMenuDO> list = menuService.getMenus(reqVO);
+        List<PlatformTenantMenuDO> list = menuService.getMenus(reqVO);
         // 排序后，返回给前端
-        list.sort(Comparator.comparing(TenantMenuDO::getSort));
+        list.sort(Comparator.comparing(PlatformTenantMenuDO::getSort));
         return success(TenantMenuConvert.INSTANCE.convertList02(list));
     }
 
@@ -79,7 +79,7 @@ public class PlatformTenantMenuController {
     @ApiOperation("获取菜单信息")
     @PreAuthorize("@ss.hasPermission('platform:tenant-menu:query')")
     public CommonResult<TenantMenuRespVO> getMenu(Long id) {
-        TenantMenuDO menu = menuService.getMenu(id);
+        PlatformTenantMenuDO menu = menuService.getMenu(id);
         return success(TenantMenuConvert.INSTANCE.convert(menu));
     }
 

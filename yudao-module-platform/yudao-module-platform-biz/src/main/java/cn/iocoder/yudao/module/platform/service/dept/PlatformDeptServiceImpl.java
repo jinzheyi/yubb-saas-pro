@@ -8,7 +8,7 @@ import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptCreat
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptListReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.dept.DeptConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
 import cn.iocoder.yudao.module.platform.dal.mapper.dept.PlatformDeptMapper;
 import cn.iocoder.yudao.module.platform.enums.dept.PlatformDeptIdEnum;
 import cn.iocoder.yudao.module.platform.mq.producer.dept.PlatformDeptProducer;
@@ -49,30 +49,30 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
 
     /**
      * 部门缓存
-     * key：部门编号 {@link DeptDO#getId()}
+     * key：部门编号 {@link PlatformDeptDO#getId()}
      *
      * 这里声明 volatile 修饰的原因是，每次刷新时，直接修改指向
      */
     @SuppressWarnings("FieldCanBeLocal")
-    private volatile Map<Long, DeptDO> deptCache;
+    private volatile Map<Long, PlatformDeptDO> deptCache;
     /**
      * 父部门缓存
-     * key：部门编号 {@link DeptDO#getParentId()}
+     * key：部门编号 {@link PlatformDeptDO#getParentId()}
      * value: 直接子部门列表
      *
      * 这里声明 volatile 修饰的原因是，每次刷新时，直接修改指向
      */
-    private volatile Multimap<Long, DeptDO> parentDeptCache;
+    private volatile Multimap<Long, PlatformDeptDO> parentDeptCache;
     /**
      * 缓存部门的最大更新时间，用于后续的增量轮询，判断是否有更新
      */
     private volatile Date maxUpdateTime;
 
     @Resource
-    private PlatformDeptMapper deptMapper;
+    private PlatformDeptMapper platformDeptMapper;
 
     @Resource
-    private PlatformDeptProducer deptProducer;
+    private PlatformDeptProducer platformDeptProducer;
 
     @Resource
     @Lazy // 注入自己，所以延迟加载
@@ -85,14 +85,14 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
     @PostConstruct
     public synchronized void initLocalCache() {
         // 获取部门列表，如果有更新
-        List<DeptDO> deptList = loadDeptIfUpdate(maxUpdateTime);
+        List<PlatformDeptDO> deptList = loadDeptIfUpdate(maxUpdateTime);
         if (CollUtil.isEmpty(deptList)) {
             return;
         }
 
         // 构建缓存
-        ImmutableMap.Builder<Long, DeptDO> builder = ImmutableMap.builder();
-        ImmutableMultimap.Builder<Long, DeptDO> parentBuilder = ImmutableMultimap.builder();
+        ImmutableMap.Builder<Long, PlatformDeptDO> builder = ImmutableMap.builder();
+        ImmutableMultimap.Builder<Long, PlatformDeptDO> parentBuilder = ImmutableMultimap.builder();
         deptList.forEach(deptDO -> {
             builder.put(deptDO.getId(), deptDO);
             parentBuilder.put(deptDO.getParentId(), deptDO);
@@ -101,7 +101,7 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
         deptCache = builder.build();
         parentDeptCache = parentBuilder.build();
         //获取 deptList 部门数据中 最大的更新时间
-        maxUpdateTime = CollectionUtils.getMaxValue(deptList, DeptDO::getUpdateTime);
+        maxUpdateTime = CollectionUtils.getMaxValue(deptList, PlatformDeptDO::getUpdateTime);
         log.info("[initLocalCache][初始化 Dept 数量为 {}]", deptList.size());
     }
 
@@ -117,18 +117,18 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
      * @param maxUpdateTime 当前部门的最大更新时间
      * @return 部门列表
      */
-    protected List<DeptDO> loadDeptIfUpdate(Date maxUpdateTime) {
+    protected List<PlatformDeptDO> loadDeptIfUpdate(Date maxUpdateTime) {
         // 第一步，判断是否要更新。
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
             log.info("[loadDeptIfUpdate][首次加载全量部门]");
         } else { // 判断数据库中是否有更新的部门
-            if (deptMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
+            if (platformDeptMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
                 return null;
             }
             log.info("[loadDeptIfUpdate][增量加载全量部门]");
         }
         // 第二步，如果有更新，则从数据库加载所有部门
-        return deptMapper.selectList();
+        return platformDeptMapper.selectList();
     }
 
     @Override
@@ -139,10 +139,10 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
         }
         checkCreateOrUpdate(null, reqVO.getParentId(), reqVO.getName());
         // 插入部门
-        DeptDO dept = DeptConvert.INSTANCE.convert(reqVO);
-        deptMapper.insert(dept);
+        PlatformDeptDO dept = DeptConvert.INSTANCE.convert(reqVO);
+        platformDeptMapper.insert(dept);
         // 发送刷新消息
-        deptProducer.sendDeptRefreshMessage();
+        platformDeptProducer.sendDeptRefreshMessage();
         return dept.getId();
     }
 
@@ -154,10 +154,10 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
         }
         checkCreateOrUpdate(reqVO.getId(), reqVO.getParentId(), reqVO.getName());
         // 更新部门
-        DeptDO updateObj = DeptConvert.INSTANCE.convert(reqVO);
-        deptMapper.updateById(updateObj);
+        PlatformDeptDO updateObj = DeptConvert.INSTANCE.convert(reqVO);
+        platformDeptMapper.updateById(updateObj);
         // 发送刷新消息
-        deptProducer.sendDeptRefreshMessage();
+        platformDeptProducer.sendDeptRefreshMessage();
     }
 
     @Override
@@ -165,26 +165,26 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
         // 校验是否存在
         checkDeptExists(id);
         // 校验是否有子部门
-        if (deptMapper.selectCountByParentId(id) > 0) {
+        if (platformDeptMapper.selectCountByParentId(id) > 0) {
             throw ServiceExceptionUtil.exception(DEPT_EXITS_CHILDREN);
         }
         // 删除部门
-        deptMapper.deleteById(id);
+        platformDeptMapper.deleteById(id);
         // 发送刷新消息
-        deptProducer.sendDeptRefreshMessage();
+        platformDeptProducer.sendDeptRefreshMessage();
     }
 
     @Override
-    public List<DeptDO> getSimpleDepts(DeptListReqVO reqVO) {
-        return deptMapper.selectList(reqVO);
+    public List<PlatformDeptDO> getSimpleDepts(DeptListReqVO reqVO) {
+        return platformDeptMapper.selectList(reqVO);
     }
 
     @Override
-    public List<DeptDO> getDeptsByParentIdFromCache(Long parentId, boolean recursive) {
+    public List<PlatformDeptDO> getDeptsByParentIdFromCache(Long parentId, boolean recursive) {
         if (parentId == null) {
             return Collections.emptyList();
         }
-        List<DeptDO> result = new ArrayList<>(); // TODO 芋艿：待优化，新增缓存，避免每次遍历的计算
+        List<PlatformDeptDO> result = new ArrayList<>(); // TODO 芋艿：待优化，新增缓存，避免每次遍历的计算
         // 递归，简单粗暴
         this.getDeptsByParentIdFromCache(result, parentId,
                 recursive ? Integer.MAX_VALUE : 1, // 如果递归获取，则无限；否则，只递归 1 次
@@ -200,14 +200,14 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
      * @param recursiveCount 递归次数
      * @param parentDeptMap 父部门 Map，使用缓存，避免变化
      */
-    private void getDeptsByParentIdFromCache(List<DeptDO> result, Long parentId, int recursiveCount,
-                                             Multimap<Long, DeptDO> parentDeptMap) {
+    private void getDeptsByParentIdFromCache(List<PlatformDeptDO> result, Long parentId, int recursiveCount,
+                                             Multimap<Long, PlatformDeptDO> parentDeptMap) {
         // 递归次数为 0，结束！
         if (recursiveCount == 0) {
             return;
         }
         // 获得子部门
-        Collection<DeptDO> depts = parentDeptMap.get(parentId);
+        Collection<PlatformDeptDO> depts = parentDeptMap.get(parentId);
         if (CollUtil.isEmpty(depts)) {
             return;
         }
@@ -235,7 +235,7 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
             throw ServiceExceptionUtil.exception(DEPT_PARENT_ERROR);
         }
         // 父部门不存在
-        DeptDO dept = deptMapper.selectById(parentId);
+        PlatformDeptDO dept = platformDeptMapper.selectById(parentId);
         if (dept == null) {
             throw ServiceExceptionUtil.exception(DEPT_PARENT_NOT_EXITS);
         }
@@ -244,7 +244,7 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
             throw ServiceExceptionUtil.exception(DEPT_NOT_ENABLE);
         }
         // 父部门不能是原来的子部门
-        List<DeptDO> children = this.getDeptsByParentIdFromCache(id, true);
+        List<PlatformDeptDO> children = this.getDeptsByParentIdFromCache(id, true);
         if (children.stream().anyMatch(dept1 -> dept1.getId().equals(parentId))) {
             throw ServiceExceptionUtil.exception(DEPT_PARENT_IS_CHILD);
         }
@@ -254,34 +254,34 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
         if (id == null) {
             return;
         }
-        DeptDO dept = deptMapper.selectById(id);
+        PlatformDeptDO dept = platformDeptMapper.selectById(id);
         if (dept == null) {
             throw ServiceExceptionUtil.exception(DEPT_NOT_FOUND);
         }
     }
 
     private void checkDeptNameUnique(Long id, Long parentId, String name) {
-        DeptDO deptDO = deptMapper.selectByParentIdAndName(parentId, name);
-        if (deptDO == null) {
+        PlatformDeptDO platformDeptDO = platformDeptMapper.selectByParentIdAndName(parentId, name);
+        if (platformDeptDO == null) {
             return;
         }
         // 如果 id 为空，说明不用比较是否为相同 id 的岗位
         if (id == null) {
             throw ServiceExceptionUtil.exception(DEPT_NAME_DUPLICATE);
         }
-        if (!deptDO.getId().equals(id)) {
+        if (!platformDeptDO.getId().equals(id)) {
             throw ServiceExceptionUtil.exception(DEPT_NAME_DUPLICATE);
         }
     }
 
     @Override
-    public List<DeptDO> getDepts(Collection<Long> ids) {
-        return deptMapper.selectBatchIds(ids);
+    public List<PlatformDeptDO> getDepts(Collection<Long> ids) {
+        return platformDeptMapper.selectBatchIds(ids);
     }
 
     @Override
-    public DeptDO getDept(Long id) {
-        return deptMapper.selectById(id);
+    public PlatformDeptDO getDept(Long id) {
+        return platformDeptMapper.selectById(id);
     }
 
     @Override
@@ -290,11 +290,11 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
             return;
         }
         // 获得部门信息
-        List<DeptDO> depts = deptMapper.selectBatchIds(ids);
-        Map<Long, DeptDO> deptMap = CollectionUtils.convertMap(depts, DeptDO::getId);
+        List<PlatformDeptDO> depts = platformDeptMapper.selectBatchIds(ids);
+        Map<Long, PlatformDeptDO> deptMap = CollectionUtils.convertMap(depts, PlatformDeptDO::getId);
         // 校验
         ids.forEach(id -> {
-            DeptDO dept = deptMap.get(id);
+            PlatformDeptDO dept = deptMap.get(id);
             if (dept == null) {
                 throw exception(DEPT_NOT_FOUND);
             }
@@ -305,8 +305,8 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
     }
 
     @Override
-    public List<DeptDO> getSimpleDepts(Collection<Long> ids) {
-        return deptMapper.selectBatchIds(ids);
+    public List<PlatformDeptDO> getSimpleDepts(Collection<Long> ids) {
+        return platformDeptMapper.selectBatchIds(ids);
     }
 
 }

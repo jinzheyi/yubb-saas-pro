@@ -5,8 +5,8 @@ import cn.hutool.core.lang.Assert;
 import cn.iocoder.yudao.framework.common.enums.SocialTypeEnum;
 import cn.iocoder.yudao.framework.common.util.http.HttpUtils;
 import cn.iocoder.yudao.module.platform.api.social.dto.PlatformSocialUserBindReqDTO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserBindDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.social.PlatformSocialUserBindDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.social.PlatformSocialUserDO;
 import cn.iocoder.yudao.module.platform.dal.mapper.social.PlatformSocialUserBindMapper;
 import cn.iocoder.yudao.module.platform.dal.mapper.social.PlatformSocialUserMapper;
 import com.xkcoding.justauth.AuthRequestFactory;
@@ -43,9 +43,9 @@ public class PlatformSocialUserServiceImpl implements PlatformSocialUserService 
     private AuthRequestFactory authRequestFactory;
 
     @Resource
-    private PlatformSocialUserBindMapper socialUserBindMapper;
+    private PlatformSocialUserBindMapper platformSocialUserBindMapper;
     @Resource
-    private PlatformSocialUserMapper socialUserMapper;
+    private PlatformSocialUserMapper platformSocialUserMapper;
 
     @Override
     public String getAuthorizeUrl(Integer type, String redirectUri) {
@@ -57,10 +57,10 @@ public class PlatformSocialUserServiceImpl implements PlatformSocialUserService 
     }
 
     @Override
-    public SocialUserDO authSocialUser(Integer type, String code, String state) {
+    public PlatformSocialUserDO authSocialUser(Integer type, String code, String state) {
         // 优先从 DB 中获取，因为 code 有且可以使用一次。
         // 在社交登录时，当未绑定 User 时，需要绑定登录，此时需要 code 使用两次
-        SocialUserDO socialUser = socialUserMapper.selectByTypeAndCodeAnState(type, code, state);
+        PlatformSocialUserDO socialUser = platformSocialUserMapper.selectByTypeAndCodeAnState(type, code, state);
         if (socialUser != null) {
             return socialUser;
         }
@@ -70,73 +70,73 @@ public class PlatformSocialUserServiceImpl implements PlatformSocialUserService 
         Assert.notNull(authUser, "三方用户不能为空");
 
         // 保存到 DB 中
-        socialUser = socialUserMapper.selectByTypeAndOpenid(type, authUser.getUuid());
+        socialUser = platformSocialUserMapper.selectByTypeAndOpenid(type, authUser.getUuid());
         if (socialUser == null) {
-            socialUser = new SocialUserDO();
+            socialUser = new PlatformSocialUserDO();
         }
         socialUser.setType(type).setCode(code).setState(state) // 需要保存 code + state 字段，保证后续可查询
                 .setOpenid(authUser.getUuid()).setToken(authUser.getToken().getAccessToken()).setRawTokenInfo((toJsonString(authUser.getToken())))
                 .setNickname(authUser.getNickname()).setAvatar(authUser.getAvatar()).setRawUserInfo(toJsonString(authUser.getRawUserInfo()));
         if (socialUser.getId() == null) {
-            socialUserMapper.insert(socialUser);
+            platformSocialUserMapper.insert(socialUser);
         } else {
-            socialUserMapper.updateById(socialUser);
+            platformSocialUserMapper.updateById(socialUser);
         }
         return socialUser;
     }
 
     @Override
-    public List<SocialUserDO> getSocialUserList(Long userId, Integer userType) {
+    public List<PlatformSocialUserDO> getSocialUserList(Long userId, Integer userType) {
         // 获得绑定
-        List<SocialUserBindDO> socialUserBinds = socialUserBindMapper.selectListByUserIdAndUserType(userId, userType);
+        List<PlatformSocialUserBindDO> socialUserBinds = platformSocialUserBindMapper.selectListByUserIdAndUserType(userId, userType);
         if (CollUtil.isEmpty(socialUserBinds)) {
             return Collections.emptyList();
         }
         // 获得社交用户
-        return socialUserMapper.selectBatchIds(convertSet(socialUserBinds, SocialUserBindDO::getSocialUserId));
+        return platformSocialUserMapper.selectBatchIds(convertSet(socialUserBinds, PlatformSocialUserBindDO::getSocialUserId));
     }
 
     @Override
     @Transactional
     public void bindSocialUser(PlatformSocialUserBindReqDTO reqDTO) {
         // 获得社交用户
-        SocialUserDO socialUser = authSocialUser(reqDTO.getType(), reqDTO.getCode(), reqDTO.getState());
+        PlatformSocialUserDO socialUser = authSocialUser(reqDTO.getType(), reqDTO.getCode(), reqDTO.getState());
         Assert.notNull(socialUser, "社交用户不能为空");
 
         // 社交用户可能之前绑定过别的用户，需要进行解绑
-        socialUserBindMapper.deleteByUserTypeAndSocialUserId(reqDTO.getUserType(), socialUser.getId());
+        platformSocialUserBindMapper.deleteByUserTypeAndSocialUserId(reqDTO.getUserType(), socialUser.getId());
 
         // 用户可能之前已经绑定过该社交类型，需要进行解绑
-        socialUserBindMapper.deleteByUserTypeAndUserIdAndSocialType(reqDTO.getUserType(), reqDTO.getUserId(),
+        platformSocialUserBindMapper.deleteByUserTypeAndUserIdAndSocialType(reqDTO.getUserType(), reqDTO.getUserId(),
                 socialUser.getType());
 
         // 绑定当前登录的社交用户
-        SocialUserBindDO socialUserBind = SocialUserBindDO.builder()
+        PlatformSocialUserBindDO socialUserBind = PlatformSocialUserBindDO.builder()
                 .userId(reqDTO.getUserId()).userType(reqDTO.getUserType())
                 .socialUserId(socialUser.getId()).socialType(socialUser.getType()).build();
-        socialUserBindMapper.insert(socialUserBind);
+        platformSocialUserBindMapper.insert(socialUserBind);
     }
 
     @Override
     public void unbindSocialUser(Long userId, Integer userType, Integer type, String openid) {
         // 获得 openid 对应的 SocialUserDO 社交用户
-        SocialUserDO socialUser = socialUserMapper.selectByTypeAndOpenid(type, openid);
+        PlatformSocialUserDO socialUser = platformSocialUserMapper.selectByTypeAndOpenid(type, openid);
         if (socialUser == null) {
             throw exception(SOCIAL_USER_NOT_FOUND);
         }
 
         // 获得对应的社交绑定关系
-        socialUserBindMapper.deleteByUserTypeAndUserIdAndSocialType(userType, userId, socialUser.getType());
+        platformSocialUserBindMapper.deleteByUserTypeAndUserIdAndSocialType(userType, userId, socialUser.getType());
     }
 
     @Override
     public Long getBindUserId(Integer userType, Integer type, String code, String state) {
         // 获得社交用户
-        SocialUserDO socialUser = authSocialUser(type, code, state);
+        PlatformSocialUserDO socialUser = authSocialUser(type, code, state);
         Assert.notNull(socialUser, "社交用户不能为空");
 
         // 如果未绑定的社交用户，则无法自动登录，进行报错
-        SocialUserBindDO socialUserBind = socialUserBindMapper.selectByUserTypeAndSocialUserId(userType,
+        PlatformSocialUserBindDO socialUserBind = platformSocialUserBindMapper.selectByUserTypeAndSocialUserId(userType,
                 socialUser.getId());
         if (socialUserBind == null) {
             throw exception(AUTH_THIRD_LOGIN_NOT_BIND);

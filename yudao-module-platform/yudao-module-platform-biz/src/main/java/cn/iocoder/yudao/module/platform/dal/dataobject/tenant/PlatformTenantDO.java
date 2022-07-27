@@ -21,7 +21,7 @@ import java.util.Date;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class TenantDO extends BaseDO {
+public class PlatformTenantDO extends BaseDO {
 
     /**
      * 租户编号，自增
@@ -60,7 +60,7 @@ public class TenantDO extends BaseDO {
     /**
      * 租户套餐编号
      *
-     * 关联 {@link TenantPackageDO#getId()}
+     * 关联 {@link PlatformTenantPackageDO#getId()}
      */
     private Long packageId;
     /**

@@ -5,9 +5,9 @@ import cn.iocoder.yudao.module.platform.api.sms.dto.code.PlatformSmsCodeSendReqD
 import cn.iocoder.yudao.module.platform.api.sms.dto.code.PlatformSmsCodeUseReqDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.PlatformSocialUserBindReqDTO;
 import cn.iocoder.yudao.module.platform.controller.center.auth.vo.*;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformMenuDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.module.platform.enums.permission.PlatformMenuIdEnum;
 import org.mapstruct.Mapper;
@@ -21,17 +21,17 @@ public interface AuthConvert {
 
     AuthConvert INSTANCE = Mappers.getMapper(AuthConvert.class);
 
-    AuthLoginRespVO convert(OAuth2AccessTokenDO bean);
+    AuthLoginRespVO convert(PlatformOAuth2AccessTokenDO bean);
 
-    default AuthPermissionInfoRespVO convert(PlatformUserDO user, List<RoleDO> roleList, List<MenuDO> menuList) {
+    default AuthPermissionInfoRespVO convert(PlatformUserDO user, List<PlatformRoleDO> roleList, List<PlatformMenuDO> menuList) {
         return AuthPermissionInfoRespVO.builder()
             .user(AuthPermissionInfoRespVO.UserVO.builder().id(user.getId()).nickname(user.getNickname()).avatar(user.getAvatar()).build())
-            .roles(CollectionUtils.convertSet(roleList, RoleDO::getCode))
-            .permissions(CollectionUtils.convertSet(menuList, MenuDO::getPermission))
+            .roles(CollectionUtils.convertSet(roleList, PlatformRoleDO::getCode))
+            .permissions(CollectionUtils.convertSet(menuList, PlatformMenuDO::getPermission))
             .build();
     }
 
-    AuthMenuRespVO convertTreeNode(MenuDO menu);
+    AuthMenuRespVO convertTreeNode(PlatformMenuDO menu);
 
     /**
      * 将菜单列表，构建成菜单树
@@ -39,9 +39,9 @@ public interface AuthConvert {
      * @param menuList 菜单列表
      * @return 菜单树
      */
-    default List<AuthMenuRespVO> buildMenuTree(List<MenuDO> menuList) {
+    default List<AuthMenuRespVO> buildMenuTree(List<PlatformMenuDO> menuList) {
         // 排序，保证菜单的有序性
-        menuList.sort(Comparator.comparing(MenuDO::getSort));
+        menuList.sort(Comparator.comparing(PlatformMenuDO::getSort));
         // 构建菜单树
         // 使用 LinkedHashMap 的原因，是为了排序 。实际也可以用 Stream API ，就是太丑了。
         Map<Long, AuthMenuRespVO> treeNodeMap = new LinkedHashMap<>();

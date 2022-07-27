@@ -8,7 +8,7 @@ import lombok.*;
 
 /**
  * 社交用户的绑定
- * 即 {@link SocialUserDO} 与 UserDO 的关联表
+ * 即 {@link PlatformSocialUserDO} 与 UserDO 的关联表
  *
  * @author 芋道源码
  */
@@ -19,7 +19,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SocialUserBindDO extends BaseDO {
+public class PlatformSocialUserBindDO extends BaseDO {
 
     /**
      * 关联的用户编号
@@ -37,13 +37,13 @@ public class SocialUserBindDO extends BaseDO {
     /**
      * 社交平台的用户编号
      *
-     * 关联 {@link SocialUserDO#getId()}
+     * 关联 {@link PlatformSocialUserDO#getId()}
      */
     private Long socialUserId;
     /**
      * 社交平台的类型
      *
-     * 冗余 {@link SocialUserDO#getType()}
+     * 冗余 {@link PlatformSocialUserDO#getType()}
      */
     private Integer socialType;
 

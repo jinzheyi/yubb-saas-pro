@@ -8,7 +8,7 @@ import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.Men
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuListReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.permission.MenuConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformMenuDO;
 import cn.iocoder.yudao.module.platform.dal.mapper.permission.PlatformMenuMapper;
 import cn.iocoder.yudao.module.platform.enums.permission.PlatformMenuIdEnum;
 import cn.iocoder.yudao.module.platform.enums.permission.PlatformMenuTypeEnum;
@@ -52,27 +52,27 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
      *
      * 这里声明 volatile 修饰的原因是，每次刷新时，直接修改指向
      */
-    private volatile Map<Long, MenuDO> menuCache;
+    private volatile Map<Long, PlatformMenuDO> menuCache;
     /**
      * 权限与菜单缓存
-     * key：权限 {@link MenuDO#getPermission()}
+     * key：权限 {@link PlatformMenuDO#getPermission()}
      * value：MenuDO 数组，因为一个权限可能对应多个 MenuDO 对象
      *
      * 这里声明 volatile 修饰的原因是，每次刷新时，直接修改指向
      */
-    private volatile Multimap<String, MenuDO> permissionMenuCache;
+    private volatile Multimap<String, PlatformMenuDO> permissionMenuCache;
     /**
      * 缓存菜单的最大更新时间，用于后续的增量轮询，判断是否有更新
      */
     private volatile Date maxUpdateTime;
 
     @Resource
-    private PlatformMenuMapper menuMapper;
+    private PlatformMenuMapper platformMenuMapper;
     @Resource
-    private PlatformPermissionService permissionService;
+    private PlatformPermissionService platformPermissionService;
 
     @Resource
-    private PlatformMenuProducer menuProducer;
+    private PlatformMenuProducer platformMenuProducer;
 
     /**
      * 初始化 {@link #menuCache} 和 {@link #permissionMenuCache} 缓存。该方法标注了@PostContruct
@@ -82,14 +82,14 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
     @PostConstruct
     public synchronized void initLocalCache() {
         // 获取菜单列表，如果有更新
-        List<MenuDO> menuList = this.loadMenuIfUpdate(maxUpdateTime);
+        List<PlatformMenuDO> menuList = this.loadMenuIfUpdate(maxUpdateTime);
         if (CollUtil.isEmpty(menuList)) {
             return;
         }
 
         // 构建缓存
-        ImmutableMap.Builder<Long, MenuDO> menuCacheBuilder = ImmutableMap.builder();
-        ImmutableMultimap.Builder<String, MenuDO> permMenuCacheBuilder = ImmutableMultimap.builder();
+        ImmutableMap.Builder<Long, PlatformMenuDO> menuCacheBuilder = ImmutableMap.builder();
+        ImmutableMultimap.Builder<String, PlatformMenuDO> permMenuCacheBuilder = ImmutableMultimap.builder();
         menuList.forEach(menuDO -> {
             menuCacheBuilder.put(menuDO.getId(), menuDO);
             if (StrUtil.isNotEmpty(menuDO.getPermission())) { // 会存在 permission 为 null 的情况，导致 put 报 NPE 异常
@@ -98,7 +98,7 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
         });
         menuCache = menuCacheBuilder.build();
         permissionMenuCache = permMenuCacheBuilder.build();
-        maxUpdateTime = CollectionUtils.getMaxValue(menuList, MenuDO::getUpdateTime);
+        maxUpdateTime = CollectionUtils.getMaxValue(menuList, PlatformMenuDO::getUpdateTime);
         log.info("[initLocalCache][缓存菜单，数量为:{}]", menuList.size());
     }
 
@@ -121,18 +121,18 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
      * @param maxUpdateTime 当前菜单的最大更新时间
      * @return 菜单列表
      */
-    private List<MenuDO> loadMenuIfUpdate(Date maxUpdateTime) {
+    private List<PlatformMenuDO> loadMenuIfUpdate(Date maxUpdateTime) {
         // 第一步，判断是否要更新。
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
             log.info("[loadMenuIfUpdate][首次加载全量菜单]");
         } else { // 判断数据库中是否有更新的菜单
-            if (menuMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
+            if (platformMenuMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
                 return null;
             }
             log.info("[loadMenuIfUpdate][增量加载全量菜单]");
         }
         // 第二步，如果有更新，则从数据库加载所有菜单
-        return menuMapper.selectList();
+        return platformMenuMapper.selectList();
     }
 
     /**
@@ -149,11 +149,11 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
         // 校验菜单（自己）
         checkResource(reqVO.getParentId(), reqVO.getName(), null);
         // 插入数据库
-        MenuDO menu = MenuConvert.INSTANCE.convert(reqVO);
+        PlatformMenuDO menu = MenuConvert.INSTANCE.convert(reqVO);
         initMenuProperty(menu);
-        menuMapper.insert(menu);
+        platformMenuMapper.insert(menu);
         // 发送刷新消息
-        menuProducer.sendMenuRefreshMessage();
+        platformMenuProducer.sendMenuRefreshMessage();
         // 返回
         return menu.getId();
     }
@@ -161,7 +161,7 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
     @Override
     public void updateMenu(MenuUpdateReqVO reqVO) {
         // 校验更新的菜单是否存在
-        if (menuMapper.selectById(reqVO.getId()) == null) {
+        if (platformMenuMapper.selectById(reqVO.getId()) == null) {
             throw ServiceExceptionUtil.exception(MENU_NOT_EXISTS);
         }
         // 校验父菜单存在
@@ -169,11 +169,11 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
         // 校验菜单（自己）
         checkResource(reqVO.getParentId(), reqVO.getName(), reqVO.getId());
         // 更新到数据库
-        MenuDO updateObject = MenuConvert.INSTANCE.convert(reqVO);
+        PlatformMenuDO updateObject = MenuConvert.INSTANCE.convert(reqVO);
         initMenuProperty(updateObject);
-        menuMapper.updateById(updateObject);
+        platformMenuMapper.updateById(updateObject);
         // 发送刷新消息
-        menuProducer.sendMenuRefreshMessage();
+        platformMenuProducer.sendMenuRefreshMessage();
     }
 
     /**
@@ -185,40 +185,40 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
     @Override
     public void deleteMenu(Long menuId) {
         // 校验是否还有子菜单
-        if (menuMapper.selectCountByParentId(menuId) > 0) {
+        if (platformMenuMapper.selectCountByParentId(menuId) > 0) {
             throw ServiceExceptionUtil.exception(MENU_EXISTS_CHILDREN);
         }
         // 校验删除的菜单是否存在
-        if (menuMapper.selectById(menuId) == null) {
+        if (platformMenuMapper.selectById(menuId) == null) {
             throw ServiceExceptionUtil.exception(MENU_NOT_EXISTS);
         }
         // 标记删除
-        menuMapper.deleteById(menuId);
+        platformMenuMapper.deleteById(menuId);
         // 删除授予给角色的权限
-        permissionService.processMenuDeleted(menuId);
+        platformPermissionService.processMenuDeleted(menuId);
         // 发送刷新消息. 注意，需要事务提交后，在进行发送刷新消息。不然 db 还未提交，结果缓存先刷新了
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 
             @Override
             public void afterCommit() {
-                menuProducer.sendMenuRefreshMessage();
+                platformMenuProducer.sendMenuRefreshMessage();
             }
 
         });
     }
 
     @Override
-    public List<MenuDO> getMenus() {
-        return menuMapper.selectList();
+    public List<PlatformMenuDO> getMenus() {
+        return platformMenuMapper.selectList();
     }
 
     @Override
-    public List<MenuDO> getMenus(MenuListReqVO reqVO) {
-        return menuMapper.selectList(reqVO);
+    public List<PlatformMenuDO> getMenus(MenuListReqVO reqVO) {
+        return platformMenuMapper.selectList(reqVO);
     }
 
     @Override
-    public List<MenuDO> getMenuListFromCache(Collection<Integer> menuTypes, Collection<Integer> menusStatuses) {
+    public List<PlatformMenuDO> getMenuListFromCache(Collection<Integer> menuTypes, Collection<Integer> menusStatuses) {
         // 任一一个参数为空，则返回空
         if (CollectionUtils.isAnyEmpty(menuTypes, menusStatuses)) {
             return Collections.emptyList();
@@ -230,8 +230,8 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
     }
 
     @Override
-    public List<MenuDO> getMenuListFromCache(Collection<Long> menuIds, Collection<Integer> menuTypes,
-                                             Collection<Integer> menusStatuses) {
+    public List<PlatformMenuDO> getMenuListFromCache(Collection<Long> menuIds, Collection<Integer> menuTypes,
+                                                     Collection<Integer> menusStatuses) {
         // 任一一个参数为空，则返回空
         if (CollectionUtils.isAnyEmpty(menuIds, menuTypes, menusStatuses)) {
             return Collections.emptyList();
@@ -243,13 +243,13 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
     }
 
     @Override
-    public List<MenuDO> getMenuListByPermissionFromCache(String permission) {
+    public List<PlatformMenuDO> getMenuListByPermissionFromCache(String permission) {
         return new ArrayList<>(permissionMenuCache.get(permission));
     }
 
     @Override
-    public MenuDO getMenu(Long id) {
-        return menuMapper.selectById(id);
+    public PlatformMenuDO getMenu(Long id) {
+        return platformMenuMapper.selectById(id);
     }
 
     /**
@@ -271,7 +271,7 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
         if (parentId.equals(childId)) {
             throw ServiceExceptionUtil.exception(MENU_PARENT_ERROR);
         }
-        MenuDO menu = menuMapper.selectById(parentId);
+        PlatformMenuDO menu = platformMenuMapper.selectById(parentId);
         // 父菜单不存在
         if (menu == null) {
             throw ServiceExceptionUtil.exception(MENU_PARENT_NOT_EXISTS);
@@ -294,7 +294,7 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
      */
     @VisibleForTesting
     public void checkResource(Long parentId, String name, Long id) {
-        MenuDO menu = menuMapper.selectByParentIdAndName(parentId, name);
+        PlatformMenuDO menu = platformMenuMapper.selectByParentIdAndName(parentId, name);
         if (menu == null) {
             return;
         }
@@ -314,7 +314,7 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
      *
      * @param menu 菜单
      */
-    private void initMenuProperty(MenuDO menu) {
+    private void initMenuProperty(PlatformMenuDO menu) {
         // 菜单为按钮类型时，无需 component、icon、path 属性，进行置空
         if (PlatformMenuTypeEnum.BUTTON.getType().equals(menu.getType())) {
             menu.setComponent("");
