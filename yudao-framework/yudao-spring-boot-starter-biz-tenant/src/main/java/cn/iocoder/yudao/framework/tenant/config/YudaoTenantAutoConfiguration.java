@@ -9,7 +9,6 @@ import cn.iocoder.yudao.framework.tenant.core.db.TenantDatabaseInterceptor;
 import cn.iocoder.yudao.framework.tenant.core.job.TenantJob;
 import cn.iocoder.yudao.framework.tenant.core.job.TenantJobHandlerDecorator;
 import cn.iocoder.yudao.framework.tenant.core.mq.TenantRedisMessageInterceptor;
-import cn.iocoder.yudao.framework.tenant.core.security.PlatformSecurityWebFilter;
 import cn.iocoder.yudao.framework.tenant.core.security.TenantSecurityWebFilter;
 import cn.iocoder.yudao.framework.tenant.core.service.TenantFrameworkService;
 import cn.iocoder.yudao.framework.tenant.core.web.TenantContextWebFilter;
@@ -60,14 +59,6 @@ public class YudaoTenantAutoConfiguration {
     }
 
     // ========== Security ==========
-
-    @Bean
-    public FilterRegistrationBean<PlatformSecurityWebFilter> platformSecurityWebFilter(WebProperties webProperties) {
-        FilterRegistrationBean<PlatformSecurityWebFilter> registrationBean = new FilterRegistrationBean<>();
-        registrationBean.setFilter(new PlatformSecurityWebFilter(webProperties));
-        registrationBean.setOrder(WebFilterOrderEnum.PLATFORM_CONTEXT_FILTER);
-        return registrationBean;
-    }
 
     @Bean
     public FilterRegistrationBean<TenantSecurityWebFilter> tenantSecurityWebFilter(TenantProperties tenantProperties,

@@ -43,11 +43,16 @@ public class TenantDatabaseInterceptor implements TenantLineHandler {
     @Override
     public boolean ignoreTable(String tableName) {
         boolean isIgnore = Boolean.FALSE;
-        ignoreTablesPrefix.stream().forEach(tp -> {
-            isIgnore = tableName.startsWith(tp);
-        });
+        for (String tablesPrefix : ignoreTablesPrefix) {
+            //匹配到一个前缀就可以跳出循环体了
+            if (tableName.startsWith(tablesPrefix)) {
+                isIgnore = Boolean.TRUE;
+                break;
+            }
+        }
         return TenantContextHolder.isIgnore() // 情况一，全局忽略多租户
-            || CollUtil.contains(ignoreTables, tableName); // 情况二，忽略多租户的表
+            || CollUtil.contains(ignoreTables, tableName) // 情况二，忽略多租户的表
+            || isIgnore;  // 情况二，忽略多租户的表前缀
     }
 
 }

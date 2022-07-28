@@ -1,7 +1,6 @@
 package cn.iocoder.yudao.module.platform.service.auth;
 
-import cn.iocoder.yudao.module.platform.controller.center.auth.vo.AuthLoginReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.auth.vo.AuthLoginRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.auth.vo.*;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 
 import javax.validation.Valid;
@@ -32,5 +31,52 @@ public interface PlatformAuthService {
      * @return 登录结果
      */
     AuthLoginRespVO login(@Valid AuthLoginReqVO reqVO);
+
+    /**
+     * 基于 token 退出登录
+     *
+     * @param token token
+     * @param logType 登出类型
+     */
+    void logout(String token, Integer logType);
+
+    /**
+     * 短信验证码发送
+     *
+     * @param reqVO 发送请求
+     */
+    void sendSmsCode(AuthSmsSendReqVO reqVO);
+
+    /**
+     * 短信登录
+     *
+     * @param reqVO 登录信息
+     * @return 登录结果
+     */
+    AuthLoginRespVO smsLogin(AuthSmsLoginReqVO reqVO) ;
+
+    /**
+     * 社交快捷登录，使用 code 授权码
+     *
+     * @param reqVO 登录信息
+     * @return 登录结果
+     */
+    AuthLoginRespVO socialQuickLogin(@Valid AuthSocialQuickLoginReqVO reqVO);
+
+    /**
+     * 社交绑定登录，使用 code 授权码 + 账号密码
+     *
+     * @param reqVO 登录信息
+     * @return 登录结果
+     */
+    AuthLoginRespVO socialBindLogin(@Valid AuthSocialBindLoginReqVO reqVO);
+
+    /**
+     * 刷新访问令牌
+     *
+     * @param refreshToken 刷新令牌
+     * @return 登录结果
+     */
+    AuthLoginRespVO refreshToken(String refreshToken);
 
 }
