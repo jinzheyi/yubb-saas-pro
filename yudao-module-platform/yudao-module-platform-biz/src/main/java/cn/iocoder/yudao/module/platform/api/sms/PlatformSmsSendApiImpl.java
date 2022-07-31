@@ -1,8 +1,7 @@
 package cn.iocoder.yudao.module.platform.api.sms;
 
-import cn.iocoder.yudao.module.system.api.sms.SmsSendApi;
-import cn.iocoder.yudao.module.system.api.sms.dto.send.SmsSendSingleToUserReqDTO;
-import cn.iocoder.yudao.module.system.service.sms.SmsSendService;
+import cn.iocoder.yudao.module.platform.api.sms.dto.send.PlatformSmsSendSingleToUserReqDTO;
+import cn.iocoder.yudao.module.platform.service.sms.PlatformSmsSendService;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -15,20 +14,20 @@ import javax.annotation.Resource;
  */
 @Service
 @Validated
-public class PlatformSmsSendApiImpl implements SmsSendApi {
+public class PlatformSmsSendApiImpl implements PlatformSmsSendApi {
 
     @Resource
-    private SmsSendService smsSendService;
+    private PlatformSmsSendService platformSmsSendService;
 
     @Override
-    public Long sendSingleSmsToAdmin(SmsSendSingleToUserReqDTO reqDTO) {
-        return smsSendService.sendSingleSmsToAdmin(reqDTO.getMobile(), reqDTO.getUserId(),
+    public Long sendSingleSmsToAdmin(PlatformSmsSendSingleToUserReqDTO reqDTO) {
+        return platformSmsSendService.sendSingleSmsToAdmin(reqDTO.getMobile(), reqDTO.getUserId(),
                 reqDTO.getTemplateCode(), reqDTO.getTemplateParams());
     }
 
     @Override
-    public Long sendSingleSmsToMember(SmsSendSingleToUserReqDTO reqDTO) {
-        return smsSendService.sendSingleSmsToMember(reqDTO.getMobile(), reqDTO.getUserId(),
+    public Long sendSingleSmsToMember(PlatformSmsSendSingleToUserReqDTO reqDTO) {
+        return platformSmsSendService.sendSingleSmsToMember(reqDTO.getMobile(), reqDTO.getUserId(),
                 reqDTO.getTemplateCode(), reqDTO.getTemplateParams());
     }
 

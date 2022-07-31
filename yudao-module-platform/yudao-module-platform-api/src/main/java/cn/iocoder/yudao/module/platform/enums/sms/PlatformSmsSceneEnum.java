@@ -20,7 +20,11 @@ public enum PlatformSmsSceneEnum implements IntArrayValuable {
     MEMBER_UPDATE_MOBILE(2, "user-sms-reset-password", "会员用户 - 修改手机"),
     MEMBER_FORGET_PASSWORD(3, "user-sms-update-mobile", "会员用户 - 忘记密码"),
 
-    ADMIN_MEMBER_LOGIN(21, "admin-sms-login", "后台用户 - 手机号登录");
+    ADMIN_MEMBER_LOGIN(21, "admin-sms-login", "租户后台用户 - 手机号登录"),
+
+    PLATFORM_USER_LOGIN(31, "platform_user-sms-login", "平台后台用户 - 手机号登录"),
+
+    ;
 
     public static final int[] ARRAYS = Arrays.stream(values()).mapToInt(PlatformSmsSceneEnum::getScene).toArray();
 

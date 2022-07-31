@@ -8,9 +8,7 @@ import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.common.util.validation.ValidationUtils;
 import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformLoginLogCreateReqDTO;
-import cn.iocoder.yudao.module.platform.controller.center.auth.vo.AuthLoginReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.auth.vo.AuthLoginRespVO;
-import cn.iocoder.yudao.module.platform.controller.center.auth.vo.AuthSmsSendReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.auth.vo.*;
 import cn.iocoder.yudao.module.platform.convert.auth.AuthConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
@@ -20,12 +18,13 @@ import cn.iocoder.yudao.module.platform.enums.oauth2.PlatformOAuth2ClientConstan
 import cn.iocoder.yudao.module.platform.service.common.PlatformCaptchaService;
 import cn.iocoder.yudao.module.platform.service.logger.PlatformLoginLogService;
 import cn.iocoder.yudao.module.platform.service.oauth2.PlatformOAuth2TokenService;
+import cn.iocoder.yudao.module.platform.service.sms.PlatformSmsCodeService;
 import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
-import cn.iocoder.yudao.module.system.api.logger.dto.LoginLogCreateReqDTO;
-import cn.iocoder.yudao.module.system.enums.logger.LoginLogTypeEnum;
-import cn.iocoder.yudao.module.system.enums.logger.LoginResultEnum;
-import cn.iocoder.yudao.module.system.enums.oauth2.OAuth2ClientConstants;
-import cn.iocoder.yudao.module.system.enums.sms.SmsSceneEnum;
+import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformLoginLogCreateReqDTO;
+import cn.iocoder.yudao.module.platform.enums.logger.PlatformLoginLogTypeEnum;
+import cn.iocoder.yudao.module.platform.enums.logger.PlatformLoginResultEnum;
+import cn.iocoder.yudao.module.platform.enums.oauth2.PlatformOAuth2ClientConstants;
+import cn.iocoder.yudao.module.platform.enums.sms.PlatformSmsSceneEnum;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,9 +36,6 @@ import java.util.Objects;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
 import static cn.iocoder.yudao.module.platform.enums.PlatformErrorCodeConstants.*;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_MOBILE_NOT_EXISTS;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_THIRD_LOGIN_NOT_BIND;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
 
 /**
  * Auth Service 实现类
@@ -61,6 +57,8 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     private PlatformLoginLogService platformLoginLogService;
     @Resource
     private PlatformOAuth2TokenService platformOAuth2TokenService;
+    @Resource
+    private PlatformSmsCodeService platformSmsCodeService;
     @Resource
     private Validator validator;
 
@@ -104,22 +102,22 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
             throw exception(AUTH_MOBILE_NOT_EXISTS);
         }
         // 发送验证码
-        smsCodeApi.sendSmsCode(AuthConvert.INSTANCE.convert(reqVO).setCreateIp(getClientIP()));
+        platformSmsCodeService.sendSmsCode(AuthConvert.INSTANCE.convert(reqVO).setCreateIp(getClientIP()));
     }
 
     @Override
     public AuthLoginRespVO smsLogin(AuthSmsLoginReqVO reqVO) {
         // 校验验证码
-        smsCodeApi.useSmsCode(AuthConvert.INSTANCE.convert(reqVO, SmsSceneEnum.ADMIN_MEMBER_LOGIN.getScene(), getClientIP()));
+        platformSmsCodeService.useSmsCode(AuthConvert.INSTANCE.convert(reqVO, PlatformSmsSceneEnum.PLATFORM_USER_LOGIN.getScene(), getClientIP()));
 
         // 获得用户信息
-        AdminUserDO user = userService.getUserByMobile(reqVO.getMobile());
+        PlatformUserDO user = platformUserService.getUserByMobile(reqVO.getMobile());
         if (user == null) {
             throw exception(USER_NOT_EXISTS);
         }
 
         // 缓存登陆用户到 Redis 中，返回 sessionId 编号
-        return createTokenAfterLoginSuccess(user.getId(), reqVO.getMobile(), LoginLogTypeEnum.LOGIN_MOBILE);
+        return createTokenAfterLoginSuccess(user.getId(), reqVO.getMobile(), PlatformLoginLogTypeEnum.LOGIN_MOBILE);
     }
 
     @VisibleForTesting
@@ -167,40 +165,40 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
     }
 
-    @Override
-    public AuthLoginRespVO socialQuickLogin(AuthSocialQuickLoginReqVO reqVO) {
-        // 使用 code 授权码，进行登录。然后，获得到绑定的用户编号
-        Long userId = socialUserService.getBindUserId(UserTypeEnum.ADMIN.getValue(), reqVO.getType(),
-                reqVO.getCode(), reqVO.getState());
-        if (userId == null) {
-            throw exception(AUTH_THIRD_LOGIN_NOT_BIND);
-        }
-
-        // 获得用户
-        AdminUserDO user = userService.getUser(userId);
-        if (user == null) {
-            throw exception(USER_NOT_EXISTS);
-        }
-
-        // 创建 Token 令牌，记录登录日志
-        return createTokenAfterLoginSuccess(user.getId(), user.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
-    }
-
-    @Override
-    public AuthLoginRespVO socialBindLogin(AuthSocialBindLoginReqVO reqVO) {
-        // 使用账号密码，进行登录。
-        AdminUserDO user = authenticate(reqVO.getUsername(), reqVO.getPassword());
-
-        // 绑定社交用户
-        socialUserService.bindSocialUser(AuthConvert.INSTANCE.convert(user.getId(), getUserType().getValue(), reqVO));
-
-        // 创建 Token 令牌，记录登录日志
-        return createTokenAfterLoginSuccess(user.getId(), reqVO.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
-    }
+//    @Override
+//    public AuthLoginRespVO socialQuickLogin(AuthSocialQuickLoginReqVO reqVO) {
+//        // 使用 code 授权码，进行登录。然后，获得到绑定的用户编号
+//        Long userId = socialUserService.getBindUserId(UserTypeEnum.ADMIN.getValue(), reqVO.getType(),
+//                reqVO.getCode(), reqVO.getState());
+//        if (userId == null) {
+//            throw exception(AUTH_THIRD_LOGIN_NOT_BIND);
+//        }
+//
+//        // 获得用户
+//        AdminUserDO user = userService.getUser(userId);
+//        if (user == null) {
+//            throw exception(USER_NOT_EXISTS);
+//        }
+//
+//        // 创建 Token 令牌，记录登录日志
+//        return createTokenAfterLoginSuccess(user.getId(), user.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
+//    }
+//
+//    @Override
+//    public AuthLoginRespVO socialBindLogin(AuthSocialBindLoginReqVO reqVO) {
+//        // 使用账号密码，进行登录。
+//        AdminUserDO user = authenticate(reqVO.getUsername(), reqVO.getPassword());
+//
+//        // 绑定社交用户
+//        socialUserService.bindSocialUser(AuthConvert.INSTANCE.convert(user.getId(), getUserType().getValue(), reqVO));
+//
+//        // 创建 Token 令牌，记录登录日志
+//        return createTokenAfterLoginSuccess(user.getId(), reqVO.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
+//    }
 
     @Override
     public AuthLoginRespVO refreshToken(String refreshToken) {
-        OAuth2AccessTokenDO accessTokenDO = oauth2TokenService.refreshAccessToken(refreshToken, OAuth2ClientConstants.CLIENT_ID_DEFAULT);
+        PlatformOAuth2AccessTokenDO accessTokenDO = platformOAuth2TokenService.refreshAccessToken(refreshToken, PlatformOAuth2ClientConstants.CLIENT_ID_DEFAULT);
         return AuthConvert.INSTANCE.convert(accessTokenDO);
     }
 
@@ -217,7 +215,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     @Override
     public void logout(String token, Integer logType) {
         // 删除访问令牌
-        OAuth2AccessTokenDO accessTokenDO = oauth2TokenService.removeAccessToken(token);
+        PlatformOAuth2AccessTokenDO accessTokenDO = platformOAuth2TokenService.removeAccessToken(token);
         if (accessTokenDO == null) {
             return;
         }
@@ -226,27 +224,23 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     }
 
     private void createLogoutLog(Long userId, Integer userType, Integer logType) {
-        LoginLogCreateReqDTO reqDTO = new LoginLogCreateReqDTO();
+        PlatformLoginLogCreateReqDTO reqDTO = new PlatformLoginLogCreateReqDTO();
         reqDTO.setLogType(logType);
         reqDTO.setTraceId(TracerUtils.getTraceId());
         reqDTO.setUserId(userId);
         reqDTO.setUserType(userType);
-        if (ObjectUtil.notEqual(getUserType(), userType)) {
-            reqDTO.setUsername(getUsername(userId));
-        } else {
-            reqDTO.setUsername(memberService.getMemberUserMobile(userId));
-        }
+        reqDTO.setUsername(getUsername(userId));
         reqDTO.setUserAgent(ServletUtils.getUserAgent());
         reqDTO.setUserIp(ServletUtils.getClientIP());
-        reqDTO.setResult(LoginResultEnum.SUCCESS.getResult());
-        loginLogService.createLoginLog(reqDTO);
+        reqDTO.setResult(PlatformLoginResultEnum.SUCCESS.getResult());
+        platformLoginLogService.createLoginLog(reqDTO);
     }
 
     private String getUsername(Long userId) {
         if (userId == null) {
             return null;
         }
-        AdminUserDO user = userService.getUser(userId);
+        PlatformUserDO user = platformUserService.getUser(userId);
         return user != null ? user.getUsername() : null;
     }
 

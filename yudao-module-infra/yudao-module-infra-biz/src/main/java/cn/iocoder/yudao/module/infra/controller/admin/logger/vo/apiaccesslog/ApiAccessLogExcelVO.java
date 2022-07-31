@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.infra.controller.admin.logger.vo.apiaccesslog;
 
 import cn.iocoder.yudao.framework.excel.core.annotations.DictFormat;
 import cn.iocoder.yudao.framework.excel.core.convert.DictConvert;
-import cn.iocoder.yudao.module.system.enums.DictTypeConstants;
+import cn.iocoder.yudao.module.platform.enums.PlatformDictTypeConstants;
 import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
@@ -26,7 +26,7 @@ public class ApiAccessLogExcelVO {
     private Long userId;
 
     @ExcelProperty(value = "用户类型", converter = DictConvert.class)
-    @DictFormat(DictTypeConstants.USER_TYPE)
+    @DictFormat(PlatformDictTypeConstants.USER_TYPE)
     private Integer userType;
 
     @ExcelProperty("应用名")
