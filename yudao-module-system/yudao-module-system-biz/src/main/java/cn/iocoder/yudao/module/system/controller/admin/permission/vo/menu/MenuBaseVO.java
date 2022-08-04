@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.system.controller.admin.permission.vo.menu;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -47,9 +46,6 @@ public class MenuBaseVO {
     @Size(max = 200, message = "组件路径不能超过255个字符")
     private String component;
 
-    /**
-     * 状态 {@link CommonStatusEnum}
-     */
     @ApiModelProperty(value = "状态", required = true, example = "1", notes = "见 CommonStatusEnum 枚举")
     @NotNull(message = "状态不能为空")
     private Integer status;

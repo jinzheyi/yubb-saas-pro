@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.system.convert.user;
 
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserCreateReqDTO;
 import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
@@ -15,7 +14,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
-import java.util.Map;
 
 @Mapper
 public interface UserConvert {
@@ -53,9 +51,5 @@ public interface UserConvert {
     AdminUserRespDTO convert4(AdminUserDO bean);
 
     List<AdminUserRespDTO> convertList4(List<AdminUserDO> users);
-
-    Map<Long, AdminUserRespDTO> convertMap4(Map<Long, AdminUserDO> map);
-
-    UserCreateReqVO convert(AdminUserCreateReqDTO bean);
 
 }

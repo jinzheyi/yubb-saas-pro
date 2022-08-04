@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.system.controller.admin.sensitiveword.vo;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -20,18 +19,11 @@ public class SensitiveWordExportReqVO {
     @ApiModelProperty(value = "标签", example = "短信,评论")
     private String tag;
 
-    /**
-     * 状态 {@link CommonStatusEnum}
-     */
     @ApiModelProperty(value = "状态", example = "1", notes = "参见 CommonStatusEnum 枚举类")
     private Integer status;
 
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
-    @ApiModelProperty(value = "开始创建时间")
-    private Date beginCreateTime;
-
-    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
-    @ApiModelProperty(value = "结束创建时间")
-    private Date endCreateTime;
+    @ApiModelProperty(value = "创建时间")
+    private Date[] createTime;
 
 }

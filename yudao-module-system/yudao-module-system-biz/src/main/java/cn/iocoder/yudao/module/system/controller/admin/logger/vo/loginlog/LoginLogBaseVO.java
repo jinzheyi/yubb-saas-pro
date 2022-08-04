@@ -1,7 +1,5 @@
 package cn.iocoder.yudao.module.system.controller.admin.logger.vo.loginlog;
 
-import cn.iocoder.yudao.module.system.enums.logger.LoginLogTypeEnum;
-import cn.iocoder.yudao.module.system.enums.logger.LoginResultEnum;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -17,25 +15,19 @@ import javax.validation.constraints.Size;
 @Data
 public class LoginLogBaseVO {
 
-    /**
-     * 日志类型 {@link LoginLogTypeEnum}
-     */
     @ApiModelProperty(value = "日志类型", required = true, example = "1", notes = "参见 LoginLogTypeEnum 枚举类")
     @NotNull(message = "日志类型不能为空")
     private Integer logType;
 
-    @ApiModelProperty(value = "链路追踪编号", required = true, example = "89aca178-a370-411c-ae02-3f0d672be4ab")
+    @ApiModelProperty(value = "链路追踪编号", example = "89aca178-a370-411c-ae02-3f0d672be4ab")
     @NotEmpty(message = "链路追踪编号不能为空")
     private String traceId;
 
-    @ApiModelProperty(value = "用户账号", required = true, example = "圣钰SaaS")
+    @ApiModelProperty(value = "用户账号", required = true, example = "yudao")
     @NotBlank(message = "用户账号不能为空")
     @Size(max = 30, message = "用户账号长度不能超过30个字符")
     private String username;
 
-    /**
-     * 登录结果 {@link LoginResultEnum}
-     */
     @ApiModelProperty(value = "登录结果", required = true, example = "1", notes = "参见 LoginResultEnum 枚举类")
     @NotNull(message = "登录结果不能为空")
     private Integer result;
@@ -44,8 +36,7 @@ public class LoginLogBaseVO {
     @NotEmpty(message = "用户 IP 不能为空")
     private String userIp;
 
-    @ApiModelProperty(value = "浏览器 UserAgent", required = true, example = "Mozilla/5.0")
-    @NotEmpty(message = "浏览器 UserAgent 不能为空")
+    @ApiModelProperty(value = "浏览器 UserAgent", example = "Mozilla/5.0")
     private String userAgent;
 
 }

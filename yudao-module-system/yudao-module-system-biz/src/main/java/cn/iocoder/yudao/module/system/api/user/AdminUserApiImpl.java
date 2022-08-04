@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.system.api.user;
 
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserCreateReqDTO;
 import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import cn.iocoder.yudao.module.system.convert.user.UserConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
@@ -10,7 +9,6 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -31,6 +29,12 @@ public class AdminUserApiImpl implements AdminUserApi {
     }
 
     @Override
+    public List<AdminUserRespDTO> getUsers(Collection<Long> ids) {
+        List<AdminUserDO> users = userService.getUsers(ids);
+        return UserConvert.INSTANCE.convertList4(users);
+    }
+
+    @Override
     public List<AdminUserRespDTO> getUsersByDeptIds(Collection<Long> deptIds) {
         List<AdminUserDO> users = userService.getUsersByDeptIds(deptIds);
         return UserConvert.INSTANCE.convertList4(users);
@@ -43,19 +47,8 @@ public class AdminUserApiImpl implements AdminUserApi {
     }
 
     @Override
-    public Map<Long, AdminUserRespDTO> getUserMap(Collection<Long> ids) {
-        Map<Long, AdminUserDO> userMap = userService.getUserMap(ids);
-        return UserConvert.INSTANCE.convertMap4(userMap);
-    }
-
-    @Override
     public void validUsers(Set<Long> ids) {
         userService.validUsers(ids);
-    }
-
-    @Override
-    public Long createUser(AdminUserCreateReqDTO reqVO) {
-        return userService.createUser(UserConvert.INSTANCE.convert(reqVO));
     }
 
 }

@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.system.controller.admin.tenant.vo.tenant;
 
-import cn.iocoder.yudao.module.platform.enums.PlatformDictTypeConstants;
+import cn.iocoder.yudao.module.system.enums.DictTypeConstants;
 import lombok.*;
 import java.util.*;
 
@@ -30,7 +30,7 @@ public class TenantExcelVO {
     private String contactMobile;
 
     @ExcelProperty(value = "状态", converter = DictConvert.class)
-    @DictFormat(PlatformDictTypeConstants.COMMON_STATUS)
+    @DictFormat(DictTypeConstants.COMMON_STATUS)
     private Integer status;
 
     @ExcelProperty("创建时间")

@@ -1,59 +1,55 @@
 package cn.iocoder.yudao.module.platform.convert.user;
 
-import cn.iocoder.yudao.module.platform.api.user.dto.PlatformUserRespDTO;
-import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileRespVO;
-import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdatePasswordReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformPostDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.social.PlatformSocialUserDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
+import cn.iocoder.yudao.module.platform.api.user.dto.AdminUserRespDTO;
+import cn.iocoder.yudao.module.platform.controller.admin.user.vo.profile.UserProfileRespVO;
+import cn.iocoder.yudao.module.platform.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
+import cn.iocoder.yudao.module.platform.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.admin.user.vo.user.*;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
-import java.util.Map;
 
 @Mapper
 public interface UserConvert {
 
     UserConvert INSTANCE = Mappers.getMapper(UserConvert.class);
 
-    UserPageItemRespVO convert(PlatformUserDO bean);
+    UserPageItemRespVO convert(AdminUserDO bean);
 
-    UserPageItemRespVO.Dept convert(PlatformDeptDO bean);
+    UserPageItemRespVO.Dept convert(DeptDO bean);
 
-    PlatformUserDO convert(UserCreateReqVO bean);
+    AdminUserDO convert(UserCreateReqVO bean);
 
-    PlatformUserDO convert(UserUpdateReqVO bean);
+    AdminUserDO convert(UserUpdateReqVO bean);
 
-    UserExcelVO convert02(PlatformUserDO bean);
+    UserExcelVO convert02(AdminUserDO bean);
 
-    PlatformUserDO convert(UserImportExcelVO bean);
+    AdminUserDO convert(UserImportExcelVO bean);
 
-    UserProfileRespVO convert03(PlatformUserDO bean);
+    UserProfileRespVO convert03(AdminUserDO bean);
 
-    List<UserProfileRespVO.Role> convertList(List<PlatformRoleDO> list);
+    List<UserProfileRespVO.Role> convertList(List<RoleDO> list);
 
-    UserProfileRespVO.Dept convert02(PlatformDeptDO bean);
+    UserProfileRespVO.Dept convert02(DeptDO bean);
 
-    PlatformUserDO convert(UserProfileUpdateReqVO bean);
+    AdminUserDO convert(UserProfileUpdateReqVO bean);
 
-    PlatformUserDO convert(UserProfileUpdatePasswordReqVO bean);
+    AdminUserDO convert(UserProfileUpdatePasswordReqVO bean);
 
-    List<UserProfileRespVO.Post> convertList02(List<PlatformPostDO> list);
+    List<UserProfileRespVO.Post> convertList02(List<PostDO> list);
 
-    //TODO 这里先标记一下平台是否需要社交账号
-    List<UserProfileRespVO.SocialUser> convertList03(List<PlatformSocialUserDO> list);
+    List<UserProfileRespVO.SocialUser> convertList03(List<SocialUserDO> list);
 
-    List<UserSimpleRespVO> convertList04(List<PlatformUserDO> list);
+    List<UserSimpleRespVO> convertList04(List<AdminUserDO> list);
 
-    PlatformUserRespDTO convert4(PlatformUserDO bean);
+    AdminUserRespDTO convert4(AdminUserDO bean);
 
-    List<PlatformUserRespDTO> convertList4(List<PlatformUserDO> users);
-
-    Map<Long, PlatformUserRespDTO> convertMap4(Map<Long, PlatformUserDO> map);
+    List<AdminUserRespDTO> convertList4(List<AdminUserDO> users);
 
 }

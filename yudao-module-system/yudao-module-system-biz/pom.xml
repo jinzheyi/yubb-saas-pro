@@ -91,7 +91,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Excel导出工具类相关 -->
+        <!-- 工具类相关 -->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-spring-boot-starter-excel</artifactId>

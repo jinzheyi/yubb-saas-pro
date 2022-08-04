@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.system.controller.admin.dict.vo.type;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -25,18 +24,11 @@ public class DictTypePageReqVO extends PageParam {
     @Size(max = 100, message = "字典类型类型长度不能超过100个字符")
     private String type;
 
-    /**
-     * 展示状态 {@link CommonStatusEnum}
-     */
     @ApiModelProperty(value = "展示状态", example = "1", notes = "参见 CommonStatusEnum 枚举类")
     private Integer status;
 
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
-    @ApiModelProperty(value = "开始创建时间")
-    private Date beginCreateTime;
-
-    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
-    @ApiModelProperty(value = "结束创建时间")
-    private Date endCreateTime;
+    @ApiModelProperty(value = "创建时间")
+    private Date[] createTime;
 
 }

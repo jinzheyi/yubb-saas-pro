@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.system.controller.admin.dict.vo.data;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -34,11 +33,9 @@ public class DictDataBaseVO {
     @Size(max = 100, message = "字典类型长度不能超过100个字符")
     private String dictType;
 
-    /**
-     * 状态 {@link CommonStatusEnum}
-     */
     @ApiModelProperty(value = "状态", required = true, example = "1", notes = "见 CommonStatusEnum 枚举")
     @NotNull(message = "状态不能为空")
+//    @InEnum(value = CommonStatusEnum.class, message = "修改状态必须是 {value}")
     private Integer status;
 
     @ApiModelProperty(value = "颜色类型", example = "default", notes = "default、primary、success、info、warning、danger")

@@ -26,7 +26,7 @@ public class ApiErrorLogExcelVO {
     private Integer userId;
 
     @ExcelProperty(value = "用户类型", converter = DictConvert.class)
-    @DictFormat(cn.iocoder.yudao.module.platform.enums.PlatformDictTypeConstants.USER_TYPE)
+    @DictFormat(cn.iocoder.yudao.module.system.enums.DictTypeConstants.USER_TYPE)
     private Integer userType;
 
     @ExcelProperty("应用名")

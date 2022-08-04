@@ -3,8 +3,8 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>yudao-module-platform</artifactId>
         <groupId>cn.iocoder.boot</groupId>
+        <artifactId>yudao-module-platform</artifactId>
         <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -17,20 +17,17 @@
     </description>
 
     <dependencies>
-        <!--引入common基础包-->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-common</artifactId>
         </dependency>
 
-        <!--引入参数校验依赖-->
+        <!-- 参数校验 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
-            <!-- 可选依赖，如果你在项目B中把C依赖声明为可选，你就需要在依赖于B的项目（例如项目A）中显示的引用对C的依赖。因为可选依赖属性会阻断依赖的传递性 -->
             <optional>true</optional>
         </dependency>
-
 
     </dependencies>
 

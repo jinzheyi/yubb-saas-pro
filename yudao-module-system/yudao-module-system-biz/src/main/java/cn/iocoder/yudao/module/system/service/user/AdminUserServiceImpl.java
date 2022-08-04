@@ -74,7 +74,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createUser(UserCreateReqVO reqVO) {
-        // 校验租户账户创建是否超过限制
+        // 校验账户配合
         tenantService.handleTenantInfo(tenant -> {
             long count = userMapper.selectCount();
             if (count >= tenant.getAccountCount()) {
@@ -87,7 +87,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         // 插入用户
         AdminUserDO user = UserConvert.INSTANCE.convert(reqVO);
         user.setStatus(CommonStatusEnum.ENABLE.getStatus()); // 默认开启
-        user.setPassword(passwordEncoder.encode(reqVO.getPassword())); // 加密密码
+        user.setPassword(encodePassword(reqVO.getPassword())); // 加密密码
         userMapper.insert(user);
         // 插入关联岗位
         if (CollectionUtil.isNotEmpty(user.getPostIds())) {

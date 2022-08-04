@@ -1,11 +1,11 @@
 package cn.iocoder.yudao.module.platform.convert.dept;
 
-import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptRespVO;
-import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptSimpleRespVO;
-import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
-import cn.iocoder.yudao.module.system.api.dept.dto.DeptRespDTO;
+import cn.iocoder.yudao.module.platform.api.dept.dto.DeptRespDTO;
+import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.dept.DeptCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.dept.DeptRespVO;
+import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.dept.DeptSimpleRespVO;
+import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.dept.DeptUpdateReqVO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -17,20 +17,18 @@ public interface DeptConvert {
 
     DeptConvert INSTANCE = Mappers.getMapper(DeptConvert.class);
 
-    List<DeptRespVO> convertList(List<PlatformDeptDO> list);
+    List<DeptRespVO> convertList(List<DeptDO> list);
 
-    List<DeptSimpleRespVO> convertList02(List<PlatformDeptDO> list);
+    List<DeptSimpleRespVO> convertList02(List<DeptDO> list);
 
-    DeptRespVO convert(PlatformDeptDO bean);
+    DeptRespVO convert(DeptDO bean);
 
-    PlatformDeptDO convert(DeptCreateReqVO bean);
+    DeptDO convert(DeptCreateReqVO bean);
 
-    PlatformDeptDO convert(DeptUpdateReqVO bean);
+    DeptDO convert(DeptUpdateReqVO bean);
 
-    List<DeptRespDTO> convertList03(List<PlatformDeptDO> list);
+    List<DeptRespDTO> convertList03(List<DeptDO> list);
 
-    DeptRespDTO convert03(PlatformDeptDO bean);
-
-    Map<Long, DeptRespDTO> convertMap(Map<Long, PlatformDeptDO> map);
+    DeptRespDTO convert03(DeptDO bean);
 
 }

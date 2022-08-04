@@ -1,0 +1,4 @@
+### 请求 /center/operate-log/demo 接口 => 成功
+GET {{baseUrl}}/center/operate-log/demo
+Authorization: Bearer {{token}}
+tenant-id: {{adminTenentId}}

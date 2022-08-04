@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.system.controller.admin.dept.vo.post;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -29,9 +28,6 @@ public class PostBaseVO {
     @NotNull(message = "显示顺序不能为空")
     private Integer sort;
 
-    /**
-     * 状态 {@link CommonStatusEnum}
-     */
     @ApiModelProperty(value = "状态", required = true, example = "1", notes = "参见 CommonStatusEnum 枚举类")
     private Integer status;
 

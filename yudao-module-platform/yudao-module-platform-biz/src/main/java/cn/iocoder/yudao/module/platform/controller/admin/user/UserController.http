@@ -1,0 +1,4 @@
+### 请求 /center/user/page 接口 => 没有权限
+GET {{baseUrl}}/center/user/page?pageNo=1&pageSize=10
+Authorization: Bearer {{token}}
+tenant-id: {{adminTenentId}}

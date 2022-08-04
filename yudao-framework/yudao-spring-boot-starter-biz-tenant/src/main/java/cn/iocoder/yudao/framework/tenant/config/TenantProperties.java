@@ -3,6 +3,7 @@ package cn.iocoder.yudao.framework.tenant.config;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.Collections;
 import java.util.Set;
 
 /**
@@ -29,18 +30,13 @@ public class TenantProperties {
      *
      * 默认情况下，每个请求需要带上 tenant-id 的请求头。但是，部分请求是无需带上的，例如说短信回调、支付回调等 Open API！
      */
-    private Set<String> ignoreUrls;
+    private Set<String> ignoreUrls = Collections.emptySet();
 
     /**
      * 需要忽略多租户的表
      *
      * 即默认所有表都开启多租户的功能，所以记得添加对应的 tenant_id 字段哟
      */
-    private Set<String> ignoreTables;
-
-    /**
-     * 需要忽略的表前缀 即默认所有该前缀表都屏蔽自动添加租户id功能。例如平台的表，租户中间表
-     */
-    private Set<String> ignoreTablesPrefix;
+    private Set<String> ignoreTables = Collections.emptySet();
 
 }

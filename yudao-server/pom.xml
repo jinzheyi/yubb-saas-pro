@@ -23,11 +23,6 @@
     <dependencies>
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-module-platform-biz</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-module-member-biz</artifactId>
             <version>${revision}</version>
         </dependency>
@@ -46,23 +41,41 @@
             <artifactId>yudao-module-pay-biz</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-module-market-biz</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-module-product-biz</artifactId>
+            <version>${revision}</version>
+        </dependency>
         <!-- 默认引入 yudao-module-bpm-biz-flowable 实现，可以替换为 yudao-module-bpm-biz-activiti 实现-->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-module-bpm-biz-flowable</artifactId>
+            <artifactId>yudao-module-bpm-biz</artifactId>
             <version>${revision}</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>cn.iocoder.boot</groupId>-->
-<!--            <artifactId>yudao-module-bpm-biz-activiti</artifactId>-->
-<!--            <version>${revision}</version>-->
+        <!--        <dependency>-->
+        <!--            <groupId>cn.iocoder.boot</groupId>-->
+        <!--            <artifactId>yudao-module-bpm-biz-activiti</artifactId>-->
+        <!--            <version>${revision}</version>-->
 <!--        </dependency>-->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-biz-error-code</artifactId>
+        </dependency>
 
         <!-- spring boot 配置所需依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-banner</artifactId>
         </dependency>
 
         <!-- 服务保障相关 -->

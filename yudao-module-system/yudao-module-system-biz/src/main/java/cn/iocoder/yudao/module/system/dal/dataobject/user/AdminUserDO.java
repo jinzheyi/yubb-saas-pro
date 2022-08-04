@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.system.dal.dataobject.user;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.mybatis.core.type.JsonLongSetTypeHandler;
 import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
-import cn.iocoder.yudao.framework.common.enums.SexEnum;
+import cn.iocoder.yudao.module.system.enums.common.SexEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -52,7 +52,7 @@ public class AdminUserDO extends TenantBaseDO {
      */
     private String remark;
     /**
-     * 部门ID
+     * 部门 ID
      */
     private Long deptId;
     /**

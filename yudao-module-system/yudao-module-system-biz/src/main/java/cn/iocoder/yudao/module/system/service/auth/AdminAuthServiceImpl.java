@@ -1,7 +1,6 @@
 package cn.iocoder.yudao.module.system.service.auth;
 
 import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
@@ -9,13 +8,14 @@ import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.common.util.validation.ValidationUtils;
 import cn.iocoder.yudao.module.system.api.logger.dto.LoginLogCreateReqDTO;
 import cn.iocoder.yudao.module.system.api.sms.SmsCodeApi;
+import cn.iocoder.yudao.module.system.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.*;
 import cn.iocoder.yudao.module.system.convert.auth.AuthConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.system.enums.oauth2.OAuth2ClientConstants;
 import cn.iocoder.yudao.module.system.enums.logger.LoginLogTypeEnum;
 import cn.iocoder.yudao.module.system.enums.logger.LoginResultEnum;
+import cn.iocoder.yudao.module.system.enums.oauth2.OAuth2ClientConstants;
 import cn.iocoder.yudao.module.system.enums.sms.SmsSceneEnum;
 import cn.iocoder.yudao.module.system.service.common.CaptchaService;
 import cn.iocoder.yudao.module.system.service.logger.LoginLogService;
@@ -92,6 +92,12 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         // 使用账号密码，进行登录
         AdminUserDO user = authenticate(reqVO.getUsername(), reqVO.getPassword());
 
+        // 如果 socialType 非空，说明需要绑定社交用户
+        if (reqVO.getSocialType() != null) {
+            socialUserService.bindSocialUser(new SocialUserBindReqDTO(user.getId(), getUserType().getValue(),
+                    reqVO.getSocialType(), reqVO.getSocialCode(), reqVO.getSocialState()));
+        }
+
         // 创建 Token 令牌，记录登录日志
         return createTokenAfterLoginSuccess(user.getId(), reqVO.getUsername(), LoginLogTypeEnum.LOGIN_USERNAME);
     }
@@ -117,7 +123,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             throw exception(USER_NOT_EXISTS);
         }
 
-        // 缓存登陆用户到 Redis 中，返回 sessionId 编号
+        // 创建 Token 令牌，记录登录日志
         return createTokenAfterLoginSuccess(user.getId(), reqVO.getMobile(), LoginLogTypeEnum.LOGIN_MOBILE);
     }
 
@@ -132,7 +138,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         // 验证码不存在
         final LoginLogTypeEnum logTypeEnum = LoginLogTypeEnum.LOGIN_USERNAME;
         String code = captchaService.getCaptchaCode(reqVO.getUuid());
-        if (StrUtil.isBlankOrUndefined(code)) {
+        if (code == null) {
             // 创建登录失败日志（验证码不存在）
             createLoginLog(null, reqVO.getUsername(), logTypeEnum, LoginResultEnum.CAPTCHA_NOT_FOUND);
             throw exception(AUTH_LOGIN_CAPTCHA_NOT_FOUND);
@@ -167,7 +173,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     }
 
     @Override
-    public AuthLoginRespVO socialQuickLogin(AuthSocialQuickLoginReqVO reqVO) {
+    public AuthLoginRespVO socialLogin(AuthSocialLoginReqVO reqVO) {
         // 使用 code 授权码，进行登录。然后，获得到绑定的用户编号
         Long userId = socialUserService.getBindUserId(UserTypeEnum.ADMIN.getValue(), reqVO.getType(),
                 reqVO.getCode(), reqVO.getState());
@@ -183,18 +189,6 @@ public class AdminAuthServiceImpl implements AdminAuthService {
 
         // 创建 Token 令牌，记录登录日志
         return createTokenAfterLoginSuccess(user.getId(), user.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
-    }
-
-    @Override
-    public AuthLoginRespVO socialBindLogin(AuthSocialBindLoginReqVO reqVO) {
-        // 使用账号密码，进行登录。
-        AdminUserDO user = authenticate(reqVO.getUsername(), reqVO.getPassword());
-
-        // 绑定社交用户
-        socialUserService.bindSocialUser(AuthConvert.INSTANCE.convert(user.getId(), getUserType().getValue(), reqVO));
-
-        // 创建 Token 令牌，记录登录日志
-        return createTokenAfterLoginSuccess(user.getId(), reqVO.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
     }
 
     @Override
@@ -230,7 +224,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         reqDTO.setTraceId(TracerUtils.getTraceId());
         reqDTO.setUserId(userId);
         reqDTO.setUserType(userType);
-        if (ObjectUtil.notEqual(getUserType(), userType)) {
+        if (ObjectUtil.equal(getUserType().getValue(), userType)) {
             reqDTO.setUsername(getUsername(userId));
         } else {
             reqDTO.setUsername(memberService.getMemberUserMobile(userId));

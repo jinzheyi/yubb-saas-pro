@@ -19,18 +19,14 @@ public class LoginLogPageReqVO extends PageParam {
     @ApiModelProperty(value = "用户 IP", example = "127.0.0.1", notes = "模拟匹配")
     private String userIp;
 
-    @ApiModelProperty(value = "用户账号", example = "圣钰SaaS", notes = "模拟匹配")
+    @ApiModelProperty(value = "用户账号", example = "芋道", notes = "模拟匹配")
     private String username;
 
     @ApiModelProperty(value = "操作状态", example = "true")
     private Boolean status;
 
-    @ApiModelProperty(value = "开始时间", example = "2020-10-24")
+    @ApiModelProperty(value = "登录时间", example = "[2022-07-01 00:00:00,2022-07-01 23:59:59]")
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
-    private Date beginTime;
-
-    @ApiModelProperty(value = "结束时间", example = "2020-10-24")
-    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
-    private Date endTime;
+    private Date[] createTime;
 
 }

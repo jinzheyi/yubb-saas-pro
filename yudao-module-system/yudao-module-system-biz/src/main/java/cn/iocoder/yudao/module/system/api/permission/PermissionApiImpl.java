@@ -40,11 +40,6 @@ public class PermissionApiImpl implements PermissionApi {
     }
 
     @Override
-    public void assignRoleMenu(Long roleId, Set<Long> menuIds) {
-        permissionService.assignRoleMenu(roleId, menuIds);
-    }
-
-    @Override
     public void assignUserRole(Long userId, Set<Long> roleIds) {
         permissionService.assignUserRole(userId, roleIds);
     }

@@ -22,8 +22,6 @@ import java.io.IOException;
 @Slf4j
 public class TenantContextWebFilter extends ApiRequestFilter {
 
-    private static final String HEADER_TENANT_ID = "tenant-id";
-
     public TenantContextWebFilter(WebProperties webProperties) {
         super(webProperties);
     }

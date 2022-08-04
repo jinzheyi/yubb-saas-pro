@@ -15,7 +15,7 @@ public class UserSimpleRespVO {
     @ApiModelProperty(value = "用户编号", required = true, example = "1024")
     private Long id;
 
-    @ApiModelProperty(value = "用户昵称", required = true, example = "圣钰SaaS")
+    @ApiModelProperty(value = "用户昵称", required = true, example = "芋道")
     private String nickname;
 
 }

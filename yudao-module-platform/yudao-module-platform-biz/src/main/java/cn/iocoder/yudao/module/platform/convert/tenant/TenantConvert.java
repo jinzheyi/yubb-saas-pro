@@ -1,12 +1,12 @@
 package cn.iocoder.yudao.module.platform.convert.tenant;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantExcelVO;
-import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantRespVO;
-import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantDO;
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserCreateReqDTO;
+import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantExcelVO;
+import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantRespVO;
+import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.admin.user.vo.user.UserCreateReqVO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -22,24 +22,23 @@ public interface TenantConvert {
 
     TenantConvert INSTANCE = Mappers.getMapper(TenantConvert.class);
 
-    PlatformTenantDO convert(TenantCreateReqVO bean);
+    TenantDO convert(TenantCreateReqVO bean);
 
-    PlatformTenantDO convert(TenantUpdateReqVO bean);
+    TenantDO convert(TenantUpdateReqVO bean);
 
-    TenantRespVO convert(PlatformTenantDO bean);
+    TenantRespVO convert(TenantDO bean);
 
-    List<TenantRespVO> convertList(List<PlatformTenantDO> list);
+    List<TenantRespVO> convertList(List<TenantDO> list);
 
-    PageResult<TenantRespVO> convertPage(PageResult<PlatformTenantDO> page);
+    PageResult<TenantRespVO> convertPage(PageResult<TenantDO> page);
 
-    List<TenantExcelVO> convertList02(List<PlatformTenantDO> list);
+    List<TenantExcelVO> convertList02(List<TenantDO> list);
 
-    default AdminUserCreateReqDTO convert02(TenantCreateReqVO bean) {
-        AdminUserCreateReqDTO reqVO = new AdminUserCreateReqDTO();
+    default UserCreateReqVO convert02(TenantCreateReqVO bean) {
+        UserCreateReqVO reqVO = new UserCreateReqVO();
         reqVO.setUsername(bean.getUsername());
         reqVO.setPassword(bean.getPassword());
-        reqVO.setNickname(bean.getContactName())
-                .setMobile(bean.getContactMobile());
+        reqVO.setNickname(bean.getContactName()).setMobile(bean.getContactMobile());
         return reqVO;
     }
 

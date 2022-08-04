@@ -1,6 +1,8 @@
 package cn.iocoder.yudao.framework.web.config;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
@@ -15,16 +17,18 @@ import javax.validation.constraints.NotNull;
 public class WebProperties {
 
     @NotNull(message = "APP API 不能为空")
-    private Api appApi;
+    private Api appApi = new Api("/app-api", "**.controller.app.**");
     @NotNull(message = "Admin API 不能为空")
-    private Api adminApi;
+    private Api adminApi = new Api("/admin-api", "**.controller.admin.**");
     @NotNull(message = "Platform API 不能为空")
-    private Api platformApi;
+    private Api platformApi = new Api("/platform-api", "**.controller.center.**");
 
     @NotNull(message = "Admin UI 不能为空")
     private Ui adminUi;
 
     @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     @Valid
     public static class Api {
 

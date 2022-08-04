@@ -2,7 +2,6 @@ package cn.iocoder.yudao.module.system.service.permission;
 
 import cn.iocoder.yudao.module.system.api.permission.dto.DeptDataPermissionRespDTO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.MenuDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleMenuDO;
 import org.springframework.lang.Nullable;
 
 import java.util.Collection;

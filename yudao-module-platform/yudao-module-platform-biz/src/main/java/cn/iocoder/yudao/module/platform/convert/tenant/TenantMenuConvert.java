@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.platform.convert.tenant;
 
-import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuRespVO;
-import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuSimpleRespVO;
-import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.PlatformTenantMenuDO;
+import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.menu.TenantMenuCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.menu.TenantMenuRespVO;
+import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.menu.TenantMenuSimpleRespVO;
+import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.menu.TenantMenuUpdateReqVO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantMenuDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -15,14 +15,14 @@ public interface TenantMenuConvert {
 
     TenantMenuConvert INSTANCE = Mappers.getMapper(TenantMenuConvert.class);
 
-    List<TenantMenuRespVO> convertList(List<PlatformTenantMenuDO> list);
+    List<TenantMenuRespVO> convertList(List<TenantMenuDO> list);
 
-    PlatformTenantMenuDO convert(TenantMenuCreateReqVO bean);
+    TenantMenuDO convert(TenantMenuCreateReqVO bean);
 
-    PlatformTenantMenuDO convert(TenantMenuUpdateReqVO bean);
+    TenantMenuDO convert(TenantMenuUpdateReqVO bean);
 
-    TenantMenuRespVO convert(PlatformTenantMenuDO bean);
+    TenantMenuRespVO convert(TenantMenuDO bean);
 
-    List<TenantMenuSimpleRespVO> convertList02(List<PlatformTenantMenuDO> list);
+    List<TenantMenuSimpleRespVO> convertList02(List<TenantMenuDO> list);
 
 }

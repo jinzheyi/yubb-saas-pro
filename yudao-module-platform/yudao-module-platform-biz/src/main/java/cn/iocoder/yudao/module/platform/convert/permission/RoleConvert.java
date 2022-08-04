@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.convert.permission;
 
-import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.*;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
+import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.*;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.platform.service.permission.bo.RoleCreateReqBO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -13,16 +13,16 @@ public interface RoleConvert {
 
     RoleConvert INSTANCE = Mappers.getMapper(RoleConvert.class);
 
-    PlatformRoleDO convert(RoleUpdateReqVO bean);
+    RoleDO convert(RoleUpdateReqVO bean);
 
-    RoleRespVO convert(PlatformRoleDO bean);
+    RoleRespVO convert(RoleDO bean);
 
-    PlatformRoleDO convert(RoleCreateReqVO bean);
+    RoleDO convert(RoleCreateReqVO bean);
 
-    List<RoleSimpleRespVO> convertList02(List<PlatformRoleDO> list);
+    List<RoleSimpleRespVO> convertList02(List<RoleDO> list);
 
-    List<RoleExcelVO> convertList03(List<PlatformRoleDO> list);
+    List<RoleExcelVO> convertList03(List<RoleDO> list);
 
-    PlatformRoleDO convert(RoleCreateReqBO bean);
+    RoleDO convert(RoleCreateReqBO bean);
 
 }

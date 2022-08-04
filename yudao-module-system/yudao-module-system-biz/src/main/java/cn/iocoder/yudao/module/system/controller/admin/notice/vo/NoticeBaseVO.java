@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.system.controller.admin.notice.vo;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -27,9 +26,6 @@ public class NoticeBaseVO {
     @ApiModelProperty(value = "公告内容", required = true, example = "半生编码")
     private String content;
 
-    /**
-     * 状态 {@link CommonStatusEnum}
-     */
     @ApiModelProperty(value = "状态", required = true, example = "1", notes = "参见 CommonStatusEnum 枚举类")
     private Integer status;
 

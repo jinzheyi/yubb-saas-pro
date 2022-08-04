@@ -1,9 +1,9 @@
 package cn.iocoder.yudao.module.platform.convert.social;
 
-import cn.iocoder.yudao.module.platform.api.social.dto.PlatformSocialUserBindReqDTO;
-import cn.iocoder.yudao.module.platform.api.social.dto.PlatformSocialUserUnbindReqDTO;
-import cn.iocoder.yudao.module.platform.controller.center.socail.vo.SocialUserBindReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.socail.vo.SocialUserUnbindReqVO;
+import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
+import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserUnbindReqDTO;
+import cn.iocoder.yudao.module.platform.controller.admin.socail.vo.SocialUserBindReqVO;
+import cn.iocoder.yudao.module.platform.controller.admin.socail.vo.SocialUserUnbindReqVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -12,8 +12,8 @@ public interface SocialUserConvert {
 
     SocialUserConvert INSTANCE = Mappers.getMapper(SocialUserConvert.class);
 
-    PlatformSocialUserBindReqDTO convert(Long userId, Integer userType, SocialUserBindReqVO reqVO);
+    SocialUserBindReqDTO convert(Long userId, Integer userType, SocialUserBindReqVO reqVO);
 
-    PlatformSocialUserUnbindReqDTO convert(Long userId, Integer userType, SocialUserUnbindReqVO reqVO);
+    SocialUserUnbindReqDTO convert(Long userId, Integer userType, SocialUserUnbindReqVO reqVO);
 
 }

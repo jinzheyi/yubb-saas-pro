@@ -23,7 +23,7 @@ public class OAuth2UserInfoRespVO {
     @ApiModelProperty(value = "用户昵称", required = true, example = "芋道")
     private String nickname;
 
-    @ApiModelProperty(value = "用户邮箱", example = "jin_zheyicn@qq.com")
+    @ApiModelProperty(value = "用户邮箱", example = "yudao@iocoder.cn")
     private String email;
     @ApiModelProperty(value = "手机号码", example = "15601691300")
     private String mobile;

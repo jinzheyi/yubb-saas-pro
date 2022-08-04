@@ -1,7 +1,6 @@
 package cn.iocoder.yudao.module.system.controller.admin.oauth2.vo.client;
 
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -39,9 +38,6 @@ public class OAuth2ClientBaseVO {
     @ApiModelProperty(value = "应用描述", example = "我是一个应用")
     private String description;
 
-    /**
-     * 状态 {@link CommonStatusEnum}
-     */
     @ApiModelProperty(value = "状态", required = true, example = "1", notes = "参见 CommonStatusEnum 枚举")
     @NotNull(message = "状态不能为空")
     private Integer status;

@@ -47,13 +47,6 @@ public interface PermissionApi {
     DeptDataPermissionRespDTO getDeptDataPermission(Long userId);
 
     /**
-     * 创建租户的角色菜单权限
-     * @param roleId 角色id
-     * @param menuIds 权限菜单id集合
-     */
-    void assignRoleMenu(Long roleId, Set<Long> menuIds);
-
-    /**
      * 设置用户角色
      *
      * @param userId 角色编号

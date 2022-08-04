@@ -1,11 +1,11 @@
 package cn.iocoder.yudao.module.platform.convert.sms;
 
+import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateExcelVO;
+import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateRespVO;
+import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateUpdateReqVO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsTemplateDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateExcelVO;
-import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateRespVO;
-import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.sms.PlatformSmsTemplateDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -16,16 +16,16 @@ public interface SmsTemplateConvert {
 
     SmsTemplateConvert INSTANCE = Mappers.getMapper(SmsTemplateConvert.class);
 
-    PlatformSmsTemplateDO convert(SmsTemplateCreateReqVO bean);
+    SmsTemplateDO convert(SmsTemplateCreateReqVO bean);
 
-    PlatformSmsTemplateDO convert(SmsTemplateUpdateReqVO bean);
+    SmsTemplateDO convert(SmsTemplateUpdateReqVO bean);
 
-    SmsTemplateRespVO convert(PlatformSmsTemplateDO bean);
+    SmsTemplateRespVO convert(SmsTemplateDO bean);
 
-    List<SmsTemplateRespVO> convertList(List<PlatformSmsTemplateDO> list);
+    List<SmsTemplateRespVO> convertList(List<SmsTemplateDO> list);
 
-    PageResult<SmsTemplateRespVO> convertPage(PageResult<PlatformSmsTemplateDO> page);
+    PageResult<SmsTemplateRespVO> convertPage(PageResult<SmsTemplateDO> page);
 
-    List<SmsTemplateExcelVO> convertList02(List<PlatformSmsTemplateDO> list);
+    List<SmsTemplateExcelVO> convertList02(List<SmsTemplateDO> list);
 
 }

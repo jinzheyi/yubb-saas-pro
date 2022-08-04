@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.system.controller.admin.permission.vo.role;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -15,11 +14,9 @@ public class RoleUpdateStatusReqVO {
     @NotNull(message = "角色编号不能为空")
     private Long id;
 
-    /**
-     * 状态 {@link CommonStatusEnum}
-     */
     @ApiModelProperty(value = "状态", required = true, example = "1", notes = "见 CommonStatusEnum 枚举")
     @NotNull(message = "状态不能为空")
+//    @InEnum(value = CommonStatusEnum.class, message = "修改状态必须是 {value}")
     private Integer status;
 
 }

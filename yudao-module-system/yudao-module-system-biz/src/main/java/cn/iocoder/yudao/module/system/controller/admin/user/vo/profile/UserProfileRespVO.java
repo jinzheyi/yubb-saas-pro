@@ -1,7 +1,5 @@
 package cn.iocoder.yudao.module.system.controller.admin.user.vo.profile;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.enums.SocialTypeEnum;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserBaseVO;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -24,9 +22,6 @@ public class UserProfileRespVO extends UserBaseVO {
     @ApiModelProperty(value = "用户编号", required = true, example = "1")
     private Long id;
 
-    /**
-     * 状态 {@link CommonStatusEnum}
-     */
     @ApiModelProperty(value = "状态", required = true, example = "1", notes = "参见 CommonStatusEnum 枚举类")
     private Integer status;
 
@@ -98,9 +93,6 @@ public class UserProfileRespVO extends UserBaseVO {
     @Data
     public static class SocialUser {
 
-        /**
-         * 社交平台的类型 {@link SocialTypeEnum}
-         */
         @ApiModelProperty(value = "社交平台的类型", required = true, example = "10", notes = "参见 SocialTypeEnum 枚举类")
         private Integer type;
 

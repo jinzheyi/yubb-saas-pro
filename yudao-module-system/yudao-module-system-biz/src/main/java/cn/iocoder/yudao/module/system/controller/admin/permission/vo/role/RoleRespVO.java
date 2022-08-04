@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.system.controller.admin.permission.vo.role;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -27,9 +26,6 @@ public class RoleRespVO extends RoleBaseVO {
     @ApiModelProperty(value = "数据范围(指定部门数组)", example = "1")
     private Set<Long> dataScopeDeptIds;
 
-    /**
-     * 状态 {@link CommonStatusEnum}
-     */
     @ApiModelProperty(value = "状态", required = true, example = "1", notes = "参见 CommonStatusEnum 枚举类")
     private Integer status;
 

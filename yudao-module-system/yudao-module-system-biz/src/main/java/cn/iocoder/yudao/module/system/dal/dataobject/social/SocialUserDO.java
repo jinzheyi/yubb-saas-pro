@@ -1,14 +1,14 @@
 package cn.iocoder.yudao.module.system.dal.dataobject.social;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.framework.common.enums.SocialTypeEnum;
+import cn.iocoder.yudao.module.system.enums.social.SocialTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
 
 /**
- * 社交用户
+ * 社交（三方）用户
  *
  * @author weir
  */

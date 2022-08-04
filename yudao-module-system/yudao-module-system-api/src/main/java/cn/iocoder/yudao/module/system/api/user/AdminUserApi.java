@@ -1,9 +1,8 @@
 package cn.iocoder.yudao.module.system.api.user;
 
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserCreateReqDTO;
+import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 
-import javax.validation.Valid;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +22,14 @@ public interface AdminUserApi {
      * @return 用户对象信息
      */
     AdminUserRespDTO getUser(Long id);
+
+    /**
+     * 通过用户 ID 查询用户们
+     *
+     * @param ids 用户 ID 们
+     * @return 用户对象信息
+     */
+    List<AdminUserRespDTO> getUsers(Collection<Long> ids);
 
     /**
      * 获得指定部门的用户数组
@@ -46,7 +53,10 @@ public interface AdminUserApi {
      * @param ids 用户编号数组
      * @return 用户 Map
      */
-    Map<Long, AdminUserRespDTO> getUserMap(Collection<Long> ids);
+    default Map<Long, AdminUserRespDTO> getUserMap(Collection<Long> ids) {
+        List<AdminUserRespDTO> users = getUsers(ids);
+        return CollectionUtils.convertMap(users, AdminUserRespDTO::getId);
+    }
 
     /**
      * 校验用户们是否有效。如下情况，视为无效：
@@ -56,13 +66,5 @@ public interface AdminUserApi {
      * @param ids 用户编号数组
      */
     void validUsers(Set<Long> ids);
-
-    /**
-     * 外部服务创建租户用户接口
-     *
-     * @param reqVO 用户信息
-     * @return 用户编号
-     */
-    Long createUser(@Valid AdminUserCreateReqDTO reqVO);
 
 }

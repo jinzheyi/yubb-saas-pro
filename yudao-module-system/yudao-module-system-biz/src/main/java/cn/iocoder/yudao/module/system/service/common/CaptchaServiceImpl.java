@@ -3,10 +3,10 @@ package cn.iocoder.yudao.module.system.service.common;
 import cn.hutool.captcha.CaptchaUtil;
 import cn.hutool.captcha.CircleCaptcha;
 import cn.hutool.core.util.IdUtil;
-import cn.iocoder.yudao.module.system.controller.admin.common.vo.CaptchaImageRespVO;
 import cn.iocoder.yudao.module.system.convert.common.CaptchaConvert;
-import cn.iocoder.yudao.module.system.dal.redis.common.CaptchaRedisDAO;
 import cn.iocoder.yudao.module.system.framework.captcha.config.CaptchaProperties;
+import cn.iocoder.yudao.module.system.controller.admin.common.vo.CaptchaImageRespVO;
+import cn.iocoder.yudao.module.system.dal.redis.common.CaptchaRedisDAO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
