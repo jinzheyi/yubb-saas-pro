@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.system.convert.user;
 
+import cn.iocoder.yudao.module.system.api.user.dto.AdminUserCreateReqDTO;
 import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
@@ -51,5 +52,7 @@ public interface UserConvert {
     AdminUserRespDTO convert4(AdminUserDO bean);
 
     List<AdminUserRespDTO> convertList4(List<AdminUserDO> users);
+
+    UserCreateReqVO convert(AdminUserCreateReqDTO bean);
 
 }

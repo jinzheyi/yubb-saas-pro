@@ -19,7 +19,6 @@ import cn.iocoder.yudao.module.platform.enums.oauth2.OAuth2ClientConstants;
 import cn.iocoder.yudao.module.platform.enums.sms.SmsSceneEnum;
 import cn.iocoder.yudao.module.platform.service.common.CaptchaService;
 import cn.iocoder.yudao.module.platform.service.logger.LoginLogService;
-import cn.iocoder.yudao.module.platform.service.member.MemberService;
 import cn.iocoder.yudao.module.platform.service.oauth2.OAuth2TokenService;
 import cn.iocoder.yudao.module.platform.service.social.SocialUserService;
 import cn.iocoder.yudao.module.platform.service.user.AdminUserService;
@@ -54,8 +53,6 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     private OAuth2TokenService oauth2TokenService;
     @Resource
     private SocialUserService socialUserService;
-    @Resource
-    private MemberService memberService;
 
     @Resource
     private Validator validator;
@@ -175,7 +172,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     @Override
     public AuthLoginRespVO socialLogin(AuthSocialLoginReqVO reqVO) {
         // 使用 code 授权码，进行登录。然后，获得到绑定的用户编号
-        Long userId = socialUserService.getBindUserId(UserTypeEnum.ADMIN.getValue(), reqVO.getType(),
+        Long userId = socialUserService.getBindUserId(UserTypeEnum.CENTER.getValue(), reqVO.getType(),
                 reqVO.getCode(), reqVO.getState());
         if (userId == null) {
             throw exception(AUTH_THIRD_LOGIN_NOT_BIND);
@@ -224,11 +221,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         reqDTO.setTraceId(TracerUtils.getTraceId());
         reqDTO.setUserId(userId);
         reqDTO.setUserType(userType);
-        if (ObjectUtil.equal(getUserType().getValue(), userType)) {
-            reqDTO.setUsername(getUsername(userId));
-        } else {
-            reqDTO.setUsername(memberService.getMemberUserMobile(userId));
-        }
+        reqDTO.setUsername(getUsername(userId));
         reqDTO.setUserAgent(ServletUtils.getUserAgent());
         reqDTO.setUserIp(ServletUtils.getClientIP());
         reqDTO.setResult(LoginResultEnum.SUCCESS.getResult());
@@ -244,7 +237,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     }
 
     private UserTypeEnum getUserType() {
-        return UserTypeEnum.ADMIN;
+        return UserTypeEnum.CENTER;
     }
 
 }

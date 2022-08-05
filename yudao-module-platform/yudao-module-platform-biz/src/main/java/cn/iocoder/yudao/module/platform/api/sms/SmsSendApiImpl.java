@@ -25,10 +25,4 @@ public class SmsSendApiImpl implements SmsSendApi {
                 reqDTO.getTemplateCode(), reqDTO.getTemplateParams());
     }
 
-    @Override
-    public Long sendSingleSmsToMember(SmsSendSingleToUserReqDTO reqDTO) {
-        return smsSendService.sendSingleSmsToMember(reqDTO.getMobile(), reqDTO.getUserId(),
-                reqDTO.getTemplateCode(), reqDTO.getTemplateParams());
-    }
-
 }

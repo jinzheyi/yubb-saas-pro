@@ -62,6 +62,13 @@
         <!--            <artifactId>yudao-module-bpm-biz-activiti</artifactId>-->
         <!--            <version>${revision}</version>-->
 <!--        </dependency>-->
+
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-module-platform-biz</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-spring-boot-starter-biz-error-code</artifactId>

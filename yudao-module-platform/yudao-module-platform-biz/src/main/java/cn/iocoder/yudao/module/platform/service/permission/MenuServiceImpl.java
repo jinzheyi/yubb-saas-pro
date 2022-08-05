@@ -203,14 +203,6 @@ public class MenuServiceImpl implements MenuService {
     }
 
     @Override
-    public List<MenuDO> getTenantMenus(MenuListReqVO reqVO) {
-        List<MenuDO> menus = getMenus(reqVO);
-        // 开启多租户的情况下，需要过滤掉未开通的菜单
-        tenantService.handleTenantMenu(menuIds -> menus.removeIf(menu -> !CollUtil.contains(menuIds, menu.getId())));
-        return menus;
-    }
-
-    @Override
     public List<MenuDO> getMenus(MenuListReqVO reqVO) {
         return menuMapper.selectList(reqVO);
     }

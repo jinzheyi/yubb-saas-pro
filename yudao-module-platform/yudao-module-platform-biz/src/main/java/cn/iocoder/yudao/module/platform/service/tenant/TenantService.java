@@ -99,21 +99,21 @@ public interface TenantService {
      */
     List<TenantDO> getTenantListByPackageId(Long packageId);
 
-    /**
-     * 进行租户的信息处理逻辑
-     * 其中，租户编号从 {@link TenantContextHolder} 上下文中获取
-     *
-     * @param handler 处理器
-     */
-    void handleTenantInfo(TenantInfoHandler handler);
-
-    /**
-     * 进行租户的菜单处理逻辑
-     * 其中，租户编号从 {@link TenantContextHolder} 上下文中获取
-     *
-     * @param handler 处理器
-     */
-    void handleTenantMenu(TenantMenuHandler handler);
+//    /**
+//     * 进行租户的信息处理逻辑
+//     * 其中，租户编号从 {@link TenantContextHolder} 上下文中获取
+//     *
+//     * @param handler 处理器
+//     */
+//    void handleTenantInfo(TenantInfoHandler handler);
+//
+//    /**
+//     * 进行租户的菜单处理逻辑
+//     * 其中，租户编号从 {@link TenantContextHolder} 上下文中获取
+//     *
+//     * @param handler 处理器
+//     */
+//    void handleTenantMenu(TenantMenuHandler handler);
 
     /**
      * 获得所有租户

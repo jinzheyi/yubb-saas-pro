@@ -28,14 +28,14 @@ public class SocialUserController {
     @PostMapping("/bind")
     @ApiOperation("社交绑定，使用 code 授权码")
     public CommonResult<Boolean> socialBind(@RequestBody @Valid SocialUserBindReqVO reqVO) {
-        socialUserService.bindSocialUser(SocialUserConvert.INSTANCE.convert(getLoginUserId(), UserTypeEnum.ADMIN.getValue(), reqVO));
+        socialUserService.bindSocialUser(SocialUserConvert.INSTANCE.convert(getLoginUserId(), UserTypeEnum.CENTER.getValue(), reqVO));
         return CommonResult.success(true);
     }
 
     @DeleteMapping("/unbind")
     @ApiOperation("取消社交绑定")
     public CommonResult<Boolean> socialUnbind(@RequestBody SocialUserUnbindReqVO reqVO) {
-        socialUserService.unbindSocialUser(getLoginUserId(), UserTypeEnum.ADMIN.getValue(), reqVO.getType(), reqVO.getOpenid());
+        socialUserService.unbindSocialUser(getLoginUserId(), UserTypeEnum.CENTER.getValue(), reqVO.getType(), reqVO.getOpenid());
         return CommonResult.success(true);
     }
 

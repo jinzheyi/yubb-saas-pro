@@ -76,7 +76,7 @@ public class OAuth2GrantServiceImpl implements OAuth2GrantService {
         Assert.notNull(user, "用户不能为空！"); // 防御性编程
 
         // 创建访问令牌
-        return oauth2TokenService.createAccessToken(user.getId(), UserTypeEnum.ADMIN.getValue(), clientId, scopes);
+        return oauth2TokenService.createAccessToken(user.getId(), UserTypeEnum.CENTER.getValue(), clientId, scopes);
     }
 
     @Override

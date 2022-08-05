@@ -16,7 +16,7 @@ import javax.annotation.Resource;
  * @author 芋道源码
  */
 @Service
-public class OAuth2TokenApiImpl implements OAuth2TokenApi {
+public class PlatformOAuth2TokenApiImpl implements PlatformOAuth2TokenApi {
 
     @Resource
     private OAuth2TokenService oauth2TokenService;

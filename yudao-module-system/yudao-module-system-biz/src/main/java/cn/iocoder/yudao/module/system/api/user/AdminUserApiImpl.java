@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.system.api.user;
 
+import cn.iocoder.yudao.module.system.api.user.dto.AdminUserCreateReqDTO;
 import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import cn.iocoder.yudao.module.system.convert.user.UserConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
@@ -49,6 +50,11 @@ public class AdminUserApiImpl implements AdminUserApi {
     @Override
     public void validUsers(Set<Long> ids) {
         userService.validUsers(ids);
+    }
+
+    @Override
+    public Long createUser(AdminUserCreateReqDTO reqVO) {
+        return userService.createUser(UserConvert.INSTANCE.convert(reqVO));
     }
 
 }

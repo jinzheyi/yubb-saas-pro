@@ -39,4 +39,9 @@ public class TenantProperties {
      */
     private Set<String> ignoreTables = Collections.emptySet();
 
+    /**
+     * 需要忽略的表前缀 即默认所有该前缀表都屏蔽自动添加租户id功能。例如平台的表，租户中间表
+     */
+    private Set<String> ignoreTablesPrefix = Collections.emptySet();
+
 }

@@ -42,7 +42,7 @@ public class YudaoWebAutoConfiguration implements WebMvcConfigurer {
     public void configurePathMatch(PathMatchConfigurer configurer) {
         configurePathMatch(configurer, webProperties.getAdminApi());
         configurePathMatch(configurer, webProperties.getAppApi());
-        configurePathMatch(configurer, webProperties.getPlatformApi());
+        configurePathMatch(configurer, webProperties.getCenterApi());
     }
 
     /**

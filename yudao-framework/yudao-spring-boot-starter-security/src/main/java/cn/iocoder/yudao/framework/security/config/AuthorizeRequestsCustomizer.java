@@ -26,7 +26,7 @@ public abstract class AuthorizeRequestsCustomizer
      * @return
      */
     protected String buildPlatformApi(String url) {
-        return webProperties.getPlatformApi().getPrefix() + url;
+        return webProperties.getCenterApi().getPrefix() + url;
     }
 
     /**

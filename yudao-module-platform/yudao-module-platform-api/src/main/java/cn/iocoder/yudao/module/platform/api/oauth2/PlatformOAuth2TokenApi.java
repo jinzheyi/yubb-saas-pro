@@ -11,7 +11,7 @@ import javax.validation.Valid;
  *
  * @author 芋道源码
  */
-public interface OAuth2TokenApi {
+public interface PlatformOAuth2TokenApi {
 
     /**
      * 创建访问令牌

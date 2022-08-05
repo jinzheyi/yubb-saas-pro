@@ -59,4 +59,9 @@ public class PermissionApiImpl implements PermissionApi {
         return permissionService.hasAnyRoleMenu(menuId);
     }
 
+    @Override
+    public void assignRoleMenu(Long roleId, Set<Long> menuIds) {
+        permissionService.assignRoleMenu(roleId, menuIds);
+    }
+
 }

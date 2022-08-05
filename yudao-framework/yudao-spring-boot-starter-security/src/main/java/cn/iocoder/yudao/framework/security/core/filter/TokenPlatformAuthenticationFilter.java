@@ -13,7 +13,7 @@ import cn.iocoder.yudao.framework.web.core.filter.ApiPlatformRequestFilter;
 import cn.iocoder.yudao.framework.web.core.handler.GlobalExceptionHandler;
 import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
 import cn.iocoder.yudao.module.platform.api.oauth2.PlatformOAuth2TokenApi;
-import cn.iocoder.yudao.module.platform.api.oauth2.dto.PlatformOAuth2AccessTokenCheckRespDTO;
+import cn.iocoder.yudao.module.platform.api.oauth2.dto.OAuth2AccessTokenCheckRespDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 
@@ -36,16 +36,16 @@ public class TokenPlatformAuthenticationFilter extends ApiPlatformRequestFilter 
 
     private final GlobalExceptionHandler globalExceptionHandler;
 
-    private final PlatformOAuth2TokenApi oauth2TokenApi;
+    private final PlatformOAuth2TokenApi oauth2TokenApiPlatform;
 
     public TokenPlatformAuthenticationFilter(WebProperties webProperties,
                                              SecurityProperties securityProperties,
                                              GlobalExceptionHandler globalExceptionHandler,
-                                             PlatformOAuth2TokenApi oauth2TokenApi) {
+                                             PlatformOAuth2TokenApi oauth2TokenApiPlatform) {
         super(webProperties);
         this.securityProperties = securityProperties;
         this.globalExceptionHandler = globalExceptionHandler;
-        this.oauth2TokenApi = oauth2TokenApi;
+        this.oauth2TokenApiPlatform = oauth2TokenApiPlatform;
     }
 
     @Override
@@ -75,7 +75,7 @@ public class TokenPlatformAuthenticationFilter extends ApiPlatformRequestFilter 
 
     private PlatformLoginUser buildLoginUserByToken(String token, Integer userType) {
         try {
-            PlatformOAuth2AccessTokenCheckRespDTO accessToken = oauth2TokenApi.checkAccessToken(token);
+            OAuth2AccessTokenCheckRespDTO accessToken = oauth2TokenApiPlatform.checkAccessToken(token);
             if (accessToken == null) {
                 return null;
             }

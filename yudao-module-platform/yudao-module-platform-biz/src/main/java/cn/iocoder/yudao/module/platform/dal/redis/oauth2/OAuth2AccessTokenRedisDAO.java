@@ -34,7 +34,7 @@ public class OAuth2AccessTokenRedisDAO {
         // 清理多余字段，避免缓存
         accessTokenDO.setUpdater(null).setUpdateTime(null).setCreateTime(null).setCreator(null).setDeleted(null);
         stringRedisTemplate.opsForValue().set(redisKey, JsonUtils.toJsonString(accessTokenDO),
-                accessTokenDO.getExpiresTime().getTime() - platform.currentTimeMillis(), TimeUnit.MILLISECONDS);
+                accessTokenDO.getExpiresTime().getTime() - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
     }
 
     public void delete(String accessToken) {

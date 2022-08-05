@@ -1,8 +1,10 @@
 package cn.iocoder.yudao.module.system.api.user;
 
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import cn.iocoder.yudao.module.system.api.user.dto.AdminUserCreateReqDTO;
 import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 
+import javax.validation.Valid;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -66,5 +68,13 @@ public interface AdminUserApi {
      * @param ids 用户编号数组
      */
     void validUsers(Set<Long> ids);
+
+    /**
+     * 外部服务创建租户用户接口
+     *
+     * @param reqVO 用户信息
+     * @return 用户编号
+     */
+    Long createUser(@Valid AdminUserCreateReqDTO reqVO);
 
 }

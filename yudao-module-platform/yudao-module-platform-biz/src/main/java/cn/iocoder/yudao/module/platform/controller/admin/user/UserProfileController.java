@@ -76,7 +76,7 @@ public class UserProfileController {
             resp.setPosts(UserConvert.INSTANCE.convertList02(posts));
         }
         // 获得社交用户信息
-        List<SocialUserDO> socialUsers = socialService.getSocialUserList(user.getId(), UserTypeEnum.ADMIN.getValue());
+        List<SocialUserDO> socialUsers = socialService.getSocialUserList(user.getId(), UserTypeEnum.CENTER.getValue());
         resp.setSocialUsers(UserConvert.INSTANCE.convertList03(socialUsers));
         return success(resp);
     }

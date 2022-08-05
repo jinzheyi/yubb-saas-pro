@@ -10,7 +10,6 @@ import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.framework.tenant.config.TenantProperties;
 import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
 import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.RoleCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantPageReqVO;
@@ -29,6 +28,11 @@ import cn.iocoder.yudao.module.platform.service.permission.RoleService;
 import cn.iocoder.yudao.module.platform.service.tenant.handler.TenantInfoHandler;
 import cn.iocoder.yudao.module.platform.service.tenant.handler.TenantMenuHandler;
 import cn.iocoder.yudao.module.platform.service.user.AdminUserService;
+import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
+import cn.iocoder.yudao.module.system.api.permission.RoleApi;
+import cn.iocoder.yudao.module.system.api.permission.dto.RoleCreateReqDTO;
+import cn.iocoder.yudao.module.system.api.permission.dto.RoleSimpleRespDTO;
+import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -64,15 +68,23 @@ public class TenantServiceImpl implements TenantService {
 
     @Resource
     private TenantPackageService tenantPackageService;
+//    @Resource
+//    @Lazy // 延迟，避免循环依赖报错
+//    private AdminUserService userService;
+//    @Resource
+//    private RoleService roleService;
+
     @Resource
-    @Lazy // 延迟，避免循环依赖报错
-    private AdminUserService userService;
+    private AdminUserApi adminUserApi;
     @Resource
-    private RoleService roleService;
+    private RoleApi roleApi;
+//    @Resource
+//    private MenuService menuService;
+//    @Resource
+//    private PermissionService permissionService;
+
     @Resource
-    private MenuService menuService;
-    @Resource
-    private PermissionService permissionService;
+    private PermissionApi permissionApi;
 
     @Override
     public List<Long> getTenantIds() {
@@ -125,10 +137,10 @@ public class TenantServiceImpl implements TenantService {
 
     private Long createRole(TenantPackageDO tenantPackage) {
         // 创建角色
-        RoleCreateReqVO reqVO = new RoleCreateReqVO();
-        reqVO.setName(RoleCodeEnum.TENANT_ADMIN.getName()).setCode(RoleCodeEnum.TENANT_ADMIN.getCode())
-                .setSort(0).setRemark("系统自动生成");
-        Long roleId = roleService.createRole(reqVO, RoleTypeEnum.SYSTEM.getType());
+        RoleCreateReqDTO reqDTO = new RoleCreateReqDTO();
+        reqDTO.setName(RoleCodeEnum.TENANT_ADMIN.getName()).setCode(RoleCodeEnum.TENANT_ADMIN.getCode())
+                .setSort(0).setRemark("系统自动生成").setType(RoleTypeEnum.SYSTEM.getType());
+        Long roleId = roleApi.createRole(reqDTO);
         // 分配权限
         permissionApi.assignRoleMenu(roleId, tenantPackage.getMenuIds());
         return roleId;
@@ -189,10 +201,6 @@ public class TenantServiceImpl implements TenantService {
         if (tenant == null) {
             throw exception(TENANT_NOT_EXISTS);
         }
-        // 内置租户，不允许删除
-        if (isSystemTenant(tenant)) {
-            throw exception(TENANT_CAN_NOT_UPDATE_SYSTEM);
-        }
         return tenant;
     }
 
@@ -226,42 +234,42 @@ public class TenantServiceImpl implements TenantService {
         return tenantMapper.selectListByPackageId(packageId);
     }
 
-    @Override
-    public void handleTenantInfo(TenantInfoHandler handler) {
-        // 如果禁用，则不执行逻辑
-        if (isTenantDisable()) {
-            return;
-        }
-        // 获得租户
-        TenantDO tenant = getTenant(TenantContextHolder.getRequiredTenantId());
-        // 执行处理器
-        handler.handle(tenant);
-    }
-
-    @Override
-    public void handleTenantMenu(TenantMenuHandler handler) {
-        // 如果禁用，则不执行逻辑
-        if (isTenantDisable()) {
-            return;
-        }
-        // 获得租户，然后获得菜单
-        TenantDO tenant = getTenant(TenantContextHolder.getRequiredTenantId());
-        Set<Long> menuIds;
-        if (isSystemTenant(tenant)) { // 系统租户，菜单是全量的
-            menuIds = CollectionUtils.convertSet(menuService.getMenus(), MenuDO::getId);
-        } else {
-            menuIds = tenantPackageService.getTenantPackage(tenant.getPackageId()).getMenuIds();
-        }
-        // 执行处理器
-        handler.handle(menuIds);
-    }
-
-    private static boolean isSystemTenant(TenantDO tenant) {
-        return Objects.equals(tenant.getPackageId(), TenantDO.PACKAGE_ID_SYSTEM);
-    }
-
-    private boolean isTenantDisable() {
-        return tenantProperties == null || Boolean.FALSE.equals(tenantProperties.getEnable());
-    }
+//    @Override
+//    public void handleTenantInfo(TenantInfoHandler handler) {
+//        // 如果禁用，则不执行逻辑
+//        if (isTenantDisable()) {
+//            return;
+//        }
+//        // 获得租户
+//        TenantDO tenant = getTenant(TenantContextHolder.getRequiredTenantId());
+//        // 执行处理器
+//        handler.handle(tenant);
+//    }
+//
+//    @Override
+//    public void handleTenantMenu(TenantMenuHandler handler) {
+//        // 如果禁用，则不执行逻辑
+//        if (isTenantDisable()) {
+//            return;
+//        }
+//        // 获得租户，然后获得菜单
+//        TenantDO tenant = getTenant(TenantContextHolder.getRequiredTenantId());
+//        Set<Long> menuIds;
+//        if (isSystemTenant(tenant)) { // 系统租户，菜单是全量的
+//            menuIds = CollectionUtils.convertSet(menuService.getMenus(), MenuDO::getId);
+//        } else {
+//            menuIds = tenantPackageService.getTenantPackage(tenant.getPackageId()).getMenuIds();
+//        }
+//        // 执行处理器
+//        handler.handle(menuIds);
+//    }
+//
+//    private static boolean isSystemTenant(TenantDO tenant) {
+//        return Objects.equals(tenant.getPackageId(), TenantDO.PACKAGE_ID_SYSTEM);
+//    }
+//
+//    private boolean isTenantDisable() {
+//        return tenantProperties == null || Boolean.FALSE.equals(tenantProperties.getEnable());
+//    }
 
 }

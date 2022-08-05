@@ -20,8 +20,8 @@ public class WebProperties {
     private Api appApi = new Api("/app-api", "**.controller.app.**");
     @NotNull(message = "Admin API 不能为空")
     private Api adminApi = new Api("/admin-api", "**.controller.admin.**");
-    @NotNull(message = "Platform API 不能为空")
-    private Api platformApi = new Api("/platform-api", "**.controller.center.**");
+    @NotNull(message = "center API 不能为空")
+    private Api centerApi = new Api("/center-api", "**.controller.center.**");
 
     @NotNull(message = "Admin UI 不能为空")
     private Ui adminUi;

@@ -8,7 +8,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * 过滤 /platform-api 等 平台端API 请求的过滤器
+ * 过滤 /center-api 等 平台端API 请求的过滤器
  *
  * @author zhusy
  * @since 2022/7/26
@@ -21,7 +21,7 @@ public abstract class ApiPlatformRequestFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         // 只过滤 API 请求的地址
-        return !StrUtil.startWithAny(request.getRequestURI(), webProperties.getPlatformApi().getPrefix());
+        return !StrUtil.startWithAny(request.getRequestURI(), webProperties.getCenterApi().getPrefix());
     }
 
 }
