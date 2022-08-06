@@ -8,26 +8,17 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.framework.tenant.config.TenantProperties;
-import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
 import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
 import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.tenant.TenantMapper;
 import cn.iocoder.yudao.module.platform.enums.permission.RoleCodeEnum;
 import cn.iocoder.yudao.module.platform.enums.permission.RoleTypeEnum;
-import cn.iocoder.yudao.module.platform.service.permission.MenuService;
-import cn.iocoder.yudao.module.platform.service.permission.PermissionService;
-import cn.iocoder.yudao.module.platform.service.permission.RoleService;
-import cn.iocoder.yudao.module.platform.service.tenant.handler.TenantInfoHandler;
-import cn.iocoder.yudao.module.platform.service.tenant.handler.TenantMenuHandler;
-import cn.iocoder.yudao.module.platform.service.user.AdminUserService;
 import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
 import cn.iocoder.yudao.module.system.api.permission.RoleApi;
 import cn.iocoder.yudao.module.system.api.permission.dto.RoleCreateReqDTO;
@@ -35,7 +26,6 @@ import cn.iocoder.yudao.module.system.api.permission.dto.RoleSimpleRespDTO;
 import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -68,20 +58,11 @@ public class TenantServiceImpl implements TenantService {
 
     @Resource
     private TenantPackageService tenantPackageService;
-//    @Resource
-//    @Lazy // 延迟，避免循环依赖报错
-//    private AdminUserService userService;
-//    @Resource
-//    private RoleService roleService;
 
     @Resource
     private AdminUserApi adminUserApi;
     @Resource
     private RoleApi roleApi;
-//    @Resource
-//    private MenuService menuService;
-//    @Resource
-//    private PermissionService permissionService;
 
     @Resource
     private PermissionApi permissionApi;
@@ -233,43 +214,5 @@ public class TenantServiceImpl implements TenantService {
     public List<TenantDO> getTenantListByPackageId(Long packageId) {
         return tenantMapper.selectListByPackageId(packageId);
     }
-
-//    @Override
-//    public void handleTenantInfo(TenantInfoHandler handler) {
-//        // 如果禁用，则不执行逻辑
-//        if (isTenantDisable()) {
-//            return;
-//        }
-//        // 获得租户
-//        TenantDO tenant = getTenant(TenantContextHolder.getRequiredTenantId());
-//        // 执行处理器
-//        handler.handle(tenant);
-//    }
-//
-//    @Override
-//    public void handleTenantMenu(TenantMenuHandler handler) {
-//        // 如果禁用，则不执行逻辑
-//        if (isTenantDisable()) {
-//            return;
-//        }
-//        // 获得租户，然后获得菜单
-//        TenantDO tenant = getTenant(TenantContextHolder.getRequiredTenantId());
-//        Set<Long> menuIds;
-//        if (isSystemTenant(tenant)) { // 系统租户，菜单是全量的
-//            menuIds = CollectionUtils.convertSet(menuService.getMenus(), MenuDO::getId);
-//        } else {
-//            menuIds = tenantPackageService.getTenantPackage(tenant.getPackageId()).getMenuIds();
-//        }
-//        // 执行处理器
-//        handler.handle(menuIds);
-//    }
-//
-//    private static boolean isSystemTenant(TenantDO tenant) {
-//        return Objects.equals(tenant.getPackageId(), TenantDO.PACKAGE_ID_SYSTEM);
-//    }
-//
-//    private boolean isTenantDisable() {
-//        return tenantProperties == null || Boolean.FALSE.equals(tenantProperties.getEnable());
-//    }
 
 }

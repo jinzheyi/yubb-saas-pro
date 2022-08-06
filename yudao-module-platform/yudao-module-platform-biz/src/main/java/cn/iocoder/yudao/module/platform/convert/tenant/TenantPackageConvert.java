@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.platform.convert.tenant;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.module.platform.api.tenant.dto.packages.TenantPackageRespDTO;
 import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.RoleSimpleRespVO;
 import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.packages.TenantPackageCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.packages.TenantPackageRespVO;
@@ -33,5 +34,7 @@ public interface TenantPackageConvert {
     PageResult<TenantPackageRespVO> convertPage(PageResult<TenantPackageDO> page);
 
     List<TenantPackageSimpleRespVO> convertList02(List<TenantPackageDO> list);
+
+    TenantPackageRespDTO convertDTO(TenantPackageDO bean);
 
 }

@@ -32,6 +32,7 @@ public class PermissionController {
 
     @Resource
     private PermissionService permissionService;
+
     @Resource
     private TenantService tenantService;
 

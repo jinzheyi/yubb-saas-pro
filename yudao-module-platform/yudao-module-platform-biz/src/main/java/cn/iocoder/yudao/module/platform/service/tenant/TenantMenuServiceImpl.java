@@ -13,7 +13,6 @@ import cn.iocoder.yudao.module.platform.dal.mysql.tenant.TenantMenuMapper;
 import cn.iocoder.yudao.module.platform.enums.permission.MenuIdEnum;
 import cn.iocoder.yudao.module.platform.enums.permission.MenuTypeEnum;
 import cn.iocoder.yudao.module.platform.mq.producer.tenant.TenantMenuProducer;
-import cn.iocoder.yudao.module.platform.service.tenant.TenantMenuService;
 import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;

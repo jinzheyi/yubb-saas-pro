@@ -6,9 +6,9 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.util.collection.SetUtils;
 import cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog;
 import cn.iocoder.yudao.framework.security.config.SecurityProperties;
+import cn.iocoder.yudao.module.platform.api.tenant.dto.menu.TenantMenuRespDTO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.*;
 import cn.iocoder.yudao.module.system.convert.auth.AuthConvert;
-import cn.iocoder.yudao.module.system.dal.dataobject.permission.MenuDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.module.system.enums.logger.LoginLogTypeEnum;
@@ -100,7 +100,7 @@ public class AuthController {
         Set<Long> roleIds = permissionService.getUserRoleIdsFromCache(getLoginUserId(), singleton(CommonStatusEnum.ENABLE.getStatus()));
         List<RoleDO> roleList = roleService.getRolesFromCache(roleIds);
         // 获得菜单列表
-        List<MenuDO> menuList = permissionService.getRoleMenuListFromCache(roleIds,
+        List<TenantMenuRespDTO> menuList = permissionService.getRoleMenuListFromCache(roleIds,
                 SetUtils.asSet(MenuTypeEnum.DIR.getType(), MenuTypeEnum.MENU.getType(), MenuTypeEnum.BUTTON.getType()),
                 singleton(CommonStatusEnum.ENABLE.getStatus())); // 只要开启的
         // 拼接结果返回
@@ -113,7 +113,7 @@ public class AuthController {
         // 获得角色列表
         Set<Long> roleIds = permissionService.getUserRoleIdsFromCache(getLoginUserId(), singleton(CommonStatusEnum.ENABLE.getStatus()));
         // 获得用户拥有的菜单列表
-        List<MenuDO> menuList = permissionService.getRoleMenuListFromCache(roleIds,
+        List<TenantMenuRespDTO> menuList = permissionService.getRoleMenuListFromCache(roleIds,
                 SetUtils.asSet(MenuTypeEnum.DIR.getType(), MenuTypeEnum.MENU.getType()), // 只要目录和菜单类型
                 singleton(CommonStatusEnum.ENABLE.getStatus())); // 只要开启的
         // 转换成 Tree 结构返回

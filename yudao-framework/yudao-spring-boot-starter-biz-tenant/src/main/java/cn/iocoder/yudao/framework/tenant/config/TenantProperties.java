@@ -21,11 +21,6 @@ public class TenantProperties {
     private static final Boolean ENABLE_DEFAULT = true;
 
     /**
-     * 是否开启
-     */
-    private Boolean enable = ENABLE_DEFAULT;
-
-    /**
      * 需要忽略多租户的请求
      *
      * 默认情况下，每个请求需要带上 tenant-id 的请求头。但是，部分请求是无需带上的，例如说短信回调、支付回调等 Open API！

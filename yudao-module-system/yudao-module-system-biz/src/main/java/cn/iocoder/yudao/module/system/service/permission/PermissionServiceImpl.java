@@ -9,9 +9,10 @@ import cn.iocoder.yudao.framework.common.util.collection.MapUtils;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
 import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
+import cn.iocoder.yudao.module.platform.api.tenant.TenantMenuApi;
+import cn.iocoder.yudao.module.platform.api.tenant.dto.menu.TenantMenuRespDTO;
 import cn.iocoder.yudao.module.system.api.permission.dto.DeptDataPermissionRespDTO;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.permission.MenuDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleMenuDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.UserRoleDO;
@@ -115,8 +116,7 @@ public class PermissionServiceImpl implements PermissionService {
 
     @Resource
     private RoleService roleService;
-    @Resource
-    private MenuService menuService;
+
     @Resource
     private DeptService deptService;
     @Resource
@@ -128,6 +128,9 @@ public class PermissionServiceImpl implements PermissionService {
     @Resource
     @Lazy // 注入自己，所以延迟加载
     private PermissionService self;
+
+    @Resource
+    private TenantMenuApi tenantMenuApi;
 
     @Override
     @PostConstruct
@@ -228,22 +231,15 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     @Override
-    public List<MenuDO> getRoleMenuListFromCache(Collection<Long> roleIds, Collection<Integer> menuTypes,
-                                                 Collection<Integer> menusStatuses) {
+    public List<TenantMenuRespDTO> getRoleMenuListFromCache(Collection<Long> roleIds, Collection<Integer> menuTypes,
+                                                            Collection<Integer> menusStatuses) {
         // 任一一个参数为空时，不返回任何菜单
         if (CollectionUtils.isAnyEmpty(roleIds, menuTypes, menusStatuses)) {
             return Collections.emptyList();
         }
-
-        // 判断角色是否包含超级管理员。如果是超级管理员，获取到全部
-        List<RoleDO> roleList = roleService.getRolesFromCache(roleIds);
-        if (roleService.hasAnySuperAdmin(roleList)) {
-            return menuService.getMenuListFromCache(menuTypes, menusStatuses);
-        }
-
         // 获得角色拥有的菜单关联
         List<Long> menuIds = MapUtils.getList(roleMenuCache, roleIds);
-        return menuService.getMenuListFromCache(menuIds, menuTypes, menusStatuses);
+        return tenantMenuApi.getMenuListFromCache(menuIds, menuTypes, menusStatuses);
     }
 
     @Override
@@ -266,11 +262,7 @@ public class PermissionServiceImpl implements PermissionService {
 
     @Override
     public Set<Long> getRoleMenuIds(Long roleId) {
-        // 如果是管理员的情况下，获取全部菜单编号
-        if (roleService.hasAnySuperAdmin(Collections.singleton(roleId))) {
-            return convertSet(menuService.getMenus(), MenuDO::getId);
-        }
-        // 如果是非管理员的情况下，获得拥有的菜单编号
+        // 获得拥有的菜单编号
         return convertSet(roleMenuMapper.selectListByRoleId(roleId), RoleMenuDO::getMenuId);
     }
 
@@ -420,14 +412,10 @@ public class PermissionServiceImpl implements PermissionService {
         if (CollUtil.isEmpty(roleIds)) {
             return false;
         }
-        // 判断是否是超管。如果是，当然符合条件
-        if (roleService.hasAnySuperAdmin(roleIds)) {
-            return true;
-        }
 
         // 遍历权限，判断是否有一个满足
         return Arrays.stream(permissions).anyMatch(permission -> {
-            List<MenuDO> menuList = menuService.getMenuListByPermissionFromCache(permission);
+            List<TenantMenuRespDTO> menuList = tenantMenuApi.getMenuListByPermissionFromCache(permission);
             // 采用严格模式，如果权限找不到对应的 Menu 的话，认为
             if (CollUtil.isEmpty(menuList)) {
                 return false;
@@ -449,10 +437,6 @@ public class PermissionServiceImpl implements PermissionService {
         Set<Long> roleIds = getUserRoleIdsFromCache(userId, singleton(CommonStatusEnum.ENABLE.getStatus()));
         if (CollUtil.isEmpty(roleIds)) {
             return false;
-        }
-        // 判断是否是超管。如果是，当然符合条件
-        if (roleService.hasAnySuperAdmin(roleIds)) {
-            return true;
         }
         Set<String> userRoles = convertSet(roleService.getRolesFromCache(roleIds),
                 RoleDO::getCode);

@@ -1,5 +1,7 @@
 package cn.iocoder.yudao.module.platform.api.tenant;
 
+import cn.iocoder.yudao.module.platform.api.tenant.dto.tenant.TenantRespDTO;
+
 import java.util.List;
 
 /**
@@ -22,5 +24,13 @@ public interface TenantApi {
      * @param id 租户编号
      */
     void validTenant(Long id);
+
+    /**
+     * 通过租户 ID 查询租户
+     *
+     * @param id 租户ID
+     * @return 租户对象信息
+     */
+    TenantRespDTO getTenant(Long id);
 
 }

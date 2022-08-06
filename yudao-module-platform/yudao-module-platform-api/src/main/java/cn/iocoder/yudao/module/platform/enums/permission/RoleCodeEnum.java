@@ -28,4 +28,8 @@ public enum RoleCodeEnum {
         return ObjectUtils.equalsAny(code, SUPER_ADMIN.getCode());
     }
 
+    public static boolean isTenantAdmin(String code) {
+        return ObjectUtils.equalsAny(code, TENANT_ADMIN.getCode());
+    }
+
 }

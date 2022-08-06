@@ -1,12 +1,12 @@
 package cn.iocoder.yudao.module.system.convert.auth;
 
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import cn.iocoder.yudao.module.platform.api.tenant.dto.menu.TenantMenuRespDTO;
 import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeSendReqDTO;
 import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeUseReqDTO;
 import cn.iocoder.yudao.module.system.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.*;
 import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.permission.MenuDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.module.system.enums.permission.MenuIdEnum;
@@ -23,15 +23,15 @@ public interface AuthConvert {
 
     AuthLoginRespVO convert(OAuth2AccessTokenDO bean);
 
-    default AuthPermissionInfoRespVO convert(AdminUserDO user, List<RoleDO> roleList, List<MenuDO> menuList) {
+    default AuthPermissionInfoRespVO convert(AdminUserDO user, List<RoleDO> roleList, List<TenantMenuRespDTO> menuList) {
         return AuthPermissionInfoRespVO.builder()
             .user(AuthPermissionInfoRespVO.UserVO.builder().id(user.getId()).nickname(user.getNickname()).avatar(user.getAvatar()).build())
             .roles(CollectionUtils.convertSet(roleList, RoleDO::getCode))
-            .permissions(CollectionUtils.convertSet(menuList, MenuDO::getPermission))
+            .permissions(CollectionUtils.convertSet(menuList, TenantMenuRespDTO::getPermission))
             .build();
     }
 
-    AuthMenuRespVO convertTreeNode(MenuDO menu);
+    AuthMenuRespVO convertTreeNode(TenantMenuRespDTO menu);
 
     /**
      * 将菜单列表，构建成菜单树
@@ -39,9 +39,9 @@ public interface AuthConvert {
      * @param menuList 菜单列表
      * @return 菜单树
      */
-    default List<AuthMenuRespVO> buildMenuTree(List<MenuDO> menuList) {
+    default List<AuthMenuRespVO> buildMenuTree(List<TenantMenuRespDTO> menuList) {
         // 排序，保证菜单的有序性
-        menuList.sort(Comparator.comparing(MenuDO::getSort));
+        menuList.sort(Comparator.comparing(TenantMenuRespDTO::getSort));
         // 构建菜单树
         // 使用 LinkedHashMap 的原因，是为了排序 。实际也可以用 Stream API ，就是太丑了。
         Map<Long, AuthMenuRespVO> treeNodeMap = new LinkedHashMap<>();

@@ -2,7 +2,7 @@ package cn.iocoder.yudao.framework.tenant.core.service;
 
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.util.cache.CacheUtils;
-import cn.iocoder.yudao.module.system.api.tenant.TenantApi;
+import cn.iocoder.yudao.module.platform.api.tenant.TenantApi;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import lombok.RequiredArgsConstructor;

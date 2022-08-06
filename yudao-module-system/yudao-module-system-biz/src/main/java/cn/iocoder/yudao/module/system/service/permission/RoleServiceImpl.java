@@ -6,6 +6,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import cn.iocoder.yudao.module.platform.enums.permission.RoleCodeEnum;
 import cn.iocoder.yudao.module.system.enums.permission.DataScopeEnum;
 import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
 import cn.iocoder.yudao.module.system.controller.admin.permission.vo.role.RoleCreateReqVO;
@@ -15,7 +16,6 @@ import cn.iocoder.yudao.module.system.controller.admin.permission.vo.role.RoleUp
 import cn.iocoder.yudao.module.system.convert.permission.RoleConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.system.dal.mysql.permission.RoleMapper;
-import cn.iocoder.yudao.module.system.enums.permission.RoleCodeEnum;
 import cn.iocoder.yudao.module.system.enums.permission.RoleTypeEnum;
 import cn.iocoder.yudao.module.system.mq.producer.permission.RoleProducer;
 import com.google.common.annotations.VisibleForTesting;
@@ -231,14 +231,6 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public boolean hasAnySuperAdmin(Collection<RoleDO> roleList) {
-        if (CollectionUtil.isEmpty(roleList)) {
-            return false;
-        }
-        return roleList.stream().anyMatch(role -> RoleCodeEnum.isSuperAdmin(role.getCode()));
-    }
-
-    @Override
     public RoleDO getRole(Long id) {
         return roleMapper.selectById(id);
     }
@@ -265,8 +257,8 @@ public class RoleServiceImpl implements RoleService {
      */
     @VisibleForTesting
     public void checkDuplicateRole(String name, String code, Long id) {
-        // 0. 超级管理员，不允许创建
-        if (RoleCodeEnum.isSuperAdmin(code)) {
+        // 0. 租户管理员code，不允许创建
+        if (RoleCodeEnum.isTenantAdmin(code)) {
             throw exception(ROLE_ADMIN_CODE_ERROR, code);
         }
         // 1. 该 name 名字被其它角色所使用

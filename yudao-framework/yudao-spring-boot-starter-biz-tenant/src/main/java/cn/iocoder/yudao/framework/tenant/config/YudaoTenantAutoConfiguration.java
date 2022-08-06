@@ -15,7 +15,7 @@ import cn.iocoder.yudao.framework.tenant.core.service.TenantFrameworkServiceImpl
 import cn.iocoder.yudao.framework.tenant.core.web.TenantContextWebFilter;
 import cn.iocoder.yudao.framework.web.config.WebProperties;
 import cn.iocoder.yudao.framework.web.core.handler.GlobalExceptionHandler;
-import cn.iocoder.yudao.module.system.api.tenant.TenantApi;
+import cn.iocoder.yudao.module.platform.api.tenant.TenantApi;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import org.springframework.beans.BeansException;
