@@ -8,7 +8,7 @@ import cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog;
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.*;
 import cn.iocoder.yudao.module.platform.convert.dept.PostConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
-import cn.iocoder.yudao.module.platform.service.dept.PostService;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformPostService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -34,13 +34,13 @@ import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.E
 public class CenterPostController {
 
     @Resource
-    private PostService postService;
+    private PlatformPostService platformPostService;
 
     @PostMapping("/create")
     @ApiOperation("创建岗位")
     @PreAuthorize("@ss.hasPermission('center:post:create')")
     public CommonResult<Long> createPost(@Valid @RequestBody PostCreateReqVO reqVO) {
-        Long postId = postService.createPost(reqVO);
+        Long postId = platformPostService.createPost(reqVO);
         return success(postId);
     }
 
@@ -48,7 +48,7 @@ public class CenterPostController {
     @ApiOperation("修改岗位")
     @PreAuthorize("@ss.hasPermission('center:post:update')")
     public CommonResult<Boolean> updatePost(@Valid @RequestBody PostUpdateReqVO reqVO) {
-        postService.updatePost(reqVO);
+        platformPostService.updatePost(reqVO);
         return success(true);
     }
 
@@ -56,7 +56,7 @@ public class CenterPostController {
     @ApiOperation("删除岗位")
     @PreAuthorize("@ss.hasPermission('center:post:delete')")
     public CommonResult<Boolean> deletePost(@RequestParam("id") Long id) {
-        postService.deletePost(id);
+        platformPostService.deletePost(id);
         return success(true);
     }
 
@@ -65,14 +65,14 @@ public class CenterPostController {
     @ApiImplicitParam(name = "id", value = "岗位编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:post:query')")
     public CommonResult<PostRespVO> getPost(@RequestParam("id") Long id) {
-        return success(PostConvert.INSTANCE.convert(postService.getPost(id)));
+        return success(PostConvert.INSTANCE.convert(platformPostService.getPost(id)));
     }
 
     @GetMapping("/list-all-simple")
     @ApiOperation(value = "获取岗位精简信息列表", notes = "只包含被开启的岗位，主要用于前端的下拉选项")
     public CommonResult<List<PostSimpleRespVO>> getSimplePosts() {
         // 获得岗位列表，只要开启状态的
-        List<PostDO> list = postService.getPosts(null, Collections.singleton(CommonStatusEnum.ENABLE.getStatus()));
+        List<PostDO> list = platformPostService.getPosts(null, Collections.singleton(CommonStatusEnum.ENABLE.getStatus()));
         // 排序后，返回给前端
         list.sort(Comparator.comparing(PostDO::getSort));
         return success(PostConvert.INSTANCE.convertList02(list));
@@ -82,7 +82,7 @@ public class CenterPostController {
     @ApiOperation("获得岗位分页列表")
     @PreAuthorize("@ss.hasPermission('center:post:query')")
     public CommonResult<PageResult<PostRespVO>> getPostPage(@Validated PostPageReqVO reqVO) {
-        return success(PostConvert.INSTANCE.convertPage(postService.getPostPage(reqVO)));
+        return success(PostConvert.INSTANCE.convertPage(platformPostService.getPostPage(reqVO)));
     }
 
     @GetMapping("/export")
@@ -90,7 +90,7 @@ public class CenterPostController {
     @PreAuthorize("@ss.hasPermission('center:post:export')")
     @OperateLog(type = EXPORT)
     public void export(HttpServletResponse response, @Validated PostExportReqVO reqVO) throws IOException {
-        List<PostDO> posts = postService.getPosts(reqVO);
+        List<PostDO> posts = platformPostService.getPosts(reqVO);
         List<PostExcelVO> data = PostConvert.INSTANCE.convertList03(posts);
         // 输出
         ExcelUtils.write(response, "岗位数据.xls", "岗位列表", PostExcelVO.class, data);

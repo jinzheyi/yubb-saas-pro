@@ -7,7 +7,7 @@ import cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.*;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
-import cn.iocoder.yudao.module.platform.service.tenant.TenantService;
+import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -30,14 +30,14 @@ import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.E
 public class TenantController {
 
     @Resource
-    private TenantService tenantService;
+    private PlatformTenantService platformTenantService;
 
     @GetMapping("/get-id-by-name")
     @PermitAll
     @ApiOperation(value = "使用租户名，获得租户编号", notes = "登录界面，根据用户的租户名，获得租户编号")
     @ApiImplicitParam(name = "name", value = "租户名", required = true, example = "1024", dataTypeClass = Long.class)
     public CommonResult<Long> getTenantIdByName(@RequestParam("name") String name) {
-        TenantDO tenantDO = tenantService.getTenantByName(name);
+        TenantDO tenantDO = platformTenantService.getTenantByName(name);
         return success(tenantDO != null ? tenantDO.getId() : null);
     }
 
@@ -45,14 +45,14 @@ public class TenantController {
     @ApiOperation("创建租户")
     @PreAuthorize("@ss.hasPermission('center:tenant:create')")
     public CommonResult<Long> createTenant(@Valid @RequestBody TenantCreateReqVO createReqVO) {
-        return success(tenantService.createTenant(createReqVO));
+        return success(platformTenantService.createTenant(createReqVO));
     }
 
     @PutMapping("/update")
     @ApiOperation("更新租户")
     @PreAuthorize("@ss.hasPermission('center:tenant:update')")
     public CommonResult<Boolean> updateTenant(@Valid @RequestBody TenantUpdateReqVO updateReqVO) {
-        tenantService.updateTenant(updateReqVO);
+        platformTenantService.updateTenant(updateReqVO);
         return success(true);
     }
 
@@ -61,7 +61,7 @@ public class TenantController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:tenant:delete')")
     public CommonResult<Boolean> deleteTenant(@RequestParam("id") Long id) {
-        tenantService.deleteTenant(id);
+        platformTenantService.deleteTenant(id);
         return success(true);
     }
 
@@ -70,7 +70,7 @@ public class TenantController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:tenant:query')")
     public CommonResult<TenantRespVO> getTenant(@RequestParam("id") Long id) {
-        TenantDO tenant = tenantService.getTenant(id);
+        TenantDO tenant = platformTenantService.getTenant(id);
         return success(TenantConvert.INSTANCE.convert(tenant));
     }
 
@@ -78,7 +78,7 @@ public class TenantController {
     @ApiOperation("获得租户分页")
     @PreAuthorize("@ss.hasPermission('center:tenant:query')")
     public CommonResult<PageResult<TenantRespVO>> getTenantPage(@Valid TenantPageReqVO pageVO) {
-        PageResult<TenantDO> pageResult = tenantService.getTenantPage(pageVO);
+        PageResult<TenantDO> pageResult = platformTenantService.getTenantPage(pageVO);
         return success(TenantConvert.INSTANCE.convertPage(pageResult));
     }
 
@@ -88,7 +88,7 @@ public class TenantController {
     @OperateLog(type = EXPORT)
     public void exportTenantExcel(@Valid TenantExportReqVO exportReqVO,
                                   HttpServletResponse response) throws IOException {
-        List<TenantDO> list = tenantService.getTenantList(exportReqVO);
+        List<TenantDO> list = platformTenantService.getTenantList(exportReqVO);
         // 导出 Excel
         List<TenantExcelVO> datas = TenantConvert.INSTANCE.convertList02(list);
         ExcelUtils.write(response, "租户.xls", "数据", TenantExcelVO.class, datas);

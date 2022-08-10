@@ -14,12 +14,12 @@ import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.platform.service.dept.DeptService;
-import cn.iocoder.yudao.module.platform.service.dept.PostService;
-import cn.iocoder.yudao.module.platform.service.permission.PermissionService;
-import cn.iocoder.yudao.module.platform.service.permission.RoleService;
-import cn.iocoder.yudao.module.platform.service.social.SocialUserService;
-import cn.iocoder.yudao.module.platform.service.user.AdminUserService;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformPostService;
+import cn.iocoder.yudao.module.platform.service.permission.PlatformPermissionService;
+import cn.iocoder.yudao.module.platform.service.permission.PlatformRoleService;
+import cn.iocoder.yudao.module.platform.service.social.PlatformSocialUserService;
+import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -43,17 +43,17 @@ import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.FILE_IS_EMP
 public class CenterUserProfileController {
 
     @Resource
-    private AdminUserService userService;
+    private PlatformUserService userService;
     @Resource
-    private DeptService deptService;
+    private PlatformDeptService platformDeptService;
     @Resource
-    private PostService postService;
+    private PlatformPostService platformPostService;
     @Resource
-    private PermissionService permissionService;
+    private PlatformPermissionService platformPermissionService;
     @Resource
-    private RoleService roleService;
+    private PlatformRoleService platformRoleService;
     @Resource
-    private SocialUserService socialService;
+    private PlatformSocialUserService socialService;
 
     @GetMapping("/get")
     @ApiOperation("获得登录用户信息")
@@ -63,16 +63,16 @@ public class CenterUserProfileController {
         AdminUserDO user = userService.getUser(getLoginUserId());
         UserProfileRespVO resp = UserConvert.INSTANCE.convert03(user);
         // 获得用户角色
-        List<RoleDO> userRoles = roleService.getRolesFromCache(permissionService.getUserRoleIdListByUserId(user.getId()));
+        List<RoleDO> userRoles = platformRoleService.getRolesFromCache(platformPermissionService.getUserRoleIdListByUserId(user.getId()));
         resp.setRoles(UserConvert.INSTANCE.convertList(userRoles));
         // 获得部门信息
         if (user.getDeptId() != null) {
-            DeptDO dept = deptService.getDept(user.getDeptId());
+            DeptDO dept = platformDeptService.getDept(user.getDeptId());
             resp.setDept(UserConvert.INSTANCE.convert02(dept));
         }
         // 获得岗位信息
         if (CollUtil.isNotEmpty(user.getPostIds())) {
-            List<PostDO> posts = postService.getPosts(user.getPostIds());
+            List<PostDO> posts = platformPostService.getPosts(user.getPostIds());
             resp.setPosts(UserConvert.INSTANCE.convertList02(posts));
         }
         // 获得社交用户信息

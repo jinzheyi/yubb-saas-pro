@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.api.tenant;
 
 import cn.iocoder.yudao.module.platform.api.tenant.dto.tenant.TenantRespDTO;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantConvert;
-import cn.iocoder.yudao.module.platform.service.tenant.TenantService;
+import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -17,21 +17,21 @@ import java.util.List;
 public class TenantApiImpl implements TenantApi {
 
     @Resource
-    private TenantService tenantService;
+    private PlatformTenantService platformTenantService;
 
     @Override
     public List<Long> getTenantIds() {
-        return tenantService.getTenantIds();
+        return platformTenantService.getTenantIds();
     }
 
     @Override
     public void validTenant(Long id) {
-        tenantService.validTenant(id);
+        platformTenantService.validTenant(id);
     }
 
     @Override
     public TenantRespDTO getTenant(Long id) {
-        return TenantConvert.INSTANCE.convertDTO(tenantService.getTenant(id));
+        return TenantConvert.INSTANCE.convertDTO(platformTenantService.getTenant(id));
     }
 
 }

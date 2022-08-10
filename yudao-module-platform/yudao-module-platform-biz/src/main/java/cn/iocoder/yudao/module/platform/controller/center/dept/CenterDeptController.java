@@ -5,7 +5,7 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.*;
 import cn.iocoder.yudao.module.platform.convert.dept.DeptConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.platform.service.dept.DeptService;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -27,13 +27,13 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 public class CenterDeptController {
 
     @Resource
-    private DeptService deptService;
+    private PlatformDeptService platformDeptService;
 
     @PostMapping("create")
     @ApiOperation("创建部门")
     @PreAuthorize("@ss.hasPermission('center:dept:create')")
     public CommonResult<Long> createDept(@Valid @RequestBody DeptCreateReqVO reqVO) {
-        Long deptId = deptService.createDept(reqVO);
+        Long deptId = platformDeptService.createDept(reqVO);
         return success(deptId);
     }
 
@@ -41,7 +41,7 @@ public class CenterDeptController {
     @ApiOperation("更新部门")
     @PreAuthorize("@ss.hasPermission('center:dept:update')")
     public CommonResult<Boolean> updateDept(@Valid @RequestBody DeptUpdateReqVO reqVO) {
-        deptService.updateDept(reqVO);
+        platformDeptService.updateDept(reqVO);
         return success(true);
     }
 
@@ -50,7 +50,7 @@ public class CenterDeptController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:dept:delete')")
     public CommonResult<Boolean> deleteDept(@RequestParam("id") Long id) {
-        deptService.deleteDept(id);
+        platformDeptService.deleteDept(id);
         return success(true);
     }
 
@@ -58,7 +58,7 @@ public class CenterDeptController {
     @ApiOperation("获取部门列表")
     @PreAuthorize("@ss.hasPermission('center:dept:query')")
     public CommonResult<List<DeptRespVO>> listDepts(DeptListReqVO reqVO) {
-        List<DeptDO> list = deptService.getSimpleDepts(reqVO);
+        List<DeptDO> list = platformDeptService.getSimpleDepts(reqVO);
         list.sort(Comparator.comparing(DeptDO::getSort));
         return success(DeptConvert.INSTANCE.convertList(list));
     }
@@ -69,7 +69,7 @@ public class CenterDeptController {
         // 获得部门列表，只要开启状态的
         DeptListReqVO reqVO = new DeptListReqVO();
         reqVO.setStatus(CommonStatusEnum.ENABLE.getStatus());
-        List<DeptDO> list = deptService.getSimpleDepts(reqVO);
+        List<DeptDO> list = platformDeptService.getSimpleDepts(reqVO);
         // 排序后，返回给前端
         list.sort(Comparator.comparing(DeptDO::getSort));
         return success(DeptConvert.INSTANCE.convertList02(list));
@@ -80,7 +80,7 @@ public class CenterDeptController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:dept:query')")
     public CommonResult<DeptRespVO> getDept(@RequestParam("id") Long id) {
-        return success(DeptConvert.INSTANCE.convert(deptService.getDept(id)));
+        return success(DeptConvert.INSTANCE.convert(platformDeptService.getDept(id)));
     }
 
 }

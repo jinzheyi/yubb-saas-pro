@@ -10,7 +10,7 @@ import cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog.Log
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog.LoginLogPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog.LoginLogRespVO;
 import cn.iocoder.yudao.module.platform.convert.logger.LoginLogConvert;
-import cn.iocoder.yudao.module.platform.service.logger.LoginLogService;
+import cn.iocoder.yudao.module.platform.service.logger.PlatformLoginLogService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,13 +34,13 @@ import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.E
 public class CenterLoginLogController {
 
     @Resource
-    private LoginLogService loginLogService;
+    private PlatformLoginLogService platformLoginLogService;
 
     @GetMapping("/page")
     @ApiOperation("获得登录日志分页列表")
     @PreAuthorize("@ss.hasPermission('center:login-log:query')")
     public CommonResult<PageResult<LoginLogRespVO>> getLoginLogPage(@Valid LoginLogPageReqVO reqVO) {
-        PageResult<LoginLogDO> page = loginLogService.getLoginLogPage(reqVO);
+        PageResult<LoginLogDO> page = platformLoginLogService.getLoginLogPage(reqVO);
         return CommonResult.success(LoginLogConvert.INSTANCE.convertPage(page));
     }
 
@@ -49,7 +49,7 @@ public class CenterLoginLogController {
     @PreAuthorize("@ss.hasPermission('center:login-log:export')")
     @OperateLog(type = EXPORT)
     public void exportLoginLog(HttpServletResponse response, @Valid LoginLogExportReqVO reqVO) throws IOException {
-        List<LoginLogDO> list = loginLogService.getLoginLogList(reqVO);
+        List<LoginLogDO> list = platformLoginLogService.getLoginLogList(reqVO);
         // 拼接数据
         List<LoginLogExcelVO> data = LoginLogConvert.INSTANCE.convertList(list);
         // 输出

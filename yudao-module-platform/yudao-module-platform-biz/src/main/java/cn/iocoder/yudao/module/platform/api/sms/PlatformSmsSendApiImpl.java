@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.api.sms;
 
 import cn.iocoder.yudao.module.platform.api.sms.dto.send.SmsSendSingleToUserReqDTO;
-import cn.iocoder.yudao.module.platform.service.sms.SmsSendService;
+import cn.iocoder.yudao.module.platform.service.sms.PlatformSmsSendService;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -18,17 +18,17 @@ import java.util.Map;
 public class PlatformSmsSendApiImpl implements SmsSendApi {
 
     @Resource
-    private SmsSendService smsSendService;
+    private PlatformSmsSendService platformSmsSendService;
 
     @Override
     public Long sendSingleSmsToAdmin(SmsSendSingleToUserReqDTO reqDTO) {
-        return smsSendService.sendSingleSmsToAdmin(reqDTO.getMobile(), reqDTO.getUserId(),
+        return platformSmsSendService.sendSingleSmsToAdmin(reqDTO.getMobile(), reqDTO.getUserId(),
                 reqDTO.getTemplateCode(), reqDTO.getTemplateParams());
     }
 
     @Override
     public Long sendSingleSms(String mobile, Long userId, Integer userType, String templateCode, Map<String, Object> templateParams) {
-        return smsSendService.sendSingleSms(mobile, userId, userType, templateCode, templateParams);
+        return platformSmsSendService.sendSingleSms(mobile, userId, userType, templateCode, templateParams);
     }
 
 }

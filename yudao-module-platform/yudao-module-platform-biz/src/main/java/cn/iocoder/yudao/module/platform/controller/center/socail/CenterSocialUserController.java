@@ -5,7 +5,7 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.platform.controller.center.socail.vo.SocialUserBindReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.socail.vo.SocialUserUnbindReqVO;
 import cn.iocoder.yudao.module.platform.convert.social.SocialUserConvert;
-import cn.iocoder.yudao.module.platform.service.social.SocialUserService;
+import cn.iocoder.yudao.module.platform.service.social.PlatformSocialUserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.validation.annotation.Validated;
@@ -23,19 +23,19 @@ import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUti
 public class CenterSocialUserController {
 
     @Resource
-    private SocialUserService socialUserService;
+    private PlatformSocialUserService platformSocialUserService;
 
     @PostMapping("/bind")
     @ApiOperation("社交绑定，使用 code 授权码")
     public CommonResult<Boolean> socialBind(@RequestBody @Valid SocialUserBindReqVO reqVO) {
-        socialUserService.bindSocialUser(SocialUserConvert.INSTANCE.convert(getLoginUserId(), UserTypeEnum.CENTER.getValue(), reqVO));
+        platformSocialUserService.bindSocialUser(SocialUserConvert.INSTANCE.convert(getLoginUserId(), UserTypeEnum.CENTER.getValue(), reqVO));
         return CommonResult.success(true);
     }
 
     @DeleteMapping("/unbind")
     @ApiOperation("取消社交绑定")
     public CommonResult<Boolean> socialUnbind(@RequestBody SocialUserUnbindReqVO reqVO) {
-        socialUserService.unbindSocialUser(getLoginUserId(), UserTypeEnum.CENTER.getValue(), reqVO.getType(), reqVO.getOpenid());
+        platformSocialUserService.unbindSocialUser(getLoginUserId(), UserTypeEnum.CENTER.getValue(), reqVO.getType(), reqVO.getOpenid());
         return CommonResult.success(true);
     }
 

@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.controller.center.sms;
 
 import cn.hutool.core.util.URLUtil;
 import cn.hutool.extra.servlet.ServletUtil;
-import cn.iocoder.yudao.module.platform.service.sms.SmsSendService;
+import cn.iocoder.yudao.module.platform.service.sms.PlatformSmsSendService;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog;
 import cn.iocoder.yudao.framework.sms.core.enums.SmsChannelEnum;
@@ -26,7 +26,7 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 public class SmsCallbackController {
 
     @Resource
-    private SmsSendService smsSendService;
+    private PlatformSmsSendService platformSmsSendService;
 
     @PostMapping("/yunpian")
     @PermitAll
@@ -35,7 +35,7 @@ public class SmsCallbackController {
     @OperateLog(enable = false)
     public String receiveYunpianSmsStatus(@RequestParam("sms_status") String smsStatus) throws Throwable {
         String text = URLUtil.decode(smsStatus); // decode 解码参数，因为它被 encode
-        smsSendService.receiveSmsStatus(SmsChannelEnum.YUN_PIAN.getCode(), text);
+        platformSmsSendService.receiveSmsStatus(SmsChannelEnum.YUN_PIAN.getCode(), text);
         return "SUCCESS"; // 约定返回 SUCCESS 为成功
     }
 
@@ -45,7 +45,7 @@ public class SmsCallbackController {
     @OperateLog(enable = false)
     public CommonResult<Boolean> receiveAliyunSmsStatus(HttpServletRequest request) throws Throwable {
         String text = ServletUtil.getBody(request);
-        smsSendService.receiveSmsStatus(SmsChannelEnum.ALIYUN.getCode(), text);
+        platformSmsSendService.receiveSmsStatus(SmsChannelEnum.ALIYUN.getCode(), text);
         return success(true);
     }
 
@@ -55,7 +55,7 @@ public class SmsCallbackController {
     @OperateLog(enable = false)
     public CommonResult<Boolean> receiveTencentSmsStatus(HttpServletRequest request) throws Throwable {
         String text = ServletUtil.getBody(request);
-        smsSendService.receiveSmsStatus(SmsChannelEnum.TENCENT.getCode(), text);
+        platformSmsSendService.receiveSmsStatus(SmsChannelEnum.TENCENT.getCode(), text);
         return success(true);
     }
 

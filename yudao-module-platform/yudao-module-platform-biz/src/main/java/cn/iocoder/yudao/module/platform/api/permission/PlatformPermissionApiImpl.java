@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.api.permission;
 
 import cn.iocoder.yudao.module.platform.api.permission.dto.DeptDataPermissionRespDTO;
-import cn.iocoder.yudao.module.platform.service.permission.PermissionService;
+import cn.iocoder.yudao.module.platform.service.permission.PlatformPermissionService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -17,26 +17,26 @@ import java.util.Set;
 public class PlatformPermissionApiImpl implements PermissionApi {
 
     @Resource
-    private PermissionService permissionService;
+    private PlatformPermissionService platformPermissionService;
 
     @Override
     public Set<Long> getUserRoleIdListByRoleIds(Collection<Long> roleIds) {
-        return permissionService.getUserRoleIdListByRoleIds(roleIds);
+        return platformPermissionService.getUserRoleIdListByRoleIds(roleIds);
     }
 
     @Override
     public boolean hasAnyPermissions(Long userId, String... permissions) {
-        return permissionService.hasAnyPermissions(userId, permissions);
+        return platformPermissionService.hasAnyPermissions(userId, permissions);
     }
 
     @Override
     public boolean hasAnyRoles(Long userId, String... roles) {
-        return permissionService.hasAnyRoles(userId, roles);
+        return platformPermissionService.hasAnyRoles(userId, roles);
     }
 
     @Override
     public DeptDataPermissionRespDTO getDeptDataPermission(Long userId) {
-        return permissionService.getDeptDataPermission(userId);
+        return platformPermissionService.getDeptDataPermission(userId);
     }
 
 }

@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.controller.center.common;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.platform.controller.center.common.vo.CaptchaImageRespVO;
-import cn.iocoder.yudao.module.platform.service.common.CaptchaService;
+import cn.iocoder.yudao.module.platform.service.common.PlatformCaptchaService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,13 +20,13 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 public class CenterCaptchaController {
 
     @Resource
-    private CaptchaService captchaService;
+    private PlatformCaptchaService platformCaptchaService;
 
     @GetMapping("/get-image")
     @PermitAll
     @ApiOperation("生成图片验证码")
     public CommonResult<CaptchaImageRespVO> getCaptchaImage() {
-        return success(captchaService.getCaptchaImage());
+        return success(platformCaptchaService.getCaptchaImage());
     }
 
 }

@@ -13,11 +13,11 @@ import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.framework.common.enums.logger.LoginLogTypeEnum;
 import cn.iocoder.yudao.framework.common.enums.permission.MenuTypeEnum;
-import cn.iocoder.yudao.module.platform.service.auth.AdminAuthService;
-import cn.iocoder.yudao.module.platform.service.permission.PermissionService;
-import cn.iocoder.yudao.module.platform.service.permission.RoleService;
-import cn.iocoder.yudao.module.platform.service.social.SocialUserService;
-import cn.iocoder.yudao.module.platform.service.user.AdminUserService;
+import cn.iocoder.yudao.module.platform.service.auth.PlatformAuthService;
+import cn.iocoder.yudao.module.platform.service.permission.PlatformPermissionService;
+import cn.iocoder.yudao.module.platform.service.permission.PlatformRoleService;
+import cn.iocoder.yudao.module.platform.service.social.PlatformSocialUserService;
+import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -46,15 +46,15 @@ import static java.util.Collections.singleton;
 public class CenterAuthController {
 
     @Resource
-    private AdminAuthService authService;
+    private PlatformAuthService authService;
     @Resource
-    private AdminUserService userService;
+    private PlatformUserService userService;
     @Resource
-    private RoleService roleService;
+    private PlatformRoleService platformRoleService;
     @Resource
-    private PermissionService permissionService;
+    private PlatformPermissionService platformPermissionService;
     @Resource
-    private SocialUserService socialUserService;
+    private PlatformSocialUserService platformSocialUserService;
 
     @Resource
     private SecurityProperties securityProperties;
@@ -97,10 +97,10 @@ public class CenterAuthController {
             return null;
         }
         // 获得角色列表
-        Set<Long> roleIds = permissionService.getUserRoleIdsFromCache(getLoginUserId(), singleton(CommonStatusEnum.ENABLE.getStatus()));
-        List<RoleDO> roleList = roleService.getRolesFromCache(roleIds);
+        Set<Long> roleIds = platformPermissionService.getUserRoleIdsFromCache(getLoginUserId(), singleton(CommonStatusEnum.ENABLE.getStatus()));
+        List<RoleDO> roleList = platformRoleService.getRolesFromCache(roleIds);
         // 获得菜单列表
-        List<MenuDO> menuList = permissionService.getRoleMenuListFromCache(roleIds,
+        List<MenuDO> menuList = platformPermissionService.getRoleMenuListFromCache(roleIds,
                 SetUtils.asSet(MenuTypeEnum.DIR.getType(), MenuTypeEnum.MENU.getType(), MenuTypeEnum.BUTTON.getType()),
                 singleton(CommonStatusEnum.ENABLE.getStatus())); // 只要开启的
         // 拼接结果返回
@@ -111,9 +111,9 @@ public class CenterAuthController {
     @ApiOperation("获得登录用户的菜单列表")
     public CommonResult<List<AuthMenuRespVO>> getMenus() {
         // 获得角色列表
-        Set<Long> roleIds = permissionService.getUserRoleIdsFromCache(getLoginUserId(), singleton(CommonStatusEnum.ENABLE.getStatus()));
+        Set<Long> roleIds = platformPermissionService.getUserRoleIdsFromCache(getLoginUserId(), singleton(CommonStatusEnum.ENABLE.getStatus()));
         // 获得用户拥有的菜单列表
-        List<MenuDO> menuList = permissionService.getRoleMenuListFromCache(roleIds,
+        List<MenuDO> menuList = platformPermissionService.getRoleMenuListFromCache(roleIds,
                 SetUtils.asSet(MenuTypeEnum.DIR.getType(), MenuTypeEnum.MENU.getType()), // 只要目录和菜单类型
                 singleton(CommonStatusEnum.ENABLE.getStatus())); // 只要开启的
         // 转换成 Tree 结构返回
@@ -150,7 +150,7 @@ public class CenterAuthController {
     })
     public CommonResult<String> socialLogin(@RequestParam("type") Integer type,
                                                     @RequestParam("redirectUri") String redirectUri) {
-        return CommonResult.success(socialUserService.getAuthorizeUrl(type, redirectUri));
+        return CommonResult.success(platformSocialUserService.getAuthorizeUrl(type, redirectUri));
     }
 
     @PostMapping("/social-login")

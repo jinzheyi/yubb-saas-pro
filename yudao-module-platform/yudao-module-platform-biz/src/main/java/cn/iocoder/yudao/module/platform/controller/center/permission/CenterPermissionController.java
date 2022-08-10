@@ -4,8 +4,8 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.permission.PermissionAssignRoleDataScopeReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.permission.PermissionAssignRoleMenuReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.permission.PermissionAssignUserRoleReqVO;
-import cn.iocoder.yudao.module.platform.service.permission.PermissionService;
-import cn.iocoder.yudao.module.platform.service.tenant.TenantService;
+import cn.iocoder.yudao.module.platform.service.permission.PlatformPermissionService;
+import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -30,16 +30,16 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 public class CenterPermissionController {
 
     @Resource
-    private PermissionService permissionService;
+    private PlatformPermissionService platformPermissionService;
     @Resource
-    private TenantService tenantService;
+    private PlatformTenantService platformTenantService;
 
     @ApiOperation("获得角色拥有的菜单编号")
     @ApiImplicitParam(name = "roleId", value = "角色编号", required = true, dataTypeClass = Long.class)
     @GetMapping("/list-role-resources")
     @PreAuthorize("@ss.hasPermission('center:permission:assign-role-menu')")
     public CommonResult<Set<Long>> listRoleMenus(Long roleId) {
-        return success(permissionService.getRoleMenuIds(roleId));
+        return success(platformPermissionService.getRoleMenuIds(roleId));
     }
 
     @PostMapping("/assign-role-menu")
@@ -47,7 +47,7 @@ public class CenterPermissionController {
     @PreAuthorize("@ss.hasPermission('center:permission:assign-role-menu')")
     public CommonResult<Boolean> assignRoleMenu(@Validated @RequestBody PermissionAssignRoleMenuReqVO reqVO) {
         // 执行菜单的分配
-        permissionService.assignRoleMenu(reqVO.getRoleId(), reqVO.getMenuIds());
+        platformPermissionService.assignRoleMenu(reqVO.getRoleId(), reqVO.getMenuIds());
         return success(true);
     }
 
@@ -55,7 +55,7 @@ public class CenterPermissionController {
     @ApiOperation("赋予角色数据权限")
     @PreAuthorize("@ss.hasPermission('center:permission:assign-role-data-scope')")
     public CommonResult<Boolean> assignRoleDataScope(@Valid @RequestBody PermissionAssignRoleDataScopeReqVO reqVO) {
-        permissionService.assignRoleDataScope(reqVO.getRoleId(), reqVO.getDataScope(), reqVO.getDataScopeDeptIds());
+        platformPermissionService.assignRoleDataScope(reqVO.getRoleId(), reqVO.getDataScope(), reqVO.getDataScopeDeptIds());
         return success(true);
     }
 
@@ -64,14 +64,14 @@ public class CenterPermissionController {
     @GetMapping("/list-user-roles")
     @PreAuthorize("@ss.hasPermission('center:permission:assign-user-role')")
     public CommonResult<Set<Long>> listAdminRoles(@RequestParam("userId") Long userId) {
-        return success(permissionService.getUserRoleIdListByUserId(userId));
+        return success(platformPermissionService.getUserRoleIdListByUserId(userId));
     }
 
     @ApiOperation("赋予用户角色")
     @PostMapping("/assign-user-role")
     @PreAuthorize("@ss.hasPermission('center:permission:assign-user-role')")
     public CommonResult<Boolean> assignUserRole(@Validated @RequestBody PermissionAssignUserRoleReqVO reqVO) {
-        permissionService.assignUserRole(reqVO.getUserId(), reqVO.getRoleIds());
+        platformPermissionService.assignUserRole(reqVO.getUserId(), reqVO.getRoleIds());
         return success(true);
     }
 

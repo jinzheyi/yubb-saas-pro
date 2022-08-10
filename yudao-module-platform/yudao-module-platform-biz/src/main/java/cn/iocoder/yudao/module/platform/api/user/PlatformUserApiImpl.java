@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.platform.api.user;
 import cn.iocoder.yudao.module.platform.api.user.dto.AdminUserRespDTO;
 import cn.iocoder.yudao.module.platform.convert.user.UserConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.platform.service.user.AdminUserService;
+import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -20,7 +20,7 @@ import java.util.Set;
 public class PlatformUserApiImpl implements AdminUserApi {
 
     @Resource
-    private AdminUserService userService;
+    private PlatformUserService userService;
 
     @Override
     public AdminUserRespDTO getUser(Long id) {

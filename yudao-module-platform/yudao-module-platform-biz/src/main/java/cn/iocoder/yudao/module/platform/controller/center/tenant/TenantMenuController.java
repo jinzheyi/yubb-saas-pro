@@ -5,8 +5,8 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.*;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantMenuConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantMenuDO;
-import cn.iocoder.yudao.module.platform.service.tenant.TenantMenuService;
-import cn.iocoder.yudao.module.platform.service.tenant.TenantService;
+import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantMenuService;
+import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -28,15 +28,15 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 public class TenantMenuController {
 
     @Resource
-    private TenantMenuService tenantMenuService;
+    private PlatformTenantMenuService platformTenantMenuService;
     @Resource
-    private TenantService tenantService;
+    private PlatformTenantService platformTenantService;
 
     @PostMapping("/create")
     @ApiOperation("创建菜单")
     @PreAuthorize("@ss.hasPermission('center:tenant-menu:create')")
     public CommonResult<Long> createMenu(@Valid @RequestBody TenantMenuCreateReqVO reqVO) {
-        Long menuId = tenantMenuService.createMenu(reqVO);
+        Long menuId = platformTenantMenuService.createMenu(reqVO);
         return success(menuId);
     }
 
@@ -44,7 +44,7 @@ public class TenantMenuController {
     @ApiOperation("修改菜单")
     @PreAuthorize("@ss.hasPermission('center:tenant-menu:update')")
     public CommonResult<Boolean> updateMenu(@Valid @RequestBody TenantMenuUpdateReqVO reqVO) {
-        tenantMenuService.updateMenu(reqVO);
+        platformTenantMenuService.updateMenu(reqVO);
         return success(true);
     }
 
@@ -53,7 +53,7 @@ public class TenantMenuController {
     @ApiImplicitParam(name = "id", value = "角色编号", required= true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:tenant-menu:delete')")
     public CommonResult<Boolean> deleteMenu(@RequestParam("id") Long id) {
-        tenantMenuService.deleteMenu(id);
+        platformTenantMenuService.deleteMenu(id);
         return success(true);
     }
 
@@ -61,7 +61,7 @@ public class TenantMenuController {
     @ApiOperation(value = "获取菜单列表", notes = "用于【菜单管理】界面")
     @PreAuthorize("@ss.hasPermission('center:tenant-menu:query')")
     public CommonResult<List<TenantMenuRespVO>> getMenus(TenantMenuListReqVO reqVO) {
-        List<TenantMenuDO> list = tenantMenuService.getMenus(reqVO);
+        List<TenantMenuDO> list = platformTenantMenuService.getMenus(reqVO);
         list.sort(Comparator.comparing(TenantMenuDO::getSort));
         return success(TenantMenuConvert.INSTANCE.convertList(list));
     }
@@ -72,7 +72,7 @@ public class TenantMenuController {
         // 获得菜单列表，只要开启状态的
         TenantMenuListReqVO reqVO = new TenantMenuListReqVO();
         reqVO.setStatus(CommonStatusEnum.ENABLE.getStatus());
-        List<TenantMenuDO> list = tenantMenuService.getMenus(reqVO);
+        List<TenantMenuDO> list = platformTenantMenuService.getMenus(reqVO);
         // 排序后，返回给前端
         list.sort(Comparator.comparing(TenantMenuDO::getSort));
         return success(TenantMenuConvert.INSTANCE.convertList02(list));
@@ -82,7 +82,7 @@ public class TenantMenuController {
     @ApiOperation("获取菜单信息")
     @PreAuthorize("@ss.hasPermission('center:tenant-menu:query')")
     public CommonResult<TenantMenuRespVO> getMenu(Long id) {
-        TenantMenuDO menu = tenantMenuService.getMenu(id);
+        TenantMenuDO menu = platformTenantMenuService.getMenu(id);
         return success(TenantMenuConvert.INSTANCE.convert(menu));
     }
 

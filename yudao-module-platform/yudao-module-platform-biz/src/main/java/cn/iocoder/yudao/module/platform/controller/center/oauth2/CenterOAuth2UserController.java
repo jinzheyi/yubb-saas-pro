@@ -8,9 +8,9 @@ import cn.iocoder.yudao.module.platform.convert.oauth2.OAuth2UserConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.platform.service.dept.DeptService;
-import cn.iocoder.yudao.module.platform.service.dept.PostService;
-import cn.iocoder.yudao.module.platform.service.user.AdminUserService;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformPostService;
+import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -41,11 +41,11 @@ import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUti
 public class CenterOAuth2UserController {
 
     @Resource
-    private AdminUserService userService;
+    private PlatformUserService userService;
     @Resource
-    private DeptService deptService;
+    private PlatformDeptService platformDeptService;
     @Resource
-    private PostService postService;
+    private PlatformPostService platformPostService;
 
     @GetMapping("/get")
     @ApiOperation("获得用户基本信息")
@@ -56,12 +56,12 @@ public class CenterOAuth2UserController {
         OAuth2UserInfoRespVO resp = OAuth2UserConvert.INSTANCE.convert(user);
         // 获得部门信息
         if (user.getDeptId() != null) {
-            DeptDO dept = deptService.getDept(user.getDeptId());
+            DeptDO dept = platformDeptService.getDept(user.getDeptId());
             resp.setDept(OAuth2UserConvert.INSTANCE.convert(dept));
         }
         // 获得岗位信息
         if (CollUtil.isNotEmpty(user.getPostIds())) {
-            List<PostDO> posts = postService.getPosts(user.getPostIds());
+            List<PostDO> posts = platformPostService.getPosts(user.getPostIds());
             resp.setPosts(OAuth2UserConvert.INSTANCE.convertList(posts));
         }
         return success(resp);

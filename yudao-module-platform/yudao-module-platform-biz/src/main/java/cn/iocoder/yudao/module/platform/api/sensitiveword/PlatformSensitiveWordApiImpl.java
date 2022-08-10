@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.platform.api.sensitiveword;
 
-import cn.iocoder.yudao.module.platform.service.sensitiveword.SensitiveWordService;
+import cn.iocoder.yudao.module.platform.service.sensitiveword.PlatformSensitiveWordService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -15,15 +15,15 @@ import java.util.List;
 public class PlatformSensitiveWordApiImpl implements SensitiveWordApi {
 
     @Resource
-    private SensitiveWordService sensitiveWordService;
+    private PlatformSensitiveWordService platformSensitiveWordService;
 
     @Override
     public List<String> validateText(String text, List<String> tags) {
-        return sensitiveWordService.validateText(text, tags);
+        return platformSensitiveWordService.validateText(text, tags);
     }
 
     @Override
     public boolean isTextValid(String text, List<String> tags) {
-        return sensitiveWordService.isTextValid(text, tags);
+        return platformSensitiveWordService.isTextValid(text, tags);
     }
 }

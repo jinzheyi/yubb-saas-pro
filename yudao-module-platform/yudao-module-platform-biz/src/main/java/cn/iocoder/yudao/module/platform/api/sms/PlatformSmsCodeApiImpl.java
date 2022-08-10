@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.platform.api.sms;
 import cn.iocoder.yudao.module.platform.api.sms.dto.code.SmsCodeCheckReqDTO;
 import cn.iocoder.yudao.module.platform.api.sms.dto.code.SmsCodeSendReqDTO;
 import cn.iocoder.yudao.module.platform.api.sms.dto.code.SmsCodeUseReqDTO;
-import cn.iocoder.yudao.module.platform.service.sms.SmsCodeService;
+import cn.iocoder.yudao.module.platform.service.sms.PlatformSmsCodeService;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -19,21 +19,21 @@ import javax.annotation.Resource;
 public class PlatformSmsCodeApiImpl implements SmsCodeApi {
 
     @Resource
-    private SmsCodeService smsCodeService;
+    private PlatformSmsCodeService platformSmsCodeService;
 
     @Override
     public void sendSmsCode(SmsCodeSendReqDTO reqDTO) {
-        smsCodeService.sendSmsCode(reqDTO);
+        platformSmsCodeService.sendSmsCode(reqDTO);
     }
 
     @Override
     public void useSmsCode(SmsCodeUseReqDTO reqDTO) {
-        smsCodeService.useSmsCode(reqDTO);
+        platformSmsCodeService.useSmsCode(reqDTO);
     }
 
     @Override
     public void checkSmsCode(SmsCodeCheckReqDTO reqDTO) {
-        smsCodeService.checkSmsCode(reqDTO);
+        platformSmsCodeService.checkSmsCode(reqDTO);
     }
 
 }

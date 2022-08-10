@@ -7,14 +7,14 @@ import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.O
 import cn.iocoder.yudao.module.platform.convert.logger.OperateLogConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.logger.OperateLogDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.platform.service.logger.OperateLogService;
+import cn.iocoder.yudao.module.platform.service.logger.PlatformOperateLogService;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.collection.MapUtils;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
 import cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog;
-import cn.iocoder.yudao.module.platform.service.user.AdminUserService;
+import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,15 +42,15 @@ import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.E
 public class CenterOperateLogController {
 
     @Resource
-    private OperateLogService operateLogService;
+    private PlatformOperateLogService platformOperateLogService;
     @Resource
-    private AdminUserService userService;
+    private PlatformUserService userService;
 
     @GetMapping("/page")
     @ApiOperation("查看操作日志分页列表")
     @PreAuthorize("@ss.hasPermission('center:operate-log:query')")
     public CommonResult<PageResult<OperateLogRespVO>> pageOperateLog(@Valid OperateLogPageReqVO reqVO) {
-        PageResult<OperateLogDO> pageResult = operateLogService.getOperateLogPage(reqVO);
+        PageResult<OperateLogDO> pageResult = platformOperateLogService.getOperateLogPage(reqVO);
 
         // 获得拼接需要的数据
         Collection<Long> userIds = CollectionUtils.convertList(pageResult.getList(), OperateLogDO::getUserId);
@@ -71,7 +71,7 @@ public class CenterOperateLogController {
     @PreAuthorize("@ss.hasPermission('center:operate-log:export')")
     @OperateLog(type = EXPORT)
     public void exportOperateLog(HttpServletResponse response, @Valid OperateLogExportReqVO reqVO) throws IOException {
-        List<OperateLogDO> list = operateLogService.getOperateLogs(reqVO);
+        List<OperateLogDO> list = platformOperateLogService.getOperateLogs(reqVO);
 
         // 获得拼接需要的数据
         Collection<Long> userIds = CollectionUtils.convertList(list, OperateLogDO::getUserId);

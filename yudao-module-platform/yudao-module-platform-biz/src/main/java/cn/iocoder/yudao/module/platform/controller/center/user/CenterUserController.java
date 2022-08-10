@@ -5,8 +5,8 @@ import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
 import cn.iocoder.yudao.module.platform.convert.user.UserConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.platform.service.dept.DeptService;
-import cn.iocoder.yudao.module.platform.service.user.AdminUserService;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
+import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
 import cn.iocoder.yudao.framework.common.enums.common.SexEnum;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
@@ -41,9 +41,9 @@ import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.E
 public class CenterUserController {
 
     @Resource
-    private AdminUserService userService;
+    private PlatformUserService userService;
     @Resource
-    private DeptService deptService;
+    private PlatformDeptService platformDeptService;
 
     @PostMapping("/create")
     @ApiOperation("新增用户")
@@ -98,7 +98,7 @@ public class CenterUserController {
 
         // 获得拼接需要的数据
         Collection<Long> deptIds = convertList(pageResult.getList(), AdminUserDO::getDeptId);
-        Map<Long, DeptDO> deptMap = deptService.getDeptMap(deptIds);
+        Map<Long, DeptDO> deptMap = platformDeptService.getDeptMap(deptIds);
         // 拼接结果返回
         List<UserPageItemRespVO> userList = new ArrayList<>(pageResult.getList().size());
         pageResult.getList().forEach(user -> {
@@ -137,7 +137,7 @@ public class CenterUserController {
 
         // 获得拼接需要的数据
         Collection<Long> deptIds = convertList(users, AdminUserDO::getDeptId);
-        Map<Long, DeptDO> deptMap = deptService.getDeptMap(deptIds);
+        Map<Long, DeptDO> deptMap = platformDeptService.getDeptMap(deptIds);
         Map<Long, AdminUserDO> deptLeaderUserMap = userService.getUserMap(
                 convertSet(deptMap.values(), DeptDO::getLeaderUserId));
         // 拼接数据

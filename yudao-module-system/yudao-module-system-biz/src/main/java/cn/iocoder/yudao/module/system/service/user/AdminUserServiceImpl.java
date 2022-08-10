@@ -42,7 +42,7 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
  * 后台用户 Service 实现类
  * @author 芋道源码
  */
-@Service("adminUserService")
+@Service
 @Slf4j
 public class AdminUserServiceImpl implements AdminUserService {
 

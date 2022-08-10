@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.api.social;
 
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserUnbindReqDTO;
-import cn.iocoder.yudao.module.platform.service.social.SocialUserService;
+import cn.iocoder.yudao.module.platform.service.social.PlatformSocialUserService;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -18,27 +18,27 @@ import javax.annotation.Resource;
 public class PlatformSocialUserApiImpl implements SocialUserApi {
 
     @Resource
-    private SocialUserService socialUserService;
+    private PlatformSocialUserService platformSocialUserService;
 
     @Override
     public String getAuthorizeUrl(Integer type, String redirectUri) {
-        return socialUserService.getAuthorizeUrl(type, redirectUri);
+        return platformSocialUserService.getAuthorizeUrl(type, redirectUri);
     }
 
     @Override
     public void bindSocialUser(SocialUserBindReqDTO reqDTO) {
-        socialUserService.bindSocialUser(reqDTO);
+        platformSocialUserService.bindSocialUser(reqDTO);
     }
 
     @Override
     public void unbindSocialUser(SocialUserUnbindReqDTO reqDTO) {
-        socialUserService.unbindSocialUser(reqDTO.getUserId(), reqDTO.getUserType(),
+        platformSocialUserService.unbindSocialUser(reqDTO.getUserId(), reqDTO.getUserType(),
                 reqDTO.getType(), reqDTO.getUnionId());
     }
 
     @Override
     public Long getBindUserId(Integer userType, Integer type, String code, String state) {
-       return socialUserService.getBindUserId(userType, type, code, state);
+       return platformSocialUserService.getBindUserId(userType, type, code, state);
     }
 
 }

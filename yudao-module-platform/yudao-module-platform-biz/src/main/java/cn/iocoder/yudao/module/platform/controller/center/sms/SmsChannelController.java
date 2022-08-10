@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.platform.controller.center.sms;
 import cn.iocoder.yudao.module.platform.controller.center.sms.vo.channel.*;
 import cn.iocoder.yudao.module.platform.convert.sms.SmsChannelConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsChannelDO;
-import cn.iocoder.yudao.module.platform.service.sms.SmsChannelService;
+import cn.iocoder.yudao.module.platform.service.sms.PlatformSmsChannelService;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import io.swagger.annotations.Api;
@@ -25,20 +25,20 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 public class SmsChannelController {
 
     @Resource
-    private SmsChannelService smsChannelService;
+    private PlatformSmsChannelService platformSmsChannelService;
 
     @PostMapping("/create")
     @ApiOperation("创建短信渠道")
     @PreAuthorize("@ss.hasPermission('center:sms-channel:create')")
     public CommonResult<Long> createSmsChannel(@Valid @RequestBody SmsChannelCreateReqVO createReqVO) {
-        return success(smsChannelService.createSmsChannel(createReqVO));
+        return success(platformSmsChannelService.createSmsChannel(createReqVO));
     }
 
     @PutMapping("/update")
     @ApiOperation("更新短信渠道")
     @PreAuthorize("@ss.hasPermission('center:sms-channel:update')")
     public CommonResult<Boolean> updateSmsChannel(@Valid @RequestBody SmsChannelUpdateReqVO updateReqVO) {
-        smsChannelService.updateSmsChannel(updateReqVO);
+        platformSmsChannelService.updateSmsChannel(updateReqVO);
         return success(true);
     }
 
@@ -47,7 +47,7 @@ public class SmsChannelController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:sms-channel:delete')")
     public CommonResult<Boolean> deleteSmsChannel(@RequestParam("id") Long id) {
-        smsChannelService.deleteSmsChannel(id);
+        platformSmsChannelService.deleteSmsChannel(id);
         return success(true);
     }
 
@@ -56,7 +56,7 @@ public class SmsChannelController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:sms-channel:query')")
     public CommonResult<SmsChannelRespVO> getSmsChannel(@RequestParam("id") Long id) {
-        SmsChannelDO smsChannel = smsChannelService.getSmsChannel(id);
+        SmsChannelDO smsChannel = platformSmsChannelService.getSmsChannel(id);
         return success(SmsChannelConvert.INSTANCE.convert(smsChannel));
     }
 
@@ -64,14 +64,14 @@ public class SmsChannelController {
     @ApiOperation("获得短信渠道分页")
     @PreAuthorize("@ss.hasPermission('center:sms-channel:query')")
     public CommonResult<PageResult<SmsChannelRespVO>> getSmsChannelPage(@Valid SmsChannelPageReqVO pageVO) {
-        PageResult<SmsChannelDO> pageResult = smsChannelService.getSmsChannelPage(pageVO);
+        PageResult<SmsChannelDO> pageResult = platformSmsChannelService.getSmsChannelPage(pageVO);
         return success(SmsChannelConvert.INSTANCE.convertPage(pageResult));
     }
 
     @GetMapping("/list-all-simple")
     @ApiOperation(value = "获得短信渠道精简列表", notes = "包含被禁用的短信渠道")
     public CommonResult<List<SmsChannelSimpleRespVO>> getSimpleSmsChannels() {
-        List<SmsChannelDO> list = smsChannelService.getSmsChannelList();
+        List<SmsChannelDO> list = platformSmsChannelService.getSmsChannelList();
         // 排序后，返回给前端
         list.sort(Comparator.comparing(SmsChannelDO::getId));
         return success(SmsChannelConvert.INSTANCE.convertList03(list));

@@ -8,7 +8,7 @@ import cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.*;
 import cn.iocoder.yudao.module.platform.convert.permission.RoleConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
-import cn.iocoder.yudao.module.platform.service.permission.RoleService;
+import cn.iocoder.yudao.module.platform.service.permission.PlatformRoleService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -34,20 +34,20 @@ import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.E
 public class CenterRoleController {
 
     @Resource
-    private RoleService roleService;
+    private PlatformRoleService platformRoleService;
 
     @PostMapping("/create")
     @ApiOperation("创建角色")
     @PreAuthorize("@ss.hasPermission('center:role:create')")
     public CommonResult<Long> createRole(@Valid @RequestBody RoleCreateReqVO reqVO) {
-        return success(roleService.createRole(reqVO, null));
+        return success(platformRoleService.createRole(reqVO, null));
     }
 
     @PutMapping("/update")
     @ApiOperation("修改角色")
     @PreAuthorize("@ss.hasPermission('center:role:update')")
     public CommonResult<Boolean> updateRole(@Valid @RequestBody RoleUpdateReqVO reqVO) {
-        roleService.updateRole(reqVO);
+        platformRoleService.updateRole(reqVO);
         return success(true);
     }
 
@@ -55,7 +55,7 @@ public class CenterRoleController {
     @ApiOperation("修改角色状态")
     @PreAuthorize("@ss.hasPermission('center:role:update')")
     public CommonResult<Boolean> updateRoleStatus(@Valid @RequestBody RoleUpdateStatusReqVO reqVO) {
-        roleService.updateRoleStatus(reqVO.getId(), reqVO.getStatus());
+        platformRoleService.updateRoleStatus(reqVO.getId(), reqVO.getStatus());
         return success(true);
     }
 
@@ -64,7 +64,7 @@ public class CenterRoleController {
     @ApiImplicitParam(name = "id", value = "角色编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:role:delete')")
     public CommonResult<Boolean> deleteRole(@RequestParam("id") Long id) {
-        roleService.deleteRole(id);
+        platformRoleService.deleteRole(id);
         return success(true);
     }
 
@@ -72,7 +72,7 @@ public class CenterRoleController {
     @ApiOperation("获得角色信息")
     @PreAuthorize("@ss.hasPermission('center:role:query')")
     public CommonResult<RoleRespVO> getRole(@RequestParam("id") Long id) {
-        RoleDO role = roleService.getRole(id);
+        RoleDO role = platformRoleService.getRole(id);
         return success(RoleConvert.INSTANCE.convert(role));
     }
 
@@ -80,14 +80,14 @@ public class CenterRoleController {
     @ApiOperation("获得角色分页")
     @PreAuthorize("@ss.hasPermission('center:role:query')")
     public CommonResult<PageResult<RoleDO>> getRolePage(RolePageReqVO reqVO) {
-        return success(roleService.getRolePage(reqVO));
+        return success(platformRoleService.getRolePage(reqVO));
     }
 
     @GetMapping("/list-all-simple")
     @ApiOperation(value = "获取角色精简信息列表", notes = "只包含被开启的角色，主要用于前端的下拉选项")
     public CommonResult<List<RoleSimpleRespVO>> getSimpleRoles() {
         // 获得角色列表，只要开启状态的
-        List<RoleDO> list = roleService.getRoles(Collections.singleton(CommonStatusEnum.ENABLE.getStatus()));
+        List<RoleDO> list = platformRoleService.getRoles(Collections.singleton(CommonStatusEnum.ENABLE.getStatus()));
         // 排序后，返回给前端
         list.sort(Comparator.comparing(RoleDO::getSort));
         return success(RoleConvert.INSTANCE.convertList02(list));
@@ -97,7 +97,7 @@ public class CenterRoleController {
     @OperateLog(type = EXPORT)
     @PreAuthorize("@ss.hasPermission('center:role:export')")
     public void export(HttpServletResponse response, @Validated RoleExportReqVO reqVO) throws IOException {
-        List<RoleDO> list = roleService.getRoleList(reqVO);
+        List<RoleDO> list = platformRoleService.getRoleList(reqVO);
         List<RoleExcelVO> data = RoleConvert.INSTANCE.convertList03(list);
         // 输出
         ExcelUtils.write(response, "角色数据.xls", "角色列表", RoleExcelVO.class, data);

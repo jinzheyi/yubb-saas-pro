@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.platform.api.dept;
 
-import cn.iocoder.yudao.module.platform.service.dept.PostService;
+import cn.iocoder.yudao.module.platform.service.dept.PlatformPostService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -15,10 +15,10 @@ import java.util.Collection;
 public class PlatformPostApiImpl implements PostApi {
 
     @Resource
-    private PostService postService;
+    private PlatformPostService platformPostService;
 
     @Override
     public void validPosts(Collection<Long> ids) {
-        postService.validPosts(ids);
+        platformPostService.validPosts(ids);
     }
 }

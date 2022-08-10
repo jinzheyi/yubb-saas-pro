@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.api.logger;
 
 import cn.iocoder.yudao.module.platform.api.logger.dto.LoginLogCreateReqDTO;
-import cn.iocoder.yudao.module.platform.service.logger.LoginLogService;
+import cn.iocoder.yudao.module.platform.service.logger.PlatformLoginLogService;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -17,11 +17,11 @@ import javax.annotation.Resource;
 public class PlatformLoginLogApiImpl implements LoginLogApi {
 
     @Resource
-    private LoginLogService loginLogService;
+    private PlatformLoginLogService platformLoginLogService;
 
     @Override
     public void createLoginLog(LoginLogCreateReqDTO reqDTO) {
-        loginLogService.createLoginLog(reqDTO);
+        platformLoginLogService.createLoginLog(reqDTO);
     }
 
 }

@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.platform.api.permission;
 
-import cn.iocoder.yudao.module.platform.service.permission.RoleService;
+import cn.iocoder.yudao.module.platform.service.permission.PlatformRoleService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -15,10 +15,10 @@ import java.util.Collection;
 public class PlatformRoleApiImpl implements RoleApi {
 
     @Resource
-    private RoleService roleService;
+    private PlatformRoleService platformRoleService;
 
     @Override
     public void validRoles(Collection<Long> ids) {
-        roleService.validRoles(ids);
+        platformRoleService.validRoles(ids);
     }
 }

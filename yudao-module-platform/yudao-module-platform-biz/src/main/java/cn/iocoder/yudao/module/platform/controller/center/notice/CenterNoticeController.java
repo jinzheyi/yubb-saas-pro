@@ -7,7 +7,7 @@ import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticePageRe
 import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticeRespVO;
 import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticeUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.notice.NoticeConvert;
-import cn.iocoder.yudao.module.platform.service.notice.NoticeService;
+import cn.iocoder.yudao.module.platform.service.notice.PlatformNoticeService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -27,13 +27,13 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 public class CenterNoticeController {
 
     @Resource
-    private NoticeService noticeService;
+    private PlatformNoticeService platformNoticeService;
 
     @PostMapping("/create")
     @ApiOperation("创建通知公告")
     @PreAuthorize("@ss.hasPermission('center:notice:create')")
     public CommonResult<Long> createNotice(@Valid @RequestBody NoticeCreateReqVO reqVO) {
-        Long noticeId = noticeService.createNotice(reqVO);
+        Long noticeId = platformNoticeService.createNotice(reqVO);
         return success(noticeId);
     }
 
@@ -41,7 +41,7 @@ public class CenterNoticeController {
     @ApiOperation("修改通知公告")
     @PreAuthorize("@ss.hasPermission('center:notice:update')")
     public CommonResult<Boolean> updateNotice(@Valid @RequestBody NoticeUpdateReqVO reqVO) {
-        noticeService.updateNotice(reqVO);
+        platformNoticeService.updateNotice(reqVO);
         return success(true);
     }
 
@@ -50,7 +50,7 @@ public class CenterNoticeController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:notice:delete')")
     public CommonResult<Boolean> deleteNotice(@RequestParam("id") Long id) {
-        noticeService.deleteNotice(id);
+        platformNoticeService.deleteNotice(id);
         return success(true);
     }
 
@@ -58,7 +58,7 @@ public class CenterNoticeController {
     @ApiOperation("获取通知公告列表")
     @PreAuthorize("@ss.hasPermission('center:notice:query')")
     public CommonResult<PageResult<NoticeRespVO>> pageNotices(@Validated NoticePageReqVO reqVO) {
-        return success(NoticeConvert.INSTANCE.convertPage(noticeService.pageNotices(reqVO)));
+        return success(NoticeConvert.INSTANCE.convertPage(platformNoticeService.pageNotices(reqVO)));
     }
 
     @GetMapping("/get")
@@ -66,7 +66,7 @@ public class CenterNoticeController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:notice:query')")
     public CommonResult<NoticeRespVO> getNotice(@RequestParam("id") Long id) {
-        return success(NoticeConvert.INSTANCE.convert(noticeService.getNotice(id)));
+        return success(NoticeConvert.INSTANCE.convert(platformNoticeService.getNotice(id)));
     }
 
 }
