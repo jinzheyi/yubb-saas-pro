@@ -10,10 +10,10 @@ import cn.iocoder.yudao.framework.sms.core.client.SmsClient;
 import cn.iocoder.yudao.framework.sms.core.client.SmsClientFactory;
 import cn.iocoder.yudao.framework.sms.core.client.SmsCommonResult;
 import cn.iocoder.yudao.framework.sms.core.client.dto.SmsTemplateRespDTO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplatePageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplatePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.sms.SmsTemplateConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsChannelDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsTemplateDO;
@@ -31,7 +31,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 短信模板 Service 实现类

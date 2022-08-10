@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.platform.service.permission;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.RoleCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.RoleExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.RolePageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.RoleUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RolePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
 import org.springframework.lang.Nullable;
 

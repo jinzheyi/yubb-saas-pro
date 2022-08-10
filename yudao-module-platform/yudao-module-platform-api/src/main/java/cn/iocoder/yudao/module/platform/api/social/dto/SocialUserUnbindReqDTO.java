@@ -1,8 +1,8 @@
 package cn.iocoder.yudao.module.platform.api.social.dto;
 
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.social.SocialTypeEnum;
 import cn.iocoder.yudao.framework.common.validation.InEnum;
-import cn.iocoder.yudao.module.platform.enums.social.SocialTypeEnum;
 import lombok.Data;
 
 import javax.validation.constraints.NotEmpty;

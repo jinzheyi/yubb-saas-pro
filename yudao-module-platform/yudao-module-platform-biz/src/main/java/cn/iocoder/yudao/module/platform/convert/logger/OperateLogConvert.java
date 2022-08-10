@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.convert.logger;
 
-import cn.iocoder.yudao.module.platform.controller.admin.logger.vo.operatelog.OperateLogExcelVO;
-import cn.iocoder.yudao.module.platform.controller.admin.logger.vo.operatelog.OperateLogRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogExcelVO;
+import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogRespVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.logger.OperateLogDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;

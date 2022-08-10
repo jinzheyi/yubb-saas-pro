@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.platform.convert.permission;
 
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.*;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.*;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.platform.service.permission.bo.RoleCreateReqBO;
 import org.mapstruct.Mapper;

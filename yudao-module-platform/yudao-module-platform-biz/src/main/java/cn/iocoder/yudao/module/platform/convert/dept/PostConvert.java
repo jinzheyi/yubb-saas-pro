@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.convert.dept;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.post.*;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.*;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

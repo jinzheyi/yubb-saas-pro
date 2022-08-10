@@ -9,14 +9,14 @@ import cn.iocoder.yudao.framework.common.util.validation.ValidationUtils;
 import cn.iocoder.yudao.module.platform.api.logger.dto.LoginLogCreateReqDTO;
 import cn.iocoder.yudao.module.platform.api.sms.SmsCodeApi;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
-import cn.iocoder.yudao.module.platform.controller.admin.auth.vo.*;
+import cn.iocoder.yudao.module.platform.controller.center.auth.vo.*;
 import cn.iocoder.yudao.module.platform.convert.auth.AuthConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.platform.enums.logger.LoginLogTypeEnum;
-import cn.iocoder.yudao.module.platform.enums.logger.LoginResultEnum;
-import cn.iocoder.yudao.module.platform.enums.oauth2.OAuth2ClientConstants;
-import cn.iocoder.yudao.module.platform.enums.sms.SmsSceneEnum;
+import cn.iocoder.yudao.framework.common.enums.logger.LoginLogTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.logger.LoginResultEnum;
+import cn.iocoder.yudao.framework.common.enums.oauth2.OAuth2ClientConstants;
+import cn.iocoder.yudao.framework.common.enums.sms.SmsSceneEnum;
 import cn.iocoder.yudao.module.platform.service.common.CaptchaService;
 import cn.iocoder.yudao.module.platform.service.logger.LoginLogService;
 import cn.iocoder.yudao.module.platform.service.oauth2.OAuth2TokenService;
@@ -32,7 +32,7 @@ import java.util.Objects;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * Auth Service 实现类

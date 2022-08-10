@@ -1,14 +1,14 @@
 package cn.iocoder.yudao.module.platform.service.sms;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.log.SmsLogExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.log.SmsLogPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.log.SmsLogExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.log.SmsLogPageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsLogDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsTemplateDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.sms.SmsLogMapper;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.enums.sms.SmsReceiveStatusEnum;
-import cn.iocoder.yudao.module.platform.enums.sms.SmsSendStatusEnum;
+import cn.iocoder.yudao.framework.common.enums.sms.SmsReceiveStatusEnum;
+import cn.iocoder.yudao.framework.common.enums.sms.SmsSendStatusEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

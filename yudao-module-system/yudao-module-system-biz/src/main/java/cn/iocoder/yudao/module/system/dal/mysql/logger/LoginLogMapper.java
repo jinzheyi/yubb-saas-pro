@@ -6,7 +6,7 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.system.controller.admin.logger.vo.loginlog.LoginLogExportReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.logger.vo.loginlog.LoginLogPageReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.logger.LoginLogDO;
-import cn.iocoder.yudao.module.system.enums.logger.LoginResultEnum;
+import cn.iocoder.yudao.framework.common.enums.logger.LoginResultEnum;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;

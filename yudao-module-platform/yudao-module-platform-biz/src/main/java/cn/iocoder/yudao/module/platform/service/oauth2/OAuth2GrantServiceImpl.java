@@ -7,7 +7,7 @@ import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2CodeDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants;
+import cn.iocoder.yudao.module.system.enums.ErrorCodeConstants;
 import cn.iocoder.yudao.module.platform.service.auth.AdminAuthService;
 import org.springframework.stereotype.Service;
 

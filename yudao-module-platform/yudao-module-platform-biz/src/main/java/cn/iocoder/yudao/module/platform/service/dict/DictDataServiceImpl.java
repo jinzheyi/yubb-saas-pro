@@ -4,10 +4,10 @@ import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.data.DictDataCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.data.DictDataExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.data.DictDataPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.data.DictDataUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.data.DictDataCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.data.DictDataExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.data.DictDataPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.data.DictDataUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.dict.DictDataConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dict.DictDataDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dict.DictTypeDO;
@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 字典数据 Service 实现类

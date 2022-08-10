@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.service.logger;
 
-import cn.iocoder.yudao.module.platform.controller.admin.logger.vo.loginlog.LoginLogExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.logger.vo.loginlog.LoginLogPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog.LoginLogExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog.LoginLogPageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.logger.LoginLogDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.api.logger.dto.LoginLogCreateReqDTO;

@@ -9,16 +9,16 @@ import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.framework.tenant.config.TenantProperties;
 import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.tenant.TenantMapper;
-import cn.iocoder.yudao.module.platform.enums.permission.RoleCodeEnum;
-import cn.iocoder.yudao.module.platform.enums.permission.RoleTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.permission.RoleCodeEnum;
+import cn.iocoder.yudao.framework.common.enums.permission.RoleTypeEnum;
 import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
 import cn.iocoder.yudao.module.system.api.permission.RoleApi;
 import cn.iocoder.yudao.module.system.api.permission.dto.RoleCreateReqDTO;
@@ -36,7 +36,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 import static java.util.Collections.singleton;
 
 /**

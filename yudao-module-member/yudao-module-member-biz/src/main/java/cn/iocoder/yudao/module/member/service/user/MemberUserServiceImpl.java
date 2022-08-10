@@ -9,7 +9,7 @@ import cn.iocoder.yudao.module.member.dal.dataobject.user.MemberUserDO;
 import cn.iocoder.yudao.module.member.dal.mysql.user.MemberUserMapper;
 import cn.iocoder.yudao.module.system.api.sms.SmsCodeApi;
 import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeUseReqDTO;
-import cn.iocoder.yudao.module.system.enums.sms.SmsSceneEnum;
+import cn.iocoder.yudao.framework.common.enums.sms.SmsSceneEnum;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;

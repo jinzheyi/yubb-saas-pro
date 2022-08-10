@@ -9,7 +9,7 @@ import cn.iocoder.yudao.module.platform.api.sms.dto.code.SmsCodeSendReqDTO;
 import cn.iocoder.yudao.module.platform.api.sms.dto.code.SmsCodeUseReqDTO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsCodeDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.sms.SmsCodeMapper;
-import cn.iocoder.yudao.module.platform.enums.sms.SmsSceneEnum;
+import cn.iocoder.yudao.framework.common.enums.sms.SmsSceneEnum;
 import cn.iocoder.yudao.module.platform.framework.sms.SmsCodeProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -18,7 +18,7 @@ import javax.annotation.Resource;
 import java.util.Date;
 
 import static cn.hutool.core.util.RandomUtil.randomInt;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 短信验证码 Service 实现类

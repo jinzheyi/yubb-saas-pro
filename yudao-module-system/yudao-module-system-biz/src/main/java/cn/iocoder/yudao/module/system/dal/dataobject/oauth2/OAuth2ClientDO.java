@@ -1,8 +1,8 @@
 package cn.iocoder.yudao.module.system.dal.dataobject.oauth2;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.module.system.enums.oauth2.OAuth2GrantTypeEnum;
+import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
+import cn.iocoder.yudao.framework.common.enums.oauth2.OAuth2GrantTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -22,7 +22,7 @@ import java.util.List;
 @KeySequence("system_oauth2_client_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class OAuth2ClientDO extends BaseDO {
+public class OAuth2ClientDO extends TenantBaseDO {
 
     /**
      * 编号，数据库自增

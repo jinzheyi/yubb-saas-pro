@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.dal.mysql.tenant;
 
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantPageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
@@ -52,7 +52,7 @@ public interface TenantMapper extends BaseMapperX<TenantDO> {
         return selectList(TenantDO::getPackageId, packageId);
     }
 
-    @Select("SELECT COUNT(*) FROM platform_tenant WHERE update_time > #{maxUpdateTime}")
+    @Select("SELECT COUNT(*) FROM tenant WHERE update_time > #{maxUpdateTime}")
     Long selectCountByUpdateTimeGt(Date maxUpdateTime);
 
 }

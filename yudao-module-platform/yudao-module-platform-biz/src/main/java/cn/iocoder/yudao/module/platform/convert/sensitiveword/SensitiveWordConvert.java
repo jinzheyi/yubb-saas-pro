@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.platform.convert.sensitiveword;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.sensitiveword.vo.SensitiveWordCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sensitiveword.vo.SensitiveWordExcelVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sensitiveword.vo.SensitiveWordRespVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sensitiveword.vo.SensitiveWordUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordExcelVO;
+import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sensitiveword.SensitiveWordDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

@@ -5,9 +5,9 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.sms.core.client.SmsClientFactory;
 import cn.iocoder.yudao.framework.sms.core.property.SmsChannelProperties;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.channel.SmsChannelCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.channel.SmsChannelPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.channel.SmsChannelUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.channel.SmsChannelCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.channel.SmsChannelPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.channel.SmsChannelUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.sms.SmsChannelConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsChannelDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.sms.SmsChannelMapper;
@@ -23,8 +23,8 @@ import java.util.Date;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.SMS_CHANNEL_HAS_CHILDREN;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.SMS_CHANNEL_NOT_EXISTS;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.SMS_CHANNEL_HAS_CHILDREN;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.SMS_CHANNEL_NOT_EXISTS;
 
 /**
  * 短信渠道Service实现类

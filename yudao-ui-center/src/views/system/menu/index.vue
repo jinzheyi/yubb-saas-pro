@@ -21,7 +21,7 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button type="primary" plain icon="el-icon-plus" size="mini" @click="handleAdd"
-                   v-hasPermi="['system:menu:create']">新增</el-button>
+                   v-hasPermi="['center:menu:create']">新增</el-button>
       </el-col>
       <el-col :span="1.5">
         <el-button type="info" plain icon="el-icon-sort" size="mini" @click="toggleExpandAll">展开/折叠</el-button>
@@ -53,11 +53,11 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button size="mini" type="text" icon="el-icon-edit" @click="handleUpdate(scope.row)"
-                     v-hasPermi="['system:menu:update']">修改</el-button>
+                     v-hasPermi="['center:menu:update']">修改</el-button>
           <el-button size="mini" type="text" icon="el-icon-plus" @click="handleAdd(scope.row)"
-                     v-hasPermi="['system:menu:create']">新增</el-button>
+                     v-hasPermi="['center:menu:create']">新增</el-button>
           <el-button size="mini" type="text" icon="el-icon-delete" @click="handleDelete(scope.row)"
-                     v-hasPermi="['system:menu:delete']">删除</el-button>
+                     v-hasPermi="['center:menu:delete']">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -121,7 +121,7 @@
           <el-col :span="12">
             <el-form-item v-if="form.type !== 1" label="权限标识">
               <span slot="label">
-                <el-tooltip content="Controller 方法上的权限字符，如：@PreAuthorize(`@ss.hasPermission('system:user:list')`)" placement="top">
+                <el-tooltip content="Controller 方法上的权限字符，如：@PreAuthorize(`@ss.hasPermission('center:user:list')`)" placement="top">
                   <i class="el-icon-question" />
                 </el-tooltip>
                 权限字符

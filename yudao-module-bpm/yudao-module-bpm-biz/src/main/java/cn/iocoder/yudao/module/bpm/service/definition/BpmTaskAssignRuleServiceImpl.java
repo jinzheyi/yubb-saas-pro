@@ -21,7 +21,7 @@ import cn.iocoder.yudao.module.bpm.framework.flowable.core.behavior.script.BpmTa
 import cn.iocoder.yudao.module.system.api.dept.DeptApi;
 import cn.iocoder.yudao.module.system.api.dept.PostApi;
 import cn.iocoder.yudao.module.system.api.dept.dto.DeptRespDTO;
-import cn.iocoder.yudao.module.system.api.dict.DictDataApi;
+import cn.iocoder.yudao.module.platform.api.dict.DictDataApi;
 import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
 import cn.iocoder.yudao.module.system.api.permission.RoleApi;
 import cn.iocoder.yudao.module.system.api.user.AdminUserApi;

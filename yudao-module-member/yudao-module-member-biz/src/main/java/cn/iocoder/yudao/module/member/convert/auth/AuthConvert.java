@@ -7,7 +7,7 @@ import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeSendReqDTO;
 import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeUseReqDTO;
 import cn.iocoder.yudao.module.system.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.system.api.social.dto.SocialUserUnbindReqDTO;
-import cn.iocoder.yudao.module.system.enums.sms.SmsSceneEnum;
+import cn.iocoder.yudao.framework.common.enums.sms.SmsSceneEnum;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

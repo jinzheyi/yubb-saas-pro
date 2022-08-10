@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.dal.dataobject.notice;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.module.platform.enums.notice.NoticeTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.notice.NoticeTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;

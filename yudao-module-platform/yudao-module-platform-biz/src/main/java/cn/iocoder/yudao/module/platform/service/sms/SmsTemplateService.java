@@ -1,9 +1,9 @@
 package cn.iocoder.yudao.module.platform.service.sms;
 
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplatePageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplatePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsTemplateDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 

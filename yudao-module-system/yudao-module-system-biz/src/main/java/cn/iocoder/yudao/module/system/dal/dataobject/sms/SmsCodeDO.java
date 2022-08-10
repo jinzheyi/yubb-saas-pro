@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.system.dal.dataobject.sms;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
@@ -21,7 +21,7 @@ import java.util.Date;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SmsCodeDO extends BaseDO {
+public class SmsCodeDO extends TenantBaseDO {
 
     /**
      * 编号

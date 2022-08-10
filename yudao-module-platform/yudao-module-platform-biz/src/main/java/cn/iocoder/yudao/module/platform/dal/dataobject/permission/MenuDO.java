@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.dal.dataobject.permission;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.module.platform.enums.permission.MenuTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.permission.MenuTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;

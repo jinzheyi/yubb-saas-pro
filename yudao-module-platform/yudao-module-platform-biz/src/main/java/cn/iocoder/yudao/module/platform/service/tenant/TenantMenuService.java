@@ -1,8 +1,8 @@
 package cn.iocoder.yudao.module.platform.service.tenant;
 
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.menu.TenantMenuCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.menu.TenantMenuListReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.menu.TenantMenuUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuListReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantMenuDO;
 
 import java.util.Collection;

@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.platform.service.sensitiveword;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.sensitiveword.vo.SensitiveWordCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sensitiveword.vo.SensitiveWordExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sensitiveword.vo.SensitiveWordPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sensitiveword.vo.SensitiveWordUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sensitiveword.SensitiveWordDO;
 
 import javax.validation.Valid;

@@ -5,7 +5,7 @@ import cn.hutool.core.lang.Assert;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2ApproveDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2ClientDO;
-import cn.iocoder.yudao.module.platform.dal.mysql.oauth2.OAuth2ApproveMapper;
+import cn.iocoder.yudao.module.platform.dal.mysql.oauth2.PlatformOAuth2ApproveMapper;
 import com.google.common.annotations.VisibleForTesting;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +34,7 @@ public class OAuth2ApproveServiceImpl implements OAuth2ApproveService {
     private OAuth2ClientService oauth2ClientService;
 
     @Resource
-    private OAuth2ApproveMapper oauth2ApproveMapper;
+    private PlatformOAuth2ApproveMapper oauth2ApproveMapperPlatform;
 
     @Override
     @Transactional
@@ -80,7 +80,7 @@ public class OAuth2ApproveServiceImpl implements OAuth2ApproveService {
 
     @Override
     public List<OAuth2ApproveDO> getApproveList(Long userId, Integer userType, String clientId) {
-        List<OAuth2ApproveDO> approveDOs = oauth2ApproveMapper.selectListByUserIdAndUserTypeAndClientId(
+        List<OAuth2ApproveDO> approveDOs = oauth2ApproveMapperPlatform.selectListByUserIdAndUserTypeAndClientId(
                 userId, userType, clientId);
         approveDOs.removeIf(o -> DateUtils.isExpired(o.getExpiresTime()));
         return approveDOs;
@@ -92,11 +92,11 @@ public class OAuth2ApproveServiceImpl implements OAuth2ApproveService {
         // 先更新
         OAuth2ApproveDO approveDO = new OAuth2ApproveDO().setUserId(userId).setUserType(userType)
                 .setClientId(clientId).setScope(scope).setApproved(approved).setExpiresTime(expireTime);
-        if (oauth2ApproveMapper.update(approveDO) == 1) {
+        if (oauth2ApproveMapperPlatform.update(approveDO) == 1) {
             return;
         }
         // 失败，则说明不存在，进行更新
-        oauth2ApproveMapper.insert(approveDO);
+        oauth2ApproveMapperPlatform.insert(approveDO);
     }
 
 }

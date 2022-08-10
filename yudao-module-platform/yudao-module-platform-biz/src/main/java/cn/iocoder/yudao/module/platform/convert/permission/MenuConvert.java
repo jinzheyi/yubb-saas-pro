@@ -1,9 +1,9 @@
 package cn.iocoder.yudao.module.platform.convert.permission;
 
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.menu.MenuCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.menu.MenuRespVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.menu.MenuSimpleRespVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.menu.MenuUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuSimpleRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

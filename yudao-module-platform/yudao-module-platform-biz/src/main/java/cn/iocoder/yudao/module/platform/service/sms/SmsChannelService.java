@@ -2,9 +2,9 @@ package cn.iocoder.yudao.module.platform.service.sms;
 
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsChannelDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.channel.SmsChannelCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.channel.SmsChannelPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.channel.SmsChannelUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.channel.SmsChannelCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.channel.SmsChannelPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.channel.SmsChannelUpdateReqVO;
 
 import javax.validation.Valid;
 import java.util.Collection;

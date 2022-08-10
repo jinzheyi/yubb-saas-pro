@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.platform.convert.auth;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.api.oauth2.dto.OAuth2AccessTokenCheckRespDTO;
 import cn.iocoder.yudao.module.platform.api.oauth2.dto.OAuth2AccessTokenRespDTO;
-import cn.iocoder.yudao.module.platform.controller.admin.oauth2.vo.token.OAuth2AccessTokenRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.token.OAuth2AccessTokenRespVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

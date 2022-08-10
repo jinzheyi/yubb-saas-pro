@@ -4,14 +4,14 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.menu.TenantMenuCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.menu.TenantMenuListReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.menu.TenantMenuUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuListReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantMenuConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantMenuDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.tenant.TenantMenuMapper;
-import cn.iocoder.yudao.module.platform.enums.permission.MenuIdEnum;
-import cn.iocoder.yudao.module.platform.enums.permission.MenuTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.permission.MenuIdEnum;
+import cn.iocoder.yudao.framework.common.enums.permission.MenuTypeEnum;
 import cn.iocoder.yudao.module.platform.mq.producer.tenant.TenantMenuProducer;
 import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
 import com.google.common.annotations.VisibleForTesting;
@@ -31,7 +31,7 @@ import javax.annotation.Resource;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 菜单 Service 实现

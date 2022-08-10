@@ -2,8 +2,8 @@ package cn.iocoder.yudao.module.platform.convert.social;
 
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserUnbindReqDTO;
-import cn.iocoder.yudao.module.platform.controller.admin.socail.vo.SocialUserBindReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.socail.vo.SocialUserUnbindReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.socail.vo.SocialUserBindReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.socail.vo.SocialUserUnbindReqVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

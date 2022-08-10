@@ -23,11 +23,11 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button type="primary" plain icon="el-icon-plus" size="mini" @click="handleAdd"
-                   v-hasPermi="['system:dict:create']">新增</el-button>
+                   v-hasPermi="['center:dict:create']">新增</el-button>
       </el-col>
       <el-col :span="1.5">
         <el-button type="warning" icon="el-icon-download" size="mini" @click="handleExport" :loading="exportLoading"
-                   v-hasPermi="['system:dict:export']">导出</el-button>
+                   v-hasPermi="['center:dict:export']">导出</el-button>
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
@@ -53,9 +53,9 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button size="mini" type="text" icon="el-icon-edit" @click="handleUpdate(scope.row)"
-                     v-hasPermi="['system:dict:update']">修改</el-button>
+                     v-hasPermi="['center:dict:update']">修改</el-button>
           <el-button size="mini" type="text" icon="el-icon-delete" @click="handleDelete(scope.row)"
-                     v-hasPermi="['system:dict:delete']">删除</el-button>
+                     v-hasPermi="['center:dict:delete']">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

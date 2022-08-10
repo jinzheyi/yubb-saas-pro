@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.platform.service.dict;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.data.DictDataCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.data.DictDataExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.data.DictDataPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.data.DictDataUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.data.DictDataCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.data.DictDataExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.data.DictDataPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.data.DictDataUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dict.DictDataDO;
 
 import java.util.Collection;

@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.dal.dataobject.sms;
 
-import cn.iocoder.yudao.module.platform.enums.sms.SmsReceiveStatusEnum;
-import cn.iocoder.yudao.module.platform.enums.sms.SmsSendStatusEnum;
+import cn.iocoder.yudao.framework.common.enums.sms.SmsReceiveStatusEnum;
+import cn.iocoder.yudao.framework.common.enums.sms.SmsSendStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.framework.sms.core.enums.SmsFrameworkErrorCodeConstants;

@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.dal.mysql.tenant;
 
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.menu.TenantMenuListReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuListReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantMenuDO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -28,7 +28,7 @@ public interface TenantMenuMapper extends BaseMapperX<TenantMenuDO> {
                 .eqIfPresent(TenantMenuDO::getStatus, reqVO.getStatus()));
     }
 
-    @Select("SELECT COUNT(*) FROM platform_tenant_menu WHERE update_time > #{maxUpdateTime}")
+    @Select("SELECT COUNT(*) FROM tenant_menu WHERE update_time > #{maxUpdateTime}")
     Long selectCountByUpdateTimeGt(Date maxUpdateTime);
 
 }

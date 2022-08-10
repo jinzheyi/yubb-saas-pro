@@ -5,12 +5,12 @@ import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.string.StrUtils;
 import cn.iocoder.yudao.module.platform.api.logger.dto.OperateLogCreateReqDTO;
-import cn.iocoder.yudao.module.platform.controller.admin.logger.vo.operatelog.OperateLogExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.logger.vo.operatelog.OperateLogPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogPageReqVO;
 import cn.iocoder.yudao.module.platform.convert.logger.OperateLogConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.logger.OperateLogDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.platform.dal.mysql.logger.OperateLogMapper;
+import cn.iocoder.yudao.module.platform.dal.mysql.logger.PlatformOperateLogMapper;
 import cn.iocoder.yudao.module.platform.service.user.AdminUserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,7 +31,7 @@ import static cn.iocoder.yudao.module.platform.dal.dataobject.logger.OperateLogD
 public class OperateLogServiceImpl implements OperateLogService {
 
     @Resource
-    private OperateLogMapper operateLogMapper;
+    private PlatformOperateLogMapper platformOperateLogMapper;
 
     @Resource
     private AdminUserService userService;
@@ -41,7 +41,7 @@ public class OperateLogServiceImpl implements OperateLogService {
         OperateLogDO logDO = OperateLogConvert.INSTANCE.convert(createReqDTO);
         logDO.setJavaMethodArgs(StrUtils.maxLength(logDO.getJavaMethodArgs(), JAVA_METHOD_ARGS_MAX_LENGTH));
         logDO.setResultData(StrUtils.maxLength(logDO.getResultData(), RESULT_MAX_LENGTH));
-        operateLogMapper.insert(logDO);
+        platformOperateLogMapper.insert(logDO);
     }
 
     @Override
@@ -55,7 +55,7 @@ public class OperateLogServiceImpl implements OperateLogService {
             }
         }
         // 查询分页
-        return operateLogMapper.selectPage(reqVO, userIds);
+        return platformOperateLogMapper.selectPage(reqVO, userIds);
     }
 
     @Override
@@ -69,7 +69,7 @@ public class OperateLogServiceImpl implements OperateLogService {
             }
         }
         // 查询列表
-        return operateLogMapper.selectList(reqVO, userIds);
+        return platformOperateLogMapper.selectList(reqVO, userIds);
     }
 
 }

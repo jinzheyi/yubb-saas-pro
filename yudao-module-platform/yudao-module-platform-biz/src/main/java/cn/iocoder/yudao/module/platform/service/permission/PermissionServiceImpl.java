@@ -15,11 +15,11 @@ import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleMenuDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.UserRoleDO;
-import cn.iocoder.yudao.module.platform.dal.mysql.permission.RoleMenuBatchInsertMapper;
-import cn.iocoder.yudao.module.platform.dal.mysql.permission.RoleMenuMapper;
-import cn.iocoder.yudao.module.platform.dal.mysql.permission.UserRoleBatchInsertMapper;
-import cn.iocoder.yudao.module.platform.dal.mysql.permission.UserRoleMapper;
-import cn.iocoder.yudao.module.platform.enums.permission.DataScopeEnum;
+import cn.iocoder.yudao.module.platform.dal.mysql.permission.PlatformRoleMenuBatchInsertMapper;
+import cn.iocoder.yudao.module.platform.dal.mysql.permission.PlatformRoleMenuMapper;
+import cn.iocoder.yudao.module.platform.dal.mysql.permission.PlatformUserRoleBatchInsertMapper;
+import cn.iocoder.yudao.module.platform.dal.mysql.permission.PlatformUserRoleMapper;
+import cn.iocoder.yudao.framework.common.enums.permission.DataScopeEnum;
 import cn.iocoder.yudao.module.platform.mq.producer.permission.PermissionProducer;
 import cn.iocoder.yudao.module.platform.service.dept.DeptService;
 import cn.iocoder.yudao.module.platform.service.user.AdminUserService;
@@ -105,13 +105,13 @@ public class PermissionServiceImpl implements PermissionService {
     private volatile Date userRoleMaxUpdateTime;
 
     @Resource
-    private RoleMenuMapper roleMenuMapper;
+    private PlatformRoleMenuMapper platformRoleMenuMapper;
     @Resource
-    private RoleMenuBatchInsertMapper roleMenuBatchInsertMapper;
+    private PlatformRoleMenuBatchInsertMapper platformRoleMenuBatchInsertMapper;
     @Resource
-    private UserRoleMapper userRoleMapper;
+    private PlatformUserRoleMapper platformUserRoleMapper;
     @Resource
-    private UserRoleBatchInsertMapper userRoleBatchInsertMapper;
+    private PlatformUserRoleBatchInsertMapper platformUserRoleBatchInsertMapper;
 
     @Resource
     private RoleService roleService;
@@ -197,13 +197,13 @@ public class PermissionServiceImpl implements PermissionService {
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
             log.info("[loadRoleMenuIfUpdate][首次加载全量角色与菜单的关联]");
         } else { // 判断数据库中是否有更新的角色与菜单的关联
-            if (roleMenuMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
+            if (platformRoleMenuMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
                 return null;
             }
             log.info("[loadRoleMenuIfUpdate][增量加载全量角色与菜单的关联]");
         }
         // 第二步，如果有更新，则从数据库加载所有角色与菜单的关联
-        return roleMenuMapper.selectList();
+        return platformRoleMenuMapper.selectList();
     }
 
     /**
@@ -218,13 +218,13 @@ public class PermissionServiceImpl implements PermissionService {
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
             log.info("[loadUserRoleIfUpdate][首次加载全量用户与角色的关联]");
         } else { // 判断数据库中是否有更新的用户与角色的关联
-            if (userRoleMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
+            if (platformUserRoleMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
                 return null;
             }
             log.info("[loadUserRoleIfUpdate][增量加载全量用户与角色的关联]");
         }
         // 第二步，如果有更新，则从数据库加载所有用户与角色的关联
-        return userRoleMapper.selectList();
+        return platformUserRoleMapper.selectList();
     }
 
     @Override
@@ -271,21 +271,21 @@ public class PermissionServiceImpl implements PermissionService {
             return convertSet(menuService.getMenus(), MenuDO::getId);
         }
         // 如果是非管理员的情况下，获得拥有的菜单编号
-        return convertSet(roleMenuMapper.selectListByRoleId(roleId), RoleMenuDO::getMenuId);
+        return convertSet(platformRoleMenuMapper.selectListByRoleId(roleId), RoleMenuDO::getMenuId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void assignRoleMenu(Long roleId, Set<Long> menuIds) {
         // 获得角色拥有菜单编号
-        Set<Long> dbMenuIds = convertSet(roleMenuMapper.selectListByRoleId(roleId),
+        Set<Long> dbMenuIds = convertSet(platformRoleMenuMapper.selectListByRoleId(roleId),
                 RoleMenuDO::getMenuId);
         // 计算新增和删除的菜单编号
         Collection<Long> createMenuIds = CollUtil.subtract(menuIds, dbMenuIds);
         Collection<Long> deleteMenuIds = CollUtil.subtract(dbMenuIds, menuIds);
         // 执行新增和删除。对于已经授权的菜单，不用做任何处理
         if (!CollectionUtil.isEmpty(createMenuIds)) {
-            roleMenuBatchInsertMapper.saveBatch(CollectionUtils.convertList(createMenuIds, menuId -> {
+            platformRoleMenuBatchInsertMapper.saveBatch(CollectionUtils.convertList(createMenuIds, menuId -> {
                 RoleMenuDO entity = new RoleMenuDO();
                 entity.setRoleId(roleId);
                 entity.setMenuId(menuId);
@@ -293,7 +293,7 @@ public class PermissionServiceImpl implements PermissionService {
             }));
         }
         if (!CollectionUtil.isEmpty(deleteMenuIds)) {
-            roleMenuMapper.deleteListByRoleIdAndMenuIds(roleId, deleteMenuIds);
+            platformRoleMenuMapper.deleteListByRoleIdAndMenuIds(roleId, deleteMenuIds);
         }
         // 发送刷新消息. 注意，需要事务提交后，在进行发送刷新消息。不然 db 还未提交，结果缓存先刷新了
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -308,13 +308,13 @@ public class PermissionServiceImpl implements PermissionService {
 
     @Override
     public Set<Long> getUserRoleIdListByUserId(Long userId) {
-        return convertSet(userRoleMapper.selectListByUserId(userId),
+        return convertSet(platformUserRoleMapper.selectListByUserId(userId),
                 UserRoleDO::getRoleId);
     }
 
     @Override
     public Set<Long> getUserRoleIdListByRoleIds(Collection<Long> roleIds) {
-        return convertSet(userRoleMapper.selectListByRoleIds(roleIds),
+        return convertSet(platformUserRoleMapper.selectListByRoleIds(roleIds),
                 UserRoleDO::getUserId);
     }
 
@@ -322,14 +322,14 @@ public class PermissionServiceImpl implements PermissionService {
     @Transactional(rollbackFor = Exception.class)
     public void assignUserRole(Long userId, Set<Long> roleIds) {
         // 获得角色拥有角色编号
-        Set<Long> dbRoleIds = convertSet(userRoleMapper.selectListByUserId(userId),
+        Set<Long> dbRoleIds = convertSet(platformUserRoleMapper.selectListByUserId(userId),
                 UserRoleDO::getRoleId);
         // 计算新增和删除的角色编号
         Collection<Long> createRoleIds = CollUtil.subtract(roleIds, dbRoleIds);
         Collection<Long> deleteMenuIds = CollUtil.subtract(dbRoleIds, roleIds);
         // 执行新增和删除。对于已经授权的角色，不用做任何处理
         if (!CollectionUtil.isEmpty(createRoleIds)) {
-            userRoleBatchInsertMapper.saveBatch(CollectionUtils.convertList(createRoleIds, roleId -> {
+            platformUserRoleBatchInsertMapper.saveBatch(CollectionUtils.convertList(createRoleIds, roleId -> {
                 UserRoleDO entity = new UserRoleDO();
                 entity.setUserId(userId);
                 entity.setRoleId(roleId);
@@ -337,7 +337,7 @@ public class PermissionServiceImpl implements PermissionService {
             }));
         }
         if (!CollectionUtil.isEmpty(deleteMenuIds)) {
-            userRoleMapper.deleteListByUserIdAndRoleIdIds(userId, deleteMenuIds);
+            platformUserRoleMapper.deleteListByUserIdAndRoleIdIds(userId, deleteMenuIds);
         }
         // 发送刷新消息. 注意，需要事务提交后，在进行发送刷新消息。不然 db 还未提交，结果缓存先刷新了
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -359,9 +359,9 @@ public class PermissionServiceImpl implements PermissionService {
     @Transactional(rollbackFor = Exception.class)
     public void processRoleDeleted(Long roleId) {
         // 标记删除 UserRole
-        userRoleMapper.deleteListByRoleId(roleId);
+        platformUserRoleMapper.deleteListByRoleId(roleId);
         // 标记删除 RoleMenu
-        roleMenuMapper.deleteListByRoleId(roleId);
+        platformRoleMenuMapper.deleteListByRoleId(roleId);
         // 发送刷新消息. 注意，需要事务提交后，在进行发送刷新消息。不然 db 还未提交，结果缓存先刷新了
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 
@@ -377,7 +377,7 @@ public class PermissionServiceImpl implements PermissionService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void processMenuDeleted(Long menuId) {
-        roleMenuMapper.deleteListByMenuId(menuId);
+        platformRoleMenuMapper.deleteListByMenuId(menuId);
         // 发送刷新消息. 注意，需要事务提交后，在进行发送刷新消息。不然 db 还未提交，结果缓存先刷新了
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 
@@ -392,7 +392,7 @@ public class PermissionServiceImpl implements PermissionService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void processUserDeleted(Long userId) {
-        userRoleMapper.deleteListByUserId(userId);
+        platformUserRoleMapper.deleteListByUserId(userId);
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 
             @Override

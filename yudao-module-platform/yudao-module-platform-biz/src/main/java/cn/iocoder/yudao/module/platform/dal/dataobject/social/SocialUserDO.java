@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.dal.dataobject.social;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.module.platform.enums.social.SocialTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.social.SocialTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;

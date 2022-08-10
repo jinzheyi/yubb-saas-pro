@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.convert.tenant;
 
 import cn.iocoder.yudao.module.platform.api.tenant.dto.menu.TenantMenuListReqDTO;
 import cn.iocoder.yudao.module.platform.api.tenant.dto.menu.TenantMenuRespDTO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.menu.*;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.*;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantMenuDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

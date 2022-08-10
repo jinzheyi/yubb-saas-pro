@@ -40,7 +40,7 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button size="mini" type="text" icon="el-icon-delete" @click="handleForceLogout(scope.row)"
-            v-hasPermi="['system:oauth2-token:delete']">强退</el-button>
+            v-hasPermi="['center:oauth2-token:delete']">强退</el-button>
         </template>
       </el-table-column>
     </el-table>

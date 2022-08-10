@@ -5,13 +5,13 @@ import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
-import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.dept.DeptCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.dept.DeptListReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.dept.DeptUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptListReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.dept.DeptUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.dept.DeptConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.platform.dal.mysql.dept.DeptMapper;
-import cn.iocoder.yudao.module.platform.enums.dept.DeptIdEnum;
+import cn.iocoder.yudao.module.platform.dal.mysql.dept.PlatformDeptMapper;
+import cn.iocoder.yudao.framework.common.enums.dept.DeptIdEnum;
 import cn.iocoder.yudao.module.platform.mq.producer.dept.DeptProducer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
@@ -27,7 +27,7 @@ import javax.annotation.Resource;
 import java.util.*;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 部门 Service 实现类
@@ -67,7 +67,7 @@ public class DeptServiceImpl implements DeptService {
     private volatile Date maxUpdateTime;
 
     @Resource
-    private DeptMapper deptMapper;
+    private PlatformDeptMapper platformDeptMapper;
 
     @Resource
     private DeptProducer deptProducer;
@@ -117,13 +117,13 @@ public class DeptServiceImpl implements DeptService {
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
             log.info("[loadMenuIfUpdate][首次加载全量部门]");
         } else { // 判断数据库中是否有更新的部门
-            if (deptMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
+            if (platformDeptMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
                 return null;
             }
             log.info("[loadMenuIfUpdate][增量加载全量部门]");
         }
         // 第二步，如果有更新，则从数据库加载所有部门
-        return deptMapper.selectList();
+        return platformDeptMapper.selectList();
     }
 
     @Override
@@ -135,7 +135,7 @@ public class DeptServiceImpl implements DeptService {
         checkCreateOrUpdate(null, reqVO.getParentId(), reqVO.getName());
         // 插入部门
         DeptDO dept = DeptConvert.INSTANCE.convert(reqVO);
-        deptMapper.insert(dept);
+        platformDeptMapper.insert(dept);
         // 发送刷新消息
         deptProducer.sendDeptRefreshMessage();
         return dept.getId();
@@ -150,7 +150,7 @@ public class DeptServiceImpl implements DeptService {
         checkCreateOrUpdate(reqVO.getId(), reqVO.getParentId(), reqVO.getName());
         // 更新部门
         DeptDO updateObj = DeptConvert.INSTANCE.convert(reqVO);
-        deptMapper.updateById(updateObj);
+        platformDeptMapper.updateById(updateObj);
         // 发送刷新消息
         deptProducer.sendDeptRefreshMessage();
     }
@@ -160,18 +160,18 @@ public class DeptServiceImpl implements DeptService {
         // 校验是否存在
         checkDeptExists(id);
         // 校验是否有子部门
-        if (deptMapper.selectCountByParentId(id) > 0) {
+        if (platformDeptMapper.selectCountByParentId(id) > 0) {
             throw ServiceExceptionUtil.exception(DEPT_EXITS_CHILDREN);
         }
         // 删除部门
-        deptMapper.deleteById(id);
+        platformDeptMapper.deleteById(id);
         // 发送刷新消息
         deptProducer.sendDeptRefreshMessage();
     }
 
     @Override
     public List<DeptDO> getSimpleDepts(DeptListReqVO reqVO) {
-        return deptMapper.selectList(reqVO);
+        return platformDeptMapper.selectList(reqVO);
     }
 
     @Override
@@ -230,7 +230,7 @@ public class DeptServiceImpl implements DeptService {
             throw ServiceExceptionUtil.exception(DEPT_PARENT_ERROR);
         }
         // 父岗位不存在
-        DeptDO dept = deptMapper.selectById(parentId);
+        DeptDO dept = platformDeptMapper.selectById(parentId);
         if (dept == null) {
             throw ServiceExceptionUtil.exception(DEPT_PARENT_NOT_EXITS);
         }
@@ -249,14 +249,14 @@ public class DeptServiceImpl implements DeptService {
         if (id == null) {
             return;
         }
-        DeptDO dept = deptMapper.selectById(id);
+        DeptDO dept = platformDeptMapper.selectById(id);
         if (dept == null) {
             throw ServiceExceptionUtil.exception(DEPT_NOT_FOUND);
         }
     }
 
     private void checkDeptNameUnique(Long id, Long parentId, String name) {
-        DeptDO menu = deptMapper.selectByParentIdAndName(parentId, name);
+        DeptDO menu = platformDeptMapper.selectByParentIdAndName(parentId, name);
         if (menu == null) {
             return;
         }
@@ -271,12 +271,12 @@ public class DeptServiceImpl implements DeptService {
 
     @Override
     public List<DeptDO> getDepts(Collection<Long> ids) {
-        return deptMapper.selectBatchIds(ids);
+        return platformDeptMapper.selectBatchIds(ids);
     }
 
     @Override
     public DeptDO getDept(Long id) {
-        return deptMapper.selectById(id);
+        return platformDeptMapper.selectById(id);
     }
 
     @Override
@@ -285,7 +285,7 @@ public class DeptServiceImpl implements DeptService {
             return;
         }
         // 获得科室信息
-        List<DeptDO> depts = deptMapper.selectBatchIds(ids);
+        List<DeptDO> depts = platformDeptMapper.selectBatchIds(ids);
         Map<Long, DeptDO> deptMap = CollectionUtils.convertMap(depts, DeptDO::getId);
         // 校验
         ids.forEach(id -> {
@@ -301,7 +301,7 @@ public class DeptServiceImpl implements DeptService {
 
     @Override
     public List<DeptDO> getSimpleDepts(Collection<Long> ids) {
-        return deptMapper.selectBatchIds(ids);
+        return platformDeptMapper.selectBatchIds(ids);
     }
 
 }

@@ -1,0 +1,34 @@
+package cn.iocoder.yudao.module.platform.api.sms;
+
+import cn.iocoder.yudao.module.platform.api.sms.dto.send.SmsSendSingleToUserReqDTO;
+import cn.iocoder.yudao.module.platform.service.sms.SmsSendService;
+import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
+
+import javax.annotation.Resource;
+import java.util.Map;
+
+/**
+ * 短信发送 API 接口
+ *
+ * @author 芋道源码
+ */
+@Service
+@Validated
+public class PlatformSmsSendApiImpl implements SmsSendApi {
+
+    @Resource
+    private SmsSendService smsSendService;
+
+    @Override
+    public Long sendSingleSmsToAdmin(SmsSendSingleToUserReqDTO reqDTO) {
+        return smsSendService.sendSingleSmsToAdmin(reqDTO.getMobile(), reqDTO.getUserId(),
+                reqDTO.getTemplateCode(), reqDTO.getTemplateParams());
+    }
+
+    @Override
+    public Long sendSingleSms(String mobile, Long userId, Integer userType, String templateCode, Map<String, Object> templateParams) {
+        return smsSendService.sendSingleSms(mobile, userId, userType, templateCode, templateParams);
+    }
+
+}

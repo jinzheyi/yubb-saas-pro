@@ -4,12 +4,13 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.map.MapUtil;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
+import cn.iocoder.yudao.module.platform.api.sms.SmsSendApi;
 import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeCheckReqDTO;
 import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeSendReqDTO;
 import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeUseReqDTO;
 import cn.iocoder.yudao.module.system.dal.dataobject.sms.SmsCodeDO;
 import cn.iocoder.yudao.module.system.dal.mysql.sms.SmsCodeMapper;
-import cn.iocoder.yudao.module.system.enums.sms.SmsSceneEnum;
+import cn.iocoder.yudao.framework.common.enums.sms.SmsSceneEnum;
 import cn.iocoder.yudao.module.system.framework.sms.SmsCodeProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -29,6 +30,7 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 @Validated
 public class SmsCodeServiceImpl implements SmsCodeService {
 
+    //TODO 这里临时启用跟平台一样的配置，后期可以改成一个租户一个配置
     @Resource
     private SmsCodeProperties smsCodeProperties;
 
@@ -36,7 +38,7 @@ public class SmsCodeServiceImpl implements SmsCodeService {
     private SmsCodeMapper smsCodeMapper;
 
     @Resource
-    private SmsSendService smsSendService;
+    private SmsSendApi smsSendApi;
 
     @Override
     public void sendSmsCode(SmsCodeSendReqDTO reqDTO) {
@@ -45,7 +47,7 @@ public class SmsCodeServiceImpl implements SmsCodeService {
         // 创建验证码
         String code = createSmsCode(reqDTO.getMobile(), reqDTO.getScene(), reqDTO.getCreateIp());
         // 发送验证码
-        smsSendService.sendSingleSms(reqDTO.getMobile(), null, null,
+        smsSendApi.sendSingleSms(reqDTO.getMobile(), null, null,
                 sceneEnum.getTemplateCode(), MapUtil.of("code", code));
     }
 

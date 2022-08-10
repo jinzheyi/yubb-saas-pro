@@ -4,7 +4,7 @@ import cn.iocoder.yudao.framework.errorcode.core.generator.ErrorCodeAutoGenerato
 import cn.iocoder.yudao.framework.errorcode.core.generator.ErrorCodeAutoGeneratorImpl;
 import cn.iocoder.yudao.framework.errorcode.core.loader.ErrorCodeLoader;
 import cn.iocoder.yudao.framework.errorcode.core.loader.ErrorCodeLoaderImpl;
-import cn.iocoder.yudao.module.system.api.errorcode.ErrorCodeApi;
+import cn.iocoder.yudao.module.platform.api.errorcode.ErrorCodeApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

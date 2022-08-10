@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.service.sms;
 
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.log.SmsLogExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.log.SmsLogPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.log.SmsLogExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.log.SmsLogPageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsLogDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsTemplateDO;

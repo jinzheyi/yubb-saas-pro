@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.member.controller.app.auth.vo;
 
 import cn.iocoder.yudao.framework.common.validation.InEnum;
 import cn.iocoder.yudao.framework.common.validation.Mobile;
-import cn.iocoder.yudao.module.system.enums.sms.SmsSceneEnum;
+import cn.iocoder.yudao.framework.common.enums.sms.SmsSceneEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

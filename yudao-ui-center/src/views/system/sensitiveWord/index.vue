@@ -30,11 +30,11 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button type="primary" plain icon="el-icon-plus" size="mini" @click="handleAdd"
-                   v-hasPermi="['system:sensitive-word:create']">新增</el-button>
+                   v-hasPermi="['center:sensitive-word:create']">新增</el-button>
       </el-col>
       <el-col :span="1.5">
         <el-button type="warning" plain icon="el-icon-download" size="mini" @click="handleExport"
-                   :loading="exportLoading" v-hasPermi="['system:sensitive-word:export']">导出</el-button>
+                   :loading="exportLoading" v-hasPermi="['center:sensitive-word:export']">导出</el-button>
       </el-col>
       <el-col :span="1.5">
         <el-button type="success" plain icon="el-icon-document-checked" size="mini" @click="handleTest">测试</el-button>
@@ -67,10 +67,10 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button size="mini" type="text" icon="el-icon-edit" @click="handleUpdate(scope.row)"
-                     v-hasPermi="['system:sensitive-word:update']">修改
+                     v-hasPermi="['center:sensitive-word:update']">修改
           </el-button>
           <el-button size="mini" type="text" icon="el-icon-delete" @click="handleDelete(scope.row)"
-                     v-hasPermi="['system:sensitive-word:delete']">删除
+                     v-hasPermi="['center:sensitive-word:delete']">删除
           </el-button>
         </template>
       </el-table-column>

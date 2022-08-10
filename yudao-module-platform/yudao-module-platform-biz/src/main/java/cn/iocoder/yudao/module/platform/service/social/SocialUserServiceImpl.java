@@ -9,7 +9,7 @@ import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserBindDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.social.SocialUserBindMapper;
 import cn.iocoder.yudao.module.platform.dal.mysql.social.SocialUserMapper;
-import cn.iocoder.yudao.module.platform.enums.social.SocialTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.social.SocialTypeEnum;
 import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.model.AuthCallback;
 import me.zhyd.oauth.model.AuthResponse;
@@ -27,7 +27,7 @@ import java.util.List;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 社交用户 Service 实现类

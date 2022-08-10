@@ -9,7 +9,7 @@ import cn.iocoder.yudao.module.system.controller.admin.auth.vo.*;
 import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.system.enums.permission.MenuIdEnum;
+import cn.iocoder.yudao.framework.common.enums.permission.MenuIdEnum;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 import org.slf4j.LoggerFactory;

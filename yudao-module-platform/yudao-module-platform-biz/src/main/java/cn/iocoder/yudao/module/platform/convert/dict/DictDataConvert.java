@@ -2,12 +2,11 @@ package cn.iocoder.yudao.module.platform.convert.dict;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.api.dict.dto.DictDataRespDTO;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.data.*;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.data.*;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dict.DictDataDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
-import java.util.Collection;
 import java.util.List;
 
 @Mapper

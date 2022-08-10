@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.platform.service.social;
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserDO;
-import cn.iocoder.yudao.module.platform.enums.social.SocialTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.social.SocialTypeEnum;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;

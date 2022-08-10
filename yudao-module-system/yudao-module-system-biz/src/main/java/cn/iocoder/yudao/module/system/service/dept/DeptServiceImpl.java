@@ -11,7 +11,7 @@ import cn.iocoder.yudao.module.system.controller.admin.dept.vo.dept.DeptUpdateRe
 import cn.iocoder.yudao.module.system.convert.dept.DeptConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.system.dal.mysql.dept.DeptMapper;
-import cn.iocoder.yudao.module.system.enums.dept.DeptIdEnum;
+import cn.iocoder.yudao.framework.common.enums.dept.DeptIdEnum;
 import cn.iocoder.yudao.module.system.mq.producer.dept.DeptProducer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;

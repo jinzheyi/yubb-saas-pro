@@ -6,17 +6,17 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.module.platform.enums.permission.DataScopeEnum;
+import cn.iocoder.yudao.framework.common.enums.permission.DataScopeEnum;
 import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.RoleCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.RoleExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.RolePageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.RoleUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RolePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.permission.RoleConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
-import cn.iocoder.yudao.module.platform.dal.mysql.permission.RoleMapper;
-import cn.iocoder.yudao.module.platform.enums.permission.RoleCodeEnum;
-import cn.iocoder.yudao.module.platform.enums.permission.RoleTypeEnum;
+import cn.iocoder.yudao.module.platform.dal.mysql.permission.PlatformRoleMapper;
+import cn.iocoder.yudao.framework.common.enums.permission.RoleCodeEnum;
+import cn.iocoder.yudao.framework.common.enums.permission.RoleTypeEnum;
 import cn.iocoder.yudao.module.platform.mq.producer.permission.RoleProducer;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.Getter;
@@ -36,7 +36,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 角色 Service 实现类
@@ -71,7 +71,7 @@ public class RoleServiceImpl implements RoleService {
     private PermissionService permissionService;
 
     @Resource
-    private RoleMapper roleMapper;
+    private PlatformRoleMapper platformRoleMapper;
 
     @Resource
     private RoleProducer roleProducer;
@@ -116,13 +116,13 @@ public class RoleServiceImpl implements RoleService {
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
             log.info("[loadRoleIfUpdate][首次加载全量角色]");
         } else { // 判断数据库中是否有更新的角色
-            if (roleMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
+            if (platformRoleMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
                 return null;
             }
             log.info("[loadRoleIfUpdate][增量加载全量角色]");
         }
         // 第二步，如果有更新，则从数据库加载所有角色
-        return roleMapper.selectList();
+        return platformRoleMapper.selectList();
     }
 
     @Override
@@ -135,7 +135,7 @@ public class RoleServiceImpl implements RoleService {
         role.setType(ObjectUtil.defaultIfNull(type, RoleTypeEnum.CUSTOM.getType()));
         role.setStatus(CommonStatusEnum.ENABLE.getStatus());
         role.setDataScope(DataScopeEnum.ALL.getScope()); // 默认可查看所有数据。原因是，可能一些项目不需要项目权限
-        roleMapper.insert(role);
+        platformRoleMapper.insert(role);
         // 发送刷新消息
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -156,7 +156,7 @@ public class RoleServiceImpl implements RoleService {
 
         // 更新到数据库
         RoleDO updateObject = RoleConvert.INSTANCE.convert(reqVO);
-        roleMapper.updateById(updateObject);
+        platformRoleMapper.updateById(updateObject);
         // 发送刷新消息
         roleProducer.sendRoleRefreshMessage();
     }
@@ -169,7 +169,7 @@ public class RoleServiceImpl implements RoleService {
         RoleDO updateObject = new RoleDO();
         updateObject.setId(id);
         updateObject.setStatus(status);
-        roleMapper.updateById(updateObject);
+        platformRoleMapper.updateById(updateObject);
         // 发送刷新消息
         roleProducer.sendRoleRefreshMessage();
     }
@@ -183,7 +183,7 @@ public class RoleServiceImpl implements RoleService {
         updateObject.setId(id);
         updateObject.setDataScope(dataScope);
         updateObject.setDataScopeDeptIds(dataScopeDeptIds);
-        roleMapper.updateById(updateObject);
+        platformRoleMapper.updateById(updateObject);
         // 发送刷新消息
         roleProducer.sendRoleRefreshMessage();
     }
@@ -194,7 +194,7 @@ public class RoleServiceImpl implements RoleService {
         // 校验是否可以更新
         this.checkUpdateRole(id);
         // 标记删除
-        roleMapper.deleteById(id);
+        platformRoleMapper.deleteById(id);
         // 删除相关数据
         permissionService.processRoleDeleted(id);
         // 发送刷新消息. 注意，需要事务提交后，在进行发送刷新消息。不然 db 还未提交，结果缓存先刷新了
@@ -216,9 +216,9 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public List<RoleDO> getRoles(@Nullable Collection<Integer> statuses) {
         if (CollUtil.isEmpty(statuses)) {
-    		return roleMapper.selectList();
+    		return platformRoleMapper.selectList();
 		}
-        return roleMapper.selectListByStatus(statuses);
+        return platformRoleMapper.selectListByStatus(statuses);
     }
 
     @Override
@@ -240,17 +240,17 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public RoleDO getRole(Long id) {
-        return roleMapper.selectById(id);
+        return platformRoleMapper.selectById(id);
     }
 
     @Override
     public PageResult<RoleDO> getRolePage(RolePageReqVO reqVO) {
-        return roleMapper.selectPage(reqVO);
+        return platformRoleMapper.selectPage(reqVO);
     }
 
     @Override
     public List<RoleDO> getRoleList(RoleExportReqVO reqVO) {
-        return roleMapper.selectList(reqVO);
+        return platformRoleMapper.selectList(reqVO);
     }
 
     /**
@@ -270,7 +270,7 @@ public class RoleServiceImpl implements RoleService {
             throw exception(ROLE_ADMIN_CODE_ERROR, code);
         }
         // 1. 该 name 名字被其它角色所使用
-        RoleDO role = roleMapper.selectByName(name);
+        RoleDO role = platformRoleMapper.selectByName(name);
         if (role != null && !role.getId().equals(id)) {
             throw exception(ROLE_NAME_DUPLICATE, name);
         }
@@ -279,7 +279,7 @@ public class RoleServiceImpl implements RoleService {
             return;
         }
         // 该 code 编码被其它角色所使用
-        role = roleMapper.selectByCode(code);
+        role = platformRoleMapper.selectByCode(code);
         if (role != null && !role.getId().equals(id)) {
             throw exception(ROLE_CODE_DUPLICATE, code);
         }
@@ -292,7 +292,7 @@ public class RoleServiceImpl implements RoleService {
      */
     @VisibleForTesting
     public void checkUpdateRole(Long id) {
-        RoleDO roleDO = roleMapper.selectById(id);
+        RoleDO roleDO = platformRoleMapper.selectById(id);
         if (roleDO == null) {
             throw exception(ROLE_NOT_EXISTS);
         }
@@ -308,7 +308,7 @@ public class RoleServiceImpl implements RoleService {
             return;
         }
         // 获得角色信息
-        List<RoleDO> roles = roleMapper.selectBatchIds(ids);
+        List<RoleDO> roles = platformRoleMapper.selectBatchIds(ids);
         Map<Long, RoleDO> roleMap = CollectionUtils.convertMap(roles, RoleDO::getId);
         // 校验
         ids.forEach(id -> {

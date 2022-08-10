@@ -1,8 +1,8 @@
 package cn.iocoder.yudao.module.platform.convert.oauth2;
 
-import cn.iocoder.yudao.module.platform.controller.admin.oauth2.vo.user.OAuth2UserInfoRespVO;
-import cn.iocoder.yudao.module.platform.controller.admin.oauth2.vo.user.OAuth2UserUpdateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.user.OAuth2UserInfoRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.user.OAuth2UserUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;

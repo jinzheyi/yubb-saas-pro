@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.platform.dal.dataobject.user;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.framework.mybatis.core.type.JsonLongSetTypeHandler;
-import cn.iocoder.yudao.module.platform.enums.common.SexEnum;
+import cn.iocoder.yudao.framework.common.enums.common.SexEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;

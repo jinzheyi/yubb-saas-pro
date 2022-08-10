@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.platform.convert.user;
 
 import cn.iocoder.yudao.module.platform.api.user.dto.AdminUserRespDTO;
-import cn.iocoder.yudao.module.platform.controller.admin.user.vo.profile.UserProfileRespVO;
-import cn.iocoder.yudao.module.platform.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.user.vo.user.*;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdatePasswordReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;

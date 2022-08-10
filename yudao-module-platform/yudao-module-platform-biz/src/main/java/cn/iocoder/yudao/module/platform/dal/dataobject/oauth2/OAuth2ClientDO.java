@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.dal.dataobject.oauth2;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.module.platform.enums.oauth2.OAuth2GrantTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.oauth2.OAuth2GrantTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;

@@ -2,8 +2,8 @@ package cn.iocoder.yudao.module.system.dal.dataobject.logger;
 
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum;
+import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -24,7 +24,7 @@ import java.util.Map;
 @KeySequence("system_operate_log_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class OperateLogDO extends BaseDO {
+public class OperateLogDO extends TenantBaseDO {
 
     /**
      * {@link #javaMethodArgs} 的最大长度

@@ -1,9 +1,9 @@
 package cn.iocoder.yudao.module.platform.convert.notice;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.notice.vo.NoticeCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.notice.vo.NoticeRespVO;
-import cn.iocoder.yudao.module.platform.controller.admin.notice.vo.NoticeUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticeCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticeRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticeUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.notice.NoticeDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

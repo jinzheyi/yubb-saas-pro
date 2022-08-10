@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.service.oauth2;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 
 import java.util.List;

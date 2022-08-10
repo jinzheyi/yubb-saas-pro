@@ -1,8 +1,8 @@
 package cn.iocoder.yudao.module.platform.service.permission;
 
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.menu.MenuCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.menu.MenuListReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.menu.MenuUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuListReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
 
 import java.util.Collection;

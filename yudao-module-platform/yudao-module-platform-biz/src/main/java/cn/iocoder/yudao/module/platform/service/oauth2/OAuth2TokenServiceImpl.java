@@ -6,12 +6,12 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
-import cn.iocoder.yudao.module.platform.controller.admin.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2ClientDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2RefreshTokenDO;
-import cn.iocoder.yudao.module.platform.dal.mysql.oauth2.OAuth2AccessTokenMapper;
-import cn.iocoder.yudao.module.platform.dal.mysql.oauth2.OAuth2RefreshTokenMapper;
+import cn.iocoder.yudao.module.platform.dal.mysql.oauth2.PlatformOAuth2AccessTokenMapper;
+import cn.iocoder.yudao.module.platform.dal.mysql.oauth2.PlatformOAuth2RefreshTokenMapper;
 import cn.iocoder.yudao.module.platform.dal.redis.oauth2.OAuth2AccessTokenRedisDAO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,9 +32,9 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 public class OAuth2TokenServiceImpl implements OAuth2TokenService {
 
     @Resource
-    private OAuth2AccessTokenMapper oauth2AccessTokenMapper;
+    private PlatformOAuth2AccessTokenMapper oauth2AccessTokenMapperPlatform;
     @Resource
-    private OAuth2RefreshTokenMapper oauth2RefreshTokenMapper;
+    private PlatformOAuth2RefreshTokenMapper oauth2RefreshTokenMapperPlatform;
 
     @Resource
     private OAuth2AccessTokenRedisDAO oauth2AccessTokenRedisDAO;
@@ -55,7 +55,7 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
     @Override
     public OAuth2AccessTokenDO refreshAccessToken(String refreshToken, String clientId) {
         // 查询访问令牌
-        OAuth2RefreshTokenDO refreshTokenDO = oauth2RefreshTokenMapper.selectByRefreshToken(refreshToken);
+        OAuth2RefreshTokenDO refreshTokenDO = oauth2RefreshTokenMapperPlatform.selectByRefreshToken(refreshToken);
         if (refreshTokenDO == null) {
             throw exception0(GlobalErrorCodeConstants.BAD_REQUEST.getCode(), "无效的刷新令牌");
         }
@@ -67,15 +67,15 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
         }
 
         // 移除相关的访问令牌
-        List<OAuth2AccessTokenDO> accessTokenDOs = oauth2AccessTokenMapper.selectListByRefreshToken(refreshToken);
+        List<OAuth2AccessTokenDO> accessTokenDOs = oauth2AccessTokenMapperPlatform.selectListByRefreshToken(refreshToken);
         if (CollUtil.isNotEmpty(accessTokenDOs)) {
-            oauth2AccessTokenMapper.deleteBatchIds(convertSet(accessTokenDOs, OAuth2AccessTokenDO::getId));
+            oauth2AccessTokenMapperPlatform.deleteBatchIds(convertSet(accessTokenDOs, OAuth2AccessTokenDO::getId));
             oauth2AccessTokenRedisDAO.deleteList(convertSet(accessTokenDOs, OAuth2AccessTokenDO::getAccessToken));
         }
 
         // 已过期的情况下，删除刷新令牌
         if (DateUtils.isExpired(refreshTokenDO.getExpiresTime())) {
-            oauth2RefreshTokenMapper.deleteById(refreshTokenDO.getId());
+            oauth2RefreshTokenMapperPlatform.deleteById(refreshTokenDO.getId());
             throw exception0(GlobalErrorCodeConstants.UNAUTHORIZED.getCode(), "刷新令牌已过期");
         }
 
@@ -92,7 +92,7 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
         }
 
         // 获取不到，从 MySQL 中获取
-        accessTokenDO = oauth2AccessTokenMapper.selectByAccessToken(accessToken);
+        accessTokenDO = oauth2AccessTokenMapperPlatform.selectByAccessToken(accessToken);
         // 如果在 MySQL 存在，则往 Redis 中写入
         if (accessTokenDO != null && !DateUtils.isExpired(accessTokenDO.getExpiresTime())) {
             oauth2AccessTokenRedisDAO.set(accessTokenDO);
@@ -115,20 +115,20 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
     @Override
     public OAuth2AccessTokenDO removeAccessToken(String accessToken) {
         // 删除访问令牌
-        OAuth2AccessTokenDO accessTokenDO = oauth2AccessTokenMapper.selectByAccessToken(accessToken);
+        OAuth2AccessTokenDO accessTokenDO = oauth2AccessTokenMapperPlatform.selectByAccessToken(accessToken);
         if (accessTokenDO == null) {
             return null;
         }
-        oauth2AccessTokenMapper.deleteById(accessTokenDO.getId());
+        oauth2AccessTokenMapperPlatform.deleteById(accessTokenDO.getId());
         oauth2AccessTokenRedisDAO.delete(accessToken);
         // 删除刷新令牌
-        oauth2RefreshTokenMapper.deleteByRefreshToken(accessTokenDO.getRefreshToken());
+        oauth2RefreshTokenMapperPlatform.deleteByRefreshToken(accessTokenDO.getRefreshToken());
         return accessTokenDO;
     }
 
     @Override
     public PageResult<OAuth2AccessTokenDO> getAccessTokenPage(OAuth2AccessTokenPageReqVO reqVO) {
-        return oauth2AccessTokenMapper.selectPage(reqVO);
+        return oauth2AccessTokenMapperPlatform.selectPage(reqVO);
     }
 
     private OAuth2AccessTokenDO createOAuth2AccessToken(OAuth2RefreshTokenDO refreshTokenDO, OAuth2ClientDO clientDO) {
@@ -137,7 +137,7 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
                 .setClientId(clientDO.getClientId()).setScopes(refreshTokenDO.getScopes())
                 .setRefreshToken(refreshTokenDO.getRefreshToken())
                 .setExpiresTime(DateUtils.addDate(Calendar.SECOND, clientDO.getAccessTokenValiditySeconds()));
-        oauth2AccessTokenMapper.insert(accessTokenDO);
+        oauth2AccessTokenMapperPlatform.insert(accessTokenDO);
         // 记录到 Redis 中
         oauth2AccessTokenRedisDAO.set(accessTokenDO);
         return accessTokenDO;
@@ -148,7 +148,7 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
                 .setUserId(userId).setUserType(userType)
                 .setClientId(clientDO.getClientId()).setScopes(scopes)
                 .setExpiresTime(DateUtils.addDate(Calendar.SECOND, clientDO.getRefreshTokenValiditySeconds()));
-        oauth2RefreshTokenMapper.insert(refreshToken);
+        oauth2RefreshTokenMapperPlatform.insert(refreshToken);
         return refreshToken;
     }
 

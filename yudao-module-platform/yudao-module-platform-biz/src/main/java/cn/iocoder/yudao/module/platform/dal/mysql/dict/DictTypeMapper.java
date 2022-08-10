@@ -3,9 +3,8 @@ package cn.iocoder.yudao.module.platform.dal.mysql.dict;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.type.DictTypeExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.type.DictTypePageReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dict.DictDataDO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.type.DictTypeExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.type.DictTypePageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dict.DictTypeDO;
 import org.apache.ibatis.annotations.Mapper;
 

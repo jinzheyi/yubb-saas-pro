@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.dal.dataobject.errorcode;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.module.platform.enums.errorcode.ErrorCodeTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.errorcode.ErrorCodeTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;

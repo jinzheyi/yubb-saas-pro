@@ -142,4 +142,7 @@ public interface ErrorCodeConstants {
     ErrorCode OAUTH2_CODE_NOT_EXISTS = new ErrorCode(1002022000, "code 不存在");
     ErrorCode OAUTH2_CODE_EXPIRE = new ErrorCode(1002022000, "code 已过期");
 
+    // ========== 租户菜单 ========================
+    ErrorCode TENANT_MENU_USED = new ErrorCode(1002023000, "租户正在使用该菜单，请给租户重新设置没有选择该菜单的套餐后再尝试删除");
+
 }

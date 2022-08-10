@@ -2,8 +2,8 @@ package cn.iocoder.yudao.framework.errorcode.core.loader;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
-import cn.iocoder.yudao.module.system.api.errorcode.ErrorCodeApi;
-import cn.iocoder.yudao.module.system.api.errorcode.dto.ErrorCodeRespDTO;
+import cn.iocoder.yudao.module.platform.api.errorcode.ErrorCodeApi;
+import cn.iocoder.yudao.module.platform.api.errorcode.dto.ErrorCodeRespDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

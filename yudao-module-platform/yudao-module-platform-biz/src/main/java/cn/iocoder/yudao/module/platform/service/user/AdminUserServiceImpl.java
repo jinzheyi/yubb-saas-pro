@@ -9,23 +9,21 @@ import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.module.infra.api.file.FileApi;
-import cn.iocoder.yudao.module.platform.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.user.vo.user.*;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdatePasswordReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
 import cn.iocoder.yudao.module.platform.convert.user.UserConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.UserPostDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.platform.dal.mysql.dept.UserPostMapper;
+import cn.iocoder.yudao.module.platform.dal.mysql.dept.PlatformUserPostMapper;
 import cn.iocoder.yudao.module.platform.dal.mysql.user.AdminUserMapper;
 import cn.iocoder.yudao.module.platform.service.dept.DeptService;
 import cn.iocoder.yudao.module.platform.service.dept.PostService;
 import cn.iocoder.yudao.module.platform.service.permission.PermissionService;
-import cn.iocoder.yudao.module.platform.service.tenant.TenantService;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +35,7 @@ import java.util.*;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 后台用户 Service 实现类
@@ -63,7 +61,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     private PasswordEncoder passwordEncoder;
 
     @Resource
-    private UserPostMapper userPostMapper;
+    private PlatformUserPostMapper platformUserPostMapper;
 
     @Resource
     private FileApi fileApi;
@@ -81,7 +79,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         userMapper.insert(user);
         // 插入关联岗位
         if (CollectionUtil.isNotEmpty(user.getPostIds())) {
-            userPostMapper.insertBatch(convertList(user.getPostIds(),
+            platformUserPostMapper.insertBatch(convertList(user.getPostIds(),
                     postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
         return user.getId();
@@ -102,18 +100,18 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     private void updateUserPost(UserUpdateReqVO reqVO, AdminUserDO updateObj) {
         Long userId = reqVO.getId();
-        Set<Long> dbPostIds = convertSet(userPostMapper.selectListByUserId(userId), UserPostDO::getPostId);
+        Set<Long> dbPostIds = convertSet(platformUserPostMapper.selectListByUserId(userId), UserPostDO::getPostId);
         // 计算新增和删除的岗位编号
         Set<Long> postIds = updateObj.getPostIds();
         Collection<Long> createPostIds = CollUtil.subtract(postIds, dbPostIds);
         Collection<Long> deletePostIds = CollUtil.subtract(dbPostIds, postIds);
         // 执行新增和删除。对于已经授权的菜单，不用做任何处理
         if (!CollectionUtil.isEmpty(createPostIds)) {
-            userPostMapper.insertBatch(convertList(createPostIds,
+            platformUserPostMapper.insertBatch(convertList(createPostIds,
                     postId -> new UserPostDO().setUserId(userId).setPostId(postId)));
         }
         if (!CollectionUtil.isEmpty(deletePostIds)) {
-            userPostMapper.deleteByUserIdAndPostId(userId, deletePostIds);
+            platformUserPostMapper.deleteByUserIdAndPostId(userId, deletePostIds);
         }
     }
 
@@ -187,7 +185,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         // 删除用户关联数据
         permissionService.processUserDeleted(id);
         // 删除用户岗位
-        userPostMapper.deleteByUserId(id);
+        platformUserPostMapper.deleteByUserId(id);
     }
 
     @Override
@@ -223,7 +221,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         if (CollUtil.isEmpty(postIds)) {
             return Collections.emptyList();
         }
-        Set<Long> userIds = convertSet(userPostMapper.selectListByPostIds(postIds), UserPostDO::getUserId);
+        Set<Long> userIds = convertSet(platformUserPostMapper.selectListByPostIds(postIds), UserPostDO::getUserId);
         if (CollUtil.isEmpty(userIds)) {
             return Collections.emptyList();
         }

@@ -4,14 +4,14 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.menu.MenuCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.menu.MenuListReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.menu.MenuUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuListReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.MenuUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.permission.MenuConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
-import cn.iocoder.yudao.module.platform.dal.mysql.permission.MenuMapper;
-import cn.iocoder.yudao.module.platform.enums.permission.MenuIdEnum;
-import cn.iocoder.yudao.module.platform.enums.permission.MenuTypeEnum;
+import cn.iocoder.yudao.module.platform.dal.mysql.permission.PlatformMenuMapper;
+import cn.iocoder.yudao.framework.common.enums.permission.MenuIdEnum;
+import cn.iocoder.yudao.framework.common.enums.permission.MenuTypeEnum;
 import cn.iocoder.yudao.module.platform.mq.producer.permission.MenuProducer;
 import cn.iocoder.yudao.module.platform.service.tenant.TenantService;
 import com.google.common.annotations.VisibleForTesting;
@@ -31,7 +31,7 @@ import javax.annotation.Resource;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 菜单 Service 实现
@@ -69,7 +69,7 @@ public class MenuServiceImpl implements MenuService {
     private volatile Date maxUpdateTime;
 
     @Resource
-    private MenuMapper menuMapper;
+    private PlatformMenuMapper platformMenuMapper;
     @Resource
     private PermissionService permissionService;
     @Resource
@@ -123,13 +123,13 @@ public class MenuServiceImpl implements MenuService {
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
             log.info("[loadMenuIfUpdate][首次加载全量菜单]");
         } else { // 判断数据库中是否有更新的菜单
-            if (menuMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
+            if (platformMenuMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
                 return null;
             }
             log.info("[loadMenuIfUpdate][增量加载全量菜单]");
         }
         // 第二步，如果有更新，则从数据库加载所有菜单
-        return menuMapper.selectList();
+        return platformMenuMapper.selectList();
     }
 
     @Override
@@ -141,7 +141,7 @@ public class MenuServiceImpl implements MenuService {
         // 插入数据库
         MenuDO menu = MenuConvert.INSTANCE.convert(reqVO);
         initMenuProperty(menu);
-        menuMapper.insert(menu);
+        platformMenuMapper.insert(menu);
         // 发送刷新消息
         menuProducer.sendMenuRefreshMessage();
         // 返回
@@ -151,7 +151,7 @@ public class MenuServiceImpl implements MenuService {
     @Override
     public void updateMenu(MenuUpdateReqVO reqVO) {
         // 校验更新的菜单是否存在
-        if (menuMapper.selectById(reqVO.getId()) == null) {
+        if (platformMenuMapper.selectById(reqVO.getId()) == null) {
             throw ServiceExceptionUtil.exception(MENU_NOT_EXISTS);
         }
         // 校验父菜单存在
@@ -161,7 +161,7 @@ public class MenuServiceImpl implements MenuService {
         // 更新到数据库
         MenuDO updateObject = MenuConvert.INSTANCE.convert(reqVO);
         initMenuProperty(updateObject);
-        menuMapper.updateById(updateObject);
+        platformMenuMapper.updateById(updateObject);
         // 发送刷新消息
         menuProducer.sendMenuRefreshMessage();
     }
@@ -175,15 +175,15 @@ public class MenuServiceImpl implements MenuService {
     @Override
     public void deleteMenu(Long menuId) {
         // 校验是否还有子菜单
-        if (menuMapper.selectCountByParentId(menuId) > 0) {
+        if (platformMenuMapper.selectCountByParentId(menuId) > 0) {
             throw ServiceExceptionUtil.exception(MENU_EXISTS_CHILDREN);
         }
         // 校验删除的菜单是否存在
-        if (menuMapper.selectById(menuId) == null) {
+        if (platformMenuMapper.selectById(menuId) == null) {
             throw ServiceExceptionUtil.exception(MENU_NOT_EXISTS);
         }
         // 标记删除
-        menuMapper.deleteById(menuId);
+        platformMenuMapper.deleteById(menuId);
         // 删除授予给角色的权限
         permissionService.processMenuDeleted(menuId);
         // 发送刷新消息. 注意，需要事务提交后，在进行发送刷新消息。不然 db 还未提交，结果缓存先刷新了
@@ -199,12 +199,12 @@ public class MenuServiceImpl implements MenuService {
 
     @Override
     public List<MenuDO> getMenus() {
-        return menuMapper.selectList();
+        return platformMenuMapper.selectList();
     }
 
     @Override
     public List<MenuDO> getMenus(MenuListReqVO reqVO) {
-        return menuMapper.selectList(reqVO);
+        return platformMenuMapper.selectList(reqVO);
     }
 
     @Override
@@ -239,7 +239,7 @@ public class MenuServiceImpl implements MenuService {
 
     @Override
     public MenuDO getMenu(Long id) {
-        return menuMapper.selectById(id);
+        return platformMenuMapper.selectById(id);
     }
 
     /**
@@ -261,7 +261,7 @@ public class MenuServiceImpl implements MenuService {
         if (parentId.equals(childId)) {
             throw ServiceExceptionUtil.exception(MENU_PARENT_ERROR);
         }
-        MenuDO menu = menuMapper.selectById(parentId);
+        MenuDO menu = platformMenuMapper.selectById(parentId);
         // 父菜单不存在
         if (menu == null) {
             throw ServiceExceptionUtil.exception(MENU_PARENT_NOT_EXISTS);
@@ -284,7 +284,7 @@ public class MenuServiceImpl implements MenuService {
      */
     @VisibleForTesting
     public void checkResource(Long parentId, String name, Long id) {
-        MenuDO menu = menuMapper.selectByParentIdAndName(parentId, name);
+        MenuDO menu = platformMenuMapper.selectByParentIdAndName(parentId, name);
         if (menu == null) {
             return;
         }

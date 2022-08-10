@@ -1,9 +1,9 @@
 package cn.iocoder.yudao.module.platform.convert.sms;
 
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateExcelVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateRespVO;
-import cn.iocoder.yudao.module.platform.controller.admin.sms.vo.template.SmsTemplateUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateExcelVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.sms.vo.template.SmsTemplateUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsTemplateDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import org.mapstruct.Mapper;

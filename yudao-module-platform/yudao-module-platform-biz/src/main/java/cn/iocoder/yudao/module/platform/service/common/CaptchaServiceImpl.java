@@ -5,7 +5,7 @@ import cn.hutool.captcha.CircleCaptcha;
 import cn.hutool.core.util.IdUtil;
 import cn.iocoder.yudao.module.platform.convert.common.CaptchaConvert;
 import cn.iocoder.yudao.module.platform.framework.captcha.config.CaptchaProperties;
-import cn.iocoder.yudao.module.platform.controller.admin.common.vo.CaptchaImageRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.common.vo.CaptchaImageRespVO;
 import cn.iocoder.yudao.module.platform.dal.redis.common.CaptchaRedisDAO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

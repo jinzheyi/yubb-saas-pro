@@ -9,7 +9,7 @@ import cn.iocoder.yudao.module.system.dal.dataobject.social.SocialUserBindDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.social.SocialUserDO;
 import cn.iocoder.yudao.module.system.dal.mysql.social.SocialUserBindMapper;
 import cn.iocoder.yudao.module.system.dal.mysql.social.SocialUserMapper;
-import cn.iocoder.yudao.module.system.enums.social.SocialTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.social.SocialTypeEnum;
 import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.model.AuthCallback;
 import me.zhyd.oauth.model.AuthResponse;

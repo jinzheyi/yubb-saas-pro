@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.platform.dal.dataobject.sms;
 
-import cn.iocoder.yudao.module.platform.enums.sms.SmsTemplateTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.sms.SmsTemplateTypeEnum;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;

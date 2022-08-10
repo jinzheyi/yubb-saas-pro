@@ -44,15 +44,15 @@
         <el-row :gutter="10" class="mb8">
           <el-col :span="1.5">
             <el-button type="primary" plain icon="el-icon-plus" size="mini" @click="handleAdd"
-                       v-hasPermi="['system:user:create']">新增</el-button>
+                       v-hasPermi="['center:user:create']">新增</el-button>
           </el-col>
           <el-col :span="1.5">
             <el-button type="info" icon="el-icon-upload2" size="mini" @click="handleImport"
-                       v-hasPermi="['system:user:import']">导入</el-button>
+                       v-hasPermi="['center:user:import']">导入</el-button>
           </el-col>
           <el-col :span="1.5">
             <el-button type="warning" icon="el-icon-download" size="mini" @click="handleExport" :loading="exportLoading"
-                       v-hasPermi="['system:user:export']">导出</el-button>
+                       v-hasPermi="['center:user:export']">导出</el-button>
           </el-col>
           <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" :columns="columns"></right-toolbar>
         </el-row>
@@ -76,19 +76,19 @@
           <el-table-column label="操作" align="center" width="160" class-name="small-padding fixed-width">
             <template slot-scope="scope">
               <el-button size="mini" type="text" icon="el-icon-edit" @click="handleUpdate(scope.row)"
-                         v-hasPermi="['system:user:update']">修改</el-button>
+                         v-hasPermi="['center:user:update']">修改</el-button>
               <el-dropdown  @command="(command) => handleCommand(command, scope.$index, scope.row)"
-                            v-hasPermi="['system:user:delete', 'system:user:update-password', 'system:permission:assign-user-role']">
+                            v-hasPermi="['center:user:delete', 'center:user:update-password', 'center:permission:assign-user-role']">
                 <span class="el-dropdown-link">
                   <i class="el-icon-d-arrow-right el-icon--right"></i>更多
                 </span>
                 <el-dropdown-menu slot="dropdown">
                   <el-dropdown-item command="handleDelete" v-if="scope.row.id !== 1" size="mini" type="text" icon="el-icon-delete"
-                                    v-hasPermi="['system:user:delete']">删除</el-dropdown-item>
+                                    v-hasPermi="['center:user:delete']">删除</el-dropdown-item>
                   <el-dropdown-item command="handleResetPwd" size="mini" type="text" icon="el-icon-key"
-                                    v-hasPermi="['system:user:update-password']">重置密码</el-dropdown-item>
+                                    v-hasPermi="['center:user:update-password']">重置密码</el-dropdown-item>
                   <el-dropdown-item command="handleRole" size="mini" type="text" icon="el-icon-circle-check"
-                                    v-hasPermi="['system:permission:assign-user-role']">分配角色</el-dropdown-item>
+                                    v-hasPermi="['center:permission:assign-user-role']">分配角色</el-dropdown-item>
                 </el-dropdown-menu>
               </el-dropdown>
             </template>

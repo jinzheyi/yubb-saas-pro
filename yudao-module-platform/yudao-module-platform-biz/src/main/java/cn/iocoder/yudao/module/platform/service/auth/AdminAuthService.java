@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.platform.service.auth;
 
-import cn.iocoder.yudao.module.platform.controller.admin.auth.vo.*;
+import cn.iocoder.yudao.module.platform.controller.center.auth.vo.*;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
 
 import javax.validation.Valid;

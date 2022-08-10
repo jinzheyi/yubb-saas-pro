@@ -2,11 +2,10 @@ package cn.iocoder.yudao.module.platform.convert.tenant;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.api.tenant.dto.packages.TenantPackageRespDTO;
-import cn.iocoder.yudao.module.platform.controller.admin.permission.vo.role.RoleSimpleRespVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.packages.TenantPackageCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.packages.TenantPackageRespVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.packages.TenantPackageSimpleRespVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.packages.TenantPackageUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackageCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackageRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackageSimpleRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackageUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

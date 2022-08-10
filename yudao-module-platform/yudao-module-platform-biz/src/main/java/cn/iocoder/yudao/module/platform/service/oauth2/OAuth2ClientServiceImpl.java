@@ -6,12 +6,12 @@ import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.string.StrUtils;
-import cn.iocoder.yudao.module.platform.controller.admin.oauth2.vo.client.OAuth2ClientCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.oauth2.vo.client.OAuth2ClientPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.oauth2.vo.client.OAuth2ClientUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth2ClientCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth2ClientPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth2ClientUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.auth.OAuth2ClientConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2ClientDO;
-import cn.iocoder.yudao.module.platform.dal.mysql.oauth2.OAuth2ClientMapper;
+import cn.iocoder.yudao.module.platform.dal.mysql.oauth2.PlatformOAuth2ClientMapper;
 import cn.iocoder.yudao.module.platform.mq.producer.auth.OAuth2ClientProducer;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.Getter;
@@ -28,7 +28,7 @@ import java.util.*;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.getMaxValue;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * OAuth2.0 Client Service 实现类
@@ -62,7 +62,7 @@ public class OAuth2ClientServiceImpl implements OAuth2ClientService {
     private volatile Date maxUpdateTime;
 
     @Resource
-    private OAuth2ClientMapper oauth2ClientMapper;
+    private PlatformOAuth2ClientMapper oauth2ClientMapperPlatform;
 
     @Resource
     private OAuth2ClientProducer oauth2ClientProducer;
@@ -102,13 +102,13 @@ public class OAuth2ClientServiceImpl implements OAuth2ClientService {
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
             log.info("[loadOAuth2ClientIfUpdate][首次加载全量客户端]");
         } else { // 判断数据库中是否有更新的客户端
-            if (oauth2ClientMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
+            if (oauth2ClientMapperPlatform.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
                 return null;
             }
             log.info("[loadOAuth2ClientIfUpdate][增量加载全量客户端]");
         }
         // 第二步，如果有更新，则从数据库加载所有客户端
-        return oauth2ClientMapper.selectList();
+        return oauth2ClientMapperPlatform.selectList();
     }
 
     @Override
@@ -116,7 +116,7 @@ public class OAuth2ClientServiceImpl implements OAuth2ClientService {
         validateClientIdExists(null, createReqVO.getClientId());
         // 插入
         OAuth2ClientDO oauth2Client = OAuth2ClientConvert.INSTANCE.convert(createReqVO);
-        oauth2ClientMapper.insert(oauth2Client);
+        oauth2ClientMapperPlatform.insert(oauth2Client);
         // 发送刷新消息
         oauth2ClientProducer.sendOAuth2ClientRefreshMessage();
         return oauth2Client.getId();
@@ -131,7 +131,7 @@ public class OAuth2ClientServiceImpl implements OAuth2ClientService {
 
         // 更新
         OAuth2ClientDO updateObj = OAuth2ClientConvert.INSTANCE.convert(updateReqVO);
-        oauth2ClientMapper.updateById(updateObj);
+        oauth2ClientMapperPlatform.updateById(updateObj);
         // 发送刷新消息
         oauth2ClientProducer.sendOAuth2ClientRefreshMessage();
     }
@@ -141,20 +141,20 @@ public class OAuth2ClientServiceImpl implements OAuth2ClientService {
         // 校验存在
         validateOAuth2ClientExists(id);
         // 删除
-        oauth2ClientMapper.deleteById(id);
+        oauth2ClientMapperPlatform.deleteById(id);
         // 发送刷新消息
         oauth2ClientProducer.sendOAuth2ClientRefreshMessage();
     }
 
     private void validateOAuth2ClientExists(Long id) {
-        if (oauth2ClientMapper.selectById(id) == null) {
+        if (oauth2ClientMapperPlatform.selectById(id) == null) {
             throw exception(OAUTH2_CLIENT_NOT_EXISTS);
         }
     }
 
     @VisibleForTesting
     void validateClientIdExists(Long id, String clientId) {
-        OAuth2ClientDO client = oauth2ClientMapper.selectByClientId(clientId);
+        OAuth2ClientDO client = oauth2ClientMapperPlatform.selectByClientId(clientId);
         if (client == null) {
             return;
         }
@@ -169,12 +169,12 @@ public class OAuth2ClientServiceImpl implements OAuth2ClientService {
 
     @Override
     public OAuth2ClientDO getOAuth2Client(Long id) {
-        return oauth2ClientMapper.selectById(id);
+        return oauth2ClientMapperPlatform.selectById(id);
     }
 
     @Override
     public PageResult<OAuth2ClientDO> getOAuth2ClientPage(OAuth2ClientPageReqVO pageReqVO) {
-        return oauth2ClientMapper.selectPage(pageReqVO);
+        return oauth2ClientMapperPlatform.selectPage(pageReqVO);
     }
 
     @Override

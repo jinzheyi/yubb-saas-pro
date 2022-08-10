@@ -2,9 +2,9 @@ package cn.iocoder.yudao.module.platform.service.user;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.module.platform.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.user.vo.user.*;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdatePasswordReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
 

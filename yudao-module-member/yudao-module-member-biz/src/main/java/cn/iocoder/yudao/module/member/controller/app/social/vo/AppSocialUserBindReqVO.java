@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.member.controller.app.social.vo;
 
 import cn.iocoder.yudao.framework.common.validation.InEnum;
-import cn.iocoder.yudao.module.system.enums.social.SocialTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.social.SocialTypeEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;

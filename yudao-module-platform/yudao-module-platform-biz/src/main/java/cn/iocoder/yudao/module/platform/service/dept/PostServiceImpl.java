@@ -4,13 +4,13 @@ import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.post.PostCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.post.PostExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.post.PostPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.post.PostUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.dept.PostConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
-import cn.iocoder.yudao.module.platform.dal.mysql.dept.PostMapper;
+import cn.iocoder.yudao.module.platform.dal.mysql.dept.PlatformPostMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -21,7 +21,7 @@ import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 岗位 Service 实现类
@@ -33,7 +33,7 @@ import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
 public class PostServiceImpl implements PostService {
 
     @Resource
-    private PostMapper postMapper;
+    private PlatformPostMapper platformPostMapper;
 
     @Override
     public Long createPost(PostCreateReqVO reqVO) {
@@ -41,7 +41,7 @@ public class PostServiceImpl implements PostService {
         this.checkCreateOrUpdate(null, reqVO.getName(), reqVO.getCode());
         // 插入岗位
         PostDO post = PostConvert.INSTANCE.convert(reqVO);
-        postMapper.insert(post);
+        platformPostMapper.insert(post);
         return post.getId();
     }
 
@@ -51,7 +51,7 @@ public class PostServiceImpl implements PostService {
         this.checkCreateOrUpdate(reqVO.getId(), reqVO.getName(), reqVO.getCode());
         // 更新岗位
         PostDO updateObj = PostConvert.INSTANCE.convert(reqVO);
-        postMapper.updateById(updateObj);
+        platformPostMapper.updateById(updateObj);
     }
 
     @Override
@@ -59,27 +59,27 @@ public class PostServiceImpl implements PostService {
         // 校验是否存在
         this.checkPostExists(id);
         // 删除部门
-        postMapper.deleteById(id);
+        platformPostMapper.deleteById(id);
     }
 
     @Override
     public List<PostDO> getPosts(Collection<Long> ids, Collection<Integer> statuses) {
-        return postMapper.selectList(ids, statuses);
+        return platformPostMapper.selectList(ids, statuses);
     }
 
     @Override
     public PageResult<PostDO> getPostPage(PostPageReqVO reqVO) {
-        return postMapper.selectPage(reqVO);
+        return platformPostMapper.selectPage(reqVO);
     }
 
     @Override
     public List<PostDO> getPosts(PostExportReqVO reqVO) {
-        return postMapper.selectList(reqVO);
+        return platformPostMapper.selectList(reqVO);
     }
 
     @Override
     public PostDO getPost(Long id) {
-        return postMapper.selectById(id);
+        return platformPostMapper.selectById(id);
     }
 
     private void checkCreateOrUpdate(Long id, String name, String code) {
@@ -92,7 +92,7 @@ public class PostServiceImpl implements PostService {
     }
 
     private void checkPostNameUnique(Long id, String name) {
-        PostDO post = postMapper.selectByName(name);
+        PostDO post = platformPostMapper.selectByName(name);
         if (post == null) {
             return;
         }
@@ -106,7 +106,7 @@ public class PostServiceImpl implements PostService {
     }
 
     private void checkPostCodeUnique(Long id, String code) {
-        PostDO post = postMapper.selectByCode(code);
+        PostDO post = platformPostMapper.selectByCode(code);
         if (post == null) {
             return;
         }
@@ -123,7 +123,7 @@ public class PostServiceImpl implements PostService {
         if (id == null) {
             return;
         }
-        PostDO post = postMapper.selectById(id);
+        PostDO post = platformPostMapper.selectById(id);
         if (post == null) {
             throw ServiceExceptionUtil.exception(POST_NOT_FOUND);
         }
@@ -135,7 +135,7 @@ public class PostServiceImpl implements PostService {
             return;
         }
         // 获得岗位信息
-        List<PostDO> posts = postMapper.selectBatchIds(ids);
+        List<PostDO> posts = platformPostMapper.selectBatchIds(ids);
         Map<Long, PostDO> postMap = convertMap(posts, PostDO::getId);
         // 校验
         ids.forEach(id -> {

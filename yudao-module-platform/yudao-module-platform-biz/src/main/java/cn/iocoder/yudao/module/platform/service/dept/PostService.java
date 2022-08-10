@@ -2,10 +2,10 @@ package cn.iocoder.yudao.module.platform.service.dept;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.post.PostCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.post.PostExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.post.PostPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dept.vo.post.PostUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
 import org.springframework.lang.Nullable;
 

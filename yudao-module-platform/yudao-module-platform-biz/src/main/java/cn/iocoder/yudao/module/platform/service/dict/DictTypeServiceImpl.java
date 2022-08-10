@@ -2,10 +2,10 @@ package cn.iocoder.yudao.module.platform.service.dict;
 
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.type.DictTypeCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.type.DictTypeExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.type.DictTypePageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.dict.vo.type.DictTypeUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.type.DictTypeCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.type.DictTypeExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.type.DictTypePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.dict.vo.type.DictTypeUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.dict.DictTypeConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dict.DictTypeDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.dict.DictTypeMapper;
@@ -16,7 +16,7 @@ import javax.annotation.Resource;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 字典类型 Service 实现类

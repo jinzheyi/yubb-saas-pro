@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.platform.service.common;
 
-import cn.iocoder.yudao.module.platform.controller.admin.common.vo.CaptchaImageRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.common.vo.CaptchaImageRespVO;
 
 /**
  * 验证码 Service 接口

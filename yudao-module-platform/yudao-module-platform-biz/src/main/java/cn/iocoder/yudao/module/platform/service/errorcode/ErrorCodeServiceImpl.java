@@ -4,14 +4,14 @@ import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.api.errorcode.dto.ErrorCodeAutoGenerateReqDTO;
 import cn.iocoder.yudao.module.platform.api.errorcode.dto.ErrorCodeRespDTO;
-import cn.iocoder.yudao.module.platform.controller.admin.errorcode.vo.ErrorCodeCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.errorcode.vo.ErrorCodeExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.errorcode.vo.ErrorCodePageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.errorcode.vo.ErrorCodeUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.errorcode.vo.ErrorCodeCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.errorcode.vo.ErrorCodeExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.errorcode.vo.ErrorCodePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.errorcode.vo.ErrorCodeUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.errorcode.ErrorCodeConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.errorcode.ErrorCodeDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.errorcode.ErrorCodeMapper;
-import cn.iocoder.yudao.module.platform.enums.errorcode.ErrorCodeTypeEnum;
+import cn.iocoder.yudao.framework.common.enums.errorcode.ErrorCodeTypeEnum;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,8 +26,8 @@ import java.util.Map;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.ERROR_CODE_DUPLICATE;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.ERROR_CODE_NOT_EXISTS;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.ERROR_CODE_DUPLICATE;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.ERROR_CODE_NOT_EXISTS;
 
 /**
  * 错误码 Service 实现类

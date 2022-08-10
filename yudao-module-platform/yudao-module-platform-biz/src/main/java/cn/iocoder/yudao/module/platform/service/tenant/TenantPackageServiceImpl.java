@@ -3,9 +3,9 @@ package cn.iocoder.yudao.module.platform.service.tenant;
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.packages.TenantPackageCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.packages.TenantPackagePageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.packages.TenantPackageUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackageCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackagePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.packages.TenantPackageUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantPackageConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
@@ -19,7 +19,7 @@ import javax.annotation.Resource;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.platform.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 租户套餐 Service 实现类

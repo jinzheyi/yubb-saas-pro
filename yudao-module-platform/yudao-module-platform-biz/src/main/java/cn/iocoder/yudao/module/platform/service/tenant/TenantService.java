@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.platform.service.tenant;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.admin.tenant.vo.tenant.TenantUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
 
 import javax.validation.Valid;
