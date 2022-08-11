@@ -5,7 +5,7 @@ import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.Rol
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RolePageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
 import org.springframework.lang.Nullable;
 
 import javax.validation.Valid;
@@ -71,7 +71,7 @@ public interface PlatformRoleService {
      * @param id 角色编号
      * @return 角色
      */
-    RoleDO getRoleFromCache(Long id);
+    PlatformRoleDO getRoleFromCache(Long id);
 
     /**
      * 获得角色列表
@@ -79,7 +79,7 @@ public interface PlatformRoleService {
      * @param statuses 筛选的状态。允许空，空时不筛选
      * @return 角色列表
      */
-    List<RoleDO> getRoles(@Nullable Collection<Integer> statuses);
+    List<PlatformRoleDO> getRoles(@Nullable Collection<Integer> statuses);
 
     /**
      * 获得角色数组，从缓存中
@@ -87,7 +87,7 @@ public interface PlatformRoleService {
      * @param ids 角色编号数组
      * @return 角色数组
      */
-    List<RoleDO> getRolesFromCache(Collection<Long> ids);
+    List<PlatformRoleDO> getRolesFromCache(Collection<Long> ids);
 
     /**
      * 判断角色数组中，是否有超级管理员
@@ -95,7 +95,7 @@ public interface PlatformRoleService {
      * @param roleList 角色数组
      * @return 是否有管理员
      */
-    boolean hasAnySuperAdmin(Collection<RoleDO> roleList);
+    boolean hasAnySuperAdmin(Collection<PlatformRoleDO> roleList);
 
     /**
      * 判断角色编号数组中，是否有管理员
@@ -113,7 +113,7 @@ public interface PlatformRoleService {
      * @param id 角色编号
      * @return 角色
      */
-    RoleDO getRole(Long id);
+    PlatformRoleDO getRole(Long id);
 
     /**
      * 获得角色分页
@@ -121,7 +121,7 @@ public interface PlatformRoleService {
      * @param reqVO 角色分页查询
      * @return 角色分页结果
      */
-    PageResult<RoleDO> getRolePage(RolePageReqVO reqVO);
+    PageResult<PlatformRoleDO> getRolePage(RolePageReqVO reqVO);
 
     /**
      * 获得角色列表
@@ -129,7 +129,7 @@ public interface PlatformRoleService {
      * @param reqVO 列表查询
      * @return 角色列表
      */
-    List<RoleDO> getRoleList(RoleExportReqVO reqVO);
+    List<PlatformRoleDO> getRoleList(RoleExportReqVO reqVO);
 
     /**
      * 校验角色们是否有效。如下情况，视为无效：

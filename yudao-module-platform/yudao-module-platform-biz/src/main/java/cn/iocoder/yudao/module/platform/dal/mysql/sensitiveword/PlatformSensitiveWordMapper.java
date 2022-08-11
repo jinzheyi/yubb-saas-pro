@@ -5,7 +5,7 @@ import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordPageReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.sensitiveword.SensitiveWordDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.sensitiveword.PlatformSensitiveWordDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 
@@ -18,28 +18,28 @@ import java.util.List;
  * @author 永不言败
  */
 @Mapper
-public interface PlatformSensitiveWordMapper extends BaseMapperX<SensitiveWordDO> {
+public interface PlatformSensitiveWordMapper extends BaseMapperX<PlatformSensitiveWordDO> {
 
-    default PageResult<SensitiveWordDO> selectPage(SensitiveWordPageReqVO reqVO) {
-        return selectPage(reqVO, new LambdaQueryWrapperX<SensitiveWordDO>()
-                .likeIfPresent(SensitiveWordDO::getName, reqVO.getName())
-                .likeIfPresent(SensitiveWordDO::getTags, reqVO.getTag())
-                .eqIfPresent(SensitiveWordDO::getStatus, reqVO.getStatus())
-                .betweenIfPresent(SensitiveWordDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(SensitiveWordDO::getId));
+    default PageResult<PlatformSensitiveWordDO> selectPage(SensitiveWordPageReqVO reqVO) {
+        return selectPage(reqVO, new LambdaQueryWrapperX<PlatformSensitiveWordDO>()
+                .likeIfPresent(PlatformSensitiveWordDO::getName, reqVO.getName())
+                .likeIfPresent(PlatformSensitiveWordDO::getTags, reqVO.getTag())
+                .eqIfPresent(PlatformSensitiveWordDO::getStatus, reqVO.getStatus())
+                .betweenIfPresent(PlatformSensitiveWordDO::getCreateTime, reqVO.getCreateTime())
+                .orderByDesc(PlatformSensitiveWordDO::getId));
     }
 
-    default List<SensitiveWordDO> selectList(SensitiveWordExportReqVO reqVO) {
-        return selectList(new LambdaQueryWrapperX<SensitiveWordDO>()
-                .likeIfPresent(SensitiveWordDO::getName, reqVO.getName())
-                .likeIfPresent(SensitiveWordDO::getTags, reqVO.getTag())
-                .eqIfPresent(SensitiveWordDO::getStatus, reqVO.getStatus())
-                .betweenIfPresent(SensitiveWordDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(SensitiveWordDO::getId));
+    default List<PlatformSensitiveWordDO> selectList(SensitiveWordExportReqVO reqVO) {
+        return selectList(new LambdaQueryWrapperX<PlatformSensitiveWordDO>()
+                .likeIfPresent(PlatformSensitiveWordDO::getName, reqVO.getName())
+                .likeIfPresent(PlatformSensitiveWordDO::getTags, reqVO.getTag())
+                .eqIfPresent(PlatformSensitiveWordDO::getStatus, reqVO.getStatus())
+                .betweenIfPresent(PlatformSensitiveWordDO::getCreateTime, reqVO.getCreateTime())
+                .orderByDesc(PlatformSensitiveWordDO::getId));
     }
 
-    default SensitiveWordDO selectByName(String name) {
-        return selectOne(SensitiveWordDO::getName, name);
+    default PlatformSensitiveWordDO selectByName(String name) {
+        return selectOne(PlatformSensitiveWordDO::getName, name);
     }
 
     @Select("SELECT COUNT(*) FROM platform_sensitive_word WHERE update_time > #{maxUpdateTime}")

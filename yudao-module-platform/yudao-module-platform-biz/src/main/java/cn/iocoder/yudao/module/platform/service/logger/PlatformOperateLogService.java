@@ -4,7 +4,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.api.logger.dto.OperateLogCreateReqDTO;
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogPageReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.logger.OperateLogDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.logger.PlatformOperateLogDO;
 
 import java.util.List;
 
@@ -28,7 +28,7 @@ public interface PlatformOperateLogService {
      * @param reqVO 分页条件
      * @return 操作日志分页列表
      */
-    PageResult<OperateLogDO> getOperateLogPage(OperateLogPageReqVO reqVO);
+    PageResult<PlatformOperateLogDO> getOperateLogPage(OperateLogPageReqVO reqVO);
 
     /**
      * 获得操作日志列表
@@ -36,6 +36,6 @@ public interface PlatformOperateLogService {
      * @param reqVO 列表条件
      * @return 日志列表
      */
-    List<OperateLogDO> getOperateLogs(OperateLogExportReqVO reqVO);
+    List<PlatformOperateLogDO> getOperateLogs(OperateLogExportReqVO reqVO);
 
 }

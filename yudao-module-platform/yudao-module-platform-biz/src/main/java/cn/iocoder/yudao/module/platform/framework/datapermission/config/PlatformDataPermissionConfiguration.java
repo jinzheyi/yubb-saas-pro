@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.framework.datapermission.config;
 
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.framework.datapermission.core.rule.dept.DeptDataPermissionRuleCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,10 +18,10 @@ public class PlatformDataPermissionConfiguration {
     public DeptDataPermissionRuleCustomizer PlatformDeptDataPermissionRuleCustomizer() {
         return rule -> {
             // dept
-            rule.addDeptColumn(AdminUserDO.class);
-            rule.addDeptColumn(DeptDO.class, "id");
+            rule.addDeptColumn(PlatformUserDO.class);
+            rule.addDeptColumn(PlatformDeptDO.class, "id");
             // user
-            rule.addUserColumn(AdminUserDO.class, "id");
+            rule.addUserColumn(PlatformUserDO.class, "id");
         };
     }
 

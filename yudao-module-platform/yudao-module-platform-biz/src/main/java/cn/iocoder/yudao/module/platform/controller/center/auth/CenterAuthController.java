@@ -9,8 +9,8 @@ import cn.iocoder.yudao.framework.security.config.SecurityProperties;
 import cn.iocoder.yudao.module.platform.controller.center.auth.vo.*;
 import cn.iocoder.yudao.module.platform.convert.auth.AuthConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.framework.common.enums.logger.LoginLogTypeEnum;
 import cn.iocoder.yudao.framework.common.enums.permission.MenuTypeEnum;
 import cn.iocoder.yudao.module.platform.service.auth.PlatformAuthService;
@@ -92,13 +92,13 @@ public class CenterAuthController {
     @ApiOperation("获取登录用户的权限信息")
     public CommonResult<AuthPermissionInfoRespVO> getPermissionInfo() {
         // 获得用户信息
-        AdminUserDO user = userService.getUser(getLoginUserId());
+        PlatformUserDO user = userService.getUser(getLoginUserId());
         if (user == null) {
             return null;
         }
         // 获得角色列表
         Set<Long> roleIds = platformPermissionService.getUserRoleIdsFromCache(getLoginUserId(), singleton(CommonStatusEnum.ENABLE.getStatus()));
-        List<RoleDO> roleList = platformRoleService.getRolesFromCache(roleIds);
+        List<PlatformRoleDO> roleList = platformRoleService.getRolesFromCache(roleIds);
         // 获得菜单列表
         List<MenuDO> menuList = platformPermissionService.getRoleMenuListFromCache(roleIds,
                 SetUtils.asSet(MenuTypeEnum.DIR.getType(), MenuTypeEnum.MENU.getType(), MenuTypeEnum.BUTTON.getType()),

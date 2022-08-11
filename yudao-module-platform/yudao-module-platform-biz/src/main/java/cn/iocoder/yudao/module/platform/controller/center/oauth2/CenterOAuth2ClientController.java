@@ -7,7 +7,7 @@ import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth
 import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth2ClientRespVO;
 import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth2ClientUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.auth.OAuth2ClientConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2ClientDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2ClientDO;
 import cn.iocoder.yudao.module.platform.service.oauth2.PlatformOAuth2ClientService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -59,7 +59,7 @@ public class CenterOAuth2ClientController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:oauth2-client:query')")
     public CommonResult<OAuth2ClientRespVO> getOAuth2Client(@RequestParam("id") Long id) {
-        OAuth2ClientDO oAuth2Client = platformOAuth2ClientService.getOAuth2Client(id);
+        PlatformOAuth2ClientDO oAuth2Client = platformOAuth2ClientService.getOAuth2Client(id);
         return success(OAuth2ClientConvert.INSTANCE.convert(oAuth2Client));
     }
 
@@ -67,7 +67,7 @@ public class CenterOAuth2ClientController {
     @ApiOperation("获得OAuth2 客户端分页")
     @PreAuthorize("@ss.hasPermission('center:oauth2-client:query')")
     public CommonResult<PageResult<OAuth2ClientRespVO>> getOAuth2ClientPage(@Valid OAuth2ClientPageReqVO pageVO) {
-        PageResult<OAuth2ClientDO> pageResult = platformOAuth2ClientService.getOAuth2ClientPage(pageVO);
+        PageResult<PlatformOAuth2ClientDO> pageResult = platformOAuth2ClientService.getOAuth2ClientPage(pageVO);
         return success(OAuth2ClientConvert.INSTANCE.convertPage(pageResult));
     }
 

@@ -24,7 +24,7 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Accessors(chain = true)
-public class OAuth2RefreshTokenDO extends BaseDO {
+public class PlatformOAuth2RefreshTokenDO extends BaseDO {
 
     /**
      * 编号，数据库字典
@@ -47,7 +47,7 @@ public class OAuth2RefreshTokenDO extends BaseDO {
     /**
      * 客户端编号
      *
-     * 关联 {@link OAuth2ClientDO#getId()}
+     * 关联 {@link PlatformOAuth2ClientDO#getId()}
      */
     private String clientId;
     /**

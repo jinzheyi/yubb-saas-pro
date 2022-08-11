@@ -5,7 +5,7 @@ import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.Sensi
 import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.sensitiveword.SensitiveWordDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.sensitiveword.PlatformSensitiveWordDO;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -51,14 +51,14 @@ public interface PlatformSensitiveWordService {
      * @param id 编号
      * @return 敏感词
      */
-    SensitiveWordDO getSensitiveWord(Long id);
+    PlatformSensitiveWordDO getSensitiveWord(Long id);
 
     /**
      * 获得敏感词列表
      *
      * @return 敏感词列表
      */
-    List<SensitiveWordDO> getSensitiveWordList();
+    List<PlatformSensitiveWordDO> getSensitiveWordList();
 
     /**
      * 获得敏感词分页
@@ -66,7 +66,7 @@ public interface PlatformSensitiveWordService {
      * @param pageReqVO 分页查询
      * @return 敏感词分页
      */
-    PageResult<SensitiveWordDO> getSensitiveWordPage(SensitiveWordPageReqVO pageReqVO);
+    PageResult<PlatformSensitiveWordDO> getSensitiveWordPage(SensitiveWordPageReqVO pageReqVO);
 
     /**
      * 获得敏感词列表, 用于 Excel 导出
@@ -74,7 +74,7 @@ public interface PlatformSensitiveWordService {
      * @param exportReqVO 查询条件
      * @return 敏感词列表
      */
-    List<SensitiveWordDO> getSensitiveWordList(SensitiveWordExportReqVO exportReqVO);
+    List<PlatformSensitiveWordDO> getSensitiveWordList(SensitiveWordExportReqVO exportReqVO);
 
     /**
      * 获得所有敏感词的标签数组

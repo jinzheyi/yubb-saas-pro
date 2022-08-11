@@ -3,8 +3,8 @@ package cn.iocoder.yudao.module.platform.controller.center.user;
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
 import cn.iocoder.yudao.module.platform.convert.user.UserConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
 import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
 import cn.iocoder.yudao.framework.common.enums.common.SexEnum;
@@ -91,14 +91,14 @@ public class CenterUserController {
     @PreAuthorize("@ss.hasPermission('center:user:list')")
     public CommonResult<PageResult<UserPageItemRespVO>> getUserPage(@Valid UserPageReqVO reqVO) {
         // 获得用户分页列表
-        PageResult<AdminUserDO> pageResult = userService.getUserPage(reqVO);
+        PageResult<PlatformUserDO> pageResult = userService.getUserPage(reqVO);
         if (CollUtil.isEmpty(pageResult.getList())) {
             return success(new PageResult<>(pageResult.getTotal())); // 返回空
         }
 
         // 获得拼接需要的数据
-        Collection<Long> deptIds = convertList(pageResult.getList(), AdminUserDO::getDeptId);
-        Map<Long, DeptDO> deptMap = platformDeptService.getDeptMap(deptIds);
+        Collection<Long> deptIds = convertList(pageResult.getList(), PlatformUserDO::getDeptId);
+        Map<Long, PlatformDeptDO> deptMap = platformDeptService.getDeptMap(deptIds);
         // 拼接结果返回
         List<UserPageItemRespVO> userList = new ArrayList<>(pageResult.getList().size());
         pageResult.getList().forEach(user -> {
@@ -113,7 +113,7 @@ public class CenterUserController {
     @ApiOperation(value = "获取用户精简信息列表", notes = "只包含被开启的用户，主要用于前端的下拉选项")
     public CommonResult<List<UserSimpleRespVO>> getSimpleUsers() {
         // 获用户门列表，只要开启状态的
-        List<AdminUserDO> list = userService.getUsersByStatus(CommonStatusEnum.ENABLE.getStatus());
+        List<PlatformUserDO> list = userService.getUsersByStatus(CommonStatusEnum.ENABLE.getStatus());
         // 排序后，返回给前端
         return success(UserConvert.INSTANCE.convertList04(list));
     }
@@ -133,13 +133,13 @@ public class CenterUserController {
     public void exportUsers(@Validated UserExportReqVO reqVO,
                             HttpServletResponse response) throws IOException {
         // 获得用户列表
-        List<AdminUserDO> users = userService.getUsers(reqVO);
+        List<PlatformUserDO> users = userService.getUsers(reqVO);
 
         // 获得拼接需要的数据
-        Collection<Long> deptIds = convertList(users, AdminUserDO::getDeptId);
-        Map<Long, DeptDO> deptMap = platformDeptService.getDeptMap(deptIds);
-        Map<Long, AdminUserDO> deptLeaderUserMap = userService.getUserMap(
-                convertSet(deptMap.values(), DeptDO::getLeaderUserId));
+        Collection<Long> deptIds = convertList(users, PlatformUserDO::getDeptId);
+        Map<Long, PlatformDeptDO> deptMap = platformDeptService.getDeptMap(deptIds);
+        Map<Long, PlatformUserDO> deptLeaderUserMap = userService.getUserMap(
+                convertSet(deptMap.values(), PlatformDeptDO::getLeaderUserId));
         // 拼接数据
         List<UserExcelVO> excelUsers = new ArrayList<>(users.size());
         users.forEach(user -> {

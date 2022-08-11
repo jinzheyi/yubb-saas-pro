@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.platform.service.oauth2;
 
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2ApproveDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2ApproveDO;
 
 import java.util.Collection;
 import java.util.List;
@@ -47,6 +47,6 @@ public interface PlatformOAuth2ApproveService {
      * @param clientId 客户端编号
      * @return 是否授权通过
      */
-    List<OAuth2ApproveDO> getApproveList(Long userId, Integer userType, String clientId);
+    List<PlatformOAuth2ApproveDO> getApproveList(Long userId, Integer userType, String clientId);
 
 }

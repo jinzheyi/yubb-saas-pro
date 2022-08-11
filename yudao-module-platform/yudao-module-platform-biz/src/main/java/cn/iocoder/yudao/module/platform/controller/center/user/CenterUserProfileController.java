@@ -9,11 +9,11 @@ import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserPr
 import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.user.UserConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformPostDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.social.PlatformSocialUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
 import cn.iocoder.yudao.module.platform.service.dept.PlatformPostService;
 import cn.iocoder.yudao.module.platform.service.permission.PlatformPermissionService;
@@ -60,23 +60,23 @@ public class CenterUserProfileController {
     @DataPermission(enable = false) // 关闭数据权限，避免只查看自己时，查询不到部门。
     public CommonResult<UserProfileRespVO> profile() {
         // 获得用户基本信息
-        AdminUserDO user = userService.getUser(getLoginUserId());
+        PlatformUserDO user = userService.getUser(getLoginUserId());
         UserProfileRespVO resp = UserConvert.INSTANCE.convert03(user);
         // 获得用户角色
-        List<RoleDO> userRoles = platformRoleService.getRolesFromCache(platformPermissionService.getUserRoleIdListByUserId(user.getId()));
+        List<PlatformRoleDO> userRoles = platformRoleService.getRolesFromCache(platformPermissionService.getUserRoleIdListByUserId(user.getId()));
         resp.setRoles(UserConvert.INSTANCE.convertList(userRoles));
         // 获得部门信息
         if (user.getDeptId() != null) {
-            DeptDO dept = platformDeptService.getDept(user.getDeptId());
+            PlatformDeptDO dept = platformDeptService.getDept(user.getDeptId());
             resp.setDept(UserConvert.INSTANCE.convert02(dept));
         }
         // 获得岗位信息
         if (CollUtil.isNotEmpty(user.getPostIds())) {
-            List<PostDO> posts = platformPostService.getPosts(user.getPostIds());
+            List<PlatformPostDO> posts = platformPostService.getPosts(user.getPostIds());
             resp.setPosts(UserConvert.INSTANCE.convertList02(posts));
         }
         // 获得社交用户信息
-        List<SocialUserDO> socialUsers = socialService.getSocialUserList(user.getId(), UserTypeEnum.CENTER.getValue());
+        List<PlatformSocialUserDO> socialUsers = socialService.getSocialUserList(user.getId(), UserTypeEnum.CENTER.getValue());
         resp.setSocialUsers(UserConvert.INSTANCE.convertList03(socialUsers));
         return success(resp);
     }

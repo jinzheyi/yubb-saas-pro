@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.api.dept;
 
 import cn.iocoder.yudao.module.platform.api.dept.dto.DeptRespDTO;
 import cn.iocoder.yudao.module.platform.convert.dept.DeptConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
 import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
 import org.springframework.stereotype.Service;
 
@@ -23,13 +23,13 @@ public class PlatformDeptApiImpl implements DeptApi {
 
     @Override
     public DeptRespDTO getDept(Long id) {
-        DeptDO dept = platformDeptService.getDept(id);
+        PlatformDeptDO dept = platformDeptService.getDept(id);
         return DeptConvert.INSTANCE.convert03(dept);
     }
 
     @Override
     public List<DeptRespDTO> getDepts(Collection<Long> ids) {
-        List<DeptDO> depts = platformDeptService.getDepts(ids);
+        List<PlatformDeptDO> depts = platformDeptService.getDepts(ids);
         return DeptConvert.INSTANCE.convertList03(depts);
     }
 

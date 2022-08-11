@@ -7,7 +7,7 @@ import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.module.platform.api.sms.dto.code.SmsCodeCheckReqDTO;
 import cn.iocoder.yudao.module.platform.api.sms.dto.code.SmsCodeSendReqDTO;
 import cn.iocoder.yudao.module.platform.api.sms.dto.code.SmsCodeUseReqDTO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsCodeDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.sms.PlatformSmsCodeDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.sms.PlatformSmsCodeMapper;
 import cn.iocoder.yudao.framework.common.enums.sms.SmsSceneEnum;
 import cn.iocoder.yudao.module.platform.framework.sms.SmsCodeProperties;
@@ -51,7 +51,7 @@ public class PlatformSmsCodeServiceImpl implements PlatformSmsCodeService {
 
     private String createSmsCode(String mobile, Integer scene, String ip) {
         // 校验是否可以发送验证码，不用筛选场景
-        SmsCodeDO lastSmsCode = platformSmsCodeMapper.selectLastByMobile(mobile, null,null);
+        PlatformSmsCodeDO lastSmsCode = platformSmsCodeMapper.selectLastByMobile(mobile, null,null);
         if (lastSmsCode != null) {
             if (System.currentTimeMillis() - lastSmsCode.getCreateTime().getTime()
                     < smsCodeProperties.getSendFrequency().toMillis()) { // 发送过于频繁
@@ -67,7 +67,7 @@ public class PlatformSmsCodeServiceImpl implements PlatformSmsCodeService {
 
         // 创建验证码记录
         String code = String.valueOf(randomInt(smsCodeProperties.getBeginCode(), smsCodeProperties.getEndCode() + 1));
-        SmsCodeDO newSmsCode = SmsCodeDO.builder().mobile(mobile).code(code).scene(scene)
+        PlatformSmsCodeDO newSmsCode = PlatformSmsCodeDO.builder().mobile(mobile).code(code).scene(scene)
                 .todayIndex(lastSmsCode != null && DateUtils.isToday(lastSmsCode.getCreateTime()) ? lastSmsCode.getTodayIndex() + 1 : 1)
                 .createIp(ip).used(false).build();
         platformSmsCodeMapper.insert(newSmsCode);
@@ -77,9 +77,9 @@ public class PlatformSmsCodeServiceImpl implements PlatformSmsCodeService {
     @Override
     public void useSmsCode(SmsCodeUseReqDTO reqDTO) {
         // 检测验证码是否有效
-        SmsCodeDO lastSmsCode = this.checkSmsCode0(reqDTO.getMobile(), reqDTO.getCode(), reqDTO.getScene());
+        PlatformSmsCodeDO lastSmsCode = this.checkSmsCode0(reqDTO.getMobile(), reqDTO.getCode(), reqDTO.getScene());
         // 使用验证码
-        platformSmsCodeMapper.updateById(SmsCodeDO.builder().id(lastSmsCode.getId())
+        platformSmsCodeMapper.updateById(PlatformSmsCodeDO.builder().id(lastSmsCode.getId())
                 .used(true).usedTime(new Date()).usedIp(reqDTO.getUsedIp()).build());
     }
 
@@ -88,9 +88,9 @@ public class PlatformSmsCodeServiceImpl implements PlatformSmsCodeService {
         checkSmsCode0(reqDTO.getMobile(), reqDTO.getCode(), reqDTO.getScene());
     }
 
-    public SmsCodeDO checkSmsCode0(String mobile, String code, Integer scene) {
+    public PlatformSmsCodeDO checkSmsCode0(String mobile, String code, Integer scene) {
         // 校验验证码
-        SmsCodeDO lastSmsCode = platformSmsCodeMapper.selectLastByMobile(mobile,code,scene);
+        PlatformSmsCodeDO lastSmsCode = platformSmsCodeMapper.selectLastByMobile(mobile,code,scene);
         // 若验证码不存在，抛出异常
         if (lastSmsCode == null) {
             throw ServiceExceptionUtil.exception(SMS_CODE_NOT_FOUND);

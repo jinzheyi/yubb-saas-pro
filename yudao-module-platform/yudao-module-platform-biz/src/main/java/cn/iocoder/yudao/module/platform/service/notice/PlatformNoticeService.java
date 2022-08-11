@@ -4,7 +4,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticeCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticePageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticeUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.notice.NoticeDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.notice.PlatformNoticeDO;
 
 /**
  * 通知公告 Service 接口
@@ -39,7 +39,7 @@ public interface PlatformNoticeService {
      * @param reqVO 分页条件
      * @return 部门分页列表
      */
-    PageResult<NoticeDO> pageNotices(NoticePageReqVO reqVO);
+    PageResult<PlatformNoticeDO> pageNotices(NoticePageReqVO reqVO);
 
     /**
      * 获得岗位公告公告信息
@@ -47,6 +47,6 @@ public interface PlatformNoticeService {
      * @param id 岗位公告公告编号
      * @return 岗位公告公告信息
      */
-    NoticeDO getNotice(Long id);
+    PlatformNoticeDO getNotice(Long id);
 
 }

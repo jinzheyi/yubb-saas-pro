@@ -5,8 +5,8 @@ import cn.hutool.core.lang.Assert;
 import cn.iocoder.yudao.framework.common.util.http.HttpUtils;
 import cn.iocoder.yudao.framework.social.core.YudaoAuthRequestFactory;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserBindDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.social.PlatformSocialUserBindDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.social.PlatformSocialUserDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.social.PlatformSocialUserBindMapper;
 import cn.iocoder.yudao.module.platform.dal.mysql.social.PlatformSocialUserMapper;
 import cn.iocoder.yudao.framework.common.enums.social.SocialTypeEnum;
@@ -57,10 +57,10 @@ public class PlatformSocialUserServiceImpl implements PlatformSocialUserService 
     }
 
     @Override
-    public SocialUserDO authSocialUser(Integer type, String code, String state) {
+    public PlatformSocialUserDO authSocialUser(Integer type, String code, String state) {
         // 优先从 DB 中获取，因为 code 有且可以使用一次。
         // 在社交登录时，当未绑定 User 时，需要绑定登录，此时需要 code 使用两次
-        SocialUserDO socialUser = platformSocialUserMapper.selectByTypeAndCodeAnState(type, code, state);
+        PlatformSocialUserDO socialUser = platformSocialUserMapper.selectByTypeAndCodeAnState(type, code, state);
         if (socialUser != null) {
             return socialUser;
         }
@@ -72,7 +72,7 @@ public class PlatformSocialUserServiceImpl implements PlatformSocialUserService 
         // 保存到 DB 中
         socialUser = platformSocialUserMapper.selectByTypeAndOpenid(type, authUser.getUuid());
         if (socialUser == null) {
-            socialUser = new SocialUserDO();
+            socialUser = new PlatformSocialUserDO();
         }
         socialUser.setType(type).setCode(code).setState(state) // 需要保存 code + state 字段，保证后续可查询
                 .setOpenid(authUser.getUuid()).setToken(authUser.getToken().getAccessToken()).setRawTokenInfo((toJsonString(authUser.getToken())))
@@ -86,21 +86,21 @@ public class PlatformSocialUserServiceImpl implements PlatformSocialUserService 
     }
 
     @Override
-    public List<SocialUserDO> getSocialUserList(Long userId, Integer userType) {
+    public List<PlatformSocialUserDO> getSocialUserList(Long userId, Integer userType) {
         // 获得绑定
-        List<SocialUserBindDO> socialUserBinds = platformSocialUserBindMapper.selectListByUserIdAndUserType(userId, userType);
+        List<PlatformSocialUserBindDO> socialUserBinds = platformSocialUserBindMapper.selectListByUserIdAndUserType(userId, userType);
         if (CollUtil.isEmpty(socialUserBinds)) {
             return Collections.emptyList();
         }
         // 获得社交用户
-        return platformSocialUserMapper.selectBatchIds(convertSet(socialUserBinds, SocialUserBindDO::getSocialUserId));
+        return platformSocialUserMapper.selectBatchIds(convertSet(socialUserBinds, PlatformSocialUserBindDO::getSocialUserId));
     }
 
     @Override
     @Transactional
     public void bindSocialUser(SocialUserBindReqDTO reqDTO) {
         // 获得社交用户
-        SocialUserDO socialUser = authSocialUser(reqDTO.getType(), reqDTO.getCode(), reqDTO.getState());
+        PlatformSocialUserDO socialUser = authSocialUser(reqDTO.getType(), reqDTO.getCode(), reqDTO.getState());
         Assert.notNull(socialUser, "社交用户不能为空");
 
         // 社交用户可能之前绑定过别的用户，需要进行解绑
@@ -111,7 +111,7 @@ public class PlatformSocialUserServiceImpl implements PlatformSocialUserService 
                 socialUser.getType());
 
         // 绑定当前登录的社交用户
-        SocialUserBindDO socialUserBind = SocialUserBindDO.builder()
+        PlatformSocialUserBindDO socialUserBind = PlatformSocialUserBindDO.builder()
                 .userId(reqDTO.getUserId()).userType(reqDTO.getUserType())
                 .socialUserId(socialUser.getId()).socialType(socialUser.getType()).build();
         platformSocialUserBindMapper.insert(socialUserBind);
@@ -120,7 +120,7 @@ public class PlatformSocialUserServiceImpl implements PlatformSocialUserService 
     @Override
     public void unbindSocialUser(Long userId, Integer userType, Integer type, String openid) {
         // 获得 openid 对应的 SocialUserDO 社交用户
-        SocialUserDO socialUser = platformSocialUserMapper.selectByTypeAndOpenid(type, openid);
+        PlatformSocialUserDO socialUser = platformSocialUserMapper.selectByTypeAndOpenid(type, openid);
         if (socialUser == null) {
             throw exception(SOCIAL_USER_NOT_FOUND);
         }
@@ -132,11 +132,11 @@ public class PlatformSocialUserServiceImpl implements PlatformSocialUserService 
     @Override
     public Long getBindUserId(Integer userType, Integer type, String code, String state) {
         // 获得社交用户
-        SocialUserDO socialUser = authSocialUser(type, code, state);
+        PlatformSocialUserDO socialUser = authSocialUser(type, code, state);
         Assert.notNull(socialUser, "社交用户不能为空");
 
         // 如果未绑定的社交用户，则无法自动登录，进行报错
-        SocialUserBindDO socialUserBind = platformSocialUserBindMapper.selectByUserTypeAndSocialUserId(userType,
+        PlatformSocialUserBindDO socialUserBind = platformSocialUserBindMapper.selectByUserTypeAndSocialUserId(userType,
                 socialUser.getId());
         if (socialUserBind == null) {
             throw exception(AUTH_THIRD_LOGIN_NOT_BIND);

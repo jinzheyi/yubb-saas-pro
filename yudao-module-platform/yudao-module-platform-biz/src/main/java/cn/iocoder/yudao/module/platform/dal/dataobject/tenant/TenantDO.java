@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.dal.dataobject.tenant;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
@@ -40,7 +40,7 @@ public class TenantDO extends BaseDO {
     /**
      * 联系人的用户编号
      *
-     * 关联 {@link AdminUserDO#getId()}
+     * 关联 {@link PlatformUserDO#getId()}
      */
     private Long contactUserId;
     /**

@@ -5,7 +5,7 @@ import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.Sensi
 import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordExcelVO;
 import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordRespVO;
 import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.sensitiveword.SensitiveWordDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.sensitiveword.PlatformSensitiveWordDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -21,16 +21,16 @@ public interface SensitiveWordConvert {
 
     SensitiveWordConvert INSTANCE = Mappers.getMapper(SensitiveWordConvert.class);
 
-    SensitiveWordDO convert(SensitiveWordCreateReqVO bean);
+    PlatformSensitiveWordDO convert(SensitiveWordCreateReqVO bean);
 
-    SensitiveWordDO convert(SensitiveWordUpdateReqVO bean);
+    PlatformSensitiveWordDO convert(SensitiveWordUpdateReqVO bean);
 
-    SensitiveWordRespVO convert(SensitiveWordDO bean);
+    SensitiveWordRespVO convert(PlatformSensitiveWordDO bean);
 
-    List<SensitiveWordRespVO> convertList(List<SensitiveWordDO> list);
+    List<SensitiveWordRespVO> convertList(List<PlatformSensitiveWordDO> list);
 
-    PageResult<SensitiveWordRespVO> convertPage(PageResult<SensitiveWordDO> page);
+    PageResult<SensitiveWordRespVO> convertPage(PageResult<PlatformSensitiveWordDO> page);
 
-    List<SensitiveWordExcelVO> convertList02(List<SensitiveWordDO> list);
+    List<SensitiveWordExcelVO> convertList02(List<PlatformSensitiveWordDO> list);
 
 }

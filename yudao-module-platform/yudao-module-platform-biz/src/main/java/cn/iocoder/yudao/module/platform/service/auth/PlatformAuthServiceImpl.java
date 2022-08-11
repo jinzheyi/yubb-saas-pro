@@ -11,8 +11,8 @@ import cn.iocoder.yudao.module.platform.api.sms.SmsCodeApi;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.platform.controller.center.auth.vo.*;
 import cn.iocoder.yudao.module.platform.convert.auth.AuthConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.framework.common.enums.logger.LoginLogTypeEnum;
 import cn.iocoder.yudao.framework.common.enums.logger.LoginResultEnum;
 import cn.iocoder.yudao.framework.common.enums.oauth2.OAuth2ClientConstants;
@@ -61,10 +61,10 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     private SmsCodeApi smsCodeApi;
 
     @Override
-    public AdminUserDO authenticate(String username, String password) {
+    public PlatformUserDO authenticate(String username, String password) {
         final LoginLogTypeEnum logTypeEnum = LoginLogTypeEnum.LOGIN_USERNAME;
         // 校验账号是否存在
-        AdminUserDO user = userService.getUserByUsername(username);
+        PlatformUserDO user = userService.getUserByUsername(username);
         if (user == null) {
             createLoginLog(null, username, logTypeEnum, LoginResultEnum.BAD_CREDENTIALS);
             throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
@@ -87,7 +87,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         verifyCaptcha(reqVO);
 
         // 使用账号密码，进行登录
-        AdminUserDO user = authenticate(reqVO.getUsername(), reqVO.getPassword());
+        PlatformUserDO user = authenticate(reqVO.getUsername(), reqVO.getPassword());
 
         // 如果 socialType 非空，说明需要绑定社交用户
         if (reqVO.getSocialType() != null) {
@@ -115,7 +115,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         smsCodeApi.useSmsCode(AuthConvert.INSTANCE.convert(reqVO, SmsSceneEnum.ADMIN_MEMBER_LOGIN.getScene(), getClientIP()));
 
         // 获得用户信息
-        AdminUserDO user = userService.getUserByMobile(reqVO.getMobile());
+        PlatformUserDO user = userService.getUserByMobile(reqVO.getMobile());
         if (user == null) {
             throw exception(USER_NOT_EXISTS);
         }
@@ -179,7 +179,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
 
         // 获得用户
-        AdminUserDO user = userService.getUser(userId);
+        PlatformUserDO user = userService.getUser(userId);
         if (user == null) {
             throw exception(USER_NOT_EXISTS);
         }
@@ -190,7 +190,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
 
     @Override
     public AuthLoginRespVO refreshToken(String refreshToken) {
-        OAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.refreshAccessToken(refreshToken, OAuth2ClientConstants.CLIENT_ID_DEFAULT);
+        PlatformOAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.refreshAccessToken(refreshToken, OAuth2ClientConstants.CLIENT_ID_DEFAULT);
         return AuthConvert.INSTANCE.convert(accessTokenDO);
     }
 
@@ -198,7 +198,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         // 插入登陆日志
         createLoginLog(userId, username, logType, LoginResultEnum.SUCCESS);
         // 创建访问令牌
-        OAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.createAccessToken(userId, getUserType().getValue(),
+        PlatformOAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.createAccessToken(userId, getUserType().getValue(),
                 OAuth2ClientConstants.CLIENT_ID_DEFAULT, null);
         // 构建返回结果
         return AuthConvert.INSTANCE.convert(accessTokenDO);
@@ -207,7 +207,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     @Override
     public void logout(String token, Integer logType) {
         // 删除访问令牌
-        OAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.removeAccessToken(token);
+        PlatformOAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.removeAccessToken(token);
         if (accessTokenDO == null) {
             return;
         }
@@ -232,7 +232,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         if (userId == null) {
             return null;
         }
-        AdminUserDO user = userService.getUser(userId);
+        PlatformUserDO user = userService.getUser(userId);
         return user != null ? user.getUsername() : null;
     }
 

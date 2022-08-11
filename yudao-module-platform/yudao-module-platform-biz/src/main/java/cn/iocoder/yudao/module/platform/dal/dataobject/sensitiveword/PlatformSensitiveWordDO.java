@@ -24,7 +24,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SensitiveWordDO extends BaseDO {
+public class PlatformSensitiveWordDO extends BaseDO {
 
     /**
      * 编号

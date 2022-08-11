@@ -5,8 +5,8 @@ import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.O
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogRespVO;
 import cn.iocoder.yudao.module.platform.convert.logger.OperateLogConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.logger.OperateLogDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.logger.PlatformOperateLogDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.module.platform.service.logger.PlatformOperateLogService;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
@@ -50,11 +50,11 @@ public class CenterOperateLogController {
     @ApiOperation("查看操作日志分页列表")
     @PreAuthorize("@ss.hasPermission('center:operate-log:query')")
     public CommonResult<PageResult<OperateLogRespVO>> pageOperateLog(@Valid OperateLogPageReqVO reqVO) {
-        PageResult<OperateLogDO> pageResult = platformOperateLogService.getOperateLogPage(reqVO);
+        PageResult<PlatformOperateLogDO> pageResult = platformOperateLogService.getOperateLogPage(reqVO);
 
         // 获得拼接需要的数据
-        Collection<Long> userIds = CollectionUtils.convertList(pageResult.getList(), OperateLogDO::getUserId);
-        Map<Long, AdminUserDO> userMap = userService.getUserMap(userIds);
+        Collection<Long> userIds = CollectionUtils.convertList(pageResult.getList(), PlatformOperateLogDO::getUserId);
+        Map<Long, PlatformUserDO> userMap = userService.getUserMap(userIds);
         // 拼接数据
         List<OperateLogRespVO> list = new ArrayList<>(pageResult.getList().size());
         pageResult.getList().forEach(operateLog -> {
@@ -71,11 +71,11 @@ public class CenterOperateLogController {
     @PreAuthorize("@ss.hasPermission('center:operate-log:export')")
     @OperateLog(type = EXPORT)
     public void exportOperateLog(HttpServletResponse response, @Valid OperateLogExportReqVO reqVO) throws IOException {
-        List<OperateLogDO> list = platformOperateLogService.getOperateLogs(reqVO);
+        List<PlatformOperateLogDO> list = platformOperateLogService.getOperateLogs(reqVO);
 
         // 获得拼接需要的数据
-        Collection<Long> userIds = CollectionUtils.convertList(list, OperateLogDO::getUserId);
-        Map<Long, AdminUserDO> userMap = userService.getUserMap(userIds);
+        Collection<Long> userIds = CollectionUtils.convertList(list, PlatformOperateLogDO::getUserId);
+        Map<Long, PlatformUserDO> userMap = userService.getUserMap(userIds);
         // 拼接数据
         List<OperateLogExcelVO> excelDataList = OperateLogConvert.INSTANCE.convertList(list, userMap);
         // 输出

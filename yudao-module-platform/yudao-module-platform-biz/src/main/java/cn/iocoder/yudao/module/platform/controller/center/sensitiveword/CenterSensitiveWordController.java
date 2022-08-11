@@ -6,7 +6,7 @@ import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
 import cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog;
 import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.*;
 import cn.iocoder.yudao.module.platform.convert.sensitiveword.SensitiveWordConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.sensitiveword.SensitiveWordDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.sensitiveword.PlatformSensitiveWordDO;
 import cn.iocoder.yudao.module.platform.service.sensitiveword.PlatformSensitiveWordService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -63,7 +63,7 @@ public class CenterSensitiveWordController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@ss.hasPermission('center:sensitive-word:query')")
     public CommonResult<SensitiveWordRespVO> getSensitiveWord(@RequestParam("id") Long id) {
-        SensitiveWordDO sensitiveWord = platformSensitiveWordService.getSensitiveWord(id);
+        PlatformSensitiveWordDO sensitiveWord = platformSensitiveWordService.getSensitiveWord(id);
         return success(SensitiveWordConvert.INSTANCE.convert(sensitiveWord));
     }
 
@@ -71,7 +71,7 @@ public class CenterSensitiveWordController {
     @ApiOperation("获得敏感词分页")
     @PreAuthorize("@ss.hasPermission('center:sensitive-word:query')")
     public CommonResult<PageResult<SensitiveWordRespVO>> getSensitiveWordPage(@Valid SensitiveWordPageReqVO pageVO) {
-        PageResult<SensitiveWordDO> pageResult = platformSensitiveWordService.getSensitiveWordPage(pageVO);
+        PageResult<PlatformSensitiveWordDO> pageResult = platformSensitiveWordService.getSensitiveWordPage(pageVO);
         return success(SensitiveWordConvert.INSTANCE.convertPage(pageResult));
     }
 
@@ -81,7 +81,7 @@ public class CenterSensitiveWordController {
     @OperateLog(type = EXPORT)
     public void exportSensitiveWordExcel(@Valid SensitiveWordExportReqVO exportReqVO,
               HttpServletResponse response) throws IOException {
-        List<SensitiveWordDO> list = platformSensitiveWordService.getSensitiveWordList(exportReqVO);
+        List<PlatformSensitiveWordDO> list = platformSensitiveWordService.getSensitiveWordList(exportReqVO);
         // 导出 Excel
         List<SensitiveWordExcelVO> datas = SensitiveWordConvert.INSTANCE.convertList02(list);
         ExcelUtils.write(response, "敏感词.xls", "数据", SensitiveWordExcelVO.class, datas);

@@ -5,7 +5,7 @@ import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.UserExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.UserPageReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -13,53 +13,53 @@ import java.util.Collection;
 import java.util.List;
 
 @Mapper
-public interface PlatformUserMapper extends BaseMapperX<AdminUserDO> {
+public interface PlatformUserMapper extends BaseMapperX<PlatformUserDO> {
 
-    default AdminUserDO selectByUsername(String username) {
-        return selectOne(new LambdaQueryWrapper<AdminUserDO>().eq(AdminUserDO::getUsername, username));
+    default PlatformUserDO selectByUsername(String username) {
+        return selectOne(new LambdaQueryWrapper<PlatformUserDO>().eq(PlatformUserDO::getUsername, username));
     }
 
-    default AdminUserDO selectByEmail(String email) {
-        return selectOne(new LambdaQueryWrapper<AdminUserDO>().eq(AdminUserDO::getEmail, email));
+    default PlatformUserDO selectByEmail(String email) {
+        return selectOne(new LambdaQueryWrapper<PlatformUserDO>().eq(PlatformUserDO::getEmail, email));
     }
 
-    default AdminUserDO selectByMobile(String mobile) {
-        return selectOne(new LambdaQueryWrapper<AdminUserDO>().eq(AdminUserDO::getMobile, mobile));
+    default PlatformUserDO selectByMobile(String mobile) {
+        return selectOne(new LambdaQueryWrapper<PlatformUserDO>().eq(PlatformUserDO::getMobile, mobile));
     }
 
-    default PageResult<AdminUserDO> selectPage(UserPageReqVO reqVO, Collection<Long> deptIds) {
-        return selectPage(reqVO, new LambdaQueryWrapperX<AdminUserDO>()
-                .likeIfPresent(AdminUserDO::getUsername, reqVO.getUsername())
-                .likeIfPresent(AdminUserDO::getMobile, reqVO.getMobile())
-                .eqIfPresent(AdminUserDO::getStatus, reqVO.getStatus())
-                .betweenIfPresent(AdminUserDO::getCreateTime, reqVO.getCreateTime())
-                .inIfPresent(AdminUserDO::getDeptId, deptIds)
-                .orderByDesc(AdminUserDO::getId));
+    default PageResult<PlatformUserDO> selectPage(UserPageReqVO reqVO, Collection<Long> deptIds) {
+        return selectPage(reqVO, new LambdaQueryWrapperX<PlatformUserDO>()
+                .likeIfPresent(PlatformUserDO::getUsername, reqVO.getUsername())
+                .likeIfPresent(PlatformUserDO::getMobile, reqVO.getMobile())
+                .eqIfPresent(PlatformUserDO::getStatus, reqVO.getStatus())
+                .betweenIfPresent(PlatformUserDO::getCreateTime, reqVO.getCreateTime())
+                .inIfPresent(PlatformUserDO::getDeptId, deptIds)
+                .orderByDesc(PlatformUserDO::getId));
     }
 
-    default List<AdminUserDO> selectList(UserExportReqVO reqVO, Collection<Long> deptIds) {
-        return selectList(new LambdaQueryWrapperX<AdminUserDO>()
-                .likeIfPresent(AdminUserDO::getUsername, reqVO.getUsername())
-                .likeIfPresent(AdminUserDO::getMobile, reqVO.getMobile())
-                .eqIfPresent(AdminUserDO::getStatus, reqVO.getStatus())
-                .betweenIfPresent(AdminUserDO::getCreateTime, reqVO.getCreateTime())
-                .inIfPresent(AdminUserDO::getDeptId, deptIds));
+    default List<PlatformUserDO> selectList(UserExportReqVO reqVO, Collection<Long> deptIds) {
+        return selectList(new LambdaQueryWrapperX<PlatformUserDO>()
+                .likeIfPresent(PlatformUserDO::getUsername, reqVO.getUsername())
+                .likeIfPresent(PlatformUserDO::getMobile, reqVO.getMobile())
+                .eqIfPresent(PlatformUserDO::getStatus, reqVO.getStatus())
+                .betweenIfPresent(PlatformUserDO::getCreateTime, reqVO.getCreateTime())
+                .inIfPresent(PlatformUserDO::getDeptId, deptIds));
     }
 
-    default List<AdminUserDO> selectListByNickname(String nickname) {
-        return selectList(new LambdaQueryWrapperX<AdminUserDO>().like(AdminUserDO::getNickname, nickname));
+    default List<PlatformUserDO> selectListByNickname(String nickname) {
+        return selectList(new LambdaQueryWrapperX<PlatformUserDO>().like(PlatformUserDO::getNickname, nickname));
     }
 
-    default List<AdminUserDO> selectListByUsername(String username) {
-        return selectList(new LambdaQueryWrapperX<AdminUserDO>().like(AdminUserDO::getUsername, username));
+    default List<PlatformUserDO> selectListByUsername(String username) {
+        return selectList(new LambdaQueryWrapperX<PlatformUserDO>().like(PlatformUserDO::getUsername, username));
     }
 
-    default List<AdminUserDO> selectListByStatus(Integer status) {
-        return selectList(AdminUserDO::getStatus, status);
+    default List<PlatformUserDO> selectListByStatus(Integer status) {
+        return selectList(PlatformUserDO::getStatus, status);
     }
 
-    default List<AdminUserDO> selectListByDeptIds(Collection<Long> deptIds) {
-        return selectList(AdminUserDO::getDeptId, deptIds);
+    default List<PlatformUserDO> selectListByDeptIds(Collection<Long> deptIds) {
+        return selectList(PlatformUserDO::getDeptId, deptIds);
     }
 
 }

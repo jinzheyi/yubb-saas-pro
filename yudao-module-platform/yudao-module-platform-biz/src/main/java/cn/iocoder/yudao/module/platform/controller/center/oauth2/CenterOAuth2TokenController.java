@@ -5,7 +5,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.token.OAuth2AccessTokenRespVO;
 import cn.iocoder.yudao.module.platform.convert.auth.OAuth2TokenConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 import cn.iocoder.yudao.framework.common.enums.logger.LoginLogTypeEnum;
 import cn.iocoder.yudao.module.platform.service.auth.PlatformAuthService;
 import cn.iocoder.yudao.module.platform.service.oauth2.PlatformOAuth2TokenService;
@@ -34,7 +34,7 @@ public class CenterOAuth2TokenController {
     @ApiOperation(value = "获得访问令牌分页", notes = "只返回有效期内的")
     @PreAuthorize("@ss.hasPermission('center:oauth2-token:page')")
     public CommonResult<PageResult<OAuth2AccessTokenRespVO>> getAccessTokenPage(@Valid OAuth2AccessTokenPageReqVO reqVO) {
-        PageResult<OAuth2AccessTokenDO> pageResult = oauth2TokenServicePlatform.getAccessTokenPage(reqVO);
+        PageResult<PlatformOAuth2AccessTokenDO> pageResult = oauth2TokenServicePlatform.getAccessTokenPage(reqVO);
         return success(OAuth2TokenConvert.INSTANCE.convert(pageResult));
     }
 

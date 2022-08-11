@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.platform.service.oauth2;
 
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 
 import java.util.List;
 
@@ -29,8 +29,8 @@ public interface PlatformOAuth2GrantService {
      * @param scopes 授权范围
      * @return 访问令牌
      */
-    OAuth2AccessTokenDO grantImplicit(Long userId, Integer userType,
-                                      String clientId, List<String> scopes);
+    PlatformOAuth2AccessTokenDO grantImplicit(Long userId, Integer userType,
+                                              String clientId, List<String> scopes);
 
     /**
      * 授权码模式，第一阶段，获得 code 授权码
@@ -60,8 +60,8 @@ public interface PlatformOAuth2GrantService {
      * @param state 状态
      * @return 访问令牌
      */
-    OAuth2AccessTokenDO grantAuthorizationCodeForAccessToken(String clientId, String code,
-                                                             String redirectUri, String state);
+    PlatformOAuth2AccessTokenDO grantAuthorizationCodeForAccessToken(String clientId, String code,
+                                                                     String redirectUri, String state);
 
     /**
      * 密码模式
@@ -74,8 +74,8 @@ public interface PlatformOAuth2GrantService {
      * @param scopes 授权范围
      * @return 访问令牌
      */
-    OAuth2AccessTokenDO grantPassword(String username, String password,
-                                      String clientId, List<String> scopes);
+    PlatformOAuth2AccessTokenDO grantPassword(String username, String password,
+                                              String clientId, List<String> scopes);
 
     /**
      * 刷新模式
@@ -86,7 +86,7 @@ public interface PlatformOAuth2GrantService {
      * @param clientId 客户端编号
      * @return 访问令牌
      */
-    OAuth2AccessTokenDO grantRefreshToken(String refreshToken, String clientId);
+    PlatformOAuth2AccessTokenDO grantRefreshToken(String refreshToken, String clientId);
 
     /**
      * 客户端模式
@@ -97,7 +97,7 @@ public interface PlatformOAuth2GrantService {
      * @param scopes 授权范围
      * @return 访问令牌
      */
-    OAuth2AccessTokenDO grantClientCredentials(String clientId, List<String> scopes);
+    PlatformOAuth2AccessTokenDO grantClientCredentials(String clientId, List<String> scopes);
 
     /**
      * 移除访问令牌

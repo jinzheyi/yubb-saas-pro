@@ -13,7 +13,7 @@ import cn.iocoder.yudao.framework.sms.core.client.dto.SmsReceiveRespDTO;
 import cn.iocoder.yudao.framework.sms.core.client.dto.SmsSendRespDTO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsChannelDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsTemplateDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.module.platform.mq.message.sms.SmsSendMessage;
 import cn.iocoder.yudao.module.platform.mq.producer.sms.PlatformSmsProducer;
 import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
@@ -56,7 +56,7 @@ public class PlatformSmsSendServiceImpl implements PlatformSmsSendService {
     public Long sendSingleSmsToAdmin(String mobile, Long userId, String templateCode, Map<String, Object> templateParams) {
         // 如果 mobile 为空，则加载用户编号对应的手机号
         if (StrUtil.isEmpty(mobile)) {
-            AdminUserDO user = platformUserService.getUser(userId);
+            PlatformUserDO user = platformUserService.getUser(userId);
             if (user != null) {
                 mobile = user.getMobile();
             }

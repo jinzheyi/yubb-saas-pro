@@ -9,7 +9,7 @@ import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostExpor
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.dept.PostConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformPostDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.dept.PlatformPostMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -40,7 +40,7 @@ public class PlatformPostServiceImpl implements PlatformPostService {
         // 校验正确性
         this.checkCreateOrUpdate(null, reqVO.getName(), reqVO.getCode());
         // 插入岗位
-        PostDO post = PostConvert.INSTANCE.convert(reqVO);
+        PlatformPostDO post = PostConvert.INSTANCE.convert(reqVO);
         platformPostMapper.insert(post);
         return post.getId();
     }
@@ -50,7 +50,7 @@ public class PlatformPostServiceImpl implements PlatformPostService {
         // 校验正确性
         this.checkCreateOrUpdate(reqVO.getId(), reqVO.getName(), reqVO.getCode());
         // 更新岗位
-        PostDO updateObj = PostConvert.INSTANCE.convert(reqVO);
+        PlatformPostDO updateObj = PostConvert.INSTANCE.convert(reqVO);
         platformPostMapper.updateById(updateObj);
     }
 
@@ -63,22 +63,22 @@ public class PlatformPostServiceImpl implements PlatformPostService {
     }
 
     @Override
-    public List<PostDO> getPosts(Collection<Long> ids, Collection<Integer> statuses) {
+    public List<PlatformPostDO> getPosts(Collection<Long> ids, Collection<Integer> statuses) {
         return platformPostMapper.selectList(ids, statuses);
     }
 
     @Override
-    public PageResult<PostDO> getPostPage(PostPageReqVO reqVO) {
+    public PageResult<PlatformPostDO> getPostPage(PostPageReqVO reqVO) {
         return platformPostMapper.selectPage(reqVO);
     }
 
     @Override
-    public List<PostDO> getPosts(PostExportReqVO reqVO) {
+    public List<PlatformPostDO> getPosts(PostExportReqVO reqVO) {
         return platformPostMapper.selectList(reqVO);
     }
 
     @Override
-    public PostDO getPost(Long id) {
+    public PlatformPostDO getPost(Long id) {
         return platformPostMapper.selectById(id);
     }
 
@@ -92,7 +92,7 @@ public class PlatformPostServiceImpl implements PlatformPostService {
     }
 
     private void checkPostNameUnique(Long id, String name) {
-        PostDO post = platformPostMapper.selectByName(name);
+        PlatformPostDO post = platformPostMapper.selectByName(name);
         if (post == null) {
             return;
         }
@@ -106,7 +106,7 @@ public class PlatformPostServiceImpl implements PlatformPostService {
     }
 
     private void checkPostCodeUnique(Long id, String code) {
-        PostDO post = platformPostMapper.selectByCode(code);
+        PlatformPostDO post = platformPostMapper.selectByCode(code);
         if (post == null) {
             return;
         }
@@ -123,7 +123,7 @@ public class PlatformPostServiceImpl implements PlatformPostService {
         if (id == null) {
             return;
         }
-        PostDO post = platformPostMapper.selectById(id);
+        PlatformPostDO post = platformPostMapper.selectById(id);
         if (post == null) {
             throw ServiceExceptionUtil.exception(POST_NOT_FOUND);
         }
@@ -135,11 +135,11 @@ public class PlatformPostServiceImpl implements PlatformPostService {
             return;
         }
         // 获得岗位信息
-        List<PostDO> posts = platformPostMapper.selectBatchIds(ids);
-        Map<Long, PostDO> postMap = convertMap(posts, PostDO::getId);
+        List<PlatformPostDO> posts = platformPostMapper.selectBatchIds(ids);
+        Map<Long, PlatformPostDO> postMap = convertMap(posts, PlatformPostDO::getId);
         // 校验
         ids.forEach(id -> {
-            PostDO post = postMap.get(id);
+            PlatformPostDO post = postMap.get(id);
             if (post == null) {
                 throw exception(POST_NOT_FOUND);
             }

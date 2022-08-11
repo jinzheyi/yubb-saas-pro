@@ -9,7 +9,7 @@ import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.Sensi
 import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.sensitiveword.vo.SensitiveWordUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.sensitiveword.SensitiveWordConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.sensitiveword.SensitiveWordDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.sensitiveword.PlatformSensitiveWordDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.sensitiveword.PlatformSensitiveWordMapper;
 import cn.iocoder.yudao.module.platform.mq.producer.sensitiveword.PlatformSensitiveWordProducer;
 import cn.iocoder.yudao.module.platform.util.collection.SimpleTrie;
@@ -47,7 +47,7 @@ public class PlatformSensitiveWordServiceImpl implements PlatformSensitiveWordSe
 
     /**
      * 敏感词标签缓存
-     * key：敏感词编号 {@link SensitiveWordDO#getId()}
+     * key：敏感词编号 {@link PlatformSensitiveWordDO#getId()}
      * <p>
      * 这里声明 volatile 修饰的原因是，每次刷新时，直接修改指向
      */
@@ -84,7 +84,7 @@ public class PlatformSensitiveWordServiceImpl implements PlatformSensitiveWordSe
     @PostConstruct
     public void initLocalCache() {
         // 获取敏感词列表，如果有更新
-        List<SensitiveWordDO> sensitiveWordList = loadSensitiveWordIfUpdate(maxUpdateTime);
+        List<PlatformSensitiveWordDO> sensitiveWordList = loadSensitiveWordIfUpdate(maxUpdateTime);
         if (CollUtil.isEmpty(sensitiveWordList)) {
             return;
         }
@@ -96,20 +96,20 @@ public class PlatformSensitiveWordServiceImpl implements PlatformSensitiveWordSe
         // 写入 defaultSensitiveWordTrie、tagSensitiveWordTries 缓存
         initSensitiveWordTrie(sensitiveWordList);
         // 写入 maxUpdateTime 最大更新时间
-        maxUpdateTime = CollectionUtils.getMaxValue(sensitiveWordList, SensitiveWordDO::getUpdateTime);
+        maxUpdateTime = CollectionUtils.getMaxValue(sensitiveWordList, PlatformSensitiveWordDO::getUpdateTime);
         log.info("[initLocalCache][初始化 敏感词 数量为 {}]", sensitiveWordList.size());
     }
 
-    private void initSensitiveWordTrie(List<SensitiveWordDO> wordDOs) {
+    private void initSensitiveWordTrie(List<PlatformSensitiveWordDO> wordDOs) {
         // 过滤禁用的敏感词
         wordDOs = CollectionUtils.filterList(wordDOs, word -> word.getStatus().equals(CommonStatusEnum.ENABLE.getStatus()));
 
         // 初始化默认的 defaultSensitiveWordTrie
-        this.defaultSensitiveWordTrie = new SimpleTrie(CollectionUtils.convertList(wordDOs, SensitiveWordDO::getName));
+        this.defaultSensitiveWordTrie = new SimpleTrie(CollectionUtils.convertList(wordDOs, PlatformSensitiveWordDO::getName));
 
         // 初始化 tagSensitiveWordTries
         Multimap<String, String> tagWords = HashMultimap.create();
-        for (SensitiveWordDO word : wordDOs) {
+        for (PlatformSensitiveWordDO word : wordDOs) {
             if (CollUtil.isEmpty(word.getTags())) {
                 continue;
             }
@@ -133,7 +133,7 @@ public class PlatformSensitiveWordServiceImpl implements PlatformSensitiveWordSe
      * @param maxUpdateTime 当前敏感词的最大更新时间
      * @return 敏感词列表
      */
-    private List<SensitiveWordDO> loadSensitiveWordIfUpdate(Date maxUpdateTime) {
+    private List<PlatformSensitiveWordDO> loadSensitiveWordIfUpdate(Date maxUpdateTime) {
         // 第一步，判断是否要更新。
         // 如果更新时间为空，说明 DB 一定有新数据
         if (maxUpdateTime == null) {
@@ -153,7 +153,7 @@ public class PlatformSensitiveWordServiceImpl implements PlatformSensitiveWordSe
         // 校验唯一性
         checkSensitiveWordNameUnique(null, createReqVO.getName());
         // 插入
-        SensitiveWordDO sensitiveWord = SensitiveWordConvert.INSTANCE.convert(createReqVO);
+        PlatformSensitiveWordDO sensitiveWord = SensitiveWordConvert.INSTANCE.convert(createReqVO);
         platformSensitiveWordMapper.insert(sensitiveWord);
         // 发送消息，刷新缓存
         platformSensitiveWordProducer.sendSensitiveWordRefreshMessage();
@@ -166,7 +166,7 @@ public class PlatformSensitiveWordServiceImpl implements PlatformSensitiveWordSe
         checkSensitiveWordExists(updateReqVO.getId());
         checkSensitiveWordNameUnique(updateReqVO.getId(), updateReqVO.getName());
         // 更新
-        SensitiveWordDO updateObj = SensitiveWordConvert.INSTANCE.convert(updateReqVO);
+        PlatformSensitiveWordDO updateObj = SensitiveWordConvert.INSTANCE.convert(updateReqVO);
         platformSensitiveWordMapper.updateById(updateObj);
         // 发送消息，刷新缓存
         platformSensitiveWordProducer.sendSensitiveWordRefreshMessage();
@@ -183,7 +183,7 @@ public class PlatformSensitiveWordServiceImpl implements PlatformSensitiveWordSe
     }
 
     private void checkSensitiveWordNameUnique(Long id, String name) {
-        SensitiveWordDO word = platformSensitiveWordMapper.selectByName(name);
+        PlatformSensitiveWordDO word = platformSensitiveWordMapper.selectByName(name);
         if (word == null) {
             return;
         }
@@ -203,22 +203,22 @@ public class PlatformSensitiveWordServiceImpl implements PlatformSensitiveWordSe
     }
 
     @Override
-    public SensitiveWordDO getSensitiveWord(Long id) {
+    public PlatformSensitiveWordDO getSensitiveWord(Long id) {
         return platformSensitiveWordMapper.selectById(id);
     }
 
     @Override
-    public List<SensitiveWordDO> getSensitiveWordList() {
+    public List<PlatformSensitiveWordDO> getSensitiveWordList() {
         return platformSensitiveWordMapper.selectList();
     }
 
     @Override
-    public PageResult<SensitiveWordDO> getSensitiveWordPage(SensitiveWordPageReqVO pageReqVO) {
+    public PageResult<PlatformSensitiveWordDO> getSensitiveWordPage(SensitiveWordPageReqVO pageReqVO) {
         return platformSensitiveWordMapper.selectPage(pageReqVO);
     }
 
     @Override
-    public List<SensitiveWordDO> getSensitiveWordList(SensitiveWordExportReqVO exportReqVO) {
+    public List<PlatformSensitiveWordDO> getSensitiveWordList(SensitiveWordExportReqVO exportReqVO) {
         return platformSensitiveWordMapper.selectList(exportReqVO);
     }
 

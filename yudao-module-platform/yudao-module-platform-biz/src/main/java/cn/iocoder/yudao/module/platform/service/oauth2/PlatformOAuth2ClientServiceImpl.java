@@ -10,7 +10,7 @@ import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth
 import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth2ClientPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth2ClientUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.auth.OAuth2ClientConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2ClientDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2ClientDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.oauth2.PlatformOAuth2ClientMapper;
 import cn.iocoder.yudao.module.platform.mq.producer.auth.PlatformOAuth2ClientProducer;
 import com.google.common.annotations.VisibleForTesting;
@@ -48,13 +48,13 @@ public class PlatformOAuth2ClientServiceImpl implements PlatformOAuth2ClientServ
 
     /**
      * 客户端缓存
-     * key：客户端编号 {@link OAuth2ClientDO#getClientId()} ()}
+     * key：客户端编号 {@link PlatformOAuth2ClientDO#getClientId()} ()}
      *
      * 这里声明 volatile 修饰的原因是，每次刷新时，直接修改指向
      */
     @Getter // 解决单测
     @Setter // 解决单测
-    private volatile Map<String, OAuth2ClientDO> clientCache;
+    private volatile Map<String, PlatformOAuth2ClientDO> clientCache;
     /**
      * 缓存角色的最大更新时间，用于后续的增量轮询，判断是否有更新
      */
@@ -74,14 +74,14 @@ public class PlatformOAuth2ClientServiceImpl implements PlatformOAuth2ClientServ
     @PostConstruct
     public void initLocalCache() {
         // 获取客户端列表，如果有更新
-        List<OAuth2ClientDO> tenantList = loadOAuth2ClientIfUpdate(maxUpdateTime);
+        List<PlatformOAuth2ClientDO> tenantList = loadOAuth2ClientIfUpdate(maxUpdateTime);
         if (CollUtil.isEmpty(tenantList)) {
             return;
         }
 
         // 写入缓存
-        clientCache = convertMap(tenantList, OAuth2ClientDO::getClientId);
-        maxUpdateTime = getMaxValue(tenantList, OAuth2ClientDO::getUpdateTime);
+        clientCache = convertMap(tenantList, PlatformOAuth2ClientDO::getClientId);
+        maxUpdateTime = getMaxValue(tenantList, PlatformOAuth2ClientDO::getUpdateTime);
         log.info("[initLocalCache][初始化 OAuth2Client 数量为 {}]", tenantList.size());
     }
 
@@ -97,7 +97,7 @@ public class PlatformOAuth2ClientServiceImpl implements PlatformOAuth2ClientServ
      * @param maxUpdateTime 当前客户端的最大更新时间
      * @return 客户端列表
      */
-    private List<OAuth2ClientDO> loadOAuth2ClientIfUpdate(Date maxUpdateTime) {
+    private List<PlatformOAuth2ClientDO> loadOAuth2ClientIfUpdate(Date maxUpdateTime) {
         // 第一步，判断是否要更新。
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
             log.info("[loadOAuth2ClientIfUpdate][首次加载全量客户端]");
@@ -115,7 +115,7 @@ public class PlatformOAuth2ClientServiceImpl implements PlatformOAuth2ClientServ
     public Long createOAuth2Client(OAuth2ClientCreateReqVO createReqVO) {
         validateClientIdExists(null, createReqVO.getClientId());
         // 插入
-        OAuth2ClientDO oauth2Client = OAuth2ClientConvert.INSTANCE.convert(createReqVO);
+        PlatformOAuth2ClientDO oauth2Client = OAuth2ClientConvert.INSTANCE.convert(createReqVO);
         oauth2ClientMapperPlatform.insert(oauth2Client);
         // 发送刷新消息
         oauth2ClientProducerPlatform.sendOAuth2ClientRefreshMessage();
@@ -130,7 +130,7 @@ public class PlatformOAuth2ClientServiceImpl implements PlatformOAuth2ClientServ
         validateClientIdExists(updateReqVO.getId(), updateReqVO.getClientId());
 
         // 更新
-        OAuth2ClientDO updateObj = OAuth2ClientConvert.INSTANCE.convert(updateReqVO);
+        PlatformOAuth2ClientDO updateObj = OAuth2ClientConvert.INSTANCE.convert(updateReqVO);
         oauth2ClientMapperPlatform.updateById(updateObj);
         // 发送刷新消息
         oauth2ClientProducerPlatform.sendOAuth2ClientRefreshMessage();
@@ -154,7 +154,7 @@ public class PlatformOAuth2ClientServiceImpl implements PlatformOAuth2ClientServ
 
     @VisibleForTesting
     void validateClientIdExists(Long id, String clientId) {
-        OAuth2ClientDO client = oauth2ClientMapperPlatform.selectByClientId(clientId);
+        PlatformOAuth2ClientDO client = oauth2ClientMapperPlatform.selectByClientId(clientId);
         if (client == null) {
             return;
         }
@@ -168,20 +168,20 @@ public class PlatformOAuth2ClientServiceImpl implements PlatformOAuth2ClientServ
     }
 
     @Override
-    public OAuth2ClientDO getOAuth2Client(Long id) {
+    public PlatformOAuth2ClientDO getOAuth2Client(Long id) {
         return oauth2ClientMapperPlatform.selectById(id);
     }
 
     @Override
-    public PageResult<OAuth2ClientDO> getOAuth2ClientPage(OAuth2ClientPageReqVO pageReqVO) {
+    public PageResult<PlatformOAuth2ClientDO> getOAuth2ClientPage(OAuth2ClientPageReqVO pageReqVO) {
         return oauth2ClientMapperPlatform.selectPage(pageReqVO);
     }
 
     @Override
-    public OAuth2ClientDO validOAuthClientFromCache(String clientId, String clientSecret,
-                                                    String authorizedGrantType, Collection<String> scopes, String redirectUri) {
+    public PlatformOAuth2ClientDO validOAuthClientFromCache(String clientId, String clientSecret,
+                                                            String authorizedGrantType, Collection<String> scopes, String redirectUri) {
         // 校验客户端存在、且开启
-        OAuth2ClientDO client = clientCache.get(clientId);
+        PlatformOAuth2ClientDO client = clientCache.get(clientId);
         if (client == null) {
             throw exception(OAUTH2_CLIENT_NOT_EXISTS);
         }

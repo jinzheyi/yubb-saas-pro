@@ -3,8 +3,8 @@ package cn.iocoder.yudao.module.platform.service.oauth2;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2ApproveDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2ClientDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2ApproveDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2ClientDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.oauth2.PlatformOAuth2ApproveMapper;
 import com.google.common.annotations.VisibleForTesting;
 import org.springframework.stereotype.Service;
@@ -40,7 +40,7 @@ public class PlatformOAuth2ApproveServiceImpl implements PlatformOAuth2ApproveSe
     @Transactional
     public boolean checkForPreApproval(Long userId, Integer userType, String clientId, Collection<String> requestedScopes) {
         // 第一步，基于 Client 的自动授权计算，如果 scopes 都在自动授权中，则返回 true 通过
-        OAuth2ClientDO clientDO = oauth2ClientServicePlatform.validOAuthClientFromCache(clientId);
+        PlatformOAuth2ClientDO clientDO = oauth2ClientServicePlatform.validOAuthClientFromCache(clientId);
         Assert.notNull(clientDO, "客户端不能为空"); // 防御性编程
         if (CollUtil.containsAll(clientDO.getAutoApproveScopes(), requestedScopes)) {
             // gh-877 - if all scopes are auto approved, approvals still need to be added to the approval store.
@@ -52,9 +52,9 @@ public class PlatformOAuth2ApproveServiceImpl implements PlatformOAuth2ApproveSe
         }
 
         // 第二步，算上用户已经批准的授权。如果 scopes 都包含，则返回 true
-        List<OAuth2ApproveDO> approveDOs = getApproveList(userId, userType, clientId);
-        Set<String> scopes = convertSet(approveDOs, OAuth2ApproveDO::getScope,
-                OAuth2ApproveDO::getApproved); // 只保留未过期的 + 同意的
+        List<PlatformOAuth2ApproveDO> approveDOs = getApproveList(userId, userType, clientId);
+        Set<String> scopes = convertSet(approveDOs, PlatformOAuth2ApproveDO::getScope,
+                PlatformOAuth2ApproveDO::getApproved); // 只保留未过期的 + 同意的
         return CollUtil.containsAll(scopes, requestedScopes);
     }
 
@@ -79,8 +79,8 @@ public class PlatformOAuth2ApproveServiceImpl implements PlatformOAuth2ApproveSe
     }
 
     @Override
-    public List<OAuth2ApproveDO> getApproveList(Long userId, Integer userType, String clientId) {
-        List<OAuth2ApproveDO> approveDOs = oauth2ApproveMapperPlatform.selectListByUserIdAndUserTypeAndClientId(
+    public List<PlatformOAuth2ApproveDO> getApproveList(Long userId, Integer userType, String clientId) {
+        List<PlatformOAuth2ApproveDO> approveDOs = oauth2ApproveMapperPlatform.selectListByUserIdAndUserTypeAndClientId(
                 userId, userType, clientId);
         approveDOs.removeIf(o -> DateUtils.isExpired(o.getExpiresTime()));
         return approveDOs;
@@ -90,7 +90,7 @@ public class PlatformOAuth2ApproveServiceImpl implements PlatformOAuth2ApproveSe
     void saveApprove(Long userId, Integer userType, String clientId,
                      String scope, Boolean approved, Date expireTime) {
         // 先更新
-        OAuth2ApproveDO approveDO = new OAuth2ApproveDO().setUserId(userId).setUserType(userType)
+        PlatformOAuth2ApproveDO approveDO = new PlatformOAuth2ApproveDO().setUserId(userId).setUserType(userType)
                 .setClientId(clientId).setScope(scope).setApproved(approved).setExpiresTime(expireTime);
         if (oauth2ApproveMapperPlatform.update(approveDO) == 1) {
             return;

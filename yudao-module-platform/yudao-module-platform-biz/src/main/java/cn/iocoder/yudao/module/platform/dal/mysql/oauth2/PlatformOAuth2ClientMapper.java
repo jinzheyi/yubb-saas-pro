@@ -4,7 +4,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth2ClientPageReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2ClientDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2ClientDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 
@@ -16,17 +16,17 @@ import java.util.Date;
  * @author 芋道源码
  */
 @Mapper
-public interface PlatformOAuth2ClientMapper extends BaseMapperX<OAuth2ClientDO> {
+public interface PlatformOAuth2ClientMapper extends BaseMapperX<PlatformOAuth2ClientDO> {
 
-    default PageResult<OAuth2ClientDO> selectPage(OAuth2ClientPageReqVO reqVO) {
-        return selectPage(reqVO, new LambdaQueryWrapperX<OAuth2ClientDO>()
-                .likeIfPresent(OAuth2ClientDO::getName, reqVO.getName())
-                .eqIfPresent(OAuth2ClientDO::getStatus, reqVO.getStatus())
-                .orderByDesc(OAuth2ClientDO::getId));
+    default PageResult<PlatformOAuth2ClientDO> selectPage(OAuth2ClientPageReqVO reqVO) {
+        return selectPage(reqVO, new LambdaQueryWrapperX<PlatformOAuth2ClientDO>()
+                .likeIfPresent(PlatformOAuth2ClientDO::getName, reqVO.getName())
+                .eqIfPresent(PlatformOAuth2ClientDO::getStatus, reqVO.getStatus())
+                .orderByDesc(PlatformOAuth2ClientDO::getId));
     }
 
-    default OAuth2ClientDO selectByClientId(String clientId) {
-        return selectOne(OAuth2ClientDO::getClientId, clientId);
+    default PlatformOAuth2ClientDO selectByClientId(String clientId) {
+        return selectOne(PlatformOAuth2ClientDO::getClientId, clientId);
     }
 
     @Select("SELECT COUNT(*) FROM platform_oauth2_client WHERE update_time > #{maxUpdateTime}")

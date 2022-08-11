@@ -26,7 +26,7 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AdminUserDO extends BaseDO {
+public class PlatformUserDO extends BaseDO {
 
     /**
      * 用户ID

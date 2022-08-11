@@ -6,8 +6,8 @@ import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticeCreate
 import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticePageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticeUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.notice.NoticeConvert;
+import cn.iocoder.yudao.module.platform.dal.dataobject.notice.PlatformNoticeDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.notice.PlatformNoticeMapper;
-import cn.iocoder.yudao.module.platform.dal.dataobject.notice.NoticeDO;
 import com.google.common.annotations.VisibleForTesting;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +28,7 @@ public class PlatformNoticeServiceImpl implements PlatformNoticeService {
 
     @Override
     public Long createNotice(NoticeCreateReqVO reqVO) {
-        NoticeDO notice = NoticeConvert.INSTANCE.convert(reqVO);
+        PlatformNoticeDO notice = NoticeConvert.INSTANCE.convert(reqVO);
         platformNoticeMapper.insert(notice);
         return notice.getId();
     }
@@ -38,7 +38,7 @@ public class PlatformNoticeServiceImpl implements PlatformNoticeService {
         // 校验是否存在
         this.checkNoticeExists(reqVO.getId());
         // 更新通知公告
-        NoticeDO updateObj = NoticeConvert.INSTANCE.convert(reqVO);
+        PlatformNoticeDO updateObj = NoticeConvert.INSTANCE.convert(reqVO);
         platformNoticeMapper.updateById(updateObj);
     }
 
@@ -51,12 +51,12 @@ public class PlatformNoticeServiceImpl implements PlatformNoticeService {
     }
 
     @Override
-    public PageResult<NoticeDO> pageNotices(NoticePageReqVO reqVO) {
+    public PageResult<PlatformNoticeDO> pageNotices(NoticePageReqVO reqVO) {
         return platformNoticeMapper.selectPage(reqVO);
     }
 
     @Override
-    public NoticeDO getNotice(Long id) {
+    public PlatformNoticeDO getNotice(Long id) {
         return platformNoticeMapper.selectById(id);
     }
 
@@ -65,7 +65,7 @@ public class PlatformNoticeServiceImpl implements PlatformNoticeService {
         if (id == null) {
             return;
         }
-        NoticeDO notice = platformNoticeMapper.selectById(id);
+        PlatformNoticeDO notice = platformNoticeMapper.selectById(id);
         if (notice == null) {
             throw ServiceExceptionUtil.exception(NOTICE_NOT_FOUND);
         }

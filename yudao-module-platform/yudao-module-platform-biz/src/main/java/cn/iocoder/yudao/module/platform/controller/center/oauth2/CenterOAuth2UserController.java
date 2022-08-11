@@ -5,9 +5,9 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.user.OAuth2UserInfoRespVO;
 import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.user.OAuth2UserUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.oauth2.OAuth2UserConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformPostDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.module.platform.service.dept.PlatformDeptService;
 import cn.iocoder.yudao.module.platform.service.dept.PlatformPostService;
 import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
@@ -52,16 +52,16 @@ public class CenterOAuth2UserController {
     @PreAuthorize("@ss.hasScope('user.read')") //
     public CommonResult<OAuth2UserInfoRespVO> getUserInfo() {
         // 获得用户基本信息
-        AdminUserDO user = userService.getUser(getLoginUserId());
+        PlatformUserDO user = userService.getUser(getLoginUserId());
         OAuth2UserInfoRespVO resp = OAuth2UserConvert.INSTANCE.convert(user);
         // 获得部门信息
         if (user.getDeptId() != null) {
-            DeptDO dept = platformDeptService.getDept(user.getDeptId());
+            PlatformDeptDO dept = platformDeptService.getDept(user.getDeptId());
             resp.setDept(OAuth2UserConvert.INSTANCE.convert(dept));
         }
         // 获得岗位信息
         if (CollUtil.isNotEmpty(user.getPostIds())) {
-            List<PostDO> posts = platformPostService.getPosts(user.getPostIds());
+            List<PlatformPostDO> posts = platformPostService.getPosts(user.getPostIds());
             resp.setPosts(OAuth2UserConvert.INSTANCE.convertList(posts));
         }
         return success(resp);

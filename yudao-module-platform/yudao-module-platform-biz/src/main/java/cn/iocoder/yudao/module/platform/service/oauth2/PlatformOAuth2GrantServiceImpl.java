@@ -4,9 +4,9 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2CodeDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2CodeDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.module.system.enums.ErrorCodeConstants;
 import cn.iocoder.yudao.module.platform.service.auth.PlatformAuthService;
 import org.springframework.stereotype.Service;
@@ -32,8 +32,8 @@ public class PlatformOAuth2GrantServiceImpl implements PlatformOAuth2GrantServic
     private PlatformAuthService platformAuthService;
 
     @Override
-    public OAuth2AccessTokenDO grantImplicit(Long userId, Integer userType,
-                                             String clientId, List<String> scopes) {
+    public PlatformOAuth2AccessTokenDO grantImplicit(Long userId, Integer userType,
+                                                     String clientId, List<String> scopes) {
         return oauth2TokenServicePlatform.createAccessToken(userId, userType, clientId, scopes);
     }
 
@@ -46,9 +46,9 @@ public class PlatformOAuth2GrantServiceImpl implements PlatformOAuth2GrantServic
     }
 
     @Override
-    public OAuth2AccessTokenDO grantAuthorizationCodeForAccessToken(String clientId, String code,
-                                                                    String redirectUri, String state) {
-        OAuth2CodeDO codeDO = oauth2CodeServicePlatform.consumeAuthorizationCode(code);
+    public PlatformOAuth2AccessTokenDO grantAuthorizationCodeForAccessToken(String clientId, String code,
+                                                                            String redirectUri, String state) {
+        PlatformOAuth2CodeDO codeDO = oauth2CodeServicePlatform.consumeAuthorizationCode(code);
         Assert.notNull(codeDO, "授权码不能为空"); // 防御性编程
         // 校验 clientId 是否匹配
         if (!StrUtil.equals(clientId, codeDO.getClientId())) {
@@ -70,9 +70,9 @@ public class PlatformOAuth2GrantServiceImpl implements PlatformOAuth2GrantServic
     }
 
     @Override
-    public OAuth2AccessTokenDO grantPassword(String username, String password, String clientId, List<String> scopes) {
+    public PlatformOAuth2AccessTokenDO grantPassword(String username, String password, String clientId, List<String> scopes) {
         // 使用账号 + 密码进行登录
-        AdminUserDO user = platformAuthService.authenticate(username, password);
+        PlatformUserDO user = platformAuthService.authenticate(username, password);
         Assert.notNull(user, "用户不能为空！"); // 防御性编程
 
         // 创建访问令牌
@@ -80,12 +80,12 @@ public class PlatformOAuth2GrantServiceImpl implements PlatformOAuth2GrantServic
     }
 
     @Override
-    public OAuth2AccessTokenDO grantRefreshToken(String refreshToken, String clientId) {
+    public PlatformOAuth2AccessTokenDO grantRefreshToken(String refreshToken, String clientId) {
         return oauth2TokenServicePlatform.refreshAccessToken(refreshToken, clientId);
     }
 
     @Override
-    public OAuth2AccessTokenDO grantClientCredentials(String clientId, List<String> scopes) {
+    public PlatformOAuth2AccessTokenDO grantClientCredentials(String clientId, List<String> scopes) {
         // TODO 芋艿：项目中使用 OAuth2 解决的是三方应用的授权，内部的 SSO 等问题，所以暂时不考虑 client_credentials 这个场景
         throw new UnsupportedOperationException("暂时不支持 client_credentials 授权模式");
     }
@@ -93,7 +93,7 @@ public class PlatformOAuth2GrantServiceImpl implements PlatformOAuth2GrantServic
     @Override
     public boolean revokeToken(String clientId, String accessToken) {
         // 先查询，保证 clientId 时匹配的
-        OAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.getAccessToken(accessToken);
+        PlatformOAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.getAccessToken(accessToken);
         if (accessTokenDO == null || ObjectUtil.notEqual(clientId, accessTokenDO.getClientId())) {
             return false;
         }

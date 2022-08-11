@@ -6,7 +6,7 @@ import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostCreat
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostUpdateReqVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PostDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformPostDO;
 import org.springframework.lang.Nullable;
 
 import java.util.Collection;
@@ -49,7 +49,7 @@ public interface PlatformPostService {
      * @param ids 岗位编号数组。如果为空，不进行筛选
      * @return 部门列表
      */
-    default List<PostDO> getPosts(@Nullable Collection<Long> ids) {
+    default List<PlatformPostDO> getPosts(@Nullable Collection<Long> ids) {
         return getPosts(ids, asSet(CommonStatusEnum.ENABLE.getStatus(), CommonStatusEnum.DISABLE.getStatus()));
     }
 
@@ -60,7 +60,7 @@ public interface PlatformPostService {
      * @param statuses 状态数组。如果为空，不进行筛选
      * @return 部门列表
      */
-    List<PostDO> getPosts(@Nullable Collection<Long> ids, @Nullable Collection<Integer> statuses);
+    List<PlatformPostDO> getPosts(@Nullable Collection<Long> ids, @Nullable Collection<Integer> statuses);
 
     /**
      * 获得岗位分页列表
@@ -68,7 +68,7 @@ public interface PlatformPostService {
      * @param reqVO 分页条件
      * @return 部门分页列表
      */
-    PageResult<PostDO> getPostPage(PostPageReqVO reqVO);
+    PageResult<PlatformPostDO> getPostPage(PostPageReqVO reqVO);
 
     /**
      * 获得岗位列表
@@ -76,7 +76,7 @@ public interface PlatformPostService {
      * @param reqVO 查询条件
      * @return 部门列表
      */
-    List<PostDO> getPosts(PostExportReqVO reqVO);
+    List<PlatformPostDO> getPosts(PostExportReqVO reqVO);
 
     /**
      * 获得岗位信息
@@ -84,7 +84,7 @@ public interface PlatformPostService {
      * @param id 岗位编号
      * @return 岗位信息
      */
-    PostDO getPost(Long id);
+    PlatformPostDO getPost(Long id);
 
     /**
      * 校验岗位们是否有效。如下情况，视为无效：

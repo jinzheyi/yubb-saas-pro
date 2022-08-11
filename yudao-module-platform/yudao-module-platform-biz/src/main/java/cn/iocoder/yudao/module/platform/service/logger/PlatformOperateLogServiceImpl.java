@@ -8,8 +8,8 @@ import cn.iocoder.yudao.module.platform.api.logger.dto.OperateLogCreateReqDTO;
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogPageReqVO;
 import cn.iocoder.yudao.module.platform.convert.logger.OperateLogConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.logger.OperateLogDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.logger.PlatformOperateLogDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.logger.PlatformOperateLogMapper;
 import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
 import lombok.extern.slf4j.Slf4j;
@@ -22,8 +22,8 @@ import java.util.Collections;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.module.platform.dal.dataobject.logger.OperateLogDO.JAVA_METHOD_ARGS_MAX_LENGTH;
-import static cn.iocoder.yudao.module.platform.dal.dataobject.logger.OperateLogDO.RESULT_MAX_LENGTH;
+import static cn.iocoder.yudao.module.platform.dal.dataobject.logger.PlatformOperateLogDO.JAVA_METHOD_ARGS_MAX_LENGTH;
+import static cn.iocoder.yudao.module.platform.dal.dataobject.logger.PlatformOperateLogDO.RESULT_MAX_LENGTH;
 
 @Service
 @Validated
@@ -38,18 +38,18 @@ public class PlatformOperateLogServiceImpl implements PlatformOperateLogService 
 
     @Override
     public void createOperateLog(OperateLogCreateReqDTO createReqDTO) {
-        OperateLogDO logDO = OperateLogConvert.INSTANCE.convert(createReqDTO);
+        PlatformOperateLogDO logDO = OperateLogConvert.INSTANCE.convert(createReqDTO);
         logDO.setJavaMethodArgs(StrUtils.maxLength(logDO.getJavaMethodArgs(), JAVA_METHOD_ARGS_MAX_LENGTH));
         logDO.setResultData(StrUtils.maxLength(logDO.getResultData(), RESULT_MAX_LENGTH));
         platformOperateLogMapper.insert(logDO);
     }
 
     @Override
-    public PageResult<OperateLogDO> getOperateLogPage(OperateLogPageReqVO reqVO) {
+    public PageResult<PlatformOperateLogDO> getOperateLogPage(OperateLogPageReqVO reqVO) {
         // 处理基于用户昵称的查询
         Collection<Long> userIds = null;
         if (StrUtil.isNotEmpty(reqVO.getUserNickname())) {
-            userIds = convertSet(userService.getUsersByNickname(reqVO.getUserNickname()), AdminUserDO::getId);
+            userIds = convertSet(userService.getUsersByNickname(reqVO.getUserNickname()), PlatformUserDO::getId);
             if (CollUtil.isEmpty(userIds)) {
                 return PageResult.empty();
             }
@@ -59,11 +59,11 @@ public class PlatformOperateLogServiceImpl implements PlatformOperateLogService 
     }
 
     @Override
-    public List<OperateLogDO> getOperateLogs(OperateLogExportReqVO reqVO) {
+    public List<PlatformOperateLogDO> getOperateLogs(OperateLogExportReqVO reqVO) {
         // 处理基于用户昵称的查询
         Collection<Long> userIds = null;
         if (StrUtil.isNotEmpty(reqVO.getUserNickname())) {
-            userIds = convertSet(userService.getUsersByNickname(reqVO.getUserNickname()), AdminUserDO::getId);
+            userIds = convertSet(userService.getUsersByNickname(reqVO.getUserNickname()), PlatformUserDO::getId);
             if (CollUtil.isEmpty(userIds)) {
                 return Collections.emptyList();
             }

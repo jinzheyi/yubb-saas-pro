@@ -2,8 +2,8 @@ package cn.iocoder.yudao.module.platform.convert.logger;
 
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogExcelVO;
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogRespVO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.logger.OperateLogDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.logger.PlatformOperateLogDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.MapUtils;
 import cn.iocoder.yudao.module.platform.api.logger.dto.OperateLogCreateReqDTO;
@@ -21,13 +21,13 @@ public interface OperateLogConvert {
 
     OperateLogConvert INSTANCE = Mappers.getMapper(OperateLogConvert.class);
 
-    OperateLogDO convert(OperateLogCreateReqDTO bean);
+    PlatformOperateLogDO convert(OperateLogCreateReqDTO bean);
 
-    PageResult<OperateLogRespVO> convertPage(PageResult<OperateLogDO> page);
+    PageResult<OperateLogRespVO> convertPage(PageResult<PlatformOperateLogDO> page);
 
-    OperateLogRespVO convert(OperateLogDO bean);
+    OperateLogRespVO convert(PlatformOperateLogDO bean);
 
-    default List<OperateLogExcelVO> convertList(List<OperateLogDO> list, Map<Long, AdminUserDO> userMap) {
+    default List<OperateLogExcelVO> convertList(List<PlatformOperateLogDO> list, Map<Long, PlatformUserDO> userMap) {
         return list.stream().map(operateLog -> {
             OperateLogExcelVO excelVO = convert02(operateLog);
             MapUtils.findAndThen(userMap, operateLog.getUserId(), user -> excelVO.setUserNickname(user.getNickname()));
@@ -36,6 +36,6 @@ public interface OperateLogConvert {
         }).collect(Collectors.toList());
     }
 
-    OperateLogExcelVO convert02(OperateLogDO bean);
+    OperateLogExcelVO convert02(PlatformOperateLogDO bean);
 
 }

@@ -19,7 +19,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SocialUserDO extends BaseDO {
+public class PlatformSocialUserDO extends BaseDO {
 
     /**
      * 自增主键

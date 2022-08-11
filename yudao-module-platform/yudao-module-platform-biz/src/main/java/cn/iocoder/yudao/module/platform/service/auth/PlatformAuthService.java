@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.service.auth;
 
 import cn.iocoder.yudao.module.platform.controller.center.auth.vo.*;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 
 import javax.validation.Valid;
 
@@ -21,7 +21,7 @@ public interface PlatformAuthService {
      * @param password 密码
      * @return 用户
      */
-    AdminUserDO authenticate(String username, String password);
+    PlatformUserDO authenticate(String username, String password);
 
     /**
      * 账号登录

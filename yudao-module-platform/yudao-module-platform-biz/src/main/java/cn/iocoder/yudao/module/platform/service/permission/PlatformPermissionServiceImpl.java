@@ -10,11 +10,11 @@ import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
 import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
 import cn.iocoder.yudao.module.platform.api.permission.dto.DeptDataPermissionRespDTO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.dept.DeptDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformDeptDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleMenuDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.UserRoleDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleMenuDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformUserRoleDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.permission.PlatformRoleMenuBatchInsertMapper;
 import cn.iocoder.yudao.module.platform.dal.mysql.permission.PlatformRoleMenuMapper;
 import cn.iocoder.yudao.module.platform.dal.mysql.permission.PlatformUserRoleBatchInsertMapper;
@@ -143,7 +143,7 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
     @VisibleForTesting
     void initRoleMenuLocalCache() {
         // 获取角色与菜单的关联列表，如果有更新
-        List<RoleMenuDO> roleMenuList = loadRoleMenuIfUpdate(roleMenuMaxUpdateTime);
+        List<PlatformRoleMenuDO> roleMenuList = loadRoleMenuIfUpdate(roleMenuMaxUpdateTime);
         if (CollUtil.isEmpty(roleMenuList)) {
             return;
         }
@@ -151,13 +151,13 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
         // 初始化 roleMenuCache 和 menuRoleCache 缓存
         ImmutableMultimap.Builder<Long, Long> roleMenuCacheBuilder = ImmutableMultimap.builder();
         ImmutableMultimap.Builder<Long, Long> menuRoleCacheBuilder = ImmutableMultimap.builder();
-        roleMenuList.forEach(roleMenuDO -> {
-            roleMenuCacheBuilder.put(roleMenuDO.getRoleId(), roleMenuDO.getMenuId());
-            menuRoleCacheBuilder.put(roleMenuDO.getMenuId(), roleMenuDO.getRoleId());
+        roleMenuList.forEach(platformRoleMenuDO -> {
+            roleMenuCacheBuilder.put(platformRoleMenuDO.getRoleId(), platformRoleMenuDO.getMenuId());
+            menuRoleCacheBuilder.put(platformRoleMenuDO.getMenuId(), platformRoleMenuDO.getRoleId());
         });
         roleMenuCache = roleMenuCacheBuilder.build();
         menuRoleCache = menuRoleCacheBuilder.build();
-        roleMenuMaxUpdateTime = getMaxValue(roleMenuList, RoleMenuDO::getUpdateTime);
+        roleMenuMaxUpdateTime = getMaxValue(roleMenuList, PlatformRoleMenuDO::getUpdateTime);
         log.info("[initRoleMenuLocalCache][初始化角色与菜单的关联数量为 {}]", roleMenuList.size());
     }
 
@@ -167,16 +167,16 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
     @VisibleForTesting
     void initUserRoleLocalCache() {
         // 获取用户与角色的关联列表，如果有更新
-        List<UserRoleDO> userRoleList = loadUserRoleIfUpdate(userRoleMaxUpdateTime);
+        List<PlatformUserRoleDO> userRoleList = loadUserRoleIfUpdate(userRoleMaxUpdateTime);
         if (CollUtil.isEmpty(userRoleList)) {
             return;
         }
 
         // 初始化 userRoleCache 缓存
         ImmutableMultimap.Builder<Long, Long> userRoleCacheBuilder = ImmutableMultimap.builder();
-        userRoleList.forEach(userRoleDO -> userRoleCacheBuilder.put(userRoleDO.getUserId(), userRoleDO.getRoleId()));
-        userRoleCache = CollectionUtils.convertMultiMap2(userRoleList, UserRoleDO::getUserId, UserRoleDO::getRoleId);
-        userRoleMaxUpdateTime = getMaxValue(userRoleList, UserRoleDO::getUpdateTime);
+        userRoleList.forEach(platformUserRoleDO -> userRoleCacheBuilder.put(platformUserRoleDO.getUserId(), platformUserRoleDO.getRoleId()));
+        userRoleCache = CollectionUtils.convertMultiMap2(userRoleList, PlatformUserRoleDO::getUserId, PlatformUserRoleDO::getRoleId);
+        userRoleMaxUpdateTime = getMaxValue(userRoleList, PlatformUserRoleDO::getUpdateTime);
         log.info("[initUserRoleLocalCache][初始化用户与角色的关联数量为 {}]", userRoleList.size());
     }
 
@@ -192,7 +192,7 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
      * @param maxUpdateTime 当前角色与菜单的关联的最大更新时间
      * @return 角色与菜单的关联列表
      */
-    protected List<RoleMenuDO> loadRoleMenuIfUpdate(Date maxUpdateTime) {
+    protected List<PlatformRoleMenuDO> loadRoleMenuIfUpdate(Date maxUpdateTime) {
         // 第一步，判断是否要更新。
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
             log.info("[loadRoleMenuIfUpdate][首次加载全量角色与菜单的关联]");
@@ -213,7 +213,7 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
      * @param maxUpdateTime 当前角色与菜单的关联的最大更新时间
      * @return 角色与菜单的关联列表
      */
-    protected List<UserRoleDO> loadUserRoleIfUpdate(Date maxUpdateTime) {
+    protected List<PlatformUserRoleDO> loadUserRoleIfUpdate(Date maxUpdateTime) {
         // 第一步，判断是否要更新。
         if (maxUpdateTime == null) { // 如果更新时间为空，说明 DB 一定有新数据
             log.info("[loadUserRoleIfUpdate][首次加载全量用户与角色的关联]");
@@ -236,7 +236,7 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
         }
 
         // 判断角色是否包含超级管理员。如果是超级管理员，获取到全部
-        List<RoleDO> roleList = platformRoleService.getRolesFromCache(roleIds);
+        List<PlatformRoleDO> roleList = platformRoleService.getRolesFromCache(roleIds);
         if (platformRoleService.hasAnySuperAdmin(roleList)) {
             return platformMenuService.getMenuListFromCache(menuTypes, menusStatuses);
         }
@@ -257,7 +257,7 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
         // 过滤角色状态
         if (CollectionUtil.isNotEmpty(roleStatuses)) {
             roleIds.removeIf(roleId -> {
-                RoleDO role = platformRoleService.getRoleFromCache(roleId);
+                PlatformRoleDO role = platformRoleService.getRoleFromCache(roleId);
                 return role == null || !roleStatuses.contains(role.getStatus());
             });
         }
@@ -271,7 +271,7 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
             return convertSet(platformMenuService.getMenus(), MenuDO::getId);
         }
         // 如果是非管理员的情况下，获得拥有的菜单编号
-        return convertSet(platformRoleMenuMapper.selectListByRoleId(roleId), RoleMenuDO::getMenuId);
+        return convertSet(platformRoleMenuMapper.selectListByRoleId(roleId), PlatformRoleMenuDO::getMenuId);
     }
 
     @Override
@@ -279,14 +279,14 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
     public void assignRoleMenu(Long roleId, Set<Long> menuIds) {
         // 获得角色拥有菜单编号
         Set<Long> dbMenuIds = convertSet(platformRoleMenuMapper.selectListByRoleId(roleId),
-                RoleMenuDO::getMenuId);
+                PlatformRoleMenuDO::getMenuId);
         // 计算新增和删除的菜单编号
         Collection<Long> createMenuIds = CollUtil.subtract(menuIds, dbMenuIds);
         Collection<Long> deleteMenuIds = CollUtil.subtract(dbMenuIds, menuIds);
         // 执行新增和删除。对于已经授权的菜单，不用做任何处理
         if (!CollectionUtil.isEmpty(createMenuIds)) {
             platformRoleMenuBatchInsertMapper.saveBatch(CollectionUtils.convertList(createMenuIds, menuId -> {
-                RoleMenuDO entity = new RoleMenuDO();
+                PlatformRoleMenuDO entity = new PlatformRoleMenuDO();
                 entity.setRoleId(roleId);
                 entity.setMenuId(menuId);
                 return entity;
@@ -309,13 +309,13 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
     @Override
     public Set<Long> getUserRoleIdListByUserId(Long userId) {
         return convertSet(platformUserRoleMapper.selectListByUserId(userId),
-                UserRoleDO::getRoleId);
+                PlatformUserRoleDO::getRoleId);
     }
 
     @Override
     public Set<Long> getUserRoleIdListByRoleIds(Collection<Long> roleIds) {
         return convertSet(platformUserRoleMapper.selectListByRoleIds(roleIds),
-                UserRoleDO::getUserId);
+                PlatformUserRoleDO::getUserId);
     }
 
     @Override
@@ -323,14 +323,14 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
     public void assignUserRole(Long userId, Set<Long> roleIds) {
         // 获得角色拥有角色编号
         Set<Long> dbRoleIds = convertSet(platformUserRoleMapper.selectListByUserId(userId),
-                UserRoleDO::getRoleId);
+                PlatformUserRoleDO::getRoleId);
         // 计算新增和删除的角色编号
         Collection<Long> createRoleIds = CollUtil.subtract(roleIds, dbRoleIds);
         Collection<Long> deleteMenuIds = CollUtil.subtract(dbRoleIds, roleIds);
         // 执行新增和删除。对于已经授权的角色，不用做任何处理
         if (!CollectionUtil.isEmpty(createRoleIds)) {
             platformUserRoleBatchInsertMapper.saveBatch(CollectionUtils.convertList(createRoleIds, roleId -> {
-                UserRoleDO entity = new UserRoleDO();
+                PlatformUserRoleDO entity = new PlatformUserRoleDO();
                 entity.setUserId(userId);
                 entity.setRoleId(roleId);
                 return entity;
@@ -450,7 +450,7 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
             return true;
         }
         Set<String> userRoles = convertSet(platformRoleService.getRolesFromCache(roleIds),
-                RoleDO::getCode);
+                PlatformRoleDO::getCode);
         return CollUtil.containsAny(userRoles, Sets.newHashSet(roles));
     }
 
@@ -466,12 +466,12 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
             result.setSelf(true);
             return result;
         }
-        List<RoleDO> roles = platformRoleService.getRolesFromCache(roleIds);
+        List<PlatformRoleDO> roles = platformRoleService.getRolesFromCache(roleIds);
 
         // 获得用户的部门编号的缓存，通过 Guava 的 Suppliers 惰性求值，即有且仅有第一次发起 DB 的查询
         Supplier<Long> userDeptIdCache = Suppliers.memoize(() -> userService.getUser(userId).getDeptId());
         // 遍历每个角色，计算
-        for (RoleDO role : roles) {
+        for (PlatformRoleDO role : roles) {
             // 为空时，跳过
             if (role.getDataScope() == null) {
                 continue;
@@ -496,8 +496,8 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
             }
             // 情况四，DEPT_DEPT_AND_CHILD
             if (Objects.equals(role.getDataScope(), DataScopeEnum.DEPT_AND_CHILD.getScope())) {
-                List<DeptDO> depts = platformDeptService.getDeptsByParentIdFromCache(userDeptIdCache.get(), true);
-                CollUtil.addAll(result.getDeptIds(), CollectionUtils.convertList(depts, DeptDO::getId));
+                List<PlatformDeptDO> depts = platformDeptService.getDeptsByParentIdFromCache(userDeptIdCache.get(), true);
+                CollUtil.addAll(result.getDeptIds(), CollectionUtils.convertList(depts, PlatformDeptDO::getId));
                 // 添加本身部门编号
                 CollUtil.addAll(result.getDeptIds(), userDeptIdCache.get());
                 continue;

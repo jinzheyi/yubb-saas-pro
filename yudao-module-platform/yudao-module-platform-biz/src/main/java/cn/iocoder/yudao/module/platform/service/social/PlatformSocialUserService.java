@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.service.social;
 
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.social.PlatformSocialUserDO;
 import cn.iocoder.yudao.framework.common.enums.social.SocialTypeEnum;
 
 import javax.validation.Valid;
@@ -35,7 +35,7 @@ public interface PlatformSocialUserService {
      * @return 授权用户
      */
     @NotNull
-    SocialUserDO authSocialUser(Integer type, String code, String state);
+    PlatformSocialUserDO authSocialUser(Integer type, String code, String state);
 
     /**
      * 获得指定用户的社交用户列表
@@ -44,7 +44,7 @@ public interface PlatformSocialUserService {
      * @param userType 用户类型
      * @return 社交用户列表
      */
-    List<SocialUserDO> getSocialUserList(Long userId, Integer userType);
+    List<PlatformSocialUserDO> getSocialUserList(Long userId, Integer userType);
 
     /**
      * 绑定社交用户

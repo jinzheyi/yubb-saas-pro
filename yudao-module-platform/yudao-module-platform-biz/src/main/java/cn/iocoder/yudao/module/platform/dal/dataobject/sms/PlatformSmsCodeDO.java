@@ -21,7 +21,7 @@ import java.util.Date;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SmsCodeDO extends BaseDO {
+public class PlatformSmsCodeDO extends BaseDO {
 
     /**
      * 编号
@@ -38,7 +38,7 @@ public class SmsCodeDO extends BaseDO {
     /**
      * 发送场景
      *
-     * 枚举 {@link SmsCodeDO}
+     * 枚举 {@link PlatformSmsCodeDO}
      */
     private Integer scene;
     /**

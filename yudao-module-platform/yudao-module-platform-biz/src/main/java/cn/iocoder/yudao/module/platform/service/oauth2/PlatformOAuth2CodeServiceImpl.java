@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.service.oauth2;
 
 import cn.hutool.core.util.IdUtil;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2CodeDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2CodeDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.oauth2.PlatformOAuth2CodeMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -33,9 +33,9 @@ public class PlatformOAuth2CodeServiceImpl implements PlatformOAuth2CodeService 
     private PlatformOAuth2CodeMapper oauth2CodeMapperPlatform;
 
     @Override
-    public OAuth2CodeDO createAuthorizationCode(Long userId, Integer userType, String clientId,
-                                                List<String> scopes, String redirectUri, String state) {
-        OAuth2CodeDO codeDO = new OAuth2CodeDO().setCode(generateCode())
+    public PlatformOAuth2CodeDO createAuthorizationCode(Long userId, Integer userType, String clientId,
+                                                        List<String> scopes, String redirectUri, String state) {
+        PlatformOAuth2CodeDO codeDO = new PlatformOAuth2CodeDO().setCode(generateCode())
                 .setUserId(userId).setUserType(userType)
                 .setClientId(clientId).setScopes(scopes)
                 .setExpiresTime(DateUtils.addDate(Calendar.SECOND, TIMEOUT))
@@ -45,8 +45,8 @@ public class PlatformOAuth2CodeServiceImpl implements PlatformOAuth2CodeService 
     }
 
     @Override
-    public OAuth2CodeDO consumeAuthorizationCode(String code) {
-        OAuth2CodeDO codeDO = oauth2CodeMapperPlatform.selectByCode(code);
+    public PlatformOAuth2CodeDO consumeAuthorizationCode(String code) {
+        PlatformOAuth2CodeDO codeDO = oauth2CodeMapperPlatform.selectByCode(code);
         if (codeDO == null) {
             throw exception(OAUTH2_CODE_NOT_EXISTS);
         }

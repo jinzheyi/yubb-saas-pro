@@ -22,7 +22,7 @@ import lombok.ToString;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
-public class LoginLogDO extends BaseDO {
+public class PlatformLoginLogDO extends BaseDO {
 
     /**
      * 日志主键

@@ -5,10 +5,10 @@ import cn.iocoder.yudao.module.platform.api.sms.dto.code.SmsCodeSendReqDTO;
 import cn.iocoder.yudao.module.platform.api.sms.dto.code.SmsCodeUseReqDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.platform.controller.center.auth.vo.*;
-import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.OAuth2AccessTokenDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.permission.RoleDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.framework.common.enums.permission.MenuIdEnum;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -21,12 +21,12 @@ public interface AuthConvert {
 
     AuthConvert INSTANCE = Mappers.getMapper(AuthConvert.class);
 
-    AuthLoginRespVO convert(OAuth2AccessTokenDO bean);
+    AuthLoginRespVO convert(PlatformOAuth2AccessTokenDO bean);
 
-    default AuthPermissionInfoRespVO convert(AdminUserDO user, List<RoleDO> roleList, List<MenuDO> menuList) {
+    default AuthPermissionInfoRespVO convert(PlatformUserDO user, List<PlatformRoleDO> roleList, List<MenuDO> menuList) {
         return AuthPermissionInfoRespVO.builder()
             .user(AuthPermissionInfoRespVO.UserVO.builder().id(user.getId()).nickname(user.getNickname()).avatar(user.getAvatar()).build())
-            .roles(CollectionUtils.convertSet(roleList, RoleDO::getCode))
+            .roles(CollectionUtils.convertSet(roleList, PlatformRoleDO::getCode))
             .permissions(CollectionUtils.convertSet(menuList, MenuDO::getPermission))
             .build();
     }
