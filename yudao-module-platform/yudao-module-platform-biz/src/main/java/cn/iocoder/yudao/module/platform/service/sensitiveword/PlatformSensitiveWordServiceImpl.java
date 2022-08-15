@@ -17,6 +17,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -77,6 +78,10 @@ public class PlatformSensitiveWordServiceImpl implements PlatformSensitiveWordSe
     @Getter
     private volatile Map<String, SimpleTrie> tagSensitiveWordTries = Collections.emptyMap();
 
+    @Resource
+    @Lazy
+    private PlatformSensitiveWordService self;
+
     /**
      * 初始化缓存
      */
@@ -123,7 +128,7 @@ public class PlatformSensitiveWordServiceImpl implements PlatformSensitiveWordSe
 
     @Scheduled(fixedDelay = SCHEDULER_PERIOD, initialDelay = SCHEDULER_PERIOD)
     public void schedulePeriodicRefresh() {
-        initLocalCache();
+        self.initLocalCache();
     }
 
     /**

@@ -6,11 +6,13 @@ import cn.iocoder.yudao.framework.security.core.filter.TokenAuthenticationFilter
 import cn.iocoder.yudao.framework.security.core.filter.TokenPlatformAuthenticationFilter;
 import cn.iocoder.yudao.framework.security.core.handler.AccessDeniedHandlerImpl;
 import cn.iocoder.yudao.framework.security.core.handler.AuthenticationEntryPointImpl;
+import cn.iocoder.yudao.framework.security.core.service.CSecurityFrameworkServiceImpl;
 import cn.iocoder.yudao.framework.security.core.service.SecurityFrameworkService;
 import cn.iocoder.yudao.framework.security.core.service.SecurityFrameworkServiceImpl;
 import cn.iocoder.yudao.framework.web.config.WebProperties;
 import cn.iocoder.yudao.framework.web.core.handler.GlobalExceptionHandler;
 import cn.iocoder.yudao.module.platform.api.oauth2.PlatformOAuth2TokenApi;
+import cn.iocoder.yudao.module.platform.api.permission.PlatformPermissionApi;
 import cn.iocoder.yudao.module.system.api.oauth2.OAuth2TokenApi;
 import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
 import org.springframework.beans.factory.config.MethodInvokingFactoryBean;
@@ -93,6 +95,11 @@ public class YudaoSecurityAutoConfiguration {
     @Bean("ss") // 使用 Spring Security 的缩写，方便使用
     public SecurityFrameworkService securityFrameworkService(PermissionApi permissionApi) {
         return new SecurityFrameworkServiceImpl(permissionApi);
+    }
+
+    @Bean("cs")
+    public SecurityFrameworkService securityFrameworkService(PlatformPermissionApi platformPermissionApi) {
+        return new CSecurityFrameworkServiceImpl(platformPermissionApi);
     }
 
     /**

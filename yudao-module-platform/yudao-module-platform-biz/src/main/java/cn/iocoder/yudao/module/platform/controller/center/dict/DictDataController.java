@@ -35,7 +35,7 @@ public class DictDataController {
 
     @PostMapping("/create")
     @ApiOperation("新增字典数据")
-    @PreAuthorize("@ss.hasPermission('center:dict:create')")
+    @PreAuthorize("@cs.hasPermission('center:dict:create')")
     public CommonResult<Long> createDictData(@Valid @RequestBody DictDataCreateReqVO reqVO) {
         Long dictDataId = dictDataService.createDictData(reqVO);
         return success(dictDataId);
@@ -43,7 +43,7 @@ public class DictDataController {
 
     @PutMapping("update")
     @ApiOperation("修改字典数据")
-    @PreAuthorize("@ss.hasPermission('center:dict:update')")
+    @PreAuthorize("@cs.hasPermission('center:dict:update')")
     public CommonResult<Boolean> updateDictData(@Valid @RequestBody DictDataUpdateReqVO reqVO) {
         dictDataService.updateDictData(reqVO);
         return success(true);
@@ -52,7 +52,7 @@ public class DictDataController {
     @DeleteMapping("/delete")
     @ApiOperation("删除字典数据")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:dict:delete')")
+    @PreAuthorize("@cs.hasPermission('center:dict:delete')")
     public CommonResult<Boolean> deleteDictData(Long id) {
         dictDataService.deleteDictData(id);
         return success(true);
@@ -68,7 +68,7 @@ public class DictDataController {
 
     @GetMapping("/page")
     @ApiOperation("/获得字典类型的分页列表")
-    @PreAuthorize("@ss.hasPermission('center:dict:query')")
+    @PreAuthorize("@cs.hasPermission('center:dict:query')")
     public CommonResult<PageResult<DictDataRespVO>> getDictTypePage(@Valid DictDataPageReqVO reqVO) {
         return success(DictDataConvert.INSTANCE.convertPage(dictDataService.getDictDataPage(reqVO)));
     }
@@ -76,14 +76,14 @@ public class DictDataController {
     @GetMapping(value = "/get")
     @ApiOperation("/查询字典数据详细")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:dict:query')")
+    @PreAuthorize("@cs.hasPermission('center:dict:query')")
     public CommonResult<DictDataRespVO> getDictData(@RequestParam("id") Long id) {
         return success(DictDataConvert.INSTANCE.convert(dictDataService.getDictData(id)));
     }
 
     @GetMapping("/export")
     @ApiOperation("导出字典数据")
-    @PreAuthorize("@ss.hasPermission('center:dict:export')")
+    @PreAuthorize("@cs.hasPermission('center:dict:export')")
     @OperateLog(type = EXPORT)
     public void export(HttpServletResponse response, @Valid DictDataExportReqVO reqVO) throws IOException {
         List<DictDataDO> list = dictDataService.getDictDatas(reqVO);

@@ -60,7 +60,7 @@ export default {
   },
   data() {
     return {
-      uploadFileUrl: process.env.VUE_APP_BASE_API + "/center_api/infra/file/upload", // 请求地址
+      uploadFileUrl: process.env.VUE_APP_BASE_API + "/center-api/infra/file/upload", // 请求地址
       headers: { Authorization: "Bearer " + getAccessToken() }, // 设置上传的请求头部
       Quill: null,
       currentValue: "",

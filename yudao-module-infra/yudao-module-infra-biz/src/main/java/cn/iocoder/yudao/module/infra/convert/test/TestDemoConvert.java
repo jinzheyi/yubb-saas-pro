@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.infra.convert.test;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.infra.controller.admin.test.vo.TestDemoCreateReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.test.vo.TestDemoExcelVO;
-import cn.iocoder.yudao.module.infra.controller.admin.test.vo.TestDemoRespVO;
-import cn.iocoder.yudao.module.infra.controller.admin.test.vo.TestDemoUpdateReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.test.vo.TestDemoCreateReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.test.vo.TestDemoExcelVO;
+import cn.iocoder.yudao.module.infra.controller.center.test.vo.TestDemoRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.test.vo.TestDemoUpdateReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.test.TestDemoDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

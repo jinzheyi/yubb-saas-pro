@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.infra.service.test;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.infra.controller.admin.test.vo.TestDemoCreateReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.test.vo.TestDemoExportReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.test.vo.TestDemoPageReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.test.vo.TestDemoUpdateReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.test.vo.TestDemoCreateReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.test.vo.TestDemoExportReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.test.vo.TestDemoPageReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.test.vo.TestDemoUpdateReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.test.TestDemoDO;
 
 import javax.validation.Valid;

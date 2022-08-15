@@ -32,7 +32,7 @@ public class CenterOAuth2TokenController {
 
     @GetMapping("/page")
     @ApiOperation(value = "获得访问令牌分页", notes = "只返回有效期内的")
-    @PreAuthorize("@ss.hasPermission('center:oauth2-token:page')")
+    @PreAuthorize("@cs.hasPermission('center:oauth2-token:page')")
     public CommonResult<PageResult<OAuth2AccessTokenRespVO>> getAccessTokenPage(@Valid OAuth2AccessTokenPageReqVO reqVO) {
         PageResult<PlatformOAuth2AccessTokenDO> pageResult = oauth2TokenServicePlatform.getAccessTokenPage(reqVO);
         return success(OAuth2TokenConvert.INSTANCE.convert(pageResult));
@@ -41,7 +41,7 @@ public class CenterOAuth2TokenController {
     @DeleteMapping("/delete")
     @ApiOperation("删除访问令牌")
     @ApiImplicitParam(name = "accessToken", value = "访问令牌", required = true, dataTypeClass = String.class, example = "tudou")
-    @PreAuthorize("@ss.hasPermission('center:oauth2-token:delete')")
+    @PreAuthorize("@cs.hasPermission('center:oauth2-token:delete')")
     public CommonResult<Boolean> deleteAccessToken(@RequestParam("accessToken") String accessToken) {
         authService.logout(accessToken, LoginLogTypeEnum.LOGOUT_DELETE.getType());
         return success(true);

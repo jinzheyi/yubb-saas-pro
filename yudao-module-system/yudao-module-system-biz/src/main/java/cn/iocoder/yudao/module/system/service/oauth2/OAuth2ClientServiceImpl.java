@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.string.StrUtils;
+import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
 import cn.iocoder.yudao.module.system.controller.admin.oauth2.vo.client.OAuth2ClientCreateReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.oauth2.vo.client.OAuth2ClientPageReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.oauth2.vo.client.OAuth2ClientUpdateReqVO;
@@ -17,6 +18,7 @@ import com.google.common.annotations.VisibleForTesting;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -67,11 +69,16 @@ public class OAuth2ClientServiceImpl implements OAuth2ClientService {
     @Resource
     private OAuth2ClientProducer oauth2ClientProducer;
 
+    @Resource
+    @Lazy // 注入自己，所以延迟加载
+    private OAuth2ClientService self;
+
     /**
      * 初始化 {@link #clientCache} 缓存
      */
     @Override
     @PostConstruct
+    @TenantIgnore // 初始化缓存，无需租户过滤
     public void initLocalCache() {
         // 获取客户端列表，如果有更新
         List<OAuth2ClientDO> tenantList = loadOAuth2ClientIfUpdate(maxUpdateTime);
@@ -87,7 +94,7 @@ public class OAuth2ClientServiceImpl implements OAuth2ClientService {
 
     @Scheduled(fixedDelay = SCHEDULER_PERIOD, initialDelay = SCHEDULER_PERIOD)
     public void schedulePeriodicRefresh() {
-        initLocalCache();
+        self.initLocalCache();
     }
 
     /**

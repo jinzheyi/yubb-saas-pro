@@ -78,7 +78,6 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
 
     @Override
     @PostConstruct
-    @TenantIgnore // 初始化缓存，无需租户过滤
     public synchronized void initLocalCache() {
         // 获取部门列表，如果有更新
         List<PlatformDeptDO> deptList = loadDeptIfUpdate(maxUpdateTime);

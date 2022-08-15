@@ -39,7 +39,7 @@ public class SmsLogController {
 
     @GetMapping("/page")
     @ApiOperation("获得短信日志分页")
-    @PreAuthorize("@ss.hasPermission('center:sms-log:query')")
+    @PreAuthorize("@cs.hasPermission('center:sms-log:query')")
     public CommonResult<PageResult<SmsLogRespVO>> getSmsLogPage(@Valid SmsLogPageReqVO pageVO) {
         PageResult<SmsLogDO> pageResult = platformSmsLogService.getSmsLogPage(pageVO);
         return success(SmsLogConvert.INSTANCE.convertPage(pageResult));
@@ -47,7 +47,7 @@ public class SmsLogController {
 
     @GetMapping("/export-excel")
     @ApiOperation("导出短信日志 Excel")
-    @PreAuthorize("@ss.hasPermission('center:sms-log:export')")
+    @PreAuthorize("@cs.hasPermission('center:sms-log:export')")
     @OperateLog(type = EXPORT)
     public void exportSmsLogExcel(@Valid SmsLogExportReqVO exportReqVO,
                                   HttpServletResponse response) throws IOException {

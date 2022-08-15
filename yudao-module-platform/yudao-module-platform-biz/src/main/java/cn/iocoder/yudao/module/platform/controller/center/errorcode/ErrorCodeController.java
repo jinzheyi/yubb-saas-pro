@@ -35,14 +35,14 @@ public class ErrorCodeController {
 
     @PostMapping("/create")
     @ApiOperation("创建错误码")
-    @PreAuthorize("@ss.hasPermission('center:error-code:create')")
+    @PreAuthorize("@cs.hasPermission('center:error-code:create')")
     public CommonResult<Long> createErrorCode(@Valid @RequestBody ErrorCodeCreateReqVO createReqVO) {
         return success(errorCodeService.createErrorCode(createReqVO));
     }
 
     @PutMapping("/update")
     @ApiOperation("更新错误码")
-    @PreAuthorize("@ss.hasPermission('center:error-code:update')")
+    @PreAuthorize("@cs.hasPermission('center:error-code:update')")
     public CommonResult<Boolean> updateErrorCode(@Valid @RequestBody ErrorCodeUpdateReqVO updateReqVO) {
         errorCodeService.updateErrorCode(updateReqVO);
         return success(true);
@@ -51,7 +51,7 @@ public class ErrorCodeController {
     @DeleteMapping("/delete")
     @ApiOperation("删除错误码")
     @ApiImplicitParam(name = "id", value = "编号", required = true, dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:error-code:delete')")
+    @PreAuthorize("@cs.hasPermission('center:error-code:delete')")
     public CommonResult<Boolean> deleteErrorCode(@RequestParam("id") Long id) {
         errorCodeService.deleteErrorCode(id);
         return success(true);
@@ -60,7 +60,7 @@ public class ErrorCodeController {
     @GetMapping("/get")
     @ApiOperation("获得错误码")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:error-code:query')")
+    @PreAuthorize("@cs.hasPermission('center:error-code:query')")
     public CommonResult<ErrorCodeRespVO> getErrorCode(@RequestParam("id") Long id) {
         ErrorCodeDO errorCode = errorCodeService.getErrorCode(id);
         return success(ErrorCodeConvert.INSTANCE.convert(errorCode));
@@ -68,7 +68,7 @@ public class ErrorCodeController {
 
     @GetMapping("/page")
     @ApiOperation("获得错误码分页")
-    @PreAuthorize("@ss.hasPermission('center:error-code:query')")
+    @PreAuthorize("@cs.hasPermission('center:error-code:query')")
     public CommonResult<PageResult<ErrorCodeRespVO>> getErrorCodePage(@Valid ErrorCodePageReqVO pageVO) {
         PageResult<ErrorCodeDO> pageResult = errorCodeService.getErrorCodePage(pageVO);
         return success(ErrorCodeConvert.INSTANCE.convertPage(pageResult));
@@ -76,7 +76,7 @@ public class ErrorCodeController {
 
     @GetMapping("/export-excel")
     @ApiOperation("导出错误码 Excel")
-    @PreAuthorize("@ss.hasPermission('center:error-code:export')")
+    @PreAuthorize("@cs.hasPermission('center:error-code:export')")
     @OperateLog(type = EXPORT)
     public void exportErrorCodeExcel(@Valid ErrorCodeExportReqVO exportReqVO,
               HttpServletResponse response) throws IOException {

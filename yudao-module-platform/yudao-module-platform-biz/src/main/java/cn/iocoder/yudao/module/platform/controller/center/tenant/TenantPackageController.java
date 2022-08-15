@@ -31,14 +31,14 @@ public class TenantPackageController {
 
     @PostMapping("/create")
     @ApiOperation("创建租户套餐")
-    @PreAuthorize("@ss.hasPermission('center:tenant-package:create')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-package:create')")
     public CommonResult<Long> createTenantPackage(@Valid @RequestBody TenantPackageCreateReqVO createReqVO) {
         return success(platformTenantPackageService.createTenantPackage(createReqVO));
     }
 
     @PutMapping("/update")
     @ApiOperation("更新租户套餐")
-    @PreAuthorize("@ss.hasPermission('center:tenant-package:update')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-package:update')")
     public CommonResult<Boolean> updateTenantPackage(@Valid @RequestBody TenantPackageUpdateReqVO updateReqVO) {
         platformTenantPackageService.updateTenantPackage(updateReqVO);
         return success(true);
@@ -47,7 +47,7 @@ public class TenantPackageController {
     @DeleteMapping("/delete")
     @ApiOperation("删除租户套餐")
     @ApiImplicitParam(name = "id", value = "编号", required = true, dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:tenant-package:delete')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-package:delete')")
     public CommonResult<Boolean> deleteTenantPackage(@RequestParam("id") Long id) {
         platformTenantPackageService.deleteTenantPackage(id);
         return success(true);
@@ -56,7 +56,7 @@ public class TenantPackageController {
     @GetMapping("/get")
     @ApiOperation("获得租户套餐")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:tenant-package:query')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-package:query')")
     public CommonResult<TenantPackageRespVO> getTenantPackage(@RequestParam("id") Long id) {
         TenantPackageDO tenantPackage = platformTenantPackageService.getTenantPackage(id);
         return success(TenantPackageConvert.INSTANCE.convert(tenantPackage));
@@ -64,7 +64,7 @@ public class TenantPackageController {
 
     @GetMapping("/page")
     @ApiOperation("获得租户套餐分页")
-    @PreAuthorize("@ss.hasPermission('center:tenant-package:query')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-package:query')")
     public CommonResult<PageResult<TenantPackageRespVO>> getTenantPackagePage(@Valid TenantPackagePageReqVO pageVO) {
         PageResult<TenantPackageDO> pageResult = platformTenantPackageService.getTenantPackagePage(pageVO);
         return success(TenantPackageConvert.INSTANCE.convertPage(pageResult));

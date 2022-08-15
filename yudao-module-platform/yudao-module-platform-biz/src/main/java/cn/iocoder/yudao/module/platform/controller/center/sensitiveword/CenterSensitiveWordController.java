@@ -36,14 +36,14 @@ public class CenterSensitiveWordController {
 
     @PostMapping("/create")
     @ApiOperation("创建敏感词")
-    @PreAuthorize("@ss.hasPermission('center:sensitive-word:create')")
+    @PreAuthorize("@cs.hasPermission('center:sensitive-word:create')")
     public CommonResult<Long> createSensitiveWord(@Valid @RequestBody SensitiveWordCreateReqVO createReqVO) {
         return success(platformSensitiveWordService.createSensitiveWord(createReqVO));
     }
 
     @PutMapping("/update")
     @ApiOperation("更新敏感词")
-    @PreAuthorize("@ss.hasPermission('center:sensitive-word:update')")
+    @PreAuthorize("@cs.hasPermission('center:sensitive-word:update')")
     public CommonResult<Boolean> updateSensitiveWord(@Valid @RequestBody SensitiveWordUpdateReqVO updateReqVO) {
         platformSensitiveWordService.updateSensitiveWord(updateReqVO);
         return success(true);
@@ -52,7 +52,7 @@ public class CenterSensitiveWordController {
     @DeleteMapping("/delete")
     @ApiOperation("删除敏感词")
     @ApiImplicitParam(name = "id", value = "编号", required = true, dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:sensitive-word:delete')")
+    @PreAuthorize("@cs.hasPermission('center:sensitive-word:delete')")
     public CommonResult<Boolean> deleteSensitiveWord(@RequestParam("id") Long id) {
         platformSensitiveWordService.deleteSensitiveWord(id);
         return success(true);
@@ -61,7 +61,7 @@ public class CenterSensitiveWordController {
     @GetMapping("/get")
     @ApiOperation("获得敏感词")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:sensitive-word:query')")
+    @PreAuthorize("@cs.hasPermission('center:sensitive-word:query')")
     public CommonResult<SensitiveWordRespVO> getSensitiveWord(@RequestParam("id") Long id) {
         PlatformSensitiveWordDO sensitiveWord = platformSensitiveWordService.getSensitiveWord(id);
         return success(SensitiveWordConvert.INSTANCE.convert(sensitiveWord));
@@ -69,7 +69,7 @@ public class CenterSensitiveWordController {
 
     @GetMapping("/page")
     @ApiOperation("获得敏感词分页")
-    @PreAuthorize("@ss.hasPermission('center:sensitive-word:query')")
+    @PreAuthorize("@cs.hasPermission('center:sensitive-word:query')")
     public CommonResult<PageResult<SensitiveWordRespVO>> getSensitiveWordPage(@Valid SensitiveWordPageReqVO pageVO) {
         PageResult<PlatformSensitiveWordDO> pageResult = platformSensitiveWordService.getSensitiveWordPage(pageVO);
         return success(SensitiveWordConvert.INSTANCE.convertPage(pageResult));
@@ -77,7 +77,7 @@ public class CenterSensitiveWordController {
 
     @GetMapping("/export-excel")
     @ApiOperation("导出敏感词 Excel")
-    @PreAuthorize("@ss.hasPermission('center:sensitive-word:export')")
+    @PreAuthorize("@cs.hasPermission('center:sensitive-word:export')")
     @OperateLog(type = EXPORT)
     public void exportSensitiveWordExcel(@Valid SensitiveWordExportReqVO exportReqVO,
               HttpServletResponse response) throws IOException {
@@ -89,7 +89,7 @@ public class CenterSensitiveWordController {
 
     @GetMapping("/get-tags")
     @ApiOperation("获取所有敏感词的标签数组")
-    @PreAuthorize("@ss.hasPermission('center:sensitive-word:query')")
+    @PreAuthorize("@cs.hasPermission('center:sensitive-word:query')")
     public CommonResult<Set<String>> getSensitiveWordTags() throws IOException {
         return success(platformSensitiveWordService.getSensitiveWordTags());
     }

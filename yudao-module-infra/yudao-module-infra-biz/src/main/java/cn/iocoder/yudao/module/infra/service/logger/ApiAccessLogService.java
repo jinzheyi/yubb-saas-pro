@@ -2,8 +2,8 @@ package cn.iocoder.yudao.module.infra.service.logger;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.infra.api.logger.dto.ApiAccessLogCreateReqDTO;
-import cn.iocoder.yudao.module.infra.controller.admin.logger.vo.apiaccesslog.ApiAccessLogExportReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.logger.vo.apiaccesslog.ApiAccessLogPageReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.logger.vo.apiaccesslog.ApiAccessLogExportReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.logger.vo.apiaccesslog.ApiAccessLogPageReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.logger.ApiAccessLogDO;
 
 import java.util.List;

@@ -3,8 +3,8 @@ package cn.iocoder.yudao.module.infra.dal.mysql.test;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
-import cn.iocoder.yudao.module.infra.controller.admin.test.vo.TestDemoExportReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.test.vo.TestDemoPageReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.test.vo.TestDemoExportReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.test.vo.TestDemoPageReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.test.TestDemoDO;
 import org.apache.ibatis.annotations.Mapper;
 

@@ -499,7 +499,7 @@ export const selectComponents = [
     __slot__: {
       'list-type': true
     },
-    // action: process.env.VUE_APP_BASE_API + "/center_api/infra/file/upload", // 请求地址
+    // action: process.env.VUE_APP_BASE_API + "/center-api/infra/file/upload", // 请求地址
     action: '/infra/file/upload', // 请求地址
     disabled: false,
     accept: '',

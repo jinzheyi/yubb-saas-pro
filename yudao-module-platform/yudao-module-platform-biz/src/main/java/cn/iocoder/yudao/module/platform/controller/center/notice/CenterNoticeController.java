@@ -31,7 +31,7 @@ public class CenterNoticeController {
 
     @PostMapping("/create")
     @ApiOperation("创建通知公告")
-    @PreAuthorize("@ss.hasPermission('center:notice:create')")
+    @PreAuthorize("@cs.hasPermission('center:notice:create')")
     public CommonResult<Long> createNotice(@Valid @RequestBody NoticeCreateReqVO reqVO) {
         Long noticeId = platformNoticeService.createNotice(reqVO);
         return success(noticeId);
@@ -39,7 +39,7 @@ public class CenterNoticeController {
 
     @PutMapping("/update")
     @ApiOperation("修改通知公告")
-    @PreAuthorize("@ss.hasPermission('center:notice:update')")
+    @PreAuthorize("@cs.hasPermission('center:notice:update')")
     public CommonResult<Boolean> updateNotice(@Valid @RequestBody NoticeUpdateReqVO reqVO) {
         platformNoticeService.updateNotice(reqVO);
         return success(true);
@@ -48,7 +48,7 @@ public class CenterNoticeController {
     @DeleteMapping("/delete")
     @ApiOperation("删除通知公告")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:notice:delete')")
+    @PreAuthorize("@cs.hasPermission('center:notice:delete')")
     public CommonResult<Boolean> deleteNotice(@RequestParam("id") Long id) {
         platformNoticeService.deleteNotice(id);
         return success(true);
@@ -56,7 +56,7 @@ public class CenterNoticeController {
 
     @GetMapping("/page")
     @ApiOperation("获取通知公告列表")
-    @PreAuthorize("@ss.hasPermission('center:notice:query')")
+    @PreAuthorize("@cs.hasPermission('center:notice:query')")
     public CommonResult<PageResult<NoticeRespVO>> pageNotices(@Validated NoticePageReqVO reqVO) {
         return success(NoticeConvert.INSTANCE.convertPage(platformNoticeService.pageNotices(reqVO)));
     }
@@ -64,7 +64,7 @@ public class CenterNoticeController {
     @GetMapping("/get")
     @ApiOperation("获得通知公告")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:notice:query')")
+    @PreAuthorize("@cs.hasPermission('center:notice:query')")
     public CommonResult<NoticeRespVO> getNotice(@RequestParam("id") Long id) {
         return success(NoticeConvert.INSTANCE.convert(platformNoticeService.getNotice(id)));
     }

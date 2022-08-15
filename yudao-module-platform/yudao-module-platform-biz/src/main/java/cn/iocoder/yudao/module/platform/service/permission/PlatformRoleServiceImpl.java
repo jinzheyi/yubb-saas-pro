@@ -85,7 +85,6 @@ public class PlatformRoleServiceImpl implements PlatformRoleService {
      */
     @Override
     @PostConstruct
-    @TenantIgnore // 忽略自动多租户，全局初始化缓存
     public void initLocalCache() {
         // 获取角色列表，如果有更新
         List<PlatformRoleDO> roleList = loadRoleIfUpdate(maxUpdateTime);

@@ -33,4 +33,12 @@ public interface TenantApi {
      */
     TenantRespDTO getTenant(Long id);
 
+    /**
+     * 获得名字对应的租户
+     *
+     * @param name 组户名
+     * @return 租户
+     */
+    TenantRespDTO getTenantByName(String name);
+
 }

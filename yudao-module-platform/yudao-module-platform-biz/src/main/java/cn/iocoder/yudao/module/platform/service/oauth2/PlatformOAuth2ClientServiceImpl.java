@@ -17,6 +17,7 @@ import com.google.common.annotations.VisibleForTesting;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -67,6 +68,10 @@ public class PlatformOAuth2ClientServiceImpl implements PlatformOAuth2ClientServ
     @Resource
     private PlatformOAuth2ClientProducer oauth2ClientProducerPlatform;
 
+    @Resource
+    @Lazy
+    private PlatformOAuth2ClientService self;
+
     /**
      * 初始化 {@link #clientCache} 缓存
      */
@@ -87,7 +92,7 @@ public class PlatformOAuth2ClientServiceImpl implements PlatformOAuth2ClientServ
 
     @Scheduled(fixedDelay = SCHEDULER_PERIOD, initialDelay = SCHEDULER_PERIOD)
     public void schedulePeriodicRefresh() {
-        initLocalCache();
+        self.initLocalCache();
     }
 
     /**

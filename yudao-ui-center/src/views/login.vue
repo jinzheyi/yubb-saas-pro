@@ -22,11 +22,6 @@
           </el-tabs>
           <div>
             <el-form ref="loginForm" :model="loginForm" :rules="LoginRules" class="login-form">
-              <el-form-item prop="tenantName" v-if="tenantEnable">
-                <el-input v-model="loginForm.tenantName" type="text" auto-complete="off" placeholder='租户'>
-                  <svg-icon slot="prefix" icon-class="tree" class="el-input__icon input-icon"/>
-                </el-input>
-              </el-form-item>
               <!-- 账号密码登录 -->
               <div v-if="loginForm.loginType === 'uname'">
                 <el-form-item prop="username">
@@ -105,16 +100,14 @@
 
 <script>
 import {getCodeImg, sendSmsCode, socialAuthRedirect} from "@/api/login";
-import {getTenantIdByName} from "@/api/system/tenant";
 import {SystemUserSocialTypeEnum} from "@/utils/constants";
-import {getTenantEnable} from "@/utils/ruoyi";
 import {
   getPassword,
-  getRememberMe, getTenantName,
+  getRememberMe,
   getUsername,
-  removePassword, removeRememberMe, removeTenantName,
+  removePassword, removeRememberMe,
   removeUsername,
-  setPassword, setRememberMe, setTenantId, setTenantName,
+  setPassword, setRememberMe,
   setUsername
 } from "@/utils/auth";
 
@@ -124,7 +117,6 @@ export default {
     return {
       codeUrl: "",
       captchaEnable: true,
-      tenantEnable: true,
       mobileCodeTimer: 0,
       loginForm: {
         loginType: "uname",
@@ -135,7 +127,6 @@ export default {
         rememberMe: false,
         code: "",
         uuid: "",
-        tenantName: "芋道源码",
       },
       scene: 21,
 
@@ -159,25 +150,6 @@ export default {
             }, trigger: "blur"
           }
         ],
-        tenantName: [
-          {required: true, trigger: "blur", message: "租户不能为空"},
-          {
-            validator: (rule, value, callback) => {
-              // debugger
-              getTenantIdByName(value).then(res => {
-                const tenantId = res.data;
-                if (tenantId && tenantId >= 0) {
-                  // 设置租户
-                  setTenantId(tenantId)
-                  callback();
-                } else {
-                  callback('租户不存在');
-                }
-              });
-            },
-            trigger: 'blur'
-          }
-        ]
       },
       loading: false,
       redirect: undefined,
@@ -194,8 +166,6 @@ export default {
   //   }
   // },
   created() {
-    // 租户开关
-    this.tenantEnable = getTenantEnable();
     // 重定向地址
     this.redirect = this.$route.query.redirect;
     this.getCode();
@@ -221,13 +191,11 @@ export default {
       const username = getUsername();
       const password = getPassword();
       const rememberMe = getRememberMe();
-      const tenantName = getTenantName();
       this.loginForm = {
         ...this.loginForm,
         username: username ? username : this.loginForm.username,
         password: password ? password : this.loginForm.password,
         rememberMe: rememberMe ? getRememberMe() : false,
-        tenantName: tenantName ? tenantName : this.loginForm.tenantName,
       };
     },
     handleLogin() {
@@ -239,12 +207,10 @@ export default {
             setUsername(this.loginForm.username)
             setPassword(this.loginForm.password)
             setRememberMe(this.loginForm.rememberMe)
-            setTenantName(this.loginForm.tenantName)
           } else {
             removeUsername()
             removePassword()
             removeRememberMe()
-            removeTenantName()
           }
           // 发起登陆
           // console.log("发起登录", this.loginForm);

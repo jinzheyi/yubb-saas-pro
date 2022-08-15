@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.infra.service.codegen;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.infra.controller.admin.codegen.vo.CodegenCreateListReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.codegen.vo.CodegenUpdateReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.codegen.vo.table.CodegenTablePageReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.codegen.vo.table.DatabaseTableRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.CodegenCreateListReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.CodegenUpdateReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.table.CodegenTablePageReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.table.DatabaseTableRespVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.codegen.CodegenColumnDO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.codegen.CodegenTableDO;
 

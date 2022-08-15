@@ -1,9 +1,9 @@
 package cn.iocoder.yudao.module.infra.convert.file;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.infra.controller.admin.file.vo.config.FileConfigCreateReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.file.vo.config.FileConfigRespVO;
-import cn.iocoder.yudao.module.infra.controller.admin.file.vo.config.FileConfigUpdateReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.file.vo.config.FileConfigCreateReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.file.vo.config.FileConfigRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.file.vo.config.FileConfigUpdateReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.file.FileConfigDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

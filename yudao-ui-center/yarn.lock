@@ -5773,11 +5773,6 @@ js-beautify@1.13.0:
     mkdirp "^1.0.4"
     nopt "^5.0.0"
 
-js-cookie@3.0.1:
-  version "3.0.1"
-  resolved "https://registry.npmmirror.com/js-cookie/-/js-cookie-3.0.1.tgz"
-  integrity sha512-+0rgsUXZu4ncpPxRL+lNEptWMOWl9etvPHc/koSRp6MPwpRYAhmk0dUG00J4bxVV3r9uUzfo24wW0knS07SKSw==
-
 js-message@1.0.7:
   version "1.0.7"
   resolved "https://registry.npmmirror.com/js-message/-/js-message-1.0.7.tgz"

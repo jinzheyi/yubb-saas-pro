@@ -6,7 +6,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.io.FileUtils;
 import cn.iocoder.yudao.framework.file.core.client.FileClient;
 import cn.iocoder.yudao.framework.file.core.utils.FileTypeUtils;
-import cn.iocoder.yudao.module.infra.controller.admin.file.vo.file.FilePageReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.file.vo.file.FilePageReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.file.FileDO;
 import cn.iocoder.yudao.module.infra.dal.mysql.file.FileMapper;
 import lombok.SneakyThrows;

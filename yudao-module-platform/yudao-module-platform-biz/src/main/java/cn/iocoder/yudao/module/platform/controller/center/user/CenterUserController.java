@@ -47,7 +47,7 @@ public class CenterUserController {
 
     @PostMapping("/create")
     @ApiOperation("新增用户")
-    @PreAuthorize("@ss.hasPermission('center:user:create')")
+    @PreAuthorize("@cs.hasPermission('center:user:create')")
     public CommonResult<Long> createUser(@Valid @RequestBody UserCreateReqVO reqVO) {
         Long id = userService.createUser(reqVO);
         return success(id);
@@ -55,7 +55,7 @@ public class CenterUserController {
 
     @PutMapping("update")
     @ApiOperation("修改用户")
-    @PreAuthorize("@ss.hasPermission('center:user:update')")
+    @PreAuthorize("@cs.hasPermission('center:user:update')")
     public CommonResult<Boolean> updateUser(@Valid @RequestBody UserUpdateReqVO reqVO) {
         userService.updateUser(reqVO);
         return success(true);
@@ -64,7 +64,7 @@ public class CenterUserController {
     @DeleteMapping("/delete")
     @ApiOperation("删除用户")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:user:delete')")
+    @PreAuthorize("@cs.hasPermission('center:user:delete')")
     public CommonResult<Boolean> deleteUser(@RequestParam("id") Long id) {
         userService.deleteUser(id);
         return success(true);
@@ -72,7 +72,7 @@ public class CenterUserController {
 
     @PutMapping("/update-password")
     @ApiOperation("重置用户密码")
-    @PreAuthorize("@ss.hasPermission('center:user:update-password')")
+    @PreAuthorize("@cs.hasPermission('center:user:update-password')")
     public CommonResult<Boolean> updateUserPassword(@Valid @RequestBody UserUpdatePasswordReqVO reqVO) {
         userService.updateUserPassword(reqVO.getId(), reqVO.getPassword());
         return success(true);
@@ -80,7 +80,7 @@ public class CenterUserController {
 
     @PutMapping("/update-status")
     @ApiOperation("修改用户状态")
-    @PreAuthorize("@ss.hasPermission('center:user:update')")
+    @PreAuthorize("@cs.hasPermission('center:user:update')")
     public CommonResult<Boolean> updateUserStatus(@Valid @RequestBody UserUpdateStatusReqVO reqVO) {
         userService.updateUserStatus(reqVO.getId(), reqVO.getStatus());
         return success(true);
@@ -88,7 +88,7 @@ public class CenterUserController {
 
     @GetMapping("/page")
     @ApiOperation("获得用户分页列表")
-    @PreAuthorize("@ss.hasPermission('center:user:list')")
+    @PreAuthorize("@cs.hasPermission('center:user:list')")
     public CommonResult<PageResult<UserPageItemRespVO>> getUserPage(@Valid UserPageReqVO reqVO) {
         // 获得用户分页列表
         PageResult<PlatformUserDO> pageResult = userService.getUserPage(reqVO);
@@ -121,14 +121,14 @@ public class CenterUserController {
     @GetMapping("/get")
     @ApiOperation("获得用户详情")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:user:query')")
+    @PreAuthorize("@cs.hasPermission('center:user:query')")
     public CommonResult<UserRespVO> getInfo(@RequestParam("id") Long id) {
         return success(UserConvert.INSTANCE.convert(userService.getUser(id)));
     }
 
     @GetMapping("/export")
     @ApiOperation("导出用户")
-    @PreAuthorize("@ss.hasPermission('center:user:export')")
+    @PreAuthorize("@cs.hasPermission('center:user:export')")
     @OperateLog(type = EXPORT)
     public void exportUsers(@Validated UserExportReqVO reqVO,
                             HttpServletResponse response) throws IOException {
@@ -179,7 +179,7 @@ public class CenterUserController {
             @ApiImplicitParam(name = "file", value = "Excel 文件", required = true, dataTypeClass = MultipartFile.class),
             @ApiImplicitParam(name = "updateSupport", value = "是否支持更新，默认为 false", example = "true", dataTypeClass = Boolean.class)
     })
-    @PreAuthorize("@ss.hasPermission('center:user:import')")
+    @PreAuthorize("@cs.hasPermission('center:user:import')")
     public CommonResult<UserImportRespVO> importExcel(@RequestParam("file") MultipartFile file,
                                                       @RequestParam(value = "updateSupport", required = false, defaultValue = "false") Boolean updateSupport) throws Exception {
         List<UserImportExcelVO> list = ExcelUtils.read(file, UserImportExcelVO.class);

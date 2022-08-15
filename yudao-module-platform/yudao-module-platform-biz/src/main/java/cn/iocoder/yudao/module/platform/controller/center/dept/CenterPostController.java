@@ -38,7 +38,7 @@ public class CenterPostController {
 
     @PostMapping("/create")
     @ApiOperation("创建岗位")
-    @PreAuthorize("@ss.hasPermission('center:post:create')")
+    @PreAuthorize("@cs.hasPermission('center:post:create')")
     public CommonResult<Long> createPost(@Valid @RequestBody PostCreateReqVO reqVO) {
         Long postId = platformPostService.createPost(reqVO);
         return success(postId);
@@ -46,7 +46,7 @@ public class CenterPostController {
 
     @PutMapping("/update")
     @ApiOperation("修改岗位")
-    @PreAuthorize("@ss.hasPermission('center:post:update')")
+    @PreAuthorize("@cs.hasPermission('center:post:update')")
     public CommonResult<Boolean> updatePost(@Valid @RequestBody PostUpdateReqVO reqVO) {
         platformPostService.updatePost(reqVO);
         return success(true);
@@ -54,7 +54,7 @@ public class CenterPostController {
 
     @DeleteMapping("/delete")
     @ApiOperation("删除岗位")
-    @PreAuthorize("@ss.hasPermission('center:post:delete')")
+    @PreAuthorize("@cs.hasPermission('center:post:delete')")
     public CommonResult<Boolean> deletePost(@RequestParam("id") Long id) {
         platformPostService.deletePost(id);
         return success(true);
@@ -63,7 +63,7 @@ public class CenterPostController {
     @GetMapping(value = "/get")
     @ApiOperation("获得岗位信息")
     @ApiImplicitParam(name = "id", value = "岗位编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:post:query')")
+    @PreAuthorize("@cs.hasPermission('center:post:query')")
     public CommonResult<PostRespVO> getPost(@RequestParam("id") Long id) {
         return success(PostConvert.INSTANCE.convert(platformPostService.getPost(id)));
     }
@@ -80,14 +80,14 @@ public class CenterPostController {
 
     @GetMapping("/page")
     @ApiOperation("获得岗位分页列表")
-    @PreAuthorize("@ss.hasPermission('center:post:query')")
+    @PreAuthorize("@cs.hasPermission('center:post:query')")
     public CommonResult<PageResult<PostRespVO>> getPostPage(@Validated PostPageReqVO reqVO) {
         return success(PostConvert.INSTANCE.convertPage(platformPostService.getPostPage(reqVO)));
     }
 
     @GetMapping("/export")
     @ApiOperation("岗位管理")
-    @PreAuthorize("@ss.hasPermission('center:post:export')")
+    @PreAuthorize("@cs.hasPermission('center:post:export')")
     @OperateLog(type = EXPORT)
     public void export(HttpServletResponse response, @Validated PostExportReqVO reqVO) throws IOException {
         List<PlatformPostDO> posts = platformPostService.getPosts(reqVO);

@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
 import cn.iocoder.yudao.module.system.controller.admin.sensitiveword.vo.SensitiveWordCreateReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.sensitiveword.vo.SensitiveWordExportReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.sensitiveword.vo.SensitiveWordPageReqVO;
@@ -17,6 +18,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -77,11 +79,16 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
     @Getter
     private volatile Map<String, SimpleTrie> tagSensitiveWordTries = Collections.emptyMap();
 
+    @Resource
+    @Lazy // 注入自己，所以延迟加载
+    private SensitiveWordService self;
+
     /**
      * 初始化缓存
      */
     @Override
     @PostConstruct
+    @TenantIgnore // 初始化缓存，无需租户过滤
     public void initLocalCache() {
         // 获取敏感词列表，如果有更新
         List<SensitiveWordDO> sensitiveWordList = loadSensitiveWordIfUpdate(maxUpdateTime);
@@ -123,7 +130,7 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
 
     @Scheduled(fixedDelay = SCHEDULER_PERIOD, initialDelay = SCHEDULER_PERIOD)
     public void schedulePeriodicRefresh() {
-        initLocalCache();
+        self.initLocalCache();
     }
 
     /**

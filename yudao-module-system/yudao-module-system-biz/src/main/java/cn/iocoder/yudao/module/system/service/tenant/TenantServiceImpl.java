@@ -46,4 +46,9 @@ public class TenantServiceImpl implements TenantService {
         handler.handle(menuIds);
     }
 
+    @Override
+    public TenantRespDTO getTenantByName(String name) {
+        return tenantApi.getTenantByName(name);
+    }
+
 }

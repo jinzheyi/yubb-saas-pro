@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.infra.dal.mysql.job;
 
-import cn.iocoder.yudao.module.infra.controller.admin.job.vo.job.JobExportReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.job.vo.job.JobPageReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.job.vo.job.JobExportReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.job.vo.job.JobPageReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.job.JobDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;

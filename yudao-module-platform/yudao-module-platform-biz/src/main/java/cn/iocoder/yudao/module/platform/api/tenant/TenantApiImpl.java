@@ -34,4 +34,9 @@ public class TenantApiImpl implements TenantApi {
         return TenantConvert.INSTANCE.convertDTO(platformTenantService.getTenant(id));
     }
 
+    @Override
+    public TenantRespDTO getTenantByName(String name) {
+        return TenantConvert.INSTANCE.convertDTO(platformTenantService.getTenantByName(name));
+    }
+
 }

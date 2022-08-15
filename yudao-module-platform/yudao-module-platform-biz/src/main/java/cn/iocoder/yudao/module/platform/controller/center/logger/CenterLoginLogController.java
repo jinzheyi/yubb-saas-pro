@@ -38,7 +38,7 @@ public class CenterLoginLogController {
 
     @GetMapping("/page")
     @ApiOperation("获得登录日志分页列表")
-    @PreAuthorize("@ss.hasPermission('center:login-log:query')")
+    @PreAuthorize("@cs.hasPermission('center:login-log:query')")
     public CommonResult<PageResult<LoginLogRespVO>> getLoginLogPage(@Valid LoginLogPageReqVO reqVO) {
         PageResult<PlatformLoginLogDO> page = platformLoginLogService.getLoginLogPage(reqVO);
         return CommonResult.success(LoginLogConvert.INSTANCE.convertPage(page));
@@ -46,7 +46,7 @@ public class CenterLoginLogController {
 
     @GetMapping("/export")
     @ApiOperation("导出登录日志 Excel")
-    @PreAuthorize("@ss.hasPermission('center:login-log:export')")
+    @PreAuthorize("@cs.hasPermission('center:login-log:export')")
     @OperateLog(type = EXPORT)
     public void exportLoginLog(HttpServletResponse response, @Valid LoginLogExportReqVO reqVO) throws IOException {
         List<PlatformLoginLogDO> list = platformLoginLogService.getLoginLogList(reqVO);

@@ -6,7 +6,6 @@ import cn.iocoder.yudao.module.platform.controller.center.permission.vo.menu.*;
 import cn.iocoder.yudao.module.platform.convert.permission.MenuConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.MenuDO;
 import cn.iocoder.yudao.module.platform.service.permission.PlatformMenuService;
-import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -29,12 +28,10 @@ public class CenterMenuController {
 
     @Resource
     private PlatformMenuService platformMenuService;
-    @Resource
-    private PlatformTenantService platformTenantService;
 
     @PostMapping("/create")
     @ApiOperation("创建菜单")
-    @PreAuthorize("@ss.hasPermission('center:menu:create')")
+    @PreAuthorize("@cs.hasPermission('center:menu:create')")
     public CommonResult<Long> createMenu(@Valid @RequestBody MenuCreateReqVO reqVO) {
         Long menuId = platformMenuService.createMenu(reqVO);
         return success(menuId);
@@ -42,7 +39,7 @@ public class CenterMenuController {
 
     @PutMapping("/update")
     @ApiOperation("修改菜单")
-    @PreAuthorize("@ss.hasPermission('center:menu:update')")
+    @PreAuthorize("@cs.hasPermission('center:menu:update')")
     public CommonResult<Boolean> updateMenu(@Valid @RequestBody MenuUpdateReqVO reqVO) {
         platformMenuService.updateMenu(reqVO);
         return success(true);
@@ -51,7 +48,7 @@ public class CenterMenuController {
     @DeleteMapping("/delete")
     @ApiOperation("删除菜单")
     @ApiImplicitParam(name = "id", value = "角色编号", required= true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:menu:delete')")
+    @PreAuthorize("@cs.hasPermission('center:menu:delete')")
     public CommonResult<Boolean> deleteMenu(@RequestParam("id") Long id) {
         platformMenuService.deleteMenu(id);
         return success(true);
@@ -59,7 +56,7 @@ public class CenterMenuController {
 
     @GetMapping("/list")
     @ApiOperation(value = "获取菜单列表", notes = "用于【菜单管理】界面")
-    @PreAuthorize("@ss.hasPermission('center:menu:query')")
+    @PreAuthorize("@cs.hasPermission('center:menu:query')")
     public CommonResult<List<MenuRespVO>> getMenus(MenuListReqVO reqVO) {
         List<MenuDO> list = platformMenuService.getMenus(reqVO);
         list.sort(Comparator.comparing(MenuDO::getSort));
@@ -81,7 +78,7 @@ public class CenterMenuController {
 
     @GetMapping("/get")
     @ApiOperation("获取菜单信息")
-    @PreAuthorize("@ss.hasPermission('center:menu:query')")
+    @PreAuthorize("@cs.hasPermission('center:menu:query')")
     public CommonResult<MenuRespVO> getMenu(Long id) {
         MenuDO menu = platformMenuService.getMenu(id);
         return success(MenuConvert.INSTANCE.convert(menu));

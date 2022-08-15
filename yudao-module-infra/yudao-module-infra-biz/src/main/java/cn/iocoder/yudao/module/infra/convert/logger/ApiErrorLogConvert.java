@@ -2,8 +2,8 @@ package cn.iocoder.yudao.module.infra.convert.logger;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.infra.api.logger.dto.ApiErrorLogCreateReqDTO;
-import cn.iocoder.yudao.module.infra.controller.admin.logger.vo.apierrorlog.ApiErrorLogExcelVO;
-import cn.iocoder.yudao.module.infra.controller.admin.logger.vo.apierrorlog.ApiErrorLogRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.logger.vo.apierrorlog.ApiErrorLogExcelVO;
+import cn.iocoder.yudao.module.infra.controller.center.logger.vo.apierrorlog.ApiErrorLogRespVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.logger.ApiErrorLogDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.infra.convert.job;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.infra.controller.admin.job.vo.job.JobCreateReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.job.vo.job.JobExcelVO;
-import cn.iocoder.yudao.module.infra.controller.admin.job.vo.job.JobRespVO;
-import cn.iocoder.yudao.module.infra.controller.admin.job.vo.job.JobUpdateReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.job.vo.job.JobCreateReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.job.vo.job.JobExcelVO;
+import cn.iocoder.yudao.module.infra.controller.center.job.vo.job.JobRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.job.vo.job.JobUpdateReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.job.JobDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

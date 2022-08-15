@@ -1,12 +1,12 @@
 package cn.iocoder.yudao.module.infra.convert.codegen;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.infra.controller.admin.codegen.vo.CodegenDetailRespVO;
-import cn.iocoder.yudao.module.infra.controller.admin.codegen.vo.CodegenPreviewRespVO;
-import cn.iocoder.yudao.module.infra.controller.admin.codegen.vo.CodegenUpdateReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.codegen.vo.column.CodegenColumnRespVO;
-import cn.iocoder.yudao.module.infra.controller.admin.codegen.vo.table.CodegenTableRespVO;
-import cn.iocoder.yudao.module.infra.controller.admin.codegen.vo.table.DatabaseTableRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.CodegenDetailRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.CodegenPreviewRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.CodegenUpdateReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.column.CodegenColumnRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.table.CodegenTableRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.table.DatabaseTableRespVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.codegen.CodegenColumnDO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.codegen.CodegenTableDO;
 import com.baomidou.mybatisplus.generator.config.po.TableField;

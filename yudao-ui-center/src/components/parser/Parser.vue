@@ -95,7 +95,7 @@ function renderFormItem(h, elementList) {
       // 回显图片
       scheme['file-list'] = (val || []).map(url => ({ name: url, url }))
       // 上传地址 + 请求头
-      scheme.action = process.env.VUE_APP_BASE_API + "/center_api/infra/file/upload"
+      scheme.action = process.env.VUE_APP_BASE_API + "/center-api/infra/file/upload"
       scheme.headers = { Authorization: "Bearer " + getAccessToken() }
       // 注意 on-success 不能绑定箭头函数！！！
       scheme['on-success'] = function (response, file, fileList) {

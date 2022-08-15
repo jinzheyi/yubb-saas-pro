@@ -32,14 +32,14 @@ public class CenterOAuth2ClientController {
 
     @PostMapping("/create")
     @ApiOperation("创建 OAuth2 客户端")
-    @PreAuthorize("@ss.hasPermission('center:oauth2-client:create')")
+    @PreAuthorize("@cs.hasPermission('center:oauth2-client:create')")
     public CommonResult<Long> createOAuth2Client(@Valid @RequestBody OAuth2ClientCreateReqVO createReqVO) {
         return success(platformOAuth2ClientService.createOAuth2Client(createReqVO));
     }
 
     @PutMapping("/update")
     @ApiOperation("更新 OAuth2 客户端")
-    @PreAuthorize("@ss.hasPermission('center:oauth2-client:update')")
+    @PreAuthorize("@cs.hasPermission('center:oauth2-client:update')")
     public CommonResult<Boolean> updateOAuth2Client(@Valid @RequestBody OAuth2ClientUpdateReqVO updateReqVO) {
         platformOAuth2ClientService.updateOAuth2Client(updateReqVO);
         return success(true);
@@ -48,7 +48,7 @@ public class CenterOAuth2ClientController {
     @DeleteMapping("/delete")
     @ApiOperation("删除 OAuth2 客户端")
     @ApiImplicitParam(name = "id", value = "编号", required = true, dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:oauth2-client:delete')")
+    @PreAuthorize("@cs.hasPermission('center:oauth2-client:delete')")
     public CommonResult<Boolean> deleteOAuth2Client(@RequestParam("id") Long id) {
         platformOAuth2ClientService.deleteOAuth2Client(id);
         return success(true);
@@ -57,7 +57,7 @@ public class CenterOAuth2ClientController {
     @GetMapping("/get")
     @ApiOperation("获得 OAuth2 客户端")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:oauth2-client:query')")
+    @PreAuthorize("@cs.hasPermission('center:oauth2-client:query')")
     public CommonResult<OAuth2ClientRespVO> getOAuth2Client(@RequestParam("id") Long id) {
         PlatformOAuth2ClientDO oAuth2Client = platformOAuth2ClientService.getOAuth2Client(id);
         return success(OAuth2ClientConvert.INSTANCE.convert(oAuth2Client));
@@ -65,7 +65,7 @@ public class CenterOAuth2ClientController {
 
     @GetMapping("/page")
     @ApiOperation("获得OAuth2 客户端分页")
-    @PreAuthorize("@ss.hasPermission('center:oauth2-client:query')")
+    @PreAuthorize("@cs.hasPermission('center:oauth2-client:query')")
     public CommonResult<PageResult<OAuth2ClientRespVO>> getOAuth2ClientPage(@Valid OAuth2ClientPageReqVO pageVO) {
         PageResult<PlatformOAuth2ClientDO> pageResult = platformOAuth2ClientService.getOAuth2ClientPage(pageVO);
         return success(OAuth2ClientConvert.INSTANCE.convertPage(pageResult));

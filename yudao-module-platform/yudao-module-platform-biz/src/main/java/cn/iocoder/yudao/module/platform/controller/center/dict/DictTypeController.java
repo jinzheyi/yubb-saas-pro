@@ -35,7 +35,7 @@ public class DictTypeController {
 
     @PostMapping("/create")
     @ApiOperation("创建字典类型")
-    @PreAuthorize("@ss.hasPermission('center:dict:create')")
+    @PreAuthorize("@cs.hasPermission('center:dict:create')")
     public CommonResult<Long> createDictType(@Valid @RequestBody DictTypeCreateReqVO reqVO) {
         Long dictTypeId = dictTypeService.createDictType(reqVO);
         return success(dictTypeId);
@@ -43,7 +43,7 @@ public class DictTypeController {
 
     @PutMapping("/update")
     @ApiOperation("修改字典类型")
-    @PreAuthorize("@ss.hasPermission('center:dict:update')")
+    @PreAuthorize("@cs.hasPermission('center:dict:update')")
     public CommonResult<Boolean> updateDictType(@Valid @RequestBody DictTypeUpdateReqVO reqVO) {
         dictTypeService.updateDictType(reqVO);
         return success(true);
@@ -52,7 +52,7 @@ public class DictTypeController {
     @DeleteMapping("/delete")
     @ApiOperation("删除字典类型")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:dict:delete')")
+    @PreAuthorize("@cs.hasPermission('center:dict:delete')")
     public CommonResult<Boolean> deleteDictType(Long id) {
         dictTypeService.deleteDictType(id);
         return success(true);
@@ -60,7 +60,7 @@ public class DictTypeController {
 
     @ApiOperation("/获得字典类型的分页列表")
     @GetMapping("/page")
-    @PreAuthorize("@ss.hasPermission('center:dict:query')")
+    @PreAuthorize("@cs.hasPermission('center:dict:query')")
     public CommonResult<PageResult<DictTypeRespVO>> pageDictTypes(@Valid DictTypePageReqVO reqVO) {
         return success(DictTypeConvert.INSTANCE.convertPage(dictTypeService.getDictTypePage(reqVO)));
     }
@@ -68,7 +68,7 @@ public class DictTypeController {
     @ApiOperation("/查询字典类型详细")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @GetMapping(value = "/get")
-    @PreAuthorize("@ss.hasPermission('center:dict:query')")
+    @PreAuthorize("@cs.hasPermission('center:dict:query')")
     public CommonResult<DictTypeRespVO> getDictType(@RequestParam("id") Long id) {
         return success(DictTypeConvert.INSTANCE.convert(dictTypeService.getDictType(id)));
     }
@@ -83,7 +83,7 @@ public class DictTypeController {
 
     @ApiOperation("导出数据类型")
     @GetMapping("/export")
-    @PreAuthorize("@ss.hasPermission('center:dict:query')")
+    @PreAuthorize("@cs.hasPermission('center:dict:query')")
     @OperateLog(type = EXPORT)
     public void export(HttpServletResponse response, @Valid DictTypeExportReqVO reqVO) throws IOException {
         List<DictTypeDO> list = dictTypeService.getDictTypeList(reqVO);

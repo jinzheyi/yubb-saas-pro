@@ -1,9 +1,9 @@
 import axios from 'axios'
 import {Message, MessageBox, Notification} from 'element-ui'
 import store from '@/store'
-import {getAccessToken, getRefreshToken, getTenantId, setToken} from '@/utils/auth'
+import {getAccessToken, getRefreshToken, setToken} from '@/utils/auth'
 import errorCode from '@/utils/errorCode'
-import {getPath, getTenantEnable} from "@/utils/ruoyi";
+import {getPath} from "@/utils/ruoyi";
 import {refreshToken} from "@/api/login";
 
 // 需要忽略的提示。忽略后，自动 Promise.reject('error')
@@ -24,7 +24,7 @@ axios.defaults.headers['Content-Type'] = 'application/json;charset=utf-8'
 // 创建axios实例
 const service = axios.create({
   // axios中请求配置有baseURL选项，表示请求URL公共部分
-  baseURL: process.env.VUE_APP_BASE_API + '/center_api/', // 此处的 /center_api/ 地址，原因是后端的基础路径为 /center_api/
+  baseURL: process.env.VUE_APP_BASE_API + '/center-api/', // 此处的 /center-api/ 地址，原因是后端的基础路径为 /center-api/
   // 超时
   timeout: 30000,
   // 禁用 Cookie 等信息
@@ -36,13 +36,6 @@ service.interceptors.request.use(config => {
   const isToken = (config.headers || {}).isToken === false
   if (getAccessToken() && !isToken) {
     config.headers['Authorization'] = 'Bearer ' + getAccessToken() // 让每个请求携带自定义token 请根据实际情况自行修改
-  }
-  // 设置租户
-  if (getTenantEnable()) {
-    const tenantId = getTenantId();
-    if (tenantId) {
-      config.headers['tenant-id'] = tenantId;
-    }
   }
   // get请求映射params参数
   if (config.method === 'get' && config.params) {
@@ -165,7 +158,6 @@ service.interceptors.response.use(async res => {
 export function getBaseHeader() {
   return {
     'Authorization': "Bearer " + getAccessToken(),
-    'tenant-id': getTenantId(),
   }
 }
 

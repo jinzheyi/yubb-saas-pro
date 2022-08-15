@@ -2,8 +2,8 @@ package cn.iocoder.yudao.module.infra.convert.redis;
 
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.redis.core.RedisKeyDefine;
-import cn.iocoder.yudao.module.infra.controller.admin.redis.vo.RedisKeyDefineRespVO;
-import cn.iocoder.yudao.module.infra.controller.admin.redis.vo.RedisMonitorRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.redis.vo.RedisKeyDefineRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.redis.vo.RedisMonitorRespVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

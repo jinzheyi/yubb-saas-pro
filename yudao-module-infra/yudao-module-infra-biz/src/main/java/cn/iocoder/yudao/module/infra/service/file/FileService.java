@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.infra.service.file;
 
-import cn.iocoder.yudao.module.infra.controller.admin.file.vo.file.FilePageReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.file.vo.file.FilePageReqVO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.infra.dal.dataobject.file.FileDO;
 

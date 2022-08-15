@@ -31,7 +31,7 @@ public class CenterDeptController {
 
     @PostMapping("create")
     @ApiOperation("创建部门")
-    @PreAuthorize("@ss.hasPermission('center:dept:create')")
+    @PreAuthorize("@cs.hasPermission('center:dept:create')")
     public CommonResult<Long> createDept(@Valid @RequestBody DeptCreateReqVO reqVO) {
         Long deptId = platformDeptService.createDept(reqVO);
         return success(deptId);
@@ -39,7 +39,7 @@ public class CenterDeptController {
 
     @PutMapping("update")
     @ApiOperation("更新部门")
-    @PreAuthorize("@ss.hasPermission('center:dept:update')")
+    @PreAuthorize("@cs.hasPermission('center:dept:update')")
     public CommonResult<Boolean> updateDept(@Valid @RequestBody DeptUpdateReqVO reqVO) {
         platformDeptService.updateDept(reqVO);
         return success(true);
@@ -48,7 +48,7 @@ public class CenterDeptController {
     @DeleteMapping("delete")
     @ApiOperation("删除部门")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:dept:delete')")
+    @PreAuthorize("@cs.hasPermission('center:dept:delete')")
     public CommonResult<Boolean> deleteDept(@RequestParam("id") Long id) {
         platformDeptService.deleteDept(id);
         return success(true);
@@ -56,7 +56,7 @@ public class CenterDeptController {
 
     @GetMapping("/list")
     @ApiOperation("获取部门列表")
-    @PreAuthorize("@ss.hasPermission('center:dept:query')")
+    @PreAuthorize("@cs.hasPermission('center:dept:query')")
     public CommonResult<List<DeptRespVO>> listDepts(DeptListReqVO reqVO) {
         List<PlatformDeptDO> list = platformDeptService.getSimpleDepts(reqVO);
         list.sort(Comparator.comparing(PlatformDeptDO::getSort));
@@ -78,7 +78,7 @@ public class CenterDeptController {
     @GetMapping("/get")
     @ApiOperation("获得部门信息")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:dept:query')")
+    @PreAuthorize("@cs.hasPermission('center:dept:query')")
     public CommonResult<DeptRespVO> getDept(@RequestParam("id") Long id) {
         return success(DeptConvert.INSTANCE.convert(platformDeptService.getDept(id)));
     }

@@ -37,14 +37,14 @@ public class CenterPermissionController {
     @ApiOperation("获得角色拥有的菜单编号")
     @ApiImplicitParam(name = "roleId", value = "角色编号", required = true, dataTypeClass = Long.class)
     @GetMapping("/list-role-resources")
-    @PreAuthorize("@ss.hasPermission('center:permission:assign-role-menu')")
+    @PreAuthorize("@cs.hasPermission('center:permission:assign-role-menu')")
     public CommonResult<Set<Long>> listRoleMenus(Long roleId) {
         return success(platformPermissionService.getRoleMenuIds(roleId));
     }
 
     @PostMapping("/assign-role-menu")
     @ApiOperation("赋予角色菜单")
-    @PreAuthorize("@ss.hasPermission('center:permission:assign-role-menu')")
+    @PreAuthorize("@cs.hasPermission('center:permission:assign-role-menu')")
     public CommonResult<Boolean> assignRoleMenu(@Validated @RequestBody PermissionAssignRoleMenuReqVO reqVO) {
         // 执行菜单的分配
         platformPermissionService.assignRoleMenu(reqVO.getRoleId(), reqVO.getMenuIds());
@@ -53,7 +53,7 @@ public class CenterPermissionController {
 
     @PostMapping("/assign-role-data-scope")
     @ApiOperation("赋予角色数据权限")
-    @PreAuthorize("@ss.hasPermission('center:permission:assign-role-data-scope')")
+    @PreAuthorize("@cs.hasPermission('center:permission:assign-role-data-scope')")
     public CommonResult<Boolean> assignRoleDataScope(@Valid @RequestBody PermissionAssignRoleDataScopeReqVO reqVO) {
         platformPermissionService.assignRoleDataScope(reqVO.getRoleId(), reqVO.getDataScope(), reqVO.getDataScopeDeptIds());
         return success(true);
@@ -62,14 +62,14 @@ public class CenterPermissionController {
     @ApiOperation("获得管理员拥有的角色编号列表")
     @ApiImplicitParam(name = "userId", value = "用户编号", required = true, dataTypeClass = Long.class)
     @GetMapping("/list-user-roles")
-    @PreAuthorize("@ss.hasPermission('center:permission:assign-user-role')")
+    @PreAuthorize("@cs.hasPermission('center:permission:assign-user-role')")
     public CommonResult<Set<Long>> listAdminRoles(@RequestParam("userId") Long userId) {
         return success(platformPermissionService.getUserRoleIdListByUserId(userId));
     }
 
     @ApiOperation("赋予用户角色")
     @PostMapping("/assign-user-role")
-    @PreAuthorize("@ss.hasPermission('center:permission:assign-user-role')")
+    @PreAuthorize("@cs.hasPermission('center:permission:assign-user-role')")
     public CommonResult<Boolean> assignUserRole(@Validated @RequestBody PermissionAssignUserRoleReqVO reqVO) {
         platformPermissionService.assignUserRole(reqVO.getUserId(), reqVO.getRoleIds());
         return success(true);

@@ -131,7 +131,6 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
 
     @Override
     @PostConstruct
-    @TenantIgnore // 初始化缓存，无需租户过滤
     public void initLocalCache() {
         initUserRoleLocalCache();
         initRoleMenuLocalCache();

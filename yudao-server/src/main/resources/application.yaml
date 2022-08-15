@@ -47,12 +47,13 @@ flowable:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true # 虽然默认为 true ，但是还是显示去指定下。
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     db-config:
-      id-type: NONE # “智能”模式，基于 IdTypeEnvironmentPostProcessor + 数据源的类型，自动适配成 AUTO、INPUT 模式。
+#      id-type: NONE # “智能”模式，基于 IdTypeEnvironmentPostProcessor + 数据源的类型，自动适配成 AUTO、INPUT 模式。
 #      id-type: AUTO # 自增 ID，适合 MySQL 等直接自增的数据库
 #      id-type: INPUT # 用户输入 ID，适合 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库
-#      id-type: ASSIGN_ID # 分配 ID，默认使用雪花算法。注意，Oracle、PostgreSQL、Kingbase、DB2、H2 数据库时，需要去除实体类上的 @KeySequence 注解
+      id-type: ASSIGN_ID # 分配 ID，默认使用雪花算法。注意，Oracle、PostgreSQL、Kingbase、DB2、H2 数据库时，需要去除实体类上的 @KeySequence 注解
       logic-delete-value: 1 # 逻辑已删除值(默认为 1)
       logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
   type-aliases-package: ${yudao.info.base-package}.module.*.dal.dataobject
@@ -98,6 +99,9 @@ yudao:
       - /admin-api/infra/file/*/get/** # 获取图片，和租户无关
       - /admin-api/system/sms/callback/* # 短信回调接口，无法带上租户编号
       - /app-api/pay/order/notify/* # 支付回调通知，不携带租户编号
+      - /center-api/center/captcha/get-image # 获取图片验证码，和租户无关
+      - /center-api/infra/file/*/get/** # 获取图片，和租户无关
+      - /center-api/center/sms/callback/* # 短信回调接口，无法带上租户编号
     ignore-tables:
       - infra_codegen_column
       - infra_codegen_table

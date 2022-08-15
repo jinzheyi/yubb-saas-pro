@@ -1,8 +1,8 @@
 package cn.iocoder.yudao.module.infra.service.job;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.infra.controller.admin.job.vo.log.JobLogExportReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.job.vo.log.JobLogPageReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.job.vo.log.JobLogExportReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.job.vo.log.JobLogPageReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.job.JobLogDO;
 import cn.iocoder.yudao.module.infra.dal.mysql.job.JobLogMapper;
 import cn.iocoder.yudao.module.infra.enums.job.JobLogStatusEnum;

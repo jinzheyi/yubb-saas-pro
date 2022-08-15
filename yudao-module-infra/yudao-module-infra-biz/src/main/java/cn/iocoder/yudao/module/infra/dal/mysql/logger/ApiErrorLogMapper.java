@@ -3,8 +3,8 @@ package cn.iocoder.yudao.module.infra.dal.mysql.logger;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
-import cn.iocoder.yudao.module.infra.controller.admin.logger.vo.apierrorlog.ApiErrorLogExportReqVO;
-import cn.iocoder.yudao.module.infra.controller.admin.logger.vo.apierrorlog.ApiErrorLogPageReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.logger.vo.apierrorlog.ApiErrorLogExportReqVO;
+import cn.iocoder.yudao.module.infra.controller.center.logger.vo.apierrorlog.ApiErrorLogPageReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.logger.ApiErrorLogDO;
 import org.apache.ibatis.annotations.Mapper;
 

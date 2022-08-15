@@ -1,8 +1,8 @@
 package cn.iocoder.yudao.module.infra.convert.job;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.infra.controller.admin.job.vo.log.JobLogExcelVO;
-import cn.iocoder.yudao.module.infra.controller.admin.job.vo.log.JobLogRespVO;
+import cn.iocoder.yudao.module.infra.controller.center.job.vo.log.JobLogExcelVO;
+import cn.iocoder.yudao.module.infra.controller.center.job.vo.log.JobLogRespVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.job.JobLogDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

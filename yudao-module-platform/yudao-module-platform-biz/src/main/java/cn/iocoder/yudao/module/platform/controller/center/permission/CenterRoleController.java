@@ -38,14 +38,14 @@ public class CenterRoleController {
 
     @PostMapping("/create")
     @ApiOperation("创建角色")
-    @PreAuthorize("@ss.hasPermission('center:role:create')")
+    @PreAuthorize("@cs.hasPermission('center:role:create')")
     public CommonResult<Long> createRole(@Valid @RequestBody RoleCreateReqVO reqVO) {
         return success(platformRoleService.createRole(reqVO, null));
     }
 
     @PutMapping("/update")
     @ApiOperation("修改角色")
-    @PreAuthorize("@ss.hasPermission('center:role:update')")
+    @PreAuthorize("@cs.hasPermission('center:role:update')")
     public CommonResult<Boolean> updateRole(@Valid @RequestBody RoleUpdateReqVO reqVO) {
         platformRoleService.updateRole(reqVO);
         return success(true);
@@ -53,7 +53,7 @@ public class CenterRoleController {
 
     @PutMapping("/update-status")
     @ApiOperation("修改角色状态")
-    @PreAuthorize("@ss.hasPermission('center:role:update')")
+    @PreAuthorize("@cs.hasPermission('center:role:update')")
     public CommonResult<Boolean> updateRoleStatus(@Valid @RequestBody RoleUpdateStatusReqVO reqVO) {
         platformRoleService.updateRoleStatus(reqVO.getId(), reqVO.getStatus());
         return success(true);
@@ -62,7 +62,7 @@ public class CenterRoleController {
     @DeleteMapping("/delete")
     @ApiOperation("删除角色")
     @ApiImplicitParam(name = "id", value = "角色编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:role:delete')")
+    @PreAuthorize("@cs.hasPermission('center:role:delete')")
     public CommonResult<Boolean> deleteRole(@RequestParam("id") Long id) {
         platformRoleService.deleteRole(id);
         return success(true);
@@ -70,7 +70,7 @@ public class CenterRoleController {
 
     @GetMapping("/get")
     @ApiOperation("获得角色信息")
-    @PreAuthorize("@ss.hasPermission('center:role:query')")
+    @PreAuthorize("@cs.hasPermission('center:role:query')")
     public CommonResult<RoleRespVO> getRole(@RequestParam("id") Long id) {
         PlatformRoleDO role = platformRoleService.getRole(id);
         return success(RoleConvert.INSTANCE.convert(role));
@@ -78,7 +78,7 @@ public class CenterRoleController {
 
     @GetMapping("/page")
     @ApiOperation("获得角色分页")
-    @PreAuthorize("@ss.hasPermission('center:role:query')")
+    @PreAuthorize("@cs.hasPermission('center:role:query')")
     public CommonResult<PageResult<PlatformRoleDO>> getRolePage(RolePageReqVO reqVO) {
         return success(platformRoleService.getRolePage(reqVO));
     }
@@ -95,7 +95,7 @@ public class CenterRoleController {
 
     @GetMapping("/export")
     @OperateLog(type = EXPORT)
-    @PreAuthorize("@ss.hasPermission('center:role:export')")
+    @PreAuthorize("@cs.hasPermission('center:role:export')")
     public void export(HttpServletResponse response, @Validated RoleExportReqVO reqVO) throws IOException {
         List<PlatformRoleDO> list = platformRoleService.getRoleList(reqVO);
         List<RoleExcelVO> data = RoleConvert.INSTANCE.convertList03(list);

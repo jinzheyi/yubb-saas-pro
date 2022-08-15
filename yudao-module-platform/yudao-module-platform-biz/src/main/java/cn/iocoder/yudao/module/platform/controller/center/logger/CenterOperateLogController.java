@@ -48,7 +48,7 @@ public class CenterOperateLogController {
 
     @GetMapping("/page")
     @ApiOperation("查看操作日志分页列表")
-    @PreAuthorize("@ss.hasPermission('center:operate-log:query')")
+    @PreAuthorize("@cs.hasPermission('center:operate-log:query')")
     public CommonResult<PageResult<OperateLogRespVO>> pageOperateLog(@Valid OperateLogPageReqVO reqVO) {
         PageResult<PlatformOperateLogDO> pageResult = platformOperateLogService.getOperateLogPage(reqVO);
 
@@ -68,7 +68,7 @@ public class CenterOperateLogController {
 
     @ApiOperation("导出操作日志")
     @GetMapping("/export")
-    @PreAuthorize("@ss.hasPermission('center:operate-log:export')")
+    @PreAuthorize("@cs.hasPermission('center:operate-log:export')")
     @OperateLog(type = EXPORT)
     public void exportOperateLog(HttpServletResponse response, @Valid OperateLogExportReqVO reqVO) throws IOException {
         List<PlatformOperateLogDO> list = platformOperateLogService.getOperateLogs(reqVO);
