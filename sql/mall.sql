@@ -273,7 +273,7 @@ CREATE TABLE `market_banner` (
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COMMENT='Banner管理';
 -- 菜单 SQL
 INSERT INTO `tenant_menu`(`id`,`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `status`)
-VALUES (2002, 'Banner管理', '', 2, 1, 2000, 'brand', '', 'mall/market/banner/index', 0);
+VALUES (2030, 'Banner管理', '', 2, 1, 2000, 'brand', '', 'mall/market/banner/index', 0);
 -- 按钮父菜单ID
 SELECT @parentId := LAST_INSERT_ID();
 -- 按钮 SQL
