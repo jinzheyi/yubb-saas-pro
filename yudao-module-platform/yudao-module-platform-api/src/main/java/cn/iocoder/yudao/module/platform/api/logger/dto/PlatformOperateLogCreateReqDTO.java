@@ -11,7 +11,7 @@ import java.util.Map;
  * 操作日志创建 Request DTO
  */
 @Data
-public class OperateLogCreateReqDTO {
+public class PlatformOperateLogCreateReqDTO {
 
     /**
      * 链路追踪编号

@@ -6,7 +6,7 @@ import cn.iocoder.yudao.module.platform.dal.dataobject.logger.PlatformOperateLog
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.MapUtils;
-import cn.iocoder.yudao.module.platform.api.logger.dto.OperateLogCreateReqDTO;
+import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformOperateLogCreateReqDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -21,7 +21,7 @@ public interface OperateLogConvert {
 
     OperateLogConvert INSTANCE = Mappers.getMapper(OperateLogConvert.class);
 
-    PlatformOperateLogDO convert(OperateLogCreateReqDTO bean);
+    PlatformOperateLogDO convert(PlatformOperateLogCreateReqDTO bean);
 
     PageResult<OperateLogRespVO> convertPage(PageResult<PlatformOperateLogDO> page);
 

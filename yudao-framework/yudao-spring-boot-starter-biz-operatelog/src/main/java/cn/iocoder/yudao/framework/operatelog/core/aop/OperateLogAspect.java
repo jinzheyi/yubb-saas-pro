@@ -89,7 +89,8 @@ public class OperateLogAspect {
                            ApiOperation apiOperation) throws Throwable {
         // 目前，只有管理员，才记录操作日志！所以非管理员，直接调用，不进行记录
         Integer userType = WebFrameworkUtils.getLoginUserType();
-        if (!Objects.equals(userType, UserTypeEnum.ADMIN.getValue())) {
+        if (!Objects.equals(userType, UserTypeEnum.ADMIN.getValue()) &&
+                !Objects.equals(userType, UserTypeEnum.CENTER.getValue())) {
             return joinPoint.proceed();
         }
 

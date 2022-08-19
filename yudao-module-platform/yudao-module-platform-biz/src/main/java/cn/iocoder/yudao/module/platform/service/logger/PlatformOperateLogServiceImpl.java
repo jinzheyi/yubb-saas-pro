@@ -4,7 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.string.StrUtils;
-import cn.iocoder.yudao.module.platform.api.logger.dto.OperateLogCreateReqDTO;
+import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformOperateLogCreateReqDTO;
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogExportReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogPageReqVO;
 import cn.iocoder.yudao.module.platform.convert.logger.OperateLogConvert;
@@ -37,7 +37,7 @@ public class PlatformOperateLogServiceImpl implements PlatformOperateLogService 
     private PlatformUserService userService;
 
     @Override
-    public void createOperateLog(OperateLogCreateReqDTO createReqDTO) {
+    public void createOperateLog(PlatformOperateLogCreateReqDTO createReqDTO) {
         PlatformOperateLogDO logDO = OperateLogConvert.INSTANCE.convert(createReqDTO);
         logDO.setJavaMethodArgs(StrUtils.maxLength(logDO.getJavaMethodArgs(), JAVA_METHOD_ARGS_MAX_LENGTH));
         logDO.setResultData(StrUtils.maxLength(logDO.getResultData(), RESULT_MAX_LENGTH));

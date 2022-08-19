@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.platform.api.logger;
 
-import cn.iocoder.yudao.module.platform.api.logger.dto.OperateLogCreateReqDTO;
+import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformOperateLogCreateReqDTO;
 
 import javax.validation.Valid;
 
@@ -9,13 +9,13 @@ import javax.validation.Valid;
  *
  * @author 芋道源码
  */
-public interface OperateLogApi {
+public interface PlatformOperateLogApi {
 
     /**
      * 创建操作日志
      *
      * @param createReqDTO 请求
      */
-    void createOperateLog(@Valid OperateLogCreateReqDTO createReqDTO);
+    void createOperateLog(@Valid PlatformOperateLogCreateReqDTO createReqDTO);
 
 }
