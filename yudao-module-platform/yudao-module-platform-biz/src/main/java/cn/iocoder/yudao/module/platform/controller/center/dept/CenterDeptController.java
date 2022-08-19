@@ -56,7 +56,7 @@ public class CenterDeptController {
 
     @GetMapping("/list")
     @ApiOperation("获取部门列表")
-    @PreAuthorize("@cs.hasPermission('center:dept:query')")
+    @PreAuthorize("@cs.hasPermission('center:dept:list')")
     public CommonResult<List<DeptRespVO>> listDepts(DeptListReqVO reqVO) {
         List<PlatformDeptDO> list = platformDeptService.getSimpleDepts(reqVO);
         list.sort(Comparator.comparing(PlatformDeptDO::getSort));

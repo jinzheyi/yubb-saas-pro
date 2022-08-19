@@ -21,7 +21,7 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 
 @Api(tags = "管理后台 - 短信渠道")
 @RestController
-@RequestMapping("system/sms-channel")
+@RequestMapping("/center/sms-channel")
 public class SmsChannelController {
 
     @Resource

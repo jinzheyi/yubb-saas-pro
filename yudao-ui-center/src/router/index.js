@@ -80,7 +80,7 @@ export const constantRoutes = [
     redirect: 'noredirect',
     children: [{
         path: 'profile',
-        component: (resolve) => require(['@/views/system/user/profile/index'], resolve),
+        component: (resolve) => require(['@/views/system/org/user/profile/index'], resolve),
         name: 'Profile',
         meta: {title: '个人中心', icon: 'user'}
       }
@@ -91,7 +91,7 @@ export const constantRoutes = [
     hidden: true,
     children: [{
         path: 'type/data/:dictId(\\d+)',
-        component: (resolve) => require(['@/views/system/dict/data'], resolve),
+        component: (resolve) => require(['@/views/system/developer/dict/data'], resolve),
         name: 'Data',
         meta: {title: '字典数据', icon: '', activeMenu: '/system/dict'}
       }

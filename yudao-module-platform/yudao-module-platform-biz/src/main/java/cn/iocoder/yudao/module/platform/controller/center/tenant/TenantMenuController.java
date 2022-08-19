@@ -31,7 +31,7 @@ public class TenantMenuController {
 
     @PostMapping("/create")
     @ApiOperation("创建菜单")
-    @PreAuthorize("@cs.hasPermission('center:tenant-menu:create')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-man-menu:create')")
     public CommonResult<Long> createMenu(@Valid @RequestBody TenantMenuCreateReqVO reqVO) {
         Long menuId = platformTenantMenuService.createMenu(reqVO);
         return success(menuId);
@@ -39,7 +39,7 @@ public class TenantMenuController {
 
     @PutMapping("/update")
     @ApiOperation("修改菜单")
-    @PreAuthorize("@cs.hasPermission('center:tenant-menu:update')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-man-menu:update')")
     public CommonResult<Boolean> updateMenu(@Valid @RequestBody TenantMenuUpdateReqVO reqVO) {
         platformTenantMenuService.updateMenu(reqVO);
         return success(true);
@@ -48,7 +48,7 @@ public class TenantMenuController {
     @DeleteMapping("/delete")
     @ApiOperation("删除菜单")
     @ApiImplicitParam(name = "id", value = "角色编号", required= true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@cs.hasPermission('center:tenant-menu:delete')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-man-menu:delete')")
     public CommonResult<Boolean> deleteMenu(@RequestParam("id") Long id) {
         platformTenantMenuService.deleteMenu(id);
         return success(true);
@@ -56,7 +56,7 @@ public class TenantMenuController {
 
     @GetMapping("/list")
     @ApiOperation(value = "获取菜单列表", notes = "用于【菜单管理】界面")
-    @PreAuthorize("@cs.hasPermission('center:tenant-menu:query')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-man-menu:list')")
     public CommonResult<List<TenantMenuRespVO>> getMenus(TenantMenuListReqVO reqVO) {
         List<TenantMenuDO> list = platformTenantMenuService.getMenus(reqVO);
         list.sort(Comparator.comparing(TenantMenuDO::getSort));
@@ -77,7 +77,7 @@ public class TenantMenuController {
 
     @GetMapping("/get")
     @ApiOperation("获取菜单信息")
-    @PreAuthorize("@ss.hasPermission('center:tenant-menu:query')")
+    @PreAuthorize("@ss.hasPermission('center:tenant-man-menu:query')")
     public CommonResult<TenantMenuRespVO> getMenu(Long id) {
         TenantMenuDO menu = platformTenantMenuService.getMenu(id);
         return success(TenantMenuConvert.INSTANCE.convert(menu));

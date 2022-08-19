@@ -33,14 +33,14 @@ public class CenterTenantController {
 
     @PostMapping("/create")
     @ApiOperation("创建租户")
-    @PreAuthorize("@cs.hasPermission('center:tenant:create')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-man-list:create')")
     public CommonResult<Long> createTenant(@Valid @RequestBody TenantCreateReqVO createReqVO) {
         return success(platformTenantService.createTenant(createReqVO));
     }
 
     @PutMapping("/update")
     @ApiOperation("更新租户")
-    @PreAuthorize("@cs.hasPermission('center:tenant:update')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-man-list:update')")
     public CommonResult<Boolean> updateTenant(@Valid @RequestBody TenantUpdateReqVO updateReqVO) {
         platformTenantService.updateTenant(updateReqVO);
         return success(true);
@@ -49,7 +49,7 @@ public class CenterTenantController {
     @DeleteMapping("/delete")
     @ApiOperation("删除租户")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@cs.hasPermission('center:tenant:delete')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-man-list:delete')")
     public CommonResult<Boolean> deleteTenant(@RequestParam("id") Long id) {
         platformTenantService.deleteTenant(id);
         return success(true);
@@ -58,7 +58,7 @@ public class CenterTenantController {
     @GetMapping("/get")
     @ApiOperation("获得租户")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@cs.hasPermission('center:tenant:query')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-man-list:query')")
     public CommonResult<TenantRespVO> getTenant(@RequestParam("id") Long id) {
         TenantDO tenant = platformTenantService.getTenant(id);
         return success(TenantConvert.INSTANCE.convert(tenant));
@@ -66,7 +66,7 @@ public class CenterTenantController {
 
     @GetMapping("/page")
     @ApiOperation("获得租户分页")
-    @PreAuthorize("@cs.hasPermission('center:tenant:query')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-man-list:list')")
     public CommonResult<PageResult<TenantRespVO>> getTenantPage(@Valid TenantPageReqVO pageVO) {
         PageResult<TenantDO> pageResult = platformTenantService.getTenantPage(pageVO);
         return success(TenantConvert.INSTANCE.convertPage(pageResult));
@@ -74,7 +74,7 @@ public class CenterTenantController {
 
     @GetMapping("/export-excel")
     @ApiOperation("导出租户 Excel")
-    @PreAuthorize("@cs.hasPermission('center:tenant:export')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-man-list:export')")
     @OperateLog(type = EXPORT)
     public void exportTenantExcel(@Valid TenantExportReqVO exportReqVO,
                                   HttpServletResponse response) throws IOException {

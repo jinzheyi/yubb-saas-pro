@@ -21,7 +21,7 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button type="primary" plain icon="el-icon-plus" size="mini" @click="handleAdd"
-                   v-hasPermi="['center:tenant-menu:create']">新增</el-button>
+                   v-hasPermi="['center:tenant-man-menu:create']">新增</el-button>
       </el-col>
       <el-col :span="1.5">
         <el-button type="info" plain icon="el-icon-sort" size="mini" @click="toggleExpandAll">展开/折叠</el-button>
@@ -53,11 +53,11 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button size="mini" type="text" icon="el-icon-edit" @click="handleUpdate(scope.row)"
-                     v-hasPermi="['center:tenant-menu:update']">修改</el-button>
+                     v-hasPermi="['center:tenant-man-menu:update']">修改</el-button>
           <el-button size="mini" type="text" icon="el-icon-plus" @click="handleAdd(scope.row)"
-                     v-hasPermi="['center:tenant-menu:create']">新增</el-button>
+                     v-hasPermi="['center:tenant-man-menu:create']">新增</el-button>
           <el-button size="mini" type="text" icon="el-icon-delete" @click="handleDelete(scope.row)"
-                     v-hasPermi="['center:tenant-menu:delete']">删除</el-button>
+                     v-hasPermi="['center:tenant-man-menu:delete']">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
