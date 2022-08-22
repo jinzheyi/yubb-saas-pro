@@ -24,7 +24,6 @@ public class ErrorCodeDO extends BaseDO {
     /**
      * 错误码编号，自增
      */
-    @TableId
     private Long id;
     /**
      * 错误码类型
