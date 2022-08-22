@@ -182,7 +182,7 @@
 </template>
 
 <script>
-import { listMenu, getMenu, delMenu, addMenu, updateMenu } from "@/api/system/menu";
+import { listMenu, getMenu, delMenu, addMenu, updateMenu } from "@/api/system/tenantMenu";
 import Treeselect from "@riophae/vue-treeselect";
 import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 import IconSelect from "@/components/IconSelect";
@@ -192,7 +192,7 @@ import { getDictDatas, DICT_TYPE } from '@/utils/dict'
 import {isExternal} from "@/utils/validate";
 
 export default {
-  name: "Menu",
+  name: "TenantMenu",
   components: { Treeselect, IconSelect },
   data() {
     return {
