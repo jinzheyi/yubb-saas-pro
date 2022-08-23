@@ -44,16 +44,16 @@ spring:
       datasource:
         master:
           name: yubb-saas-pro-dev
-          url: jdbc:mysql://121.43.32.181:3306/${spring.datasource.dynamic.datasource.master.name}?allowMultiQueries=true&useUnicode=true&useSSL=false&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&autoReconnect=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
+          url: jdbc:mysql://127.0.0.1:3306/${spring.datasource.dynamic.datasource.master.name}?allowMultiQueries=true&useUnicode=true&useSSL=false&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&autoReconnect=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
           driver-class-name: com.mysql.jdbc.Driver
           username: root
-          password: Jinzheyi@123
+          password: password
         slave: # 模拟从库，可根据自己需要修改 # 模拟从库，可根据自己需要修改
           name: yubb-saas-pro-dev
-          url: jdbc:mysql://121.43.32.181:3306/${spring.datasource.dynamic.datasource.master.name}?allowMultiQueries=true&useUnicode=true&useSSL=false&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&autoReconnect=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
+          url: jdbc:mysql://127.0.0.1:3306/${spring.datasource.dynamic.datasource.master.name}?allowMultiQueries=true&useUnicode=true&useSSL=false&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&autoReconnect=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
           driver-class-name: com.mysql.jdbc.Driver
           username: root
-          password: Jinzheyi@123
+          password: password
 
   # Redis 配置。Redisson 默认的配置足够使用，一般不需要进行调优
   redis:
