@@ -18,7 +18,7 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button type="primary" plain icon="el-icon-plus" size="mini" @click="handleAdd"
-                   v-hasPermi="['center:dept:create']">新增</el-button>
+                   v-hasPermi="['system:dept:create']">新增</el-button>
       </el-col>
       <el-col :span="1.5">
         <el-button type="info" plain icon="el-icon-sort" size="mini" @click="toggleExpandAll">展开/折叠</el-button>
@@ -44,11 +44,11 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button size="mini" type="text" icon="el-icon-edit" @click="handleUpdate(scope.row)"
-                     v-hasPermi="['center:dept:update']">修改</el-button>
+                     v-hasPermi="['system:dept:update']">修改</el-button>
           <el-button size="mini" type="text" icon="el-icon-plus" @click="handleAdd(scope.row)"
-                     v-hasPermi="['center:dept:create']">新增</el-button>
+                     v-hasPermi="['system:dept:create']">新增</el-button>
           <el-button v-if="scope.row.parentId !== 0" size="mini" type="text" icon="el-icon-delete"
-                     @click="handleDelete(scope.row)" v-hasPermi="['center:dept:delete']">删除</el-button>
+                     @click="handleDelete(scope.row)" v-hasPermi="['system:dept:delete']">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -167,7 +167,7 @@ export default {
         ],
         phone: [
           {
-            pattern: /^1[3|4|5|6|7|8|9][0-9]\d{8}$/,
+            pattern: /^(?:(?:\+|00)86)?1(?:(?:3[\d])|(?:4[5-79])|(?:5[0-35-9])|(?:6[5-7])|(?:7[0-8])|(?:8[\d])|(?:9[189]))\d{8}$/,
             message: "请输入正确的手机号码",
             trigger: "blur"
           }

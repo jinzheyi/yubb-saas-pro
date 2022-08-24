@@ -259,7 +259,7 @@ export default {
       showBpmnOpen: false,
       bpmnXML: null,
       bpmnControlForm: {
-        prefix: "activiti"
+        prefix: "flowable"
       },
 
       // 流程表单详情
@@ -292,7 +292,7 @@ export default {
         // 设置上传的请求头部
         headers: getBaseHeader(),
         // 上传的地址
-        url: process.env.VUE_APP_BASE_API + '/center-api' + "/bpm/model/import",
+        url: process.env.VUE_APP_BASE_API + '/admin-api' + "/bpm/model/import",
         // 表单
         form: {},
         // 校验规则

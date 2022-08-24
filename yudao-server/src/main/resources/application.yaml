@@ -102,6 +102,8 @@ yudao:
       - /center-api/center/captcha/get-image # 获取图片验证码，和租户无关
       - /center-api/infra/file/*/get/** # 获取图片，和租户无关
       - /center-api/center/sms/callback/* # 短信回调接口，无法带上租户编号
+#      - /jmreport/list
+      - /jmreport/*
     ignore-tables:
       - infra_codegen_column
       - infra_codegen_table
@@ -114,6 +116,23 @@ yudao:
       - infra_job_log
       - infra_job_log
       - infra_data_source_config
+
+      - jimu_dict
+      - jimu_dict_item
+      - jimu_report
+      - jimu_report_data_source
+      - jimu_report_db
+      - jimu_report_db_field
+      - jimu_report_db_param
+      - jimu_report_link
+      - jimu_report_map
+      - jimu_report_share
+      - rep_demo_dxtj
+      - rep_demo_employee
+      - rep_demo_gongsi
+      - rep_demo_jianpiao
+      - tmp_report_data_1
+      - tmp_report_data_income
     ignore-tables-prefix:
       - platform
       - tenant
@@ -125,3 +144,9 @@ yudao:
     end-code: 9999 # 这里配置 9999 的原因是，测试方便。
 
 debug: false
+
+#积木报表配置
+minidao :
+  base-package: org.jeecg.modules.jmreport.desreport.dao*
+  db-type: mysql
+
