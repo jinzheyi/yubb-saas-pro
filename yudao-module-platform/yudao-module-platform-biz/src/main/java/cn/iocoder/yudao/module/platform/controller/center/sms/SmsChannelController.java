@@ -29,14 +29,14 @@ public class SmsChannelController {
 
     @PostMapping("/create")
     @ApiOperation("创建短信渠道")
-    @PreAuthorize("@ss.hasPermission('center:sms-channel:create')")
+    @PreAuthorize("@cs.hasPermission('center:sms-channel:create')")
     public CommonResult<Long> createSmsChannel(@Valid @RequestBody SmsChannelCreateReqVO createReqVO) {
         return success(platformSmsChannelService.createSmsChannel(createReqVO));
     }
 
     @PutMapping("/update")
     @ApiOperation("更新短信渠道")
-    @PreAuthorize("@ss.hasPermission('center:sms-channel:update')")
+    @PreAuthorize("@cs.hasPermission('center:sms-channel:update')")
     public CommonResult<Boolean> updateSmsChannel(@Valid @RequestBody SmsChannelUpdateReqVO updateReqVO) {
         platformSmsChannelService.updateSmsChannel(updateReqVO);
         return success(true);
@@ -45,7 +45,7 @@ public class SmsChannelController {
     @DeleteMapping("/delete")
     @ApiOperation("删除短信渠道")
     @ApiImplicitParam(name = "id", value = "编号", required = true, dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:sms-channel:delete')")
+    @PreAuthorize("@cs.hasPermission('center:sms-channel:delete')")
     public CommonResult<Boolean> deleteSmsChannel(@RequestParam("id") Long id) {
         platformSmsChannelService.deleteSmsChannel(id);
         return success(true);
@@ -54,7 +54,7 @@ public class SmsChannelController {
     @GetMapping("/get")
     @ApiOperation("获得短信渠道")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('center:sms-channel:query')")
+    @PreAuthorize("@cs.hasPermission('center:sms-channel:query')")
     public CommonResult<SmsChannelRespVO> getSmsChannel(@RequestParam("id") Long id) {
         SmsChannelDO smsChannel = platformSmsChannelService.getSmsChannel(id);
         return success(SmsChannelConvert.INSTANCE.convert(smsChannel));
@@ -62,7 +62,7 @@ public class SmsChannelController {
 
     @GetMapping("/page")
     @ApiOperation("获得短信渠道分页")
-    @PreAuthorize("@ss.hasPermission('center:sms-channel:query')")
+    @PreAuthorize("@cs.hasPermission('center:sms-channel:query')")
     public CommonResult<PageResult<SmsChannelRespVO>> getSmsChannelPage(@Valid SmsChannelPageReqVO pageVO) {
         PageResult<SmsChannelDO> pageResult = platformSmsChannelService.getSmsChannelPage(pageVO);
         return success(SmsChannelConvert.INSTANCE.convertPage(pageResult));

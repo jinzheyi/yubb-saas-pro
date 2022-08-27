@@ -134,7 +134,7 @@ import {
 } from '@/components/generator/config'
 import {
   exportDefault, beautifierConf, isNumberStr, titleCase, deepClone
-} from '@/utils/index'
+} from '@/utils'
 import {
   makeUpHtml, vueTemplate, vueScript, cssStyle
 } from '@/components/generator/html'
@@ -465,5 +465,5 @@ export default {
 </script>
 
 <style lang='scss'>
-@import '@/styles/home';
+@import '@/styles/home.scss';
 </style>

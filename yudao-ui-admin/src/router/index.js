@@ -80,42 +80,9 @@ export const constantRoutes = [
     redirect: 'noredirect',
     children: [{
         path: 'profile',
-        component: (resolve) => require(['@/views/system/user/profile/index'], resolve),
+        component: (resolve) => require(['@/views/system/org/user/profile/index'], resolve),
         name: 'Profile',
         meta: {title: '个人中心', icon: 'user'}
-      }
-    ]
-  }, {
-    path: '/dict',
-    component: Layout,
-    hidden: true,
-    children: [{
-        path: 'type/data/:dictId(\\d+)',
-        component: (resolve) => require(['@/views/system/dict/data'], resolve),
-        name: 'Data',
-        meta: {title: '字典数据', icon: '', activeMenu: '/system/dict'}
-      }
-    ]
-  }, {
-    path: '/job',
-    component: Layout,
-    hidden: true,
-    children: [{
-        path: 'log',
-        component: (resolve) => require(['@/views/infra/job/log'], resolve),
-        name: 'JobLog',
-        meta: {title: '调度日志', activeMenu: '/infra/job'}
-      }
-    ]
-  }, {
-    path: '/codegen',
-    component: Layout,
-    hidden: true,
-    children: [{
-        path: 'edit/:tableId(\\d+)',
-        component: (resolve) => require(['@/views/infra/codegen/editTable'], resolve),
-        name: 'GenEdit',
-        meta: {title: '修改生成配置', activeMenu: '/infra/codegen'}
       }
     ]
   }, {

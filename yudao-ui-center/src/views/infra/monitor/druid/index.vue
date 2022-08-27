@@ -6,7 +6,7 @@
   </div>
 </template>
 <script>
-import iFrame from "@/components/iFrame/index";
+import iFrame from "@/components/iFrame";
 export default {
   name: "Druid",
   components: { iFrame },

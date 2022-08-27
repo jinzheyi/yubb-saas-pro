@@ -77,7 +77,7 @@ public class TenantMenuController {
 
     @GetMapping("/get")
     @ApiOperation("获取菜单信息")
-    @PreAuthorize("@ss.hasPermission('center:tenant-man-menu:query')")
+    @PreAuthorize("@cs.hasPermission('center:tenant-man-menu:query')")
     public CommonResult<TenantMenuRespVO> getMenu(Long id) {
         TenantMenuDO menu = platformTenantMenuService.getMenu(id);
         return success(TenantMenuConvert.INSTANCE.convert(menu));

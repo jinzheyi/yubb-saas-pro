@@ -268,7 +268,9 @@ public class PermissionServiceImpl implements PermissionService {
 
     @Override
     public Boolean hasAnyRoleMenu(Long menuId) {
-        return Objects.nonNull(menuRoleCache.get(menuId));
+        //先刷新一遍缓存
+        self.initLocalCache();
+        return Objects.nonNull(Objects.isNull(menuRoleCache)? null : menuRoleCache.get(menuId));
     }
 
     @Override

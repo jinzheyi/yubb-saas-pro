@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuCreateReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuListReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.menu.TenantMenuUpdateReqVO;
@@ -182,6 +183,7 @@ public class PlatformTenantMenuServiceImpl implements PlatformTenantMenuService 
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
+    @TenantIgnore
     public void deleteMenu(Long menuId) {
         // 校验是否还有子菜单
         if (platformTenantMenuMapper.selectCountByParentId(menuId) > 0) {

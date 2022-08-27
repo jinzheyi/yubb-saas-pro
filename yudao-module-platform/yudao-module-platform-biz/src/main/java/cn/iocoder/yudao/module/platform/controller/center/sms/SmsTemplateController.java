@@ -89,7 +89,7 @@ public class SmsTemplateController {
 
     @PostMapping("/send-sms")
     @ApiOperation("发送短信")
-    @PreAuthorize("@ss.hasPermission('system:sms-template:send-sms')")
+    @PreAuthorize("@cs.hasPermission('system:sms-template:send-sms')")
     public CommonResult<Long> sendSms(@Valid @RequestBody SmsTemplateSendReqVO sendReqVO) {
         return success(platformSmsSendService.sendSingleSmsToAdmin(sendReqVO.getMobile(), null,
                 sendReqVO.getTemplateCode(), sendReqVO.getTemplateParams()));
