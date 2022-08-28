@@ -209,9 +209,9 @@
           <el-select v-model="form.roleIds" multiple placeholder="请选择">
             <el-option
                 v-for="item in roleOptions"
-                :key="parseInt(item.id)"
+                :key="item.id"
                 :label="item.name"
-                :value="parseInt(item.id)"
+                :value="item.id"
             ></el-option>
           </el-select>
         </el-form-item>

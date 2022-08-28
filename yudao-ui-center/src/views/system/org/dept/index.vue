@@ -18,7 +18,7 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button type="primary" plain icon="el-icon-plus" size="mini" @click="handleAdd"
-                   v-hasPermi="['system:dept:create']">新增</el-button>
+                   v-hasPermi="['center:dept:create']">新增</el-button>
       </el-col>
       <el-col :span="1.5">
         <el-button type="info" plain icon="el-icon-sort" size="mini" @click="toggleExpandAll">展开/折叠</el-button>
@@ -44,11 +44,11 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button size="mini" type="text" icon="el-icon-edit" @click="handleUpdate(scope.row)"
-                     v-hasPermi="['system:dept:update']">修改</el-button>
+                     v-hasPermi="['center:dept:update']">修改</el-button>
           <el-button size="mini" type="text" icon="el-icon-plus" @click="handleAdd(scope.row)"
-                     v-hasPermi="['system:dept:create']">新增</el-button>
+                     v-hasPermi="['center:dept:create']">新增</el-button>
           <el-button v-if="scope.row.parentId !== 0" size="mini" type="text" icon="el-icon-delete"
-                     @click="handleDelete(scope.row)" v-hasPermi="['system:dept:delete']">删除</el-button>
+                     @click="handleDelete(scope.row)" v-hasPermi="['center:dept:delete']">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -75,7 +75,7 @@
           <el-col :span="12">
             <el-form-item label="负责人" prop="leaderUserId">
               <el-select v-model="form.leaderUserId" placeholder="请输入负责人" clearable style="width: 100%">
-                <el-option v-for="item in users" :key="parseInt(item.id)" :label="item.nickname" :value="parseInt(item.id)" />
+                <el-option v-for="item in users" :key="item.id" :label="item.nickname" :value="item.id" />
               </el-select>
             </el-form-item>
           </el-col>

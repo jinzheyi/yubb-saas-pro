@@ -75,7 +75,7 @@
           <el-col :span="12">
             <el-form-item label="负责人" prop="leaderUserId">
               <el-select v-model="form.leaderUserId" placeholder="请输入负责人" clearable style="width: 100%">
-                <el-option v-for="item in users" :key="parseInt(item.id)" :label="item.nickname" :value="parseInt(item.id)" />
+                <el-option v-for="item in users" :key="item.id" :label="item.nickname" :value="item.id" />
               </el-select>
             </el-form-item>
           </el-col>
