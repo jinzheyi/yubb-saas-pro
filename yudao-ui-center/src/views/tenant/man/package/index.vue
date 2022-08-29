@@ -92,7 +92,7 @@
 <script>
 import { createTenantPackage, updateTenantPackage, deleteTenantPackage, getTenantPackage, getTenantPackagePage} from "@/api/system/tenantPackage";
 import {CommonStatusEnum, SystemMenuTypeEnum} from "@/utils/constants";
-import {listSimpleMenus} from "@/api/system/menu";
+import {listSimpleMenus} from "@/api/system/tenantMenu";
 
 export default {
   name: "TenantPackage",

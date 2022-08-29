@@ -129,7 +129,7 @@ public class RoleServiceImpl implements RoleService {
     @Transactional
     public Long createRole(RoleCreateReqVO reqVO, Integer type) {
         // 校验角色
-        checkDuplicateRole(reqVO.getName(), reqVO.getCode(), null);
+        checkDuplicateRole(reqVO.getName(), reqVO.getCode(),null, type);
         // 插入到数据库
         RoleDO role = RoleConvert.INSTANCE.convert(reqVO);
         role.setType(ObjectUtil.defaultIfNull(type, RoleTypeEnum.CUSTOM.getType()));
@@ -152,7 +152,7 @@ public class RoleServiceImpl implements RoleService {
         // 校验是否可以更新
         checkUpdateRole(reqVO.getId());
         // 校验角色的唯一字段是否重复
-        checkDuplicateRole(reqVO.getName(), reqVO.getCode(), reqVO.getId());
+        checkDuplicateRole(reqVO.getName(), reqVO.getCode(), reqVO.getId(), null);
 
         // 更新到数据库
         RoleDO updateObject = RoleConvert.INSTANCE.convert(reqVO);
@@ -256,9 +256,9 @@ public class RoleServiceImpl implements RoleService {
      * @param id 角色编号
      */
     @VisibleForTesting
-    public void checkDuplicateRole(String name, String code, Long id) {
-        // 0. 租户管理员code，不允许创建
-        if (RoleCodeEnum.isTenantAdmin(code)) {
+    public void checkDuplicateRole(String name, String code, Long id, Integer type) {
+        // 0. 租户管理员code，不允许创建,排除是系统级别创建的时候
+        if (RoleCodeEnum.isTenantAdmin(code) && !RoleTypeEnum.SYSTEM.getType().equals(type)) {
             throw exception(ROLE_ADMIN_CODE_ERROR, code);
         }
         // 1. 该 name 名字被其它角色所使用

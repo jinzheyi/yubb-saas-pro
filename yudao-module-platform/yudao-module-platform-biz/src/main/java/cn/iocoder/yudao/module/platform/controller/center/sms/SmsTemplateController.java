@@ -61,7 +61,7 @@ public class SmsTemplateController {
     @GetMapping("/get")
     @ApiOperation("获得短信模板")
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@cs.hasPermission('system:sms-template:query')")
+    @PreAuthorize("@cs.hasPermission('center:sms-template:query')")
     public CommonResult<SmsTemplateRespVO> getSmsTemplate(@RequestParam("id") Long id) {
         SmsTemplateDO smsTemplate = platformSmsTemplateService.getSmsTemplate(id);
         return success(SmsTemplateConvert.INSTANCE.convert(smsTemplate));
@@ -69,7 +69,7 @@ public class SmsTemplateController {
 
     @GetMapping("/page")
     @ApiOperation("获得短信模板分页")
-    @PreAuthorize("@cs.hasPermission('system:sms-template:query')")
+    @PreAuthorize("@cs.hasPermission('center:sms-template:query')")
     public CommonResult<PageResult<SmsTemplateRespVO>> getSmsTemplatePage(@Valid SmsTemplatePageReqVO pageVO) {
         PageResult<SmsTemplateDO> pageResult = platformSmsTemplateService.getSmsTemplatePage(pageVO);
         return success(SmsTemplateConvert.INSTANCE.convertPage(pageResult));
@@ -77,7 +77,7 @@ public class SmsTemplateController {
 
     @GetMapping("/export-excel")
     @ApiOperation("导出短信模板 Excel")
-    @PreAuthorize("@cs.hasPermission('system:sms-template:export')")
+    @PreAuthorize("@cs.hasPermission('center:sms-template:export')")
     @OperateLog(type = EXPORT)
     public void exportSmsTemplateExcel(@Valid SmsTemplateExportReqVO exportReqVO,
                                        HttpServletResponse response) throws IOException {
@@ -89,7 +89,7 @@ public class SmsTemplateController {
 
     @PostMapping("/send-sms")
     @ApiOperation("发送短信")
-    @PreAuthorize("@cs.hasPermission('system:sms-template:send-sms')")
+    @PreAuthorize("@cs.hasPermission('center:sms-template:send-sms')")
     public CommonResult<Long> sendSms(@Valid @RequestBody SmsTemplateSendReqVO sendReqVO) {
         return success(platformSmsSendService.sendSingleSmsToAdmin(sendReqVO.getMobile(), null,
                 sendReqVO.getTemplateCode(), sendReqVO.getTemplateParams()));
