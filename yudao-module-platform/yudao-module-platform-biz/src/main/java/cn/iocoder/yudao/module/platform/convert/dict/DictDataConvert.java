@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.platform.convert.dict;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.api.dict.dto.DictDataRespDTO;
+import cn.iocoder.yudao.module.platform.api.dict.dto.DictDataSimpleRespDTO;
 import cn.iocoder.yudao.module.platform.controller.center.dict.vo.data.*;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dict.DictDataDO;
 import org.mapstruct.Mapper;
@@ -27,5 +28,7 @@ public interface DictDataConvert {
     List<DictDataExcelVO> convertList02(List<DictDataDO> bean);
 
     DictDataRespDTO convert02(DictDataDO bean);
+
+    List<DictDataSimpleRespDTO> convertDTOList(List<DictDataDO> list);
 
 }

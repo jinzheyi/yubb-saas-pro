@@ -32,7 +32,7 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
  */
 @Service
 @Slf4j
-public class DictDataServiceImpl implements DictDataService {
+public class PlatformDictDataServiceImpl implements PlatformDictDataService {
 
     /**
      * 排序 dictType > sort

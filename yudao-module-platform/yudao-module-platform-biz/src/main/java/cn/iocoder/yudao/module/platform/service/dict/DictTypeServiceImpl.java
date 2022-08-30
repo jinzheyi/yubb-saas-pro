@@ -27,7 +27,7 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 public class DictTypeServiceImpl implements DictTypeService {
 
     @Resource
-    private DictDataService dictDataService;
+    private PlatformDictDataService platformDictDataService;
 
     @Resource
     private DictTypeMapper dictTypeMapper;
@@ -76,7 +76,7 @@ public class DictTypeServiceImpl implements DictTypeService {
         // 校验是否存在
         DictTypeDO dictType = checkDictTypeExists(id);
         // 校验是否有字典数据
-        if (dictDataService.countByDictType(dictType.getType()) > 0) {
+        if (platformDictDataService.countByDictType(dictType.getType()) > 0) {
             throw exception(DICT_TYPE_HAS_CHILDREN);
         }
         // 删除字典类型

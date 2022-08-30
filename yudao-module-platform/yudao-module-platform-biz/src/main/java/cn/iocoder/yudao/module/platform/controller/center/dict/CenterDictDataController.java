@@ -7,7 +7,7 @@ import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
 import cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog;
 import cn.iocoder.yudao.module.platform.controller.center.dict.vo.data.*;
 import cn.iocoder.yudao.module.platform.convert.dict.DictDataConvert;
-import cn.iocoder.yudao.module.platform.service.dict.DictDataService;
+import cn.iocoder.yudao.module.platform.service.dict.PlatformDictDataService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -28,16 +28,16 @@ import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.E
 @RestController
 @RequestMapping("/center/dict-data")
 @Validated
-public class DictDataController {
+public class CenterDictDataController {
 
     @Resource
-    private DictDataService dictDataService;
+    private PlatformDictDataService platformDictDataService;
 
     @PostMapping("/create")
     @ApiOperation("新增字典数据")
     @PreAuthorize("@cs.hasPermission('center:dict:create')")
     public CommonResult<Long> createDictData(@Valid @RequestBody DictDataCreateReqVO reqVO) {
-        Long dictDataId = dictDataService.createDictData(reqVO);
+        Long dictDataId = platformDictDataService.createDictData(reqVO);
         return success(dictDataId);
     }
 
@@ -45,7 +45,7 @@ public class DictDataController {
     @ApiOperation("修改字典数据")
     @PreAuthorize("@cs.hasPermission('center:dict:update')")
     public CommonResult<Boolean> updateDictData(@Valid @RequestBody DictDataUpdateReqVO reqVO) {
-        dictDataService.updateDictData(reqVO);
+        platformDictDataService.updateDictData(reqVO);
         return success(true);
     }
 
@@ -54,7 +54,7 @@ public class DictDataController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@cs.hasPermission('center:dict:delete')")
     public CommonResult<Boolean> deleteDictData(Long id) {
-        dictDataService.deleteDictData(id);
+        platformDictDataService.deleteDictData(id);
         return success(true);
     }
 
@@ -62,7 +62,7 @@ public class DictDataController {
     @ApiOperation(value = "获得全部字典数据列表", notes = "一般用于管理后台缓存字典数据在本地")
     // 无需添加权限认证，因为前端全局都需要
     public CommonResult<List<DictDataSimpleRespVO>> getSimpleDictDatas() {
-        List<DictDataDO> list = dictDataService.getDictDatas();
+        List<DictDataDO> list = platformDictDataService.getDictDatas();
         return success(DictDataConvert.INSTANCE.convertList(list));
     }
 
@@ -70,7 +70,7 @@ public class DictDataController {
     @ApiOperation("/获得字典类型的分页列表")
     @PreAuthorize("@cs.hasPermission('center:dict:query')")
     public CommonResult<PageResult<DictDataRespVO>> getDictTypePage(@Valid DictDataPageReqVO reqVO) {
-        return success(DictDataConvert.INSTANCE.convertPage(dictDataService.getDictDataPage(reqVO)));
+        return success(DictDataConvert.INSTANCE.convertPage(platformDictDataService.getDictDataPage(reqVO)));
     }
 
     @GetMapping(value = "/get")
@@ -78,7 +78,7 @@ public class DictDataController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@cs.hasPermission('center:dict:query')")
     public CommonResult<DictDataRespVO> getDictData(@RequestParam("id") Long id) {
-        return success(DictDataConvert.INSTANCE.convert(dictDataService.getDictData(id)));
+        return success(DictDataConvert.INSTANCE.convert(platformDictDataService.getDictData(id)));
     }
 
     @GetMapping("/export")
@@ -86,7 +86,7 @@ public class DictDataController {
     @PreAuthorize("@cs.hasPermission('center:dict:export')")
     @OperateLog(type = EXPORT)
     public void export(HttpServletResponse response, @Valid DictDataExportReqVO reqVO) throws IOException {
-        List<DictDataDO> list = dictDataService.getDictDatas(reqVO);
+        List<DictDataDO> list = platformDictDataService.getDictDatas(reqVO);
         List<DictDataExcelVO> data = DictDataConvert.INSTANCE.convertList02(list);
         // 输出
         ExcelUtils.write(response, "字典数据.xls", "数据列表", DictDataExcelVO.class, data);
