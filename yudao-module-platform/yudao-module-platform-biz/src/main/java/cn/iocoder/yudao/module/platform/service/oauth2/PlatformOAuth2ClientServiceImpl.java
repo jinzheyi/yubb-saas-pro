@@ -24,7 +24,10 @@ import org.springframework.validation.annotation.Validated;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-import java.util.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
@@ -175,6 +178,19 @@ public class PlatformOAuth2ClientServiceImpl implements PlatformOAuth2ClientServ
     @Override
     public PlatformOAuth2ClientDO getOAuth2Client(Long id) {
         return oauth2ClientMapperPlatform.selectById(id);
+    }
+
+    @Override
+    public PlatformOAuth2ClientDO getOAuth2Client(String clientId) {
+        // 校验客户端存在、且开启
+        PlatformOAuth2ClientDO client = clientCache.get(clientId);
+        if (client == null) {
+            throw exception(OAUTH2_CLIENT_NOT_EXISTS);
+        }
+        if (ObjectUtil.notEqual(client.getStatus(), CommonStatusEnum.ENABLE.getStatus())) {
+            throw exception(OAUTH2_CLIENT_DISABLE);
+        }
+        return client;
     }
 
     @Override

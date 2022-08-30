@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.system.dal.dataobject.oauth2;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import cn.iocoder.yudao.framework.common.enums.Constants;
 import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
 import cn.iocoder.yudao.framework.common.enums.oauth2.OAuth2GrantTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
@@ -103,5 +104,12 @@ public class OAuth2ClientDO extends TenantBaseDO {
      * 附加信息，JSON 格式
      */
     private String additionalInformation;
+
+    @TableField(exist = false)
+    private String clientTenantId;
+
+    public String getClientTenantId() {
+        return getClientId() + Constants.SYMBOL + getTenantId();
+    }
 
 }

@@ -50,7 +50,7 @@ public class OAuth2ClientServiceImpl implements OAuth2ClientService {
 
     /**
      * 客户端缓存
-     * key：客户端编号 {@link OAuth2ClientDO#getClientId()} ()}
+     * key：客户端编号 {@link OAuth2ClientDO#getClientTenantId()} ()}
      *
      * 这里声明 volatile 修饰的原因是，每次刷新时，直接修改指向
      */
@@ -87,7 +87,7 @@ public class OAuth2ClientServiceImpl implements OAuth2ClientService {
         }
 
         // 写入缓存
-        clientCache = convertMap(tenantList, OAuth2ClientDO::getClientId);
+        clientCache = convertMap(tenantList, OAuth2ClientDO::getClientTenantId);
         maxUpdateTime = getMaxValue(tenantList, OAuth2ClientDO::getUpdateTime);
         log.info("[initLocalCache][初始化 OAuth2Client 数量为 {}]", tenantList.size());
     }

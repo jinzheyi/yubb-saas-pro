@@ -54,6 +54,14 @@ public interface PlatformOAuth2ClientService {
     PlatformOAuth2ClientDO getOAuth2Client(Long id);
 
     /**
+     * 获得 OAuth2 客户端
+     *
+     * @param clientId 客户端ID
+     * @return OAuth2 客户端
+     */
+    PlatformOAuth2ClientDO getOAuth2Client(String clientId);
+
+    /**
      * 获得 OAuth2 客户端分页
      *
      * @param pageReqVO 分页查询

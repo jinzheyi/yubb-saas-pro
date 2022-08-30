@@ -139,6 +139,7 @@
 import { createTenant, updateTenant, deleteTenant, getTenant, getTenantPage, exportTenantExcel } from "@/api/system/tenant";
 import { CommonStatusEnum } from '@/utils/constants'
 import {getTenantPackageList} from "@/api/system/tenantPackage";
+import {getOAuth2ClientId} from "@/api/system/oauth2/oauth2Client";
 
 export default {
   name: "Tenant",
@@ -146,6 +147,7 @@ export default {
   },
   data() {
     return {
+      clientId: "tenant",
       // 遮罩层
       loading: true,
       // 导出遮罩层
@@ -236,9 +238,11 @@ export default {
     },
     /** 新增按钮操作 */
     handleAdd() {
-      this.reset();
-      this.open = true;
-      this.title = "添加租户";
+      getOAuth2ClientId(this.clientId).then(res => {
+        this.reset();
+        this.open = true;
+        this.title = "添加租户";
+      });
     },
     /** 修改按钮操作 */
     handleUpdate(row) {

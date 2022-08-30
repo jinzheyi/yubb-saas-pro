@@ -53,8 +53,8 @@ public class AdminUserApiImpl implements AdminUserApi {
     }
 
     @Override
-    public Long createUser(AdminUserCreateReqDTO reqVO) {
-        return userService.createUser(UserConvert.INSTANCE.convert(reqVO));
+    public Long createUser(AdminUserCreateReqDTO reqDTO) {
+        return userService.createUser(UserConvert.INSTANCE.convert(reqDTO));
     }
 
 }

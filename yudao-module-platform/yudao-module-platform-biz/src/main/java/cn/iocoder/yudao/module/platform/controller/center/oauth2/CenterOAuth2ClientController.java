@@ -17,6 +17,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.annotation.security.PermitAll;
 import javax.validation.Valid;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
@@ -69,6 +70,15 @@ public class CenterOAuth2ClientController {
     public CommonResult<PageResult<OAuth2ClientRespVO>> getOAuth2ClientPage(@Valid OAuth2ClientPageReqVO pageVO) {
         PageResult<PlatformOAuth2ClientDO> pageResult = platformOAuth2ClientService.getOAuth2ClientPage(pageVO);
         return success(OAuth2ClientConvert.INSTANCE.convertPage(pageResult));
+    }
+
+    @GetMapping("/get-oauth2-by-client-id")
+    @PermitAll
+    @ApiOperation(value = "根据客户端ID查询指定的oauth2编号", notes = "添加租户时，获取平台租户客户端是否已提前创建")
+    @ApiImplicitParam(name = "clientId", value = "客户端ID", required = true, example = "clientId", dataTypeClass = String.class)
+    public CommonResult<Long> getTenantIdByName(@RequestParam("clientId") String clientId) {
+        PlatformOAuth2ClientDO oAuth2Client = platformOAuth2ClientService.getOAuth2Client(clientId);
+        return success(oAuth2Client.getId());
     }
 
 }

@@ -42,3 +42,14 @@ export function getOAuth2ClientPage(query) {
     params: query
   })
 }
+
+// 获得 OAuth2 客户端
+export function getOAuth2ClientId(clientId) {
+  return request({
+    url: '/center/oauth2-client/get-oauth2-by-client-id',
+    method: 'get',
+    params: {
+      clientId
+    }
+  })
+}

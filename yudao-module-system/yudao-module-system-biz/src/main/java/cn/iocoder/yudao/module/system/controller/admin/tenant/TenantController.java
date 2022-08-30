@@ -27,7 +27,7 @@ public class TenantController {
     @GetMapping("/get-id-by-name")
     @PermitAll
     @ApiOperation(value = "使用租户名，获得租户编号", notes = "登录界面，根据用户的租户名，获得租户编号")
-    @ApiImplicitParam(name = "name", value = "租户名", required = true, example = "1024", dataTypeClass = Long.class)
+    @ApiImplicitParam(name = "name", value = "租户名", required = true, example = "1024", dataTypeClass = String.class)
     public CommonResult<Long> getTenantIdByName(@RequestParam("name") String name) {
         TenantRespDTO tenantRespDTO = tenantService.getTenantByName(name);
         return success(tenantRespDTO != null ? tenantRespDTO.getId() : null);

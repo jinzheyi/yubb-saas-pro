@@ -4,6 +4,9 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import cn.iocoder.yudao.framework.common.enums.oauth2.OAuth2ClientConstants;
+import cn.iocoder.yudao.framework.common.enums.permission.RoleCodeEnum;
+import cn.iocoder.yudao.framework.common.enums.permission.RoleTypeEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
@@ -14,11 +17,12 @@ import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.Tenan
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantConvert;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2ClientDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantPackageDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.tenant.PlatformTenantMapper;
-import cn.iocoder.yudao.framework.common.enums.permission.RoleCodeEnum;
-import cn.iocoder.yudao.framework.common.enums.permission.RoleTypeEnum;
+import cn.iocoder.yudao.module.platform.service.oauth2.PlatformOAuth2ClientService;
+import cn.iocoder.yudao.module.system.api.oauth2.OAuth2ClientApi;
 import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
 import cn.iocoder.yudao.module.system.api.permission.RoleApi;
 import cn.iocoder.yudao.module.system.api.permission.dto.RoleCreateReqDTO;
@@ -60,12 +64,18 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     private PlatformTenantPackageService platformTenantPackageService;
 
     @Resource
+    private PlatformOAuth2ClientService platformOAuth2ClientService;
+
+    @Resource
     private AdminUserApi adminUserApi;
     @Resource
     private RoleApi roleApi;
 
     @Resource
     private PermissionApi permissionApi;
+
+    @Resource
+    private OAuth2ClientApi oAuth2ClientApi;
 
     @Override
     public List<Long> getTenantIds() {
@@ -92,6 +102,8 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     public Long createTenant(TenantCreateReqVO createReqVO) {
         // 校验套餐被禁用
         TenantPackageDO tenantPackage = platformTenantPackageService.validTenantPackage(createReqVO.getPackageId());
+        //校验客户端是否可用
+        PlatformOAuth2ClientDO auth2Client = platformOAuth2ClientService.getOAuth2Client(OAuth2ClientConstants.CLIENT_ID_TENANT);
 
         // 创建租户
         TenantDO tenant = TenantConvert.INSTANCE.convert(createReqVO);
@@ -104,6 +116,8 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
             Long userId = createUser(roleId, createReqVO);
             // 修改租户的管理员
             platformTenantMapper.updateById(new TenantDO().setId(tenant.getId()).setContactUserId(userId));
+            //创建租户OAuth2客户端
+            createOAuth2Client(auth2Client);
         });
         return tenant.getId();
     }
@@ -126,6 +140,10 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
         permissionApi.assignRoleMenu(roleId, tenantPackage.getMenuIds());
         return roleId;
     }
+
+    private Long createOAuth2Client(PlatformOAuth2ClientDO auth2Client) {
+        return oAuth2ClientApi.createOAuth2Client(TenantConvert.INSTANCE.convert03(auth2Client));
+    };
 
     @Override
     @Transactional(rollbackFor = Exception.class)

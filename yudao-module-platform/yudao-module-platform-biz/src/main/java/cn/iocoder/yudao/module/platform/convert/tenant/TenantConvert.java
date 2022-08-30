@@ -6,7 +6,9 @@ import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.Tenan
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantExcelVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantRespVO;
 import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantUpdateReqVO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2ClientDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
+import cn.iocoder.yudao.module.system.api.oauth2.dto.client.OAuth2ClientCreateReqDTO;
 import cn.iocoder.yudao.module.system.api.user.dto.AdminUserCreateReqDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -44,5 +46,7 @@ public interface TenantConvert {
     }
 
     TenantRespDTO convertDTO(TenantDO bean);
+
+    OAuth2ClientCreateReqDTO convert03(PlatformOAuth2ClientDO bean);
 
 }
