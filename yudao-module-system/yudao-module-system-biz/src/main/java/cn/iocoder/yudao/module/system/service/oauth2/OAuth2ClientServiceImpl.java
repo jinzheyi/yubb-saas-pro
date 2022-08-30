@@ -4,9 +4,11 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import cn.iocoder.yudao.framework.common.enums.Constants;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.string.StrUtils;
 import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
+import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
 import cn.iocoder.yudao.module.system.controller.admin.oauth2.vo.client.OAuth2ClientCreateReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.oauth2.vo.client.OAuth2ClientPageReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.oauth2.vo.client.OAuth2ClientUpdateReqVO;
@@ -187,8 +189,10 @@ public class OAuth2ClientServiceImpl implements OAuth2ClientService {
     @Override
     public OAuth2ClientDO validOAuthClientFromCache(String clientId, String clientSecret,
                                                     String authorizedGrantType, Collection<String> scopes, String redirectUri) {
+        // TODO 这里因为缓存用的是 客户端ID + "#" +租户ID，所以取也是这么取。但是考虑到前台还有个sso.vue的界面OAuth2请求，针对sso.vue页面是地址请求，已经默认带了租户ID
+        String oAuth2ClientId = clientId.contains(Constants.SYMBOL)? clientId : clientId + Constants.SYMBOL + TenantContextHolder.getTenantId();
         // 校验客户端存在、且开启
-        OAuth2ClientDO client = clientCache.get(clientId);
+        OAuth2ClientDO client = clientCache.get(oAuth2ClientId);
         if (client == null) {
             throw exception(OAUTH2_CLIENT_NOT_EXISTS);
         }

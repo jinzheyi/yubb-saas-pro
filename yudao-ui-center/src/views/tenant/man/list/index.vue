@@ -147,7 +147,8 @@ export default {
   },
   data() {
     return {
-      clientId: "tenant",
+      //平台为租户分配的客户端标识
+      clientId: "default",
       // 遮罩层
       loading: true,
       // 导出遮罩层

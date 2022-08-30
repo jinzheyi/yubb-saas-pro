@@ -103,7 +103,7 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
         // 校验套餐被禁用
         TenantPackageDO tenantPackage = platformTenantPackageService.validTenantPackage(createReqVO.getPackageId());
         //校验客户端是否可用
-        PlatformOAuth2ClientDO auth2Client = platformOAuth2ClientService.getOAuth2Client(OAuth2ClientConstants.CLIENT_ID_TENANT);
+        PlatformOAuth2ClientDO auth2Client = platformOAuth2ClientService.getOAuth2Client(OAuth2ClientConstants.CLIENT_ID_DEFAULT);
 
         // 创建租户
         TenantDO tenant = TenantConvert.INSTANCE.convert(createReqVO);
