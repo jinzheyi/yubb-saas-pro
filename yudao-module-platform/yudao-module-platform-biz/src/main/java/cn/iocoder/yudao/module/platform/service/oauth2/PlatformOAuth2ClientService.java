@@ -59,6 +59,14 @@ public interface PlatformOAuth2ClientService {
      * @param clientId 客户端ID
      * @return OAuth2 客户端
      */
+    PlatformOAuth2ClientDO getCache(String clientId);
+
+    /**
+     * 获得 OAuth2 客户端
+     *
+     * @param clientId 客户端ID
+     * @return OAuth2 客户端
+     */
     PlatformOAuth2ClientDO getOAuth2Client(String clientId);
 
     /**

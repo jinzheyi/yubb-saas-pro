@@ -181,9 +181,14 @@ public class PlatformOAuth2ClientServiceImpl implements PlatformOAuth2ClientServ
     }
 
     @Override
+    public PlatformOAuth2ClientDO getCache(String clientId) {
+        return clientCache.get(clientId);
+    }
+
+    @Override
     public PlatformOAuth2ClientDO getOAuth2Client(String clientId) {
         // 校验客户端存在、且开启
-        PlatformOAuth2ClientDO client = clientCache.get(clientId);
+        PlatformOAuth2ClientDO client = this.getCache(clientId);
         if (client == null) {
             throw exception(OAUTH2_CLIENT_NOT_EXISTS);
         }

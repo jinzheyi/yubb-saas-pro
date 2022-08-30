@@ -77,8 +77,8 @@ public class CenterOAuth2ClientController {
     @ApiOperation(value = "根据客户端ID查询指定的oauth2编号", notes = "添加租户时，获取平台租户客户端是否已提前创建")
     @ApiImplicitParam(name = "clientId", value = "客户端ID", required = true, example = "clientId", dataTypeClass = String.class)
     public CommonResult<Long> getTenantIdByName(@RequestParam("clientId") String clientId) {
-        PlatformOAuth2ClientDO oAuth2Client = platformOAuth2ClientService.getOAuth2Client(clientId);
-        return success(oAuth2Client.getId());
+        PlatformOAuth2ClientDO oAuth2Client = platformOAuth2ClientService.getCache(clientId);
+        return success(oAuth2Client != null ? oAuth2Client.getId() : null);
     }
 
 }

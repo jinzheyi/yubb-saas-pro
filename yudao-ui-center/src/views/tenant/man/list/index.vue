@@ -239,9 +239,15 @@ export default {
     /** 新增按钮操作 */
     handleAdd() {
       getOAuth2ClientId(this.clientId).then(res => {
-        this.reset();
-        this.open = true;
-        this.title = "添加租户";
+        const auth2ClientId = res.data;
+        if (auth2ClientId && auth2ClientId >= 0) {
+          this.reset();
+          this.open = true;
+          this.title = "添加租户";
+        } else {
+          this.$modal.alertWarning('平台未设置OAuth2租户类型应用，请先联系管理员维护后再进行添加租户操作');
+          return;
+        }
       });
     },
     /** 修改按钮操作 */
