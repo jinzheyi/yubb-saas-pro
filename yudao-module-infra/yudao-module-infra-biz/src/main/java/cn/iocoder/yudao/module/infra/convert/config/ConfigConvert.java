@@ -6,6 +6,7 @@ import cn.iocoder.yudao.module.infra.controller.center.config.vo.ConfigExcelVO;
 import cn.iocoder.yudao.module.infra.controller.center.config.vo.ConfigRespVO;
 import cn.iocoder.yudao.module.infra.controller.center.config.vo.ConfigUpdateReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.config.ConfigDO;
+import cn.iocoder.yudao.module.system.api.config.dto.ConfigurationCreateReqDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
@@ -29,5 +30,8 @@ public interface ConfigConvert {
 
     @Mapping(source = "configKey", target = "key")
     List<ConfigExcelVO> convertList(List<ConfigDO> list);
+
+    @Mapping(source = "id", target = "configId")
+    List<ConfigurationCreateReqDTO> convertListDTO(List<ConfigDO> list);
 
 }

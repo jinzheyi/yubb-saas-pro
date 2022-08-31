@@ -7,7 +7,9 @@ import cn.iocoder.yudao.module.infra.controller.center.config.vo.ConfigExportReq
 import cn.iocoder.yudao.module.infra.controller.center.config.vo.ConfigPageReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.config.ConfigDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 
+import java.util.Date;
 import java.util.List;
 
 @Mapper
@@ -32,5 +34,8 @@ public interface ConfigMapper extends BaseMapperX<ConfigDO> {
                 .eqIfPresent(ConfigDO::getType, reqVO.getType())
                 .betweenIfPresent(ConfigDO::getCreateTime, reqVO.getCreateTime()));
     }
+
+    @Select("SELECT * FROM infra_config")
+    List<ConfigDO> selectAllList();
 
 }

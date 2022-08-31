@@ -18,6 +18,11 @@ import java.util.List;
 public interface ConfigService {
 
     /**
+     * 初始化租户配置信息
+     */
+    void initTenantConfig();
+
+    /**
      * 创建参数配置
      *
      * @param reqVO 创建信息
