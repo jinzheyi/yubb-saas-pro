@@ -12,7 +12,7 @@ import javax.validation.constraints.Size;
 @ApiModel("管理后台 - 参数配置创建 Request VO")
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class ConfigCreateReqVO extends ConfigBaseVO {
+public class ConfigCreateOrDelReqVO extends ConfigBaseVO {
 
     @ApiModelProperty(value = "参数键名", required = true, example = "yunai.db.username")
     @NotBlank(message = "参数键名长度不能为空")

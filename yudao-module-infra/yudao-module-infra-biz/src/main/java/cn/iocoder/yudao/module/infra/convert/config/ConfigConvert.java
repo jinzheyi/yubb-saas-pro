@@ -29,9 +29,13 @@ public interface ConfigConvert {
     ConfigDO convert(ConfigUpdateReqVO bean);
 
     @Mapping(source = "configKey", target = "key")
+    ConfigExcelVO convertVo(ConfigDO bean);
+
     List<ConfigExcelVO> convertList(List<ConfigDO> list);
 
     @Mapping(source = "id", target = "configId")
+    ConfigurationCreateReqDTO convertDTO(ConfigDO bean);
+
     List<ConfigurationCreateReqDTO> convertListDTO(List<ConfigDO> list);
 
 }

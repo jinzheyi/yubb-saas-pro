@@ -3,14 +3,15 @@ package cn.iocoder.yudao.module.system.service.config;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
 import cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants;
-import cn.iocoder.yudao.module.infra.enums.config.ConfigTypeEnum;
-import cn.iocoder.yudao.module.system.controller.admin.config.vo.ConfigCreateReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.config.vo.ConfigCreateOrDelReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.config.vo.ConfigPageReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.config.vo.ConfigUpdateReqVO;
 import cn.iocoder.yudao.module.system.convert.config.ConfigurationConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.config.ConfigurationDO;
 import cn.iocoder.yudao.module.system.dal.mysql.config.ConfigurationMapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,34 +27,36 @@ import java.util.List;
 @Service
 @Slf4j
 @Validated
-public class ConfigurationServiceImpl implements ConfigurationService {
+public class ConfigurationServiceImpl extends ServiceImpl<ConfigurationMapper, ConfigurationDO> implements ConfigurationService {
 
     @Resource
     private ConfigurationMapper configurationMapper;
 
-    @Resource
-    private ConfigProducer configProducer;
+//    @Resource
+//    private ConfigProducer configProducer;
 
     @Override
-    public void createOrDel(List<ConfigCreateReqVO> reqVOList) {
+    public void createOrDel(List<ConfigCreateOrDelReqVO> reqVOList) {
         List<ConfigurationDO> createList = new ArrayList<>();
-        List<ConfigurationDO> delList = new ArrayList<>();
+        List<Long> delIdsList = new ArrayList<>();
         reqVOList.forEach(reqVO -> {
             // 校验正确性
-            if (checkCreate(reqVO.getKey())) {
+            if (checkCreate(reqVO.getConfigKey()) && !reqVO.getDeleted()) {
                 createList.add(ConfigurationConvert.INSTANCE.convert(reqVO));
             };
-
+            if (reqVO.getDeleted()) {
+                delIdsList.add(reqVO.getConfigId());
+            }
         });
-
-
-        // 插入参数配置
-        ConfigurationDO config = ConfigConvert.INSTANCE.convert(reqVO);
-        config.setType(ConfigTypeEnum.CUSTOM.getType());
-        configurationMapper.insert(config);
+        try {
+            log.info("TenantContextHolder.getTenantId()====" + TenantContextHolder.getTenantId());
+            this.saveBatch(createList);
+            this.removeBatchByIds(delIdsList);
+        } catch (Exception e) {
+            log.error("租户同步平台配置发生异常:{}", e);
+        }
         // 发送刷新消息
-        configProducer.sendConfigRefreshMessage();
-        return config.getId();
+//        configProducer.sendConfigRefreshMessage();
     }
 
     @Override
@@ -61,10 +64,10 @@ public class ConfigurationServiceImpl implements ConfigurationService {
         // 校验正确性
         checkCreateOrUpdate(reqVO.getId(), null); // 不允许更新 key
         // 更新参数配置
-        ConfigurationDO updateObj = ConfigConvert.INSTANCE.convert(reqVO);
+        ConfigurationDO updateObj = ConfigurationConvert.INSTANCE.convert(reqVO);
         configurationMapper.updateById(updateObj);
         // 发送刷新消息
-        configProducer.sendConfigRefreshMessage();
+//        configProducer.sendConfigRefreshMessage();
     }
 
     @Override

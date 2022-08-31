@@ -65,9 +65,14 @@ public class ConfigServiceImpl implements ConfigService {
             return;
         }
         idList.forEach(tenantId -> {
-            TenantUtils.execute(tenantId, () -> {
-                configurationApi.createOrDel(ConfigConvert.INSTANCE.convertListDTO(configList));
-            });
+            this.createOrDel(tenantId, configList);
+        });
+    }
+
+    private void createOrDel(Long tenantId, List<ConfigDO> configList) {
+        log.info("tenantId====" + tenantId);
+        TenantUtils.execute(tenantId, () -> {
+            configurationApi.createOrDel(ConfigConvert.INSTANCE.convertListDTO(configList));
         });
     }
 
