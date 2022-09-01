@@ -25,6 +25,7 @@ import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.EXPORT;
+import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.OTHER;
 
 @Api(tags = "管理后台 - 参数配置")
 @RestController
@@ -100,6 +101,14 @@ public class ConfigController {
         List<ConfigExcelVO> datas = ConfigConvert.INSTANCE.convertList(list);
         // 输出
         ExcelUtils.write(response, "参数配置.xls", "数据", ConfigExcelVO.class, datas);
+    }
+
+    @PostMapping("/init-tenant-config")
+    @ApiOperation("同步新配置给租户")
+    @PreAuthorize("@cs.hasPermission('infra:config:init-tenant-config')")
+    @OperateLog(type = OTHER)
+    public CommonResult<> initTenantConfig() {
+        return success(configService.initTenantConfig());
     }
 
 }

@@ -22,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.util.List;
 
@@ -53,7 +52,6 @@ public class ConfigServiceImpl implements ConfigService {
      * 添加跟删除的操作交给平台同步给租户，租户只能修改键的值，租户端key不能改，只改值
      */
     @Override
-    @PostConstruct
     public void initTenantConfig() {
         // 获取所有配置列表
         List<ConfigDO> configList = configMapper.selectAllList();
@@ -70,7 +68,6 @@ public class ConfigServiceImpl implements ConfigService {
     }
 
     private void createOrDel(Long tenantId, List<ConfigDO> configList) {
-        log.info("tenantId====" + tenantId);
         TenantUtils.execute(tenantId, () -> {
             configurationApi.createOrDel(ConfigConvert.INSTANCE.convertListDTO(configList));
         });

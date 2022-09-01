@@ -49,7 +49,6 @@ public class ConfigurationServiceImpl extends ServiceImpl<ConfigurationMapper, C
             }
         });
         try {
-            log.info("TenantContextHolder.getTenantId()====" + TenantContextHolder.getTenantId());
             this.saveBatch(createList);
             this.removeBatchByIds(delIdsList);
         } catch (Exception e) {
