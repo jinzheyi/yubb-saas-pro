@@ -1,6 +1,7 @@
 <template>
   <div class="app-container">
     <doc-alert title="配置中心" url="https://doc.iocoder.cn/config-center/" />
+    <doc-alert title="按钮说明" url="'同步配置给租户'按钮会同步平台配置给所有租户" />
     <!-- 搜索工作栏 -->
     <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
       <el-form-item label="参数名称" prop="name">
@@ -35,6 +36,10 @@
       <el-col :span="1.5">
         <el-button type="warning" icon="el-icon-download" size="mini" @click="handleExport" :loading="exportLoading"
                    v-hasPermi="['infra:config:export']">导出</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button type="primary" icon="el-icon-download" size="mini" @click="handleInitTenantConfig"
+                   v-hasPermi="['infra:config:init-tenant-config']">同步配置给租户</el-button>
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
@@ -107,7 +112,15 @@
 </template>
 
 <script>
-import { listConfig, getConfig, delConfig, addConfig, updateConfig, exportConfig } from "@/api/infra/config";
+import {
+  listConfig,
+  getConfig,
+  delConfig,
+  addConfig,
+  updateConfig,
+  exportConfig,
+  handleInitTenantConfig
+} from "@/api/infra/config";
 
 export default {
   name: "Config",
@@ -257,6 +270,14 @@ export default {
           this.exportLoading = false;
       }).catch(() => {});
     },
+    /** 同步配置租户按钮操作 */
+    handleInitTenantConfig() {
+      this.$modal.confirm('是否确认同步平台配置给所有租户?').then(function() {
+        return handleInitTenantConfig();
+      }).then(() => {
+        this.$modal.msgSuccess("同步成功");
+      }).catch(() => {});
+    }
   }
 };
 </script>

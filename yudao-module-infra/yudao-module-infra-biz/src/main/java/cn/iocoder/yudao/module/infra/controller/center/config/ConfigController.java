@@ -23,6 +23,7 @@ import javax.validation.Valid;
 import java.io.IOException;
 import java.util.List;
 
+import static cn.iocoder.yudao.framework.common.pojo.CommonResult.error;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.EXPORT;
 import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.OTHER;
@@ -107,8 +108,15 @@ public class ConfigController {
     @ApiOperation("同步新配置给租户")
     @PreAuthorize("@cs.hasPermission('infra:config:init-tenant-config')")
     @OperateLog(type = OTHER)
-    public CommonResult<> initTenantConfig() {
-        return success(configService.initTenantConfig());
+    public CommonResult<Long> initTenantConfig() {
+        Long result = configService.initTenantConfig();
+        if (result == 1) {
+            return error(ErrorCodeConstants.CONFIG_INIT_TENANT_NULL);
+        }
+        if (result == 2) {
+            return error(ErrorCodeConstants.CONFIG_INIT_TENANT_ERROR);
+        }
+        return success(null);
     }
 
 }

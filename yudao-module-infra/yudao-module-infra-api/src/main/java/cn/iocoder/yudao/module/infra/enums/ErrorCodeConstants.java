@@ -15,6 +15,10 @@ public interface ErrorCodeConstants {
     ErrorCode CONFIG_CAN_NOT_DELETE_SYSTEM_TYPE = new ErrorCode(1001000003, "不能删除类型为系统内置的参数配置");
     ErrorCode CONFIG_GET_VALUE_ERROR_IF_VISIBLE = new ErrorCode(1001000004, "获取参数配置失败，原因：不允许获取不可见配置");
 
+    ErrorCode CONFIG_INIT_TENANT_NULL = new ErrorCode(1001000005, "无配置信息同步租户或不存在需要同步的租户");
+
+    ErrorCode CONFIG_INIT_TENANT_ERROR = new ErrorCode(1001000006, "配置信息同步租户失败");
+
     // ========== 定时任务 1001001000 ==========
     ErrorCode JOB_NOT_EXISTS = new ErrorCode(1001001000, "定时任务不存在");
     ErrorCode JOB_HANDLER_EXISTS = new ErrorCode(1001001001, "定时任务的处理器已经存在");

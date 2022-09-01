@@ -20,7 +20,7 @@ public interface ConfigService {
     /**
      * 初始化租户配置信息
      */
-    void initTenantConfig();
+    Long initTenantConfig();
 
     /**
      * 创建参数配置

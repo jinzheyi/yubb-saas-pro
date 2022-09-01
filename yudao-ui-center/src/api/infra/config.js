@@ -60,3 +60,11 @@ export function exportConfig(query) {
     responseType: 'blob'
   })
 }
+
+// 同步配置给租户
+export function handleInitTenantConfig() {
+  return request({
+    url: '/infra/config/init-tenant-config',
+    method: 'post'
+  })
+}

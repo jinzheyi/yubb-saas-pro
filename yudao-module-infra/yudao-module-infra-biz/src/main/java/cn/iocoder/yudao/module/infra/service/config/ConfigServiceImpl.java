@@ -52,19 +52,24 @@ public class ConfigServiceImpl implements ConfigService {
      * 添加跟删除的操作交给平台同步给租户，租户只能修改键的值，租户端key不能改，只改值
      */
     @Override
-    public void initTenantConfig() {
-        // 获取所有配置列表
-        List<ConfigDO> configList = configMapper.selectAllList();
-        if (CollUtil.isEmpty(configList)) {
-            return;
+    public Long initTenantConfig() {
+        try {
+            // 获取所有配置列表
+            List<ConfigDO> configList = configMapper.selectAllList();
+            if (CollUtil.isEmpty(configList)) {
+                return 1l;
+            }
+            List<Long> idList = tenantApi.getTenantIds();
+            if (idList.isEmpty()) {
+                return 1l;
+            }
+            idList.forEach(tenantId -> {
+                this.createOrDel(tenantId, configList);
+            });
+        } catch (Exception e) {
+            return 2l;
         }
-        List<Long> idList = tenantApi.getTenantIds();
-        if (idList.isEmpty()) {
-            return;
-        }
-        idList.forEach(tenantId -> {
-            this.createOrDel(tenantId, configList);
-        });
+        return 0l;
     }
 
     private void createOrDel(Long tenantId, List<ConfigDO> configList) {

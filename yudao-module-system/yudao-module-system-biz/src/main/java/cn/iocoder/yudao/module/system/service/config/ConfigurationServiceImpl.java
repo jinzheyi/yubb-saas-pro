@@ -3,7 +3,6 @@ package cn.iocoder.yudao.module.system.service.config;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
 import cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants;
 import cn.iocoder.yudao.module.system.controller.admin.config.vo.ConfigCreateOrDelReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.config.vo.ConfigPageReqVO;
@@ -48,12 +47,8 @@ public class ConfigurationServiceImpl extends ServiceImpl<ConfigurationMapper, C
                 delIdsList.add(reqVO.getConfigId());
             }
         });
-        try {
-            this.saveBatch(createList);
-            this.removeBatchByIds(delIdsList);
-        } catch (Exception e) {
-            log.error("租户同步平台配置发生异常:{}", e);
-        }
+        this.saveBatch(createList);
+        this.removeBatchByIds(delIdsList);
         // 发送刷新消息
 //        configProducer.sendConfigRefreshMessage();
     }
