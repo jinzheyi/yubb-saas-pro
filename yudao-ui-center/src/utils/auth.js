@@ -65,32 +65,3 @@ export function setRememberMe(rememberMe) {
 export function removeRememberMe() {
   localStorage.removeItem(RememberMeKey)
 }
-
-// ========== 租户相关 ==========
-
-const TenantIdKey = 'TENANT_ID'
-const TenantNameKey = 'TENANT_NAME'
-
-export function getTenantName() {
-  return localStorage.getItem(TenantNameKey)
-}
-
-export function setTenantName(username) {
-  localStorage.setItem(TenantNameKey, username)
-}
-
-export function removeTenantName() {
-  localStorage.removeItem(TenantNameKey)
-}
-
-export function getTenantId() {
-  return localStorage.getItem(TenantIdKey)
-}
-
-export function setTenantId(username) {
-  localStorage.setItem(TenantIdKey, username)
-}
-
-export function removeTenantId() {
-  localStorage.removeItem(TenantIdKey)
-}

@@ -1,16 +1,5 @@
 import request from '@/utils/request'
 
-// 使用租户名，获得租户编号
-export function getTenantIdByName(name) {
-  return request({
-    url: '/center/tenant/get-id-by-name',
-    method: 'get',
-    params: {
-      name
-    }
-  })
-}
-
 // 创建租户
 export function createTenant(data) {
   return request({

@@ -22,7 +22,7 @@
           </el-tabs>
           <div>
             <el-form ref="loginForm" :model="loginForm" :rules="LoginRules" class="login-form">
-              <el-form-item prop="tenantName" v-if="tenantEnable">
+              <el-form-item prop="tenantName">
                 <el-input v-model="loginForm.tenantName" type="text" auto-complete="off" placeholder='租户'>
                   <svg-icon slot="prefix" icon-class="tree" class="el-input__icon input-icon"/>
                 </el-input>
@@ -107,7 +107,6 @@
 import {getCodeImg, sendSmsCode, socialAuthRedirect} from "@/api/login";
 import {getTenantIdByName} from "@/api/system/tenant";
 import {SystemUserSocialTypeEnum} from "@/utils/constants";
-import {getTenantEnable} from "@/utils/ruoyi";
 import {
   getPassword,
   getRememberMe, getTenantName,
@@ -124,18 +123,17 @@ export default {
     return {
       codeUrl: "",
       captchaEnable: true,
-      tenantEnable: true,
       mobileCodeTimer: 0,
       loginForm: {
         loginType: "uname",
-        username: "admin",
-        password: "admin123",
+        username: "",
+        password: "",
         mobile: "",
         mobileCode: "",
         rememberMe: false,
         code: "",
         uuid: "",
-        tenantName: "芋道源码",
+        tenantName: "",
       },
       scene: 21,
 
@@ -194,8 +192,6 @@ export default {
   //   }
   // },
   created() {
-    // 租户开关
-    this.tenantEnable = getTenantEnable();
     // 重定向地址
     this.redirect = this.$route.query.redirect;
     this.getCode();

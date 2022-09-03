@@ -20,7 +20,7 @@
           </el-tabs>
           <div>
             <el-form ref="loginForm" :model="loginForm" :rules="LoginRules" class="login-form">
-              <el-form-item prop="tenantName" v-if="tenantEnable">
+              <el-form-item prop="tenantName">
                 <el-input v-model="loginForm.tenantName" type="text" auto-complete="off" placeholder='租户'>
                   <svg-icon slot="prefix" icon-class="tree" class="el-input__icon input-icon"/>
                 </el-input>
@@ -57,7 +57,6 @@
 
 <script>
 import {getTenantIdByName} from "@/api/system/tenant";
-import {getTenantEnable} from "@/utils/ruoyi";
 import {authorize, getAuthorize} from "@/api/login";
 import {getTenantName, setTenantId} from "@/utils/auth";
 
@@ -65,9 +64,8 @@ export default {
   name: "Login",
   data() {
     return {
-      tenantEnable: true,
       loginForm: {
-        tenantName: "芋道源码",
+        tenantName: "",
         scopes: [], // 已选中的 scope 数组
       },
       params: { // URL 上的 client_id、scope 等参数
@@ -106,8 +104,6 @@ export default {
     };
   },
   created() {
-    // 租户开关
-    this.tenantEnable = getTenantEnable();
     this.getCookie();
 
     // 解析参数
