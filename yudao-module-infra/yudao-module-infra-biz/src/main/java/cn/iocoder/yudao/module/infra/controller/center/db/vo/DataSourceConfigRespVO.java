@@ -11,7 +11,7 @@ import io.swagger.annotations.*;
 public class DataSourceConfigRespVO extends DataSourceConfigBaseVO {
 
     @ApiModelProperty(value = "主键编号", required = true, example = "1024")
-    private Integer id;
+    private Long id;
 
     @ApiModelProperty(value = "创建时间", required = true)
     private Date createTime;

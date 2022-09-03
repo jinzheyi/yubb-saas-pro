@@ -517,9 +517,9 @@ COMMIT;
 -- ----------------------------
 DROP TABLE IF EXISTS `infra_api_error_log`;
 CREATE TABLE `infra_api_error_log`  (
-                                        `id` int NOT NULL AUTO_INCREMENT COMMENT '编号',
+                                        `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
                                         `trace_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '链路追踪编号\n     *\n     * 一般来说，通过链路追踪编号，可以将访问日志，错误日志，链路追踪日志，logger 打印日志等，结合在一起，从而进行排错。',
-                                        `user_id` int NOT NULL DEFAULT 0 COMMENT '用户编号',
+                                        `user_id` bigint NOT NULL DEFAULT 0 COMMENT '用户编号',
                                         `user_type` tinyint NOT NULL DEFAULT 0 COMMENT '用户类型',
                                         `application_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '应用名\n     *\n     * 目前读取 spring.application.name',
                                         `request_method` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '请求方法名',
@@ -538,7 +538,7 @@ CREATE TABLE `infra_api_error_log`  (
                                         `exception_line_number` int NOT NULL COMMENT '异常发生的方法所在行\n     *\n     * {@link StackTraceElement#getLineNumber()}',
                                         `process_status` tinyint NOT NULL COMMENT '处理状态',
                                         `process_time` datetime NULL DEFAULT NULL COMMENT '处理时间',
-                                        `process_user_id` int NULL DEFAULT 0 COMMENT '处理用户编号',
+                                        `process_user_id` bigint NULL DEFAULT 0 COMMENT '处理用户编号',
                                         `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
                                         `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                         `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',

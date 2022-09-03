@@ -29,10 +29,6 @@
 
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
-        <el-button type="primary" plain icon="el-icon-plus" size="mini" @click="handleAdd"
-                   v-hasPermi="['infra:config:create']">新增</el-button>
-      </el-col>
-      <el-col :span="1.5">
         <el-button type="warning" icon="el-icon-download" size="mini" @click="handleExport" :loading="exportLoading"
                    v-hasPermi="['infra:config:export']">导出</el-button>
       </el-col>
@@ -65,8 +61,6 @@
         <template slot-scope="scope">
           <el-button size="mini" type="text" icon="el-icon-edit" @click="handleUpdate(scope.row)"
                      v-hasPermi="['infra:config:update']">修改</el-button>
-          <el-button size="mini" type="text" icon="el-icon-delete" @click="handleDelete(scope.row)"
-                     v-hasPermi="['infra:config:delete']">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -77,22 +71,19 @@
     <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="参数分类" prop="category">
-          <el-input v-model="form.category" placeholder="请输入参数分类" />
+          {{form.category}}
         </el-form-item>
         <el-form-item label="参数名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入参数名称" />
         </el-form-item>
         <el-form-item label="参数键名" prop="key">
-          <el-input v-model="form.key" placeholder="请输入参数键名" />
+          {{form.key}}
         </el-form-item>
         <el-form-item label="参数键值" prop="value">
           <el-input v-model="form.value" placeholder="请输入参数键值" />
         </el-form-item>
         <el-form-item label="是否可见" prop="type">
-          <el-radio-group v-model="form.visible">
-            <el-radio :key="true" :label="true">是</el-radio>
-            <el-radio :key="false" :label="false">否</el-radio>
-          </el-radio-group>
+          {{form.visible}}
         </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
@@ -107,7 +98,7 @@
 </template>
 
 <script>
-import { listConfig, getConfig, delConfig, addConfig, updateConfig, exportConfig } from "@/api/infra/config";
+import { listConfig, getConfig, updateConfig, exportConfig } from "@/api/infra/config";
 
 export default {
   name: "Config",
@@ -142,14 +133,8 @@ export default {
       form: {},
       // 表单校验
       rules: {
-        category: [
-          { required: true, message: "参数分类不能为空", trigger: "blur" }
-        ],
         name: [
           { required: true, message: "参数名称不能为空", trigger: "blur" }
-        ],
-        key: [
-          { required: true, message: "参数键名不能为空", trigger: "blur" }
         ],
         value: [
           { required: true, message: "参数键值不能为空", trigger: "blur" }
@@ -197,12 +182,6 @@ export default {
       this.resetForm("queryForm");
       this.handleQuery();
     },
-    /** 新增按钮操作 */
-    handleAdd() {
-      this.reset();
-      this.open = true;
-      this.title = "添加参数";
-    },
     /** 修改按钮操作 */
     handleUpdate(row) {
       this.reset();
@@ -223,25 +202,9 @@ export default {
               this.open = false;
               this.getList();
             });
-          } else {
-            addConfig(this.form).then(response => {
-              this.$modal.msgSuccess("新增成功");
-              this.open = false;
-              this.getList();
-            });
           }
         }
       });
-    },
-    /** 删除按钮操作 */
-    handleDelete(row) {
-      const ids = row.id || this.ids;
-      this.$modal.confirm('是否确认删除参数编号为"' + ids + '"的数据项?').then(function() {
-          return delConfig(ids);
-        }).then(() => {
-          this.getList();
-          this.$modal.msgSuccess("删除成功");
-      }).catch(() => {});
     },
     /** 导出按钮操作 */
     handleExport() {

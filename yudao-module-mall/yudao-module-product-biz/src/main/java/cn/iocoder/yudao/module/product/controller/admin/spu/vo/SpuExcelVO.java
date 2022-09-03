@@ -15,7 +15,7 @@ import com.alibaba.excel.annotation.ExcelProperty;
 public class SpuExcelVO {
 
     @ExcelProperty("主键")
-    private Integer id;
+    private Long id;
 
     @ExcelProperty("商品名称")
     private String name;

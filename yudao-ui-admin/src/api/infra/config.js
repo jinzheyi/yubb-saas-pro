@@ -25,29 +25,12 @@ export function getConfigKey(configKey) {
   })
 }
 
-// 新增参数配置
-export function addConfig(data) {
-  return request({
-    url: '/infra/config/create',
-    method: 'post',
-    data: data
-  })
-}
-
 // 修改参数配置
 export function updateConfig(data) {
   return request({
     url: '/infra/config/update',
     method: 'put',
     data: data
-  })
-}
-
-// 删除参数配置
-export function delConfig(configId) {
-  return request({
-    url: '/infra/config/delete?id=' + configId,
-    method: 'delete'
   })
 }
 

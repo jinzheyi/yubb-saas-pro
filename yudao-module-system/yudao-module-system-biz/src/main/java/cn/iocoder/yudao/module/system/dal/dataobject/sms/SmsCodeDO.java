@@ -26,7 +26,7 @@ public class SmsCodeDO extends TenantBaseDO {
     /**
      * 编号
      */
-    private Integer id;
+    private Long id;
     /**
      * 手机号
      */

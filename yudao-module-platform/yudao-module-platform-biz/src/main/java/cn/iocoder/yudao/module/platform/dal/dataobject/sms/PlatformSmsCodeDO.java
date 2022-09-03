@@ -26,7 +26,7 @@ public class PlatformSmsCodeDO extends BaseDO {
     /**
      * 编号
      */
-    private Integer id;
+    private Long id;
     /**
      * 手机号
      */

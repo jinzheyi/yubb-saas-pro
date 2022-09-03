@@ -17,7 +17,7 @@ import java.util.Date;
 public class ApiErrorLogExcelVO {
 
     @ExcelProperty("编号")
-    private Integer id;
+    private Long id;
 
     @ExcelProperty("链路追踪编号")
     private String traceId;
