@@ -13,11 +13,13 @@ import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfi
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.*;
 import cn.iocoder.yudao.module.system.convert.user.UserConvert;
+import cn.iocoder.yudao.module.system.dal.dataobject.config.ConfigurationDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.UserPostDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.module.system.dal.mysql.dept.UserPostMapper;
 import cn.iocoder.yudao.module.system.dal.mysql.user.AdminUserMapper;
+import cn.iocoder.yudao.module.system.service.config.ConfigurationService;
 import cn.iocoder.yudao.module.system.service.dept.DeptService;
 import cn.iocoder.yudao.module.system.service.dept.PostService;
 import cn.iocoder.yudao.module.system.service.permission.PermissionService;
@@ -46,7 +48,7 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 @Slf4j
 public class AdminUserServiceImpl implements AdminUserService {
 
-    @Value("${sys.user.init-password:yudaoyuanma}")
+    @Value("${sys.user.init-password:shengyu}")
     private String userInitPassword;
 
     @Resource
@@ -69,6 +71,9 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Resource
     private TenantService tenantService;
+
+    @Resource
+    private ConfigurationService configurationService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -399,6 +404,11 @@ public class AdminUserServiceImpl implements AdminUserService {
     public UserImportRespVO importUsers(List<UserImportExcelVO> importUsers, boolean isUpdateSupport) {
         if (CollUtil.isEmpty(importUsers)) {
             throw exception(USER_IMPORT_LIST_IS_EMPTY);
+        }
+        //优先读取租户自己的配置
+        ConfigurationDO configurationDO = configurationService.getTenantConfigByKey("sys.user.init-password");
+        if (Objects.nonNull(configurationDO)) {
+            userInitPassword = configurationDO.getValue();
         }
         UserImportRespVO respVO = UserImportRespVO.builder().createUsernames(new ArrayList<>())
                 .updateUsernames(new ArrayList<>()).failureUsernames(new LinkedHashMap<>()).build();

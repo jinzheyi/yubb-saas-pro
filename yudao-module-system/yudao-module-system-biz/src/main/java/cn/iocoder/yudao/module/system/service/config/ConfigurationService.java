@@ -56,4 +56,12 @@ public interface ConfigurationService extends IService<ConfigurationDO> {
      */
     PageResult<ConfigurationDO> getConfigPage(@Valid ConfigPageReqVO reqVO);
 
+    /**
+     * 根据参数键，获得参数配置
+     *
+     * @param key 配置键
+     * @return 参数配置
+     */
+    ConfigurationDO getTenantConfigByKey(String key);
+
 }

@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.system.service.config;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
 import cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants;
 import cn.iocoder.yudao.module.system.controller.admin.config.vo.ConfigCreateOrDelReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.config.vo.ConfigPageReqVO;
@@ -19,6 +20,7 @@ import org.springframework.validation.annotation.Validated;
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 参数配置 Service 实现类
@@ -30,9 +32,6 @@ public class ConfigurationServiceImpl extends ServiceImpl<ConfigurationMapper, C
 
     @Resource
     private ConfigurationMapper configurationMapper;
-
-//    @Resource
-//    private ConfigProducer configProducer;
 
     @Override
     public void createOrDel(List<ConfigCreateOrDelReqVO> reqVOList) {
@@ -49,8 +48,6 @@ public class ConfigurationServiceImpl extends ServiceImpl<ConfigurationMapper, C
         });
         this.saveBatch(createList);
         this.removeBatchByIds(delIdsList);
-        // 发送刷新消息
-//        configProducer.sendConfigRefreshMessage();
     }
 
     @Override
@@ -60,8 +57,6 @@ public class ConfigurationServiceImpl extends ServiceImpl<ConfigurationMapper, C
         // 更新参数配置
         ConfigurationDO updateObj = ConfigurationConvert.INSTANCE.convert(reqVO);
         configurationMapper.updateById(updateObj);
-        // 发送刷新消息
-//        configProducer.sendConfigRefreshMessage();
     }
 
     @Override
@@ -77,6 +72,14 @@ public class ConfigurationServiceImpl extends ServiceImpl<ConfigurationMapper, C
     @Override
     public PageResult<ConfigurationDO> getConfigPage(ConfigPageReqVO reqVO) {
         return configurationMapper.selectPage(reqVO);
+    }
+
+    @Override
+    public ConfigurationDO getTenantConfigByKey(String key) {
+        if (Objects.isNull(TenantContextHolder.getTenantId())) {
+            return null;
+        }
+        return configurationMapper.selectByKey(key);
     }
 
     private boolean checkCreate(String key) {
