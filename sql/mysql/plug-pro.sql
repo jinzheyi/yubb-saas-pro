@@ -55,10 +55,10 @@ CREATE TABLE `plug_order_item`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '订单项';
 
 -- ----------------------------
--- Table structure for app_goods
+-- Table structure for plug_goods
 -- ----------------------------
-DROP TABLE IF EXISTS `app_goods`;
-CREATE TABLE `app_goods`  (
+DROP TABLE IF EXISTS `plug_goods`;
+CREATE TABLE `plug_goods`  (
 `id` bigint NOT NULL AUTO_INCREMENT COMMENT '应用编号',
 `app_pic` varchar(500) COMMENT '应用图片',
 `app_name` varchar(200) COMMENT '应用名称',
@@ -78,4 +78,4 @@ CREATE TABLE `app_goods`  (
 `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
 `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
 PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'app商品';
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '应用商品';
