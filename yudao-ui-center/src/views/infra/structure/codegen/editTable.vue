@@ -213,7 +213,7 @@ export default {
     /** 关闭按钮 */
     close() {
       this.$tab.closeOpenPage({
-        path: "/infra/codegen",
+        path: "/infra/structure/codegen",
         query: { t: Date.now(), pageNum: this.$route.query.pageNum } }
       );
     }
