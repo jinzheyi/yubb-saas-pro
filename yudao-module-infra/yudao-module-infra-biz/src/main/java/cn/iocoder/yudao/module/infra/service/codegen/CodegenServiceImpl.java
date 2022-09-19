@@ -17,7 +17,7 @@ import cn.iocoder.yudao.module.infra.enums.codegen.CodegenSceneEnum;
 import cn.iocoder.yudao.module.infra.service.codegen.inner.CodegenBuilder;
 import cn.iocoder.yudao.module.infra.service.codegen.inner.CodegenEngine;
 import cn.iocoder.yudao.module.infra.service.db.DatabaseTableService;
-import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
+import cn.iocoder.yudao.module.platform.api.user.AdminUserApi;
 import com.baomidou.mybatisplus.generator.config.po.TableField;
 import com.baomidou.mybatisplus.generator.config.po.TableInfo;
 import org.springframework.stereotype.Service;
