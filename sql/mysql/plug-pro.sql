@@ -16,7 +16,7 @@ CREATE TABLE `plug_order`  (
   `expire_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '订单失效时间',
   `success_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '订单支付成功时间',
   `integration` bigint COMMENT '可以获得的积分',
-  `growth` bigint COMMENT '可以活动的成长值',
+  `growth` bigint COMMENT '可以获得的成长值',
   `note` varchar(500) COMMENT '订单备注',
   `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
