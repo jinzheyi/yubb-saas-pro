@@ -140,9 +140,14 @@ public interface ErrorCodeConstants {
 
     // ========== OAuth2 授权 1002022000 =========
     ErrorCode OAUTH2_CODE_NOT_EXISTS = new ErrorCode(1002022000, "code 不存在");
-    ErrorCode OAUTH2_CODE_EXPIRE = new ErrorCode(1002022000, "code 已过期");
+    ErrorCode OAUTH2_CODE_EXPIRE = new ErrorCode(1002022001, "code 已过期");
 
-    // ========== 租户菜单 ========================
+    // ========== 租户菜单 1002023000========================
     ErrorCode TENANT_MENU_USED = new ErrorCode(1002023000, "租户正在使用该菜单，请给租户重新设置没有选择该菜单的套餐后再尝试删除");
+
+    // ========== 插件市场 1002024000========================
+    ErrorCode GOODS_NOT_EXISTS = new ErrorCode(1002024000, "应用商品不存在");
+    ErrorCode ORDER_NOT_EXISTS = new ErrorCode(1002024001, "订单不存在");
+    ErrorCode ORDER_ITEM_NOT_EXISTS = new ErrorCode(1002024002, "订单项不存在");
 
 }
