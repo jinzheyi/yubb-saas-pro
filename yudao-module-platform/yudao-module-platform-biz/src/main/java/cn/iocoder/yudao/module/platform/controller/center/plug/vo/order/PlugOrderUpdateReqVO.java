@@ -1,7 +1,6 @@
 package cn.iocoder.yudao.module.platform.controller.center.plug.vo.order;
 
 import lombok.*;
-import java.util.*;
 import io.swagger.annotations.*;
 import javax.validation.constraints.*;
 

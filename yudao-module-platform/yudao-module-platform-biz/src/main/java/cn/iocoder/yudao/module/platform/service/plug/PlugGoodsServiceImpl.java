@@ -5,15 +5,15 @@ import javax.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.*;
-import cn.iocoder.yudao.module.plug.controller.admin.goods.vo.*;
-import cn.iocoder.yudao.module.plug.dal.dataobject.goods.PlugGoodsDO;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.*;
+import cn.iocoder.yudao.module.platform.dal.dataobject.plug.PlugGoodsDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 
-import cn.iocoder.yudao.module.plug.convert.goods.PlugGoodsConvert;
-import cn.iocoder.yudao.module.plug.dal.mysql.goods.PlugGoodsMapper;
+import cn.iocoder.yudao.module.platform.convert.plug.PlugGoodsConvert;
+import cn.iocoder.yudao.module.platform.dal.mysql.plug.PlugGoodsMapper;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.plug.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 应用商品 Service 实现类

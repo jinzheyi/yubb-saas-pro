@@ -1,9 +1,10 @@
 package cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods;
 
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.util.*;
 import io.swagger.annotations.*;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
@@ -19,11 +20,9 @@ public class PlugGoodsExportReqVO {
     private String appSn;
 
     @ApiModelProperty(value = "原价", example = "0")
-    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private BigDecimal[] appPrice;
 
     @ApiModelProperty(value = "售价", example = "0")
-    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private BigDecimal[] payPrice;
 
     @ApiModelProperty(value = "数量", example = "1")

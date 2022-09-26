@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 创建订单
 export function createOrder(data) {
   return request({
-    url: '/plug/order/create',
+    url: '/center/plug-order/create',
     method: 'post',
     data: data
   })
@@ -12,7 +12,7 @@ export function createOrder(data) {
 // 更新订单
 export function updateOrder(data) {
   return request({
-    url: '/plug/order/update',
+    url: '/center/plug-order/update',
     method: 'put',
     data: data
   })
@@ -21,7 +21,7 @@ export function updateOrder(data) {
 // 删除订单
 export function deleteOrder(id) {
   return request({
-    url: '/plug/order/delete?id=' + id,
+    url: '/center/plug-order/delete?id=' + id,
     method: 'delete'
   })
 }
@@ -29,7 +29,7 @@ export function deleteOrder(id) {
 // 获得订单
 export function getOrder(id) {
   return request({
-    url: '/plug/order/get?id=' + id,
+    url: '/center/plug-order/get?id=' + id,
     method: 'get'
   })
 }
@@ -37,7 +37,7 @@ export function getOrder(id) {
 // 获得订单分页
 export function getOrderPage(query) {
   return request({
-    url: '/plug/order/page',
+    url: '/center/plug-order/page',
     method: 'get',
     params: query
   })
@@ -46,7 +46,7 @@ export function getOrderPage(query) {
 // 导出订单 Excel
 export function exportOrderExcel(query) {
   return request({
-    url: '/plug/order/export-excel',
+    url: '/center/plug-order/export-excel',
     method: 'get',
     params: query,
     responseType: 'blob'

@@ -2,8 +2,8 @@ package cn.iocoder.yudao.module.platform.service.plug;
 
 import java.util.*;
 import javax.validation.*;
-import cn.iocoder.yudao.module.plug.controller.admin.order.vo.*;
-import cn.iocoder.yudao.module.plug.dal.dataobject.order.PlugOrderDO;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.order.*;
+import cn.iocoder.yudao.module.platform.dal.dataobject.plug.PlugOrderDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 
 /**

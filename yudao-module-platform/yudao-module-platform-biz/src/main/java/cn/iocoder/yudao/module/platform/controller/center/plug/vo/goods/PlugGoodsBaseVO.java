@@ -1,7 +1,6 @@
 package cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods;
 
 import lombok.*;
-import java.util.*;
 import java.math.BigDecimal;
 import io.swagger.annotations.*;
 import javax.validation.constraints.*;

@@ -1,10 +1,8 @@
 package cn.iocoder.yudao.module.platform.controller.center.plug.vo.order;
 
 import lombok.*;
-import java.util.*;
 import java.math.BigDecimal;
 import io.swagger.annotations.*;
-import javax.validation.constraints.*;
 
 /**
 * 订单 Base VO，提供给添加、修改、详细的子 VO 使用

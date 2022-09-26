@@ -1,6 +1,8 @@
 package cn.iocoder.yudao.module.platform.controller.center.plug.vo.order;
 
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.util.*;
 import io.swagger.annotations.*;
 

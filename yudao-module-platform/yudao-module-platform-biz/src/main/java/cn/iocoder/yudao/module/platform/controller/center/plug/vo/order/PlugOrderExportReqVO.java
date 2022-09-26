@@ -1,9 +1,10 @@
 package cn.iocoder.yudao.module.platform.controller.center.plug.vo.order;
 
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.util.*;
 import io.swagger.annotations.*;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
@@ -16,7 +17,6 @@ public class PlugOrderExportReqVO {
     private String orderNo;
 
     @ApiModelProperty(value = "应付金额（实际支付金额）")
-    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private BigDecimal[] payAmount;
 
     @ApiModelProperty(value = "订单类型：0->正常订单；1->赠送订单")

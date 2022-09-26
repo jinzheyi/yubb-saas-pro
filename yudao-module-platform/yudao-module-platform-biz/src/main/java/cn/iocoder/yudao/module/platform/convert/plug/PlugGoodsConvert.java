@@ -6,8 +6,8 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
-import cn.iocoder.yudao.module.plug.controller.admin.goods.vo.*;
-import cn.iocoder.yudao.module.plug.dal.dataobject.goods.PlugGoodsDO;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.*;
+import cn.iocoder.yudao.module.platform.dal.dataobject.plug.PlugGoodsDO;
 
 /**
  * 应用商品 Convert
