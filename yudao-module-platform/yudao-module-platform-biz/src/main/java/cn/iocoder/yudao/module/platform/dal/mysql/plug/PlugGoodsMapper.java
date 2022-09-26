@@ -5,9 +5,9 @@ import java.util.*;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.module.plug.dal.dataobject.goods.PlugGoodsDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.plug.PlugGoodsDO;
 import org.apache.ibatis.annotations.Mapper;
-import cn.iocoder.yudao.module.plug.controller.admin.goods.vo.*;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.*;
 
 /**
  * 应用商品 Mapper
