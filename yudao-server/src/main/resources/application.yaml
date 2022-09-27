@@ -121,10 +121,14 @@ yudao:
       - rep_demo_jianpiao
       - tmp_report_data_1
       - tmp_report_data_income
+
+      - plug_goods
     ignore-tables-prefix:
       - platform
       - tenant
       - infra
+    platform-ignore-tables:
+      - plug_order
   sms-code: # 短信验证码相关的配置项
     expire-times: 10m
     send-frequency: 1m

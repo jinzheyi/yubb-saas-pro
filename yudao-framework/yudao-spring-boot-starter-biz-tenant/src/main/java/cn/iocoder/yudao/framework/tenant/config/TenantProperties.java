@@ -39,4 +39,9 @@ public class TenantProperties {
      */
     private Set<String> ignoreTablesPrefix = Collections.emptySet();
 
+    /**
+     * 平台端需要忽略多租户的表
+     */
+    private Set<String> platformIgnoreTables = Collections.emptySet();
+
 }

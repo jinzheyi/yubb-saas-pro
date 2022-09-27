@@ -1,8 +1,10 @@
 package cn.iocoder.yudao.framework.tenant.core.db;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.tenant.config.TenantProperties;
 import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
+import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
@@ -21,6 +23,8 @@ public class TenantDatabaseInterceptor implements TenantLineHandler {
 
     private final Set<String> ignoreTablesPrefix = new HashSet<>();
 
+    private final Set<String> platformIgnoreTables = new HashSet<>();
+
     public TenantDatabaseInterceptor(TenantProperties properties) {
         // 不同 DB 下，大小写的习惯不同，所以需要都添加进去
         properties.getIgnoreTables().forEach(table -> {
@@ -33,6 +37,10 @@ public class TenantDatabaseInterceptor implements TenantLineHandler {
         properties.getIgnoreTablesPrefix().forEach(tablesPrefix -> {
             ignoreTablesPrefix.add(tablesPrefix);
         });
+        //平台需要忽略多租户的表
+        properties.getPlatformIgnoreTables().forEach(ignoreTable -> {
+            platformIgnoreTables.add(ignoreTable);
+        });
     }
 
     @Override
@@ -43,11 +51,22 @@ public class TenantDatabaseInterceptor implements TenantLineHandler {
     @Override
     public boolean ignoreTable(String tableName) {
         boolean isIgnore = Boolean.FALSE;
+        //需要忽略的表前缀处理
         for (String tablesPrefix : ignoreTablesPrefix) {
             //匹配到一个前缀就可以跳出循环体了
             if (tableName.startsWith(tablesPrefix)) {
                 isIgnore = Boolean.TRUE;
                 break;
+            }
+        }
+        //平台端请求并且是指定需要忽略的表
+        if (UserTypeEnum.CENTER.getValue().equals(WebFrameworkUtils.getLoginUserType())) {
+            for (String tablesPrefix : platformIgnoreTables) {
+                //匹配到一个就可以跳出循环体了
+                if (tableName.equals(tablesPrefix)) {
+                    isIgnore = Boolean.TRUE;
+                    break;
+                }
             }
         }
         return TenantContextHolder.isIgnore() // 情况一，全局忽略多租户
