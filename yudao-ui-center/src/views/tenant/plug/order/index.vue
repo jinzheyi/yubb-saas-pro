@@ -42,12 +42,8 @@
     <!-- 操作工具栏 -->
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
-        <el-button type="primary" plain icon="el-icon-plus" size="mini" @click="handleAdd"
-                   v-hasPermi="['plug:order:create']">新增</el-button>
-      </el-col>
-      <el-col :span="1.5">
         <el-button type="warning" plain icon="el-icon-download" size="mini" @click="handleExport" :loading="exportLoading"
-                   v-hasPermi="['plug:order:export']">导出</el-button>
+                   v-hasPermi="['center:plug-order:export']">导出</el-button>
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
@@ -93,9 +89,9 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button size="mini" type="text" icon="el-icon-edit" @click="handleUpdate(scope.row)"
-                     v-hasPermi="['plug:order:update']">修改</el-button>
+                     v-hasPermi="['center:plug-order:update']">修改</el-button>
           <el-button size="mini" type="text" icon="el-icon-delete" @click="handleDelete(scope.row)"
-                     v-hasPermi="['plug:order:delete']">删除</el-button>
+                     v-hasPermi="['center:plug-order:delete']">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -164,7 +160,7 @@
 </template>
 
 <script>
-import { createOrder, updateOrder, deleteOrder, getOrder, getOrderPage, exportOrderExcel } from "@/api/plug/order";
+import {updateOrder, deleteOrder, getOrder, getOrderPage, exportOrderExcel } from "@/api/plug/order";
 
 export default {
   name: "Order",
@@ -263,12 +259,6 @@ export default {
       this.resetForm("queryForm");
       this.handleQuery();
     },
-    /** 新增按钮操作 */
-    handleAdd() {
-      this.reset();
-      this.open = true;
-      this.title = "添加订单";
-    },
     /** 修改按钮操作 */
     handleUpdate(row) {
       this.reset();
@@ -294,12 +284,6 @@ export default {
           });
           return;
         }
-        // 添加的提交
-        createOrder(this.form).then(response => {
-          this.$modal.msgSuccess("新增成功");
-          this.open = false;
-          this.getList();
-        });
       });
     },
     /** 删除按钮操作 */

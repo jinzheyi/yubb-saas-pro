@@ -19,7 +19,6 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
@@ -33,13 +32,6 @@ public class PlugOrderController {
 
     @Resource
     private PlugOrderService orderService;
-
-    @PostMapping("/create")
-    @ApiOperation("创建订单")
-    @PreAuthorize("@cs.hasPermission('center:plug-order:create')")
-    public CommonResult<Long> createOrder(@Valid @RequestBody PlugOrderCreateReqVO createReqVO) {
-        return success(orderService.createOrder(createReqVO));
-    }
 
     @PutMapping("/update")
     @ApiOperation("更新订单")
@@ -67,18 +59,9 @@ public class PlugOrderController {
         return success(PlugOrderConvert.INSTANCE.convert(order));
     }
 
-    @GetMapping("/list")
-    @ApiOperation("获得订单列表")
-    @ApiImplicitParam(name = "ids", value = "编号列表", required = true, example = "1024,2048", dataTypeClass = List.class)
-    @PreAuthorize("@cs.hasPermission('center:plug-order:query')")
-    public CommonResult<List<PlugOrderRespVO>> getOrderList(@RequestParam("ids") Collection<Long> ids) {
-        List<PlugOrderDO> list = orderService.getOrderList(ids);
-        return success(PlugOrderConvert.INSTANCE.convertList(list));
-    }
-
     @GetMapping("/page")
     @ApiOperation("获得订单分页")
-    @PreAuthorize("@cs.hasPermission('center:plug-order:query')")
+    @PreAuthorize("@cs.hasPermission('center:plug-order:list')")
     public CommonResult<PageResult<PlugOrderRespVO>> getOrderPage(@Valid PlugOrderPageReqVO pageVO) {
         PageResult<PlugOrderDO> pageResult = orderService.getOrderPage(pageVO);
         return success(PlugOrderConvert.INSTANCE.convertPage(pageResult));

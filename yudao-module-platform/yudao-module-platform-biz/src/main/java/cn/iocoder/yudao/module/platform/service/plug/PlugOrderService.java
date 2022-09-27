@@ -44,14 +44,6 @@ public interface PlugOrderService {
     PlugOrderDO getOrder(Long id);
 
     /**
-     * 获得订单列表
-     *
-     * @param ids 编号
-     * @return 订单列表
-     */
-    List<PlugOrderDO> getOrderList(Collection<Long> ids);
-
-    /**
      * 获得订单分页
      *
      * @param pageReqVO 分页查询

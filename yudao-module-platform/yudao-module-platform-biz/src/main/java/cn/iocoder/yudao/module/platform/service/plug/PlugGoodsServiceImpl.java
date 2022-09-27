@@ -1,19 +1,21 @@
 package cn.iocoder.yudao.module.platform.service.plug;
 
+import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.PlugGoodsCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.PlugGoodsExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.PlugGoodsPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.PlugGoodsUpdateReqVO;
+import cn.iocoder.yudao.module.platform.convert.plug.PlugGoodsConvert;
+import cn.iocoder.yudao.module.platform.dal.dataobject.plug.PlugGoodsDO;
+import cn.iocoder.yudao.module.platform.dal.mysql.plug.PlugGoodsMapper;
 import org.springframework.stereotype.Service;
-import javax.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
 
-import java.util.*;
-import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.*;
-import cn.iocoder.yudao.module.platform.dal.dataobject.plug.PlugGoodsDO;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-
-import cn.iocoder.yudao.module.platform.convert.plug.PlugGoodsConvert;
-import cn.iocoder.yudao.module.platform.dal.mysql.plug.PlugGoodsMapper;
+import javax.annotation.Resource;
+import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.GOODS_NOT_EXISTS;
 
 /**
  * 应用商品 Service 实现类
@@ -62,11 +64,6 @@ public class PlugGoodsServiceImpl implements PlugGoodsService {
     @Override
     public PlugGoodsDO getGoods(Long id) {
         return goodsMapper.selectById(id);
-    }
-
-    @Override
-    public List<PlugGoodsDO> getGoodsList(Collection<Long> ids) {
-        return goodsMapper.selectBatchIds(ids);
     }
 
     @Override

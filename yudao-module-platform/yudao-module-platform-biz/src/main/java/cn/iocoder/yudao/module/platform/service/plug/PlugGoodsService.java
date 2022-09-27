@@ -1,10 +1,14 @@
 package cn.iocoder.yudao.module.platform.service.plug;
 
-import java.util.*;
-import javax.validation.*;
-import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.*;
-import cn.iocoder.yudao.module.platform.dal.dataobject.plug.PlugGoodsDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.PlugGoodsCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.PlugGoodsExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.PlugGoodsPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.goods.PlugGoodsUpdateReqVO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.plug.PlugGoodsDO;
+
+import javax.validation.Valid;
+import java.util.List;
 
 /**
  * 应用商品 Service 接口
@@ -42,14 +46,6 @@ public interface PlugGoodsService {
      * @return 应用商品
      */
     PlugGoodsDO getGoods(Long id);
-
-    /**
-     * 获得应用商品列表
-     *
-     * @param ids 编号
-     * @return 应用商品列表
-     */
-    List<PlugGoodsDO> getGoodsList(Collection<Long> ids);
 
     /**
      * 获得应用商品分页

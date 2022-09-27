@@ -65,11 +65,6 @@ public class PlugOrderServiceImpl implements PlugOrderService {
     }
 
     @Override
-    public List<PlugOrderDO> getOrderList(Collection<Long> ids) {
-        return orderMapper.selectBatchIds(ids);
-    }
-
-    @Override
     public PageResult<PlugOrderDO> getOrderPage(PlugOrderPageReqVO pageReqVO) {
         return orderMapper.selectPage(pageReqVO);
     }

@@ -1,14 +1,5 @@
 import request from '@/utils/request'
 
-// 创建订单
-export function createOrder(data) {
-  return request({
-    url: '/center/plug-order/create',
-    method: 'post',
-    data: data
-  })
-}
-
 // 更新订单
 export function updateOrder(data) {
   return request({

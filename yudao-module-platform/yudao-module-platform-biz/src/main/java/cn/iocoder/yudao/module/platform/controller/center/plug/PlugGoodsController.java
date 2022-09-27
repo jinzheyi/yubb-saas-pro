@@ -67,18 +67,9 @@ public class PlugGoodsController {
         return success(PlugGoodsConvert.INSTANCE.convert(goods));
     }
 
-    @GetMapping("/list")
-    @ApiOperation("获得应用商品列表")
-    @ApiImplicitParam(name = "ids", value = "编号列表", required = true, example = "1024,2048", dataTypeClass = List.class)
-    @PreAuthorize("@cs.hasPermission('center:plug-goods:query')")
-    public CommonResult<List<PlugGoodsRespVO>> getGoodsList(@RequestParam("ids") Collection<Long> ids) {
-        List<PlugGoodsDO> list = goodsService.getGoodsList(ids);
-        return success(PlugGoodsConvert.INSTANCE.convertList(list));
-    }
-
     @GetMapping("/page")
     @ApiOperation("获得应用商品分页")
-    @PreAuthorize("@cs.hasPermission('center:plug-goods:query')")
+    @PreAuthorize("@cs.hasPermission('center:plug-goods:list')")
     public CommonResult<PageResult<PlugGoodsRespVO>> getGoodsPage(@Valid PlugGoodsPageReqVO pageVO) {
         PageResult<PlugGoodsDO> pageResult = goodsService.getGoodsPage(pageVO);
         return success(PlugGoodsConvert.INSTANCE.convertPage(pageResult));
