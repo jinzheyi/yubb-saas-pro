@@ -18,10 +18,10 @@
       <el-form-item label="数量" prop="appNum">
         <el-input v-model="queryParams.appNum" placeholder="请输入数量" clearable @keyup.enter.native="handleQuery"/>
       </el-form-item>
-      <el-form-item label="状态 上下架" prop="appStatus">
-        <el-select v-model="queryParams.appStatus" placeholder="请选择状态 上下架" clearable size="small">
-          <el-option v-for="dict in this.getDictDatas(DICT_TYPE.UP_DOWN_SHELF_STATUS)"
-                       :key="dict.value" :label="dict.label" :value="dict.value"/>
+      <el-form-item label="状态" prop="appStatus">
+        <el-select v-model="queryParams.appStatus" placeholder="请选择上下架状态" clearable size="small">
+          <el-option v-for="dict in appStatusDictDatas"
+                       :key="dict.value" :label="parseInt(dict.label)" :value="dict.value"/>
         </el-select>
       </el-form-item>
       <el-form-item label="创建时间" prop="createTime">
@@ -56,7 +56,7 @@
       <el-table-column label="原价" align="center" prop="appPrice" />
       <el-table-column label="售价" align="center" prop="payPrice" />
       <el-table-column label="数量" align="center" prop="appNum" />
-      <el-table-column label="状态 上下架" align="center" prop="appStatus">
+      <el-table-column label="状态" align="center" prop="appStatus">
         <template slot-scope="scope">
           <dict-tag :type="DICT_TYPE.UP_DOWN_SHELF_STATUS" :value="scope.row.appStatus" />
         </template>
@@ -80,11 +80,8 @@
                 @pagination="getList"/>
 
     <!-- 对话框(添加 / 修改) -->
-    <el-dialog :title="title" :visible.sync="open" width="500px" v-dialogDrag append-to-body>
+    <el-dialog :title="title" :visible.sync="open" width="1000px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
-        <el-form-item label="应用图片">
-          <imageUpload v-model="form.appPic"/>
-        </el-form-item>
         <el-form-item label="应用名称" prop="appName">
           <el-input v-model="form.appName" placeholder="请输入应用名称" />
         </el-form-item>
@@ -94,31 +91,56 @@
         <el-form-item label="商品条码" prop="appSn">
           <el-input v-model="form.appSn" placeholder="请输入商品条码" />
         </el-form-item>
+        <el-form-item label="应用图片">
+          <imageUpload v-model="form.appPic" :limit="10"/>
+        </el-form-item>
         <el-form-item label="原价" prop="appPrice">
-          <el-input v-model="form.appPrice" placeholder="请输入原价" />
+          <el-input-number
+            v-model="form.appPrice"
+            placeholder="请输入原价"
+            :precision="2"
+            :max="1000000000"
+            :min="0.01"/>
         </el-form-item>
         <el-form-item label="售价" prop="payPrice">
-          <el-input v-model="form.payPrice" placeholder="请输入售价" />
+          <el-input-number
+            v-model="form.payPrice"
+            placeholder="请输入售价"
+            :precision="2"
+            :max="1000000000"
+            :min="0.01"/>
         </el-form-item>
         <el-form-item label="数量" prop="appNum">
-          <el-input v-model="form.appNum" placeholder="请输入数量" />
+          <el-input-number
+            v-model="form.appNum"
+            placeholder="请输入数量"
+            :max="1000000000"
+            :min="1"/>
         </el-form-item>
-        <el-form-item label="商品赠送积分" prop="giftIntegration">
-          <el-input v-model="form.giftIntegration" placeholder="请输入商品赠送积分" />
+        <el-form-item label="赠送积分" prop="giftIntegration">
+          <el-input-number
+            v-model="form.giftIntegration"
+            placeholder="请输入商品赠送积分"
+            :max="1000000000"
+            :min="1"/>
         </el-form-item>
-        <el-form-item label="商品赠送成长值" prop="giftGrowth">
-          <el-input v-model="form.giftGrowth" placeholder="请输入商品赠送成长值" />
+        <el-form-item label="成长值" prop="giftGrowth">
+          <el-input-number
+            v-model="form.giftGrowth"
+            placeholder="请输入商品赠送成长值"
+            :max="1000000000"
+            :min="1"/>
         </el-form-item>
-        <el-form-item label="状态 上下架" prop="appStatus">
+        <el-form-item label="状态" prop="appStatus">
           <el-radio-group v-model="form.appStatus">
-            <el-radio v-for="dict in this.getDictDatas(DICT_TYPE.UP_DOWN_SHELF_STATUS)"
+            <el-radio v-for="dict in appStatusDictDatas"
                       :key="dict.value" :label="parseInt(dict.value)">{{dict.label}}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="应用业务信息" prop="appInfo">
           <el-input v-model="form.appInfo" type="textarea" placeholder="请输入内容" />
         </el-form-item>
-        <el-form-item label="商品祥情描述">
+        <el-form-item label="商品描述">
           <editor v-model="form.appContents" :min-height="192"/>
         </el-form-item>
       </el-form>
@@ -134,6 +156,8 @@
 import { createGoods, updateGoods, deleteGoods, getGoods, getGoodsPage, exportGoodsExcel } from "@/api/plug/goods";
 import ImageUpload from '@/components/ImageUpload';
 import Editor from '@/components/Editor';
+import {DICT_TYPE, getDictDatas} from "@/utils/dict";
+import {CommonStatusEnum} from "@/utils/constants";
 
 export default {
   name: "Goods",
@@ -180,7 +204,9 @@ export default {
         payPrice: [{ required: true, message: "售价不能为空", trigger: "blur" }],
         appNum: [{ required: true, message: "数量不能为空", trigger: "blur" }],
         appStatus: [{ required: true, message: "状态 上下架不能为空", trigger: "blur" }],
-      }
+      },
+      //数据字典
+      appStatusDictDatas: getDictDatas(DICT_TYPE.UP_DOWN_SHELF_STATUS),
     };
   },
   created() {
@@ -215,7 +241,7 @@ export default {
         appNum: undefined,
         giftIntegration: undefined,
         giftGrowth: undefined,
-        appStatus: undefined,
+        appStatus: CommonStatusEnum.ENABLE,
         appInfo: undefined,
         appContents: undefined,
       };
