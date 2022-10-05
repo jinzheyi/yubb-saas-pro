@@ -13,6 +13,17 @@ export const CommonStatusEnum = {
 }
 
 /**
+ * 续期类型的枚举
+ * @type {{FOREVER: number, MONTH: number, QUARTER: number, YEAR: number}}
+ */
+export const RenewalTypeEnum = {
+  FOREVER: 0, // 永久
+  YEAR: 1, // 年
+  MONTH: 2, // 月
+  QUARTER: 3 // 季
+}
+
+/**
  * 菜单的类型枚举
  */
 export const SystemMenuTypeEnum = {

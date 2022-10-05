@@ -59,6 +59,8 @@ export const DICT_TYPE = {
 
   // =========== plus 模块 ===========
   UP_DOWN_SHELF_STATUS: 'up_down_shelf_status',  //商品上下架
+  RENEWAL_TYPE: 'renewal_type',  //续期类型
+
 }
 
 /**

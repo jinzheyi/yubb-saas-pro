@@ -10,7 +10,7 @@ import io.swagger.annotations.*;
 @ToString(callSuper = true)
 public class PlugGoodsRespVO extends PlugGoodsBaseVO {
 
-    @ApiModelProperty(value = "应用编号", required = true)
+    @ApiModelProperty(value = "编号", required = true)
     private Long id;
 
     @ApiModelProperty(value = "创建时间", required = true)

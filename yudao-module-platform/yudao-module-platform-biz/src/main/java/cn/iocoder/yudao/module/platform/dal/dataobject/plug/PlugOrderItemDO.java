@@ -1,7 +1,6 @@
 package cn.iocoder.yudao.module.platform.dal.dataobject.plug;
 
 import lombok.*;
-import java.util.*;
 import java.math.BigDecimal;
 import com.baomidou.mybatisplus.annotation.*;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
@@ -31,29 +30,33 @@ public class PlugOrderItemDO extends BaseDO {
      */
     private Long orderId;
     /**
-     * 应用id
+     * 商品id
      */
-    private Long appId;
+    private Long goodsId;
     /**
-     * 应用图片
+     * 商品图片
      */
-    private String appPic;
+    private String goodsPic;
     /**
-     * 应用名称
+     * 商品名称
      */
-    private String appName;
+    private String goodsName;
     /**
      * 商品条码
      */
-    private String appSn;
+    private String goodsSn;
     /**
      * 原单价
      */
-    private BigDecimal appPrice;
+    private BigDecimal goodsPrice;
     /**
-     * 购买数量
+     * 购买可以使用的天数
      */
-    private Integer payNum;
+    private Integer payDay;
+    /**
+     * 续期类型  0（永久）1（年）2（月）3（季）
+     */
+    private Integer renewalType;
     /**
      * 促销优化金额（促销价、满减、阶梯价）
      */

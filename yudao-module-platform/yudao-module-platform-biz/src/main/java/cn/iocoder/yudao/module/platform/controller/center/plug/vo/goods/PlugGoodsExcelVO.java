@@ -16,26 +16,23 @@ import cn.iocoder.yudao.framework.excel.core.convert.DictConvert;
 @Data
 public class PlugGoodsExcelVO {
 
-    @ExcelProperty("应用编号")
+    @ExcelProperty("编号")
     private Long id;
 
-    @ExcelProperty("应用图片")
-    private String appPic;
+    @ExcelProperty("商品图片")
+    private String goodsPic;
 
-    @ExcelProperty("应用名称")
-    private String appName;
+    @ExcelProperty("商品名称")
+    private String goodsName;
 
     @ExcelProperty("商品条码")
-    private String appSn;
+    private String goodsSn;
 
     @ExcelProperty("原价")
-    private BigDecimal appPrice;
+    private BigDecimal goodsPrice;
 
     @ExcelProperty("售价")
     private BigDecimal payPrice;
-
-    @ExcelProperty("数量")
-    private Integer appNum;
 
     @ExcelProperty(value = "状态 上下架", converter = DictConvert.class)
     @DictFormat("up_down_shelf_status") // TODO 代码优化：建议设置到对应的 XXXDictTypeConstants 枚举类中

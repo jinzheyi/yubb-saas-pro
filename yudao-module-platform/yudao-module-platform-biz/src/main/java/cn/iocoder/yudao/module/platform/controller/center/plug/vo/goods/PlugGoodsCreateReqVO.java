@@ -9,17 +9,14 @@ import io.swagger.annotations.*;
 @ToString(callSuper = true)
 public class PlugGoodsCreateReqVO extends PlugGoodsBaseVO {
 
-    @ApiModelProperty(value = "应用概要")
-    private String appOutline;
+    @ApiModelProperty(value = "商品概要")
+    private String goodsOutline;
 
     @ApiModelProperty(value = "商品赠送积分", example = "0")
     private Long giftIntegration;
 
     @ApiModelProperty(value = "商品赠送成长值", example = "0")
     private Long giftGrowth;
-
-    @ApiModelProperty(value = "应用业务信息")
-    private String appInfo;
 
     @ApiModelProperty(value = "商品祥情描述")
     private String appContents;

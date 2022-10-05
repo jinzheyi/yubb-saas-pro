@@ -3,20 +3,11 @@
 
     <!-- 搜索工作栏 -->
     <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="应用名称" prop="appName">
-        <el-input v-model="queryParams.appName" placeholder="请输入应用名称" clearable @keyup.enter.native="handleQuery"/>
+      <el-form-item label="商品名称" prop="goodsName">
+        <el-input v-model="queryParams.goodsName" placeholder="请输入商品名称" clearable @keyup.enter.native="handleQuery"/>
       </el-form-item>
-      <el-form-item label="商品条码" prop="appSn">
-        <el-input v-model="queryParams.appSn" placeholder="请输入商品条码" clearable @keyup.enter.native="handleQuery"/>
-      </el-form-item>
-      <el-form-item label="原价" prop="appPrice">
-        <el-input v-model="queryParams.appPrice" placeholder="请输入原价" clearable @keyup.enter.native="handleQuery"/>
-      </el-form-item>
-      <el-form-item label="售价" prop="payPrice">
-        <el-input v-model="queryParams.payPrice" placeholder="请输入售价" clearable @keyup.enter.native="handleQuery"/>
-      </el-form-item>
-      <el-form-item label="数量" prop="appNum">
-        <el-input v-model="queryParams.appNum" placeholder="请输入数量" clearable @keyup.enter.native="handleQuery"/>
+      <el-form-item label="商品条码" prop="goodsSn">
+        <el-input v-model="queryParams.goodsSn" placeholder="请输入商品条码" clearable @keyup.enter.native="handleQuery"/>
       </el-form-item>
       <el-form-item label="状态" prop="appStatus">
         <el-select v-model="queryParams.appStatus" placeholder="请选择上下架状态" clearable size="small">
@@ -49,13 +40,12 @@
 
     <!-- 列表 -->
     <el-table v-loading="loading" :data="list">
-      <el-table-column label="应用编号" align="center" prop="id" />
-      <el-table-column label="应用图片" align="center" prop="appPic" />
-      <el-table-column label="应用名称" align="center" prop="appName" />
-      <el-table-column label="商品条码" align="center" prop="appSn" />
-      <el-table-column label="原价" align="center" prop="appPrice" />
+      <el-table-column label="编号" align="center" prop="id" />
+      <el-table-column label="商品图片" align="center" prop="goodsPic" />
+      <el-table-column label="商品名称" align="center" prop="goodsName" />
+      <el-table-column label="商品条码" align="center" prop="goodsSn" />
+      <el-table-column label="原价" align="center" prop="goodsPrice" />
       <el-table-column label="售价" align="center" prop="payPrice" />
-      <el-table-column label="数量" align="center" prop="appNum" />
       <el-table-column label="状态" align="center" prop="appStatus">
         <template slot-scope="scope">
           <dict-tag :type="DICT_TYPE.UP_DOWN_SHELF_STATUS" :value="scope.row.appStatus" />
@@ -82,21 +72,21 @@
     <!-- 对话框(添加 / 修改) -->
     <el-dialog :title="title" :visible.sync="open" width="1000px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
-        <el-form-item label="应用名称" prop="appName">
-          <el-input v-model="form.appName" placeholder="请输入应用名称" />
+        <el-form-item label="商品名称" prop="goodsName">
+          <el-input v-model="form.goodsName" placeholder="请输入商品名称" />
         </el-form-item>
-        <el-form-item label="应用概要" prop="appOutline">
-          <el-input v-model="form.appOutline" type="textarea" placeholder="请输入内容" />
+        <el-form-item label="商品概要" prop="goodsOutline">
+          <el-input v-model="form.goodsOutline" type="textarea" placeholder="请输入内容" />
         </el-form-item>
-        <el-form-item label="商品条码" prop="appSn">
-          <el-input v-model="form.appSn" placeholder="请输入商品条码" />
+        <el-form-item label="商品条码" prop="goodsSn">
+          <el-input v-model="form.goodsSn" placeholder="请输入商品条码" />
         </el-form-item>
-        <el-form-item label="应用图片">
-          <imageUpload v-model="form.appPic" :limit="10"/>
+        <el-form-item label="商品图片">
+          <imageUpload v-model="form.goodsPic" :limit="10"/>
         </el-form-item>
-        <el-form-item label="原价" prop="appPrice">
+        <el-form-item label="原价" prop="goodsPrice">
           <el-input-number
-            v-model="form.appPrice"
+            v-model="form.goodsPrice"
             placeholder="请输入原价"
             :precision="2"
             :max="1000000000"
@@ -109,13 +99,6 @@
             :precision="2"
             :max="1000000000"
             :min="0.01"/>
-        </el-form-item>
-        <el-form-item label="数量" prop="appNum">
-          <el-input-number
-            v-model="form.appNum"
-            placeholder="请输入数量"
-            :max="1000000000"
-            :min="1"/>
         </el-form-item>
         <el-form-item label="赠送积分" prop="giftIntegration">
           <el-input-number
@@ -136,9 +119,6 @@
             <el-radio v-for="dict in appStatusDictDatas"
                       :key="dict.value" :label="parseInt(dict.value)">{{dict.label}}</el-radio>
           </el-radio-group>
-        </el-form-item>
-        <el-form-item label="应用业务信息" prop="appInfo">
-          <el-input v-model="form.appInfo" type="textarea" placeholder="请输入内容" />
         </el-form-item>
         <el-form-item label="商品描述">
           <editor v-model="form.appContents" :min-height="192"/>
@@ -185,11 +165,8 @@ export default {
       queryParams: {
         pageNo: 1,
         pageSize: 10,
-        appName: null,
-        appSn: null,
-        appPrice: [],
-        payPrice: [],
-        appNum: null,
+        goodsName: null,
+        goodsSn: null,
         appStatus: null,
         createTime: [],
       },
@@ -197,12 +174,11 @@ export default {
       form: {},
       // 表单校验
       rules: {
-        appPic: [{ required: true, message: "应用图片不能为空", trigger: "blur" }],
-        appName: [{ required: true, message: "应用名称不能为空", trigger: "blur" }],
-        appSn: [{ required: true, message: "商品条码不能为空", trigger: "blur" }],
-        appPrice: [{ required: true, message: "原价不能为空", trigger: "blur" }],
+        goodsPic: [{ required: true, message: "商品图片不能为空", trigger: "blur" }],
+        goodsName: [{ required: true, message: "商品名称不能为空", trigger: "blur" }],
+        goodsSn: [{ required: true, message: "商品条码不能为空", trigger: "blur" }],
+        goodsPrice: [{ required: true, message: "原价不能为空", trigger: "blur" }],
         payPrice: [{ required: true, message: "售价不能为空", trigger: "blur" }],
-        appNum: [{ required: true, message: "数量不能为空", trigger: "blur" }],
         appStatus: [{ required: true, message: "状态 上下架不能为空", trigger: "blur" }],
       },
       //数据字典
@@ -232,17 +208,15 @@ export default {
     reset() {
       this.form = {
         id: undefined,
-        appPic: undefined,
-        appName: undefined,
-        appOutline: undefined,
-        appSn: undefined,
-        appPrice: undefined,
+        goodsPic: undefined,
+        goodsName: undefined,
+        goodsOutline: undefined,
+        goodsSn: undefined,
+        goodsPrice: undefined,
         payPrice: undefined,
-        appNum: undefined,
         giftIntegration: undefined,
         giftGrowth: undefined,
         appStatus: CommonStatusEnum.ENABLE,
-        appInfo: undefined,
         appContents: undefined,
       };
       this.resetForm("form");
@@ -261,7 +235,7 @@ export default {
     handleAdd() {
       this.reset();
       this.open = true;
-      this.title = "添加应用商品";
+      this.title = "添加商品";
     },
     /** 修改按钮操作 */
     handleUpdate(row) {
@@ -270,7 +244,7 @@ export default {
       getGoods(id).then(response => {
         this.form = response.data;
         this.open = true;
-        this.title = "修改应用商品";
+        this.title = "修改商品";
       });
     },
     /** 提交按钮 */
@@ -299,7 +273,7 @@ export default {
     /** 删除按钮操作 */
     handleDelete(row) {
       const id = row.id;
-      this.$modal.confirm('是否确认删除应用商品编号为"' + id + '"的数据项?').then(function() {
+      this.$modal.confirm('是否确认删除商品编号为"' + id + '"的数据项?').then(function() {
           return deleteGoods(id);
         }).then(() => {
           this.getList();
@@ -312,11 +286,11 @@ export default {
       let params = {...this.queryParams};
       params.pageNo = undefined;
       params.pageSize = undefined;
-      this.$modal.confirm('是否确认导出所有应用商品数据项?').then(() => {
+      this.$modal.confirm('是否确认导出所有商品数据项?').then(() => {
           this.exportLoading = true;
           return exportGoodsExcel(params);
         }).then(response => {
-          this.$download.excel(response, '应用商品.xls');
+          this.$download.excel(response, '商品.xls');
           this.exportLoading = false;
         }).catch(() => {});
     }
