@@ -1,5 +1,8 @@
 package cn.iocoder.yudao.module.platform.controller.center.plug.vo.order;
 
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.order.item.OrderItemRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantRespVO;
+import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -27,6 +30,9 @@ public class PlugOrderRespVO extends PlugOrderBaseVO {
     @ApiModelProperty(value = "促销优化金额（促销价、满减、阶梯价）")
     private BigDecimal promotionAmount;
 
+    @ApiModelProperty(value = "管理员后台调整订单使用的折扣金额")
+    private BigDecimal discountAmount;
+
     @ApiModelProperty(value = "订单类型：0->正常订单；1->赠送订单", required = true)
     private Integer orderType;
 
@@ -48,10 +54,25 @@ public class PlugOrderRespVO extends PlugOrderBaseVO {
     @ApiModelProperty(value = "可以获得的积分")
     private Long integration;
 
-    @ApiModelProperty(value = "可以活动的成长值")
+    @ApiModelProperty(value = "可以获得的成长值")
     private Long growth;
 
     @ApiModelProperty(value = "创建时间", required = true)
     private Date createTime;
+
+    /**
+     * 订单项
+     */
+    List<OrderItemRespVO> item;
+
+    /**
+     * 租户信息
+     */
+    TenantRespVO tenant;
+
+    /**
+     * 租户用户
+     */
+    AdminUserRespDTO adminUser;
 
 }

@@ -6,26 +6,23 @@
       <el-form-item label="订单编号" prop="orderNo">
         <el-input v-model="queryParams.orderNo" placeholder="请输入订单编号" clearable @keyup.enter.native="handleQuery"/>
       </el-form-item>
-      <el-form-item label="应付金额（实际支付金额）" prop="payAmount">
-        <el-input v-model="queryParams.payAmount" placeholder="请输入应付金额（实际支付金额）" clearable @keyup.enter.native="handleQuery"/>
-      </el-form-item>
-      <el-form-item label="订单类型：0->正常订单；1->赠送订单" prop="orderType">
-        <el-select v-model="queryParams.orderType" placeholder="请选择订单类型：0->正常订单；1->赠送订单" clearable size="small">
-          <el-option v-for="dict in this.getDictDatas(DICT_TYPE.PLUG_ORDER_TYPE)"
+      <el-form-item label="订单类型" prop="orderType">
+        <el-select v-model="queryParams.orderType" placeholder="请选择订单类型" clearable size="small">
+          <el-option v-for="dict in orderTypeDictDatas"
                        :key="dict.value" :label="dict.label" :value="dict.value"/>
         </el-select>
       </el-form-item>
-      <el-form-item label="订单状态 未付款,已付款,已安装" prop="orderStatus">
-        <el-select v-model="queryParams.orderStatus" placeholder="请选择订单状态 未付款,已付款,已安装" clearable size="small">
-          <el-option v-for="dict in this.getDictDatas(DICT_TYPE.PLUG_ORDER_STATUS)"
+      <el-form-item label="订单状态" prop="orderStatus">
+        <el-select v-model="queryParams.orderStatus" placeholder="请选择订单状态" clearable size="small">
+          <el-option v-for="dict in orderStatusDictDatas"
                        :key="dict.value" :label="dict.label" :value="dict.value"/>
         </el-select>
       </el-form-item>
-      <el-form-item label="订单失效时间" prop="expireTime">
+      <el-form-item label="失效时间" prop="expireTime">
         <el-date-picker v-model="queryParams.expireTime" style="width: 240px" value-format="yyyy-MM-dd HH:mm:ss" type="daterange"
                         range-separator="-" start-placeholder="开始日期" end-placeholder="结束日期" :default-time="['00:00:00', '23:59:59']" />
       </el-form-item>
-      <el-form-item label="订单支付成功时间" prop="successTime">
+      <el-form-item label="支付时间" prop="successTime">
         <el-date-picker v-model="queryParams.successTime" style="width: 240px" value-format="yyyy-MM-dd HH:mm:ss" type="daterange"
                         range-separator="-" start-placeholder="开始日期" end-placeholder="结束日期" :default-time="['00:00:00', '23:59:59']" />
       </el-form-item>
@@ -53,34 +50,34 @@
       <el-table-column label="订单id" align="center" prop="id" />
       <el-table-column label="订单编号" align="center" prop="orderNo" />
       <el-table-column label="支付金额，单位：钰豆" align="center" prop="totalAmount" />
-      <el-table-column label="应付金额（实际支付金额）" align="center" prop="payAmount" />
-      <el-table-column label="促销优化金额（促销价、满减、阶梯价）" align="center" prop="promotionAmount" />
-      <el-table-column label="管理员后台调整订单使用的折扣金额" align="center" prop="discountAmount" />
-      <el-table-column label="订单类型：0->正常订单；1->赠送订单" align="center" prop="orderType">
+      <el-table-column label="应付金额" align="center" prop="payAmount" />
+      <el-table-column label="促销优化金额" align="center" prop="promotionAmount" />
+      <el-table-column label="管理员调整折扣金额" align="center" prop="discountAmount" />
+      <el-table-column label="订单类型" align="center" prop="orderType">
         <template slot-scope="scope">
           <dict-tag :type="DICT_TYPE.PLUG_ORDER_TYPE" :value="scope.row.orderType" />
         </template>
       </el-table-column>
-      <el-table-column label="订单状态 未付款,已付款,已安装" align="center" prop="orderStatus">
+      <el-table-column label="订单状态" align="center" prop="orderStatus">
         <template slot-scope="scope">
           <dict-tag :type="DICT_TYPE.PLUG_ORDER_STATUS" :value="scope.row.orderStatus" />
         </template>
       </el-table-column>
       <el-table-column label="用户 IP" align="center" prop="userIp" />
       <el-table-column label="购买者编号" align="center" prop="userId" />
-      <el-table-column label="订单失效时间" align="center" prop="expireTime" width="180">
+      <el-table-column label="失效时间" align="center" prop="expireTime" width="180">
         <template slot-scope="scope">
           <span>{{ parseTime(scope.row.expireTime) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="订单支付成功时间" align="center" prop="successTime" width="180">
+      <el-table-column label="支付时间" align="center" prop="successTime" width="180">
         <template slot-scope="scope">
           <span>{{ parseTime(scope.row.successTime) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="可以获得的积分" align="center" prop="integration" />
-      <el-table-column label="可以活动的成长值" align="center" prop="growth" />
-      <el-table-column label="订单备注" align="center" prop="note" />
+      <el-table-column label="获得积分" align="center" prop="integration" />
+      <el-table-column label="获得成长值" align="center" prop="growth" />
+      <el-table-column label="备注" align="center" prop="note" />
       <el-table-column label="创建时间" align="center" prop="createTime" width="180">
         <template slot-scope="scope">
           <span>{{ parseTime(scope.row.createTime) }}</span>
@@ -88,6 +85,8 @@
       </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
+          <el-button size="mini" type="text" icon="el-icon-edit" @click="handleDetail(scope.row)"
+                     v-hasPermi="['center:plug-order:query']">详情</el-button>
           <el-button size="mini" type="text" icon="el-icon-edit" @click="handleUpdate(scope.row)"
                      v-hasPermi="['center:plug-order:update']">修改</el-button>
           <el-button size="mini" type="text" icon="el-icon-delete" @click="handleDelete(scope.row)"
@@ -99,8 +98,155 @@
     <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNo" :limit.sync="queryParams.pageSize"
                 @pagination="getList"/>
 
-    <!-- 对话框(添加 / 修改) -->
-    <el-dialog :title="title" :visible.sync="open" width="500px" v-dialogDrag append-to-body>
+
+    <!-- 对话框(详情) -->
+    <el-dialog :title="title" :visible.sync="open" width="70%" append-to-body>
+      <el-form ref="form" :model="form" :rules="rules" label-width="80px">
+      <!--租户信息-->
+      <el-descriptions :column="2" label-class-name="desc-label">
+        <el-descriptions-item label="租户名称">{{form.tenant.name}}</el-descriptions-item>
+        <el-descriptions-item label="租户联系人信息">
+          {{ form.tenant.contactName }}
+          <el-tag size="small">({{form.tenant.contactMobile}})</el-tag>
+        </el-descriptions-item>
+      </el-descriptions>
+      <el-divider></el-divider>
+      <el-descriptions :column="2" label-class-name="desc-label">
+        <el-descriptions-item label="订单编号">
+          <el-tag size="small">{{ form.orderNo }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="订单类型">
+          <dict-tag :type="DICT_TYPE.PLUG_ORDER_TYPE" :value="form.orderType" />
+        </el-descriptions-item>
+        <el-descriptions-item label="购买者 IP">
+          <el-tag class="tag-pink" size="small">
+            {{ form.userIp }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="购买者信息">
+            {{ form.adminUser.nickname }}
+            <el-tag size="small">({{form.adminUser.mobile}})</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="支付金额">
+          <el-tag type="warning" size="small">{{ form.totalAmount }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="促销金额">
+          <el-tag type="warning" size="small">{{ form.promotionAmount }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="管理员折扣金额">
+          <el-tag type="warning" size="small">{{ form.discountAmount }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="实付金额">
+          <el-tag type="warning" size="small">{{ form.payAmount }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="订单状态">
+          <dict-tag :type="DICT_TYPE.PLUG_ORDER_STATUS" :value="form.orderStatus" />
+        </el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ parseTime(form.createTime) }}</el-descriptions-item>
+        <el-descriptions-item label="支付时间">{{ parseTime(form.successTime) }}</el-descriptions-item>
+        <el-descriptions-item label="失效时间">{{ parseTime(form.expireTime) }}</el-descriptions-item>
+      </el-descriptions>
+      <el-divider></el-divider>
+      <el-descriptions :column="1" label-class-name="desc-label" direction="vertical" border>
+        <el-descriptions-item label="商品">
+        <el-table
+          :data="form.item"
+          border
+          style="margin-top: 5px">
+          <el-table-column prop="goodsPic"
+                           label="商品图片"
+                           width="120">
+            <template slot-scope="scope">
+              <img v-if="scope.row.goodsPic" :src="scope.row.goodsPic" alt="商品图片" style="width: 100px;"/>
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="goodsName"
+            label="名称"
+            width="200">
+            <template slot-scope="scope">
+              {{scope.row.goodsName}}
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="goodsSn"
+            label="条形码"
+            width="150">
+            <template slot-scope="scope">
+              {{scope.row.goodsSn}}
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="renewalType"
+            label="续期类型"
+            width="100">
+            <template slot-scope="scope">
+              <dict-tag :type="DICT_TYPE.RENEWAL_TYPE" :value="scope.row.renewalType" />
+              &nbsp;<el-tag class="tag-pink" size="small" v-if="scope.row.renewalType != 0">
+                ({{scope.row.payDay}}天)
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="goodsPrice"
+            label="单价"
+            width="100">
+            <template slot-scope="scope">
+              {{ scope.row.goodsPrice }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="promotionAmount"
+            label="促销金额">
+            <template slot-scope="scope">
+              <el-input-number
+                size="small"
+                v-model="scope.row.promotionAmount"
+                controls-position="right"
+                :precision="2"
+                :max="scope.row.goodsPrice"
+                :min="0.01"
+                :disabled="updateCheckPermi">
+              </el-input-number>
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="discountAmount"
+            label="管理员调整金额">
+            <template slot-scope="scope">
+              <el-input-number
+                size="small"
+                v-model="scope.row.discountAmount"
+                controls-position="right"
+                :precision="2"
+                :max="scope.row.goodsPrice"
+                :min="0.01"
+                :disabled="updateCheckPermi">
+              </el-input-number>
+            </template>
+          </el-table-column>
+        </el-table>
+        </el-descriptions-item>
+      </el-descriptions>
+      <el-divider></el-divider>
+      <el-descriptions :column="1" label-class-name="desc-label" direction="vertical" border>
+        <el-descriptions-item label="备注">
+          {{ form.note }}
+        </el-descriptions-item>
+      </el-descriptions>
+      <el-divider></el-divider>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submitForm" v-hasPermi="['center:plug-order:update1']">确 定</el-button>
+        <el-button @click="cancel">取 消</el-button>
+      </div>
+    </el-dialog>
+
+
+
+
+<!--    &lt;!&ndash; 对话框(添加 / 修改) &ndash;&gt;
+    <el-dialog :title="title" :visible.sync="open" width="90%">
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="订单编号" prop="orderNo">
           <el-input v-model="form.orderNo" placeholder="请输入订单编号" />
@@ -155,12 +301,14 @@
         <el-button type="primary" @click="submitForm">确 定</el-button>
         <el-button @click="cancel">取 消</el-button>
       </div>
-    </el-dialog>
+    </el-dialog>-->
   </div>
 </template>
 
 <script>
 import {updateOrder, deleteOrder, getOrder, getOrderPage, exportOrderExcel } from "@/api/plug/order";
+import {DICT_TYPE, getDictDatas} from "@/utils/dict";
+import {checkPermi} from "@/utils/permission";
 
 export default {
   name: "Order",
@@ -195,7 +343,14 @@ export default {
         createTime: [],
       },
       // 表单参数
-      form: {},
+      form: {
+        tenant: {
+
+        },
+        adminUser: {
+
+        }
+      },
       // 表单校验
       rules: {
         orderNo: [{ required: true, message: "订单编号不能为空", trigger: "blur" }],
@@ -206,7 +361,12 @@ export default {
         userIp: [{ required: true, message: "用户 IP不能为空", trigger: "blur" }],
         userId: [{ required: true, message: "购买者编号不能为空", trigger: "blur" }],
         expireTime: [{ required: true, message: "订单失效时间不能为空", trigger: "blur" }],
-      }
+      },
+      //数据字典
+      orderTypeDictDatas: getDictDatas(DICT_TYPE.PLUG_ORDER_TYPE),
+      orderStatusDictDatas: getDictDatas(DICT_TYPE.PLUG_ORDER_STATUS),
+      //权限
+      updateCheckPermi: checkPermi(['center:plug-order:update'])? false:true,
     };
   },
   created() {
@@ -265,8 +425,20 @@ export default {
       const id = row.id;
       getOrder(id).then(response => {
         this.form = response.data;
+        this.form.tenant = response.data.tenant;
+        this.form.adminUser = response.data.adminUser;
         this.open = true;
         this.title = "修改订单";
+      });
+    },
+    /** 详情按钮操作 */
+    handleDetail(row) {
+      this.reset();
+      const id = row.id;
+      getOrder(id).then(response => {
+        this.form = response.data;
+        this.open = true;
+        this.title = "查看订单";
       });
     },
     /** 提交按钮 */

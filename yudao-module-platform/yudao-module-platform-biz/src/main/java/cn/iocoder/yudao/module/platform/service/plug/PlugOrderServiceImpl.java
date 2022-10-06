@@ -1,19 +1,23 @@
 package cn.iocoder.yudao.module.platform.service.plug;
 
+import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.order.*;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.order.item.OrderItemRespVO;
+import cn.iocoder.yudao.module.platform.convert.plug.PlugOrderConvert;
+import cn.iocoder.yudao.module.platform.convert.plug.PlugOrderItemConvert;
+import cn.iocoder.yudao.module.platform.convert.tenant.TenantConvert;
+import cn.iocoder.yudao.module.platform.dal.dataobject.plug.PlugOrderDO;
+import cn.iocoder.yudao.module.platform.dal.mysql.plug.PlugOrderMapper;
+import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantService;
+import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
 import org.springframework.stereotype.Service;
-import javax.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
 
-import java.util.*;
-import cn.iocoder.yudao.module.platform.controller.center.plug.vo.order.*;
-import cn.iocoder.yudao.module.platform.dal.dataobject.plug.PlugOrderDO;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-
-import cn.iocoder.yudao.module.platform.convert.plug.PlugOrderConvert;
-import cn.iocoder.yudao.module.platform.dal.mysql.plug.PlugOrderMapper;
+import javax.annotation.Resource;
+import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.ORDER_NOT_EXISTS;
 
 /**
  * 订单 Service 实现类
@@ -26,6 +30,15 @@ public class PlugOrderServiceImpl implements PlugOrderService {
 
     @Resource
     private PlugOrderMapper orderMapper;
+
+    @Resource
+    private PlugOrderItemService orderItemService;
+
+    @Resource
+    private PlatformTenantService tenantService;
+
+    @Resource
+    private AdminUserApi adminUserApi;
 
     @Override
     public Long createOrder(PlugOrderCreateReqVO createReqVO) {
@@ -60,8 +73,16 @@ public class PlugOrderServiceImpl implements PlugOrderService {
     }
 
     @Override
-    public PlugOrderDO getOrder(Long id) {
-        return orderMapper.selectById(id);
+    public PlugOrderRespVO getOrder(Long id) {
+        // 校验存在
+        this.validateOrderExists(id);
+        PlugOrderDO order = orderMapper.selectById(id);
+        PlugOrderRespVO orderRespVO = PlugOrderConvert.INSTANCE.convert(order);
+        List<OrderItemRespVO> itemRespVOS = PlugOrderItemConvert.INSTANCE.convertList(orderItemService.getByOrderId(id));
+        orderRespVO.setTenant(TenantConvert.INSTANCE.convert(tenantService.getTenant(order.getTenantId())));
+        orderRespVO.setItem(itemRespVOS);
+        orderRespVO.setAdminUser(adminUserApi.getUser(order.getUserId()));
+        return orderRespVO;
     }
 
     @Override

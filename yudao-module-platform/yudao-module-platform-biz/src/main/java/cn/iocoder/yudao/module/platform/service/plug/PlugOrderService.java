@@ -41,7 +41,7 @@ public interface PlugOrderService {
      * @param id 编号
      * @return 订单
      */
-    PlugOrderDO getOrder(Long id);
+    PlugOrderRespVO getOrder(Long id);
 
     /**
      * 获得订单分页

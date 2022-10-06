@@ -129,6 +129,8 @@ yudao:
       - infra
     platform-ignore-tables:
       - plug_order
+      - plug_order_item
+      - system_users
   sms-code: # 短信验证码相关的配置项
     expire-times: 10m
     send-frequency: 1m

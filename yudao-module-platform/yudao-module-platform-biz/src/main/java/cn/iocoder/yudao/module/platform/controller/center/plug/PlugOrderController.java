@@ -55,8 +55,7 @@ public class PlugOrderController {
     @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
     @PreAuthorize("@cs.hasPermission('center:plug-order:query')")
     public CommonResult<PlugOrderRespVO> getOrder(@RequestParam("id") Long id) {
-        PlugOrderDO order = orderService.getOrder(id);
-        return success(PlugOrderConvert.INSTANCE.convert(order));
+        return success(orderService.getOrder(id));
     }
 
     @GetMapping("/page")

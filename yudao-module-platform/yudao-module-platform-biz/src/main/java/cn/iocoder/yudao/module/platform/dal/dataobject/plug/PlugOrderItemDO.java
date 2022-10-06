@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.platform.dal.dataobject.plug;
 
+import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
 import lombok.*;
 import java.math.BigDecimal;
 import com.baomidou.mybatisplus.annotation.*;
@@ -18,7 +19,7 @@ import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PlugOrderItemDO extends BaseDO {
+public class PlugOrderItemDO extends TenantBaseDO {
 
     /**
      * 订单项id
@@ -73,9 +74,5 @@ public class PlugOrderItemDO extends BaseDO {
      * 商品赠送成长值
      */
     private Long giftGrowth;
-    /**
-     * 应用业务信息
-     */
-    private String appInfo;
 
 }

@@ -12,7 +12,7 @@
       <el-form-item label="状态" prop="appStatus">
         <el-select v-model="queryParams.appStatus" placeholder="请选择上下架状态" clearable size="small">
           <el-option v-for="dict in appStatusDictDatas"
-                       :key="dict.value" :label="parseInt(dict.label)" :value="dict.value"/>
+                       :key="dict.value" :label="dict.label" :value="dict.value"/>
         </el-select>
       </el-form-item>
       <el-form-item label="创建时间" prop="createTime">

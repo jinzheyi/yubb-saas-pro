@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.platform.dal.dataobject.plug;
 
+import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
 import lombok.*;
 import java.util.*;
 import java.math.BigDecimal;
@@ -19,7 +20,7 @@ import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PlugOrderDO extends BaseDO {
+public class PlugOrderDO extends TenantBaseDO {
 
     /**
      * 订单id

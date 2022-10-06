@@ -19,13 +19,10 @@ public class PlugOrderPageReqVO extends PageParam {
     @ApiModelProperty(value = "订单编号")
     private String orderNo;
 
-    @ApiModelProperty(value = "应付金额（实际支付金额）")
-    private BigDecimal[] payAmount;
-
-    @ApiModelProperty(value = "订单类型：0->正常订单；1->赠送订单")
+    @ApiModelProperty(value = "订单类型")
     private Integer orderType;
 
-    @ApiModelProperty(value = "订单状态 未付款,已付款,已安装")
+    @ApiModelProperty(value = "订单状态")
     private Integer orderStatus;
 
     @ApiModelProperty(value = "订单失效时间")

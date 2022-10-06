@@ -20,7 +20,6 @@ public interface PlugOrderMapper extends BaseMapperX<PlugOrderDO> {
     default PageResult<PlugOrderDO> selectPage(PlugOrderPageReqVO reqVO) {
         return selectPage(reqVO, new LambdaQueryWrapperX<PlugOrderDO>()
                 .likeIfPresent(PlugOrderDO::getOrderNo, reqVO.getOrderNo())
-                .betweenIfPresent(PlugOrderDO::getPayAmount, reqVO.getPayAmount())
                 .eqIfPresent(PlugOrderDO::getOrderType, reqVO.getOrderType())
                 .eqIfPresent(PlugOrderDO::getOrderStatus, reqVO.getOrderStatus())
                 .betweenIfPresent(PlugOrderDO::getExpireTime, reqVO.getExpireTime())
