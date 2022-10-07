@@ -16,4 +16,16 @@ public class PlugGoodsRespVO extends PlugGoodsBaseVO {
     @ApiModelProperty(value = "创建时间", required = true)
     private Date createTime;
 
+    @ApiModelProperty(value = "商品概要")
+    private String goodsOutline;
+
+    @ApiModelProperty(value = "商品赠送积分", example = "0")
+    private Long giftIntegration;
+
+    @ApiModelProperty(value = "商品赠送成长值", example = "0")
+    private Long giftGrowth;
+
+    @ApiModelProperty(value = "商品祥情描述")
+    private String appContents;
+
 }

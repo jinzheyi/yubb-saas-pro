@@ -50,10 +50,6 @@ public class PlugGoodsDO extends BaseDO {
      */
     private BigDecimal payPrice;
     /**
-     * 可以使用的天数
-     */
-    private Integer appDay;
-    /**
      * 商品赠送积分
      */
     private Long giftIntegration;
@@ -66,10 +62,6 @@ public class PlugGoodsDO extends BaseDO {
      *
      */
     private Integer appStatus;
-    /**
-     * 应用业务信息
-     */
-    private String appInfo;
     /**
      * 商品祥情描述
      */

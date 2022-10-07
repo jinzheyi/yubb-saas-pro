@@ -66,7 +66,6 @@ CREATE TABLE `plug_goods`  (
 `goods_sn` varchar(64) COMMENT '商品条码',
 `goods_price` decimal(10,2) COMMENT '原价（续期中一天的价格）',
 `pay_price` decimal(10,2) COMMENT '售价（续期中一天的价格）',
-`app_day` int COMMENT '可以使用的天数',
 `gift_integration` bigint not null default 0 COMMENT '商品赠送积分',
 `gift_growth` bigint not null default 0 COMMENT '商品赠送成长值',
 `app_status` tinyint NOT NULL COMMENT '状态 上下架',
