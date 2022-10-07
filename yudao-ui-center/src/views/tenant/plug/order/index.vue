@@ -47,12 +47,16 @@
 
     <!-- 列表 -->
     <el-table v-loading="loading" :data="list">
-      <el-table-column label="订单id" align="center" prop="id" />
-      <el-table-column label="订单编号" align="center" prop="orderNo" />
-      <el-table-column label="支付金额，单位：钰豆" align="center" prop="totalAmount" />
-      <el-table-column label="应付金额" align="center" prop="payAmount" />
-      <el-table-column label="促销优化金额" align="center" prop="promotionAmount" />
-      <el-table-column label="管理员调整折扣金额" align="center" prop="discountAmount" />
+<!--      <el-table-column label="订单id" align="center" prop="id" />-->
+      <el-table-column fixed label="订单编号" align="center" width="300" >
+        <template slot-scope="{row}">
+          <el-tag>{{ row.orderNo }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="支付金额(钰豆)" align="center" prop="totalAmount" />
+      <el-table-column label="实付金额" align="center" prop="payAmount" />
+      <el-table-column label="促销金额" align="center" prop="promotionAmount" />
+      <el-table-column label="管理员折扣金额" align="center" prop="discountAmount" />
       <el-table-column label="订单类型" align="center" prop="orderType">
         <template slot-scope="scope">
           <dict-tag :type="DICT_TYPE.PLUG_ORDER_TYPE" :value="scope.row.orderType" />
@@ -63,8 +67,7 @@
           <dict-tag :type="DICT_TYPE.PLUG_ORDER_STATUS" :value="scope.row.orderStatus" />
         </template>
       </el-table-column>
-      <el-table-column label="用户 IP" align="center" prop="userIp" />
-      <el-table-column label="购买者编号" align="center" prop="userId" />
+      <el-table-column label="购买者 IP" align="center" prop="userIp" />
       <el-table-column label="失效时间" align="center" prop="expireTime" width="180">
         <template slot-scope="scope">
           <span>{{ parseTime(scope.row.expireTime) }}</span>
@@ -77,15 +80,19 @@
       </el-table-column>
       <el-table-column label="获得积分" align="center" prop="integration" />
       <el-table-column label="获得成长值" align="center" prop="growth" />
-      <el-table-column label="备注" align="center" prop="note" />
+      <el-table-column label="备注" align="center" min-width="100" :show-overflow-tooltip="true" >
+        <template slot-scope="{row}">
+          <span>{{ row.note }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="创建时间" align="center" prop="createTime" width="180">
         <template slot-scope="scope">
           <span>{{ parseTime(scope.row.createTime) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+      <el-table-column fixed="right" label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
-          <el-button size="mini" type="text" icon="el-icon-edit" @click="handleDetail(scope.row)"
+          <el-button size="mini" type="text" icon="el-icon-view" @click="handleDetail(scope.row)"
                      v-hasPermi="['center:plug-order:query']">详情</el-button>
           <el-button size="mini" type="text" icon="el-icon-edit" @click="handleUpdate(scope.row)"
                      v-hasPermi="['center:plug-order:update']">修改</el-button>
@@ -139,6 +146,12 @@
         <el-descriptions-item label="实付金额">
           <el-tag type="warning" size="small">{{ form.payAmount }}</el-tag>
         </el-descriptions-item>
+        <el-descriptions-item label="获得积分">
+          <el-tag type="warning" size="small">{{ form.integration }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="获得成长值">
+          <el-tag type="warning" size="small">{{ form.growth }}</el-tag>
+        </el-descriptions-item>
         <el-descriptions-item label="订单状态">
           <dict-tag :type="DICT_TYPE.PLUG_ORDER_STATUS" :value="form.orderStatus" />
         </el-descriptions-item>
@@ -188,6 +201,22 @@
             </template>
           </el-table-column>
           <el-table-column
+            prop="giftIntegration"
+            label="获得积分"
+            width="100">
+            <template slot-scope="scope">
+              {{ scope.row.giftIntegration }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="giftGrowth"
+            label="获得成长值"
+            width="100">
+            <template slot-scope="scope">
+              {{ scope.row.giftGrowth }}
+            </template>
+          </el-table-column>
+          <el-table-column
             prop="goodsPrice"
             label="单价"
             width="100">
@@ -197,17 +226,10 @@
           </el-table-column>
           <el-table-column
             prop="promotionAmount"
-            label="促销金额">
+            label="促销金额"
+            width="100">
             <template slot-scope="scope">
-              <el-input-number
-                size="small"
-                v-model="scope.row.promotionAmount"
-                controls-position="right"
-                :precision="2"
-                :max="scope.row.goodsPrice"
-                :min="0.01"
-                :disabled="updateCheckPermi">
-              </el-input-number>
+              {{ scope.row.promotionAmount }}
             </template>
           </el-table-column>
           <el-table-column
@@ -219,7 +241,7 @@
                 v-model="scope.row.discountAmount"
                 controls-position="right"
                 :precision="2"
-                :max="scope.row.goodsPrice"
+                :max="scope.row.goodsPrice - scope.row.promotionAmount"
                 :min="0.01"
                 :disabled="updateCheckPermi">
               </el-input-number>
@@ -231,7 +253,7 @@
       <el-divider></el-divider>
       <el-descriptions :column="1" label-class-name="desc-label" direction="vertical" border>
         <el-descriptions-item label="备注">
-          {{ form.note }}
+          <el-input v-model="form.note" type="textarea" :disabled="updateCheckPermi" placeholder="请输入订单备注" />
         </el-descriptions-item>
       </el-descriptions>
       <el-divider></el-divider>
@@ -242,66 +264,6 @@
       </div>
     </el-dialog>
 
-
-
-
-<!--    &lt;!&ndash; 对话框(添加 / 修改) &ndash;&gt;
-    <el-dialog :title="title" :visible.sync="open" width="90%">
-      <el-form ref="form" :model="form" :rules="rules" label-width="80px">
-        <el-form-item label="订单编号" prop="orderNo">
-          <el-input v-model="form.orderNo" placeholder="请输入订单编号" />
-        </el-form-item>
-        <el-form-item label="支付金额，单位：钰豆" prop="totalAmount">
-          <el-input v-model="form.totalAmount" placeholder="请输入支付金额，单位：钰豆" />
-        </el-form-item>
-        <el-form-item label="应付金额（实际支付金额）" prop="payAmount">
-          <el-input v-model="form.payAmount" placeholder="请输入应付金额（实际支付金额）" />
-        </el-form-item>
-        <el-form-item label="促销优化金额（促销价、满减、阶梯价）" prop="promotionAmount">
-          <el-input v-model="form.promotionAmount" placeholder="请输入促销优化金额（促销价、满减、阶梯价）" />
-        </el-form-item>
-        <el-form-item label="管理员后台调整订单使用的折扣金额" prop="discountAmount">
-          <el-input v-model="form.discountAmount" placeholder="请输入管理员后台调整订单使用的折扣金额" />
-        </el-form-item>
-        <el-form-item label="订单类型：0->正常订单；1->赠送订单" prop="orderType">
-          <el-select v-model="form.orderType" placeholder="请选择订单类型：0->正常订单；1->赠送订单">
-            <el-option v-for="dict in this.getDictDatas(DICT_TYPE.PLUG_ORDER_TYPE)"
-                       :key="dict.value" :label="dict.label" :value="parseInt(dict.value)" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="订单状态 未付款,已付款,已安装" prop="orderStatus">
-          <el-radio-group v-model="form.orderStatus">
-            <el-radio v-for="dict in this.getDictDatas(DICT_TYPE.PLUG_ORDER_STATUS)"
-                      :key="dict.value" :label="parseInt(dict.value)">{{dict.label}}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="用户 IP" prop="userIp">
-          <el-input v-model="form.userIp" placeholder="请输入用户 IP" />
-        </el-form-item>
-        <el-form-item label="购买者编号" prop="userId">
-          <el-input v-model="form.userId" placeholder="请输入购买者编号" />
-        </el-form-item>
-        <el-form-item label="订单失效时间" prop="expireTime">
-          <el-date-picker clearable v-model="form.expireTime" type="date" value-format="timestamp" placeholder="选择订单失效时间" />
-        </el-form-item>
-        <el-form-item label="订单支付成功时间" prop="successTime">
-          <el-date-picker clearable v-model="form.successTime" type="date" value-format="timestamp" placeholder="选择订单支付成功时间" />
-        </el-form-item>
-        <el-form-item label="可以获得的积分" prop="integration">
-          <el-input v-model="form.integration" placeholder="请输入可以获得的积分" />
-        </el-form-item>
-        <el-form-item label="可以活动的成长值" prop="growth">
-          <el-input v-model="form.growth" placeholder="请输入可以活动的成长值" />
-        </el-form-item>
-        <el-form-item label="订单备注" prop="note">
-          <el-input v-model="form.note" placeholder="请输入订单备注" />
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitForm">确 定</el-button>
-        <el-button @click="cancel">取 消</el-button>
-      </div>
-    </el-dialog>-->
   </div>
 </template>
 
@@ -344,12 +306,8 @@ export default {
       },
       // 表单参数
       form: {
-        tenant: {
-
-        },
-        adminUser: {
-
-        }
+        tenant: {},
+        adminUser: {}
       },
       // 表单校验
       rules: {
@@ -406,6 +364,8 @@ export default {
         integration: undefined,
         growth: undefined,
         note: undefined,
+        tenant: {},
+        adminUser: {}
       };
       this.resetForm("form");
     },
@@ -437,6 +397,8 @@ export default {
       const id = row.id;
       getOrder(id).then(response => {
         this.form = response.data;
+        this.form.tenant = response.data.tenant;
+        this.form.adminUser = response.data.adminUser;
         this.open = true;
         this.title = "查看订单";
       });
@@ -485,3 +447,7 @@ export default {
   }
 };
 </script>
+
+<style>
+.el-tooltip__popper{font-size: 14px; max-width:30% }/* 设置显示隐藏部分内容，按30%显示 */
+</style>

@@ -3,18 +3,23 @@ package cn.iocoder.yudao.module.platform.service.plug;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.controller.center.plug.vo.order.*;
 import cn.iocoder.yudao.module.platform.controller.center.plug.vo.order.item.OrderItemRespVO;
+import cn.iocoder.yudao.module.platform.controller.center.plug.vo.order.item.OrderItemUpdateReqVO;
 import cn.iocoder.yudao.module.platform.convert.plug.PlugOrderConvert;
 import cn.iocoder.yudao.module.platform.convert.plug.PlugOrderItemConvert;
 import cn.iocoder.yudao.module.platform.convert.tenant.TenantConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.plug.PlugOrderDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.plug.PlugOrderItemDO;
 import cn.iocoder.yudao.module.platform.dal.mysql.plug.PlugOrderMapper;
 import cn.iocoder.yudao.module.platform.service.tenant.PlatformTenantService;
 import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.ORDER_NOT_EXISTS;
@@ -50,12 +55,21 @@ public class PlugOrderServiceImpl implements PlugOrderService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateOrder(PlugOrderUpdateReqVO updateReqVO) {
         // 校验存在
         this.validateOrderExists(updateReqVO.getId());
+        List<Long> ids = updateReqVO.getItem().stream().map(OrderItemUpdateReqVO::getId).collect(Collectors.toList());
+        orderItemService.validateOrderItemExists(ids);
+        BigDecimal reduce = updateReqVO.getItem().stream().map(OrderItemUpdateReqVO::getDiscountAmount).reduce(BigDecimal.ZERO,BigDecimal::add);
         // 更新
         PlugOrderDO updateObj = PlugOrderConvert.INSTANCE.convert(updateReqVO);
+        PlugOrderDO orderDO = orderMapper.selectById(updateObj.getId());
+        updateObj.setDiscountAmount(reduce);
+        updateObj.setPayAmount(orderDO.getPayAmount().subtract(reduce));
         orderMapper.updateById(updateObj);
+        //更新item
+        orderItemService.updateOrderItems(updateReqVO.getItem());
     }
 
     @Override

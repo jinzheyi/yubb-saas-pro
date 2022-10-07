@@ -100,19 +100,19 @@
             :max="1000000000"
             :min="0.01"/>
         </el-form-item>
-        <el-form-item label="赠送积分" prop="giftIntegration">
+        <el-form-item label="积分" prop="giftIntegration">
           <el-input-number
             v-model="form.giftIntegration"
             placeholder="请输入商品赠送积分"
             :max="1000000000"
-            :min="1"/>
+            :min="0"/>
         </el-form-item>
         <el-form-item label="成长值" prop="giftGrowth">
           <el-input-number
             v-model="form.giftGrowth"
             placeholder="请输入商品赠送成长值"
             :max="1000000000"
-            :min="1"/>
+            :min="0"/>
         </el-form-item>
         <el-form-item label="状态" prop="appStatus">
           <el-radio-group v-model="form.appStatus">
@@ -180,6 +180,8 @@ export default {
         goodsPrice: [{ required: true, message: "原价不能为空", trigger: "blur" }],
         payPrice: [{ required: true, message: "售价不能为空", trigger: "blur" }],
         appStatus: [{ required: true, message: "状态 上下架不能为空", trigger: "blur" }],
+        giftIntegration: [{ required: true, message: "积分不能为空", trigger: "blur" }],
+        giftGrowth: [{ required: true, message: "成长值不能为空", trigger: "blur" }],
       },
       //数据字典
       appStatusDictDatas: getDictDatas(DICT_TYPE.UP_DOWN_SHELF_STATUS),
@@ -214,8 +216,8 @@ export default {
         goodsSn: undefined,
         goodsPrice: undefined,
         payPrice: undefined,
-        giftIntegration: undefined,
-        giftGrowth: undefined,
+        giftIntegration: 0,
+        giftGrowth: 0,
         appStatus: CommonStatusEnum.ENABLE,
         appContents: undefined,
       };
