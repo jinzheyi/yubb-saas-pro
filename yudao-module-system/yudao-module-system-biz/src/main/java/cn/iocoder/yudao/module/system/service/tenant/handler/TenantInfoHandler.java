@@ -6,7 +6,7 @@ import cn.iocoder.yudao.module.platform.api.tenant.dto.tenant.TenantRespDTO;
  * 租户信息处理
  * 目的：尽量减少租户逻辑耦合到系统中
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface TenantInfoHandler {
 

@@ -2,15 +2,19 @@ package cn.iocoder.yudao.module.product.controller.admin.spu;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
 import cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.*;
 import cn.iocoder.yudao.module.product.convert.spu.ProductSpuConvert;
+import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
+import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
+import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
 import cn.iocoder.yudao.module.product.service.spu.ProductSpuService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiImplicitParam;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -20,79 +24,118 @@ import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
+import static cn.iocoder.yudao.framework.common.enums.CommonConstants.MALL_CODE;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static cn.iocoder.yudao.framework.common.pojo.PageParam.PAGE_SIZE_NONE;
 import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.EXPORT;
 
-@Api(tags = "管理后台 - 商品spu")
+@Tag(name = "管理后台 - 商品 SPU")
 @RestController
 @RequestMapping("/product/spu")
 @Validated
 public class ProductSpuController {
 
     @Resource
-    private ProductSpuService spuService;
+    private ProductSpuService productSpuService;
+    @Resource
+    private ProductSkuService productSkuService;
 
     @PostMapping("/create")
-    @ApiOperation("创建商品spu")
-    @PreAuthorize("@ss.hasPermission('product:spu:create')")
-    public CommonResult<Long> createSpu(@Valid @RequestBody ProductSpuCreateReqVO createReqVO) {
-        return success(spuService.createSpu(createReqVO));
+    @Operation(summary = "创建商品 SPU")
+    @PreAuthorize("@ss.hasPermission('product:spu:create') && @ss.hasAllPlugApp('"+ MALL_CODE +"')")
+    public CommonResult<Long> createProductSpu(@Valid @RequestBody ProductSpuSaveReqVO createReqVO) {
+        return success(productSpuService.createSpu(createReqVO));
     }
 
-    // TODO @franky：SpuUpdateReqVO 缺少前缀
     @PutMapping("/update")
-    @ApiOperation("更新商品spu")
-    @PreAuthorize("@ss.hasPermission('product:spu:update')")
-    public CommonResult<Boolean> updateSpu(@Valid @RequestBody SpuUpdateReqVO updateReqVO) {
-        spuService.updateSpu(updateReqVO);
+    @Operation(summary = "更新商品 SPU")
+    @PreAuthorize("@ss.hasPermission('product:spu:update') && @ss.hasAllPlugApp('"+ MALL_CODE +"')")
+    public CommonResult<Boolean> updateSpu(@Valid @RequestBody ProductSpuSaveReqVO updateReqVO) {
+        productSpuService.updateSpu(updateReqVO);
+        return success(true);
+    }
+
+    @PutMapping("/update-status")
+    @Operation(summary = "更新商品 SPU Status")
+    @PreAuthorize("@ss.hasPermission('product:spu:update') && @ss.hasAllPlugApp('"+ MALL_CODE +"')")
+    public CommonResult<Boolean> updateStatus(@Valid @RequestBody ProductSpuUpdateStatusReqVO updateReqVO) {
+        productSpuService.updateSpuStatus(updateReqVO);
         return success(true);
     }
 
     @DeleteMapping("/delete")
-    @ApiOperation("删除商品spu")
-    @ApiImplicitParam(name = "id", value = "编号", required = true, dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('product:spu:delete')")
+    @Operation(summary = "删除商品 SPU")
+    @Parameter(name = "id", description = "编号", required = true, example = "1024")
+    @PreAuthorize("@ss.hasPermission('product:spu:delete') && @ss.hasAllPlugApp('"+ MALL_CODE +"')")
     public CommonResult<Boolean> deleteSpu(@RequestParam("id") Long id) {
-        spuService.deleteSpu(id);
+        productSpuService.deleteSpu(id);
         return success(true);
     }
 
-    @GetMapping("/get")
-    @ApiOperation("获得商品spu")
-    @ApiImplicitParam(name = "id", value = "编号", required = true, example = "1024", dataTypeClass = Long.class)
-    @PreAuthorize("@ss.hasPermission('product:spu:query')")
-    public CommonResult<SpuRespVO> getSpu(@RequestParam("id") Long id) {
-        return success(spuService.getSpu(id));
+    @GetMapping("/get-detail")
+    @Operation(summary = "获得商品 SPU 明细")
+    @Parameter(name = "id", description = "编号", required = true, example = "1024")
+    @PreAuthorize("@ss.hasPermission('product:spu:query') && @ss.hasAllPlugApp('"+ MALL_CODE +"')")
+    public CommonResult<ProductSpuRespVO> getSpuDetail(@RequestParam("id") Long id) {
+        // 获得商品 SPU
+        ProductSpuDO spu = productSpuService.getSpu(id);
+        if (spu == null) {
+            return success(null);
+        }
+        // 查询商品 SKU
+        List<ProductSkuDO> skus = productSkuService.getSkuListBySpuId(spu.getId());
+        return success(ProductSpuConvert.INSTANCE.convert(spu, skus));
+    }
+
+    @GetMapping("/list-all-simple")
+    @Operation(summary = "获得商品 SPU 精简列表")
+    @PreAuthorize("@ss.hasPermission('product:spu:query') && @ss.hasAllPlugApp('"+ MALL_CODE +"')")
+    public CommonResult<List<ProductSpuSimpleRespVO>> getSpuSimpleList() {
+        List<ProductSpuDO> list = productSpuService.getSpuListByStatus(ProductSpuStatusEnum.ENABLE.getStatus());
+        // 降序排序后，返回给前端
+        list.sort(Comparator.comparing(ProductSpuDO::getSort).reversed());
+        return success(BeanUtils.toBean(list, ProductSpuSimpleRespVO.class));
     }
 
     @GetMapping("/list")
-    @ApiOperation("获得商品spu列表")
-    @ApiImplicitParam(name = "ids", value = "编号列表", required = true, example = "1024,2048", dataTypeClass = List.class)
-    @PreAuthorize("@ss.hasPermission('product:spu:query')")
-    public CommonResult<List<SpuRespVO>> getSpuList(@RequestParam("ids") Collection<Long> ids) {
-        List<ProductSpuDO> list = spuService.getSpuList(ids);
-        return success(ProductSpuConvert.INSTANCE.convertList(list));
+    @Operation(summary = "获得商品 SPU 详情列表")
+    @Parameter(name = "spuIds", description = "spu 编号列表", required = true, example = "[1,2,3]")
+    @PreAuthorize("@ss.hasPermission('product:spu:query') && @ss.hasAllPlugApp('"+ MALL_CODE +"')")
+    public CommonResult<List<ProductSpuRespVO>> getSpuList(@RequestParam("spuIds") Collection<Long> spuIds) {
+        return success(ProductSpuConvert.INSTANCE.convertForSpuDetailRespListVO(
+                productSpuService.getSpuList(spuIds), productSkuService.getSkuListBySpuId(spuIds)));
     }
 
     @GetMapping("/page")
-    @ApiOperation("获得商品spu分页")
-    @PreAuthorize("@ss.hasPermission('product:spu:query')")
-    public CommonResult<PageResult<SpuRespVO>> getSpuPage(@Valid SpuPageReqVO pageVO) {
-        return success(spuService.getSpuPage(pageVO));
+    @Operation(summary = "获得商品 SPU 分页")
+    @PreAuthorize("@ss.hasPermission('product:spu:query') && @ss.hasAllPlugApp('"+ MALL_CODE +"')")
+    public CommonResult<PageResult<ProductSpuRespVO>> getSpuPage(@Valid ProductSpuPageReqVO pageVO) {
+        PageResult<ProductSpuDO> pageResult = productSpuService.getSpuPage(pageVO);
+        return success(BeanUtils.toBean(pageResult, ProductSpuRespVO.class));
     }
 
-    @GetMapping("/export-excel")
-    @ApiOperation("导出商品spu Excel")
-    @PreAuthorize("@ss.hasPermission('product:spu:export')")
+    @GetMapping("/get-count")
+    @Operation(summary = "获得商品 SPU 分页 tab count")
+    @PreAuthorize("@ss.hasPermission('product:spu:query') && @ss.hasAllPlugApp('"+ MALL_CODE +"')")
+    public CommonResult<Map<Integer, Long>> getSpuCount() {
+        return success(productSpuService.getTabsCount());
+    }
+
+    @GetMapping("/export")
+    @Operation(summary = "导出商品")
+    @PreAuthorize("@ss.hasPermission('product:spu:export') && @ss.hasAllPlugApp('"+ MALL_CODE +"')")
     @OperateLog(type = EXPORT)
-    public void exportSpuExcel(@Valid SpuExportReqVO exportReqVO,
-              HttpServletResponse response) throws IOException {
-        List<ProductSpuDO> list = spuService.getSpuList(exportReqVO);
+    public void exportSpuList(@Validated ProductSpuPageReqVO reqVO,
+                               HttpServletResponse response) throws IOException {
+        reqVO.setPageSize(PAGE_SIZE_NONE);
+        List<ProductSpuDO> list = productSpuService.getSpuPage(reqVO).getList();
         // 导出 Excel
-        List<SpuExcelVO> datas = ProductSpuConvert.INSTANCE.convertList02(list);
-        ExcelUtils.write(response, "商品spu.xls", "数据", SpuExcelVO.class, datas);
+        ExcelUtils.write(response, "商品列表.xls", "数据", ProductSpuRespVO.class,
+                BeanUtils.toBean(list, ProductSpuRespVO.class));
     }
 
 }

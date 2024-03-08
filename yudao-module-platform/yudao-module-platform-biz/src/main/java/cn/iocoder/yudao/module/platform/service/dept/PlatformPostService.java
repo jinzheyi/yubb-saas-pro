@@ -2,10 +2,10 @@ package cn.iocoder.yudao.module.platform.service.dept;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.dept.vo.post.PostUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.dept.vo.post.PostCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.dept.vo.post.PostExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.dept.vo.post.PostPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.dept.vo.post.PostUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dept.PlatformPostDO;
 import org.springframework.lang.Nullable;
 
@@ -17,7 +17,7 @@ import static cn.iocoder.yudao.framework.common.util.collection.SetUtils.asSet;
 /**
  * 岗位 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface PlatformPostService {
 
@@ -49,8 +49,8 @@ public interface PlatformPostService {
      * @param ids 岗位编号数组。如果为空，不进行筛选
      * @return 部门列表
      */
-    default List<PlatformPostDO> getPosts(@Nullable Collection<Long> ids) {
-        return getPosts(ids, asSet(CommonStatusEnum.ENABLE.getStatus(), CommonStatusEnum.DISABLE.getStatus()));
+    default List<PlatformPostDO> getPostList(@Nullable Collection<Long> ids) {
+        return getPostList(ids, asSet(CommonStatusEnum.ENABLE.getStatus(), CommonStatusEnum.DISABLE.getStatus()));
     }
 
     /**
@@ -60,7 +60,7 @@ public interface PlatformPostService {
      * @param statuses 状态数组。如果为空，不进行筛选
      * @return 部门列表
      */
-    List<PlatformPostDO> getPosts(@Nullable Collection<Long> ids, @Nullable Collection<Integer> statuses);
+    List<PlatformPostDO> getPostList(@Nullable Collection<Long> ids, @Nullable Collection<Integer> statuses);
 
     /**
      * 获得岗位分页列表
@@ -76,7 +76,7 @@ public interface PlatformPostService {
      * @param reqVO 查询条件
      * @return 部门列表
      */
-    List<PlatformPostDO> getPosts(PostExportReqVO reqVO);
+    List<PlatformPostDO> getPostList(PostExportReqVO reqVO);
 
     /**
      * 获得岗位信息
@@ -93,6 +93,6 @@ public interface PlatformPostService {
      *
      * @param ids 岗位编号数组
      */
-    void validPosts(Collection<Long> ids);
+    void validatePostList(Collection<Long> ids);
 
 }

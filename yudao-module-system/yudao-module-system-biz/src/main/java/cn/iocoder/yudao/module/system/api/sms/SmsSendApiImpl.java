@@ -2,15 +2,14 @@ package cn.iocoder.yudao.module.system.api.sms;
 
 import cn.iocoder.yudao.module.system.api.sms.dto.send.SmsSendSingleToUserReqDTO;
 import cn.iocoder.yudao.module.system.service.sms.SmsSendService;
+import javax.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
-
-import javax.annotation.Resource;
 
 /**
  * 短信发送 API 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 @Validated

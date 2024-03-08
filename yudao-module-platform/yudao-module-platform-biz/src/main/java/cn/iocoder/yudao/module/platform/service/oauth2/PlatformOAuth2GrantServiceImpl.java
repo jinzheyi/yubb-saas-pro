@@ -19,7 +19,7 @@ import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionU
 /**
  * OAuth2 授予 Service 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 public class PlatformOAuth2GrantServiceImpl implements PlatformOAuth2GrantService {
@@ -76,7 +76,7 @@ public class PlatformOAuth2GrantServiceImpl implements PlatformOAuth2GrantServic
         Assert.notNull(user, "用户不能为空！"); // 防御性编程
 
         // 创建访问令牌
-        return oauth2TokenServicePlatform.createAccessToken(user.getId(), UserTypeEnum.CENTER.getValue(), clientId, scopes);
+        return oauth2TokenServicePlatform.createAccessToken(user.getId(), UserTypeEnum.PLATFORM.getValue(), clientId, scopes);
     }
 
     @Override

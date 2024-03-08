@@ -1,27 +1,26 @@
 package cn.iocoder.yudao.module.platform.api.logger;
 
-import cn.iocoder.yudao.module.platform.api.logger.dto.LoginLogCreateReqDTO;
+import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformLoginLogCreateReqDTO;
 import cn.iocoder.yudao.module.platform.service.logger.PlatformLoginLogService;
+import javax.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
-
-import javax.annotation.Resource;
 
 /**
  * 登录日志的 API 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 @Validated
-public class PlatformLoginLogApiImpl implements LoginLogApi {
+public class PlatformLoginLogApiImpl implements PlatformLoginLogApi {
 
     @Resource
-    private PlatformLoginLogService platformLoginLogService;
+    private PlatformLoginLogService loginLogService;
 
     @Override
-    public void createLoginLog(LoginLogCreateReqDTO reqDTO) {
-        platformLoginLogService.createLoginLog(reqDTO);
+    public void createLoginLog(PlatformLoginLogCreateReqDTO reqDTO) {
+        loginLogService.createLoginLog(reqDTO);
     }
 
 }

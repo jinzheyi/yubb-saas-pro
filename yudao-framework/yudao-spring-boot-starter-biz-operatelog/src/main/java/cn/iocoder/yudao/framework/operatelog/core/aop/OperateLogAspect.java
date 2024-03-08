@@ -1,9 +1,9 @@
 package cn.iocoder.yudao.framework.operatelog.core.aop;
 
+import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.extra.servlet.ServletUtil;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
@@ -14,8 +14,8 @@ import cn.iocoder.yudao.framework.operatelog.core.service.OperateLog;
 import cn.iocoder.yudao.framework.operatelog.core.service.OperateLogFrameworkService;
 import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
 import com.google.common.collect.Maps;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
@@ -47,7 +48,7 @@ import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeC
  * <p>
  * 但是，如果声明 @OperateLog 注解时，将 enable 属性设置为 false 时，强制不记录。
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Aspect
 @Slf4j
@@ -69,15 +70,15 @@ public class OperateLogAspect {
     @Resource
     private OperateLogFrameworkService operateLogFrameworkService;
 
-    @Around("@annotation(apiOperation)")
-    public Object around(ProceedingJoinPoint joinPoint, ApiOperation apiOperation) throws Throwable {
+    @Around("@annotation(operation)")
+    public Object around(ProceedingJoinPoint joinPoint, Operation operation) throws Throwable {
         // 可能也添加了 @ApiOperation 注解
         cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog operateLog = getMethodAnnotation(joinPoint,
                 cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog.class);
-        return around0(joinPoint, operateLog, apiOperation);
+        return around0(joinPoint, operateLog, operation);
     }
 
-    @Around("!@annotation(io.swagger.annotations.ApiOperation) && @annotation(operateLog)")
+    @Around("!@annotation(io.swagger.v3.oas.annotations.Operation) && @annotation(operateLog)")
     // 兼容处理，只添加 @OperateLog 注解的情况
     public Object around(ProceedingJoinPoint joinPoint,
                          cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog operateLog) throws Throwable {
@@ -86,24 +87,23 @@ public class OperateLogAspect {
 
     private Object around0(ProceedingJoinPoint joinPoint,
                            cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog operateLog,
-                           ApiOperation apiOperation) throws Throwable {
+                           Operation operation) throws Throwable {
         // 目前，只有管理员，才记录操作日志！所以非管理员，直接调用，不进行记录
         Integer userType = WebFrameworkUtils.getLoginUserType();
-        if (!Objects.equals(userType, UserTypeEnum.ADMIN.getValue()) &&
-                !Objects.equals(userType, UserTypeEnum.CENTER.getValue())) {
+        if (!Objects.equals(userType, UserTypeEnum.ADMIN.getValue()) && !Objects.equals(userType, UserTypeEnum.PLATFORM.getValue())) {
             return joinPoint.proceed();
         }
 
         // 记录开始时间
-        Date startTime = new Date();
+        LocalDateTime startTime = LocalDateTime.now();
         try {
             // 执行原有方法
             Object result = joinPoint.proceed();
             // 记录正常执行时的操作日志
-            this.log(joinPoint, operateLog, apiOperation, startTime, result, null);
+            this.log(joinPoint, operateLog, operation, startTime, result, null, userType);
             return result;
         } catch (Throwable exception) {
-            this.log(joinPoint, operateLog, apiOperation, startTime, null, exception);
+            this.log(joinPoint, operateLog, operation, startTime, null, exception, userType);
             throw exception;
         } finally {
             clearThreadLocal();
@@ -128,25 +128,25 @@ public class OperateLogAspect {
 
     private void log(ProceedingJoinPoint joinPoint,
                      cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog operateLog,
-                     ApiOperation apiOperation,
-                     Date startTime, Object result, Throwable exception) {
+                     Operation operation,
+                     LocalDateTime startTime, Object result, Throwable exception, Integer userType) {
         try {
             // 判断不记录的情况
             if (!isLogEnable(joinPoint, operateLog)) {
                 return;
             }
             // 真正记录操作日志
-            this.log0(joinPoint, operateLog, apiOperation, startTime, result, exception);
+            this.log0(joinPoint, operateLog, operation, startTime, result, exception, userType);
         } catch (Throwable ex) {
             log.error("[log][记录操作日志时，发生异常，其中参数是 joinPoint({}) operateLog({}) apiOperation({}) result({}) exception({}) ]",
-                    joinPoint, operateLog, apiOperation, result, exception, ex);
+                    joinPoint, operateLog, operation, result, exception, ex);
         }
     }
 
     private void log0(ProceedingJoinPoint joinPoint,
                       cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog operateLog,
-                      ApiOperation apiOperation,
-                      Date startTime, Object result, Throwable exception) {
+                      Operation operation,
+                      LocalDateTime startTime, Object result, Throwable exception, Integer userType) {
         OperateLog operateLogObj = new OperateLog();
         // 补全通用字段
         operateLogObj.setTraceId(TracerUtils.getTraceId());
@@ -154,12 +154,13 @@ public class OperateLogAspect {
         // 补充用户信息
         fillUserFields(operateLogObj);
         // 补全模块信息
-        fillModuleFields(operateLogObj, joinPoint, operateLog, apiOperation);
+        fillModuleFields(operateLogObj, joinPoint, operateLog, operation);
         // 补全请求信息
         fillRequestFields(operateLogObj);
         // 补全方法信息
         fillMethodFields(operateLogObj, joinPoint, operateLog, startTime, result, exception);
-
+        // 补全平台信息
+        operateLogObj.setTerrace(userType);
         // 异步记录日志
         operateLogFrameworkService.createOperateLog(operateLogObj);
     }
@@ -167,26 +168,27 @@ public class OperateLogAspect {
     private static void fillUserFields(OperateLog operateLogObj) {
         operateLogObj.setUserId(WebFrameworkUtils.getLoginUserId());
         operateLogObj.setUserType(WebFrameworkUtils.getLoginUserType());
+        operateLogObj.setTenantId(WebFrameworkUtils.getTenantId());
     }
 
     private static void fillModuleFields(OperateLog operateLogObj,
                                          ProceedingJoinPoint joinPoint,
                                          cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog operateLog,
-                                         ApiOperation apiOperation) {
+                                         Operation operation) {
         // module 属性
         if (operateLog != null) {
             operateLogObj.setModule(operateLog.module());
         }
         if (StrUtil.isEmpty(operateLogObj.getModule())) {
-            Api api = getClassAnnotation(joinPoint, Api.class);
-            if (api != null) {
-                // 优先读取 @API 的 name 属性
-                if (StrUtil.isNotEmpty(api.value())) {
-                    operateLogObj.setModule(api.value());
+            Tag tag = getClassAnnotation(joinPoint, Tag.class);
+            if (tag != null) {
+                // 优先读取 @Tag 的 name 属性
+                if (StrUtil.isNotEmpty(tag.name())) {
+                    operateLogObj.setModule(tag.name());
                 }
-                // 没有的话，读取 @API 的 tags 属性
-                if (StrUtil.isEmpty(operateLogObj.getModule()) && ArrayUtil.isNotEmpty(api.tags())) {
-                    operateLogObj.setModule(api.tags()[0]);
+                // 没有的话，读取 @API 的 description 属性
+                if (StrUtil.isEmpty(operateLogObj.getModule()) && ArrayUtil.isNotEmpty(tag.description())) {
+                    operateLogObj.setModule(tag.description());
                 }
             }
         }
@@ -194,8 +196,8 @@ public class OperateLogAspect {
         if (operateLog != null) {
             operateLogObj.setName(operateLog.name());
         }
-        if (StrUtil.isEmpty(operateLogObj.getName()) && apiOperation != null) {
-            operateLogObj.setName(apiOperation.value());
+        if (StrUtil.isEmpty(operateLogObj.getName()) && operation != null) {
+            operateLogObj.setName(operation.summary());
         }
         // type 属性
         if (operateLog != null && ArrayUtil.isNotEmpty(operateLog.type())) {
@@ -220,14 +222,14 @@ public class OperateLogAspect {
         // 补全请求信息
         operateLogObj.setRequestMethod(request.getMethod());
         operateLogObj.setRequestUrl(request.getRequestURI());
-        operateLogObj.setUserIp(ServletUtil.getClientIP(request));
+        operateLogObj.setUserIp(ServletUtils.getClientIP(request));
         operateLogObj.setUserAgent(ServletUtils.getUserAgent(request));
     }
 
     private static void fillMethodFields(OperateLog operateLogObj,
                                          ProceedingJoinPoint joinPoint,
                                          cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog operateLog,
-                                         Date startTime, Object result, Throwable exception) {
+                                         LocalDateTime startTime, Object result, Throwable exception) {
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         operateLogObj.setJavaMethod(methodSignature.toString());
         if (operateLog == null || operateLog.logArgs()) {
@@ -236,7 +238,7 @@ public class OperateLogAspect {
         if (operateLog == null || operateLog.logResultData()) {
             operateLogObj.setResultData(obtainResultData(result));
         }
-        operateLogObj.setDuration((int) (System.currentTimeMillis() - startTime.getTime()));
+        operateLogObj.setDuration((int) (LocalDateTimeUtil.between(startTime, LocalDateTime.now()).toMillis()));
         // （正常）处理 resultCode 和 resultMsg 字段
         if (result instanceof CommonResult) {
             CommonResult<?> commonResult = (CommonResult<?>) result;

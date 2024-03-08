@@ -1,8 +1,6 @@
 package cn.iocoder.yudao.module.system.service.logger;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.operatelog.core.service.OperateLog;
-import cn.iocoder.yudao.framework.operatelog.core.service.OperateLogFrameworkService;
 import cn.iocoder.yudao.module.system.api.logger.dto.OperateLogCreateReqDTO;
 import cn.iocoder.yudao.module.system.controller.admin.logger.vo.operatelog.OperateLogExportReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.logger.vo.operatelog.OperateLogPageReqVO;
@@ -13,7 +11,7 @@ import java.util.List;
 /**
  * 操作日志 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface OperateLogService {
 
@@ -38,6 +36,6 @@ public interface OperateLogService {
      * @param reqVO 列表条件
      * @return 日志列表
      */
-    List<OperateLogDO> getOperateLogs(OperateLogExportReqVO reqVO);
+    List<OperateLogDO> getOperateLogList(OperateLogExportReqVO reqVO);
 
 }

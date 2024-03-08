@@ -3,14 +3,14 @@ package cn.iocoder.yudao.module.infra.dal.mysql.file;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
-import cn.iocoder.yudao.module.infra.controller.center.file.vo.file.FilePageReqVO;
+import cn.iocoder.yudao.module.infra.controller.platform.file.vo.file.FilePageReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.file.FileDO;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 文件操作 Mapper
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Mapper
 public interface FileMapper extends BaseMapperX<FileDO> {

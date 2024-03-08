@@ -8,17 +8,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import javax.annotation.Resource;
-import java.util.Calendar;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.OAUTH2_CODE_EXPIRE;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.OAUTH2_CODE_NOT_EXISTS;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * OAuth2.0 授权码 Service 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 @Validated
@@ -38,7 +37,7 @@ public class PlatformOAuth2CodeServiceImpl implements PlatformOAuth2CodeService 
         PlatformOAuth2CodeDO codeDO = new PlatformOAuth2CodeDO().setCode(generateCode())
                 .setUserId(userId).setUserType(userType)
                 .setClientId(clientId).setScopes(scopes)
-                .setExpiresTime(DateUtils.addDate(Calendar.SECOND, TIMEOUT))
+                .setExpiresTime(LocalDateTime.now().plusSeconds(TIMEOUT))
                 .setRedirectUri(redirectUri).setState(state);
         oauth2CodeMapperPlatform.insert(codeDO);
         return codeDO;

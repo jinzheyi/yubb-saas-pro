@@ -9,7 +9,7 @@ import javax.validation.Valid;
 /**
  * OAuth2.0 Token API 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface PlatformOAuth2TokenApi {
 

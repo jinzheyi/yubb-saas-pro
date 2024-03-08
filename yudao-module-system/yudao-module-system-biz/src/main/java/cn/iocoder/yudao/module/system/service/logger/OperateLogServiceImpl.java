@@ -3,11 +3,11 @@ package cn.iocoder.yudao.module.system.service.logger;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.common.util.string.StrUtils;
 import cn.iocoder.yudao.module.system.api.logger.dto.OperateLogCreateReqDTO;
 import cn.iocoder.yudao.module.system.controller.admin.logger.vo.operatelog.OperateLogExportReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.logger.vo.operatelog.OperateLogPageReqVO;
-import cn.iocoder.yudao.module.system.convert.logger.OperateLogConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.logger.OperateLogDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.module.system.dal.mysql.logger.OperateLogMapper;
@@ -34,11 +34,11 @@ public class OperateLogServiceImpl implements OperateLogService {
     private OperateLogMapper operateLogMapper;
 
     @Resource
-    private AdminUserService userService;
+    private AdminUserService adminUserService;
 
     @Override
     public void createOperateLog(OperateLogCreateReqDTO createReqDTO) {
-        OperateLogDO logDO = OperateLogConvert.INSTANCE.convert(createReqDTO);
+        OperateLogDO logDO = BeanUtils.toBean(createReqDTO, OperateLogDO.class);
         logDO.setJavaMethodArgs(StrUtils.maxLength(logDO.getJavaMethodArgs(), JAVA_METHOD_ARGS_MAX_LENGTH));
         logDO.setResultData(StrUtils.maxLength(logDO.getResultData(), RESULT_MAX_LENGTH));
         operateLogMapper.insert(logDO);
@@ -49,7 +49,7 @@ public class OperateLogServiceImpl implements OperateLogService {
         // 处理基于用户昵称的查询
         Collection<Long> userIds = null;
         if (StrUtil.isNotEmpty(reqVO.getUserNickname())) {
-            userIds = convertSet(userService.getUsersByNickname(reqVO.getUserNickname()), AdminUserDO::getId);
+            userIds = convertSet(adminUserService.getUserListByNickname(reqVO.getUserNickname()), AdminUserDO::getId);
             if (CollUtil.isEmpty(userIds)) {
                 return PageResult.empty();
             }
@@ -59,11 +59,11 @@ public class OperateLogServiceImpl implements OperateLogService {
     }
 
     @Override
-    public List<OperateLogDO> getOperateLogs(OperateLogExportReqVO reqVO) {
+    public List<OperateLogDO> getOperateLogList(OperateLogExportReqVO reqVO) {
         // 处理基于用户昵称的查询
         Collection<Long> userIds = null;
         if (StrUtil.isNotEmpty(reqVO.getUserNickname())) {
-            userIds = convertSet(userService.getUsersByNickname(reqVO.getUserNickname()), AdminUserDO::getId);
+            userIds = convertSet(adminUserService.getUserListByNickname(reqVO.getUserNickname()), AdminUserDO::getId);
             if (CollUtil.isEmpty(userIds)) {
                 return Collections.emptyList();
             }

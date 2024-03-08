@@ -12,7 +12,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 /**
  * 用户组 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface BpmUserGroupService {
 

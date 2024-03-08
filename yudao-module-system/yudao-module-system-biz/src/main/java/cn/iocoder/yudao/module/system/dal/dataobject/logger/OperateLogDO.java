@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.system.dal.dataobject.logger;
 
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum;
 import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
@@ -12,13 +13,13 @@ import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
  * 操作日志表
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName(value = "system_operate_log", autoResultMap = true)
 @KeySequence("system_operate_log_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
@@ -117,7 +118,7 @@ public class OperateLogDO extends TenantBaseDO {
     /**
      * 开始时间
      */
-    private Date startTime;
+    private LocalDateTime startTime;
     /**
      * 执行时长，单位：毫秒
      */

@@ -9,13 +9,13 @@ import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * OAuth2 授权码 DO
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName(value = "platform_oauth2_code", autoResultMap = true)
 @KeySequence("platform_oauth2_code_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
@@ -63,6 +63,6 @@ public class PlatformOAuth2CodeDO extends BaseDO {
     /**
      * 过期时间
      */
-    private Date expiresTime;
+    private LocalDateTime expiresTime;
 
 }

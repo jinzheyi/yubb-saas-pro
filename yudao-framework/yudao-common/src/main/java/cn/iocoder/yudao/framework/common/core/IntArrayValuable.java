@@ -3,7 +3,7 @@ package cn.iocoder.yudao.framework.common.core;
 /**
  * 可生成 Int 数组的接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface IntArrayValuable {
 

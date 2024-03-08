@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * 字典数据 API 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface DictDataApi {
 
@@ -21,7 +21,7 @@ public interface DictDataApi {
      * @param dictType 字典类型
      * @param values 字典数据值的数组
      */
-    void validDictDatas(String dictType, Collection<String> values);
+    void validateDictDataList(String dictType, Collection<String> values);
 
     /**
      * 获得指定的字典数据，从缓存中
@@ -46,6 +46,14 @@ public interface DictDataApi {
      *
      * @return 字典数据全列表
      */
-    List<DictDataSimpleRespDTO> getDictDatas();
+    List<DictDataSimpleRespDTO> getDictDataList();
+
+    /**
+     * 获得字典数据列表
+     *
+     * @param dictType 字典类型
+     * @return 字典数据列表
+     */
+    List<DictDataRespDTO> getEnabledDictDataListByType(String dictType);
 
 }

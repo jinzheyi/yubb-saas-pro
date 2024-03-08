@@ -6,7 +6,7 @@ import lombok.Data;
 /**
  * 部门 Response DTO
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Data
 public class DeptRespDTO {

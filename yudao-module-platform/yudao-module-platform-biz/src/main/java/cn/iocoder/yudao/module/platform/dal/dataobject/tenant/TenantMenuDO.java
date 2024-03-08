@@ -1,8 +1,9 @@
 package cn.iocoder.yudao.module.platform.dal.dataobject.tenant;
 
+import cn.iocoder.yudao.framework.common.enums.CommonConstants;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.framework.common.enums.permission.MenuTypeEnum;
+import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -21,7 +22,7 @@ import lombok.EqualsAndHashCode;
 public class TenantMenuDO extends BaseDO {
 
     /**
-     * 菜单ID
+     * 菜单编号
      */
     @TableId
     private Long id;
@@ -56,6 +57,8 @@ public class TenantMenuDO extends BaseDO {
     private Long parentId;
     /**
      * 路由地址
+     *
+     * 如果 path 为 http(s) 时，则它是外链
      */
     private String path;
     /**
@@ -66,6 +69,10 @@ public class TenantMenuDO extends BaseDO {
      * 组件路径
      */
     private String component;
+    /**
+     * 组件名
+     */
+    private String componentName;
     /**
      * 状态
      *
@@ -82,9 +89,27 @@ public class TenantMenuDO extends BaseDO {
     /**
      * 是否缓存
      *
-     * 只有菜单、目录使用
-     * 是否使用 Vue 路由的 keep-alive 特性
+     * 只有菜单、目录使用，否使用 Vue 路由的 keep-alive 特性
+     * 注意：如果开启缓存，则必须填写 {@link #componentName} 属性，否则无法缓存
      */
     private Boolean keepAlive;
+    /**
+     * 是否总是显示
+     *
+     * 如果为 false 时，当该菜单只有一个子菜单时，不展示自己，直接展示子菜单
+     */
+    private Boolean alwaysShow;
+
+    /**
+     * 菜单维度 0：普通菜单  1：插件菜单
+     *
+     * 枚举 {@link CommonConstants.MenuDimensionEnum}
+     */
+    private Integer dimension;
+
+    /**
+     * 应用插件编码
+     */
+    private String plugAppSn;
 
 }

@@ -7,9 +7,10 @@ import cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstant
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
+import cn.iocoder.yudao.module.platform.api.oauth2.PlatformOAuth2ClientApi;
+import cn.iocoder.yudao.module.platform.api.oauth2.dto.client.OAuth2ClientRespDTO;
 import cn.iocoder.yudao.module.system.controller.admin.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2ClientDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2RefreshTokenDO;
 import cn.iocoder.yudao.module.system.dal.mysql.oauth2.OAuth2AccessTokenMapper;
 import cn.iocoder.yudao.module.system.dal.mysql.oauth2.OAuth2RefreshTokenMapper;
@@ -18,7 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import java.util.Calendar;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception0;
@@ -27,7 +28,7 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 /**
  * OAuth2.0 Token Service 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 public class OAuth2TokenServiceImpl implements OAuth2TokenService {
@@ -41,16 +42,16 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
     private OAuth2AccessTokenRedisDAO oauth2AccessTokenRedisDAO;
 
     @Resource
-    private OAuth2ClientService oauth2ClientService;
+    private PlatformOAuth2ClientApi auth2ClientApi;
 
     @Override
     @Transactional
     public OAuth2AccessTokenDO createAccessToken(Long userId, Integer userType, String clientId, List<String> scopes) {
-        OAuth2ClientDO clientDO = oauth2ClientService.validOAuthClientFromCache(clientId);
+        OAuth2ClientRespDTO clientRespDTO = auth2ClientApi.validOAuthClientFromCache(clientId);
         // 创建刷新令牌
-        OAuth2RefreshTokenDO refreshTokenDO = createOAuth2RefreshToken(userId, userType, clientDO, scopes);
+        OAuth2RefreshTokenDO refreshTokenDO = createOAuth2RefreshToken(userId, userType, clientRespDTO, scopes);
         // 创建访问令牌
-        return createOAuth2AccessToken(refreshTokenDO, clientDO);
+        return createOAuth2AccessToken(refreshTokenDO, clientRespDTO);
     }
 
     @Override
@@ -62,7 +63,7 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
         }
 
         // 校验 Client 匹配
-        OAuth2ClientDO clientDO = oauth2ClientService.validOAuthClientFromCache(clientId);
+        OAuth2ClientRespDTO clientRespDTO = auth2ClientApi.validOAuthClientFromCache(clientId);
         if (ObjectUtil.notEqual(clientId, refreshTokenDO.getClientId())) {
             throw exception0(GlobalErrorCodeConstants.BAD_REQUEST.getCode(), "刷新令牌的客户端编号不正确");
         }
@@ -81,7 +82,7 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
         }
 
         // 创建访问令牌
-        return createOAuth2AccessToken(refreshTokenDO, clientDO);
+        return createOAuth2AccessToken(refreshTokenDO, clientRespDTO);
     }
 
     @Override
@@ -132,12 +133,12 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
         return oauth2AccessTokenMapper.selectPage(reqVO);
     }
 
-    private OAuth2AccessTokenDO createOAuth2AccessToken(OAuth2RefreshTokenDO refreshTokenDO, OAuth2ClientDO clientDO) {
+    private OAuth2AccessTokenDO createOAuth2AccessToken(OAuth2RefreshTokenDO refreshTokenDO, OAuth2ClientRespDTO clientRespDTO) {
         OAuth2AccessTokenDO accessTokenDO = new OAuth2AccessTokenDO().setAccessToken(generateAccessToken())
                 .setUserId(refreshTokenDO.getUserId()).setUserType(refreshTokenDO.getUserType())
-                .setClientId(clientDO.getClientId()).setScopes(refreshTokenDO.getScopes())
+                .setClientId(clientRespDTO.getClientId()).setScopes(refreshTokenDO.getScopes())
                 .setRefreshToken(refreshTokenDO.getRefreshToken())
-                .setExpiresTime(DateUtils.addDate(Calendar.SECOND, clientDO.getAccessTokenValiditySeconds()));
+                .setExpiresTime(LocalDateTime.now().plusSeconds(clientRespDTO.getAccessTokenValiditySeconds()));
         accessTokenDO.setTenantId(TenantContextHolder.getTenantId()); // 手动设置租户编号，避免缓存到 Redis 的时候，无对应的租户编号
         oauth2AccessTokenMapper.insert(accessTokenDO);
         // 记录到 Redis 中
@@ -145,11 +146,11 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
         return accessTokenDO;
     }
 
-    private OAuth2RefreshTokenDO createOAuth2RefreshToken(Long userId, Integer userType, OAuth2ClientDO clientDO, List<String> scopes) {
+    private OAuth2RefreshTokenDO createOAuth2RefreshToken(Long userId, Integer userType, OAuth2ClientRespDTO clientRespDTO, List<String> scopes) {
         OAuth2RefreshTokenDO refreshToken = new OAuth2RefreshTokenDO().setRefreshToken(generateRefreshToken())
                 .setUserId(userId).setUserType(userType)
-                .setClientId(clientDO.getClientId()).setScopes(scopes)
-                .setExpiresTime(DateUtils.addDate(Calendar.SECOND, clientDO.getRefreshTokenValiditySeconds()));
+                .setClientId(clientRespDTO.getClientId()).setScopes(scopes)
+                .setExpiresTime(LocalDateTime.now().plusSeconds(clientRespDTO.getRefreshTokenValiditySeconds()));
         oauth2RefreshTokenMapper.insert(refreshToken);
         return refreshToken;
     }

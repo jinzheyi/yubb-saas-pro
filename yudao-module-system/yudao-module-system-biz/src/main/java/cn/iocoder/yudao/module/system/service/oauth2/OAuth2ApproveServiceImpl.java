@@ -3,8 +3,9 @@ package cn.iocoder.yudao.module.system.service.oauth2;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
+import cn.iocoder.yudao.module.platform.api.oauth2.PlatformOAuth2ClientApi;
+import cn.iocoder.yudao.module.platform.api.oauth2.dto.client.OAuth2ClientRespDTO;
 import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2ApproveDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2ClientDO;
 import cn.iocoder.yudao.module.system.dal.mysql.oauth2.OAuth2ApproveMapper;
 import com.google.common.annotations.VisibleForTesting;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import javax.annotation.Resource;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
@@ -19,7 +21,7 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 /**
  * OAuth2 批准 Service 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 @Validated
@@ -31,7 +33,7 @@ public class OAuth2ApproveServiceImpl implements OAuth2ApproveService {
     private static final Integer TIMEOUT = 30 * 24 * 60 * 60; // 单位：秒
 
     @Resource
-    private OAuth2ClientService oauth2ClientService;
+    private PlatformOAuth2ClientApi auth2ClientApi;
 
     @Resource
     private OAuth2ApproveMapper oauth2ApproveMapper;
@@ -40,11 +42,11 @@ public class OAuth2ApproveServiceImpl implements OAuth2ApproveService {
     @Transactional
     public boolean checkForPreApproval(Long userId, Integer userType, String clientId, Collection<String> requestedScopes) {
         // 第一步，基于 Client 的自动授权计算，如果 scopes 都在自动授权中，则返回 true 通过
-        OAuth2ClientDO clientDO = oauth2ClientService.validOAuthClientFromCache(clientId);
-        Assert.notNull(clientDO, "客户端不能为空"); // 防御性编程
-        if (CollUtil.containsAll(clientDO.getAutoApproveScopes(), requestedScopes)) {
+        OAuth2ClientRespDTO clientRespDTO = auth2ClientApi.validOAuthClientFromCache(clientId);
+        Assert.notNull(clientRespDTO, "客户端不能为空"); // 防御性编程
+        if (CollUtil.containsAll(clientRespDTO.getAutoApproveScopes(), requestedScopes)) {
             // gh-877 - if all scopes are auto approved, approvals still need to be added to the approval store.
-            Date expireTime = DateUtils.addDate(Calendar.SECOND, TIMEOUT);
+            LocalDateTime expireTime = LocalDateTime.now().plusSeconds(TIMEOUT);
             for (String scope : requestedScopes) {
                 saveApprove(userId, userType, clientId, scope, true, expireTime);
             }
@@ -68,8 +70,8 @@ public class OAuth2ApproveServiceImpl implements OAuth2ApproveService {
 
         // 更新批准的信息
         boolean success = false; // 需要至少有一个同意
-        Date expireTime = DateUtils.addDate(Calendar.SECOND, TIMEOUT);
-        for (Map.Entry<String, Boolean> entry :requestedScopes.entrySet()) {
+        LocalDateTime expireTime = LocalDateTime.now().plusSeconds(TIMEOUT);
+        for (Map.Entry<String, Boolean> entry : requestedScopes.entrySet()) {
             if (entry.getValue()) {
                 success = true;
             }
@@ -88,7 +90,7 @@ public class OAuth2ApproveServiceImpl implements OAuth2ApproveService {
 
     @VisibleForTesting
     void saveApprove(Long userId, Integer userType, String clientId,
-                     String scope, Boolean approved, Date expireTime) {
+                     String scope, Boolean approved, LocalDateTime expireTime) {
         // 先更新
         OAuth2ApproveDO approveDO = new OAuth2ApproveDO().setUserId(userId).setUserType(userType)
                 .setClientId(clientId).setScope(scope).setApproved(approved).setExpiresTime(expireTime);

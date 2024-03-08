@@ -1,29 +1,22 @@
 package cn.iocoder.yudao.module.platform.service.permission;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RolePageReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.permission.vo.role.RoleCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.permission.vo.role.RoleExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.permission.vo.role.RolePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.permission.vo.role.RoleUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
-import org.springframework.lang.Nullable;
-
-import javax.validation.Valid;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import javax.validation.Valid;
 
 /**
  * 角色 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface PlatformRoleService {
-
-    /**
-     * 初始化角色的本地缓存
-     */
-    void initLocalCache();
 
     /**
      * 创建角色
@@ -66,6 +59,14 @@ public interface PlatformRoleService {
     void updateRoleDataScope(Long id, Integer dataScope, Set<Long> dataScopeDeptIds);
 
     /**
+     * 获得角色
+     *
+     * @param id 角色编号
+     * @return 角色
+     */
+    PlatformRoleDO getRole(Long id);
+
+    /**
      * 获得角色，从缓存中
      *
      * @param id 角色编号
@@ -76,10 +77,10 @@ public interface PlatformRoleService {
     /**
      * 获得角色列表
      *
-     * @param statuses 筛选的状态。允许空，空时不筛选
+     * @param ids 角色编号数组
      * @return 角色列表
      */
-    List<PlatformRoleDO> getRoles(@Nullable Collection<Integer> statuses);
+    List<PlatformRoleDO> getRoleList(Collection<Long> ids);
 
     /**
      * 获得角色数组，从缓存中
@@ -87,33 +88,22 @@ public interface PlatformRoleService {
      * @param ids 角色编号数组
      * @return 角色数组
      */
-    List<PlatformRoleDO> getRolesFromCache(Collection<Long> ids);
+    List<PlatformRoleDO> getRoleListFromCache(Collection<Long> ids);
 
     /**
-     * 判断角色数组中，是否有超级管理员
+     * 获得角色列表
      *
-     * @param roleList 角色数组
-     * @return 是否有管理员
+     * @param statuses 筛选的状态
+     * @return 角色列表
      */
-    boolean hasAnySuperAdmin(Collection<PlatformRoleDO> roleList);
+    List<PlatformRoleDO> getRoleListByStatus(Collection<Integer> statuses);
 
     /**
-     * 判断角色编号数组中，是否有管理员
+     * 获得所有角色列表
      *
-     * @param ids 角色编号数组
-     * @return 是否有管理员
+     * @return 角色列表
      */
-    default boolean hasAnySuperAdmin(Set<Long> ids) {
-        return hasAnySuperAdmin(getRolesFromCache(ids));
-    }
-
-    /**
-     * 获得角色
-     *
-     * @param id 角色编号
-     * @return 角色
-     */
-    PlatformRoleDO getRole(Long id);
+    List<PlatformRoleDO> getRoleList();
 
     /**
      * 获得角色分页
@@ -132,12 +122,20 @@ public interface PlatformRoleService {
     List<PlatformRoleDO> getRoleList(RoleExportReqVO reqVO);
 
     /**
+     * 判断角色编号数组中，是否有管理员
+     *
+     * @param ids 角色编号数组
+     * @return 是否有管理员
+     */
+    boolean hasAnySuperAdmin(Collection<Long> ids);
+
+    /**
      * 校验角色们是否有效。如下情况，视为无效：
      * 1. 角色编号不存在
      * 2. 角色被禁用
      *
      * @param ids 角色编号数组
      */
-    void validRoles(Collection<Long> ids);
+    void validateRoleList(Collection<Long> ids);
 
 }

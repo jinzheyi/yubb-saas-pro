@@ -1,27 +1,21 @@
 package cn.iocoder.yudao.module.platform.service.oauth2;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth2ClientCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth2ClientPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.client.OAuth2ClientUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.oauth2.vo.client.OAuth2ClientCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.oauth2.vo.client.OAuth2ClientPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.oauth2.vo.client.OAuth2ClientUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2ClientDO;
-
-import javax.validation.Valid;
 import java.util.Collection;
+import javax.validation.Valid;
 
 /**
  * OAuth2.0 Client Service 接口
  *
  * 从功能上，和 JdbcClientDetailsService 的功能，提供客户端的操作
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface PlatformOAuth2ClientService {
-
-    /**
-     * 初始化 OAuth2Client 的本地缓存
-     */
-    void initLocalCache();
 
     /**
      * 创建 OAuth2 客户端
@@ -54,20 +48,12 @@ public interface PlatformOAuth2ClientService {
     PlatformOAuth2ClientDO getOAuth2Client(Long id);
 
     /**
-     * 获得 OAuth2 客户端
+     * 获得 OAuth2 客户端，从缓存中
      *
-     * @param clientId 客户端ID
+     * @param clientId 客户端编号
      * @return OAuth2 客户端
      */
-    PlatformOAuth2ClientDO getCache(String clientId);
-
-    /**
-     * 获得 OAuth2 客户端
-     *
-     * @param clientId 客户端ID
-     * @return OAuth2 客户端
-     */
-    PlatformOAuth2ClientDO getOAuth2Client(String clientId);
+    PlatformOAuth2ClientDO getOAuth2ClientFromCache(String clientId);
 
     /**
      * 获得 OAuth2 客户端分页

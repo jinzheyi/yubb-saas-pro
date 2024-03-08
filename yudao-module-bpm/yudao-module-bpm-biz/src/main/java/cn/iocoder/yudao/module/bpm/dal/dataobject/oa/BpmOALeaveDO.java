@@ -1,10 +1,12 @@
 package cn.iocoder.yudao.module.bpm.dal.dataobject.oa;
 
-import cn.iocoder.yudao.module.bpm.enums.task.BpmProcessInstanceResultEnum;
-import lombok.*;
-import java.util.*;
-import com.baomidou.mybatisplus.annotation.*;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.module.bpm.enums.task.BpmProcessInstanceResultEnum;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.*;
+
+import java.time.LocalDateTime;
 
 /**
  * OA 请假申请 DO
@@ -12,7 +14,7 @@ import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
  * {@link #day} 请假天数，目前先简单做。一般是分成请假上午和下午，可以是 1 整天，可以是 0.5 半天
  *
  * @author jason
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName("bpm_oa_leave")
 @Data
@@ -37,7 +39,6 @@ public class BpmOALeaveDO extends BaseDO {
     /**
      * 请假类型
      */
-    @TableField("`type`")
     private String type;
     /**
      * 原因
@@ -46,11 +47,11 @@ public class BpmOALeaveDO extends BaseDO {
     /**
      * 开始时间
      */
-    private Date startTime;
+    private LocalDateTime startTime;
     /**
      * 结束时间
      */
-    private Date endTime;
+    private LocalDateTime endTime;
     /**
      * 请假天数
      */

@@ -1,0 +1,89 @@
+package cn.iocoder.yudao.module.platform.api.oauth2.dto.client;
+
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import cn.iocoder.yudao.framework.common.enums.oauth2.OAuth2GrantTypeEnum;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.util.List;
+
+/**
+ * OAuth2 客户端
+ *
+ * @author 圣钰科技
+ */
+@Data
+public class OAuth2ClientRespDTO implements Serializable {
+
+    /**
+     * 编号
+     */
+    private Long id;
+    /**
+     * 客户端编号
+     */
+    private String clientId;
+    /**
+     * 客户端密钥
+     */
+    private String secret;
+    /**
+     * 应用名
+     */
+    private String name;
+    /**
+     * 应用图标
+     */
+    private String logo;
+    /**
+     * 应用描述
+     */
+    private String description;
+    /**
+     * 状态
+     *
+     * 枚举 {@link CommonStatusEnum}
+     */
+    private Integer status;
+    /**
+     * 访问令牌的有效期
+     */
+    private Integer accessTokenValiditySeconds;
+    /**
+     * 刷新令牌的有效期
+     */
+    private Integer refreshTokenValiditySeconds;
+    /**
+     * 可重定向的 URI 地址
+     */
+    private List<String> redirectUris;
+    /**
+     * 授权类型（模式）
+     *
+     * 枚举 {@link OAuth2GrantTypeEnum}
+     */
+    private List<String> authorizedGrantTypes;
+    /**
+     * 授权范围
+     */
+    private List<String> scopes;
+    /**
+     * 自动授权的 Scope
+     *
+     * code 授权时，如果 scope 在这个范围内，则自动通过
+     */
+    private List<String> autoApproveScopes;
+    /**
+     * 权限
+     */
+    private List<String> authorities;
+    /**
+     * 资源
+     */
+    private List<String> resourceIds;
+    /**
+     * 附加信息，JSON 格式
+     */
+    private String additionalInformation;
+
+}

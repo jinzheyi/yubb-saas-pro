@@ -4,30 +4,30 @@ import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
-import cn.iocoder.yudao.module.system.controller.admin.sensitiveword.vo.SensitiveWordCreateReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.sensitiveword.vo.SensitiveWordExportReqVO;
+import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.system.controller.admin.sensitiveword.vo.SensitiveWordPageReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.sensitiveword.vo.SensitiveWordUpdateReqVO;
-import cn.iocoder.yudao.module.system.convert.sensitiveword.SensitiveWordConvert;
+import cn.iocoder.yudao.module.system.controller.admin.sensitiveword.vo.SensitiveWordSaveVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.sensitiveword.SensitiveWordDO;
 import cn.iocoder.yudao.module.system.dal.mysql.sensitiveword.SensitiveWordMapper;
-import cn.iocoder.yudao.module.system.mq.producer.sensitiveword.SensitiveWordProducer;
 import cn.iocoder.yudao.module.system.util.collection.SimpleTrie;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 import org.springframework.validation.annotation.Validated;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.filterList;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.getMaxValue;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.SENSITIVE_WORD_EXISTS;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.SENSITIVE_WORD_NOT_EXISTS;
 
@@ -42,11 +42,15 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.SENSITIVE_
 public class SensitiveWordServiceImpl implements SensitiveWordService {
 
     /**
-     * 定时执行 {@link #schedulePeriodicRefresh()} 的周期
-     * 因为已经通过 Redis Pub/Sub 机制，所以频率不需要高
+     * 是否开启敏感词功能
      */
-    private static final long SCHEDULER_PERIOD = 5 * 60 * 1000L;
+    public static Boolean ENABLED = false;
 
+    /**
+     * 敏感词列表缓存
+     */
+    @Getter
+    private volatile List<SensitiveWordDO> sensitiveWordCache = Collections.emptyList();
     /**
      * 敏感词标签缓存
      * key：敏感词编号 {@link SensitiveWordDO#getId()}
@@ -56,17 +60,8 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
     @Getter
     private volatile Set<String> sensitiveWordTagsCache = Collections.emptySet();
 
-    /**
-     * 缓存敏感词的最大更新时间，用于后续的增量轮询，判断是否有更新
-     */
-    @Getter
-    private volatile Date maxUpdateTime;
-
     @Resource
     private SensitiveWordMapper sensitiveWordMapper;
-
-    @Resource
-    private SensitiveWordProducer sensitiveWordProducer;
 
     /**
      * 默认的敏感词的字典树，包含所有敏感词
@@ -79,37 +74,32 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
     @Getter
     private volatile Map<String, SimpleTrie> tagSensitiveWordTries = Collections.emptyMap();
 
-    @Resource
-    @Lazy // 注入自己，所以延迟加载
-    private SensitiveWordService self;
-
     /**
      * 初始化缓存
      */
-    @Override
     @PostConstruct
-    @TenantIgnore // 初始化缓存，无需租户过滤
     public void initLocalCache() {
-        // 获取敏感词列表，如果有更新
-        List<SensitiveWordDO> sensitiveWordList = loadSensitiveWordIfUpdate(maxUpdateTime);
-        if (CollUtil.isEmpty(sensitiveWordList)) {
+        if (!ENABLED) {
             return;
         }
 
+        // 第一步：查询数据
+        List<SensitiveWordDO> sensitiveWords = sensitiveWordMapper.selectList();
+        log.info("[initLocalCache][缓存敏感词，数量为:{}]", sensitiveWords.size());
+
+        // 第二步：构建缓存
         // 写入 sensitiveWordTagsCache 缓存
         Set<String> tags = new HashSet<>();
-        sensitiveWordList.forEach(word -> tags.addAll(word.getTags()));
+        sensitiveWords.forEach(word -> tags.addAll(word.getTags()));
         sensitiveWordTagsCache = tags;
+        sensitiveWordCache = sensitiveWords;
         // 写入 defaultSensitiveWordTrie、tagSensitiveWordTries 缓存
-        initSensitiveWordTrie(sensitiveWordList);
-        // 写入 maxUpdateTime 最大更新时间
-        maxUpdateTime = CollectionUtils.getMaxValue(sensitiveWordList, SensitiveWordDO::getUpdateTime);
-        log.info("[initLocalCache][初始化 敏感词 数量为 {}]", sensitiveWordList.size());
+        initSensitiveWordTrie(sensitiveWords);
     }
 
     private void initSensitiveWordTrie(List<SensitiveWordDO> wordDOs) {
         // 过滤禁用的敏感词
-        wordDOs = CollectionUtils.filterList(wordDOs, word -> word.getStatus().equals(CommonStatusEnum.ENABLE.getStatus()));
+        wordDOs = filterList(wordDOs, word -> word.getStatus().equals(CommonStatusEnum.ENABLE.getStatus()));
 
         // 初始化默认的 defaultSensitiveWordTrie
         this.defaultSensitiveWordTrie = new SimpleTrie(CollectionUtils.convertList(wordDOs, SensitiveWordDO::getName));
@@ -128,68 +118,66 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
         this.tagSensitiveWordTries = tagSensitiveWordTries;
     }
 
-    @Scheduled(fixedDelay = SCHEDULER_PERIOD, initialDelay = SCHEDULER_PERIOD)
-    public void schedulePeriodicRefresh() {
-        self.initLocalCache();
-    }
-
     /**
-     * 如果敏感词发生变化，从数据库中获取最新的全量敏感词。
-     * 如果未发生变化，则返回空
+     * 通过定时任务轮询，刷新缓存
      *
-     * @param maxUpdateTime 当前敏感词的最大更新时间
-     * @return 敏感词列表
+     * 目的：多节点部署时，通过轮询”通知“所有节点，进行刷新
      */
-    private List<SensitiveWordDO> loadSensitiveWordIfUpdate(Date maxUpdateTime) {
-        // 第一步，判断是否要更新。
-        // 如果更新时间为空，说明 DB 一定有新数据
-        if (maxUpdateTime == null) {
-            log.info("[loadSensitiveWordIfUpdate][首次加载全量敏感词]");
-        } else { // 判断数据库中是否有更新的敏感词
-            if (sensitiveWordMapper.selectCountByUpdateTimeGt(maxUpdateTime) == 0) {
-                return null;
-            }
-            log.info("[loadSensitiveWordIfUpdate][增量加载全量敏感词]");
+    @Scheduled(initialDelay = 60, fixedRate = 60, timeUnit = TimeUnit.SECONDS)
+    public void refreshLocalCache() {
+        // 情况一：如果缓存里没有数据，则直接刷新缓存
+        if (CollUtil.isEmpty(sensitiveWordCache)) {
+            initLocalCache();
+            return;
         }
-        // 第二步，如果有更新，则从数据库加载所有敏感词
-        return sensitiveWordMapper.selectList();
+
+        // 情况二，如果缓存里数据，则通过 updateTime 判断是否有数据变更，有变更则刷新缓存
+        LocalDateTime maxTime = getMaxValue(sensitiveWordCache, SensitiveWordDO::getUpdateTime);
+        if (sensitiveWordMapper.selectCountByUpdateTimeGt(maxTime) > 0) {
+            initLocalCache();
+        }
     }
 
     @Override
-    public Long createSensitiveWord(SensitiveWordCreateReqVO createReqVO) {
+    public Long createSensitiveWord(SensitiveWordSaveVO createReqVO) {
         // 校验唯一性
-        checkSensitiveWordNameUnique(null, createReqVO.getName());
+        validateSensitiveWordNameUnique(null, createReqVO.getName());
+
         // 插入
-        SensitiveWordDO sensitiveWord = SensitiveWordConvert.INSTANCE.convert(createReqVO);
+        SensitiveWordDO sensitiveWord = BeanUtils.toBean(createReqVO, SensitiveWordDO.class);
         sensitiveWordMapper.insert(sensitiveWord);
-        // 发送消息，刷新缓存
-        sensitiveWordProducer.sendSensitiveWordRefreshMessage();
+
+        // 刷新缓存
+        initLocalCache();
         return sensitiveWord.getId();
     }
 
     @Override
-    public void updateSensitiveWord(SensitiveWordUpdateReqVO updateReqVO) {
+    public void updateSensitiveWord(SensitiveWordSaveVO updateReqVO) {
         // 校验唯一性
-        checkSensitiveWordExists(updateReqVO.getId());
-        checkSensitiveWordNameUnique(updateReqVO.getId(), updateReqVO.getName());
+        validateSensitiveWordExists(updateReqVO.getId());
+        validateSensitiveWordNameUnique(updateReqVO.getId(), updateReqVO.getName());
+
         // 更新
-        SensitiveWordDO updateObj = SensitiveWordConvert.INSTANCE.convert(updateReqVO);
+        SensitiveWordDO updateObj = BeanUtils.toBean(updateReqVO, SensitiveWordDO.class);
         sensitiveWordMapper.updateById(updateObj);
-        // 发送消息，刷新缓存
-        sensitiveWordProducer.sendSensitiveWordRefreshMessage();
+
+        // 刷新缓存
+        initLocalCache();
     }
 
     @Override
     public void deleteSensitiveWord(Long id) {
         // 校验存在
-        checkSensitiveWordExists(id);
+        validateSensitiveWordExists(id);
         // 删除
         sensitiveWordMapper.deleteById(id);
-        // 发送消息，刷新缓存
-        sensitiveWordProducer.sendSensitiveWordRefreshMessage();
+
+        // 刷新缓存
+        initLocalCache();
     }
 
-    private void checkSensitiveWordNameUnique(Long id, String name) {
+    private void validateSensitiveWordNameUnique(Long id, String name) {
         SensitiveWordDO word = sensitiveWordMapper.selectByName(name);
         if (word == null) {
             return;
@@ -203,7 +191,7 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
         }
     }
 
-    private void checkSensitiveWordExists(Long id) {
+    private void validateSensitiveWordExists(Long id) {
         if (sensitiveWordMapper.selectById(id) == null) {
             throw exception(SENSITIVE_WORD_NOT_EXISTS);
         }
@@ -225,17 +213,15 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
     }
 
     @Override
-    public List<SensitiveWordDO> getSensitiveWordList(SensitiveWordExportReqVO exportReqVO) {
-        return sensitiveWordMapper.selectList(exportReqVO);
-    }
-
-    @Override
-    public Set<String> getSensitiveWordTags() {
+    public Set<String> getSensitiveWordTagSet() {
         return sensitiveWordTagsCache;
     }
 
     @Override
     public List<String> validateText(String text, List<String> tags) {
+        Assert.isTrue(ENABLED, "敏感词功能未开启，请将 ENABLED 设置为 true");
+
+        // 无标签时，默认所有
         if (CollUtil.isEmpty(tags)) {
             return defaultSensitiveWordTrie.validate(text);
         }
@@ -253,6 +239,9 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
 
     @Override
     public boolean isTextValid(String text, List<String> tags) {
+        Assert.isTrue(ENABLED, "敏感词功能未开启，请将 ENABLED 设置为 true");
+
+        // 无标签时，默认所有
         if (CollUtil.isEmpty(tags)) {
             return defaultSensitiveWordTrie.isValid(text);
         }
@@ -262,6 +251,7 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
             if (trie == null) {
                 continue;
             }
+            // 如果有一个标签不合法，则返回 false 不合法
             if (!trie.isValid(text)) {
                 return false;
             }

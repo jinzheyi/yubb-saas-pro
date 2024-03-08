@@ -14,13 +14,9 @@ import java.util.Arrays;
 @Getter
 public enum UserTypeEnum implements IntArrayValuable {
 
+    PLATFORM(0, "平台管理员"), // 面向 b 端，平台管理后台
     MEMBER(1, "会员"), // 面向 c 端，普通用户
     ADMIN(2, "管理员"), // 面向 b 端，管理后台
-
-    /**
-     * 面向平台用户
-     */
-    CENTER(0, "平台管理员"),
 
     ;
 

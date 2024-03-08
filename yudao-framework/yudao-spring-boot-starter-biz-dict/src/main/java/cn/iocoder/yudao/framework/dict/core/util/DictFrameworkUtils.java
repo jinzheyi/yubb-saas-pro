@@ -15,7 +15,7 @@ import java.time.Duration;
 /**
  * 字典工具类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Slf4j
 public class DictFrameworkUtils {
@@ -27,7 +27,7 @@ public class DictFrameworkUtils {
     /**
      * 针对 {@link #getDictDataLabel(String, String)} 的缓存
      */
-    private static final LoadingCache<KeyValue<String, String>, DictDataRespDTO> getDictDataCache = CacheUtils.buildAsyncReloadingCache(
+    private static final LoadingCache<KeyValue<String, String>, DictDataRespDTO> GET_DICT_DATA_CACHE = CacheUtils.buildAsyncReloadingCache(
             Duration.ofMinutes(1L), // 过期时间 1 分钟
             new CacheLoader<KeyValue<String, String>, DictDataRespDTO>() {
 
@@ -41,7 +41,7 @@ public class DictFrameworkUtils {
     /**
      * 针对 {@link #parseDictDataValue(String, String)} 的缓存
      */
-    private static final LoadingCache<KeyValue<String, String>, DictDataRespDTO> parseDictDataCache = CacheUtils.buildAsyncReloadingCache(
+    private static final LoadingCache<KeyValue<String, String>, DictDataRespDTO> PARSE_DICT_DATA_CACHE = CacheUtils.buildAsyncReloadingCache(
             Duration.ofMinutes(1L), // 过期时间 1 分钟
             new CacheLoader<KeyValue<String, String>, DictDataRespDTO>() {
 
@@ -58,13 +58,18 @@ public class DictFrameworkUtils {
     }
 
     @SneakyThrows
+    public static String getDictDataLabel(String dictType, Integer value) {
+        return GET_DICT_DATA_CACHE.get(new KeyValue<>(dictType, String.valueOf(value))).getLabel();
+    }
+
+    @SneakyThrows
     public static String getDictDataLabel(String dictType, String value) {
-        return getDictDataCache.get(new KeyValue<>(dictType, value)).getLabel();
+        return GET_DICT_DATA_CACHE.get(new KeyValue<>(dictType, value)).getLabel();
     }
 
     @SneakyThrows
     public static String parseDictDataValue(String dictType, String label) {
-        return parseDictDataCache.get(new KeyValue<>(dictType, label)).getValue();
+        return PARSE_DICT_DATA_CACHE.get(new KeyValue<>(dictType, label)).getValue();
     }
 
 }

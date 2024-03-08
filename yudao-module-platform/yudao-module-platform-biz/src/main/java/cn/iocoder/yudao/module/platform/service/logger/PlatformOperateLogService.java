@@ -2,8 +2,8 @@ package cn.iocoder.yudao.module.platform.service.logger;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformOperateLogCreateReqDTO;
-import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.logger.vo.operatelog.OperateLogPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.logger.vo.operatelog.OperateLogExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.logger.vo.operatelog.OperateLogPageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.logger.PlatformOperateLogDO;
 
 import java.util.List;
@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * 操作日志 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface PlatformOperateLogService {
 
@@ -36,6 +36,6 @@ public interface PlatformOperateLogService {
      * @param reqVO 列表条件
      * @return 日志列表
      */
-    List<PlatformOperateLogDO> getOperateLogs(OperateLogExportReqVO reqVO);
+    List<PlatformOperateLogDO> getOperateLogList(OperateLogExportReqVO reqVO);
 
 }

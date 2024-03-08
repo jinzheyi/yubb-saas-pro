@@ -34,7 +34,7 @@ import static org.mockito.Mockito.*;
  * 和 {@link DataPermissionDatabaseInterceptor#beforeUpdate(Executor, MappedStatement, Object)}
  * 以及在这个过程中，ContextHolder 和 MappedStatementCache
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public class DataPermissionDatabaseInterceptorTest extends BaseMockitoUnitTest {
 
@@ -87,7 +87,7 @@ public class DataPermissionDatabaseInterceptorTest extends BaseMockitoUnitTest {
             interceptor.beforeQuery(null, mappedStatement, null, null, null, boundSql);
             // 断言
             verify(mpBs, times(1)).sql(
-                    eq("SELECT * FROM t_user WHERE id = 1 AND dept_id = 100"));
+                    eq("SELECT * FROM t_user WHERE id = 1 AND t_user.dept_id = 100"));
             // 断言缓存
             assertTrue(interceptor.getMappedStatementCache().getNoRewritableMappedStatements().isEmpty());
         }

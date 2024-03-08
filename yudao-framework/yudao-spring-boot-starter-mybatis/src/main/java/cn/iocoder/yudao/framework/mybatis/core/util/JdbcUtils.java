@@ -8,7 +8,7 @@ import java.sql.DriverManager;
 /**
  * JDBC 工具类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public class JdbcUtils {
 

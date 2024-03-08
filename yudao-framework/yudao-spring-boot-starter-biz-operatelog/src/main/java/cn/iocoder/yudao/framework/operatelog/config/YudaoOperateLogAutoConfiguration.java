@@ -5,10 +5,10 @@ import cn.iocoder.yudao.framework.operatelog.core.service.OperateLogFrameworkSer
 import cn.iocoder.yudao.framework.operatelog.core.service.OperateLogFrameworkServiceImpl;
 import cn.iocoder.yudao.module.platform.api.logger.PlatformOperateLogApi;
 import cn.iocoder.yudao.module.system.api.logger.OperateLogApi;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
-@Configuration
+@AutoConfiguration
 public class YudaoOperateLogAutoConfiguration {
 
     @Bean
@@ -17,8 +17,7 @@ public class YudaoOperateLogAutoConfiguration {
     }
 
     @Bean
-    public OperateLogFrameworkService operateLogFrameworkService(OperateLogApi operateLogApi,
-                                                                 PlatformOperateLogApi platformOperateLogApi) {
+    public OperateLogFrameworkService operateLogFrameworkService(OperateLogApi operateLogApi, PlatformOperateLogApi platformOperateLogApi) {
         return new OperateLogFrameworkServiceImpl(operateLogApi, platformOperateLogApi);
     }
 

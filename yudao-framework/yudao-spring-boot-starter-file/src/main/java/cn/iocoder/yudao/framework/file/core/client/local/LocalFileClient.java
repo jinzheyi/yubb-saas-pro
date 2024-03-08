@@ -8,7 +8,7 @@ import java.io.File;
 /**
  * 本地文件客户端
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public class LocalFileClient extends AbstractFileClient<LocalFileClientConfig> {
 
@@ -25,7 +25,7 @@ public class LocalFileClient extends AbstractFileClient<LocalFileClientConfig> {
     }
 
     @Override
-    public String upload(byte[] content, String path) {
+    public String upload(byte[] content, String path, String type) {
         // 执行写入
         String filePath = getFilePath(path);
         FileUtil.writeBytes(content, filePath);

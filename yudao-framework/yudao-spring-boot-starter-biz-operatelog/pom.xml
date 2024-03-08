@@ -40,8 +40,7 @@
             <artifactId>yudao-module-system-api</artifactId> <!-- 需要使用它，进行操作日志的记录 -->
             <version>${revision}</version>
         </dependency>
-
-        <!-- 业务组件 -->
+        <!-- 平台业务组件 -->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-module-platform-api</artifactId> <!-- 需要使用它，进行操作日志的记录 -->
@@ -53,6 +52,7 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
+
     </dependencies>
 
 </project>

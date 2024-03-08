@@ -8,9 +8,25 @@ import cn.iocoder.yudao.module.system.service.tenant.handler.TenantMenuHandler;
 /**
  * 租户 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface TenantService {
+
+    /**
+     * 获得名字对应的租户
+     *
+     * @param name 组户名
+     * @return 租户
+     */
+    TenantRespDTO getTenantByName(String name);
+
+    /**
+     * 获得域名对应的租户
+     *
+     * @param website 域名
+     * @return 租户
+     */
+    TenantRespDTO getTenantByWebsite(String website);
 
     /**
      * 进行租户的信息处理逻辑
@@ -27,13 +43,5 @@ public interface TenantService {
      * @param handler 处理器
      */
     void handleTenantMenu(TenantMenuHandler handler);
-
-    /**
-     * 获得名字对应的租户
-     *
-     * @param name 组户名
-     * @return 租户
-     */
-    TenantRespDTO getTenantByName(String name);
 
 }

@@ -24,10 +24,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * 重构为租户端Token 过滤器，验证 token 的有效性
+ * Token 过滤器，验证 token 的有效性
  * 验证通过后，获得 {@link LoginUser} 信息，并加入到 Spring Security 上下文
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Slf4j
 public class TokenAuthenticationFilter extends ApiRequestFilter {
@@ -52,7 +52,8 @@ public class TokenAuthenticationFilter extends ApiRequestFilter {
     @SuppressWarnings("NullableProblems")
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String token = SecurityFrameworkUtils.obtainAuthorization(request, securityProperties.getTokenHeader());
+        String token = SecurityFrameworkUtils.obtainAuthorization(request,
+                securityProperties.getTokenHeader(), securityProperties.getTokenParameter());
         if (StrUtil.isNotEmpty(token)) {
             Integer userType = WebFrameworkUtils.getLoginUserType(request);
             try {
@@ -85,7 +86,10 @@ public class TokenAuthenticationFilter extends ApiRequestFilter {
                 return null;
             }
             // 用户类型不匹配，无权限
-            if (ObjectUtil.notEqual(accessToken.getUserType(), userType)) {
+            // 注意：只有 /admin-api/* 和 /app-api/* 有 userType，才需要比对用户类型
+            // 类似 WebSocket 的 /ws/* 连接地址，是不需要比对用户类型的
+            if (userType != null
+                    && ObjectUtil.notEqual(accessToken.getUserType(), userType)) {
                 throw new AccessDeniedException("错误的用户类型");
             }
             // 构建登录用户

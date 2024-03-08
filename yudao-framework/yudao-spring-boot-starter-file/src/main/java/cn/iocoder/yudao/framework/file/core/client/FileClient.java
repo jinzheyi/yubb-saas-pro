@@ -3,7 +3,7 @@ package cn.iocoder.yudao.framework.file.core.client;
 /**
  * 文件客户端
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface FileClient {
 
@@ -22,7 +22,7 @@ public interface FileClient {
      * @return 完整路径，即 HTTP 访问地址
      * @throws Exception 上传文件时，抛出 Exception 异常
      */
-    String upload(byte[] content, String path) throws  Exception;
+    String upload(byte[] content, String path, String type) throws  Exception;
 
     /**
      * 删除文件

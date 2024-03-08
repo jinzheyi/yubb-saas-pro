@@ -3,11 +3,11 @@ package cn.iocoder.yudao.module.platform.dal.mysql.oauth2;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
-import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 import org.apache.ibatis.annotations.Mapper;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
@@ -26,7 +26,7 @@ public interface PlatformOAuth2AccessTokenMapper extends BaseMapperX<PlatformOAu
                 .eqIfPresent(PlatformOAuth2AccessTokenDO::getUserId, reqVO.getUserId())
                 .eqIfPresent(PlatformOAuth2AccessTokenDO::getUserType, reqVO.getUserType())
                 .likeIfPresent(PlatformOAuth2AccessTokenDO::getClientId, reqVO.getClientId())
-                .gt(PlatformOAuth2AccessTokenDO::getExpiresTime, new Date())
+                .gt(PlatformOAuth2AccessTokenDO::getExpiresTime, LocalDateTime.now())
                 .orderByDesc(PlatformOAuth2AccessTokenDO::getId));
     }
 

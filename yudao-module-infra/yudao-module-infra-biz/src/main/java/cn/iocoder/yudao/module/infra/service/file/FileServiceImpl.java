@@ -6,7 +6,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.io.FileUtils;
 import cn.iocoder.yudao.framework.file.core.client.FileClient;
 import cn.iocoder.yudao.framework.file.core.utils.FileTypeUtils;
-import cn.iocoder.yudao.module.infra.controller.center.file.vo.file.FilePageReqVO;
+import cn.iocoder.yudao.module.infra.controller.platform.file.vo.file.FilePageReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.file.FileDO;
 import cn.iocoder.yudao.module.infra.dal.mysql.file.FileMapper;
 import lombok.SneakyThrows;
@@ -20,7 +20,7 @@ import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.FILE_NOT_EX
 /**
  * 文件 Service 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 public class FileServiceImpl implements FileService {
@@ -52,7 +52,7 @@ public class FileServiceImpl implements FileService {
         // 上传到文件存储器
         FileClient client = fileConfigService.getMasterFileClient();
         Assert.notNull(client, "客户端(master) 不能为空");
-        String url = client.upload(content, path);
+        String url = client.upload(content, path, type);
 
         // 保存到数据库
         FileDO file = new FileDO();
@@ -69,7 +69,7 @@ public class FileServiceImpl implements FileService {
     @Override
     public void deleteFile(Long id) throws Exception {
         // 校验存在
-        FileDO file = this.validateFileExists(id);
+        FileDO file = validateFileExists(id);
 
         // 从文件存储器中删除
         FileClient client = fileConfigService.getFileClient(file.getConfigId());

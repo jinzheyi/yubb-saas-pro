@@ -1,1 +1,0 @@
-package cn.iocoder.yudao.module.platform.api.sms;import cn.iocoder.yudao.module.platform.api.sms.dto.channel.SmsChannelRespDTO;import java.util.List;/** * 短信渠道API接口 * * @author zhusy * @since 2022/8/7 */public interface SmsChannelApi {    /**     * 获取短信渠道配置信息     *     * @return     */    List<SmsChannelRespDTO> getSmsChannelList();}

@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.bpm.convert.task;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
 import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.instance.BpmProcessInstancePageItemRespVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.instance.BpmProcessInstanceRespVO;
@@ -26,9 +27,9 @@ import java.util.Map;
 /**
  * 流程实例 Convert
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
-@Mapper
+@Mapper(uses = DateUtils.class)
 public interface BpmProcessInstanceConvert {
 
     BpmProcessInstanceConvert INSTANCE = Mappers.getMapper(BpmProcessInstanceConvert.class);

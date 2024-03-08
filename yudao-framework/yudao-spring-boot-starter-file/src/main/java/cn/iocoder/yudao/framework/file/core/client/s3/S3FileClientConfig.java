@@ -12,13 +12,14 @@ import javax.validation.constraints.NotNull;
 /**
  * S3 文件客户端的配置类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Data
 public class S3FileClientConfig implements FileClientConfig {
 
     public static final String ENDPOINT_QINIU = "qiniucs.com";
     public static final String ENDPOINT_ALIYUN = "aliyuncs.com";
+    public static final String ENDPOINT_TENCENT = "myqcloud.com";
 
     /**
      * 节点地址

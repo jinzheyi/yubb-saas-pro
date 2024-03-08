@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.platform.service.tenant;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantPageReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.tenant.vo.tenant.TenantUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.tenant.vo.tenant.TenantCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.tenant.vo.tenant.TenantExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.tenant.vo.tenant.TenantPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.tenant.vo.tenant.TenantUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.tenant.TenantDO;
 
 import javax.validation.Valid;
@@ -14,7 +14,7 @@ import java.util.Set;
 /**
  * 租户 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface PlatformTenantService {
 
@@ -81,6 +81,14 @@ public interface PlatformTenantService {
     TenantDO getTenantByName(String name);
 
     /**
+     * 获得域名对应的租户
+     *
+     * @param website 域名
+     * @return 租户
+     */
+    TenantDO getTenantByWebsite(String website);
+
+    /**
      * 获得使用指定套餐的租户数量
      *
      * @param packageId 租户套餐编号
@@ -101,7 +109,7 @@ public interface PlatformTenantService {
      *
      * @return 租户编号数组
      */
-    List<Long> getTenantIds();
+    List<Long> getTenantIdList();
 
     /**
      * 校验租户是否合法

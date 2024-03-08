@@ -9,7 +9,7 @@ import javax.validation.Valid;
 /**
  * {@link BpmProcessInstanceResultEvent} 的生产者
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @AllArgsConstructor
 @Validated

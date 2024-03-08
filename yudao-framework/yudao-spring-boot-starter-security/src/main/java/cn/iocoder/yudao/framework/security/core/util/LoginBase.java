@@ -1,8 +1,8 @@
 package cn.iocoder.yudao.framework.security.core.util;
 
 import cn.hutool.core.map.MapUtil;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

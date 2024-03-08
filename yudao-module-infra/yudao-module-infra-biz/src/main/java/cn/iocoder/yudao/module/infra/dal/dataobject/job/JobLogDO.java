@@ -7,12 +7,12 @@ import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 定时任务的执行日志
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName("infra_job_log")
 @KeySequence("infra_job_log_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
@@ -56,11 +56,11 @@ public class JobLogDO extends BaseDO {
     /**
      * 开始执行时间
      */
-    private Date beginTime;
+    private LocalDateTime beginTime;
     /**
      * 结束执行时间
      */
-    private Date endTime;
+    private LocalDateTime endTime;
     /**
      * 执行时长，单位：毫秒
      */

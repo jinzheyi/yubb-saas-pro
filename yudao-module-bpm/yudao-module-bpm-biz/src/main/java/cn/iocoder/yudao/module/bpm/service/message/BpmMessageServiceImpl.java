@@ -18,7 +18,7 @@ import java.util.Map;
 /**
  * BPM 消息 Service 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 @Validated
@@ -57,7 +57,7 @@ public class BpmMessageServiceImpl implements BpmMessageService {
         templateParams.put("taskName", reqDTO.getTaskName());
         templateParams.put("startUserNickname", reqDTO.getStartUserNickname());
         templateParams.put("detailUrl", getProcessInstanceDetailUrl(reqDTO.getProcessInstanceId()));
-        smsSendApi.sendSingleSmsToAdmin(BpmMessageConvert.INSTANCE.convert(reqDTO.getStartUserId(),
+        smsSendApi.sendSingleSmsToAdmin(BpmMessageConvert.INSTANCE.convert(reqDTO.getAssigneeUserId(),
                 BpmMessageEnum.TASK_ASSIGNED.getSmsTemplateCode(), templateParams));
     }
 

@@ -3,12 +3,12 @@ package cn.iocoder.yudao.module.infra.api.logger.dto;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * API 错误日志
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Data
 public class ApiErrorLogCreateReqDTO {
@@ -61,7 +61,7 @@ public class ApiErrorLogCreateReqDTO {
      * 异常时间
      */
     @NotNull(message = "异常时间不能为空")
-    private Date exceptionTime;
+    private LocalDateTime exceptionTime;
     /**
      * 异常名
      */

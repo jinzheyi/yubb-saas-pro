@@ -17,7 +17,7 @@ import java.util.Map;
 /**
  * HTTP 工具类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public class HttpUtils {
 

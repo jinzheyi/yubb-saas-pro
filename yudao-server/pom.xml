@@ -23,11 +23,6 @@
     <dependencies>
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-module-member-biz</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-module-system-biz</artifactId>
             <version>${revision}</version>
         </dependency>
@@ -38,12 +33,52 @@
         </dependency>
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-module-pay-biz</artifactId>
+            <artifactId>yudao-module-platform-biz</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-module-market-biz</artifactId>
+            <artifactId>yudao-spring-boot-starter-biz-error-code</artifactId>
+        </dependency>
+
+
+        <!-- 会员 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-module-member-biz</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <!-- 数据报表 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-module-report-biz</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <!-- 工作流 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-module-bpm-biz</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <!-- 支付服务 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-module-pay-biz</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <!-- 微信公众号模块。默认注释，保证编译速度 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-module-mp-biz</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+<!--         商城相关模块。默认注释，保证编译速度 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-module-promotion-biz</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
@@ -51,27 +86,15 @@
             <artifactId>yudao-module-product-biz</artifactId>
             <version>${revision}</version>
         </dependency>
-        <!-- 数据报表 -->
-<!--        <dependency>-->
-<!--            <groupId>cn.iocoder.boot</groupId>-->
-<!--            <artifactId>yudao-module-visualization-biz</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
-        <!-- 工作流 -->
-<!--        <dependency>-->
-<!--            <groupId>cn.iocoder.boot</groupId>-->
-<!--            <artifactId>yudao-module-bpm-biz</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-module-platform-biz</artifactId>
+            <artifactId>yudao-module-trade-biz</artifactId>
             <version>${revision}</version>
         </dependency>
-
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-spring-boot-starter-biz-error-code</artifactId>
+            <artifactId>yudao-module-statistics-biz</artifactId>
+            <version>${revision}</version>
         </dependency>
 
         <!-- spring boot 配置所需依赖 -->
@@ -101,10 +124,7 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>2.6.7</version> <!-- 如果 spring.boot.version 版本修改，则这里也要跟着修改 -->
-                <configuration>
-                    <fork>true</fork>
-                </configuration>
+                <version>${spring.boot.version}</version>
                 <executions>
                     <execution>
                         <goals>

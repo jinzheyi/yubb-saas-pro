@@ -16,7 +16,7 @@ import java.util.Set;
 /**
  * 租户 Service 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 @Validated
@@ -28,6 +28,16 @@ public class TenantServiceImpl implements TenantService {
 
     @Resource
     private TenantPackageApi tenantPackageApi;
+
+    @Override
+    public TenantRespDTO getTenantByName(String name) {
+        return tenantApi.getTenantByName(name);
+    }
+
+    @Override
+    public TenantRespDTO getTenantByWebsite(String website) {
+        return tenantApi.getTenantByWebsite(website);
+    }
 
     @Override
     public void handleTenantInfo(TenantInfoHandler handler) {
@@ -44,11 +54,6 @@ public class TenantServiceImpl implements TenantService {
         Set<Long> menuIds = tenantPackageApi.getTenantPackage(tenant.getPackageId()).getMenuIds();
         // 执行处理器
         handler.handle(menuIds);
-    }
-
-    @Override
-    public TenantRespDTO getTenantByName(String name) {
-        return tenantApi.getTenantByName(name);
     }
 
 }

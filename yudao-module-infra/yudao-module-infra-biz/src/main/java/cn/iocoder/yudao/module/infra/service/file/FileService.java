@@ -1,13 +1,13 @@
 package cn.iocoder.yudao.module.infra.service.file;
 
-import cn.iocoder.yudao.module.infra.controller.center.file.vo.file.FilePageReqVO;
+import cn.iocoder.yudao.module.infra.controller.platform.file.vo.file.FilePageReqVO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.infra.dal.dataobject.file.FileDO;
 
 /**
  * 文件 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface FileService {
 

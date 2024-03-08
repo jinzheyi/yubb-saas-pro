@@ -9,15 +9,17 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <modules>
-        <module>yudao-module-platform-api</module>
         <module>yudao-module-platform-biz</module>
+        <module>yudao-module-platform-api</module>
     </modules>
+
     <artifactId>yudao-module-platform</artifactId>
     <packaging>pom</packaging>
 
     <name>${project.artifactId}</name>
     <description>
-        platform 模块下，我们放通用 + 平台业务，支撑其它平行层的核心业务。
+        platform 模块下，我们放平台业务，支撑租户的核心业务。
+        例如说：用户、部门、权限、数据字典等等
     </description>
 
 </project>

@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.platform.service.dict;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.center.dict.vo.type.DictTypeCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.dict.vo.type.DictTypeExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.dict.vo.type.DictTypePageReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.dict.vo.type.DictTypeUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.dict.vo.type.DictTypeCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.dict.vo.type.DictTypeExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.dict.vo.type.DictTypePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.dict.vo.type.DictTypeUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.dict.DictTypeDO;
 
 import java.util.List;
@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * 字典类型 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface DictTypeService {
 

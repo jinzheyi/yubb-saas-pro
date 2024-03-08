@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.service.oauth2;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 
 import java.util.List;
@@ -11,7 +11,7 @@ import java.util.List;
  *
  * 从功能上，和 Spring Security OAuth 的 DefaultTokenServices + JdbcTokenStore 的功能，提供访问令牌、刷新令牌的操作
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface PlatformOAuth2TokenService {
 

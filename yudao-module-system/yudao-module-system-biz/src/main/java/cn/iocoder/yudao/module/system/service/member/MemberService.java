@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.system.service.member;
 /**
  * Member Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface MemberService {
 
@@ -14,5 +14,13 @@ public interface MemberService {
      * @return 手机号码
      */
     String getMemberUserMobile(Long id);
+
+    /**
+     * 获得会员用户的邮箱
+     *
+     * @param id 会员用户编号
+     * @return 邮箱
+     */
+    String getMemberUserEmail(Long id);
 
 }

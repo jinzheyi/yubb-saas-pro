@@ -1,15 +1,16 @@
 package cn.iocoder.yudao.module.member.service.address;
 
-import java.util.*;
-import javax.validation.*;
-import cn.iocoder.yudao.module.member.controller.app.address.vo.*;
-import cn.iocoder.yudao.module.member.dal.dataobject.address.AddressDO;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.module.member.controller.app.address.vo.AppAddressCreateReqVO;
+import cn.iocoder.yudao.module.member.controller.app.address.vo.AppAddressUpdateReqVO;
+import cn.iocoder.yudao.module.member.dal.dataobject.address.MemberAddressDO;
+
+import javax.validation.Valid;
+import java.util.List;
 
 /**
  * 用户收件地址 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface AddressService {
 
@@ -45,7 +46,7 @@ public interface AddressService {
      * @param id 编号
      * @return 用户收件地址
      */
-    AddressDO getAddress(Long userId, Long id);
+    MemberAddressDO getAddress(Long userId, Long id);
 
     /**
      * 获得用户收件地址列表
@@ -53,7 +54,14 @@ public interface AddressService {
      * @param userId 用户编号
      * @return 用户收件地址列表
      */
-    List<AddressDO> getAddressList(Long userId);
+    List<MemberAddressDO> getAddressList(Long userId);
 
-    AddressDO getDefaultUserAddress(Long userId);
+    /**
+     * 获得用户默认的收件地址
+     *
+     * @param userId 用户编号
+     * @return 用户收件地址
+     */
+    MemberAddressDO getDefaultUserAddress(Long userId);
+
 }

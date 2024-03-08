@@ -3,18 +3,10 @@ package cn.iocoder.yudao.module.infra.dal.mysql.file;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
-import cn.iocoder.yudao.module.infra.controller.center.file.vo.config.FileConfigPageReqVO;
+import cn.iocoder.yudao.module.infra.controller.platform.file.vo.config.FileConfigPageReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.file.FileConfigDO;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
 
-import java.util.Date;
-
-/**
- * 文件配置 Mapper
- *
- * @author 芋道源码
- */
 @Mapper
 public interface FileConfigMapper extends BaseMapperX<FileConfigDO> {
 
@@ -26,7 +18,8 @@ public interface FileConfigMapper extends BaseMapperX<FileConfigDO> {
                 .orderByDesc(FileConfigDO::getId));
     }
 
-    @Select("SELECT COUNT(*) FROM infra_file_config WHERE update_time > #{maxUpdateTime}")
-    Long selectCountByUpdateTimeGt(Date maxUpdateTime);
+    default FileConfigDO selectByMaster() {
+        return selectOne(FileConfigDO::getMaster, true);
+    }
 
 }

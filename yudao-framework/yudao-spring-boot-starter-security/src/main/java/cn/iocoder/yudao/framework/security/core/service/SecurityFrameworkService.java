@@ -3,7 +3,7 @@ package cn.iocoder.yudao.framework.security.core.service;
 /**
  * Security 框架 Service 接口，定义权限相关的校验操作
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface SecurityFrameworkService {
 
@@ -56,4 +56,12 @@ public interface SecurityFrameworkService {
      * @return 是否
      */
     boolean hasAnyScopes(String... scope);
+
+    /**
+     * 访问时判断是否购买了该插件，可以判断多个插件标识
+     * @param plugAppSn 插件编码
+     * @return true 通过 false 不通过
+     */
+    boolean hasAllPlugApp(String... plugAppSn);
+
 }

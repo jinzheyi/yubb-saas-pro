@@ -14,7 +14,7 @@ import java.util.Set;
 /**
  * BPM 任务分配规则 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface BpmTaskAssignRuleService {
 

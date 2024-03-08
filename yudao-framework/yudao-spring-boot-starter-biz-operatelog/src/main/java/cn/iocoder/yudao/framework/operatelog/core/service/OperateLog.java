@@ -2,13 +2,13 @@ package cn.iocoder.yudao.framework.operatelog.core.service;
 
 import lombok.Data;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
  * 操作日志
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Data
 public class OperateLog {
@@ -85,7 +85,7 @@ public class OperateLog {
     /**
      * 开始时间
      */
-    private Date startTime;
+    private LocalDateTime startTime;
 
     /**
      * 执行时长，单位：毫秒
@@ -106,5 +106,15 @@ public class OperateLog {
      * 结果数据
      */
     private String resultData;
+
+    /**
+     * 租户id
+     */
+    private Long tenantId;
+
+    /**
+     * 区分平台
+     */
+    private Integer terrace;
 
 }

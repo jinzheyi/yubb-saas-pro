@@ -10,7 +10,7 @@ import lombok.experimental.SuperBuilder;
 /**
  * 登录用户信息
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Data
 @AllArgsConstructor

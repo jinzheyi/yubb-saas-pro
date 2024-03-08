@@ -3,20 +3,20 @@ package cn.iocoder.yudao.module.platform.service.errorcode;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.api.errorcode.dto.ErrorCodeAutoGenerateReqDTO;
 import cn.iocoder.yudao.module.platform.api.errorcode.dto.ErrorCodeRespDTO;
-import cn.iocoder.yudao.module.platform.controller.center.errorcode.vo.ErrorCodeCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.errorcode.vo.ErrorCodeExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.errorcode.vo.ErrorCodePageReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.errorcode.vo.ErrorCodeUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.errorcode.vo.ErrorCodeCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.errorcode.vo.ErrorCodeExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.errorcode.vo.ErrorCodePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.errorcode.vo.ErrorCodeUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.errorcode.ErrorCodeDO;
 
 import javax.validation.Valid;
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * 错误码 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface ErrorCodeService {
 
@@ -36,7 +36,7 @@ public interface ErrorCodeService {
      * @param minUpdateTime 最小更新时间
      * @return 错误码数组
      */
-    List<ErrorCodeRespDTO> getErrorCodeList(String applicationName, Date minUpdateTime);
+    List<ErrorCodeRespDTO> getErrorCodeList(String applicationName, LocalDateTime minUpdateTime);
 
     /**
      * 创建错误码

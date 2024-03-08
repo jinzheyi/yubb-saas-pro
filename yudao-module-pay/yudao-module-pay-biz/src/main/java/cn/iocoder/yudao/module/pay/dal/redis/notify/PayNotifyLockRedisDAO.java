@@ -12,7 +12,7 @@ import static cn.iocoder.yudao.module.pay.dal.redis.RedisKeyConstants.PAY_NOTIFY
 /**
  * 支付通知的锁 Redis DAO
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Repository
 public class PayNotifyLockRedisDAO {
@@ -33,7 +33,7 @@ public class PayNotifyLockRedisDAO {
     }
 
     private static String formatKey(Long id) {
-        return String.format(PAY_NOTIFY_LOCK.getKeyTemplate(), id);
+        return String.format(PAY_NOTIFY_LOCK, id);
     }
 
 }

@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.framework.security.core.util;
 
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.security.core.LoginUser;
 import cn.iocoder.yudao.framework.security.core.PlatformLoginUser;
 import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
@@ -17,10 +18,13 @@ import java.util.Collections;
 /**
  * 安全服务工具类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public class SecurityFrameworkUtils {
 
+    /**
+     * HEADER 认证头 value 的前缀
+     */
     public static final String AUTHORIZATION_BEARER = "Bearer";
 
     private SecurityFrameworkUtils() {}
@@ -29,19 +33,23 @@ public class SecurityFrameworkUtils {
      * 从请求中，获得认证 Token
      *
      * @param request 请求
-     * @param header 认证 Token 对应的 Header 名字
+     * @param headerName 认证 Token 对应的 Header 名字
+     * @param parameterName 认证 Token 对应的 Parameter 名字
      * @return 认证 Token
      */
-    public static String obtainAuthorization(HttpServletRequest request, String header) {
-        String authorization = request.getHeader(header);
-        if (!StringUtils.hasText(authorization)) {
+    public static String obtainAuthorization(HttpServletRequest request,
+                                             String headerName, String parameterName) {
+        // 1. 获得 Token。优先级：Header > Parameter
+        String token = request.getHeader(headerName);
+        if (StrUtil.isEmpty(token)) {
+            token = request.getParameter(parameterName);
+        }
+        if (!StringUtils.hasText(token)) {
             return null;
         }
-        int index = authorization.indexOf(AUTHORIZATION_BEARER + " ");
-        if (index == -1) { // 未找到
-            return null;
-        }
-        return authorization.substring(index + 7).trim();
+        // 2. 去除 Token 中带的 Bearer
+        int index = token.indexOf(AUTHORIZATION_BEARER + " ");
+        return index >= 0 ? token.substring(index + 7).trim() : token;
     }
 
     /**
@@ -58,9 +66,9 @@ public class SecurityFrameworkUtils {
     }
 
     /**
-     * 获取当前用户
+     * 获取当前租户用户
      *
-     * @return 当前用户
+     * @return 当前租户用户
      */
     @Nullable
     public static LoginUser getLoginUser() {
@@ -71,6 +79,11 @@ public class SecurityFrameworkUtils {
         return authentication.getPrincipal() instanceof LoginUser ? (LoginUser) authentication.getPrincipal() : null;
     }
 
+    /**
+     * 获取当前平台用户
+     *
+     * @return 当前平台用户
+     */
     @Nullable
     public static PlatformLoginUser getPlatformLoginUser() {
         Authentication authentication = getAuthentication();
@@ -81,9 +94,9 @@ public class SecurityFrameworkUtils {
     }
 
     /**
-     * 获得当前用户的编号，从上下文中
+     * 获得当前租户用户的编号，从上下文中
      *
-     * @return 用户编号
+     * @return 租户用户编号
      */
     @Nullable
     public static Long getLoginUserId() {
@@ -91,8 +104,23 @@ public class SecurityFrameworkUtils {
         if (authentication == null) {
             return null;
         }
-        LoginBase loginBase = authentication.getPrincipal() instanceof LoginBase ? (LoginBase) authentication.getPrincipal() : null;
-        return loginBase != null ? loginBase.getId() : null;
+        LoginUser loginUser = authentication.getPrincipal() instanceof LoginUser ? (LoginUser) authentication.getPrincipal() : null;
+        return loginUser != null ? loginUser.getId() : null;
+    }
+
+    /**
+     * 获得当前平台用户的编号，从上下文中
+     *
+     * @return 平台用户编号
+     */
+    @Nullable
+    public static Long getPlatformLoginUserId() {
+        Authentication authentication = getAuthentication();
+        if (authentication == null) {
+            return null;
+        }
+        PlatformLoginUser platformLoginUser = authentication.getPrincipal() instanceof PlatformLoginUser ? (PlatformLoginUser) authentication.getPrincipal() : null;
+        return platformLoginUser != null ? platformLoginUser.getId() : null;
     }
 
     /**

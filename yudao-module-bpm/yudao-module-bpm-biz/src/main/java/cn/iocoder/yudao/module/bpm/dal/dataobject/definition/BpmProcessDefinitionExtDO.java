@@ -14,7 +14,7 @@ import java.util.List;
  * Bpm 流程定义的拓展表
  * 主要解决 Activiti {@link ProcessDefinition} 不支持拓展字段，所以新建拓展表
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName(value = "bpm_process_definition_ext", autoResultMap = true)
 @Data

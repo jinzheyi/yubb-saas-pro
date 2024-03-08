@@ -8,9 +8,9 @@ import lombok.*;
 
 
 /**
- * 规格值 DO
+ * 商品属性值 DO
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName("product_property_value")
 @KeySequence("product_property_value_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
@@ -23,23 +23,33 @@ import lombok.*;
 public class ProductPropertyValueDO extends BaseDO {
 
     /**
+     * SPU 单规格时，默认属性值 id
+     */
+    public static final Long ID_DEFAULT = 0L;
+    /**
+     * SPU 单规格时，默认属性值名字
+     */
+    public static final String NAME_DEFAULT = "默认";
+
+    /**
      * 主键
      */
     @TableId
     private Long id;
     /**
-     * 规格键 id
+     * 属性项的编号
      *
-     * TODO @franky：加个 关联 {@link ProductPropertyDO#getId()} ，这样就能更好的知道
+     * 关联 {@link ProductPropertyDO#getId()}
      */
     private Long propertyId;
     /**
-     * 规格值名字
+     * 名称
      */
     private String name;
     /**
-     * 状态： 1 开启 ，2 禁用
+     * 备注
+     *
      */
-    private Integer status;
+    private String remark;
 
 }

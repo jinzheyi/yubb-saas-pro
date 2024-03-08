@@ -6,10 +6,8 @@ import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.common.util.validation.ValidationUtils;
-import cn.iocoder.yudao.module.platform.api.logger.dto.LoginLogCreateReqDTO;
-import cn.iocoder.yudao.module.platform.api.sms.SmsCodeApi;
-import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
-import cn.iocoder.yudao.module.platform.controller.center.auth.vo.*;
+import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformLoginLogCreateReqDTO;
+import cn.iocoder.yudao.module.platform.controller.platform.auth.vo.*;
 import cn.iocoder.yudao.module.platform.convert.auth.AuthConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
@@ -17,13 +15,16 @@ import cn.iocoder.yudao.framework.common.enums.logger.LoginLogTypeEnum;
 import cn.iocoder.yudao.framework.common.enums.logger.LoginResultEnum;
 import cn.iocoder.yudao.framework.common.enums.oauth2.OAuth2ClientConstants;
 import cn.iocoder.yudao.framework.common.enums.sms.SmsSceneEnum;
-import cn.iocoder.yudao.module.platform.service.common.PlatformCaptchaService;
 import cn.iocoder.yudao.module.platform.service.logger.PlatformLoginLogService;
 import cn.iocoder.yudao.module.platform.service.oauth2.PlatformOAuth2TokenService;
-import cn.iocoder.yudao.module.platform.service.social.PlatformSocialUserService;
 import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
+import cn.iocoder.yudao.module.system.api.sms.SmsCodeApi;
+import com.xingyuv.captcha.model.common.ResponseModel;
+import com.xingyuv.captcha.model.vo.CaptchaVO;
+import com.xingyuv.captcha.service.CaptchaService;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -37,39 +38,41 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 /**
  * Auth Service 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 @Slf4j
 public class PlatformAuthServiceImpl implements PlatformAuthService {
 
     @Resource
-    private PlatformUserService userService;
-    @Resource
-    private PlatformCaptchaService platformCaptchaService;
+    private PlatformUserService platformUserService;
     @Resource
     private PlatformLoginLogService platformLoginLogService;
     @Resource
     private PlatformOAuth2TokenService oauth2TokenServicePlatform;
     @Resource
-    private PlatformSocialUserService platformSocialUserService;
-
-    @Resource
     private Validator validator;
-
+    @Resource
+    private CaptchaService captchaService;
     @Resource
     private SmsCodeApi smsCodeApi;
+
+    /**
+     * 验证码的开关，默认为 true
+     */
+    @Value("${yudao.captcha.enable}")
+    private Boolean captchaEnable;
 
     @Override
     public PlatformUserDO authenticate(String username, String password) {
         final LoginLogTypeEnum logTypeEnum = LoginLogTypeEnum.LOGIN_USERNAME;
         // 校验账号是否存在
-        PlatformUserDO user = userService.getUserByUsername(username);
+        PlatformUserDO user = platformUserService.getUserByUsername(username);
         if (user == null) {
             createLoginLog(null, username, logTypeEnum, LoginResultEnum.BAD_CREDENTIALS);
             throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
         }
-        if (!userService.isPasswordMatch(password, user.getPassword())) {
+        if (!platformUserService.isPasswordMatch(password, user.getPassword())) {
             createLoginLog(user.getId(), username, logTypeEnum, LoginResultEnum.BAD_CREDENTIALS);
             throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
         }
@@ -83,17 +86,11 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
 
     @Override
     public AuthLoginRespVO login(AuthLoginReqVO reqVO) {
-        // 判断验证码是否正确
-        verifyCaptcha(reqVO);
+        // 校验验证码
+        validateCaptcha(reqVO);
 
         // 使用账号密码，进行登录
         PlatformUserDO user = authenticate(reqVO.getUsername(), reqVO.getPassword());
-
-        // 如果 socialType 非空，说明需要绑定社交用户
-        if (reqVO.getSocialType() != null) {
-            platformSocialUserService.bindSocialUser(new SocialUserBindReqDTO(user.getId(), getUserType().getValue(),
-                    reqVO.getSocialType(), reqVO.getSocialCode(), reqVO.getSocialState()));
-        }
 
         // 创建 Token 令牌，记录登录日志
         return createTokenAfterLoginSuccess(user.getId(), reqVO.getUsername(), LoginLogTypeEnum.LOGIN_USERNAME);
@@ -102,20 +99,22 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     @Override
     public void sendSmsCode(AuthSmsSendReqVO reqVO) {
         // 登录场景，验证是否存在
-        if (userService.getUserByMobile(reqVO.getMobile()) == null) {
+        if (platformUserService.getUserByMobile(reqVO.getMobile()) == null) {
             throw exception(AUTH_MOBILE_NOT_EXISTS);
         }
         // 发送验证码
-        smsCodeApi.sendSmsCode(AuthConvert.INSTANCE.convert(reqVO).setCreateIp(getClientIP()));
+        //todo
+        //smsCodeApi.sendSmsCode(AuthConvert.INSTANCE.convert(reqVO).setCreateIp(getClientIP()));
     }
 
     @Override
     public AuthLoginRespVO smsLogin(AuthSmsLoginReqVO reqVO) {
         // 校验验证码
-        smsCodeApi.useSmsCode(AuthConvert.INSTANCE.convert(reqVO, SmsSceneEnum.ADMIN_MEMBER_LOGIN.getScene(), getClientIP()));
+        //todo
+        //smsCodeApi.useSmsCode(AuthConvert.INSTANCE.convert(reqVO, SmsSceneEnum.ADMIN_MEMBER_LOGIN.getScene(), getClientIP()));
 
         // 获得用户信息
-        PlatformUserDO user = userService.getUserByMobile(reqVO.getMobile());
+        PlatformUserDO user = platformUserService.getUserByMobile(reqVO.getMobile());
         if (user == null) {
             throw exception(USER_NOT_EXISTS);
         }
@@ -124,36 +123,10 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         return createTokenAfterLoginSuccess(user.getId(), reqVO.getMobile(), LoginLogTypeEnum.LOGIN_MOBILE);
     }
 
-    @VisibleForTesting
-    void verifyCaptcha(AuthLoginReqVO reqVO) {
-        // 如果验证码关闭，则不进行校验
-        if (!platformCaptchaService.isCaptchaEnable()) {
-            return;
-        }
-        // 校验验证码
-        ValidationUtils.validate(validator, reqVO, AuthLoginReqVO.CodeEnableGroup.class);
-        // 验证码不存在
-        final LoginLogTypeEnum logTypeEnum = LoginLogTypeEnum.LOGIN_USERNAME;
-        String code = platformCaptchaService.getCaptchaCode(reqVO.getUuid());
-        if (code == null) {
-            // 创建登录失败日志（验证码不存在）
-            createLoginLog(null, reqVO.getUsername(), logTypeEnum, LoginResultEnum.CAPTCHA_NOT_FOUND);
-            throw exception(AUTH_LOGIN_CAPTCHA_NOT_FOUND);
-        }
-        // 验证码不正确
-        if (!code.equals(reqVO.getCode())) {
-            // 创建登录失败日志（验证码不正确)
-            createLoginLog(null, reqVO.getUsername(), logTypeEnum, LoginResultEnum.CAPTCHA_CODE_ERROR);
-            throw exception(AUTH_LOGIN_CAPTCHA_CODE_ERROR);
-        }
-        // 正确，所以要删除下验证码
-        platformCaptchaService.deleteCaptchaCode(reqVO.getUuid());
-    }
-
     private void createLoginLog(Long userId, String username,
                                 LoginLogTypeEnum logTypeEnum, LoginResultEnum loginResult) {
         // 插入登录日志
-        LoginLogCreateReqDTO reqDTO = new LoginLogCreateReqDTO();
+        PlatformLoginLogCreateReqDTO reqDTO = new PlatformLoginLogCreateReqDTO();
         reqDTO.setLogType(logTypeEnum.getType());
         reqDTO.setTraceId(TracerUtils.getTraceId());
         reqDTO.setUserId(userId);
@@ -165,33 +138,27 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         platformLoginLogService.createLoginLog(reqDTO);
         // 更新最后登录时间
         if (userId != null && Objects.equals(LoginResultEnum.SUCCESS.getResult(), loginResult.getResult())) {
-            userService.updateUserLogin(userId, ServletUtils.getClientIP());
+            platformUserService.updateUserLogin(userId, ServletUtils.getClientIP());
         }
     }
 
-    @Override
-    public AuthLoginRespVO socialLogin(AuthSocialLoginReqVO reqVO) {
-        // 使用 code 授权码，进行登录。然后，获得到绑定的用户编号
-        Long userId = platformSocialUserService.getBindUserId(UserTypeEnum.CENTER.getValue(), reqVO.getType(),
-                reqVO.getCode(), reqVO.getState());
-        if (userId == null) {
-            throw exception(AUTH_THIRD_LOGIN_NOT_BIND);
+    @VisibleForTesting
+    void validateCaptcha(AuthLoginReqVO reqVO) {
+        // 如果验证码关闭，则不进行校验
+        if (!captchaEnable) {
+            return;
         }
-
-        // 获得用户
-        PlatformUserDO user = userService.getUser(userId);
-        if (user == null) {
-            throw exception(USER_NOT_EXISTS);
+        // 校验验证码
+        ValidationUtils.validate(validator, reqVO, AuthLoginReqVO.CodeEnableGroup.class);
+        CaptchaVO captchaVO = new CaptchaVO();
+        captchaVO.setCaptchaVerification(reqVO.getCaptchaVerification());
+        ResponseModel response = captchaService.verification(captchaVO);
+        // 验证不通过
+        if (!response.isSuccess()) {
+            // 创建登录失败日志（验证码不正确)
+            createLoginLog(null, reqVO.getUsername(), LoginLogTypeEnum.LOGIN_USERNAME, LoginResultEnum.CAPTCHA_CODE_ERROR);
+            throw exception(AUTH_LOGIN_CAPTCHA_CODE_ERROR, response.getRepMsg());
         }
-
-        // 创建 Token 令牌，记录登录日志
-        return createTokenAfterLoginSuccess(user.getId(), user.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
-    }
-
-    @Override
-    public AuthLoginRespVO refreshToken(String refreshToken) {
-        PlatformOAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.refreshAccessToken(refreshToken, OAuth2ClientConstants.CLIENT_ID_DEFAULT);
-        return AuthConvert.INSTANCE.convert(accessTokenDO);
     }
 
     private AuthLoginRespVO createTokenAfterLoginSuccess(Long userId, String username, LoginLogTypeEnum logType) {
@@ -201,6 +168,12 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         PlatformOAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.createAccessToken(userId, getUserType().getValue(),
                 OAuth2ClientConstants.CLIENT_ID_DEFAULT, null);
         // 构建返回结果
+        return AuthConvert.INSTANCE.convert(accessTokenDO);
+    }
+
+    @Override
+    public AuthLoginRespVO refreshToken(String refreshToken) {
+        PlatformOAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.refreshAccessToken(refreshToken, OAuth2ClientConstants.CLIENT_ID_DEFAULT);
         return AuthConvert.INSTANCE.convert(accessTokenDO);
     }
 
@@ -216,7 +189,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     }
 
     private void createLogoutLog(Long userId, Integer userType, Integer logType) {
-        LoginLogCreateReqDTO reqDTO = new LoginLogCreateReqDTO();
+        PlatformLoginLogCreateReqDTO reqDTO = new PlatformLoginLogCreateReqDTO();
         reqDTO.setLogType(logType);
         reqDTO.setTraceId(TracerUtils.getTraceId());
         reqDTO.setUserId(userId);
@@ -232,12 +205,12 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         if (userId == null) {
             return null;
         }
-        PlatformUserDO user = userService.getUser(userId);
+        PlatformUserDO user = platformUserService.getUser(userId);
         return user != null ? user.getUsername() : null;
     }
 
     private UserTypeEnum getUserType() {
-        return UserTypeEnum.CENTER;
+        return UserTypeEnum.PLATFORM;
     }
 
 }

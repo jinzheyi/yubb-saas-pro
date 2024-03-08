@@ -14,7 +14,7 @@ import java.io.ByteArrayOutputStream;
 /**
  * Ftp 文件客户端
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public class FtpFileClient extends AbstractFileClient<FtpFileClientConfig> {
 
@@ -38,7 +38,7 @@ public class FtpFileClient extends AbstractFileClient<FtpFileClientConfig> {
     }
 
     @Override
-    public String upload(byte[] content, String path) {
+    public String upload(byte[] content, String path, String type) {
         // 执行写入
         String filePath = getFilePath(path);
         String fileName = FileUtil.getName(filePath);

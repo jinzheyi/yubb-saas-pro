@@ -29,22 +29,26 @@
             <artifactId>yudao-module-infra-api</artifactId>
             <version>${revision}</version>
         </dependency>
-        <dependency>
-            <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-module-platform-api</artifactId>
-            <version>${revision}</version>
-        </dependency>
 
         <!-- 业务组件 -->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-spring-boot-starter-biz-operatelog</artifactId>
         </dependency>
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-biz-tenant</artifactId>
+        </dependency>
 
         <!-- Web 相关 -->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-websocket</artifactId>
         </dependency>
 
         <!-- DB 相关 -->
@@ -63,10 +67,6 @@
         </dependency>
 
         <!-- Config 配置中心相关 -->
-        <dependency>
-            <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-spring-boot-starter-config</artifactId>
-        </dependency>
 
         <!-- Job 定时任务相关 -->
         <dependency>
@@ -88,10 +88,6 @@
         </dependency>
 
         <!-- 工具类相关 -->
-        <dependency>
-            <groupId>com.github.ulisesbocchio</groupId>
-            <artifactId>jasypt-spring-boot-starter</artifactId> <!-- 加解密 -->
-        </dependency>
 
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
@@ -125,10 +121,6 @@
             <artifactId>yudao-spring-boot-starter-file</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-spring-boot-starter-biz-tenant</artifactId>
-        </dependency>
     </dependencies>
 
 </project>

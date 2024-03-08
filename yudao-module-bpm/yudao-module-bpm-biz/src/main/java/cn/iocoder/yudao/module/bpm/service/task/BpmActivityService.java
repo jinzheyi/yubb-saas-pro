@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * BPM 活动实例 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface BpmActivityService {
 

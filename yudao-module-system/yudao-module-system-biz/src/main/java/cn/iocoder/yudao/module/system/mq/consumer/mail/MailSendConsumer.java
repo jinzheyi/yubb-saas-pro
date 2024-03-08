@@ -1,18 +1,30 @@
 package cn.iocoder.yudao.module.system.mq.consumer.mail;
 
-import cn.iocoder.yudao.framework.mq.core.stream.AbstractStreamMessageListener;
 import cn.iocoder.yudao.module.system.mq.message.mail.MailSendMessage;
+import cn.iocoder.yudao.module.system.service.mail.MailSendService;
+import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-// TODO 芋艿：这个暂未实现
+/**
+ * 针对 {@link MailSendMessage} 的消费者
+ *
+ * @author 圣钰科技
+ */
 @Component
 @Slf4j
-public class MailSendConsumer extends AbstractStreamMessageListener<MailSendMessage> {
+public class MailSendConsumer {
 
-    @Override
+    @Resource
+    private MailSendService mailSendService;
+
+    @EventListener
+    @Async // Spring Event 默认在 Producer 发送的线程，通过 @Async 实现异步
     public void onMessage(MailSendMessage message) {
         log.info("[onMessage][消息内容({})]", message);
+        mailSendService.doSendMail(message);
     }
 
 }

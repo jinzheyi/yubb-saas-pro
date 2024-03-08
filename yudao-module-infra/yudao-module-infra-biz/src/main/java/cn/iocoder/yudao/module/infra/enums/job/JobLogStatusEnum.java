@@ -6,7 +6,7 @@ import lombok.Getter;
 /**
  * 任务日志的状态枚举
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Getter
 @AllArgsConstructor

@@ -1,10 +1,9 @@
 package cn.iocoder.yudao.module.system.api.sensitiveword;
 
 import cn.iocoder.yudao.module.system.service.sensitiveword.SensitiveWordService;
-import org.springframework.stereotype.Service;
-
-import javax.annotation.Resource;
 import java.util.List;
+import javax.annotation.Resource;
+import org.springframework.stereotype.Service;
 
 /**
  * 敏感词 API 实现类

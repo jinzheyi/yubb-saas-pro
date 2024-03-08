@@ -4,15 +4,13 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
-import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RoleExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.permission.vo.role.RolePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.permission.vo.role.RoleExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.permission.vo.role.RolePageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.permission.PlatformRoleDO;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
 import org.springframework.lang.Nullable;
 
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 
 @Mapper
@@ -46,8 +44,5 @@ public interface PlatformRoleMapper extends BaseMapperX<PlatformRoleDO> {
     default List<PlatformRoleDO> selectListByStatus(@Nullable Collection<Integer> statuses) {
         return selectList(PlatformRoleDO::getStatus, statuses);
     }
-
-    @Select("SELECT COUNT(*) FROM platform_role WHERE update_time > #{maxUpdateTime}")
-    Long selectCountByUpdateTimeGt(Date maxUpdateTime);
 
 }

@@ -6,7 +6,7 @@ import cn.iocoder.yudao.framework.file.core.client.AbstractFileClient;
 /**
  * 基于 DB 存储的文件客户端的配置类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public class DBFileClient extends AbstractFileClient<DBFileClientConfig> {
 
@@ -21,7 +21,7 @@ public class DBFileClient extends AbstractFileClient<DBFileClientConfig> {
     }
 
     @Override
-    public String upload(byte[] content, String path) {
+    public String upload(byte[] content, String path, String type) {
         getDao().insert(getId(), path, content);
         // 拼接返回路径
         return super.formatFileUrl(config.getDomain(), path);

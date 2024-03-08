@@ -1,1 +1,0 @@
-package cn.iocoder.yudao.framework.common.enums;import lombok.NoArgsConstructor;/** * 常量类 * * @author zhusy * @since 2022/8/30 */@NoArgsConstructorpublic class Constants {    public static final String SYMBOL = "#";}

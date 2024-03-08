@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * OAuth2.0 访问令牌的校验 Response DTO
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Data
 public class OAuth2AccessTokenCheckRespDTO implements Serializable {

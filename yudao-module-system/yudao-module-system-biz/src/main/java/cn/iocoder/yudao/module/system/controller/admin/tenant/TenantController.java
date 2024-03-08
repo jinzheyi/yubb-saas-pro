@@ -1,22 +1,21 @@
 package cn.iocoder.yudao.module.system.controller.admin.tenant;
 
+import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.platform.api.tenant.dto.tenant.TenantRespDTO;
 import cn.iocoder.yudao.module.system.service.tenant.TenantService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiImplicitParam;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import javax.annotation.Resource;
+import javax.annotation.security.PermitAll;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.annotation.Resource;
-import javax.annotation.security.PermitAll;
-
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-
-@Api(tags = "管理后台 - 租户")
+@Tag(name = "管理后台 - 租户")
 @RestController
 @RequestMapping("/system/tenant")
 public class TenantController {
@@ -26,11 +25,19 @@ public class TenantController {
 
     @GetMapping("/get-id-by-name")
     @PermitAll
-    @ApiOperation(value = "使用租户名，获得租户编号", notes = "登录界面，根据用户的租户名，获得租户编号")
-    @ApiImplicitParam(name = "name", value = "租户名", required = true, example = "1024", dataTypeClass = String.class)
+    @Operation(summary = "使用租户名，获得租户编号", description = "登录界面，根据用户的租户名，获得租户编号")
+    @Parameter(name = "name", description = "租户名", required = true, example = "1024")
     public CommonResult<Long> getTenantIdByName(@RequestParam("name") String name) {
         TenantRespDTO tenantRespDTO = tenantService.getTenantByName(name);
         return success(tenantRespDTO != null ? tenantRespDTO.getId() : null);
+    }
+
+    @GetMapping("/get-by-website")
+    @PermitAll
+    @Operation(summary = "使用域名，获得租户信息", description = "登录界面，根据用户的域名，获得租户信息")
+    @Parameter(name = "website", description = "域名", required = true, example = "www.iocoder.cn")
+    public CommonResult<TenantRespDTO> getTenantByWebsite(@RequestParam("website") String website) {
+        return success(tenantService.getTenantByWebsite(website));
     }
 
 }

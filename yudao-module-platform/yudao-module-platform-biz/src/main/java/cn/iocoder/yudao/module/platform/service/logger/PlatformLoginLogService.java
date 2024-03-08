@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.platform.service.logger;
 
-import cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog.LoginLogExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.logger.vo.loginlog.LoginLogPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.logger.vo.loginlog.LoginLogExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.logger.vo.loginlog.LoginLogPageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.logger.PlatformLoginLogDO;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.api.logger.dto.LoginLogCreateReqDTO;
+import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformLoginLogCreateReqDTO;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -35,6 +35,6 @@ public interface PlatformLoginLogService {
      *
      * @param reqDTO 日志信息
      */
-    void createLoginLog(@Valid LoginLogCreateReqDTO reqDTO);
+    void createLoginLog(@Valid PlatformLoginLogCreateReqDTO reqDTO);
 
 }

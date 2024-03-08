@@ -8,9 +8,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * 过滤 /admin-api、/app-api 等 租户端API 请求的过滤器
+ * 过滤 /admin-api、/app-api 等 API 请求的过滤器
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @RequiredArgsConstructor
 public abstract class ApiRequestFilter extends OncePerRequestFilter {

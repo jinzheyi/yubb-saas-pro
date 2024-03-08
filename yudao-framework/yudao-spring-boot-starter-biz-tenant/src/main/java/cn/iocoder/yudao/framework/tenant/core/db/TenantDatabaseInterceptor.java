@@ -10,20 +10,19 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
  * 基于 MyBatis Plus 多租户的功能，实现 DB 层面的多租户的功能
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public class TenantDatabaseInterceptor implements TenantLineHandler {
 
     private final Set<String> ignoreTables = new HashSet<>();
 
     private final Set<String> ignoreTablesPrefix = new HashSet<>();
-
-    private final Set<String> platformIgnoreTables = new HashSet<>();
 
     public TenantDatabaseInterceptor(TenantProperties properties) {
         // 不同 DB 下，大小写的习惯不同，所以需要都添加进去
@@ -37,10 +36,6 @@ public class TenantDatabaseInterceptor implements TenantLineHandler {
         properties.getIgnoreTablesPrefix().forEach(tablesPrefix -> {
             ignoreTablesPrefix.add(tablesPrefix);
         });
-        //平台需要忽略多租户的表
-        properties.getPlatformIgnoreTables().forEach(ignoreTable -> {
-            platformIgnoreTables.add(ignoreTable);
-        });
     }
 
     @Override
@@ -50,6 +45,8 @@ public class TenantDatabaseInterceptor implements TenantLineHandler {
 
     @Override
     public boolean ignoreTable(String tableName) {
+        //平台用户默认不拼接租户id(并且是获取的租户id为空的情况)
+        boolean userType = Objects.isNull(TenantContextHolder.getTenantId()) && UserTypeEnum.PLATFORM.getValue().equals(WebFrameworkUtils.getLoginUserType());
         boolean isIgnore = Boolean.FALSE;
         //需要忽略的表前缀处理
         for (String tablesPrefix : ignoreTablesPrefix) {
@@ -59,19 +56,11 @@ public class TenantDatabaseInterceptor implements TenantLineHandler {
                 break;
             }
         }
-        //平台端请求并且是指定需要忽略的表
-        if (UserTypeEnum.CENTER.getValue().equals(WebFrameworkUtils.getLoginUserType())) {
-            for (String tablesPrefix : platformIgnoreTables) {
-                //匹配到一个就可以跳出循环体了
-                if (tableName.equals(tablesPrefix)) {
-                    isIgnore = Boolean.TRUE;
-                    break;
-                }
-            }
-        }
         return TenantContextHolder.isIgnore() // 情况一，全局忽略多租户
             || CollUtil.contains(ignoreTables, tableName) // 情况二，忽略多租户的表
-            || isIgnore;  // 情况二，忽略多租户的表前缀
+            || isIgnore  // 情况三，自定义忽略多租户的表前缀
+            || userType  //情况三，平台用户默认不拼接租户id
+        ;
     }
 
 }

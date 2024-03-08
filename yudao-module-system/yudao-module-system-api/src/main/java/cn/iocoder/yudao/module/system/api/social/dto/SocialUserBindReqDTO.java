@@ -13,7 +13,7 @@ import javax.validation.constraints.NotNull;
 /**
  * 取消绑定社交用户 Request DTO
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Data
 @NoArgsConstructor
@@ -37,7 +37,7 @@ public class SocialUserBindReqDTO {
      */
     @InEnum(SocialTypeEnum.class)
     @NotNull(message = "社交平台的类型不能为空")
-    private Integer type;
+    private Integer socialType;
     /**
      * 授权码
      */

@@ -24,12 +24,22 @@ public enum RoleCodeEnum {
      */
     private final String name;
 
-    public static boolean isSuperAdmin(String code) {
-        return ObjectUtils.equalsAny(code, SUPER_ADMIN.getCode());
-    }
-
+    /**
+     * 租户超管
+     * @param code
+     * @return
+     */
     public static boolean isTenantAdmin(String code) {
         return ObjectUtils.equalsAny(code, TENANT_ADMIN.getCode());
+    }
+
+    /**
+     * 平台超管
+     * @param code
+     * @return
+     */
+    public static boolean isSuperAdmin(String code) {
+        return ObjectUtils.equalsAny(code, SUPER_ADMIN.getCode());
     }
 
 }

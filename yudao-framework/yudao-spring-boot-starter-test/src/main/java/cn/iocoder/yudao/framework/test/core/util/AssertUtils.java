@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /**
  * 单元测试，assert 断言工具类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public class AssertUtils {
 
@@ -33,6 +33,10 @@ public class AssertUtils {
     public static void assertPojoEquals(Object expected, Object actual, String... ignoreFields) {
         Field[] expectedFields = ReflectUtil.getFields(expected.getClass());
         Arrays.stream(expectedFields).forEach(expectedField -> {
+            // 忽略 jacoco 自动生成的 $jacocoData 属性的情况
+            if (expectedField.isSynthetic()) {
+                return;
+            }
             // 如果是忽略的属性，则不进行比对
             if (ArrayUtil.contains(ignoreFields, expectedField.getName())) {
                 return;

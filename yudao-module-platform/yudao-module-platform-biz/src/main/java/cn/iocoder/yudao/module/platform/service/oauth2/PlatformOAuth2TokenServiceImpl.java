@@ -6,7 +6,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.date.DateUtils;
-import cn.iocoder.yudao.module.platform.controller.center.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2ClientDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.oauth2.PlatformOAuth2RefreshTokenDO;
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import java.util.Calendar;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception0;
@@ -26,7 +26,7 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 /**
  * OAuth2.0 Token Service 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 public class PlatformOAuth2TokenServiceImpl implements PlatformOAuth2TokenService {
@@ -136,7 +136,7 @@ public class PlatformOAuth2TokenServiceImpl implements PlatformOAuth2TokenServic
                 .setUserId(refreshTokenDO.getUserId()).setUserType(refreshTokenDO.getUserType())
                 .setClientId(clientDO.getClientId()).setScopes(refreshTokenDO.getScopes())
                 .setRefreshToken(refreshTokenDO.getRefreshToken())
-                .setExpiresTime(DateUtils.addDate(Calendar.SECOND, clientDO.getAccessTokenValiditySeconds()));
+                .setExpiresTime(LocalDateTime.now().plusSeconds(clientDO.getAccessTokenValiditySeconds()));
         oauth2AccessTokenMapperPlatform.insert(accessTokenDO);
         // 记录到 Redis 中
         oauth2AccessTokenRedisDAOPlatform.set(accessTokenDO);
@@ -147,7 +147,7 @@ public class PlatformOAuth2TokenServiceImpl implements PlatformOAuth2TokenServic
         PlatformOAuth2RefreshTokenDO refreshToken = new PlatformOAuth2RefreshTokenDO().setRefreshToken(generateRefreshToken())
                 .setUserId(userId).setUserType(userType)
                 .setClientId(clientDO.getClientId()).setScopes(scopes)
-                .setExpiresTime(DateUtils.addDate(Calendar.SECOND, clientDO.getRefreshTokenValiditySeconds()));
+                .setExpiresTime(LocalDateTime.now().plusSeconds(clientDO.getRefreshTokenValiditySeconds()));
         oauth2RefreshTokenMapperPlatform.insert(refreshToken);
         return refreshToken;
     }

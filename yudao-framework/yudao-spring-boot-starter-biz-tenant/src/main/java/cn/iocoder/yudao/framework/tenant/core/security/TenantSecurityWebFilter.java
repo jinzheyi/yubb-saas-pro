@@ -1,7 +1,6 @@
 package cn.iocoder.yudao.framework.tenant.core.security;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
@@ -29,9 +28,7 @@ import java.util.Objects;
  * 2. 如果请求未带租户的编号，检查是否是忽略的 URL，否则也不允许访问。
  * 3. 校验租户是合法，例如说被禁用、到期
  *
- * 校验用户访问的租户，是否是其所在的租户，
- *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Slf4j
 public class TenantSecurityWebFilter extends ApiRequestFilter {
@@ -82,7 +79,7 @@ public class TenantSecurityWebFilter extends ApiRequestFilter {
             if (tenantId == null) {
                 log.error("[doFilterInternal][URL({}/{}) 未传递租户编号]", request.getRequestURI(), request.getMethod());
                 ServletUtils.writeJSON(response, CommonResult.error(GlobalErrorCodeConstants.BAD_REQUEST.getCode(),
-                        "租户的请求未传递，请进行排查"));
+                        "请求的租户标识未传递，请进行排查"));
                 return;
             }
             // 3. 校验租户是合法，例如说被禁用、到期

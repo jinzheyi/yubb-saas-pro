@@ -6,12 +6,11 @@ import cn.iocoder.yudao.module.system.api.dept.dto.DeptRespDTO;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 部门 API 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface DeptApi {
 
@@ -29,7 +28,7 @@ public interface DeptApi {
      * @param ids 部门编号数组
      * @return 部门信息数组
      */
-    List<DeptRespDTO> getDepts(Collection<Long> ids);
+    List<DeptRespDTO> getDeptList(Collection<Long> ids);
 
     /**
      * 校验部门们是否有效。如下情况，视为无效：
@@ -38,7 +37,7 @@ public interface DeptApi {
      *
      * @param ids 角色编号数组
      */
-    void validDepts(Collection<Long> ids);
+    void validateDeptList(Collection<Long> ids);
 
     /**
      * 获得指定编号的部门 Map
@@ -46,8 +45,8 @@ public interface DeptApi {
      * @param ids 部门编号数组
      * @return 部门 Map
      */
-    default Map<Long, DeptRespDTO> getDeptMap(Set<Long> ids) {
-        List<DeptRespDTO> list = getDepts(ids);
+    default Map<Long, DeptRespDTO> getDeptMap(Collection<Long> ids) {
+        List<DeptRespDTO> list = getDeptList(ids);
         return CollectionUtils.convertMap(list, DeptRespDTO::getId);
     }
 

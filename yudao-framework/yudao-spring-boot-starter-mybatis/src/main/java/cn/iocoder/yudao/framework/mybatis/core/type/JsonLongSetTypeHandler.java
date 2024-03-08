@@ -12,15 +12,15 @@ import java.util.Set;
  *
  * 例如说哦，SysUserDO 的 postIds 属性
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public class JsonLongSetTypeHandler extends AbstractJsonTypeHandler<Object> {
 
-    private static final TypeReference<Set<Long>> typeReference = new TypeReference<Set<Long>>(){};
+    private static final TypeReference<Set<Long>> TYPE_REFERENCE = new TypeReference<Set<Long>>(){};
 
     @Override
     protected Object parse(String json) {
-        return JsonUtils.parseObject(json, typeReference);
+        return JsonUtils.parseObject(json, TYPE_REFERENCE);
     }
 
     @Override

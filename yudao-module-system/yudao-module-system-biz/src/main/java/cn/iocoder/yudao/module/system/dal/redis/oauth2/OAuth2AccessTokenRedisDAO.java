@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.system.dal.redis.oauth2;
 
+import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
@@ -7,6 +8,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
 
 import javax.annotation.Resource;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -16,7 +19,7 @@ import static cn.iocoder.yudao.module.system.dal.redis.RedisKeyConstants.OAUTH2_
 /**
  * {@link OAuth2AccessTokenDO} 的 RedisDAO
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Repository
 public class OAuth2AccessTokenRedisDAO {
@@ -33,8 +36,10 @@ public class OAuth2AccessTokenRedisDAO {
         String redisKey = formatKey(accessTokenDO.getAccessToken());
         // 清理多余字段，避免缓存
         accessTokenDO.setUpdater(null).setUpdateTime(null).setCreateTime(null).setCreator(null).setDeleted(null);
-        stringRedisTemplate.opsForValue().set(redisKey, JsonUtils.toJsonString(accessTokenDO),
-                accessTokenDO.getExpiresTime().getTime() - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+        long time = LocalDateTimeUtil.between(LocalDateTime.now(), accessTokenDO.getExpiresTime(), ChronoUnit.SECONDS);
+        if (time > 0) {
+            stringRedisTemplate.opsForValue().set(redisKey, JsonUtils.toJsonString(accessTokenDO), time, TimeUnit.SECONDS);
+        }
     }
 
     public void delete(String accessToken) {
@@ -48,7 +53,7 @@ public class OAuth2AccessTokenRedisDAO {
     }
 
     private static String formatKey(String accessToken) {
-        return String.format(OAUTH2_ACCESS_TOKEN.getKeyTemplate(), accessToken);
+        return String.format(OAUTH2_ACCESS_TOKEN, accessToken);
     }
 
 }

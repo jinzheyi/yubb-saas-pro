@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * 角色 API 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface RoleApi {
 
@@ -22,7 +22,7 @@ public interface RoleApi {
      *
      * @param ids 角色编号数组
      */
-    void validRoles(Collection<Long> ids);
+    void validRoleList(Collection<Long> ids);
 
     /**
      * 外部创建租户角色
@@ -37,6 +37,6 @@ public interface RoleApi {
      * @param statuses 筛选的状态。允许空，空时不筛选
      * @return 角色列表
      */
-    List<RoleSimpleRespDTO> getRoles(@Nullable Collection<Integer> statuses);
+    List<RoleSimpleRespDTO> getRoleListByStatus(@Nullable Collection<Integer> statuses);
 
 }

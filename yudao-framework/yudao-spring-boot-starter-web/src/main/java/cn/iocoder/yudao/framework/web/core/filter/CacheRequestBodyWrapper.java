@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.framework.web.core.filter;
 
-import cn.hutool.extra.servlet.ServletUtil;
+import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
@@ -14,7 +14,7 @@ import java.io.InputStreamReader;
 /**
  *  Request Body 缓存 Wrapper
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public class CacheRequestBodyWrapper extends HttpServletRequestWrapper {
 
@@ -25,7 +25,7 @@ public class CacheRequestBodyWrapper extends HttpServletRequestWrapper {
 
     public CacheRequestBodyWrapper(HttpServletRequest request) {
         super(request);
-        body = ServletUtil.getBodyBytes(request);
+        body = ServletUtils.getBodyBytes(request);
     }
 
     @Override

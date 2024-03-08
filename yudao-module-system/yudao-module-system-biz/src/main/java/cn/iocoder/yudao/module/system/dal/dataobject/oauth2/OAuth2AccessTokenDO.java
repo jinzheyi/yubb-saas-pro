@@ -10,7 +10,7 @@ import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -19,7 +19,7 @@ import java.util.List;
  * 如下字段，暂时未使用，暂时不支持：
  * user_name、authentication（用户信息）
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName(value = "system_oauth2_access_token", autoResultMap = true)
 @KeySequence("system_oauth2_access_token_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
@@ -64,6 +64,6 @@ public class OAuth2AccessTokenDO extends TenantBaseDO {
     /**
      * 过期时间
      */
-    private Date expiresTime;
+    private LocalDateTime expiresTime;
 
 }

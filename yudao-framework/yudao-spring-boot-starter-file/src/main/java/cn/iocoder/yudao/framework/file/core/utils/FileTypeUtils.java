@@ -7,7 +7,7 @@ import org.apache.tika.Tika;
 /**
  * 文件类型 Utils
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public class FileTypeUtils {
 

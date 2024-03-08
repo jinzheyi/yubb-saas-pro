@@ -2,11 +2,11 @@ package cn.iocoder.yudao.framework.security.config;
 
 import cn.iocoder.yudao.framework.security.core.aop.PreAuthenticatedAspect;
 import cn.iocoder.yudao.framework.security.core.context.TransmittableThreadLocalSecurityContextHolderStrategy;
+import cn.iocoder.yudao.framework.security.core.filter.PlatformTokenAuthenticationFilter;
 import cn.iocoder.yudao.framework.security.core.filter.TokenAuthenticationFilter;
-import cn.iocoder.yudao.framework.security.core.filter.TokenPlatformAuthenticationFilter;
 import cn.iocoder.yudao.framework.security.core.handler.AccessDeniedHandlerImpl;
 import cn.iocoder.yudao.framework.security.core.handler.AuthenticationEntryPointImpl;
-import cn.iocoder.yudao.framework.security.core.service.CSecurityFrameworkServiceImpl;
+import cn.iocoder.yudao.framework.security.core.service.PlatformSecurityFrameworkServiceImpl;
 import cn.iocoder.yudao.framework.security.core.service.SecurityFrameworkService;
 import cn.iocoder.yudao.framework.security.core.service.SecurityFrameworkServiceImpl;
 import cn.iocoder.yudao.framework.web.config.WebProperties;
@@ -15,10 +15,11 @@ import cn.iocoder.yudao.module.platform.api.oauth2.PlatformOAuth2TokenApi;
 import cn.iocoder.yudao.module.platform.api.permission.PlatformPermissionApi;
 import cn.iocoder.yudao.module.system.api.oauth2.OAuth2TokenApi;
 import cn.iocoder.yudao.module.system.api.permission.PermissionApi;
+import cn.iocoder.yudao.module.system.api.plug.PlugTenantApi;
 import org.springframework.beans.factory.config.MethodInvokingFactoryBean;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,9 +34,9 @@ import javax.annotation.Resource;
  * 注意，不能和 {@link YudaoWebSecurityConfigurerAdapter} 用一个，原因是会导致初始化报错。
  * 参见 https://stackoverflow.com/questions/53847050/spring-boot-delegatebuilder-cannot-be-null-on-autowiring-authenticationmanager 文档。
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
-@Configuration(proxyBeanMethods = false)
+@AutoConfiguration
 @EnableConfigurationProperties(SecurityProperties.class)
 public class YudaoSecurityAutoConfiguration {
 
@@ -74,7 +75,7 @@ public class YudaoSecurityAutoConfiguration {
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(securityProperties.getPasswordEncoderLength());
     }
 
     /**
@@ -87,19 +88,19 @@ public class YudaoSecurityAutoConfiguration {
     }
 
     @Bean
-    public TokenPlatformAuthenticationFilter platformAuthenticationFilter(WebProperties webProperties, GlobalExceptionHandler globalExceptionHandler,
+    public PlatformTokenAuthenticationFilter platformAuthenticationFilter(WebProperties webProperties, GlobalExceptionHandler globalExceptionHandler,
                                                                           PlatformOAuth2TokenApi platformOAuth2TokenApi) {
-        return new TokenPlatformAuthenticationFilter(webProperties, securityProperties, globalExceptionHandler, platformOAuth2TokenApi);
+        return new PlatformTokenAuthenticationFilter(webProperties, securityProperties, globalExceptionHandler, platformOAuth2TokenApi);
     }
 
     @Bean("ss") // 使用 Spring Security 的缩写，方便使用
-    public SecurityFrameworkService securityFrameworkService(PermissionApi permissionApi) {
-        return new SecurityFrameworkServiceImpl(permissionApi);
+    public SecurityFrameworkService securityFrameworkService(PermissionApi permissionApi, PlugTenantApi plugTenantApi) {
+        return new SecurityFrameworkServiceImpl(permissionApi, plugTenantApi);
     }
 
-    @Bean("cs")
+    @Bean("ps")
     public SecurityFrameworkService securityFrameworkService(PlatformPermissionApi platformPermissionApi) {
-        return new CSecurityFrameworkServiceImpl(platformPermissionApi);
+        return new PlatformSecurityFrameworkServiceImpl(platformPermissionApi);
     }
 
     /**

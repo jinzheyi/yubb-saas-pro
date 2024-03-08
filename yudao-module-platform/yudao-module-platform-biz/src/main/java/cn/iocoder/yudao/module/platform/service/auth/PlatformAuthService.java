@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.platform.service.auth;
 
-import cn.iocoder.yudao.module.platform.controller.center.auth.vo.*;
+import cn.iocoder.yudao.module.platform.controller.platform.auth.vo.*;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 
 import javax.validation.Valid;
@@ -10,7 +10,7 @@ import javax.validation.Valid;
  *
  * 提供用户的登录、登出的能力
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface PlatformAuthService {
 
@@ -53,14 +53,6 @@ public interface PlatformAuthService {
      * @return 登录结果
      */
     AuthLoginRespVO smsLogin(AuthSmsLoginReqVO reqVO) ;
-
-    /**
-     * 社交快捷登录，使用 code 授权码
-     *
-     * @param reqVO 登录信息
-     * @return 登录结果
-     */
-    AuthLoginRespVO socialLogin(@Valid AuthSocialLoginReqVO reqVO);
 
     /**
      * 刷新访问令牌

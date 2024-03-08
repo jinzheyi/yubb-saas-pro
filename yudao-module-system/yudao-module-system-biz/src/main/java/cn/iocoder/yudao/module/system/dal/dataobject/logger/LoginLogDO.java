@@ -1,9 +1,9 @@
 package cn.iocoder.yudao.module.system.dal.dataobject.logger;
 
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
 import cn.iocoder.yudao.framework.common.enums.logger.LoginLogTypeEnum;
 import cn.iocoder.yudao.framework.common.enums.logger.LoginResultEnum;
+import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -15,7 +15,7 @@ import lombok.ToString;
  *
  * 注意，包括登录和登出两种行为
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName("system_login_log")
 @KeySequence("system_login_log_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。

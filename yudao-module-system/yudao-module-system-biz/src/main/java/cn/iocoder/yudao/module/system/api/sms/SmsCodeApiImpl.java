@@ -1,18 +1,17 @@
 package cn.iocoder.yudao.module.system.api.sms;
 
-import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeCheckReqDTO;
 import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeSendReqDTO;
 import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeUseReqDTO;
+import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeValidateReqDTO;
 import cn.iocoder.yudao.module.system.service.sms.SmsCodeService;
+import javax.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
-
-import javax.annotation.Resource;
 
 /**
  * 短信验证码 API 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 @Validated
@@ -32,8 +31,8 @@ public class SmsCodeApiImpl implements SmsCodeApi {
     }
 
     @Override
-    public void checkSmsCode(SmsCodeCheckReqDTO reqDTO) {
-        smsCodeService.checkSmsCode(reqDTO);
+    public void validateSmsCode(SmsCodeValidateReqDTO reqDTO) {
+        smsCodeService.validateSmsCode(reqDTO);
     }
 
 }

@@ -1,1 +1,0 @@
-package cn.iocoder.yudao.module.system.api.config;import cn.iocoder.yudao.module.system.api.config.dto.ConfigurationCreateReqDTO;import java.util.List;/** * 租户配置信息API接口 * * @author zhusy * @since 2022/8/31 */public interface ConfigurationApi {    /**     * 同步平台端配置信息     */    void createOrDel(List<ConfigurationCreateReqDTO> reqDTOList);}

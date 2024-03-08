@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.bpm.convert.task;
 
+import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.activity.BpmActivityRespVO;
 import org.flowable.engine.history.HistoricActivityInstance;
 import org.mapstruct.Mapper;
@@ -12,9 +13,9 @@ import java.util.List;
 /**
  * BPM 活动 Convert
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
-@Mapper
+@Mapper(uses = DateUtils.class)
 public interface BpmActivityConvert {
 
     BpmActivityConvert INSTANCE = Mappers.getMapper(BpmActivityConvert.class);

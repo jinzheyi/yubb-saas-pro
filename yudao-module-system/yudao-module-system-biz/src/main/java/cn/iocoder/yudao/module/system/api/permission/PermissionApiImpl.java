@@ -11,7 +11,7 @@ import java.util.Set;
 /**
  * 权限 API 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 public class PermissionApiImpl implements PermissionApi {
@@ -21,7 +21,7 @@ public class PermissionApiImpl implements PermissionApi {
 
     @Override
     public Set<Long> getUserRoleIdListByRoleIds(Collection<Long> roleIds) {
-        return permissionService.getUserRoleIdListByRoleIds(roleIds);
+        return permissionService.getUserRoleIdListByRoleId(roleIds);
     }
 
     @Override
@@ -45,8 +45,8 @@ public class PermissionApiImpl implements PermissionApi {
     }
 
     @Override
-    public Set<Long> getRoleMenuIds(Long roleId) {
-        return permissionService.getRoleMenuIds(roleId);
+    public Set<Long> getRoleMenuListByRoleId(Long roleId) {
+        return permissionService.getRoleMenuListByRoleId(roleId);
     }
 
     @Override
@@ -55,7 +55,7 @@ public class PermissionApiImpl implements PermissionApi {
     }
 
     @Override
-    public Boolean hasAnyRoleMenu(Long menuId) {
+    public boolean hasAnyRoleMenu(Long menuId) {
         return permissionService.hasAnyRoleMenu(menuId);
     }
 

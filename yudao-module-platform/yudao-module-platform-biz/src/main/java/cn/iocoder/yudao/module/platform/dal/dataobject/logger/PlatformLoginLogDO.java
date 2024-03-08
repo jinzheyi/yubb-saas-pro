@@ -15,7 +15,7 @@ import lombok.ToString;
  *
  * 注意，包括登录和登出两种行为
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName("platform_login_log")
 @KeySequence("platform_login_log_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。

@@ -9,7 +9,7 @@ import java.util.Set;
 /**
  * 多租户配置
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @ConfigurationProperties(prefix = "yudao.tenant")
 @Data
@@ -19,6 +19,11 @@ public class TenantProperties {
      * 租户是否开启
      */
     private static final Boolean ENABLE_DEFAULT = true;
+
+    /**
+     * 是否开启
+     */
+    private Boolean enable = ENABLE_DEFAULT;
 
     /**
      * 需要忽略多租户的请求
@@ -38,10 +43,5 @@ public class TenantProperties {
      * 需要忽略的表前缀 即默认所有该前缀表都屏蔽自动添加租户id功能。例如平台的表，租户中间表
      */
     private Set<String> ignoreTablesPrefix = Collections.emptySet();
-
-    /**
-     * 平台端需要忽略多租户的表
-     */
-    private Set<String> platformIgnoreTables = Collections.emptySet();
 
 }

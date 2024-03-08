@@ -7,15 +7,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * system 模块的数据权限 Configuration
+ * platform 模块的数据权限 Configuration
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Configuration(proxyBeanMethods = false)
 public class PlatformDataPermissionConfiguration {
 
     @Bean
-    public DeptDataPermissionRuleCustomizer PlatformDeptDataPermissionRuleCustomizer() {
+    public DeptDataPermissionRuleCustomizer psDeptDataPermissionRuleCustomizer() {
         return rule -> {
             // dept
             rule.addDeptColumn(PlatformUserDO.class);

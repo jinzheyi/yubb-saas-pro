@@ -20,7 +20,7 @@
 -- Sequence structure for bpm_form_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "bpm_form_seq";
-CREATE SEQUENCE "bpm_form_seq" 
+CREATE SEQUENCE "bpm_form_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -29,7 +29,7 @@ CACHE 1;
 -- Sequence structure for bpm_oa_leave_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "bpm_oa_leave_seq";
-CREATE SEQUENCE "bpm_oa_leave_seq" 
+CREATE SEQUENCE "bpm_oa_leave_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -38,7 +38,7 @@ CACHE 1;
 -- Sequence structure for bpm_process_definition_ext_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "bpm_process_definition_ext_seq";
-CREATE SEQUENCE "bpm_process_definition_ext_seq" 
+CREATE SEQUENCE "bpm_process_definition_ext_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -47,7 +47,7 @@ CACHE 1;
 -- Sequence structure for bpm_process_instance_ext_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "bpm_process_instance_ext_seq";
-CREATE SEQUENCE "bpm_process_instance_ext_seq" 
+CREATE SEQUENCE "bpm_process_instance_ext_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -56,7 +56,7 @@ CACHE 1;
 -- Sequence structure for bpm_task_assign_rule_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "bpm_task_assign_rule_seq";
-CREATE SEQUENCE "bpm_task_assign_rule_seq" 
+CREATE SEQUENCE "bpm_task_assign_rule_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -65,7 +65,7 @@ CACHE 1;
 -- Sequence structure for bpm_task_ext_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "bpm_task_ext_seq";
-CREATE SEQUENCE "bpm_task_ext_seq" 
+CREATE SEQUENCE "bpm_task_ext_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -74,7 +74,7 @@ CACHE 1;
 -- Sequence structure for bpm_user_group_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "bpm_user_group_seq";
-CREATE SEQUENCE "bpm_user_group_seq" 
+CREATE SEQUENCE "bpm_user_group_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -83,7 +83,7 @@ CACHE 1;
 -- Sequence structure for infra_api_access_log_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "infra_api_access_log_seq";
-CREATE SEQUENCE "infra_api_access_log_seq" 
+CREATE SEQUENCE "infra_api_access_log_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -92,7 +92,7 @@ CACHE 1;
 -- Sequence structure for infra_api_error_log_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "infra_api_error_log_seq";
-CREATE SEQUENCE "infra_api_error_log_seq" 
+CREATE SEQUENCE "infra_api_error_log_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -101,7 +101,7 @@ CACHE 1;
 -- Sequence structure for infra_codegen_column_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "infra_codegen_column_seq";
-CREATE SEQUENCE "infra_codegen_column_seq" 
+CREATE SEQUENCE "infra_codegen_column_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -110,7 +110,7 @@ CACHE 1;
 -- Sequence structure for infra_codegen_table_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "infra_codegen_table_seq";
-CREATE SEQUENCE "infra_codegen_table_seq" 
+CREATE SEQUENCE "infra_codegen_table_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -119,7 +119,7 @@ CACHE 1;
 -- Sequence structure for infra_config_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "infra_config_seq";
-CREATE SEQUENCE "infra_config_seq" 
+CREATE SEQUENCE "infra_config_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -128,7 +128,7 @@ CACHE 1;
 -- Sequence structure for infra_data_source_config_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "infra_data_source_config_seq";
-CREATE SEQUENCE "infra_data_source_config_seq" 
+CREATE SEQUENCE "infra_data_source_config_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -137,7 +137,7 @@ CACHE 1;
 -- Sequence structure for infra_file_config_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "infra_file_config_seq";
-CREATE SEQUENCE "infra_file_config_seq" 
+CREATE SEQUENCE "infra_file_config_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -146,7 +146,7 @@ CACHE 1;
 -- Sequence structure for infra_file_content_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "infra_file_content_seq";
-CREATE SEQUENCE "infra_file_content_seq" 
+CREATE SEQUENCE "infra_file_content_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -155,7 +155,7 @@ CACHE 1;
 -- Sequence structure for infra_file_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "infra_file_seq";
-CREATE SEQUENCE "infra_file_seq" 
+CREATE SEQUENCE "infra_file_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -164,7 +164,7 @@ CACHE 1;
 -- Sequence structure for infra_job_log_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "infra_job_log_seq";
-CREATE SEQUENCE "infra_job_log_seq" 
+CREATE SEQUENCE "infra_job_log_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -173,7 +173,7 @@ CACHE 1;
 -- Sequence structure for infra_job_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "infra_job_seq";
-CREATE SEQUENCE "infra_job_seq" 
+CREATE SEQUENCE "infra_job_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -182,7 +182,7 @@ CACHE 1;
 -- Sequence structure for infra_test_demo_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "infra_test_demo_seq";
-CREATE SEQUENCE "infra_test_demo_seq" 
+CREATE SEQUENCE "infra_test_demo_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -191,7 +191,7 @@ CACHE 1;
 -- Sequence structure for member_user_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "member_user_seq";
-CREATE SEQUENCE "member_user_seq" 
+CREATE SEQUENCE "member_user_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -200,7 +200,7 @@ CACHE 1;
 -- Sequence structure for pay_app_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "pay_app_seq";
-CREATE SEQUENCE "pay_app_seq" 
+CREATE SEQUENCE "pay_app_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -209,7 +209,7 @@ CACHE 1;
 -- Sequence structure for pay_channel_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "pay_channel_seq";
-CREATE SEQUENCE "pay_channel_seq" 
+CREATE SEQUENCE "pay_channel_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -218,7 +218,7 @@ CACHE 1;
 -- Sequence structure for pay_merchant_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "pay_merchant_seq";
-CREATE SEQUENCE "pay_merchant_seq" 
+CREATE SEQUENCE "pay_merchant_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -227,7 +227,7 @@ CACHE 1;
 -- Sequence structure for pay_notify_log_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "pay_notify_log_seq";
-CREATE SEQUENCE "pay_notify_log_seq" 
+CREATE SEQUENCE "pay_notify_log_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -236,7 +236,7 @@ CACHE 1;
 -- Sequence structure for pay_notify_task_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "pay_notify_task_seq";
-CREATE SEQUENCE "pay_notify_task_seq" 
+CREATE SEQUENCE "pay_notify_task_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -245,7 +245,7 @@ CACHE 1;
 -- Sequence structure for pay_order_extension_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "pay_order_extension_seq";
-CREATE SEQUENCE "pay_order_extension_seq" 
+CREATE SEQUENCE "pay_order_extension_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -254,7 +254,7 @@ CACHE 1;
 -- Sequence structure for pay_order_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "pay_order_seq";
-CREATE SEQUENCE "pay_order_seq" 
+CREATE SEQUENCE "pay_order_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -263,7 +263,7 @@ CACHE 1;
 -- Sequence structure for pay_refund_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "pay_refund_seq";
-CREATE SEQUENCE "pay_refund_seq" 
+CREATE SEQUENCE "pay_refund_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -272,7 +272,7 @@ CACHE 1;
 -- Sequence structure for system_dept_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_dept_seq";
-CREATE SEQUENCE "system_dept_seq" 
+CREATE SEQUENCE "system_dept_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -281,7 +281,7 @@ CACHE 1;
 -- Sequence structure for system_dict_data_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_dict_data_seq";
-CREATE SEQUENCE "system_dict_data_seq" 
+CREATE SEQUENCE "system_dict_data_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -290,7 +290,7 @@ CACHE 1;
 -- Sequence structure for system_dict_type_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_dict_type_seq";
-CREATE SEQUENCE "system_dict_type_seq" 
+CREATE SEQUENCE "system_dict_type_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -299,7 +299,7 @@ CACHE 1;
 -- Sequence structure for system_error_code_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_error_code_seq";
-CREATE SEQUENCE "system_error_code_seq" 
+CREATE SEQUENCE "system_error_code_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -308,7 +308,7 @@ CACHE 1;
 -- Sequence structure for system_login_log_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_login_log_seq";
-CREATE SEQUENCE "system_login_log_seq" 
+CREATE SEQUENCE "system_login_log_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -317,7 +317,7 @@ CACHE 1;
 -- Sequence structure for system_menu_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_menu_seq";
-CREATE SEQUENCE "system_menu_seq" 
+CREATE SEQUENCE "system_menu_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -326,7 +326,7 @@ CACHE 1;
 -- Sequence structure for system_notice_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_notice_seq";
-CREATE SEQUENCE "system_notice_seq" 
+CREATE SEQUENCE "system_notice_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -335,7 +335,7 @@ CACHE 1;
 -- Sequence structure for system_oauth2_access_token_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_oauth2_access_token_seq";
-CREATE SEQUENCE "system_oauth2_access_token_seq" 
+CREATE SEQUENCE "system_oauth2_access_token_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 9223372036854775807
@@ -346,7 +346,7 @@ CACHE 1;
 -- Sequence structure for system_oauth2_approve_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_oauth2_approve_seq";
-CREATE SEQUENCE "system_oauth2_approve_seq" 
+CREATE SEQUENCE "system_oauth2_approve_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 9223372036854775807
@@ -357,7 +357,7 @@ CACHE 1;
 -- Sequence structure for system_oauth2_client_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_oauth2_client_seq";
-CREATE SEQUENCE "system_oauth2_client_seq" 
+CREATE SEQUENCE "system_oauth2_client_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 9223372036854775807
@@ -368,7 +368,7 @@ CACHE 1;
 -- Sequence structure for system_oauth2_code_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_oauth2_code_seq";
-CREATE SEQUENCE "system_oauth2_code_seq" 
+CREATE SEQUENCE "system_oauth2_code_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 9223372036854775807
@@ -379,7 +379,7 @@ CACHE 1;
 -- Sequence structure for system_oauth2_refresh_token_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_oauth2_refresh_token_seq";
-CREATE SEQUENCE "system_oauth2_refresh_token_seq" 
+CREATE SEQUENCE "system_oauth2_refresh_token_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 9223372036854775807
@@ -390,7 +390,7 @@ CACHE 1;
 -- Sequence structure for system_operate_log_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_operate_log_seq";
-CREATE SEQUENCE "system_operate_log_seq" 
+CREATE SEQUENCE "system_operate_log_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -399,7 +399,7 @@ CACHE 1;
 -- Sequence structure for system_post_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_post_seq";
-CREATE SEQUENCE "system_post_seq" 
+CREATE SEQUENCE "system_post_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -408,7 +408,7 @@ CACHE 1;
 -- Sequence structure for system_role_menu_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_role_menu_seq";
-CREATE SEQUENCE "system_role_menu_seq" 
+CREATE SEQUENCE "system_role_menu_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -417,7 +417,7 @@ CACHE 1;
 -- Sequence structure for system_role_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_role_seq";
-CREATE SEQUENCE "system_role_seq" 
+CREATE SEQUENCE "system_role_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -426,7 +426,7 @@ CACHE 1;
 -- Sequence structure for system_sensitive_word_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_sensitive_word_seq";
-CREATE SEQUENCE "system_sensitive_word_seq" 
+CREATE SEQUENCE "system_sensitive_word_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -435,7 +435,7 @@ CACHE 1;
 -- Sequence structure for system_sms_channel_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_sms_channel_seq";
-CREATE SEQUENCE "system_sms_channel_seq" 
+CREATE SEQUENCE "system_sms_channel_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -444,7 +444,7 @@ CACHE 1;
 -- Sequence structure for system_sms_code_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_sms_code_seq";
-CREATE SEQUENCE "system_sms_code_seq" 
+CREATE SEQUENCE "system_sms_code_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -453,7 +453,7 @@ CACHE 1;
 -- Sequence structure for system_sms_log_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_sms_log_seq";
-CREATE SEQUENCE "system_sms_log_seq" 
+CREATE SEQUENCE "system_sms_log_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -462,7 +462,7 @@ CACHE 1;
 -- Sequence structure for system_sms_template_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_sms_template_seq";
-CREATE SEQUENCE "system_sms_template_seq" 
+CREATE SEQUENCE "system_sms_template_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -471,7 +471,7 @@ CACHE 1;
 -- Sequence structure for system_social_user_bind_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_social_user_bind_seq";
-CREATE SEQUENCE "system_social_user_bind_seq" 
+CREATE SEQUENCE "system_social_user_bind_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -480,7 +480,7 @@ CACHE 1;
 -- Sequence structure for system_social_user_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_social_user_seq";
-CREATE SEQUENCE "system_social_user_seq" 
+CREATE SEQUENCE "system_social_user_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -489,7 +489,7 @@ CACHE 1;
 -- Sequence structure for system_tenant_package_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_tenant_package_seq";
-CREATE SEQUENCE "system_tenant_package_seq" 
+CREATE SEQUENCE "system_tenant_package_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -498,7 +498,7 @@ CACHE 1;
 -- Sequence structure for system_tenant_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_tenant_seq";
-CREATE SEQUENCE "system_tenant_seq" 
+CREATE SEQUENCE "system_tenant_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -507,7 +507,7 @@ CACHE 1;
 -- Sequence structure for system_user_post_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_user_post_seq";
-CREATE SEQUENCE "system_user_post_seq" 
+CREATE SEQUENCE "system_user_post_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -516,7 +516,7 @@ CACHE 1;
 -- Sequence structure for system_user_role_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_user_role_seq";
-CREATE SEQUENCE "system_user_role_seq" 
+CREATE SEQUENCE "system_user_role_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -525,7 +525,7 @@ CACHE 1;
 -- Sequence structure for system_user_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "system_user_seq";
-CREATE SEQUENCE "system_user_seq" 
+CREATE SEQUENCE "system_user_seq"
 INCREMENT 1
 MAXVALUE 9223372036854775807
 CACHE 1;
@@ -2163,7 +2163,7 @@ COMMENT ON TABLE "system_dept" IS '部门表';
 -- Records of system_dept
 -- ----------------------------
 BEGIN;
-INSERT INTO "system_dept" ("id", "name", "parent_id", "sort", "leader_user_id", "phone", "email", "status", "creator", "create_time", "updater", "update_time", "deleted", "tenant_id") VALUES (100, '芋道源码', 0, 0, 1, '15888888888', 'ry@qq.com', 0, 'admin', '2021-01-05 17:03:47', '103', '2022-01-14 01:04:05', 0, 1);
+INSERT INTO "system_dept" ("id", "name", "parent_id", "sort", "leader_user_id", "phone", "email", "status", "creator", "create_time", "updater", "update_time", "deleted", "tenant_id") VALUES (100, '圣钰科技', 0, 0, 1, '15888888888', 'ry@qq.com', 0, 'admin', '2021-01-05 17:03:47', '103', '2022-01-14 01:04:05', 0, 1);
 INSERT INTO "system_dept" ("id", "name", "parent_id", "sort", "leader_user_id", "phone", "email", "status", "creator", "create_time", "updater", "update_time", "deleted", "tenant_id") VALUES (101, '深圳总公司', 100, 1, 104, '15888888888', 'ry@qq.com', 0, 'admin', '2021-01-05 17:03:47', '1', '2022-02-22 19:47:48', 0, 1);
 INSERT INTO "system_dept" ("id", "name", "parent_id", "sort", "leader_user_id", "phone", "email", "status", "creator", "create_time", "updater", "update_time", "deleted", "tenant_id") VALUES (102, '长沙分公司', 100, 2, NULL, '15888888888', 'ry@qq.com', 0, 'admin', '2021-01-05 17:03:47', '', '2021-12-15 05:01:40', 0, 1);
 INSERT INTO "system_dept" ("id", "name", "parent_id", "sort", "leader_user_id", "phone", "email", "status", "creator", "create_time", "updater", "update_time", "deleted", "tenant_id") VALUES (103, '研发部门', 101, 1, 104, '15888888888', 'ry@qq.com', 0, 'admin', '2021-01-05 17:03:47', '103', '2022-01-14 01:04:14', 0, 1);
@@ -2267,7 +2267,6 @@ INSERT INTO "system_dict_data" ("id", "sort", "label", "value", "dict_type", "st
 INSERT INTO "system_dict_data" ("id", "sort", "label", "value", "dict_type", "status", "color_type", "css_class", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (62, 0, '未处理', '0', 'infra_api_error_log_process_status', 0, 'primary', '', NULL, '', '2021-02-26 07:07:19', '1', '2022-02-16 20:14:17', 0);
 INSERT INTO "system_dict_data" ("id", "sort", "label", "value", "dict_type", "status", "color_type", "css_class", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (63, 1, '已处理', '1', 'infra_api_error_log_process_status', 0, 'success', '', NULL, '', '2021-02-26 07:07:26', '1', '2022-02-16 20:14:08', 0);
 INSERT INTO "system_dict_data" ("id", "sort", "label", "value", "dict_type", "status", "color_type", "css_class", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (64, 2, '已忽略', '2', 'infra_api_error_log_process_status', 0, 'danger', '', NULL, '', '2021-02-26 07:07:34', '1', '2022-02-16 20:14:14', 0);
-INSERT INTO "system_dict_data" ("id", "sort", "label", "value", "dict_type", "status", "color_type", "css_class", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (65, 1, '云片', 'YUN_PIAN', 'system_sms_channel_code', 0, 'success', '', NULL, '1', '2021-04-05 01:05:14', '1', '2022-02-16 10:09:55', 0);
 INSERT INTO "system_dict_data" ("id", "sort", "label", "value", "dict_type", "status", "color_type", "css_class", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (66, 2, '阿里云', 'ALIYUN', 'system_sms_channel_code', 0, 'primary', '', NULL, '1', '2021-04-05 01:05:26', '1', '2022-02-16 10:09:52', 0);
 INSERT INTO "system_dict_data" ("id", "sort", "label", "value", "dict_type", "status", "color_type", "css_class", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (67, 1, '验证码', '1', 'system_sms_template_type', 0, 'warning', '', NULL, '1', '2021-04-05 21:50:57', '1', '2022-02-16 12:48:30', 0);
 INSERT INTO "system_dict_data" ("id", "sort", "label", "value", "dict_type", "status", "color_type", "css_class", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (68, 2, '通知', '2', 'system_sms_template_type', 0, 'primary', '', NULL, '1', '2021-04-05 21:51:08', '1', '2022-02-16 12:48:27', 0);
@@ -2358,38 +2357,58 @@ COMMIT;
 -- Table structure for system_dict_type
 -- ----------------------------
 DROP TABLE IF EXISTS "system_dict_type";
-CREATE TABLE "system_dict_type" (
-  "id" int8 NOT NULL,
-  "name" varchar(100) COLLATE "pg_catalog"."default" NOT NULL,
-  "type" varchar(100) COLLATE "pg_catalog"."default" NOT NULL,
-  "status" int2 NOT NULL,
-  "remark" varchar(500) COLLATE "pg_catalog"."default",
-  "creator" varchar(64) COLLATE "pg_catalog"."default",
-  "create_time" timestamp(6) NOT NULL,
-  "updater" varchar(64) COLLATE "pg_catalog"."default",
-  "update_time" timestamp(6) NOT NULL,
-  "deleted" int2 NOT NULL DEFAULT 0
+CREATE TABLE "system_dict_type"(
+                                   "id"           int8                                        NOT NULL,
+                                   "name"         varchar(100) COLLATE "pg_catalog"."default" NOT NULL,
+                                   "type"         varchar(100) COLLATE "pg_catalog"."default" NOT NULL,
+                                   "status"       int2                                        NOT NULL,
+                                   "remark"       varchar(500) COLLATE "pg_catalog"."default",
+                                   "creator"      varchar(64) COLLATE "pg_catalog"."default",
+                                   "create_time"  timestamp(6)                                NOT NULL,
+                                   "updater"      varchar(64) COLLATE "pg_catalog"."default",
+                                   "update_time"  timestamp(6)                                NOT NULL,
+                                   "deleted_time" timestamp(6),
+                                   "deleted"      int2                                        NOT NULL DEFAULT 0
 )
 ;
-COMMENT ON COLUMN "system_dict_type"."id" IS '字典主键';
-COMMENT ON COLUMN "system_dict_type"."name" IS '字典名称';
-COMMENT ON COLUMN "system_dict_type"."type" IS '字典类型';
-COMMENT ON COLUMN "system_dict_type"."status" IS '状态（0正常 1停用）';
-COMMENT ON COLUMN "system_dict_type"."remark" IS '备注';
-COMMENT ON COLUMN "system_dict_type"."creator" IS '创建者';
-COMMENT ON COLUMN "system_dict_type"."create_time" IS '创建时间';
-COMMENT ON COLUMN "system_dict_type"."updater" IS '更新者';
-COMMENT ON COLUMN "system_dict_type"."update_time" IS '更新时间';
-COMMENT ON COLUMN "system_dict_type"."deleted" IS '是否删除';
-COMMENT ON TABLE "system_dict_type" IS '字典类型表';
+COMMENT
+ON COLUMN "system_dict_type"."id" IS '字典主键';
+COMMENT
+ON COLUMN "system_dict_type"."name" IS '字典名称';
+COMMENT
+ON COLUMN "system_dict_type"."type" IS '字典类型';
+COMMENT
+ON COLUMN "system_dict_type"."status" IS '状态（0正常 1停用）';
+COMMENT
+ON COLUMN "system_dict_type"."remark" IS '备注';
+COMMENT
+ON COLUMN "system_dict_type"."creator" IS '创建者';
+COMMENT
+ON COLUMN "system_dict_type"."create_time" IS '创建时间';
+COMMENT
+ON COLUMN "system_dict_type"."updater" IS '更新者';
+COMMENT
+ON COLUMN "system_dict_type"."update_time" IS '更新时间';
+COMMENT
+ON COLUMN "system_dict_type"."deleted_time" IS '删除时间';
+COMMENT
+ON COLUMN "system_dict_type"."deleted" IS '是否删除';
+COMMENT
+ON TABLE "system_dict_type" IS '字典类型表';
 
 -- ----------------------------
 -- Records of system_dict_type
 -- ----------------------------
 BEGIN;
-INSERT INTO "system_dict_type" ("id", "name", "type", "status", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (1, '用户性别', 'system_user_sex', 0, NULL, 'admin', '2021-01-05 17:03:48', '', '2022-02-01 16:30:31', 0);
-INSERT INTO "system_dict_type" ("id", "name", "type", "status", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (6, '参数类型', 'infra_config_type', 0, NULL, 'admin', '2021-01-05 17:03:48', '', '2022-02-01 16:36:54', 0);
-INSERT INTO "system_dict_type" ("id", "name", "type", "status", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (7, '通知类型', 'system_notice_type', 0, NULL, 'admin', '2021-01-05 17:03:48', '', '2022-02-01 16:35:26', 0);
+INSERT INTO "system_dict_type" ("id", "name", "type", "status", "remark", "creator", "create_time", "updater",
+                                "update_time", "deleted")
+VALUES (1, '用户性别', 'system_user_sex', 0, NULL, 'admin', '2021-01-05 17:03:48', '', '2022-02-01 16:30:31', 0);
+INSERT INTO "system_dict_type" ("id", "name", "type", "status", "remark", "creator", "create_time", "updater",
+                                "update_time", "deleted")
+VALUES (6, '参数类型', 'infra_config_type', 0, NULL, 'admin', '2021-01-05 17:03:48', '', '2022-02-01 16:36:54', 0);
+INSERT INTO "system_dict_type" ("id", "name", "type", "status", "remark", "creator", "create_time", "updater",
+                                "update_time", "deleted")
+VALUES (7, '通知类型', 'system_notice_type', 0, NULL, 'admin', '2021-01-05 17:03:48', '', '2022-02-01 16:35:26', 0);
 INSERT INTO "system_dict_type" ("id", "name", "type", "status", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (9, '操作类型', 'system_operate_type', 0, NULL, 'admin', '2021-01-05 17:03:48', '1', '2022-02-16 09:32:21', 0);
 INSERT INTO "system_dict_type" ("id", "name", "type", "status", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (10, '系统状态', 'common_status', 0, NULL, 'admin', '2021-01-05 17:03:48', '', '2022-02-01 16:21:28', 0);
 INSERT INTO "system_dict_type" ("id", "name", "type", "status", "remark", "creator", "create_time", "updater", "update_time", "deleted") VALUES (11, 'Boolean 是否类型', 'infra_boolean_string', 0, 'boolean 转是否', '', '2021-01-19 03:20:08', '', '2022-02-01 16:37:10', 0);
@@ -2474,7 +2493,7 @@ CREATE TABLE "system_login_log" (
   "id" int8 NOT NULL,
   "log_type" int8 NOT NULL,
   "trace_id" varchar(64) COLLATE "pg_catalog"."default" NOT NULL,
-  "user_id" int8 NOT NULL,
+  "user_id" int8 NOT NULL DEFAULT 0,
   "user_type" int2 NOT NULL,
   "username" varchar(50) COLLATE "pg_catalog"."default" NOT NULL,
   "result" int2 NOT NULL,
@@ -2847,7 +2866,7 @@ CREATE TABLE "system_oauth2_access_token" (
   "updater" varchar(64) COLLATE "pg_catalog"."default",
   "update_time" timestamp(6) NOT NULL,
   "deleted" int2 NOT NULL DEFAULT 0,
-  "tenant_id" int8 NOT NULL,
+  "tenant_id" int8 NOT NULL DEFAULT 0,
   "scopes" varchar(255) COLLATE "pg_catalog"."default" DEFAULT ''::character varying
 )
 ;
@@ -2890,7 +2909,7 @@ CREATE TABLE "system_oauth2_approve" (
   "updater" varchar(64) COLLATE "pg_catalog"."default",
   "update_time" timestamp(6) NOT NULL,
   "deleted" int2 NOT NULL DEFAULT 0,
-  "tenant_id" int8 NOT NULL
+  "tenant_id" int8 NOT NULL DEFAULT 0
 )
 ;
 COMMENT ON COLUMN "system_oauth2_approve"."id" IS '编号';
@@ -2969,7 +2988,7 @@ COMMENT ON TABLE "system_oauth2_client" IS 'OAuth2 客户端表';
 -- Records of system_oauth2_client
 -- ----------------------------
 BEGIN;
-INSERT INTO "system_oauth2_client" ("id", "client_id", "secret", "name", "logo", "description", "status", "access_token_validity_seconds", "refresh_token_validity_seconds", "redirect_uris", "authorized_grant_types", "scopes", "authorities", "resource_ids", "additional_information", "creator", "create_time", "updater", "update_time", "deleted", "auto_approve_scopes") VALUES (1, 'default', 'admin123', '芋道源码', 'http://test.yudao.iocoder.cn/a5e2e244368878a366b516805a4aabf1.png', '我是描述', 0, 180, 8640, '["https://www.iocoder.cn","https://doc.iocoder.cn"]', '["password","authorization_code","implicit","refresh_token"]', '["user.read","user.write"]', '["system:user:query"]', '[]', '{}', '1', '2022-05-11 21:47:12', '1', '2022-05-12 01:00:20', 0, NULL);
+INSERT INTO "system_oauth2_client" ("id", "client_id", "secret", "name", "logo", "description", "status", "access_token_validity_seconds", "refresh_token_validity_seconds", "redirect_uris", "authorized_grant_types", "scopes", "authorities", "resource_ids", "additional_information", "creator", "create_time", "updater", "update_time", "deleted", "auto_approve_scopes") VALUES (1, 'default', 'admin123', '圣钰科技', 'http://test.yudao.iocoder.cn/a5e2e244368878a366b516805a4aabf1.png', '我是描述', 0, 180, 8640, '["https://www.iocoder.cn","https://doc.iocoder.cn"]', '["password","authorization_code","implicit","refresh_token"]', '["user.read","user.write"]', '["system:user:query"]', '[]', '{}', '1', '2022-05-11 21:47:12', '1', '2022-05-12 01:00:20', 0, NULL);
 INSERT INTO "system_oauth2_client" ("id", "client_id", "secret", "name", "logo", "description", "status", "access_token_validity_seconds", "refresh_token_validity_seconds", "redirect_uris", "authorized_grant_types", "scopes", "authorities", "resource_ids", "additional_information", "creator", "create_time", "updater", "update_time", "deleted", "auto_approve_scopes") VALUES (40, 'test', 'test2', 'biubiu', 'http://test.yudao.iocoder.cn/277a899d573723f1fcdfb57340f00379.png', NULL, 0, 1800, 43200, '["https://www.iocoder.cn"]', '["password","authorization_code","implicit"]', '[]', '[]', '[]', '{}', '1', '2022-05-12 00:28:20', '1', '2022-05-25 23:45:33.005', 0, '[]');
 COMMIT;
 
@@ -2992,7 +3011,7 @@ CREATE TABLE "system_oauth2_code" (
   "updater" varchar(64) COLLATE "pg_catalog"."default",
   "update_time" timestamp(6) NOT NULL,
   "deleted" int2 NOT NULL DEFAULT 0,
-  "tenant_id" int8 NOT NULL
+  "tenant_id" int8 NOT NULL DEFAULT 0
 )
 ;
 COMMENT ON COLUMN "system_oauth2_code"."id" IS '编号';
@@ -3034,7 +3053,7 @@ CREATE TABLE "system_oauth2_refresh_token" (
   "updater" varchar(64) COLLATE "pg_catalog"."default",
   "update_time" timestamp(6) NOT NULL,
   "deleted" int2 NOT NULL DEFAULT 0,
-  "tenant_id" int8 NOT NULL,
+  "tenant_id" int8 NOT NULL DEFAULT 0,
   "scopes" varchar(255) COLLATE "pg_catalog"."default" DEFAULT ''::character varying
 )
 ;
@@ -3519,7 +3538,6 @@ COMMENT ON TABLE "system_sms_channel" IS '短信渠道';
 -- Records of system_sms_channel
 -- ----------------------------
 BEGIN;
-INSERT INTO "system_sms_channel" ("id", "signature", "code", "status", "remark", "api_key", "api_secret", "callback_url", "creator", "create_time", "updater", "update_time", "deleted") VALUES (1, '芋道', 'YUN_PIAN', 0, '呵呵呵哒', '1555a14277cb8a608cf45a9e6a80d510', NULL, 'http://vdwapu.natappfree.cc/admin-api/system/sms/callback/yunpian', '', '2021-03-31 06:12:20', '1', '2022-02-23 16:48:44', 0);
 INSERT INTO "system_sms_channel" ("id", "signature", "code", "status", "remark", "api_key", "api_secret", "callback_url", "creator", "create_time", "updater", "update_time", "deleted") VALUES (2, 'Ballcat', 'ALIYUN', 0, '啦啦啦', 'LTAI5tCnKso2uG3kJ5gRav88', 'fGJ5SNXL7P1NHNRmJ7DJaMJGPyE55C', NULL, '', '2021-03-31 11:53:10', '1', '2021-04-14 00:08:37', 0);
 INSERT INTO "system_sms_channel" ("id", "signature", "code", "status", "remark", "api_key", "api_secret", "callback_url", "creator", "create_time", "updater", "update_time", "deleted") VALUES (4, '测试渠道', 'DEBUG_DING_TALK', 0, '123', '696b5d8ead48071237e4aa5861ff08dbadb2b4ded1c688a7b7c9afc615579859', 'SEC5c4e5ff888bc8a9923ae47f59e7ccd30af1f14d93c55b4e2c9cb094e35aeed67', NULL, '1', '2021-04-13 00:23:14', '1', '2022-03-27 20:29:49', 0);
 INSERT INTO "system_sms_channel" ("id", "signature", "code", "status", "remark", "api_key", "api_secret", "callback_url", "creator", "create_time", "updater", "update_time", "deleted") VALUES (6, '测试演示', 'DEBUG_DING_TALK', 0, NULL, '696b5d8ead48071237e4aa5861ff08dbadb2b4ded1c688a7b7c9afc615579859', 'SEC5c4e5ff888bc8a9923ae47f59e7ccd30af1f14d93c55b4e2c9cb094e35aeed67', NULL, '1', '2022-04-10 23:07:59', '1', '2022-04-10 23:07:59', 0);
@@ -3799,7 +3817,7 @@ CREATE TABLE "system_tenant" (
   "package_id" int8 NOT NULL,
   "expire_time" timestamp(6) NOT NULL,
   "account_count" int4 NOT NULL,
-  "creator" varchar(64) COLLATE "pg_catalog"."default" NOT NULL,
+  "creator" varchar(64) COLLATE "pg_catalog"."default",
   "create_time" timestamp(6) NOT NULL,
   "updater" varchar(64) COLLATE "pg_catalog"."default",
   "update_time" timestamp(6) NOT NULL,
@@ -3827,7 +3845,7 @@ COMMENT ON TABLE "system_tenant" IS '租户表';
 -- Records of system_tenant
 -- ----------------------------
 BEGIN;
-INSERT INTO "system_tenant" ("id", "name", "contact_user_id", "contact_name", "contact_mobile", "status", "domain", "package_id", "expire_time", "account_count", "creator", "create_time", "updater", "update_time", "deleted") VALUES (1, '芋道源码', NULL, '芋艿', '17321315478', 0, 'https://www.iocoder.cn', 0, '2099-02-19 17:14:16', 9999, '1', '2021-01-05 17:03:47', '1', '2022-02-23 12:15:11', 0);
+INSERT INTO "system_tenant" ("id", "name", "contact_user_id", "contact_name", "contact_mobile", "status", "domain", "package_id", "expire_time", "account_count", "creator", "create_time", "updater", "update_time", "deleted") VALUES (1, '圣钰科技', NULL, '芋艿', '17321315478', 0, 'https://www.iocoder.cn', 0, '2099-02-19 17:14:16', 9999, '1', '2021-01-05 17:03:47', '1', '2022-02-23 12:15:11', 0);
 INSERT INTO "system_tenant" ("id", "name", "contact_user_id", "contact_name", "contact_mobile", "status", "domain", "package_id", "expire_time", "account_count", "creator", "create_time", "updater", "update_time", "deleted") VALUES (121, '小租户', 110, '小王2', '15601691300', 0, 'http://www.iocoder.cn', 111, '2024-03-11 00:00:00', 20, '1', '2022-02-22 00:56:14', '1', '2022-03-19 18:37:20', 0);
 INSERT INTO "system_tenant" ("id", "name", "contact_user_id", "contact_name", "contact_mobile", "status", "domain", "package_id", "expire_time", "account_count", "creator", "create_time", "updater", "update_time", "deleted") VALUES (122, '测试租户', 113, '芋道', '15601691300', 0, 'https://www.iocoder.cn', 111, '2022-04-30 00:00:00', 50, '1', '2022-03-07 21:37:58', '1', '2022-03-07 21:37:58', 0);
 COMMIT;
@@ -3842,7 +3860,7 @@ CREATE TABLE "system_tenant_package" (
   "status" int2 NOT NULL,
   "remark" varchar(256) COLLATE "pg_catalog"."default",
   "menu_ids" varchar(2048) COLLATE "pg_catalog"."default" NOT NULL,
-  "creator" varchar(64) COLLATE "pg_catalog"."default" NOT NULL,
+  "creator" varchar(64) COLLATE "pg_catalog"."default",
   "create_time" timestamp(6) NOT NULL,
   "updater" varchar(64) COLLATE "pg_catalog"."default",
   "update_time" timestamp(6) NOT NULL,
@@ -4017,7 +4035,7 @@ INSERT INTO "system_users" ("id", "username", "password", "nickname", "remark", 
 INSERT INTO "system_users" ("id", "username", "password", "nickname", "remark", "dept_id", "post_ids", "email", "mobile", "sex", "avatar", "status", "login_ip", "login_date", "creator", "create_time", "updater", "update_time", "deleted", "tenant_id") VALUES (113, 'aoteman', '$2a$10$0acJOIk2D25/oC87nyclE..0lzeu9DtQ/n3geP4fkun/zIVRhHJIO', '芋道', NULL, NULL, NULL, '', '15601691300', 0, '', 0, '127.0.0.1', '2022-03-19 18:38:51', '1', '2022-03-07 21:37:58', NULL, '2022-03-19 18:38:51', 0, 122);
 INSERT INTO "system_users" ("id", "username", "password", "nickname", "remark", "dept_id", "post_ids", "email", "mobile", "sex", "avatar", "status", "login_ip", "login_date", "creator", "create_time", "updater", "update_time", "deleted", "tenant_id") VALUES (114, 'hrmgr', '$2a$10$TR4eybBioGRhBmDBWkqWLO6NIh3mzYa8KBKDDB5woiGYFVlRAi.fu', 'hr 小姐姐', NULL, NULL, '[3]', '', '', 0, '', 0, '127.0.0.1', '2022-03-19 22:15:43', '1', '2022-03-19 21:50:58', NULL, '2022-03-19 22:15:43', 0, 1);
 INSERT INTO "system_users" ("id", "username", "password", "nickname", "remark", "dept_id", "post_ids", "email", "mobile", "sex", "avatar", "status", "login_ip", "login_date", "creator", "create_time", "updater", "update_time", "deleted", "tenant_id") VALUES (115, 'aotemane', '$2a$10$/WCwGHu1eq0wOVDd/u8HweJ0gJCHyLS6T7ndCqI8UXZAQom1etk2e', '1', '11', 100, '[]', '', '', 0, '', 0, '', NULL, '1', '2022-04-30 02:55:43', '1', '2022-04-30 02:55:43', 0, 1);
-INSERT INTO "system_users" ("id", "username", "password", "nickname", "remark", "dept_id", "post_ids", "email", "mobile", "sex", "avatar", "status", "login_ip", "login_date", "creator", "create_time", "updater", "update_time", "deleted", "tenant_id") VALUES (1, 'admin', '$2a$10$0acJOIk2D25/oC87nyclE..0lzeu9DtQ/n3geP4fkun/zIVRhHJIO', '芋道源码', '管理员', 103, '[1]', 'aoteman@126.com', '15612345678', 1, 'http://test.yudao.iocoder.cn/48934f2f-92d4-4250-b917-d10d2b262c6a', 0, '127.0.0.1', '2022-05-25 23:44:33.003', 'admin', '2021-01-05 17:03:47', NULL, '2022-05-25 23:44:33.003', 0, 1);
+INSERT INTO "system_users" ("id", "username", "password", "nickname", "remark", "dept_id", "post_ids", "email", "mobile", "sex", "avatar", "status", "login_ip", "login_date", "creator", "create_time", "updater", "update_time", "deleted", "tenant_id") VALUES (1, 'admin', '$2a$10$0acJOIk2D25/oC87nyclE..0lzeu9DtQ/n3geP4fkun/zIVRhHJIO', '圣钰科技', '管理员', 103, '[1]', 'aoteman@126.com', '15612345678', 1, 'http://test.yudao.iocoder.cn/48934f2f-92d4-4250-b917-d10d2b262c6a', 0, '127.0.0.1', '2022-05-25 23:44:33.003', 'admin', '2021-01-05 17:03:47', NULL, '2022-05-25 23:44:33.003', 0, 1);
 COMMIT;
 
 -- ----------------------------

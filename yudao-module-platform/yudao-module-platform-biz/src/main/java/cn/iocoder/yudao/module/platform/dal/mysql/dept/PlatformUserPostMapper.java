@@ -13,8 +13,7 @@ import java.util.List;
 public interface PlatformUserPostMapper extends BaseMapperX<PlatformUserPostDO> {
 
     default List<PlatformUserPostDO> selectListByUserId(Long userId) {
-        return selectList(new LambdaQueryWrapperX<PlatformUserPostDO>()
-                .eq(PlatformUserPostDO::getUserId, userId));
+        return selectList(PlatformUserPostDO::getUserId, userId);
     }
 
     default void deleteByUserIdAndPostId(Long userId, Collection<Long> postIds) {
@@ -24,11 +23,10 @@ public interface PlatformUserPostMapper extends BaseMapperX<PlatformUserPostDO> 
     }
 
     default List<PlatformUserPostDO> selectListByPostIds(Collection<Long> postIds) {
-        return selectList(new LambdaQueryWrapperX<PlatformUserPostDO>()
-                .in(PlatformUserPostDO::getPostId, postIds));
+        return selectList(PlatformUserPostDO::getPostId, postIds);
     }
 
-    default void deleteByUserId(Long userId){
+    default void deleteByUserId(Long userId) {
         delete(Wrappers.lambdaUpdate(PlatformUserPostDO.class).eq(PlatformUserPostDO::getUserId, userId));
     }
 }

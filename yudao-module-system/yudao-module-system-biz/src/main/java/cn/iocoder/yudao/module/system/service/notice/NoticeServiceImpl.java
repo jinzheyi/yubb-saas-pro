@@ -1,24 +1,23 @@
 package cn.iocoder.yudao.module.system.service.notice;
 
-import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.system.controller.admin.notice.vo.NoticeCreateReqVO;
+import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.system.controller.admin.notice.vo.NoticePageReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.notice.vo.NoticeUpdateReqVO;
-import cn.iocoder.yudao.module.system.convert.notice.NoticeConvert;
-import cn.iocoder.yudao.module.system.dal.mysql.notice.NoticeMapper;
+import cn.iocoder.yudao.module.system.controller.admin.notice.vo.NoticeSaveReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.notice.NoticeDO;
+import cn.iocoder.yudao.module.system.dal.mysql.notice.NoticeMapper;
 import com.google.common.annotations.VisibleForTesting;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 
+import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.NOTICE_NOT_FOUND;
 
 /**
  * 通知公告 Service 实现类
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 public class NoticeServiceImpl implements NoticeService {
@@ -27,31 +26,31 @@ public class NoticeServiceImpl implements NoticeService {
     private NoticeMapper noticeMapper;
 
     @Override
-    public Long createNotice(NoticeCreateReqVO reqVO) {
-        NoticeDO notice = NoticeConvert.INSTANCE.convert(reqVO);
+    public Long createNotice(NoticeSaveReqVO createReqVO) {
+        NoticeDO notice = BeanUtils.toBean(createReqVO, NoticeDO.class);
         noticeMapper.insert(notice);
         return notice.getId();
     }
 
     @Override
-    public void updateNotice(NoticeUpdateReqVO reqVO) {
+    public void updateNotice(NoticeSaveReqVO updateReqVO) {
         // 校验是否存在
-        this.checkNoticeExists(reqVO.getId());
+        validateNoticeExists(updateReqVO.getId());
         // 更新通知公告
-        NoticeDO updateObj = NoticeConvert.INSTANCE.convert(reqVO);
+        NoticeDO updateObj = BeanUtils.toBean(updateReqVO, NoticeDO.class);
         noticeMapper.updateById(updateObj);
     }
 
     @Override
     public void deleteNotice(Long id) {
         // 校验是否存在
-        this.checkNoticeExists(id);
+        validateNoticeExists(id);
         // 删除通知公告
         noticeMapper.deleteById(id);
     }
 
     @Override
-    public PageResult<NoticeDO> pageNotices(NoticePageReqVO reqVO) {
+    public PageResult<NoticeDO> getNoticePage(NoticePageReqVO reqVO) {
         return noticeMapper.selectPage(reqVO);
     }
 
@@ -61,13 +60,13 @@ public class NoticeServiceImpl implements NoticeService {
     }
 
     @VisibleForTesting
-    public void checkNoticeExists(Long id) {
+    public void validateNoticeExists(Long id) {
         if (id == null) {
             return;
         }
         NoticeDO notice = noticeMapper.selectById(id);
         if (notice == null) {
-            throw ServiceExceptionUtil.exception(NOTICE_NOT_FOUND);
+            throw exception(NOTICE_NOT_FOUND);
         }
     }
 

@@ -5,7 +5,9 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.PageUtils;
+import cn.iocoder.yudao.framework.flowable.core.util.BpmnModelUtils;
 import cn.iocoder.yudao.framework.flowable.core.util.FlowableUtils;
+import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.process.BpmProcessDefinitionListReqVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.process.BpmProcessDefinitionPageItemRespVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.process.BpmProcessDefinitionPageReqVO;
@@ -44,7 +46,7 @@ import static java.util.Collections.emptyList;
  *
  * @author yunlongn
  * @author ZJQ
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Service
 @Validated
@@ -124,6 +126,7 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
         Deployment deploy = repositoryService.createDeployment()
                 .key(createReqDTO.getKey()).name(createReqDTO.getName()).category(createReqDTO.getCategory())
                 .addBytes(createReqDTO.getKey() + BPMN_FILE_SUFFIX, createReqDTO.getBpmnBytes())
+                .tenantId(TenantContextHolder.getTenantIdStr())
                 .deploy();
 
         // 设置 ProcessDefinition 的 category 分类
@@ -199,8 +202,8 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
         // 校验 BPMN XML 信息
         BpmnModel newModel = buildBpmnModel(createReqDTO.getBpmnBytes());
         BpmnModel oldModel = getBpmnModel(oldProcessDefinition.getId());
-        // TODO  貌似 flowable 不修改这个也不同。需要看看。 sourceSystemId 不同
-        if (FlowableUtils.equals(oldModel, newModel)) {
+        // 对比字节变化
+        if (!BpmnModelUtils.equals(oldModel, newModel)) {
             return false;
         }
         // 最终发现都一致，则返回 true
@@ -234,6 +237,7 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
             definitionQuery.active();
         }
         // 执行查询
+        definitionQuery.processDefinitionTenantId(TenantContextHolder.getTenantIdStr());
         List<ProcessDefinition> processDefinitions = definitionQuery.list();
         if (CollUtil.isEmpty(processDefinitions)) {
             return Collections.emptyList();

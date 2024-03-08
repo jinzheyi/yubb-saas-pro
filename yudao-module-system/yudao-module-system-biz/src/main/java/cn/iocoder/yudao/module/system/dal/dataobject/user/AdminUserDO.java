@@ -11,13 +11,13 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 /**
  * 管理后台的用户 DO
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName(value = "system_users", autoResultMap = true) // 由于 SQL Server 的 system_user 是关键字，所以使用 system_users
 @KeySequence("system_user_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
@@ -91,6 +91,6 @@ public class AdminUserDO extends TenantBaseDO {
     /**
      * 最后登录时间
      */
-    private Date loginDate;
+    private LocalDateTime loginDate;
 
 }

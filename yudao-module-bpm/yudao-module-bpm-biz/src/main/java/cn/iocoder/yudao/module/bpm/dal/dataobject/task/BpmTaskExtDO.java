@@ -8,13 +8,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * Bpm 流程任务的拓展表
  * 主要解决 Flowable Task 和 HistoricTaskInstance 不支持拓展字段，所以新建拓展表
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName(value = "bpm_task_ext", autoResultMap = true)
 @Data
@@ -67,7 +67,7 @@ public class BpmTaskExtDO extends BaseDO {
      *
      * 冗余 HistoricTaskInstance 的 endTime  属性
      */
-    private Date endTime;
+    private LocalDateTime endTime;
 
     /**
      * 流程实例的编号

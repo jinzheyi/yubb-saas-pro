@@ -2,26 +2,18 @@ package cn.iocoder.yudao.module.infra.service.file;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.file.core.client.FileClient;
-import cn.iocoder.yudao.module.infra.controller.center.file.vo.config.FileConfigCreateReqVO;
-import cn.iocoder.yudao.module.infra.controller.center.file.vo.config.FileConfigPageReqVO;
-import cn.iocoder.yudao.module.infra.controller.center.file.vo.config.FileConfigUpdateReqVO;
+import cn.iocoder.yudao.module.infra.controller.platform.file.vo.config.FileConfigPageReqVO;
+import cn.iocoder.yudao.module.infra.controller.platform.file.vo.config.FileConfigSaveReqVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.file.FileConfigDO;
 
 import javax.validation.Valid;
-import java.util.Collection;
-import java.util.List;
 
 /**
  * 文件配置 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface FileConfigService {
-
-    /**
-     * 初始化文件客户端
-     */
-    void initFileClients();
 
     /**
      * 创建文件配置
@@ -29,14 +21,14 @@ public interface FileConfigService {
      * @param createReqVO 创建信息
      * @return 编号
      */
-    Long createFileConfig(@Valid FileConfigCreateReqVO createReqVO);
+    Long createFileConfig(@Valid FileConfigSaveReqVO createReqVO);
 
     /**
      * 更新文件配置
      *
      * @param updateReqVO 更新信息
      */
-    void updateFileConfig(@Valid FileConfigUpdateReqVO updateReqVO);
+    void updateFileConfig(@Valid FileConfigSaveReqVO updateReqVO);
 
     /**
      * 更新文件配置为 Master
@@ -59,14 +51,6 @@ public interface FileConfigService {
      * @return 文件配置
      */
     FileConfigDO getFileConfig(Long id);
-
-    /**
-     * 获得文件配置列表
-     *
-     * @param ids 编号
-     * @return 文件配置列表
-     */
-    List<FileConfigDO> getFileConfigList(Collection<Long> ids);
 
     /**
      * 获得文件配置分页

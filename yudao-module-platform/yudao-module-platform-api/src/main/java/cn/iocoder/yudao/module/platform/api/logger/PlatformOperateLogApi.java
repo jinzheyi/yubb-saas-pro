@@ -1,13 +1,12 @@
 package cn.iocoder.yudao.module.platform.api.logger;
 
 import cn.iocoder.yudao.module.platform.api.logger.dto.PlatformOperateLogCreateReqDTO;
-
 import javax.validation.Valid;
 
 /**
  * 操作日志 API 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface PlatformOperateLogApi {
 

@@ -1,9 +1,9 @@
 package cn.iocoder.yudao.module.platform.service.notice;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticeCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticePageReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.notice.vo.NoticeUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.notice.vo.NoticeCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.notice.vo.NoticePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.notice.vo.NoticeUpdateReqVO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.notice.PlatformNoticeDO;
 
 /**
@@ -39,7 +39,7 @@ public interface PlatformNoticeService {
      * @param reqVO 分页条件
      * @return 部门分页列表
      */
-    PageResult<PlatformNoticeDO> pageNotices(NoticePageReqVO reqVO);
+    PageResult<PlatformNoticeDO> getNoticePage(NoticePageReqVO reqVO);
 
     /**
      * 获得岗位公告公告信息

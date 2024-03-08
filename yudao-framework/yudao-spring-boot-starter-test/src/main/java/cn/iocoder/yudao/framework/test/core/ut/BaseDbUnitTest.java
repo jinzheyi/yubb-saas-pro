@@ -5,6 +5,7 @@ import cn.iocoder.yudao.framework.mybatis.config.YudaoMybatisAutoConfiguration;
 import cn.iocoder.yudao.framework.test.config.SqlInitializationTestConfiguration;
 import com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure;
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration;
+import com.github.yulichang.autoconfigure.MybatisPlusJoinAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,7 +18,7 @@ import org.springframework.test.context.jdbc.Sql;
  *
  * 注意，Service 层同样适用。对于 Service 层的单元测试，我们针对自己模块的 Mapper 走的是 H2 内存数据库，针对别的模块的 Service 走的是 Mock 方法
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = BaseDbUnitTest.Application.class)
 @ActiveProfiles("unit-test") // 设置使用 application-unit-test 配置文件
@@ -34,6 +35,7 @@ public class BaseDbUnitTest {
             // MyBatis 配置类
             YudaoMybatisAutoConfiguration.class, // 自己的 MyBatis 配置类
             MybatisPlusAutoConfiguration.class, // MyBatis 的自动配置类
+            MybatisPlusJoinAutoConfiguration.class, // MyBatis 的Join配置类
     })
     public static class Application {
     }

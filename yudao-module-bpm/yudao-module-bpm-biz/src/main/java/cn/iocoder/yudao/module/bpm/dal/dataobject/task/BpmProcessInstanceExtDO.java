@@ -11,14 +11,15 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Bpm 流程实例的拓展表
  * 主要解决 Activiti ProcessInstance 和 HistoricProcessInstance 不支持拓展字段，所以新建拓展表
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName(value = "bpm_process_instance_ext", autoResultMap = true)
 @Data
@@ -79,12 +80,19 @@ public class BpmProcessInstanceExtDO extends BaseDO {
      *
      * 冗余 HistoricProcessInstance 的 endTime 属性
      */
-    private Date endTime;
+    private LocalDateTime endTime;
 
     /**
      * 提交的表单值
      */
     @TableField(typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> formVariables;
+
+    // TODO @hai：assignees 复数
+    /**
+     * 提前设定好的审批人
+     */
+    @TableField(typeHandler = JacksonTypeHandler.class, exist = false) // TODO 芋艿：临时 exist = false，避免 db 报错；
+    private Map<String, List<Long>> assignee;
 
 }

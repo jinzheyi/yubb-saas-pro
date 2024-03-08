@@ -3,18 +3,22 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <groupId>cn.iocoder.boot</groupId>
         <artifactId>yudao-module-platform</artifactId>
+        <groupId>cn.iocoder.boot</groupId>
         <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
+
     <artifactId>yudao-module-platform-biz</artifactId>
     <packaging>jar</packaging>
 
     <name>${project.artifactId}</name>
     <description>
-        platform 模块下，我们放通用业务，支撑上层的核心业务。
-        例如说：用户、部门、权限、数据字典等等
+        platform
+        1、模块下，我们放平台业务，支撑租户的核心业务。 例如说：用户、部门、权限、数据字典等等
+        infra 模块，主要提供两块能力：
+        1. 我们放基础设施的运维与管理，支撑上层的通用与核心业务。 例如说：定时任务的管理、服务器的信息等等
+        2. 研发工具，提升研发效率与质量。 例如说：代码生成器、接口文档等等
     </description>
 
     <dependencies>
@@ -48,17 +52,22 @@
         </dependency>
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-spring-boot-starter-biz-social</artifactId>
+            <artifactId>yudao-spring-boot-starter-biz-tenant</artifactId>
         </dependency>
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-spring-boot-starter-biz-tenant</artifactId>
+            <artifactId>yudao-spring-boot-starter-biz-ip</artifactId>
         </dependency>
 
         <!-- Web 相关 -->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
         <!-- DB 相关 -->
@@ -83,20 +92,68 @@
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-spring-boot-starter-mq</artifactId>
         </dependency>
-
-        <!-- Test 测试相关 -->
-        <dependency>
-            <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
         <!-- 工具类相关 -->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-spring-boot-starter-excel</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-captcha</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+
+
+
+
+        <!--infra相关迁移-->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-generator</artifactId> <!-- 代码生成器，使用它解析表结构 -->
+        </dependency>
+        <!-- Test 测试相关 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.velocity</groupId>
+            <artifactId>velocity-engine-core</artifactId> <!-- 实现代码生成 -->
+        </dependency>
+
+        <dependency>
+            <groupId>cn.smallbun.screw</groupId>
+            <artifactId>screw-core</artifactId> <!-- 实现数据库文档 -->
+        </dependency>
+        <!-- 监控相关 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-monitor</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>de.codecentric</groupId>
+            <artifactId>spring-boot-admin-starter-server</artifactId> <!-- 实现 Spring Boot Admin Server 服务端 -->
+        </dependency>
+
+        <!-- 三方云服务相关 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-file</artifactId>
+        </dependency>
+
+        <!-- WebSocket -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

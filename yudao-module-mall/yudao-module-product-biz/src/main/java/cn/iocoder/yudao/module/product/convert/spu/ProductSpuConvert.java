@@ -1,52 +1,42 @@
 package cn.iocoder.yudao.module.product.convert.spu;
 
-import java.util.*;
-
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Named;
-import org.mapstruct.factory.Mappers;
-import cn.iocoder.yudao.module.product.controller.admin.spu.vo.*;
+import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuRespVO;
+import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuPageReqVO;
+import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuRespVO;
+import cn.iocoder.yudao.module.product.controller.app.spu.vo.AppProductSpuPageReqVO;
+import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
-import org.springframework.util.StringUtils;
+import org.mapstruct.Mapper;
+import org.mapstruct.factory.Mappers;
+
+import java.util.List;
+import java.util.Map;
+
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMultiMap;
 
 /**
- * 商品spu Convert
+ * 商品 SPU Convert
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Mapper
 public interface ProductSpuConvert {
 
     ProductSpuConvert INSTANCE = Mappers.getMapper(ProductSpuConvert.class);
 
-    @Mapping(source = "picUrls", target = "picUrls", qualifiedByName = "translatePicUrlsFromStringList")
-    ProductSpuDO convert(ProductSpuCreateReqVO bean);
+    ProductSpuPageReqVO convert(AppProductSpuPageReqVO bean);
 
-    @Mapping(source = "picUrls", target = "picUrls", qualifiedByName = "translatePicUrlsFromStringList")
-    ProductSpuDO convert(SpuUpdateReqVO bean);
-
-    @Mapping(source = "picUrls", target = "picUrls", qualifiedByName = "tokenizeToStringArray")
-    SpuRespVO convert(ProductSpuDO bean);
-
-    @Mapping(source = "picUrls", target = "picUrls", qualifiedByName = "tokenizeToStringArray")
-    SpuExcelVO convertToExcelVO(ProductSpuDO bean);
-
-    List<SpuRespVO> convertList(List<ProductSpuDO> list);
-
-    PageResult<SpuRespVO> convertPage(PageResult<ProductSpuDO> page);
-
-    List<SpuExcelVO> convertList02(List<ProductSpuDO> list);
-
-    @Named("tokenizeToStringArray")
-    default List<String> translatePicUrlsArrayFromString(String picUrls) {
-        return Arrays.asList(StringUtils.tokenizeToStringArray(picUrls, ","));
+    default ProductSpuRespVO convert(ProductSpuDO spu, List<ProductSkuDO> skus) {
+        ProductSpuRespVO spuVO = BeanUtils.toBean(spu, ProductSpuRespVO.class);
+        spuVO.setSkus(BeanUtils.toBean(skus, ProductSkuRespVO.class));
+        return spuVO;
     }
 
-    @Named("translatePicUrlsFromStringList")
-    default String translatePicUrlsFromList(List<String> picUrls) {
-        return StringUtils.collectionToCommaDelimitedString(picUrls);
+    default List<ProductSpuRespVO> convertForSpuDetailRespListVO(List<ProductSpuDO> spus, List<ProductSkuDO> skus) {
+        Map<Long, List<ProductSkuDO>> skuMultiMap = convertMultiMap(skus, ProductSkuDO::getSpuId);
+        return CollectionUtils.convertList(spus, spu -> convert(spu, skuMultiMap.get(spu.getId())));
     }
+
 }

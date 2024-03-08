@@ -2,9 +2,9 @@ package cn.iocoder.yudao.module.platform.service.user;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdatePasswordReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.user.vo.profile.UserProfileUpdateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.user.vo.user.*;
+import cn.iocoder.yudao.module.platform.controller.platform.user.vo.profile.UserProfileUpdatePasswordReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.user.vo.profile.UserProfileUpdateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.user.vo.user.*;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 
@@ -15,7 +15,7 @@ import java.util.*;
 /**
  * 后台用户 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface PlatformUserService {
 
@@ -127,7 +127,7 @@ public interface PlatformUserService {
      * @param deptIds 部门数组
      * @return 用户数组
      */
-    List<PlatformUserDO> getUsersByDeptIds(Collection<Long> deptIds);
+    List<PlatformUserDO> getUserListByDeptIds(Collection<Long> deptIds);
 
     /**
      * 获得指定岗位的用户数组
@@ -135,7 +135,7 @@ public interface PlatformUserService {
      * @param postIds 岗位数组
      * @return 用户数组
      */
-    List<PlatformUserDO> getUsersByPostIds(Collection<Long> postIds);
+    List<PlatformUserDO> getUserListByPostIds(Collection<Long> postIds);
 
     /**
      * 获得用户列表
@@ -143,7 +143,7 @@ public interface PlatformUserService {
      * @param ids 用户编号数组
      * @return 用户列表
      */
-    List<PlatformUserDO> getUsers(Collection<Long> ids);
+    List<PlatformUserDO> getUserList(Collection<Long> ids);
 
     /**
      * 校验用户们是否有效。如下情况，视为无效：
@@ -152,7 +152,7 @@ public interface PlatformUserService {
      *
      * @param ids 用户编号数组
      */
-    void validUsers(Set<Long> ids);
+    void validateUserList(Collection<Long> ids);
 
     /**
      * 获得用户 Map
@@ -164,7 +164,7 @@ public interface PlatformUserService {
         if (CollUtil.isEmpty(ids)) {
             return new HashMap<>();
         }
-        return CollectionUtils.convertMap(getUsers(ids), PlatformUserDO::getId);
+        return CollectionUtils.convertMap(getUserList(ids), PlatformUserDO::getId);
     }
 
     /**
@@ -173,7 +173,7 @@ public interface PlatformUserService {
      * @param reqVO 列表请求
      * @return 用户列表
      */
-    List<PlatformUserDO> getUsers(UserExportReqVO reqVO);
+    List<PlatformUserDO> getUserList(UserExportReqVO reqVO);
 
     /**
      * 获得用户列表，基于昵称模糊匹配
@@ -181,15 +181,7 @@ public interface PlatformUserService {
      * @param nickname 昵称
      * @return 用户列表
      */
-    List<PlatformUserDO> getUsersByNickname(String nickname);
-
-    /**
-     * 获得用户列表，基于用户账号模糊匹配
-     *
-     * @param username 用户账号
-     * @return 用户列表
-     */
-    List<PlatformUserDO> getUsersByUsername(String username);
+    List<PlatformUserDO> getUserListByNickname(String nickname);
 
     /**
      * 批量导入用户
@@ -198,7 +190,7 @@ public interface PlatformUserService {
      * @param isUpdateSupport 是否支持更新
      * @return 导入结果
      */
-    UserImportRespVO importUsers(List<UserImportExcelVO> importUsers, boolean isUpdateSupport);
+    UserImportRespVO importUserList(List<UserImportExcelVO> importUsers, boolean isUpdateSupport);
 
     /**
      * 获得指定状态的用户们
@@ -206,7 +198,7 @@ public interface PlatformUserService {
      * @param status 状态
      * @return 用户们
      */
-    List<PlatformUserDO> getUsersByStatus(Integer status);
+    List<PlatformUserDO> getUserListByStatus(Integer status);
 
     /**
      * 判断密码是否匹配

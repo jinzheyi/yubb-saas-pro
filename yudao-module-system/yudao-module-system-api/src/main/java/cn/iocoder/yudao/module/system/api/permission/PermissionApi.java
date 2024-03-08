@@ -8,7 +8,7 @@ import java.util.Set;
 /**
  * 权限 API 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface PermissionApi {
 
@@ -60,7 +60,7 @@ public interface PermissionApi {
      * @param roleId 角色编号
      * @return 菜单编号集合
      */
-    Set<Long> getRoleMenuIds(Long roleId);
+    Set<Long> getRoleMenuListByRoleId(Long roleId);
 
     /**
      * 处理租户菜单删除时，删除租户角色菜单关联授权数据
@@ -74,7 +74,7 @@ public interface PermissionApi {
      * @param menuId 菜单id
      * @return 布尔值 true存在 false不存在
      */
-    Boolean hasAnyRoleMenu(Long menuId);
+    boolean hasAnyRoleMenu(Long menuId);
 
     /**
      * 创建租户的角色菜单权限

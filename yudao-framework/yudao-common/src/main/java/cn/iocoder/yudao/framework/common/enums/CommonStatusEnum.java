@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.framework.common.enums;
 
+import cn.hutool.core.util.ObjUtil;
 import cn.iocoder.yudao.framework.common.core.IntArrayValuable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,7 +10,7 @@ import java.util.Arrays;
 /**
  * 通用状态枚举
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Getter
 @AllArgsConstructor
@@ -19,7 +20,6 @@ public enum CommonStatusEnum implements IntArrayValuable {
     DISABLE(1, "关闭");
 
     public static final int[] ARRAYS = Arrays.stream(values()).mapToInt(CommonStatusEnum::getStatus).toArray();
-
 
     /**
      * 状态值
@@ -33,6 +33,14 @@ public enum CommonStatusEnum implements IntArrayValuable {
     @Override
     public int[] array() {
         return ARRAYS;
+    }
+
+    public static boolean isEnable(Integer status) {
+        return ObjUtil.equal(ENABLE.status, status);
+    }
+
+    public static boolean isDisable(Integer status) {
+        return ObjUtil.equal(DISABLE.status, status);
     }
 
 }

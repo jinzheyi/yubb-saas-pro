@@ -9,7 +9,7 @@ import java.util.*;
  * <p>
  * 相比 Apache Common 提供的 PatriciaTrie 来说，性能可能会更加好一些。
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @SuppressWarnings("unchecked")
 public class SimpleTrie {

@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * 幂等注解
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)

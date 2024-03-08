@@ -1,33 +1,32 @@
 package cn.iocoder.yudao.module.platform.service.errorcode;
 
-import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.platform.api.errorcode.dto.ErrorCodeAutoGenerateReqDTO;
-import cn.iocoder.yudao.module.platform.api.errorcode.dto.ErrorCodeRespDTO;
-import cn.iocoder.yudao.module.platform.controller.center.errorcode.vo.ErrorCodeCreateReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.errorcode.vo.ErrorCodeExportReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.errorcode.vo.ErrorCodePageReqVO;
-import cn.iocoder.yudao.module.platform.controller.center.errorcode.vo.ErrorCodeUpdateReqVO;
-import cn.iocoder.yudao.module.platform.convert.errorcode.ErrorCodeConvert;
-import cn.iocoder.yudao.module.platform.dal.dataobject.errorcode.ErrorCodeDO;
-import cn.iocoder.yudao.module.platform.dal.mysql.errorcode.ErrorCodeMapper;
-import cn.iocoder.yudao.framework.common.enums.errorcode.ErrorCodeTypeEnum;
-import com.google.common.annotations.VisibleForTesting;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.validation.annotation.Validated;
-
-import javax.annotation.Resource;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.ERROR_CODE_DUPLICATE;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.ERROR_CODE_NOT_EXISTS;
+
+import cn.hutool.core.collection.CollUtil;
+import cn.iocoder.yudao.framework.common.enums.errorcode.ErrorCodeTypeEnum;
+import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.platform.api.errorcode.dto.ErrorCodeAutoGenerateReqDTO;
+import cn.iocoder.yudao.module.platform.api.errorcode.dto.ErrorCodeRespDTO;
+import cn.iocoder.yudao.module.platform.controller.platform.errorcode.vo.ErrorCodeCreateReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.errorcode.vo.ErrorCodeExportReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.errorcode.vo.ErrorCodePageReqVO;
+import cn.iocoder.yudao.module.platform.controller.platform.errorcode.vo.ErrorCodeUpdateReqVO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.errorcode.ErrorCodeDO;
+import cn.iocoder.yudao.module.platform.dal.mysql.errorcode.ErrorCodeMapper;
+import com.google.common.annotations.VisibleForTesting;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import javax.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * 错误码 Service 实现类
@@ -48,7 +47,7 @@ public class ErrorCodeServiceImpl implements ErrorCodeService {
         validateCodeDuplicate(createReqVO.getCode(), null);
 
         // 插入
-        ErrorCodeDO errorCode = ErrorCodeConvert.INSTANCE.convert(createReqVO)
+        ErrorCodeDO errorCode = BeanUtils.toBean(createReqVO, ErrorCodeDO.class)
                 .setType(ErrorCodeTypeEnum.MANUAL_OPERATION.getType());
         errorCodeMapper.insert(errorCode);
         // 返回
@@ -58,12 +57,12 @@ public class ErrorCodeServiceImpl implements ErrorCodeService {
     @Override
     public void updateErrorCode(ErrorCodeUpdateReqVO updateReqVO) {
         // 校验存在
-        this.validateErrorCodeExists(updateReqVO.getId());
+        validateErrorCodeExists(updateReqVO.getId());
         // 校验 code 重复
         validateCodeDuplicate(updateReqVO.getCode(), updateReqVO.getId());
 
         // 更新
-        ErrorCodeDO updateObj = ErrorCodeConvert.INSTANCE.convert(updateReqVO)
+        ErrorCodeDO updateObj = BeanUtils.toBean(updateReqVO, ErrorCodeDO.class)
                 .setType(ErrorCodeTypeEnum.MANUAL_OPERATION.getType());
         errorCodeMapper.updateById(updateObj);
     }
@@ -71,7 +70,7 @@ public class ErrorCodeServiceImpl implements ErrorCodeService {
     @Override
     public void deleteErrorCode(Long id) {
         // 校验存在
-        this.validateErrorCodeExists(id);
+        validateErrorCodeExists(id);
         // 删除
         errorCodeMapper.deleteById(id);
     }
@@ -100,7 +99,7 @@ public class ErrorCodeServiceImpl implements ErrorCodeService {
     }
 
     @VisibleForTesting
-    public void validateErrorCodeExists(Long id) {
+    void validateErrorCodeExists(Long id) {
         if (errorCodeMapper.selectById(id) == null) {
             throw exception(ERROR_CODE_NOT_EXISTS);
         }
@@ -137,7 +136,7 @@ public class ErrorCodeServiceImpl implements ErrorCodeService {
             ErrorCodeDO errorCodeDO = errorCodeDOMap.get(autoGenerateDTO.getCode());
             // 不存在，则进行新增
             if (errorCodeDO == null) {
-                errorCodeDO = ErrorCodeConvert.INSTANCE.convert(autoGenerateDTO)
+                errorCodeDO = BeanUtils.toBean(autoGenerateDTO, ErrorCodeDO.class)
                         .setType(ErrorCodeTypeEnum.AUTO_GENERATION.getType());
                 errorCodeMapper.insert(errorCodeDO);
                 return;
@@ -164,10 +163,10 @@ public class ErrorCodeServiceImpl implements ErrorCodeService {
     }
 
     @Override
-    public List<ErrorCodeRespDTO> getErrorCodeList(String applicationName, Date minUpdateTime) {
+    public List<ErrorCodeRespDTO> getErrorCodeList(String applicationName, LocalDateTime minUpdateTime) {
         List<ErrorCodeDO> errorCodeDOs = errorCodeMapper.selectListByApplicationNameAndUpdateTimeGt(
                 applicationName, minUpdateTime);
-        return ErrorCodeConvert.INSTANCE.convertList03(errorCodeDOs);
+        return BeanUtils.toBean(errorCodeDOs, ErrorCodeRespDTO.class);
     }
 
 }

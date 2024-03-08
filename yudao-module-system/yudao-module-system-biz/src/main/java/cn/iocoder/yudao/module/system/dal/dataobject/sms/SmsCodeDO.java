@@ -1,18 +1,21 @@
 package cn.iocoder.yudao.module.system.dal.dataobject.sms;
 
-import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
+import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.*;
-
-import java.util.Date;
+import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 /**
  * 手机验证码 DO
  *
  * idx_mobile 索引：基于 {@link #mobile} 字段
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName("system_sms_code")
 @KeySequence("system_sms_code_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
@@ -21,7 +24,7 @@ import java.util.Date;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SmsCodeDO extends TenantBaseDO {
+public class SmsCodeDO extends BaseDO {
 
     /**
      * 编号
@@ -56,7 +59,7 @@ public class SmsCodeDO extends TenantBaseDO {
     /**
      * 使用时间
      */
-    private Date usedTime;
+    private LocalDateTime usedTime;
     /**
      * 使用 IP
      */

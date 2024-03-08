@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.module.infra.service.codegen;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.CodegenCreateListReqVO;
-import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.CodegenUpdateReqVO;
-import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.table.CodegenTablePageReqVO;
-import cn.iocoder.yudao.module.infra.controller.center.codegen.vo.table.DatabaseTableRespVO;
+import cn.iocoder.yudao.module.infra.controller.platform.codegen.vo.CodegenCreateListReqVO;
+import cn.iocoder.yudao.module.infra.controller.platform.codegen.vo.CodegenUpdateReqVO;
+import cn.iocoder.yudao.module.infra.controller.platform.codegen.vo.table.CodegenTablePageReqVO;
+import cn.iocoder.yudao.module.infra.controller.platform.codegen.vo.table.DatabaseTableRespVO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.codegen.CodegenColumnDO;
 import cn.iocoder.yudao.module.infra.dal.dataobject.codegen.CodegenTableDO;
 
@@ -14,7 +14,7 @@ import java.util.Map;
 /**
  * 代码生成 Service 接口
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 public interface CodegenService {
 
@@ -49,6 +49,14 @@ public interface CodegenService {
     void deleteCodegen(Long tableId);
 
     /**
+     * 获得表定义列表
+     *
+     * @param dataSourceConfigId 数据源配置的编号
+     * @return 表定义列表
+     */
+    List<CodegenTableDO> getCodegenTableList(Long dataSourceConfigId);
+
+    /**
      * 获得表定义分页
      *
      * @param pageReqVO 分页条件
@@ -62,7 +70,7 @@ public interface CodegenService {
      * @param id 表编号
      * @return 表定义
      */
-    CodegenTableDO getCodegenTablePage(Long id);
+    CodegenTableDO getCodegenTable(Long id);
 
     /**
      * 获得指定表的字段定义数组
@@ -82,7 +90,6 @@ public interface CodegenService {
 
     /**
      * 获得数据库自带的表定义列表
-     *
      *
      * @param dataSourceConfigId 数据源的配置编号
      * @param name 表名称

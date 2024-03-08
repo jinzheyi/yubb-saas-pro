@@ -1,26 +1,27 @@
 package cn.iocoder.yudao.framework.apilog.core.filter;
 
+import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.map.MapUtil;
-import cn.hutool.extra.servlet.ServletUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.apilog.core.service.ApiAccessLog;
 import cn.iocoder.yudao.framework.apilog.core.service.ApiAccessLogFrameworkService;
 import cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.util.date.DateUtils;
 import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.web.config.WebProperties;
-import cn.iocoder.yudao.framework.web.core.filter.ApiRequestFilter;
 import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString;
@@ -28,43 +29,52 @@ import static cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString
 /**
  * API 访问日志 Filter
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @Slf4j
-public class ApiAccessLogFilter extends ApiRequestFilter {
+public class ApiAccessLogFilter extends OncePerRequestFilter {
 
     private final String applicationName;
 
     private final ApiAccessLogFrameworkService apiAccessLogFrameworkService;
 
+    private final WebProperties webProperties;
+
     public ApiAccessLogFilter(WebProperties webProperties, String applicationName, ApiAccessLogFrameworkService apiAccessLogFrameworkService) {
-        super(webProperties);
+        this.webProperties = webProperties;
         this.applicationName = applicationName;
         this.apiAccessLogFrameworkService = apiAccessLogFrameworkService;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        // 只过滤 API 请求的地址
+        return !StrUtil.startWithAny(request.getRequestURI(), webProperties.getAdminApi().getPrefix(),
+                webProperties.getAppApi().getPrefix(), webProperties.getPlatformApi().getPrefix());
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         // 获得开始时间
-        Date beginTim = new Date();
+        LocalDateTime beginTime = LocalDateTime.now();
         // 提前获得参数，避免 XssFilter 过滤处理
-        Map<String, String> queryString = ServletUtil.getParamMap(request);
-        String requestBody = ServletUtils.isJsonRequest(request) ? ServletUtil.getBody(request) : null;
+        Map<String, String> queryString = ServletUtils.getParamMap(request);
+        String requestBody = ServletUtils.isJsonRequest(request) ? ServletUtils.getBody(request) : null;
 
         try {
             // 继续过滤器
             filterChain.doFilter(request, response);
             // 正常执行，记录日志
-            createApiAccessLog(request, beginTim, queryString, requestBody, null);
+            createApiAccessLog(request, beginTime, queryString, requestBody, null);
         } catch (Exception ex) {
             // 异常执行，记录日志
-            createApiAccessLog(request, beginTim, queryString, requestBody, ex);
+            createApiAccessLog(request, beginTime, queryString, requestBody, ex);
             throw ex;
         }
     }
 
-    private void createApiAccessLog(HttpServletRequest request, Date beginTime,
+    private void createApiAccessLog(HttpServletRequest request, LocalDateTime beginTime,
                                     Map<String, String> queryString, String requestBody, Exception ex) {
         ApiAccessLog accessLog = new ApiAccessLog();
         try {
@@ -75,7 +85,7 @@ public class ApiAccessLogFilter extends ApiRequestFilter {
         }
     }
 
-    private void buildApiAccessLogDTO(ApiAccessLog accessLog, HttpServletRequest request, Date beginTime,
+    private void buildApiAccessLogDTO(ApiAccessLog accessLog, HttpServletRequest request, LocalDateTime beginTime,
                                       Map<String, String> queryString, String requestBody, Exception ex) {
         // 处理用户信息
         accessLog.setUserId(WebFrameworkUtils.getLoginUserId(request));
@@ -100,11 +110,11 @@ public class ApiAccessLogFilter extends ApiRequestFilter {
         accessLog.setRequestParams(toJsonString(requestParams));
         accessLog.setRequestMethod(request.getMethod());
         accessLog.setUserAgent(ServletUtils.getUserAgent(request));
-        accessLog.setUserIp(ServletUtil.getClientIP(request));
+        accessLog.setUserIp(ServletUtils.getClientIP(request));
         // 持续时间
         accessLog.setBeginTime(beginTime);
-        accessLog.setEndTime(new Date());
-        accessLog.setDuration((int) DateUtils.diff(accessLog.getEndTime(), accessLog.getBeginTime()));
+        accessLog.setEndTime(LocalDateTime.now());
+        accessLog.setDuration((int) LocalDateTimeUtil.between(accessLog.getBeginTime(), accessLog.getEndTime(), ChronoUnit.MILLIS));
     }
 
 }

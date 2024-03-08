@@ -4036,7 +4036,7 @@ GO
 SET IDENTITY_INSERT [dbo].[pay_merchant] ON
 GO
 
-INSERT INTO [dbo].[pay_merchant] ([id], [no], [name], [short_name], [status], [remark], [creator], [create_time], [updater], [update_time], [tenant_id], [deleted]) VALUES (N'1', N'M233666999', N'芋道源码', N'芋艿', N'0', N'我是备注', N'', N'2021-10-23 08:31:14.0000000', N'', N'2022-02-27 04:15:20.0000000', N'1', N'0')
+INSERT INTO [dbo].[pay_merchant] ([id], [no], [name], [short_name], [status], [remark], [creator], [create_time], [updater], [update_time], [tenant_id], [deleted]) VALUES (N'1', N'M233666999', N'圣钰科技', N'芋艿', N'0', N'我是备注', N'', N'2021-10-23 08:31:14.0000000', N'', N'2022-02-27 04:15:20.0000000', N'1', N'0')
 GO
 
 SET IDENTITY_INSERT [dbo].[pay_merchant] OFF
@@ -5216,7 +5216,7 @@ GO
 SET IDENTITY_INSERT [dbo].[system_dept] ON
 GO
 
-INSERT INTO [dbo].[system_dept] ([id], [name], [parent_id], [sort], [leader_user_id], [phone], [email], [status], [creator], [create_time], [updater], [update_time], [tenant_id], [deleted]) VALUES (N'100', N'芋道源码', N'0', N'0', N'1', N'15888888888', N'ry@qq.com', N'0', N'admin', N'2021-01-05 17:03:47.0000000', N'103', N'2022-01-14 01:04:05.0000000', N'1', N'0')
+INSERT INTO [dbo].[system_dept] ([id], [name], [parent_id], [sort], [leader_user_id], [phone], [email], [status], [creator], [create_time], [updater], [update_time], [tenant_id], [deleted]) VALUES (N'100', N'圣钰科技', N'0', N'0', N'1', N'15888888888', N'ry@qq.com', N'0', N'admin', N'2021-01-05 17:03:47.0000000', N'103', N'2022-01-14 01:04:05.0000000', N'1', N'0')
 GO
 
 INSERT INTO [dbo].[system_dept] ([id], [name], [parent_id], [sort], [leader_user_id], [phone], [email], [status], [creator], [create_time], [updater], [update_time], [tenant_id], [deleted]) VALUES (N'101', N'深圳总公司', N'100', N'1', N'104', N'15888888888', N'ry@qq.com', N'0', N'admin', N'2021-01-05 17:03:47.0000000', N'1', N'2022-02-22 19:47:48.0000000', N'1', N'0')
@@ -5545,11 +5545,7 @@ GO
 INSERT INTO [dbo].[system_dict_data] ([id], [sort], [label], [value], [dict_type], [status], [color_type], [css_class], [remark], [creator], [create_time], [updater], [update_time], [deleted]) VALUES (N'63', N'1', N'已处理', N'1', N'infra_api_error_log_process_status', N'0', N'success', N'', NULL, N'', N'2021-02-26 07:07:26.0000000', N'1', N'2022-02-16 20:14:08.0000000', N'0')
 GO
 
-INSERT INTO [dbo].[system_dict_data] ([id], [sort], [label], [value], [dict_type], [status], [color_type], [css_class], [remark], [creator], [create_time], [updater], [update_time], [deleted]) VALUES (N'64', N'2', N'已忽略', N'2', N'infra_api_error_log_process_status', N'0', N'danger', N'', NULL, N'', N'2021-02-26 07:07:34.0000000', N'1', N'2022-02-16 20:14:14.0000000', N'0')
-GO
 
-INSERT INTO [dbo].[system_dict_data] ([id], [sort], [label], [value], [dict_type], [status], [color_type], [css_class], [remark], [creator], [create_time], [updater], [update_time], [deleted]) VALUES (N'65', N'1', N'云片', N'YUN_PIAN', N'system_sms_channel_code', N'0', N'success', N'', NULL, N'1', N'2021-04-05 01:05:14.0000000', N'1', N'2022-02-16 10:09:55.0000000', N'0')
-GO
 
 INSERT INTO [dbo].[system_dict_data] ([id], [sort], [label], [value], [dict_type], [status], [color_type], [css_class], [remark], [creator], [create_time], [updater], [update_time], [deleted]) VALUES (N'66', N'2', N'阿里云', N'ALIYUN', N'system_sms_channel_code', N'0', N'primary', N'', NULL, N'1', N'2021-04-05 01:05:26.0000000', N'1', N'2022-02-16 10:09:52.0000000', N'0')
 GO
@@ -5817,18 +5813,51 @@ IF EXISTS (SELECT * FROM sys.all_objects WHERE object_id = OBJECT_ID(N'[dbo].[sy
 	DROP TABLE [dbo].[system_dict_type]
 GO
 
-CREATE TABLE [dbo].[system_dict_type] (
-  [id] bigint  IDENTITY(1,1) NOT NULL,
-  [name] nvarchar(100) COLLATE SQL_Latin1_General_CP1_CI_AS  NOT NULL,
-  [type] nvarchar(100) COLLATE SQL_Latin1_General_CP1_CI_AS  NOT NULL,
-  [status] tinyint  NOT NULL,
-  [remark] nvarchar(500) COLLATE SQL_Latin1_General_CP1_CI_AS  NULL,
-  [creator] nvarchar(64) COLLATE SQL_Latin1_General_CP1_CI_AS  NULL,
-  [create_time] datetime2(7)  NOT NULL,
-  [updater] nvarchar(64) COLLATE SQL_Latin1_General_CP1_CI_AS  NULL,
-  [update_time] datetime2(7)  NOT NULL,
-  [deleted] bit DEFAULT 0 NOT NULL
-)
+CREATE TABLE [dbo].[system_dict_type]
+(
+    [
+    id]
+    bigint
+    IDENTITY
+(
+    1,
+    1
+) NOT NULL,
+    [name] nvarchar
+(
+    100
+) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
+    [type] nvarchar
+(
+    100
+) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
+    [status] tinyint NOT NULL,
+    [remark] nvarchar
+(
+    500
+) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+    [creator] nvarchar
+(
+    64
+) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+    [create_time] datetime2
+(
+    7
+) NOT NULL,
+    [updater] nvarchar
+(
+    64
+) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+    [update_time] datetime2
+(
+    7
+) NOT NULL,
+    [deleted_time] datetime2
+(
+    7
+),
+    [deleted] bit DEFAULT 0 NOT NULL
+    )
 GO
 
 ALTER TABLE [dbo].[system_dict_type] SET (LOCK_ESCALATION = TABLE)
@@ -5886,26 +5915,29 @@ GO
 EXEC sp_addextendedproperty
 'MS_Description', N'更新者',
 'SCHEMA', N'dbo',
-'TABLE', N'system_dict_type',
-'COLUMN', N'updater'
-GO
-
-EXEC sp_addextendedproperty
-'MS_Description', N'更新时间',
-'SCHEMA', N'dbo',
-'TABLE', N'system_dict_type',
-'COLUMN', N'update_time'
-GO
-
-EXEC sp_addextendedproperty
-'MS_Description', N'是否删除',
-'SCHEMA', N'dbo',
-'TABLE', N'system_dict_type',
-'COLUMN', N'deleted'
-GO
-
-EXEC sp_addextendedproperty
-'MS_Description', N'字典类型表',
+    'TABLE', N'system_dict_type',
+    'COLUMN', N'updater'
+    GO
+    EXEC sp_addextendedproperty
+    'MS_Description', N'更新时间',
+    'SCHEMA', N'dbo',
+    'TABLE', N'system_dict_type',
+    'COLUMN', N'update_time'
+    GO
+    EXEC sp_addextendedproperty
+    'MS_Description', N'删除时间',
+    'SCHEMA', N'dbo',
+    'TABLE', N'system_dict_type',
+    'COLUMN', N'deleted_time'
+    GO
+    EXEC sp_addextendedproperty
+    'MS_Description', N'是否删除',
+    'SCHEMA', N'dbo',
+    'TABLE', N'system_dict_type',
+    'COLUMN', N'deleted'
+    GO
+    EXEC sp_addextendedproperty
+    'MS_Description', N'字典类型表',
 'SCHEMA', N'dbo',
 'TABLE', N'system_dict_type'
 GO
@@ -7814,7 +7846,7 @@ GO
 SET IDENTITY_INSERT [dbo].[system_oauth2_client] ON
 GO
 
-INSERT INTO [dbo].[system_oauth2_client] ([id], [client_id], [secret], [name], [logo], [description], [status], [access_token_validity_seconds], [refresh_token_validity_seconds], [redirect_uris], [auto_approve_scopes], [authorized_grant_types], [scopes], [authorities], [resource_ids], [additional_information], [creator], [create_time], [updater], [update_time], [deleted]) VALUES (N'1', N'default', N'admin123', N'芋道源码', N'http://test.yudao.iocoder.cn/a5e2e244368878a366b516805a4aabf1.png', N'我是描述', N'0', N'180', N'8640', N'["https://www.iocoder.cn","https://doc.iocoder.cn"]', N'', N'["password","authorization_code","implicit","refresh_token"]', N'["user.read", "user.write"]', N'["system:user:query"]', N'[]', N'{}', N'1', N'2022-05-11 21:47:12.0000000', N'1', N'2022-05-13 10:50:16.9620000', N'0')
+INSERT INTO [dbo].[system_oauth2_client] ([id], [client_id], [secret], [name], [logo], [description], [status], [access_token_validity_seconds], [refresh_token_validity_seconds], [redirect_uris], [auto_approve_scopes], [authorized_grant_types], [scopes], [authorities], [resource_ids], [additional_information], [creator], [create_time], [updater], [update_time], [deleted]) VALUES (N'1', N'default', N'admin123', N'圣钰科技', N'http://test.yudao.iocoder.cn/a5e2e244368878a366b516805a4aabf1.png', N'我是描述', N'0', N'180', N'8640', N'["https://www.iocoder.cn","https://doc.iocoder.cn"]', N'', N'["password","authorization_code","implicit","refresh_token"]', N'["user.read", "user.write"]', N'["system:user:query"]', N'[]', N'{}', N'1', N'2022-05-11 21:47:12.0000000', N'1', N'2022-05-13 10:50:16.9620000', N'0')
 GO
 
 SET IDENTITY_INSERT [dbo].[system_oauth2_client] OFF
@@ -9623,9 +9655,6 @@ GO
 SET IDENTITY_INSERT [dbo].[system_sms_channel] ON
 GO
 
-INSERT INTO [dbo].[system_sms_channel] ([id], [signature], [code], [status], [remark], [api_key], [api_secret], [callback_url], [creator], [create_time], [updater], [update_time], [deleted]) VALUES (N'1', N'芋道', N'YUN_PIAN', N'0', N'呵呵呵哒', N'1555a14277cb8a608cf45a9e6a80d510', NULL, N'http://vdwapu.natappfree.cc/admin-api/system/sms/callback/yunpian', N'', N'2021-03-31 06:12:20.0000000', N'1', N'2022-02-23 16:48:44.0000000', N'0')
-GO
-
 INSERT INTO [dbo].[system_sms_channel] ([id], [signature], [code], [status], [remark], [api_key], [api_secret], [callback_url], [creator], [create_time], [updater], [update_time], [deleted]) VALUES (N'2', N'Ballcat', N'ALIYUN', N'0', N'啦啦啦', N'LTAI5tCnKso2uG3kJ5gRav88', N'fGJ5SNXL7P1NHNRmJ7DJaMJGPyE55C', NULL, N'', N'2021-03-31 11:53:10.0000000', N'1', N'2021-04-14 00:08:37.0000000', N'0')
 GO
 
@@ -10571,7 +10600,7 @@ CREATE TABLE [dbo].[system_tenant] (
   [package_id] bigint  NOT NULL,
   [expire_time] datetime2(7)  NOT NULL,
   [account_count] int  NOT NULL,
-  [creator] nvarchar(64) COLLATE SQL_Latin1_General_CP1_CI_AS  NOT NULL,
+  [creator] nvarchar(64) COLLATE SQL_Latin1_General_CP1_CI_AS  NULL,
   [create_time] datetime2(7)  NOT NULL,
   [updater] nvarchar(64) COLLATE SQL_Latin1_General_CP1_CI_AS  NULL,
   [update_time] datetime2(7)  NOT NULL,
@@ -10703,7 +10732,7 @@ GO
 SET IDENTITY_INSERT [dbo].[system_tenant] ON
 GO
 
-INSERT INTO [dbo].[system_tenant] ([id], [name], [contact_user_id], [contact_name], [contact_mobile], [status], [domain], [package_id], [expire_time], [account_count], [creator], [create_time], [updater], [update_time], [deleted]) VALUES (N'1', N'芋道源码', NULL, N'芋艿', N'17321315478', N'0', N'https://www.iocoder.cn', N'0', N'2099-02-19 17:14:16.0000000', N'9999', N'1', N'2021-01-05 17:03:47.0000000', N'1', N'2022-02-23 12:15:11.0000000', N'0')
+INSERT INTO [dbo].[system_tenant] ([id], [name], [contact_user_id], [contact_name], [contact_mobile], [status], [domain], [package_id], [expire_time], [account_count], [creator], [create_time], [updater], [update_time], [deleted]) VALUES (N'1', N'圣钰科技', NULL, N'芋艿', N'17321315478', N'0', N'https://www.iocoder.cn', N'0', N'2099-02-19 17:14:16.0000000', N'9999', N'1', N'2021-01-05 17:03:47.0000000', N'1', N'2022-02-23 12:15:11.0000000', N'0')
 GO
 
 INSERT INTO [dbo].[system_tenant] ([id], [name], [contact_user_id], [contact_name], [contact_mobile], [status], [domain], [package_id], [expire_time], [account_count], [creator], [create_time], [updater], [update_time], [deleted]) VALUES (N'121', N'小租户', N'110', N'小王2', N'15601691300', N'0', N'http://www.iocoder.cn', N'111', N'2024-03-11 00:00:00.0000000', N'20', N'1', N'2022-02-22 00:56:14.0000000', N'1', N'2022-03-19 18:37:20.0000000', N'0')
@@ -10732,7 +10761,7 @@ CREATE TABLE [dbo].[system_tenant_package] (
   [status] tinyint  NOT NULL,
   [remark] nvarchar(256) COLLATE SQL_Latin1_General_CP1_CI_AS  NULL,
   [menu_ids] nvarchar(2048) COLLATE SQL_Latin1_General_CP1_CI_AS  NOT NULL,
-  [creator] nvarchar(64) COLLATE SQL_Latin1_General_CP1_CI_AS  NOT NULL,
+  [creator] nvarchar(64) COLLATE SQL_Latin1_General_CP1_CI_AS  NULL,
   [create_time] datetime2(7)  NOT NULL,
   [updater] nvarchar(64) COLLATE SQL_Latin1_General_CP1_CI_AS  NULL,
   [update_time] datetime2(7)  NOT NULL,
@@ -11298,7 +11327,7 @@ GO
 SET IDENTITY_INSERT [dbo].[system_users] ON
 GO
 
-INSERT INTO [dbo].[system_users] ([id], [username], [password], [nickname], [remark], [dept_id], [post_ids], [email], [mobile], [sex], [avatar], [status], [login_ip], [login_date], [creator], [create_time], [updater], [update_time], [tenant_id], [deleted]) VALUES (N'1', N'admin', N'$2a$10$0acJOIk2D25/oC87nyclE..0lzeu9DtQ/n3geP4fkun/zIVRhHJIO', N'芋道源码', N'管理员', N'103', N'[1]', N'aoteman@126.com', N'15612345678', N'1', N'http://test.yudao.iocoder.cn/48934f2f-92d4-4250-b917-d10d2b262c6a', N'0', N'127.0.0.1', N'2022-05-26 00:51:15.3820000', N'admin', N'2021-01-05 17:03:47.0000000', NULL, N'2022-05-26 00:51:15.3870000', N'1', N'0')
+INSERT INTO [dbo].[system_users] ([id], [username], [password], [nickname], [remark], [dept_id], [post_ids], [email], [mobile], [sex], [avatar], [status], [login_ip], [login_date], [creator], [create_time], [updater], [update_time], [tenant_id], [deleted]) VALUES (N'1', N'admin', N'$2a$10$0acJOIk2D25/oC87nyclE..0lzeu9DtQ/n3geP4fkun/zIVRhHJIO', N'圣钰科技', N'管理员', N'103', N'[1]', N'aoteman@126.com', N'15612345678', N'1', N'http://test.yudao.iocoder.cn/48934f2f-92d4-4250-b917-d10d2b262c6a', N'0', N'127.0.0.1', N'2022-05-26 00:51:15.3820000', N'admin', N'2021-01-05 17:03:47.0000000', NULL, N'2022-05-26 00:51:15.3870000', N'1', N'0')
 GO
 
 INSERT INTO [dbo].[system_users] ([id], [username], [password], [nickname], [remark], [dept_id], [post_ids], [email], [mobile], [sex], [avatar], [status], [login_ip], [login_date], [creator], [create_time], [updater], [update_time], [tenant_id], [deleted]) VALUES (N'100', N'yudao', N'$2a$10$11U48RhyJ5pSBYWSn12AD./ld671.ycSzJHbyrtpeoMeYiw31eo8a', N'芋道', N'不要吓我', N'104', N'[1]', N'yudao@iocoder.cn', N'15601691300', N'1', N'', N'1', N'127.0.0.1', N'2022-05-03 16:49:24.6860000', N'', N'2021-01-07 09:07:17.0000000', NULL, N'2022-05-03 16:49:24.6860000', N'1', N'0')
@@ -11348,7 +11377,7 @@ GO
 -- Primary Key structure for table QRTZ_CALENDARS
 -- ----------------------------
 ALTER TABLE [dbo].[QRTZ_CALENDARS] ADD CONSTRAINT [PK_QRTZ_CALENDARS] PRIMARY KEY CLUSTERED ([SCHED_NAME], [CALENDAR_NAME])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11369,7 +11398,7 @@ GO
 -- Primary Key structure for table QRTZ_CRON_TRIGGERS
 -- ----------------------------
 ALTER TABLE [dbo].[QRTZ_CRON_TRIGGERS] ADD CONSTRAINT [PK_QRTZ_CRON_TRIGGERS] PRIMARY KEY CLUSTERED ([SCHED_NAME], [TRIGGER_NAME], [TRIGGER_GROUP])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11378,7 +11407,7 @@ GO
 -- Primary Key structure for table QRTZ_FIRED_TRIGGERS
 -- ----------------------------
 ALTER TABLE [dbo].[QRTZ_FIRED_TRIGGERS] ADD CONSTRAINT [PK_QRTZ_FIRED_TRIGGERS] PRIMARY KEY CLUSTERED ([SCHED_NAME], [ENTRY_ID])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11387,7 +11416,7 @@ GO
 -- Primary Key structure for table QRTZ_JOB_DETAILS
 -- ----------------------------
 ALTER TABLE [dbo].[QRTZ_JOB_DETAILS] ADD CONSTRAINT [PK_QRTZ_JOB_DETAILS] PRIMARY KEY CLUSTERED ([SCHED_NAME], [JOB_NAME], [JOB_GROUP])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11396,7 +11425,7 @@ GO
 -- Primary Key structure for table QRTZ_LOCKS
 -- ----------------------------
 ALTER TABLE [dbo].[QRTZ_LOCKS] ADD CONSTRAINT [PK_QRTZ_LOCKS] PRIMARY KEY CLUSTERED ([SCHED_NAME], [LOCK_NAME])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11405,7 +11434,7 @@ GO
 -- Primary Key structure for table QRTZ_PAUSED_TRIGGER_GRPS
 -- ----------------------------
 ALTER TABLE [dbo].[QRTZ_PAUSED_TRIGGER_GRPS] ADD CONSTRAINT [PK_QRTZ_PAUSED_TRIGGER_GRPS] PRIMARY KEY CLUSTERED ([SCHED_NAME], [TRIGGER_GROUP])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11414,7 +11443,7 @@ GO
 -- Primary Key structure for table QRTZ_SCHEDULER_STATE
 -- ----------------------------
 ALTER TABLE [dbo].[QRTZ_SCHEDULER_STATE] ADD CONSTRAINT [PK_QRTZ_SCHEDULER_STATE] PRIMARY KEY CLUSTERED ([SCHED_NAME], [INSTANCE_NAME])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11435,7 +11464,7 @@ GO
 -- Primary Key structure for table QRTZ_SIMPLE_TRIGGERS
 -- ----------------------------
 ALTER TABLE [dbo].[QRTZ_SIMPLE_TRIGGERS] ADD CONSTRAINT [PK_QRTZ_SIMPLE_TRIGGERS] PRIMARY KEY CLUSTERED ([SCHED_NAME], [TRIGGER_NAME], [TRIGGER_GROUP])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11456,7 +11485,7 @@ GO
 -- Primary Key structure for table QRTZ_SIMPROP_TRIGGERS
 -- ----------------------------
 ALTER TABLE [dbo].[QRTZ_SIMPROP_TRIGGERS] ADD CONSTRAINT [PK_QRTZ_SIMPROP_TRIGGERS] PRIMARY KEY CLUSTERED ([SCHED_NAME], [TRIGGER_NAME], [TRIGGER_GROUP])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11477,7 +11506,7 @@ GO
 -- Primary Key structure for table QRTZ_TRIGGERS
 -- ----------------------------
 ALTER TABLE [dbo].[QRTZ_TRIGGERS] ADD CONSTRAINT [PK_QRTZ_TRIGGERS] PRIMARY KEY CLUSTERED ([SCHED_NAME], [TRIGGER_NAME], [TRIGGER_GROUP])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11493,7 +11522,7 @@ GO
 -- Primary Key structure for table bpm_form
 -- ----------------------------
 ALTER TABLE [dbo].[bpm_form] ADD CONSTRAINT [PK__bpm_form__3213E83F86C2B27F] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11509,7 +11538,7 @@ GO
 -- Primary Key structure for table bpm_oa_leave
 -- ----------------------------
 ALTER TABLE [dbo].[bpm_oa_leave] ADD CONSTRAINT [PK__bpm_oa_l__3213E83F3569F596] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11525,7 +11554,7 @@ GO
 -- Primary Key structure for table bpm_process_definition_ext
 -- ----------------------------
 ALTER TABLE [dbo].[bpm_process_definition_ext] ADD CONSTRAINT [PK__bpm_proc__3213E83F0A8AB015] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11541,7 +11570,7 @@ GO
 -- Primary Key structure for table bpm_process_instance_ext
 -- ----------------------------
 ALTER TABLE [dbo].[bpm_process_instance_ext] ADD CONSTRAINT [PK__bpm_proc__3213E83FFD88328F] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11557,7 +11586,7 @@ GO
 -- Primary Key structure for table bpm_task_assign_rule
 -- ----------------------------
 ALTER TABLE [dbo].[bpm_task_assign_rule] ADD CONSTRAINT [PK__bpm_task__3213E83F474371C5] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11573,7 +11602,7 @@ GO
 -- Primary Key structure for table bpm_task_ext
 -- ----------------------------
 ALTER TABLE [dbo].[bpm_task_ext] ADD CONSTRAINT [PK__bpm_task__3213E83FD8AFE1F9] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11589,7 +11618,7 @@ GO
 -- Primary Key structure for table bpm_user_group
 -- ----------------------------
 ALTER TABLE [dbo].[bpm_user_group] ADD CONSTRAINT [PK__bpm_user__3213E83F25E4725B] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11605,7 +11634,7 @@ GO
 -- Primary Key structure for table infra_api_access_log
 -- ----------------------------
 ALTER TABLE [dbo].[infra_api_access_log] ADD CONSTRAINT [PK__infra_ap__3213E83F04F27A05] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11621,7 +11650,7 @@ GO
 -- Primary Key structure for table infra_api_error_log
 -- ----------------------------
 ALTER TABLE [dbo].[infra_api_error_log] ADD CONSTRAINT [PK__infra_ap__3213E83FCA2446D4] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11637,7 +11666,7 @@ GO
 -- Primary Key structure for table infra_codegen_column
 -- ----------------------------
 ALTER TABLE [dbo].[infra_codegen_column] ADD CONSTRAINT [PK__infra_co__3213E83FA9EC5005] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11653,7 +11682,7 @@ GO
 -- Primary Key structure for table infra_codegen_table
 -- ----------------------------
 ALTER TABLE [dbo].[infra_codegen_table] ADD CONSTRAINT [PK__infra_co__3213E83F555031D0] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11662,7 +11691,7 @@ GO
 -- Primary Key structure for table infra_config
 -- ----------------------------
 ALTER TABLE [dbo].[infra_config] ADD CONSTRAINT [PK__infra_co__3213E83FF4C71E85] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11678,7 +11707,7 @@ GO
 -- Primary Key structure for table infra_data_source_config
 -- ----------------------------
 ALTER TABLE [dbo].[infra_data_source_config] ADD CONSTRAINT [PK__infra_da__3213E83F02D21AEB] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11701,7 +11730,7 @@ GO
 -- Primary Key structure for table infra_file_config
 -- ----------------------------
 ALTER TABLE [dbo].[infra_file_config] ADD CONSTRAINT [PK__infra_fi__3213E83F8A7903EA] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11717,7 +11746,7 @@ GO
 -- Primary Key structure for table infra_file_content
 -- ----------------------------
 ALTER TABLE [dbo].[infra_file_content] ADD CONSTRAINT [PK__infra_fi__3213E83F033E6045] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11733,7 +11762,7 @@ GO
 -- Primary Key structure for table infra_job
 -- ----------------------------
 ALTER TABLE [dbo].[infra_job] ADD CONSTRAINT [PK__infra_jo__3213E83F3C7DE10C] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11749,7 +11778,7 @@ GO
 -- Primary Key structure for table infra_job_log
 -- ----------------------------
 ALTER TABLE [dbo].[infra_job_log] ADD CONSTRAINT [PK__infra_jo__3213E83F4CA8F353] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11772,7 +11801,7 @@ GO
 -- Primary Key structure for table member_user
 -- ----------------------------
 ALTER TABLE [dbo].[member_user] ADD CONSTRAINT [PK__member_u__3213E83F0A9AEC0B] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11788,7 +11817,7 @@ GO
 -- Primary Key structure for table pay_app
 -- ----------------------------
 ALTER TABLE [dbo].[pay_app] ADD CONSTRAINT [PK__pay_app__3213E83FB26E0A6B] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11804,7 +11833,7 @@ GO
 -- Primary Key structure for table pay_channel
 -- ----------------------------
 ALTER TABLE [dbo].[pay_channel] ADD CONSTRAINT [PK__pay_chan__3213E83F2556A7FC] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11820,7 +11849,7 @@ GO
 -- Primary Key structure for table pay_merchant
 -- ----------------------------
 ALTER TABLE [dbo].[pay_merchant] ADD CONSTRAINT [PK__pay_merc__3213E83F010D02B8] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11836,7 +11865,7 @@ GO
 -- Primary Key structure for table pay_notify_log
 -- ----------------------------
 ALTER TABLE [dbo].[pay_notify_log] ADD CONSTRAINT [PK__pay_noti__3213E83F5F4B3447] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11852,7 +11881,7 @@ GO
 -- Primary Key structure for table pay_notify_task
 -- ----------------------------
 ALTER TABLE [dbo].[pay_notify_task] ADD CONSTRAINT [PK__pay_noti__3213E83FB9215103] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11868,7 +11897,7 @@ GO
 -- Primary Key structure for table pay_order
 -- ----------------------------
 ALTER TABLE [dbo].[pay_order] ADD CONSTRAINT [PK__pay_orde__3213E83F34C95271] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11884,7 +11913,7 @@ GO
 -- Primary Key structure for table pay_order_extension
 -- ----------------------------
 ALTER TABLE [dbo].[pay_order_extension] ADD CONSTRAINT [PK__pay_orde__3213E83F5ACB776F] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11900,7 +11929,7 @@ GO
 -- Primary Key structure for table pay_refund
 -- ----------------------------
 ALTER TABLE [dbo].[pay_refund] ADD CONSTRAINT [PK__pay_refu__3213E83FBE1B54AC] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11916,7 +11945,7 @@ GO
 -- Primary Key structure for table system_dept
 -- ----------------------------
 ALTER TABLE [dbo].[system_dept] ADD CONSTRAINT [PK__system_d__3213E83FFA72847C] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11932,7 +11961,7 @@ GO
 -- Primary Key structure for table system_dict_data
 -- ----------------------------
 ALTER TABLE [dbo].[system_dict_data] ADD CONSTRAINT [PK__system_d__3213E83F20407597] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11948,7 +11977,7 @@ GO
 -- Primary Key structure for table system_dict_type
 -- ----------------------------
 ALTER TABLE [dbo].[system_dict_type] ADD CONSTRAINT [PK__system_d__3213E83F7C36B1FD] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11964,7 +11993,7 @@ GO
 -- Primary Key structure for table system_error_code
 -- ----------------------------
 ALTER TABLE [dbo].[system_error_code] ADD CONSTRAINT [PK__system_e__3213E83F68B8DFD0] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11980,7 +12009,7 @@ GO
 -- Primary Key structure for table system_login_log
 -- ----------------------------
 ALTER TABLE [dbo].[system_login_log] ADD CONSTRAINT [PK__system_l__3213E83F717953E9] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -11996,7 +12025,7 @@ GO
 -- Primary Key structure for table system_menu
 -- ----------------------------
 ALTER TABLE [dbo].[system_menu] ADD CONSTRAINT [PK__system_m__3213E83F14175801] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12012,7 +12041,7 @@ GO
 -- Primary Key structure for table system_notice
 -- ----------------------------
 ALTER TABLE [dbo].[system_notice] ADD CONSTRAINT [PK__system_n__3213E83FA158BA8D] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12035,7 +12064,7 @@ GO
 -- Primary Key structure for table system_oauth2_approve
 -- ----------------------------
 ALTER TABLE [dbo].[system_oauth2_approve] ADD CONSTRAINT [PK__system_o__3213E83F7CC08ED6] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12058,7 +12087,7 @@ GO
 -- Primary Key structure for table system_oauth2_code
 -- ----------------------------
 ALTER TABLE [dbo].[system_oauth2_code] ADD CONSTRAINT [PK__system_o__3213E83F38C13543] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12074,7 +12103,7 @@ GO
 -- Primary Key structure for table system_oauth2_refresh_token
 -- ----------------------------
 ALTER TABLE [dbo].[system_oauth2_refresh_token] ADD CONSTRAINT [PK__system_o__3213E83FCFB541CC] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12090,7 +12119,7 @@ GO
 -- Primary Key structure for table system_operate_log
 -- ----------------------------
 ALTER TABLE [dbo].[system_operate_log] ADD CONSTRAINT [PK__system_o__3213E83F85EC81FD] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12106,7 +12135,7 @@ GO
 -- Primary Key structure for table system_post
 -- ----------------------------
 ALTER TABLE [dbo].[system_post] ADD CONSTRAINT [PK__system_p__3213E83FBC098F34] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12122,7 +12151,7 @@ GO
 -- Primary Key structure for table system_role
 -- ----------------------------
 ALTER TABLE [dbo].[system_role] ADD CONSTRAINT [PK__system_r__3213E83F209B43F2] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12138,7 +12167,7 @@ GO
 -- Primary Key structure for table system_role_menu
 -- ----------------------------
 ALTER TABLE [dbo].[system_role_menu] ADD CONSTRAINT [PK__system_r__3213E83F6F1E4A9B] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12154,7 +12183,7 @@ GO
 -- Primary Key structure for table system_sensitive_word
 -- ----------------------------
 ALTER TABLE [dbo].[system_sensitive_word] ADD CONSTRAINT [PK__system_s__3213E83FFFD8E555] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12170,7 +12199,7 @@ GO
 -- Primary Key structure for table system_sms_channel
 -- ----------------------------
 ALTER TABLE [dbo].[system_sms_channel] ADD CONSTRAINT [PK__system_s__3213E83FA96B966E] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12186,7 +12215,7 @@ GO
 -- Primary Key structure for table system_sms_code
 -- ----------------------------
 ALTER TABLE [dbo].[system_sms_code] ADD CONSTRAINT [PK__system_s__3213E83F825CBCB9] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12202,7 +12231,7 @@ GO
 -- Primary Key structure for table system_sms_log
 -- ----------------------------
 ALTER TABLE [dbo].[system_sms_log] ADD CONSTRAINT [PK__system_s__3213E83F5F1968A9] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12218,7 +12247,7 @@ GO
 -- Primary Key structure for table system_sms_template
 -- ----------------------------
 ALTER TABLE [dbo].[system_sms_template] ADD CONSTRAINT [PK__system_s__3213E83F5C91CA37] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12234,7 +12263,7 @@ GO
 -- Primary Key structure for table system_social_user
 -- ----------------------------
 ALTER TABLE [dbo].[system_social_user] ADD CONSTRAINT [PK__system_s__3213E83F6EF3863C] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12250,7 +12279,7 @@ GO
 -- Primary Key structure for table system_social_user_bind
 -- ----------------------------
 ALTER TABLE [dbo].[system_social_user_bind] ADD CONSTRAINT [PK__system_s__3213E83F21F44049] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12266,7 +12295,7 @@ GO
 -- Primary Key structure for table system_tenant
 -- ----------------------------
 ALTER TABLE [dbo].[system_tenant] ADD CONSTRAINT [PK__system_t__3213E83FAF444092] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12282,7 +12311,7 @@ GO
 -- Primary Key structure for table system_tenant_package
 -- ----------------------------
 ALTER TABLE [dbo].[system_tenant_package] ADD CONSTRAINT [PK__system_t__3213E83FA2213DB5] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12298,7 +12327,7 @@ GO
 -- Primary Key structure for table system_user_post
 -- ----------------------------
 ALTER TABLE [dbo].[system_user_post] ADD CONSTRAINT [PK__system_u__3213E83F56DD4107] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12314,7 +12343,7 @@ GO
 -- Primary Key structure for table system_user_role
 -- ----------------------------
 ALTER TABLE [dbo].[system_user_role] ADD CONSTRAINT [PK__system_u__3213E83F3593F652] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 
@@ -12330,7 +12359,7 @@ GO
 -- Primary Key structure for table system_users
 -- ----------------------------
 ALTER TABLE [dbo].[system_users] ADD CONSTRAINT [PK__system_u__3213E83F7CF2516E] PRIMARY KEY CLUSTERED ([id])
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)  
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 ON [PRIMARY]
 GO
 

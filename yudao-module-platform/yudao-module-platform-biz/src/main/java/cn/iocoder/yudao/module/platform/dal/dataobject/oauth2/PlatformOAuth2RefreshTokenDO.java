@@ -10,16 +10,16 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * OAuth2 刷新令牌
  *
- * @author 芋道源码
+ * @author 圣钰科技
  */
 @TableName(value = "platform_oauth2_refresh_token", autoResultMap = true)
-// 由于 Oracle 的 SEQ 的名字长度有限制，所以就先用 platform_oauth2_access_token_seq 吧，反正也没啥问题
+// 由于 Oracle 的 SEQ 的名字长度有限制，所以就先用 system_oauth2_access_token_seq 吧，反正也没啥问题
 @KeySequence("platform_oauth2_access_token_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -58,6 +58,6 @@ public class PlatformOAuth2RefreshTokenDO extends BaseDO {
     /**
      * 过期时间
      */
-    private Date expiresTime;
+    private LocalDateTime expiresTime;
 
 }
