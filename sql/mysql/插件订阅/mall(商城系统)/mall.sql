@@ -582,7 +582,7 @@ CREATE TABLE `product_spu`  (
   `introduction` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '商品简介',
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '商品详情',
   `category_id` bigint NOT NULL COMMENT '商品分类编号',
-  `brand_id` int NULL DEFAULT NULL COMMENT '商品品牌编号',
+  `brand_id` bigint NULL DEFAULT NULL COMMENT '商品品牌编号',
   `pic_url` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '商品封面图',
   `slider_pic_urls` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '商品轮播图地址\n 数组，以逗号分隔\n 最多上传15张',
   `sort` int NOT NULL DEFAULT 0 COMMENT '排序字段',
