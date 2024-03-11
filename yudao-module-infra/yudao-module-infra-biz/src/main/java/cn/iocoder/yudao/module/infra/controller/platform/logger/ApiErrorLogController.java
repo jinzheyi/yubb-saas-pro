@@ -26,7 +26,7 @@ import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.operatelog.core.enums.OperateTypeEnum.EXPORT;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getPlatformLoginUserId;
 
 @Tag(name = "管理后台 - API 错误日志")
 @RestController
@@ -46,7 +46,7 @@ public class ApiErrorLogController {
     @PreAuthorize("@ps.hasPermission('infra:api-error-log:update-status')")
     public CommonResult<Boolean> updateApiErrorLogProcess(@RequestParam("id") Long id,
                                                           @RequestParam("processStatus") Integer processStatus) {
-        apiErrorLogService.updateApiErrorLogProcess(id, processStatus, getLoginUserId());
+        apiErrorLogService.updateApiErrorLogProcess(id, processStatus, getPlatformLoginUserId());
         return success(true);
     }
 

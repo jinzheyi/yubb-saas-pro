@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getPlatformLoginUserId;
 
 @Tag(name = "管理后台 - 代码生成器")
 @RestController
@@ -93,7 +93,7 @@ public class CodegenController {
     @PostMapping("/create-list")
     @PreAuthorize("@ps.hasPermission('infra:codegen:create')")
     public CommonResult<List<Long>> createCodegenList(@Valid @RequestBody CodegenCreateListReqVO reqVO) {
-        return success(codegenService.createCodegenList(getLoginUserId(), reqVO));
+        return success(codegenService.createCodegenList(getPlatformLoginUserId(), reqVO));
     }
 
     @Operation(summary = "更新数据库的表和字段定义")
