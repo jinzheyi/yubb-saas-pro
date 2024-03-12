@@ -1,5 +1,20 @@
 package cn.iocoder.yudao.module.infra.service.codegen;
 
+import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.CODEGEN_COLUMN_NOT_EXISTS;
+import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.CODEGEN_IMPORT_COLUMNS_NULL;
+import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.CODEGEN_IMPORT_TABLE_NULL;
+import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.CODEGEN_MASTER_GENERATION_FAIL_NO_SUB_TABLE;
+import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.CODEGEN_MASTER_TABLE_NOT_EXISTS;
+import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.CODEGEN_SUB_COLUMN_NOT_EXISTS;
+import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.CODEGEN_SYNC_NONE_CHANGE;
+import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.CODEGEN_TABLE_EXISTS;
+import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.CODEGEN_TABLE_INFO_COLUMN_COMMENT_IS_NULL;
+import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.CODEGEN_TABLE_INFO_TABLE_COMMENT_IS_NULL;
+import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.CODEGEN_TABLE_NOT_EXISTS;
+
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
@@ -18,22 +33,20 @@ import cn.iocoder.yudao.module.infra.framework.codegen.config.CodegenProperties;
 import cn.iocoder.yudao.module.infra.service.codegen.inner.CodegenBuilder;
 import cn.iocoder.yudao.module.infra.service.codegen.inner.CodegenEngine;
 import cn.iocoder.yudao.module.infra.service.db.DatabaseTableService;
-import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
+import cn.iocoder.yudao.module.platform.api.user.PlatformUserApi;
 import com.baomidou.mybatisplus.generator.config.po.TableField;
 import com.baomidou.mybatisplus.generator.config.po.TableInfo;
 import com.google.common.annotations.VisibleForTesting;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import javax.annotation.Resource;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
-
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.module.infra.enums.ErrorCodeConstants.*;
+import javax.annotation.Resource;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 代码生成 Service 实现类
@@ -52,7 +65,7 @@ public class CodegenServiceImpl implements CodegenService {
     private CodegenColumnMapper codegenColumnMapper;
 
     @Resource
-    private AdminUserApi userApi;
+    private PlatformUserApi userApi;
 
     @Resource
     private CodegenBuilder codegenBuilder;
