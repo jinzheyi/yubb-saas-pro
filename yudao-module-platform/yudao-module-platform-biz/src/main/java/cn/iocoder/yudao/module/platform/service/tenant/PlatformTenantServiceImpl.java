@@ -139,7 +139,7 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
         // 校验租户名称是否重复
         validTenantNameDuplicate(updateReqVO.getName(), updateReqVO.getId());
         // 校验租户域名是否重复
-        validTenantWebsiteDuplicate(updateReqVO.getWebsite(), null);
+        validTenantWebsiteDuplicate(updateReqVO.getWebsite(), updateReqVO.getId());
         // 校验套餐被禁用
         TenantPackageDO tenantPackage = tenantPackageService.validTenantPackage(updateReqVO.getPackageId());
 
