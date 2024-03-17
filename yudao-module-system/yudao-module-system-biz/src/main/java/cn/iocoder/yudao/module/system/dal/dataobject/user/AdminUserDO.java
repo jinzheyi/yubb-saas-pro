@@ -34,6 +34,10 @@ public class AdminUserDO extends TenantBaseDO {
     @TableId
     private Long id;
     /**
+     * 所属SaaS用户表id
+     */
+    private Long saasUserId;
+    /**
      * 用户账号
      */
     private String username;
