@@ -9,7 +9,6 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -37,16 +36,6 @@ public class AdminUserDO extends TenantBaseDO {
      * 所属SaaS用户表id
      */
     private Long saasUserId;
-    /**
-     * 用户账号
-     */
-    private String username;
-    /**
-     * 加密后的密码
-     *
-     * 因为目前使用 {@link BCryptPasswordEncoder} 加密器，所以无需自己处理 salt 盐
-     */
-    private String password;
     /**
      * 用户昵称
      */

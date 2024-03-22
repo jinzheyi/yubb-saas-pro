@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 /**
  * 所属SaaS用户表 DO
@@ -34,7 +35,9 @@ public class SaasUserDO extends BaseDO {
      */
     private String account;
     /**
-     * 密码
+     * 加密后的密码
+     *
+     * 因为目前使用 {@link BCryptPasswordEncoder} 加密器，所以无需自己处理 salt 盐
      */
     private String password;
     /**

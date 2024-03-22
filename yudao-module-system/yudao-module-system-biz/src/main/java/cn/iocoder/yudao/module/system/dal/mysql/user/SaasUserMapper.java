@@ -12,4 +12,8 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface SaasUserMapper extends BaseMapperX<SaasUserDO> {
 
+    default SaasUserDO selectByAccount(String account) {
+        return selectOne(SaasUserDO::getAccount, account);
+    }
+
 }

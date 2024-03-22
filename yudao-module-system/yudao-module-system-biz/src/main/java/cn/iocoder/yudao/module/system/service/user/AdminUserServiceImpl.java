@@ -443,11 +443,6 @@ public class AdminUserServiceImpl implements AdminUserService {
         return userMapper.selectListByStatus(status);
     }
 
-    @Override
-    public boolean isPasswordMatch(String rawPassword, String encodedPassword) {
-        return passwordEncoder.matches(rawPassword, encodedPassword);
-    }
-
     /**
      * 对密码进行加密
      *

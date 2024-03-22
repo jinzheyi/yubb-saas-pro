@@ -90,14 +90,6 @@ public interface AdminUserService {
     void deleteUser(Long id);
 
     /**
-     * 通过用户名查询用户
-     *
-     * @param username 用户名
-     * @return 用户对象信息
-     */
-    AdminUserDO getUserByUsername(String username);
-
-    /**
      * 通过手机号获取用户
      *
      * @param mobile 手机号
@@ -191,14 +183,5 @@ public interface AdminUserService {
      * @return 用户们
      */
     List<AdminUserDO> getUserListByStatus(Integer status);
-
-    /**
-     * 判断密码是否匹配
-     *
-     * @param rawPassword 未加密的密码
-     * @param encodedPassword 加密后的密码
-     * @return 是否匹配
-     */
-    boolean isPasswordMatch(String rawPassword, String encodedPassword);
 
 }

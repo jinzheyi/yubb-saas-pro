@@ -1,6 +1,10 @@
 package cn.iocoder.yudao.module.system.service.user;
 
+import cn.iocoder.yudao.module.system.dal.dataobject.user.SaasUserDO;
+import cn.iocoder.yudao.module.system.dal.mysql.user.SaasUserMapper;
+import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 /**
@@ -11,5 +15,21 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 public class SaasUserServiceImpl implements SaasUserService{
+
+    @Resource
+    private SaasUserMapper saasUserMapper;
+
+    @Resource
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public SaasUserDO getUserByAccount(String account) {
+        return saasUserMapper.selectByAccount(account);
+    }
+
+    @Override
+    public boolean isPasswordMatch(String rawPassword, String encodedPassword) {
+        return passwordEncoder.matches(rawPassword, encodedPassword);
+    }
 
 }

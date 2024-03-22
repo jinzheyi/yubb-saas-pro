@@ -218,6 +218,7 @@ yudao:
 #      - rep_demo_jianpiao
 #      - tmp_report_data_1
 #      - tmp_report_data_income
+      - system_saas_user
     ignore-tables-prefix:
       - platform
       - tenant

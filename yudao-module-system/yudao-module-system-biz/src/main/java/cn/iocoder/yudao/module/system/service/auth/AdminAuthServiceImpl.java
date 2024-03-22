@@ -18,10 +18,12 @@ import cn.iocoder.yudao.module.system.controller.admin.auth.vo.*;
 import cn.iocoder.yudao.module.system.convert.auth.AuthConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.system.dal.dataobject.user.SaasUserDO;
 import cn.iocoder.yudao.module.system.service.logger.LoginLogService;
 import cn.iocoder.yudao.module.system.service.oauth2.OAuth2TokenService;
 import cn.iocoder.yudao.module.system.service.social.SocialUserService;
 import cn.iocoder.yudao.module.system.service.user.AdminUserService;
+import cn.iocoder.yudao.module.system.service.user.SaasUserService;
 import com.google.common.annotations.VisibleForTesting;
 import com.xingyuv.captcha.model.common.ResponseModel;
 import com.xingyuv.captcha.model.vo.CaptchaVO;
@@ -62,6 +64,9 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     @Resource
     private SmsCodeApi smsCodeApi;
 
+    @Resource
+    private SaasUserService saasUserService;
+
     /**
      * 验证码的开关，默认为 true
      */
@@ -72,12 +77,12 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     public AdminUserDO authenticate(String username, String password) {
         final LoginLogTypeEnum logTypeEnum = LoginLogTypeEnum.LOGIN_USERNAME;
         // 校验账号是否存在
-        AdminUserDO user = adminUserService.getUserByUsername(username);
+        SaasUserDO user = saasUserService.getUserByAccount(username);
         if (user == null) {
             createLoginLog(null, username, logTypeEnum, LoginResultEnum.BAD_CREDENTIALS);
             throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
         }
-        if (!adminUserService.isPasswordMatch(password, user.getPassword())) {
+        if (!saasUserService.isPasswordMatch(password, user.getPassword())) {
             createLoginLog(user.getId(), username, logTypeEnum, LoginResultEnum.BAD_CREDENTIALS);
             throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
         }
