@@ -208,13 +208,13 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
-    public AdminUserDO getUserByUsername(String username) {
-        return userMapper.selectByUsername(username);
+    public AdminUserDO getUserByMobile(String mobile) {
+        return userMapper.selectByMobile(mobile);
     }
 
     @Override
-    public AdminUserDO getUserByMobile(String mobile) {
-        return userMapper.selectByMobile(mobile);
+    public AdminUserDO getUserBySaasUserId(Long saasUserId) {
+        return userMapper.selectBySaasUserId(saasUserId);
     }
 
     @Override

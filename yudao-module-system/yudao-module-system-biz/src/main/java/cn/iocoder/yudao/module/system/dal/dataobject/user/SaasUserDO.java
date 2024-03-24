@@ -45,8 +45,13 @@ public class SaasUserDO extends BaseDO {
      */
     private String openId;
     /**
-     * 默认所属租户
+     * 默认所属租户，这个租户是指每次选定的租户，即上次登录的
      */
     private Long defaultTenant;
+
+    /**
+     * 我的租户（每个注册的用户都会拥有一个自己的租户，是这个租户的超管）
+     */
+    private Long myTenant;
 
 }

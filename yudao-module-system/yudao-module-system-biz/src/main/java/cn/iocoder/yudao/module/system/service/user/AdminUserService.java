@@ -98,6 +98,13 @@ public interface AdminUserService {
     AdminUserDO getUserByMobile(String mobile);
 
     /**
+     * 根据SaaS用户表id查询对应租户的用户信息
+     * @param saasUserId SaaS用户id
+     * @return 用户id
+     */
+    AdminUserDO getUserBySaasUserId(Long saasUserId);
+
+    /**
      * 获得用户分页列表
      *
      * @param reqVO 分页条件

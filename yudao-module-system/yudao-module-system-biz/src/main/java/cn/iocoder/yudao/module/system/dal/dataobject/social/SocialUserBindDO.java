@@ -29,11 +29,11 @@ public class SocialUserBindDO extends TenantBaseDO {
     @TableId
     private Long id;
     /**
-     * 关联的用户编号
+     * 关联的saas用户表编号
      *
-     * 关联 UserDO 的编号
+     * 关联 system_saas_user 的编号
      */
-    private Long userId;
+    private Long saasUserId;
     /**
      * 用户类型
      *

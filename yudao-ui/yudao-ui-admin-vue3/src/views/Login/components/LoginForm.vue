@@ -244,7 +244,6 @@ const loading = ref() // ElLoading.service 返回的实例
 const handleLogin = async (params) => {
   loginLoading.value = true
   try {
-    await getTenantId()
     const data = await validForm()
     if (!data) {
       return

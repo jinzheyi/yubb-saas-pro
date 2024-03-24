@@ -4,7 +4,8 @@ CREATE TABLE `system_saas_user`  (
    `account` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '账号',
    `password` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '密码',
    `open_id` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '用户唯一标识值',
-   `default_tenant` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '默认所属租户',
+   `default_tenant` bigint NULL COMMENT '默认所属租户，这个租户是指每次选定的租户，即记录上次登录的租户',
+   `my_tenant` bigint NOT NULL COMMENT '我的租户（每个注册的用户都会拥有一个自己的租户，是这个租户的超管）',
    `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '创建者',
    `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
    `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
@@ -13,6 +14,7 @@ CREATE TABLE `system_saas_user`  (
    PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '租户saas单一用户表' ROW_FORMAT = DYNAMIC;
 
-alter table system_users add saas_user_id bigint NOT NULL DEFAULT '0' COMMENT '所属SaaS用户表';
+alter table system_users add saas_user_id bigint NOT NULL DEFAULT '0' COMMENT '所属SaaS用户表id';
 
+ALTER TABLE system_social_user_bind CHANGE `saas_user_id` bigint NOT NULL COMMENT '所属SaaS用户表编号';
 

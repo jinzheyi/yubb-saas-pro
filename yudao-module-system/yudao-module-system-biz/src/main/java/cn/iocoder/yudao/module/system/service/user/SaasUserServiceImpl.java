@@ -32,4 +32,9 @@ public class SaasUserServiceImpl implements SaasUserService{
         return passwordEncoder.matches(rawPassword, encodedPassword);
     }
 
+    @Override
+    public SaasUserDO getUser(Long id) {
+        return saasUserMapper.selectById(id);
+    }
+
 }

@@ -10,6 +10,8 @@ import cn.iocoder.yudao.framework.common.enums.sms.SmsSceneEnum;
 import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.common.util.validation.ValidationUtils;
+import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
+import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
 import cn.iocoder.yudao.module.system.api.sms.SmsCodeApi;
 import cn.iocoder.yudao.module.system.api.logger.dto.LoginLogCreateReqDTO;
 import cn.iocoder.yudao.module.system.api.social.dto.SocialUserBindReqDTO;
@@ -77,21 +79,41 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     public AdminUserDO authenticate(String username, String password) {
         final LoginLogTypeEnum logTypeEnum = LoginLogTypeEnum.LOGIN_USERNAME;
         // 校验账号是否存在
-        SaasUserDO user = saasUserService.getUserByAccount(username);
-        if (user == null) {
-            createLoginLog(null, username, logTypeEnum, LoginResultEnum.BAD_CREDENTIALS);
+        SaasUserDO saasUserDO = saasUserService.getUserByAccount(username);
+        if (saasUserDO == null) {
             throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
         }
-        if (!saasUserService.isPasswordMatch(password, user.getPassword())) {
-            createLoginLog(user.getId(), username, logTypeEnum, LoginResultEnum.BAD_CREDENTIALS);
+        if (!saasUserService.isPasswordMatch(password, saasUserDO.getPassword())) {
             throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
         }
+        //查询当前用户默认的租户id
+        AdminUserDO adminUser = getAdminUser(saasUserDO, saasUserDO.getDefaultTenant(), logTypeEnum);
+        //如果默认的禁用了，则只能取它自己的所属租户了
+        if (Objects.isNull(adminUser)) {
+            //这里查询自己的租户不可能为空，如果为空了那肯定是数据的问题
+            adminUser = getAdminUser(saasUserDO, saasUserDO.getMyTenant(), logTypeEnum);
+        }
+        //设置登录的租户id
+        TenantContextHolder.setTenantId(adminUser.getTenantId());
+        return adminUser;
+    }
+
+    private AdminUserDO getAdminUser(SaasUserDO saasUserDO, Long tenantId, LoginLogTypeEnum logTypeEnum) {
+        Long oldTenantId = TenantContextHolder.getTenantId();
+        Boolean oldIgnore = TenantContextHolder.isIgnore();
+        TenantContextHolder.setTenantId(tenantId);
+        TenantContextHolder.setIgnore(false);
+        AdminUserDO adminUserDO = adminUserService.getUserBySaasUserId(saasUserDO.getId());
         // 校验是否禁用
-        if (CommonStatusEnum.isDisable(user.getStatus())) {
-            createLoginLog(user.getId(), username, logTypeEnum, LoginResultEnum.USER_DISABLED);
-            throw exception(AUTH_LOGIN_USER_DISABLED);
+        if (CommonStatusEnum.isDisable(adminUserDO.getStatus())) {
+            if (Objects.nonNull(logTypeEnum)) {
+                createLoginLog(adminUserDO.getId(), saasUserDO.getAccount(), logTypeEnum, LoginResultEnum.USER_DISABLED);
+            }
+            TenantContextHolder.setTenantId(oldTenantId);
+            TenantContextHolder.setIgnore(oldIgnore);
+            return null;
         }
-        return user;
+        return adminUserDO;
     }
 
     @Override
@@ -160,18 +182,26 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         // 使用 code 授权码，进行登录。然后，获得到绑定的用户编号
         SocialUserRespDTO socialUser = socialUserService.getSocialUserByCode(UserTypeEnum.ADMIN.getValue(), reqVO.getType(),
                 reqVO.getCode(), reqVO.getState());
-        if (socialUser == null || socialUser.getUserId() == null) {
+        if (socialUser == null || socialUser.getSaasUserId() == null) {
             throw exception(AUTH_THIRD_LOGIN_NOT_BIND);
         }
 
         // 获得用户
-        AdminUserDO user = adminUserService.getUser(socialUser.getUserId());
-        if (user == null) {
+        SaasUserDO saasUserDO = saasUserService.getUser(socialUser.getSaasUserId());
+        if (saasUserDO == null) {
             throw exception(USER_NOT_EXISTS);
         }
-
+        //查询当前用户默认的租户id
+        AdminUserDO adminUser = getAdminUser(saasUserDO, saasUserDO.getDefaultTenant(), null);
+        //如果默认的禁用了，则只能取它自己的所属租户了
+        if (Objects.isNull(adminUser)) {
+            //这里查询自己的租户不可能为空，如果为空了那肯定是数据的问题
+            adminUser = getAdminUser(saasUserDO, saasUserDO.getMyTenant(), null);
+        }
+        //设置登录的租户id
+        TenantContextHolder.setTenantId(adminUser.getTenantId());
         // 创建 Token 令牌，记录登录日志
-        return createTokenAfterLoginSuccess(user.getId(), user.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
+        return createTokenAfterLoginSuccess(adminUser.getId(), saasUserDO.getAccount(), LoginLogTypeEnum.LOGIN_SOCIAL);
     }
 
     @VisibleForTesting
@@ -240,7 +270,8 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             return null;
         }
         AdminUserDO user = adminUserService.getUser(userId);
-        return user != null ? user.getUsername() : null;
+        SaasUserDO saasUserDO = saasUserService.getUser(user.getSaasUserId());
+        return saasUserDO != null ? saasUserDO.getAccount() : null;
     }
 
     private UserTypeEnum getUserType() {

@@ -22,6 +22,7 @@ export const getRefreshToken = () => {
 export const setToken = (token: TokenType) => {
   wsCache.set(RefreshTokenKey, token.refreshToken)
   wsCache.set(AccessTokenKey, token.accessToken)
+  setTenantId(token.tenantId)
 }
 
 // 删除token

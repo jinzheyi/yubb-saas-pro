@@ -28,8 +28,8 @@ public class SocialUserRespDTO {
     private String avatar;
 
     /**
-     * 关联的用户编号
+     * 关联的saas表用户编号
      */
-    private Long userId;
+    private Long saasUserId;
 
 }
