@@ -75,4 +75,28 @@ public interface RedisKeyConstants {
      */
     String OAUTH2_ACCESS_TOKEN = "platform_oauth2_access_token:%s";
 
+    /**
+     * 邮件账号的缓存
+     * <p>
+     * KEY 格式：sms_template:{id}
+     * VALUE 数据格式：String 账号信息
+     */
+    String MAIL_ACCOUNT = "tenant_mail_account";
+
+    /**
+     * 邮件模版的缓存
+     * <p>
+     * KEY 格式：mail_template:{code}
+     * VALUE 数据格式：String 模版信息
+     */
+    String MAIL_TEMPLATE = "tenant_mail_template";
+
+    /**
+     * 短信模版的缓存
+     * <p>
+     * KEY 格式：sms_template:{id}
+     * VALUE 数据格式：String 模版信息
+     */
+    String SMS_TEMPLATE = "tenant_sms_template";
+
 }

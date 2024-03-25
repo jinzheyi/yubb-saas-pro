@@ -3,15 +3,17 @@ package cn.iocoder.yudao.module.system.dal.dataobject.user;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.mybatis.core.type.JsonLongSetTypeHandler;
 import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
-import cn.iocoder.yudao.framework.common.enums.common.SexEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.Set;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 /**
  * 管理后台的用户 DO
@@ -53,16 +55,6 @@ public class AdminUserDO extends TenantBaseDO {
      */
     @TableField(typeHandler = JsonLongSetTypeHandler.class)
     private Set<Long> postIds;
-    /**
-     * 用户性别
-     *
-     * 枚举类 {@link SexEnum}
-     */
-    private Integer sex;
-    /**
-     * 用户头像
-     */
-    private String avatar;
     /**
      * 帐号状态
      *

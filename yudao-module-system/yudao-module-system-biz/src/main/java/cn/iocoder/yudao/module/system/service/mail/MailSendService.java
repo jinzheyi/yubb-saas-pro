@@ -1,7 +1,6 @@
 package cn.iocoder.yudao.module.system.service.mail;
 
-import cn.iocoder.yudao.module.system.mq.message.mail.MailSendMessage;
-
+import cn.iocoder.yudao.module.platform.mq.message.mail.MailSendMessage;
 import java.util.Map;
 
 /**
