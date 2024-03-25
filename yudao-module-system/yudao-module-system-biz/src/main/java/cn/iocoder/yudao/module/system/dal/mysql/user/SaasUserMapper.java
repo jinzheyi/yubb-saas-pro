@@ -16,4 +16,8 @@ public interface SaasUserMapper extends BaseMapperX<SaasUserDO> {
         return selectOne(SaasUserDO::getAccount, account);
     }
 
+    default SaasUserDO selectByMobile(String mobile) {
+        return selectOne(SaasUserDO::getMobile, mobile);
+    }
+
 }

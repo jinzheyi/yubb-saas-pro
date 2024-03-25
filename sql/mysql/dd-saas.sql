@@ -1,11 +1,12 @@
 DROP TABLE IF EXISTS `system_saas_user`;
 CREATE TABLE `system_saas_user`  (
    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
-   `account` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '账号',
+   `account` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '账号,这个账号大概率是邮箱之类的，为了模拟真实业务场景，建议邮箱',
    `password` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '密码',
    `open_id` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '用户唯一标识值',
    `default_tenant` bigint NULL COMMENT '默认所属租户，这个租户是指每次选定的租户，即记录上次登录的租户',
    `my_tenant` bigint NOT NULL COMMENT '我的租户（每个注册的用户都会拥有一个自己的租户，是这个租户的超管）',
+   `mobile` varchar(11) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '手机号码',
    `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '创建者',
    `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
    `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',

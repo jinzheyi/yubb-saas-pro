@@ -90,14 +90,6 @@ public interface AdminUserService {
     void deleteUser(Long id);
 
     /**
-     * 通过手机号获取用户
-     *
-     * @param mobile 手机号
-     * @return 用户对象信息
-     */
-    AdminUserDO getUserByMobile(String mobile);
-
-    /**
      * 根据SaaS用户表id查询对应租户的用户信息
      * @param saasUserId SaaS用户id
      * @return 用户id

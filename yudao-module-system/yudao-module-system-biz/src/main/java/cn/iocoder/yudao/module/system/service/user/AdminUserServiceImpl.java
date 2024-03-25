@@ -208,11 +208,6 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
-    public AdminUserDO getUserByMobile(String mobile) {
-        return userMapper.selectByMobile(mobile);
-    }
-
-    @Override
     public AdminUserDO getUserBySaasUserId(Long saasUserId) {
         return userMapper.selectBySaasUserId(saasUserId);
     }

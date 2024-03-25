@@ -54,14 +54,6 @@ public class AdminUserDO extends TenantBaseDO {
     @TableField(typeHandler = JsonLongSetTypeHandler.class)
     private Set<Long> postIds;
     /**
-     * 用户邮箱
-     */
-    private String email;
-    /**
-     * 手机号码
-     */
-    private String mobile;
-    /**
      * 用户性别
      *
      * 枚举类 {@link SexEnum}

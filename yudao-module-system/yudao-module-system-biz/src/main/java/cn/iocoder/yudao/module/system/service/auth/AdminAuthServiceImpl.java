@@ -1,5 +1,14 @@
 package cn.iocoder.yudao.module.system.service.auth;
 
+import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_LOGIN_BAD_CREDENTIALS;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_LOGIN_CAPTCHA_CODE_ERROR;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_MOBILE_NOT_EXISTS;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_TENANT_EXCEPTION;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_THIRD_LOGIN_NOT_BIND;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
+
 import cn.hutool.core.util.ObjectUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
@@ -11,12 +20,15 @@ import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.common.util.validation.ValidationUtils;
 import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
-import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
-import cn.iocoder.yudao.module.system.api.sms.SmsCodeApi;
 import cn.iocoder.yudao.module.system.api.logger.dto.LoginLogCreateReqDTO;
+import cn.iocoder.yudao.module.system.api.sms.SmsCodeApi;
 import cn.iocoder.yudao.module.system.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.system.api.social.dto.SocialUserRespDTO;
-import cn.iocoder.yudao.module.system.controller.admin.auth.vo.*;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthLoginReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthLoginRespVO;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSmsLoginReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSmsSendReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSocialLoginReqVO;
 import cn.iocoder.yudao.module.system.convert.auth.AuthConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
@@ -30,17 +42,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.xingyuv.captcha.model.common.ResponseModel;
 import com.xingyuv.captcha.model.vo.CaptchaVO;
 import com.xingyuv.captcha.service.CaptchaService;
+import java.util.Objects;
+import javax.annotation.Resource;
+import javax.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.Resource;
-import javax.validation.Validator;
-import java.util.Objects;
-
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * Auth Service 实现类
@@ -86,34 +93,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         if (!saasUserService.isPasswordMatch(password, saasUserDO.getPassword())) {
             throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
         }
-        //查询当前用户默认的租户id
-        AdminUserDO adminUser = getAdminUser(saasUserDO, saasUserDO.getDefaultTenant(), logTypeEnum);
-        //如果默认的禁用了，则只能取它自己的所属租户了
-        if (Objects.isNull(adminUser)) {
-            //这里查询自己的租户不可能为空，如果为空了那肯定是数据的问题
-            adminUser = getAdminUser(saasUserDO, saasUserDO.getMyTenant(), logTypeEnum);
-        }
-        //设置登录的租户id
-        TenantContextHolder.setTenantId(adminUser.getTenantId());
-        return adminUser;
-    }
-
-    private AdminUserDO getAdminUser(SaasUserDO saasUserDO, Long tenantId, LoginLogTypeEnum logTypeEnum) {
-        Long oldTenantId = TenantContextHolder.getTenantId();
-        Boolean oldIgnore = TenantContextHolder.isIgnore();
-        TenantContextHolder.setTenantId(tenantId);
-        TenantContextHolder.setIgnore(false);
-        AdminUserDO adminUserDO = adminUserService.getUserBySaasUserId(saasUserDO.getId());
-        // 校验是否禁用
-        if (CommonStatusEnum.isDisable(adminUserDO.getStatus())) {
-            if (Objects.nonNull(logTypeEnum)) {
-                createLoginLog(adminUserDO.getId(), saasUserDO.getAccount(), logTypeEnum, LoginResultEnum.USER_DISABLED);
-            }
-            TenantContextHolder.setTenantId(oldTenantId);
-            TenantContextHolder.setIgnore(oldIgnore);
-            return null;
-        }
-        return adminUserDO;
+        return getAdminUser(saasUserDO, logTypeEnum);
     }
 
     @Override
@@ -136,7 +116,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     @Override
     public void sendSmsCode(AuthSmsSendReqVO reqVO) {
         // 登录场景，验证是否存在
-        if (adminUserService.getUserByMobile(reqVO.getMobile()) == null) {
+        if (saasUserService.getUserByMobile(reqVO.getMobile()) == null) {
             throw exception(AUTH_MOBILE_NOT_EXISTS);
         }
         // 发送验证码
@@ -149,13 +129,13 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         smsCodeApi.useSmsCode(AuthConvert.INSTANCE.convert(reqVO, SmsSceneEnum.ADMIN_MEMBER_LOGIN.getScene(), getClientIP()));
 
         // 获得用户信息
-        AdminUserDO user = adminUserService.getUserByMobile(reqVO.getMobile());
-        if (user == null) {
+        SaasUserDO saasUserDO = saasUserService.getUserByMobile(reqVO.getMobile());
+        if (saasUserDO == null) {
             throw exception(USER_NOT_EXISTS);
         }
-
+        AdminUserDO adminUser = getAdminUser(saasUserDO, null);
         // 创建 Token 令牌，记录登录日志
-        return createTokenAfterLoginSuccess(user.getId(), reqVO.getMobile(), LoginLogTypeEnum.LOGIN_MOBILE);
+        return createTokenAfterLoginSuccess(adminUser.getId(), reqVO.getMobile(), LoginLogTypeEnum.LOGIN_MOBILE);
     }
 
     private void createLoginLog(Long userId, String username,
@@ -191,15 +171,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         if (saasUserDO == null) {
             throw exception(USER_NOT_EXISTS);
         }
-        //查询当前用户默认的租户id
-        AdminUserDO adminUser = getAdminUser(saasUserDO, saasUserDO.getDefaultTenant(), null);
-        //如果默认的禁用了，则只能取它自己的所属租户了
-        if (Objects.isNull(adminUser)) {
-            //这里查询自己的租户不可能为空，如果为空了那肯定是数据的问题
-            adminUser = getAdminUser(saasUserDO, saasUserDO.getMyTenant(), null);
-        }
-        //设置登录的租户id
-        TenantContextHolder.setTenantId(adminUser.getTenantId());
+        AdminUserDO adminUser = getAdminUser(saasUserDO, null);
         // 创建 Token 令牌，记录登录日志
         return createTokenAfterLoginSuccess(adminUser.getId(), saasUserDO.getAccount(), LoginLogTypeEnum.LOGIN_SOCIAL);
     }
@@ -276,6 +248,65 @@ public class AdminAuthServiceImpl implements AdminAuthService {
 
     private UserTypeEnum getUserType() {
         return UserTypeEnum.ADMIN;
+    }
+
+    /**
+     * 获取租户用户信心，并更新SaaS用户信息
+     * @param saasUserDO saas用户
+     * @return 对应租户用户
+     */
+    private AdminUserDO getAdminUser(SaasUserDO saasUserDO, LoginLogTypeEnum logTypeEnum) {
+        //查询当前用户默认的租户id
+        AdminUserDO adminUser = getAdminUser(saasUserDO, saasUserDO.getDefaultTenant(), logTypeEnum);
+        //如果默认的禁用了，则只能取它自己的所属租户了
+        if (Objects.isNull(adminUser)) {
+            //这里查询自己的租户不可能为空，如果为空了那肯定是数据的问题
+            adminUser = getAdminUser(saasUserDO, saasUserDO.getMyTenant(), logTypeEnum);
+        }
+        //更新SaaS用户信息
+        setSaasUserInfo(saasUserDO, adminUser);
+        return adminUser;
+    }
+
+    /**
+     * 根据SaaS用户查询对应租户的用户信息
+     * @param saasUserDO SaaS用户
+     * @param tenantId 租户id
+     * @param logTypeEnum 登录类型
+     * @return 对应租户的用户信息
+     */
+    private AdminUserDO getAdminUser(SaasUserDO saasUserDO, Long tenantId, LoginLogTypeEnum logTypeEnum) {
+        Long oldTenantId = TenantContextHolder.getTenantId();
+        Boolean oldIgnore = TenantContextHolder.isIgnore();
+        TenantContextHolder.setTenantId(tenantId);
+        TenantContextHolder.setIgnore(false);
+        AdminUserDO adminUserDO = adminUserService.getUserBySaasUserId(saasUserDO.getId());
+        // 检查是否被删除或校验是否禁用
+        if (Objects.isNull(adminUserDO) || CommonStatusEnum.isDisable(adminUserDO.getStatus())) {
+            if (Objects.nonNull(adminUserDO) && Objects.nonNull(logTypeEnum)) {
+                createLoginLog(adminUserDO.getId(), saasUserDO.getAccount(), logTypeEnum, LoginResultEnum.USER_DISABLED);
+            }
+            TenantContextHolder.setTenantId(oldTenantId);
+            TenantContextHolder.setIgnore(oldIgnore);
+            return null;
+        }
+        return adminUserDO;
+    }
+
+    /**
+     * 更新SaaS用户信息
+     * @param saasUserDO SaaS用户
+     * @param adminUser SaaS用户对应租户的用户信息
+     */
+    private void setSaasUserInfo(SaasUserDO saasUserDO, AdminUserDO adminUser) {
+        //设置登录的租户id
+        if (Objects.isNull(adminUser)) {
+            throw exception(AUTH_TENANT_EXCEPTION);
+        }
+        //设置租户id
+        TenantContextHolder.setTenantId(adminUser.getTenantId());
+        //设置默认租户
+        saasUserService.updateUserDefaultTenant(saasUserDO.getId(), adminUser.getTenantId());
     }
 
 }

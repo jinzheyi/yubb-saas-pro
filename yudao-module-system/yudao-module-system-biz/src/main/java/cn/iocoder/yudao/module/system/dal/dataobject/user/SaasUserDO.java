@@ -31,7 +31,7 @@ public class SaasUserDO extends BaseDO {
     @TableId
     private Long id;
     /**
-     * 账号
+     * 账号,这个账号大概率是邮箱之类的，为了模拟真实业务场景，建议邮箱
      */
     private String account;
     /**
@@ -40,6 +40,10 @@ public class SaasUserDO extends BaseDO {
      * 因为目前使用 {@link BCryptPasswordEncoder} 加密器，所以无需自己处理 salt 盐
      */
     private String password;
+    /**
+     * 手机号码
+     */
+    private String mobile;
     /**
      * 用户唯一标识值
      */

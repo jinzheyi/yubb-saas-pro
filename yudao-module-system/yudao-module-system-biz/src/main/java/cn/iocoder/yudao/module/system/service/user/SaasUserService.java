@@ -34,4 +34,19 @@ public interface SaasUserService {
      */
     SaasUserDO getUser(Long id);
 
+    /**
+     *
+     * @param id
+     * @param defaultTenant
+     */
+    void updateUserDefaultTenant(Long id, Long defaultTenant);
+
+    /**
+     * 通过手机号获取用户
+     *
+     * @param mobile 手机号
+     * @return 用户对象信息
+     */
+    SaasUserDO getUserByMobile(String mobile);
+
 }
