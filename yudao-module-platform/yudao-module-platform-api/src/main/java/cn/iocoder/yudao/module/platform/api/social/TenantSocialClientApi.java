@@ -9,7 +9,7 @@ import cn.iocoder.yudao.framework.common.enums.social.SocialTypeEnum;
  *
  * @author 圣钰科技
  */
-public interface SocialClientApi {
+public interface TenantSocialClientApi {
 
     /**
      * 获得社交平台的授权 URL

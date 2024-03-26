@@ -16,7 +16,7 @@ import javax.annotation.Resource;
  */
 @Service
 @Validated
-public class SocialUserApiImpl implements SocialUserApi {
+public class TenantSocialUserApiImpl implements TenantSocialUserApi {
 
     @Resource
     private SocialUserService socialUserService;

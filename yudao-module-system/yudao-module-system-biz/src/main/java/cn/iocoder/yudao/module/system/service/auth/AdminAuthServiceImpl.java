@@ -20,6 +20,7 @@ import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.common.util.validation.ValidationUtils;
 import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
+import cn.iocoder.yudao.module.platform.api.social.TenantSocialUserApi;
 import cn.iocoder.yudao.module.system.api.logger.dto.LoginLogCreateReqDTO;
 import cn.iocoder.yudao.module.platform.api.sms.SmsCodeApi;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
@@ -35,7 +36,6 @@ import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.SaasUserDO;
 import cn.iocoder.yudao.module.system.service.logger.LoginLogService;
 import cn.iocoder.yudao.module.system.service.oauth2.OAuth2TokenService;
-import cn.iocoder.yudao.module.system.service.social.SocialUserService;
 import cn.iocoder.yudao.module.system.service.user.AdminUserService;
 import cn.iocoder.yudao.module.system.service.user.SaasUserService;
 import com.google.common.annotations.VisibleForTesting;
@@ -65,7 +65,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     @Resource
     private OAuth2TokenService oauth2TokenService;
     @Resource
-    private SocialUserService socialUserService;
+    private TenantSocialUserApi socialUserService;
     @Resource
     private Validator validator;
     @Resource

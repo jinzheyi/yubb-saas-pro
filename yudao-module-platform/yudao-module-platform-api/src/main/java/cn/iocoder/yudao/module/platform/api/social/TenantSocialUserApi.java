@@ -12,7 +12,7 @@ import javax.validation.Valid;
  *
  * @author 圣钰科技
  */
-public interface SocialUserApi {
+public interface TenantSocialUserApi {
 
     /**
      * 绑定社交用户

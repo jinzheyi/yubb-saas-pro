@@ -5,8 +5,8 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.platform.controller.platform.mail.vo.log.MailLogRespVO;
 import cn.iocoder.yudao.module.platform.controller.platform.mail.vo.log.MailLogPageReqVO;
-import cn.iocoder.yudao.module.system.dal.dataobject.mail.MailLogDO;
-import cn.iocoder.yudao.module.system.service.mail.MailLogService;
+import cn.iocoder.yudao.module.platform.dal.dataobject.mail.MailLogDO;
+import cn.iocoder.yudao.module.platform.service.mail.MailLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,7 +31,7 @@ public class MailLogController {
 
     @GetMapping("/page")
     @Operation(summary = "获得邮箱日志分页")
-    @PreAuthorize("@ss.hasPermission('system:mail-log:query')")
+    @PreAuthorize("@ps.hasPermission('system:mail-log:query')")
     public CommonResult<PageResult<MailLogRespVO>> getMailLogPage(@Valid MailLogPageReqVO pageVO) {
         PageResult<MailLogDO> pageResult = mailLogService.getMailLogPage(pageVO);
         return success(BeanUtils.toBean(pageResult, MailLogRespVO.class));
@@ -40,7 +40,7 @@ public class MailLogController {
     @GetMapping("/get")
     @Operation(summary = "获得邮箱日志")
     @Parameter(name = "id", description = "编号", required = true, example = "1024")
-    @PreAuthorize("@ss.hasPermission('system:mail-log:query')")
+    @PreAuthorize("@ps.hasPermission('system:mail-log:query')")
     public CommonResult<MailLogRespVO> getMailTemplate(@RequestParam("id") Long id) {
         MailLogDO log = mailLogService.getMailLog(id);
         return success(BeanUtils.toBean(log, MailLogRespVO.class));

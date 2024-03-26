@@ -13,6 +13,7 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog;
 import cn.iocoder.yudao.framework.security.config.SecurityProperties;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
+import cn.iocoder.yudao.module.platform.api.social.TenantSocialClientApi;
 import cn.iocoder.yudao.module.platform.api.tenant.dto.menu.TenantMenuListReqDTO;
 import cn.iocoder.yudao.module.platform.api.tenant.dto.menu.TenantMenuRespDTO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthLoginReqVO;
@@ -28,7 +29,6 @@ import cn.iocoder.yudao.module.system.service.auth.AdminAuthService;
 import cn.iocoder.yudao.module.system.service.permission.MenuService;
 import cn.iocoder.yudao.module.system.service.permission.PermissionService;
 import cn.iocoder.yudao.module.system.service.permission.RoleService;
-import cn.iocoder.yudao.module.system.service.social.SocialClientService;
 import cn.iocoder.yudao.module.system.service.user.AdminUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -70,7 +70,7 @@ public class AuthController {
     private SecurityProperties securityProperties;
 
     @Resource
-    private SocialClientService socialClientService;
+    private TenantSocialClientApi socialClientService;
 
     @Resource
     private MenuService menuService;
