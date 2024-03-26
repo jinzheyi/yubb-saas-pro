@@ -37,14 +37,14 @@ public class PlatformSocialUserController {
     @Operation(summary = "社交绑定，使用 code 授权码")
     public CommonResult<Boolean> socialBind(@RequestBody @Valid SocialUserBindReqVO reqVO) {
         socialUserService.bindSocialUser(SocialUserConvert.INSTANCE.convert(
-                getPlatformLoginUserId(), UserTypeEnum.ADMIN.getValue(), reqVO));
+                getPlatformLoginUserId(), UserTypeEnum.PLATFORM.getValue(), reqVO));
         return CommonResult.success(true);
     }
 
     @DeleteMapping("/unbind")
     @Operation(summary = "取消社交绑定")
     public CommonResult<Boolean> socialUnbind(@RequestBody SocialUserUnbindReqVO reqVO) {
-        socialUserService.unbindSocialUser(getPlatformLoginUserId(), UserTypeEnum.ADMIN.getValue(), reqVO.getType(), reqVO.getOpenid());
+        socialUserService.unbindSocialUser(getPlatformLoginUserId(), UserTypeEnum.PLATFORM.getValue(), reqVO.getType(), reqVO.getOpenid());
         return CommonResult.success(true);
     }
 
