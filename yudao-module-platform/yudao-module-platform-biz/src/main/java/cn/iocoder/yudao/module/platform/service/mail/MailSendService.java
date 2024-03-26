@@ -1,4 +1,4 @@
-package cn.iocoder.yudao.module.system.service.mail;
+package cn.iocoder.yudao.module.platform.service.mail;
 
 import cn.iocoder.yudao.module.platform.mq.message.mail.MailSendMessage;
 import java.util.Map;
@@ -22,18 +22,6 @@ public interface MailSendService {
      */
     Long sendSingleMailToAdmin(String mail, Long userId,
                                String templateCode, Map<String, Object> templateParams);
-
-    /**
-     * 发送单条邮件给用户 APP 的用户
-     *
-     * @param mail 邮箱
-     * @param userId 用户编码
-     * @param templateCode 邮件模版编码
-     * @param templateParams 邮件模版参数
-     * @return 发送日志编号
-     */
-    Long sendSingleMailToMember(String mail, Long userId,
-                                String templateCode, Map<String, Object> templateParams);
 
     /**
      * 发送单条邮件给用户

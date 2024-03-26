@@ -285,17 +285,17 @@ const doSocialLogin = async (type: number) => {
     message.error('此方式未配置')
   } else {
     loginLoading.value = true
-    if (loginData.tenantEnable === 'true') {
-      // 尝试先通过 tenantName 获取租户
-      await getTenantId()
-      // 如果获取不到，则需要弹出提示，进行处理
-      if (!authUtil.getTenantId()) {
-        await message.prompt('请输入租户名称', t('common.reminder')).then(async ({ value }) => {
-          const res = await LoginApi.getTenantIdByName(value)
-          authUtil.setTenantId(res)
-        })
-      }
-    }
+    // if (loginData.tenantEnable === 'true') {
+    //   // 尝试先通过 tenantName 获取租户
+    //   await getTenantId()
+    //   // 如果获取不到，则需要弹出提示，进行处理
+    //   if (!authUtil.getTenantId()) {
+    //     await message.prompt('请输入租户名称', t('common.reminder')).then(async ({ value }) => {
+    //       const res = await LoginApi.getTenantIdByName(value)
+    //       authUtil.setTenantId(res)
+    //     })
+    //   }
+    // }
     // 计算 redirectUri
     // tricky: type、redirect需要先encode一次，否则钉钉回调会丢失。
     // 配合 Login/SocialLogin.vue#getUrlValue() 使用

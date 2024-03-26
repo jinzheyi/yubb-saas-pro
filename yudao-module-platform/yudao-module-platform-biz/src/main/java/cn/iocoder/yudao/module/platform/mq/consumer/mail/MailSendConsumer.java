@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.mq.consumer.mail;
 
-import cn.iocoder.yudao.module.system.mq.message.mail.MailSendMessage;
-import cn.iocoder.yudao.module.system.service.mail.MailSendService;
+import cn.iocoder.yudao.module.platform.mq.message.mail.MailSendMessage;
+import cn.iocoder.yudao.module.platform.service.mail.MailSendService;
 import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

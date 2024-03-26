@@ -70,7 +70,7 @@ public class AuthController {
     private SecurityProperties securityProperties;
 
     @Resource
-    private TenantSocialClientApi socialClientService;
+    private TenantSocialClientApi socialClientApi;
 
     @Resource
     private MenuService menuService;
@@ -163,7 +163,7 @@ public class AuthController {
     })
     public CommonResult<String> socialLogin(@RequestParam("type") Integer type,
                                             @RequestParam("redirectUri") String redirectUri) {
-        return success(socialClientService.getAuthorizeUrl(
+        return success(socialClientApi.getAuthorizeUrl(
                 type, UserTypeEnum.ADMIN.getValue(), redirectUri));
     }
 

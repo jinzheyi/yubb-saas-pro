@@ -7,8 +7,8 @@ import cn.iocoder.yudao.module.platform.controller.platform.sms.vo.channel.SmsCh
 import cn.iocoder.yudao.module.platform.controller.platform.sms.vo.channel.SmsChannelRespVO;
 import cn.iocoder.yudao.module.platform.controller.platform.sms.vo.channel.SmsChannelSaveReqVO;
 import cn.iocoder.yudao.module.platform.controller.platform.sms.vo.channel.SmsChannelSimpleRespVO;
-import cn.iocoder.yudao.module.system.dal.dataobject.sms.SmsChannelDO;
-import cn.iocoder.yudao.module.system.service.sms.SmsChannelService;
+import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsChannelDO;
+import cn.iocoder.yudao.module.platform.service.sms.SmsChannelService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

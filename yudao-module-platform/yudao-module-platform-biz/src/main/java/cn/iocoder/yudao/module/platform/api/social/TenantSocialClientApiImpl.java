@@ -4,7 +4,7 @@ import cn.binarywang.wx.miniapp.bean.WxMaPhoneNumberInfo;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialWxJsapiSignatureRespDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialWxPhoneNumberInfoRespDTO;
-import cn.iocoder.yudao.module.system.service.social.SocialClientService;
+import cn.iocoder.yudao.module.platform.service.social.SocialClientService;
 import me.chanjar.weixin.common.bean.WxJsapiSignature;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;

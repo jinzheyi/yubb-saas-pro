@@ -1,4 +1,4 @@
-package cn.iocoder.yudao.module.system.service.mail;
+package cn.iocoder.yudao.module.platform.service.mail;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.MAIL_ACCOUNT_NOT_EXISTS;
@@ -14,11 +14,10 @@ import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.module.platform.convert.mail.MailAccountConvert;
 import cn.iocoder.yudao.module.platform.dal.dataobject.mail.MailAccountDO;
 import cn.iocoder.yudao.module.platform.dal.dataobject.mail.MailTemplateDO;
-import cn.iocoder.yudao.module.platform.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
 import cn.iocoder.yudao.module.platform.mq.message.mail.MailSendMessage;
 import cn.iocoder.yudao.module.platform.mq.producer.mail.MailProducer;
-import cn.iocoder.yudao.module.platform.service.member.MemberService;
-import cn.iocoder.yudao.module.platform.service.user.AdminUserService;
+import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.Map;
 import javax.annotation.Resource;
@@ -38,9 +37,7 @@ import org.springframework.validation.annotation.Validated;
 public class MailSendServiceImpl implements MailSendService {
 
     @Resource
-    private AdminUserService adminUserService;
-    @Resource
-    private MemberService memberService;
+    private PlatformUserService platformUserService;
 
     @Resource
     private MailAccountService mailAccountService;
@@ -57,24 +54,13 @@ public class MailSendServiceImpl implements MailSendService {
                                       String templateCode, Map<String, Object> templateParams) {
         // 如果 mail 为空，则加载用户编号对应的邮箱
         if (StrUtil.isEmpty(mail)) {
-            AdminUserDO user = adminUserService.getUser(userId);
+            PlatformUserDO user = platformUserService.getUser(userId);
             if (user != null) {
                 mail = user.getEmail();
             }
         }
         // 执行发送
-        return sendSingleMail(mail, userId, UserTypeEnum.ADMIN.getValue(), templateCode, templateParams);
-    }
-
-    @Override
-    public Long sendSingleMailToMember(String mail, Long userId,
-                                       String templateCode, Map<String, Object> templateParams) {
-        // 如果 mail 为空，则加载用户编号对应的邮箱
-        if (StrUtil.isEmpty(mail)) {
-            mail = memberService.getMemberUserEmail(userId);
-        }
-        // 执行发送
-        return sendSingleMail(mail, userId, UserTypeEnum.MEMBER.getValue(), templateCode, templateParams);
+        return sendSingleMail(mail, userId, UserTypeEnum.PLATFORM.getValue(), templateCode, templateParams);
     }
 
     @Override

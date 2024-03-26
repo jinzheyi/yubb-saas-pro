@@ -1,5 +1,8 @@
 package cn.iocoder.yudao.module.platform.controller.platform.mail;
 
+import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getPlatformLoginUserId;
+
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
@@ -8,22 +11,24 @@ import cn.iocoder.yudao.module.platform.controller.platform.mail.vo.template.Mai
 import cn.iocoder.yudao.module.platform.controller.platform.mail.vo.template.MailTemplateSaveReqVO;
 import cn.iocoder.yudao.module.platform.controller.platform.mail.vo.template.MailTemplateSendReqVO;
 import cn.iocoder.yudao.module.platform.controller.platform.mail.vo.template.MailTemplateSimpleRespVO;
-import cn.iocoder.yudao.module.platform.controller.platform.mail.vo.template.*;
 import cn.iocoder.yudao.module.platform.dal.dataobject.mail.MailTemplateDO;
 import cn.iocoder.yudao.module.platform.service.mail.MailSendService;
 import cn.iocoder.yudao.module.platform.service.mail.MailTemplateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
+import java.util.List;
 import javax.annotation.Resource;
 import javax.validation.Valid;
-import java.util.List;
-
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "管理后台 - 邮件模版")
 @RestController
@@ -84,10 +89,10 @@ public class MailTemplateController {
     }
 
     @PostMapping("/send-mail")
-    @Operation(summary = "发送短信")
+    @Operation(summary = "发送邮件")
     @PreAuthorize("@ps.hasPermission('system:mail-template:send-mail')")
     public CommonResult<Long> sendMail(@Valid @RequestBody MailTemplateSendReqVO sendReqVO) {
-        return success(mailSendService.sendSingleMailToAdmin(sendReqVO.getMail(), getLoginUserId(),
+        return success(mailSendService.sendSingleMailToAdmin(sendReqVO.getMail(), getPlatformLoginUserId(),
                 sendReqVO.getTemplateCode(), sendReqVO.getTemplateParams()));
     }
 

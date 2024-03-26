@@ -6,10 +6,10 @@ import cn.iocoder.yudao.module.platform.controller.platform.sms.vo.template.SmsT
 import cn.iocoder.yudao.module.platform.controller.platform.sms.vo.template.SmsTemplateRespVO;
 import cn.iocoder.yudao.module.platform.controller.platform.sms.vo.template.SmsTemplateSaveReqVO;
 import cn.iocoder.yudao.module.platform.controller.platform.sms.vo.template.SmsTemplateSendReqVO;
-import cn.iocoder.yudao.module.system.controller.admin.sms.vo.template.*;
-import cn.iocoder.yudao.module.system.dal.dataobject.sms.SmsTemplateDO;
-import cn.iocoder.yudao.module.system.service.sms.SmsTemplateService;
-import cn.iocoder.yudao.module.system.service.sms.SmsSendService;
+import cn.iocoder.yudao.module.platform.controller.platform.sms.vo.template.*;
+import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsTemplateDO;
+import cn.iocoder.yudao.module.platform.service.sms.SmsTemplateService;
+import cn.iocoder.yudao.module.platform.service.sms.SmsSendService;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;

@@ -8,9 +8,9 @@ import cn.iocoder.yudao.module.platform.controller.platform.socail.vo.user.Socia
 import cn.iocoder.yudao.module.platform.controller.platform.socail.vo.user.SocialUserUnbindReqVO;
 import cn.iocoder.yudao.module.platform.controller.platform.socail.vo.user.SocialUserPageReqVO;
 import cn.iocoder.yudao.module.platform.controller.platform.socail.vo.user.SocialUserRespVO;
-import cn.iocoder.yudao.module.system.convert.social.SocialUserConvert;
-import cn.iocoder.yudao.module.system.dal.dataobject.social.SocialUserDO;
-import cn.iocoder.yudao.module.system.service.social.SocialUserService;
+import cn.iocoder.yudao.module.platform.convert.social.SocialUserConvert;
+import cn.iocoder.yudao.module.platform.dal.dataobject.social.SocialUserDO;
+import cn.iocoder.yudao.module.platform.service.social.SocialUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,13 +22,13 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getPlatformLoginUserId;
 
 @Tag(name = "管理后台 - 社交用户")
 @RestController
 @RequestMapping("/system/social-user")
 @Validated
-public class SocialUserController {
+public class PlatformSocialUserController {
 
     @Resource
     private SocialUserService socialUserService;
@@ -37,14 +37,14 @@ public class SocialUserController {
     @Operation(summary = "社交绑定，使用 code 授权码")
     public CommonResult<Boolean> socialBind(@RequestBody @Valid SocialUserBindReqVO reqVO) {
         socialUserService.bindSocialUser(SocialUserConvert.INSTANCE.convert(
-                getLoginUserId(), UserTypeEnum.ADMIN.getValue(), reqVO));
+                getPlatformLoginUserId(), UserTypeEnum.ADMIN.getValue(), reqVO));
         return CommonResult.success(true);
     }
 
     @DeleteMapping("/unbind")
     @Operation(summary = "取消社交绑定")
     public CommonResult<Boolean> socialUnbind(@RequestBody SocialUserUnbindReqVO reqVO) {
-        socialUserService.unbindSocialUser(getLoginUserId(), UserTypeEnum.ADMIN.getValue(), reqVO.getType(), reqVO.getOpenid());
+        socialUserService.unbindSocialUser(getPlatformLoginUserId(), UserTypeEnum.ADMIN.getValue(), reqVO.getType(), reqVO.getOpenid());
         return CommonResult.success(true);
     }
 

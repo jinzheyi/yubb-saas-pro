@@ -1,4 +1,4 @@
-package cn.iocoder.yudao.module.system.service.sms;
+package cn.iocoder.yudao.module.platform.service.sms;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.SMS_CHANNEL_NOT_EXISTS;
@@ -17,13 +17,12 @@ import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
 import cn.iocoder.yudao.framework.sms.core.client.SmsClient;
 import cn.iocoder.yudao.framework.sms.core.client.dto.SmsReceiveRespDTO;
 import cn.iocoder.yudao.framework.sms.core.client.dto.SmsSendRespDTO;
-import cn.iocoder.yudao.module.system.dal.dataobject.sms.SmsChannelDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.sms.SmsTemplateDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
-import cn.iocoder.yudao.module.system.mq.message.sms.SmsSendMessage;
-import cn.iocoder.yudao.module.system.mq.producer.sms.SmsProducer;
-import cn.iocoder.yudao.module.system.service.member.MemberService;
-import cn.iocoder.yudao.module.system.service.user.AdminUserService;
+import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsChannelDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.sms.SmsTemplateDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.user.PlatformUserDO;
+import cn.iocoder.yudao.module.platform.mq.message.sms.SmsSendMessage;
+import cn.iocoder.yudao.module.platform.mq.producer.sms.SmsProducer;
+import cn.iocoder.yudao.module.platform.service.user.PlatformUserService;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.List;
 import java.util.Map;
@@ -42,9 +41,7 @@ import org.springframework.stereotype.Service;
 public class SmsSendServiceImpl implements SmsSendService {
 
     @Resource
-    private AdminUserService adminUserService;
-    @Resource
-    private MemberService memberService;
+    private PlatformUserService platformUserService;
     @Resource
     private SmsChannelService smsChannelService;
     @Resource
@@ -60,23 +57,13 @@ public class SmsSendServiceImpl implements SmsSendService {
     public Long sendSingleSmsToAdmin(String mobile, Long userId, String templateCode, Map<String, Object> templateParams) {
         // 如果 mobile 为空，则加载用户编号对应的手机号
         if (StrUtil.isEmpty(mobile)) {
-            AdminUserDO user = adminUserService.getUser(userId);
+            PlatformUserDO user = platformUserService.getUser(userId);
             if (user != null) {
                 mobile = user.getMobile();
             }
         }
         // 执行发送
-        return sendSingleSms(mobile, userId, UserTypeEnum.ADMIN.getValue(), templateCode, templateParams);
-    }
-
-    @Override
-    public Long sendSingleSmsToMember(String mobile, Long userId, String templateCode, Map<String, Object> templateParams) {
-        // 如果 mobile 为空，则加载用户编号对应的手机号
-        if (StrUtil.isEmpty(mobile)) {
-            mobile = memberService.getMemberUserMobile(userId);
-        }
-        // 执行发送
-        return sendSingleSms(mobile, userId, UserTypeEnum.MEMBER.getValue(), templateCode, templateParams);
+        return sendSingleSms(mobile, userId, UserTypeEnum.PLATFORM.getValue(), templateCode, templateParams);
     }
 
     @Override

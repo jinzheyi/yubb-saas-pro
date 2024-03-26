@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.platform.api.social;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserRespDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserUnbindReqDTO;
-import cn.iocoder.yudao.module.system.service.social.SocialUserService;
+import cn.iocoder.yudao.module.platform.service.social.SocialUserService;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 

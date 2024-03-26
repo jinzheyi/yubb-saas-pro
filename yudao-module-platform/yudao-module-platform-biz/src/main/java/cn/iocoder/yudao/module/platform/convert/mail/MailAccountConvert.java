@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.platform.convert.mail;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.mail.MailAccount;
-import cn.iocoder.yudao.module.system.dal.dataobject.mail.MailAccountDO;
+import cn.iocoder.yudao.module.platform.dal.dataobject.mail.MailAccountDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

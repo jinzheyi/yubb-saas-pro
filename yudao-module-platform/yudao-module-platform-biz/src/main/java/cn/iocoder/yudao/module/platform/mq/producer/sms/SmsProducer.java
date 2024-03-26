@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.mq.producer.sms;
 
 import cn.iocoder.yudao.framework.common.core.KeyValue;
-import cn.iocoder.yudao.module.system.mq.message.sms.SmsSendMessage;
+import cn.iocoder.yudao.module.platform.mq.message.sms.SmsSendMessage;
 import java.util.List;
 import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

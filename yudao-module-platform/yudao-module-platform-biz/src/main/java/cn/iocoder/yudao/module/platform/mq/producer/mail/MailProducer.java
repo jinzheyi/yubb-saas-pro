@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.platform.mq.producer.mail;
 
-import cn.iocoder.yudao.module.system.mq.message.mail.MailSendMessage;
+import cn.iocoder.yudao.module.platform.mq.message.mail.MailSendMessage;
 import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;

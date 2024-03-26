@@ -1,7 +1,7 @@
 package cn.iocoder.yudao.module.platform.mq.consumer.sms;
 
-import cn.iocoder.yudao.module.system.mq.message.sms.SmsSendMessage;
-import cn.iocoder.yudao.module.system.service.sms.SmsSendService;
+import cn.iocoder.yudao.module.platform.mq.message.sms.SmsSendMessage;
+import cn.iocoder.yudao.module.platform.service.sms.SmsSendService;
 import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
