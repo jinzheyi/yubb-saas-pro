@@ -90,11 +90,10 @@ public class AdminUserServiceImpl implements AdminUserService {
         });
         // 校验正确性
         validateUserForCreateOrUpdate(null, createReqVO.getUsername(),
-                createReqVO.getMobile(), createReqVO.getEmail(), createReqVO.getDeptId(), createReqVO.getPostIds());
+                createReqVO.getMobile(), createReqVO.getDeptId(), createReqVO.getPostIds());
         // 插入用户
         AdminUserDO user = BeanUtils.toBean(createReqVO, AdminUserDO.class);
         user.setStatus(CommonStatusEnum.ENABLE.getStatus()); // 默认开启
-        user.setPassword(encodePassword(createReqVO.getPassword())); // 加密密码
         userMapper.insert(user);
         // 插入关联岗位
         if (CollectionUtil.isNotEmpty(user.getPostIds())) {
@@ -290,18 +289,16 @@ public class AdminUserServiceImpl implements AdminUserService {
         return deptIds;
     }
 
-    private void validateUserForCreateOrUpdate(Long id, String username, String mobile, String email,
+    private void validateUserForCreateOrUpdate(Long id, String username, String mobile,
                                                Long deptId, Set<Long> postIds) {
         // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
         DataPermissionUtils.executeIgnore(() -> {
             // 校验用户存在
             validateUserExists(id);
-            // 校验用户名唯一
+            // 校验邮箱账号在SaaS用户表中是否存在
             validateUsernameUnique(id, username);
             // 校验手机号唯一
             validateMobileUnique(id, mobile);
-            // 校验邮箱唯一
-            validateEmailUnique(id, email);
             // 校验部门处于开启状态
             deptService.validateDeptList(CollectionUtils.singleton(deptId));
             // 校验岗位处于开启状态
@@ -341,24 +338,6 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
         if (!user.getId().equals(id)) {
             throw exception(USER_USERNAME_EXISTS);
-        }
-    }
-
-    @VisibleForTesting
-    void validateEmailUnique(Long id, String email) {
-        if (StrUtil.isBlank(email)) {
-            return;
-        }
-        AdminUserDO user = userMapper.selectByEmail(email);
-        if (user == null) {
-            return;
-        }
-        // 如果 id 为空，说明不用比较是否为相同 id 的用户
-        if (id == null) {
-            throw exception(USER_EMAIL_EXISTS);
-        }
-        if (!user.getId().equals(id)) {
-            throw exception(USER_EMAIL_EXISTS);
         }
     }
 

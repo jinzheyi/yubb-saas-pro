@@ -1,14 +1,13 @@
 package cn.iocoder.yudao.module.system.controller.admin.user.vo.user;
 
-import cn.hutool.core.util.ObjectUtil;
 import cn.iocoder.yudao.framework.common.validation.Mobile;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
-import org.hibernate.validator.constraints.Length;
-
-import javax.validation.constraints.*;
 import java.util.Set;
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
+import lombok.Data;
 
 @Schema(description = "管理后台 - 用户创建/修改 Request VO")
 @Data
@@ -19,8 +18,8 @@ public class UserSaveReqVO {
 
     @Schema(description = "邮箱账号,saas用户表的邮箱账号，用于通知SaaS用户邀请", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudao")
     @NotBlank(message = "邮箱账号不能为空")
-    @Pattern(regexp = "^[a-zA-Z0-9]{4,30}$", message = "邮箱账号由 数字、字母 组成")
-    @Size(min = 4, max = 30, message = "邮箱账号长度为 4-30 个字符")
+    @Email(message = "邮箱账号格式不正确")
+    @Size(max = 50, message = "邮箱长度不能超过 50 个字符")
     private String username;
 
     @Schema(description = "账号,成员唯一标识，可以使用工号、邮箱等公司系统内统一的ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudao")
@@ -42,32 +41,11 @@ public class UserSaveReqVO {
     @Schema(description = "岗位编号数组", example = "1")
     private Set<Long> postIds;
 
-    @Schema(description = "用户邮箱", example = "yudao@iocoder.cn")
-    @Email(message = "邮箱格式不正确")
-    @Size(max = 50, message = "邮箱长度不能超过 50 个字符")
-    private String email;
-
     @Schema(description = "手机号码", example = "15601691300")
     @Mobile
     private String mobile;
 
-    @Schema(description = "用户性别，参见 SexEnum 枚举类", example = "1")
-    private Integer sex;
-
     @Schema(description = "用户头像", example = "https://www.iocoder.cn/xxx.png")
     private String avatar;
-
-    // ========== 仅【创建】时，需要传递的字段 ==========
-
-    @Schema(description = "密码", requiredMode = Schema.RequiredMode.REQUIRED, example = "123456")
-    @Length(min = 4, max = 16, message = "密码长度为 4-16 位")
-    private String password;
-
-    @AssertTrue(message = "密码不能为空")
-    @JsonIgnore
-    public boolean isPasswordValid() {
-        return id != null // 修改时，不需要传递
-                || (ObjectUtil.isAllNotEmpty(password)); // 新增时，必须都传递 password
-    }
 
 }
