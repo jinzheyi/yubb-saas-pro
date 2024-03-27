@@ -39,6 +39,10 @@ public class AdminUserDO extends TenantBaseDO {
      */
     private Long saasUserId;
     /**
+     * 在当前租户下用户唯一标识值
+     */
+    private String openAccount;
+    /**
      * 用户昵称
      */
     private String nickname;
@@ -61,6 +65,10 @@ public class AdminUserDO extends TenantBaseDO {
      * 枚举 {@link CommonStatusEnum}
      */
     private Integer status;
+    /**
+     * 用户头像
+     */
+    private String avatar;
     /**
      * 最后登录IP
      */

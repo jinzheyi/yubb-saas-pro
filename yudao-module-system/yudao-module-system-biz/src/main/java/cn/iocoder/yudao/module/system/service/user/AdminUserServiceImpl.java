@@ -16,6 +16,7 @@ import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfi
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserImportExcelVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserImportRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserPageReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserSaveReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.UserPostDO;
@@ -213,13 +214,13 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
-    public PageResult<AdminUserDO> getUserPage(UserPageReqVO reqVO) {
-        return userMapper.selectPage(reqVO, getDeptCondition(reqVO.getDeptId()));
+    public PageResult<UserRespVO> getUserPage(UserPageReqVO reqVO) {
+        return userMapper.selectJoinPage(reqVO, getDeptCondition(reqVO.getDeptId()));
     }
 
     @Override
-    public AdminUserDO getUser(Long id) {
-        return userMapper.selectById(id);
+    public UserRespVO getUser(Long id) {
+        return userMapper.selectJoinOne(id);
     }
 
     @Override

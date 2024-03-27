@@ -92,13 +92,13 @@ public class UserController {
     @PreAuthorize("@ss.hasPermission('system:user:list')")
     public CommonResult<PageResult<UserRespVO>> getUserPage(@Valid UserPageReqVO pageReqVO) {
         // 获得用户分页列表
-        PageResult<AdminUserDO> pageResult = userService.getUserPage(pageReqVO);
+        PageResult<UserRespVO> pageResult = userService.getUserPage(pageReqVO);
         if (CollUtil.isEmpty(pageResult.getList())) {
             return success(new PageResult<>(pageResult.getTotal()));
         }
         // 拼接数据
         Map<Long, DeptDO> deptMap = deptService.getDeptMap(
-                convertList(pageResult.getList(), AdminUserDO::getDeptId));
+                convertList(pageResult.getList(), UserRespVO::getDeptId));
         return success(new PageResult<>(UserConvert.INSTANCE.convertList(pageResult.getList(), deptMap),
                 pageResult.getTotal()));
     }
@@ -118,7 +118,7 @@ public class UserController {
     @Parameter(name = "id", description = "编号", required = true, example = "1024")
     @PreAuthorize("@ss.hasPermission('system:user:query')")
     public CommonResult<UserRespVO> getUser(@RequestParam("id") Long id) {
-        AdminUserDO user = userService.getUser(id);
+        UserRespVO user = userService.getUser(id);
         // 拼接数据
         DeptDO dept = deptService.getDept(user.getDeptId());
         return success(UserConvert.INSTANCE.convert(user, dept));
@@ -131,10 +131,10 @@ public class UserController {
     public void exportUserList(@Validated UserPageReqVO exportReqVO,
                                HttpServletResponse response) throws IOException {
         exportReqVO.setPageSize(PageParam.PAGE_SIZE_NONE);
-        List<AdminUserDO> list = userService.getUserPage(exportReqVO).getList();
+        List<UserRespVO> list = userService.getUserPage(exportReqVO).getList();
         // 输出 Excel
         Map<Long, DeptDO> deptMap = deptService.getDeptMap(
-                convertList(list, AdminUserDO::getDeptId));
+                convertList(list, UserRespVO::getDeptId));
         ExcelUtils.write(response, "用户数据.xls", "数据", UserRespVO.class,
                 UserConvert.INSTANCE.convertList(list, deptMap));
     }

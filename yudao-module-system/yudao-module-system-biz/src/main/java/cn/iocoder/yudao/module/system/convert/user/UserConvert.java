@@ -25,11 +25,11 @@ public interface UserConvert {
 
     UserConvert INSTANCE = Mappers.getMapper(UserConvert.class);
 
-    default List<UserRespVO> convertList(List<AdminUserDO> list, Map<Long, DeptDO> deptMap) {
+    default List<UserRespVO> convertList(List<UserRespVO> list, Map<Long, DeptDO> deptMap) {
         return CollectionUtils.convertList(list, user -> convert(user, deptMap.get(user.getDeptId())));
     }
 
-    default UserRespVO convert(AdminUserDO user, DeptDO dept) {
+    default UserRespVO convert(UserRespVO user, DeptDO dept) {
         UserRespVO userVO = BeanUtils.toBean(user, UserRespVO.class);
         if (dept != null) {
             userVO.setDeptName(dept.getName());

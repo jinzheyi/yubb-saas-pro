@@ -102,7 +102,7 @@ public interface AdminUserService {
      * @param reqVO 分页条件
      * @return 分页列表
      */
-    PageResult<AdminUserDO> getUserPage(UserPageReqVO reqVO);
+    PageResult<UserRespVO> getUserPage(UserPageReqVO reqVO);
 
     /**
      * 通过用户 ID 查询用户
@@ -110,7 +110,7 @@ public interface AdminUserService {
      * @param id 用户ID
      * @return 用户对象信息
      */
-    AdminUserDO getUser(Long id);
+    UserRespVO getUser(Long id);
 
     /**
      * 获得指定部门的用户数组

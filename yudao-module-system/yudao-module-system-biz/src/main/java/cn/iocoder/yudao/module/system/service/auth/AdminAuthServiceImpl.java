@@ -173,7 +173,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         }
         AdminUserDO adminUser = getAdminUser(saasUserDO, null);
         // 创建 Token 令牌，记录登录日志
-        return createTokenAfterLoginSuccess(adminUser.getId(), saasUserDO.getAccount(), LoginLogTypeEnum.LOGIN_SOCIAL);
+        return createTokenAfterLoginSuccess(adminUser.getId(), saasUserDO.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
     }
 
     @VisibleForTesting
@@ -243,7 +243,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         }
         AdminUserDO user = adminUserService.getUser(userId);
         SaasUserDO saasUserDO = saasUserService.getUser(user.getSaasUserId());
-        return saasUserDO != null ? saasUserDO.getAccount() : null;
+        return saasUserDO != null ? saasUserDO.getUsername() : null;
     }
 
     private UserTypeEnum getUserType() {
@@ -284,7 +284,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         // 检查是否被删除或校验是否禁用
         if (Objects.isNull(adminUserDO) || CommonStatusEnum.isDisable(adminUserDO.getStatus())) {
             if (Objects.nonNull(adminUserDO) && Objects.nonNull(logTypeEnum)) {
-                createLoginLog(adminUserDO.getId(), saasUserDO.getAccount(), logTypeEnum, LoginResultEnum.USER_DISABLED);
+                createLoginLog(adminUserDO.getId(), saasUserDO.getUsername(), logTypeEnum, LoginResultEnum.USER_DISABLED);
             }
             TenantContextHolder.setTenantId(oldTenantId);
             TenantContextHolder.setIgnore(oldIgnore);

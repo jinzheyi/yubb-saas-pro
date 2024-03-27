@@ -34,9 +34,10 @@ public class SaasUserDO extends BaseDO {
     @TableId
     private Long id;
     /**
-     * 账号,这个账号大概率是邮箱之类的，为了模拟真实业务场景，建议邮箱
+     * 邮箱，第一登录方式账号没有用手机号是因为邮箱验证免费。
+     * 而且这里不能用传统意义上的所谓的用户名，因为这个账号是可以对应多个租户的，这里需要确定唯一性
      */
-    private String account;
+    private String username;
     /**
      * 加密后的密码
      *
@@ -53,10 +54,6 @@ public class SaasUserDO extends BaseDO {
      * 枚举类 {@link SexEnum}
      */
     private Integer sex;
-    /**
-     * 用户头像
-     */
-    private String avatar;
     /**
      * 用户唯一标识值
      */

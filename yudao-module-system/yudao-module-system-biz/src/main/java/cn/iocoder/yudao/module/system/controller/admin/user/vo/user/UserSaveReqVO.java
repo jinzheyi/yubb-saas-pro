@@ -17,11 +17,17 @@ public class UserSaveReqVO {
     @Schema(description = "用户编号", example = "1024")
     private Long id;
 
-    @Schema(description = "用户账号", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudao")
-    @NotBlank(message = "用户账号不能为空")
-    @Pattern(regexp = "^[a-zA-Z0-9]{4,30}$", message = "用户账号由 数字、字母 组成")
-    @Size(min = 4, max = 30, message = "用户账号长度为 4-30 个字符")
+    @Schema(description = "邮箱账号,saas用户表的邮箱账号，用于通知SaaS用户邀请", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudao")
+    @NotBlank(message = "邮箱账号不能为空")
+    @Pattern(regexp = "^[a-zA-Z0-9]{4,30}$", message = "邮箱账号由 数字、字母 组成")
+    @Size(min = 4, max = 30, message = "邮箱账号长度为 4-30 个字符")
     private String username;
+
+    @Schema(description = "账号,成员唯一标识，可以使用工号、邮箱等公司系统内统一的ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudao")
+    @NotBlank(message = "账号不能为空")
+    @Pattern(regexp = "^[a-zA-Z0-9]{4,30}$", message = "账号由 数字、字母 组成")
+    @Size(min = 4, max = 30, message = "账号长度为 4-30 个字符")
+    private String openAccount;
 
     @Schema(description = "用户昵称", requiredMode = Schema.RequiredMode.REQUIRED, example = "芋艿")
     @Size(max = 30, message = "用户昵称长度不能超过30个字符")
