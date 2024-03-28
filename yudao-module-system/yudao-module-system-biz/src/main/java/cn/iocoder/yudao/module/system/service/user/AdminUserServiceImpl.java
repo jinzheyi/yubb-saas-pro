@@ -21,8 +21,10 @@ import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserSaveReqV
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.UserPostDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.system.dal.dataobject.user.SaasUserDO;
 import cn.iocoder.yudao.module.system.dal.mysql.dept.UserPostMapper;
 import cn.iocoder.yudao.module.system.dal.mysql.user.AdminUserMapper;
+import cn.iocoder.yudao.module.system.dal.mysql.user.SaasUserMapper;
 import cn.iocoder.yudao.module.system.service.dept.DeptService;
 import cn.iocoder.yudao.module.system.service.dept.PostService;
 import cn.iocoder.yudao.module.system.service.permission.PermissionService;
@@ -61,6 +63,9 @@ public class AdminUserServiceImpl implements AdminUserService {
     private AdminUserMapper userMapper;
 
     @Resource
+    private SaasUserMapper saasUserMapper;
+
+    @Resource
     private DeptService deptService;
     @Resource
     private PostService postService;
@@ -89,8 +94,8 @@ public class AdminUserServiceImpl implements AdminUserService {
             }
         });
         // 校验正确性
-        validateUserForCreateOrUpdate(null, createReqVO.getUsername(),
-                createReqVO.getMobile(), createReqVO.getDeptId(), createReqVO.getPostIds());
+        validateUserForCreate(createReqVO.getUsername(),
+                createReqVO.getMobile(), createReqVO.getOpenAccount(), createReqVO.getDeptId(), createReqVO.getPostIds());
         // 插入用户
         AdminUserDO user = BeanUtils.toBean(createReqVO, AdminUserDO.class);
         user.setStatus(CommonStatusEnum.ENABLE.getStatus()); // 默认开启
@@ -108,8 +113,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     public void updateUser(UserSaveReqVO updateReqVO) {
         updateReqVO.setPassword(null); // 特殊：此处不更新密码
         // 校验正确性
-        validateUserForCreateOrUpdate(updateReqVO.getId(), updateReqVO.getUsername(),
-                updateReqVO.getMobile(), updateReqVO.getEmail(), updateReqVO.getDeptId(), updateReqVO.getPostIds());
+        validateUserForUpdate(updateReqVO.getId(), updateReqVO.getDeptId(), updateReqVO.getPostIds());
         // 更新用户
         AdminUserDO updateObj = BeanUtils.toBean(updateReqVO, AdminUserDO.class);
         userMapper.updateById(updateObj);
@@ -289,21 +293,50 @@ public class AdminUserServiceImpl implements AdminUserService {
         return deptIds;
     }
 
-    private void validateUserForCreateOrUpdate(Long id, String username, String mobile,
+    /**
+     * 新增时的校验
+     * @param username SaaS用户表的邮箱账号
+     * @param mobile SaaS表的手机号
+     * @param deptId
+     * @param postIds
+     */
+    private void validateUserForCreate(String username, String mobile, String openAccount,
                                                Long deptId, Set<Long> postIds) {
         // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
         DataPermissionUtils.executeIgnore(() -> {
-            // 校验用户存在
-            validateUserExists(id);
-            // 校验邮箱账号在SaaS用户表中是否存在
-            validateUsernameUnique(id, username);
-            // 校验手机号唯一
-            validateMobileUnique(id, mobile);
+            // 校验成员唯一标识
+            validateOpenAccountUserUnique(openAccount);
+            // 校验邮箱账号在SaaS用户表中是否存在,以及是否被其它账号绑定了
+            validateUsernameExists(username, mobile);
             // 校验部门处于开启状态
             deptService.validateDeptList(CollectionUtils.singleton(deptId));
             // 校验岗位处于开启状态
             postService.validatePostList(postIds);
         });
+    }
+
+    private void validateUserForUpdate(Long id, Long deptId, Set<Long> postIds) {
+        // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
+        DataPermissionUtils.executeIgnore(() -> {
+            // 校验用户存在
+            validateUserExists(id);
+            // 校验部门处于开启状态
+            deptService.validateDeptList(CollectionUtils.singleton(deptId));
+            // 校验岗位处于开启状态
+            postService.validatePostList(postIds);
+        });
+    }
+
+    @VisibleForTesting
+    void validateOpenAccountUserUnique(String openAccount) {
+        if (StrUtil.isBlank(openAccount)) {
+            return;
+        }
+        AdminUserDO user = userMapper.selectByOpenAccount(openAccount);
+        if (user == null) {
+            return;
+        }
+        throw exception(USER_USERNAME_EXISTS);
     }
 
     @VisibleForTesting
@@ -323,39 +356,22 @@ public class AdminUserServiceImpl implements AdminUserService {
         });
     }
 
+    /**
+     * 校验邮箱账号在SaaS用户表中是否存在,以及是否被其它账号绑定了
+     * @param username saas用户表中的邮箱账号
+     * @param mobile saas用户表中的手机号
+     */
     @VisibleForTesting
-    void validateUsernameUnique(Long id, String username) {
-        if (StrUtil.isBlank(username)) {
-            return;
+    void validateUsernameExists(String username, String mobile) {
+        //todo 其它账号是否已绑定
+        if (StrUtil.isAllBlank(username, mobile)) {
+            throw exception(USER_CREATE_SAAS_EXISTS);
         }
-        AdminUserDO user = userMapper.selectByUsername(username);
-        if (user == null) {
-            return;
+        if (StrUtil.isNotBlank(username) && Objects.isNull(saasUserMapper.selectByUsername(username))) {
+            throw exception(USER_SAAS_USERNAME_NOT_EXISTS);
         }
-        // 如果 id 为空，说明不用比较是否为相同 id 的用户
-        if (id == null) {
-            throw exception(USER_USERNAME_EXISTS);
-        }
-        if (!user.getId().equals(id)) {
-            throw exception(USER_USERNAME_EXISTS);
-        }
-    }
-
-    @VisibleForTesting
-    void validateMobileUnique(Long id, String mobile) {
-        if (StrUtil.isBlank(mobile)) {
-            return;
-        }
-        AdminUserDO user = userMapper.selectByMobile(mobile);
-        if (user == null) {
-            return;
-        }
-        // 如果 id 为空，说明不用比较是否为相同 id 的用户
-        if (id == null) {
-            throw exception(USER_MOBILE_EXISTS);
-        }
-        if (!user.getId().equals(id)) {
-            throw exception(USER_MOBILE_EXISTS);
+        if (StrUtil.isNotBlank(mobile) && Objects.isNull(saasUserMapper.selectByMobile(mobile))) {
+            throw exception(USER_SAAS_USERNAME_NOT_EXISTS);
         }
     }
 

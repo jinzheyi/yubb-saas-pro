@@ -27,8 +27,8 @@ public class SaasUserServiceImpl implements SaasUserService{
     private PasswordEncoder passwordEncoder;
 
     @Override
-    public SaasUserDO getUserByAccount(String account) {
-        return saasUserMapper.selectByAccount(account);
+    public SaasUserDO getUserByUsername(String username) {
+        return saasUserMapper.selectByUsername(username);
     }
 
     @Override

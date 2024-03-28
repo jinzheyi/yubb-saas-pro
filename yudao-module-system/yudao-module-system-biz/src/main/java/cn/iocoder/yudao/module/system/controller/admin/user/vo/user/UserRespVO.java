@@ -20,6 +20,9 @@ public class UserRespVO{
     @ExcelProperty("用户编号")
     private Long id;
 
+    @Schema(description = "所属SaaS用户表编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    private Long saasUserId;
+
     @Schema(description = "用户账号", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudao")
     @ExcelProperty("用户名称")
     private String username;

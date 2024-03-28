@@ -12,10 +12,10 @@ public interface SaasUserService {
     /**
      * 通过用户名查询用户
      *
-     * @param account 账户名
+     * @param username 账户名
      * @return 用户对象信息
      */
-    SaasUserDO getUserByAccount(String account);
+    SaasUserDO getUserByUsername(String username);
 
     /**
      * 判断密码是否匹配

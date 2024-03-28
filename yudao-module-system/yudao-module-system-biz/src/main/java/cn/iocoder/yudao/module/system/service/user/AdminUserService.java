@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.system.service.user;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import cn.iocoder.yudao.framework.common.util.validation.ValidGroup;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.*;
@@ -11,6 +12,7 @@ import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 import javax.validation.Valid;
 import java.io.InputStream;
 import java.util.*;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * 后台用户 Service 接口
@@ -25,14 +27,14 @@ public interface AdminUserService {
      * @param createReqVO 用户信息
      * @return 用户编号
      */
-    Long createUser(@Valid UserSaveReqVO createReqVO);
+    Long createUser(@Validated({ValidGroup.Insert.class}) UserSaveReqVO createReqVO);
 
     /**
      * 修改用户
      *
      * @param updateReqVO 用户信息
      */
-    void updateUser(@Valid UserSaveReqVO updateReqVO);
+    void updateUser(@Validated({ValidGroup.Update.class}) UserSaveReqVO updateReqVO);
 
     /**
      * 更新用户的最后登陆信息

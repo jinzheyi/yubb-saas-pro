@@ -67,6 +67,9 @@ public interface ErrorCodeConstants {
     ErrorCode USER_IS_DISABLE = new ErrorCode(1_002_003_006, "名字为【{}】的用户已被禁用");
     ErrorCode USER_COUNT_MAX = new ErrorCode(1_002_003_008, "创建用户失败，原因：超过租户最大租户配额({})！");
     ErrorCode USER_ADMIN = new ErrorCode(1_002_003_009, "不能操作超管用户！");
+    ErrorCode USER_CREATE_SAAS_EXISTS = new ErrorCode(1_002_003_010, "添加用户时，邮箱账号和手机号不能都为空");
+    ErrorCode USER_SAAS_USERNAME_NOT_EXISTS = new ErrorCode(1_002_003_011, "邮箱账号对应体系用户不存在");
+    ErrorCode USER_SAAS_MOBILE_NOT_EXISTS = new ErrorCode(1_002_003_012, "手机号对应体系用户不存在");
 
     // ========== 部门模块 1-002-004-000 ==========
     ErrorCode DEPT_NAME_DUPLICATE = new ErrorCode(1_002_004_000, "已经存在该名字的部门");

@@ -1,10 +1,12 @@
 package cn.iocoder.yudao.module.system.controller.admin.user.vo.user;
 
+import cn.iocoder.yudao.framework.common.util.validation.ValidGroup;
 import cn.iocoder.yudao.framework.common.validation.Mobile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Set;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import lombok.Data;
@@ -14,22 +16,22 @@ import lombok.Data;
 public class UserSaveReqVO {
 
     @Schema(description = "用户编号", example = "1024")
+    @NotNull(message = "用户编号不能为空", groups = {ValidGroup.Update.class})
     private Long id;
 
-    @Schema(description = "邮箱账号,saas用户表的邮箱账号，用于通知SaaS用户邀请", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudao")
-    @NotBlank(message = "邮箱账号不能为空")
-    @Email(message = "邮箱账号格式不正确")
-    @Size(max = 50, message = "邮箱长度不能超过 50 个字符")
+    @Schema(description = "邮箱账号,saas用户表的邮箱账号，用于通知SaaS用户邀请", example = "yudao")
+    @Email(message = "邮箱账号格式不正确", groups = {ValidGroup.Insert.class})
+    @Size(max = 50, message = "邮箱长度不能超过 50 个字符", groups = {ValidGroup.Insert.class})
     private String username;
 
     @Schema(description = "账号,成员唯一标识，可以使用工号、邮箱等公司系统内统一的ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudao")
-    @NotBlank(message = "账号不能为空")
-    @Pattern(regexp = "^[a-zA-Z0-9]{4,30}$", message = "账号由 数字、字母 组成")
-    @Size(min = 4, max = 30, message = "账号长度为 4-30 个字符")
+    @NotBlank(message = "账号不能为空", groups = {ValidGroup.Insert.class})
+    @Pattern(regexp = "^[a-zA-Z0-9]{4,30}$", message = "账号由 数字、字母 组成", groups = {ValidGroup.Insert.class})
+    @Size(min = 4, max = 30, message = "账号长度为 4-30 个字符", groups = {ValidGroup.Insert.class})
     private String openAccount;
 
     @Schema(description = "用户昵称", requiredMode = Schema.RequiredMode.REQUIRED, example = "芋艿")
-    @Size(max = 30, message = "用户昵称长度不能超过30个字符")
+    @Size(max = 30, message = "用户昵称长度不能超过30个字符", groups = {ValidGroup.saveOrUpdate.class})
     private String nickname;
 
     @Schema(description = "备注", example = "我是一个用户")
@@ -42,7 +44,7 @@ public class UserSaveReqVO {
     private Set<Long> postIds;
 
     @Schema(description = "手机号码", example = "15601691300")
-    @Mobile
+    @Mobile(groups = {ValidGroup.Insert.class})
     private String mobile;
 
     @Schema(description = "用户头像", example = "https://www.iocoder.cn/xxx.png")

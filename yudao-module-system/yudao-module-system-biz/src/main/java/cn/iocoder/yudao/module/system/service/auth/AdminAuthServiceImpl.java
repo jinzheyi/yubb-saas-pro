@@ -30,6 +30,7 @@ import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthLoginRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSmsLoginReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSmsSendReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSocialLoginReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserRespVO;
 import cn.iocoder.yudao.module.system.convert.auth.AuthConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
@@ -86,7 +87,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     public AdminUserDO authenticate(String username, String password) {
         final LoginLogTypeEnum logTypeEnum = LoginLogTypeEnum.LOGIN_USERNAME;
         // 校验账号是否存在
-        SaasUserDO saasUserDO = saasUserService.getUserByAccount(username);
+        SaasUserDO saasUserDO = saasUserService.getUserByUsername(username);
         if (saasUserDO == null) {
             throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
         }
@@ -241,7 +242,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         if (userId == null) {
             return null;
         }
-        AdminUserDO user = adminUserService.getUser(userId);
+        UserRespVO user = adminUserService.getUser(userId);
         SaasUserDO saasUserDO = saasUserService.getUser(user.getSaasUserId());
         return saasUserDO != null ? saasUserDO.getUsername() : null;
     }

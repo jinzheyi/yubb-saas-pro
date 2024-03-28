@@ -24,6 +24,10 @@ public interface AdminUserMapper extends BaseMapperX<AdminUserDO> {
         return selectOne(AdminUserDO::getSaasUserId, saasUserId);
     }
 
+    default AdminUserDO selectByOpenAccount(String openAccount) {
+        return selectOne(AdminUserDO::getOpenAccount, openAccount);
+    }
+
 //    default PageResult<AdminUserDO> selectPage(UserPageReqVO reqVO, Collection<Long> deptIds) {
 //        return selectPage(reqVO, new LambdaQueryWrapperX<AdminUserDO>()
 //                .likeIfPresent(AdminUserDO::getUsername, reqVO.getUsername())
@@ -37,7 +41,7 @@ public interface AdminUserMapper extends BaseMapperX<AdminUserDO> {
     default UserRespVO selectJoinOne(Long userId) {
         return selectJoinOne(UserRespVO.class, new MPJLambdaWrapper<AdminUserDO>()
           .selectAll(AdminUserDO.class)
-          .select(SaasUserDO::getUsername, SaasUserDO::getMobile, SaasUserDO::getSex, SaasUserDO::getAvatar)
+          .select(SaasUserDO::getUsername, SaasUserDO::getMobile, SaasUserDO::getSex)
           .selectAs(SaasUserDO::getUsername, UserRespVO::getEmail)
           .leftJoin(SaasUserDO.class, SaasUserDO::getId, AdminUserDO::getSaasUserId)
           .eq(AdminUserDO::getId, userId));
@@ -48,7 +52,7 @@ public interface AdminUserMapper extends BaseMapperX<AdminUserDO> {
         LocalDateTime endTime = ArrayUtils.get(reqVO.getCreateTime(), 1);
         MPJLambdaWrapper<AdminUserDO> wrapper = new MPJLambdaWrapper<AdminUserDO>()
           .selectAll(AdminUserDO.class)
-          .select(SaasUserDO::getUsername, SaasUserDO::getMobile, SaasUserDO::getSex, SaasUserDO::getAvatar)
+          .select(SaasUserDO::getUsername, SaasUserDO::getMobile, SaasUserDO::getSex)
           .selectAs(SaasUserDO::getUsername, UserRespVO::getEmail)
           .leftJoin(SaasUserDO.class, SaasUserDO::getId, AdminUserDO::getSaasUserId)
           .like(StrUtil.isNotBlank(reqVO.getUsername()), SaasUserDO::getUsername, reqVO.getUsername())
