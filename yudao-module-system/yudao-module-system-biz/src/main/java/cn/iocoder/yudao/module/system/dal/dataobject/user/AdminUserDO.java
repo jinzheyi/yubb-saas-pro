@@ -40,6 +40,7 @@ public class AdminUserDO extends TenantBaseDO {
     private Long saasUserId;
     /**
      * 在当前租户下用户唯一标识值
+     * 创建时间+sy+用户id+雪花
      */
     private String openAccount;
     /**

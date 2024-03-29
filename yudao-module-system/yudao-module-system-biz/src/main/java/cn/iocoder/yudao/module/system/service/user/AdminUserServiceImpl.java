@@ -98,7 +98,17 @@ public class AdminUserServiceImpl implements AdminUserService {
                 createReqVO.getMobile(), createReqVO.getOpenAccount(), createReqVO.getDeptId(), createReqVO.getPostIds());
         // 插入用户
         AdminUserDO user = BeanUtils.toBean(createReqVO, AdminUserDO.class);
-        user.setStatus(CommonStatusEnum.ENABLE.getStatus()); // 默认开启
+        //优先取邮箱账号的SaaS用户
+        if (StrUtil.isNotBlank(createReqVO.getUsername())) {
+            SaasUserDO userNameSaasDO = saasUserMapper.selectByUsername(createReqVO.getUsername());
+            user.setSaasUserId(userNameSaasDO.getId());
+        } else {
+            SaasUserDO mobileSaasDO = saasUserMapper.selectByMobile(createReqVO.getMobile());
+            user.setSaasUserId(mobileSaasDO.getId());
+        }
+        // 默认开启
+        user.setStatus(CommonStatusEnum.ENABLE.getStatus());
+        user.setOpenAccount();
         userMapper.insert(user);
         // 插入关联岗位
         if (CollectionUtil.isNotEmpty(user.getPostIds())) {
@@ -111,7 +121,6 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateUser(UserSaveReqVO updateReqVO) {
-        updateReqVO.setPassword(null); // 特殊：此处不更新密码
         // 校验正确性
         validateUserForUpdate(updateReqVO.getId(), updateReqVO.getDeptId(), updateReqVO.getPostIds());
         // 更新用户
@@ -146,26 +155,27 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     public void updateUserProfile(Long id, UserProfileUpdateReqVO reqVO) {
         // 校验正确性
-        validateUserExists(id);
-        validateEmailUnique(id, reqVO.getEmail());
-        validateMobileUnique(id, reqVO.getMobile());
+        validateAdminUserExists(id);
+        //todo 修改邮箱或手机号需要发送邮件或短信进行验证
         // 执行更新
         userMapper.updateById(BeanUtils.toBean(reqVO, AdminUserDO.class).setId(id));
     }
 
     @Override
     public void updateUserPassword(Long id, UserProfileUpdatePasswordReqVO reqVO) {
+        AdminUserDO adminUserDO = validateAdminUserExists(id);
         // 校验旧密码密码
         validateOldPassword(id, reqVO.getOldPassword());
         // 执行更新
-        AdminUserDO updateObj = new AdminUserDO().setId(id);
-        updateObj.setPassword(encodePassword(reqVO.getNewPassword())); // 加密密码
-        userMapper.updateById(updateObj);
+        SaasUserDO updateObj = new SaasUserDO().setId(adminUserDO.getSaasUserId());
+        // 加密密码
+        updateObj.setPassword(encodePassword(reqVO.getNewPassword()));
+        saasUserMapper.updateById(updateObj);
     }
 
     @Override
     public String updateUserAvatar(Long id, InputStream avatarFile) {
-        validateUserExists(id);
+        validateAdminUserExists(id);
         // 存储文件
         String avatar = fileApi.createFile(IoUtil.readBytes(avatarFile));
         // 更新路径
@@ -180,11 +190,12 @@ public class AdminUserServiceImpl implements AdminUserService {
     public void updateUserPassword(Long id, String password) {
         // 校验用户存在
         validateUserExists(id);
+        AdminUserDO user = userMapper.selectById(id);
         // 更新密码
-        AdminUserDO updateObj = new AdminUserDO();
-        updateObj.setId(id);
+        SaasUserDO updateObj = new SaasUserDO();
+        updateObj.setId(user.getSaasUserId());
         updateObj.setPassword(encodePassword(password)); // 加密密码
-        userMapper.updateById(updateObj);
+        saasUserMapper.updateById(updateObj);
     }
 
     @Override
@@ -357,22 +368,64 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     /**
+     * 一般用于自己操作自己
+     * @param id 用户id
+     */
+    @VisibleForTesting
+    AdminUserDO validateAdminUserExists(Long id) {
+        if (id == null) {
+            return null;
+        }
+        AdminUserDO user = userMapper.selectById(id);
+        if (user == null) {
+            throw exception(USER_NOT_EXISTS);
+        }
+        return user;
+    }
+
+    /**
      * 校验邮箱账号在SaaS用户表中是否存在,以及是否被其它账号绑定了
      * @param username saas用户表中的邮箱账号
      * @param mobile saas用户表中的手机号
      */
     @VisibleForTesting
     void validateUsernameExists(String username, String mobile) {
-        //todo 其它账号是否已绑定
+        //校验是否存在
         if (StrUtil.isAllBlank(username, mobile)) {
             throw exception(USER_CREATE_SAAS_EXISTS);
         }
-        if (StrUtil.isNotBlank(username) && Objects.isNull(saasUserMapper.selectByUsername(username))) {
-            throw exception(USER_SAAS_USERNAME_NOT_EXISTS);
+        if (StrUtil.isNotBlank(username)) {
+            SaasUserDO userNameSaasDO = saasUserMapper.selectByUsername(username);
+            if (Objects.isNull(userNameSaasDO)) {
+                throw exception(USER_SAAS_USERNAME_NOT_EXISTS);
+            }
+            //校验是否被其它账号已绑定
+            validateSaasUserIdUnique(userNameSaasDO.getId());
         }
-        if (StrUtil.isNotBlank(mobile) && Objects.isNull(saasUserMapper.selectByMobile(mobile))) {
-            throw exception(USER_SAAS_USERNAME_NOT_EXISTS);
+        if (StrUtil.isNotBlank(mobile)) {
+            SaasUserDO mobileSaasDO = saasUserMapper.selectByMobile(mobile);
+            if (Objects.isNull(mobileSaasDO)) {
+                throw exception(USER_SAAS_MOBILE_NOT_EXISTS);
+            }
+            //校验是否被其它账号已绑定
+            validateSaasUserIdUnique(mobileSaasDO.getId());
         }
+    }
+
+    /**
+     * 校验当前SaaS体系用户是否被其它用户绑定
+     * @param saasUserId SaaS体系用户id
+     */
+    @VisibleForTesting
+    void validateSaasUserIdUnique(Long saasUserId) {
+        if (saasUserId == null) {
+            return;
+        }
+        AdminUserDO user = userMapper.selectBySaasUserId(saasUserId);
+        if (user == null) {
+            return;
+        }
+        throw exception(USER_SAAS_ID_UNIQUE, user.getNickname());
     }
 
     /**
@@ -382,7 +435,7 @@ public class AdminUserServiceImpl implements AdminUserService {
      */
     @VisibleForTesting
     void validateOldPassword(Long id, String oldPassword) {
-        AdminUserDO user = userMapper.selectById(id);
+        SaasUserDO user = saasUserMapper.selectById(id);
         if (user == null) {
             throw exception(USER_NOT_EXISTS);
         }
@@ -432,6 +485,11 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     public List<AdminUserDO> getUserListByStatus(Integer status) {
         return userMapper.selectListByStatus(status);
+    }
+
+    @Override
+    public boolean isPasswordMatch(String rawPassword, String encodedPassword) {
+        return passwordEncoder.matches(rawPassword, encodedPassword);
     }
 
     /**

@@ -22,6 +22,7 @@ import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthPermissionInf
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSmsLoginReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSmsSendReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSocialLoginReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserRespVO;
 import cn.iocoder.yudao.module.system.convert.auth.AuthConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
@@ -109,7 +110,7 @@ public class AuthController {
     @Operation(summary = "获取登录用户的权限信息")
     public CommonResult<AuthPermissionInfoRespVO> getPermissionInfo() {
         // 1.1 获得用户信息
-        AdminUserDO user = adminUserService.getUser(getLoginUserId());
+        UserRespVO user = adminUserService.getUser(getLoginUserId());
         if (user == null) {
             return null;
         }

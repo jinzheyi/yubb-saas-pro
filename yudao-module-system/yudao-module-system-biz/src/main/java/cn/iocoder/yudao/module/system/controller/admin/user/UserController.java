@@ -72,14 +72,6 @@ public class UserController {
         return success(true);
     }
 
-    @PutMapping("/update-password")
-    @Operation(summary = "重置用户密码")
-    @PreAuthorize("@ss.hasPermission('system:user:update-password')")
-    public CommonResult<Boolean> updateUserPassword(@Valid @RequestBody UserUpdatePasswordReqVO reqVO) {
-        userService.updateUserPassword(reqVO.getId(), reqVO.getPassword());
-        return success(true);
-    }
-
     @PutMapping("/update-status")
     @Operation(summary = "修改用户状态")
     @PreAuthorize("@ss.hasPermission('system:user:update')")

@@ -70,6 +70,7 @@ public interface ErrorCodeConstants {
     ErrorCode USER_CREATE_SAAS_EXISTS = new ErrorCode(1_002_003_010, "添加用户时，邮箱账号和手机号不能都为空");
     ErrorCode USER_SAAS_USERNAME_NOT_EXISTS = new ErrorCode(1_002_003_011, "邮箱账号对应体系用户不存在");
     ErrorCode USER_SAAS_MOBILE_NOT_EXISTS = new ErrorCode(1_002_003_012, "手机号对应体系用户不存在");
+    ErrorCode USER_SAAS_ID_UNIQUE = new ErrorCode(1_002_003_013, "输入的邮箱账号或手机号已被昵称为【{}】员工绑定");
 
     // ========== 部门模块 1-002-004-000 ==========
     ErrorCode DEPT_NAME_DUPLICATE = new ErrorCode(1_002_004_000, "已经存在该名字的部门");

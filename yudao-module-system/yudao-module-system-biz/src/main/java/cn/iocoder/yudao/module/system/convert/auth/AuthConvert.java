@@ -8,6 +8,7 @@ import cn.iocoder.yudao.module.platform.api.sms.dto.code.SmsCodeSendReqDTO;
 import cn.iocoder.yudao.module.platform.api.sms.dto.code.SmsCodeUseReqDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.*;
+import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserRespVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
@@ -27,7 +28,7 @@ public interface AuthConvert {
 
     AuthLoginRespVO convert(OAuth2AccessTokenDO bean);
 
-    default AuthPermissionInfoRespVO convert(AdminUserDO user, List<RoleDO> roleList, List<TenantMenuRespDTO> menuList) {
+    default AuthPermissionInfoRespVO convert(UserRespVO user, List<RoleDO> roleList, List<TenantMenuRespDTO> menuList) {
         return AuthPermissionInfoRespVO.builder()
             .user(AuthPermissionInfoRespVO.UserVO.builder().id(user.getId()).nickname(user.getNickname()).avatar(user.getAvatar()).build())
             .roles(convertSet(roleList, RoleDO::getCode))

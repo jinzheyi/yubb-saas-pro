@@ -56,6 +56,7 @@ public class SaasUserDO extends BaseDO {
     private Integer sex;
     /**
      * 用户唯一标识值
+     * 创建时间+sy+用户id+雪花
      */
     private String openId;
     /**
