@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.system.service.user;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_ADMIN;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_COUNT_MAX;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_CREATE_SAAS_EXISTS;
@@ -26,9 +27,13 @@ import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.common.util.string.StrUtils;
 import cn.iocoder.yudao.framework.datapermission.core.util.DataPermissionUtils;
+import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
 import cn.iocoder.yudao.module.infra.api.file.FileApi;
+import cn.iocoder.yudao.module.platform.api.tenant.dto.tenant.TenantRespDTO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.MyTenantRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserImportExcelVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserImportRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserPageReqVO;
@@ -512,6 +517,31 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     public boolean isPasswordMatch(String rawPassword, String encodedPassword) {
         return passwordEncoder.matches(rawPassword, encodedPassword);
+    }
+
+    @Override
+    public List<MyTenantRespVO> getMyTenantList() {
+        AdminUserDO user = userMapper.selectById(getLoginUserId());
+        if (user == null) {
+            return Collections.emptyList();
+        }
+        List<MyTenantRespVO> tenantList = new ArrayList<>();
+        //忽略多租户进行查询
+        TenantUtils.executeIgnore(() -> {
+            List<AdminUserDO> userDOList = userMapper.selectList(
+                new LambdaQueryWrapperX<AdminUserDO>()
+                    .eq(AdminUserDO::getSaasUserId, user.getSaasUserId()));
+            for (AdminUserDO userDO : userDOList) {
+                MyTenantRespVO tenant = new MyTenantRespVO();
+                TenantRespDTO tenantRespDTO = tenantService.getTenantById(userDO.getTenantId());
+                tenant.setId(tenantRespDTO.getId());
+                tenant.setTenantName(tenantRespDTO.getName());
+                tenant.setStatus("正常");
+                tenant.setLoginDate(userDO.getLoginDate());
+                tenantList.add(tenant);
+            }
+        });
+        return tenantList;
     }
 
     /**

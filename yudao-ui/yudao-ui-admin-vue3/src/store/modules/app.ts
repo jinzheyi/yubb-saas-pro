@@ -20,6 +20,7 @@ interface AppState {
   size: boolean
   locale: boolean
   message: boolean
+  myTenant: boolean
   plugApp: boolean
   tagsView: boolean
   tagsViewIcon: boolean
@@ -58,6 +59,7 @@ export const useAppStore = defineStore('app', {
       size: true, // 尺寸图标
       locale: true, // 多语言图标
       message: true, // 消息图标
+      myTenant: true, // 我的租户图标
       plugApp: true, // 应用市场
       tagsView: true, // 标签页
       tagsViewIcon: true, // 是否显示标签图标
@@ -129,6 +131,9 @@ export const useAppStore = defineStore('app', {
     },
     getMessage(): boolean {
       return this.message
+    },
+    getMyTenant(): boolean {
+      return this.myTenant
     },
     getPlugApp(): boolean {
       return this.plugApp
@@ -209,6 +214,9 @@ export const useAppStore = defineStore('app', {
     },
     setMessage(message: boolean) {
       this.message = message
+    },
+    setMyTenant(myTenant: boolean) {
+      this.myTenant = myTenant
     },
     setPlugApp(plugApp: boolean) {
       this.plugApp = plugApp

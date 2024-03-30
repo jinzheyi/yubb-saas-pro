@@ -20,6 +20,11 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface AdminUserMapper extends BaseMapperX<AdminUserDO> {
 
+    /**
+     * 理论上SaaSUserId对应user表的多条记录，但这里会拼接上租户id，所以只会查询出一条记录
+     * @param saasUserId SaaS用户表id
+     * @return 结果
+     */
     default AdminUserDO selectBySaasUserId(Long saasUserId) {
         return selectOne(AdminUserDO::getSaasUserId, saasUserId);
     }

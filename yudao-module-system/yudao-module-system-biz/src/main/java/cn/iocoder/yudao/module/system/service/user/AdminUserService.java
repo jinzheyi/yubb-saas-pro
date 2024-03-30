@@ -194,4 +194,10 @@ public interface AdminUserService {
      */
     boolean isPasswordMatch(String rawPassword, String encodedPassword);
 
+    /**
+     * 获取当前用户的全部租户列表
+     * @return 結果
+     */
+    List<MyTenantRespVO> getMyTenantList();
+
 }

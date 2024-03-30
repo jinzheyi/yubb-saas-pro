@@ -21,6 +21,14 @@ public interface TenantService {
     TenantRespDTO getTenantByName(String name);
 
     /**
+     * 获得id对应的租户
+     *
+     * @param id 租户id
+     * @return 租户
+     */
+    TenantRespDTO getTenantById(Long id);
+
+    /**
      * 获得域名对应的租户
      *
      * @param website 域名

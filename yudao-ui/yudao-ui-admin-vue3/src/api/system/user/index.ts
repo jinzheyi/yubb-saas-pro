@@ -79,3 +79,8 @@ export const updateUserStatus = (id: number, status: number) => {
 export const getSimpleUserList = (): Promise<UserVO[]> => {
   return request.get({ url: '/system/user/simple-list' })
 }
+
+// 获取当前用户的我的全部租户列表
+export const getMyTenantList = async () => {
+  return await request.get({ url: '/system/user/get-myTenant-list' })
+}

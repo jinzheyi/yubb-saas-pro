@@ -35,6 +35,11 @@ public class TenantServiceImpl implements TenantService {
     }
 
     @Override
+    public TenantRespDTO getTenantById(Long id) {
+        return tenantApi.getTenant(id);
+    }
+
+    @Override
     public TenantRespDTO getTenantByWebsite(String website) {
         return tenantApi.getTenantByWebsite(website);
     }

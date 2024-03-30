@@ -12,6 +12,19 @@ export interface SmsLoginVO {
   code: string
 }
 
+/**
+ * 跳转目标租户
+ * @param id 租户id
+ */
+export function toTenant(id: number) {
+  return request.post({
+    url: '/system/auth/toTenant',
+    data: {
+      id
+    }
+  })
+}
+
 // 登录
 export const login = (data: UserLoginVO) => {
   return request.post({ url: '/system/auth/login', data })

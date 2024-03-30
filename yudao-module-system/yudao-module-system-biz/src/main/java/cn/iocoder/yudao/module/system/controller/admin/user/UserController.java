@@ -5,6 +5,7 @@ import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.common.util.validation.ValidGroup;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
 import cn.iocoder.yudao.framework.operatelog.core.annotations.OperateLog;
@@ -104,6 +105,12 @@ public class UserController {
         Map<Long, DeptDO> deptMap = deptService.getDeptMap(
                 convertList(list, AdminUserDO::getDeptId));
         return success(UserConvert.INSTANCE.convertSimpleList(list, deptMap));
+    }
+
+    @GetMapping("/get-myTenant-list")
+    @Operation(summary = "获取当前用户的全部租户列表")
+    public CommonResult<List<MyTenantRespVO>> getMyTenantList() {
+        return success(userService.getMyTenantList());
     }
 
     @GetMapping("/get")
