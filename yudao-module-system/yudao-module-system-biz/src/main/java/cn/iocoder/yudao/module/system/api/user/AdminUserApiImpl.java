@@ -7,6 +7,7 @@ import cn.hutool.core.util.ObjUtil;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.system.api.user.dto.AdminUserCreateReqDTO;
 import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
+import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserSaveReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
@@ -35,14 +36,14 @@ public class AdminUserApiImpl implements AdminUserApi {
 
     @Override
     public AdminUserRespDTO getUser(Long id) {
-        AdminUserDO user = adminUserService.getUser(id);
+        UserRespVO user = adminUserService.getUser(id);
         return BeanUtils.toBean(user, AdminUserRespDTO.class);
     }
 
     @Override
     public List<AdminUserRespDTO> getUserListBySubordinate(Long userId) {
         // 1.1 获取用户负责的部门
-        AdminUserDO user = adminUserService.getUser(userId);
+        UserRespVO user = adminUserService.getUser(userId);
         if (user == null) {
             return Collections.emptyList();
         }
@@ -51,7 +52,8 @@ public class AdminUserApiImpl implements AdminUserApi {
         if (dept == null) {
             return Collections.emptyList();
         }
-        if (ObjUtil.notEqual(dept.getLeaderUserId(), userId)) { // 校验为负责人
+        // 校验为负责人
+        if (ObjUtil.notEqual(dept.getLeaderUserId(), userId)) {
             return Collections.emptyList();
         }
         deptIds.add(dept.getId());

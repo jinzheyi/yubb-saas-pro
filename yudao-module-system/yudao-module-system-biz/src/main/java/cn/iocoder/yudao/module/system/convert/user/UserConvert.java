@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.system.convert.user;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.collection.MapUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserRespDTO;
 import cn.iocoder.yudao.module.system.controller.admin.dept.vo.dept.DeptSimpleRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.dept.vo.post.PostSimpleRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.permission.vo.role.RoleSimpleRespVO;
@@ -12,13 +13,11 @@ import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserSimpleRe
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.PostDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
-import cn.iocoder.yudao.module.system.dal.dataobject.social.SocialUserDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
-import org.mapstruct.Mapper;
-import org.mapstruct.factory.Mappers;
-
 import java.util.List;
 import java.util.Map;
+import org.mapstruct.Mapper;
+import org.mapstruct.factory.Mappers;
 
 @Mapper
 public interface UserConvert {
@@ -45,8 +44,8 @@ public interface UserConvert {
         });
     }
 
-    default UserProfileRespVO convert(AdminUserDO user, List<RoleDO> userRoles,
-        DeptDO dept, List<PostDO> posts, List<SocialUserDO> socialUsers) {
+    default UserProfileRespVO convert(UserRespVO user, List<RoleDO> userRoles,
+        DeptDO dept, List<PostDO> posts, List<SocialUserRespDTO> socialUsers) {
         UserProfileRespVO userVO = BeanUtils.toBean(user, UserProfileRespVO.class);
         userVO.setRoles(BeanUtils.toBean(userRoles, RoleSimpleRespVO.class));
         userVO.setDept(BeanUtils.toBean(dept, DeptSimpleRespVO.class));

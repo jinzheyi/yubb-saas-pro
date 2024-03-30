@@ -19,6 +19,8 @@ public class CommonConstants {
      */
     public static final String USER_NAME = "admin";
 
+    public static final String SY = "sy";
+
     /**
      * 应用订单状态
      */

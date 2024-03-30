@@ -21,6 +21,7 @@ import cn.iocoder.yudao.module.system.api.plug.dto.tenant.PlugAppEnableReqDTO;
 import cn.iocoder.yudao.module.system.controller.admin.plug.vo.tenant.PlugTenantPageReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.plug.vo.tenant.PlugTenantRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.plug.vo.tenant.PlugTenantUpdateReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserRespVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.plug.PlugTenantDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.module.system.dal.mysql.plug.PlugTenantMapper;
@@ -128,10 +129,12 @@ public class PlugTenantServiceImpl extends ServiceImpl<PlugTenantMapper, PlugTen
         if (ArrayUtil.isEmpty(plugAppSn)) {
             return true;
         }
-        AdminUserDO user = adminUserService.getUser(userId);
+        //根据租户用户编号查询所属用户信息，会一并查询出对应SaaS体系用户信息
+        UserRespVO user = adminUserService.getUser(userId);
         if (Objects.isNull(user)) {
             return false;
         }
+        //查询租户包含的插件
         List<PlugTenantDO> plugTenantDoS = plugTenantMapper.selectList(PlugTenantDO::getTenantId,
             user.getTenantId());
         //当前访问用户所属租户没有购买任何插件

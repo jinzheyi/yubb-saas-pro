@@ -17,7 +17,9 @@ import java.util.Arrays;
 public enum CommonStatusEnum implements IntArrayValuable {
 
     ENABLE(0, "开启"),
-    DISABLE(1, "关闭");
+    DISABLE(1, "关闭"),
+
+    AWAIT(-1, "等待确认");
 
     public static final int[] ARRAYS = Arrays.stream(values()).mapToInt(CommonStatusEnum::getStatus).toArray();
 

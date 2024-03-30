@@ -20,7 +20,7 @@
           :inline="true"
           label-width="68px"
         >
-          <el-form-item label="用户名称" prop="username">
+          <el-form-item label="邮箱账号" prop="username">
             <el-input
               v-model="queryParams.username"
               placeholder="请输入用户名称"
@@ -74,14 +74,14 @@
             >
               <Icon icon="ep:plus" /> 新增
             </el-button>
-            <el-button
-              type="warning"
-              plain
-              @click="handleImport"
-              v-hasPermi="['system:user:import']"
-            >
-              <Icon icon="ep:upload" /> 导入
-            </el-button>
+<!--            <el-button-->
+<!--              type="warning"-->
+<!--              plain-->
+<!--              @click="handleImport"-->
+<!--              v-hasPermi="['system:user:import']"-->
+<!--            >-->
+<!--              <Icon icon="ep:upload" /> 导入-->
+<!--            </el-button>-->
             <el-button
               type="success"
               plain
@@ -98,7 +98,7 @@
         <el-table v-loading="loading" :data="list">
           <el-table-column label="用户编号" align="center" key="id" prop="id" />
           <el-table-column
-            label="用户名称"
+            label="邮箱账号"
             align="center"
             prop="username"
             :show-overflow-tooltip="true"

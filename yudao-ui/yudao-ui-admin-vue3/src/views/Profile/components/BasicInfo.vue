@@ -29,8 +29,8 @@ const message = useMessage() // 消息弹窗
 // 表单校验
 const rules = reactive<FormRules>({
   nickname: [{ required: true, message: t('profile.rules.nickname'), trigger: 'blur' }],
-  email: [
-    { required: true, message: t('profile.rules.mail'), trigger: 'blur' },
+  username: [
+    { message: t('profile.rules.mail'), trigger: 'blur' },
     {
       type: 'email',
       message: t('profile.rules.truemail'),
@@ -38,7 +38,7 @@ const rules = reactive<FormRules>({
     }
   ],
   mobile: [
-    { required: true, message: t('profile.rules.phone'), trigger: 'blur' },
+    { message: t('profile.rules.phone'), trigger: 'blur' },
     {
       pattern: /^1[3|4|5|6|7|8|9][0-9]\d{8}$/,
       message: t('profile.rules.truephone'),
@@ -53,13 +53,13 @@ const schema = reactive<FormSchema[]>([
     component: 'Input'
   },
   {
-    field: 'mobile',
-    label: t('profile.user.mobile'),
+    field: 'username',
+    label: t('profile.user.username'),
     component: 'Input'
   },
   {
-    field: 'email',
-    label: t('profile.user.email'),
+    field: 'mobile',
+    label: t('profile.user.mobile'),
     component: 'Input'
   },
   {

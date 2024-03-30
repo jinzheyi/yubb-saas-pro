@@ -1,10 +1,15 @@
 package cn.iocoder.yudao.framework.common.util.string;
 
+import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ArrayUtil;
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 
+import cn.iocoder.yudao.framework.common.enums.CommonConstants;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -64,6 +69,15 @@ public class StrUtils {
         return Arrays.stream(content.split("\n"))
                 .filter(line -> !line.contains(sequence))
                 .collect(Collectors.joining("\n"));
+    }
+
+    /**
+     * 生成有意义的唯一值
+     * @param userId 用户id
+     * @return 结果
+     */
+    public static String uniqueId(Long userId) {
+        return DateUtil.format(new Date(), DatePattern.PURE_DATETIME_FORMATTER) + CommonConstants.SY + userId + CommonConstants.SY + IdUtil.getSnowflakeNextId();
     }
 
 }

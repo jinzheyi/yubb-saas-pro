@@ -1,5 +1,20 @@
 package cn.iocoder.yudao.module.system.service.user;
 
+import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_ADMIN;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_COUNT_MAX;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_CREATE_SAAS_EXISTS;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_IMPORT_LIST_IS_EMPTY;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_IS_DISABLE;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_PASSWORD_FAILED;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_SAAS_ID_UNIQUE;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_SAAS_MOBILE_NOT_EXISTS;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_SAAS_USERNAME_NOT_EXISTS;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_USERNAME_EXISTS;
+
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.io.IoUtil;
@@ -9,6 +24,7 @@ import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.framework.common.util.string.StrUtils;
 import cn.iocoder.yudao.framework.datapermission.core.util.DataPermissionUtils;
 import cn.iocoder.yudao.module.infra.api.file.FileApi;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
@@ -30,22 +46,24 @@ import cn.iocoder.yudao.module.system.service.dept.PostService;
 import cn.iocoder.yudao.module.system.service.permission.PermissionService;
 import cn.iocoder.yudao.module.system.service.tenant.TenantService;
 import com.google.common.annotations.VisibleForTesting;
+import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javax.annotation.Resource;
-import java.io.InputStream;
-import java.time.LocalDateTime;
-import java.util.*;
-
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 后台用户 Service 实现类
@@ -56,7 +74,7 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 @Slf4j
 public class AdminUserServiceImpl implements AdminUserService {
 
-    @Value("${sys.user.init-password:yudaoyuanma}")
+    @Value("${sys.user.init-password:shengyuyuanma}")
     private String userInitPassword;
 
     @Resource
@@ -106,15 +124,18 @@ public class AdminUserServiceImpl implements AdminUserService {
             SaasUserDO mobileSaasDO = saasUserMapper.selectByMobile(createReqVO.getMobile());
             user.setSaasUserId(mobileSaasDO.getId());
         }
-        // 默认开启
-        user.setStatus(CommonStatusEnum.ENABLE.getStatus());
-        user.setOpenAccount();
+        // 等待SaaS用户确认
+        user.setStatus(CommonStatusEnum.AWAIT.getStatus());
         userMapper.insert(user);
+        //添加时初次设置值
+        user.setOpenAccount(StrUtils.uniqueId(user.getId()));
+        userMapper.updateById(user);
         // 插入关联岗位
         if (CollectionUtil.isNotEmpty(user.getPostIds())) {
             userPostMapper.insertBatch(convertList(user.getPostIds(),
                     postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
+        //todo 发送站内信通知SaaS用户确认被邀请
         return user.getId();
     }
 
@@ -300,7 +321,8 @@ public class AdminUserServiceImpl implements AdminUserService {
             return Collections.emptySet();
         }
         Set<Long> deptIds = convertSet(deptService.getChildDeptList(deptId), DeptDO::getId);
-        deptIds.add(deptId); // 包括自身
+        // 包括自身
+        deptIds.add(deptId);
         return deptIds;
     }
 
@@ -308,8 +330,8 @@ public class AdminUserServiceImpl implements AdminUserService {
      * 新增时的校验
      * @param username SaaS用户表的邮箱账号
      * @param mobile SaaS表的手机号
-     * @param deptId
-     * @param postIds
+     * @param deptId 部门编号
+     * @param postIds 多个岗位编号
      */
     private void validateUserForCreate(String username, String mobile, String openAccount,
                                                Long deptId, Set<Long> postIds) {
@@ -444,43 +466,43 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
     }
 
-    @Override
-    @Transactional(rollbackFor = Exception.class) // 添加事务，异常则回滚所有导入
-    public UserImportRespVO importUserList(List<UserImportExcelVO> importUsers, boolean isUpdateSupport) {
-        if (CollUtil.isEmpty(importUsers)) {
-            throw exception(USER_IMPORT_LIST_IS_EMPTY);
-        }
-        UserImportRespVO respVO = UserImportRespVO.builder().createUsernames(new ArrayList<>())
-                .updateUsernames(new ArrayList<>()).failureUsernames(new LinkedHashMap<>()).build();
-        importUsers.forEach(importUser -> {
-            // 校验，判断是否有不符合的原因
-            try {
-                validateUserForCreateOrUpdate(null, null, importUser.getMobile(), importUser.getEmail(),
-                        importUser.getDeptId(), null);
-            } catch (ServiceException ex) {
-                respVO.getFailureUsernames().put(importUser.getUsername(), ex.getMessage());
-                return;
-            }
-            // 判断如果不存在，在进行插入
-            AdminUserDO existUser = userMapper.selectByUsername(importUser.getUsername());
-            if (existUser == null) {
-                userMapper.insert(BeanUtils.toBean(importUser, AdminUserDO.class)
-                        .setPassword(encodePassword(userInitPassword)).setPostIds(new HashSet<>())); // 设置默认密码及空岗位编号数组
-                respVO.getCreateUsernames().add(importUser.getUsername());
-                return;
-            }
-            // 如果存在，判断是否允许更新
-            if (!isUpdateSupport) {
-                respVO.getFailureUsernames().put(importUser.getUsername(), USER_USERNAME_EXISTS.getMsg());
-                return;
-            }
-            AdminUserDO updateUser = BeanUtils.toBean(importUser, AdminUserDO.class);
-            updateUser.setId(existUser.getId());
-            userMapper.updateById(updateUser);
-            respVO.getUpdateUsernames().add(importUser.getUsername());
-        });
-        return respVO;
-    }
+//    @Override
+//    @Transactional(rollbackFor = Exception.class) // 添加事务，异常则回滚所有导入
+//    public UserImportRespVO importUserList(List<UserImportExcelVO> importUsers, boolean isUpdateSupport) {
+//        if (CollUtil.isEmpty(importUsers)) {
+//            throw exception(USER_IMPORT_LIST_IS_EMPTY);
+//        }
+//        UserImportRespVO respVO = UserImportRespVO.builder().createUsernames(new ArrayList<>())
+//                .updateUsernames(new ArrayList<>()).failureUsernames(new LinkedHashMap<>()).build();
+//        importUsers.forEach(importUser -> {
+//            // 校验，判断是否有不符合的原因
+//            try {
+//                validateUserForCreateOrUpdate(null, null, importUser.getMobile(), importUser.getEmail(),
+//                        importUser.getDeptId(), null);
+//            } catch (ServiceException ex) {
+//                respVO.getFailureUsernames().put(importUser.getUsername(), ex.getMessage());
+//                return;
+//            }
+//            // 判断如果不存在，在进行插入
+//            AdminUserDO existUser = userMapper.selectByUsername(importUser.getUsername());
+//            if (existUser == null) {
+//                userMapper.insert(BeanUtils.toBean(importUser, AdminUserDO.class)
+//                        .setPassword(encodePassword(userInitPassword)).setPostIds(new HashSet<>())); // 设置默认密码及空岗位编号数组
+//                respVO.getCreateUsernames().add(importUser.getUsername());
+//                return;
+//            }
+//            // 如果存在，判断是否允许更新
+//            if (!isUpdateSupport) {
+//                respVO.getFailureUsernames().put(importUser.getUsername(), USER_USERNAME_EXISTS.getMsg());
+//                return;
+//            }
+//            AdminUserDO updateUser = BeanUtils.toBean(importUser, AdminUserDO.class);
+//            updateUser.setId(existUser.getId());
+//            userMapper.updateById(updateUser);
+//            respVO.getUpdateUsernames().add(importUser.getUsername());
+//        });
+//        return respVO;
+//    }
 
     @Override
     public List<AdminUserDO> getUserListByStatus(Integer status) {

@@ -5,6 +5,7 @@ import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserRespDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserUnbindReqDTO;
 
+import java.util.List;
 import javax.validation.Valid;
 
 /**
@@ -51,5 +52,14 @@ public interface TenantSocialUserApi {
      * @return 社交用户
      */
     SocialUserRespDTO getSocialUserByCode(Integer userType, Integer socialType, String code, String state);
+
+    /**
+     * 获得指定用户的社交用户列表
+     *
+     * @param userId   用户编号
+     * @param userType 用户类型
+     * @return 社交用户列表
+     */
+    List<SocialUserRespDTO> getSocialUserList(Long userId, Integer userType);
 
 }

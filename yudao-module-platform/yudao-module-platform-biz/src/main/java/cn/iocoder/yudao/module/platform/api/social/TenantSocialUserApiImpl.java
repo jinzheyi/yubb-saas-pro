@@ -1,9 +1,11 @@
 package cn.iocoder.yudao.module.platform.api.social;
 
+import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserRespDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserUnbindReqDTO;
 import cn.iocoder.yudao.module.platform.service.social.SocialUserService;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -40,6 +42,11 @@ public class TenantSocialUserApiImpl implements TenantSocialUserApi {
     @Override
     public SocialUserRespDTO getSocialUserByCode(Integer userType, Integer socialType, String code, String state) {
        return socialUserService.getSocialUserByCode(userType, socialType, code, state);
+    }
+
+    @Override
+    public List<SocialUserRespDTO> getSocialUserList(Long userId, Integer userType) {
+        return BeanUtils.toBean(socialUserService.getSocialUserList(userId, userType), SocialUserRespDTO.class);
     }
 
 }

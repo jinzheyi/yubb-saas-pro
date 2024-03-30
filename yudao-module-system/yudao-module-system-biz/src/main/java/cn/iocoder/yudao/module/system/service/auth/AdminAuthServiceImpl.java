@@ -107,10 +107,12 @@ public class AdminAuthServiceImpl implements AdminAuthService {
 
         // 如果 socialType 非空，说明需要绑定社交用户
         if (reqVO.getSocialType() != null) {
-            socialUserService.bindSocialUser(new SocialUserBindReqDTO(user.getId(), getUserType().getValue(),
+            SaasUserDO saasUserDO = saasUserService.getUser(user.getSaasUserId());
+            //三方平台绑定用户需要操作的是SaaS用户，因为不可能每个租户都要进行重复的绑定
+            socialUserService.bindSocialUser(new SocialUserBindReqDTO(saasUserDO.getId(), getUserType().getValue(),
                     reqVO.getSocialType(), reqVO.getSocialCode(), reqVO.getSocialState()));
         }
-        // 创建 Token 令牌，记录登录日志
+        // 创建 Token 令牌需要基于租户用户，因为每个租户的登录逻辑是跟随租户进行的，记录登录日志
         return createTokenAfterLoginSuccess(user.getId(), reqVO.getUsername(), LoginLogTypeEnum.LOGIN_USERNAME);
     }
 

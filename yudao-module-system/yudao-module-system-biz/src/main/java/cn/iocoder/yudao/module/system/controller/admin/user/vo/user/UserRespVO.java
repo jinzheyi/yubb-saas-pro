@@ -23,8 +23,8 @@ public class UserRespVO{
     @Schema(description = "所属SaaS用户表编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Long saasUserId;
 
-    @Schema(description = "用户账号", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudao")
-    @ExcelProperty("用户名称")
+    @Schema(description = "邮箱账号", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudao")
+    @ExcelProperty("邮箱账号")
     private String username;
 
     @Schema(description = "用户昵称", requiredMode = Schema.RequiredMode.REQUIRED, example = "芋艿")
@@ -74,5 +74,8 @@ public class UserRespVO{
 
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED, example = "时间戳格式")
     private LocalDateTime createTime;
+
+    @Schema(description = "所属多租户编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    private Long tenantId;
 
 }

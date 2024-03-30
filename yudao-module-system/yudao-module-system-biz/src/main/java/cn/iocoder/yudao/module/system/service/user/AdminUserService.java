@@ -168,14 +168,14 @@ public interface AdminUserService {
      */
     List<AdminUserDO> getUserListByNickname(String nickname);
 
-    /**
-     * 批量导入用户
-     *
-     * @param importUsers     导入用户列表
-     * @param isUpdateSupport 是否支持更新
-     * @return 导入结果
-     */
-    UserImportRespVO importUserList(List<UserImportExcelVO> importUsers, boolean isUpdateSupport);
+//    /**
+//     * 批量导入用户
+//     *
+//     * @param importUsers     导入用户列表
+//     * @param isUpdateSupport 是否支持更新
+//     * @return 导入结果
+//     */
+//    UserImportRespVO importUserList(List<UserImportExcelVO> importUsers, boolean isUpdateSupport);
 
     /**
      * 获得指定状态的用户们
@@ -184,5 +184,14 @@ public interface AdminUserService {
      * @return 用户们
      */
     List<AdminUserDO> getUserListByStatus(Integer status);
+
+    /**
+     * 判断密码是否匹配
+     *
+     * @param rawPassword 未加密的密码
+     * @param encodedPassword 加密后的密码
+     * @return 是否匹配
+     */
+    boolean isPasswordMatch(String rawPassword, String encodedPassword);
 
 }

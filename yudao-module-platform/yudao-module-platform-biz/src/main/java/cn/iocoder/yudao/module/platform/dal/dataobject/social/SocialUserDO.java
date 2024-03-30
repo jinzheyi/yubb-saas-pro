@@ -8,7 +8,9 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
 
 /**
- * 社交（三方）用户
+ * 社交（三方）用户,
+ * 1、三方登錄用戶当是平台用户三方用户登录时绑定的是平台用户id
+ * 2、当如果是租户用户三方登录时绑定的是SaaS体系用户id，因为一个SaaS用户体系用户可以对应多个租户，不能直接使用租户用户id
  *
  * @author weir
  */

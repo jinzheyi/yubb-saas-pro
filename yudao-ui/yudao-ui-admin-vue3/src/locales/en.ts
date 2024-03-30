@@ -106,7 +106,7 @@ export default {
     welcome: 'Welcome to the system',
     message: 'Backstage management system',
     tenantname: 'TenantName',
-    username: 'Username',
+    username: 'Email account',
     password: 'Password',
     code: 'verification code',
     login: 'Sign in',
@@ -395,7 +395,7 @@ export default {
   profile: {
     user: {
       title: 'Personal Information',
-      username: 'User Name',
+      username: 'Email account',
       nickname: 'Nick Name',
       mobile: 'Phone Number',
       email: 'User Mail',

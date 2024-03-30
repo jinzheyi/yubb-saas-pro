@@ -106,7 +106,7 @@ export default {
     welcome: '欢迎使用本系统',
     message: '开箱即用的中后台管理系统',
     tenantname: '租户名称',
-    username: '用户名',
+    username: '邮箱账号',
     password: '密码',
     code: '验证码',
     login: '登录',
@@ -388,7 +388,7 @@ export default {
   profile: {
     user: {
       title: '个人信息',
-      username: '用户名称',
+      username: '邮箱账号',
       nickname: '用户昵称',
       mobile: '手机号码',
       email: '用户邮箱',
