@@ -10,6 +10,7 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_THIRD
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.enums.logger.LoginLogTypeEnum;
@@ -260,7 +261,8 @@ public class AdminAuthServiceImpl implements AdminAuthService {
      */
     private AdminUserDO getAdminUser(SaasUserDO saasUserDO, LoginLogTypeEnum logTypeEnum) {
         //查询当前用户默认的租户id
-        AdminUserDO adminUser = getAdminUser(saasUserDO, saasUserDO.getDefaultTenant(), logTypeEnum);
+        AdminUserDO adminUser = getAdminUser(saasUserDO,
+            Objects.nonNull(saasUserDO.getDefaultTenant())? saasUserDO.getDefaultTenant() : saasUserDO.getMyTenant(), logTypeEnum);
         //如果默认的禁用了，则只能取它自己的所属租户了
         if (Objects.isNull(adminUser)) {
             //这里查询自己的租户不可能为空，如果为空了那肯定是数据的问题

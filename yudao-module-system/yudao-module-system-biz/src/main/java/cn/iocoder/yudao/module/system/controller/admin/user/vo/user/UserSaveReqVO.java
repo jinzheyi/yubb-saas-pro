@@ -19,9 +19,9 @@ public class UserSaveReqVO {
     @NotNull(message = "用户编号不能为空", groups = {ValidGroup.Update.class})
     private Long id;
 
-    @Schema(description = "邮箱账号,saas用户表的邮箱账号，用于通知SaaS用户邀请", example = "yudao")
+    @Schema(description = "邮箱账号,saas用户表的邮箱账号，用于通知SaaS用户邀请", example = "jin_zheyicn@qq.com")
     @Email(message = "邮箱账号格式不正确", groups = {ValidGroup.Insert.class})
-    @Size(max = 50, message = "邮箱长度不能超过 50 个字符", groups = {ValidGroup.Insert.class})
+    @Size(max = 50, message = "邮箱账号长度不能超过 50 个字符", groups = {ValidGroup.Insert.class})
     private String username;
 
     @Schema(description = "账号,成员唯一标识，可以使用工号、邮箱等公司系统内统一的ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudao")

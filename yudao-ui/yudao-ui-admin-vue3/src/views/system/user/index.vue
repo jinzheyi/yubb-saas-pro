@@ -162,12 +162,12 @@
                       >
                         <Icon icon="ep:delete" />删除
                       </el-dropdown-item>
-                      <el-dropdown-item
-                        command="handleResetPwd"
-                        v-if="checkPermi(['system:user:update-password'])"
-                      >
-                        <Icon icon="ep:key" />重置密码
-                      </el-dropdown-item>
+<!--                      <el-dropdown-item-->
+<!--                        command="handleResetPwd"-->
+<!--                        v-if="checkPermi(['system:user:update-password'])"-->
+<!--                      >-->
+<!--                        <Icon icon="ep:key" />重置密码-->
+<!--                      </el-dropdown-item>-->
                       <el-dropdown-item
                         command="handleRole"
                         v-if="checkPermi(['system:permission:assign-user-role'])"

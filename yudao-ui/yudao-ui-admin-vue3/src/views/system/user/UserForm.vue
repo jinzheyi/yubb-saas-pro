@@ -28,46 +28,29 @@
       </el-row>
       <el-row>
         <el-col :span="12">
-          <el-form-item label="手机号码" prop="mobile">
-            <el-input v-model="formData.mobile" maxlength="11" placeholder="请输入手机号码" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="邮箱" prop="email">
-            <el-input v-model="formData.email" maxlength="50" placeholder="请输入邮箱" />
-          </el-form-item>
-        </el-col>
-      </el-row>
-      <el-row>
-        <el-col :span="12">
-          <el-form-item v-if="formData.id === undefined" label="用户名称" prop="username">
-            <el-input v-model="formData.username" placeholder="请输入用户名称" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item v-if="formData.id === undefined" label="用户密码" prop="password">
-            <el-input
-              v-model="formData.password"
-              placeholder="请输入用户密码"
-              show-password
-              type="password"
-            />
-          </el-form-item>
-        </el-col>
-      </el-row>
-      <el-row>
-        <el-col :span="12">
-          <el-form-item label="用户性别">
-            <el-select v-model="formData.sex" placeholder="请选择">
-              <el-option
-                v-for="dict in getIntDictOptions(DICT_TYPE.SYSTEM_USER_SEX)"
-                :key="dict.value"
-                :label="dict.label"
-                :value="dict.value"
+          <el-form-item v-if="formData.id === undefined" label="邮箱账号" prop="username">
+            <template #label>
+              <Tooltip
+                message="成员通过验证该邮箱账号后可加入租户企业"
+                title="账号"
               />
-            </el-select>
+            </template>
+            <el-input v-model="formData.username" placeholder="请输入成员邮箱账号" />
           </el-form-item>
         </el-col>
+        <el-col :span="12">
+          <el-form-item v-if="formData.id === undefined" label="手机号" prop="mobile">
+            <template #label>
+              <Tooltip
+                message="成员通过验证该手机号码后可加入租户企业"
+                title="手机号"
+              />
+            </template>
+            <el-input v-model="formData.mobile" maxlength="11" placeholder="请输入成员手机号码" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
         <el-col :span="12">
           <el-form-item label="岗位">
             <el-select v-model="formData.postIds" multiple placeholder="请选择">
@@ -120,7 +103,6 @@ const formData = ref({
   email: '',
   id: undefined,
   username: '',
-  password: '',
   sex: undefined,
   postIds: [],
   remark: '',
@@ -128,13 +110,12 @@ const formData = ref({
   roleIds: []
 })
 const formRules = reactive<FormRules>({
-  username: [{ required: true, message: '用户名称不能为空', trigger: 'blur' }],
   nickname: [{ required: true, message: '用户昵称不能为空', trigger: 'blur' }],
-  password: [{ required: true, message: '用户密码不能为空', trigger: 'blur' }],
-  email: [
+  username: [
     {
+      required: true,
       type: 'email',
-      message: '请输入正确的邮箱地址',
+      message: '请输入正确的邮箱账号地址',
       trigger: ['blur', 'change']
     }
   ],
@@ -207,7 +188,6 @@ const resetForm = () => {
     email: '',
     id: undefined,
     username: '',
-    password: '',
     sex: undefined,
     postIds: [],
     remark: '',

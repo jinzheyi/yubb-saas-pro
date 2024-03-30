@@ -118,7 +118,7 @@ export default {
     hasUser: 'Existing account? Go to login',
     forgetPassword: 'Forget password?',
     tenantNamePlaceholder: 'Please Enter Tenant Name',
-    usernamePlaceholder: 'Please Enter Username',
+    usernamePlaceholder: 'Please Enter Email account',
     passwordPlaceholder: 'Please Enter Password',
     codePlaceholder: 'Please Enter Verification Code',
     mobileTitle: 'Mobile sign in',
