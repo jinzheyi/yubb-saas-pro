@@ -78,8 +78,9 @@ public interface AdminAuthService {
      * 切换目标租户
      *
      * @param reqVO 切换信息
+     * @param token 原token
      * @return 切换结果
      */
-    AuthLoginRespVO toTenant(@Valid ToTenantReqVO reqVO);
+    AuthLoginRespVO toTenant(@Valid ToTenantReqVO reqVO, String token);
 
 }

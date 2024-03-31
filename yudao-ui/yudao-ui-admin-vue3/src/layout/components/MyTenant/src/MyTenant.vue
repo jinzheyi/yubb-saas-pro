@@ -4,6 +4,8 @@ import * as UserApi from '@/api/system/user'
 import * as LoginApi from "@/api/login";
 import * as authUtil from "@/utils/auth";
 import { usePermissionStore } from '@/store/modules/permission'
+import {useUserStore} from "@/store/modules/user";
+import {useTagsViewStore} from "@/store/modules/tagsView";
 
 defineOptions({ name: 'MyTenant' })
 
@@ -12,6 +14,8 @@ const list = ref<any[]>([]) // 租户列表
 const redirect = ref<string>('')
 const { push } = useRouter()
 const permissionStore = usePermissionStore()
+const userStore = useUserStore()
+const tagsViewStore = useTagsViewStore()
 
 const getList = async () => {
   list.value = await UserApi.getMyTenantList()
@@ -23,11 +27,15 @@ const toTenant = async (id: number) => {
   if (!res) {
     return
   }
+  //推出登錄的一些操作
+  await userStore.loginToTenantOut()
+  tagsViewStore.delAllViews()
   authUtil.setToken(res)
   if (!redirect.value) {
     redirect.value = '/'
   }
   push({ path: redirect.value || permissionStore.addRouters[0].path })
+  location.reload();
 }
 
 </script>

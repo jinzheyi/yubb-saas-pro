@@ -180,8 +180,10 @@ public class AuthController {
     @PostMapping("/toTenant")
     @Operation(summary = "跳转到目标租户", description = "跳转到目标租户")
     @OperateLog(enable = false) // 避免 Post 请求被记录操作日志
-    public CommonResult<AuthLoginRespVO> toTenant(@RequestBody @Valid ToTenantReqVO reqVO) {
-        return success(adminAuthService.toTenant(reqVO));
+    public CommonResult<AuthLoginRespVO> toTenant(@RequestBody @Valid ToTenantReqVO reqVO, HttpServletRequest request) {
+        String token = SecurityFrameworkUtils.obtainAuthorization(request,
+            securityProperties.getTokenHeader(), securityProperties.getTokenParameter());
+        return success(adminAuthService.toTenant(reqVO, token));
     }
 
 }

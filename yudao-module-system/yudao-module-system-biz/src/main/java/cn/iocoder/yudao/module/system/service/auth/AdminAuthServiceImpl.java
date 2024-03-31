@@ -14,6 +14,7 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.TENANT_NOT
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.enums.logger.LoginLogTypeEnum;
@@ -23,6 +24,7 @@ import cn.iocoder.yudao.framework.common.enums.sms.SmsSceneEnum;
 import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.common.util.validation.ValidationUtils;
+import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
 import cn.iocoder.yudao.module.platform.api.sms.SmsCodeApi;
 import cn.iocoder.yudao.module.platform.api.social.TenantSocialUserApi;
@@ -226,7 +228,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     }
 
     @Override
-    public AuthLoginRespVO toTenant(ToTenantReqVO reqVO) {
+    public AuthLoginRespVO toTenant(ToTenantReqVO reqVO, String token) {
         TenantRespDTO tenantRespDTO = Optional.ofNullable(tenantService.getTenantById(reqVO.getId()))
             .orElseThrow(() -> exception(TENANT_NOT_EXISTS));
         UserRespVO userRespVO = Optional.ofNullable(adminUserService.getUser(getLoginUserId()))
@@ -236,6 +238,10 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         AdminUserDO adminUser = getAdminUser(saasUserDO, tenantRespDTO.getId(), null);
         if (adminUser == null) {
             throw exception(AUTH_TO_TENANT_EXCEPTION);
+        }
+        //清除原來的登錄token
+        if (StrUtil.isNotBlank(token)) {
+            logout(token, LoginLogTypeEnum.LOGOUT_TO_TENANT.getType());
         }
         //更新SaaS用户信息
         setSaasUserInfo(saasUserDO, adminUser);
@@ -323,6 +329,8 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             TenantContextHolder.setIgnore(oldIgnore);
             return null;
         }
+        TenantContextHolder.setTenantId(oldTenantId);
+        TenantContextHolder.setIgnore(oldIgnore);
         return adminUserDO;
     }
 

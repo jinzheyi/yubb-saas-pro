@@ -66,6 +66,11 @@ export const useUserStore = defineStore('admin-user', {
       wsCache.clear()
       this.resetState()
     },
+    async loginToTenantOut() {
+      removeToken()
+      wsCache.clear()
+      this.resetState()
+    },
     resetState() {
       this.permissions = []
       this.roles = []

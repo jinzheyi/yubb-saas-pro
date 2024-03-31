@@ -18,6 +18,7 @@ public enum LoginLogTypeEnum {
 
     LOGOUT_SELF(200),  // 自己主动登出
     LOGOUT_DELETE(202), // 强制退出
+    LOGOUT_TO_TENANT(203), // 切換租戶退出
     ;
 
     /**
