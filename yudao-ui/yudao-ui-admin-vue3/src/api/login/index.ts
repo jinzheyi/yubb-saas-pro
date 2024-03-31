@@ -1,5 +1,5 @@
 import request from '@/config/axios'
-import { getRefreshToken } from '@/utils/auth'
+import {getRefreshToken} from '@/utils/auth'
 import type { UserLoginVO } from './types'
 
 export interface SmsCodeVO {
@@ -16,7 +16,7 @@ export interface SmsLoginVO {
  * 跳转目标租户
  * @param id 租户id
  */
-export function toTenant(id: number) {
+export const toTenant = (id: number) => {
   return request.post({
     url: '/system/auth/toTenant',
     data: {

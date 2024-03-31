@@ -1,8 +1,12 @@
 package cn.iocoder.yudao.module.system.service.auth;
 
-import cn.iocoder.yudao.module.system.controller.admin.auth.vo.*;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthLoginReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthLoginRespVO;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSmsLoginReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSmsSendReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSocialLoginReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.ToTenantReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
-
 import javax.validation.Valid;
 
 /**
@@ -69,5 +73,13 @@ public interface AdminAuthService {
      * @return 登录结果
      */
     AuthLoginRespVO refreshToken(String refreshToken);
+
+    /**
+     * 切换目标租户
+     *
+     * @param reqVO 切换信息
+     * @return 切换结果
+     */
+    AuthLoginRespVO toTenant(@Valid ToTenantReqVO reqVO);
 
 }

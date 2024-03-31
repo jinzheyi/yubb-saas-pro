@@ -22,6 +22,7 @@ import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthPermissionInf
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSmsLoginReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSmsSendReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSocialLoginReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.ToTenantReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserRespVO;
 import cn.iocoder.yudao.module.system.convert.auth.AuthConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
@@ -174,6 +175,13 @@ public class AuthController {
     @OperateLog(enable = false) // 避免 Post 请求被记录操作日志
     public CommonResult<AuthLoginRespVO> socialQuickLogin(@RequestBody @Valid AuthSocialLoginReqVO reqVO) {
         return success(adminAuthService.socialLogin(reqVO));
+    }
+
+    @PostMapping("/toTenant")
+    @Operation(summary = "跳转到目标租户", description = "跳转到目标租户")
+    @OperateLog(enable = false) // 避免 Post 请求被记录操作日志
+    public CommonResult<AuthLoginRespVO> toTenant(@RequestBody @Valid ToTenantReqVO reqVO) {
+        return success(adminAuthService.toTenant(reqVO));
     }
 
 }

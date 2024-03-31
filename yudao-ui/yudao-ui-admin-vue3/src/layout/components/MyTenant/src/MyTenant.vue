@@ -2,22 +2,32 @@
 import { formatDate } from '@/utils/formatTime'
 import * as UserApi from '@/api/system/user'
 import * as LoginApi from "@/api/login";
+import * as authUtil from "@/utils/auth";
+import { usePermissionStore } from '@/store/modules/permission'
 
 defineOptions({ name: 'MyTenant' })
 
 const activeName = ref('myTenant')
 const list = ref<any[]>([]) // 租户列表
+const redirect = ref<string>('')
+const { push } = useRouter()
+const permissionStore = usePermissionStore()
 
 const getList = async () => {
   list.value = await UserApi.getMyTenantList()
 }
 
 // 跳转到目标租户
-const toTenant = (id: number) => {
-  const res = LoginApi.toTenant(id)
+const toTenant = async (id: number) => {
+  const res = await LoginApi.toTenant(id)
   if (!res) {
     return
   }
+  authUtil.setToken(res)
+  if (!redirect.value) {
+    redirect.value = '/'
+  }
+  push({ path: redirect.value || permissionStore.addRouters[0].path })
 }
 
 </script>

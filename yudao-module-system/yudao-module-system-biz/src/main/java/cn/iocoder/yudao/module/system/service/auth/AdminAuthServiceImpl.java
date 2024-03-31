@@ -2,15 +2,18 @@ package cn.iocoder.yudao.module.system.service.auth;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_LOGIN_BAD_CREDENTIALS;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_LOGIN_CAPTCHA_CODE_ERROR;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_MOBILE_NOT_EXISTS;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_TENANT_EXCEPTION;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_THIRD_LOGIN_NOT_BIND;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_TOKEN_EXPIRED;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_TO_TENANT_EXCEPTION;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.TENANT_NOT_EXISTS;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
 
 import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.enums.logger.LoginLogTypeEnum;
@@ -21,16 +24,18 @@ import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.common.util.validation.ValidationUtils;
 import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
-import cn.iocoder.yudao.module.platform.api.social.TenantSocialUserApi;
-import cn.iocoder.yudao.module.system.api.logger.dto.LoginLogCreateReqDTO;
 import cn.iocoder.yudao.module.platform.api.sms.SmsCodeApi;
+import cn.iocoder.yudao.module.platform.api.social.TenantSocialUserApi;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserBindReqDTO;
 import cn.iocoder.yudao.module.platform.api.social.dto.SocialUserRespDTO;
+import cn.iocoder.yudao.module.platform.api.tenant.dto.tenant.TenantRespDTO;
+import cn.iocoder.yudao.module.system.api.logger.dto.LoginLogCreateReqDTO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthLoginReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthLoginRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSmsLoginReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSmsSendReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthSocialLoginReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.auth.vo.ToTenantReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserRespVO;
 import cn.iocoder.yudao.module.system.convert.auth.AuthConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
@@ -38,6 +43,7 @@ import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.SaasUserDO;
 import cn.iocoder.yudao.module.system.service.logger.LoginLogService;
 import cn.iocoder.yudao.module.system.service.oauth2.OAuth2TokenService;
+import cn.iocoder.yudao.module.system.service.tenant.TenantService;
 import cn.iocoder.yudao.module.system.service.user.AdminUserService;
 import cn.iocoder.yudao.module.system.service.user.SaasUserService;
 import com.google.common.annotations.VisibleForTesting;
@@ -45,6 +51,7 @@ import com.xingyuv.captcha.model.common.ResponseModel;
 import com.xingyuv.captcha.model.vo.CaptchaVO;
 import com.xingyuv.captcha.service.CaptchaService;
 import java.util.Objects;
+import java.util.Optional;
 import javax.annotation.Resource;
 import javax.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
@@ -77,6 +84,9 @@ public class AdminAuthServiceImpl implements AdminAuthService {
 
     @Resource
     private SaasUserService saasUserService;
+
+    @Resource
+    private TenantService tenantService;
 
     /**
      * 验证码的开关，默认为 true
@@ -216,6 +226,24 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     }
 
     @Override
+    public AuthLoginRespVO toTenant(ToTenantReqVO reqVO) {
+        TenantRespDTO tenantRespDTO = Optional.ofNullable(tenantService.getTenantById(reqVO.getId()))
+            .orElseThrow(() -> exception(TENANT_NOT_EXISTS));
+        UserRespVO userRespVO = Optional.ofNullable(adminUserService.getUser(getLoginUserId()))
+            .orElseThrow(() -> exception(AUTH_TOKEN_EXPIRED));
+        SaasUserDO saasUserDO = saasUserService.getUser(userRespVO.getSaasUserId());
+        //切换的目标租户是否用户合规
+        AdminUserDO adminUser = getAdminUser(saasUserDO, tenantRespDTO.getId(), null);
+        if (adminUser == null) {
+            throw exception(AUTH_TO_TENANT_EXCEPTION);
+        }
+        //更新SaaS用户信息
+        setSaasUserInfo(saasUserDO, adminUser);
+        // 创建 Token 令牌需要基于租户用户，因为每个租户的登录逻辑是跟随租户进行的，记录登录日志
+        return createTokenAfterLoginSuccess(adminUser.getId(), saasUserDO.getUsername(), LoginLogTypeEnum.LOGIN_USERNAME);
+    }
+
+    @Override
     public void logout(String token, Integer logType) {
         // 删除访问令牌
         OAuth2AccessTokenDO accessTokenDO = oauth2TokenService.removeAccessToken(token);
@@ -287,7 +315,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         TenantContextHolder.setIgnore(false);
         AdminUserDO adminUserDO = adminUserService.getUserBySaasUserId(saasUserDO.getId());
         // 检查是否被删除或校验是否禁用
-        if (Objects.isNull(adminUserDO) || CommonStatusEnum.isDisable(adminUserDO.getStatus())) {
+        if (Objects.isNull(adminUserDO) || !CommonStatusEnum.isEnable(adminUserDO.getStatus())) {
             if (Objects.nonNull(adminUserDO) && Objects.nonNull(logTypeEnum)) {
                 createLoginLog(adminUserDO.getId(), saasUserDO.getUsername(), logTypeEnum, LoginResultEnum.USER_DISABLED);
             }
