@@ -119,12 +119,17 @@
           <el-table-column label="手机号码" align="center" prop="mobile" width="120" />
           <el-table-column label="状态" key="status">
             <template #default="scope">
-              <el-switch
-                v-model="scope.row.status"
-                :active-value="0"
-                :inactive-value="1"
-                @change="handleStatusChange(scope.row)"
-              />
+              <template v-if="scope.status != -1">
+                <el-switch
+                  v-model="scope.row.status"
+                  :active-value="0"
+                  :inactive-value="1"
+                  @change="handleStatusChange(scope.row)"
+                />
+              </template>
+              <template v-else>
+                <el-tag type="info">等待确认</el-tag>
+              </template>
             </template>
           </el-table-column>
           <el-table-column

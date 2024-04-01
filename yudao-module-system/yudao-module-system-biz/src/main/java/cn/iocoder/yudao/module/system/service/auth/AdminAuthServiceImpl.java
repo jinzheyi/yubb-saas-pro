@@ -346,7 +346,12 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         }
         //设置租户id
         TenantContextHolder.setTenantId(adminUser.getTenantId());
-        //设置默认租户
+        //如果是对方邀请的该用户，然后该用户又主动点击进入租户，则被视为主动同意，修改租户用户状态为启用
+        if (CommonStatusEnum.AWAIT.getStatus().equals(adminUser.getStatus())) {
+            //跟新租户用户状态信息
+            adminUserService.updateUserStatus(adminUser.getId(), CommonStatusEnum.ENABLE.getStatus());
+        }
+        //设置SaaS用户默认租户
         saasUserService.updateUserDefaultTenant(saasUserDO.getId(), adminUser.getTenantId());
     }
 

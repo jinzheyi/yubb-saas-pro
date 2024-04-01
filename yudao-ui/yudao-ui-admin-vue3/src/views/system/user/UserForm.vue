@@ -31,7 +31,7 @@
           <el-form-item v-if="formData.id === undefined" label="邮箱账号" prop="username">
             <template #label>
               <Tooltip
-                message="成员通过验证该邮箱账号后可加入租户企业"
+                message="成员通过验证该邮箱账号后可加入租户企业,添加用户时邮箱账号或手机号必输一个"
                 title="账号"
               />
             </template>
@@ -42,7 +42,7 @@
           <el-form-item v-if="formData.id === undefined" label="手机号" prop="mobile">
             <template #label>
               <Tooltip
-                message="成员通过验证该手机号码后可加入租户企业"
+                message="成员通过验证该手机号码后可加入租户企业,添加用户时邮箱账号或手机号必输一个"
                 title="手机号"
               />
             </template>
@@ -113,7 +113,6 @@ const formRules = reactive<FormRules>({
   nickname: [{ required: true, message: '用户昵称不能为空', trigger: 'blur' }],
   username: [
     {
-      required: true,
       type: 'email',
       message: '请输入正确的邮箱账号地址',
       trigger: ['blur', 'change']
@@ -165,6 +164,10 @@ const submitForm = async () => {
   try {
     const data = formData.value as unknown as UserApi.UserVO
     if (formType.value === 'create') {
+      if (isBlank(formData.value.username) && isBlank(formData.value.mobile)) {
+        message.error('添加用户时邮箱账号或手机号不能都为空')
+        return
+      }
       await UserApi.createUser(data)
       message.success(t('common.createSuccess'))
     } else {
@@ -177,6 +180,10 @@ const submitForm = async () => {
   } finally {
     formLoading.value = false
   }
+}
+
+const isBlank = function (str: string) {
+  return str === '' || str === null || str === undefined;
 }
 
 /** 重置表单 */
