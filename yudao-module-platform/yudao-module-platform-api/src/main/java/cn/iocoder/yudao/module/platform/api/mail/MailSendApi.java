@@ -1,8 +1,6 @@
 package cn.iocoder.yudao.module.platform.api.mail;
 
-import cn.iocoder.yudao.module.platform.api.mail.dto.MailSendSingleToUserReqDTO;
-
-import javax.validation.Valid;
+import java.util.Map;
 
 /**
  * 邮箱发送 API 接口
@@ -12,23 +10,16 @@ import javax.validation.Valid;
 public interface MailSendApi {
 
     /**
-     * 发送单条邮箱给 Admin 用户
+     * 发送单条邮件给用户
      *
-     * 在 mail 为空时，使用 userId 加载对应 Admin 的邮箱
-     *
-     * @param reqDTO 发送请求
+     * @param mail 邮箱
+     * @param userId 用户编码
+     * @param userType 用户类型
+     * @param templateCode 邮件模版编码
+     * @param templateParams 邮件模版参数
      * @return 发送日志编号
      */
-    Long sendSingleMailToAdmin(@Valid MailSendSingleToUserReqDTO reqDTO);
-
-    /**
-     * 发送单条邮箱给 Member 用户
-     *
-     * 在 mail 为空时，使用 userId 加载对应 Member 的邮箱
-     *
-     * @param reqDTO 发送请求
-     * @return 发送日志编号
-     */
-    Long sendSingleMailToMember(@Valid MailSendSingleToUserReqDTO reqDTO);
+    Long sendSingleMail(String mail, Long userId, Integer userType,
+        String templateCode, Map<String, Object> templateParams);
 
 }
