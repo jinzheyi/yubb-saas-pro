@@ -33,8 +33,8 @@ export interface ProfileVO {
 
 export interface UserProfileUpdateReqVO {
   nickname: string
-  email: string
-  mobile: string
+  // username: string
+  // mobile: string
   sex: number
 }
 

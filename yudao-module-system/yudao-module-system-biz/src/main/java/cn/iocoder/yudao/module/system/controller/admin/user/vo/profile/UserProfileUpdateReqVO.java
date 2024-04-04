@@ -17,14 +17,14 @@ public class UserProfileUpdateReqVO {
     @Size(max = 30, message = "用户昵称长度不能超过 30 个字符")
     private String nickname;
 
-    @Schema(description = "用户账号邮箱", example = "jin_zheyicn@qq.com")
-    @Email(message = "邮箱格式不正确")
-    @Size(max = 50, message = "邮箱长度不能超过 50 个字符")
-    private String username;
-
-    @Schema(description = "手机号码", example = "15170435653")
-    @Mobile
-    private String mobile;
+//    @Schema(description = "用户账号邮箱", example = "jin_zheyicn@qq.com")
+//    @Email(message = "邮箱格式不正确")
+//    @Size(max = 50, message = "邮箱长度不能超过 50 个字符")
+//    private String username;
+//
+//    @Schema(description = "手机号码", example = "15170435653")
+//    @Mobile
+//    private String mobile;
 
     @Schema(description = "用户性别，参见 SexEnum 枚举类", example = "1")
     private Integer sex;

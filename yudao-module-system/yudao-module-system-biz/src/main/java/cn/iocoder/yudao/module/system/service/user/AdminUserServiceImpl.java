@@ -182,7 +182,6 @@ public class AdminUserServiceImpl implements AdminUserService {
     public void updateUserProfile(Long id, UserProfileUpdateReqVO reqVO) {
         // 校验正确性
         validateAdminUserExists(id);
-        //todo 修改邮箱或手机号需要发送邮件或短信进行验证
         // 执行更新
         userMapper.updateById(BeanUtils.toBean(reqVO, AdminUserDO.class).setId(id));
     }

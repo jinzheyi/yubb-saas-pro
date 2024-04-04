@@ -80,7 +80,6 @@ public class UserProfileController {
     @PutMapping("/update")
     @Operation(summary = "修改用户个人信息")
     public CommonResult<Boolean> updateUserProfile(@Valid @RequestBody UserProfileUpdateReqVO reqVO) {
-        //todo 修改邮箱或手机号需要发送邮件或短信进行验证
         userService.updateUserProfile(getLoginUserId(), reqVO);
         return success(true);
     }

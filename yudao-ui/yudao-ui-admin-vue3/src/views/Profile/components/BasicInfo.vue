@@ -28,23 +28,24 @@ const { t } = useI18n()
 const message = useMessage() // 消息弹窗
 // 表单校验
 const rules = reactive<FormRules>({
-  nickname: [{ required: true, message: t('profile.rules.nickname'), trigger: 'blur' }],
-  username: [
-    { message: t('profile.rules.mail'), trigger: 'blur' },
-    {
-      type: 'email',
-      message: t('profile.rules.truemail'),
-      trigger: ['blur', 'change']
-    }
-  ],
-  mobile: [
-    { message: t('profile.rules.phone'), trigger: 'blur' },
-    {
-      pattern: /^1[3|4|5|6|7|8|9][0-9]\d{8}$/,
-      message: t('profile.rules.truephone'),
-      trigger: 'blur'
-    }
-  ]
+  nickname: [{ required: true, message: t('profile.rules.nickname'), trigger: 'blur' }]
+  // ,
+  // username: [
+  //   { message: t('profile.rules.mail'), trigger: 'blur' },
+  //   {
+  //     type: 'email',
+  //     message: t('profile.rules.truemail'),
+  //     trigger: ['blur', 'change']
+  //   }
+  // ],
+  // mobile: [
+  //   { message: t('profile.rules.phone'), trigger: 'blur' },
+  //   {
+  //     pattern: /^1[3|4|5|6|7|8|9][0-9]\d{8}$/,
+  //     message: t('profile.rules.truephone'),
+  //     trigger: 'blur'
+  //   }
+  // ]
 })
 const schema = reactive<FormSchema[]>([
   {
@@ -52,16 +53,16 @@ const schema = reactive<FormSchema[]>([
     label: t('profile.user.nickname'),
     component: 'Input'
   },
-  {
-    field: 'username',
-    label: t('profile.user.username'),
-    component: 'Input'
-  },
-  {
-    field: 'mobile',
-    label: t('profile.user.mobile'),
-    component: 'Input'
-  },
+  // {
+  //   field: 'username',
+  //   label: t('profile.user.username'),
+  //   component: 'Input'
+  // },
+  // {
+  //   field: 'mobile',
+  //   label: t('profile.user.mobile'),
+  //   component: 'Input'
+  // },
   {
     field: 'sex',
     label: t('profile.user.sex'),
