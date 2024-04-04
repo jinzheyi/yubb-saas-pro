@@ -193,6 +193,10 @@ yudao:
       - /admin-api/system/captcha/get # 获取图片验证码，和租户无关
       - /admin-api/system/captcha/check # 校验图片验证码，和租户无关
       - /admin-api/system/auth/login # 登录，和租户无关
+      - /admin-api/system/auth/social-auth-redirect # 社交登录，和租户无关
+      - /admin-api/system/auth/social-login # 社交登录，和租户无关
+      - /admin-api/system/auth/sms-login # 短信登录，和租户无关
+      - /admin-api/system/auth/send-sms-code
       # 平台运营端
       - /platform-api/system/captcha/get # 获取图片验证码，和租户无关
       - /platform-api/system/captcha/check # 校验图片验证码，和租户无关
