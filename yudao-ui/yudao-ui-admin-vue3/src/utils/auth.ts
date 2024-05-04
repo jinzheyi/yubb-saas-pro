@@ -29,6 +29,7 @@ export const setToken = (token: TokenType) => {
 export const removeToken = () => {
   wsCache.delete(AccessTokenKey)
   wsCache.delete(RefreshTokenKey)
+  removeTenantId()
 }
 
 /** 格式化token（jwt格式） */
