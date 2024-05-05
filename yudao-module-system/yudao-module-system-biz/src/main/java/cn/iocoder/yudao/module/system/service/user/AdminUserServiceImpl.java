@@ -7,21 +7,18 @@ import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUti
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_ADMIN;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_COUNT_MAX;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_CREATE_SAAS_EXISTS;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_IMPORT_LIST_IS_EMPTY;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_IS_DISABLE;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_PASSWORD_FAILED;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_SAAS_ID_UNIQUE;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_SAAS_MOBILE_NOT_EXISTS;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_SAAS_USERNAME_NOT_EXISTS;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.USER_USERNAME_EXISTS;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
@@ -34,8 +31,6 @@ import cn.iocoder.yudao.module.platform.api.tenant.dto.tenant.TenantRespDTO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.MyTenantRespVO;
-import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserImportExcelVO;
-import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserImportRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserPageReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserSaveReqVO;
@@ -56,8 +51,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -118,7 +111,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         });
         // 校验正确性
         validateUserForCreate(createReqVO.getUsername(),
-                createReqVO.getMobile(), createReqVO.getOpenAccount(), createReqVO.getDeptId(), createReqVO.getPostIds());
+            createReqVO.getMobile(), createReqVO.getDeptId(), createReqVO.getPostIds());
         // 插入用户
         AdminUserDO user = BeanUtils.toBean(createReqVO, AdminUserDO.class);
         //优先取邮箱账号的SaaS用户
@@ -138,7 +131,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         // 插入关联岗位
         if (CollectionUtil.isNotEmpty(user.getPostIds())) {
             userPostMapper.insertBatch(convertList(user.getPostIds(),
-                    postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
+                postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
         //todo 发送站内信通知SaaS用户确认被邀请
         return user.getId();
@@ -166,7 +159,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         // 执行新增和删除。对于已经授权的菜单，不用做任何处理
         if (!CollectionUtil.isEmpty(createPostIds)) {
             userPostMapper.insertBatch(convertList(createPostIds,
-                    postId -> new UserPostDO().setUserId(userId).setPostId(postId)));
+                postId -> new UserPostDO().setUserId(userId).setPostId(postId)));
         }
         if (!CollectionUtil.isEmpty(deletePostIds)) {
             userPostMapper.deleteByUserIdAndPostId(userId, deletePostIds);
@@ -337,12 +330,10 @@ public class AdminUserServiceImpl implements AdminUserService {
      * @param deptId 部门编号
      * @param postIds 多个岗位编号
      */
-    private void validateUserForCreate(String username, String mobile, String openAccount,
-                                               Long deptId, Set<Long> postIds) {
+    private void validateUserForCreate(String username, String mobile,
+        Long deptId, Set<Long> postIds) {
         // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
         DataPermissionUtils.executeIgnore(() -> {
-            // 校验成员唯一标识
-            validateOpenAccountUserUnique(openAccount);
             // 校验邮箱账号在SaaS用户表中是否存在,以及是否被其它账号绑定了
             validateUsernameExists(username, mobile);
             // 校验部门处于开启状态
@@ -362,18 +353,6 @@ public class AdminUserServiceImpl implements AdminUserService {
             // 校验岗位处于开启状态
             postService.validatePostList(postIds);
         });
-    }
-
-    @VisibleForTesting
-    void validateOpenAccountUserUnique(String openAccount) {
-        if (StrUtil.isBlank(openAccount)) {
-            return;
-        }
-        AdminUserDO user = userMapper.selectByOpenAccount(openAccount);
-        if (user == null) {
-            return;
-        }
-        throw exception(USER_USERNAME_EXISTS);
     }
 
     @VisibleForTesting

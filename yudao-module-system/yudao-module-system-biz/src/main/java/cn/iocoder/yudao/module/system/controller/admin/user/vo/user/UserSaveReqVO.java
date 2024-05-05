@@ -24,12 +24,6 @@ public class UserSaveReqVO {
     @Size(max = 50, message = "邮箱账号长度不能超过 50 个字符", groups = {ValidGroup.Insert.class})
     private String username;
 
-    @Schema(description = "账号,成员唯一标识，可以使用工号、邮箱等公司系统内统一的ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudao")
-    @NotBlank(message = "账号不能为空", groups = {ValidGroup.Insert.class})
-    @Pattern(regexp = "^[a-zA-Z0-9]{4,30}$", message = "账号由 数字、字母 组成", groups = {ValidGroup.Insert.class})
-    @Size(min = 4, max = 30, message = "账号长度为 4-30 个字符", groups = {ValidGroup.Insert.class})
-    private String openAccount;
-
     @Schema(description = "用户昵称", requiredMode = Schema.RequiredMode.REQUIRED, example = "芋艿")
     @Size(max = 30, message = "用户昵称长度不能超过30个字符", groups = {ValidGroup.saveOrUpdate.class})
     private String nickname;
