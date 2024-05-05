@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.platform.dal.dataobject.social;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
+import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
 import cn.iocoder.yudao.framework.common.enums.social.SocialTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
@@ -28,7 +29,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SocialClientDO extends TenantBaseDO {
+public class SocialClientDO extends BaseDO {
 
     /**
      * 编号，自增

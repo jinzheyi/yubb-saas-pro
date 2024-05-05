@@ -41,3 +41,16 @@ alter table system_mail_template rename as tenant_mail_template;
 
 
 
+ALTER TABLE tenant_social_user_bind DROP tenant_id;
+ALTER TABLE tenant_social_client DROP tenant_id;
+ALTER TABLE tenant_social_user DROP tenant_id;
+ALTER TABLE tenant_sms_channel DROP tenant_id;
+ALTER TABLE tenant_sms_code DROP tenant_id;
+ALTER TABLE tenant_sms_log DROP tenant_id;
+ALTER TABLE tenant_sms_template DROP tenant_id;
+ALTER TABLE tenant_mail_account DROP tenant_id;
+ALTER TABLE tenant_mail_log DROP tenant_id;
+ALTER TABLE tenant_mail_template DROP tenant_id;
+
+
+
