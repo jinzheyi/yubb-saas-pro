@@ -1,0 +1,37 @@
+package com.shengyu.module.system.service.permission;
+
+import com.shengyu.module.platform.api.tenant.dto.menu.TenantMenuListReqDTO;
+import com.shengyu.module.platform.api.tenant.dto.menu.TenantMenuRespDTO;
+
+import java.util.List;
+
+/**
+ * 菜单 Service 接口
+ *
+ * @author 圣钰科技
+ */
+public interface MenuService {
+/**
+ * 基于租户，筛选菜单列表，会经过一遍租户套餐过滤
+ *
+ * @param reqDTO 筛选条件请求 DTO
+ * @return 菜单列表
+ */
+    /**
+     * 基于租户，筛选菜单列表，会经过一遍租户套餐过滤
+     *
+     * @param reqDTO 筛选条件请求 DTO
+     * @param allPlug 是否只查询自己系统已上架且平台正常启用的拥有的插件  true 是  false 否
+     * @return 菜单列表
+     */
+    List<TenantMenuRespDTO> getMenuListByTenant(TenantMenuListReqDTO reqDTO, Boolean allPlug);
+
+    /**
+     * 筛选菜单列表
+     *
+     * @param reqDTO 筛选条件请求 DTO
+     * @return 菜单列表
+     */
+    List<TenantMenuRespDTO> getMenuListSimpleByTenant(TenantMenuListReqDTO reqDTO);
+
+}

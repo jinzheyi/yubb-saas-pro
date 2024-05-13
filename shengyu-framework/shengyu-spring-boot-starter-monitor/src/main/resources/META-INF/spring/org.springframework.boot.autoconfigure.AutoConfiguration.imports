@@ -1,0 +1,2 @@
+com.shengyu.framework.tracer.config.ShengyuTracerAutoConfiguration
+com.shengyu.framework.tracer.config.ShengyuMetricsAutoConfiguration

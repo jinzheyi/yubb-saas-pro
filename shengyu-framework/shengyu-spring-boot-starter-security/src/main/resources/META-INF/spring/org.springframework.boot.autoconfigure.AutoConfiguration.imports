@@ -1,0 +1,2 @@
+com.shengyu.framework.security.config.ShengyuSecurityAutoConfiguration
+com.shengyu.framework.security.config.ShengyuWebSecurityConfigurerAdapter

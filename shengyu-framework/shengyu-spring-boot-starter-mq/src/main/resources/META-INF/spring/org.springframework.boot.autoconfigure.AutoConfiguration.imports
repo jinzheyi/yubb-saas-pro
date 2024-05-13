@@ -1,0 +1,3 @@
+com.shengyu.framework.mq.redis.config.ShengyuRedisMQProducerAutoConfiguration
+com.shengyu.framework.mq.redis.config.ShengyuRedisMQConsumerAutoConfiguration
+com.shengyu.framework.mq.rabbitmq.config.ShengyuRabbitMQAutoConfiguration

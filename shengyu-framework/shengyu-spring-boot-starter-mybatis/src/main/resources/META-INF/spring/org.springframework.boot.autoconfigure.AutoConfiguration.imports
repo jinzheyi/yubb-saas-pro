@@ -1,0 +1,2 @@
+com.shengyu.framework.datasource.config.ShengyuDataSourceAutoConfiguration
+com.shengyu.framework.mybatis.config.ShengyuMybatisAutoConfiguration
