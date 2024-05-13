@@ -1,0 +1,2 @@
+com.shengyu.framework.idempotent.config.ShengyuIdempotentConfiguration
+com.shengyu.framework.lock4j.config.ShengyuLock4jConfiguration

@@ -1,0 +1,1 @@
+package com.shengyu.module.platform.api.tenant;import com.shengyu.module.platform.api.tenant.dto.packages.TenantPackageRespDTO;/** * 租户套餐API接口 * * @author zhusy * @since 2022/8/5 */public interface TenantPackageApi {    /**     * 通过套餐 ID 查询套餐     *     * @param id 套餐ID     * @return 套餐对象信息     */    TenantPackageRespDTO getTenantPackage(Long id);}

@@ -1,0 +1,16 @@
+package com.shengyu.framework.apilog.core.service;
+
+/**
+ * API 访问日志 Framework Service 接口
+ *
+ * @author 圣钰科技
+ */
+public interface ApiAccessLogFrameworkService {
+
+    /**
+     * 创建 API 访问日志
+     *
+     * @param apiAccessLog API 访问日志
+     */
+    void createApiAccessLog(ApiAccessLog apiAccessLog);
+}

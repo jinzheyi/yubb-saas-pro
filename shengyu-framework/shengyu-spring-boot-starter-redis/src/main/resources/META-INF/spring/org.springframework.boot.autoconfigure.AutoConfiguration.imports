@@ -1,0 +1,2 @@
+com.shengyu.framework.redis.config.ShengyuRedisAutoConfiguration
+com.shengyu.framework.redis.config.ShengyuCacheAutoConfiguration

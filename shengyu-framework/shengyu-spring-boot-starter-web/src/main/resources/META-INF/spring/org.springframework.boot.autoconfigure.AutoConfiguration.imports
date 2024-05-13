@@ -1,0 +1,5 @@
+com.shengyu.framework.apilog.config.ShengyuApiLogAutoConfiguration
+com.shengyu.framework.jackson.config.ShengyuJacksonAutoConfiguration
+com.shengyu.framework.swagger.config.ShengyuSwaggerAutoConfiguration
+com.shengyu.framework.web.config.ShengyuWebAutoConfiguration
+com.shengyu.framework.xss.config.ShengyuXssAutoConfiguration

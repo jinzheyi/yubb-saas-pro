@@ -1,0 +1,2 @@
+com.shengyu.framework.quartz.config.ShengyuQuartzAutoConfiguration
+com.shengyu.framework.quartz.config.ShengyuAsyncAutoConfiguration

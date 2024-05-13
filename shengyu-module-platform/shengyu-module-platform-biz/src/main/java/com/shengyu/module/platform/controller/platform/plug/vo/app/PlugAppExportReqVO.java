@@ -1,0 +1,34 @@
+package com.shengyu.module.platform.controller.platform.plug.vo.app;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDateTime;
+
+import static com.shengyu.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+
+@Schema(description = "管理后台 - 插件应用 Excel 导出 Request VO，参数和 PlugAppPageReqVO 是一致的")
+@Data
+public class PlugAppExportReqVO {
+
+    @Schema(description = "应用名称", example = "名称")
+    private String name;
+
+    @Schema(description = "条码")
+    private String appSn;
+
+    @Schema(description = "状态（0上架 1下架）", example = "0")
+    private Integer status;
+
+    @Schema(description = "状态（0启用 1停用）平台端操作，停用后租户不能使用该插件")
+    private Integer enable;
+
+    @Schema(description = "创建时间")
+    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
+    private LocalDateTime[] createTime;
+
+    @Schema(description = "应用主图地址")
+    private String mainPic;
+
+}

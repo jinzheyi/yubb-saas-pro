@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>com.shengyu.boot</groupId>
+        <artifactId>shengyu</artifactId>
+        <version>${revision}</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <modules>
+        <module>shengyu-module-platform-biz</module>
+        <module>shengyu-module-platform-api</module>
+    </modules>
+
+    <artifactId>shengyu-module-platform</artifactId>
+    <packaging>pom</packaging>
+
+    <name>${project.artifactId}</name>
+    <description>
+        platform 模块下，我们放平台业务，支撑租户的核心业务。
+        例如说：用户、部门、权限、数据字典等等
+    </description>
+
+</project>
