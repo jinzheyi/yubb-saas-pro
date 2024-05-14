@@ -4,6 +4,7 @@ import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
 import com.shengyu.module.system.service.tenant.handler.TenantInfoHandler;
 import com.shengyu.module.system.service.tenant.handler.TenantMenuHandler;
+import java.util.Set;
 
 /**
  * 租户 Service 接口
@@ -43,6 +44,12 @@ public interface TenantService {
      * @param handler 处理器
      */
     void handleTenantInfo(TenantInfoHandler handler);
+
+    /**
+     * 查询当前租户已开启的套餐菜单+已上架且平台正常启用的拥有的插件菜单
+     * @return 租户已开启的套餐菜单+已上架且平台正常启用的拥有的插件菜单
+     */
+    Set<Long> getMentIdList();
 
     /**
      * 进行租户的菜单处理逻辑

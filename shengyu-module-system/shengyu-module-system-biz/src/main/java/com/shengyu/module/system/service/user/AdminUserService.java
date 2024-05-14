@@ -27,14 +27,14 @@ public interface AdminUserService {
      * @param createReqVO 用户信息
      * @return 用户编号
      */
-    Long createUser(@Validated({ValidGroup.Insert.class}) UserSaveReqVO createReqVO);
+    Long createUser(UserSaveReqVO createReqVO);
 
     /**
      * 修改用户
      *
      * @param updateReqVO 用户信息
      */
-    void updateUser(@Validated({ValidGroup.Update.class}) UserSaveReqVO updateReqVO);
+    void updateUser(UserUpdateReqVO updateReqVO);
 
     /**
      * 更新用户的最后登陆信息

@@ -4,8 +4,6 @@ import static java.util.Collections.singleton;
 
 import com.shengyu.module.platform.api.tenant.dto.menu.TenantMenuRespDTO;
 import com.shengyu.module.system.api.permission.dto.DeptDataPermissionRespDTO;
-import org.springframework.lang.Nullable;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -27,6 +25,13 @@ public interface PermissionService {
      * @return 是否
      */
     boolean hasAnyPermissions(Long userId, String... permissions);
+
+    /**
+     * 用于超管
+     * 获得当前租户下普通菜单列表+已购买的应用的菜单，只要开启状态的
+     * @return 获得当前租户下普通菜单列表+已购买的应用的菜单，只要开启状态的
+     */
+    List<TenantMenuRespDTO> getAdminTenantPackageAndPlugMenu();
 
     /**
      * 判断是否有角色，任一一个即可
@@ -67,17 +72,16 @@ public interface PermissionService {
      * @return 菜单编号集合
      */
     default Set<Long> getRoleMenuListByRoleId(Long roleId) {
-        return getRoleMenuListByRoleId(singleton(roleId), false);
+        return getRoleMenuListByRoleId(singleton(roleId));
     }
 
     /**
      * 获得角色们拥有的菜单编号集合
      *
      * @param roleIds 角色编号数组
-     * @param allPlug 是否只查询自己系统已上架且平台正常启用的拥有的插件  true 是  false 否
      * @return 菜单编号集合
      */
-    Set<Long> getRoleMenuListByRoleId(Collection<Long> roleIds, Boolean allPlug);
+    Set<Long> getRoleMenuListByRoleId(Collection<Long> roleIds);
 
     /**
      * 获得拥有指定菜单的角色编号数组，从缓存中获取

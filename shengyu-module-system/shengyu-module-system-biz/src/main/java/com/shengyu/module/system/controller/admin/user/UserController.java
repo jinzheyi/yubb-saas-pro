@@ -51,7 +51,7 @@ public class UserController {
     @PostMapping("/create")
     @Operation(summary = "新增用户")
     @PreAuthorize("@ss.hasPermission('system:user:create')")
-    public CommonResult<Long> createUser(@Validated({ValidGroup.Insert.class}) @RequestBody UserSaveReqVO reqVO) {
+    public CommonResult<Long> createUser(@Valid @RequestBody UserSaveReqVO reqVO) {
         Long id = userService.createUser(reqVO);
         return success(id);
     }
@@ -59,7 +59,7 @@ public class UserController {
     @PutMapping("update")
     @Operation(summary = "修改用户")
     @PreAuthorize("@ss.hasPermission('system:user:update')")
-    public CommonResult<Boolean> updateUser(@Validated({ValidGroup.Update.class}) @RequestBody UserSaveReqVO reqVO) {
+    public CommonResult<Boolean> updateUser(@Valid @RequestBody UserUpdateReqVO reqVO) {
         userService.updateUser(reqVO);
         return success(true);
     }

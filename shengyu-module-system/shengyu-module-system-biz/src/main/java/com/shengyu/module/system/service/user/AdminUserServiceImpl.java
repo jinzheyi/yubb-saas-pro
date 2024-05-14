@@ -25,6 +25,7 @@ import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.common.util.string.StrUtils;
 import com.shengyu.framework.datapermission.core.util.DataPermissionUtils;
 import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.module.infra.api.file.FileApi;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
@@ -34,6 +35,7 @@ import com.shengyu.module.system.controller.admin.user.vo.user.MyTenantRespVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserPageReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserSaveReqVO;
+import com.shengyu.module.system.controller.admin.user.vo.user.UserUpdateReqVO;
 import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
 import com.shengyu.module.system.dal.dataobject.dept.UserPostDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
@@ -72,7 +74,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class AdminUserServiceImpl implements AdminUserService {
 
-    @Value("${sys.user.init-password:shengyuyuanma}")
+    @Value("${sys.user.init-password:shengyukeji}")
     private String userInitPassword;
 
     @Resource
@@ -117,10 +119,32 @@ public class AdminUserServiceImpl implements AdminUserService {
         //优先取邮箱账号的SaaS用户
         if (StrUtil.isNotBlank(createReqVO.getUsername())) {
             SaasUserDO userNameSaasDO = saasUserMapper.selectByUsername(createReqVO.getUsername());
-            user.setSaasUserId(userNameSaasDO.getId());
+            if (Objects.nonNull(userNameSaasDO)) {
+                user.setSaasUserId(userNameSaasDO.getId());
+            }
         } else {
             SaasUserDO mobileSaasDO = saasUserMapper.selectByMobile(createReqVO.getMobile());
-            user.setSaasUserId(mobileSaasDO.getId());
+            if (Objects.nonNull(mobileSaasDO)) {
+                user.setSaasUserId(mobileSaasDO.getId());
+            }
+        }
+        //如果还是空的话，就创建SaaS用户
+        if (Objects.isNull(user.getSaasUserId())) {
+            // 创建SaaS用户
+            SaasUserDO saasUser = new SaasUserDO();
+            if (StrUtil.isNotBlank(createReqVO.getUsername())) {
+                saasUser.setUsername(createReqVO.getUsername());
+            }
+            if (StrUtil.isNotBlank(createReqVO.getMobile())) {
+                saasUser.setMobile(createReqVO.getMobile());
+            }
+            saasUser.setDefaultTenant(TenantContextHolder.getTenantId());
+            saasUser.setPassword(encodePassword(userInitPassword));
+            saasUserMapper.insert(saasUser);
+            saasUser.setOpenId(StrUtils.uniqueId(saasUser.getId()));
+            saasUserMapper.updateById(saasUser);
+            // 插入用户
+            user.setSaasUserId(saasUser.getId());
         }
         // 等待SaaS用户确认
         user.setStatus(CommonStatusEnum.AWAIT.getStatus());
@@ -139,18 +163,17 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void updateUser(UserSaveReqVO updateReqVO) {
+    public void updateUser(UserUpdateReqVO updateReqVO) {
         // 校验正确性
         validateUserForUpdate(updateReqVO.getId(), updateReqVO.getDeptId(), updateReqVO.getPostIds());
         // 更新用户
         AdminUserDO updateObj = BeanUtils.toBean(updateReqVO, AdminUserDO.class);
         userMapper.updateById(updateObj);
         // 更新岗位
-        updateUserPost(updateReqVO, updateObj);
+        updateUserPost(updateReqVO.getId(), updateObj);
     }
 
-    private void updateUserPost(UserSaveReqVO reqVO, AdminUserDO updateObj) {
-        Long userId = reqVO.getId();
+    private void updateUserPost(Long userId, AdminUserDO updateObj) {
         Set<Long> dbPostIds = convertSet(userPostMapper.selectListByUserId(userId), UserPostDO::getPostId);
         // 计算新增和删除的岗位编号
         Set<Long> postIds = CollUtil.emptyIfNull(updateObj.getPostIds());
@@ -401,19 +424,17 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
         if (StrUtil.isNotBlank(username)) {
             SaasUserDO userNameSaasDO = saasUserMapper.selectByUsername(username);
-            if (Objects.isNull(userNameSaasDO)) {
-                throw exception(USER_SAAS_USERNAME_NOT_EXISTS);
+            if (Objects.nonNull(userNameSaasDO)) {
+                //校验是否被其它账号已绑定
+                validateSaasUserIdUnique(userNameSaasDO.getId());
             }
-            //校验是否被其它账号已绑定
-            validateSaasUserIdUnique(userNameSaasDO.getId());
         }
         if (StrUtil.isNotBlank(mobile)) {
             SaasUserDO mobileSaasDO = saasUserMapper.selectByMobile(mobile);
-            if (Objects.isNull(mobileSaasDO)) {
-                throw exception(USER_SAAS_MOBILE_NOT_EXISTS);
+            if (Objects.nonNull(mobileSaasDO)) {
+                //校验是否被其它账号已绑定
+                validateSaasUserIdUnique(mobileSaasDO.getId());
             }
-            //校验是否被其它账号已绑定
-            validateSaasUserIdUnique(mobileSaasDO.getId());
         }
     }
 
@@ -506,18 +527,19 @@ public class AdminUserServiceImpl implements AdminUserService {
         List<MyTenantRespVO> tenantList = new ArrayList<>();
         //忽略多租户进行查询
         TenantUtils.executeIgnore(() -> {
-            List<AdminUserDO> userDOList = userMapper.selectList(
-                new LambdaQueryWrapperX<AdminUserDO>()
-                    .eq(AdminUserDO::getSaasUserId, user.getSaasUserId()));
-            for (AdminUserDO userDO : userDOList) {
-                MyTenantRespVO tenant = new MyTenantRespVO();
-                TenantRespDTO tenantRespDTO = tenantService.getTenantById(userDO.getTenantId());
-                tenant.setId(tenantRespDTO.getId());
-                tenant.setTenantName(tenantRespDTO.getName());
-                tenant.setStatus("正常");
-                tenant.setLoginDate(userDO.getLoginDate());
-                tenantList.add(tenant);
-            }
+            // 关闭数据权限，避免因为没有数据权限，查询不到数据
+            DataPermissionUtils.executeIgnore(() -> {
+                List<AdminUserDO> userDOList = userMapper.selectList(AdminUserDO::getSaasUserId, user.getSaasUserId());
+                for (AdminUserDO userDO : userDOList) {
+                    MyTenantRespVO tenant = new MyTenantRespVO();
+                    TenantRespDTO tenantRespDTO = tenantService.getTenantById(userDO.getTenantId());
+                    tenant.setId(tenantRespDTO.getId());
+                    tenant.setTenantName(tenantRespDTO.getName());
+                    tenant.setStatus("正常");
+                    tenant.setLoginDate(userDO.getLoginDate());
+                    tenantList.add(tenant);
+                }
+            });
         });
         return tenantList;
     }
