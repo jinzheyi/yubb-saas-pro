@@ -16,9 +16,11 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_SAAS_USERN
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.framework.common.util.object.BeanUtils;
@@ -28,6 +30,7 @@ import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.module.infra.api.file.FileApi;
+import com.shengyu.module.platform.api.mail.MailSendApi;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
@@ -53,6 +56,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -101,6 +106,9 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Resource
     private FileApi fileApi;
 
+    @Resource
+    private MailSendApi mailSendApi;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createUser(UserSaveReqVO createReqVO) {
@@ -128,6 +136,8 @@ public class AdminUserServiceImpl implements AdminUserService {
                 user.setSaasUserId(mobileSaasDO.getId());
             }
         }
+        boolean registerSaasUser = Boolean.FALSE;
+        String password = userInitPassword + (int)((Math.random() * 9 + 1) * Math.pow(10, 5));
         //如果还是空的话，就创建SaaS用户
         if (Objects.isNull(user.getSaasUserId())) {
             // 创建SaaS用户
@@ -139,12 +149,13 @@ public class AdminUserServiceImpl implements AdminUserService {
                 saasUser.setMobile(createReqVO.getMobile());
             }
             saasUser.setDefaultTenant(TenantContextHolder.getTenantId());
-            saasUser.setPassword(encodePassword(userInitPassword));
+            saasUser.setPassword(encodePassword(password));
             saasUserMapper.insert(saasUser);
             saasUser.setOpenId(StrUtils.uniqueId(saasUser.getId()));
             saasUserMapper.updateById(saasUser);
             // 插入用户
             user.setSaasUserId(saasUser.getId());
+            registerSaasUser = Boolean.TRUE;
         }
         // 等待SaaS用户确认
         user.setStatus(CommonStatusEnum.AWAIT.getStatus());
@@ -156,6 +167,15 @@ public class AdminUserServiceImpl implements AdminUserService {
         if (CollectionUtil.isNotEmpty(user.getPostIds())) {
             userPostMapper.insertBatch(convertList(user.getPostIds(),
                 postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
+        }
+        //是否时新注册的平台用户
+        if (registerSaasUser) {
+            Map<String, Object> mailParam = new HashMap<String, Object>();
+            mailParam.put("mail", createReqVO.getUsername());
+            mailParam.put("password", password);
+            mailParam.put("registerTime", DateUtil.formatDateTime(new Date()));
+            mailSendApi.sendSingleMail(createReqVO.getUsername(), null, UserTypeEnum.ADMIN.getValue(),
+                "tenant-add-user", mailParam);
         }
         //todo 发送站内信通知SaaS用户确认被邀请
         return user.getId();
