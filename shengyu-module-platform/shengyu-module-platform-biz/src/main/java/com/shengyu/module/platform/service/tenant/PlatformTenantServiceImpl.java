@@ -98,6 +98,7 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
         TenantPackageDO tenantPackage = tenantPackageService.validTenantPackage(createReqVO.getPackageId());
         // 创建租户
         TenantDO tenant = BeanUtils.toBean(createReqVO, TenantDO.class);
+        tenant.setContactUserName(createReqVO.getUsername());
         tenantMapper.insert(tenant);
 
         TenantUtils.execute(tenant.getId(), () -> {
@@ -113,7 +114,7 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
 
     private Long createUser(Long roleId, TenantCreateReqVO createReqVO) {
         // 创建用户
-        Long userId = adminUserApi.createUser(TenantConvert.INSTANCE.convert02(createReqVO));
+        Long userId = adminUserApi.createUser(TenantConvert.INSTANCE.convert02(createReqVO), RoleCodeEnum.TENANT_ADMIN.getCode());
         // 分配角色
         permissionApi.assignUserRole(userId, singleton(roleId));
         return userId;

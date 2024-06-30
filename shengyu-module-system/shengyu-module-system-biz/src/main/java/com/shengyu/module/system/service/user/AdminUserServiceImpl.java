@@ -32,6 +32,7 @@ import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.module.infra.api.file.FileApi;
 import com.shengyu.module.platform.api.mail.MailSendApi;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
+import com.shengyu.module.system.api.user.dto.AdminUserCreateReqDTO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.MyTenantRespVO;
@@ -79,7 +80,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class AdminUserServiceImpl implements AdminUserService {
 
-    @Value("${sys.user.init-password:shengyukeji}")
+    @Value("${sys.user.init-password:shengyukj}")
     private String userInitPassword;
 
     @Resource
@@ -183,6 +184,77 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public Long createTenantUser(UserSaveReqVO createReqVO, AdminUserCreateReqDTO reqDTO) {
+        // 校验账户配合
+        tenantService.handleTenantInfo(tenant -> {
+            long count = userMapper.selectCount();
+            if (count >= tenant.getAccountCount()) {
+                throw exception(USER_COUNT_MAX, tenant.getAccountCount());
+            }
+        });
+        // 校验正确性
+        validateUserForCreate(createReqVO.getUsername(),
+            createReqVO.getMobile(), createReqVO.getDeptId(), createReqVO.getPostIds());
+        // 插入用户
+        AdminUserDO user = BeanUtils.toBean(createReqVO, AdminUserDO.class);
+        //优先取邮箱账号的SaaS用户
+        if (StrUtil.isNotBlank(createReqVO.getUsername())) {
+            SaasUserDO userNameSaasDO = saasUserMapper.selectByUsername(createReqVO.getUsername());
+            if (Objects.nonNull(userNameSaasDO)) {
+                user.setSaasUserId(userNameSaasDO.getId());
+            }
+        } else {
+            SaasUserDO mobileSaasDO = saasUserMapper.selectByMobile(createReqVO.getMobile());
+            if (Objects.nonNull(mobileSaasDO)) {
+                user.setSaasUserId(mobileSaasDO.getId());
+            }
+        }
+        boolean registerSaasUser = Boolean.FALSE;
+        String password = userInitPassword + (int)((Math.random() * 9 + 1) * Math.pow(10, 5));
+        //如果还是空的话，就创建SaaS用户
+        if (Objects.isNull(user.getSaasUserId())) {
+            // 创建SaaS用户
+            SaasUserDO saasUser = new SaasUserDO();
+            if (StrUtil.isNotBlank(createReqVO.getUsername())) {
+                saasUser.setUsername(createReqVO.getUsername());
+            }
+            if (StrUtil.isNotBlank(createReqVO.getMobile())) {
+                saasUser.setMobile(createReqVO.getMobile());
+            }
+            saasUser.setDefaultTenant(TenantContextHolder.getTenantId());
+            saasUser.setPassword(encodePassword(password));
+            saasUserMapper.insert(saasUser);
+            saasUser.setOpenId(StrUtils.uniqueId(saasUser.getId()));
+            saasUserMapper.updateById(saasUser);
+            // 插入用户
+            user.setSaasUserId(saasUser.getId());
+            registerSaasUser = Boolean.TRUE;
+        }
+        user.setStatus(CommonStatusEnum.ENABLE.getStatus());
+        userMapper.insert(user);
+        //添加时初次设置值
+        user.setOpenAccount(StrUtils.uniqueId(user.getId()));
+        userMapper.updateById(user);
+        // 插入关联岗位
+        if (CollectionUtil.isNotEmpty(user.getPostIds())) {
+            userPostMapper.insertBatch(convertList(user.getPostIds(),
+                postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
+        }
+        //是否时新注册的平台用户
+        if (registerSaasUser) {
+            Map<String, Object> mailParam = new HashMap<String, Object>();
+            mailParam.put("mail", createReqVO.getUsername());
+            mailParam.put("password", password);
+            mailParam.put("registerTime", DateUtil.formatDateTime(new Date()));
+            mailSendApi.sendSingleMail(createReqVO.getUsername(), null, UserTypeEnum.ADMIN.getValue(),
+                "tenant-add-user", mailParam);
+        }
+        //todo 发送站内信通知SaaS用户确认被邀请
+        return user.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateUser(UserUpdateReqVO updateReqVO) {
         // 校验正确性
         validateUserForUpdate(updateReqVO.getId(), updateReqVO.getDeptId(), updateReqVO.getPostIds());
@@ -217,16 +289,20 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     public void updateUserProfile(Long id, UserProfileUpdateReqVO reqVO) {
         // 校验正确性
-        validateAdminUserExists(id);
+        AdminUserDO adminUserDO = validateAdminUserExists(id);
         // 执行更新
         userMapper.updateById(BeanUtils.toBean(reqVO, AdminUserDO.class).setId(id));
+        // 执行更新
+        SaasUserDO updateObj = new SaasUserDO().setId(adminUserDO.getSaasUserId());
+        updateObj.setSex(reqVO.getSex());
+        saasUserMapper.updateById(updateObj);
     }
 
     @Override
     public void updateUserPassword(Long id, UserProfileUpdatePasswordReqVO reqVO) {
         AdminUserDO adminUserDO = validateAdminUserExists(id);
         // 校验旧密码密码
-        validateOldPassword(id, reqVO.getOldPassword());
+        validateOldPassword(adminUserDO.getSaasUserId(), reqVO.getOldPassword());
         // 执行更新
         SaasUserDO updateObj = new SaasUserDO().setId(adminUserDO.getSaasUserId());
         // 加密密码

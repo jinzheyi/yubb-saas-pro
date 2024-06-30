@@ -183,8 +183,8 @@ const loginData = reactive({
   isShowPassword: false,
   captchaEnable: import.meta.env.VITE_APP_CAPTCHA_ENABLE,
   loginForm: {
-    username: 'admin',
-    password: 'admin123',
+    username: '',
+    password: '',
     captchaVerification: '',
     rememberMe: false
   }

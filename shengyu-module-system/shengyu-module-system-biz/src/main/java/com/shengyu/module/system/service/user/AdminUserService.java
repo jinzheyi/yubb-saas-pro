@@ -3,6 +3,7 @@ package com.shengyu.module.system.service.user;
 import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.framework.common.util.validation.ValidGroup;
+import com.shengyu.module.system.api.user.dto.AdminUserCreateReqDTO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.*;
@@ -28,6 +29,14 @@ public interface AdminUserService {
      * @return 用户编号
      */
     Long createUser(UserSaveReqVO createReqVO);
+
+    /**
+     * 创建租戶的超管用户
+     *
+     * @param createReqVO 用户信息
+     * @return 用户编号
+     */
+    Long createTenantUser(UserSaveReqVO createReqVO, AdminUserCreateReqDTO reqDTO);
 
     /**
      * 修改用户

@@ -330,9 +330,9 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         if (user == null) {
             throw exception(USER_NOT_EXISTS);
         }
-        if (USER_NAME.equals(user.getUsername())) {
-            throw exception(USER_ADMIN);
-        }
+//        if (USER_NAME.equals(user.getUsername())) {
+//            throw exception(USER_ADMIN);
+//        }
     }
 
     @VisibleForTesting

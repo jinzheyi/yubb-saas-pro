@@ -64,9 +64,4 @@ public class SaasUserDO extends BaseDO {
      */
     private Long defaultTenant;
 
-    /**
-     * 我的租户（每个注册的用户都会拥有一个自己的租户，是这个租户的超管）
-     */
-    private Long myTenant;
-
 }

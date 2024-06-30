@@ -4,6 +4,7 @@ import static com.shengyu.framework.common.util.collection.CollectionUtils.conve
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
+import com.shengyu.framework.common.enums.permission.RoleCodeEnum;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.system.api.user.dto.AdminUserCreateReqDTO;
 import com.shengyu.module.system.api.user.dto.AdminUserRespDTO;
@@ -93,7 +94,10 @@ public class AdminUserApiImpl implements AdminUserApi {
     }
 
     @Override
-    public Long createUser(AdminUserCreateReqDTO reqDTO) {
+    public Long createUser(AdminUserCreateReqDTO reqDTO, String businessName) {
+        if (RoleCodeEnum.TENANT_ADMIN.getCode().equals(businessName)) {
+            return adminUserService.createTenantUser(BeanUtils.toBean(reqDTO, UserSaveReqVO.class), reqDTO);
+        }
         return adminUserService.createUser(BeanUtils.toBean(reqDTO, UserSaveReqVO.class));
     }
 

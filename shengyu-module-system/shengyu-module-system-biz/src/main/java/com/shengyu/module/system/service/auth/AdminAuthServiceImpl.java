@@ -299,22 +299,17 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     }
 
     /**
-     * 获取租户用户信心，并更新SaaS用户信息
+     * 获取租户用户信息，并更新SaaS用户信息
      * @param saasUserDO saas用户
      * @return 对应租户用户
      */
     private AdminUserDO getAdminUser(SaasUserDO saasUserDO, LoginLogTypeEnum logTypeEnum) {
         //查询当前用户默认的租户id
-        AdminUserDO adminUser = getAdminUser(saasUserDO,
-            Objects.nonNull(saasUserDO.getDefaultTenant())? saasUserDO.getDefaultTenant() : saasUserDO.getMyTenant(), logTypeEnum);
+        AdminUserDO adminUser = getAdminUser(saasUserDO, saasUserDO.getDefaultTenant(), logTypeEnum);
         //如果默认的禁用了，则只能取它自己的所属租户了
         if (Objects.isNull(adminUser)) {
-            //这里查询自己的租户不可能为空，如果为空了那肯定是数据的问题
-            adminUser = getAdminUser(saasUserDO, saasUserDO.getMyTenant(), logTypeEnum);
-            if (Objects.isNull(adminUser)) {
-                //todo 需要处理登录失败的逻辑
-                throw exception(AUTH_TENANT_EXCEPTION);
-            }
+            //todo 需要处理登录失败的逻辑
+            throw exception(AUTH_TENANT_EXCEPTION);
         }
         //更新SaaS用户信息
         setSaasUserInfo(saasUserDO, adminUser);

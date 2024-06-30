@@ -43,6 +43,10 @@ public class TenantDO extends BaseDO {
      */
     private Long contactUserId;
     /**
+     * 租户管理员账号
+     */
+    private String contactUserName;
+    /**
      * 联系人
      */
     private String contactName;

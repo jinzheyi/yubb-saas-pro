@@ -7,6 +7,7 @@
   "scripts": {
     "i": "pnpm install",
     "front": "vite --mode front",
+    "prod": "vite --mode prod",
     "ts:check": "vue-tsc --noEmit",
     "build:prod": "node --max_old_space_size=8192 ./node_modules/vite/bin/vite.js build --mode prod",
     "serve:prod": "vite preview --mode prod",
