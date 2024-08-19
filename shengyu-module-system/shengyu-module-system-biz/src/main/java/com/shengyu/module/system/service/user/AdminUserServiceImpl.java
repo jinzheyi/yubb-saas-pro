@@ -629,9 +629,12 @@ public class AdminUserServiceImpl implements AdminUserService {
                 for (AdminUserDO userDO : userDOList) {
                     MyTenantRespVO tenant = new MyTenantRespVO();
                     TenantRespDTO tenantRespDTO = tenantService.getTenantById(userDO.getTenantId());
+                    if (Objects.isNull(tenantRespDTO)) {
+                        continue;
+                    }
                     tenant.setId(tenantRespDTO.getId());
                     tenant.setTenantName(tenantRespDTO.getName());
-                    tenant.setStatus("正常");
+                    tenant.setStatus(CommonStatusEnum.isEnable(tenantRespDTO.getStatus())? "正常" : "禁用");
                     tenant.setLoginDate(userDO.getLoginDate());
                     tenantList.add(tenant);
                 }
