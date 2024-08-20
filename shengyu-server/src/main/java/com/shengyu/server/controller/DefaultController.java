@@ -15,36 +15,10 @@ import static com.shengyu.framework.common.exception.enums.GlobalErrorCodeConsta
 @RestController
 public class DefaultController {
 
-    @RequestMapping("/admin-api/bpm/**")
-    public CommonResult<Boolean> bpm404() {
-        return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                "[工作流模块 shengyu-module-bpm - 已禁用][参考 https://doc.iocoder.cn/bpm/ 开启]");
-    }
-
-    @RequestMapping("/admin-api/mp/**")
-    public CommonResult<Boolean> mp404() {
-        return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                "[微信公众号 shengyu-module-mp - 已禁用][参考 https://doc.iocoder.cn/mp/build/ 开启]");
-    }
-
-    @RequestMapping(value = {"/admin-api/product/**", // 商品中心
-            "/admin-api/trade/**", // 交易中心
-            "/admin-api/promotion/**"})  // 营销中心
-    public CommonResult<Boolean> mall404() {
-        return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                "[商城系统 shengyu-module-mall - 已禁用][参考 https://doc.iocoder.cn/mall/build/ 开启]");
-    }
-
-    @RequestMapping(value = {"/admin-api/report/**"})
-    public CommonResult<Boolean> report404() {
-        return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                "[报表模块 shengyu-module-report - 已禁用][参考 https://doc.iocoder.cn/report/ 开启]");
-    }
-
-    @RequestMapping(value = {"/admin-api/pay/**"})
-    public CommonResult<Boolean> pay404() {
-        return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                "[支付模块 shengyu-module-pay - 已禁用][参考 https://doc.iocoder.cn/pay/build/ 开启]");
-    }
+//    @RequestMapping(value = {"/admin-api/pay/**"})
+//    public CommonResult<Boolean> pay404() {
+//        return CommonResult.error(NOT_IMPLEMENTED.getCode(),
+//                "[支付模块 shengyu-module-pay - 已禁用][参考 https://doc.iocoder.cn/pay/build/ 开启]");
+//    }
 
 }
