@@ -289,36 +289,12 @@ public class GlobalExceptionHandler {
         if (!message.contains("doesn't exist")) {
             return null;
         }
-        // 1. 数据报表
-        if (message.contains("report_")) {
-            log.error("[报表模块 shengyu-module-report - 表结构未导入][参考 https://doc.iocoder.cn/report/ 开启]");
-            return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[报表模块 shengyu-module-report - 表结构未导入][参考 https://doc.iocoder.cn/report/ 开启]");
-        }
-        // 2. 工作流
-        if (message.contains("bpm_")) {
-            log.error("[工作流模块 shengyu-module-bpm - 表结构未导入][参考 https://doc.iocoder.cn/bpm/ 开启]");
-            return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[工作流模块 shengyu-module-bpm - 表结构未导入][参考 https://doc.iocoder.cn/bpm/ 开启]");
-        }
-        // 3. 微信公众号
-        if (message.contains("mp_")) {
-            log.error("[微信公众号 shengyu-module-mp - 表结构未导入][参考 https://doc.iocoder.cn/mp/build/ 开启]");
-            return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[微信公众号 shengyu-module-mp - 表结构未导入][参考 https://doc.iocoder.cn/mp/build/ 开启]");
-        }
-        // 4. 商城系统
-        if (StrUtil.containsAny(message, "product_", "promotion_", "trade_")) {
-            log.error("[商城系统 shengyu-module-mall - 已禁用][参考 https://doc.iocoder.cn/mall/build/ 开启]");
-            return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[商城系统 shengyu-module-mall - 已禁用][参考 https://doc.iocoder.cn/mall/build/ 开启]");
-        }
-        // 5. 支付平台
-        if (message.contains("pay_")) {
-            log.error("[支付模块 shengyu-module-pay - 表结构未导入][参考 https://doc.iocoder.cn/pay/build/ 开启]");
-            return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                    "[支付模块 shengyu-module-pay - 表结构未导入][参考 https://doc.iocoder.cn/pay/build/ 开启]");
-        }
+        // 1. 支付平台
+//        if (message.contains("pay_")) {
+//            log.error("[支付模块 shengyu-module-pay - 表结构未导入][参考 https://doc.iocoder.cn/pay/build/ 开启]");
+//            return CommonResult.error(NOT_IMPLEMENTED.getCode(),
+//                    "[支付模块 shengyu-module-pay - 表结构未导入][参考 https://doc.iocoder.cn/pay/build/ 开启]");
+//        }
         return null;
     }
 

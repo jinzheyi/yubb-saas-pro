@@ -1,13 +1,11 @@
 package com.shengyu.module.platform.controller.platform.tenant.vo.tenant;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
-import org.hibernate.validator.constraints.Length;
-
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Email;
 import javax.validation.constraints.Size;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @Schema(description = "管理后台 - 租户创建 Request VO")
 @Data
@@ -15,15 +13,9 @@ import javax.validation.constraints.Size;
 @ToString(callSuper = true)
 public class TenantCreateReqVO extends TenantBaseVO {
 
-    @Schema(description = "用户账号", requiredMode = Schema.RequiredMode.REQUIRED, example = "shengyu")
-    @NotBlank(message = "用户账号不能为空")
-    @Pattern(regexp = "^[a-zA-Z0-9]{4,30}$", message = "用户账号由 数字、字母 组成")
-    @Size(min = 4, max = 30, message = "用户账号长度为 4-30 个字符")
+    @Schema(description = "邮箱账号,saas用户表的邮箱账号，用于通知SaaS用户邀请", example = "jin_zheyicn@qq.com")
+    @Email(message = "邮箱账号格式不正确")
+    @Size(max = 50, message = "邮箱账号长度不能超过 50 个字符")
     private String username;
-
-    @Schema(description = "密码", requiredMode = Schema.RequiredMode.REQUIRED, example = "123456")
-    @NotEmpty(message = "密码不能为空")
-    @Length(min = 4, max = 16, message = "密码长度为 4-16 位")
-    private String password;
 
 }

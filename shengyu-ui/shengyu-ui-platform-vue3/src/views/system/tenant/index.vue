@@ -111,6 +111,7 @@
           </template>
         </template>
       </el-table-column>
+      <el-table-column label="登录账号" align="center" prop="contactUserName" />
       <el-table-column label="联系人" align="center" prop="contactName" />
       <el-table-column label="联系手机" align="center" prop="contactMobile" />
       <el-table-column label="账号额度" align="center" prop="accountCount">

@@ -2,6 +2,7 @@ package com.shengyu.module.system.service.auth;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.framework.common.util.servlet.ServletUtils.getClientIP;
+import static com.shengyu.framework.datapermission.core.util.DataPermissionUtils.getDisableDataPermissionDisable;
 import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_LOGIN_BAD_CREDENTIALS;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_LOGIN_CAPTCHA_CODE_ERROR;
@@ -24,6 +25,8 @@ import com.shengyu.framework.common.enums.sms.SmsSceneEnum;
 import com.shengyu.framework.common.util.monitor.TracerUtils;
 import com.shengyu.framework.common.util.servlet.ServletUtils;
 import com.shengyu.framework.common.util.validation.ValidationUtils;
+import com.shengyu.framework.datapermission.core.annotation.DataPermission;
+import com.shengyu.framework.datapermission.core.aop.DataPermissionContextHolder;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.platform.api.sms.SmsCodeApi;
@@ -229,24 +232,31 @@ public class AdminAuthServiceImpl implements AdminAuthService {
 
     @Override
     public AuthLoginRespVO toTenant(ToTenantReqVO reqVO, String token) {
-        TenantRespDTO tenantRespDTO = Optional.ofNullable(tenantService.getTenantById(reqVO.getId()))
-            .orElseThrow(() -> exception(TENANT_NOT_EXISTS));
-        UserRespVO userRespVO = Optional.ofNullable(adminUserService.getUser(getLoginUserId()))
-            .orElseThrow(() -> exception(AUTH_TOKEN_EXPIRED));
-        SaasUserDO saasUserDO = saasUserService.getUser(userRespVO.getSaasUserId());
-        //切换的目标租户是否用户合规
-        AdminUserDO adminUser = getAdminUser(saasUserDO, tenantRespDTO.getId(), null);
-        if (adminUser == null) {
-            throw exception(AUTH_TO_TENANT_EXCEPTION);
+        // 关闭数据权限，避免因为没有数据权限，查询不到数据
+        DataPermission dataPermission = getDisableDataPermissionDisable();
+        DataPermissionContextHolder.add(dataPermission);
+        try {
+            TenantRespDTO tenantRespDTO = Optional.ofNullable(tenantService.getTenantById(reqVO.getId()))
+                .orElseThrow(() -> exception(TENANT_NOT_EXISTS));
+            UserRespVO userRespVO = Optional.ofNullable(adminUserService.getUser(getLoginUserId()))
+                .orElseThrow(() -> exception(AUTH_TOKEN_EXPIRED));
+            SaasUserDO saasUserDO = saasUserService.getUser(userRespVO.getSaasUserId());
+            //切换的目标租户是否用户合规
+            AdminUserDO adminUser = getAdminUser(saasUserDO, tenantRespDTO.getId(), null);
+            if (adminUser == null) {
+                throw exception(AUTH_TO_TENANT_EXCEPTION);
+            }
+            //清除原來的登錄token
+            if (StrUtil.isNotBlank(token)) {
+                logout(token, LoginLogTypeEnum.LOGOUT_TO_TENANT.getType());
+            }
+            //更新SaaS用户信息
+            setSaasUserInfo(saasUserDO, adminUser);
+            // 创建 Token 令牌需要基于租户用户，因为每个租户的登录逻辑是跟随租户进行的，记录登录日志
+            return createTokenAfterLoginSuccess(adminUser.getId(), saasUserDO.getUsername(), LoginLogTypeEnum.LOGIN_USERNAME);
+        } finally {
+            DataPermissionContextHolder.remove();
         }
-        //清除原來的登錄token
-        if (StrUtil.isNotBlank(token)) {
-            logout(token, LoginLogTypeEnum.LOGOUT_TO_TENANT.getType());
-        }
-        //更新SaaS用户信息
-        setSaasUserInfo(saasUserDO, adminUser);
-        // 创建 Token 令牌需要基于租户用户，因为每个租户的登录逻辑是跟随租户进行的，记录登录日志
-        return createTokenAfterLoginSuccess(adminUser.getId(), saasUserDO.getUsername(), LoginLogTypeEnum.LOGIN_USERNAME);
     }
 
     @Override
@@ -289,18 +299,17 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     }
 
     /**
-     * 获取租户用户信心，并更新SaaS用户信息
+     * 获取租户用户信息，并更新SaaS用户信息
      * @param saasUserDO saas用户
      * @return 对应租户用户
      */
     private AdminUserDO getAdminUser(SaasUserDO saasUserDO, LoginLogTypeEnum logTypeEnum) {
         //查询当前用户默认的租户id
-        AdminUserDO adminUser = getAdminUser(saasUserDO,
-            Objects.nonNull(saasUserDO.getDefaultTenant())? saasUserDO.getDefaultTenant() : saasUserDO.getMyTenant(), logTypeEnum);
+        AdminUserDO adminUser = getAdminUser(saasUserDO, saasUserDO.getDefaultTenant(), logTypeEnum);
         //如果默认的禁用了，则只能取它自己的所属租户了
         if (Objects.isNull(adminUser)) {
-            //这里查询自己的租户不可能为空，如果为空了那肯定是数据的问题
-            adminUser = getAdminUser(saasUserDO, saasUserDO.getMyTenant(), logTypeEnum);
+            //todo 需要处理登录失败的逻辑
+            throw exception(AUTH_TENANT_EXCEPTION);
         }
         //更新SaaS用户信息
         setSaasUserInfo(saasUserDO, adminUser);
@@ -320,9 +329,15 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         TenantContextHolder.setTenantId(tenantId);
         TenantContextHolder.setIgnore(false);
         AdminUserDO adminUserDO = adminUserService.getUserBySaasUserId(saasUserDO.getId());
-        // 检查是否被删除或校验是否禁用
-        if (Objects.isNull(adminUserDO) || !CommonStatusEnum.isEnable(adminUserDO.getStatus())) {
-            if (Objects.nonNull(adminUserDO) && Objects.nonNull(logTypeEnum)) {
+        // 检查是否被删除
+        if (Objects.isNull(adminUserDO)) {
+            TenantContextHolder.setTenantId(oldTenantId);
+            TenantContextHolder.setIgnore(oldIgnore);
+            return null;
+        }
+        // 是否禁用
+        if (CommonStatusEnum.isDisable(adminUserDO.getStatus())) {
+            if (Objects.nonNull(logTypeEnum)) {
                 createLoginLog(adminUserDO.getId(), saasUserDO.getUsername(), logTypeEnum, LoginResultEnum.USER_DISABLED);
             }
             TenantContextHolder.setTenantId(oldTenantId);

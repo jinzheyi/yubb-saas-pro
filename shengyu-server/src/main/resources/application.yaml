@@ -3,7 +3,7 @@ spring:
     name: shengyu-server
 
   profiles:
-    active: local
+    active: dev
 
   main:
     allow-circular-references: true # 允许循环依赖，因为项目是三层架构，无法避免这个情况。
@@ -178,12 +178,8 @@ shengyu:
     front-type: 10 # 前端模版的类型，参见 CodegenFrontTypeEnum 枚举类
   error-code: # 错误码相关配置项
     constants-class-list:
-      - com.shengyu.module.bpm.enums.ErrorCodeConstants
       - com.shengyu.module.infra.enums.ErrorCodeConstants
-      - com.shengyu.module.member.enums.ErrorCodeConstants
-      - com.shengyu.module.pay.enums.ErrorCodeConstants
       - com.shengyu.module.system.enums.ErrorCodeConstants
-      - com.shengyu.module.mp.enums.ErrorCodeConstants
   tenant: # 多租户相关配置项
     enable: true
     ignore-urls:
@@ -206,24 +202,10 @@ shengyu:
       - /admin-api/pay/notify/** # 支付回调通知，不携带租户编号
       - /jmreport/* # 积木报表，无法携带租户编号
       - /admin-api/mp/open/** # 微信公众号开放平台，微信回调接口，无法携带租户编号
+    #忽略多租户的表
     ignore-tables:
-#      - jimu_dict
-#      - jimu_dict_item
-#      - jimu_report
-#      - jimu_report_data_source
-#      - jimu_report_db
-#      - jimu_report_db_field
-#      - jimu_report_db_param
-#      - jimu_report_link
-#      - jimu_report_map
-#      - jimu_report_share
-#      - rep_demo_dxtj
-#      - rep_demo_employee
-#      - rep_demo_gongsi
-#      - rep_demo_jianpiao
-#      - tmp_report_data_1
-#      - tmp_report_data_income
       - system_saas_user
+    #忽略多租户表的前缀
     ignore-tables-prefix:
       - platform
       - tenant

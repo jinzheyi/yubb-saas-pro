@@ -107,7 +107,7 @@ public class RandomUtils {
     }
 
     public static String randomURL() {
-        return "https://www.iocoder.cn/" + randomString();
+        return "http://shengyukj.top/" + randomString();
     }
 
     @SafeVarargs

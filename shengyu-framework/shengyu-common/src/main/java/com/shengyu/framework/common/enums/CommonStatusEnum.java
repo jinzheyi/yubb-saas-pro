@@ -45,4 +45,8 @@ public enum CommonStatusEnum implements IntArrayValuable {
         return ObjUtil.equal(DISABLE.status, status);
     }
 
+    public static boolean isAwait(Integer status) {
+        return ObjUtil.equal(AWAIT.status, status);
+    }
+
 }

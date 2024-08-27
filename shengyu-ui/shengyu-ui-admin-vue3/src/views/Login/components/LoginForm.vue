@@ -185,8 +185,8 @@ const loginData = reactive({
   tenantEnable: import.meta.env.VITE_APP_TENANT_ENABLE,
   loginForm: {
     tenantName: '圣钰科技',
-    username: 'admin',
-    password: 'admin123',
+    username: '',
+    password: '',
     captchaVerification: '',
     rememberMe: false
   }

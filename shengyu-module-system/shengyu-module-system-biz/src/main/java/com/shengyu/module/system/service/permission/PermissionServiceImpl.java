@@ -7,7 +7,10 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import com.shengyu.framework.common.enums.CommonConstants;
+import com.baomidou.dynamic.datasource.annotation.DSTransactional;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.Sets;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.enums.permission.DataScopeEnum;
 import com.shengyu.framework.common.util.collection.CollectionUtils;
@@ -19,7 +22,6 @@ import com.shengyu.module.system.api.permission.dto.DeptDataPermissionRespDTO;
 import com.shengyu.module.system.dal.dataobject.permission.RoleDO;
 import com.shengyu.module.system.dal.dataobject.permission.RoleMenuDO;
 import com.shengyu.module.system.dal.dataobject.permission.UserRoleDO;
-import com.shengyu.module.system.dal.dataobject.plug.PlugTenantDO;
 import com.shengyu.module.system.dal.mysql.permission.RoleMenuMapper;
 import com.shengyu.module.system.dal.mysql.permission.UserRoleMapper;
 import com.shengyu.module.system.dal.mysql.plug.PlugTenantMapper;
@@ -27,17 +29,13 @@ import com.shengyu.module.system.dal.redis.RedisKeyConstants;
 import com.shengyu.module.system.service.dept.DeptService;
 import com.shengyu.module.system.service.tenant.TenantService;
 import com.shengyu.module.system.service.user.AdminUserService;
-import com.baomidou.dynamic.datasource.annotation.DSTransactional;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Suppliers;
-import com.google.common.collect.Sets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -122,7 +120,7 @@ public class PermissionServiceImpl implements PermissionService {
         Set<Long> roleIds = convertSet(roles, RoleDO::getId);
         //是否租户超管的判断
         if (roleService.hasAnyTenantAdmin(roleIds)) {
-            Set<Long> tenantAdminMenuIds = convertSet(getTenantAndPlugMenu(false), TenantMenuRespDTO::getId);
+            Set<Long> tenantAdminMenuIds = convertSet(getAdminTenantPackageAndPlugMenu(), TenantMenuRespDTO::getId);
             return tenantAdminMenuIds.containsAll(menuIds);
         }
         for (Long menuId : menuIds) {
@@ -137,14 +135,15 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     /**
+     * 用于超管
      * 获得当前租户下普通菜单列表+已购买的应用的菜单，只要开启状态的
      * @return 获得当前租户下普通菜单列表+已购买的应用的菜单，只要开启状态的
      */
-    private List<TenantMenuRespDTO> getTenantAndPlugMenu(Boolean allPlug) {
+    @Override
+    public List<TenantMenuRespDTO> getAdminTenantPackageAndPlugMenu() {
         TenantMenuListReqDTO reqDTO = new TenantMenuListReqDTO();
-        reqDTO.setStatus(CommonStatusEnum.ENABLE.getStatus());
-        reqDTO.setDimension(CommonConstants.MenuDimensionEnum.MENU.getCode());
-        return menuService.getMenuListByTenant(reqDTO, allPlug);
+        reqDTO.setIds(new ArrayList<>(tenantService.getMentIdList()));
+        return tenantMenuApi.getTenantMenuList(reqDTO);
     }
 
     @Override
@@ -214,25 +213,18 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     @Override
-    public Set<Long> getRoleMenuListByRoleId(Collection<Long> roleIds, Boolean allPlug) {
+    public Set<Long> getRoleMenuListByRoleId(Collection<Long> roleIds) {
         if (CollUtil.isEmpty(roleIds)) {
             return Collections.emptySet();
         }
         // 如果是租户超管的情况下，获取自己租户套餐+插件的全部菜单编号
         if (roleService.hasAnyTenantAdmin(roleIds)) {
-            return convertSet(getTenantAndPlugMenu(allPlug), TenantMenuRespDTO::getId);
+            return convertSet(getAdminTenantPackageAndPlugMenu(), TenantMenuRespDTO::getId);
         }
         // 如果是非管理员的情况下，获得拥有的菜单编号
         List<RoleMenuDO> roleMenuDoList = roleMenuMapper.selectListByRoleId(roleIds);
-        // 多租户的情况下，需要过滤掉未开通的菜单，根据套餐会去区分出来，套餐只会包含普通菜单
+        // 多租户的情况下，需要过滤掉未开通的菜单
         tenantService.handleTenantMenu(menuIds -> roleMenuDoList.removeIf(menu -> !CollUtil.contains(menuIds, menu.getMenuId())));
-        //todo 逻辑有待优化
-//        // 获得插件菜单列表，只要开启状态的
-//        TenantMenuListReqDTO reqPlugDTO = new TenantMenuListReqDTO();
-//        reqPlugDTO.setStatus(CommonStatusEnum.ENABLE.getStatus());
-//        reqPlugDTO.setDimension(CommonConstants.MenuDimensionEnum.PLUG.getCode());
-//        List<Long> menuListByTenantPlugMenuId = menuService.getMenuListByTenant(reqPlugDTO, allPlug).stream().map(TenantMenuRespDTO::getId).collect(Collectors.toList());
-//        roleMenuDoList.removeIf(menu -> !CollUtil.contains(menuListByTenantPlugMenuId, menu.getMenuId()));
         return convertSet(roleMenuDoList, RoleMenuDO::getMenuId);
     }
 

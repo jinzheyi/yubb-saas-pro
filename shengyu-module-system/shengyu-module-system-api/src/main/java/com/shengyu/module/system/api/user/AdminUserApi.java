@@ -82,6 +82,6 @@ public interface AdminUserApi {
      * @param reqVO 用户信息
      * @return 用户编号
      */
-    Long createUser(@Valid AdminUserCreateReqDTO reqVO);
+    Long createUser(@Valid AdminUserCreateReqDTO reqVO, String businessName);
 
 }

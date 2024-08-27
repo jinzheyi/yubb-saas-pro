@@ -15,7 +15,7 @@ public class DataPermissionUtils {
 
     @DataPermission(enable = false)
     @SneakyThrows
-    private static DataPermission getDisableDataPermissionDisable() {
+    public static DataPermission getDisableDataPermissionDisable() {
         if (DATA_PERMISSION_DISABLE == null) {
             DATA_PERMISSION_DISABLE = DataPermissionUtils.class
                     .getDeclaredMethod("getDisableDataPermissionDisable")

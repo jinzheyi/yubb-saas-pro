@@ -26,7 +26,6 @@ import com.shengyu.module.system.controller.admin.auth.vo.ToTenantReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.convert.auth.AuthConvert;
 import com.shengyu.module.system.dal.dataobject.permission.RoleDO;
-import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.service.auth.AdminAuthService;
 import com.shengyu.module.system.service.permission.MenuService;
 import com.shengyu.module.system.service.permission.PermissionService;
@@ -126,7 +125,7 @@ public class AuthController {
         roles.removeIf(role -> !CommonStatusEnum.ENABLE.getStatus().equals(role.getStatus()));
 
         // 1.3 获得菜单列表
-        Set<Long> menuIds = permissionService.getRoleMenuListByRoleId(convertSet(roles, RoleDO::getId), true);
+        Set<Long> menuIds = permissionService.getRoleMenuListByRoleId(convertSet(roles, RoleDO::getId));
         TenantMenuListReqDTO reqDTO = new TenantMenuListReqDTO();
         reqDTO.setStatus(CommonStatusEnum.ENABLE.getStatus());
         reqDTO.setIds(new ArrayList<>(menuIds));

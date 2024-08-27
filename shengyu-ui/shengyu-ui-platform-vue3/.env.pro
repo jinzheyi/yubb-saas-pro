@@ -4,16 +4,16 @@ NODE_ENV=production
 VITE_DEV=false
 
 # 请求路径
-VITE_BASE_URL='http://localhost:48080'
+VITE_BASE_URL='http://121.43.32.181:48080'
 
 # 上传路径
-VITE_UPLOAD_URL='http://localhost:48080/admin-api/infra/file/upload'
+VITE_UPLOAD_URL='http://121.43.32.181:48080/platform-api/infra/file/upload'
 
 # 接口前缀
 VITE_API_BASEPATH=
 
 # 接口地址
-VITE_API_URL=/admin-api
+VITE_API_URL=/platform-api
 
 # 是否删除debugger
 VITE_DROP_DEBUGGER=true
@@ -28,4 +28,4 @@ VITE_SOURCEMAP=false
 VITE_BASE_PATH=/
 
 # 输出路径
-VITE_OUT_DIR=dist-pro
+VITE_OUT_DIR=dist-platform
