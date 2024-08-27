@@ -23,6 +23,8 @@ test/123456  (平台端体验账号)
 
 jin_zheyicn@qq.com/shengyukj578503
 
+![输入图片说明](image.png)
+
 <font color='blue'> 更多租户可以在平台系统端进行添加，维护。所有的租户数据完全隔离 </font>
 
 # 其它更多资料待发布之日公布更新
