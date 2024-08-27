@@ -26,7 +26,7 @@
       <el-form-item label="联系手机" prop="contactMobile">
         <el-input v-model="formData.contactMobile" placeholder="请输入联系手机" />
       </el-form-item>
-      <el-form-item v-if="formData.id === undefined" label="邮箱登录账号" prop="username">
+      <el-form-item v-if="formData.id === undefined" label="邮箱账号" prop="username">
         <el-input v-model="formData.username" placeholder="请输入邮箱登录账号" />
       </el-form-item>
       <el-form-item label="账号额度" prop="accountCount">
