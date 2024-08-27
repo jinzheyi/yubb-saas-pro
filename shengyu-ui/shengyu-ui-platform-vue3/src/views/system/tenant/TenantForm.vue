@@ -26,16 +26,8 @@
       <el-form-item label="联系手机" prop="contactMobile">
         <el-input v-model="formData.contactMobile" placeholder="请输入联系手机" />
       </el-form-item>
-      <el-form-item v-if="formData.id === undefined" label="用户名称" prop="username">
-        <el-input v-model="formData.username" placeholder="请输入用户名称" />
-      </el-form-item>
-      <el-form-item v-if="formData.id === undefined" label="用户密码" prop="password">
-        <el-input
-          v-model="formData.password"
-          placeholder="请输入用户密码"
-          show-password
-          type="password"
-        />
+      <el-form-item v-if="formData.id === undefined" label="邮箱登录账号" prop="username">
+        <el-input v-model="formData.username" placeholder="请输入邮箱登录账号" />
       </el-form-item>
       <el-form-item label="账号额度" prop="accountCount">
         <el-input-number
@@ -108,8 +100,7 @@ const formRules = reactive({
   accountCount: [{ required: true, message: '账号额度不能为空', trigger: 'blur' }],
   expireTime: [{ required: true, message: '过期时间不能为空', trigger: 'blur' }],
   website: [{ required: true, message: '绑定域名不能为空', trigger: 'blur' }],
-  username: [{ required: true, message: '用户名称不能为空', trigger: 'blur' }],
-  password: [{ required: true, message: '用户密码不能为空', trigger: 'blur' }]
+  username: [{ required: true, message: '邮箱登录账号不能为空', trigger: 'blur' }]
 })
 const formRef = ref() // 表单 Ref
 const packageList = ref([]) // 租户套餐
