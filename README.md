@@ -13,25 +13,15 @@
 ## 演示
 ### 商用pro版本演示
 
-**商用pro版的插件功能架构体系已经实现，但是插件本身的功能，比如提供的对应插件功能还在编写中**
+**商用pro版的插件功能架构体系已经实现**
 
-[平台登录地址:http://121.43.32.181:81](http://121.43.32.181:81)
+[平台登录地址:http://saasadmin.shengyukj.top](http://saasadmin.shengyukj.top)
 
-test/admin123
+test/123456  (平台端体验账号)
 
-[租户登录地址:http://121.43.32.181](http://121.43.32.181)
+[租户登录地址:http://saas.shengyukj.top](http://saas.shengyukj.top)
 
-1号租户
-* 编号：小米科技有限公司
-* admin/123456
-
-2号租户
-* 编号：华为技术有限公司
-* admin/admin123
-
-3号租户
-* 编号：深圳市腾讯计算机系统有限公司
-* admin/123456
+jin_zheyicn@qq.com/shengyukj578503
 
 <font color='blue'> 更多租户可以在平台系统端进行添加，维护。所有的租户数据完全隔离 </font>
 
