@@ -1,9 +1,7 @@
-**严肃声明：现在、未来都不会有商业版本，所有代码全部开源!！**
+**严肃声明：本商业产品只针对个人爱好学习者免费开源，商用需要联系作者进行购买授权!！**
 
 **「我喜欢写代码，乐此不疲」**  
 **「我喜欢做开源，以此为乐」**
-
-我 🐶 在上海艰苦奋斗，早中晚在 top3 大厂认真搬砖，夜里为开源做贡献。
 
 如果这个项目让你有所收获，记得 Star 关注哦，这对我是非常不错的鼓励与支持。
 
@@ -70,9 +68,9 @@
 
 支持 Spring Boot、Spring Cloud 两种架构：
 
-① Spring Boot 单体架构：<https://github.com/YunaiV/ruoyi-vue-pro>
+① Spring Boot 单体架构：<https://gitee.com/jinzheyi/yubb-saas-pro>
 
-![架构图](/.image/common/ruoyi-vue-pro-architecture.png)
+![架构图](/.image/common/shengyu-saas-architecture.png)
 
 ② Spring Cloud 微服务架构：<https://github.com/YunaiV/shengyu-cloud>
 

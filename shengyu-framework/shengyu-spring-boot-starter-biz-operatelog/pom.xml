@@ -13,7 +13,7 @@
 
     <name>${project.artifactId}</name>
     <description>操作日志</description>
-    <url>https://github.com/YunaiV/ruoyi-vue-pro</url>
+    <url>https://gitee.com/jinzheyi/yubb-saas-pro</url>
 
     <dependencies>
         <dependency>

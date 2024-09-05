@@ -28,7 +28,7 @@
 
     <name>${project.artifactId}</name>
     <description>芋道项目基础脚手架</description>
-    <url>https://github.com/YunaiV/ruoyi-vue-pro</url>
+    <url>https://gitee.com/jinzheyi/yubb-saas-pro</url>
 
     <properties>
         <revision>2.0.0-jdk8-snapshot</revision>

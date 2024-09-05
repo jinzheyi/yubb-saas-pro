@@ -43,24 +43,24 @@ spring:
       primary: master
       datasource:
         master:
-          name: sy-saas-pro
+          name: shengyu-saas
           url: jdbc:mysql://127.0.0.1:3306/${spring.datasource.dynamic.datasource.master.name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
           driver-class-name: com.mysql.cj.jdbc.Driver
-          username: root
-          password: password
+          username: shengyu-saas
+          password: 36Zhu@186
         slave: # 模拟从库，可根据自己需要修改 # 模拟从库，可根据自己需要修改
-          name: sy-saas-pro
+          name: shengyu-saas
           url: jdbc:mysql://127.0.0.1:3306/${spring.datasource.dynamic.datasource.slave.name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
           driver-class-name: com.mysql.cj.jdbc.Driver
-          username: root
-          password: password
+          username: shengyu-saas
+          password: 36Zhu@186
 
   # Redis 配置。Redisson 默认的配置足够使用，一般不需要进行调优
   redis:
     host: 127.0.0.1 # 地址
     port: 6379 # 端口
     database: 2 # 数据库索引
-  #    password: # 密码，建议生产环境开启
+    password: jinzheyiredis # 密码，建议生产环境开启
 
 --- #################### 定时任务相关配置 ####################
 

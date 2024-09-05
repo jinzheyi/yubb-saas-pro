@@ -70,9 +70,9 @@
 
 支持 Spring Boot、Spring Cloud 两种架构：
 
-① Spring Boot 单体架构：<https://github.com/YunaiV/ruoyi-vue-pro>
+① Spring Boot 单体架构：<https://gitee.com/jinzheyi/yubb-saas-pro>
 
-![架构图](/.image/common/ruoyi-vue-pro-architecture.png)
+![架构图](/.image/common/shengyu-saas-architecture.png)
 
 ② Spring Cloud 微服务架构：<https://github.com/YunaiV/shengyu-cloud>
 

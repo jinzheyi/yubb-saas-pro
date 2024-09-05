@@ -4,10 +4,10 @@ NODE_ENV=production
 VITE_DEV=false
 
 # 请求路径
-VITE_BASE_URL='http://121.43.32.181:48080'
+VITE_BASE_URL='http://apisaas.shengyukj.top'
 
 # 上传路径
-VITE_UPLOAD_URL='http://121.43.32.181:48080/platform-api/infra/file/upload'
+VITE_UPLOAD_URL='http://apisaas.shengyukj.top/platform-api/infra/file/upload'
 
 # 接口前缀
 VITE_API_BASEPATH=
