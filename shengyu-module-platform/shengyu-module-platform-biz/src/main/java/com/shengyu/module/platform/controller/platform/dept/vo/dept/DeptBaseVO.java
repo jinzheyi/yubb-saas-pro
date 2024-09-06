@@ -14,7 +14,7 @@ import javax.validation.constraints.Size;
 @Data
 public class DeptBaseVO {
 
-    @Schema(description = "菜单名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "芋道")
+    @Schema(description = "菜单名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "圣钰")
     @NotBlank(message = "部门名称不能为空")
     @Size(max = 30, message = "部门名称长度不能超过30个字符")
     private String name;

@@ -27,7 +27,7 @@
     </modules>
 
     <name>${project.artifactId}</name>
-    <description>芋道项目基础脚手架</description>
+    <description>圣钰项目基础脚手架</description>
     <url>https://gitee.com/jinzheyi/yubb-saas-pro</url>
 
     <properties>
