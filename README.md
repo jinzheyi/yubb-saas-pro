@@ -21,7 +21,7 @@ test/123456  (平台端体验账号)
 
 [租户登录地址:http://saas.shengyukj.top](http://saas.shengyukj.top)
 
-jin_zheyicn@qq.com/shengyukj578503
+ jin_zheyicn@qq.com/shengyukj578503
 
 ![输入图片说明](image.png)
 
