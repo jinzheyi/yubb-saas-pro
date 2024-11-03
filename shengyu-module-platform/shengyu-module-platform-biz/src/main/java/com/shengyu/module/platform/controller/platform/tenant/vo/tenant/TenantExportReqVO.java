@@ -12,7 +12,7 @@ import static com.shengyu.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH
 @Data
 public class TenantExportReqVO {
 
-    @Schema(description = "租户名", example = "芋道")
+    @Schema(description = "租户名", example = "圣钰")
     private String name;
 
     @Schema(description = "联系人", example = "芋艿")

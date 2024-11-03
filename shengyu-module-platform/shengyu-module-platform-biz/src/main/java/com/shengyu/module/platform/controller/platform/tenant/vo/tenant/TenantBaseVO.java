@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Data
 public class TenantBaseVO {
 
-    @Schema(description = "租户名", requiredMode = Schema.RequiredMode.REQUIRED, example = "芋道")
+    @Schema(description = "租户名", requiredMode = Schema.RequiredMode.REQUIRED, example = "圣钰")
     @NotNull(message = "租户名不能为空")
     private String name;
 

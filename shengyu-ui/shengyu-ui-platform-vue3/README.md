@@ -18,7 +18,7 @@
 
 ## 🐯 平台简介
 
-**芋道**，以开发者为中心，打造中国第一流的快速开发平台，全部开源，个人与企业可 100% 免费使用。
+**圣钰**，以开发者为中心，打造中国第一流的快速开发平台，全部开源，个人与企业可 100% 免费使用。
 
 * 采用 [vue-element-plus-admin](https://gitee.com/kailong110120130/vue-element-plus-admin) 实现
 * 改换 saas，自动引入等功能
@@ -70,9 +70,9 @@
 
 支持 Spring Boot、Spring Cloud 两种架构：
 
-① Spring Boot 单体架构：<https://github.com/YunaiV/ruoyi-vue-pro>
+① Spring Boot 单体架构：<https://gitee.com/jinzheyi/yubb-saas-pro>
 
-![架构图](/.image/common/ruoyi-vue-pro-architecture.png)
+![架构图](/.image/common/shengyu-saas-architecture.png)
 
 ② Spring Cloud 微服务架构：<https://github.com/YunaiV/shengyu-cloud>
 
@@ -190,7 +190,7 @@ ps：核心功能已经实现，正在对接微信小程序中...
 
 ![功能图](/.image/common/mall-preview.png)
 
-_前端基于 crmeb uniapp 经过授权重构，优化代码实现，接入芋道快速开发平台_
+_前端基于 crmeb uniapp 经过授权重构，优化代码实现，接入圣钰快速开发平台_
 
 演示地址：<https://doc.iocoder.cn/mall-preview/>
 

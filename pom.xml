@@ -27,8 +27,8 @@
     </modules>
 
     <name>${project.artifactId}</name>
-    <description>芋道项目基础脚手架</description>
-    <url>https://github.com/YunaiV/ruoyi-vue-pro</url>
+    <description>圣钰项目基础脚手架</description>
+    <url>https://gitee.com/jinzheyi/yubb-saas-pro</url>
 
     <properties>
         <revision>2.0.0-jdk8-snapshot</revision>

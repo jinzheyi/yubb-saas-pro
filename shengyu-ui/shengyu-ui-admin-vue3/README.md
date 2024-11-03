@@ -1,9 +1,7 @@
-**严肃声明：现在、未来都不会有商业版本，所有代码全部开源!！**
+**严肃声明：本商业产品只针对个人爱好学习者免费开源，商用需要联系作者进行购买授权!！**
 
 **「我喜欢写代码，乐此不疲」**  
 **「我喜欢做开源，以此为乐」**
-
-我 🐶 在上海艰苦奋斗，早中晚在 top3 大厂认真搬砖，夜里为开源做贡献。
 
 如果这个项目让你有所收获，记得 Star 关注哦，这对我是非常不错的鼓励与支持。
 
@@ -18,7 +16,7 @@
 
 ## 🐯 平台简介
 
-**芋道**，以开发者为中心，打造中国第一流的快速开发平台，全部开源，个人与企业可 100% 免费使用。
+**圣钰**，以开发者为中心，打造中国第一流的快速开发平台，全部开源，个人与企业可 100% 免费使用。
 
 * 采用 [vue-element-plus-admin](https://gitee.com/kailong110120130/vue-element-plus-admin) 实现
 * 改换 saas，自动引入等功能
@@ -70,9 +68,9 @@
 
 支持 Spring Boot、Spring Cloud 两种架构：
 
-① Spring Boot 单体架构：<https://github.com/YunaiV/ruoyi-vue-pro>
+① Spring Boot 单体架构：<https://gitee.com/jinzheyi/yubb-saas-pro>
 
-![架构图](/.image/common/ruoyi-vue-pro-architecture.png)
+![架构图](/.image/common/shengyu-saas-architecture.png)
 
 ② Spring Cloud 微服务架构：<https://github.com/YunaiV/shengyu-cloud>
 
@@ -190,7 +188,7 @@ ps：核心功能已经实现，正在对接微信小程序中...
 
 ![功能图](/.image/common/mall-preview.png)
 
-_前端基于 crmeb uniapp 经过授权重构，优化代码实现，接入芋道快速开发平台_
+_前端基于 crmeb uniapp 经过授权重构，优化代码实现，接入圣钰快速开发平台_
 
 演示地址：<https://doc.iocoder.cn/mall-preview/>
 

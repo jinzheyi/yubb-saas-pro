@@ -11,7 +11,7 @@ Authorization: Bearer {{token}}
   "config": {
     "accessKey": "b7yvuhBSAGjmtPhMFcn9iMOxUOY_I06cA_p0ZUx8",
     "accessSecret": "kXM1l5ia1RvSX3QaOEcwI3RLz3Y2rmNszWonKZtP",
-    "bucket": "ruoyi-vue-pro",
+    "bucket": "shengyu-saas",
     "endpoint": "s3-cn-south-1.qiniucs.com",
     "domain": "http://test.shengyu.iocoder.cn",
     "region": "oss-cn-beijing"
@@ -31,7 +31,7 @@ Authorization: Bearer {{token}}
   "config": {
     "accessKey": "b7yvuhBSAGjmtPhMFcn9iMOxUOY_I06cA_p0ZUx8",
     "accessSecret": "kXM1l5ia1RvSX3QaOEcwI3RLz3Y2rmNszWonKZtP",
-    "bucket": "ruoyi-vue-pro",
+    "bucket": "shengyu-saas",
     "endpoint": "s3-cn-south-1.qiniucs.com",
     "domain": "http://test.shengyu.iocoder.cn",
     "region": "oss-cn-beijing"

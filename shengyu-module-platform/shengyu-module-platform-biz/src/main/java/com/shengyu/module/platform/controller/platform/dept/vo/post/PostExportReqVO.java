@@ -10,7 +10,7 @@ public class PostExportReqVO {
     @Schema(description = "岗位编码,模糊匹配", example = "shengyu")
     private String code;
 
-    @Schema(description = "岗位名称,模糊匹配", example = "芋道")
+    @Schema(description = "岗位名称,模糊匹配", example = "圣钰")
     private String name;
 
     @Schema(description = "展示状态,参见 CommonStatusEnum 枚举类", example = "1")
