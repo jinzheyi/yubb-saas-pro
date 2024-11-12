@@ -7,6 +7,10 @@
 
 # 本系统基于芋道开源系统进行魔改（已联系作者，不存在侵权）
 
+# 作者博客地址：http://blog.shengyukj.top/ 里面有该项目的详细部署教程+相关SaaS业务介绍（博客文章在持续补充中......）
+
+# 部署文档地址：http://blog.shengyukj.top/article/178
+
 # 以下是商业版功能脑图规划（不是最终版，不定期更新）
 ![圣钰SaaS.png](https://zhushuyong.oss-cn-hangzhou.aliyuncs.com/images/20220819/6376c21a82ea44a0823bc10e4ed4caea.png?x-oss-process=image/auto-orient,1/interlace,1/quality,q_50/format,jpg/watermark,text_5pyx6L-w5YuHLXpodXNodXlvbmc,color_ff0021,size_18,x_10,y_10)
 
