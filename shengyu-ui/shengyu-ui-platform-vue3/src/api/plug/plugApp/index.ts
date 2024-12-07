@@ -43,7 +43,7 @@ export const updatePlugApp = async (data: PlugAppVO) => {
 
 // 导出插件应用
 export const exportPlugApp = async (params) => {
-  return await request.download({ url: '/plug/plug-app/export', params })
+  return await request.download({ url: '/plug/plug-app/export-excel', params })
 }
 
 // 上下架状态修改
