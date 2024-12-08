@@ -14,11 +14,11 @@ import java.time.LocalDateTime;
 public class TenantBaseVO {
 
     @Schema(description = "租户名", requiredMode = Schema.RequiredMode.REQUIRED, example = "圣钰")
-    @NotNull(message = "租户名不能为空")
+    @NotBlank(message = "租户名不能为空")
     private String name;
 
     @Schema(description = "联系人", requiredMode = Schema.RequiredMode.REQUIRED, example = "芋艿")
-    @NotNull(message = "联系人不能为空")
+    @NotBlank(message = "联系人不能为空")
     private String contactName;
 
     @Schema(description = "联系手机", example = "15601691300")

@@ -1,6 +1,7 @@
 package com.shengyu.module.platform.controller.platform.tenant.vo.packages;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import javax.validation.constraints.NotBlank;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
@@ -14,7 +15,7 @@ import java.util.Set;
 public class TenantPackageBaseVO {
 
     @Schema(description = "套餐名", requiredMode = Schema.RequiredMode.REQUIRED, example = "VIP")
-    @NotNull(message = "套餐名不能为空")
+    @NotBlank(message = "套餐名不能为空")
     private String name;
 
     @Schema(description = "状态,参见 CommonStatusEnum 枚举", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
