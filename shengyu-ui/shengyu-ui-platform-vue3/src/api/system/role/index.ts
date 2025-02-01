@@ -55,7 +55,7 @@ export const deleteRole = async (id: number) => {
 // 导出角色
 export const exportRole = (params) => {
   return request.download({
-    url: '/system/role/export-excel',
+    url: '/system/role/export',
     params
   })
 }

@@ -30,7 +30,8 @@ public interface DictTypeMapper extends BaseMapperX<DictTypeDO> {
                 .likeIfPresent(DictTypeDO::getName, reqVO.getName())
                 .likeIfPresent(DictTypeDO::getType, reqVO.getType())
                 .eqIfPresent(DictTypeDO::getStatus, reqVO.getStatus())
-                .betweenIfPresent(DictTypeDO::getCreateTime, reqVO.getCreateTime()));
+                .betweenIfPresent(DictTypeDO::getCreateTime, reqVO.getCreateTime())
+                .orderByDesc(DictTypeDO::getId));
     }
 
     default DictTypeDO selectByType(String type) {
@@ -43,6 +44,6 @@ public interface DictTypeMapper extends BaseMapperX<DictTypeDO> {
 
     int deleteById(@Param("id") Long id, @Param("deletedTime") LocalDateTime deletedTime);
 
-    @Update("UPDATE system_dict_type SET deleted = 1, deleted_time = #{deletedTime} WHERE id = #{id}")
+    @Update("UPDATE platform_dict_type SET deleted = 1, deleted_time = #{deletedTime} WHERE id = #{id}")
     void updateToDelete(@Param("id") Long id, @Param("deletedTime") LocalDateTime deletedTime);
 }
