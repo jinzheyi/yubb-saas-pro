@@ -1629,7 +1629,7 @@ INSERT INTO `platform_menu` VALUES (2155, '更新项目', 'report:go-view-projec
 INSERT INTO `platform_menu` VALUES (2156, '查询项目', 'report:go-view-project:query', 3, 0, 2153, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2023-02-07 19:25:53', '1', '2024-01-13 20:49:04', b'1');
 INSERT INTO `platform_menu` VALUES (2157, '使用 SQL 查询数据', 'report:go-view-data:get-by-sql', 3, 3, 2153, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2023-02-07 19:26:15', '1', '2024-01-13 20:48:54', b'1');
 INSERT INTO `platform_menu` VALUES (2158, '使用 HTTP 查询数据', 'report:go-view-data:get-by-http', 3, 4, 2153, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2023-02-07 19:26:35', '1', '2024-01-13 20:48:51', b'1');
-INSERT INTO `platform_menu` VALUES (2159, '开发文档', '', 1, 1, 0, 'http://blog.shengyukj.top', 'education', NULL, NULL, 0, b'1', b'1', b'1', '1', '2023-02-10 22:46:28', '1', '2024-08-20 23:29:40', b'0');
+INSERT INTO `platform_menu` VALUES (2159, '开发文档', '', 1, 1, 0, 'http://www.shengyukj.top', 'education', NULL, NULL, 0, b'1', b'1', b'1', '1', '2023-02-10 22:46:28', '1', '2024-08-20 23:29:40', b'0');
 INSERT INTO `platform_menu` VALUES (2160, 'Cloud 开发文档', '', 1, 2, 0, 'https://cloud.iocoder.cn', 'documentation', NULL, NULL, 0, b'1', b'1', b'1', '1', '2023-02-10 22:47:07', '1', '2024-08-20 23:29:44', b'1');
 INSERT INTO `platform_menu` VALUES (2161, '接入示例', '', 2, 99, 1117, 'demo-order', 'drag', 'pay/demo/index', NULL, 0, b'1', b'1', b'1', '', '2023-02-11 14:21:42', '1', '2024-01-13 18:36:31', b'1');
 INSERT INTO `platform_menu` VALUES (2162, '商品导出', 'product:spu:export', 3, 5, 2014, '', '', '', NULL, 0, b'1', b'1', b'1', '', '2022-07-30 14:22:58', '', '2024-01-13 20:37:02', b'1');
@@ -3073,7 +3073,7 @@ INSERT INTO `tenant_menu` VALUES (2149, '站内信模板删除', 'system:notify-
 INSERT INTO `tenant_menu` VALUES (2150, '发送测试站内信', 'system:notify-template:send-notify', 3, 5, 2145, '', '', '', NULL, 0, b'1', b'1', b'1', 0, NULL, '1', '2023-01-28 10:54:43', '1', '2023-01-28 10:54:43', b'0');
 INSERT INTO `tenant_menu` VALUES (2151, '消息记录', '', 2, 0, 2144, 'notify-message', 'edit', 'system/notify/message/index', 'SystemNotifyMessage', 0, b'1', b'1', b'1', 0, NULL, '', '2023-01-28 04:28:22', '1', '2023-04-08 08:54:11', b'0');
 INSERT INTO `tenant_menu` VALUES (2152, '站内信消息查询', 'system:notify-message:query', 3, 1, 2151, '', '', '', NULL, 0, b'1', b'1', b'1', 0, NULL, '', '2023-01-28 04:28:22', '', '2023-01-28 04:28:22', b'0');
-INSERT INTO `tenant_menu` VALUES (2159, '开发文档', '', 1, 1, 0, 'http://blog.shengyukj.top', 'education', NULL, NULL, 0, b'1', b'1', b'1', 0, NULL, '1', '2023-02-10 22:46:28', '1', '2024-08-20 23:37:23', b'0');
+INSERT INTO `tenant_menu` VALUES (2159, '开发文档', '', 1, 1, 0, 'http://www.shengyukj.top', 'education', NULL, NULL, 0, b'1', b'1', b'1', 0, NULL, '1', '2023-02-10 22:46:28', '1', '2024-08-20 23:37:23', b'0');
 INSERT INTO `tenant_menu` VALUES (2160, 'Cloud 开发文档', '', 1, 2, 0, 'https://cloud.iocoder.cn', 'documentation', NULL, NULL, 0, b'1', b'1', b'1', 0, NULL, '1', '2023-02-10 22:47:07', '1', '2024-08-20 23:37:26', b'1');
 INSERT INTO `tenant_menu` VALUES (2447, '三方登录', '', 1, 10, 1, 'social', 'fa:500px', '', '', 0, b'1', b'1', b'1', 0, NULL, '1', '2023-11-04 12:12:01', '1', '2024-05-15 22:16:14', b'1');
 INSERT INTO `tenant_menu` VALUES (2448, '三方应用', '', 2, 1, 2447, 'client', 'ep:set-up', 'views/system/social/client/index.vue', 'SocialClient', 0, b'1', b'1', b'1', 0, NULL, '1', '2023-11-04 12:17:19', '1', '2024-05-15 22:16:14', b'1');
