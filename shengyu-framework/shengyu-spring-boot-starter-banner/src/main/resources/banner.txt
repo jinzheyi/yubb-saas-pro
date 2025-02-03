@@ -1,4 +1,4 @@
-圣钰科技 http://blog.shengyukj.top
+圣钰科技 http://www.shengyukj.top
 Application Version: ${shengyu.info.version}
 Spring Boot Version: ${spring-boot.version}
 

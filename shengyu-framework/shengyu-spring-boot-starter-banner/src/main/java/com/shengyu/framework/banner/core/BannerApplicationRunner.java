@@ -24,7 +24,7 @@ public class BannerApplicationRunner implements ApplicationRunner {
                             "项目启动成功！\n\t" +
                             "文档地址: \t{} \n\t" +
                             "----------------------------------------------------------",
-                    "http://blog.shengyukj.top");
+                    "http://www.shengyukj.top");
 //            // 支付平台
 //            if (isNotPresent("com.shengyu.module.pay.framework.pay.config.PayConfiguration")) {
 //                System.out.println("[支付系统 shengyu-module-pay - 已禁用][参考 https://doc.iocoder.cn/pay/build/ 开启]");
