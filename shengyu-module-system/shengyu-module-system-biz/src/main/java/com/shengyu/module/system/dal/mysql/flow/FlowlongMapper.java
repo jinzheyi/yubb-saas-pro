@@ -18,12 +18,6 @@ public interface FlowlongMapper {
     Page<PendingClaimTaskVO> selectPagePendingClaim(Page<PendingClaimTaskVO> page, @Param("dto") ProcessTaskDTO dto);
 
 
-
-    /**
-     * 我的申请任务分页列表
-     */
-    Page<ProcessTaskVO> selectPageMyApplication(Page<ProcessTaskVO> page, @Param("dto") ProcessTaskDTO dto);
-
     /**
      * 我收到的任务分页列表
      */
