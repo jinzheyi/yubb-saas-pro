@@ -1,0 +1,461 @@
+package com.shengyu.module.system.service.flow;
+
+import com.aizuda.boot.modules.flw.entity.*;
+import com.aizuda.boot.modules.flw.entity.dto.*;
+import com.aizuda.boot.modules.flw.entity.vo.*;
+import com.aizuda.boot.modules.flw.flow.FlowForm;
+import com.aizuda.boot.modules.flw.flow.FlowHelper;
+import com.aizuda.boot.modules.flw.mapper.FlowlongMapper;
+import com.aizuda.boot.modules.flw.service.*;
+import com.aizuda.boot.modules.system.service.ISysSSEService;
+import com.aizuda.bpm.engine.FlowDataTransfer;
+import com.aizuda.bpm.engine.FlowLongEngine;
+import com.aizuda.bpm.engine.RuntimeService;
+import com.aizuda.bpm.engine.TaskService;
+import com.aizuda.bpm.engine.core.Execution;
+import com.aizuda.bpm.engine.core.FlowCreator;
+import com.aizuda.bpm.engine.core.enums.PerformType;
+import com.aizuda.bpm.engine.core.enums.ProcessType;
+import com.aizuda.bpm.engine.core.enums.TaskType;
+import com.aizuda.bpm.engine.entity.*;
+import com.aizuda.bpm.engine.model.ModelHelper;
+import com.aizuda.bpm.engine.model.NodeModel;
+import com.aizuda.bpm.engine.model.ProcessModel;
+import com.aizuda.bpm.mybatisplus.mapper.FlwExtInstanceMapper;
+import com.aizuda.core.api.ApiAssert;
+import com.aizuda.core.api.PageParam;
+import com.aizuda.service.web.UserSession;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.AllArgsConstructor;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * 流程任务 服务实现类
+ *
+ * @author 青苗
+ * @since 2023-12-11
+ */
+@Service
+@AllArgsConstructor
+public class ProcessTaskServiceImpl implements ProcessTaskService {
+    private final RuntimeService runtimeService;
+    private FlowlongMapper flowlongMapper;
+    private FlwExtInstanceMapper extInstanceMapper;
+    private FlowLongEngine flowLongEngine;
+    private FlwProcessApprovalService flwProcessApprovalService;
+    private FlwProcessFormService flwProcessFormService;
+    private FlwFormTemplateService flwFormTemplateService;
+    private FlwProcessConfigureService flwProcessConfigureService;
+    private ISysSSEService sseService;
+
+    @Override
+    public Page<PendingClaimTaskVO> pagePendingClaim(PageParam<ProcessTaskDTO> pageParam) {
+        ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
+        Page<PendingClaimTaskVO> page = pageParam.page();
+        page.setSearchCount(false);
+        return flowlongMapper.selectPagePendingClaim(page, dto);
+    }
+
+    @Override
+    public Page<PendingApprovalTaskVO> pagePendingApproval(PageParam<ProcessTaskDTO> pageParam) {
+        ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
+        Page<PendingApprovalTaskVO> page = pageParam.page();
+        page.setSearchCount(false);
+        return flowlongMapper.selectPagePendingApproval(page, dto);
+    }
+
+    @Override
+    public Page<ProcessTaskVO> pageMyApplication(PageParam<ProcessTaskDTO> pageParam) {
+        ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
+        Page<ProcessTaskVO> page = pageParam.page();
+        page.setSearchCount(false);
+        return flowlongMapper.selectPageMyApplication(page, dto);
+    }
+
+    @Override
+    public Page<ProcessTaskVO> pageMyReceived(PageParam<ProcessTaskDTO> pageParam) {
+        ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
+        Page<ProcessTaskVO> page = pageParam.page();
+        page.setSearchCount(false);
+        return flowlongMapper.selectPageMyReceived(page, dto);
+    }
+
+    @Override
+    public Page<ProcessTaskVO> pageApproved(PageParam<ProcessTaskDTO> pageParam) {
+        ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
+        Page<ProcessTaskVO> page = pageParam.page();
+        page.setSearchCount(false);
+        return flowlongMapper.selectPageApproved(pageParam.page(), dto);
+    }
+
+    @Override
+    public TaskApprovalVO approvalInfo(ProcessInfoDTO dto) {
+        final Long instanceId = dto.getInstanceId();
+        FlwHisInstance hisInstance = flowLongEngine.queryService().getHistInstance(instanceId);
+        ApiAssert.isEmpty(hisInstance, "未发现指定审批流程");
+        TaskApprovalVO vo = new TaskApprovalVO();
+        vo.setInstanceId(hisInstance.getId());
+        vo.setInstanceState(hisInstance.getInstanceState());
+        vo.setTaskId(dto.getTaskId());
+        vo.setCreateId(hisInstance.getCreateId());
+        vo.setCreateBy(hisInstance.getCreateBy());
+        vo.setCreateTime(hisInstance.getCreateTime());
+
+        // 获取当前流程模型
+        FlwExtInstance extInstance = extInstanceMapper.selectById(instanceId);
+        vo.setModelContent(extInstance.getModelContent());
+        ProcessModel processModel = extInstance.model();
+
+        // 表单配置权限
+        if (null != dto.getTaskId()) {
+            FlwTask flwTask = this.getFlwTask(dto.getTaskId());
+            NodeModel nodeModel = processModel.getNode(flwTask.getTaskKey());
+            Map<String, Object> extendConfig = nodeModel.getExtendConfig();
+            if (null != extendConfig) {
+                // 表单配置内容
+                Object formConfig = extendConfig.get("formConfig");
+                if (null != formConfig) {
+                    vo.setFormConfig(formConfig);
+                }
+            }
+            vo.setTaskType(flwTask.getTaskType());
+            vo.setActionUrl(nodeModel.getActionUrl());
+
+            // 设置按钮控制参数
+            vo.setAllowTransfer(nodeModel.getAllowTransfer());
+            vo.setAllowAppendNode(nodeModel.getAllowAppendNode());
+            vo.setAllowRollback(nodeModel.getAllowRollback());
+            vo.setRejectStrategy(nodeModel.getRejectStrategy());
+        }
+
+        FlwProcessConfigure configure = flwProcessConfigureService.getByProcessId(hisInstance.getProcessId());
+        if (null != configure) {
+            boolean searchFormContent = true;
+
+            // 流程设置
+            vo.setProcessSetting(configure.getProcessSetting());
+
+            // 表单设置
+            if (ProcessType.business.eq(extInstance.getProcessType())) {
+                // 业务流程，加载表单模板内容
+                FlwFormTemplate formTemplate = flwFormTemplateService.getByConfigure(configure.getProcessForm());
+                ApiAssert.fail(null == formTemplate, "未发现指定业务流程表单模板");
+                vo.setFormTemplate(formTemplate);
+                if (Objects.equals(formTemplate.getType(), 1)) {
+                    // 系统表单情况
+                    searchFormContent = false;
+                }
+            }
+
+            // 表单内容
+            if (searchFormContent) {
+                vo.setFormContent(this.formContent(instanceId, hisInstance.getParentInstanceId()));
+            }
+        }
+
+        // 渲染节点列表
+        Map<String, Integer> renderNodes = new HashMap<>();
+        Execution execution = new Execution(FlowHelper.getFlowCreator(), null);
+        List<String> usedNodeKeys = ModelHelper.getAllUsedNodeKeys(flowLongEngine.getContext(), execution, processModel.getNodeConfig(), hisInstance.getCurrentNodeKey());
+        for (String nodeKey : usedNodeKeys) {
+            // 已执行节点
+            renderNodes.put(nodeKey, 0);
+        }
+
+        // 审批记录列表
+        List<FlwProcessApproval> processApprovals = flwProcessApprovalService.listByInstanceId(instanceId);
+
+        // 追加当前正在审核任务记录
+        if (null == hisInstance.getEndTime()) {
+            List<FlwTask> flwTaskList = flowLongEngine.queryService().getTasksByInstanceId(instanceId);
+            if (CollectionUtils.isNotEmpty(flwTaskList)) {
+                FlwTask flwTask = flwTaskList.get(0);
+                FlwProcessApproval fpa = new FlwProcessApproval();
+                fpa.setInstanceId(instanceId);
+                fpa.setTaskId(flwTask.getId());
+                fpa.setTaskName(flwTask.getTaskName());
+                fpa.setType(-1);
+                Integer performType = flwTask.getPerformType();
+                if (!(PerformType.timer.eq(performType) && PerformType.trigger.eq(performType))) {
+                    // 排除 定时器 & 触发器
+                    ApprovalContent content = new ApprovalContent();
+                    if (PerformType.countersign.eq(performType)) {
+                        // 会签情况
+                        flowLongEngine.queryService().getActiveTaskActorsByInstanceId(flwTask.getInstanceId())
+                                .ifPresent(content::appendNodeAssignee);
+                    } else {
+                        // 其它
+                        flowLongEngine.queryService().getActiveTaskActorsByTaskId(flwTask.getId())
+                                .ifPresent(content::appendNodeAssignee);
+                    }
+                    fpa.setContent(content);
+                }
+                processApprovals.add(fpa);
+
+                // 正在执行节点
+                for (FlwTask ft : flwTaskList) {
+                    renderNodes.put(ft.getTaskKey(), 1);
+                }
+            }
+        } else {
+            // 流程结束，渲染最终完成结束节点
+            renderNodes.put(hisInstance.getCurrentNodeKey(), 0);
+        }
+
+        vo.setRenderNodes(renderNodes);
+        vo.setProcessApprovals(processApprovals);
+        return vo;
+    }
+
+    /**
+     * 查询流程表单内容
+     * <p>
+     * 普通流程，表单填写内容，子流程需要获取主流程表单
+     * </p>
+     */
+    private String formContent(Long instanceId, Long parentInstanceId) {
+        // 普通流程，表单填写内容，子流程需要获取主流程表单
+        FlwProcessForm flwProcessForm;
+        if (null != parentInstanceId) {
+            flwProcessForm = flwProcessFormService.getByInstanceId(parentInstanceId);
+        } else {
+            flwProcessForm = flwProcessFormService.getByInstanceId(instanceId);
+        }
+        return null == flwProcessForm ? null : flwProcessForm.getContent();
+    }
+
+    @Override
+    public List<Map<String, String>> listPreviousNodes(Long taskId) {
+        FlwTask flwTask = this.getFlwTask(taskId);
+        ProcessModel processModel = flowLongEngine.runtimeService().getProcessModelByInstanceId(flwTask.getInstanceId());
+        List<String> nodeKeys = ModelHelper.getAllPreviousNodeKeys(processModel.getNode(flwTask.getTaskKey()));
+        List<Map<String, String>> mapList = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(nodeKeys)) {
+            for (String nodeKey : nodeKeys) {
+                // 模型中找到可回退历史节点信息
+                NodeModel nodeModel = processModel.getNode(nodeKey);
+                if (null != nodeModel) {
+                    Map<String, String> map = new HashMap<>();
+                    map.put("nodeName", nodeModel.getNodeName());
+                    map.put("nodeKey", nodeModel.getNodeKey());
+                    mapList.add(map);
+                }
+            }
+        }
+        return mapList;
+    }
+
+    @Override
+    public Map<String, Object> listNextNodes(NextNodesDTO dto) {
+        FlwInstance instance = flowLongEngine.queryService().getInstance(dto.getInstanceId());
+        ApiAssert.fail(null == instance, "当前流程实例不存在");
+        FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(dto.getInstanceId());
+        NodeModel rootNodeModel = extInstance.model().getNodeConfig();
+        Execution execution = new Execution(FlowHelper.getFlowCreator(), dto.getArgs());
+        Map<String, Object> nodeModelsMap = new HashMap<>();
+        List<NodeModel> nodeModels = ModelHelper.getNextChildNodes(flowLongEngine.getContext(), execution, rootNodeModel, instance.getCurrentNodeKey());
+        if (null != nodeModels) {
+            // 1，普通审批
+            int nodeType = 1;
+            if (nodeModels.size() > 1) {
+                // 判断是否为条件分支，根据父节点确定分支类型
+                NodeModel nextParentNode = nodeModels.get(0).getParentNode();
+                if (TaskType.conditionNode.eq(nextParentNode.getType())) {
+                    // 4，条件分支 8，并发分支 9，包容分支
+                    nodeType = nextParentNode.getParentNode().getType();
+                }
+            }
+            nodeModelsMap.put("nodeType", nodeType);
+            nodeModelsMap.put("nodeModels", nodeModels.stream().map(NodeModel::cloneBaseInfo).toList());
+        }
+        return nodeModelsMap;
+    }
+
+    @Override
+    public boolean viewed(Long taskId) {
+        return flowLongEngine.taskService().viewTask(taskId, FlowHelper.getFlwTaskActor());
+    }
+
+    /**
+     * 获取流程任务DTO
+     */
+    private ProcessTaskDTO getProcessTaskDTO(PageParam<ProcessTaskDTO> pageParam) {
+        ProcessTaskDTO dto = pageParam.getData();
+        if (null == dto) {
+            dto = new ProcessTaskDTO();
+        }
+        UserSession userSession = UserSession.getLoginInfo();
+        dto.setCreateId(userSession.getUserId());
+        return dto;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean reclaim(Long taskId, FlowCreator flowCreator) {
+        TaskService taskService = flowLongEngine.taskService();
+        return taskService.reclaimTask(taskId, flowCreator).isPresent();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean claim(Long taskId, FlowCreator flowCreator) {
+        TaskService taskService = flowLongEngine.taskService();
+        return null != taskService.claimRole(taskId, flowCreator);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean withdraw(Long taskId, FlowCreator flowCreator) {
+        TaskService taskService = flowLongEngine.taskService();
+        return taskService.withdrawTask(taskId, flowCreator).isPresent();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean revoke(ProcessApprovalDTO dto, FlowCreator flowCreator) {
+        FlwInstance flwInstance = flowLongEngine.queryService().getInstance(dto.getInstanceId());
+        ApiAssert.fail(null == flwInstance, "流程实例已结束");
+        FlwProcessConfigure configure = flwProcessConfigureService.getByProcessId(flwInstance.getProcessId());
+        if (null != configure && null != configure.getProcessSetting()) {
+            ApiAssert.fail(!Objects.equals(true, configure.getProcessSetting().getAllowRevocation()),
+                    "该审批流程不允许撤回");
+        }
+        FlowHelper.setProcessApprovalOpinion(dto.getContent());
+        flowLongEngine.runtimeService().revoke(dto.getInstanceId(), flowCreator);
+        return true;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean execute(ExecuteTaskDTO dto) {
+        FlowHelper.setProcessApprovalOpinion(dto.getOpinion());
+        return flowLongEngine.executeTask(dto.getTaskId(), FlowHelper.getFlowCreator(), dto.getArgs());
+    }
+
+    @Override
+    public List<FlwHisTaskVO> listHisTaskByInstanceId(Long instanceId) {
+        List<FlwHisTaskVO> voList = flowlongMapper.selectListHisTaskByInstanceId(instanceId);
+        if (CollectionUtils.isNotEmpty(voList)) {
+            List<FlwHisTaskActorVO> actorList = flowlongMapper.selectListHisTaskActorVOByInstanceId(instanceId);
+            if (CollectionUtils.isNotEmpty(actorList)) {
+                voList.forEach(t -> t.setActorList(actorList.stream().filter(v -> Objects.equals(v.getTaskId(), t.getId()))
+                        .collect(Collectors.toList())));
+            }
+        }
+        return voList;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean reject(RejectTaskDTO dto) {
+        FlwTask flwTask = flowLongEngine.queryService().getTask(dto.getTaskId());
+        ApiAssert.isEmpty(flwTask, "当前ID执行任务不存在");
+        FlowHelper.setProcessApprovalOpinion(dto.getReason());
+        return flowLongEngine.executeRejectTask(flwTask, dto.getNodeKey(), FlowHelper.getFlowCreator(), dto.getArgs()).isPresent();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean transfer(TaskAssigneeDTO dto) {
+        FlowHelper.setProcessApprovalOpinion(dto.getContent());
+        if (Objects.equals(0, dto.getType())) {
+            // 转办
+            TaskService taskService = flowLongEngine.taskService();
+            return taskService.transferTask(dto.getTaskId(), FlowHelper.getFlowCreator(), dto.toFlowCreator());
+        }
+
+        // 委派
+        TaskService taskService = flowLongEngine.taskService();
+        return taskService.delegateTask(dto.getTaskId(), FlowHelper.getFlowCreator(), dto.toFlowCreator());
+    }
+
+    private FlwTask getFlwTask(Long taskId) {
+        FlwTask flwTask = flowLongEngine.queryService().getTask(taskId);
+        ApiAssert.isEmpty(flwTask, "指定ID任务已执行完成");
+        return flwTask;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean comment(ProcessApprovalDTO dto) {
+        return flwProcessApprovalService.comment(dto);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean consent(TaskApprovalDTO dto) {
+        // 判断是否修改模型
+        if (MapUtils.isNotEmpty(dto.getAssigneeMap())) {
+
+            // 传递动态分配处理人员
+            FlowDataTransfer.dynamicAssignee(Collections.unmodifiableMap(dto.getAssigneeMap()));
+        }
+
+        // 获取任务，保存表单
+        FlwTask flwTask = this.getFlwTask(dto.getTaskId());
+        FlowHelper.setProcessApprovalOpinion(dto.getContent());
+        ApiAssert.fail(!flwProcessFormService.saveForm(flwTask.getInstanceId(), dto.getProcessForm()), "保存保单内容失败");
+        FlowForm.argsTransfer(dto.getProcessForm());
+
+        // 委派审批
+        if (TaskType.delegate.eq(flwTask.getTaskType())) {
+            return flowLongEngine.taskService().resolveTask(flwTask.getId(), FlowHelper.getFlowCreator());
+        }
+
+        // 普通审批
+        return flowLongEngine.executeTask(dto.getTaskId(), FlowHelper.getFlowCreator());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean rejection(TaskApprovalDTO dto) {
+        FlwTask flwTask = this.getFlwTask(dto.getTaskId());
+        FlowHelper.setProcessApprovalOpinion(dto.getContent());
+        if (dto.isTermination()) {
+            // 驳回并终止流程
+            runtimeService.reject(flwTask.getInstanceId(), FlowHelper.getFlowCreator());
+            return true;
+        }
+        return flowLongEngine.executeRejectTask(flwTask, dto.getNodeKey(), FlowHelper.getFlowCreator(), dto.getArgs()).isPresent();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean appendNode(TaskAppendNodeDTO dto) {
+        FlwTask flwTask = this.getFlwTask(dto.getTaskId());
+        FlowHelper.setProcessApprovalOpinion(dto.getContent());
+        return flowLongEngine.executeAppendNodeModel(flwTask.getId(), dto.toNodeModel(),
+                FlowHelper.getFlowCreator(), dto.getType() == 9);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean jump(TaskJumpDTO dto) {
+        FlowHelper.setProcessApprovalOpinion(dto.getContent());
+        return flowLongEngine.executeJumpTask(dto.getTaskId(), dto.getNodeKey(), FlowHelper.getFlowCreator());
+    }
+
+    @Override
+    public Integer countPendingApproval() {
+        UserSession userSession = UserSession.getLoginInfo();
+        return flowlongMapper.selectCountPendingApproval(userSession.getUserId());
+    }
+
+    @Override
+    public boolean urgeByInstanceId(Long instanceId) {
+        flowLongEngine.queryService().getActiveTaskActorsByInstanceId(instanceId)
+                .ifPresent(taskActors -> {
+                    // 演示催办逻辑，提示当前用户，实际业务可以做一些其他处理，比如通过短信、邮件、站内信等方式提醒用户
+                    UserSession userSession = UserSession.getLoginInfo();
+                    sseService.sendRemind(userSession.getId(), "流程催办", "模拟流程催办消息，通知用户：" +
+                            taskActors.stream().map(FlwTaskActor::getActorName).collect(Collectors.joining(", ")));
+                });
+        return true;
+    }
+}

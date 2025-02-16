@@ -1,0 +1,129 @@
+/*
+ * Copyright 2023-2025 Licensed under the Dual Licensing
+ * website: https://aizuda.com
+ */
+package com.shengyu.module.system.dal.dataobject.flow;
+
+import com.aizuda.bpm.engine.assist.Assert;
+import com.aizuda.bpm.engine.assist.DateUtils;
+import com.aizuda.bpm.engine.core.enums.TaskState;
+import com.aizuda.bpm.engine.core.enums.TaskType;
+import com.aizuda.bpm.engine.entity.FlwInstance;
+import com.aizuda.bpm.engine.entity.FlwTask;
+import com.aizuda.bpm.engine.model.NodeModel;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.*;
+
+import java.util.Date;
+
+/**
+ * 历史任务实体类
+ *
+ * <p>
+ * <a href="https://aizuda.com">官网</a>尊重知识产权，不允许非法使用，后果自负
+ * </p>
+ *
+ * @author hubin
+ * @since 1.0
+ */
+@Data
+@TableName("flw_his_task")
+@EqualsAndHashCode(callSuper = true)
+public class FlwHisTaskDO extends FlwTaskDO {
+    /**
+     * 调用外部流程定义ID
+     */
+    protected Long callProcessId;
+    /**
+     * 调用外部流程实例ID
+     */
+    protected Long callInstanceId;
+    /**
+     * 完成时间
+     */
+    protected Date finishTime;
+    /**
+     * 任务状态 0，活动 1，跳转 2，完成 3，拒绝 更多查看 {@link TaskState}
+     */
+    protected Integer taskState;
+    /**
+     * 处理耗时
+     */
+    protected Long duration;
+
+    public FlwHisTaskDO setTaskState(TaskState taskState) {
+        this.taskState = taskState.getValue();
+        return this;
+    }
+
+    public FlwHisTaskDO setTaskState(Integer taskState) {
+        Assert.isNull(TaskState.get(taskState), "插入的实例状态异常 [taskState=" + taskState + "]");
+        this.taskState = taskState;
+        return this;
+    }
+
+    public static FlwHisTaskDO of(FlwTaskDO flwTask, TaskState taskState) {
+        return of(flwTask).setTaskState(taskState);
+    }
+
+    public static FlwHisTaskDO of(FlwTaskDO flwTask) {
+        FlwHisTaskDO hisTask = new FlwHisTaskDO();
+        hisTask.id = flwTask.getId();
+        hisTask.setTenantId(flwTask.getTenantId());
+        hisTask.setCreator(flwTask.getCreator());
+        hisTask.createBy = flwTask.getCreateBy();
+        hisTask.setCreateTime(flwTask.getCreateTime());
+        hisTask.instanceId = flwTask.getInstanceId();
+        hisTask.parentTaskId = flwTask.getParentTaskId();
+        hisTask.taskName = flwTask.getTaskName();
+        hisTask.taskKey = flwTask.getTaskKey();
+        hisTask.taskType = flwTask.getTaskType();
+        hisTask.performType = flwTask.getPerformType();
+        hisTask.actionUrl = flwTask.getActionUrl();
+        hisTask.variable = flwTask.getVariable();
+        hisTask.assignorId = flwTask.getAssignorId();
+        hisTask.assignor = flwTask.getAssignor();
+        hisTask.expireTime = flwTask.getExpireTime();
+        hisTask.remindTime = flwTask.getRemindTime();
+        hisTask.remindRepeat = flwTask.getRemindRepeat();
+        hisTask.viewed = flwTask.getViewed();
+        return hisTask;
+    }
+
+    public static FlwHisTaskDO ofCallInstance(NodeModel nodeModel, FlwInstanceDO instance) {
+        FlwHisTaskDO flwHisTask = new FlwHisTaskDO();
+        flwHisTask.setTenantId(instance.getTenantId());
+        flwHisTask.setCreator(instance.getCreator());
+        flwHisTask.setCreateBy(instance.getCreateBy());
+        flwHisTask.setCreateTime(instance.getCreateTime());
+        flwHisTask.setInstanceId(instance.getParentInstanceId());
+        flwHisTask.setTaskName(nodeModel.getNodeName());
+        flwHisTask.setTaskKey(nodeModel.getNodeKey());
+        flwHisTask.setCallProcessId(instance.getProcessId());
+        flwHisTask.setCallInstanceId(instance.getId());
+        flwHisTask.setTaskType(nodeModel.getType());
+        return flwHisTask;
+    }
+
+    /**
+     * 根据历史任务产生撤回的任务对象
+     * <p>
+     * 创建人信息保留
+     * </p>
+     *
+     * @return 任务对象
+     */
+    public FlwTaskDO undoTask(TaskType taskType) {
+        FlwTaskDO flwTask = this.cloneTask(this.getCreator(), this.createBy);
+        flwTask.taskType(taskType);
+        return flwTask;
+    }
+
+    /**
+     * 计算流程实例处理耗时
+     */
+    public void calculateDuration() {
+        this.finishTime = DateUtils.getCurrentDate();
+        this.duration = DateUtils.calculateDateDifference(DateUtils.toDate(this.getCreateTime()), this.finishTime);
+    }
+}
