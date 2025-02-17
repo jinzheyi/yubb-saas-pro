@@ -4,5 +4,8 @@ aizuda-boot
 aizuda-framework
 -- 代码同步git节点：升级 Gradle 为国内镜像地址  20241230
 
+zizuda-sql
+-- 代码同步git节点：新增数据权限维护脚本  20250205
+
 flowlong
 -- 代码同步git节点：发布 1.1.2 版本   20250116
