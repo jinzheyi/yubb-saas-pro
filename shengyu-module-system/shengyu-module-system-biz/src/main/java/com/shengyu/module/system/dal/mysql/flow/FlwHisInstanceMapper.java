@@ -36,14 +36,14 @@ public interface FlwHisInstanceMapper extends BaseMapperX<FlwHisInstanceDO> {
         return selectJoinPage(page, ProcessTaskVO.class,
                 new MPJLambdaWrapper<FlwHisInstanceDO>()
                         .select(FlwHisInstanceDO::getProcessId, FlwHisInstanceDO::getCurrentNodeName, FlwHisInstanceDO::getCurrentNodeKey,
-                                FlwHisInstanceDO::getInstanceState, FlwHisInstanceDO::getCreator, FlwHisInstanceDO::getCreateBy, FlwHisInstanceDO::getCreateTime,
+                                FlwHisInstanceDO::getInstanceState, FlwHisInstanceDO::getCreateId, FlwHisInstanceDO::getCreateBy, FlwHisInstanceDO::getCreateTime,
                                 FlwHisInstanceDO::getExpireTime, FlwHisInstanceDO::getEndTime, FlwHisInstanceDO::getDuration)
                         .selectAs(FlwHisInstanceDO::getId, ProcessTaskVO::getInstanceId)
 
                         .select(FlwProcessDO::getProcessName, FlwProcessDO::getProcessType)
 
                         .leftJoin(FlwProcessDO.class, FlwProcessDO::getId, FlwHisInstanceDO::getProcessId)
-                        .eq(FlwHisInstanceDO::getCreator, dto.getCreateId())
+                        .eq(FlwHisInstanceDO::getCreateId, dto.getCreateId())
                         .like(StrUtil.isNotBlank(dto.getProcessName()), FlwProcessDO::getProcessName, dto.getProcessName())
                         .like(StrUtil.isNotBlank(dto.getCreateBy()), FlwProcessDO::getCreateBy, dto.getCreateBy())
                         .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstanceDO::getId, dto.getInstanceId())
