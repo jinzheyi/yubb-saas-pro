@@ -1,7 +1,8 @@
 package com.shengyu.module.system.dal.mysql.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwFormTemplate;
-import com.aizuda.service.mapper.CrudMapper;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplateDO;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * <p>
@@ -11,6 +12,7 @@ import com.aizuda.service.mapper.CrudMapper;
  * @author hubin
  * @since 2024-05-19
  */
-public interface FlwFormTemplateMapper extends CrudMapper<FlwFormTemplate> {
+@Mapper
+public interface FlwFormTemplateMapper extends BaseMapperX<FlwFormTemplateDO> {
 
 }

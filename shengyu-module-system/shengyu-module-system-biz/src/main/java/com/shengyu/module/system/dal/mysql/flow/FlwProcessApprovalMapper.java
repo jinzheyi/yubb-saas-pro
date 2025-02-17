@@ -1,7 +1,8 @@
 package com.shengyu.module.system.dal.mysql.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessApproval;
-import com.aizuda.service.mapper.CrudMapper;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApprovalDO;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * <p>
@@ -11,6 +12,7 @@ import com.aizuda.service.mapper.CrudMapper;
  * @author hubin
  * @since 2024-03-03
  */
-public interface FlwProcessApprovalMapper extends CrudMapper<FlwProcessApproval> {
+@Mapper
+public interface FlwProcessApprovalMapper extends BaseMapperX<FlwProcessApprovalDO> {
 
 }

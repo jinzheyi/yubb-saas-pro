@@ -2,11 +2,12 @@ package com.shengyu.module.system.dal.mysql.flow;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shengyu.module.system.controller.admin.flow.dto.ProcessTaskDTO;
-import com.shengyu.module.system.controller.admin.flow.vo.*;
+import com.shengyu.module.system.controller.admin.flow.vo.FlwHisTaskActorVO;
+import com.shengyu.module.system.controller.admin.flow.vo.PendingClaimTaskVO;
+import com.shengyu.module.system.controller.admin.flow.vo.ProcessTaskVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import javax.annotation.Resource;
 import java.util.List;
 
 @Mapper
@@ -17,21 +18,10 @@ public interface FlowlongMapper {
      */
     Page<PendingClaimTaskVO> selectPagePendingClaim(Page<PendingClaimTaskVO> page, @Param("dto") ProcessTaskDTO dto);
 
-
-    /**
-     * 我收到的任务分页列表
-     */
-    Page<ProcessTaskVO> selectPageMyReceived(Page<ProcessTaskVO> page, @Param("dto") ProcessTaskDTO dto);
-
     /**
      * 已审批任务分页列表
      */
     Page<ProcessTaskVO> selectPageApproved(Page<ProcessTaskVO> page, @Param("dto") ProcessTaskDTO dto);
-
-    /**
-     * 查询流程实例ID的审批历史
-     */
-    List<FlwHisTaskVO> selectListHisTaskByInstanceId(@Param("instanceId") Long instanceId);
 
     /**
      * 查询流程实例ID的审批处理人

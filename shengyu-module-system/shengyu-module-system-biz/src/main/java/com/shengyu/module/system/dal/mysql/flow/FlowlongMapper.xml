@@ -2,18 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.shengyu.module.system.dal.mysql.flow.FlowlongMapper">
 
-    <select id="selectFlwProcessList" resultType="com.aizuda.boot.modules.flw.entity.vo.FlwProcessVO">
-        SELECT t2.category_id,t2.process_id,t1.process_key,t1.process_name,t1.process_icon,t1.process_type,t1.process_version,t1.instance_url,t1.remark,t1.use_scope,
-               t1.process_state,t1.sort AS process_sort,t1.create_time FROM flw_process t1 JOIN flw_process_configure t2 ON t1.id=t2.process_id
-        WHERE t1.process_state IN (0, 1)
-    </select>
-
-    <select id="selectLaunchProcessList" resultType="com.aizuda.boot.modules.flw.entity.vo.FlwProcessVO">
-        SELECT t2.category_id,t2.process_id,t1.process_key,t1.process_name,t1.process_icon,t1.process_type,t1.process_version,t1.instance_url,
-        t1.remark,t1.use_scope,t1.process_state,t1.sort AS process_sort,t1.create_time
-        FROM flw_process t1 JOIN flw_process_configure t2 ON t1.ID = t2.process_id WHERE t1.process_state=1 AND t1.process_type='main'
-    </select>
-
     <sql id="sqlConditionProcessTask">
         <if test="dto.processName != null and dto.processName != '' ">
             AND p.process_name LIKE CONCAT(CONCAT('%',#{dto.processName}),'%')
@@ -36,7 +24,7 @@
         ORDER BY i.create_time DESC
     </sql>
 
-    <select id="selectPagePendingClaim" resultType="com.aizuda.boot.modules.flw.entity.vo.PendingClaimTaskVO">
+    <select id="selectPagePendingClaim" resultType="com.shengyu.module.system.controller.admin.flow.vo.PendingClaimTaskVO">
         SELECT i.process_id,p.process_name,p.process_type,i.id AS instance_id,i.instance_state,i.create_by AS launch_by,i.create_time AS launch_time,
         t.id AS task_id,t.create_time,t.task_name,t.task_key,t.task_type,t.perform_type,t.expire_time,t.remind_time,t.remind_repeat
         FROM flw_task t JOIN flw_task_actor a ON t.id=a.task_id LEFT JOIN flw_his_instance i ON i.id=t.instance_id LEFT JOIN flw_process p ON i.process_id=p.id
@@ -45,40 +33,14 @@
         <include refid="sqlConditionProcessTask"></include>
     </select>
 
-    <select id="selectPagePendingApproval" resultType="com.aizuda.boot.modules.flw.entity.vo.PendingApprovalTaskVO">
-        SELECT i.process_id,p.process_name,p.process_type,i.id AS instance_id,i.instance_state,i.create_by AS launch_by,i.create_time AS launch_time,
-        t.id AS task_id,t.create_time,t.task_name,t.task_key,t.task_type,t.perform_type,t.assignor,t.expire_time,t.remind_time,t.remind_repeat
-        FROM flw_task t JOIN flw_task_actor a ON t.id=a.task_id LEFT JOIN flw_his_instance i ON i.id=t.instance_id LEFT JOIN flw_process p ON i.process_id=p.id
-        WHERE a.actor_type=0 AND a.actor_id=#{dto.createId}
-        <include refid="sqlConditionProcessTask"></include>
-    </select>
-
-    <select id="selectPageMyApplication" resultType="com.aizuda.boot.modules.flw.entity.vo.ProcessTaskVO">
-        SELECT i.process_id,p.process_name,p.process_type,i.current_node_name,i.current_node_key,i.id AS instance_id,i.instance_state,i.create_id,i.create_by,i.create_time,i.expire_time,i.end_time,i.duration
-        FROM flw_his_instance i LEFT JOIN flw_process p ON i.process_id=p.id
-        WHERE i.create_id=#{dto.createId}
-        <include refid="sqlConditionProcessTask"></include>
-    </select>
-
-    <select id="selectPageMyReceived" resultType="com.aizuda.boot.modules.flw.entity.vo.ProcessTaskVO">
-        SELECT i.process_id,p.process_name,p.process_type,i.current_node_name,i.current_node_key,i.id AS instance_id,i.instance_state,i.create_id,i.create_by,i.create_time,i.expire_time,i.end_time,i.duration
-        FROM flw_his_instance i LEFT JOIN flw_process p ON i.process_id=p.id JOIN flw_his_task t ON i.id=t.instance_id JOIN flw_his_task_actor a ON t.id=a.task_id
-        WHERE t.task_type=2 AND a.actor_id=#{dto.createId}
-        <include refid="sqlConditionProcessTask"></include>
-    </select>
-
-    <select id="selectPageApproved" resultType="com.aizuda.boot.modules.flw.entity.vo.ProcessTaskVO">
+    <select id="selectPageApproved" resultType="com.shengyu.module.system.controller.admin.flow.vo.ProcessTaskVO">
         SELECT i.process_id,p.process_name,p.process_type,i.current_node_name,i.current_node_key,i.id AS instance_id,i.instance_state,i.create_id,i.create_by,i.create_time,i.expire_time,i.end_time,i.duration
         FROM flw_his_instance i LEFT JOIN flw_process p ON i.process_id=p.id
         WHERE EXISTS (SELECT 1 FROM flw_his_task c JOIN flw_his_task_actor a ON c.id=a.task_id WHERE i.id=c.instance_id AND a.actor_id=#{dto.createId})
         <include refid="sqlConditionProcessTask"></include>
     </select>
 
-    <select id="selectListHisTaskByInstanceId" resultType="com.aizuda.boot.modules.flw.entity.vo.FlwHisTaskVO">
-        SELECT * FROM flw_his_task WHERE instance_id=#{instanceId} ORDER BY create_time ASC
-    </select>
-
-    <select id="selectListHisTaskActorVOByInstanceId" resultType="com.aizuda.boot.modules.flw.entity.vo.FlwHisTaskActorVO">
+    <select id="selectListHisTaskActorVOByInstanceId" resultType="com.shengyu.module.system.controller.admin.flow.vo.FlwHisTaskActorVO">
         SELECT a.task_id,a.actor_name,(SELECT avatar FROM sys_user WHERE CONCAT(id)=a.actor_id) AS avatar,a.weight
         FROM flw_his_task_actor a WHERE a.instance_id=#{instanceId}
     </select>
