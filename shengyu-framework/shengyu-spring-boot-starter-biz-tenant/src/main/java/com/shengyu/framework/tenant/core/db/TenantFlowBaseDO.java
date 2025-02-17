@@ -20,6 +20,11 @@ public abstract class TenantFlowBaseDO extends TenantBaseDO {
     protected Long id;
 
     /**
+     * 创建人ID
+     */
+    protected String createId;
+
+    /**
      * 创建人名称
      */
     protected String createBy;

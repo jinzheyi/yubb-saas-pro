@@ -7,6 +7,7 @@ import com.aizuda.bpm.engine.core.enums.PerformType;
 import com.aizuda.bpm.engine.core.enums.TaskType;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.shengyu.framework.tenant.core.db.TenantFlowBaseDO;
+import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -173,7 +174,7 @@ public class FlwTaskDO extends TenantFlowBaseDO {
         newFlwTask.setViewed(viewed);
         newFlwTask.setCreateId(createId);
         newFlwTask.setCreateBy(createBy);
-        newFlwTask.setCreateTime(DateUtils.getCurrentDate());
+        newFlwTask.setCreateTime(LocalDateTime.now());
         return newFlwTask;
     }
 

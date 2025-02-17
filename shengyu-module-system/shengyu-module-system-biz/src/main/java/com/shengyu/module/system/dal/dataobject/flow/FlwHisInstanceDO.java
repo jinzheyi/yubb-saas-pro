@@ -58,6 +58,7 @@ public class FlwHisInstanceDO extends FlwInstanceDO {
         his.setId(fi.getId());
         his.setTenantId(fi.getTenantId());
         his.setCreator(fi.getCreator());
+        his.createId = fi.getCreateId();
         his.createBy = fi.getCreateBy();
         his.setCreateTime(fi.getCreateTime());
         his.processId = fi.getProcessId();
@@ -83,6 +84,7 @@ public class FlwHisInstanceDO extends FlwInstanceDO {
         fi.setId(this.id);
         fi.setTenantId(this.getTenantId());
         fi.setCreator(this.getCreator());
+        fi.setCreateId(this.createId);
         fi.setCreateBy(this.createBy);
         fi.setCreateTime(this.getCreateTime());
         fi.setProcessId(this.processId);

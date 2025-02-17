@@ -71,6 +71,7 @@ public class FlwHisTaskDO extends FlwTaskDO {
         hisTask.id = flwTask.getId();
         hisTask.setTenantId(flwTask.getTenantId());
         hisTask.setCreator(flwTask.getCreator());
+        hisTask.createId = flwTask.getCreateId();
         hisTask.createBy = flwTask.getCreateBy();
         hisTask.setCreateTime(flwTask.getCreateTime());
         hisTask.instanceId = flwTask.getInstanceId();
@@ -94,6 +95,7 @@ public class FlwHisTaskDO extends FlwTaskDO {
         FlwHisTaskDO flwHisTask = new FlwHisTaskDO();
         flwHisTask.setTenantId(instance.getTenantId());
         flwHisTask.setCreator(instance.getCreator());
+        flwHisTask.setCreateId(instance.getCreateId());
         flwHisTask.setCreateBy(instance.getCreateBy());
         flwHisTask.setCreateTime(instance.getCreateTime());
         flwHisTask.setInstanceId(instance.getParentInstanceId());
