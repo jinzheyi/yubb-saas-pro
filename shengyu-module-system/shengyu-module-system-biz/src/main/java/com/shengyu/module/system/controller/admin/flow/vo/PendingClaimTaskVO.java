@@ -53,12 +53,12 @@ public class PendingClaimTaskVO {
     @Schema(description = "任务 key 唯一标识")
     private String taskKey;
     /**
-     * 任务类型 {@link com.aizuda.bpm.engine.core.enums.TaskType}
+     * 任务类型 {@link com.shengyu.module.system.framework.engine.core.enums.TaskType}
      */
     @Schema(description = "任务类型")
     protected Integer taskType;
     /**
-     * 参与方式 {@link com.aizuda.bpm.engine.core.enums.PerformType}
+     * 参与方式 {@link com.shengyu.module.system.framework.engine.core.enums.PerformType}
      */
     @Schema(description = "参与方式")
     protected Integer performType;

@@ -1,28 +1,27 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.*;
-import com.aizuda.boot.modules.flw.entity.dto.*;
-import com.aizuda.boot.modules.flw.entity.vo.*;
+import com.shengyu.module.system.dal.dataobject.flow*;
+import com.shengyu.module.system.controller.admin.flow.dto.*;
+import com.shengyu.module.system.controller.admin.flow.vo.*;
 import com.aizuda.boot.modules.flw.flow.FlowForm;
 import com.aizuda.boot.modules.flw.flow.FlowHelper;
-import com.aizuda.boot.modules.flw.mapper.FlowlongMapper;
-import com.aizuda.boot.modules.flw.service.*;
+import com.shengyu.module.system.dal.mysql.flow.FlowlongMapper;
 import com.aizuda.boot.modules.system.service.ISysSSEService;
-import com.aizuda.bpm.engine.FlowDataTransfer;
-import com.aizuda.bpm.engine.FlowLongEngine;
-import com.aizuda.bpm.engine.RuntimeService;
-import com.aizuda.bpm.engine.TaskService;
-import com.aizuda.bpm.engine.core.Execution;
-import com.aizuda.bpm.engine.core.FlowCreator;
-import com.aizuda.bpm.engine.core.enums.PerformType;
-import com.aizuda.bpm.engine.core.enums.ProcessType;
-import com.aizuda.bpm.engine.core.enums.TaskType;
-import com.aizuda.bpm.engine.entity.*;
-import com.aizuda.bpm.engine.model.ModelHelper;
-import com.aizuda.bpm.engine.model.NodeModel;
-import com.aizuda.bpm.engine.model.ProcessModel;
-import com.aizuda.bpm.mybatisplus.mapper.FlwExtInstanceMapper;
-import com.aizuda.core.api.ApiAssert;
+import com.shengyu.module.system.framework.engine.FlowDataTransfer;
+import com.shengyu.module.system.framework.engine.FlowLongEngine;
+import com.shengyu.module.system.framework.engine.RuntimeService;
+import com.shengyu.module.system.framework.engine.TaskService;
+import com.shengyu.module.system.framework.engine.core.Execution;
+import com.shengyu.module.system.framework.engine.core.FlowCreator;
+import com.shengyu.module.system.framework.engine.core.enums.PerformType;
+import com.shengyu.module.system.framework.engine.core.enums.ProcessType;
+import com.shengyu.module.system.framework.engine.core.enums.TaskType;
+import com.shengyu.module.system.dal.dataobject.flow.*;
+import com.shengyu.module.system.framework.engine.model.ModelHelper;
+import com.shengyu.module.system.framework.engine.model.NodeModel;
+import com.shengyu.module.system.framework.engine.model.ProcessModel;
+import com.shengyu.module.system.framework.mybatisplus.mapper.FlwExtInstanceMapper;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.aizuda.core.api.PageParam;
 import com.aizuda.service.web.UserSession;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -50,7 +49,7 @@ public class ProcessTaskServiceImpl implements ProcessTaskService {
     private FlowLongEngine flowLongEngine;
     private FlwProcessApprovalService flwProcessApprovalService;
     private FlwProcessFormService flwProcessFormService;
-    private FlwFormTemplateService flwFormTemplateService;
+    private IFlwFormTemplateService flwFormTemplateService;
     private FlwProcessConfigureService flwProcessConfigureService;
     private ISysSSEService sseService;
 
@@ -98,7 +97,7 @@ public class ProcessTaskServiceImpl implements ProcessTaskService {
     public TaskApprovalVO approvalInfo(ProcessInfoDTO dto) {
         final Long instanceId = dto.getInstanceId();
         FlwHisInstance hisInstance = flowLongEngine.queryService().getHistInstance(instanceId);
-        ApiAssert.isEmpty(hisInstance, "未发现指定审批流程");
+        ServiceExceptionUtil.isEmpty(hisInstance, "未发现指定审批流程");
         TaskApprovalVO vo = new TaskApprovalVO();
         vo.setInstanceId(hisInstance.getId());
         vo.setInstanceState(hisInstance.getInstanceState());
@@ -145,7 +144,7 @@ public class ProcessTaskServiceImpl implements ProcessTaskService {
             if (ProcessType.business.eq(extInstance.getProcessType())) {
                 // 业务流程，加载表单模板内容
                 FlwFormTemplate formTemplate = flwFormTemplateService.getByConfigure(configure.getProcessForm());
-                ApiAssert.fail(null == formTemplate, "未发现指定业务流程表单模板");
+                ServiceExceptionUtil.fail(null == formTemplate, "未发现指定业务流程表单模板");
                 vo.setFormTemplate(formTemplate);
                 if (Objects.equals(formTemplate.getType(), 1)) {
                     // 系统表单情况
@@ -254,7 +253,7 @@ public class ProcessTaskServiceImpl implements ProcessTaskService {
     @Override
     public Map<String, Object> listNextNodes(NextNodesDTO dto) {
         FlwInstance instance = flowLongEngine.queryService().getInstance(dto.getInstanceId());
-        ApiAssert.fail(null == instance, "当前流程实例不存在");
+        ServiceExceptionUtil.fail(null == instance, "当前流程实例不存在");
         FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(dto.getInstanceId());
         NodeModel rootNodeModel = extInstance.model().getNodeConfig();
         Execution execution = new Execution(FlowHelper.getFlowCreator(), dto.getArgs());
@@ -320,10 +319,10 @@ public class ProcessTaskServiceImpl implements ProcessTaskService {
     @Override
     public boolean revoke(ProcessApprovalDTO dto, FlowCreator flowCreator) {
         FlwInstance flwInstance = flowLongEngine.queryService().getInstance(dto.getInstanceId());
-        ApiAssert.fail(null == flwInstance, "流程实例已结束");
+        ServiceExceptionUtil.fail(null == flwInstance, "流程实例已结束");
         FlwProcessConfigure configure = flwProcessConfigureService.getByProcessId(flwInstance.getProcessId());
         if (null != configure && null != configure.getProcessSetting()) {
-            ApiAssert.fail(!Objects.equals(true, configure.getProcessSetting().getAllowRevocation()),
+            ServiceExceptionUtil.fail(!Objects.equals(true, configure.getProcessSetting().getAllowRevocation()),
                     "该审批流程不允许撤回");
         }
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
@@ -355,7 +354,7 @@ public class ProcessTaskServiceImpl implements ProcessTaskService {
     @Override
     public boolean reject(RejectTaskDTO dto) {
         FlwTask flwTask = flowLongEngine.queryService().getTask(dto.getTaskId());
-        ApiAssert.isEmpty(flwTask, "当前ID执行任务不存在");
+        ServiceExceptionUtil.isEmpty(flwTask, "当前ID执行任务不存在");
         FlowHelper.setProcessApprovalOpinion(dto.getReason());
         return flowLongEngine.executeRejectTask(flwTask, dto.getNodeKey(), FlowHelper.getFlowCreator(), dto.getArgs()).isPresent();
     }
@@ -377,7 +376,7 @@ public class ProcessTaskServiceImpl implements ProcessTaskService {
 
     private FlwTask getFlwTask(Long taskId) {
         FlwTask flwTask = flowLongEngine.queryService().getTask(taskId);
-        ApiAssert.isEmpty(flwTask, "指定ID任务已执行完成");
+        ServiceExceptionUtil.isEmpty(flwTask, "指定ID任务已执行完成");
         return flwTask;
     }
 
@@ -400,7 +399,7 @@ public class ProcessTaskServiceImpl implements ProcessTaskService {
         // 获取任务，保存表单
         FlwTask flwTask = this.getFlwTask(dto.getTaskId());
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
-        ApiAssert.fail(!flwProcessFormService.saveForm(flwTask.getInstanceId(), dto.getProcessForm()), "保存保单内容失败");
+        ServiceExceptionUtil.fail(!flwProcessFormService.saveForm(flwTask.getInstanceId(), dto.getProcessForm()), "保存保单内容失败");
         FlowForm.argsTransfer(dto.getProcessForm());
 
         // 委派审批

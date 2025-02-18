@@ -1,8 +1,8 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessPermission;
-import com.aizuda.boot.modules.flw.entity.dto.FlwProcessPermissionDTO;
-import com.aizuda.service.service.IBaseService;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessPermission;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessPermissionDTO;
+import com.shengyu.module.system.framework.engine.core.IBaseService;
 
 import java.util.List;
 

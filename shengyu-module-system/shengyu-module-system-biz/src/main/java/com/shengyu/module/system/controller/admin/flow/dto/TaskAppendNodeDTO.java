@@ -1,12 +1,12 @@
 package com.shengyu.module.system.controller.admin.flow.dto;
 
-import com.aizuda.bpm.engine.model.ModelHelper;
-import com.aizuda.bpm.engine.model.NodeAssignee;
-import com.aizuda.bpm.engine.model.NodeModel;
+import com.shengyu.module.system.framework.engine.model.ModelHelper;
+import com.shengyu.module.system.framework.engine.model.NodeAssignee;
+import com.shengyu.module.system.framework.engine.model.NodeModel;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.PositiveOrZero;
 import lombok.Getter;
 import lombok.Setter;
 

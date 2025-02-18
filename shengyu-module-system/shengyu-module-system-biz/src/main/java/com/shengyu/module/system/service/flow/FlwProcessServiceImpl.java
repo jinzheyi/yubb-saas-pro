@@ -1,37 +1,36 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessActor;
-import com.aizuda.boot.modules.flw.entity.FlwProcessCategory;
-import com.aizuda.boot.modules.flw.entity.FlwProcessConfigure;
-import com.aizuda.boot.modules.flw.entity.FlwProcessPermission;
-import com.aizuda.boot.modules.flw.entity.dto.*;
-import com.aizuda.boot.modules.flw.entity.vo.FlwProcessCategoryVO;
-import com.aizuda.boot.modules.flw.entity.vo.FlwProcessVO;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessActor;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessCategory;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessConfigure;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessPermission;
+import com.shengyu.module.system.controller.admin.flow.dto.*;
+import com.shengyu.module.system.controller.admin.flow.vo.FlwProcessCategoryVO;
+import com.shengyu.module.system.controller.admin.flow.vo.FlwProcessVO;
 import com.aizuda.boot.modules.flw.flow.FlowForm;
 import com.aizuda.boot.modules.flw.flow.FlowHelper;
-import com.aizuda.boot.modules.flw.mapper.FlowlongMapper;
-import com.aizuda.boot.modules.flw.service.*;
-import com.aizuda.bpm.engine.FlowDataTransfer;
-import com.aizuda.bpm.engine.FlowLongEngine;
-import com.aizuda.bpm.engine.ProcessService;
-import com.aizuda.bpm.engine.core.FlowCreator;
-import com.aizuda.bpm.engine.core.FlowLongContext;
-import com.aizuda.bpm.engine.core.enums.FlowState;
-import com.aizuda.bpm.engine.core.enums.NodeSetType;
-import com.aizuda.bpm.engine.core.enums.ProcessType;
-import com.aizuda.bpm.engine.entity.FlwInstance;
-import com.aizuda.bpm.engine.entity.FlwProcess;
-import com.aizuda.bpm.engine.model.*;
-import com.aizuda.bpm.mybatisplus.mapper.FlwProcessMapper;
+import com.shengyu.module.system.dal.mysql.flow.FlowlongMapper;
+import com.shengyu.module.system.dal.mysql.flow.FlwProcessMapper;
+import com.shengyu.module.system.framework.engine.FlowDataTransfer;
+import com.shengyu.module.system.framework.engine.FlowLongEngine;
+import com.shengyu.module.system.framework.engine.ProcessService;
+import com.shengyu.module.system.framework.engine.core.FlowCreator;
+import com.shengyu.module.system.framework.engine.core.FlowLongContext;
+import com.shengyu.module.system.framework.engine.core.enums.FlowState;
+import com.shengyu.module.system.framework.engine.core.enums.NodeSetType;
+import com.shengyu.module.system.framework.engine.core.enums.ProcessType;
+import com.shengyu.module.system.dal.dataobject.flow.FlwInstance;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcess;
+import com.shengyu.module.system.framework.engine.model.*;
 import com.aizuda.common.toolkit.JacksonUtils;
-import com.aizuda.core.api.ApiAssert;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.aizuda.service.web.UserSession;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.AllArgsConstructor;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,7 +52,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     private FlwProcessConfigureService flwProcessConfigureService;
     private FlwProcessActorService flwProcessActorService;
     private FlwProcessFormService flwProcessFormService;
-    private FlwFormTemplateService flwFormTemplateService;
+    private IFlwFormTemplateService flwFormTemplateService;
     private FlowlongMapper flowlongMapper;
     private FlowLongEngine flowLongEngine;
 
@@ -179,7 +178,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     public Long launchProcess(ProcessStartDTO dto, FlowCreator flowCreator) {
         FlwProcess flwProcess = flowLongEngine.processService().getProcessById(dto.getProcessId());
         if (null == flwProcess) {
-            ApiAssert.fail("指定流程模型不存在");
+            ServiceExceptionUtil.fail("指定流程模型不存在");
         }
         List<NodeModel> unsetAssigneeNodes = ModelHelper.getUnsetAssigneeNodes(flwProcess.model(true).getNodeConfig());
         if (CollectionUtils.isNotEmpty(unsetAssigneeNodes)) {
@@ -190,10 +189,10 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
                     return;
                 }
                 if (NodeSetType.specifyMembers.eq(t.getSetType()) || NodeSetType.initiatorSelected.eq(t.getSetType())) {
-                    ApiAssert.fail(null == assigneeMap.get(t.getNodeKey()), "发起人自选节点未设置处理人员");
+                    ServiceExceptionUtil.fail(null == assigneeMap.get(t.getNodeKey()), "发起人自选节点未设置处理人员");
                 }
                 DynamicAssignee dynamicAssignee = assigneeMap.get(t.getNodeKey());
-                ApiAssert.fail(null == dynamicAssignee || CollectionUtils.isEmpty(dynamicAssignee.getAssigneeList()),
+                ServiceExceptionUtil.fail(null == dynamicAssignee || CollectionUtils.isEmpty(dynamicAssignee.getAssigneeList()),
                         "节点【 " + t.getNodeName() + " 】未设置处理人员");
             });
             // 传递动态分配处理人员
@@ -211,7 +210,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
         });
         if (opt.isPresent()) {
             FlwInstance flwInstance = opt.get();
-            ApiAssert.fail(!flwProcessFormService.saveForm(flwInstance.getId(), dto.getProcessForm()), "保存保单失败");
+            ServiceExceptionUtil.fail(!flwProcessFormService.saveForm(flwInstance.getId(), dto.getProcessForm()), "保存保单失败");
             return flwInstance.getId();
         }
         return null;
@@ -229,7 +228,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     }
 
     public FlwProcessDTO getFlwProcessDTO(FlwProcess flwProcess) {
-        ApiAssert.isEmpty(flwProcess, "未发现指定流程模型");
+        ServiceExceptionUtil.isEmpty(flwProcess, "未发现指定流程模型");
         FlwProcessDTO dto = FlwProcessDTO.of(flwProcess);
         // 流程权限
         List<FlwProcessPermission> permissionList = flwProcessPermissionService.getByProcessId(flwProcess.getId());
@@ -261,18 +260,18 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     @Transactional(rollbackFor = Exception.class)
     @Override
     public Long saveDto(FlwProcessDTO dto) {
-        ApiAssert.fail(null == dto.getCategoryId(), "流程定义分类ID不存在");
+        ServiceExceptionUtil.fail(null == dto.getCategoryId(), "流程定义分类ID不存在");
         ProcessModel processModel = FlowLongContext.fromJson(dto.getModelContent(), ProcessModel.class);
         NodeModel rootNode = processModel.getNodeConfig();
-        ApiAssert.fail(ModelHelper.checkDuplicateNodeKeys(rootNode), "模型节点名称不允许重复");
-        ApiAssert.fail(null == rootNode.getChildNode(), "必须存在两个以上节点");
+        ServiceExceptionUtil.fail(ModelHelper.checkDuplicateNodeKeys(rootNode), "模型节点名称不允许重复");
+        ServiceExceptionUtil.fail(null == rootNode.getChildNode(), "必须存在两个以上节点");
         int checkConditionNode = ModelHelper.checkConditionNode(rootNode);
         if (checkConditionNode > 0) {
-            ApiAssert.fail(Objects.equals(1, checkConditionNode), "存在多个条件表达式为空");
-            ApiAssert.fail(Objects.equals(2, checkConditionNode), "存在多个条件子节点为空");
-            ApiAssert.fail(Objects.equals(3, checkConditionNode), "存在条件节点KEY重复");
+            ServiceExceptionUtil.fail(Objects.equals(1, checkConditionNode), "存在多个条件表达式为空");
+            ServiceExceptionUtil.fail(Objects.equals(2, checkConditionNode), "存在多个条件子节点为空");
+            ServiceExceptionUtil.fail(Objects.equals(3, checkConditionNode), "存在条件节点KEY重复");
         }
-        ApiAssert.fail(!ModelHelper.checkExistApprovalNode(rootNode), "必须存在审批节点");
+        ServiceExceptionUtil.fail(!ModelHelper.checkExistApprovalNode(rootNode), "必须存在审批节点");
 
         // 检查流程定义操作权限
         if (null != dto.getProcessId()) {
@@ -301,14 +300,14 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
         // 流程定义权限
         List<FlwProcessPermissionDTO> processPermissionList = dto.getProcessPermissionList();
         if (CollectionUtils.isNotEmpty(processPermissionList)) {
-            ApiAssert.fail(!flwProcessPermissionService.saveProcessPermissions(processId, processPermissionList),
+            ServiceExceptionUtil.fail(!flwProcessPermissionService.saveProcessPermissions(processId, processPermissionList),
                     "流程定义管理权限保存失败");
         }
 
         // 设置流程定义参与者，限制发起人角色
         List<NodeAssignee> nodeAssigneeList = rootNode.getNodeAssigneeList();
         if (CollectionUtils.isNotEmpty(nodeAssigneeList)) {
-            ApiAssert.fail(!flwProcessActorService.saveProcessActors(processId, nodeAssigneeList.stream().map(t -> {
+            ServiceExceptionUtil.fail(!flwProcessActorService.saveProcessActors(processId, nodeAssigneeList.stream().map(t -> {
                 FlwProcessActor fpa = new FlwProcessActor();
                 fpa.setProcessId(processId);
                 fpa.setActorType(null == rootNode.getSetType() ? 3 : rootNode.getSetType());
@@ -320,7 +319,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
 
         // 保存流程定义配置
         if (null != dto.getCategoryId()) {
-            ApiAssert.fail(!flwProcessConfigureService.saveByDto(processId, dto), "流程定义配置保存失败");
+            ServiceExceptionUtil.fail(!flwProcessConfigureService.saveByDto(processId, dto), "流程定义配置保存失败");
         }
         return processId;
     }
@@ -332,7 +331,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
         Long count = lambdaQuery().ne(null != processId, FlwProcess::getId, processId)
                 .ne(FlwProcess::getProcessState, 2)
                 .eq(FlwProcess::getProcessKey, processKey).count();
-        ApiAssert.fail(count > 0, "流程唯一标识key不允许重复");
+        ServiceExceptionUtil.fail(count > 0, "流程唯一标识key不允许重复");
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -367,7 +366,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
         if (null == userSession || !UserSession.isAdmin(userSession.getId())) {
             FlwProcessPermission fpp = getFlwProcessPermissionByProcessId(userSession, processId);
             if (null != fpp) {
-                ApiAssert.fail(!fpp.allowOperateApproval(), "无权限编辑操作审批流程");
+                ServiceExceptionUtil.fail(!fpp.allowOperateApproval(), "无权限编辑操作审批流程");
             }
         }
     }
@@ -400,11 +399,11 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
             // 更新流程排序
             if (CollectionUtils.isNotEmpty(fpList)) {
                 flwProcessConfigureService.updateRelation(dtoList);
-                ApiAssert.fail(!super.updateBatchById(fpList), "流程顺序保存失败");
+                ServiceExceptionUtil.fail(!super.updateBatchById(fpList), "流程顺序保存失败");
             }
             // 更新流程分类顺序
             if (CollectionUtils.isNotEmpty(fpcList)) {
-                ApiAssert.fail(!flwProcessCategoryService.sort(fpcList), "流程分类顺序保存失败");
+                ServiceExceptionUtil.fail(!flwProcessCategoryService.sort(fpcList), "流程分类顺序保存失败");
             }
         }
         return true;

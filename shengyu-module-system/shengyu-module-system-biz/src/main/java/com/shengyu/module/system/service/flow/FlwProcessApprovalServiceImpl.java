@@ -1,12 +1,12 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.ApprovalContent;
-import com.aizuda.boot.modules.flw.entity.FlwProcessApproval;
-import com.aizuda.boot.modules.flw.entity.dto.ProcessApprovalDTO;
-import com.aizuda.boot.modules.flw.mapper.FlwProcessApprovalMapper;
-import com.aizuda.boot.modules.flw.service.IFlwProcessApprovalService;
-import com.aizuda.bpm.engine.FlowLongEngine;
-import com.aizuda.bpm.engine.entity.FlwTask;
+import com.shengyu.module.system.dal.dataobject.flowApprovalContent;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
+import com.shengyu.module.system.controller.admin.flow.dto.ProcessApprovalDTO;
+import com.shengyu.module.system.dal.mysql.flow.FlwProcessApprovalMapper;
+import com.shengyu.module.system.service.flow.IFlwProcessApprovalService;
+import com.shengyu.module.system.framework.engine.FlowLongEngine;
+import com.shengyu.module.system.dal.dataobject.flow.FlwTask;
 import com.aizuda.service.service.BaseServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;

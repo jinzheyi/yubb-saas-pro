@@ -1,6 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow.vo;
 
-import com.shengyu.module.system.dal.dataobject.flow.FlwFormCategoryDO;
+import com.shengyu.module.system.dal.dataobject.flow.FlwFormCategory;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,7 +8,7 @@ import java.util.List;
 
 @Getter
 @Setter
-public class FlwFormCategoryVO extends FlwFormCategoryDO {
+public class FlwFormCategoryVO extends FlwFormCategory {
 
     /**
      * 父级部门

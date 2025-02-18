@@ -127,11 +127,11 @@
             <artifactId>wx-java-miniapp-spring-boot-starter</artifactId>  <!-- 微信登录（小程序） -->
         </dependency>
 
-        <!-- 工作流引擎 -->
-        <dependency>
-            <groupId>com.aizuda</groupId>
-            <artifactId>flowlong-spring-boot-starter</artifactId>
-        </dependency>
+<!--        &lt;!&ndash; 工作流引擎 &ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>com.aizuda</groupId>-->
+<!--            <artifactId>flowlong-spring-boot-starter</artifactId>-->
+<!--        </dependency>-->
 
     </dependencies>
 

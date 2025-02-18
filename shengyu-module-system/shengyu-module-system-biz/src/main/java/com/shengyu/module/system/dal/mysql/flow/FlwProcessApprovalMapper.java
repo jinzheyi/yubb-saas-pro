@@ -1,7 +1,7 @@
 package com.shengyu.module.system.dal.mysql.flow;
 
 import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
-import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApprovalDO;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
@@ -13,6 +13,6 @@ import org.apache.ibatis.annotations.Mapper;
  * @since 2024-03-03
  */
 @Mapper
-public interface FlwProcessApprovalMapper extends BaseMapperX<FlwProcessApprovalDO> {
+public interface FlwProcessApprovalMapper extends BaseMapperX<FlwProcessApproval> {
 
 }

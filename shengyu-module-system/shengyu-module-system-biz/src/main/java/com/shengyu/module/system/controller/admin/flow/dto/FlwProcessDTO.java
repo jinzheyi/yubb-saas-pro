@@ -1,12 +1,12 @@
 package com.shengyu.module.system.controller.admin.flow.dto;
 
 
-import com.aizuda.boot.modules.flw.entity.FlwFormTemplate;
-import com.aizuda.boot.modules.flw.entity.FlwProcessSetting;
-import com.aizuda.bpm.engine.entity.FlwProcess;
+import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplate;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessSetting;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcess;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;

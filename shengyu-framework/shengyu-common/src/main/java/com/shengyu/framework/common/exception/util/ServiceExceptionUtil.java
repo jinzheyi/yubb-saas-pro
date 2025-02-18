@@ -5,8 +5,12 @@ import com.shengyu.framework.common.exception.ServiceException;
 import com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -53,6 +57,55 @@ public class ServiceExceptionUtil {
     public static ServiceException exception(ErrorCode errorCode, Object... params) {
         String messagePattern = MESSAGES.getOrDefault(errorCode.getCode(), errorCode.getMsg());
         return exception0(errorCode.getCode(), messagePattern, params);
+    }
+
+    public static void fail(String message) {
+        throw new ServiceException(message);
+    }
+
+    public static void fail(boolean condition, String message) {
+        if (condition) {
+            fail(message);
+        }
+
+    }
+
+    public static void isEmpty(Object obj, String message) {
+        fail(ObjectUtils.isEmpty(obj), message);
+    }
+
+    public static void nonEmpty(Object obj, String message) {
+        fail(!ObjectUtils.isEmpty(obj), message);
+    }
+
+    public static void equals(Object a, Object b, String message) {
+        fail(Objects.equals(a, b), message);
+    }
+
+    public static void nonEquals(Object a, Object b, String message) {
+        fail(!Objects.equals(a, b), message);
+    }
+
+    public static void fail(String message, MessageSource messageSource) {
+        fail(messageSource.getMessage(message, (Object[])null, LocaleContextHolder.getLocale()));
+    }
+
+    public static void fail(boolean condition, String message, MessageSource messageSource) {
+        if (condition) {
+            fail(message, messageSource);
+        }
+
+    }
+
+    public static void fail(String message, Object[] args, MessageSource messageSource) {
+        fail(messageSource.getMessage(message, args, LocaleContextHolder.getLocale()));
+    }
+
+    public static void fail(boolean condition, String message, Object[] args, MessageSource messageSource) {
+        if (condition) {
+            fail(message, args, messageSource);
+        }
+
     }
 
     /**

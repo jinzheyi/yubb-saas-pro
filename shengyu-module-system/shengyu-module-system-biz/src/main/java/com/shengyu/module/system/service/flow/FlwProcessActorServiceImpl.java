@@ -1,8 +1,8 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessActor;
-import com.aizuda.boot.modules.flw.mapper.FlwProcessActorMapper;
-import com.aizuda.boot.modules.flw.service.IFlwProcessActorService;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessActor;
+import com.shengyu.module.system.dal.mysql.flow.FlwProcessActorMapper;
+import com.shengyu.module.system.service.flow.IFlwProcessActorService;
 import com.aizuda.service.service.BaseServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;

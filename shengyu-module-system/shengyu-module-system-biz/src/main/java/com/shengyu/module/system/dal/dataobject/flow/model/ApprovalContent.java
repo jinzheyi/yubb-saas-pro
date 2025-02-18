@@ -1,8 +1,8 @@
 package com.shengyu.module.system.dal.dataobject.flow.model;
 
 import cn.hutool.core.collection.CollUtil;
-import com.aizuda.bpm.engine.model.NodeAssignee;
-import com.shengyu.module.system.dal.dataobject.flow.FlwTaskActorDO;
+import com.shengyu.module.system.framework.engine.model.NodeAssignee;
+import com.shengyu.module.system.dal.dataobject.flow.FlwTaskActor;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -41,7 +41,7 @@ public class ApprovalContent {
     @Schema(description = "节点分配处理角色")
     private List<NodeAssignee> nodeRoleList;
 
-    public void appendNodeAssignee(List<FlwTaskActorDO> flwTaskActors) {
+    public void appendNodeAssignee(List<FlwTaskActor> flwTaskActors) {
         if (CollUtil.isNotEmpty(flwTaskActors)) {
             List<NodeAssignee> nodeAssigneeList = flwTaskActors.stream().map(t -> {
                 NodeAssignee nodeAssignee = new NodeAssignee();
@@ -52,7 +52,7 @@ public class ApprovalContent {
                 return nodeAssignee;
             }).toList();
             // 参与者类型 0，用户 1，角色 2，部门
-            FlwTaskActorDO flwTaskActor = flwTaskActors.get(0);
+            FlwTaskActor flwTaskActor = flwTaskActors.get(0);
             if (Objects.equals(0, flwTaskActor.getActorType())) {
                 this.setNodeUserList(nodeAssigneeList);
             } else {

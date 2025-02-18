@@ -1,10 +1,10 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessConfigure;
-import com.aizuda.boot.modules.flw.entity.dto.FlwCategorySortDTO;
-import com.aizuda.boot.modules.flw.entity.dto.FlwProcessDTO;
-import com.aizuda.boot.modules.flw.mapper.FlwProcessConfigureMapper;
-import com.aizuda.boot.modules.flw.service.IFlwProcessConfigureService;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessConfigure;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwCategorySortDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessDTO;
+import com.shengyu.module.system.dal.mysql.flow.FlwProcessConfigureMapper;
+import com.shengyu.module.system.service.flow.IFlwProcessConfigureService;
 import com.aizuda.service.service.BaseServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;

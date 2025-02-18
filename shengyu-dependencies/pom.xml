@@ -75,7 +75,7 @@
         <xercesImpl.version>2.12.2</xercesImpl.version>
         <weixin-java.version>4.6.0</weixin-java.version>
         <ureport2.version>2.2.9</ureport2.version>
-        <flowlong.version>1.1.2</flowlong.version>
+<!--        <flowlong.version>1.1.2</flowlong.version>-->
     </properties>
 
     <dependencyManagement>
@@ -657,12 +657,12 @@
                 <version>${ureport2.version}</version>
             </dependency>
 
-            <!-- 工作流引擎 -->
-            <dependency>
-                <groupId>com.aizuda</groupId>
-                <artifactId>flowlong-spring-boot-starter</artifactId>
-                <version>${flowlong.version}</version>
-            </dependency>
+<!--            &lt;!&ndash; 工作流引擎 &ndash;&gt;-->
+<!--            <dependency>-->
+<!--                <groupId>com.aizuda</groupId>-->
+<!--                <artifactId>flowlong-spring-boot-starter</artifactId>-->
+<!--                <version>${flowlong.version}</version>-->
+<!--            </dependency>-->
 
         </dependencies>
     </dependencyManagement>

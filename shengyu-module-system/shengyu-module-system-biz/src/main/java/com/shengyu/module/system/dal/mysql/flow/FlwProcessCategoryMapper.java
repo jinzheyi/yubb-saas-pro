@@ -1,7 +1,7 @@
 package com.shengyu.module.system.dal.mysql.flow;
 
 import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
-import com.shengyu.module.system.dal.dataobject.flow.FlwProcessCategoryDO;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessCategory;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
@@ -13,6 +13,6 @@ import org.apache.ibatis.annotations.Mapper;
  * @since 2023-09-07
  */
 @Mapper
-public interface FlwProcessCategoryMapper extends BaseMapperX<FlwProcessCategoryDO> {
+public interface FlwProcessCategoryMapper extends BaseMapperX<FlwProcessCategory> {
 
 }

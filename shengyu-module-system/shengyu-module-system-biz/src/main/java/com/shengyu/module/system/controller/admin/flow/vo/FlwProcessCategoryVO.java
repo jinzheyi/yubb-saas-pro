@@ -1,6 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow.vo;
 
-import com.shengyu.module.system.dal.dataobject.flow.FlwProcessCategoryDO;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -32,7 +32,7 @@ public class FlwProcessCategoryVO {
     @Schema(description = "流程定义信息列表")
     private List<FlwProcessVO> processList;
 
-    public static FlwProcessCategoryVO of(FlwProcessCategoryDO fpc) {
+    public static FlwProcessCategoryVO of(FlwProcessCategory fpc) {
         FlwProcessCategoryVO vo = new FlwProcessCategoryVO();
         vo.setCategoryId(fpc.getId());
         vo.setCategoryName(fpc.getName());

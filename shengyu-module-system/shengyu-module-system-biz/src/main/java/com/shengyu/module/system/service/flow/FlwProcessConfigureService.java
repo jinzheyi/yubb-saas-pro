@@ -1,9 +1,9 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessConfigure;
-import com.aizuda.boot.modules.flw.entity.dto.FlwCategorySortDTO;
-import com.aizuda.boot.modules.flw.entity.dto.FlwProcessDTO;
-import com.aizuda.service.service.IBaseService;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessConfigure;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwCategorySortDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessDTO;
+import com.shengyu.module.system.framework.engine.core.IBaseService;
 
 import java.util.List;
 

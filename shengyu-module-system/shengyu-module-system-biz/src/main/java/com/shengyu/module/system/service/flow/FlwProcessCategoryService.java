@@ -1,7 +1,7 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessCategory;
-import com.aizuda.service.service.IBaseService;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessCategory;
+import com.shengyu.module.system.framework.engine.core.IBaseService;
 
 import java.util.List;
 

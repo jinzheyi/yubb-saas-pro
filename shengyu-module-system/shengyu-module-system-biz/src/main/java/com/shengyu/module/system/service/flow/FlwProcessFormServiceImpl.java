@@ -1,8 +1,8 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessForm;
-import com.aizuda.boot.modules.flw.mapper.FlwProcessFormMapper;
-import com.aizuda.boot.modules.flw.service.IFlwProcessFormService;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessForm;
+import com.shengyu.module.system.dal.mysql.flow.FlwProcessFormMapper;
+import com.shengyu.module.system.service.flow.IFlwProcessFormService;
 import com.aizuda.service.service.BaseServiceImpl;
 import org.springframework.stereotype.Service;
 
