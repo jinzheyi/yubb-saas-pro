@@ -4,9 +4,9 @@
  */
 package com.shengyu.module.system.framework.engine.dao.impl;
 
-import com.aizuda.bpm.engine.dao.FlwTaskActorDao;
-import com.aizuda.bpm.engine.entity.FlwTaskActor;
-import com.aizuda.bpm.mybatisplus.mapper.FlwTaskActorMapper;
+import com.shengyu.module.system.framework.engine.dao.FlwTaskActorDao;
+import com.shengyu.module.system.dal.dataobject.flow.FlwTaskActor;
+import com.shengyu.module.system.dal.mysql.flow.FlwTaskActorMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 
 import java.util.List;
@@ -40,7 +40,7 @@ public class FlwTaskActorDaoImpl implements FlwTaskActorDao {
 
     @Override
     public boolean deleteByIds(List<Long> ids) {
-        return taskActorMapper.deleteByIds(ids) > 0;
+        return taskActorMapper.deleteBatchIds(ids) > 0;
     }
 
     @Override

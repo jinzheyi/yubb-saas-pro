@@ -4,9 +4,9 @@
  */
 package com.shengyu.module.system.framework.engine.dao.impl;
 
-import com.aizuda.bpm.engine.dao.FlwInstanceDao;
-import com.aizuda.bpm.engine.entity.FlwInstance;
-import com.aizuda.bpm.mybatisplus.mapper.FlwInstanceMapper;
+import com.shengyu.module.system.framework.engine.dao.FlwInstanceDao;
+import com.shengyu.module.system.dal.dataobject.flow.FlwInstance;
+import com.shengyu.module.system.dal.mysql.flow.FlwInstanceMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 
 import java.util.List;

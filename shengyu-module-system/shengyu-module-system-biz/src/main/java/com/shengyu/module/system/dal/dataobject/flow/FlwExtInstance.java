@@ -39,7 +39,7 @@ public class FlwExtInstance extends TenantFlowBaseDO implements ProcessModelCach
     public static FlwExtInstance of(FlwInstance flwInstance, FlwProcess flwProcess) {
         FlwExtInstance ext = new FlwExtInstance();
         ext.id = flwInstance.getId();
-        ext.setTenantId(flwInstance.getTenantId());
+        ext.tenantId = flwInstance.getTenantId();
         ext.processId = flwInstance.getProcessId();
         ext.processName = flwProcess.getProcessName();
         ext.processType = flwProcess.getProcessType();

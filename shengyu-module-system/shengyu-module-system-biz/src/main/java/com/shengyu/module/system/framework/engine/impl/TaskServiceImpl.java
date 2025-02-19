@@ -13,6 +13,7 @@ import com.shengyu.module.system.framework.engine.assist.DateUtils;
 import com.shengyu.module.system.framework.engine.assist.ObjectUtils;
 import com.shengyu.module.system.framework.engine.core.Execution;
 import com.shengyu.module.system.framework.engine.core.FlowCreator;
+import com.shengyu.module.system.framework.engine.core.TenantFlowBaseDO;
 import com.shengyu.module.system.framework.engine.core.enums.*;
 import com.shengyu.module.system.framework.engine.dao.*;
 import com.shengyu.module.system.dal.dataobject.flow.*;
@@ -22,6 +23,7 @@ import com.shengyu.module.system.framework.engine.model.NodeAssignee;
 import com.shengyu.module.system.framework.engine.model.NodeModel;
 import com.shengyu.module.system.framework.engine.model.ProcessModel;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -722,14 +724,14 @@ public class TaskServiceImpl implements TaskService {
                 }
             }
             Assert.isEmpty(flwTasks, "后续活动任务已完成或不存在，无法撤回.");
-            List<Long> taskIds = flwTasks.stream().map(FlowEntity::getId).collect(Collectors.toList());
+            List<Long> taskIds = flwTasks.stream().map(TenantFlowBaseDO::getId).collect(Collectors.toList());
             // 查询任务参与者
             List<Long> taskActorIds = taskActorDao.selectListByTaskIds(taskIds)
                     .stream().map(FlwTaskActor::getId).collect(Collectors.toList());
             if (ObjectUtils.isNotEmpty(taskActorIds)) {
                 taskActorDao.deleteByIds(taskActorIds);
             }
-            taskDao.deleteByIds(flwTasks.stream().map(FlowEntity::getId).collect(Collectors.toList()));
+            taskDao.deleteByIds(flwTasks.stream().map(TenantFlowBaseDO::getId).collect(Collectors.toList()));
 
             // 任务监听器通知
             this.taskNotify(TaskEventType.withdraw, () -> hisTask, null, flowCreator);
@@ -1082,7 +1084,7 @@ public class TaskServiceImpl implements TaskService {
     private FlwTask createTaskBase(NodeModel nodeModel, Execution execution) {
         FlwTask flwTask = new FlwTask();
         flwTask.setFlowCreator(execution.getFlowCreator());
-        flwTask.setCreateTime(DateUtils.getCurrentDate());
+        flwTask.setCreateTime(LocalDateTime.now());
         flwTask.setInstanceId(execution.getFlwInstance().getId());
         flwTask.setTaskName(nodeModel.getNodeName());
         flwTask.setTaskKey(nodeModel.getNodeKey());

@@ -55,8 +55,8 @@ public class FlwHisInstance extends FlwInstance {
 
     public static FlwHisInstance of(FlwInstance fi, InstanceState instanceState) {
         FlwHisInstance his = new FlwHisInstance();
-        his.setId(fi.getId());
-        his.setTenantId(fi.getTenantId());
+        his.id = fi.getId();
+        his.tenantId = fi.getTenantId();
         his.setCreator(fi.getCreator());
         his.createId = fi.getCreateId();
         his.createBy = fi.getCreateBy();
@@ -82,7 +82,7 @@ public class FlwHisInstance extends FlwInstance {
     public FlwInstance toFlwInstance() {
         FlwInstance fi = new FlwInstance();
         fi.setId(this.id);
-        fi.setTenantId(this.getTenantId());
+        fi.setTenantId(this.tenantId);
         fi.setCreator(this.getCreator());
         fi.setCreateId(this.createId);
         fi.setCreateBy(this.createBy);

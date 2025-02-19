@@ -1,0 +1,170 @@
+/*
+ * Copyright 2023-2025 Licensed under the Dual Licensing
+ * website: https://aizuda.com
+ */
+package com.shengyu.module.system.framework.engine.spring.autoconfigure;
+
+import com.shengyu.module.system.framework.engine.*;
+import com.shengyu.module.system.framework.engine.cache.FlowCache;
+import com.shengyu.module.system.framework.engine.core.FlowLongContext;
+import com.shengyu.module.system.framework.engine.core.FlowLongEngineImpl;
+import com.shengyu.module.system.framework.engine.dao.*;
+import com.shengyu.module.system.framework.engine.handler.ConditionNodeHandler;
+import com.shengyu.module.system.framework.engine.handler.CreateTaskHandler;
+import com.shengyu.module.system.framework.engine.handler.FlowJsonHandler;
+import com.shengyu.module.system.framework.engine.impl.*;
+import com.shengyu.module.system.framework.engine.listener.InstanceListener;
+import com.shengyu.module.system.framework.engine.listener.TaskListener;
+import com.shengyu.module.system.framework.engine.scheduling.JobLock;
+import com.shengyu.module.system.framework.engine.scheduling.LocalLock;
+import com.shengyu.module.system.framework.engine.spring.adaptive.FlowJacksonHandler;
+import com.shengyu.module.system.framework.engine.spring.adaptive.SpelExpression;
+import com.shengyu.module.system.framework.engine.spring.event.EventInstanceListener;
+import com.shengyu.module.system.framework.engine.spring.event.EventTaskListener;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+
+/**
+ * spring boot starter 启动自动配置处理类
+ *
+ * <p>
+ * <a href="https://aizuda.com">官网</a>尊重知识产权，不允许非法使用，后果自负
+ * </p>
+ *
+ * @author hubin
+ * @since 1.0
+ */
+@Configuration
+@Import(FlowLongMybatisPlusConfiguration.class)
+@EnableConfigurationProperties(FlowLongProperties.class)
+public class FlowLongAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public TaskService taskService(@Autowired(required = false) TaskAccessStrategy taskAccessStrategy, @Autowired(required = false) TaskListener taskListener,
+                                   @Autowired(required = false) TaskTrigger taskTrigger, FlwInstanceDao instanceDao, FlwExtInstanceDao extInstanceDao,
+                                   FlwHisInstanceDao hisInstanceDao, FlwTaskDao taskDao, FlwTaskActorDao taskActorDao,
+                                   FlwHisTaskDao hisTaskDao, FlwHisTaskActorDao hisTaskActorDao) {
+        return new TaskServiceImpl(taskAccessStrategy, taskListener, taskTrigger, instanceDao, extInstanceDao, hisInstanceDao,
+                taskDao, taskActorDao, hisTaskDao, hisTaskActorDao);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public QueryService queryService(FlwInstanceDao instanceDao, FlwHisInstanceDao hisInstanceDao, FlwExtInstanceDao extInstanceDao,
+                                     FlwTaskDao taskDao, FlwTaskActorDao taskActorDao, FlwHisTaskDao hisTaskDao, FlwHisTaskActorDao hisTaskActorDao) {
+        return new QueryServiceImpl(instanceDao, hisInstanceDao, extInstanceDao, taskDao, taskActorDao, hisTaskDao, hisTaskActorDao);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public RuntimeService runtimeService(@Autowired(required = false) InstanceListener instanceListener, QueryService queryService,
+                                         TaskService taskService, FlwInstanceDao instanceDao, FlwHisInstanceDao hisInstanceDao,
+                                         FlwExtInstanceDao extInstanceDao) {
+        return new RuntimeServiceImpl(instanceListener, queryService, taskService, instanceDao, hisInstanceDao, extInstanceDao);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ProcessService processService(RuntimeService runtimeService, FlwProcessDao processDao) {
+        return new ProcessServiceImpl(runtimeService, processDao);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public JobLock jobLock() {
+        return new LocalLock();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public Expression expression() {
+        return new SpelExpression();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public TaskAccessStrategy taskAccessStrategy() {
+        return new GeneralAccessStrategy();
+    }
+
+
+    @Bean
+    @ConditionalOnMissingBean
+    public TaskActorProvider taskActorProvider() {
+        return new GeneralTaskActorProvider();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public FlowLongEngine flowLongEngine() {
+        return new FlowLongEngineImpl();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public FlowLongContext flowLongContext(ProcessService processService, QueryService queryService, RuntimeService runtimeService,
+                                           TaskService taskService, Expression expression, TaskAccessStrategy taskAccessStrategy,
+                                           TaskActorProvider taskActorProvider, FlowLongEngine flowLongEngine, FlowLongProperties flp,
+                                           @Autowired(required = false) FlowCache flowCache,
+                                           @Autowired(required = false) ProcessModelParser processModelParser,
+                                           @Autowired(required = false) FlowJsonHandler flowJsonHandler,
+                                           @Autowired(required = false) ConditionNodeHandler conditionNodeHandler,
+                                           @Autowired(required = false) TaskCreateInterceptor taskCreateInterceptor,
+                                           @Autowired(required = false) CreateTaskHandler createTaskHandler,
+                                           @Autowired(required = false) TaskReminder taskReminder,
+                                           @Autowired(required = false) TaskTrigger taskTrigger) {
+        // 静态注入 Jackson 解析 JSON 处理器
+        if (null == flowJsonHandler) {
+            flowJsonHandler = new FlowJacksonHandler();
+        }
+        FlowLongContext.setFlowJsonHandler(flowJsonHandler);
+        // 注入 FlowLong 上下文
+        FlowLongContext flc = new FlowLongContext(flowCache, processModelParser);
+        flc.setProcessService(processService);
+        flc.setQueryService(queryService);
+        flc.setRuntimeService(runtimeService);
+        flc.setTaskService(taskService);
+        flc.setExpression(expression);
+        flc.setTaskAccessStrategy(taskAccessStrategy);
+        flc.setTaskActorProvider(taskActorProvider);
+        flc.setConditionNodeHandler(conditionNodeHandler);
+        flc.setTaskCreateInterceptor(taskCreateInterceptor);
+        flc.setCreateTaskHandler(createTaskHandler);
+        flc.setTaskReminder(taskReminder);
+        flc.setTaskTrigger(taskTrigger);
+        return flc.build(flowLongEngine, flp.isBanner());
+    }
+
+    /**
+     * 注入自定义 TaskListener 实现该方法不再生效
+     *
+     * @param eventPublisher {@link ApplicationEventPublisher}
+     * @return {@link EventTaskListener}
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "flowlong", name = "eventing.task", havingValue = "true")
+    public EventTaskListener taskListener(ApplicationEventPublisher eventPublisher) {
+        return new EventTaskListener(eventPublisher);
+    }
+
+    /**
+     * 注入自定义 InstanceListener 实现该方法不再生效
+     *
+     * @param eventPublisher {@link ApplicationEventPublisher}
+     * @return {@link EventInstanceListener}
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "flowlong", name = "eventing.instance", havingValue = "true")
+    public EventInstanceListener instanceListener(ApplicationEventPublisher eventPublisher) {
+        return new EventInstanceListener(eventPublisher);
+    }
+}

@@ -1,6 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow.vo;
 
-import com.aizuda.core.ApiConstants;
+import com.shengyu.framework.common.enums.SyConstants;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -56,7 +56,7 @@ public class FlwProcessVO {
     @Schema(description = "流程定义排序")
     private Integer processSort;
 
-    @JsonFormat(pattern = ApiConstants.DATE_MM)
+    @JsonFormat(pattern = SyConstants.DATE_MM)
     @Schema(description = "创建时间")
     private Date createTime;
 

@@ -4,10 +4,10 @@
  */
 package com.shengyu.module.system.framework.engine.dao.impl;
 
-import com.aizuda.bpm.engine.dao.FlwHisTaskActorDao;
-import com.aizuda.bpm.engine.entity.FlwHisTaskActor;
-import com.aizuda.bpm.engine.entity.FlwTaskActor;
-import com.aizuda.bpm.mybatisplus.mapper.FlwHisTaskActorMapper;
+import com.shengyu.module.system.framework.engine.dao.FlwHisTaskActorDao;
+import com.shengyu.module.system.dal.dataobject.flow.FlwHisTaskActor;
+import com.shengyu.module.system.dal.dataobject.flow.FlwTaskActor;
+import com.shengyu.module.system.dal.mysql.flow.FlwHisTaskActorMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 
 import java.util.List;

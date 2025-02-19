@@ -4,9 +4,9 @@
  */
 package com.shengyu.module.system.framework.engine.dao.impl;
 
-import com.aizuda.bpm.engine.dao.FlwTaskDao;
-import com.aizuda.bpm.engine.entity.FlwTask;
-import com.aizuda.bpm.mybatisplus.mapper.FlwTaskMapper;
+import com.shengyu.module.system.framework.engine.dao.FlwTaskDao;
+import com.shengyu.module.system.dal.dataobject.flow.FlwTask;
+import com.shengyu.module.system.dal.mysql.flow.FlwTaskMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 
 import java.util.Date;
@@ -46,7 +46,7 @@ public class FlwTaskDaoImpl implements FlwTaskDao {
 
     @Override
     public boolean deleteByIds(List<Long> ids) {
-        return taskMapper.deleteByIds(ids) > 0;
+        return taskMapper.deleteBatchIds(ids) > 0;
     }
 
     @Override

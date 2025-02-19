@@ -2,7 +2,7 @@ package com.shengyu.module.system.controller.admin.flow.vo;
 
 import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplate;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
-import com.shengyu.module.system.dal.dataobject.flow.FlwProcessSetting;
+import com.shengyu.module.system.dal.dataobject.flow.model.FlwProcessSetting;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;

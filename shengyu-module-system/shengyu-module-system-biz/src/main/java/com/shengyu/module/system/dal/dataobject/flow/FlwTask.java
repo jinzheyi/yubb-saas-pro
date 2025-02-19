@@ -157,7 +157,7 @@ public class FlwTask extends TenantFlowBaseDO {
 
     public FlwTask cloneTask(String createId, String createBy) {
         FlwTask newFlwTask = new FlwTask();
-        newFlwTask.setTenantId(getTenantId());
+        newFlwTask.setTenantId(tenantId);
         newFlwTask.setInstanceId(instanceId);
         newFlwTask.setParentTaskId(parentTaskId);
         newFlwTask.setTaskName(taskName);

@@ -1,6 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow.vo;
 
-import com.aizuda.core.ApiConstants;
+import com.shengyu.framework.common.enums.SyConstants;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -36,14 +36,14 @@ public class PendingClaimTaskVO {
     @Schema(description = "发起人")
     private String launchBy;
 
-    @JsonFormat(pattern = ApiConstants.DATE_MM)
+    @JsonFormat(pattern = SyConstants.DATE_MM)
     @Schema(description = "发起时间")
     private Date launchTime;
 
     @Schema(description = "当前任务ID")
     private Long taskId;
 
-    @JsonFormat(pattern = ApiConstants.DATE_MM)
+    @JsonFormat(pattern = SyConstants.DATE_MM)
     @Schema(description = "创建时间")
     private Date createTime;
 
@@ -63,11 +63,11 @@ public class PendingClaimTaskVO {
     @Schema(description = "参与方式")
     protected Integer performType;
 
-    @JsonFormat(pattern = ApiConstants.DATE_MM)
+    @JsonFormat(pattern = SyConstants.DATE_MM)
     @Schema(description = "期望任务完成时间")
     protected Date expireTime;
 
-    @JsonFormat(pattern = ApiConstants.DATE_MM)
+    @JsonFormat(pattern = SyConstants.DATE_MM)
     @Schema(description = "提醒时间")
     protected Date remindTime;
 

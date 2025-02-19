@@ -67,7 +67,7 @@ public class FlwHisTask extends FlwTask {
     public static FlwHisTask of(FlwTask flwTask) {
         FlwHisTask hisTask = new FlwHisTask();
         hisTask.id = flwTask.getId();
-        hisTask.setTenantId(flwTask.getTenantId());
+        hisTask.tenantId = flwTask.getTenantId();
         hisTask.setCreator(flwTask.getCreator());
         hisTask.createId = flwTask.getCreateId();
         hisTask.createBy = flwTask.getCreateBy();

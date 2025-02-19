@@ -4,9 +4,9 @@
  */
 package com.shengyu.module.system.framework.engine.dao.impl;
 
-import com.aizuda.bpm.engine.dao.FlwProcessDao;
-import com.aizuda.bpm.engine.entity.FlwProcess;
-import com.aizuda.bpm.mybatisplus.mapper.FlwProcessMapper;
+import com.shengyu.module.system.framework.engine.dao.FlwProcessDao;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcess;
+import com.shengyu.module.system.dal.mysql.flow.FlwProcessMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 
@@ -45,7 +45,7 @@ public class FlwProcessDaoImpl implements FlwProcessDao {
     }
 
     @Override
-    public boolean updateByProcessKey(FlwProcess process, String tenantId, String processKey) {
+    public boolean updateByProcessKey(FlwProcess process, Long tenantId, String processKey) {
         return processMapper.update(process, Wrappers.<FlwProcess>lambdaQuery()
                 .eq(null != tenantId, FlwProcess::getTenantId, tenantId)
                 .eq(FlwProcess::getProcessKey, processKey)) > 0;
@@ -57,7 +57,7 @@ public class FlwProcessDaoImpl implements FlwProcessDao {
     }
 
     @Override
-    public List<FlwProcess> selectListByProcessKeyAndVersion(String tenantId, String processKey, Integer version) {
+    public List<FlwProcess> selectListByProcessKeyAndVersion(Long tenantId, String processKey, Integer version) {
         LambdaQueryWrapper<FlwProcess> lqw = Wrappers.lambdaQuery();
         lqw.eq(null != tenantId, FlwProcess::getTenantId, tenantId);
         lqw.eq(FlwProcess::getProcessKey, processKey);
