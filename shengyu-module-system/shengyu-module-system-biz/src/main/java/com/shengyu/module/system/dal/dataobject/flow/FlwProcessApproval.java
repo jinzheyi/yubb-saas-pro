@@ -3,7 +3,7 @@ package com.shengyu.module.system.dal.dataobject.flow;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
-import com.shengyu.module.system.framework.engine.core.TenantFlowBaseDO;
+import com.shengyu.module.system.framework.bpm.engine.core.TenantFlowBaseDO;
 import com.shengyu.module.system.dal.dataobject.flow.model.ApprovalContent;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

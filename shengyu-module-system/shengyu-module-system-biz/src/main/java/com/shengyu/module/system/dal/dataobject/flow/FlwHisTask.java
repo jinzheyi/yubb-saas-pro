@@ -4,11 +4,11 @@
  */
 package com.shengyu.module.system.dal.dataobject.flow;
 
-import com.shengyu.module.system.framework.engine.assist.Assert;
-import com.shengyu.module.system.framework.engine.assist.DateUtils;
-import com.shengyu.module.system.framework.engine.core.enums.TaskState;
-import com.shengyu.module.system.framework.engine.core.enums.TaskType;
-import com.shengyu.module.system.framework.engine.model.NodeModel;
+import com.shengyu.module.system.framework.bpm.engine.assist.Assert;
+import com.shengyu.module.system.framework.bpm.engine.assist.DateUtils;
+import com.shengyu.module.system.framework.bpm.engine.core.enums.TaskState;
+import com.shengyu.module.system.framework.bpm.engine.core.enums.TaskType;
+import com.shengyu.module.system.framework.bpm.engine.model.NodeModel;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
 

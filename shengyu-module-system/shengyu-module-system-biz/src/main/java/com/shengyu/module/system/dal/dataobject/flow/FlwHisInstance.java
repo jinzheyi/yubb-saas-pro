@@ -4,9 +4,9 @@
  */
 package com.shengyu.module.system.dal.dataobject.flow;
 
-import com.shengyu.module.system.framework.engine.assist.Assert;
-import com.shengyu.module.system.framework.engine.assist.DateUtils;
-import com.shengyu.module.system.framework.engine.core.enums.InstanceState;
+import com.shengyu.module.system.framework.bpm.engine.assist.Assert;
+import com.shengyu.module.system.framework.bpm.engine.assist.DateUtils;
+import com.shengyu.module.system.framework.bpm.engine.core.enums.InstanceState;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

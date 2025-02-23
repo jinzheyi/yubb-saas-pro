@@ -4,8 +4,8 @@
  */
 package com.shengyu.module.system.dal.dataobject.flow;
 
-import com.shengyu.module.system.framework.engine.core.enums.ActorType;
-import com.shengyu.module.system.framework.engine.model.NodeAssignee;
+import com.shengyu.module.system.framework.bpm.engine.core.enums.ActorType;
+import com.shengyu.module.system.framework.bpm.engine.model.NodeAssignee;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
 

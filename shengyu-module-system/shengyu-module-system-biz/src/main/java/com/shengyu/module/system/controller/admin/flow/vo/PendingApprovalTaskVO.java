@@ -2,6 +2,8 @@ package com.shengyu.module.system.controller.admin.flow.vo;
 
 import com.shengyu.framework.common.enums.SyConstants;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.shengyu.module.system.framework.bpm.engine.core.enums.PerformType;
+import com.shengyu.module.system.framework.bpm.engine.core.enums.TaskType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -53,12 +55,12 @@ public class PendingApprovalTaskVO {
     @Schema(description = "任务 key 唯一标识")
     private String taskKey;
     /**
-     * 任务类型 {@link com.shengyu.module.system.framework.engine.core.enums.TaskType}
+     * 任务类型 {@link TaskType}
      */
     @Schema(description = "任务类型")
     protected Integer taskType;
     /**
-     * 参与方式 {@link com.shengyu.module.system.framework.engine.core.enums.PerformType}
+     * 参与方式 {@link PerformType}
      */
     @Schema(description = "参与方式")
     protected Integer performType;

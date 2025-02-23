@@ -1,12 +1,12 @@
 package com.shengyu.module.system.dal.dataobject.flow;
 
-import com.shengyu.module.system.framework.engine.assist.Assert;
-import com.shengyu.module.system.framework.engine.assist.DateUtils;
-import com.shengyu.module.system.framework.engine.core.FlowLongContext;
-import com.shengyu.module.system.framework.engine.core.enums.PerformType;
-import com.shengyu.module.system.framework.engine.core.enums.TaskType;
+import com.shengyu.module.system.framework.bpm.engine.assist.Assert;
+import com.shengyu.module.system.framework.bpm.engine.assist.DateUtils;
+import com.shengyu.module.system.framework.bpm.engine.core.FlowLongContext;
+import com.shengyu.module.system.framework.bpm.engine.core.enums.PerformType;
+import com.shengyu.module.system.framework.bpm.engine.core.enums.TaskType;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.shengyu.module.system.framework.engine.core.TenantFlowBaseDO;
+import com.shengyu.module.system.framework.bpm.engine.core.TenantFlowBaseDO;
 import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

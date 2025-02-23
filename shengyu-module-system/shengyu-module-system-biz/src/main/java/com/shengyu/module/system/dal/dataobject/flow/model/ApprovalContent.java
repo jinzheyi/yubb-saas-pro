@@ -1,7 +1,7 @@
 package com.shengyu.module.system.dal.dataobject.flow.model;
 
 import cn.hutool.core.collection.CollUtil;
-import com.shengyu.module.system.framework.engine.model.NodeAssignee;
+import com.shengyu.module.system.framework.bpm.engine.model.NodeAssignee;
 import com.shengyu.module.system.dal.dataobject.flow.FlwTaskActor;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;

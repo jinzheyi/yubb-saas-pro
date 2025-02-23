@@ -1,11 +1,11 @@
 package com.shengyu.module.system.dal.dataobject.flow;
 
-import com.shengyu.module.system.framework.engine.FlowConstants;
-import com.shengyu.module.system.framework.engine.ProcessModelCache;
-import com.shengyu.module.system.framework.engine.core.FlowLongContext;
-import com.shengyu.module.system.framework.engine.model.ProcessModel;
+import com.shengyu.module.system.framework.bpm.engine.FlowConstants;
+import com.shengyu.module.system.framework.bpm.engine.ProcessModelCache;
+import com.shengyu.module.system.framework.bpm.engine.core.FlowLongContext;
+import com.shengyu.module.system.framework.bpm.engine.model.ProcessModel;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.shengyu.module.system.framework.engine.core.TenantFlowBaseDO;
+import com.shengyu.module.system.framework.bpm.engine.core.TenantFlowBaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
