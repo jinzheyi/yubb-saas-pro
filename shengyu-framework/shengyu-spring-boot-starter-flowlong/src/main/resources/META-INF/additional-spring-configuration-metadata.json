@@ -1,0 +1,37 @@
+{
+  "groups": [
+    {
+      "sourceType": "com.shengyu.framework.flowlong.config.autoconfigure.FlowLongProperties",
+      "name": "flowlong",
+      "type": "com.shengyu.framework.flowlong.config.autoconfigure.FlowLongProperties"
+    },
+    {
+      "sourceType": "com.shengyu.framework.flowlong.config.autoconfigure.FlowLongProperties",
+      "name": "flowlong.remind",
+      "sourceMethod": "getRemind()",
+      "type": "com.shengyu.framework.flowlong.engine.scheduling.RemindParam"
+    },
+    {
+      "sourceType": "com.shengyu.framework.flowlong.config.autoconfigure.FlowLongProperties",
+      "name": "flowlong.eventing",
+      "sourceMethod": "getEventing()",
+      "type": "com.shengyu.framework.flowlong.config.autoconfigure.EventingParam"
+    }
+  ],
+  "properties": [
+    {
+      "sourceType": "com.shengyu.framework.flowlong.engine.scheduling.RemindParam",
+      "name": "flowlong.remind.cron",
+      "defaultValue": "*/5 * * * * ?",
+      "description": "remind cron.",
+      "type": "java.lang.String"
+    },
+    {
+      "sourceType": "com.shengyu.framework.flowlong.config.autoconfigure.EventingParam",
+      "name": "flowlong.eventing.task",
+      "defaultValue": false,
+      "description": "task event listener property.",
+      "type": "java.lang.Boolean"
+    }
+  ]
+}

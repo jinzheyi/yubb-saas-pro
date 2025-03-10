@@ -74,6 +74,11 @@
 
         <dependency>
             <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-spring-boot-starter-flowlong</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.shengyu.boot</groupId>
             <artifactId>shengyu-spring-boot-starter-redis</artifactId>
         </dependency>
 
@@ -126,12 +131,6 @@
             <groupId>com.github.binarywang</groupId>
             <artifactId>wx-java-miniapp-spring-boot-starter</artifactId>  <!-- 微信登录（小程序） -->
         </dependency>
-
-<!--        &lt;!&ndash; 工作流引擎 &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>com.aizuda</groupId>-->
-<!--            <artifactId>flowlong-spring-boot-starter</artifactId>-->
-<!--        </dependency>-->
 
     </dependencies>
 

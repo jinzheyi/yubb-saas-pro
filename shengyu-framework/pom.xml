@@ -40,6 +40,7 @@
         <module>shengyu-spring-boot-starter-captcha</module>
         <module>shengyu-spring-boot-starter-websocket</module>
         <module>shengyu-spring-boot-starter-desensitize</module>
+        <module>shengyu-spring-boot-starter-flowlong</module>
     </modules>
 
     <artifactId>shengyu-framework</artifactId>

@@ -21,7 +21,7 @@ public abstract class BaseDO implements Serializable {
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
+    protected LocalDateTime createTime;
     /**
      * 最后更新时间
      */

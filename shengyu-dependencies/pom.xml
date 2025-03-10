@@ -76,6 +76,7 @@
         <weixin-java.version>4.6.0</weixin-java.version>
         <ureport2.version>2.2.9</ureport2.version>
 <!--        <flowlong.version>1.1.2</flowlong.version>-->
+        <jodd.version>5.1.6</jodd.version>
     </properties>
 
     <dependencyManagement>
@@ -663,6 +664,12 @@
 <!--                <artifactId>flowlong-spring-boot-starter</artifactId>-->
 <!--                <version>${flowlong.version}</version>-->
 <!--            </dependency>-->
+
+            <dependency>
+                <groupId>org.jodd</groupId>
+                <artifactId>jodd-bean</artifactId>
+                <version>${jodd.version}</version>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>
