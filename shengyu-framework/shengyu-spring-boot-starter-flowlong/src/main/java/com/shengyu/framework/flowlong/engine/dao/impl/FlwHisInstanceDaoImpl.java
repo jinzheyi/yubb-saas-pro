@@ -6,8 +6,8 @@ package com.shengyu.framework.flowlong.engine.dao.impl;
 
 import com.shengyu.framework.flowlong.engine.dao.FlwHisInstanceDao;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
-import com.shengyu.module.system.dal.mysql.flow.FlwHisInstanceMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.shengyu.framework.flowlong.engine.mapper.FlwHisInstanceMapper;
 
 import java.util.List;
 import java.util.Optional;

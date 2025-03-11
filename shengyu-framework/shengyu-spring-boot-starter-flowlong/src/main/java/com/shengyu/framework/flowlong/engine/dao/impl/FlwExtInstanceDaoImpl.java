@@ -6,8 +6,8 @@ package com.shengyu.framework.flowlong.engine.dao.impl;
 
 import com.shengyu.framework.flowlong.engine.dao.FlwExtInstanceDao;
 import com.shengyu.framework.flowlong.engine.entity.FlwExtInstance;
-import com.shengyu.module.system.dal.mysql.flow.FlwExtInstanceMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.shengyu.framework.flowlong.engine.mapper.FlwExtInstanceMapper;
 
 /**
  * 扩展流程实例数据访问层接口实现类

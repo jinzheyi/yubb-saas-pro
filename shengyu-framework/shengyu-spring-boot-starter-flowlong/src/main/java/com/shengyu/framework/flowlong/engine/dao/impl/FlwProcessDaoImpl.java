@@ -6,9 +6,9 @@ package com.shengyu.framework.flowlong.engine.dao.impl;
 
 import com.shengyu.framework.flowlong.engine.dao.FlwProcessDao;
 import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
-import com.shengyu.module.system.dal.mysql.flow.FlwProcessMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.shengyu.framework.flowlong.engine.mapper.FlwProcessMapper;
 
 import java.util.List;
 

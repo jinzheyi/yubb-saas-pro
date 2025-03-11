@@ -6,8 +6,8 @@ package com.shengyu.framework.flowlong.engine.dao.impl;
 
 import com.shengyu.framework.flowlong.engine.dao.FlwTaskDao;
 import com.shengyu.framework.flowlong.engine.entity.FlwTask;
-import com.shengyu.module.system.dal.mysql.flow.FlwTaskMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.shengyu.framework.flowlong.engine.mapper.FlwTaskMapper;
 
 import java.util.Date;
 import java.util.List;

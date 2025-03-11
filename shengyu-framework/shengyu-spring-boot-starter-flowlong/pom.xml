@@ -20,10 +20,6 @@
             <groupId>com.shengyu.boot</groupId>
             <artifactId>shengyu-common</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.shengyu.boot</groupId>
-            <artifactId>shengyu-spring-boot-starter-biz-tenant</artifactId>
-        </dependency>
 
         <!-- jackson -->
         <dependency>
@@ -39,16 +35,7 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-expression</artifactId>
-        </dependency>
-
         <!-- Spring 核心 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>com.baomidou</groupId>
@@ -57,6 +44,11 @@
         <dependency>
             <groupId>org.jodd</groupId>
             <artifactId>jodd-bean</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-spring-boot-starter-biz-tenant</artifactId>
         </dependency>
 
     </dependencies>
