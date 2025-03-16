@@ -7,10 +7,12 @@ package com.shengyu.framework.flowlong.config.event;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.core.enums.TaskEventType;
 import com.shengyu.framework.flowlong.engine.entity.FlwTask;
+import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import com.shengyu.framework.flowlong.engine.listener.TaskListener;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -31,10 +33,12 @@ public class EventTaskListener implements TaskListener {
     }
 
     @Override
-    public boolean notify(TaskEventType eventType, Supplier<FlwTask> supplier, NodeModel nodeModel, FlowCreator flowCreator) {
+    public boolean notify(TaskEventType eventType, Supplier<FlwTask> supplier, List<FlwTaskActor> taskActors,
+                          NodeModel nodeModel, FlowCreator flowCreator) {
         TaskEvent taskEvent = new TaskEvent();
         taskEvent.setEventType(eventType);
         taskEvent.setFlwTask(supplier.get());
+        taskEvent.setTaskActors(taskActors);
         taskEvent.setNodeModel(nodeModel);
         taskEvent.setFlowCreator(flowCreator);
         eventPublisher.publishEvent(taskEvent);

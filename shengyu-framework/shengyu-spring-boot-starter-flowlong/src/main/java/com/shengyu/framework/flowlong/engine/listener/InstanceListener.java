@@ -4,8 +4,12 @@
  */
 package com.shengyu.framework.flowlong.engine.listener;
 
+import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.core.enums.InstanceEventType;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
+import com.shengyu.framework.flowlong.engine.model.NodeModel;
+
+import java.util.function.Supplier;
 
 /**
  * 流程实例监听
@@ -17,6 +21,17 @@ import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
  * @author hubin
  * @since 1.0
  */
-public interface InstanceListener extends FlowLongListener<InstanceEventType, FlwHisInstance> {
+public interface InstanceListener {
+
+    /**
+     * 流程引擎监听通知
+     *
+     * @param eventType   事件类型
+     * @param supplier    监听实例提供者
+     * @param nodeModel   当前执行节点 {@link NodeModel}
+     * @param flowCreator 处理人员
+     * @return 通知结果 true 成功 false 失败
+     */
+    boolean notify(InstanceEventType eventType, Supplier<FlwHisInstance> supplier, NodeModel nodeModel, FlowCreator flowCreator);
 
 }

@@ -7,11 +7,13 @@ package com.shengyu.framework.flowlong.config.event;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.core.enums.TaskEventType;
 import com.shengyu.framework.flowlong.engine.entity.FlwTask;
+import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 流程任务事件对象
@@ -28,6 +30,7 @@ import java.io.Serializable;
 public class TaskEvent implements Serializable {
     private TaskEventType eventType;
     private FlwTask flwTask;
+    private List<FlwTaskActor> taskActors;
     private NodeModel nodeModel;
     private FlowCreator flowCreator;
 

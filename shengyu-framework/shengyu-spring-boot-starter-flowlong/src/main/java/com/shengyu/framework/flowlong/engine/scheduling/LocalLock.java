@@ -22,24 +22,16 @@ public class LocalLock implements JobLock {
     /**
      * 防重入锁
      */
-    private static Lock LOCAL_LOCK;
-
-    public static Lock getLocalLock() {
-        if (null == LOCAL_LOCK) {
-            synchronized (LocalLock.class) {
-                LOCAL_LOCK = new ReentrantLock();
-            }
-        }
-        return LOCAL_LOCK;
-    }
+    private static final Lock LOCAL_LOCK = new ReentrantLock();
 
     @Override
     public boolean tryLock() {
-        return getLocalLock().tryLock();
+        return LOCAL_LOCK.tryLock();
     }
 
     @Override
     public void unlock() {
-        getLocalLock().unlock();
+        LOCAL_LOCK.unlock();
     }
+
 }
