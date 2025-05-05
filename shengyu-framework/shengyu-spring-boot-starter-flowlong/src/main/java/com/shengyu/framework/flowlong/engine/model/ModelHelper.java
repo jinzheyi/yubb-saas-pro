@@ -30,6 +30,19 @@ import java.util.stream.Collectors;
 public class ModelHelper {
 
     /**
+     * 构建流程模型
+     * <p>确保已经实现JSON解析处理器接口</p>
+     *
+     * @param jsonModel 流程模型JSON格式
+     * @return 流程模型
+     */
+    public static ProcessModel buildProcessModel(String jsonModel) {
+        ProcessModel pm = FlowLongContext.fromJson(jsonModel, ProcessModel.class);
+        pm.buildParentNode(pm.getNodeConfig());
+        return pm;
+    }
+
+    /**
      * 动态获取下一个节点
      *
      * @param flowLongContext 流程上下文 {@link FlowLongContext}
@@ -64,6 +77,9 @@ public class ModelHelper {
                         NodeModel _childNode = t.getChildNode();
                         if (null != _childNode) {
                             nextNodes.add(_childNode);
+                        } else if (null != childNode.getChildNode()) {
+                            // 默认条件，找下一个审批节点
+                            nextNodes.addAll(getNextChildNodes(flowLongContext, execution, rootNodeModel, childNode.getChildNode()));
                         }
                     });
         } else if (childNode.parallelNode()) {
@@ -182,68 +198,55 @@ public class ModelHelper {
     }
 
     /**
-     * 获取所有上一个节点key，不包含抄送节点
+     * 获取所有上一个节点key，只包含发起节点和审批节点（非直接所在条件分支排除在外）
      *
      * @param nodeModel 当前节点
      * @return 所有节点key
      */
     public static List<String> getAllPreviousNodeKeys(NodeModel nodeModel) {
-        List<String> getNodeKeys = getAllParentNodeKeys(nodeModel.getNodeKey(), nodeModel.getParentNode());
-        // 往上递归需要去重
-        return getNodeKeys.stream().distinct().collect(Collectors.toList());
-    }
-
-    private static List<String> getAllParentNodeKeys(String currentNodeKey, NodeModel nodeModel) {
         List<String> nodeKeys = new ArrayList<>();
-        if (null != nodeModel) {
-            if (!nodeModel.ccNode()) {
-                // 非抄送节点
-                if (nodeModel.conditionNode()) {
-                    // 条件节点找子节点
-                    nodeKeys.addAll(getAllConditionNodeKeys(currentNodeKey, nodeModel));
-                } else {
-                    // 普通节点
-                    nodeKeys.add(nodeModel.getNodeKey());
-                }
-            }
-            // 继续找上一个节点
-            nodeKeys.addAll(getAllParentNodeKeys(currentNodeKey, nodeModel.getParentNode()));
-        }
-        return nodeKeys;
-    }
-
-    private static List<String> getAllConditionNodeKeys(String currentNodeKey, NodeModel nodeModel) {
-        List<String> nodeKeys = new ArrayList<>();
-        if (null != nodeModel) {
-            List<ConditionNode> conditionNodes = nodeModel.getConditionNodes();
-            if (ObjectUtils.isNotEmpty(conditionNodes)) {
-                for (ConditionNode conditionNode : conditionNodes) {
-                    NodeModel childNodeMode = conditionNode.getChildNode();
-                    if (null != childNodeMode) {
-                        if (childNodeMode.conditionNode()) {
-                            // 条件路由继续往下找
-                            nodeKeys.addAll(getAllConditionNodeKeys(currentNodeKey, childNodeMode));
-                        } else {
-                            // 其它节点找子节点，必须包含当前节点的子节点分支
-                            List<String> allNextNodeKeys = getAllNextConditionNodeKeys(childNodeMode);
-                            if (allNextNodeKeys.contains(currentNodeKey)) {
-                                List<String> legalNodeKeys = new ArrayList<>();
-                                for (String t : allNextNodeKeys) {
-                                    if (currentNodeKey.equals(t)) {
-                                        break;
-                                    }
-                                    legalNodeKeys.add(t);
-                                }
-                                nodeKeys.addAll(legalNodeKeys);
-                            }
-                        }
-                    }
+        List<NodeModel> allParentNodeModels = getAllParentNodeModels(nodeModel);
+        if (!allParentNodeModels.isEmpty()) {
+            for (NodeModel parentNodeModel : allParentNodeModels) {
+                Integer type = parentNodeModel.getType();
+                if (TaskType.major.eq(type) || TaskType.approval.eq(type)) {
+                    // 发起或审批节点
+                    nodeKeys.add(parentNodeModel.getNodeKey());
                 }
             }
         }
         return nodeKeys;
     }
 
+    /**
+     * 获取当前节点的所有父节点模型
+     *
+     * @param nodeModel 当前节点模型
+     * @return 所有父节点模型
+     */
+    private static List<NodeModel> getAllParentNodeModels(NodeModel nodeModel) {
+        List<NodeModel> nodeModels = new ArrayList<>();
+        NodeModel parentNodeModel = nodeModel.getParentNode();
+        if (null != parentNodeModel) {
+            nodeModels.add(parentNodeModel);
+            if (TaskType.major.eq(parentNodeModel.getType())) {
+                return nodeModels;
+            }
+            // 继续往上递归
+            List<NodeModel> pnmList = getAllParentNodeModels(parentNodeModel);
+            if (!pnmList.isEmpty()) {
+                nodeModels.addAll(pnmList);
+            }
+        }
+        return nodeModels;
+    }
+
+    /**
+     * 获取所有下一个节点key，递归所有子节点
+     *
+     * @param nodeModel 当前节点模型
+     * @return 所有节点key
+     */
     private static List<String> getAllNextConditionNodeKeys(NodeModel nodeModel) {
         List<String> nodeKeys = new ArrayList<>();
         if (null != nodeModel) {
@@ -297,7 +300,7 @@ public class ModelHelper {
     }
 
     /**
-     * 获取根节点下的所有节点类型【 注意，只对根节点查找有效！】
+     * 获取根节点下的所有节点模型【 注意，只对根节点查找有效！】
      *
      * @param rootNodeModel 根节点模型
      * @return 所有节点信息
@@ -341,17 +344,56 @@ public class ModelHelper {
     }
 
     /**
-     * 检查是否存在重复节点名称
+     * 检查节点模型，检测节点模型需要构建父节点
      *
      * @param rootNodeModel 根节点模型
-     * @return true 重复 false 不重复
+     * @return 0，正常 1，存在重复节点KEY 2，自动通过节点配置错误 3，自动拒绝节点配置错误
+     * 4，路由节点必须配置错误（未配置路由分支） 5，子流程节点配置错误（未选择子流程）
      */
-    public static boolean checkDuplicateNodeKeys(NodeModel rootNodeModel) {
+    public static int checkNodeModel(NodeModel rootNodeModel) {
         List<NodeModel> allNextNodes = getRootNodeAllChildNodes(rootNodeModel);
         Set<String> set = new HashSet<>();
         for (NodeModel nextNode : allNextNodes) {
             if (!set.add(nextNode.getNodeKey())) {
-                return true;
+                // 节点KEY重复
+                return 1;
+            }
+            if (TaskType.autoPass.eq(nextNode.getType())) {
+                if (!inConditionNode(nextNode) || null != nextNode.getChildNode()) {
+                    // 自动通过节点配置错误
+                    return 2;
+                }
+            } else if (TaskType.autoReject.eq(nextNode.getType())) {
+                if (!inConditionNode(nextNode) || null != nextNode.getChildNode()) {
+                    // 自动拒绝节点配置错误
+                    return 3;
+                }
+            } else if (nextNode.routeNode() && ObjectUtils.isEmpty(nextNode.getRouteNodes())) {
+                // 路由节点必须配置错误（未配置路由分支）
+                return 4;
+            } else if (nextNode.callProcessNode() && ObjectUtils.isEmpty(nextNode.getCallProcess())) {
+                // 子流程节点配置错误（未选择子流程）
+                return 5;
+            }
+        }
+        // 正确模型
+        return 0;
+    }
+
+    /**
+     * 判断节点是否在条件节点中
+     *
+     * @param nodeModel {@link NodeModel}
+     * @return true 是 false 否
+     */
+    public static boolean inConditionNode(NodeModel nodeModel) {
+        if (null != nodeModel) {
+            NodeModel parentNode = nodeModel.getParentNode();
+            if (null != parentNode) {
+                if (parentNode.conditionNode()) {
+                    return true;
+                }
+                return inConditionNode(parentNode);
             }
         }
         return false;
@@ -518,6 +560,65 @@ public class ModelHelper {
 
                     // 条件节点子节点
                     getChildAllUsedNodeKeys(currentUsedNodeKeys, flowLongContext, execution, rootNodeModel.getChildNode(), currentNodeKey);
+                } else if (rootNodeModel.parallelNode()) {
+                    // 并行节点
+                    int flag = 0;
+                    List<String> pnAllKeys = new ArrayList<>();
+                    for (NodeModel nodeModel : rootNodeModel.getParallelNodes()) {
+                        List<String> pnKeys = new ArrayList<>();
+                        // 添加执行条件节点
+                        pnKeys.add(nodeModel.getNodeKey());
+
+                        // 条件节点分支子节点
+                        pnKeys.addAll(getAllUsedNodeKeys(flowLongContext, execution, nodeModel, currentNodeKey));
+
+                        // 判断如果包含当前节点则添加到已使用的节点中
+                        if (pnKeys.contains(currentNodeKey)) {
+                            flag = 1;
+                            currentUsedNodeKeys.addAll(pnKeys);
+                            break;
+                        } else {
+                            pnAllKeys.addAll(pnKeys);
+                        }
+                    }
+
+                    // 如果不包含当前节点则添加到已使用的节点中
+                    if (Objects.equals(0, flag)) {
+                        currentUsedNodeKeys.addAll(pnAllKeys);
+                    }
+
+                    // 条件节点子节点
+                    getChildAllUsedNodeKeys(currentUsedNodeKeys, flowLongContext, execution, rootNodeModel.getChildNode(), currentNodeKey);
+                } else if (rootNodeModel.inclusiveNode()) {
+                    // 包容节点
+                    flowLongContext.getFlowConditionHandler().getInclusiveNodes(flowLongContext, execution, rootNodeModel).ifPresent(conditionNodes -> {
+                        for (ConditionNode conditionNode : conditionNodes) {
+                            // 添加执行条件节点
+                            currentUsedNodeKeys.add(conditionNode.getNodeKey());
+
+                            // 条件节点分支子节点
+                            currentUsedNodeKeys.addAll(getAllUsedNodeKeys(flowLongContext, execution, conditionNode.getChildNode(), currentNodeKey));
+
+                            // 已经找到当前节点，忽略其它分支
+                            if (currentUsedNodeKeys.contains(currentNodeKey)) {
+                                break;
+                            }
+                        }
+                    });
+
+                    // 条件节点子节点
+                    getChildAllUsedNodeKeys(currentUsedNodeKeys, flowLongContext, execution, rootNodeModel.getChildNode(), currentNodeKey);
+                } else if (rootNodeModel.routeNode()) {
+                    // 路由节点
+                    currentUsedNodeKeys.add(rootNodeModel.getNodeKey());
+                    Optional<ConditionNode> opt = flowLongContext.getFlowConditionHandler().getRouteNode(flowLongContext, execution, rootNodeModel);
+                    if (opt.isPresent()) {
+                        // 添加执行条件节点
+                        currentUsedNodeKeys.add(opt.get().getNodeKey());
+                    } else if (null != rootNodeModel.getChildNode()) {
+                        // 获取路由分支子节点
+                        currentUsedNodeKeys.addAll(getAllUsedNodeKeys(flowLongContext, execution, rootNodeModel.getChildNode(), currentNodeKey));
+                    }
                 } else {
 
                     // 普通节点
@@ -534,6 +635,9 @@ public class ModelHelper {
         return currentUsedNodeKeys;
     }
 
+    /**
+     * 获取已使用所有的子节点key列表
+     */
     public static void getChildAllUsedNodeKeys(List<String> currentUsedNodeKeys, FlowLongContext flowLongContext,
                                                Execution execution, NodeModel rootNodeModel, String currentNodeKey) {
         if (!currentUsedNodeKeys.contains(currentNodeKey)) {

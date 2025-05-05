@@ -55,18 +55,18 @@ public class FlowLongEngineImpl implements FlowLongEngine {
      * 根据流程定义ID，创建人，参数列表启动流程实例
      */
     @Override
-    public Optional<FlwInstance> startInstanceById(Long id, FlowCreator flowCreator, Map<String, Object> args, Supplier<FlwInstance> supplier) {
+    public Optional<FlwInstance> startInstanceById(Long id, FlowCreator flowCreator, Map<String, Object> args, boolean saveAsDraft, Supplier<FlwInstance> supplier) {
         FlwProcess process = processService().getProcessById(id);
-        return this.startProcessInstance(process.checkState(), flowCreator, args, supplier);
+        return this.startProcessInstance(process.checkState(), flowCreator, args, saveAsDraft, supplier);
     }
 
     /**
      * 根据流程定义key、版本号、创建人、参数列表启动流程实例
      */
     @Override
-    public Optional<FlwInstance> startInstanceByProcessKey(String processKey, Integer version, FlowCreator flowCreator, Map<String, Object> args, Supplier<FlwInstance> supplier) {
+    public Optional<FlwInstance> startInstanceByProcessKey(String processKey, Integer version, FlowCreator flowCreator, Map<String, Object> args, boolean saveAsDraft, Supplier<FlwInstance> supplier) {
         FlwProcess process = processService().getProcessByVersion(flowCreator.getTenantId(), processKey, version);
-        return this.startProcessInstance(process, flowCreator, args, supplier);
+        return this.startProcessInstance(process, flowCreator, args, saveAsDraft, supplier);
     }
 
     /**
@@ -75,14 +75,16 @@ public class FlowLongEngineImpl implements FlowLongEngine {
      * @param process     流程定义对象
      * @param flowCreator 流程创建者
      * @param args        执行参数
+     * @param saveAsDraft 暂存草稿
      * @param supplier    初始化流程实例提供者
      * @return {@link FlwInstance} 流程实例
      */
     @Override
-    public Optional<FlwInstance> startProcessInstance(FlwProcess process, FlowCreator flowCreator, Map<String, Object> args, Supplier<FlwInstance> supplier) {
+    public Optional<FlwInstance> startProcessInstance(FlwProcess process, FlowCreator flowCreator, Map<String, Object> args,
+                                                      boolean saveAsDraft, Supplier<FlwInstance> supplier) {
         // 执行启动模型
-        return process.executeStartModel(flowLongContext, flowCreator, nodeModel -> {
-            FlwInstance flwInstance = runtimeService().createInstance(process, flowCreator, args, nodeModel, supplier);
+        return process.executeStartModel(flowLongContext, flowCreator, saveAsDraft, nodeModel -> {
+            FlwInstance flwInstance = runtimeService().createInstance(process, flowCreator, args, nodeModel, saveAsDraft, supplier);
             if (log.isDebugEnabled()) {
                 log.debug("start process instanceId={}", flwInstance.getId());
             }
@@ -102,7 +104,7 @@ public class FlowLongEngineImpl implements FlowLongEngine {
             if (nodeModelOptional.isPresent()) {
                 // 执行子节点
                 nodeModelOptional.get().execute(flowLongContext, execution);
-            } else {
+            } else if (nodeModel.endNode()) {
                 // 不存在任何子节点结束流程
                 execution.endInstance(nodeModel);
             }
@@ -137,6 +139,13 @@ public class FlowLongEngineImpl implements FlowLongEngine {
         if (log.isDebugEnabled()) {
             log.debug("Auto execute taskId={}", taskId);
         }
+
+        // 会签情况存在多个任务，遇到某个处理人自动跳过
+        if (TaskEventType.autoJump.eq(eventType) && PerformType.countersign.eq(flwTask.getPerformType())) {
+            // 直接返回，不再执行后续逻辑
+            return true;
+        }
+
         // 完成任务后续逻辑
         return afterDoneTask(flowCreator, flwTask, args, execution -> {
             // 执行节点模型
@@ -172,7 +181,7 @@ public class FlowLongEngineImpl implements FlowLongEngine {
             ProcessModel processModel = runtimeService().getProcessModelByInstanceId(flwInstance.getId());
 
             // 重新加载流程模型内容
-            ModelHelper.reloadProcessModel(flowLongContext,  flwInstance.getId(), processModel);
+            ModelHelper.reloadProcessModel(flowLongContext, flwInstance.getId(), processModel);
 
             // 构建节点模型
             Execution execution = new Execution(this, processModel, flowCreator, flwInstance, flwInstance.variableToMap());
@@ -184,7 +193,23 @@ public class FlowLongEngineImpl implements FlowLongEngine {
     }
 
     @Override
-    public Optional<FlwTask> executeRejectTask(FlwTask currentFlwTask, String nodeKey, FlowCreator flowCreator, Map<String, Object> args) {
+    public Optional<FlwTask> executeRejectTask(FlwTask currentFlwTask, String nodeKey, FlowCreator flowCreator, Map<String, Object> args, boolean termination) {
+        // 执行任务驳回
+        return this.executeRejectTask(currentFlwTask, nodeKey, flowCreator, args, termination, () -> {
+
+            // 驳回并终止流程
+            flowLongContext.getRuntimeService().reject(currentFlwTask.getInstanceId(), flowCreator);
+            return Optional.of(currentFlwTask);
+        });
+    }
+
+    protected Optional<FlwTask> executeRejectTask(FlwTask currentFlwTask, String nodeKey, FlowCreator flowCreator, Map<String, Object> args,
+                                                  boolean termination, Supplier<Optional<FlwTask>> terminateProcess) {
+
+        if (termination) {
+            // 强制终止流程
+            return terminateProcess.get();
+        }
 
         if (null != nodeKey) {
             // 3，驳回到指定节点
@@ -198,6 +223,12 @@ public class FlowLongEngineImpl implements FlowLongEngine {
         if (Objects.equals(1, nodeModel.getRejectStrategy())) {
             // 驳回策略 1，驳回到发起人
             return this.executeJumpTask(currentFlwTask.getId(), processModel.getNodeConfig().getNodeKey(), flowCreator, args, TaskType.rejectJump);
+        } else if (Objects.equals(4, nodeModel.getRejectStrategy())) {
+            // 驳回策略 4，终止审批流程
+            return terminateProcess.get();
+        } else if (Objects.equals(5, nodeModel.getRejectStrategy())) {
+            // 驳回策略 5，驳回到模型父节点
+            return this.executeJumpTask(currentFlwTask.getId(), nodeModel.getParentNode().getNodeKey(), flowCreator, args, TaskType.rejectJump);
         }
 
         // 2，驳回到上一节点
@@ -220,6 +251,20 @@ public class FlowLongEngineImpl implements FlowLongEngine {
             // 构建执行对象
             return this.createExecution(processModel, flwInstance, flwTask, flowCreator, args);
         });
+    }
+
+    /**
+     * 创建抄送任务
+     * <p>默认不校验是否重复抄送</p>
+     *
+     * @param taskModel   任务模型
+     * @param ccUserList  抄送任务分配到任务的人或角色列表
+     * @param flwTask     当前任务
+     * @param flowCreator 任务创建者
+     */
+    @Override
+    public boolean createCcTask(NodeModel taskModel, FlwTask flwTask, List<NodeAssignee> ccUserList, FlowCreator flowCreator) {
+        return taskService().createCcTask(taskModel, flwTask, ccUserList, flowCreator);
     }
 
     @Override
@@ -357,8 +402,7 @@ public class FlowLongEngineImpl implements FlowLongEngine {
          * 执行触发器任务
          */
         if (performType == PerformType.trigger) {
-            taskService().executeTaskTrigger(execution, flwTask);
-            return true;
+            return taskService().executeTaskTrigger(execution, flwTask);
         }
 
         // 执行回调逻辑

@@ -5,7 +5,7 @@
 package com.shengyu.framework.flowlong.config.autoconfigure;
 
 import com.shengyu.framework.flowlong.config.adaptive.FlowJacksonHandler;
-import com.shengyu.framework.flowlong.config.adaptive.SpelExpression;
+import com.shengyu.framework.flowlong.config.adaptive.SpelFlowLongExpression;
 import com.shengyu.framework.flowlong.config.event.EventInstanceListener;
 import com.shengyu.framework.flowlong.config.event.EventTaskListener;
 import com.shengyu.framework.flowlong.engine.*;
@@ -47,11 +47,17 @@ public class FlowLongAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    public FlowLongIdGenerator flowLongIdGenerator() {
+        return new DefaultFlowLongIdGenerator();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     public TaskService taskService(@Autowired(required = false) TaskAccessStrategy taskAccessStrategy, @Autowired(required = false) TaskListener taskListener,
-                                   @Autowired(required = false) TaskTrigger taskTrigger, FlwInstanceDao instanceDao, FlwExtInstanceDao extInstanceDao,
+                                   @Autowired(required = false) TaskTrigger taskTrigger, FlowLongIdGenerator flowLongIdGenerator, FlwInstanceDao instanceDao, FlwExtInstanceDao extInstanceDao,
                                    FlwHisInstanceDao hisInstanceDao, FlwTaskDao taskDao, FlwTaskActorDao taskActorDao,
                                    FlwHisTaskDao hisTaskDao, FlwHisTaskActorDao hisTaskActorDao) {
-        return new TaskServiceImpl(taskAccessStrategy, taskListener, taskTrigger, instanceDao, extInstanceDao, hisInstanceDao,
+        return new TaskServiceImpl(taskAccessStrategy, taskListener, taskTrigger, flowLongIdGenerator, instanceDao, extInstanceDao, hisInstanceDao,
                 taskDao, taskActorDao, hisTaskDao, hisTaskActorDao);
     }
 
@@ -64,16 +70,16 @@ public class FlowLongAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public RuntimeService runtimeService(@Autowired(required = false) InstanceListener instanceListener, QueryService queryService,
+    public RuntimeService runtimeService(@Autowired(required = false) InstanceListener instanceListener, FlowLongIdGenerator flowLongIdGenerator, QueryService queryService,
                                          TaskService taskService, FlwInstanceDao instanceDao, FlwHisInstanceDao hisInstanceDao,
                                          FlwExtInstanceDao extInstanceDao) {
-        return new RuntimeServiceImpl(instanceListener, queryService, taskService, instanceDao, hisInstanceDao, extInstanceDao);
+        return new RuntimeServiceImpl(instanceListener, flowLongIdGenerator, queryService, taskService, instanceDao, hisInstanceDao, extInstanceDao);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public ProcessService processService(RuntimeService runtimeService, FlwProcessDao processDao) {
-        return new ProcessServiceImpl(runtimeService, processDao);
+    public ProcessService processService(RuntimeService runtimeService, FlowLongIdGenerator flowLongIdGenerator, FlwProcessDao processDao) {
+        return new ProcessServiceImpl(runtimeService, flowLongIdGenerator, processDao);
     }
 
     @Bean
@@ -84,8 +90,8 @@ public class FlowLongAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public Expression expression() {
-        return new SpelExpression();
+    public FlowLongExpression flowLongExpression() {
+        return new SpelFlowLongExpression();
     }
 
     @Bean
@@ -93,7 +99,6 @@ public class FlowLongAutoConfiguration {
     public TaskAccessStrategy taskAccessStrategy() {
         return new GeneralAccessStrategy();
     }
-
 
     @Bean
     @ConditionalOnMissingBean
@@ -110,7 +115,7 @@ public class FlowLongAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public FlowLongContext flowLongContext(ProcessService processService, QueryService queryService, RuntimeService runtimeService,
-                                           TaskService taskService, Expression expression, TaskAccessStrategy taskAccessStrategy,
+                                           TaskService taskService, FlowLongExpression flowLongExpression, TaskAccessStrategy taskAccessStrategy,
                                            TaskActorProvider taskActorProvider, FlowLongEngine flowLongEngine, FlowLongProperties flp,
                                            @Autowired(required = false) FlowCache flowCache,
                                            @Autowired(required = false) ProcessModelParser processModelParser,
@@ -131,7 +136,7 @@ public class FlowLongAutoConfiguration {
         flc.setQueryService(queryService);
         flc.setRuntimeService(runtimeService);
         flc.setTaskService(taskService);
-        flc.setExpression(expression);
+        flc.setFlowLongExpression(flowLongExpression);
         flc.setTaskAccessStrategy(taskAccessStrategy);
         flc.setTaskActorProvider(taskActorProvider);
         flc.setConditionNodeHandler(conditionNodeHandler);

@@ -7,6 +7,7 @@ package com.shengyu.framework.flowlong.engine.handler.impl;
 import com.shengyu.framework.flowlong.engine.Expression;
 import com.shengyu.framework.flowlong.engine.FlowConstants;
 import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
+import com.shengyu.framework.flowlong.engine.FlowLongExpression;
 import com.shengyu.framework.flowlong.engine.assist.Assert;
 import com.shengyu.framework.flowlong.engine.assist.ObjectUtils;
 import com.shengyu.framework.flowlong.engine.core.Execution;
@@ -68,9 +69,9 @@ public class SimpleConditionNodeHandler implements ConditionNodeHandler {
 
         // 根据正则条件节点选择
         Map<String, Object> args = this.getArgs(flowLongContext, execution);
-        Expression expression = flowLongContext.checkExpression();
+        FlowLongExpression flowLongExpression = flowLongContext.checkFlowLongExpression();
         return conditionNodes.stream().sorted(Comparator.comparing(ConditionNode::getPriorityLevel))
-                .filter(t -> expression.eval(t.getConditionList(), args)).findFirst();
+                .filter(t -> flowLongExpression.eval(t.getConditionList(), args)).findFirst();
     }
 
     @Override
@@ -94,9 +95,9 @@ public class SimpleConditionNodeHandler implements ConditionNodeHandler {
         List<ConditionNode> inclusiveNodes = nodeModel.getInclusiveNodes();
 
         // 根据正则条件节点选择
-        Expression expression = flowLongContext.checkExpression();
+        FlowLongExpression flowLongExpression = flowLongContext.checkFlowLongExpression();
         Map<String, Object> args = this.getArgs(flowLongContext, execution);
-        List<ConditionNode> cnsOpt = inclusiveNodes.stream().filter(t -> expression.eval(t.getConditionList(), args)).collect(Collectors.toList());
+        List<ConditionNode> cnsOpt = inclusiveNodes.stream().filter(t -> flowLongExpression.eval(t.getConditionList(), args)).collect(Collectors.toList());
         if (ObjectUtils.isEmpty(cnsOpt)) {
             cnsOpt = Collections.singletonList(defaultConditionNode(inclusiveNodes).get());
         }

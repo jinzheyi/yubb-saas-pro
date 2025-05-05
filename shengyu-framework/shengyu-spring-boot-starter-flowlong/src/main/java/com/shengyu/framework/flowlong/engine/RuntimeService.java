@@ -6,6 +6,7 @@ package com.shengyu.framework.flowlong.engine;
 
 import com.shengyu.framework.flowlong.engine.core.Execution;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
+import com.shengyu.framework.flowlong.engine.core.enums.InstanceState;
 import com.shengyu.framework.flowlong.engine.entity.FlwInstance;
 import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
@@ -34,10 +35,11 @@ public interface RuntimeService {
      * @param flowCreator 流程实例任务创建者
      * @param args        参数列表
      * @param nodeModel   当前所在节点
+     * @param saveAsDraft 暂存草稿
      * @param supplier    初始化流程实例提供者
      * @return 活动流程实例对象
      */
-    FlwInstance createInstance(FlwProcess flwProcess, FlowCreator flowCreator, Map<String, Object> args, NodeModel nodeModel, Supplier<FlwInstance> supplier);
+    FlwInstance createInstance(FlwProcess flwProcess, FlowCreator flowCreator, Map<String, Object> args, NodeModel nodeModel, boolean saveAsDraft, Supplier<FlwInstance> supplier);
 
     /**
      * 根据流程实例ID获取流程实例模型
@@ -69,21 +71,32 @@ public interface RuntimeService {
     /**
      * 结束流程实例（审批通过）
      *
-     * @param execution  {@link Execution}
-     * @param instanceId 流程实例ID
-     * @param endNode    结束节点
+     * @param execution     {@link Execution}
+     * @param instanceId    流程实例ID
+     * @param endNode       结束节点
+     * @param instanceState 实例状态
      * @return true 成功 false 失败
      */
-    boolean endInstance(Execution execution, Long instanceId, NodeModel endNode);
+    boolean endInstance(Execution execution, Long instanceId, NodeModel endNode, InstanceState instanceState);
 
     /**
      * 保存流程实例
      *
      * @param flwInstance 流程实例对象
      * @param flwProcess  流程定义对象
+     * @param saveAsDraft 暂存草稿
      * @param flowCreator 处理人员
      */
-    void saveInstance(FlwInstance flwInstance, FlwProcess flwProcess, FlowCreator flowCreator);
+    void saveInstance(FlwInstance flwInstance, FlwProcess flwProcess, boolean saveAsDraft, FlowCreator flowCreator);
+
+    /**
+     * 暂停流程实例 {@link InstanceState#suspend}
+     *
+     * @param instanceId  流程实例ID
+     * @param flowCreator 处理人员
+     * @return true 成功 false 失败
+     */
+    boolean suspendInstanceById(Long instanceId, FlowCreator flowCreator);
 
     /**
      * 流程实例拒绝审批强制终止（用于后续审核人员认为该审批不再需要继续，拒绝审批强行终止）

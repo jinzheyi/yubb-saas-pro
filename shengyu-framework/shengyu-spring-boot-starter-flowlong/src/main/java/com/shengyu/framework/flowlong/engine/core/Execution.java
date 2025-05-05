@@ -8,6 +8,7 @@ import com.shengyu.framework.flowlong.engine.FlowConstants;
 import com.shengyu.framework.flowlong.engine.FlowLongEngine;
 import com.shengyu.framework.flowlong.engine.TaskActorProvider;
 import com.shengyu.framework.flowlong.engine.assist.Assert;
+import com.shengyu.framework.flowlong.engine.core.enums.InstanceState;
 import com.shengyu.framework.flowlong.engine.core.enums.TaskEventType;
 import com.shengyu.framework.flowlong.engine.entity.FlwInstance;
 import com.shengyu.framework.flowlong.engine.entity.FlwTask;
@@ -84,7 +85,10 @@ public class Execution implements Serializable {
      * 针对join节点的处理
      */
     private boolean isMerged = false;
-
+    /**
+     * 暂存草稿
+     */
+    private boolean saveAsDraft = false;
     /**
      * 指定任务事件类型
      */
@@ -166,7 +170,7 @@ public class Execution implements Serializable {
         Assert.isNull(processModel, "Process model content cannot be empty");
 
         // 重新加载流程模型内容
-        ModelHelper.reloadProcessModel(flowLongContext,  flwInstance.getId(), processModel);
+        ModelHelper.reloadProcessModel(flowLongContext, flwInstance.getId(), processModel);
 
         // 获取节点模型
         NodeModel nodeModel = processModel.getNode(nodeKey);
@@ -217,11 +221,19 @@ public class Execution implements Serializable {
 
     /**
      * 执行结束当前流程实例
-     *
-     * @param endNode 结束节点
-     * @return true 执行成功  false 执行失败
      */
     public boolean endInstance(NodeModel endNode) {
+        return this.endInstance(endNode, InstanceState.complete);
+    }
+
+    /**
+     * 执行结束当前流程实例
+     *
+     * @param endNode       结束节点
+     * @param instanceState 实例状态
+     * @return true 执行成功  false 执行失败
+     */
+    public boolean endInstance(NodeModel endNode, InstanceState instanceState) {
         if (engine.queryService().existActiveSubProcess(flwInstance.getId())) {
             /*
              * 存在执行中的子流程，不允许结束
@@ -230,12 +242,14 @@ public class Execution implements Serializable {
         }
 
         /*
-         * 执行完成任务
+         * 执行自动完成逻辑
          */
-        List<FlwTask> flwTasks = engine.queryService().getTasksByInstanceId(flwInstance.getId());
-        for (FlwTask flwTask : flwTasks) {
-            Assert.illegal(flwTask.major(), "There are unfinished major tasks");
-            engine.taskService().complete(flwTask.getId(), this.flowCreator);
+        if (instanceState == InstanceState.autoPass || instanceState == InstanceState.autoReject) {
+            List<FlwTask> flwTasks = engine.queryService().getTasksByInstanceId(flwInstance.getId());
+            for (FlwTask flwTask : flwTasks) {
+                Assert.illegal(flwTask.major(), "There are unfinished major tasks");
+                engine.taskService().complete(flwTask.getId(), this.flowCreator);
+            }
         }
 
         /*
@@ -246,7 +260,7 @@ public class Execution implements Serializable {
         /*
          * 结束当前流程实例
          */
-        return engine.runtimeService().endInstance(this, flwInstance.getId(), endNode);
+        return engine.runtimeService().endInstance(this, flwInstance.getId(), endNode, instanceState);
     }
 
     /**

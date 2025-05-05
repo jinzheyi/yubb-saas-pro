@@ -95,12 +95,10 @@ public class FlwTask extends FlowEntity {
     }
 
     public Map<String, Object> variableMap() {
-        Map<String, Object> map = FlowLongContext.fromJson(this.variable, Map.class);
-        return null == map ? Collections.emptyMap() : map;
-    }
-
-    public void setVariable(String variable) {
-        this.variable = variable;
+        if (null == this.variable) {
+            return null;
+        }
+        return FlowLongContext.fromJson(this.variable, Map.class);
     }
 
     public void taskType(TaskType taskType) {
@@ -121,8 +119,13 @@ public class FlwTask extends FlowEntity {
         this.performType = performType;
     }
 
-    public void setVariable(Map<String, Object> args) {
+    public void putAllVariable(Map<String, Object> args) {
         if (null != args && !args.isEmpty()) {
+            Map<String, Object> varMap = this.variableMap();
+            if (null != varMap) {
+                // 合并变量
+                varMap.forEach(args::putIfAbsent);
+            }
             this.variable = FlowLongContext.toJson(args);
         }
     }

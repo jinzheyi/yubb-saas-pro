@@ -4,6 +4,7 @@
  */
 package com.shengyu.framework.flowlong.engine.impl;
 
+import com.shengyu.framework.flowlong.engine.FlowLongIdGenerator;
 import com.shengyu.framework.flowlong.engine.ProcessService;
 import com.shengyu.framework.flowlong.engine.RuntimeService;
 import com.shengyu.framework.flowlong.engine.assist.Assert;
@@ -32,12 +33,14 @@ import java.util.function.Consumer;
  */
 @Slf4j
 public class ProcessServiceImpl implements ProcessService {
-    private final FlwProcessDao processDao;
-    private final RuntimeService runtimeService;
+    protected final RuntimeService runtimeService;
+    protected final FlowLongIdGenerator flowLongIdGenerator;
+    protected final FlwProcessDao processDao;
 
-    public ProcessServiceImpl(RuntimeService runtimeService, FlwProcessDao processDao) {
-        this.processDao = processDao;
+    public ProcessServiceImpl(RuntimeService runtimeService, FlowLongIdGenerator flowLongIdGenerator, FlwProcessDao processDao) {
         this.runtimeService = runtimeService;
+        this.flowLongIdGenerator = flowLongIdGenerator;
+        this.processDao = processDao;
     }
 
     /**
@@ -139,6 +142,7 @@ public class ProcessServiceImpl implements ProcessService {
              * 添加一条新的流程记录
              */
             FlwProcess process = FlwProcess.of(flowCreator, processModel, processVersion, jsonString);
+            process.setId(flowLongIdGenerator.getId(process.getId()));
             if (null != processSave) {
                 processSave.accept(process);
             }

@@ -22,6 +22,14 @@ import java.util.Objects;
 @Getter
 public enum InstanceState {
     /**
+     * 已暂停状态，被主动挂起，暂停执行
+     */
+    suspend(-2),
+    /**
+     * 暂存待审
+     */
+    saveAsDraft(-1),
+    /**
      * 审批中
      */
     active(0),
@@ -44,7 +52,15 @@ public enum InstanceState {
     /**
      * 强制终止
      */
-    terminate(5);
+    terminate(5),
+    /**
+     * 自动通过
+     */
+    autoPass(6),
+    /**
+     * 自动拒绝
+     */
+    autoReject(7);
 
     private final int value;
 

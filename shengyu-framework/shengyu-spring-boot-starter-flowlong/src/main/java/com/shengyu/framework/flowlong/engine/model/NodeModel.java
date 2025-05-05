@@ -10,10 +10,7 @@ import com.shengyu.framework.flowlong.engine.assist.Assert;
 import com.shengyu.framework.flowlong.engine.assist.ObjectUtils;
 import com.shengyu.framework.flowlong.engine.core.Execution;
 import com.shengyu.framework.flowlong.engine.core.FlowLongContext;
-import com.shengyu.framework.flowlong.engine.core.enums.NodeApproveSelf;
-import com.shengyu.framework.flowlong.engine.core.enums.NodeSetType;
-import com.shengyu.framework.flowlong.engine.core.enums.PerformType;
-import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
+import com.shengyu.framework.flowlong.engine.core.enums.*;
 import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import lombok.Getter;
@@ -25,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * JSON BPM 节点
@@ -59,13 +57,20 @@ public class NodeModel implements ModelInstance, Serializable {
      */
     private String callProcess;
     /**
+     * 是否异步调用【例如：子流程该参数为 true 则为异步子流程】
+     */
+    private Boolean callAsync;
+    /**
      * 任务关联的表单url
      */
     private String actionUrl;
     /**
      * 节点类型 {@link TaskType}
      * <p>
-     * -1，结束节点 0，发起人 1，审批人 2，抄送人 3，条件审批 4，条件分支 5，办理子流程 6，定时器任务 7，触发器任务 8，并发分支 9，包容分支 23，路由分支
+     * -1，结束节点 0，发起人 1，审批人 2，抄送人 3，条件审批 4，条件分支 5，办理子流程 6，定时器任务 7，触发器任务 8，并发分支 9，包容分支
+     * </p>
+     * <p>
+     * 23，路由分支 30，自动通过 31，自动拒绝
      * </p>
      */
     private Integer type;
@@ -139,7 +144,7 @@ public class NodeModel implements ModelInstance, Serializable {
      */
     private Integer passWeight;
     /**
-     * 驳回策略 1，驳回到发起人，2，驳回到上一节点，3，驳回到指定节点
+     * 驳回策略 1，驳回到发起人，2，驳回到上一节点，3，驳回到指定节点 4，终止审批流程 5，驳回到模型父节点
      */
     private Integer rejectStrategy;
     /**
@@ -185,6 +190,10 @@ public class NodeModel implements ModelInstance, Serializable {
      * 允许回退
      */
     private Boolean allowRollback;
+    /**
+     * 允许审批节点手动创建抄送任务
+     */
+    private Boolean allowCc;
     /**
      * 审批人与提交人为同一人时 {@link NodeApproveSelf}
      * <p>
@@ -283,8 +292,11 @@ public class NodeModel implements ModelInstance, Serializable {
                 execution.getEngine().executeJumpTask(execution.getFlwTask().getId(), routeNodeOptional.get().getNodeKey(),
                         execution.getFlowCreator(), execution.getArgs(), TaskType.routeJump);
             } else {
-                // 执行下一个节点
-                this.nextNode().ifPresent(nextNode -> flowLongContext.createTask(execution, nextNode));
+                // 执行子节点逻辑
+                NodeModel _childNode = this.getChildNode();
+                if (null != _childNode) {
+                    _childNode.execute(flowLongContext, execution);
+                }
             }
             return true;
         }
@@ -298,6 +310,20 @@ public class NodeModel implements ModelInstance, Serializable {
 
             // 创建任务
             flowLongContext.createTask(execution, this);
+        }
+
+        /*
+         * 执行【自动通过】结束流程
+         */
+        else if (TaskType.autoPass.eq(this.type)) {
+            return execution.endInstance(this, InstanceState.autoPass);
+        }
+
+        /*
+         * 执行【自动拒绝】结束流程
+         */
+        else if (TaskType.autoReject.eq(this.type)) {
+            return execution.endInstance(this, InstanceState.autoReject);
         }
 
         /*
@@ -450,6 +476,13 @@ public class NodeModel implements ModelInstance, Serializable {
     }
 
     /**
+     * 是否异步调用
+     */
+    public boolean callAsync() {
+        return null != callAsync && callAsync;
+    }
+
+    /**
      * 获取父审批节点
      *
      * @return 模型节点
@@ -519,6 +552,24 @@ public class NodeModel implements ModelInstance, Serializable {
         return TaskType.routeBranch.eq(type);
     }
 
+    /**
+     * 判断是否为调用子流程节点
+     *
+     * @return true 是 false 否
+     */
+    public boolean callProcessNode() {
+        return TaskType.callProcess.eq(type);
+    }
+
+    /**
+     * 判断是否为结束节点
+     *
+     * @return true 是 false 否
+     */
+    public boolean endNode() {
+        return TaskType.end.eq(type);
+    }
+
     public NodeAssignee nextNodeAssignee(Execution execution, String assigneeId) {
         boolean findTaskActor = false;
         NodeAssignee nextNodeAssignee = null;
@@ -564,27 +615,30 @@ public class NodeModel implements ModelInstance, Serializable {
      * 执行触发器
      *
      * @param execution {@link Execution}
-     * @param function  执行默认触发器执行函数
+     * @param supplier  执行默认触发器执行函数
      */
-    public void executeTrigger(Execution execution, Function<Exception, Boolean> function) {
+    public void executeTrigger(Execution execution, Supplier<Boolean> supplier) {
+        boolean callSupplier = true;
         boolean flag = false;
         Map<String, Object> extendConfig = this.getExtendConfig();
         if (null != extendConfig) {
             Object _trigger = extendConfig.get("trigger");
             if (null != _trigger) {
                 try {
+                    callSupplier = false;
                     Class<?> triggerClass = Class.forName((String) _trigger);
                     if (TaskTrigger.class.isAssignableFrom(triggerClass)) {
                         TaskTrigger taskTrigger = (TaskTrigger) ObjectUtils.newInstance(triggerClass);
                         flag = taskTrigger.execute(this, execution);
                     }
                 } catch (Exception e) {
-                    // 使用默认触发器
-                    if (null != function) {
-                        flag = function.apply(e);
-                    }
+                    e.printStackTrace();
                 }
             }
+        }
+        // 使用默认触发器
+        if (null != supplier && callSupplier) {
+            flag = supplier.get();
         }
         Assert.isFalse(flag, "trigger execute error");
     }

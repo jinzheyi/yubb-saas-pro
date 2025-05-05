@@ -78,6 +78,11 @@ public class QueryServiceImpl implements QueryService {
     }
 
     @Override
+    public FlwHisTask getStartTaskByInstanceId(Long instanceId) {
+        return hisTaskDao.selectStartTaskByInstanceId(instanceId);
+    }
+
+    @Override
     public Optional<List<FlwHisTask>> getHisTasksByName(Long instanceId, String taskName) {
         return Optional.ofNullable(hisTaskDao.selectListByInstanceIdAndTaskName(instanceId, taskName));
     }
@@ -99,6 +104,11 @@ public class QueryServiceImpl implements QueryService {
     @Override
     public Optional<List<FlwTaskActor>> getActiveTaskActorsByInstanceId(Long instanceId) {
         return Optional.ofNullable(taskActorDao.selectListByInstanceId(instanceId));
+    }
+
+    @Override
+    public Optional<List<FlwHisTaskActor>> getCcTaskActorsByInstanceId(Long instanceId) {
+        return Optional.ofNullable(hisTaskActorDao.selectCcTaskActorsByInstanceId(instanceId));
     }
 
     @Override
