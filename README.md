@@ -10,10 +10,10 @@
 
 # 脑图规划
 （不是最终版，不定期更新）
-![圣钰SaaS.png](https://zhushuyong.oss-cn-hangzhou.aliyuncs.com/images/20220819/6376c21a82ea44a0823bc10e4ed4caea.png?x-oss-process=image/auto-orient,1/interlace,1/quality,q_50/format,jpg/watermark,text_5pyx6L-w5YuHLXpodXNodXlvbmc,color_ff0021,size_18,x_10,y_10)
+![规划脑图](%E8%A7%84%E5%88%92%E8%84%91%E5%9B%BE.png)
 
 # 圣钰SaaS系统架构图
-![输入图片说明](%E5%9C%A3%E9%92%B0SaaS%E6%9E%B6%E6%9E%84%E5%9B%BE.png)
+![圣钰SaaS系统架构图](%E5%9C%A3%E9%92%B0SaaS%E6%9E%B6%E6%9E%84%E5%9B%BE.png)
 
 
 # 快速体验
