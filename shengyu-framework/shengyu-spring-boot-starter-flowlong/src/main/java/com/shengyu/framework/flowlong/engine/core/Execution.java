@@ -10,6 +10,7 @@ import com.shengyu.framework.flowlong.engine.TaskActorProvider;
 import com.shengyu.framework.flowlong.engine.assist.Assert;
 import com.shengyu.framework.flowlong.engine.core.enums.InstanceState;
 import com.shengyu.framework.flowlong.engine.core.enums.TaskEventType;
+import com.shengyu.framework.flowlong.engine.core.enums.TaskState;
 import com.shengyu.framework.flowlong.engine.entity.FlwInstance;
 import com.shengyu.framework.flowlong.engine.entity.FlwTask;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
@@ -248,7 +249,13 @@ public class Execution implements Serializable {
             List<FlwTask> flwTasks = engine.queryService().getTasksByInstanceId(flwInstance.getId());
             for (FlwTask flwTask : flwTasks) {
                 Assert.illegal(flwTask.major(), "There are unfinished major tasks");
-                engine.taskService().complete(flwTask.getId(), this.flowCreator);
+                TaskState taskState = TaskState.autoComplete;
+                TaskEventType taskEventType = TaskEventType.autoComplete;
+                if (instanceState == InstanceState.autoReject) {
+                    taskState = TaskState.autoReject;
+                    taskEventType = TaskEventType.autoReject;
+                }
+                engine.taskService().executeTask(flwTask.getId(), flowCreator, null, taskState, taskEventType);;
             }
         }
 
