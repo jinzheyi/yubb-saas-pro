@@ -243,3 +243,8 @@ ureport:
   provider:
     database:
         disabled: false
+
+# flowlong config
+flowlong:
+  eventing:
+    instance: true

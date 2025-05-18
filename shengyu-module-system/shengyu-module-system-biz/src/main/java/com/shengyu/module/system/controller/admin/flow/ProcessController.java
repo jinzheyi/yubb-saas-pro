@@ -1,0 +1,168 @@
+package com.shengyu.module.system.controller.admin.flow;
+
+import com.aizuda.boot.modules.flw.entity.dto.FlwCategorySortDTO;
+import com.aizuda.boot.modules.flw.entity.dto.FlwProcessDTO;
+import com.aizuda.boot.modules.flw.entity.dto.FlwProcessHistoryDTO;
+import com.aizuda.boot.modules.flw.entity.dto.ProcessStartDTO;
+import com.aizuda.boot.modules.flw.entity.vo.FlwProcessCategoryVO;
+import com.aizuda.boot.modules.flw.flow.FlowHelper;
+import com.aizuda.boot.modules.flw.service.IFlwProcessService;
+import com.aizuda.bpm.engine.entity.FlwProcess;
+import com.aizuda.core.api.ApiController;
+import com.aizuda.core.api.PageParam;
+import com.aizuda.core.validation.Create;
+import com.baomidou.kisso.annotation.Permission;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.AllArgsConstructor;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * 流程定义 前端控制器
+ *
+ * @author 青苗
+ * @since 2023-09-07
+ */
+@Tag(name = "流程定义")
+@RestController
+@AllArgsConstructor
+@RequestMapping("/v1/process")
+public class ProcessController extends ApiController {
+    private IFlwProcessService flwProcessService;
+
+    @Operation(summary = "历史分页列表")
+    @Permission("flw:process:page")
+    @PostMapping("/page-history")
+    public Page<FlwProcess> getPageHistory(@RequestBody PageParam<FlwProcessHistoryDTO> dto) {
+        return flwProcessService.pageHistory(dto.page(), dto.getData());
+    }
+
+    @Operation(summary = "获取所有分类流程定义列表")
+    @Permission("flw:process:listCategory")
+    @Parameters({
+            @Parameter(name = "keyword", description = "关键词")
+    })
+    @PostMapping("/list-category")
+    public List<FlwProcessCategoryVO> listCategory(@RequestParam(required = false) String keyword) {
+        return flwProcessService.listCategoryAll(keyword);
+    }
+
+    @Operation(summary = "获取发起分类流程定义列表")
+    @Permission("flw:process:listLaunch")
+    @Parameters({
+            @Parameter(name = "keyword", description = "关键词")
+    })
+    @PostMapping("/list-launch")
+    public List<FlwProcessCategoryVO> listLaunch(@RequestParam(required = false) String keyword) {
+        return flwProcessService.listLaunch(keyword);
+    }
+
+    @Operation(summary = "查询满足条件前10条子流程列表")
+    @Permission("flw:process:listStart")
+    @Parameters({
+            @Parameter(name = "keyword", description = "关键词")
+    })
+    @PostMapping("/list-child-top10")
+    public List<FlwProcess> listChildTop10(@RequestParam(required = false) String keyword) {
+        return flwProcessService.listChildTop10(keyword);
+    }
+
+    @Operation(summary = "发起流程")
+    @Permission("flw:process:launch")
+    @PostMapping("/launch")
+    public boolean launchProcess(@RequestBody ProcessStartDTO dto) {
+        return flwProcessService.launchProcess(dto, FlowHelper.getFlowCreator()) != null;
+    }
+
+    @Operation(summary = "根据 id 获取模型")
+    @Parameters({
+            @Parameter(name = "id", description = "流程ID")
+    })
+    @Permission("flw:process:nodeModel")
+    @PostMapping("/node-model")
+    public String nodeModel(@RequestParam Long id) {
+        return flwProcessService.getNodeModelById(id);
+    }
+
+    @Operation(summary = "查询 id 信息")
+    @Parameters({
+            @Parameter(name = "id", description = "流程ID")
+    })
+    @Permission("flw:process:get")
+    @GetMapping("/get")
+    public FlwProcessDTO get(@RequestParam Long id) {
+        return flwProcessService.getDtoById(id);
+    }
+
+    @Operation(summary = "查询 key 业务流程信息")
+    @Parameters({
+            @Parameter(name = "key", description = "流程KEY")
+    })
+    @Permission("flw:process:business")
+    @GetMapping("/business")
+    public FlwProcessDTO business(@RequestParam String key) {
+        return flwProcessService.getDtoByKey(key);
+    }
+
+    @Operation(summary = "查询 id 克隆流程定义信息")
+    @Parameters({
+            @Parameter(name = "id", description = "流程ID")
+    })
+    @Permission("flw:process:clone")
+    @GetMapping("/clone")
+    public boolean clone(@RequestParam Long id) {
+        return flwProcessService.cloneById(id);
+    }
+
+    @Operation(summary = "创建添加")
+    @Permission("flw:process:create")
+    @PostMapping("/create")
+    public Long create(@Validated @RequestBody FlwProcessDTO dto) {
+        return flwProcessService.saveDto(dto);
+    }
+
+    @Operation(summary = "根据流程定义ID删除流程定义相关信息")
+    @Parameters({
+            @Parameter(name = "id", description = "主键ID")
+    })
+    @Permission("flw:process:delete")
+    @PostMapping("/delete")
+    public boolean delete(@RequestParam Long id) {
+        return flwProcessService.removeProcessInfo(id);
+    }
+
+    @Operation(summary = "流程排序")
+    @Permission("flw:process:sort")
+    @PostMapping("/sort")
+    public boolean sort(@Validated(Create.class) @RequestBody List<FlwCategorySortDTO> dtoList) {
+        return flwProcessService.sort(dtoList);
+    }
+
+    @Operation(summary = "根据流程定义ID更新流程状态")
+    @Parameters({
+            @Parameter(name = "id", description = "主键ID"),
+            @Parameter(name = "state", description = "流程状态 0，不可用 1，可用")
+    })
+    @Permission("flw:process:updateSate")
+    @PostMapping("/update-state-{id}")
+    public boolean updateSate(@PathVariable("id") Long id, @RequestParam Integer state) {
+        return flwProcessService.updateSateById(id, state);
+    }
+
+    @Operation(summary = "根据指定ID签出历史流程")
+    @Parameters({
+            @Parameter(name = "id", description = "流程ID")
+    })
+    @Permission("flw:process:checkout")
+    @PostMapping("/checkout")
+    public boolean checkout(@RequestParam Long id) {
+        return flwProcessService.checkoutById(id);
+    }
+
+}

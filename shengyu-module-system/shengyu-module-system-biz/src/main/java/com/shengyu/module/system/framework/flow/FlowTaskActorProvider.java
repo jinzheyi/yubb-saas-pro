@@ -1,0 +1,209 @@
+package com.shengyu.module.system.framework.flow;
+
+import com.aizuda.boot.modules.system.entity.vo.DepartmentHeadVO;
+import com.aizuda.boot.modules.system.service.ISysDepartmentService;
+import com.aizuda.boot.modules.system.service.ISysUserRoleService;
+import com.aizuda.bpm.engine.FlowConstants;
+import com.aizuda.bpm.engine.FlowDataTransfer;
+import com.aizuda.bpm.engine.TaskActorProvider;
+import com.aizuda.bpm.engine.assist.ObjectUtils;
+import com.aizuda.bpm.engine.core.Execution;
+import com.aizuda.bpm.engine.core.FlowCreator;
+import com.aizuda.bpm.engine.core.enums.NodeSetType;
+import com.aizuda.bpm.engine.core.enums.TaskType;
+import com.aizuda.bpm.engine.entity.FlwInstance;
+import com.aizuda.bpm.engine.entity.FlwTaskActor;
+import com.aizuda.bpm.engine.model.DynamicAssignee;
+import com.aizuda.bpm.engine.model.NodeAssignee;
+import com.aizuda.bpm.engine.model.NodeCandidate;
+import com.aizuda.bpm.engine.model.NodeModel;
+import com.aizuda.core.api.ApiAssert;
+import com.aizuda.service.spring.SpringHelper;
+import org.apache.commons.collections.CollectionUtils;
+import org.springframework.stereotype.Component;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+@Component
+public class FlowTaskActorProvider implements TaskActorProvider {
+
+    @Override
+    public boolean isAllowed(NodeModel nodeModel, FlowCreator flowCreator) {
+        List<NodeAssignee> nodeAssigneeList = nodeModel.getNodeAssigneeList();
+        if (ObjectUtils.isNotEmpty(nodeAssigneeList)) {
+            if (NodeSetType.specifyMembers.eq(nodeModel.getSetType())) {
+                // 1，指定成员
+                return nodeAssigneeList.stream().anyMatch((t) -> Objects.equals(t.getId(), flowCreator.getCreateId()));
+            }
+
+            if (NodeSetType.role.eq(nodeModel.getSetType())) {
+                // 3，角色
+                ISysUserRoleService sysUserRoleService = SpringHelper.getBean(ISysUserRoleService.class);
+                List<Long> roleIds = nodeModel.getNodeAssigneeList().stream().map(t -> Long.valueOf(t.getId())).toList();
+                ApiAssert.fail(!sysUserRoleService.existRoles(Long.valueOf(flowCreator.getCreateId()), roleIds), "当前用户无操作权限");
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public Integer getActorType(NodeModel nodeModel) {
+
+        // 1，角色
+        if (NodeSetType.role.eq(nodeModel.getSetType())) {
+            return 1;
+        }
+
+        // 2，部门
+        if (NodeSetType.department.eq(nodeModel.getSetType())) {
+            return 2;
+        }
+
+        // 发起人自选情况
+        if (NodeSetType.initiatorSelected.eq(nodeModel.getSetType())) {
+            if (Objects.equals(3, nodeModel.getSelectMode())) {
+                // 1，自选一个人 2，自选多个人 3，自选角色
+                return 1;
+            } else {
+                // 候选情况
+                NodeCandidate nodeCandidate = nodeModel.getNodeCandidate();
+                if (null != nodeCandidate) {
+                    // 1，角色
+                    if (Objects.equals(1, nodeCandidate.getType())) {
+                        return 1;
+                    }
+
+                    // 2，部门
+                    if (Objects.equals(2, nodeCandidate.getType())) {
+                        return 2;
+                    }
+                }
+            }
+        }
+
+        // 其它类型自定义映射
+        return 0;
+    }
+
+    @Override
+    public List<FlwTaskActor> getTaskActors(NodeModel nodeModel, Execution execution) {
+        final Integer nodeType = nodeModel.getType();
+        if (TaskType.callProcess.eq(nodeType) || TaskType.trigger.eq(nodeType) || TaskType.timer.eq(nodeType)) {
+            // 子流程，触发器情况
+            return null;
+        }
+
+        final FlowCreator flowCreator = execution.getFlowCreator();
+        if (TaskType.major.eq(nodeType)) {
+            // 发起人审批，经过 isAllowed 验证合法，直接返回当前执行人
+            return Collections.singletonList(FlwTaskActor.ofFlowCreator(flowCreator));
+        }
+
+        if (TaskType.approval.eq(nodeType)) {
+            /*
+             * 审核人类型
+             * <p>
+             * 1，指定成员
+             * 2，主管
+             * 3，角色
+             * 4，发起人自选
+             * 5，发起人自己
+             * 6，连续多级主管
+             * 7，部门
+             * </p>
+             */
+            if (NodeSetType.supervisor.eq(nodeModel.getSetType())) {
+                // 2，主管
+                return getDepartmentHeadInfo(flowCreator, nodeModel.getExamineLevel(), false, () -> "请设置直接主管信息");
+            } else if (NodeSetType.initiatorSelected.eq(nodeModel.getSetType())) {
+                // 4，发起人自选
+                Map<String, Object> modelData = FlowDataTransfer.get(FlowConstants.processDynamicAssignee);
+                if (ObjectUtils.isNotEmpty(modelData)) {
+                    DynamicAssignee dynamicAssignee = (DynamicAssignee) modelData.get(nodeModel.getNodeKey());
+                    if (null != dynamicAssignee && CollectionUtils.isNotEmpty(dynamicAssignee.getAssigneeList())) {
+                        return dynamicAssignee.getAssigneeList().stream().map(t -> {
+                            FlwTaskActor flwTaskActor = FlwTaskActor.ofNodeAssignee(t);
+                            // 前端 1 用户 3 角色 转为后台对应的 0，用户 1，角色
+                            Integer type = dynamicAssignee.getType();
+                            flwTaskActor.setActorType(Objects.equals(3, type) ? 1 : 0);
+                            return flwTaskActor;
+                        }).toList();
+                    }
+                }
+            } else if (NodeSetType.initiatorThemselves.eq(nodeModel.getSetType())) {
+                // 5，发起人自己
+                FlwInstance fi = execution.getFlwInstance();
+                return Collections.singletonList(FlwTaskActor.ofUser(fi.getTenantId(), fi.getCreateId(), fi.getCreateBy()));
+            } else if (NodeSetType.multiLevelSupervisors.eq(nodeModel.getSetType())) {
+                // 6，连续多级主管
+                return getDepartmentHeadInfo(flowCreator, nodeModel.getExamineLevel(), true, () -> "未找到任何主管信息");
+            }
+        }
+
+        List<NodeAssignee> nodeAssigneeList = nodeModel.getNodeAssigneeList();
+        if (ObjectUtils.isNotEmpty(nodeAssigneeList)) {
+            if (null == nodeModel.getSetType()
+
+                    // 1，指定成员
+                    || NodeSetType.specifyMembers.eq(nodeModel.getSetType())
+
+                    // 4，发起人自选
+                    || NodeSetType.initiatorSelected.eq(nodeModel.getSetType())) {
+
+                boolean isRole = false;
+                if (Objects.equals(3, nodeModel.getSelectMode())) {
+                    // 1，自选一个人 2，自选多个人 3，自选角色
+                    isRole = true;
+                } else {
+                    // 自选候选人判断参与者类型
+                    NodeCandidate nodeCandidate = nodeModel.getNodeCandidate();
+                    if (null != nodeCandidate) {
+                        // 1，角色
+                        if (Objects.equals(1, nodeCandidate.getType())) {
+                            isRole = true;
+                        } else if (Objects.equals(2, nodeCandidate.getType())) {
+                            // 2，部门
+                            return nodeAssigneeList.stream().map(t -> FlwTaskActor.ofDepartment(t.getTenantId(),
+                                    t.getId(), t.getName())).collect(Collectors.toList());
+                        }
+                    }
+                }
+
+                if (isRole) {
+                    // 3，角色
+                    return nodeAssigneeList.stream().map(t -> FlwTaskActor.ofRole(t.getTenantId(),
+                            t.getId(), t.getName())).collect(Collectors.toList());
+                }
+
+                // 读取当前节点配置信息
+                return nodeAssigneeList.stream().map(FlwTaskActor::ofNodeAssignee).collect(Collectors.toList());
+            }
+
+            if (NodeSetType.role.eq(nodeModel.getSetType())) {
+                // 3，角色
+                return nodeAssigneeList.stream().map(t -> FlwTaskActor.ofRole(t.getTenantId(), t.getId(), t.getName()))
+                        .collect(Collectors.toList());
+            }
+        }
+
+        ApiAssert.fail("请选择设置流程处理人信息");
+        return null;
+    }
+
+    /**
+     * 获取部门主管信息
+     */
+    private List<FlwTaskActor> getDepartmentHeadInfo(FlowCreator flowCreator, Integer examineLevel, boolean multiLevel, Supplier<String> supplier) {
+        ISysDepartmentService sysDepartmentService = SpringHelper.getBean(ISysDepartmentService.class);
+        List<DepartmentHeadVO> voList = sysDepartmentService.getDepartmentHeadInfo(Long.valueOf(flowCreator.getCreateId()), examineLevel, multiLevel);
+        if (CollectionUtils.isEmpty(voList)) {
+            ApiAssert.fail(supplier.get());
+        }
+        return voList.stream().map(DepartmentHeadVO::toFlwTaskActor).collect(Collectors.toList());
+    }
+}
