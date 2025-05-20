@@ -1,7 +1,7 @@
 package com.shengyu.module.system.controller.admin.flow;
 
-import com.aizuda.boot.modules.flw.entity.dto.*;
-import com.aizuda.boot.modules.flw.entity.vo.*;
+import com.shengyu.module.system.dal.dataobject.flow.dto.*;
+import com.shengyu.module.system.dal.dataobject.flow.vo.*;
 import com.aizuda.boot.modules.flw.flow.FlowHelper;
 import com.aizuda.boot.modules.flw.service.IProcessTaskService;
 import com.aizuda.core.api.ApiController;

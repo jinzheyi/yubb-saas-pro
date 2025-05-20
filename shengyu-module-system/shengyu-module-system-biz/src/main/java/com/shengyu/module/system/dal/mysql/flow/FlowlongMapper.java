@@ -1,7 +1,7 @@
 package com.shengyu.module.system.dal.mysql.flow;
 
-import com.aizuda.boot.modules.flw.entity.dto.ProcessTaskDTO;
-import com.aizuda.boot.modules.flw.entity.vo.*;
+import com.shengyu.module.system.dal.dataobject.flow.dto.ProcessTaskDTO;
+import com.shengyu.module.system.dal.dataobject.flow.vo.*;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
 

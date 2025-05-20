@@ -1,8 +1,8 @@
 package com.shengyu.module.system.framework.flow;
 
-import com.aizuda.bpm.engine.core.Execution;
-import com.aizuda.bpm.engine.core.FlowLongContext;
-import com.aizuda.bpm.engine.handler.impl.SimpleConditionNodeHandler;
+import com.shengyu.framework.flowlong.engine.core.Execution;
+import com.shengyu.framework.flowlong.engine.core.FlowLongContext;
+import com.shengyu.framework.flowlong.engine.handler.impl.SimpleConditionNodeHandler;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;

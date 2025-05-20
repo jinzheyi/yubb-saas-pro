@@ -12,8 +12,6 @@ import javax.validation.constraints.PositiveOrZero;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.Date;
-
 /**
  * 流程审批记录
  *

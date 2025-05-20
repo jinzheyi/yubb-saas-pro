@@ -1,12 +1,12 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.dto.FlwCategorySortDTO;
-import com.aizuda.boot.modules.flw.entity.dto.FlwProcessDTO;
-import com.aizuda.boot.modules.flw.entity.dto.FlwProcessHistoryDTO;
-import com.aizuda.boot.modules.flw.entity.dto.ProcessStartDTO;
-import com.aizuda.boot.modules.flw.entity.vo.FlwProcessCategoryVO;
-import com.aizuda.bpm.engine.core.FlowCreator;
-import com.aizuda.bpm.engine.entity.FlwProcess;
+import com.shengyu.module.system.dal.dataobject.flow.dto.FlwCategorySortDTO;
+import com.shengyu.module.system.dal.dataobject.flow.dto.FlwProcessDTO;
+import com.shengyu.module.system.dal.dataobject.flow.dto.FlwProcessHistoryDTO;
+import com.shengyu.module.system.dal.dataobject.flow.dto.ProcessStartDTO;
+import com.shengyu.module.system.dal.dataobject.flow.vo.FlwProcessCategoryVO;
+import com.shengyu.framework.flowlong.engine.core.FlowCreator;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
 import com.aizuda.service.service.IBaseService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 

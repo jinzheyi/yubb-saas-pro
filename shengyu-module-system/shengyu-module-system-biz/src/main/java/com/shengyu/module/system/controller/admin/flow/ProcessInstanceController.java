@@ -2,7 +2,7 @@ package com.shengyu.module.system.controller.admin.flow;
 
 import com.aizuda.boot.modules.flw.flow.FlowHelper;
 import com.aizuda.boot.modules.flw.service.IFlwProcessService;
-import com.aizuda.bpm.engine.FlowLongEngine;
+import com.shengyu.framework.flowlong.engine.FlowLongEngine;
 import com.aizuda.core.api.ApiController;
 import com.baomidou.kisso.annotation.Permission;
 import io.swagger.v3.oas.annotations.Operation;

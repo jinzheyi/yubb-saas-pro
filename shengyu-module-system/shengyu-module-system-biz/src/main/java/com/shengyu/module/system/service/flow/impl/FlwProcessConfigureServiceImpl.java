@@ -1,8 +1,8 @@
 package com.shengyu.module.system.service.flow.impl;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessConfigure;
-import com.aizuda.boot.modules.flw.entity.dto.FlwCategorySortDTO;
-import com.aizuda.boot.modules.flw.entity.dto.FlwProcessDTO;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessConfigure;
+import com.shengyu.module.system.dal.dataobject.flow.dto.FlwCategorySortDTO;
+import com.shengyu.module.system.dal.dataobject.flow.dto.FlwProcessDTO;
 import com.aizuda.boot.modules.flw.mapper.FlwProcessConfigureMapper;
 import com.aizuda.boot.modules.flw.service.IFlwProcessConfigureService;
 import com.aizuda.service.service.BaseServiceImpl;

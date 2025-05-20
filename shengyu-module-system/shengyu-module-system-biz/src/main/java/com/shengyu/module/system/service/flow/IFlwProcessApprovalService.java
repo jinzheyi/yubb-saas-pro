@@ -1,7 +1,7 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessApproval;
-import com.aizuda.boot.modules.flw.entity.dto.ProcessApprovalDTO;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
+import com.shengyu.module.system.dal.dataobject.flow.dto.ProcessApprovalDTO;
 import com.aizuda.service.service.IBaseService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 

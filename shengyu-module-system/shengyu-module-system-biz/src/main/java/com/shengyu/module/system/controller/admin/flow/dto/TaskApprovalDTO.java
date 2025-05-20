@@ -1,6 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow.dto;
 
-import com.aizuda.bpm.engine.model.DynamicAssignee;
+import com.shengyu.framework.flowlong.engine.model.DynamicAssignee;
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;

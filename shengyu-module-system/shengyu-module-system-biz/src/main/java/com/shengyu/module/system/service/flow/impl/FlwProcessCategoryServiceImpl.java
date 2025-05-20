@@ -1,6 +1,6 @@
 package com.shengyu.module.system.service.flow.impl;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessCategory;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessCategory;
 import com.aizuda.boot.modules.flw.mapper.FlwProcessCategoryMapper;
 import com.aizuda.boot.modules.flw.service.IFlwProcessCategoryService;
 import com.aizuda.boot.modules.flw.service.IFlwProcessConfigureService;

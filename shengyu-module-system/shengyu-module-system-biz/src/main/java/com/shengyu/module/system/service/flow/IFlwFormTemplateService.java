@@ -1,6 +1,6 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwFormTemplate;
+import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplate;
 import com.aizuda.service.service.IBaseService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 

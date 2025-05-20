@@ -1,6 +1,6 @@
 package com.shengyu.module.system.service.flow.impl;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessForm;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessForm;
 import com.aizuda.boot.modules.flw.mapper.FlwProcessFormMapper;
 import com.aizuda.boot.modules.flw.service.IFlwProcessFormService;
 import com.aizuda.service.service.BaseServiceImpl;

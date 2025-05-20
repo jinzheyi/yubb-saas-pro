@@ -1,7 +1,7 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwFormCategory;
-import com.aizuda.boot.modules.flw.entity.vo.FlwFormCategoryVO;
+import com.shengyu.module.system.dal.dataobject.flow.FlwFormCategory;
+import com.shengyu.module.system.dal.dataobject.flow.vo.FlwFormCategoryVO;
 import com.aizuda.service.service.IBaseService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 

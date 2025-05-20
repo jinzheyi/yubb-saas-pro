@@ -1,6 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow.dto;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessPermission;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessPermission;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;

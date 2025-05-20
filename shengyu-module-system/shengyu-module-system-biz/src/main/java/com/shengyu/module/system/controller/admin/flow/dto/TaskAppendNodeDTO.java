@@ -1,8 +1,8 @@
 package com.shengyu.module.system.controller.admin.flow.dto;
 
-import com.aizuda.bpm.engine.model.ModelHelper;
-import com.aizuda.bpm.engine.model.NodeAssignee;
-import com.aizuda.bpm.engine.model.NodeModel;
+import com.shengyu.framework.flowlong.engine.model.ModelHelper;
+import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
+import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;

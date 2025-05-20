@@ -1,8 +1,8 @@
 package com.shengyu.module.system.service.flow;
 
-import com.aizuda.boot.modules.flw.entity.dto.*;
-import com.aizuda.boot.modules.flw.entity.vo.*;
-import com.aizuda.bpm.engine.core.FlowCreator;
+import com.shengyu.module.system.dal.dataobject.flow.dto.*;
+import com.shengyu.module.system.dal.dataobject.flow.vo.*;
+import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.aizuda.core.api.PageParam;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 

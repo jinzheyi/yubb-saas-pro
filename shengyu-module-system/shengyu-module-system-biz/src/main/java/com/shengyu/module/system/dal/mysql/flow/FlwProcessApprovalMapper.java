@@ -1,6 +1,6 @@
 package com.shengyu.module.system.dal.mysql.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessApproval;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
 import com.aizuda.service.mapper.CrudMapper;
 
 /**

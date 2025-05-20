@@ -1,6 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow.vo;
 
-import com.aizuda.boot.modules.flw.entity.FlwFormCategory;
+import com.shengyu.module.system.dal.dataobject.flow.FlwFormCategory;
 import lombok.Getter;
 import lombok.Setter;
 

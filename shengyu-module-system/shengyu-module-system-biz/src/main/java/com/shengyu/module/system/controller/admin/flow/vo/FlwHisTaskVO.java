@@ -1,6 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow.vo;
 
-import com.aizuda.bpm.engine.entity.FlwHisTask;
+import com.shengyu.framework.flowlong.engine.entity.FlwHisTask;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;

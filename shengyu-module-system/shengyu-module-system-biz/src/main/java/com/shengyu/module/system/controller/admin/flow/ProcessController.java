@@ -1,13 +1,13 @@
 package com.shengyu.module.system.controller.admin.flow;
 
-import com.aizuda.boot.modules.flw.entity.dto.FlwCategorySortDTO;
-import com.aizuda.boot.modules.flw.entity.dto.FlwProcessDTO;
-import com.aizuda.boot.modules.flw.entity.dto.FlwProcessHistoryDTO;
-import com.aizuda.boot.modules.flw.entity.dto.ProcessStartDTO;
-import com.aizuda.boot.modules.flw.entity.vo.FlwProcessCategoryVO;
+import com.shengyu.module.system.dal.dataobject.flow.dto.FlwCategorySortDTO;
+import com.shengyu.module.system.dal.dataobject.flow.dto.FlwProcessDTO;
+import com.shengyu.module.system.dal.dataobject.flow.dto.FlwProcessHistoryDTO;
+import com.shengyu.module.system.dal.dataobject.flow.dto.ProcessStartDTO;
+import com.shengyu.module.system.dal.dataobject.flow.vo.FlwProcessCategoryVO;
 import com.aizuda.boot.modules.flw.flow.FlowHelper;
 import com.aizuda.boot.modules.flw.service.IFlwProcessService;
-import com.aizuda.bpm.engine.entity.FlwProcess;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
 import com.aizuda.core.api.ApiController;
 import com.aizuda.core.api.PageParam;
 import com.aizuda.core.validation.Create;

@@ -1,6 +1,6 @@
 package com.shengyu.module.system.service.flow.impl;
 
-import com.aizuda.boot.modules.flw.entity.FlwFormTemplate;
+import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplate;
 import com.aizuda.boot.modules.flw.mapper.FlwFormTemplateMapper;
 import com.aizuda.boot.modules.flw.service.IFlwFormTemplateService;
 import com.aizuda.common.toolkit.JacksonUtils;

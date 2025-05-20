@@ -1,6 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessCategory;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessCategory;
 import com.aizuda.boot.modules.flw.service.IFlwProcessCategoryService;
 import com.aizuda.core.api.ApiController;
 import com.aizuda.core.validation.Create;

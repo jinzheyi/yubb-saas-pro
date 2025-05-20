@@ -1,12 +1,11 @@
 package com.shengyu.module.system.service.flow.impl;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessPermission;
-import com.aizuda.boot.modules.flw.entity.dto.FlwProcessPermissionDTO;
-import com.aizuda.boot.modules.flw.mapper.FlwProcessPermissionMapper;
-import com.aizuda.boot.modules.flw.service.IFlwProcessPermissionService;
-import com.aizuda.service.service.BaseServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessPermissionDTO;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessPermission;
+import com.shengyu.module.system.dal.mysql.flow.FlwProcessPermissionMapper;
+import com.shengyu.module.system.service.flow.IFlwProcessPermissionService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

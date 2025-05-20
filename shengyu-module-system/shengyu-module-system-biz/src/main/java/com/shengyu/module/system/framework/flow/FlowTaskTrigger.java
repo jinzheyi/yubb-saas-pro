@@ -1,8 +1,8 @@
 package com.shengyu.module.system.framework.flow;
 
-import com.aizuda.bpm.engine.TaskTrigger;
-import com.aizuda.bpm.engine.core.Execution;
-import com.aizuda.bpm.engine.model.NodeModel;
+import com.shengyu.framework.flowlong.engine.TaskTrigger;
+import com.shengyu.framework.flowlong.engine.core.Execution;
+import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import org.springframework.stereotype.Component;
 
 @Component

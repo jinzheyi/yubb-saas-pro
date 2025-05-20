@@ -1,6 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow.dto;
 
-import com.aizuda.bpm.engine.core.FlowCreator;
+import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;

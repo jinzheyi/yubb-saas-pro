@@ -1,6 +1,6 @@
 package com.shengyu.module.system.framework.flow;
 
-import com.aizuda.bpm.engine.FlowDataTransfer;
+import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
 import com.aizuda.common.toolkit.JacksonUtils;
 import lombok.Getter;
 import lombok.Setter;

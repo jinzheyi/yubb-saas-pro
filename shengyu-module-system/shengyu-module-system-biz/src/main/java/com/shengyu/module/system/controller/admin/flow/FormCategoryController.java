@@ -1,7 +1,7 @@
 package com.shengyu.module.system.controller.admin.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwFormCategory;
-import com.aizuda.boot.modules.flw.entity.vo.FlwFormCategoryVO;
+import com.shengyu.module.system.dal.dataobject.flow.FlwFormCategory;
+import com.shengyu.module.system.dal.dataobject.flow.vo.FlwFormCategoryVO;
 import com.aizuda.boot.modules.flw.service.IFlwFormCategoryService;
 import com.aizuda.core.api.ApiController;
 import com.aizuda.core.api.PageParam;

@@ -1,6 +1,6 @@
 package com.shengyu.module.system.dal.mysql.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwFormCategory;
+import com.shengyu.module.system.dal.dataobject.flow.FlwFormCategory;
 import com.aizuda.service.mapper.CrudMapper;
 
 import java.util.List;

@@ -1,6 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow.vo;
 
-import com.aizuda.boot.modules.flw.entity.FlwProcessCategory;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;

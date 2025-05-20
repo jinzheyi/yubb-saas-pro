@@ -1,6 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow;
 
-import com.aizuda.boot.modules.flw.entity.FlwFormTemplate;
+import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplate;
 import com.aizuda.boot.modules.flw.service.IFlwFormTemplateService;
 import com.aizuda.core.api.ApiController;
 import com.aizuda.core.api.PageParam;
