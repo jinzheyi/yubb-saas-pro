@@ -134,6 +134,19 @@ public class PermissionServiceImpl implements PermissionService {
         return false;
     }
 
+    @Override
+    public boolean hasAnyTenantAdmin(Long userId) {
+        // 获得当前登录的角色。如果为空，说明没有权限
+        List<RoleDO> roles = getEnableUserRoleListByUserIdFromCache(userId);
+        if (CollUtil.isEmpty(roles)) {
+            return false;
+        }
+        // 判断是否有权限
+        Set<Long> roleIds = convertSet(roles, RoleDO::getId);
+        //是否租户超管的判断
+        return roleService.hasAnyTenantAdmin(roleIds);
+    };
+
     /**
      * 用于超管
      * 获得当前租户下普通菜单列表+已购买的应用的菜单，只要开启状态的

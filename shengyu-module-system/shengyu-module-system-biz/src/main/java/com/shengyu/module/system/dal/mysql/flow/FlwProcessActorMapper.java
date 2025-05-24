@@ -1,7 +1,7 @@
 package com.shengyu.module.system.dal.mysql.flow;
 
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessActor;
-import com.aizuda.service.mapper.CrudMapper;
 
 /**
  * <p>
@@ -11,6 +11,6 @@ import com.aizuda.service.mapper.CrudMapper;
  * @author 青苗
  * @since 2023-09-07
  */
-public interface FlwProcessActorMapper extends CrudMapper<FlwProcessActor> {
+public interface FlwProcessActorMapper extends BaseMapperX<FlwProcessActor> {
 
 }

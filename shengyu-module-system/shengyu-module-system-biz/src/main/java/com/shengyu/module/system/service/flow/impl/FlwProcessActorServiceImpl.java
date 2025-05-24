@@ -1,11 +1,11 @@
 package com.shengyu.module.system.service.flow.impl;
 
+import com.shengyu.framework.mybatis.core.service.BaseServiceImpl;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessActor;
-import com.aizuda.boot.modules.flw.mapper.FlwProcessActorMapper;
-import com.aizuda.boot.modules.flw.service.IFlwProcessActorService;
-import com.aizuda.service.service.BaseServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.shengyu.module.system.dal.mysql.flow.FlwProcessActorMapper;
+import com.shengyu.module.system.service.flow.IFlwProcessActorService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

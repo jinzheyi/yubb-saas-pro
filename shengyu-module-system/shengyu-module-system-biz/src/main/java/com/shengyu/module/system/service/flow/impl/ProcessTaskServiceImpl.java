@@ -1,15 +1,15 @@
 package com.shengyu.module.system.service.flow.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
+import com.shengyu.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.flowlong.engine.core.PageParam;
+import com.shengyu.framework.flowlong.engine.mapper.FlwExtInstanceMapper;
+import com.shengyu.framework.security.core.LoginUser;
+import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.module.system.controller.admin.flow.dto.*;
+import com.shengyu.module.system.controller.admin.flow.vo.*;
 import com.shengyu.module.system.dal.dataobject.flow.*;
-import com.shengyu.module.system.dal.dataobject.flow.dto.*;
-import com.shengyu.module.system.dal.dataobject.flow.vo.*;
-import com.aizuda.boot.modules.flw.flow.FlowForm;
-import com.aizuda.boot.modules.flw.flow.FlowHelper;
-import com.aizuda.boot.modules.flw.mapper.FlowlongMapper;
-import com.aizuda.boot.modules.flw.service.*;
-import com.aizuda.boot.modules.system.entity.SysUser;
-import com.aizuda.boot.modules.system.service.ISysSSEService;
-import com.aizuda.boot.modules.system.service.ISysUserService;
 import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
 import com.shengyu.framework.flowlong.engine.FlowLongEngine;
 import com.shengyu.framework.flowlong.engine.TaskService;
@@ -24,19 +24,18 @@ import com.shengyu.framework.flowlong.engine.model.ModelHelper;
 import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import com.shengyu.framework.flowlong.engine.model.ProcessModel;
-import com.shengyu.framework.flowlong.mybatisplus.mapper.FlwExtInstanceMapper;
-import com.aizuda.common.toolkit.JacksonUtils;
-import com.aizuda.core.api.ApiAssert;
-import com.aizuda.core.api.PageParam;
-import com.aizuda.service.web.UserSession;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shengyu.module.system.dal.mysql.flow.FlowlongMapper;
+import com.shengyu.module.system.framework.flow.FlowForm;
+import com.shengyu.module.system.framework.flow.FlowHelper;
+import com.shengyu.module.system.service.flow.*;
 import lombok.AllArgsConstructor;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.Resource;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -47,16 +46,24 @@ import java.util.stream.Collectors;
  * @since 2023-12-11
  */
 @Service
-@AllArgsConstructor
 public class ProcessTaskServiceImpl implements IProcessTaskService {
+    @Resource
     private FlowlongMapper flowlongMapper;
+    @Resource
     private FlwExtInstanceMapper extInstanceMapper;
+    @Resource
     private FlowLongEngine flowLongEngine;
+    @Resource
     private IFlwProcessApprovalService flwProcessApprovalService;
+    @Resource
     private IFlwProcessFormService flwProcessFormService;
+    @Resource
     private IFlwFormTemplateService flwFormTemplateService;
+    @Resource
     private IFlwProcessConfigureService flwProcessConfigureService;
+    @Resource
     private ISysUserService sysUserService;
+    @Resource
     private ISysSSEService sseService;
 
     @Override
@@ -103,7 +110,7 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
     public TaskApprovalVO approvalInfo(ProcessInfoDTO dto) {
         final Long instanceId = dto.getInstanceId();
         FlwHisInstance hisInstance = flowLongEngine.queryService().getHistInstance(instanceId);
-        ApiAssert.isEmpty(hisInstance, "未发现指定审批流程");
+        ServiceExceptionUtil.isEmpty(hisInstance, "未发现指定审批流程");
         TaskApprovalVO vo = new TaskApprovalVO();
         vo.setInstanceId(hisInstance.getId());
         vo.setInstanceState(hisInstance.getInstanceState());
@@ -151,7 +158,7 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
             if (ProcessType.business.eq(extInstance.getProcessType())) {
                 // 业务流程，加载表单模板内容
                 FlwFormTemplate formTemplate = flwFormTemplateService.getByConfigure(configure.getProcessForm());
-                ApiAssert.fail(null == formTemplate, "未发现指定业务流程表单模板");
+                ServiceExceptionUtil.fail(null == formTemplate, "未发现指定业务流程表单模板");
                 vo.setFormTemplate(formTemplate);
                 if (Objects.equals(formTemplate.getType(), 1)) {
                     // 系统表单情况
@@ -168,7 +175,7 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
         // 渲染节点列表
         Map<String, Object> formArgs = null;
         if (null != vo.getFormContent()) {
-            Map<String, Object> formMap = JacksonUtils.readMap(vo.getFormContent());
+            Map<String, Object> formMap = JsonUtils.readMap(vo.getFormContent());
             if (null != formMap) {
                 formArgs = (Map<String, Object>) formMap.get("formData");
             }
@@ -280,7 +287,7 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
     @Override
     public Map<String, Object> listNextNodes(NextNodesDTO dto) {
         FlwInstance instance = flowLongEngine.queryService().getInstance(dto.getInstanceId());
-        ApiAssert.fail(null == instance, "当前流程实例不存在");
+        ServiceExceptionUtil.fail(null == instance, "当前流程实例不存在");
         FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(dto.getInstanceId());
         NodeModel rootNodeModel = extInstance.model().getNodeConfig();
         Execution execution = new Execution(FlowHelper.getFlowCreator(), dto.getArgs());
@@ -316,8 +323,8 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
         if (null == dto) {
             dto = new ProcessTaskDTO();
         }
-        UserSession userSession = UserSession.getLoginInfo();
-        dto.setCreateId(userSession.getUserId());
+        LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
+        dto.setCreateId(userSession.getId());
         return dto;
     }
 
@@ -339,10 +346,10 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
     @Override
     public boolean revoke(ProcessApprovalDTO dto, FlowCreator flowCreator) {
         FlwInstance flwInstance = flowLongEngine.queryService().getInstance(dto.getInstanceId());
-        ApiAssert.fail(null == flwInstance, "流程实例已结束");
+        ServiceExceptionUtil.fail(null == flwInstance, "流程实例已结束");
         FlwProcessConfigure configure = flwProcessConfigureService.getByProcessId(flwInstance.getProcessId());
         if (null != configure && null != configure.getProcessSetting()) {
-            ApiAssert.fail(!Objects.equals(true, configure.getProcessSetting().getAllowRevocation()),
+            ServiceExceptionUtil.fail(!Objects.equals(true, configure.getProcessSetting().getAllowRevocation()),
                     "该审批流程不允许撤回");
         }
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
@@ -390,7 +397,7 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
 
     private FlwTask checkFlwTaskById(Long taskId) {
         FlwTask flwTask = flowLongEngine.queryService().getTask(taskId);
-        ApiAssert.isEmpty(flwTask, "当前ID执行任务不存在");
+        ServiceExceptionUtil.isEmpty(flwTask, "当前ID执行任务不存在");
         return flwTask;
     }
 
@@ -398,11 +405,11 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
     public boolean carbonCopy(TaskCarbonCopyDTO dto) {
         FlwTask flwTask = this.checkFlwTaskById(dto.getTaskId());
         List<SysUser> sysUsers = sysUserService.listByIds(dto.getUserIds());
-        ApiAssert.isEmpty(sysUsers, "指定用户不存在");
+        ServiceExceptionUtil.isEmpty(sysUsers, "指定用户不存在");
         flowLongEngine.queryService().getCcTaskActorsByInstanceId(flwTask.getInstanceId())
                 .ifPresent(t -> t.forEach(actor -> sysUsers.forEach(user -> {
                     if (Objects.equals(actor.getActorId(), String.valueOf(user.getId()))) {
-                        ApiAssert.fail("用户【" + user.getUsername() + "】已抄送，请勿重复操作");
+                        ServiceExceptionUtil.fail("用户【" + user.getUsername() + "】已抄送，请勿重复操作");
                     }
                 })));
 
@@ -435,7 +442,7 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
 
     private FlwTask getFlwTask(Long taskId) {
         FlwTask flwTask = flowLongEngine.queryService().getTask(taskId);
-        ApiAssert.isEmpty(flwTask, "指定ID任务已执行完成");
+        ServiceExceptionUtil.isEmpty(flwTask, "指定ID任务已执行完成");
         return flwTask;
     }
 
@@ -458,7 +465,7 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
         // 获取任务，保存表单
         FlwTask flwTask = this.getFlwTask(dto.getTaskId());
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
-        ApiAssert.fail(!flwProcessFormService.saveForm(flwTask.getInstanceId(), dto.getProcessForm()), "保存保单内容失败");
+        ServiceExceptionUtil.fail(!flwProcessFormService.saveForm(flwTask.getInstanceId(), dto.getProcessForm()), "保存保单内容失败");
         FlowForm.argsTransfer(dto.getProcessForm());
 
         // 委派审批
@@ -496,8 +503,8 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
 
     @Override
     public Integer countPendingApproval() {
-        UserSession userSession = UserSession.getLoginInfo();
-        return flowlongMapper.selectCountPendingApproval(userSession.getUserId());
+        LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
+        return flowlongMapper.selectCountPendingApproval(userSession.getId());
     }
 
     @Override
@@ -505,7 +512,7 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
         flowLongEngine.queryService().getActiveTaskActorsByInstanceId(instanceId)
                 .ifPresent(taskActors -> {
                     // 演示催办逻辑，提示当前用户，实际业务可以做一些其他处理，比如通过短信、邮件、站内信等方式提醒用户
-                    UserSession userSession = UserSession.getLoginInfo();
+                    LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
                     sseService.sendRemind(userSession.getId(), "流程催办", "模拟流程催办消息，通知用户：" +
                             taskActors.stream().map(FlwTaskActor::getActorName).collect(Collectors.joining(", ")));
                 });

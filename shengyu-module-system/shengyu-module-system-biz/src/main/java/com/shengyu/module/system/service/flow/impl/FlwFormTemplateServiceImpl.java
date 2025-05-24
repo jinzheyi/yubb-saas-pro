@@ -1,14 +1,14 @@
 package com.shengyu.module.system.service.flow.impl;
 
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
+import com.shengyu.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.mybatis.core.service.BaseServiceImpl;
 import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplate;
-import com.aizuda.boot.modules.flw.mapper.FlwFormTemplateMapper;
-import com.aizuda.boot.modules.flw.service.IFlwFormTemplateService;
-import com.aizuda.common.toolkit.JacksonUtils;
-import com.aizuda.core.api.ApiAssert;
-import com.aizuda.service.service.BaseServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shengyu.module.system.dal.mysql.flow.FlwFormTemplateMapper;
+import com.shengyu.module.system.service.flow.IFlwFormTemplateService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -45,7 +45,7 @@ public class FlwFormTemplateServiceImpl extends BaseServiceImpl<FlwFormTemplateM
 
     @Override
     public boolean updateById(FlwFormTemplate flwFormTemplate) {
-        ApiAssert.fail(null == flwFormTemplate.getId(), "主键不存在无法更新");
+        ServiceExceptionUtil.fail(null == flwFormTemplate.getId(), "主键不存在无法更新");
         return super.updateById(flwFormTemplate);
     }
 
@@ -65,7 +65,7 @@ public class FlwFormTemplateServiceImpl extends BaseServiceImpl<FlwFormTemplateM
         Long id = null;
         if (null != configureProcessForm) {
             // 加载表单模板内容
-            Map<String, Object> formMap = JacksonUtils.readMap(configureProcessForm);
+            Map<String, Object> formMap = JsonUtils.readMap(configureProcessForm);
             if (null != formMap) {
                 String formId = (String) formMap.get("formId");
                 if (null != formId) {
@@ -73,7 +73,7 @@ public class FlwFormTemplateServiceImpl extends BaseServiceImpl<FlwFormTemplateM
                 }
             }
         }
-        ApiAssert.fail(null == id, "业务表单配置内容有误");
+        ServiceExceptionUtil.fail(null == id, "业务表单配置内容有误");
         FlwFormTemplate flwFormTemplate = this.checkById(id);
         if (null != flwFormTemplate && !Objects.equals(3, flwFormTemplate.getStatus())) {
             // 加载设置为绑定状态，该状态不允许删除，只能修改编辑

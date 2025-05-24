@@ -1,9 +1,9 @@
 package com.shengyu.module.system.service.flow.impl;
 
+import com.shengyu.framework.mybatis.core.service.BaseServiceImpl;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessForm;
-import com.aizuda.boot.modules.flw.mapper.FlwProcessFormMapper;
-import com.aizuda.boot.modules.flw.service.IFlwProcessFormService;
-import com.aizuda.service.service.BaseServiceImpl;
+import com.shengyu.module.system.dal.mysql.flow.FlwProcessFormMapper;
+import com.shengyu.module.system.service.flow.IFlwProcessFormService;
 import org.springframework.stereotype.Service;
 
 /**

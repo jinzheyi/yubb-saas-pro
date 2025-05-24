@@ -1,8 +1,7 @@
 package com.shengyu.module.system.dal.mysql.flow;
 
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.module.system.dal.dataobject.flow.FlwFormCategory;
-import com.aizuda.service.mapper.CrudMapper;
-
 import java.util.List;
 
 /**
@@ -13,7 +12,7 @@ import java.util.List;
  * @author hubin
  * @since 2024-05-19
  */
-public interface FlwFormCategoryMapper extends CrudMapper<FlwFormCategory> {
+public interface FlwFormCategoryMapper extends BaseMapperX<FlwFormCategory> {
 
     List<Long> selectIdsRecursive(Long id);
 }

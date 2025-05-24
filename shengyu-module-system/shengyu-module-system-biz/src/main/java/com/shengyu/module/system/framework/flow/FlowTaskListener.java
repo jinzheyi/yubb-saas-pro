@@ -178,7 +178,7 @@ public class FlowTaskListener implements TaskListener {
         if (null == nodeModel) {
             // 不存在情况从数据库中获取
             ProcessModel processModel = flowLongEngine.runtimeService().getProcessModelByInstanceId(flwTask.getInstanceId());
-            ApiAssert.isEmpty(processModel, "流程模型节点查询异常");
+            ServiceExceptionUtil.isEmpty(processModel, "流程模型节点查询异常");
             return processModel.getNode(flwTask.getTaskKey());
         }
         return nodeModel;

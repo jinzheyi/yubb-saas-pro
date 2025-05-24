@@ -1,19 +1,19 @@
 package com.shengyu.module.system.service.flow.impl;
 
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
+import com.shengyu.framework.mybatis.core.service.BaseServiceImpl;
+import com.shengyu.module.system.controller.admin.flow.vo.FlwFormCategoryVO;
 import com.shengyu.module.system.dal.dataobject.flow.FlwFormCategory;
-import com.shengyu.module.system.dal.dataobject.flow.vo.FlwFormCategoryVO;
-import com.aizuda.boot.modules.flw.mapper.FlwFormCategoryMapper;
-import com.aizuda.boot.modules.flw.service.IFlwFormCategoryService;
-import com.aizuda.boot.modules.flw.service.IFlwFormTemplateService;
-import com.aizuda.core.api.ApiAssert;
-import com.aizuda.service.service.BaseServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.AllArgsConstructor;
+import com.shengyu.module.system.dal.mysql.flow.FlwFormCategoryMapper;
+import com.shengyu.module.system.service.flow.IFlwFormCategoryService;
+import com.shengyu.module.system.service.flow.IFlwFormTemplateService;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -25,8 +25,9 @@ import java.util.Objects;
  * @since 2024-05-19
  */
 @Service
-@AllArgsConstructor
 public class FlwFormCategoryServiceImpl extends BaseServiceImpl<FlwFormCategoryMapper, FlwFormCategory> implements IFlwFormCategoryService {
+
+    @Resource
     private IFlwFormTemplateService formTemplateService;
 
     @Override
@@ -74,9 +75,9 @@ public class FlwFormCategoryServiceImpl extends BaseServiceImpl<FlwFormCategoryM
 
     @Override
     public boolean updateById(FlwFormCategory flwFormCategory) {
-        ApiAssert.isEmpty(flwFormCategory.getId(), "主键不存在无法更新");
+        ServiceExceptionUtil.isEmpty(flwFormCategory.getId(), "主键不存在无法更新");
         List<Long> ids = baseMapper.selectIdsRecursive(flwFormCategory.getId());
-        ApiAssert.fail(CollectionUtils.isNotEmpty(ids) && ids.contains(flwFormCategory.getPid()),
+        ServiceExceptionUtil.fail(CollectionUtils.isNotEmpty(ids) && ids.contains(flwFormCategory.getPid()),
                 "父分类不能为子分类，请重新选择父分类");
         if (null == flwFormCategory.getPid()) {
             // 未设置父ID设置为0
@@ -87,10 +88,10 @@ public class FlwFormCategoryServiceImpl extends BaseServiceImpl<FlwFormCategoryM
 
     @Override
     public boolean removeByIds(List<Long> ids) {
-        ApiAssert.fail(ids.stream().anyMatch(Objects::isNull), "不允许删除所有");
+        ServiceExceptionUtil.fail(ids.stream().anyMatch(Objects::isNull), "不允许删除所有");
         this.checkExists(Wrappers.<FlwFormCategory>lambdaQuery().select(FlwFormCategory::getId)
                 .in(FlwFormCategory::getPid, ids), "存在子类不允许删除");
-        ApiAssert.fail(formTemplateService.existByFormCategoryIds(ids), "存在关联表单模板不允许删除");
+        ServiceExceptionUtil.fail(formTemplateService.existByFormCategoryIds(ids), "存在关联表单模板不允许删除");
         return super.removeByIds(ids);
     }
 }

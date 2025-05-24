@@ -158,4 +158,11 @@ public interface PermissionService {
      */
     boolean hasAnyRoleMenu(Long menuId);
 
+    /**
+     * 判断用户是否是租户管理员
+     * @param userId 用户id
+     * @return 布尔值 true是 false不是
+     */
+    boolean hasAnyTenantAdmin(Long userId);
+
 }

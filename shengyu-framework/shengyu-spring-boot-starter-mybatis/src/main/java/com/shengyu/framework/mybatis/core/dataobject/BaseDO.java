@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  * @author 圣钰科技
  */
 @Data
-public abstract class BaseDO implements Serializable {
+public abstract class BaseDO implements BeanConvert {
 
     /**
      * 创建时间

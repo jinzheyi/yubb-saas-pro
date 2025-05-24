@@ -1,16 +1,15 @@
 package com.shengyu.module.system.service.flow.impl;
 
+import cn.hutool.core.collection.CollectionUtil;
+import com.shengyu.framework.mybatis.core.service.BaseServiceImpl;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwCategorySortDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessDTO;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessConfigure;
-import com.shengyu.module.system.dal.dataobject.flow.dto.FlwCategorySortDTO;
-import com.shengyu.module.system.dal.dataobject.flow.dto.FlwProcessDTO;
-import com.aizuda.boot.modules.flw.mapper.FlwProcessConfigureMapper;
-import com.aizuda.boot.modules.flw.service.IFlwProcessConfigureService;
-import com.aizuda.service.service.BaseServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import org.apache.commons.collections.CollectionUtils;
+import com.shengyu.module.system.dal.mysql.flow.FlwProcessConfigureMapper;
+import com.shengyu.module.system.service.flow.IFlwProcessConfigureService;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Objects;
 
@@ -61,7 +60,7 @@ public class FlwProcessConfigureServiceImpl extends BaseServiceImpl<FlwProcessCo
     @Override
     public void updateRelation(List<FlwCategorySortDTO> dtoList) {
         dtoList.forEach(t -> {
-            if (CollectionUtils.isNotEmpty(t.getProcessIds())) {
+            if (CollectionUtil.isNotEmpty(t.getProcessIds())) {
                 lambdaUpdate().set(FlwProcessConfigure::getCategoryId, t.getCategoryId())
                         .in(FlwProcessConfigure::getProcessId, t.getProcessIds()).update();
             }

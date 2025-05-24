@@ -2,6 +2,7 @@ package com.shengyu.module.system.service.flow.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.shengyu.framework.mybatis.core.service.BaseServiceImpl;
 import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessPermissionDTO;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessPermission;
 import com.shengyu.module.system.dal.mysql.flow.FlwProcessPermissionMapper;

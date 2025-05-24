@@ -12,11 +12,14 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * JSON 工具类
@@ -178,6 +181,13 @@ public class JsonUtils {
             log.error("json parse err,json:{}", text, e);
             throw new RuntimeException(e);
         }
+    }
+
+    public static Map<String, Object> readMap(@Nullable String content) {
+        if (StrUtil.isEmpty(content)) {
+            return Collections.emptyMap();
+        }
+        return parseObject(content, new TypeReference<Map<String, Object>>() {});
     }
 
     public static boolean isJson(String text) {
