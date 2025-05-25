@@ -1,7 +1,7 @@
 package com.shengyu.module.system.service.flow;
 
+import com.shengyu.framework.mybatis.core.service.IBaseService;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessActor;
-import com.aizuda.service.service.IBaseService;
 
 import java.util.List;
 

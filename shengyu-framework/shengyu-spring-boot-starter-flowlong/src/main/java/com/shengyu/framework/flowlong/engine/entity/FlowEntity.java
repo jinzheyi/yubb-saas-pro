@@ -5,7 +5,6 @@
 package com.shengyu.framework.flowlong.engine.entity;
 
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.shengyu.framework.flowlong.engine.core.BeanConvert;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import lombok.Data;
@@ -23,7 +22,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class FlowEntity extends TenantBaseDO implements BeanConvert {
+public class FlowEntity extends TenantBaseDO {
     /**
      * 主键ID
      */

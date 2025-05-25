@@ -51,7 +51,7 @@ public interface FlowlongMapper {
     /**
      * 待办数量
      */
-    Integer selectCountPendingApproval(@Param("actorId") String actorId);
+    Integer selectCountPendingApproval(@Param("actorId") Long actorId);
 
     /**
      * 不存在角色权限的流程ID列表

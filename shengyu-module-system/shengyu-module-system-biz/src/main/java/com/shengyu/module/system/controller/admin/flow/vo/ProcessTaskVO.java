@@ -1,6 +1,5 @@
 package com.shengyu.module.system.controller.admin.flow.vo;
 
-import com.aizuda.core.ApiConstants;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -45,15 +44,15 @@ public class ProcessTaskVO {
     @Schema(description = "发起人")
     private String createBy;
 
-    @JsonFormat(pattern = ApiConstants.DATE_MM)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     @Schema(description = "创建时间")
     private Date createTime;
 
-    @JsonFormat(pattern = ApiConstants.DATE_MM)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     @Schema(description = "期望完成时间")
     private Date expireTime;
 
-    @JsonFormat(pattern = ApiConstants.DATE_MM)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     @Schema(description = "结束时间")
     private Date endTime;
 

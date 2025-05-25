@@ -1,8 +1,8 @@
 package com.shengyu.module.system.framework.flow;
 
-import com.aizuda.boot.modules.system.entity.vo.DepartmentHeadVO;
-import com.aizuda.boot.modules.system.service.ISysDepartmentService;
-import com.aizuda.boot.modules.system.service.ISysUserRoleService;
+import cn.hutool.extra.spring.SpringUtil;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.flowlong.engine.FlowConstants;
 import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
 import com.shengyu.framework.flowlong.engine.TaskActorProvider;
@@ -17,9 +17,7 @@ import com.shengyu.framework.flowlong.engine.model.DynamicAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeCandidate;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
-import com.aizuda.core.api.ApiAssert;
-import com.aizuda.service.spring.SpringHelper;
-import org.apache.commons.collections.CollectionUtils;
+import com.shengyu.module.system.service.permission.PermissionService;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -43,9 +41,9 @@ public class FlowTaskActorProvider implements TaskActorProvider {
 
             if (NodeSetType.role.eq(nodeModel.getSetType())) {
                 // 3，角色
-                ISysUserRoleService sysUserRoleService = SpringHelper.getBean(ISysUserRoleService.class);
+                PermissionService sysUserRoleService = SpringUtil.getBean(PermissionService.class);
                 List<Long> roleIds = nodeModel.getNodeAssigneeList().stream().map(t -> Long.valueOf(t.getId())).toList();
-                ServiceExceptionUtil.fail(!sysUserRoleService.existRoles(Long.valueOf(flowCreator.getCreateId()), roleIds), "当前用户无操作权限");
+                ServiceExceptionUtil.fail(!sysUserRoleService.hasAnyRoleIds(Long.valueOf(flowCreator.getCreateId()), roleIds), "当前用户无操作权限");
             }
         }
         return true;
@@ -199,11 +197,13 @@ public class FlowTaskActorProvider implements TaskActorProvider {
      * 获取部门主管信息
      */
     private List<FlwTaskActor> getDepartmentHeadInfo(FlowCreator flowCreator, Integer examineLevel, boolean multiLevel, Supplier<String> supplier) {
-        ISysDepartmentService sysDepartmentService = SpringHelper.getBean(ISysDepartmentService.class);
-        List<DepartmentHeadVO> voList = sysDepartmentService.getDepartmentHeadInfo(Long.valueOf(flowCreator.getCreateId()), examineLevel, multiLevel);
-        if (CollectionUtils.isEmpty(voList)) {
-            ServiceExceptionUtil.fail(supplier.get());
-        }
-        return voList.stream().map(DepartmentHeadVO::toFlwTaskActor).collect(Collectors.toList());
+        //todo 获取部门主管信息
+        return null;
+//        ISysDepartmentService sysDepartmentService = SpringHelper.getBean(ISysDepartmentService.class);
+//        List<DepartmentHeadVO> voList = sysDepartmentService.getDepartmentHeadInfo(Long.valueOf(flowCreator.getCreateId()), examineLevel, multiLevel);
+//        if (CollectionUtils.isEmpty(voList)) {
+//            ServiceExceptionUtil.fail(supplier.get());
+//        }
+//        return voList.stream().map(DepartmentHeadVO::toFlwTaskActor).collect(Collectors.toList());
     }
 }

@@ -25,10 +25,12 @@ import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import com.shengyu.framework.flowlong.engine.model.ProcessModel;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.flow.FlowlongMapper;
 import com.shengyu.module.system.framework.flow.FlowForm;
 import com.shengyu.module.system.framework.flow.FlowHelper;
 import com.shengyu.module.system.service.flow.*;
+import com.shengyu.module.system.service.user.AdminUserService;
 import lombok.AllArgsConstructor;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -62,9 +64,9 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
     @Resource
     private IFlwProcessConfigureService flwProcessConfigureService;
     @Resource
-    private ISysUserService sysUserService;
-    @Resource
-    private ISysSSEService sseService;
+    private AdminUserService adminUserService;
+//    @Resource
+//    private ISysSSEService sseService;
 
     @Override
     public Page<PendingClaimTaskVO> pagePendingClaim(PageParam<ProcessTaskDTO> pageParam) {
@@ -404,12 +406,12 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
     @Override
     public boolean carbonCopy(TaskCarbonCopyDTO dto) {
         FlwTask flwTask = this.checkFlwTaskById(dto.getTaskId());
-        List<SysUser> sysUsers = sysUserService.listByIds(dto.getUserIds());
+        List<AdminUserDO> sysUsers = adminUserService.getUserList(dto.getUserIds());
         ServiceExceptionUtil.isEmpty(sysUsers, "指定用户不存在");
         flowLongEngine.queryService().getCcTaskActorsByInstanceId(flwTask.getInstanceId())
                 .ifPresent(t -> t.forEach(actor -> sysUsers.forEach(user -> {
                     if (Objects.equals(actor.getActorId(), String.valueOf(user.getId()))) {
-                        ServiceExceptionUtil.fail("用户【" + user.getUsername() + "】已抄送，请勿重复操作");
+                        ServiceExceptionUtil.fail("用户【" + user.getNickname() + "】已抄送，请勿重复操作");
                     }
                 })));
 
@@ -420,7 +422,7 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
         return flowLongEngine.createCcTask(flwTask, sysUsers.stream().map(t -> {
             NodeAssignee nodeAssignee = new NodeAssignee();
             nodeAssignee.setId(String.valueOf(t.getId()));
-            nodeAssignee.setName(t.getUsername());
+            nodeAssignee.setName(t.getNickname());
             return nodeAssignee;
         }).toList(), FlowHelper.getFlowCreator());
     }
@@ -512,9 +514,10 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
         flowLongEngine.queryService().getActiveTaskActorsByInstanceId(instanceId)
                 .ifPresent(taskActors -> {
                     // 演示催办逻辑，提示当前用户，实际业务可以做一些其他处理，比如通过短信、邮件、站内信等方式提醒用户
-                    LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
-                    sseService.sendRemind(userSession.getId(), "流程催办", "模拟流程催办消息，通知用户：" +
-                            taskActors.stream().map(FlwTaskActor::getActorName).collect(Collectors.joining(", ")));
+                    //todo 消息后续完善
+//                    LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
+//                    sseService.sendRemind(userSession.getId(), "流程催办", "模拟流程催办消息，通知用户：" +
+//                            taskActors.stream().map(FlwTaskActor::getActorName).collect(Collectors.joining(", ")));
                 });
         return true;
     }

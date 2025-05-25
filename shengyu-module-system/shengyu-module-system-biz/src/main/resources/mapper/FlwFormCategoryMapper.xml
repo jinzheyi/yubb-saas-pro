@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shengyu.module.system.dal.mysql.flow.FlwFormCategoryMapper">
+
+    <select id="selectIdsRecursive" resultType="java.lang.Long">
+        WITH RECURSIVE r AS (SELECT id FROM flw_form_category WHERE id=#{id} UNION ALL SELECT c.id
+        FROM flw_form_category c JOIN r ON c.pid=r.id) SELECT id FROM r
+    </select>
+
+</mapper>

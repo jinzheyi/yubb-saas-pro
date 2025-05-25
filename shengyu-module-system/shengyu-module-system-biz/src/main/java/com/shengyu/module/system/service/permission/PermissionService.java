@@ -41,6 +41,14 @@ public interface PermissionService {
      */
     boolean hasAnyRoles(Long userId, String... roles);
 
+    /**
+     * 判断是否有角色，任一一个即可
+     *
+     * @param roleIds 角色id数组
+     * @return 是否
+     */
+    boolean hasAnyRoleIds(Long userId, List<Long> roleIds);
+
     // ========== 角色-菜单的相关方法  ==========
 
     /**

@@ -1,23 +1,22 @@
 package com.shengyu.module.system.controller.admin.flow;
 
-import com.shengyu.module.system.dal.dataobject.flow.dto.FlwCategorySortDTO;
-import com.shengyu.module.system.dal.dataobject.flow.dto.FlwProcessDTO;
-import com.shengyu.module.system.dal.dataobject.flow.dto.FlwProcessHistoryDTO;
-import com.shengyu.module.system.dal.dataobject.flow.dto.ProcessStartDTO;
-import com.shengyu.module.system.dal.dataobject.flow.vo.FlwProcessCategoryVO;
-import com.aizuda.boot.modules.flw.flow.FlowHelper;
-import com.aizuda.boot.modules.flw.service.IFlwProcessService;
+import com.shengyu.framework.common.validation.group.Create;
+import com.shengyu.framework.flowlong.engine.core.PageParam;
 import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
-import com.aizuda.core.api.ApiController;
-import com.aizuda.core.api.PageParam;
-import com.aizuda.core.validation.Create;
-import com.baomidou.kisso.annotation.Permission;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwCategorySortDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessHistoryDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.ProcessStartDTO;
+import com.shengyu.module.system.controller.admin.flow.vo.FlwProcessCategoryVO;
+import com.shengyu.module.system.framework.flow.FlowHelper;
+import com.shengyu.module.system.service.flow.IFlwProcessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,18 +32,18 @@ import java.util.List;
 @RestController
 @AllArgsConstructor
 @RequestMapping("/v1/process")
-public class ProcessController extends ApiController {
+public class ProcessController {
     private IFlwProcessService flwProcessService;
 
     @Operation(summary = "历史分页列表")
-    @Permission("flw:process:page")
+    @PreAuthorize("@ss.hasPermission('flw:process:page')")
     @PostMapping("/page-history")
     public Page<FlwProcess> getPageHistory(@RequestBody PageParam<FlwProcessHistoryDTO> dto) {
         return flwProcessService.pageHistory(dto.page(), dto.getData());
     }
 
     @Operation(summary = "获取所有分类流程定义列表")
-    @Permission("flw:process:listCategory")
+    @PreAuthorize("@ss.hasPermission('flw:process:listCategory')")
     @Parameters({
             @Parameter(name = "keyword", description = "关键词")
     })
@@ -54,7 +53,7 @@ public class ProcessController extends ApiController {
     }
 
     @Operation(summary = "获取发起分类流程定义列表")
-    @Permission("flw:process:listLaunch")
+    @PreAuthorize("@ss.hasPermission('flw:process:listLaunch')")
     @Parameters({
             @Parameter(name = "keyword", description = "关键词")
     })
@@ -64,7 +63,7 @@ public class ProcessController extends ApiController {
     }
 
     @Operation(summary = "查询满足条件前10条子流程列表")
-    @Permission("flw:process:listStart")
+    @PreAuthorize("@ss.hasPermission('flw:process:listStart')")
     @Parameters({
             @Parameter(name = "keyword", description = "关键词")
     })
@@ -74,7 +73,7 @@ public class ProcessController extends ApiController {
     }
 
     @Operation(summary = "发起流程")
-    @Permission("flw:process:launch")
+    @PreAuthorize("@ss.hasPermission('flw:process:launch')")
     @PostMapping("/launch")
     public boolean launchProcess(@RequestBody ProcessStartDTO dto) {
         return flwProcessService.launchProcess(dto, FlowHelper.getFlowCreator()) != null;
@@ -84,7 +83,7 @@ public class ProcessController extends ApiController {
     @Parameters({
             @Parameter(name = "id", description = "流程ID")
     })
-    @Permission("flw:process:nodeModel")
+    @PreAuthorize("@ss.hasPermission('flw:process:nodeModel')")
     @PostMapping("/node-model")
     public String nodeModel(@RequestParam Long id) {
         return flwProcessService.getNodeModelById(id);
@@ -94,7 +93,7 @@ public class ProcessController extends ApiController {
     @Parameters({
             @Parameter(name = "id", description = "流程ID")
     })
-    @Permission("flw:process:get")
+    @PreAuthorize("@ss.hasPermission('flw:process:get')")
     @GetMapping("/get")
     public FlwProcessDTO get(@RequestParam Long id) {
         return flwProcessService.getDtoById(id);
@@ -104,7 +103,7 @@ public class ProcessController extends ApiController {
     @Parameters({
             @Parameter(name = "key", description = "流程KEY")
     })
-    @Permission("flw:process:business")
+    @PreAuthorize("@ss.hasPermission('flw:process:business')")
     @GetMapping("/business")
     public FlwProcessDTO business(@RequestParam String key) {
         return flwProcessService.getDtoByKey(key);
@@ -114,14 +113,14 @@ public class ProcessController extends ApiController {
     @Parameters({
             @Parameter(name = "id", description = "流程ID")
     })
-    @Permission("flw:process:clone")
+    @PreAuthorize("@ss.hasPermission('flw:process:clone')")
     @GetMapping("/clone")
     public boolean clone(@RequestParam Long id) {
         return flwProcessService.cloneById(id);
     }
 
     @Operation(summary = "创建添加")
-    @Permission("flw:process:create")
+    @PreAuthorize("@ss.hasPermission('flw:process:create')")
     @PostMapping("/create")
     public Long create(@Validated @RequestBody FlwProcessDTO dto) {
         return flwProcessService.saveDto(dto);
@@ -131,14 +130,14 @@ public class ProcessController extends ApiController {
     @Parameters({
             @Parameter(name = "id", description = "主键ID")
     })
-    @Permission("flw:process:delete")
+    @PreAuthorize("@ss.hasPermission('flw:process:delete')")
     @PostMapping("/delete")
     public boolean delete(@RequestParam Long id) {
         return flwProcessService.removeProcessInfo(id);
     }
 
     @Operation(summary = "流程排序")
-    @Permission("flw:process:sort")
+    @PreAuthorize("@ss.hasPermission('flw:process:sort')")
     @PostMapping("/sort")
     public boolean sort(@Validated(Create.class) @RequestBody List<FlwCategorySortDTO> dtoList) {
         return flwProcessService.sort(dtoList);
@@ -149,7 +148,7 @@ public class ProcessController extends ApiController {
             @Parameter(name = "id", description = "主键ID"),
             @Parameter(name = "state", description = "流程状态 0，不可用 1，可用")
     })
-    @Permission("flw:process:updateSate")
+    @PreAuthorize("@ss.hasPermission('flw:process:updateSate')")
     @PostMapping("/update-state-{id}")
     public boolean updateSate(@PathVariable("id") Long id, @RequestParam Integer state) {
         return flwProcessService.updateSateById(id, state);
@@ -159,7 +158,7 @@ public class ProcessController extends ApiController {
     @Parameters({
             @Parameter(name = "id", description = "流程ID")
     })
-    @Permission("flw:process:checkout")
+    @PreAuthorize("@ss.hasPermission('flw:process:checkout')")
     @PostMapping("/checkout")
     public boolean checkout(@RequestParam Long id) {
         return flwProcessService.checkoutById(id);

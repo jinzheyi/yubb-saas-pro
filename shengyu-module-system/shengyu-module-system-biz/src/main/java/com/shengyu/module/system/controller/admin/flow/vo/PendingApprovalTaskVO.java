@@ -1,7 +1,8 @@
 package com.shengyu.module.system.controller.admin.flow.vo;
 
-import com.aizuda.core.ApiConstants;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.shengyu.framework.flowlong.engine.core.enums.PerformType;
+import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -36,14 +37,14 @@ public class PendingApprovalTaskVO {
     @Schema(description = "发起人")
     private String launchBy;
 
-    @JsonFormat(pattern = ApiConstants.DATE_MM)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     @Schema(description = "发起时间")
     private Date launchTime;
 
     @Schema(description = "当前任务ID")
     private Long taskId;
 
-    @JsonFormat(pattern = ApiConstants.DATE_MM)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     @Schema(description = "创建时间")
     private Date createTime;
 
@@ -53,12 +54,12 @@ public class PendingApprovalTaskVO {
     @Schema(description = "任务 key 唯一标识")
     private String taskKey;
     /**
-     * 任务类型 {@link com.aizuda.bpm.engine.core.enums.TaskType}
+     * 任务类型 {@link TaskType}
      */
     @Schema(description = "任务类型")
     protected Integer taskType;
     /**
-     * 参与方式 {@link com.aizuda.bpm.engine.core.enums.PerformType}
+     * 参与方式 {@link PerformType}
      */
     @Schema(description = "参与方式")
     protected Integer performType;
@@ -66,11 +67,11 @@ public class PendingApprovalTaskVO {
     @Schema(description = "委托人")
     protected String assignor;
 
-    @JsonFormat(pattern = ApiConstants.DATE_MM)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     @Schema(description = "期望任务完成时间")
     protected Date expireTime;
 
-    @JsonFormat(pattern = ApiConstants.DATE_MM)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     @Schema(description = "提醒时间")
     protected Date remindTime;
 

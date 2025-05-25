@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +44,7 @@ public class TaskApprovalVO {
     private String createBy;
 
     @Schema(description = "创建时间")
-    private Date createTime;
+    private LocalDateTime createTime;
 
     @Schema(description = "流程模型JSON")
     private String modelContent;

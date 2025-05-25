@@ -1,11 +1,9 @@
 package com.shengyu.module.system.framework.flow;
 
-import com.aizuda.boot.modules.common.MessageEvent;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.module.system.dal.dataobject.flow.ApprovalContent;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
-import com.aizuda.boot.modules.flw.service.IFlwProcessApprovalService;
-import com.aizuda.boot.modules.system.entity.enums.BusinessType;
-import com.aizuda.boot.modules.system.service.ISysUserRoleService;
 import com.shengyu.framework.flowlong.engine.FlowLongEngine;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.core.enums.*;
@@ -14,12 +12,12 @@ import com.shengyu.framework.flowlong.engine.listener.TaskListener;
 import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import com.shengyu.framework.flowlong.engine.model.ProcessModel;
-import com.aizuda.common.toolkit.CollectionUtils;
-import com.aizuda.common.toolkit.StringUtils;
-import com.aizuda.core.api.ApiAssert;
 import javax.annotation.Resource;
+
+import com.shengyu.module.system.service.flow.IFlwProcessApprovalService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
@@ -34,8 +32,6 @@ public class FlowTaskListener implements TaskListener {
     private FlowLongEngine flowLongEngine;
     @Resource
     private ApplicationEventPublisher applicationEventPublisher;
-    @Resource
-    private ISysUserRoleService userRoleService;
 
     @Override
     public boolean notify(TaskEventType eventType, Supplier<FlwTask> supplier, List<FlwTaskActor> taskActors,
@@ -247,22 +243,23 @@ public class FlowTaskListener implements TaskListener {
             }
             List<Long> actorIds = flwTaskActors.stream().map(t -> Long.valueOf(t.getActorId())).toList();
             FlwTaskActor fta = flwTaskActors.get(0);
-            if (ActorType.role.eq(fta.getActorType())) {
-                // 流程任务处理者为角色情况，查询对应用户ID列表
-                actorIds = userRoleService.listUserIdsByRoleIds(actorIds);
-            }
-            FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(flwTask.getInstanceId());
-            // 发送消息
-            MessageEvent messageEvent = new MessageEvent();
-            messageEvent.setTitle("流程：" + extInstance.getProcessName() + " 待审批");
-            messageEvent.setContent(messageEvent.getTitle() + " ，当前所在节点：" + flwTask.getTaskName() + " ，任务发起人：" + flowCreator.getCreateBy());
-            messageEvent.setCreateId(Long.valueOf(flowCreator.getCreateId()));
-            messageEvent.setCreateBy(flowCreator.getCreateBy());
-            messageEvent.setCategory(2);
-            messageEvent.setBusinessId(flwTask.getInstanceId());
-            messageEvent.setBusinessType(BusinessType.flowTodoTask.name());
-            messageEvent.setUserIds(actorIds);
-            applicationEventPublisher.publishEvent(messageEvent);
+            //todo
+//            if (ActorType.role.eq(fta.getActorType())) {
+//                // 流程任务处理者为角色情况，查询对应用户ID列表
+//                actorIds = userRoleService.listUserIdsByRoleIds(actorIds);
+//            }
+//            FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(flwTask.getInstanceId());
+//            // 发送消息
+//            MessageEvent messageEvent = new MessageEvent();
+//            messageEvent.setTitle("流程：" + extInstance.getProcessName() + " 待审批");
+//            messageEvent.setContent(messageEvent.getTitle() + " ，当前所在节点：" + flwTask.getTaskName() + " ，任务发起人：" + flowCreator.getCreateBy());
+//            messageEvent.setCreateId(Long.valueOf(flowCreator.getCreateId()));
+//            messageEvent.setCreateBy(flowCreator.getCreateBy());
+//            messageEvent.setCategory(2);
+//            messageEvent.setBusinessId(flwTask.getInstanceId());
+//            messageEvent.setBusinessType(BusinessType.flowTodoTask.name());
+//            messageEvent.setUserIds(actorIds);
+//            applicationEventPublisher.publishEvent(messageEvent);
         }
     }
 }

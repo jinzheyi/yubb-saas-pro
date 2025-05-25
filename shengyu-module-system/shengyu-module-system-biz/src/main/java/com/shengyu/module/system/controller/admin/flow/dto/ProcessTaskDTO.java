@@ -26,7 +26,7 @@ public class ProcessTaskDTO {
     private Integer instanceState;
 
     @Schema(description = "发起人ID")
-    private String createId;
+    private Long createId;
 
     @Schema(description = "创建人")
     private String createBy;
