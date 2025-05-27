@@ -2,6 +2,7 @@ package com.shengyu.module.system.dal.dataobject.flow;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.shengyu.framework.common.validation.group.Create;
+import com.shengyu.framework.flowlong.engine.core.FlowBaseDO;
 import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.constraints.NotNull;
@@ -21,7 +22,7 @@ import java.util.Objects;
 @Getter
 @Setter
 @Schema(name = "FlwProcessPermission", description = "流程定义权限")
-public class FlwProcessPermission extends TenantBaseDO {
+public class FlwProcessPermission extends FlowBaseDO {
 
     @TableId
     private Long id;

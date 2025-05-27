@@ -1,12 +1,9 @@
 package com.shengyu.module.system.framework.flow;
 
-import com.aizuda.boot.modules.system.service.ISysUserDepartmentService;
-import com.aizuda.boot.modules.system.service.ISysUserRoleService;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.shengyu.framework.flowlong.engine.TaskAccessStrategy;
 import com.shengyu.framework.flowlong.engine.assist.ObjectUtils;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
-import com.aizuda.service.spring.SpringHelper;
-import org.apache.commons.collections.CollectionUtils;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

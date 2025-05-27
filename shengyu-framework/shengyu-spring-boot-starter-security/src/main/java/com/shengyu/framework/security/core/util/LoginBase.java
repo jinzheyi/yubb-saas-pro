@@ -38,6 +38,11 @@ public class LoginBase {
      */
     private List<String> scopes;
 
+    /**
+     * 昵称
+     */
+    private String nickname;
+
     // ========== 上下文 ==========
     /**
      * 上下文字段，不进行持久化

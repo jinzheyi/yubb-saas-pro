@@ -1,10 +1,10 @@
 package com.shengyu.module.system.framework.flow;
 
+import com.shengyu.framework.common.util.json.JsonUtils;
 import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
-import com.aizuda.common.toolkit.JacksonUtils;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.commons.collections.MapUtils;
+import org.apache.commons.collections4.MapUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,7 +31,7 @@ public class FlowForm {
 
     private static Map<String, Object> convertArgs(String formContent) {
         Map<String, Object> args = new HashMap<>();
-        FlowForm flowForm = JacksonUtils.readValue(formContent, FlowForm.class);
+        FlowForm flowForm = JsonUtils.parseObject(formContent, FlowForm.class);
         if (null != flowForm) {
             Map<String, Object> formData = flowForm.getFormData();
             if (null != formData) {

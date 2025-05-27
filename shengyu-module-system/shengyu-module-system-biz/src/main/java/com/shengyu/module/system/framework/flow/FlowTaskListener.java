@@ -2,6 +2,8 @@ package com.shengyu.module.system.framework.flow;
 
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
+import com.shengyu.framework.tenant.core.context.TenantContextHolder;
+import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
 import com.shengyu.module.system.dal.dataobject.flow.ApprovalContent;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
 import com.shengyu.framework.flowlong.engine.FlowLongEngine;
@@ -15,6 +17,7 @@ import com.shengyu.framework.flowlong.engine.model.ProcessModel;
 import javax.annotation.Resource;
 
 import com.shengyu.module.system.service.flow.IFlwProcessApprovalService;
+import com.shengyu.module.system.service.tenant.TenantService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -159,8 +162,8 @@ public class FlowTaskListener implements TaskListener {
         if (TaskEventType.autoComplete.eq(eventType) || TaskEventType.autoReject.eq(eventType)
                 || TaskEventType.trigger.eq(eventType)) {
             // 自动审批情况，设置默认处理人信息
-            fpa.setCreateId(0L);
-            fpa.setCreateBy("admin");
+            fpa.setCreator(FlowCreator.ADMIN.getCreateId());
+            fpa.setCreateBy(FlowCreator.ADMIN.getCreateBy());
         }
 
         if (null == fpa.getType()) {

@@ -7,7 +7,11 @@ import com.shengyu.module.platform.api.oauth2.dto.OAuth2AccessTokenRespDTO;
 import com.shengyu.module.platform.dal.dataobject.oauth2.PlatformOAuth2AccessTokenDO;
 import com.shengyu.module.platform.service.oauth2.PlatformOAuth2TokenService;
 import javax.annotation.Resource;
+
+import com.shengyu.module.platform.service.user.PlatformUserService;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 /**
  * OAuth2.0 Token API 实现类
@@ -19,6 +23,8 @@ public class PlatformOAuth2TokenApiImpl implements PlatformOAuth2TokenApi {
 
     @Resource
     private PlatformOAuth2TokenService oauth2TokenServicePlatform;
+    @Resource
+    private PlatformUserService platformUserService;
 
     @Override
     public OAuth2AccessTokenRespDTO createAccessToken(OAuth2AccessTokenCreateReqDTO reqDTO) {
@@ -29,7 +35,13 @@ public class PlatformOAuth2TokenApiImpl implements PlatformOAuth2TokenApi {
 
     @Override
     public OAuth2AccessTokenCheckRespDTO checkAccessToken(String accessToken) {
-        return BeanUtils.toBean(oauth2TokenServicePlatform.checkAccessToken(accessToken), OAuth2AccessTokenCheckRespDTO.class);
+        PlatformOAuth2AccessTokenDO platformOAuth2AccessTokenDO = oauth2TokenServicePlatform.checkAccessToken(accessToken);
+        OAuth2AccessTokenCheckRespDTO accessTokenCheckRespDTO = BeanUtils.toBean(platformOAuth2AccessTokenDO, OAuth2AccessTokenCheckRespDTO.class);
+        if (accessTokenCheckRespDTO != null) {
+            Optional.ofNullable(platformUserService.getUser(accessTokenCheckRespDTO.getUserId()))
+                    .ifPresent(user -> accessTokenCheckRespDTO.setNickname(user.getNickname()));
+        }
+        return accessTokenCheckRespDTO;
     }
 
     @Override

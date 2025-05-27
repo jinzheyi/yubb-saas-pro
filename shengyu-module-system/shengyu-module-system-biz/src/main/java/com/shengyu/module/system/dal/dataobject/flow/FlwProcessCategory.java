@@ -2,6 +2,7 @@ package com.shengyu.module.system.dal.dataobject.flow;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.shengyu.framework.common.validation.group.Create;
+import com.shengyu.framework.flowlong.engine.core.FlowBaseDO;
 import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -19,7 +20,7 @@ import javax.validation.constraints.Size;
 @Getter
 @Setter
 @Schema(name = "FlwProcessCategory", description = "流程分类")
-public class FlwProcessCategory extends TenantBaseDO {
+public class FlwProcessCategory extends FlowBaseDO {
 
 	/**
 	 * id

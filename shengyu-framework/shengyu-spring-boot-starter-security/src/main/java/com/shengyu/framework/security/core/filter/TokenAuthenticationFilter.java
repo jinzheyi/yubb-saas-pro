@@ -94,7 +94,7 @@ public class TokenAuthenticationFilter extends ApiRequestFilter {
             }
             // 构建登录用户
             return LoginUser.builder().id(accessToken.getUserId()).userType(accessToken.getUserType())
-                    .tenantId(accessToken.getTenantId()).scopes(accessToken.getScopes()).build();
+                    .tenantId(accessToken.getTenantId()).scopes(accessToken.getScopes()).nickname(accessToken.getNickname()).build();
         } catch (ServiceException serviceException) {
             // 校验 Token 不通过时，考虑到一些接口是无需登录的，所以直接返回 null 即可
             return null;

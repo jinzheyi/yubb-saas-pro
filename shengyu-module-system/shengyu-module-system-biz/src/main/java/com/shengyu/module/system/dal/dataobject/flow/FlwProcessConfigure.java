@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.shengyu.framework.common.validation.group.Create;
+import com.shengyu.framework.flowlong.engine.core.FlowBaseDO;
 import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.constraints.NotNull;
@@ -22,7 +23,7 @@ import lombok.Setter;
 @Setter
 @TableName(autoResultMap = true)
 @Schema(name = "FlwProcessConfigure", description = "流程定义配置")
-public class FlwProcessConfigure extends TenantBaseDO {
+public class FlwProcessConfigure extends FlowBaseDO {
 
 	@TableId
 	private Long id;

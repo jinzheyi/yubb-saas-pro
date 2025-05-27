@@ -3,7 +3,8 @@ package com.shengyu.module.system.framework.flow;
 import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
-import com.aizuda.service.web.UserSession;
+import com.shengyu.framework.security.core.LoginUser;
+import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 
 /**
  * 工作流辅助类
@@ -11,13 +12,13 @@ import com.aizuda.service.web.UserSession;
 public class FlowHelper {
 
     public static FlowCreator getFlowCreator() {
-        UserSession userSession = UserSession.getLoginInfo();
-        return FlowCreator.of(userSession.getUserId(), userSession.getUsername());
+        LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
+        return FlowCreator.of(String.valueOf(userSession.getId()), userSession.getNickname());
     }
 
     public static FlwTaskActor getFlwTaskActor() {
-        UserSession userSession = UserSession.getLoginInfo();
-        return FlwTaskActor.ofUser(null, userSession.getUserId(), userSession.getUsername());
+        LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
+        return FlwTaskActor.ofUser(null, String.valueOf(userSession.getId()), userSession.getNickname());
     }
 
     /**

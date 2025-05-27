@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.shengyu.framework.common.validation.group.Create;
+import com.shengyu.framework.flowlong.engine.core.FlowBaseDO;
 import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.constraints.NotBlank;
@@ -24,7 +25,7 @@ import lombok.Setter;
 @Setter
 @Schema(name = "FlwFormCategory", description = "流程表单分类")
 @TableName("flw_form_category")
-public class FlwFormCategory extends TenantBaseDO {
+public class FlwFormCategory extends FlowBaseDO {
 
 	/**
 	 * id

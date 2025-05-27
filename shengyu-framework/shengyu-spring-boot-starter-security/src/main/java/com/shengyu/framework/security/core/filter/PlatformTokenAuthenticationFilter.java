@@ -86,7 +86,7 @@ public class PlatformTokenAuthenticationFilter extends PlatformApiRequestFilter 
             }
             // 构建登录用户
             return PlatformLoginUser.builder().id(accessToken.getUserId()).userType(accessToken.getUserType())
-                    .scopes(accessToken.getScopes()).build();
+                    .scopes(accessToken.getScopes()).nickname(accessToken.getNickname()).build();
         } catch (ServiceException serviceException) {
             // 校验 Token 不通过时，考虑到一些接口是无需登录的，所以直接返回 null 即可
             return null;
