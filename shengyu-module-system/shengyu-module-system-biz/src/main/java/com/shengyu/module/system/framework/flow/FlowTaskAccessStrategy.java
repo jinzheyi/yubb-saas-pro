@@ -1,14 +1,16 @@
 package com.shengyu.module.system.framework.flow;
 
+import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.shengyu.framework.flowlong.engine.TaskAccessStrategy;
 import com.shengyu.framework.flowlong.engine.assist.ObjectUtils;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
+import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
+import com.shengyu.module.system.service.permission.PermissionService;
+import com.shengyu.module.system.service.user.AdminUserService;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Component
 public class FlowTaskAccessStrategy implements TaskAccessStrategy {
@@ -29,19 +31,20 @@ public class FlowTaskAccessStrategy implements TaskAccessStrategy {
         FlwTaskActor flwTaskActor = taskActors.get(0);
         if (Objects.equals(flwTaskActor.getActorType(), 1)) {
             // 角色
-            ISysUserRoleService sysUserRoleService = SpringHelper.getBean(ISysUserRoleService.class);
-            return contains(taskActors, sysUserRoleService.listRoleIdsByUserId(Long.valueOf(userId)));
+            PermissionService sysUserRoleService = SpringUtil.getBean(PermissionService.class);
+            return contains(taskActors, sysUserRoleService.getUserRoleIdListByUserId(Long.valueOf(userId)));
         } else if (Objects.equals(flwTaskActor.getActorType(), 2)) {
             // 部门
-            ISysUserDepartmentService sysUserDepartmentService = SpringHelper.getBean(ISysUserDepartmentService.class);
-            return contains(taskActors, sysUserDepartmentService.listDepartmentIdsByUserId(Long.valueOf(userId)));
+            AdminUserService sysUserDepartmentService = SpringUtil.getBean(AdminUserService.class);
+            UserRespVO userRespVO = sysUserDepartmentService.getUser(Long.valueOf(userId));
+            return contains(taskActors, Collections.singleton(Objects.nonNull(userRespVO) ? userRespVO.getDeptId() : null));
         }
 
         // 无匹配参与者
         return null;
     }
 
-    private FlwTaskActor contains(List<FlwTaskActor> taskActors, List<Long> ids) {
+    private FlwTaskActor contains(List<FlwTaskActor> taskActors, Collection<Long> ids) {
         if (CollectionUtils.isEmpty(ids)) {
             return null;
         }

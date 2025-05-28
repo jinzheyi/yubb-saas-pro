@@ -3,10 +3,12 @@ package com.shengyu.module.system.dal.mysql.flow;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shengyu.module.system.controller.admin.flow.dto.ProcessTaskDTO;
 import com.shengyu.module.system.controller.admin.flow.vo.*;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
+@Mapper
 public interface FlowlongMapper {
 
     List<FlwProcessVO> selectFlwProcessList();

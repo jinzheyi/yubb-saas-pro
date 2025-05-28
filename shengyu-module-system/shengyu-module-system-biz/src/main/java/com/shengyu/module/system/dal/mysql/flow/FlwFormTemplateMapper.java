@@ -2,6 +2,7 @@ package com.shengyu.module.system.dal.mysql.flow;
 
 import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplate;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * <p>
@@ -11,6 +12,7 @@ import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplate;
  * @author hubin
  * @since 2024-05-19
  */
+@Mapper
 public interface FlwFormTemplateMapper extends BaseMapperX<FlwFormTemplate> {
 
 }
