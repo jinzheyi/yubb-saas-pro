@@ -14,7 +14,11 @@ import lombok.EqualsAndHashCode;
 public abstract class FlowBaseDO extends TenantBaseDO {
 
     /**
-     * 创建人
+     * 创建人ID
+     */
+    protected String createId;
+    /**
+     * 创建人名称
      */
     protected String createBy;
 
