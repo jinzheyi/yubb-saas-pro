@@ -228,4 +228,42 @@ public class DeptServiceImpl implements DeptService {
         });
     }
 
+    // 获取指定部门的所有上级部门负责人
+    public List<String> getAllAncestorLeaders(String departmentId) {
+        List<String> leaders = new ArrayList<>();
+        Department current = departmentMap.get(departmentId);
+
+        while (current != null && current.getParentId() != null) {
+            Department parent = departmentMap.get(current.getParentId());
+            if (parent != null) {
+                leaders.add(parent.getLeaderName());
+                current = parent;
+            } else {
+                break; // Parent not found
+            }
+        }
+
+        return leaders;
+    }
+
+    // 获取指定部门及其往上 n 层级的上级部门负责人
+    public List<String> getAncestorLeadersUpToLevel(String departmentId, int maxLevels) {
+        List<String> leaders = new ArrayList<>();
+        Department current = departmentMap.get(departmentId);
+        int level = 0;
+
+        while (current != null && current.getParentId() != null && level < maxLevels) {
+            Department parent = departmentMap.get(current.getParentId());
+            if (parent != null) {
+                leaders.add(parent.getLeaderName());
+                current = parent;
+                level++;
+            } else {
+                break;
+            }
+        }
+
+        return leaders;
+    }
+
 }

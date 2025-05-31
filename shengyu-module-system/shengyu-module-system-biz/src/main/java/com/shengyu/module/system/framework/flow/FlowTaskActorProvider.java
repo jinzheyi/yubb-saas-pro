@@ -117,7 +117,7 @@ public class FlowTaskActorProvider implements TaskActorProvider {
              */
             if (NodeSetType.supervisor.eq(nodeModel.getSetType())) {
                 // 2，主管
-                return getDepartmentHeadInfo(flowCreator, nodeModel.getExamineLevel(), false, () -> "请设置直接主管信息");
+                return getDepartmentHeadInfo(flowCreator, nodeModel, () -> "请设置发起人部门层级主管信息");
             } else if (NodeSetType.initiatorSelected.eq(nodeModel.getSetType())) {
                 // 4，发起人自选
                 Map<String, Object> modelData = FlowDataTransfer.get(FlowConstants.processDynamicAssignee);
@@ -139,7 +139,7 @@ public class FlowTaskActorProvider implements TaskActorProvider {
                 return Collections.singletonList(FlwTaskActor.ofUser(fi.getTenantId(), fi.getCreateId(), fi.getCreateBy()));
             } else if (NodeSetType.multiLevelSupervisors.eq(nodeModel.getSetType())) {
                 // 6，连续多级主管
-                return getDepartmentHeadInfo(flowCreator, nodeModel.getExamineLevel(), true, () -> "未找到任何主管信息");
+                return getDepartmentHeadInfo(flowCreator, nodeModel, () -> "未找到任何主管信息");
             }
         }
 
@@ -195,6 +195,9 @@ public class FlowTaskActorProvider implements TaskActorProvider {
 
     /**
      * 获取部门主管信息
+     *  @param flowCreator
+     *  @param examineLevel 指定主管层级
+     *  @param multiLevel
      */
     private List<FlwTaskActor> getDepartmentHeadInfo(FlowCreator flowCreator, Integer examineLevel, boolean multiLevel, Supplier<String> supplier) {
         //todo 获取部门主管信息
