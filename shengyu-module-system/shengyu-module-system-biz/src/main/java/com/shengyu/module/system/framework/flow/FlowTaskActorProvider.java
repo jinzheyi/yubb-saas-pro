@@ -17,13 +17,13 @@ import com.shengyu.framework.flowlong.engine.model.DynamicAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeCandidate;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
+import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
+import com.shengyu.module.system.service.dept.DeptService;
 import com.shengyu.module.system.service.permission.PermissionService;
+import com.shengyu.module.system.service.user.AdminUserService;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -195,18 +195,31 @@ public class FlowTaskActorProvider implements TaskActorProvider {
 
     /**
      * 获取部门主管信息
-     *  @param flowCreator
-     *  @param examineLevel 指定主管层级
-     *  @param multiLevel
+     *  @param flowCreator 流程创建者信息
+     *  @param nodeModel  节点信息
      */
-    private List<FlwTaskActor> getDepartmentHeadInfo(FlowCreator flowCreator, Integer examineLevel, boolean multiLevel, Supplier<String> supplier) {
-        //todo 获取部门主管信息
-        return null;
-//        ISysDepartmentService sysDepartmentService = SpringHelper.getBean(ISysDepartmentService.class);
-//        List<DepartmentHeadVO> voList = sysDepartmentService.getDepartmentHeadInfo(Long.valueOf(flowCreator.getCreateId()), examineLevel, multiLevel);
-//        if (CollectionUtils.isEmpty(voList)) {
-//            ServiceExceptionUtil.fail(supplier.get());
-//        }
-//        return voList.stream().map(DepartmentHeadVO::toFlwTaskActor).collect(Collectors.toList());
+    private List<FlwTaskActor> getDepartmentHeadInfo(FlowCreator flowCreator, NodeModel nodeModel, Supplier<String> supplier) {
+        DeptService deptService = SpringUtil.getBean(DeptService.class);
+        AdminUserService userService = SpringUtil.getBean(AdminUserService.class);
+        UserRespVO userRespVO = userService.getUser(Long.valueOf(flowCreator.getCreateId()));
+        if (Objects.isNull(userRespVO.getDeptId())) {
+            ServiceExceptionUtil.fail("创建流程者没有选择部门信息");
+        }
+        List<UserRespVO> leaders = new ArrayList<>();
+        if (0 == nodeModel.getDirectorMode()) {
+            leaders = deptService.getAllAncestorLeaders(userRespVO.getDeptId());
+        } else if (1 == nodeModel.getDirectorMode()) {
+            leaders = deptService.getAncestorLeadersUpToLevel(userRespVO.getDeptId(), nodeModel.getDirectorLevel());
+        }
+        if (CollectionUtils.isEmpty(leaders)) {
+            ServiceExceptionUtil.fail(supplier.get());
+        }
+        return leaders.stream().map(user -> {
+            FlwTaskActor flwTaskActor = new FlwTaskActor();
+            flwTaskActor.setActorId(String.valueOf(user.getId()));
+            flwTaskActor.setActorName(user.getNickname());
+            flwTaskActor.setActorType(0);
+            return flwTaskActor;
+        }).collect(Collectors.toList());
     }
 }
