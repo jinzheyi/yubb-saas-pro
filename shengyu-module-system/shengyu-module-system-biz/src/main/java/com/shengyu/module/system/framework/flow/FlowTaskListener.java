@@ -1,30 +1,30 @@
 package com.shengyu.module.system.framework.flow;
 
+import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
-import com.shengyu.framework.tenant.core.context.TenantContextHolder;
-import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
-import com.shengyu.module.system.dal.dataobject.flow.ApprovalContent;
-import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
 import com.shengyu.framework.flowlong.engine.FlowLongEngine;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.core.enums.*;
-import com.shengyu.framework.flowlong.engine.entity.*;
+import com.shengyu.framework.flowlong.engine.entity.FlwExtInstance;
+import com.shengyu.framework.flowlong.engine.entity.FlwInstance;
+import com.shengyu.framework.flowlong.engine.entity.FlwTask;
+import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import com.shengyu.framework.flowlong.engine.listener.TaskListener;
 import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import com.shengyu.framework.flowlong.engine.model.ProcessModel;
-import javax.annotation.Resource;
-
+import com.shengyu.module.system.dal.dataobject.flow.ApprovalContent;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
 import com.shengyu.module.system.service.flow.IFlwProcessApprovalService;
-import com.shengyu.module.system.service.tenant.TenantService;
+import com.shengyu.module.system.service.notify.NotifySendService;
+import com.shengyu.module.system.service.permission.PermissionService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import javax.annotation.Resource;
+import java.util.*;
 import java.util.function.Supplier;
 
 @Component
@@ -246,23 +246,25 @@ public class FlowTaskListener implements TaskListener {
             }
             List<Long> actorIds = flwTaskActors.stream().map(t -> Long.valueOf(t.getActorId())).toList();
             FlwTaskActor fta = flwTaskActors.get(0);
-            //todo
-//            if (ActorType.role.eq(fta.getActorType())) {
-//                // 流程任务处理者为角色情况，查询对应用户ID列表
-//                actorIds = userRoleService.listUserIdsByRoleIds(actorIds);
-//            }
-//            FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(flwTask.getInstanceId());
-//            // 发送消息
-//            MessageEvent messageEvent = new MessageEvent();
-//            messageEvent.setTitle("流程：" + extInstance.getProcessName() + " 待审批");
-//            messageEvent.setContent(messageEvent.getTitle() + " ，当前所在节点：" + flwTask.getTaskName() + " ，任务发起人：" + flowCreator.getCreateBy());
-//            messageEvent.setCreateId(Long.valueOf(flowCreator.getCreateId()));
-//            messageEvent.setCreateBy(flowCreator.getCreateBy());
-//            messageEvent.setCategory(2);
-//            messageEvent.setBusinessId(flwTask.getInstanceId());
-//            messageEvent.setBusinessType(BusinessType.flowTodoTask.name());
-//            messageEvent.setUserIds(actorIds);
-//            applicationEventPublisher.publishEvent(messageEvent);
+            if (ActorType.role.eq(fta.getActorType())) {
+                // 流程任务处理者为角色情况，查询对应用户ID列表
+                PermissionService permissionService = SpringUtil.getBean(PermissionService.class);
+                actorIds =  new ArrayList<>(permissionService.getUserRoleIdListByRoleId(actorIds));
+            }
+            FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(flwTask.getInstanceId());
+            // 发送消息
+            NotifySendService notifySendService = SpringUtil.getBean(NotifySendService.class);
+            Map<String, Object> templateParams = new HashMap<>();
+            templateParams.put("processName", extInstance.getProcessName());
+            templateParams.put("taskName", flwTask.getTaskName());
+            templateParams.put("createBy", flowCreator.getCreateBy());
+            templateParams.put("createId", flowCreator.getCreateId());
+            templateParams.put("businessId", flwTask.getInstanceId());
+            templateParams.put("userIds", actorIds);
+            actorIds.forEach(actorId -> {
+                notifySendService.sendSingleNotifyToAdmin(actorId,
+                        "flow_send_msg", templateParams);
+            });
         }
     }
 }

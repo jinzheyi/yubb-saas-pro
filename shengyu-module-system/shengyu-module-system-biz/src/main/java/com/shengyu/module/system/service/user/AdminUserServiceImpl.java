@@ -169,7 +169,7 @@ public class AdminUserServiceImpl implements AdminUserService {
             userPostMapper.insertBatch(convertList(user.getPostIds(),
                 postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
-        //是否时新注册的平台用户
+        //是否是新注册的平台用户
         if (registerSaasUser) {
             Map<String, Object> mailParam = new HashMap<String, Object>();
             mailParam.put("mail", createReqVO.getUsername());

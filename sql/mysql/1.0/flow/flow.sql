@@ -438,3 +438,10 @@ CREATE TABLE `flw_form_category`  (
   `sort` smallint NOT NULL DEFAULT 0 COMMENT '排序',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '流程表单分类' ROW_FORMAT = Dynamic;
+
+
+
+
+-- business  表或数据
+INSERT INTO `shengyu-saas`.`system_notify_template` (`id`, `name`, `code`, `nickname`, `content`, `type`, `params`, `status`, `remark`, `creator`, `create_time`, `updater`, `update_time`, `deleted`, `tenant_id`) VALUES (1929134406828666882, '流程到达消息', 'flow_send_msg', '系统', '流程：{processName}  待审批，当前所在节点：{taskName}  ，任务发起人：{createBy}', 2, '[\"processName\",\"taskName\",\"createBy\"]', 0, '', '507075497791557', '2025-06-01 19:14:19', '507075497791557', '2025-06-01 20:28:08', b'0', 507075493834821);
+INSERT INTO `shengyu-saas`.`system_notify_template` (`id`, `name`, `code`, `nickname`, `content`, `type`, `params`, `status`, `remark`, `creator`, `create_time`, `updater`, `update_time`, `deleted`, `tenant_id`) VALUES (1929152917693116418, '流程催办消息', 'flow_urge_msg', '流程系统', '发起人对流程：“{processName}” 发起了催办，请您尽快审批', 2, '[\"processName\"]', 0, '', '507075497791557', '2025-06-01 20:27:52', '507075497791557', '2025-06-01 20:27:52', b'0', 507075493834821);

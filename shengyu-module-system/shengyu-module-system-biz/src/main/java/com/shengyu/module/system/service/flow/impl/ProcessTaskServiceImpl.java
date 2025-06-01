@@ -1,37 +1,37 @@
 package com.shengyu.module.system.service.flow.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.common.util.json.JsonUtils;
-import com.shengyu.framework.flowlong.engine.core.PageParam;
-import com.shengyu.framework.flowlong.engine.mapper.FlwExtInstanceMapper;
-import com.shengyu.framework.security.core.LoginUser;
-import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
-import com.shengyu.module.system.controller.admin.flow.dto.*;
-import com.shengyu.module.system.controller.admin.flow.vo.*;
-import com.shengyu.module.system.dal.dataobject.flow.*;
 import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
 import com.shengyu.framework.flowlong.engine.FlowLongEngine;
 import com.shengyu.framework.flowlong.engine.TaskService;
 import com.shengyu.framework.flowlong.engine.core.Execution;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.core.FlowLongContext;
+import com.shengyu.framework.flowlong.engine.core.PageParam;
 import com.shengyu.framework.flowlong.engine.core.enums.PerformType;
 import com.shengyu.framework.flowlong.engine.core.enums.ProcessType;
 import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
 import com.shengyu.framework.flowlong.engine.entity.*;
+import com.shengyu.framework.flowlong.engine.mapper.FlwExtInstanceMapper;
 import com.shengyu.framework.flowlong.engine.model.ModelHelper;
 import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import com.shengyu.framework.flowlong.engine.model.ProcessModel;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shengyu.framework.security.core.LoginUser;
+import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.module.system.controller.admin.flow.dto.*;
+import com.shengyu.module.system.controller.admin.flow.vo.*;
+import com.shengyu.module.system.dal.dataobject.flow.*;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.flow.FlowlongMapper;
 import com.shengyu.module.system.framework.flow.FlowForm;
 import com.shengyu.module.system.framework.flow.FlowHelper;
 import com.shengyu.module.system.service.flow.*;
+import com.shengyu.module.system.service.notify.NotifySendService;
 import com.shengyu.module.system.service.user.AdminUserService;
-import lombok.AllArgsConstructor;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -65,8 +65,8 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
     private IFlwProcessConfigureService flwProcessConfigureService;
     @Resource
     private AdminUserService adminUserService;
-//    @Resource
-//    private ISysSSEService sseService;
+    @Resource
+    private NotifySendService notifySendService;
 
     @Override
     public Page<PendingClaimTaskVO> pagePendingClaim(PageParam<ProcessTaskDTO> pageParam) {
@@ -511,13 +511,20 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
 
     @Override
     public boolean urgeByInstanceId(Long instanceId) {
+        FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(instanceId);
         flowLongEngine.queryService().getActiveTaskActorsByInstanceId(instanceId)
                 .ifPresent(taskActors -> {
-                    // 演示催办逻辑，提示当前用户，实际业务可以做一些其他处理，比如通过短信、邮件、站内信等方式提醒用户
-                    //todo 消息后续完善
-//                    LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
-//                    sseService.sendRemind(userSession.getId(), "流程催办", "模拟流程催办消息，通知用户：" +
-//                            taskActors.stream().map(FlwTaskActor::getActorName).collect(Collectors.joining(", ")));
+                    if (taskActors.isEmpty()) {
+                        return;
+                    }
+                    // 发送催办消息
+                    List<Long> actorIds = taskActors.stream().map(t -> Long.valueOf(t.getActorId())).toList();
+                    Map<String, Object> templateParams = new HashMap<>();
+                    templateParams.put("processName", extInstance.getProcessName());
+                    actorIds.forEach(actorId -> {
+                        notifySendService.sendSingleNotifyToAdmin(actorId,
+                                "flow_urge_msg", templateParams);
+                    });
                 });
         return true;
     }
