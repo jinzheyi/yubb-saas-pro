@@ -41,7 +41,7 @@
         t.id AS task_id,t.create_time,t.task_name,t.task_key,t.task_type,t.perform_type,t.expire_time,t.remind_time,t.remind_repeat
         FROM flw_task t JOIN flw_task_actor a ON t.id=a.task_id LEFT JOIN flw_his_instance i ON i.id=t.instance_id LEFT JOIN flw_process p ON i.process_id=p.id
         WHERE a.id IN (SELECT f.id FROM flw_task_actor f JOIN sys_user_role r ON CONCAT(r.role_id)=f.actor_id WHERE f.actor_type=1 AND r.user_id=#{dto.userId}
-        UNION ALL SELECT f.id FROM flw_task_actor f JOIN sys_user_department r ON CONCAT(r.department_id)=f.actor_id WHERE f.actor_type=2 AND r.user_id=#{dto.userId})
+        UNION ALL SELECT f.id FROM flw_task_actor f JOIN sys_user r ON CONCAT(r.dept_id)=f.actor_id WHERE f.actor_type=2 AND r.user_id=#{dto.userId})
         <include refid="sqlConditionProcessTask"></include>
     </select>
 
