@@ -58,7 +58,7 @@ public class NotifyTemplateSaveReqDTO {
         return NotifyTemplateSaveReqDTO.builder()
                 .name("邀请新用户消息")
                 .code(tenant_new_admin_user)
-                .type(0)
+                .type(2)
                 .nickname("系统")
                 .content("您已被邀请加入租户【{tenantName}】。账号【{mail}】，密码【{password}】，注册时间【{registerTime}】请登录系统进行确认")
                 .status(CommonStatusEnum.ENABLE.getStatus()).build();
@@ -72,7 +72,7 @@ public class NotifyTemplateSaveReqDTO {
         return NotifyTemplateSaveReqDTO.builder()
                 .name("邀请用户消息")
                 .code(tenant_admin_user)
-                .type(0)
+                .type(2)
                 .nickname("系统")
                 .content("您已被邀请加入租户【{tenantName}】，请登录系统进行确认")
                 .status(CommonStatusEnum.ENABLE.getStatus()).build();
@@ -86,7 +86,7 @@ public class NotifyTemplateSaveReqDTO {
         return NotifyTemplateSaveReqDTO.builder()
                 .name("创建租户超管消息")
                 .code(tenant_super_admin_user)
-                .type(0)
+                .type(2)
                 .nickname("系统")
                 .content("您已成为租户【{tenantName}】超管,拥有当前租户所有权限。账号【{mail}】，密码【{password}】，注册时间【{registerTime}】请登录系统进行确认")
                 .status(CommonStatusEnum.ENABLE.getStatus()).build();
