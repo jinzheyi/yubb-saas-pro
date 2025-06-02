@@ -14,9 +14,10 @@
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="归属部门" prop="deptId">
+          <el-form-item label="归属部门" prop="deptIdList">
             <el-tree-select
-              v-model="formData.deptId"
+              multiple
+              v-model="formData.deptIdList"
               :data="deptList"
               :props="defaultProps"
               check-strictly
@@ -98,7 +99,7 @@ const formLoading = ref(false) // 表单的加载中：1）修改时的数据加
 const formType = ref('') // 表单的类型：create - 新增；update - 修改
 const formData = ref({
   nickname: '',
-  deptId: '',
+  deptIdList: '',
   mobile: '',
   email: '',
   id: undefined,
@@ -190,7 +191,7 @@ const isBlank = function (str: string) {
 const resetForm = () => {
   formData.value = {
     nickname: '',
-    deptId: '',
+    deptIdList: '',
     mobile: '',
     email: '',
     id: undefined,

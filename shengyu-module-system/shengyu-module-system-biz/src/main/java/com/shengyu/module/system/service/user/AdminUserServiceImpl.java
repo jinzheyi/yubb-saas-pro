@@ -24,9 +24,11 @@ import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpd
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.*;
 import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
+import com.shengyu.module.system.dal.dataobject.dept.UserDeptDO;
 import com.shengyu.module.system.dal.dataobject.dept.UserPostDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.dataobject.user.SaasUserDO;
+import com.shengyu.module.system.dal.mysql.dept.UserDeptMapper;
 import com.shengyu.module.system.dal.mysql.dept.UserPostMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.dal.mysql.user.SaasUserMapper;
@@ -88,6 +90,8 @@ public class AdminUserServiceImpl implements AdminUserService {
     private MailSendApi mailSendApi;
     @Resource
     private NotifySendService notifySendService;
+    @Resource
+    private UserDeptMapper userDeptMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -101,7 +105,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         });
         // 校验正确性
         validateUserForCreate(createReqVO.getUsername(),
-            createReqVO.getMobile(), createReqVO.getDeptId(), createReqVO.getPostIds());
+            createReqVO.getMobile(), createReqVO.getDeptIdList(), createReqVO.getPostIds());
         // 插入用户
         AdminUserDO user = BeanUtils.toBean(createReqVO, AdminUserDO.class);
         //优先取邮箱账号的SaaS用户
@@ -140,6 +144,8 @@ public class AdminUserServiceImpl implements AdminUserService {
         // 等待SaaS用户确认
         user.setStatus(CommonStatusEnum.AWAIT.getStatus());
         userMapper.insert(user);
+        // 更新部门
+        updateUserDept(user.getId(), createReqVO.getDeptIdList());
         //添加时初次设置值
         user.setOpenAccount(StrUtils.uniqueId(user.getId()));
         userMapper.updateById(user);
@@ -186,7 +192,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         });
         // 校验正确性
         validateUserForCreate(createReqVO.getUsername(),
-            createReqVO.getMobile(), createReqVO.getDeptId(), createReqVO.getPostIds());
+            createReqVO.getMobile(), createReqVO.getDeptIdList(), createReqVO.getPostIds());
         // 插入用户
         AdminUserDO user = BeanUtils.toBean(createReqVO, AdminUserDO.class);
         //优先取邮箱账号的SaaS用户
@@ -224,6 +230,8 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
         user.setStatus(CommonStatusEnum.ENABLE.getStatus());
         userMapper.insert(user);
+        // 更新部门
+        updateUserDept(user.getId(), createReqVO.getDeptIdList());
         //添加时初次设置值
         user.setOpenAccount(StrUtils.uniqueId(user.getId()));
         userMapper.updateById(user);
@@ -260,12 +268,36 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Transactional(rollbackFor = Exception.class)
     public void updateUser(UserUpdateReqVO updateReqVO) {
         // 校验正确性
-        validateUserForUpdate(updateReqVO.getId(), updateReqVO.getDeptId(), updateReqVO.getPostIds());
+        validateUserForUpdate(updateReqVO.getId(), updateReqVO.getDeptIdList(), updateReqVO.getPostIds());
         // 更新用户
         AdminUserDO updateObj = BeanUtils.toBean(updateReqVO, AdminUserDO.class);
         userMapper.updateById(updateObj);
+        // 更新部门
+        updateUserDept(updateReqVO.getId(), updateReqVO.getDeptIdList());
         // 更新岗位
         updateUserPost(updateReqVO.getId(), updateObj);
+    }
+
+    private void updateUserDept(Long userId, Set<Long> deptIds) {
+        // 获得用户拥有部门编号
+        Set<Long> dbDeptIds = convertSet(userDeptMapper.selectListByUserId(userId),
+                UserDeptDO::getDeptId);
+        // 计算新增和删除的部门编号
+        Set<Long> deptIdList = CollUtil.emptyIfNull(deptIds);
+        Collection<Long> createDeptIds = CollUtil.subtract(deptIdList, dbDeptIds);
+        Collection<Long> deleteDeptIds = CollUtil.subtract(dbDeptIds, deptIdList);
+        // 执行新增和删除。对于已经授权的部门，不用做任何处理
+        if (!CollectionUtil.isEmpty(createDeptIds)) {
+            userDeptMapper.insertBatch(CollectionUtils.convertList(createDeptIds, deptId -> {
+                UserDeptDO entity = new UserDeptDO();
+                entity.setUserId(userId);
+                entity.setDeptId(deptId);
+                return entity;
+            }));
+        }
+        if (!CollectionUtil.isEmpty(deleteDeptIds)) {
+            userDeptMapper.deleteListByUserIdAndDeptIdIds(userId, deleteDeptIds);
+        }
     }
 
     private void updateUserPost(Long userId, AdminUserDO updateObj) {
@@ -449,29 +481,29 @@ public class AdminUserServiceImpl implements AdminUserService {
      * 新增时的校验
      * @param username SaaS用户表的邮箱账号
      * @param mobile SaaS表的手机号
-     * @param deptId 部门编号
+     * @param deptIdList 部门编号数组
      * @param postIds 多个岗位编号
      */
     private void validateUserForCreate(String username, String mobile,
-        Long deptId, Set<Long> postIds) {
+                                       Set<Long> deptIdList, Set<Long> postIds) {
         // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
         DataPermissionUtils.executeIgnore(() -> {
             // 校验邮箱账号在SaaS用户表中是否存在,以及是否被其它账号绑定了
             validateUsernameExists(username, mobile);
             // 校验部门处于开启状态
-            deptService.validateDeptList(CollectionUtils.singleton(deptId));
+            deptService.validateDeptList(deptIdList);
             // 校验岗位处于开启状态
             postService.validatePostList(postIds);
         });
     }
 
-    private void validateUserForUpdate(Long id, Long deptId, Set<Long> postIds) {
+    private void validateUserForUpdate(Long id, Set<Long> deptIdList, Set<Long> postIds) {
         // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
         DataPermissionUtils.executeIgnore(() -> {
             // 校验用户存在
             validateUserExists(id);
             // 校验部门处于开启状态
-            deptService.validateDeptList(CollectionUtils.singleton(deptId));
+            deptService.validateDeptList(deptIdList);
             // 校验岗位处于开启状态
             postService.validatePostList(postIds);
         });

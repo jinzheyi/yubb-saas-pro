@@ -445,3 +445,21 @@ CREATE TABLE `flw_form_category`  (
 -- business  表或数据
 INSERT INTO `system_notify_template` (`id`, `name`, `code`, `nickname`, `content`, `type`, `params`, `status`, `remark`, `creator`, `create_time`, `updater`, `update_time`, `deleted`, `tenant_id`) VALUES (1929134406828666882, '流程到达消息', 'flow_send_msg', '系统', '流程：{processName}  待审批，当前所在节点：{taskName}  ，任务发起人：{createBy}', 2, '[\"processName\",\"taskName\",\"createBy\"]', 0, '', '507075497791557', '2025-06-01 19:14:19', '507075497791557', '2025-06-01 20:28:08', b'0', 507075493834821);
 INSERT INTO `system_notify_template` (`id`, `name`, `code`, `nickname`, `content`, `type`, `params`, `status`, `remark`, `creator`, `create_time`, `updater`, `update_time`, `deleted`, `tenant_id`) VALUES (1929152917693116418, '流程催办消息', 'flow_urge_msg', '流程系统', '发起人对流程：“{processName}” 发起了催办，请您尽快审批', 2, '[\"processName\"]', 0, '', '507075497791557', '2025-06-01 20:27:52', '507075497791557', '2025-06-01 20:27:52', b'0', 507075493834821);
+
+
+-- ----------------------------
+-- Table structure for system_user_dept
+-- ----------------------------
+DROP TABLE IF EXISTS `system_user_dept`;
+CREATE TABLE `system_user_dept`  (
+                                     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增编号',
+                                     `user_id` bigint NOT NULL COMMENT '用户ID',
+                                     `dept_id` bigint NOT NULL COMMENT '部门ID',
+                                     `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+                                     `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                     `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+                                     `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                     `deleted` bit(1) NULL DEFAULT b'0' COMMENT '是否删除',
+                                     `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+                                     PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户和部门关联表' ROW_FORMAT = DYNAMIC;
