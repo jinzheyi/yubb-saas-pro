@@ -148,7 +148,8 @@ public class AdminUserServiceImpl implements AdminUserService {
             userPostMapper.insertBatch(convertList(user.getPostIds(),
                 postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
-        TenantRespDTO tenantRespDTO = tenantService.getTenantById(user.getTenantId());
+        UserRespVO userRespVO = userMapper.selectJoinOne(user.getId());
+        TenantRespDTO tenantRespDTO = tenantService.getTenantById(userRespVO.getTenantId());
         //是否是新注册的平台用户
         if (registerSaasUser) {
             Map<String, Object> mailParam = new HashMap<String, Object>();
@@ -231,7 +232,8 @@ public class AdminUserServiceImpl implements AdminUserService {
             userPostMapper.insertBatch(convertList(user.getPostIds(),
                 postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
-        TenantRespDTO tenantRespDTO = tenantService.getTenantById(user.getTenantId());
+        UserRespVO userRespVO = userMapper.selectJoinOne(user.getId());
+        TenantRespDTO tenantRespDTO = tenantService.getTenantById(userRespVO.getTenantId());
         Map<String, Object> mailParam = new HashMap<String, Object>();
         mailParam.put("mail", createReqVO.getUsername());
         mailParam.put("password", password);
