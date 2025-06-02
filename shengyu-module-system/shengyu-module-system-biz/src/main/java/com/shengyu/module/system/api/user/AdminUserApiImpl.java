@@ -95,9 +95,11 @@ public class AdminUserApiImpl implements AdminUserApi {
 
     @Override
     public Long createUser(AdminUserCreateReqDTO reqDTO, String businessName) {
+        // 判断是创建租户管理员的分支
         if (RoleCodeEnum.TENANT_ADMIN.getCode().equals(businessName)) {
             return adminUserService.createTenantUser(BeanUtils.toBean(reqDTO, UserSaveReqVO.class), reqDTO);
         }
+        //外部创建用户
         return adminUserService.createUser(BeanUtils.toBean(reqDTO, UserSaveReqVO.class));
     }
 

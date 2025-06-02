@@ -28,6 +28,8 @@ import com.shengyu.module.platform.convert.tenant.TenantConvert;
 import com.shengyu.module.platform.dal.dataobject.tenant.TenantDO;
 import com.shengyu.module.platform.dal.dataobject.tenant.TenantPackageDO;
 import com.shengyu.module.platform.dal.mysql.tenant.TenantMapper;
+import com.shengyu.module.system.api.notify.NotifyTemplateApi;
+import com.shengyu.module.system.api.notify.dto.NotifyTemplateSaveReqDTO;
 import com.shengyu.module.system.api.permission.PermissionApi;
 import com.shengyu.module.system.api.permission.RoleApi;
 import com.shengyu.module.system.api.permission.dto.RoleCreateReqDTO;
@@ -66,6 +68,8 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
 
     @Resource
     private PermissionApi permissionApi;
+    @Resource
+    private NotifyTemplateApi notifyTemplateApi;
 
     @Override
     public List<Long> getTenantIdList() {
@@ -102,6 +106,10 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
         tenantMapper.insert(tenant);
 
         TenantUtils.execute(tenant.getId(), () -> {
+            //创建租户系统通知模版
+            notifyTemplateApi.createNotifyTemplate(NotifyTemplateSaveReqDTO.getTenantNewAdminUser());
+            notifyTemplateApi.createNotifyTemplate(NotifyTemplateSaveReqDTO.getTenantAdminUser());
+            notifyTemplateApi.createNotifyTemplate(NotifyTemplateSaveReqDTO.getTenantSuperAdminUser());
             // 创建角色
             Long roleId = createRole(tenantPackage);
             // 创建用户，并分配角色

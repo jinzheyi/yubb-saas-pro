@@ -1,24 +1,11 @@
 package com.shengyu.module.system.service.user;
 
-import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
-import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
-import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_ADMIN;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_COUNT_MAX;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_CREATE_SAAS_EXISTS;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_IS_DISABLE;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_PASSWORD_FAILED;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_SAAS_ID_UNIQUE;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_SAAS_MOBILE_NOT_EXISTS;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_SAAS_USERNAME_NOT_EXISTS;
-
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
+import com.google.common.annotations.VisibleForTesting;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.framework.common.pojo.PageResult;
@@ -26,20 +13,16 @@ import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.common.util.string.StrUtils;
 import com.shengyu.framework.datapermission.core.util.DataPermissionUtils;
-import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.module.infra.api.file.FileApi;
 import com.shengyu.module.platform.api.mail.MailSendApi;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
+import com.shengyu.module.system.api.notify.dto.NotifyTemplateSaveReqDTO;
 import com.shengyu.module.system.api.user.dto.AdminUserCreateReqDTO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
-import com.shengyu.module.system.controller.admin.user.vo.user.MyTenantRespVO;
-import com.shengyu.module.system.controller.admin.user.vo.user.UserPageReqVO;
-import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
-import com.shengyu.module.system.controller.admin.user.vo.user.UserSaveReqVO;
-import com.shengyu.module.system.controller.admin.user.vo.user.UserUpdateReqVO;
+import com.shengyu.module.system.controller.admin.user.vo.user.*;
 import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
 import com.shengyu.module.system.dal.dataobject.dept.UserPostDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
@@ -49,27 +32,26 @@ import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.dal.mysql.user.SaasUserMapper;
 import com.shengyu.module.system.service.dept.DeptService;
 import com.shengyu.module.system.service.dept.PostService;
+import com.shengyu.module.system.service.notify.NotifySendService;
 import com.shengyu.module.system.service.permission.PermissionService;
 import com.shengyu.module.system.service.tenant.TenantService;
-import com.google.common.annotations.VisibleForTesting;
-import java.io.InputStream;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import javax.annotation.Resource;
+import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.util.*;
+
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 后台用户 Service 实现类
@@ -85,10 +67,8 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Resource
     private AdminUserMapper userMapper;
-
     @Resource
     private SaasUserMapper saasUserMapper;
-
     @Resource
     private DeptService deptService;
     @Resource
@@ -100,15 +80,14 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Resource
     @Lazy // 延迟，避免循环依赖报错
     private TenantService tenantService;
-
     @Resource
     private UserPostMapper userPostMapper;
-
     @Resource
     private FileApi fileApi;
-
     @Resource
     private MailSendApi mailSendApi;
+    @Resource
+    private NotifySendService notifySendService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -169,16 +148,28 @@ public class AdminUserServiceImpl implements AdminUserService {
             userPostMapper.insertBatch(convertList(user.getPostIds(),
                 postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
+        TenantRespDTO tenantRespDTO = tenantService.getTenantById(user.getTenantId());
         //是否是新注册的平台用户
         if (registerSaasUser) {
             Map<String, Object> mailParam = new HashMap<String, Object>();
             mailParam.put("mail", createReqVO.getUsername());
             mailParam.put("password", password);
             mailParam.put("registerTime", DateUtil.formatDateTime(new Date()));
+            mailParam.put("tenantName", tenantRespDTO.getName());
+            notifySendService.sendSingleNotifyToAdmin(user.getId(),
+                    NotifyTemplateSaveReqDTO.tenant_new_admin_user, mailParam);
             mailSendApi.sendSingleMail(createReqVO.getUsername(), null, UserTypeEnum.ADMIN.getValue(),
                 "tenant-add-user", mailParam);
         }
-        //todo 发送站内信通知SaaS用户确认被邀请
+        //发送站内信，异常吃掉的原因是不希望影响主流程
+        try {
+            Map<String, Object> templateParams = new HashMap<>();
+            templateParams.put("tenantName", tenantRespDTO.getName());
+            notifySendService.sendSingleNotifyToAdmin(user.getId(),
+                    NotifyTemplateSaveReqDTO.tenant_admin_user, templateParams);
+        } catch ( Exception e) {
+             log.error("邀请用户消息发送站内信失败", e);
+        }
         return user.getId();
     }
 
@@ -240,16 +231,26 @@ public class AdminUserServiceImpl implements AdminUserService {
             userPostMapper.insertBatch(convertList(user.getPostIds(),
                 postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
+        TenantRespDTO tenantRespDTO = tenantService.getTenantById(user.getTenantId());
+        Map<String, Object> mailParam = new HashMap<String, Object>();
+        mailParam.put("mail", createReqVO.getUsername());
+        mailParam.put("password", password);
+        mailParam.put("registerTime", DateUtil.formatDateTime(new Date()));
+        mailParam.put("tenantName", tenantRespDTO.getName());
         //是否时新注册的平台用户
         if (registerSaasUser) {
-            Map<String, Object> mailParam = new HashMap<String, Object>();
-            mailParam.put("mail", createReqVO.getUsername());
-            mailParam.put("password", password);
-            mailParam.put("registerTime", DateUtil.formatDateTime(new Date()));
+            notifySendService.sendSingleNotifyToAdmin(user.getId(),
+                    NotifyTemplateSaveReqDTO.tenant_new_admin_user, mailParam);
             mailSendApi.sendSingleMail(createReqVO.getUsername(), null, UserTypeEnum.ADMIN.getValue(),
                 "tenant-add-user", mailParam);
         }
-        //todo 发送站内信通知SaaS用户确认被邀请
+        //发送站内信，异常吃掉的原因是不希望影响主流程
+        try {
+            notifySendService.sendSingleNotifyToAdmin(user.getId(),
+                    NotifyTemplateSaveReqDTO.tenant_super_admin_user, mailParam);
+        } catch ( Exception e) {
+            log.error("邀请用户消息发送站内信失败", e);
+        }
         return user.getId();
     }
 
