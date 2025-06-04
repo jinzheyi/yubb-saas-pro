@@ -9,9 +9,11 @@ import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptListReqVO;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptSaveReqVO;
+import com.shengyu.module.system.controller.admin.dept.vo.dept.UserDeptRespVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
 import com.shengyu.module.system.dal.mysql.dept.DeptMapper;
+import com.shengyu.module.system.dal.mysql.dept.UserDeptMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.dal.redis.RedisKeyConstants;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +46,9 @@ public class DeptServiceImpl implements DeptService {
 
     @Resource
     private AdminUserMapper adminUserMapper;
+
+    @Resource
+    private UserDeptMapper userDeptMapper;
 
     @Override
     @CacheEvict(cacheNames = RedisKeyConstants.DEPT_CHILDREN_ID_LIST,
@@ -175,6 +180,19 @@ public class DeptServiceImpl implements DeptService {
         List<DeptDO> list = deptMapper.selectList(reqVO);
         list.sort(Comparator.comparing(DeptDO::getSort));
         return list;
+    }
+
+    @Override
+    public Map<Long, List<UserDeptRespVO>> getUserDeptMap(Collection<Long> ids) {
+        if (CollUtil.isEmpty(ids)) {
+            return Collections.emptyMap();
+        }
+        List<UserDeptRespVO> userDeptRespVOList = userDeptMapper.selectListByUserIds(ids);
+        if (CollUtil.isEmpty(userDeptRespVOList)) {
+            return Collections.emptyMap();
+        }
+       return userDeptRespVOList.stream()
+                .collect(Collectors.groupingBy(UserDeptRespVO::getUserId));
     }
 
     @Override

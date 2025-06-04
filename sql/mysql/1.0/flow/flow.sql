@@ -463,3 +463,7 @@ CREATE TABLE `system_user_dept`  (
                                      `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
                                      PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户和部门关联表' ROW_FORMAT = DYNAMIC;
+
+
+alter table system_users drop column post_ids;
+alter table platform_users drop column post_ids;

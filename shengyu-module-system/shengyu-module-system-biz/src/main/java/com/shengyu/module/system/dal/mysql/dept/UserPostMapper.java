@@ -1,9 +1,12 @@
 package com.shengyu.module.system.dal.mysql.dept;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.mybatis.core.query.MPJLambdaWrapperX;
+import com.shengyu.module.system.controller.admin.dept.vo.post.UserPostRespVO;
+import com.shengyu.module.system.dal.dataobject.dept.PostDO;
 import com.shengyu.module.system.dal.dataobject.dept.UserPostDO;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.Collection;
@@ -29,4 +32,14 @@ public interface UserPostMapper extends BaseMapperX<UserPostDO> {
     default void deleteByUserId(Long userId) {
         delete(Wrappers.lambdaUpdate(UserPostDO.class).eq(UserPostDO::getUserId, userId));
     }
+
+    default List<UserPostRespVO> selectListByUserIds(Collection<Long> userIds) {
+        return selectJoinList(UserPostRespVO.class, new MPJLambdaWrapperX<UserPostDO>()
+                .select(UserPostDO::getId, UserPostDO::getUserId, UserPostDO::getPostId)
+                .select(PostDO::getName, PostDO::getCode, PostDO::getSort, PostDO::getStatus)
+                .leftJoin(PostDO.class, PostDO::getId, UserPostDO::getPostId)
+                .in(UserPostDO::getUserId, userIds)
+        );
+    }
+
 }

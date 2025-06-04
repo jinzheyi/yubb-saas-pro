@@ -100,8 +100,8 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         user.setPassword(encodePassword(reqVO.getPassword())); // 加密密码
         userMapper.insert(user);
         // 插入关联岗位
-        if (CollectionUtil.isNotEmpty(user.getPostIds())) {
-            platformUserPostMapper.insertBatch(convertList(user.getPostIds(),
+        if (CollectionUtil.isNotEmpty(reqVO.getPostIds())) {
+            platformUserPostMapper.insertBatch(convertList(reqVO.getPostIds(),
                     postId -> new PlatformUserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
         return user.getId();
@@ -124,7 +124,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         Long userId = reqVO.getId();
         Set<Long> dbPostIds = convertSet(platformUserPostMapper.selectListByUserId(userId), PlatformUserPostDO::getPostId);
         // 计算新增和删除的岗位编号
-        Set<Long> postIds = CollUtil.emptyIfNull(updateObj.getPostIds());
+        Set<Long> postIds = CollUtil.emptyIfNull(reqVO.getPostIds());
         Collection<Long> createPostIds = CollUtil.subtract(postIds, dbPostIds);
         Collection<Long> deletePostIds = CollUtil.subtract(dbPostIds, postIds);
         // 执行新增和删除。对于已经授权的菜单，不用做任何处理
@@ -426,7 +426,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
             PlatformUserDO existUser = userMapper.selectByUsername(importUser.getUsername());
             if (existUser == null) {
                 userMapper.insert(BeanUtils.toBean(importUser, PlatformUserDO.class)
-                        .setPassword(encodePassword(userInitPassword)).setPostIds(new HashSet<>())); // 设置默认密码及空岗位编号数组
+                        .setPassword(encodePassword(userInitPassword))); // 设置默认密码及空岗位编号数组
                 respVO.getCreateUsernames().add(importUser.getUsername());
                 return;
             }

@@ -52,7 +52,7 @@ public interface AdminUserMapper extends BaseMapperX<AdminUserDO> {
           .eq(AdminUserDO::getId, userId));
     }
 
-    default PageResult<UserRespVO> selectJoinPage(UserPageReqVO reqVO, Collection<Long> deptIds) {
+    default PageResult<UserRespVO> selectJoinPage(UserPageReqVO reqVO, Collection<Long> userIds) {
         LocalDateTime startTime = ArrayUtils.get(reqVO.getCreateTime(), 0);
         LocalDateTime endTime = ArrayUtils.get(reqVO.getCreateTime(), 1);
         MPJLambdaWrapper<AdminUserDO> wrapper = new MPJLambdaWrapper<AdminUserDO>()
@@ -72,7 +72,7 @@ public interface AdminUserMapper extends BaseMapperX<AdminUserDO> {
         if (endTime != null) {
             wrapper.le(AdminUserDO::getCreateTime, endTime);
         }
-        wrapper.in(CollUtil.isNotEmpty(deptIds), AdminUserDO::getDeptId, deptIds)
+        wrapper.in(CollUtil.isNotEmpty(userIds), AdminUserDO::getId, userIds)
           .orderByDesc(AdminUserDO::getId);
         return selectJoinPage(reqVO, UserRespVO.class, wrapper);
     }

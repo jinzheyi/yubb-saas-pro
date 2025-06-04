@@ -56,11 +56,6 @@ public class PlatformUserDO extends BaseDO {
      */
     private Long deptId;
     /**
-     * 岗位编号数组
-     */
-    @TableField(typeHandler = JsonLongSetTypeHandler.class)
-    private Set<Long> postIds;
-    /**
      * 用户邮箱
      */
     private String email;

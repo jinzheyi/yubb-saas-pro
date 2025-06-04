@@ -1,10 +1,5 @@
 package com.shengyu.module.platform.controller.platform.user;
 
-import static com.shengyu.framework.common.pojo.CommonResult.success;
-import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
-import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
-import static com.shengyu.framework.operatelog.core.enums.OperateTypeEnum.EXPORT;
-
 import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.enums.common.SexEnum;
@@ -14,46 +9,33 @@ import com.shengyu.framework.common.util.collection.MapUtils;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.excel.core.util.ExcelUtils;
 import com.shengyu.framework.operatelog.core.annotations.OperateLog;
-import com.shengyu.module.platform.controller.platform.user.vo.user.UserCreateReqVO;
-import com.shengyu.module.platform.controller.platform.user.vo.user.UserExcelVO;
-import com.shengyu.module.platform.controller.platform.user.vo.user.UserExportReqVO;
-import com.shengyu.module.platform.controller.platform.user.vo.user.UserImportExcelVO;
-import com.shengyu.module.platform.controller.platform.user.vo.user.UserImportRespVO;
-import com.shengyu.module.platform.controller.platform.user.vo.user.UserPageItemRespVO;
-import com.shengyu.module.platform.controller.platform.user.vo.user.UserPageReqVO;
-import com.shengyu.module.platform.controller.platform.user.vo.user.UserRespVO;
-import com.shengyu.module.platform.controller.platform.user.vo.user.UserSimpleRespVO;
-import com.shengyu.module.platform.controller.platform.user.vo.user.UserUpdatePasswordReqVO;
-import com.shengyu.module.platform.controller.platform.user.vo.user.UserUpdateReqVO;
-import com.shengyu.module.platform.controller.platform.user.vo.user.UserUpdateStatusReqVO;
+import com.shengyu.module.platform.controller.platform.dept.vo.post.UserPostRespVO;
+import com.shengyu.module.platform.controller.platform.user.vo.user.*;
 import com.shengyu.module.platform.dal.dataobject.dept.PlatformDeptDO;
 import com.shengyu.module.platform.dal.dataobject.user.PlatformUserDO;
 import com.shengyu.module.platform.service.dept.PlatformDeptService;
+import com.shengyu.module.platform.service.dept.PlatformPostService;
 import com.shengyu.module.platform.service.user.PlatformUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.operatelog.core.enums.OperateTypeEnum.EXPORT;
 
 @Tag(name = "管理后台 - 用户")
 @RestController
@@ -65,6 +47,8 @@ public class PlatformUserController {
     private PlatformUserService platformUserService;
     @Resource
     private PlatformDeptService platformDeptService;
+    @Resource
+    private PlatformPostService platformPostService;
 
     @PostMapping("/create")
     @Operation(summary = "新增用户")
@@ -120,11 +104,13 @@ public class PlatformUserController {
         // 获得拼接需要的数据
         Collection<Long> deptIds = convertList(pageResult.getList(), PlatformUserDO::getDeptId);
         Map<Long, PlatformDeptDO> deptMap = platformDeptService.getDeptMap(deptIds);
+        Map<Long, List<UserPostRespVO>> userPostMap = platformPostService.getUserPostMap(pageResult.getList().stream().map(PlatformUserDO::getId).collect(Collectors.toSet()));
         // 拼接结果返回
         List<UserPageItemRespVO> userList = new ArrayList<>(pageResult.getList().size());
         pageResult.getList().forEach(user -> {
             UserPageItemRespVO respVO = BeanUtils.toBean(user, UserPageItemRespVO.class);
             respVO.setDept(BeanUtils.toBean(deptMap.get(user.getDeptId()), UserPageItemRespVO.Dept.class));
+            respVO.setPostIds(userPostMap.get(respVO.getId()).stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
             userList.add(respVO);
         });
         return success(new PageResult<>(userList, pageResult.getTotal()));
@@ -147,7 +133,10 @@ public class PlatformUserController {
         PlatformUserDO user = platformUserService.getUser(id);
         // 获得部门数据
         PlatformDeptDO dept = platformDeptService.getDept(user.getDeptId());
-        return success(BeanUtils.toBean(user, UserPageItemRespVO.class).setDept(BeanUtils.toBean(dept, UserPageItemRespVO.Dept.class)));
+        UserPageItemRespVO pageItemRespVO = BeanUtils.toBean(user, UserPageItemRespVO.class);
+        pageItemRespVO.setDept(BeanUtils.toBean(dept, UserPageItemRespVO.Dept.class));
+        pageItemRespVO.setPostIds(platformPostService.getUserPostMap(Collections.singleton(user.getId())).get(user.getId()).stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
+        return success(pageItemRespVO);
     }
 
     @GetMapping("/export")

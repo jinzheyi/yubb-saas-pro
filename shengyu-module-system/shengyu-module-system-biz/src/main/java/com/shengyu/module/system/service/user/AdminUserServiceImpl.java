@@ -20,6 +20,7 @@ import com.shengyu.module.platform.api.mail.MailSendApi;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
 import com.shengyu.module.system.api.notify.dto.NotifyTemplateSaveReqDTO;
 import com.shengyu.module.system.api.user.dto.AdminUserCreateReqDTO;
+import com.shengyu.module.system.controller.admin.dept.vo.post.UserPostRespVO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.*;
@@ -48,8 +49,10 @@ import javax.annotation.Resource;
 import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
 import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
 import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
@@ -150,8 +153,8 @@ public class AdminUserServiceImpl implements AdminUserService {
         user.setOpenAccount(StrUtils.uniqueId(user.getId()));
         userMapper.updateById(user);
         // 插入关联岗位
-        if (CollectionUtil.isNotEmpty(user.getPostIds())) {
-            userPostMapper.insertBatch(convertList(user.getPostIds(),
+        if (CollectionUtil.isNotEmpty(createReqVO.getPostIds())) {
+            userPostMapper.insertBatch(convertList(createReqVO.getPostIds(),
                 postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
         UserRespVO userRespVO = userMapper.selectJoinOne(user.getId());
@@ -236,8 +239,8 @@ public class AdminUserServiceImpl implements AdminUserService {
         user.setOpenAccount(StrUtils.uniqueId(user.getId()));
         userMapper.updateById(user);
         // 插入关联岗位
-        if (CollectionUtil.isNotEmpty(user.getPostIds())) {
-            userPostMapper.insertBatch(convertList(user.getPostIds(),
+        if (CollectionUtil.isNotEmpty(createReqVO.getPostIds())) {
+            userPostMapper.insertBatch(convertList(createReqVO.getPostIds(),
                 postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
         UserRespVO userRespVO = userMapper.selectJoinOne(user.getId());
@@ -275,7 +278,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         // 更新部门
         updateUserDept(updateReqVO.getId(), updateReqVO.getDeptIdList());
         // 更新岗位
-        updateUserPost(updateReqVO.getId(), updateObj);
+        updateUserPost(updateReqVO.getId(), updateObj, updateReqVO);
     }
 
     private void updateUserDept(Long userId, Set<Long> deptIds) {
@@ -300,10 +303,10 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
     }
 
-    private void updateUserPost(Long userId, AdminUserDO updateObj) {
+    private void updateUserPost(Long userId, AdminUserDO updateObj, UserUpdateReqVO updateReqVO) {
         Set<Long> dbPostIds = convertSet(userPostMapper.selectListByUserId(userId), UserPostDO::getPostId);
         // 计算新增和删除的岗位编号
-        Set<Long> postIds = CollUtil.emptyIfNull(updateObj.getPostIds());
+        Set<Long> postIds = CollUtil.emptyIfNull(updateReqVO.getPostIds());
         Collection<Long> createPostIds = CollUtil.subtract(postIds, dbPostIds);
         Collection<Long> deletePostIds = CollUtil.subtract(dbPostIds, postIds);
         // 执行新增和删除。对于已经授权的菜单，不用做任何处理
@@ -401,7 +404,15 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public PageResult<UserRespVO> getUserPage(UserPageReqVO reqVO) {
-        return userMapper.selectJoinPage(reqVO, getDeptCondition(reqVO.getDeptId()));
+        PageResult<UserRespVO> userRespVOPageResult = userMapper.selectJoinPage(reqVO, getDeptConditionUserIds(reqVO.getDeptId()));
+        if (CollUtil.isEmpty(userRespVOPageResult.getList())) {
+            return userRespVOPageResult;
+        }
+        Map<Long, List<UserPostRespVO>> userPostMap = postService.getUserPostMap(userRespVOPageResult.getList().stream().map(UserRespVO::getId).collect(Collectors.toSet()));
+        userRespVOPageResult.getList().forEach(userRespVO -> {
+            userRespVO.setPostIds(userPostMap.get(userRespVO.getId()).stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
+        });
+        return userRespVOPageResult;
     }
 
     @Override
@@ -463,18 +474,18 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     /**
-     * 获得部门条件：查询指定部门的子部门编号们，包括自身
+     * 获得部门条件：查询指定部门的子部门编号们，包括自身，对应部门所有用户编号集合
      * @param deptId 部门编号
-     * @return 部门编号集合
+     * @return 对应部门所有用户编号集合
      */
-    private Set<Long> getDeptCondition(Long deptId) {
+    private Set<Long> getDeptConditionUserIds(Long deptId) {
         if (deptId == null) {
             return Collections.emptySet();
         }
         Set<Long> deptIds = convertSet(deptService.getChildDeptList(deptId), DeptDO::getId);
         // 包括自身
         deptIds.add(deptId);
-        return deptIds;
+        return userDeptMapper.selectListByDeptIds(deptIds).stream().map(UserDeptDO::getUserId).collect(Collectors.toSet());
     }
 
     /**

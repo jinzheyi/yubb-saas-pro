@@ -9,12 +9,15 @@ import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.common.util.validation.ValidGroup;
 import com.shengyu.framework.excel.core.util.ExcelUtils;
 import com.shengyu.framework.operatelog.core.annotations.OperateLog;
+import com.shengyu.module.system.controller.admin.dept.vo.dept.UserDeptRespVO;
+import com.shengyu.module.system.controller.admin.dept.vo.post.UserPostRespVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.*;
 import com.shengyu.module.system.convert.user.UserConvert;
 import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.framework.common.enums.common.SexEnum;
 import com.shengyu.module.system.service.dept.DeptService;
+import com.shengyu.module.system.service.dept.PostService;
 import com.shengyu.module.system.service.user.AdminUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -30,8 +33,10 @@ import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.pojo.CommonResult.success;
 import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
@@ -47,6 +52,8 @@ public class UserController {
     private AdminUserService userService;
     @Resource
     private DeptService deptService;
+    @Resource
+    private PostService postService;
 
     @PostMapping("/create")
     @Operation(summary = "新增用户")
@@ -91,9 +98,9 @@ public class UserController {
             return success(new PageResult<>(pageResult.getTotal()));
         }
         // 拼接数据
-        Map<Long, DeptDO> deptMap = deptService.getDeptMap(
-                convertList(pageResult.getList(), UserRespVO::getDeptId));
-        return success(new PageResult<>(UserConvert.INSTANCE.convertList(pageResult.getList(), deptMap),
+        Map<Long, List<UserDeptRespVO>> userDeptMap = deptService.getUserDeptMap(
+                convertList(pageResult.getList(), UserRespVO::getId));
+        return success(new PageResult<>(UserConvert.INSTANCE.convertList(pageResult.getList(), userDeptMap),
                 pageResult.getTotal()));
     }
 
@@ -102,9 +109,9 @@ public class UserController {
     public CommonResult<List<UserSimpleRespVO>> getSimpleUserList() {
         List<AdminUserDO> list = userService.getUserListByStatus(CommonStatusEnum.ENABLE.getStatus());
         // 拼接数据
-        Map<Long, DeptDO> deptMap = deptService.getDeptMap(
-                convertList(list, AdminUserDO::getDeptId));
-        return success(UserConvert.INSTANCE.convertSimpleList(list, deptMap));
+        Map<Long, List<UserDeptRespVO>> userDeptMap = deptService.getUserDeptMap(
+                convertList(list, AdminUserDO::getId));
+        return success(UserConvert.INSTANCE.convertSimpleList(list, userDeptMap));
     }
 
     @GetMapping("/get-myTenant-list")
@@ -120,8 +127,9 @@ public class UserController {
     public CommonResult<UserRespVO> getUser(@RequestParam("id") Long id) {
         UserRespVO user = userService.getUser(id);
         // 拼接数据
-        DeptDO dept = deptService.getDept(user.getDeptId());
-        return success(UserConvert.INSTANCE.convert(user, dept));
+        user.setPostIds(postService.getUserPostMap(Collections.singleton(user.getId())).get(user.getId()).stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
+        List<UserDeptRespVO> userDeptList = deptService.getUserDeptMap(Collections.singleton(user.getId())).get(user.getId());
+        return success(UserConvert.INSTANCE.convert(user, userDeptList));
     }
 
     @GetMapping("/export")
@@ -133,10 +141,10 @@ public class UserController {
         exportReqVO.setPageSize(PageParam.PAGE_SIZE_NONE);
         List<UserRespVO> list = userService.getUserPage(exportReqVO).getList();
         // 输出 Excel
-        Map<Long, DeptDO> deptMap = deptService.getDeptMap(
-                convertList(list, UserRespVO::getDeptId));
+        Map<Long, List<UserDeptRespVO>> userDeptMap = deptService.getUserDeptMap(
+                convertList(list, UserRespVO::getId));
         ExcelUtils.write(response, "用户数据.xls", "数据", UserRespVO.class,
-                UserConvert.INSTANCE.convertList(list, deptMap));
+                UserConvert.INSTANCE.convertList(list, userDeptMap));
     }
 
 //    @GetMapping("/get-import-template")
