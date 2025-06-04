@@ -110,7 +110,10 @@ public class PlatformUserController {
         pageResult.getList().forEach(user -> {
             UserPageItemRespVO respVO = BeanUtils.toBean(user, UserPageItemRespVO.class);
             respVO.setDept(BeanUtils.toBean(deptMap.get(user.getDeptId()), UserPageItemRespVO.Dept.class));
-            respVO.setPostIds(userPostMap.get(respVO.getId()).stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
+            List<UserPostRespVO> userPostRespVOList = userPostMap.get(respVO.getId());
+            if (CollUtil.isNotEmpty(userPostRespVOList)) {
+                respVO.setPostIds(userPostRespVOList.stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
+            }
             userList.add(respVO);
         });
         return success(new PageResult<>(userList, pageResult.getTotal()));
@@ -135,7 +138,10 @@ public class PlatformUserController {
         PlatformDeptDO dept = platformDeptService.getDept(user.getDeptId());
         UserPageItemRespVO pageItemRespVO = BeanUtils.toBean(user, UserPageItemRespVO.class);
         pageItemRespVO.setDept(BeanUtils.toBean(dept, UserPageItemRespVO.Dept.class));
-        pageItemRespVO.setPostIds(platformPostService.getUserPostMap(Collections.singleton(user.getId())).get(user.getId()).stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
+        List<UserPostRespVO> userPostRespVOList = platformPostService.getUserPostMap(Collections.singleton(user.getId())).get(user.getId());
+        if (CollUtil.isNotEmpty(userPostRespVOList)) {
+            pageItemRespVO.setPostIds(userPostRespVOList.stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
+        }
         return success(pageItemRespVO);
     }
 

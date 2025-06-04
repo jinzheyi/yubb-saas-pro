@@ -127,7 +127,10 @@ public class UserController {
     public CommonResult<UserRespVO> getUser(@RequestParam("id") Long id) {
         UserRespVO user = userService.getUser(id);
         // 拼接数据
-        user.setPostIds(postService.getUserPostMap(Collections.singleton(user.getId())).get(user.getId()).stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
+        List<UserPostRespVO> userPostRespVOList = postService.getUserPostMap(Collections.singleton(user.getId())).get(user.getId());
+        if (CollUtil.isNotEmpty(userPostRespVOList)) {
+            user.setPostIds(userPostRespVOList.stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
+        }
         List<UserDeptRespVO> userDeptList = deptService.getUserDeptMap(Collections.singleton(user.getId())).get(user.getId());
         return success(UserConvert.INSTANCE.convert(user, userDeptList));
     }
