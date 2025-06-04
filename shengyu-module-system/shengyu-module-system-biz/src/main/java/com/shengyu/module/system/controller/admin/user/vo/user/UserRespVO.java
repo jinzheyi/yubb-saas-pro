@@ -36,6 +36,9 @@ public class UserRespVO{
 
     @Schema(description = "当前登录选择部门ID", example = "我是一个用户")
     private Long deptId;
+    @Schema(description = "所属部门数组ID")
+    private Set<Long> deptIdList;
+
     @Schema(description = "多个逗号分割的部门名称", example = "IT 部")
     @ExcelProperty("部门名称")
     private String deptName;

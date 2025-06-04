@@ -36,6 +36,7 @@ public interface UserConvert {
         UserRespVO userVO = BeanUtils.toBean(user, UserRespVO.class);
         if (CollUtil.isNotEmpty(userDeptList)) {
             userVO.setDeptName(userDeptList.stream().map(UserDeptRespVO::getDeptName).collect(Collectors.joining(", ")));
+            userVO.setDeptIdList(userDeptList.stream().map(UserDeptRespVO::getDeptId).collect(Collectors.toSet()));
         }
         return userVO;
     }
