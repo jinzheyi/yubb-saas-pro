@@ -93,11 +93,11 @@ export default defineComponent({
           {plugApp.value ? (
             <PlugApp class="custom-hover" color="var(--top-header-text-color)"></PlugApp>
           ) : undefined}
-          {myTenant.value ? (
-            <MyTenant class="custom-hover" color="var(--top-header-text-color)"></MyTenant>
-          ) : undefined}
           {myEnableDept.value ? (
             <MyEnableDept class="custom-hover" color="var(--top-header-text-color)"></MyEnableDept>
+          ) : undefined}
+          {myTenant.value ? (
+            <MyTenant class="custom-hover" color="var(--top-header-text-color)"></MyTenant>
           ) : undefined}
           <UserInfo></UserInfo>
         </div>

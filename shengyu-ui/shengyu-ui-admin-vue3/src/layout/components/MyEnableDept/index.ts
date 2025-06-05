@@ -1,3 +1,3 @@
-import MyTenant from './src/MyEnableDept.vue'
+import MyEnableDept from './src/MyEnableDept.vue'
 
-export { MyTenant }
+export { MyEnableDept }

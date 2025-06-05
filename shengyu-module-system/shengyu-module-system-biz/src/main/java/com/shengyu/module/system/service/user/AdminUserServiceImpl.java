@@ -12,6 +12,8 @@ import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.common.util.string.StrUtils;
+import com.shengyu.framework.datapermission.core.annotation.DataPermission;
+import com.shengyu.framework.datapermission.core.aop.DataPermissionContextHolder;
 import com.shengyu.framework.datapermission.core.util.DataPermissionUtils;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
@@ -20,6 +22,7 @@ import com.shengyu.module.platform.api.mail.MailSendApi;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
 import com.shengyu.module.system.api.notify.dto.NotifyTemplateSaveReqDTO;
 import com.shengyu.module.system.api.user.dto.AdminUserCreateReqDTO;
+import com.shengyu.module.system.controller.admin.dept.vo.dept.UserDeptRespVO;
 import com.shengyu.module.system.controller.admin.dept.vo.post.UserPostRespVO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
@@ -52,9 +55,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static com.shengyu.framework.common.pojo.CommonResult.success;
 import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
 import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.datapermission.core.util.DataPermissionUtils.getDisableDataPermissionDisable;
 import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 
@@ -703,6 +706,22 @@ public class AdminUserServiceImpl implements AdminUserService {
             });
         });
         return tenantList;
+    }
+
+    @Override
+    public List<UserDeptRespVO> getMyEnableDeptList() {
+        // 关闭数据权限，避免因为没有数据权限，查询不到数据
+        DataPermission dataPermission = getDisableDataPermissionDisable();
+        DataPermissionContextHolder.add(dataPermission);
+        try {
+            AdminUserDO user = userMapper.selectById(getLoginUserId());
+            if (user == null) {
+                return Collections.emptyList();
+            }
+            return userDeptMapper.selectListByUserIds(Collections.singleton(user.getId()));
+        } finally {
+            DataPermissionContextHolder.remove();
+        }
     }
 
     /**

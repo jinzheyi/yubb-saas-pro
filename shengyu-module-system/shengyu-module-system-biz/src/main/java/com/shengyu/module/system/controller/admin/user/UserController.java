@@ -120,6 +120,12 @@ public class UserController {
         return success(userService.getMyTenantList());
     }
 
+    @GetMapping("/get-myEnableDept-list")
+    @Operation(summary = "获取当前用户的已启用部门列表")
+    public CommonResult<List<UserDeptRespVO>> getMyEnableDeptList() {
+        return success(userService.getMyEnableDeptList());
+    }
+
     @GetMapping("/get")
     @Operation(summary = "获得用户详情")
     @Parameter(name = "id", description = "编号", required = true, example = "1024")

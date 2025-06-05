@@ -32,7 +32,7 @@ const toDept = async (id: number) => {
   // //推出登錄的一些操作
   // await userStore.loginToTenantOut()
   tagsViewStore.delAllViews()
-  authUtil.setDeptId(res.deptId)
+  authUtil.setDeptId(res.id)
   if (!redirect.value) {
     redirect.value = '/'
   }
@@ -46,14 +46,14 @@ const toDept = async (id: number) => {
     <ElPopover :width="400" placement="bottom" trigger="click">
       <template #reference>
         <ElBadge class="item">
-          <Icon :size="18" class="cursor-pointer" icon="ep:office-building" @click="getList" />
+          <Icon :size="18" class="cursor-pointer" icon="fa:tree" @click="getList" />
         </ElBadge>
       </template>
       <ElTabs v-model="activeName">
         <ElTabPane label="我的公司/部门" name="myEnableDept">
           <el-scrollbar class="message-list">
-            <template v-for="item in list" :key="item.id">
-              <div class="message-item" @click="toDept(item.id)" :class="item.id==getDeptId()? 'back-blue' : ''">
+            <template v-for="item in list" :key="item.deptId">
+              <div class="message-item" @click="toDept(item.deptId)" :class="item.deptId==getDeptId()? 'back-blue' : ''">
                 <!--                <img alt="" class="message-icon" src="@/assets/imgs/avatar.gif" />-->
                 <div class="message-content">
                   <span class="message-title">
