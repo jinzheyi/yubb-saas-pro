@@ -94,6 +94,13 @@ public interface AdminUserService {
     void updateUserStatus(Long id, Integer status);
 
     /**
+     * 更新用户登录选择部门
+     * @param id 用户id
+     * @param deptId 部门id
+     */
+    void updateUserDeptId(Long id, Long deptId);
+
+    /**
      * 删除用户
      *
      * @param id 用户编号

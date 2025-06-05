@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 
-import { getTenantId } from '@/utils/auth'
+import {getDeptId, setDeptId} from '@/utils/auth'
 import { formatDate } from '@/utils/formatTime'
 import * as UserApi from '@/api/system/user'
 import * as LoginApi from "@/api/login";
@@ -9,10 +9,10 @@ import { usePermissionStore } from '@/store/modules/permission'
 import {useUserStore} from "@/store/modules/user";
 import {useTagsViewStore} from "@/store/modules/tagsView";
 
-defineOptions({ name: 'MyTenant' })
+defineOptions({ name: 'MyEnableDept' })
 
-const activeName = ref('myTenant')
-const list = ref<any[]>([]) // 租户列表
+const activeName = ref('myEnableDept')
+const list = ref<any[]>([]) // 部门列表
 const redirect = ref<string>('')
 const { push } = useRouter()
 const permissionStore = usePermissionStore()
@@ -20,19 +20,19 @@ const userStore = useUserStore()
 const tagsViewStore = useTagsViewStore()
 
 const getList = async () => {
-  list.value = await UserApi.getMyTenantList()
+  list.value = await UserApi.getMyEnableDeptList()
 }
 
-// 跳转到目标租户
-const toTenant = async (id: number) => {
-  const res = await LoginApi.toTenant(id)
+// 跳转到目标部门
+const toDept = async (id: number) => {
+  const res = await LoginApi.toDept(id)
   if (!res) {
     return
   }
-  //退出登录的一些操作
-  await userStore.loginToTenantOut()
+  // //推出登錄的一些操作
+  // await userStore.loginToTenantOut()
   tagsViewStore.delAllViews()
-  authUtil.setToken(res)
+  authUtil.setDeptId(res.deptId)
   if (!redirect.value) {
     redirect.value = '/'
   }
@@ -50,17 +50,14 @@ const toTenant = async (id: number) => {
         </ElBadge>
       </template>
       <ElTabs v-model="activeName">
-        <ElTabPane label="我的企业/租户" name="myTenant">
+        <ElTabPane label="我的公司/部门" name="myEnableDept">
           <el-scrollbar class="message-list">
             <template v-for="item in list" :key="item.id">
-              <div class="message-item" @click="toTenant(item.id)" :class="item.id==getTenantId()? 'back-blue' : ''">
+              <div class="message-item" @click="toDept(item.id)" :class="item.id==getDeptId()? 'back-blue' : ''">
                 <!--                <img alt="" class="message-icon" src="@/assets/imgs/avatar.gif" />-->
                 <div class="message-content">
                   <span class="message-title">
-                    {{ item.tenantName }}【{{ item.status }}】
-                  </span>
-                  <span class="message-date">
-                    最后登录时间：{{ formatDate(item.loginDate) }}
+                    {{ item.deptName }}
                   </span>
                 </div>
               </div>

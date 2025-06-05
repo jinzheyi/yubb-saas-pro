@@ -385,6 +385,19 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
+    public void updateUserDeptId(Long id, Long deptId) {
+        AdminUserDO user = userMapper.selectById(id);
+        if (user == null) {
+            throw exception(USER_NOT_EXISTS);
+        }
+        // 更新状态
+        AdminUserDO updateObj = new AdminUserDO();
+        updateObj.setId(id);
+        updateObj.setDeptId(deptId);
+        userMapper.updateById(updateObj);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteUser(Long id) {
         // 校验用户存在

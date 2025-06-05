@@ -11,11 +11,14 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_TENANT_EXC
 import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_THIRD_LOGIN_NOT_BIND;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_TOKEN_EXPIRED;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_TO_TENANT_EXCEPTION;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.DEPT_NOT_ENABLE;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.DEPT_NOT_FOUND;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.TENANT_NOT_EXISTS;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.google.common.annotations.VisibleForTesting;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.framework.common.enums.logger.LoginLogTypeEnum;
@@ -27,7 +30,6 @@ import com.shengyu.framework.common.util.servlet.ServletUtils;
 import com.shengyu.framework.common.util.validation.ValidationUtils;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.datapermission.core.aop.DataPermissionContextHolder;
-import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.platform.api.sms.SmsCodeApi;
 import com.shengyu.module.platform.api.social.TenantSocialUserApi;
@@ -40,18 +42,20 @@ import com.shengyu.module.system.controller.admin.auth.vo.AuthLoginRespVO;
 import com.shengyu.module.system.controller.admin.auth.vo.AuthSmsLoginReqVO;
 import com.shengyu.module.system.controller.admin.auth.vo.AuthSmsSendReqVO;
 import com.shengyu.module.system.controller.admin.auth.vo.AuthSocialLoginReqVO;
+import com.shengyu.module.system.controller.admin.auth.vo.ToDeptReqVO;
 import com.shengyu.module.system.controller.admin.auth.vo.ToTenantReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.convert.auth.AuthConvert;
+import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
 import com.shengyu.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.dataobject.user.SaasUserDO;
+import com.shengyu.module.system.service.dept.DeptService;
 import com.shengyu.module.system.service.logger.LoginLogService;
 import com.shengyu.module.system.service.oauth2.OAuth2TokenService;
 import com.shengyu.module.system.service.tenant.TenantService;
 import com.shengyu.module.system.service.user.AdminUserService;
 import com.shengyu.module.system.service.user.SaasUserService;
-import com.google.common.annotations.VisibleForTesting;
 import com.xingyuv.captcha.model.common.ResponseModel;
 import com.xingyuv.captcha.model.vo.CaptchaVO;
 import com.xingyuv.captcha.service.CaptchaService;
@@ -93,6 +97,9 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     @Resource
     private TenantService tenantService;
 
+    @Resource
+    private DeptService deptService;
+
     /**
      * 验证码的开关，默认为 true
      */
@@ -129,7 +136,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
                     reqVO.getSocialType(), reqVO.getSocialCode(), reqVO.getSocialState()));
         }
         // 创建 Token 令牌需要基于租户用户，因为每个租户的登录逻辑是跟随租户进行的，记录登录日志
-        return createTokenAfterLoginSuccess(user.getId(), reqVO.getUsername(), LoginLogTypeEnum.LOGIN_USERNAME);
+        return createTokenAfterLoginSuccess(user, reqVO.getUsername(), LoginLogTypeEnum.LOGIN_USERNAME);
     }
 
     @Override
@@ -154,7 +161,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         }
         AdminUserDO adminUser = getAdminUser(saasUserDO, null);
         // 创建 Token 令牌，记录登录日志
-        return createTokenAfterLoginSuccess(adminUser.getId(), reqVO.getMobile(), LoginLogTypeEnum.LOGIN_MOBILE);
+        return createTokenAfterLoginSuccess(adminUser, reqVO.getMobile(), LoginLogTypeEnum.LOGIN_MOBILE);
     }
 
     private void createLoginLog(Long userId, String username,
@@ -192,7 +199,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         }
         AdminUserDO adminUser = getAdminUser(saasUserDO, null);
         // 创建 Token 令牌，记录登录日志
-        return createTokenAfterLoginSuccess(adminUser.getId(), saasUserDO.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
+        return createTokenAfterLoginSuccess(adminUser, saasUserDO.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
     }
 
     @VisibleForTesting
@@ -214,14 +221,16 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         }
     }
 
-    private AuthLoginRespVO createTokenAfterLoginSuccess(Long userId, String username, LoginLogTypeEnum logType) {
+    private AuthLoginRespVO createTokenAfterLoginSuccess(AdminUserDO user, String username, LoginLogTypeEnum logType) {
         // 插入登陆日志
-        createLoginLog(userId, username, logType, LoginResultEnum.SUCCESS);
+        createLoginLog(user.getId(), username, logType, LoginResultEnum.SUCCESS);
         // 创建访问令牌
-        OAuth2AccessTokenDO accessTokenDO = oauth2TokenService.createAccessToken(userId, getUserType().getValue(),
+        OAuth2AccessTokenDO accessTokenDO = oauth2TokenService.createAccessToken(user.getId(), getUserType().getValue(),
                 OAuth2ClientConstants.CLIENT_ID_TENANT, null);
         // 构建返回结果
-        return AuthConvert.INSTANCE.convert(accessTokenDO);
+        AuthLoginRespVO loginRespVO = AuthConvert.INSTANCE.convert(accessTokenDO);
+        loginRespVO.setDeptId(user.getDeptId());
+        return loginRespVO;
     }
 
     @Override
@@ -253,7 +262,27 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             //更新SaaS用户信息
             setSaasUserInfo(saasUserDO, adminUser);
             // 创建 Token 令牌需要基于租户用户，因为每个租户的登录逻辑是跟随租户进行的，记录登录日志
-            return createTokenAfterLoginSuccess(adminUser.getId(), saasUserDO.getUsername(), LoginLogTypeEnum.LOGIN_USERNAME);
+            return createTokenAfterLoginSuccess(adminUser, saasUserDO.getUsername(), LoginLogTypeEnum.LOGIN_USERNAME);
+        } finally {
+            DataPermissionContextHolder.remove();
+        }
+    }
+
+    @Override
+    public ToDeptReqVO toDept(ToDeptReqVO reqVO) {
+        // 关闭数据权限，避免因为没有数据权限，查询不到数据
+        DataPermission dataPermission = getDisableDataPermissionDisable();
+        DataPermissionContextHolder.add(dataPermission);
+        try {
+            DeptDO deptDO = Optional.ofNullable(deptService.getDept(reqVO.getId()))
+              .orElseThrow(() -> exception(DEPT_NOT_FOUND));
+            //切换的目标部门是否合规
+            if (!CommonStatusEnum.ENABLE.getStatus().equals(deptDO.getStatus())) {
+                throw exception(DEPT_NOT_ENABLE, deptDO.getName());
+            }
+            adminUserService.updateUserDeptId(getLoginUserId(), reqVO.getId());
+            // 创建 Token 令牌需要基于租户用户，因为每个租户的登录逻辑是跟随租户进行的，记录登录日志
+            return reqVO;
         } finally {
             DataPermissionContextHolder.remove();
         }

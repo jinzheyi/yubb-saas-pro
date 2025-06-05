@@ -6,6 +6,7 @@ import { CACHE_KEY, useCache } from '@/hooks/web/useCache'
 import { ElementPlusSize } from '@/types/elementPlus'
 import { LayoutType } from '@/types/layout'
 import { ThemeTypes } from '@/types/theme'
+import {getMyEnableDeptList} from "@/api/system/user";
 
 const { wsCache } = useCache()
 
@@ -21,6 +22,7 @@ interface AppState {
   locale: boolean
   message: boolean
   myTenant: boolean
+  myEnableDept: boolean
   plugApp: boolean
   tagsView: boolean
   tagsViewIcon: boolean
@@ -60,6 +62,7 @@ export const useAppStore = defineStore('app', {
       locale: true, // 多语言图标
       message: true, // 消息图标
       myTenant: true, // 我的租户图标
+      myEnableDept: true,  //  我的部门图标
       plugApp: true, // 应用市场
       tagsView: true, // 标签页
       tagsViewIcon: true, // 是否显示标签图标
@@ -134,6 +137,9 @@ export const useAppStore = defineStore('app', {
     },
     getMyTenant(): boolean {
       return this.myTenant
+    },
+    getMyEnableDept(): boolean {
+      return this.myEnableDept
     },
     getPlugApp(): boolean {
       return this.plugApp
@@ -217,6 +223,9 @@ export const useAppStore = defineStore('app', {
     },
     setMyTenant(myTenant: boolean) {
       this.myTenant = myTenant
+    },
+    setMyEnableDept(myEnableDept: boolean) {
+      this.myEnableDept = myEnableDept
     },
     setPlugApp(plugApp: boolean) {
       this.plugApp = plugApp

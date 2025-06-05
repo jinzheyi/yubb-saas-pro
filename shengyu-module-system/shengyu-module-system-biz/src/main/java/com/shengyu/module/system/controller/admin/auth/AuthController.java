@@ -22,6 +22,7 @@ import com.shengyu.module.system.controller.admin.auth.vo.AuthPermissionInfoResp
 import com.shengyu.module.system.controller.admin.auth.vo.AuthSmsLoginReqVO;
 import com.shengyu.module.system.controller.admin.auth.vo.AuthSmsSendReqVO;
 import com.shengyu.module.system.controller.admin.auth.vo.AuthSocialLoginReqVO;
+import com.shengyu.module.system.controller.admin.auth.vo.ToDeptReqVO;
 import com.shengyu.module.system.controller.admin.auth.vo.ToTenantReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.convert.auth.AuthConvert;
@@ -183,6 +184,13 @@ public class AuthController {
         String token = SecurityFrameworkUtils.obtainAuthorization(request,
             securityProperties.getTokenHeader(), securityProperties.getTokenParameter());
         return success(adminAuthService.toTenant(reqVO, token));
+    }
+
+    @PostMapping("/toDept")
+    @Operation(summary = "跳转到目标部门", description = "跳转到目标部门")
+    @OperateLog(enable = false) // 避免 Post 请求被记录操作日志
+    public CommonResult<ToDeptReqVO> toDept(@RequestBody @Valid ToDeptReqVO reqVO) {
+        return success(adminAuthService.toDept(reqVO));
     }
 
 }

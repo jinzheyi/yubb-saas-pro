@@ -23,6 +23,7 @@ export const setToken = (token: TokenType) => {
   wsCache.set(RefreshTokenKey, token.refreshToken)
   wsCache.set(AccessTokenKey, token.accessToken)
   setTenantId(token.tenantId)
+  setDeptId(token.deptId)
 }
 
 // 删除token
@@ -30,6 +31,7 @@ export const removeToken = () => {
   wsCache.delete(AccessTokenKey)
   wsCache.delete(RefreshTokenKey)
   removeTenantId()
+  removeDeptId()
 }
 
 /** 格式化token（jwt格式） */
@@ -69,6 +71,9 @@ export const removeLoginForm = () => {
 const TenantIdKey = 'TENANT_ID'
 const TenantNameKey = 'TENANT_NAME'
 
+// =========== 部门相关 =========
+const deptIdKey = 'DEPT_ID'
+
 export const getTenantName = () => {
   return wsCache.get(TenantNameKey)
 }
@@ -85,10 +90,22 @@ export const getTenantId = () => {
   return wsCache.get(TenantIdKey)
 }
 
-export const setTenantId = (username: string) => {
-  wsCache.set(TenantIdKey, username)
+export const setTenantId = (tenantId: string) => {
+  wsCache.set(TenantIdKey, tenantId)
 }
 
 export const removeTenantId = () => {
   wsCache.delete(TenantIdKey)
 }
+
+export const removeDeptId = () => {
+  wsCache.delete(deptIdKey)
+}
+
+export const getDeptId = () => {
+  return wsCache.get(deptIdKey)
+}
+export const setDeptId = (deptId: string) => {
+  wsCache.set(deptIdKey, deptId)
+}
+
