@@ -296,20 +296,30 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
         Map<String, Object> nodeModelsMap = new HashMap<>();
         List<NodeModel> nodeModels = ModelHelper.getNextChildNodes(flowLongEngine.getContext(), execution, rootNodeModel, instance.getCurrentNodeKey());
         if (null != nodeModels) {
-            // 1，普通审批
-            int nodeType = 1;
-            if (nodeModels.size() > 1) {
-                // 判断是否为条件分支，根据父节点确定分支类型
-                NodeModel nextParentNode = nodeModels.get(0).getParentNode();
-                if (TaskType.conditionNode.eq(nextParentNode.getType())) {
-                    // 4，条件分支 8，并发分支 9，包容分支
-                    nodeType = nextParentNode.getParentNode().getType();
-                }
-            }
-            nodeModelsMap.put("nodeType", nodeType);
+            nodeModelsMap.put("nodeType", getNodeType(nodeModels));
             nodeModelsMap.put("nodeModels", nodeModels.stream().map(NodeModel::cloneBaseInfo).toList());
         }
         return nodeModelsMap;
+    }
+
+    private static int getNodeType(List<NodeModel> nodeModels) {
+        // 1，普通审批
+        int nodeType = 1;
+        if (nodeModels.size() > 1) {
+            // 判断是否为条件分支，根据父节点确定分支类型
+            NodeModel nextParentNode = nodeModels.get(0).getParentNode();
+            if (nextParentNode.conditionNode()) {
+                // 4，条件分支
+                nodeType = 4;
+            } else if (nextParentNode.parallelNode()) {
+                // 8，并行分支
+                nodeType = 8;
+            } else if (nextParentNode.inclusiveNode()) {
+                // 9，包容分支
+                nodeType = 9;
+            }
+        }
+        return nodeType;
     }
 
     @Override
