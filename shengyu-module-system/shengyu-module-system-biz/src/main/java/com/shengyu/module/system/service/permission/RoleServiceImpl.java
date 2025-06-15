@@ -123,10 +123,6 @@ public class RoleServiceImpl implements RoleService {
      */
     @VisibleForTesting
     void validateRoleDuplicate(String name, String code, Long id, Integer type) {
-        // 0. 超级管理员，不允许创建
-        if (RoleCodeEnum.isTenantAdmin(code) && !RoleTypeEnum.SYSTEM.getType().equals(type)) {
-            throw exception(ROLE_ADMIN_CODE_ERROR, code);
-        }
         // 1. 该 name 名字被其它角色所使用
         RoleDO role = roleMapper.selectByName(name);
         if (role != null && !role.getId().equals(id)) {
@@ -204,18 +200,6 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public PageResult<RoleDO> getRolePage(RolePageReqVO reqVO) {
         return roleMapper.selectPage(reqVO);
-    }
-
-    @Override
-    public boolean hasAnyTenantAdmin(Collection<Long> ids) {
-        if (CollectionUtil.isEmpty(ids)) {
-            return false;
-        }
-        RoleServiceImpl self = getSelf();
-        return ids.stream().anyMatch(id -> {
-            RoleDO role = self.getRoleFromCache(id);
-            return role != null && RoleCodeEnum.isTenantAdmin(role.getCode());
-        });
     }
 
     @Override

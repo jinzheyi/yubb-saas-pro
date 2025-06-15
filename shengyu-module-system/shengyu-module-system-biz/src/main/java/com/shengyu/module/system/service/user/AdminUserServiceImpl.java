@@ -52,6 +52,7 @@ import javax.annotation.Resource;
 import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -734,6 +735,28 @@ public class AdminUserServiceImpl implements AdminUserService {
             // 校验用户存在
             validateUserExists(id);
         });
+    }
+
+    @Override
+    public boolean hasTenantAdmin(Long id) {
+        AtomicBoolean hasTenantAdmin = new AtomicBoolean(false);
+        // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
+        DataPermissionUtils.executeIgnore(() -> {
+            if (id == null) {
+                return;
+            }
+            AdminUserDO user = userMapper.selectById(id);
+            if (user == null) {
+                return;
+            }
+            // 校验账户配合
+            tenantService.handleTenantInfo(tenant -> {
+                if (id.equals(tenant.getContactUserId())) {
+                    hasTenantAdmin.set(true);
+                }
+            });
+        });
+        return hasTenantAdmin.get();
     }
 
     /**

@@ -115,18 +115,22 @@ public class AuthController {
         if (user == null) {
             return null;
         }
-
-        // 1.2 获得角色列表
-        Set<Long> roleIds = permissionService.getUserRoleIdListByUserId(getLoginUserId());
-        if (CollUtil.isEmpty(roleIds)) {
-            return success(AuthConvert.INSTANCE.convert(user, Collections.emptyList(), Collections.emptyList()));
+        List<RoleDO> roles = List.of();
+        Set<Long> menuIds;
+        if (adminUserService.hasTenantAdmin(user.getId())) {
+            menuIds = permissionService.getRoleMenuListByTenantPackageAndPlugMenu();
+        } else {
+            // 1.2 获得角色列表
+            Set<Long> roleIds = permissionService.getUserRoleIdListByUserId(getLoginUserId());
+            if (CollUtil.isEmpty(roleIds)) {
+                return success(AuthConvert.INSTANCE.convert(user, Collections.emptyList(), Collections.emptyList()));
+            }
+            roles = roleService.getRoleList(roleIds);
+            // 移除禁用的角色
+            roles.removeIf(role -> !CommonStatusEnum.ENABLE.getStatus().equals(role.getStatus()));
+            // 1.3 获得菜单列表
+            menuIds = permissionService.getRoleMenuListByRoleId(convertSet(roles, RoleDO::getId));
         }
-        List<RoleDO> roles = roleService.getRoleList(roleIds);
-        // 移除禁用的角色
-        roles.removeIf(role -> !CommonStatusEnum.ENABLE.getStatus().equals(role.getStatus()));
-
-        // 1.3 获得菜单列表
-        Set<Long> menuIds = permissionService.getRoleMenuListByRoleId(convertSet(roles, RoleDO::getId));
         TenantMenuListReqDTO reqDTO = new TenantMenuListReqDTO();
         reqDTO.setStatus(CommonStatusEnum.ENABLE.getStatus());
         reqDTO.setIds(new ArrayList<>(menuIds));

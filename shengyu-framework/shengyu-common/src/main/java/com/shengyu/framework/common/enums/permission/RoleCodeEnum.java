@@ -12,7 +12,6 @@ import lombok.Getter;
 public enum RoleCodeEnum {
 
     SUPER_ADMIN("super_admin", "超级管理员"),
-    TENANT_ADMIN("tenant_admin", "租户管理员"),
     ;
 
     /**
@@ -23,16 +22,6 @@ public enum RoleCodeEnum {
      * 名字
      */
     private final String name;
-
-    /**
-     * 租户超管
-     * @param code
-     * @return
-     */
-    //todo 这种判断租户超管的方式不是很合适，应该是租户绑定了超管用户，对应用户就是超管
-    public static boolean isTenantAdmin(String code) {
-        return ObjectUtils.equalsAny(code, TENANT_ADMIN.getCode());
-    }
 
     /**
      * 平台超管

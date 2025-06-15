@@ -84,6 +84,13 @@ public interface PermissionService {
     }
 
     /**
+     * 获得超管拥有的菜单编号集合
+     *
+     * @return 菜单编号集合
+     */
+    Set<Long> getRoleMenuListByTenantPackageAndPlugMenu();
+
+    /**
      * 获得角色们拥有的菜单编号集合
      *
      * @param roleIds 角色编号数组
@@ -165,12 +172,5 @@ public interface PermissionService {
      * @return 布尔值 true存在 false不存在
      */
     boolean hasAnyRoleMenu(Long menuId);
-
-    /**
-     * 判断用户是否是租户管理员
-     * @param userId 用户id
-     * @return 布尔值 true是 false不是
-     */
-    boolean hasAnyTenantAdmin(Long userId);
 
 }

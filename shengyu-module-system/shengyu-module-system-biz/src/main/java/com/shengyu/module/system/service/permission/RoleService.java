@@ -113,14 +113,6 @@ public interface RoleService {
     PageResult<RoleDO> getRolePage(RolePageReqVO reqVO);
 
     /**
-     * 判断角色编号数组中，是否有管理员
-     *
-     * @param ids 角色编号数组
-     * @return 是否有管理员
-     */
-    boolean hasAnyTenantAdmin(Collection<Long> ids);
-
-    /**
      * 校验角色们是否有效。如下情况，视为无效：
      * 1. 角色编号不存在
      * 2. 角色被禁用

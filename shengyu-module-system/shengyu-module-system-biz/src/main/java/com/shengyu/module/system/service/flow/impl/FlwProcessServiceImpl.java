@@ -403,7 +403,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
 
     private void checkOperateApproval(Long processId) {
         LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
-        if (null == userSession || !permissionService.hasAnyTenantAdmin(userSession.getId())) {
+        if (null == userSession) {
             FlwProcessPermission fpp = getFlwProcessPermissionByProcessId(userSession, processId);
             if (null != fpp) {
                 ServiceExceptionUtil.fail(!fpp.allowOperateApproval(), "无权限编辑操作审批流程");

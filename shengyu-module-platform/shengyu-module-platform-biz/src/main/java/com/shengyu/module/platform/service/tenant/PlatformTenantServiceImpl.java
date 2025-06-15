@@ -12,6 +12,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.shengyu.framework.common.enums.CommonConstants;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.enums.permission.RoleCodeEnum;
 import com.shengyu.framework.common.enums.permission.RoleTypeEnum;
@@ -110,34 +111,17 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
             notifyTemplateApi.createNotifyTemplate(NotifyTemplateSaveReqDTO.getTenantNewAdminUser());
             notifyTemplateApi.createNotifyTemplate(NotifyTemplateSaveReqDTO.getTenantAdminUser());
             notifyTemplateApi.createNotifyTemplate(NotifyTemplateSaveReqDTO.getTenantSuperAdminUser());
-            // 创建角色
-            Long roleId = createRole(tenantPackage);
-            // 创建用户，并分配角色
-            Long userId = createUser(roleId, createReqVO);
+            // 创建用户
+            Long userId = createUser(createReqVO);
             // 修改租户的管理员
             tenantMapper.updateById(new TenantDO().setId(tenant.getId()).setContactUserId(userId));
         });
         return tenant.getId();
     }
 
-    private Long createUser(Long roleId, TenantCreateReqVO createReqVO) {
+    private Long createUser(TenantCreateReqVO createReqVO) {
         // 创建用户
-        Long userId = adminUserApi.createUser(TenantConvert.INSTANCE.convert02(createReqVO), RoleCodeEnum.TENANT_ADMIN.getCode());
-        // 分配角色
-        permissionApi.assignUserRole(userId, singleton(roleId));
-        return userId;
-    }
-
-    private Long createRole(TenantPackageDO tenantPackage) {
-        // 创建角色
-        RoleCreateReqDTO reqDTO = new RoleCreateReqDTO();
-        reqDTO.setName(RoleCodeEnum.TENANT_ADMIN.getName()).setCode(RoleCodeEnum.TENANT_ADMIN.getCode())
-                .setSort(0).setRemark("系统自动生成").setType(RoleTypeEnum.SYSTEM.getType());
-        Long roleId = roleApi.createRole(reqDTO);
-        // todo 租户超管应该直接使用角色即可，创建角色对应的菜单关联意义不大
-        // 分配权限
-        //permissionApi.assignRoleMenu(roleId, tenantPackage.getMenuIds());
-        return roleId;
+        return adminUserApi.createUser(TenantConvert.INSTANCE.convert02(createReqVO), CommonConstants.TENANT_ADMIN);
     }
 
     @Override
@@ -202,14 +186,7 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
                     role.getId(), role.getTenantId(), tenantId)); // 兜底校验
             // 重新分配每个角色的权限
             roles.forEach(role -> {
-                // 如果是租户管理员，重新分配其权限为租户套餐的权限
-                if (Objects.equals(role.getCode(), RoleCodeEnum.TENANT_ADMIN.getCode())) {
-                    // todo 租户超管应该直接使用角色即可，创建角色对应的菜单关联意义不大
-//                    permissionApi.assignRoleMenu(role.getId(), menuIds);
-//                    log.info("[updateTenantRoleMenu][租户管理员({}/{}) 的权限修改为({})]", role.getId(), role.getTenantId(), menuIds);
-                    return;
-                }
-                // 如果是其他角色，则去掉超过套餐的权限
+                // 去掉超过套餐的权限
                 Set<Long> roleMenuIds = permissionApi.getRoleMenuListByRoleId(role.getId());
                 roleMenuIds = CollUtil.intersectionDistinct(roleMenuIds, menuIds);
                 permissionApi.assignRoleMenu(role.getId(), roleMenuIds);
