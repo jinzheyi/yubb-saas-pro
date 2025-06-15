@@ -29,6 +29,7 @@ public enum RoleCodeEnum {
      * @param code
      * @return
      */
+    //todo 这种判断租户超管的方式不是很合适，应该是租户绑定了超管用户，对应用户就是超管
     public static boolean isTenantAdmin(String code) {
         return ObjectUtils.equalsAny(code, TENANT_ADMIN.getCode());
     }

@@ -539,6 +539,9 @@ public class AdminUserServiceImpl implements AdminUserService {
         });
     }
 
+    /**
+     * 判断用户是否存在以及否是租户管理员
+     */
     @VisibleForTesting
     void validateUserExists(Long id) {
         if (id == null) {
@@ -722,6 +725,15 @@ public class AdminUserServiceImpl implements AdminUserService {
         } finally {
             DataPermissionContextHolder.remove();
         }
+    }
+
+    @Override
+    public void updateUserValidate(Long id) {
+        // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
+        DataPermissionUtils.executeIgnore(() -> {
+            // 校验用户存在
+            validateUserExists(id);
+        });
     }
 
     /**

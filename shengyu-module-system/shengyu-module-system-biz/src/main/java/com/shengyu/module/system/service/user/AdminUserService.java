@@ -223,4 +223,10 @@ public interface AdminUserService {
      */
     List<UserDeptRespVO> getMyEnableDeptList();
 
+    /**
+     * 校验用户
+     * @param id 用户编号
+     */
+    void updateUserValidate(Long id);
+
 }
