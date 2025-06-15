@@ -3,11 +3,13 @@ package com.shengyu.module.system.service.dept;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.system.controller.admin.dept.vo.post.PostPageReqVO;
 import com.shengyu.module.system.controller.admin.dept.vo.post.PostSaveReqVO;
+import com.shengyu.module.system.controller.admin.dept.vo.post.UserPostRespVO;
 import com.shengyu.module.system.dal.dataobject.dept.PostDO;
 import org.springframework.lang.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 岗位 Service 接口
@@ -80,5 +82,13 @@ public interface PostService {
      * @param ids 岗位编号数组
      */
     void validatePostList(Collection<Long> ids);
+
+    /**
+     * 获得指定用户编号的岗位 Map
+     *
+     * @param ids 用户编号数组
+     * @return 用户编号。岗位数组 Map
+     */
+    Map<Long, List<UserPostRespVO>> getUserPostMap(Collection<Long> ids);
 
 }

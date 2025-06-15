@@ -1,75 +1,66 @@
 package com.shengyu.module.system.service.user;
 
-import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
-import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
-import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_ADMIN;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_COUNT_MAX;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_CREATE_SAAS_EXISTS;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_IS_DISABLE;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_PASSWORD_FAILED;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_SAAS_ID_UNIQUE;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_SAAS_MOBILE_NOT_EXISTS;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_SAAS_USERNAME_NOT_EXISTS;
-
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
+import com.google.common.annotations.VisibleForTesting;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.common.util.string.StrUtils;
+import com.shengyu.framework.datapermission.core.annotation.DataPermission;
+import com.shengyu.framework.datapermission.core.aop.DataPermissionContextHolder;
 import com.shengyu.framework.datapermission.core.util.DataPermissionUtils;
-import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.module.infra.api.file.FileApi;
 import com.shengyu.module.platform.api.mail.MailSendApi;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
+import com.shengyu.module.system.api.notify.dto.NotifyTemplateSaveReqDTO;
 import com.shengyu.module.system.api.user.dto.AdminUserCreateReqDTO;
+import com.shengyu.module.system.controller.admin.dept.vo.dept.UserDeptRespVO;
+import com.shengyu.module.system.controller.admin.dept.vo.post.UserPostRespVO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
-import com.shengyu.module.system.controller.admin.user.vo.user.MyTenantRespVO;
-import com.shengyu.module.system.controller.admin.user.vo.user.UserPageReqVO;
-import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
-import com.shengyu.module.system.controller.admin.user.vo.user.UserSaveReqVO;
-import com.shengyu.module.system.controller.admin.user.vo.user.UserUpdateReqVO;
+import com.shengyu.module.system.controller.admin.user.vo.user.*;
 import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
+import com.shengyu.module.system.dal.dataobject.dept.UserDeptDO;
 import com.shengyu.module.system.dal.dataobject.dept.UserPostDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.dataobject.user.SaasUserDO;
+import com.shengyu.module.system.dal.mysql.dept.UserDeptMapper;
 import com.shengyu.module.system.dal.mysql.dept.UserPostMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.dal.mysql.user.SaasUserMapper;
 import com.shengyu.module.system.service.dept.DeptService;
 import com.shengyu.module.system.service.dept.PostService;
+import com.shengyu.module.system.service.notify.NotifySendService;
 import com.shengyu.module.system.service.permission.PermissionService;
 import com.shengyu.module.system.service.tenant.TenantService;
-import com.google.common.annotations.VisibleForTesting;
-import java.io.InputStream;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import javax.annotation.Resource;
+import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.datapermission.core.util.DataPermissionUtils.getDisableDataPermissionDisable;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 后台用户 Service 实现类
@@ -85,10 +76,8 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Resource
     private AdminUserMapper userMapper;
-
     @Resource
     private SaasUserMapper saasUserMapper;
-
     @Resource
     private DeptService deptService;
     @Resource
@@ -100,15 +89,16 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Resource
     @Lazy // 延迟，避免循环依赖报错
     private TenantService tenantService;
-
     @Resource
     private UserPostMapper userPostMapper;
-
     @Resource
     private FileApi fileApi;
-
     @Resource
     private MailSendApi mailSendApi;
+    @Resource
+    private NotifySendService notifySendService;
+    @Resource
+    private UserDeptMapper userDeptMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -122,7 +112,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         });
         // 校验正确性
         validateUserForCreate(createReqVO.getUsername(),
-            createReqVO.getMobile(), createReqVO.getDeptId(), createReqVO.getPostIds());
+            createReqVO.getMobile(), createReqVO.getDeptIdList(), createReqVO.getPostIds());
         // 插入用户
         AdminUserDO user = BeanUtils.toBean(createReqVO, AdminUserDO.class);
         //优先取邮箱账号的SaaS用户
@@ -161,24 +151,39 @@ public class AdminUserServiceImpl implements AdminUserService {
         // 等待SaaS用户确认
         user.setStatus(CommonStatusEnum.AWAIT.getStatus());
         userMapper.insert(user);
+        // 更新部门
+        updateUserDept(user.getId(), createReqVO.getDeptIdList());
         //添加时初次设置值
         user.setOpenAccount(StrUtils.uniqueId(user.getId()));
         userMapper.updateById(user);
         // 插入关联岗位
-        if (CollectionUtil.isNotEmpty(user.getPostIds())) {
-            userPostMapper.insertBatch(convertList(user.getPostIds(),
+        if (CollectionUtil.isNotEmpty(createReqVO.getPostIds())) {
+            userPostMapper.insertBatch(convertList(createReqVO.getPostIds(),
                 postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
-        //是否时新注册的平台用户
+        UserRespVO userRespVO = userMapper.selectJoinOne(user.getId());
+        TenantRespDTO tenantRespDTO = tenantService.getTenantById(userRespVO.getTenantId());
+        //是否是新注册的平台用户
         if (registerSaasUser) {
             Map<String, Object> mailParam = new HashMap<String, Object>();
             mailParam.put("mail", createReqVO.getUsername());
             mailParam.put("password", password);
             mailParam.put("registerTime", DateUtil.formatDateTime(new Date()));
+            mailParam.put("tenantName", tenantRespDTO.getName());
+            notifySendService.sendSingleNotifyToAdmin(user.getId(),
+                    NotifyTemplateSaveReqDTO.tenant_new_admin_user, mailParam);
             mailSendApi.sendSingleMail(createReqVO.getUsername(), null, UserTypeEnum.ADMIN.getValue(),
                 "tenant-add-user", mailParam);
         }
-        //todo 发送站内信通知SaaS用户确认被邀请
+        //发送站内信，异常吃掉的原因是不希望影响主流程
+        try {
+            Map<String, Object> templateParams = new HashMap<>();
+            templateParams.put("tenantName", tenantRespDTO.getName());
+            notifySendService.sendSingleNotifyToAdmin(user.getId(),
+                    NotifyTemplateSaveReqDTO.tenant_admin_user, templateParams);
+        } catch ( Exception e) {
+             log.error("邀请用户消息发送站内信失败", e);
+        }
         return user.getId();
     }
 
@@ -194,7 +199,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         });
         // 校验正确性
         validateUserForCreate(createReqVO.getUsername(),
-            createReqVO.getMobile(), createReqVO.getDeptId(), createReqVO.getPostIds());
+            createReqVO.getMobile(), createReqVO.getDeptIdList(), createReqVO.getPostIds());
         // 插入用户
         AdminUserDO user = BeanUtils.toBean(createReqVO, AdminUserDO.class);
         //优先取邮箱账号的SaaS用户
@@ -232,24 +237,37 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
         user.setStatus(CommonStatusEnum.ENABLE.getStatus());
         userMapper.insert(user);
+        // 更新部门
+        updateUserDept(user.getId(), createReqVO.getDeptIdList());
         //添加时初次设置值
         user.setOpenAccount(StrUtils.uniqueId(user.getId()));
         userMapper.updateById(user);
         // 插入关联岗位
-        if (CollectionUtil.isNotEmpty(user.getPostIds())) {
-            userPostMapper.insertBatch(convertList(user.getPostIds(),
+        if (CollectionUtil.isNotEmpty(createReqVO.getPostIds())) {
+            userPostMapper.insertBatch(convertList(createReqVO.getPostIds(),
                 postId -> new UserPostDO().setUserId(user.getId()).setPostId(postId)));
         }
+        UserRespVO userRespVO = userMapper.selectJoinOne(user.getId());
+        TenantRespDTO tenantRespDTO = tenantService.getTenantById(userRespVO.getTenantId());
+        Map<String, Object> mailParam = new HashMap<String, Object>();
+        mailParam.put("mail", createReqVO.getUsername());
+        mailParam.put("password", password);
+        mailParam.put("registerTime", DateUtil.formatDateTime(new Date()));
+        mailParam.put("tenantName", tenantRespDTO.getName());
         //是否时新注册的平台用户
         if (registerSaasUser) {
-            Map<String, Object> mailParam = new HashMap<String, Object>();
-            mailParam.put("mail", createReqVO.getUsername());
-            mailParam.put("password", password);
-            mailParam.put("registerTime", DateUtil.formatDateTime(new Date()));
+            notifySendService.sendSingleNotifyToAdmin(user.getId(),
+                    NotifyTemplateSaveReqDTO.tenant_new_admin_user, mailParam);
             mailSendApi.sendSingleMail(createReqVO.getUsername(), null, UserTypeEnum.ADMIN.getValue(),
                 "tenant-add-user", mailParam);
         }
-        //todo 发送站内信通知SaaS用户确认被邀请
+        //发送站内信，异常吃掉的原因是不希望影响主流程
+        try {
+            notifySendService.sendSingleNotifyToAdmin(user.getId(),
+                    NotifyTemplateSaveReqDTO.tenant_super_admin_user, mailParam);
+        } catch ( Exception e) {
+            log.error("邀请用户消息发送站内信失败", e);
+        }
         return user.getId();
     }
 
@@ -257,18 +275,42 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Transactional(rollbackFor = Exception.class)
     public void updateUser(UserUpdateReqVO updateReqVO) {
         // 校验正确性
-        validateUserForUpdate(updateReqVO.getId(), updateReqVO.getDeptId(), updateReqVO.getPostIds());
+        validateUserForUpdate(updateReqVO.getId(), updateReqVO.getDeptIdList(), updateReqVO.getPostIds());
         // 更新用户
         AdminUserDO updateObj = BeanUtils.toBean(updateReqVO, AdminUserDO.class);
         userMapper.updateById(updateObj);
+        // 更新部门
+        updateUserDept(updateReqVO.getId(), updateReqVO.getDeptIdList());
         // 更新岗位
-        updateUserPost(updateReqVO.getId(), updateObj);
+        updateUserPost(updateReqVO.getId(), updateObj, updateReqVO);
     }
 
-    private void updateUserPost(Long userId, AdminUserDO updateObj) {
+    private void updateUserDept(Long userId, Set<Long> deptIds) {
+        // 获得用户拥有部门编号
+        Set<Long> dbDeptIds = convertSet(userDeptMapper.selectListByUserId(userId),
+                UserDeptDO::getDeptId);
+        // 计算新增和删除的部门编号
+        Set<Long> deptIdList = CollUtil.emptyIfNull(deptIds);
+        Collection<Long> createDeptIds = CollUtil.subtract(deptIdList, dbDeptIds);
+        Collection<Long> deleteDeptIds = CollUtil.subtract(dbDeptIds, deptIdList);
+        // 执行新增和删除。对于已经授权的部门，不用做任何处理
+        if (!CollectionUtil.isEmpty(createDeptIds)) {
+            userDeptMapper.insertBatch(CollectionUtils.convertList(createDeptIds, deptId -> {
+                UserDeptDO entity = new UserDeptDO();
+                entity.setUserId(userId);
+                entity.setDeptId(deptId);
+                return entity;
+            }));
+        }
+        if (!CollectionUtil.isEmpty(deleteDeptIds)) {
+            userDeptMapper.deleteListByUserIdAndDeptIdIds(userId, deleteDeptIds);
+        }
+    }
+
+    private void updateUserPost(Long userId, AdminUserDO updateObj, UserUpdateReqVO updateReqVO) {
         Set<Long> dbPostIds = convertSet(userPostMapper.selectListByUserId(userId), UserPostDO::getPostId);
         // 计算新增和删除的岗位编号
-        Set<Long> postIds = CollUtil.emptyIfNull(updateObj.getPostIds());
+        Set<Long> postIds = CollUtil.emptyIfNull(updateReqVO.getPostIds());
         Collection<Long> createPostIds = CollUtil.subtract(postIds, dbPostIds);
         Collection<Long> deletePostIds = CollUtil.subtract(dbPostIds, postIds);
         // 执行新增和删除。对于已经授权的菜单，不用做任何处理
@@ -347,6 +389,19 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
+    public void updateUserDeptId(Long id, Long deptId) {
+        AdminUserDO user = userMapper.selectById(id);
+        if (user == null) {
+            throw exception(USER_NOT_EXISTS);
+        }
+        // 更新状态
+        AdminUserDO updateObj = new AdminUserDO();
+        updateObj.setId(id);
+        updateObj.setDeptId(deptId);
+        userMapper.updateById(updateObj);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteUser(Long id) {
         // 校验用户存在
@@ -366,7 +421,18 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public PageResult<UserRespVO> getUserPage(UserPageReqVO reqVO) {
-        return userMapper.selectJoinPage(reqVO, getDeptCondition(reqVO.getDeptId()));
+        PageResult<UserRespVO> userRespVOPageResult = userMapper.selectJoinPage(reqVO, getDeptConditionUserIds(reqVO.getDeptId()));
+        if (CollUtil.isEmpty(userRespVOPageResult.getList())) {
+            return userRespVOPageResult;
+        }
+        Map<Long, List<UserPostRespVO>> userPostMap = postService.getUserPostMap(userRespVOPageResult.getList().stream().map(UserRespVO::getId).collect(Collectors.toSet()));
+        userRespVOPageResult.getList().forEach(userRespVO -> {
+            List<UserPostRespVO> userPostRespVOList = userPostMap.get(userRespVO.getId());
+            if (CollUtil.isNotEmpty(userPostRespVOList)) {
+                userRespVO.setPostIds(userPostRespVOList.stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
+            }
+        });
+        return userRespVOPageResult;
     }
 
     @Override
@@ -428,52 +494,55 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     /**
-     * 获得部门条件：查询指定部门的子部门编号们，包括自身
+     * 获得部门条件：查询指定部门的子部门编号们，包括自身，对应部门所有用户编号集合
      * @param deptId 部门编号
-     * @return 部门编号集合
+     * @return 对应部门所有用户编号集合
      */
-    private Set<Long> getDeptCondition(Long deptId) {
+    private Set<Long> getDeptConditionUserIds(Long deptId) {
         if (deptId == null) {
             return Collections.emptySet();
         }
         Set<Long> deptIds = convertSet(deptService.getChildDeptList(deptId), DeptDO::getId);
         // 包括自身
         deptIds.add(deptId);
-        return deptIds;
+        return userDeptMapper.selectListByDeptIds(deptIds).stream().map(UserDeptDO::getUserId).collect(Collectors.toSet());
     }
 
     /**
      * 新增时的校验
      * @param username SaaS用户表的邮箱账号
      * @param mobile SaaS表的手机号
-     * @param deptId 部门编号
+     * @param deptIdList 部门编号数组
      * @param postIds 多个岗位编号
      */
     private void validateUserForCreate(String username, String mobile,
-        Long deptId, Set<Long> postIds) {
+                                       Set<Long> deptIdList, Set<Long> postIds) {
         // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
         DataPermissionUtils.executeIgnore(() -> {
             // 校验邮箱账号在SaaS用户表中是否存在,以及是否被其它账号绑定了
             validateUsernameExists(username, mobile);
             // 校验部门处于开启状态
-            deptService.validateDeptList(CollectionUtils.singleton(deptId));
+            deptService.validateDeptList(deptIdList);
             // 校验岗位处于开启状态
             postService.validatePostList(postIds);
         });
     }
 
-    private void validateUserForUpdate(Long id, Long deptId, Set<Long> postIds) {
+    private void validateUserForUpdate(Long id, Set<Long> deptIdList, Set<Long> postIds) {
         // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
         DataPermissionUtils.executeIgnore(() -> {
             // 校验用户存在
             validateUserExists(id);
             // 校验部门处于开启状态
-            deptService.validateDeptList(CollectionUtils.singleton(deptId));
+            deptService.validateDeptList(deptIdList);
             // 校验岗位处于开启状态
             postService.validatePostList(postIds);
         });
     }
 
+    /**
+     * 判断用户是否存在以及否是租户管理员
+     */
     @VisibleForTesting
     void validateUserExists(Long id) {
         if (id == null) {
@@ -641,6 +710,53 @@ public class AdminUserServiceImpl implements AdminUserService {
             });
         });
         return tenantList;
+    }
+
+    @Override
+    public List<UserDeptRespVO> getMyEnableDeptList() {
+        // 关闭数据权限，避免因为没有数据权限，查询不到数据
+        DataPermission dataPermission = getDisableDataPermissionDisable();
+        DataPermissionContextHolder.add(dataPermission);
+        try {
+            AdminUserDO user = userMapper.selectById(getLoginUserId());
+            if (user == null) {
+                return Collections.emptyList();
+            }
+            return userDeptMapper.selectListByUserIds(Collections.singleton(user.getId()));
+        } finally {
+            DataPermissionContextHolder.remove();
+        }
+    }
+
+    @Override
+    public void updateUserValidate(Long id) {
+        // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
+        DataPermissionUtils.executeIgnore(() -> {
+            // 校验用户存在
+            validateUserExists(id);
+        });
+    }
+
+    @Override
+    public boolean hasTenantAdmin(Long id) {
+        AtomicBoolean hasTenantAdmin = new AtomicBoolean(false);
+        // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
+        DataPermissionUtils.executeIgnore(() -> {
+            if (id == null) {
+                return;
+            }
+            AdminUserDO user = userMapper.selectById(id);
+            if (user == null) {
+                return;
+            }
+            // 校验账户配合
+            tenantService.handleTenantInfo(tenant -> {
+                if (id.equals(tenant.getContactUserId())) {
+                    hasTenantAdmin.set(true);
+                }
+            });
+        });
+        return hasTenantAdmin.get();
     }
 
     /**

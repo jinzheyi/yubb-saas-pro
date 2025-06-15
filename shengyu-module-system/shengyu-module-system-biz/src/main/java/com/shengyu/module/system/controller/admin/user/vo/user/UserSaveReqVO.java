@@ -3,6 +3,9 @@ package com.shengyu.module.system.controller.admin.user.vo.user;
 import com.shengyu.framework.common.util.validation.ValidGroup;
 import com.shengyu.framework.common.validation.Mobile;
 import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
@@ -28,7 +31,7 @@ public class UserSaveReqVO {
     private String remark;
 
     @Schema(description = "部门ID", example = "我是一个用户")
-    private Long deptId;
+    private Set<Long> deptIdList = Collections.emptySet();
 
     @Schema(description = "岗位编号数组", example = "1")
     private Set<Long> postIds;

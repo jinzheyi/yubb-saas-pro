@@ -1,41 +1,35 @@
 package com.shengyu.module.system.service.dept;
 
-import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.DEPT_EXITS_CHILDREN;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.DEPT_NAME_DUPLICATE;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.DEPT_NOT_ENABLE;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.DEPT_NOT_FOUND;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.DEPT_PARENT_ERROR;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.DEPT_PARENT_IS_CHILD;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.DEPT_PARENT_NOT_EXITS;
-
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.google.common.annotations.VisibleForTesting;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.enums.dept.DeptIdEnum;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptListReqVO;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptSaveReqVO;
+import com.shengyu.module.system.controller.admin.dept.vo.dept.UserDeptRespVO;
+import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
 import com.shengyu.module.system.dal.mysql.dept.DeptMapper;
+import com.shengyu.module.system.dal.mysql.dept.UserDeptMapper;
+import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.dal.redis.RedisKeyConstants;
-import com.google.common.annotations.VisibleForTesting;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
+
+import javax.annotation.Resource;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 部门 Service 实现类
@@ -49,6 +43,12 @@ public class DeptServiceImpl implements DeptService {
 
     @Resource
     private DeptMapper deptMapper;
+
+    @Resource
+    private AdminUserMapper adminUserMapper;
+
+    @Resource
+    private UserDeptMapper userDeptMapper;
 
     @Override
     @CacheEvict(cacheNames = RedisKeyConstants.DEPT_CHILDREN_ID_LIST,
@@ -183,6 +183,19 @@ public class DeptServiceImpl implements DeptService {
     }
 
     @Override
+    public Map<Long, List<UserDeptRespVO>> getUserDeptMap(Collection<Long> ids) {
+        if (CollUtil.isEmpty(ids)) {
+            return Collections.emptyMap();
+        }
+        List<UserDeptRespVO> userDeptRespVOList = userDeptMapper.selectListByUserIds(ids);
+        if (CollUtil.isEmpty(userDeptRespVOList)) {
+            return Collections.emptyMap();
+        }
+       return userDeptRespVOList.stream()
+                .collect(Collectors.groupingBy(UserDeptRespVO::getUserId));
+    }
+
+    @Override
     public List<DeptDO> getChildDeptList(Long id) {
         List<DeptDO> children = new LinkedList<>();
         // 遍历每一层
@@ -226,6 +239,56 @@ public class DeptServiceImpl implements DeptService {
                 throw exception(DEPT_NOT_ENABLE, dept.getName());
             }
         });
+    }
+
+     public Map<Long, DeptDO> getDeptMap() {
+        return deptMapper.selectList(DeptDO::getStatus, CommonStatusEnum.ENABLE.getStatus()).stream()
+                .collect(Collectors.toMap(
+                        DeptDO::getId,
+                        Function.identity(),
+                        (oldValue, newValue) -> newValue  // 冲突时保留新值
+                ));
+    }
+
+    /**
+     * 获取指定部门的所有上级部门负责人
+      * @param departmentId 指定部门ID
+     * @return 获取指定部门的所有上级部门负责人
+     */
+    @Override
+    public List<UserRespVO> getAllAncestorLeaders(Long departmentId) {
+        List<UserRespVO> leaders = new ArrayList<>();
+        Map<Long, DeptDO> departmentMap = getDeptMap();
+        DeptDO current = departmentMap.get(departmentId);
+        while (current != null && current.getParentId() != null) {
+            DeptDO parent = departmentMap.get(current.getParentId());
+            if (parent != null) {
+                leaders.add(adminUserMapper.selectJoinOne(parent.getLeaderUserId()));
+                current = parent;
+            } else {
+                break; // Parent not found
+            }
+        }
+        return leaders;
+    }
+
+    @Override
+    public List<UserRespVO> getAncestorLeadersUpToLevel(Long departmentId, int maxLevels) {
+        List<UserRespVO> leaders = new ArrayList<>();
+        Map<Long, DeptDO> departmentMap = getDeptMap();
+        DeptDO current = departmentMap.get(departmentId);
+        int level = 0;
+        while (current != null && current.getParentId() != null && level < maxLevels) {
+            DeptDO parent = departmentMap.get(current.getParentId());
+            if (parent != null) {
+                leaders.add(adminUserMapper.selectJoinOne(parent.getLeaderUserId()));
+                current = parent;
+                level++;
+            } else {
+                break; // Parent not found
+            }
+        }
+        return leaders;
     }
 
 }

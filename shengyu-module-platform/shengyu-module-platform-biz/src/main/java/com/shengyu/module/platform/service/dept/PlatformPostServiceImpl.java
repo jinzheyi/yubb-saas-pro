@@ -11,16 +11,17 @@ import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
-import com.shengyu.module.platform.controller.platform.dept.vo.post.PostCreateReqVO;
-import com.shengyu.module.platform.controller.platform.dept.vo.post.PostExportReqVO;
-import com.shengyu.module.platform.controller.platform.dept.vo.post.PostPageReqVO;
-import com.shengyu.module.platform.controller.platform.dept.vo.post.PostUpdateReqVO;
+import com.shengyu.module.platform.controller.platform.dept.vo.post.*;
 import com.shengyu.module.platform.dal.dataobject.dept.PlatformPostDO;
 import com.shengyu.module.platform.dal.mysql.dept.PlatformPostMapper;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.annotation.Resource;
+
+import com.shengyu.module.platform.dal.mysql.dept.PlatformUserPostMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -35,6 +36,8 @@ public class PlatformPostServiceImpl implements PlatformPostService {
 
     @Resource
     private PlatformPostMapper platformPostMapper;
+    @Resource
+    private PlatformUserPostMapper platformUserPostMapper;
 
     @Override
     public Long createPost(PostCreateReqVO reqVO) {
@@ -150,4 +153,18 @@ public class PlatformPostServiceImpl implements PlatformPostService {
             }
         });
     }
+
+    @Override
+    public Map<Long, List<UserPostRespVO>> getUserPostMap(Collection<Long> ids) {
+        if (CollUtil.isEmpty(ids)) {
+            return Collections.emptyMap();
+        }
+        List<UserPostRespVO> userPostRespVOList = platformUserPostMapper.selectListByUserIds(ids);
+        if (CollUtil.isEmpty(userPostRespVOList)) {
+            return Collections.emptyMap();
+        }
+        return userPostRespVOList.stream()
+                .collect(Collectors.groupingBy(UserPostRespVO::getUserId));
+    }
+
 }

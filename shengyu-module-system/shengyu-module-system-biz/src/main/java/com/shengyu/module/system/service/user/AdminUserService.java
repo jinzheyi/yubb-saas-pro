@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.framework.common.util.validation.ValidGroup;
 import com.shengyu.module.system.api.user.dto.AdminUserCreateReqDTO;
+import com.shengyu.module.system.controller.admin.dept.vo.dept.UserDeptRespVO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.*;
@@ -92,6 +93,13 @@ public interface AdminUserService {
      * @param status 状态
      */
     void updateUserStatus(Long id, Integer status);
+
+    /**
+     * 更新用户登录选择部门
+     * @param id 用户id
+     * @param deptId 部门id
+     */
+    void updateUserDeptId(Long id, Long deptId);
 
     /**
      * 删除用户
@@ -208,5 +216,24 @@ public interface AdminUserService {
      * @return 結果
      */
     List<MyTenantRespVO> getMyTenantList();
+
+    /**
+     * 获取当前用户的部门信息
+     * @return 結果
+     */
+    List<UserDeptRespVO> getMyEnableDeptList();
+
+    /**
+     * 校验用户
+     * @param id 用户编号
+     */
+    void updateUserValidate(Long id);
+
+    /**
+     * 判断用户是否是租户管理员
+     * @param id 用户编号
+     * @return 結果 true 是/false 否
+     */
+    boolean hasTenantAdmin(Long id);
 
 }

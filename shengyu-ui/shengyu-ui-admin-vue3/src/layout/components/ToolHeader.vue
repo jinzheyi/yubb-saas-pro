@@ -3,6 +3,7 @@ import { defineComponent, computed } from 'vue'
 import { Message } from '@/layout/components//Message'
 import { PlugApp } from '@/layout/components//PlugApp'
 import { MyTenant } from '@/layout/components//MyTenant'
+import { MyEnableDept } from '@/layout/components//MyEnableDept'
 import { Collapse } from '@/layout/components/Collapse'
 import { UserInfo } from '@/layout/components/UserInfo'
 import { Screenfull } from '@/layout/components/Screenfull'
@@ -49,6 +50,9 @@ const plugApp = computed(() => appStore.getPlugApp)
 // 我的租户图标
 const myTenant = computed(() => appStore.getMyTenant)
 
+// 我的启用部门图标
+const myEnableDept = computed(() => appStore.getMyEnableDept)
+
 export default defineComponent({
   name: 'ToolHeader',
   setup() {
@@ -88,6 +92,9 @@ export default defineComponent({
           ) : undefined}
           {plugApp.value ? (
             <PlugApp class="custom-hover" color="var(--top-header-text-color)"></PlugApp>
+          ) : undefined}
+          {myEnableDept.value ? (
+            <MyEnableDept class="custom-hover" color="var(--top-header-text-color)"></MyEnableDept>
           ) : undefined}
           {myTenant.value ? (
             <MyTenant class="custom-hover" color="var(--top-header-text-color)"></MyTenant>

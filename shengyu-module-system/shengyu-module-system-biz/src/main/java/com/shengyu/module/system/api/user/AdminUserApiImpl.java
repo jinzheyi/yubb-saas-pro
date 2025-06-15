@@ -4,6 +4,7 @@ import static com.shengyu.framework.common.util.collection.CollectionUtils.conve
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
+import com.shengyu.framework.common.enums.CommonConstants;
 import com.shengyu.framework.common.enums.permission.RoleCodeEnum;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.system.api.user.dto.AdminUserCreateReqDTO;
@@ -95,9 +96,11 @@ public class AdminUserApiImpl implements AdminUserApi {
 
     @Override
     public Long createUser(AdminUserCreateReqDTO reqDTO, String businessName) {
-        if (RoleCodeEnum.TENANT_ADMIN.getCode().equals(businessName)) {
+        // 判断是创建租户管理员的分支
+        if (CommonConstants.TENANT_ADMIN.equals(businessName)) {
             return adminUserService.createTenantUser(BeanUtils.toBean(reqDTO, UserSaveReqVO.class), reqDTO);
         }
+        //外部创建用户
         return adminUserService.createUser(BeanUtils.toBean(reqDTO, UserSaveReqVO.class));
     }
 

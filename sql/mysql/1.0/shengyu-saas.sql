@@ -2249,7 +2249,6 @@ CREATE TABLE `platform_users`  (
   `nickname` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户昵称',
   `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '备注',
   `dept_id` bigint NULL DEFAULT NULL COMMENT '部门ID',
-  `post_ids` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '岗位编号数组',
   `email` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '用户邮箱',
   `mobile` varchar(11) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '手机号码',
   `sex` tinyint NULL DEFAULT 0 COMMENT '用户性别',
@@ -2269,7 +2268,7 @@ CREATE TABLE `platform_users`  (
 -- ----------------------------
 -- Records of platform_users
 -- ----------------------------
-INSERT INTO `platform_users` VALUES (1, 'admin', '$2a$04$9GQYoSk1U649RJRSADyFw./ln74SasJ3A84/Qy/FeA9uh8OGYSU7S', '圣钰科技', '管理员', 103, '[1]', 'jin_zheyicn@qq.com', '15170435653', 1, 'http://127.0.0.1:48080/platform-api/infra/file/4/get/098aab3cb5a9e33ec18ab3bf1ae28f338627f28d92b023d4fd441c098f760f77.png', 0, '0:0:0:0:0:0:0:1', '2024-08-21 00:07:53', 'admin', '2021-01-05 17:03:47', NULL, '2024-08-21 00:07:53', b'0');
+INSERT INTO `platform_users` VALUES (1, 'admin', '$2a$04$9GQYoSk1U649RJRSADyFw./ln74SasJ3A84/Qy/FeA9uh8OGYSU7S', '圣钰科技', '管理员', 103, 'jin_zheyicn@qq.com', '15170435653', 1, 'http://127.0.0.1:48080/platform-api/infra/file/4/get/098aab3cb5a9e33ec18ab3bf1ae28f338627f28d92b023d4fd441c098f760f77.png', 0, '0:0:0:0:0:0:0:1', '2024-08-21 00:07:53', 'admin', '2021-01-05 17:03:47', NULL, '2024-08-21 00:07:53', b'0');
 
 -- ----------------------------
 -- Table structure for plug_order
@@ -2786,7 +2785,6 @@ CREATE TABLE `system_users`  (
   `nickname` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户昵称',
   `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '备注',
   `dept_id` bigint NULL DEFAULT NULL COMMENT '部门ID',
-  `post_ids` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '岗位编号数组',
   `avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '头像地址',
   `status` tinyint NOT NULL DEFAULT 0 COMMENT '帐号状态（0正常 1停用）',
   `login_ip` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '最后登录IP',
@@ -3308,5 +3306,22 @@ CREATE TABLE `tenant_social_user_bind`  (
 -- ----------------------------
 -- Records of tenant_social_user_bind
 -- ----------------------------
+
+-- ----------------------------
+-- Table structure for system_user_dept
+-- ----------------------------
+DROP TABLE IF EXISTS `system_user_dept`;
+CREATE TABLE `system_user_dept`  (
+                                     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增编号',
+                                     `user_id` bigint NOT NULL COMMENT '用户ID',
+                                     `dept_id` bigint NOT NULL COMMENT '部门ID',
+                                     `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+                                     `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                     `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+                                     `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                     `deleted` bit(1) NULL DEFAULT b'0' COMMENT '是否删除',
+                                     `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+                                     PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户和部门关联表' ROW_FORMAT = DYNAMIC;
 
 SET FOREIGN_KEY_CHECKS = 1;

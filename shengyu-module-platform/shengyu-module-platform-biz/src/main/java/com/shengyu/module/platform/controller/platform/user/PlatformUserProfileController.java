@@ -9,6 +9,7 @@ import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
+import com.shengyu.module.platform.controller.platform.dept.vo.post.UserPostRespVO;
 import com.shengyu.module.platform.controller.platform.user.vo.profile.UserProfileRespVO;
 import com.shengyu.module.platform.controller.platform.user.vo.profile.UserProfileUpdatePasswordReqVO;
 import com.shengyu.module.platform.controller.platform.user.vo.profile.UserProfileUpdateReqVO;
@@ -23,7 +24,11 @@ import com.shengyu.module.platform.service.permission.PlatformRoleService;
 import com.shengyu.module.platform.service.user.PlatformUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import javax.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -71,8 +76,9 @@ public class PlatformUserProfileController {
             resp.setDept(BeanUtils.toBean(dept, UserProfileRespVO.Dept.class));
         }
         // 获得岗位信息
-        if (CollUtil.isNotEmpty(user.getPostIds())) {
-            List<PlatformPostDO> posts = platformPostService.getPostList(user.getPostIds());
+        List<UserPostRespVO> userPostRespVOList = platformPostService.getUserPostMap(Collections.singleton(user.getId())).get(user.getId());
+        if (CollUtil.isNotEmpty(userPostRespVOList)) {
+            List<PlatformPostDO> posts = platformPostService.getPostList(userPostRespVOList.stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
             resp.setPosts(BeanUtils.toBean(posts, UserProfileRespVO.Post.class));
         }
         return success(resp);

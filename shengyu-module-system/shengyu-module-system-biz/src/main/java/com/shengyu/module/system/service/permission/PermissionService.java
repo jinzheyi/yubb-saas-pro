@@ -41,6 +41,14 @@ public interface PermissionService {
      */
     boolean hasAnyRoles(Long userId, String... roles);
 
+    /**
+     * 判断是否有角色，任一一个即可
+     *
+     * @param roleIds 角色id数组
+     * @return 是否
+     */
+    boolean hasAnyRoleIds(Long userId, List<Long> roleIds);
+
     // ========== 角色-菜单的相关方法  ==========
 
     /**
@@ -74,6 +82,13 @@ public interface PermissionService {
     default Set<Long> getRoleMenuListByRoleId(Long roleId) {
         return getRoleMenuListByRoleId(singleton(roleId));
     }
+
+    /**
+     * 获得超管拥有的菜单编号集合
+     *
+     * @return 菜单编号集合
+     */
+    Set<Long> getRoleMenuListByTenantPackageAndPlugMenu();
 
     /**
      * 获得角色们拥有的菜单编号集合

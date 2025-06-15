@@ -84,3 +84,8 @@ export const getSimpleUserList = (): Promise<UserVO[]> => {
 export const getMyTenantList = async () => {
   return await request.get({ url: '/system/user/get-myTenant-list' })
 }
+
+// 获取当前用户的我的全部有效部门列表
+export const getMyEnableDeptList = async () => {
+  return await request.get({ url: '/system/user/get-myEnableDept-list' })
+}

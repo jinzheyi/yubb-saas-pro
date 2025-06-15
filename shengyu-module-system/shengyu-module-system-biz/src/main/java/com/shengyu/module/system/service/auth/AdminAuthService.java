@@ -5,6 +5,7 @@ import com.shengyu.module.system.controller.admin.auth.vo.AuthLoginRespVO;
 import com.shengyu.module.system.controller.admin.auth.vo.AuthSmsLoginReqVO;
 import com.shengyu.module.system.controller.admin.auth.vo.AuthSmsSendReqVO;
 import com.shengyu.module.system.controller.admin.auth.vo.AuthSocialLoginReqVO;
+import com.shengyu.module.system.controller.admin.auth.vo.ToDeptReqVO;
 import com.shengyu.module.system.controller.admin.auth.vo.ToTenantReqVO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import javax.validation.Valid;
@@ -82,5 +83,12 @@ public interface AdminAuthService {
      * @return 切换结果
      */
     AuthLoginRespVO toTenant(@Valid ToTenantReqVO reqVO, String token);
+
+    /**
+     * 切换目标部门
+     * @param reqVO
+     * @return
+     */
+    ToDeptReqVO toDept(ToDeptReqVO reqVO);
 
 }

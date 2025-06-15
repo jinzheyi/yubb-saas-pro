@@ -2,15 +2,13 @@ package com.shengyu.module.platform.service.dept;
 
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.pojo.PageResult;
-import com.shengyu.module.platform.controller.platform.dept.vo.post.PostCreateReqVO;
-import com.shengyu.module.platform.controller.platform.dept.vo.post.PostExportReqVO;
-import com.shengyu.module.platform.controller.platform.dept.vo.post.PostPageReqVO;
-import com.shengyu.module.platform.controller.platform.dept.vo.post.PostUpdateReqVO;
+import com.shengyu.module.platform.controller.platform.dept.vo.post.*;
 import com.shengyu.module.platform.dal.dataobject.dept.PlatformPostDO;
 import org.springframework.lang.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import static com.shengyu.framework.common.util.collection.SetUtils.asSet;
 
@@ -94,5 +92,13 @@ public interface PlatformPostService {
      * @param ids 岗位编号数组
      */
     void validatePostList(Collection<Long> ids);
+
+    /**
+     * 获得指定用户编号的岗位 Map
+     *
+     * @param ids 用户编号数组
+     * @return 用户编号。岗位数组 Map
+     */
+    Map<Long, List<UserPostRespVO>> getUserPostMap(Collection<Long> ids);
 
 }

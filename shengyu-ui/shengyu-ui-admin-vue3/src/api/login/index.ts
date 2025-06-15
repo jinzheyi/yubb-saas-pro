@@ -25,6 +25,19 @@ export const toTenant = (id: number) => {
   })
 }
 
+/**
+ * 跳转目标部门
+ * @param id 部门id
+ */
+export const toDept = (id: number) => {
+  return request.post({
+    url: '/system/auth/toDept',
+    data: {
+      id
+    }
+  })
+}
+
 // 登录
 export const login = (data: UserLoginVO) => {
   return request.post({ url: '/system/auth/login', data })

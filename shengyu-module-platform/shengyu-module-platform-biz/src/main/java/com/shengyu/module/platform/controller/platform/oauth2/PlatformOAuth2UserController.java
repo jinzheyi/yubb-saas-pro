@@ -6,6 +6,7 @@ import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.ge
 import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.module.platform.controller.platform.dept.vo.post.UserPostRespVO;
 import com.shengyu.module.platform.controller.platform.oauth2.vo.user.OAuth2UserInfoRespVO;
 import com.shengyu.module.platform.controller.platform.oauth2.vo.user.OAuth2UserUpdateReqVO;
 import com.shengyu.module.platform.controller.platform.user.vo.profile.UserProfileUpdateReqVO;
@@ -17,7 +18,10 @@ import com.shengyu.module.platform.service.dept.PlatformPostService;
 import com.shengyu.module.platform.service.user.PlatformUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import javax.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -64,8 +68,9 @@ public class PlatformOAuth2UserController {
             resp.setDept(BeanUtils.toBean(dept, OAuth2UserInfoRespVO.Dept.class));
         }
         // 获得岗位信息
-        if (CollUtil.isNotEmpty(user.getPostIds())) {
-            List<PlatformPostDO> posts = platformPostService.getPostList(user.getPostIds());
+        List<UserPostRespVO> userPostRespVOList = platformPostService.getUserPostMap(Collections.singleton(user.getId())).get(user.getId());
+        if (CollUtil.isNotEmpty(userPostRespVOList)) {
+            List<PlatformPostDO> posts = platformPostService.getPostList(userPostRespVOList.stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
             resp.setPosts(BeanUtils.toBean(posts, OAuth2UserInfoRespVO.Post.class));
         }
         return success(resp);

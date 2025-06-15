@@ -6,8 +6,10 @@ import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.system.controller.admin.dept.vo.post.PostPageReqVO;
 import com.shengyu.module.system.controller.admin.dept.vo.post.PostSaveReqVO;
+import com.shengyu.module.system.controller.admin.dept.vo.post.UserPostRespVO;
 import com.shengyu.module.system.dal.dataobject.dept.PostDO;
 import com.shengyu.module.system.dal.mysql.dept.PostMapper;
+import com.shengyu.module.system.dal.mysql.dept.UserPostMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -16,6 +18,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
@@ -32,6 +35,8 @@ public class PostServiceImpl implements PostService {
 
     @Resource
     private PostMapper postMapper;
+    @Resource
+    private UserPostMapper userPostMapper;
 
     @Override
     public Long createPost(PostSaveReqVO createReqVO) {
@@ -150,4 +155,18 @@ public class PostServiceImpl implements PostService {
             }
         });
     }
+
+    @Override
+    public Map<Long, List<UserPostRespVO>> getUserPostMap(Collection<Long> ids) {
+        if (CollUtil.isEmpty(ids)) {
+            return Collections.emptyMap();
+        }
+        List<UserPostRespVO> userPostRespVOList = userPostMapper.selectListByUserIds(ids);
+        if (CollUtil.isEmpty(userPostRespVOList)) {
+            return Collections.emptyMap();
+        }
+        return userPostRespVOList.stream()
+                .collect(Collectors.groupingBy(UserPostRespVO::getUserId));
+    }
+
 }

@@ -22,6 +22,7 @@ import com.shengyu.module.system.controller.admin.auth.vo.AuthPermissionInfoResp
 import com.shengyu.module.system.controller.admin.auth.vo.AuthSmsLoginReqVO;
 import com.shengyu.module.system.controller.admin.auth.vo.AuthSmsSendReqVO;
 import com.shengyu.module.system.controller.admin.auth.vo.AuthSocialLoginReqVO;
+import com.shengyu.module.system.controller.admin.auth.vo.ToDeptReqVO;
 import com.shengyu.module.system.controller.admin.auth.vo.ToTenantReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.convert.auth.AuthConvert;
@@ -114,18 +115,22 @@ public class AuthController {
         if (user == null) {
             return null;
         }
-
-        // 1.2 获得角色列表
-        Set<Long> roleIds = permissionService.getUserRoleIdListByUserId(getLoginUserId());
-        if (CollUtil.isEmpty(roleIds)) {
-            return success(AuthConvert.INSTANCE.convert(user, Collections.emptyList(), Collections.emptyList()));
+        List<RoleDO> roles = Collections.emptyList();
+        Set<Long> menuIds;
+        if (adminUserService.hasTenantAdmin(user.getId())) {
+            menuIds = permissionService.getRoleMenuListByTenantPackageAndPlugMenu();
+        } else {
+            // 1.2 获得角色列表
+            Set<Long> roleIds = permissionService.getUserRoleIdListByUserId(getLoginUserId());
+            if (CollUtil.isEmpty(roleIds)) {
+                return success(AuthConvert.INSTANCE.convert(user, Collections.emptyList(), Collections.emptyList()));
+            }
+            roles = roleService.getRoleList(roleIds);
+            // 移除禁用的角色
+            roles.removeIf(role -> !CommonStatusEnum.ENABLE.getStatus().equals(role.getStatus()));
+            // 1.3 获得菜单列表
+            menuIds = permissionService.getRoleMenuListByRoleId(convertSet(roles, RoleDO::getId));
         }
-        List<RoleDO> roles = roleService.getRoleList(roleIds);
-        // 移除禁用的角色
-        roles.removeIf(role -> !CommonStatusEnum.ENABLE.getStatus().equals(role.getStatus()));
-
-        // 1.3 获得菜单列表
-        Set<Long> menuIds = permissionService.getRoleMenuListByRoleId(convertSet(roles, RoleDO::getId));
         TenantMenuListReqDTO reqDTO = new TenantMenuListReqDTO();
         reqDTO.setStatus(CommonStatusEnum.ENABLE.getStatus());
         reqDTO.setIds(new ArrayList<>(menuIds));
@@ -183,6 +188,13 @@ public class AuthController {
         String token = SecurityFrameworkUtils.obtainAuthorization(request,
             securityProperties.getTokenHeader(), securityProperties.getTokenParameter());
         return success(adminAuthService.toTenant(reqVO, token));
+    }
+
+    @PostMapping("/toDept")
+    @Operation(summary = "跳转到目标部门", description = "跳转到目标部门")
+    @OperateLog(enable = false) // 避免 Post 请求被记录操作日志
+    public CommonResult<ToDeptReqVO> toDept(@RequestBody @Valid ToDeptReqVO reqVO) {
+        return success(adminAuthService.toDept(reqVO));
     }
 
 }

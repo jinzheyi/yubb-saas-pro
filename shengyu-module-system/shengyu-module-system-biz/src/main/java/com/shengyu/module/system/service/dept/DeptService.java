@@ -3,6 +3,8 @@ package com.shengyu.module.system.service.dept;
 import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptListReqVO;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptSaveReqVO;
+import com.shengyu.module.system.controller.admin.dept.vo.dept.UserDeptRespVO;
+import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
 
 import java.util.Collection;
@@ -64,6 +66,14 @@ public interface DeptService {
     List<DeptDO> getDeptList(DeptListReqVO reqVO);
 
     /**
+     * 获得指定用户编号的部门 Map
+     *
+     * @param ids 用户编号数组
+     * @return 用户编号。部门数组 Map
+     */
+    Map<Long, List<UserDeptRespVO>> getUserDeptMap(Collection<Long> ids);
+
+    /**
      * 获得指定编号的部门 Map
      *
      * @param ids 部门编号数组
@@ -98,5 +108,20 @@ public interface DeptService {
      * @param ids 角色编号数组
      */
     void validateDeptList(Collection<Long> ids);
+
+    /**
+     * 获取指定部门的所有上级部门负责人
+     * @param departmentId 指定部门ID
+     * @return 获取指定部门的所有上级部门负责人
+     */
+    List<UserRespVO> getAllAncestorLeaders(Long departmentId);
+
+    /**
+     * 获取指定部门及其往上 n 层级的上级部门负责人
+     * @param departmentId 指定部门ID
+     * @param maxLevels  最高层数
+     * @return  获取指定部门及其往上 n 层级的上级部门负责人
+     */
+    List<UserRespVO> getAncestorLeadersUpToLevel(Long departmentId, int maxLevels);
 
 }

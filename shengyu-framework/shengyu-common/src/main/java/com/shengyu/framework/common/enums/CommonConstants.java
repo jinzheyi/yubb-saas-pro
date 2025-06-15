@@ -19,6 +19,11 @@ public class CommonConstants {
      */
     public static final String USER_NAME = "admin";
 
+    /**
+     * 租户管理员标识
+     */
+    public static final String TENANT_ADMIN = "tenant_admin";
+
     public static final String SY = "sy";
 
     /**
