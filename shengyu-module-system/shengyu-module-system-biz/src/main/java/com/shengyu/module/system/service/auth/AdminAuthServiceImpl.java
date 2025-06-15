@@ -353,6 +353,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
      * @return 对应租户的用户信息
      */
     private AdminUserDO getAdminUser(SaasUserDO saasUserDO, Long tenantId, LoginLogTypeEnum logTypeEnum) {
+        //todo 这里获取用户需要考虑租户被禁被删，用户被禁被删的情况
         Long oldTenantId = TenantContextHolder.getTenantId();
         Boolean oldIgnore = TenantContextHolder.isIgnore();
         TenantContextHolder.setTenantId(tenantId);
