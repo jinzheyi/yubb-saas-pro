@@ -3,6 +3,8 @@ package com.shengyu.module.platform.api.tenant;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
 import com.shengyu.module.platform.service.tenant.PlatformTenantService;
+
+import java.util.Collection;
 import java.util.List;
 import javax.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,11 @@ public class TenantApiImpl implements TenantApi {
     @Override
     public TenantRespDTO getTenant(Long id) {
         return BeanUtils.toBean(platformTenantService.getTenant(id), TenantRespDTO.class);
+    }
+
+    @Override
+    public List<TenantRespDTO> getTenantList(Collection<Long> ids) {
+        return BeanUtils.toBean(platformTenantService.getTenantList(ids), TenantRespDTO.class);
     }
 
     @Override

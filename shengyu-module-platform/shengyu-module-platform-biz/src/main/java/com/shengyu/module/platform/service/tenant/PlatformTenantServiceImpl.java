@@ -36,6 +36,8 @@ import com.shengyu.module.system.api.permission.RoleApi;
 import com.shengyu.module.system.api.permission.dto.RoleCreateReqDTO;
 import com.shengyu.module.system.api.permission.dto.RoleSimpleRespDTO;
 import com.shengyu.module.system.api.user.AdminUserApi;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -214,6 +216,11 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     @Override
     public TenantDO getTenant(Long id) {
         return tenantMapper.selectById(id);
+    }
+
+    @Override
+    public List<TenantDO> getTenantList(Collection<Long> ids) {
+        return tenantMapper.selectBatchIds(ids);
     }
 
     @Override

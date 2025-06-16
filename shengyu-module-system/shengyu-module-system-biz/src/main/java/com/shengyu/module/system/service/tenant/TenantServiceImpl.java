@@ -15,6 +15,8 @@ import com.shengyu.module.system.dal.dataobject.plug.PlugTenantDO;
 import com.shengyu.module.system.dal.mysql.plug.PlugTenantMapper;
 import com.shengyu.module.system.service.tenant.handler.TenantInfoHandler;
 import com.shengyu.module.system.service.tenant.handler.TenantMenuHandler;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +56,11 @@ public class TenantServiceImpl implements TenantService {
     @Override
     public TenantRespDTO getTenantById(Long id) {
         return tenantApi.getTenant(id);
+    }
+
+    @Override
+    public List<TenantRespDTO> getTenantList(Collection<Long> ids) {
+        return tenantApi.getTenantList(ids);
     }
 
     @Override

@@ -4,6 +4,9 @@ import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
 import com.shengyu.module.system.service.tenant.handler.TenantInfoHandler;
 import com.shengyu.module.system.service.tenant.handler.TenantMenuHandler;
+
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -28,6 +31,14 @@ public interface TenantService {
      * @return 租户
      */
     TenantRespDTO getTenantById(Long id);
+
+    /**
+     * 获得租户列表
+     *
+     * @param ids 租户编号数组
+     * @return 租户列表
+     */
+    List<TenantRespDTO> getTenantList(Collection<Long> ids);
 
     /**
      * 获得域名对应的租户
