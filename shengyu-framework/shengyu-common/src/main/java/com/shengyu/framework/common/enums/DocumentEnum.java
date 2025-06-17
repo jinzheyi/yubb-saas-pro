@@ -12,8 +12,8 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum DocumentEnum {
 
-    REDIS_INSTALL("https://gitee.com/jinzheyi/yubb-saas-pro/issues/I4VCSJ", "Redis 安装文档"),
-    TENANT("https://doc.iocoder.cn", "SaaS 多租户文档");
+    REDIS_INSTALL("https://gitee.com/jinzheyi/yubb-saas-pro", "圣钰 SaaS 下载地址"),
+    TENANT("http://www.shengyukj.top", "圣钰 SaaS 多租户官网");
 
     private final String url;
     private final String memo;

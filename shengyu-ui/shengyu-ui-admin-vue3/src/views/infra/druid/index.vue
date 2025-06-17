@@ -1,6 +1,5 @@
 <template>
-  <doc-alert title="数据库 MyBatis" url="https://doc.iocoder.cn/mybatis/" />
-  <doc-alert title="多数据源（读写分离）" url="https://doc.iocoder.cn/dynamic-datasource/" />
+  <doc-alert title="官网地址" url="http://www.shengyukj.top/" />
 
   <ContentWrap>
     <IFrame v-if="!loading" :src="url" />

@@ -230,6 +230,12 @@ public interface AdminUserService {
     void updateUserValidate(Long id);
 
     /**
+     * 校验超管用户
+     * @param id 用户编号
+     */
+    void updateUserValidateTenantAdmin(Long id);
+
+    /**
      * 判断用户是否是租户管理员
      * @param id 用户编号
      * @return 結果 true 是/false 否

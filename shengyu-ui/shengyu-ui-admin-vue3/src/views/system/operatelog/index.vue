@@ -1,5 +1,5 @@
 <template>
-  <doc-alert title="系统日志" url="https://doc.iocoder.cn/system-log/" />
+  <doc-alert title="官网地址" url="http://www.shengyukj.top/" />
 
   <ContentWrap>
     <!-- 搜索工作栏 -->

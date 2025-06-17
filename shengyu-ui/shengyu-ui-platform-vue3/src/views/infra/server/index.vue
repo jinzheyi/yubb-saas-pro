@@ -1,5 +1,5 @@
 <template>
-  <doc-alert title="服务监控" url="https://doc.iocoder.cn/server-monitor/" />
+  <doc-alert title="官网地址" url="http://www.shengyukj.top/" />
 
   <ContentWrap>
     <IFrame v-if="!loading" v-loading="loading" :src="src" />

@@ -1,5 +1,5 @@
 <template>
-  <doc-alert title="邮件配置" url="https://doc.iocoder.cn/mail" />
+  <doc-alert title="官网地址" url="http://www.shengyukj.top/" />
 
   <!-- 搜索工作栏 -->
   <ContentWrap>

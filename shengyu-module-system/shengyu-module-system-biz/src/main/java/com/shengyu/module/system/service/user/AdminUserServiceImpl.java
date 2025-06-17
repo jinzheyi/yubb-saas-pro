@@ -380,7 +380,11 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     public void updateUserStatus(Long id, Integer status) {
         // 校验用户存在
-        validateUserExists(id);
+        if (CommonStatusEnum.DISABLE.getStatus().equals(status)) {
+            updateUserValidateTenantAdmin(id);
+        } else {
+            validateUserExists(id);
+        }
         // 更新状态
         AdminUserDO updateObj = new AdminUserDO();
         updateObj.setId(id);
@@ -405,7 +409,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteUser(Long id) {
         // 校验用户存在
-        validateUserExists(id);
+        updateUserValidateTenantAdmin(id);
         // 删除用户
         userMapper.deleteById(id);
         // 删除用户关联数据
@@ -728,6 +732,26 @@ public class AdminUserServiceImpl implements AdminUserService {
         DataPermissionUtils.executeIgnore(() -> {
             // 校验用户存在
             validateUserExists(id);
+        });
+    }
+
+    @Override
+    public void updateUserValidateTenantAdmin(Long id) {
+        // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
+        DataPermissionUtils.executeIgnore(() -> {
+            if (id == null) {
+                return;
+            }
+            AdminUserDO user = userMapper.selectById(id);
+            if (user == null) {
+                throw exception(USER_NOT_EXISTS);
+            }
+            // 校验账户配合
+            tenantService.handleTenantInfo(tenant -> {
+                if (id.equals(tenant.getContactUserId())) {
+                    throw exception(USER_ADMIN);
+                }
+            });
         });
     }
 
