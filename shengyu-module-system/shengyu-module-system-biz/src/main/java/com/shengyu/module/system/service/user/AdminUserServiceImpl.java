@@ -552,12 +552,6 @@ public class AdminUserServiceImpl implements AdminUserService {
         if (user == null) {
             throw exception(USER_NOT_EXISTS);
         }
-        // 校验账户配合
-        tenantService.handleTenantInfo(tenant -> {
-            if (id.equals(tenant.getContactUserId())) {
-                throw exception(USER_ADMIN);
-            }
-        });
     }
 
     /**

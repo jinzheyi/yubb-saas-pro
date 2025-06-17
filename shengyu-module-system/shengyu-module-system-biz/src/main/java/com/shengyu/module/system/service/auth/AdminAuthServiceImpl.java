@@ -353,9 +353,9 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     }
 
     /**
-     * 根据SaaS用户查询对应租户的用户信息
+     * de登录时根据SaaS用户查询可用租户的可用用户信息
      * @param saasUserDO SaaS用户
-     * @param tenantId 租户id
+     * @param tenantId 默认租户id
      * @param logTypeEnum 登录类型
      * @return 对应租户的用户信息
      */
