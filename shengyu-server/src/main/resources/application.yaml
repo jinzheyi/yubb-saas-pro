@@ -3,7 +3,9 @@ spring:
     name: shengyu-server
 
   profiles:
-    active: local
+    # dev: 生产环境
+    # local: 本地开发环境
+    active: dev
 
   main:
     allow-circular-references: true # 允许循环依赖，因为项目是三层架构，无法避免这个情况。
@@ -139,6 +141,8 @@ spring:
 --- #################### 圣钰相关配置 ####################
 
 shengyu:
+  # 平台超级管理员的编号
+  super-admin-id: 1
   info:
     version: 1.0.0
     base-package: com.shengyu

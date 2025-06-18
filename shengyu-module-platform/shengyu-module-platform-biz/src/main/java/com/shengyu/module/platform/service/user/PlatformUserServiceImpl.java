@@ -51,6 +51,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -69,6 +70,9 @@ public class PlatformUserServiceImpl implements PlatformUserService {
 
     @Value("${sys.user.init-password:shengyuyuanma}")
     private String userInitPassword;
+
+    @Value("${shengyu.super-admin-id:1}")
+    private Long superAdminId;
 
     @Resource
     private PlatformUserMapper userMapper;
@@ -189,7 +193,11 @@ public class PlatformUserServiceImpl implements PlatformUserService {
     @Override
     public void updateUserStatus(Long id, Integer status) {
         // 校验用户存在
-        validateUserExists(id);
+        if (CommonStatusEnum.DISABLE.getStatus().equals(status)) {
+            updateUserValidateSuperAdmin(id);
+        } else {
+            validateUserExists(id);
+        }
         // 更新状态
         PlatformUserDO updateObj = new PlatformUserDO();
         updateObj.setId(id);
@@ -201,7 +209,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteUser(Long id) {
         // 校验用户存在
-        validateUserExists(id);
+        updateUserValidateSuperAdmin(id);
         // 删除用户
         userMapper.deleteById(id);
         // 删除用户关联数据
@@ -330,9 +338,24 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         if (user == null) {
             throw exception(USER_NOT_EXISTS);
         }
-//        if (USER_NAME.equals(user.getUsername())) {
-//            throw exception(USER_ADMIN);
-//        }
+    }
+
+    @VisibleForTesting
+    public void updateUserValidateSuperAdmin(Long id) {
+        // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
+        DataPermissionUtils.executeIgnore(() -> {
+            if (id == null) {
+                return;
+            }
+            PlatformUserDO user = userMapper.selectById(id);
+            if (user == null) {
+                throw exception(USER_NOT_EXISTS);
+            }
+            // 校验账户配合
+            if (id.equals(superAdminId)) {
+                throw exception(USER_ADMIN);
+            }
+        });
     }
 
     @VisibleForTesting
@@ -451,6 +474,25 @@ public class PlatformUserServiceImpl implements PlatformUserService {
     @Override
     public boolean isPasswordMatch(String rawPassword, String encodedPassword) {
         return passwordEncoder.matches(rawPassword, encodedPassword);
+    }
+
+    @Override
+    public boolean hasSuperAdmin(Long id) {
+        AtomicBoolean hasSuperAdmin = new AtomicBoolean(false);
+        // 关闭数据权限，避免因为没有数据权限，查询不到数据，进而导致唯一校验不正确
+        DataPermissionUtils.executeIgnore(() -> {
+            if (id == null) {
+                return;
+            }
+            PlatformUserDO user = userMapper.selectById(id);
+            if (user == null) {
+                return;
+            }
+            if (id.equals(superAdminId)) {
+                hasSuperAdmin.set(true);
+            }
+        });
+        return hasSuperAdmin.get();
     }
 
     /**

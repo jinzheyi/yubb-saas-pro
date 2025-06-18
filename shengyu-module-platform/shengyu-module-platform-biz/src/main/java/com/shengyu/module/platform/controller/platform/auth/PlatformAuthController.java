@@ -105,17 +105,24 @@ public class PlatformAuthController {
         if (user == null) {
             return null;
         }
-        // 1.2 获得角色列表
-        Set<Long> roleIds = platformPermissionService.getUserRoleIdListByUserId(getPlatformLoginUserId());
-        if (CollUtil.isEmpty(roleIds)) {
-            return success(AuthConvert.INSTANCE.convert(user, Collections.emptyList(), Collections.emptyList()));
-        }
-        List<PlatformRoleDO> roles = platformRoleService.getRoleList(roleIds);
-        // 移除禁用的角色
-        roles.removeIf(role -> !CommonStatusEnum.ENABLE.getStatus().equals(role.getStatus()));
+        List<PlatformRoleDO> roles = Collections.emptyList();
+        Set<Long> menuIds;
+        // 如果是管理员的情况下，获取全部菜单编号
+        if (platformUserService.hasSuperAdmin(user.getId())) {
+            menuIds = convertSet(platformMenuService.getMenuList(), MenuDO::getId);
+        } else {
+            // 1.2 获得角色列表
+            Set<Long> roleIds = platformPermissionService.getUserRoleIdListByUserId(getPlatformLoginUserId());
+            if (CollUtil.isEmpty(roleIds)) {
+                return success(AuthConvert.INSTANCE.convert(user, Collections.emptyList(), Collections.emptyList()));
+            }
+            roles = platformRoleService.getRoleList(roleIds);
+            // 移除禁用的角色
+            roles.removeIf(role -> !CommonStatusEnum.ENABLE.getStatus().equals(role.getStatus()));
 
-        // 1.3 获得菜单列表
-        Set<Long> menuIds = platformPermissionService.getRoleMenuListByRoleId(convertSet(roles, PlatformRoleDO::getId));
+            // 1.3 获得菜单列表
+            menuIds = platformPermissionService.getRoleMenuListByRoleId(convertSet(roles, PlatformRoleDO::getId));
+        }
         List<MenuDO> menuList = platformMenuService.getMenuList(menuIds);
         // 移除禁用的菜单
         menuList.removeIf(menu -> !CommonStatusEnum.ENABLE.getStatus().equals(menu.getStatus()));

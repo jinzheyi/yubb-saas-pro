@@ -209,4 +209,11 @@ public interface PlatformUserService {
      */
     boolean isPasswordMatch(String rawPassword, String encodedPassword);
 
+    /**
+     * 判断用户是否是平台超级管理员
+     * @param id 用户编号
+     * @return 結果 true 是/false 否
+     */
+    boolean hasSuperAdmin(Long id);
+
 }

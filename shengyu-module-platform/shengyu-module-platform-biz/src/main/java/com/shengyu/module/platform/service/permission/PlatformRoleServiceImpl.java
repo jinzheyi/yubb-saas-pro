@@ -16,7 +16,6 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.enums.permission.DataScopeEnum;
-import com.shengyu.framework.common.enums.permission.RoleCodeEnum;
 import com.shengyu.framework.common.enums.permission.RoleTypeEnum;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
@@ -132,10 +131,6 @@ public class PlatformRoleServiceImpl implements PlatformRoleService {
      */
     @VisibleForTesting
     void validateRoleDuplicate(String name, String code, Long id) {
-        // 0. 超级管理员，不允许创建
-        if (RoleCodeEnum.isSuperAdmin(code)) {
-            throw exception(ROLE_ADMIN_CODE_ERROR, code);
-        }
         // 1. 该 name 名字被其它角色所使用
         PlatformRoleDO role = platformRoleMapper.selectByName(name);
         if (role != null && !role.getId().equals(id)) {
@@ -218,18 +213,6 @@ public class PlatformRoleServiceImpl implements PlatformRoleService {
     @Override
     public List<PlatformRoleDO> getRoleList(RoleExportReqVO reqVO) {
         return platformRoleMapper.selectList(reqVO);
-    }
-
-    @Override
-    public boolean hasAnySuperAdmin(Collection<Long> ids) {
-        if (CollectionUtil.isEmpty(ids)) {
-            return false;
-        }
-        PlatformRoleServiceImpl self = getSelf();
-        return ids.stream().anyMatch(id -> {
-            PlatformRoleDO role = self.getRoleFromCache(id);
-            return role != null && RoleCodeEnum.isSuperAdmin(role.getCode());
-        });
     }
 
     @Override

@@ -5,7 +5,6 @@ import static com.shengyu.framework.common.util.collection.CollectionUtils.conve
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import com.shengyu.framework.common.enums.CommonConstants;
-import com.shengyu.framework.common.enums.permission.RoleCodeEnum;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.system.api.user.dto.AdminUserCreateReqDTO;
 import com.shengyu.module.system.api.user.dto.AdminUserRespDTO;
