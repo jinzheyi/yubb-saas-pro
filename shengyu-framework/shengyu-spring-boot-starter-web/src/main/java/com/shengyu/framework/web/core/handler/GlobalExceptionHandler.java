@@ -289,12 +289,6 @@ public class GlobalExceptionHandler {
         if (!message.contains("doesn't exist")) {
             return null;
         }
-        // 1. 支付平台
-//        if (message.contains("pay_")) {
-//            log.error("[支付模块 shengyu-module-pay - 表结构未导入][参考 https://doc.iocoder.cn/pay/build/ 开启]");
-//            return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-//                    "[支付模块 shengyu-module-pay - 表结构未导入][参考 https://doc.iocoder.cn/pay/build/ 开启]");
-//        }
         return null;
     }
 

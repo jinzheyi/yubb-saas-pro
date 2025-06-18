@@ -1972,7 +1972,7 @@ CREATE TABLE `platform_oauth2_client`  (
 -- ----------------------------
 -- Records of platform_oauth2_client
 -- ----------------------------
-INSERT INTO `platform_oauth2_client` VALUES (1, 'default', 'admin123', '平台使用', 'http://test.shengyu.iocoder.cn/a5e2e244368878a366b516805a4aabf1.png', '我是描述', 0, 1800, 43200, '[\"https://www.iocoder.cn\",\"https://doc.iocoder.cn\"]', '[\"password\",\"authorization_code\",\"implicit\",\"refresh_token\"]', '[\"user.read\",\"user.write\"]', '[]', '[\"user.read\",\"user.write\"]', '[]', '{}', '1', '2022-05-11 21:47:12', '1', '2024-01-21 18:16:13', b'0');
+INSERT INTO `platform_oauth2_client` VALUES (1, 'default', 'admin123', '平台使用', 'http://test.shengyu.iocoder.cn/a5e2e244368878a366b516805a4aabf1.png', '我是描述', 0, 1800, 43200, '[\"http://shengyukj.top/",\"http://shengyukj.top/"]', '[\"password\",\"authorization_code\",\"implicit\",\"refresh_token\"]', '[\"user.read\",\"user.write\"]', '[]', '[\"user.read\",\"user.write\"]', '[]', '{}', '1', '2022-05-11 21:47:12', '1', '2024-01-21 18:16:13', b'0');
 INSERT INTO `platform_oauth2_client` VALUES (506659178795077, 'tenant', 'admin123', '租户使用', 'http://127.0.0.1:48080/platform-api/infra/file/4/get/c8ba40f1caf77009434aae5130fa3ad54b25d3a649f67fbe63326933f9b6e40b.png', NULL, 0, 1800, 43200, '[\"http://121.43.32.181\"]', '[\"password\",\"authorization_code\",\"implicit\",\"refresh_token\"]', '[\"user.read\",\"user.write\"]', '[]', '[\"user.read\",\"user.write\"]', '[]', NULL, '1', '2024-01-21 18:21:31', '1', '2024-01-21 18:22:26', b'0');
 
 -- ----------------------------

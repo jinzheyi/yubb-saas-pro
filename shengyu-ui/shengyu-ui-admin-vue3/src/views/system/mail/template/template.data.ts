@@ -17,7 +17,7 @@ export const rules = reactive({
   status: [required]
 })
 
-// CrudSchema：https://doc.iocoder.cn/vue3/crud-schema/
+// CrudSchema：http://shengyukj.top/guide/explain/experience
 const crudSchemas = reactive<CrudSchema[]>([
   {
     label: '模板编码',

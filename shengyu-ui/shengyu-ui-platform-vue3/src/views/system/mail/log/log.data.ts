@@ -5,7 +5,7 @@ import * as MailAccountApi from '@/api/system/mail/account'
 // 邮箱账号的列表
 const accountList = await MailAccountApi.getSimpleMailAccountList()
 
-// CrudSchema：https://doc.iocoder.cn/vue3/crud-schema/
+// CrudSchema：http://shengyukj.top/
 const crudSchemas = reactive<CrudSchema[]>([
   {
     label: '编号',
