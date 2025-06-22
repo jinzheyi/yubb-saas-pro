@@ -1,5 +1,5 @@
 <template>
-  <doc-alert title="接口文档" url="https://doc.iocoder.cn/api-doc/" />
+  <doc-alert title="官网地址" url="http://www.shengyukj.top/" />
 
   <ContentWrap>
     <IFrame :src="src" />

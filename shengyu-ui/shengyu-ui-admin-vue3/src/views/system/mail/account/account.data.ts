@@ -19,7 +19,7 @@ export const rules = reactive({
   sslEnable: [required]
 })
 
-// CrudSchema：https://doc.iocoder.cn/vue3/crud-schema/
+// CrudSchema：http://shengyukj.top/guide/explain/experience
 const crudSchemas = reactive<CrudSchema[]>([
   {
     label: '邮箱',

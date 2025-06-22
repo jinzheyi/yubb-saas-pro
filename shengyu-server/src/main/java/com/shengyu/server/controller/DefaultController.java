@@ -18,7 +18,7 @@ public class DefaultController {
 //    @RequestMapping(value = {"/admin-api/pay/**"})
 //    public CommonResult<Boolean> pay404() {
 //        return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-//                "[支付模块 shengyu-module-pay - 已禁用][参考 https://doc.iocoder.cn/pay/build/ 开启]");
+//                "[支付模块 shengyu-module-pay - 已禁用][参考 http://shengyukj.top/guide/explain/experience 开启]");
 //    }
 
 }

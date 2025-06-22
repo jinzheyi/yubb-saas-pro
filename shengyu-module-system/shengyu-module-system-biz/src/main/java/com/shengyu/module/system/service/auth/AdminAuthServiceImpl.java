@@ -4,18 +4,10 @@ import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.e
 import static com.shengyu.framework.common.util.servlet.ServletUtils.getClientIP;
 import static com.shengyu.framework.datapermission.core.util.DataPermissionUtils.getDisableDataPermissionDisable;
 import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_LOGIN_BAD_CREDENTIALS;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_LOGIN_CAPTCHA_CODE_ERROR;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_MOBILE_NOT_EXISTS;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_TENANT_EXCEPTION;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_THIRD_LOGIN_NOT_BIND;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_TOKEN_EXPIRED;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.AUTH_TO_TENANT_EXCEPTION;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.DEPT_NOT_ENABLE;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.DEPT_NOT_FOUND;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.TENANT_NOT_EXISTS;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.TENANT_EXPIRE;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.google.common.annotations.VisibleForTesting;
@@ -25,12 +17,15 @@ import com.shengyu.framework.common.enums.logger.LoginLogTypeEnum;
 import com.shengyu.framework.common.enums.logger.LoginResultEnum;
 import com.shengyu.framework.common.enums.oauth2.OAuth2ClientConstants;
 import com.shengyu.framework.common.enums.sms.SmsSceneEnum;
+import com.shengyu.framework.common.util.date.DateUtils;
 import com.shengyu.framework.common.util.monitor.TracerUtils;
 import com.shengyu.framework.common.util.servlet.ServletUtils;
 import com.shengyu.framework.common.util.validation.ValidationUtils;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.datapermission.core.aop.DataPermissionContextHolder;
+import com.shengyu.framework.datapermission.core.util.DataPermissionUtils;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
+import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.module.platform.api.sms.SmsCodeApi;
 import com.shengyu.module.platform.api.social.TenantSocialUserApi;
 import com.shengyu.module.platform.api.social.dto.SocialUserBindReqDTO;
@@ -50,6 +45,7 @@ import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
 import com.shengyu.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.dataobject.user.SaasUserDO;
+import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.service.dept.DeptService;
 import com.shengyu.module.system.service.logger.LoginLogService;
 import com.shengyu.module.system.service.oauth2.OAuth2TokenService;
@@ -59,8 +55,12 @@ import com.shengyu.module.system.service.user.SaasUserService;
 import com.xingyuv.captcha.model.common.ResponseModel;
 import com.xingyuv.captcha.model.vo.CaptchaVO;
 import com.xingyuv.captcha.service.CaptchaService;
+
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import javax.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
@@ -78,6 +78,8 @@ public class AdminAuthServiceImpl implements AdminAuthService {
 
     @Resource
     private AdminUserService adminUserService;
+    @Resource
+    private AdminUserMapper userMapper;
     @Resource
     private LoginLogService loginLogService;
     @Resource
@@ -117,7 +119,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         if (!saasUserService.isPasswordMatch(password, saasUserDO.getPassword())) {
             throw exception(AUTH_LOGIN_BAD_CREDENTIALS);
         }
-        return getAdminUser(saasUserDO, logTypeEnum);
+        return getLoginAdminUser(saasUserDO, logTypeEnum);
     }
 
     @Override
@@ -159,7 +161,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         if (saasUserDO == null) {
             throw exception(USER_NOT_EXISTS);
         }
-        AdminUserDO adminUser = getAdminUser(saasUserDO, null);
+        AdminUserDO adminUser = getLoginAdminUser(saasUserDO, null);
         // 创建 Token 令牌，记录登录日志
         return createTokenAfterLoginSuccess(adminUser, reqVO.getMobile(), LoginLogTypeEnum.LOGIN_MOBILE);
     }
@@ -174,12 +176,12 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         reqDTO.setUserType(getUserType().getValue());
         reqDTO.setUsername(username);
         reqDTO.setUserAgent(ServletUtils.getUserAgent());
-        reqDTO.setUserIp(ServletUtils.getClientIP());
+        reqDTO.setUserIp(getClientIP());
         reqDTO.setResult(loginResult.getResult());
         loginLogService.createLoginLog(reqDTO);
         // 更新最后登录时间
         if (userId != null && Objects.equals(LoginResultEnum.SUCCESS.getResult(), loginResult.getResult())) {
-            adminUserService.updateUserLogin(userId, ServletUtils.getClientIP());
+            adminUserService.updateUserLogin(userId, getClientIP());
         }
     }
 
@@ -197,7 +199,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         if (saasUserDO == null) {
             throw exception(USER_NOT_EXISTS);
         }
-        AdminUserDO adminUser = getAdminUser(saasUserDO, null);
+        AdminUserDO adminUser = getLoginAdminUser(saasUserDO, null);
         // 创建 Token 令牌，记录登录日志
         return createTokenAfterLoginSuccess(adminUser, saasUserDO.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
     }
@@ -247,15 +249,21 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         try {
             TenantRespDTO tenantRespDTO = Optional.ofNullable(tenantService.getTenantById(reqVO.getId()))
                 .orElseThrow(() -> exception(TENANT_NOT_EXISTS));
+            if (tenantRespDTO.getStatus().equals(CommonStatusEnum.DISABLE.getStatus())) {
+                throw exception(TENANT_DISABLE, tenantRespDTO.getName());
+            }
+            if (DateUtils.isExpired(tenantRespDTO.getExpireTime())) {
+                throw exception(TENANT_EXPIRE, tenantRespDTO.getName());
+            }
             UserRespVO userRespVO = Optional.ofNullable(adminUserService.getUser(getLoginUserId()))
                 .orElseThrow(() -> exception(AUTH_TOKEN_EXPIRED));
             SaasUserDO saasUserDO = saasUserService.getUser(userRespVO.getSaasUserId());
             //切换的目标租户是否用户合规
-            AdminUserDO adminUser = getAdminUser(saasUserDO, tenantRespDTO.getId(), null);
+            AdminUserDO adminUser = getToTenantAdminUser(saasUserDO, tenantRespDTO.getId(), null);
             if (adminUser == null) {
                 throw exception(AUTH_TO_TENANT_EXCEPTION);
             }
-            //清除原來的登錄token
+            //清除原來的登录token
             if (StrUtil.isNotBlank(token)) {
                 logout(token, LoginLogTypeEnum.LOGOUT_TO_TENANT.getType());
             }
@@ -309,7 +317,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             reqDTO.setUsername(getUsername(userId));
         }
         reqDTO.setUserAgent(ServletUtils.getUserAgent());
-        reqDTO.setUserIp(ServletUtils.getClientIP());
+        reqDTO.setUserIp(getClientIP());
         reqDTO.setResult(LoginResultEnum.SUCCESS.getResult());
         loginLogService.createLoginLog(reqDTO);
     }
@@ -332,17 +340,62 @@ public class AdminAuthServiceImpl implements AdminAuthService {
      * @param saasUserDO saas用户
      * @return 对应租户用户
      */
-    private AdminUserDO getAdminUser(SaasUserDO saasUserDO, LoginLogTypeEnum logTypeEnum) {
+    private AdminUserDO getLoginAdminUser(SaasUserDO saasUserDO, LoginLogTypeEnum logTypeEnum) {
         //查询当前用户默认的租户id
-        AdminUserDO adminUser = getAdminUser(saasUserDO, saasUserDO.getDefaultTenant(), logTypeEnum);
+        AdminUserDO adminUser = getLoginAdminUser(saasUserDO, saasUserDO.getDefaultTenant(), logTypeEnum);
         //如果默认的禁用了，则只能取它自己的所属租户了
         if (Objects.isNull(adminUser)) {
-            //todo 需要处理登录失败的逻辑
-            throw exception(AUTH_TENANT_EXCEPTION);
+            throw exception(AUTH_LOGIN_EXCEPTION);
         }
         //更新SaaS用户信息
         setSaasUserInfo(saasUserDO, adminUser);
         return adminUser;
+    }
+
+    /**
+     * de登录时根据SaaS用户查询可用租户的可用用户信息
+     * @param saasUserDO SaaS用户
+     * @param tenantId 默认租户id
+     * @param logTypeEnum 登录类型
+     * @return 对应租户的用户信息
+     */
+    private AdminUserDO getLoginAdminUser(SaasUserDO saasUserDO, Long tenantId, LoginLogTypeEnum logTypeEnum) {
+        AtomicReference<AdminUserDO> adminUserDO = new AtomicReference<>(null);
+        //忽略多租户进行查询
+        TenantUtils.executeIgnore(() -> {
+            // 关闭数据权限，避免因为没有数据权限，查询不到数据
+            DataPermissionUtils.executeIgnore(() -> {
+                //对应租户所有用户
+                List<AdminUserDO> userDOList = userMapper.selectList(AdminUserDO::getSaasUserId, saasUserDO.getId());
+                if (CollUtil.isEmpty(userDOList)) {
+                    return;
+                }
+                List<Long> tenantIdList = userDOList.stream().map(AdminUserDO::getTenantId).collect(Collectors.toList());
+                //对应所有租户
+                List<TenantRespDTO> respDTOList = tenantService.getTenantList(tenantIdList);
+                //租户条件满足，对应租户内部的用户也满足
+                TenantRespDTO tenantRespDTO = respDTOList.stream().filter(tenant -> tenant.getId().equals(tenantId)).findFirst().orElse(null);
+                if (Objects.nonNull(tenantRespDTO) && tenantRespDTO.getStatus().equals(CommonStatusEnum.ENABLE.getStatus())) {
+                    userDOList.stream().filter(userDO -> userDO.getTenantId().equals(tenantId)
+                            && userDO.getStatus().equals(CommonStatusEnum.ENABLE.getStatus())).findFirst().ifPresent(adminUserDO::set);
+                }
+                if (Objects.nonNull(adminUserDO.get())) {
+                    return;
+                }
+                //排除掉禁用的租户和上面已经不满足的租户
+                respDTOList = respDTOList.stream()
+                        .filter(tenant -> tenant.getStatus().equals(CommonStatusEnum.ENABLE.getStatus()) && !tenant.getId().equals(tenantId))
+                        .collect(Collectors.toList());
+                for (TenantRespDTO tenant : respDTOList) {
+                    userDOList.stream().filter(userDO -> userDO.getTenantId().equals(tenant.getId())
+                            && userDO.getStatus().equals(CommonStatusEnum.ENABLE.getStatus())).findFirst().ifPresent(adminUserDO::set);
+                    if (Objects.nonNull(adminUserDO.get())) {
+                        return;
+                    }
+                }
+            });
+        });
+        return adminUserDO.get();
     }
 
     /**
@@ -352,7 +405,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
      * @param logTypeEnum 登录类型
      * @return 对应租户的用户信息
      */
-    private AdminUserDO getAdminUser(SaasUserDO saasUserDO, Long tenantId, LoginLogTypeEnum logTypeEnum) {
+    private AdminUserDO getToTenantAdminUser(SaasUserDO saasUserDO, Long tenantId, LoginLogTypeEnum logTypeEnum) {
         Long oldTenantId = TenantContextHolder.getTenantId();
         Boolean oldIgnore = TenantContextHolder.isIgnore();
         TenantContextHolder.setTenantId(tenantId);

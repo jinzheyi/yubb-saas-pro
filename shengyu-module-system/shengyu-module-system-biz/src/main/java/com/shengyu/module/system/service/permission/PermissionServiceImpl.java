@@ -75,6 +75,10 @@ public class PermissionServiceImpl implements PermissionService {
             return true;
         }
 
+        if (adminUserService.hasTenantAdmin(userId)) {
+            return true;
+        }
+
         // 获得当前登录的角色。如果为空，说明没有权限
         List<RoleDO> roles = getEnableUserRoleListByUserIdFromCache(userId);
         if (CollUtil.isEmpty(roles) && !adminUserService.hasTenantAdmin(userId)) {

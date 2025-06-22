@@ -1,5 +1,5 @@
 <template>
-  <doc-alert title="地区 & IP" url="https://doc.iocoder.cn/area-and-ip/" />
+  <doc-alert title="官网地址" url="http://www.shengyukj.top/" />
 
   <!-- 操作栏 -->
   <ContentWrap>

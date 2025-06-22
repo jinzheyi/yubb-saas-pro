@@ -6,7 +6,6 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.TENANT_EXPIRE;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.TENANT_NAME_DUPLICATE;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.TENANT_NOT_EXISTS;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.TENANT_WEBSITE_DUPLICATE;
-import static java.util.Collections.singleton;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
@@ -14,8 +13,6 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.common.enums.CommonConstants;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
-import com.shengyu.framework.common.enums.permission.RoleCodeEnum;
-import com.shengyu.framework.common.enums.permission.RoleTypeEnum;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.framework.common.util.date.DateUtils;
@@ -33,9 +30,10 @@ import com.shengyu.module.system.api.notify.NotifyTemplateApi;
 import com.shengyu.module.system.api.notify.dto.NotifyTemplateSaveReqDTO;
 import com.shengyu.module.system.api.permission.PermissionApi;
 import com.shengyu.module.system.api.permission.RoleApi;
-import com.shengyu.module.system.api.permission.dto.RoleCreateReqDTO;
 import com.shengyu.module.system.api.permission.dto.RoleSimpleRespDTO;
 import com.shengyu.module.system.api.user.AdminUserApi;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -214,6 +212,11 @@ public class PlatformTenantServiceImpl implements PlatformTenantService {
     @Override
     public TenantDO getTenant(Long id) {
         return tenantMapper.selectById(id);
+    }
+
+    @Override
+    public List<TenantDO> getTenantList(Collection<Long> ids) {
+        return tenantMapper.selectBatchIds(ids);
     }
 
     @Override

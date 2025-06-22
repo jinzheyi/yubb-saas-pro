@@ -1,5 +1,5 @@
 <template>
-  <doc-alert title="配置中心" url="https://doc.iocoder.cn/config-center/" />
+  <doc-alert title="官网地址" url="http://www.shengyukj.top/" />
 
   <!-- 搜索 -->
   <ContentWrap>

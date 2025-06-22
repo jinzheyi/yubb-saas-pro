@@ -1,5 +1,5 @@
 <template>
-  <doc-alert title="邮件配置" url="https://doc.iocoder.cn/mail" />
+  <doc-alert title="官网地址" url="http://www.shengyukj.top/" />
 
   <!-- 搜索工作栏 -->
   <ContentWrap>
@@ -43,7 +43,7 @@ defineOptions({ name: 'SystemMailLog' })
 
 // tableObject：表格的属性对象，可获得分页大小、条数等属性
 // tableMethods：表格的操作对象，可进行获得分页、删除记录等操作
-// 详细可见：https://doc.iocoder.cn/vue3/crud-schema/
+// 详细可见：http://shengyukj.top/
 const { tableObject, tableMethods } = useTable({
   getListApi: MailLogApi.getMailLogPage // 分页接口
 })

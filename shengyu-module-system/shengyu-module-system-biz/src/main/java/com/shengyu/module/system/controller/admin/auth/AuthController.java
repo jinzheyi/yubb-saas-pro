@@ -115,7 +115,7 @@ public class AuthController {
         if (user == null) {
             return null;
         }
-        List<RoleDO> roles = List.of();
+        List<RoleDO> roles = Collections.emptyList();
         Set<Long> menuIds;
         if (adminUserService.hasTenantAdmin(user.getId())) {
             menuIds = permissionService.getRoleMenuListByTenantPackageAndPlugMenu();

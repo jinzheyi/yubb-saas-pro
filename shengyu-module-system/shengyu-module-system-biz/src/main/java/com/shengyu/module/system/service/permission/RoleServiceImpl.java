@@ -14,7 +14,6 @@ import com.shengyu.module.system.dal.dataobject.permission.RoleDO;
 import com.shengyu.module.system.dal.mysql.permission.RoleMapper;
 import com.shengyu.module.system.dal.redis.RedisKeyConstants;
 import com.shengyu.framework.common.enums.permission.DataScopeEnum;
-import com.shengyu.framework.common.enums.permission.RoleCodeEnum;
 import com.shengyu.framework.common.enums.permission.RoleTypeEnum;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;

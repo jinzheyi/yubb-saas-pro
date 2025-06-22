@@ -41,6 +41,7 @@ public interface ErrorCodeConstants {
     ErrorCode AUTH_MOBILE_NOT_EXISTS = new ErrorCode(1_002_000_007, "手机号不存在");
     ErrorCode AUTH_TENANT_EXCEPTION = new ErrorCode(1_002_000_008, "当前用户登录的租户数据异常或切换的租户用户已被禁用");
     ErrorCode AUTH_TO_TENANT_EXCEPTION = new ErrorCode(1_002_000_009, "切换租户失败，对应用户已被禁用或已删除");
+    ErrorCode AUTH_LOGIN_EXCEPTION = new ErrorCode(1_002_000_010, "当前登录账号所属租户信息已被【删除/禁用】或所属用户已被【删除/禁用】");
 
     // ========== 菜单模块 1-002-001-000 ==========
     ErrorCode MENU_NAME_DUPLICATE = new ErrorCode(1_002_001_000, "已经存在该名字的菜单");

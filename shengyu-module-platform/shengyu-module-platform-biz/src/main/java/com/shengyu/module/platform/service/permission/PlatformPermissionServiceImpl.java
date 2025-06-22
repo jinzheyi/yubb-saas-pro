@@ -69,6 +69,10 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
             return true;
         }
 
+        if (platformUserService.hasSuperAdmin(userId)) {
+            return true;
+        }
+
         // 获得当前登录的角色。如果为空，说明没有权限
         List<PlatformRoleDO> roles = getEnableUserRoleListByUserIdFromCache(userId);
         if (CollUtil.isEmpty(roles)) {
@@ -81,9 +85,7 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
                 return true;
             }
         }
-
-        // 情况二：如果是超管，也说明有权限
-        return platformRoleService.hasAnySuperAdmin(convertSet(roles, PlatformRoleDO::getId));
+        return false;
     }
 
     /**
@@ -117,6 +119,10 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
     public boolean hasAnyRoles(Long userId, String... roles) {
         // 如果为空，说明已经有权限
         if (ArrayUtil.isEmpty(roles)) {
+            return true;
+        }
+
+        if (platformUserService.hasSuperAdmin(userId)) {
             return true;
         }
 
@@ -184,12 +190,7 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
         if (CollUtil.isEmpty(roleIds)) {
             return Collections.emptySet();
         }
-
-        // 如果是管理员的情况下，获取全部菜单编号
-        if (platformRoleService.hasAnySuperAdmin(roleIds)) {
-            return convertSet(platformMenuService.getMenuList(), MenuDO::getId);
-        }
-        // 如果是非管理员的情况下，获得拥有的菜单编号
+        // 获得拥有的菜单编号
         return convertSet(platformRoleMenuMapper.selectListByRoleId(roleIds), PlatformRoleMenuDO::getMenuId);
     }
 
@@ -274,11 +275,16 @@ public class PlatformPermissionServiceImpl implements PlatformPermissionService 
     @Override
     @DataPermission(enable = false) // 关闭数据权限，不然就会出现递归获取数据权限的问题
     public DeptDataPermissionRespDTO getDeptDataPermission(Long userId) {
+        DeptDataPermissionRespDTO result = new DeptDataPermissionRespDTO();
+        //  如果是超级管理员，则返回所有数据
+        if (platformUserService.hasSuperAdmin(userId)) {
+            result.setAll(true);
+            return result;
+        }
         // 获得用户的角色
         List<PlatformRoleDO> roles = getEnableUserRoleListByUserIdFromCache(userId);
 
         // 如果角色为空，则只能查看自己
-        DeptDataPermissionRespDTO result = new DeptDataPermissionRespDTO();
         if (CollUtil.isEmpty(roles)) {
             result.setSelf(true);
             return result;

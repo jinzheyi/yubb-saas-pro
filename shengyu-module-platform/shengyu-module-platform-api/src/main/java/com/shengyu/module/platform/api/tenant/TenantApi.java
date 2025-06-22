@@ -2,6 +2,7 @@ package com.shengyu.module.platform.api.tenant;
 
 import com.shengyu.module.platform.api.tenant.dto.tenant.TenantRespDTO;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -32,6 +33,13 @@ public interface TenantApi {
      * @return 租户对象信息
      */
     TenantRespDTO getTenant(Long id);
+
+    /**
+     * 获得租户列表
+     * @param ids 租户ID集合
+     * @return 租户列表
+     */
+    List<TenantRespDTO> getTenantList(Collection<Long> ids);
 
     /**
      * 获得名字对应的租户
