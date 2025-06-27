@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
  * @since 2023-12-11
  */
 @Service
-public class ProcessTaskServiceImpl implements IProcessTaskService {
+public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     @Resource
     private FlowlongMapper flowlongMapper;
     @Resource
@@ -362,7 +362,7 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
         FlwProcessConfigure configure = flwProcessConfigureService.getByProcessId(flwInstance.getProcessId());
         if (null != configure && null != configure.getProcessSetting()) {
             ServiceExceptionUtil.fail(!Objects.equals(true, configure.getProcessSetting().getAllowRevocation()),
-                    "该审批流程不允许撤回");
+              "该审批流程不允许撤回");
         }
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
         if (dto.isTermination()) {
@@ -373,6 +373,7 @@ public class ProcessTaskServiceImpl implements IProcessTaskService {
 
         // 发起人撤回任务
         FlwHisTask fht = flowLongEngine.queryService().getStartTaskByInstanceId(dto.getInstanceId());
+        ServiceExceptionUtil.fail(null == fht || fht.startNode(), "发起人节点不允许继续撤回");
         TaskService taskService = flowLongEngine.taskService();
         return taskService.withdrawTask(fht.getId(), flowCreator).isPresent();
     }

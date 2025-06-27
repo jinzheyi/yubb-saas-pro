@@ -4,13 +4,17 @@ import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shengyu.framework.mybatis.core.service.IBaseService;
+import com.shengyu.module.system.controller.admin.flow.dto.DestroyInstanceDTO;
 import com.shengyu.module.system.controller.admin.flow.dto.FlwCategorySortDTO;
 import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessDTO;
 import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessHistoryDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessInstanceDTO;
 import com.shengyu.module.system.controller.admin.flow.dto.ProcessStartDTO;
+import com.shengyu.module.system.controller.admin.flow.vo.FlwInstanceVO;
 import com.shengyu.module.system.controller.admin.flow.vo.FlwProcessCategoryVO;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 流程分类 服务类
@@ -24,6 +28,11 @@ public interface IFlwProcessService extends IBaseService<FlwProcess> {
      * 流程定义历史分页列表
      */
     Page<FlwProcess> pageHistory(Page<FlwProcess> page, FlwProcessHistoryDTO dto);
+
+    /**
+     * 流程实例分页列表
+     */
+    Page<FlwInstanceVO> pageInstance(Page<FlwInstanceVO> page, FlwProcessInstanceDTO dto);
 
     /**
      * 流程定义分类查询所有流程定义列表
@@ -56,6 +65,14 @@ public interface IFlwProcessService extends IBaseService<FlwProcess> {
     Long launchProcess(ProcessStartDTO dto, FlowCreator flowCreator);
 
     /**
+     * 根据实例ID获取流程变量
+     *
+     * @param instanceId 流程实例ID
+     * @return 流程变量 MAP
+     */
+    Map<String, Object> getVariableByInstanceId(Long instanceId);
+
+    /**
      * 根据实例ID删除暂存待审流程
      *
      * @param instanceId 流程实例ID
@@ -70,6 +87,11 @@ public interface IFlwProcessService extends IBaseService<FlwProcess> {
      * @return true 成功 false 失败
      */
     boolean resumeProcessByInstanceId(Long instanceId);
+
+    /**
+     * 作废流程实例
+     */
+    boolean destroyProcessByInstanceId(DestroyInstanceDTO dto);
 
     /**
      * 根据 id 获取模型

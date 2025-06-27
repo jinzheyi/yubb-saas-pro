@@ -50,9 +50,9 @@ public class TaskServiceImpl implements TaskService {
     protected final FlwHisTaskActorDao hisTaskActorDao;
 
     public TaskServiceImpl(TaskAccessStrategy taskAccessStrategy, TaskListener taskListener, TaskTrigger taskTrigger, FlowLongIdGenerator flowLongIdGenerator,
-                           FlwInstanceDao instanceDao, FlwExtInstanceDao extInstanceDao, FlwHisInstanceDao hisInstanceDao,
-                           FlwTaskDao taskDao, FlwTaskActorDao taskActorDao, FlwHisTaskDao hisTaskDao,
-                           FlwHisTaskActorDao hisTaskActorDao) {
+      FlwInstanceDao instanceDao, FlwExtInstanceDao extInstanceDao, FlwHisInstanceDao hisInstanceDao,
+      FlwTaskDao taskDao, FlwTaskActorDao taskActorDao, FlwHisTaskDao hisTaskDao,
+      FlwHisTaskActorDao hisTaskActorDao) {
         this.taskAccessStrategy = taskAccessStrategy;
         this.taskTrigger = taskTrigger;
         this.taskListener = taskListener;
@@ -161,7 +161,7 @@ public class TaskServiceImpl implements TaskService {
      */
     @Override
     public Optional<FlwTask> executeJumpTask(Long taskId, String nodeKey, FlowCreator flowCreator, Map<String, Object> args,
-                                             Function<FlwTask, Execution> executionFunction, TaskType taskTye) {
+      Function<FlwTask, Execution> executionFunction, TaskType taskTye) {
         FlwTask flwTask = null;
         TaskEventType taskEventType = null;
         TaskState taskState = null;
@@ -275,7 +275,7 @@ public class TaskServiceImpl implements TaskService {
         }
         if (null == taskState || TaskState.allowedCheck(taskState)) {
             Assert.isNull(isAllowed(flwTask, flowCreator.getCreateId()),
-                    "当前参与者 [" + flowCreator.getCreateBy() + "]不允许执行任务[taskId=" + taskId + "]");
+              "当前参与者 [" + flowCreator.getCreateBy() + "]不允许执行任务[taskId=" + taskId + "]");
         }
         return flwTask;
     }
@@ -292,7 +292,7 @@ public class TaskServiceImpl implements TaskService {
         // 获取当前所有处理人员
         List<FlwTaskActor> taskActors = taskActorDao.selectListByTaskId(flwTask.getId());
         if (taskState != TaskState.autoComplete && taskState != TaskState.autoReject
-                && taskState != TaskState.autoJump && ObjectUtils.isEmpty(taskActors)) {
+          && taskState != TaskState.autoJump && ObjectUtils.isEmpty(taskActors)) {
             // 非自动处理，不存在处理人，不再继续执行
             return true;
         }
@@ -308,21 +308,21 @@ public class TaskServiceImpl implements TaskService {
 
             // 当前处理人为代理人员
             FlwTaskActor agentFlwTaskActor = taskActors.stream().filter(t -> t.agentActor() && t.eqActorId(flowCreator.getCreateId()))
-                    .findFirst().orElse(null);
+              .findFirst().orElse(null);
             if (null != agentFlwTaskActor) {
 
                 // 设置历史代理任务状态为【代理人协办完成的任务】设置被代理人信息
                 hisTask.taskType(TaskType.agentAssist);
                 taskActors.stream().filter(t -> Objects.equals(agentFlwTaskActor.getAgentId(), t.getActorId()))
-                        .findFirst().ifPresent(t -> {
-                            hisTask.setAssignorId(t.getActorId());
-                            hisTask.setAssignor(t.getActorName());
+                  .findFirst().ifPresent(t -> {
+                      hisTask.setAssignorId(t.getActorId());
+                      hisTask.setAssignor(t.getActorName());
 
-                            // 更新被代理人信息
-                            FlwTaskActor flwTaskActor = FlwTaskActor.ofAgentIt(flowCreator);
-                            flwTaskActor.setId(t.getId());
-                            taskActorDao.updateById(flwTaskActor);
-                        });
+                      // 更新被代理人信息
+                      FlwTaskActor flwTaskActor = FlwTaskActor.ofAgentIt(flowCreator);
+                      flwTaskActor.setId(t.getId());
+                      taskActorDao.updateById(flwTaskActor);
+                  });
                 hisTaskDao.insert(hisTask);
 
                 // 迁移任务当前代理人员
@@ -368,7 +368,7 @@ public class TaskServiceImpl implements TaskService {
 
         // 会签情况处理其它任务 排除完成及自动跳过情况，自动跳过是当前任务归档非所有任务
         if (PerformType.countersign.eq(flwTask.getPerformType()) && TaskState.complete.ne(taskState.getValue())
-                && TaskState.autoJump.ne(taskState.getValue())) {
+          && TaskState.autoJump.ne(taskState.getValue())) {
             List<FlwTask> flwTaskList = taskDao.selectListByParentTaskId(flwTask.getParentTaskId());
             flwTaskList.forEach(t -> {
                 FlwHisTask ht = FlwHisTask.of(t);
@@ -427,7 +427,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     protected void taskNotify(TaskEventType eventType, Supplier<FlwTask> supplier, List<FlwTaskActor> taskActors,
-                              NodeModel nodeModel, FlowCreator flowCreator) {
+      NodeModel nodeModel, FlowCreator flowCreator) {
         if (null != taskListener) {
             taskListener.notify(eventType, supplier, taskActors, nodeModel, flowCreator);
         }
@@ -436,25 +436,26 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public boolean executeTaskTrigger(Execution execution, FlwTask flwTask) {
         NodeModel nodeModel = execution.getProcessModel().getNode(flwTask.getTaskKey());
-        nodeModel.executeTrigger(execution, () -> {
+        Supplier<Boolean> finishSupplier = () -> {
+
+            // 任务监听器通知
+            this.taskNotify(TaskEventType.trigger, () -> flwTask, null, nodeModel, execution.getFlowCreator());
+
+            /*
+             * 可能存在子节点，存在继续执行
+             */
+            return nodeModel.nextNode().map(model -> model.execute(execution.getEngine().getContext(), execution))
+              // 不存在子节点，结束流程
+              .orElseGet(() -> execution.endInstance(nodeModel));
+        };
+        return nodeModel.executeTrigger(execution, () -> {
             // 使用默认触发器
             TaskTrigger taskTrigger = execution.getEngine().getContext().getTaskTrigger();
             if (null == taskTrigger) {
                 return false;
             }
-            return taskTrigger.execute(nodeModel, execution);
-        });
-
-        // 任务监听器通知
-        this.taskNotify(TaskEventType.trigger, () -> flwTask, null, nodeModel, execution.getFlowCreator());
-
-        /*
-         * 可能存在子节点，存在继续执行
-         */
-        return nodeModel.nextNode().map(model -> model.execute(execution.getEngine().getContext(), execution))
-                // 不存在子节点，结束流程
-                .orElseGet(() -> execution.endInstance(nodeModel));
-
+            return taskTrigger.execute(nodeModel, execution, finishSupplier);
+        }, finishSupplier);
     }
 
     /**
@@ -588,7 +589,7 @@ public class TaskServiceImpl implements TaskService {
      */
     @Override
     public boolean assigneeTask(Long taskId, TaskType taskType, FlowCreator flowCreator, List<FlowCreator> assigneeFlowCreators,
-                                Map<String, Object> args, Function<FlwTask, Boolean> check) {
+      Map<String, Object> args, Function<FlwTask, Boolean> check) {
         // 受理任务权限验证
         FlwTaskActor flwTaskActor = this.getAllowedFlwTaskActor(taskId, flowCreator);
 
@@ -744,7 +745,7 @@ public class TaskServiceImpl implements TaskService {
     public boolean resume(Long instanceId, FlowCreator flowCreator) {
         FlwHisInstance fhi = hisInstanceDao.selectById(instanceId);
         if (null == fhi || !Objects.equals(fhi.getCreateBy(), flowCreator.getCreateBy()) ||
-                (InstanceState.reject.ne(fhi.getInstanceState()) && InstanceState.revoke.ne(fhi.getInstanceState()))) {
+          (InstanceState.reject.ne(fhi.getInstanceState()) && InstanceState.revoke.ne(fhi.getInstanceState()))) {
             return false;
         }
 
@@ -762,26 +763,26 @@ public class TaskServiceImpl implements TaskService {
             taskState = TaskState.revoke;
         }
         hisTaskDao.selectListByInstanceIdAndTaskState(instanceId, taskState.getValue()).ifPresent(hisTasks ->
-                hisTasks.forEach(hisTask -> {
-                    // 历史任务恢复
-                    FlwTask flwTask = hisTask.cloneTask(null);
-                    flwTask.setId(flowLongIdGenerator.getId(flwTask.getId()));
-                    if (taskDao.insert(flwTask)) {
-                        // 历史任务参与者恢复
-                        List<FlwTaskActor> taskActors = new ArrayList<>();
-                        List<FlwHisTaskActor> hisTaskActors = hisTaskActorDao.selectListByTaskId(hisTask.getId());
-                        hisTaskActors.forEach(t -> {
-                            FlwTaskActor fta = FlwTaskActor.ofFlwHisTaskActor(flwTask.getId(), t);
-                            fta.setId(flowLongIdGenerator.getId(fta.getId()));
-                            if (taskActorDao.insert(fta)) {
-                                taskActors.add(fta);
-                            }
-                        });
+          hisTasks.forEach(hisTask -> {
+              // 历史任务恢复
+              FlwTask flwTask = hisTask.cloneTask(null);
+              flwTask.setId(flowLongIdGenerator.getId(flwTask.getId()));
+              if (taskDao.insert(flwTask)) {
+                  // 历史任务参与者恢复
+                  List<FlwTaskActor> taskActors = new ArrayList<>();
+                  List<FlwHisTaskActor> hisTaskActors = hisTaskActorDao.selectListByTaskId(hisTask.getId());
+                  hisTaskActors.forEach(t -> {
+                      FlwTaskActor fta = FlwTaskActor.ofFlwHisTaskActor(flwTask.getId(), t);
+                      fta.setId(flowLongIdGenerator.getId(fta.getId()));
+                      if (taskActorDao.insert(fta)) {
+                          taskActors.add(fta);
+                      }
+                  });
 
-                        // 任务监听器通知
-                        this.taskNotify(TaskEventType.resume, () -> flwTask, taskActors, null, flowCreator);
-                    }
-                }));
+                  // 任务监听器通知
+                  this.taskNotify(TaskEventType.resume, () -> flwTask, taskActors, null, flowCreator);
+              }
+          }));
         return true;
     }
 
@@ -798,23 +799,29 @@ public class TaskServiceImpl implements TaskService {
                 flwTasks = taskDao.selectListByParentTaskId(hisTask.getId());
             } else {
                 List<Long> hisTaskIds = hisTaskDao.selectListByInstanceIdAndTaskNameAndParentTaskId(hisTask.getInstanceId(),
-                        hisTask.getTaskName(), hisTask.getParentTaskId()).stream().map(FlwHisTask::getId).collect(Collectors.toList());
+                  hisTask.getTaskName(), hisTask.getParentTaskId()).stream().map(FlwHisTask::getId).collect(Collectors.toList());
                 if (ObjectUtils.isNotEmpty(hisTaskIds)) {
                     flwTasks = taskDao.selectListByParentTaskIds(hisTaskIds);
                 }
             }
-            Assert.isEmpty(flwTasks, "后续活动任务已完成或不存在，无法撤回.");
-            List<Long> taskIds = flwTasks.stream().map(FlowEntity::getId).collect(Collectors.toList());
-            // 查询任务参与者
-            List<Long> taskActorIds = taskActorDao.selectListByTaskIds(taskIds)
-                    .stream().map(FlwTaskActor::getId).collect(Collectors.toList());
-            if (ObjectUtils.isNotEmpty(taskActorIds)) {
-                taskActorDao.deleteByIds(taskActorIds);
+            if (ObjectUtils.isEmpty(flwTasks)) {
+                flwTasks = taskDao.selectListByInstanceId(hisTask.getInstanceId());
+                // 设置为 0 执行撤回到发起人逻辑
+                hisTask.setParentTaskId(0L);
             }
-            taskDao.deleteByIds(flwTasks.stream().map(FlowEntity::getId).collect(Collectors.toList()));
+            if (ObjectUtils.isNotEmpty(flwTasks)) {
+                List<Long> taskIds = flwTasks.stream().map(FlowEntity::getId).collect(Collectors.toList());
+                // 查询任务参与者
+                List<Long> taskActorIds = taskActorDao.selectListByTaskIds(taskIds)
+                  .stream().map(FlwTaskActor::getId).collect(Collectors.toList());
+                if (ObjectUtils.isNotEmpty(taskActorIds)) {
+                    taskActorDao.deleteByIds(taskActorIds);
+                }
+                taskDao.deleteByIds(flwTasks.stream().map(FlowEntity::getId).collect(Collectors.toList()));
 
-            // 任务监听器通知
-            this.taskNotify(TaskEventType.withdraw, () -> hisTask, null, null, flowCreator);
+                // 任务监听器通知
+                this.taskNotify(TaskEventType.withdraw, () -> hisTask, null, null, flowCreator);
+            }
         });
     }
 
@@ -829,7 +836,7 @@ public class TaskServiceImpl implements TaskService {
         // 或签 结束其它任务
         final Integer performType = currentFlwTask.getPerformType();
         if (PerformType.countersign.eq(performType) || PerformType.orSign.eq(performType)
-                || PerformType.voteSign.eq(performType)) {
+          || PerformType.voteSign.eq(performType)) {
             List<FlwTask> flwTasks = taskDao.selectListByParentTaskId(currentFlwTask.getParentTaskId());
             if (null != flwTasks && !flwTasks.isEmpty()) {
                 // 删除其它任务及参与者信息
@@ -846,8 +853,8 @@ public class TaskServiceImpl implements TaskService {
         if (parentNode.parallelNode() || parentNode.inclusiveNode()) {
             List<String> allNextNodeKeys = ModelHelper.getAllNextConditionNodeKeys(parentNode.getParentNode());
             List<Long> flwTaskIds = taskDao.selectListByInstanceId(instanceId).stream()
-                    .filter(t -> allNextNodeKeys.contains(t.getTaskKey()) && !Objects.equals(t.getId(), currentFlwTask.getId()))
-                    .map(FlowEntity::getId).collect(Collectors.toList());
+              .filter(t -> allNextNodeKeys.contains(t.getTaskKey()) && !Objects.equals(t.getId(), currentFlwTask.getId()))
+              .map(FlowEntity::getId).collect(Collectors.toList());
             if (!flwTaskIds.isEmpty()) {
                 taskActorDao.deleteByInstanceIdAndTaskIds(instanceId, flwTaskIds);
                 taskDao.deleteByIds(flwTaskIds);
@@ -874,8 +881,17 @@ public class TaskServiceImpl implements TaskService {
      * @return 任务参与者
      */
     protected Optional<FlwTask> undoHisTask(Long hisTaskId, FlowCreator flowCreator, TaskType taskType,
-                                            Consumer<FlwHisTask> hisTaskConsumer) {
+      Consumer<FlwHisTask> hisTaskConsumer) {
         FlwHisTask hisTask = hisTaskDao.selectCheckById(hisTaskId);
+        if (null == hisTask) {
+            return Optional.empty();
+        }
+        if (hisTask.startNode()) {
+            // 发起节点撤回直接返回
+            return Optional.of(hisTask);
+        }
+
+        // 回调处理函数
         if (null != hisTaskConsumer) {
             hisTaskConsumer.accept(hisTask);
         }
@@ -897,7 +913,7 @@ public class TaskServiceImpl implements TaskService {
 
                 // 撤回任务参与者
                 List<FlwHisTaskActor> hisTaskActors = hisTaskActorDao.selectListByTaskIds(hisTasks.stream()
-                        .map(FlwHisTask::getId).collect(Collectors.toList()));
+                  .map(FlwHisTask::getId).collect(Collectors.toList()));
                 if (null != hisTaskActors) {
                     Map<String, FlwHisTaskActor> taskActorMap = new HashMap<>();
                     for (FlwHisTaskActor t : hisTaskActors) {
@@ -910,15 +926,15 @@ public class TaskServiceImpl implements TaskService {
 
                     // 恢复最新历史任务
                     taskActorMap.forEach((k, v) -> hisTasks.stream().filter(t -> Objects.equals(t.getId(), v.getTaskId()))
-                            .findFirst().ifPresent(t -> {
-                                FlwTask flwTask = t.undoTask(taskType);
-                                flwTask.setId(flowLongIdGenerator.getId(flwTask.getId()));
-                                if (taskDao.insert(flwTask)) {
-                                    FlwTaskActor fta = FlwTaskActor.of(flwTask.getId(), v);
-                                    fta.setId(flowLongIdGenerator.getId(fta.getId()));
-                                    taskActorDao.insert(fta);
-                                }
-                            }));
+                      .findFirst().ifPresent(t -> {
+                          FlwTask flwTask = t.undoTask(taskType);
+                          flwTask.setId(flowLongIdGenerator.getId(flwTask.getId()));
+                          if (taskDao.insert(flwTask)) {
+                              FlwTaskActor fta = FlwTaskActor.of(flwTask.getId(), v);
+                              fta.setId(flowLongIdGenerator.getId(fta.getId()));
+                              taskActorDao.insert(fta);
+                          }
+                      }));
                 }
             } else {
                 // 恢复历史任务
@@ -967,7 +983,7 @@ public class TaskServiceImpl implements TaskService {
      */
     @Override
     public List<FlwTask> createNewTask(Long taskId, TaskType taskType, PerformType performType, List<FlwTaskActor> taskActors,
-                                       FlowCreator flowCreator, Function<FlwTask, Execution> executionFunction) {
+      FlowCreator flowCreator, Function<FlwTask, Execution> executionFunction) {
         FlwTask flwTask = taskDao.selectCheckById(taskId);
         FlwTask newFlwTask = flwTask.cloneTask(flowCreator.getCreateId(), flowCreator.getCreateBy());
         newFlwTask.taskType(taskType);
@@ -1205,23 +1221,26 @@ public class TaskServiceImpl implements TaskService {
             if (null == flwTask.getExpireTime()) {
                 // 立即触发器，直接执行
                 execution.setFlwTask(flwTask);
-                // 使用默认触发器
-                nodeModel.executeTrigger(execution, () -> taskTrigger.execute(nodeModel, execution));
                 // 执行成功，任务归档
                 FlwHisTask hisTask = FlwHisTask.of(flwTask);
-                hisTask.setTaskState(TaskState.complete);
-                hisTask.setFlowCreator(execution.getFlowCreator());
-                hisTask.calculateDuration();
-                hisTask.setId(flowLongIdGenerator.getId(hisTask.getId()));
-                hisTaskDao.insert(hisTask);
+                // 使用默认触发器
+                Supplier<Boolean> finishSupplier = () -> {
+                    hisTask.setTaskState(TaskState.complete);
+                    hisTask.setFlowCreator(execution.getFlowCreator());
+                    hisTask.calculateDuration();
+                    hisTask.setId(flowLongIdGenerator.getId(hisTask.getId()));
+                    hisTaskDao.insert(hisTask);
 
-                // 任务监听器通知
-                this.taskNotify(TaskEventType.trigger, () -> hisTask, null, nodeModel, execution.getFlowCreator());
+                    // 任务监听器通知
+                    this.taskNotify(TaskEventType.trigger, () -> hisTask, null, nodeModel, execution.getFlowCreator());
 
-                /*
-                 * 可能存在子节点
-                 */
-                nodeModel.nextNode().ifPresent(nextNode -> nextNode.execute(execution.getEngine().getContext(), execution));
+                    /*
+                     * 可能存在子节点
+                     */
+                    nodeModel.nextNode().ifPresent(nextNode -> nextNode.execute(execution.getEngine().getContext(), execution));
+                    return true;
+                };
+                nodeModel.executeTrigger(execution, () -> taskTrigger.execute(nodeModel, execution, finishSupplier), finishSupplier);
             } else {
                 // 定时触发器，等待执行
                 flwTasks.addAll(this.saveTask(flwTask, PerformType.trigger, taskActors, execution, nodeModel));
@@ -1442,7 +1461,7 @@ public class TaskServiceImpl implements TaskService {
         boolean countersign = PerformType.countersign.eq(flwTask.getPerformType());
 
         if (countersign || (PerformType.sort != performType && PerformType.countersign != performType
-                && PerformType.orSign != performType && PerformType.voteSign != performType)) {
+          && PerformType.orSign != performType && PerformType.voteSign != performType)) {
             // 会签（非合法类型）不允许修改审批方式
             performType = null;
         } else {
@@ -1468,19 +1487,17 @@ public class TaskServiceImpl implements TaskService {
                     // 分配参与者
                     this.assignTask(flwTask.getInstanceId(), newFlwTask.getId(), 0, taskActor);
                     // 创建会签加签任务监听
-                    this.taskNotify(TaskEventType.addCountersign, () -> newFlwTask, taskActors, null, flowCreator);
+                    this.taskNotify(TaskEventType.addCountersign, () -> newFlwTask, Collections.singletonList(taskActor), null, flowCreator);
                 }
             } else {
                 /*
                  * 单一任务多处理人员情况
                  */
                 this.assignTask(flwTask.getInstanceId(), taskId, 0, taskActor);
-                // 新增参与者
-                ftaList.add(taskActor);
             }
+            // 新增参与者
+            ftaList.add(taskActor);
         }
-        // 已存在参与者
-        ftaList.addAll(taskActorList);
 
         // 更新任务参与类型
         if (null != performType) {

@@ -252,8 +252,8 @@ public class NodeModel implements ModelInstance, Serializable {
              * 执行条件分支
              */
             flowLongContext.getFlowConditionHandler()
-                    .getConditionNode(flowLongContext, execution, this)
-                    .ifPresent(t -> this.executeConditionNode(flowLongContext, execution, t));
+              .getConditionNode(flowLongContext, execution, this)
+              .ifPresent(t -> this.executeConditionNode(flowLongContext, execution, t));
             return true;
         }
 
@@ -272,8 +272,8 @@ public class NodeModel implements ModelInstance, Serializable {
              * 执行包容分支
              */
             flowLongContext.getFlowConditionHandler()
-                    .getInclusiveNodes(flowLongContext, execution, this)
-                    .ifPresent(t -> t.forEach(s -> this.executeConditionNode(flowLongContext, execution, s)));
+              .getInclusiveNodes(flowLongContext, execution, this)
+              .ifPresent(t -> t.forEach(s -> this.executeConditionNode(flowLongContext, execution, s)));
             return true;
         }
 
@@ -282,11 +282,11 @@ public class NodeModel implements ModelInstance, Serializable {
              * 执行路由分支
              */
             Optional<ConditionNode> routeNodeOptional = flowLongContext.getFlowConditionHandler()
-                    .getRouteNode(flowLongContext, execution, this);
+              .getRouteNode(flowLongContext, execution, this);
             if (routeNodeOptional.isPresent()) {
                 // 自动跳转到指定节点
                 execution.getEngine().executeJumpTask(execution.getFlwTask().getId(), routeNodeOptional.get().getNodeKey(),
-                        execution.getFlowCreator(), execution.getArgs(), TaskType.routeJump);
+                  execution.getFlowCreator(), execution.getArgs(), TaskType.routeJump);
             } else {
                 // 执行子节点逻辑
                 NodeModel _childNode = this.getChildNode();
@@ -301,8 +301,8 @@ public class NodeModel implements ModelInstance, Serializable {
          * 执行 1、审批任务 2、创建抄送 5、办理子流程 6、定时器任务 7、触发器任务
          */
         if (TaskType.approval.eq(this.type) || TaskType.cc.eq(this.type)
-                || TaskType.callProcess.eq(this.type) || TaskType.timer.eq(this.type)
-                || TaskType.trigger.eq(this.type)) {
+          || TaskType.callProcess.eq(this.type) || TaskType.timer.eq(this.type)
+          || TaskType.trigger.eq(this.type)) {
 
             // 创建任务
             flowLongContext.createTask(execution, this);
@@ -586,7 +586,7 @@ public class NodeModel implements ModelInstance, Serializable {
      * @param execution {@link Execution}
      * @param supplier  执行默认触发器执行函数
      */
-    public void executeTrigger(Execution execution, Supplier<Boolean> supplier) {
+    public boolean executeTrigger(Execution execution, Supplier<Boolean> supplier, Supplier<Boolean> callAsync) {
         boolean callSupplier = true;
         boolean flag = false;
         Map<String, Object> extendConfig = this.getExtendConfig();
@@ -598,7 +598,7 @@ public class NodeModel implements ModelInstance, Serializable {
                     Class<?> triggerClass = Class.forName((String) _trigger);
                     if (TaskTrigger.class.isAssignableFrom(triggerClass)) {
                         TaskTrigger taskTrigger = (TaskTrigger) ObjectUtils.newInstance(triggerClass);
-                        flag = taskTrigger.execute(this, execution);
+                        flag = taskTrigger.execute(this, execution, callAsync);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -610,6 +610,7 @@ public class NodeModel implements ModelInstance, Serializable {
             flag = supplier.get();
         }
         Assert.isFalse(flag, "trigger execute error");
+        return flag;
     }
 
     /**

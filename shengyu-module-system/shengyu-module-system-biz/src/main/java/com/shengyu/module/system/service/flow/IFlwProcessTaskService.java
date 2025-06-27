@@ -15,7 +15,7 @@ import java.util.Map;
  * @author 青苗
  * @since 2023-12-11
  */
-public interface IProcessTaskService {
+public interface IFlwProcessTaskService {
 
     /**
      * 待认领任务分页列表

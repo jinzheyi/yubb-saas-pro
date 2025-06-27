@@ -92,4 +92,26 @@
         WHERE p.process_id NOT IN (SELECT p.process_id FROM flw_process_actor p LEFT JOIN sys_user_role u ON p.actor_id=u.role_id WHERE u.user_id=#{userId})
     </select>
 
+    <select id="selectPageInstance" resultType="com.shengyu.module.system.controller.admin.flow.vo.FlwInstanceVO">
+        SELECT t.id,t.create_by,t.process_id,e.process_name,t.current_node_name,t.expire_time,t.instance_state,t.end_time,t.duration
+        FROM flw_his_instance t JOIN flw_ext_instance e ON t.id=e.id
+        <if test="dto != null">
+            <where>
+                <if test="dto.completed">
+                    AND t.end_time IS NULL
+                </if>
+                <if test="dto.processName != null and dto.processName != '' ">
+                    AND e.process_name LIKE CONCAT(CONCAT('%',#{dto.processName}),'%')
+                </if>
+                <if test="dto.currentNodeName != null and dto.currentNodeName != '' ">
+                    AND t.current_node_name LIKE CONCAT(CONCAT('%',#{currentNodeName}),'%')
+                </if>
+                <if test="dto.processCategoryId != null">
+                    AND e.process_id IN (SELECT c.process_id FROM flw_process_configure c WHERE c.category_id=#{dto.processCategoryId})
+                </if>
+            </where>
+        </if>
+        ORDER BY t.create_time DESC
+    </select>
+
 </mapper>

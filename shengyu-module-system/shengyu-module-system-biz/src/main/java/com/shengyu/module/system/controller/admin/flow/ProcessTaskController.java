@@ -5,7 +5,7 @@ import com.shengyu.framework.flowlong.engine.core.PageParam;
 import com.shengyu.module.system.controller.admin.flow.dto.*;
 import com.shengyu.module.system.controller.admin.flow.vo.*;
 import com.shengyu.module.system.framework.flow.FlowHelper;
-import com.shengyu.module.system.service.flow.IProcessTaskService;
+import com.shengyu.module.system.service.flow.IFlwProcessTaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
@@ -27,7 +27,7 @@ import java.util.Map;
 @AllArgsConstructor
 @RequestMapping("/v1/process-task")
 public class ProcessTaskController {
-    private IProcessTaskService processTaskService;
+    private IFlwProcessTaskService processTaskService;
 
     @Operation(summary = "待认领任务分页列表")
     @PreAuthorize("@ss.hasPermission('flw:processTask:pagePendingClaim')")

@@ -4,13 +4,17 @@ import cn.hutool.core.collection.CollectionUtil;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.flowlong.engine.QueryService;
 import com.shengyu.framework.flowlong.engine.mapper.FlwProcessMapper;
 import com.shengyu.framework.security.core.LoginUser;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.admin.flow.dto.*;
+import com.shengyu.module.system.controller.admin.flow.vo.FlwInstanceVO;
 import com.shengyu.module.system.controller.admin.flow.vo.FlwProcessCategoryVO;
 import com.shengyu.module.system.controller.admin.flow.vo.FlwProcessVO;
+import com.shengyu.module.system.dal.dataobject.flow.ApprovalContent;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessActor;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessCategory;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessConfigure;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessPermission;
@@ -60,6 +64,8 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     @Resource
     private IFlwProcessConfigureService flwProcessConfigureService;
     @Resource
+    private IFlwProcessApprovalService flwProcessApprovalService;
+    @Resource
     private IFlwProcessActorService flwProcessActorService;
     @Resource
     private IFlwProcessFormService flwProcessFormService;
@@ -82,6 +88,16 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
         lqw.eq(FlwProcess::getProcessKey, flwProcess.getProcessKey());
         lqw.orderByDesc(FlwProcess::getProcessVersion);
         return super.page(page, lqw);
+    }
+
+    @Override
+    public Page<FlwInstanceVO> pageInstance(Page<FlwInstanceVO> page, FlwProcessInstanceDTO dto) {
+        if (null != dto) {
+            if (null == dto.getCompleted()) {
+                dto.setCompleted(false);
+            }
+        }
+        return flowlongMapper.selectPageInstance(page, dto);
     }
 
     @Override
@@ -236,16 +252,52 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     }
 
     @Override
+    public Map<String, Object> getVariableByInstanceId(Long instanceId) {
+        QueryService queryService = flowLongEngine.queryService();
+        FlwInstance fi = queryService.getInstance(instanceId);
+        if (null != fi) {
+            return fi.variableToMap();
+        }
+
+        // 已完成流程
+        FlwHisInstance fhi = queryService.getHistInstance(instanceId);
+        if (null != fhi) {
+            return fhi.variableToMap();
+        }
+
+        // 不存在情况
+        return new HashMap<>();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
     public boolean removeProcessByInstanceId(Long instanceId) {
         FlwHisInstance fhi = flowLongEngine.queryService().getHistInstance(instanceId);
-        ServiceExceptionUtil.fail(null == fhi || InstanceState.saveAsDraft.ne(fhi.getInstanceState()), "非暂存待审流程实例，不能删除");
-        flowLongEngine.runtimeService().cascadeRemoveByProcessId(fhi.getProcessId());
+        if (null != fhi) {
+            ServiceExceptionUtil.fail(fhi.getInstanceState() > 0, "流程已执行结束不允许删除");
+            flowLongEngine.runtimeService().cascadeRemoveByInstanceId(instanceId);
+        }
         return true;
     }
 
     @Override
     public boolean resumeProcessByInstanceId(Long instanceId) {
         return flowLongEngine.taskService().resume(instanceId, FlowHelper.getFlowCreator());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean destroyProcessByInstanceId(DestroyInstanceDTO dto) {
+        if (StringUtils.isNoneBlank(dto.getOpinion())) {
+            FlwProcessApproval fpa = new FlwProcessApproval();
+            fpa.setInstanceId(dto.getInstanceId());
+            fpa.setType(16);
+            ApprovalContent content = new ApprovalContent();
+            content.setOpinion(dto.getOpinion());
+            fpa.setContent(content);
+            flwProcessApprovalService.save(fpa);
+        }
+        return flowLongEngine.runtimeService().destroyByInstanceId(dto.getInstanceId(), null);
     }
 
     @Override

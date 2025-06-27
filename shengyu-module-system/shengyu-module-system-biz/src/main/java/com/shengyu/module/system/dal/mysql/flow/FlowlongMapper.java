@@ -1,6 +1,7 @@
 package com.shengyu.module.system.dal.mysql.flow;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessInstanceDTO;
 import com.shengyu.module.system.controller.admin.flow.dto.ProcessTaskDTO;
 import com.shengyu.module.system.controller.admin.flow.vo.*;
 import org.apache.ibatis.annotations.Mapper;
@@ -59,4 +60,9 @@ public interface FlowlongMapper {
      * 不存在角色权限的流程ID列表
      */
     List<Long> selectNotExistProcessIds(@Param("userId") Long userId);
+
+    /**
+     * 流程实例分页列表
+     */
+    Page<FlwInstanceVO> selectPageInstance(Page<FlwInstanceVO> page, @Param("dto") FlwProcessInstanceDTO dto);
 }
