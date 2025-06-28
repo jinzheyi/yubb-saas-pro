@@ -255,9 +255,6 @@ public interface ErrorCodeConstants {
     ErrorCode FLOW_1_002_029_049 = new ErrorCode(1_002_029_049, "分类名称已存在，请更换其它名称");
     ErrorCode FLOW_1_002_029_050 = new ErrorCode(1_002_029_050, "主键不存在无法更新");
     ErrorCode FLOW_1_002_029_051 = new ErrorCode(1_002_029_051, "存在流程定义关联不允许删除");
-    ErrorCode FLOW_1_002_029_052 = new ErrorCode(1_002_029_052, "");
-    ErrorCode FLOW_1_002_029_053 = new ErrorCode(1_002_029_053, "");
-    ErrorCode FLOW_1_002_029_054 = new ErrorCode(1_002_029_054, "");
 
 
 }

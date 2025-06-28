@@ -2,6 +2,7 @@ package com.shengyu.module.system.service.dept;
 
 import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptListReqVO;
+import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptRespVO;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptSaveReqVO;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.UserDeptRespVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
@@ -64,6 +65,13 @@ public interface DeptService {
      * @return 部门列表
      */
     List<DeptDO> getDeptList(DeptListReqVO reqVO);
+
+    /**
+     * 获得部门树列表
+     * @param reqVO 筛选条件请求 VO
+     * @return 部门树列表
+     */
+    List<DeptRespVO> listTree(DeptListReqVO reqVO);
 
     /**
      * 获得指定用户编号的部门 Map

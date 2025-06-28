@@ -2,12 +2,15 @@ package com.shengyu.module.system.service.dept;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.google.common.annotations.VisibleForTesting;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.enums.dept.DeptIdEnum;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptListReqVO;
+import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptRespVO;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptSaveReqVO;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.UserDeptRespVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
@@ -180,6 +183,38 @@ public class DeptServiceImpl implements DeptService {
         List<DeptDO> list = deptMapper.selectList(reqVO);
         list.sort(Comparator.comparing(DeptDO::getSort));
         return list;
+    }
+
+    @Override
+    public List<DeptRespVO> listTree(DeptListReqVO reqVO) {
+        List<DeptDO> sysDepartmentList = deptMapper.selectList(reqVO);
+        if (CollectionUtils.isEmpty(sysDepartmentList)) {
+            return null;
+        }
+        return sysDepartmentList.stream().filter(e -> Objects.equals(0L, e.getParentId())).map(e -> {
+            DeptRespVO vo = BeanUtils.toBean(e, DeptRespVO.class);
+            vo.setChildren(this.getChild(vo.getId(), vo.getName(), sysDepartmentList));
+            return vo;
+        }).toList();
+    }
+
+    /**
+     * 获取子节点
+     */
+    private List<DeptRespVO> getChild(Long id, String parentName, List<DeptDO> sysDepartmentList) {
+        // 遍历所有节点，将所有菜单的父id与传过来的根节点的id比较
+        List<DeptDO> childList = sysDepartmentList.stream().filter(e -> Objects.equals(id, e.getParentId())).toList();
+        if (childList.isEmpty()) {
+            // 没有子节点，返回一个空 List（递归退出）
+            return null;
+        }
+        // 递归
+        return childList.stream().map(e -> {
+            DeptRespVO vo = BeanUtils.toBean(e, DeptRespVO.class);
+            vo.setParentName(parentName);
+            vo.setChildren(this.getChild(vo.getId(), vo.getName(), sysDepartmentList));
+            return vo;
+        }).toList();
     }
 
     @Override
