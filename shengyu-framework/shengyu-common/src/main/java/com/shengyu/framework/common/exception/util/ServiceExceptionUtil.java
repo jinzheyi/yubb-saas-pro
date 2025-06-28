@@ -59,15 +59,23 @@ public class ServiceExceptionUtil {
         return exception0(errorCode.getCode(), messagePattern, params);
     }
 
-    public static void fail(String message) {
-        throw new ServiceException(message);
+//    public static void fail(String message) {
+//        throw new ServiceException(message);
+//    }
+
+    public static ServiceException fail(boolean condition, String message, Object... params) {
+        if (condition) {
+//            fail(message);
+            String messagePattern = MESSAGES.getOrDefault(1_002_029_000, message);
+            throw exception0(1_002_029_000, messagePattern, params);
+        }
+        return null;
     }
 
-    public static void fail(boolean condition, String message) {
-        if (condition) {
-            fail(message);
-        }
-
+    public static ServiceException fail(String message, Object... params) {
+//            fail(message);
+        String messagePattern = MESSAGES.getOrDefault(1_002_029_000, message);
+        throw exception0(1_002_029_000, messagePattern, params);
     }
 
     public static void isEmpty(Object obj, String message) {
@@ -84,28 +92,6 @@ public class ServiceExceptionUtil {
 
     public static void nonEquals(Object a, Object b, String message) {
         fail(!Objects.equals(a, b), message);
-    }
-
-    public static void fail(String message, MessageSource messageSource) {
-        fail(messageSource.getMessage(message, (Object[])null, LocaleContextHolder.getLocale()));
-    }
-
-    public static void fail(boolean condition, String message, MessageSource messageSource) {
-        if (condition) {
-            fail(message, messageSource);
-        }
-
-    }
-
-    public static void fail(String message, Object[] args, MessageSource messageSource) {
-        fail(messageSource.getMessage(message, args, LocaleContextHolder.getLocale()));
-    }
-
-    public static void fail(boolean condition, String message, Object[] args, MessageSource messageSource) {
-        if (condition) {
-            fail(message, args, messageSource);
-        }
-
     }
 
     /**
