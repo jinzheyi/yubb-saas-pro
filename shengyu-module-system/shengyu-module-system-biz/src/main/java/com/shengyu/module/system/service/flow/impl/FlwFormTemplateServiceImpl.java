@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shengyu.module.system.dal.mysql.flow.FlwFormTemplateMapper;
+import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.service.flow.IFlwFormTemplateService;
 import org.springframework.stereotype.Service;
 
@@ -45,7 +46,7 @@ public class FlwFormTemplateServiceImpl extends BaseServiceImpl<FlwFormTemplateM
 
     @Override
     public boolean updateById(FlwFormTemplate flwFormTemplate) {
-        ServiceExceptionUtil.fail(null == flwFormTemplate.getId(), "主键不存在无法更新");
+        ServiceExceptionUtil.fail(null == flwFormTemplate.getId(), ErrorCodeConstants.FLOW_1_002_029_010);
         return super.updateById(flwFormTemplate);
     }
 
@@ -73,7 +74,7 @@ public class FlwFormTemplateServiceImpl extends BaseServiceImpl<FlwFormTemplateM
                 }
             }
         }
-        ServiceExceptionUtil.fail(null == id, "业务表单配置内容有误");
+        ServiceExceptionUtil.fail(null == id, ErrorCodeConstants.FLOW_1_002_029_011);
         FlwFormTemplate flwFormTemplate = this.checkById(id);
         if (null != flwFormTemplate && !Objects.equals(3, flwFormTemplate.getStatus())) {
             // 加载设置为绑定状态，该状态不允许删除，只能修改编辑

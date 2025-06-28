@@ -2,6 +2,8 @@ package com.shengyu.module.system.framework.flow;
 
 import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.shengyu.framework.common.exception.ErrorCode;
+import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.flowlong.engine.FlowConstants;
 import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
@@ -43,7 +45,7 @@ public class FlowTaskActorProvider implements TaskActorProvider {
                 // 3，角色
                 PermissionService sysUserRoleService = SpringUtil.getBean(PermissionService.class);
                 List<Long> roleIds = nodeModel.getNodeAssigneeList().stream().map(t -> Long.valueOf(t.getId())).toList();
-                ServiceExceptionUtil.fail(!sysUserRoleService.hasAnyRoleIds(Long.valueOf(flowCreator.getCreateId()), roleIds), "当前用户无操作权限");
+                ServiceExceptionUtil.fail(!sysUserRoleService.hasAnyRoleIds(Long.valueOf(flowCreator.getCreateId()), roleIds), ErrorCodeConstants.FLOW_1_002_029_006);
             }
         }
         return true;
@@ -117,7 +119,7 @@ public class FlowTaskActorProvider implements TaskActorProvider {
              */
             if (NodeSetType.supervisor.eq(nodeModel.getSetType())) {
                 // 2，主管
-                return getDepartmentHeadInfo(flowCreator, nodeModel, () -> "请设置发起人部门层级主管信息");
+                return getDepartmentHeadInfo(flowCreator, nodeModel, () -> ErrorCodeConstants.FLOW_1_002_029_008);
             } else if (NodeSetType.initiatorSelected.eq(nodeModel.getSetType())) {
                 // 4，发起人自选
                 Map<String, Object> modelData = FlowDataTransfer.get(FlowConstants.processDynamicAssignee);
@@ -139,7 +141,7 @@ public class FlowTaskActorProvider implements TaskActorProvider {
                 return Collections.singletonList(FlwTaskActor.ofUser(fi.getTenantId(), fi.getCreateId(), fi.getCreateBy()));
             } else if (NodeSetType.multiLevelSupervisors.eq(nodeModel.getSetType())) {
                 // 6，连续多级主管
-                return getDepartmentHeadInfo(flowCreator, nodeModel, () -> "未找到任何主管信息");
+                return getDepartmentHeadInfo(flowCreator, nodeModel, () -> ErrorCodeConstants.FLOW_1_002_029_009);
             }
         }
 
@@ -189,7 +191,7 @@ public class FlowTaskActorProvider implements TaskActorProvider {
             }
         }
 
-        ServiceExceptionUtil.fail("请选择设置流程处理人信息");
+        ServiceExceptionUtil.fail(ErrorCodeConstants.FLOW_1_002_029_005);
         return null;
     }
 
@@ -198,12 +200,12 @@ public class FlowTaskActorProvider implements TaskActorProvider {
      *  @param flowCreator 流程创建者信息
      *  @param nodeModel  节点信息
      */
-    private List<FlwTaskActor> getDepartmentHeadInfo(FlowCreator flowCreator, NodeModel nodeModel, Supplier<String> supplier) {
+    private List<FlwTaskActor> getDepartmentHeadInfo(FlowCreator flowCreator, NodeModel nodeModel, Supplier<ErrorCode> supplier) {
         DeptService deptService = SpringUtil.getBean(DeptService.class);
         AdminUserService userService = SpringUtil.getBean(AdminUserService.class);
         UserRespVO userRespVO = userService.getUser(Long.valueOf(flowCreator.getCreateId()));
         if (Objects.isNull(userRespVO.getDeptId())) {
-            ServiceExceptionUtil.fail("创建流程者没有选择部门信息");
+            ServiceExceptionUtil.fail(ErrorCodeConstants.FLOW_1_002_029_007);
         }
         List<UserRespVO> leaders = new ArrayList<>();
         if (0 == nodeModel.getDirectorMode()) {

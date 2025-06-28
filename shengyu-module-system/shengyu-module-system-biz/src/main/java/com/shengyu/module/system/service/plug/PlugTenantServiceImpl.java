@@ -23,7 +23,6 @@ import com.shengyu.module.system.controller.admin.plug.vo.tenant.PlugTenantRespV
 import com.shengyu.module.system.controller.admin.plug.vo.tenant.PlugTenantUpdateReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.dal.dataobject.plug.PlugTenantDO;
-import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.plug.PlugTenantMapper;
 import com.shengyu.module.system.service.user.AdminUserService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;

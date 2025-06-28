@@ -1,6 +1,5 @@
 package com.shengyu.module.platform.service.user;
 
-import static com.shengyu.framework.common.enums.CommonConstants.USER_NAME;
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
 import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
@@ -46,7 +45,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

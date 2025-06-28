@@ -203,6 +203,61 @@ public interface ErrorCodeConstants {
     ErrorCode NOTIFY_SEND_TEMPLATE_PARAM_MISS = new ErrorCode(1_002_028_000, "模板参数({})缺失");
 
     // ========== 流程相关 1-002-029-000 ==========
-    ErrorCode FLOW_EXCEPTION = new ErrorCode(1_002_029_000, "流程相关功能异常");
+    ErrorCode FLOW_1_002_029_000 = new ErrorCode(1_002_029_000, "父分类不能为子分类，请重新选择父分类");
+    ErrorCode FLOW_1_002_029_001 = new ErrorCode(1_002_029_001, "主键不存在无法更新");
+    ErrorCode FLOW_1_002_029_002 = new ErrorCode(1_002_029_002, "不允许删除所有");
+    ErrorCode FLOW_1_002_029_003 = new ErrorCode(1_002_029_003, "存在子类不允许删除");
+    ErrorCode FLOW_1_002_029_004 = new ErrorCode(1_002_029_004, "存在关联表单模板不允许删除");
+    ErrorCode FLOW_1_002_029_005 = new ErrorCode(1_002_029_005, "请选择设置流程处理人信息");
+    ErrorCode FLOW_1_002_029_006 = new ErrorCode(1_002_029_006, "当前用户无操作权限");
+    ErrorCode FLOW_1_002_029_007 = new ErrorCode(1_002_029_007, "创建流程者没有选择部门信息");
+    ErrorCode FLOW_1_002_029_008 = new ErrorCode(1_002_029_008, "请设置发起人部门层级主管信息");
+    ErrorCode FLOW_1_002_029_009 = new ErrorCode(1_002_029_009, "未找到任何主管信息");
+    ErrorCode FLOW_1_002_029_010 = new ErrorCode(1_002_029_010, "主键不存在无法更新");
+    ErrorCode FLOW_1_002_029_011 = new ErrorCode(1_002_029_011, "业务表单配置内容有误");
+    ErrorCode FLOW_1_002_029_012 = new ErrorCode(1_002_029_012, "当前ID执行任务不存在");
+    ErrorCode FLOW_1_002_029_013 = new ErrorCode(1_002_029_013, "指定用户不存在");
+    ErrorCode FLOW_1_002_029_014 = new ErrorCode(1_002_029_014, "用户【{}】已抄送，请勿重复操作");
+    ErrorCode FLOW_1_002_029_015 = new ErrorCode(1_002_029_015, "流程实例已结束");
+    ErrorCode FLOW_1_002_029_016 = new ErrorCode(1_002_029_016, "该审批流程不允许撤回");
+    ErrorCode FLOW_1_002_029_017 = new ErrorCode(1_002_029_017, "发起人节点不允许继续撤回");
+    ErrorCode FLOW_1_002_029_018 = new ErrorCode(1_002_029_018, "未发现指定审批流程");
+    ErrorCode FLOW_1_002_029_019 = new ErrorCode(1_002_029_019, "未发现指定业务流程表单模板");
+    ErrorCode FLOW_1_002_029_020 = new ErrorCode(1_002_029_020, "当前流程实例不存在");
+    ErrorCode FLOW_1_002_029_021 = new ErrorCode(1_002_029_021, "指定ID任务已执行完成");
+    ErrorCode FLOW_1_002_029_022 = new ErrorCode(1_002_029_022, "保存保单内容失败");
+    ErrorCode FLOW_1_002_029_023 = new ErrorCode(1_002_029_023, "指定流程模型不存在");
+    ErrorCode FLOW_1_002_029_024 = new ErrorCode(1_002_029_024, "发起人自选节点未设置处理人员");
+    ErrorCode FLOW_1_002_029_025 = new ErrorCode(1_002_029_025, "节点【{}】未设置处理人员");
+    ErrorCode FLOW_1_002_029_026 = new ErrorCode(1_002_029_026, "流程启动失败");
+    ErrorCode FLOW_1_002_029_027 = new ErrorCode(1_002_029_027, "保存保单失败");
+    ErrorCode FLOW_1_002_029_028 = new ErrorCode(1_002_029_028, "流程已执行结束不允许删除");
+    ErrorCode FLOW_1_002_029_029 = new ErrorCode(1_002_029_029, "未发现指定流程模型");
+    ErrorCode FLOW_1_002_029_030 = new ErrorCode(1_002_029_030, "流程定义分类ID不存在");
+    ErrorCode FLOW_1_002_029_031 = new ErrorCode(1_002_029_031, "模型节点名称不允许重复");
+    ErrorCode FLOW_1_002_029_032 = new ErrorCode(1_002_029_032, "自动通过节点配置错误，请确保包含在条件分支节点中");
+    ErrorCode FLOW_1_002_029_033 = new ErrorCode(1_002_029_033, "自动拒绝节点配置错误，请确保包含在条件分支节点中");
+    ErrorCode FLOW_1_002_029_034 = new ErrorCode(1_002_029_034, "路由节点必须配置错误，请确保配置路由分支");
+    ErrorCode FLOW_1_002_029_035 = new ErrorCode(1_002_029_035, "子流程节点配置错误，请确保已选择子流程");
+    ErrorCode FLOW_1_002_029_036 = new ErrorCode(1_002_029_036, "必须存在两个以上节点");
+    ErrorCode FLOW_1_002_029_037 = new ErrorCode(1_002_029_037, "存在多个条件表达式为空");
+    ErrorCode FLOW_1_002_029_038 = new ErrorCode(1_002_029_038, "存在多个条件子节点为空");
+    ErrorCode FLOW_1_002_029_039 = new ErrorCode(1_002_029_039, "存在条件节点KEY重复");
+    ErrorCode FLOW_1_002_029_040 = new ErrorCode(1_002_029_040, "必须存在审批节点");
+    ErrorCode FLOW_1_002_029_041 = new ErrorCode(1_002_029_041, "流程定义管理权限保存失败");
+    ErrorCode FLOW_1_002_029_042 = new ErrorCode(1_002_029_042, "流程发起人参与者信息保持失败");
+    ErrorCode FLOW_1_002_029_043 = new ErrorCode(1_002_029_043, "流程定义配置保存失败");
+    ErrorCode FLOW_1_002_029_044 = new ErrorCode(1_002_029_044, "流程唯一标识key不允许重复");
+    ErrorCode FLOW_1_002_029_045 = new ErrorCode(1_002_029_045, "无权限编辑操作审批流程");
+    ErrorCode FLOW_1_002_029_046 = new ErrorCode(1_002_029_046, "流程顺序保存失败");
+    ErrorCode FLOW_1_002_029_047 = new ErrorCode(1_002_029_047, "流程分类顺序保存失败");
+    ErrorCode FLOW_1_002_029_048 = new ErrorCode(1_002_029_048, "流程模型节点查询异常");
+    ErrorCode FLOW_1_002_029_049 = new ErrorCode(1_002_029_049, "分类名称已存在，请更换其它名称");
+    ErrorCode FLOW_1_002_029_050 = new ErrorCode(1_002_029_050, "主键不存在无法更新");
+    ErrorCode FLOW_1_002_029_051 = new ErrorCode(1_002_029_051, "存在流程定义关联不允许删除");
+    ErrorCode FLOW_1_002_029_052 = new ErrorCode(1_002_029_052, "");
+    ErrorCode FLOW_1_002_029_053 = new ErrorCode(1_002_029_053, "");
+    ErrorCode FLOW_1_002_029_054 = new ErrorCode(1_002_029_054, "");
+
 
 }

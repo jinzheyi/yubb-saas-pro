@@ -4,6 +4,7 @@ import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.mybatis.core.service.BaseServiceImpl;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessCategory;
 import com.shengyu.module.system.dal.mysql.flow.FlwProcessCategoryMapper;
+import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.service.flow.IFlwProcessCategoryService;
 import com.shengyu.module.system.service.flow.IFlwProcessConfigureService;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,7 @@ public class FlwProcessCategoryServiceImpl extends BaseServiceImpl<FlwProcessCat
     @Override
     public boolean save(FlwProcessCategory flwProcessCategory) {
         ServiceExceptionUtil.fail(super.lambdaQuery().eq(FlwProcessCategory::getName,
-                flwProcessCategory.getName()).count() > 0, "分类名称已存在，请更换其它名称");
+                flwProcessCategory.getName()).count() > 0, ErrorCodeConstants.FLOW_1_002_029_049);
         if (null == flwProcessCategory.getSort()) {
             // 设置默认排序
             flwProcessCategory.setSort(0);
@@ -40,13 +41,13 @@ public class FlwProcessCategoryServiceImpl extends BaseServiceImpl<FlwProcessCat
 
     @Override
     public boolean updateById(FlwProcessCategory flwProcessCategory) {
-        ServiceExceptionUtil.fail(null == flwProcessCategory.getId(), "主键不存在无法更新");
+        ServiceExceptionUtil.fail(null == flwProcessCategory.getId(), ErrorCodeConstants.FLOW_1_002_029_050);
         return super.updateById(flwProcessCategory);
     }
 
     @Override
     public boolean removeCategoryByIds(List<Long> ids) {
-        ServiceExceptionUtil.fail(flwProcessConfigureService.existByCategoryIds(ids), "存在流程定义关联不允许删除");
+        ServiceExceptionUtil.fail(flwProcessConfigureService.existByCategoryIds(ids), ErrorCodeConstants.FLOW_1_002_029_051);
         return super.removeByIds(ids);
     }
 

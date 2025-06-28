@@ -38,4 +38,6 @@ public interface GlobalErrorCodeConstants {
 
     ErrorCode UNKNOWN = new ErrorCode(999, "未知错误");
 
+    ErrorCode FLOW_ID_NOT_EXIST = new ErrorCode(902, "指定ID查询数据不存在");
+
 }

@@ -6,7 +6,6 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.PLUG_APP_SN_EXI
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;

@@ -35,7 +35,6 @@ import com.shengyu.module.system.api.user.AdminUserApi;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

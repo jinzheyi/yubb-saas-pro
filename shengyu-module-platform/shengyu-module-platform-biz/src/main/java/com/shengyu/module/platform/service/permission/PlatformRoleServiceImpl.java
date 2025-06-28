@@ -3,7 +3,6 @@ package com.shengyu.module.platform.service.permission;
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
 import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.ROLE_ADMIN_CODE_ERROR;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.ROLE_CAN_NOT_UPDATE_SYSTEM_TYPE_ROLE;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.ROLE_CODE_DUPLICATE;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.ROLE_IS_DISABLE;

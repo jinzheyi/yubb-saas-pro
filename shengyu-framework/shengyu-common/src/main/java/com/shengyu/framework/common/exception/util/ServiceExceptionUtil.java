@@ -59,39 +59,31 @@ public class ServiceExceptionUtil {
         return exception0(errorCode.getCode(), messagePattern, params);
     }
 
-//    public static void fail(String message) {
-//        throw new ServiceException(message);
-//    }
-
-    public static ServiceException fail(boolean condition, String message, Object... params) {
+    public static void fail(boolean condition, ErrorCode errorCode, Object... params) {
         if (condition) {
-//            fail(message);
-            String messagePattern = MESSAGES.getOrDefault(1_002_029_000, message);
-            throw exception0(1_002_029_000, messagePattern, params);
+            fail(errorCode, params);
         }
-        return null;
     }
 
-    public static ServiceException fail(String message, Object... params) {
-//            fail(message);
-        String messagePattern = MESSAGES.getOrDefault(1_002_029_000, message);
-        throw exception0(1_002_029_000, messagePattern, params);
+    public static void fail(ErrorCode errorCode, Object... params) {
+        String messagePattern = MESSAGES.getOrDefault(errorCode.getCode(), errorCode.getMsg());
+        throw exception0(errorCode.getCode(), messagePattern, params);
     }
 
-    public static void isEmpty(Object obj, String message) {
-        fail(ObjectUtils.isEmpty(obj), message);
+    public static void isEmpty(Object obj, ErrorCode errorCode, Object... params) {
+        fail(ObjectUtils.isEmpty(obj), errorCode, params);
     }
 
-    public static void nonEmpty(Object obj, String message) {
-        fail(!ObjectUtils.isEmpty(obj), message);
+    public static void nonEmpty(Object obj, ErrorCode errorCode, Object... params) {
+        fail(!ObjectUtils.isEmpty(obj), errorCode, params);
     }
 
-    public static void equals(Object a, Object b, String message) {
-        fail(Objects.equals(a, b), message);
+    public static void equals(Object a, Object b, ErrorCode errorCode, Object... params) {
+        fail(Objects.equals(a, b), errorCode, params);
     }
 
-    public static void nonEquals(Object a, Object b, String message) {
-        fail(!Objects.equals(a, b), message);
+    public static void nonEquals(Object a, Object b, ErrorCode errorCode, Object... params) {
+        fail(!Objects.equals(a, b), errorCode, params);
     }
 
     /**

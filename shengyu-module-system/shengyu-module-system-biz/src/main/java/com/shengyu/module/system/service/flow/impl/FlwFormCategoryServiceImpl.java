@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shengyu.module.system.dal.mysql.flow.FlwFormCategoryMapper;
+import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.service.flow.IFlwFormCategoryService;
 import com.shengyu.module.system.service.flow.IFlwFormTemplateService;
 import org.springframework.stereotype.Service;
@@ -75,10 +76,10 @@ public class FlwFormCategoryServiceImpl extends BaseServiceImpl<FlwFormCategoryM
 
     @Override
     public boolean updateById(FlwFormCategory flwFormCategory) {
-        ServiceExceptionUtil.isEmpty(flwFormCategory.getId(), "主键不存在无法更新");
+        ServiceExceptionUtil.isEmpty(flwFormCategory.getId(), ErrorCodeConstants.FLOW_1_002_029_001);
         List<Long> ids = baseMapper.selectIdsRecursive(flwFormCategory.getId());
         ServiceExceptionUtil.fail(CollectionUtils.isNotEmpty(ids) && ids.contains(flwFormCategory.getPid()),
-                "父分类不能为子分类，请重新选择父分类");
+                ErrorCodeConstants.FLOW_1_002_029_000);
         if (null == flwFormCategory.getPid()) {
             // 未设置父ID设置为0
             flwFormCategory.setPid(0L);
@@ -88,10 +89,10 @@ public class FlwFormCategoryServiceImpl extends BaseServiceImpl<FlwFormCategoryM
 
     @Override
     public boolean removeByIds(List<Long> ids) {
-        ServiceExceptionUtil.fail(ids.stream().anyMatch(Objects::isNull), "不允许删除所有");
+        ServiceExceptionUtil.fail(ids.stream().anyMatch(Objects::isNull), ErrorCodeConstants.FLOW_1_002_029_002);
         this.checkExists(Wrappers.<FlwFormCategory>lambdaQuery().select(FlwFormCategory::getId)
-                .in(FlwFormCategory::getPid, ids), "存在子类不允许删除");
-        ServiceExceptionUtil.fail(formTemplateService.existByFormCategoryIds(ids), "存在关联表单模板不允许删除");
+                .in(FlwFormCategory::getPid, ids), ErrorCodeConstants.FLOW_1_002_029_003);
+        ServiceExceptionUtil.fail(formTemplateService.existByFormCategoryIds(ids), ErrorCodeConstants.FLOW_1_002_029_004);
         return super.removeByIds(ids);
     }
 }

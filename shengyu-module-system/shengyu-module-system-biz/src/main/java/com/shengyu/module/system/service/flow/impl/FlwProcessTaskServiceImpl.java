@@ -27,6 +27,7 @@ import com.shengyu.module.system.controller.admin.flow.vo.*;
 import com.shengyu.module.system.dal.dataobject.flow.*;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.flow.FlowlongMapper;
+import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.framework.flow.FlowForm;
 import com.shengyu.module.system.framework.flow.FlowHelper;
 import com.shengyu.module.system.service.flow.*;
@@ -112,7 +113,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     public TaskApprovalVO approvalInfo(ProcessInfoDTO dto) {
         final Long instanceId = dto.getInstanceId();
         FlwHisInstance hisInstance = flowLongEngine.queryService().getHistInstance(instanceId);
-        ServiceExceptionUtil.isEmpty(hisInstance, "未发现指定审批流程");
+        ServiceExceptionUtil.isEmpty(hisInstance, ErrorCodeConstants.FLOW_1_002_029_018);
         TaskApprovalVO vo = new TaskApprovalVO();
         vo.setInstanceId(hisInstance.getId());
         vo.setInstanceState(hisInstance.getInstanceState());
@@ -160,7 +161,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
             if (ProcessType.business.eq(extInstance.getProcessType())) {
                 // 业务流程，加载表单模板内容
                 FlwFormTemplate formTemplate = flwFormTemplateService.getByConfigure(configure.getProcessForm());
-                ServiceExceptionUtil.fail(null == formTemplate, "未发现指定业务流程表单模板");
+                ServiceExceptionUtil.fail(null == formTemplate, ErrorCodeConstants.FLOW_1_002_029_019);
                 vo.setFormTemplate(formTemplate);
                 if (Objects.equals(formTemplate.getType(), 1)) {
                     // 系统表单情况
@@ -289,7 +290,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     @Override
     public Map<String, Object> listNextNodes(NextNodesDTO dto) {
         FlwInstance instance = flowLongEngine.queryService().getInstance(dto.getInstanceId());
-        ServiceExceptionUtil.fail(null == instance, "当前流程实例不存在");
+        ServiceExceptionUtil.fail(null == instance, ErrorCodeConstants.FLOW_1_002_029_020);
         FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(dto.getInstanceId());
         NodeModel rootNodeModel = extInstance.model().getNodeConfig();
         Execution execution = new Execution(FlowHelper.getFlowCreator(), dto.getArgs());
@@ -358,11 +359,11 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     @Override
     public boolean revoke(ProcessApprovalDTO dto, FlowCreator flowCreator) {
         FlwInstance flwInstance = flowLongEngine.queryService().getInstance(dto.getInstanceId());
-        ServiceExceptionUtil.fail(null == flwInstance, "流程实例已结束");
+        ServiceExceptionUtil.fail(null == flwInstance, ErrorCodeConstants.FLOW_1_002_029_015);
         FlwProcessConfigure configure = flwProcessConfigureService.getByProcessId(flwInstance.getProcessId());
         if (null != configure && null != configure.getProcessSetting()) {
             ServiceExceptionUtil.fail(!Objects.equals(true, configure.getProcessSetting().getAllowRevocation()),
-              "该审批流程不允许撤回");
+                    ErrorCodeConstants.FLOW_1_002_029_016);
         }
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
         if (dto.isTermination()) {
@@ -373,7 +374,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
 
         // 发起人撤回任务
         FlwHisTask fht = flowLongEngine.queryService().getStartTaskByInstanceId(dto.getInstanceId());
-        ServiceExceptionUtil.fail(null == fht || fht.startNode(), "发起人节点不允许继续撤回");
+        ServiceExceptionUtil.fail(null == fht || fht.startNode(), ErrorCodeConstants.FLOW_1_002_029_017);
         TaskService taskService = flowLongEngine.taskService();
         return taskService.withdrawTask(fht.getId(), flowCreator).isPresent();
     }
@@ -410,7 +411,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
 
     private FlwTask checkFlwTaskById(Long taskId) {
         FlwTask flwTask = flowLongEngine.queryService().getTask(taskId);
-        ServiceExceptionUtil.isEmpty(flwTask, "当前ID执行任务不存在");
+        ServiceExceptionUtil.isEmpty(flwTask, ErrorCodeConstants.FLOW_1_002_029_012);
         return flwTask;
     }
 
@@ -418,11 +419,11 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     public boolean carbonCopy(TaskCarbonCopyDTO dto) {
         FlwTask flwTask = this.checkFlwTaskById(dto.getTaskId());
         List<AdminUserDO> sysUsers = adminUserService.getUserList(dto.getUserIds());
-        ServiceExceptionUtil.isEmpty(sysUsers, "指定用户不存在");
+        ServiceExceptionUtil.isEmpty(sysUsers, ErrorCodeConstants.FLOW_1_002_029_013);
         flowLongEngine.queryService().getCcTaskActorsByInstanceId(flwTask.getInstanceId())
                 .ifPresent(t -> t.forEach(actor -> sysUsers.forEach(user -> {
                     if (Objects.equals(actor.getActorId(), String.valueOf(user.getId()))) {
-                        ServiceExceptionUtil.fail("用户【" + user.getNickname() + "】已抄送，请勿重复操作");
+                        ServiceExceptionUtil.fail(ErrorCodeConstants.FLOW_1_002_029_014, user.getNickname());
                     }
                 })));
 
@@ -455,7 +456,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
 
     private FlwTask getFlwTask(Long taskId) {
         FlwTask flwTask = flowLongEngine.queryService().getTask(taskId);
-        ServiceExceptionUtil.isEmpty(flwTask, "指定ID任务已执行完成");
+        ServiceExceptionUtil.isEmpty(flwTask, ErrorCodeConstants.FLOW_1_002_029_021);
         return flwTask;
     }
 
@@ -478,7 +479,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         // 获取任务，保存表单
         FlwTask flwTask = this.getFlwTask(dto.getTaskId());
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
-        ServiceExceptionUtil.fail(!flwProcessFormService.saveForm(flwTask.getInstanceId(), dto.getProcessForm()), "保存保单内容失败");
+        ServiceExceptionUtil.fail(!flwProcessFormService.saveForm(flwTask.getInstanceId(), dto.getProcessForm()), ErrorCodeConstants.FLOW_1_002_029_022);
         FlowForm.argsTransfer(dto.getProcessForm());
 
         // 委派审批

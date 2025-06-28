@@ -16,6 +16,7 @@ import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import com.shengyu.framework.flowlong.engine.model.ProcessModel;
 import com.shengyu.module.system.dal.dataobject.flow.ApprovalContent;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
+import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.service.flow.IFlwProcessApprovalService;
 import com.shengyu.module.system.service.notify.NotifySendService;
 import com.shengyu.module.system.service.permission.PermissionService;
@@ -177,7 +178,7 @@ public class FlowTaskListener implements TaskListener {
         if (null == nodeModel) {
             // 不存在情况从数据库中获取
             ProcessModel processModel = flowLongEngine.runtimeService().getProcessModelByInstanceId(flwTask.getInstanceId());
-            ServiceExceptionUtil.isEmpty(processModel, "流程模型节点查询异常");
+            ServiceExceptionUtil.isEmpty(processModel, ErrorCodeConstants.FLOW_1_002_029_048);
             return processModel.getNode(flwTask.getTaskKey());
         }
         return nodeModel;

@@ -36,6 +36,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shengyu.module.system.dal.mysql.flow.FlowlongMapper;
+import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.framework.flow.FlowForm;
 import com.shengyu.module.system.framework.flow.FlowHelper;
 import com.shengyu.module.system.service.flow.*;
@@ -209,7 +210,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     @Override
     public Long launchProcess(ProcessStartDTO dto, FlowCreator flowCreator) {
         FlwProcess flwProcess = flowLongEngine.processService().getProcessById(dto.getProcessId());
-        ServiceExceptionUtil.fail(null == flwProcess, "指定流程模型不存在");
+        ServiceExceptionUtil.fail(null == flwProcess, ErrorCodeConstants.FLOW_1_002_029_023);
 
         // 获取未设置处理人员节点
         final Map<String, DynamicAssignee> assigneeMap = dto.getAssigneeMap();
@@ -223,10 +224,10 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
 
                 final DynamicAssignee dynamicAssignee = assigneeMap.get(t.getNodeKey());
                 if (NodeSetType.specifyMembers.eq(t.getSetType()) || NodeSetType.initiatorSelected.eq(t.getSetType())) {
-                    ServiceExceptionUtil.fail(null == dynamicAssignee, "发起人自选节点未设置处理人员");
+                    ServiceExceptionUtil.fail(null == dynamicAssignee, ErrorCodeConstants.FLOW_1_002_029_024);
                 }
                 ServiceExceptionUtil.fail(null == dynamicAssignee || CollectionUtils.isEmpty(dynamicAssignee.getAssigneeList()),
-                        "节点【 " + t.getNodeName() + " 】未设置处理人员");
+                        ErrorCodeConstants.FLOW_1_002_029_025, t.getNodeName());
             });
         }
         // 传递动态分配处理人员
@@ -243,11 +244,11 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
             flwInstance.setBusinessKey(dto.getBusinessKey());
             return flwInstance;
         });
-        ServiceExceptionUtil.fail(opt.isEmpty(), "流程启动失败");
+        ServiceExceptionUtil.fail(opt.isEmpty(), ErrorCodeConstants.FLOW_1_002_029_026);
 
         // 保存表单
         FlwInstance flwInstance = opt.get();
-        ServiceExceptionUtil.fail(!flwProcessFormService.saveForm(flwInstance.getId(), dto.getProcessForm()), "保存保单失败");
+        ServiceExceptionUtil.fail(!flwProcessFormService.saveForm(flwInstance.getId(), dto.getProcessForm()), ErrorCodeConstants.FLOW_1_002_029_027);
         return flwInstance.getId();
     }
 
@@ -274,7 +275,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     public boolean removeProcessByInstanceId(Long instanceId) {
         FlwHisInstance fhi = flowLongEngine.queryService().getHistInstance(instanceId);
         if (null != fhi) {
-            ServiceExceptionUtil.fail(fhi.getInstanceState() > 0, "流程已执行结束不允许删除");
+            ServiceExceptionUtil.fail(fhi.getInstanceState() > 0, ErrorCodeConstants.FLOW_1_002_029_028);
             flowLongEngine.runtimeService().cascadeRemoveByInstanceId(instanceId);
         }
         return true;
@@ -312,7 +313,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     }
 
     public FlwProcessDTO getFlwProcessDTO(FlwProcess flwProcess) {
-        ServiceExceptionUtil.isEmpty(flwProcess, "未发现指定流程模型");
+        ServiceExceptionUtil.isEmpty(flwProcess, ErrorCodeConstants.FLOW_1_002_029_029);
         FlwProcessDTO dto = FlwProcessDTO.of(flwProcess);
         // 流程权限
         List<FlwProcessPermission> permissionList = flwProcessPermissionService.getByProcessId(flwProcess.getId());
@@ -344,25 +345,25 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     @Transactional(rollbackFor = Exception.class)
     @Override
     public Long saveDto(FlwProcessDTO dto) {
-        ServiceExceptionUtil.fail(null == dto.getCategoryId(), "流程定义分类ID不存在");
+        ServiceExceptionUtil.fail(null == dto.getCategoryId(), ErrorCodeConstants.FLOW_1_002_029_030);
         ProcessModel processModel = ModelHelper.buildProcessModel(dto.getModelContent());
         NodeModel rootNode = processModel.getNodeConfig();
         int checkNodeModel = ModelHelper.checkNodeModel(rootNode);
         if (checkNodeModel > 0) {
-            ServiceExceptionUtil.equals(1, checkNodeModel, "模型节点名称不允许重复");
-            ServiceExceptionUtil.equals(2, checkNodeModel, "自动通过节点配置错误，请确保包含在条件分支节点中");
-            ServiceExceptionUtil.equals(3, checkNodeModel, "自动拒绝节点配置错误，请确保包含在条件分支节点中");
-            ServiceExceptionUtil.equals(4, checkNodeModel, "路由节点必须配置错误，请确保配置路由分支");
-            ServiceExceptionUtil.equals(5, checkNodeModel, "子流程节点配置错误，请确保已选择子流程");
+            ServiceExceptionUtil.equals(1, checkNodeModel, ErrorCodeConstants.FLOW_1_002_029_031);
+            ServiceExceptionUtil.equals(2, checkNodeModel, ErrorCodeConstants.FLOW_1_002_029_032);
+            ServiceExceptionUtil.equals(3, checkNodeModel, ErrorCodeConstants.FLOW_1_002_029_033);
+            ServiceExceptionUtil.equals(4, checkNodeModel, ErrorCodeConstants.FLOW_1_002_029_034);
+            ServiceExceptionUtil.equals(5, checkNodeModel, ErrorCodeConstants.FLOW_1_002_029_035);
         }
-        ServiceExceptionUtil.fail(null == rootNode.getChildNode(), "必须存在两个以上节点");
+        ServiceExceptionUtil.fail(null == rootNode.getChildNode(), ErrorCodeConstants.FLOW_1_002_029_036);
         int checkConditionNode = ModelHelper.checkConditionNode(rootNode);
         if (checkConditionNode > 0) {
-            ServiceExceptionUtil.equals(1, checkConditionNode, "存在多个条件表达式为空");
-            ServiceExceptionUtil.equals(2, checkConditionNode, "存在多个条件子节点为空");
-            ServiceExceptionUtil.equals(3, checkConditionNode, "存在条件节点KEY重复");
+            ServiceExceptionUtil.equals(1, checkConditionNode, ErrorCodeConstants.FLOW_1_002_029_037);
+            ServiceExceptionUtil.equals(2, checkConditionNode, ErrorCodeConstants.FLOW_1_002_029_038);
+            ServiceExceptionUtil.equals(3, checkConditionNode, ErrorCodeConstants.FLOW_1_002_029_039);
         }
-        ServiceExceptionUtil.fail(!ModelHelper.checkExistApprovalNode(rootNode), "必须存在审批节点");
+        ServiceExceptionUtil.fail(!ModelHelper.checkExistApprovalNode(rootNode), ErrorCodeConstants.FLOW_1_002_029_040);
 
         // 检查流程定义操作权限
         if (null != dto.getProcessId()) {
@@ -392,7 +393,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
         List<FlwProcessPermissionDTO> processPermissionList = dto.getProcessPermissionList();
         if (CollectionUtils.isNotEmpty(processPermissionList)) {
             ServiceExceptionUtil.fail(!flwProcessPermissionService.saveProcessPermissions(processId, processPermissionList),
-                    "流程定义管理权限保存失败");
+                    ErrorCodeConstants.FLOW_1_002_029_041);
         }
 
         // 设置流程定义参与者，限制发起人角色
@@ -406,12 +407,12 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
                 fpa.setActorId(Long.valueOf(t.getId()));
                 fpa.setActorName(t.getName());
                 return fpa;
-            }).toList()), "流程发起人参与者信息保持失败");
+            }).toList()), ErrorCodeConstants.FLOW_1_002_029_042);
         }
 
         // 保存流程定义配置
         if (null != dto.getCategoryId()) {
-            ServiceExceptionUtil.fail(!flwProcessConfigureService.saveByDto(processId, dto), "流程定义配置保存失败");
+            ServiceExceptionUtil.fail(!flwProcessConfigureService.saveByDto(processId, dto), ErrorCodeConstants.FLOW_1_002_029_043);
         }
         return processId;
     }
@@ -423,7 +424,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
         Long count = lambdaQuery().ne(null != processId, FlwProcess::getId, processId)
                 .ne(FlwProcess::getProcessState, 2)
                 .eq(FlwProcess::getProcessKey, processKey).count();
-        ServiceExceptionUtil.fail(count > 0, "流程唯一标识key不允许重复");
+        ServiceExceptionUtil.fail(count > 0, ErrorCodeConstants.FLOW_1_002_029_044);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -458,7 +459,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
         if (null == userSession) {
             FlwProcessPermission fpp = getFlwProcessPermissionByProcessId(userSession, processId);
             if (null != fpp) {
-                ServiceExceptionUtil.fail(!fpp.allowOperateApproval(), "无权限编辑操作审批流程");
+                ServiceExceptionUtil.fail(!fpp.allowOperateApproval(), ErrorCodeConstants.FLOW_1_002_029_045);
             }
         }
     }
@@ -491,11 +492,11 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
             // 更新流程排序
             if (CollectionUtils.isNotEmpty(fpList)) {
                 flwProcessConfigureService.updateRelation(dtoList);
-                ServiceExceptionUtil.fail(!super.updateBatchById(fpList), "流程顺序保存失败");
+                ServiceExceptionUtil.fail(!super.updateBatchById(fpList), ErrorCodeConstants.FLOW_1_002_029_046);
             }
             // 更新流程分类顺序
             if (CollectionUtils.isNotEmpty(fpcList)) {
-                ServiceExceptionUtil.fail(!flwProcessCategoryService.sort(fpcList), "流程分类顺序保存失败");
+                ServiceExceptionUtil.fail(!flwProcessCategoryService.sort(fpcList), ErrorCodeConstants.FLOW_1_002_029_047);
             }
         }
         return true;
