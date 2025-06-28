@@ -1,5 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow;
 
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.validation.group.Create;
 import com.shengyu.framework.common.validation.group.Update;
 import com.shengyu.framework.flowlong.engine.core.PageParam;
@@ -15,6 +16,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 /**
  * 流程表单模板 前端控制器
@@ -32,49 +35,49 @@ public class FormTemplateController {
     @Operation(summary = "分页列表")
     @PreAuthorize("@ss.hasPermission('flw:formTemplate:page')")
     @PostMapping("/page")
-    public Page<FlwFormTemplate> getPage(@RequestBody PageParam<FlwFormTemplate> dto) {
-        return flwFormTemplateService.page(dto.page(), dto.getData());
+    public CommonResult<Page<FlwFormTemplate>> getPage(@RequestBody PageParam<FlwFormTemplate> dto) {
+        return success(flwFormTemplateService.page(dto.page(), dto.getData()));
     }
 
     @Operation(summary = "简单分页列表")
     @PreAuthorize("@ss.hasPermission('flw:formTemplate:pageSimple')")
     @PostMapping("/page-simple")
-    public Page<FlwFormTemplate> getPageSimple(@RequestBody PageParam<FlwFormTemplate> dto) {
-        return flwFormTemplateService.pageSimple(dto.page(), dto.getData());
+    public CommonResult<Page<FlwFormTemplate>> getPageSimple(@RequestBody PageParam<FlwFormTemplate> dto) {
+        return success(flwFormTemplateService.pageSimple(dto.page(), dto.getData()));
     }
 
     @Operation(summary = "查询 id 信息")
     @PreAuthorize("@ss.hasPermission('flw:formTemplate:get')")
     @GetMapping("/get")
-    public FlwFormTemplate get(@RequestParam Long id) {
-        return flwFormTemplateService.getById(id);
+    public CommonResult<FlwFormTemplate> get(@RequestParam Long id) {
+        return success(flwFormTemplateService.getById(id));
     }
 
     @Operation(summary = "根据 id 修改信息")
     @PreAuthorize("@ss.hasPermission('flw:formTemplate:update')")
     @PostMapping("/update")
-    public boolean update(@Validated(Update.class) @RequestBody FlwFormTemplate flwFormTemplate) {
-        return flwFormTemplateService.updateById(flwFormTemplate);
+    public CommonResult<Boolean> update(@Validated(Update.class) @RequestBody FlwFormTemplate flwFormTemplate) {
+        return success(flwFormTemplateService.updateById(flwFormTemplate));
     }
 
     @Operation(summary = "根据 id 修改状态")
     @PreAuthorize("@ss.hasPermission('flw:formTemplate:status')")
     @PostMapping("/status/{id}")
-    public boolean status(@PathVariable("id") Long id, @RequestParam Integer status) {
-        return flwFormTemplateService.updateStatusById(id, status);
+    public CommonResult<Boolean> status(@PathVariable("id") Long id, @RequestParam Integer status) {
+        return success(flwFormTemplateService.updateStatusById(id, status));
     }
 
     @Operation(summary = "创建添加")
     @PreAuthorize("@ss.hasPermission('flw:formTemplate:create')")
     @PostMapping("/create")
-    public boolean create(@Validated(Create.class) @RequestBody FlwFormTemplate flwFormTemplate) {
-        return flwFormTemplateService.save(flwFormTemplate);
+    public CommonResult<Boolean> create(@Validated(Create.class) @RequestBody FlwFormTemplate flwFormTemplate) {
+        return success(flwFormTemplateService.save(flwFormTemplate));
     }
 
     @Operation(summary = "根据 ids 删除")
     @PreAuthorize("@ss.hasPermission('flw:formTemplate:delete')")
     @PostMapping("/delete")
-    public boolean delete(@NotEmpty @RequestBody List<Long> ids) {
-        return flwFormTemplateService.removeNotBindByIds(ids);
+    public CommonResult<Boolean> delete(@NotEmpty @RequestBody List<Long> ids) {
+        return success(flwFormTemplateService.removeNotBindByIds(ids));
     }
 }

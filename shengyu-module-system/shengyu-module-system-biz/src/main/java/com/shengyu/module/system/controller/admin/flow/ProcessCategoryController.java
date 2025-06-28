@@ -1,5 +1,6 @@
 package com.shengyu.module.system.controller.admin.flow;
 
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.validation.group.Create;
 import com.shengyu.framework.common.validation.group.Update;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessCategory;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+
 /**
  * 流程分类 前端控制器
  *
@@ -33,28 +36,28 @@ public class ProcessCategoryController {
     @Operation(summary = "根据 id 修改信息")
     @PreAuthorize("@ss.hasPermission('flw:processCategory:update')")
     @PostMapping("/update")
-    public boolean update(@Validated(Update.class) @RequestBody FlwProcessCategory flwProcessCategory) {
-        return flwProcessCategoryService.updateById(flwProcessCategory);
+    public CommonResult<Boolean> update(@Validated(Update.class) @RequestBody FlwProcessCategory flwProcessCategory) {
+        return success(flwProcessCategoryService.updateById(flwProcessCategory));
     }
 
     @Operation(summary = "所有列表")
     @PreAuthorize("@ss.hasPermission('flw:processCategory:listAll')")
     @PostMapping("/list-all")
-    public List<FlwProcessCategory> listAll() {
-        return flwProcessCategoryService.listAll();
+    public CommonResult<List<FlwProcessCategory>> listAll() {
+        return success(flwProcessCategoryService.listAll());
     }
 
     @Operation(summary = "创建添加")
     @PreAuthorize("@ss.hasPermission('flw:processCategory:create')")
     @PostMapping("/create")
-    public boolean create(@Validated(Create.class) @RequestBody FlwProcessCategory flwProcessCategory) {
-        return flwProcessCategoryService.save(flwProcessCategory);
+    public CommonResult<Boolean> create(@Validated(Create.class) @RequestBody FlwProcessCategory flwProcessCategory) {
+        return success(flwProcessCategoryService.save(flwProcessCategory));
     }
 
     @Operation(summary = "根据 ids 删除")
     @PreAuthorize("@ss.hasPermission('flw:processCategory:delete')")
     @PostMapping("/delete")
-    public boolean delete(@NotEmpty @RequestBody List<Long> ids) {
-        return flwProcessCategoryService.removeCategoryByIds(ids);
+    public CommonResult<Boolean> delete(@NotEmpty @RequestBody List<Long> ids) {
+        return success(flwProcessCategoryService.removeCategoryByIds(ids));
     }
 }

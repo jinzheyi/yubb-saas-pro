@@ -1,6 +1,7 @@
 package com.shengyu.module.system.controller.admin.flow;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.flowlong.engine.FlowLongEngine;
 import com.shengyu.framework.flowlong.engine.core.PageParam;
 import com.shengyu.module.system.controller.admin.flow.dto.DestroyInstanceDTO;
@@ -24,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+
 /**
  * 流程实例 前端控制器
  *
@@ -42,8 +45,8 @@ public class ProcessInstanceController {
     @Operation(summary = "流程实例分页列表")
     @PreAuthorize("@ss.hasPermission('flw:processInstance:page')")
     @PostMapping("/page")
-    public Page<FlwInstanceVO> pageInstance(@RequestBody PageParam<FlwProcessInstanceDTO> dto) {
-        return flwProcessService.pageInstance(dto.page(), dto.getData());
+    public CommonResult<Page<FlwInstanceVO>> pageInstance(@RequestBody PageParam<FlwProcessInstanceDTO> dto) {
+        return success(flwProcessService.pageInstance(dto.page(), dto.getData()));
     }
 
     @Operation(summary = "获取所有分类流程定义列表")
@@ -52,8 +55,8 @@ public class ProcessInstanceController {
             @Parameter(name = "processId", description = "流程ID", in = ParameterIn.PATH)
     })
     @PostMapping("/start/{processId}")
-    public boolean start(@PathVariable("processId") Long processId) {
-        return flowLongEngine.startInstanceById(processId, FlowHelper.getFlowCreator()).isPresent();
+    public CommonResult<Boolean> start(@PathVariable("processId") Long processId) {
+        return success(flowLongEngine.startInstanceById(processId, FlowHelper.getFlowCreator()).isPresent());
     }
 
     @Operation(summary = "根据流程实例ID获取流程变量")
@@ -62,8 +65,8 @@ public class ProcessInstanceController {
       @Parameter(name = "instanceId", description = "流程实例ID", in = ParameterIn.PATH)
     })
     @PostMapping("/variable/{instanceId}")
-    public Map<String, Object> variable(@PathVariable("instanceId") Long instanceId) {
-        return flwProcessService.getVariableByInstanceId(instanceId);
+    public CommonResult<Map<String, Object>> variable(@PathVariable("instanceId") Long instanceId) {
+        return success(flwProcessService.getVariableByInstanceId(instanceId));
     }
 
     @Operation(summary = "根据流程实例ID删除暂存待审流程实例")
@@ -72,8 +75,8 @@ public class ProcessInstanceController {
             @Parameter(name = "instanceId", description = "流程实例ID", in = ParameterIn.PATH)
     })
     @PostMapping("/remove/{instanceId}")
-    public boolean remove(@PathVariable("instanceId") Long instanceId) {
-        return flwProcessService.removeProcessByInstanceId(instanceId);
+    public CommonResult<Boolean> remove(@PathVariable("instanceId") Long instanceId) {
+        return success(flwProcessService.removeProcessByInstanceId(instanceId));
     }
 
     @Operation(summary = "根据流程实例ID唤醒撤销拒审终止流程实例")
@@ -82,15 +85,15 @@ public class ProcessInstanceController {
             @Parameter(name = "instanceId", description = "流程实例ID", in = ParameterIn.PATH)
     })
     @PostMapping("/resume/{instanceId}")
-    public boolean resume(@PathVariable("instanceId") Long instanceId) {
-        return flwProcessService.resumeProcessByInstanceId(instanceId);
+    public CommonResult<Boolean> resume(@PathVariable("instanceId") Long instanceId) {
+        return success(flwProcessService.resumeProcessByInstanceId(instanceId));
     }
 
     @Operation(summary = "作废流程实例")
     @PreAuthorize("@ss.hasPermission('flw:processInstance:destroy')")
     @PostMapping("/destroy")
-    public boolean destroy(@Validated @RequestBody DestroyInstanceDTO dto) {
-        return flwProcessService.destroyProcessByInstanceId(dto);
+    public CommonResult<Boolean> destroy(@Validated @RequestBody DestroyInstanceDTO dto) {
+        return success(flwProcessService.destroyProcessByInstanceId(dto));
     }
 
 }
