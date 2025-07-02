@@ -6,6 +6,7 @@ package com.shengyu.framework.flowlong.engine;
 
 import com.shengyu.framework.flowlong.engine.core.Execution;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -28,5 +29,5 @@ public interface TaskTrigger {
      * @param finish 执行完成函数【必须执行否则无法继续执行下一步】
      * @return 执行结果 true 成功 false 失败
      */
-    boolean execute(NodeModel nodeModel, Execution execution, Supplier<Boolean> finish);
+    boolean execute(NodeModel nodeModel, Execution execution, Function<Execution, Boolean> finish);
 }

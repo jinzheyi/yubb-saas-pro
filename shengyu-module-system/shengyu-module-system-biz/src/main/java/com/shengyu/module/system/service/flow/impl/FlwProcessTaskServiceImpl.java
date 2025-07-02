@@ -216,11 +216,11 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
                     if (PerformType.countersign.eq(performType)) {
                         // 会签情况
                         flowLongEngine.queryService().getActiveTaskActorsByInstanceId(flwTask.getInstanceId())
-                                .ifPresent(content::appendNodeAssignee);
+                          .ifPresent(content::appendNodeAssignee);
                     } else {
                         // 其它
                         flowLongEngine.queryService().getActiveTaskActorsByTaskId(flwTask.getId())
-                                .ifPresent(content::appendNodeAssignee);
+                          .ifPresent(content::appendNodeAssignee);
                     }
                     fpa.setContent(content);
                 }
@@ -239,9 +239,9 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
 
         // 找到未记录【执行节点】的办理任务，获取可能在分支中已执行节点【排除包含正在执行节点的历史数据】
         processApprovals.stream().filter(t -> Objects.equals(3, t.getType()) && !usedNodeKeys.contains(t.getTaskKey()))
-                .map(t -> ModelHelper.getAllUsedNodeKeys(flowLongContext, execution, nodeModel, t.getTaskKey()))
-                .filter(nodeKeys -> nodeKeys.stream().noneMatch(pendingNodeKeys::contains))
-                .forEach(nodeKeys -> nodeKeys.forEach(nodeKey -> renderNodes.put(nodeKey, 0)) );
+          .map(t -> ModelHelper.getAllUsedNodeKeys(flowLongContext, execution, nodeModel, t.getTaskKey()))
+          .filter(nodeKeys -> nodeKeys.stream().noneMatch(pendingNodeKeys::contains))
+          .forEach(nodeKeys -> nodeKeys.forEach(nodeKey -> renderNodes.put(nodeKey, 0)) );
 
         // 设置渲染节点信息
         vo.setRenderNodes(renderNodes);
@@ -325,7 +325,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
 
     @Override
     public boolean viewed(Long taskId) {
-        return flowLongEngine.taskService().viewTask(taskId, FlowHelper.getFlwTaskActor());
+        return flowLongEngine.taskService().viewTask(taskId, FlowHelper.getFlowCreator());
     }
 
     /**
@@ -395,7 +395,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
             List<FlwHisTaskActorVO> actorList = flowlongMapper.selectListHisTaskActorVOByInstanceId(instanceId);
             if (CollectionUtils.isNotEmpty(actorList)) {
                 voList.forEach(t -> t.setActorList(actorList.stream().filter(v -> Objects.equals(v.getTaskId(), t.getId()))
-                        .collect(Collectors.toList())));
+                  .collect(Collectors.toList())));
             }
         }
         return voList;
@@ -505,7 +505,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         FlwTask flwTask = this.getFlwTask(dto.getTaskId());
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
         return flowLongEngine.executeAppendNodeModel(flwTask.getId(), dto.toNodeModel(),
-                FlowHelper.getFlowCreator(), dto.getType() == 9);
+          FlowHelper.getFlowCreator(), dto.getType() == 9);
     }
 
     @Transactional(rollbackFor = Exception.class)

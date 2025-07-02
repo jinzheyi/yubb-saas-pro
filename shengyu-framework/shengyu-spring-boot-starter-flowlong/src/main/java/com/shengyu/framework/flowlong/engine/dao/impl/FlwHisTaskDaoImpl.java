@@ -43,7 +43,7 @@ public class FlwHisTaskDaoImpl implements FlwHisTaskDao {
     @Override
     public boolean deleteByInstanceIds(List<Long> instanceIds) {
         return hisTaskMapper.delete(Wrappers.<FlwHisTask>lambdaQuery()
-                .in(FlwHisTask::getInstanceId, instanceIds)) > 0;
+          .in(FlwHisTask::getInstanceId, instanceIds)) > 0;
     }
 
     @Override
@@ -59,49 +59,57 @@ public class FlwHisTaskDaoImpl implements FlwHisTaskDao {
     @Override
     public FlwHisTask selectStartTaskByInstanceId(Long instanceId) {
         List<FlwHisTask> hisTasks = hisTaskMapper.selectList(Wrappers.<FlwHisTask>lambdaQuery()
-                .eq(FlwHisTask::getInstanceId, instanceId)
-                .eq(FlwHisTask::getParentTaskId, 0));
+          .eq(FlwHisTask::getInstanceId, instanceId)
+          .eq(FlwHisTask::getParentTaskId, 0));
         return null == hisTasks ? null : hisTasks.get(0);
     }
 
     @Override
     public List<FlwHisTask> selectListByInstanceIdAndTaskName(Long instanceId, String taskName) {
         return hisTaskMapper.selectList(Wrappers.<FlwHisTask>lambdaQuery()
-                .eq(FlwHisTask::getInstanceId, instanceId)
-                .eq(FlwHisTask::getTaskName, taskName));
+          .eq(FlwHisTask::getInstanceId, instanceId)
+          .eq(FlwHisTask::getTaskName, taskName));
     }
 
     @Override
     public Optional<List<FlwHisTask>> selectListByInstanceId(Long instanceId) {
         return Optional.ofNullable(hisTaskMapper.selectList(Wrappers.<FlwHisTask>lambdaQuery()
-                .eq(FlwHisTask::getInstanceId, instanceId)));
+          .eq(FlwHisTask::getInstanceId, instanceId)));
     }
 
     @Override
     public Optional<List<FlwHisTask>> selectListByInstanceIdAndTaskState(Long instanceId, Integer taskState) {
         return Optional.ofNullable(hisTaskMapper.selectList(Wrappers.<FlwHisTask>lambdaQuery()
-                .eq(FlwHisTask::getInstanceId, instanceId)
-                .eq(FlwHisTask::getTaskState, taskState)));
+          .eq(FlwHisTask::getInstanceId, instanceId)
+          .eq(FlwHisTask::getTaskState, taskState)));
+    }
+
+    @Override
+    public Optional<List<FlwHisTask>> selectListByInstanceIdAndTaskKey(Long instanceId, String taskKey) {
+        return Optional.ofNullable(hisTaskMapper.selectList(Wrappers.<FlwHisTask>lambdaQuery()
+          .eq(FlwHisTask::getInstanceId, instanceId)
+          .eq(FlwHisTask::getTaskKey, taskKey)
+          .orderByDesc(FlwHisTask::getCreateTime)));
     }
 
     @Override
     public List<FlwHisTask> selectListByCallProcessIdAndCallInstanceId(Long callProcessId, Long callInstanceId) {
         return hisTaskMapper.selectList(Wrappers.<FlwHisTask>lambdaQuery()
-                .eq(FlwHisTask::getCallProcessId, callProcessId)
-                .eq(FlwHisTask::getCallInstanceId, callInstanceId));
+          .eq(FlwHisTask::getCallProcessId, callProcessId)
+          .eq(FlwHisTask::getCallInstanceId, callInstanceId));
     }
 
     @Override
     public List<FlwHisTask> selectListByParentTaskId(Long parentTaskId) {
         return hisTaskMapper.selectList(Wrappers.<FlwHisTask>lambdaQuery()
-                .eq(FlwHisTask::getParentTaskId, parentTaskId));
+          .eq(FlwHisTask::getParentTaskId, parentTaskId));
     }
 
     @Override
     public Collection<FlwHisTask> selectListByInstanceIdAndTaskNameAndParentTaskId(Long instanceId, String taskName, Long parentTaskId) {
         return hisTaskMapper.selectList(Wrappers.<FlwHisTask>lambdaQuery()
-                .eq(FlwHisTask::getInstanceId, instanceId)
-                .eq(FlwHisTask::getTaskName, taskName)
-                .eq(FlwHisTask::getParentTaskId, parentTaskId));
+          .eq(FlwHisTask::getInstanceId, instanceId)
+          .eq(FlwHisTask::getTaskName, taskName)
+          .eq(FlwHisTask::getParentTaskId, parentTaskId));
     }
 }
