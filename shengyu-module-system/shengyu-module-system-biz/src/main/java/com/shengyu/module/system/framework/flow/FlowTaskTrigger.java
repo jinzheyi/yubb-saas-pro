@@ -13,6 +13,8 @@ public class FlowTaskTrigger implements TaskTrigger {
 
     @Override
     public boolean execute(NodeModel nodeModel, Execution execution, Function<Execution, Boolean> finish) {
+        // 避免定时任务重复执行定时触发器，设置临时状态 execution.setSaveAsDraft(true);
+        // 执行 finish.apply(execution); 回调完成
         CompletableFuture.runAsync(() -> asyncExec(execution, finish));
         System.out.println("FlowTaskTrigger = " + nodeModel.getNodeName());
         return true;

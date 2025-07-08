@@ -425,12 +425,17 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public PageResult<UserRespVO> getUserPage(UserPageReqVO reqVO) {
+        if (Objects.nonNull(reqVO.getDepartmentId())) {
+            reqVO.setDeptId(reqVO.getDepartmentId());
+        }
         PageResult<UserRespVO> userRespVOPageResult = userMapper.selectJoinPage(reqVO, getDeptConditionUserIds(reqVO.getDeptId()));
         if (CollUtil.isEmpty(userRespVOPageResult.getList())) {
             return userRespVOPageResult;
         }
         Map<Long, List<UserPostRespVO>> userPostMap = postService.getUserPostMap(userRespVOPageResult.getList().stream().map(UserRespVO::getId).collect(Collectors.toSet()));
         userRespVOPageResult.getList().forEach(userRespVO -> {
+            userRespVO.setRealName(userRespVO.getNickName());
+            userRespVO.setNickName(userRespVO.getNickName());
             List<UserPostRespVO> userPostRespVOList = userPostMap.get(userRespVO.getId());
             if (CollUtil.isNotEmpty(userPostRespVOList)) {
                 userRespVO.setPostIds(userPostRespVOList.stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));

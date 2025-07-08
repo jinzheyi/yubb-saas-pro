@@ -36,6 +36,11 @@
         ORDER BY i.create_time DESC
     </sql>
 
+    <sql id="sqlSelectApprovalTask">
+        SELECT i.process_id,p.process_name,p.process_type,i.id AS instance_id,i.instance_state,i.create_by AS launch_by,i.create_time AS launch_time,
+               t.id AS task_id,t.create_time,t.task_name,t.task_key,t.task_type,t.perform_type,t.assignor,t.expire_time,t.remind_time,t.remind_repeat
+    </sql>
+
     <select id="selectPagePendingClaim" resultType="com.shengyu.module.system.controller.admin.flow.vo.PendingClaimTaskVO">
         SELECT i.process_id,p.process_name,p.process_type,i.id AS instance_id,i.instance_state,i.create_by AS launch_by,i.create_time AS launch_time,
         t.id AS task_id,t.create_time,t.task_name,t.task_key,t.task_type,t.perform_type,t.expire_time,t.remind_time,t.remind_repeat
@@ -50,6 +55,12 @@
         t.id AS task_id,t.create_time,t.task_name,t.task_key,t.task_type,t.perform_type,t.assignor,t.expire_time,t.remind_time,t.remind_repeat
         FROM flw_task t JOIN flw_task_actor a ON t.id=a.task_id LEFT JOIN flw_his_instance i ON i.id=t.instance_id LEFT JOIN flw_process p ON i.process_id=p.id
         WHERE a.actor_type=0 AND a.actor_id=#{dto.createId}
+        <include refid="sqlConditionProcessTask"></include>
+    </select>
+
+    <select id="selectPageAllPendingApproval" resultType="com.shengyu.module.system.controller.admin.flow.vo.PendingApprovalTaskVO">
+        <include refid="sqlSelectApprovalTask"></include>
+        FROM flw_task t LEFT JOIN flw_his_instance i ON i.id=t.instance_id LEFT JOIN flw_process p ON i.process_id=p.id WHERE 1=1
         <include refid="sqlConditionProcessTask"></include>
     </select>
 
@@ -70,7 +81,13 @@
     <select id="selectPageApproved" resultType="com.shengyu.module.system.controller.admin.flow.vo.ProcessTaskVO">
         SELECT i.process_id,p.process_name,p.process_type,i.current_node_name,i.current_node_key,i.id AS instance_id,i.instance_state,i.create_id,i.create_by,i.create_time,i.expire_time,i.end_time,i.duration
         FROM flw_his_instance i LEFT JOIN flw_process p ON i.process_id=p.id
-        WHERE EXISTS (SELECT 1 FROM flw_his_task c JOIN flw_his_task_actor a ON c.id=a.task_id WHERE i.id=c.instance_id AND a.actor_id=#{dto.createId})
+        WHERE EXISTS (SELECT 1 FROM flw_his_task c JOIN flw_his_task_actor a ON c.id=a.task_id WHERE i.id=c.instance_id AND a.weight IS NULL AND a.actor_id=#{dto.createId})
+        <include refid="sqlConditionProcessTask"></include>
+    </select>
+
+    <select id="selectPageAllApproved" resultType="com.shengyu.module.system.controller.admin.flow.vo.PendingApprovalTaskVO">
+        <include refid="sqlSelectApprovalTask"></include>
+        FROM flw_his_task t LEFT JOIN flw_his_instance i ON i.id=t.instance_id LEFT JOIN flw_process p ON i.process_id=p.id WHERE 1=1
         <include refid="sqlConditionProcessTask"></include>
     </select>
 
@@ -97,9 +114,14 @@
         FROM flw_his_instance t JOIN flw_ext_instance e ON t.id=e.id
         <if test="dto != null">
             <where>
-                <if test="dto.completed">
-                    AND t.end_time IS NULL
-                </if>
+                <choose>
+                    <when test="dto.completed">
+                        AND t.end_time IS NOT NULL
+                    </when>
+                    <otherwise>
+                        AND t.end_time IS NULL
+                    </otherwise>
+                </choose>
                 <if test="dto.processName != null and dto.processName != '' ">
                     AND e.process_name LIKE CONCAT(CONCAT('%',#{dto.processName}),'%')
                 </if>
@@ -112,6 +134,11 @@
             </where>
         </if>
         ORDER BY t.create_time DESC
+    </select>
+
+    <select id="selectCountByParentTaskIdAndActorId" resultType="java.lang.Integer">
+        SELECT COUNT(1) FROM flw_his_task_actor a JOIN flw_his_task h ON a.task_id=h.id
+        WHERE h.parent_task_id=(SELECT parent_task_id FROM flw_his_task WHERE id=#{parentTaskId}) AND a.actor_id=#{actorId}
     </select>
 
 </mapper>

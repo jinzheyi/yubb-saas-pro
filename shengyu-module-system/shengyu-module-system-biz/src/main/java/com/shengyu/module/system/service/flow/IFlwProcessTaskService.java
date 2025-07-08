@@ -28,6 +28,11 @@ public interface IFlwProcessTaskService {
     Page<PendingApprovalTaskVO> pagePendingApproval(PageParam<ProcessTaskDTO> pageParam);
 
     /**
+     * 所有待审批任务分页列表
+     */
+    Page<PendingApprovalTaskVO> pageAllPendingApproval(PageParam<ProcessTaskDTO> pageParam);
+
+    /**
      * 我的申请任务分页列表
      */
     Page<ProcessTaskVO> pageMyApplication(PageParam<ProcessTaskDTO> pageParam);
@@ -41,6 +46,11 @@ public interface IFlwProcessTaskService {
      * 已审批任务分页列表
      */
     Page<ProcessTaskVO> pageApproved(PageParam<ProcessTaskDTO> pageParam);
+
+    /**
+     * 所有已审批任务分页列表
+     */
+    Page<PendingApprovalTaskVO> pageAllApproved(PageParam<ProcessTaskDTO> pageParam);
 
     /**
      * 审批信息
@@ -151,4 +161,13 @@ public interface IFlwProcessTaskService {
      * 流程任务催办
      */
     boolean urgeByInstanceId(Long instanceId);
+
+    /**
+     * 参与审批父节点
+     *
+     * @param parentTaskId 父任务ID
+     * @param actorId 参与者
+     * @return true 成功 false 失败
+     */
+    boolean approvedParentNode(Long parentTaskId, String actorId);
 }

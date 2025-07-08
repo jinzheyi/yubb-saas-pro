@@ -64,7 +64,7 @@ public class DeptController {
         return success(BeanUtils.toBean(list, DeptRespVO.class));
     }
 
-    @Operation(summary = "树列表")
+    @Operation(summary = "树列表，给流程使用")
     @PostMapping("/list-tree")
     public CommonResult<List<DeptRespVO>> listTree(@RequestBody DeptListReqVO reqVO) {
         return success(deptService.listTree(reqVO));

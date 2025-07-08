@@ -193,6 +193,11 @@ public class DeptServiceImpl implements DeptService {
         }
         return sysDepartmentList.stream().filter(e -> Objects.equals(0L, e.getParentId())).map(e -> {
             DeptRespVO vo = BeanUtils.toBean(e, DeptRespVO.class);
+            vo.setPid(vo.getParentId());
+            vo.setHeadId(vo.getLeaderUserId());
+            if (Objects.nonNull(vo.getLeaderUserId())) {
+                Optional.ofNullable(adminUserMapper.selectById(vo.getLeaderUserId())).ifPresent(user -> vo.setHeadName(user.getNickname()));
+            }
             vo.setChildren(this.getChild(vo.getId(), vo.getName(), sysDepartmentList));
             return vo;
         }).toList();
@@ -212,6 +217,11 @@ public class DeptServiceImpl implements DeptService {
         return childList.stream().map(e -> {
             DeptRespVO vo = BeanUtils.toBean(e, DeptRespVO.class);
             vo.setParentName(parentName);
+            vo.setPid(vo.getParentId());
+            vo.setHeadId(vo.getLeaderUserId());
+            if (Objects.nonNull(vo.getLeaderUserId())) {
+                Optional.ofNullable(adminUserMapper.selectById(vo.getLeaderUserId())).ifPresent(user -> vo.setHeadName(user.getNickname()));
+            }
             vo.setChildren(this.getChild(vo.getId(), vo.getName(), sysDepartmentList));
             return vo;
         }).toList();

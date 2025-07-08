@@ -14,9 +14,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
 import java.util.Map;
 import javax.annotation.Resource;
 
+import javax.validation.constraints.NotEmpty;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -69,14 +71,11 @@ public class ProcessInstanceController {
         return success(flwProcessService.getVariableByInstanceId(instanceId));
     }
 
-    @Operation(summary = "根据流程实例ID删除暂存待审流程实例")
+    @Operation(summary = "根据流程实例ID删除审流程实例")
     @PreAuthorize("@ss.hasPermission('flw:processInstance:remove')")
-    @Parameters({
-            @Parameter(name = "instanceId", description = "流程实例ID", in = ParameterIn.PATH)
-    })
-    @PostMapping("/remove/{instanceId}")
-    public CommonResult<Boolean> remove(@PathVariable("instanceId") Long instanceId) {
-        return success(flwProcessService.removeProcessByInstanceId(instanceId));
+    @PostMapping("/remove")
+    public boolean remove(@NotEmpty @RequestBody List<Long> instanceIds) {
+        return flwProcessService.removeProcessByInstanceIds(instanceIds);
     }
 
     @Operation(summary = "根据流程实例ID唤醒撤销拒审终止流程实例")
@@ -87,6 +86,16 @@ public class ProcessInstanceController {
     @PostMapping("/resume/{instanceId}")
     public CommonResult<Boolean> resume(@PathVariable("instanceId") Long instanceId) {
         return success(flwProcessService.resumeProcessByInstanceId(instanceId));
+    }
+
+    @Operation(summary = "根据流程实例ID终止流程实例")
+    @PreAuthorize("@ss.hasPermission('flw:processInstance:terminate')")
+    @Parameters({
+      @Parameter(name = "instanceId", description = "流程实例ID", in = ParameterIn.PATH)
+    })
+    @PostMapping("/terminate/{instanceId}")
+    public boolean terminate(@PathVariable("instanceId") Long instanceId) {
+        return flwProcessService.terminateProcessByInstanceId(instanceId);
     }
 
     @Operation(summary = "作废流程实例")

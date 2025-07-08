@@ -60,7 +60,12 @@ public interface AdminUserMapper extends BaseMapperX<AdminUserDO> {
           .select(SaasUserDO::getUsername, SaasUserDO::getMobile, SaasUserDO::getSex)
           .selectAs(SaasUserDO::getUsername, UserRespVO::getEmail)
           .leftJoin(SaasUserDO.class, SaasUserDO::getId, AdminUserDO::getSaasUserId)
-          .like(StrUtil.isNotBlank(reqVO.getUsername()), SaasUserDO::getUsername, reqVO.getUsername())
+
+          .and(wrapper1 -> wrapper1.like(StrUtil.isNotBlank(reqVO.getUsername()), SaasUserDO::getUsername, reqVO.getUsername())
+            .or().like(StrUtil.isNotBlank(reqVO.getUsername()), AdminUserDO::getNickname, reqVO.getUsername()))
+
+          //.like(StrUtil.isNotBlank(reqVO.getUsername()), SaasUserDO::getUsername, reqVO.getUsername())
+
           .like(StrUtil.isNotBlank(reqVO.getMobile()), SaasUserDO::getMobile, reqVO.getMobile())
           .eq(Objects.nonNull(reqVO.getStatus()), AdminUserDO::getStatus, reqVO.getStatus());
         if (startTime != null && endTime != null) {

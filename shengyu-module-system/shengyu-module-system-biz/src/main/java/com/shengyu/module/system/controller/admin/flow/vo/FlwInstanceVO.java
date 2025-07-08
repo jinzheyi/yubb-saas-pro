@@ -33,4 +33,7 @@ public class FlwInstanceVO {
     @Schema(description = "结束时间")
     private Date endTime;
 
+    @Schema(description = "处理耗时")
+    protected Long duration;
+
 }

@@ -73,12 +73,12 @@ public interface IFlwProcessService extends IBaseService<FlwProcess> {
     Map<String, Object> getVariableByInstanceId(Long instanceId);
 
     /**
-     * 根据实例ID删除暂存待审流程
+     * 根据实例ID删除流程实例
      *
-     * @param instanceId 流程实例ID
+     * @param instanceIds 流程实例ID列表
      * @return true 成功 false 失败
      */
-    boolean removeProcessByInstanceId(Long instanceId);
+    boolean removeProcessByInstanceIds(List<Long> instanceIds);
 
     /**
      * 根据流程实例ID唤醒撤销拒审终止流程实例
@@ -87,6 +87,14 @@ public interface IFlwProcessService extends IBaseService<FlwProcess> {
      * @return true 成功 false 失败
      */
     boolean resumeProcessByInstanceId(Long instanceId);
+
+    /**
+     * 根据流程实例ID终止流程实例
+     *
+     * @param instanceId 流程实例ID
+     * @return true 成功 false 失败
+     */
+    boolean terminateProcessByInstanceId(Long instanceId);
 
     /**
      * 作废流程实例

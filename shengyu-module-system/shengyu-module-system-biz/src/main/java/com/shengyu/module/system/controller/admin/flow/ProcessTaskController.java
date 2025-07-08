@@ -46,6 +46,13 @@ public class ProcessTaskController {
         return success(processTaskService.pagePendingApproval(pageParam));
     }
 
+    @Operation(summary = "所有待审批任务分页列表")
+    @PreAuthorize("@ss.hasPermission('flw:processTask:pageAllPendingApproval')")
+    @PostMapping("/page-all-pending-approval")
+    public CommonResult<Page<PendingApprovalTaskVO>> pageAllPendingApproval(@RequestBody PageParam<ProcessTaskDTO> pageParam) {
+        return success(processTaskService.pageAllPendingApproval(pageParam));
+    }
+
     @Operation(summary = "我收到的任务分页列表")
     @PreAuthorize("@ss.hasPermission('flw:processTask:pageMyReceived')")
     @PostMapping("/page-my-received")
@@ -65,6 +72,13 @@ public class ProcessTaskController {
     @PostMapping("/page-approved")
     public CommonResult<Page<ProcessTaskVO>> pageApproved(@RequestBody PageParam<ProcessTaskDTO> pageParam) {
         return success(processTaskService.pageApproved(pageParam));
+    }
+
+    @Operation(summary = "所有已审批任务分页列表")
+    @PreAuthorize("@ss.hasPermission('flw:processTask:pageAllApproved')")
+    @PostMapping("/page-all-approved")
+    public CommonResult<Page<PendingApprovalTaskVO>> pageAllApproved(@RequestBody PageParam<ProcessTaskDTO> pageParam) {
+        return success(processTaskService.pageAllApproved(pageParam));
     }
 
     @Operation(summary = "审批信息")

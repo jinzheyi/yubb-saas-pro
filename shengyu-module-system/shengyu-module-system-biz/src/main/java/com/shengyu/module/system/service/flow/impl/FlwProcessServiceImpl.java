@@ -272,11 +272,13 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
 
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public boolean removeProcessByInstanceId(Long instanceId) {
-        FlwHisInstance fhi = flowLongEngine.queryService().getHistInstance(instanceId);
-        if (null != fhi) {
-            ServiceExceptionUtil.fail(fhi.getInstanceState() > 0, ErrorCodeConstants.FLOW_1_002_029_028);
-            flowLongEngine.runtimeService().cascadeRemoveByInstanceId(instanceId);
+    public boolean removeProcessByInstanceIds(List<Long> instanceIds) {
+        for (Long instanceId : instanceIds) {
+            FlwHisInstance fhi = flowLongEngine.queryService().getHistInstance(instanceId);
+            if (null != fhi) {
+                ServiceExceptionUtil.fail(fhi.getInstanceState() > 0, ErrorCodeConstants.FLOW_1_002_029_028);
+                flowLongEngine.runtimeService().cascadeRemoveByInstanceId(instanceId);
+            }
         }
         return true;
     }
@@ -284,6 +286,11 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     @Override
     public boolean resumeProcessByInstanceId(Long instanceId) {
         return flowLongEngine.taskService().resume(instanceId, FlowHelper.getFlowCreator());
+    }
+
+    @Override
+    public boolean terminateProcessByInstanceId(Long instanceId) {
+        return flowLongEngine.runtimeService().terminate(instanceId, FlowHelper.getFlowCreator());
     }
 
     @Transactional(rollbackFor = Exception.class)

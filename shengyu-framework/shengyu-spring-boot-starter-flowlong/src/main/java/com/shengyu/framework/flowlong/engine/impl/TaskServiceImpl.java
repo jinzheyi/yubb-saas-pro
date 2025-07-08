@@ -1246,15 +1246,16 @@ public class TaskServiceImpl implements TaskService {
             /*
              * 7、触发器任务
              */
-            flwTask.loadExpireTime(nodeModel.getExtendConfig(), false);
-            if (null == flwTask.getExpireTime()) {
+            if (Objects.equals(1, nodeModel.getTriggerType())) {
                 // 立即触发器，直接执行
                 execution.setFlwTask(flwTask);
+                flwTasks.addAll(this.saveTask(flwTask, PerformType.trigger, taskActors, execution, nodeModel));
                 // 使用默认触发器
                 Function<Execution, Boolean> finishFunction = (e) -> this.executeFinishTrigger(nodeModel, execution, execution.getFlowCreator());
                 nodeModel.executeTrigger(execution, () -> taskTrigger.execute(nodeModel, execution, finishFunction), finishFunction);
             } else {
                 // 定时触发器，等待执行
+                flwTask.loadExpireTime(nodeModel.getExtendConfig(), false);
                 flwTasks.addAll(this.saveTask(flwTask, PerformType.trigger, taskActors, execution, nodeModel));
             }
         }
@@ -1326,17 +1327,14 @@ public class TaskServiceImpl implements TaskService {
         } else {
             flwTask.setParentTaskId(executionTask.getId());
         }
-        Map<String, Object> args = execution.getArgs();
-        // 审批期限非空，设置期望任务完成时间
-        Integer term = nodeModel.getTerm();
-        if (null != term && term > 0) {
-            flwTask.setExpireTime(DateUtils.toDate(DateUtils.now().plusHours(term)));
-            if (null == args) {
-                args = new HashMap<>();
+        // 超时自动审批
+        if (Objects.equals(true, nodeModel.getTermAuto())) {
+            // 审批期限非空，设置期望任务完成时间
+            Integer term = nodeModel.getTerm();
+            if (null != term && term > 0) {
+                flwTask.setExpireTime(DateUtils.toDate(DateUtils.now().plusHours(term)));
             }
-            args.put("termMode", nodeModel.getTermMode());
         }
-        flwTask.putAllVariable(args);
         flwTask.setRemindRepeat(0);
         flwTask.setViewed(0);
         return flwTask;

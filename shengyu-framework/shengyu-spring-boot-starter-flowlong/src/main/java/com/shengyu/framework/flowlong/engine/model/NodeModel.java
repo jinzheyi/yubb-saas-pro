@@ -225,7 +225,7 @@ public class NodeModel implements ModelInstance, Serializable {
     /**
      * 触发器类型 1，立即执行 2，延迟执行
      */
-    private String triggerType;
+    private Integer triggerType;
     /**
      * 延时处理类型 1，固定时长 2，自动计算
      * <p>

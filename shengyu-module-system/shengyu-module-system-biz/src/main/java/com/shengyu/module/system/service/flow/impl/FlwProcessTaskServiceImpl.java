@@ -86,6 +86,14 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     }
 
     @Override
+    public Page<PendingApprovalTaskVO> pageAllPendingApproval(PageParam<ProcessTaskDTO> pageParam) {
+        ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
+        Page<PendingApprovalTaskVO> page = pageParam.page();
+        page.setSearchCount(false);
+        return flowlongMapper.selectPageAllPendingApproval(page, dto);
+    }
+
+    @Override
     public Page<ProcessTaskVO> pageMyApplication(PageParam<ProcessTaskDTO> pageParam) {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<ProcessTaskVO> page = pageParam.page();
@@ -107,6 +115,14 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         Page<ProcessTaskVO> page = pageParam.page();
         page.setSearchCount(false);
         return flowlongMapper.selectPageApproved(pageParam.page(), dto);
+    }
+
+    @Override
+    public Page<PendingApprovalTaskVO> pageAllApproved(PageParam<ProcessTaskDTO> pageParam) {
+        ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
+        Page<PendingApprovalTaskVO> page = pageParam.page();
+        page.setSearchCount(false);
+        return flowlongMapper.selectPageAllApproved(page, dto);
     }
 
     @Override
@@ -203,7 +219,13 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         if (null == hisInstance.getEndTime()) {
             List<FlwTask> flwTaskList = flowLongEngine.queryService().getTasksByInstanceId(instanceId);
             if (CollectionUtils.isNotEmpty(flwTaskList)) {
-                FlwTask flwTask = flwTaskList.get(0);
+                FlwTask flwTask;
+                if (null != dto.getTaskId() && flwTaskList.size() > 1) {
+                    // 并行分支情况，找到指定任务 ID
+                    flwTask = flwTaskList.stream().filter(t -> Objects.equals(dto.getTaskId(), t.getId())).findFirst().get();
+                } else {
+                    flwTask = flwTaskList.get(0);
+                }
                 FlwProcessApproval fpa = new FlwProcessApproval();
                 fpa.setInstanceId(instanceId);
                 fpa.setTaskId(flwTask.getId());
@@ -241,7 +263,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         processApprovals.stream().filter(t -> Objects.equals(3, t.getType()) && !usedNodeKeys.contains(t.getTaskKey()))
           .map(t -> ModelHelper.getAllUsedNodeKeys(flowLongContext, execution, nodeModel, t.getTaskKey()))
           .filter(nodeKeys -> nodeKeys.stream().noneMatch(pendingNodeKeys::contains))
-          .forEach(nodeKeys -> nodeKeys.forEach(nodeKey -> renderNodes.put(nodeKey, 0)) );
+          .forEach(nodeKeys -> nodeKeys.forEach(nodeKey -> renderNodes.put(nodeKey, 0)));
 
         // 设置渲染节点信息
         vo.setRenderNodes(renderNodes);
@@ -540,4 +562,10 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
                 });
         return true;
     }
+
+    @Override
+    public boolean approvedParentNode(Long parentTaskId, String actorId) {
+        return flowlongMapper.selectCountByParentTaskIdAndActorId(parentTaskId, actorId) > 0;
+    }
+
 }

@@ -27,6 +27,11 @@ public interface FlowlongMapper {
     Page<PendingApprovalTaskVO> selectPagePendingApproval(Page<PendingApprovalTaskVO> page, @Param("dto") ProcessTaskDTO dto);
 
     /**
+     * 所有待审批任务分页列表
+     */
+    Page<PendingApprovalTaskVO> selectPageAllPendingApproval(Page<PendingApprovalTaskVO> page, @Param("dto") ProcessTaskDTO dto);
+
+    /**
      * 我的申请任务分页列表
      */
     Page<ProcessTaskVO> selectPageMyApplication(Page<ProcessTaskVO> page, @Param("dto") ProcessTaskDTO dto);
@@ -40,6 +45,11 @@ public interface FlowlongMapper {
      * 已审批任务分页列表
      */
     Page<ProcessTaskVO> selectPageApproved(Page<ProcessTaskVO> page, @Param("dto") ProcessTaskDTO dto);
+
+    /**
+     * 所有已审批任务分页列表
+     */
+    Page<PendingApprovalTaskVO> selectPageAllApproved(Page<PendingApprovalTaskVO> page, @Param("dto") ProcessTaskDTO dto);
 
     /**
      * 查询流程实例ID的审批历史
@@ -65,4 +75,10 @@ public interface FlowlongMapper {
      * 流程实例分页列表
      */
     Page<FlwInstanceVO> selectPageInstance(Page<FlwInstanceVO> page, @Param("dto") FlwProcessInstanceDTO dto);
+
+    /**
+     * 查询父节点参与者是否存在
+     */
+    Integer selectCountByParentTaskIdAndActorId(@Param("parentTaskId") Long parentTaskId, @Param("actorId") String actorId);
+
 }
