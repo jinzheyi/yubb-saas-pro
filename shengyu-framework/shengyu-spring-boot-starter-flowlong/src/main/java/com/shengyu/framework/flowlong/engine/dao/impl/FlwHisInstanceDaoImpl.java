@@ -42,7 +42,7 @@ public class FlwHisInstanceDaoImpl implements FlwHisInstanceDao {
     @Override
     public boolean deleteByProcessId(Long processId) {
         return hisInstanceMapper.delete(Wrappers.<FlwHisInstance>lambdaQuery()
-                .eq(FlwHisInstance::getProcessId, processId)) > 0;
+          .eq(FlwHisInstance::getProcessId, processId)) > 0;
     }
 
     @Override
@@ -62,12 +62,18 @@ public class FlwHisInstanceDaoImpl implements FlwHisInstanceDao {
     @Override
     public Optional<List<FlwHisInstance>> selectListByProcessId(Long processId) {
         return this.ofNullable(hisInstanceMapper.selectList(Wrappers.<FlwHisInstance>lambdaQuery()
-                .eq(FlwHisInstance::getProcessId, processId)));
+          .eq(FlwHisInstance::getProcessId, processId)));
+    }
+
+    @Override
+    public Optional<List<FlwHisInstance>> selectListByParentInstanceId(Long parentInstanceId) {
+        return this.ofNullable(hisInstanceMapper.selectList(Wrappers.<FlwHisInstance>lambdaQuery()
+          .eq(FlwHisInstance::getParentInstanceId, parentInstanceId)));
     }
 
     @Override
     public Optional<List<FlwHisInstance>> selectListByBusinessKey(String businessKey) {
         return this.ofNullable(hisInstanceMapper.selectList(Wrappers.<FlwHisInstance>lambdaQuery()
-                .eq(FlwHisInstance::getBusinessKey, businessKey)));
+          .eq(FlwHisInstance::getBusinessKey, businessKey)));
     }
 }

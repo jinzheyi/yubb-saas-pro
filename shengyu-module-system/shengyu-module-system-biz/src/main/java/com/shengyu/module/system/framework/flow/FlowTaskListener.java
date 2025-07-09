@@ -14,6 +14,8 @@ import com.shengyu.framework.flowlong.engine.listener.TaskListener;
 import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import com.shengyu.framework.flowlong.engine.model.ProcessModel;
+import com.shengyu.framework.security.core.LoginUser;
+import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.dal.dataobject.flow.ApprovalContent;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
 import com.shengyu.module.system.enums.ErrorCodeConstants;
@@ -165,10 +167,16 @@ public class FlowTaskListener implements TaskListener {
         }
 
         if (TaskEventType.autoComplete.eq(eventType) || TaskEventType.autoReject.eq(eventType)
-          || TaskEventType.trigger.eq(eventType)) {
+          || TaskEventType.cc.eq(eventType) || TaskEventType.trigger.eq(eventType)) {
             // 自动审批情况，设置默认处理人信息
-            fpa.setCreator(FlowCreator.ADMIN.getCreateId());
-            fpa.setCreateBy(FlowCreator.ADMIN.getCreateBy());
+            LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
+            if (null == userSession) {
+                fpa.setCreateId(FlowCreator.ADMIN.getCreateId());
+                fpa.setCreateBy(FlowCreator.ADMIN.getCreateBy());
+            } else {
+                fpa.setCreateId(String.valueOf(userSession.getId()));
+                fpa.setCreateBy(userSession.getNickname());
+            }
         }
 
         if (null == fpa.getType()) {

@@ -222,9 +222,6 @@ public class TaskServiceImpl implements TaskService {
                     ft.putAllVariable(args);
                     // 归档历史
                     this.moveToHisTask(ft, taskState, flowCreator);
-
-                    // 任务监听器通知
-                    this.taskNotify(taskEventType, () -> ft, null, nodeModel, flowCreator);
                 }
             }
         }
@@ -368,9 +365,9 @@ public class TaskServiceImpl implements TaskService {
             hisTask.taskType(TaskType.agentAssist);
         }
 
-        // 会签情况处理其它任务 排除完成及自动跳过情况，自动跳过是当前任务归档非所有任务
+        // 会签情况处理其它任务 排除（自动）完成及自动跳过情况，自动跳过是当前任务归档非所有任务
         if (PerformType.countersign.eq(flwTask.getPerformType()) && TaskState.complete.ne(taskState.getValue())
-          && TaskState.autoJump.ne(taskState.getValue())) {
+          && TaskState.autoComplete.ne(taskState.getValue()) && TaskState.autoJump.ne(taskState.getValue())) {
             List<FlwTask> flwTaskList = taskDao.selectListByParentTaskId(flwTask.getParentTaskId());
             flwTaskList.forEach(t -> {
                 FlwHisTask ht = FlwHisTask.of(t);
@@ -497,9 +494,10 @@ public class TaskServiceImpl implements TaskService {
      */
     @Override
     public void updateTaskById(FlwTask flwTask, FlowCreator flowCreator) {
-        taskDao.updateById(flwTask);
-        // 任务监听器通知
-        this.taskNotify(TaskEventType.update, () -> flwTask, null, null, flowCreator);
+        if (taskDao.updateById(flwTask)) {
+            // 任务监听器通知
+            this.taskNotify(TaskEventType.update, () -> flwTask, null, null, flowCreator);
+        }
     }
 
     /**
@@ -1169,9 +1167,8 @@ public class TaskServiceImpl implements TaskService {
                 // 下一个节点如果在并行分支，判断是否并行分支都执行结束
                 boolean _exec = true;
                 NodeModel ccNextNode = nextNodeOptional.get();
-                NodeModel _cnn = execution.getProcessModel().getNode(ccNextNode.getNodeKey());
-                if (_cnn.getParentNode().parallelNode()) {
-                    // 抄送节点独立占据一个分支或者存在执行任务
+                if (!ccNextNode.ccNode()) {
+                    // 下一节点非抄送节点独立占据一个分支或者存在执行任务
                     if (ccNextNode.getParentNode().parallelNode() || taskDao.selectCountByInstanceId(flwTask.getInstanceId()) > 0) {
                         _exec = false;
                     }
@@ -1335,6 +1332,8 @@ public class TaskServiceImpl implements TaskService {
                 flwTask.setExpireTime(DateUtils.toDate(DateUtils.now().plusHours(term)));
             }
         }
+        // 提醒时间
+        flwTask.setRemindTime(DateUtils.loadDelayTime(nodeModel.getExtendConfig(), "remindTime", false));
         flwTask.setRemindRepeat(0);
         flwTask.setViewed(0);
         return flwTask;
@@ -1449,6 +1448,7 @@ public class TaskServiceImpl implements TaskService {
         /*
          * 会签（票签）每个参与者生成一条任务
          */
+        Map<String, FlwTask> taskActorMap = new HashMap<>();
         taskActors.forEach(t -> {
             FlwTask newFlwTask = flwTask.cloneTask(null);
             newFlwTask.setId(flowLongIdGenerator.getId(newFlwTask.getId()));
@@ -1458,10 +1458,13 @@ public class TaskServiceImpl implements TaskService {
                 // 分配参与者
                 this.assignTask(newFlwTask.getInstanceId(), newFlwTask.getId(), assignActorType(actorType, t.getActorType()), t);
 
-                // 创建任务监听
-                this.taskNotify(execution.getTaskEventType(), () -> newFlwTask, Collections.singletonList(t), nodeModel, flowCreator);
+                // 参与者任务
+                taskActorMap.put(t.getActorId(), newFlwTask);
             }
         });
+
+        // 创建任务监听统一通知，避免独立通知异常、导致会签其它任务创建失败
+        taskActors.forEach(t -> this.taskNotify(execution.getTaskEventType(), () -> taskActorMap.get(t.getActorId()), Collections.singletonList(t), nodeModel, flowCreator));
 
         // 返回创建的任务列表
         return flwTasks;

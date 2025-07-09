@@ -305,7 +305,11 @@ public class DeptServiceImpl implements DeptService {
         List<UserRespVO> leaders = new ArrayList<>();
         Map<Long, DeptDO> departmentMap = getDeptMap();
         DeptDO current = departmentMap.get(departmentId);
-        while (current != null && current.getParentId() != null) {
+        if (current == null) {
+            return Collections.emptyList();
+        }
+        leaders.add(adminUserMapper.selectJoinOne(current.getLeaderUserId()));
+        while (current.getParentId() != null) {
             DeptDO parent = departmentMap.get(current.getParentId());
             if (parent != null) {
                 leaders.add(adminUserMapper.selectJoinOne(parent.getLeaderUserId()));
@@ -322,8 +326,12 @@ public class DeptServiceImpl implements DeptService {
         List<UserRespVO> leaders = new ArrayList<>();
         Map<Long, DeptDO> departmentMap = getDeptMap();
         DeptDO current = departmentMap.get(departmentId);
+        if (current == null) {
+            return Collections.emptyList();
+        }
+        leaders.add(adminUserMapper.selectJoinOne(current.getLeaderUserId()));
         int level = 0;
-        while (current != null && current.getParentId() != null && level < maxLevels) {
+        while (current.getParentId() != null && level < maxLevels) {
             DeptDO parent = departmentMap.get(current.getParentId());
             if (parent != null) {
                 leaders.add(adminUserMapper.selectJoinOne(parent.getLeaderUserId()));
