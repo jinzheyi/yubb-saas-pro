@@ -434,8 +434,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
         Map<Long, List<UserPostRespVO>> userPostMap = postService.getUserPostMap(userRespVOPageResult.getList().stream().map(UserRespVO::getId).collect(Collectors.toSet()));
         userRespVOPageResult.getList().forEach(userRespVO -> {
-            userRespVO.setRealName(userRespVO.getNickName());
-            userRespVO.setNickName(userRespVO.getNickName());
+            userRespVO.setRealName(userRespVO.getNickname());
             List<UserPostRespVO> userPostRespVOList = userPostMap.get(userRespVO.getId());
             if (CollUtil.isNotEmpty(userPostRespVOList)) {
                 userRespVO.setPostIds(userPostRespVOList.stream().map(UserPostRespVO::getPostId).collect(Collectors.toSet()));
