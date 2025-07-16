@@ -308,11 +308,15 @@ public class DeptServiceImpl implements DeptService {
         if (current == null) {
             return Collections.emptyList();
         }
-        leaders.add(adminUserMapper.selectJoinOne(current.getLeaderUserId()));
+        if (Objects.nonNull(current.getLeaderUserId())) {
+            leaders.add(adminUserMapper.selectJoinOne(current.getLeaderUserId()));
+        }
         while (current.getParentId() != null) {
             DeptDO parent = departmentMap.get(current.getParentId());
             if (parent != null) {
-                leaders.add(adminUserMapper.selectJoinOne(parent.getLeaderUserId()));
+                if (Objects.nonNull(parent.getLeaderUserId())) {
+                    leaders.add(adminUserMapper.selectJoinOne(parent.getLeaderUserId()));
+                }
                 current = parent;
             } else {
                 break; // Parent not found
@@ -329,12 +333,17 @@ public class DeptServiceImpl implements DeptService {
         if (current == null) {
             return Collections.emptyList();
         }
-        leaders.add(adminUserMapper.selectJoinOne(current.getLeaderUserId()));
-        int level = 0;
+        if (Objects.nonNull(current.getLeaderUserId())) {
+            leaders.add(adminUserMapper.selectJoinOne(current.getLeaderUserId()));
+        }
+        //因为maxLevels默认等于1，所以这里从1开始计算，避免多算本身自己的部门
+        int level = 1;
         while (current.getParentId() != null && level < maxLevels) {
             DeptDO parent = departmentMap.get(current.getParentId());
             if (parent != null) {
-                leaders.add(adminUserMapper.selectJoinOne(parent.getLeaderUserId()));
+                if (Objects.nonNull(parent.getLeaderUserId())) {
+                    leaders.add(adminUserMapper.selectJoinOne(parent.getLeaderUserId()));
+                }
                 current = parent;
                 level++;
             } else {

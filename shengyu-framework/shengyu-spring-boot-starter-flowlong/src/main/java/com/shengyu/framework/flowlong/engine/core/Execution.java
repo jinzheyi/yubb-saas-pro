@@ -9,6 +9,7 @@ import com.shengyu.framework.flowlong.engine.FlowLongEngine;
 import com.shengyu.framework.flowlong.engine.TaskActorProvider;
 import com.shengyu.framework.flowlong.engine.assist.Assert;
 import com.shengyu.framework.flowlong.engine.core.enums.InstanceState;
+import com.shengyu.framework.flowlong.engine.core.enums.PerformType;
 import com.shengyu.framework.flowlong.engine.core.enums.TaskEventType;
 import com.shengyu.framework.flowlong.engine.core.enums.TaskState;
 import com.shengyu.framework.flowlong.engine.entity.FlwInstance;
@@ -53,6 +54,16 @@ public class Execution implements Serializable {
      * 父流程实例
      */
     private FlwInstance parentFlwInstance;
+    /**
+     * 动态提供审批参与者类型
+     * <p>如果已经存在，避免多次获取</p>
+     */
+    private Integer providerTaskActorType;
+    /**
+     * 动态提供审批参与者列表
+     * <p>如果已经存在，避免多次获取</p>
+     */
+    private List<FlwTaskActor> providerTaskActors;
     /**
      * 下一个审批参与者
      */
@@ -128,7 +139,7 @@ public class Execution implements Serializable {
      * @param args         执行参数
      */
     public Execution(FlowLongEngine engine, ProcessModel processModel, FlowCreator flowCreator,
-                     FlwInstance flwInstance, Map<String, Object> args) {
+      FlwInstance flwInstance, Map<String, Object> args) {
         if (processModel == null || flwInstance == null) {
             throw Assert.throwable("Failed to construct Execution object, please check if process and order are empty");
         }
@@ -190,7 +201,7 @@ public class Execution implements Serializable {
         Optional<List<FlwInstance>> subProcessList = flowLongContext.getQueryService().getSubProcessByInstanceId(flwTask.getInstanceId());
         subProcessList.ifPresent(subProcesses -> subProcesses.forEach(process -> {
             ProcessModel otherModel = flowLongContext.getRuntimeService().getProcessModelByInstanceId(process.getId());
-            otherProcessKeys.addAll(new ArrayList<>(ModelHelper.getRootNodeAllChildNodes(otherModel.getNodeConfig()).stream().map(NodeModel::getNodeKey).collect(Collectors.toList())));
+            otherProcessKeys.addAll(ModelHelper.getRootNodeAllChildNodes(otherModel.getNodeConfig()).stream().map(NodeModel::getNodeKey).collect(Collectors.toList()));
             flowLongContext.getQueryService().getActiveTasksByInstanceId(process.getId()).ifPresent(flwTasks -> {
                 for (FlwTask ft : flwTasks) {
                     nodeKeys.add(ft.getTaskKey());
@@ -255,7 +266,7 @@ public class Execution implements Serializable {
                     taskState = TaskState.autoReject;
                     taskEventType = TaskEventType.autoReject;
                 }
-                engine.taskService().executeTask(flwTask.getId(), flowCreator, null, taskState, taskEventType);;
+                engine.taskService().executeTask(flwTask.getId(), flowCreator, null, taskState, taskEventType);
             }
         }
 
@@ -298,7 +309,52 @@ public class Execution implements Serializable {
         this.flwTasks.add(flwTask);
     }
 
-    public TaskActorProvider getTaskActorProvider() {
+    /**
+     * 非正常创建任务处理逻辑，默认抛出异常
+     *
+     * @param flwTask     当前任务
+     * @param performType 任务参与类型 {@link PerformType}
+     * @param taskActors  任务参与者
+     * @param nodeModel   模型节点 {@link NodeModel}
+     * @return 返回 true 不再创建任务，返回 false 解决异常补充回写 taskActors 信息
+     */
+    public boolean abnormal(FlwTask flwTask, PerformType performType, List<FlwTaskActor> taskActors, NodeModel nodeModel) {
+        return getTaskActorProvider().abnormal(flwTask, performType, taskActors, this, nodeModel);
+    }
+
+    /**
+     * 动态获取指定节点模型任务参与者类型
+     *
+     * @param nodeModel 节点模型
+     */
+    public Integer getProviderTaskActorType(NodeModel nodeModel) {
+        if (null == providerTaskActorType) {
+            providerTaskActorType = getTaskActorProvider().getActorType(nodeModel);
+        }
+        return providerTaskActorType;
+    }
+
+    /**
+     * 动态获取指定节点模型任务参与者列表
+     *
+     * @param nodeModel 节点模型
+     */
+    public List<FlwTaskActor> getProviderTaskActors(NodeModel nodeModel) {
+        if (null == providerTaskActors) {
+            providerTaskActors = getTaskActorProvider().getTaskActors(nodeModel, this);
+        }
+        return providerTaskActors;
+    }
+
+    protected TaskActorProvider getTaskActorProvider() {
         return engine.getContext().getTaskActorProvider();
+    }
+
+    /**
+     * 清理动态提供审批参与者信息
+     */
+    public void cleanTaskActorProvider() {
+        this.providerTaskActorType = null;
+        this.providerTaskActors = null;
     }
 }

@@ -31,8 +31,8 @@ public class QueryServiceImpl implements QueryService {
     private final FlwHisTaskActorDao hisTaskActorDao;
 
     public QueryServiceImpl(FlwInstanceDao instanceDao, FlwHisInstanceDao hisInstanceDao,
-                            FlwExtInstanceDao extInstanceDao, FlwTaskDao taskDao, FlwTaskActorDao taskActorDao,
-                            FlwHisTaskDao hisTaskDao, FlwHisTaskActorDao hisTaskActorDao) {
+      FlwExtInstanceDao extInstanceDao, FlwTaskDao taskDao, FlwTaskActorDao taskActorDao,
+      FlwHisTaskDao hisTaskDao, FlwHisTaskActorDao hisTaskActorDao) {
         this.instanceDao = instanceDao;
         this.hisInstanceDao = hisInstanceDao;
         this.extInstanceDao = extInstanceDao;
@@ -124,6 +124,11 @@ public class QueryServiceImpl implements QueryService {
     @Override
     public List<FlwHisTaskActor> getHisTaskActorsByTaskId(Long taskId) {
         return hisTaskActorDao.selectListByTaskId(taskId);
+    }
+
+    @Override
+    public Optional<List<FlwHisTaskActor>> getHisTaskActorsByInstanceId(Long instanceId) {
+        return Optional.of(hisTaskActorDao.selectListByInstanceId(instanceId));
     }
 
     @Override

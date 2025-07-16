@@ -37,38 +37,44 @@ public class FlwHisTaskActorDaoImpl implements FlwHisTaskActorDao {
     @Override
     public boolean deleteByInstanceIds(List<Long> instanceIds) {
         return hisTaskActorMapper.delete(Wrappers.<FlwHisTaskActor>lambdaQuery()
-                .in(FlwHisTaskActor::getInstanceId, instanceIds)) > 0;
+          .in(FlwHisTaskActor::getInstanceId, instanceIds)) > 0;
     }
 
     @Override
     public boolean deleteByTaskId(Long taskId) {
         return hisTaskActorMapper.delete(Wrappers.<FlwHisTaskActor>lambdaQuery()
-                .eq(FlwHisTaskActor::getTaskId, taskId)) > 0;
+          .eq(FlwHisTaskActor::getTaskId, taskId)) > 0;
     }
 
     @Override
     public List<FlwHisTaskActor> selectCcTaskActorsByInstanceId(Long instanceId) {
         return hisTaskActorMapper.selectList(Wrappers.<FlwHisTaskActor>lambdaQuery()
-                .eq(FlwHisTaskActor::getInstanceId, instanceId)
-                .eq(FlwHisTaskActor::getWeight, 6));
+          .eq(FlwHisTaskActor::getInstanceId, instanceId)
+          .eq(FlwHisTaskActor::getWeight, 6));
+    }
+
+    @Override
+    public List<FlwHisTaskActor> selectListByInstanceId(Long instanceId) {
+        return hisTaskActorMapper.selectList(Wrappers.<FlwHisTaskActor>lambdaQuery()
+          .eq(FlwHisTaskActor::getInstanceId, instanceId));
     }
 
     @Override
     public List<FlwHisTaskActor> selectListByTaskId(Long taskId) {
         return hisTaskActorMapper.selectList(Wrappers.<FlwHisTaskActor>lambdaQuery()
-                .eq(FlwHisTaskActor::getTaskId, taskId));
+          .eq(FlwHisTaskActor::getTaskId, taskId));
     }
 
     @Override
     public List<FlwHisTaskActor> selectListByTaskIds(List<Long> taskIds) {
         return hisTaskActorMapper.selectList(Wrappers.<FlwHisTaskActor>lambdaQuery()
-                .in(FlwHisTaskActor::getTaskId, taskIds));
+          .in(FlwHisTaskActor::getTaskId, taskIds));
     }
 
     @Override
     public List<FlwHisTaskActor> selectListByTaskIdAndActorId(Long taskId, String actorId) {
         return hisTaskActorMapper.selectList(Wrappers.<FlwHisTaskActor>lambdaQuery()
-                .eq(FlwHisTaskActor::getTaskId, taskId)
-                .eq(FlwTaskActor::getActorId, actorId));
+          .eq(FlwHisTaskActor::getTaskId, taskId)
+          .eq(FlwTaskActor::getActorId, actorId));
     }
 }

@@ -57,7 +57,7 @@ public interface FlowLongExpression {
 
         // 执行存在参数的表达式
         String expr = conditionList.stream().map(cl -> cl.stream().map(t -> exprOfArgs(t, args))
-                .collect(Collectors.joining(" && "))).collect(Collectors.joining(" || "));
+          .collect(Collectors.joining(" && "))).collect(Collectors.joining(" || "));
         return evalFunc.apply(expr);
     }
 
@@ -67,6 +67,6 @@ public interface FlowLongExpression {
         if (fieldValue instanceof String) {
             value = "'" + nodeExpression.getValue() + "'";
         }
-        return "#" + nodeExpression.getField() + nodeExpression.getOperator() + value;
+        return "#" + nodeExpression.getField() + " " + nodeExpression.getOperator() + " " + value;
     }
 }
