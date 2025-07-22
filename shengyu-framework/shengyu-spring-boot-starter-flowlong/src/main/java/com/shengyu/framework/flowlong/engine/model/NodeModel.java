@@ -103,6 +103,11 @@ public class NodeModel implements ModelInstance, Serializable {
      */
     private Integer examineMode;
     /**
+     * 分组（角色、部门）审批策略，默认 0，认领审批 1，全部人员参与审批
+     */
+    //todo 前端通过传参的形式修改，后端已完成，前端暂未实现
+    private Integer groupStrategy;
+    /**
      * 自定义连续主管审批层级
      */
     private Integer directorLevel;
@@ -116,7 +121,7 @@ public class NodeModel implements ModelInstance, Serializable {
     /**
      * 发起人自选类型
      * <p>
-     * 1，自选一个人 2，自选多个人 3，自选角色
+     * 1，自选一个人 2，自选多个人 3，自选角色 4,自选部门
      * </p>
      */
     private Integer selectMode;
@@ -525,6 +530,15 @@ public class NodeModel implements ModelInstance, Serializable {
     }
 
     /**
+     * 判断是否为全部人员参与审批分组策略
+     *
+     * @return true 是 false 否
+     */
+    public boolean allJoinGroupStrategy() {
+        return Objects.equals(1, groupStrategy);
+    }
+
+    /**
      * 判断是否为调用子流程节点
      *
      * @return true 是 false 否
@@ -546,9 +560,9 @@ public class NodeModel implements ModelInstance, Serializable {
         boolean findTaskActor = false;
         NodeAssignee nextNodeAssignee = null;
         List<NodeAssignee> nodeAssigneeList = this.getNodeAssigneeList();
-        if (ObjectUtils.isEmpty(nodeAssigneeList)) {
+        if (ObjectUtils.isEmpty(nodeAssigneeList) || allJoinGroupStrategy()) {
             /*
-             * 模型未设置处理人，那么需要获取自定义参与者
+             * 模型未设置处理人、分组策略全部人员参与审批，那么需要获取自定义参与者
              */
             List<FlwTaskActor> taskActors = execution.getProviderTaskActors(this);
             if (ObjectUtils.isNotEmpty(taskActors)) {

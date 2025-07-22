@@ -301,8 +301,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         // 迁移 task 信息到 flw_his_task
-        FlwHisTask hisTask = FlwHisTask.of(flwTask);
-        hisTask.setTaskState(taskState);
+        FlwHisTask hisTask = FlwHisTask.of(flwTask, taskState);
         hisTask.setFlowCreator(flowCreator);
         hisTask.calculateDuration();
 
@@ -374,8 +373,7 @@ public class TaskServiceImpl implements TaskService {
           && TaskState.autoComplete.ne(taskState.getValue()) && TaskState.autoJump.ne(taskState.getValue())) {
             List<FlwTask> flwTaskList = taskDao.selectListByParentTaskId(flwTask.getParentTaskId());
             flwTaskList.forEach(t -> {
-                FlwHisTask ht = FlwHisTask.of(t);
-                ht.setTaskState(taskState);
+                FlwHisTask ht = FlwHisTask.of(t, taskState);
                 ht.setFlowCreator(flowCreator);
                 ht.calculateDuration();
                 ht.setTaskType(hisTask.getTaskType());
@@ -1140,8 +1138,6 @@ public class TaskServiceImpl implements TaskService {
 
         // 模型中获取参与者信息
         List<FlwTaskActor> taskActors = execution.getProviderTaskActors(nodeModel);
-        // 清空参与者信息
-        execution.cleanTaskActorProvider();
 
         // 创建任务列表
         List<FlwTask> flwTasks = new ArrayList<>();
@@ -1324,8 +1320,7 @@ public class TaskServiceImpl implements TaskService {
         if (taskDao.deleteById(flwTask.getId())) {
 
             // 构建触发器历史任务
-            FlwHisTask hisTask = FlwHisTask.of(flwTask);
-            hisTask.setTaskState(TaskState.complete);
+            FlwHisTask hisTask = FlwHisTask.of(flwTask, TaskState.complete);
             hisTask.setFlowCreator(flowCreator);
             hisTask.calculateDuration();
             hisTask.setId(flowLongIdGenerator.getId(hisTask.getId()));
@@ -1646,10 +1641,9 @@ public class TaskServiceImpl implements TaskService {
             FlwHisTask his = new FlwHisTask();
             his.setId(dbHis.getId());
             his.setCreateTime(dbHis.getCreateTime());
-            his.setTaskState(TaskState.complete);
             his.calculateDuration();
             his.setCreateTime(null);
-            hisTaskDao.updateById(his);
+            hisTaskDao.updateById(his.taskState(TaskState.complete));
         }
     }
 

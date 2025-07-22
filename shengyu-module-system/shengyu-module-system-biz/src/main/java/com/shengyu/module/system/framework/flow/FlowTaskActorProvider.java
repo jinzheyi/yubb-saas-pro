@@ -53,6 +53,11 @@ public class FlowTaskActorProvider implements TaskActorProvider {
 
     @Override
     public Integer getActorType(NodeModel nodeModel) {
+        // 全部人员参与审批分组策略
+        if (nodeModel.allJoinGroupStrategy()) {
+            // 0，用户
+            return 0;
+        }
 
         // 1，角色
         if (NodeSetType.role.eq(nodeModel.getSetType())) {
@@ -118,8 +123,9 @@ public class FlowTaskActorProvider implements TaskActorProvider {
              * </p>
              */
             if (NodeSetType.supervisor.eq(nodeModel.getSetType())) {
-                // 2，主管
-                return getDepartmentHeadInfo(flowCreator, nodeModel, () -> ErrorCodeConstants.FLOW_1_002_029_008);
+                // 2，主管是取当时发起流程创建者的部门负责人
+                FlwInstance fi = execution.getFlwInstance();
+                return getDepartmentHeadInfo(FlowCreator.of(fi.getCreateId(), fi.getCreateBy()), nodeModel, () -> ErrorCodeConstants.FLOW_1_002_029_008);
             } else if (NodeSetType.initiatorSelected.eq(nodeModel.getSetType())) {
                 // 4，发起人自选
                 Map<String, Object> modelData = FlowDataTransfer.get(FlowConstants.processDynamicAssignee);
@@ -140,8 +146,9 @@ public class FlowTaskActorProvider implements TaskActorProvider {
                 FlwInstance fi = execution.getFlwInstance();
                 return Collections.singletonList(FlwTaskActor.ofUser(fi.getTenantId(), fi.getCreateId(), fi.getCreateBy()));
             } else if (NodeSetType.multiLevelSupervisors.eq(nodeModel.getSetType())) {
-                // 6，连续多级主管
-                return getDepartmentHeadInfo(flowCreator, nodeModel, () -> ErrorCodeConstants.FLOW_1_002_029_009);
+                // 6，连续多级主管,主管是取当时发起流程创建者的部门负责人
+                FlwInstance fi = execution.getFlwInstance();
+                return getDepartmentHeadInfo(FlowCreator.of(fi.getCreateId(), fi.getCreateBy()), nodeModel, () -> ErrorCodeConstants.FLOW_1_002_029_009);
             }
         }
 
@@ -149,16 +156,20 @@ public class FlowTaskActorProvider implements TaskActorProvider {
         if (ObjectUtils.isNotEmpty(nodeAssigneeList)) {
             if (null == nodeModel.getSetType()
 
-                    // 1，指定成员
-                    || NodeSetType.specifyMembers.eq(nodeModel.getSetType())
+              // 1，指定成员
+              || NodeSetType.specifyMembers.eq(nodeModel.getSetType())
 
-                    // 4，发起人自选
-                    || NodeSetType.initiatorSelected.eq(nodeModel.getSetType())) {
+              // 4，发起人自选
+              || NodeSetType.initiatorSelected.eq(nodeModel.getSetType())) {
 
                 boolean isRole = false;
+                boolean isDepartment = false;
                 if (Objects.equals(3, nodeModel.getSelectMode())) {
-                    // 1，自选一个人 2，自选多个人 3，自选角色
+                    // 3，自选角色
                     isRole = true;
+                } else if (Objects.equals(4, nodeModel.getSelectMode())) {
+                    // 4，自选部门
+                    isDepartment = true;
                 } else {
                     // 自选候选人判断参与者类型
                     NodeCandidate nodeCandidate = nodeModel.getNodeCandidate();
@@ -168,16 +179,17 @@ public class FlowTaskActorProvider implements TaskActorProvider {
                             isRole = true;
                         } else if (Objects.equals(2, nodeCandidate.getType())) {
                             // 2，部门
-                            return nodeAssigneeList.stream().map(t -> FlwTaskActor.ofDepartment(t.getTenantId(),
-                                    t.getId(), t.getName())).collect(Collectors.toList());
+                            isDepartment = true;
                         }
                     }
                 }
 
                 if (isRole) {
-                    // 3，角色
-                    return nodeAssigneeList.stream().map(t -> FlwTaskActor.ofRole(t.getTenantId(),
-                            t.getId(), t.getName())).collect(Collectors.toList());
+                    return flwTaskActorRoleUserList(nodeAssigneeList, nodeModel);
+                }
+
+                if (isDepartment) {
+                    return flwTaskActorDepartmentUserList(nodeAssigneeList, nodeModel);
                 }
 
                 // 读取当前节点配置信息
@@ -186,13 +198,73 @@ public class FlowTaskActorProvider implements TaskActorProvider {
 
             if (NodeSetType.role.eq(nodeModel.getSetType())) {
                 // 3，角色
-                return nodeAssigneeList.stream().map(t -> FlwTaskActor.ofRole(t.getTenantId(), t.getId(), t.getName()))
-                        .collect(Collectors.toList());
+                return flwTaskActorRoleUserList(nodeAssigneeList, nodeModel);
+            }
+            if (NodeSetType.department.eq(nodeModel.getSetType())) {
+                // 7，部门
+                return flwTaskActorDepartmentUserList(nodeAssigneeList, nodeModel);
             }
         }
 
         ServiceExceptionUtil.fail(ErrorCodeConstants.FLOW_1_002_029_005);
         return null;
+    }
+
+    /**
+     * 获取部门用户信息
+     * @param nodeAssigneeList 模型部门信息
+     * @param nodeModel 节点模型
+     * @return 部门用户信息
+     */
+    private List<FlwTaskActor> flwTaskActorDepartmentUserList(List<NodeAssignee> nodeAssigneeList, NodeModel nodeModel) {
+        // 获取模型对应选择的部门数据
+        List<FlwTaskActor> flwTaskActorList = nodeAssigneeList.stream()
+          .map(t -> FlwTaskActor.ofDepartment(t.getTenantId(),
+            t.getId(), t.getName())).collect(Collectors.toList());
+        if (!nodeModel.allJoinGroupStrategy()) {
+            // 7，部门
+            return flwTaskActorList;
+        }
+        //todo 部门审批获取用户的方式需要用户确认，待实现
+        // 所有加入，非部门其中一人的加入
+        INoAuthAPI noAuthAPI = SpringUtils.getBean(INoAuthAPI.class);
+        List<FlwTaskActor> flwTaskActorUserList = new ArrayList<>();
+        // 获取对应部门下所有用户
+        flwTaskActorList.forEach(flwTaskActor -> flwTaskActorUserList.addAll(
+          noAuthAPI.getUsersByRoleIds(Collections.singletonList(flwTaskActor.getActorId()))
+            .stream().map(t ->
+              FlwTaskActor.ofUser(flwTaskActor.getTenantId(), t.getId(),
+                t.getRealname() + "(" + flwTaskActor.getActorName() + ")"))
+            .collect(Collectors.toList())));
+        return flwTaskActorUserList;
+    }
+
+    /**
+     * 获取角色用户信息
+     * @param nodeAssigneeList 模型角色信息
+     * @param nodeModel 节点模型
+     * @return 角色用户信息
+     */
+    private List<FlwTaskActor> flwTaskActorRoleUserList(List<NodeAssignee> nodeAssigneeList, NodeModel nodeModel) {
+        // 获取模型对应选择的角色数据
+        List<FlwTaskActor> flwTaskActorList = nodeAssigneeList.stream()
+          .map(t -> FlwTaskActor.ofRole(t.getTenantId(),
+            t.getId(), t.getName())).collect(Collectors.toList());
+        if (!nodeModel.allJoinGroupStrategy()) {
+            // 3，角色
+            return flwTaskActorList;
+        }
+        // 所有加入，非角色其中一人的加入
+        INoAuthAPI noAuthAPI = SpringUtils.getBean(INoAuthAPI.class);
+        List<FlwTaskActor> flwTaskActorUserList = new ArrayList<>();
+        // 获取对应角色下所有用户
+        flwTaskActorList.forEach(flwTaskActor -> flwTaskActorUserList.addAll(
+          noAuthAPI.getUsersByRoleIds(Collections.singletonList(flwTaskActor.getActorId()))
+            .stream().map(t ->
+              FlwTaskActor.ofUser(flwTaskActor.getTenantId(), t.getId(),
+                t.getRealname() + "(" + flwTaskActor.getActorName() + ")"))
+            .collect(Collectors.toList())));
+        return flwTaskActorUserList;
     }
 
     /**
