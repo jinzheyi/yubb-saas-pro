@@ -4,10 +4,10 @@
  */
 package com.shengyu.framework.flowlong.engine.mapper;
 
+import com.github.yulichang.base.MPJBaseMapper;
 import com.shengyu.framework.flowlong.engine.assist.Assert;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisTask;
 import com.shengyu.framework.flowlong.engine.entity.FlwTask;
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**
  * 历史任务 Mapper
@@ -19,7 +19,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @author hubin
  * @since 1.0
  */
-public interface FlwHisTaskMapper extends BaseMapper<FlwHisTask> {
+public interface FlwHisTaskMapper extends MPJBaseMapper<FlwHisTask> {
 
     /**
      * 获取历史任务并检查ID的合法性

@@ -1,5 +1,6 @@
 package com.shengyu.module.system.service.flow.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
@@ -36,11 +37,14 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shengyu.module.system.dal.mysql.flow.FlowlongMapper;
+import com.shengyu.module.system.dal.mysql.flow.SyFlwHisInstanceMapper;
+import com.shengyu.module.system.dal.mysql.flow.SyFlwProcessMapper;
 import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.framework.flow.FlowForm;
 import com.shengyu.module.system.framework.flow.FlowHelper;
 import com.shengyu.module.system.service.flow.*;
 import com.shengyu.module.system.service.permission.PermissionService;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,6 +81,10 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     @Resource
     private FlowLongEngine flowLongEngine;
     @Resource
+    private SyFlwProcessMapper syFlwProcessMapper;
+    @Resource
+    private SyFlwHisInstanceMapper syFlwHisInstanceMapper;
+    @Resource
     private PermissionService permissionService;
 
     @Override
@@ -98,7 +106,14 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
                 dto.setCompleted(false);
             }
         }
-        return flowlongMapper.selectPageInstance(page, dto);
+        List<Long> processIdList = null;
+        if (dto != null && Objects.nonNull(dto.getProcessCategoryId())) {
+            processIdList = flwProcessConfigureService.list(
+                new LambdaQueryWrapper<FlwProcessConfigure>()
+                  .eq(FlwProcessConfigure::getCategoryId, dto.getProcessCategoryId())).stream()
+              .map(FlwProcessConfigure::getProcessId).collect(Collectors.toList());
+        }
+        return cxkjFlwHisInstanceMapper.selectPageInstance(page, dto, processIdList);
     }
 
     @Override
@@ -115,9 +130,11 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
         List<FlwProcessCategoryVO> voList = new ArrayList<>();
         List<FlwProcessVO> flwProcessVOList;
         if (launch) {
-            flwProcessVOList = flowlongMapper.selectLaunchProcessList();
+            //查询已启用的主流程
+            flwProcessVOList = cxkjFlwProcessMapper.selectLaunchProcessList();
         } else {
-            flwProcessVOList = flowlongMapper.selectFlwProcessList();
+            //查询所有流程（包括未启用的，不包含历史版本的）
+            flwProcessVOList = cxkjFlwProcessMapper.selectFlwProcessList();
         }
 
         boolean voIsNotEmpty = CollectionUtil.isNotEmpty(flwProcessVOList);
@@ -126,7 +143,16 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
             if (launch) {
                 // 发起流程，过滤不存在角色权限的流程
                 LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
-                List<Long> notExistProcessIds = flowlongMapper.selectNotExistProcessIds(userSession.getId());
+                // 查询当前用户角色ID集合
+                List<Long> roleIdList = sysBaseAPI.getRoleIdsByUsername(loginUser.getUsername(), unifyAppId)
+                  .stream()
+                  .filter(StringUtils::isNumeric)
+                  .map(Long::valueOf)
+                  .collect(Collectors.toList());
+                // 查询当前用户不存在角色权限的流程ID集合
+                List<Long> processIdList = flwProcessActorMapper.selectListByActorIdList(roleIdList)
+                  .stream().map(FlwProcessActor::getProcessId).collect(Collectors.toList());
+                List<Long> notExistProcessIds = flwProcessActorMapper.selectNotExistProcessIds(processIdList);
                 if (CollectionUtils.isNotEmpty(notExistProcessIds)) {
                     needSort = false;
                     flwProcessVOList = flwProcessVOList.stream().sorted(Comparator.comparing(FlwProcessVO::getProcessSort))
@@ -463,11 +489,31 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     }
 
     private void checkOperateApproval(Long processId) {
-        LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
-        if (null == userSession) {
-            FlwProcessPermission fpp = getFlwProcessPermissionByProcessId(userSession, processId);
+//        LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
+//        if (null == userSession) {
+//            FlwProcessPermission fpp = getFlwProcessPermissionByProcessId(userSession, processId);
+//            if (null != fpp) {
+//                ServiceExceptionUtil.fail(!fpp.allowOperateApproval(), ErrorCodeConstants.FLOW_1_002_029_045);
+//            }
+//        }
+        LoginUser userSession = UserSession.getLoginUser();
+        if (userSession == null) {
+            ApiAssert.fail(true, "请登录后再操作审批流程");
+        }
+        if (!UserSession.isAdmin(userSession.getId())) {
+            List<FlwProcessPermission> fppList = flwProcessPermissionService.getByProcessId(processId);
+            //流程本身没有设置管理员，则无需判断
+            if (CollUtil.isEmpty(fppList)) {
+                return;
+            }
+            FlwProcessPermission fpp = fppList.stream()
+              .filter(t -> Objects.equals(t.getUserId(), userSession.getId())).findFirst()
+              .orElse(null);
+            if (Objects.isNull(fpp)) {
+                ApiAssert.fail(true, "无权限编辑操作审批流程");
+            }
             if (null != fpp) {
-                ServiceExceptionUtil.fail(!fpp.allowOperateApproval(), ErrorCodeConstants.FLOW_1_002_029_045);
+                ApiAssert.fail(!fpp.allowOperateApproval(), "无权限编辑操作审批流程");
             }
         }
     }

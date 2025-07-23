@@ -4,6 +4,7 @@
  */
 package com.shengyu.framework.flowlong.engine.mapper;
 
+import com.github.yulichang.base.MPJBaseMapper;
 import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
@@ -21,7 +22,7 @@ import java.util.List;
  * @author hubin
  * @since 1.0
  */
-public interface FlwProcessMapper extends BaseMapper<FlwProcess> {
+public interface FlwProcessMapper extends MPJBaseMapper<FlwProcess> {
 
     default List<FlwProcess> selectListByProcessKey(String tenantId, String processKey) {
         return this.selectList(Wrappers.<FlwProcess>lambdaQuery()

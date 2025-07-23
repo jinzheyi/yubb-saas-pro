@@ -4,10 +4,9 @@
  */
 package com.shengyu.framework.flowlong.engine.mapper;
 
-import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-
+import com.github.yulichang.base.MPJBaseMapper;
+import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import java.util.List;
 
 /**
@@ -20,7 +19,7 @@ import java.util.List;
  * @author hubin
  * @since 1.0
  */
-public interface FlwTaskActorMapper extends BaseMapper<FlwTaskActor> {
+public interface FlwTaskActorMapper extends MPJBaseMapper<FlwTaskActor> {
 
     /**
      * 通过任务ID获取参与者列表
