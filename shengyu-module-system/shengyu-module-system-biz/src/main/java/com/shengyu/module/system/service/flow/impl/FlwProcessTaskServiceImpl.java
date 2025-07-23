@@ -15,18 +15,43 @@ import com.shengyu.framework.flowlong.engine.core.enums.ActorType;
 import com.shengyu.framework.flowlong.engine.core.enums.PerformType;
 import com.shengyu.framework.flowlong.engine.core.enums.ProcessType;
 import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
-import com.shengyu.framework.flowlong.engine.entity.*;
+import com.shengyu.framework.flowlong.engine.entity.FlwExtInstance;
+import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
+import com.shengyu.framework.flowlong.engine.entity.FlwHisTask;
+import com.shengyu.framework.flowlong.engine.entity.FlwInstance;
+import com.shengyu.framework.flowlong.engine.entity.FlwTask;
+import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import com.shengyu.framework.flowlong.engine.mapper.FlwExtInstanceMapper;
+import com.shengyu.framework.flowlong.engine.mapper.FlwTaskActorMapper;
 import com.shengyu.framework.flowlong.engine.model.ModelHelper;
 import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import com.shengyu.framework.flowlong.engine.model.ProcessModel;
 import com.shengyu.framework.security.core.LoginUser;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
-import com.shengyu.module.system.controller.admin.flow.dto.*;
-import com.shengyu.module.system.controller.admin.flow.vo.*;
+import com.shengyu.module.system.controller.admin.flow.dto.ExecuteTaskDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.NextNodesDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.ProcessApprovalDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.ProcessInfoDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.ProcessTaskDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.RejectTaskDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskAppendNodeDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskApprovalDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskAssigneeDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskCarbonCopyDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskJumpDTO;
+import com.shengyu.module.system.controller.admin.flow.vo.FlwHisTaskActorVO;
+import com.shengyu.module.system.controller.admin.flow.vo.FlwHisTaskVO;
+import com.shengyu.module.system.controller.admin.flow.vo.PendingApprovalTaskVO;
+import com.shengyu.module.system.controller.admin.flow.vo.PendingClaimTaskVO;
+import com.shengyu.module.system.controller.admin.flow.vo.ProcessTaskVO;
+import com.shengyu.module.system.controller.admin.flow.vo.TaskApprovalVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
-import com.shengyu.module.system.dal.dataobject.flow.*;
+import com.shengyu.module.system.dal.dataobject.flow.ApprovalContent;
+import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplate;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessConfigure;
+import com.shengyu.module.system.dal.dataobject.flow.FlwProcessForm;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.flow.FlowlongMapper;
 import com.shengyu.module.system.dal.mysql.flow.SyFlwHisInstanceMapper;
@@ -35,17 +60,28 @@ import com.shengyu.module.system.dal.mysql.flow.SyFlwTaskMapper;
 import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.framework.flow.FlowForm;
 import com.shengyu.module.system.framework.flow.FlowHelper;
-import com.shengyu.module.system.service.flow.*;
+import com.shengyu.module.system.service.flow.IFlwFormTemplateService;
+import com.shengyu.module.system.service.flow.IFlwProcessApprovalService;
+import com.shengyu.module.system.service.flow.IFlwProcessConfigureService;
+import com.shengyu.module.system.service.flow.IFlwProcessFormService;
+import com.shengyu.module.system.service.flow.IFlwProcessTaskService;
 import com.shengyu.module.system.service.notify.NotifySendService;
+import com.shengyu.module.system.service.permission.PermissionService;
 import com.shengyu.module.system.service.user.AdminUserService;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import javax.annotation.Resource;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javax.annotation.Resource;
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 流程任务 服务实现类
@@ -79,6 +115,10 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     private AdminUserService adminUserService;
     @Resource
     private NotifySendService notifySendService;
+    @Resource
+    private PermissionService permissionService;
+    @Resource
+    private FlwTaskActorMapper flwTaskActorMapper;
 
     @Override
     public Page<PendingClaimTaskVO> pagePendingClaim(PageParam<ProcessTaskDTO> pageParam) {
@@ -88,15 +128,16 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         UserRespVO userRespVO = adminUserService.getUser(dto.getUserId());
         List<Long> flwTaskActorIdList;
         //对应角色所属的待认领任务
-        List<String> roleIdList = sysBaseAPI.getRoleIdsByUsername(loginUser.getUsername(), unifyAppId);
-        flwTaskActorIdList = flwTaskActorMapper.selectListByActorIdListAndActorType(roleIdList, ActorType.role.getValue())
+        Set<Long> roleIdListByUserId = permissionService.getUserRoleIdListByUserId(userRespVO.getId());
+        flwTaskActorIdList = flwTaskActorMapper.selectListByActorIdListAndActorType(roleIdListByUserId.stream().map(String::valueOf).toList(), ActorType.role.getValue())
           .stream().map(
             FlwTaskActor::getId).collect(Collectors.toList());
         //对应部门所属的待认领任务
         flwTaskActorIdList.addAll(flwTaskActorMapper.selectListByActorIdListAndActorType(
-            sysDepartAPI.queryUserDeparts(dto.getUserId()).stream().map(SysDepart::getId).collect(Collectors.toList()), ActorType.department.getValue())
+            adminUserService.getMyEnableDeptList().stream().map(
+              userDeptRespVO -> String.valueOf(userDeptRespVO.getDeptId())).collect(Collectors.toList()), ActorType.department.getValue())
           .stream().map(
-            FlwTaskActor::getId).collect(Collectors.toList()));
+            FlwTaskActor::getId).toList());
         return syFlwTaskMapper.selectPagePendingClaim(page, dto, flwTaskActorIdList);
     }
 
@@ -105,18 +146,15 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<PendingApprovalTaskVO> page = pageParam.page();
         page.setSearchCount(false);
-        Result<SysUser> userResult = iNoAuthAPI.getById(dto.getUserId());
-        if (!userResult.isSuccess()) {
-            ApiAssert.fail(userResult.getMessage());
-        }
-        SysUser loginUser = userResult.getResult();
+        UserRespVO userRespVO = adminUserService.getUser(dto.getUserId());
         List<String> flwTaskActorIdList = new ArrayList<>();
-        flwTaskActorIdList.add(loginUser.getId());
+        flwTaskActorIdList.add(String.valueOf(userRespVO.getId()));
         //对应角色所属的待认领任务
-        flwTaskActorIdList.addAll(sysBaseAPI.getRoleIdsByUsername(loginUser.getUsername(), unifyAppId));
+        flwTaskActorIdList.addAll(permissionService.getUserRoleIdListByUserId(userRespVO.getId()).stream().map(String::valueOf).toList());
         //对应部门所属的待认领任务
-        flwTaskActorIdList.addAll(sysDepartAPI.queryUserDeparts(dto.getUserId()).stream().map(SysDepart::getId).collect(Collectors.toList()));
-        return cxkjFlwTaskMapper.selectPagePendingApproval(page, dto, flwTaskActorIdList);
+        flwTaskActorIdList.addAll(adminUserService.getMyEnableDeptList().stream().map(
+          userDeptRespVO -> String.valueOf(userDeptRespVO.getDeptId())).toList());
+        return syFlwTaskMapper.selectPagePendingApproval(page, dto, flwTaskActorIdList);
     }
 
     @Override
@@ -124,7 +162,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<PendingApprovalTaskVO> page = pageParam.page();
         page.setSearchCount(false);
-        return cxkjFlwTaskMapper.selectPageAllPendingApproval(page, dto);
+        return syFlwTaskMapper.selectPageAllPendingApproval(page, dto);
     }
 
     @Override
@@ -132,7 +170,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<ProcessTaskVO> page = pageParam.page();
         page.setSearchCount(false);
-        return cxkjFlwHisInstanceMapper.selectPageMyApplication(page, dto);
+        return syFlwHisInstanceMapper.selectPageMyApplication(page, dto);
     }
 
     @Override
@@ -140,7 +178,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<ProcessTaskVO> page = pageParam.page();
         page.setSearchCount(false);
-        return cxkjFlwHisInstanceMapper.selectPageMyReceived(page, dto);
+        return syFlwHisInstanceMapper.selectPageMyReceived(page, dto);
     }
 
     @Override
@@ -156,7 +194,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<PendingApprovalTaskVO> page = pageParam.page();
         page.setSearchCount(false);
-        return cxkjFlwHisTaskMapper.selectPageAllApproved(page, dto);
+        return syFlwHisTaskMapper.selectPageAllApproved(page, dto);
     }
 
     @Override
@@ -446,7 +484,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
 
     @Override
     public List<FlwHisTaskVO> listHisTaskByInstanceId(Long instanceId) {
-        List<FlwHisTaskVO> voList = cxkjFlwHisTaskMapper.selectListHisTaskByInstanceId(instanceId);
+        List<FlwHisTaskVO> voList = syFlwHisTaskMapper.selectListHisTaskByInstanceId(instanceId);
         if (CollectionUtils.isNotEmpty(voList)) {
             List<FlwHisTaskActorVO> actorList = flowlongMapper.selectListHisTaskActorVOByInstanceId(instanceId);
             if (CollectionUtils.isNotEmpty(actorList)) {
@@ -526,7 +564,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     @Override
     public boolean consent(TaskApprovalDTO dto) {
         //当前任务处理人员为角色或者部门时，进行任务认领操作
-        this.claimTask(dto.getTaskId(), Objects.nonNull(dto.getFlowCreator())? dto.getFlowCreator() : FlowHelper.getFlowCreator());
+        this.claimTask(dto.getTaskId(), FlowHelper.getFlowCreator());
 
         // 判断是否修改模型
         if (MapUtils.isNotEmpty(dto.getAssigneeMap())) {
@@ -554,7 +592,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     @Override
     public boolean rejection(TaskApprovalDTO dto) {
         //当前任务处理人员为角色或者部门时，进行任务认领操作
-        this.claimTask(dto.getTaskId(), Objects.nonNull(dto.getFlowCreator())? dto.getFlowCreator() : FlowHelper.getFlowCreator());
+        this.claimTask(dto.getTaskId(), FlowHelper.getFlowCreator());
         FlwTask flwTask = this.getFlwTask(dto.getTaskId());
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
         return flowLongEngine.executeRejectTask(flwTask, dto.getNodeKey(), FlowHelper.getFlowCreator(), dto.getArgs(), dto.isTermination()).isPresent();
@@ -610,12 +648,13 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     public Integer countPendingApproval() {
         LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
         List<String> flwTaskActorIdList = new ArrayList<>();
-        flwTaskActorIdList.add(userSession.getId());
+        flwTaskActorIdList.add(String.valueOf(userSession.getId()));
         //对应角色所属的待认领任务
-        flwTaskActorIdList.addAll(sysBaseAPI.getRoleIdsByUsername(userSession.getUsername(), unifyAppId));
+        flwTaskActorIdList.addAll(permissionService.getUserRoleIdListByUserId(userSession.getId()).stream().map(String::valueOf).toList());
         //对应部门所属的待认领任务
-        flwTaskActorIdList.addAll(sysDepartAPI.queryUserDeparts(userSession.getId()).stream().map(SysDepart::getId).collect(Collectors.toList()));
-        return cxkjFlwTaskMapper.selectCountPendingApproval(flwTaskActorIdList);
+        flwTaskActorIdList.addAll(adminUserService.getMyEnableDeptList().stream().map(
+          userDeptRespVO -> String.valueOf(userDeptRespVO.getDeptId())).toList());
+        return syFlwTaskMapper.selectCountPendingApproval(flwTaskActorIdList);
     }
 
     @Override

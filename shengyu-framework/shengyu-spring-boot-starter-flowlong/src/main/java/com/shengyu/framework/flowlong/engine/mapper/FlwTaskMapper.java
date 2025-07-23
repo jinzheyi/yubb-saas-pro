@@ -5,8 +5,8 @@
 package com.shengyu.framework.flowlong.engine.mapper;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.github.yulichang.base.MPJBaseMapper;
 import com.shengyu.framework.flowlong.engine.entity.FlwTask;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import java.util.List;
 
 /**
@@ -19,7 +19,7 @@ import java.util.List;
  * @author hubin
  * @since 1.0
  */
-public interface FlwTaskMapper extends MPJBaseMapper<FlwTask> {
+public interface FlwTaskMapper extends BaseMapperX<FlwTask> {
 
     /**
      * 根据流程实例ID获取任务列表

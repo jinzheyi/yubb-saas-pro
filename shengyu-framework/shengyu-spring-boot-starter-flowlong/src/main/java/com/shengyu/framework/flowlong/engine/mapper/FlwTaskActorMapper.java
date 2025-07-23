@@ -4,9 +4,11 @@
  */
 package com.shengyu.framework.flowlong.engine.mapper;
 
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.github.yulichang.base.MPJBaseMapper;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -19,7 +21,7 @@ import java.util.List;
  * @author hubin
  * @since 1.0
  */
-public interface FlwTaskActorMapper extends MPJBaseMapper<FlwTaskActor> {
+public interface FlwTaskActorMapper extends BaseMapperX<FlwTaskActor> {
 
     /**
      * 通过任务ID获取参与者列表
@@ -49,6 +51,20 @@ public interface FlwTaskActorMapper extends MPJBaseMapper<FlwTaskActor> {
      */
     default List<FlwTaskActor> selectListByInstanceId(Long instanceId) {
         return this.selectList(Wrappers.<FlwTaskActor>lambdaQuery().eq(FlwTaskActor::getInstanceId, instanceId));
+    }
+
+    /**
+     * 通过参与者ID列表和参与者类型获取参与者列表
+     * @param actorIdList 参与者ID列表
+     * @param actorType 参与者类型
+     * @return 参与者列表
+     */
+    default List<FlwTaskActor> selectListByActorIdListAndActorType(List<String> actorIdList, Integer actorType) {
+        if (CollUtil.isEmpty(actorIdList)) {
+            return Collections.emptyList();
+        }
+        return this.selectList(Wrappers.<FlwTaskActor>lambdaQuery()
+          .in(FlwTaskActor::getActorId, actorIdList).eq(FlwTaskActor::getActorType, actorType));
     }
 
     /**

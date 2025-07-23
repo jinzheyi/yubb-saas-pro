@@ -4,8 +4,8 @@
  */
 package com.shengyu.framework.flowlong.engine.mapper;
 
-import com.github.yulichang.base.MPJBaseMapper;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 
 /**
  * 历史流程实例 Mapper
@@ -17,6 +17,6 @@ import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
  * @author hubin
  * @since 1.0
  */
-public interface FlwHisInstanceMapper extends MPJBaseMapper<FlwHisInstance> {
+public interface FlwHisInstanceMapper extends BaseMapperX<FlwHisInstance> {
 
 }

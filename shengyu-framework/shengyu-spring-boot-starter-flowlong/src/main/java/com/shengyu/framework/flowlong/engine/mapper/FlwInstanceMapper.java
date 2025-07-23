@@ -5,8 +5,8 @@
 package com.shengyu.framework.flowlong.engine.mapper;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.github.yulichang.base.MPJBaseMapper;
 import com.shengyu.framework.flowlong.engine.entity.FlwInstance;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,7 +20,7 @@ import java.util.Optional;
  * @author hubin
  * @since 1.0
  */
-public interface FlwInstanceMapper extends MPJBaseMapper<FlwInstance> {
+public interface FlwInstanceMapper extends BaseMapperX<FlwInstance> {
 
     default Optional<List<FlwInstance>> listByParentInstanceId(Long parentInstanceId) {
         return Optional.ofNullable(selectList(Wrappers.<FlwInstance>lambdaQuery().eq(FlwInstance::getParentInstanceId, parentInstanceId)));
