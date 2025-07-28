@@ -645,7 +645,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     }
 
     @Override
-    public Integer countPendingApproval() {
+    public Long countPendingApproval() {
         LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
         List<String> flwTaskActorIdList = new ArrayList<>();
         flwTaskActorIdList.add(String.valueOf(userSession.getId()));

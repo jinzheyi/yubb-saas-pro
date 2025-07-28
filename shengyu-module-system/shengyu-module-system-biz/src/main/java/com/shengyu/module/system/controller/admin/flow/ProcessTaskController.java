@@ -196,7 +196,7 @@ public class ProcessTaskController {
     @Operation(summary = "当前用户待办任务数量")
     @PreAuthorize("@ss.hasPermission('flw:processTask:countPendingApproval')")
     @PostMapping("/count-pending-approval")
-    public CommonResult<Integer> countPendingApproval() {
+    public CommonResult<Long> countPendingApproval() {
         return success(processTaskService.countPendingApproval());
     }
 

@@ -491,8 +491,9 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     private void checkOperateApproval(Long processId) {
         LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
         if (userSession == null) {
-            ServiceExceptionUtil.fail(true, "请登录后再操作审批流程");
+            ServiceExceptionUtil.fail(true, ErrorCodeConstants.FLOW_1_002_029_054);
         }
+        //非租户超管
         if (!adminUserService.hasTenantAdmin(userSession.getId())) {
             List<FlwProcessPermission> fppList = flwProcessPermissionService.getByProcessId(processId);
             //流程本身没有设置管理员，则无需判断
@@ -503,10 +504,10 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
               .filter(t -> Objects.equals(t.getUserId(), userSession.getId())).findFirst()
               .orElse(null);
             if (Objects.isNull(fpp)) {
-                ServiceExceptionUtil.fail(true, "无权限编辑操作审批流程");
+                ServiceExceptionUtil.fail(true, ErrorCodeConstants.FLOW_1_002_029_055);
             }
             if (null != fpp) {
-                ServiceExceptionUtil.fail(!fpp.allowOperateApproval(), "无权限编辑操作审批流程");
+                ServiceExceptionUtil.fail(!fpp.allowOperateApproval(), ErrorCodeConstants.FLOW_1_002_029_055);
             }
         }
     }

@@ -155,7 +155,7 @@ public interface IFlwProcessTaskService {
     /**
      * 当前用户待办任务数量
      */
-    Integer countPendingApproval();
+    Long countPendingApproval();
 
     /**
      * 流程任务催办

@@ -1,9 +1,9 @@
 package com.shengyu.module.system.framework.flow;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.shengyu.framework.common.exception.ErrorCode;
-import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.flowlong.engine.FlowConstants;
 import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
@@ -20,14 +20,19 @@ import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeCandidate;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
+import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.service.dept.DeptService;
 import com.shengyu.module.system.service.permission.PermissionService;
 import com.shengyu.module.system.service.user.AdminUserService;
-import org.springframework.stereotype.Component;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Component;
 
 @Component
 public class FlowTaskActorProvider implements TaskActorProvider {
@@ -225,17 +230,17 @@ public class FlowTaskActorProvider implements TaskActorProvider {
             // 7，部门
             return flwTaskActorList;
         }
-        //todo 部门审批获取用户的方式需要用户确认，待实现
         // 所有加入，非部门其中一人的加入
-        INoAuthAPI noAuthAPI = SpringUtils.getBean(INoAuthAPI.class);
+        AdminUserService adminUserService = SpringUtil.getBean(AdminUserService.class);
         List<FlwTaskActor> flwTaskActorUserList = new ArrayList<>();
         // 获取对应部门下所有用户
         flwTaskActorList.forEach(flwTaskActor -> flwTaskActorUserList.addAll(
-          noAuthAPI.getUsersByRoleIds(Collections.singletonList(flwTaskActor.getActorId()))
+          adminUserService.getUserListByDeptIds(Collections.singletonList(
+              Long.valueOf(flwTaskActor.getActorId())))
             .stream().map(t ->
-              FlwTaskActor.ofUser(flwTaskActor.getTenantId(), t.getId(),
-                t.getRealname() + "(" + flwTaskActor.getActorName() + ")"))
-            .collect(Collectors.toList())));
+              FlwTaskActor.ofUser(flwTaskActor.getTenantId(), String.valueOf(t.getId()),
+                t.getNickname() + "(" + flwTaskActor.getActorName() + ")"))
+            .toList()));
         return flwTaskActorUserList;
     }
 
@@ -255,15 +260,19 @@ public class FlowTaskActorProvider implements TaskActorProvider {
             return flwTaskActorList;
         }
         // 所有加入，非角色其中一人的加入
-        INoAuthAPI noAuthAPI = SpringUtils.getBean(INoAuthAPI.class);
-        List<FlwTaskActor> flwTaskActorUserList = new ArrayList<>();
+        PermissionService permissionService = SpringUtil.getBean(PermissionService.class);
+        AdminUserService adminUserService = SpringUtil.getBean(AdminUserService.class);
+          List<FlwTaskActor> flwTaskActorUserList = new ArrayList<>();
         // 获取对应角色下所有用户
-        flwTaskActorList.forEach(flwTaskActor -> flwTaskActorUserList.addAll(
-          noAuthAPI.getUsersByRoleIds(Collections.singletonList(flwTaskActor.getActorId()))
-            .stream().map(t ->
-              FlwTaskActor.ofUser(flwTaskActor.getTenantId(), t.getId(),
-                t.getRealname() + "(" + flwTaskActor.getActorName() + ")"))
-            .collect(Collectors.toList())));
+        flwTaskActorList.forEach(flwTaskActor -> {
+          Set<Long> userRoleIdListByRoleId = permissionService.getUserRoleIdListByRoleId(
+            Collections.singletonList(Long.valueOf(flwTaskActor.getActorId())));
+          if (CollUtil.isNotEmpty(userRoleIdListByRoleId)) {
+            flwTaskActorUserList.addAll(adminUserService.getUserList(userRoleIdListByRoleId).stream().map(t ->
+              FlwTaskActor.ofUser(flwTaskActor.getTenantId(), String.valueOf(t.getId()),
+                t.getNickname() + "(" + flwTaskActor.getActorName() + ")")).toList());
+          }
+        });
         return flwTaskActorUserList;
     }
 

@@ -257,6 +257,8 @@ public interface ErrorCodeConstants {
     ErrorCode FLOW_1_002_029_051 = new ErrorCode(1_002_029_051, "存在流程定义关联不允许删除");
     ErrorCode FLOW_1_002_029_052 = new ErrorCode(1_002_029_052, "抄送节点配置错误，请配置处理人或允许抄送自选");
     ErrorCode FLOW_1_002_029_053 = new ErrorCode(1_002_029_053, "无该任务的操作权限");
+    ErrorCode FLOW_1_002_029_054 = new ErrorCode(1_002_029_054, "请登录后再操作审批流程");
+    ErrorCode FLOW_1_002_029_055 = new ErrorCode(1_002_029_055, "无权限编辑操作审批流程");
 
 
 }

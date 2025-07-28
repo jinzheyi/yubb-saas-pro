@@ -1,17 +1,17 @@
 package com.shengyu.module.system.dal.mysql.flow;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
-import com.jxscxkj.cxkjflow.biz.bpm.boot.model.dto.ProcessTaskDTO;
-import com.jxscxkj.cxkjflow.biz.bpm.boot.model.vo.FlwHisTaskVO;
-import com.jxscxkj.cxkjflow.biz.bpm.boot.model.vo.PendingApprovalTaskVO;
-import com.jxscxkj.cxkjflow.common.base.core.util.BeanUtils;
-import com.jxscxkj.cxkjflow.common.bpm.engine.entity.FlwHisInstance;
-import com.jxscxkj.cxkjflow.common.bpm.engine.entity.FlwHisTask;
-import com.jxscxkj.cxkjflow.common.bpm.engine.entity.FlwProcess;
-import com.jxscxkj.cxkjflow.common.bpm.engine.mapper.FlwHisTaskMapper;
+import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
+import com.shengyu.framework.flowlong.engine.entity.FlwHisTask;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
+import com.shengyu.framework.flowlong.engine.mapper.FlwHisTaskMapper;
+import com.shengyu.module.system.controller.admin.flow.dto.ProcessTaskDTO;
+import com.shengyu.module.system.controller.admin.flow.vo.FlwHisTaskVO;
+import com.shengyu.module.system.controller.admin.flow.vo.PendingApprovalTaskVO;
 import java.util.List;
 import java.util.Objects;
 import org.apache.ibatis.annotations.Mapper;
@@ -57,8 +57,8 @@ public interface SyFlwHisTaskMapper extends FlwHisTaskMapper {
             .leftJoin(FlwHisInstance.class, FlwHisInstance::getId, FlwHisTask::getInstanceId)
             .leftJoin(FlwProcess.class, FlwProcess::getId, FlwHisInstance::getProcessId)
 
-            .like(StrUtil.isNotBlank(dto.getProcessName()), FlwProcess::getProcessName, dto.getProcessName())
-            .like(StrUtil.isNotBlank(dto.getCreateBy()), FlwProcess::getCreateBy, dto.getCreateBy())
+            .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwProcess::getProcessName, dto.getProcessName())
+            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwProcess::getCreateBy, dto.getCreateBy())
             .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
             .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
             .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())

@@ -5,20 +5,20 @@
 package com.shengyu.module.system.dal.mysql.flow;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
-import com.jxscxkj.cxkjflow.biz.bpm.boot.model.dto.FlwProcessInstanceDTO;
-import com.jxscxkj.cxkjflow.biz.bpm.boot.model.dto.ProcessTaskDTO;
-import com.jxscxkj.cxkjflow.biz.bpm.boot.model.vo.FlwInstanceVO;
-import com.jxscxkj.cxkjflow.biz.bpm.boot.model.vo.ProcessTaskVO;
-import com.jxscxkj.cxkjflow.common.bpm.engine.core.enums.TaskType;
-import com.jxscxkj.cxkjflow.common.bpm.engine.entity.FlwExtInstance;
-import com.jxscxkj.cxkjflow.common.bpm.engine.entity.FlwHisInstance;
-import com.jxscxkj.cxkjflow.common.bpm.engine.entity.FlwHisTask;
-import com.jxscxkj.cxkjflow.common.bpm.engine.entity.FlwHisTaskActor;
-import com.jxscxkj.cxkjflow.common.bpm.engine.entity.FlwProcess;
-import com.jxscxkj.cxkjflow.common.bpm.engine.mapper.FlwHisInstanceMapper;
+import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
+import com.shengyu.framework.flowlong.engine.entity.FlwExtInstance;
+import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
+import com.shengyu.framework.flowlong.engine.entity.FlwHisTask;
+import com.shengyu.framework.flowlong.engine.entity.FlwHisTaskActor;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
+import com.shengyu.framework.flowlong.engine.mapper.FlwHisInstanceMapper;
+import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessInstanceDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.ProcessTaskDTO;
+import com.shengyu.module.system.controller.admin.flow.vo.FlwInstanceVO;
+import com.shengyu.module.system.controller.admin.flow.vo.ProcessTaskVO;
 import java.util.List;
 import java.util.Objects;
 import org.apache.ibatis.annotations.Mapper;
@@ -62,8 +62,8 @@ public interface SyFlwHisInstanceMapper extends FlwHisInstanceMapper {
                         .leftJoin(FlwProcess.class, FlwProcess::getId, FlwHisInstance::getProcessId)
 
                         .eq(FlwHisInstance::getCreateId, dto.getCreateId())
-                        .like(StrUtil.isNotBlank(dto.getProcessName()), FlwProcess::getProcessName, dto.getProcessName())
-                        .like(StrUtil.isNotBlank(dto.getCreateBy()), FlwProcess::getCreateBy, dto.getCreateBy())
+                        .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwProcess::getProcessName, dto.getProcessName())
+                        .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwProcess::getCreateBy, dto.getCreateBy())
                         .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
                         .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
                         .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())
@@ -99,8 +99,8 @@ public interface SyFlwHisInstanceMapper extends FlwHisInstanceMapper {
                          //抄送的业务
                         .eq(FlwHisTask::getTaskType, TaskType.cc.getValue())
                         .eq(FlwHisTaskActor::getActorId, dto.getCreateId())
-                        .like(StrUtil.isNotBlank(dto.getProcessName()), FlwProcess::getProcessName, dto.getProcessName())
-                        .like(StrUtil.isNotBlank(dto.getCreateBy()), FlwProcess::getCreateBy, dto.getCreateBy())
+                        .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwProcess::getProcessName, dto.getProcessName())
+                        .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwProcess::getCreateBy, dto.getCreateBy())
                         .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
                         .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
                         .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())
@@ -128,8 +128,8 @@ public interface SyFlwHisInstanceMapper extends FlwHisInstanceMapper {
                   .innerJoin(FlwExtInstance.class, FlwExtInstance::getId, FlwHisInstance::getId)
                   .isNotNull(Objects.nonNull(dto) && dto.getCompleted(), FlwHisInstance::getEndTime)
                   .isNull(Objects.nonNull(dto) && !dto.getCompleted(), FlwHisInstance::getEndTime)
-                  .like(Objects.nonNull(dto) && StrUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
-                  .like(StrUtil.isNotBlank(dto.getCurrentNodeName()), FlwHisInstance::getCurrentNodeName, dto.getCurrentNodeName())
+                  .like(Objects.nonNull(dto) && CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
+                  .like(CharSequenceUtil.isNotBlank(dto.getCurrentNodeName()), FlwHisInstance::getCurrentNodeName, dto.getCurrentNodeName())
                   .in(CollUtil.isNotEmpty(processIdList), FlwExtInstance::getProcessId, processIdList)
                   .orderByDesc(FlwHisInstance::getCreateTime)
         );
