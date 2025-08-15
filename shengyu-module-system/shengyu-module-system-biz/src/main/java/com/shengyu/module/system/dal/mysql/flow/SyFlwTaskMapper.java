@@ -3,8 +3,8 @@ package com.shengyu.module.system.dal.mysql.flow;
 import cn.hutool.core.text.CharSequenceUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.shengyu.framework.flowlong.engine.entity.FlwExtInstance;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
-import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
 import com.shengyu.framework.flowlong.engine.entity.FlwTask;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import com.shengyu.framework.flowlong.engine.mapper.FlwTaskMapper;
@@ -34,7 +34,7 @@ public interface SyFlwTaskMapper extends FlwTaskMapper {
             .selectAs(FlwHisInstance::getId, PendingClaimTaskVO::getInstanceId)
             .selectAs(FlwHisInstance::getCreateBy, PendingClaimTaskVO::getLaunchBy)
             .selectAs(FlwHisInstance::getCreateTime, PendingClaimTaskVO::getLaunchTime)
-            .select(FlwProcess::getProcessName, FlwProcess::getProcessType)
+            .select(FlwExtInstance::getProcessName, FlwExtInstance::getProcessType)
             .selectAs(FlwTask::getId, PendingClaimTaskVO::getTaskId)
             .select(FlwTask::getCreateTime,
               FlwTask::getTaskName,
@@ -46,11 +46,11 @@ public interface SyFlwTaskMapper extends FlwTaskMapper {
               FlwTask::getRemindRepeat)
             .innerJoin(FlwTaskActor.class, FlwTaskActor::getTaskId, FlwTask::getId)
             .leftJoin(FlwHisInstance.class, FlwHisInstance::getId, FlwTask::getInstanceId)
-            .leftJoin(FlwProcess.class, FlwProcess::getId, FlwHisInstance::getProcessId)
+            .leftJoin(FlwExtInstance.class, FlwExtInstance::getId, FlwHisInstance::getId)
             .in(FlwTaskActor::getId, flwTaskActorIdList)
 
-            .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwProcess::getProcessName, dto.getProcessName())
-            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwProcess::getCreateBy, dto.getCreateBy())
+            .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
+            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwExtInstance::getCreateBy, dto.getCreateBy())
             .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
             .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
             .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())
@@ -71,7 +71,7 @@ public interface SyFlwTaskMapper extends FlwTaskMapper {
             .selectAs(FlwHisInstance::getCreateBy, PendingApprovalTaskVO::getLaunchBy)
             .selectAs(FlwHisInstance::getCreateTime, PendingApprovalTaskVO::getLaunchTime)
 
-            .select(FlwProcess::getProcessName, FlwProcess::getProcessType)
+            .select(FlwExtInstance::getProcessName, FlwExtInstance::getProcessType)
 
             .select(
               FlwTask::getCreateTime,
@@ -86,11 +86,11 @@ public interface SyFlwTaskMapper extends FlwTaskMapper {
 
             .innerJoin(FlwTaskActor.class, FlwTaskActor::getTaskId, FlwTask::getId)
             .leftJoin(FlwHisInstance.class, FlwHisInstance::getId, FlwTask::getInstanceId)
-            .leftJoin(FlwProcess.class, FlwProcess::getId, FlwHisInstance::getProcessId)
+            .leftJoin(FlwExtInstance.class, FlwExtInstance::getId, FlwHisInstance::getId)
             // 待审批任务 + 待认领的任务
             .in(FlwTaskActor::getActorId, flwTaskActorIdList)
-            .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwProcess::getProcessName, dto.getProcessName())
-            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwProcess::getCreateBy, dto.getCreateBy())
+            .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
+            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwExtInstance::getCreateBy, dto.getCreateBy())
             .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
             .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
             .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())
@@ -110,7 +110,7 @@ public interface SyFlwTaskMapper extends FlwTaskMapper {
             .selectAs(FlwHisInstance::getCreateBy, PendingApprovalTaskVO::getLaunchBy)
             .selectAs(FlwHisInstance::getCreateTime, PendingApprovalTaskVO::getLaunchTime)
 
-            .select(FlwProcess::getProcessName, FlwProcess::getProcessType)
+            .select(FlwExtInstance::getProcessName, FlwExtInstance::getProcessType)
 
             .select(
               FlwTask::getCreateTime,
@@ -124,10 +124,10 @@ public interface SyFlwTaskMapper extends FlwTaskMapper {
             .selectAs(FlwTask::getId, PendingApprovalTaskVO::getTaskId)
 
             .leftJoin(FlwHisInstance.class, FlwHisInstance::getId, FlwTask::getInstanceId)
-            .leftJoin(FlwProcess.class, FlwProcess::getId, FlwHisInstance::getProcessId)
+            .leftJoin(FlwExtInstance.class, FlwExtInstance::getId, FlwHisInstance::getId)
 
-            .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwProcess::getProcessName, dto.getProcessName())
-            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwProcess::getCreateBy, dto.getCreateBy())
+            .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
+            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwExtInstance::getCreateBy, dto.getCreateBy())
             .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
             .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
             .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())
