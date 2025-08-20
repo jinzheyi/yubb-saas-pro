@@ -37,9 +37,9 @@ import com.shengyu.module.system.controller.admin.flow.dto.ProcessTaskDTO;
 import com.shengyu.module.system.controller.admin.flow.dto.RejectTaskDTO;
 import com.shengyu.module.system.controller.admin.flow.dto.TaskAppendNodeDTO;
 import com.shengyu.module.system.controller.admin.flow.dto.TaskApprovalDTO;
-import com.shengyu.module.system.controller.admin.flow.dto.TaskAssigneeDTO;
 import com.shengyu.module.system.controller.admin.flow.dto.TaskCarbonCopyDTO;
 import com.shengyu.module.system.controller.admin.flow.dto.TaskJumpDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskTransferDTO;
 import com.shengyu.module.system.controller.admin.flow.vo.FlwHisTaskActorVO;
 import com.shengyu.module.system.controller.admin.flow.vo.FlwHisTaskVO;
 import com.shengyu.module.system.controller.admin.flow.vo.PendingApprovalTaskVO;
@@ -535,17 +535,23 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
 
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public boolean transfer(TaskAssigneeDTO dto) {
+    public boolean transfer(TaskTransferDTO dto) {
+        LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
+        ServiceExceptionUtil.fail(dto.getAssigneeList().stream().anyMatch(t ->
+          Objects.equals(userSession.getId(), t.getUserId())), ErrorCodeConstants.FLOW_1_002_029_060);
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
+        FlowCreator flowCreator = FlowCreator.of(String.valueOf(userSession.getId()), userSession.getNickname());
+        TaskService taskService = flowLongEngine.taskService();
+        List<FlowCreator> flowCreators = dto.toFlowCreators();
         if (Objects.equals(0, dto.getType())) {
             // 转办
-            TaskService taskService = flowLongEngine.taskService();
-            return taskService.transferTask(dto.getTaskId(), FlowHelper.getFlowCreator(), dto.toFlowCreator());
+            return taskService.transferTask(dto.getTaskId(), flowCreator, flowCreators.get(0));
+        } else if (Objects.equals(1, dto.getType())) {
+            // 委派
+            return taskService.delegateTask(dto.getTaskId(), flowCreator, flowCreators.get(0));
         }
-
-        // 委派
-        TaskService taskService = flowLongEngine.taskService();
-        return taskService.delegateTask(dto.getTaskId(), FlowHelper.getFlowCreator(), dto.toFlowCreator());
+        // 代理
+        return taskService.agentTask(dto.getTaskId(), flowCreator, flowCreators);
     }
 
     private FlwTask getFlwTask(Long taskId) {

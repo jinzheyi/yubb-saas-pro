@@ -10,6 +10,8 @@ import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,8 +21,8 @@ import lombok.Setter;
  * @author hubin
  * @since 2024-03-03
  */
-@Getter
-@Setter
+@Data
+@EqualsAndHashCode(callSuper = true)
 @Schema(name = "FlwProcessApproval", description = "流程审批记录")
 @TableName(value = "flw_process_approval", autoResultMap = true)
 public class FlwProcessApproval extends FlowBaseDO {

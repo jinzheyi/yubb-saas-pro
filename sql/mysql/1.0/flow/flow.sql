@@ -50,7 +50,7 @@ CREATE TABLE `flw_his_instance`  (
  `expire_time` datetime NULL DEFAULT NULL COMMENT '期望完成时间',
  `last_update_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '上次更新人',
  `last_update_time` datetime NULL DEFAULT NULL COMMENT '上次更新时间',
- `instance_state` smallint NOT NULL DEFAULT 0 COMMENT '状态 0，审批中 1，审批通过 2，审批拒绝 3，撤销审批 4，超时结束 5，强制终止',
+ `instance_state`     tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态 -2，已暂停状态 -1，暂存待审 0，审批中 1，审批通过 2，审批拒绝 3，撤销审批 4，超时结束 5，强制终止 6，自动通过 7，自动拒绝',
  `end_time` datetime NULL DEFAULT NULL COMMENT '结束时间',
  `duration` bigint NULL DEFAULT NULL COMMENT '处理耗时',
  PRIMARY KEY (`id`) USING BTREE,
@@ -78,8 +78,8 @@ CREATE TABLE `flw_his_task`  (
  `call_instance_id` bigint NULL DEFAULT NULL COMMENT '调用外部流程实例ID',
  `task_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '任务名称',
  `task_key` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '任务 key 唯一标识',
- `task_type` smallint NOT NULL COMMENT '任务类型',
- `perform_type` smallint NULL DEFAULT NULL COMMENT '参与类型',
+ `task_type`        tinyint(1) NOT NULL COMMENT '任务类型 -1，结束节点 0，主办 1，审批 2，抄送 3，条件审批 4，条件分支 5，调用外部流程任务 6，定时器任务 7，触发器任务 8，并行分支 9，包容分支 10，转办 11，委派 12，委派归还 13，代理人任务 14，代理人归还 15，代理人协办 16，被代理人自己完成 17，拿回任务 18，待撤回历史任务 19，拒绝任务 20，跳转任务 21，驳回跳转 22，路由跳转 23，路由分支 24，驳回重新审批跳转 25，暂存待审 30，自动通过 31，自动拒绝',
+ `perform_type`     tinyint(1) COMMENT '参与类型 0，发起 1，按顺序依次审批 2，会签 3，或签 4，票签 6，定时器 7，触发器 9，抄送',
  `action_url` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '任务处理的url',
  `variable` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '变量json',
  `assignor_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '委托人ID',
@@ -89,7 +89,7 @@ CREATE TABLE `flw_his_task`  (
  `remind_repeat` smallint NOT NULL DEFAULT 0 COMMENT '提醒次数',
  `viewed` smallint NOT NULL DEFAULT 0 COMMENT '已阅 0，否 1，是',
  `finish_time` datetime NULL DEFAULT NULL COMMENT '任务完成时间',
- `task_state` smallint NOT NULL DEFAULT 0 COMMENT '任务状态 0，活动 1，跳转 2，完成 3，拒绝 4，撤销审批  5，超时 6，终止 7，驳回终止',
+ `task_state`       tinyint(1) NOT NULL DEFAULT 0 COMMENT '任务状态 0，活动 1，跳转 2，完成 3，拒绝 4，撤销审批 5，超时 6，终止 7，驳回终止 8，自动完成 9，自动驳回 10，自动跳转 11，驳回跳转 12，驳回重新审批跳转 13，路由跳转',
  `duration` bigint NULL DEFAULT NULL COMMENT '处理耗时',
  PRIMARY KEY (`id`) USING BTREE,
  INDEX `idx_his_task_instance_id`(`instance_id` ASC) USING BTREE,
@@ -342,8 +342,8 @@ CREATE TABLE `flw_task`  (
 `parent_task_id` bigint NULL DEFAULT NULL COMMENT '父任务ID',
 `task_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '任务名称',
 `task_key` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '任务 key 唯一标识',
-`task_type` smallint NOT NULL COMMENT '任务类型',
-`perform_type` smallint NULL DEFAULT NULL COMMENT '参与类型',
+`task_type`      tinyint(1) NOT NULL COMMENT '任务类型 -1，结束节点 0，主办 1，审批 2，抄送 3，条件审批 4，条件分支 5，调用外部流程任务 6，定时器任务 7，触发器任务 8，并行分支 9，包容分支 10，转办 11，委派 12，委派归还 13，代理人任务 14，代理人归还 15，代理人协办 16，被代理人自己完成 17，拿回任务 18，待撤回历史任务 19，拒绝任务 20，跳转任务 21，驳回跳转 22，路由跳转 23，路由分支 24，驳回重新审批跳转 25，暂存待审 30，自动通过 31，自动拒绝',
+`perform_type`   tinyint(1) NULL COMMENT '参与类型 0，发起 1，按顺序依次审批 2，会签 3，或签 4，票签 6，定时器 7，触发器 9，抄送',
 `action_url` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '任务处理的url',
 `variable` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '变量json',
 `assignor_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '委托人ID',
@@ -438,6 +438,28 @@ CREATE TABLE `flw_form_category`  (
   `sort` smallint NOT NULL DEFAULT 0 COMMENT '排序',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '流程表单分类' ROW_FORMAT = Dynamic;
+
+
+-- ----------------------------
+-- Table structure for flw_transfer_configure
+-- ----------------------------
+DROP TABLE IF EXISTS `flw_transfer_configure`;
+CREATE TABLE `flw_transfer_configure`  (
+   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+   `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+   `create_id`  varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建人ID',
+   `create_by` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者名称',
+   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+   `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+   `user_id` bigint NOT NULL COMMENT '用户ID',
+   `begin_time` datetime NOT NULL COMMENT '转办开始时间',
+   `end_time` datetime NOT NULL COMMENT '转办结束时间',
+   `transfer_id` bigint NOT NULL COMMENT '转办人ID',
+   PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '流程转办配置' ROW_FORMAT = Dynamic;
 
 
 

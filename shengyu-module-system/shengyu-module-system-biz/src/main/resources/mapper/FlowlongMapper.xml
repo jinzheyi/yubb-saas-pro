@@ -37,8 +37,7 @@
     </select>
 
     <select id="selectCountByParentTaskIdAndActorId" resultType="java.lang.Integer">
-        SELECT COUNT(1) FROM flw_his_task_actor a JOIN flw_his_task h ON a.task_id=h.id
-        WHERE h.parent_task_id=(SELECT parent_task_id FROM flw_his_task WHERE id=#{parentTaskId}) AND a.actor_id=#{actorId}
+        SELECT COUNT(1) FROM flw_his_task_actor a JOIN flw_his_task h ON a.task_id=h.id WHERE h.id=#{parentTaskId} AND a.actor_id=#{actorId}
     </select>
 
 </mapper>

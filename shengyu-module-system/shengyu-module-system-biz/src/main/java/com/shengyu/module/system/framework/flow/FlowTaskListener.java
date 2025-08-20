@@ -16,11 +16,13 @@ import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import com.shengyu.framework.flowlong.engine.model.ProcessModel;
 import com.shengyu.framework.security.core.LoginUser;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.module.system.controller.admin.flow.vo.TaskTransferVO;
 import com.shengyu.module.system.dal.dataobject.flow.ApprovalContent;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
 import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.service.flow.IFlwProcessApprovalService;
 import com.shengyu.module.system.service.flow.IFlwProcessTaskService;
+import com.shengyu.module.system.service.flow.IFlwTransferConfigureService;
 import com.shengyu.module.system.service.notify.NotifySendService;
 import com.shengyu.module.system.service.permission.PermissionService;
 import org.springframework.context.ApplicationEventPublisher;
@@ -41,10 +43,17 @@ public class FlowTaskListener implements TaskListener {
     private ApplicationEventPublisher applicationEventPublisher;
     @Resource
     private IFlwProcessTaskService flwProcessTaskService;
+    @Resource
+    private IFlwTransferConfigureService flwTransferConfigureService;
 
     @Override
     public boolean notify(TaskEventType eventType, Supplier<FlwTask> supplier, List<FlwTaskActor> taskActors,
       NodeModel nodeModel, FlowCreator flowCreator) {
+        if (TaskEventType.update == eventType) {
+            // 任务更新事件不处理
+            return true;
+        }
+
         // 获取当前任务信息
         FlwTask flwTask = supplier.get();
 
@@ -52,33 +61,7 @@ public class FlowTaskListener implements TaskListener {
         if (TaskEventType.create.eq(eventType) || TaskEventType.recreate.eq(eventType)
           // 重新发起审批创建
           || TaskEventType.reApproveCreate.eq(eventType)) {
-            // 获取当前节点信息
-            if (null != flwTask) {
-                NodeModel currentNodeModel = this.getNodeModel(flwTask, nodeModel);
-                // 创建人物，发起人自己，自动跳过
-                if (TaskEventType.create.eq(eventType) && NodeApproveSelf.AutoSkip.eq(currentNodeModel.getApproveSelf())) {
-                    if (NodeSetType.initiatorThemselves.eq(currentNodeModel.getSetType())) {
-                        // 发起人自己，执行自动跳转逻辑
-                        flowLongEngine.autoJumpTask(flwTask.getId(), flowCreator);
-                    } else {
-                        // 流程发起人自动跳过处理
-                        final FlwInstance instance = flowLongEngine.queryService().getInstance(flwTask.getInstanceId());
-                        if (taskActors.stream().anyMatch(t -> Objects.equals(t.getActorId(), instance.getCreateId())
-                          || flwProcessTaskService.approvedParentNode(flwTask.getParentTaskId(), t.getActorId()))) {
-                            // 审批人与提交人为同一人时，执行自动跳转逻辑
-                            flowLongEngine.autoJumpTask(flwTask.getId(), FlowCreator.of(instance.getTenantId(),
-                              instance.getCreateId(), instance.getCreateBy()));
-                        }
-                    }
-                } else {
-                    // 推送消息，需要勾选【审批提醒】
-                    if (Boolean.TRUE.equals(currentNodeModel.getRemind())) {
-                        this.sendMessage(flwTask, flowCreator);
-                    }
-                }
-            }
-            // 创建任务直接跳过
-            return true;
+            return this.createEventHandle(eventType, flwTask, taskActors, nodeModel, flowCreator);
         }
 
         // 监听处理其它任务事件
@@ -97,20 +80,6 @@ public class FlowTaskListener implements TaskListener {
                 // 发起
                 fpa.setType(1);
             } else {
-                if (eventType == TaskEventType.assignment) {
-                    TaskType taskType = TaskType.get(flwTask.getTaskType());
-                    if (taskType == TaskType.transfer) {
-                        // 转办、代理人办理完任务直接进入下一个节点
-                        fpa.setType(6);
-                    } else if (taskType == TaskType.delegate) {
-                        // 委派、代理人办理完任务该任务重新归还给原处理人
-                        fpa.setType(7);
-                    } else if (taskType == TaskType.delegateReturn) {
-                        // 委派归还任务
-                        fpa.setType(18);
-                    }
-                }
-
                 // 获取当前节点信息
                 NodeModel currentNodeModel = this.getNodeModel(flwTask, nodeModel);
                 boolean saveContent = false;
@@ -186,6 +155,52 @@ public class FlowTaskListener implements TaskListener {
         return flwProcessApprovalService.save(fpa);
     }
 
+    private boolean createEventHandle(TaskEventType eventType, FlwTask flwTask, List<FlwTaskActor> taskActors,
+      NodeModel nodeModel, FlowCreator flowCreator) {
+        // 获取当前节点信息
+        if (null != flwTask) {
+            NodeModel currentNodeModel = this.getNodeModel(flwTask, nodeModel);
+            if (TaskEventType.create.eq(eventType)) {
+                // 创建人，发起人自己，自动跳过
+                if (NodeApproveSelf.AutoSkip.eq(currentNodeModel.getApproveSelf())) {
+                    if (NodeSetType.initiatorThemselves.eq(currentNodeModel.getSetType())) {
+                        // 发起人自己，执行自动跳转逻辑
+                        return flowLongEngine.autoJumpTask(flwTask.getId(), flowCreator);
+                    }
+
+                    // 流程发起人自动跳过处理
+                    final FlwInstance instance = flowLongEngine.queryService().getInstance(flwTask.getInstanceId());
+                    if (taskActors.stream().anyMatch(t -> Objects.equals(t.getActorId(), instance.getCreateId())
+                      // 当前节点处理人参与父节点审批
+                      || flwProcessTaskService.approvedParentNode(flwTask.getParentTaskId(), t.getActorId())
+                    )) {
+                        // 审批人与提交人为同一人时，执行自动跳转逻辑
+                        return flowLongEngine.autoJumpTask(flwTask.getId(), FlowCreator.of(instance.getTenantId(),
+                          instance.getCreateId(), instance.getCreateBy()));
+                    }
+                }
+
+                // 允许转办处理
+                if (Objects.equals(true, currentNodeModel.getAllowTransfer())) {
+                    for (FlwTaskActor fta : taskActors) {
+                        TaskTransferVO ttv = flwTransferConfigureService.getTaskTransfer(Long.valueOf(fta.getActorId()));
+                        if (null != ttv) {
+                            FlowCreator fc = FlowCreator.of(fta.getTenantId(), fta.getActorId(), fta.getActorName());
+                            return flowLongEngine.taskService().transferTask(flwTask.getId(), fc, ttv.toFlowCreator());
+                        }
+                    }
+                }
+            }
+
+            // 推送消息，需要勾选【审批提醒】
+            if (Boolean.TRUE.equals(currentNodeModel.getRemind())) {
+                this.sendMessage(flwTask, flowCreator);
+            }
+        }
+        // 创建任务直接跳过
+        return true;
+    }
+
     private NodeModel getNodeModel(FlwTask flwTask, NodeModel nodeModel) {
         if (null == nodeModel) {
             // 不存在情况从数据库中获取
@@ -215,6 +230,12 @@ public class FlowTaskListener implements TaskListener {
           || eventType == TaskEventType.rejectJump || eventType == TaskEventType.reApproveJump) {
             // 跳转
             type = 8;
+        } else if (eventType == TaskEventType.transfer) {
+            // 转办、代理人办理完任务直接进入下一个节点
+            type = 6;
+        } else if (eventType == TaskEventType.delegate) {
+            // 委派、代理人办理完任务该任务重新归还给原处理人
+            type = 7;
         } else if (eventType == TaskEventType.reclaim) {
             // 拿回
             type = 9;
@@ -230,6 +251,9 @@ public class FlowTaskListener implements TaskListener {
         } else if (eventType == TaskEventType.timeout) {
             // 超时
             type = 17;
+        } else if (eventType == TaskEventType.delegateResolve) {
+            // 委派归还任务
+            type = 18;
         } else if (eventType == TaskEventType.autoJump) {
             // 自动跳转
             type = 19;

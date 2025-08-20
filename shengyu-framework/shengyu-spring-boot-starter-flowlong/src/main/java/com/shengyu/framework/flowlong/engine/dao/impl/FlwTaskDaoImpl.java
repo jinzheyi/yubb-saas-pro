@@ -42,20 +42,20 @@ public class FlwTaskDaoImpl implements FlwTaskDao {
     @Override
     public boolean deleteByInstanceIdAndParentTaskId(Long instanceId, Long parentTaskId) {
         return taskMapper.delete(Wrappers.<FlwTask>lambdaQuery()
-                .eq(FlwTask::getInstanceId, instanceId)
-                .eq(FlwTask::getParentTaskId, parentTaskId)) > 0;
+          .eq(FlwTask::getInstanceId, instanceId)
+          .eq(FlwTask::getParentTaskId, parentTaskId)) > 0;
     }
 
     @Override
     public boolean deleteByInstanceIds(List<Long> instanceIds) {
         return taskMapper.delete(Wrappers.<FlwTask>lambdaQuery()
-                .in(FlwTask::getInstanceId, instanceIds)) > 0;
+          .in(FlwTask::getInstanceId, instanceIds)) > 0;
     }
 
     @Override
     public boolean deleteByIds(List<Long> ids) {
         return taskMapper.delete(Wrappers.<FlwTask>lambdaQuery()
-                .in(FlwTask::getId, ids)) > 0;
+          .in(FlwTask::getId, ids)) > 0;
     }
 
     @Override
@@ -71,58 +71,57 @@ public class FlwTaskDaoImpl implements FlwTaskDao {
     @Override
     public Long selectCountByParentTaskId(Long parentTaskId) {
         return taskMapper.selectCount(Wrappers.<FlwTask>lambdaQuery()
-                .eq(FlwTask::getParentTaskId, parentTaskId));
+          .eq(FlwTask::getParentTaskId, parentTaskId));
     }
 
     @Override
     public Long selectCountByInstanceId(Long instanceId) {
         return taskMapper.selectCount(Wrappers.<FlwTask>lambdaQuery()
-                .eq(FlwTask::getInstanceId, instanceId));
+          .eq(FlwTask::getInstanceId, instanceId));
     }
 
     @Override
     public List<FlwTask> selectListByInstanceId(Long instanceId) {
         return taskMapper.selectList(Wrappers.<FlwTask>lambdaQuery()
-                .eq(FlwTask::getInstanceId, instanceId));
+          .eq(FlwTask::getInstanceId, instanceId));
     }
 
     @Override
     public List<FlwTask> selectListByInstanceIdAndTaskName(Long instanceId, String taskName) {
         return taskMapper.selectList(Wrappers.<FlwTask>lambdaQuery()
-                .eq(FlwTask::getInstanceId, instanceId)
-                .eq(FlwTask::getTaskName, taskName));
+          .eq(FlwTask::getInstanceId, instanceId)
+          .eq(FlwTask::getTaskName, taskName));
     }
 
     @Override
     public List<FlwTask> selectListByInstanceIdAndTaskKey(Long instanceId, String taskKey) {
         return taskMapper.selectList(Wrappers.<FlwTask>lambdaQuery()
-                .eq(FlwTask::getInstanceId, instanceId)
-                .eq(FlwTask::getTaskKey, taskKey));
+          .eq(FlwTask::getInstanceId, instanceId)
+          .eq(FlwTask::getTaskKey, taskKey));
     }
 
     @Override
     public List<FlwTask> selectListByInstanceIdAndTaskNames(Long instanceId, List<String> taskNames) {
         return taskMapper.selectList(Wrappers.<FlwTask>lambdaQuery()
-                .eq(FlwTask::getInstanceId, instanceId)
-                .in(FlwTask::getTaskName, taskNames));
+          .eq(FlwTask::getInstanceId, instanceId)
+          .in(FlwTask::getTaskName, taskNames));
     }
 
     @Override
     public List<FlwTask> selectListTimeoutOrRemindTasks(Date currentDate) {
-        return taskMapper.selectList(Wrappers.<FlwTask>lambdaQuery()
-                .le(FlwTask::getExpireTime, currentDate)
-                .or().le(FlwTask::getRemindTime, currentDate));
+        return taskMapper.selectList(Wrappers.<FlwTask>lambdaQuery().le(FlwTask::getExpireTime, currentDate)
+          .or(t -> t.le(FlwTask::getRemindTime, currentDate).gt(FlwTask::getRemindRepeat, 0)));
     }
 
     @Override
     public List<FlwTask> selectListByParentTaskId(Long parentTaskId) {
         return taskMapper.selectList(Wrappers.<FlwTask>lambdaQuery()
-                .eq(FlwTask::getParentTaskId, parentTaskId));
+          .eq(FlwTask::getParentTaskId, parentTaskId));
     }
 
     @Override
     public List<FlwTask> selectListByParentTaskIds(List<Long> parentTaskIds) {
         return taskMapper.selectList(Wrappers.<FlwTask>lambdaQuery()
-                .in(FlwTask::getParentTaskId, parentTaskIds));
+          .in(FlwTask::getParentTaskId, parentTaskIds));
     }
 }

@@ -119,8 +119,8 @@ public class TaskServiceImpl implements TaskService {
             eventType = TaskEventType.restart;
         }
 
-        // 迁移任务至历史表
-        this.moveToHisTask(flwTask, taskState, flowCreator);
+        // 设置执行参数，迁移任务至历史表
+        this.moveToHisTask(flwTask.putAllVariable(args), taskState, flowCreator);
 
         // 任务监听器通知
         this.taskNotify(eventType, () -> flwTask, null, null, flowCreator);
@@ -222,10 +222,8 @@ public class TaskServiceImpl implements TaskService {
             for (FlwTask ft : fts) {
                 // 归档所有或归档条件子节点任务
                 if (moveAll || allNextNodeKeys.stream().anyMatch(t -> Objects.equals(t, ft.getTaskKey()))) {
-                    // 设置执行参数
-                    ft.putAllVariable(args);
-                    // 归档历史
-                    this.moveToHisTask(ft, taskState, flowCreator);
+                    // 设置执行参数，归档历史
+                    this.moveToHisTask(ft.putAllVariable(args), taskState, flowCreator);
                 }
             }
         }
@@ -590,6 +588,7 @@ public class TaskServiceImpl implements TaskService {
      *
      * @param taskId               任务ID
      * @param taskType             任务类型
+     * @param taskEventType        任务事件类型
      * @param flowCreator          任务参与者
      * @param assigneeFlowCreators 指定办理人列表
      * @param args                 任务参数
@@ -597,7 +596,7 @@ public class TaskServiceImpl implements TaskService {
      * @return true 成功 false 失败
      */
     @Override
-    public boolean assigneeTask(Long taskId, TaskType taskType, FlowCreator flowCreator, List<FlowCreator> assigneeFlowCreators,
+    public boolean assigneeTask(Long taskId, TaskType taskType, TaskEventType taskEventType, FlowCreator flowCreator, List<FlowCreator> assigneeFlowCreators,
       Map<String, Object> args, Function<FlwTask, Boolean> check) {
         // 受理任务权限验证
         FlwTaskActor flwTaskActor = this.getAllowedFlwTaskActor(taskId, flowCreator);
@@ -653,7 +652,7 @@ public class TaskServiceImpl implements TaskService {
         taskDao.updateById(flwTask);
 
         // 任务监听器通知
-        this.taskNotify(TaskEventType.assignment, () -> {
+        this.taskNotify(taskEventType, () -> {
             dbFlwTask.taskType(taskType);
             dbFlwTask.setAssignorId(flwTask.getAssignorId());
             dbFlwTask.setAssignor(flwTask.getAssignor());

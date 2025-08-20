@@ -18,15 +18,6 @@ import lombok.Setter;
 @Setter
 public class TaskAssigneeDTO {
 
-    @Schema(description = "流程任务ID")
-    @NotNull
-    @PositiveOrZero
-    private Long taskId;
-
-    @Schema(description = "类型 0，转办 1，委派")
-    @NotNull
-    private Integer type;
-
     @Schema(description = "用户ID")
     @NotNull
     @PositiveOrZero
@@ -35,9 +26,6 @@ public class TaskAssigneeDTO {
     @Schema(description = "用户名")
     @NotBlank
     private String username;
-
-    @Schema(description = "意见评论")
-    private String content;
 
     public FlowCreator toFlowCreator() {
         return FlowCreator.of(String.valueOf(this.userId), this.username);

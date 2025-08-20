@@ -125,7 +125,7 @@ public interface IFlwProcessTaskService {
     /**
      * 转交
      */
-    boolean transfer(TaskAssigneeDTO dto);
+    boolean transfer(TaskTransferDTO dto);
 
     /**
      * 审批评论
@@ -163,7 +163,7 @@ public interface IFlwProcessTaskService {
     boolean urgeByInstanceId(Long instanceId);
 
     /**
-     * 参与审批父节点
+     * 当前节点处理人参与父节点审批
      *
      * @param parentTaskId 父任务ID
      * @param actorId 参与者

@@ -389,6 +389,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
             ServiceExceptionUtil.equals(4, checkNodeModel, ErrorCodeConstants.FLOW_1_002_029_034);
             ServiceExceptionUtil.equals(5, checkNodeModel, ErrorCodeConstants.FLOW_1_002_029_035);
             ServiceExceptionUtil.equals(6, checkNodeModel, ErrorCodeConstants.FLOW_1_002_029_052);
+            ServiceExceptionUtil.equals(7, checkNodeModel, ErrorCodeConstants.FLOW_1_002_029_056);
         }
         ServiceExceptionUtil.fail(null == rootNode.getChildNode(), ErrorCodeConstants.FLOW_1_002_029_036);
         int checkConditionNode = ModelHelper.checkConditionNode(rootNode);

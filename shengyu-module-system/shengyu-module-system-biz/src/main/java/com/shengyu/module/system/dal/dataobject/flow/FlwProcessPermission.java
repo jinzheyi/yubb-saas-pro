@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;
 import javax.validation.constraints.Size;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,8 +21,8 @@ import java.util.Objects;
  * @author 青苗
  * @since 2023-09-07
  */
-@Getter
-@Setter
+@Data
+@EqualsAndHashCode(callSuper = true)
 @Schema(name = "FlwProcessPermission", description = "流程定义权限")
 public class FlwProcessPermission extends FlowBaseDO {
 

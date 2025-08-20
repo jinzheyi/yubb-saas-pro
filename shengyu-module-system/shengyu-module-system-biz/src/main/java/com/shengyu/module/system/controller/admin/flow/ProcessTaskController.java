@@ -154,7 +154,7 @@ public class ProcessTaskController {
     @Operation(summary = "转交任务")
     @PreAuthorize("@ss.hasPermission('flw:processTask:transfer')")
     @PostMapping("/transfer")
-    public CommonResult<Boolean> transfer(@Validated @RequestBody TaskAssigneeDTO dto) {
+    public CommonResult<Boolean> transfer(@Validated @RequestBody TaskTransferDTO dto) {
         return success(processTaskService.transfer(dto));
     }
 

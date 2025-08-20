@@ -12,6 +12,8 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;
 import javax.validation.constraints.Size;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,8 +23,8 @@ import lombok.Setter;
  * @author hubin
  * @since 2024-05-19
  */
-@Getter
-@Setter
+@Data
+@EqualsAndHashCode(callSuper = true)
 @Schema(name = "FlwFormTemplate", description = "流程表单模板")
 @TableName("flw_form_template")
 public class FlwFormTemplate extends FlowBaseDO {

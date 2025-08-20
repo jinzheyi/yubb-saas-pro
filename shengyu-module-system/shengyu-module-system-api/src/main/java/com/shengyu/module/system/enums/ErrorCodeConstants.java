@@ -259,6 +259,11 @@ public interface ErrorCodeConstants {
     ErrorCode FLOW_1_002_029_053 = new ErrorCode(1_002_029_053, "无该任务的操作权限");
     ErrorCode FLOW_1_002_029_054 = new ErrorCode(1_002_029_054, "请登录后再操作审批流程");
     ErrorCode FLOW_1_002_029_055 = new ErrorCode(1_002_029_055, "无权限编辑操作审批流程");
+    ErrorCode FLOW_1_002_029_056 = new ErrorCode(1_002_029_056, "指定成员审批配置错误，请确保配置处理人员");
+    ErrorCode FLOW_1_002_029_057 = new ErrorCode(1_002_029_057, "指定用户ID不能为空");
+    ErrorCode FLOW_1_002_029_058 = new ErrorCode(1_002_029_058, "转办人员不能设置为自己");
+    ErrorCode FLOW_1_002_029_059 = new ErrorCode(1_002_029_059, "转办时间待办人不能为空");
+    ErrorCode FLOW_1_002_029_060 = new ErrorCode(1_002_029_060, "转交人员不能设置为自己");
 
 
 }
