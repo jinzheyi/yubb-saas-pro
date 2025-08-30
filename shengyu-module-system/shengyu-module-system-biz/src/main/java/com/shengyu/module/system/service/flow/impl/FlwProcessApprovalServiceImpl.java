@@ -2,7 +2,7 @@ package com.shengyu.module.system.service.flow.impl;
 
 import com.shengyu.framework.mybatis.core.service.BaseServiceImpl;
 import com.shengyu.module.system.controller.admin.flow.dto.ProcessApprovalDTO;
-import com.shengyu.module.system.dal.dataobject.flow.ApprovalContent;
+import com.shengyu.framework.flowlong.engine.entity.ApprovalContent;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
 import com.shengyu.framework.flowlong.engine.FlowLongEngine;
 import com.shengyu.framework.flowlong.engine.entity.FlwTask;
@@ -60,7 +60,13 @@ public class FlwProcessApprovalServiceImpl extends BaseServiceImpl<FlwProcessApp
     }
 
     @Override
-    public boolean comment(ProcessApprovalDTO dto) {
-        return super.save(getFlwProcessApproval(dto.getInstanceId(), dto.getTaskId(), 0, dto.getContent()));
+    public boolean comment(ProcessApprovalDTO dto, Integer type) {
+        return super.save(getFlwProcessApproval(dto.getInstanceId(), dto.getTaskId(), type, dto.getContent()));
     }
+
+    @Override
+    public List<FlwProcessApproval> listByTaskId(Long taskId) {
+        return lambdaQuery().eq(FlwProcessApproval::getTaskId, taskId).list();
+    }
+
 }

@@ -136,12 +136,20 @@ public interface QueryService {
     Optional<List<FlwTaskActor>> getActiveTaskActorsByInstanceId(Long instanceId);
 
     /**
-     * 根据流程实例ID获取历史任务参与者数组
+     * 根据流程实例ID获取历史任务抄送参与者数组
      *
      * @param instanceId 历史任务ID
-     * @return 当前活动任务参与者列表
+     * @return 当前活动任务抄送参与者列表
      */
     Optional<List<FlwHisTaskActor>> getCcTaskActorsByInstanceId(Long instanceId);
+
+    /**
+     * 根据流程实例ID获取历史任务传阅参与者数组
+     *
+     * @param instanceId 历史任务ID
+     * @return 当前活动任务传阅参与者列表
+     */
+    Optional<List<FlwHisTaskActor>> getCirculateTaskActorsByInstanceId(Long instanceId);
 
     /**
      * 根据任务ID获取活动任务参与者数组

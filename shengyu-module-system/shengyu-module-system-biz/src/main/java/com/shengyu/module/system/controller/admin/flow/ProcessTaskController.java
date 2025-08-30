@@ -3,6 +3,7 @@ package com.shengyu.module.system.controller.admin.flow;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.flowlong.engine.core.PageParam;
+import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
 import com.shengyu.module.system.controller.admin.flow.dto.*;
 import com.shengyu.module.system.controller.admin.flow.vo.*;
 import com.shengyu.module.system.framework.flow.FlowHelper;
@@ -53,11 +54,18 @@ public class ProcessTaskController {
         return success(processTaskService.pageAllPendingApproval(pageParam));
     }
 
-    @Operation(summary = "我收到的任务分页列表")
+    @Operation(summary = "我收到的任务分页列表-抄送给我的")
     @PreAuthorize("@ss.hasPermission('flw:processTask:pageMyReceived')")
     @PostMapping("/page-my-received")
     public CommonResult<Page<ProcessTaskVO>> pageMyReceived(@RequestBody PageParam<ProcessTaskDTO> pageParam) {
-        return success(processTaskService.pageMyReceived(pageParam));
+        return success(processTaskService.pageMyReceived(pageParam, TaskType.cc.getValue()));
+    }
+
+    @ApiOperation("我收到的传阅任务分页列表")
+    //@RequiresPermissions("flw:processTask:pageMyCirculate")
+    @PostMapping("/page-my-circulate")
+    public Page<ProcessTaskVO> pageMyCirculate(@RequestBody PageParam<ProcessTaskDTO> pageParam) {
+        return processTaskService.pageMyReceived(pageParam, TaskType.circulate.getValue());
     }
 
     @Operation(summary = "我的申请任务分页列表")
@@ -123,11 +131,18 @@ public class ProcessTaskController {
         return success(processTaskService.rejection(dto));
     }
 
-    @Operation(summary = "设置已阅读")
+    @Operation(summary = "设置已阅读-任务本身的已读未读")
     @PreAuthorize("@ss.hasPermission('flw:processTask:viewed')")
     @PostMapping("/viewed-{taskId}")
     public CommonResult<Boolean> viewed(@PathVariable("taskId") Long taskId) {
         return success(processTaskService.viewed(taskId));
+    }
+
+    @ApiOperation("设置传阅已阅")
+    //@RequiresPermissions("flw:processTask:circulateViewed")
+    @PostMapping("/circulateViewed")
+    public boolean circulateViewed(@Validated @RequestBody TaskCirculateViewDTO dto) {
+        return processTaskService.circulateViewed(dto);
     }
 
     @Operation(summary = "拿回任务")
@@ -177,6 +192,13 @@ public class ProcessTaskController {
     @PostMapping("/carbon-copy")
     public CommonResult<Boolean> carbonCopy(@Validated @RequestBody TaskCarbonCopyDTO dto) {
         return success(processTaskService.carbonCopy(dto));
+    }
+
+    @ApiOperation("手动传阅任务")
+    //@RequiresPermissions("flw:processTask:manualCirculate")
+    @PostMapping("/manual-circulate")
+    public boolean manualCirculate(@Validated @RequestBody ManualCirculateDTO dto) {
+        return processTaskService.manualCirculate(dto);
     }
 
     @Operation(summary = "审批加签")

@@ -6,7 +6,7 @@ import com.shengyu.framework.flowlong.engine.core.enums.ProcessType;
 import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
 import com.shengyu.framework.flowlong.engine.mapper.FlwProcessMapper;
 import com.shengyu.module.system.controller.admin.flow.vo.FlwProcessVO;
-import com.shengyu.module.system.dal.dataobject.flow.FlwProcessConfigure;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcessConfigure;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;

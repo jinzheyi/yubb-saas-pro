@@ -17,6 +17,7 @@ import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
 import com.shengyu.framework.flowlong.engine.dao.FlwExtInstanceDao;
 import com.shengyu.framework.flowlong.engine.dao.FlwHisInstanceDao;
 import com.shengyu.framework.flowlong.engine.dao.FlwInstanceDao;
+import com.shengyu.framework.flowlong.engine.dao.FlwProcessConfigureDao;
 import com.shengyu.framework.flowlong.engine.entity.*;
 import com.shengyu.framework.flowlong.engine.listener.InstanceListener;
 import com.shengyu.framework.flowlong.engine.model.ConditionNode;
@@ -50,9 +51,10 @@ public class RuntimeServiceImpl implements RuntimeService {
     protected final FlwInstanceDao instanceDao;
     protected final FlwHisInstanceDao hisInstanceDao;
     protected final FlwExtInstanceDao extInstanceDao;
+    protected final FlwProcessConfigureDao flwProcessConfigureDao;
 
     public RuntimeServiceImpl(InstanceListener instanceListener, FlowLongIdGenerator flowLongIdGenerator, QueryService queryService, TaskService taskService,
-      FlwInstanceDao instanceDao, FlwHisInstanceDao hisInstanceDao, FlwExtInstanceDao extInstanceDao) {
+      FlwInstanceDao instanceDao, FlwHisInstanceDao hisInstanceDao, FlwExtInstanceDao extInstanceDao, FlwProcessConfigureDao flwProcessConfigureDao) {
         this.instanceListener = instanceListener;
         this.flowLongIdGenerator = flowLongIdGenerator;
         this.queryService = queryService;
@@ -60,6 +62,7 @@ public class RuntimeServiceImpl implements RuntimeService {
         this.instanceDao = instanceDao;
         this.hisInstanceDao = hisInstanceDao;
         this.extInstanceDao = extInstanceDao;
+        this.flwProcessConfigureDao = flwProcessConfigureDao;
     }
 
     /**
@@ -362,6 +365,7 @@ public class RuntimeServiceImpl implements RuntimeService {
         FlwExtInstance extInstance = new FlwExtInstance();
         extInstance.setId(instanceId);
         extInstance.setModelContent(FlowLongContext.toJson(processModel.cleanParentNode()));
+        extInstance.setTaskKey(processModel.getNodeConfig().getNodeKey());
         return extInstanceDao.updateById(extInstance);
     }
 
@@ -465,6 +469,7 @@ public class RuntimeServiceImpl implements RuntimeService {
         FlwExtInstance temp = new FlwExtInstance();
         temp.setId(flwExtInstance.getId());
         temp.setModelContent(FlowLongContext.toJson(processModel.cleanParentNode()));
+        temp.setTaskKey(processModel.getNodeConfig().getNodeKey());
         Assert.isFalse(extInstanceDao.updateById(temp), "Update FlwExtInstance Failed");
 
         // 使缓存失效

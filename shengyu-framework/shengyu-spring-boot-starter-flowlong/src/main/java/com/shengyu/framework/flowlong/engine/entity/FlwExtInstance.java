@@ -8,6 +8,7 @@ import com.shengyu.framework.flowlong.engine.FlowConstants;
 import com.shengyu.framework.flowlong.engine.ProcessModelCache;
 import com.shengyu.framework.flowlong.engine.core.FlowLongContext;
 import com.shengyu.framework.flowlong.engine.model.ProcessModel;
+import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -50,7 +51,20 @@ public class FlwExtInstance extends FlowEntity implements ProcessModelCache, Ser
      */
     private String modelContent;
 
-    public static FlwExtInstance of(FlwInstance flwInstance, FlwProcess flwProcess) {
+    /**
+     * 流程设置定义JSON内容
+     * <p>
+     *  在发起的时候拷贝自流程定义模型流程设置。
+     * </p>
+     */
+    private String processSetting;
+
+    /**
+     * 模型第一个节点key（发起人）
+     */
+    private String taskKey;
+
+    public static FlwExtInstance of(FlwInstance flwInstance, FlwProcess flwProcess, FlwProcessConfigure flwProcessConfigure) {
         FlwExtInstance ext = new FlwExtInstance();
         ext.id = flwInstance.getId();
         ext.tenantId = flwInstance.getTenantId();
@@ -58,6 +72,8 @@ public class FlwExtInstance extends FlowEntity implements ProcessModelCache, Ser
         ext.processName = flwProcess.getProcessName();
         ext.processType = flwProcess.getProcessType();
         ext.modelContent = flwProcess.getModelContent();
+        ext.taskKey = FlowLongContext.fromJson(flwProcess.getModelContent(), ProcessModel.class).getNodeConfig().getNodeKey();
+        ext.processSetting = Objects.nonNull(flwProcessConfigure)? JacksonUtils.toJson(flwProcessConfigure.getProcessSetting()) : null;
         return ext;
     }
 

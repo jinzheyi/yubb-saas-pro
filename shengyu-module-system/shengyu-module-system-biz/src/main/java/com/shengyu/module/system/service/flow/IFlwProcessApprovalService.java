@@ -27,6 +27,13 @@ public interface IFlwProcessApprovalService extends IBaseService<FlwProcessAppro
     /**
      * 审批评论
      */
-    boolean comment(ProcessApprovalDTO dto);
+    boolean comment(ProcessApprovalDTO dto, Integer type);
+
+    /**
+     * 根据任务ID查询审批记录列表
+     * @param taskId 任务ID
+     * @return 审批记录列表
+     */
+    List<FlwProcessApproval> listByTaskId(Long taskId);
 
 }

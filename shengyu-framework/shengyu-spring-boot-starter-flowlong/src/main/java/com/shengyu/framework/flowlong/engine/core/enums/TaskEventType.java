@@ -44,6 +44,14 @@ public enum TaskEventType {
      */
     createCc,
     /**
+     * 传阅
+     */
+    circulate,
+    /**
+     * 手动创建传阅任务
+     */
+    createCirculate,
+    /**
      * 代理
      */
     agent,

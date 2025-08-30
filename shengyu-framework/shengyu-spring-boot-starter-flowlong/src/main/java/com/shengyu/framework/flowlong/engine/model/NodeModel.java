@@ -203,6 +203,10 @@ public class NodeModel implements ModelInstance, Serializable {
      */
     private Boolean allowCc;
     /**
+     * 允许审批节点手动创建传阅任务
+     */
+    private Boolean allowCirculate;
+    /**
      * 审批人与提交人为同一人时 {@link NodeApproveSelf}
      * <p>
      * 0，由发起人对自己审批 1，自动跳过 2，转交给直接上级审批 3，转交给部门负责人审批
@@ -308,7 +312,7 @@ public class NodeModel implements ModelInstance, Serializable {
         /*
          * 执行 1、审批任务 2、创建抄送 5、办理子流程 6、定时器任务 7、触发器任务
          */
-        if (TaskType.approval.eq(this.type) || TaskType.cc.eq(this.type)
+        if (TaskType.approval.eq(this.type) || TaskType.cc.eq(this.type) || TaskType.circulate.eq(this.type)
           || TaskType.callProcess.eq(this.type) || TaskType.timer.eq(this.type)
           || TaskType.trigger.eq(this.type)) {
 
@@ -500,6 +504,15 @@ public class NodeModel implements ModelInstance, Serializable {
      */
     public boolean ccNode() {
         return TaskType.cc.eq(type);
+    }
+
+    /**
+     * 判断是否为传阅节点
+     *
+     * @return true 是 false 否
+     */
+    public boolean circulateNode() {
+        return TaskType.circulate.eq(type);
     }
 
     /**

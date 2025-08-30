@@ -20,6 +20,7 @@ CREATE TABLE `flw_ext_instance`  (
  `process_id` bigint NOT NULL COMMENT '流程定义ID',
  `process_name`  varchar(100) COMMENT '流程名称',
  `process_type`  varchar(100) COMMENT '流程类型',
+ `task_key`  varchar(100) COMMENT '模型第一个节点key（发起人）',
  `model_content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '流程模型定义JSON内容',
  PRIMARY KEY (`id`) USING BTREE,
  CONSTRAINT `fk_ext_instance_id` FOREIGN KEY (`id`) REFERENCES `flw_his_instance` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
@@ -120,6 +121,7 @@ CREATE TABLE `flw_his_task_actor`  (
    `agent_id`    varchar(100) COMMENT '代理人ID',
    `agent_type`  int          COMMENT '代理人类型 0，代理 1，被代理 2，认领角色 3，认领部门',
    `extend`      json COMMENT '扩展json',
+   `viewed` smallint NOT NULL DEFAULT 0 COMMENT '已阅 0，否 1，是',
    PRIMARY KEY (`id`) USING BTREE,
    INDEX `idx_his_task_actor_task_id`(`task_id` ASC) USING BTREE,
    CONSTRAINT `flw_his_task_actor_task_id_fkey` FOREIGN KEY (`task_id`) REFERENCES `flw_his_task` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
@@ -384,6 +386,7 @@ CREATE TABLE `flw_task_actor`  (
 `agent_id`    varchar(100) COMMENT '代理人ID',
 `agent_type`  int          COMMENT '代理人类型 0，代理 1，被代理 2，认领角色 3，认领部门',
 `extend`      json COMMENT '扩展json',
+`viewed` smallint NOT NULL DEFAULT '0' COMMENT '已阅 0，否 1，是',
 PRIMARY KEY (`id`) USING BTREE,
 INDEX `idx_task_actor_task_id`(`task_id` ASC) USING BTREE,
 CONSTRAINT `flw_task_actor_task_id_fkey` FOREIGN KEY (`task_id`) REFERENCES `flw_task` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT

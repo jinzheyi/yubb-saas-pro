@@ -19,6 +19,7 @@ import com.shengyu.framework.flowlong.engine.model.ProcessModel;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -346,6 +347,29 @@ public interface FlowLongEngine {
     default boolean createCcTask(FlwTask flwTask, List<NodeAssignee> ccUserList, FlowCreator flowCreator) {
         ProcessModel processModel = runtimeService().getProcessModelByInstanceId(flwTask.getInstanceId());
         return this.createCcTask(processModel.getNode(flwTask.getTaskKey()), flwTask, ccUserList, flowCreator);
+    }
+
+    /**
+     * 创建传阅任务
+     * <p>默认不校验是否重复传阅</p>
+     *
+     * @param taskModel   任务模型
+     * @param flwTask     当前任务
+     * @param flwHisTask  历史任务
+     * @param circulateUserList  传阅任务分配到任务的人或角色列表
+     * @param flowCreator 任务创建者
+     */
+    boolean createCirculateTask(NodeModel taskModel, FlwTask flwTask, FlwHisTask flwHisTask, List<NodeAssignee> circulateUserList, FlowCreator flowCreator);
+
+    /**
+     * 创建传阅任务
+     */
+    default boolean createCirculateTask(FlwTask flwTask, FlwHisTask flwHisTask, List<NodeAssignee> circulateUserList, FlowCreator flowCreator) {
+        Long instanceId = Objects.nonNull(flwTask)? flwTask.getInstanceId() : flwHisTask.getInstanceId();
+        ProcessModel processModel = runtimeService().getProcessModelByInstanceId(instanceId);
+        // 如果任务对象为空则说明发起传阅得入口是我得被传阅页面入口发起得此时任务对象为空
+        NodeModel taskModel = Objects.nonNull(flwTask)? processModel.getNode(flwTask.getTaskKey()) : processModel.getNode(flwHisTask.getTaskKey());
+        return this.createCirculateTask(taskModel, flwTask, flwHisTask, circulateUserList, flowCreator);
     }
 
     /**

@@ -4,6 +4,7 @@
  */
 package com.shengyu.framework.flowlong.engine.model;
 
+import cn.hutool.core.text.CharSequenceUtil;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import lombok.Getter;
@@ -42,6 +43,10 @@ public class NodeAssignee implements Serializable {
      */
     private Integer weight;
     /**
+     * 已阅 0，否 1，是
+     */
+    private Integer viewed;
+    /**
      * 扩展配置，用于存储头像、等其它信息
      */
     private Map<String, Object> extendConfig;
@@ -52,6 +57,9 @@ public class NodeAssignee implements Serializable {
         nodeAssignee.setId(flwTaskActor.getActorId());
         nodeAssignee.setName(flwTaskActor.getActorName());
         nodeAssignee.setWeight(flwTaskActor.getWeight());
+        nodeAssignee.setViewed(flwTaskActor.getViewed());
+        nodeAssignee.setExtendConfig(CharSequenceUtil.isNotBlank(flwTaskActor.getExtend())?
+          FlowLongContext.str2map(flwTaskActor.getExtend()) : null);
         return nodeAssignee;
     }
 

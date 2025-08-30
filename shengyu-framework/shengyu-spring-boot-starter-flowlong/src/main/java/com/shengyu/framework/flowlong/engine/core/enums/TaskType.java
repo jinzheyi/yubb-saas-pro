@@ -137,7 +137,13 @@ public enum TaskType {
     /**
      * 自动拒绝
      */
-    autoReject(31);
+    autoReject(31),
+    /**
+     * 传阅
+     */
+    circulate(500),
+
+    ;
 
     private final int value;
 

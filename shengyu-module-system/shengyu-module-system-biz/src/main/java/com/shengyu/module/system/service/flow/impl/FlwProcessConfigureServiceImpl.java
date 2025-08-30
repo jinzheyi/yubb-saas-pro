@@ -4,10 +4,11 @@ import cn.hutool.core.collection.CollectionUtil;
 import com.shengyu.framework.mybatis.core.service.BaseServiceImpl;
 import com.shengyu.module.system.controller.admin.flow.dto.FlwCategorySortDTO;
 import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessDTO;
-import com.shengyu.module.system.dal.dataobject.flow.FlwProcessConfigure;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcessConfigure;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.shengyu.module.system.dal.mysql.flow.FlwProcessConfigureMapper;
+import com.shengyu.framework.flowlong.engine.mapper.FlwProcessConfigureMapper;
+import com.shengyu.module.system.dal.mysql.flow.SyFlwProcessConfigureMapper;
 import com.shengyu.module.system.service.flow.IFlwProcessConfigureService;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -20,7 +21,7 @@ import java.util.Objects;
  * @since 2023-09-07
  */
 @Service
-public class FlwProcessConfigureServiceImpl extends BaseServiceImpl<FlwProcessConfigureMapper, FlwProcessConfigure> implements IFlwProcessConfigureService {
+public class FlwProcessConfigureServiceImpl extends BaseServiceImpl<SyFlwProcessConfigureMapper, FlwProcessConfigure> implements IFlwProcessConfigureService {
 
     @Override
     public boolean saveByDto(Long processId, FlwProcessDTO dto) {

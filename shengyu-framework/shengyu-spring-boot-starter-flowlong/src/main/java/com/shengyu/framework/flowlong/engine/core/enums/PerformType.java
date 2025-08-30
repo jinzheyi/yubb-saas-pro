@@ -52,7 +52,14 @@ public enum PerformType {
     /**
      * 抄送
      */
-    copy(9);
+    copy(9),
+
+    /**
+     * 传阅
+     */
+    loop(500),
+
+    ;
 
     private final int value;
 

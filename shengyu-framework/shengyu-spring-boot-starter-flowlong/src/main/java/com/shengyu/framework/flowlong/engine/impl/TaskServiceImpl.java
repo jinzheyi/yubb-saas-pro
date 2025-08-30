@@ -10,6 +10,7 @@ import com.shengyu.framework.flowlong.engine.assist.DateUtils;
 import com.shengyu.framework.flowlong.engine.assist.ObjectUtils;
 import com.shengyu.framework.flowlong.engine.core.Execution;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
+import com.shengyu.framework.flowlong.engine.core.FlowLongContext;
 import com.shengyu.framework.flowlong.engine.core.enums.*;
 import com.shengyu.framework.flowlong.engine.dao.*;
 import com.shengyu.framework.flowlong.engine.entity.*;
@@ -914,9 +915,9 @@ public class TaskServiceImpl implements TaskService {
             return flwTasksOptional;
         }
 
-        // 触发器任务、定时器任务、抄送任务 情况
+        // 触发器任务、定时器任务、抄送任务、传阅任务 情况
         if (TaskType.trigger.eq(hisTask.getTaskType()) || TaskType.timer.eq(hisTask.getTaskType())
-          || TaskType.cc.eq(hisTask.getTaskType())) {
+          || TaskType.cc.eq(hisTask.getTaskType())|| TaskType.circulate.eq(hisTask.getTaskType())) {
             Long thisParentTaskId = hisTask.getParentTaskId();
             if (null == thisParentTaskId) {
                 return flwTasksOptional;
@@ -1076,7 +1077,78 @@ public class TaskServiceImpl implements TaskService {
         for (NodeAssignee nodeUser : ccUserList) {
             FlwHisTaskActor hta = FlwHisTaskActor.ofNodeAssignee(nodeUser, fht.getInstanceId(), fht.getId());
             hta.setId(flowLongIdGenerator.getId(hta.getId()));
-            hta.setWeight(6);
+            hta.setWeight(TaskWeightEnum.CC.getValue());
+            if (hisTaskActorDao.insert(hta)) {
+                htaList.add(hta);
+            }
+        }
+
+        // 任务监听器通知
+        this.taskNotify(eventType, () -> fht, htaList, taskModel, flowCreator);
+        return true;
+    }
+
+    /**
+     * 创建传阅任务
+     * <p>默认不校验是否重复传阅</p>
+     *
+     * @param taskModel   任务模型
+     * @param flwTask     当前任务
+     * @param flwHisTask  历史任务
+     * @param circulateUserList  传阅任务分配到任务的人或角色列表
+     * @param flowCreator 任务创建者
+     */
+    @Override
+    public boolean createCirculateTask(NodeModel taskModel, FlwTask flwTask, FlwHisTask flwHisTask, List<NodeAssignee> circulateUserList, FlowCreator flowCreator) {
+        if (ObjectUtils.isEmpty(circulateUserList)) {
+            return false;
+        }
+        TaskEventType eventType = TaskEventType.circulate;
+        FlwHisTask fht;
+        if (Objects.nonNull(flwTask)) {
+            FlwTask newFlwTask;
+            if (TaskType.circulate.eq(taskModel.getType())) {
+                // 传阅任务
+                newFlwTask = flwTask;
+            } else {
+                // 非抄送任务手动创建传阅，需要克隆当前任务
+                eventType = TaskEventType.createCirculate;
+                newFlwTask = flwTask.cloneTask(flowCreator.getCreateId(), flowCreator.getCreateBy());
+            }
+            newFlwTask.setId(flowLongIdGenerator.getId(newFlwTask.getId()));
+            taskDao.insert(newFlwTask);
+
+            // 传阅历史任务
+            fht = FlwHisTask.of(newFlwTask, TaskState.complete);
+            fht.taskType(TaskType.circulate);
+            fht.performType(PerformType.loop);
+            fht.calculateDuration();
+            fht.setId(flowLongIdGenerator.getId(fht.getId()));
+            hisTaskDao.insert(fht);
+
+            // 即刻归档，确保自增ID情况一致性
+            taskDao.deleteById(newFlwTask.getId());
+        } else {
+            // 这里是传阅之后得人为二次传阅
+            eventType = TaskEventType.createCirculate;
+            // 传阅历史任务
+            fht = FlwHisTask.simple(flwHisTask, TaskState.complete, flowCreator);
+            fht.setTaskName(String.valueOf(TaskType.circulate.getValue()));
+            fht.setTaskKey(String.valueOf(TaskType.circulate.getValue()));
+            fht.taskType(TaskType.circulate);
+            fht.performType(PerformType.loop);
+            fht.calculateDuration();
+            hisTaskDao.insert(fht);
+        }
+        // 历史任务参与者数据入库
+        List<FlwTaskActor> htaList = new ArrayList<>();
+        for (NodeAssignee nodeUser : circulateUserList) {
+            FlwHisTaskActor hta = FlwHisTaskActor.ofNodeAssignee(nodeUser, fht.getInstanceId(), fht.getId());
+            hta.setId(flowLongIdGenerator.getId(hta.getId()));
+            hta.setWeight(TaskWeightEnum.CIRCULATE.getValue());
+            hta.setViewed(0);
+            //传阅需求的扩展信息
+            hta.setExtend(FlowLongContext.toJson(nodeUser.getExtendConfig()));
             if (hisTaskActorDao.insert(hta)) {
                 htaList.add(hta);
             }
@@ -1144,8 +1216,8 @@ public class TaskServiceImpl implements TaskService {
         // 处理流程任务
         Integer nodeType = nodeModel.getType();
 
-        // 更新当前执行节点信息，抄送节点除外
-        if (!TaskType.cc.eq(nodeType)) {
+        // 更新当前执行节点信息，抄送/传阅节点除外
+        if (!TaskType.cc.eq(nodeType) && !TaskType.circulate.eq(nodeType)) {
             this.updateCurrentNode(flwTask);
         }
 
@@ -1188,6 +1260,32 @@ public class TaskServiceImpl implements TaskService {
                 if (_exec) {
                     // 执行下一个节点
                     ccNextNode.execute(execution.getEngine().getContext(), execution);
+                }
+            } else {
+                // 不存在任何子节点结束流程
+                execution.endInstance(nodeModel);
+            }
+        } else if (TaskType.circulate.eq(nodeType)) {
+            /*
+             * 传阅任务
+             */
+            this.createCirculateTask(nodeModel, flwTask, null,  nodeModel.getNodeAssigneeList(), execution.getFlowCreator());
+
+            /*
+             * 可能存在子节点
+             */
+            Optional<NodeModel> nextNodeOptional = nodeModel.nextNode();
+            if (nextNodeOptional.isPresent()) {
+                // 下一个节点如果在并行分支，判断是否并行分支都执行结束
+                boolean _exec = true;
+                NodeModel circulateNextNode = nextNodeOptional.get();
+                if (!circulateNextNode.circulateNode()) {
+                    // 下一节点非传阅节点，是否允许执行下一个节点
+                    _exec = this.allowNextNodeExec(flwTask.getInstanceId(), circulateNextNode.parentConditionNodeKeys());
+                }
+                if (_exec) {
+                    // 执行下一个节点
+                    circulateNextNode.execute(execution.getEngine().getContext(), execution);
                 }
             } else {
                 // 不存在任何子节点结束流程

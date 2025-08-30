@@ -2,13 +2,12 @@ package com.shengyu.module.system.controller.admin.flow.vo;
 
 import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplate;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
-import com.shengyu.module.system.dal.dataobject.flow.FlwProcessSetting;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcessSetting;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -69,6 +68,9 @@ public class TaskApprovalVO {
 
     @Schema(description = "允许审批节点手动创建抄送任务")
     private Boolean allowCc;
+
+    @Schema(description = "允许审批节点手动创建传阅任务")
+    private Boolean allowCirculate;
 
     @Schema(description = "驳回策略")
     private Integer rejectStrategy;

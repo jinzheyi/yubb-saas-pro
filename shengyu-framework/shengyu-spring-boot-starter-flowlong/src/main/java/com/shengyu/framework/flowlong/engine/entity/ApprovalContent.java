@@ -1,4 +1,4 @@
-package com.shengyu.module.system.dal.dataobject.flow;
+package com.shengyu.framework.flowlong.engine.entity;
 
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;

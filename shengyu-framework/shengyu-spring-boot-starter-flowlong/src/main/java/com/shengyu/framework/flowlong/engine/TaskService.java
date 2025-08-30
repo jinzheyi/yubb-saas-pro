@@ -9,6 +9,7 @@ import com.shengyu.framework.flowlong.engine.assist.ObjectUtils;
 import com.shengyu.framework.flowlong.engine.core.Execution;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.core.enums.*;
+import com.shengyu.framework.flowlong.engine.entity.FlwHisTask;
 import com.shengyu.framework.flowlong.engine.entity.FlwTask;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
@@ -369,6 +370,18 @@ public interface TaskService {
      * @param flowCreator 任务创建者
      */
     boolean createCcTask(NodeModel taskModel, FlwTask flwTask, List<NodeAssignee> ccUserList, FlowCreator flowCreator);
+
+    /**
+     * 创建传阅任务
+     * <p>默认不校验是否重复传阅</p>
+     *
+     * @param taskModel   任务模型
+     * @param flwTask     当前任务
+     * @param flwHisTask  历史任务
+     * @param circulateUserList  传阅任务分配到任务的人或角色列表
+     * @param flowCreator 任务创建者
+     */
+    boolean createCirculateTask(NodeModel taskModel, FlwTask flwTask, FlwHisTask flwHisTask, List<NodeAssignee> circulateUserList, FlowCreator flowCreator);
 
     /**
      * 获取超时或者提醒的任务

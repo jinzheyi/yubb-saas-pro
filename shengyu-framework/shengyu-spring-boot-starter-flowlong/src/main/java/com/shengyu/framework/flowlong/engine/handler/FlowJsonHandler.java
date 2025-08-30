@@ -4,6 +4,8 @@
  */
 package com.shengyu.framework.flowlong.engine.handler;
 
+import java.util.Map;
+
 /**
  * 流程 JSON 解析处理器接口
  *
@@ -32,5 +34,21 @@ public interface FlowJsonHandler {
      * @return 转化对象
      */
     <T> T fromJson(String jsonString, Class<T> clazz);
+
+    /**
+     * 对象转换为 Map
+     *
+     * @param obj 待转换对象
+     * @return 转换结果
+     */
+    Map<String, Object> obj2map(Object obj);
+
+    /**
+     * JSON 字符串转换为 Map
+     *
+     * @param obj 待转换对象
+     * @return 转换结果
+     */
+    Map<String, Object> str2map(String obj);
 
 }

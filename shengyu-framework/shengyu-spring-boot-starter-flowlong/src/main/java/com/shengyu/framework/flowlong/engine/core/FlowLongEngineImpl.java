@@ -453,7 +453,7 @@ public class FlowLongEngineImpl implements FlowLongEngine {
         if (performType == PerformType.sort) {
             // 当前任务实际办理人
             String assigneeId = flowCreator.getCreateId();
-            boolean isSupervisor = NodeSetType.supervisor.eq(nodeModel.getSetType());
+            boolean isSupervisor = NodeSetType.supervisor.eq(nodeModel.getSetType()) || NodeSetType.multiLevelSupervisors.eq(nodeModel.getSetType());
             if (isSupervisor || NodeSetType.role.eq(nodeModel.getSetType()) || NodeSetType.department.eq(nodeModel.getSetType())) {
                 // 主管、角色、部门 任务参与者
                 List<FlwHisTaskActor> htaList = flowLongContext.getQueryService().getHisTaskActorsByTaskIdAndActorId(flwTask.getId(), flowCreator.getCreateId());

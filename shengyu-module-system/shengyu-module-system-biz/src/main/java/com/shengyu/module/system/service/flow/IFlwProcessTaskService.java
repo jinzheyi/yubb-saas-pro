@@ -3,6 +3,7 @@ package com.shengyu.module.system.service.flow;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shengyu.framework.flowlong.engine.core.PageParam;
+import com.shengyu.framework.flowlong.engine.entity.FlwTask;
 import com.shengyu.module.system.controller.admin.flow.dto.*;
 import com.shengyu.module.system.controller.admin.flow.vo.*;
 
@@ -40,7 +41,7 @@ public interface IFlwProcessTaskService {
     /**
      * 我收到的任务分页列表
      */
-    Page<ProcessTaskVO> pageMyReceived(PageParam<ProcessTaskDTO> pageParam);
+    Page<ProcessTaskVO> pageMyReceived(PageParam<ProcessTaskDTO> pageParam, Integer taskType);
 
     /**
      * 已审批任务分页列表
@@ -77,6 +78,13 @@ public interface IFlwProcessTaskService {
      * @param taskId 任务ID
      */
     boolean viewed(Long taskId);
+
+    /**
+     * 设置传阅已阅
+     * @param dto 入参
+     * @return  结果
+     */
+    boolean circulateViewed(TaskCirculateViewDTO dto);
 
     /**
      * 拿回任务
@@ -121,6 +129,13 @@ public interface IFlwProcessTaskService {
      * 抄送
      */
     boolean carbonCopy(TaskCarbonCopyDTO dto);
+
+    /**
+     * 手动传阅
+     * @param dto 入参 数据
+     * @return  结果
+     */
+    boolean manualCirculate(ManualCirculateDTO dto);
 
     /**
      * 转交
@@ -170,4 +185,20 @@ public interface IFlwProcessTaskService {
      * @return true 成功 false 失败
      */
     boolean approvedParentNode(Long parentTaskId, String actorId);
+
+    /**
+     * 当前节点处理人参与父节点审批通过得
+     * @param flwTask 当前任务
+     * @param actorId 参与者
+     * @return true 成功 false 失败
+     */
+    boolean approvedCompleteParentNode(FlwTask flwTask, String actorId);
+
+    /**
+     * 当前节点处理人参与过历史任务审批
+     * @param flwTask 当前任务
+     * @param actorId 参与者
+     * @return true 成功 false 失败
+     */
+    boolean approvedCompleteAllNode(FlwTask flwTask, String actorId);
 }

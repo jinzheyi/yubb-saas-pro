@@ -6,14 +6,12 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.shengyu.framework.common.validation.group.Create;
 import com.shengyu.framework.flowlong.engine.core.FlowBaseDO;
-import com.shengyu.framework.tenant.core.db.TenantBaseDO;
+import com.shengyu.framework.flowlong.engine.entity.ApprovalContent;
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * 流程审批记录

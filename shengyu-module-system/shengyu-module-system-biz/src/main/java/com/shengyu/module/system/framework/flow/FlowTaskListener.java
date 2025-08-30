@@ -17,14 +17,17 @@ import com.shengyu.framework.flowlong.engine.model.ProcessModel;
 import com.shengyu.framework.security.core.LoginUser;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.admin.flow.vo.TaskTransferVO;
-import com.shengyu.module.system.dal.dataobject.flow.ApprovalContent;
+import com.shengyu.framework.flowlong.engine.entity.ApprovalContent;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcessConfigure;
 import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.service.flow.IFlwProcessApprovalService;
+import com.shengyu.module.system.service.flow.IFlwProcessConfigureService;
 import com.shengyu.module.system.service.flow.IFlwProcessTaskService;
 import com.shengyu.module.system.service.flow.IFlwTransferConfigureService;
 import com.shengyu.module.system.service.notify.NotifySendService;
 import com.shengyu.module.system.service.permission.PermissionService;
+import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -45,6 +48,8 @@ public class FlowTaskListener implements TaskListener {
     private IFlwProcessTaskService flwProcessTaskService;
     @Resource
     private IFlwTransferConfigureService flwTransferConfigureService;
+    @Resource
+    private IFlwProcessConfigureService flwProcessConfigureService;
 
     @Override
     public boolean notify(TaskEventType eventType, Supplier<FlwTask> supplier, List<FlwTaskActor> taskActors,
@@ -84,8 +89,8 @@ public class FlowTaskListener implements TaskListener {
                 NodeModel currentNodeModel = this.getNodeModel(flwTask, nodeModel);
                 boolean saveContent = false;
                 ApprovalContent content = new ApprovalContent();
-                if (TaskEventType.cc.eq(eventType)) {
-                    // 自动抄送
+                if (TaskEventType.cc.eq(eventType) || TaskEventType.circulate.eq(eventType)) {
+                    // 自动抄送或自动传阅
                     content.setNodeUserList(currentNodeModel.getNodeAssigneeList());
                     saveContent = true;
                 } else {
@@ -98,11 +103,12 @@ public class FlowTaskListener implements TaskListener {
                         saveContent = true;
                     }
 
-                    // 手动抄送
-                    if (TaskEventType.createCc.eq(eventType)) {
-                        content.setNodeUserList(taskActors.stream().map(NodeAssignee::of).toList());
+                    // 手动抄送/手动传阅
+                    if (TaskEventType.createCc.eq(eventType) || TaskEventType.createCirculate.eq(eventType)) {
+                        content.setNodeUserList(taskActors.stream().map(NodeAssignee::of).collect(
+                          Collectors.toList()));
                         if (null == content.getOpinion()) {
-                            content.setOpinion("发起抄送任务");
+                            content.setOpinion(TaskEventType.createCc.eq(eventType)? "发起抄送任务" : "发起传阅任务");
                             saveContent = true;
                         }
                     }
@@ -136,7 +142,8 @@ public class FlowTaskListener implements TaskListener {
         }
 
         if (TaskEventType.autoComplete.eq(eventType) || TaskEventType.autoReject.eq(eventType)
-          || TaskEventType.cc.eq(eventType) || TaskEventType.trigger.eq(eventType)) {
+          || TaskEventType.cc.eq(eventType) || TaskEventType.trigger.eq(eventType)
+          || TaskEventType.circulate.eq(eventType)) {
             // 自动审批情况，设置默认处理人信息
             LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
             if (null == userSession) {
@@ -146,6 +153,9 @@ public class FlowTaskListener implements TaskListener {
                 fpa.setCreateId(String.valueOf(userSession.getId()));
                 fpa.setCreateBy(userSession.getNickname());
             }
+        } else if (Objects.nonNull(flowCreator)) {
+            fpa.setCreateId(flowCreator.getCreateId());
+            fpa.setCreateBy(flowCreator.getCreateBy());
         }
 
         if (null == fpa.getType()) {
@@ -161,6 +171,7 @@ public class FlowTaskListener implements TaskListener {
         if (null != flwTask) {
             NodeModel currentNodeModel = this.getNodeModel(flwTask, nodeModel);
             if (TaskEventType.create.eq(eventType)) {
+                final FlwInstance instance = flowLongEngine.queryService().getInstance(flwTask.getInstanceId());
                 // 创建人，发起人自己，自动跳过
                 if (NodeApproveSelf.AutoSkip.eq(currentNodeModel.getApproveSelf())) {
                     if (NodeSetType.initiatorThemselves.eq(currentNodeModel.getSetType())) {
@@ -169,7 +180,6 @@ public class FlowTaskListener implements TaskListener {
                     }
 
                     // 流程发起人自动跳过处理
-                    final FlwInstance instance = flowLongEngine.queryService().getInstance(flwTask.getInstanceId());
                     if (taskActors.stream().anyMatch(t -> Objects.equals(t.getActorId(), instance.getCreateId())
                       // 当前节点处理人参与父节点审批
                       || flwProcessTaskService.approvedParentNode(flwTask.getParentTaskId(), t.getActorId())
@@ -177,6 +187,29 @@ public class FlowTaskListener implements TaskListener {
                         // 审批人与提交人为同一人时，执行自动跳转逻辑
                         return flowLongEngine.autoJumpTask(flwTask.getId(), FlowCreator.of(instance.getTenantId(),
                           instance.getCreateId(), instance.getCreateBy()));
+                    }
+                }
+
+                FlwProcessConfigure configure = flwProcessConfigureService.getByProcessId(instance.getProcessId());
+                if (null != configure && null != configure.getProcessSetting()
+                  && !Objects.equals(3, configure.getProcessSetting().getRepeatOperateSkip())) {
+                    if (Objects.equals(1, configure.getProcessSetting().getRepeatOperateSkip())) {
+                        if (taskActors.stream().anyMatch(t ->
+                          // 当前节点处理人参与历史节点审批
+                          flwProcessTaskService.approvedCompleteAllNode(flwTask, t.getActorId())
+                        )) {
+                            //仅审批一次，后续重复的审批节点均自动同意
+                            return flowLongEngine.autoCompleteTask(flwTask.getId(), flowCreator);
+                        }
+                    }
+                    if (Objects.equals(2, configure.getProcessSetting().getRepeatOperateSkip())) {
+                        if (taskActors.stream().anyMatch(t ->
+                          // 当前节点处理人参与父节点审批
+                          flwProcessTaskService.approvedCompleteParentNode(flwTask, t.getActorId())
+                        )) {
+                            //连续审批的节点自动同意
+                            return flowLongEngine.autoCompleteTask(flwTask.getId(), flowCreator);
+                        }
                     }
                 }
 
@@ -269,6 +302,9 @@ public class FlowTaskListener implements TaskListener {
         } else if (eventType == TaskEventType.trigger) {
             // 触发器任务
             type = 23;
+        } else if (eventType == TaskEventType.circulate || eventType == TaskEventType.createCirculate) {
+            // 传阅
+            type = TaskType.circulate.getValue();
         }
         return type;
     }

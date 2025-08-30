@@ -1,7 +1,7 @@
-package com.shengyu.module.system.dal.mysql.flow;
+package com.shengyu.framework.flowlong.engine.mapper;
 
+import com.shengyu.framework.flowlong.engine.entity.FlwProcessConfigure;
 import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
-import com.shengyu.module.system.dal.dataobject.flow.FlwProcessConfigure;
 import org.apache.ibatis.annotations.Mapper;
 
 /**

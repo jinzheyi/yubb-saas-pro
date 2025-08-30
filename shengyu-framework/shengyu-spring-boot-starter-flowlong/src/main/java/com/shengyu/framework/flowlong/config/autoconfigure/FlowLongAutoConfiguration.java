@@ -71,9 +71,9 @@ public class FlowLongAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public RuntimeService runtimeService(@Autowired(required = false) InstanceListener instanceListener, FlowLongIdGenerator flowLongIdGenerator, QueryService queryService,
-                                         TaskService taskService, FlwInstanceDao instanceDao, FlwHisInstanceDao hisInstanceDao,
-                                         FlwExtInstanceDao extInstanceDao) {
-        return new RuntimeServiceImpl(instanceListener, flowLongIdGenerator, queryService, taskService, instanceDao, hisInstanceDao, extInstanceDao);
+      TaskService taskService, FlwInstanceDao instanceDao, FlwHisInstanceDao hisInstanceDao,
+      FlwExtInstanceDao extInstanceDao, FlwProcessConfigureDao processConfigureDao) {
+        return new RuntimeServiceImpl(instanceListener, flowLongIdGenerator, queryService, taskService, instanceDao, hisInstanceDao, extInstanceDao, processConfigureDao);
     }
 
     @Bean

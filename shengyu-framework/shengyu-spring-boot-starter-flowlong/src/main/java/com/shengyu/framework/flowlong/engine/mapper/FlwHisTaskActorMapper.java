@@ -5,6 +5,7 @@
 package com.shengyu.framework.flowlong.engine.mapper;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisTaskActor;
 import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import java.util.List;
@@ -39,6 +40,25 @@ public interface FlwHisTaskActorMapper extends BaseMapperX<FlwHisTaskActor> {
      */
     default List<FlwHisTaskActor> selectListByTaskIds(List<Long> taskIds) {
         return this.selectList(Wrappers.<FlwHisTaskActor>lambdaQuery().in(FlwHisTaskActor::getTaskId, taskIds));
+    }
+
+    /**
+     * 当前节点处理人参与过历史任务审批且通过的
+     * @param flwTask 任务参数
+     * @param actorId 处理人ID
+     * @return 历史任务参与者列表
+     */
+    //TODO 这里要调整下，因为要考虑到重新发起的情况，可以思考使用ext_instance的taskkey来找到当前一个循环的审批情况
+    default List<FlwHisTaskActor> selectListByTaskAndActorIdApprovalAndComplete(FlwTask flwTask, String actorId) {
+        return this.selectJoinList(FlwHisTaskActor.class,
+          new MPJLambdaWrapper<FlwHisTaskActor>()
+            .selectAll(FlwHisTaskActor.class)
+            .innerJoin(FlwHisTask.class, FlwHisTask::getId, FlwHisTaskActor::getTaskId)
+            .eq(FlwHisTaskActor::getActorId, actorId)
+            .eq(FlwHisTask::getInstanceId, flwTask.getInstanceId())
+            .eq(FlwHisTask::getTaskType, TaskType.approval.getValue())
+            .eq(FlwHisTask::getTaskState, TaskState.complete.getValue())
+        );
     }
 
 }

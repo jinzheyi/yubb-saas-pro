@@ -58,6 +58,7 @@ public interface SyFlwHisInstanceMapper extends FlwHisInstanceMapper {
             .selectAs(FlwHisInstance::getId, ProcessTaskVO::getInstanceId)
 
             .select(FlwExtInstance::getProcessName, FlwExtInstance::getProcessType)
+            .selectAs(FlwExtInstance::getTaskKey, ProcessTaskVO::getFirstNodeKey)
 
             .leftJoin(FlwExtInstance.class, FlwExtInstance::getId, FlwHisInstance::getId)
 
@@ -75,7 +76,7 @@ public interface SyFlwHisInstanceMapper extends FlwHisInstanceMapper {
     /**
      * 我收到的任务分页列表
      */
-    default Page<ProcessTaskVO> selectPageMyReceived(Page<ProcessTaskVO> page, @NotNull ProcessTaskDTO dto) {
+    default Page<ProcessTaskVO> selectPageMyReceived(Page<ProcessTaskVO> page, @NotNull ProcessTaskDTO dto, @NotNull Integer taskType) {
         return selectJoinPage(page, ProcessTaskVO.class,
           new MPJLambdaWrapper<FlwHisInstance>()
             .select(
@@ -92,12 +93,19 @@ public interface SyFlwHisInstanceMapper extends FlwHisInstanceMapper {
             .selectAs(FlwHisInstance::getId, ProcessTaskVO::getInstanceId)
 
             .select(FlwExtInstance::getProcessName, FlwExtInstance::getProcessType)
+            .selectAs(FlwExtInstance::getTaskKey, ProcessTaskVO::getFirstNodeKey)
+
+            .select(FlwHisTaskActor::getViewed, FlwHisTaskActor::getExtend)
+            .selectAs(FlwHisTaskActor::getId, ProcessTaskVO::getHisTaskActorId)
+
+            .select(FlwHisTask::getTaskType)
+            .selectAs(FlwHisTask::getId, ProcessTaskVO::getHisTaskId)
 
             .leftJoin(FlwExtInstance.class, FlwExtInstance::getId, FlwHisInstance::getId)
             .innerJoin(FlwHisTask.class, FlwHisTask::getInstanceId, FlwHisInstance::getId)
             .innerJoin(FlwHisTaskActor.class, FlwHisTaskActor::getTaskId, FlwHisTask::getId)
             //抄送的业务
-            .eq(FlwHisTask::getTaskType, TaskType.cc.getValue())
+            .eq(FlwHisTask::getTaskType, taskType)
             .eq(FlwHisTaskActor::getActorId, dto.getCreateId())
             .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
             .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwExtInstance::getCreateBy, dto.getCreateBy())

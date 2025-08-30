@@ -64,6 +64,12 @@ public class FlowLongMybatisPlusConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    public FlwProcessConfigureDao processConfigureDao(FlwProcessConfigureMapper processConfigureMapper) {
+        return new FlwProcessConfigureDaoImpl(processConfigureMapper);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     public FlwTaskActorDao taskActorDao(FlwTaskActorMapper taskActorMapper) {
         return new FlwTaskActorDaoImpl(taskActorMapper);
     }

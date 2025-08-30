@@ -2,7 +2,7 @@ package com.shengyu.module.system.controller.admin.flow.dto;
 
 import com.shengyu.framework.flowlong.engine.entity.FlwProcess;
 import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplate;
-import com.shengyu.module.system.dal.dataobject.flow.FlwProcessSetting;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcessSetting;
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;

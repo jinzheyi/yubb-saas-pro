@@ -89,6 +89,8 @@ public interface SyFlwTaskMapper extends FlwTaskMapper {
             .leftJoin(FlwExtInstance.class, FlwExtInstance::getId, FlwHisInstance::getId)
             // 待审批任务 + 待认领的任务
             .in(FlwTaskActor::getActorId, flwTaskActorIdList)
+            // 排除掉节点在第一个节点的流程数据（发起人节点）
+            .ne(FlwTask::getTaskKey, FlwExtInstance::getTaskKey)
             .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
             .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwExtInstance::getCreateBy, dto.getCreateBy())
             .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
@@ -144,6 +146,17 @@ public interface SyFlwTaskMapper extends FlwTaskMapper {
           .innerJoin(FlwTaskActor.class, FlwTaskActor::getTaskId, FlwTask::getId)
           // 待审批任务 + 待认领的任务
           .in(FlwTaskActor::getActorId, flwTaskActorIdList)
+        );
+    }
+
+    /**
+     * 根据流程实例id和节点key查询最新时间的任务信息
+     */
+    default List<FlwTask> selectByInstanceIdAndNodeKeyList(List<Long> instanceIdList, List<String> nodeKeyList) {
+        return selectList(new MPJLambdaWrapper<FlwTask>()
+          .in(FlwTask::getInstanceId, instanceIdList)
+          .in(FlwTask::getTaskKey, nodeKeyList)
+          .orderByDesc(FlwTask::getCreateTime)
         );
     }
 

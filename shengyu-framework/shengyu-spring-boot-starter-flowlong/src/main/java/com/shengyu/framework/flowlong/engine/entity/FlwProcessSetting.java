@@ -1,4 +1,4 @@
-package com.shengyu.module.system.dal.dataobject.flow;
+package com.shengyu.framework.flowlong.engine.entity;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -56,6 +56,6 @@ public class FlwProcessSetting {
      * 3，不自动同意，每个节点都需要审批
      */
     @Schema(description = "重复审批跳过")
-    private Boolean repeatOperateSkip;
+    private Integer repeatOperateSkip;
 
 }
