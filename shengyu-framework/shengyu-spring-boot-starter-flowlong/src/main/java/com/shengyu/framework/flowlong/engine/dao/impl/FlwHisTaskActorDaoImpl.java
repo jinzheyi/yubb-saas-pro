@@ -4,6 +4,7 @@
  */
 package com.shengyu.framework.flowlong.engine.dao.impl;
 
+import com.shengyu.framework.flowlong.engine.core.enums.TaskWeightEnum;
 import com.shengyu.framework.flowlong.engine.dao.FlwHisTaskActorDao;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisTaskActor;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
@@ -50,7 +51,14 @@ public class FlwHisTaskActorDaoImpl implements FlwHisTaskActorDao {
     public List<FlwHisTaskActor> selectCcTaskActorsByInstanceId(Long instanceId) {
         return hisTaskActorMapper.selectList(Wrappers.<FlwHisTaskActor>lambdaQuery()
           .eq(FlwHisTaskActor::getInstanceId, instanceId)
-          .eq(FlwHisTaskActor::getWeight, 6));
+          .eq(FlwHisTaskActor::getWeight, TaskWeightEnum.CC.getValue()));
+    }
+
+    @Override
+    public List<FlwHisTaskActor> selectCirculateTaskActorsByInstanceId(Long instanceId) {
+        return hisTaskActorMapper.selectList(Wrappers.<FlwHisTaskActor>lambdaQuery()
+          .eq(FlwHisTaskActor::getInstanceId, instanceId)
+          .eq(FlwHisTaskActor::getWeight, TaskWeightEnum.CIRCULATE.getValue()));
     }
 
     @Override

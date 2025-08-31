@@ -6,7 +6,11 @@ package com.shengyu.framework.flowlong.engine.mapper;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.shengyu.framework.flowlong.engine.core.enums.TaskState;
+import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
+import com.shengyu.framework.flowlong.engine.entity.FlwHisTask;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisTaskActor;
+import com.shengyu.framework.flowlong.engine.entity.FlwTask;
 import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import java.util.List;
 

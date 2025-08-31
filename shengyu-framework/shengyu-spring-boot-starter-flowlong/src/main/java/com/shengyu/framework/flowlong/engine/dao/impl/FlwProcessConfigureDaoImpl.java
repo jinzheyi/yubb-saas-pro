@@ -1,9 +1,9 @@
 package com.shengyu.framework.flowlong.engine.dao.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.jxscxkj.cxkjflow.common.bpm.engine.dao.FlwProcessConfigureDao;
-import com.jxscxkj.cxkjflow.common.bpm.engine.entity.FlwProcessConfigure;
-import com.jxscxkj.cxkjflow.common.bpm.engine.mapper.FlwProcessConfigureMapper;
+import com.shengyu.framework.flowlong.engine.dao.FlwProcessConfigureDao;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcessConfigure;
+import com.shengyu.framework.flowlong.engine.mapper.FlwProcessConfigureMapper;
 
 /**
  * <p>

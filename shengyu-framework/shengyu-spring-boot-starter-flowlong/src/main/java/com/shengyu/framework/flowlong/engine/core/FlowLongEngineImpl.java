@@ -334,6 +334,20 @@ public class FlowLongEngineImpl implements FlowLongEngine {
         return taskService().createCcTask(taskModel, flwTask, ccUserList, flowCreator);
     }
 
+    /**
+     * 创建传阅任务
+     * <p>默认不校验是否重复传阅</p>
+     *
+     * @param taskModel   任务模型
+     * @param circulateUserList  传阅任务分配到任务的人或角色列表
+     * @param flwTask     当前任务
+     * @param flowCreator 任务创建者
+     */
+    @Override
+    public boolean createCirculateTask(NodeModel taskModel, FlwTask flwTask, FlwHisTask flwHisTask, List<NodeAssignee> circulateUserList, FlowCreator flowCreator) {
+        return taskService().createCirculateTask(taskModel, flwTask, flwHisTask, circulateUserList, flowCreator);
+    }
+
     @Override
     public boolean executeAppendNodeModel(Long taskId, NodeModel nodeModel, FlowCreator flowCreator, Map<String, Object> args, boolean beforeAfter) {
         // 追加指定节点模型

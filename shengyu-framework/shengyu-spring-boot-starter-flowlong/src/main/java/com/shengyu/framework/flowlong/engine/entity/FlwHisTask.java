@@ -6,6 +6,7 @@ package com.shengyu.framework.flowlong.engine.entity;
 
 import com.shengyu.framework.flowlong.engine.assist.Assert;
 import com.shengyu.framework.flowlong.engine.assist.DateUtils;
+import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.core.enums.TaskState;
 import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
 import com.shengyu.framework.flowlong.engine.model.NodeModel;
@@ -58,6 +59,16 @@ public class FlwHisTask extends FlwTask {
         Assert.isNull(TaskState.get(taskState), "插入的实例状态异常 [taskState=" + taskState + "]");
         this.taskState = taskState;
         return this;
+    }
+
+    public static FlwHisTask simple(FlwHisTask flwHisTask, TaskState taskState, FlowCreator flowCreator) {
+        FlwHisTask hisTask = new FlwHisTask();
+        hisTask.tenantId = flwHisTask.getTenantId();
+        hisTask.instanceId = flwHisTask.getInstanceId();
+        hisTask.taskState = taskState.getValue();
+        hisTask.createId = flowCreator.getCreateId();
+        hisTask.createBy = flowCreator.getCreateBy();
+        return hisTask;
     }
 
     public static FlwHisTask of(FlwTask flwTask, TaskState taskState) {

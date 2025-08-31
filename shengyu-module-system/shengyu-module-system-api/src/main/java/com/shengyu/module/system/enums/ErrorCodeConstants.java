@@ -264,6 +264,11 @@ public interface ErrorCodeConstants {
     ErrorCode FLOW_1_002_029_058 = new ErrorCode(1_002_029_058, "转办人员不能设置为自己");
     ErrorCode FLOW_1_002_029_059 = new ErrorCode(1_002_029_059, "转办时间待办人不能为空");
     ErrorCode FLOW_1_002_029_060 = new ErrorCode(1_002_029_060, "转交人员不能设置为自己");
+    ErrorCode FLOW_1_002_029_061 = new ErrorCode(1_002_029_061, "流程任务ID和流程历史任务不能都为空");
+    ErrorCode FLOW_1_002_029_062 = new ErrorCode(1_002_029_062, "当前ID执行任务不存在");
+    ErrorCode FLOW_1_002_029_063 = new ErrorCode(1_002_029_063, "当前ID执行历史任务不存在");
+    ErrorCode FLOW_1_002_029_064 = new ErrorCode(1_002_029_064, "用户【{}】已传阅，请勿重复操作");
+    ErrorCode FLOW_1_002_029_065 = new ErrorCode(1_002_029_065, "历史任务参与者信息不存在");
 
 
 }

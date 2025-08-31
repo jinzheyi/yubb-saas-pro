@@ -204,13 +204,13 @@ public class RuntimeServiceImpl implements RuntimeService {
         // 保存流程实例
         flwInstance.setId(flowLongIdGenerator.getId(flwInstance.getId()));
         instanceDao.insert(flwInstance);
-
+        FlwProcessConfigure processConfigure = flwProcessConfigureDao.selectByProcessId(flwProcess.getId());
         // 保存历史实例设置为活的状态
         FlwHisInstance fhi = FlwHisInstance.of(flwInstance, saveAsDraft ? InstanceState.saveAsDraft : InstanceState.active);
         if (hisInstanceDao.insert(fhi)) {
 
             // 保存扩展流程实例
-            extInstanceDao.insert(FlwExtInstance.of(flwInstance, flwProcess));
+            extInstanceDao.insert(FlwExtInstance.of(flwInstance, flwProcess, processConfigure));
 
             // 流程实例监听器通知
             this.instanceNotify(InstanceEventType.start, () -> fhi, null, flowCreator);

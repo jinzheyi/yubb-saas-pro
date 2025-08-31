@@ -129,6 +129,26 @@ public class FlowLongContext {
         return getFlowJsonHandler().toJson(object);
     }
 
+    /**
+     * 对象转换为 Map
+     *
+     * @param obj 待转换对象
+     * @return 转换结果
+     */
+    public static Map<String, Object> obj2map(Object obj) {
+        return getFlowJsonHandler().obj2map(obj);
+    }
+
+    /**
+     * JSON 字符串转换为 Map
+     *
+     * @param obj 待转换对象
+     * @return 转换结果
+     */
+    public static Map<String, Object> str2map(String obj) {
+        return getFlowJsonHandler().str2map(obj);
+    }
+
     @SuppressWarnings({"all"})
     public static String putAllVariable(String variable, Map<String, Object> args) {
         if (null != args && !args.isEmpty()) {

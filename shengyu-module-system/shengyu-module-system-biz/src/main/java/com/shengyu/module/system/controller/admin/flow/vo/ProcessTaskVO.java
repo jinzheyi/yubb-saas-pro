@@ -1,6 +1,8 @@
 package com.shengyu.module.system.controller.admin.flow.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.shengyu.framework.flowlong.engine.core.CirculateArgs;
+import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -59,31 +61,31 @@ public class ProcessTaskVO {
     @Schema(description = "处理耗时")
     private Long duration;
 
-    @ApiModelProperty(value = "任务参与者记录id")
+    @Schema(description = "任务参与者记录id")
     private Long hisTaskActorId;
 
-    @ApiModelProperty(value = "模型第一个节点key")
+    @Schema(description = "模型第一个节点key")
     private String firstNodeKey;
 
-    @ApiModelProperty(value = "当前任务ID")
+    @Schema(description = "当前任务ID")
     private Long taskId;
 
     /**
      * 任务类型 {@link TaskType}
      */
-    @ApiModelProperty(value = "任务类型")
+    @Schema(description = "任务类型")
     private Integer taskType;
 
-    @ApiModelProperty(value = "历史任务ID")
+    @Schema(description = "历史任务ID")
     private Long hisTaskId;
 
-    @ApiModelProperty(value = "传阅的配置")
+    @Schema(description = "传阅的配置")
     private String extend;
 
-    @ApiModelProperty(value = "传阅的配置")
+    @Schema(description = "传阅的配置")
     private CirculateArgs circulateArgs;
 
-    @ApiModelProperty(value = "是否已阅 0，否 1，是")
+    @Schema(description = "是否已阅 0，否 1，是")
     private Integer viewed;
 
 }

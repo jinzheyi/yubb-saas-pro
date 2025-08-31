@@ -1,8 +1,8 @@
 package com.shengyu.module.system.controller.admin.flow.dto;
 
-import io.swagger.annotations.ApiModelProperty;
 import java.util.List;
 import javax.validation.constraints.NotEmpty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,26 +16,26 @@ import lombok.Setter;
 @Setter
 public class ManualCirculateDTO {
 
-  @ApiModelProperty(value = "流程任务ID，如果是审批节点进行传阅得时候传递此值")
-  private Long taskId;
+    @Schema(description = "流程任务ID，如果是审批节点进行传阅得时候传递此值")
+    private Long taskId;
 
-  @ApiModelProperty(value = "流程历史任务ID，在我收到得传阅中再进行传阅传递此值")
-  private Long hisTaskId;
+    @Schema(description = "流程历史任务ID，在我收到得传阅中再进行传阅传递此值")
+    private Long hisTaskId;
 
-  @ApiModelProperty(value = "可提交意见")
-  private Boolean allowOpinion = false;
+    @Schema(description = "可提交意见")
+    private Boolean allowOpinion = false;
 
-  @ApiModelProperty(value = "可传阅")
-  private Boolean allowCirculate = false;
+    @Schema(description = "可传阅")
+    private Boolean allowCirculate = false;
 
-  @ApiModelProperty(value = "阅知后通知我")
-  private Boolean notifyMe = false;
+    @Schema(description = "阅知后通知我")
+    private Boolean notifyMe = false;
 
-  @ApiModelProperty(value = "用户ID列表")
-  @NotEmpty
-  private List<Long> userIdList;
+    @Schema(description = "用户ID列表")
+    @NotEmpty
+    private List<Long> userIdList;
 
-  @ApiModelProperty(value = "意见评论")
-  private String content;
+    @Schema(description = "意见评论")
+    private String content;
 
 }

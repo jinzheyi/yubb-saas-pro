@@ -61,11 +61,11 @@ public class ProcessTaskController {
         return success(processTaskService.pageMyReceived(pageParam, TaskType.cc.getValue()));
     }
 
-    @ApiOperation("我收到的传阅任务分页列表")
-    //@RequiresPermissions("flw:processTask:pageMyCirculate")
+    @Operation(summary ="我收到的传阅任务分页列表")
+    @PreAuthorize("@ss.hasPermission('flw:processTask:pageMyCirculate')")
     @PostMapping("/page-my-circulate")
-    public Page<ProcessTaskVO> pageMyCirculate(@RequestBody PageParam<ProcessTaskDTO> pageParam) {
-        return processTaskService.pageMyReceived(pageParam, TaskType.circulate.getValue());
+    public CommonResult<Page<ProcessTaskVO>> pageMyCirculate(@RequestBody PageParam<ProcessTaskDTO> pageParam) {
+        return success(processTaskService.pageMyReceived(pageParam, TaskType.circulate.getValue()));
     }
 
     @Operation(summary = "我的申请任务分页列表")
@@ -138,11 +138,11 @@ public class ProcessTaskController {
         return success(processTaskService.viewed(taskId));
     }
 
-    @ApiOperation("设置传阅已阅")
-    //@RequiresPermissions("flw:processTask:circulateViewed")
+    @Operation(summary = "设置传阅已阅")
+    @PreAuthorize("@ss.hasPermission('flw:processTask:circulateViewed')")
     @PostMapping("/circulateViewed")
-    public boolean circulateViewed(@Validated @RequestBody TaskCirculateViewDTO dto) {
-        return processTaskService.circulateViewed(dto);
+    public CommonResult<Boolean> circulateViewed(@Validated @RequestBody TaskCirculateViewDTO dto) {
+        return success(processTaskService.circulateViewed(dto));
     }
 
     @Operation(summary = "拿回任务")
@@ -194,11 +194,11 @@ public class ProcessTaskController {
         return success(processTaskService.carbonCopy(dto));
     }
 
-    @ApiOperation("手动传阅任务")
-    //@RequiresPermissions("flw:processTask:manualCirculate")
+    @Operation(summary = "手动传阅任务")
+    @PreAuthorize("@ss.hasPermission('flw:processTask:manualCirculate')")
     @PostMapping("/manual-circulate")
-    public boolean manualCirculate(@Validated @RequestBody ManualCirculateDTO dto) {
-        return processTaskService.manualCirculate(dto);
+    public CommonResult<Boolean> manualCirculate(@Validated @RequestBody ManualCirculateDTO dto) {
+        return success(processTaskService.manualCirculate(dto));
     }
 
     @Operation(summary = "审批加签")

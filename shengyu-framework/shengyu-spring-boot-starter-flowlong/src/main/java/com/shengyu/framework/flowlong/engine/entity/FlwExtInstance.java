@@ -4,6 +4,7 @@
  */
 package com.shengyu.framework.flowlong.engine.entity;
 
+import com.shengyu.framework.common.util.json.JsonUtils;
 import com.shengyu.framework.flowlong.engine.FlowConstants;
 import com.shengyu.framework.flowlong.engine.ProcessModelCache;
 import com.shengyu.framework.flowlong.engine.core.FlowLongContext;
@@ -73,7 +74,7 @@ public class FlwExtInstance extends FlowEntity implements ProcessModelCache, Ser
         ext.processType = flwProcess.getProcessType();
         ext.modelContent = flwProcess.getModelContent();
         ext.taskKey = FlowLongContext.fromJson(flwProcess.getModelContent(), ProcessModel.class).getNodeConfig().getNodeKey();
-        ext.processSetting = Objects.nonNull(flwProcessConfigure)? JacksonUtils.toJson(flwProcessConfigure.getProcessSetting()) : null;
+        ext.processSetting = Objects.nonNull(flwProcessConfigure)? JsonUtils.toJsonString(flwProcessConfigure.getProcessSetting()) : null;
         return ext;
     }
 

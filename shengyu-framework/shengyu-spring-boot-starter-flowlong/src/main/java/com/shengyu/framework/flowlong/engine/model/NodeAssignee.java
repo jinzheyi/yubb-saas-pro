@@ -6,6 +6,7 @@ package com.shengyu.framework.flowlong.engine.model;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
+import com.shengyu.framework.flowlong.engine.core.FlowLongContext;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import lombok.Getter;
 import lombok.Setter;

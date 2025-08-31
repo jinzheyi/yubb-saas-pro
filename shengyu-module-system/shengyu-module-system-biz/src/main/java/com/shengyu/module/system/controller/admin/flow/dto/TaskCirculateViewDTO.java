@@ -1,8 +1,9 @@
 package com.shengyu.module.system.controller.admin.flow.dto;
 
-import io.swagger.annotations.ApiModelProperty;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,12 +17,12 @@ import lombok.Setter;
 @Setter
 public class TaskCirculateViewDTO {
 
-    @ApiModelProperty(value = "任务参与者记录ID")
+    @Schema(description = "任务参与者记录ID")
     @NotNull(message = "任务参与者记录ID不能为空")
     @PositiveOrZero
     private Long hisTaskActorId;
 
-    @ApiModelProperty(value = "意见评论")
+    @Schema(description = "意见评论")
     private String content;
 
 }

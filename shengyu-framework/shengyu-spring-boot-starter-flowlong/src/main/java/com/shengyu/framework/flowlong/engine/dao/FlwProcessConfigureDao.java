@@ -1,6 +1,6 @@
 package com.shengyu.framework.flowlong.engine.dao;
 
-import com.jxscxkj.cxkjflow.common.bpm.engine.entity.FlwProcessConfigure;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcessConfigure;
 
 /**
  * <p>

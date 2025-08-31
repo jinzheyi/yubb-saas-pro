@@ -28,6 +28,8 @@ public interface FlwHisTaskActorDao {
 
     List<FlwHisTaskActor> selectCcTaskActorsByInstanceId(Long instanceId);
 
+    List<FlwHisTaskActor> selectCirculateTaskActorsByInstanceId(Long instanceId);
+
     List<FlwHisTaskActor> selectListByInstanceId(Long instanceId);
 
     List<FlwHisTaskActor> selectListByTaskId(Long taskId);

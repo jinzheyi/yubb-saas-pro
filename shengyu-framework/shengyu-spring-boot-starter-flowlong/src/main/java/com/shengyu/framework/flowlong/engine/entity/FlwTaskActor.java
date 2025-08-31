@@ -79,6 +79,11 @@ public class FlwTaskActor extends FlowEntity {
     protected String extend;
 
     /**
+     * 已阅 0，否 1，是
+     */
+    protected Integer viewed;
+
+    /**
      * 是否为代理人
      *
      * @return true 是 false 否
