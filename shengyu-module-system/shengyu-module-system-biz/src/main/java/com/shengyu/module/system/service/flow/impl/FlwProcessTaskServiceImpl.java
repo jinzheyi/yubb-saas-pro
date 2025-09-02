@@ -525,9 +525,13 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
 
         // 发起人撤回任务
         FlwHisTask fht = flowLongEngine.queryService().getStartTaskByInstanceId(dto.getInstanceId());
-        ServiceExceptionUtil.fail(null == fht || fht.startNode(), ErrorCodeConstants.FLOW_1_002_029_017);
+        ServiceExceptionUtil.fail(null == fht, ErrorCodeConstants.FLOW_1_002_029_066);
         TaskService taskService = flowLongEngine.taskService();
-        return taskService.withdrawTask(fht.getId(), flowCreator).isPresent();
+        FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(dto.getInstanceId());
+        ServiceExceptionUtil.fail(flwInstance.getCurrentNodeKey().equals(extInstance.getTaskKey()), ErrorCodeConstants.FLOW_1_002_029_017);
+        Optional<List<FlwTask>> flwTasks = taskService.withdrawTask(fht.getId(), flowCreator);
+        ServiceExceptionUtil.fail(!flwTasks.isPresent(), ErrorCodeConstants.FLOW_1_002_029_067);
+        return flwTasks.isPresent();
     }
 
     @Transactional(rollbackFor = Exception.class)

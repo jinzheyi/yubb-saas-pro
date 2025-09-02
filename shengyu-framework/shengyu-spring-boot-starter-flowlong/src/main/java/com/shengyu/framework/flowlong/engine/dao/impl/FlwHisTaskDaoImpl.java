@@ -4,6 +4,7 @@
  */
 package com.shengyu.framework.flowlong.engine.dao.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.flowlong.engine.dao.FlwHisTaskDao;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisTask;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -60,8 +61,10 @@ public class FlwHisTaskDaoImpl implements FlwHisTaskDao {
     public FlwHisTask selectStartTaskByInstanceId(Long instanceId) {
         List<FlwHisTask> hisTasks = hisTaskMapper.selectList(Wrappers.<FlwHisTask>lambdaQuery()
           .eq(FlwHisTask::getInstanceId, instanceId)
-          .eq(FlwHisTask::getParentTaskId, 0));
-        return null == hisTasks ? null : hisTasks.get(0);
+          .eq(FlwHisTask::getParentTaskId, 0)
+          .orderByDesc(FlwHisTask::getCreateTime)
+        );
+        return CollUtil.isEmpty(hisTasks) ? null : hisTasks.get(0);
     }
 
     @Override

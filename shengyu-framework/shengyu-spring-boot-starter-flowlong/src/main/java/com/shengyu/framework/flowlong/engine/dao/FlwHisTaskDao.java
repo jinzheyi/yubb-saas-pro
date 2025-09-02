@@ -39,6 +39,11 @@ public interface FlwHisTaskDao {
         return flwHisTask;
     }
 
+    /**
+     * 获取最近的发起人历史任务节点
+     * @param instanceId 实例id
+     * @return FlwHisTask
+     */
     FlwHisTask selectStartTaskByInstanceId(Long instanceId);
 
     List<FlwHisTask> selectListByInstanceIdAndTaskName(Long instanceId, String taskName);
