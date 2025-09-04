@@ -140,10 +140,10 @@ public class FlowTaskListener implements TaskListener {
             //用于流程图颜色标记
             fpa.setTaskKey(flwTask.getTaskKey());
         }
-
-        if (TaskEventType.autoComplete.eq(eventType) || TaskEventType.autoReject.eq(eventType)
-          || TaskEventType.cc.eq(eventType) || TaskEventType.trigger.eq(eventType)
-          || TaskEventType.circulate.eq(eventType)) {
+        if (Objects.nonNull(flowCreator)) {
+            fpa.setCreateId(flowCreator.getCreateId());
+            fpa.setCreateBy(flowCreator.getCreateBy());
+        } else {
             // 自动审批情况，设置默认处理人信息
             LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
             if (null == userSession) {
@@ -153,11 +153,7 @@ public class FlowTaskListener implements TaskListener {
                 fpa.setCreateId(String.valueOf(userSession.getId()));
                 fpa.setCreateBy(userSession.getNickname());
             }
-        } else if (Objects.nonNull(flowCreator)) {
-            fpa.setCreateId(flowCreator.getCreateId());
-            fpa.setCreateBy(flowCreator.getCreateBy());
         }
-
         if (null == fpa.getType()) {
             // 其它类型转换
             fpa.setType(this.getType(eventType));

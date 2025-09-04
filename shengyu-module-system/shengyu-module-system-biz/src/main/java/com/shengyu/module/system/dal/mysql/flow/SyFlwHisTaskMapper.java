@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.flowlong.engine.core.enums.TaskState;
+import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
 import com.shengyu.framework.flowlong.engine.entity.FlwExtInstance;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisTask;
@@ -66,6 +68,16 @@ public interface SyFlwHisTaskMapper extends FlwHisTaskMapper {
             .le(Objects.nonNull(dto.getEndTime()), FlwHisInstance::getCreateTime, dto.getEndTime())
             .orderByDesc(FlwHisInstance::getCreateTime)
         );
+    }
+
+    /**
+     * 获取审批通过的审批节点任务
+     */
+    default FlwHisTask selectOneApprovedTaskById(Long taskId) {
+        return selectOne(new LambdaQueryWrapper<FlwHisTask>()
+          .eq(FlwHisTask::getId, taskId)
+          .eq(FlwHisTask::getTaskType, TaskType.approval.getValue())
+          .eq(FlwHisTask::getTaskState, TaskState.complete.getValue()), false);
     }
 
 }

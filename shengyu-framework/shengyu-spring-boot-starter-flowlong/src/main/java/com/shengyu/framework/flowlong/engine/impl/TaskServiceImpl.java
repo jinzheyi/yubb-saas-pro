@@ -620,7 +620,7 @@ public class TaskServiceImpl implements TaskService {
             flwTask.setVariable(dbFlwTask.getVariable());
             flwTask.putAllVariable(args);
         }
-
+        // 设置任务类型为代理任务
         if (taskType == TaskType.agent) {
             // 设置代理人员信息，第一个人为主办 assignorId 其他人为协办 assignor 多个英文逗号分隔
             FlowCreator afc = assigneeFlowCreators.get(0);
@@ -639,7 +639,22 @@ public class TaskServiceImpl implements TaskService {
                 flwTask.setAssignorId(flowCreator.getCreateId());
                 flwTask.setAssignor(flowCreator.getCreateBy());
             }
-
+            //需要要求转办的情况下转办人也要能在我得已审批中看到数据，相当于转办本身也是一种特殊的审批操作
+            if (taskType == TaskType.transfer) {
+                FlwHisTask ht = FlwHisTask.of(dbFlwTask, TaskState.complete);
+                ht.setFlowCreator(flowCreator);
+                ht.calculateDuration();
+                //记录每一次的转办发起人
+                ht.setAssignorId(flowCreator.getCreateId());
+                ht.setAssignor(flowCreator.getCreateBy());
+                ht.setId(null);
+                hisTaskDao.insert(ht);
+                FlwHisTaskActor fht = FlwHisTaskActor.of(flwTaskActor);
+                //记录相关联的历史任务id
+                fht.setTaskId(ht.getId());
+                fht.setId(flowLongIdGenerator.getId(fht.getId()));
+                hisTaskActorDao.insert(fht);
+            }
             // 删除任务历史参与者
             taskActorDao.deleteById(flwTaskActor.getId());
 

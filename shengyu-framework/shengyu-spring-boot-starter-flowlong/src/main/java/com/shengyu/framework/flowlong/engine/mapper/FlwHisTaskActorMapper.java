@@ -37,13 +37,16 @@ public interface FlwHisTaskActorMapper extends BaseMapperX<FlwHisTaskActor> {
     }
 
     /**
-     * 通过任务ID获取参与者列表
+     * 通过任务ID获取本轮提交流程的参与者列表（区分继续提交的轮次）
      *
      * @param taskIds 任务ID列表
      * @return 历史任务参与者列表
      */
-    default List<FlwHisTaskActor> selectListByTaskIds(List<Long> taskIds) {
-        return this.selectList(Wrappers.<FlwHisTaskActor>lambdaQuery().in(FlwHisTaskActor::getTaskId, taskIds));
+    default List<FlwHisTaskActor> selectListByTaskIdsAndResubmit(List<Long> taskIds) {
+        return this.selectList(Wrappers.<FlwHisTaskActor>lambdaQuery()
+          .in(FlwHisTaskActor::getTaskId, taskIds)
+          .eq(FlwHisTaskActor::getResubmit, 0)
+        );
     }
 
     /**
@@ -52,16 +55,29 @@ public interface FlwHisTaskActorMapper extends BaseMapperX<FlwHisTaskActor> {
      * @param actorId 处理人ID
      * @return 历史任务参与者列表
      */
-    //TODO 这里要调整下，因为要考虑到重新发起的情况，可以思考使用ext_instance的taskkey来找到当前一个循环的审批情况
     default List<FlwHisTaskActor> selectListByTaskAndActorIdApprovalAndComplete(FlwTask flwTask, String actorId) {
         return this.selectJoinList(FlwHisTaskActor.class,
           new MPJLambdaWrapper<FlwHisTaskActor>()
             .selectAll(FlwHisTaskActor.class)
             .innerJoin(FlwHisTask.class, FlwHisTask::getId, FlwHisTaskActor::getTaskId)
             .eq(FlwHisTaskActor::getActorId, actorId)
+            .eq(FlwHisTaskActor::getResubmit, 0)
             .eq(FlwHisTask::getInstanceId, flwTask.getInstanceId())
             .eq(FlwHisTask::getTaskType, TaskType.approval.getValue())
             .eq(FlwHisTask::getTaskState, TaskState.complete.getValue())
+        );
+    }
+
+    /**
+     * 通过实例ID获取历史任务参与者列表
+     * @param instanceId 实例ID
+     * @return 历史任务参与者列表
+     */
+    default List<FlwHisTaskActor> selectListByInstanceId(Long instanceId) {
+        return this.selectJoinList(FlwHisTaskActor.class,
+          new MPJLambdaWrapper<FlwHisTaskActor>()
+            .selectAll(FlwHisTaskActor.class)
+            .eq(FlwHisTaskActor::getInstanceId, instanceId)
         );
     }
 

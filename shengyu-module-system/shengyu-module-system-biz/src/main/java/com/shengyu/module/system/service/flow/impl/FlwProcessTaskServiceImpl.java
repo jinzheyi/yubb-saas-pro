@@ -75,6 +75,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import javax.validation.constraints.NotNull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -88,6 +89,7 @@ import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.e
  * @author 青苗
  * @since 2023-12-11
  */
+@Slf4j
 @Service
 public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     @Resource
@@ -125,7 +127,6 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     public Page<PendingClaimTaskVO> pagePendingClaim(PageParam<ProcessTaskDTO> pageParam) {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<PendingClaimTaskVO> page = pageParam.page();
-        page.setSearchCount(false);
         UserRespVO userRespVO = adminUserService.getUser(dto.getUserId());
         List<Long> flwTaskActorIdList;
         //对应角色所属的待认领任务
@@ -146,7 +147,6 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     public Page<PendingApprovalTaskVO> pagePendingApproval(PageParam<ProcessTaskDTO> pageParam) {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<PendingApprovalTaskVO> page = pageParam.page();
-        page.setSearchCount(false);
         UserRespVO userRespVO = adminUserService.getUser(dto.getUserId());
         List<String> flwTaskActorIdList = new ArrayList<>();
         flwTaskActorIdList.add(String.valueOf(userRespVO.getId()));
@@ -162,7 +162,6 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     public Page<PendingApprovalTaskVO> pageAllPendingApproval(PageParam<ProcessTaskDTO> pageParam) {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<PendingApprovalTaskVO> page = pageParam.page();
-        page.setSearchCount(false);
         return syFlwTaskMapper.selectPageAllPendingApproval(page, dto);
     }
 
@@ -170,7 +169,6 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     public Page<ProcessTaskVO> pageMyApplication(PageParam<ProcessTaskDTO> pageParam) {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<ProcessTaskVO> page = pageParam.page();
-        page.setSearchCount(false);
         Page<ProcessTaskVO> processTaskVOPage = syFlwHisInstanceMapper.selectPageMyApplication(
           page, dto);
         if (CollUtil.isEmpty(processTaskVOPage.getRecords())) {
@@ -190,7 +188,6 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     public Page<ProcessTaskVO> pageMyReceived(PageParam<ProcessTaskDTO> pageParam, @NotNull Integer taskType) {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<ProcessTaskVO> page = pageParam.page();
-        page.setSearchCount(false);
         Page<ProcessTaskVO> processTaskVOPage = syFlwHisInstanceMapper.selectPageMyReceived(page,
           dto, taskType);
         if (CollUtil.isEmpty(processTaskVOPage.getRecords())) {
@@ -209,7 +206,6 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     public Page<ProcessTaskVO> pageApproved(PageParam<ProcessTaskDTO> pageParam) {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<ProcessTaskVO> page = pageParam.page();
-        page.setSearchCount(false);
         return flowlongMapper.selectPageApproved(pageParam.page(), dto);
     }
 
@@ -217,7 +213,6 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     public Page<PendingApprovalTaskVO> pageAllApproved(PageParam<ProcessTaskDTO> pageParam) {
         ProcessTaskDTO dto = this.getProcessTaskDTO(pageParam);
         Page<PendingApprovalTaskVO> page = pageParam.page();
-        page.setSearchCount(false);
         return syFlwHisTaskMapper.selectPageAllApproved(page, dto);
     }
 
@@ -244,26 +239,33 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
 
         // 表单配置权限
         if (null != dto.getTaskId()) {
-            FlwTask flwTask = this.getFlwTask(dto.getTaskId());
-            NodeModel nodeModel = processModel.getNode(flwTask.getTaskKey());
-            Map<String, Object> extendConfig = nodeModel.getExtendConfig();
-            if (null != extendConfig) {
-                // 表单配置内容
-                Object formConfig = extendConfig.get("formConfig");
-                if (null != formConfig) {
-                    vo.setFormConfig(formConfig);
-                }
+            FlwTask flwTask = null;
+            try {
+                flwTask = this.getFlwTask(dto.getTaskId());
+            } catch (Exception e) {
+                log.error("获取任务信息失败", e);
             }
-            vo.setTaskType(flwTask.getTaskType());
-            vo.setActionUrl(nodeModel.getActionUrl());
+            if (Objects.nonNull(flwTask)) {
+                NodeModel nodeModel = processModel.getNode(flwTask.getTaskKey());
+                Map<String, Object> extendConfig = nodeModel.getExtendConfig();
+                if (null != extendConfig) {
+                    // 表单配置内容
+                    Object formConfig = extendConfig.get("formConfig");
+                    if (null != formConfig) {
+                        vo.setFormConfig(formConfig);
+                    }
+                }
+                vo.setTaskType(flwTask.getTaskType());
+                vo.setActionUrl(nodeModel.getActionUrl());
 
-            // 设置按钮控制参数
-            vo.setAllowTransfer(nodeModel.getAllowTransfer());
-            vo.setAllowAppendNode(nodeModel.getAllowAppendNode());
-            vo.setAllowRollback(nodeModel.getAllowRollback());
-            vo.setAllowCc(nodeModel.getAllowCc());
-            vo.setAllowCirculate(nodeModel.getAllowCirculate());
-            vo.setRejectStrategy(nodeModel.getRejectStrategy());
+                // 设置按钮控制参数
+                vo.setAllowTransfer(nodeModel.getAllowTransfer());
+                vo.setAllowAppendNode(nodeModel.getAllowAppendNode());
+                vo.setAllowRollback(nodeModel.getAllowRollback());
+                vo.setAllowCc(nodeModel.getAllowCc());
+                vo.setAllowCirculate(nodeModel.getAllowCirculate());
+                vo.setRejectStrategy(nodeModel.getRejectStrategy());
+            }
         }
 
         FlwProcessConfigure configure = flwProcessConfigureService.getByProcessId(hisInstance.getProcessId());
@@ -690,7 +692,15 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         if (TaskType.delegate.eq(flwTask.getTaskType())) {
             return flowLongEngine.taskService().resolveTask(flwTask.getId(), FlowHelper.getFlowCreator());
         }
-
+        // 重新提交
+        if (dto.isResubmit()) {
+            List<FlwHisTaskActor> flwHisTaskActorList = flwHisTaskActorMapper.selectListByInstanceId(
+              flwTask.getInstanceId());
+            flwHisTaskActorList.forEach(t -> {
+                t.setResubmit(1);
+                flwHisTaskActorMapper.updateById(t);
+            });
+        }
         // 普通审批
         return flowLongEngine.executeTask(dto.getTaskId(), FlowHelper.getFlowCreator());
     }
@@ -792,10 +802,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     @Override
     public boolean approvedCompleteParentNode(FlwTask flwTask, String actorId) {
         //只查询审批节点已通过得任务
-        FlwHisTask current = syFlwHisTaskMapper.selectOne(new LambdaQueryWrapper<FlwHisTask>()
-          .eq(FlwHisTask::getId, flwTask.getParentTaskId())
-          .eq(FlwHisTask::getTaskType, TaskType.approval.getValue())
-          .eq(FlwHisTask::getTaskState, TaskState.complete.getValue()), false);
+        FlwHisTask current = syFlwHisTaskMapper.selectOneApprovedTaskById(flwTask.getParentTaskId());
         //没有父任务
         if (Objects.isNull(current)) {
             return false;
@@ -811,7 +818,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
             return false;
         }
         //通过任务ID获取参与者列表
-        List<FlwHisTaskActor> flwHisTaskActorList = flwHisTaskActorMapper.selectListByTaskIds(
+        List<FlwHisTaskActor> flwHisTaskActorList = flwHisTaskActorMapper.selectListByTaskIdsAndResubmit(
           result.stream().map(FlwHisTask::getId).collect(
             Collectors.toList()));
         return flwHisTaskActorList.stream().anyMatch(t -> Objects.equals(actorId, t.getActorId()));
@@ -829,10 +836,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         }
         // 防止脏数据循环引用
         visited.add(taskId);
-        FlwHisTask task = syFlwHisTaskMapper.selectOne(new LambdaQueryWrapper<FlwHisTask>()
-          .eq(FlwHisTask::getId, taskId)
-          .eq(FlwHisTask::getTaskType, TaskType.approval.getValue())
-          .eq(FlwHisTask::getTaskState, TaskState.complete.getValue()), false);
+        FlwHisTask task = syFlwHisTaskMapper.selectOneApprovedTaskById(taskId);
         if (task == null) {
             return;
         }

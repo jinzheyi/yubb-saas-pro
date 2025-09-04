@@ -42,4 +42,7 @@ public class TaskApprovalDTO {
     @Schema(description = "执行参数")
     private Map<String, Object> args;
 
+    @Schema(description = "是否重新提交")
+    private boolean resubmit = false;
+
 }

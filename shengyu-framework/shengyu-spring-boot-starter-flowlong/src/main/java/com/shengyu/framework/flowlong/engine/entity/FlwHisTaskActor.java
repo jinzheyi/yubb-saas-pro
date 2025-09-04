@@ -25,6 +25,11 @@ import lombok.ToString;
 @ToString
 public class FlwHisTaskActor extends FlwTaskActor {
 
+    /**
+     * 是否重新提交 0：否 1：是
+     */
+    protected Integer resubmit;
+
     public static FlwHisTaskActor ofNodeAssignee(NodeAssignee nodeAssignee, Long instanceId, Long taskId) {
         FlwHisTaskActor his = new FlwHisTaskActor();
         his.setTenantId(nodeAssignee.getTenantId());

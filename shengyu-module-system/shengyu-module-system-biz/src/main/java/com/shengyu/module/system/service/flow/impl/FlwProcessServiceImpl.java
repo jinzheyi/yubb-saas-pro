@@ -124,9 +124,12 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
     }
 
     public List<FlwProcessCategoryVO> listCategoryVO(String keyword, boolean launch) {
-        List<FlwProcessCategory> categoryList = flwProcessCategoryService.listAll();
-        if (CollectionUtil.isEmpty(categoryList)) {
-            return null;
+        List<FlwProcessCategory> categoryList = flwProcessCategoryService
+          .list(new LambdaQueryWrapper<FlwProcessCategory>()
+            .orderByAsc(FlwProcessCategory::getSort)
+          );
+        if (CollUtil.isEmpty(categoryList)) {
+            return Collections.emptyList();
         }
         // 全部查询
         List<FlwProcessCategoryVO> voList = new ArrayList<>();
