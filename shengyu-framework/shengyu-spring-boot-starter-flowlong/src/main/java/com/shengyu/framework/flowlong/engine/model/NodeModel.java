@@ -87,8 +87,13 @@ public class NodeModel implements ModelInstance, Serializable {
     private List<NodeAssignee> nodeAssigneeList;
     /**
      * 节点候选人或角色等
+     * 如果审批节点设置了候选人，那么 只有这些候选人才有资格签收并处理该任务。自选时数据也是从候选人进行筛选
      */
     private NodeCandidate nodeCandidate;
+    /**
+     * 允许当节点选择发起人自选又实际没有人员时自动通过,默认false不允许
+     */
+    private Boolean allowInitiatorSelectedPass = false;
     /**
      * 指定主管层级
      */
@@ -206,6 +211,14 @@ public class NodeModel implements ModelInstance, Serializable {
      * 允许审批节点手动创建传阅任务
      */
     private Boolean allowCirculate;
+    /**
+     * 允许驳回
+     */
+    private Boolean allowRejection;
+    /**
+     * 允许拒绝
+     */
+    private Boolean allowRefuse;
     /**
      * 审批人与提交人为同一人时 {@link NodeApproveSelf}
      * <p>

@@ -52,7 +52,7 @@ public interface FlwHisTaskDao {
 
     Optional<List<FlwHisTask>> selectListByInstanceIdAndTaskState(Long instanceId, Integer taskState);
 
-    Optional<List<FlwHisTask>> selectListByInstanceIdAndTaskKey(Long instanceId, String taskKey);
+    Optional<List<FlwHisTask>> selectListByInstanceIdAndTaskKey(Long instanceId, List<String> taskKeyList);
 
     List<FlwHisTask> selectListByCallProcessIdAndCallInstanceId(Long callProcessId, Long callInstanceId);
 

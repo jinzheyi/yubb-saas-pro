@@ -72,6 +72,12 @@ public class TaskApprovalVO {
     @Schema(description = "允许审批节点手动创建传阅任务")
     private Boolean allowCirculate;
 
+    @Schema(description = "允许驳回")
+    private Boolean allowRejection;
+
+    @Schema(description = "允许拒绝")
+    private Boolean allowRefuse;
+
     @Schema(description = "驳回策略")
     private Integer rejectStrategy;
 

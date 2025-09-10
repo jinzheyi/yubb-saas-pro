@@ -227,7 +227,7 @@ public interface ErrorCodeConstants {
     ErrorCode FLOW_1_002_029_021 = new ErrorCode(1_002_029_021, "指定ID任务已执行完成");
     ErrorCode FLOW_1_002_029_022 = new ErrorCode(1_002_029_022, "保存保单内容失败");
     ErrorCode FLOW_1_002_029_023 = new ErrorCode(1_002_029_023, "指定流程模型不存在");
-    ErrorCode FLOW_1_002_029_024 = new ErrorCode(1_002_029_024, "发起人自选节点未设置处理人员");
+    ErrorCode FLOW_1_002_029_024 = new ErrorCode(1_002_029_024, "节点【{}】发起人自选未设置处理人员");
     ErrorCode FLOW_1_002_029_025 = new ErrorCode(1_002_029_025, "节点【{}】未设置处理人员");
     ErrorCode FLOW_1_002_029_026 = new ErrorCode(1_002_029_026, "流程启动失败");
     ErrorCode FLOW_1_002_029_027 = new ErrorCode(1_002_029_027, "保存保单失败");

@@ -294,6 +294,15 @@ public interface FlowLongEngine {
      */
     Optional<List<FlwTask>> executeRejectTask(FlwTask currentFlwTask, String nodeKey, FlowCreator flowCreator, Map<String, Object> args, boolean termination);
 
+    /**
+     * 直接终止流程
+     * @param currentFlwTask 当前任务对象
+     * @param flowCreator 任务创建者
+     * @param args 任务参数
+     * @return 直接终止流程
+     */
+    Optional<List<FlwTask>> reject(FlwTask currentFlwTask, FlowCreator flowCreator, Map<String, Object> args);
+
     default Optional<List<FlwTask>> executeRejectTask(FlwTask currentFlwTask, String nodeKey, FlowCreator flowCreator, Map<String, Object> args) {
         return executeRejectTask(currentFlwTask, nodeKey, flowCreator, args, false);
     }

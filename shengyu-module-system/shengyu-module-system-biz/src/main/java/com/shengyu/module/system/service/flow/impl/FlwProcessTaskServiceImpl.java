@@ -265,6 +265,8 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
                 vo.setAllowCc(nodeModel.getAllowCc());
                 vo.setAllowCirculate(nodeModel.getAllowCirculate());
                 vo.setRejectStrategy(nodeModel.getRejectStrategy());
+                vo.setAllowRejection(nodeModel.getAllowRejection());
+                vo.setAllowRefuse(nodeModel.getAllowRefuse());
             }
         }
 
@@ -713,6 +715,16 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         FlwTask flwTask = this.getFlwTask(dto.getTaskId());
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
         return flowLongEngine.executeRejectTask(flwTask, dto.getNodeKey(), FlowHelper.getFlowCreator(), dto.getArgs(), dto.isTermination()).isPresent();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean refuse(TaskRefuseDTO dto) {
+        //当前任务处理人员为角色或者部门时，进行任务认领操作
+        this.claimTask(dto.getTaskId(), Objects.nonNull(dto.getFlowCreator())? dto.getFlowCreator() : FlowHelper.getFlowCreator());
+        FlwTask flwTask = this.getFlwTask(dto.getTaskId());
+        FlowHelper.setProcessApprovalOpinion(dto.getContent());
+        return flowLongEngine.reject(flwTask, FlowHelper.getFlowCreator(), dto.getArgs()).isPresent();
     }
 
     /**

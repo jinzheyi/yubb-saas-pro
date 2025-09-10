@@ -2,6 +2,7 @@ package com.shengyu.module.system.service.flow.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.BooleanUtil;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.common.util.json.JsonUtils;
@@ -248,13 +249,19 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
                     // 主管由 FlowTaskActorProvider 类提供，不认为非法逻辑
                     return;
                 }
-
                 final DynamicAssignee dynamicAssignee = assigneeMap.get(t.getNodeKey());
-                if (NodeSetType.specifyMembers.eq(t.getSetType()) || NodeSetType.initiatorSelected.eq(t.getSetType())) {
-                    ServiceExceptionUtil.fail(null == dynamicAssignee, ErrorCodeConstants.FLOW_1_002_029_024);
+                if (NodeSetType.specifyMembers.eq(t.getSetType())) {
+                    ServiceExceptionUtil.fail(null == dynamicAssignee || CollectionUtils.isEmpty(dynamicAssignee.getAssigneeList()),
+                      ErrorCodeConstants.FLOW_1_002_029_024, t.getNodeName());
+                } else if (NodeSetType.initiatorSelected.eq(t.getSetType())) {
+                    if (BooleanUtil.isFalse(t.getAllowInitiatorSelectedPass())) {
+                        ServiceExceptionUtil.fail(null == dynamicAssignee || CollectionUtils.isEmpty(dynamicAssignee.getAssigneeList()),
+                          ErrorCodeConstants.FLOW_1_002_029_024, t.getNodeName());
+                    }
+                } else {
+                    ServiceExceptionUtil.fail(null == dynamicAssignee || CollectionUtils.isEmpty(dynamicAssignee.getAssigneeList()),
+                      ErrorCodeConstants.FLOW_1_002_029_025, t.getNodeName());
                 }
-                ServiceExceptionUtil.fail(null == dynamicAssignee || CollectionUtils.isEmpty(dynamicAssignee.getAssigneeList()),
-                        ErrorCodeConstants.FLOW_1_002_029_025, t.getNodeName());
             });
         }
         // 传递动态分配处理人员

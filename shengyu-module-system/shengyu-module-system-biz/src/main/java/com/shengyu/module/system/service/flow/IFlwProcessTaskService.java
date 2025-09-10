@@ -158,6 +158,13 @@ public interface IFlwProcessTaskService {
     boolean rejection(TaskApprovalDTO dto);
 
     /**
+     * 审批拒绝,直接就是终止流程
+     * @param dto 入参 数据
+     * @return 结果
+     */
+    boolean refuse(TaskRefuseDTO dto);
+
+    /**
      * 加签
      */
     boolean appendNode(TaskAppendNodeDTO dto);

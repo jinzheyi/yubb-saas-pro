@@ -88,10 +88,10 @@ public class FlwHisTaskDaoImpl implements FlwHisTaskDao {
     }
 
     @Override
-    public Optional<List<FlwHisTask>> selectListByInstanceIdAndTaskKey(Long instanceId, String taskKey) {
+    public Optional<List<FlwHisTask>> selectListByInstanceIdAndTaskKey(Long instanceId, List<String> taskKeyList) {
         return Optional.ofNullable(hisTaskMapper.selectList(Wrappers.<FlwHisTask>lambdaQuery()
           .eq(FlwHisTask::getInstanceId, instanceId)
-          .eq(FlwHisTask::getTaskKey, taskKey)
+          .in(FlwHisTask::getTaskKey, taskKeyList)
           .orderByDesc(FlwHisTask::getCreateTime)));
     }
 

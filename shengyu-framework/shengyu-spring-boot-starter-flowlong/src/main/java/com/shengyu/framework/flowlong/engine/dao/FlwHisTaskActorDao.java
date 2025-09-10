@@ -26,6 +26,8 @@ public interface FlwHisTaskActorDao {
 
     boolean deleteByTaskId(Long taskId);
 
+    boolean updateById(FlwHisTaskActor hisTaskActor);
+
     List<FlwHisTaskActor> selectCcTaskActorsByInstanceId(Long instanceId);
 
     List<FlwHisTaskActor> selectCirculateTaskActorsByInstanceId(Long instanceId);
@@ -35,6 +37,8 @@ public interface FlwHisTaskActorDao {
     List<FlwHisTaskActor> selectListByTaskId(Long taskId);
 
     List<FlwHisTaskActor> selectListByTaskIds(List<Long> taskIds);
+
+    List<FlwHisTaskActor> selectListByTaskIdsAndInstanceId(List<Long> taskIds, Long instanceId);
 
     List<FlwHisTaskActor> selectListByTaskIdAndActorId(Long taskId, String actorId);
 }

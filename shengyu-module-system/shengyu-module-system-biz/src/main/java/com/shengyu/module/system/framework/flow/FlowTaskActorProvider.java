@@ -1,6 +1,7 @@
 package com.shengyu.module.system.framework.flow;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.shengyu.framework.common.exception.ErrorCode;
@@ -8,12 +9,15 @@ import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.flowlong.engine.FlowConstants;
 import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
 import com.shengyu.framework.flowlong.engine.TaskActorProvider;
+import com.shengyu.framework.flowlong.engine.assist.Assert;
 import com.shengyu.framework.flowlong.engine.assist.ObjectUtils;
 import com.shengyu.framework.flowlong.engine.core.Execution;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.core.enums.NodeSetType;
+import com.shengyu.framework.flowlong.engine.core.enums.PerformType;
 import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
 import com.shengyu.framework.flowlong.engine.entity.FlwInstance;
+import com.shengyu.framework.flowlong.engine.entity.FlwTask;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import com.shengyu.framework.flowlong.engine.model.DynamicAssignee;
 import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
@@ -105,7 +109,7 @@ public class FlowTaskActorProvider implements TaskActorProvider {
         final Integer nodeType = nodeModel.getType();
         if (TaskType.callProcess.eq(nodeType) || TaskType.trigger.eq(nodeType) || TaskType.timer.eq(nodeType)) {
             // 子流程，触发器情况
-            return null;
+            return Collections.emptyList();
         }
 
         final FlowCreator flowCreator = execution.getFlowCreator();
@@ -210,9 +214,33 @@ public class FlowTaskActorProvider implements TaskActorProvider {
                 return flwTaskActorDepartmentUserList(nodeAssigneeList, nodeModel);
             }
         }
+        // 发起人自选，没有选择处理人但是允许当节点选择发起人自选又实际没有人员时自动通过
+        if (BooleanUtil.isFalse(nodeModel.getAllowInitiatorSelectedPass())) {
+            ServiceExceptionUtil.fail(ErrorCodeConstants.FLOW_1_002_029_005);
+        }
+        return Collections.emptyList();
+    }
 
-        ServiceExceptionUtil.fail(ErrorCodeConstants.FLOW_1_002_029_005);
-        return null;
+    /**
+     * 非正常创建任务处理逻辑，默认抛出异常
+     *
+     * @param flwTask     当前任务
+     * @param performType 任务参与类型 {@link PerformType}
+     * @param taskActors  任务参与者
+     * @param execution   执行对象 {@link Execution}
+     * @param nodeModel   模型节点 {@link NodeModel}
+     * @return 返回 true 不再创建任务，返回 false 解决异常补充回写 taskActors 信息
+     */
+    @Override
+    public boolean abnormal(FlwTask flwTask, PerformType performType, List<FlwTaskActor> taskActors,
+      Execution execution, NodeModel nodeModel) {
+        // 发起人自选，没有选择处理人但是允许当节点选择发起人自选又实际没有人员时自动通过
+        if (NodeSetType.initiatorSelected.eq(nodeModel.getSetType()) && BooleanUtil.isTrue(nodeModel.getAllowInitiatorSelectedPass())) {
+            return true;
+        }
+        Assert.illegal("taskActors cannot be empty. taskName = " + flwTask.getTaskName() + ", taskKey = " +
+          flwTask.getTaskKey() + ", performType = " + performType.getValue());
+        return true;
     }
 
     /**

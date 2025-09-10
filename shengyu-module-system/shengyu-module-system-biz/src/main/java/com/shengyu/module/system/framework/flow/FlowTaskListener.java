@@ -1,13 +1,18 @@
 package com.shengyu.module.system.framework.flow;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.flowlong.engine.FlowLongEngine;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
+import com.shengyu.framework.flowlong.engine.core.FlowLongContext;
 import com.shengyu.framework.flowlong.engine.core.enums.*;
 import com.shengyu.framework.flowlong.engine.entity.FlwExtInstance;
 import com.shengyu.framework.flowlong.engine.entity.FlwInstance;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcessSetting;
 import com.shengyu.framework.flowlong.engine.entity.FlwTask;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import com.shengyu.framework.flowlong.engine.listener.TaskListener;
@@ -105,8 +110,9 @@ public class FlowTaskListener implements TaskListener {
 
                     // 手动抄送/手动传阅
                     if (TaskEventType.createCc.eq(eventType) || TaskEventType.createCirculate.eq(eventType)) {
-                        content.setNodeUserList(taskActors.stream().map(NodeAssignee::of).collect(
-                          Collectors.toList()));
+                        if (CollUtil.isNotEmpty(taskActors)) {
+                            content.setNodeUserList(taskActors.stream().map(NodeAssignee::of).toList());
+                        }
                         if (null == content.getOpinion()) {
                             content.setOpinion(TaskEventType.createCc.eq(eventType)? "发起抄送任务" : "发起传阅任务");
                             saveContent = true;
@@ -168,15 +174,16 @@ public class FlowTaskListener implements TaskListener {
             NodeModel currentNodeModel = this.getNodeModel(flwTask, nodeModel);
             if (TaskEventType.create.eq(eventType)) {
                 final FlwInstance instance = flowLongEngine.queryService().getInstance(flwTask.getInstanceId());
+                final FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(flwTask.getInstanceId());
                 // 创建人，发起人自己，自动跳过
                 if (NodeApproveSelf.AutoSkip.eq(currentNodeModel.getApproveSelf())) {
                     if (NodeSetType.initiatorThemselves.eq(currentNodeModel.getSetType())) {
                         // 发起人自己，执行自动跳转逻辑
-                        return flowLongEngine.autoJumpTask(flwTask.getId(), flowCreator);
+                        return flowLongEngine.autoJumpTask(flwTask.getId(), FlowCreator.ADMIN);
                     }
 
                     // 流程发起人自动跳过处理
-                    if (taskActors.stream().anyMatch(t -> Objects.equals(t.getActorId(), instance.getCreateId())
+                    if (CollUtil.isNotEmpty(taskActors) && taskActors.stream().anyMatch(t -> Objects.equals(t.getActorId(), instance.getCreateId())
                       // 当前节点处理人参与父节点审批
                       || flwProcessTaskService.approvedParentNode(flwTask.getParentTaskId(), t.getActorId())
                     )) {
@@ -185,34 +192,40 @@ public class FlowTaskListener implements TaskListener {
                           instance.getCreateId(), instance.getCreateBy()));
                     }
                 }
+                // 发起人自选 并且 人员为空 并且 配置了节点允许人员为空自动通过
+                if (NodeSetType.initiatorSelected.eq(currentNodeModel.getSetType())
+                  && CollUtil.isEmpty(taskActors)
+                  && BooleanUtil.isTrue(currentNodeModel.getAllowInitiatorSelectedPass())) {
+                    return flowLongEngine.autoCompleteTask(flwTask.getId(), FlowCreator.ADMIN);
+                }
 
-                FlwProcessConfigure configure = flwProcessConfigureService.getByProcessId(instance.getProcessId());
-                if (null != configure && null != configure.getProcessSetting()
-                  && !Objects.equals(3, configure.getProcessSetting().getRepeatOperateSkip())) {
-                    if (Objects.equals(1, configure.getProcessSetting().getRepeatOperateSkip())) {
+                FlwProcessSetting processSetting = CharSequenceUtil.isNotBlank(extInstance.getProcessSetting())?
+                  FlowLongContext.fromJson(extInstance.getProcessSetting(), FlwProcessSetting.class) : null;
+                if (null != processSetting && !Objects.equals(3, processSetting.getRepeatOperateSkip()) && CollUtil.isNotEmpty(taskActors)) {
+                    if (Objects.equals(1, processSetting.getRepeatOperateSkip())) {
                         if (taskActors.stream().anyMatch(t ->
                           // 当前节点处理人参与历史节点审批
                           flwProcessTaskService.approvedCompleteAllNode(flwTask, t.getActorId())
                         )) {
                             //仅审批一次，后续重复的审批节点均自动同意
-                            return flowLongEngine.autoCompleteTask(flwTask.getId(), flowCreator);
+                            return flowLongEngine.autoCompleteTask(flwTask.getId(), FlowCreator.ADMIN);
                         }
                     }
-                    if (Objects.equals(2, configure.getProcessSetting().getRepeatOperateSkip())) {
+                    if (Objects.equals(2, processSetting.getRepeatOperateSkip())) {
                         if (taskActors.stream().anyMatch(t ->
                           // 当前节点处理人参与父节点审批
                           flwProcessTaskService.approvedCompleteParentNode(flwTask, t.getActorId())
                         )) {
                             //连续审批的节点自动同意
-                            return flowLongEngine.autoCompleteTask(flwTask.getId(), flowCreator);
+                            return flowLongEngine.autoCompleteTask(flwTask.getId(), FlowCreator.ADMIN);
                         }
                     }
                 }
 
                 // 允许转办处理
-                if (Objects.equals(true, currentNodeModel.getAllowTransfer())) {
+                if (Objects.equals(true, currentNodeModel.getAllowTransfer()) && CollUtil.isNotEmpty(taskActors)) {
                     for (FlwTaskActor fta : taskActors) {
-                        TaskTransferVO ttv = flwTransferConfigureService.getTaskTransfer(Long.valueOf(fta.getActorId()));
+                        TaskTransferVO ttv = flwTransferConfigureService.getTaskTransfer(Long.parseLong(fta.getActorId()));
                         if (null != ttv) {
                             FlowCreator fc = FlowCreator.of(fta.getTenantId(), fta.getActorId(), fta.getActorName());
                             return flowLongEngine.taskService().transferTask(flwTask.getId(), fc, ttv.toFlowCreator());

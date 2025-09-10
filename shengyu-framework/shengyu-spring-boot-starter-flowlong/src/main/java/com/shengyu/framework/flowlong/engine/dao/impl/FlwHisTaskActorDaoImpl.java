@@ -48,6 +48,11 @@ public class FlwHisTaskActorDaoImpl implements FlwHisTaskActorDao {
     }
 
     @Override
+    public boolean updateById(FlwHisTaskActor hisTaskActor) {
+        return hisTaskActorMapper.updateById(hisTaskActor) > 0;
+    }
+
+    @Override
     public List<FlwHisTaskActor> selectCcTaskActorsByInstanceId(Long instanceId) {
         return hisTaskActorMapper.selectList(Wrappers.<FlwHisTaskActor>lambdaQuery()
           .eq(FlwHisTaskActor::getInstanceId, instanceId)

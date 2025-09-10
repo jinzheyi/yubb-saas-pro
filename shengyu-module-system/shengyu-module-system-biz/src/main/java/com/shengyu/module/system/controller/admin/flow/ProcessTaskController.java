@@ -124,11 +124,18 @@ public class ProcessTaskController {
         return success(processTaskService.consent(dto));
     }
 
-    @Operation(summary = "审批拒绝")
+    @Operation(summary = "审批驳回")
     @PreAuthorize("@ss.hasPermission('flw:processTask:approval')")
     @PostMapping("/rejection")
     public CommonResult<Boolean> rejection(@Validated @RequestBody TaskApprovalDTO dto) {
         return success(processTaskService.rejection(dto));
+    }
+
+    @Operation(summary = "审批拒绝,直接就是终止流程")
+    @PreAuthorize("@ss.hasPermission('flw:processTask:refuse')")
+    @PostMapping("/refuse")
+    public CommonResult<Boolean> refuse(@Validated @RequestBody TaskRefuseDTO dto) {
+        return success(processTaskService.refuse(dto));
     }
 
     @Operation(summary = "设置已阅读-任务本身的已读未读")

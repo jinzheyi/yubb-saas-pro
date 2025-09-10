@@ -4,6 +4,7 @@
  */
 package com.shengyu.framework.flowlong.engine.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.flowlong.engine.*;
 import com.shengyu.framework.flowlong.engine.assist.Assert;
 import com.shengyu.framework.flowlong.engine.assist.DateUtils;
@@ -213,10 +214,24 @@ public class TaskServiceImpl implements TaskService {
         TaskType taskType = TaskType.get(nodeModel.getType());
         Assert.illegal(TaskType.major != taskType && TaskType.approval != taskType, "not allow jumping nodes");
 
+        // 获取跳转节点的所有子节点
+        List<String> allNextNodeKeys = ModelHelper.getAllNextConditionNodeKeys(nodeModel);
+        // 根据找到的所有子节点将已审批的人员情况置为未审批过，业务要求退回情况下需将已审批人员置为未审批，避免自动跳过连续审批节点的设置
+        List<Long> flwHisTaskIdList = hisTaskDao.selectListByInstanceIdAndTaskKey(
+          flwTask.getInstanceId(), allNextNodeKeys).get().stream().map(FlwHisTask::getId).collect(
+          Collectors.toList());
+        if (CollUtil.isNotEmpty(flwHisTaskIdList)) {
+            List<FlwHisTaskActor> flwHisTaskActorList = hisTaskActorDao.selectListByTaskIdsAndInstanceId(
+              flwHisTaskIdList, flwTask.getInstanceId());
+            flwHisTaskActorList.forEach(t -> {
+                t.setResubmit(1);
+                hisTaskActorDao.updateById(t);
+            });
+        }
+
         // 获取当前执行实例的所有正在执行的任务，强制终止跳到指定节点的所有子节点任务
         List<FlwTask> fts = taskDao.selectListByInstanceId(flwTask.getInstanceId());
         if (ObjectUtils.isNotEmpty(fts)) {
-            List<String> allNextNodeKeys = ModelHelper.getAllNextConditionNodeKeys(nodeModel);
             // 当前任务不在指定跳转节点条件之下归档所有任务
             final String currentTaskKey = flwTask.getTaskKey();
             boolean moveAll = allNextNodeKeys.stream().noneMatch(t -> Objects.equals(t, currentTaskKey));
@@ -235,6 +250,7 @@ public class TaskServiceImpl implements TaskService {
         // 设置任务类型为跳转
         FlwTask createTask = this.createTaskBase(nodeModel, execution);
         createTask.taskType(taskTye);
+        boolean taskNotify = true;
         if (TaskType.major == taskType) {
             // 发起节点，创建发起任务，分配发起人
             createTask.performType(PerformType.start);
@@ -248,16 +264,34 @@ public class TaskServiceImpl implements TaskService {
         } else {
             // 模型中获取参与者信息
             taskActors = execution.getProviderTaskActors(nodeModel);
+
+            //任务监听器通知，这里考虑的是优先通知当前处理的任务节点，然后再通知目标处理节点
+            this.taskNotify(taskEventType, execution::getFlwTask,
+              execution.getProviderTaskActors(processModel.getNode(flwTask.getTaskKey())),
+              processModel.getNode(flwTask.getTaskKey()), flowCreator);
+            taskNotify = false;
+
             // 创建审批人
             PerformType performType = PerformType.get(nodeModel.getExamineMode());
             flwTasks.addAll(this.saveTask(createTask, performType, taskActors, execution, nodeModel));
         }
 
-        // 更新当前节点
-        this.updateCurrentNode(createTask);
-
+        // 更新当前节点。取最新的任务节点，因为可能有自动跳过的情况，不能取前端传过来的目标节点
+        List<FlwTask> flwTaskList = taskDao.selectListByInstanceId(flwTask.getInstanceId());
+        FlwTask task = flwTaskList.get(0);
+        if (Objects.nonNull(task)) {
+            this.updateCurrentNode(task);
+        }
         // 任务监听器通知
-        this.taskNotify(taskEventType, execution::getFlwTask, taskActors, nodeModel, flowCreator);
+        if (taskNotify) {
+            this.taskNotify(taskEventType, execution::getFlwTask, taskActors, nodeModel, flowCreator);
+        } else {
+            //取最新的任务以及节点进行通知
+            Execution executionTask = new Execution(flowCreator, args);
+            executionTask.setFlwTask(task);
+            this.taskNotify(TaskEventType.update,
+              executionTask::getFlwTask, taskActors, Objects.nonNull(task)? processModel.getNode(task.getTaskKey()) :  null, flowCreator);
+        }
         return Optional.of(flwTasks);
     }
 
@@ -804,7 +838,7 @@ public class TaskServiceImpl implements TaskService {
 
         if (null != nodeKey) {
             // 恢复指定节点key历史任务
-            hisTaskDao.selectListByInstanceIdAndTaskKey(instanceId, nodeKey).ifPresent(hisTasks -> {
+            hisTaskDao.selectListByInstanceIdAndTaskKey(instanceId, Collections.singletonList(nodeKey)).ifPresent(hisTasks -> {
                 if (hisTasks.size() > 1) {
                     // 获取最近执行的指定节点历史任务
                     List<FlwHisTask> lastFhtList = hisTaskDao.selectListByParentTaskId(hisTasks.get(0).getParentTaskId());
@@ -1466,7 +1500,7 @@ public class TaskServiceImpl implements TaskService {
             flwTask.setParentTaskId(executionTask.getId());
         }
         // 超时自动审批
-        if (Objects.equals(true, nodeModel.getTermAuto())) {
+        if (Objects.equals(Boolean.TRUE, nodeModel.getTermAuto())) {
             // 审批期限非空，设置期望任务完成时间
             Integer term = nodeModel.getTerm();
             if (null != term && term > 0) {
@@ -1543,16 +1577,26 @@ public class TaskServiceImpl implements TaskService {
             return flwTasks;
         }
 
+        // 参与者类型
+        int actorType = execution.getProviderTaskActorType(nodeModel);
+
         if (ObjectUtils.isEmpty(taskActors)) {
             // 非正常创建任务处理逻辑
             if (execution.abnormal(flwTask, performType, taskActors, nodeModel)) {
+                //如果abnormal方法不报错则说明根据配置允许创建任务
+                taskDao.insert(flwTask);
+                flwTasks.add(flwTask);
+                // 分配下一个参与者
+                FlwTaskActor nextFlwTaskActor = execution.getNextFlwTaskActor();
+                if (null != nextFlwTaskActor) {
+                    this.assignTask(flwTask.getInstanceId(), flwTask.getId(), assignActorType(actorType, nextFlwTaskActor.getActorType()), nextFlwTaskActor);
+                }
+                // 创建任务监听
+                this.taskNotify(execution.getTaskEventType(), () -> flwTask, null != nextFlwTaskActor? Collections.singletonList(nextFlwTaskActor) : null, nodeModel, flowCreator);
                 // 返回 true 继续执行
                 return flwTasks;
             }
         }
-
-        // 参与者类型
-        int actorType = execution.getProviderTaskActorType(nodeModel);
 
         if (performType == PerformType.orSign) {
             /*
@@ -1665,7 +1709,7 @@ public class TaskServiceImpl implements TaskService {
 
         List<FlwTaskActor> ftaList = new ArrayList<>();
         List<FlwTaskActor> taskActorList = this.getTaskActorsByTaskId(taskId);
-        Map<String, FlwTaskActor> taskActorMap = taskActorList.stream().collect(Collectors.toMap(FlwTaskActor::getActorId, t -> t));
+        Map<String, FlwTaskActor> taskActorMap = taskActorList.stream().collect(Collectors.toMap(FlwTaskActor::getActorId, Function.identity()));
         for (FlwTaskActor taskActor : taskActors) {
             // 不存在的参与者
             if (null != taskActorMap.get(taskActor.getActorId())) {
