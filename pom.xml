@@ -16,12 +16,12 @@
         <module>shengyu-module-system</module>
         <module>shengyu-module-platform</module>
         <module>shengyu-module-infra</module>
-<!--        <module>shengyu-module-member</module>-->
-<!--        <module>shengyu-module-pay</module>-->
+        <module>yudao-module-member</module>
+        <module>yudao-module-pay</module>
 <!--        <module>shengyu-module-bpm</module>-->
 <!--        <module>shengyu-module-report</module>-->
 <!--        <module>shengyu-module-mp</module>-->
-<!--        <module>shengyu-module-mall</module>-->
+        <module>yudao-module-mall</module>
         <!-- 示例项目 -->
 <!--        <module>shengyu-example</module>-->
     </modules>
