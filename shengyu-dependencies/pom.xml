@@ -103,11 +103,6 @@
             </dependency>
             <dependency>
                 <groupId>com.shengyu.boot</groupId>
-                <artifactId>shengyu-spring-boot-starter-biz-trade</artifactId>
-                <version>${revision}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.shengyu.boot</groupId>
                 <artifactId>shengyu-spring-boot-starter-biz-dict</artifactId>
                 <version>${revision}</version>
             </dependency>
@@ -637,31 +632,6 @@
                 <groupId>com.github.binarywang</groupId>
                 <artifactId>wx-java-miniapp-spring-boot-starter</artifactId>
                 <version>${weixin-java.version}</version>
-            </dependency>
-
-            <!-- 积木报表-->
-            <dependency>
-                <groupId>org.jeecgframework.jimureport</groupId>
-                <artifactId>jimureport-spring-boot-starter</artifactId>
-                <version>${jimureport.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.alibaba</groupId>
-                        <artifactId>druid</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>xerces</groupId>
-                <artifactId>xercesImpl</artifactId>
-                <version>${xercesImpl.version}</version>
-            </dependency>
-
-            <!-- UReport2 报表-->
-            <dependency>
-                <groupId>com.bstek.ureport</groupId>
-                <artifactId>ureport2-console</artifactId>
-                <version>${ureport2.version}</version>
             </dependency>
 
 <!--            &lt;!&ndash; 工作流引擎 &ndash;&gt;-->
