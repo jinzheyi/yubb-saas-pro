@@ -2,6 +2,7 @@ package com.shengyu.module.system.framework.flow;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
@@ -164,6 +165,8 @@ public class FlowTaskListener implements TaskListener {
             // 其它类型转换
             fpa.setType(this.getType(eventType));
         }
+        //睡眠1秒，防止生成的记录时间一致不好排序
+        ThreadUtil.sleep(1000);
         return flwProcessApprovalService.save(fpa);
     }
 

@@ -290,6 +290,18 @@ public class RuntimeServiceImpl implements RuntimeService {
      * @param flowCreator    处理人员
      */
     @Override
+    public boolean rejectTerminate(Long instanceId, FlwTask currentFlwTask, FlowCreator flowCreator) {
+        return this.forceComplete(instanceId, currentFlwTask, flowCreator, InstanceEventType.rejectComplete, InstanceState.reject, TaskEventType.terminate);
+    }
+
+    /**
+     * 强制终止活动实例,并强制完成活动任务
+     *
+     * @param instanceId     流程实例ID
+     * @param currentFlwTask 当前任务
+     * @param flowCreator    处理人员
+     */
+    @Override
     public boolean terminate(Long instanceId, FlwTask currentFlwTask, FlowCreator flowCreator) {
         return this.forceComplete(instanceId, currentFlwTask, flowCreator, InstanceEventType.rejectComplete, InstanceState.terminate, TaskEventType.terminate);
     }

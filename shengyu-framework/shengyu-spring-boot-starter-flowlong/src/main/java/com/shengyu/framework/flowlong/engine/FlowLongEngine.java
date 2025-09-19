@@ -301,7 +301,7 @@ public interface FlowLongEngine {
      * @param args 任务参数
      * @return 直接终止流程
      */
-    Optional<List<FlwTask>> reject(FlwTask currentFlwTask, FlowCreator flowCreator, Map<String, Object> args);
+    Optional<List<FlwTask>> rejectTerminate(FlwTask currentFlwTask, FlowCreator flowCreator, Map<String, Object> args);
 
     default Optional<List<FlwTask>> executeRejectTask(FlwTask currentFlwTask, String nodeKey, FlowCreator flowCreator, Map<String, Object> args) {
         return executeRejectTask(currentFlwTask, nodeKey, flowCreator, args, false);

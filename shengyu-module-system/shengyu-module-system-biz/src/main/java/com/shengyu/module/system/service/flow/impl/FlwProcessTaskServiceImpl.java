@@ -724,7 +724,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         this.claimTask(dto.getTaskId(), Objects.nonNull(dto.getFlowCreator())? dto.getFlowCreator() : FlowHelper.getFlowCreator());
         FlwTask flwTask = this.getFlwTask(dto.getTaskId());
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
-        return flowLongEngine.reject(flwTask, FlowHelper.getFlowCreator(), dto.getArgs()).isPresent();
+        return flowLongEngine.rejectTerminate(flwTask, FlowHelper.getFlowCreator(), dto.getArgs()).isPresent();
     }
 
     /**

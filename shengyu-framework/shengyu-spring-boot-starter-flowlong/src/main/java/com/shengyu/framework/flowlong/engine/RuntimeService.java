@@ -168,6 +168,15 @@ public interface RuntimeService {
     }
 
     /**
+     * 流程实例拒绝终止
+     *
+     * @param instanceId     流程实例ID
+     * @param currentFlwTask 当前任务
+     * @param flowCreator    处理人员
+     */
+    boolean rejectTerminate(Long instanceId, FlwTask currentFlwTask, FlowCreator flowCreator);
+
+    /**
      * 流程实例强制终止
      *
      * @param instanceId     流程实例ID

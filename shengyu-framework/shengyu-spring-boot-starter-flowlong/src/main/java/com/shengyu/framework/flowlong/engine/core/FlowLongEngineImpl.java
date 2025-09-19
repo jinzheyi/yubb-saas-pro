@@ -230,24 +230,18 @@ public class FlowLongEngineImpl implements FlowLongEngine {
     @Override
     public Optional<List<FlwTask>> executeRejectTask(FlwTask currentFlwTask, String nodeKey, FlowCreator flowCreator, Map<String, Object> args, boolean termination) {
         // 执行任务驳回
-        return this.executeRejectTask(currentFlwTask, nodeKey, flowCreator, args, termination, () -> {
-
-            // 驳回并终止流程
-            if (null != args) {
-                currentFlwTask.putAllVariable(args);
-            }
-            flowLongContext.getRuntimeService().reject(currentFlwTask.getInstanceId(), currentFlwTask, flowCreator);
-            return Optional.of(Collections.singletonList(currentFlwTask));
-        });
+        return this.executeRejectTask(currentFlwTask, nodeKey, flowCreator, args, termination, () ->
+          rejectTerminate(currentFlwTask, flowCreator, args)
+        );
     }
 
     @Override
-    public Optional<List<FlwTask>> reject(FlwTask currentFlwTask, FlowCreator flowCreator, Map<String, Object> args) {
+    public Optional<List<FlwTask>> rejectTerminate(FlwTask currentFlwTask, FlowCreator flowCreator, Map<String, Object> args) {
         // 驳回并终止流程
         if (null != args) {
             currentFlwTask.putAllVariable(args);
         }
-        flowLongContext.getRuntimeService().reject(currentFlwTask.getInstanceId(), currentFlwTask, flowCreator);
+        flowLongContext.getRuntimeService().rejectTerminate(currentFlwTask.getInstanceId(), currentFlwTask, flowCreator);
         return Optional.of(Collections.singletonList(currentFlwTask));
     }
 
