@@ -50,7 +50,7 @@ public interface SyFlwTaskMapper extends FlwTaskMapper {
             .in(FlwTaskActor::getId, flwTaskActorIdList)
 
             .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
-            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwExtInstance::getCreateBy, dto.getCreateBy())
+            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwHisInstance::getCreateBy, dto.getCreateBy())
             .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
             .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
             .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())
@@ -92,7 +92,7 @@ public interface SyFlwTaskMapper extends FlwTaskMapper {
             // 排除掉节点在第一个节点的流程数据（发起人节点）
             .ne(FlwTask::getTaskKey, FlwExtInstance::getTaskKey)
             .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
-            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwExtInstance::getCreateBy, dto.getCreateBy())
+            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwHisInstance::getCreateBy, dto.getCreateBy())
             .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
             .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
             .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())
@@ -129,7 +129,7 @@ public interface SyFlwTaskMapper extends FlwTaskMapper {
             .leftJoin(FlwExtInstance.class, FlwExtInstance::getId, FlwHisInstance::getId)
 
             .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
-            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwExtInstance::getCreateBy, dto.getCreateBy())
+            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwHisInstance::getCreateBy, dto.getCreateBy())
             .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
             .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
             .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())

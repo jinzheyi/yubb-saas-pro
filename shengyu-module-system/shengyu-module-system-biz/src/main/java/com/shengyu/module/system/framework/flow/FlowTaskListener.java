@@ -95,40 +95,29 @@ public class FlowTaskListener implements TaskListener {
                 NodeModel currentNodeModel = this.getNodeModel(flwTask, nodeModel);
                 boolean saveContent = false;
                 ApprovalContent content = new ApprovalContent();
+                // 其它
+                String opinion = FlowHelper.getProcessApprovalOpinion();
+                if (StringUtils.hasLength(opinion)) {
+                    FlowHelper.removeProcessApprovalOpinion();
+                    content.setOpinion(opinion);
+                    saveContent = true;
+                }
+                // 这里考虑以后可能会模型加传阅节点的需求，而不单单是手动传阅
                 if (TaskEventType.cc.eq(eventType) || TaskEventType.circulate.eq(eventType)) {
                     // 自动抄送或自动传阅
                     content.setNodeUserList(currentNodeModel.getNodeAssigneeList());
                     saveContent = true;
-                } else {
-
-                    // 其它
-                    String opinion = FlowHelper.getProcessApprovalOpinion();
-                    if (StringUtils.hasLength(opinion)) {
-                        FlowHelper.removeProcessApprovalOpinion();
-                        content.setOpinion(opinion);
+                }
+                // 手动抄送/手动传阅
+                else if (TaskEventType.createCc.eq(eventType) || TaskEventType.createCirculate.eq(eventType)) {
+                    if (CollUtil.isNotEmpty(taskActors)) {
+                        content.setNodeUserList(taskActors.stream().map(NodeAssignee::of).collect(
+                                Collectors.toList()));
+                    }
+                    if (null == content.getOpinion()) {
+                        content.setOpinion(TaskEventType.createCc.eq(eventType)? "手动发起抄送任务" : "手动发起传阅任务");
                         saveContent = true;
                     }
-
-                    // 手动抄送/手动传阅
-                    if (TaskEventType.createCc.eq(eventType) || TaskEventType.createCirculate.eq(eventType)) {
-                        if (CollUtil.isNotEmpty(taskActors)) {
-                            content.setNodeUserList(taskActors.stream().map(NodeAssignee::of).toList());
-                        }
-                        if (null == content.getOpinion()) {
-                            content.setOpinion(TaskEventType.createCc.eq(eventType)? "发起抄送任务" : "发起传阅任务");
-                            saveContent = true;
-                        }
-                    }
-                }
-
-                if (NodeSetType.specifyMembers.eq(currentNodeModel.getSetType())) {
-                    // 指定成员类型
-                    content.setNodeUserList(currentNodeModel.getNodeAssigneeList());
-                    saveContent = true;
-                } else if (NodeSetType.role.eq(currentNodeModel.getSetType())) {
-                    // 角色类型
-                    content.setNodeRoleList(currentNodeModel.getNodeAssigneeList());
-                    saveContent = true;
                 }
 
                 // 记录是否调用流程
@@ -171,7 +160,7 @@ public class FlowTaskListener implements TaskListener {
     }
 
     private boolean createEventHandle(TaskEventType eventType, FlwTask flwTask, List<FlwTaskActor> taskActors,
-      NodeModel nodeModel, FlowCreator flowCreator) {
+                                      NodeModel nodeModel, FlowCreator flowCreator) {
         // 获取当前节点信息
         if (null != flwTask) {
             NodeModel currentNodeModel = this.getNodeModel(flwTask, nodeModel);
@@ -182,45 +171,54 @@ public class FlowTaskListener implements TaskListener {
                 if (NodeApproveSelf.AutoSkip.eq(currentNodeModel.getApproveSelf())) {
                     if (NodeSetType.initiatorThemselves.eq(currentNodeModel.getSetType())) {
                         // 发起人自己，执行自动跳转逻辑
-                        return flowLongEngine.autoJumpTask(flwTask.getId(), FlowCreator.ADMIN);
+                        return flowLongEngine.autoJumpTask(flwTask.getId(), FlowCreator.of(instance.getTenantId(),
+                                instance.getCreateId(), instance.getCreateBy()));
                     }
 
                     // 流程发起人自动跳过处理
                     if (CollUtil.isNotEmpty(taskActors) && taskActors.stream().anyMatch(t -> Objects.equals(t.getActorId(), instance.getCreateId())
-                      // 当前节点处理人参与父节点审批
-                      || flwProcessTaskService.approvedParentNode(flwTask.getParentTaskId(), t.getActorId())
+                            // 当前节点处理人参与父节点审批
+                            || flwProcessTaskService.approvedParentNode(flwTask.getParentTaskId(), t.getActorId())
                     )) {
                         // 审批人与提交人为同一人时，执行自动跳转逻辑
                         return flowLongEngine.autoJumpTask(flwTask.getId(), FlowCreator.of(instance.getTenantId(),
-                          instance.getCreateId(), instance.getCreateBy()));
+                                instance.getCreateId(), instance.getCreateBy()));
                     }
                 }
                 // 发起人自选 并且 人员为空 并且 配置了节点允许人员为空自动通过
                 if (NodeSetType.initiatorSelected.eq(currentNodeModel.getSetType())
-                  && CollUtil.isEmpty(taskActors)
-                  && BooleanUtil.isTrue(currentNodeModel.getAllowInitiatorSelectedPass())) {
+                        && CollUtil.isEmpty(taskActors)
+                        && BooleanUtil.isTrue(currentNodeModel.getAllowInitiatorSelectedPass())) {
                     return flowLongEngine.autoCompleteTask(flwTask.getId(), FlowCreator.ADMIN);
                 }
 
                 FlwProcessSetting processSetting = CharSequenceUtil.isNotBlank(extInstance.getProcessSetting())?
-                  FlowLongContext.fromJson(extInstance.getProcessSetting(), FlwProcessSetting.class) : null;
+                        FlowLongContext.fromJson(extInstance.getProcessSetting(), FlwProcessSetting.class) : null;
                 if (null != processSetting && !Objects.equals(3, processSetting.getRepeatOperateSkip()) && CollUtil.isNotEmpty(taskActors)) {
                     if (Objects.equals(1, processSetting.getRepeatOperateSkip())) {
-                        if (taskActors.stream().anyMatch(t ->
-                          // 当前节点处理人参与历史节点审批
-                          flwProcessTaskService.approvedCompleteAllNode(flwTask, t.getActorId())
-                        )) {
-                            //仅审批一次，后续重复的审批节点均自动同意
-                            return flowLongEngine.autoCompleteTask(flwTask.getId(), FlowCreator.ADMIN);
+                        Optional<FlwTaskActor> matchingActor = taskActors.stream()
+                                .filter(t ->
+                                        // 当前节点处理人参与过历史节点审批
+                                        flwProcessTaskService.approvedCompleteAllNode(flwTask, t.getActorId()))
+                                .findFirst();
+                        if (matchingActor.isPresent()) {
+                            FlwTaskActor flwTaskActor = matchingActor.get();
+                            // 仅审批一次，后续重复的审批节点均自动同意
+                            return flowLongEngine.autoCompleteTask(flwTask.getId(), FlowCreator.of(instance.getTenantId(),
+                                    flwTaskActor.getActorId(), flwTaskActor.getActorName()));
                         }
                     }
                     if (Objects.equals(2, processSetting.getRepeatOperateSkip())) {
-                        if (taskActors.stream().anyMatch(t ->
-                          // 当前节点处理人参与父节点审批
-                          flwProcessTaskService.approvedCompleteParentNode(flwTask, t.getActorId())
-                        )) {
+                        Optional<FlwTaskActor> matchingActor = taskActors.stream()
+                                .filter(t ->
+                                        // 当前节点处理人参与父节点审批
+                                        flwProcessTaskService.approvedCompleteParentNode(flwTask, t.getActorId()))
+                                .findFirst();
+                        if (matchingActor.isPresent()) {
+                            FlwTaskActor flwTaskActor = matchingActor.get();
                             //连续审批的节点自动同意
-                            return flowLongEngine.autoCompleteTask(flwTask.getId(), FlowCreator.ADMIN);
+                            return flowLongEngine.autoCompleteTask(flwTask.getId(), FlowCreator.of(instance.getTenantId(),
+                                    flwTaskActor.getActorId(), flwTaskActor.getActorName()));
                         }
                     }
                 }
@@ -262,19 +260,33 @@ public class FlowTaskListener implements TaskListener {
         if (eventType == TaskEventType.start) {
             // 发起
             type = 1;
-        } else if (eventType == TaskEventType.cc || eventType == TaskEventType.createCc) {
+        } else if (eventType == TaskEventType.cc) {
             // 抄送
             type = 2;
+        } else if (eventType == TaskEventType.createCc) {
+            // 手动抄送
+            type = 501;
         } else if (eventType == TaskEventType.reject) {
             // 驳回
             type = 4;
-        } else if (eventType == TaskEventType.claimRole || eventType == TaskEventType.claimDepartment) {
-            // 认领
+        } else if (eventType == TaskEventType.claimRole) {
+            // 角色认领
             type = 5;
-        } else if (eventType == TaskEventType.jump || eventType == TaskEventType.routeJump
-          || eventType == TaskEventType.rejectJump || eventType == TaskEventType.reApproveJump) {
+        } else if (eventType == TaskEventType.claimDepartment) {
+            // 部门认领
+            type = 502;
+        } else if (eventType == TaskEventType.jump) {
             // 跳转
             type = 8;
+        } else if (eventType == TaskEventType.routeJump) {
+            // 路由跳转
+            type = 503;
+        } else if (eventType == TaskEventType.rejectJump) {
+            // 驳回跳转
+            type = 504;
+        } else if (eventType == TaskEventType.reApproveJump) {
+            // 重新审批跳转
+            type = 505;
         } else if (eventType == TaskEventType.transfer) {
             // 转办、代理人办理完任务直接进入下一个节点
             type = 6;
@@ -287,9 +299,12 @@ public class FlowTaskListener implements TaskListener {
         } else if (eventType == TaskEventType.resume) {
             // 唤醒
             type = 10;
-        } else if (eventType == TaskEventType.revoke || eventType == TaskEventType.withdraw) {
+        } else if (eventType == TaskEventType.revoke) {
             // 撤销
             type = 15;
+        } else if (eventType == TaskEventType.withdraw) {
+            // 撤回
+            type = 506;
         } else if (eventType == TaskEventType.terminate) {
             // 终止
             type = 16;
@@ -314,9 +329,12 @@ public class FlowTaskListener implements TaskListener {
         } else if (eventType == TaskEventType.trigger) {
             // 触发器任务
             type = 23;
-        } else if (eventType == TaskEventType.circulate || eventType == TaskEventType.createCirculate) {
+        } else if (eventType == TaskEventType.circulate) {
             // 传阅
             type = TaskType.circulate.getValue();
+        } else if (eventType == TaskEventType.createCirculate) {
+            // 手动传阅
+            type = 507;
         }
         return type;
     }

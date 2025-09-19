@@ -1,5 +1,7 @@
 package com.shengyu.module.system.controller.admin.flow.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.shengyu.framework.common.enums.SyConstants;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -31,9 +33,11 @@ public class ProcessTaskDTO {
     @Schema(description = "创建人")
     private String createBy;
 
+    @JsonFormat(timezone = "GMT+8", pattern = SyConstants.DATE_MM_SS)
     @Schema(description = "开始时间")
     private Date beginTime;
 
+    @JsonFormat(timezone = "GMT+8", pattern = SyConstants.DATE_MM_SS)
     @Schema(description = "结束时间")
     private Date endTime;
 

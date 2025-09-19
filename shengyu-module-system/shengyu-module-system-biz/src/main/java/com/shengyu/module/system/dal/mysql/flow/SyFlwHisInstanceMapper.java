@@ -64,7 +64,7 @@ public interface SyFlwHisInstanceMapper extends FlwHisInstanceMapper {
 
             .eq(FlwHisInstance::getCreateId, dto.getCreateId())
             .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
-            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwExtInstance::getCreateBy, dto.getCreateBy())
+            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwHisInstance::getCreateBy, dto.getCreateBy())
             .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
             .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
             .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())
@@ -108,7 +108,7 @@ public interface SyFlwHisInstanceMapper extends FlwHisInstanceMapper {
             .eq(FlwHisTask::getTaskType, taskType)
             .eq(FlwHisTaskActor::getActorId, dto.getCreateId())
             .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
-            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwExtInstance::getCreateBy, dto.getCreateBy())
+            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwHisInstance::getCreateBy, dto.getCreateBy())
             .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
             .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
             .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())
@@ -139,6 +139,11 @@ public interface SyFlwHisInstanceMapper extends FlwHisInstanceMapper {
             .like(Objects.nonNull(dto) && CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, Objects.nonNull(dto)? dto.getProcessName() : "")
             .like(Objects.nonNull(dto) && CharSequenceUtil.isNotBlank(dto.getCurrentNodeName()), FlwHisInstance::getCurrentNodeName, Objects.nonNull(dto)? dto.getCurrentNodeName() : "")
             .in(CollUtil.isNotEmpty(processIdList), FlwExtInstance::getProcessId, processIdList)
+              .eq(Objects.nonNull(dto) && Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
+              .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwHisInstance::getCreateBy, dto.getCreateBy())
+              .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
+              .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())
+              .le(Objects.nonNull(dto.getEndTime()), FlwHisInstance::getCreateTime, dto.getEndTime())
             .orderByDesc(FlwHisInstance::getCreateTime)
         );
     }

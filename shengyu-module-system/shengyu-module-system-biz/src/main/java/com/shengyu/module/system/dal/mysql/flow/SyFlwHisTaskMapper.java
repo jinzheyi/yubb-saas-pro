@@ -61,7 +61,7 @@ public interface SyFlwHisTaskMapper extends FlwHisTaskMapper {
             .leftJoin(FlwExtInstance.class, FlwExtInstance::getId, FlwHisInstance::getId)
 
             .like(CharSequenceUtil.isNotBlank(dto.getProcessName()), FlwExtInstance::getProcessName, dto.getProcessName())
-            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwExtInstance::getCreateBy, dto.getCreateBy())
+            .like(CharSequenceUtil.isNotBlank(dto.getCreateBy()), FlwHisInstance::getCreateBy, dto.getCreateBy())
             .eq(Objects.nonNull(dto.getInstanceId()), FlwHisInstance::getId, dto.getInstanceId())
             .eq(Objects.nonNull(dto.getInstanceState()), FlwHisInstance::getInstanceState, dto.getInstanceState())
             .ge(Objects.nonNull(dto.getBeginTime()), FlwHisInstance::getCreateTime, dto.getBeginTime())

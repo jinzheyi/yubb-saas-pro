@@ -69,6 +69,9 @@ public class FlwExtInstance extends FlowEntity implements ProcessModelCache, Ser
         FlwExtInstance ext = new FlwExtInstance();
         ext.id = flwInstance.getId();
         ext.tenantId = flwInstance.getTenantId();
+        ext.createId = flwInstance.getCreateId();
+        ext.createBy = flwInstance.getCreateBy();
+        ext.createTime = flwInstance.getCreateTime();
         ext.processId = flwInstance.getProcessId();
         ext.processName = flwProcess.getProcessName();
         ext.processType = flwProcess.getProcessType();
