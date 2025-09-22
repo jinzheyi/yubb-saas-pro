@@ -237,7 +237,10 @@ public class RuntimeServiceImpl implements RuntimeService {
     protected boolean updateInstanceStateById(Long instanceId, InstanceState instanceState, FlowCreator flowCreator) {
         FlwHisInstance dbFhi = hisInstanceDao.selectById(instanceId);
         if (null != dbFhi) {
-            Assert.isTrue(null != dbFhi.getParentInstanceId(), "Sub processes are not allowed.");
+            Long parentInstanceId = dbFhi.getParentInstanceId();
+            if (null != parentInstanceId) {
+                Assert.illegal("Sub processes are not allowed. parentInstanceId=" + parentInstanceId);
+            }
             // 挂起当前主流程
             if (this.updateInstanceState(dbFhi, instanceState, flowCreator)) {
                 // 子流程挂起
@@ -462,13 +465,26 @@ public class RuntimeServiceImpl implements RuntimeService {
             selectNode = selectNode.getParentNode();
         }
         if (null != selectNode.getConditionNodes()) {
-            // 如果直接跟着条件节点，找到分支作为父节点
-            for (ConditionNode conditionNode : selectNode.getConditionNodes()) {
-                NodeModel conditionChildNode = conditionNode.getChildNode();
-                if (Objects.equals(conditionChildNode.getNodeKey(), appendTaskKey)) {
-                    nodeModel.setChildNode(conditionChildNode);
-                    conditionNode.setChildNode(nodeModel);
-                    break;
+            boolean findIt = false;
+            NodeModel childNode = selectNode.getChildNode();
+            if (null != childNode && Objects.equals(childNode.getNodeKey(), appendTaskKey)) {
+                // 为直接子节点情况
+                nodeModel.setChildNode(childNode.getChildNode());
+                selectNode.setChildNode(nodeModel);
+                findIt = true;
+            }
+            if (!findIt) {
+                // 如果直接跟着条件节点，找到分支作为父节点
+                for (ConditionNode conditionNode : selectNode.getConditionNodes()) {
+                    NodeModel conditionChildNode = conditionNode.getChildNode();
+                    if (null == conditionChildNode) {
+                        continue;
+                    }
+                    if (Objects.equals(conditionChildNode.getNodeKey(), appendTaskKey)) {
+                        nodeModel.setChildNode(conditionChildNode);
+                        conditionNode.setChildNode(nodeModel);
+                        break;
+                    }
                 }
             }
         } else {
@@ -481,7 +497,6 @@ public class RuntimeServiceImpl implements RuntimeService {
         FlwExtInstance temp = new FlwExtInstance();
         temp.setId(flwExtInstance.getId());
         temp.setModelContent(FlowLongContext.toJson(processModel.cleanParentNode()));
-        temp.setTaskKey(processModel.getNodeConfig().getNodeKey());
         Assert.isFalse(extInstanceDao.updateById(temp), "Update FlwExtInstance Failed");
 
         // 使缓存失效

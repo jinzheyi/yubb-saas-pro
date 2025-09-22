@@ -148,6 +148,10 @@ public enum TaskEventType {
      */
     routeJump,
     /**
+     * 触发器跳转
+     */
+    triggerJump,
+    /**
      * 重新审批跳转
      */
     reApproveJump,

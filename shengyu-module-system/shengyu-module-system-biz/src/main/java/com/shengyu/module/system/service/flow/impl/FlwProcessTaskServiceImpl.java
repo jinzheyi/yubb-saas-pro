@@ -515,11 +515,14 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     public boolean revoke(ProcessApprovalDTO dto, FlowCreator flowCreator) {
         FlwInstance flwInstance = flowLongEngine.queryService().getInstance(dto.getInstanceId());
         ServiceExceptionUtil.fail(null == flwInstance, ErrorCodeConstants.FLOW_1_002_029_015);
-        FlwProcessConfigure configure = flwProcessConfigureService.getByProcessId(flwInstance.getProcessId());
-        if (null != configure && null != configure.getProcessSetting()) {
-            ServiceExceptionUtil.fail(!Objects.equals(true, configure.getProcessSetting().getAllowRevocation()),
+        FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(dto.getInstanceId());
+        FlwProcessSetting processSetting = CharSequenceUtil.isNotBlank(extInstance.getProcessSetting())?
+          FlowLongContext.fromJson(extInstance.getProcessSetting(), FlwProcessSetting.class) : null;
+        if (null != processSetting) {
+            ServiceExceptionUtil.fail(!Objects.equals(true, processSetting.getAllowRevocation()),
                     ErrorCodeConstants.FLOW_1_002_029_016);
         }
+        ServiceExceptionUtil.fail(!Objects.equals(flowCreator.getCreateId(), flwInstance.getCreateId()), "非发起人不允许撤回");
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
         if (dto.isTermination()) {
             // 发起人撤回终止

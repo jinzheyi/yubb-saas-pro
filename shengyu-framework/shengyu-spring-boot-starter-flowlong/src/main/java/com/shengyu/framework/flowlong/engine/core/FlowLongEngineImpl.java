@@ -193,10 +193,10 @@ public class FlowLongEngineImpl implements FlowLongEngine {
      */
     @Override
     public boolean autoCompleteTask(Long taskId, Map<String, Object> args, FlowCreator flowCreator) {
-        return executeTask(taskId, flowCreator, null, TaskState.autoComplete, TaskEventType.autoComplete);
+        return executeTask(taskId, flowCreator, args, TaskState.autoComplete, TaskEventType.autoComplete);
     }
 
-    /**
+     /**
      * 自动拒绝任务
      */
     @Override

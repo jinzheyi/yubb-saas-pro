@@ -139,6 +139,10 @@ public enum TaskType {
      */
     autoReject(31),
     /**
+     * 触发器跳转
+     */
+    triggerJump(32),
+    /**
      * 传阅
      */
     circulate(500),
