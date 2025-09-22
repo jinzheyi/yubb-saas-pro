@@ -4,9 +4,10 @@ import com.shengyu.framework.idempotent.core.aop.IdempotentAspect;
 import com.shengyu.framework.idempotent.core.keyresolver.impl.DefaultIdempotentKeyResolver;
 import com.shengyu.framework.idempotent.core.keyresolver.impl.ExpressionIdempotentKeyResolver;
 import com.shengyu.framework.idempotent.core.keyresolver.IdempotentKeyResolver;
+import com.shengyu.framework.idempotent.core.keyresolver.impl.UserIdempotentKeyResolver;
 import com.shengyu.framework.idempotent.core.redis.IdempotentRedisDAO;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
 import com.shengyu.framework.redis.config.ShengyuRedisAutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
@@ -30,6 +31,11 @@ public class ShengyuIdempotentConfiguration {
     @Bean
     public DefaultIdempotentKeyResolver defaultIdempotentKeyResolver() {
         return new DefaultIdempotentKeyResolver();
+    }
+
+    @Bean
+    public UserIdempotentKeyResolver userIdempotentKeyResolver() {
+        return new UserIdempotentKeyResolver();
     }
 
     @Bean

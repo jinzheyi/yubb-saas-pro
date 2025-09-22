@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * 幂等 Redis DAO
  *
- * @author 圣钰科技
+ * @author 芋道源码
  */
 @AllArgsConstructor
 public class IdempotentRedisDAO {
@@ -27,6 +27,11 @@ public class IdempotentRedisDAO {
     public Boolean setIfAbsent(String key, long timeout, TimeUnit timeUnit) {
         String redisKey = formatKey(key);
         return redisTemplate.opsForValue().setIfAbsent(redisKey, "", timeout, timeUnit);
+    }
+
+    public void delete(String key) {
+        String redisKey = formatKey(key);
+        redisTemplate.delete(redisKey);
     }
 
     private static String formatKey(String key) {

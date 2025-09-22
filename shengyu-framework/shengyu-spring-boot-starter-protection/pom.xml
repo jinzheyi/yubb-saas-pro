@@ -16,6 +16,13 @@
     <url>https://gitee.com/jinzheyi/yubb-saas-pro</url>
 
     <dependencies>
+        <!-- Web 相关 -->
+        <dependency>
+            <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-spring-boot-starter-web</artifactId>
+            <scope>provided</scope> <!-- 设置为 provided，只有限流、幂等使用到 -->
+        </dependency>
+
         <!-- DB 相关 -->
         <dependency>
             <groupId>com.shengyu.boot</groupId>
@@ -29,10 +36,11 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Test 测试相关 -->
         <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-spring-boot2</artifactId>
-            <optional>true</optional>
+            <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

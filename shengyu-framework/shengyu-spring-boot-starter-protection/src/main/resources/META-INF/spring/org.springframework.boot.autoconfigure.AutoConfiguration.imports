@@ -1,2 +1,4 @@
 com.shengyu.framework.idempotent.config.ShengyuIdempotentConfiguration
 com.shengyu.framework.lock4j.config.ShengyuLock4jConfiguration
+com.shengyu.framework.ratelimiter.config.ShengyuRateLimiterConfiguration
+com.shengyu.framework.signature.config.ShengyuApiSignatureAutoConfiguration

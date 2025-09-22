@@ -1,11 +1,11 @@
-package com.shengyu.framework.idempotent.core.keyresolver.impl;
+package com.shengyu.framework.ratelimiter.core.keyresolver.impl;
 
 import cn.hutool.core.util.ArrayUtil;
-import com.shengyu.framework.idempotent.core.annotation.Idempotent;
-import com.shengyu.framework.idempotent.core.keyresolver.IdempotentKeyResolver;
+import com.shengyu.framework.ratelimiter.core.annotation.RateLimiter;
+import com.shengyu.framework.ratelimiter.core.keyresolver.RateLimiterKeyResolver;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
+import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
@@ -15,17 +15,18 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import java.lang.reflect.Method;
 
 /**
- * 基于 Spring EL 表达式，
+ * 基于 Spring EL 表达式的 {@link RateLimiterKeyResolver} 实现类
  *
  * @author 芋道源码
  */
-public class ExpressionIdempotentKeyResolver implements IdempotentKeyResolver {
+public class ExpressionRateLimiterKeyResolver implements RateLimiterKeyResolver {
 
-    private final ParameterNameDiscoverer parameterNameDiscoverer = new LocalVariableTableParameterNameDiscoverer();
+    private final ParameterNameDiscoverer parameterNameDiscoverer = new DefaultParameterNameDiscoverer();
+
     private final ExpressionParser expressionParser = new SpelExpressionParser();
 
     @Override
-    public String resolver(JoinPoint joinPoint, Idempotent idempotent) {
+    public String resolver(JoinPoint joinPoint, RateLimiter rateLimiter) {
         // 获得被拦截方法参数名列表
         Method method = getMethod(joinPoint);
         Object[] args = joinPoint.getArgs();
@@ -39,7 +40,7 @@ public class ExpressionIdempotentKeyResolver implements IdempotentKeyResolver {
         }
 
         // 解析参数
-        Expression expression = expressionParser.parseExpression(idempotent.keyArg());
+        Expression expression = expressionParser.parseExpression(rateLimiter.keyArg());
         return expression.getValue(evaluationContext, String.class);
     }
 
