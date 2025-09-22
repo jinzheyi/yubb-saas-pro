@@ -1,8 +1,8 @@
 package com.shengyu.module.promotion.controller.app.combination;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.promotion.controller.app.combination.vo.record.AppCombinationRecordDetailRespVO;
 import com.shengyu.module.promotion.controller.app.combination.vo.record.AppCombinationRecordPageReqVO;
 import com.shengyu.module.promotion.controller.app.combination.vo.record.AppCombinationRecordRespVO;
@@ -28,9 +28,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 APP - 拼团活动")
 @RestController

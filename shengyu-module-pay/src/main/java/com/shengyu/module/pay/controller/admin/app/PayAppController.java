@@ -1,10 +1,10 @@
 package com.shengyu.module.pay.controller.admin.app;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.pay.controller.admin.app.vo.*;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.pay.controller.admin.app.vo.*;
 import com.shengyu.module.pay.controller.admin.app.vo.*;
 import com.shengyu.module.pay.convert.app.PayAppConvert;
 import com.shengyu.module.pay.dal.dataobject.app.PayAppDO;
@@ -23,8 +23,8 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
 
 @Slf4j
 @Tag(name = "管理后台 - 支付应用信息")

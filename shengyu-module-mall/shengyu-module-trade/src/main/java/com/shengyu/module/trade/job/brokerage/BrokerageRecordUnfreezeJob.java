@@ -1,8 +1,8 @@
 package com.shengyu.module.trade.job.brokerage;
 
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.quartz.core.handler.JobHandler;
-import cn.iocoder.yudao.framework.tenant.core.job.TenantJob;
+import com.shengyu.framework.quartz.core.handler.JobHandler;
+import com.shengyu.framework.tenant.core.job.TenantJob;
 import com.shengyu.module.trade.service.brokerage.BrokerageRecordService;
 import org.springframework.stereotype.Component;
 

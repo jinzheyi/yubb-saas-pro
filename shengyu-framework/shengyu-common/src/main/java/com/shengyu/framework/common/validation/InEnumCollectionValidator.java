@@ -1,7 +1,7 @@
 package com.shengyu.framework.common.validation;
 
 import cn.hutool.core.collection.CollUtil;
-import com.shengyu.framework.common.core.IntArrayValuable;
+import com.shengyu.framework.common.core.ArrayValuable;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
@@ -11,27 +11,30 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class InEnumCollectionValidator implements ConstraintValidator<InEnum, Collection<Integer>> {
+public class InEnumCollectionValidator implements ConstraintValidator<InEnum, Collection<?>> {
 
-    private List<Integer> values;
+    private List<?> values;
 
     @Override
     public void initialize(InEnum annotation) {
-        IntArrayValuable[] values = annotation.value().getEnumConstants();
+        ArrayValuable<?>[] values = annotation.value().getEnumConstants();
         if (values.length == 0) {
             this.values = Collections.emptyList();
         } else {
-            this.values = Arrays.stream(values[0].array()).boxed().collect(Collectors.toList());
+            this.values = Arrays.asList(values[0].array());
         }
     }
 
     @Override
-    public boolean isValid(Collection<Integer> list, ConstraintValidatorContext context) {
+    public boolean isValid(Collection<?> list, ConstraintValidatorContext context) {
+        if (list == null) {
+            return true;
+        }
         // 校验通过
         if (CollUtil.containsAll(values, list)) {
             return true;
         }
-        // 校验不通过，自定义提示语句（因为，注解上的 value 是枚举类，无法获得枚举类的实际值）
+        // 校验不通过，自定义提示语句
         context.disableDefaultConstraintViolation(); // 禁用默认的 message 的值
         context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate()
                 .replaceAll("\\{value}", CollUtil.join(list, ","))).addConstraintViolation(); // 重新添加错误提示语句

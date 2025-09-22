@@ -1,8 +1,8 @@
 package com.shengyu.module.trade.service.order;
 
 import cn.hutool.core.util.IdUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.member.api.address.MemberAddressApi;
 import com.shengyu.module.member.api.user.MemberUserApi;
 import com.shengyu.module.pay.api.order.PayOrderApi;
@@ -12,7 +12,7 @@ import com.shengyu.module.product.api.comment.ProductCommentApi;
 import com.shengyu.module.product.api.sku.ProductSkuApi;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
 import com.shengyu.module.promotion.api.coupon.CouponApi;
-import cn.iocoder.yudao.module.system.api.notify.NotifyMessageSendApi;
+import com.shengyu.module.system.api.notify.NotifyMessageSendApi;
 import com.shengyu.module.trade.controller.admin.delivery.vo.express.DeliveryExpressCreateReqVO;
 import com.shengyu.module.trade.controller.admin.order.vo.TradeOrderDeliveryReqVO;
 import com.shengyu.module.trade.dal.dataobject.order.TradeOrderDO;
@@ -40,8 +40,8 @@ import org.springframework.context.annotation.Import;
 import javax.annotation.Resource;
 import java.time.Duration;
 
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;

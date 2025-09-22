@@ -1,6 +1,6 @@
 package com.shengyu.module.statistics.dal.mysql.member;
 
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.module.statistics.controller.admin.member.vo.MemberRegisterCountRespVO;
 import com.shengyu.module.statistics.controller.admin.member.vo.MemberSexStatisticsRespVO;
 import com.shengyu.module.statistics.controller.admin.member.vo.MemberTerminalStatisticsRespVO;

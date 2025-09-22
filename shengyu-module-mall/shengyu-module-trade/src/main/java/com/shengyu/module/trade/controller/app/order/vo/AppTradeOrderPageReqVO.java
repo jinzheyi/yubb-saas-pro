@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.controller.app.order.vo;
 
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.trade.enums.order.TradeOrderStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

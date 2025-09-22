@@ -2,10 +2,10 @@ package com.shengyu.module.promotion.controller.app.seckill;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.date.LocalDateTimeUtils;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
 import com.shengyu.module.product.api.spu.dto.ProductSpuRespDTO;
 import com.shengyu.module.promotion.controller.app.seckill.vo.activity.AppSeckillActivityDetailRespVO;
@@ -39,11 +39,11 @@ import java.time.LocalTime;
 import java.util.Collections;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.cache.CacheUtils.buildAsyncReloadingCache;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.findFirst;
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.isBetween;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.cache.CacheUtils.buildAsyncReloadingCache;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.findFirst;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.isBetween;
 
 @Tag(name = "用户 App - 秒杀活动")
 @RestController

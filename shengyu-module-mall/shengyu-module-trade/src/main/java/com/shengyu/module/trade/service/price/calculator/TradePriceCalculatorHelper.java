@@ -2,7 +2,7 @@ package com.shengyu.module.trade.service.price.calculator;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.module.product.api.sku.dto.ProductSkuRespDTO;
 import com.shengyu.module.product.api.spu.dto.ProductSpuRespDTO;
 import com.shengyu.module.trade.dal.dataobject.order.TradeOrderItemDO;
@@ -15,8 +15,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.getSumValue;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.getSumValue;
 import static java.util.Collections.singletonList;
 
 /**

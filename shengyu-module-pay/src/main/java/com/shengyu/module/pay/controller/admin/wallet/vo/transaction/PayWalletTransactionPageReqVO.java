@@ -1,8 +1,8 @@
 package com.shengyu.module.pay.controller.admin.wallet.vo.transaction;
 
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.validation.InEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 

@@ -12,7 +12,7 @@ import javax.annotation.Resource;
 import java.util.Comparator;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.member.enums.ErrorCodeConstants.SIGN_IN_CONFIG_EXISTS;
 import static com.shengyu.module.member.enums.ErrorCodeConstants.SIGN_IN_CONFIG_NOT_EXISTS;
 

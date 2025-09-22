@@ -1,7 +1,7 @@
 package com.shengyu.module.product.controller.admin.category;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.controller.admin.category.vo.ProductCategoryListReqVO;
 import com.shengyu.module.product.controller.admin.category.vo.ProductCategoryRespVO;
 import com.shengyu.module.product.controller.admin.category.vo.ProductCategorySaveReqVO;
@@ -19,7 +19,7 @@ import javax.validation.Valid;
 import java.util.Comparator;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 商品分类")
 @RestController

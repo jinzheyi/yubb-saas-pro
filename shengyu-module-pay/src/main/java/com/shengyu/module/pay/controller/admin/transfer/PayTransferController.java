@@ -1,10 +1,10 @@
 package com.shengyu.module.pay.controller.admin.transfer;
 
-import cn.iocoder.yudao.framework.apilog.core.annotation.ApiAccessLog;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
+import com.shengyu.framework.apilog.core.annotation.ApiAccessLog;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.excel.core.util.ExcelUtils;
 import com.shengyu.module.pay.controller.admin.transfer.vo.PayTransferPageReqVO;
 import com.shengyu.module.pay.controller.admin.transfer.vo.PayTransferRespVO;
 import com.shengyu.module.pay.dal.dataobject.app.PayAppDO;
@@ -26,10 +26,10 @@ import javax.validation.Valid;
 import java.io.IOException;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.apilog.core.enums.OperateTypeEnum.EXPORT;
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.pojo.PageParam.PAGE_SIZE_NONE;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.apilog.core.enums.OperateTypeEnum.EXPORT;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.PageParam.PAGE_SIZE_NONE;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
 
 @Tag(name = "管理后台 - 转账单")
 @RestController

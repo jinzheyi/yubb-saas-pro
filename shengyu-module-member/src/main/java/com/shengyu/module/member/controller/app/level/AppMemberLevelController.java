@@ -1,6 +1,6 @@
 package com.shengyu.module.member.controller.app.level;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.member.controller.app.level.vo.level.AppMemberLevelRespVO;
 import com.shengyu.module.member.convert.level.MemberLevelConvert;
 import com.shengyu.module.member.dal.dataobject.level.MemberLevelDO;
@@ -16,7 +16,7 @@ import javax.annotation.Resource;
 import javax.annotation.security.PermitAll;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "用户 App - 会员等级")
 @RestController

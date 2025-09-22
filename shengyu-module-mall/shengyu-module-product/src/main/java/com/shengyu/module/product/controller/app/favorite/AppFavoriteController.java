@@ -1,8 +1,8 @@
 package com.shengyu.module.product.controller.app.favorite;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.product.controller.app.favorite.vo.AppFavoritePageReqVO;
 import com.shengyu.module.product.controller.app.favorite.vo.AppFavoriteReqVO;
 import com.shengyu.module.product.controller.app.favorite.vo.AppFavoriteRespVO;
@@ -19,9 +19,9 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 APP - 商品收藏")
 @RestController

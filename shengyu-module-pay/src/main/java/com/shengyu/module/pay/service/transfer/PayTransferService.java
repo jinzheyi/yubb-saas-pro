@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.service.transfer;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.pay.framework.pay.core.client.dto.transfer.PayTransferRespDTO;
 import com.shengyu.module.pay.api.transfer.dto.PayTransferCreateReqDTO;
 import com.shengyu.module.pay.api.transfer.dto.PayTransferCreateRespDTO;

@@ -1,6 +1,6 @@
 package com.shengyu.module.member.service.level;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.module.member.controller.admin.level.vo.level.MemberLevelCreateReqVO;
 import com.shengyu.module.member.controller.admin.level.vo.level.MemberLevelListReqVO;
 import com.shengyu.module.member.controller.admin.level.vo.level.MemberLevelUpdateReqVO;

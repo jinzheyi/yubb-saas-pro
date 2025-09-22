@@ -17,8 +17,8 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.filterList;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.filterList;
 import static com.shengyu.module.trade.service.price.calculator.TradePriceCalculatorHelper.formatPrice;
 
 // TODO @puhui999：相关的单测，建议改一改

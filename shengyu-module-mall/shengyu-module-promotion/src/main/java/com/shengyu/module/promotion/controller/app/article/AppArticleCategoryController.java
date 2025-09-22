@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.controller.app.article;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.promotion.controller.app.article.vo.category.AppArticleCategoryRespVO;
 import com.shengyu.module.promotion.convert.article.ArticleCategoryConvert;
 import com.shengyu.module.promotion.dal.dataobject.article.ArticleCategoryDO;
@@ -16,7 +16,7 @@ import javax.annotation.Resource;
 import java.util.Comparator;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "用户 APP - 文章分类")
 @RestController

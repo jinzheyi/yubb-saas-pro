@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.service.price.calculator;
 
-import cn.iocoder.yudao.framework.test.core.ut.BaseMockitoUnitTest;
+import com.shengyu.framework.test.core.ut.BaseMockitoUnitTest;
 import com.shengyu.module.member.api.config.MemberConfigApi;
 import com.shengyu.module.member.api.config.dto.MemberConfigRespDTO;
 import com.shengyu.module.member.api.user.MemberUserApi;
@@ -16,7 +16,7 @@ import org.mockito.Mock;
 
 import java.util.ArrayList;
 
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

@@ -6,7 +6,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
 
 /**
  * 商品 SPU API 接口

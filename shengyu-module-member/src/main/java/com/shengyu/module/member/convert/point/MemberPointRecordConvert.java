@@ -1,7 +1,7 @@
 package com.shengyu.module.member.convert.point;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.collection.MapUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.collection.MapUtils;
 import com.shengyu.module.member.controller.admin.point.vo.recrod.MemberPointRecordRespVO;
 import com.shengyu.module.member.dal.dataobject.point.MemberPointRecordDO;
 import com.shengyu.module.member.dal.dataobject.user.MemberUserDO;
@@ -11,7 +11,7 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
 
 /**
  * 用户积分记录 Convert

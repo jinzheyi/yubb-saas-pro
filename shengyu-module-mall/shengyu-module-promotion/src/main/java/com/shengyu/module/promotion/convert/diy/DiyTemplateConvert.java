@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.convert.diy;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.promotion.controller.admin.diy.vo.template.*;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.promotion.controller.admin.diy.vo.template.*;
 import com.shengyu.module.promotion.controller.admin.diy.vo.template.*;
 import com.shengyu.module.promotion.controller.app.diy.vo.AppDiyTemplatePropertyRespVO;
 import com.shengyu.module.promotion.dal.dataobject.diy.DiyPageDO;

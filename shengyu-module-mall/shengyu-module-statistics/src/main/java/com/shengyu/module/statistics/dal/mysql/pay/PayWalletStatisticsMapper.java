@@ -1,6 +1,6 @@
 package com.shengyu.module.statistics.dal.mysql.pay;
 
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.module.statistics.service.pay.bo.RechargeSummaryRespBO;
 import com.shengyu.module.statistics.service.trade.bo.WalletSummaryRespBO;
 import org.apache.ibatis.annotations.Mapper;

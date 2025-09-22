@@ -4,9 +4,9 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.*;
 import cn.hutool.extra.spring.SpringUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.number.MoneyUtils;
-import cn.iocoder.yudao.framework.mybatis.core.util.MyBatisUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.number.MoneyUtils;
+import com.shengyu.framework.mybatis.core.util.MyBatisUtils;
 import com.shengyu.module.product.api.sku.ProductSkuApi;
 import com.shengyu.module.product.api.sku.dto.ProductSkuRespDTO;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
@@ -35,10 +35,10 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.*;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.getMaxValue;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.getMinValue;
-import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.getMaxValue;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.getMinValue;
+import static com.shengyu.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.BROKERAGE_WITHDRAW_USER_BALANCE_NOT_ENOUGH;
 
 /**

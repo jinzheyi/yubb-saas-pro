@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.controller.admin.discount.vo;
 
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.promotion.enums.common.PromotionDiscountTypeEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -13,7 +13,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
-import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static com.shengyu.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 
 /**
 * 限时折扣活动 Base VO，提供给添加、修改、详细的子 VO 使用

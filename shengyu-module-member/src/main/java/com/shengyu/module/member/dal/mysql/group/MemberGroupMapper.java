@@ -1,8 +1,8 @@
 package com.shengyu.module.member.dal.mysql.group;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.member.controller.admin.group.vo.MemberGroupPageReqVO;
 import com.shengyu.module.member.dal.dataobject.group.MemberGroupDO;
 import org.apache.ibatis.annotations.Mapper;

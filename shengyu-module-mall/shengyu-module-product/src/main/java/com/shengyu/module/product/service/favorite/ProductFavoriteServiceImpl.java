@@ -1,6 +1,6 @@
 package com.shengyu.module.product.service.favorite;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.product.controller.admin.favorite.vo.ProductFavoritePageReqVO;
 import com.shengyu.module.product.controller.app.favorite.vo.AppFavoritePageReqVO;
 import com.shengyu.module.product.convert.favorite.ProductFavoriteConvert;
@@ -12,7 +12,7 @@ import org.springframework.validation.annotation.Validated;
 import javax.annotation.Resource;
 import javax.validation.Valid;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.FAVORITE_EXISTS;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.FAVORITE_NOT_EXISTS;
 

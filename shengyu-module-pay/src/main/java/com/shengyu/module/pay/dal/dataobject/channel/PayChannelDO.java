@@ -1,9 +1,9 @@
 package com.shengyu.module.pay.dal.dataobject.channel;
 
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
-import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.pay.dal.dataobject.app.PayAppDO;
 import com.shengyu.module.pay.enums.PayChannelEnum;
 import com.shengyu.module.pay.framework.pay.core.client.PayClientConfig;

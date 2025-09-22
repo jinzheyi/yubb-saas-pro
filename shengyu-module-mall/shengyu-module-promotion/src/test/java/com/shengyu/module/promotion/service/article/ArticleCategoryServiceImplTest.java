@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.service.article;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.promotion.controller.admin.article.vo.category.ArticleCategoryCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.article.vo.category.ArticleCategoryPageReqVO;
 import com.shengyu.module.promotion.controller.admin.article.vo.category.ArticleCategoryUpdateReqVO;
@@ -13,12 +13,12 @@ import org.springframework.context.annotation.Import;
 
 import javax.annotation.Resource;
 
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.buildBetweenTime;
-import static cn.iocoder.yudao.framework.common.util.object.ObjectUtils.cloneIgnoreId;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomLongId;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.buildBetweenTime;
+import static com.shengyu.framework.common.util.object.ObjectUtils.cloneIgnoreId;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertServiceException;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomLongId;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.ARTICLE_CATEGORY_NOT_EXISTS;
 import static org.junit.jupiter.api.Assertions.*;
 

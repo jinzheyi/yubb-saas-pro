@@ -1,6 +1,6 @@
 package com.shengyu.module.member.framework.web.config;
 
-import cn.iocoder.yudao.framework.swagger.config.YudaoSwaggerAutoConfiguration;
+import com.shengyu.framework.swagger.config.ShengyuSwaggerAutoConfiguration;
 import org.springdoc.core.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,7 +18,7 @@ public class MemberWebConfiguration {
      */
     @Bean
     public GroupedOpenApi memberGroupedOpenApi() {
-        return YudaoSwaggerAutoConfiguration.buildGroupedOpenApi("member");
+        return ShengyuSwaggerAutoConfiguration.buildSystemGroupedOpenApi("租户端-会员", "member");
     }
 
 }

@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.convert.diy;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.promotion.controller.admin.diy.vo.page.*;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.promotion.controller.admin.diy.vo.page.*;
 import com.shengyu.module.promotion.controller.admin.diy.vo.page.*;
 import com.shengyu.module.promotion.dal.dataobject.diy.DiyPageDO;
 import org.mapstruct.Mapper;

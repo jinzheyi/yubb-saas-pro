@@ -2,11 +2,11 @@ package com.shengyu.module.pay.service.demo;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.pay.api.transfer.PayTransferApi;
 import com.shengyu.module.pay.api.transfer.dto.PayTransferCreateReqDTO;
 import com.shengyu.module.pay.api.transfer.dto.PayTransferCreateRespDTO;
@@ -25,8 +25,8 @@ import org.springframework.validation.annotation.Validated;
 import javax.annotation.Resource;
 import javax.validation.Valid;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.servlet.ServletUtils.getClientIP;
 import static com.shengyu.module.pay.enums.ErrorCodeConstants.*;
 
 /**

@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.controller.admin.wallet;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.pay.api.notify.dto.PayOrderNotifyReqDTO;
 import com.shengyu.module.pay.api.notify.dto.PayRefundNotifyReqDTO;
 import com.shengyu.module.pay.service.wallet.PayWalletRechargeService;
@@ -15,8 +15,8 @@ import javax.annotation.Resource;
 import javax.annotation.security.PermitAll;
 import javax.validation.Valid;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.servlet.ServletUtils.getClientIP;
 
 @Tag(name = "管理后台 - 钱包充值")
 @RestController

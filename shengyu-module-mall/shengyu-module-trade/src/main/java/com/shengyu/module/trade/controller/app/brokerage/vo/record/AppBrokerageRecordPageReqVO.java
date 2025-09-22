@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.controller.app.brokerage.vo.record;
 
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageRecordBizTypeEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageRecordStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -10,7 +10,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
 
-import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static com.shengyu.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 
 @Schema(description = "应用 App - 分销记录分页 Request VO")
 @Data

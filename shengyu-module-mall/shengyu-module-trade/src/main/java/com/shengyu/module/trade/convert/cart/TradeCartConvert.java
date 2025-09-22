@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.convert.cart;
 
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.api.sku.dto.ProductSkuRespDTO;
 import com.shengyu.module.product.api.spu.dto.ProductSpuRespDTO;
 import com.shengyu.module.product.enums.spu.ProductSpuStatusEnum;
@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
 
 @Mapper
 public interface TradeCartConvert {

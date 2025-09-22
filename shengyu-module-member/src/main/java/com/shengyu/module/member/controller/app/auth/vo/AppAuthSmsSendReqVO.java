@@ -1,8 +1,8 @@
 package com.shengyu.module.member.controller.app.auth.vo;
 
-import cn.iocoder.yudao.framework.common.validation.InEnum;
-import cn.iocoder.yudao.framework.common.validation.Mobile;
-import cn.iocoder.yudao.module.system.enums.sms.SmsSceneEnum;
+import com.shengyu.framework.common.validation.InEnum;
+import com.shengyu.framework.common.validation.Mobile;
+import com.shengyu.framework.common.enums.sms.SmsSceneEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 

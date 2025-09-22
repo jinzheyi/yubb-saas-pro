@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.convert.wallet;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.pay.controller.admin.wallet.vo.transaction.PayWalletTransactionRespVO;
 import com.shengyu.module.pay.dal.dataobject.wallet.PayWalletTransactionDO;
 import com.shengyu.module.pay.service.wallet.bo.WalletTransactionCreateReqBO;

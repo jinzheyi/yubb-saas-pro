@@ -2,10 +2,10 @@ package com.shengyu.module.promotion.dal.mysql.combination;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.promotion.controller.admin.combination.vo.recrod.CombinationRecordReqPageVO;
 import com.shengyu.module.promotion.controller.app.combination.vo.record.AppCombinationRecordPageReqVO;
 import com.shengyu.module.promotion.dal.dataobject.combination.CombinationRecordDO;

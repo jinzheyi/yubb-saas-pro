@@ -1,6 +1,6 @@
 package com.shengyu.module.product.convert.comment;
 
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.product.api.comment.dto.ProductCommentCreateReqDTO;
 import com.shengyu.module.product.controller.admin.comment.vo.ProductCommentCreateReqVO;

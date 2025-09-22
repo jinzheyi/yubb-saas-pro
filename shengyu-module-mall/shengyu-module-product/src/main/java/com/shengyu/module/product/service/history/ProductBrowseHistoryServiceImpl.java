@@ -1,7 +1,7 @@
 package com.shengyu.module.product.service.history;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.product.controller.admin.history.vo.ProductBrowseHistoryPageReqVO;
 import com.shengyu.module.product.dal.dataobject.history.ProductBrowseHistoryDO;
 import com.shengyu.module.product.dal.mysql.history.ProductBrowseHistoryMapper;

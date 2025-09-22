@@ -1,12 +1,12 @@
 package com.shengyu.module.promotion.controller.admin.combination;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
 import com.shengyu.module.product.api.spu.dto.ProductSpuRespDTO;
-import cn.iocoder.yudao.module.promotion.controller.admin.combination.vo.activity.*;
+import com.shengyu.module.promotion.controller.admin.combination.vo.activity.*;
 import com.shengyu.module.promotion.controller.admin.combination.vo.activity.*;
 import com.shengyu.module.promotion.convert.combination.CombinationActivityConvert;
 import com.shengyu.module.promotion.dal.dataobject.combination.CombinationActivityDO;
@@ -30,9 +30,9 @@ import java.util.Map;
 import java.util.Set;
 
 import static cn.hutool.core.collection.CollectionUtil.newArrayList;
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
 
 @Tag(name = "管理后台 - 拼团活动")
 @RestController

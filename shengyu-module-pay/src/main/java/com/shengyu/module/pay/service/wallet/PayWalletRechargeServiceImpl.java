@@ -5,9 +5,9 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.pay.api.order.dto.PayOrderCreateReqDTO;
 import com.shengyu.module.pay.api.refund.PayRefundApi;
 import com.shengyu.module.pay.api.refund.dto.PayRefundCreateReqDTO;
@@ -24,9 +24,9 @@ import com.shengyu.module.pay.enums.refund.PayRefundStatusEnum;
 import com.shengyu.module.pay.enums.wallet.PayWalletBizTypeEnum;
 import com.shengyu.module.pay.framework.pay.config.PayProperties;
 import com.shengyu.module.pay.service.order.PayOrderService;
-import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialWxaOrderUploadShippingInfoReqDTO;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialWxaSubscribeMessageSendReqDTO;
+import com.shengyu.module.platform.api.social.TenantSocialClientApi;
+import com.shengyu.module.platform.api.social.dto.SocialWxaOrderUploadShippingInfoReqDTO;
+import com.shengyu.module.platform.api.social.dto.SocialWxaSubscribeMessageSendReqDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -38,10 +38,10 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 import static cn.hutool.core.util.ObjectUtil.notEqual;
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.addTime;
-import static cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString;
-import static cn.iocoder.yudao.framework.common.util.number.MoneyUtils.fenToYuanStr;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.addTime;
+import static com.shengyu.framework.common.util.json.JsonUtils.toJsonString;
+import static com.shengyu.framework.common.util.number.MoneyUtils.fenToYuanStr;
 import static com.shengyu.module.pay.convert.wallet.PayWalletRechargeConvert.INSTANCE;
 import static com.shengyu.module.pay.enums.ErrorCodeConstants.*;
 import static com.shengyu.module.pay.enums.MessageTemplateConstants.WXA_WALLET_RECHARGER_PAID;
@@ -68,7 +68,7 @@ public class PayWalletRechargeServiceImpl implements PayWalletRechargeService {
     private PayWalletRechargePackageService payWalletRechargePackageService;
 
     @Resource
-    public SocialClientApi socialClientApi;
+    public TenantSocialClientApi socialClientApi;
     @Resource
     private PayRefundApi payRefundApi;
 

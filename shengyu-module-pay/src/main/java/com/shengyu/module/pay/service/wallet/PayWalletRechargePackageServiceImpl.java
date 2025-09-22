@@ -1,8 +1,8 @@
 package com.shengyu.module.pay.service.wallet;
 
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.pay.controller.admin.wallet.vo.rechargepackage.WalletRechargePackageCreateReqVO;
 import com.shengyu.module.pay.controller.admin.wallet.vo.rechargepackage.WalletRechargePackagePageReqVO;
 import com.shengyu.module.pay.controller.admin.wallet.vo.rechargepackage.WalletRechargePackageUpdateReqVO;
@@ -15,7 +15,7 @@ import javax.annotation.Resource;
 
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.pay.enums.ErrorCodeConstants.*;
 
 /**

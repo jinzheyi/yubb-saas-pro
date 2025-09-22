@@ -2,9 +2,9 @@ package com.shengyu.module.product.service.comment;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.RandomUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.product.controller.admin.comment.vo.ProductCommentPageReqVO;
 import com.shengyu.module.product.controller.admin.comment.vo.ProductCommentReplyReqVO;
 import com.shengyu.module.product.controller.admin.comment.vo.ProductCommentRespVO;
@@ -25,9 +25,9 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.Date;
 
-import static cn.iocoder.yudao.framework.common.util.object.ObjectUtils.cloneIgnoreId;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.common.util.object.ObjectUtils.cloneIgnoreId;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 

@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.controller.admin.kefu;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.member.api.user.MemberUserApi;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.promotion.controller.admin.kefu.vo.conversation.KeFuConversationRespVO;
@@ -20,9 +20,9 @@ import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.framework.common.util.collection.MapUtils.findAndThen;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.util.collection.MapUtils.findAndThen;
 
 @Tag(name = "管理后台 - 客服会话")
 @RestController

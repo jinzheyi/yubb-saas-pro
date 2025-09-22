@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.api.wallet.dto;
 
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.enums.UserTypeEnum;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;

@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.service.diy;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.diy.vo.page.DiyPageCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.diy.vo.page.DiyPagePageReqVO;
 import com.shengyu.module.promotion.controller.admin.diy.vo.page.DiyPagePropertyUpdateRequestVO;

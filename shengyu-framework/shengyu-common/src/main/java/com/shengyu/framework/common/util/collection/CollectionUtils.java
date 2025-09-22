@@ -4,12 +4,14 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.ArrayUtil;
 import com.google.common.collect.ImmutableMap;
+import com.shengyu.framework.common.pojo.PageResult;
 
 import java.util.*;
 import java.util.function.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static cn.hutool.core.convert.Convert.toCollection;
 import static java.util.Arrays.asList;
 
 /**
@@ -73,12 +75,19 @@ public class CollectionUtils {
         return from.stream().filter(filter).map(func).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
+    public static <T, U> PageResult<U> convertPage(PageResult<T> from, Function<T, U> func) {
+        if (ArrayUtil.isEmpty(from)) {
+            return new PageResult<>(from.getTotal());
+        }
+        return new PageResult<>(convertList(from.getList(), func), from.getTotal());
+    }
+
     public static <T, U> List<U> convertListByFlatMap(Collection<T> from,
                                                       Function<T, ? extends Stream<? extends U>> func) {
         if (CollUtil.isEmpty(from)) {
             return new ArrayList<>();
         }
-        return from.stream().flatMap(func).filter(Objects::nonNull).collect(Collectors.toList());
+        return from.stream().filter(Objects::nonNull).flatMap(func).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     public static <T, U, R> List<R> convertListByFlatMap(Collection<T> from,
@@ -87,7 +96,7 @@ public class CollectionUtils {
         if (CollUtil.isEmpty(from)) {
             return new ArrayList<>();
         }
-        return from.stream().map(mapper).flatMap(func).filter(Objects::nonNull).collect(Collectors.toList());
+        return from.stream().map(mapper).filter(Objects::nonNull).flatMap(func).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     public static <K, V> List<V> mergeValuesFromMap(Map<K, List<V>> map) {
@@ -95,6 +104,10 @@ public class CollectionUtils {
                 .stream()
                 .flatMap(List::stream)
                 .collect(Collectors.toList());
+    }
+
+    public static <T> Set<T> convertSet(Collection<T> from) {
+        return convertSet(from, v -> v);
     }
 
     public static <T, U> Set<U> convertSet(Collection<T> from, Function<T, U> func) {
@@ -123,7 +136,7 @@ public class CollectionUtils {
         if (CollUtil.isEmpty(from)) {
             return new HashSet<>();
         }
-        return from.stream().flatMap(func).filter(Objects::nonNull).collect(Collectors.toSet());
+        return from.stream().filter(Objects::nonNull).flatMap(func).filter(Objects::nonNull).collect(Collectors.toSet());
     }
 
     public static <T, U, R> Set<R> convertSetByFlatMap(Collection<T> from,
@@ -132,7 +145,7 @@ public class CollectionUtils {
         if (CollUtil.isEmpty(from)) {
             return new HashSet<>();
         }
-        return from.stream().map(mapper).flatMap(func).filter(Objects::nonNull).collect(Collectors.toSet());
+        return from.stream().map(mapper).filter(Objects::nonNull).flatMap(func).filter(Objects::nonNull).collect(Collectors.toSet());
     }
 
     public static <T, K> Map<K, T> convertMap(Collection<T> from, Function<T, K> keyFunc) {
@@ -257,11 +270,11 @@ public class CollectionUtils {
         return !CollectionUtil.isEmpty(from) ? from.get(0) : null;
     }
 
-    public static <T> T findFirst(List<T> from, Predicate<T> predicate) {
+    public static <T> T findFirst(Collection<T> from, Predicate<T> predicate) {
         return findFirst(from, predicate, Function.identity());
     }
 
-    public static <T, U> U findFirst(List<T> from, Predicate<T> predicate, Function<T, U> func) {
+    public static <T, U> U findFirst(Collection<T> from, Predicate<T> predicate, Function<T, U> func) {
         if (CollUtil.isEmpty(from)) {
             return null;
         }
@@ -286,13 +299,26 @@ public class CollectionUtils {
         return valueFunc.apply(t);
     }
 
-    public static <T, V extends Comparable<? super V>> V getSumValue(List<T> from, Function<T, V> valueFunc,
-                                                                     BinaryOperator<V> accumulator) {
+    public static <T, V extends Comparable<? super V>> T getMinObject(List<T> from, Function<T, V> valueFunc) {
         if (CollUtil.isEmpty(from)) {
             return null;
         }
         assert from.size() > 0; // 断言，避免告警
-        return from.stream().map(valueFunc).reduce(accumulator).get();
+        return from.stream().min(Comparator.comparing(valueFunc)).get();
+    }
+
+    public static <T, V extends Comparable<? super V>> V getSumValue(Collection<T> from, Function<T, V> valueFunc,
+                                                                     BinaryOperator<V> accumulator) {
+        return getSumValue(from, valueFunc, accumulator, null);
+    }
+
+    public static <T, V extends Comparable<? super V>> V getSumValue(Collection<T> from, Function<T, V> valueFunc,
+                                                                     BinaryOperator<V> accumulator, V defaultValue) {
+        if (CollUtil.isEmpty(from)) {
+            return defaultValue;
+        }
+        assert !from.isEmpty(); // 断言，避免告警
+        return from.stream().map(valueFunc).filter(Objects::nonNull).reduce(accumulator).orElse(defaultValue);
     }
 
     public static <T> void addIfNotNull(Collection<T> coll, T item) {
@@ -302,8 +328,25 @@ public class CollectionUtils {
         coll.add(item);
     }
 
-    public static <T> Collection<T> singleton(T deptId) {
-        return deptId == null ? Collections.emptyList() : Collections.singleton(deptId);
+    public static <T> Collection<T> singleton(T obj) {
+        return obj == null ? Collections.emptyList() : Collections.singleton(obj);
+    }
+
+    public static <T> List<T> newArrayList(List<List<T>> list) {
+        return list.stream().filter(Objects::nonNull).flatMap(Collection::stream).collect(Collectors.toList());
+    }
+
+    /**
+     * 转换为 LinkedHashSet
+     *
+     * @param <T>         元素类型
+     * @param elementType 集合中元素类型
+     * @param value       被转换的值
+     * @return {@link LinkedHashSet}
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> LinkedHashSet<T> toLinkedHashSet(Class<T> elementType, Object value) {
+        return (LinkedHashSet<T>) toCollection(LinkedHashSet.class, elementType, value);
     }
 
 }

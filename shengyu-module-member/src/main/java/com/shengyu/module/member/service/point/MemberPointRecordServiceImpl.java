@@ -2,7 +2,7 @@ package com.shengyu.module.member.service.point;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.controller.admin.point.vo.recrod.MemberPointRecordPageReqVO;
 import com.shengyu.module.member.controller.app.point.vo.AppMemberPointRecordPageReqVO;
 import com.shengyu.module.member.dal.dataobject.point.MemberPointRecordDO;
@@ -21,8 +21,8 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.Set;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
 import static com.shengyu.module.member.enums.ErrorCodeConstants.USER_POINT_NOT_ENOUGH;
 
 

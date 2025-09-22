@@ -1,6 +1,6 @@
 package com.shengyu.module.statistics.controller.admin.pay;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.statistics.controller.admin.pay.vo.PaySummaryRespVO;
 import com.shengyu.module.statistics.convert.pay.PayStatisticsConvert;
 import com.shengyu.module.statistics.service.pay.PayWalletStatisticsService;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 支付统计")
 @RestController

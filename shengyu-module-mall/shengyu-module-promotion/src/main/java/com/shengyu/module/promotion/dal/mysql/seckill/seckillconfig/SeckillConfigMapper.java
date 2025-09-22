@@ -1,8 +1,8 @@
 package com.shengyu.module.promotion.dal.mysql.seckill.seckillconfig;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.config.SeckillConfigPageReqVO;
 import com.shengyu.module.promotion.dal.dataobject.seckill.SeckillConfigDO;
 import org.apache.ibatis.annotations.Mapper;

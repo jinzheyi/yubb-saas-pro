@@ -1,16 +1,17 @@
 package com.shengyu.module.member.service.auth;
 
-import cn.iocoder.yudao.framework.common.biz.system.oauth2.OAuth2TokenCommonApi;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.util.collection.ArrayUtils;
-import cn.iocoder.yudao.framework.redis.config.YudaoRedisAutoConfiguration;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbAndRedisUnitTest;
+import com.shengyu.framework.common.biz.system.oauth2.OAuth2TokenCommonApi;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.util.collection.ArrayUtils;
+import com.shengyu.framework.redis.config.YudaoRedisAutoConfiguration;
+import com.shengyu.framework.test.core.ut.BaseDbAndRedisUnitTest;
 import com.shengyu.module.member.dal.dataobject.user.MemberUserDO;
 import com.shengyu.module.member.dal.mysql.user.MemberUserMapper;
 import com.shengyu.module.member.service.user.MemberUserService;
-import cn.iocoder.yudao.module.system.api.logger.LoginLogApi;
-import cn.iocoder.yudao.module.system.api.sms.SmsCodeApi;
-import cn.iocoder.yudao.module.system.api.social.SocialUserApi;
+import com.shengyu.module.platform.api.social.TenantSocialUserApi;
+import com.shengyu.module.system.api.logger.LoginLogApi;
+import com.shengyu.module.system.api.sms.SmsCodeApi;
+import com.shengyu.module.system.api.social.SocialUserApi;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,8 +20,8 @@ import javax.annotation.Resource;
 import java.util.function.Consumer;
 
 import static cn.hutool.core.util.RandomUtil.randomEle;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomString;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomString;
 
 // TODO @芋艿：单测的 review，等逻辑都达成一致后
 /**
@@ -45,7 +46,7 @@ public class MemberAuthServiceTest extends BaseDbAndRedisUnitTest {
     @MockBean
     private OAuth2TokenCommonApi oauth2TokenApi;
     @MockBean
-    private SocialUserApi socialUserApi;
+    private TenantSocialUserApi socialUserApi;
     @MockBean
     private PasswordEncoder passwordEncoder;
 

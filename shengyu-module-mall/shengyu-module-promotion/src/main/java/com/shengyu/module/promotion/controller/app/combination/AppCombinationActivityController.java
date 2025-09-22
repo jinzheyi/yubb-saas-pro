@@ -2,10 +2,10 @@ package com.shengyu.module.promotion.controller.app.combination;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
 import com.shengyu.module.product.api.spu.dto.ProductSpuRespDTO;
 import com.shengyu.module.promotion.controller.app.combination.vo.activity.AppCombinationActivityDetailRespVO;
@@ -28,8 +28,8 @@ import javax.annotation.security.PermitAll;
 import java.util.Collections;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
 
 @Tag(name = "用户 APP - 拼团活动")
 @RestController

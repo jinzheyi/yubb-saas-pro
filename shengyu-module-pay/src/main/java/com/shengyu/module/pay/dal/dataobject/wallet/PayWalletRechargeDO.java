@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.dal.dataobject.wallet;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
 import com.shengyu.module.pay.dal.dataobject.order.PayOrderDO;
 import com.shengyu.module.pay.dal.dataobject.refund.PayRefundDO;
 import com.shengyu.module.pay.enums.refund.PayRefundStatusEnum;

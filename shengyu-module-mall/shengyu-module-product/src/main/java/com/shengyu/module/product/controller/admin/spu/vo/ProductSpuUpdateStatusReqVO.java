@@ -1,6 +1,6 @@
 package com.shengyu.module.product.controller.admin.spu.vo;
 
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.product.enums.spu.ProductSpuStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

@@ -5,7 +5,7 @@ import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.api.user.MemberUserApi;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.trade.controller.admin.order.vo.TradeOrderPageReqVO;
@@ -30,8 +30,8 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.util.*;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.EXPRESS_NOT_EXISTS;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.ORDER_NOT_FOUND;
 

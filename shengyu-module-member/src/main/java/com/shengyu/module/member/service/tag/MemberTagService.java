@@ -1,6 +1,6 @@
 package com.shengyu.module.member.service.tag;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.controller.admin.tag.vo.MemberTagCreateReqVO;
 import com.shengyu.module.member.controller.admin.tag.vo.MemberTagPageReqVO;
 import com.shengyu.module.member.controller.admin.tag.vo.MemberTagUpdateReqVO;

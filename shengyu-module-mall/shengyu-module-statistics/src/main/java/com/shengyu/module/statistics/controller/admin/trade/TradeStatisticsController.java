@@ -1,10 +1,10 @@
 package com.shengyu.module.statistics.controller.admin.trade;
 
 import cn.hutool.core.util.ArrayUtil;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.excel.core.util.ExcelUtils;
 import com.shengyu.module.statistics.controller.admin.common.vo.DataComparisonRespVO;
-import cn.iocoder.yudao.module.statistics.controller.admin.trade.vo.*;
+import com.shengyu.module.statistics.controller.admin.trade.vo.*;
 import com.shengyu.module.statistics.controller.admin.trade.vo.*;
 import com.shengyu.module.statistics.convert.trade.TradeStatisticsConvert;
 import com.shengyu.module.statistics.dal.dataobject.trade.TradeStatisticsDO;
@@ -32,7 +32,7 @@ import javax.validation.Valid;
 import java.io.IOException;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 交易统计")
 @RestController

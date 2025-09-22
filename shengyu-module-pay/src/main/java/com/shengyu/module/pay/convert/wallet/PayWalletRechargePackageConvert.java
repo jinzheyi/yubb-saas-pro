@@ -2,7 +2,7 @@ package com.shengyu.module.pay.convert.wallet;
 
 import java.util.*;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 
 import com.shengyu.module.pay.controller.admin.wallet.vo.rechargepackage.WalletRechargePackageCreateReqVO;
 import com.shengyu.module.pay.controller.admin.wallet.vo.rechargepackage.WalletRechargePackageRespVO;

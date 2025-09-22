@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.dal.dataobject.diy;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.framework.mybatis.core.type.StringListTypeHandler;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.type.StringListTypeHandler;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;

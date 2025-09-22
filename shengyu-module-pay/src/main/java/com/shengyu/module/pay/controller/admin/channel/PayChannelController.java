@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.controller.admin.channel;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.pay.controller.admin.channel.vo.PayChannelCreateReqVO;
 import com.shengyu.module.pay.controller.admin.channel.vo.PayChannelRespVO;
 import com.shengyu.module.pay.controller.admin.channel.vo.PayChannelUpdateReqVO;
@@ -19,8 +19,8 @@ import javax.validation.Valid;
 import java.util.List;
 import java.util.Set;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
 
 @Tag(name = "管理后台 - 支付渠道")
 @RestController

@@ -1,7 +1,7 @@
 package com.shengyu.module.statistics.service.product;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.pojo.SortablePageParam;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.SortablePageParam;
 import com.shengyu.module.statistics.controller.admin.common.vo.DataComparisonRespVO;
 import com.shengyu.module.statistics.controller.admin.product.vo.ProductStatisticsReqVO;
 import com.shengyu.module.statistics.controller.admin.product.vo.ProductStatisticsRespVO;

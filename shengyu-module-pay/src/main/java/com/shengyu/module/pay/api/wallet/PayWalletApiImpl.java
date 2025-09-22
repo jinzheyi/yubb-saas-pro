@@ -1,7 +1,7 @@
 package com.shengyu.module.pay.api.wallet;
 
 import cn.hutool.core.lang.Assert;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.pay.api.wallet.dto.PayWalletAddBalanceReqDTO;
 import com.shengyu.module.pay.api.wallet.dto.PayWalletRespDTO;
 import com.shengyu.module.pay.dal.dataobject.wallet.PayWalletDO;

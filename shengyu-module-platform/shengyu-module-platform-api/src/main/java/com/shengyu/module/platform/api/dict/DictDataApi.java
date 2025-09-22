@@ -49,6 +49,14 @@ public interface DictDataApi {
     List<DictDataSimpleRespDTO> getDictDataList();
 
     /**
+     * 获得指定字典类型的字典数据列表
+     *
+     * @param dictType 字典类型
+     * @return 字典数据列表
+     */
+    List<DictDataRespDTO> getDictDataList(String dictType);
+
+    /**
      * 获得字典数据列表
      *
      * @param dictType 字典类型

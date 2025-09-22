@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.convert.coupon;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.api.coupon.dto.CouponRespDTO;
 import com.shengyu.module.promotion.controller.admin.coupon.vo.coupon.CouponPageItemRespVO;
 import com.shengyu.module.promotion.controller.admin.coupon.vo.coupon.CouponPageReqVO;

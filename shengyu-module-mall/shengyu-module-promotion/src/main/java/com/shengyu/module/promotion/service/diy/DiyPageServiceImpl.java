@@ -3,7 +3,7 @@ package com.shengyu.module.promotion.service.diy;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.diy.vo.page.DiyPageCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.diy.vo.page.DiyPagePageReqVO;
 import com.shengyu.module.promotion.controller.admin.diy.vo.page.DiyPagePropertyUpdateRequestVO;
@@ -18,7 +18,7 @@ import javax.annotation.Resource;
 import java.util.Collection;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.DIY_PAGE_NAME_USED;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.DIY_PAGE_NOT_EXISTS;
 

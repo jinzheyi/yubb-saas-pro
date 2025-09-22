@@ -2,9 +2,9 @@ package com.shengyu.module.member.convert.signin;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.collection.MapUtils;
-import cn.iocoder.yudao.framework.common.util.date.DateUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.collection.MapUtils;
+import com.shengyu.framework.common.util.date.DateUtils;
 import com.shengyu.module.member.controller.admin.signin.vo.record.MemberSignInRecordRespVO;
 import com.shengyu.module.member.controller.app.signin.vo.record.AppMemberSignInRecordRespVO;
 import com.shengyu.module.member.dal.dataobject.signin.MemberSignInConfigDO;
@@ -17,7 +17,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
 
 /**
  * 签到记录 Convert

@@ -1,6 +1,6 @@
 package com.shengyu.module.member.dal.dataobject.point;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
 import com.shengyu.module.member.enums.point.MemberPointBizTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;

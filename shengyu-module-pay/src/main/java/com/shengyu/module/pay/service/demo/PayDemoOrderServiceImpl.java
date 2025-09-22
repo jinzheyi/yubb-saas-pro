@@ -3,9 +3,9 @@ package com.shengyu.module.pay.service.demo;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.pay.api.order.PayOrderApi;
 import com.shengyu.module.pay.api.order.dto.PayOrderCreateReqDTO;
 import com.shengyu.module.pay.api.order.dto.PayOrderRespDTO;
@@ -28,10 +28,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static cn.hutool.core.util.ObjectUtil.notEqual;
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.addTime;
-import static cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString;
-import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.addTime;
+import static com.shengyu.framework.common.util.json.JsonUtils.toJsonString;
+import static com.shengyu.framework.common.util.servlet.ServletUtils.getClientIP;
 import static com.shengyu.module.pay.enums.ErrorCodeConstants.*;
 
 /**

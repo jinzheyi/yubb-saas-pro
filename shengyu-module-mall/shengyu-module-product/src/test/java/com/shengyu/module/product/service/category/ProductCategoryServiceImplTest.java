@@ -1,7 +1,7 @@
 package com.shengyu.module.product.service.category;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.product.controller.admin.category.vo.ProductCategoryListReqVO;
 import com.shengyu.module.product.controller.admin.category.vo.ProductCategorySaveReqVO;
 import com.shengyu.module.product.dal.dataobject.category.ProductCategoryDO;
@@ -13,11 +13,11 @@ import org.springframework.context.annotation.Import;
 import javax.annotation.Resource;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.util.object.ObjectUtils.cloneIgnoreId;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomLongId;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.common.util.object.ObjectUtils.cloneIgnoreId;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertServiceException;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomLongId;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static com.shengyu.module.product.dal.dataobject.category.ProductCategoryDO.PARENT_ID_NULL;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.CATEGORY_NOT_EXISTS;
 import static org.junit.jupiter.api.Assertions.assertEquals;

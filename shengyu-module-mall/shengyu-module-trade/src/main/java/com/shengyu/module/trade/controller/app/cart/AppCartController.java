@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.controller.app.cart;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.module.trade.controller.app.cart.vo.*;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.module.trade.controller.app.cart.vo.*;
 import com.shengyu.module.trade.controller.app.cart.vo.*;
 import com.shengyu.module.trade.service.cart.CartService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,8 +16,8 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 App - 购物车")
 @RestController

@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.framework.web.config;
 
-import cn.iocoder.yudao.framework.swagger.config.YudaoSwaggerAutoConfiguration;
+import com.shengyu.framework.swagger.config.ShengyuSwaggerAutoConfiguration;
 import org.springdoc.core.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,7 +18,7 @@ public class PromotionWebConfiguration {
      */
     @Bean
     public GroupedOpenApi promotionGroupedOpenApi() {
-        return YudaoSwaggerAutoConfiguration.buildGroupedOpenApi("promotion");
+        return ShengyuSwaggerAutoConfiguration.buildSystemGroupedOpenApi("租户端-营销", "promotion");
     }
 
 }

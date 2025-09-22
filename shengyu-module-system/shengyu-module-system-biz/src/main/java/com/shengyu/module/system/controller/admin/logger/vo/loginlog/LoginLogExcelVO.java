@@ -3,7 +3,7 @@ package com.shengyu.module.system.controller.admin.logger.vo.loginlog;
 import com.shengyu.framework.excel.core.annotations.DictFormat;
 import com.shengyu.framework.excel.core.convert.DictConvert;
 import com.shengyu.framework.common.enums.DictTypeConstants;
-import com.alibaba.excel.annotation.ExcelProperty;
+import cn.idev.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;

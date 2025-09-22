@@ -1,6 +1,6 @@
 package com.shengyu.module.statistics.dal.mysql.trade;
 
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.module.statistics.controller.admin.trade.vo.TradeOrderSummaryRespVO;
 import com.shengyu.module.statistics.controller.admin.trade.vo.TradeOrderTrendRespVO;
 import com.shengyu.module.statistics.dal.dataobject.trade.TradeStatisticsDO;

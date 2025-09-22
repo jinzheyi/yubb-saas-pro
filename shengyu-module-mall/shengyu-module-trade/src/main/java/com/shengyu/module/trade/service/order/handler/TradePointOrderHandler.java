@@ -15,7 +15,7 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.Objects;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.ORDER_CREATE_FAIL_INSUFFICIENT_USER_POINTS;
 
 /**

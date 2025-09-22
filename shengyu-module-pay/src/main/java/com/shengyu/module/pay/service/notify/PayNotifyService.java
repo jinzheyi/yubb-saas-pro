@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.service.notify;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.pay.controller.admin.notify.vo.PayNotifyTaskPageReqVO;
 import com.shengyu.module.pay.dal.dataobject.notify.PayNotifyLogDO;
 import com.shengyu.module.pay.dal.dataobject.notify.PayNotifyTaskDO;

@@ -4,7 +4,7 @@ import com.shengyu.framework.common.enums.DictTypeConstants;
 import lombok.*;
 import java.time.LocalDateTime;
 
-import com.alibaba.excel.annotation.ExcelProperty;
+import cn.idev.excel.annotation.ExcelProperty;
 import com.shengyu.framework.excel.core.annotations.DictFormat;
 import com.shengyu.framework.excel.core.convert.DictConvert;
 

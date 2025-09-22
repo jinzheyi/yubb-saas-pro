@@ -1,15 +1,15 @@
 package com.shengyu.module.member.service.user;
 
 import cn.hutool.core.util.RandomUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.util.collection.ArrayUtils;
-import cn.iocoder.yudao.framework.redis.config.YudaoRedisAutoConfiguration;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbAndRedisUnitTest;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.util.collection.ArrayUtils;
+import com.shengyu.framework.redis.config.YudaoRedisAutoConfiguration;
+import com.shengyu.framework.test.core.ut.BaseDbAndRedisUnitTest;
 import com.shengyu.module.member.controller.app.user.vo.AppMemberUserUpdateMobileReqVO;
 import com.shengyu.module.member.dal.dataobject.user.MemberUserDO;
 import com.shengyu.module.member.dal.mysql.user.MemberUserMapper;
 import com.shengyu.module.member.service.auth.MemberAuthServiceImpl;
-import cn.iocoder.yudao.module.system.api.sms.SmsCodeApi;
+import com.shengyu.module.system.api.sms.SmsCodeApi;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -22,7 +22,7 @@ import java.util.function.Consumer;
 
 import static cn.hutool.core.util.RandomUtil.randomEle;
 import static cn.hutool.core.util.RandomUtil.randomNumbers;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 // TODO @芋艿：单测的 review，等逻辑都达成一致后

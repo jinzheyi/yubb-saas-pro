@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.dal.dataobject.brokerage;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
 import com.shengyu.module.trade.enums.brokerage.BrokerageRecordBizTypeEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageRecordStatusEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;

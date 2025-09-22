@@ -1,8 +1,8 @@
 package com.shengyu.module.product.service.sku;
 
 import cn.hutool.core.util.RandomUtil;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
-import cn.iocoder.yudao.framework.test.core.util.AssertUtils;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.test.core.util.AssertUtils;
 import com.shengyu.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
 import com.shengyu.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
 import com.shengyu.module.product.dal.dataobject.sku.ProductSkuDO;
@@ -19,9 +19,9 @@ import javax.annotation.Resource;
 import java.util.Arrays;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertServiceException;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.SKU_NOT_EXISTS;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.SKU_STOCK_NOT_ENOUGH;
 import static java.util.Collections.singletonList;

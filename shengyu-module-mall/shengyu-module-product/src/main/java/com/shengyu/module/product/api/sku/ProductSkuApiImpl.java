@@ -1,6 +1,6 @@
 package com.shengyu.module.product.api.sku;
 
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.api.sku.dto.ProductSkuRespDTO;
 import com.shengyu.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
 import com.shengyu.module.product.dal.dataobject.sku.ProductSkuDO;

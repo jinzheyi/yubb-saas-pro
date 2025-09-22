@@ -1,8 +1,8 @@
 package com.shengyu.module.pay.service.app;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.pay.controller.admin.app.vo.PayAppCreateReqVO;
 import com.shengyu.module.pay.controller.admin.app.vo.PayAppPageReqVO;
 import com.shengyu.module.pay.controller.admin.app.vo.PayAppUpdateReqVO;
@@ -21,7 +21,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.pay.enums.ErrorCodeConstants.*;
 
 /**

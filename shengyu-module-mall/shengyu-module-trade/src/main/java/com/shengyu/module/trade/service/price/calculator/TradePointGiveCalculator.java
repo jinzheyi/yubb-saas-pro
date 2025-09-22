@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.service.price.calculator;
 
 import cn.hutool.core.util.BooleanUtil;
-import cn.iocoder.yudao.framework.common.util.number.MoneyUtils;
+import com.shengyu.framework.common.util.number.MoneyUtils;
 import com.shengyu.module.member.api.config.MemberConfigApi;
 import com.shengyu.module.member.api.config.dto.MemberConfigRespDTO;
 import com.shengyu.module.trade.service.price.bo.TradePriceCalculateReqBO;
@@ -14,7 +14,7 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.Optional;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.filterList;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.filterList;
 
 /**
  * 赠送积分的 {@link TradePriceCalculator} 实现类

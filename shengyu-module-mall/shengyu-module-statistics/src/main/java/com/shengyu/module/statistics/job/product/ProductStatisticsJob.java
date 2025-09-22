@@ -4,8 +4,8 @@ import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.quartz.core.handler.JobHandler;
-import cn.iocoder.yudao.framework.tenant.core.job.TenantJob;
+import com.shengyu.framework.quartz.core.handler.JobHandler;
+import com.shengyu.framework.tenant.core.job.TenantJob;
 import com.shengyu.module.statistics.service.product.ProductStatisticsService;
 import org.springframework.stereotype.Component;
 

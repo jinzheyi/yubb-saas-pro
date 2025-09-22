@@ -1,10 +1,10 @@
 package com.shengyu.module.trade.controller.app.brokerage;
 
 import cn.hutool.core.util.ObjUtil;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.framework.dict.core.DictFrameworkUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.dict.core.DictFrameworkUtils;
 import com.shengyu.module.pay.api.transfer.PayTransferApi;
 import com.shengyu.module.pay.api.transfer.dto.PayTransferRespDTO;
 import com.shengyu.module.trade.controller.admin.brokerage.vo.withdraw.BrokerageWithdrawPageReqVO;
@@ -27,8 +27,8 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.Objects;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 APP - 分销提现")
 @RestController

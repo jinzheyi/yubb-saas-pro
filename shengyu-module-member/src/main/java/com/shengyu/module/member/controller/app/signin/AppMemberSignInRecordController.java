@@ -1,8 +1,8 @@
 package com.shengyu.module.member.controller.app.signin;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.controller.app.signin.vo.record.AppMemberSignInRecordRespVO;
 import com.shengyu.module.member.controller.app.signin.vo.record.AppMemberSignInRecordSummaryRespVO;
 import com.shengyu.module.member.convert.signin.MemberSignInRecordConvert;
@@ -18,8 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 App - 签到记录")
 @RestController

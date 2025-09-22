@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.service.discount;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.promotion.controller.admin.discount.vo.DiscountActivityBaseVO;
 import com.shengyu.module.promotion.controller.admin.discount.vo.DiscountActivityCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.discount.vo.DiscountActivityPageReqVO;
@@ -21,13 +21,13 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.addTime;
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.buildTime;
-import static cn.iocoder.yudao.framework.common.util.object.ObjectUtils.cloneIgnoreId;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomLongId;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.addTime;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.buildTime;
+import static com.shengyu.framework.common.util.object.ObjectUtils.cloneIgnoreId;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertServiceException;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomLongId;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.DISCOUNT_ACTIVITY_NOT_EXISTS;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;

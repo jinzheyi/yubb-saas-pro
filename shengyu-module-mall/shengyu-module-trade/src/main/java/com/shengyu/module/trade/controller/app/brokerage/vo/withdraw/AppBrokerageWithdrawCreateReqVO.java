@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.controller.app.brokerage.vo.withdraw;
 
-import cn.iocoder.yudao.framework.common.util.validation.ValidationUtils;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.util.validation.ValidationUtils;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.pay.enums.PayChannelEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageWithdrawTypeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;

@@ -15,8 +15,8 @@ import com.github.binarywang.wxpay.constant.WxPayConstants;
 import com.github.binarywang.wxpay.exception.WxPayException;
 import lombok.extern.slf4j.Slf4j;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.invalidParamException;
-import static cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.invalidParamException;
+import static com.shengyu.framework.common.util.json.JsonUtils.toJsonString;
 
 /**
  * 微信支付（公众号）的 PayClient 实现类

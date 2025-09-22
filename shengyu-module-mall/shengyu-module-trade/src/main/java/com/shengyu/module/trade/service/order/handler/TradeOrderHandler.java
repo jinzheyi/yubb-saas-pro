@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.service.order.handler;
 
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.module.trade.dal.dataobject.order.TradeOrderDO;
 import com.shengyu.module.trade.dal.dataobject.order.TradeOrderItemDO;
 import com.shengyu.module.trade.enums.order.TradeOrderItemAfterSaleStatusEnum;

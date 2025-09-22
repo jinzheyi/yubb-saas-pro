@@ -1,8 +1,8 @@
 package com.shengyu.module.trade.controller.app.order.vo;
 
 import cn.hutool.core.util.ObjUtil;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
-import cn.iocoder.yudao.framework.common.validation.Mobile;
+import com.shengyu.framework.common.validation.InEnum;
+import com.shengyu.framework.common.validation.Mobile;
 import com.shengyu.module.trade.enums.delivery.DeliveryTypeEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;

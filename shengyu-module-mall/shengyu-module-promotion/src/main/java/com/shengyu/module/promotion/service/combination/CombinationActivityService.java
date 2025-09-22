@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.service.combination;
 
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.combination.vo.activity.CombinationActivityCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.combination.vo.activity.CombinationActivityPageReqVO;
 import com.shengyu.module.promotion.controller.admin.combination.vo.activity.CombinationActivityUpdateReqVO;

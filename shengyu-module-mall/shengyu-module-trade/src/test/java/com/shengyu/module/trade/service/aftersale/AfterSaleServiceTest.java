@@ -1,8 +1,8 @@
 package com.shengyu.module.trade.service.aftersale;
 
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.pay.api.refund.PayRefundApi;
 import com.shengyu.module.trade.controller.admin.aftersale.vo.AfterSalePageReqVO;
 import com.shengyu.module.trade.controller.app.aftersale.vo.AppAfterSaleCreateReqVO;
@@ -28,10 +28,10 @@ import org.springframework.context.annotation.Import;
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.buildTime;
-import static cn.iocoder.yudao.framework.common.util.object.ObjectUtils.cloneIgnoreId;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.buildTime;
+import static com.shengyu.framework.common.util.object.ObjectUtils.cloneIgnoreId;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;

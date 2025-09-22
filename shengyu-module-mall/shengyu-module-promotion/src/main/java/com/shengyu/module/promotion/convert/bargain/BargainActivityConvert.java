@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.convert.bargain;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.module.product.api.spu.dto.ProductSpuRespDTO;
 import com.shengyu.module.promotion.controller.admin.bargain.vo.activity.BargainActivityBaseVO;
 import com.shengyu.module.promotion.controller.admin.bargain.vo.activity.BargainActivityPageItemRespVO;
@@ -16,8 +16,8 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
-import static cn.iocoder.yudao.framework.common.util.collection.MapUtils.findAndThen;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.MapUtils.findAndThen;
 
 /**
  * 拼团活动 Convert

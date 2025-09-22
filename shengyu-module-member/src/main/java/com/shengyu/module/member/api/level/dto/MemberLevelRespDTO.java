@@ -1,6 +1,6 @@
 package com.shengyu.module.member.api.level.dto;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
 import lombok.Data;
 
 /**

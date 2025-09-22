@@ -1,8 +1,8 @@
 package com.shengyu.module.trade.service.brokerage;
 
 import cn.hutool.core.util.NumberUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.trade.controller.admin.brokerage.vo.record.BrokerageRecordPageReqVO;
 import com.shengyu.module.trade.dal.dataobject.brokerage.BrokerageRecordDO;
 import com.shengyu.module.trade.dal.mysql.brokerage.BrokerageRecordMapper;
@@ -17,11 +17,11 @@ import java.math.RoundingMode;
 
 import static cn.hutool.core.util.RandomUtil.randomEle;
 import static cn.hutool.core.util.RandomUtil.randomInt;
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.buildBetweenTime;
-import static cn.iocoder.yudao.framework.common.util.object.ObjectUtils.cloneIgnoreId;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomInteger;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.buildBetweenTime;
+import static com.shengyu.framework.common.util.object.ObjectUtils.cloneIgnoreId;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomInteger;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 // TODO @芋艿：单测后续看看

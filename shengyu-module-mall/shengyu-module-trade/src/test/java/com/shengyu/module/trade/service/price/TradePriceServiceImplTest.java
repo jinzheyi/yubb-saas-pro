@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.service.price;
 
-import cn.iocoder.yudao.framework.test.core.ut.BaseMockitoUnitTest;
+import com.shengyu.framework.test.core.ut.BaseMockitoUnitTest;
 import com.shengyu.module.product.api.property.dto.ProductPropertyValueDetailRespDTO;
 import com.shengyu.module.product.api.sku.ProductSkuApi;
 import com.shengyu.module.product.api.sku.dto.ProductSkuRespDTO;
@@ -20,7 +20,7 @@ import org.mockito.Mockito;
 import java.util.Arrays;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.util.collection.SetUtils.asSet;
+import static com.shengyu.framework.common.util.collection.SetUtils.asSet;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;

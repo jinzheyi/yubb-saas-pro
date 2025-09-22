@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.dal.dataobject.wallet;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -40,7 +40,7 @@ public class PayWalletRechargePackageDO extends BaseDO {
     /**
      * 状态
      *
-     * 枚举 {@link cn.iocoder.yudao.framework.common.enums.CommonStatusEnum}
+     * 枚举 {@link com.shengyu.framework.common.enums.CommonStatusEnum}
      */
     private Integer status;
 

@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.framework.delivery.core.client.impl;
 
-import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.common.util.json.JsonUtils;
 import com.shengyu.module.trade.framework.delivery.config.TradeExpressProperties;
 import com.shengyu.module.trade.framework.delivery.core.client.dto.ExpressTrackQueryReqDTO;
 import com.shengyu.module.trade.framework.delivery.core.client.dto.ExpressTrackRespDTO;

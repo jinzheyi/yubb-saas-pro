@@ -1,8 +1,8 @@
 package com.shengyu.module.product.dal.mysql.favorite;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.product.controller.admin.favorite.vo.ProductFavoritePageReqVO;
 import com.shengyu.module.product.controller.app.favorite.vo.AppFavoritePageReqVO;
 import com.shengyu.module.product.dal.dataobject.favorite.ProductFavoriteDO;

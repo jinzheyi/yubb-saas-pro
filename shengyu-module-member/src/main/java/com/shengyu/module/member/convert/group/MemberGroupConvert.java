@@ -1,6 +1,6 @@
 package com.shengyu.module.member.convert.group;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.controller.admin.group.vo.MemberGroupCreateReqVO;
 import com.shengyu.module.member.controller.admin.group.vo.MemberGroupRespVO;
 import com.shengyu.module.member.controller.admin.group.vo.MemberGroupSimpleRespVO;

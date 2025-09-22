@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.controller.admin.app.vo;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.validation.InEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import org.hibernate.validator.constraints.URL;

@@ -2,10 +2,10 @@ package com.shengyu.module.statistics.controller.admin.member;
 
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.NumberUtil;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.statistics.controller.admin.common.vo.DataComparisonRespVO;
-import cn.iocoder.yudao.module.statistics.controller.admin.member.vo.*;
+import com.shengyu.module.statistics.controller.admin.member.vo.*;
 import com.shengyu.module.statistics.controller.admin.member.vo.*;
 import com.shengyu.module.statistics.convert.member.MemberStatisticsConvert;
 import com.shengyu.module.statistics.service.infra.ApiAccessLogStatisticsService;
@@ -24,7 +24,7 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 会员统计")
 @RestController

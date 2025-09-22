@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.controller.app.activity;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.promotion.controller.app.activity.vo.AppActivityRespVO;
 import com.shengyu.module.promotion.dal.dataobject.bargain.BargainActivityDO;
 import com.shengyu.module.promotion.dal.dataobject.combination.CombinationActivityDO;
@@ -23,7 +23,7 @@ import javax.annotation.security.PermitAll;
 import java.util.ArrayList;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "用户 APP - 营销活动") // 用于提供跨多个活动的 HTTP 接口
 @RestController

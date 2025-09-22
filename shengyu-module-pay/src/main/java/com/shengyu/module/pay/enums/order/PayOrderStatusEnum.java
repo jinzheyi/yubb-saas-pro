@@ -1,7 +1,7 @@
 package com.shengyu.module.pay.enums.order;
 
-import cn.iocoder.yudao.framework.common.core.ArrayValuable;
-import cn.iocoder.yudao.framework.common.util.object.ObjectUtils;
+import com.shengyu.framework.common.core.ArrayValuable;
+import com.shengyu.framework.common.util.object.ObjectUtils;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

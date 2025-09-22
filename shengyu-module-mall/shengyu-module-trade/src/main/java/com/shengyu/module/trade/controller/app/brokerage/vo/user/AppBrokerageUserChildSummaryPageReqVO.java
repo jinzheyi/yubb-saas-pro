@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.controller.app.brokerage.vo.user;
 
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.SortingField;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.SortingField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import org.hibernate.validator.constraints.Range;

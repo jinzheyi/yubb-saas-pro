@@ -3,13 +3,13 @@ package com.shengyu.module.pay.service.transfer;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.pay.framework.pay.core.client.PayClient;
 import com.shengyu.module.pay.framework.pay.core.client.dto.transfer.PayTransferRespDTO;
 import com.shengyu.module.pay.framework.pay.core.client.dto.transfer.PayTransferUnifiedReqDTO;
-import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
+import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.module.pay.api.transfer.dto.PayTransferCreateReqDTO;
 import com.shengyu.module.pay.api.transfer.dto.PayTransferCreateRespDTO;
 import com.shengyu.module.pay.controller.admin.transfer.vo.PayTransferPageReqVO;
@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.pay.enums.ErrorCodeConstants.*;
 
 // TODO @jason：等彻底实现完，单测写写；

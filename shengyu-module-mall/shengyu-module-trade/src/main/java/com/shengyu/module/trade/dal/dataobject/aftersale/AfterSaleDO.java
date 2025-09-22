@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.dal.dataobject.aftersale;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
 import com.shengyu.module.trade.dal.dataobject.order.TradeOrderDO;
 import com.shengyu.module.trade.dal.dataobject.order.TradeOrderItemDO;
 import com.shengyu.module.trade.enums.aftersale.AfterSaleStatusEnum;

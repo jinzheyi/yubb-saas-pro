@@ -1,8 +1,8 @@
 package com.shengyu.module.product.service.property;
 
 import cn.hutool.core.util.ObjUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.controller.admin.property.vo.property.ProductPropertyPageReqVO;
 import com.shengyu.module.product.controller.admin.property.vo.property.ProductPropertySaveReqVO;
 import com.shengyu.module.product.dal.dataobject.property.ProductPropertyDO;
@@ -17,7 +17,7 @@ import javax.annotation.Resource;
 import java.util.Collection;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.*;
 
 /**

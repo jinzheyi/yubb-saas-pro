@@ -1,6 +1,6 @@
 package com.shengyu.framework.common.validation;
 
-import com.shengyu.framework.common.core.IntArrayValuable;
+import com.shengyu.framework.common.core.ArrayValuable;
 
 import javax.validation.Constraint;
 import javax.validation.Payload;
@@ -24,7 +24,7 @@ public @interface InEnum {
     /**
      * @return 实现 EnumValuable 接口的
      */
-    Class<? extends IntArrayValuable> value();
+    Class<? extends ArrayValuable> value();
 
     String message() default "必须在指定范围 {value}";
 

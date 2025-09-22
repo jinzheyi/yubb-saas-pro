@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.service.brokerage;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.trade.controller.admin.brokerage.vo.record.BrokerageRecordPageReqVO;
 import com.shengyu.module.trade.controller.app.brokerage.vo.record.AppBrokerageProductPriceRespVO;
 import com.shengyu.module.trade.controller.app.brokerage.vo.user.AppBrokerageUserRankByPriceRespVO;
@@ -17,7 +17,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
 
 /**
  * 佣金记录 Service 接口

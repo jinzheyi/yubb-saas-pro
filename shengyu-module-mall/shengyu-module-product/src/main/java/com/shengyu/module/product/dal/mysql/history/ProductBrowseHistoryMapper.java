@@ -1,9 +1,9 @@
 package com.shengyu.module.product.dal.mysql.history;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.product.controller.admin.history.vo.ProductBrowseHistoryPageReqVO;
 import com.shengyu.module.product.dal.dataobject.history.ProductBrowseHistoryDO;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;

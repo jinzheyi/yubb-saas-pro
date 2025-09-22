@@ -1,7 +1,7 @@
 package com.shengyu.module.member.controller.admin.level;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.module.member.controller.admin.level.vo.level.*;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.module.member.controller.admin.level.vo.level.*;
 import com.shengyu.module.member.controller.admin.level.vo.level.*;
 import com.shengyu.module.member.convert.level.MemberLevelConvert;
 import com.shengyu.module.member.dal.dataobject.level.MemberLevelDO;
@@ -17,7 +17,7 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 会员等级")
 @RestController

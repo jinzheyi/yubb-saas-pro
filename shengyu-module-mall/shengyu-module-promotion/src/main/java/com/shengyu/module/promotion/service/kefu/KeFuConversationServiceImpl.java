@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.service.kefu;
 
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.module.promotion.controller.admin.kefu.vo.conversation.KeFuConversationUpdatePinnedReqVO;
 import com.shengyu.module.promotion.dal.dataobject.kefu.KeFuConversationDO;
 import com.shengyu.module.promotion.dal.dataobject.kefu.KeFuMessageDO;
@@ -15,7 +15,7 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.KEFU_CONVERSATION_NOT_EXISTS;
 
 /**

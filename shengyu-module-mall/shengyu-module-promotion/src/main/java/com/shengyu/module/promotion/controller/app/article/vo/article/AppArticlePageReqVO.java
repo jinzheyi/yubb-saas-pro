@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.controller.app.article.vo.article;
 
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageParam;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 

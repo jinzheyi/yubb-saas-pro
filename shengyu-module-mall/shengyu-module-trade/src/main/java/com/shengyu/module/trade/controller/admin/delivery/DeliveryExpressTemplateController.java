@@ -1,8 +1,8 @@
 package com.shengyu.module.trade.controller.admin.delivery;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.expresstemplate.*;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.trade.controller.admin.delivery.vo.expresstemplate.*;
 import com.shengyu.module.trade.controller.admin.delivery.vo.expresstemplate.*;
 import com.shengyu.module.trade.convert.delivery.DeliveryExpressTemplateConvert;
 import com.shengyu.module.trade.dal.dataobject.delivery.DeliveryExpressTemplateDO;
@@ -19,7 +19,7 @@ import javax.validation.Valid;
 import java.util.Collection;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 快递运费模板")
 @RestController

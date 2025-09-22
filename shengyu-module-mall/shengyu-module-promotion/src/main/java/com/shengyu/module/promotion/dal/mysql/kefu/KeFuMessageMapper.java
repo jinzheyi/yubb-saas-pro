@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.dal.mysql.kefu;
 
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.QueryWrapperX;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.QueryWrapperX;
 import com.shengyu.module.promotion.controller.admin.kefu.vo.message.KeFuMessageListReqVO;
 import com.shengyu.module.promotion.dal.dataobject.kefu.KeFuMessageDO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;

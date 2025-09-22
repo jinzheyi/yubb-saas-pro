@@ -2,10 +2,10 @@ package com.shengyu.module.promotion.service.combination;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.module.product.api.sku.ProductSkuApi;
 import com.shengyu.module.product.api.sku.dto.ProductSkuRespDTO;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
@@ -28,9 +28,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.filterList;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.filterList;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.SKU_NOT_EXISTS;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.SPU_NOT_EXISTS;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.*;

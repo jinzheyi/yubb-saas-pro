@@ -2,7 +2,7 @@ package com.shengyu.module.trade.convert.brokerage;
 
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.ObjUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.trade.controller.admin.brokerage.vo.user.BrokerageUserRespVO;
 import com.shengyu.module.trade.controller.app.brokerage.vo.user.AppBrokerageUserChildSummaryRespVO;

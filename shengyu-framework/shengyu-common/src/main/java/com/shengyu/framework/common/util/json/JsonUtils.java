@@ -9,13 +9,18 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.shengyu.framework.common.util.json.databind.TimestampLocalDateTimeDeserializer;
+import com.shengyu.framework.common.util.json.databind.TimestampLocalDateTimeSerializer;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,13 +34,18 @@ import java.util.Map;
 @Slf4j
 public class JsonUtils {
 
+    @Getter
     private static ObjectMapper objectMapper = new ObjectMapper();
 
     static {
         objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL); // 忽略 null 值
-        objectMapper.registerModules(new JavaTimeModule()); // 解决 LocalDateTime 的序列化
+        // 解决 LocalDateTime 的序列化
+        SimpleModule simpleModule = new JavaTimeModule()
+                .addSerializer(LocalDateTime.class, TimestampLocalDateTimeSerializer.INSTANCE)
+                .addDeserializer(LocalDateTime.class, TimestampLocalDateTimeDeserializer.INSTANCE);
+        objectMapper.registerModules(simpleModule);
     }
 
     /**
@@ -102,6 +112,18 @@ public class JsonUtils {
         }
     }
 
+    public static <T> T parseObject(byte[] text, Type type) {
+        if (ArrayUtil.isEmpty(text)) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(text, objectMapper.getTypeFactory().constructType(type));
+        } catch (IOException e) {
+            log.error("json parse err,json:{}", text, e);
+            throw new RuntimeException(e);
+        }
+    }
+
     /**
      * 将字符串解析成指定类型的对象
      * 使用 {@link #parseObject(String, Class)} 时，在@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS) 的场景下，
@@ -136,6 +158,21 @@ public class JsonUtils {
         } catch (IOException e) {
             log.error("json parse err,json:{}", text, e);
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 解析 JSON 字符串成指定类型的对象，如果解析失败，则返回 null
+     *
+     * @param text 字符串
+     * @param typeReference 类型引用
+     * @return 指定类型的对象
+     */
+    public static <T> T parseObjectQuietly(String text, TypeReference<T> typeReference) {
+        try {
+            return objectMapper.readValue(text, typeReference);
+        } catch (IOException e) {
+            return null;
         }
     }
 
@@ -192,6 +229,14 @@ public class JsonUtils {
 
     public static boolean isJson(String text) {
         return JSONUtil.isTypeJSON(text);
+    }
+
+    /**
+     * 判断字符串是否为 JSON 类型的字符串
+     * @param str 字符串
+     */
+    public static boolean isJsonObject(String str) {
+        return JSONUtil.isTypeJSONObject(str);
     }
 
 }

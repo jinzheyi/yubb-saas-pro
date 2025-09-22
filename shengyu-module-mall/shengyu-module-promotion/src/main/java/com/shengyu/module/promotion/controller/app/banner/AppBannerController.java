@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.controller.app.banner;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.promotion.controller.app.banner.vo.AppBannerRespVO;
 import com.shengyu.module.promotion.convert.banner.BannerConvert;
 import com.shengyu.module.promotion.dal.dataobject.banner.BannerDO;
@@ -15,7 +15,7 @@ import javax.annotation.Resource;
 import javax.annotation.security.PermitAll;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @RestController
 @RequestMapping("/promotion/banner")

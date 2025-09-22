@@ -1,7 +1,7 @@
 package com.shengyu.module.product.service.property;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.controller.admin.property.vo.value.ProductPropertyValuePageReqVO;
 import com.shengyu.module.product.controller.admin.property.vo.value.ProductPropertyValueSaveReqVO;
 import com.shengyu.module.product.dal.dataobject.property.ProductPropertyValueDO;
@@ -15,7 +15,7 @@ import javax.annotation.Resource;
 import java.util.Collection;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.PROPERTY_VALUE_EXISTS;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.PROPERTY_VALUE_NOT_EXISTS;
 

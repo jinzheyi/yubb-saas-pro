@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.service.order;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.trade.controller.admin.order.vo.TradeOrderPageReqVO;
 import com.shengyu.module.trade.controller.admin.order.vo.TradeOrderSummaryRespVO;
 import com.shengyu.module.trade.controller.app.order.vo.AppTradeOrderPageReqVO;

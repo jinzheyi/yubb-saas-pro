@@ -1,6 +1,6 @@
 package com.shengyu.module.member.enums;
 
-import cn.iocoder.yudao.framework.common.exception.ErrorCode;
+import com.shengyu.framework.common.exception.ErrorCode;
 
 /**
  * Member 错误码枚举类

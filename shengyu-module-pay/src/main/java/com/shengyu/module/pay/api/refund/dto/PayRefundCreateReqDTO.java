@@ -1,7 +1,7 @@
 package com.shengyu.module.pay.api.refund.dto;
 
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.validation.InEnum;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 

@@ -1,8 +1,8 @@
 package com.shengyu.module.trade.dal.mysql.delivery;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.trade.controller.admin.delivery.vo.pickup.DeliveryPickUpStorePageReqVO;
 import com.shengyu.module.trade.dal.dataobject.delivery.DeliveryPickUpStoreDO;
 import org.apache.ibatis.annotations.Mapper;

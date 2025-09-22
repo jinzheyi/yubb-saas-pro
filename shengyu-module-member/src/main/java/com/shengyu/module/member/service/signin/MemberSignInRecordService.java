@@ -1,7 +1,7 @@
 package com.shengyu.module.member.service.signin;
 
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.controller.admin.signin.vo.record.MemberSignInRecordPageReqVO;
 import com.shengyu.module.member.controller.app.signin.vo.record.AppMemberSignInRecordSummaryRespVO;
 import com.shengyu.module.member.dal.dataobject.signin.MemberSignInRecordDO;

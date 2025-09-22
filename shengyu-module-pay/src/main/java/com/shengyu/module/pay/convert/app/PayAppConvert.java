@@ -1,7 +1,7 @@
 package com.shengyu.module.pay.convert.app;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.module.pay.controller.admin.app.vo.PayAppCreateReqVO;
 import com.shengyu.module.pay.controller.admin.app.vo.PayAppPageItemRespVO;
 import com.shengyu.module.pay.controller.admin.app.vo.PayAppRespVO;

@@ -1,8 +1,8 @@
 package com.shengyu.module.pay.controller.app.order;
 
 import cn.hutool.core.util.ObjUtil;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.pay.controller.admin.order.vo.PayOrderRespVO;
 import com.shengyu.module.pay.controller.admin.order.vo.PayOrderSubmitRespVO;
 import com.shengyu.module.pay.controller.app.order.vo.AppPayOrderSubmitReqVO;
@@ -26,10 +26,10 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import java.util.Objects;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
-import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
-import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getLoginUserType;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.servlet.ServletUtils.getClientIP;
+import static com.shengyu.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.web.core.util.WebFrameworkUtils.getLoginUserType;
 
 @Tag(name = "用户 APP - 支付订单")
 @RestController

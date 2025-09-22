@@ -1,6 +1,6 @@
 package com.shengyu.module.member.controller.admin.config;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.member.controller.admin.config.vo.MemberConfigRespVO;
 import com.shengyu.module.member.controller.admin.config.vo.MemberConfigSaveReqVO;
 import com.shengyu.module.member.convert.config.MemberConfigConvert;
@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.validation.Valid;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 会员设置")
 @RestController

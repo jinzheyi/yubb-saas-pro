@@ -2,7 +2,7 @@ package com.shengyu.module.platform.controller.platform.errorcode.vo;
 
 import com.shengyu.framework.excel.core.annotations.DictFormat;
 import com.shengyu.framework.excel.core.convert.DictConvert;
-import com.alibaba.excel.annotation.ExcelProperty;
+import cn.idev.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;

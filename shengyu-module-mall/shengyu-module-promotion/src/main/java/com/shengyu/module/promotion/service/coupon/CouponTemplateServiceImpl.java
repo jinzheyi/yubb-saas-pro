@@ -1,8 +1,8 @@
 package com.shengyu.module.promotion.service.coupon;
 
 import cn.hutool.core.util.ObjUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.product.api.category.ProductCategoryApi;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
 import com.shengyu.module.promotion.controller.admin.coupon.vo.template.CouponTemplateCreateReqVO;
@@ -21,7 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.*;
 
 /**

@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.api.combination;
 
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.promotion.api.combination.dto.CombinationRecordCreateReqDTO;
 import com.shengyu.module.promotion.api.combination.dto.CombinationRecordCreateRespDTO;
 import com.shengyu.module.promotion.api.combination.dto.CombinationRecordRespDTO;

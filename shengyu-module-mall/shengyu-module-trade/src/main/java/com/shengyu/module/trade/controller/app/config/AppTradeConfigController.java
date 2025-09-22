@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.controller.app.config;
 
 import cn.hutool.core.util.ObjUtil;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.trade.controller.app.config.vo.AppTradeConfigRespVO;
 import com.shengyu.module.trade.convert.config.TradeConfigConvert;
 import com.shengyu.module.trade.dal.dataobject.config.TradeConfigDO;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.annotation.Resource;
 import javax.annotation.security.PermitAll;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "用户 App - 交易配置")
 @RestController

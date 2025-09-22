@@ -1,8 +1,8 @@
 package com.shengyu.module.promotion.controller.admin.discount;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.discount.vo.DiscountActivityCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.discount.vo.DiscountActivityPageReqVO;
 import com.shengyu.module.promotion.controller.admin.discount.vo.DiscountActivityRespVO;
@@ -22,8 +22,8 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
 
 @Tag(name = "管理后台 - 限时折扣活动")
 @RestController

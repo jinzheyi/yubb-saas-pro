@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.controller.app.coupon.vo.coupon;
 
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.promotion.enums.coupon.CouponStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

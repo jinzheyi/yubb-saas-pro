@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.convert.channel;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.pay.controller.admin.channel.vo.PayChannelCreateReqVO;
 import com.shengyu.module.pay.controller.admin.channel.vo.PayChannelRespVO;
 import com.shengyu.module.pay.controller.admin.channel.vo.PayChannelUpdateReqVO;
@@ -20,7 +20,7 @@ public interface PayChannelConvert {
     @Mapping(target = "config",ignore = true)
     PayChannelDO convert(PayChannelUpdateReqVO bean);
 
-    @Mapping(target = "config",expression = "java(cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString(bean.getConfig()))")
+    @Mapping(target = "config",expression = "java(com.shengyu.framework.common.util.json.JsonUtils.toJsonString(bean.getConfig()))")
     PayChannelRespVO convert(PayChannelDO bean);
 
     PageResult<PayChannelRespVO> convertPage(PageResult<PayChannelDO> page);

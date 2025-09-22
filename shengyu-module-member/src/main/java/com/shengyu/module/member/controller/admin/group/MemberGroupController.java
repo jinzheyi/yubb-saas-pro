@@ -1,8 +1,8 @@
 package com.shengyu.module.member.controller.admin.group;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.member.controller.admin.group.vo.*;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.member.controller.admin.group.vo.*;
 import com.shengyu.module.member.controller.admin.group.vo.*;
 import com.shengyu.module.member.convert.group.MemberGroupConvert;
 import com.shengyu.module.member.dal.dataobject.group.MemberGroupDO;
@@ -18,7 +18,7 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 
 @Tag(name = "管理后台 - 用户分组")

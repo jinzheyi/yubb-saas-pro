@@ -1,7 +1,7 @@
 package com.shengyu.module.product.dal.dataobject.spu;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.framework.mybatis.core.type.IntegerListTypeHandler;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.type.IntegerListTypeHandler;
 import com.shengyu.module.product.dal.dataobject.brand.ProductBrandDO;
 import com.shengyu.module.product.dal.dataobject.category.ProductCategoryDO;
 import com.shengyu.module.product.dal.dataobject.sku.ProductSkuDO;

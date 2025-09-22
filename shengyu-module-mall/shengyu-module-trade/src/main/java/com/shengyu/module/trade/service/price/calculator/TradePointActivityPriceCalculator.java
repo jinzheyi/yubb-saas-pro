@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.PRICE_CALCULATE_POINT_TOTAL_LIMIT_COUNT;
 
 /**

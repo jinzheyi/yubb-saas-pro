@@ -2,7 +2,7 @@ package com.shengyu.module.statistics.service.trade;
 
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.LocalDateTimeUtil;
-import cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils;
+import com.shengyu.framework.common.util.date.LocalDateTimeUtils;
 import com.shengyu.module.statistics.controller.admin.common.vo.DataComparisonRespVO;
 import com.shengyu.module.statistics.controller.admin.trade.vo.TradeTrendSummaryRespVO;
 import com.shengyu.module.statistics.convert.trade.TradeStatisticsConvert;

@@ -1,8 +1,8 @@
 package com.shengyu.module.promotion.controller.admin.reward;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.promotion.controller.admin.reward.vo.RewardActivityCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.reward.vo.RewardActivityPageReqVO;
 import com.shengyu.module.promotion.controller.admin.reward.vo.RewardActivityRespVO;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.validation.Valid;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 满减送活动")
 @RestController

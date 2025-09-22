@@ -1,7 +1,7 @@
 package com.shengyu.module.statistics.service.trade;
 
 import com.shengyu.module.statistics.controller.admin.common.vo.DataComparisonRespVO;
-import cn.iocoder.yudao.module.statistics.controller.admin.trade.vo.*;
+import com.shengyu.module.statistics.controller.admin.trade.vo.*;
 import com.shengyu.module.statistics.controller.admin.trade.vo.TradeOrderSummaryRespVO;
 import com.shengyu.module.statistics.controller.admin.trade.vo.TradeOrderTrendReqVO;
 import com.shengyu.module.statistics.controller.admin.trade.vo.TradeOrderTrendRespVO;

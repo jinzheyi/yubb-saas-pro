@@ -1,7 +1,7 @@
 package com.shengyu.module.member.controller.app.user;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.module.member.controller.app.user.vo.*;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.module.member.controller.app.user.vo.*;
 import com.shengyu.module.member.controller.app.user.vo.*;
 import com.shengyu.module.member.convert.user.MemberUserConvert;
 import com.shengyu.module.member.dal.dataobject.level.MemberLevelDO;
@@ -18,8 +18,8 @@ import javax.annotation.Resource;
 import javax.annotation.security.PermitAll;
 import javax.validation.Valid;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 APP - 用户个人中心")
 @RestController

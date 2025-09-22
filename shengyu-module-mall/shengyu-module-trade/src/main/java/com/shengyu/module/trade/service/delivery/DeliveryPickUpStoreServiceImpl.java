@@ -1,8 +1,8 @@
 package com.shengyu.module.trade.service.delivery;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.module.system.api.user.AdminUserApi;
 import com.shengyu.module.trade.controller.admin.delivery.vo.pickup.DeliveryPickUpBindReqVO;
 import com.shengyu.module.trade.controller.admin.delivery.vo.pickup.DeliveryPickUpStoreCreateReqVO;
 import com.shengyu.module.trade.controller.admin.delivery.vo.pickup.DeliveryPickUpStorePageReqVO;
@@ -17,7 +17,7 @@ import javax.annotation.Resource;
 import java.util.Collection;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.PICK_UP_STORE_NOT_EXISTS;
 
 /**

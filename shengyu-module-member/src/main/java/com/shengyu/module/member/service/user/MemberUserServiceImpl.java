@@ -4,25 +4,25 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.*;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.member.controller.admin.user.vo.MemberUserPageReqVO;
 import com.shengyu.module.member.controller.admin.user.vo.MemberUserUpdateReqVO;
-import cn.iocoder.yudao.module.member.controller.app.user.vo.*;
+import com.shengyu.module.member.controller.app.user.vo.*;
 import com.shengyu.module.member.controller.app.user.vo.*;
 import com.shengyu.module.member.convert.auth.AuthConvert;
 import com.shengyu.module.member.convert.user.MemberUserConvert;
 import com.shengyu.module.member.dal.dataobject.user.MemberUserDO;
 import com.shengyu.module.member.dal.mysql.user.MemberUserMapper;
 import com.shengyu.module.member.mq.producer.user.MemberUserProducer;
-import cn.iocoder.yudao.module.system.api.sms.SmsCodeApi;
-import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeUseReqDTO;
-import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialWxPhoneNumberInfoRespDTO;
-import cn.iocoder.yudao.module.system.enums.sms.SmsSceneEnum;
+import com.shengyu.module.platform.api.sms.SmsCodeApi;
+import com.shengyu.module.platform.api.sms.dto.code.SmsCodeUseReqDTO;
+import com.shengyu.module.platform.api.social.TenantSocialClientApi;
+import com.shengyu.framework.common.enums.sms.SmsSceneEnum;
 import com.google.common.annotations.VisibleForTesting;
+import com.shengyu.module.platform.api.social.dto.SocialWxPhoneNumberInfoRespDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,8 +36,8 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.servlet.ServletUtils.getClientIP;
 import static com.shengyu.module.member.enums.ErrorCodeConstants.*;
 
 /**
@@ -57,7 +57,7 @@ public class MemberUserServiceImpl implements MemberUserService {
     private SmsCodeApi smsCodeApi;
 
     @Resource
-    private SocialClientApi socialClientApi;
+    private TenantSocialClientApi socialClientApi;
 
     @Resource
     private PasswordEncoder passwordEncoder;

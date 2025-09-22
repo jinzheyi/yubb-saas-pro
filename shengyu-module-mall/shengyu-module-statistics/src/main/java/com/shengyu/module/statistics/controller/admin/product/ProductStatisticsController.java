@@ -1,10 +1,10 @@
 package com.shengyu.module.statistics.controller.admin.product;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.pojo.SortablePageParam;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.SortablePageParam;
+import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.excel.core.util.ExcelUtils;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
 import com.shengyu.module.product.api.spu.dto.ProductSpuRespDTO;
 import com.shengyu.module.statistics.controller.admin.common.vo.DataComparisonRespVO;
@@ -28,9 +28,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
 
 @Tag(name = "管理后台 - 商品统计")
 @RestController

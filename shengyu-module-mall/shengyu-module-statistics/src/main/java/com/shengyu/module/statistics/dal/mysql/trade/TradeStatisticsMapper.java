@@ -1,7 +1,7 @@
 package com.shengyu.module.statistics.dal.mysql.trade;
 
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.statistics.controller.admin.trade.vo.TradeTrendSummaryRespVO;
 import com.shengyu.module.statistics.dal.dataobject.trade.TradeStatisticsDO;
 import com.shengyu.module.statistics.service.trade.bo.TradeSummaryRespBO;

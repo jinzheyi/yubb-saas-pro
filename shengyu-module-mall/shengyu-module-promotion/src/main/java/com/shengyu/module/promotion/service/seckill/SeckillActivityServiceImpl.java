@@ -2,9 +2,9 @@ package com.shengyu.module.promotion.service.seckill;
 
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.date.LocalDateTimeUtils;
 import com.shengyu.module.product.api.sku.ProductSkuApi;
 import com.shengyu.module.product.api.sku.dto.ProductSkuRespDTO;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
@@ -32,9 +32,9 @@ import java.util.List;
 import java.util.Map;
 
 import static cn.hutool.core.collection.CollUtil.isNotEmpty;
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.isBetween;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.*;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.isBetween;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.SKU_NOT_EXISTS;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.SPU_NOT_EXISTS;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.*;

@@ -1,7 +1,7 @@
 package com.shengyu.module.pay.controller.admin.wallet;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.pay.controller.admin.wallet.vo.wallet.PayWalletPageReqVO;
 import com.shengyu.module.pay.controller.admin.wallet.vo.wallet.PayWalletRespVO;
 import com.shengyu.module.pay.controller.admin.wallet.vo.wallet.PayWalletUpdateBalanceReqVO;
@@ -20,9 +20,9 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.validation.Valid;
 
-import static cn.iocoder.yudao.framework.common.enums.UserTypeEnum.MEMBER;
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.enums.UserTypeEnum.MEMBER;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 import static com.shengyu.module.pay.enums.ErrorCodeConstants.WALLET_NOT_FOUND;
 
 @Tag(name = "管理后台 - 用户钱包")

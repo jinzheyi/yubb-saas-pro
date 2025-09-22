@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.service.brokerage;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.trade.controller.admin.brokerage.vo.user.BrokerageUserPageReqVO;
 import com.shengyu.module.trade.dal.dataobject.brokerage.BrokerageUserDO;
 import com.shengyu.module.trade.dal.mysql.brokerage.BrokerageUserMapper;
@@ -11,10 +11,10 @@ import org.springframework.context.annotation.Import;
 
 import javax.annotation.Resource;
 
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.buildBetweenTime;
-import static cn.iocoder.yudao.framework.common.util.object.ObjectUtils.cloneIgnoreId;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.buildBetweenTime;
+import static com.shengyu.framework.common.util.object.ObjectUtils.cloneIgnoreId;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 // TODO @芋艿：单测后续看看

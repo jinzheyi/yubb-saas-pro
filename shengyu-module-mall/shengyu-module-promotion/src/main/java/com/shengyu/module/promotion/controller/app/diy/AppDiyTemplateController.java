@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.controller.app.diy;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.promotion.controller.app.diy.vo.AppDiyTemplatePropertyRespVO;
 import com.shengyu.module.promotion.convert.diy.DiyTemplateConvert;
 import com.shengyu.module.promotion.dal.dataobject.diy.DiyPageDO;
@@ -21,8 +21,8 @@ import javax.annotation.Resource;
 import javax.annotation.security.PermitAll;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.findFirst;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.findFirst;
 
 @Tag(name = "用户 APP - 装修模板")
 @RestController

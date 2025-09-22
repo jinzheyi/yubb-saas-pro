@@ -3,7 +3,7 @@ package com.shengyu.module.trade.framework.order.core.aop;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
+import com.shengyu.framework.web.core.util.WebFrameworkUtils;
 import com.shengyu.module.trade.dal.dataobject.order.TradeOrderLogDO;
 import com.shengyu.module.trade.framework.order.core.annotations.TradeOrderLog;
 import com.shengyu.module.trade.service.order.TradeOrderLogService;
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString;
+import static com.shengyu.framework.common.util.json.JsonUtils.toJsonString;
 import static java.util.Collections.emptyMap;
 
 /**

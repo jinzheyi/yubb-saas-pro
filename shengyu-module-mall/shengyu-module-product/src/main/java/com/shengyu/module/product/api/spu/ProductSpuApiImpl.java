@@ -1,6 +1,6 @@
 package com.shengyu.module.product.api.spu;
 
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.api.spu.dto.ProductSpuRespDTO;
 import com.shengyu.module.product.dal.dataobject.spu.ProductSpuDO;
 import com.shengyu.module.product.service.spu.ProductSpuService;

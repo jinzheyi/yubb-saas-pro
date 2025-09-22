@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.controller.admin.coupon.vo.coupon;
 
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.promotion.enums.common.PromotionDiscountTypeEnum;
 import com.shengyu.module.promotion.enums.common.PromotionProductScopeEnum;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -13,8 +13,8 @@ import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
-import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
+import static com.shengyu.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static com.shengyu.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 /**
 * 优惠劵 Base VO，提供给添加、修改、详细的子 VO 使用

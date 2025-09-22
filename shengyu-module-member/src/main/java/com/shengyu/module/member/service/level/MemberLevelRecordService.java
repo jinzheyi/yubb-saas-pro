@@ -1,6 +1,6 @@
 package com.shengyu.module.member.service.level;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.controller.admin.level.vo.record.MemberLevelRecordPageReqVO;
 import com.shengyu.module.member.dal.dataobject.level.MemberLevelRecordDO;
 

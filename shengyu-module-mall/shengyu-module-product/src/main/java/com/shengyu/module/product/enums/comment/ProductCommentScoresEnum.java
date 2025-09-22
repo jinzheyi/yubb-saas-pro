@@ -1,6 +1,6 @@
 package com.shengyu.module.product.enums.comment;
 
-import cn.iocoder.yudao.framework.common.core.ArrayValuable;
+import com.shengyu.framework.common.core.ArrayValuable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

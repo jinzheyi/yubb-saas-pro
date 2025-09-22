@@ -1,8 +1,8 @@
 package com.shengyu.module.member.service.level;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.util.collection.ArrayUtils;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.util.collection.ArrayUtils;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.member.controller.admin.level.vo.level.MemberLevelCreateReqVO;
 import com.shengyu.module.member.controller.admin.level.vo.level.MemberLevelListReqVO;
 import com.shengyu.module.member.controller.admin.level.vo.level.MemberLevelUpdateReqVO;
@@ -18,10 +18,10 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static cn.hutool.core.util.RandomUtil.randomInt;
-import static cn.iocoder.yudao.framework.common.util.object.ObjectUtils.cloneIgnoreId;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.*;
+import static com.shengyu.framework.common.util.object.ObjectUtils.cloneIgnoreId;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertServiceException;
+import static com.shengyu.framework.test.core.util.RandomUtils.*;
 import static com.shengyu.module.member.enums.ErrorCodeConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 

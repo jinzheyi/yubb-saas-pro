@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.convert.coupon;
 
 import cn.hutool.core.map.MapUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.coupon.vo.template.CouponTemplateCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.coupon.vo.template.CouponTemplatePageReqVO;
 import com.shengyu.module.promotion.controller.admin.coupon.vo.template.CouponTemplateRespVO;

@@ -1,6 +1,6 @@
 package com.shengyu.module.member.controller.admin.address;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.member.controller.admin.address.vo.AddressRespVO;
 import com.shengyu.module.member.convert.address.AddressConvert;
 import com.shengyu.module.member.dal.dataobject.address.MemberAddressDO;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.annotation.Resource;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 用户收件地址")
 @RestController

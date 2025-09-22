@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.convert.discount;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.promotion.controller.admin.discount.vo.DiscountActivityBaseVO;
 import com.shengyu.module.promotion.controller.admin.discount.vo.DiscountActivityCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.discount.vo.DiscountActivityRespVO;

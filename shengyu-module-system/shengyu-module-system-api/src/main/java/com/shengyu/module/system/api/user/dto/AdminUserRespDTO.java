@@ -41,4 +41,9 @@ public class AdminUserRespDTO {
      */
     private String mobile;
 
+    /**
+     * 用户头像
+     */
+    private String avatar;
+
 }

@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.service.delivery;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.trade.controller.admin.delivery.vo.express.DeliveryExpressCreateReqVO;
 import com.shengyu.module.trade.controller.admin.delivery.vo.express.DeliveryExpressExportReqVO;
 import com.shengyu.module.trade.controller.admin.delivery.vo.express.DeliveryExpressPageReqVO;
@@ -15,7 +15,7 @@ import org.springframework.validation.annotation.Validated;
 import javax.annotation.Resource;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.*;
 
 /**

@@ -1,6 +1,6 @@
 package com.shengyu.module.member.convert.level;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.controller.admin.level.vo.record.MemberLevelRecordRespVO;
 import com.shengyu.module.member.dal.dataobject.level.MemberLevelDO;
 import com.shengyu.module.member.dal.dataobject.level.MemberLevelRecordDO;

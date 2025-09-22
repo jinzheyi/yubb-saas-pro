@@ -1,9 +1,9 @@
 package com.shengyu.module.promotion.controller.app.coupon;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.framework.common.util.object.ObjectUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.ObjectUtils;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
 import com.shengyu.module.product.api.spu.dto.ProductSpuRespDTO;
 import com.shengyu.module.promotion.controller.app.coupon.vo.template.AppCouponTemplatePageReqVO;
@@ -31,8 +31,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
 import static java.util.Collections.singletonList;
 
 @Tag(name = "用户 App - 优惠劵模板")

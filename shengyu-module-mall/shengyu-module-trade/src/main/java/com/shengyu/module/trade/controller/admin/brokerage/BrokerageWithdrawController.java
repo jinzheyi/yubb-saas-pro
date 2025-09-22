@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.controller.admin.brokerage;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.api.user.MemberUserApi;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.pay.api.notify.dto.PayTransferNotifyReqDTO;
@@ -25,9 +25,9 @@ import javax.annotation.security.PermitAll;
 import javax.validation.Valid;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.util.servlet.ServletUtils.getClientIP;
 
 @Tag(name = "管理后台 - 佣金提现")
 @RestController

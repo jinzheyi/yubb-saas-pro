@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.service.price;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.member.api.level.dto.MemberLevelRespDTO;
 import com.shengyu.module.product.api.sku.ProductSkuApi;
 import com.shengyu.module.product.api.sku.dto.ProductSkuRespDTO;
@@ -26,8 +26,8 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.*;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.SKU_NOT_EXISTS;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.SKU_STOCK_NOT_ENOUGH;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.PRICE_CALCULATE_PAY_PRICE_ILLEGAL;

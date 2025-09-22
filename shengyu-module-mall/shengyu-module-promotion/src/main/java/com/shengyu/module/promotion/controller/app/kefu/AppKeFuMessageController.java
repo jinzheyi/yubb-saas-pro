@@ -1,15 +1,15 @@
 package com.shengyu.module.promotion.controller.app.kefu;
 
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.promotion.controller.admin.kefu.vo.message.KeFuMessageRespVO;
 import com.shengyu.module.promotion.controller.app.kefu.vo.message.AppKeFuMessagePageReqVO;
 import com.shengyu.module.promotion.controller.app.kefu.vo.message.AppKeFuMessageSendReqVO;
 import com.shengyu.module.promotion.dal.dataobject.kefu.KeFuMessageDO;
 import com.shengyu.module.promotion.service.kefu.KeFuMessageService;
-import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
+import com.shengyu.module.system.api.user.AdminUserApi;
+import com.shengyu.module.system.api.user.dto.AdminUserRespDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,11 +21,11 @@ import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.filterList;
-import static cn.iocoder.yudao.framework.common.util.collection.MapUtils.findAndThen;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.filterList;
+import static com.shengyu.framework.common.util.collection.MapUtils.findAndThen;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 APP - 客服消息")
 @RestController

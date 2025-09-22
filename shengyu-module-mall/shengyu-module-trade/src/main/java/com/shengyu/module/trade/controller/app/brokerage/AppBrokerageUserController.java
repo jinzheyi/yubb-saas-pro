@@ -1,11 +1,11 @@
 package com.shengyu.module.trade.controller.app.brokerage;
 
 import cn.hutool.core.date.LocalDateTimeUtil;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.api.user.MemberUserApi;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
-import cn.iocoder.yudao.module.trade.controller.app.brokerage.vo.user.*;
+import com.shengyu.module.trade.controller.app.brokerage.vo.user.*;
 import com.shengyu.module.trade.controller.app.brokerage.vo.user.*;
 import com.shengyu.module.trade.convert.brokerage.BrokerageRecordConvert;
 import com.shengyu.module.trade.convert.brokerage.BrokerageUserConvert;
@@ -32,10 +32,10 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 import static java.util.Arrays.asList;
 
 @Tag(name = "用户 APP - 分销用户")

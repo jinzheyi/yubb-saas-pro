@@ -1,7 +1,7 @@
 package com.shengyu.module.member.controller.admin.level.vo.level;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.validation.InEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import org.hibernate.validator.constraints.Range;

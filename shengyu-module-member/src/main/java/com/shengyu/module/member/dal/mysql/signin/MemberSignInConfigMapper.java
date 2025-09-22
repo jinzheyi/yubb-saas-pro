@@ -1,6 +1,6 @@
 package com.shengyu.module.member.dal.mysql.signin;
 
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.module.member.dal.dataobject.signin.MemberSignInConfigDO;
 import org.apache.ibatis.annotations.Mapper;
 

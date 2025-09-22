@@ -1,10 +1,10 @@
 package com.shengyu.module.promotion.dal.mysql.coupon;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.promotion.controller.admin.coupon.vo.template.CouponTemplatePageReqVO;
 import com.shengyu.module.promotion.dal.dataobject.coupon.CouponTemplateDO;
 import com.shengyu.module.promotion.enums.coupon.CouponTemplateValidityTypeEnum;

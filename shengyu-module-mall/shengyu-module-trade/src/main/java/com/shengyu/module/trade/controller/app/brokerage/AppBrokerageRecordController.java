@@ -1,9 +1,9 @@
 package com.shengyu.module.trade.controller.app.brokerage;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.framework.dict.core.DictFrameworkUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.dict.core.DictFrameworkUtils;
 import com.shengyu.module.trade.controller.admin.brokerage.vo.record.BrokerageRecordPageReqVO;
 import com.shengyu.module.trade.controller.app.brokerage.vo.record.AppBrokerageProductPriceRespVO;
 import com.shengyu.module.trade.controller.app.brokerage.vo.record.AppBrokerageRecordPageReqVO;
@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.annotation.Resource;
 import javax.validation.Valid;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 APP - 分销用户")
 @RestController

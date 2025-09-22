@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.dal.dataobject.demo;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
 import com.shengyu.module.pay.dal.dataobject.transfer.PayTransferDO;
 import com.shengyu.module.pay.enums.PayChannelEnum;
 import com.shengyu.module.pay.enums.demo.PayDemoWithdrawStatusEnum;

@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.service.channel;
 
-import cn.iocoder.yudao.framework.common.exception.ServiceException;
+import com.shengyu.framework.common.exception.ServiceException;
 import com.shengyu.module.pay.framework.pay.core.client.PayClient;
 import com.shengyu.module.pay.controller.admin.channel.vo.PayChannelCreateReqVO;
 import com.shengyu.module.pay.controller.admin.channel.vo.PayChannelUpdateReqVO;

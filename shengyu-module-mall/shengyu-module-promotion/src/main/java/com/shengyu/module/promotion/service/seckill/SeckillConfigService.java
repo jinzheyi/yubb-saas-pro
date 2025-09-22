@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.service.seckill;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.config.SeckillConfigCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.config.SeckillConfigPageReqVO;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.config.SeckillConfigUpdateReqVO;

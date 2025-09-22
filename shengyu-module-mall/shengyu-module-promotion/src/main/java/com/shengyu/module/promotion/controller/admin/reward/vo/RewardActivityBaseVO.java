@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.controller.admin.reward.vo;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.promotion.enums.common.PromotionConditionTypeEnum;
 import com.shengyu.module.promotion.enums.common.PromotionProductScopeEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;

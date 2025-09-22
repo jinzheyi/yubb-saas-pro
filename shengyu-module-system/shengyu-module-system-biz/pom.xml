@@ -40,10 +40,6 @@
         </dependency>
         <dependency>
             <groupId>com.shengyu.boot</groupId>
-            <artifactId>shengyu-spring-boot-starter-biz-dict</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.shengyu.boot</groupId>
             <artifactId>shengyu-spring-boot-starter-biz-data-permission</artifactId>
         </dependency>
         <dependency>

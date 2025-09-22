@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.controller.app.diy;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.promotion.controller.app.diy.vo.AppDiyPagePropertyRespVO;
 import com.shengyu.module.promotion.dal.dataobject.diy.DiyPageDO;
 import com.shengyu.module.promotion.service.diy.DiyPageService;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.annotation.Resource;
 import javax.annotation.security.PermitAll;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "用户 APP - 装修页面")
 @RestController

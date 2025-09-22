@@ -1,7 +1,7 @@
 package com.shengyu.module.pay.controller.admin.demo.vo.withdraw;
 
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.pay.enums.demo.PayDemoWithdrawTypeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

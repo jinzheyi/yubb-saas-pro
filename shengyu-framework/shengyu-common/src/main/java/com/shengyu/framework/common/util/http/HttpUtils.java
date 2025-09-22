@@ -5,13 +5,18 @@ import cn.hutool.core.map.TableMap;
 import cn.hutool.core.net.url.UrlBuilder;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
+import lombok.SneakyThrows;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
@@ -20,6 +25,18 @@ import java.util.Map;
  * @author 圣钰科技
  */
 public class HttpUtils {
+
+    @SuppressWarnings("unchecked")
+    /**
+     * 编码 URL 参数
+     *
+     * @param value 参数
+     * @return 编码后的参数
+     */
+    @SneakyThrows
+    public static String encodeUtf8(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8.name());
+    }
 
     @SuppressWarnings("unchecked")
     public static String replaceUrlQuery(String url, String key, String value) {
@@ -33,8 +50,15 @@ public class HttpUtils {
         return builder.build();
     }
 
-    private String append(String base, Map<String, ?> query, boolean fragment) {
-        return append(base, query, null, fragment);
+    public static String removeUrlQuery(String url) {
+        if (!StrUtil.contains(url, '?')) {
+            return url;
+        }
+        UrlBuilder builder = UrlBuilder.of(url, Charset.defaultCharset());
+        // 移除 query、fragment
+        builder.setQuery(null);
+        builder.setFragment(null);
+        return builder.build();
     }
 
     /**
@@ -109,7 +133,7 @@ public class HttpUtils {
             authorization = Base64.decodeStr(authorization);
             clientId = StrUtil.subBefore(authorization, ":", false);
             clientSecret = StrUtil.subAfter(authorization, ":", false);
-        // 再从 Param 中获取
+            // 再从 Param 中获取
         } else {
             clientId = request.getParameter("client_id");
             clientSecret = request.getParameter("client_secret");
@@ -120,6 +144,42 @@ public class HttpUtils {
             return new String[]{clientId, clientSecret};
         }
         return null;
+    }
+
+    /**
+     * HTTP post 请求，基于 {@link cn.hutool.http.HttpUtil} 实现
+     *
+     * 为什么要封装该方法，因为 HttpUtil 默认封装的方法，没有允许传递 headers 参数
+     *
+     * @param url URL
+     * @param headers 请求头
+     * @param requestBody 请求体
+     * @return 请求结果
+     */
+    public static String post(String url, Map<String, String> headers, String requestBody) {
+        try (HttpResponse response = HttpRequest.post(url)
+                .addHeaders(headers)
+                .body(requestBody)
+                .execute()) {
+            return response.body();
+        }
+    }
+
+    /**
+     * HTTP get 请求，基于 {@link cn.hutool.http.HttpUtil} 实现
+     *
+     * 为什么要封装该方法，因为 HttpUtil 默认封装的方法，没有允许传递 headers 参数
+     *
+     * @param url URL
+     * @param headers 请求头
+     * @return 请求结果
+     */
+    public static String get(String url, Map<String, String> headers) {
+        try (HttpResponse response = HttpRequest.get(url)
+                .addHeaders(headers)
+                .execute()) {
+            return response.body();
+        }
     }
 
 

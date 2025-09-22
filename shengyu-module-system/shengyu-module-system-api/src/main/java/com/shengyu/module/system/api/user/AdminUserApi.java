@@ -6,6 +6,7 @@ import com.shengyu.module.system.api.user.dto.AdminUserRespDTO;
 
 import javax.validation.Valid;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -65,6 +66,17 @@ public interface AdminUserApi {
     default Map<Long, AdminUserRespDTO> getUserMap(Collection<Long> ids) {
         List<AdminUserRespDTO> users = getUserList(ids);
         return CollectionUtils.convertMap(users, AdminUserRespDTO::getId);
+    }
+
+    /**
+     * 校验用户是否有效。如下情况，视为无效：
+     * 1. 用户编号不存在
+     * 2. 用户被禁用
+     *
+     * @param id 用户编号
+     */
+    default void validateUser(Long id) {
+        validateUserList(Collections.singleton(id));
     }
 
     /**

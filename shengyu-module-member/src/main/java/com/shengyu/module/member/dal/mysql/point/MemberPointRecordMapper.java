@@ -1,9 +1,9 @@
 package com.shengyu.module.member.dal.mysql.point;
 
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.member.controller.admin.point.vo.recrod.MemberPointRecordPageReqVO;
 import com.shengyu.module.member.controller.app.point.vo.AppMemberPointRecordPageReqVO;
 import com.shengyu.module.member.dal.dataobject.point.MemberPointRecordDO;

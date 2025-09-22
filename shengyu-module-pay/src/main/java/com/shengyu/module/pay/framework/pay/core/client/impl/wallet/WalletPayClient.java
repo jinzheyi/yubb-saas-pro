@@ -3,7 +3,7 @@ package com.shengyu.module.pay.framework.pay.core.client.impl.wallet;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import cn.iocoder.yudao.framework.common.exception.ServiceException;
+import com.shengyu.framework.common.exception.ServiceException;
 import com.shengyu.module.pay.enums.PayChannelEnum;
 import com.shengyu.module.pay.enums.refund.PayRefundStatusEnum;
 import com.shengyu.module.pay.enums.transfer.PayTransferStatusEnum;
@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants.INTERNAL_SERVER_ERROR;
+import static com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants.INTERNAL_SERVER_ERROR;
 import static com.shengyu.module.pay.enums.ErrorCodeConstants.PAY_ORDER_EXTENSION_NOT_FOUND;
 import static com.shengyu.module.pay.enums.ErrorCodeConstants.REFUND_NOT_FOUND;
 

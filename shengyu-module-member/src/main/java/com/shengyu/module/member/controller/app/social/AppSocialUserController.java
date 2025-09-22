@@ -1,14 +1,14 @@
 package com.shengyu.module.member.controller.app.social;
 
 import cn.hutool.core.codec.Base64;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.module.member.controller.app.social.vo.*;
-import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
-import cn.iocoder.yudao.module.system.api.social.SocialUserApi;
-import cn.iocoder.yudao.module.system.api.social.dto.*;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.member.controller.app.social.vo.*;
+import com.shengyu.module.platform.api.social.TenantSocialClientApi;
+import com.shengyu.module.platform.api.social.TenantSocialUserApi;
+import com.shengyu.module.member.controller.app.social.vo.*;
+import com.shengyu.module.platform.api.social.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,8 +20,8 @@ import javax.annotation.security.PermitAll;
 import javax.validation.Valid;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 App - 社交用户")
 @RestController
@@ -30,9 +30,9 @@ import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUti
 public class AppSocialUserController {
 
     @Resource
-    private SocialUserApi socialUserApi;
+    private TenantSocialUserApi socialUserApi;
     @Resource
-    private SocialClientApi socialClientApi;
+    private TenantSocialClientApi socialClientApi;
 
     @PostMapping("/bind")
     @Operation(summary = "社交绑定，使用 code 授权码")

@@ -1,6 +1,6 @@
 package com.shengyu.module.member.convert.user;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.member.controller.admin.user.vo.MemberUserRespVO;
 import com.shengyu.module.member.controller.admin.user.vo.MemberUserUpdateReqVO;
@@ -18,8 +18,8 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
 
 @Mapper(uses = {AddressConvert.class})
 public interface MemberUserConvert {

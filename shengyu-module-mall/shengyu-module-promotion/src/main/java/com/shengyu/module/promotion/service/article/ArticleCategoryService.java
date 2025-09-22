@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.service.article;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.article.vo.category.ArticleCategoryCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.article.vo.category.ArticleCategoryPageReqVO;
 import com.shengyu.module.promotion.controller.admin.article.vo.category.ArticleCategoryUpdateReqVO;

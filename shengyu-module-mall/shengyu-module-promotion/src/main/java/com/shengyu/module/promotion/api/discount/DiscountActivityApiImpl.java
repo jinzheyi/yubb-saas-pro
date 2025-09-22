@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.api.discount;
 
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.promotion.api.discount.dto.DiscountProductRespDTO;
 import com.shengyu.module.promotion.dal.dataobject.discount.DiscountProductDO;
 import com.shengyu.module.promotion.service.discount.DiscountActivityService;

@@ -1,6 +1,6 @@
 package com.shengyu.module.product.dal.dataobject.sku;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
 import com.shengyu.module.product.dal.dataobject.property.ProductPropertyDO;
 import com.shengyu.module.product.dal.dataobject.property.ProductPropertyValueDO;
 import com.shengyu.module.product.dal.dataobject.spu.ProductSpuDO;

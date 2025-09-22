@@ -1,6 +1,6 @@
 package com.shengyu.module.product.dal.dataobject.comment;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
 import com.shengyu.module.product.dal.dataobject.sku.ProductSkuDO;
 import com.shengyu.module.product.dal.dataobject.spu.ProductSpuDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;

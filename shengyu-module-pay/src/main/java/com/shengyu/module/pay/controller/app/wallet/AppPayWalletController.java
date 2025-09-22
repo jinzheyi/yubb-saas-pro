@@ -1,7 +1,7 @@
 package com.shengyu.module.pay.controller.app.wallet;
 
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.pay.controller.app.wallet.vo.wallet.AppPayWalletRespVO;
 import com.shengyu.module.pay.convert.wallet.PayWalletConvert;
 import com.shengyu.module.pay.dal.dataobject.wallet.PayWalletDO;
@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 /**
  * @author jason

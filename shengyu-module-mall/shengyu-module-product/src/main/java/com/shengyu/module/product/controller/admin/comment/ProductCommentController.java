@@ -1,9 +1,9 @@
 package com.shengyu.module.product.controller.admin.comment;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.module.product.controller.admin.comment.vo.*;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.module.product.controller.admin.comment.vo.*;
 import com.shengyu.module.product.controller.admin.comment.vo.*;
 import com.shengyu.module.product.dal.dataobject.comment.ProductCommentDO;
 import com.shengyu.module.product.service.comment.ProductCommentService;
@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.validation.Valid;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "管理后台 - 商品评价")
 @RestController

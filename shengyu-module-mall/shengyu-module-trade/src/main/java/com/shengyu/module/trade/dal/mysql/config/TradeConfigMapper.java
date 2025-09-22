@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.dal.mysql.config;
 
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.module.trade.dal.dataobject.config.TradeConfigDO;
 import org.apache.ibatis.annotations.Mapper;
 

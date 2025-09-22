@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.dal.mysql.delivery;
 
 
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.module.trade.dal.dataobject.delivery.DeliveryExpressTemplateChargeDO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.apache.ibatis.annotations.Mapper;

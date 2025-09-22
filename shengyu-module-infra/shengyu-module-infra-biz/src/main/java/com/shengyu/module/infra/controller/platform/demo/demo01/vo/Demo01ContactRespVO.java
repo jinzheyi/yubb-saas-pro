@@ -3,7 +3,8 @@ package com.shengyu.module.infra.controller.platform.demo.demo01.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import java.time.LocalDateTime;
-import com.alibaba.excel.annotation.*;
+import cn.idev.excel.annotation.ExcelIgnoreUnannotated;
+import cn.idev.excel.annotation.ExcelProperty;
 import com.shengyu.framework.excel.core.annotations.DictFormat;
 import com.shengyu.framework.excel.core.convert.DictConvert;
 

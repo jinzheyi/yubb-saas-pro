@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.controller.admin.banner.vo;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.promotion.enums.banner.BannerPositionEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

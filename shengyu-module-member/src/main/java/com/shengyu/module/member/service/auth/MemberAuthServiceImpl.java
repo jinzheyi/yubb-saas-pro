@@ -1,32 +1,32 @@
 package com.shengyu.module.member.service.auth;
 
 import cn.hutool.core.lang.Assert;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.enums.TerminalEnum;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
-import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
-import cn.iocoder.yudao.module.member.controller.app.auth.vo.*;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.enums.TerminalEnum;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.enums.logger.LoginLogTypeEnum;
+import com.shengyu.framework.common.enums.logger.LoginResultEnum;
+import com.shengyu.framework.common.enums.oauth2.OAuth2ClientConstants;
+import com.shengyu.framework.common.enums.sms.SmsSceneEnum;
+import com.shengyu.framework.common.enums.social.SocialTypeEnum;
+import com.shengyu.framework.common.util.monitor.TracerUtils;
+import com.shengyu.framework.common.util.servlet.ServletUtils;
+import com.shengyu.module.member.controller.app.auth.vo.*;
 import com.shengyu.module.member.controller.app.auth.vo.*;
 import com.shengyu.module.member.convert.auth.AuthConvert;
 import com.shengyu.module.member.dal.dataobject.user.MemberUserDO;
 import com.shengyu.module.member.service.user.MemberUserService;
-import cn.iocoder.yudao.module.system.api.logger.LoginLogApi;
-import cn.iocoder.yudao.module.system.api.logger.dto.LoginLogCreateReqDTO;
-import cn.iocoder.yudao.framework.common.biz.system.oauth2.OAuth2TokenCommonApi;
-import cn.iocoder.yudao.framework.common.biz.system.oauth2.dto.OAuth2AccessTokenCreateReqDTO;
-import cn.iocoder.yudao.framework.common.biz.system.oauth2.dto.OAuth2AccessTokenRespDTO;
-import cn.iocoder.yudao.module.system.api.sms.SmsCodeApi;
-import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
-import cn.iocoder.yudao.module.system.api.social.SocialUserApi;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialUserBindReqDTO;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialUserRespDTO;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialWxPhoneNumberInfoRespDTO;
-import cn.iocoder.yudao.module.system.enums.logger.LoginLogTypeEnum;
-import cn.iocoder.yudao.module.system.enums.logger.LoginResultEnum;
-import cn.iocoder.yudao.module.system.enums.oauth2.OAuth2ClientConstants;
-import cn.iocoder.yudao.module.system.enums.sms.SmsSceneEnum;
-import cn.iocoder.yudao.module.system.enums.social.SocialTypeEnum;
+import com.shengyu.module.system.api.oauth2.dto.OAuth2AccessTokenCreateReqDTO;
+import com.shengyu.module.system.api.oauth2.dto.OAuth2AccessTokenRespDTO;
+import com.shengyu.module.platform.api.sms.SmsCodeApi;
+import com.shengyu.module.platform.api.social.TenantSocialClientApi;
+import com.shengyu.module.platform.api.social.TenantSocialUserApi;
+import com.shengyu.module.platform.api.social.dto.SocialUserBindReqDTO;
+import com.shengyu.module.platform.api.social.dto.SocialUserRespDTO;
+import com.shengyu.module.platform.api.social.dto.SocialWxPhoneNumberInfoRespDTO;
+import com.shengyu.module.system.api.logger.LoginLogApi;
+import com.shengyu.module.system.api.logger.dto.LoginLogCreateReqDTO;
+import com.shengyu.module.system.api.oauth2.OAuth2TokenApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,9 +34,9 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import java.util.Objects;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
-import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getTerminal;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.servlet.ServletUtils.getClientIP;
+import static com.shengyu.framework.web.core.util.WebFrameworkUtils.getTerminal;
 import static com.shengyu.module.member.enums.ErrorCodeConstants.*;
 
 /**
@@ -55,11 +55,11 @@ public class MemberAuthServiceImpl implements MemberAuthService {
     @Resource
     private LoginLogApi loginLogApi;
     @Resource
-    private SocialUserApi socialUserApi;
+    private TenantSocialUserApi socialUserApi;
     @Resource
-    private SocialClientApi socialClientApi;
+    private TenantSocialClientApi socialClientApi;
     @Resource
-    private OAuth2TokenCommonApi oauth2TokenApi;
+    private OAuth2TokenApi oauth2TokenApi;
 
     @Override
     public AppAuthLoginRespVO login(AppAuthLoginReqVO reqVO) {
@@ -117,8 +117,9 @@ public class MemberAuthServiceImpl implements MemberAuthService {
 
         // 情况一：已绑定，直接读取用户信息
         MemberUserDO user;
-        if (socialUser.getUserId() != null) {
-            user = userService.getUser(socialUser.getUserId());
+        //todo 之前的SaasUserId设计适合租户用户，这种商城用户要后期实际测试看看情况
+        if (socialUser.getSaasUserId() != null) {
+            user = userService.getUser(socialUser.getSaasUserId());
         // 情况二：未绑定，注册用户 + 绑定用户
         } else {
             user = userService.createUser(socialUser.getNickname(), socialUser.getAvatar(), getClientIP(), getTerminal());
@@ -160,6 +161,7 @@ public class MemberAuthServiceImpl implements MemberAuthService {
         // 创建 Token 令牌
         OAuth2AccessTokenRespDTO accessTokenRespDTO = oauth2TokenApi.createAccessToken(new OAuth2AccessTokenCreateReqDTO()
                 .setUserId(user.getId()).setUserType(getUserType().getValue())
+                //todo 这块可能要每种用户都独立的token配置
                 .setClientId(OAuth2ClientConstants.CLIENT_ID_DEFAULT));
         // 构建返回结果
         return AuthConvert.INSTANCE.convert(accessTokenRespDTO, openid);

@@ -1,6 +1,6 @@
 package com.shengyu.module.product.convert.brand;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.product.controller.admin.brand.vo.ProductBrandCreateReqVO;
 import com.shengyu.module.product.controller.admin.brand.vo.ProductBrandRespVO;
 import com.shengyu.module.product.controller.admin.brand.vo.ProductBrandSimpleRespVO;

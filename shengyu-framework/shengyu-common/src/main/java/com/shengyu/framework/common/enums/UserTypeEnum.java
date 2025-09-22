@@ -1,7 +1,7 @@
 package com.shengyu.framework.common.enums;
 
 import cn.hutool.core.util.ArrayUtil;
-import com.shengyu.framework.common.core.IntArrayValuable;
+import com.shengyu.framework.common.core.ArrayValuable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -12,7 +12,7 @@ import java.util.Arrays;
  */
 @AllArgsConstructor
 @Getter
-public enum UserTypeEnum implements IntArrayValuable {
+public enum UserTypeEnum implements ArrayValuable<Integer> {
 
     PLATFORM(0, "平台管理员"), // 面向 b 端，平台管理后台
     MEMBER(1, "会员"), // 面向 c 端，普通用户
@@ -20,7 +20,7 @@ public enum UserTypeEnum implements IntArrayValuable {
 
     ;
 
-    public static final int[] ARRAYS = Arrays.stream(values()).mapToInt(UserTypeEnum::getValue).toArray();
+    public static final Integer[] ARRAYS = Arrays.stream(values()).map(UserTypeEnum::getValue).toArray(Integer[]::new);
 
     /**
      * 类型
@@ -36,7 +36,7 @@ public enum UserTypeEnum implements IntArrayValuable {
     }
 
     @Override
-    public int[] array() {
+    public Integer[] array() {
         return ARRAYS;
     }
 }

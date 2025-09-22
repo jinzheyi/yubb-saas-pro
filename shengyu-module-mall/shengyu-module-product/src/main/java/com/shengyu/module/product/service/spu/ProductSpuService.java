@@ -1,7 +1,7 @@
 package com.shengyu.module.product.service.spu;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.module.product.controller.admin.spu.vo.ProductSpuPageReqVO;
 import com.shengyu.module.product.controller.admin.spu.vo.ProductSpuSaveReqVO;
 import com.shengyu.module.product.controller.admin.spu.vo.ProductSpuUpdateStatusReqVO;

@@ -1,7 +1,7 @@
 package com.shengyu.module.member.service.level;
 
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.controller.admin.level.vo.experience.MemberExperienceRecordPageReqVO;
 import com.shengyu.module.member.dal.dataobject.level.MemberExperienceRecordDO;
 import com.shengyu.module.member.enums.MemberExperienceBizTypeEnum;

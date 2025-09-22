@@ -1,7 +1,7 @@
 package com.shengyu.module.pay.framework.pay.core.client.impl.alipay;
 
 import cn.hutool.core.date.LocalDateTimeUtil;
-import cn.iocoder.yudao.framework.common.exception.ServiceException;
+import com.shengyu.framework.common.exception.ServiceException;
 import com.shengyu.module.pay.enums.order.PayOrderStatusEnum;
 import com.shengyu.module.pay.framework.pay.core.client.dto.order.PayOrderRespDTO;
 import com.shengyu.module.pay.framework.pay.core.client.dto.order.PayOrderUnifiedReqDTO;
@@ -22,7 +22,7 @@ import java.util.Map;
 
 import static com.shengyu.module.pay.enums.order.PayOrderStatusEnum.CLOSED;
 import static com.shengyu.module.pay.enums.order.PayOrderStatusEnum.WAITING;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.*;
+import static com.shengyu.framework.test.core.util.RandomUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.when;

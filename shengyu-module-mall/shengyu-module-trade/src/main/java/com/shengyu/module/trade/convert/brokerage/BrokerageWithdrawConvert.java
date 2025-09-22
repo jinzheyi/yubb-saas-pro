@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.convert.brokerage;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.trade.controller.admin.brokerage.vo.withdraw.BrokerageWithdrawRespVO;
 import com.shengyu.module.trade.dal.dataobject.brokerage.BrokerageWithdrawDO;

@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.api.order.dto;
 
-import cn.iocoder.yudao.framework.common.enums.TerminalEnum;
+import com.shengyu.framework.common.enums.TerminalEnum;
 import com.shengyu.module.trade.enums.order.TradeOrderCancelTypeEnum;
 import com.shengyu.module.trade.enums.order.TradeOrderStatusEnum;
 import com.shengyu.module.trade.enums.order.TradeOrderTypeEnum;

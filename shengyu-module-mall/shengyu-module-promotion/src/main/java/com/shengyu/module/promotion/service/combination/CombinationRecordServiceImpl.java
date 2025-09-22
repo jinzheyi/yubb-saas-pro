@@ -3,13 +3,14 @@ package com.shengyu.module.promotion.service.combination;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import cn.iocoder.yudao.framework.common.core.KeyValue;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.common.core.KeyValue;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.json.JsonUtils;
 import com.shengyu.module.member.api.user.MemberUserApi;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
+import com.shengyu.module.platform.api.social.TenantSocialClientApi;
 import com.shengyu.module.product.api.sku.ProductSkuApi;
 import com.shengyu.module.product.api.sku.dto.ProductSkuRespDTO;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
@@ -24,8 +25,8 @@ import com.shengyu.module.promotion.dal.dataobject.combination.CombinationProduc
 import com.shengyu.module.promotion.dal.dataobject.combination.CombinationRecordDO;
 import com.shengyu.module.promotion.dal.mysql.combination.CombinationRecordMapper;
 import com.shengyu.module.promotion.enums.combination.CombinationRecordStatusEnum;
-import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialWxaSubscribeMessageSendReqDTO;
+import com.shengyu.module.platform.api.social.TenantSocialClientApi;
+import com.shengyu.module.platform.api.social.dto.SocialWxaSubscribeMessageSendReqDTO;
 import com.shengyu.module.trade.api.order.TradeOrderApi;
 import com.shengyu.module.trade.enums.order.TradeOrderCancelTypeEnum;
 import lombok.extern.slf4j.Slf4j;
@@ -43,10 +44,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.afterNow;
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.beforeNow;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.*;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.afterNow;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.beforeNow;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.*;
 import static com.shengyu.module.promotion.enums.MessageTemplateConstants.COMBINATION_SUCCESS;
 
@@ -75,7 +76,7 @@ public class CombinationRecordServiceImpl implements CombinationRecordService {
     @Lazy // 延迟加载，避免循环依赖
     private TradeOrderApi tradeOrderApi;
     @Resource
-    public SocialClientApi socialClientApi;
+    public TenantSocialClientApi socialClientApi;
 
     // TODO @芋艿：在详细预览下；
     @Override

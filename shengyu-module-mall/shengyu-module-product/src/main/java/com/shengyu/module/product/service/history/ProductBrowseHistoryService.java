@@ -1,6 +1,6 @@
 package com.shengyu.module.product.service.history;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.product.controller.admin.history.vo.ProductBrowseHistoryPageReqVO;
 import com.shengyu.module.product.dal.dataobject.history.ProductBrowseHistoryDO;
 import org.springframework.scheduling.annotation.Async;

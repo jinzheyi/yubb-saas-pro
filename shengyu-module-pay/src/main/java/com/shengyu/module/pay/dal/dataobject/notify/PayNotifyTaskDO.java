@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.dal.dataobject.notify;
 
-import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.pay.dal.dataobject.app.PayAppDO;
 import com.shengyu.module.pay.dal.dataobject.order.PayOrderDO;
 import com.shengyu.module.pay.dal.dataobject.refund.PayRefundDO;

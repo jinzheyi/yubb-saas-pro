@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.convert.article;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.article.vo.article.ArticleCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.article.vo.article.ArticleRespVO;
 import com.shengyu.module.promotion.controller.admin.article.vo.article.ArticleUpdateReqVO;

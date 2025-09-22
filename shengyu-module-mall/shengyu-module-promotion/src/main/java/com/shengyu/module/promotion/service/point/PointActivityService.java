@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.service.point;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.api.point.dto.PointValidateJoinRespDTO;
 import com.shengyu.module.promotion.controller.admin.point.vo.activity.PointActivityPageReqVO;
 import com.shengyu.module.promotion.controller.admin.point.vo.activity.PointActivitySaveReqVO;

@@ -1,6 +1,6 @@
 package com.shengyu.module.product.service.comment;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.product.api.comment.dto.ProductCommentCreateReqDTO;
 import com.shengyu.module.product.controller.admin.comment.vo.ProductCommentCreateReqVO;
 import com.shengyu.module.product.controller.admin.comment.vo.ProductCommentPageReqVO;

@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.service.price.calculator;
 
 import cn.hutool.core.collection.ListUtil;
-import cn.iocoder.yudao.framework.test.core.ut.BaseMockitoUnitTest;
+import com.shengyu.framework.test.core.ut.BaseMockitoUnitTest;
 import com.shengyu.module.promotion.api.coupon.CouponApi;
 import com.shengyu.module.promotion.api.coupon.dto.CouponRespDTO;
 import com.shengyu.module.promotion.enums.common.PromotionDiscountTypeEnum;
@@ -19,8 +19,8 @@ import org.mockito.Mock;
 import java.time.Duration;
 import java.util.ArrayList;
 
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.addTime;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.addTime;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

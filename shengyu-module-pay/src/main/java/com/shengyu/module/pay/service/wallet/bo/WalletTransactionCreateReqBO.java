@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.service.wallet.bo;
 
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.pay.enums.wallet.PayWalletBizTypeEnum;
 import lombok.Data;
 

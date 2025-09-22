@@ -1,7 +1,7 @@
 package com.shengyu.module.pay.service.wallet;
 
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.pay.controller.admin.wallet.vo.transaction.PayWalletTransactionPageReqVO;
 import com.shengyu.module.pay.controller.app.wallet.vo.transaction.AppPayWalletTransactionPageReqVO;
 import com.shengyu.module.pay.controller.app.wallet.vo.transaction.AppPayWalletTransactionSummaryRespVO;

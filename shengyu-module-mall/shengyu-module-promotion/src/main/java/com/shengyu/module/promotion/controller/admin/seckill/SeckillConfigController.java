@@ -1,9 +1,9 @@
 package com.shengyu.module.promotion.controller.admin.seckill;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.promotion.controller.admin.seckill.vo.config.*;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.promotion.controller.admin.seckill.vo.config.*;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.config.*;
 import com.shengyu.module.promotion.convert.seckill.SeckillConfigConvert;
 import com.shengyu.module.promotion.dal.dataobject.seckill.SeckillConfigDO;
@@ -19,7 +19,7 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 秒杀时段")
 @RestController

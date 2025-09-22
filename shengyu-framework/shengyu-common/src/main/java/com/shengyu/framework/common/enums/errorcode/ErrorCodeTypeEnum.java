@@ -1,6 +1,6 @@
 package com.shengyu.framework.common.enums.errorcode;
 
-import com.shengyu.framework.common.core.IntArrayValuable;
+import com.shengyu.framework.common.core.ArrayValuable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -13,7 +13,7 @@ import java.util.Arrays;
  */
 @AllArgsConstructor
 @Getter
-public enum ErrorCodeTypeEnum implements IntArrayValuable {
+public enum ErrorCodeTypeEnum implements ArrayValuable<Integer> {
 
     /**
      * 自动生成
@@ -24,15 +24,14 @@ public enum ErrorCodeTypeEnum implements IntArrayValuable {
      */
     MANUAL_OPERATION(2);
 
-    public static final int[] ARRAYS = Arrays.stream(values()).mapToInt(ErrorCodeTypeEnum::getType).toArray();
-
+    public static final Integer[] ARRAYS = Arrays.stream(values()).map(ErrorCodeTypeEnum::getType).toArray(Integer[]::new);
     /**
      * 类型
      */
     private final Integer type;
 
     @Override
-    public int[] array() {
+    public Integer[] array() {
         return ARRAYS;
     }
 

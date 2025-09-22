@@ -1,8 +1,8 @@
 package com.shengyu.module.promotion.dal.mysql.diy;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.promotion.controller.admin.diy.vo.page.DiyPagePageReqVO;
 import com.shengyu.module.promotion.dal.dataobject.diy.DiyPageDO;
 import org.apache.ibatis.annotations.Mapper;

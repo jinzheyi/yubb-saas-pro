@@ -2,7 +2,7 @@ package com.shengyu.module.trade.service.price.calculator;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.module.member.api.level.MemberLevelApi;
 import com.shengyu.module.member.api.level.dto.MemberLevelRespDTO;
 import com.shengyu.module.member.api.user.MemberUserApi;
@@ -21,9 +21,9 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
-import static cn.iocoder.yudao.framework.common.util.number.MoneyUtils.calculateRatePrice;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.util.number.MoneyUtils.calculateRatePrice;
 import static com.shengyu.module.trade.service.price.calculator.TradePriceCalculatorHelper.formatPrice;
 
 /**

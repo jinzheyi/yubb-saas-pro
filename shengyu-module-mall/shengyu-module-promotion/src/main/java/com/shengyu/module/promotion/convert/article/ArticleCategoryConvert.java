@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.convert.article;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.promotion.controller.admin.article.vo.category.*;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.promotion.controller.admin.article.vo.category.*;
 import com.shengyu.module.promotion.controller.admin.article.vo.category.ArticleCategoryCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.article.vo.category.ArticleCategoryRespVO;
 import com.shengyu.module.promotion.controller.admin.article.vo.category.ArticleCategorySimpleRespVO;

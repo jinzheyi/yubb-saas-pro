@@ -1,11 +1,11 @@
 package com.shengyu.module.member.service.user;
 
-import cn.iocoder.yudao.framework.common.enums.TerminalEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.validation.Mobile;
+import com.shengyu.framework.common.enums.TerminalEnum;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.validation.Mobile;
 import com.shengyu.module.member.controller.admin.user.vo.MemberUserPageReqVO;
 import com.shengyu.module.member.controller.admin.user.vo.MemberUserUpdateReqVO;
-import cn.iocoder.yudao.module.member.controller.app.user.vo.*;
+import com.shengyu.module.member.controller.app.user.vo.*;
 import com.shengyu.module.member.controller.app.user.vo.*;
 import com.shengyu.module.member.dal.dataobject.user.MemberUserDO;
 

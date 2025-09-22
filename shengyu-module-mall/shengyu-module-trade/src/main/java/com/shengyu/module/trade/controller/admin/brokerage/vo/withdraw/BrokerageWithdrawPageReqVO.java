@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.controller.admin.brokerage.vo.withdraw;
 
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageWithdrawStatusEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageWithdrawTypeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -12,7 +12,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
 
-import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static com.shengyu.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 
 @Schema(description = "管理后台 - 佣金提现分页 Request VO")
 @Data

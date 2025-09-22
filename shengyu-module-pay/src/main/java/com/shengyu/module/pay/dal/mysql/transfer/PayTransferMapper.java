@@ -1,8 +1,8 @@
 package com.shengyu.module.pay.dal.mysql.transfer;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.pay.controller.admin.transfer.vo.PayTransferPageReqVO;
 import com.shengyu.module.pay.dal.dataobject.transfer.PayTransferDO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;

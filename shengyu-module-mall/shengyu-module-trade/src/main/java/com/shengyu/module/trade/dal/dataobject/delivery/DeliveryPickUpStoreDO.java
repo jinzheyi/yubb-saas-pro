@@ -1,9 +1,9 @@
 package com.shengyu.module.trade.dal.dataobject.delivery;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.framework.mybatis.core.type.LongListTypeHandler;
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.type.LongListTypeHandler;
+import com.shengyu.module.system.api.user.dto.AdminUserRespDTO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;

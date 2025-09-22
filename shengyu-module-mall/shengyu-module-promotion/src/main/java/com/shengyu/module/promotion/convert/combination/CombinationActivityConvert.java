@@ -1,10 +1,10 @@
 package com.shengyu.module.promotion.convert.combination;
 
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.framework.common.util.collection.MapUtils;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.util.collection.MapUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.product.api.sku.dto.ProductSkuRespDTO;
 import com.shengyu.module.product.api.spu.dto.ProductSpuRespDTO;
@@ -34,8 +34,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
-import static cn.iocoder.yudao.framework.common.util.collection.MapUtils.findAndThen;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.*;
+import static com.shengyu.framework.common.util.collection.MapUtils.findAndThen;
 
 /**
  * 拼团活动 Convert

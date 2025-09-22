@@ -1,6 +1,6 @@
 package com.shengyu.module.member.service.auth;
 
-import cn.iocoder.yudao.module.member.controller.app.auth.vo.*;
+import com.shengyu.module.member.controller.app.auth.vo.*;
 import com.shengyu.module.member.controller.app.auth.vo.*;
 
 import javax.validation.Valid;

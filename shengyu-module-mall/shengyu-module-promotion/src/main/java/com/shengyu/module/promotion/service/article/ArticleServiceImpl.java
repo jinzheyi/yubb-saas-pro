@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.service.article;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.article.vo.article.ArticleCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.article.vo.article.ArticlePageReqVO;
 import com.shengyu.module.promotion.controller.admin.article.vo.article.ArticleUpdateReqVO;
@@ -16,7 +16,7 @@ import org.springframework.validation.annotation.Validated;
 import javax.annotation.Resource;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.ARTICLE_CATEGORY_NOT_EXISTS;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.ARTICLE_NOT_EXISTS;
 

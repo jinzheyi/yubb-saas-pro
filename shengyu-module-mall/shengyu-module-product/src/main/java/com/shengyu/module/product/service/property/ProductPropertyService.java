@@ -1,7 +1,7 @@
 package com.shengyu.module.product.service.property;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.product.controller.admin.property.vo.property.*;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.product.controller.admin.property.vo.property.*;
 import com.shengyu.module.product.controller.admin.property.vo.property.ProductPropertyPageReqVO;
 import com.shengyu.module.product.controller.admin.property.vo.property.ProductPropertySaveReqVO;
 import com.shengyu.module.product.dal.dataobject.property.ProductPropertyDO;

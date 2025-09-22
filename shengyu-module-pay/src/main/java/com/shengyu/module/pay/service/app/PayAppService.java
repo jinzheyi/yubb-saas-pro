@@ -1,8 +1,8 @@
 package com.shengyu.module.pay.service.app;
 
-import cn.iocoder.yudao.framework.common.exception.ServiceException;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.exception.ServiceException;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.module.pay.controller.admin.app.vo.PayAppCreateReqVO;
 import com.shengyu.module.pay.controller.admin.app.vo.PayAppPageReqVO;
 import com.shengyu.module.pay.controller.admin.app.vo.PayAppUpdateReqVO;

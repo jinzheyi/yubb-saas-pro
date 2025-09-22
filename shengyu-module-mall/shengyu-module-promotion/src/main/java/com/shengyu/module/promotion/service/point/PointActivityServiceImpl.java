@@ -1,9 +1,9 @@
 package com.shengyu.module.promotion.service.point;
 
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.api.sku.ProductSkuApi;
 import com.shengyu.module.product.api.sku.dto.ProductSkuRespDTO;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
@@ -27,9 +27,9 @@ import java.util.Map;
 
 import static cn.hutool.core.collection.CollUtil.intersectionDistinct;
 import static cn.hutool.core.collection.CollUtil.isNotEmpty;
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
-import static cn.iocoder.yudao.framework.common.util.collection.MapUtils.findAndThen;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.*;
+import static com.shengyu.framework.common.util.collection.MapUtils.findAndThen;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.SKU_NOT_EXISTS;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.SPU_NOT_EXISTS;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.*;

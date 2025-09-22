@@ -2,7 +2,7 @@ package com.shengyu.module.member.service.group;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ListUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.controller.admin.group.vo.MemberGroupCreateReqVO;
 import com.shengyu.module.member.controller.admin.group.vo.MemberGroupPageReqVO;
 import com.shengyu.module.member.controller.admin.group.vo.MemberGroupUpdateReqVO;
@@ -17,7 +17,7 @@ import javax.annotation.Resource;
 import java.util.Collection;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.member.enums.ErrorCodeConstants.GROUP_HAS_USER;
 import static com.shengyu.module.member.enums.ErrorCodeConstants.GROUP_NOT_EXISTS;
 

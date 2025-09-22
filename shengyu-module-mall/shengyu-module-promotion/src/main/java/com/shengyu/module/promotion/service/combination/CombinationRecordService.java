@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.service.combination;
 
-import cn.iocoder.yudao.framework.common.core.KeyValue;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.core.KeyValue;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.api.combination.dto.CombinationRecordCreateReqDTO;
 import com.shengyu.module.promotion.api.combination.dto.CombinationValidateJoinRespDTO;
 import com.shengyu.module.promotion.controller.admin.combination.vo.recrod.CombinationRecordReqPageVO;

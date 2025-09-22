@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.convert.bargain;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.collection.MapUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.collection.MapUtils;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.promotion.controller.admin.bargain.vo.help.BargainHelpRespVO;
 import com.shengyu.module.promotion.controller.app.bargain.vo.help.AppBargainHelpRespVO;

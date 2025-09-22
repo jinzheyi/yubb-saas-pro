@@ -1,7 +1,7 @@
 package com.shengyu.module.pay.dal.dataobject.notify;
 
 import com.shengyu.module.pay.enums.notify.PayNotifyStatusEnum;
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;

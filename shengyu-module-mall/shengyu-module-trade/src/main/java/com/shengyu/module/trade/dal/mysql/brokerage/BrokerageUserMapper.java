@@ -2,10 +2,10 @@ package com.shengyu.module.trade.dal.mysql.brokerage;
 
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.lang.Assert;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.pojo.SortingField;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.SortingField;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.trade.controller.admin.brokerage.vo.user.BrokerageUserPageReqVO;
 import com.shengyu.module.trade.controller.app.brokerage.vo.user.AppBrokerageUserChildSummaryRespVO;
 import com.shengyu.module.trade.controller.app.brokerage.vo.user.AppBrokerageUserRankByUserCountRespVO;

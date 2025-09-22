@@ -3,7 +3,7 @@ package com.shengyu.module.trade.framework.aftersale.core.aop;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
+import com.shengyu.framework.web.core.util.WebFrameworkUtils;
 import com.shengyu.module.trade.dal.dataobject.order.TradeOrderLogDO;
 import com.shengyu.module.trade.enums.aftersale.AfterSaleOperateTypeEnum;
 import com.shengyu.module.trade.framework.aftersale.core.annotations.AfterSaleLog;
@@ -17,7 +17,7 @@ import org.aspectj.lang.annotation.Aspect;
 
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString;
+import static com.shengyu.framework.common.util.json.JsonUtils.toJsonString;
 import static java.util.Collections.emptyMap;
 
 /**

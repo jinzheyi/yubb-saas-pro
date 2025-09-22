@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.enums.combination;
 
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.core.ArrayValuable;
+import com.shengyu.framework.common.core.ArrayValuable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

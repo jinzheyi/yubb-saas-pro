@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.service.seckillconfig;
 
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.config.SeckillConfigCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.config.SeckillConfigUpdateReqVO;
 import com.shengyu.module.promotion.dal.dataobject.seckill.SeckillConfigDO;
@@ -14,11 +14,11 @@ import org.springframework.context.annotation.Import;
 
 import javax.annotation.Resource;
 
-import static cn.iocoder.yudao.framework.common.util.object.ObjectUtils.cloneIgnoreId;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomLongId;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.common.util.object.ObjectUtils.cloneIgnoreId;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertServiceException;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomLongId;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.SECKILL_CONFIG_NOT_EXISTS;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;

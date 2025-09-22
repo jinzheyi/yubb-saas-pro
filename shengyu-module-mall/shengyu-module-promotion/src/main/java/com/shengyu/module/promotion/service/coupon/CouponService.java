@@ -2,7 +2,7 @@ package com.shengyu.module.promotion.service.coupon;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.coupon.vo.coupon.CouponPageReqVO;
 import com.shengyu.module.promotion.dal.dataobject.coupon.CouponDO;
 import com.shengyu.module.promotion.dal.dataobject.coupon.CouponTemplateDO;

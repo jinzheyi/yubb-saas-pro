@@ -3,8 +3,8 @@ package com.shengyu.module.promotion.service.bargain;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.api.bargain.dto.BargainValidateJoinRespDTO;
 import com.shengyu.module.promotion.controller.admin.bargain.vo.recrod.BargainRecordPageReqVO;
 import com.shengyu.module.promotion.controller.app.bargain.vo.record.AppBargainRecordCreateReqVO;
@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.*;
 
 /**

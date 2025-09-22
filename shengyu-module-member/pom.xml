@@ -28,6 +28,11 @@
             <artifactId>shengyu-module-infra-api</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-module-platform-api</artifactId>
+            <version>${revision}</version>
+        </dependency>
 
         <!-- 业务组件 -->
         <dependency>

@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.service.discount;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.discount.vo.DiscountActivityCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.discount.vo.DiscountActivityPageReqVO;
 import com.shengyu.module.promotion.controller.admin.discount.vo.DiscountActivityUpdateReqVO;

@@ -1,7 +1,7 @@
 package com.shengyu.module.member.controller.app.signin;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.member.controller.app.signin.vo.config.AppMemberSignInConfigRespVO;
 import com.shengyu.module.member.convert.signin.MemberSignInConfigConvert;
 import com.shengyu.module.member.dal.dataobject.signin.MemberSignInConfigDO;
@@ -17,7 +17,7 @@ import javax.annotation.Resource;
 import javax.annotation.security.PermitAll;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "用户 App - 签到规则")
 @RestController

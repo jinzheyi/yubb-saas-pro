@@ -1,14 +1,14 @@
 package com.shengyu.module.trade.controller.admin.delivery;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
-import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.module.system.api.user.AdminUserApi;
+import com.shengyu.module.system.api.user.dto.AdminUserRespDTO;
 import com.shengyu.module.trade.controller.admin.base.system.user.UserSimpleBaseVO;
-import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.pickup.*;
+import com.shengyu.module.trade.controller.admin.delivery.vo.pickup.*;
 import com.shengyu.module.trade.controller.admin.delivery.vo.pickup.*;
 import com.shengyu.module.trade.convert.delivery.DeliveryPickUpStoreConvert;
 import com.shengyu.module.trade.dal.dataobject.delivery.DeliveryPickUpStoreDO;
@@ -25,7 +25,7 @@ import javax.validation.Valid;
 import java.util.Collection;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 自提门店")
 @RestController

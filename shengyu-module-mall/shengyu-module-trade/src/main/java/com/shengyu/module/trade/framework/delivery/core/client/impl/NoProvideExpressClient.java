@@ -6,7 +6,7 @@ import com.shengyu.module.trade.framework.delivery.core.client.dto.ExpressTrackR
 
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.EXPRESS_CLIENT_NOT_PROVIDE;
 
 /**

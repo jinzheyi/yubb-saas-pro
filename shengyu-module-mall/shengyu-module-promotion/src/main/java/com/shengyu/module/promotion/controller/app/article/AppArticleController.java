@@ -1,8 +1,8 @@
 package com.shengyu.module.promotion.controller.app.article;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.promotion.controller.app.article.vo.article.AppArticlePageReqVO;
 import com.shengyu.module.promotion.controller.app.article.vo.article.AppArticleRespVO;
 import com.shengyu.module.promotion.convert.article.ArticleConvert;
@@ -22,7 +22,7 @@ import javax.annotation.Resource;
 import javax.annotation.security.PermitAll;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "用户 APP - 文章")
 @RestController

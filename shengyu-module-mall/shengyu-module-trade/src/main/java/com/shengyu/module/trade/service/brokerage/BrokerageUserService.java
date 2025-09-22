@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.service.brokerage;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.trade.controller.admin.brokerage.vo.user.BrokerageUserCreateReqVO;
 import com.shengyu.module.trade.controller.admin.brokerage.vo.user.BrokerageUserPageReqVO;
 import com.shengyu.module.trade.controller.app.brokerage.vo.user.AppBrokerageUserChildSummaryPageReqVO;

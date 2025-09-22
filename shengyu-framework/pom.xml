@@ -27,7 +27,6 @@
         <module>shengyu-spring-boot-starter-test</module>
 
         <module>shengyu-spring-boot-starter-biz-operatelog</module>
-        <module>shengyu-spring-boot-starter-biz-dict</module>
         <module>shengyu-spring-boot-starter-biz-sms</module>
 
         <module>shengyu-spring-boot-starter-biz-pay</module>

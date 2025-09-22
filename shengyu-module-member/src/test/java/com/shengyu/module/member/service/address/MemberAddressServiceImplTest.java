@@ -1,6 +1,6 @@
 package com.shengyu.module.member.service.address;
 
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.member.controller.app.address.vo.AppAddressCreateReqVO;
 import com.shengyu.module.member.controller.app.address.vo.AppAddressUpdateReqVO;
 import com.shengyu.module.member.dal.dataobject.address.MemberAddressDO;
@@ -10,10 +10,10 @@ import org.springframework.context.annotation.Import;
 
 import javax.annotation.Resource;
 
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomLongId;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertServiceException;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomLongId;
+import static com.shengyu.framework.test.core.util.RandomUtils.randomPojo;
 import static com.shengyu.module.member.enums.ErrorCodeConstants.ADDRESS_NOT_EXISTS;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;

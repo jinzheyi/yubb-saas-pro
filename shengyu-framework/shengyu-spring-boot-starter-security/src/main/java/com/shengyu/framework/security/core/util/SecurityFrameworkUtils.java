@@ -1,5 +1,6 @@
 package com.shengyu.framework.security.core.util;
 
+import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.security.core.LoginUser;
 import com.shengyu.framework.security.core.PlatformLoginUser;

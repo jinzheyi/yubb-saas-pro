@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.enums;
 
-import cn.iocoder.yudao.framework.common.exception.ErrorCode;
+import com.shengyu.framework.common.exception.ErrorCode;
 
 /**
  * Pay 错误码 Core 枚举类

@@ -1,9 +1,9 @@
 package com.shengyu.module.product.controller.admin.brand;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.product.controller.admin.brand.vo.*;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.product.controller.admin.brand.vo.*;
 import com.shengyu.module.product.controller.admin.brand.vo.*;
 import com.shengyu.module.product.convert.brand.ProductBrandConvert;
 import com.shengyu.module.product.dal.dataobject.brand.ProductBrandDO;
@@ -20,7 +20,7 @@ import javax.validation.Valid;
 import java.util.Comparator;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 商品品牌")
 @RestController

@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.framework.pay.core.client.impl.alipay;
 
-import cn.iocoder.yudao.framework.common.util.validation.ValidationUtils;
+import com.shengyu.framework.common.util.validation.ValidationUtils;
 import com.shengyu.module.pay.framework.pay.core.client.PayClientConfig;
 import lombok.Data;
 

@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.dal.dataobject.config;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.framework.mybatis.core.type.IntegerListTypeHandler;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.type.IntegerListTypeHandler;
 import com.shengyu.module.trade.enums.brokerage.BrokerageBindModeEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageEnabledConditionEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageWithdrawTypeEnum;

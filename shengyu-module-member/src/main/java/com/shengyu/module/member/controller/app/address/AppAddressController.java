@@ -1,6 +1,6 @@
 package com.shengyu.module.member.controller.app.address;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.member.controller.app.address.vo.AppAddressCreateReqVO;
 import com.shengyu.module.member.controller.app.address.vo.AppAddressRespVO;
 import com.shengyu.module.member.controller.app.address.vo.AppAddressUpdateReqVO;
@@ -17,8 +17,8 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 APP - 用户收件地址")
 @RestController

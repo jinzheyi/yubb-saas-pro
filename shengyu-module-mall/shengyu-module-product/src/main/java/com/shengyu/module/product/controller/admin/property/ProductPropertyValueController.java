@@ -1,8 +1,8 @@
 package com.shengyu.module.product.controller.admin.property;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.controller.admin.property.vo.value.ProductPropertyValuePageReqVO;
 import com.shengyu.module.product.controller.admin.property.vo.value.ProductPropertyValueRespVO;
 import com.shengyu.module.product.controller.admin.property.vo.value.ProductPropertyValueSaveReqVO;
@@ -19,9 +19,9 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.singleton;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.singleton;
 
 @Tag(name = "管理后台 - 商品属性值")
 @RestController

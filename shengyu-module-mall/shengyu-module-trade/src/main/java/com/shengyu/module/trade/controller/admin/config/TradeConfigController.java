@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.controller.admin.config;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.trade.controller.admin.config.vo.TradeConfigRespVO;
 import com.shengyu.module.trade.controller.admin.config.vo.TradeConfigSaveReqVO;
 import com.shengyu.module.trade.convert.config.TradeConfigConvert;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.validation.Valid;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 交易中心配置")
 @RestController

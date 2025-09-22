@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.dal.dataobject.coupon;
 
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.framework.mybatis.core.type.LongListTypeHandler;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.type.LongListTypeHandler;
 import com.shengyu.module.promotion.enums.common.PromotionDiscountTypeEnum;
 import com.shengyu.module.promotion.enums.common.PromotionProductScopeEnum;
 import com.shengyu.module.promotion.enums.coupon.CouponStatusEnum;

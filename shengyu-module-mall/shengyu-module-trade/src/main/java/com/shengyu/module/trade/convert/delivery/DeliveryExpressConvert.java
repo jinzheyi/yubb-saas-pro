@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.convert.delivery;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.express.*;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.trade.controller.admin.delivery.vo.express.*;
 import com.shengyu.module.trade.controller.admin.delivery.vo.express.*;
 import com.shengyu.module.trade.controller.app.delivery.vo.express.AppDeliveryExpressRespVO;
 import com.shengyu.module.trade.dal.dataobject.delivery.DeliveryExpressDO;

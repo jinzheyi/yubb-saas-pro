@@ -1,7 +1,7 @@
 package com.shengyu.module.product.dal.mysql.category;
 
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.product.controller.admin.category.vo.ProductCategoryListReqVO;
 import com.shengyu.module.product.dal.dataobject.category.ProductCategoryDO;
 import org.apache.ibatis.annotations.Mapper;

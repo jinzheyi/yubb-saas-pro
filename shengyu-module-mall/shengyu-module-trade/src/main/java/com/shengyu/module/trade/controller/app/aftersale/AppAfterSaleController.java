@@ -1,8 +1,8 @@
 package com.shengyu.module.trade.controller.app.aftersale;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.trade.controller.app.aftersale.vo.AppAfterSaleCreateReqVO;
 import com.shengyu.module.trade.controller.app.aftersale.vo.AppAfterSaleDeliveryReqVO;
 import com.shengyu.module.trade.controller.app.aftersale.vo.AppAfterSalePageReqVO;
@@ -18,8 +18,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 App - 交易售后")
 @RestController

@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.api.coupon;
 
 
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.promotion.api.coupon.dto.CouponRespDTO;
 import com.shengyu.module.promotion.api.coupon.dto.CouponUseReqDTO;
 import com.shengyu.module.promotion.service.coupon.CouponService;

@@ -1,8 +1,8 @@
 package com.shengyu.module.promotion.controller.admin.coupon;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.promotion.controller.admin.coupon.vo.template.*;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.promotion.controller.admin.coupon.vo.template.*;
 import com.shengyu.module.promotion.controller.admin.coupon.vo.template.*;
 import com.shengyu.module.promotion.convert.coupon.CouponTemplateConvert;
 import com.shengyu.module.promotion.dal.dataobject.coupon.CouponTemplateDO;
@@ -20,7 +20,7 @@ import javax.validation.Valid;
 import java.util.Collection;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 优惠劵模板")
 @RestController

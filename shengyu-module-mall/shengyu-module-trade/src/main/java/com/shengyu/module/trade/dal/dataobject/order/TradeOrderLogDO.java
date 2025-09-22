@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.dal.dataobject.order;
 
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
 import com.shengyu.module.trade.enums.order.TradeOrderOperateTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;

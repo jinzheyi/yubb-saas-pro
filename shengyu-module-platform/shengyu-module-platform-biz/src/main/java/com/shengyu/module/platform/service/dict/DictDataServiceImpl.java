@@ -70,6 +70,13 @@ public class DictDataServiceImpl implements DictDataService {
     }
 
     @Override
+    public List<DictDataDO> getDictDataListByDictType(String dictType) {
+        List<DictDataDO> list = dictDataMapper.selectList(DictDataDO::getDictType, dictType);
+        list.sort(Comparator.comparing(DictDataDO::getSort));
+        return list;
+    }
+
+    @Override
     public List<DictDataDO> getEnabledDictDataListByType(String dictType) {
         List<DictDataDO> list = dictDataMapper.selectListByTypeAndStatus(dictType, CommonStatusEnum.ENABLE.getStatus());
         list.sort(COMPARATOR_TYPE_AND_SORT);

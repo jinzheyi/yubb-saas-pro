@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.api.refund;
 
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.pay.api.refund.dto.PayRefundCreateReqDTO;
 import com.shengyu.module.pay.api.refund.dto.PayRefundRespDTO;
 import com.shengyu.module.pay.dal.dataobject.refund.PayRefundDO;

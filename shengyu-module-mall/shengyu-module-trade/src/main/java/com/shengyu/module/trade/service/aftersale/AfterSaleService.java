@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.service.aftersale;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.trade.controller.admin.aftersale.vo.AfterSaleDisagreeReqVO;
 import com.shengyu.module.trade.controller.admin.aftersale.vo.AfterSalePageReqVO;
 import com.shengyu.module.trade.controller.admin.aftersale.vo.AfterSaleRefuseReqVO;

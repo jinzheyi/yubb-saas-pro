@@ -1,9 +1,9 @@
 package com.shengyu.module.pay.service.app;
 
 import cn.hutool.core.util.RandomUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.pay.controller.admin.app.vo.PayAppCreateReqVO;
 import com.shengyu.module.pay.controller.admin.app.vo.PayAppPageReqVO;
 import com.shengyu.module.pay.controller.admin.app.vo.PayAppUpdateReqVO;
@@ -19,12 +19,12 @@ import org.springframework.context.annotation.Import;
 import javax.annotation.Resource;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.buildBetweenTime;
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.buildTime;
-import static cn.iocoder.yudao.framework.common.util.object.ObjectUtils.cloneIgnoreId;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.*;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.buildBetweenTime;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.buildTime;
+import static com.shengyu.framework.common.util.object.ObjectUtils.cloneIgnoreId;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertServiceException;
+import static com.shengyu.framework.test.core.util.RandomUtils.*;
 import static com.shengyu.module.pay.enums.ErrorCodeConstants.*;
 import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.*;

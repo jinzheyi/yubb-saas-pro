@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.controller.admin.combination;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.combination.vo.recrod.CombinationRecordPageItemRespVO;
 import com.shengyu.module.promotion.controller.admin.combination.vo.recrod.CombinationRecordReqPageVO;
 import com.shengyu.module.promotion.controller.admin.combination.vo.recrod.CombinationRecordSummaryVO;
@@ -25,8 +25,8 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
 
 @Tag(name = "管理后台 - 拼团记录")
 @RestController

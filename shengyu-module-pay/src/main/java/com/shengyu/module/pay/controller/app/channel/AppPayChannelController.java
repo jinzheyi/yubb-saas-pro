@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.controller.app.channel;
 
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.pay.dal.dataobject.channel.PayChannelDO;
 import com.shengyu.module.pay.service.channel.PayChannelService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,8 +16,8 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.Set;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
 
 @Tag(name = "用户 App - 支付渠道")
 @RestController

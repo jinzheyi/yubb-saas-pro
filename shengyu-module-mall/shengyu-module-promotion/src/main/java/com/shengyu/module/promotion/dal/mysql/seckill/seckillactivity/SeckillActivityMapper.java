@@ -2,9 +2,9 @@ package com.shengyu.module.promotion.dal.mysql.seckill.seckillactivity;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.activity.SeckillActivityPageReqVO;
 import com.shengyu.module.promotion.controller.app.seckill.vo.activity.AppSeckillActivityPageReqVO;
 import com.shengyu.module.promotion.dal.dataobject.seckill.SeckillActivityDO;

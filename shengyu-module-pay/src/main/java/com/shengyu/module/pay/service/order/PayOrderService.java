@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.service.order;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.pay.framework.pay.core.client.dto.order.PayOrderRespDTO;
 import com.shengyu.module.pay.api.order.dto.PayOrderCreateReqDTO;
 import com.shengyu.module.pay.controller.admin.order.vo.PayOrderExportReqVO;

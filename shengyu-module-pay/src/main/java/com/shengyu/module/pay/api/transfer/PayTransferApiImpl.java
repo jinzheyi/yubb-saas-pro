@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.api.transfer;
 
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.pay.framework.pay.core.client.impl.weixin.WxPayClientConfig;
 import com.shengyu.module.pay.api.transfer.dto.PayTransferCreateReqDTO;
 import com.shengyu.module.pay.api.transfer.dto.PayTransferCreateRespDTO;

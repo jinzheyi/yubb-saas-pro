@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.service.config;
 
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.module.trade.controller.admin.config.vo.TradeConfigSaveReqVO;
 import com.shengyu.module.trade.convert.config.TradeConfigConvert;
 import com.shengyu.module.trade.dal.dataobject.config.TradeConfigDO;

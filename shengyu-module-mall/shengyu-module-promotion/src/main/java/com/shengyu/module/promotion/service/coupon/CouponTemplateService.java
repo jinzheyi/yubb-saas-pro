@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.service.coupon;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.coupon.vo.template.CouponTemplateCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.coupon.vo.template.CouponTemplatePageReqVO;
 import com.shengyu.module.promotion.controller.admin.coupon.vo.template.CouponTemplateUpdateReqVO;

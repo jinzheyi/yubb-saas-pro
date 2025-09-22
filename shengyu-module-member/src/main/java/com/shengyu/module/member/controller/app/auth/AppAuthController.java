@@ -1,16 +1,16 @@
 package com.shengyu.module.member.controller.app.auth;
 
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.security.config.SecurityProperties;
-import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
-import cn.iocoder.yudao.module.member.controller.app.auth.vo.*;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.security.config.SecurityProperties;
+import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.module.member.controller.app.auth.vo.*;
 import com.shengyu.module.member.controller.app.auth.vo.*;
 import com.shengyu.module.member.convert.auth.AuthConvert;
 import com.shengyu.module.member.service.auth.MemberAuthService;
-import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialWxJsapiSignatureRespDTO;
+import com.shengyu.module.platform.api.social.TenantSocialClientApi;
+import com.shengyu.module.platform.api.social.dto.SocialWxJsapiSignatureRespDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -24,8 +24,8 @@ import javax.annotation.security.PermitAll;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 APP - 认证")
 @RestController
@@ -38,7 +38,7 @@ public class AppAuthController {
     private MemberAuthService authService;
 
     @Resource
-    private SocialClientApi socialClientApi;
+    private TenantSocialClientApi socialClientApi;
 
     @Resource
     private SecurityProperties securityProperties;

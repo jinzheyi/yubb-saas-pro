@@ -3,7 +3,7 @@ package com.shengyu.module.platform.controller.platform.plug.vo.app;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.excel.core.annotations.DictFormat;
 import com.shengyu.framework.excel.core.convert.DictConvert;
-import com.alibaba.excel.annotation.ExcelProperty;
+import cn.idev.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;

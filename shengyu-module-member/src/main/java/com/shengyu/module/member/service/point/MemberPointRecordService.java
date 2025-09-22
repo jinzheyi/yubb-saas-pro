@@ -1,6 +1,6 @@
 package com.shengyu.module.member.service.point;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.controller.admin.point.vo.recrod.MemberPointRecordPageReqVO;
 import com.shengyu.module.member.controller.app.point.vo.AppMemberPointRecordPageReqVO;
 import com.shengyu.module.member.dal.dataobject.point.MemberPointRecordDO;

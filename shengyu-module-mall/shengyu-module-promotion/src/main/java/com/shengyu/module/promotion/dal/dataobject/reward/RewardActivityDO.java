@@ -1,8 +1,8 @@
 package com.shengyu.module.promotion.dal.dataobject.reward;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.framework.mybatis.core.type.LongListTypeHandler;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.type.LongListTypeHandler;
 import com.shengyu.module.promotion.enums.common.PromotionConditionTypeEnum;
 import com.shengyu.module.promotion.enums.common.PromotionProductScopeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;

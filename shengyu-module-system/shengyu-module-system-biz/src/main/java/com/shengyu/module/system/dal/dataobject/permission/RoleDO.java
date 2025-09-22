@@ -1,7 +1,7 @@
 package com.shengyu.module.system.dal.dataobject.permission;
 
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
-import com.shengyu.framework.mybatis.core.type.JsonLongSetTypeHandler;
 import com.shengyu.framework.common.enums.permission.DataScopeEnum;
 import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.framework.common.enums.permission.RoleTypeEnum;
@@ -72,7 +72,7 @@ public class RoleDO extends TenantBaseDO {
      *
      * 适用于 {@link #dataScope} 的值为 {@link DataScopeEnum#DEPT_CUSTOM} 时
      */
-    @TableField(typeHandler = JsonLongSetTypeHandler.class)
+    @TableField(typeHandler = JacksonTypeHandler.class)
     private Set<Long> dataScopeDeptIds;
 
 }

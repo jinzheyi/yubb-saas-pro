@@ -1,17 +1,17 @@
 package com.shengyu.module.member.convert.auth;
 
-import cn.iocoder.yudao.module.member.controller.app.auth.vo.*;
+import com.shengyu.framework.common.enums.sms.SmsSceneEnum;
+import com.shengyu.module.member.controller.app.auth.vo.*;
 import com.shengyu.module.member.controller.app.auth.vo.*;
 import com.shengyu.module.member.controller.app.social.vo.AppSocialUserUnbindReqVO;
 import com.shengyu.module.member.controller.app.user.vo.AppMemberUserResetPasswordReqVO;
-import cn.iocoder.yudao.framework.common.biz.system.oauth2.dto.OAuth2AccessTokenRespDTO;
-import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeSendReqDTO;
-import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeUseReqDTO;
-import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeValidateReqDTO;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialUserBindReqDTO;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialUserUnbindReqDTO;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialWxJsapiSignatureRespDTO;
-import cn.iocoder.yudao.module.system.enums.sms.SmsSceneEnum;
+import com.shengyu.module.system.api.oauth2.dto.OAuth2AccessTokenRespDTO;
+import com.shengyu.module.platform.api.sms.dto.code.SmsCodeSendReqDTO;
+import com.shengyu.module.platform.api.sms.dto.code.SmsCodeUseReqDTO;
+import com.shengyu.module.platform.api.sms.dto.code.SmsCodeValidateReqDTO;
+import com.shengyu.module.platform.api.social.dto.SocialUserBindReqDTO;
+import com.shengyu.module.platform.api.social.dto.SocialUserUnbindReqDTO;
+import com.shengyu.module.platform.api.social.dto.SocialWxJsapiSignatureRespDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

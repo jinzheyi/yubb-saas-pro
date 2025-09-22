@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.enums;
 
-import cn.iocoder.yudao.framework.common.exception.ErrorCode;
+import com.shengyu.framework.common.exception.ErrorCode;
 
 /**
  * Trade 错误码枚举类

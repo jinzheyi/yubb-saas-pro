@@ -2,7 +2,7 @@ package com.shengyu.module.promotion.service.diy;
 
 import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.diy.vo.template.DiyTemplateCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.diy.vo.template.DiyTemplatePageReqVO;
 import com.shengyu.module.promotion.controller.admin.diy.vo.template.DiyTemplatePropertyUpdateRequestVO;
@@ -18,7 +18,7 @@ import org.springframework.validation.annotation.Validated;
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.*;
 
 /**

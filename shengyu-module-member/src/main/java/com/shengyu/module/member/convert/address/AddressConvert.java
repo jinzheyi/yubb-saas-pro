@@ -1,6 +1,6 @@
 package com.shengyu.module.member.convert.address;
 
-import cn.iocoder.yudao.framework.ip.core.utils.AreaUtils;
+import com.shengyu.framework.ip.core.utils.AreaUtils;
 import com.shengyu.module.member.api.address.dto.MemberAddressRespDTO;
 import com.shengyu.module.member.controller.admin.address.vo.AddressRespVO;
 import com.shengyu.module.member.controller.app.address.vo.AppAddressCreateReqVO;

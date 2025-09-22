@@ -1,9 +1,9 @@
 package com.shengyu.module.product.dal.mysql.spu;
 
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.product.controller.admin.spu.vo.ProductSpuPageReqVO;
 import com.shengyu.module.product.controller.app.spu.vo.AppProductSpuPageReqVO;
 import com.shengyu.module.product.dal.dataobject.spu.ProductSpuDO;

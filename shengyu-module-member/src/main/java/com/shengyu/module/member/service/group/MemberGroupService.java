@@ -1,7 +1,7 @@
 package com.shengyu.module.member.service.group;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.controller.admin.group.vo.MemberGroupCreateReqVO;
 import com.shengyu.module.member.controller.admin.group.vo.MemberGroupPageReqVO;
 import com.shengyu.module.member.controller.admin.group.vo.MemberGroupUpdateReqVO;

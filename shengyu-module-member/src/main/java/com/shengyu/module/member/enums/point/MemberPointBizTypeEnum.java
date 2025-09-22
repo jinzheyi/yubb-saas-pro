@@ -1,7 +1,7 @@
 package com.shengyu.module.member.enums.point;
 
 import cn.hutool.core.util.EnumUtil;
-import cn.iocoder.yudao.framework.common.core.ArrayValuable;
+import com.shengyu.framework.common.core.ArrayValuable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.service.delivery;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.trade.controller.admin.delivery.vo.express.DeliveryExpressCreateReqVO;
 import com.shengyu.module.trade.controller.admin.delivery.vo.express.DeliveryExpressExportReqVO;
 import com.shengyu.module.trade.controller.admin.delivery.vo.express.DeliveryExpressPageReqVO;

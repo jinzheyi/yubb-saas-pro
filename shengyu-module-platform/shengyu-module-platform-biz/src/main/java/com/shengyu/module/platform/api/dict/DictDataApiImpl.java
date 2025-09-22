@@ -45,6 +45,12 @@ public class DictDataApiImpl implements DictDataApi {
     }
 
     @Override
+    public List<DictDataRespDTO> getDictDataList(String dictType) {
+        List<DictDataDO> list = dictDataService.getDictDataListByDictType(dictType);
+        return BeanUtils.toBean(list, DictDataRespDTO.class);
+    }
+
+    @Override
     public List<DictDataRespDTO> getEnabledDictDataListByType(String dictType) {
         List<DictDataDO> dictDataDOList = dictDataService.getEnabledDictDataListByType(dictType);
         return BeanUtils.toBean(dictDataDOList, DictDataRespDTO.class);

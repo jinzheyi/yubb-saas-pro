@@ -2,11 +2,11 @@ package com.shengyu.module.member.service.signin;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.date.DateUtils;
-import cn.iocoder.yudao.framework.common.util.object.ObjectUtils;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.date.DateUtils;
+import com.shengyu.framework.common.util.object.ObjectUtils;
 import com.shengyu.module.member.controller.admin.signin.vo.record.MemberSignInRecordPageReqVO;
 import com.shengyu.module.member.controller.app.signin.vo.record.AppMemberSignInRecordSummaryRespVO;
 import com.shengyu.module.member.convert.signin.MemberSignInRecordConvert;
@@ -28,8 +28,8 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.Set;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
 import static com.shengyu.module.member.enums.ErrorCodeConstants.SIGN_IN_RECORD_TODAY_EXISTS;
 
 /**

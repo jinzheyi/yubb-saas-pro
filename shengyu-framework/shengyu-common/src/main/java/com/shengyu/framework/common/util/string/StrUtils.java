@@ -2,15 +2,14 @@ package com.shengyu.framework.common.util.string;
 
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.text.StrPool;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
-
 import com.shengyu.framework.common.enums.CommonConstants;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import org.aspectj.lang.JoinPoint;
+
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -50,6 +49,15 @@ public class StrUtils {
         return Arrays.stream(longs).boxed().collect(Collectors.toList());
     }
 
+    public static Set<Long> splitToLongSet(String value) {
+        return splitToLongSet(value, StrPool.COMMA);
+    }
+
+    public static Set<Long> splitToLongSet(String value, CharSequence separator) {
+        long[] longs = StrUtil.splitToLong(value, separator);
+        return Arrays.stream(longs).boxed().collect(Collectors.toSet());
+    }
+
     public static List<Integer> splitToInteger(String value, CharSequence separator) {
         int[] integers = StrUtil.splitToInt(value, separator);
         return Arrays.stream(integers).boxed().collect(Collectors.toList());
@@ -78,6 +86,32 @@ public class StrUtils {
      */
     public static String uniqueId(Long userId) {
         return DateUtil.format(new Date(), DatePattern.PURE_DATETIME_FORMATTER) + CommonConstants.SY + userId + CommonConstants.SY + IdUtil.getSnowflakeNextId();
+    }
+
+    /**
+     * 拼接方法的参数
+     *
+     * 特殊：排除一些无法序列化的参数，如 ServletRequest、ServletResponse、MultipartFile
+     *
+     * @param joinPoint 连接点
+     * @return 拼接后的参数
+     */
+    public static String joinMethodArgs(JoinPoint joinPoint) {
+        Object[] args = joinPoint.getArgs();
+        if (ArrayUtil.isEmpty(args)) {
+            return "";
+        }
+        return ArrayUtil.join(args, ",", item -> {
+            if (item == null) {
+                return "";
+            }
+            // 讨论可见：https://t.zsxq.com/XUJVk、https://t.zsxq.com/MnKcL
+            String clazzName = item.getClass().getName();
+            if (StrUtil.startWithAny(clazzName, "javax.servlet", "jakarta.servlet", "org.springframework.web")) {
+                return "";
+            }
+            return item;
+        });
     }
 
 }

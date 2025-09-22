@@ -1,9 +1,9 @@
 package com.shengyu.module.product.controller.app.comment;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.controller.app.comment.vo.AppCommentPageReqVO;
 import com.shengyu.module.product.controller.app.comment.vo.AppProductCommentRespVO;
 import com.shengyu.module.product.dal.dataobject.comment.ProductCommentDO;
@@ -19,7 +19,7 @@ import javax.annotation.Resource;
 import javax.annotation.security.PermitAll;
 import javax.validation.Valid;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "用户 APP - 商品评价")
 @RestController

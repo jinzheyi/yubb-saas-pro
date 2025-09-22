@@ -1,8 +1,8 @@
 package com.shengyu.module.pay.controller.app.wallet;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.pay.controller.app.wallet.vo.recharge.AppPayWalletPackageRespVO;
 import com.shengyu.module.pay.dal.dataobject.wallet.PayWalletRechargePackageDO;
 import com.shengyu.module.pay.service.wallet.PayWalletRechargePackageService;
@@ -18,7 +18,7 @@ import javax.annotation.Resource;
 import java.util.Comparator;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "用户 APP - 钱包充值套餐")
 @RestController

@@ -1,8 +1,8 @@
 package com.shengyu.module.platform.dal.dataobject.tenant;
 
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
-import com.shengyu.framework.mybatis.core.type.JsonLongSetTypeHandler;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -46,7 +46,7 @@ public class TenantPackageDO extends BaseDO {
     /**
      * 关联的菜单编号
      */
-    @TableField(typeHandler = JsonLongSetTypeHandler.class)
+    @TableField(typeHandler = JacksonTypeHandler.class)
     private Set<Long> menuIds;
 
 }

@@ -1,8 +1,8 @@
 package com.shengyu.module.trade.dal.mysql.aftersale;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.trade.controller.admin.aftersale.vo.AfterSalePageReqVO;
 import com.shengyu.module.trade.controller.app.aftersale.vo.AppAfterSalePageReqVO;
 import com.shengyu.module.trade.dal.dataobject.aftersale.AfterSaleDO;

@@ -1,9 +1,9 @@
 package com.shengyu.module.promotion.controller.app.bargain;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.product.api.spu.ProductSpuApi;
 import com.shengyu.module.product.api.spu.dto.ProductSpuRespDTO;
 import com.shengyu.module.promotion.controller.app.bargain.vo.activity.AppBargainActivityDetailRespVO;
@@ -30,9 +30,9 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.cache.CacheUtils.buildAsyncReloadingCache;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.cache.CacheUtils.buildAsyncReloadingCache;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
 
 @Tag(name = "用户 App - 砍价活动")
 @RestController

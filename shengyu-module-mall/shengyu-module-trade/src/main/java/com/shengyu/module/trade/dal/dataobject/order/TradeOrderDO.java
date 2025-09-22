@@ -1,8 +1,8 @@
 package com.shengyu.module.trade.dal.dataobject.order;
 
-import cn.iocoder.yudao.framework.common.enums.TerminalEnum;
-import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.framework.mybatis.core.type.LongListTypeHandler;
+import com.shengyu.framework.common.enums.TerminalEnum;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.mybatis.core.type.LongListTypeHandler;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.trade.dal.dataobject.brokerage.BrokerageUserDO;
 import com.shengyu.module.trade.dal.dataobject.delivery.DeliveryExpressDO;

@@ -1,8 +1,8 @@
 package com.shengyu.module.pay.service.channel;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
-import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.test.core.ut.BaseDbUnitTest;
 import com.shengyu.module.pay.controller.admin.channel.vo.PayChannelCreateReqVO;
 import com.shengyu.module.pay.controller.admin.channel.vo.PayChannelUpdateReqVO;
 import com.shengyu.module.pay.dal.dataobject.channel.PayChannelDO;
@@ -22,9 +22,9 @@ import javax.validation.Validator;
 import java.util.Collections;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
-import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.*;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertPojoEquals;
+import static com.shengyu.framework.test.core.util.AssertUtils.assertServiceException;
+import static com.shengyu.framework.test.core.util.RandomUtils.*;
 import static com.shengyu.module.pay.enums.ErrorCodeConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;

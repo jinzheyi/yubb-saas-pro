@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.service.delivery;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.pickup.*;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.trade.controller.admin.delivery.vo.pickup.*;
 import com.shengyu.module.trade.controller.admin.delivery.vo.pickup.DeliveryPickUpBindReqVO;
 import com.shengyu.module.trade.controller.admin.delivery.vo.pickup.DeliveryPickUpStoreCreateReqVO;
 import com.shengyu.module.trade.controller.admin.delivery.vo.pickup.DeliveryPickUpStorePageReqVO;

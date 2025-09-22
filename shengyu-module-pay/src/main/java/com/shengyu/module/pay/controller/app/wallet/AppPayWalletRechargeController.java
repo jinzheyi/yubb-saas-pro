@@ -1,10 +1,10 @@
 package com.shengyu.module.pay.controller.app.wallet;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageParam;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.pay.controller.app.wallet.vo.recharge.AppPayWalletRechargeCreateReqVO;
 import com.shengyu.module.pay.controller.app.wallet.vo.recharge.AppPayWalletRechargeCreateRespVO;
 import com.shengyu.module.pay.controller.app.wallet.vo.recharge.AppPayWalletRechargeRespVO;
@@ -24,11 +24,11 @@ import javax.validation.Valid;
 
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
-import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
-import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
-import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getLoginUserType;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.common.util.servlet.ServletUtils.getClientIP;
+import static com.shengyu.framework.web.core.util.WebFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.web.core.util.WebFrameworkUtils.getLoginUserType;
 
 @Tag(name = "用户 APP - 钱包充值")
 @RestController

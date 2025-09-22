@@ -1,11 +1,11 @@
 package com.shengyu.module.product.controller.admin.spu;
 
-import cn.iocoder.yudao.framework.apilog.core.annotation.ApiAccessLog;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
-import cn.iocoder.yudao.module.product.controller.admin.spu.vo.*;
+import com.shengyu.framework.apilog.core.annotation.ApiAccessLog;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.excel.core.util.ExcelUtils;
+import com.shengyu.module.product.controller.admin.spu.vo.*;
 import com.shengyu.module.product.controller.admin.spu.vo.*;
 import com.shengyu.module.product.convert.spu.ProductSpuConvert;
 import com.shengyu.module.product.dal.dataobject.sku.ProductSkuDO;
@@ -29,9 +29,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.apilog.core.enums.OperateTypeEnum.EXPORT;
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.pojo.PageParam.PAGE_SIZE_NONE;
+import static com.shengyu.framework.apilog.core.enums.OperateTypeEnum.EXPORT;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.PageParam.PAGE_SIZE_NONE;
 
 @Tag(name = "管理后台 - 商品 SPU")
 @RestController

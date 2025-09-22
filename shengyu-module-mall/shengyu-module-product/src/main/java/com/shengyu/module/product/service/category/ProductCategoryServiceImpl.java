@@ -1,9 +1,9 @@
 package com.shengyu.module.product.service.category;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.controller.admin.category.vo.ProductCategoryListReqVO;
 import com.shengyu.module.product.controller.admin.category.vo.ProductCategorySaveReqVO;
 import com.shengyu.module.product.dal.dataobject.category.ProductCategoryDO;
@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.product.dal.dataobject.category.ProductCategoryDO.CATEGORY_LEVEL;
 import static com.shengyu.module.product.dal.dataobject.category.ProductCategoryDO.PARENT_ID_NULL;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.*;

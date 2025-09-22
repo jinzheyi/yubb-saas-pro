@@ -1,8 +1,8 @@
 package com.shengyu.module.product.controller.app.category;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.controller.app.category.vo.AppCategoryRespVO;
 import com.shengyu.module.product.dal.dataobject.category.ProductCategoryDO;
 import com.shengyu.module.product.service.category.ProductCategoryService;
@@ -21,7 +21,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "用户 APP - 商品分类")
 @RestController

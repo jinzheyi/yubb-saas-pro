@@ -2,9 +2,9 @@ package com.shengyu.module.promotion.service.seckill;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.date.LocalDateTimeUtils;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.config.SeckillConfigCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.config.SeckillConfigPageReqVO;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.config.SeckillConfigUpdateReqVO;
@@ -20,9 +20,9 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.findFirst;
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.isBetween;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.findFirst;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.isBetween;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.*;
 
 /**

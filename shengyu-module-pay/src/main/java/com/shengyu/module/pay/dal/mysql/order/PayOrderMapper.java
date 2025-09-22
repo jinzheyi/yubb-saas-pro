@@ -1,8 +1,8 @@
 package com.shengyu.module.pay.dal.mysql.order;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.pay.controller.admin.order.vo.PayOrderExportReqVO;
 import com.shengyu.module.pay.controller.admin.order.vo.PayOrderPageReqVO;
 import com.shengyu.module.pay.dal.dataobject.order.PayOrderDO;

@@ -10,9 +10,9 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
-import cn.iocoder.yudao.framework.common.util.number.MoneyUtils;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.common.util.number.MoneyUtils;
 import com.shengyu.module.member.api.address.MemberAddressApi;
 import com.shengyu.module.member.api.address.dto.MemberAddressRespDTO;
 import com.shengyu.module.pay.api.order.PayOrderApi;
@@ -28,8 +28,8 @@ import com.shengyu.module.product.api.comment.dto.ProductCommentCreateReqDTO;
 import com.shengyu.module.promotion.api.combination.CombinationRecordApi;
 import com.shengyu.module.promotion.api.combination.dto.CombinationRecordRespDTO;
 import com.shengyu.module.promotion.enums.combination.CombinationRecordStatusEnum;
-import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialWxaSubscribeMessageSendReqDTO;
+import com.shengyu.module.platform.api.social.TenantSocialClientApi;
+import com.shengyu.module.platform.api.social.dto.SocialWxaSubscribeMessageSendReqDTO;
 import com.shengyu.module.trade.controller.admin.order.vo.TradeOrderDeliveryReqVO;
 import com.shengyu.module.trade.controller.admin.order.vo.TradeOrderRemarkReqVO;
 import com.shengyu.module.trade.controller.admin.order.vo.TradeOrderUpdateAddressReqVO;
@@ -48,7 +48,7 @@ import com.shengyu.module.trade.dal.mysql.order.TradeOrderItemMapper;
 import com.shengyu.module.trade.dal.mysql.order.TradeOrderMapper;
 import com.shengyu.module.trade.dal.redis.no.TradeNoRedisDAO;
 import com.shengyu.module.trade.enums.delivery.DeliveryTypeEnum;
-import cn.iocoder.yudao.module.trade.enums.order.*;
+import com.shengyu.module.trade.enums.order.*;
 import com.shengyu.module.trade.enums.order.*;
 import com.shengyu.module.trade.framework.order.config.TradeOrderProperties;
 import com.shengyu.module.trade.framework.order.core.annotations.TradeOrderLog;
@@ -76,11 +76,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.minusTime;
-import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
-import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getTerminal;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.*;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.minusTime;
+import static com.shengyu.framework.common.util.servlet.ServletUtils.getClientIP;
+import static com.shengyu.framework.web.core.util.WebFrameworkUtils.getTerminal;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.*;
 import static com.shengyu.module.trade.enums.MessageTemplateConstants.WXA_ORDER_DELIVERY;
 
@@ -122,7 +122,7 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
     @Resource
     private ProductCommentApi productCommentApi;
     @Resource
-    public SocialClientApi socialClientApi;
+    public TenantSocialClientApi socialClientApi;
     @Resource
     public PayRefundApi payRefundApi;
     @Resource

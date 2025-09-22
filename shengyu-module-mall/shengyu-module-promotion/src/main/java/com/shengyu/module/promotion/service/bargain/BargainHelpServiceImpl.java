@@ -2,7 +2,7 @@ package com.shengyu.module.promotion.service.bargain;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.bargain.vo.help.BargainHelpPageReqVO;
 import com.shengyu.module.promotion.controller.app.bargain.vo.help.AppBargainHelpCreateReqVO;
 import com.shengyu.module.promotion.dal.dataobject.bargain.BargainActivityDO;
@@ -21,7 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.promotion.enums.ErrorCodeConstants.*;
 
 /**

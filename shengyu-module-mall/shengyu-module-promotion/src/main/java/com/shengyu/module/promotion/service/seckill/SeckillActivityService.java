@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.service.seckill;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.api.seckill.dto.SeckillValidateJoinRespDTO;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.activity.SeckillActivityCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.activity.SeckillActivityPageReqVO;

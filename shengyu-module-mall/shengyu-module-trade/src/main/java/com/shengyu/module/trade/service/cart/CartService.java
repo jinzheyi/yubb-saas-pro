@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.service.cart;
 
-import cn.iocoder.yudao.module.trade.controller.app.cart.vo.*;
+import com.shengyu.module.trade.controller.app.cart.vo.*;
 import com.shengyu.module.trade.controller.app.cart.vo.*;
 import com.shengyu.module.trade.dal.dataobject.cart.CartDO;
 

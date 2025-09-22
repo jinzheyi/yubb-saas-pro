@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.convert.banner;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.banner.vo.BannerCreateReqVO;
 import com.shengyu.module.promotion.controller.admin.banner.vo.BannerRespVO;
 import com.shengyu.module.promotion.controller.admin.banner.vo.BannerUpdateReqVO;

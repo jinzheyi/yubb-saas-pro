@@ -1,7 +1,7 @@
 package com.shengyu.framework.common.enums;
 
 import cn.hutool.core.util.ObjUtil;
-import com.shengyu.framework.common.core.IntArrayValuable;
+import com.shengyu.framework.common.core.ArrayValuable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -14,14 +14,14 @@ import java.util.Arrays;
  */
 @Getter
 @AllArgsConstructor
-public enum CommonStatusEnum implements IntArrayValuable {
+public enum CommonStatusEnum implements ArrayValuable<Integer> {
 
     ENABLE(0, "开启"),
     DISABLE(1, "关闭"),
 
     AWAIT(-1, "等待确认");
 
-    public static final int[] ARRAYS = Arrays.stream(values()).mapToInt(CommonStatusEnum::getStatus).toArray();
+    public static final Integer[] ARRAYS = Arrays.stream(values()).map(CommonStatusEnum::getStatus).toArray(Integer[]::new);
 
     /**
      * 状态值
@@ -33,7 +33,7 @@ public enum CommonStatusEnum implements IntArrayValuable {
     private final String name;
 
     @Override
-    public int[] array() {
+    public Integer[] array() {
         return ARRAYS;
     }
 

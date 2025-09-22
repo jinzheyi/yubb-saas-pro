@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.convert.aftersale;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.pay.api.refund.dto.PayRefundCreateReqDTO;
 import com.shengyu.module.product.api.property.dto.ProductPropertyValueDetailRespDTO;

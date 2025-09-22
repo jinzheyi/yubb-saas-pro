@@ -2,13 +2,13 @@ package com.shengyu.module.trade.service.order.handler;
 
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.module.pay.api.order.PayOrderApi;
 import com.shengyu.module.pay.api.order.dto.PayOrderRespDTO;
 import com.shengyu.module.pay.enums.PayChannelEnum;
-import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialWxaOrderNotifyConfirmReceiveReqDTO;
-import cn.iocoder.yudao.module.system.api.social.dto.SocialWxaOrderUploadShippingInfoReqDTO;
+import com.shengyu.module.platform.api.social.TenantSocialClientApi;
+import com.shengyu.module.platform.api.social.dto.SocialWxaOrderNotifyConfirmReceiveReqDTO;
+import com.shengyu.module.platform.api.social.dto.SocialWxaOrderUploadShippingInfoReqDTO;
 import com.shengyu.module.trade.dal.dataobject.order.TradeOrderDO;
 import com.shengyu.module.trade.enums.delivery.DeliveryTypeEnum;
 import com.shengyu.module.trade.service.delivery.DeliveryExpressService;
@@ -32,7 +32,7 @@ public class TradeStatusSyncToWxaOrderHandler implements TradeOrderHandler {
     @Resource
     private PayOrderApi payOrderApi;
     @Resource
-    private SocialClientApi socialClientApi;
+    private TenantSocialClientApi socialClientApi;
 
     @Resource
     private DeliveryExpressService expressService;

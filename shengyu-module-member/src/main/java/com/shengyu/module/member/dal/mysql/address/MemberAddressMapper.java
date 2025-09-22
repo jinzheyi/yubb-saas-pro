@@ -1,7 +1,7 @@
 package com.shengyu.module.member.dal.mysql.address;
 
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.member.dal.dataobject.address.MemberAddressDO;
 import org.apache.ibatis.annotations.Mapper;
 

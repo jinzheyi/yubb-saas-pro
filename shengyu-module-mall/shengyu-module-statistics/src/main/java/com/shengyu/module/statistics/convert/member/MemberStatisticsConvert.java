@@ -2,8 +2,8 @@ package com.shengyu.module.statistics.convert.member;
 
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.ObjUtil;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.framework.ip.core.Area;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.ip.core.Area;
 import com.shengyu.module.statistics.controller.admin.common.vo.DataComparisonRespVO;
 import com.shengyu.module.statistics.controller.admin.member.vo.MemberAnalyseDataRespVO;
 import com.shengyu.module.statistics.controller.admin.member.vo.MemberAnalyseRespVO;

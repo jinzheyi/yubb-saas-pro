@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.service.bargain;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.promotion.controller.admin.bargain.vo.help.BargainHelpPageReqVO;
 import com.shengyu.module.promotion.controller.app.bargain.vo.help.AppBargainHelpCreateReqVO;
 import com.shengyu.module.promotion.dal.dataobject.bargain.BargainHelpDO;

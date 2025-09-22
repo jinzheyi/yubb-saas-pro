@@ -1,7 +1,7 @@
 package com.shengyu.module.statistics.service.member;
 
 import com.shengyu.module.statistics.controller.admin.common.vo.DataComparisonRespVO;
-import cn.iocoder.yudao.module.statistics.controller.admin.member.vo.*;
+import com.shengyu.module.statistics.controller.admin.member.vo.*;
 import com.shengyu.module.statistics.controller.admin.member.vo.*;
 
 import java.time.LocalDateTime;

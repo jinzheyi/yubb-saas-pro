@@ -1,8 +1,8 @@
 package com.shengyu.module.pay.framework.pay.core.client.impl.alipay;
 
-import cn.iocoder.yudao.framework.common.exception.ServiceException;
-import cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants;
-import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
+import com.shengyu.framework.common.exception.ServiceException;
+import com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.module.pay.framework.pay.core.client.dto.order.PayOrderRespDTO;
 import com.shengyu.module.pay.framework.pay.core.client.dto.order.PayOrderUnifiedReqDTO;
 import com.shengyu.module.pay.framework.pay.core.client.exception.PayClientException;
@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.InjectMocks;
 
-import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.*;
+import static com.shengyu.framework.test.core.util.RandomUtils.*;
 import static com.shengyu.module.pay.enums.order.PayOrderStatusEnum.CLOSED;
 import static com.shengyu.module.pay.enums.order.PayOrderStatusEnum.WAITING;
 import static org.junit.jupiter.api.Assertions.*;

@@ -1,6 +1,6 @@
 package com.shengyu.module.member.service.config;
 
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.module.member.controller.admin.config.vo.MemberConfigSaveReqVO;
 import com.shengyu.module.member.convert.config.MemberConfigConvert;
 import com.shengyu.module.member.dal.dataobject.config.MemberConfigDO;

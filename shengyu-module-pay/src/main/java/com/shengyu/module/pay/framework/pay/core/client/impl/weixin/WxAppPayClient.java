@@ -13,7 +13,7 @@ import com.github.binarywang.wxpay.constant.WxPayConstants;
 import com.github.binarywang.wxpay.exception.WxPayException;
 import lombok.extern.slf4j.Slf4j;
 
-import static cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString;
+import static com.shengyu.framework.common.util.json.JsonUtils.toJsonString;
 
 /**
  * 微信支付【App 支付】的 PayClient 实现类

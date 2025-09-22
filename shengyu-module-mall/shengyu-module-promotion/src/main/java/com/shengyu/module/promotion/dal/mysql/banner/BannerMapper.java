@@ -1,8 +1,8 @@
 package com.shengyu.module.promotion.dal.mysql.banner;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.promotion.controller.admin.banner.vo.BannerPageReqVO;
 import com.shengyu.module.promotion.dal.dataobject.banner.BannerDO;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;

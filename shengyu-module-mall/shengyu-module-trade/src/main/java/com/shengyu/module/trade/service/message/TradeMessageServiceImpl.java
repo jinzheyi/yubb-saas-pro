@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.service.message;
 
-import cn.iocoder.yudao.module.system.api.notify.NotifyMessageSendApi;
-import cn.iocoder.yudao.module.system.api.notify.dto.NotifySendSingleToUserReqDTO;
+import com.shengyu.module.system.api.notify.NotifyMessageSendApi;
+import com.shengyu.module.system.api.notify.dto.NotifySendSingleToUserReqDTO;
 import com.shengyu.module.trade.enums.MessageTemplateConstants;
 import com.shengyu.module.trade.service.message.bo.TradeOrderMessageWhenDeliveryOrderReqBO;
 import org.springframework.stereotype.Service;

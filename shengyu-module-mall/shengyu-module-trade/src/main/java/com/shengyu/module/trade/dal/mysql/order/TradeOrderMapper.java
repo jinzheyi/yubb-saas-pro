@@ -1,9 +1,9 @@
 package com.shengyu.module.trade.dal.mysql.order;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.MPJLambdaWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.mybatis.core.query.MPJLambdaWrapperX;
 import com.shengyu.module.trade.controller.admin.order.vo.TradeOrderPageReqVO;
 import com.shengyu.module.trade.controller.app.order.vo.AppTradeOrderPageReqVO;
 import com.shengyu.module.trade.dal.dataobject.order.TradeOrderDO;

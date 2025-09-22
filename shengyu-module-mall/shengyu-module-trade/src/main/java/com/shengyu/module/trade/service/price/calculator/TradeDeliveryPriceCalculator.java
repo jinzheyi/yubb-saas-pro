@@ -3,8 +3,8 @@ package com.shengyu.module.trade.service.price.calculator;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.module.member.api.address.MemberAddressApi;
 import com.shengyu.module.member.api.address.dto.MemberAddressRespDTO;
 import com.shengyu.module.trade.dal.dataobject.config.TradeConfigDO;
@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.*;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.*;
 
 /**

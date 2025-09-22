@@ -1,9 +1,9 @@
 package com.shengyu.module.promotion.controller.app.coupon;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.promotion.controller.app.coupon.vo.coupon.AppCouponPageReqVO;
 import com.shengyu.module.promotion.controller.app.coupon.vo.coupon.AppCouponRespVO;
 import com.shengyu.module.promotion.controller.app.coupon.vo.coupon.AppCouponTakeReqVO;
@@ -23,8 +23,8 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.Collections;
 
-import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "用户 App - 优惠劵")
 @RestController

@@ -1,9 +1,9 @@
 package com.shengyu.module.pay.api.transfer.dto;
 
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.common.validation.InEnum;
 import lombok.Data;
 
 import javax.validation.constraints.Min;

@@ -2,12 +2,12 @@ package com.shengyu.module.trade.convert.order;
 
 import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.framework.common.util.string.StrUtils;
-import cn.iocoder.yudao.framework.dict.core.DictFrameworkUtils;
-import cn.iocoder.yudao.framework.ip.core.utils.AreaUtils;
+import com.shengyu.framework.common.enums.UserTypeEnum;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.util.string.StrUtils;
+import com.shengyu.framework.dict.core.DictFrameworkUtils;
+import com.shengyu.framework.ip.core.utils.AreaUtils;
 import com.shengyu.module.member.api.address.dto.MemberAddressRespDTO;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.pay.api.order.dto.PayOrderCreateReqDTO;
@@ -21,10 +21,10 @@ import com.shengyu.module.promotion.api.combination.dto.CombinationRecordCreateR
 import com.shengyu.module.trade.api.order.dto.TradeOrderRespDTO;
 import com.shengyu.module.trade.controller.admin.base.member.user.MemberUserRespVO;
 import com.shengyu.module.trade.controller.admin.base.product.property.ProductPropertyValueDetailRespVO;
-import cn.iocoder.yudao.module.trade.controller.admin.order.vo.*;
+import com.shengyu.module.trade.controller.admin.order.vo.*;
 import com.shengyu.module.trade.controller.admin.order.vo.*;
 import com.shengyu.module.trade.controller.app.base.property.AppProductPropertyValueDetailRespVO;
-import cn.iocoder.yudao.module.trade.controller.app.order.vo.*;
+import com.shengyu.module.trade.controller.app.order.vo.*;
 import com.shengyu.module.trade.controller.app.order.vo.*;
 import com.shengyu.module.trade.controller.app.order.vo.item.AppTradeOrderItemCommentCreateReqVO;
 import com.shengyu.module.trade.controller.app.order.vo.item.AppTradeOrderItemRespVO;
@@ -49,9 +49,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMultiMap;
-import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.addTime;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMultiMap;
+import static com.shengyu.framework.common.util.date.LocalDateTimeUtils.addTime;
 
 @Mapper
 public interface TradeOrderConvert {

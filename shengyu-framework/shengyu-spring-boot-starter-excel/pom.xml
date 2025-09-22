@@ -21,13 +21,6 @@
             <artifactId>shengyu-common</artifactId>
         </dependency>
 
-        <!-- 业务组件 -->
-        <dependency>
-            <groupId>com.shengyu.boot</groupId>
-            <artifactId>shengyu-spring-boot-starter-biz-dict</artifactId>
-            <optional>true</optional> <!-- 如果希望使用 @DictFormat 注解，需要引入该依赖 -->
-        </dependency>
-
         <!-- Web 相关 -->
         <dependency>
             <groupId>org.springframework</groupId>
@@ -43,8 +36,38 @@
 
         <!-- 工具类相关 -->
         <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>easyexcel</artifactId>
+            <groupId>cn.idev.excel</groupId>
+            <artifactId>fastexcel</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-spring-boot-starter-biz-ip</artifactId>
+            <optional>true</optional> <!-- 设置为 optional，只有在 AreaConvert 的时候使用 -->
+        </dependency>
+
+        <!-- 平台业务组件 -->
+        <dependency>
+            <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-module-platform-api</artifactId> <!-- 需要使用它，进行数据权限的获取 -->
+            <version>${revision}</version>
+        </dependency>
+
+        <!-- Spring 核心 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
         </dependency>
     </dependencies>
 

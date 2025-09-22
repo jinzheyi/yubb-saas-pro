@@ -1,6 +1,6 @@
 package com.shengyu.module.promotion.api.reward.dto;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.module.promotion.enums.common.PromotionConditionTypeEnum;
 import com.shengyu.module.promotion.enums.common.PromotionProductScopeEnum;
 import lombok.Data;

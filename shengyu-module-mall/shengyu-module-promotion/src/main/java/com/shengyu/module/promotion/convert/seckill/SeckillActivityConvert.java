@@ -1,9 +1,9 @@
 package com.shengyu.module.promotion.convert.seckill;
 
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
-import cn.iocoder.yudao.framework.common.util.collection.MapUtils;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.collection.CollectionUtils;
+import com.shengyu.framework.common.util.collection.MapUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.api.spu.dto.ProductSpuRespDTO;
 import com.shengyu.module.promotion.api.seckill.dto.SeckillValidateJoinRespDTO;
 import com.shengyu.module.promotion.controller.admin.seckill.vo.activity.SeckillActivityCreateReqVO;
@@ -27,8 +27,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
-import static cn.iocoder.yudao.framework.common.util.collection.MapUtils.findAndThen;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.*;
+import static com.shengyu.framework.common.util.collection.MapUtils.findAndThen;
 
 /**
  * 秒杀活动 Convert

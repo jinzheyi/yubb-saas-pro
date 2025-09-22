@@ -1,7 +1,7 @@
 package com.shengyu.module.member.controller.app.social.vo;
 
-import cn.iocoder.yudao.framework.common.validation.InEnum;
-import cn.iocoder.yudao.module.system.enums.social.SocialTypeEnum;
+import com.shengyu.framework.common.validation.InEnum;
+import com.shengyu.framework.common.enums.social.SocialTypeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

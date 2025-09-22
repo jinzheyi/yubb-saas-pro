@@ -22,7 +22,7 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
 
 /**
  * 订单分销的 {@link TradeOrderHandler} 实现类

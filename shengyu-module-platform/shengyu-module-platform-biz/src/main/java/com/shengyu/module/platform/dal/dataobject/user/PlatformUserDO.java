@@ -2,10 +2,8 @@ package com.shengyu.module.platform.dal.dataobject.user;
 
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
-import com.shengyu.framework.mybatis.core.type.JsonLongSetTypeHandler;
 import com.shengyu.framework.common.enums.common.SexEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;

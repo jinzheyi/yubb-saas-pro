@@ -3,7 +3,7 @@ package com.shengyu.module.product.service.sku;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
 import com.shengyu.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
 import com.shengyu.module.product.convert.sku.ProductSkuConvert;
@@ -23,9 +23,9 @@ import javax.annotation.Resource;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertMap;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.*;
 
 /**

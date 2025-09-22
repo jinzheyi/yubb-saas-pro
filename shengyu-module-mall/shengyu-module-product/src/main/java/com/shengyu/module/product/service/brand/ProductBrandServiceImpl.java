@@ -1,7 +1,7 @@
 package com.shengyu.module.product.service.brand;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.product.controller.admin.brand.vo.ProductBrandCreateReqVO;
 import com.shengyu.module.product.controller.admin.brand.vo.ProductBrandListReqVO;
 import com.shengyu.module.product.controller.admin.brand.vo.ProductBrandPageReqVO;
@@ -17,7 +17,7 @@ import javax.annotation.Resource;
 import java.util.Collection;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.product.enums.ErrorCodeConstants.*;
 
 /**

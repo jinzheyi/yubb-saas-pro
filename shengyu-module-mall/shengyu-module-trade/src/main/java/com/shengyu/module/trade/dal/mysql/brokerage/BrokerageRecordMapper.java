@@ -1,9 +1,9 @@
 package com.shengyu.module.trade.dal.mysql.brokerage;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
-import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.trade.controller.admin.brokerage.vo.record.BrokerageRecordPageReqVO;
 import com.shengyu.module.trade.controller.app.brokerage.vo.user.AppBrokerageUserRankByPriceRespVO;
 import com.shengyu.module.trade.dal.dataobject.brokerage.BrokerageRecordDO;

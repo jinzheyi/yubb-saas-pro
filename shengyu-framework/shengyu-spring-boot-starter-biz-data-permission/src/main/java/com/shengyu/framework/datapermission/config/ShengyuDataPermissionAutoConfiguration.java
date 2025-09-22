@@ -1,7 +1,8 @@
 package com.shengyu.framework.datapermission.config;
 
+import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
 import com.shengyu.framework.datapermission.core.aop.DataPermissionAnnotationAdvisor;
-import com.shengyu.framework.datapermission.core.db.DataPermissionDatabaseInterceptor;
+import com.shengyu.framework.datapermission.core.db.DataPermissionRuleHandler;
 import com.shengyu.framework.datapermission.core.rule.DataPermissionRule;
 import com.shengyu.framework.datapermission.core.rule.DataPermissionRuleFactory;
 import com.shengyu.framework.datapermission.core.rule.DataPermissionRuleFactoryImpl;
@@ -26,14 +27,15 @@ public class ShengyuDataPermissionAutoConfiguration {
     }
 
     @Bean
-    public DataPermissionDatabaseInterceptor dataPermissionDatabaseInterceptor(MybatisPlusInterceptor interceptor,
-                                                                               DataPermissionRuleFactory ruleFactory) {
-        // 创建 DataPermissionDatabaseInterceptor 拦截器
-        DataPermissionDatabaseInterceptor inner = new DataPermissionDatabaseInterceptor(ruleFactory);
+    public DataPermissionRuleHandler dataPermissionRuleHandler(MybatisPlusInterceptor interceptor,
+                                                               DataPermissionRuleFactory ruleFactory) {
+        // 创建 DataPermissionInterceptor 拦截器
+        DataPermissionRuleHandler handler = new DataPermissionRuleHandler(ruleFactory);
+        DataPermissionInterceptor inner = new DataPermissionInterceptor(handler);
         // 添加到 interceptor 中
         // 需要加在首个，主要是为了在分页插件前面。这个是 MyBatis Plus 的规定
         MyBatisUtils.addInterceptor(interceptor, inner, 0);
-        return inner;
+        return handler;
     }
 
     @Bean

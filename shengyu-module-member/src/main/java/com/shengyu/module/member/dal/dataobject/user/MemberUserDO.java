@@ -1,13 +1,13 @@
 package com.shengyu.module.member.dal.dataobject.user;
 
-import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
-import cn.iocoder.yudao.framework.common.enums.TerminalEnum;
-import cn.iocoder.yudao.framework.ip.core.Area;
-import cn.iocoder.yudao.framework.mybatis.core.type.LongListTypeHandler;
-import cn.iocoder.yudao.framework.tenant.core.db.TenantBaseDO;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
+import com.shengyu.framework.common.enums.TerminalEnum;
+import com.shengyu.framework.ip.core.Area;
+import com.shengyu.framework.mybatis.core.type.LongListTypeHandler;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.member.dal.dataobject.group.MemberGroupDO;
 import com.shengyu.module.member.dal.dataobject.level.MemberLevelDO;
-import cn.iocoder.yudao.module.system.enums.common.SexEnum;
+import com.shengyu.framework.common.enums.common.SexEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;

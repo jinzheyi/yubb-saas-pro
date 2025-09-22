@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.service.price.calculator;
 
-import cn.iocoder.yudao.framework.test.core.ut.BaseMockitoUnitTest;
+import com.shengyu.framework.test.core.ut.BaseMockitoUnitTest;
 import com.shengyu.module.promotion.api.reward.RewardActivityApi;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;

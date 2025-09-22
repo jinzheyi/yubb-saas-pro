@@ -6,7 +6,7 @@ import cn.hutool.core.net.URLEncodeUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
-import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.common.util.json.JsonUtils;
 import com.shengyu.module.trade.framework.delivery.config.TradeExpressProperties;
 import com.shengyu.module.trade.framework.delivery.core.client.ExpressClient;
 import com.shengyu.module.trade.framework.delivery.core.client.dto.ExpressTrackQueryReqDTO;
@@ -23,7 +23,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Collections;
 import java.util.List;
 
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.EXPRESS_API_QUERY_FAILED;
 import static com.shengyu.module.trade.enums.ErrorCodeConstants.EXPRESS_API_QUERY_ERROR;
 import static com.shengyu.module.trade.framework.delivery.core.client.convert.ExpressQueryConvert.INSTANCE;

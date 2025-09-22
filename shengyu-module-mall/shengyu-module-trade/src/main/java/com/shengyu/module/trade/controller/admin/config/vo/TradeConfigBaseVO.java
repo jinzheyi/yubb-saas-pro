@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.controller.admin.config.vo;
 
-import cn.iocoder.yudao.framework.common.validation.InEnum;
+import com.shengyu.framework.common.validation.InEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageBindModeEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageEnabledConditionEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageWithdrawTypeEnum;

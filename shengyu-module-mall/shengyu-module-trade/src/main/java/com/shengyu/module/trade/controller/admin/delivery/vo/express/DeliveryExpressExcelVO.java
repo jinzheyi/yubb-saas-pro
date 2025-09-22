@@ -1,8 +1,8 @@
 package com.shengyu.module.trade.controller.admin.delivery.vo.express;
 
-import cn.iocoder.yudao.framework.excel.core.annotations.DictFormat;
-import cn.iocoder.yudao.framework.excel.core.convert.DictConvert;
-import cn.iocoder.yudao.module.system.enums.DictTypeConstants;
+import com.shengyu.framework.excel.core.annotations.DictFormat;
+import com.shengyu.framework.excel.core.convert.DictConvert;
+import com.shengyu.module.system.enums.DictTypeConstants;
 import cn.idev.excel.annotation.ExcelProperty;
 import lombok.Data;
 
