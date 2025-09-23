@@ -16,7 +16,7 @@ import javax.validation.constraints.NotEmpty;
  * @author jason
  */
 @Component
-@ConfigurationProperties(prefix = "yudao.trade.express")
+@ConfigurationProperties(prefix = "shengyu.trade.express")
 @Data
 @Validated
 public class TradeExpressProperties {

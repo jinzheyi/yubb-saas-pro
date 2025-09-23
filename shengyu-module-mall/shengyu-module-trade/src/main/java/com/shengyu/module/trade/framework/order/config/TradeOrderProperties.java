@@ -14,7 +14,7 @@ import java.time.Duration;
  * @author LeeYan9
  * @since 2022-09-15
  */
-@ConfigurationProperties(prefix = "yudao.trade.order")
+@ConfigurationProperties(prefix = "shengyu.trade.order")
 @Data
 @Validated
 public class TradeOrderProperties {

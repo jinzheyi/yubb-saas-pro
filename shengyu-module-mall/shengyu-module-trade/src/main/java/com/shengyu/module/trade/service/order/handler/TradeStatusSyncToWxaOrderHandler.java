@@ -26,7 +26,7 @@ import javax.annotation.Resource;
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(prefix = "yudao.trade.order", value = "status-sync-to-wxa-enable")
+@ConditionalOnProperty(prefix = "shengyu.trade.order", value = "status-sync-to-wxa-enable")
 public class TradeStatusSyncToWxaOrderHandler implements TradeOrderHandler {
 
     @Resource

@@ -18,7 +18,7 @@ public class PayWebConfiguration {
      */
     @Bean
     public GroupedOpenApi payGroupedOpenApi() {
-        return ShengyuSwaggerAutoConfiguration.buildSystemGroupedOpenApi("租户端-会员", "pay");
+        return ShengyuSwaggerAutoConfiguration.buildSystemGroupedOpenApi("租户端-支付", "pay");
     }
 
 }

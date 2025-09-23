@@ -4,8 +4,8 @@ server:
 --- #################### 数据库相关配置 ####################
 
 spring:
-  # 数据源配置项
   autoconfigure:
+    # noinspection SpringBootApplicationYaml
     exclude:
       - com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure # 排除 Druid 的自动配置，使用 dynamic-datasource-spring-boot-starter 配置多数据源
   datasource:
@@ -32,32 +32,31 @@ spring:
         initial-size: 5 # 初始连接数
         min-idle: 10 # 最小连接池数量
         max-active: 20 # 最大连接池数量
-        max-wait: 600000 # 配置获取连接等待超时的时间，单位：毫秒
-        time-between-eviction-runs-millis: 60000 # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位：毫秒
-        min-evictable-idle-time-millis: 300000 # 配置一个连接在池中最小生存的时间，单位：毫秒
-        max-evictable-idle-time-millis: 900000 # 配置一个连接在池中最大生存的时间，单位：毫秒
-        validation-query: SELECT 1 # 配置检测连接是否有效
+        max-wait: 60000 # 配置获取连接等待超时的时间，单位：毫秒（1 分钟）
+        time-between-eviction-runs-millis: 60000 # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位：毫秒（1 分钟）
+        min-evictable-idle-time-millis: 600000 # 配置一个连接在池中最小生存的时间，单位：毫秒（10 分钟）
+        max-evictable-idle-time-millis: 1800000 # 配置一个连接在池中最大生存的时间，单位：毫秒（30 分钟）
+        validation-query: SELECT 1 FROM DUAL # 配置检测连接是否有效
         test-while-idle: true
         test-on-borrow: false
         test-on-return: false
+        pool-prepared-statements: true # 是否开启 PreparedStatement 缓存
+        max-pool-prepared-statement-per-connection-size: 20 # 每个连接缓存的 PreparedStatement 数量
       primary: master
       datasource:
         master:
-          name: shengyu-saas-dev
-          url: jdbc:mysql://121.43.108.200:3306/${spring.datasource.dynamic.datasource.master.name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
-          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://127.0.0.1:3306/shengyu-saas-dev?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
           username: root
           password: 36Zhu@186
         slave: # 模拟从库，可根据自己需要修改 # 模拟从库，可根据自己需要修改
-          name: shengyu-saas-dev
-          url: jdbc:mysql://121.43.108.200:3306/${spring.datasource.dynamic.datasource.slave.name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
-          driver-class-name: com.mysql.cj.jdbc.Driver
+          lazy: true # 开启懒加载，保证启动速度
+          url: jdbc:mysql://127.0.0.1:3306/shengyu-saas-dev?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
           username: root
           password: 36Zhu@186
 
   # Redis 配置。Redisson 默认的配置足够使用，一般不需要进行调优
   redis:
-    host: 121.43.108.200 # 地址
+    host: 127.0.0.1 # 地址
     port: 6379 # 端口
     database: 1 # 数据库索引
     password: 36Zhu@186 # 密码，建议生产环境开启
@@ -117,16 +116,6 @@ lock4j:
   acquire-timeout: 3000 # 获取分布式锁超时时间，默认为 3000 毫秒
   expire: 30000 # 分布式锁的超时时间，默认为 30 毫秒
 
-# Resilience4j 配置项
-resilience4j:
-  ratelimiter:
-    instances:
-      backendA:
-        limit-for-period: 1 # 每个周期内，允许的请求数。默认为 50
-        limit-refresh-period: 60s # 每个周期的时长，单位：微秒。默认为 500
-        timeout-duration: 1s # 被限流时，阻塞等待的时长，单位：微秒。默认为 5s
-        register-health-indicator: true # 是否注册到健康监测
-
 --- #################### 监控相关配置 ####################
 
 # Actuator 监控端点的配置项
@@ -177,11 +166,10 @@ wx: # 参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-sta
 
 # 圣钰配置项，设置当前项目所有自定义的配置
 shengyu:
-  xss:
-    enable: false
-    exclude-urls: # 如下两个 url，仅仅是为了演示，去掉配置也没关系
-      - ${spring.boot.admin.context-path}/** # 不处理 Spring Boot Admin 的请求
-      - ${management.endpoints.web.base-path}/** # 不处理 Actuator 的请求
+  pay:
+    order-notify-url: http://yunai.natapp1.cc/admin-api/pay/notify/order # 支付渠道的【支付】回调地址
+    refund-notify-url: http://yunai.natapp1.cc/admin-api/pay/notify/refund # 支付渠道的【退款】回调地址
+    transfer-notify-url: https://yunai.natapp1.cc/admin-api/pay/notify/transfer # 支付渠道的【转账】回调地址
   demo: false # 开启演示模式
   tencent-lbs-key: TVDBZ-TDILD-4ON4B-PFDZA-RNLKH-VVF6E # QQ 地图的密钥 https://lbs.qq.com/service/staticV2/staticGuide/staticDoc
 
@@ -196,6 +184,16 @@ justauth:
       client-id: wwd411c69a39ad2e54
       client-secret: 1wTb7hYxnpT2TUbIeHGXGo7T0odav1ic10mLdyyATOw
       agent-id: 1000004
+      ignore-check-redirect-uri: true
+    # noinspection SpringBootApplicationYaml
+    WECHAT_MINI_PROGRAM: # 微信小程序
+      client-id: ${wx.miniapp.appid}
+      client-secret: ${wx.miniapp.secret}
+      ignore-check-redirect-uri: true
+      ignore-check-state: true # 微信小程序，不会使用到 state，所以不进行校验
+    WECHAT_MP: # 微信公众号
+      client-id: ${wx.mp.app-id}
+      client-secret: ${wx.mp.secret}
       ignore-check-redirect-uri: true
   cache:
     type: REDIS

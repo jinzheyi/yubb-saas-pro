@@ -2,17 +2,14 @@ server:
   port: 48080
 
 --- #################### 数据库相关配置 ####################
-
 spring:
-  # 数据源配置项
   autoconfigure:
+    # noinspection SpringBootApplicationYaml
     exclude:
       - com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure # 排除 Druid 的自动配置，使用 dynamic-datasource-spring-boot-starter 配置多数据源
       - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration # 排除积木报表带来的 MongoDB 的自动配置
       - org.springframework.boot.autoconfigure.quartz.QuartzAutoConfiguration # 默认 local 环境，不开启 Quartz 的自动配置
-#      - de.codecentric.boot.admin.server.config.AdminServerAutoConfiguration # 禁用 Spring Boot Admin 的 Server 的自动配置
-#      - de.codecentric.boot.admin.server.ui.config.AdminServerUiAutoConfiguration # 禁用 Spring Boot Admin 的 Server UI 的自动配置
-#      - de.codecentric.boot.admin.client.config.SpringBootAdminClientAutoConfiguration # 禁用 Spring Boot Admin 的 Client 的自动配置
+  # 数据源配置项
   datasource:
     druid: # Druid 【监控】相关的全局配置
       web-stat-filter:
@@ -37,44 +34,54 @@ spring:
         initial-size: 1 # 初始连接数
         min-idle: 1 # 最小连接池数量
         max-active: 20 # 最大连接池数量
-        max-wait: 600000 # 配置获取连接等待超时的时间，单位：毫秒
-        time-between-eviction-runs-millis: 60000 # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位：毫秒
-        min-evictable-idle-time-millis: 300000 # 配置一个连接在池中最小生存的时间，单位：毫秒
-        max-evictable-idle-time-millis: 900000 # 配置一个连接在池中最大生存的时间，单位：毫秒
+        max-wait: 60000 # 配置获取连接等待超时的时间，单位：毫秒（1 分钟）
+        time-between-eviction-runs-millis: 60000 # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位：毫秒（1 分钟）
+        min-evictable-idle-time-millis: 600000 # 配置一个连接在池中最小生存的时间，单位：毫秒（10 分钟）
+        max-evictable-idle-time-millis: 1800000 # 配置一个连接在池中最大生存的时间，单位：毫秒（30 分钟）
         validation-query: SELECT 1 FROM DUAL # 配置检测连接是否有效
         test-while-idle: true
         test-on-borrow: false
         test-on-return: false
+        pool-prepared-statements: true # 是否开启 PreparedStatement 缓存
+        max-pool-prepared-statement-per-connection-size: 20 # 每个连接缓存的 PreparedStatement 数量
       primary: master
       datasource:
         master:
-          name: shengyu-saas
-          url: jdbc:mysql://127.0.0.1:3306/${spring.datasource.dynamic.datasource.master.name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
-          #          url: jdbc:postgresql://127.0.0.1:5432/${spring.datasource.dynamic.datasource.slave.name} # PostgreSQL 连接的示例
+          url: jdbc:mysql://127.0.0.1:3306/shengyu-saas?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
+          #          url: jdbc:mysql://127.0.0.1:3306/ruoyi-vue-pro?useSSL=true&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true # MySQL Connector/J 5.X 连接的示例
+          #          url: jdbc:postgresql://127.0.0.1:5432/ruoyi-vue-pro # PostgreSQL 连接的示例
           #          url: jdbc:oracle:thin:@127.0.0.1:1521:xe # Oracle 连接的示例
-          #          url: jdbc:sqlserver://127.0.0.1:1433;DatabaseName=${spring.datasource.dynamic.datasource.master.name} # SQLServer 连接的示例
+          #          url: jdbc:sqlserver://127.0.0.1:1433;DatabaseName=ruoyi-vue-pro;SelectMethod=cursor;encrypt=false;rewriteBatchedStatements=true;useUnicode=true;characterEncoding=utf-8 # SQLServer 连接的示例
+          #          url: jdbc:dm://127.0.0.1:5236?schema=RUOYI_VUE_PRO # DM 连接的示例
+          #          url: jdbc:kingbase8://127.0.0.1:54321/test  # 人大金仓 KingbaseES 连接的示例
+          #          url: jdbc:postgresql://127.0.0.1:5432/postgres # OpenGauss 连接的示例
           username: root
           password: password
-        #          username: sa
-        #          password: JSm:g(*%lU4ZAkz06cd52KqT3)i1?H7W
-#        slave: # 模拟从库，可根据自己需要修改
-#          name: sy-saas-pro
-#          url: jdbc:mysql://127.0.0.1:3306/${spring.datasource.dynamic.datasource.slave.name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
-#          #          url: jdbc:mysql://127.0.0.1:3306/${spring.datasource.dynamic.datasource.slave.name}?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=CTT # MySQL Connector/J 5.X 连接的示例
-#          #          url: jdbc:postgresql://127.0.0.1:5432/${spring.datasource.dynamic.datasource.slave.name} # PostgreSQL 连接的示例
-#          #          url: jdbc:oracle:thin:@127.0.0.1:1521:xe # Oracle 连接的示例
-#          #          url: jdbc:sqlserver://127.0.0.1:1433;DatabaseName=${spring.datasource.dynamic.datasource.slave.name} # SQLServer 连接的示例
-#          username: root
-#          password: password
-  #          username: sa
-  #          password: JSm:g(*%lU4ZAkz06cd52KqT3)i1?H7W
+          #          username: sa # SQL Server 连接的示例
+          #          password: Yudao@2024 # SQL Server 连接的示例
+          #          username: SYSDBA # DM 连接的示例
+          #          password: SYSDBA001 # DM 连接的示例
+          #          username: root # OpenGauss 连接的示例
+          #          password: Yudao@2024 # OpenGauss 连接的示例
+        slave: # 模拟从库，可根据自己需要修改
+          lazy: true # 开启懒加载，保证启动速度
+          url: jdbc:mysql://127.0.0.1:3306/shengyu-saas?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true&nullCatalogMeansCurrent=true
+          username: root
+          password: password
+  #        tdengine: # IoT 数据库（需要 IoT 物联网再开启噢！）
+  #          url: jdbc:TAOS-RS://127.0.0.1:6041/ruoyi_vue_pro
+  #          driver-class-name: com.taosdata.jdbc.rs.RestfulDriver
+  #          username: root
+  #          password: taosdata
+  #          druid:
+  #            validation-query: SELECT SERVER_STATUS() # TDengine 数据源的有效性检查 SQL
 
   # Redis 配置。Redisson 默认的配置足够使用，一般不需要进行调优
   redis:
     host: 127.0.0.1 # 地址
     port: 6379 # 端口
     database: 0 # 数据库索引
-#    password: # 密码，建议生产环境开启
+#    password: dev # 密码，建议生产环境开启
 
 --- #################### 定时任务相关配置 ####################
 
@@ -131,16 +138,6 @@ lock4j:
   acquire-timeout: 3000 # 获取分布式锁超时时间，默认为 3000 毫秒
   expire: 30000 # 分布式锁的超时时间，默认为 30 毫秒
 
-# Resilience4j 配置项
-resilience4j:
-  ratelimiter:
-    instances:
-      backendA:
-        limit-for-period: 1 # 每个周期内，允许的请求数。默认为 50
-        limit-refresh-period: 60s # 每个周期的时长，单位：微秒。默认为 500
-        timeout-duration: 1s # 被限流时，阻塞等待的时长，单位：微秒。默认为 5s
-        register-health-indicator: true # 是否注册到健康监测
-
 --- #################### 监控相关配置 ####################
 
 # Actuator 监控端点的配置项
@@ -171,15 +168,24 @@ logging:
     # 配置自己写的 MyBatis Mapper 打印日志
     com.shengyu.module.bpm.dal.mysql: debug
     com.shengyu.module.infra.dal.mysql: debug
-    com.shengyu.module.platform.dal.mysql: debug
+    com.shengyu.module.infra.dal.mysql.logger.ApiErrorLogMapper: INFO # 配置 ApiErrorLogMapper 的日志级别为 info，避免和 GlobalExceptionHandler 重复打印
+    com.shengyu.module.infra.dal.mysql.job.JobLogMapper: INFO # 配置 JobLogMapper 的日志级别为 info
+    com.shengyu.module.infra.dal.mysql.file.FileConfigMapper: INFO # 配置 FileConfigMapper 的日志级别为 info
     com.shengyu.module.pay.dal.mysql: debug
-    com.shengyu.module.pay.dal.mysql.notify.PayNotifyTaskMapper: INFO # 配置 JobLogMapper 的日志级别为 info
+    com.shengyu.module.pay.dal.mysql.notify.PayNotifyTaskMapper: INFO # 配置 PayNotifyTaskMapper 的日志级别为 info
     com.shengyu.module.system.dal.mysql: debug
+    com.shengyu.module.system.dal.mysql.sms.SmsChannelMapper: INFO # 配置 SmsChannelMapper 的日志级别为 info
     com.shengyu.module.tool.dal.mysql: debug
     com.shengyu.module.member.dal.mysql: debug
     com.shengyu.module.trade.dal.mysql: debug
     com.shengyu.module.promotion.dal.mysql: debug
     com.shengyu.module.statistics.dal.mysql: debug
+    com.shengyu.module.crm.dal.mysql: debug
+    com.shengyu.module.erp.dal.mysql: debug
+    com.shengyu.module.iot.dal.mysql: debug
+    com.shengyu.module.iot.dal.tdengine: DEBUG
+    com.shengyu.module.iot.service.rule: debug
+    com.shengyu.module.ai.dal.mysql: debug
     org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR # TODO 芋艿：先禁用，Spring Boot 3.X 存在部分错误的 WARN 提示
 
 debug: false
@@ -187,20 +193,26 @@ debug: false
 --- #################### 微信公众号、小程序相关配置 ####################
 wx:
   mp: # 公众号配置（必填），参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-starters/wx-java-mp-spring-boot-starter/README.md 文档
-    #    app-id: wx041349c6f39b268b
+    #    app-id: wx041349c6f39b268b # 测试号（牛希尧提供的）
     #    secret: 5abee519483bc9f8cb37ce280e814bd0
-    app-id: wx5b23ba7a5589ecbb # 测试号
-    secret: 2a7b3b20c537e52e74afd395eb85f61f
+    #    app-id: wx5b23ba7a5589ecbb # 测试号（自己的）
+    #    secret: 2a7b3b20c537e52e74afd395eb85f61f
+    app-id: wxf56b1542b9e85f8a # 测试号（Kongdy 提供的）
+    secret: 496379dcef1ba869e9234de8d598cfd3
     # 存储配置，解决 AccessToken 的跨节点的共享
     config-storage:
       type: RedisTemplate # 采用 RedisTemplate 操作 Redis，会自动从 Spring 中获取
       key-prefix: wx # Redis Key 的前缀
       http-client-type: HttpClient # 采用 HttpClient 请求微信公众号平台
   miniapp: # 小程序配置（必填），参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-starters/wx-java-miniapp-spring-boot-starter/README.md 文档
-    #    appid: wx62056c0d5e8db250
+    #    appid: wx62056c0d5e8db250 # 测试号（牛希尧提供的）
     #    secret: 333ae72f41552af1e998fe1f54e1584a
-    appid: wx63c280fe3248a3e7 # wenhualian的接口测试号
-    secret: 6f270509224a7ae1296bbf1c8cb97aed
+    #    appid: wx63c280fe3248a3e7 # wenhualian的接口测试号
+    #    secret: 6f270509224a7ae1296bbf1c8cb97aed
+    appid: wxc4598c446f8a9cb3 # 测试号（Kongdy 提供的）
+    secret: 4a1a04e07f6a4a0751b39c3064a92c8b
+    #    appid: wx66186af0759f47c9 # 测试号（puhui 提供的）
+    #    secret: 3218bcbd112cbc614c7264ceb20144ac
     config-storage:
       type: RedisTemplate # 采用 RedisTemplate 操作 Redis，会自动从 Spring 中获取
       key-prefix: wa # Redis Key 的前缀
@@ -211,19 +223,20 @@ wx:
 # 圣钰配置项，设置当前项目所有自定义的配置
 shengyu:
   captcha:
-    enable: true # 本地环境，暂时关闭图片验证码，方便登录等接口的测试；
+    enable: false # 本地环境，暂时关闭图片验证码，方便登录等接口的测试；
   security:
     mock-enable: true
-  xss:
-    enable: false
-    exclude-urls: # 如下两个 url，仅仅是为了演示，去掉配置也没关系
-      - ${spring.boot.admin.context-path}/** # 不处理 Spring Boot Admin 的请求
-      - ${management.endpoints.web.base-path}/** # 不处理 Actuator 的请求
+  pay:
+    order-notify-url: https://yutou.mynatapp.cc/admin-api/pay/notify/order # 支付渠道的【支付】回调地址
+    refund-notify-url: https://yutou.mynatapp.cc/admin-api/pay/notify/refund # 支付渠道的【退款】回调地址
+    transfer-notify-url: https://yutou.mynatapp.cc/admin-api/pay/notify/transfer # 支付渠道的【转账】回调地址
   access-log: # 访问日志的配置项
     enable: false
-  error-code: # 错误码相关配置项
-    enable: false
   demo: false # 关闭演示模式
+  wxa-code:
+    env-version: develop # 小程序版本: 正式版为 "release"；体验版为 "trial"；开发版为 "develop"
+  wxa-subscribe-message:
+    miniprogram-state: developer # 跳转小程序类型：开发版为 “developer”；体验版为 “trial”为；正式版为 “formal”
   tencent-lbs-key: TVDBZ-TDILD-4ON4B-PFDZA-RNLKH-VVF6E # QQ 地图的密钥 https://lbs.qq.com/service/staticV2/staticGuide/staticDoc
 
 justauth:
@@ -238,7 +251,8 @@ justauth:
       client-secret: 1wTb7hYxnpT2TUbIeHGXGo7T0odav1ic10mLdyyATOw
       agent-id: 1000004
       ignore-check-redirect-uri: true
-    WECHAT_MINI_APP: # 微信小程序
+    # noinspection SpringBootApplicationYaml
+    WECHAT_MINI_PROGRAM: # 微信小程序
       client-id: ${wx.miniapp.appid}
       client-secret: ${wx.miniapp.secret}
       ignore-check-redirect-uri: true
@@ -251,18 +265,3 @@ justauth:
     type: REDIS
     prefix: 'social_auth_state:' # 缓存前缀，目前只对 Redis 缓存生效，默认 JUSTAUTH::STATE::
     timeout: 24h # 超时时长，目前只对 Redis 缓存生效，默认 3 分钟
-
-# TODO 赤焰：这个配置的目的是？
-#ureport配置
-#ureport:
-#  disableHttpSessionReportCache: true #是否禁用
-#  disableFileProvider: true #是否禁用
-#  debug: true
-#  fileStoreDir: D://ureport//files
-#  provider:
-#    database:
-#       disabled: true
-#    file:
-#       disabled: true
-
-

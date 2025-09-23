@@ -91,7 +91,7 @@ public class SocialClientServiceImpl implements SocialClientService {
      * 2. trial：体验版
      * 3. developer：开发版
      */
-    @Value("${yudao.wxa-code.env-version:release}")
+    @Value("${shengyu.wxa-code.env-version:release}")
     public String envVersion;
     /**
      * 订阅消息跳转小程序类型
@@ -100,7 +100,7 @@ public class SocialClientServiceImpl implements SocialClientService {
      * 2. trial：体验版
      * 3. formal：正式版
      */
-    @Value("${yudao.wxa-subscribe-message.miniprogram-state:formal}")
+    @Value("${shengyu.wxa-subscribe-message.miniprogram-state:formal}")
     public String miniprogramState;
 
     //    @Resource

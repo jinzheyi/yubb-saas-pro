@@ -32,7 +32,7 @@ public class AppTradeConfigController {
     @Resource
     private TradeConfigService tradeConfigService;
 
-    @Value("${yudao.tencent-lbs-key}")
+    @Value("${shengyu.tencent-lbs-key}")
     private String tencentLbsKey;
 
     @GetMapping("/get")
