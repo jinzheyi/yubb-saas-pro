@@ -200,7 +200,7 @@ public class DeptServiceImpl implements DeptService {
             }
             vo.setChildren(this.getChild(vo.getId(), vo.getName(), sysDepartmentList));
             return vo;
-        }).toList();
+        }).collect(Collectors.toList());
     }
 
     /**
@@ -208,7 +208,7 @@ public class DeptServiceImpl implements DeptService {
      */
     private List<DeptRespVO> getChild(Long id, String parentName, List<DeptDO> sysDepartmentList) {
         // 遍历所有节点，将所有菜单的父id与传过来的根节点的id比较
-        List<DeptDO> childList = sysDepartmentList.stream().filter(e -> Objects.equals(id, e.getParentId())).toList();
+        List<DeptDO> childList = sysDepartmentList.stream().filter(e -> Objects.equals(id, e.getParentId())).collect(Collectors.toList());
         if (childList.isEmpty()) {
             // 没有子节点，返回一个空 List（递归退出）
             return null;
@@ -224,7 +224,7 @@ public class DeptServiceImpl implements DeptService {
             }
             vo.setChildren(this.getChild(vo.getId(), vo.getName(), sysDepartmentList));
             return vo;
-        }).toList();
+        }).collect(Collectors.toList());
     }
 
     @Override

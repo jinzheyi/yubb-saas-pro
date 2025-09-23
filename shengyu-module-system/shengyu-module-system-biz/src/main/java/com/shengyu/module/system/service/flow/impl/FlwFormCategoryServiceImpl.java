@@ -12,6 +12,7 @@ import com.shengyu.module.system.dal.mysql.flow.FlwFormCategoryMapper;
 import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.service.flow.IFlwFormCategoryService;
 import com.shengyu.module.system.service.flow.IFlwFormTemplateService;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -47,7 +48,7 @@ public class FlwFormCategoryServiceImpl extends BaseServiceImpl<FlwFormCategoryM
             FlwFormCategoryVO vo = e.convert(FlwFormCategoryVO.class);
             vo.setChildren(this.getChild(vo.getId(), vo.getName(), sysDepartmentList));
             return vo;
-        }).toList();
+        }).collect(Collectors.toList());
     }
 
     /**
@@ -55,7 +56,7 @@ public class FlwFormCategoryServiceImpl extends BaseServiceImpl<FlwFormCategoryM
      */
     private List<FlwFormCategoryVO> getChild(Long id, String parentName, List<FlwFormCategory> flwFormCategoryList) {
         // 遍历所有节点，将所有表单分类的父id与传过来的根节点的id比较
-        List<FlwFormCategory> childList = flwFormCategoryList.stream().filter(e -> Objects.equals(id, e.getPid())).toList();
+        List<FlwFormCategory> childList = flwFormCategoryList.stream().filter(e -> Objects.equals(id, e.getPid())).collect(Collectors.toList());
         if (childList.isEmpty()) {
             // 没有子节点，返回一个空 List（递归退出）
             return null;
@@ -66,7 +67,7 @@ public class FlwFormCategoryServiceImpl extends BaseServiceImpl<FlwFormCategoryM
             vo.setParentName(parentName);
             vo.setChildren(this.getChild(vo.getId(), vo.getName(), flwFormCategoryList));
             return vo;
-        }).toList();
+        }).collect(Collectors.toList());
     }
 
     @Override

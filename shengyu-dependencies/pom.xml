@@ -130,7 +130,7 @@
         <transmittable-thread-local.version>2.14.5</transmittable-thread-local.version>
         <commons-net.version>3.11.1</commons-net.version>
         <commons-lang3.version>3.18.0</commons-lang3.version>
-        <jsch.version>0.1.55</jsch.version>
+        <!--<jsch.version>2.27.3</jsch.version>-->
         <tika-core.version>2.9.3</tika-core.version> <!-- JDK8 不能从 2.9.3 升级到 3.X，会报 JDK8 不支持 -->
         <ip2region.version>2.7.0</ip2region.version>
         <bizlog-sdk.version>3.0.6</bizlog-sdk.version>
@@ -140,7 +140,7 @@
         <vertx.version>4.5.13</vertx.version>
         <!-- 三方云服务相关 -->
         <awssdk.version>2.30.14</awssdk.version>
-        <justauth.version>1.16.7</justauth.version>
+        <!--<justauth.version>1.16.7</justauth.version>-->
         <justauth-starter.version>1.4.0</justauth-starter.version>
         <jimureport.version>2.1.1</jimureport.version>
         <jimubi.version>2.1.0</jimubi.version>
@@ -149,6 +149,20 @@
         <logback.version>1.2.13</logback.version> <!-- 无法使用 1.3.X 版本，启动会报错 -->
         <flowlong.version>1.1.2</flowlong.version>
         <jodd.version>5.1.6</jodd.version>
+
+
+        <jsch.version>0.1.55</jsch.version>
+        <commons-io.version>2.15.1</commons-io.version>
+        <screw.version>1.0.5</screw.version>
+        <captcha-plus.version>1.0.10</captcha-plus.version>
+        <okio.version>3.5.0</okio.version>
+        <okhttp3.version>4.11.0</okhttp3.version>
+        <aliyun-java-sdk-core.version>4.6.4</aliyun-java-sdk-core.version>
+        <aliyun-java-sdk-dysmsapi.version>2.2.1</aliyun-java-sdk-dysmsapi.version>
+        <tencentcloud-sdk-java.version>3.1.880</tencentcloud-sdk-java.version>
+        <justauth.version>1.0.8</justauth.version>
+        <minio.version>8.5.7</minio.version>
+
     </properties>
 
     <dependencyManagement>
@@ -243,6 +257,11 @@
             <dependency>
                 <groupId>com.shengyu.boot</groupId>
                 <artifactId>shengyu-spring-boot-starter-desensitize</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.shengyu.boot</groupId>
+                <artifactId>shengyu-spring-boot-starter-file</artifactId>
                 <version>${revision}</version>
             </dependency>
 
@@ -611,6 +630,12 @@
             </dependency>
 
             <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>${commons-io.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>cn.idev.excel</groupId>
                 <artifactId>fastexcel</artifactId>
                 <version>${fastexcel.version}</version>
@@ -635,9 +660,31 @@
             </dependency>
 
             <dependency>
+                <groupId>cn.smallbun.screw</groupId>
+                <artifactId>screw-core</artifactId> <!-- 实现数据库文档 -->
+                <version>${screw.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.freemarker</groupId>
+                        <artifactId>freemarker</artifactId> <!-- 移除 Freemarker 依赖，采用 Velocity 作为模板引擎 -->
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.alibaba</groupId>
+                        <artifactId>fastjson</artifactId> <!-- 最新版screw-core1.0.5依赖fastjson1.2.73存在漏洞，移除。 -->
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+            <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>${guava.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.inject</groupId>
+                <artifactId>guice</artifactId>
+                <version>${guice.version}</version>
             </dependency>
 
             <dependency>
@@ -655,6 +702,12 @@
                 <groupId>com.jcraft</groupId>
                 <artifactId>jsch</artifactId> <!-- 解决 sftp 连接 -->
                 <version>${jsch.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.xingyuv</groupId>
+                <artifactId>spring-boot-starter-captcha-plus</artifactId>
+                <version>${captcha-plus.version}</version>
             </dependency>
 
             <dependency>
@@ -681,6 +734,54 @@
                 <version>${jsoup.version}</version>
             </dependency>
 
+            <!-- 三方云服务相关 -->
+            <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio</artifactId>
+                <version>${okio.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp</artifactId>
+                <version>${okhttp3.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.shengyu.boot</groupId>
+                <artifactId>shengyu-spring-boot-starter-file</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>${minio.version}</version>
+            </dependency>
+
+            <!-- SMS SDK begin -->
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>aliyun-java-sdk-core</artifactId>
+                <version>${aliyun-java-sdk-core.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>opentracing-api</artifactId>
+                        <groupId>io.opentracing</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>opentracing-util</artifactId>
+                        <groupId>io.opentracing</groupId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>aliyun-java-sdk-dysmsapi</artifactId>
+                <version>${aliyun-java-sdk-dysmsapi.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.tencentcloudapi</groupId>
+                <artifactId>tencentcloud-sdk-java-sms</artifactId>
+                <version>${tencentcloud-sdk-java.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
@@ -695,10 +796,22 @@
             </dependency>
 
             <dependency>
-                <groupId>me.zhyd.oauth</groupId>
-                <artifactId>JustAuth</artifactId> <!-- 社交登陆（例如说，个人微信、企业微信等等） -->
+                <groupId>com.xingyuv</groupId>
+                <artifactId>spring-boot-starter-justauth</artifactId> <!-- 社交登陆（例如说，个人微信、企业微信等等） -->
                 <version>${justauth.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>cn.hutool</groupId>
+                        <artifactId>hutool-core</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
+
+            <!--<dependency>
+                <groupId>me.zhyd.oauth</groupId>
+                <artifactId>JustAuth</artifactId> &lt;!&ndash; 社交登陆（例如说，个人微信、企业微信等等） &ndash;&gt;
+                <version>${justauth.version}</version>
+            </dependency>-->
             <dependency>
                 <groupId>com.xkcoding.justauth</groupId>
                 <artifactId>justauth-spring-boot-starter</artifactId>

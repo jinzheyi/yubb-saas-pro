@@ -7,6 +7,7 @@ import com.shengyu.module.system.dal.mysql.flow.FlwProcessCategoryMapper;
 import com.shengyu.module.system.enums.ErrorCodeConstants;
 import com.shengyu.module.system.service.flow.IFlwProcessCategoryService;
 import com.shengyu.module.system.service.flow.IFlwProcessConfigureService;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -58,6 +59,6 @@ public class FlwProcessCategoryServiceImpl extends BaseServiceImpl<FlwProcessCat
             fpc.setId(t.getId());
             fpc.setSort(t.getSort());
             return fpc;
-        }).toList());
+        }).collect(Collectors.toList()));
     }
 }

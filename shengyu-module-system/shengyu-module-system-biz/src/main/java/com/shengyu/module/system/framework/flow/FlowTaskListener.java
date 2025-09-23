@@ -347,7 +347,7 @@ public class FlowTaskListener implements TaskListener {
                 // 暂时先不处理，根据具体业务调整
                 return;
             }
-            List<Long> actorIds = flwTaskActors.stream().map(t -> Long.valueOf(t.getActorId())).toList();
+            List<Long> actorIds = flwTaskActors.stream().map(t -> Long.valueOf(t.getActorId())).collect(Collectors.toList());
             FlwTaskActor fta = flwTaskActors.get(0);
             if (ActorType.role.eq(fta.getActorType())) {
                 // 流程任务处理者为角色情况，查询对应用户ID列表

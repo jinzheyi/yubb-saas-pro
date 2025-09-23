@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
 import com.shengyu.framework.flowlong.engine.model.NodeAssignee;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import java.util.List;
@@ -34,7 +35,7 @@ public class ApprovalContent {
                 nodeAssignee.setName(t.getActorName());
                 nodeAssignee.setWeight(t.getWeight());
                 return nodeAssignee;
-            }).toList();
+            }).collect(Collectors.toList());
             // 参与者类型 0，用户 1，角色 2，部门
             FlwTaskActor flwTaskActor = flwTaskActors.get(0);
             if (Objects.equals(0, flwTaskActor.getActorType())) {

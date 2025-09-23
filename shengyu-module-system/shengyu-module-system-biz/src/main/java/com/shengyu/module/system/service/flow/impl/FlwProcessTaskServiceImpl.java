@@ -131,7 +131,8 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         List<Long> flwTaskActorIdList;
         //对应角色所属的待认领任务
         Set<Long> roleIdListByUserId = permissionService.getUserRoleIdListByUserId(userRespVO.getId());
-        flwTaskActorIdList = flwTaskActorMapper.selectListByActorIdListAndActorType(roleIdListByUserId.stream().map(String::valueOf).toList(), ActorType.role.getValue())
+        flwTaskActorIdList = flwTaskActorMapper.selectListByActorIdListAndActorType(roleIdListByUserId.stream().map(String::valueOf).collect(
+            Collectors.toList()), ActorType.role.getValue())
           .stream().map(
             FlwTaskActor::getId).collect(Collectors.toList());
         //对应部门所属的待认领任务
@@ -139,7 +140,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
             adminUserService.getMyEnableDeptList().stream().map(
               userDeptRespVO -> String.valueOf(userDeptRespVO.getDeptId())).collect(Collectors.toList()), ActorType.department.getValue())
           .stream().map(
-            FlwTaskActor::getId).toList());
+            FlwTaskActor::getId).collect(Collectors.toList()));
         return syFlwTaskMapper.selectPagePendingClaim(page, dto, flwTaskActorIdList);
     }
 
@@ -151,10 +152,11 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         List<String> flwTaskActorIdList = new ArrayList<>();
         flwTaskActorIdList.add(String.valueOf(userRespVO.getId()));
         //对应角色所属的待认领任务
-        flwTaskActorIdList.addAll(permissionService.getUserRoleIdListByUserId(userRespVO.getId()).stream().map(String::valueOf).toList());
+        flwTaskActorIdList.addAll(permissionService.getUserRoleIdListByUserId(userRespVO.getId()).stream().map(String::valueOf).collect(
+          Collectors.toList()));
         //对应部门所属的待认领任务
         flwTaskActorIdList.addAll(adminUserService.getMyEnableDeptList().stream().map(
-          userDeptRespVO -> String.valueOf(userDeptRespVO.getDeptId())).toList());
+          userDeptRespVO -> String.valueOf(userDeptRespVO.getDeptId())).collect(Collectors.toList()));
         return syFlwTaskMapper.selectPagePendingApproval(page, dto, flwTaskActorIdList);
     }
 
@@ -421,7 +423,8 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         List<NodeModel> nodeModels = ModelHelper.getNextChildNodes(flowLongEngine.getContext(), execution, rootNodeModel, instance.getCurrentNodeKey());
         if (null != nodeModels) {
             nodeModelsMap.put("nodeType", getNodeType(nodeModels));
-            nodeModelsMap.put("nodeModels", nodeModels.stream().map(NodeModel::cloneBaseInfo).toList());
+            nodeModelsMap.put("nodeModels", nodeModels.stream().map(NodeModel::cloneBaseInfo).collect(
+              Collectors.toList()));
         }
         return nodeModelsMap;
     }
@@ -522,7 +525,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
             ServiceExceptionUtil.fail(!Objects.equals(true, processSetting.getAllowRevocation()),
                     ErrorCodeConstants.FLOW_1_002_029_016);
         }
-        ServiceExceptionUtil.fail(!Objects.equals(flowCreator.getCreateId(), flwInstance.getCreateId()), "非发起人不允许撤回");
+        ServiceExceptionUtil.fail(!Objects.equals(flowCreator.getCreateId(), flwInstance.getCreateId()), ErrorCodeConstants.FLOW_1_002_029_068);
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
         if (dto.isTermination()) {
             // 发起人撤回终止
@@ -534,7 +537,6 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         FlwHisTask fht = flowLongEngine.queryService().getStartTaskByInstanceId(dto.getInstanceId());
         ServiceExceptionUtil.fail(null == fht, ErrorCodeConstants.FLOW_1_002_029_066);
         TaskService taskService = flowLongEngine.taskService();
-        FlwExtInstance extInstance = flowLongEngine.queryService().getExtInstance(dto.getInstanceId());
         ServiceExceptionUtil.fail(flwInstance.getCurrentNodeKey().equals(extInstance.getTaskKey()), ErrorCodeConstants.FLOW_1_002_029_017);
         Optional<List<FlwTask>> flwTasks = taskService.withdrawTask(fht.getId(), flowCreator);
         ServiceExceptionUtil.fail(!flwTasks.isPresent(), ErrorCodeConstants.FLOW_1_002_029_067);
@@ -599,7 +601,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
             nodeAssignee.setId(String.valueOf(t.getId()));
             nodeAssignee.setName(t.getNickname());
             return nodeAssignee;
-        }).toList(), FlowHelper.getFlowCreator());
+        }).collect(Collectors.toList()), FlowHelper.getFlowCreator());
     }
 
     @Override
@@ -638,7 +640,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
             nodeAssignee.setName(t.getNickname());
             nodeAssignee.setExtendConfig(FlowLongContext.obj2map(args));
             return nodeAssignee;
-        }).toList(), FlowHelper.getFlowCreator());
+        }).collect(Collectors.toList()), FlowHelper.getFlowCreator());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -782,10 +784,11 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         List<String> flwTaskActorIdList = new ArrayList<>();
         flwTaskActorIdList.add(String.valueOf(userSession.getId()));
         //对应角色所属的待认领任务
-        flwTaskActorIdList.addAll(permissionService.getUserRoleIdListByUserId(userSession.getId()).stream().map(String::valueOf).toList());
+        flwTaskActorIdList.addAll(permissionService.getUserRoleIdListByUserId(userSession.getId()).stream().map(String::valueOf).collect(
+          Collectors.toList()));
         //对应部门所属的待认领任务
         flwTaskActorIdList.addAll(adminUserService.getMyEnableDeptList().stream().map(
-          userDeptRespVO -> String.valueOf(userDeptRespVO.getDeptId())).toList());
+          userDeptRespVO -> String.valueOf(userDeptRespVO.getDeptId())).collect(Collectors.toList()));
         return syFlwTaskMapper.selectCountPendingApproval(flwTaskActorIdList);
     }
 
@@ -798,7 +801,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
                         return;
                     }
                     // 发送催办消息
-                    List<Long> actorIds = taskActors.stream().map(t -> Long.valueOf(t.getActorId())).toList();
+                    List<Long> actorIds = taskActors.stream().map(t -> Long.valueOf(t.getActorId())).collect(Collectors.toList());
                     Map<String, Object> templateParams = new HashMap<>();
                     templateParams.put("processName", extInstance.getProcessName());
                     actorIds.forEach(actorId -> {

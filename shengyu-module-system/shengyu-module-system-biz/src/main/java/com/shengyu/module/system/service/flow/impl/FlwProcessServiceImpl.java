@@ -150,7 +150,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
                 // 发起流程，过滤不存在角色权限的流程
                 LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
                 // 查询当前用户角色ID集合
-                List<Long> roleIdList = permissionService.getUserRoleIdListByUserId(userSession.getId()).stream().toList();
+                List<Long> roleIdList = permissionService.getUserRoleIdListByUserId(userSession.getId()).stream().collect(Collectors.toList());
                 // 查询当前用户不存在角色权限的流程ID集合
                 List<Long> processIdList = flwProcessActorMapper.selectListByActorIdList(roleIdList)
                   .stream().map(FlwProcessActor::getProcessId).collect(Collectors.toList());
@@ -158,7 +158,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
                 if (CollectionUtils.isNotEmpty(notExistProcessIds)) {
                     needSort = false;
                     flwProcessVOList = flwProcessVOList.stream().sorted(Comparator.comparing(FlwProcessVO::getProcessSort))
-                            .filter(t -> !notExistProcessIds.contains(t.getProcessId())).toList();
+                            .filter(t -> !notExistProcessIds.contains(t.getProcessId())).collect(Collectors.toList());
                 }
             }
             // 排序
@@ -171,7 +171,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
             // 不存在关键词查询
             for (FlwProcessCategory fpc : categoryList) {
                 if (voIsNotEmpty) {
-                    List<FlwProcessVO> processList = flwProcessVOList.stream().filter(f -> Objects.equals(fpc.getId(), f.getCategoryId())).toList();
+                    List<FlwProcessVO> processList = flwProcessVOList.stream().filter(f -> Objects.equals(fpc.getId(), f.getCategoryId())).collect(Collectors.toList());
                     boolean isEmpty = CollectionUtils.isEmpty(processList);
                     if (isEmpty && launch) {
                         continue;
@@ -189,7 +189,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
             for (FlwProcessCategory fpc : categoryList) {
                 if (voIsNotEmpty) {
                     List<FlwProcessVO> processList = flwProcessVOList.stream().filter(t -> Objects.equals(t.getCategoryId(), fpc.getId())
-                            && t.getProcessName().contains(keyword)).toList();
+                            && t.getProcessName().contains(keyword)).collect(Collectors.toList());
                     if (fpc.getName().contains(keyword)) {
                         // 匹配分类名称
                         if (CollectionUtils.isEmpty(processList)) {
@@ -197,7 +197,8 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
                                 continue;
                             }
                             FlwProcessCategoryVO vo = FlwProcessCategoryVO.of(fpc);
-                            vo.setProcessList(flwProcessVOList.stream().filter(f -> Objects.equals(f.getCategoryId(), fpc.getId())).toList());
+                            vo.setProcessList(flwProcessVOList.stream().filter(f -> Objects.equals(f.getCategoryId(), fpc.getId())).collect(
+                              Collectors.toList()));
                             voList.add(vo);
                         } else {
                             FlwProcessCategoryVO vo = FlwProcessCategoryVO.of(fpc);
@@ -278,7 +279,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
             flwInstance.setBusinessKey(dto.getBusinessKey());
             return flwInstance;
         });
-        ServiceExceptionUtil.fail(opt.isEmpty(), ErrorCodeConstants.FLOW_1_002_029_026);
+        ServiceExceptionUtil.fail(!opt.isPresent(), ErrorCodeConstants.FLOW_1_002_029_026);
 
         // 保存表单
         FlwInstance flwInstance = opt.get();
@@ -359,7 +360,8 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
         // 流程权限
         List<FlwProcessPermission> permissionList = flwProcessPermissionService.getByProcessId(flwProcess.getId());
         if (CollectionUtils.isNotEmpty(permissionList)) {
-            dto.setProcessPermissionList(permissionList.stream().map(FlwProcessPermissionDTO::of).toList());
+            dto.setProcessPermissionList(permissionList.stream().map(FlwProcessPermissionDTO::of).collect(
+              Collectors.toList()));
         }
         // 流程配置
         FlwProcessConfigure configure = flwProcessConfigureService.getByProcessId(flwProcess.getId());
@@ -450,7 +452,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
                 fpa.setActorId(Long.valueOf(t.getId()));
                 fpa.setActorName(t.getName());
                 return fpa;
-            }).toList()), ErrorCodeConstants.FLOW_1_002_029_042);
+            }).collect(Collectors.toList())), ErrorCodeConstants.FLOW_1_002_029_042);
         }
 
         // 保存流程定义配置

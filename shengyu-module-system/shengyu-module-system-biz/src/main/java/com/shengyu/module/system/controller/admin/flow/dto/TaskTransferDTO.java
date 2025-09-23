@@ -3,6 +3,7 @@ package com.shengyu.module.system.controller.admin.flow.dto;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;
@@ -36,6 +37,6 @@ public class TaskTransferDTO {
     private String content;
 
     public List<FlowCreator> toFlowCreators() {
-        return assigneeList.stream().map(TaskAssigneeDTO::toFlowCreator).toList();
+        return assigneeList.stream().map(TaskAssigneeDTO::toFlowCreator).collect(Collectors.toList());
     }
 }

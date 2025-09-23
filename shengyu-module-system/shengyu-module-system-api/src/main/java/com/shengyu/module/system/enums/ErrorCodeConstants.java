@@ -276,6 +276,7 @@ public interface ErrorCodeConstants {
     ErrorCode FLOW_1_002_029_065 = new ErrorCode(1_002_029_065, "历史任务参与者信息不存在");
     ErrorCode FLOW_1_002_029_066 = new ErrorCode(1_002_029_066, "没有走过发起人节点的流程不允许继续撤回");
     ErrorCode FLOW_1_002_029_067 = new ErrorCode(1_002_029_067, "撤回失败,请联系管理员");
+    ErrorCode FLOW_1_002_029_068 = new ErrorCode(1_002_029_068, "非发起人不允许撤回");
 
 
 }

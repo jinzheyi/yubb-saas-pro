@@ -53,7 +53,7 @@ public class FlowTaskActorProvider implements TaskActorProvider {
             if (NodeSetType.role.eq(nodeModel.getSetType())) {
                 // 3，角色
                 PermissionService sysUserRoleService = SpringUtil.getBean(PermissionService.class);
-                List<Long> roleIds = nodeModel.getNodeAssigneeList().stream().map(t -> Long.valueOf(t.getId())).toList();
+                List<Long> roleIds = nodeModel.getNodeAssigneeList().stream().map(t -> Long.valueOf(t.getId())).collect(Collectors.toList());
                 ServiceExceptionUtil.fail(!sysUserRoleService.hasAnyRoleIds(Long.valueOf(flowCreator.getCreateId()), roleIds), ErrorCodeConstants.FLOW_1_002_029_006);
             }
         }
@@ -147,7 +147,7 @@ public class FlowTaskActorProvider implements TaskActorProvider {
                             Integer type = dynamicAssignee.getType();
                             flwTaskActor.setActorType(Objects.equals(3, type) ? 1 : 0);
                             return flwTaskActor;
-                        }).toList();
+                        }).collect(Collectors.toList());
                     }
                 }
             } else if (NodeSetType.initiatorThemselves.eq(nodeModel.getSetType())) {
@@ -268,7 +268,7 @@ public class FlowTaskActorProvider implements TaskActorProvider {
             .stream().map(t ->
               FlwTaskActor.ofUser(flwTaskActor.getTenantId(), String.valueOf(t.getId()),
                 t.getNickname() + "(" + flwTaskActor.getActorName() + ")"))
-            .toList()));
+            .collect(Collectors.toList())));
         return flwTaskActorUserList;
     }
 
@@ -298,7 +298,7 @@ public class FlowTaskActorProvider implements TaskActorProvider {
           if (CollUtil.isNotEmpty(userRoleIdListByRoleId)) {
             flwTaskActorUserList.addAll(adminUserService.getUserList(userRoleIdListByRoleId).stream().map(t ->
               FlwTaskActor.ofUser(flwTaskActor.getTenantId(), String.valueOf(t.getId()),
-                t.getNickname() + "(" + flwTaskActor.getActorName() + ")")).toList());
+                t.getNickname() + "(" + flwTaskActor.getActorName() + ")")).collect(Collectors.toList()));
           }
         });
         return flwTaskActorUserList;

@@ -7,6 +7,7 @@ import com.shengyu.module.system.controller.admin.flow.dto.FlwProcessPermissionD
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessPermission;
 import com.shengyu.module.system.dal.mysql.flow.FlwProcessPermissionMapper;
 import com.shengyu.module.system.service.flow.IFlwProcessPermissionService;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,7 +24,8 @@ public class FlwProcessPermissionServiceImpl extends BaseServiceImpl<FlwProcessP
     @Override
     public boolean saveProcessPermissions(Long processId, List<FlwProcessPermissionDTO> dtoList) {
         // 保存流程定义权限列表
-        return super.saveBatch(dtoList.stream().map(t -> t.toFlwProcessPermission(processId)).toList());
+        return super.saveBatch(dtoList.stream().map(t -> t.toFlwProcessPermission(processId)).collect(
+          Collectors.toList()));
     }
 
     @Override
