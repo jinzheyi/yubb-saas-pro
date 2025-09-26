@@ -11,10 +11,10 @@
         <el-form-item label="显示次数" :prop="`list[${index}].showType`">
           <el-radio-group v-model="element.showType">
             <el-tooltip content="只显示一次，下次打开时不显示" placement="bottom">
-              <el-radio label="once">一次</el-radio>
+              <el-radio value="once">一次</el-radio>
             </el-tooltip>
             <el-tooltip content="每次打开时都会显示" placement="bottom">
-              <el-radio label="always">不限</el-radio>
+              <el-radio value="always">不限</el-radio>
             </el-tooltip>
           </el-radio-group>
         </el-form-item>
@@ -25,14 +25,14 @@
 
 <script setup lang="ts">
 import { PopoverProperty } from './config'
-import { usePropertyForm } from '@/components/DiyEditor/util'
+import { useVModel } from '@vueuse/core'
 
 // 弹窗广告属性面板
 defineOptions({ name: 'PopoverProperty' })
 
 const props = defineProps<{ modelValue: PopoverProperty }>()
 const emit = defineEmits(['update:modelValue'])
-const { formData } = usePropertyForm(props.modelValue, emit)
+const formData = useVModel(props, 'modelValue', emit)
 </script>
 
 <style scoped lang="scss"></style>

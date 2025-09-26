@@ -28,7 +28,7 @@ export const component = {
   name: '公告栏',
   icon: 'ep:bell',
   property: {
-    iconUrl: 'http://mall.shengyu.iocoder.cn/static/images/xinjian.png',
+    iconUrl: 'http://mall.yudao.iocoder.cn/static/images/xinjian.png',
     contents: [
       {
         text: '',

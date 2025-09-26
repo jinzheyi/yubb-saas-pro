@@ -27,8 +27,8 @@
       </el-form-item>
       <el-form-item label="导航背景">
         <el-radio-group v-model="formData!.style.bgType">
-          <el-radio-button label="color">纯色</el-radio-button>
-          <el-radio-button label="img">图片</el-radio-button>
+          <el-radio-button value="color">纯色</el-radio-button>
+          <el-radio-button value="img">图片</el-radio-button>
         </el-radio-group>
       </el-form-item>
       <el-form-item label="选择颜色" v-if="formData!.style.bgType === 'color'">
@@ -79,14 +79,17 @@
 </template>
 
 <script setup lang="ts">
-import { TabBarProperty, THEME_LIST } from './config'
-import { usePropertyForm } from '@/components/DiyEditor/util'
+import { TabBarProperty, component, THEME_LIST } from './config'
+import { useVModel } from '@vueuse/core'
 // 底部导航栏
 defineOptions({ name: 'TabBarProperty' })
 
 const props = defineProps<{ modelValue: TabBarProperty }>()
 const emit = defineEmits(['update:modelValue'])
-const { formData } = usePropertyForm(props.modelValue, emit)
+const formData = useVModel(props, 'modelValue', emit)
+
+// 将数据库的值更新到右侧属性栏
+component.property.items = formData.value.items
 
 // 要的主题
 const handleThemeChange = () => {

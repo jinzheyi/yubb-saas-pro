@@ -1,12 +1,13 @@
-import { defineStore } from 'pinia'
-import { store } from '../index'
-import { setCssVar, humpToUnderline } from '@/utils'
-import { ElMessage } from 'element-plus'
 import { CACHE_KEY, useCache } from '@/hooks/web/useCache'
 import { ElementPlusSize } from '@/types/elementPlus'
 import { LayoutType } from '@/types/layout'
 import { ThemeTypes } from '@/types/theme'
 import {getMyEnableDeptList} from "@/api/system/user";
+import { humpToUnderline, setCssVar } from '@/utils'
+import { getCssColorVariable, hexToRGB, mix } from '@/utils/color'
+import { ElMessage } from 'element-plus'
+import { defineStore } from 'pinia'
+import { store } from '../index'
 
 const { wsCache } = useCache()
 
@@ -25,6 +26,7 @@ interface AppState {
   myEnableDept: boolean
   plugApp: boolean
   tagsView: boolean
+  tagsViewImmerse: boolean
   tagsViewIcon: boolean
   logo: boolean
   fixedHeader: boolean
@@ -65,6 +67,7 @@ export const useAppStore = defineStore('app', {
       myEnableDept: true,  //  我的部门图标
       plugApp: true, // 应用市场
       tagsView: true, // 标签页
+      tagsViewImmerse: false, // 标签页沉浸
       tagsViewIcon: true, // 是否显示标签图标
       logo: true, // logo
       fixedHeader: true, // 固定toolheader
@@ -147,6 +150,9 @@ export const useAppStore = defineStore('app', {
     getTagsView(): boolean {
       return this.tagsView
     },
+    getTagsViewImmerse(): boolean {
+      return this.tagsViewImmerse
+    },
     getTagsViewIcon(): boolean {
       return this.tagsViewIcon
     },
@@ -194,6 +200,40 @@ export const useAppStore = defineStore('app', {
     }
   },
   actions: {
+    setPrimaryLight() {
+      if (this.theme.elColorPrimary) {
+        const elColorPrimary = this.theme.elColorPrimary
+        const color = this.isDark ? '#000000' : '#ffffff'
+        const lightList = [3, 5, 7, 8, 9]
+        lightList.forEach((v) => {
+          setCssVar(`--el-color-primary-light-${v}`, mix(color, elColorPrimary, v / 10))
+        })
+        setCssVar(`--el-color-primary-dark-2`, mix(color, elColorPrimary, 0.2))
+
+        this.setAllColorRgbVars()
+      }
+    },
+
+    // 处理element自带的主题色和辅助色的-rgb切换主题变化，如：--el-color-primary-rgb
+    setAllColorRgbVars() {
+      // 需要处理的颜色类型列表
+      const colorTypes = ['primary', 'success', 'warning', 'danger', 'error', 'info']
+
+      colorTypes.forEach((type) => {
+        // 获取当前颜色值
+        const colorValue = getCssColorVariable(`--el-color-${type}`)
+        if (colorValue) {
+          // 转换为rgba并提取RGB部分
+          const rgbaString = hexToRGB(colorValue, 1)
+          const rgbValues = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i)
+          if (rgbValues) {
+            const [, r, g, b] = rgbValues
+            // 设置对应的RGB变量
+            setCssVar(`--el-color-${type}-rgb`, `${r}, ${g}, ${b}`)
+          }
+        }
+      })
+    },
     setBreadcrumb(breadcrumb: boolean) {
       this.breadcrumb = breadcrumb
     },
@@ -232,6 +272,9 @@ export const useAppStore = defineStore('app', {
     },
     setTagsView(tagsView: boolean) {
       this.tagsView = tagsView
+    },
+    setTagsViewImmerse(tagsViewImmerse: boolean) {
+      this.tagsViewImmerse = tagsViewImmerse
     },
     setTagsViewIcon(tagsViewIcon: boolean) {
       this.tagsViewIcon = tagsViewIcon
@@ -273,6 +316,7 @@ export const useAppStore = defineStore('app', {
         document.documentElement.classList.remove('dark')
       }
       wsCache.set(CACHE_KEY.IS_DARK, this.isDark)
+      this.setPrimaryLight()
     },
     setCurrentSize(currentSize: ElementPlusSize) {
       this.currentSize = currentSize
@@ -289,11 +333,13 @@ export const useAppStore = defineStore('app', {
       for (const key in this.theme) {
         setCssVar(`--${humpToUnderline(key)}`, this.theme[key])
       }
+      this.setPrimaryLight()
     },
     setFooter(footer: boolean) {
       this.footer = footer
     }
-  }
+  },
+  persist: false
 })
 
 export const useAppStoreWithOut = () => {

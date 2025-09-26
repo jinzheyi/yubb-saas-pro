@@ -18,15 +18,16 @@
     </el-select>
   </ElDialog>
   <div v-else class="custom-hover" @click.stop="showTopSearch = !showTopSearch">
-    <Icon icon="ep:search" />
+    <Icon icon="ep:search" :color="color"/>
     <el-select
+      @click.stop
       filterable
       :reserve-keyword="false"
       remote
       placeholder="请输入菜单内容"
       :remote-method="remoteMethod"
       class="overflow-hidden transition-all-600"
-      :class="showTopSearch ? 'w-220px ml2' : 'w-0'"
+      :class="showTopSearch ? '!w-220px ml2' : '!w-0'"
       @change="handleChange"
     >
       <el-option
@@ -40,11 +41,13 @@
 </template>
 
 <script lang="ts" setup>
+import { propTypes } from '@/utils/propTypes'
 defineProps({
   isModal: {
     type: Boolean,
     default: true
-  }
+  },
+  color: propTypes.string.def('')
 })
 
 const router = useRouter() // 路由对象
@@ -78,7 +81,12 @@ function remoteMethod(data) {
 
 function handleChange(path) {
   router.push({ path })
+  hiddenSearch()
   hiddenTopSearch()
+}
+
+function hiddenSearch() {
+  showSearch.value = false
 }
 
 function hiddenTopSearch() {
@@ -98,6 +106,8 @@ onUnmounted(() => {
 // 监听 ctrl + k
 function listenKey(event) {
   if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+    // 阻止触发浏览器默认事件
+    event.preventDefault()
     showSearch.value = !showSearch.value
     // 这里可以执行相应的操作（例如打开搜索框等）
   }

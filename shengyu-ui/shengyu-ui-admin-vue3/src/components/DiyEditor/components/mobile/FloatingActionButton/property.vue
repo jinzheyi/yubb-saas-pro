@@ -3,8 +3,8 @@
     <el-card header="按钮配置" class="property-group" shadow="never">
       <el-form-item label="展开方向" prop="direction">
         <el-radio-group v-model="formData.direction">
-          <el-radio label="vertical">垂直</el-radio>
-          <el-radio label="horizontal">水平</el-radio>
+          <el-radio value="vertical">垂直</el-radio>
+          <el-radio value="horizontal">水平</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item label="显示文字" prop="showText">
@@ -31,14 +31,14 @@
 
 <script setup lang="ts">
 import { FloatingActionButtonProperty } from './config'
-import { usePropertyForm } from '@/components/DiyEditor/util'
+import { useVModel } from '@vueuse/core'
 
 // 悬浮按钮属性面板
 defineOptions({ name: 'FloatingActionButtonProperty' })
 
 const props = defineProps<{ modelValue: FloatingActionButtonProperty }>()
 const emit = defineEmits(['update:modelValue'])
-const { formData } = usePropertyForm(props.modelValue, emit)
+const formData = useVModel(props, 'modelValue', emit)
 </script>
 
 <style scoped lang="scss"></style>

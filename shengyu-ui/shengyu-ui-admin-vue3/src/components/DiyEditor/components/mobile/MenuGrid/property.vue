@@ -4,8 +4,8 @@
     <el-form label-width="80px" :model="formData" class="m-t-8px">
       <el-form-item label="每行数量" prop="column">
         <el-radio-group v-model="formData.column">
-          <el-radio :label="3">3个</el-radio>
-          <el-radio :label="4">4个</el-radio>
+          <el-radio :value="3">3个</el-radio>
+          <el-radio :value="4">4个</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { usePropertyForm } from '@/components/DiyEditor/util'
+import { useVModel } from '@vueuse/core'
 import {
   EMPTY_MENU_GRID_ITEM_PROPERTY,
   MenuGridProperty
@@ -59,7 +59,7 @@ defineOptions({ name: 'MenuGridProperty' })
 
 const props = defineProps<{ modelValue: MenuGridProperty }>()
 const emit = defineEmits(['update:modelValue'])
-const { formData } = usePropertyForm(props.modelValue, emit)
+const formData = useVModel(props, 'modelValue', emit)
 </script>
 
 <style scoped lang="scss"></style>

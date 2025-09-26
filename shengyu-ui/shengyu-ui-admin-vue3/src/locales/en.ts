@@ -56,6 +56,16 @@ export default {
     copySuccess: 'Copy Success',
     copyError: 'Copy Error'
   },
+  lock: {
+    lockScreen: 'Lock screen',
+    lock: 'Lock',
+    lockPassword: 'Lock screen password',
+    unlock: 'Click to unlock',
+    backToLogin: 'Back to login',
+    entrySystem: 'Entry the system',
+    placeholder: 'Please enter the lock screen password',
+    message: 'Lock screen password error'
+  },
   error: {
     noPermission: `Sorry, you don't have permission to access this page.`,
     pageError: 'Sorry, the page you visited does not exist.',
@@ -130,12 +140,17 @@ export default {
     btnQRCode: 'QR code sign in',
     qrcode: 'Scan the QR code to log in',
     btnRegister: 'Sign up',
-    SmsSendMsg: 'code has been sent'
+    SmsSendMsg: 'code has been sent',
+    resetPassword: "Reset Password",
+    resetPasswordSuccess: "Reset Password Success",
+    invalidTenantName:"Invalid Tenant Name"
   },
   captcha: {
+    verify: 'Verify',
     verification: 'Please complete security verification',
     slide: 'Swipe right to complete verification',
     point: 'Please click',
+    code: 'Please enter the verification code',
     success: 'Verification succeeded',
     fail: 'verification failed'
   },

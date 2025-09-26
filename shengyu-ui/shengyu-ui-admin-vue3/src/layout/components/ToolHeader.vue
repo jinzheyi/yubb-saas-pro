@@ -1,9 +1,6 @@
 <script lang="tsx">
 import { defineComponent, computed } from 'vue'
 import { Message } from '@/layout/components//Message'
-import { PlugApp } from '@/layout/components//PlugApp'
-import { MyTenant } from '@/layout/components//MyTenant'
-import { MyEnableDept } from '@/layout/components//MyEnableDept'
 import { Collapse } from '@/layout/components/Collapse'
 import { UserInfo } from '@/layout/components/UserInfo'
 import { Screenfull } from '@/layout/components/Screenfull'
@@ -11,8 +8,10 @@ import { Breadcrumb } from '@/layout/components/Breadcrumb'
 import { SizeDropdown } from '@/layout/components/SizeDropdown'
 import { LocaleDropdown } from '@/layout/components/LocaleDropdown'
 import RouterSearch from '@/components/RouterSearch/index.vue'
+import TenantVisit from '@/layout/components/TenantVisit/index.vue'
 import { useAppStore } from '@/store/modules/app'
 import { useDesign } from '@/hooks/web/useDesign'
+import { checkPermi } from '@/utils/permission'
 
 const { getPrefixCls, variables } = useDesign()
 
@@ -44,14 +43,10 @@ const locale = computed(() => appStore.getLocale)
 // 消息图标
 const message = computed(() => appStore.getMessage)
 
-// 应用市场图标
-const plugApp = computed(() => appStore.getPlugApp)
-
-// 我的租户图标
-const myTenant = computed(() => appStore.getMyTenant)
-
-// 我的启用部门图标
-const myEnableDept = computed(() => appStore.getMyEnableDept)
+// 租户切换权限
+const hasTenantVisitPermission = computed(
+  () => import.meta.env.VITE_APP_TENANT_ENABLE === 'true' && checkPermi(['system:tenant:visit'])
+)
 
 export default defineComponent({
   name: 'ToolHeader',
@@ -74,10 +69,11 @@ export default defineComponent({
           </div>
         ) : undefined}
         <div class="h-full flex items-center">
+          {hasTenantVisitPermission.value ? <TenantVisit /> : undefined}
           {screenfull.value ? (
             <Screenfull class="custom-hover" color="var(--top-header-text-color)"></Screenfull>
           ) : undefined}
-          {search.value ? <RouterSearch isModal={false} /> : undefined}
+          {search.value ? <RouterSearch isModal={false} color="var(--top-header-text-color)"/> : undefined}
           {size.value ? (
             <SizeDropdown class="custom-hover" color="var(--top-header-text-color)"></SizeDropdown>
           ) : undefined}
@@ -89,15 +85,6 @@ export default defineComponent({
           ) : undefined}
           {message.value ? (
             <Message class="custom-hover" color="var(--top-header-text-color)"></Message>
-          ) : undefined}
-          {plugApp.value ? (
-            <PlugApp class="custom-hover" color="var(--top-header-text-color)"></PlugApp>
-          ) : undefined}
-          {myEnableDept.value ? (
-            <MyEnableDept class="custom-hover" color="var(--top-header-text-color)"></MyEnableDept>
-          ) : undefined}
-          {myTenant.value ? (
-            <MyTenant class="custom-hover" color="var(--top-header-text-color)"></MyTenant>
           ) : undefined}
           <UserInfo></UserInfo>
         </div>

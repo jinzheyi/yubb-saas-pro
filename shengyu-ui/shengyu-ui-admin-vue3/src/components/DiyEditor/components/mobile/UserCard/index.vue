@@ -5,7 +5,7 @@
         <el-avatar :size="60">
           <Icon icon="ep:avatar" :size="60" />
         </el-avatar>
-        <span class="text-18px font-bold">圣钰科技</span>
+        <span class="text-18px font-bold">芋道源码</span>
       </div>
       <Icon icon="tdesign:qrcode" :size="20" />
     </div>
