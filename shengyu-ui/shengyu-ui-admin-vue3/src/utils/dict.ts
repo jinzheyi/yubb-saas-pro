@@ -24,6 +24,10 @@ export interface NumberDictDataType extends DictDataType {
   value: number
 }
 
+export interface StringDictDataType extends DictDataType {
+  value: string
+}
+
 export const getDictOptions = (dictType: string) => {
   return dictStore.getDictByType(dictType) || []
 }
@@ -44,8 +48,11 @@ export const getIntDictOptions = (dictType: string): NumberDictDataType[] => {
 }
 
 export const getStrDictOptions = (dictType: string) => {
-  const dictOption: DictDataType[] = []
+  // 获得通用的 DictDataType 列表
   const dictOptions: DictDataType[] = getDictOptions(dictType)
+  // 转换成 string 类型的 StringDictDataType 类型
+  // why 需要特殊转换：避免 IDEA 在 v-for="dict in getStrDictOptions(...)" 时，el-option 的 key 会告警
+  const dictOption: StringDictDataType[] = []
   dictOptions.forEach((dict: DictDataType) => {
     dictOption.push({
       ...dict,
@@ -161,7 +168,7 @@ export enum DICT_TYPE {
   MP_AUTO_REPLY_REQUEST_MATCH = 'mp_auto_reply_request_match', // 自动回复请求匹配类型
   MP_MESSAGE_TYPE = 'mp_message_type', // 消息类型
 
-  // ========== MALL - 会员模块 ==========
+  // ========== Member 会员模块 ==========
   MEMBER_POINT_BIZ_TYPE = 'member_point_biz_type', // 积分的业务类型
   MEMBER_EXPERIENCE_BIZ_TYPE = 'member_experience_biz_type', // 会员经验业务类型
 

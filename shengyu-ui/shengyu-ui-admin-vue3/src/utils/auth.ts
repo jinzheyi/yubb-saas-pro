@@ -1,4 +1,4 @@
-import { useCache } from '@/hooks/web/useCache'
+import { useCache, CACHE_KEY } from '@/hooks/web/useCache'
 import { TokenType } from '@/api/login/types'
 import { decrypt, encrypt } from '@/utils/jsencrypt'
 
@@ -10,7 +10,8 @@ const RefreshTokenKey = 'REFRESH_TOKEN'
 // 获取token
 export const getAccessToken = () => {
   // 此处与TokenKey相同，此写法解决初始化时Cookies中不存在TokenKey报错
-  return wsCache.get(AccessTokenKey) ? wsCache.get(AccessTokenKey) : wsCache.get('ACCESS_TOKEN')
+  const accessToken = wsCache.get(AccessTokenKey)
+  return accessToken ? accessToken : wsCache.get('ACCESS_TOKEN')
 }
 
 // 刷新token
@@ -40,8 +41,6 @@ export const formatToken = (token: string): string => {
 }
 // ========== 账号相关 ==========
 
-const LoginFormKey = 'LOGINFORM'
-
 export type LoginFormType = {
   tenantName: string
   username: string
@@ -50,7 +49,7 @@ export type LoginFormType = {
 }
 
 export const getLoginForm = () => {
-  const loginForm: LoginFormType = wsCache.get(LoginFormKey)
+  const loginForm: LoginFormType = wsCache.get(CACHE_KEY.LoginForm)
   if (loginForm) {
     loginForm.password = decrypt(loginForm.password) as string
   }
@@ -59,11 +58,11 @@ export const getLoginForm = () => {
 
 export const setLoginForm = (loginForm: LoginFormType) => {
   loginForm.password = encrypt(loginForm.password) as string
-  wsCache.set(LoginFormKey, loginForm, { exp: 30 * 24 * 60 * 60 })
+  wsCache.set(CACHE_KEY.LoginForm, loginForm, { exp: 30 * 24 * 60 * 60 })
 }
 
 export const removeLoginForm = () => {
-  wsCache.delete(LoginFormKey)
+  wsCache.delete(CACHE_KEY.LoginForm)
 }
 
 // ========== 租户相关 ==========

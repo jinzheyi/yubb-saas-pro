@@ -380,5 +380,13 @@ const getAllApi = async () => {
   loading.value = false
 }
 
+const handleProjectClick = (message: string) => {
+  window.open(`https://${message}`, '_blank')
+}
+
+const handleShortcutClick = (url: string) => {
+  router.push(url)
+}
+
 getAllApi()
 </script>

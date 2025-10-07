@@ -7,7 +7,6 @@ import { isNumber } from '@/utils/is'
 import { ElMessage } from 'element-plus'
 import { useLocaleStore } from '@/store/modules/locale'
 import { getRefreshToken, getTenantId } from '@/utils/auth'
-import { getUploadUrl } from '@/components/UploadFile/src/useUpload'
 
 defineOptions({ name: 'Editor' })
 
@@ -92,7 +91,7 @@ const editorConfig = computed((): IEditorConfig => {
       scroll: true,
       MENU_CONF: {
         ['uploadImage']: {
-          server: getUploadUrl(),
+          server: import.meta.env.VITE_UPLOAD_URL,
           // 单个文件的最大体积限制，默认为 2M
           maxFileSize: 5 * 1024 * 1024,
           // 最多可上传几个文件，默认为 100
@@ -140,7 +139,7 @@ const editorConfig = computed((): IEditorConfig => {
           }
         },
         ['uploadVideo']: {
-          server: getUploadUrl(),
+          server: import.meta.env.VITE_UPLOAD_URL,
           // 单个文件的最大体积限制，默认为 10M
           maxFileSize: 10 * 1024 * 1024,
           // 最多可上传几个文件，默认为 100

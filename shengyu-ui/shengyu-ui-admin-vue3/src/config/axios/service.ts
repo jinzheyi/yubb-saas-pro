@@ -7,7 +7,6 @@ import {
   getAccessToken,
   getRefreshToken,
   getTenantId,
-  getVisitTenantId,
   removeToken,
   setToken
 } from '@/utils/auth'
@@ -63,11 +62,6 @@ service.interceptors.request.use(
     if (tenantEnable && tenantEnable === 'true') {
       const tenantId = getTenantId()
       if (tenantId) config.headers['tenant-id'] = tenantId
-      // 只有登录时，才设置 visit-tenant-id 访问租户
-      const visitTenantId = getVisitTenantId()
-      if (config.headers.Authorization && visitTenantId) {
-        config.headers['visit-tenant-id'] = visitTenantId
-      }
     }
     const method = config.method?.toUpperCase()
     // 防止 GET 请求缓存
