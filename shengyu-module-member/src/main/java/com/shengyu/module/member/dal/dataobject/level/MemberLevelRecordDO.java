@@ -1,6 +1,6 @@
 package com.shengyu.module.member.dal.dataobject.level;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.member.dal.dataobject.user.MemberUserDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -22,7 +22,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MemberLevelRecordDO extends BaseDO {
+public class MemberLevelRecordDO extends TenantBaseDO {
 
     /**
      * 编号

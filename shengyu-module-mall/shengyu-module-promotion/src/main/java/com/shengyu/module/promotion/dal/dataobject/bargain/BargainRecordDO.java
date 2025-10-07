@@ -1,6 +1,7 @@
 package com.shengyu.module.promotion.dal.dataobject.bargain;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.promotion.enums.bargain.BargainRecordStatusEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -22,7 +23,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BargainRecordDO extends BaseDO {
+public class BargainRecordDO extends TenantBaseDO {
 
     /**
      * 编号

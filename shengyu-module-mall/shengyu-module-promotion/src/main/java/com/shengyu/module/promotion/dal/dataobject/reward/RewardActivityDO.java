@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.dal.dataobject.reward;
 
 import com.shengyu.framework.common.enums.CommonStatusEnum;
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.framework.mybatis.core.type.LongListTypeHandler;
 import com.shengyu.module.promotion.enums.common.PromotionConditionTypeEnum;
 import com.shengyu.module.promotion.enums.common.PromotionProductScopeEnum;
@@ -27,7 +27,7 @@ import java.util.Map;
 @KeySequence("promotion_reward_activity_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class RewardActivityDO extends BaseDO {
+public class RewardActivityDO extends TenantBaseDO {
 
     /**
      * 活动编号，主键自增

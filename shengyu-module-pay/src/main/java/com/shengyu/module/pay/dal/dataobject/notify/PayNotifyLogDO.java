@@ -1,7 +1,7 @@
 package com.shengyu.module.pay.dal.dataobject.notify;
 
 import com.shengyu.module.pay.enums.notify.PayNotifyStatusEnum;
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
@@ -19,7 +19,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PayNotifyLogDO extends BaseDO {
+public class PayNotifyLogDO extends TenantBaseDO {
 
     /**
      * 日志编号，自增

@@ -1,11 +1,12 @@
 package com.shengyu.module.promotion.dal.dataobject.diy;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.framework.mybatis.core.type.StringListTypeHandler;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import lombok.*;
 
 import java.util.List;
@@ -23,7 +24,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DiyPageDO extends BaseDO {
+public class DiyPageDO extends TenantBaseDO {
 
     /**
      * 装修页面编号

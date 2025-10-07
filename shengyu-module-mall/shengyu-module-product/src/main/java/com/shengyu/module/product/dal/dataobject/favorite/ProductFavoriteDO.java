@@ -1,6 +1,7 @@
 package com.shengyu.module.product.dal.dataobject.favorite;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.product.dal.dataobject.spu.ProductSpuDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -20,7 +21,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductFavoriteDO extends BaseDO {
+public class ProductFavoriteDO extends TenantBaseDO {
 
     /**
      * 编号，主键自增

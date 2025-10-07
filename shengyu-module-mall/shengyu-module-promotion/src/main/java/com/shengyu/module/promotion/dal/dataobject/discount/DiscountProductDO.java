@@ -1,6 +1,7 @@
 package com.shengyu.module.promotion.dal.dataobject.discount;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.promotion.enums.common.PromotionDiscountTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -19,7 +20,7 @@ import java.time.LocalDateTime;
 @KeySequence("promotion_discount_product_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class DiscountProductDO extends BaseDO {
+public class DiscountProductDO extends TenantBaseDO {
 
     /**
      * 编号，主键自增

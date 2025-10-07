@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.dal.dataobject.brokerage;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.pay.api.transfer.dto.PayTransferRespDTO;
 import com.shengyu.module.pay.enums.PayChannelEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageWithdrawStatusEnum;
@@ -25,7 +25,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BrokerageWithdrawDO extends BaseDO {
+public class BrokerageWithdrawDO extends TenantBaseDO {
 
     /**
      * 编号

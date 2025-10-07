@@ -1,7 +1,7 @@
 package com.shengyu.module.promotion.dal.dataobject.seckill;
 
 import com.shengyu.framework.common.enums.CommonStatusEnum;
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.framework.mybatis.core.type.LongListTypeHandler;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -24,7 +24,7 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
-public class SeckillActivityDO extends BaseDO {
+public class SeckillActivityDO extends TenantBaseDO {
 
     /**
      * 秒杀活动编号

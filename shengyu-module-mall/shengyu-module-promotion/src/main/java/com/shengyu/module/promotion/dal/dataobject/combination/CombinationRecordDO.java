@@ -1,6 +1,7 @@
 package com.shengyu.module.promotion.dal.dataobject.combination;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.promotion.enums.combination.CombinationRecordStatusEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -26,7 +27,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CombinationRecordDO extends BaseDO {
+public class CombinationRecordDO extends TenantBaseDO {
 
     /**
      * 团长编号 - 团长

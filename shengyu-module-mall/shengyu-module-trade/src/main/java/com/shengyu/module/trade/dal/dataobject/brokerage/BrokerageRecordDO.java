@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.dal.dataobject.brokerage;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.trade.enums.brokerage.BrokerageRecordBizTypeEnum;
 import com.shengyu.module.trade.enums.brokerage.BrokerageRecordStatusEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BrokerageRecordDO extends BaseDO {
+public class BrokerageRecordDO extends TenantBaseDO {
 
     /**
      * 编号

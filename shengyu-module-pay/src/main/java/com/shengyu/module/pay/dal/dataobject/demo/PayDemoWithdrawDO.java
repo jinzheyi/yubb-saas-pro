@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.dal.dataobject.demo;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.pay.dal.dataobject.transfer.PayTransferDO;
 import com.shengyu.module.pay.enums.PayChannelEnum;
 import com.shengyu.module.pay.enums.demo.PayDemoWithdrawStatusEnum;
@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @TableName(value ="pay_demo_withdraw", autoResultMap = true)
 @KeySequence("pay_demo_withdraw_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
-public class PayDemoWithdrawDO extends BaseDO {
+public class PayDemoWithdrawDO extends TenantBaseDO {
 
     /**
      * 提现单编号，自增

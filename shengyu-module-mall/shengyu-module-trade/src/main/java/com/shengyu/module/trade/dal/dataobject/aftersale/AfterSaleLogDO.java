@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.dal.dataobject.aftersale;
 
 import com.shengyu.framework.common.enums.UserTypeEnum;
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.trade.enums.aftersale.AfterSaleOperateTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -21,7 +21,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AfterSaleLogDO extends BaseDO {
+public class AfterSaleLogDO extends TenantBaseDO {
 
     /**
      * 编号

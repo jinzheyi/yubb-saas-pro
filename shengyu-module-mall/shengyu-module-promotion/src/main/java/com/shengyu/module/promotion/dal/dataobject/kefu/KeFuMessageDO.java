@@ -1,7 +1,8 @@
 package com.shengyu.module.promotion.dal.dataobject.kefu;
 
 import com.shengyu.framework.common.enums.UserTypeEnum;
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.promotion.enums.kefu.KeFuMessageContentTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -21,7 +22,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class KeFuMessageDO extends BaseDO {
+public class KeFuMessageDO extends TenantBaseDO {
 
     /**
      * 编号

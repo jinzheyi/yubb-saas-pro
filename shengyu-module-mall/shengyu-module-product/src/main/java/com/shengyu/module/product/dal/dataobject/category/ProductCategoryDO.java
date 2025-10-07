@@ -1,10 +1,11 @@
 package com.shengyu.module.product.dal.dataobject.category;
 
 import com.shengyu.framework.common.enums.CommonStatusEnum;
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import lombok.*;
 
 /**
@@ -20,7 +21,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductCategoryDO extends BaseDO {
+public class ProductCategoryDO extends TenantBaseDO {
 
     /**
      * 父分类编号 - 根分类

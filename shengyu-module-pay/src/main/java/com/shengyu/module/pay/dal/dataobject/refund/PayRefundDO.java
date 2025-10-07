@@ -1,6 +1,6 @@
 package com.shengyu.module.pay.dal.dataobject.refund;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.pay.enums.PayChannelEnum;
 import com.shengyu.module.pay.framework.pay.core.client.dto.refund.PayRefundRespDTO;
 import com.shengyu.module.pay.dal.dataobject.app.PayAppDO;
@@ -30,7 +30,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PayRefundDO extends BaseDO {
+public class PayRefundDO extends TenantBaseDO {
 
     /**
      * 退款单编号，数据库自增

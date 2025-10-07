@@ -1,6 +1,6 @@
 package com.shengyu.module.member.dal.dataobject.point;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.member.enums.point.MemberPointBizTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -20,7 +20,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MemberPointRecordDO extends BaseDO {
+public class MemberPointRecordDO extends TenantBaseDO {
 
     /**
      * 自增主键

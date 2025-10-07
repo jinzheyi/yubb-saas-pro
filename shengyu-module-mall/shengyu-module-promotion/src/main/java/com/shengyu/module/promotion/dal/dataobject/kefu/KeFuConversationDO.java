@@ -1,6 +1,7 @@
 package com.shengyu.module.promotion.dal.dataobject.kefu;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.promotion.enums.kefu.KeFuMessageContentTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
@@ -23,7 +24,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class KeFuConversationDO extends BaseDO {
+public class KeFuConversationDO extends TenantBaseDO {
 
     /**
      * 编号

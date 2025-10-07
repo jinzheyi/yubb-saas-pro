@@ -1,6 +1,6 @@
 package com.shengyu.module.member.dal.dataobject.config;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -19,7 +19,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MemberConfigDO extends BaseDO {
+public class MemberConfigDO extends TenantBaseDO {
 
     /**
      * 自增主键

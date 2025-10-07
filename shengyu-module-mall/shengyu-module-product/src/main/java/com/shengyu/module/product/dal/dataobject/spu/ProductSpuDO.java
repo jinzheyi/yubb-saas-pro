@@ -1,7 +1,8 @@
 package com.shengyu.module.product.dal.dataobject.spu;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.framework.mybatis.core.type.IntegerListTypeHandler;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.product.dal.dataobject.brand.ProductBrandDO;
 import com.shengyu.module.product.dal.dataobject.category.ProductCategoryDO;
 import com.shengyu.module.product.dal.dataobject.sku.ProductSkuDO;
@@ -28,7 +29,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductSpuDO extends BaseDO {
+public class ProductSpuDO extends TenantBaseDO {
 
     /**
      * 商品 SPU 编号，自增

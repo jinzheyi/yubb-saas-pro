@@ -1,6 +1,6 @@
 package com.shengyu.module.statistics.dal.dataobject.product;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -21,7 +21,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductStatisticsDO extends BaseDO {
+public class ProductStatisticsDO extends TenantBaseDO {
 
     /**
      * 编号，主键自增

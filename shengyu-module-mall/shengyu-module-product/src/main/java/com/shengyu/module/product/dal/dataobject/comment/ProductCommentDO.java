@@ -1,6 +1,7 @@
 package com.shengyu.module.product.dal.dataobject.comment;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.product.dal.dataobject.sku.ProductSkuDO;
 import com.shengyu.module.product.dal.dataobject.spu.ProductSpuDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
@@ -26,7 +27,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductCommentDO extends BaseDO {
+public class ProductCommentDO extends TenantBaseDO {
 
     /**
      * 默认匿名昵称

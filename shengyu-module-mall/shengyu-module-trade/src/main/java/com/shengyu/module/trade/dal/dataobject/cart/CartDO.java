@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.dal.dataobject.cart;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -15,7 +15,7 @@ import lombok.Data;
 @TableName("trade_cart")
 @KeySequence("trade_cart_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
-public class CartDO extends BaseDO {
+public class CartDO extends TenantBaseDO {
 
     // ========= 基础字段 BEGIN =========
 

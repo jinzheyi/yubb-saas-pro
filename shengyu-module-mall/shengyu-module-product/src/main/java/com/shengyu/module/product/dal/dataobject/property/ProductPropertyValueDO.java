@@ -1,9 +1,10 @@
 package com.shengyu.module.product.dal.dataobject.property;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import lombok.*;
 
 
@@ -20,7 +21,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductPropertyValueDO extends BaseDO {
+public class ProductPropertyValueDO extends TenantBaseDO {
 
     /**
      * SPU 单规格时，默认属性值 id

@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.dal.dataobject.order;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.trade.dal.dataobject.aftersale.AfterSaleDO;
 import com.shengyu.module.trade.dal.dataobject.cart.CartDO;
 import com.shengyu.module.trade.enums.order.TradeOrderItemAfterSaleStatusEnum;
@@ -21,7 +21,7 @@ import java.util.List;
 @TableName(value = "trade_order_item", autoResultMap = true)
 @KeySequence("trade_order_item_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
-public class TradeOrderItemDO extends BaseDO {
+public class TradeOrderItemDO extends TenantBaseDO {
 
     // ========== 订单项基本信息 ==========
     /**

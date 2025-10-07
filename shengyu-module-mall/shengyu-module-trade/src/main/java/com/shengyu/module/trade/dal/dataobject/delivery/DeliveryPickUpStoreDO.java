@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.dal.dataobject.delivery;
 
 import com.shengyu.framework.common.enums.CommonStatusEnum;
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.framework.mybatis.core.type.LongListTypeHandler;
 import com.shengyu.module.system.api.user.dto.AdminUserRespDTO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
@@ -21,7 +21,7 @@ import java.util.List;
 @TableName(value ="trade_delivery_pick_up_store", autoResultMap = true)
 @KeySequence("trade_delivery_pick_up_store_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
-public class DeliveryPickUpStoreDO extends BaseDO {
+public class DeliveryPickUpStoreDO extends TenantBaseDO {
 
     /**
      * 编号

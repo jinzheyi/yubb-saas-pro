@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.dal.dataobject.brokerage;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BrokerageUserDO extends BaseDO {
+public class BrokerageUserDO extends TenantBaseDO {
 
     /**
      * 用户编号

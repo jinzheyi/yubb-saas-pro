@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.dal.dataobject.order;
 
 import com.shengyu.framework.common.enums.TerminalEnum;
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.framework.mybatis.core.type.LongListTypeHandler;
 import com.shengyu.module.member.api.user.dto.MemberUserRespDTO;
 import com.shengyu.module.trade.dal.dataobject.brokerage.BrokerageUserDO;
@@ -35,7 +35,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TradeOrderDO extends BaseDO {
+public class TradeOrderDO extends TenantBaseDO {
 
     /**
      * 发货物流公司编号 - 空（无需发货）

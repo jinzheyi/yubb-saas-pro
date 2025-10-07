@@ -1,8 +1,9 @@
 package com.shengyu.module.promotion.dal.dataobject.coupon;
 
 import com.shengyu.framework.common.enums.CommonStatusEnum;
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.framework.mybatis.core.type.LongListTypeHandler;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.promotion.enums.common.PromotionDiscountTypeEnum;
 import com.shengyu.module.promotion.enums.common.PromotionProductScopeEnum;
 import com.shengyu.module.promotion.enums.coupon.CouponTakeTypeEnum;
@@ -28,7 +29,7 @@ import java.util.List;
 @KeySequence("promotion_coupon_template_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class CouponTemplateDO extends BaseDO {
+public class CouponTemplateDO extends TenantBaseDO {
 
     /**
      * 领取数量 - 不限制

@@ -1,7 +1,7 @@
 package com.shengyu.module.trade.dal.dataobject.order;
 
 import com.shengyu.framework.common.enums.UserTypeEnum;
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.module.trade.enums.order.TradeOrderOperateTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -21,7 +21,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TradeOrderLogDO extends BaseDO {
+public class TradeOrderLogDO extends TenantBaseDO {
 
     /**
      * 用户类型 - 系统

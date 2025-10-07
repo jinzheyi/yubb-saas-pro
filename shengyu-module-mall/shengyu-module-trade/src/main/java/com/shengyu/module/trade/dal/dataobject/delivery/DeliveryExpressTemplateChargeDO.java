@@ -1,6 +1,6 @@
 package com.shengyu.module.trade.dal.dataobject.delivery;
 
-import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import com.shengyu.framework.tenant.core.db.TenantBaseDO;
 import com.shengyu.framework.mybatis.core.type.IntegerListTypeHandler;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -18,7 +18,7 @@ import java.util.List;
 @TableName(value ="trade_delivery_express_template_charge", autoResultMap = true)
 @KeySequence("trade_delivery_express_template_charge_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
-public class DeliveryExpressTemplateChargeDO extends BaseDO {
+public class DeliveryExpressTemplateChargeDO extends TenantBaseDO {
 
     /**
      * 编号，自增
