@@ -3,6 +3,7 @@ package com.shengyu.module.system.controller.admin.captcha;
 import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.common.util.servlet.ServletUtils;
 import com.shengyu.framework.operatelog.core.annotations.OperateLog;
+import com.shengyu.framework.tenant.core.aop.TenantIgnore;
 import com.xingyuv.captcha.model.common.ResponseModel;
 import com.xingyuv.captcha.model.vo.CaptchaVO;
 import com.xingyuv.captcha.service.CaptchaService;
@@ -33,6 +34,7 @@ public class CaptchaController {
     @PostMapping({"/get"})
     @Operation(summary = "获得验证码")
     @PermitAll
+    @TenantIgnore
     @OperateLog(enable = false) // 避免 Post 请求被记录操作日志
     public ResponseModel get(@RequestBody CaptchaVO data, HttpServletRequest request) {
         assert request.getRemoteHost() != null;
@@ -43,6 +45,7 @@ public class CaptchaController {
     @PostMapping("/check")
     @Operation(summary = "校验验证码")
     @PermitAll
+    @TenantIgnore
     @OperateLog(enable = false) // 避免 Post 请求被记录操作日志
     public ResponseModel check(@RequestBody CaptchaVO data, HttpServletRequest request) {
         data.setBrowserInfo(getRemoteId(request));

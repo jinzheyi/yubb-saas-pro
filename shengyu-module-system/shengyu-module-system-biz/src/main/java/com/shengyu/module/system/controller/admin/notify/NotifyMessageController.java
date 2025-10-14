@@ -1,5 +1,6 @@
 package com.shengyu.module.system.controller.admin.notify;
 
+import com.shengyu.framework.apilog.core.annotation.ApiAccessLog;
 import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.pojo.PageResult;
@@ -88,6 +89,7 @@ public class NotifyMessageController {
 
     @GetMapping("/get-unread-count")
     @Operation(summary = "获得当前用户的未读站内信数量")
+    @ApiAccessLog(enable = false) // 由于前端会不断轮询该接口，记录日志没有意义
     public CommonResult<Long> getUnreadNotifyMessageCount() {
         return success(notifyMessageService.getUnreadNotifyMessageCount(
                 getLoginUserId(), UserTypeEnum.ADMIN.getValue()));

@@ -4,6 +4,7 @@ import com.shengyu.framework.web.config.WebProperties;
 import org.springframework.core.Ordered;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer;
 
 import javax.annotation.Resource;
@@ -15,7 +16,7 @@ import javax.annotation.Resource;
  * @author 圣钰科技
  */
 public abstract class AuthorizeRequestsCustomizer
-        implements Customizer<ExpressionUrlAuthorizationConfigurer<HttpSecurity>.ExpressionInterceptUrlRegistry>, Ordered {
+        implements Customizer<AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry>, Ordered {
 
     @Resource
     private WebProperties webProperties;

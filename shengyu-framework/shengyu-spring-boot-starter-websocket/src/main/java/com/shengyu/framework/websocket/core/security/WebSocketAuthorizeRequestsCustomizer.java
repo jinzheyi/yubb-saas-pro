@@ -4,6 +4,7 @@ import com.shengyu.framework.security.config.AuthorizeRequestsCustomizer;
 import com.shengyu.framework.websocket.config.WebSocketProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer;
 
 /**
@@ -17,8 +18,8 @@ public class WebSocketAuthorizeRequestsCustomizer extends AuthorizeRequestsCusto
     private final WebSocketProperties webSocketProperties;
 
     @Override
-    public void customize(ExpressionUrlAuthorizationConfigurer<HttpSecurity>.ExpressionInterceptUrlRegistry registry) {
-        registry.antMatchers(webSocketProperties.getPath()).permitAll();
+    public void customize(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry registry) {
+        registry.requestMatchers(webSocketProperties.getPath()).permitAll();
     }
 
 }
