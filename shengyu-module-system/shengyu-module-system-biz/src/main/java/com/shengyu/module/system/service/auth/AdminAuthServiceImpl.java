@@ -377,7 +377,10 @@ public class AdminAuthServiceImpl implements AdminAuthService {
                 TenantRespDTO tenantRespDTO = respDTOList.stream().filter(tenant -> tenant.getId().equals(tenantId)).findFirst().orElse(null);
                 if (Objects.nonNull(tenantRespDTO) && tenantRespDTO.getStatus().equals(CommonStatusEnum.ENABLE.getStatus())) {
                     userDOList.stream().filter(userDO -> userDO.getTenantId().equals(tenantId)
-                            && userDO.getStatus().equals(CommonStatusEnum.ENABLE.getStatus())).findFirst().ifPresent(adminUserDO::set);
+                            &&
+                            //启用或者待审核用户
+                            (userDO.getStatus().equals(CommonStatusEnum.ENABLE.getStatus()) || userDO.getStatus().equals(CommonStatusEnum.AWAIT.getStatus()))
+                    ).findFirst().ifPresent(adminUserDO::set);
                 }
                 if (Objects.nonNull(adminUserDO.get())) {
                     return;
@@ -388,7 +391,10 @@ public class AdminAuthServiceImpl implements AdminAuthService {
                         .collect(Collectors.toList());
                 for (TenantRespDTO tenant : respDTOList) {
                     userDOList.stream().filter(userDO -> userDO.getTenantId().equals(tenant.getId())
-                            && userDO.getStatus().equals(CommonStatusEnum.ENABLE.getStatus())).findFirst().ifPresent(adminUserDO::set);
+                            &&
+                            //启用或者待审核用户
+                            (userDO.getStatus().equals(CommonStatusEnum.ENABLE.getStatus()) || userDO.getStatus().equals(CommonStatusEnum.AWAIT.getStatus()))
+                    ).findFirst().ifPresent(adminUserDO::set);
                     if (Objects.nonNull(adminUserDO.get())) {
                         return;
                     }
