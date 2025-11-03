@@ -154,9 +154,9 @@ public class ProcessTaskController {
 
     @Operation(summary = "拿回任务")
     @PreAuthorize("@ss.hasPermission('flw:processTask:reclaim')")
-    @PostMapping("/reclaim-{taskId}")
-    public CommonResult<Boolean> reclaim(@PathVariable("taskId") Long taskId) {
-        return success(processTaskService.reclaim(taskId, FlowHelper.getFlowCreator()));
+    @PostMapping("/reclaim")
+    public boolean reclaim(@Validated @RequestBody TaskReclaimDTO dto) {
+        return processTaskService.reclaim(dto, FlowHelper.getFlowCreator());
     }
 
     @Operation(summary = "认领任务")

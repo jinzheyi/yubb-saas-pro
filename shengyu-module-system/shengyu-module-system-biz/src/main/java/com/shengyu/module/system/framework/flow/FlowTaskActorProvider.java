@@ -163,6 +163,7 @@ public class FlowTaskActorProvider implements TaskActorProvider {
 
         List<NodeAssignee> nodeAssigneeList = nodeModel.getNodeAssigneeList();
         if (ObjectUtils.isNotEmpty(nodeAssigneeList)) {
+
             if (null == nodeModel.getSetType()
 
               // 1，指定成员

@@ -88,11 +88,8 @@ public interface IFlwProcessTaskService {
 
     /**
      * 拿回任务
-     *
-     * @param taskId      任务ID
-     * @param flowCreator 任务创建者
      */
-    boolean reclaim(Long taskId, FlowCreator flowCreator);
+    boolean reclaim(TaskReclaimDTO dto, FlowCreator flowCreator);
 
     /**
      * 认领任务

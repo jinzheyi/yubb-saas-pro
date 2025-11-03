@@ -320,7 +320,7 @@ public class FlwProcessServiceImpl extends ServiceImpl<FlwProcessMapper, FlwProc
 
     @Override
     public boolean resumeProcessByInstanceId(Long instanceId) {
-        return flowLongEngine.taskService().resume(instanceId, FlowHelper.getFlowCreator());
+        return flowLongEngine.executeResumeTask(instanceId, FlowHelper.getFlowCreator());
     }
 
     @Override

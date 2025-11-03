@@ -81,6 +81,9 @@ public class TaskApprovalVO {
     @Schema(description = "驳回策略")
     private Integer rejectStrategy;
 
+    @Schema(description = "允许拿回任务ID")
+    private Long reclaimTaskId;
+
     @Schema(description = "流程设置")
     private FlwProcessSetting processSetting;
 

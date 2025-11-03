@@ -1,8 +1,9 @@
 package com.shengyu.module.system.service.flow.impl;
 
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.text.CharSequenceUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
@@ -10,17 +11,23 @@ import com.shengyu.framework.common.util.json.JsonUtils;
 import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
 import com.shengyu.framework.flowlong.engine.FlowLongEngine;
 import com.shengyu.framework.flowlong.engine.TaskService;
-import com.shengyu.framework.flowlong.engine.core.*;
+import com.shengyu.framework.flowlong.engine.core.CirculateArgs;
+import com.shengyu.framework.flowlong.engine.core.Execution;
+import com.shengyu.framework.flowlong.engine.core.FlowCreator;
+import com.shengyu.framework.flowlong.engine.core.FlowLongContext;
+import com.shengyu.framework.flowlong.engine.core.PageParam;
 import com.shengyu.framework.flowlong.engine.core.enums.ActorType;
+import com.shengyu.framework.flowlong.engine.core.enums.InstanceState;
 import com.shengyu.framework.flowlong.engine.core.enums.PerformType;
 import com.shengyu.framework.flowlong.engine.core.enums.ProcessType;
-import com.shengyu.framework.flowlong.engine.core.enums.TaskState;
 import com.shengyu.framework.flowlong.engine.core.enums.TaskType;
+import com.shengyu.framework.flowlong.engine.entity.ApprovalContent;
 import com.shengyu.framework.flowlong.engine.entity.FlwExtInstance;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisTask;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisTaskActor;
 import com.shengyu.framework.flowlong.engine.entity.FlwInstance;
+import com.shengyu.framework.flowlong.engine.entity.FlwProcessConfigure;
 import com.shengyu.framework.flowlong.engine.entity.FlwProcessSetting;
 import com.shengyu.framework.flowlong.engine.entity.FlwTask;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
@@ -33,7 +40,21 @@ import com.shengyu.framework.flowlong.engine.model.NodeModel;
 import com.shengyu.framework.flowlong.engine.model.ProcessModel;
 import com.shengyu.framework.security.core.LoginUser;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
-import com.shengyu.module.system.controller.admin.flow.dto.*;
+import com.shengyu.module.system.controller.admin.flow.dto.ExecuteTaskDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.ManualCirculateDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.NextNodesDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.ProcessApprovalDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.ProcessInfoDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.ProcessTaskDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.RejectTaskDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskAppendNodeDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskApprovalDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskCarbonCopyDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskCirculateViewDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskJumpDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskReclaimDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskRefuseDTO;
+import com.shengyu.module.system.controller.admin.flow.dto.TaskTransferDTO;
 import com.shengyu.module.system.controller.admin.flow.vo.FlwHisTaskActorVO;
 import com.shengyu.module.system.controller.admin.flow.vo.FlwHisTaskVO;
 import com.shengyu.module.system.controller.admin.flow.vo.PendingApprovalTaskVO;
@@ -41,11 +62,8 @@ import com.shengyu.module.system.controller.admin.flow.vo.PendingClaimTaskVO;
 import com.shengyu.module.system.controller.admin.flow.vo.ProcessTaskVO;
 import com.shengyu.module.system.controller.admin.flow.vo.TaskApprovalVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
-import com.shengyu.framework.flowlong.engine.entity.ApprovalContent;
 import com.shengyu.module.system.dal.dataobject.flow.FlwFormTemplate;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessApproval;
-import com.shengyu.framework.flowlong.engine.entity.FlwProcessConfigure;
-import com.shengyu.module.system.dal.dataobject.flow.FlwProcessForm;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.flow.FlowlongMapper;
 import com.shengyu.module.system.dal.mysql.flow.SyFlwHisInstanceMapper;
@@ -63,7 +81,6 @@ import com.shengyu.module.system.service.notify.NotifySendService;
 import com.shengyu.module.system.service.permission.PermissionService;
 import com.shengyu.module.system.service.user.AdminUserService;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -77,11 +94,10 @@ import javax.annotation.Resource;
 import javax.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 
 /**
  * 流程任务 服务实现类
@@ -272,6 +288,30 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
             }
         }
 
+        // 判断是否允许拿回
+        if (InstanceState.active.eq(hisInstance.getInstanceState())) {
+            if (Objects.equals(dto.getApprove(), 1)) {
+                List<FlwTask> ftList = flowLongEngine.queryService().getTasksByInstanceId(instanceId);
+                if (ObjectUtils.isNotEmpty(ftList)) {
+                    // 查找可能存在的子节点
+                    for (FlwTask ft: ftList) {
+                        Long parentTaskId = ft.getParentTaskId();
+                        if (null != parentTaskId) {
+                            // 当前用户为上一个任务审批人
+                            List<FlwHisTaskActor> htaList = flowLongEngine.queryService().getHisTaskActorsByTaskId(parentTaskId);
+                            if (ObjectUtils.isNotEmpty(htaList)) {
+                                LoginUser userSession = SecurityFrameworkUtils.getLoginUser();
+                                if (htaList.stream().anyMatch(t -> Objects.equals(t.getActorId(), userSession.getId()))) {
+                                    vo.setReclaimTaskId(parentTaskId);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         FlwProcessConfigure configure = flwProcessConfigureService.getByProcessId(hisInstance.getProcessId());
         if (null != configure) {
             boolean searchFormContent = true;
@@ -290,7 +330,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
 
             // 表单内容
             if (searchFormContent) {
-                vo.setFormContent(this.formContent(instanceId, hisInstance.getParentInstanceId()));
+                vo.setFormContent(flwProcessFormService.getFormContentByFlwHisInstance(hisInstance));
             }
         }
 
@@ -319,7 +359,9 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         List<String> pendingNodeKeys = new ArrayList<>();
 
         // 追加当前正在审核任务记录
-        if (null == hisInstance.getEndTime()) {
+        if (null == hisInstance.getEndTime()
+          || InstanceState.saveAsDraft.eq(hisInstance.getInstanceState())
+          || InstanceState.active.eq(hisInstance.getInstanceState())) {
             List<FlwTask> flwTaskList = flowLongEngine.queryService().getTasksByInstanceId(instanceId);
             if (CollectionUtils.isNotEmpty(flwTaskList)) {
                 FlwTask flwTask;
@@ -372,23 +414,6 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         vo.setRenderNodes(renderNodes);
         vo.setProcessApprovals(processApprovals);
         return vo;
-    }
-
-    /**
-     * 查询流程表单内容
-     * <p>
-     * 普通流程，表单填写内容，子流程需要获取主流程表单
-     * </p>
-     */
-    private String formContent(Long instanceId, Long parentInstanceId) {
-        // 普通流程，表单填写内容，子流程需要获取主流程表单
-        FlwProcessForm flwProcessForm;
-        if (null != parentInstanceId) {
-            flwProcessForm = flwProcessFormService.getByInstanceId(parentInstanceId);
-        } else {
-            flwProcessForm = flwProcessFormService.getByInstanceId(instanceId);
-        }
-        return null == flwProcessForm ? null : flwProcessForm.getContent();
     }
 
     @Override
@@ -501,9 +526,16 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
 
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public boolean reclaim(Long taskId, FlowCreator flowCreator) {
+    public boolean reclaim(TaskReclaimDTO dto, FlowCreator flowCreator) {
+        //评论
+        if (CharSequenceUtil.isNotBlank(dto.getOpinion())) {
+            ProcessApprovalDTO processApprovalDTO = new ProcessApprovalDTO();
+            processApprovalDTO.setInstanceId(dto.getInstanceId());
+            processApprovalDTO.setContent(dto.getOpinion());
+            flwProcessApprovalService.comment(processApprovalDTO, 9);
+        }
         TaskService taskService = flowLongEngine.taskService();
-        return taskService.reclaimTask(taskId, flowCreator).isPresent();
+        return taskService.reclaimTask(dto.getTaskId(), flowCreator).isPresent();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -527,20 +559,18 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
         }
         ServiceExceptionUtil.fail(!Objects.equals(flowCreator.getCreateId(), flwInstance.getCreateId()), ErrorCodeConstants.FLOW_1_002_029_068);
         FlowHelper.setProcessApprovalOpinion(dto.getContent());
-        if (dto.isTermination()) {
-            // 发起人撤回终止
-            flowLongEngine.runtimeService().revoke(dto.getInstanceId(), flowCreator);
-            return true;
-        }
-
         // 发起人撤回任务
         FlwHisTask fht = flowLongEngine.queryService().getStartTaskByInstanceId(dto.getInstanceId());
         ServiceExceptionUtil.fail(null == fht, ErrorCodeConstants.FLOW_1_002_029_066);
         TaskService taskService = flowLongEngine.taskService();
         ServiceExceptionUtil.fail(flwInstance.getCurrentNodeKey().equals(extInstance.getTaskKey()), ErrorCodeConstants.FLOW_1_002_029_017);
-        Optional<List<FlwTask>> flwTasks = taskService.withdrawTask(fht.getId(), flowCreator);
-        ServiceExceptionUtil.fail(!flwTasks.isPresent(), ErrorCodeConstants.FLOW_1_002_029_067);
-        return flwTasks.isPresent();
+        boolean result = taskService.withdrawTask(fht.getId(), flowCreator).isPresent();
+        ServiceExceptionUtil.fail(!result, ErrorCodeConstants.FLOW_1_002_029_067);
+        if (result && dto.isTermination()) {
+            // 发起人撤回终止
+            return flowLongEngine.runtimeService().revoke(dto.getInstanceId(), flowCreator);
+        }
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
