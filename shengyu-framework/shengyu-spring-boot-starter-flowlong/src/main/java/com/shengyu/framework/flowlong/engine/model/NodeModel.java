@@ -4,6 +4,8 @@
  */
 package com.shengyu.framework.flowlong.engine.model;
 
+import com.shengyu.framework.flowlong.engine.FlowConstants;
+import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
 import com.shengyu.framework.flowlong.engine.ModelInstance;
 import com.shengyu.framework.flowlong.engine.TaskTrigger;
 import com.shengyu.framework.flowlong.engine.assist.Assert;
@@ -263,6 +265,15 @@ public class NodeModel implements ModelInstance, Serializable {
     private Integer delayType;
 
     /**
+     * 是否保存权重
+     * <p>兼容模型设计错误导致权重误存</p>
+     */
+    public boolean saveWeight() {
+        // 票签，保留权重
+        return Objects.equals(4, this.examineMode);
+    }
+
+    /**
      * 执行节点
      *
      * @param flowLongContext 流程引擎上下文
@@ -296,9 +307,20 @@ public class NodeModel implements ModelInstance, Serializable {
             /*
              * 执行包容分支
              */
-            flowLongContext.getFlowConditionHandler()
-              .getInclusiveNodes(flowLongContext, execution, this)
-              .ifPresent(t -> t.forEach(s -> this.executeConditionNode(flowLongContext, execution, s)));
+            Optional<List<ConditionNode>> cnOpt = flowLongContext.getFlowConditionHandler()
+              .getInclusiveNodes(flowLongContext, execution, this);
+            if (cnOpt.isPresent()) {
+                List<ConditionNode> cnList = cnOpt.get();
+                int j = cnList.size();
+                for (int i = 0; i < j; i++) {
+                    if (i + 1 == j) {
+                        // 标记最后一个满足条件节点
+                        FlowDataTransfer.put(FlowConstants.processLastConditionNode, 1);
+                    }
+                    // 执行满足条件分支
+                    this.executeConditionNode(flowLongContext, execution, cnList.get(i));
+                }
+            }
             return true;
         }
 
@@ -661,6 +683,36 @@ public class NodeModel implements ModelInstance, Serializable {
         }
         Assert.isFalse(flag, "trigger execute error");
         return flag;
+    }
+
+    /**
+     * 判断抄送任务是否允许执行下一个节点
+     */
+    public boolean ccExecNextNode(NodeModel ccNextNode) {
+        boolean _exec = true;
+        // 非直属子节点情况判断分支问题
+        if (!Objects.equals(this.nodeKey, ccNextNode.getParentNode().getNodeKey())) {
+            // 直接父节点为并行分支或包容分支情况处理
+            NodeModel parentNode = this.getParentNode();
+            if (TaskType.parallelBranch.eq(parentNode.getType())) {
+                // 并行分支
+                List<ConditionNode> parallelNodes = parentNode.getParallelNodes();
+                if (null != parallelNodes) {
+                    // 最后一个并行节点执行下一步
+                    NodeModel parallelChildNode = parallelNodes.get(parallelNodes.size() - 1).getChildNode();
+                    if (null != parallelChildNode) {
+                        _exec = Objects.equals(this.nodeKey, parallelChildNode.getNodeKey());
+                    }
+                }
+            } else if (TaskType.inclusiveBranch.eq(parentNode.getType())) {
+                // 包容分支，为最后一个满足条件节点执行下一步
+                _exec = Objects.equals(1, FlowDataTransfer.get(FlowConstants.processLastConditionNode));
+                if (_exec) {
+                    FlowDataTransfer.removeByKey(FlowConstants.processLastConditionNode);
+                }
+            }
+        }
+        return _exec;
     }
 
     /**

@@ -156,8 +156,12 @@ public class FlowLongContext {
                 Map<String, Object> varMap = fromJson(variable, Map.class);
                 if (null != varMap) {
                     // 合并变量
-                    return toJson(Stream.concat(varMap.entrySet().stream(), args.entrySet().stream())
-                      .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, ((e1, e2) -> e2))));
+                    for (Map.Entry<String, Object> entry : args.entrySet()) {
+                        if (null != entry.getValue()) {
+                            varMap.put(entry.getKey(), entry.getValue());
+                        }
+                    }
+                    return toJson(varMap);
                 }
             }
             return toJson(args);
