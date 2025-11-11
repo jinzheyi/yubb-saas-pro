@@ -48,27 +48,19 @@ public class CommonConstants {
     /**
      * 工作流模块
      */
-    public static final String BPM_CODE = "bpm00000001";
-    /**
-     * 微信公众号
-     */
-    public static final String MP_CODE = "mp00000001";
+    public static final String BPM_CODE = "shengyu_flow";
     /**
      * 商城系统
      */
-    public static final String MALL_CODE = "mall00000001";
+    public static final String MALL_CODE = "shengyu_mall";
     /**
      * 支付系统
      */
-    public static final String PAY_CODE = "pay00000001";
-    /**
-     * 报表管理
-     */
-    public static final String REPORT_CODE = "report00000001";
+    public static final String PAY_CODE = "shengyu_pay";
     /**
      * 会员中心
      */
-    public static final String MEMBER_CODE = "member00000001";
+    public static final String MEMBER_CODE = "shengyu_member";
 
 
     /**
@@ -77,14 +69,9 @@ public class CommonConstants {
     @Getter
     @AllArgsConstructor
     public enum PlugAppSnEnum {
-        /**
-         * 微信公众号
-         */
-        MP(MP_CODE, "微信公众号"),
-        MALL(MALL_CODE, "商城系统"),
         BPM(BPM_CODE, "工作流模块"),
+        MALL(MALL_CODE, "商城系统"),
         PAY(PAY_CODE, "支付系统"),
-        REPORT(REPORT_CODE, "报表管理"),
         MEMBER(MEMBER_CODE, "会员中心"),
         ;
 
