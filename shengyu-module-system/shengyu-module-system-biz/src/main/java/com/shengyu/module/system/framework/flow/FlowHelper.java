@@ -1,5 +1,6 @@
 package com.shengyu.module.system.framework.flow;
 
+import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.flowlong.engine.FlowDataTransfer;
 import com.shengyu.framework.flowlong.engine.core.FlowCreator;
 import com.shengyu.framework.flowlong.engine.entity.FlwTaskActor;
@@ -25,7 +26,9 @@ public class FlowHelper {
      * 传递流程审批内容
      */
     public static void setProcessApprovalOpinion(String content) {
-        FlowDataTransfer.put("processApprovalOpinion", content);
+        if (StrUtil.isNotBlank(content)) {
+            FlowDataTransfer.put("processApprovalOpinion", content);
+        }
     }
 
     public static String getProcessApprovalOpinion() {

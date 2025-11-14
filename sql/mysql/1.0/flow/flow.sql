@@ -124,8 +124,7 @@ CREATE TABLE `flw_his_task_actor`  (
    `viewed` smallint NOT NULL DEFAULT 0 COMMENT '已阅 0，否 1，是',
    `resubmit` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否重新提交 0：否 1：是',
    PRIMARY KEY (`id`) USING BTREE,
-   INDEX `idx_his_task_actor_task_id`(`task_id` ASC) USING BTREE,
-   CONSTRAINT `flw_his_task_actor_task_id_fkey` FOREIGN KEY (`task_id`) REFERENCES `flw_his_task` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+   INDEX `idx_his_task_actor_task_id`(`task_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '历史任务参与者表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
@@ -389,8 +388,7 @@ CREATE TABLE `flw_task_actor`  (
 `extend`      json COMMENT '扩展json',
 `viewed` smallint NOT NULL DEFAULT '0' COMMENT '已阅 0，否 1，是',
 PRIMARY KEY (`id`) USING BTREE,
-INDEX `idx_task_actor_task_id`(`task_id` ASC) USING BTREE,
-CONSTRAINT `flw_task_actor_task_id_fkey` FOREIGN KEY (`task_id`) REFERENCES `flw_task` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+INDEX `idx_task_actor_task_id`(`task_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '任务参与者表' ROW_FORMAT = Dynamic;
 
 
