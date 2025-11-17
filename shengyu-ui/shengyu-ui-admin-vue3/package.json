@@ -27,8 +27,9 @@
     "@microsoft/fetch-event-source": "^2.0.1",
     "@videojs-player/vue": "^1.0.0",
     "@vueuse/core": "^10.9.0",
-    "@wangeditor/editor": "^5.1.23",
-    "@wangeditor/editor-for-vue": "^5.1.10",
+    "@wangeditor-next/editor": "^5.6.46",
+    "@wangeditor-next/editor-for-vue": "^5.1.14",
+    "@wangeditor-next/plugin-mention": "^1.0.16",
     "@zxcvbn-ts/core": "^3.0.4",
     "animate.css": "^4.1.1",
     "axios": "1.9.0",
@@ -60,6 +61,7 @@
     "pinia-plugin-persistedstate": "^3.2.1",
     "qrcode": "^1.5.3",
     "qs": "^6.12.0",
+    "snabbdom": "^3.6.2",
     "sortablejs": "^1.15.3",
     "steady-xml": "^0.1.0",
     "url": "^0.11.3",
@@ -69,6 +71,7 @@
     "vue-i18n": "9.10.2",
     "vue-router": "4.4.5",
     "vue-types": "^5.1.1",
+    "vue3-print-nb": "^0.1.4",
     "vue3-signature": "^0.2.4",
     "vuedraggable": "^4.1.0",
     "web-storage-cache": "^1.1.1",
@@ -137,12 +140,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://gitee.com/shengyucode/shengyu-ui-admin-vue3"
+    "url": "git+https://gitee.com/jinzheyi/yubb-saas-pro"
   },
   "bugs": {
-    "url": "https://gitee.com/shengyucode/shengyu-ui-admin-vue3/issues"
+    "url": "https://gitee.com/jinzheyi/yubb-saas-pro/issues"
   },
-  "homepage": "https://gitee.com/shengyucode/shengyu-ui-admin-vue3",
+  "homepage": "https://gitee.com/jinzheyi/yubb-saas-pro",
   "web-types": "./web-types.json",
   "engines": {
     "node": ">= 16.0.0",

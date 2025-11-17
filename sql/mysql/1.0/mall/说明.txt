@@ -2,6 +2,10 @@ ruoyi-vue-pro
 feat: vben5 codegen        2025/9/12 16:51
 
 
+yudao-ui-admin-vue3
+feat & bugfix：优化部门模块的代码、提示等    2025/10/26 16:07
+
+
 
 
 

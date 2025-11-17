@@ -78,6 +78,18 @@
             <artifactId>shengyu-spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Web 相关 -->
+        <dependency>
+            <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- 文件客户端：解决阿里云、腾讯云、minio 等 S3 连接 -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

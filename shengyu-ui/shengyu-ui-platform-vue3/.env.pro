@@ -6,11 +6,8 @@ VITE_DEV=false
 # 请求路径
 VITE_BASE_URL='http://apisaas.shengyukj.top'
 
-# 上传路径
-VITE_UPLOAD_URL='http://apisaas.shengyukj.top/platform-api/infra/file/upload'
-
-# 接口前缀
-VITE_API_BASEPATH=
+# 文件上传类型：server - 后端上传， client - 前端直连上传，仅支持 S3 服务
+VITE_UPLOAD_TYPE=server
 
 # 接口地址
 VITE_API_URL=/platform-api

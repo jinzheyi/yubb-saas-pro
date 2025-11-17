@@ -831,7 +831,7 @@ CREATE TABLE `promotion_diy_template` (
 -- ----------------------------
 CREATE TABLE `promotion_diy_page` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '装修页面编号',
-  `template_id` bigint NOT NULL DEFAULT '0' COMMENT '装修模板编号',
+  `template_id` bigint NULL DEFAULT NULL COMMENT '装修模板编号',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '页面名称',
   `remark` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '备注',
   `preview_pic_urls` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '预览图，多个逗号分隔，JSON 格式',

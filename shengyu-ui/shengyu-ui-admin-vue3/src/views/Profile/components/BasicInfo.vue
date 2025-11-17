@@ -79,7 +79,10 @@ const submit = () => {
       const data = unref(formRef)?.formModel as UserProfileUpdateReqVO
       await updateUserProfile(data)
       message.success(t('common.updateSuccess'))
-      await init()
+      const profile = await init()
+      await userStore.setUserNicknameAction(profile.nickname)
+      // 发送成功事件
+      emit('success')
     }
   })
 }

@@ -1,6 +1,4 @@
 <template>
-  <doc-alert title="【营销】积分商城活动" url="https://doc.iocoder.cn/mall/promotion-point/" />
-
   <ContentWrap>
     <!-- 搜索工作栏 -->
     <el-form
@@ -10,13 +8,17 @@
       class="-mb-15px"
       label-width="68px"
     >
-      <el-form-item label="活动状态" prop="status">
-        <el-select
-          v-model="queryParams.status"
+      <el-form-item label="分类名称" prop="name">
+        <el-input
+          v-model="queryParams.name"
           class="!w-240px"
           clearable
-          placeholder="请选择活动状态"
-        >
+          placeholder="请输入分类名称"
+          @keyup.enter="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="状态" prop="status">
+        <el-select v-model="queryParams.status" class="!w-240px" clearable placeholder="请选择状态">
           <el-option
             v-for="dict in getIntDictOptions(DICT_TYPE.COMMON_STATUS)"
             :key="dict.value"
@@ -24,6 +26,17 @@
             :value="dict.value"
           />
         </el-select>
+      </el-form-item>
+      <el-form-item label="创建时间" prop="createTime">
+        <el-date-picker
+          v-model="queryParams.createTime"
+          :default-time="[new Date('1 00:00:00'), new Date('1 23:59:59')]"
+          class="!w-240px"
+          end-placeholder="结束日期"
+          start-placeholder="开始日期"
+          type="daterange"
+          value-format="YYYY-MM-DD HH:mm:ss"
+        />
       </el-form-item>
       <el-form-item>
         <el-button @click="handleQuery">
@@ -35,7 +48,7 @@
           重置
         </el-button>
         <el-button
-          v-hasPermi="['promotion:point-activity:create']"
+          v-hasPermi="['promotion:article-category:create']"
           plain
           type="primary"
           @click="openForm('create')"
@@ -50,36 +63,19 @@
   <!-- 列表 -->
   <ContentWrap>
     <el-table v-loading="loading" :data="list" :show-overflow-tooltip="true" :stripe="true">
-      <el-table-column label="活动编号" min-width="80" prop="id" />
-      <el-table-column label="商品图片" min-width="80" prop="spuName">
-        <template #default="scope">
-          <el-image
-            :preview-src-list="[scope.row.picUrl]"
-            :src="scope.row.picUrl"
-            class="h-40px w-40px"
-            preview-teleported
-          />
+      <el-table-column align="center" label="编号" prop="id" min-width="100" />
+      <el-table-column align="center" label="分类名称" prop="name" min-width="240" />
+      <el-table-column label="分类图图" min-width="80">
+        <template #default="{ row }">
+          <el-image :src="row.picUrl" class="h-30px w-30px" @click="imagePreview(row.picUrl)" />
         </template>
       </el-table-column>
-      <el-table-column label="商品标题" min-width="300" prop="spuName" />
-      <el-table-column
-        :formatter="fenToYuanFormat"
-        label="原价"
-        min-width="100"
-        prop="marketPrice"
-      />
-      <el-table-column align="center" label="活动状态" min-width="100" prop="status">
+      <el-table-column align="center" label="状态" prop="status" min-width="150">
         <template #default="scope">
           <dict-tag :type="DICT_TYPE.COMMON_STATUS" :value="scope.row.status" />
         </template>
       </el-table-column>
-      <el-table-column align="center" label="库存" min-width="80" prop="stock" />
-      <el-table-column align="center" label="总库存" min-width="80" prop="totalStock" />
-      <el-table-column align="center" label="已兑换数量" min-width="100" prop="redeemedQuantity">
-        <template #default="{ row }">
-          {{ getRedeemedQuantity(row) }}
-        </template>
-      </el-table-column>
+      <el-table-column align="center" label="排序" prop="sort" min-width="150" />
       <el-table-column
         :formatter="dateFormatter"
         align="center"
@@ -87,10 +83,10 @@
         prop="createTime"
         width="180px"
       />
-      <el-table-column align="center" fixed="right" label="操作" width="150px">
+      <el-table-column align="center" label="操作">
         <template #default="scope">
           <el-button
-            v-hasPermi="['promotion:point-activity:update']"
+            v-hasPermi="['promotion:article-category:update']"
             link
             type="primary"
             @click="openForm('update', scope.row.id)"
@@ -98,17 +94,7 @@
             编辑
           </el-button>
           <el-button
-            v-if="scope.row.status === 0"
-            v-hasPermi="['promotion:point-activity:close']"
-            link
-            type="danger"
-            @click="handleClose(scope.row.id)"
-          >
-            关闭
-          </el-button>
-          <el-button
-            v-else
-            v-hasPermi="['promotion:point-activity:delete']"
+            v-hasPermi="['promotion:article-category:delete']"
             link
             type="danger"
             @click="handleDelete(scope.row.id)"
@@ -128,17 +114,17 @@
   </ContentWrap>
 
   <!-- 表单弹窗：添加/修改 -->
-  <PointActivityForm ref="formRef" @success="getList" />
+  <ArticleCategoryForm ref="formRef" @success="getList" />
 </template>
 
 <script lang="ts" setup>
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { dateFormatter } from '@/utils/formatTime'
-import PointActivityForm from './PointActivityForm.vue'
-import { fenToYuanFormat } from '@/utils/formatter'
-import { PointActivityApi } from '@/api/mall/promotion/point'
+import * as ArticleCategoryApi from '@/api/mall/promotion/articleCategory'
+import ArticleCategoryForm from './ArticleCategoryForm.vue'
+import { createImageViewer } from '@/components/ImageViewer'
 
-defineOptions({ name: 'PointActivity' })
+defineOptions({ name: 'PromotionArticleCategory' })
 
 const message = useMessage() // 消息弹窗
 const { t } = useI18n() // 国际化
@@ -150,16 +136,24 @@ const queryParams = reactive({
   pageNo: 1,
   pageSize: 10,
   name: null,
-  status: null
+  status: null,
+  createTime: []
 })
 const queryFormRef = ref() // 搜索的表单
-const getRedeemedQuantity = computed(() => (row: any) => (row.totalStock || 0) - (row.stock || 0)) // 获得商品已兑换数量
+const exportLoading = ref(false) // 导出的加载中
+
+/** 分类图预览 */
+const imagePreview = (imgUrl: string) => {
+  createImageViewer({
+    urlList: [imgUrl]
+  })
+}
 
 /** 查询列表 */
 const getList = async () => {
   loading.value = true
   try {
-    const data = await PointActivityApi.getPointActivityPage(queryParams)
+    const data = await ArticleCategoryApi.getArticleCategoryPage(queryParams)
     list.value = data.list
     total.value = data.total
   } finally {
@@ -185,26 +179,13 @@ const openForm = (type: string, id?: number) => {
   formRef.value.open(type, id)
 }
 
-/** 关闭按钮操作 */
-const handleClose = async (id: number) => {
-  try {
-    // 关闭的二次确认
-    await message.confirm('确认关闭该积分商城活动吗？')
-    // 发起关闭
-    await PointActivityApi.closePointActivity(id)
-    message.success('关闭成功')
-    // 刷新列表
-    await getList()
-  } catch {}
-}
-
 /** 删除按钮操作 */
 const handleDelete = async (id: number) => {
   try {
     // 删除的二次确认
     await message.delConfirm()
     // 发起删除
-    await PointActivityApi.deletePointActivity(id)
+    await ArticleCategoryApi.deleteArticleCategory(id)
     message.success(t('common.delSuccess'))
     // 刷新列表
     await getList()
@@ -212,7 +193,7 @@ const handleDelete = async (id: number) => {
 }
 
 /** 初始化 **/
-onMounted(async () => {
-  await getList()
+onMounted(() => {
+  getList()
 })
 </script>

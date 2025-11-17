@@ -1,12 +1,28 @@
 package com.shengyu.framework.file.core.client.s3;
 
 import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
+import com.shengyu.framework.common.util.http.HttpUtils;
 import com.shengyu.framework.file.core.client.AbstractFileClient;
-import io.minio.*;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
-import java.io.ByteArrayInputStream;
+import java.net.URI;
+import java.net.URL;
+import java.time.Duration;
 
 import static com.shengyu.framework.file.core.client.s3.S3FileClientConfig.ENDPOINT_ALIYUN;
 import static com.shengyu.framework.file.core.client.s3.S3FileClientConfig.ENDPOINT_TENCENT;
@@ -20,7 +36,10 @@ import static com.shengyu.framework.file.core.client.s3.S3FileClientConfig.ENDPO
  */
 public class S3FileClient extends AbstractFileClient<S3FileClientConfig> {
 
-    private MinioClient client;
+    private static final Duration EXPIRATION_DEFAULT = Duration.ofHours(24);
+
+    private S3Client client;
+    private S3Presigner presigner;
 
     public S3FileClient(Long id, S3FileClientConfig config) {
         super(id, config);
@@ -32,25 +51,90 @@ public class S3FileClient extends AbstractFileClient<S3FileClientConfig> {
         if (StrUtil.isEmpty(config.getDomain())) {
             config.setDomain(buildDomain());
         }
-        // 初始化客户端
-        client = MinioClient.builder()
-                .endpoint(buildEndpointURL()) // Endpoint URL
-                .region(buildRegion()) // Region
-                .credentials(config.getAccessKey(), config.getAccessSecret()) // 认证密钥
+        // 初始化 S3 客户端
+        Region region = Region.of("us-east-1"); // 必须填，但填什么都行，常见的值有 "us-east-1"，不填会报错
+        AwsCredentialsProvider credentialsProvider = StaticCredentialsProvider.create(
+                AwsBasicCredentials.create(config.getAccessKey(), config.getAccessSecret()));
+        URI endpoint = URI.create(buildEndpoint());
+        S3Configuration serviceConfiguration = S3Configuration.builder() // Path-style 访问
+                .pathStyleAccessEnabled(Boolean.TRUE.equals(config.getEnablePathStyleAccess()))
+                .chunkedEncodingEnabled(false) // 禁用分块编码，参见 https://t.zsxq.com/kBy57
+                .build();
+        client = S3Client.builder()
+                .credentialsProvider(credentialsProvider)
+                .region(region)
+                .endpointOverride(endpoint)
+                .serviceConfiguration(serviceConfiguration)
+                .build();
+        presigner = S3Presigner.builder()
+                .credentialsProvider(credentialsProvider)
+                .region(region)
+                .endpointOverride(endpoint)
+                .serviceConfiguration(serviceConfiguration)
                 .build();
     }
 
-    /**
-     * 基于 endpoint 构建调用云服务的 URL 地址
-     *
-     * @return URI 地址
-     */
-    private String buildEndpointURL() {
-        // 如果已经是 http 或者 https，则不进行拼接.主要适配 MinIO
-        if (HttpUtil.isHttp(config.getEndpoint()) || HttpUtil.isHttps(config.getEndpoint())) {
-            return config.getEndpoint();
+    @Override
+    public String upload(byte[] content, String path, String type) {
+        // 构造 PutObjectRequest
+        PutObjectRequest putRequest = PutObjectRequest.builder()
+                .bucket(config.getBucket())
+                .key(path)
+                .contentType(type)
+                .contentLength((long) content.length)
+                .build();
+        // 上传文件
+        client.putObject(putRequest, RequestBody.fromBytes(content));
+        // 拼接返回路径
+        return presignGetUrl(path, null);
+    }
+
+    @Override
+    public void delete(String path) {
+        DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                .bucket(config.getBucket())
+                .key(path)
+                .build();
+        client.deleteObject(deleteRequest);
+    }
+
+    @Override
+    public byte[] getContent(String path) {
+        GetObjectRequest getRequest = GetObjectRequest.builder()
+                .bucket(config.getBucket())
+                .key(path)
+                .build();
+        return IoUtil.readBytes(client.getObject(getRequest));
+    }
+
+    @Override
+    public String presignPutUrl(String path) {
+        return presigner.presignPutObject(PutObjectPresignRequest.builder()
+                        .signatureDuration(EXPIRATION_DEFAULT)
+                        .putObjectRequest(b -> b.bucket(config.getBucket()).key(path)).build())
+                .url().toString();
+    }
+
+    @Override
+    public String presignGetUrl(String url, Integer expirationSeconds) {
+        // 1. 将 url 转换为 path
+        String path = StrUtil.removePrefix(url, config.getDomain() + "/");
+        path = HttpUtils.removeUrlQuery(path);
+
+        // 2.1 情况一：公开访问：无需签名
+        // 考虑到老版本的兼容，所以必须是 config.getEnablePublicAccess() 为 false 时，才进行签名
+        if (!BooleanUtil.isFalse(config.getEnablePublicAccess())) {
+            return config.getDomain() + "/" + path;
         }
-        return StrUtil.format("https://{}", config.getEndpoint());
+
+        // 2.2 情况二：私有访问：生成 GET 预签名 URL
+        String finalPath = path;
+        Duration expiration = expirationSeconds != null ? Duration.ofSeconds(expirationSeconds) : EXPIRATION_DEFAULT;
+        URL signedUrl = presigner.presignGetObject(GetObjectPresignRequest.builder()
+                        .signatureDuration(expiration)
+                        .getObjectRequest(b -> b.bucket(config.getBucket()).key(finalPath)).build())
+                .url();
+        return signedUrl.toString();
     }
 
     /**
@@ -68,53 +152,16 @@ public class S3FileClient extends AbstractFileClient<S3FileClientConfig> {
     }
 
     /**
-     * 基于 bucket 构建 region 地区
+     * 节点地址补全协议头
      *
-     * @return region 地区
+     * @return 节点地址
      */
-    private String buildRegion() {
-        // 阿里云必须有 region，否则会报错
-        if (config.getEndpoint().contains(ENDPOINT_ALIYUN)) {
-            return StrUtil.subBefore(config.getEndpoint(), '.', false)
-                    .replaceAll("-internal", "")// 去除内网 Endpoint 的后缀
-                    .replaceAll("https://", "");
+    private String buildEndpoint() {
+        // 如果已经是 http 或者 https，则不进行拼接
+        if (HttpUtil.isHttp(config.getEndpoint()) || HttpUtil.isHttps(config.getEndpoint())) {
+            return config.getEndpoint();
         }
-        // 腾讯云必须有 region，否则会报错
-        if (config.getEndpoint().contains(ENDPOINT_TENCENT)) {
-            return StrUtil.subAfter(config.getEndpoint(), "cos.", false)
-                    .replaceAll("." + ENDPOINT_TENCENT, ""); // 去除 Endpoint
-        }
-        return null;
-    }
-
-    @Override
-    public String upload(byte[] content, String path, String type) throws Exception {
-        // 执行上传
-        client.putObject(PutObjectArgs.builder()
-                .bucket(config.getBucket()) // bucket 必须传递
-                .contentType(type)
-                .object(path) // 相对路径作为 key
-                .stream(new ByteArrayInputStream(content), content.length, -1) // 文件内容
-                .build());
-        // 拼接返回路径
-        return config.getDomain() + "/" + path;
-    }
-
-    @Override
-    public void delete(String path) throws Exception {
-        client.removeObject(RemoveObjectArgs.builder()
-                .bucket(config.getBucket()) // bucket 必须传递
-                .object(path) // 相对路径作为 key
-                .build());
-    }
-
-    @Override
-    public byte[] getContent(String path) throws Exception {
-        GetObjectResponse response = client.getObject(GetObjectArgs.builder()
-                .bucket(config.getBucket()) // bucket 必须传递
-                .object(path) // 相对路径作为 key
-                .build());
-        return IoUtil.readBytes(response);
+        return StrUtil.format("https://{}", config.getEndpoint());
     }
 
 }
