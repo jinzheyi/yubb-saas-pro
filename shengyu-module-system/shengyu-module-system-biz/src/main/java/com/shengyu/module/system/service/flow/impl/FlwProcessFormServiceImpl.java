@@ -5,7 +5,10 @@ import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
 import com.shengyu.framework.mybatis.core.service.BaseServiceImpl;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessForm;
 import com.shengyu.module.system.dal.mysql.flow.FlwProcessFormMapper;
+import com.shengyu.module.system.framework.flow.FlowForm;
 import com.shengyu.module.system.service.flow.IFlwProcessFormService;
+import java.util.HashMap;
+import java.util.Map;
 import javax.annotation.Resource;
 import org.springframework.stereotype.Service;
 
@@ -73,4 +76,14 @@ public class FlwProcessFormServiceImpl extends BaseServiceImpl<FlwProcessFormMap
         FlwProcessForm flwProcessForm = this.getByInstanceId(instanceId);
         return null == flwProcessForm ? null : flwProcessForm.getContent();
     }
+
+    @Override
+    public Map<String, Object> getArgsByInstanceId(Long instanceId) {
+        FlwProcessForm flwProcessForm = this.getByInstanceId(instanceId);
+        if (null != flwProcessForm) {
+            return FlowForm.convertArgs(flwProcessForm.getContent());
+        }
+        return new HashMap<>();
+    }
+
 }

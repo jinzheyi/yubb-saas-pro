@@ -527,13 +527,7 @@ public class FlwProcessTaskServiceImpl implements IFlwProcessTaskService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean reclaim(TaskReclaimDTO dto, FlowCreator flowCreator) {
-        //评论
-        if (CharSequenceUtil.isNotBlank(dto.getOpinion())) {
-            ProcessApprovalDTO processApprovalDTO = new ProcessApprovalDTO();
-            processApprovalDTO.setInstanceId(dto.getInstanceId());
-            processApprovalDTO.setContent(dto.getOpinion());
-            flwProcessApprovalService.comment(processApprovalDTO, 9);
-        }
+        FlowHelper.setProcessApprovalOpinion(dto.getOpinion());
         TaskService taskService = flowLongEngine.taskService();
         return taskService.reclaimTask(dto.getTaskId(), flowCreator).isPresent();
     }

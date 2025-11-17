@@ -29,13 +29,15 @@ public class FlowForm {
         return formArgs;
     }
 
-    private static Map<String, Object> convertArgs(String formContent) {
+    public static Map<String, Object> convertArgs(String formContent) {
         Map<String, Object> args = new HashMap<>();
-        FlowForm flowForm = JsonUtils.parseObject(formContent, FlowForm.class);
-        if (null != flowForm) {
-            Map<String, Object> formData = flowForm.getFormData();
-            if (null != formData) {
-                args.putAll(formData);
+        if (null != formContent) {
+            FlowForm flowForm = JsonUtils.parseObject(formContent, FlowForm.class);
+            if (null != flowForm) {
+                Map<String, Object> formData = flowForm.getFormData();
+                if (null != formData) {
+                    args.putAll(formData);
+                }
             }
         }
         return args;

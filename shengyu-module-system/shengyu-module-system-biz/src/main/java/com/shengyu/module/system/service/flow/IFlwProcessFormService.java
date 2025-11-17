@@ -3,6 +3,7 @@ package com.shengyu.module.system.service.flow;
 import com.shengyu.framework.flowlong.engine.entity.FlwHisInstance;
 import com.shengyu.framework.mybatis.core.service.IBaseService;
 import com.shengyu.module.system.dal.dataobject.flow.FlwProcessForm;
+import java.util.Map;
 
 /**
  * 流程定义表单 服务类
@@ -31,4 +32,10 @@ public interface IFlwProcessFormService extends IBaseService<FlwProcessForm> {
      * @param fhi 流程历史实例
      */
     String getFormContentByFlwHisInstance(FlwHisInstance fhi);
+
+    /**
+     * 根据流程实例ID获取表单参数MAP
+     */
+    Map<String, Object> getArgsByInstanceId(Long instanceId);
+
 }
