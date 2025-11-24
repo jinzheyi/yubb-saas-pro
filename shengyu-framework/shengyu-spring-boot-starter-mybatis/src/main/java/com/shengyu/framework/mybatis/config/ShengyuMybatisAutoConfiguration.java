@@ -1,6 +1,10 @@
 package com.shengyu.framework.mybatis.config;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shengyu.framework.common.util.json.JsonUtils;
 import com.shengyu.framework.mybatis.core.handler.DefaultDBFieldHandler;
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
@@ -14,6 +18,8 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.ConfigurableEnvironment;
+
+import java.util.List;
 
 /**
  * MyBaits 配置类
@@ -58,6 +64,17 @@ public class ShengyuMybatisAutoConfiguration {
         }
         // 找不到合适的 IKeyGenerator 实现类
         throw new IllegalArgumentException(StrUtil.format("DbType{} 找不到合适的 IKeyGenerator 实现类", dbType));
+    }
+
+    @Bean // 特殊：返回结果使用 Object 而不用 JacksonTypeHandler 的原因，避免因为 JacksonTypeHandler 被 mybatis 全局使用！
+    public Object jacksonTypeHandler(List<ObjectMapper> objectMappers) {
+        // 特殊：设置 JacksonTypeHandler 的 ObjectMapper！
+        ObjectMapper objectMapper = CollUtil.getFirst(objectMappers);
+        if (objectMapper == null) {
+            objectMapper = JsonUtils.getObjectMapper();
+        }
+        JacksonTypeHandler.setObjectMapper(objectMapper);
+        return new JacksonTypeHandler(Object.class);
     }
 
 }

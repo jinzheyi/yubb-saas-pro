@@ -29,7 +29,6 @@
         <module>shengyu-spring-boot-starter-biz-operatelog</module>
         <module>shengyu-spring-boot-starter-biz-sms</module>
 
-        <module>shengyu-spring-boot-starter-biz-pay</module>
         <module>shengyu-spring-boot-starter-biz-tenant</module>
         <module>shengyu-spring-boot-starter-biz-data-permission</module>
         <module>shengyu-spring-boot-starter-biz-error-code</module>

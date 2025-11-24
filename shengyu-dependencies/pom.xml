@@ -151,7 +151,7 @@
         <jodd.version>5.1.6</jodd.version>
 
 
-        <jsch.version>0.1.55</jsch.version>
+        <jsch.version>2.27.3</jsch.version>
         <commons-io.version>2.15.1</commons-io.version>
         <screw.version>1.0.5</screw.version>
         <captcha-plus.version>1.0.10</captcha-plus.version>
@@ -222,11 +222,6 @@
             <dependency>
                 <groupId>com.shengyu.boot</groupId>
                 <artifactId>shengyu-spring-boot-starter-biz-sms</artifactId>
-                <version>${revision}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.shengyu.boot</groupId>
-                <artifactId>shengyu-spring-boot-starter-biz-pay</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
@@ -699,7 +694,7 @@
                 <version>${commons-net.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.jcraft</groupId>
+                <groupId>com.github.mwiede</groupId>
                 <artifactId>jsch</artifactId> <!-- 解决 sftp 连接 -->
                 <version>${jsch.version}</version>
             </dependency>

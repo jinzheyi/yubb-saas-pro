@@ -103,8 +103,8 @@ public class SocialClientServiceImpl implements SocialClientService {
     @Value("${shengyu.wxa-subscribe-message.miniprogram-state:formal}")
     public String miniprogramState;
 
-    //    @Resource
-    @Autowired // TODO @芋艿：等 justauth1.4.1 发布，可以去掉
+    @SuppressWarnings("SpringJavaAutowiredFieldsWarningInspection")
+    @Autowired(required = false) // 由于 justauth.enable 配置项，可以关闭 AuthRequestFactory 的功能，所以这里只能不强制注入
     private AuthRequestFactory authRequestFactory;
 
     @Resource

@@ -55,6 +55,13 @@
             <version>${revision}</version>
         </dependency>
 
+        <!-- 工具类相关 -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <scope>provided</scope> <!-- 设置为 provided，只有工具类需要使用到 -->
+        </dependency>
+
         <!-- xss -->
         <dependency>
             <groupId>org.jsoup</groupId>
