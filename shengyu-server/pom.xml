@@ -48,6 +48,13 @@
             <artifactId>shengyu-module-member</artifactId>
             <version>${revision}</version>
         </dependency>
+        
+        <!-- IM聊天模块 -->
+        <dependency>
+            <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-module-im</artifactId>
+            <version>${revision}</version>
+        </dependency>
 
 <!--        &lt;!&ndash; 数据报表 &ndash;&gt;-->
 <!--        <dependency>-->

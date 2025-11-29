@@ -18,6 +18,7 @@
         <module>shengyu-module-infra</module>
         <module>shengyu-module-member</module>
         <module>shengyu-module-pay</module>
+        <module>shengyu-module-im</module>
 <!--        <module>shengyu-module-bpm</module>-->
 <!--        <module>shengyu-module-report</module>-->
 <!--        <module>shengyu-module-mp</module>-->
