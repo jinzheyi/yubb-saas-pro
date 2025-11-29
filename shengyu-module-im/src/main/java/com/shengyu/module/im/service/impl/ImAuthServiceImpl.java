@@ -1,16 +1,21 @@
 package com.shengyu.module.im.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.baomidou.mybatisplus.core.toolkit.Assert;
 import com.shengyu.framework.common.enums.UserTypeEnum;
-import com.shengyu.framework.security.core.LoginUser;
-import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.framework.common.enums.im.ImMessageTypeEnum;
+import com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants;
+import com.shengyu.framework.security.core.LoginUser;
 import com.shengyu.module.im.config.ImSecurityConfig;
+import com.shengyu.module.im.constants.ImConstants;
 import com.shengyu.module.im.dto.ImMessage;
 import com.shengyu.module.im.netty.ConnectionManager;
 import com.shengyu.module.im.service.ImAuthService;
 import com.shengyu.module.im.service.ImMessageService;
 import com.shengyu.module.im.service.ImUserService;
+import com.shengyu.module.im.util.ImEncryptionUtil;
+import com.shengyu.module.system.api.oauth2.OAuth2TokenApi;
+import com.shengyu.module.system.api.oauth2.dto.OAuth2AccessTokenCheckRespDTO;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,67 +53,82 @@ public class ImAuthServiceImpl implements ImAuthService {
     @Autowired
     private ImUserService imUserService;
 
-    @Value("${im.auth.tokenPrefix:im:token:}")
-    private String tokenPrefix;
-
-    @Value("${im.auth.tokenExpire:3600}")
-    private long tokenExpire;
+    @Autowired
+    private OAuth2TokenApi oauth2TokenApi;
 
     @Override
     public boolean authenticate(ChannelHandlerContext ctx, ImMessage message) {
         try {
+            log.info("开始处理IM登录请求: messageId={}", message.getMessageId());
+            
             // 从消息中获取token
             String token = message.getExt();
             if (token == null || token.isEmpty()) {
-                sendLoginResponse(ctx, false, "token不能为空");
+                log.warn("登录请求token为空: messageId={}", message.getMessageId());
+                sendLoginResponse(ctx, false, GlobalErrorCodeConstants.BAD_REQUEST.getMsg());
                 return false;
             }
 
             // 验证token格式
             if (!imSecurityConfig.validateTokenFormat(token)) {
-                sendLoginResponse(ctx, false, "无效的token格式");
+                log.warn("登录请求token格式无效: messageId={}, token={}", message.getMessageId(), token);
+                sendLoginResponse(ctx, false, GlobalErrorCodeConstants.BAD_REQUEST.getMsg());
                 return false;
             }
 
             // 提取纯净的token
             String pureToken = token;
             // 如果token带有Bearer前缀，去除前缀
-            if (token.startsWith("Bearer ")) {
-                pureToken = token.substring(7);
+            if (token.startsWith(ImConstants.BEARER_PREFIX)) {
+                pureToken = token.substring(ImConstants.BEARER_PREFIX.length());
+                log.debug("去除Bearer前缀后的token: {}", pureToken);
             }
 
             // 验证token并获取用户信息
+            log.debug("开始验证token: {}", pureToken);
             LoginUser loginUser = validateToken(pureToken);
             if (loginUser == null) {
-                sendLoginResponse(ctx, false, "无效的token");
+                log.warn("token验证失败: token={}", pureToken);
+                sendLoginResponse(ctx, false, GlobalErrorCodeConstants.UNAUTHORIZED.getMsg());
+                return false;
+            }
+            log.debug("token验证成功，获取到用户信息: userId={}, userType={}, tenantId={}", 
+                      loginUser.getId(), loginUser.getUserType(), loginUser.getTenantId());
+
+            // 检查用户类型，支持ADMIN和MEMBER用户类型
+            if (!UserTypeEnum.ADMIN.getValue().equals(loginUser.getUserType()) && 
+                !UserTypeEnum.MEMBER.getValue().equals(loginUser.getUserType())) {
+                log.warn("不支持的用户类型: userId={}, userType={}", loginUser.getId(), loginUser.getUserType());
+                sendLoginResponse(ctx, false, GlobalErrorCodeConstants.FORBIDDEN.getMsg());
                 return false;
             }
 
-            // 检查用户类型
-            if (!UserTypeEnum.ADMIN.getValue().equals(loginUser.getUserType())) {
-                sendLoginResponse(ctx, false, "不支持的用户类型");
-                return false;
-            }
-
-            // 添加用户连接
-            connectionManager.addConnection(loginUser.getId(), ctx);
+            // 添加用户连接，传入租户ID
+            log.debug("添加用户连接: userId={}, tenantId={}, channel={}", 
+                      loginUser.getId(), loginUser.getTenantId(), ctx.channel().id());
+            connectionManager.addConnection(loginUser.getId(), loginUser.getTenantId(), ctx);
 
             // 发送登录成功响应
             sendLoginResponse(ctx, true, "登录成功", loginUser);
+            log.debug("发送登录成功响应: userId={}", loginUser.getId());
 
             // 更新用户在线状态为在线
+            log.debug("更新用户在线状态为在线: userId={}", loginUser.getId());
             imUserService.updateOnlineStatus(loginUser.getId(), 1);
 
             // 推送离线消息
+            log.debug("开始推送离线消息: userId={}", loginUser.getId());
             pushOfflineMessages(ctx, loginUser.getId());
+            log.debug("离线消息推送完成: userId={}", loginUser.getId());
 
             // TODO: 通知其他用户该用户上线
 
-            log.info("用户IM登录成功: userId={}, tenantId={}", loginUser.getId(), loginUser.getTenantId());
+            log.info("用户IM登录成功: userId={}, userType={}, tenantId={}, channel={}", 
+                     loginUser.getId(), loginUser.getUserType(), loginUser.getTenantId(), ctx.channel().id());
             return true;
         } catch (Exception e) {
-            log.error("IM认证失败: {}", message, e);
-            sendLoginResponse(ctx, false, "认证失败");
+            log.error("IM认证失败: messageId={}, error={}", message.getMessageId(), e.getMessage(), e);
+            sendLoginResponse(ctx, false, GlobalErrorCodeConstants.INTERNAL_SERVER_ERROR.getMsg());
             return false;
         }
     }
@@ -131,26 +151,17 @@ public class ImAuthServiceImpl implements ImAuthService {
      */
     private LoginUser validateToken(String token) {
         try {
-            // 从Redis中获取登录用户信息
-            String key = "login_user:" + token;
-            Object loginUserObj = redisTemplate.opsForValue().get(key);
-            if (loginUserObj == null) {
-                return null;
-            }
-
-            // 刷新token过期时间
-            redisTemplate.expire(key, tokenExpire, TimeUnit.SECONDS);
-
-            // 转换为LoginUser对象
-            if (loginUserObj instanceof LoginUser) {
-                return (LoginUser) loginUserObj;
-            }
-            // 如果是JSON字符串，转换为LoginUser对象
-            if (loginUserObj instanceof String) {
-                return JSON.parseObject((String) loginUserObj, LoginUser.class);
-            }
-
-            return null;
+            // 使用系统的oauth2TokenApi验证token
+            OAuth2AccessTokenCheckRespDTO checkRespDTO = oauth2TokenApi.checkAccessToken(token);
+            Assert.notNull(checkRespDTO, "访问令牌不存在");
+            
+            // 将OAuth2AccessTokenCheckRespDTO转换为LoginUser对象
+            LoginUser loginUser = new LoginUser();
+            loginUser.setId(checkRespDTO.getUserId());
+            loginUser.setUserType(checkRespDTO.getUserType());
+            loginUser.setTenantId(checkRespDTO.getTenantId());
+            
+            return loginUser;
         } catch (Exception e) {
             log.error("验证token失败: {}", token, e);
             return null;
@@ -227,7 +238,7 @@ public class ImAuthServiceImpl implements ImAuthService {
             
             // 加密消息（如果启用了加密）
             if (encryptionEnabled && !encryptionKey.isEmpty()) {
-                finalMessage = com.shengyu.module.im.util.ImEncryptionUtil.encrypt(messageJson, encryptionKey);
+                finalMessage = ImEncryptionUtil.encrypt(messageJson, encryptionKey);
             }
             
             ctx.writeAndFlush(finalMessage);

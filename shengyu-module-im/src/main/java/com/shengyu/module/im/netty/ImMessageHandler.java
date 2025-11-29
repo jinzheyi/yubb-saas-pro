@@ -2,12 +2,16 @@ package com.shengyu.module.im.netty;
 
 import com.alibaba.fastjson.JSON;
 import com.shengyu.framework.common.enums.im.ImMessageTypeEnum;
+import com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants;
+import com.shengyu.module.im.constants.ImConstants;
 import com.shengyu.module.im.dto.ImMessage;
 import com.shengyu.module.im.service.ImAuthService;
 import com.shengyu.module.im.service.ImGroupService;
 import com.shengyu.module.im.service.ImMessageService;
-import com.shengyu.module.im.util.ImEncryptionUtil;
+import com.shengyu.module.system.api.oauth2.OAuth2TokenApi;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -15,6 +19,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.concurrent.*;
 
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -41,6 +49,9 @@ public class ImMessageHandler extends SimpleChannelInboundHandler<String> {
     @Autowired
     private ImGroupService imGroupService;
 
+    @Autowired
+    private OAuth2TokenApi oauth2TokenApi;
+
     /**
      * 消息加密密钥（Base64编码）
      */
@@ -52,19 +63,97 @@ public class ImMessageHandler extends SimpleChannelInboundHandler<String> {
      */
     @Value("${im.encryption.enabled:false}")
     private boolean encryptionEnabled;
-
+    
+    /**
+     * 消息最大重试次数
+     */
+    @Value("${im.message.maxRetryCount:3}")
+    private int maxRetryCount;
+    
+    /**
+     * 消息重试间隔（毫秒）
+     */
+    @Value("${im.message.retryInterval:1000}")
+    private long retryInterval;
+    
+    /**
+     * 待重试消息存储
+     * key: messageId
+     * value: 重试信息（包含消息、重试次数、下次重试时间）
+     */
+    private final Map<String, RetryMessageInfo> retryMessageMap = new ConcurrentHashMap<>();
+    
+    /**
+     * 重试定时器
+     */
+    private final ScheduledExecutorService retryExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread thread = new Thread(r, "im-message-retry-thread");
+        thread.setDaemon(true);
+        return thread;
+    });
+    
+    /**
+     * 重试消息信息
+     */
+    private class RetryMessageInfo {
+        private final ImMessage message;
+        private final Channel channel;
+        private int retryCount;
+        private long nextRetryTime;
+        
+        public RetryMessageInfo(ImMessage message, Channel channel) {
+            this.message = message;
+            this.channel = channel;
+            this.retryCount = 0;
+            this.nextRetryTime = System.currentTimeMillis();
+        }
+        
+        public ImMessage getMessage() {
+            return message;
+        }
+        
+        public Channel getChannel() {
+            return channel;
+        }
+        
+        public int getRetryCount() {
+            return retryCount;
+        }
+        
+        public void incrementRetryCount() {
+            this.retryCount++;
+            this.nextRetryTime = System.currentTimeMillis() + retryInterval;
+        }
+        
+        public long getNextRetryTime() {
+            return nextRetryTime;
+        }
+    }
+    
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        // 启动重试定时器，每秒检查一次待重试消息
+        retryExecutor.scheduleAtFixedRate(this::processRetryMessages, 0, 1, TimeUnit.SECONDS);
+        super.handlerAdded(ctx);
+    }
+    
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
         try {
+            log.debug("收到原始IM消息: {}", msg);
+            
             // 解密消息（如果启用了加密）
             String decryptedMsg = msg;
             if (encryptionEnabled && !msg.isEmpty()) {
-                decryptedMsg = ImEncryptionUtil.decrypt(msg, encryptionKey);
+                log.debug("开始解密消息");
+                decryptedMsg = com.shengyu.module.im.util.ImEncryptionUtil.decrypt(msg, encryptionKey);
+                log.debug("消息解密成功");
             }
             
             // 解析消息
             ImMessage message = JSON.parseObject(decryptedMsg, ImMessage.class);
-            log.debug("收到IM消息: {}", message);
+            log.info("收到IM消息: type={}, senderId={}, receiverId={}, messageId={}", 
+                     message.getType(), message.getSenderId(), message.getReceiverId(), message.getMessageId());
 
             // 根据消息类型处理
             int type = message.getType();
@@ -82,6 +171,8 @@ public class ImMessageHandler extends SimpleChannelInboundHandler<String> {
                 handleGroupChat(ctx, message);
             } else if (type == ImMessageTypeEnum.MESSAGE_ACK.getCode()) {
                 handleMessageAck(ctx, message);
+            } else if (type == ImMessageTypeEnum.TOKEN_REFRESH_REQUEST.getCode()) {
+                handleTokenRefresh(ctx, message);
             } else {
                 log.warn("未知消息类型: {}", message.getType());
             }
@@ -119,13 +210,13 @@ public class ImMessageHandler extends SimpleChannelInboundHandler<String> {
             // 1. 验证发送者权限
             Long senderId = connectionManager.getUserIdByChannel(ctx);
             if (senderId == null) {
-                sendErrorMessage(ctx, "未登录或登录已过期");
+                sendErrorMessage(ctx, GlobalErrorCodeConstants.UNAUTHORIZED.getMsg());
                 return;
             }
 
             // 2. 验证消息有效性
             if (message.getReceiverId() == null) {
-                sendErrorMessage(ctx, "接收者ID不能为空");
+                sendErrorMessage(ctx, GlobalErrorCodeConstants.BAD_REQUEST.getMsg());
                 return;
             }
 
@@ -148,7 +239,7 @@ public class ImMessageHandler extends SimpleChannelInboundHandler<String> {
             sendMessageAck(ctx, message.getMessageId(), true);
         } catch (Exception e) {
             log.error("处理单聊消息失败: {}", message, e);
-            sendErrorMessage(ctx, "处理消息失败");
+            sendErrorMessage(ctx, GlobalErrorCodeConstants.INTERNAL_SERVER_ERROR.getMsg());
         }
     }
 
@@ -160,13 +251,13 @@ public class ImMessageHandler extends SimpleChannelInboundHandler<String> {
             // 1. 验证发送者权限
             Long senderId = connectionManager.getUserIdByChannel(ctx);
             if (senderId == null) {
-                sendErrorMessage(ctx, "未登录或登录已过期");
+                sendErrorMessage(ctx, GlobalErrorCodeConstants.UNAUTHORIZED.getMsg());
                 return;
             }
 
             // 2. 验证消息有效性
             if (message.getReceiverId() == null) {
-                sendErrorMessage(ctx, "群组ID不能为空");
+                sendErrorMessage(ctx, GlobalErrorCodeConstants.BAD_REQUEST.getMsg());
                 return;
             }
 
@@ -197,7 +288,7 @@ public class ImMessageHandler extends SimpleChannelInboundHandler<String> {
             sendMessageAck(ctx, message.getMessageId(), true);
         } catch (Exception e) {
             log.error("处理群聊消息失败: {}", message, e);
-            sendErrorMessage(ctx, "处理消息失败");
+            sendErrorMessage(ctx, GlobalErrorCodeConstants.INTERNAL_SERVER_ERROR.getMsg());
         }
     }
 
@@ -209,7 +300,7 @@ public class ImMessageHandler extends SimpleChannelInboundHandler<String> {
             // 1. 验证发送者权限
             Long senderId = connectionManager.getUserIdByChannel(ctx);
             if (senderId == null) {
-                sendErrorMessage(ctx, "未登录或登录已过期");
+                sendErrorMessage(ctx, GlobalErrorCodeConstants.UNAUTHORIZED.getMsg());
                 return;
             }
 
@@ -218,31 +309,65 @@ public class ImMessageHandler extends SimpleChannelInboundHandler<String> {
             log.info("消息已确认: messageId={}, senderId={}", message.getMessageId(), senderId);
         } catch (Exception e) {
             log.error("处理消息确认失败: {}", message, e);
-            sendErrorMessage(ctx, "处理消息确认失败");
+            sendErrorMessage(ctx, GlobalErrorCodeConstants.INTERNAL_SERVER_ERROR.getMsg());
         }
     }
 
     /**
-     * 发送消息（自动处理加密）
+     * 处理Token刷新请求
+     */
+    private void handleTokenRefresh(ChannelHandlerContext ctx, ImMessage message) {
+        try {
+            // 1. 验证发送者权限
+            Long senderId = connectionManager.getUserIdByChannel(ctx);
+            if (senderId == null) {
+                sendErrorMessage(ctx, GlobalErrorCodeConstants.UNAUTHORIZED.getMsg());
+                return;
+            }
+
+            // 2. 从消息中获取refreshToken
+            String refreshToken = message.getExt();
+            if (refreshToken == null || refreshToken.isEmpty()) {
+                sendErrorMessage(ctx, GlobalErrorCodeConstants.BAD_REQUEST.getMsg());
+                return;
+            }
+
+            // 3. 调用系统服务刷新token
+            // 注意：这里使用默认的clientId，实际应用中应该根据具体情况获取
+            String clientId = ImConstants.DEFAULT_CLIENT_ID;
+            com.shengyu.module.system.api.oauth2.dto.OAuth2AccessTokenRespDTO accessTokenRespDTO = oauth2TokenApi.refreshAccessToken(refreshToken, clientId);
+
+            // 4. 构建刷新响应
+            ImMessage response = new ImMessage();
+            response.setType(ImMessageTypeEnum.TOKEN_REFRESH_RESPONSE.getCode());
+            response.setTimestamp(LocalDateTime.now());
+            response.setStatus(0); // 成功
+            
+            // 5. 将新的token信息放入响应的ext字段
+            com.alibaba.fastjson.JSONObject tokenInfo = new com.alibaba.fastjson.JSONObject();
+            tokenInfo.put("accessToken", accessTokenRespDTO.getAccessToken());
+            tokenInfo.put("refreshToken", accessTokenRespDTO.getRefreshToken());
+            tokenInfo.put("expiresTime", accessTokenRespDTO.getExpiresTime());
+            response.setExt(tokenInfo.toJSONString());
+
+            // 6. 发送刷新响应
+            sendMessage(ctx, response);
+            log.info("Token刷新成功: senderId={}", senderId);
+        } catch (Exception e) {
+            log.error("处理Token刷新失败: {}", message, e);
+            sendErrorMessage(ctx, GlobalErrorCodeConstants.INTERNAL_SERVER_ERROR.getMsg());
+        }
+    }
+
+    /**
+     * 发送消息（自动处理加密和重试）
      */
     private void sendMessage(ChannelHandlerContext ctx, ImMessage message) {
-        try {
-            String messageJson = JSON.toJSONString(message);
-            
-            // 加密消息（如果启用了加密）
-            String finalMessage = messageJson;
-            if (encryptionEnabled) {
-                finalMessage = ImEncryptionUtil.encrypt(messageJson, encryptionKey);
-            }
-            
-            ctx.writeAndFlush(finalMessage);
-        } catch (Exception e) {
-            log.error("发送消息失败: {}", message, e);
-        }
+        sendMessage(ctx.channel(), message);
     }
 
     /**
-     * 发送消息（自动处理加密）
+     * 发送消息（自动处理加密和重试）
      */
     private void sendMessage(Channel channel, ImMessage message) {
         try {
@@ -251,12 +376,112 @@ public class ImMessageHandler extends SimpleChannelInboundHandler<String> {
             // 加密消息（如果启用了加密）
             String finalMessage = messageJson;
             if (encryptionEnabled) {
-                finalMessage = ImEncryptionUtil.encrypt(messageJson, encryptionKey);
+                finalMessage = com.shengyu.module.im.util.ImEncryptionUtil.encrypt(messageJson, encryptionKey);
             }
             
-            channel.writeAndFlush(finalMessage);
+            // 发送消息并添加监听器
+            channel.writeAndFlush(finalMessage).addListener((ChannelFutureListener) future -> {
+                if (!future.isSuccess()) {
+                    // 发送失败，添加到重试队列
+                    handleSendFailure(message, channel, future.cause());
+                }
+            });
         } catch (Exception e) {
             log.error("发送消息失败: {}", message, e);
+            // 异常，添加到重试队列
+            handleSendFailure(message, channel, e);
+        }
+    }
+    
+    /**
+     * 处理消息发送失败
+     */
+    private void handleSendFailure(ImMessage message, Channel channel, Throwable cause) {
+        String messageId = message.getMessageId();
+        if (messageId == null || messageId.isEmpty()) {
+            log.error("消息ID为空，无法重试: {}", message, cause);
+            return;
+        }
+        
+        RetryMessageInfo retryInfo = retryMessageMap.computeIfAbsent(messageId, k -> new RetryMessageInfo(message, channel));
+        
+        if (retryInfo.getRetryCount() >= maxRetryCount) {
+            // 超过最大重试次数，移除并记录日志
+            retryMessageMap.remove(messageId);
+            log.error("消息重试超过最大次数，放弃重试: messageId={}, retryCount={}", messageId, retryInfo.getRetryCount());
+            return;
+        }
+        
+        // 增加重试次数
+        retryInfo.incrementRetryCount();
+        log.warn("消息发送失败，将进行重试: messageId={}, retryCount={}, error={}", 
+                 messageId, retryInfo.getRetryCount(), cause.getMessage());
+    }
+    
+    /**
+     * 处理待重试消息
+     */
+    private void processRetryMessages() {
+        long currentTime = System.currentTimeMillis();
+        
+        // 遍历所有待重试消息
+        for (Map.Entry<String, RetryMessageInfo> entry : retryMessageMap.entrySet()) {
+            String messageId = entry.getKey();
+            RetryMessageInfo retryInfo = entry.getValue();
+            
+            // 检查是否到了重试时间
+            if (currentTime >= retryInfo.getNextRetryTime()) {
+                ImMessage message = retryInfo.getMessage();
+                Channel channel = retryInfo.getChannel();
+                
+                try {
+                    if (!channel.isActive()) {
+                        // 通道已关闭，移除重试消息
+                        retryMessageMap.remove(messageId);
+                        log.error("通道已关闭，放弃重试: messageId={}, channel={}", messageId, channel.id());
+                        continue;
+                    }
+                    
+                    // 重新发送消息
+                    String messageJson = JSON.toJSONString(message);
+                    String finalMessage = messageJson;
+                    if (encryptionEnabled) {
+                        finalMessage = com.shengyu.module.im.util.ImEncryptionUtil.encrypt(messageJson, encryptionKey);
+                    }
+                    
+                    channel.writeAndFlush(finalMessage).addListener((ChannelFutureListener) future -> {
+                        if (!future.isSuccess()) {
+                            // 再次发送失败，检查是否超过最大重试次数
+                            if (retryInfo.getRetryCount() >= maxRetryCount) {
+                                retryMessageMap.remove(messageId);
+                                log.error("消息重试超过最大次数，放弃重试: messageId={}, retryCount={}", 
+                                         messageId, retryInfo.getRetryCount());
+                            } else {
+                                // 增加重试次数
+                                retryInfo.incrementRetryCount();
+                                log.warn("消息重试失败，将继续重试: messageId={}, retryCount={}, error={}", 
+                                         messageId, retryInfo.getRetryCount(), future.cause().getMessage());
+                            }
+                        } else {
+                            // 发送成功，移除重试消息
+                            retryMessageMap.remove(messageId);
+                            log.info("消息重试成功: messageId={}, retryCount={}", messageId, retryInfo.getRetryCount());
+                        }
+                    });
+                } catch (Exception e) {
+                    log.error("处理重试消息失败: messageId={}, retryCount={}", messageId, retryInfo.getRetryCount(), e);
+                    
+                    // 异常，检查是否超过最大重试次数
+                    if (retryInfo.getRetryCount() >= maxRetryCount) {
+                        retryMessageMap.remove(messageId);
+                        log.error("消息重试超过最大次数，放弃重试: messageId={}, retryCount={}", 
+                                 messageId, retryInfo.getRetryCount());
+                    } else {
+                        // 增加重试次数
+                        retryInfo.incrementRetryCount();
+                    }
+                }
+            }
         }
     }
 

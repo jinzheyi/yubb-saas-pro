@@ -54,6 +54,9 @@ public class ImNettyServer {
     @Value("${im.netty.allIdleTime:0}")
     private int allIdleTime;
 
+    @Value("${im.netty.maxFrameLength:104857600}")
+    private int maxFrameLength;
+
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private ChannelFuture channelFuture;
@@ -95,7 +98,7 @@ public class ImNettyServer {
                                     // 空闲检测
                                     .addLast(new IdleStateHandler(readIdleTime, writeIdleTime, allIdleTime, TimeUnit.SECONDS))
                                     // 基于长度的帧解码器
-                                    .addLast(new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4))
+                                    .addLast(new LengthFieldBasedFrameDecoder(maxFrameLength, 0, 4, 0, 4))
                                     // 长度字段预处理器
                                     .addLast(new LengthFieldPrepender(4))
                                     // 字符串编解码器
@@ -109,10 +112,17 @@ public class ImNettyServer {
 
             // 绑定端口并启动服务器
             log.info("开始绑定端口: {}", port);
+            log.info("Netty配置信息: bossGroupThreads={}, workerGroupThreads={}, maxFrameLength={}", 
+                     bossGroupThreads, workerGroupThreads, maxFrameLength);
+            log.info("空闲检测配置: readIdleTime={}s, writeIdleTime={}s, allIdleTime={}s", 
+                     readIdleTime, writeIdleTime, allIdleTime);
+            
             channelFuture = bootstrap.bind(port).sync();
-            log.info("IM Netty服务器启动成功！监听端口: {}", port);
+            log.info("IM Netty服务器启动成功！监听端口: {}, 本地地址: {}", 
+                     port, channelFuture.channel().localAddress());
             log.info("服务器状态: 运行中");
-            log.info("EventLoopGroup状态: BossGroup={}, WorkerGroup={}", bossGroup.isShutdown(), workerGroup.isShutdown());
+            log.info("EventLoopGroup状态: BossGroup={}, WorkerGroup={}", 
+                     bossGroup.isShutdown(), workerGroup.isShutdown());
 
             // 等待服务器关闭
             channelFuture.channel().closeFuture().addListener(future -> {

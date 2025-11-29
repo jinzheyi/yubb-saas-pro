@@ -1,6 +1,7 @@
 package com.shengyu.module.im.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.shengyu.module.im.constants.ImConstants;
 import com.shengyu.module.im.dal.dataobject.ImMessageDO;
 import com.shengyu.module.im.dal.mapper.ImMessageMapper;
 import com.shengyu.module.im.dto.ImMessage;
@@ -78,7 +79,7 @@ public class ImMessageServiceImpl implements ImMessageService {
     @Override
     public boolean deleteMessage(String messageId) {
         ImMessageDO messageDO = new ImMessageDO();
-        messageDO.setStatus(2); // 2表示已删除
+        messageDO.setStatus(ImConstants.MESSAGE_STATUS_DELETED); // 2表示已删除
         
         LambdaQueryWrapper<ImMessageDO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ImMessageDO::getMessageId, messageId);
@@ -102,12 +103,12 @@ public class ImMessageServiceImpl implements ImMessageService {
         // 检查消息是否可以撤回（通常在发送后2分钟内）
         long now = System.currentTimeMillis();
         long sendTime = messageDO.getCreateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
-        if (now - sendTime > 2 * 60 * 1000) { // 2分钟
+        if (now - sendTime > ImConstants.MESSAGE_RECALL_TIMEOUT) { // 2分钟
             throw exception(ErrorCodeConstants.IM_MESSAGE_RECALL_TIMEOUT);
         }
         
         // 更新消息状态为撤回
-        messageDO.setStatus(3); // 3表示已撤回
+        messageDO.setStatus(ImConstants.MESSAGE_STATUS_RECALLED); // 3表示已撤回
         
         int result = imMessageMapper.updateById(messageDO);
         return result > 0;

@@ -28,12 +28,23 @@ public class ConnectionManager {
     private final Map<Channel, Long> channelUserMap = new ConcurrentHashMap<>();
 
     /**
+     * 用户ID -> 租户ID映射
+     */
+    private final Map<Long, Long> userTenantMap = new ConcurrentHashMap<>();
+
+    /**
+     * 租户ID -> 用户ID列表映射
+     */
+    private final Map<Long, Map<Long, Channel>> tenantUserMap = new ConcurrentHashMap<>();
+
+    /**
      * 添加用户连接
      *
-     * @param userId 用户ID
-     * @param ctx    通道上下文
+     * @param userId   用户ID
+     * @param tenantId 租户ID
+     * @param ctx      通道上下文
      */
-    public void addConnection(Long userId, ChannelHandlerContext ctx) {
+    public void addConnection(Long userId, Long tenantId, ChannelHandlerContext ctx) {
         Channel channel = ctx.channel();
         // 移除旧连接
         removeConnectionByUserId(userId);
@@ -41,11 +52,36 @@ public class ConnectionManager {
         Long oldUserId = channelUserMap.get(channel);
         if (oldUserId != null) {
             userChannelMap.remove(oldUserId);
+            Long oldTenantId = userTenantMap.remove(oldUserId);
+            if (oldTenantId != null) {
+                Map<Long, Channel> tenantUsers = tenantUserMap.get(oldTenantId);
+                if (tenantUsers != null) {
+                    tenantUsers.remove(oldUserId);
+                    if (tenantUsers.isEmpty()) {
+                        tenantUserMap.remove(oldTenantId);
+                    }
+                }
+            }
         }
         // 添加新映射
         userChannelMap.put(userId, channel);
         channelUserMap.put(channel, userId);
-        log.info("用户连接添加成功: userId={}, channel={}", userId, channel.id());
+        userTenantMap.put(userId, tenantId);
+        
+        // 添加到租户用户映射
+        tenantUserMap.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>()).put(userId, channel);
+        
+        log.info("用户连接添加成功: userId={}, tenantId={}, channel={}", userId, tenantId, channel.id());
+    }
+    
+    /**
+     * 添加用户连接（兼容旧版本）
+     *
+     * @param userId 用户ID
+     * @param ctx    通道上下文
+     */
+    public void addConnection(Long userId, ChannelHandlerContext ctx) {
+        addConnection(userId, 0L, ctx);
     }
 
     /**
@@ -58,6 +94,16 @@ public class ConnectionManager {
         Long userId = channelUserMap.remove(channel);
         if (userId != null) {
             userChannelMap.remove(userId);
+            Long tenantId = userTenantMap.remove(userId);
+            if (tenantId != null) {
+                Map<Long, Channel> tenantUsers = tenantUserMap.get(tenantId);
+                if (tenantUsers != null) {
+                    tenantUsers.remove(userId);
+                    if (tenantUsers.isEmpty()) {
+                        tenantUserMap.remove(tenantId);
+                    }
+                }
+            }
             log.info("用户连接移除成功: userId={}, channel={}", userId, channel.id());
         }
     }
@@ -71,6 +117,16 @@ public class ConnectionManager {
         Channel channel = userChannelMap.remove(userId);
         if (channel != null) {
             channelUserMap.remove(channel);
+            Long tenantId = userTenantMap.remove(userId);
+            if (tenantId != null) {
+                Map<Long, Channel> tenantUsers = tenantUserMap.get(tenantId);
+                if (tenantUsers != null) {
+                    tenantUsers.remove(userId);
+                    if (tenantUsers.isEmpty()) {
+                        tenantUserMap.remove(tenantId);
+                    }
+                }
+            }
             log.info("根据用户ID移除连接成功: userId={}, channel={}", userId, channel.id());
         }
     }
@@ -106,12 +162,42 @@ public class ConnectionManager {
     }
 
     /**
+     * 获取用户的租户ID
+     *
+     * @param userId 用户ID
+     * @return 租户ID
+     */
+    public Long getTenantIdByUserId(Long userId) {
+        return userTenantMap.get(userId);
+    }
+
+    /**
+     * 根据租户ID获取在线用户数量
+     *
+     * @param tenantId 租户ID
+     * @return 在线用户数量
+     */
+    public int getOnlineUserCountByTenant(Long tenantId) {
+        Map<Long, Channel> tenantUsers = tenantUserMap.get(tenantId);
+        return tenantUsers != null ? tenantUsers.size() : 0;
+    }
+
+    /**
      * 获取在线用户数量
      *
      * @return 在线用户数量
      */
     public int getOnlineUserCount() {
         return userChannelMap.size();
+    }
+
+    /**
+     * 获取在线租户数量
+     *
+     * @return 在线租户数量
+     */
+    public int getOnlineTenantCount() {
+        return tenantUserMap.size();
     }
 
     /**
@@ -125,7 +211,29 @@ public class ConnectionManager {
         });
         userChannelMap.clear();
         channelUserMap.clear();
+        userTenantMap.clear();
+        tenantUserMap.clear();
         log.info("所有用户连接已关闭");
+    }
+    
+    /**
+     * 关闭指定租户的所有连接
+     *
+     * @param tenantId 租户ID
+     */
+    public void closeConnectionsByTenant(Long tenantId) {
+        Map<Long, Channel> tenantUsers = tenantUserMap.remove(tenantId);
+        if (tenantUsers != null) {
+            tenantUsers.forEach((userId, channel) -> {
+                if (channel.isActive()) {
+                    channel.close();
+                }
+                userChannelMap.remove(userId);
+                channelUserMap.remove(channel);
+                userTenantMap.remove(userId);
+            });
+            log.info("租户所有连接已关闭: tenantId={}", tenantId);
+        }
     }
 
 }

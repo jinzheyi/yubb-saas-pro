@@ -75,7 +75,17 @@ public enum ImMessageTypeEnum {
     /**
      * 视频消息
      */
-    VIDEO_MESSAGE(13, "视频消息");
+    VIDEO_MESSAGE(13, "视频消息"),
+
+    /**
+     * Token刷新请求
+     */
+    TOKEN_REFRESH_REQUEST(14, "Token刷新请求"),
+
+    /**
+     * Token刷新响应
+     */
+    TOKEN_REFRESH_RESPONSE(15, "Token刷新响应");
 
     private final Integer code;
     private final String name;
