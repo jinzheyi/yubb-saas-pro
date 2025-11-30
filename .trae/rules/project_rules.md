@@ -53,7 +53,9 @@
 |  |   |  └shengyu-saas.sql
 ├─shengyu-ui                          #前端汇总
 |     ├─shengyu-ui-platform-vue3      #平台端前端
-|     ├─shengyu-ui-admin-vue3         #租户端前端 
+|     ├─shengyu-ui-admin-vue3         #租户端前端
+|     ├─shengyu-ui-admin-uniappx      #租户端前端app项目
+|     ├─shengyu-ui-im-uniappx         #uniappx使用示例项目，里面有很多参考组件和接口代码示例
 ├─shengyu-server                      #服务端启动模块
 |       ├─Dockerfile
 |       ├─src
