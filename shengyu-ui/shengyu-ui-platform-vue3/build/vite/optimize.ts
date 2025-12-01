@@ -25,8 +25,14 @@ const include = [
   'echarts/components',
   'echarts/renderers',
   'echarts-wordcloud',
-  '@wangeditor/editor',
-  '@wangeditor/editor-for-vue',
+  '@wangeditor-next/editor',
+  '@wangeditor-next/editor-for-vue',
+  '@microsoft/fetch-event-source',
+  'markdown-it',
+  'markmap-view',
+  'markmap-lib',
+  'markmap-toolbar',
+  'highlight.js',
   'element-plus',
   'element-plus/es',
   'element-plus/es/locale/lang/zh-cn',
@@ -104,7 +110,13 @@ const include = [
   'element-plus/es/components/collapse/style/css',
   'element-plus/es/components/collapse-item/style/css',
   'element-plus/es/components/button-group/style/css',
-  'element-plus/es/components/text/style/css'
+  'element-plus/es/components/text/style/css',
+  'element-plus/es/components/segmented/style/css',
+  '@element-plus/icons-vue',
+  'element-plus/es/components/footer/style/css',
+  'element-plus/es/components/empty/style/css',
+  'element-plus/es/components/mention/style/css',
+  'element-plus/es/components/progress/style/css'
 ]
 
 const exclude = ['@iconify/json']

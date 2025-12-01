@@ -11,6 +11,15 @@ uni-app x项目使用UTS语言编写script。 UTS是一种跨平台的强类型�
 
 ## project
     - 遵循uni-app x的项目结构，在正确的目录中放置生成的文件。
+    - 改造 `/Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-ui/shengyu-ui-admin-uniappx` 模块作为租户端的app企业级项目
+    - 参考示例 `/Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-ui/shengyu-ui-im-uniappx` 这是一个标准的uniappx参考示例项目，这里面有大量的组件和接口示例
+    
+## 目标
+### 基于 `/Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-ui/shengyu-ui-admin-uniappx` 这个项目来作为im的前端企业级项目开发。参考飞书app的ui设计ios扁平化风格。先帮我实现登录页和本系统登录逻辑token刷新机制，app登录过期后自动提示重新登录等，本系统租户端登录控制器 `/Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/admin/auth/AuthController.java` 
+## 参考示例
+ `/Users/zsy/IdeaProjects/shengyu/yubb-saas-pro/shengyu-ui/shengyu-ui-im-uniappx` 这是一个标准的uniappx参考示例项目，这里面有大量的组件和接口示例
+## 要求
+严格按照uniappx的开发规范和包结构。
     
 ## page
     - 使用uvue作为页面后缀名，uvue与vue基本类似，但有少量细节差异。
