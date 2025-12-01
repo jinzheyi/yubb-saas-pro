@@ -1,0 +1,79 @@
+// 认证相关API
+import request from '@/utils/request.uts'
+
+/**
+ * 用户信息类型
+ */
+export type UserInfo = {
+  id: number
+  nickname: string
+  avatar?: string
+  username: string
+}
+
+/**
+ * 登录请求参数
+ */
+export type LoginParams = {
+  username: string
+  password: string
+}
+
+/**
+ * 登录响应数据
+ */
+export type LoginResponse = {
+  accessToken: string
+  refreshToken: string
+  user: UserInfo
+}
+
+/**
+ * 登录
+ * @param params 登录参数
+ * @returns 登录结果
+ */
+export const login = (params: LoginParams) => {
+  return request<LoginResponse>({
+    url: '/system/auth/login',
+    method: 'POST',
+    data: params
+  })
+}
+
+/**
+ * 登出
+ * @returns 登出结果
+ */
+export const logout = () => {
+  return request<boolean>({
+    url: '/system/auth/logout',
+    method: 'POST'
+  })
+}
+
+/**
+ * 刷新token
+ * @param refreshToken 刷新token
+ * @returns 新的token信息
+ */
+export const refreshToken = (refreshToken: string) => {
+  return request<LoginResponse>({
+    url: '/system/auth/refresh-token',
+    method: 'POST',
+    params: {
+      refreshToken
+    }
+  })
+}
+
+/**
+ * 获取用户权限信息
+ * @returns 用户权限信息
+ */
+export const getPermissionInfo = () => {
+  return request({
+    url: '/system/auth/get-permission-info',
+    method: 'GET'
+  })
+}
