@@ -17,6 +17,7 @@ export type UserInfo = {
 export type LoginParams = {
   username: string
   password: string
+  captchaVerification: string
 }
 
 /**

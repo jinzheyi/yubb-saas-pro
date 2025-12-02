@@ -22,7 +22,7 @@ const env = {
 /**
  * 请求配置
  */
-interface RequestConfig {
+export type RequestConfig = {
   url: string
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'
   data?: any
@@ -35,7 +35,7 @@ interface RequestConfig {
 /**
  * 响应数据
  */
-interface ResponseData<T = any> {
+export type ResponseData<T = any> = {
   code: number
   message?: string
   msg?: string
@@ -126,25 +126,49 @@ const request = <T = any>(config: RequestConfig) => {
       timeout: apiConfig.requestTimeout, // 设置请求超时时间
       success: (res: any) => {
         // 处理响应
-        const response = res.data as ResponseData<T>
+        const response = res.data
         
-        // 请求成功（后端返回code为0表示成功）
-        if (response.code === apiConfig.resultCode) {
-          resolve(response)
-        } 
-        // token过期（后端可能返回的token过期code）
-        else if (response.code === 401) {
-          // 处理token过期
-          handleTokenExpired(requestConfig, resolve, reject)
-        } 
-        // 其他API错误
-        else {
-          const uniError = handleApiError(response)
-          uni.showToast({
-            title: uniError.errMsg,
-            icon: 'none'
-          })
-          reject(new Error(uniError.errMsg))
+        // 检查是否是验证码接口返回的数据结构
+        if (response.repCode !== undefined) {
+          // 验证码接口返回的数据结构
+          if (response.repCode === '0000') {
+            // 验证码接口请求成功
+            resolve({
+              code: 0,
+              message: response.repMsg,
+              data: response
+            })
+          } else {
+            // 验证码接口请求失败
+            const errorMsg = response.repMsg || '请求失败'
+            uni.showToast({
+              title: errorMsg,
+              icon: 'none'
+            })
+            reject(new Error(errorMsg))
+          }
+        } else {
+          // 普通接口返回的数据结构
+          const responseData = response as ResponseData<T>
+          
+          // 请求成功（后端返回code为0表示成功）
+          if (responseData.code === apiConfig.resultCode) {
+            resolve(responseData)
+          } 
+          // token过期（后端可能返回的token过期code）
+          else if (responseData.code === 401) {
+            // 处理token过期
+            handleTokenExpired(requestConfig, resolve, reject)
+          } 
+          // 其他API错误
+          else {
+            const uniError = handleApiError(responseData)
+            uni.showToast({
+              title: uniError.errMsg,
+              icon: 'none'
+            })
+            reject(new Error(uniError.errMsg))
+          }
         }
       },
       fail: (err: any) => {

@@ -11,7 +11,7 @@
 <script lang="uts">
 	import { isLoggedIn, clearAuthInfo } from '@/utils/auth.uts'
 	import { logout as logoutApi } from '@/api/auth.uts'
-		export default {
+	export default {
 		data() {
 			return {
 				title: '企业即时通讯'

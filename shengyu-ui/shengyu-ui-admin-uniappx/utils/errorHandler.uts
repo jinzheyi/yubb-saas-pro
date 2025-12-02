@@ -4,7 +4,7 @@ import { apiConfig } from '@/config/apiConfig.uts'
 /**
  * UniError类型定义
  */
-export interface UniError {
+export type UniError = {
   errSubject: string
   errCode: number
   errMsg: string

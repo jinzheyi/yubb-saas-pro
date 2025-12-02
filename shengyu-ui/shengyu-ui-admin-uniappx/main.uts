@@ -1,13 +1,9 @@
 import App from './App.uvue'
 
 import { createSSRApp } from 'vue'
-// 导入用户活动监听mixin
-import activityMixin from './mixins/activityMixin.uts'
 
 export function createApp() {
 	const app = createSSRApp(App)
-	// 全局注册用户活动监听mixin
-	app.mixin(activityMixin)
 	return {
 		app
 	}
