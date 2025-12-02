@@ -3,50 +3,30 @@
     <view :class="mode=='pop'?'verifybox':''" :style="{'max-width':parseInt(imgSize.width)+30+'px'}">
         <view class="verifybox-top" v-if="mode=='pop'">
             请完成安全验证
-            <text class="verifybox-close" @click="clickShow = false">
+            <text class="verifybox-close" @click="closeBox">
                 <text class="iconfont icon-close"></text>
             </text>
         </view>
         <view class="verifybox-bottom" :style="{padding:mode=='pop'?'15px':'0'}">
             <!-- 验证码容器 -->
-            <!-- 滑动 -->
-            <view v-if="componentType=='VerifySlide'">
-                <VerifySlide 
-                    @success="success"
-                    @fail="fail"
-                    :captchaType="captchaType"
-                    :type="verifyType"
-                    :figure="figure"
-                    :arith="arith"
-                    :mode="mode"
-                    :vSpace="vSpace"
-                    :explain="explain"
-                    :imgSize="imgSize"
-                    :blockSize="blockSize"
-                    :barSize="barSize"
-                    :defaultImg="defaultImg"
-                    ref="instance"
-                ></VerifySlide>
-            </view>
-            <!-- 点选 -->
-            <view v-if="componentType=='VerifyPoints'">
-                <VerifyPoint 
-                    :captchaType="captchaType"
-                    :type="verifyType"
-                    :figure="figure"
-                    :arith="arith"
-                    :mode="mode"
-                    :vSpace="vSpace"
-                    :explain="explain"
-                    :imgSize="imgSize"
-                    :blockSize="blockSize"
-                    :barSize="barSize"
-                    :defaultImg="defaultImg"
-                    ref="instance"
-                    @success="success"
-                    @fail="fail"
-                ></VerifyPoint>
-            </view>
+            <component
+                :is="componentType"
+                v-if="componentType"
+                ref="instance"
+                :arith="arith"
+                :barSize="barSize"
+                :blockSize="blockSize"
+                :captchaType="captchaType"
+                :explain="explain"
+                :figure="figure"
+                :imgSize="imgSize"
+                :mode="mode"
+                :type="verifyType"
+                :vSpace="vSpace"
+                :defaultImg="defaultImg"
+                @success="success"
+                @fail="fail"
+            />
         </view>
     </view>
 </view>
@@ -56,16 +36,16 @@
      * Verify 验证码组件
      * @description 分发验证码使用
      * */
-    import { ref, reactive, computed, watch, onMounted } from 'vue'
+    import { ref, reactive, computed, watch, onMounted, watchEffect } from 'vue'
     import VerifySlide from './verifySlider/verifySlider.uvue'
     import VerifyPoint from "./verifyPoint/verifyPoint.uvue"
 
-    export default {
-        name: 'Verify',
-        components: {
-            VerifySlide,
-            VerifyPoint
-        },
+export default {
+    name: 'Verify',
+    components: {
+        VerifySlide,
+        VerifyPoint
+    },
         props: {
             captchaType: {
                 type: String,
@@ -168,6 +148,11 @@
                 }
             }
 
+            const closeBox = () => {
+                clickShow.value = false
+                refresh()
+            }
+
             const show = () => {
                 if (props.mode === "pop") {
                     clickShow.value = true
@@ -183,8 +168,12 @@
                 }
             })
 
-            watch(() => props.captchaType, (captchaType) => {
-                switch (captchaType.toString()) {
+            watchEffect(() => {
+                switch (props.captchaType) {
+                    case 'pictureWord':
+                        verifyType.value = '3'
+                        componentType.value = 'VerifyPictureWord'
+                        break
                     case 'blockPuzzle':
                         verifyType.value = '2'
                         componentType.value = 'VerifySlide'
@@ -194,7 +183,7 @@
                         componentType.value = 'VerifyPoints'
                         break
                 }
-            }, { immediate: true })
+            })
 
             // 监听visible prop变化，控制组件显示/隐藏
             watch(() => props.visible, (newVal) => {
@@ -217,6 +206,7 @@
                 success,
                 fail,
                 refresh,
+                closeBox,
                 show,
                 showBox
             }
