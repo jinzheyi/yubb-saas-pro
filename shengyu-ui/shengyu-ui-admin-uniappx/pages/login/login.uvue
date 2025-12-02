@@ -61,7 +61,7 @@
 
 <script lang="uts">
   import { ref, reactive, computed } from 'vue'
-  import { login as loginApi } from '@/api/auth.uts'
+  import { login as loginApi, type LoginParams } from '@/api/auth.uts'
   import { setToken, setRefreshToken, setUserInfo, setTenantId, setExpiresTime, getToken, isLoggedIn } from '@/utils/auth.uts'
   import Verify from '@/components/verify/verify.uvue'
 
