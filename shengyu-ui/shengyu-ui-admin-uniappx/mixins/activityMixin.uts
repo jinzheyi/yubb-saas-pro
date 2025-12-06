@@ -1,0 +1,103 @@
+// 用户活动监听mixin
+
+export default {
+  onLoad() {
+    // 页面加载时触发活动
+    if (this && typeof this.triggerUserActivity === 'function') {
+      this.triggerUserActivity()
+    }
+  },
+  
+  onShow() {
+    // 页面显示时触发活动
+    if (this && typeof this.triggerUserActivity === 'function') {
+      this.triggerUserActivity()
+    }
+  },
+  
+  onReady() {
+    // 页面就绪时添加触摸事件监听
+    if (this && typeof this.addTouchEventListener === 'function') {
+      this.addTouchEventListener()
+    }
+  },
+  
+  onHide() {
+    // 页面隐藏时移除触摸事件监听
+    if (this && typeof this.removeTouchEventListener === 'function') {
+      this.removeTouchEventListener()
+    }
+  },
+  
+  onUnload() {
+    // 页面卸载时移除触摸事件监听
+    if (this && typeof this.removeTouchEventListener === 'function') {
+      this.removeTouchEventListener()
+    }
+  },
+  
+  methods: {
+    /**
+     * 触发用户活动
+     */
+    triggerUserActivity() {
+      // 直接触发全局用户活动事件，不依赖this上下文
+      uni.$emit('userActivity')
+    },
+    
+    /**
+     * 添加触摸事件监听
+     */
+    addTouchEventListener() {
+      // 在当前页面添加触摸事件监听
+      // #ifdef APP
+      const page = getCurrentPages().pop()
+      if (page) {
+        // 检查page对象是否有$getAppWebview方法
+        if (typeof page.$getAppWebview === 'function') {
+          const webview = page.$getAppWebview()
+          if (webview) {
+            webview.addEventListener('touchstart', this.handleTouchEvent)
+          }
+        }
+      }
+      // #endif
+      
+      // #ifdef WEB
+      // H5环境直接在document上添加事件监听
+      document.addEventListener('touchstart', this.handleTouchEvent)
+      // #endif
+    },
+    
+    /**
+     * 移除触摸事件监听
+     */
+    removeTouchEventListener() {
+      // 移除当前页面的触摸事件监听
+      // #ifdef APP
+      const page = getCurrentPages().pop()
+      if (page) {
+        // 检查page对象是否有$getAppWebview方法
+        if (typeof page.$getAppWebview === 'function') {
+          const webview = page.$getAppWebview()
+          if (webview) {
+            webview.removeEventListener('touchstart', this.handleTouchEvent)
+          }
+        }
+      }
+      // #endif
+      
+      // #ifdef WEB
+      // H5环境移除document上的事件监听
+      document.removeEventListener('touchstart', this.handleTouchEvent)
+      // #endif
+    },
+    
+    /**
+     * 处理触摸事件
+     */
+    handleTouchEvent() {
+      this.triggerUserActivity()
+    }
+  }
+}

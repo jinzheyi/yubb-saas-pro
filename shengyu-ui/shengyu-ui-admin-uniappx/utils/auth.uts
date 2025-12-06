@@ -1,0 +1,188 @@
+// 认证工具类
+
+// token存储键名
+const TOKEN_KEY = 'access_token'
+// 刷新token存储键名
+const REFRESH_TOKEN_KEY = 'refresh_token'
+// 用户信息存储键名
+const USER_INFO_KEY = 'user_info'
+// 租户ID存储键名
+const TENANT_ID_KEY = 'tenant_id'
+
+/**
+ * 用户信息类型
+ */
+export type UserInfo = {
+  nickName: string
+  avatarUrl?: string
+}
+
+/**
+ * 获取token
+ * @returns token
+ */
+export const getToken = () => {
+  return uni.getStorageSync(TOKEN_KEY) as string
+}
+
+/**
+ * 设置token
+ * @param token token
+ */
+export const setToken = (token: string) => {
+  uni.setStorageSync(TOKEN_KEY, token)
+}
+
+/**
+ * 删除token
+ */
+export const removeToken = () => {
+  uni.removeStorageSync(TOKEN_KEY)
+}
+
+/**
+ * 获取刷新token
+ * @returns 刷新token
+ */
+export const getRefreshToken = () => {
+  return uni.getStorageSync(REFRESH_TOKEN_KEY) as string
+}
+
+/**
+ * 设置刷新token
+ * @param refreshToken 刷新token
+ */
+export const setRefreshToken = (refreshToken: string) => {
+  uni.setStorageSync(REFRESH_TOKEN_KEY, refreshToken)
+}
+
+/**
+ * 删除刷新token
+ */
+export const removeRefreshToken = () => {
+  uni.removeStorageSync(REFRESH_TOKEN_KEY)
+}
+
+/**
+ * 获取用户信息
+ * @returns 用户信息
+ */
+export const getUserInfo = () => {
+  return uni.getStorageSync(USER_INFO_KEY) as UserInfo
+}
+
+/**
+ * 设置用户信息
+ * @param userInfo 用户信息
+ */
+export const setUserInfo = (userInfo: UserInfo) => {
+  uni.setStorageSync(USER_INFO_KEY, userInfo)
+}
+
+/**
+ * 删除用户信息
+ */
+export const removeUserInfo = () => {
+  uni.removeStorageSync(USER_INFO_KEY)
+}
+
+/**
+ * 获取租户ID
+ * @returns 租户ID
+ */
+export const getTenantId = () => {
+  return uni.getStorageSync(TENANT_ID_KEY) as string
+}
+
+/**
+ * 设置租户ID
+ * @param tenantId 租户ID
+ */
+export const setTenantId = (tenantId: string | number) => {
+  uni.setStorageSync(TENANT_ID_KEY, tenantId)
+}
+
+/**
+ * 删除租户ID
+ */
+export const removeTenantId = () => {
+  uni.removeStorageSync(TENANT_ID_KEY)
+}
+
+/**
+ * 清除所有认证信息
+ */
+export const clearAuthInfo = () => {
+  removeToken()
+  removeRefreshToken()
+  removeUserInfo()
+  removeTenantId()
+}
+
+/**
+ * 检查是否已登录
+ * @returns 是否已登录
+ */
+export const isLoggedIn = () => {
+  return !!getToken()
+}
+
+/**
+ * 获取token过期时间
+ * @returns 过期时间戳
+ */
+export const getExpiresTime = () => {
+  return uni.getStorageSync('expires_time') as number
+}
+
+/**
+ * 设置token过期时间
+ * @param expiresTime 过期时间戳
+ */
+export const setExpiresTime = (expiresTime: number) => {
+  uni.setStorageSync('expires_time', expiresTime)
+}
+
+/**
+ * 删除token过期时间
+ */
+export const removeExpiresTime = () => {
+  uni.removeStorageSync('expires_time')
+}
+
+/**
+ * 检查token是否即将过期
+ * @param minutes 提前多少分钟检查
+ * @returns 是否即将过期
+ */
+export const isTokenExpiring = (minutes: number = 30): boolean => {
+  const expiresTime = getExpiresTime()
+  if (!expiresTime) {
+    return false
+  }
+  
+  // 当前时间戳（毫秒）
+  const now = Date.now()
+  // 提前检查的时间（毫秒）
+  const checkTime = minutes * 60 * 1000
+  
+  // 如果当前时间加上提前检查时间大于等于过期时间，则说明token即将过期
+  return now + checkTime >= expiresTime
+}
+
+/**
+ * 检查token是否已过期
+ * @returns 是否已过期
+ */
+export const isTokenExpired = (): boolean => {
+  const expiresTime = getExpiresTime()
+  if (!expiresTime) {
+    return false
+  }
+  
+  // 当前时间戳（毫秒）
+  const now = Date.now()
+  
+  // 如果当前时间大于等于过期时间，则说明token已过期
+  return now >= expiresTime
+}

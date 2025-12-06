@@ -1,0 +1,513 @@
+<template>
+    <view style="position: relative">
+        <!-- 验证码图片 -->
+        <view class="verify-img-panel" :style="{'width':imgSize.width,'height':imgSize.height}">
+            <image 
+                v-if="!sliderImg" 
+                :src="defaultImg" 
+                :style="{'width':'100%','height':'100%'}" 
+                mode="aspectFill"
+            ></image>
+            <image 
+                v-else 
+                :src="'data:image/png;base64,'+sliderImg" 
+                :style="{'width':'100%','height':'100%'}" 
+                mode="aspectFill"
+            ></image>
+            <!-- 滑块缺口 -->
+            <view 
+                class="verify-gap" 
+                v-if="sliderImg" 
+                :style="{
+                    'width':blockSize.width,
+                    'height':blockSize.height,
+                    'left':imgLeft+'px',
+                    'top':imgTop+'px'
+                }"
+            ></view>
+            <!-- 拖动滑块 -->
+            <view 
+                class="verify-drag-block" 
+                v-if="sliderImg" 
+                :style="{
+                    'width':blockSize.width,
+                    'height':blockSize.height,
+                    'left':moveLeft+'px',
+                    'top':imgTop+'px'
+                }"
+            >
+                <image 
+                    :src="'data:image/png;base64,'+sliderBlock" 
+                    :style="{
+                        'width':'100%',
+                        'height':'100%',
+                        'border':'1px solid #ddd',
+                        'box-shadow': '0 0 5px rgba(0, 0, 0, 0.3)'
+                    }"
+                    mode="aspectFill"
+                ></image>
+            </view>
+            <!-- 刷新按钮 -->
+            <view class="verify-refresh" @click="refresh">
+                <text class="iconfont icon-refresh"></text>
+            </view>
+        </view>
+        <!-- 滑动条 -->
+        <view 
+            class="verify-bar-area" 
+            :style="{
+                'width':imgSize.width,
+                'height':barSize.height,
+                'line-height':barSize.height+'px'
+            }"
+        >
+            <!-- 提示文字 -->
+            <text class="verify-msg">{{text}}</text>
+            <!-- 已滑动距离 -->
+            <view 
+                class="verify-left-bar" 
+                :style="{
+                    'width':(moveLeft+50)+'px',
+                    'height':barSize.height,
+                    'background-color': isMove ? '#337ab7' : '#5cb85c',
+                    'border-color': isMove ? '#337ab7' : '#5cb85c'
+                }"
+            ></view>
+            <!-- 滑块 -->
+            <view 
+                class="verify-move-block" 
+                :style="{
+                    'width':'50px',
+                    'height':barSize.height,
+                    'left':moveLeft+'px',
+                    'background-color': isMove ? '#337ab7' : '#fff',
+                    'box-shadow': '0 0 3px rgba(0, 0, 0, 0.3)'
+                }"
+                @touchstart="touchStart"
+                @touchmove="touchMove"
+                @touchend="touchEnd"
+            >
+                <view class="verify-sub-block">
+                    <text 
+                        class="iconfont" 
+                        :class="isSuccess ? 'icon-check' : 'icon-right'"
+                        :style="{
+                            'color': isMove ? '#fff' : '#000'
+                        }"
+                    ></text>
+                </view>
+            </view>
+        </view>
+    </view>
+</template>
+
+<script lang="uts">
+    /**
+     * VerifySlide 滑动验证码组件
+     * @description 滑动验证码
+     * */
+    import { ref, reactive, onMounted, watch } from 'vue'
+    import { aesEncrypt } from '../utils/ase.uts'
+    import { myRequest } from '../utils/request.uts'
+
+    export default {
+        name: 'VerifySlide',
+        props: {
+            //弹出式pop，固定fixed
+            mode: {
+                type: String,
+                default: 'fixed'
+            },
+            //验证码类型
+            captchaType: {
+                type: String,
+                default: 'blockPuzzle'
+            },
+            //类型 滑块：2 点选：3
+            type: {
+                type: String,
+                default: '2'
+            },
+            //间距
+            vSpace: {
+                type: Number,
+                default: 5
+            },
+            //说明
+            explain: {
+                type: String,
+                default: '向右滑动完成验证'
+            },
+            //图片大小
+            imgSize: {
+                type: Object,
+                default() {
+                    return {
+                        width: '310px',
+                        height: '155px'
+                    }
+                }
+            },
+            //滑块大小
+            blockSize: {
+                type: Object,
+                default() {
+                    return {
+                        width: '50px',
+                        height: '50px'
+                    }
+                }
+            },
+            //滑块条大小
+            barSize: {
+                type: Object,
+                default() {
+                    return {
+                        width: '310px',
+                        height: '40px'
+                    }
+                }
+            },
+            //默认图片
+            defaultImg: {
+                type: String,
+                default: ''
+            }
+        },
+        emits: ['success', 'fail'],
+        setup(props, { emit }) {
+            const secretKey = ref('')        //后端返回的加密秘钥 字段
+            const sliderImg = ref('')        //滑块背景图
+            const sliderBlock = ref('')      //滑块
+            const token = ref('')            //后端返回的token值
+            const imgLeft = ref(0)           //滑块位置
+            const imgTop = ref(0)            //滑块位置
+            const moveLeft = ref(0)          //移动距离
+            const text = ref(props.explain)  //提示文字
+            const barAreaColor = ref('#000') //提示文字颜色
+            const barAreaBorderColor = ref('#ddd') //边框颜色
+            const isSuccess = ref(false)     //是否成功
+            const isMove = ref(false)        //是否移动
+            const startX = ref(0)            //开始位置
+            const endX = ref(0)              //结束位置
+            const barWidth = ref(0)          //滑块条宽度
+
+            //初始化
+            const init = () => {
+                text.value = props.explain
+                barAreaColor.value = '#000'
+                barAreaBorderColor.value = '#ddd'
+                isSuccess.value = false
+                isMove.value = false
+                moveLeft.value = 0
+                getSliderImg()
+            }
+
+            //获取滑块图片
+            const getSliderImg = () => {
+                const data = {
+                    captchaType: props.captchaType,
+                    clientUid: uni.getStorageSync('slider'),
+                    ts: Date.now()
+                }
+                myRequest({
+                    url: "/system/captcha/get",
+                    data,
+                    method: "POST"
+                }).then((result: any) => {
+                    // request工具已经处理了响应格式，直接获取data
+                    const res = result.data
+                    if (res.repCode == "0000") {
+                        sliderImg.value = res.repData.originalImageBase64
+                        sliderBlock.value = res.repData.jigsawImageBase64
+                        
+                        // 如果接口返回了缺口位置，使用接口返回的位置，否则随机生成
+                        if (res.repData.point) {
+                            // 接口返回的point格式为{x, y}，直接使用
+                            imgLeft.value = res.repData.point.x
+                            imgTop.value = res.repData.point.y
+                        } else {
+                            // 随机生成滑块位置，确保在图片范围内
+                            imgLeft.value = Math.floor(Math.random() * (parseInt(props.imgSize.width) - parseInt(props.blockSize.width) - 10)) + 10
+                            imgTop.value = Math.floor(Math.random() * (parseInt(props.imgSize.height) - parseInt(props.blockSize.height) - 10)) + 10
+                        }
+                        
+                        token.value = res.repData.token
+                        secretKey.value = res.repData.secretKey
+                    }
+                    // 判断接口请求次数是否失效
+                    if (res.repCode == '6201') {
+                        sliderImg.value = ''
+                    }
+                }).catch((err) => {
+                    console.error('获取滑块图片失败:', err)
+                })
+            }
+
+            //刷新
+            const refresh = () => {
+                init()
+            }
+
+            //开始滑动
+            const touchStart = (e) => {
+                isMove.value = true
+                // 获取触摸点相对于屏幕的x坐标
+                startX.value = e.touches[0].clientX
+                text.value = ''
+            }
+
+            //滑动中
+            const touchMove = (e) => {
+                if (!isMove.value) return
+                // 获取当前触摸点相对于屏幕的x坐标
+                endX.value = e.touches[0].clientX
+                // 计算移动距离
+                let deltaX = endX.value - startX.value
+                moveLeft.value = deltaX
+                //限制滑动范围
+                if (moveLeft.value < 0) {
+                    moveLeft.value = 0
+                }
+                if (moveLeft.value > parseInt(props.imgSize.width) - 50) {
+                    moveLeft.value = parseInt(props.imgSize.width) - 50
+                }
+            }
+
+            //滑动结束
+            const touchEnd = () => {
+                isMove.value = false
+                // 调整移动距离计算方式，按照PC端逻辑转换为310px宽度下的距离
+                const moveLeftDistance = (moveLeft.value * 310) / parseInt(props.imgSize.width)
+                //验证
+                const data = {
+                    captchaType: props.captchaType,
+                    token: token.value,
+                    // 使用aesEncrypt函数进行Base64编码，y坐标固定为5.0
+                    pointJson: aesEncrypt(JSON.stringify({x: moveLeftDistance, y: 5.0}), secretKey.value)
+                }
+                myRequest({
+                    url: "/system/captcha/check",
+                    data,
+                    method: "POST"
+                }).then((result: any) => {
+                    // request工具已经处理了响应格式，直接获取data
+                    const res = result.data
+                    if (res.repCode == "0000") {
+                        //验证成功
+                        text.value = '验证成功'
+                        isSuccess.value = true
+                        
+                        // 验证成功后，保持滑块位置，不重置
+                        // 触发成功事件
+                        emit('success', {
+                            // 使用aesEncrypt函数进行Base64编码
+                            captchaVerification: aesEncrypt(token.value + '---' + JSON.stringify({x: moveLeftDistance, y: 5.0}), secretKey.value)
+                        })
+                    } else {
+                        //验证失败
+                        text.value = '验证失败'
+                        isSuccess.value = false
+                        // 触发失败事件
+                        emit('fail', res)
+                        // 重置滑块位置，添加动画效果
+                        moveLeft.value = 0
+                        // 刷新验证码
+                        setTimeout(() => {
+                            refresh()
+                        }, 1000)
+                    }
+                }).catch((err) => {
+                    console.error('验证码验证失败:', err)
+                    // 验证失败
+                    text.value = '验证失败'
+                    isSuccess.value = false
+                    // 重置滑块位置，添加动画效果
+                    moveLeft.value = 0
+                    // 刷新验证码
+                    setTimeout(() => {
+                        refresh()
+                    }, 1000)
+                })
+            }
+
+            onMounted(() => {
+                init()
+            })
+
+            return {
+                sliderImg,
+                sliderBlock,
+                imgLeft,
+                imgTop,
+                moveLeft,
+                text,
+                barAreaColor,
+                barAreaBorderColor,
+                isMove,
+                isSuccess,
+                touchStart,
+                touchMove,
+                touchEnd,
+                refresh
+            }
+        }
+    }
+</script>
+
+<style scoped>
+    /* 验证码图片容器 */
+    .verify-img-panel {
+        position: relative;
+        margin: 0;
+        box-sizing: content-box;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        overflow: hidden;
+        background-color: #f8f8f8;
+    }
+
+    /* 滑块缺口 */
+    .verify-gap {
+        position: absolute;
+        background-color: transparent;
+        z-index: 2;
+        border: 1px solid rgba(0, 0, 0, 0.3);
+        box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 刷新按钮 */
+    .verify-refresh {
+        position: absolute;
+        top: 0;
+        right: 0;
+        z-index: 3;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        background-color: rgba(0, 0, 0, 0.3);
+        transition: background-color 0.3s ease;
+    }
+
+    .verify-refresh:hover {
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .verify-refresh .icon-refresh {
+        font-size: 18px;
+        color: #fff;
+    }
+
+    /* 滑动条容器 */
+    .verify-bar-area {
+        position: relative;
+        background: #FFFFFF;
+        text-align: center;
+        box-sizing: content-box;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-top: 10px;
+        overflow: hidden;
+    }
+
+    /* 已滑动部分 */
+    .verify-left-bar {
+        position: absolute;
+        top: -1px;
+        left: -1px;
+        background: #5cb85c;
+        box-sizing: content-box;
+        border: 1px solid #5cb85c;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        z-index: 1;
+    }
+
+    /* 滑块 */
+    .verify-move-block {
+        position: absolute;
+        top: -1px;
+        left: 0;
+        background: #fff;
+        cursor: pointer;
+        box-sizing: content-box;
+        box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        z-index: 3;
+    }
+
+    .verify-move-block:active {
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 滑块内的图标容器 */
+    .verify-sub-block {
+        position: absolute;
+        text-align: center;
+        z-index: 3;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* 滑块图标样式 */
+    .verify-move-block .icon-right,
+    .verify-move-block .icon-check {
+        font-size: 18px;
+        transition: color 0.2s ease;
+    }
+
+    /* 拖动的滑块块 */
+    .verify-drag-block {
+        position: absolute;
+        background-color: transparent;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        z-index: 3;
+        pointer-events: none;
+    }
+
+    /* 提示文字 */
+    .verify-msg {
+        position: absolute;
+        left: 0;
+        right: 0;
+        z-index: 2;
+        font-size: 14px;
+        color: #666;
+        pointer-events: none;
+    }
+
+    /* 验证结果提示 */
+    .verify-tips {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 30px;
+        line-height: 30px;
+        color: #fff;
+        text-indent: 10px;
+        z-index: 4;
+    }
+
+    /* 成功提示背景 */
+    .suc-bg {
+        background-color: rgba(92, 184, 92, 0.5);
+    }
+
+    /* 失败提示背景 */
+    .err-bg {
+        background-color: rgba(217, 83, 79, 0.5);
+    }
+</style>
