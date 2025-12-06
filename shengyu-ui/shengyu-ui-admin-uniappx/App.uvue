@@ -157,3 +157,7 @@
 		background-color: #f5f5f5;
 	}
 </style>
+
+<style lang="scss">
+  @import '@/static/scss/index.scss'
+</style>
