@@ -28,5 +28,18 @@ export const apiConfig = {
   resultCode: 0,
   
   // 请求超时时间
-  requestTimeout: 30000
+  requestTimeout: 30000,
+  
+  // 验证码配置
+  captcha: {
+    // 是否启用验证码
+    enabled: false,
+    // 验证码类型 (blockPuzzle: 滑块验证, pointSelect: 点选验证)
+    type: 'blockPuzzle',
+    // 验证码图片大小
+    imgSize: {
+      width: '330px',
+      height: '155px'
+    }
+  }
 }

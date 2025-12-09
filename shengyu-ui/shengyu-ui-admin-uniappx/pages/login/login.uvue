@@ -34,8 +34,8 @@
       <Verify
         mode="pop"
         :captchaType="captchaType"
+        :imgSize="captchaConfig.imgSize"
         @success="handleCaptchaSuccess"
-        @fail="handleCaptchaFail"
         ref="verify"
       ></Verify>
 
@@ -64,6 +64,7 @@
   import { login as loginApi, type LoginParams } from '@/api/auth.uts'
   import { setToken, setRefreshToken, setUserInfo, setTenantId, setExpiresTime, getToken, isLoggedIn } from '@/utils/auth.uts'
   import Verify from '@/components/verifition/Verify.uvue'
+  import { apiConfig } from '@/config/apiConfig.uts'
 
   export default {
     components: {
@@ -75,9 +76,12 @@
         password: '123456'
       })
 
-      const captchaType = ref('blockPuzzle') // 验证码类型：blockPuzzle（滑块）或 clickWord（点选）
       const captchaVerification = ref('') // 验证码验证结果
       const verify = ref<any>(null) // 验证码组件引用
+
+      // 使用配置文件中的验证码参数
+      const captchaConfig = apiConfig.captcha
+      const captchaType = ref(captchaConfig.type) // 验证码类型：blockPuzzle（滑块）或 clickWord（点选）
 
       const canLogin = computed(() => {
         return form.username.trim() && form.password.trim()
@@ -223,8 +227,11 @@
 
       // 登录入口
       const login = async () => {
-        // 如果没有验证码验证结果，显示验证码弹窗
-        if (!captchaVerification.value) {
+        // 如果验证码开关关闭，直接执行登录
+        if (!captchaConfig.enabled) {
+          await doLogin()
+        } else if (!captchaVerification.value) {
+          // 如果验证码开关开启且没有验证码验证结果，显示验证码弹窗
           verify.value.show()
         } else {
           // 已有验证码结果，直接登录
@@ -238,6 +245,7 @@
         captchaVerification,
         verify,
         canLogin,
+        captchaConfig,
         onInput,
         forgetPassword,
         handleCaptchaSuccess,
