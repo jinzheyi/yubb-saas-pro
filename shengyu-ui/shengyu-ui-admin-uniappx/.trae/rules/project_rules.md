@@ -28,7 +28,7 @@ uni-app x 调用原生接口 https://doc.dcloud.net.cn/uni-app-x/native/
 uni-app x 性能优化 https://doc.dcloud.net.cn/uni-app-x/performance.html
 uni-app x 错误规范 https://uniapp.dcloud.net.cn/tutorial/err-spec.html
 uni-app x 性能优化 https://uniapp.dcloud.net.cn/tutorial/performance.html
-uni-app x 国际化 https://uniapp.dcloud.net.cn/tutorial/i18n.html
+uni-app x 国际化 https://doc.dcloud.net.cn/uni-app-x/i18n.html
 uni-app x 深色模式 https://uniapp.dcloud.net.cn/tutorial/darkmode.html
 uni-app x 版本管理 https://uniapp.dcloud.net.cn/tutorial/version.html
 
