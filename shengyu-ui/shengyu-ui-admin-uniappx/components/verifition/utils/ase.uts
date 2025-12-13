@@ -1,14 +1,18 @@
-import CryptoJS from 'crypto-js'
+// 在 UTS 中使用 crypto-js 的正确方式
+import AES from 'crypto-js/aes'
+import encUtf8 from 'crypto-js/enc-utf8'
+import modeEcb from 'crypto-js/mode-ecb'
+import padPkcs7 from 'crypto-js/pad-pkcs7'
 /**
  * @word 要加密的内容
  * @keyWord String  服务器随机返回的关键字
  *  */
-export function aesEncrypt(word, keyWord = "XwKsGlMcdPMEhR1B") {
-	var key = CryptoJS.enc.Utf8.parse(keyWord);
-	var srcs = CryptoJS.enc.Utf8.parse(word);
-	var encrypted = CryptoJS.AES.encrypt(srcs, key, {
-		mode: CryptoJS.mode.ECB,
-		padding: CryptoJS.pad.Pkcs7
+export function aesEncrypt(word: string, keyWord: string = "XwKsGlMcdPMEhR1B"): string {
+	var key = encUtf8.parse(keyWord);
+	var srcs = encUtf8.parse(word);
+	var encrypted = AES.encrypt(srcs, key, {
+		mode: modeEcb,
+		padding: padPkcs7
 	});
 	return encrypted.toString();
 }

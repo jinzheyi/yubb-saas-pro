@@ -7,41 +7,100 @@
     </view>
     
     <view class="login-form">
-      <view class="form-item">
-        <view class="label">账号</view>
-        <input 
-          v-model="form.username" 
-          class="input" 
-          placeholder="请输入账号" 
-          placeholder-style="color: #999"
-          @input="onInput"
-        />
-      </view>
-      
-      <view class="form-item">
-        <view class="label">密码</view>
-        <input 
-          v-model="form.password" 
-          class="input" 
-          placeholder="请输入密码" 
-          placeholder-style="color: #999"
-          password
-          @input="onInput"
-        />
+      <!-- 登录模式切换 -->
+      <view class="login-mode-tabs">
+        <view 
+          class="tab-item" 
+          :class="{ active: loginMode === 'email' }"
+          @click="loginMode = 'email'"
+        >
+          邮箱登录
+        </view>
+        <view 
+          class="tab-item" 
+          :class="{ active: loginMode === 'mobile' }"
+          @click="loginMode = 'mobile'"
+        >
+          手机号登录
+        </view>
       </view>
 
-      <!-- 验证码组件，pop模式 -->
-      <Verify
-        mode="pop"
-        :captchaType="captchaType"
-        :imgSize="captchaConfig.imgSize"
-        @success="handleCaptchaSuccess"
-        ref="verify"
-      ></Verify>
+      <!-- 邮箱登录表单 -->
+      <template v-if="loginMode === 'email'">
+        <view class="form-item">
+          <view class="label">邮箱账号</view>
+          <input 
+            v-model="emailForm.username" 
+            class="input" 
+            placeholder="请输入邮箱账号" 
+            placeholder-style="color: #999"
+            @input="onInput"
+          />
+        </view>
+        
+        <view class="form-item">
+          <view class="label">密码</view>
+          <input 
+            v-model="emailForm.password" 
+            class="input" 
+            placeholder="请输入密码" 
+            placeholder-style="color: #999"
+            password
+            @input="onInput"
+          />
+        </view>
 
-      <view class="form-actions">
-        <view class="forget-password" @click="forgetPassword">忘记密码？</view>
-      </view>
+        <!-- 验证码组件，pop模式 -->
+        <Verify
+          mode="pop"
+          :captchaType="captchaType"
+          :imgSize="captchaConfig.imgSize"
+          @success="handleCaptchaSuccess"
+          ref="verify"
+        ></Verify>
+
+        <view class="form-actions">
+          <view class="forget-password" @click="forgetPassword">忘记密码？</view>
+        </view>
+      </template>
+
+      <!-- 手机号登录表单 -->
+      <template v-else>
+        <view class="form-item">
+          <view class="label">手机号</view>
+          <input 
+            v-model="mobileForm.mobile" 
+            class="input" 
+            placeholder="请输入手机号" 
+            placeholder-style="color: #999"
+            type="number"
+            maxlength="11"
+            @input="onInput"
+          />
+        </view>
+        
+        <view class="form-item">
+          <view class="label">验证码</view>
+          <view class="code-input-wrapper">
+            <input 
+              v-model="mobileForm.code" 
+              class="code-input" 
+              placeholder="请输入验证码" 
+              placeholder-style="color: #999"
+              type="number"
+              maxlength="6"
+              @input="onInput"
+            />
+            <button 
+              class="send-code-btn" 
+              :disabled="!canSendCode"
+              @click="sendSmsCode"
+            >
+              {{ smsCountdown > 0 ? `${smsCountdown}秒后重发` : '获取验证码' }}
+            </button>
+          </view>
+        </view>
+      </template>
 
       <button
         class="login-btn"
@@ -61,7 +120,7 @@
 
 <script lang="uts">
   import { ref, reactive, computed } from 'vue'
-  import { login as loginApi, type LoginParams } from '@/api/auth.uts'
+  import { emailLogin, smsLogin, sendSmsCode as sendSmsApi, type EmailLoginParams, type SmsLoginParams, type SendSmsParams } from '@/api/auth.uts'
   import { setToken, setRefreshToken, setUserInfo, setTenantId, setExpiresTime, getToken, isLoggedIn } from '@/utils/auth.uts'
   import Verify from '@/components/verifition/Verify.uvue'
   import { apiConfig } from '@/config/apiConfig.uts'
@@ -71,9 +130,19 @@
       Verify
     },
     setup() {
-      const form = reactive({
+      // 登录模式：email 或 mobile
+      const loginMode = ref('email')
+
+      // 邮箱登录表单
+      const emailForm = reactive({
         username: 'jin_zheyicn@qq.com',
         password: '123456'
+      })
+
+      // 手机号登录表单
+      const mobileForm = reactive({
+        mobile: '',
+        code: ''
       })
 
       const captchaVerification = ref('') // 验证码验证结果
@@ -83,8 +152,22 @@
       const captchaConfig = apiConfig.captcha
       const captchaType = ref(captchaConfig.type) // 验证码类型：blockPuzzle（滑块）或 clickWord（点选）
 
+      // 短信倒计时
+      const smsCountdown = ref(0)
+      let countdownTimer: any = null
+
+      // 判断是否可以登录
       const canLogin = computed(() => {
-        return form.username.trim() && form.password.trim()
+        if (loginMode.value === 'email') {
+          return emailForm.username.trim() && emailForm.password.trim()
+        } else {
+          return mobileForm.mobile.trim() && mobileForm.code.trim()
+        }
+      })
+
+      // 判断是否可以发送验证码
+      const canSendCode = computed(() => {
+        return mobileForm.mobile.trim() && mobileForm.mobile.length === 11 && smsCountdown.value === 0
       })
 
       const onInput = () => {
@@ -118,20 +201,58 @@
         captchaVerification.value = ''
       }
 
+      // 发送手机验证码
+      const sendSmsCode = async () => {
+        try {
+          const params: SendSmsParams = {
+            mobile: mobileForm.mobile,
+            scene: 21 // 登录场景
+          }
+          await sendSmsApi(params)
+          uni.showToast({
+            title: '验证码发送成功',
+            icon: 'success'
+          })
+
+          // 开始倒计时
+          smsCountdown.value = 60
+          countdownTimer = setInterval(() => {
+            smsCountdown.value--
+            if (smsCountdown.value <= 0) {
+              clearInterval(countdownTimer)
+            }
+          }, 1000)
+        } catch (error) {
+          const err = error as Error
+          uni.showToast({
+            title: err.message || '验证码发送失败',
+            icon: 'none'
+          })
+        }
+      }
+
       // 执行登录请求
       const doLogin = async () => {
         try {
           uni.showLoading({
             title: '登录中...'
           })
-          
-          // 将验证码信息添加到登录请求中
-          const loginData = {
-            ...form,
-            captchaVerification: captchaVerification.value
-          } as LoginParams
-          
-          const res = await loginApi(loginData)
+          let res
+
+          if (loginMode.value === 'email') {
+            // 邮箱登录
+            const loginData = {
+              ...emailForm,
+              captchaVerification: captchaVerification.value
+            } as EmailLoginParams
+            res = await emailLogin(loginData)
+          } else {
+            // 手机号登录
+            const loginData = {
+              ...mobileForm
+            } as SmsLoginParams
+            res = await smsLogin(loginData)
+          }
 
           // 调试：打印完整的响应数据
           console.log('完整响应数据:', res)
@@ -212,13 +333,15 @@
             icon: 'none'
           })
 
-          // 登录失败时刷新验证码
-          if (verify.value && verify.value.refresh) {
+          // 邮箱登录失败时刷新验证码
+          if (loginMode.value === 'email' && verify.value && verify.value.refresh) {
             verify.value.refresh()
           }
 
           // 清空验证码验证结果
-          captchaVerification.value = ''
+          if (loginMode.value === 'email') {
+            captchaVerification.value = ''
+          }
         } finally {
           // 确保无论如何都会隐藏loading
           uni.hideLoading()
@@ -227,29 +350,40 @@
 
       // 登录入口
       const login = async () => {
-        // 如果验证码开关关闭，直接执行登录
-        if (!captchaConfig.enabled) {
-          await doLogin()
-        } else if (!captchaVerification.value) {
-          // 如果验证码开关开启且没有验证码验证结果，显示验证码弹窗
-          verify.value.show()
+        if (loginMode.value === 'email') {
+          // 邮箱登录：需要验证码
+          // 如果验证码开关关闭，直接执行登录
+          if (!captchaConfig.enabled) {
+            await doLogin()
+          } else if (!captchaVerification.value) {
+            // 如果验证码开关开启且没有验证码验证结果，显示验证码弹窗
+            verify.value.show()
+          } else {
+            // 已有验证码结果，直接登录
+            await doLogin()
+          }
         } else {
-          // 已有验证码结果，直接登录
+          // 手机号登录：不需要验证码，直接登录
           await doLogin()
         }
       }
 
       return {
-        form,
+        loginMode,
+        emailForm,
+        mobileForm,
         captchaType,
         captchaVerification,
         verify,
         canLogin,
+        canSendCode,
         captchaConfig,
+        smsCountdown,
         onInput,
         forgetPassword,
         handleCaptchaSuccess,
         handleCaptchaFail,
+        sendSmsCode,
         login
       }
     }
@@ -298,6 +432,40 @@
     box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
   }
 
+  /* 登录模式切换 */
+  .login-mode-tabs {
+    display: flex;
+    margin-bottom: 48rpx;
+    border-bottom: 2rpx solid #e5e5e5;
+  }
+
+  .tab-item {
+    flex: 1;
+    text-align: center;
+    padding: 16rpx 0;
+    font-size: 28rpx;
+    color: #666;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .tab-item.active {
+    color: #007aff;
+    font-weight: 500;
+  }
+
+  .tab-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2rpx;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80rpx;
+    height: 4rpx;
+    background-color: #007aff;
+    border-radius: 2rpx;
+  }
+
   .form-item {
     margin-bottom: 40rpx;
   }
@@ -323,6 +491,44 @@
   .input:focus {
     border-color: #007aff;
     background-color: #fff;
+  }
+
+  /* 验证码输入框和发送按钮容器 */
+  .code-input-wrapper {
+    display: flex;
+    gap: 16rpx;
+    align-items: center;
+  }
+
+  .code-input {
+    flex: 1;
+    height: 88rpx;
+    border: 2rpx solid #e5e5e5;
+    border-radius: 8rpx;
+    padding: 0 24rpx;
+    font-size: 28rpx;
+    color: #333;
+    background-color: #fafafa;
+  }
+
+  .code-input:focus {
+    border-color: #007aff;
+    background-color: #fff;
+  }
+
+  .send-code-btn {
+    width: 200rpx;
+    height: 88rpx;
+    font-size: 24rpx;
+    border-radius: 8rpx;
+    background-color: #007aff;
+    color: #fff;
+    line-height: 88rpx;
+  }
+
+  .send-code-btn:disabled {
+    background-color: #c0c0c0;
+    color: #fff;
   }
 
   .form-actions {
