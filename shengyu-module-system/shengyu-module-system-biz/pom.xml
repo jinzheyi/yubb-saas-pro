@@ -108,6 +108,12 @@
             <artifactId>shengyu-spring-boot-starter-captcha</artifactId>
         </dependency>
 
+        <!-- netty通讯相关 -->
+        <dependency>
+            <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-spring-boot-starter-netty</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>

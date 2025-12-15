@@ -259,4 +259,26 @@ shengyu:
     message-bus:
       type: redis # 消息总线的类型
 
+  netty:
+    #是否开启服务
+    enable: true
+    #网络通讯端口号
+    port: 8090
+    #即时通讯协议
+    imProtocol: ws:/
+    #建立通讯的前置url
+    imSocketUrl: /sy
+    #主线程数（如果不设置的话，默认是CPU核数的 *2 倍）
+    bossThread: 10
+    #工作线程数（如果不设置的话，默认是CPU核数的 *2 倍）
+    workerThread: 50
+    #临时存放已经完成三次握手的请求的队列的最大长度
+    backLog: 100
+    #读心跳检测，规定时间内未向服务端发送读操作心跳时间，单位秒
+    readHeartBeatTime: 180
+    #写心跳检测，规定时间内未发生写操作心跳时间，单位秒
+    writerHeartBeatTime: 120
+    #读写心跳检测，单位秒
+    allHeartBeatTime: 360
+
 debug: false

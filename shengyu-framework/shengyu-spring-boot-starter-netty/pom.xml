@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>shengyu-framework</artifactId>
+        <groupId>com.shengyu.boot</groupId>
+        <version>${revision}</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>shengyu-spring-boot-starter-netty</artifactId>
+    <packaging>jar</packaging>
+
+    <name>${project.artifactId}</name>
+    <description>网络通讯基础模块</description>
+    <url>https://gitee.com/jinzheyi/yubb-saas-pro</url>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-common</artifactId>
+        </dependency>
+
+        <!-- Spring 核心 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- redis 相关 -->
+        <dependency>
+            <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-spring-boot-starter-redis</artifactId>
+        </dependency>
+
+        <!-- 参数校验相关 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!--netty网络通信框架-->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>
