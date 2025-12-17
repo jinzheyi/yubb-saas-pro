@@ -1,0 +1,1 @@
+package com.shengyu.module.system.controller.admin.im.vo.mail;import cn.hutool.core.util.StrUtil;import com.fasterxml.jackson.annotation.JsonIgnore;import io.swagger.v3.oas.annotations.media.Schema;import lombok.Data;import java.util.List;/** * @author zhusy * @since 2022/11/23 */@Schema(description = "用户通讯录 Response VO")@Datapublic class ImMailListRespVO {}
