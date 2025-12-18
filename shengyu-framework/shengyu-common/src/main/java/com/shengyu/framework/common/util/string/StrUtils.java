@@ -6,6 +6,7 @@ import cn.hutool.core.text.StrPool;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.pinyin.PinyinUtil;
 import com.shengyu.framework.common.enums.CommonConstants;
 import org.aspectj.lang.JoinPoint;
 
@@ -112,6 +113,23 @@ public class StrUtils {
             }
             return item;
         });
+    }
+
+    /**
+     *
+     * @param nickName 传入的字符串
+     * @return 获取自定字符串的首字母转大写，不是英文字母的返回#号
+     */
+    public static String getRemarkPinYinLetter(String nickName) {
+        if (StrUtil.isBlank(nickName)) {
+            return "";
+        }
+        String firstPinYin = PinyinUtil.getFirstLetter(nickName, "").substring(0,1);
+        boolean isLetter= firstPinYin.matches("[a-zA-Z]+");
+        if (isLetter) {
+            return firstPinYin.toUpperCase();
+        }
+        return "#";
     }
 
 }
