@@ -15,7 +15,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -51,28 +50,28 @@ public class ImMailController {
         return success(imMailService.getUserDetail(id));
     }
 
-    @PutMapping("/setblack/{id}")
+    @PostMapping("/setblack/{id}")
     @Operation(summary = "移入/移除黑名单")
     public CommonResult<Boolean> setBlack(@PathVariable Long id, @RequestBody ImMailBlackReqVO reqVO) {
         imMailService.updateBlackStatus(id, reqVO.getIsblack());
         return success(true);
     }
 
-    @PutMapping("/setstar/{id}")
+    @PostMapping("/setstar/{id}")
     @Operation(summary = "设置/取消星标好友")
     public CommonResult<Boolean> setStar(@PathVariable Long id, @RequestBody ImMailStarReqVO reqVO) {
         imMailService.updateStarStatus(id, reqVO.getStar());
         return success(true);
     }
     
-    @PutMapping("/setmomentauth/{id}")
+    @PostMapping("/setmomentauth/{id}")
     @Operation(summary = "设置朋友圈权限")
     public CommonResult<Boolean> setMomentAuth(@PathVariable Long id, @RequestBody ImMailMomentAuthReqVO reqVO) {
         imMailService.setMomentAuth(id, reqVO.getLookme(), reqVO.getLookhim());
         return success(true);
     }
     
-    @PutMapping("/setremarktag/{id}")
+    @PostMapping("/setremarktag/{id}")
     @Operation(summary = "设置备注和标签")
     public CommonResult<Boolean> setRemarkTag(@PathVariable Long id, @RequestBody ImMailRemarkTagReqVO reqVO) {
         imMailService.setRemarkTag(id, reqVO.getNickname(), reqVO.getTags());
