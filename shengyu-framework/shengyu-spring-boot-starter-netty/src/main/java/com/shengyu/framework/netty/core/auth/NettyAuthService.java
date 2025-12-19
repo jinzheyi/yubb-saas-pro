@@ -1,1 +1,0 @@
-package com.shengyu.framework.netty.core.auth;import io.netty.handler.codec.http.FullHttpRequest;/** * 鉴权 * @author zhusy * @since 2022/11/13 */public interface NettyAuthService {    /**     * 根据当前传入request判断是否登录     * @param fullHttpRequest 完整的http请求     * @return true 已登录 false未登录     */    AuthInfo verifyToken(FullHttpRequest fullHttpRequest);}

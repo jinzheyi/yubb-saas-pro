@@ -1,7 +1,6 @@
 package com.shengyu.framework.netty.core.heart;
 
 import com.shengyu.framework.netty.config.NettyProperties;
-import com.shengyu.framework.netty.core.channel.ChannelUtils;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -40,20 +39,13 @@ public class HeartBeatHandler extends IdleStateHandler {
     protected void channelIdle(ChannelHandlerContext context, IdleStateEvent idleStateEvent) throws Exception {
         if (idleStateEvent.state() == IdleState.READER_IDLE) {
             log.info("{}进入读空闲。。。。。。", context.channel());
-            //解绑
-            ChannelUtils.unBindUser(context.channel());
-            context.close();
         } else if (idleStateEvent.state() == IdleState.WRITER_IDLE) {
             log.info("{}进入写空闲。。。。。。", context.channel());
-            //解绑
-            ChannelUtils.unBindUser(context.channel());
-            context.close();
         } else if (idleStateEvent.state() == IdleState.ALL_IDLE) {
             log.info("{}进入读写空闲。。。。。", context.channel());
-            //解绑
-            ChannelUtils.unBindUser(context.channel());
-            context.close();
         }
+        // 关闭空闲通道
+        context.close();
     }
 
 }
