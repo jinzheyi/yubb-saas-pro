@@ -6,6 +6,7 @@ import com.shengyu.module.system.controller.admin.im.vo.mail.ImMailDeleteReqVO;
 import com.shengyu.module.system.controller.admin.im.vo.mail.ImMailListRespVO;
 import com.shengyu.module.system.controller.admin.im.vo.mail.ImMailMomentAuthReqVO;
 import com.shengyu.module.system.controller.admin.im.vo.mail.ImMailRemarkTagReqVO;
+import com.shengyu.module.system.controller.admin.im.vo.mail.ImMailSearchReqVO;
 import com.shengyu.module.system.controller.admin.im.vo.mail.ImMailStarReqVO;
 import com.shengyu.module.system.controller.admin.im.vo.mail.ImMailUserDetailRespVO;
 import com.shengyu.module.system.service.im.ImMailService;
@@ -83,6 +84,12 @@ public class ImMailController {
     public CommonResult<Boolean> destroy(@RequestBody ImMailDeleteReqVO reqVO) {
         imMailService.deleteFriend(reqVO.getFriend_id());
         return success(true);
+    }
+
+    @PostMapping("/search")
+    @Operation(summary = "搜索用户")
+    public CommonResult<ImMailUserDetailRespVO> search(@RequestBody ImMailSearchReqVO reqVO) {
+        return success(imMailService.searchUser(reqVO.getKeyword()));
     }
 
 }

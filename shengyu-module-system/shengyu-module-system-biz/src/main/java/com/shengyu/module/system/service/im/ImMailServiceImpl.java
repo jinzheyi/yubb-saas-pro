@@ -207,6 +207,50 @@ public class ImMailServiceImpl implements ImMailService {
         // 这里可以根据实际的表结构和Mapper进行补充
     }
 
+    @Override
+    public ImMailUserDetailRespVO searchUser(String keyword) {
+        // 获取当前登录用户ID
+        Long currentUserId = getCurrentUserId();
+
+        // 查询符合条件的用户（根据username关键词搜索）
+        List<AdminUserDO> adminUsers = adminUserMapper.selectJoinList(AdminUserDO.class,
+            new MPJLambdaWrapper<AdminUserDO>()
+                .selectAll(AdminUserDO.class)
+                .leftJoin(SaasUserDO.class, SaasUserDO::getId, AdminUserDO::getSaasUserId)
+                .eq(SaasUserDO::getUsername, keyword)
+        );
+
+        if (adminUsers.isEmpty()) {
+            return null;
+        }
+
+        // 获取第一个匹配的用户
+        AdminUserDO adminUser = adminUsers.get(0);
+
+        // 查询Saas用户信息
+        SaasUserDO saasUser = getSaasUserByAdminUser(adminUser);
+        if (saasUser == null) {
+            return null;
+        }
+
+        // 查询用户最新动态
+        List<ImMomentDO> moments = getLatestMoments(adminUser.getId());
+
+        // 构建基础用户信息
+        ImMailUserDetailRespVO respVO = buildBaseUserDetail(adminUser, saasUser, moments);
+
+        // 查询好友关系
+        ImFriendDO friend = getFriendRelation(currentUserId, adminUser.getId());
+        if (friend != null) {
+            // 如果是好友，查询标签信息
+            List<ImTagDO> tags = getFriendTags(friend.getId());
+            // 更新好友相关信息
+            updateFriendInfo(respVO, friend, tags);
+        }
+
+        return respVO;
+    }
+
     /**
      * 处理好友标签
      */

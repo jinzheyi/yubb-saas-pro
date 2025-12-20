@@ -67,4 +67,12 @@ public interface ImMailService {
      */
     void deleteFriend(Long friendId);
 
+    /**
+     * 搜索用户
+     *
+     * @param keyword 关键词
+     * @return 用户详情
+     */
+    ImMailUserDetailRespVO searchUser(String keyword);
+
 }
