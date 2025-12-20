@@ -78,25 +78,25 @@ public interface RedisKeyConstants {
     /**
      * 用户在线状态缓存
      * <p>
-     * KEY 格式：online:{userId}
+     * KEY 格式：online_${userId}
      * VALUE 数据类型：String 用户在线状态
      */
-    String ONLINE_STATUS = "online:%s";
+    String ONLINE_STATUS = "online_%s";
 
     /**
      * 用户离线消息缓存
      * <p>
-     * KEY 格式：getmessage:{userId}
+     * KEY 格式：getmessage_${userId}
      * VALUE 数据类型：List<Map> 离线消息列表
      */
-    String OFFLINE_MESSAGE = "getmessage:%s";
+    String OFFLINE_MESSAGE = "getmessage_%s";
 
     /**
      * 聊天记录缓存
      * <p>
-     * KEY 格式：chatlog:{userId}:{chatType}:{targetId}
+     * KEY 格式：chatlog_${userId}_${chatType}_${targetId}
      * VALUE 数据类型：List<Map> 聊天记录列表
      */
-    String CHAT_LOG = "chatlog:%s:%s:%s";
+    String CHAT_LOG = "chatlog_%s_%s_%s";
 
 }
