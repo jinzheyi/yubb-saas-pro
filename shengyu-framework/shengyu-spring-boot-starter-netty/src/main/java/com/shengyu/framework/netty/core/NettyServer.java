@@ -2,6 +2,7 @@ package com.shengyu.framework.netty.core;
 
 import com.shengyu.framework.netty.config.NettyProperties;
 import com.shengyu.framework.netty.service.NettyAuthService;
+import com.shengyu.framework.netty.service.NettyMessageHandler;
 import com.shengyu.framework.netty.service.NettyMessageService;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -24,6 +25,7 @@ public class NettyServer implements InitializingBean {
     private final NettyProperties nettyProperties;
     private final NettyAuthService nettyAuthService;
     private final NettyMessageService nettyMessageService;
+    private final NettyMessageHandler nettyMessageHandler;
 
     /**
      * 构造函数
@@ -31,13 +33,16 @@ public class NettyServer implements InitializingBean {
      * @param nettyProperties    配置属性
      * @param nettyAuthService   认证服务
      * @param nettyMessageService 消息服务
+     * @param nettyMessageHandler 消息处理器
      */
     public NettyServer(NettyProperties nettyProperties,
                       NettyAuthService nettyAuthService,
-                      NettyMessageService nettyMessageService) {
+                      NettyMessageService nettyMessageService,
+                      NettyMessageHandler nettyMessageHandler) {
         this.nettyProperties = nettyProperties;
         this.nettyAuthService = nettyAuthService;
         this.nettyMessageService = nettyMessageService;
+        this.nettyMessageHandler = nettyMessageHandler;
     }
 
     @Override
@@ -65,7 +70,7 @@ public class NettyServer implements InitializingBean {
                     //设置nio模型，NioServerSocketChannel是对nio类型的链接的抽象
                     .channel(NioServerSocketChannel.class)
                     //工作线程处理业务工作类
-                    .childHandler(new NettyWorkGroupPipelines(nettyProperties, nettyAuthService, nettyMessageService));
+                    .childHandler(new NettyWorkGroupPipelines(nettyProperties, nettyAuthService, nettyMessageService, nettyMessageHandler));
             
             bind(serverBootstrap, nettyProperties.getPort());
         } catch (Exception e) {

@@ -5,15 +5,18 @@ import com.shengyu.framework.netty.core.auth.AuthInfo;
 import com.shengyu.framework.netty.service.NettyAuthService;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.FullHttpRequest;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Service;
 
 /**
  * Netty认证服务实现类
+ * 当业务服务没有自定义实现时，使用此默认实现
  *
  * @author zhusy
  * @since 2024/12/19
  */
 @Service
+@ConditionalOnMissingBean(NettyAuthService.class)
 public class NettyAuthServiceImpl implements NettyAuthService {
 
     @Override
@@ -47,26 +50,4 @@ public class NettyAuthServiceImpl implements NettyAuthService {
         return getAuthInfo(channel) != null;
     }
 
-    /**
-     * 兼容原有接口的verifyToken方法
-     *
-     * @param fullHttpRequest 完整的http请求
-     * @return 认证信息
-     */
-    public AuthInfo verifyToken(FullHttpRequest fullHttpRequest) {
-        // 从请求中提取认证信息，例如从header或参数中获取token
-        // 这里可以根据实际业务逻辑实现
-        AuthInfo authInfo = new AuthInfo();
-        // 示例：从header中获取token和userId
-        String token = fullHttpRequest.headers().get("token");
-        String userId = fullHttpRequest.headers().get("userId");
-        
-        if (token != null && userId != null) {
-            authInfo.setToken(token);
-            authInfo.setUserId(userId);
-            return authInfo;
-        }
-        
-        return null;
-    }
 }

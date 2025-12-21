@@ -4,6 +4,7 @@ import com.shengyu.framework.common.util.json.JsonUtils;
 import com.shengyu.framework.netty.config.NettyProperties;
 import com.shengyu.framework.netty.core.auth.AuthInfo;
 import com.shengyu.framework.netty.service.NettyAuthService;
+import com.shengyu.framework.netty.service.NettyMessageHandler;
 import com.shengyu.framework.netty.service.NettyMessageService;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -37,6 +38,7 @@ public class ShengyuChannelInboundHandler extends SimpleChannelInboundHandler<Ob
     private final NettyProperties nettyProperties;
     private final NettyAuthService nettyAuthService;
     private final NettyMessageService nettyMessageService;
+    private final NettyMessageHandler nettyMessageHandler;
 
     /**
      * 构造函数
@@ -44,13 +46,16 @@ public class ShengyuChannelInboundHandler extends SimpleChannelInboundHandler<Ob
      * @param nettyProperties    配置属性
      * @param nettyAuthService   认证服务
      * @param nettyMessageService 消息服务
+     * @param nettyMessageHandler 消息处理器
      */
     public ShengyuChannelInboundHandler(NettyProperties nettyProperties,
                                        NettyAuthService nettyAuthService,
-                                       NettyMessageService nettyMessageService) {
+                                       NettyMessageService nettyMessageService,
+                                       NettyMessageHandler nettyMessageHandler) {
         this.nettyProperties = nettyProperties;
         this.nettyAuthService = nettyAuthService;
         this.nettyMessageService = nettyMessageService;
+        this.nettyMessageHandler = nettyMessageHandler;
     }
 
     @Override
@@ -76,14 +81,20 @@ public class ShengyuChannelInboundHandler extends SimpleChannelInboundHandler<Ob
                 return;
             }
 
-            // 2. 进行认证
-            AuthInfo authInfo = extractAndVerifyToken(request);
-            if (authInfo == null || !authInfo.getVerify()) {
+            // 2. 提取token和userId
+            AuthInfo authInfo = extractTokenFromRequest(request);
+            if (authInfo == null) {
                 sendHttpResponse(context, request, new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED));
                 return;
             }
 
-            // 3. 执行WebSocket握手
+            // 3. 调用业务服务的认证逻辑
+            if (!nettyAuthService.authenticate(authInfo, context.channel())) {
+                sendHttpResponse(context, request, new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED));
+                return;
+            }
+
+            // 4. 执行WebSocket握手
             WebSocketServerHandshakerFactory factory = new WebSocketServerHandshakerFactory(
                     buildWebSocketUrl(request), nettyProperties.getImProtocol(), true, 65536);
             WebSocketServerHandshaker handshaker = factory.newHandshaker(request);
@@ -91,7 +102,7 @@ public class ShengyuChannelInboundHandler extends SimpleChannelInboundHandler<Ob
                 WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(context.channel());
             } else {
                 handshaker.handshake(context.channel(), request);
-                // 4. 保存认证信息和用户通道
+                // 5. 保存认证信息和用户通道
                 nettyAuthService.saveAuthInfo(context.channel(), authInfo);
                 if (authInfo.getUserId() != null) {
                     nettyMessageService.addUserChannel(authInfo.getUserId(), context.channel());
@@ -102,6 +113,55 @@ public class ShengyuChannelInboundHandler extends SimpleChannelInboundHandler<Ob
             log.error("处理WebSocket握手请求异常: {}", e.getMessage(), e);
             sendHttpResponse(context, request, new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR));
         }
+    }
+    
+    /**
+     * 从请求中提取token和userId
+     *
+     * @param request HTTP请求
+     * @return 认证信息
+     */
+    private AuthInfo extractTokenFromRequest(FullHttpRequest request) {
+        AuthInfo authInfo = new AuthInfo();
+        
+        // 从请求头中获取token
+        String token = request.headers().get(DEFAULT_TOKEN_HEADER);
+        String refreshToken = null;
+        String userId = null;
+        String tenantId = null;
+        
+        // 从请求头中获取tenantId
+        tenantId = request.headers().get("tenant-id");
+        
+        // 从URI参数中获取token和userId
+        try {
+            URI uri = new URI(request.uri());
+            String query = uri.getQuery();
+            if (query != null) {
+                Map<String, String> params = parseQueryString(query);
+                if (StrUtil.isBlank(token)) {
+                    token = params.get(DEFAULT_TOKEN_PARAM);
+                }
+                refreshToken = params.get("refreshToken");
+                userId = params.get(DEFAULT_USER_ID_PARAM);
+                if (StrUtil.isBlank(tenantId)) {
+                    tenantId = params.get("tenantId");
+                }
+            }
+        } catch (Exception e) {
+            log.error("解析URI失败: {}", e.getMessage());
+        }
+        
+        // 只需要token，userId可以后续通过token解析获取
+        if (StrUtil.isNotBlank(token)) {
+            authInfo.setToken(token);
+            authInfo.setRefreshToken(refreshToken);
+            authInfo.setUserId(userId);
+            authInfo.setTenantId(tenantId);
+            return authInfo;
+        }
+        
+        return null;
     }
 
     /**
@@ -189,9 +249,14 @@ public class ShengyuChannelInboundHandler extends SimpleChannelInboundHandler<Ob
         String message = textFrame.text();
         log.debug("收到消息: {}, 通道: {}", message, context.channel().id());
         
-        // 这里可以根据实际业务需求处理消息
-        // 示例：直接返回收到的消息
-        context.channel().writeAndFlush(new TextWebSocketFrame("收到消息: " + message));
+        // 从通道中获取认证信息
+        AuthInfo authInfo = nettyAuthService.getAuthInfo(context.channel());
+        if (authInfo != null && authInfo.getUserId() != null) {
+            // 调用业务服务的消息处理逻辑
+            nettyMessageHandler.handleTextMessage(context, textFrame, authInfo.getUserId(), message);
+        } else {
+            log.warn("处理消息失败：未认证的通道，通道ID={}", context.channel().id());
+        }
     }
 
     /**
@@ -232,46 +297,7 @@ public class ShengyuChannelInboundHandler extends SimpleChannelInboundHandler<Ob
         return "ws://" + host + request.uri();
     }
 
-    /**
-     * 提取并验证token
-     *
-     * @param request HTTP请求
-     * @return 认证信息
-     */
-    private AuthInfo extractAndVerifyToken(FullHttpRequest request) {
-        AuthInfo authInfo = new AuthInfo();
-        
-        // 从请求头中获取token
-        String token = request.headers().get(DEFAULT_TOKEN_HEADER);
-        String userId = null;
-        
-        // 从URI参数中获取token和userId
-        try {
-            URI uri = new URI(request.uri());
-            String query = uri.getQuery();
-            if (query != null) {
-                Map<String, String> params = parseQueryString(query);
-                if (StrUtil.isBlank(token)) {
-                    token = params.get(DEFAULT_TOKEN_PARAM);
-                }
-                userId = params.get(DEFAULT_USER_ID_PARAM);
-            }
-        } catch (Exception e) {
-            log.error("解析URI失败: {}", e.getMessage());
-        }
-        
-        // 验证token和userId是否存在
-        if (StrUtil.isNotBlank(token) && StrUtil.isNotBlank(userId)) {
-            authInfo.setToken(token);
-            authInfo.setUserId(userId);
-            // 这里可以集成系统的认证服务，验证token有效性
-            // 目前简化处理，仅检查token和userId是否存在
-            authInfo.setVerify(true);
-            return authInfo;
-        }
-        
-        return null;
-    }
+
 
     /**
      * 解析查询字符串

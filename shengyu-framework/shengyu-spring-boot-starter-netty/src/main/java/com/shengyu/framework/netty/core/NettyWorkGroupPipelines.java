@@ -3,6 +3,7 @@ package com.shengyu.framework.netty.core;
 import com.shengyu.framework.netty.config.NettyProperties;
 import com.shengyu.framework.netty.core.heart.HeartBeatHandler;
 import com.shengyu.framework.netty.service.NettyAuthService;
+import com.shengyu.framework.netty.service.NettyMessageHandler;
 import com.shengyu.framework.netty.service.NettyMessageService;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -23,6 +24,7 @@ public class NettyWorkGroupPipelines extends ChannelInitializer<NioSocketChannel
     private final NettyProperties nettyProperties;
     private final NettyAuthService nettyAuthService;
     private final NettyMessageService nettyMessageService;
+    private final NettyMessageHandler nettyMessageHandler;
 
     /**
      * 构造函数
@@ -30,13 +32,16 @@ public class NettyWorkGroupPipelines extends ChannelInitializer<NioSocketChannel
      * @param nettyProperties    配置属性
      * @param nettyAuthService   认证服务
      * @param nettyMessageService 消息服务
+     * @param nettyMessageHandler 消息处理器
      */
     public NettyWorkGroupPipelines(NettyProperties nettyProperties,
                                    NettyAuthService nettyAuthService,
-                                   NettyMessageService nettyMessageService) {
+                                   NettyMessageService nettyMessageService,
+                                   NettyMessageHandler nettyMessageHandler) {
         this.nettyProperties = nettyProperties;
         this.nettyAuthService = nettyAuthService;
         this.nettyMessageService = nettyMessageService;
+        this.nettyMessageHandler = nettyMessageHandler;
     }
 
     @Override
@@ -52,7 +57,7 @@ public class NettyWorkGroupPipelines extends ChannelInitializer<NioSocketChannel
         //对写大数据流的支持
         pipeline.addLast(new ChunkedWriteHandler());
         //权限校验与业务转发
-        pipeline.addLast(new ShengyuChannelInboundHandler(nettyProperties, nettyAuthService, nettyMessageService));
+        pipeline.addLast(new ShengyuChannelInboundHandler(nettyProperties, nettyAuthService, nettyMessageService, nettyMessageHandler));
         //心跳检测
         pipeline.addLast(new HeartBeatHandler(nettyProperties));
     }

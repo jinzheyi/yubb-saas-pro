@@ -21,8 +21,18 @@ public class AuthInfo {
     private String userId;
     
     /**
-     * 令牌
+     * 租户ID
+     */
+    private String tenantId;
+    
+    /**
+     * 访问令牌
      */
     private String token;
+    
+    /**
+     * 刷新令牌
+     */
+    private String refreshToken;
 
-}
+}
