@@ -25,21 +25,16 @@ class chat {
 		}
 	}
 	// 断线重连
-	reconnect(){
-		if(this.isOnline){
-			return
-		}
-		if(this.reconnectTime >= 20){
-			return this.reconnectConfirm()
-		}
-		// 检查用户是否有有效的token
-		if (!this.user || !getAccessToken()) {
-			console.error('websocket重连失败：用户未登录或token无效')
-			return
-		}
-		this.reconnectTime += 1
-		this.connectSocket()
-	}
+    reconnect(){
+        if(this.isOnline){
+            return
+        }
+        if(this.reconnectTime >= 20){
+            return this.reconnectConfirm()
+        }
+        this.reconnectTime += 1
+        this.connectSocket()
+    }
 	// 连接socket
 	connectSocket(){
 		// 检查用户是否有有效的token
@@ -61,7 +56,7 @@ class chat {
 
 		this.socket = uni.connectSocket({
 		    // #ifdef H5
-				url: wsUrl + "?token=" + getAccessToken() + "&refreshToken=" + getRefreshToken() + "&tenant-id=" + getTenantId(),
+				url: wsUrl + "?token=" + getAccessToken() + "&refreshToken=" + getRefreshToken() + "&tenantId=" + getTenantId(),
 				// #endif
 				// #ifndef H5
 				url: wsUrl + "?token=" + getAccessToken() + "&refreshToken=" + getRefreshToken(),
@@ -153,7 +148,10 @@ class chat {
 	// 监听接收消息
 	onMessage(data){
 		let res = JSON.parse(data.data)
-		// console.log('监听接收消息',res)
+		console.log('监听接收消息',res)
+		if(res.msg == 'undefined' || !res.msg){
+			return
+		}
 		// 错误
 		switch (res.msg){
 			case 'fail':

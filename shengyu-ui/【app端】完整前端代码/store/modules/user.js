@@ -208,27 +208,36 @@ export default {
 
 		// 初始化登录状态
 		initLogin({ state, dispatch }) {
-			// 获取用户信息
-			dispatch('GetInfo').then(() => {
-				// 初始化聊天功能
-				dispatch('initChat')
-			}).catch(() => {
-				// 跳转到登录页
-				uni.reLaunch({
-					url: "/pages/common/login/login"
+			// 引入auth.js的getAccessToken方法检查token是否存在
+			const { getAccessToken } = require('@/common/free-lib/auth.js');
+			// 只有在token存在时才调用GetInfo
+			if (getAccessToken()) {
+				// 获取用户信息
+				dispatch('GetInfo').then(() => {
+					// 初始化聊天功能
+					dispatch('initChat')
+				}).catch(() => {
+					// 跳转到登录页
+					uni.reLaunch({
+						url: "/pages/common/login/login"
+					})
 				})
-			})
+			}
 		},
 
 		// 获取好友申请列表
 		getApply({state,dispatch},page = 1){
 			$H.get('/im/apply/'+page).then(res=>{
 				console.log(res);
+				res = res.data; // 读取 data 数据
 				if(page === 1){
-					state.apply = res
+					state.apply = {
+						rows: res || [],
+						count: res ? res.length : 0
+					}
 				} else {
-					state.apply.rows = [ ...state.apply.rows, ...res.rows ]
-					state.apply.count = res.count
+					state.apply.rows = [ ...state.apply.rows, ...(res || []) ]
+					state.apply.count = state.apply.rows.length
 				}
 				// 更新通讯录角标提示
 				dispatch('updateMailBadge')
@@ -250,8 +259,9 @@ export default {
 		},
 
 		// 获取通讯录列表
-		getMailList({ state }){
+		getMailList({ state }){ 
 			$H.get('/im/mail/list').then(res=>{
+				res = res.data; // 读取 data 数据
 				state.mailList = res.rows.newList ? res.rows.newList : [],
 				console.log(state.mailList);
 			})

@@ -25,7 +25,7 @@ public class CustomNettyMessageHandlerImpl implements NettyMessageHandler {
         // 例如：解析消息内容，调用相应的业务服务，然后返回处理结果
         
         // 示例：直接返回处理结果
-        ctx.channel().writeAndFlush(new TextWebSocketFrame("处理结果: " + message));
+        ctx.channel().writeAndFlush(new TextWebSocketFrame(message));
     }
 
     @Override

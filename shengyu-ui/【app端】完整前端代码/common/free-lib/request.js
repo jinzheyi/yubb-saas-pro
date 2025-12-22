@@ -96,19 +96,32 @@ export default {
 
     // 处理token过期
     handleTokenExpired(options, resolve, reject) {
+        // 检查refreshToken是否存在
+        const refreshToken = getRefreshToken();
+        if (!refreshToken) {
+            // refreshToken不存在，直接跳转到登录页
+            uni.reLaunch({
+                url: '/pages/common/login/login'
+            });
+            reject({ code: 401, msg: '无效的会话，或者会话已过期，请重新登录。' });
+            return;
+        }
+        
         if (!this.refreshingToken) {
             // 开始刷新token
             this.refreshingToken = true
 
             // 使用refreshToken获取新的token
+            const tenantId = getTenantId();
             uni.request({
                 url: this.common.baseUrl + '/system/auth/refresh-token',
                 method: 'POST',
                 data: {
-                    refreshToken: getRefreshToken()
+                    refreshToken: refreshToken
                 },
                 header: {
-                    'Content-Type': 'application/json;charset=UTF-8'
+                    'Content-Type': 'application/json;charset=UTF-8',
+                    ...(tenantId && { 'tenant-id': tenantId })
                 }
             }).then(response => {
                 let [error, res] = response

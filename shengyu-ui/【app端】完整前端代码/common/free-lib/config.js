@@ -8,7 +8,7 @@ export default {
   env:"dev",
   codeUrl:"http://localhost:48080",
   // 表情包线上路径
-  emoticonUrl:"http://wechath5.dishait.cn/static/images/emoticon/5497/"
+  emoticonUrl:"http://wechath5.dishait.cn/static/images/emoticon/5497/",
   // 应用信息
   appInfo: {
     // 应用名称
