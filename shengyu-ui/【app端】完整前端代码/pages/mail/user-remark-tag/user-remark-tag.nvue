@@ -4,12 +4,12 @@
 		<free-nav-bar title="设置备注和标签" showBack :showRight="true" bgColor="bg-white">
 			<free-main-button name="完成" slot="right" @click="submit"></free-main-button>
 		</free-nav-bar>
-		
+
 		<view class="flex flex-column">
 			<text class="font-sm text-secondary px-3 py-2">备注名</text>
 			<input type="text" class="font-md border bg-white px-3" placeholder="请填写备注名" style="height: 100rpx;" v-model="nickname"/>
 		</view>
-		
+
 		<view class="flex flex-column">
 			<text class="font-sm text-secondary px-3 py-2">标签</text>
 			<view class="border bg-white px-3 flex align-center flex-wrap pt-3 pb-2" @click="openTagSet">
@@ -18,7 +18,7 @@
 				</view>
 			</view>
 		</view>
-		
+
 	</view>
 </template>
 
@@ -63,7 +63,7 @@
 			},
 			// 完成
 			submit(){
-				$H.post('/friend/setremarktag/'+this.id,{
+				$H.post('/im/mail/setremarktag/'+this.id,{
 					nickname:this.nickname,
 					tags:this.tagList.join(',')
 				}).then(res=>{

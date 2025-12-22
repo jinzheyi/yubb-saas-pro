@@ -1,3 +1,5 @@
+import $U from '@/common/free-lib/util.js'
+
 const AccessTokenKey = 'ACCESS_TOKEN'
 const RefreshTokenKey = 'REFRESH_TOKEN'
 const TenantIdKey = 'TENANT_ID'
@@ -8,28 +10,26 @@ const deptIdKey = 'DEPT_ID'
 
 // 获取token
 export function getAccessToken() {
-  // 此处与TokenKey相同，此写法解决初始化时Cookies中不存在TokenKey报错
-  const accessToken = uni.getStorageSync(AccessTokenKey)
-  return accessToken ? accessToken : uni.getStorageSync('ACCESS_TOKEN')
+  return $U.getStorage(AccessTokenKey)
 }
 
 // 刷新token
 export function getRefreshToken() {
-  return uni.getStorageSync(RefreshTokenKey)
+  return $U.getStorage(RefreshTokenKey)
 }
 
 // 设置token
 export function setToken(token) {
-  uni.setStorageSync(RefreshTokenKey, token.refreshToken)
-  uni.setStorageSync(AccessTokenKey, token.accessToken)
+  $U.setStorage(RefreshTokenKey, token.refreshToken)
+  $U.setStorage(AccessTokenKey, token.accessToken)
   setTenantId(token.tenantId)
   setDeptId(token.deptId)
 }
 
 // 删除token
 export function removeToken() {
-  uni.removeStorageSync(AccessTokenKey)
-  uni.removeStorageSync(RefreshTokenKey)
+  $U.removeStorage(AccessTokenKey)
+  $U.removeStorage(RefreshTokenKey)
   removeTenantId()
   removeDeptId()
 }
@@ -42,38 +42,38 @@ export function formatToken(token) {
 // ========== 租户相关 ==========
 
 export function getTenantName() {
-  return uni.getStorageSync(TenantNameKey)
+  return $U.getStorage(TenantNameKey)
 }
 
 export function setTenantName(username) {
-  uni.setStorageSync(TenantNameKey, username)
+  $U.setStorage(TenantNameKey, username)
 }
 
 export function removeTenantName() {
-  uni.removeStorageSync(TenantNameKey)
+  $U.removeStorage(TenantNameKey)
 }
 
 export function getTenantId() {
-  return uni.getStorageSync(TenantIdKey)
+  return $U.getStorage(TenantIdKey)
 }
 
 export function setTenantId(tenantId) {
-  uni.setStorageSync(TenantIdKey, tenantId)
+  $U.setStorage(TenantIdKey, tenantId)
 }
 
 export function removeTenantId() {
-  uni.removeStorageSync(TenantIdKey)
+  $U.removeStorage(TenantIdKey)
 }
 
 // =========== 部门相关 =========
 export function removeDeptId() {
-  uni.removeStorageSync(deptIdKey)
+  $U.removeStorage(deptIdKey)
 }
 
 export function getDeptId() {
-  return uni.getStorageSync(deptIdKey)
+  return $U.getStorage(deptIdKey)
 }
 
 export function setDeptId(deptId) {
-  uni.setStorageSync(deptIdKey, deptId)
+  $U.setStorage(deptIdKey, deptId)
 }

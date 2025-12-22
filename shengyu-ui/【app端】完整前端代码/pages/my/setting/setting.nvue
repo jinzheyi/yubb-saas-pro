@@ -22,12 +22,12 @@
 		},
 		data() {
 			return {
-				
+
 			}
 		},
 		methods: {
 			logout(){
-				$H.post('/logout').then(res=>{
+				$H.post('/system/auth/logout').then(res=>{
 					uni.showToast({
 						title: '退出登录成功',
 						icon: 'none'

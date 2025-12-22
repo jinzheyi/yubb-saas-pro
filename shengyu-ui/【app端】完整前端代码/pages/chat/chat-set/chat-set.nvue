@@ -3,37 +3,37 @@
 		<!-- 导航栏 -->
 		<free-nav-bar title="聊天信息" showBack :showRight="false"></free-nav-bar>
 		<view class="flex flex-wrap py-3 bg-white">
-			
+
 			<view v-if="detail.chat_type === 'user'" class="flex flex-column align-center justify-center mb-2" style="width: 150rpx;">
 				<free-avater :src="detail.avatar || '/static/images/userpic.png'" size="110"></free-avater>
 				<text class="font text-muted mt-1">{{detail.name}}</text>
 			</view>
-			
+
 			<view v-else class="flex flex-column align-center justify-center mb-2" style="width: 150rpx;" v-for="(item,index) in list" :key="index">
 				<free-avater :src="item.avatar || '/static/images/userpic.png'" size="110"></free-avater>
 				<text class="font text-muted mt-1">{{item.name}}</text>
 			</view>
-			
+
 			<view class="flex flex-column align-center justify-center mb-2" style="width: 150rpx;">
-				<view class="flex align-center justify-center border" 
-				style="width: 120rpx;height: 120rpx;" 
+				<view class="flex align-center justify-center border"
+				style="width: 120rpx;height: 120rpx;"
 				hover-class="bg-light"
 				@click="openMail">
-					<text class="text-light-muted" 
+					<text class="text-light-muted"
 					style="font-size: 100rpx;">+</text>
 				</view>
 			</view>
-			
+
 			<view class="flex flex-column align-center justify-center mb-2" style="width: 150rpx;">
-				<view class="flex align-center justify-center border" 
-				style="width: 120rpx;height: 120rpx;" 
+				<view class="flex align-center justify-center border"
+				style="width: 120rpx;height: 120rpx;"
 				hover-class="bg-light"
 				@click="deleteUser">
-					<text class="text-light-muted" 
+					<text class="text-light-muted"
 					style="font-size: 100rpx;">-</text>
 				</view>
 			</view>
-			
+
 		</view>
 		<view v-if="detail.chat_type === 'group'">
 			<free-divider></free-divider>
@@ -63,19 +63,19 @@
 		:showRightIcon="false">
 			<switch slot="right" :checked="detail.strongwarn" color="#08C060" @change="updateChatItem($event,'strongwarn')"/>
 		</free-list-item>
-		
+
 		<view v-if="detail.chat_type === 'group'">
 			<free-divider></free-divider>
 			<free-list-item title="我在本群的昵称" showRight :showLeftIcon="false" @click="updateNickname">
 				<text slot="right" class="font text-muted">{{nickname}}</text>
 			</free-list-item>
-			<free-list-item title="显示群成员昵称" showRight 
+			<free-list-item title="显示群成员昵称" showRight
 			:showLeftIcon="false"
 			:showRightIcon="false">
 				<switch slot="right" :checked="detail.shownickname" color="#08C060" @change="updateChatItem($event,'shownickname')"/>
 			</free-list-item>
 		</view>
-		
+
 		<free-divider></free-divider>
 		<free-list-item title="清空聊天记录" showRight :showLeftIcon="false" @click="clear"></free-list-item>
 		<free-divider></free-divider>
@@ -85,11 +85,11 @@
 		hover-class="bg-light" @click="quit">
 			<text class="font-md text-danger">删除并退出</text>
 		</view>
-		
+
 		<free-confirm ref="confirm" :title="'修改'+confirmTitle">
 			<input type="text" v-model="confirmText" class="border-bottom font-md" :placeholder="confirmTitle"/>
 		</free-confirm>
-		
+
 		<view style="height: 200rpx;"></view>
 	</view>
 </template>
@@ -128,7 +128,7 @@
 					shownickname:false, // 是否显示昵称
 					nowarn:false, // 消息免打扰
 					strongwarn:false, // 是否开启强提醒
-					
+
 					user_id:0, // 群管理员id
 					remark:"", // 群公告
 					invite_confirm:0, // 邀请确认
@@ -149,7 +149,7 @@
 		},
 		onShow() {
 			if(this.detail.chat_type === 'group'){
-				$H.get('/group_info/'+this.detail.id).then(res=>{
+				$H.get('/im/group/info/'+this.detail.id).then(res=>{
 					console.log(res);
 					this.list = res.group_users.map(item=>{
 						if(item.user_id === this.user.id){
@@ -198,7 +198,7 @@
 							icon: 'none'
 						});
 					}
-					$H.post('/group/rename',{
+					$H.post('/im/group/rename',{
 						id:this.detail.id,
 						name:this.confirmText
 					}).then(res=>{
@@ -215,7 +215,7 @@
 				this.confirmType = 'nickname'
 				this.confirmText = this.nickname
 				this.$refs.confirm.show((close)=>{
-					$H.post('/group/nickname',{
+					$H.post('/im/group/nickname',{
 						id:this.detail.id,
 						nickname:this.confirmText
 					}).then(res=>{
@@ -249,7 +249,7 @@
 					content: '是否要删除或退出该群聊？',
 					success:(res)=>{
 						if (res.cancel) return
-						$H.post('/group/quit',{
+						$H.post('/im/group/quit',{
 							id:this.detail.id
 						}).then(res=>{
 							uni.showToast({

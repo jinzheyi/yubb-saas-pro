@@ -17,8 +17,8 @@
 		<view v-if="type === 'video' && video && video.src" class="my-3 flex align-center justify-center bg-light" hover-class="bg-hover-light" style="height: 100rpx;" @click="uploadVideo">
 			<text class="font-md text-muted">点击切换视频</text>
 		</view>
-		
-		
+
+
 		<!-- <free-list-item title="所在位置" showRight :showLeftIcon="false">
 			<text slot="right" class="font-md">位置</text>
 		</free-list-item> -->
@@ -32,7 +32,7 @@
 		<free-list-item title="谁可以看" showRight :showLeftIcon="false" @click="openSee">
 			<text slot="right" class="font-md">{{seeText}}</text>
 		</free-list-item>
-		
+
 	</view>
 </template>
 
@@ -57,9 +57,9 @@
 				imageList:[],
 				type:"image",
 				video:false,
-				
+
 				remindList:[],
-				
+
 				seeObj:{
 					k:"all",
 					v:[]
@@ -115,7 +115,7 @@
 				});
 			},
 			submit(){
-				$H.post('/moment/create',{
+				$H.post('/im/moment/create',{
 					content:this.content,
 					image:this.imageList.join(','),
 					video:this.video ? JSON.stringify(this.video) : '',

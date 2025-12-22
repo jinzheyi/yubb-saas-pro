@@ -60,7 +60,7 @@
 			submit(){
 				// 添加好友
 				if(this.id == 0){
-					return $H.post('/apply/addfriend',this.form).then(res=>{
+					return $H.post('/im/apply/add',this.form).then(res=>{
 						uni.showToast({
 							title: '申请成功',
 							icon: 'none'
@@ -71,7 +71,7 @@
 					})
 				}
 				// 处理好友申请
-				$H.post('/apply/handle/'+this.id,{
+				$H.post('/im/apply/handle/'+this.id,{
 					...this.form,
 					status:"agree"
 				}).then(res=>{

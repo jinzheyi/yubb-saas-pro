@@ -104,7 +104,7 @@ public class ImChatController {
      * @param limit 每页数量
      * @return 好友申请列表
      */
-    @GetMapping("/apply/list")
+    @GetMapping("/apply/{page}")
     @Operation(summary = "获取好友申请列表")
     public CommonResult<List<ImApplyListRespVO>> getApplyList(
             @Parameter(description = "页码，默认1") @RequestParam(defaultValue = "1") int page,
@@ -138,7 +138,7 @@ public class ImChatController {
      * @param limit 每页数量
      * @return 群聊列表
      */
-    @GetMapping("/group/list")
+    @GetMapping("/group/{page}")
     @Operation(summary = "获取群聊列表")
     public CommonResult<List<ImGroupInfoRespVO>> getGroupList(
             @Parameter(description = "页码，默认1") @RequestParam(defaultValue = "1") int page,
@@ -278,7 +278,7 @@ public class ImChatController {
         GroupRelationRespVO result = imGroupService.checkGroupRelation(id);
         return CommonResult.success(result);
     }
-    
+
     /**
      * 生成群二维码
      *

@@ -10,13 +10,13 @@
 				<video v-else-if="item.type === 'video' " :src="item.data" :poster="item.options.poster" controls style="width: 500rpx;height: 400rpx;"></video>
 			</view>
 		</view>
-		
+
 		<!-- 上拉加载 -->
 		<view class="flex align-center justify-center py-5 bg-light"
 		v-if="list.length >= 10">
 			<text class="text-muted font">{{loadmore}}</text>
 		</view>
-		
+
 	</view>
 </template>
 
@@ -82,7 +82,7 @@
 								if (res.cancel) {
 									return
 								}
-								$H.post('/fava/destroy',{
+								$H.post('/im/my/fava/delete',{
 									id:item.id
 								}).then(res=>{
 									uni.showToast({
@@ -98,7 +98,7 @@
 			},
 			getData(){
 				return new Promise((result,reject)=>{
-					$H.get('/fava/'+this.page).then(res=>{
+					$H.get('/im/my/fava/'+this.page).then(res=>{
 						let list = res.map(item=>{
 							item.options = JSON.parse(item.options)
 							return item

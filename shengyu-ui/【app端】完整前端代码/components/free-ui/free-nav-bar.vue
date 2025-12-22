@@ -20,7 +20,7 @@
 				<!-- 右边 -->
 				<view class="flex align-center" v-if="showRight">
 					<slot name="right">
-						<free-icon-button @click="search" 
+						<free-icon-button @click="search"
 						:icon="'\ue6e3'"></free-icon-button>
 						<free-icon-button @click="openExtend"
 						:icon="'\ue682'"></free-icon-button>
@@ -30,13 +30,13 @@
 		</view>
 		<!-- 占位 -->
 		<view v-if="fixed" :style="fixedStyle"></view>
-		
+
 		<!-- 扩展菜单 -->
 		<free-popup v-if="showRight" ref="extend" :bodyWidth="320" :bodyHeight="525"
 		bodyBgColor="bg-dark" transformOrigin="right top">
-			<view class="flex flex-column" 
+			<view class="flex flex-column"
 			style="width: 320rpx;height: 525rpx;">
-				<view class="flex-1 flex align-center" 
+				<view class="flex-1 flex align-center"
 				hover-class="bg-hover-dark"
 				v-for="(item,index) in menus"
 				:key="index"
@@ -46,8 +46,8 @@
 				</view>
 			</view>
 		</free-popup>
-		
-		
+
+
 	</view>
 </template>
 
@@ -67,7 +67,7 @@
 			},
 			title: {
 				type: [String,Boolean],
-				default:false 
+				default:false
 			},
 			fixed:{
 				type:Boolean,
@@ -143,7 +143,7 @@
 			},
 			getClass(){
 				let fixed = this.fixed?'fixed-top':''
-				return `${fixed} ${this.bgColor}` 
+				return `${fixed} ${this.bgColor}`
 			}
 		},
 		methods: {
@@ -180,7 +180,7 @@
 								console.log(result);
 								switch (result.type){
 									case 'group':
-									$H.post('/group/checkrelation',{
+									$H.post('/im/group/checkrelation',{
 										id:parseInt(result.id)
 									}).then(res2=>{
 										if(res2.status){

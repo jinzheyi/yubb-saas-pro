@@ -3,7 +3,7 @@
 		<!-- 导航栏 -->
 		<free-nav-bar title="群聊列表" showBack :showRight="false">
 		</free-nav-bar>
-		
+
 		<free-list-item v-for="(item,index) in list" :key="index" :title="item.name" :cover="item.avatar || '/static/images/userpic.png'" :showRight="true" @click="handle(item)"></free-list-item>
 		<!-- 上拉加载 -->
 		<view class="flex align-center justify-center py-5 bg-light"
@@ -33,13 +33,13 @@
 			}
 		},
 		computed: {
-			
+
 		},
 		onShow() {
 			this.page = 1
 			this.loadmore = '上拉加载更多'
 			this.$store.dispatch('getApply',this.page)
-			$H.get('/group/'+this.page).then(res=>{
+			$H.get('/im/group/'+this.page).then(res=>{
 				console.log(res);
 				this.list = res
 			})
@@ -48,7 +48,7 @@
 		onPullDownRefresh() {
 			this.page = 1
 			this.loadmore = '上拉加载更多'
-			$H.get('/group/'+this.page).then(res=>{
+			$H.get('/im/group/'+this.page).then(res=>{
 				this.list = res
 				uni.showToast({
 					title: '刷新成功',
@@ -64,8 +64,8 @@
 			}
 			this.loadmore = '加载中...'
 			this.page = this.page + 1
-			
-			$H.get('/group/'+this.page).then(res=>{
+
+			$H.get('/im/group/'+this.page).then(res=>{
 				this.list = [...this.list, ...res]
 				this.loadmore = this.list.length == this.page * 10 ? '上拉加载更多' : '没有更多了'
 			}).catch(err=>{

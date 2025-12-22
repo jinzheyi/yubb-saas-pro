@@ -26,9 +26,9 @@
 		},
 		data() {
 			return {
-				
+
 				range:["分类一","分类二","分类三","分类四","分类五"],
-				
+
 				form:{
 					reported_id:0,
 					reported_type:"user",
@@ -63,7 +63,7 @@
 					});
 				}
 				// 请求服务器
-				$H.post('/report/save',this.form).then(res=>{
+				$H.post('/im/my/report/save',this.form).then(res=>{
 					uni.navigateBack({
 						delta: 1
 					});

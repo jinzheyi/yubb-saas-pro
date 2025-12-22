@@ -58,20 +58,20 @@ class chat {
 		} else if (wsUrl.startsWith('https://')) {
 			wsUrl = wsUrl.replace('https://', 'wss://')
 		}
-		
+
 		this.socket = uni.connectSocket({
 		    // #ifdef H5
-            url: wsUrl + "?token=" + getAccessToken() + "&refreshToken=" + getRefreshToken() + "&tenant-id=" + getTenantId(),
-            // #endif
-            // #ifndef H5
-            url: wsUrl + "?token=" + getAccessToken() + "&refreshToken=" + getRefreshToken(),
-            header: {
-                'content-type': 'application/json',
-                'Authorization': 'Bearer ' + getAccessToken(),
-                'tenant-id': getTenantId()
-            },
-            // #endif
-            complete: ()=> {}
+				url: wsUrl + "?token=" + getAccessToken() + "&refreshToken=" + getRefreshToken() + "&tenant-id=" + getTenantId(),
+				// #endif
+				// #ifndef H5
+				url: wsUrl + "?token=" + getAccessToken() + "&refreshToken=" + getRefreshToken(),
+				header: {
+						'content-type': 'application/json',
+						'Authorization': 'Bearer ' + getAccessToken(),
+						'tenant-id': getTenantId()
+				},
+				// #endif
+				complete: ()=> {}
 		})
 		// 监听连接成功
 		this.socket.onOpen(()=>this.onOpen())
@@ -157,23 +157,23 @@ class chat {
 		// 错误
 		switch (res.msg){
 			case 'fail':
-			return uni.showToast({
-				title: res.data,
-				icon: 'none'
-			});
+				return uni.showToast({
+					title: res.data,
+					icon: 'none'
+				});
 				break;
 			case 'recall': // 撤回消息
-			this.handleOnRecall(res.data)
+				this.handleOnRecall(res.data)
 				break;
 			case 'updateApplyList': // 新的好友申请
-			$store.dispatch('getApply');
+				$store.dispatch('getApply');
 				break;
 			case 'moment': // 朋友圈更新
-			this.handleMoment(res.data)
+				this.handleMoment(res.data)
 				break;
 			default:
-			// 处理消息
-			this.handleOnMessage(res.data)
+				// 处理消息
+				this.handleOnMessage(res.data)
 				break;
 		}
 	}
@@ -392,12 +392,12 @@ class chat {
 			if(!this.checkOnline()) return reject('未上线')
 			// 上传文件
 			let isUpload = (message.type !== 'text' && message.type !== 'emoticon' && message.type !== 'card' && !message.data.startsWith('http://tangzhe123-com'))
-			
+
 			let uploadResult = ''
 			if(isUpload){ uploadResult = await $H.upload('/upload',{
 					filePath:message.data
 				},onProgress)
-				
+
 				if(!uploadResult){
 					// 发送失败
 					message.sendStatus = 'fail'
@@ -407,24 +407,24 @@ class chat {
 					return reject('上传失败')
 				}
 			}
-			
+
 			// 提交到后端
 			let data = isUpload ? uploadResult : message.data
 			$H.post('/im/chat/send',{
 				to_id:message.to_id || this.TO.id,
-				chat_type:message.chat_type || this.TO.chat_type, 
-				type:message.type, 
-				data, 
+				chat_type:message.chat_type || this.TO.chat_type,
+				type:message.type,
+				data,
 				options:JSON.stringify(message.options)
 			}).then(res=>{
 				// 发送成功
 				message.id = res.id
 				message.sendStatus = 'success'
-				
+
 				if(message.type === 'video'){
 					message.options = res.options
 				}
-				
+
 				// 更新指定历史记录
 				// console.log('更新指定历史记录',message);
 				this.updateChatDetail(message,k)
@@ -499,7 +499,7 @@ class chat {
 		key = key ? key : `chatDetail_${this.user.id}_${this.TO.chat_type}_${this.TO.id}`
 		return this.getStorage(key)
 	}
-	
+
 	// 格式化会话最后一条消息显示
 	formatChatItemData(message,isSend){
 		let data = message.data
@@ -523,7 +523,7 @@ class chat {
 		data = isSend ? data : `${message.from_name}: ${data}`
 		return data
 	}
-	
+
 	/**
 	 {
 	 	id:1, // 接收人/群 id
@@ -538,7 +538,7 @@ class chat {
 	 	shownickname:0, // 是否显示昵称
 	 	nowarn:0, // 消息免打扰
 	 	strongwarn:0, // 是否开启强提醒
-		
+
 		user_id:0, // 群管理员id
 		remark:"公告", // 群公告
 		invite_confirm:0, // 邀请确认
@@ -597,12 +597,12 @@ class chat {
 		let id = 0
 		let avatar = ''
 		let name = ''
-		
+
 		// 判断私聊还是群聊
 		if(message.chat_type === 'user'){ // 私聊
 			// 聊天对象是否存在
 			isCurrentChat = this.TO ? (isSend ? this.TO.id === message.to_id : this.TO.id === message.from_id) : false
-			
+
 			id = isSend ? message.to_id : message.from_id
 			avatar = isSend ? message.to_avatar : message.from_avatar
 			name = isSend ? message.to_name : message.from_name
@@ -612,7 +612,7 @@ class chat {
 			avatar = message.to_avatar
 			name = message.to_name
 		}
-		
+
 		// 会话是否存在
 		let index = list.findIndex(item=>{
 			return item.chat_type === message.chat_type && item.id === id
@@ -707,7 +707,7 @@ class chat {
 		} else {
 			list[index] = data
 		}
-		
+
 		let key = `chatlist_${this.user.id}`
 		this.setStorage(key,list)
 
@@ -738,7 +738,7 @@ class chat {
 		let index = list.findIndex(item=>item.id === id && item.chat_type === chat_type)
 		if(index !== -1){
 			list.splice(index,1)
-			
+
 			let key = `chatlist_${this.user.id}`
 			this.setStorage(key,list)
 			// 重新获取总未读数
@@ -751,14 +751,14 @@ class chat {
 	async clearChatDetail(id,chat_type){
 		let key = `chatDetail_${this.user.id}_${chat_type}_${id}`
 		$U.removeStorage(key)
-		
+
 		// 获取所有会话列表
 		let list = this.getChatList()
 		// 找到当前会话
 		let index = list.findIndex(item=>item.id === id && item.chat_type === chat_type)
 		if(index !== -1){
 			list[index].data = ''
-			
+
 			let key = `chatlist_${this.user.id}`
 			this.setStorage(key,list)
 			// 更新会话列表状态

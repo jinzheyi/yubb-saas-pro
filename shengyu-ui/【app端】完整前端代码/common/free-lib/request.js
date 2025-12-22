@@ -22,7 +22,7 @@ export default {
     refreshingToken: false,
     // 等待刷新token的请求队列
     tokenRequestQueue: [],
-    
+
     // 请求 返回promise
     request(options = {}){
         // 是否需要设置 token
@@ -40,13 +40,13 @@ export default {
             url = url.slice(0, -1)
             options.url = url
         }
-        
+
         // 组织参数
         options.url = options.url
         options.data = options.data || this.common.data
         options.method = options.method || this.common.method
         options.dataType = options.dataType || this.common.dataType
-        
+
         // 请求
         return new Promise((resolve, reject) => {
             // 请求中...
@@ -93,13 +93,13 @@ export default {
             })
         })
     },
-    
+
     // 处理token过期
     handleTokenExpired(options, resolve, reject) {
         if (!this.refreshingToken) {
             // 开始刷新token
             this.refreshingToken = true
-            
+
             // 使用refreshToken获取新的token
             uni.request({
                 url: this.common.baseUrl + '/system/auth/refresh-token',
@@ -117,16 +117,16 @@ export default {
                     reject({ code: 401, msg: '无效的会话，或者会话已过期，请重新登录。' })
                     return
                 }
-                
+
                 const code = res.data.code || 200
                 if (code === 200) {
                     // 刷新成功，更新token
                     setToken(res.data.data)
-                    
+
                     // 重新发送所有等待的请求
                     this.tokenRequestQueue.forEach(cb => cb())
                     this.tokenRequestQueue = []
-                    
+
                     // 重新发送当前请求
                     this.request(options).then(resolve).catch(reject)
                 } else {
@@ -147,7 +147,7 @@ export default {
             })
         }
     },
-    
+
     // 处理刷新token失败
     handleRefreshTokenError() {
         uni.showModal({
@@ -195,14 +195,14 @@ export default {
                     url: '/pages/common/login/login',
                 });
             }
-            
+
             const uploadTask = uni.uploadFile({
                 url: this.common.baseUrl + url,
                 filePath: data.filePath,
                 name: data.name || "files",
-                header: { 
+                header: {
                     'Authorization': 'Bearer ' + token,
-                    'tenant-id': uni.getStorageSync('TENANT_ID') || '1'
+                    'tenant-id': getTenantId() || '1'
                 },
                 success: (res) => {
                     if(res.statusCode !== 200){
@@ -236,13 +236,13 @@ export default {
                     reject({ code: 500, msg: errMsg })
                 }
             })
-            
+
             uploadTask.onProgressUpdate((res) => {
                 if(typeof onProgress === 'function'){
                     onProgress(res.progress)
                 }
             });
-            
+
         })
     },
     // 参数处理

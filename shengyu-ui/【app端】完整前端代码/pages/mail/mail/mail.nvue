@@ -1,57 +1,57 @@
 <template>
 	<view>
-		
+
 		<!-- 导航栏 -->
 		<free-nav-bar title="选择" showBack :showRight="true">
 			<free-main-button :name="buttonText" slot="right" @click="submit"></free-main-button>
 		</free-nav-bar>
-		
+
 		<!-- 通讯录列表 -->
-		<scroll-view scroll-y="true" 
+		<scroll-view scroll-y="true"
 		:style="'height:'+scrollHeight+'px;'"
 		:scroll-into-view="scrollInto">
-			
+
 			<template v-if="type === 'see'">
 				<free-list-item v-for="(item,index) in typeList"
-				:key="item.key" :title="item.name" 
+				:key="item.key" :title="item.name"
 				:showRightIcon="false" showRight
 				@click="typeIndex = index">
 					<view slot="right"
 					style="width: 40rpx;height: 40rpx;"
 					class="border rounded-circle flex align-center justify-center mr-4">
-						<view v-if="typeIndex === index" 
+						<view v-if="typeIndex === index"
 						style="width: 30rpx;height: 30rpx;"
 						class="main-bg-color rounded-circle"></view>
 					</view>
 				</free-list-item>
 			</template>
-		
-		
+
+
 			<template v-if="type !== 'see' || (type === 'see' && (typeIndex === 1 || typeIndex === 2)) ">
 				<view v-for="(item,index) in list" :key="index"
 				:id="'item-'+item.title">
-					<view v-if="item.list.length" 
+					<view v-if="item.list.length"
 					class="py-2 px-3 border-bottom bg-light">
 						<text class="font-md text-dark">{{item.title}}</text>
 					</view>
-					<free-list-item v-for="(item2,index2) in item.list" 
-					:key="index2" :title="item2.name" 
+					<free-list-item v-for="(item2,index2) in item.list"
+					:key="index2" :title="item2.name"
 					:cover="item2.avatar || '/static/images/userpic.png'"
 					:showRightIcon="false" showRight
 					@click="selectItem(item2)">
 						<view slot="right"
 						style="width: 40rpx;height: 40rpx;"
 						class="border rounded-circle flex align-center justify-center mr-4">
-							<view v-if="item2.checked" 
+							<view v-if="item2.checked"
 							style="width: 30rpx;height: 30rpx;"
 							class="main-bg-color rounded-circle"></view>
 						</view>
 					</free-list-item>
 				</view>
 			</template>
-			
+
 		</scroll-view>
-		
+
 		<!-- 侧边导航条 -->
 		<view class="position-fixed right-0 bottom-0 bg-light flex flex-column" :style="'top:'+top+'px;'" style="width: 50rpx;" @touchstart="touchstart" @touchmove="touchmove" @touchend="touchend">
 			<view class="flex-1 flex align-center justify-center"
@@ -97,18 +97,18 @@
 					name:"私密",
 					key:"none"
 				}],
-				
+
 				top:0,
 				scrollHeight:0,
 				scrollInto:'',
 				current:'',
-				
+
 				selectList:[],
-				
+
 				type:"",
-				
+
 				limit:9,
-				
+
 				id:0
 			}
 		},
@@ -116,7 +116,7 @@
 			let res = uni.getSystemInfoSync()
 			this.top = res.statusBarHeight + uni.upx2px(90)
 			this.scrollHeight = res.windowHeight - this.top
-			
+
 			if(e.type){
 				this.type = e.type
 			}
@@ -209,7 +209,7 @@
 				}
 				switch (this.type){
 					case 'createGroup': // 创建群组
-					$H.post('/group/create',{
+					$H.post('/im/group/create',{
 						ids:this.selectList.map(item=>item.user_id)
 					}).then(res=>{
 						uni.showToast({
@@ -266,7 +266,7 @@
 						break;
 					case 'inviteGroup':
 					console.log(this.selectList);
-					$H.post('/group/invite',{
+					$H.post('/im/group/invite',{
 						id:this.id,
 						user_id:this.selectList[0].user_id
 					}).then(res=>{

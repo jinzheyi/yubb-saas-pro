@@ -75,7 +75,7 @@ public class ImMomentController {
      * @param limit 每页数量
      * @return 朋友圈列表
      */
-    @GetMapping("/timeline")
+    @GetMapping("/timeline/{page}")
     @Operation(summary = "获取朋友圈时间线")
     public CommonResult<List<ImMomentTimelineRespVO>> getTimeline(
             @Parameter(description = "页码，默认1") @RequestParam(defaultValue = "1") Integer page,

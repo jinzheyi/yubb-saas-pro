@@ -46,7 +46,7 @@
 				this.submit()
 			},
 			submit(){
-				$H.post('/friend/setmomentauth/'+this.id,this.form).then(res=>{
+				$H.post('/im/mail/setmomentauth/'+this.id,this.form).then(res=>{
 					uni.showToast({
 						title: '修改成功',
 						icon: 'none'

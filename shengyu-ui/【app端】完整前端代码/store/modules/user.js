@@ -45,22 +45,22 @@ export default {
 		roles: $U.getStorage('roles') || [],
 		permissions: $U.getStorage('permissions') || [],
 		user: false,
-		
+
 		apply:{
 			rows: [],
 			count: 0
 		},
-		
+
 		mailList:[],
-		
+
 		chat:null,
-		
+
 		// 会话列表
 		chatList:[],
-		
+
 		// 总未读数
 		totalNoreadnum:0,
-		
+
 		notice:{
 			avatar:"",
 			user_id:0,
@@ -87,7 +87,7 @@ export default {
 			state.permissions = permissions
 			$U.setStorage('permissions', permissions)
 		},
-		updateUser(state,{ k,v }){ 
+		updateUser(state,{ k,v }){
 			if(state.user){
 				state.user[k] = v
 				$U.setStorage('user',JSON.stringify(state.user))
@@ -105,7 +105,7 @@ export default {
 					res = res.data; // 读取 data 数据
 					// 设置 token
 					setToken(res)
-					
+
 					// 获取用户信息
 					return dispatch('GetInfo').then(() => {
 						// 初始化聊天功能
@@ -135,12 +135,12 @@ export default {
 					commit('SET_ID', user.id)
 					commit('SET_NAME', nickname)
 					commit('SET_AVATAR', avatar)
-					
+
 					// 保存用户信息到本地
 					state.user = user
 					$U.setStorage('user', JSON.stringify(user))
 					$U.setStorage('user_id', user.id)
-					
+
 					resolve(res)
 				}).catch(error => {
 					reject(error)
@@ -155,7 +155,7 @@ export default {
 					commit('SET_ROLES', [])
 					commit('SET_PERMISSIONS', [])
 					removeToken()
-					
+
 					// 清除本地存储数据
 					$U.removeStorage('user');
 					$U.removeStorage('user_id');
@@ -163,33 +163,33 @@ export default {
 					$U.removeStorage('avatar');
 					$U.removeStorage('roles');
 					$U.removeStorage('permissions');
-					
+
 					// 清除用户状态
 					state.user = false
-					
+
 					// 关闭socket连接
 					if(state.chat){
 						state.chat.close()
 						state.chat = null
 					}
-					
+
 					// 跳转到登录页
 					uni.reLaunch({
 						url: "/pages/common/login/login"
 					})
-					
+
 					// 注销监听事件
 					uni.$off('onUpdateChatList')
 					uni.$off('momentNotice')
 					uni.$off('totalNoreadnum')
-					
+
 					resolve()
 				}).catch(error => {
 					reject(error)
 				})
 			})
 		},
-		
+
 		// 初始化聊天功能
 		initChat({ state, dispatch }) {
 			// 获取好友申请列表
@@ -205,7 +205,7 @@ export default {
 			// 获取朋友圈动态通知
 			dispatch('getNotice')
 		},
-		
+
 		// 初始化登录状态
 		initLogin({ state, dispatch }) {
 			// 获取用户信息
@@ -219,10 +219,10 @@ export default {
 				})
 			})
 		},
-		
+
 		// 获取好友申请列表
-		getApply({state,dispatch},page = 1){ 
-			$H.get('/apply/'+page).then(res=>{
+		getApply({state,dispatch},page = 1){
+			$H.get('/im/apply/'+page).then(res=>{
 				console.log(res);
 				if(page === 1){
 					state.apply = res
@@ -234,9 +234,9 @@ export default {
 				dispatch('updateMailBadge')
 			})
 		},
-		
+
 		// 更新通讯录角标提示
-		updateMailBadge({ state }){ 
+		updateMailBadge({ state }){
 			let count = state.apply.count > 99 ? '99+' : state.apply.count.toString()
 			if(state.apply.count > 0){
 				return uni.setTabBarBadge({
@@ -248,17 +248,17 @@ export default {
 				index:1
 			})
 		},
-		
+
 		// 获取通讯录列表
-		getMailList({ state }){ 
-			$H.get('/friend/list').then(res=>{
+		getMailList({ state }){
+			$H.get('/im/mail/list').then(res=>{
 				state.mailList = res.rows.newList ? res.rows.newList : [],
 				console.log(state.mailList);
 			})
 		},
-		
+
 		// 获取会话列表
-		getChatList({ state }){ 
+		getChatList({ state }){
 			if (state.chat) {
 				state.chatList = state.chat.getChatList()
 				// 监听会话列表变化
@@ -267,9 +267,9 @@ export default {
 				})
 			}
 		},
-		
+
 		// 获取朋友圈动态通知
-		getNotice({ state }){ 
+		getNotice({ state }){
 			if (state.chat) {
 				state.notice = state.chat.getNotice()
 				if(state.notice.num > 0){
@@ -287,9 +287,9 @@ export default {
 				})
 			}
 		},
-		
+
 		// 初始化总未读数角标
-		updateBadge({state}){ 
+		updateBadge({state}){
 			if (state.chat) {
 				// 开启监听总未读数变化
 				uni.$on('totalNoreadnum',(num)=>{
@@ -298,9 +298,9 @@ export default {
 				state.chat.updateBadge()
 			}
 		},
-		
+
 		// 断线自动重连
-		reconnect({state}){ 
+		reconnect({state}){
 			if(state.user && state.chat){
 				state.chat.reconnect()
 			}

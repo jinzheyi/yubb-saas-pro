@@ -8,11 +8,11 @@
 			<text class="text-white font-md position-absolute"
 			style="bottom: 45rpx;right: 160rpx;">{{nickname}}</text>
 		</view>
-		
+
 		<!-- 朋友圈列表 -->
 		<free-moment-list v-for="(item,index) in list" :key="index"
 		:item="item" :index="index" @action="doAction" @reply="replyEvent"></free-moment-list>
-		
+
 		<!-- 评论框 -->
 		<free-popup ref="action" bottom transformOrigin="center bottom">
 			<view style="height: 105rpx;" class="bg-light border-top flex align-center px-3">
@@ -21,7 +21,7 @@
 				@click="changeFaceModal"></free-icon-button>
 				<free-main-button name="发送" :disabled="content.length === 0" @click="send"></free-main-button>
 			</view>
-			<scroll-view v-if="faceModal" scroll-y="true" 
+			<scroll-view v-if="faceModal" scroll-y="true"
 			style="height: 350rpx;"
 			class="bg-light">
 				<view class="flex flex-wrap">
@@ -36,14 +36,14 @@
 				</view>
 			</scroll-view>
 		</free-popup>
-		
+
 		<!-- 上拉加载 -->
 		<view class="flex align-center justify-center py-5 bg-light"
 		v-if="list.length >= 10">
 			<text class="text-muted font">{{loadmore}}</text>
 		</view>
-		
-		
+
+
 	</view>
 </template>
 
@@ -68,17 +68,17 @@
 				content:"",
 				scrollTop:0,
 				list:[],
-				
+
 				faceModal:false,
 				faceList:["😀","😁","😂","😃","😄","😅","😆","😉","😊","😋","😎","😍","😘","😗","😙","😚","😇","😐","😑","😶","😏","😣","😥","😮","😯","😪","😫","😴","😌","😛","😜","😝","😒","😓","😔","😕","😲","😷","😖","😞","😟","😤","😢","😭","😦","😧","😨","😬","😰","😱","😳","😵","😡","😠"],
 				// 评论的对象
 				commentIndex:-1,
-				
+
 				page:1,
 				loadmore:"上拉加载更多",
-				key:"moment_timeline",
+				key:"timeline",
 				reply_user:false,
-				
+
 				params:false
 			}
 		},
@@ -111,7 +111,7 @@
 			}
 			this.page = 1
 			this.getData()
-			
+
 			uni.$on('momentNotice',this.momentNotice)
 		},
 		destroyed() {
@@ -165,7 +165,7 @@
 					if(this.params && this.key == 'moment'){
 						param = '?user_id='+this.params.id
 					}
-					$H.get(`/${this.key}/${this.page}${param}`).then(res=>{
+					$H.get(`/im/moment/${this.key}/${this.page}${param}`).then(res=>{
 						this.list = page === 1 ? res : [...this.list,...res]
 						this.loadmore = this.list.length === (page * 10) ? '上拉加载更多' : '没有更多了'
 						result(res)
@@ -194,7 +194,7 @@
 			// 点赞
 			doSupport(e){
 				console.log(e);
-				$H.post('/moment/like',{
+				$H.post('/im/moment/like',{
 					id:e.item.moment_id
 				}).then(res=>{
 					let i = e.item.likes.findIndex(item=>item.id === this.user.id)
@@ -226,7 +226,7 @@
 			// 发送
 			send(){
 				let item = this.list[this.commentIndex]
-				$H.post('/moment/comment',{
+				$H.post('/im/moment/comment',{
 					id:item.moment_id,
 					content:this.content,
 					reply_id:this.reply_user ? this.reply_user.id : 0

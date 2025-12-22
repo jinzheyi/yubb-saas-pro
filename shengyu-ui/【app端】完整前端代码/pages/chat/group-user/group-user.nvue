@@ -13,25 +13,25 @@
 		<view class="px-2 py-1 bg-light">
 			<text class="font-sm text-muted">{{keyword ? '搜索结果' :'最近联系人'}}</text>
 		</view>
-		
-		<free-list-item :title="item.name" 
+
+		<free-list-item :title="item.name"
 		v-for="(item,index) in allList"
 		:key="index" :cover="item.avatar || '/static/images/userpic.png'" showRight :showRightIcon="false" @click="selectItem(item)">
-			<view v-if="muliSelect" slot="right" 
+			<view v-if="muliSelect" slot="right"
 			style="width: 40rpx;height: 40rpx;"
 			class="border rounded-circle flex align-center justify-center">
 				<view v-if="item.checked" style="width: 30rpx;height: 30rpx;"
 				class="main-bg-color rounded-circle"></view>
 			</view>
 		</free-list-item>
-		
-		<view v-if="keyword !== '' && searchList.length === 0" 
-		class="flex align-center justify-center" 
+
+		<view v-if="keyword !== '' && searchList.length === 0"
+		class="flex align-center justify-center"
 		style="height: 100rpx;">
 			<text class="font text-light-muted">暂无搜索结果</text>
 		</view>
-		
-		
+
+
 	</view>
 </template>
 
@@ -64,10 +64,10 @@
 			statusBarHeight = res.statusBarHeight
 			// #endif
 			this.top = statusBarHeight + uni.upx2px(90)
-			
+
 			if(e.id){
 				this.group_id = e.id
-				$H.get('/group_info/'+e.id).then(res=>{
+				$H.get('/im/group/info/'+e.id).then(res=>{
 					console.log(res);
 					this.list = res.group_users.map(item=>{
 						return {
@@ -95,7 +95,7 @@
 			},
 			// 选中列表
 			selectList() {
-				return this.list.filter(item=>item.checked) 
+				return this.list.filter(item=>item.checked)
 			},
 			// 选中数量
 			selectCount(){
@@ -109,7 +109,7 @@
 					content: '是否要踢出该成员？',
 					success: (res)=> {
 						if (res.confirm) {
-							$H.post('/group/kickoff',{
+							$H.post('/im/group/kickoff',{
 								id:this.group_id,
 								user_id:item.id
 							}).then(res=>{
@@ -121,7 +121,7 @@
 									delta: 1
 								});
 							})
-						} 
+						}
 					}
 				});
 			},

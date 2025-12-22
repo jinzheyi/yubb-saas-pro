@@ -6,25 +6,25 @@
 			<input type="text" :placeholder="placeholder" v-model="keyword"
 			style="width: 650rpx;" class="font-md" @confirm="confirm"/>
 		</free-nav-bar>
-		
+
 		<view v-if="searchType == '' && list.length === 0">
 			<view class="py-5 flex align-center justify-center">
 				<text class="font text-light-muted">搜索指定内容</text>
 			</view>
-			
+
 			<view class="px-4 flex flex-wrap">
 				<view class="flex align-center justify-center mb-3 border-left border-right" style="width: 223rpx;" v-for="(item,index) in typeList" :key="index" @click="changeSearchType(item)">
 					<text class="font text-hover-primary">{{item.name}}</text>
 				</view>
 			</view>
 		</view>
-		
-		
-		<free-list-item v-for="(item,index) in list" :key="index" 
+
+
+		<free-list-item v-for="(item,index) in list" :key="index"
 		:title="item.nickname ? item.nickname : item.username"
 		:cover="item.avatar ? item.avatar : '/static/images/userpic.png'"
 		@click="openUserBase(item.id)"></free-list-item>
-		
+
 	</view>
 </template>
 
@@ -75,7 +75,7 @@
 				this.searchType = ''
 			},
 			confirm(){
-				$H.post('/search/user',{
+				$H.post('/im/mail/search',{
 					keyword:this.keyword
 				}).then(res=>{
 					this.list = []

@@ -63,7 +63,7 @@ public class ImMyController {
      * @param limit 每页数量，默认10
      * @return 收藏列表
      */
-    @GetMapping("/fava/list")
+    @GetMapping("/fava/{page}")
     @Operation(summary = "获取收藏列表")
     public CommonResult<List<ImFavaDO>> getFavaList(
             @Parameter(description = "页码，默认1") @RequestParam(defaultValue = "1") int page,

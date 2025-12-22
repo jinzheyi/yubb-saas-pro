@@ -3,7 +3,7 @@
 		<!-- 导航栏 -->
 		<free-nav-bar showBack :showRight="detail.friend" bgColor="bg-white">
 			<view slot="right">
-				<free-icon-button 
+				<free-icon-button
 				:icon="'\ue6fd'" v-if="detail.friend"
 				@click="openAction"></free-icon-button>
 			</view>
@@ -19,7 +19,7 @@
 				<text class="font-md text-light-muted">账号：{{detail.username}}</text>
 			</view>
 		</view>
-		<free-list-item v-if="detail.friend" showRight :showLeftIcon="false" 
+		<free-list-item v-if="detail.friend" showRight :showLeftIcon="false"
 		@click="navigate(tagPath)">
 			<view class="flex align-center">
 				<text class="font-md text-dark mr-3">标签</text>
@@ -43,27 +43,27 @@
 		<free-divider></free-divider>
 		<view class="py-3 flex align-center justify-center bg-white"
 		hover-class="bg-light" v-if="detail.friend" @click="doEvent">
-			<text class="iconfont text-primary mr-1" 
+			<text class="iconfont text-primary mr-1"
 			v-if="!detail.isblack">&#xe64e;</text>
 			<text class="font-md text-primary">{{detail.isblack ? '移出黑名单' : '发信息'}}</text>
 		</view>
-		
+
 		<view class="py-3 flex align-center justify-center bg-white"
-		hover-class="bg-light" v-else 
+		hover-class="bg-light" v-else
 		@click="navigate(addFriend)">
 			<text class="font-md text-primary">添加好友</text>
 		</view>
 		<!-- 操作菜单 -->
 		<free-popup ref="action" bottom transformOrigin="center bottom" maskColor>
-			<scroll-view scroll-y="true" style="height: 580rpx;" 
+			<scroll-view scroll-y="true" style="height: 580rpx;"
 			class="bg-white" :show-scrollbar="false">
 				<free-list-item v-for="(item,index) in actions" :key="index" :title="item.title" :showRight="false" :border="false" @click="popupEvent(item)">
 					<text slot="icon" class="iconfont font-lg py-1">{{item.icon}}</text>
 				</free-list-item>
 			</scroll-view>
 		</free-popup>
-		
-		
+
+
 	</view>
 </template>
 
@@ -76,7 +76,7 @@
 	import freePopup from '@/components/free-ui/free-popup.vue';
 	import auth from '@/common/mixin/auth.js';
 	import $H from '@/common/free-lib/request.js';
-	
+
 	export default {
 		mixins:[auth],
 		components: {
@@ -111,7 +111,7 @@
 				return this.backToast()
 			}
 			this.detail.id = e.user_id
-			
+
 			uni.$on('saveRemarkTag',(e)=>{
 				this.nickname = e.nickname
 				this.tagList = e.tagList
@@ -195,7 +195,7 @@
 		},
 		methods: {
 			getData(){
-				$H.get('/friend/read/'+this.detail.id).then(res=>{
+				$H.get('/im/mail/read/'+this.detail.id).then(res=>{
 					if(!res){
 						return this.backToast('该用户不存在')
 					}
@@ -215,7 +215,7 @@
 					url: '/pages/'+path,
 				});
 			},
-			// 操作菜单事件 
+			// 操作菜单事件
 			popupEvent(e){
 				if(!e.type){
 					return
@@ -241,7 +241,7 @@
 					content: '是否要删除该好友？',
 					success: (res)=> {
 						if (res.confirm) {
-							$H.post('/friend/destroy',{
+							$H.post('/im/mail/destroy',{
 								friend_id:this.detail.id
 							}).then(res=>{
 								uni.showToast({
@@ -259,7 +259,7 @@
 			// 设为星标
 			setStar(e){
 				let star = this.detail.star == 0 ? 1 : 0
-				$H.post('/friend/setstar/'+this.detail.id,{
+				$H.post('/im/mail/setstar/'+this.detail.id,{
 					star
 				}).then(res=>{
 					this.detail.star = star
@@ -274,7 +274,7 @@
 					success: (res)=> {
 						if (res.confirm) {
 							let isblack = this.detail.isblack == 0 ? 1 : 0
-							$H.post('/friend/setblack/'+this.detail.id,{
+							$H.post('/im/mail/setblack/'+this.detail.id,{
 								isblack
 							}).then(res=>{
 								this.detail.isblack = isblack
@@ -283,7 +283,7 @@
 								title: msg+'成功',
 								icon: 'none'
 							});
-						} 
+						}
 					}
 				});
 			},

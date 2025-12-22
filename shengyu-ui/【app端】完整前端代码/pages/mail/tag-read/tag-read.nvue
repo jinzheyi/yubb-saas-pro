@@ -3,7 +3,7 @@
 		<!-- 导航栏 -->
 		<free-nav-bar title="标签列表" showBack :showRight="false">
 		</free-nav-bar>
-		
+
 		<free-list-item v-for="(item,index) in list" :key="index" :title="item.name" :cover="item.avatar || '/static/images/userpic.png'" :showRight="true" @click="handle(item)"></free-list-item>
 	</view>
 </template>
@@ -27,7 +27,7 @@
 			}
 		},
 		computed: {
-			
+
 		},
 		onLoad(e) {
 			this.id = e.id
@@ -46,7 +46,7 @@
 		methods: {
 			getData(){
 				return new Promise((result,reject)=>{
-					$H.get('/tag/read/'+this.id).then(res=>{
+					$H.get('/im/my/tag/read/'+this.id).then(res=>{
 						this.list = res.map(item=>{
 							return {
 								id:item.friendInfo.id,
