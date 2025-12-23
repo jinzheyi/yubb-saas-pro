@@ -1,18 +1,24 @@
 package com.shengyu.module.system.service.im.impl;
 
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSON;
 import com.shengyu.framework.common.enums.oauth2.OAuth2ClientConstants;
 import com.shengyu.framework.netty.core.Attributes;
 import com.shengyu.framework.netty.core.auth.AuthInfo;
 import com.shengyu.framework.netty.service.NettyAuthService;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
+import com.shengyu.module.system.convert.auth.AuthConvert;
 import com.shengyu.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import com.shengyu.module.system.service.oauth2.OAuth2TokenService;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 自定义Netty认证服务实现
@@ -35,7 +41,29 @@ public class CustomNettyAuthServiceImpl implements NettyAuthService {
             log.warn("认证失败：token为空");
             return false;
         }
-        return TenantUtils.execute(Long.valueOf(authInfo.getTenantId()), () -> auth(authInfo));
+        String originalToken = authInfo.getToken();
+        boolean result = TenantUtils.execute(Long.valueOf(authInfo.getTenantId()), () -> auth(authInfo));
+        
+        // 如果认证成功且token被刷新，发送token_refresh消息给客户端
+        if (result && !originalToken.equals(authInfo.getToken())) {
+            try {
+                // 构建token刷新消息
+                Map<String, Object> tokenData = new HashMap<>();
+                tokenData.put("accessToken", authInfo.getToken());
+                tokenData.put("refreshToken", authInfo.getRefreshToken());
+                
+                Map<String, Object> message = new HashMap<>();
+                message.put("msg", "token_refresh");
+                message.put("data", tokenData);
+                
+                // 发送消息给客户端
+                channel.writeAndFlush(new TextWebSocketFrame(JSON.toJSONString(message)));
+                log.info("已向客户端发送刷新后的token，用户ID：{}", authInfo.getUserId());
+            } catch (Exception e) {
+                log.error("发送token刷新消息失败：{}", e.getMessage());
+            }
+        }
+        return result;
     }
 
     @Override

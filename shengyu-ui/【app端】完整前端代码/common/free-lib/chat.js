@@ -1,7 +1,7 @@
 import $U from './util.js';
 import $H from './request.js';
 import $store from '@/store/index.js';
-import { getAccessToken, getRefreshToken, getTenantId } from './auth.js';
+import { getAccessToken, getRefreshToken, setToken, getTenantId } from './auth.js';
 class chat {
 	constructor(arg) {
 		this.url = arg.url
@@ -32,8 +32,11 @@ class chat {
         if(this.reconnectTime >= 20){
             return this.reconnectConfirm()
         }
-        this.reconnectTime += 1
-        this.connectSocket()
+        // 只有当用户和token有效时才尝试连接并递增重连次数
+        if (this.user && getAccessToken()) {
+            this.reconnectTime += 1
+            this.connectSocket()
+        }
     }
 	// 连接socket
 	connectSocket(){
@@ -87,6 +90,17 @@ class chat {
 		this.startHeartbeat()
 		// 获取用户离线消息
 		this.getMessage()
+		// 连接成功后刷新token
+		this.refreshTokenAfterConnection()
+	}
+	// 连接成功后刷新token
+	refreshTokenAfterConnection(){
+		// 这里实现token刷新逻辑
+		// 可以调用后端刷新token接口，更新本地存储的token和refreshToken
+		$H.post('/system/auth/refresh-token').then(res => {
+		    // 刷新成功，更新token
+			setToken(res.data.data)
+	    })
 	}
 	// 获取离线消息
 	getMessage(){
@@ -147,32 +161,44 @@ class chat {
 	}
 	// 监听接收消息
 	onMessage(data){
-		let res = JSON.parse(data.data)
-		console.log('监听接收消息',res)
-		if(res.msg == 'undefined' || !res.msg){
-			return
-		}
-		// 错误
-		switch (res.msg){
-			case 'fail':
-				return uni.showToast({
-					title: res.data,
-					icon: 'none'
-				});
-				break;
-			case 'recall': // 撤回消息
-				this.handleOnRecall(res.data)
-				break;
-			case 'updateApplyList': // 新的好友申请
-				$store.dispatch('getApply');
-				break;
-			case 'moment': // 朋友圈更新
-				this.handleMoment(res.data)
-				break;
-			default:
-				// 处理消息
-				this.handleOnMessage(res.data)
-				break;
+		try {
+			let res = JSON.parse(data.data)
+			console.log('监听接收消息',res)
+			if(res.msg == 'undefined' || !res.msg){
+				// 没有消息内容时的优化处理
+				console.log('收到空消息或格式不正确，忽略处理')
+				return
+			}
+			// 错误
+			switch (res.msg){
+				case 'fail':
+					return uni.showToast({
+						title: res.data,
+						icon: 'none'
+					});
+					break;
+				case 'recall': // 撤回消息
+					this.handleOnRecall(res.data)
+					break;
+				case 'updateApplyList': // 新的好友申请
+					$store.dispatch('getApply');
+					break;
+				case 'moment': // 朋友圈更新
+					this.handleMoment(res.data)
+					break;
+				case 'token_refresh': // 服务器刷新了token
+					// 更新本地存储的token
+					setToken(res.data)
+					console.log('token已刷新')
+					break;
+				default:
+					// 处理消息
+					this.handleOnMessage(res.data)
+					break;
+			}
+		} catch (error) {
+			console.error('消息解析失败:', error)
+			// 忽略格式错误的消息，避免程序崩溃
 		}
 	}
 	// 获取本地存储中的朋友圈动态通知
