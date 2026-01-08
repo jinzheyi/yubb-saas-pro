@@ -52,3 +52,16 @@ application-my.yaml
 
 /shengyu-ui-app/unpackage/
 /shengyu-ui/shengyu-ui-admin-uniappx/node_modules/
+.DS_Store
+shengyu-ui/.DS_Store
+shengyu-ui/shengyu-ui-admin-uniappx-v1.8.3/.DS_Store
+shengyu-ui/shengyu-ui-admin-uniappx-v1.8.3/.image/.DS_Store
+shengyu-ui/shengyu-ui-admin-uniappx-v1.8.3/components/.DS_Store
+shengyu-ui/shengyu-ui-admin-uniappx-v1.8.3/components/verifition/.DS_Store
+shengyu-ui/shengyu-ui-admin-uniappx-v1.8.3/pages/.DS_Store
+shengyu-ui/shengyu-ui-admin-uniappx-v1.8.3/pages/common/.DS_Store
+shengyu-ui/shengyu-ui-admin-uniappx-v1.8.3/pages/mine/.DS_Store
+shengyu-ui/shengyu-ui-admin-uniappx-v1.8.3/static/.DS_Store
+shengyu-ui/shengyu-ui-admin-uniappx-v1.8.3/static/images/.DS_Store
+shengyu-ui/shengyu-ui-admin-uniappx-v1.8.3/uni_modules/.DS_Store
+shengyu-ui/shengyu-ui-admin-uniappx-v1.8.3/uni_modules/uni-table/.DS_Store

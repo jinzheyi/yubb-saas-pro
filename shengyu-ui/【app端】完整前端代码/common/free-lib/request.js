@@ -114,11 +114,9 @@ export default {
             // 使用refreshToken获取新的token
             const tenantId = getTenantId();
             uni.request({
-                url: this.common.baseUrl + '/system/auth/refresh-token',
+                url: this.common.baseUrl + '/system/auth/refresh-token?refreshToken=' + encodeURIComponent(refreshToken),
                 method: 'POST',
-                data: {
-                    refreshToken: refreshToken
-                },
+                data: {},
                 header: {
                     'Content-Type': 'application/json;charset=UTF-8',
                     ...(tenantId && { 'tenant-id': tenantId })

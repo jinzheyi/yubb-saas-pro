@@ -1,5 +1,6 @@
 package com.shengyu.framework.netty.core;
 
+import com.alibaba.fastjson.JSON;
 import com.shengyu.framework.common.util.json.JsonUtils;
 import com.shengyu.framework.netty.config.NettyProperties;
 import com.shengyu.framework.netty.core.auth.AuthInfo;
@@ -276,10 +277,18 @@ public class ShengyuChannelInboundHandler extends SimpleChannelInboundHandler<Ob
         HttpUtil.setContentLength(response, response.content().readableBytes());
 
         // 2. 发送响应
-        ChannelFuture future = context.writeAndFlush(response);
-        // 3. 如果响应失败，关闭通道
-        if (!HttpUtil.isKeepAlive(request) || response.status().code() != 200) {
-            future.addListener(ChannelFutureListener.CLOSE);
+        if (response.status().code() == HttpResponseStatus.UNAUTHORIZED.code() || HttpResponseStatus.INTERNAL_SERVER_ERROR.code() == response.status().code()) {
+            Map<String, Object> message = new HashMap<>();
+            message.put("msg", "redirectToLogin");
+            message.put("data", "token刷新失败,跳转登录页");
+            // 发送消息给客户端
+            context.writeAndFlush(new TextWebSocketFrame(JSON.toJSONString(message)));
+        } else {
+            ChannelFuture future = context.writeAndFlush(response);
+            // 3. 如果响应失败，关闭通道
+            if (!HttpUtil.isKeepAlive(request) || response.status().code() != 200) {
+                future.addListener(ChannelFutureListener.CLOSE);
+            }
         }
     }
 

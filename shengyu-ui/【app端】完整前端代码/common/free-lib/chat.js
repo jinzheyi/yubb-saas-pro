@@ -1,7 +1,7 @@
 import $U from './util.js';
 import $H from './request.js';
 import $store from '@/store/index.js';
-import { getAccessToken, getRefreshToken, setToken, getTenantId } from './auth.js';
+import { getAccessToken, getRefreshToken, setToken, getTenantId, removeToken } from './auth.js';
 class chat {
 	constructor(arg) {
 		this.url = arg.url
@@ -29,8 +29,16 @@ class chat {
         if(this.isOnline){
             return
         }
-        if(this.reconnectTime >= 20){
-            return this.reconnectConfirm()
+        // 检查token是否有效
+        if (!getAccessToken()) {
+            // token无效，跳转到登录页
+            this.redirectToLogin()
+            return
+        }
+        if(this.reconnectTime >= 3){
+            // 重连次数过多，跳转到登录页
+            this.redirectToLogin()
+            return
         }
         // 只有当用户和token有效时才尝试连接并递增重连次数
         if (this.user && getAccessToken()) {
@@ -97,10 +105,18 @@ class chat {
 	refreshTokenAfterConnection(){
 		// 这里实现token刷新逻辑
 		// 可以调用后端刷新token接口，更新本地存储的token和refreshToken
-		$H.post('/system/auth/refresh-token').then(res => {
-		    // 刷新成功，更新token
-			setToken(res.data.data)
-	    })
+		const refreshToken = getRefreshToken();
+		if (refreshToken) {
+			// 直接在URL后面拼接refreshToken参数
+			$H.post('/system/auth/refresh-token?refreshToken=' + encodeURIComponent(refreshToken), {}).then(res => {
+			    // 刷新成功，更新token
+				setToken(res.data)
+			}).catch(err => {
+				// 刷新失败，跳转到登录页
+				console.error('token刷新失败:', err)
+				this.redirectToLogin()
+			})
+		}
 	}
 	// 获取离线消息
 	getMessage(){
@@ -152,12 +168,32 @@ class chat {
 		this.isOnline = false
 		this.stopHeartbeat()
 		this.socket = null
+		// 检查token是否有效
+		if (!getAccessToken()) {
+			// token无效，跳转到登录页
+			this.redirectToLogin()
+			return
+		}
 		if(this.isOpenReconnect){
 			// 延迟重连，避免频繁连接
 			setTimeout(()=>{
 				this.reconnect()
 			}, 3000)
 		}
+	}
+	
+	// 跳转到登录页
+	redirectToLogin(){
+		// 关闭重连
+		this.isOpenReconnect = false
+		// 清除本地存储的用户信息和token
+		$U.removeStorage('user')
+		// 清除token信息
+		removeToken()
+		// 跳转到登录页
+		uni.redirectTo({
+			url: '/pages/common/login/login'
+		})
 	}
 	// 监听接收消息
 	onMessage(data){
@@ -190,6 +226,11 @@ class chat {
 					// 更新本地存储的token
 					setToken(res.data)
 					console.log('token已刷新')
+					break;
+				case 'redirectToLogin':
+					// 刷新失败，跳转到登录页
+                    console.error('token刷新失败,跳转登录页:', res)
+                    this.redirectToLogin()
 					break;
 				default:
 					// 处理消息

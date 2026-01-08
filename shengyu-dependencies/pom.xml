@@ -88,8 +88,8 @@
         <spring.security.version>5.8.16</spring.security.version>
         <spring.boot.version>2.7.18</spring.boot.version>
         <!-- Web 相关 -->
-        <springdoc.version>1.8.0</springdoc.version>
-        <knife4j.version>4.5.0</knife4j.version>
+        <springdoc.version>1.6.15</springdoc.version>
+        <knife4j.version>4.3.0</knife4j.version>
         <servlet.versoin>2.5</servlet.versoin>
         <!-- DB 相关 -->
         <druid.version>1.2.27</druid.version>
