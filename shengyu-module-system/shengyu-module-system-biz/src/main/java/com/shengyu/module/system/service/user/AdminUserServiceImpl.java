@@ -425,9 +425,6 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public PageResult<UserRespVO> getUserPage(UserPageReqVO reqVO) {
-        if (Objects.nonNull(reqVO.getDepartmentId())) {
-            reqVO.setDeptId(reqVO.getDepartmentId());
-        }
         PageResult<UserRespVO> userRespVOPageResult = userMapper.selectJoinPage(reqVO, getDeptConditionUserIds(reqVO.getDeptId()));
         if (CollUtil.isEmpty(userRespVOPageResult.getList())) {
             return userRespVOPageResult;

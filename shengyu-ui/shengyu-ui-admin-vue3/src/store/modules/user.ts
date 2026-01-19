@@ -89,6 +89,11 @@ export const useUserStore = defineStore('admin-user', {
       deleteUserCache() // 删除用户缓存
       this.resetState()
     },
+    async loginToTenantOut() {
+        removeToken()
+        deleteUserCache() // 删除用户缓存
+        this.resetState()
+      },
     resetState() {
       this.permissions = new Set<string>()
       this.roles = []
