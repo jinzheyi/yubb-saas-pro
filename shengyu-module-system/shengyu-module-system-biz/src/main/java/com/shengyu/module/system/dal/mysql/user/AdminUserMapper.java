@@ -59,14 +59,12 @@ public interface AdminUserMapper extends BaseMapperX<AdminUserDO> {
           .selectAll(AdminUserDO.class)
           .select(SaasUserDO::getUsername, SaasUserDO::getMobile, SaasUserDO::getSex)
           .selectAs(SaasUserDO::getUsername, UserRespVO::getEmail)
-          .leftJoin(SaasUserDO.class, SaasUserDO::getId, AdminUserDO::getSaasUserId)
-
-          .and(wrapper1 -> wrapper1.like(StrUtil.isNotBlank(reqVO.getUsername()), SaasUserDO::getUsername, reqVO.getUsername())
-            .or().like(StrUtil.isNotBlank(reqVO.getUsername()), AdminUserDO::getNickname, reqVO.getUsername()))
-
-          //.like(StrUtil.isNotBlank(reqVO.getUsername()), SaasUserDO::getUsername, reqVO.getUsername())
-
-          .like(StrUtil.isNotBlank(reqVO.getMobile()), SaasUserDO::getMobile, reqVO.getMobile())
+          .leftJoin(SaasUserDO.class, SaasUserDO::getId, AdminUserDO::getSaasUserId);
+        if (StrUtil.isNotBlank(reqVO.getUsername())) {
+            wrapper.and(wrapper1 -> wrapper1.like(SaasUserDO::getUsername, reqVO.getUsername())
+                    .or().like(AdminUserDO::getNickname, reqVO.getUsername()));
+        }
+        wrapper.like(StrUtil.isNotBlank(reqVO.getMobile()), SaasUserDO::getMobile, reqVO.getMobile())
           .eq(Objects.nonNull(reqVO.getStatus()), AdminUserDO::getStatus, reqVO.getStatus());
         if (startTime != null && endTime != null) {
             wrapper.between(AdminUserDO::getCreateTime, startTime, endTime);
