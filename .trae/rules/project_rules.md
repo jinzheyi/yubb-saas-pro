@@ -125,7 +125,6 @@
 |         ├─shengyu-spring-boot-starter-mq              #mq消息封装
 |         ├─shengyu-spring-boot-starter-monitor         #监控   
 |         ├─shengyu-spring-boot-starter-job             #定时任务核心
-|         ├─shengyu-spring-boot-starter-flowable        #流程核心
 |         ├─shengyu-spring-boot-starter-file            #文件处理
 |         ├─shengyu-spring-boot-starter-excel           #excel处理核心封装
 |         ├─shengyu-spring-boot-starter-desensitize     #敏感次管理核心

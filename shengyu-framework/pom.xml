@@ -34,7 +34,6 @@
         <module>shengyu-spring-boot-starter-biz-error-code</module>
         <module>shengyu-spring-boot-starter-biz-ip</module>
 
-        <module>shengyu-spring-boot-starter-flowable</module>
         <module>shengyu-spring-boot-starter-captcha</module>
         <module>shengyu-spring-boot-starter-websocket</module>
         <module>shengyu-spring-boot-starter-desensitize</module>
