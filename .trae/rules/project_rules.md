@@ -54,6 +54,7 @@
 ├─shengyu-ui                          #前端汇总
 |     ├─shengyu-ui-platform-vue3      #平台端前端
 |     ├─shengyu-ui-admin-vue3         #租户端前端
+|     ├─shengyu-ui-admin-uniappx      #租户app端前端
 ├─shengyu-server                      #服务端启动模块
 |       ├─Dockerfile
 |       ├─src
