@@ -1,5 +1,6 @@
 package com.shengyu.module.platform.api.mail;
 
+import java.io.File;
 import java.util.Map;
 
 /**
@@ -20,6 +21,6 @@ public interface MailSendApi {
      * @return 发送日志编号
      */
     Long sendSingleMail(String mail, Long userId, Integer userType,
-        String templateCode, Map<String, Object> templateParams);
+        String templateCode, Map<String, Object> templateParams, File... attachments);
 
 }

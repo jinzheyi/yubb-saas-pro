@@ -8,6 +8,7 @@ import com.shengyu.framework.common.util.json.JsonUtils;
 import com.shengyu.framework.sms.core.client.dto.SmsReceiveRespDTO;
 import com.shengyu.framework.sms.core.client.dto.SmsSendRespDTO;
 import com.shengyu.framework.sms.core.client.dto.SmsTemplateRespDTO;
+import com.shengyu.framework.sms.core.client.impl.TencentSmsClient;
 import com.shengyu.framework.sms.core.enums.SmsTemplateAuditStatusEnum;
 import com.shengyu.framework.sms.core.property.SmsChannelProperties;
 import com.shengyu.framework.test.core.ut.BaseMockitoUnitTest;

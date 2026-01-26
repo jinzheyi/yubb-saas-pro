@@ -5,6 +5,7 @@ import lombok.Data;
 
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
+import java.io.File;
 import java.util.Map;
 
 @Schema(description = "管理后台 - 邮件发送 Req VO")
@@ -21,5 +22,10 @@ public class MailTemplateSendReqVO {
 
     @Schema(description = "模板参数")
     private Map<String, Object> templateParams;
+
+    /**
+     * 附件
+     */
+    private File[] attachments;
 
 }

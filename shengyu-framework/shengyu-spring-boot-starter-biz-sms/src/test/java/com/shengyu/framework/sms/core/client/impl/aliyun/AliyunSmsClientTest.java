@@ -6,6 +6,7 @@ import com.shengyu.framework.common.util.collection.MapUtils;
 import com.shengyu.framework.sms.core.client.dto.SmsReceiveRespDTO;
 import com.shengyu.framework.sms.core.client.dto.SmsSendRespDTO;
 import com.shengyu.framework.sms.core.client.dto.SmsTemplateRespDTO;
+import com.shengyu.framework.sms.core.client.impl.AliyunSmsClient;
 import com.shengyu.framework.sms.core.enums.SmsTemplateAuditStatusEnum;
 import com.shengyu.framework.sms.core.property.SmsChannelProperties;
 import com.shengyu.framework.test.core.ut.BaseMockitoUnitTest;

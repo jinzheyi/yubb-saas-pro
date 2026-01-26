@@ -10,7 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.MapPropertySource;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -42,9 +45,6 @@ public class IdTypeEnvironmentPostProcessor implements EnvironmentPostProcessor 
         // TODO 芋艿：暂时没有找到特别合适的地方，先放在这里
         setJobStoreDriverIfPresent(environment, dbType);
 
-        // 初始化 SQL 静态变量
-        SqlConstants.init(dbType);
-
         // 如果非 NONE，则不进行处理
         IdType idType = getIdType(environment);
         if (idType != IdType.NONE) {
@@ -55,16 +55,24 @@ public class IdTypeEnvironmentPostProcessor implements EnvironmentPostProcessor 
             setIdType(environment, IdType.INPUT);
             return;
         }
-        // 情况二，自增 ID，适合 MySQL 等直接自增的数据库
+        // 情况二，自增 ID，适合 MySQL、DM 达梦等直接自增的数据库
         setIdType(environment, IdType.AUTO);
     }
 
     public IdType getIdType(ConfigurableEnvironment environment) {
-        return environment.getProperty(ID_TYPE_KEY, IdType.class);
+        String value = environment.getProperty(ID_TYPE_KEY);
+        try {
+            return StrUtil.isNotBlank(value) ? IdType.valueOf(value) : IdType.NONE;
+        } catch (IllegalArgumentException ex) {
+            log.error("[getIdType][无法解析 id-type 配置值({})]", value, ex);
+            return IdType.NONE;
+        }
     }
 
     public void setIdType(ConfigurableEnvironment environment, IdType idType) {
-        environment.getSystemProperties().put(ID_TYPE_KEY, idType);
+        Map<String, Object> map = new HashMap<>();
+        map.put(ID_TYPE_KEY, idType);
+        environment.getPropertySources().addFirst(new MapPropertySource("mybatisPlusIdType", map));
         log.info("[setIdType][修改 MyBatis Plus 的 idType 为({})]", idType);
     }
 
@@ -85,6 +93,10 @@ public class IdTypeEnvironmentPostProcessor implements EnvironmentPostProcessor 
             case SQL_SERVER:
             case SQL_SERVER2005:
                 driverClass = "org.quartz.impl.jdbcjobstore.MSSQLDelegate";
+                break;
+            case DM:
+            case KINGBASE_ES:
+                driverClass = "org.quartz.impl.jdbcjobstore.StdJDBCDelegate";
                 break;
         }
         // 设置 driverClass 变量

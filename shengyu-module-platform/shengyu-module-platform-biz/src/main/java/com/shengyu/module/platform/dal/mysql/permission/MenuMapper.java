@@ -29,4 +29,8 @@ public interface MenuMapper extends BaseMapperX<MenuDO> {
         return selectList(MenuDO::getPermission, permission);
     }
 
+    default MenuDO selectByComponentName(String componentName) {
+        return selectOne(MenuDO::getComponentName, componentName);
+    }
+
 }

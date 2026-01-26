@@ -33,6 +33,11 @@ public class ApiAccessLogServiceImpl implements ApiAccessLogService {
     }
 
     @Override
+    public ApiAccessLogDO getApiAccessLog(Long id) {
+        return apiAccessLogMapper.selectById(id);
+    }
+
+    @Override
     public PageResult<ApiAccessLogDO> getApiAccessLogPage(ApiAccessLogPageReqVO pageReqVO) {
         return apiAccessLogMapper.selectPage(pageReqVO);
     }

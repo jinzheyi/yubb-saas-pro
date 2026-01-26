@@ -63,6 +63,14 @@ public interface FileService {
     Long createFile(FileCreateReqVO createReqVO);
 
     /**
+     * 根据编号获得文件
+     *
+     * @param id 编号
+     * @return 文件
+     */
+    FileDO getFile(Long id);
+
+    /**
      * 删除文件
      *
      * @param id 编号

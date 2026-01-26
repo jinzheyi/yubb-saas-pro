@@ -1,5 +1,7 @@
 package com.shengyu.framework.file.core.client;
 
+import com.shengyu.framework.file.core.enums.FileStorageEnum;
+
 public interface FileClientFactory {
 
     /**
@@ -14,7 +16,7 @@ public interface FileClientFactory {
      * 创建文件客户端
      *
      * @param configId 配置编号
-     * @param storage 存储器的枚举 {@link com.shengyu.framework.file.core.enums.FileStorageEnum}
+     * @param storage 存储器的枚举 {@link FileStorageEnum}
      * @param config 文件配置
      */
     <Config extends FileClientConfig> void createOrUpdateFileClient(Long configId, Integer storage, Config config);

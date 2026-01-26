@@ -39,6 +39,7 @@ import com.shengyu.module.system.dal.mysql.user.SaasUserMapper;
 import com.shengyu.module.system.service.dept.DeptService;
 import com.shengyu.module.system.service.dept.PostService;
 import com.shengyu.module.system.service.notify.NotifySendService;
+import com.shengyu.module.system.service.oauth2.OAuth2TokenService;
 import com.shengyu.module.system.service.permission.PermissionService;
 import com.shengyu.module.system.service.tenant.TenantService;
 import lombok.extern.slf4j.Slf4j;
@@ -89,6 +90,9 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Resource
     @Lazy // 延迟，避免循环依赖报错
     private TenantService tenantService;
+    @Resource
+    @Lazy // 懒加载，避免循环依赖
+    private OAuth2TokenService oauth2TokenService;
     @Resource
     private UserPostMapper userPostMapper;
     @Resource
@@ -390,6 +394,11 @@ public class AdminUserServiceImpl implements AdminUserService {
         updateObj.setId(id);
         updateObj.setStatus(status);
         userMapper.updateById(updateObj);
+
+        // 如果是禁用用户，则删除其 Token 信息
+        if (CommonStatusEnum.isDisable(status)) {
+            oauth2TokenService.removeAccessToken(id, UserTypeEnum.ADMIN.getValue());
+        }
     }
 
     @Override

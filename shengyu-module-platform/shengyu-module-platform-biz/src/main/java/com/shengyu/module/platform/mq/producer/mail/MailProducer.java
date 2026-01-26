@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+
 /**
  * Mail 邮件相关消息的 Producer
  *
@@ -28,12 +30,13 @@ public class MailProducer {
      * @param nickname 邮件发件人
      * @param title 邮件标题
      * @param content 邮件内容
+     * @param attachments 附件
      */
     public void sendMailSendMessage(Long sendLogId, String mail, Long accountId,
-                                    String nickname, String title, String content) {
+                                    String nickname, String title, String content, File[] attachments) {
         MailSendMessage message = new MailSendMessage()
                 .setLogId(sendLogId).setMail(mail).setAccountId(accountId)
-                .setNickname(nickname).setTitle(title).setContent(content);
+                .setNickname(nickname).setTitle(title).setContent(content).setAttachments(attachments);
         applicationContext.publishEvent(message);
     }
 

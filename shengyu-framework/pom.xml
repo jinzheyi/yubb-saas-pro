@@ -39,7 +39,6 @@
         <module>shengyu-spring-boot-starter-websocket</module>
         <module>shengyu-spring-boot-starter-desensitize</module>
         <module>shengyu-spring-boot-starter-flowlong</module>
-        <module>shengyu-spring-boot-starter-netty</module>
     </modules>
 
     <artifactId>shengyu-framework</artifactId>

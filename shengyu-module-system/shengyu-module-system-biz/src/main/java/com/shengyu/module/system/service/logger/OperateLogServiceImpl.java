@@ -45,6 +45,11 @@ public class OperateLogServiceImpl implements OperateLogService {
     }
 
     @Override
+    public OperateLogDO getOperateLog(Long id) {
+        return operateLogMapper.selectById(id);
+    }
+
+    @Override
     public PageResult<OperateLogDO> getOperateLogPage(OperateLogPageReqVO reqVO) {
         // 处理基于用户昵称的查询
         Collection<Long> userIds = null;

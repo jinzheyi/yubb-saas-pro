@@ -89,10 +89,10 @@
             :href="row.url"
             :underline="false"
             target="_blank"
-            >预览</el-link
+          >预览</el-link
           >
           <el-link v-else type="primary" download :href="row.url" :underline="false" target="_blank"
-            >下载</el-link
+          >下载</el-link
           >
         </template>
       </el-table-column>
@@ -132,120 +132,107 @@
   <FileForm ref="formRef" @success="getList" />
 </template>
 <script lang="ts" setup>
-import { fileSizeFormatter } from '@/utils'
-import { dateFormatter } from '@/utils/formatTime'
-import * as FileApi from '@/api/infra/file'
-import FileForm from './FileForm.vue'
+  import { fileSizeFormatter } from '@/utils'
+  import { dateFormatter } from '@/utils/formatTime'
+  import * as FileApi from '@/api/infra/file'
+  import FileForm from './FileForm.vue'
+  import { useClipboard } from '@vueuse/core'
 
-defineOptions({ name: 'InfraFile' })
+  defineOptions({ name: 'InfraFile' })
 
-const message = useMessage() // 消息弹窗
-const { t } = useI18n() // 国际化
+  const message = useMessage() // 消息弹窗
+  const { t } = useI18n() // 国际化
 
-const loading = ref(true) // 列表的加载中
-const total = ref(0) // 列表的总页数
-const list = ref([]) // 列表的数据
-const queryParams = reactive({
-  pageNo: 1,
-  pageSize: 10,
-  name: undefined,
-  type: undefined,
-  path: undefined,
-  createTime: []
-})
-const queryFormRef = ref() // 搜索的表单
+  const loading = ref(true) // 列表的加载中
+  const total = ref(0) // 列表的总页数
+  const list = ref([]) // 列表的数据
+  const queryParams = reactive({
+    pageNo: 1,
+    pageSize: 10,
+    name: undefined,
+    type: undefined,
+    path: undefined,
+    createTime: []
+  })
+  const queryFormRef = ref() // 搜索的表单
 
-/** 查询列表 */
-const getList = async () => {
-  loading.value = true
-  try {
-    const data = await FileApi.getFilePage(queryParams)
-    list.value = data.list
-    total.value = data.total
-  } finally {
-    loading.value = false
-  }
-}
-
-/** 搜索按钮操作 */
-const handleQuery = () => {
-  queryParams.pageNo = 1
-  getList()
-}
-
-/** 重置按钮操作 */
-const resetQuery = () => {
-  queryFormRef.value.resetFields()
-  handleQuery()
-}
-
-/** 添加/修改操作 */
-const formRef = ref()
-const openForm = () => {
-  formRef.value.open()
-}
-
-/** 复制到剪贴板方法 */
-const copyToClipboard = (text: string) => {
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        message.success('复制成功')
-      })
-      .catch(() => {
-        message.error('复制失败')
-      })
-  } else {
-    // 兼容不支持 clipboard 的情况
+  /** 查询列表 */
+  const getList = async () => {
+    loading.value = true
     try {
-      const textarea = document.createElement('textarea')
-      textarea.value = text
-      document.body.appendChild(textarea)
-      textarea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textarea)
-      message.success('复制成功')
-    } catch (error) {
-      message.error('复制失败')
+      const data = await FileApi.getFilePage(queryParams)
+      list.value = data.list
+      total.value = data.total
+    } finally {
+      loading.value = false
     }
   }
-}
 
-/** 删除按钮操作 */
-const handleDelete = async (id: number) => {
-  try {
-    // 删除的二次确认
-    await message.delConfirm()
-    // 发起删除
-    await FileApi.deleteFile(id)
-    message.success(t('common.delSuccess'))
-    // 刷新列表
-    await getList()
-  } catch {}
-}
+  /** 搜索按钮操作 */
+  const handleQuery = () => {
+    queryParams.pageNo = 1
+    getList()
+  }
 
-/** 批量删除按钮操作 */
-const checkedIds = ref<number[]>([])
-const handleRowCheckboxChange = (rows) => {
-  checkedIds.value = rows.map((row) => row.id)
-}
+  /** 重置按钮操作 */
+  const resetQuery = () => {
+    queryFormRef.value.resetFields()
+    handleQuery()
+  }
 
-const handleDeleteBatch = async () => {
-  try {
-    // 删除的二次确认
-    await message.delConfirm()
-    // 发起批量删除
-    await FileApi.deleteFileList(checkedIds.value)
-    checkedIds.value = []
-    message.success(t('common.delSuccess'))
-    // 刷新列表
-    await getList()
-  } catch {}
-}
+  /** 添加/修改操作 */
+  const formRef = ref()
+  const openForm = () => {
+    formRef.value.open()
+  }
 
-/** 初始化 **/
-onMounted(() => {
-  getList()
-})
+  /** 复制到剪贴板方法 */
+  const copyToClipboard = async (text: string) => {
+    const { copy, copied, isSupported } = useClipboard({ legacy: true, source: text })
+    if (!isSupported) {
+      message.error(t('common.copyError'))
+      return
+    }
+    await copy()
+    if (unref(copied)) {
+      message.success(t('common.copySuccess'))
+    }
+  }
+
+  /** 删除按钮操作 */
+  const handleDelete = async (id: number) => {
+    try {
+      // 删除的二次确认
+      await message.delConfirm()
+      // 发起删除
+      await FileApi.deleteFile(id)
+      message.success(t('common.delSuccess'))
+      // 刷新列表
+      await getList()
+    } catch {}
+  }
+
+  /** 批量删除按钮操作 */
+  const checkedIds = ref<number[]>([])
+  const handleRowCheckboxChange = (rows) => {
+    checkedIds.value = rows.map((row) => row.id)
+  }
+
+  const handleDeleteBatch = async () => {
+    try {
+      // 删除的二次确认
+      await message.delConfirm()
+      // 发起批量删除
+      await FileApi.deleteFileList(checkedIds.value)
+      checkedIds.value = []
+      message.success(t('common.delSuccess'))
+      // 刷新列表
+      await getList()
+    } catch {}
+  }
+
+  /** 初始化 **/
+  onMounted(() => {
+    getList()
+  })
 </script>

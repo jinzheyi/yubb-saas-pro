@@ -1,8 +1,10 @@
 package com.shengyu.module.system.convert.auth;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjUtil;
 import com.shengyu.framework.common.enums.permission.MenuIdEnum;
 import com.shengyu.framework.common.enums.permission.MenuTypeEnum;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.platform.api.tenant.dto.menu.TenantMenuRespDTO;
 import com.shengyu.module.platform.api.sms.dto.code.SmsCodeSendReqDTO;
 import com.shengyu.module.platform.api.sms.dto.code.SmsCodeUseReqDTO;
@@ -59,14 +61,15 @@ public interface AuthConvert {
         // 构建菜单树
         // 使用 LinkedHashMap 的原因，是为了排序 。实际也可以用 Stream API ，就是太丑了。
         Map<Long, AuthPermissionInfoRespVO.MenuVO> treeNodeMap = new LinkedHashMap<>();
-        menuList.forEach(menu -> treeNodeMap.put(menu.getId(), AuthConvert.INSTANCE.convertTreeNode(menu)));
+        menuList.forEach(menu -> treeNodeMap.put(menu.getId(),
+                BeanUtils.toBean(menu, AuthPermissionInfoRespVO.MenuVO.class)));
         // 处理父子关系
-        treeNodeMap.values().stream().filter(node -> !node.getParentId().equals(MenuIdEnum.ROOT.getId())).forEach(childNode -> {
+        treeNodeMap.values().stream().filter(node -> ObjUtil.notEqual(node.getParentId(), MenuIdEnum.ROOT.getId())).forEach(childNode -> {
             // 获得父节点
             AuthPermissionInfoRespVO.MenuVO parentNode = treeNodeMap.get(childNode.getParentId());
             if (parentNode == null) {
                 LoggerFactory.getLogger(getClass()).error("[buildRouterTree][resource({}) 找不到父资源({})]",
-                    childNode.getId(), childNode.getParentId());
+                        childNode.getId(), childNode.getParentId());
                 return;
             }
             // 将自己添加到父节点中

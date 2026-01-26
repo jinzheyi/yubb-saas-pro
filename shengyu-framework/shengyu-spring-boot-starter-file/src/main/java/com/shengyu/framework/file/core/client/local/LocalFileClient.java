@@ -1,6 +1,7 @@
 package com.shengyu.framework.file.core.client.local;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IORuntimeException;
 import com.shengyu.framework.file.core.client.AbstractFileClient;
 
 import java.io.File;
@@ -18,10 +19,6 @@ public class LocalFileClient extends AbstractFileClient<LocalFileClientConfig> {
 
     @Override
     protected void doInit() {
-        // 补全风格。例如说 Linux 是 /，Windows 是 \
-        if (!config.getBasePath().endsWith(File.separator)) {
-            config.setBasePath(config.getBasePath() + File.separator);
-        }
     }
 
     @Override
@@ -42,11 +39,18 @@ public class LocalFileClient extends AbstractFileClient<LocalFileClientConfig> {
     @Override
     public byte[] getContent(String path) {
         String filePath = getFilePath(path);
-        return FileUtil.readBytes(filePath);
+        try {
+            return FileUtil.readBytes(filePath);
+        } catch (IORuntimeException ex) {
+            if (ex.getMessage().startsWith("File not exist:")) {
+                return null;
+            }
+            throw ex;
+        }
     }
 
     private String getFilePath(String path) {
-        return config.getBasePath() + path;
+        return config.getBasePath() + File.separator + path;
     }
 
 }

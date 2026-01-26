@@ -6,9 +6,9 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.ftp.FtpConfig;
 import cn.hutool.extra.ssh.JschRuntimeException;
 import cn.hutool.extra.ssh.Sftp;
-import com.jcraft.jsch.JSch;
 import com.shengyu.framework.common.util.io.FileUtils;
 import com.shengyu.framework.file.core.client.AbstractFileClient;
+import com.jcraft.jsch.JSch;
 
 import java.io.File;
 

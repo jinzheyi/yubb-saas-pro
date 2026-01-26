@@ -19,6 +19,7 @@ import com.shengyu.framework.common.enums.oauth2.OAuth2ClientConstants;
 import com.shengyu.framework.common.enums.sms.SmsSceneEnum;
 import com.shengyu.framework.common.util.date.DateUtils;
 import com.shengyu.framework.common.util.monitor.TracerUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.common.util.servlet.ServletUtils;
 import com.shengyu.framework.common.util.validation.ValidationUtils;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
@@ -230,7 +231,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         OAuth2AccessTokenDO accessTokenDO = oauth2TokenService.createAccessToken(user.getId(), getUserType().getValue(),
                 OAuth2ClientConstants.CLIENT_ID_TENANT, null);
         // 构建返回结果
-        AuthLoginRespVO loginRespVO = AuthConvert.INSTANCE.convert(accessTokenDO);
+        AuthLoginRespVO loginRespVO = BeanUtils.toBean(accessTokenDO, AuthLoginRespVO.class);
         loginRespVO.setDeptId(user.getDeptId());
         return loginRespVO;
     }
@@ -238,7 +239,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     @Override
     public AuthLoginRespVO refreshToken(String refreshToken) {
         OAuth2AccessTokenDO accessTokenDO = oauth2TokenService.refreshAccessToken(refreshToken, OAuth2ClientConstants.CLIENT_ID_TENANT);
-        return AuthConvert.INSTANCE.convert(accessTokenDO);
+        return BeanUtils.toBean(accessTokenDO, AuthLoginRespVO.class);
     }
 
     @Override

@@ -4,6 +4,7 @@ import cn.hutool.core.util.ObjectUtil;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.framework.common.util.monitor.TracerUtils;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.common.util.servlet.ServletUtils;
 import com.shengyu.framework.common.util.validation.ValidationUtils;
 import com.shengyu.module.platform.api.logger.dto.PlatformLoginLogCreateReqDTO;
@@ -167,13 +168,13 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         PlatformOAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.createAccessToken(userId, getUserType().getValue(),
                 OAuth2ClientConstants.CLIENT_ID_DEFAULT, null);
         // 构建返回结果
-        return AuthConvert.INSTANCE.convert(accessTokenDO);
+        return BeanUtils.toBean(accessTokenDO, AuthLoginRespVO.class);
     }
 
     @Override
     public AuthLoginRespVO refreshToken(String refreshToken) {
         PlatformOAuth2AccessTokenDO accessTokenDO = oauth2TokenServicePlatform.refreshAccessToken(refreshToken, OAuth2ClientConstants.CLIENT_ID_DEFAULT);
-        return AuthConvert.INSTANCE.convert(accessTokenDO);
+        return BeanUtils.toBean(accessTokenDO, AuthLoginRespVO.class);
     }
 
     @Override

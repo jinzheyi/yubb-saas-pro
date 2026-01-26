@@ -38,6 +38,11 @@ public class ApiErrorLogServiceImpl implements ApiErrorLogService {
     }
 
     @Override
+    public ApiErrorLogDO getApiErrorLog(Long id) {
+        return apiErrorLogMapper.selectById(id);
+    }
+
+    @Override
     public PageResult<ApiErrorLogDO> getApiErrorLogPage(ApiErrorLogPageReqVO pageReqVO) {
         return apiErrorLogMapper.selectPage(pageReqVO);
     }

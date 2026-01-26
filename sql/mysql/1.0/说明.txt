@@ -1,0 +1,41 @@
+ruoyi-vue-pro
+【同步】jdk21 和 jdk8 的代码        2026/1/18 18:35
+
+
+yudao-ui-admin-vue3
+!856 feat(iot):【设备定位：100%】
+Merge pull request !856 from 芋道源码/feature/iot-location    2026/1/21 13:43
+
+
+
+
+
+
+
+
+
+
+生成插入sql语句：
+WITH RECURSIVE menu_tree AS (
+        -- 基础查询：获取指定的父菜单
+        SELECT
+            id, name, permission, type, sort, parent_id, path, icon,
+            component, component_name, status, visible, keep_alive,
+            always_show, 1, 'shengyu_pay', creator, create_time, updater, update_time, deleted
+        FROM system_menu
+        WHERE id IN (1117)
+          AND deleted = 0
+
+        UNION ALL
+
+        -- 递归查询：获取下级菜单
+        SELECT
+            m.id, m.name, m.permission, m.type, m.sort, m.parent_id, m.path, m.icon,
+            m.component, m.component_name, m.status, m.visible, m.keep_alive,
+            m.always_show, 1, 'shengyu_pay', m.creator, m.create_time, m.updater, m.update_time, m.deleted
+        FROM system_menu m
+        INNER JOIN menu_tree mt ON m.parent_id = mt.id
+        WHERE m.deleted = 0
+    )
+    SELECT * FROM menu_tree
+    ORDER BY parent_id, sort, id;

@@ -1,14 +1,7 @@
 package com.shengyu.module.platform.service.permission;
 
-import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.MENU_EXISTS_CHILDREN;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.MENU_NAME_DUPLICATE;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.MENU_NOT_EXISTS;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.MENU_PARENT_ERROR;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.MENU_PARENT_NOT_DIR_OR_MENU;
-import static com.shengyu.module.system.enums.ErrorCodeConstants.MENU_PARENT_NOT_EXISTS;
-
+import cn.hutool.core.util.StrUtil;
+import com.google.common.annotations.VisibleForTesting;
 import com.shengyu.framework.common.enums.permission.MenuIdEnum;
 import com.shengyu.framework.common.enums.permission.MenuTypeEnum;
 import com.shengyu.framework.common.util.object.BeanUtils;
@@ -18,15 +11,19 @@ import com.shengyu.module.platform.controller.platform.permission.vo.menu.MenuUp
 import com.shengyu.module.platform.dal.dataobject.permission.MenuDO;
 import com.shengyu.module.platform.dal.mysql.permission.MenuMapper;
 import com.shengyu.module.platform.dal.redis.RedisKeyConstants;
-import com.google.common.annotations.VisibleForTesting;
-import java.util.Collection;
-import java.util.List;
-import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import javax.annotation.Resource;
+import java.util.Collection;
+import java.util.List;
+
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 
 /**
  * 菜单 Service 实现
@@ -50,7 +47,8 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
         validateParentMenu(reqVO.getParentId(), null);
         // 校验菜单（自己）
         validateMenu(reqVO.getParentId(), reqVO.getName(), null);
-
+        // 校验组件名是否重复
+        validateMenuComponentName(reqVO.getComponentName(), null);
         // 插入数据库
         MenuDO menu = BeanUtils.toBean(reqVO, MenuDO.class);
         initMenuProperty(menu);
@@ -71,7 +69,8 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
         validateParentMenu(reqVO.getParentId(), reqVO.getId());
         // 校验菜单（自己）
         validateMenu(reqVO.getParentId(), reqVO.getName(), reqVO.getId());
-
+        // 校验组件名是否重复
+        validateMenuComponentName(reqVO.getComponentName(), reqVO.getId());
         // 更新到数据库
         MenuDO updateObject = BeanUtils.toBean(reqVO, MenuDO.class);
         initMenuProperty(updateObject);
@@ -174,6 +173,30 @@ public class PlatformMenuServiceImpl implements PlatformMenuService {
         }
         if (!menu.getId().equals(id)) {
             throw exception(MENU_NAME_DUPLICATE);
+        }
+    }
+
+    /**
+     * 校验菜单组件名是否合法
+     *
+     * @param componentName 组件名
+     * @param id            菜单编号
+     */
+    @VisibleForTesting
+    void validateMenuComponentName(String componentName, Long id) {
+        if (StrUtil.isBlank(componentName)) {
+            return;
+        }
+        MenuDO menu = menuMapper.selectByComponentName(componentName);
+        if (menu == null) {
+            return;
+        }
+        // 如果 id 为空，说明不用比较是否为相同 id 的菜单
+        if (id == null) {
+            throw exception(MENU_COMPONENT_NAME_DUPLICATE);
+        }
+        if (!menu.getId().equals(id)) {
+            throw exception(MENU_COMPONENT_NAME_DUPLICATE);
         }
     }
 

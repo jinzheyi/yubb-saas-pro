@@ -1,9 +1,5 @@
 package com.shengyu.module.platform.service.logger;
 
-import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
-import static com.shengyu.module.platform.dal.dataobject.logger.PlatformOperateLogDO.JAVA_METHOD_ARGS_MAX_LENGTH;
-import static com.shengyu.module.platform.dal.dataobject.logger.PlatformOperateLogDO.RESULT_MAX_LENGTH;
-
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.common.pojo.PageResult;
@@ -16,13 +12,18 @@ import com.shengyu.module.platform.dal.dataobject.logger.PlatformOperateLogDO;
 import com.shengyu.module.platform.dal.dataobject.user.PlatformUserDO;
 import com.shengyu.module.platform.dal.mysql.logger.PlatformOperateLogMapper;
 import com.shengyu.module.platform.service.user.PlatformUserService;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
+
+import javax.annotation.Resource;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertSet;
+import static com.shengyu.module.platform.dal.dataobject.logger.PlatformOperateLogDO.JAVA_METHOD_ARGS_MAX_LENGTH;
+import static com.shengyu.module.platform.dal.dataobject.logger.PlatformOperateLogDO.RESULT_MAX_LENGTH;
 
 @Service
 @Validated
@@ -41,6 +42,11 @@ public class PlatformOperateLogServiceImpl implements PlatformOperateLogService 
         logDO.setJavaMethodArgs(StrUtils.maxLength(logDO.getJavaMethodArgs(), JAVA_METHOD_ARGS_MAX_LENGTH));
         logDO.setResultData(StrUtils.maxLength(logDO.getResultData(), RESULT_MAX_LENGTH));
         platformOperateLogMapper.insert(logDO);
+    }
+
+    @Override
+    public PlatformOperateLogDO getOperateLog(Long id) {
+        return platformOperateLogMapper.selectById(id);
     }
 
     @Override

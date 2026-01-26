@@ -1,12 +1,9 @@
 package com.shengyu.module.platform.controller.platform.logger;
 
-import static com.shengyu.framework.common.pojo.CommonResult.success;
-import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
-import static com.shengyu.framework.operatelog.core.enums.OperateTypeEnum.EXPORT;
-
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.pojo.PageParam;
 import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.excel.core.util.ExcelUtils;
 import com.shengyu.framework.operatelog.core.annotations.OperateLog;
 import com.shengyu.module.platform.controller.platform.logger.vo.operatelog.OperateLogPageReqVO;
@@ -17,18 +14,25 @@ import com.shengyu.module.platform.dal.dataobject.user.PlatformUserDO;
 import com.shengyu.module.platform.service.logger.PlatformOperateLogService;
 import com.shengyu.module.platform.service.user.PlatformUserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletResponse;
-import javax.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.util.collection.CollectionUtils.convertList;
+import static com.shengyu.framework.operatelog.core.enums.OperateTypeEnum.EXPORT;
 
 @Tag(name = "管理后台 - 操作日志")
 @RestController
@@ -40,6 +44,15 @@ public class PlatformOperateLogController {
     private PlatformOperateLogService platformOperateLogService;
     @Resource
     private PlatformUserService platformUserService;
+
+    @GetMapping("/get")
+    @Operation(summary = "查看操作日志")
+    @Parameter(name = "id", description = "编号", required = true, example = "1024")
+    @PreAuthorize("@ps.hasPermission('system:operate-log:query')")
+    public CommonResult<OperateLogRespVO> getOperateLog(@RequestParam("id") Long id) {
+        PlatformOperateLogDO operateLog = platformOperateLogService.getOperateLog(id);
+        return success(BeanUtils.toBean(operateLog, OperateLogRespVO.class));
+    }
 
     @GetMapping("/page")
     @Operation(summary = "查看操作日志分页列表")

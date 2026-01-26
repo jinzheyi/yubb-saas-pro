@@ -23,6 +23,14 @@ public interface PlatformOperateLogService {
     void createOperateLog(PlatformOperateLogCreateReqDTO createReqDTO);
 
     /**
+     * 获得操作日志
+     *
+     * @param id 编号
+     * @return 操作日志
+     */
+    PlatformOperateLogDO getOperateLog(Long id);
+
+    /**
      * 获得操作日志分页列表
      *
      * @param reqVO 分页条件

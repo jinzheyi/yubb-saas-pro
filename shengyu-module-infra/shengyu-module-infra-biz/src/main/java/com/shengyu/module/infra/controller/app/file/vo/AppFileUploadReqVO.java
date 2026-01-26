@@ -1,7 +1,7 @@
 package com.shengyu.module.infra.controller.app.file.vo;
 
-import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.shengyu.module.infra.controller.platform.file.vo.file.FileUploadReqVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,7 +23,7 @@ public class AppFileUploadReqVO {
     @AssertTrue(message = "文件目录不正确")
     @JsonIgnore
     public boolean isDirectoryValid() {
-        return !StrUtil.containsAny(directory, "..", "/", "\\");
+        return FileUploadReqVO.isDirectoryValid(directory);
     }
 
 }

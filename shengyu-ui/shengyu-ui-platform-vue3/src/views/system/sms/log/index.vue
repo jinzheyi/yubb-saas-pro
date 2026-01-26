@@ -1,5 +1,5 @@
 <template>
-  <doc-alert title="官网地址" url="http://www.shengyukj.top/" />
+  <doc-alert title="短信配置" url="https://doc.iocoder.cn/sms/" />
 
   <ContentWrap>
     <!-- 搜索工作栏 -->

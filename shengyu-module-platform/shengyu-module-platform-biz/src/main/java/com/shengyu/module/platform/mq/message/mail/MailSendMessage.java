@@ -4,6 +4,8 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.io.File;
+
 /**
  * 邮箱发送消息
  *
@@ -42,5 +44,10 @@ public class MailSendMessage {
      */
     @NotEmpty(message = "邮件内容不能为空")
     private String content;
+
+    /**
+     * 附件
+     */
+    private File[] attachments;
 
 }

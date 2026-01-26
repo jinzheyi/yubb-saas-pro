@@ -1,5 +1,6 @@
 package com.shengyu.module.system.controller.admin.logger;
 
+import static com.shengyu.framework.common.pojo.CommonResult.success;
 import static com.shengyu.framework.operatelog.core.enums.OperateTypeEnum.EXPORT;
 
 import com.shengyu.framework.common.pojo.CommonResult;
@@ -35,12 +36,20 @@ public class LoginLogController {
     @Resource
     private LoginLogService loginLogService;
 
+    @GetMapping("/get")
+    @Operation(summary = "获得登录日志")
+    @PreAuthorize("@ss.hasPermission('system:login-log:query')")
+    public CommonResult<LoginLogRespVO> getLoginLog(Long id) {
+        LoginLogDO loginLog = loginLogService.getLoginLog(id);
+        return success(BeanUtils.toBean(loginLog, LoginLogRespVO.class));
+    }
+
     @GetMapping("/page")
     @Operation(summary = "获得登录日志分页列表")
     @PreAuthorize("@ss.hasPermission('system:login-log:query')")
     public CommonResult<PageResult<LoginLogRespVO>> getLoginLogPage(@Valid LoginLogPageReqVO reqVO) {
         PageResult<LoginLogDO> page = loginLogService.getLoginLogPage(reqVO);
-        return CommonResult.success(BeanUtils.toBean(page, LoginLogRespVO.class));
+        return success(BeanUtils.toBean(page, LoginLogRespVO.class));
     }
 
     @GetMapping("/export")

@@ -43,11 +43,11 @@
 
 
         <!-- 会员中心。默认注释，保证编译速度 -->
-        <dependency>
-            <groupId>com.shengyu.boot</groupId>
-            <artifactId>shengyu-module-member</artifactId>
-            <version>${revision}</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.shengyu.boot</groupId>-->
+<!--            <artifactId>shengyu-module-member</artifactId>-->
+<!--            <version>${revision}</version>-->
+<!--        </dependency>-->
 
 <!--        &lt;!&ndash; 数据报表 &ndash;&gt;-->
 <!--        <dependency>-->
@@ -62,11 +62,11 @@
 <!--            <version>${revision}</version>-->
 <!--        </dependency>-->
         <!-- 支付服务。默认注释，保证编译速度 -->
-        <dependency>
-            <groupId>com.shengyu.boot</groupId>
-            <artifactId>shengyu-module-pay</artifactId>
-            <version>${revision}</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.shengyu.boot</groupId>-->
+<!--            <artifactId>shengyu-module-pay</artifactId>-->
+<!--            <version>${revision}</version>-->
+<!--        </dependency>-->
 
 <!--        &lt;!&ndash; 微信公众号模块。默认注释，保证编译速度 &ndash;&gt;-->
 <!--        <dependency>-->
@@ -76,26 +76,26 @@
 <!--        </dependency>-->
 
         <!-- 商城相关模块。默认注释，保证编译速度-->
-        <dependency>
-            <groupId>com.shengyu.boot</groupId>
-            <artifactId>shengyu-module-product</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.shengyu.boot</groupId>
-            <artifactId>shengyu-module-promotion</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.shengyu.boot</groupId>
-            <artifactId>shengyu-module-trade</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.shengyu.boot</groupId>
-            <artifactId>shengyu-module-statistics</artifactId>
-            <version>${revision}</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.shengyu.boot</groupId>-->
+<!--            <artifactId>shengyu-module-product</artifactId>-->
+<!--            <version>${revision}</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>com.shengyu.boot</groupId>-->
+<!--            <artifactId>shengyu-module-promotion</artifactId>-->
+<!--            <version>${revision}</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>com.shengyu.boot</groupId>-->
+<!--            <artifactId>shengyu-module-trade</artifactId>-->
+<!--            <version>${revision}</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>com.shengyu.boot</groupId>-->
+<!--            <artifactId>shengyu-module-statistics</artifactId>-->
+<!--            <version>${revision}</version>-->
+<!--        </dependency>-->
 
         <!-- spring boot 配置所需依赖 -->
         <dependency>

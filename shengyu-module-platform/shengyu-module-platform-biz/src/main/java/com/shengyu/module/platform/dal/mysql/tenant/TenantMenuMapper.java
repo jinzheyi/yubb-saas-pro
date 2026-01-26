@@ -32,4 +32,8 @@ public interface TenantMenuMapper extends BaseMapperX<TenantMenuDO> {
         return selectList(TenantMenuDO::getPermission, permission);
     }
 
+    default TenantMenuDO selectByComponentName(String componentName) {
+        return selectOne(TenantMenuDO::getComponentName, componentName);
+    }
+
 }

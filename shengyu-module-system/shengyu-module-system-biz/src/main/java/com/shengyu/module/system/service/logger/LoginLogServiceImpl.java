@@ -24,6 +24,11 @@ public class LoginLogServiceImpl implements LoginLogService {
     private LoginLogMapper loginLogMapper;
 
     @Override
+    public LoginLogDO getLoginLog(Long id) {
+        return loginLogMapper.selectById(id);
+    }
+
+    @Override
     public PageResult<LoginLogDO> getLoginLogPage(LoginLogPageReqVO reqVO) {
         return loginLogMapper.selectPage(reqVO);
     }

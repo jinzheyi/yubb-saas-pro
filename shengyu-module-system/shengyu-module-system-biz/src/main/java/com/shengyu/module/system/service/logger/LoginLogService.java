@@ -15,6 +15,14 @@ import java.util.List;
 public interface LoginLogService {
 
     /**
+     * 获得登录日志
+     *
+     * @param id 编号
+     * @return 登录日志
+     */
+    LoginLogDO getLoginLog(Long id);
+
+    /**
      * 获得登录日志分页
      *
      * @param reqVO 分页条件
