@@ -95,6 +95,21 @@ public class SecurityFrameworkUtils {
     }
 
     /**
+     * 获取当前登录用户（统一获取，支持租户端和平台端）
+     * 
+     * @return 当前登录用户基类，可能是 LoginUser 或 PlatformLoginUser
+     */
+    @Nullable
+    public static LoginBase getLoginUserBase() {
+        Authentication authentication = getAuthentication();
+        if (authentication == null) {
+            return null;
+        }
+        Object principal = authentication.getPrincipal();
+        return principal instanceof LoginBase ? (LoginBase) principal : null;
+    }
+
+    /**
      * 获得当前租户用户的编号，从上下文中
      *
      * @return 租户用户编号

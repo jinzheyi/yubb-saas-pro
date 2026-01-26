@@ -1,20 +1,16 @@
 package com.shengyu.framework.datapermission.core.rule.dept;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.framework.common.util.collection.CollectionUtils;
 import com.shengyu.framework.common.util.json.JsonUtils;
 import com.shengyu.framework.datapermission.core.rule.DataPermissionRule;
+import com.shengyu.framework.datapermission.core.rule.dept.dto.DeptDataPermissionRespDTO;
 import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
 import com.shengyu.framework.mybatis.core.util.MyBatisUtils;
-import com.shengyu.framework.security.core.LoginUser;
+import com.shengyu.framework.security.core.util.LoginBase;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
-import com.shengyu.module.system.api.permission.PermissionApi;
-import com.shengyu.module.system.api.permission.dto.DeptDataPermissionRespDTO;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
@@ -23,13 +19,16 @@ import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.ParenthesedExpressionList;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 基于部门的 {@link DataPermissionRule} 数据权限规则实现
+ * 
+ * 重构说明：支持平台端和租户端各自的数据权限逻辑
+ * - 通过 DeptDataPermissionProvider 策略模式，根据用户类型自动选择对应的权限提供者
+ * - 平台端使用 PlatformDeptDataPermissionProvider
+ * - 租户端使用 SystemDeptDataPermissionProvider
+ * - 统一使用 LoginBase 获取登录用户，支持 LoginUser 和 PlatformLoginUser
  *
  * 注意，使用 DeptDataPermissionRule 时，需要保证表中有 dept_id 部门编号的字段，可自定义。
  *
@@ -45,19 +44,21 @@ import java.util.Set;
  *
  * @author 圣钰科技
  */
-@AllArgsConstructor
 @Slf4j
 public class DeptDataPermissionRule implements DataPermissionRule {
 
     /**
-     * LoginUser 的 Context 缓存 Key
+     * LoginBase 的 Context 缓存 Key
      */
     protected static final String CONTEXT_KEY = DeptDataPermissionRule.class.getSimpleName();
 
     private static final String DEPT_COLUMN_NAME = "dept_id";
     private static final String USER_COLUMN_NAME = "user_id";
 
-    private final PermissionApi permissionApi;
+    /**
+     * 数据权限提供者列表（支持平台端和租户端）
+     */
+    private final List<DeptDataPermissionProvider> providers;
 
     /**
      * 基于部门的表字段配置
@@ -80,6 +81,15 @@ public class DeptDataPermissionRule implements DataPermissionRule {
      */
     private final Set<String> TABLE_NAMES = new HashSet<>();
 
+    /**
+     * 构造函数
+     *
+     * @param providers 数据权限提供者列表
+     */
+    public DeptDataPermissionRule(List<DeptDataPermissionProvider> providers) {
+        this.providers = providers;
+    }
+
     @Override
     public Set<String> getTableNames() {
         return TABLE_NAMES;
@@ -88,12 +98,15 @@ public class DeptDataPermissionRule implements DataPermissionRule {
     @Override
     public Expression getExpression(String tableName, Alias tableAlias) {
         // 只有有登陆用户的情况下，才进行数据权限的处理
-        LoginUser loginUser = SecurityFrameworkUtils.getLoginUser();
+        LoginBase loginUser = SecurityFrameworkUtils.getLoginUserBase();
         if (loginUser == null) {
             return null;
         }
-        // 只有管理员类型的用户，才进行数据权限的处理
-        if (ObjectUtil.notEqual(loginUser.getUserType(), UserTypeEnum.ADMIN.getValue())) {
+
+        // 根据用户类型选择对应的权限提供者
+        DeptDataPermissionProvider provider = getProvider(loginUser.getUserType());
+        if (provider == null) {
+            // 没有匹配的提供者，不进行数据权限处理
             return null;
         }
 
@@ -101,7 +114,7 @@ public class DeptDataPermissionRule implements DataPermissionRule {
         DeptDataPermissionRespDTO deptDataPermission = loginUser.getContext(CONTEXT_KEY, DeptDataPermissionRespDTO.class);
         // 从上下文中拿不到，则调用逻辑进行获取
         if (deptDataPermission == null) {
-            deptDataPermission = permissionApi.getDeptDataPermission(loginUser.getId());
+            deptDataPermission = provider.getDeptDataPermission(loginUser.getId());
             if (deptDataPermission == null) {
                 log.error("[getExpression][LoginUser({}) 获取数据权限为 null]", JsonUtils.toJsonString(loginUser));
                 throw new NullPointerException(String.format("LoginUser(%d) Table(%s/%s) 未返回数据权限",
@@ -141,6 +154,24 @@ public class DeptDataPermissionRule implements DataPermissionRule {
         }
         // 目前，如果有指定部门 + 可查看自己，采用 OR 条件。即，WHERE (dept_id IN ? OR user_id = ?)
         return new ParenthesedExpressionList(new OrExpression(deptExpression, userExpression));
+    }
+
+    /**
+     * 根据用户类型获取对应的权限提供者
+     *
+     * @param userType 用户类型
+     * @return 权限提供者
+     */
+    private DeptDataPermissionProvider getProvider(Integer userType) {
+        if (userType == null) {
+            return null;
+        }
+        for (DeptDataPermissionProvider provider : providers) {
+            if (provider.supports(userType)) {
+                return provider;
+            }
+        }
+        return null;
     }
 
     private Expression buildDeptExpression(String tableName, Alias tableAlias, Set<Long> deptIds) {
