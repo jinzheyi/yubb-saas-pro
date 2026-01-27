@@ -172,6 +172,33 @@ shengyu:
     response-key: 96103715984234343991809655248883 # 【AES 案例】响应加密的秘钥，AES 案例，必须 16、24、32 位
   #    request-key: MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBAKWzasimcZ1icsWDPVdTXcZs1DkOWjI+m9bTQU8aOqflnomkr6QO1WWeSHBHzuJGsTlV/ZY2pFfq/NstKC94hBjx7yioYJvzb2bKN/Uy4j5nM3iCF//u0RiFkkY8j0Bt/EWoFTOb6RHf8cHIAjbYYtP3pYzbpCIwryfe0g//KIuzAgMBAAECgYADDjZrYcpZjR2xr7RbXmGtzYbyUGXwZEAqa3XaWBD51J2iSyOkAlQEDjGmxGQ3vvb4qDHHadWI+3/TKNeDXJUO+xTVJrnismK5BsHyC6dfxlIK/5BAuknryTca/3UoA1yomS9ZlF3Q0wcecaDoEnSmZEaTrp9T3itPAz4KnGjv5QJBAN5mNcfu6iJ5ktNvEdzqcxkKwbXb9Nq1SLnmTvt+d5TPX7eQ9fCwtOfVu5iBLhhZzb5PJ7pSN3Zt6rl5/jPOGv0CQQC+vETX9oe1wbxZSv6/RBGy0Xow6GndbJwvd89PcAJ2h+OJXWtg/rRHB3t9EQm7iis0XbZTapj19E4U6l8EibhvAkEA1CvYpRwmHKu1SqdM+GBnW/2qHlBwwXJvpoK02TOm674HR/4w0+YRQJfkd7LOAgcyxJuJgDTNmtt0MmzS+iNoFQJAMVSUIZ77XoDq69U/qcw7H5qaFcgmiUQr6QL9tTftCyb+LGri+MUnby96OtCLSdvkbLjIDS8GvKYhA7vSM2RDNQJBAKGyVVnFFIrbK3yuwW71yvxQEGoGxlgvZSezZ4vGgqTxrr9HvAtvWLwR6rpe6ybR/x8uUtoW7NRBWgpiIFwjvY4= # 【RSA 案例】请求解密的私钥
   #    response-key: MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDh/CHyBcS/zEfVyINVA7+c9Xxl0CPdxPMK1OIjxaLy/7BLfbkoEpI8onQtjuzfpuxCraDem9bu3BMF0pMH95HytI3Vi0kGjaV+WLIalwgc2w37oA2sbsmKzQOP7SDLO5s2QJNAD7kVwd+Q5rqaLu2MO0xVv+0IUJhn83hClC0L5wIDAQAB # 【RSA 案例】响应加密的公钥
+  # Netty WebSocket 配置
+  netty:
+    # 基础配置
+    enable: true # 是否启用 Netty 服务器
+    host: 0.0.0.0 # 服务器地址
+    
+    # 协议配置
+    enable-websocket: true # 是否启用 WebSocket 协议
+    websocket-path: /ws # WebSocket 路径
+    enable-protobuf: true # 是否启用 Protobuf 协议
+    max-content-length: 65536 # HTTP 最大内容长度（64KB）
+    
+    # 性能优化配置
+    boss-threads: 1 # Boss 线程数（接收连接）
+    
+    # TCP 参数配置
+    so-backlog: 1024 # TCP 连接队列大小
+    so-rcvbuf: 65536 # TCP 接收缓冲区（64KB）
+    so-sndbuf: 65536 # TCP 发送缓冲区（64KB）
+    write-buffer-low-water-mark: 32768 # 写缓冲区低水位线（32KB）
+    write-buffer-high-water-mark: 65536 # 写缓冲区高水位线（64KB）
+    
+    # 心跳配置
+    writer-idle-time: 0 # 写空闲时间（秒），0表示不检测
+    all-idle-time: 0 # 读写空闲时间（秒），0表示不检测
+  
+  # WebSocket 旧版配置（兼容性保留）
   websocket:
     enable: true # websocket的开关
     path: /infra/ws # 路径

@@ -1,0 +1,214 @@
+<template>
+	<view class="container">
+		<view class="header">
+			<text class="title">工作台</text>
+		</view>
+		
+		<scroll-view class="content" scroll-y>
+			<!-- 快捷入口 -->
+			<view class="section">
+				<text class="section-title">快捷入口</text>
+				<view class="grid">
+					<view 
+						v-for="(item, index) in quickEntries" 
+						:key="index"
+						class="grid-item"
+						@click="handleEntryClick(item)"
+					>
+						<view class="icon-wrapper" :style="{ background: item.color }">
+							<text class="icon">{{ item.icon }}</text>
+						</view>
+						<text class="label">{{ item.label }}</text>
+					</view>
+				</view>
+			</view>
+			
+			<!-- 待办事项 -->
+			<view class="section">
+				<text class="section-title">待办事项</text>
+				<view class="todo-list">
+					<view 
+						v-for="(item, index) in todoList" 
+						:key="index"
+						class="todo-item"
+						@click="handleTodoClick(item)"
+					>
+						<view class="todo-left">
+							<text class="todo-title">{{ item.title }}</text>
+							<text class="todo-time">{{ item.time }}</text>
+						</view>
+						<view class="todo-badge">{{ item.count }}</view>
+					</view>
+					
+					<view v-if="todoList.length === 0" class="empty">
+						<text class="empty-text">暂无待办事项</text>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	// 快捷入口
+	const quickEntries = ref<any[]>([
+		{ icon: '📝', label: '审批', color: '#667eea' },
+		{ icon: '📊', label: '报表', color: '#f093fb' },
+		{ icon: '📁', label: '文件', color: '#4facfe' },
+		{ icon: '⚙️', label: '设置', color: '#43e97b' }
+	])
+	
+	// 待办事项
+	const todoList = ref<any[]>([
+		{
+			id: 1,
+			title: '待审批流程',
+			time: '今天',
+			count: 3
+		},
+		{
+			id: 2,
+			title: '待处理任务',
+			time: '本周',
+			count: 5
+		}
+	])
+	
+	// 点击快捷入口
+	function handleEntryClick(item: any) {
+		uni.showToast({
+			title: item.label + '功能开发中',
+			icon: 'none'
+		})
+	}
+	
+	// 点击待办事项
+	function handleTodoClick(item: any) {
+		uni.showToast({
+			title: '待办详情功能开发中',
+			icon: 'none'
+		})
+	}
+</script>
+
+<style>
+	.container {
+		height: 100vh;
+		background: #f5f5f5;
+		display: flex;
+		flex-direction: column;
+	}
+	
+	.header {
+		background: #ffffff;
+		padding: 15px 20px;
+		border-bottom: 1px solid #e0e0e0;
+	}
+	
+	.title {
+		font-size: 18px;
+		font-weight: bold;
+		color: #333333;
+	}
+	
+	.content {
+		flex: 1;
+	}
+	
+	.section {
+		background: #ffffff;
+		margin: 10px;
+		border-radius: 10px;
+		padding: 15px;
+	}
+	
+	.section-title {
+		font-size: 16px;
+		font-weight: bold;
+		color: #333333;
+		margin-bottom: 15px;
+		display: block;
+	}
+	
+	.grid {
+		display: flex;
+		flex-wrap: wrap;
+	}
+	
+	.grid-item {
+		width: 25%;
+		text-align: center;
+		margin-bottom: 20px;
+	}
+	
+	.icon-wrapper {
+		width: 50px;
+		height: 50px;
+		border-radius: 25px;
+		margin: 0 auto 8px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	
+	.icon {
+		font-size: 24px;
+	}
+	
+	.label {
+		font-size: 13px;
+		color: #666666;
+	}
+	
+	.todo-list {
+		
+	}
+	
+	.todo-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 15px 0;
+		border-bottom: 1px solid #f0f0f0;
+	}
+	
+	.todo-item:last-child {
+		border-bottom: none;
+	}
+	
+	.todo-left {
+		flex: 1;
+	}
+	
+	.todo-title {
+		font-size: 15px;
+		color: #333333;
+		display: block;
+		margin-bottom: 5px;
+	}
+	
+	.todo-time {
+		font-size: 12px;
+		color: #999999;
+	}
+	
+	.todo-badge {
+		background: #ff4d4f;
+		color: #ffffff;
+		font-size: 12px;
+		padding: 4px 10px;
+		border-radius: 12px;
+		min-width: 24px;
+		text-align: center;
+	}
+	
+	.empty {
+		padding: 40px 0;
+		text-align: center;
+	}
+	
+	.empty-text {
+		font-size: 14px;
+		color: #999999;
+	}
+</style>

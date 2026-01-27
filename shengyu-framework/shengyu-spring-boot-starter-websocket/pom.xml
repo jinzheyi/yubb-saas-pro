@@ -12,7 +12,7 @@
     <packaging>jar</packaging>
 
     <name>${project.artifactId}</name>
-    <description>WebSocket 框架，支持多节点的广播</description>
+    <description>基于 Netty + Protobuf 的高性能即时通讯中间件，支持千万级并发连接</description>
     <url>https://gitee.com/jinzheyi/yubb-saas-pro</url>
 
 
@@ -33,9 +33,23 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Netty 核心依赖 -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+        </dependency>
+
+        <!-- Protobuf 依赖 -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+        </dependency>
+
+        <!-- 兼容 Spring WebSocket（可选，用于向后兼容） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <!-- 消息队列相关 -->
@@ -69,5 +83,42 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <extensions>
+            <!-- OS 检测插件，用于 protobuf 插件 -->
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.7.1</version>
+            </extension>
+        </extensions>
+
+        <plugins>
+            <!-- Protobuf Maven 插件 -->
+            <plugin>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>0.6.1</version>
+                <configuration>
+                    <!-- 自动下载 protoc 编译器 -->
+                    <protocArtifact>com.google.protobuf:protoc:3.21.7:exe:${os.detected.classifier}</protocArtifact>
+                    <!-- proto 文件目录 -->
+                    <protoSourceRoot>${project.basedir}/src/main/proto</protoSourceRoot>
+                    <!-- 输出目录 -->
+                    <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
+                    <!-- 不清空输出目录 -->
+                    <clearOutputDirectory>false</clearOutputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

@@ -1,0 +1,176 @@
+<template>
+	<view class="container">
+		<!-- 用户信息卡片 -->
+		<view class="user-card">
+			<image class="avatar" :src="userAvatar"></image>
+			<text class="nickname">{{ userNickname }}</text>
+			<text class="dept">{{ userDept }}</text>
+		</view>
+		
+		<!-- 菜单列表 -->
+		<view class="menu-section">
+			<view 
+				v-for="(item, index) in menuList" 
+				:key="index"
+				class="menu-item"
+				@click="handleMenuClick(item)"
+			>
+				<text class="menu-icon">{{ item.icon }}</text>
+				<text class="menu-label">{{ item.label }}</text>
+				<text class="menu-arrow">›</text>
+			</view>
+		</view>
+		
+		<!-- 退出登录按钮 -->
+		<view class="logout-section">
+			<button class="logout-btn" @click="handleLogout">退出登录</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getUserInfo, clearUserInfo } from '../../store/user.uts'
+	import { logout } from '../../api/login.uts'
+	
+	// 用户信息
+	const userAvatar = ref<string>('/static/logo.png')
+	const userNickname = ref<string>('用户')
+	const userDept = ref<string>('圣钰科技')
+	
+	// 菜单列表
+	const menuList = ref<any[]>([
+		{ icon: '👤', label: '个人信息', action: 'profile' },
+		{ icon: '🔒', label: '修改密码', action: 'password' },
+		{ icon: '⚙️', label: '系统设置', action: 'settings' },
+		{ icon: '❓', label: '帮助中心', action: 'help' },
+		{ icon: 'ℹ️', label: '关于我们', action: 'about' }
+	])
+	
+	// 点击菜单
+	function handleMenuClick(item: any) {
+		uni.showToast({
+			title: item.label + '功能开发中',
+			icon: 'none'
+		})
+	}
+	
+	// 退出登录
+	async function handleLogout() {
+		uni.showModal({
+			title: '提示',
+			content: '确定要退出登录吗？',
+			success: async (res) => {
+				if (res.confirm) {
+					try {
+						// 调用退出登录接口
+						await logout()
+					} catch (e) {
+						console.error('退出登录失败', e)
+					} finally {
+						// 清除本地数据
+						clearUserInfo()
+						// 跳转到登录页
+						uni.reLaunch({
+							url: '/pages/login/login'
+						})
+					}
+				}
+			}
+		})
+	}
+	
+	// 加载用户信息
+	function loadUserInfo() {
+		const info = getUserInfo()
+		if (info != null) {
+			userNickname.value = info['nickname'] || '用户'
+			userDept.value = info['dept'] || '圣钰科技'
+		}
+	}
+	
+	onMounted(() => {
+		loadUserInfo()
+	})
+</script>
+
+<style>
+	.container {
+		min-height: 100vh;
+		background: #f5f5f5;
+	}
+	
+	.user-card {
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		padding: 40px 20px;
+		text-align: center;
+	}
+	
+	.avatar {
+		width: 80px;
+		height: 80px;
+		border-radius: 40px;
+		border: 3px solid #ffffff;
+		margin-bottom: 15px;
+	}
+	
+	.nickname {
+		font-size: 20px;
+		color: #ffffff;
+		font-weight: bold;
+		display: block;
+		margin-bottom: 8px;
+	}
+	
+	.dept {
+		font-size: 14px;
+		color: rgba(255, 255, 255, 0.8);
+	}
+	
+	.menu-section {
+		background: #ffffff;
+		margin: 10px;
+		border-radius: 10px;
+		overflow: hidden;
+	}
+	
+	.menu-item {
+		display: flex;
+		align-items: center;
+		padding: 15px 20px;
+		border-bottom: 1px solid #f0f0f0;
+	}
+	
+	.menu-item:last-child {
+		border-bottom: none;
+	}
+	
+	.menu-icon {
+		font-size: 20px;
+		margin-right: 15px;
+	}
+	
+	.menu-label {
+		flex: 1;
+		font-size: 15px;
+		color: #333333;
+	}
+	
+	.menu-arrow {
+		font-size: 20px;
+		color: #cccccc;
+	}
+	
+	.logout-section {
+		padding: 20px;
+	}
+	
+	.logout-btn {
+		width: 100%;
+		height: 45px;
+		background: #ffffff;
+		color: #ff4d4f;
+		border: 1px solid #ff4d4f;
+		border-radius: 22.5px;
+		font-size: 15px;
+	}
+</style>

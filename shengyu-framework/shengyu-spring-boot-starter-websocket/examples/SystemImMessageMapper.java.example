@@ -1,0 +1,22 @@
+package com.shengyu.module.system.dal.mapper.im;
+
+import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
+import com.shengyu.module.system.dal.dataobject.im.SystemImMessageDO;
+import org.apache.ibatis.annotations.Mapper;
+
+/**
+ * system 模块 IM 消息 Mapper
+ * 
+ * 说明：
+ * 1. 继承 BaseMapperX，获得基础 CRUD 能力
+ * 2. 可以添加自定义查询方法
+ *
+ * @author 圣钰科技
+ */
+@Mapper
+public interface SystemImMessageMapper extends BaseMapperX<SystemImMessageDO> {
+
+    // 可以添加自定义查询方法
+    // 例如：
+    // List<SystemImMessageDO> selectUnreadMessages(@Param("userId") Long userId);
+}

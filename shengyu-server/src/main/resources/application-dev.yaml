@@ -166,6 +166,22 @@ wx: # 参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-sta
 
 # 圣钰配置项，设置当前项目所有自定义的配置
 shengyu:
+  # Netty WebSocket 生产环境配置
+  netty:
+    port: 9000 # WebSocket 端口
+    use-epoll: true # Linux 环境启用 Epoll 优化
+    worker-threads: 32 # Worker 线程数（生产环境增加线程数）
+    reader-idle-time: 60 # 读空闲超时时间（秒）
+    so-backlog: 2048 # TCP 连接队列大小（生产环境增大）
+    so-rcvbuf: 131072 # TCP 接收缓冲区（128KB）
+    so-sndbuf: 131072 # TCP 发送缓冲区（128KB）
+  
+  # WebSocket 消息总线配置（生产环境使用 Redis）
+  websocket:
+    sender-type: redis # 使用 Redis 作为消息总线
+    sender-redis:
+      channel: ${spring.application.name}-websocket-channel # Redis 频道名称
+  
   pay:
     order-notify-url: http://yunai.natapp1.cc/admin-api/pay/notify/order # 支付渠道的【支付】回调地址
     refund-notify-url: http://yunai.natapp1.cc/admin-api/pay/notify/refund # 支付渠道的【退款】回调地址

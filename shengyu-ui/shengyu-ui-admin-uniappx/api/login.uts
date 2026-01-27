@@ -1,0 +1,67 @@
+/**
+ * 登录相关 API
+ */
+import { post, get, getRefreshToken } from '../utils/request.uts'
+
+/**
+ * 账号密码登录
+ */
+export function login(data: UTSJSONObject): Promise<any> {
+	return post('/system/auth/login', data)
+}
+
+/**
+ * 短信验证码登录
+ */
+export function smsLogin(data: UTSJSONObject): Promise<any> {
+	return post('/system/auth/sms-login', data)
+}
+
+/**
+ * 发送短信验证码
+ */
+export function sendSmsCode(data: UTSJSONObject): Promise<any> {
+	return post('/system/auth/send-sms-code', data)
+}
+
+/**
+ * 根据租户名称获取租户ID
+ */
+export function getTenantIdByName(name: string): Promise<any> {
+	return get('/system/tenant/get-id-by-name?name=' + name)
+}
+
+/**
+ * 获取用户权限信息
+ */
+export function getPermissionInfo(): Promise<any> {
+	return get('/system/auth/get-permission-info')
+}
+
+/**
+ * 登出
+ */
+export function logout(): Promise<any> {
+	return post('/system/auth/logout')
+}
+
+/**
+ * 刷新访问令牌
+ */
+export function refreshToken(): Promise<any> {
+	return post('/system/auth/refresh-token?refreshToken=' + getRefreshToken())
+}
+
+/**
+ * 获取图形验证码
+ */
+export function getCaptcha(data: UTSJSONObject): Promise<any> {
+	return post('/system/captcha/get', data)
+}
+
+/**
+ * 校验图形验证码
+ */
+export function checkCaptcha(data: UTSJSONObject): Promise<any> {
+	return post('/system/captcha/check', data)
+}

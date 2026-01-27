@@ -1,0 +1,79 @@
+package com.shengyu.module.system.dal.dataobject.im;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.shengyu.framework.mybatis.core.dataobject.BaseDO;
+import lombok.*;
+
+/**
+ * system 模块 IM 消息 DO
+ * 
+ * 说明：
+ * 1. 这是业务模块的 DO 对象示例
+ * 2. 对应数据库表 system_im_message
+ * 3. 不同业务模块可以有不同的字段设计
+ *
+ * @author 圣钰科技
+ */
+@TableName("system_im_message")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
+public class SystemImMessageDO extends BaseDO {
+
+    /**
+     * 消息ID（雪花算法生成）
+     */
+    @TableId(type = IdType.INPUT)
+    private Long id;
+
+    /**
+     * 消息类型
+     * 1-文本 2-图片 3-语音 4-视频 5-文件 6-位置 等
+     */
+    private Integer messageType;
+
+    /**
+     * 发送者ID
+     */
+    private Long senderId;
+
+    /**
+     * 接收者ID（单聊时使用）
+     */
+    private Long receiverId;
+
+    /**
+     * 群组ID（群聊时使用）
+     */
+    private Long groupId;
+
+    /**
+     * 租户ID（重要：用于多租户隔离）
+     */
+    private Long tenantId;
+
+    /**
+     * 消息体（Protobuf 二进制，Base64编码）
+     */
+    private String body;
+
+    /**
+     * 序列号（用于消息去重和排序）
+     */
+    private Long sequence;
+
+    /**
+     * 消息状态（0-未读 1-已读 2-已撤回）
+     */
+    private Integer status;
+
+    /**
+     * 扩展字段（JSON格式）
+     */
+    private String extra;
+}

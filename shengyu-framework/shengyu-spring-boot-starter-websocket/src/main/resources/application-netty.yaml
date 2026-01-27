@@ -1,0 +1,84 @@
+# Netty 即时通讯配置示例
+
+shengyu:
+  netty:
+    # 是否启用 Netty 服务器
+    enable: true
+    
+    # 服务器配置
+    host: 0.0.0.0
+    port: 9000
+    
+    # 性能优化配置
+    use-epoll: true                           # Linux 环境下启用 Epoll
+    boss-threads: 1                           # Boss 线程数（接收连接）
+    worker-threads: 16                        # Worker 线程数（建议 CPU 核心数 * 2）
+    
+    # TCP 参数配置
+    so-backlog: 1024                          # TCP 连接队列大小
+    so-rcvbuf: 65536                          # TCP 接收缓冲区（64KB）
+    so-sndbuf: 65536                          # TCP 发送缓冲区（64KB）
+    write-buffer-low-water-mark: 32768        # 写缓冲区低水位线（32KB）
+    write-buffer-high-water-mark: 65536       # 写缓冲区高水位线（64KB）
+    
+    # 心跳配置
+    reader-idle-time: 60                      # 读空闲时间（秒），超时关闭连接
+    writer-idle-time: 0                       # 写空闲时间（秒），0表示不检测
+    all-idle-time: 0                          # 读写空闲时间（秒），0表示不检测
+    
+    # 协议配置
+    enable-websocket: true                    # 是否启用 WebSocket 协议
+    websocket-path: /ws                       # WebSocket 路径
+    max-content-length: 65536                 # HTTP 最大内容长度（64KB）
+    enable-protobuf: true                     # 是否启用 Protobuf 协议
+
+  # WebSocket 配置（兼容旧版本）
+  websocket:
+    enable: true
+    path: /ws
+    sender-type: redis                        # 消息发送类型：local/redis/rocketmq/kafka/rabbitmq
+    
+    # Redis 消息总线配置
+    sender-redis:
+      channel: im-message-channel
+    
+    # RocketMQ 消息总线配置
+    sender-rocketmq:
+      topic: im-message-topic
+      consumer-group: im-message-consumer-group
+    
+    # Kafka 消息总线配置
+    sender-kafka:
+      topic: im-message-topic
+      consumer-group: im-message-consumer-group
+    
+    # RabbitMQ 消息总线配置
+    sender-rabbitmq:
+      exchange: im-message-exchange
+      queue: im-message-queue
+
+---
+# 开发环境配置
+spring:
+  profiles: dev
+
+shengyu:
+  netty:
+    port: 9000
+    worker-threads: 8
+    reader-idle-time: 120                     # 开发环境延长超时时间
+
+---
+# 生产环境配置
+spring:
+  profiles: prod
+
+shengyu:
+  netty:
+    port: 9000
+    use-epoll: true
+    worker-threads: 32                        # 生产环境增加线程数
+    so-backlog: 2048
+    so-rcvbuf: 131072                         # 128KB
+    so-sndbuf: 131072                         # 128KB
+    reader-idle-time: 60

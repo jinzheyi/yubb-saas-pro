@@ -222,6 +222,17 @@ wx:
 
 # 圣钰配置项，设置当前项目所有自定义的配置
 shengyu:
+  # Netty WebSocket 本地开发环境配置
+  netty:
+    port: 9000 # WebSocket 端口
+    use-epoll: false # 本地开发环境（Windows）不使用 Epoll
+    worker-threads: 8 # Worker 线程数（本地环境减少线程数）
+    reader-idle-time: 120 # 读空闲超时时间（秒，本地环境延长超时）
+  
+  # WebSocket 消息总线配置（本地环境使用 local）
+  websocket:
+    sender-type: local # 本地环境使用 local 模式，不依赖外部消息队列
+  
   captcha:
     enable: false # 本地环境，暂时关闭图片验证码，方便登录等接口的测试；
   security:

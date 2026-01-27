@@ -82,7 +82,7 @@
 
     <properties>
         <revision>2025.09-jdk8-SNAPSHOT</revision>
-        <flatten-maven-plugin.version>1.6.0</flatten-maven-plugin.version>
+        <flatten-maven-plugin.version>1.5.0</flatten-maven-plugin.version>
         <!-- 统一依赖管理 -->
         <spring.framework.version>5.3.39</spring.framework.version>
         <spring.security.version>5.8.16</spring.security.version>
@@ -135,6 +135,7 @@
         <ip2region.version>2.7.0</ip2region.version>
         <bizlog-sdk.version>3.0.6</bizlog-sdk.version>
         <netty.version>4.2.9.Final</netty.version>
+        <protobuf.version>3.21.7</protobuf.version>
         <mqtt.version>1.2.5</mqtt.version>
         <pf4j-spring.version>0.9.0</pf4j-spring.version>
         <vertx.version>4.5.13</vertx.version>
@@ -174,6 +175,11 @@
                 <version>${netty.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>${protobuf.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
@@ -740,11 +746,6 @@
 <!--                <artifactId>okhttp</artifactId>-->
 <!--                <version>${okhttp3.version}</version>-->
 <!--            </dependency>-->
-            <dependency>
-                <groupId>com.shengyu.boot</groupId>
-                <artifactId>shengyu-spring-boot-starter-file</artifactId>
-                <version>${revision}</version>
-            </dependency>
             <dependency>
                 <groupId>io.minio</groupId>
                 <artifactId>minio</artifactId>

@@ -1,0 +1,358 @@
+<template>
+	<view v-if="show" class="captcha-overlay" @click="handleClose">
+		<view class="captcha-container" @click.stop="">
+			<view class="captcha-header">
+				<text class="captcha-title">请完成安全验证</text>
+				<text class="captcha-close" @click="handleClose">✕</text>
+			</view>
+			
+			<view class="captcha-content">
+				<!-- 验证码图片 -->
+				<view class="captcha-image-wrapper">
+					<image 
+						v-if="captchaImage" 
+						class="captcha-image" 
+						:src="captchaImage"
+						mode="aspectFit"
+					></image>
+					<view v-else class="captcha-loading">
+						<text>加载中...</text>
+					</view>
+				</view>
+				
+				<!-- 滑块轨道 -->
+				<view class="slider-track">
+					<view class="slider-bg" :style="{ width: sliderWidth + 'px' }">
+						<text class="slider-text">{{ sliderText }}</text>
+					</view>
+					<view 
+						class="slider-btn" 
+						:style="{ left: sliderLeft + 'px' }"
+						@touchstart="handleTouchStart"
+						@touchmove="handleTouchMove"
+						@touchend="handleTouchEnd"
+					>
+						<text class="slider-icon">→</text>
+					</view>
+				</view>
+				
+				<!-- 刷新按钮 -->
+				<view class="captcha-footer">
+					<text class="refresh-btn" @click="handleRefresh">🔄 刷新验证码</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getCaptcha, checkCaptcha } from '../../api/login.uts'
+	
+	// Props
+	const props = defineProps({
+		captchaType: {
+			type: String,
+			default: 'blockPuzzle' // blockPuzzle 滑块 clickWord 点击文字
+		}
+	})
+	
+	// Emits
+	const emit = defineEmits(['success', 'fail', 'close'])
+	
+	// 状态
+	const show = ref<boolean>(false)
+	const captchaImage = ref<string>('')
+	const captchaToken = ref<string>('')
+	const secretKey = ref<string>('')
+	
+	// 滑块相关
+	const sliderLeft = ref<number>(0)
+	const sliderWidth = ref<number>(0)
+	const sliderText = ref<string>('向右滑动完成验证')
+	const startX = ref<number>(0)
+	const startTime = ref<number>(0)
+	const trackList = ref<any[]>([])
+	const maxWidth = ref<number>(300) // 滑块最大宽度
+	
+	/**
+	 * 显示验证码
+	 */
+	function showCaptcha() {
+		show.value = true
+		loadCaptcha()
+	}
+	
+	/**
+	 * 隐藏验证码
+	 */
+	function hideCaptcha() {
+		show.value = false
+		resetSlider()
+	}
+	
+	/**
+	 * 加载验证码
+	 */
+	async function loadCaptcha() {
+		try {
+			const data = await getCaptcha({
+				captchaType: props.captchaType
+			})
+			
+			captchaImage.value = 'data:image/png;base64,' + data.originalImageBase64
+			captchaToken.value = data.token
+			secretKey.value = data.secretKey
+		} catch (e) {
+			console.error('加载验证码失败', e)
+			uni.showToast({
+				title: '加载验证码失败',
+				icon: 'none'
+			})
+		}
+	}
+	
+	/**
+	 * 刷新验证码
+	 */
+	function handleRefresh() {
+		resetSlider()
+		loadCaptcha()
+	}
+	
+	/**
+	 * 关闭验证码
+	 */
+	function handleClose() {
+		hideCaptcha()
+		emit('close')
+	}
+	
+	/**
+	 * 重置滑块
+	 */
+	function resetSlider() {
+		sliderLeft.value = 0
+		sliderWidth.value = 0
+		sliderText.value = '向右滑动完成验证'
+		trackList.value = []
+	}
+	
+	/**
+	 * 触摸开始
+	 */
+	function handleTouchStart(e: any) {
+		startX.value = e.touches[0].clientX
+		startTime.value = Date.now()
+		trackList.value = []
+	}
+	
+	/**
+	 * 触摸移动
+	 */
+	function handleTouchMove(e: any) {
+		const moveX = e.touches[0].clientX - startX.value
+		
+		// 限制滑动范围
+		if (moveX < 0) {
+			sliderLeft.value = 0
+			sliderWidth.value = 0
+		} else if (moveX > maxWidth.value) {
+			sliderLeft.value = maxWidth.value
+			sliderWidth.value = maxWidth.value
+		} else {
+			sliderLeft.value = moveX
+			sliderWidth.value = moveX
+		}
+		
+		// 记录轨迹
+		trackList.value.push({
+			x: moveX,
+			y: 0,
+			t: Date.now() - startTime.value
+		})
+	}
+	
+	/**
+	 * 触摸结束
+	 */
+	async function handleTouchEnd(e: any) {
+		const moveX = sliderLeft.value
+		
+		// 如果滑动距离太短，重置
+		if (moveX < 50) {
+			resetSlider()
+			return
+		}
+		
+		// 验证滑块
+		try {
+			sliderText.value = '验证中...'
+			
+			const pointJson = JSON.stringify({
+				x: moveX,
+				y: 5
+			})
+			
+			const data = await checkCaptcha({
+				captchaType: props.captchaType,
+				pointJson: pointJson,
+				token: captchaToken.value
+			})
+			
+			// 验证成功
+			sliderText.value = '验证成功'
+			
+			setTimeout(() => {
+				hideCaptcha()
+				emit('success', {
+					captchaVerification: data.captchaVerification
+				})
+			}, 500)
+		} catch (e) {
+			// 验证失败
+			sliderText.value = '验证失败，请重试'
+			
+			setTimeout(() => {
+				resetSlider()
+				loadCaptcha()
+			}, 1000)
+			
+			emit('fail')
+		}
+	}
+	
+	// 暴露方法
+	defineExpose({
+		show: showCaptcha,
+		hide: hideCaptcha
+	})
+</script>
+
+<style>
+	.captcha-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 9999;
+	}
+	
+	.captcha-container {
+		width: 90%;
+		max-width: 400px;
+		background: #ffffff;
+		border-radius: 10px;
+		overflow: hidden;
+	}
+	
+	.captcha-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 15px 20px;
+		border-bottom: 1px solid #e0e0e0;
+	}
+	
+	.captcha-title {
+		font-size: 16px;
+		font-weight: bold;
+		color: #333333;
+	}
+	
+	.captcha-close {
+		font-size: 24px;
+		color: #999999;
+		cursor: pointer;
+	}
+	
+	.captcha-content {
+		padding: 20px;
+	}
+	
+	.captcha-image-wrapper {
+		width: 100%;
+		height: 200px;
+		background: #f5f5f5;
+		border-radius: 8px;
+		margin-bottom: 20px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	
+	.captcha-image {
+		width: 100%;
+		height: 100%;
+	}
+	
+	.captcha-loading {
+		text-align: center;
+	}
+	
+	.slider-track {
+		position: relative;
+		width: 100%;
+		height: 45px;
+		background: #f5f5f5;
+		border-radius: 22.5px;
+		overflow: hidden;
+	}
+	
+	.slider-bg {
+		position: absolute;
+		left: 0;
+		top: 0;
+		height: 100%;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		border-radius: 22.5px;
+		transition: width 0.1s;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	
+	.slider-text {
+		font-size: 14px;
+		color: #666666;
+		position: absolute;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+	
+	.slider-btn {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 45px;
+		height: 45px;
+		background: #ffffff;
+		border-radius: 22.5px;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		transition: left 0.1s;
+	}
+	
+	.slider-icon {
+		font-size: 20px;
+		color: #667eea;
+	}
+	
+	.captcha-footer {
+		margin-top: 15px;
+		text-align: center;
+	}
+	
+	.refresh-btn {
+		font-size: 14px;
+		color: #667eea;
+		cursor: pointer;
+	}
+</style>

@@ -1,0 +1,187 @@
+syntax = "proto3";
+
+option java_package = "com.shengyu.framework.websocket.core.protocol";
+option java_outer_classname = "ImMessageProto";
+option java_multiple_files = true;
+
+// IM 消息协议定义
+message ImMessage {
+  // 消息头
+  MessageHeader header = 1;
+  // 消息体
+  bytes body = 2;
+}
+
+// 消息头
+message MessageHeader {
+  // 消息ID（雪花算法生成）
+  int64 messageId = 1;
+  // 消息类型
+  MessageType messageType = 2;
+  // 发送者ID
+  int64 senderId = 3;
+  // 接收者ID（单聊时使用）
+  int64 receiverId = 4;
+  // 群组ID（群聊时使用）
+  int64 groupId = 5;
+  // 租户ID
+  int64 tenantId = 6;
+  // 时间戳（毫秒）
+  int64 timestamp = 7;
+  // 序列号（用于消息去重和排序）
+  int64 sequence = 8;
+  // 扩展字段（JSON格式）
+  string extra = 9;
+}
+
+// 消息类型枚举
+enum MessageType {
+  // 未知类型
+  UNKNOWN = 0;
+  
+  // ========== 系统消息 ==========
+  // 心跳请求
+  HEARTBEAT_REQ = 1;
+  // 心跳响应
+  HEARTBEAT_RESP = 2;
+  // 认证请求
+  AUTH_REQ = 3;
+  // 认证响应
+  AUTH_RESP = 4;
+  // 连接关闭
+  CLOSE = 5;
+  
+  // ========== 业务消息 ==========
+  // 文本消息
+  TEXT = 100;
+  // 图片消息
+  IMAGE = 101;
+  // 语音消息
+  VOICE = 102;
+  // 视频消息
+  VIDEO = 103;
+  // 文件消息
+  FILE = 104;
+  // 位置消息
+  LOCATION = 105;
+  // 自定义消息
+  CUSTOM = 106;
+  
+  // ========== 通知消息 ==========
+  // 系统通知
+  SYSTEM_NOTIFY = 200;
+  // 消息已读回执
+  READ_RECEIPT = 201;
+  // 消息撤回
+  RECALL = 202;
+  // 正在输入
+  TYPING = 203;
+}
+
+// 认证请求
+message AuthRequest {
+  // 访问令牌
+  string accessToken = 1;
+  // 设备类型（1-Web 2-iOS 3-Android 4-小程序）
+  int32 deviceType = 2;
+  // 设备ID
+  string deviceId = 3;
+  // 客户端版本
+  string clientVersion = 4;
+}
+
+// 认证响应
+message AuthResponse {
+  // 是否成功
+  bool success = 1;
+  // 错误码
+  int32 code = 2;
+  // 错误消息
+  string message = 3;
+  // 用户ID
+  int64 userId = 4;
+  // 租户ID
+  int64 tenantId = 5;
+}
+
+// 文本消息
+message TextMessage {
+  // 文本内容
+  string content = 1;
+  // @用户列表
+  repeated int64 atUserIds = 2;
+}
+
+// 图片消息
+message ImageMessage {
+  // 图片URL
+  string url = 1;
+  // 缩略图URL
+  string thumbnailUrl = 2;
+  // 宽度
+  int32 width = 3;
+  // 高度
+  int32 height = 4;
+  // 文件大小（字节）
+  int64 size = 5;
+}
+
+// 语音消息
+message VoiceMessage {
+  // 语音URL
+  string url = 1;
+  // 时长（秒）
+  int32 duration = 2;
+  // 文件大小（字节）
+  int64 size = 3;
+}
+
+// 视频消息
+message VideoMessage {
+  // 视频URL
+  string url = 1;
+  // 封面URL
+  string coverUrl = 2;
+  // 时长（秒）
+  int32 duration = 3;
+  // 宽度
+  int32 width = 4;
+  // 高度
+  int32 height = 5;
+  // 文件大小（字节）
+  int64 size = 6;
+}
+
+// 文件消息
+message FileMessage {
+  // 文件URL
+  string url = 1;
+  // 文件名
+  string fileName = 2;
+  // 文件大小（字节）
+  int64 size = 3;
+  // 文件类型
+  string fileType = 4;
+}
+
+// 位置消息
+message LocationMessage {
+  // 纬度
+  double latitude = 1;
+  // 经度
+  double longitude = 2;
+  // 地址描述
+  string address = 3;
+}
+
+// 消息已读回执
+message ReadReceiptMessage {
+  // 已读的消息ID列表
+  repeated int64 messageIds = 1;
+}
+
+// 消息撤回
+message RecallMessage {
+  // 撤回的消息ID
+  int64 messageId = 1;
+}

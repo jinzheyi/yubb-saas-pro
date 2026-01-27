@@ -1,48 +1,45 @@
-<script lang="uts">
-	// #ifdef APP-ANDROID || APP-HARMONY
-	let firstBackTime = 0
-	// #endif
-	export default {
-		onLaunch() {
-			console.log('App Launch')
-		},
-		onShow() {
-			console.log('App Show')
-		},
-		onHide() {
-			console.log('App Hide')
-		},
-		// #ifdef APP-ANDROID || APP-HARMONY
-		onLastPageBackPress() {
-			console.log('App LastPageBackPress')
-			if (firstBackTime == 0) {
-				uni.showToast({
-					title: '再按一次退出应用',
-					position: 'bottom',
+<script setup lang="uts">
+	import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
+	import { isLoggedIn } from './store/user.uts'
+	
+	onLaunch(() => {
+		console.log('App Launch')
+		
+		// 检查登录状态
+		checkLoginStatus()
+	})
+	
+	onShow(() => {
+		console.log('App Show')
+	})
+	
+	onHide(() => {
+		console.log('App Hide')
+	})
+	
+	/**
+	 * 检查登录状态
+	 */
+	function checkLoginStatus() {
+		// 获取当前页面
+		const pages = getCurrentPages()
+		if (pages.length > 0) {
+			const currentPage = pages[pages.length - 1]
+			const route = currentPage.route
+			
+			// 如果不是登录页且未登录，跳转到登录页
+			if (route != 'pages/login/login' && !isLoggedIn()) {
+				uni.reLaunch({
+					url: '/pages/login/login'
 				})
-				firstBackTime = Date.now()
-				setTimeout(() => {
-					firstBackTime = 0
-				}, 2000)
-			} else if (Date.now() - firstBackTime < 2000) {
-				firstBackTime = Date.now()
-				uni.exit()
 			}
-		},
-		// #endif
-		onExit() {
-			console.log('App Exit')
-		},
+		}
 	}
 </script>
 
 <style>
-	/*每个页面公共css */
-	.uni-row {
-		flex-direction: row;
-	}
-
-	.uni-column {
-		flex-direction: column;
+	/* 全局样式 */
+	page {
+		background-color: #f5f5f5;
 	}
 </style>

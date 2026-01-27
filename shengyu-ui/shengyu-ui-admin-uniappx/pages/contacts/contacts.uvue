@@ -1,0 +1,160 @@
+<template>
+	<view class="container">
+		<view class="header">
+			<text class="title">通讯录</text>
+		</view>
+		
+		<view class="search-bar">
+			<input 
+				class="search-input" 
+				v-model="searchKeyword"
+				placeholder="搜索联系人"
+				@input="handleSearch"
+			/>
+		</view>
+		
+		<scroll-view class="contacts-list" scroll-y>
+			<view 
+				v-for="(item, index) in filteredContacts" 
+				:key="index"
+				class="contact-item"
+				@click="handleContactClick(item)"
+			>
+				<image class="avatar" :src="item.avatar"></image>
+				<view class="info">
+					<text class="name">{{ item.name }}</text>
+					<text class="dept">{{ item.dept }}</text>
+				</view>
+			</view>
+			
+			<view v-if="filteredContacts.length === 0" class="empty">
+				<text class="empty-text">暂无联系人</text>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	// 搜索关键词
+	const searchKeyword = ref<string>('')
+	
+	// 联系人列表
+	const contactsList = ref<any[]>([
+		{
+			id: 1,
+			name: '张三',
+			dept: '技术部',
+			avatar: '/static/logo.png'
+		},
+		{
+			id: 2,
+			name: '李四',
+			dept: '产品部',
+			avatar: '/static/logo.png'
+		}
+	])
+	
+	// 过滤后的联系人
+	const filteredContacts = computed(() => {
+		if (searchKeyword.value === '') {
+			return contactsList.value
+		}
+		return contactsList.value.filter(item => {
+			return item.name.includes(searchKeyword.value) || 
+				   item.dept.includes(searchKeyword.value)
+		})
+	})
+	
+	// 搜索
+	function handleSearch() {
+		// 搜索逻辑已在 computed 中实现
+	}
+	
+	// 点击联系人
+	function handleContactClick(item: any) {
+		uni.showToast({
+			title: '联系人详情功能开发中',
+			icon: 'none'
+		})
+	}
+</script>
+
+<style>
+	.container {
+		height: 100vh;
+		background: #f5f5f5;
+		display: flex;
+		flex-direction: column;
+	}
+	
+	.header {
+		background: #ffffff;
+		padding: 15px 20px;
+		border-bottom: 1px solid #e0e0e0;
+	}
+	
+	.title {
+		font-size: 18px;
+		font-weight: bold;
+		color: #333333;
+	}
+	
+	.search-bar {
+		background: #ffffff;
+		padding: 10px 20px;
+		border-bottom: 1px solid #e0e0e0;
+	}
+	
+	.search-input {
+		height: 36px;
+		background: #f5f5f5;
+		border-radius: 18px;
+		padding: 0 15px;
+		font-size: 14px;
+	}
+	
+	.contacts-list {
+		flex: 1;
+	}
+	
+	.contact-item {
+		background: #ffffff;
+		padding: 15px 20px;
+		border-bottom: 1px solid #f0f0f0;
+		display: flex;
+		align-items: center;
+	}
+	
+	.avatar {
+		width: 45px;
+		height: 45px;
+		border-radius: 22.5px;
+		margin-right: 15px;
+	}
+	
+	.info {
+		flex: 1;
+	}
+	
+	.name {
+		font-size: 16px;
+		color: #333333;
+		display: block;
+		margin-bottom: 5px;
+	}
+	
+	.dept {
+		font-size: 13px;
+		color: #999999;
+	}
+	
+	.empty {
+		padding: 100px 0;
+		text-align: center;
+	}
+	
+	.empty-text {
+		font-size: 14px;
+		color: #999999;
+	}
+</style>

@@ -1,0 +1,408 @@
+<template>
+	<view class="login-container">
+		<!-- Logo 和标题 -->
+		<view class="header">
+			<image class="logo" src="/static/logo.png"></image>
+			<text class="title">圣钰管理系统</text>
+		</view>
+		
+		<!-- 登录表单 -->
+		<view class="form-container">
+			<!-- 租户名称 -->
+			<view class="form-item">
+				<text class="label">租户名称</text>
+				<input 
+					class="input" 
+					v-model="tenantName" 
+					placeholder="请输入租户名称"
+					:disabled="true"
+				/>
+			</view>
+			
+			<!-- 账号登录 -->
+			<view v-if="loginType === 'account'">
+				<view class="form-item">
+					<text class="label">账号</text>
+					<input 
+						class="input" 
+						v-model="username" 
+						placeholder="请输入账号"
+					/>
+				</view>
+				
+				<view class="form-item">
+					<text class="label">密码</text>
+					<input 
+						class="input" 
+						v-model="password" 
+						type="password"
+						placeholder="请输入密码"
+					/>
+				</view>
+			</view>
+			
+			<!-- 手机号登录 -->
+			<view v-else>
+				<view class="form-item">
+					<text class="label">手机号</text>
+					<input 
+						class="input" 
+						v-model="mobile" 
+						type="number"
+						placeholder="请输入手机号"
+					/>
+				</view>
+				
+				<view class="form-item">
+					<text class="label">验证码</text>
+					<view class="code-input-wrapper">
+						<input 
+							class="input code-input" 
+							v-model="smsCode" 
+							type="number"
+							placeholder="请输入验证码"
+						/>
+						<button 
+							class="code-btn" 
+							:disabled="codeCountdown > 0"
+							@click="handleSendCode"
+						>
+							{{ codeCountdown > 0 ? codeCountdown + 's' : '获取验证码' }}
+						</button>
+					</view>
+				</view>
+			</view>
+			
+			<!-- 记住我 -->
+			<view class="remember-row">
+				<checkbox-group @change="handleRememberChange">
+					<label>
+						<checkbox :checked="rememberMe" />
+						<text class="remember-text">记住我</text>
+					</label>
+				</checkbox-group>
+			</view>
+			
+			<!-- 登录按钮 -->
+			<button 
+				class="login-btn" 
+				:loading="loading"
+				@click="handleLogin"
+			>
+				登录
+			</button>
+			
+			<!-- 切换登录方式 -->
+			<view class="switch-row">
+				<text 
+					class="switch-text" 
+					@click="switchLoginType"
+				>
+					{{ loginType === 'account' ? '手机号登录' : '账号密码登录' }}
+				</text>
+			</view>
+		</view>
+		
+		<!-- 滑块验证码组件 -->
+		<slider-captcha 
+			ref="captchaRef" 
+			captchaType="blockPuzzle"
+			@success="handleCaptchaSuccess"
+			@fail="handleCaptchaFail"
+		/>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { login, smsLogin, sendSmsCode, getTenantIdByName } from '../../api/login.uts'
+	import { setToken, setTenantId } from '../../utils/request.uts'
+	import { setUserInfo, loadUserPermission } from '../../store/user.uts'
+	import SliderCaptcha from '../../components/captcha/slider-captcha.uvue'
+	
+	// 登录类型
+	const loginType = ref<string>('account')
+	
+	// 表单数据
+	const tenantName = ref<string>('圣钰科技')
+	const username = ref<string>('')
+	const password = ref<string>('')
+	const mobile = ref<string>('')
+	const smsCode = ref<string>('')
+	const rememberMe = ref<boolean>(false)
+	
+	// 状态
+	const loading = ref<boolean>(false)
+	const codeCountdown = ref<number>(0)
+	const captchaVerification = ref<string>('') // 验证码验证结果
+	
+	// 验证码组件引用
+	const captchaRef = ref<any>(null)
+	
+	// 是否启用验证码（从环境变量读取，默认启用）
+	const captchaEnable = ref<boolean>(true)
+	
+	// 切换登录方式
+	function switchLoginType() {
+		loginType.value = loginType.value === 'account' ? 'mobile' : 'account'
+	}
+	
+	// 记住我
+	function handleRememberChange(e: any) {
+		rememberMe.value = e.detail.value.length > 0
+	}
+	
+	// 发送验证码
+	async function handleSendCode() {
+		if (mobile.value === '') {
+			uni.showToast({
+				title: '请输入手机号',
+				icon: 'none'
+			})
+			return
+		}
+		
+		try {
+			await sendSmsCode({
+				mobile: mobile.value,
+				scene: 21 // 登录场景
+			})
+			
+			uni.showToast({
+				title: '验证码已发送',
+				icon: 'success'
+			})
+			
+			// 开始倒计时
+			codeCountdown.value = 60
+			const timer = setInterval(() => {
+				codeCountdown.value--
+				if (codeCountdown.value <= 0) {
+					clearInterval(timer)
+				}
+			}, 1000)
+		} catch (e) {
+			console.error('发送验证码失败', e)
+		}
+	}
+	
+	// 获取租户ID
+	async function fetchTenantId() {
+		try {
+			const tenantId = await getTenantIdByName(tenantName.value)
+			setTenantId(tenantId)
+		} catch (e) {
+			console.error('获取租户ID失败', e)
+			throw e
+		}
+	}
+	
+	// 登录按钮点击
+	async function handleLogin() {
+		// 验证表单
+		if (loginType.value === 'account') {
+			if (username.value === '' || password.value === '') {
+				uni.showToast({
+					title: '请输入账号和密码',
+					icon: 'none'
+				})
+				return
+			}
+		} else {
+			if (mobile.value === '' || smsCode.value === '') {
+				uni.showToast({
+					title: '请输入手机号和验证码',
+					icon: 'none'
+				})
+				return
+			}
+		}
+		
+		// 如果启用验证码且是账号登录，显示验证码
+		if (captchaEnable.value && loginType.value === 'account') {
+			if (captchaRef.value) {
+				captchaRef.value.show()
+			}
+		} else {
+			// 直接登录
+			await doLogin('')
+		}
+	}
+	
+	// 验证码验证成功
+	function handleCaptchaSuccess(data: any) {
+		captchaVerification.value = data.captchaVerification
+		doLogin(data.captchaVerification)
+	}
+	
+	// 验证码验证失败
+	function handleCaptchaFail() {
+		console.log('验证码验证失败')
+	}
+	
+	// 执行登录
+	async function doLogin(verification: string) {
+		loading.value = true
+		
+		try {
+			// 获取租户ID
+			await fetchTenantId()
+			
+			// 登录
+			let tokenData: any
+			if (loginType.value === 'account') {
+				tokenData = await login({
+					username: username.value,
+					password: password.value,
+					captchaVerification: verification
+				})
+			} else {
+				tokenData = await smsLogin({
+					mobile: mobile.value,
+					code: smsCode.value
+				})
+			}
+			
+			// 保存 token
+			setToken(tokenData)
+			
+			// 加载用户信息
+			await loadUserPermission()
+			
+			// 记住我
+			if (rememberMe.value) {
+				uni.setStorageSync('REMEMBER_ME', JSON.stringify({
+					tenantName: tenantName.value,
+					username: username.value
+				}))
+			} else {
+				uni.removeStorageSync('REMEMBER_ME')
+			}
+			
+			// 跳转到首页
+			uni.switchTab({
+				url: '/pages/message/message'
+			})
+		} catch (e) {
+			console.error('登录失败', e)
+		} finally {
+			loading.value = false
+		}
+	}
+	
+	// 页面加载时恢复记住的信息
+	onMounted(() => {
+		const rememberData = uni.getStorageSync('REMEMBER_ME')
+		if (rememberData != null && rememberData != '') {
+			const data = JSON.parse(rememberData)
+			tenantName.value = data.tenantName || '圣钰科技'
+			username.value = data.username || ''
+			rememberMe.value = true
+		}
+	})
+</script>
+
+<style>
+	.login-container {
+		min-height: 100vh;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		padding: 40px 30px;
+	}
+	
+	.header {
+		text-align: center;
+		margin-bottom: 60px;
+	}
+	
+	.logo {
+		width: 100px;
+		height: 100px;
+		margin-bottom: 20px;
+	}
+	
+	.title {
+		font-size: 28px;
+		color: #ffffff;
+		font-weight: bold;
+	}
+	
+	.form-container {
+		background: #ffffff;
+		border-radius: 20px;
+		padding: 30px;
+	}
+	
+	.form-item {
+		margin-bottom: 20px;
+	}
+	
+	.label {
+		display: block;
+		font-size: 14px;
+		color: #333333;
+		margin-bottom: 8px;
+	}
+	
+	.input {
+		width: 100%;
+		height: 45px;
+		border: 1px solid #e0e0e0;
+		border-radius: 8px;
+		padding: 0 15px;
+		font-size: 14px;
+	}
+	
+	.code-input-wrapper {
+		display: flex;
+		align-items: center;
+	}
+	
+	.code-input {
+		flex: 1;
+		margin-right: 10px;
+	}
+	
+	.code-btn {
+		width: 110px;
+		height: 45px;
+		background: #667eea;
+		color: #ffffff;
+		border: none;
+		border-radius: 8px;
+		font-size: 13px;
+	}
+	
+	.code-btn[disabled] {
+		background: #cccccc;
+	}
+	
+	.remember-row {
+		margin-bottom: 20px;
+	}
+	
+	.remember-text {
+		font-size: 14px;
+		color: #666666;
+		margin-left: 5px;
+	}
+	
+	.login-btn {
+		width: 100%;
+		height: 50px;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		color: #ffffff;
+		border: none;
+		border-radius: 25px;
+		font-size: 16px;
+		font-weight: bold;
+		margin-bottom: 15px;
+	}
+	
+	.switch-row {
+		text-align: center;
+	}
+	
+	.switch-text {
+		font-size: 14px;
+		color: #667eea;
+	}
+</style>

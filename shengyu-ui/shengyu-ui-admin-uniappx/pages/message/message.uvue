@@ -1,0 +1,147 @@
+<template>
+	<view class="container">
+		<view class="header">
+			<text class="title">消息</text>
+		</view>
+		
+		<scroll-view class="message-list" scroll-y>
+			<view 
+				v-for="(item, index) in messageList" 
+				:key="index"
+				class="message-item"
+				@click="handleMessageClick(item)"
+			>
+				<image class="avatar" :src="item.avatar"></image>
+				<view class="content">
+					<view class="top-row">
+						<text class="name">{{ item.name }}</text>
+						<text class="time">{{ item.time }}</text>
+					</view>
+					<view class="bottom-row">
+						<text class="last-message">{{ item.lastMessage }}</text>
+						<view v-if="item.unread > 0" class="badge">{{ item.unread }}</view>
+					</view>
+				</view>
+			</view>
+			
+			<view v-if="messageList.length === 0" class="empty">
+				<text class="empty-text">暂无消息</text>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	// 消息列表
+	const messageList = ref<any[]>([
+		{
+			id: 1,
+			name: '系统通知',
+			avatar: '/static/logo.png',
+			lastMessage: '欢迎使用圣钰管理系统',
+			time: '10:30',
+			unread: 1
+		}
+	])
+	
+	// 点击消息
+	function handleMessageClick(item: any) {
+		uni.showToast({
+			title: '消息详情功能开发中',
+			icon: 'none'
+		})
+	}
+</script>
+
+<style>
+	.container {
+		height: 100vh;
+		background: #f5f5f5;
+		display: flex;
+		flex-direction: column;
+	}
+	
+	.header {
+		background: #ffffff;
+		padding: 15px 20px;
+		border-bottom: 1px solid #e0e0e0;
+	}
+	
+	.title {
+		font-size: 18px;
+		font-weight: bold;
+		color: #333333;
+	}
+	
+	.message-list {
+		flex: 1;
+	}
+	
+	.message-item {
+		background: #ffffff;
+		padding: 15px 20px;
+		border-bottom: 1px solid #f0f0f0;
+		display: flex;
+		align-items: center;
+	}
+	
+	.avatar {
+		width: 50px;
+		height: 50px;
+		border-radius: 25px;
+		margin-right: 15px;
+	}
+	
+	.content {
+		flex: 1;
+	}
+	
+	.top-row {
+		display: flex;
+		justify-content: space-between;
+		margin-bottom: 8px;
+	}
+	
+	.name {
+		font-size: 16px;
+		color: #333333;
+		font-weight: 500;
+	}
+	
+	.time {
+		font-size: 12px;
+		color: #999999;
+	}
+	
+	.bottom-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+	
+	.last-message {
+		font-size: 14px;
+		color: #666666;
+		flex: 1;
+	}
+	
+	.badge {
+		background: #ff4d4f;
+		color: #ffffff;
+		font-size: 12px;
+		padding: 2px 8px;
+		border-radius: 10px;
+		min-width: 20px;
+		text-align: center;
+	}
+	
+	.empty {
+		padding: 100px 0;
+		text-align: center;
+	}
+	
+	.empty-text {
+		font-size: 14px;
+		color: #999999;
+	}
+</style>

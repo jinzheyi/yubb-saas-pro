@@ -1,0 +1,58 @@
+/**
+ * 用户状态管理
+ */
+import { getToken, setToken, removeToken, setTenantId } from '../utils/request.uts'
+import { getPermissionInfo } from '../api/login.uts'
+
+// 用户信息
+let userInfo: UTSJSONObject | null = null
+
+/**
+ * 设置用户信息
+ */
+export function setUserInfo(info: UTSJSONObject) {
+	userInfo = info
+	uni.setStorageSync('USER_INFO', JSON.stringify(info))
+}
+
+/**
+ * 获取用户信息
+ */
+export function getUserInfo(): UTSJSONObject | null {
+	if (userInfo == null) {
+		const infoStr = uni.getStorageSync('USER_INFO')
+		if (infoStr != null && infoStr != '') {
+			userInfo = JSON.parse(infoStr)
+		}
+	}
+	return userInfo
+}
+
+/**
+ * 清除用户信息
+ */
+export function clearUserInfo() {
+	userInfo = null
+	uni.removeStorageSync('USER_INFO')
+	removeToken()
+}
+
+/**
+ * 检查是否已登录
+ */
+export function isLoggedIn(): boolean {
+	const token = getToken()
+	return token != null && token != ''
+}
+
+/**
+ * 加载用户权限信息
+ */
+export async function loadUserPermission(): Promise<void> {
+	try {
+		const data = await getPermissionInfo()
+		setUserInfo(data.user)
+	} catch (e) {
+		console.error('加载用户信息失败', e)
+	}
+}
