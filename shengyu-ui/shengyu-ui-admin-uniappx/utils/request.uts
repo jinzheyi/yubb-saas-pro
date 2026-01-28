@@ -1,39 +1,116 @@
 /**
  * 网络请求封装
+ * 严格参考 PC 端实现
+ * 兼容 Android、iOS、Web 三端
  */
 
-// 请求配置
-const BASE_URL = 'http://localhost:48080' // 根据实际情况修改
-const TIMEOUT = 30000
+import { BASE_URL as CONFIG_BASE_URL, TIMEOUT as CONFIG_TIMEOUT, TENANT_ENABLE } from '../config/app.config.uts'
+import { 
+	getAccessToken, 
+	getRefreshToken, 
+	getTenantId,
+	setToken,
+	removeToken,
+	clearUserCache,
+	formatToken
+} from '../store/user.uts'
 
-// Token 存储 key
-const TOKEN_KEY = 'ACCESS_TOKEN'
-const REFRESH_TOKEN_KEY = 'REFRESH_TOKEN'
-const TENANT_ID_KEY = 'TENANT_ID'
+// 请求配置
+const BASE_URL = CONFIG_BASE_URL + '/admin-api' // 添加 API 前缀
+const TIMEOUT = CONFIG_TIMEOUT
 
 // Token 刷新相关
 let isRefreshing = false // 是否正在刷新 Token
 let requestQueue: any[] = [] // 请求队列
 
+// 请求白名单，无须 token 的接口
+const whiteList: string[] = [
+	'/system/captcha/',              // 验证码相关接口
+	'/login',                        // 登录接口
+	'/refresh-token',                // 刷新 Token 接口
+	'/system/tenant/get-id-by-name'  // 获取租户 ID 接口
+]
+
+// 租户白名单，无须 tenant-id 的接口（验证码等公共接口）
+const tenantWhiteList: string[] = [
+	'/system/captcha/',              // 验证码相关接口
+	'/login',                        // 登录接口
+	'/refresh-token',                // 刷新 Token 接口
+	'/system/tenant/get-id-by-name'  // 获取租户 ID 接口
+]
+
 /**
  * 请求拦截器
+ * 严格参考 PC 端 service.ts 的 request 拦截器
  */
 function requestInterceptor(config: UTSJSONObject): UTSJSONObject {
-	// 添加 token
-	const token = uni.getStorageSync(TOKEN_KEY)
-	if (token != null && token != '') {
-		config['header'] = {
-			'Authorization': 'Bearer ' + token
+	// 是否需要设置 token
+	let isToken = true
+	
+	// 检查是否在白名单中
+	const url = config['url'] as string
+	for (let i = 0; i < whiteList.length; i++) {
+		if (url.indexOf(whiteList[i]) > -1) {
+			isToken = false
+			break
 		}
 	}
 	
-	// 添加租户ID
-	const tenantId = uni.getStorageSync(TENANT_ID_KEY)
-	if (tenantId != null && tenantId != '') {
+	// 添加 token
+	if (isToken) {
+		const token = getAccessToken()
+		if (token != null && token != '') {
+			if (config['header'] == null) {
+				config['header'] = {}
+			}
+			config['header']['Authorization'] = formatToken(token)
+		}
+	}
+	
+	// 设置租户 ID（严格参考 PC 端逻辑）
+	// PC 端代码：if (tenantEnable && tenantEnable === 'true')
+	if (TENANT_ENABLE === 'true') {
+		// 检查是否在租户白名单中
+		let needTenantId = true
+		for (let i = 0; i < tenantWhiteList.length; i++) {
+			if (url.indexOf(tenantWhiteList[i]) > -1) {
+				needTenantId = false
+				break
+			}
+		}
+		
+		// 只有不在白名单中的接口才添加租户 ID
+		if (needTenantId) {
+			const tenantId = getTenantId()
+			if (tenantId != null && tenantId != '') {
+				if (config['header'] == null) {
+					config['header'] = {}
+				}
+				// 租户 ID 已经是字符串，直接使用
+				config['header']['tenant-id'] = tenantId
+			}
+		}
+	}
+	
+	// 防止 GET 请求缓存（参考 PC 端）
+	const method = config['method'] as string
+	if (method && method.toUpperCase() === 'GET') {
 		if (config['header'] == null) {
 			config['header'] = {}
 		}
-		config['header']['tenant-id'] = tenantId
+		config['header']['Cache-Control'] = 'no-cache'
+		config['header']['Pragma'] = 'no-cache'
+	}
+	
+	// POST 请求设置 Content-Type
+	if (method && method.toUpperCase() === 'POST') {
+		if (config['header'] == null) {
+			config['header'] = {}
+		}
+		// 如果没有设置 Content-Type，默认使用 application/json
+		if (!config['header']['Content-Type'] && !config['header']['content-type']) {
+			config['header']['Content-Type'] = 'application/json'
+		}
 	}
 	
 	return config
@@ -41,30 +118,68 @@ function requestInterceptor(config: UTSJSONObject): UTSJSONObject {
 
 /**
  * 响应拦截器
+ * 严格参考 PC 端 service.ts 的 response 拦截器
  */
 function responseInterceptor(response: any): any {
 	const data = response.data
+	const config = response.config
+	
+	// 二进制数据则直接返回（例如 Excel 导出）
+	if (response.request && response.request.responseType === 'arraybuffer') {
+		return data
+	}
 	
 	// 成功响应
 	if (response.statusCode == 200) {
-		// 业务成功
-		if (data.code == 0) {
+		// 未设置状态码则默认成功状态
+		const code = data.code || 0
+		
+		// 业务成功（code === 0）
+		if (code === 0) {
 			return data.data
 		}
-		// 业务失败
-		else {
+		// 401 未授权 - Token 过期
+		else if (code === 401) {
+			return handle401Error(response)
+		}
+		// 500 服务器错误
+		else if (code === 500) {
 			uni.showToast({
-				title: data.msg || '请求失败',
+				title: '服务器错误',
 				icon: 'none'
 			})
+			return Promise.reject(new Error(data.msg || '服务器错误'))
+		}
+		// 901 演示模式
+		else if (code === 901) {
+			uni.showToast({
+				title: '演示模式，无法操作',
+				icon: 'none',
+				duration: 3000
+			})
+			return Promise.reject(new Error(data.msg || '演示模式'))
+		}
+		// 其他业务错误
+		else {
+			const msg = data.msg || '请求失败'
+			
+			// 忽略的错误消息（不显示 Toast）
+			const ignoreMsgs = ['无效的刷新令牌', '刷新令牌已过期']
+			if (ignoreMsgs.indexOf(msg) === -1) {
+				uni.showToast({
+					title: msg,
+					icon: 'none'
+				})
+			}
+			
 			return Promise.reject(data)
 		}
 	}
-	// 401 未授权 - Token 过期
+	// 401 未授权 - HTTP 状态码
 	else if (response.statusCode == 401) {
 		return handle401Error(response)
 	}
-	// 其他错误
+	// 其他 HTTP 错误
 	else {
 		uni.showToast({
 			title: '网络请求失败',
@@ -95,7 +210,7 @@ async function handle401Error(response: any): Promise<any> {
 	isRefreshing = true
 	
 	// 获取 RefreshToken
-	const refreshToken = uni.getStorageSync(REFRESH_TOKEN_KEY)
+	const refreshToken = getRefreshToken()
 	
 	// 如果没有 RefreshToken，直接跳转登录
 	if (refreshToken == null || refreshToken == '') {
@@ -112,12 +227,13 @@ async function handle401Error(response: any): Promise<any> {
 		setToken(tokenData)
 		
 		// 重试原请求
-		config['header']['Authorization'] = 'Bearer ' + uni.getStorageSync(TOKEN_KEY)
+		const newToken = getAccessToken()
+		config['header']['Authorization'] = 'Bearer ' + newToken
 		const retryResponse = await uni.request(config)
 		
 		// 处理队列中的请求
 		requestQueue.forEach(item => {
-			item.config['header']['Authorization'] = 'Bearer ' + uni.getStorageSync(TOKEN_KEY)
+			item.config['header']['Authorization'] = 'Bearer ' + newToken
 			uni.request(item.config).then(res => {
 				item.resolve(responseInterceptor(res))
 			}).catch(err => {
@@ -147,16 +263,20 @@ async function handle401Error(response: any): Promise<any> {
  * 刷新访问令牌
  */
 async function refreshAccessToken(): Promise<any> {
-	const refreshToken = uni.getStorageSync(REFRESH_TOKEN_KEY)
-	const tenantId = uni.getStorageSync(TENANT_ID_KEY)
+	const refreshToken = getRefreshToken()
+	const tenantId = getTenantId()
 	
 	return new Promise((resolve, reject) => {
+		const header: UTSJSONObject = {}
+		if (tenantId != null && tenantId != '') {
+			// 租户 ID 已经是字符串，直接使用
+			header['tenant-id'] = tenantId
+		}
+		
 		uni.request({
 			url: BASE_URL + '/system/auth/refresh-token?refreshToken=' + refreshToken,
 			method: 'POST',
-			header: {
-				'tenant-id': tenantId
-			},
+			header: header,
 			success: (res) => {
 				if (res.statusCode == 200 && res.data.code == 0) {
 					resolve(res.data.data)
@@ -180,12 +300,8 @@ function handleTokenExpired() {
 		content: '登录已过期，请重新登录',
 		showCancel: false,
 		success: () => {
-			// 清除 Token
-			removeToken()
-			// 跳转到登录页
-			uni.reLaunch({
-				url: '/pages/login/login'
-			})
+			// 清除所有用户缓存（会自动跳转到登录页）
+			clearUserCache()
 		}
 	})
 }
@@ -250,30 +366,56 @@ export function post(url: string, data?: UTSJSONObject): Promise<any> {
 }
 
 /**
- * Token 管理
+ * POST 请求（返回完整响应，不解析 data.data）
+ * 用于验证码等特殊接口
  */
-export function setToken(tokenData: UTSJSONObject) {
-	uni.setStorageSync(TOKEN_KEY, tokenData['accessToken'])
-	uni.setStorageSync(REFRESH_TOKEN_KEY, tokenData['refreshToken'])
+export function postRaw(url: string, data?: UTSJSONObject): Promise<any> {
+	return new Promise((resolve, reject) => {
+		// 请求拦截
+		const config = requestInterceptor({
+			url: url,
+			method: 'POST',
+			data: data,
+			header: {
+				'Content-Type': 'application/json'
+			}
+		})
+		
+		// 设置完整 URL
+		config['url'] = BASE_URL + config['url']
+		config['timeout'] = TIMEOUT
+		
+		// 发起请求
+		uni.request({
+			...config,
+			success: (res) => {
+				if (res.statusCode === 200) {
+					// 直接返回完整响应数据，不解析 data.data
+					resolve(res.data)
+				} else {
+					reject(res)
+				}
+			},
+			fail: (err) => {
+				uni.showToast({
+					title: '网络连接失败',
+					icon: 'none'
+				})
+				reject(err)
+			}
+		})
+	})
 }
 
-export function getToken(): string | null {
-	return uni.getStorageSync(TOKEN_KEY)
-}
-
-export function getRefreshToken(): string | null {
-	return uni.getStorageSync(REFRESH_TOKEN_KEY)
-}
-
-export function removeToken() {
-	uni.removeStorageSync(TOKEN_KEY)
-	uni.removeStorageSync(REFRESH_TOKEN_KEY)
-}
-
-export function setTenantId(tenantId: number) {
-	uni.setStorageSync(TENANT_ID_KEY, tenantId.toString())
-}
-
-export function getTenantId(): string | null {
-	return uni.getStorageSync(TENANT_ID_KEY)
-}
+/**
+ * Token 管理
+ * 从 user.uts 导出，供其他模块使用
+ */
+export { 
+	setToken, 
+	getAccessToken as getToken, 
+	getRefreshToken, 
+	removeToken,
+	getTenantId,
+	setTenantId
+} from '../store/user.uts'

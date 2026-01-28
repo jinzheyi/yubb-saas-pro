@@ -1,0 +1,167 @@
+<template>
+	<view :class="mode=='pop'?'mask':''" v-show="showBox">
+		<view :class="mode=='pop'?'verifybox':''">
+			<!-- 标题栏 -->
+			<view class="verifybox-top" v-if="mode=='pop'">
+				<text>请完成安全验证</text>
+				<text class="verifybox-close" @click="handleClose">✕</text>
+			</view>
+			
+			<!-- 验证码容器 -->
+			<view class="verifybox-bottom">
+				<!-- 滑块验证码 -->
+				<view v-if="componentType=='VerifySlide'">
+					<verify-slider 
+						:captchaType="captchaType"
+						:imgSize="imgSize"
+						@success="handleSuccess"
+						ref="sliderInstance"
+					/>
+				</view>
+				
+				<!-- 点选验证码 -->
+				<view v-if="componentType=='VerifyPoint'">
+					<verify-point 
+						:captchaType="captchaType"
+						:imgSize="imgSize"
+						@success="handleSuccess"
+						ref="pointInstance"
+					/>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { ref, watch, computed } from 'vue'
+	
+	// Props
+	const props = defineProps({
+		captchaType: {
+			type: String,
+			required: true,
+			default: 'blockPuzzle' // 'blockPuzzle' 或 'clickWord'
+		},
+		mode: {
+			type: String,
+			default: 'pop' // 'pop' 或 'fixed'
+		},
+		imgSize: {
+			type: Object,
+			default: () => ({
+				width: '310px',
+				height: '155px'
+			})
+		}
+	})
+	
+	// Emits
+	const emit = defineEmits(['success', 'close'])
+	
+	// 状态
+	const clickShow = ref<boolean>(false)
+	const componentType = ref<string>('')
+	const sliderInstance = ref<any>(null)
+	const pointInstance = ref<any>(null)
+	
+	// 计算属性
+	const showBox = computed(() => {
+		if (props.mode === 'pop') {
+			return clickShow.value
+		}
+		return true
+	})
+	
+	// 监听 captchaType 变化
+	watch(() => props.captchaType, (type) => {
+		if (type === 'blockPuzzle') {
+			componentType.value = 'VerifySlide'
+		} else if (type === 'clickWord') {
+			componentType.value = 'VerifyPoint'
+		}
+	}, { immediate: true })
+	
+	// 方法
+	function handleSuccess(e: any) {
+		emit('success', e)
+	}
+	
+	function handleClose() {
+		clickShow.value = false
+		emit('close')
+	}
+	
+	function show() {
+		if (props.mode === 'pop') {
+			clickShow.value = true
+		}
+	}
+	
+	function refresh() {
+		const instance = componentType.value === 'VerifySlide' ? sliderInstance.value : pointInstance.value
+		if (instance && instance.refresh) {
+			instance.refresh()
+		}
+	}
+	
+	// 暴露方法
+	defineExpose({
+		show,
+		refresh
+	})
+</script>
+
+<style>
+	.mask {
+		position: fixed;
+		top: 0;
+		left: 0;
+		z-index: 1001;
+		width: 100%;
+		height: 100vh;
+		background: rgba(0, 0, 0, 0.3);
+	}
+	
+	.verifybox {
+		position: relative;
+		box-sizing: border-box;
+		border-radius: 2px;
+		border: 1px solid #e4e7eb;
+		background-color: #fff;
+		box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
+		max-width: 340px;
+	}
+	
+	.verifybox-top {
+		padding: 0 15px;
+		height: 50px;
+		line-height: 50px;
+		text-align: left;
+		font-size: 16px;
+		color: #45494c;
+		border-bottom: 1px solid #e4e7eb;
+		box-sizing: border-box;
+		position: relative;
+	}
+	
+	.verifybox-close {
+		position: absolute;
+		top: 13px;
+		right: 9px;
+		width: 24px;
+		height: 24px;
+		text-align: center;
+		font-size: 24px;
+		color: #999999;
+		cursor: pointer;
+	}
+	
+	.verifybox-bottom {
+		padding: 15px;
+		box-sizing: border-box;
+	}
+</style>

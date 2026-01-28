@@ -1,9 +1,13 @@
 <script setup lang="uts">
 	import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
 	import { isLoggedIn } from './store/user.uts'
+	import { initLocale } from './store/locale.uts'
 	
 	onLaunch(() => {
 		console.log('App Launch')
+		
+		// 初始化国际化（如果没有设置过语言，则使用系统语言）
+		initLocale()
 		
 		// 检查登录状态
 		checkLoginStatus()

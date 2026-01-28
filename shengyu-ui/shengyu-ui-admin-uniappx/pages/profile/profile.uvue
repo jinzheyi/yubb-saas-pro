@@ -67,12 +67,8 @@
 					} catch (e) {
 						console.error('退出登录失败', e)
 					} finally {
-						// 清除本地数据
+						// 清除本地数据（会自动跳转到登录页）
 						clearUserInfo()
-						// 跳转到登录页
-						uni.reLaunch({
-							url: '/pages/login/login'
-						})
 					}
 				}
 			}

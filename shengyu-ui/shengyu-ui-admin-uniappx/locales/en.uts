@@ -1,0 +1,109 @@
+/**
+ * English language pack
+ * Reference PC locales/en.ts
+ */
+export default {
+	common: {
+		inputText: 'Please input',
+		selectText: 'Please select',
+		login: 'Login',
+		loginOut: 'Login out',
+		back: 'Back',
+		ok: 'OK',
+		save: 'Save',
+		cancel: 'Cancel',
+		close: 'Close',
+		success: 'Success',
+		query: 'Query',
+		reset: 'Reset',
+		confirmTitle: 'System Hint',
+		delMessage: 'Delete the selected data?',
+		delSuccess: 'Deleted successfully',
+		index: 'Index',
+		status: 'Status',
+		createTime: 'Create Time',
+		updateTime: 'Update Time'
+	},
+	error: {
+		noPermission: `Sorry, you don't have permission to access this page.`,
+		pageError: 'Sorry, the page you visited does not exist.',
+		networkError: 'Sorry, the server reported an error.',
+		returnToHome: 'Return to home'
+	},
+	login: {
+		welcome: 'Welcome to the system',
+		message: 'Backstage management system',
+		tenantname: 'TenantName',
+		username: 'Email account',
+		password: 'Password',
+		code: 'Verification code',
+		login: 'Sign in',
+		relogin: 'Sign in again',
+		remember: 'Remember me',
+		forgetPassword: 'Forget password?',
+		tenantNamePlaceholder: 'Please Enter Tenant Name',
+		usernamePlaceholder: 'Please Enter Email account',
+		passwordPlaceholder: 'Please Enter Password',
+		codePlaceholder: 'Please Enter Verification Code',
+		mobileTitle: 'Mobile sign in',
+		mobileNumber: 'Mobile Number',
+		mobileNumberPlaceholder: 'Please Enter Mobile Number',
+		backLogin: 'Back',
+		getSmsCode: 'Get SMS Code',
+		btnMobile: 'Mobile sign in',
+		btnAccount: 'Account sign in',
+		SmsSendMsg: 'Code has been sent',
+		invalidTenantName: 'Invalid Tenant Name'
+	},
+	captcha: {
+		verify: 'Verify',
+		verification: 'Please complete security verification',
+		slide: 'Swipe right to complete verification',
+		success: 'Verification succeeded',
+		fail: 'Verification failed'
+	},
+	sys: {
+		api: {
+			errorMessage: 'The operation failed, the system is abnormal!',
+			timeoutMessage: 'Login timed out, please log in again!',
+			apiTimeoutMessage: 'The interface request timed out, please refresh the page and try again!',
+			apiRequestFailed: 'The interface request failed, please try again later!',
+			networkException: 'Network anomaly',
+			networkExceptionMsg: 'Please check if your network connection is normal!',
+			errMsg500: 'Server error, please contact the administrator!',
+			errMsg901: 'Demo mode, no write operations are possible!'
+		},
+		app: {
+			logoutMessage: 'Confirm to exit the system?',
+			menuLoading: 'Menu loading...'
+		},
+		login: {
+			loginSuccessTitle: 'Login successful',
+			loginSuccessDesc: 'Welcome back'
+		}
+	},
+	profile: {
+		user: {
+			title: 'Personal Information',
+			username: 'Email account',
+			nickname: 'Nick Name',
+			mobile: 'Phone Number',
+			email: 'User Mail',
+			dept: 'Department',
+			sex: 'Sex',
+			man: 'Man',
+			woman: 'Woman'
+		}
+	},
+	action: {
+		create: 'Create',
+		add: 'Add',
+		del: 'Delete',
+		delete: 'Delete',
+		edit: 'Edit',
+		update: 'Update',
+		detail: 'Detail',
+		export: 'Export',
+		import: 'Import'
+	}
+}

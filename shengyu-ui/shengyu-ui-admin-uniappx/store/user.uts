@@ -1,58 +1,404 @@
 /**
- * 用户状态管理
+ * 用户 Store
+ * 管理用户信息、权限、角色等
+ * 兼容 Android、iOS、Web 三端
  */
-import { getToken, setToken, removeToken, setTenantId } from '../utils/request.uts'
-import { getPermissionInfo } from '../api/login.uts'
 
-// 用户信息
-let userInfo: UTSJSONObject | null = null
+// 存储 Key
+const ACCESS_TOKEN_KEY = 'ACCESS_TOKEN'
+const REFRESH_TOKEN_KEY = 'REFRESH_TOKEN'
+const TENANT_ID_KEY = 'TENANT_ID'
+const DEPT_ID_KEY = 'DEPT_ID'
+const USER_INFO_KEY = 'USER_INFO'
+const PERMISSIONS_KEY = 'PERMISSIONS'
+const ROLES_KEY = 'ROLES'
 
 /**
- * 设置用户信息
+ * 用户信息类型
  */
-export function setUserInfo(info: UTSJSONObject) {
-	userInfo = info
-	uni.setStorageSync('USER_INFO', JSON.stringify(info))
+export type UserVO = {
+	id: number
+	avatar: string
+	nickname: string
+	deptId: number
 }
+
+/**
+ * Token 类型
+ * 注意：tenantId 使用字符串类型，避免大整数精度丢失
+ */
+export type TokenType = {
+	accessToken: string
+	refreshToken: string
+	tenantId: number | string | null
+	deptId: number | null
+}
+
+/**
+ * 用户信息完整类型
+ */
+export type UserInfoVO = {
+	user: UserVO
+	permissions: string[]
+	roles: string[]
+	menus: any[]
+}
+
+/**
+ * 获取 Access Token
+ */
+export function getAccessToken(): string | null {
+	return uni.getStorageSync(ACCESS_TOKEN_KEY)
+}
+
+/**
+ * 获取 Refresh Token
+ */
+export function getRefreshToken(): string | null {
+	return uni.getStorageSync(REFRESH_TOKEN_KEY)
+}
+
+/**
+ * 设置 Token
+ * @param token Token 数据
+ */
+export function setToken(token: TokenType) {
+	uni.setStorageSync(ACCESS_TOKEN_KEY, token.accessToken)
+	uni.setStorageSync(REFRESH_TOKEN_KEY, token.refreshToken)
+	setTenantId(token.tenantId)
+	setDeptId(token.deptId)
+}
+
+/**
+ * 移除 Token
+ */
+export function removeToken() {
+	uni.removeStorageSync(ACCESS_TOKEN_KEY)
+	uni.removeStorageSync(REFRESH_TOKEN_KEY)
+	removeTenantId()
+	removeDeptId()
+}
+
+/**
+ * 格式化 Token（JWT 格式）
+ * @param token Token 字符串
+ * @returns Bearer Token
+ */
+export function formatToken(token: string): string {
+	return 'Bearer ' + token
+}
+
+// ========== 租户相关 ==========
+
+/**
+ * 获取租户 ID
+ * 注意：租户 ID 是大整数，使用字符串类型避免精度丢失
+ */
+export function getTenantId(): string | null {
+	const tenantId = uni.getStorageSync(TENANT_ID_KEY)
+	if (tenantId) {
+		return tenantId as string
+	}
+	return null
+}
+
+/**
+ * 设置租户 ID
+ * @param tenantId 租户 ID（字符串或数字）
+ */
+export function setTenantId(tenantId: number | string | null) {
+	if (tenantId != null) {
+		// 统一转换为字符串存储，避免大整数精度丢失
+		uni.setStorageSync(TENANT_ID_KEY, tenantId.toString())
+	}
+}
+
+/**
+ * 移除租户 ID
+ */
+export function removeTenantId() {
+	uni.removeStorageSync(TENANT_ID_KEY)
+}
+
+// ========== 部门相关 ==========
+
+/**
+ * 获取部门 ID
+ */
+export function getDeptId(): number | null {
+	const deptId = uni.getStorageSync(DEPT_ID_KEY)
+	if (deptId) {
+		return parseInt(deptId as string)
+	}
+	return null
+}
+
+/**
+ * 设置部门 ID
+ * @param deptId 部门 ID
+ */
+export function setDeptId(deptId: number | null) {
+	if (deptId != null) {
+		uni.setStorageSync(DEPT_ID_KEY, deptId.toString())
+	}
+}
+
+/**
+ * 移除部门 ID
+ */
+export function removeDeptId() {
+	uni.removeStorageSync(DEPT_ID_KEY)
+}
+
+// ========== 用户信息相关 ==========
 
 /**
  * 获取用户信息
  */
-export function getUserInfo(): UTSJSONObject | null {
-	if (userInfo == null) {
-		const infoStr = uni.getStorageSync('USER_INFO')
-		if (infoStr != null && infoStr != '') {
-			userInfo = JSON.parse(infoStr)
+export function getUserInfo(): UserInfoVO | null {
+	try {
+		const userInfoStr = uni.getStorageSync(USER_INFO_KEY)
+		if (userInfoStr) {
+			return JSON.parse(userInfoStr as string) as UserInfoVO
 		}
+	} catch (e) {
+		console.error('获取用户信息失败:', e)
 	}
-	return userInfo
+	return null
 }
 
 /**
- * 清除用户信息
+ * 设置用户信息
+ * @param userInfo 用户信息
+ */
+export function setUserInfo(userInfo: UserInfoVO) {
+	try {
+		uni.setStorageSync(USER_INFO_KEY, JSON.stringify(userInfo))
+		
+		// 同时保存权限和角色
+		setPermissions(userInfo.permissions)
+		setRoles(userInfo.roles)
+	} catch (e) {
+		console.error('保存用户信息失败:', e)
+	}
+}
+
+/**
+ * 移除用户信息
+ */
+export function removeUserInfo() {
+	uni.removeStorageSync(USER_INFO_KEY)
+	removePermissions()
+	removeRoles()
+}
+
+/**
+ * 更新用户头像
+ * @param avatar 头像 URL
+ */
+export function updateUserAvatar(avatar: string) {
+	const userInfo = getUserInfo()
+	if (userInfo) {
+		userInfo.user.avatar = avatar
+		setUserInfo(userInfo)
+	}
+}
+
+/**
+ * 更新用户昵称
+ * @param nickname 昵称
+ */
+export function updateUserNickname(nickname: string) {
+	const userInfo = getUserInfo()
+	if (userInfo) {
+		userInfo.user.nickname = nickname
+		setUserInfo(userInfo)
+	}
+}
+
+// ========== 权限相关 ==========
+
+/**
+ * 获取权限列表
+ */
+export function getPermissions(): string[] {
+	try {
+		const permissionsStr = uni.getStorageSync(PERMISSIONS_KEY)
+		if (permissionsStr) {
+			return JSON.parse(permissionsStr as string) as string[]
+		}
+	} catch (e) {
+		console.error('获取权限列表失败:', e)
+	}
+	return []
+}
+
+/**
+ * 设置权限列表
+ * @param permissions 权限列表
+ */
+export function setPermissions(permissions: string[]) {
+	try {
+		uni.setStorageSync(PERMISSIONS_KEY, JSON.stringify(permissions))
+	} catch (e) {
+		console.error('保存权限列表失败:', e)
+	}
+}
+
+/**
+ * 移除权限列表
+ */
+export function removePermissions() {
+	uni.removeStorageSync(PERMISSIONS_KEY)
+}
+
+/**
+ * 检查是否有权限
+ * @param permission 权限标识
+ * @returns 是否有权限
+ */
+export function hasPermission(permission: string): boolean {
+	const permissions = getPermissions()
+	return permissions.indexOf(permission) !== -1
+}
+
+/**
+ * 检查是否有任一权限
+ * @param permissionList 权限标识列表
+ * @returns 是否有任一权限
+ */
+export function hasAnyPermission(permissionList: string[]): boolean {
+	const permissions = getPermissions()
+	for (let i = 0; i < permissionList.length; i++) {
+		if (permissions.indexOf(permissionList[i]) !== -1) {
+			return true
+		}
+	}
+	return false
+}
+
+/**
+ * 检查是否有所有权限
+ * @param permissionList 权限标识列表
+ * @returns 是否有所有权限
+ */
+export function hasAllPermissions(permissionList: string[]): boolean {
+	const permissions = getPermissions()
+	for (let i = 0; i < permissionList.length; i++) {
+		if (permissions.indexOf(permissionList[i]) === -1) {
+			return false
+		}
+	}
+	return true
+}
+
+// ========== 角色相关 ==========
+
+/**
+ * 获取角色列表
+ */
+export function getRoles(): string[] {
+	try {
+		const rolesStr = uni.getStorageSync(ROLES_KEY)
+		if (rolesStr) {
+			return JSON.parse(rolesStr as string) as string[]
+		}
+	} catch (e) {
+		console.error('获取角色列表失败:', e)
+	}
+	return []
+}
+
+/**
+ * 设置角色列表
+ * @param roles 角色列表
+ */
+export function setRoles(roles: string[]) {
+	try {
+		uni.setStorageSync(ROLES_KEY, JSON.stringify(roles))
+	} catch (e) {
+		console.error('保存角色列表失败:', e)
+	}
+}
+
+/**
+ * 移除角色列表
+ */
+export function removeRoles() {
+	uni.removeStorageSync(ROLES_KEY)
+}
+
+/**
+ * 检查是否有角色
+ * @param role 角色标识
+ * @returns 是否有角色
+ */
+export function hasRole(role: string): boolean {
+	const roles = getRoles()
+	return roles.indexOf(role) !== -1
+}
+
+/**
+ * 检查是否有任一角色
+ * @param roleList 角色标识列表
+ * @returns 是否有任一角色
+ */
+export function hasAnyRole(roleList: string[]): boolean {
+	const roles = getRoles()
+	for (let i = 0; i < roleList.length; i++) {
+		if (roles.indexOf(roleList[i]) !== -1) {
+			return true
+		}
+	}
+	return false
+}
+
+/**
+ * 检查是否有所有角色
+ * @param roleList 角色标识列表
+ * @returns 是否有所有角色
+ */
+export function hasAllRoles(roleList: string[]): boolean {
+	const roles = getRoles()
+	for (let i = 0; i < roleList.length; i++) {
+		if (roles.indexOf(roleList[i]) === -1) {
+			return false
+		}
+	}
+	return true
+}
+
+// ========== 用户缓存清理 ==========
+
+/**
+ * 清除所有用户缓存
+ * 清除后自动跳转到登录页
+ */
+export function clearUserCache() {
+	removeToken()
+	removeUserInfo()
+	removePermissions()
+	removeRoles()
+	
+	// 跳转到登录页
+	uni.reLaunch({
+		url: '/pages/login/login'
+	})
+}
+
+/**
+ * 清除用户信息（别名函数，兼容旧代码）
+ * 清除后自动跳转到登录页
  */
 export function clearUserInfo() {
-	userInfo = null
-	uni.removeStorageSync('USER_INFO')
-	removeToken()
+	clearUserCache()
 }
 
 /**
  * 检查是否已登录
+ * @returns 是否已登录
  */
 export function isLoggedIn(): boolean {
-	const token = getToken()
+	const token = getAccessToken()
 	return token != null && token != ''
-}
-
-/**
- * 加载用户权限信息
- */
-export async function loadUserPermission(): Promise<void> {
-	try {
-		const data = await getPermissionInfo()
-		setUserInfo(data.user)
-	} catch (e) {
-		console.error('加载用户信息失败', e)
-	}
 }

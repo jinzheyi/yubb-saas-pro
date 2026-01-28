@@ -1,0 +1,345 @@
+/**
+ * 数据字典工具类
+ * 兼容 Android、iOS、Web 三端
+ */
+
+/**
+ * 字典数据类型
+ */
+export type DictDataType = {
+	dictType: string
+	label: string
+	value: string | number | boolean
+	colorType: string
+	cssClass: string
+}
+
+/**
+ * 数字类型字典数据
+ */
+export type NumberDictDataType = {
+	dictType: string
+	label: string
+	value: number
+	colorType: string
+	cssClass: string
+}
+
+/**
+ * 字符串类型字典数据
+ */
+export type StringDictDataType = {
+	dictType: string
+	label: string
+	value: string
+	colorType: string
+	cssClass: string
+}
+
+/**
+ * 字典存储（使用 uni.getStorageSync/setStorageSync）
+ */
+class DictStore {
+	private static STORAGE_KEY = 'DICT_DATA'
+	
+	/**
+	 * 获取所有字典数据
+	 */
+	static getAllDict(): Map<string, DictDataType[]> {
+		try {
+			const data = uni.getStorageSync(this.STORAGE_KEY)
+			if (data) {
+				const jsonData = JSON.parse(data as string)
+				const map = new Map<string, DictDataType[]>()
+				for (const key in jsonData) {
+					map.set(key, jsonData[key])
+				}
+				return map
+			}
+		} catch (e) {
+			console.error('获取字典数据失败:', e)
+		}
+		return new Map<string, DictDataType[]>()
+	}
+	
+	/**
+	 * 保存所有字典数据
+	 */
+	static setAllDict(dictMap: Map<string, DictDataType[]>) {
+		try {
+			const jsonData: UTSJSONObject = {}
+			dictMap.forEach((value, key) => {
+				jsonData[key] = value
+			})
+			uni.setStorageSync(this.STORAGE_KEY, JSON.stringify(jsonData))
+		} catch (e) {
+			console.error('保存字典数据失败:', e)
+		}
+	}
+	
+	/**
+	 * 根据字典类型获取字典数据
+	 */
+	static getDictByType(dictType: string): DictDataType[] {
+		const allDict = this.getAllDict()
+		return allDict.get(dictType) || []
+	}
+	
+	/**
+	 * 设置字典数据
+	 */
+	static setDictByType(dictType: string, dictData: DictDataType[]) {
+		const allDict = this.getAllDict()
+		allDict.set(dictType, dictData)
+		this.setAllDict(allDict)
+	}
+	
+	/**
+	 * 清空所有字典数据
+	 */
+	static clearDict() {
+		uni.removeStorageSync(this.STORAGE_KEY)
+	}
+}
+
+/**
+ * 获取 dictType 对应的数据字典数组
+ * @param dictType 数据类型
+ * @returns 数据字典数组
+ */
+export function getDictOptions(dictType: string): DictDataType[] {
+	return DictStore.getDictByType(dictType)
+}
+
+/**
+ * 获取整数类型的字典选项
+ * @param dictType 字典类型
+ * @returns 整数类型字典数组
+ */
+export function getIntDictOptions(dictType: string): NumberDictDataType[] {
+	const dictOptions = getDictOptions(dictType)
+	const result: NumberDictDataType[] = []
+	
+	dictOptions.forEach((dict: DictDataType) => {
+		result.push({
+			dictType: dict.dictType,
+			label: dict.label,
+			value: parseInt(dict.value.toString()),
+			colorType: dict.colorType,
+			cssClass: dict.cssClass
+		})
+	})
+	
+	return result
+}
+
+/**
+ * 获取字符串类型的字典选项
+ * @param dictType 字典类型
+ * @returns 字符串类型字典数组
+ */
+export function getStrDictOptions(dictType: string): StringDictDataType[] {
+	const dictOptions = getDictOptions(dictType)
+	const result: StringDictDataType[] = []
+	
+	dictOptions.forEach((dict: DictDataType) => {
+		result.push({
+			dictType: dict.dictType,
+			label: dict.label,
+			value: dict.value.toString(),
+			colorType: dict.colorType,
+			cssClass: dict.cssClass
+		})
+	})
+	
+	return result
+}
+
+/**
+ * 获取布尔类型的字典选项
+ * @param dictType 字典类型
+ * @returns 布尔类型字典数组
+ */
+export function getBoolDictOptions(dictType: string): DictDataType[] {
+	const dictOptions = getDictOptions(dictType)
+	const result: DictDataType[] = []
+	
+	dictOptions.forEach((dict: DictDataType) => {
+		result.push({
+			dictType: dict.dictType,
+			label: dict.label,
+			value: dict.value.toString() === 'true',
+			colorType: dict.colorType,
+			cssClass: dict.cssClass
+		})
+	})
+	
+	return result
+}
+
+/**
+ * 获取指定字典类型的指定值对应的字典对象
+ * @param dictType 字典类型
+ * @param value 字典值
+ * @returns 字典对象
+ */
+export function getDictObj(dictType: string, value: any): DictDataType | null {
+	const dictOptions = getDictOptions(dictType)
+	
+	for (let i = 0; i < dictOptions.length; i++) {
+		const dict = dictOptions[i]
+		if (dict.value.toString() === value.toString()) {
+			return dict
+		}
+	}
+	
+	return null
+}
+
+/**
+ * 获得字典数据的文本展示
+ * @param dictType 字典类型
+ * @param value 字典数据的值
+ * @returns 字典名称
+ */
+export function getDictLabel(dictType: string, value: any): string {
+	const dictOptions = getDictOptions(dictType)
+	
+	for (let i = 0; i < dictOptions.length; i++) {
+		const dict = dictOptions[i]
+		if (dict.value.toString() === value.toString()) {
+			return dict.label
+		}
+	}
+	
+	return ''
+}
+
+/**
+ * 设置字典数据（用于从后端加载字典）
+ * @param dictType 字典类型
+ * @param dictData 字典数据
+ */
+export function setDictData(dictType: string, dictData: DictDataType[]) {
+	DictStore.setDictByType(dictType, dictData)
+}
+
+/**
+ * 清空所有字典数据
+ */
+export function clearDictData() {
+	DictStore.clearDict()
+}
+
+/**
+ * 字典类型枚举
+ */
+export const DICT_TYPE = {
+	// ========== 插件模块 ==========
+	PLUG_ORDER_STATUS: 'plug_order_status',
+	
+	USER_TYPE: 'user_type',
+	COMMON_STATUS: 'common_status',
+	SYSTEM_TENANT_PACKAGE_ID: 'system_tenant_package_id',
+	TERMINAL: 'terminal', // 终端
+	
+	// ========== SYSTEM 模块 ==========
+	SYSTEM_USER_SEX: 'system_user_sex',
+	SYSTEM_MENU_TYPE: 'system_menu_type',
+	SYSTEM_ROLE_TYPE: 'system_role_type',
+	SYSTEM_DATA_SCOPE: 'system_data_scope',
+	SYSTEM_NOTICE_TYPE: 'system_notice_type',
+	SYSTEM_OPERATE_TYPE: 'system_operate_type',
+	SYSTEM_LOGIN_TYPE: 'system_login_type',
+	SYSTEM_LOGIN_RESULT: 'system_login_result',
+	SYSTEM_SMS_CHANNEL_CODE: 'system_sms_channel_code',
+	SYSTEM_SMS_TEMPLATE_TYPE: 'system_sms_template_type',
+	SYSTEM_SMS_SEND_STATUS: 'system_sms_send_status',
+	SYSTEM_SMS_RECEIVE_STATUS: 'system_sms_receive_status',
+	SYSTEM_ERROR_CODE_TYPE: 'system_error_code_type',
+	SYSTEM_OAUTH2_GRANT_TYPE: 'system_oauth2_grant_type',
+	SYSTEM_MAIL_SEND_STATUS: 'system_mail_send_status',
+	SYSTEM_NOTIFY_TEMPLATE_TYPE: 'system_notify_template_type',
+	SYSTEM_SOCIAL_TYPE: 'system_social_type',
+	
+	// ========== INFRA 模块 ==========
+	INFRA_BOOLEAN_STRING: 'infra_boolean_string',
+	INFRA_JOB_STATUS: 'infra_job_status',
+	INFRA_JOB_LOG_STATUS: 'infra_job_log_status',
+	INFRA_API_ERROR_LOG_PROCESS_STATUS: 'infra_api_error_log_process_status',
+	INFRA_CONFIG_TYPE: 'infra_config_type',
+	INFRA_CODEGEN_TEMPLATE_TYPE: 'infra_codegen_template_type',
+	INFRA_CODEGEN_FRONT_TYPE: 'infra_codegen_front_type',
+	INFRA_CODEGEN_SCENE: 'infra_codegen_scene',
+	INFRA_FILE_STORAGE: 'infra_file_storage',
+	
+	// ========== BPM 模块 ==========
+	BPM_MODEL_CATEGORY: 'bpm_model_category',
+	BPM_MODEL_FORM_TYPE: 'bpm_model_form_type',
+	BPM_TASK_ASSIGN_RULE_TYPE: 'bpm_task_assign_rule_type',
+	BPM_PROCESS_INSTANCE_STATUS: 'bpm_process_instance_status',
+	BPM_PROCESS_INSTANCE_RESULT: 'bpm_process_instance_result',
+	BPM_TASK_ASSIGN_SCRIPT: 'bpm_task_assign_script',
+	BPM_OA_LEAVE_TYPE: 'bpm_oa_leave_type',
+	
+	// ========== PAY 模块 ==========
+	PAY_CHANNEL_CODE: 'pay_channel_code',
+	PAY_ORDER_STATUS: 'pay_order_status',
+	PAY_REFUND_STATUS: 'pay_refund_status',
+	PAY_NOTIFY_STATUS: 'pay_notify_status',
+	PAY_NOTIFY_TYPE: 'pay_notify_type',
+	PAY_TRANSFER_STATUS: 'pay_transfer_status',
+	PAY_TRANSFER_TYPE: 'pay_transfer_type',
+	
+	// ========== MP 模块 ==========
+	MP_AUTO_REPLY_REQUEST_MATCH: 'mp_auto_reply_request_match',
+	MP_MESSAGE_TYPE: 'mp_message_type',
+	
+	// ========== Member 会员模块 ==========
+	MEMBER_POINT_BIZ_TYPE: 'member_point_biz_type',
+	MEMBER_EXPERIENCE_BIZ_TYPE: 'member_experience_biz_type',
+	
+	// ========== MALL - 商品模块 ==========
+	PRODUCT_SPU_STATUS: 'product_spu_status',
+	
+	// ========== MALL - 交易模块 ==========
+	EXPRESS_CHARGE_MODE: 'trade_delivery_express_charge_mode',
+	TRADE_AFTER_SALE_STATUS: 'trade_after_sale_status',
+	TRADE_AFTER_SALE_WAY: 'trade_after_sale_way',
+	TRADE_AFTER_SALE_TYPE: 'trade_after_sale_type',
+	TRADE_ORDER_TYPE: 'trade_order_type',
+	TRADE_ORDER_STATUS: 'trade_order_status',
+	TRADE_ORDER_ITEM_AFTER_SALE_STATUS: 'trade_order_item_after_sale_status',
+	TRADE_DELIVERY_TYPE: 'trade_delivery_type',
+	BROKERAGE_ENABLED_CONDITION: 'brokerage_enabled_condition',
+	BROKERAGE_BIND_MODE: 'brokerage_bind_mode',
+	BROKERAGE_BANK_NAME: 'brokerage_bank_name',
+	BROKERAGE_WITHDRAW_TYPE: 'brokerage_withdraw_type',
+	BROKERAGE_RECORD_BIZ_TYPE: 'brokerage_record_biz_type',
+	BROKERAGE_RECORD_STATUS: 'brokerage_record_status',
+	BROKERAGE_WITHDRAW_STATUS: 'brokerage_withdraw_status',
+	
+	// ========== MALL - 营销模块 ==========
+	PROMOTION_DISCOUNT_TYPE: 'promotion_discount_type',
+	PROMOTION_PRODUCT_SCOPE: 'promotion_product_scope',
+	PROMOTION_COUPON_TEMPLATE_VALIDITY_TYPE: 'promotion_coupon_template_validity_type',
+	PROMOTION_COUPON_STATUS: 'promotion_coupon_status',
+	PROMOTION_COUPON_TAKE_TYPE: 'promotion_coupon_take_type',
+	PROMOTION_ACTIVITY_STATUS: 'promotion_activity_status',
+	PROMOTION_CONDITION_TYPE: 'promotion_condition_type',
+	PROMOTION_BARGAIN_RECORD_STATUS: 'promotion_bargain_record_status',
+	PROMOTION_COMBINATION_RECORD_STATUS: 'promotion_combination_record_status',
+	PROMOTION_BANNER_POSITION: 'promotion_banner_position',
+	
+	// ========== CRM - 客户管理模块 ==========
+	CRM_AUDIT_STATUS: 'crm_audit_status',
+	CRM_BIZ_TYPE: 'crm_biz_type',
+	CRM_RECEIVABLE_RETURN_TYPE: 'crm_receivable_return_type',
+	CRM_CUSTOMER_INDUSTRY: 'crm_customer_industry',
+	CRM_CUSTOMER_LEVEL: 'crm_customer_level',
+	CRM_CUSTOMER_SOURCE: 'crm_customer_source',
+	CRM_PRODUCT_STATUS: 'crm_product_status',
+	CRM_PERMISSION_LEVEL: 'crm_permission_level',
+	CRM_PRODUCT_UNIT: 'crm_product_unit',
+	CRM_FOLLOW_UP_TYPE: 'crm_follow_up_type'
+}

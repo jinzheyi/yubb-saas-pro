@@ -3,84 +3,89 @@
 		<!-- Logo 和标题 -->
 		<view class="header">
 			<image class="logo" src="/static/logo.png"></image>
-			<text class="title">圣钰管理系统</text>
+			<text class="title">{{ t('login.welcome') }}</text>
+			<text class="subtitle">{{ t('login.message') }}</text>
+		</view>
+		
+		<!-- 语言切换 -->
+		<view class="locale-switch">
+			<text 
+				v-for="item in availableLocales" 
+				:key="item.lang"
+				@click="handleSwitchLocale(item.lang)"
+				:class="['locale-item', { active: locale === item.lang }]"
+			>
+				{{ item.name }}
+			</text>
 		</view>
 		
 		<!-- 登录表单 -->
 		<view class="form-container">
-			<!-- 租户名称 -->
-			<view class="form-item">
-				<text class="label">租户名称</text>
-				<input 
-					class="input" 
-					v-model="tenantName" 
-					placeholder="请输入租户名称"
-					:disabled="true"
-				/>
-			</view>
-			
 			<!-- 账号登录 -->
 			<view v-if="loginType === 'account'">
+				
 				<view class="form-item">
-					<text class="label">账号</text>
+					<text class="label">{{ t('login.username') }}</text>
 					<input 
 						class="input" 
 						v-model="username" 
-						placeholder="请输入账号"
+						:placeholder="t('login.usernamePlaceholder')"
 					/>
 				</view>
 				
 				<view class="form-item">
-					<text class="label">密码</text>
+					<text class="label">{{ t('login.password') }}</text>
 					<input 
 						class="input" 
 						v-model="password" 
 						type="password"
-						placeholder="请输入密码"
+						:placeholder="t('login.passwordPlaceholder')"
+						@confirm="handleLogin"
 					/>
+				</view>
+				
+				<!-- 记住我 - 仅账号登录显示 -->
+				<view class="remember-row">
+					<checkbox-group @change="handleRememberChange">
+						<label>
+							<checkbox :checked="rememberMe" />
+							<text class="remember-text">{{ t('login.remember') }}</text>
+						</label>
+					</checkbox-group>
 				</view>
 			</view>
 			
-			<!-- 手机号登录 -->
+			<!-- 手机号登录 - 不显示租户名称 -->
 			<view v-else>
 				<view class="form-item">
-					<text class="label">手机号</text>
+					<text class="label">{{ t('login.mobileNumber') }}</text>
 					<input 
 						class="input" 
 						v-model="mobile" 
 						type="number"
-						placeholder="请输入手机号"
+						:placeholder="t('login.mobileNumberPlaceholder')"
 					/>
 				</view>
 				
 				<view class="form-item">
-					<text class="label">验证码</text>
+					<text class="label">{{ t('login.code') }}</text>
 					<view class="code-input-wrapper">
 						<input 
 							class="input code-input" 
 							v-model="smsCode" 
 							type="number"
-							placeholder="请输入验证码"
+							:placeholder="t('login.codePlaceholder')"
+							@confirm="handleLogin"
 						/>
 						<button 
 							class="code-btn" 
 							:disabled="codeCountdown > 0"
 							@click="handleSendCode"
 						>
-							{{ codeCountdown > 0 ? codeCountdown + 's' : '获取验证码' }}
+							{{ codeCountdown > 0 ? codeCountdown + 's' : t('login.getSmsCode') }}
 						</button>
 					</view>
 				</view>
-			</view>
-			
-			<!-- 记住我 -->
-			<view class="remember-row">
-				<checkbox-group @change="handleRememberChange">
-					<label>
-						<checkbox :checked="rememberMe" />
-						<text class="remember-text">记住我</text>
-					</label>
-				</checkbox-group>
 			</view>
 			
 			<!-- 登录按钮 -->
@@ -89,7 +94,7 @@
 				:loading="loading"
 				@click="handleLogin"
 			>
-				登录
+				{{ t('common.login') }}
 			</button>
 			
 			<!-- 切换登录方式 -->
@@ -98,7 +103,7 @@
 					class="switch-text" 
 					@click="switchLoginType"
 				>
-					{{ loginType === 'account' ? '手机号登录' : '账号密码登录' }}
+					{{ loginType === 'account' ? t('login.btnMobile') : t('login.btnAccount') }}
 				</text>
 			</view>
 		</view>
@@ -114,18 +119,23 @@
 </template>
 
 <script setup lang="uts">
-	import { login, smsLogin, sendSmsCode, getTenantIdByName } from '../../api/login.uts'
-	import { setToken, setTenantId } from '../../utils/request.uts'
-	import { setUserInfo, loadUserPermission } from '../../store/user.uts'
+	import { login, smsLogin, sendSmsCode, getPermissionInfo } from '../../api/login.uts'
+	import { setToken, setUserInfo } from '../../store/user.uts'
+	import { useI18n } from '../../hooks/useI18n.uts'
+	import type { LocaleType } from '../../store/locale.uts'
 	import SliderCaptcha from '../../components/captcha/slider-captcha.uvue'
+	import { CAPTCHA_ENABLE, DEFAULT_TENANT_NAME, SMS_CODE_COUNTDOWN } from '../../config/app.config.uts'
+	
+	// 国际化
+	const { t, locale, availableLocales, switchLocale } = useI18n()
 	
 	// 登录类型
 	const loginType = ref<string>('account')
 	
 	// 表单数据
-	const tenantName = ref<string>('圣钰科技')
-	const username = ref<string>('')
-	const password = ref<string>('')
+	const tenantName = ref<string>(DEFAULT_TENANT_NAME)
+	const username = ref<string>('jin_zheyicn@qq.com')
+	const password = ref<string>('123456')
 	const mobile = ref<string>('')
 	const smsCode = ref<string>('')
 	const rememberMe = ref<boolean>(false)
@@ -138,12 +148,18 @@
 	// 验证码组件引用
 	const captchaRef = ref<any>(null)
 	
-	// 是否启用验证码（从环境变量读取，默认启用）
-	const captchaEnable = ref<boolean>(true)
+	// 验证码配置（严格参考 PC 端）
+	// PC 端：captchaEnable: import.meta.env.VITE_APP_CAPTCHA_ENABLE
+	// 判断逻辑：if (loginData.captchaEnable === 'false') 则直接登录
+	const captchaEnable = ref<string>(CAPTCHA_ENABLE) // 'true' 启用，'false' 禁用
 	
 	// 切换登录方式
 	function switchLoginType() {
 		loginType.value = loginType.value === 'account' ? 'mobile' : 'account'
+		// 切换时清空验证码倒计时
+		if (loginType.value === 'account') {
+			codeCountdown.value = 0
+		}
 	}
 	
 	// 记住我
@@ -153,9 +169,20 @@
 	
 	// 发送验证码
 	async function handleSendCode() {
+		// 验证手机号
 		if (mobile.value === '') {
 			uni.showToast({
-				title: '请输入手机号',
+				title: t('login.mobileNumberPlaceholder'),
+				icon: 'none'
+			})
+			return
+		}
+		
+		// 简单的手机号格式验证
+		const phoneReg = /^1[3-9]\d{9}$/
+		if (!phoneReg.test(mobile.value)) {
+			uni.showToast({
+				title: t('login.mobileNumberPlaceholder'),
 				icon: 'none'
 			})
 			return
@@ -168,12 +195,12 @@
 			})
 			
 			uni.showToast({
-				title: '验证码已发送',
+				title: t('login.SmsSendMsg'),
 				icon: 'success'
 			})
 			
-			// 开始倒计时
-			codeCountdown.value = 60
+			// 开始倒计时（使用配置的倒计时时间）
+			codeCountdown.value = SMS_CODE_COUNTDOWN
 			const timer = setInterval(() => {
 				codeCountdown.value--
 				if (codeCountdown.value <= 0) {
@@ -185,45 +212,78 @@
 		}
 	}
 	
-	// 获取租户ID
+	// 获取租户ID（仅账号登录需要）
 	async function fetchTenantId() {
 		try {
 			const tenantId = await getTenantIdByName(tenantName.value)
 			setTenantId(tenantId)
 		} catch (e) {
 			console.error('获取租户ID失败', e)
+			uni.showToast({
+				title: '租户名称不存在',
+				icon: 'none'
+			})
 			throw e
 		}
 	}
 	
-	// 登录按钮点击
+	// 登录按钮点击（严格参考 PC 端 getCode 方法）
 	async function handleLogin() {
 		// 验证表单
 		if (loginType.value === 'account') {
-			if (username.value === '' || password.value === '') {
+			// 账号登录验证
+			if (username.value === '') {
 				uni.showToast({
-					title: '请输入账号和密码',
+					title: t('login.usernamePlaceholder'),
 					icon: 'none'
 				})
 				return
 			}
-		} else {
-			if (mobile.value === '' || smsCode.value === '') {
+			if (password.value === '') {
 				uni.showToast({
-					title: '请输入手机号和验证码',
+					title: t('login.passwordPlaceholder'),
 					icon: 'none'
 				})
 				return
 			}
-		}
-		
-		// 如果启用验证码且是账号登录，显示验证码
-		if (captchaEnable.value && loginType.value === 'account') {
-			if (captchaRef.value) {
-				captchaRef.value.show()
+			
+			// 严格参考 PC 端验证码逻辑
+			// PC 端代码：
+			// const getCode = async () => {
+			//   if (loginData.captchaEnable === 'false') {
+			//     await handleLogin({})
+			//   } else {
+			//     verify.value.show()
+			//   }
+			// }
+			
+			// 情况一，未开启：则直接登录
+			if (captchaEnable.value === 'false') {
+				await doLogin('')
+			} else {
+				// 情况二，已开启：则展示验证码；只有完成验证码的情况，才进行登录
+				if (captchaRef.value) {
+					captchaRef.value.show()
+				}
 			}
 		} else {
-			// 直接登录
+			// 手机号登录验证
+			if (mobile.value === '') {
+				uni.showToast({
+					title: t('login.mobileNumberPlaceholder'),
+					icon: 'none'
+				})
+				return
+			}
+			if (smsCode.value === '') {
+				uni.showToast({
+					title: t('login.codePlaceholder'),
+					icon: 'none'
+				})
+				return
+			}
+			
+			// 手机号登录不需要验证码，直接登录
 			await doLogin('')
 		}
 	}
@@ -237,6 +297,15 @@
 	// 验证码验证失败
 	function handleCaptchaFail() {
 		console.log('验证码验证失败')
+		uni.showToast({
+			title: t('captcha.fail'),
+			icon: 'none'
+		})
+	}
+	
+	// 切换语言
+	function handleSwitchLocale(newLocale: LocaleType) {
+		switchLocale(newLocale)
 	}
 	
 	// 执行登录
@@ -244,10 +313,7 @@
 		loading.value = true
 		
 		try {
-			// 获取租户ID
-			await fetchTenantId()
-			
-			// 登录
+			// 登录（后端已做用户兼容多租户处理，不需要前端获取租户ID）
 			let tokenData: any
 			if (loginType.value === 'account') {
 				tokenData = await login({
@@ -262,30 +328,53 @@
 				})
 			}
 			
-			// 保存 token
+			// 保存 token（包含 tenantId 和 deptId）
 			setToken(tokenData)
 			
-			// 加载用户信息
-			await loadUserPermission()
+			// 加载用户信息（从后端获取）
+			await loadUserInfo()
 			
-			// 记住我
-			if (rememberMe.value) {
+			// 记住我（仅账号登录）
+			if (loginType.value === 'account' && rememberMe.value) {
 				uni.setStorageSync('REMEMBER_ME', JSON.stringify({
-					tenantName: tenantName.value,
 					username: username.value
 				}))
-			} else {
+			} else if (loginType.value === 'account' && !rememberMe.value) {
 				uni.removeStorageSync('REMEMBER_ME')
 			}
 			
-			// 跳转到首页
-			uni.switchTab({
-				url: '/pages/message/message'
+			// 登录成功提示
+			uni.showToast({
+				title: t('sys.login.loginSuccessTitle'),
+				icon: 'success',
+				duration: 1500
 			})
+			
+			// 延迟跳转，让用户看到成功提示
+			setTimeout(() => {
+				uni.switchTab({
+					url: '/pages/message/message'
+				})
+			}, 1500)
 		} catch (e) {
 			console.error('登录失败', e)
+			// 错误已在 request.uts 中处理，这里不需要再次提示
 		} finally {
 			loading.value = false
+		}
+	}
+	
+	// 加载用户信息
+	async function loadUserInfo() {
+		try {
+			// 调用获取用户信息接口
+			const userInfo = await getPermissionInfo()
+			if (userInfo) {
+				// 保存用户信息、权限、角色
+				setUserInfo(userInfo)
+			}
+		} catch (e) {
+			console.error('加载用户信息失败', e)
 		}
 	}
 	
@@ -293,10 +382,14 @@
 	onMounted(() => {
 		const rememberData = uni.getStorageSync('REMEMBER_ME')
 		if (rememberData != null && rememberData != '') {
-			const data = JSON.parse(rememberData)
-			tenantName.value = data.tenantName || '圣钰科技'
-			username.value = data.username || ''
-			rememberMe.value = true
+			try {
+				const data = JSON.parse(rememberData)
+				tenantName.value = data.tenantName || DEFAULT_TENANT_NAME
+				username.value = data.username || ''
+				rememberMe.value = true
+			} catch (e) {
+				console.error('解析记住的登录信息失败', e)
+			}
 		}
 	})
 </script>
@@ -322,6 +415,34 @@
 	.title {
 		font-size: 28px;
 		color: #ffffff;
+		font-weight: bold;
+		margin-bottom: 10px;
+	}
+	
+	.subtitle {
+		font-size: 14px;
+		color: rgba(255, 255, 255, 0.8);
+	}
+	
+	.locale-switch {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		margin-bottom: 30px;
+		gap: 20px;
+	}
+	
+	.locale-item {
+		font-size: 14px;
+		color: rgba(255, 255, 255, 0.7);
+		padding: 5px 15px;
+		border-radius: 15px;
+		transition: all 0.3s;
+	}
+	
+	.locale-item.active {
+		color: #ffffff;
+		background: rgba(255, 255, 255, 0.2);
 		font-weight: bold;
 	}
 	

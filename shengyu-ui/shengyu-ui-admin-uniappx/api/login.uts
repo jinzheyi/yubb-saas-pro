@@ -1,7 +1,7 @@
 /**
  * 登录相关 API
  */
-import { post, get, getRefreshToken } from '../utils/request.uts'
+import { post, postRaw, get } from '../utils/request.uts'
 
 /**
  * 账号密码登录
@@ -25,14 +25,8 @@ export function sendSmsCode(data: UTSJSONObject): Promise<any> {
 }
 
 /**
- * 根据租户名称获取租户ID
- */
-export function getTenantIdByName(name: string): Promise<any> {
-	return get('/system/tenant/get-id-by-name?name=' + name)
-}
-
-/**
  * 获取用户权限信息
+ * 包含用户信息、权限列表、角色列表、菜单列表
  */
 export function getPermissionInfo(): Promise<any> {
 	return get('/system/auth/get-permission-info')
@@ -48,20 +42,20 @@ export function logout(): Promise<any> {
 /**
  * 刷新访问令牌
  */
-export function refreshToken(): Promise<any> {
-	return post('/system/auth/refresh-token?refreshToken=' + getRefreshToken())
+export function refreshToken(refreshToken: string): Promise<any> {
+	return post('/system/auth/refresh-token?refreshToken=' + refreshToken)
 }
 
 /**
- * 获取图形验证码
+ * 获取图形验证码（返回完整响应）
  */
 export function getCaptcha(data: UTSJSONObject): Promise<any> {
-	return post('/system/captcha/get', data)
+	return postRaw('/system/captcha/get', data)
 }
 
 /**
- * 校验图形验证码
+ * 校验图形验证码（返回完整响应）
  */
 export function checkCaptcha(data: UTSJSONObject): Promise<any> {
-	return post('/system/captcha/check', data)
+	return postRaw('/system/captcha/check', data)
 }

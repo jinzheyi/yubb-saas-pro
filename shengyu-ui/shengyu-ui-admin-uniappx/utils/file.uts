@@ -1,0 +1,262 @@
+/**
+ * 文件工具类
+ * 兼容 Android、iOS、Web 三端
+ */
+
+/**
+ * 从 URL 中提取文件名
+ * @param url 文件 URL
+ * @returns 文件名
+ */
+export function getFileNameFromUrl(url: string): string {
+	try {
+		// 尝试解析 URL
+		const parts = url.split('/')
+		const lastPart = parts[parts.length - 1]
+		
+		// 如果包含查询参数，去掉查询参数
+		const fileName = lastPart.split('?')[0]
+		
+		// 解码 URL 编码的文件名
+		return decodeURIComponent(fileName)
+	} catch (e) {
+		console.error('提取文件名失败:', e)
+		return 'unknown'
+	}
+}
+
+/**
+ * 判断是否为图片
+ * @param filename 文件名
+ * @returns 是否为图片
+ */
+export function isImage(filename: string): boolean {
+	const ext = getFileExtension(filename).toLowerCase()
+	const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg']
+	return imageExts.indexOf(ext) !== -1
+}
+
+/**
+ * 判断是否为视频
+ * @param filename 文件名
+ * @returns 是否为视频
+ */
+export function isVideo(filename: string): boolean {
+	const ext = getFileExtension(filename).toLowerCase()
+	const videoExts = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm']
+	return videoExts.indexOf(ext) !== -1
+}
+
+/**
+ * 判断是否为音频
+ * @param filename 文件名
+ * @returns 是否为音频
+ */
+export function isAudio(filename: string): boolean {
+	const ext = getFileExtension(filename).toLowerCase()
+	const audioExts = ['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a']
+	return audioExts.indexOf(ext) !== -1
+}
+
+/**
+ * 判断是否为文档
+ * @param filename 文件名
+ * @returns 是否为文档
+ */
+export function isDocument(filename: string): boolean {
+	const ext = getFileExtension(filename).toLowerCase()
+	const docExts = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'pdf', 'txt']
+	return docExts.indexOf(ext) !== -1
+}
+
+/**
+ * 获取文件扩展名
+ * @param filename 文件名
+ * @returns 扩展名（不含点）
+ */
+export function getFileExtension(filename: string): string {
+	const parts = filename.split('.')
+	if (parts.length > 1) {
+		return parts[parts.length - 1]
+	}
+	return ''
+}
+
+/**
+ * 格式化文件大小
+ * @param bytes 字节数
+ * @returns 格式化后的文件大小
+ */
+export function formatFileSize(bytes: number): string {
+	if (bytes === 0) return '0 B'
+	
+	const k = 1024
+	const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+	const i = Math.floor(Math.log(bytes) / Math.log(k))
+	
+	// 限制最大单位为 TB
+	const index = i > 4 ? 4 : i
+	
+	const size = bytes / Math.pow(k, index)
+	const sizeStr = size.toFixed(2)
+	
+	return sizeStr + ' ' + sizes[index]
+}
+
+/**
+ * 获取文件类型图标名称
+ * @param filename 文件名
+ * @returns 图标名称
+ */
+export function getFileIcon(filename: string): string {
+	if (isImage(filename)) {
+		return 'image'
+	} else if (isVideo(filename)) {
+		return 'video'
+	} else if (isAudio(filename)) {
+		return 'audio'
+	} else if (isDocument(filename)) {
+		const ext = getFileExtension(filename).toLowerCase()
+		if (ext === 'pdf') {
+			return 'pdf'
+		} else if (ext === 'doc' || ext === 'docx') {
+			return 'word'
+		} else if (ext === 'xls' || ext === 'xlsx') {
+			return 'excel'
+		} else if (ext === 'ppt' || ext === 'pptx') {
+			return 'ppt'
+		}
+		return 'document'
+	}
+	return 'file'
+}
+
+/**
+ * 获取文件 MIME 类型
+ * @param filename 文件名
+ * @returns MIME 类型
+ */
+export function getFileMimeType(filename: string): string {
+	const ext = getFileExtension(filename).toLowerCase()
+	
+	// 图片类型
+	const imageMimes: Map<string, string> = new Map([
+		['jpg', 'image/jpeg'],
+		['jpeg', 'image/jpeg'],
+		['png', 'image/png'],
+		['gif', 'image/gif'],
+		['bmp', 'image/bmp'],
+		['webp', 'image/webp'],
+		['svg', 'image/svg+xml']
+	])
+	
+	// 视频类型
+	const videoMimes: Map<string, string> = new Map([
+		['mp4', 'video/mp4'],
+		['avi', 'video/x-msvideo'],
+		['mov', 'video/quicktime'],
+		['wmv', 'video/x-ms-wmv'],
+		['flv', 'video/x-flv'],
+		['mkv', 'video/x-matroska'],
+		['webm', 'video/webm']
+	])
+	
+	// 音频类型
+	const audioMimes: Map<string, string> = new Map([
+		['mp3', 'audio/mpeg'],
+		['wav', 'audio/wav'],
+		['ogg', 'audio/ogg'],
+		['aac', 'audio/aac'],
+		['flac', 'audio/flac'],
+		['m4a', 'audio/mp4']
+	])
+	
+	// 文档类型
+	const docMimes: Map<string, string> = new Map([
+		['doc', 'application/msword'],
+		['docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+		['xls', 'application/vnd.ms-excel'],
+		['xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+		['ppt', 'application/vnd.ms-powerpoint'],
+		['pptx', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+		['pdf', 'application/pdf'],
+		['txt', 'text/plain']
+	])
+	
+	// 查找 MIME 类型
+	if (imageMimes.has(ext)) {
+		return imageMimes.get(ext)!
+	} else if (videoMimes.has(ext)) {
+		return videoMimes.get(ext)!
+	} else if (audioMimes.has(ext)) {
+		return audioMimes.get(ext)!
+	} else if (docMimes.has(ext)) {
+		return docMimes.get(ext)!
+	}
+	
+	// 默认类型
+	return 'application/octet-stream'
+}
+
+/**
+ * 验证文件大小
+ * @param fileSize 文件大小（字节）
+ * @param maxSize 最大大小（MB）
+ * @returns 是否符合要求
+ */
+export function validateFileSize(fileSize: number, maxSize: number): boolean {
+	const maxBytes = maxSize * 1024 * 1024
+	return fileSize <= maxBytes
+}
+
+/**
+ * 验证文件类型
+ * @param filename 文件名
+ * @param allowedTypes 允许的文件类型数组（如 ['jpg', 'png']）
+ * @returns 是否符合要求
+ */
+export function validateFileType(filename: string, allowedTypes: string[]): boolean {
+	const ext = getFileExtension(filename).toLowerCase()
+	return allowedTypes.indexOf(ext) !== -1
+}
+
+/**
+ * 生成唯一文件名
+ * @param originalName 原始文件名
+ * @returns 唯一文件名
+ */
+export function generateUniqueFileName(originalName: string): string {
+	const ext = getFileExtension(originalName)
+	const timestamp = Date.now()
+	const random = Math.floor(Math.random() * 10000)
+	const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.'))
+	
+	return `${nameWithoutExt}_${timestamp}_${random}.${ext}`
+}
+
+/**
+ * 将 Base64 转换为文件大小（字节）
+ * @param base64 Base64 字符串
+ * @returns 文件大小（字节）
+ */
+export function getBase64FileSize(base64: string): number {
+	// 移除 data:image/png;base64, 前缀
+	let str = base64
+	if (base64.indexOf(',') !== -1) {
+		str = base64.split(',')[1]
+	}
+	
+	// 计算 Base64 字符串的长度
+	const len = str.length
+	
+	// Base64 编码后的大小约为原始大小的 4/3
+	// 如果有 padding (=)，需要减去
+	let padding = 0
+	if (str.endsWith('==')) {
+		padding = 2
+	} else if (str.endsWith('=')) {
+		padding = 1
+	}
+	
+	return Math.floor((len * 3) / 4) - padding
+}

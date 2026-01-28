@@ -1,0 +1,89 @@
+/**
+ * 国际化组合式函数
+ * 用于在组件中使用国际化功能
+ * 兼容 Android、iOS、Web 三端
+ */
+
+import { 
+	getCurrentLocale, 
+	setCurrentLocale, 
+	getAvailableLocales,
+	getCurrentMessages,
+	t as translate,
+	switchLocale as switchLang,
+	type LocaleType,
+	type LocaleConfig
+} from '../store/locale.uts'
+
+/**
+ * 国际化组合式函数
+ * @returns 国际化相关方法和状态
+ */
+export function useI18n() {
+	/**
+	 * 获取当前语言
+	 * @returns 当前语言类型
+	 */
+	const locale = ref<LocaleType>(getCurrentLocale())
+	
+	/**
+	 * 获取可用语言列表
+	 * @returns 语言配置列表
+	 */
+	const availableLocales = ref<LocaleConfig[]>(getAvailableLocales())
+	
+	/**
+	 * 获取当前语言包（响应式）
+	 * @returns 语言包对象
+	 */
+	const messages = computed(() => {
+		// 依赖 locale.value 确保响应式更新
+		const currentLocale = locale.value
+		return getCurrentMessages()
+	})
+	
+	/**
+	 * 翻译函数（响应式）
+	 * @param key 翻译键
+	 * @param defaultValue 默认值
+	 * @returns 翻译后的文本
+	 */
+	const t = (key: string, defaultValue?: string): string => {
+		// 依赖 locale.value 确保响应式更新
+		const currentLocale = locale.value
+		return translate(key, defaultValue)
+	}
+	
+	/**
+	 * 切换语言
+	 * @param newLocale 新语言类型
+	 */
+	const switchLocale = (newLocale: LocaleType) => {
+		setCurrentLocale(newLocale)
+		locale.value = newLocale
+		
+		// 提示用户
+		uni.showToast({
+			title: newLocale === 'zh-CN' ? '切换成功' : 'Switch Success',
+			icon: 'success'
+		})
+	}
+	
+	/**
+	 * 设置语言
+	 * @param newLocale 新语言类型
+	 */
+	const setLocale = (newLocale: LocaleType) => {
+		setCurrentLocale(newLocale)
+		locale.value = newLocale
+	}
+	
+	return {
+		t,
+		locale,
+		availableLocales,
+		messages,
+		switchLocale,
+		setLocale
+	}
+}

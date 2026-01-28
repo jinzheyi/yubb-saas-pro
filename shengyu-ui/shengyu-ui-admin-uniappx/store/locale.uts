@@ -1,0 +1,183 @@
+/**
+ * 国际化 Store
+ * 管理语言切换
+ * 兼容 Android、iOS、Web 三端
+ * 参考 PC 端 store/modules/locale.ts
+ */
+
+import zhCN from '../locales/zh-CN.uts'
+import en from '../locales/en.uts'
+
+// 存储 Key
+const LOCALE_KEY = 'LOCALE'
+
+/**
+ * 语言类型
+ */
+export type LocaleType = 'zh-CN' | 'en'
+
+/**
+ * 语言配置
+ */
+export type LocaleConfig = {
+	lang: LocaleType
+	name: string
+}
+
+/**
+ * 语言包映射
+ */
+const localeMap: Map<LocaleType, any> = new Map([
+	['zh-CN', zhCN],
+	['en', en]
+])
+
+/**
+ * 可用语言列表
+ */
+const availableLocales: LocaleConfig[] = [
+	{
+		lang: 'zh-CN',
+		name: '简体中文'
+	},
+	{
+		lang: 'en',
+		name: 'English'
+	}
+]
+
+/**
+ * 获取当前语言
+ * @returns 当前语言类型
+ */
+export function getCurrentLocale(): LocaleType {
+	const locale = uni.getStorageSync(LOCALE_KEY)
+	if (locale && (locale === 'zh-CN' || locale === 'en')) {
+		return locale as LocaleType
+	}
+	// 默认返回中文
+	return 'zh-CN'
+}
+
+/**
+ * 设置当前语言
+ * @param locale 语言类型
+ */
+export function setCurrentLocale(locale: LocaleType) {
+	uni.setStorageSync(LOCALE_KEY, locale)
+}
+
+/**
+ * 获取可用语言列表
+ * @returns 语言配置列表
+ */
+export function getAvailableLocales(): LocaleConfig[] {
+	return availableLocales
+}
+
+/**
+ * 获取当前语言包
+ * @returns 语言包对象
+ */
+export function getCurrentMessages(): any {
+	const locale = getCurrentLocale()
+	return localeMap.get(locale) || zhCN
+}
+
+/**
+ * 获取指定语言包
+ * @param locale 语言类型
+ * @returns 语言包对象
+ */
+export function getMessages(locale: LocaleType): any {
+	return localeMap.get(locale) || zhCN
+}
+
+/**
+ * 翻译函数
+ * @param key 翻译键（支持点号分隔的路径，如 'common.login'）
+ * @param defaultValue 默认值（可选）
+ * @returns 翻译后的文本
+ */
+export function t(key: string, defaultValue?: string): string {
+	const messages = getCurrentMessages()
+	
+	// 分割键路径
+	const keys = key.split('.')
+	let value: any = messages
+	
+	// 逐级查找
+	for (let i = 0; i < keys.length; i++) {
+		if (value && typeof value === 'object') {
+			value = value[keys[i]]
+		} else {
+			value = null
+			break
+		}
+	}
+	
+	// 返回翻译结果或默认值
+	if (value && typeof value === 'string') {
+		return value
+	}
+	
+	return defaultValue || key
+}
+
+/**
+ * 切换语言
+ * @param locale 语言类型
+ */
+export function switchLocale(locale: LocaleType) {
+	setCurrentLocale(locale)
+	
+	// 提示用户
+	uni.showToast({
+		title: locale === 'zh-CN' ? '切换成功' : 'Switch Success',
+		icon: 'success'
+	})
+}
+
+/**
+ * 获取系统语言
+ * @returns 系统语言类型
+ */
+export function getSystemLocale(): LocaleType {
+	// #ifdef APP-ANDROID || APP-IOS
+	// 获取系统语言
+	const systemInfo = uni.getSystemInfoSync()
+	const language = systemInfo.language
+	
+	if (language.indexOf('zh') !== -1) {
+		return 'zh-CN'
+	} else if (language.indexOf('en') !== -1) {
+		return 'en'
+	}
+	// #endif
+	
+	// #ifdef H5
+	// 获取浏览器语言
+	// @ts-ignore
+	const language = navigator.language || navigator.userLanguage
+	if (language.indexOf('zh') !== -1) {
+		return 'zh-CN'
+	} else if (language.indexOf('en') !== -1) {
+		return 'en'
+	}
+	// #endif
+	
+	// 默认返回中文
+	return 'zh-CN'
+}
+
+/**
+ * 初始化语言
+ * 如果没有设置过语言，则使用系统语言
+ */
+export function initLocale() {
+	const locale = uni.getStorageSync(LOCALE_KEY)
+	if (!locale) {
+		const systemLocale = getSystemLocale()
+		setCurrentLocale(systemLocale)
+	}
+}
