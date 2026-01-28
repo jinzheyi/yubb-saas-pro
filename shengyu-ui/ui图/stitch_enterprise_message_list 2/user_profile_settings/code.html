@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>User Profile Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#D9001B", // Deep red from the screenshot
+                        "background-light": "#F2F2F7",
+                        "background-dark": "#000000",
+                    },
+                    fontFamily: {
+                        display: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "8px",
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<div class="bg-primary text-white pt-12 pb-6 px-6 relative">
+<div class="flex items-center space-x-4 mb-6">
+<div class="w-16 h-16 rounded-full bg-sky-400 flex items-center justify-center text-xl font-medium shadow-lg">
+                述勇
+            </div>
+<div class="flex-1">
+<div class="flex items-center space-x-2">
+<h1 class="text-2xl font-bold tracking-tight">朱述勇</h1>
+<span class="material-icons text-xl opacity-80 cursor-pointer">qr_code_2</span>
+</div>
+</div>
+</div>
+<div class="mt-4 border-b border-white/20 pb-4">
+<p class="text-lg font-normal opacity-90">软件研发事业部 | 开发工程师</p>
+</div>
+<div class="mt-4 flex items-center space-x-2 opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
+<span class="text-base">添加工作状态...</span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto mt-2">
+<div class="bg-white dark:bg-slate-900">
+<div class="flex items-center px-4 py-4 active:bg-slate-100 dark:active:bg-slate-800 transition-colors cursor-pointer border-b border-slate-100 dark:border-slate-800">
+<div class="w-10 h-10 rounded-lg bg-cyan-400 flex items-center justify-center mr-4">
+<span class="material-icons text-white">palette</span>
+</div>
+<span class="flex-1 text-[17px]">切换主题</span>
+<span class="material-icons text-slate-400 text-xl">chevron_right</span>
+</div>
+<div class="flex items-center px-4 py-4 active:bg-slate-100 dark:active:bg-slate-800 transition-colors cursor-pointer border-b border-slate-100 dark:border-slate-800">
+<div class="w-10 h-10 rounded-lg bg-orange-400 flex items-center justify-center mr-4">
+<span class="material-icons text-white">star</span>
+</div>
+<span class="flex-1 text-[17px]">收藏</span>
+<span class="material-icons text-slate-400 text-xl">chevron_right</span>
+</div>
+<div class="flex items-center px-4 py-4 active:bg-slate-100 dark:active:bg-slate-800 transition-colors cursor-pointer border-b border-slate-100 dark:border-slate-800">
+<div class="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center mr-4">
+<span class="material-icons text-white">filter_center_focus</span>
+</div>
+<span class="flex-1 text-[17px]">扫一扫</span>
+<span class="material-icons text-slate-400 text-xl">chevron_right</span>
+</div>
+<div class="flex items-center px-4 py-4 active:bg-slate-100 dark:active:bg-slate-800 transition-colors cursor-pointer">
+<div class="w-10 h-10 rounded-lg bg-orange-300 flex items-center justify-center mr-4">
+<span class="material-icons text-white">settings</span>
+</div>
+<span class="flex-1 text-[17px]">设置</span>
+<span class="material-icons text-slate-400 text-xl">chevron_right</span>
+</div>
+</div>
+</div>
+<nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 safe-area-bottom">
+<div class="flex justify-around items-center h-14">
+<button class="flex flex-col items-center justify-center w-full text-slate-400 dark:text-slate-500">
+<span class="material-icons text-2xl">chat_bubble_outline</span>
+<span class="text-[10px] mt-0.5">消息</span>
+</button>
+<button class="flex flex-col items-center justify-center w-full text-slate-400 dark:text-slate-500">
+<span class="material-icons text-2xl">person_search</span>
+<span class="text-[10px] mt-0.5">通讯录</span>
+</button>
+<button class="flex flex-col items-center justify-center w-full text-slate-400 dark:text-slate-500">
+<span class="material-icons text-2xl">desktop_windows</span>
+<span class="text-[10px] mt-0.5">工作台</span>
+</button>
+<button class="flex flex-col items-center justify-center w-full text-blue-600 dark:text-blue-400">
+<span class="material-icons text-2xl">person</span>
+<span class="text-[10px] mt-0.5">我</span>
+</button>
+</div>
+<div class="h-4"></div>
+</nav>
+<div class="fixed bottom-24 right-6">
+<button class="w-12 h-12 bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-800 rounded-full flex items-center justify-center shadow-xl" onclick="document.documentElement.classList.toggle('dark')">
+<span class="material-icons">dark_mode</span>
+</button>
+</div>
+
+</body></html>

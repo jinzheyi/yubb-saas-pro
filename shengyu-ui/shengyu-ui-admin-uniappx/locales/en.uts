@@ -105,5 +105,26 @@ export default {
 		detail: 'Detail',
 		export: 'Export',
 		import: 'Import'
+	},
+	message: {
+		title: 'Messages',
+		searchPlaceholder: 'Search',
+		categories: {
+			schedule: 'Schedule',
+			person: 'Contacts',
+			group: 'Groups',
+			send: 'Sent',
+			at: 'Mentioned',
+			noDisturb: 'No Disturb'
+		},
+		list: {
+			newDoc: 'New Doc Reminder',
+			docProcess: 'Doc Process',
+			flowReturn: 'Flow Return',
+			mail: 'Email Reminder'
+		},
+		time: {
+			yesterday: 'Yesterday'
+		}
 	}
 }

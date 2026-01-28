@@ -105,5 +105,26 @@ export default {
 		detail: '详情',
 		export: '导出',
 		import: '导入'
+	},
+	message: {
+		title: '消息',
+		searchPlaceholder: '搜索',
+		categories: {
+			schedule: '日程',
+			person: '联系人',
+			group: '群组',
+			send: '已发送',
+			at: '提到我的',
+			noDisturb: '免打扰'
+		},
+		list: {
+			newDoc: '新文档阅读提醒',
+			docProcess: '公文收发',
+			flowReturn: '流程退回提醒',
+			mail: '邮件提醒'
+		},
+		time: {
+			yesterday: '昨天'
+		}
 	}
 }

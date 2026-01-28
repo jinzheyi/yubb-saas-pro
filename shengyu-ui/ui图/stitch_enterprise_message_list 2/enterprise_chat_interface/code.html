@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Enterprise Chat Interface</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#C8161D", // Deep red from the header
+                        "background-light": "#F2F2F7",
+                        "background-dark": "#1C1C1E",
+                        "bubble-sent": "#95D4FF",
+                        "bubble-received": "#FFFFFF",
+                        "bubble-received-dark": "#2C2C2E"
+                    },
+                    fontFamily: {
+                        display: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "8px",
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        .watermark {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0.05;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            transform: rotate(-30deg) scale(1.5);
+            font-size: 12px;
+            color: #000;
+        }
+        .dark .watermark {
+            color: #fff;
+            opacity: 0.03;
+        }
+        .ios-shadow {
+            box-shadow: 0 -1px 0 rgba(0,0,0,0.1);
+        }
+        .dark .ios-shadow {
+            box-shadow: 0 -1px 0 rgba(255,255,255,0.05);
+        }.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col overflow-hidden">
+<div class="watermark select-none">
+<div>朱述勇 5653<br/>2025-10-11</div>
+<div>朱述勇 5653<br/>2025-10-11</div>
+<div>朱述勇 5653<br/>2025-10-11</div>
+<div>朱述勇 5653<br/>2025-10-11</div>
+<div>朱述勇 5653<br/>2025-10-11</div>
+<div>朱述勇 5653<br/>2025-10-11</div>
+<div>朱述勇 5653<br/>2025-10-11</div>
+<div>朱述勇 5653<br/>2025-10-11</div>
+<div>朱述勇 5653<br/>2025-10-11</div>
+</div>
+<header class="bg-primary text-white pt-12 pb-3 px-4 flex items-center justify-between sticky top-0 z-50">
+<div class="flex items-center gap-1">
+<span class="material-icons cursor-pointer">chevron_left</span>
+<span class="text-lg font-medium">返回</span>
+</div>
+<div class="text-center">
+<h1 class="text-lg font-semibold leading-tight">胡婷</h1>
+<p class="text-[10px] opacity-80">手机在线</p>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-icons text-2xl cursor-pointer">call</span>
+<span class="material-icons text-2xl cursor-pointer" onclick="window.location.reload()">person_outline</span>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar pb-32">
+<div class="flex items-start gap-2">
+<div class="w-10 h-10 rounded-full bg-pink-300 flex items-center justify-center text-white text-xs shrink-0">胡婷</div>
+<div class="flex flex-col gap-1 max-w-[75%]">
+<div class="bg-bubble-received dark:bg-bubble-received-dark rounded-lg p-1 shadow-sm border border-slate-200 dark:border-slate-800">
+<img alt="Spreadsheet screenshot" class="rounded-sm w-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA64UKtCk_CK-9GWnWEnaHwR9cNDBZ-mXvUA0EzoiPiGk0wk83VXnTuWfODvEWHQApy_mMNMSFGrF1kkX1_kwqOMu4yOS1ZSZlVCtIDpRPzLzXR70mEeG1auQfdNA6oowSAXR4SwmiZBxst1kC9qoTVI6Xc6d7gDAflF22A3RH0xV2N8x0_rvpfgDBTrFr5cCMa7RxyS-nT-tssFPdKjJ5BG027SdFLOHG--aDZt2vTS61tPsD6F_xHZFdV67d9-TQNiJjxP0sqRt4"/>
+</div>
+</div>
+</div>
+<div class="flex items-start gap-2">
+<div class="w-10 h-10 rounded-full bg-pink-300 flex items-center justify-center text-white text-xs shrink-0">胡婷</div>
+<div class="flex flex-col gap-1 max-w-[75%]">
+<div class="bg-bubble-received dark:bg-bubble-received-dark rounded-lg px-4 py-2 shadow-sm border border-slate-200 dark:border-slate-800 text-sm leading-relaxed">
+                    公积金9月调基了，7-8月的补缴还没入账，在公积金里还看不到
+                </div>
+<span class="text-[11px] text-slate-400 dark:text-slate-500 self-center mt-2">2025-10-11 16:38</span>
+</div>
+</div>
+<div class="flex flex-row-reverse items-start gap-2">
+<div class="w-10 h-10 rounded-full bg-blue-400 flex items-center justify-center text-white text-xs shrink-0">述勇</div>
+<div class="flex flex-col gap-1 items-end max-w-[75%]">
+<div class="bg-bubble-sent text-slate-900 rounded-lg px-6 py-2 shadow-sm text-sm">
+                    收到
+                </div>
+</div>
+</div>
+<div class="text-center">
+<span class="text-[11px] text-slate-400 dark:text-slate-500">2025-11-10 16:33</span>
+</div>
+<div class="flex items-start gap-2 opacity-60">
+<div class="w-10 h-10 rounded-full bg-pink-300 flex items-center justify-center text-white text-xs shrink-0">胡婷</div>
+<div class="bg-bubble-received dark:bg-bubble-received-dark rounded-lg p-1 w-48 h-12 flex items-center justify-center border border-slate-200 dark:border-slate-800">
+<div class="h-2 w-32 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+</div>
+</div>
+<div class="flex items-start gap-2 opacity-40">
+<div class="w-10 h-10 rounded-full bg-pink-300 flex items-center justify-center text-white text-xs shrink-0">胡婷</div>
+<div class="bg-bubble-received dark:bg-bubble-received-dark rounded-lg p-1 w-48 h-12 flex items-center justify-center border border-slate-200 dark:border-slate-800">
+<div class="h-2 w-32 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+</div>
+</div>
+</main>
+<footer class="fixed bottom-0 left-0 right-0 bg-slate-50 dark:bg-[#121212] ios-shadow z-50">
+<div class="p-3 flex items-center gap-3">
+<div class="flex-1 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 flex items-center justify-between border border-slate-200 dark:border-slate-700">
+<span class="text-slate-300 dark:text-slate-600">请输入...</span>
+<span class="material-icons text-slate-300">expand_less</span>
+</div>
+<div class="bg-slate-200 dark:bg-slate-700 w-8 h-8 rounded-full flex items-center justify-center">
+<span class="material-icons text-white text-sm">arrow_upward</span>
+</div>
+</div>
+<div class="flex justify-between px-6 py-2 border-t border-slate-100 dark:border-slate-800">
+<span class="material-icons text-slate-400 dark:text-slate-500 cursor-pointer">mic_none</span>
+<span class="material-icons text-slate-400 dark:text-slate-500 cursor-pointer">image</span>
+<span class="material-icons text-slate-400 dark:text-slate-500 cursor-pointer">photo_camera</span>
+<span class="material-icons text-blue-500 cursor-pointer">sentiment_very_satisfied</span>
+<span class="material-icons text-slate-400 dark:text-slate-500 cursor-pointer">swap_horiz</span>
+<span class="material-icons text-blue-500 cursor-pointer">add_circle_outline</span>
+</div>
+<div class="h-64 overflow-y-auto p-4 bg-[#F2F2F7] dark:bg-[#1C1C1E]">
+<div class="grid grid-cols-8 gap-y-6 text-2xl">
+<div class="text-center cursor-pointer">😊</div>
+<div class="text-center cursor-pointer">🤩</div>
+<div class="text-center cursor-pointer">🤗</div>
+<div class="text-center cursor-pointer">🤭</div>
+<div class="text-center cursor-pointer">😁</div>
+<div class="text-center cursor-pointer">😃</div>
+<div class="text-center cursor-pointer">😄</div>
+<div class="text-center cursor-pointer">😆</div>
+<div class="text-center cursor-pointer">😋</div>
+<div class="text-center cursor-pointer">😝</div>
+<div class="text-center cursor-pointer">😜</div>
+<div class="text-center cursor-pointer">🤪</div>
+<div class="text-center cursor-pointer">😬</div>
+<div class="text-center cursor-pointer">😉</div>
+<div class="text-center cursor-pointer">😍</div>
+<div class="text-center cursor-pointer">😚</div>
+<div class="text-center cursor-pointer">😘</div>
+<div class="text-center cursor-pointer">😎</div>
+<div class="text-center cursor-pointer">🥺</div>
+<div class="text-center cursor-pointer">🤔</div>
+<div class="text-center cursor-pointer">🧐</div>
+<div class="text-center cursor-pointer">🥳</div>
+<div class="text-center cursor-pointer">🤩</div>
+<div class="text-center cursor-pointer">
+<span class="material-icons text-slate-400 text-xl">backspace</span>
+</div>
+</div>
+<div class="flex justify-center gap-1.5 mt-8 pb-4">
+<div class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-400"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+</div>
+</div>
+<div class="bg-slate-100 dark:bg-black/20 h-10 px-4 flex items-center">
+<div class="bg-white dark:bg-slate-800 p-1.5 rounded shadow-sm">
+<span class="text-xl">😊</span>
+</div>
+</div>
+<div class="h-8 flex justify-center items-end pb-2">
+<div class="w-32 h-1.5 bg-slate-900/10 dark:bg-white/10 rounded-full"></div>
+</div>
+</footer>
+
+</body></html>

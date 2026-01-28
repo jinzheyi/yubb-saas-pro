@@ -1,147 +1,289 @@
 <template>
-	<view class="container">
-		<view class="header">
-			<text class="title">消息</text>
-		</view>
+	<view class="page">
+		<!-- 顶部状态栏占位 -->
+		<view class="status-bar"></view>
 		
-		<scroll-view class="message-list" scroll-y>
-			<view 
-				v-for="(item, index) in messageList" 
-				:key="index"
-				class="message-item"
-				@click="handleMessageClick(item)"
-			>
-				<image class="avatar" :src="item.avatar"></image>
-				<view class="content">
-					<view class="top-row">
-						<text class="name">{{ item.name }}</text>
-						<text class="time">{{ item.time }}</text>
-					</view>
-					<view class="bottom-row">
-						<text class="last-message">{{ item.lastMessage }}</text>
-						<view v-if="item.unread > 0" class="badge">{{ item.unread }}</view>
+		<!-- 头部搜索区域 -->
+		<view class="header">
+			<view class="header-top">
+				<text class="header-title">{{ t('message.title') }}</text>
+				<view class="header-icons">
+					<text class="iconfont header-icon">&#xe600;</text>
+					<text class="iconfont header-icon">&#xe601;</text>
+				</view>
+			</view>
+			<view class="search-container">
+				<view class="search-bar">
+					<text class="iconfont search-icon">&#xe602;</text>
+					<input class="search-input" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" />
+				</view>
+			</view>
+		</view>
+
+		<scroll-view class="content-scroll" scroll-y="true" show-scrollbar="false">
+			<!-- 分类图标栏 -->
+			<view class="category-bar">
+				<view class="category-item" v-for="(item, index) in categories" :key="index">
+					<view class="category-icon-wrap">
+						<text class="iconfont category-icon" :style="{ color: item.color }">{{ item.icon }}</text>
 					</view>
 				</view>
 			</view>
-			
-			<view v-if="messageList.length === 0" class="empty">
-				<text class="empty-text">暂无消息</text>
+
+			<!-- 消息列表 -->
+			<view class="message-list">
+				<view class="message-item" v-for="(item, index) in messageList" :key="index" @click="handleMessageClick(item)">
+					<view class="message-avatar" :style="{ backgroundColor: item.avatarBg }">
+						<text v-if="item.avatarIcon" class="iconfont avatar-icon">{{ item.avatarIcon }}</text>
+						<text v-else class="avatar-text">{{ item.avatarText }}</text>
+					</view>
+					<view class="message-content">
+						<view class="message-top">
+							<text class="message-name">{{ t(item.titleKey, item.title) }}</text>
+							<text class="message-time">{{ item.time }}</text>
+						</view>
+						<text class="message-desc">{{ item.desc }}</text>
+					</view>
+				</view>
 			</view>
 		</scroll-view>
 	</view>
 </template>
 
 <script setup lang="uts">
-	// 消息列表
-	const messageList = ref<any[]>([
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	// 分类数据
+	const categories = [
+		{ icon: '\ue603', color: '#666', nameKey: 'message.categories.schedule' },
+		{ icon: '\ue604', color: '#666', nameKey: 'message.categories.person' },
+		{ icon: '\ue605', color: '#666', nameKey: 'message.categories.group' },
+		{ icon: '\ue606', color: '#666', nameKey: 'message.categories.send' },
+		{ icon: '\ue607', color: '#666', nameKey: 'message.categories.at' },
+		{ icon: '\ue608', color: '#666', nameKey: 'message.categories.noDisturb' }
+	]
+
+	// 消息列表数据
+	const messageList = ref([
 		{
 			id: 1,
-			name: '系统通知',
-			avatar: '/static/logo.png',
-			lastMessage: '欢迎使用圣钰管理系统',
-			time: '10:30',
-			unread: 1
+			titleKey: 'message.list.newDoc',
+			title: '新文档阅读提醒',
+			desc: '您有新的待阅文档(基层动态)：省财...',
+			time: '昨天 14:25',
+			avatarBg: '#f97316',
+			avatarIcon: '\ue609'
+		},
+		{
+			id: 2,
+			titleKey: 'message.list.docProcess',
+			title: '公文收发',
+			desc: '有流程抄送给您：省财信科技公司收...',
+			time: '2026-01-22',
+			avatarBg: '#3b82f6',
+			avatarIcon: '\ue60a'
+		},
+		{
+			id: 3,
+			titleKey: 'message.list.flowReturn',
+			title: '流程退回提醒',
+			desc: '省财信科技公司请休假审批-朱述勇-...',
+			time: '2026-01-12',
+			avatarBg: '#3b82f6',
+			avatarIcon: '\ue60b'
+		},
+		{
+			id: 4,
+			titleKey: 'message.list.mail',
+			title: '邮件提醒',
+			desc: '财信科技制度汇编2025 (20260109)...',
+			time: '2026-01-09',
+			avatarBg: '#fb923c',
+			avatarIcon: '\ue60c'
+		},
+		{
+			id: 5,
+			titleKey: '',
+			title: '胡婷',
+			desc: '[图片]',
+			time: '2025-12-10',
+			avatarBg: '#60a5fa',
+			avatarText: '胡婷'
 		}
 	])
-	
-	// 点击消息
-	function handleMessageClick(item: any) {
+
+	function handleMessageClick(item : any) {
 		uni.showToast({
-			title: '消息详情功能开发中',
+			title: '点击了: ' + (item.titleKey ? t(item.titleKey) : item.title),
 			icon: 'none'
 		})
 	}
 </script>
 
 <style>
-	.container {
-		height: 100vh;
-		background: #f5f5f5;
+	/* 页面基础样式 */
+	.page {
+		flex: 1;
+		background-color: #ffffff;
 		display: flex;
 		flex-direction: column;
 	}
-	
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #C8161D;
+	}
+
+	/* 头部区域 */
 	.header {
-		background: #ffffff;
-		padding: 15px 20px;
-		border-bottom: 1px solid #e0e0e0;
+		background-color: #C8161D;
+		padding: 12px 16px 16px 16px;
 	}
-	
-	.title {
-		font-size: 18px;
+
+	.header-top {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 16px;
+	}
+
+	.header-title {
+		color: #ffffff;
+		font-size: 20px;
 		font-weight: bold;
-		color: #333333;
 	}
-	
-	.message-list {
-		flex: 1;
-	}
-	
-	.message-item {
-		background: #ffffff;
-		padding: 15px 20px;
-		border-bottom: 1px solid #f0f0f0;
-		display: flex;
+
+	.header-icons {
+		flex-direction: row;
 		align-items: center;
 	}
-	
-	.avatar {
-		width: 50px;
-		height: 50px;
-		border-radius: 25px;
-		margin-right: 15px;
+
+	.header-icon {
+		color: #ffffff;
+		font-size: 22px;
+		margin-left: 16px;
 	}
-	
-	.content {
+
+	/* 搜索栏 */
+	.search-container {
+		width: 100%;
+	}
+
+	.search-bar {
+		background-color: rgba(255, 255, 255, 0.15);
+		border-radius: 8px;
+		height: 36px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+	}
+
+	.search-icon {
+		font-size: 16px;
+		color: rgba(255, 255, 255, 0.6);
+	}
+
+	.search-input {
+		flex: 1;
+		color: #ffffff;
+		font-size: 14px;
+	}
+
+	.placeholder {
+		color: rgba(255, 255, 255, 0.6);
+	}
+
+	/* 滚动内容区域 */
+	.content-scroll {
 		flex: 1;
 	}
-	
-	.top-row {
-		display: flex;
-		justify-content: space-between;
-		margin-bottom: 8px;
+
+	/* 分类图标栏 */
+	.category-bar {
+		flex-direction: row;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #f0f0f0;
+		justify-content: space-around;
 	}
-	
-	.name {
+
+	.category-item {
+		align-items: center;
+	}
+
+	.category-icon-wrap {
+		width: 32px;
+		height: 32px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.category-icon {
+		font-size: 24px;
+		color: #666666;
+	}
+
+	/* 消息列表 */
+	.message-list {
+		padding: 0 16px;
+	}
+
+	.message-item {
+		flex-direction: row;
+		padding: 16px 0;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #f0f0f0;
+		align-items: center;
+	}
+
+	.message-avatar {
+		width: 48px;
+		height: 48px;
+		border-radius: 24px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 12px;
+	}
+
+	.avatar-icon {
+		font-size: 24px;
+		color: #ffffff;
+	}
+
+	.avatar-text {
+		color: #ffffff;
+		font-size: 12px;
+		font-weight: bold;
+	}
+
+	.message-content {
+		flex: 1;
+	}
+
+	.message-top {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 4px;
+	}
+
+	.message-name {
 		font-size: 16px;
 		color: #333333;
 		font-weight: 500;
 	}
-	
-	.time {
+
+	.message-time {
 		font-size: 12px;
 		color: #999999;
 	}
-	
-	.bottom-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-	
-	.last-message {
+
+	.message-desc {
 		font-size: 14px;
-		color: #666666;
-		flex: 1;
-	}
-	
-	.badge {
-		background: #ff4d4f;
-		color: #ffffff;
-		font-size: 12px;
-		padding: 2px 8px;
-		border-radius: 10px;
-		min-width: 20px;
-		text-align: center;
-	}
-	
-	.empty {
-		padding: 100px 0;
-		text-align: center;
-	}
-	
-	.empty-text {
-		font-size: 14px;
-		color: #999999;
+		color: #888888;
+		lines: 1;
+		text-overflow: ellipsis;
 	}
 </style>

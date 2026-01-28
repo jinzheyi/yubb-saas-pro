@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Chat Individual Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#C8161D", // Deep red from the header
+              "background-light": "#F2F2F7",
+              "background-dark": "#000000",
+              "card-light": "#FFFFFF",
+              "card-dark": "#1C1C1E",
+              "pink-avatar": "#F197BC",
+            },
+            fontFamily: {
+              display: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "10px",
+            },
+          },
+        },
+      };
+    </script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }.toggle-checkbox:checked {
+            @apply bg-green-500;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            @apply translate-x-5;
+        }::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+<header class="bg-primary text-white sticky top-0 z-50">
+<div class="flex items-center justify-between h-12 px-4">
+<button class="flex items-center space-x-1 focus:outline-none">
+<span class="material-icons-outlined text-2xl">chevron_left</span>
+<span class="text-base">返回</span>
+</button>
+<h1 class="text-lg font-medium">聊天设置</h1>
+<div class="w-12"></div> 
+</div>
+</header>
+<main class="flex-1 overflow-y-auto pb-10">
+<section class="bg-card-light dark:bg-card-dark py-8 flex flex-col items-center">
+<div class="w-20 h-20 rounded-full bg-pink-avatar flex items-center justify-center text-white text-2xl font-medium mb-3">
+                胡婷
+            </div>
+<h2 class="text-xl font-bold mb-1">胡婷</h2>
+<p class="text-gray-500 dark:text-gray-400 text-sm">副部长（主持工作）</p>
+<div class="grid grid-cols-4 w-full mt-8 px-6 gap-4">
+<button class="flex flex-col items-center space-y-2 group">
+<div class="w-12 h-12 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-800 text-blue-500 group-active:scale-95 transition-transform">
+<span class="material-icons-outlined">image</span>
+</div>
+<span class="text-xs text-gray-600 dark:text-gray-400">图片</span>
+</button>
+<button class="flex flex-col items-center space-y-2 group">
+<div class="w-12 h-12 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-800 text-blue-500 group-active:scale-95 transition-transform">
+<span class="material-icons-outlined">folder_open</span>
+</div>
+<span class="text-xs text-gray-600 dark:text-gray-400">文件</span>
+</button>
+<button class="flex flex-col items-center space-y-2 group">
+<div class="w-12 h-12 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-800 text-blue-500 group-active:scale-95 transition-transform">
+<span class="material-icons-outlined">link</span>
+</div>
+<span class="text-xs text-gray-600 dark:text-gray-400">链接</span>
+</button>
+<button class="flex flex-col items-center space-y-2 group">
+<div class="w-12 h-12 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-800 text-blue-500 group-active:scale-95 transition-transform">
+<span class="material-icons-outlined">search</span>
+</div>
+<span class="text-xs text-gray-600 dark:text-gray-400">搜索</span>
+</button>
+</div>
+</section>
+<div class="mt-4 space-y-4">
+<div class="bg-card-light dark:bg-card-dark border-y border-gray-200 dark:border-gray-800">
+<button class="w-full flex items-center justify-between px-4 py-4 active:bg-gray-100 dark:active:bg-gray-800 transition-colors">
+<span class="text-base">添加新成员</span>
+<span class="material-icons-outlined text-gray-400 text-xl">chevron_right</span>
+</button>
+</div>
+<div class="bg-card-light dark:bg-card-dark border-y border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
+<div class="flex items-center justify-between px-4 py-4">
+<span class="text-base">气泡设置</span>
+<div class="flex items-center">
+<div class="w-6 h-6 bg-blue-300 rounded-lg mr-2"></div>
+<span class="material-icons-outlined text-gray-400 text-xl">chevron_right</span>
+</div>
+</div>
+<div class="flex items-center justify-between px-4 py-4">
+<span class="text-base">置顶</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+</label>
+</div>
+<div class="flex items-center justify-between px-4 py-4">
+<span class="text-base">新消息通知</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+</label>
+</div>
+</div>
+<div class="bg-card-light dark:bg-card-dark border-y border-gray-200 dark:border-gray-800">
+<button class="w-full flex items-center px-4 py-4 active:bg-gray-100 dark:active:bg-gray-800 transition-colors text-left">
+<span class="text-base">清空聊天记录</span>
+</button>
+</div>
+</div>
+<div class="mt-8 px-4 text-center">
+<p class="text-xs text-gray-400 dark:text-gray-500">
+                该联系人是您的直接下属
+            </p>
+</div>
+</main>
+<div class="h-8 flex items-end justify-center pb-2 bg-background-light dark:bg-background-dark">
+<div class="w-32 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full"></div>
+</div>
+
+</body></html>

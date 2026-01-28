@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>发起群聊 - Initiate Group Chat</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#C8161D", // Enterprise Red from screenshots
+                        "background-light": "#F7F8FA",
+                        "background-dark": "#121212",
+                        "card-light": "#FFFFFF",
+                        "card-dark": "#1E1E1E",
+                    },
+                    fontFamily: {
+                        display: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", "Arial", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "8px",
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .safe-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .ios-shadow {
+            box-shadow: 0 0.5px 0 0 rgba(0, 0, 0, 0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 font-display">
+<header class="bg-primary text-white sticky top-0 z-50 pt-10 pb-3 px-4 flex items-center justify-between shadow-md">
+<button class="flex items-center space-x-1 active:opacity-70 transition-opacity">
+<span class="material-icons text-2xl">chevron_left</span>
+<span class="text-lg">返回</span>
+</button>
+<h1 class="text-xl font-medium absolute left-1/2 -translate-x-1/2">发起群聊</h1>
+<div class="w-10"></div> 
+</header>
+<main class="pb-24">
+<div class="px-4 py-3 bg-white dark:bg-card-dark ios-shadow">
+<div class="relative">
+<span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+<input class="w-full bg-gray-100 dark:bg-gray-800 border-none rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/50 placeholder-gray-400" placeholder="搜索" type="text"/>
+</div>
+</div>
+<div class="mt-4 px-4 py-2 text-sm text-gray-500 dark:text-gray-400">选择已有的群</div>
+<div class="bg-white dark:bg-card-dark">
+<div class="flex items-center px-4 py-3 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
+<div class="w-10 h-10 rounded-full bg-orange-400 flex items-center justify-center text-white mr-3">
+<span class="material-icons text-xl">group</span>
+</div>
+<span class="flex-1 font-medium">我的群组</span>
+</div>
+<div class="flex items-center px-4 py-3 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
+<div class="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-white mr-3">
+<span class="material-icons text-xl">star</span>
+</div>
+<span class="flex-1 font-medium">我的关注</span>
+</div>
+<div class="flex items-center px-4 py-3 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
+<div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white mr-3">
+<span class="material-icons text-xl">account_tree</span>
+</div>
+<span class="flex-1 font-medium">组织结构</span>
+</div>
+<div class="flex items-center px-4 py-3 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
+<div class="w-10 h-10 rounded-full bg-teal-400 flex items-center justify-center text-white mr-3">
+<span class="material-icons text-xl">layers</span>
+</div>
+<span class="flex-1 font-medium">我的部门</span>
+</div>
+<div class="flex items-center px-4 py-3 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
+<div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white mr-3">
+<span class="material-icons text-xl">folder</span>
+</div>
+<span class="flex-1 font-medium">常用组</span>
+</div>
+<div class="flex items-center px-4 py-3 active:bg-gray-50 dark:active:bg-gray-800">
+<div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white mr-3">
+<span class="material-icons text-xl">groups</span>
+</div>
+<span class="flex-1 font-medium">我的下属</span>
+</div>
+</div>
+<div class="mt-4 px-4 py-2 text-sm text-gray-500 dark:text-gray-400">常用联系人</div>
+<div class="bg-white dark:bg-card-dark mb-4">
+<label class="flex items-center px-4 py-3 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800 cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-blue-400 flex items-center justify-center text-white font-medium mr-3">陶戈</div>
+<div class="flex-1">
+<div class="font-medium">陶戈</div>
+<div class="text-xs text-gray-400">高级经理</div>
+</div>
+<input class="w-5 h-5 rounded-full border-gray-300 text-primary focus:ring-primary" type="checkbox"/>
+</label>
+<label class="flex items-center px-4 py-3 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800 cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-pink-400 flex items-center justify-center text-white font-medium mr-3">子蒙</div>
+<div class="flex-1">
+<div class="font-medium">陈子蒙</div>
+<div class="text-xs text-gray-400">部门副总经理（主持工作）</div>
+</div>
+<input class="w-5 h-5 rounded-full border-gray-300 text-primary focus:ring-primary" type="checkbox"/>
+</label>
+<label class="flex items-center px-4 py-3 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800 cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-purple-400 flex items-center justify-center text-white font-medium mr-3">丹丹</div>
+<div class="flex-1">
+<div class="font-medium">刘丹丹</div>
+<div class="text-xs text-gray-400">行政经理</div>
+</div>
+<input class="w-5 h-5 rounded-full border-gray-300 text-primary focus:ring-primary" type="checkbox"/>
+</label>
+<label class="flex items-center px-4 py-3 active:bg-gray-50 dark:active:bg-gray-800 cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-[#E9629E] flex items-center justify-center text-white font-medium mr-3">胡婷</div>
+<div class="flex-1">
+<div class="font-medium">胡婷</div>
+<div class="text-xs text-gray-400">副部长（主持工作）</div>
+</div>
+<input checked="" class="w-5 h-5 rounded-full border-gray-300 text-primary focus:ring-primary" type="checkbox"/>
+</label>
+</div>
+</main>
+<div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-card-dark border-t border-gray-200 dark:border-gray-800 safe-bottom">
+<div class="px-4 py-3 flex items-center justify-between">
+<div class="text-gray-700 dark:text-gray-300 text-base">
+                已选择:<span class="font-medium">1</span> 人
+            </div>
+<button class="bg-primary/20 text-primary px-8 py-2 rounded-md font-medium text-sm transition-all active:scale-95">
+                确定(1/500)
+            </button>
+</div>
+<div class="h-6"></div>
+</div>
+
+</body></html>

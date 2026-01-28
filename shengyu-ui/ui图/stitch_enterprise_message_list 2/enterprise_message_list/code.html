@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Enterprise Message List</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#C8161D", // Deep red from the screenshots
+                        "background-light": "#F7F7F7",
+                        "background-dark": "#121212",
+                    },
+                    fontFamily: {
+                        display: ["SF Pro Display", "PingFang SC", "system-ui", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "12px",
+                    },
+                },
+            },
+        };
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('text-primary');
+                el.classList.add('text-gray-400');
+            });
+            event.currentTarget.classList.add('text-primary');
+            event.currentTarget.classList.remove('text-gray-400');
+        }
+    </script>
+<style>
+        body { font-family: 'SF Pro Display', 'PingFang SC', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .ios-blur { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 min-h-screen pb-20 select-none">
+<header class="bg-primary text-white sticky top-0 z-50 px-4 pt-12 pb-4 flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<h1 class="text-xl font-bold" id="pageTitle">消息</h1>
+<div class="flex gap-4">
+<span class="material-icons-outlined">qr_code_scanner</span>
+<span class="material-icons-outlined">chat_bubble_outline</span>
+</div>
+</div>
+<div class="relative flex items-center">
+<span class="material-icons-outlined absolute left-3 text-gray-400 text-sm">search</span>
+<input class="w-full bg-white/10 border-none rounded-lg py-2 pl-9 pr-4 text-white placeholder-white/60 focus:ring-0 text-sm" placeholder="搜索" type="text"/>
+</div>
+</header>
+<main>
+<div class="tab-content" id="messages">
+<div class="flex overflow-x-auto hide-scrollbar bg-white dark:bg-gray-900 px-4 py-3 gap-6 border-b border-gray-100 dark:border-gray-800">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400">schedule</span>
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400">person_outline</span>
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400">group</span>
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400">send</span>
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400">alternate_email</span>
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400">notifications_off</span>
+</div>
+<div class="bg-white dark:bg-gray-900">
+<div class="flex px-4 py-4 gap-4 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
+<div class="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
+<span class="material-icons-outlined text-white">menu_book</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline">
+<h3 class="font-medium text-gray-900 dark:text-gray-100 truncate">新文档阅读提醒</h3>
+<span class="text-xs text-gray-400">昨天 14:25</span>
+</div>
+<p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">您有新的待阅文档(基层动态)：省财...</p>
+</div>
+</div>
+<div class="flex px-4 py-4 gap-4 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
+<div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+<span class="material-icons-outlined text-white">swap_horiz</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline">
+<h3 class="font-medium text-gray-900 dark:text-gray-100 truncate">公文收发</h3>
+<span class="text-xs text-gray-400">2026-01-22</span>
+</div>
+<p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">有流程抄送给您：省财信科技公司收...</p>
+</div>
+</div>
+<div class="flex px-4 py-4 gap-4 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
+<div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+<span class="material-icons-outlined text-white">undo</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline">
+<h3 class="font-medium text-gray-900 dark:text-gray-100 truncate">流程退回提醒</h3>
+<span class="text-xs text-gray-400">2026-01-12</span>
+</div>
+<p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">省财信科技公司请休假审批-朱述勇-...</p>
+</div>
+</div>
+<div class="flex px-4 py-4 gap-4 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
+<div class="w-12 h-12 rounded-full bg-orange-400 flex items-center justify-center flex-shrink-0">
+<span class="material-icons-outlined text-white">mail_outline</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline">
+<h3 class="font-medium text-gray-900 dark:text-gray-100 truncate">邮件提醒</h3>
+<span class="text-xs text-gray-400">2026-01-09</span>
+</div>
+<p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">财信科技制度汇编2025 (20260109)...</p>
+</div>
+</div>
+<div class="flex px-4 py-4 gap-4 active:bg-gray-50 dark:active:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
+<div class="w-12 h-12 rounded-full bg-blue-400 flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">
+                        胡婷
+                    </div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline">
+<h3 class="font-medium text-gray-900 dark:text-gray-100 truncate">胡婷</h3>
+<span class="text-xs text-gray-400">2025-12-10</span>
+</div>
+<p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">[图片]</p>
+</div>
+</div>
+</div>
+</div>
+<div class="tab-content hidden" id="contacts">
+<div class="bg-white dark:bg-gray-900">
+<div class="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-4">
+<div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center text-white">
+<span class="material-icons-outlined">smartphone</span>
+</div>
+<span class="font-medium">手机联系人</span>
+</div>
+<div class="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-4">
+<div class="w-10 h-10 bg-orange-400 rounded-lg flex items-center justify-center text-white">
+<span class="material-icons-outlined">groups</span>
+</div>
+<span class="font-medium">我的群组</span>
+</div>
+<div class="h-4 bg-background-light dark:bg-gray-800"></div>
+<div class="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-4">
+<div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center text-white">
+<span class="material-icons-outlined">account_tree</span>
+</div>
+<span class="font-medium">组织结构</span>
+</div>
+<div class="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-4">
+<div class="w-10 h-10 bg-blue-400 rounded-lg flex items-center justify-center text-white">
+<span class="material-icons-outlined">layers</span>
+</div>
+<span class="font-medium">我的部门</span>
+</div>
+</div>
+</div>
+<div class="tab-content hidden bg-white dark:bg-gray-900" id="workbench">
+<div class="p-4">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-lg font-bold">办公流程</h2>
+<span class="material-icons-outlined text-gray-400 text-sm">expand_less</span>
+</div>
+<div class="grid grid-cols-4 gap-y-6 text-center">
+<div class="flex flex-col items-center gap-2 relative">
+<div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-500 rounded-xl flex items-center justify-center text-white">
+<span class="material-icons-outlined">list_alt</span>
+</div>
+<span class="text-xs">待办流程</span>
+<span class="absolute top-0 right-2 bg-primary text-[10px] text-white px-1.5 rounded-full border-2 border-white dark:border-gray-900">99+</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 bg-gradient-to-br from-teal-400 to-teal-500 rounded-xl flex items-center justify-center text-white">
+<span class="material-icons-outlined">task_alt</span>
+</div>
+<span class="text-xs">已办流程</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 bg-gradient-to-br from-pink-400 to-pink-500 rounded-xl flex items-center justify-center text-white">
+<span class="material-icons-outlined">fact_check</span>
+</div>
+<span class="text-xs">办结流程</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-500 rounded-xl flex items-center justify-center text-white">
+<span class="material-icons-outlined">person_pin</span>
+</div>
+<span class="text-xs">我发起的</span>
+</div>
+</div>
+</div>
+<div class="h-4 bg-background-light dark:bg-gray-800"></div>
+<div class="p-4">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-lg font-bold">常用功能</h2>
+<span class="material-icons-outlined text-gray-400 text-sm">expand_less</span>
+</div>
+<div class="grid grid-cols-4 gap-y-8 text-center">
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 bg-orange-400 rounded-xl flex items-center justify-center text-white">
+<span class="material-icons-outlined">campaign</span>
+</div>
+<span class="text-xs">通知公告</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 bg-teal-400 rounded-xl flex items-center justify-center text-white">
+<span class="material-icons-outlined">inbox</span>
+</div>
+<span class="text-xs">文档</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 bg-green-400 rounded-xl flex items-center justify-center text-white">
+<span class="material-icons-outlined">groups</span>
+</div>
+<span class="text-xs">会议</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 bg-blue-400 rounded-xl flex items-center justify-center text-white">
+<span class="material-icons-outlined">event</span>
+</div>
+<span class="text-xs">日程</span>
+</div>
+</div>
+</div>
+</div>
+<div class="tab-content hidden" id="profile">
+<div class="bg-primary text-white p-6 pb-12 flex flex-col gap-6">
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-full bg-blue-400 border-2 border-white flex items-center justify-center text-xl font-bold">
+                        述勇
+                    </div>
+<div class="flex-1">
+<div class="flex items-center gap-2">
+<h2 class="text-xl font-bold">朱述勇</h2>
+<span class="material-icons-outlined text-sm">qr_code</span>
+</div>
+<p class="text-sm opacity-80 mt-1">软件研发事业部 | 开发工程师</p>
+</div>
+</div>
+<div class="text-sm opacity-80 border-t border-white/20 pt-4">
+                    添加工作状态...
+                </div>
+</div>
+<div class="bg-white dark:bg-gray-900 mt-[-20px] rounded-t-3xl shadow-lg pt-4">
+<div class="px-6 py-4 flex items-center gap-4 active:bg-gray-50 dark:active:bg-gray-800">
+<div class="w-10 h-10 bg-teal-400 rounded-lg flex items-center justify-center text-white">
+<span class="material-icons-outlined">palette</span>
+</div>
+<span class="flex-1 font-medium">切换主题</span>
+<span class="material-icons-outlined text-gray-400">chevron_right</span>
+</div>
+<div class="px-6 py-4 flex items-center gap-4 active:bg-gray-50 dark:active:bg-gray-800">
+<div class="w-10 h-10 bg-orange-400 rounded-lg flex items-center justify-center text-white">
+<span class="material-icons-outlined">star_outline</span>
+</div>
+<span class="flex-1 font-medium">收藏</span>
+<span class="material-icons-outlined text-gray-400">chevron_right</span>
+</div>
+<div class="px-6 py-4 flex items-center gap-4 active:bg-gray-50 dark:active:bg-gray-800">
+<div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center text-white">
+<span class="material-icons-outlined">crop_free</span>
+</div>
+<span class="flex-1 font-medium">扫一扫</span>
+<span class="material-icons-outlined text-gray-400">chevron_right</span>
+</div>
+<div class="px-6 py-4 flex items-center gap-4 active:bg-gray-50 dark:active:bg-gray-800">
+<div class="w-10 h-10 bg-orange-400 rounded-lg flex items-center justify-center text-white">
+<span class="material-icons-outlined">settings</span>
+</div>
+<span class="flex-1 font-medium">设置</span>
+<span class="material-icons-outlined text-gray-400">chevron_right</span>
+</div>
+</div>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 border-t border-gray-200 dark:border-gray-800 px-2 py-2 flex justify-around ios-blur">
+<button class="nav-item flex flex-col items-center gap-0.5 text-primary" onclick="switchTab('messages')">
+<span class="material-icons-outlined">chat_bubble</span>
+<span class="text-[10px]">消息</span>
+</button>
+<button class="nav-item flex flex-col items-center gap-0.5 text-gray-400" onclick="switchTab('contacts')">
+<span class="material-icons-outlined">person_search</span>
+<span class="text-[10px]">通讯录</span>
+</button>
+<button class="nav-item flex flex-col items-center gap-0.5 text-gray-400" onclick="switchTab('workbench')">
+<span class="material-icons-outlined">desktop_windows</span>
+<span class="text-[10px]">工作台</span>
+</button>
+<button class="nav-item flex flex-col items-center gap-0.5 text-gray-400" onclick="switchTab('profile')">
+<span class="material-icons-outlined">person</span>
+<span class="text-[10px]">我</span>
+</button>
+</nav>
+<div class="fixed bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-gray-300 dark:bg-gray-700 rounded-full pointer-events-none"></div>
+
+</body></html>
