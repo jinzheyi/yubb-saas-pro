@@ -1,0 +1,410 @@
+<template>
+	<view class="page">
+		<!-- 状态栏占位 -->
+		<view class="status-bar"></view>
+		
+		<!-- 头部导航 -->
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xe600;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<view class="header-title-wrap">
+				<text class="header-title">{{ name }}</text>
+				<text class="header-status">{{ t('chat.online') }}</text>
+			</view>
+			<view class="header-right">
+				<text class="iconfont header-icon">&#xea74;</text>
+				<text class="iconfont header-icon" @click="handleToSettings">&#xea97;</text>
+			</view>
+		</view>
+
+		<!-- 聊天内容区域 -->
+		<scroll-view class="chat-content" scroll-y="true" :scroll-into-view="lastMessageId">
+			<!-- 水印层 -->
+			<view class="watermark-layer">
+				<view v-for="i in 12" :key="i" class="watermark-item">
+					<text class="watermark-text">{{ watermark }}</text>
+				</view>
+			</view>
+
+			<view class="message-list">
+				<view v-for="(msg, index) in messages" :key="index" :id="'msg-' + index" class="message-group">
+					<view v-if="msg.showTime" class="time-stamp">
+						<text class="time-text">{{ msg.time }}</text>
+					</view>
+					
+					<view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other']">
+						<view class="avatar" :style="{ backgroundColor: msg.avatarBg }">
+							<text class="avatar-text">{{ msg.avatarText }}</text>
+						</view>
+						<view class="message-bubble-wrap">
+							<view class="message-bubble">
+								<text class="message-text">{{ msg.content }}</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+
+		<!-- 底部输入区域 -->
+		<view class="footer">
+			<view class="input-row">
+				<text class="iconfont footer-icon">&#xea89;</text>
+				<view class="input-box">
+					<input 
+						class="chat-input" 
+						v-model="inputText" 
+						:placeholder="t('chat.inputPlaceholder')"
+						@confirm="handleSend"
+					/>
+				</view>
+				<text class="iconfont footer-icon" :style="{ color: inputText ? '#1677FF' : '#999' }" @click="handleSend">&#xea73;</text>
+			</view>
+			<view class="action-row">
+				<text class="iconfont action-icon">&#xea95;</text>
+				<text class="iconfont action-icon">&#xea87;</text>
+				<text class="iconfont action-icon">&#xea8f;</text>
+				<text class="iconfont action-icon">&#xea9e;</text>
+				<text class="iconfont action-icon add-icon" @click="toggleMenu">&#xea9d;</text>
+			</view>
+			
+			<!-- 功能菜单 -->
+			<view v-if="showMenu" class="features-menu">
+				<view class="feature-item" v-for="(item, index) in featureList" :key="index" @click="handleFeature(item)">
+					<view class="feature-icon-wrap" :style="{ backgroundColor: item.bg }">
+						<text class="iconfont feature-icon">{{ item.icon }}</text>
+					</view>
+					<text class="feature-name">{{ t(item.nameKey) }}</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+	const name = ref('胡婷')
+	const watermark = ref('朱述勇 5653')
+	const inputText = ref('')
+	const showMenu = ref(false)
+	const lastMessageId = ref('')
+
+	const messages = ref([
+		{
+			content: '公积金9月调基了，7-8月的补缴还没入账，在公积金里还看不到',
+			isSelf: false,
+			time: '2025-10-11 16:38',
+			showTime: true,
+			avatarText: '胡婷',
+			avatarBg: '#F197BC'
+		},
+		{
+			content: '收到',
+			isSelf: true,
+			time: '2025-11-10 16:33',
+			showTime: true,
+			avatarText: '述勇',
+			avatarBg: '#5FB6F7'
+		}
+	])
+
+	const featureList = [
+		{ icon: '\uea72', bg: '#FFB347', nameKey: 'chat.features.location' },
+		{ icon: '\uea96', bg: '#62D4A1', nameKey: 'chat.features.file' },
+		{ icon: '\uea83', bg: '#F9C349', nameKey: 'chat.features.card' },
+		{ icon: '\uea90', bg: '#FFB347', nameKey: 'chat.features.fav' },
+		{ icon: '\uea89', bg: '#5FB6F7', nameKey: 'chat.features.voice' },
+		{ icon: '\uea84', bg: '#62D4A1', nameKey: 'chat.features.paint' }
+	]
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function handleToSettings() {
+		uni.navigateTo({
+			url: '/pages/message/chat-settings'
+		})
+	}
+
+	function handleSend() {
+		if (!inputText.value.trim()) return
+		messages.value.push({
+			content: inputText.value,
+			isSelf: true,
+			time: new Date().toLocaleString(),
+			showTime: false,
+			avatarText: '述勇',
+			avatarBg: '#5FB6F7'
+		})
+		inputText.value = ''
+		scrollToBottom()
+	}
+
+	function toggleMenu() {
+		showMenu.value = !showMenu.value
+	}
+
+	function handleFeature(item : any) {
+		uni.showToast({
+			title: t(item.nameKey) + '功能开发中',
+			icon: 'none'
+		})
+	}
+
+	function scrollToBottom() {
+		setTimeout(() => {
+			lastMessageId.value = 'msg-' + (messages.value.length - 1)
+		}, 100)
+	}
+</script>
+
+<style>
+	.page {
+		flex: 1;
+		background-color: #F2F2F7;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #1677FF;
+	}
+
+	.header {
+		background-color: #1677FF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #ffffff;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #ffffff;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title-wrap {
+		flex: 1;
+		align-items: center;
+	}
+
+	.header-title {
+		color: #ffffff;
+		font-size: 17px;
+		font-weight: bold;
+	}
+
+	.header-status {
+		color: rgba(255, 255, 255, 0.8);
+		font-size: 10px;
+	}
+
+	.header-right {
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-end;
+		width: 80px;
+	}
+
+	.header-icon {
+		color: #ffffff;
+		font-size: 22px;
+		margin-left: 16px;
+	}
+
+	.chat-content {
+		flex: 1;
+		position: relative;
+	}
+
+	.watermark-layer {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		flex-direction: row;
+		flex-wrap: wrap;
+		justify-content: space-around;
+		align-content: space-around;
+		opacity: 0.05;
+		pointer-events: none;
+		transform: rotate(-25deg);
+	}
+
+	.watermark-item {
+		padding: 40px;
+	}
+
+	.watermark-text {
+		font-size: 14px;
+		color: #000000;
+		font-weight: bold;
+	}
+
+	.message-list {
+		padding: 16px;
+	}
+
+	.time-stamp {
+		align-items: center;
+		margin-bottom: 16px;
+	}
+
+	.time-text {
+		font-size: 12px;
+		color: #999999;
+	}
+
+	.message-item {
+		flex-direction: row;
+		margin-bottom: 20px;
+	}
+
+	.message-self {
+		flex-direction: row-reverse;
+	}
+
+	.avatar {
+		width: 40px;
+		height: 40px;
+		border-radius: 20px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.avatar-text {
+		color: #ffffff;
+		font-size: 12px;
+	}
+
+	.message-bubble-wrap {
+		flex: 1;
+		margin: 0 12px;
+		align-items: flex-start;
+	}
+
+	.message-self .message-bubble-wrap {
+		align-items: flex-end;
+	}
+
+	.message-bubble {
+		background-color: #ffffff;
+		padding: 10px 14px;
+		border-radius: 12px;
+		max-width: 80%;
+	}
+
+	.message-self .message-bubble {
+		background-color: #B8E4FF;
+	}
+
+	.message-text {
+		font-size: 14px;
+		color: #333333;
+		line-height: 1.5;
+	}
+
+	.footer {
+		background-color: #ffffff;
+		border-top-width: 0.5px;
+		border-top-color: #e5e5e5;
+		padding-bottom: env(safe-area-inset-bottom);
+	}
+
+	.input-row {
+		flex-direction: row;
+		align-items: center;
+		padding: 8px 12px;
+	}
+
+	.input-box {
+		flex: 1;
+		background-color: #F8F8F8;
+		border-radius: 6px;
+		margin: 0 10px;
+		height: 36px;
+		justify-content: center;
+		padding: 0 10px;
+	}
+
+	.chat-input {
+		font-size: 14px;
+		color: #333333;
+	}
+
+	.footer-icon {
+		font-size: 24px;
+		color: #666666;
+	}
+
+	.action-row {
+		flex-direction: row;
+		justify-content: space-around;
+		align-items: center;
+		padding: 4px 12px 12px 12px;
+	}
+
+	.action-icon {
+		font-size: 24px;
+		color: #666666;
+	}
+
+	.add-icon {
+		color: #1677FF;
+	}
+
+	.features-menu {
+		background-color: #F8F8F8;
+		padding: 20px;
+		flex-direction: row;
+		flex-wrap: wrap;
+		border-top-width: 0.5px;
+		border-top-color: #e5e5e5;
+	}
+
+	.feature-item {
+		width: 25%;
+		align-items: center;
+		margin-bottom: 20px;
+	}
+
+	.feature-icon-wrap {
+		width: 56px;
+		height: 56px;
+		border-radius: 14px;
+		justify-content: center;
+		align-items: center;
+		margin-bottom: 8px;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+	}
+
+	.feature-icon {
+		font-size: 28px;
+		color: #ffffff;
+	}
+
+	.feature-name {
+		font-size: 12px;
+		color: #666666;
+	}
+</style>

@@ -1,110 +1,133 @@
 <template>
 	<view class="login-container">
-		<!-- Logo 和标题 -->
+		<!-- 背景装饰 -->
+		<view class="bg-decoration">
+			<view class="circle circle-1"></view>
+			<view class="circle circle-2"></view>
+		</view>
+
+		<!-- 头部区域 -->
 		<view class="header">
-			<image class="logo" src="/static/logo.png"></image>
+			<view class="logo-wrap">
+				<image class="logo" src="/static/logo.jpg" mode="aspectFit"></image>
+			</view>
 			<text class="title">{{ t('login.welcome') }}</text>
-			<text class="subtitle">{{ t('login.message') }}</text>
+			<text class="subtitle">Yubb SaaS Pro 数字化管理平台</text>
 		</view>
 		
-		<!-- 语言切换 -->
-		<view class="locale-switch">
-			<text 
-				v-for="item in availableLocales" 
-				:key="item.lang"
-				@click="handleSwitchLocale(item.lang)"
-				:class="['locale-item', { active: locale === item.lang }]"
-			>
-				{{ item.name }}
-			</text>
-		</view>
-		
-		<!-- 登录表单 -->
-		<view class="form-container">
-			<!-- 账号登录 -->
-			<view v-if="loginType === 'account'">
-				
-				<view class="form-item">
-					<text class="label">{{ t('login.username') }}</text>
-					<input 
-						class="input" 
-						v-model="username" 
-						:placeholder="t('login.usernamePlaceholder')"
-					/>
+		<!-- 登录卡片 -->
+		<view class="login-card">
+			<!-- 登录方式切换 -->
+			<view class="tabs">
+				<view 
+					:class="['tab-item', { active: loginType === 'account' }]" 
+					@click="loginType = 'account'"
+				>
+					<text :class="['tab-text', { active: loginType === 'account' }]">{{ t('login.btnAccount') }}</text>
+					<view v-if="loginType === 'account'" class="active-line"></view>
 				</view>
-				
-				<view class="form-item">
-					<text class="label">{{ t('login.password') }}</text>
-					<input 
-						class="input" 
-						v-model="password" 
-						type="password"
-						:placeholder="t('login.passwordPlaceholder')"
-						@confirm="handleLogin"
-					/>
-				</view>
-				
-				<!-- 记住我 - 仅账号登录显示 -->
-				<view class="remember-row">
-					<checkbox-group @change="handleRememberChange">
-						<label>
-							<checkbox :checked="rememberMe" />
-							<text class="remember-text">{{ t('login.remember') }}</text>
-						</label>
-					</checkbox-group>
+				<view 
+					:class="['tab-item', { active: loginType === 'mobile' }]" 
+					@click="loginType = 'mobile'"
+				>
+					<text :class="['tab-text', { active: loginType === 'mobile' }]">{{ t('login.btnMobile') }}</text>
+					<view v-if="loginType === 'mobile'" class="active-line"></view>
 				</view>
 			</view>
-			
-			<!-- 手机号登录 - 不显示租户名称 -->
-			<view v-else>
-				<view class="form-item">
-					<text class="label">{{ t('login.mobileNumber') }}</text>
-					<input 
-						class="input" 
-						v-model="mobile" 
-						type="number"
-						:placeholder="t('login.mobileNumberPlaceholder')"
-					/>
+
+			<!-- 表单区域 -->
+			<view class="form-body">
+				<!-- 账号登录 -->
+				<view v-if="loginType === 'account'">
+					<view class="input-item">
+						<text class="iconfont input-icon">&#xea97;</text>
+						<input 
+							class="input" 
+							v-model="username" 
+							:placeholder="t('login.usernamePlaceholder')"
+							placeholder-class="placeholder"
+						/>
+					</view>
+					
+					<view class="input-item">
+						<text class="iconfont input-icon">&#xea8d;</text>
+						<input 
+							class="input" 
+							v-model="password" 
+							type="password"
+							:placeholder="t('login.passwordPlaceholder')"
+							placeholder-class="placeholder"
+							@confirm="handleLogin"
+						/>
+					</view>
+					
+					<view class="action-row">
+						<checkbox-group @change="handleRememberChange">
+							<label class="remember-label">
+								<checkbox :checked="rememberMe" color="#1677FF" style="transform:scale(0.7)" />
+								<text class="remember-text">{{ t('login.remember') }}</text>
+							</label>
+						</checkbox-group>
+						<text class="forgot-text">忘记密码?</text>
+					</view>
 				</view>
 				
-				<view class="form-item">
-					<text class="label">{{ t('login.code') }}</text>
-					<view class="code-input-wrapper">
+				<!-- 手机号登录 -->
+				<view v-else>
+					<view class="input-item">
+						<text class="iconfont input-icon">&#xea94;</text>
 						<input 
-							class="input code-input" 
+							class="input" 
+							v-model="mobile" 
+							type="number"
+							:placeholder="t('login.mobileNumberPlaceholder')"
+							placeholder-class="placeholder"
+						/>
+					</view>
+					
+					<view class="input-item">
+						<text class="iconfont input-icon">&#xea8b;</text>
+						<input 
+							class="input" 
 							v-model="smsCode" 
 							type="number"
 							:placeholder="t('login.codePlaceholder')"
+							placeholder-class="placeholder"
 							@confirm="handleLogin"
 						/>
-						<button 
-							class="code-btn" 
-							:disabled="codeCountdown > 0"
-							@click="handleSendCode"
-						>
-							{{ codeCountdown > 0 ? codeCountdown + 's' : t('login.getSmsCode') }}
-						</button>
+						<view class="code-btn-wrap" @click="handleSendCode">
+							<text :class="['code-btn-text', { disabled: codeCountdown > 0 }]">
+								{{ codeCountdown > 0 ? codeCountdown + 's' : t('login.getSmsCode') }}
+							</text>
+						</view>
 					</view>
 				</view>
-			</view>
-			
-			<!-- 登录按钮 -->
-			<button 
-				class="login-btn" 
-				:loading="loading"
-				@click="handleLogin"
-			>
-				{{ t('common.login') }}
-			</button>
-			
-			<!-- 切换登录方式 -->
-			<view class="switch-row">
-				<text 
-					class="switch-text" 
-					@click="switchLoginType"
+				
+				<!-- 登录按钮 -->
+				<button 
+					class="login-btn" 
+					:loading="loading"
+					@click="handleLogin"
 				>
-					{{ loginType === 'account' ? t('login.btnMobile') : t('login.btnAccount') }}
+					<text class="login-btn-text">{{ t('common.login') }}</text>
+				</button>
+			</view>
+		</view>
+
+		<!-- 底部辅助 -->
+		<view class="footer">
+			<view class="locale-switch">
+				<text 
+					v-for="item in availableLocales" 
+					:key="item.lang"
+					@click="handleSwitchLocale(item.lang)"
+					:class="['locale-item', { active: locale === item.lang }]"
+				>
+					{{ item.name }}
 				</text>
+			</view>
+			<view class="copyright">
+				<text class="copyright-text">Copyright © 2026 Shengyu Tech. All Rights Reserved.</text>
 			</view>
 		</view>
 		
@@ -133,7 +156,6 @@
 	const loginType = ref<string>('account')
 	
 	// 表单数据
-	const tenantName = ref<string>(DEFAULT_TENANT_NAME)
 	const username = ref<string>('jin_zheyicn@qq.com')
 	const password = ref<string>('123456')
 	const mobile = ref<string>('')
@@ -143,24 +165,9 @@
 	// 状态
 	const loading = ref<boolean>(false)
 	const codeCountdown = ref<number>(0)
-	const captchaVerification = ref<string>('') // 验证码验证结果
-	
-	// 验证码组件引用
+	const captchaVerification = ref<string>('') 
 	const captchaRef = ref<any>(null)
-	
-	// 验证码配置（严格参考 PC 端）
-	// PC 端：captchaEnable: import.meta.env.VITE_APP_CAPTCHA_ENABLE
-	// 判断逻辑：if (loginData.captchaEnable === 'false') 则直接登录
-	const captchaEnable = ref<string>(CAPTCHA_ENABLE) // 'true' 启用，'false' 禁用
-	
-	// 切换登录方式
-	function switchLoginType() {
-		loginType.value = loginType.value === 'account' ? 'mobile' : 'account'
-		// 切换时清空验证码倒计时
-		if (loginType.value === 'account') {
-			codeCountdown.value = 0
-		}
-	}
+	const captchaEnable = ref<string>(CAPTCHA_ENABLE) 
 	
 	// 记住我
 	function handleRememberChange(e: any) {
@@ -169,151 +176,59 @@
 	
 	// 发送验证码
 	async function handleSendCode() {
-		// 验证手机号
-		if (mobile.value === '') {
-			uni.showToast({
-				title: t('login.mobileNumberPlaceholder'),
-				icon: 'none'
-			})
-			return
-		}
-		
-		// 简单的手机号格式验证
-		const phoneReg = /^1[3-9]\d{9}$/
-		if (!phoneReg.test(mobile.value)) {
-			uni.showToast({
-				title: t('login.mobileNumberPlaceholder'),
-				icon: 'none'
-			})
+		if (codeCountdown.value > 0) return
+		if (!/^1[3-9]\d{9}$/.test(mobile.value)) {
+			uni.showToast({ title: t('login.mobileNumberPlaceholder'), icon: 'none' })
 			return
 		}
 		
 		try {
-			await sendSmsCode({
-				mobile: mobile.value,
-				scene: 21 // 登录场景
-			})
-			
-			uni.showToast({
-				title: t('login.SmsSendMsg'),
-				icon: 'success'
-			})
-			
-			// 开始倒计时（使用配置的倒计时时间）
+			await sendSmsCode({ mobile: mobile.value, scene: 21 })
+			uni.showToast({ title: t('login.SmsSendMsg'), icon: 'success' })
 			codeCountdown.value = SMS_CODE_COUNTDOWN
 			const timer = setInterval(() => {
 				codeCountdown.value--
-				if (codeCountdown.value <= 0) {
-					clearInterval(timer)
-				}
+				if (codeCountdown.value <= 0) clearInterval(timer)
 			}, 1000)
-		} catch (e) {
-			console.error('发送验证码失败', e)
-		}
+		} catch (e) {}
 	}
 	
-	// 获取租户ID（仅账号登录需要）
-	async function fetchTenantId() {
-		try {
-			const tenantId = await getTenantIdByName(tenantName.value)
-			setTenantId(tenantId)
-		} catch (e) {
-			console.error('获取租户ID失败', e)
-			uni.showToast({
-				title: '租户名称不存在',
-				icon: 'none'
-			})
-			throw e
-		}
-	}
-	
-	// 登录按钮点击（严格参考 PC 端 getCode 方法）
+	// 登录逻辑
 	async function handleLogin() {
-		// 验证表单
 		if (loginType.value === 'account') {
-			// 账号登录验证
-			if (username.value === '') {
-				uni.showToast({
-					title: t('login.usernamePlaceholder'),
-					icon: 'none'
-				})
+			if (!username.value || !password.value) {
+				uni.showToast({ title: '请输入账号和密码', icon: 'none' })
 				return
 			}
-			if (password.value === '') {
-				uni.showToast({
-					title: t('login.passwordPlaceholder'),
-					icon: 'none'
-				})
-				return
-			}
-			
-			// 严格参考 PC 端验证码逻辑
-			// PC 端代码：
-			// const getCode = async () => {
-			//   if (loginData.captchaEnable === 'false') {
-			//     await handleLogin({})
-			//   } else {
-			//     verify.value.show()
-			//   }
-			// }
-			
-			// 情况一，未开启：则直接登录
 			if (captchaEnable.value === 'false') {
 				await doLogin('')
 			} else {
-				// 情况二，已开启：则展示验证码；只有完成验证码的情况，才进行登录
-				if (captchaRef.value) {
-					captchaRef.value.show()
-				}
+				captchaRef.value?.show()
 			}
 		} else {
-			// 手机号登录验证
-			if (mobile.value === '') {
-				uni.showToast({
-					title: t('login.mobileNumberPlaceholder'),
-					icon: 'none'
-				})
+			if (!mobile.value || !smsCode.value) {
+				uni.showToast({ title: '请输入手机号和验证码', icon: 'none' })
 				return
 			}
-			if (smsCode.value === '') {
-				uni.showToast({
-					title: t('login.codePlaceholder'),
-					icon: 'none'
-				})
-				return
-			}
-			
-			// 手机号登录不需要验证码，直接登录
 			await doLogin('')
 		}
 	}
 	
-	// 验证码验证成功
 	function handleCaptchaSuccess(data: any) {
-		captchaVerification.value = data.captchaVerification
 		doLogin(data.captchaVerification)
 	}
 	
-	// 验证码验证失败
 	function handleCaptchaFail() {
-		console.log('验证码验证失败')
-		uni.showToast({
-			title: t('captcha.fail'),
-			icon: 'none'
-		})
+		uni.showToast({ title: t('captcha.fail'), icon: 'none' })
 	}
 	
-	// 切换语言
 	function handleSwitchLocale(newLocale: LocaleType) {
 		switchLocale(newLocale)
 	}
 	
-	// 执行登录
 	async function doLogin(verification: string) {
 		loading.value = true
-		
 		try {
-			// 登录（后端已做用户兼容多租户处理，不需要前端获取租户ID）
 			let tokenData: any
 			if (loginType.value === 'account') {
 				tokenData = await login({
@@ -327,203 +242,273 @@
 					code: smsCode.value
 				})
 			}
-			
-			// 保存 token（包含 tenantId 和 deptId）
 			setToken(tokenData)
+			const userInfo = await getPermissionInfo()
+			if (userInfo) setUserInfo(userInfo)
 			
-			// 加载用户信息（从后端获取）
-			await loadUserInfo()
-			
-			// 记住我（仅账号登录）
 			if (loginType.value === 'account' && rememberMe.value) {
-				uni.setStorageSync('REMEMBER_ME', JSON.stringify({
-					username: username.value
-				}))
-			} else if (loginType.value === 'account' && !rememberMe.value) {
+				uni.setStorageSync('REMEMBER_ME', JSON.stringify({ username: username.value }))
+			} else if (loginType.value === 'account') {
 				uni.removeStorageSync('REMEMBER_ME')
 			}
 			
-			// 登录成功提示
-			uni.showToast({
-				title: t('sys.login.loginSuccessTitle'),
-				icon: 'success',
-				duration: 1500
-			})
-			
-			// 延迟跳转，让用户看到成功提示
+			uni.showToast({ title: t('sys.login.loginSuccessTitle'), icon: 'success' })
 			setTimeout(() => {
-				uni.switchTab({
-					url: '/pages/message/message'
-				})
+				uni.switchTab({ url: '/pages/message/message' })
 			}, 1500)
 		} catch (e) {
-			console.error('登录失败', e)
-			// 错误已在 request.uts 中处理，这里不需要再次提示
 		} finally {
 			loading.value = false
 		}
 	}
 	
-	// 加载用户信息
-	async function loadUserInfo() {
-		try {
-			// 调用获取用户信息接口
-			const userInfo = await getPermissionInfo()
-			if (userInfo) {
-				// 保存用户信息、权限、角色
-				setUserInfo(userInfo)
-			}
-		} catch (e) {
-			console.error('加载用户信息失败', e)
-		}
-	}
-	
-	// 页面加载时恢复记住的信息
 	onMounted(() => {
 		const rememberData = uni.getStorageSync('REMEMBER_ME')
-		if (rememberData != null && rememberData != '') {
+		if (rememberData) {
 			try {
 				const data = JSON.parse(rememberData)
-				tenantName.value = data.tenantName || DEFAULT_TENANT_NAME
 				username.value = data.username || ''
 				rememberMe.value = true
-			} catch (e) {
-				console.error('解析记住的登录信息失败', e)
-			}
+			} catch (e) {}
 		}
 	})
 </script>
 
 <style>
 	.login-container {
-		min-height: 100vh;
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		padding: 40px 30px;
-	}
-	
-	.header {
-		text-align: center;
-		margin-bottom: 60px;
-	}
-	
-	.logo {
-		width: 100px;
-		height: 100px;
-		margin-bottom: 20px;
-	}
-	
-	.title {
-		font-size: 28px;
-		color: #ffffff;
-		font-weight: bold;
-		margin-bottom: 10px;
-	}
-	
-	.subtitle {
-		font-size: 14px;
-		color: rgba(255, 255, 255, 0.8);
-	}
-	
-	.locale-switch {
+		flex: 1;
+		background-color: #f0f2f5;
 		display: flex;
+		flex-direction: column;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.bg-decoration {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 300px;
+		background: linear-gradient(180deg, #1677FF 0%, #4096ff 100%);
+		border-bottom-left-radius: 40px;
+		border-bottom-right-radius: 40px;
+	}
+
+	.circle {
+		position: absolute;
+		background-color: rgba(255, 255, 255, 0.1);
+		border-radius: 100px;
+	}
+
+	.circle-1 {
+		width: 150px;
+		height: 150px;
+		top: -50px;
+		right: -30px;
+	}
+
+	.circle-2 {
+		width: 80px;
+		height: 80px;
+		top: 100px;
+		left: -20px;
+	}
+
+	.header {
+		margin-top: 60px;
+		align-items: center;
+		z-index: 1;
+	}
+
+	.logo-wrap {
+		width: 80px;
+		height: 80px;
+		background-color: #ffffff;
+		border-radius: 20px;
 		justify-content: center;
 		align-items: center;
-		margin-bottom: 30px;
-		gap: 20px;
+		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+		margin-bottom: 16px;
 	}
-	
-	.locale-item {
-		font-size: 14px;
-		color: rgba(255, 255, 255, 0.7);
-		padding: 5px 15px;
-		border-radius: 15px;
-		transition: all 0.3s;
+
+	.logo {
+		width: 60px;
+		height: 60px;
 	}
-	
-	.locale-item.active {
+
+	.title {
+		font-size: 24px;
 		color: #ffffff;
-		background: rgba(255, 255, 255, 0.2);
 		font-weight: bold;
-	}
-	
-	.form-container {
-		background: #ffffff;
-		border-radius: 20px;
-		padding: 30px;
-	}
-	
-	.form-item {
-		margin-bottom: 20px;
-	}
-	
-	.label {
-		display: block;
-		font-size: 14px;
-		color: #333333;
 		margin-bottom: 8px;
 	}
-	
-	.input {
-		width: 100%;
-		height: 45px;
-		border: 1px solid #e0e0e0;
-		border-radius: 8px;
-		padding: 0 15px;
-		font-size: 14px;
+
+	.subtitle {
+		font-size: 13px;
+		color: rgba(255, 255, 255, 0.8);
 	}
-	
-	.code-input-wrapper {
+
+	.login-card {
+		margin: 30px 24px 0 24px;
+		background-color: #ffffff;
+		border-radius: 16px;
+		padding: 24px;
+		box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+		z-index: 1;
+	}
+
+	.tabs {
+		flex-direction: row;
+		margin-bottom: 30px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #f0f0f0;
+	}
+
+	.tab-item {
+		flex: 1;
+		height: 44px;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+	}
+
+	.tab-text {
+		font-size: 16px;
+		color: #666666;
+	}
+
+	.tab-text.active {
+		color: #1677FF;
+		font-weight: bold;
+	}
+
+	.active-line {
+		position: absolute;
+		bottom: 0;
+		width: 40px;
+		height: 3px;
+		background-color: #1677FF;
+		border-radius: 2px;
+	}
+
+	.form-body {
 		display: flex;
+		flex-direction: column;
+	}
+
+	.input-item {
+		flex-direction: row;
+		align-items: center;
+		height: 50px;
+		background-color: #f5f7fa;
+		border-radius: 10px;
+		padding: 0 16px;
+		margin-bottom: 16px;
+	}
+
+	.input-icon {
+		font-size: 20px;
+		color: #999999;
+		margin-right: 12px;
+	}
+
+	.input {
+		flex: 1;
+		font-size: 15px;
+		color: #333333;
+	}
+
+	.placeholder {
+		color: #bbbbbb;
+	}
+
+	.action-row {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 24px;
+	}
+
+	.remember-label {
+		flex-direction: row;
 		align-items: center;
 	}
-	
-	.code-input {
-		flex: 1;
-		margin-right: 10px;
-	}
-	
-	.code-btn {
-		width: 110px;
-		height: 45px;
-		background: #667eea;
-		color: #ffffff;
-		border: none;
-		border-radius: 8px;
-		font-size: 13px;
-	}
-	
-	.code-btn[disabled] {
-		background: #cccccc;
-	}
-	
-	.remember-row {
-		margin-bottom: 20px;
-	}
-	
+
 	.remember-text {
-		font-size: 14px;
+		font-size: 13px;
 		color: #666666;
-		margin-left: 5px;
+		margin-left: 4px;
 	}
-	
+
+	.forgot-text {
+		font-size: 13px;
+		color: #1677FF;
+	}
+
+	.code-btn-wrap {
+		padding: 0 12px;
+		height: 30px;
+		justify-content: center;
+		border-left-width: 0.5px;
+		border-left-color: #e0e0e0;
+	}
+
+	.code-btn-text {
+		font-size: 13px;
+		color: #1677FF;
+	}
+
+	.code-btn-text.disabled {
+		color: #999999;
+	}
+
 	.login-btn {
-		width: 100%;
 		height: 50px;
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		background-color: #1677FF;
+		border-radius: 12px;
+		justify-content: center;
+		align-items: center;
+		margin-top: 10px;
+		box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+		border-width: 0;
+	}
+
+	.login-btn-text {
 		color: #ffffff;
-		border: none;
-		border-radius: 25px;
-		font-size: 16px;
+		font-size: 17px;
 		font-weight: bold;
-		margin-bottom: 15px;
 	}
-	
-	.switch-row {
+
+	.footer {
+		margin-top: auto;
+		padding-bottom: 30px;
+		align-items: center;
+	}
+
+	.locale-switch {
+		flex-direction: row;
+		margin-bottom: 16px;
+	}
+
+	.locale-item {
+		font-size: 13px;
+		color: #999999;
+		padding: 4px 12px;
+	}
+
+	.locale-item.active {
+		color: #1677FF;
+		font-weight: bold;
+	}
+
+	.copyright {
+		padding: 0 20px;
+	}
+
+	.copyright-text {
+		font-size: 11px;
+		color: #bbbbbb;
 		text-align: center;
-	}
-	
-	.switch-text {
-		font-size: 14px;
-		color: #667eea;
 	}
 </style>

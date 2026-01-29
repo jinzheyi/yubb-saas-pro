@@ -1,47 +1,43 @@
 <template>
-	<view class="container">
+	<view class="page">
+		<view class="status-bar"></view>
 		<view class="header">
-			<text class="title">工作台</text>
+			<text class="header-title">{{ t('workbench.title') }}</text>
+			<text class="edit-btn">{{ t('workbench.edit') }}</text>
 		</view>
-		
-		<scroll-view class="content" scroll-y>
-			<!-- 快捷入口 -->
+
+		<scroll-view class="content" scroll-y="true">
+			<!-- 办公流程 -->
 			<view class="section">
-				<text class="section-title">快捷入口</text>
+				<view class="section-header">
+					<text class="section-title">{{ t('workbench.officeProcess') }}</text>
+					<text class="iconfont arrow-icon">&#xea8d;</text>
+				</view>
 				<view class="grid">
-					<view 
-						v-for="(item, index) in quickEntries" 
-						:key="index"
-						class="grid-item"
-						@click="handleEntryClick(item)"
-					>
-						<view class="icon-wrapper" :style="{ background: item.color }">
-							<text class="icon">{{ item.icon }}</text>
+					<view class="grid-item" v-for="(item, index) in processList" :key="index" @click="handleAction(item)">
+						<view class="icon-wrap" :style="{ backgroundImage: item.gradient }">
+							<text class="iconfont grid-icon">{{ item.icon }}</text>
+							<view v-if="item.badge" class="badge">
+								<text class="badge-text">{{ item.badge }}</text>
+							</view>
 						</view>
-						<text class="label">{{ item.label }}</text>
+						<text class="grid-label">{{ t(item.nameKey) }}</text>
 					</view>
 				</view>
 			</view>
-			
-			<!-- 待办事项 -->
-			<view class="section">
-				<text class="section-title">待办事项</text>
-				<view class="todo-list">
-					<view 
-						v-for="(item, index) in todoList" 
-						:key="index"
-						class="todo-item"
-						@click="handleTodoClick(item)"
-					>
-						<view class="todo-left">
-							<text class="todo-title">{{ item.title }}</text>
-							<text class="todo-time">{{ item.time }}</text>
+
+			<!-- 常用功能 -->
+			<view class="section mt-2">
+				<view class="section-header">
+					<text class="section-title">{{ t('workbench.commonFeatures') }}</text>
+					<text class="iconfont arrow-icon">&#xea8d;</text>
+				</view>
+				<view class="grid">
+					<view class="grid-item" v-for="(item, index) in featureList" :key="index" @click="handleAction(item)">
+						<view class="icon-wrap" :style="{ backgroundImage: item.gradient }">
+							<text class="iconfont grid-icon">{{ item.icon }}</text>
 						</view>
-						<view class="todo-badge">{{ item.count }}</view>
-					</view>
-					
-					<view v-if="todoList.length === 0" class="empty">
-						<text class="empty-text">暂无待办事项</text>
+						<text class="grid-label">{{ t(item.nameKey) }}</text>
 					</view>
 				</view>
 			</view>
@@ -50,165 +46,152 @@
 </template>
 
 <script setup lang="uts">
-	// 快捷入口
-	const quickEntries = ref<any[]>([
-		{ icon: '📝', label: '审批', color: '#667eea' },
-		{ icon: '📊', label: '报表', color: '#f093fb' },
-		{ icon: '📁', label: '文件', color: '#4facfe' },
-		{ icon: '⚙️', label: '设置', color: '#43e97b' }
-	])
-	
-	// 待办事项
-	const todoList = ref<any[]>([
-		{
-			id: 1,
-			title: '待审批流程',
-			time: '今天',
-			count: 3
-		},
-		{
-			id: 2,
-			title: '待处理任务',
-			time: '本周',
-			count: 5
-		}
-	])
-	
-	// 点击快捷入口
-	function handleEntryClick(item: any) {
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	const processList = [
+		{ nameKey: 'workbench.todo', icon: '\uea83', gradient: 'linear-gradient(135deg, #fb923c, #f97316)', badge: '99+' },
+		{ nameKey: 'workbench.done', icon: '\uea81', gradient: 'linear-gradient(135deg, #34d399, #10b981)', badge: '' },
+		{ nameKey: 'workbench.finished', icon: '\uea80', gradient: 'linear-gradient(135deg, #fb7185, #f43f5e)', badge: '' },
+		{ nameKey: 'workbench.myStarted', icon: '\uea97', gradient: 'linear-gradient(135deg, #38bdf8, #0ea5e9)', badge: '' },
+		{ nameKey: 'workbench.newProcess', icon: '\uea9d', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)', badge: '' }
+	]
+
+	const featureList = [
+		{ nameKey: 'workbench.notice', icon: '\uea93', gradient: 'linear-gradient(135deg, #fb923c, #f97316)' },
+		{ nameKey: 'workbench.doc', icon: '\uea96', gradient: 'linear-gradient(135deg, #34d399, #10b981)' },
+		{ nameKey: 'workbench.meeting', icon: '\uea94', gradient: 'linear-gradient(135deg, #2dd4bf, #14b8a6)' },
+		{ nameKey: 'workbench.schedule', icon: '\uea8c', gradient: 'linear-gradient(135deg, #38bdf8, #0ea5e9)' },
+		{ nameKey: 'workbench.mail', icon: '\uea93', gradient: 'linear-gradient(135deg, #fbbf24, #f59e0b)' },
+		{ nameKey: 'workbench.proxy', icon: '\uea73', gradient: 'linear-gradient(135deg, #60a5fa, #3b82f6)' },
+		{ nameKey: 'workbench.switchAccount', icon: '\uea9e', gradient: 'linear-gradient(135deg, #818cf8, #6366f1)' },
+		{ nameKey: 'workbench.attendance', icon: '\uea81', gradient: 'linear-gradient(135deg, #60a5fa, #2563eb)' },
+		{ nameKey: 'workbench.field', icon: '\uea72', gradient: 'linear-gradient(135deg, #fb923c, #f59e0b)' }
+	]
+
+	function handleAction(item : any) {
 		uni.showToast({
-			title: item.label + '功能开发中',
-			icon: 'none'
-		})
-	}
-	
-	// 点击待办事项
-	function handleTodoClick(item: any) {
-		uni.showToast({
-			title: '待办详情功能开发中',
+			title: t(item.nameKey) + '功能开发中',
 			icon: 'none'
 		})
 	}
 </script>
 
 <style>
-	.container {
-		height: 100vh;
-		background: #f5f5f5;
+	.page {
+		flex: 1;
+		background-color: #F5F5F7;
 		display: flex;
 		flex-direction: column;
 	}
-	
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #1677FF;
+	}
+
 	.header {
-		background: #ffffff;
-		padding: 15px 20px;
-		border-bottom: 1px solid #e0e0e0;
+		background-color: #1677FF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 16px;
+		justify-content: space-between;
 	}
-	
-	.title {
-		font-size: 18px;
+
+	.header-title {
+		color: #ffffff;
+		font-size: 20px;
 		font-weight: bold;
-		color: #333333;
 	}
-	
+
+	.edit-btn {
+		color: #ffffff;
+		font-size: 16px;
+		opacity: 0.9;
+	}
+
 	.content {
 		flex: 1;
 	}
-	
+
 	.section {
-		background: #ffffff;
-		margin: 10px;
-		border-radius: 10px;
-		padding: 15px;
+		background-color: #ffffff;
+		margin-top: 8px;
 	}
-	
-	.section-title {
-		font-size: 16px;
-		font-weight: bold;
-		color: #333333;
-		margin-bottom: 15px;
-		display: block;
-	}
-	
-	.grid {
-		display: flex;
-		flex-wrap: wrap;
-	}
-	
-	.grid-item {
-		width: 25%;
-		text-align: center;
-		margin-bottom: 20px;
-	}
-	
-	.icon-wrapper {
-		width: 50px;
-		height: 50px;
-		border-radius: 25px;
-		margin: 0 auto 8px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	
-	.icon {
-		font-size: 24px;
-	}
-	
-	.label {
-		font-size: 13px;
-		color: #666666;
-	}
-	
-	.todo-list {
-		
-	}
-	
-	.todo-item {
-		display: flex;
+
+	.section-header {
+		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
-		padding: 15px 0;
-		border-bottom: 1px solid #f0f0f0;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #f0f0f0;
 	}
-	
-	.todo-item:last-child {
-		border-bottom: none;
-	}
-	
-	.todo-left {
-		flex: 1;
-	}
-	
-	.todo-title {
-		font-size: 15px;
-		color: #333333;
-		display: block;
-		margin-bottom: 5px;
-	}
-	
-	.todo-time {
-		font-size: 12px;
-		color: #999999;
-	}
-	
-	.todo-badge {
-		background: #ff4d4f;
-		color: #ffffff;
-		font-size: 12px;
-		padding: 4px 10px;
-		border-radius: 12px;
-		min-width: 24px;
-		text-align: center;
-	}
-	
-	.empty {
-		padding: 40px 0;
-		text-align: center;
-	}
-	
-	.empty-text {
+
+	.section-title {
 		font-size: 14px;
 		color: #999999;
+		font-weight: 600;
+		text-transform: uppercase;
+	}
+
+	.arrow-icon {
+		font-size: 16px;
+		color: #cccccc;
+	}
+
+	.grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+		padding: 16px 8px;
+	}
+
+	.grid-item {
+		width: 25%;
+		align-items: center;
+		margin-bottom: 24px;
+	}
+
+	.icon-wrap {
+		width: 56px;
+		height: 56px;
+		border-radius: 16px;
+		justify-content: center;
+		align-items: center;
+		margin-bottom: 8px;
+		position: relative;
+	}
+
+	.grid-icon {
+		color: #ffffff;
+		font-size: 28px;
+	}
+
+	.grid-label {
+		font-size: 12px;
+		color: #333333;
+	}
+
+	.badge {
+		position: absolute;
+		top: -4px;
+		right: -8px;
+		background-color: #1677FF;
+		border-radius: 10px;
+		padding: 2px 6px;
+		border-width: 2px;
+		border-color: #ffffff;
+	}
+
+	.badge-text {
+		color: #ffffff;
+		font-size: 10px;
+		font-weight: bold;
+	}
+
+	.mt-2 {
+		margin-top: 12px;
 	}
 </style>

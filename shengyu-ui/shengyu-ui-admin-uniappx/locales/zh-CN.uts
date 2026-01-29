@@ -92,7 +92,14 @@ export default {
 			dept: '所属部门',
 			sex: '性别',
 			man: '男',
-			woman: '女'
+			woman: '女',
+			status: '添加工作状态...'
+		},
+		menu: {
+			theme: '切换主题',
+			fav: '收藏',
+			scan: '扫一扫',
+			settings: '设置'
 		}
 	},
 	action: {
@@ -126,5 +133,62 @@ export default {
 		time: {
 			yesterday: '昨天'
 		}
+	},
+	chat: {
+		online: '手机在线',
+		inputPlaceholder: '请输入...',
+		features: {
+			location: '位置',
+			file: '文件',
+			card: '名片',
+			fav: '收藏',
+			voice: '语音输入',
+			paint: '画板'
+		}
+	},
+	chatSettings: {
+		title: '聊天设置',
+		addMember: '添加新成员',
+		bubble: '气泡设置',
+		top: '置顶',
+		notify: '新消息通知',
+		clearHistory: '清空聊天记录',
+		subordinateTip: '该联系人是您的直接下属'
+	},
+	contacts: {
+		title: '通讯录',
+		mobile: '手机联系人',
+		groups: '我的群组',
+		following: '我的关注',
+		org: '组织结构',
+		dept: '我的部门',
+		commonGroups: '常用组',
+		subordinates: '我的下属',
+		commonContacts: '常用联系人'
+	},
+	workbench: {
+		title: '工作台',
+		edit: '编辑',
+		officeProcess: '办公流程',
+		todo: '待办流程',
+		done: '已办流程',
+		finished: '办结流程',
+		myStarted: '我发起的',
+		newProcess: '新建流程',
+		commonFeatures: '常用功能',
+		notice: '通知公告',
+		doc: '文档',
+		meeting: '会议',
+		schedule: '日程',
+		mail: '邮件',
+		proxy: '流程代理',
+		switchAccount: '账号切换',
+		attendance: '考勤打卡',
+		field: '外勤'
+	},
+	initiateGroup: {
+		title: '发起群聊',
+		selectExisting: '选择已有的群',
+		selectedCount: '已选择:{count} 人'
 	}
 }

@@ -1,0 +1,292 @@
+<template>
+	<view class="page">
+		<!-- 状态栏占位 -->
+		<view class="status-bar"></view>
+		
+		<!-- 头部导航 -->
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xe600;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<text class="header-title">{{ t('chatSettings.title') }}</text>
+			<view class="header-right"></view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true">
+			<!-- 个人信息卡片 -->
+			<view class="profile-card">
+				<view class="avatar">
+					<text class="avatar-text">胡婷</text>
+				</view>
+				<text class="name">胡婷</text>
+				<text class="role">副部长 (主持工作)</text>
+				
+				<!-- 快捷功能 -->
+				<view class="quick-actions">
+					<view class="action-item">
+						<view class="action-icon-wrap">
+							<text class="iconfont action-icon">&#xea95;</text>
+						</view>
+						<text class="action-text">图片</text>
+					</view>
+					<view class="action-item">
+						<view class="action-icon-wrap">
+							<text class="iconfont action-icon">&#xea96;</text>
+						</view>
+						<text class="action-text">文件</text>
+					</view>
+					<view class="action-item">
+						<view class="action-icon-wrap">
+							<text class="iconfont action-icon">&#xea7d;</text>
+						</view>
+						<text class="action-text">链接</text>
+					</view>
+					<view class="action-item">
+						<view class="action-icon-wrap">
+							<text class="iconfont action-icon">&#xea6e;</text>
+						</view>
+						<text class="action-text">搜索</text>
+					</view>
+				</view>
+			</view>
+
+			<!-- 设置列表 -->
+			<view class="settings-group">
+				<view class="list-item" @click="handleAction('add')">
+					<text class="item-label">{{ t('chatSettings.addMember') }}</text>
+					<text class="iconfont arrow-icon">&#xea8d;</text>
+				</view>
+			</view>
+
+			<view class="settings-group">
+				<view class="list-item">
+					<text class="item-label">{{ t('chatSettings.bubble') }}</text>
+					<view class="item-right">
+						<view class="bubble-preview"></view>
+						<text class="iconfont arrow-icon">&#xea8d;</text>
+					</view>
+				</view>
+				<view class="list-item">
+					<text class="item-label">{{ t('chatSettings.top') }}</text>
+					<switch color="#4cd964" :checked="isTop" @change="onTopChange" />
+				</view>
+				<view class="list-item">
+					<text class="item-label">{{ t('chatSettings.notify') }}</text>
+					<switch color="#4cd964" :checked="isNotify" @change="onNotifyChange" />
+				</view>
+			</view>
+
+			<view class="settings-group">
+				<view class="list-item" @click="handleAction('clear')">
+					<text class="item-label">{{ t('chatSettings.clearHistory') }}</text>
+				</view>
+			</view>
+
+			<view class="tip-area">
+				<text class="tip-text">{{ t('chatSettings.subordinateTip') }}</text>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+	const isTop = ref(false)
+	const isNotify = ref(true)
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function onTopChange(e : UniSwitchChangeEvent) {
+		isTop.value = e.detail.value
+	}
+
+	function onNotifyChange(e : UniSwitchChangeEvent) {
+		isNotify.value = e.detail.value
+	}
+
+	function handleAction(type : string) {
+		uni.showToast({
+			title: type + ' 功能开发中',
+			icon: 'none'
+		})
+	}
+</script>
+
+<style>
+	.page {
+		flex: 1;
+		background-color: #F2F2F7;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #1677FF;
+	}
+
+	.header {
+		background-color: #1677FF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #ffffff;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #ffffff;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #ffffff;
+		font-size: 17px;
+		font-weight: bold;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.content {
+		flex: 1;
+	}
+
+	.profile-card {
+		background-color: #ffffff;
+		padding: 30px 20px;
+		align-items: center;
+	}
+
+	.avatar {
+		width: 80px;
+		height: 80px;
+		border-radius: 40px;
+		background-color: #F197BC;
+		justify-content: center;
+		align-items: center;
+		margin-bottom: 12px;
+	}
+
+	.avatar-text {
+		color: #ffffff;
+		font-size: 24px;
+		font-weight: bold;
+	}
+
+	.name {
+		font-size: 20px;
+		color: #333333;
+		font-weight: bold;
+		margin-bottom: 4px;
+	}
+
+	.role {
+		font-size: 14px;
+		color: #999999;
+		margin-bottom: 30px;
+	}
+
+	.quick-actions {
+		flex-direction: row;
+		width: 100%;
+		justify-content: space-around;
+	}
+
+	.action-item {
+		align-items: center;
+	}
+
+	.action-icon-wrap {
+		width: 48px;
+		height: 48px;
+		background-color: #F8F8F8;
+		border-radius: 12px;
+		justify-content: center;
+		align-items: center;
+		margin-bottom: 8px;
+	}
+
+	.action-icon {
+		font-size: 24px;
+		color: #3b82f6;
+	}
+
+	.action-text {
+		font-size: 12px;
+		color: #666666;
+	}
+
+	.settings-group {
+		margin-top: 12px;
+		background-color: #ffffff;
+		border-top-width: 0.5px;
+		border-bottom-width: 0.5px;
+		border-color: #e5e5e5;
+	}
+
+	.list-item {
+		height: 56px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #f0f0f0;
+	}
+
+	.list-item:last-child {
+		border-bottom-width: 0;
+	}
+
+	.item-label {
+		font-size: 16px;
+		color: #333333;
+	}
+
+	.item-right {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.bubble-preview {
+		width: 24px;
+		height: 24px;
+		background-color: #95D4FF;
+		border-radius: 6px;
+		margin-right: 8px;
+	}
+
+	.arrow-icon {
+		color: #cccccc;
+		font-size: 16px;
+	}
+
+	.tip-area {
+		padding: 30px 16px;
+		align-items: center;
+	}
+
+	.tip-text {
+		font-size: 12px;
+		color: #999999;
+	}
+</style>

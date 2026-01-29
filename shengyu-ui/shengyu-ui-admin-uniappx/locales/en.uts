@@ -92,7 +92,14 @@ export default {
 			dept: 'Department',
 			sex: 'Sex',
 			man: 'Man',
-			woman: 'Woman'
+			woman: 'Woman',
+			status: 'Add status...'
+		},
+		menu: {
+			theme: 'Theme',
+			fav: 'Favorites',
+			scan: 'Scan',
+			settings: 'Settings'
 		}
 	},
 	action: {
@@ -126,5 +133,62 @@ export default {
 		time: {
 			yesterday: 'Yesterday'
 		}
+	},
+	chat: {
+		online: 'Mobile Online',
+		inputPlaceholder: 'Type something...',
+		features: {
+			location: 'Location',
+			file: 'File',
+			card: 'Contact',
+			fav: 'Favorite',
+			voice: 'Voice',
+			paint: 'Paint'
+		}
+	},
+	chatSettings: {
+		title: 'Chat Settings',
+		addMember: 'Add Member',
+		bubble: 'Bubble Settings',
+		top: 'Pin Chat',
+		notify: 'Notifications',
+		clearHistory: 'Clear Chat History',
+		subordinateTip: 'This contact is your direct subordinate'
+	},
+	contacts: {
+		title: 'Contacts',
+		mobile: 'Phone Contacts',
+		groups: 'My Groups',
+		following: 'Following',
+		org: 'Organization',
+		dept: 'My Dept',
+		commonGroups: 'Groups',
+		subordinates: 'Subordinates',
+		commonContacts: 'Common Contacts'
+	},
+	workbench: {
+		title: 'Workbench',
+		edit: 'Edit',
+		officeProcess: 'Office Process',
+		todo: 'To-do',
+		done: 'Done',
+		finished: 'Finished',
+		myStarted: 'Initiated',
+		newProcess: 'New Process',
+		commonFeatures: 'Common Features',
+		notice: 'Notice',
+		doc: 'Documents',
+		meeting: 'Meetings',
+		schedule: 'Schedule',
+		mail: 'Email',
+		proxy: 'Proxy',
+		switchAccount: 'Switch',
+		attendance: 'Attendance',
+		field: 'Field'
+	},
+	initiateGroup: {
+		title: 'New Group',
+		selectExisting: 'Select Existing Group',
+		selectedCount: 'Selected:{count} people'
 	}
 }

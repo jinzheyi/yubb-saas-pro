@@ -1,172 +1,243 @@
 <template>
-	<view class="container">
-		<!-- 用户信息卡片 -->
-		<view class="user-card">
-			<image class="avatar" :src="userAvatar"></image>
-			<text class="nickname">{{ userNickname }}</text>
-			<text class="dept">{{ userDept }}</text>
-		</view>
+	<view class="page">
+		<view class="status-bar"></view>
 		
-		<!-- 菜单列表 -->
-		<view class="menu-section">
-			<view 
-				v-for="(item, index) in menuList" 
-				:key="index"
-				class="menu-item"
-				@click="handleMenuClick(item)"
-			>
-				<text class="menu-icon">{{ item.icon }}</text>
-				<text class="menu-label">{{ item.label }}</text>
-				<text class="menu-arrow">›</text>
+		<!-- 个人信息头部 -->
+		<view class="user-header">
+			<view class="user-info-row">
+				<image class="avatar" src="/static/avatar.jpg"></image>
+				<view class="user-detail">
+					<view class="name-row">
+						<text class="name">朱述勇</text>
+						<text class="iconfont qr-icon">&#xea8b;</text>
+					</view>
+				</view>
+			</view>
+			<view class="dept-row">
+				<text class="dept-text">软件研发事业部 | 开发工程师</text>
+			</view>
+			<view class="status-row" @click="handleAction('status')">
+				<text class="status-text">{{ t('profile.user.status') }}</text>
 			</view>
 		</view>
-		
-		<!-- 退出登录按钮 -->
-		<view class="logout-section">
-			<button class="logout-btn" @click="handleLogout">退出登录</button>
-		</view>
+
+		<scroll-view class="content" scroll-y="true">
+			<view class="menu-group">
+				<view class="menu-item" @click="handleAction('theme')">
+					<view class="menu-icon-wrap" style="background-color: #06b6d4;">
+						<text class="iconfont menu-icon">&#xea84;</text>
+					</view>
+					<text class="menu-label">{{ t('profile.menu.theme') }}</text>
+					<text class="iconfont arrow-icon">&#xea8d;</text>
+				</view>
+				<view class="menu-item" @click="handleAction('fav')">
+					<view class="menu-icon-wrap" style="background-color: #fb923c;">
+						<text class="iconfont menu-icon">&#xea90;</text>
+					</view>
+					<text class="menu-label">{{ t('profile.menu.fav') }}</text>
+					<text class="iconfont arrow-icon">&#xea8d;</text>
+				</view>
+				<view class="menu-item" @click="handleAction('scan')">
+					<view class="menu-icon-wrap" style="background-color: #f97316;">
+						<text class="iconfont menu-icon">&#xea8b;</text>
+					</view>
+					<text class="menu-label">{{ t('profile.menu.scan') }}</text>
+					<text class="iconfont arrow-icon">&#xea8d;</text>
+				</view>
+				<view class="menu-item" @click="handleAction('settings')">
+					<view class="menu-icon-wrap" style="background-color: #fdba74;">
+						<text class="iconfont menu-icon">&#xea8d;</text>
+					</view>
+					<text class="menu-label">{{ t('profile.menu.settings') }}</text>
+					<text class="iconfont arrow-icon">&#xea8d;</text>
+				</view>
+			</view>
+
+			<!-- 退出登录 -->
+			<view class="logout-wrap">
+				<button class="logout-btn" @click="handleLogout">
+					<text class="logout-btn-text">退出登录</text>
+				</button>
+			</view>
+		</scroll-view>
 	</view>
 </template>
 
 <script setup lang="uts">
-	import { getUserInfo, clearUserInfo } from '../../store/user.uts'
-	import { logout } from '../../api/login.uts'
-	
-	// 用户信息
-	const userAvatar = ref<string>('/static/logo.png')
-	const userNickname = ref<string>('用户')
-	const userDept = ref<string>('圣钰科技')
-	
-	// 菜单列表
-	const menuList = ref<any[]>([
-		{ icon: '👤', label: '个人信息', action: 'profile' },
-		{ icon: '🔒', label: '修改密码', action: 'password' },
-		{ icon: '⚙️', label: '系统设置', action: 'settings' },
-		{ icon: '❓', label: '帮助中心', action: 'help' },
-		{ icon: 'ℹ️', label: '关于我们', action: 'about' }
-	])
-	
-	// 点击菜单
-	function handleMenuClick(item: any) {
+	import { useI18n } from '../../hooks/useI18n.uts'
+	import { clearUserCache } from '../../store/user.uts'
+
+	const { t } = useI18n()
+
+	function handleAction(type : string) {
 		uni.showToast({
-			title: item.label + '功能开发中',
+			title: type + ' 功能开发中',
 			icon: 'none'
 		})
 	}
-	
-	// 退出登录
-	async function handleLogout() {
+
+	function handleLogout() {
 		uni.showModal({
 			title: '提示',
 			content: '确定要退出登录吗？',
-			success: async (res) => {
+			success: (res) => {
 				if (res.confirm) {
-					try {
-						// 调用退出登录接口
-						await logout()
-					} catch (e) {
-						console.error('退出登录失败', e)
-					} finally {
-						// 清除本地数据（会自动跳转到登录页）
-						clearUserInfo()
-					}
+					clearUserCache()
+					uni.reLaunch({
+						url: '/pages/login/login'
+					})
 				}
 			}
 		})
 	}
-	
-	// 加载用户信息
-	function loadUserInfo() {
-		const info = getUserInfo()
-		if (info != null) {
-			userNickname.value = info['nickname'] || '用户'
-			userDept.value = info['dept'] || '圣钰科技'
-		}
-	}
-	
-	onMounted(() => {
-		loadUserInfo()
-	})
 </script>
 
 <style>
-	.container {
-		min-height: 100vh;
-		background: #f5f5f5;
-	}
-	
-	.user-card {
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		padding: 40px 20px;
-		text-align: center;
-	}
-	
-	.avatar {
-		width: 80px;
-		height: 80px;
-		border-radius: 40px;
-		border: 3px solid #ffffff;
-		margin-bottom: 15px;
-	}
-	
-	.nickname {
-		font-size: 20px;
-		color: #ffffff;
-		font-weight: bold;
-		display: block;
-		margin-bottom: 8px;
-	}
-	
-	.dept {
-		font-size: 14px;
-		color: rgba(255, 255, 255, 0.8);
-	}
-	
-	.menu-section {
-		background: #ffffff;
-		margin: 10px;
-		border-radius: 10px;
-		overflow: hidden;
-	}
-	
-	.menu-item {
+	.page {
+		flex: 1;
+		background-color: #F2F2F7;
 		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #1677FF;
+	}
+
+	.user-header {
+		background-color: #1677FF;
+		padding: 24px 24px 32px 24px;
+	}
+
+	.user-info-row {
+		flex-direction: row;
 		align-items: center;
-		padding: 15px 20px;
-		border-bottom: 1px solid #f0f0f0;
 	}
-	
-	.menu-item:last-child {
-		border-bottom: none;
+
+	.avatar {
+		width: 64px;
+		height: 64px;
+		border-radius: 32px;
+		background-color: #38bdf8;
+		border-width: 2px;
+		border-color: #ffffff;
+		justify-content: center;
+		align-items: center;
+		box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 	}
-	
-	.menu-icon {
+
+	.avatar-text {
+		color: #ffffff;
+		font-size: 18px;
+		font-weight: 500;
+	}
+
+	.user-detail {
+		flex: 1;
+		margin-left: 16px;
+	}
+
+	.name-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.name {
+		color: #ffffff;
+		font-size: 24px;
+		font-weight: bold;
+	}
+
+	.qr-icon {
+		color: rgba(255, 255, 255, 0.8);
 		font-size: 20px;
-		margin-right: 15px;
+		margin-left: 8px;
 	}
-	
+
+	.dept-row {
+		margin-top: 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: rgba(255, 255, 255, 0.2);
+		padding-bottom: 16px;
+	}
+
+	.dept-text {
+		color: rgba(255, 255, 255, 0.9);
+		font-size: 16px;
+	}
+
+	.status-row {
+		margin-top: 16px;
+	}
+
+	.status-text {
+		color: rgba(255, 255, 255, 0.8);
+		font-size: 15px;
+	}
+
+	.content {
+		flex: 1;
+		margin-top: -12px;
+	}
+
+	.menu-group {
+		background-color: #ffffff;
+		border-radius: 20px 20px 0 0;
+		padding-top: 8px;
+		box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+	}
+
+	.menu-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 16px 20px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #f0f0f0;
+	}
+
+	.menu-icon-wrap {
+		width: 40px;
+		height: 40px;
+		border-radius: 10px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 16px;
+	}
+
+	.menu-icon {
+		color: #ffffff;
+		font-size: 22px;
+	}
+
 	.menu-label {
 		flex: 1;
-		font-size: 15px;
+		font-size: 17px;
 		color: #333333;
 	}
-	
-	.menu-arrow {
-		font-size: 20px;
+
+	.arrow-icon {
 		color: #cccccc;
+		font-size: 18px;
 	}
-	
-	.logout-section {
-		padding: 20px;
+
+	.logout-wrap {
+		padding: 32px 20px;
 	}
-	
+
 	.logout-btn {
-		width: 100%;
-		height: 45px;
-		background: #ffffff;
+		background-color: #ffffff;
+		height: 50px;
+		border-radius: 12px;
+		justify-content: center;
+		align-items: center;
+		border-width: 0.5px;
+		border-color: #ff4d4f;
+	}
+
+	.logout-btn-text {
 		color: #ff4d4f;
-		border: 1px solid #ff4d4f;
-		border-radius: 22.5px;
-		font-size: 15px;
+		font-size: 16px;
+		font-weight: 500;
 	}
 </style>

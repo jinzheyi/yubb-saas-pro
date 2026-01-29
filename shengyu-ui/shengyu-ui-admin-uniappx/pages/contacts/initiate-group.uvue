@@ -1,0 +1,324 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xe600;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<text class="header-title">{{ t('initiateGroup.title') }}</text>
+			<view class="header-right"></view>
+		</view>
+
+		<view class="search-wrap">
+			<view class="search-bar">
+				<text class="iconfont search-icon">&#xea6e;</text>
+				<input class="search-input" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" />
+			</view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true">
+			<view class="section-label">
+				<text class="section-text">{{ t('initiateGroup.selectExisting') }}</text>
+			</view>
+			<view class="category-group">
+				<view class="category-item" v-for="(item, index) in categories" :key="index" @click="handleCategory(item)">
+					<view class="category-icon-wrap" :style="{ backgroundColor: item.bg }">
+						<text class="iconfont category-icon">{{ item.icon }}</text>
+					</view>
+					<text class="category-name">{{ t(item.nameKey) }}</text>
+				</view>
+			</view>
+
+			<view class="section-label">
+				<text class="section-text">{{ t('contacts.commonContacts') }}</text>
+			</view>
+			<view class="contact-list">
+				<view class="contact-item" v-for="(item, index) in commonContacts" :key="index" @click="toggleSelect(item)">
+					<view class="contact-avatar" :style="{ backgroundColor: item.avatarBg }">
+						<text class="avatar-text">{{ item.avatarText }}</text>
+					</view>
+					<view class="contact-info">
+						<text class="contact-name">{{ item.name }}</text>
+						<text class="contact-role">{{ item.role }}</text>
+					</view>
+					<view :class="['checkbox', item.selected ? 'checkbox-active' : '']">
+						<text v-if="item.selected" class="iconfont check-icon">&#xea73;</text>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+
+		<view class="footer">
+			<text class="selected-text">{{ t('initiateGroup.selectedCount', { count: selectedCount.toString() }) }}</text>
+			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
+				<text class="confirm-btn-text">确定({{ selectedCount }}/500)</text>
+			</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	const categories = [
+		{ icon: '\uea94', bg: '#fb923c', nameKey: 'contacts.groups' },
+		{ icon: '\uea90', bg: '#facc15', nameKey: 'contacts.following' },
+		{ icon: '\uea8c', bg: '#84cc16', nameKey: 'contacts.org' },
+		{ icon: '\uea84', bg: '#06b6d4', nameKey: 'contacts.dept' },
+		{ icon: '\uea96', bg: '#3b82f6', nameKey: 'contacts.commonGroups' },
+		{ icon: '\uea97', bg: '#6366f1', nameKey: 'contacts.subordinates' }
+	]
+
+	const commonContacts = ref([
+		{ id: 1, name: '陶戈', role: '高级经理', avatarText: '陶戈', avatarBg: '#0ea5e9', selected: false },
+		{ id: 2, name: '陈子蒙', role: '部门副总经理 (主持工作)', avatarText: '子蒙', avatarBg: '#f472b6', selected: false },
+		{ id: 3, name: '刘丹丹', role: '行政经理', avatarText: '丹丹', avatarBg: '#c084fc', selected: false },
+		{ id: 4, name: '胡婷', role: '副部长 (主持工作)', avatarText: '胡婷', avatarBg: '#fb7185', selected: true },
+		{ id: 5, name: '朱述勇', role: '开发工程师', avatarText: '述勇', avatarBg: '#10b981', selected: false }
+	])
+
+	const selectedCount = computed(() => {
+		return commonContacts.value.filter(item => item.selected).length
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function handleCategory(item : any) {
+		uni.showToast({
+			title: t(item.nameKey) + '功能开发中',
+			icon: 'none'
+		})
+	}
+
+	function toggleSelect(item : any) {
+		item.selected = !item.selected
+	}
+
+	function handleConfirm() {
+		uni.showToast({
+			title: '创建群聊中...',
+			icon: 'loading'
+		})
+	}
+</script>
+
+<style>
+	.page {
+		flex: 1;
+		background-color: #F7F8FA;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #1677FF;
+	}
+
+	.header {
+		background-color: #1677FF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #ffffff;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #ffffff;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #ffffff;
+		font-size: 17px;
+		font-weight: bold;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.search-wrap {
+		background-color: #ffffff;
+		padding: 10px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #e5e5e5;
+	}
+
+	.search-bar {
+		background-color: #F3F4F6;
+		border-radius: 8px;
+		height: 36px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+	}
+
+	.search-icon {
+		font-size: 16px;
+		color: #999999;
+	}
+
+	.search-input {
+		flex: 1;
+		font-size: 14px;
+		margin-left: 8px;
+		color: #333333;
+	}
+
+	.content {
+		flex: 1;
+	}
+
+	.section-label {
+		padding: 12px 16px 8px 16px;
+	}
+
+	.section-text {
+		font-size: 13px;
+		color: #999999;
+	}
+
+	.category-group {
+		background-color: #ffffff;
+	}
+
+	.category-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #f0f0f0;
+	}
+
+	.category-icon-wrap {
+		width: 36px;
+		height: 36px;
+		border-radius: 8px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 12px;
+	}
+
+	.category-icon {
+		color: #ffffff;
+		font-size: 18px;
+	}
+
+	.category-name {
+		font-size: 15px;
+		color: #333333;
+	}
+
+	.contact-list {
+		background-color: #ffffff;
+		margin-bottom: 20px;
+	}
+
+	.contact-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #f0f0f0;
+	}
+
+	.contact-avatar {
+		width: 40px;
+		height: 40px;
+		border-radius: 20px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 12px;
+	}
+
+	.avatar-text {
+		color: #ffffff;
+		font-size: 12px;
+		font-weight: bold;
+	}
+
+	.contact-info {
+		flex: 1;
+	}
+
+	.contact-name {
+		font-size: 15px;
+		color: #333333;
+		font-weight: 500;
+	}
+
+	.contact-role {
+		font-size: 12px;
+		color: #999999;
+	}
+
+	.checkbox {
+		width: 20px;
+		height: 20px;
+		border-width: 1px;
+		border-color: #d1d5db;
+		border-radius: 10px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.checkbox-active {
+		background-color: #1677FF;
+		border-color: #1677FF;
+	}
+
+	.check-icon {
+		color: #ffffff;
+		font-size: 12px;
+	}
+
+	.footer {
+		background-color: #ffffff;
+		border-top-width: 0.5px;
+		border-top-color: #e5e5e5;
+		padding: 12px 16px;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+	}
+
+	.selected-text {
+		font-size: 15px;
+		color: #333333;
+	}
+
+	.confirm-btn {
+		background-color: rgba(22, 119, 255, 0.1);
+		padding: 0 20px;
+		height: 36px;
+		border-radius: 4px;
+		justify-content: center;
+		border-width: 0;
+	}
+
+	.confirm-btn-text {
+		color: #1677FF;
+		font-size: 14px;
+		font-weight: 500;
+	}
+</style>

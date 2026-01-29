@@ -8,13 +8,13 @@
 			<view class="header-top">
 				<text class="header-title">{{ t('message.title') }}</text>
 				<view class="header-icons">
-					<text class="iconfont header-icon">&#xe600;</text>
-					<text class="iconfont header-icon">&#xe601;</text>
+					<text class="iconfont header-icon">&#xea8b;</text>
+					<text class="iconfont header-icon">&#xea74;</text>
 				</view>
 			</view>
 			<view class="search-container">
 				<view class="search-bar">
-					<text class="iconfont search-icon">&#xe602;</text>
+					<text class="iconfont search-icon">&#xea6e;</text>
 					<input class="search-input" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" />
 				</view>
 			</view>
@@ -57,12 +57,12 @@
 
 	// 分类数据
 	const categories = [
-		{ icon: '\ue603', color: '#666', nameKey: 'message.categories.schedule' },
-		{ icon: '\ue604', color: '#666', nameKey: 'message.categories.person' },
-		{ icon: '\ue605', color: '#666', nameKey: 'message.categories.group' },
-		{ icon: '\ue606', color: '#666', nameKey: 'message.categories.send' },
-		{ icon: '\ue607', color: '#666', nameKey: 'message.categories.at' },
-		{ icon: '\ue608', color: '#666', nameKey: 'message.categories.noDisturb' }
+		{ icon: '\uea8c', color: '#666', nameKey: 'message.categories.schedule' },
+		{ icon: '\uea94', color: '#666', nameKey: 'message.categories.person' },
+		{ icon: '\uea94', color: '#666', nameKey: 'message.categories.group' },
+		{ icon: '\uea73', color: '#666', nameKey: 'message.categories.send' },
+		{ icon: '\uea93', color: '#666', nameKey: 'message.categories.at' },
+		{ icon: '\uea8d', color: '#666', nameKey: 'message.categories.noDisturb' }
 	]
 
 	// 消息列表数据
@@ -74,7 +74,7 @@
 			desc: '您有新的待阅文档(基层动态)：省财...',
 			time: '昨天 14:25',
 			avatarBg: '#f97316',
-			avatarIcon: '\ue609'
+			avatarIcon: '\uea9b'
 		},
 		{
 			id: 2,
@@ -83,7 +83,7 @@
 			desc: '有流程抄送给您：省财信科技公司收...',
 			time: '2026-01-22',
 			avatarBg: '#3b82f6',
-			avatarIcon: '\ue60a'
+			avatarIcon: '\uea9e'
 		},
 		{
 			id: 3,
@@ -92,7 +92,7 @@
 			desc: '省财信科技公司请休假审批-朱述勇-...',
 			time: '2026-01-12',
 			avatarBg: '#3b82f6',
-			avatarIcon: '\ue60b'
+			avatarIcon: '\uea76'
 		},
 		{
 			id: 4,
@@ -101,7 +101,7 @@
 			desc: '财信科技制度汇编2025 (20260109)...',
 			time: '2026-01-09',
 			avatarBg: '#fb923c',
-			avatarIcon: '\ue60c'
+			avatarIcon: '\uea93'
 		},
 		{
 			id: 5,
@@ -133,12 +133,12 @@
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #C8161D;
+		background-color: #1677FF;
 	}
 
 	/* 头部区域 */
 	.header {
-		background-color: #C8161D;
+		background-color: #1677FF;
 		padding: 12px 16px 16px 16px;
 	}
 
