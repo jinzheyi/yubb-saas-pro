@@ -115,9 +115,8 @@
 	])
 
 	function handleMessageClick(item : any) {
-		uni.showToast({
-			title: '点击了: ' + (item.titleKey ? t(item.titleKey) : item.title),
-			icon: 'none'
+		uni.navigateTo({
+			url: '/pages/message/chat?name=' + (item.titleKey ? t(item.titleKey) : item.title)
 		})
 	}
 </script>
