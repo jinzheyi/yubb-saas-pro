@@ -50,14 +50,20 @@
 					<view class="message-avatar" :style="{ backgroundColor: item.avatarBg }">
 						<text v-if="item.avatarIcon" class="iconfont avatar-icon">{{ item.avatarIcon }}</text>
 						<text v-else class="avatar-text">{{ item.avatarText }}</text>
-						<view v-if="item.unread" class="unread-dot"></view>
+						<!-- 未读提醒 -->
+						<view v-if="item.unreadCount > 0" :class="['unread-badge', item.noDisturb ? 'unread-dot-only' : '']">
+							<text v-if="!item.noDisturb" class="unread-count">{{ item.unreadCount > 99 ? '99+' : item.unreadCount }}</text>
+						</view>
 					</view>
 					<view class="message-content">
 						<view class="message-top">
 							<text class="message-name">{{ item.titleKey ? t(item.titleKey, item.title) : item.title }}</text>
-							<text class="message-time">{{ item.time }}</text>
+							<text class="message-time">{{ formatWeChatTime(item.lastMessageTime) }}</text>
 						</view>
-						<text class="message-desc">{{ item.desc }}</text>
+						<view class="message-bottom">
+							<text class="message-desc">{{ item.desc }}</text>
+							<text v-if="item.noDisturb" class="iconfont nodisturb-icon">&#xe63a;</text>
+						</view>
 					</view>
 					<view v-if="index < displayPinnedList.length - 1 || showFoldToggle" class="message-item-border"></view>
 				</view>
@@ -81,15 +87,20 @@
 					<view class="message-avatar" :style="{ backgroundColor: item.avatarBg }">
 						<text v-if="item.avatarIcon" class="iconfont avatar-icon">{{ item.avatarIcon }}</text>
 						<text v-else class="avatar-text">{{ item.avatarText }}</text>
-						<!-- 未读红点 -->
-						<view v-if="item.unread" class="unread-dot"></view>
+						<!-- 未读提醒 -->
+						<view v-if="item.unreadCount > 0" :class="['unread-badge', item.noDisturb ? 'unread-dot-only' : '']">
+							<text v-if="!item.noDisturb" class="unread-count">{{ item.unreadCount > 99 ? '99+' : item.unreadCount }}</text>
+						</view>
 					</view>
 					<view class="message-content">
 						<view class="message-top">
 							<text class="message-name">{{ item.titleKey ? t(item.titleKey, item.title) : item.title }}</text>
-							<text class="message-time">{{ item.time }}</text>
+							<text class="message-time">{{ formatWeChatTime(item.lastMessageTime) }}</text>
 						</view>
-						<text class="message-desc">{{ item.desc }}</text>
+						<view class="message-bottom">
+							<text class="message-desc">{{ item.desc }}</text>
+							<text v-if="item.noDisturb" class="iconfont nodisturb-icon">&#xe63a;</text>
+						</view>
 					</view>
 					<view v-if="index < displayNormalList.length - 1" class="message-item-border"></view>
 				</view>
@@ -139,22 +150,101 @@
 	const generateMessages = () : any[] => {
 		const list : any[] = []
 		const categoryIds = ['latest', 'user', 'group', 'business', 'at', 'nodisturb']
+		const now = Date.now()
 		for (let i = 1; i <= 100; i++) {
 			const catId = categoryIds[i % categoryIds.length]
+			
+			// 模拟数据逻辑调整：
+			// i=1: 普通未读 > 99
+			// i=2: 普通未读 < 99
+			// i=3: 免打扰未读 (显示红点)
+			// i=4: 免打扰未读 (显示红点)
+			let unreadCount = 0
+			let noDisturb = false
+			
+			if (i === 1) {
+				unreadCount = 125
+				noDisturb = false
+			} else if (i === 2) {
+				unreadCount = 12
+				noDisturb = false
+			} else if (i === 3) {
+				unreadCount = 5
+				noDisturb = true
+			} else if (i === 4) {
+				unreadCount = 99
+				noDisturb = true
+			} else {
+				unreadCount = 0
+				noDisturb = i % 10 === 0
+			}
+
+			// 模拟不同时间段的时间戳
+			let timeOffset = 0
+			if (i <= 5) timeOffset = i * 10 * 60 * 1000 // 今天内
+			else if (i <= 10) timeOffset = 24 * 60 * 60 * 1000 // 昨天
+			else if (i <= 20) timeOffset = i * 24 * 60 * 60 * 1000 // 几天前
+			else timeOffset = i * 30 * 24 * 60 * 60 * 1000 // 很久以前
+
 			list.push({
 				id: i,
 				categoryId: catId,
 				title: i <= 8 ? `置顶消息 ${i}` : `消息测试 ${i}`,
-				desc: `这是第 ${i} 条测试消息的内容摘要，模拟大数据量下的滚动性能...`,
-				time: '10:00',
+				desc: `这是第 ${i} 条测试消息的内容摘要...`,
+				lastMessageTime: now - timeOffset,
 				avatarBg: i % 2 === 0 ? '#3370FF' : '#F97316',
 				avatarText: i <= 8 ? `顶${i}` : `测${i}`,
-				unread: i < 5,
+				unreadCount: unreadCount,
+				noDisturb: noDisturb,
 				isPinned: i <= 8, // 前8条设为置顶
 				pinnedTime: i <= 8 ? Date.now() - i * 1000 : 0
 			})
 		}
 		return list
+	}
+
+	/**
+	 * 仿微信时间格式化
+	 */
+	function formatWeChatTime(timestamp : number) : string {
+		const date = new Date(timestamp)
+		const now = new Date()
+		
+		const isToday = date.getFullYear() === now.getFullYear() && 
+						date.getMonth() === now.getMonth() && 
+						date.getDate() === now.getDate()
+		
+		if (isToday) {
+			const hours = date.getHours().toString().padStart(2, '0')
+			const minutes = date.getMinutes().toString().padStart(2, '0')
+			return `${hours}:${minutes}`
+		}
+		
+		const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+		const isYesterday = date.getFullYear() === yesterday.getFullYear() && 
+							date.getMonth() === yesterday.getMonth() && 
+							date.getDate() === yesterday.getDate()
+		
+		if (isYesterday) {
+			return '昨天'
+		}
+		
+		// 判断是否在同一周 (简单判断：7天内且星期几小于等于今天)
+		const oneWeekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000
+		if (timestamp > oneWeekAgo) {
+			const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+			return weekDays[date.getDay()]
+		}
+		
+		// 超过一周显示日期
+		const year = date.getFullYear()
+		const month = (date.getMonth() + 1).toString().padStart(2, '0')
+		const day = date.getDate().toString().padStart(2, '0')
+		
+		if (year === now.getFullYear()) {
+			return `${month}/${day}`
+		}
+		return `${year}/${month}/${day}`
 	}
 
 	// 分类数据
@@ -243,7 +333,11 @@
 				}
 				break
 			case 'unread':
-				targetItem.unread = !targetItem.unread
+				if (targetItem.unreadCount > 0) {
+					targetItem.unreadCount = 0
+				} else {
+					targetItem.unreadCount = 1
+				}
 				break
 			case 'remove':
 				const index = messageList.value.findIndex(i => i.id === targetItem.id)
@@ -439,26 +533,41 @@
 		align-items: center;
 		margin-right: 12px;
 		position: relative;
+		/* 确保角标不被裁剪 */
+		overflow: visible;
 	}
 
-	.unread-dot {
+	.unread-badge {
 		position: absolute;
-		top: -4px;
-		right: -4px;
-		width: 16px;
-		height: 16px;
+		/* 仿微信：向右上角偏移并突出 */
+		top: -7px;
+		right: -7px;
 		background-color: #F54A45;
-		border-radius: 8px;
-		border-width: 2px;
-		border-color: #FFFFFF;
+		border-radius: 10px;
+		min-width: 18px;
+		height: 18px;
+		padding: 0 5px;
 		justify-content: center;
 		align-items: center;
+		border-width: 2px;
+		border-color: #FFFFFF;
+		z-index: 10;
+	}
+
+	.unread-dot-only {
+		min-width: 10px;
+		height: 10px;
+		padding: 0;
+		top: -4px;
+		right: -4px;
+		border-radius: 5px;
 	}
 	
 	.unread-count {
 		color: #FFFFFF;
 		font-size: 10px;
 		font-weight: bold;
+		line-height: 14px;
 	}
 
 	.avatar-icon {
@@ -494,11 +603,24 @@
 		color: #8F959E;
 	}
 
+	.message-bottom {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+	}
+
 	.message-desc {
+		flex: 1;
 		font-size: 13px;
 		color: #646A73;
 		lines: 1;
 		text-overflow: ellipsis;
+	}
+
+	.nodisturb-icon {
+		font-size: 14px;
+		color: #C1C4C9;
+		margin-left: 8px;
 	}
 
 	/* 菜单弹窗样式 */
