@@ -38,12 +38,43 @@
 		<view class="section-divider"></view>
 
 		<scroll-view class="content-scroll" scroll-y="true" show-scrollbar="false">
-			<!-- 消息列表 -->
+			<!-- 置顶消息列表 -->
+			<view class="message-list" v-if="displayPinnedList.length > 0">
+				<view 
+					class="message-item pinned-item" 
+					v-for="(item, index) in displayPinnedList" 
+					:key="'pinned-' + item.id" 
+					@click="handleMessageClick(item)"
+					@longpress="handleLongPress(item, $event)"
+				>
+					<view class="message-avatar" :style="{ backgroundColor: item.avatarBg }">
+						<text v-if="item.avatarIcon" class="iconfont avatar-icon">{{ item.avatarIcon }}</text>
+						<text v-else class="avatar-text">{{ item.avatarText }}</text>
+						<view v-if="item.unread" class="unread-dot"></view>
+					</view>
+					<view class="message-content">
+						<view class="message-top">
+							<text class="message-name">{{ item.titleKey ? t(item.titleKey, item.title) : item.title }}</text>
+							<text class="message-time">{{ item.time }}</text>
+						</view>
+						<text class="message-desc">{{ item.desc }}</text>
+					</view>
+					<view v-if="index < displayPinnedList.length - 1 || showFoldToggle" class="message-item-border"></view>
+				</view>
+				
+				<!-- 折叠/展开按钮 -->
+				<view v-if="showFoldToggle" class="fold-toggle" @click="isPinnedFolded = !isPinnedFolded">
+					<text class="fold-text">{{ isPinnedFolded ? t('message.fold.showMore', '展开置顶聊天') : t('message.fold.hideMore', '收起置顶聊天') }}</text>
+					<text class="iconfont fold-icon">{{ isPinnedFolded ? '\ue60e' : '\ue68d' }}</text>
+				</view>
+			</view>
+
+			<!-- 普通消息列表 -->
 			<view class="message-list">
 				<view 
 					class="message-item" 
-					v-for="(item, index) in filteredMessageList" 
-					:key="index" 
+					v-for="(item, index) in displayNormalList" 
+					:key="'normal-' + item.id" 
 					@click="handleMessageClick(item)"
 					@longpress="handleLongPress(item, $event)"
 				>
@@ -60,7 +91,7 @@
 						</view>
 						<text class="message-desc">{{ item.desc }}</text>
 					</view>
-					<view v-if="index < messageList.length - 1" class="message-item-border"></view>
+					<view v-if="index < displayNormalList.length - 1" class="message-item-border"></view>
 				</view>
 			</view>
 		</scroll-view>
@@ -95,6 +126,9 @@
 	// 当前选中的分类 ID (空字符串表示显示全部，不选中任何特定分类)
 	const selectedCategoryId = ref('')
 
+	// 置顶折叠状态
+	const isPinnedFolded = ref(true)
+
 	// 菜单状态
 	const showContextMenu = ref(false)
 	const menuX = ref(0)
@@ -110,13 +144,14 @@
 			list.push({
 				id: i,
 				categoryId: catId,
-				title: `消息测试 ${i}`,
+				title: i <= 8 ? `置顶消息 ${i}` : `消息测试 ${i}`,
 				desc: `这是第 ${i} 条测试消息的内容摘要，模拟大数据量下的滚动性能...`,
 				time: '10:00',
 				avatarBg: i % 2 === 0 ? '#3370FF' : '#F97316',
-				avatarText: `测${i}`,
+				avatarText: i <= 8 ? `顶${i}` : `测${i}`,
 				unread: i < 5,
-				isPinned: false
+				isPinned: i <= 8, // 前8条设为置顶
+				pinnedTime: i <= 8 ? Date.now() - i * 1000 : 0
 			})
 		}
 		return list
@@ -135,12 +170,35 @@
 	// 消息列表原始数据
 	const messageList = ref(generateMessages())
 	
-	// 过滤后的消息列表
-	const filteredMessageList = computed(() : any[] => {
+	// 过滤后的基础列表
+	const filteredBaseList = computed(() : any[] => {
 		if (selectedCategoryId.value === '') {
 			return messageList.value
 		}
 		return messageList.value.filter(item => item.categoryId === selectedCategoryId.value)
+	})
+
+	// 置顶消息列表
+	const allPinnedList = computed(() : any[] => {
+		return filteredBaseList.value.filter(item => item.isPinned).sort((a, b) => b.pinnedTime - a.pinnedTime)
+	})
+
+	// 最终显示的置顶列表
+	const displayPinnedList = computed(() : any[] => {
+		if (isPinnedFolded.value && allPinnedList.value.length > 5) {
+			return allPinnedList.value.slice(0, 5)
+		}
+		return allPinnedList.value
+	})
+
+	// 是否显示折叠切换按钮
+	const showFoldToggle = computed(() : boolean => {
+		return allPinnedList.value.length > 5
+	})
+
+	// 普通消息列表
+	const displayNormalList = computed(() : any[] => {
+		return filteredBaseList.value.filter(item => !item.isPinned)
 	})
 
 	function handleCategoryClick(item : any) {
@@ -174,20 +232,21 @@
 	function handleMenuAction(action : string) {
 		if (!selectedItem.value) return
 		
+		const targetItem = selectedItem.value
 		switch (action) {
 			case 'pin':
-				selectedItem.value.isPinned = !selectedItem.value.isPinned
-				// 排序逻辑：置顶的排前面
-				messageList.value.sort((a, b) => {
-					if (a.isPinned === b.isPinned) return 0
-					return a.isPinned ? -1 : 1
-				})
+				targetItem.isPinned = !targetItem.isPinned
+				if (targetItem.isPinned) {
+					targetItem.pinnedTime = Date.now()
+				} else {
+					targetItem.pinnedTime = 0
+				}
 				break
 			case 'unread':
-				selectedItem.value.unread = !selectedItem.value.unread
+				targetItem.unread = !targetItem.unread
 				break
 			case 'remove':
-				const index = messageList.value.findIndex(i => i.id === selectedItem.value.id)
+				const index = messageList.value.findIndex(i => i.id === targetItem.id)
 				if (index > -1) messageList.value.splice(index, 1)
 				break
 		}
@@ -332,8 +391,35 @@
 		position: relative;
 	}
 
+	.pinned-item {
+		background-color: #F5F7FA;
+	}
+
 	.message-item:active {
 		background-color: #F2F3F5;
+	}
+
+	.pinned-item:active {
+		background-color: #EBEDF0;
+	}
+
+	.fold-toggle {
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		padding: 12px 0;
+		background-color: #F5F7FA;
+	}
+
+	.fold-text {
+		font-size: 13px;
+		color: #646A73;
+		margin-right: 4px;
+	}
+
+	.fold-icon {
+		font-size: 12px;
+		color: #8F959E;
 	}
 
 	.message-item-border {
