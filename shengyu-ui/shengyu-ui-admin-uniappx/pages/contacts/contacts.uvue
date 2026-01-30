@@ -23,7 +23,9 @@
 				</view>
 			</view>
 
-			<view class="category-group mt-2">
+			<view class="section-divider"></view>
+
+			<view class="category-group">
 				<view class="category-item" v-for="(item, index) in categories2" :key="index" @click="handleCategory(item)">
 					<view class="category-icon-wrap" :style="{ backgroundColor: item.bg }">
 						<text class="iconfont category-icon">{{ item.icon }}</text>
@@ -33,9 +35,11 @@
 				</view>
 			</view>
 
+			<view class="section-divider"></view>
+
 			<!-- 联系人 -->
 			<view class="section-header">
-				<text class="section-title">{{ t('contacts.commonContacts') }}</text>
+				<text class="section-title">联系人</text>
 			</view>
 			<view class="contact-list">
 				<view class="contact-item" v-for="(item, index) in commonContacts" :key="index" @click="handleContact(item)">
@@ -211,6 +215,11 @@
 
 	.mt-2 {
 		margin-top: 8px;
+	}
+
+	.section-divider {
+		height: 8px;
+		background-color: #F5F7FA;
 	}
 
 	/* 分组标题 */
