@@ -6,21 +6,21 @@
 		<!-- 头部导航 -->
 		<view class="header">
 			<view class="header-left" @click="handleBack">
-				<text class="iconfont back-icon">&#xe600;</text>
-				<text class="back-text">{{ t('common.back') }}</text>
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">{{ t('common.back', '返回') }}</text>
 			</view>
 			<view class="header-title-wrap">
 				<text class="header-title">{{ name }}</text>
-				<text class="header-status">{{ t('chat.online') }}</text>
+				<text class="header-status">{{ t('chat.online', '手机在线') }}</text>
 			</view>
 			<view class="header-right">
 				<text class="iconfont header-icon">&#xea74;</text>
-				<text class="iconfont header-icon" @click="handleToSettings">&#xea97;</text>
+				<text class="iconfont header-icon" @click="handleToSettings">&#xea8d;</text>
 			</view>
 		</view>
 
 		<!-- 聊天内容区域 -->
-		<scroll-view class="chat-content" scroll-y="true" :scroll-into-view="lastMessageId">
+		<scroll-view class="chat-content" scroll-y="true" :scroll-into-view="lastMessageId" show-scrollbar="false">
 			<!-- 水印层 -->
 			<view class="watermark-layer">
 				<view v-for="i in 12" :key="i" class="watermark-item">
@@ -164,25 +164,28 @@
 </script>
 
 <style>
+	/* 页面基础样式 */
 	.page {
-		flex: 1;
-		background-color: #F2F2F7;
+		height: 100%;
+		background-color: #F5F7FA;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #1677FF;
+		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #1677FF;
+		background-color: #FFFFFF;
 		height: 44px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
 		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
 	}
 
 	.header-left {
@@ -192,12 +195,12 @@
 	}
 
 	.back-icon {
-		color: #ffffff;
+		color: #1F2329;
 		font-size: 20px;
 	}
 
 	.back-text {
-		color: #ffffff;
+		color: #1F2329;
 		font-size: 16px;
 		margin-left: 4px;
 	}
@@ -208,13 +211,13 @@
 	}
 
 	.header-title {
-		color: #ffffff;
+		color: #1F2329;
 		font-size: 17px;
-		font-weight: bold;
+		font-weight: 600;
 	}
 
 	.header-status {
-		color: rgba(255, 255, 255, 0.8);
+		color: #8F959E;
 		font-size: 10px;
 	}
 
@@ -226,7 +229,7 @@
 	}
 
 	.header-icon {
-		color: #ffffff;
+		color: #1F2329;
 		font-size: 22px;
 		margin-left: 16px;
 	}
@@ -234,6 +237,8 @@
 	.chat-content {
 		flex: 1;
 		position: relative;
+		height: 0;
+		background-color: #F5F7FA;
 	}
 
 	.watermark-layer {
@@ -246,7 +251,7 @@
 		flex-wrap: wrap;
 		justify-content: space-around;
 		align-content: space-around;
-		opacity: 0.05;
+		opacity: 0.03;
 		pointer-events: none;
 		transform: rotate(-25deg);
 	}
@@ -267,17 +272,20 @@
 
 	.time-stamp {
 		align-items: center;
-		margin-bottom: 16px;
+		margin-bottom: 20px;
 	}
 
 	.time-text {
-		font-size: 12px;
-		color: #999999;
+		font-size: 11px;
+		color: #8F959E;
+		background-color: rgba(31, 35, 41, 0.05);
+		padding: 2px 8px;
+		border-radius: 4px;
 	}
 
 	.message-item {
 		flex-direction: row;
-		margin-bottom: 20px;
+		margin-bottom: 24px;
 	}
 
 	.message-self {
@@ -287,14 +295,15 @@
 	.avatar {
 		width: 40px;
 		height: 40px;
-		border-radius: 20px;
+		border-radius: 8px;
 		justify-content: center;
 		align-items: center;
 	}
 
 	.avatar-text {
-		color: #ffffff;
+		color: #FFFFFF;
 		font-size: 12px;
+		font-weight: 600;
 	}
 
 	.message-bubble-wrap {
@@ -308,103 +317,105 @@
 	}
 
 	.message-bubble {
-		background-color: #ffffff;
+		background-color: #FFFFFF;
 		padding: 10px 14px;
-		border-radius: 12px;
-		max-width: 80%;
+		border-radius: 10px;
+		max-width: 85%;
+		border-width: 0.5px;
+		border-color: #EFF0F1;
 	}
 
 	.message-self .message-bubble {
-		background-color: #B8E4FF;
+		background-color: #D2E3FC;
+		border-color: #B2CFFB;
 	}
 
 	.message-text {
-		font-size: 14px;
-		color: #333333;
+		font-size: 15px;
+		color: #1F2329;
 		line-height: 1.5;
 	}
 
 	.footer {
-		background-color: #ffffff;
+		background-color: #FFFFFF;
 		border-top-width: 0.5px;
-		border-top-color: #e5e5e5;
-		padding-bottom: env(safe-area-inset-bottom);
+		border-top-color: #EFF0F1;
+		padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
 	}
 
 	.input-row {
 		flex-direction: row;
 		align-items: center;
-		padding: 8px 12px;
+		padding: 10px 12px;
 	}
 
 	.input-box {
 		flex: 1;
-		background-color: #F8F8F8;
+		background-color: #F5F7FA;
 		border-radius: 6px;
 		margin: 0 10px;
-		height: 36px;
+		height: 38px;
 		justify-content: center;
-		padding: 0 10px;
+		padding: 0 12px;
 	}
 
 	.chat-input {
-		font-size: 14px;
-		color: #333333;
+		font-size: 15px;
+		color: #1F2329;
 	}
 
 	.footer-icon {
 		font-size: 24px;
-		color: #666666;
+		color: #646A73;
 	}
 
 	.action-row {
 		flex-direction: row;
 		justify-content: space-around;
 		align-items: center;
-		padding: 4px 12px 12px 12px;
+		padding: 0 12px 4px 12px;
 	}
 
 	.action-icon {
 		font-size: 24px;
-		color: #666666;
+		color: #646A73;
 	}
 
 	.add-icon {
-		color: #1677FF;
+		color: #3370FF;
 	}
 
 	.features-menu {
-		background-color: #F8F8F8;
-		padding: 20px;
+		background-color: #FFFFFF;
+		padding: 24px 20px;
 		flex-direction: row;
 		flex-wrap: wrap;
 		border-top-width: 0.5px;
-		border-top-color: #e5e5e5;
+		border-top-color: #EFF0F1;
 	}
 
 	.feature-item {
 		width: 25%;
 		align-items: center;
-		margin-bottom: 20px;
+		margin-bottom: 24px;
 	}
 
 	.feature-icon-wrap {
-		width: 56px;
-		height: 56px;
-		border-radius: 14px;
+		width: 48px;
+		height: 48px;
+		border-radius: 12px;
 		justify-content: center;
 		align-items: center;
 		margin-bottom: 8px;
-		box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 	}
 
 	.feature-icon {
-		font-size: 28px;
-		color: #ffffff;
+		font-size: 24px;
+		color: #FFFFFF;
 	}
 
 	.feature-name {
 		font-size: 12px;
-		color: #666666;
+		color: #646A73;
 	}
 </style>

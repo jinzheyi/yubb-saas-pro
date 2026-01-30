@@ -6,6 +6,118 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "666888",
+      "name": "手机",
+      "font_class": "shouji",
+      "unicode": "e692",
+      "unicode_decimal": 59026
+    },
+    {
+      "icon_id": "36385017",
+      "name": "业务消息",
+      "font_class": "a-yewuxiaoxiiconbeifen3x",
+      "unicode": "e60a",
+      "unicode_decimal": 58890
+    },
+    {
+      "icon_id": "7977599",
+      "name": "免打扰",
+      "font_class": "miandarao",
+      "unicode": "e63a",
+      "unicode_decimal": 58938
+    },
+    {
+      "icon_id": "162882",
+      "name": "设置",
+      "font_class": "shezhi1",
+      "unicode": "e600",
+      "unicode_decimal": 58880
+    },
+    {
+      "icon_id": "493508",
+      "name": "艾特",
+      "font_class": "aite",
+      "unicode": "e7ab",
+      "unicode_decimal": 59307
+    },
+    {
+      "icon_id": "1304896",
+      "name": "用户",
+      "font_class": "yonghu",
+      "unicode": "e624",
+      "unicode_decimal": 58916
+    },
+    {
+      "icon_id": "2492551",
+      "name": "组织",
+      "font_class": "fl-zuzhi",
+      "unicode": "e62b",
+      "unicode_decimal": 58923
+    },
+    {
+      "icon_id": "5270862",
+      "name": "用户群体-业务查询",
+      "font_class": "yonghu1",
+      "unicode": "e616",
+      "unicode_decimal": 58902
+    },
+    {
+      "icon_id": "5387520",
+      "name": "二维码",
+      "font_class": "erweima",
+      "unicode": "eaf1",
+      "unicode_decimal": 60145
+    },
+    {
+      "icon_id": "5387571",
+      "name": "箭头_列表向右",
+      "font_class": "jiantou_liebiaoxiangyou",
+      "unicode": "eb03",
+      "unicode_decimal": 60163
+    },
+    {
+      "icon_id": "5387574",
+      "name": "箭头_列表向左",
+      "font_class": "jiantou_liebiaoxiangzuo",
+      "unicode": "eb04",
+      "unicode_decimal": 60164
+    },
+    {
+      "icon_id": "6561003",
+      "name": "最新更新",
+      "font_class": "zuixingengxin",
+      "unicode": "e61e",
+      "unicode_decimal": 58910
+    },
+    {
+      "icon_id": "13080058",
+      "name": "切换主题",
+      "font_class": "qiehuanzhuti",
+      "unicode": "e984",
+      "unicode_decimal": 59780
+    },
+    {
+      "icon_id": "21053809",
+      "name": "部门",
+      "font_class": "bumen",
+      "unicode": "e686",
+      "unicode_decimal": 59014
+    },
+    {
+      "icon_id": "24557060",
+      "name": "收起",
+      "font_class": "shouqi",
+      "unicode": "e68d",
+      "unicode_decimal": 59021
+    },
+    {
+      "icon_id": "46769367",
+      "name": "展开收起-展开",
+      "font_class": "zhankaishouqi-zhankai",
+      "unicode": "e60e",
+      "unicode_decimal": 58894
+    },
+    {
       "icon_id": "46755367",
       "name": "互联网",
       "font_class": "hulianwang",

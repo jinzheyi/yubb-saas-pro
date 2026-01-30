@@ -9,7 +9,7 @@
 				<view class="user-detail">
 					<view class="name-row">
 						<text class="name">朱述勇</text>
-						<text class="iconfont qr-icon">&#xea8b;</text>
+						<text class="iconfont qr-icon">&#xeaf1;</text>
 					</view>
 				</view>
 			</view>
@@ -21,35 +21,38 @@
 			</view>
 		</view>
 
-		<scroll-view class="content" scroll-y="true">
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<view class="menu-group">
 				<view class="menu-item" @click="handleAction('theme')">
 					<view class="menu-icon-wrap" style="background-color: #06b6d4;">
-						<text class="iconfont menu-icon">&#xea84;</text>
+						<text class="iconfont menu-icon">&#xe984;</text>
 					</view>
 					<text class="menu-label">{{ t('profile.menu.theme') }}</text>
-					<text class="iconfont arrow-icon">&#xea8d;</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
+					<view class="menu-item-border"></view>
 				</view>
 				<view class="menu-item" @click="handleAction('fav')">
 					<view class="menu-icon-wrap" style="background-color: #fb923c;">
 						<text class="iconfont menu-icon">&#xea90;</text>
 					</view>
 					<text class="menu-label">{{ t('profile.menu.fav') }}</text>
-					<text class="iconfont arrow-icon">&#xea8d;</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
+					<view class="menu-item-border"></view>
 				</view>
 				<view class="menu-item" @click="handleAction('scan')">
 					<view class="menu-icon-wrap" style="background-color: #f97316;">
 						<text class="iconfont menu-icon">&#xea8b;</text>
 					</view>
 					<text class="menu-label">{{ t('profile.menu.scan') }}</text>
-					<text class="iconfont arrow-icon">&#xea8d;</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
+					<view class="menu-item-border"></view>
 				</view>
 				<view class="menu-item" @click="handleAction('settings')">
 					<view class="menu-icon-wrap" style="background-color: #fdba74;">
 						<text class="iconfont menu-icon">&#xea8d;</text>
 					</view>
 					<text class="menu-label">{{ t('profile.menu.settings') }}</text>
-					<text class="iconfont arrow-icon">&#xea8d;</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
 				</view>
 			</view>
 
@@ -93,21 +96,22 @@
 </script>
 
 <style>
+	/* 页面基础样式 */
 	.page {
-		flex: 1;
-		background-color: #F2F2F7;
+		height: 100%;
+		background-color: #F5F7FA;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #1677FF;
+		background-color: #3370FF;
 	}
 
 	.user-header {
-		background-color: #1677FF;
-		padding: 24px 24px 32px 24px;
+		background-color: #3370FF;
+		padding: 24px 20px 40px 20px;
 	}
 
 	.user-info-row {
@@ -116,21 +120,12 @@
 	}
 
 	.avatar {
-		width: 64px;
-		height: 64px;
-		border-radius: 32px;
-		background-color: #38bdf8;
+		width: 60px;
+		height: 60px;
+		border-radius: 12px;
+		background-color: #FFFFFF;
 		border-width: 2px;
-		border-color: #ffffff;
-		justify-content: center;
-		align-items: center;
-		box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-	}
-
-	.avatar-text {
-		color: #ffffff;
-		font-size: 18px;
-		font-weight: 500;
+		border-color: rgba(255, 255, 255, 0.3);
 	}
 
 	.user-detail {
@@ -144,99 +139,119 @@
 	}
 
 	.name {
-		color: #ffffff;
-		font-size: 24px;
-		font-weight: bold;
+		color: #FFFFFF;
+		font-size: 20px;
+		font-weight: 600;
 	}
 
 	.qr-icon {
-		color: rgba(255, 255, 255, 0.8);
-		font-size: 20px;
+		color: rgba(255, 255, 255, 0.7);
+		font-size: 18px;
 		margin-left: 8px;
 	}
 
 	.dept-row {
-		margin-top: 16px;
-		border-bottom-width: 0.5px;
-		border-bottom-color: rgba(255, 255, 255, 0.2);
-		padding-bottom: 16px;
+		margin-top: 12px;
 	}
 
 	.dept-text {
-		color: rgba(255, 255, 255, 0.9);
-		font-size: 16px;
+		color: rgba(255, 255, 255, 0.8);
+		font-size: 13px;
 	}
 
 	.status-row {
 		margin-top: 16px;
+		background-color: rgba(255, 255, 255, 0.15);
+		padding: 6px 12px;
+		border-radius: 6px;
+		align-self: flex-start;
 	}
 
 	.status-text {
-		color: rgba(255, 255, 255, 0.8);
-		font-size: 15px;
+		color: #FFFFFF;
+		font-size: 12px;
 	}
 
 	.content {
 		flex: 1;
-		margin-top: -12px;
+		margin-top: -16px;
+		height: 0;
+		background-color: #F5F7FA;
 	}
 
 	.menu-group {
-		background-color: #ffffff;
-		border-radius: 20px 20px 0 0;
-		padding-top: 8px;
-		box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+		background-color: #FFFFFF;
+		border-radius: 16px 16px 0 0;
+		padding: 8px 0;
 	}
 
 	.menu-item {
 		flex-direction: row;
 		align-items: center;
-		padding: 16px 20px;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #f0f0f0;
+		padding: 14px 20px;
+		background-color: #FFFFFF;
+		position: relative;
+	}
+
+	.menu-item:active {
+		background-color: #F2F3F5;
+	}
+
+	.menu-item-border {
+		position: absolute;
+		bottom: 0;
+		left: 60px;
+		right: 0;
+		height: 0.5px;
+		background-color: #EFF0F1;
 	}
 
 	.menu-icon-wrap {
-		width: 40px;
-		height: 40px;
-		border-radius: 10px;
+		width: 28px;
+		height: 28px;
+		border-radius: 6px;
 		justify-content: center;
 		align-items: center;
-		margin-right: 16px;
+		margin-right: 12px;
 	}
 
 	.menu-icon {
-		color: #ffffff;
-		font-size: 22px;
+		color: #FFFFFF;
+		font-size: 18px;
 	}
 
 	.menu-label {
 		flex: 1;
-		font-size: 17px;
-		color: #333333;
+		font-size: 16px;
+		color: #1F2329;
+		font-weight: 400;
 	}
 
 	.arrow-icon {
-		color: #cccccc;
-		font-size: 18px;
+		color: #8F959E;
+		font-size: 14px;
 	}
 
 	.logout-wrap {
-		padding: 32px 20px;
+		padding: 24px 20px;
 	}
 
 	.logout-btn {
-		background-color: #ffffff;
-		height: 50px;
-		border-radius: 12px;
+		background-color: #FFFFFF;
+		height: 48px;
+		border-radius: 10px;
 		justify-content: center;
 		align-items: center;
 		border-width: 0.5px;
-		border-color: #ff4d4f;
+		border-color: #EFF0F1;
+	}
+
+	.logout-btn:active {
+		background-color: #FEEEEE;
 	}
 
 	.logout-btn-text {
-		color: #ff4d4f;
+		color: #F54A45;
 		font-size: 16px;
 		font-weight: 500;
 	}

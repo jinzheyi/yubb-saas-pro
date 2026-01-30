@@ -6,7 +6,7 @@
 		<!-- 头部搜索区域 -->
 		<view class="header">
 			<view class="header-top">
-				<text class="header-title">{{ t('message.title') }}</text>
+				<text class="header-title">{{ t('message.title', '消息') }}</text>
 				<view class="header-icons">
 					<text class="iconfont header-icon">&#xea8b;</text>
 					<text class="iconfont header-icon">&#xea74;</text>
@@ -15,7 +15,7 @@
 			<view class="search-container">
 				<view class="search-bar">
 					<text class="iconfont search-icon">&#xea6e;</text>
-					<input class="search-input" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" />
+					<input class="search-input" :placeholder="t('message.searchPlaceholder', '搜索')" placeholder-class="placeholder" />
 				</view>
 			</view>
 		</view>
@@ -27,15 +27,24 @@
 					<view class="category-icon-wrap">
 						<text class="iconfont category-icon" :style="{ color: item.color }">{{ item.icon }}</text>
 					</view>
+					<text class="category-text">{{ t(item.nameKey) }}</text>
 				</view>
 			</view>
 
 			<!-- 消息列表 -->
 			<view class="message-list">
-				<view class="message-item" v-for="(item, index) in messageList" :key="index" @click="handleMessageClick(item)">
+				<view 
+					class="message-item" 
+					v-for="(item, index) in messageList" 
+					:key="index" 
+					@click="handleMessageClick(item)"
+					@longpress="handleLongPress(item, $event)"
+				>
 					<view class="message-avatar" :style="{ backgroundColor: item.avatarBg }">
 						<text v-if="item.avatarIcon" class="iconfont avatar-icon">{{ item.avatarIcon }}</text>
 						<text v-else class="avatar-text">{{ item.avatarText }}</text>
+						<!-- 未读红点 -->
+						<view v-if="item.unread" class="unread-dot"></view>
 					</view>
 					<view class="message-content">
 						<view class="message-top">
@@ -44,9 +53,30 @@
 						</view>
 						<text class="message-desc">{{ item.desc }}</text>
 					</view>
+					<view v-if="index < messageList.length - 1" class="message-item-border"></view>
 				</view>
 			</view>
 		</scroll-view>
+
+		<!-- 长按右键菜单弹窗 -->
+		<view v-if="showContextMenu" class="menu-mask" @click="closeMenu">
+			<view class="menu-content" :style="{ top: menuY + 'px', left: menuX + 'px' }" @click.stop>
+				<view class="menu-header">
+					<text class="menu-title">{{ t(selectedItem?.titleKey ?? '', selectedItem?.title ?? '') }}</text>
+				</view>
+				<view class="menu-list">
+					<view class="menu-item-btn" @click="handleMenuAction('pin')">
+						<text class="menu-item-text">{{ selectedItem?.isPinned ? t('message.menu.unpin') : t('message.menu.pin') }}</text>
+					</view>
+					<view class="menu-item-btn" @click="handleMenuAction('unread')">
+						<text class="menu-item-text">{{ selectedItem?.unread ? t('message.menu.read') : t('message.menu.unread') }}</text>
+					</view>
+					<view class="menu-item-btn" @click="handleMenuAction('remove')">
+						<text class="menu-item-text menu-danger">{{ t('message.menu.remove') }}</text>
+					</view>
+				</view>
+			</view>
+		</view>
 	</view>
 </template>
 
@@ -55,14 +85,20 @@
 
 	const { t } = useI18n()
 
+	// 菜单状态
+	const showContextMenu = ref(false)
+	const menuX = ref(0)
+	const menuY = ref(0)
+	const selectedItem = ref<any>(null)
+
 	// 分类数据
 	const categories = [
-		{ icon: '\uea8c', color: '#666', nameKey: 'message.categories.schedule' },
-		{ icon: '\uea94', color: '#666', nameKey: 'message.categories.person' },
-		{ icon: '\uea94', color: '#666', nameKey: 'message.categories.group' },
-		{ icon: '\uea73', color: '#666', nameKey: 'message.categories.send' },
-		{ icon: '\uea93', color: '#666', nameKey: 'message.categories.at' },
-		{ icon: '\uea8d', color: '#666', nameKey: 'message.categories.noDisturb' }
+		{ icon: '\ue61e', color: '#666', nameKey: 'message.categories.latest' },
+		{ icon: '\ue624', color: '#666', nameKey: 'message.categories.user' },
+		{ icon: '\ue616', color: '#666', nameKey: 'message.categories.groupQuery' },
+		{ icon: '\ue60a', color: '#666', nameKey: 'message.categories.business' },
+		{ icon: '\ue7ab', color: '#666', nameKey: 'message.categories.at' },
+		{ icon: '\ue63a', color: '#666', nameKey: 'message.categories.noDisturb' }
 	]
 
 	// 消息列表数据
@@ -74,7 +110,9 @@
 			desc: '您有新的待阅文档(基层动态)：省财...',
 			time: '昨天 14:25',
 			avatarBg: '#f97316',
-			avatarIcon: '\uea9b'
+			avatarIcon: '\uea9b',
+			unread: true,
+			isPinned: false
 		},
 		{
 			id: 2,
@@ -83,7 +121,9 @@
 			desc: '有流程抄送给您：省财信科技公司收...',
 			time: '2026-01-22',
 			avatarBg: '#3b82f6',
-			avatarIcon: '\uea9e'
+			avatarIcon: '\uea9e',
+			unread: false,
+			isPinned: false
 		},
 		{
 			id: 3,
@@ -92,7 +132,9 @@
 			desc: '省财信科技公司请休假审批-朱述勇-...',
 			time: '2026-01-12',
 			avatarBg: '#3b82f6',
-			avatarIcon: '\uea76'
+			avatarIcon: '\uea76',
+			unread: false,
+			isPinned: false
 		},
 		{
 			id: 4,
@@ -101,7 +143,9 @@
 			desc: '财信科技制度汇编2025 (20260109)...',
 			time: '2026-01-09',
 			avatarBg: '#fb923c',
-			avatarIcon: '\uea93'
+			avatarIcon: '\uea93',
+			unread: true,
+			isPinned: false
 		},
 		{
 			id: 5,
@@ -110,7 +154,9 @@
 			desc: '[图片]',
 			time: '2025-12-10',
 			avatarBg: '#60a5fa',
-			avatarText: '胡婷'
+			avatarText: '胡婷',
+			unread: false,
+			isPinned: false
 		}
 	])
 
@@ -119,39 +165,75 @@
 			url: '/pages/message/chat?name=' + (item.titleKey ? t(item.titleKey) : item.title)
 		})
 	}
+
+	function handleLongPress(item : any, e : TouchEvent) {
+		selectedItem.value = item
+		// 获取点击位置，简单处理弹窗位置
+		const touch = e.touches[0]
+		menuX.value = Math.min(touch.clientX, uni.getSystemInfoSync().screenWidth - 160)
+		menuY.value = touch.clientY
+		showContextMenu.value = true
+	}
+
+	function closeMenu() {
+		showContextMenu.value = false
+	}
+
+	function handleMenuAction(action : string) {
+		if (!selectedItem.value) return
+		
+		switch (action) {
+			case 'pin':
+				selectedItem.value.isPinned = !selectedItem.value.isPinned
+				// 排序逻辑：置顶的排前面
+				messageList.value.sort((a, b) => {
+					if (a.isPinned === b.isPinned) return 0
+					return a.isPinned ? -1 : 1
+				})
+				break
+			case 'unread':
+				selectedItem.value.unread = !selectedItem.value.unread
+				break
+			case 'remove':
+				const index = messageList.value.findIndex(i => i.id === selectedItem.value.id)
+				if (index > -1) messageList.value.splice(index, 1)
+				break
+		}
+		closeMenu()
+	}
 </script>
 
 <style>
 	/* 页面基础样式 */
 	.page {
-		flex: 1;
-		background-color: #ffffff;
+		height: 100%;
+		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #1677FF;
+		background-color: #FFFFFF;
 	}
 
-	/* 头部区域 */
+	/* 头部区域 - 扁平化风格 */
 	.header {
-		background-color: #1677FF;
-		padding: 12px 16px 16px 16px;
+		background-color: #FFFFFF;
+		padding: 8px 16px 12px 16px;
 	}
 
 	.header-top {
 		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 16px;
+		height: 44px;
 	}
 
 	.header-title {
-		color: #ffffff;
+		color: #1F2329;
 		font-size: 20px;
-		font-weight: bold;
+		font-weight: 600;
 	}
 
 	.header-icons {
@@ -160,19 +242,20 @@
 	}
 
 	.header-icon {
-		color: #ffffff;
+		color: #1F2329;
 		font-size: 22px;
-		margin-left: 16px;
+		margin-left: 20px;
 	}
 
-	/* 搜索栏 */
+	/* 搜索栏 - 浅灰色扁平风格 */
 	.search-container {
 		width: 100%;
+		margin-top: 4px;
 	}
 
 	.search-bar {
-		background-color: rgba(255, 255, 255, 0.15);
-		border-radius: 8px;
+		background-color: #F2F3F5;
+		border-radius: 6px;
 		height: 36px;
 		flex-direction: row;
 		align-items: center;
@@ -181,80 +264,123 @@
 
 	.search-icon {
 		font-size: 16px;
-		color: rgba(255, 255, 255, 0.6);
+		color: #8F959E;
 	}
 
 	.search-input {
 		flex: 1;
-		color: #ffffff;
+		color: #1F2329;
 		font-size: 14px;
+		margin-left: 8px;
 	}
 
 	.placeholder {
-		color: rgba(255, 255, 255, 0.6);
+		color: #8F959E;
 	}
 
 	/* 滚动内容区域 */
 	.content-scroll {
 		flex: 1;
+		height: 0;
+		background-color: #FFFFFF;
 	}
 
-	/* 分类图标栏 */
+	/* 分类图标栏 - 更加简洁 */
 	.category-bar {
 		flex-direction: row;
-		padding: 12px 16px;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #f0f0f0;
-		justify-content: space-around;
+		padding: 16px 16px 12px 16px;
+		justify-content: space-between;
 	}
 
 	.category-item {
 		align-items: center;
+		width: 16%;
 	}
 
 	.category-icon-wrap {
-		width: 32px;
-		height: 32px;
+		width: 40px;
+		height: 40px;
+		border-radius: 10px;
+		background-color: #F5F7FA;
 		justify-content: center;
 		align-items: center;
+		margin-bottom: 6px;
 	}
 
 	.category-icon {
-		font-size: 24px;
-		color: #666666;
+		font-size: 22px;
+	}
+
+	.category-text {
+		font-size: 11px;
+		color: #646A73;
 	}
 
 	/* 消息列表 */
 	.message-list {
-		padding: 0 16px;
+		padding: 0;
 	}
 
 	.message-item {
 		flex-direction: row;
-		padding: 16px 0;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #f0f0f0;
+		padding: 14px 16px;
+		background-color: #FFFFFF;
 		align-items: center;
+		position: relative;
+	}
+
+	.message-item:active {
+		background-color: #F2F3F5;
+	}
+
+	.message-item-border {
+		position: absolute;
+		bottom: 0;
+		left: 72px;
+		right: 0;
+		height: 0.5px;
+		background-color: #EFF0F1;
 	}
 
 	.message-avatar {
 		width: 48px;
 		height: 48px;
-		border-radius: 24px;
+		border-radius: 8px;
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
+		position: relative;
+	}
+
+	.unread-dot {
+		position: absolute;
+		top: -4px;
+		right: -4px;
+		width: 16px;
+		height: 16px;
+		background-color: #F54A45;
+		border-radius: 8px;
+		border-width: 2px;
+		border-color: #FFFFFF;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.unread-count {
+		color: #FFFFFF;
+		font-size: 10px;
+		font-weight: bold;
 	}
 
 	.avatar-icon {
 		font-size: 24px;
-		color: #ffffff;
+		color: #FFFFFF;
 	}
 
 	.avatar-text {
-		color: #ffffff;
-		font-size: 12px;
-		font-weight: bold;
+		color: #FFFFFF;
+		font-size: 14px;
+		font-weight: 600;
 	}
 
 	.message-content {
@@ -270,19 +396,75 @@
 
 	.message-name {
 		font-size: 16px;
-		color: #333333;
+		color: #1F2329;
 		font-weight: 500;
 	}
 
 	.message-time {
 		font-size: 12px;
-		color: #999999;
+		color: #8F959E;
 	}
 
 	.message-desc {
-		font-size: 14px;
-		color: #888888;
+		font-size: 13px;
+		color: #646A73;
 		lines: 1;
 		text-overflow: ellipsis;
+	}
+
+	/* 菜单弹窗样式 */
+	.menu-mask {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: transparent;
+		z-index: 999;
+	}
+
+	.menu-content {
+		position: absolute;
+		width: 160px;
+		background-color: #ffffff;
+		border-radius: 12px;
+		box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+		overflow: hidden;
+		border-width: 0.5px;
+		border-color: #f0f0f0;
+	}
+
+	.menu-header {
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #f0f0f0;
+		background-color: #fafafa;
+	}
+
+	.menu-title {
+		font-size: 13px;
+		color: #999999;
+		font-weight: 500;
+	}
+
+	.menu-list {
+		padding: 4px 0;
+	}
+
+	.menu-item-btn {
+		padding: 12px 16px;
+	}
+
+	.menu-item-btn:active {
+		background-color: #f5f5f5;
+	}
+
+	.menu-item-text {
+		font-size: 15px;
+		color: #333333;
+	}
+
+	.menu-danger {
+		color: #ff4d4f;
 	}
 </style>

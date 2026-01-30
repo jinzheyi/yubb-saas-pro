@@ -11,7 +11,7 @@
 			</view>
 		</view>
 
-		<scroll-view class="content" scroll-y="true">
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<!-- 分类列表 -->
 			<view class="category-group">
 				<view class="category-item" v-for="(item, index) in categories1" :key="index" @click="handleCategory(item)">
@@ -19,6 +19,7 @@
 						<text class="iconfont category-icon">{{ item.icon }}</text>
 					</view>
 					<text class="category-name">{{ t(item.nameKey) }}</text>
+					<view v-if="index < categories1.length - 1" class="category-item-border"></view>
 				</view>
 			</view>
 
@@ -28,10 +29,11 @@
 						<text class="iconfont category-icon">{{ item.icon }}</text>
 					</view>
 					<text class="category-name">{{ t(item.nameKey) }}</text>
+					<view v-if="index < categories2.length - 1" class="category-item-border"></view>
 				</view>
 			</view>
 
-			<!-- 常用联系人 -->
+			<!-- 联系人 -->
 			<view class="section-header">
 				<text class="section-title">{{ t('contacts.commonContacts') }}</text>
 			</view>
@@ -44,6 +46,7 @@
 						<text class="contact-name">{{ item.name }}</text>
 						<text class="contact-role">{{ item.role }}</text>
 					</view>
+					<view v-if="index < commonContacts.length - 1" class="contact-item-border"></view>
 				</view>
 			</view>
 		</scroll-view>
@@ -56,16 +59,14 @@
 	const { t } = useI18n()
 
 	const categories1 = [
-		{ icon: '\uea94', bg: '#f97316', nameKey: 'contacts.mobile' },
-		{ icon: '\uea94', bg: '#fb923c', nameKey: 'contacts.groups' },
+		{ icon: '\ue692', bg: '#f97316', nameKey: 'contacts.mobile' },
+		{ icon: '\ue616', bg: '#fb923c', nameKey: 'contacts.groups' },
 		{ icon: '\uea90', bg: '#facc15', nameKey: 'contacts.following' }
 	]
 
 	const categories2 = [
-		{ icon: '\uea8c', bg: '#84cc16', nameKey: 'contacts.org' },
-		{ icon: '\uea84', bg: '#06b6d4', nameKey: 'contacts.dept' },
-		{ icon: '\uea96', bg: '#3b82f6', nameKey: 'contacts.commonGroups' },
-		{ icon: '\uea97', bg: '#6366f1', nameKey: 'contacts.subordinates' }
+		{ icon: '\ue62b', bg: '#84cc16', nameKey: 'contacts.org' },
+		{ icon: '\ue686', bg: '#06b6d4', nameKey: 'contacts.dept' }
 	]
 
 	const commonContacts = [
@@ -97,135 +98,171 @@
 </script>
 
 <style>
+	/* 页面基础样式 */
 	.page {
-		flex: 1;
-		background-color: #F7F7F7;
+		height: 100%;
+		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #1677FF;
+		background-color: #FFFFFF;
 	}
 
+	/* 头部区域 - 扁平化风格 */
 	.header {
-		background-color: #1677FF;
-		padding: 12px 16px 16px 16px;
+		background-color: #FFFFFF;
+		padding: 8px 16px 12px 16px;
 	}
 
 	.header-top {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
 		height: 44px;
-		justify-content: center;
 	}
 
 	.header-title {
-		color: #ffffff;
+		color: #1F2329;
 		font-size: 20px;
-		font-weight: bold;
+		font-weight: 600;
 	}
 
+	/* 搜索栏 - 浅灰色扁平风格 */
 	.search-bar {
-		background-color: #ffffff;
-		border-radius: 8px;
+		background-color: #F2F3F5;
+		border-radius: 6px;
 		height: 36px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
-		margin-top: 8px;
+		margin-top: 4px;
 	}
 
 	.search-icon {
 		font-size: 16px;
-		color: #999999;
+		color: #8F959E;
 	}
 
 	.search-input {
 		flex: 1;
 		font-size: 14px;
 		margin-left: 8px;
-		color: #333333;
+		color: #1F2329;
 	}
 
 	.placeholder {
-		color: #999999;
+		color: #8F959E;
 	}
 
 	.content {
 		flex: 1;
+		height: 0;
+		background-color: #FFFFFF;
 	}
 
 	.category-group {
-		background-color: #ffffff;
+		background-color: #FFFFFF;
+		padding-top: 4px;
 	}
 
 	.category-item {
 		flex-direction: row;
 		align-items: center;
 		padding: 12px 16px;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #f0f0f0;
+		background-color: #FFFFFF;
+		position: relative;
+	}
+
+	.category-item:active {
+		background-color: #F2F3F5;
+	}
+
+	.category-item-border {
+		position: absolute;
+		bottom: 0;
+		left: 64px;
+		right: 0;
+		height: 0.5px;
+		background-color: #EFF0F1;
 	}
 
 	.category-icon-wrap {
-		width: 40px;
-		height: 40px;
-		border-radius: 20px;
+		width: 36px;
+		height: 36px;
+		border-radius: 8px;
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
 	}
 
 	.category-icon {
-		color: #ffffff;
+		color: #FFFFFF;
 		font-size: 20px;
 	}
 
 	.category-name {
 		font-size: 16px;
-		color: #333333;
-		font-weight: 500;
+		color: #1F2329;
+		font-weight: 400;
 	}
 
 	.mt-2 {
 		margin-top: 8px;
 	}
 
+	/* 分组标题 */
 	.section-header {
-		padding: 12px 16px;
+		padding: 16px 16px 8px 16px;
+		background-color: #FFFFFF;
 	}
 
 	.section-title {
 		font-size: 12px;
-		color: #999999;
-		text-transform: uppercase;
+		color: #8F959E;
+		font-weight: 500;
 	}
 
 	.contact-list {
-		background-color: #ffffff;
+		background-color: #FFFFFF;
 	}
 
 	.contact-item {
 		flex-direction: row;
 		align-items: center;
-		padding: 12px 16px;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #f0f0f0;
+		padding: 10px 16px;
+		background-color: #FFFFFF;
+		position: relative;
+	}
+
+	.contact-item:active {
+		background-color: #F2F3F5;
+	}
+
+	.contact-item-border {
+		position: absolute;
+		bottom: 0;
+		left: 68px;
+		right: 0;
+		height: 0.5px;
+		background-color: #EFF0F1;
 	}
 
 	.contact-avatar {
-		width: 48px;
-		height: 48px;
-		border-radius: 24px;
+		width: 40px;
+		height: 40px;
+		border-radius: 8px;
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
 	}
 
 	.avatar-text {
-		color: #ffffff;
-		font-size: 14px;
-		font-weight: bold;
+		color: #FFFFFF;
+		font-size: 13px;
+		font-weight: 600;
 	}
 
 	.contact-info {
@@ -234,13 +271,13 @@
 
 	.contact-name {
 		font-size: 16px;
-		color: #333333;
-		font-weight: 600;
+		color: #1F2329;
+		font-weight: 400;
 		margin-bottom: 2px;
 	}
 
 	.contact-role {
-		font-size: 13px;
-		color: #999999;
+		font-size: 12px;
+		color: #8F959E;
 	}
 </style>

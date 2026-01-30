@@ -6,14 +6,14 @@
 		<!-- 头部导航 -->
 		<view class="header">
 			<view class="header-left" @click="handleBack">
-				<text class="iconfont back-icon">&#xe600;</text>
+				<text class="iconfont back-icon">&#xeb04;</text>
 				<text class="back-text">{{ t('common.back') }}</text>
 			</view>
 			<text class="header-title">{{ t('chatSettings.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
-		<scroll-view class="content" scroll-y="true">
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<!-- 个人信息卡片 -->
 			<view class="profile-card">
 				<view class="avatar">
@@ -55,7 +55,7 @@
 			<view class="settings-group">
 				<view class="list-item" @click="handleAction('add')">
 					<text class="item-label">{{ t('chatSettings.addMember') }}</text>
-					<text class="iconfont arrow-icon">&#xea8d;</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
 				</view>
 			</view>
 
@@ -64,7 +64,7 @@
 					<text class="item-label">{{ t('chatSettings.bubble') }}</text>
 					<view class="item-right">
 						<view class="bubble-preview"></view>
-						<text class="iconfont arrow-icon">&#xea8d;</text>
+						<text class="iconfont arrow-icon">&#xeb03;</text>
 					</view>
 				</view>
 				<view class="list-item">
@@ -119,8 +119,8 @@
 
 <style>
 	.page {
-		flex: 1;
-		background-color: #F2F2F7;
+		height: 100%;
+		background-color: #ffffff;
 		display: flex;
 		flex-direction: column;
 	}
@@ -168,6 +168,8 @@
 
 	.content {
 		flex: 1;
+		height: 0;
+		background-color: #ffffff;
 	}
 
 	.profile-card {

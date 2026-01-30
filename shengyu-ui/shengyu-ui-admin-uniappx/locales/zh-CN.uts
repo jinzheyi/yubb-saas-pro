@@ -117,10 +117,10 @@ export default {
 		title: '消息',
 		searchPlaceholder: '搜索',
 		categories: {
-			schedule: '日程',
-			person: '联系人',
-			group: '群组',
-			send: '已发送',
+			latest: '最近更新',
+			user: '用户',
+			groupQuery: '用户群体',
+			business: '业务消息',
 			at: '提到我的',
 			noDisturb: '免打扰'
 		},
@@ -132,6 +132,13 @@ export default {
 		},
 		time: {
 			yesterday: '昨天'
+		},
+		menu: {
+			pin: '置顶该会话',
+			unpin: '取消置顶',
+			remove: '从会话列表中移除',
+			unread: '标记未读',
+			read: '标记已读'
 		}
 	},
 	chat: {
@@ -164,7 +171,7 @@ export default {
 		dept: '我的部门',
 		commonGroups: '常用组',
 		subordinates: '我的下属',
-		commonContacts: '常用联系人'
+		commonContacts: '联系人'
 	},
 	workbench: {
 		title: '工作台',

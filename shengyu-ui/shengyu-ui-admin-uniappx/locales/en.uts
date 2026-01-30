@@ -117,10 +117,10 @@ export default {
 		title: 'Messages',
 		searchPlaceholder: 'Search',
 		categories: {
-			schedule: 'Schedule',
-			person: 'Contacts',
-			group: 'Groups',
-			send: 'Sent',
+			latest: 'Latest',
+			user: 'User',
+			groupQuery: 'Groups',
+			business: 'Business',
 			at: 'Mentioned',
 			noDisturb: 'No Disturb'
 		},
@@ -132,6 +132,13 @@ export default {
 		},
 		time: {
 			yesterday: 'Yesterday'
+		},
+		menu: {
+			pin: 'Pin Session',
+			unpin: 'Unpin Session',
+			remove: 'Remove from List',
+			unread: 'Mark as Unread',
+			read: 'Mark as Read'
 		}
 	},
 	chat: {
@@ -164,7 +171,7 @@ export default {
 		dept: 'My Dept',
 		commonGroups: 'Groups',
 		subordinates: 'Subordinates',
-		commonContacts: 'Common Contacts'
+		commonContacts: 'Contacts'
 	},
 	workbench: {
 		title: 'Workbench',

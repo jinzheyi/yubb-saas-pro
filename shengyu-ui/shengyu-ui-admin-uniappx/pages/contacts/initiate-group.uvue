@@ -3,7 +3,7 @@
 		<view class="status-bar"></view>
 		<view class="header">
 			<view class="header-left" @click="handleBack">
-				<text class="iconfont back-icon">&#xe600;</text>
+				<text class="iconfont back-icon">&#xeb04;</text>
 				<text class="back-text">{{ t('common.back') }}</text>
 			</view>
 			<text class="header-title">{{ t('initiateGroup.title') }}</text>
@@ -17,7 +17,7 @@
 			</view>
 		</view>
 
-		<scroll-view class="content" scroll-y="true">
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<view class="section-label">
 				<text class="section-text">{{ t('initiateGroup.selectExisting') }}</text>
 			</view>
@@ -64,12 +64,10 @@
 	const { t } = useI18n()
 
 	const categories = [
-		{ icon: '\uea94', bg: '#fb923c', nameKey: 'contacts.groups' },
+		{ icon: '\ue616', bg: '#fb923c', nameKey: 'contacts.groups' },
 		{ icon: '\uea90', bg: '#facc15', nameKey: 'contacts.following' },
-		{ icon: '\uea8c', bg: '#84cc16', nameKey: 'contacts.org' },
-		{ icon: '\uea84', bg: '#06b6d4', nameKey: 'contacts.dept' },
-		{ icon: '\uea96', bg: '#3b82f6', nameKey: 'contacts.commonGroups' },
-		{ icon: '\uea97', bg: '#6366f1', nameKey: 'contacts.subordinates' }
+		{ icon: '\ue62b', bg: '#84cc16', nameKey: 'contacts.org' },
+		{ icon: '\ue686', bg: '#06b6d4', nameKey: 'contacts.dept' }
 	]
 
 	const commonContacts = ref([
@@ -109,8 +107,8 @@
 
 <style>
 	.page {
-		flex: 1;
-		background-color: #F7F8FA;
+		height: 100%;
+		background-color: #ffffff;
 		display: flex;
 		flex-direction: column;
 	}
@@ -186,6 +184,8 @@
 
 	.content {
 		flex: 1;
+		height: 0;
+		background-color: #ffffff;
 	}
 
 	.section-label {

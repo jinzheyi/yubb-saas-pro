@@ -6,14 +6,14 @@
 			<text class="edit-btn">{{ t('workbench.edit') }}</text>
 		</view>
 
-		<scroll-view class="content" scroll-y="true">
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<!-- 办公流程 -->
 			<view class="section">
-				<view class="section-header">
+				<view class="section-header" @click="isProcessExpanded = !isProcessExpanded">
 					<text class="section-title">{{ t('workbench.officeProcess') }}</text>
-					<text class="iconfont arrow-icon">&#xea8d;</text>
+					<text class="iconfont arrow-icon">{{ isProcessExpanded ? '\ue68d' : '\ue60e' }}</text>
 				</view>
-				<view class="grid">
+				<view class="grid" v-if="isProcessExpanded">
 					<view class="grid-item" v-for="(item, index) in processList" :key="index" @click="handleAction(item)">
 						<view class="icon-wrap" :style="{ backgroundImage: item.gradient }">
 							<text class="iconfont grid-icon">{{ item.icon }}</text>
@@ -28,11 +28,11 @@
 
 			<!-- 常用功能 -->
 			<view class="section mt-2">
-				<view class="section-header">
+				<view class="section-header" @click="isFeatureExpanded = !isFeatureExpanded">
 					<text class="section-title">{{ t('workbench.commonFeatures') }}</text>
-					<text class="iconfont arrow-icon">&#xea8d;</text>
+					<text class="iconfont arrow-icon">{{ isFeatureExpanded ? '\ue68d' : '\ue60e' }}</text>
 				</view>
-				<view class="grid">
+				<view class="grid" v-if="isFeatureExpanded">
 					<view class="grid-item" v-for="(item, index) in featureList" :key="index" @click="handleAction(item)">
 						<view class="icon-wrap" :style="{ backgroundImage: item.gradient }">
 							<text class="iconfont grid-icon">{{ item.icon }}</text>
@@ -49,6 +49,8 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 
 	const { t } = useI18n()
+	const isProcessExpanded = ref(true)
+	const isFeatureExpanded = ref(true)
 
 	const processList = [
 		{ nameKey: 'workbench.todo', icon: '\uea83', gradient: 'linear-gradient(135deg, #fb923c, #f97316)', badge: '99+' },
@@ -79,85 +81,89 @@
 </script>
 
 <style>
+	/* 页面基础样式 */
 	.page {
-		flex: 1;
-		background-color: #F5F5F7;
+		height: 100%;
+		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #1677FF;
+		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #1677FF;
-		height: 44px;
+		background-color: #FFFFFF;
+		padding: 8px 16px 12px 16px;
 		flex-direction: row;
 		align-items: center;
-		padding: 0 16px;
 		justify-content: space-between;
 	}
 
 	.header-title {
-		color: #ffffff;
+		color: #1F2329;
 		font-size: 20px;
-		font-weight: bold;
+		font-weight: 600;
+		height: 44px;
+		line-height: 44px;
 	}
 
 	.edit-btn {
-		color: #ffffff;
+		color: #1677FF;
 		font-size: 16px;
-		opacity: 0.9;
 	}
 
 	.content {
 		flex: 1;
+		height: 0;
+		background-color: #FFFFFF;
 	}
 
 	.section {
-		background-color: #ffffff;
-		margin-top: 8px;
+		padding: 12px 16px;
 	}
 
 	.section-header {
 		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
-		padding: 12px 16px;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #f0f0f0;
+		margin-bottom: 16px;
 	}
 
 	.section-title {
 		font-size: 14px;
-		color: #999999;
+		color: #1F2329;
 		font-weight: 600;
-		text-transform: uppercase;
 	}
 
 	.arrow-icon {
-		font-size: 16px;
-		color: #cccccc;
+		font-size: 14px;
+		color: #8F959E;
 	}
 
 	.grid {
 		flex-direction: row;
 		flex-wrap: wrap;
-		padding: 16px 8px;
+		margin: 0 -8px;
 	}
 
 	.grid-item {
 		width: 25%;
 		align-items: center;
-		margin-bottom: 24px;
+		padding: 12px 0;
+	}
+
+	.grid-item:active {
+		background-color: #F5F7FA;
+		border-radius: 8px;
 	}
 
 	.icon-wrap {
-		width: 56px;
-		height: 56px;
-		border-radius: 16px;
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
 		justify-content: center;
 		align-items: center;
 		margin-bottom: 8px;
@@ -165,33 +171,38 @@
 	}
 
 	.grid-icon {
-		color: #ffffff;
-		font-size: 28px;
+		color: #FFFFFF;
+		font-size: 22px;
 	}
 
 	.grid-label {
 		font-size: 12px;
-		color: #333333;
+		color: #1F2329;
+		font-weight: 400;
 	}
 
 	.badge {
 		position: absolute;
-		top: -4px;
-		right: -8px;
-		background-color: #1677FF;
+		top: -6px;
+		right: -6px;
+		background-color: #F54A45;
 		border-radius: 10px;
-		padding: 2px 6px;
-		border-width: 2px;
-		border-color: #ffffff;
+		min-width: 18px;
+		height: 18px;
+		padding: 0 4px;
+		justify-content: center;
+		align-items: center;
+		border-width: 1.5px;
+		border-color: #FFFFFF;
 	}
 
 	.badge-text {
-		color: #ffffff;
+		color: #FFFFFF;
 		font-size: 10px;
 		font-weight: bold;
 	}
 
 	.mt-2 {
-		margin-top: 12px;
+		margin-top: 8px;
 	}
 </style>
