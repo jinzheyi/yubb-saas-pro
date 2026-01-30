@@ -31,6 +31,8 @@
 				</view>
 			</view>
 
+			<view class="section-divider"></view>
+
 			<!-- 消息列表 -->
 			<view class="message-list">
 				<view 
@@ -48,7 +50,7 @@
 					</view>
 					<view class="message-content">
 						<view class="message-top">
-							<text class="message-name">{{ t(item.titleKey, item.title) }}</text>
+							<text class="message-name">{{ item.titleKey ? t(item.titleKey, item.title) : item.title }}</text>
 							<text class="message-time">{{ item.time }}</text>
 						</view>
 						<text class="message-desc">{{ item.desc }}</text>
@@ -91,6 +93,24 @@
 	const menuY = ref(0)
 	const selectedItem = ref<any>(null)
 
+	// 生成 100 条模拟消息数据
+	const generateMessages = () : any[] => {
+		const list : any[] = []
+		for (let i = 1; i <= 100; i++) {
+			list.push({
+				id: i,
+				title: `消息测试 ${i}`,
+				desc: `这是第 ${i} 条测试消息的内容摘要，模拟大数据量下的滚动性能...`,
+				time: '10:00',
+				avatarBg: i % 2 === 0 ? '#3370FF' : '#F97316',
+				avatarText: `测${i}`,
+				unread: i < 5,
+				isPinned: false
+			})
+		}
+		return list
+	}
+
 	// 分类数据
 	const categories = [
 		{ icon: '\ue61e', color: '#666', nameKey: 'message.categories.latest' },
@@ -102,64 +122,8 @@
 	]
 
 	// 消息列表数据
-	const messageList = ref([
-		{
-			id: 1,
-			titleKey: 'message.list.newDoc',
-			title: '新文档阅读提醒',
-			desc: '您有新的待阅文档(基层动态)：省财...',
-			time: '昨天 14:25',
-			avatarBg: '#f97316',
-			avatarIcon: '\uea9b',
-			unread: true,
-			isPinned: false
-		},
-		{
-			id: 2,
-			titleKey: 'message.list.docProcess',
-			title: '公文收发',
-			desc: '有流程抄送给您：省财信科技公司收...',
-			time: '2026-01-22',
-			avatarBg: '#3b82f6',
-			avatarIcon: '\uea9e',
-			unread: false,
-			isPinned: false
-		},
-		{
-			id: 3,
-			titleKey: 'message.list.flowReturn',
-			title: '流程退回提醒',
-			desc: '省财信科技公司请休假审批-朱述勇-...',
-			time: '2026-01-12',
-			avatarBg: '#3b82f6',
-			avatarIcon: '\uea76',
-			unread: false,
-			isPinned: false
-		},
-		{
-			id: 4,
-			titleKey: 'message.list.mail',
-			title: '邮件提醒',
-			desc: '财信科技制度汇编2025 (20260109)...',
-			time: '2026-01-09',
-			avatarBg: '#fb923c',
-			avatarIcon: '\uea93',
-			unread: true,
-			isPinned: false
-		},
-		{
-			id: 5,
-			titleKey: '',
-			title: '胡婷',
-			desc: '[图片]',
-			time: '2025-12-10',
-			avatarBg: '#60a5fa',
-			avatarText: '胡婷',
-			unread: false,
-			isPinned: false
-		}
-	])
-
+	const messageList = ref(generateMessages())
+	
 	function handleMessageClick(item : any) {
 		uni.navigateTo({
 			url: '/pages/message/chat?name=' + (item.titleKey ? t(item.titleKey) : item.title)

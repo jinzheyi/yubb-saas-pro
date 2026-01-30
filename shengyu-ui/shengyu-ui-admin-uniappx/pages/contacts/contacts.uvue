@@ -94,16 +94,34 @@
 	]
 
 	// 模拟联系人数据
-	const rawContacts = [
-		{ name: '陶戈', role: '高级经理', avatarText: '陶戈', avatarBg: '#0ea5e9', pinyin: 'T' },
-		{ name: '陈子蒙', role: '部门副总经理 (主持工作)', avatarText: '子蒙', avatarBg: '#f472b6', pinyin: 'C' },
-		{ name: '刘丹丹', role: '行政经理', avatarText: '丹丹', avatarBg: '#c084fc', pinyin: 'L' },
-		{ name: '胡婷', role: '副部长 (主持工作)', avatarText: '胡婷', avatarBg: '#fb7185', pinyin: 'H' },
-		{ name: '朱述勇', role: '开发工程师', avatarText: '述勇', avatarBg: '#10b981', pinyin: 'Z' },
-		{ name: '阿明', role: '实习生', avatarText: '阿明', avatarBg: '#f59e0b', pinyin: 'A' },
-		{ name: '白雪', role: '设计师', avatarText: '白雪', avatarBg: '#ec4899', pinyin: 'B' },
-		{ name: '曹操', role: '市场总监', avatarText: '曹操', avatarBg: '#ef4444', pinyin: 'C' }
-	]
+	const generateRawContacts = () : any[] => {
+		const list : any[] = [
+			{ name: '陶戈', role: '高级经理', avatarText: '陶戈', avatarBg: '#0ea5e9', pinyin: 'T' },
+			{ name: '陈子蒙', role: '部门副总经理 (主持工作)', avatarText: '子蒙', avatarBg: '#f472b6', pinyin: 'C' },
+			{ name: '刘丹丹', role: '行政经理', avatarText: '丹丹', avatarBg: '#c084fc', pinyin: 'L' },
+			{ name: '胡婷', role: '副部长 (主持工作)', avatarText: '胡婷', avatarBg: '#fb7185', pinyin: 'H' },
+			{ name: '朱述勇', role: '开发工程师', avatarText: '述勇', avatarBg: '#10b981', pinyin: 'Z' },
+			{ name: '阿明', role: '实习生', avatarText: '阿明', avatarBg: '#f59e0b', pinyin: 'A' },
+			{ name: '白雪', role: '设计师', avatarText: '白雪', avatarBg: '#ec4899', pinyin: 'B' },
+			{ name: '曹操', role: '市场总监', avatarText: '曹操', avatarBg: '#ef4444', pinyin: 'C' }
+		]
+		
+		// 补充至 100 条
+		const pinyins = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+		for (let i = list.length + 1; i <= 100; i++) {
+			const p = pinyins[i % pinyins.length]
+			list.push({
+				name: `联系人 ${p}${i}`,
+				role: '职员',
+				avatarText: `${p}${i}`,
+				avatarBg: '#3370FF',
+				pinyin: p
+			})
+		}
+		return list
+	}
+
+	const rawContacts = generateRawContacts()
 
 	// 按字母分组
 	type ContactGroup = {
