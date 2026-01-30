@@ -11,7 +11,13 @@
 			</view>
 		</view>
 
-		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+		<scroll-view 
+			class="content" 
+			scroll-y="true" 
+			show-scrollbar="false"
+			:scroll-into-view="scrollTarget"
+			scroll-with-animation="true"
+		>
 			<!-- 分类列表 -->
 			<view class="category-group">
 				<view class="category-item" v-for="(item, index) in categories1" :key="index" @click="handleCategory(item)">
@@ -35,25 +41,37 @@
 				</view>
 			</view>
 
-			<view class="section-divider"></view>
-
-			<!-- 联系人 -->
-			<view class="section-header">
-				<text class="section-title">联系人</text>
-			</view>
-			<view class="contact-list">
-				<view class="contact-item" v-for="(item, index) in commonContacts" :key="index" @click="handleContact(item)">
-					<view class="contact-avatar" :style="{ backgroundColor: item.avatarBg }">
-						<text class="avatar-text">{{ item.avatarText }}</text>
+			<!-- 联系人列表 -->
+			<view v-for="(group, groupIndex) in groupedContacts" :key="groupIndex">
+				<view class="section-header" :id="'group-' + group.letter">
+					<text class="section-title">{{ group.letter }}</text>
+				</view>
+				<view class="contact-list">
+					<view class="contact-item" v-for="(item, index) in group.contacts" :key="index" @click="handleContact(item)">
+						<view class="contact-avatar" :style="{ backgroundColor: item.avatarBg }">
+							<text class="avatar-text">{{ item.avatarText }}</text>
+						</view>
+						<view class="contact-info">
+							<text class="contact-name">{{ item.name }}</text>
+							<text class="contact-role">{{ item.role }}</text>
+						</view>
+						<view v-if="index < group.contacts.length - 1" class="contact-item-border"></view>
 					</view>
-					<view class="contact-info">
-						<text class="contact-name">{{ item.name }}</text>
-						<text class="contact-role">{{ item.role }}</text>
-					</view>
-					<view v-if="index < commonContacts.length - 1" class="contact-item-border"></view>
 				</view>
 			</view>
 		</scroll-view>
+
+		<!-- 右侧字母索引 -->
+		<view class="index-bar">
+			<text 
+				v-for="letter in indexList" 
+				:key="letter" 
+				class="index-item"
+				@click="scrollToGroup(letter)"
+			>
+				{{ letter }}
+			</text>
+		</view>
 	</view>
 </template>
 
@@ -61,6 +79,8 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 
 	const { t } = useI18n()
+
+	const scrollTarget = ref('')
 
 	const categories1 = [
 		{ icon: '\ue692', bg: '#f97316', nameKey: 'contacts.mobile' },
@@ -73,13 +93,51 @@
 		{ icon: '\ue686', bg: '#06b6d4', nameKey: 'contacts.dept' }
 	]
 
-	const commonContacts = [
-		{ name: '陶戈', role: '高级经理', avatarText: '陶戈', avatarBg: '#0ea5e9' },
-		{ name: '陈子蒙', role: '部门副总经理 (主持工作)', avatarText: '子蒙', avatarBg: '#f472b6' },
-		{ name: '刘丹丹', role: '行政经理', avatarText: '丹丹', avatarBg: '#c084fc' },
-		{ name: '胡婷', role: '副部长 (主持工作)', avatarText: '胡婷', avatarBg: '#fb7185' },
-		{ name: '朱述勇', role: '开发工程师', avatarText: '述勇', avatarBg: '#10b981' }
+	// 模拟联系人数据
+	const rawContacts = [
+		{ name: '陶戈', role: '高级经理', avatarText: '陶戈', avatarBg: '#0ea5e9', pinyin: 'T' },
+		{ name: '陈子蒙', role: '部门副总经理 (主持工作)', avatarText: '子蒙', avatarBg: '#f472b6', pinyin: 'C' },
+		{ name: '刘丹丹', role: '行政经理', avatarText: '丹丹', avatarBg: '#c084fc', pinyin: 'L' },
+		{ name: '胡婷', role: '副部长 (主持工作)', avatarText: '胡婷', avatarBg: '#fb7185', pinyin: 'H' },
+		{ name: '朱述勇', role: '开发工程师', avatarText: '述勇', avatarBg: '#10b981', pinyin: 'Z' },
+		{ name: '阿明', role: '实习生', avatarText: '阿明', avatarBg: '#f59e0b', pinyin: 'A' },
+		{ name: '白雪', role: '设计师', avatarText: '白雪', avatarBg: '#ec4899', pinyin: 'B' },
+		{ name: '曹操', role: '市场总监', avatarText: '曹操', avatarBg: '#ef4444', pinyin: 'C' }
 	]
+
+	// 按字母分组
+	type ContactGroup = {
+		letter: string,
+		contacts: any[]
+	}
+
+	const groupedContacts = computed(() : ContactGroup[] => {
+		const groups : ContactGroup[] = []
+		const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+		
+		letters.forEach(letter => {
+			const filtered = rawContacts.filter(c => c.pinyin === letter)
+			if (filtered.length > 0) {
+				groups.push({
+					letter: letter,
+					contacts: filtered.sort((a, b) => a.name.localeCompare(b.name))
+				})
+			}
+		})
+		return groups
+	})
+
+	const indexList = computed(() : string[] => {
+		return groupedContacts.value.map((g : ContactGroup) : string => g.letter)
+	})
+
+	function scrollToGroup(letter : string) {
+		scrollTarget.value = 'group-' + letter
+		// 重置 scrollTarget 以允许重复点击同一字母
+		setTimeout(() => {
+			scrollTarget.value = ''
+		}, 100)
+	}
 
 	function handleCategory(item : any) {
 		if (item.nameKey === 'contacts.groups') {
@@ -108,6 +166,7 @@
 		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
+		position: relative;
 	}
 
 	.status-bar {
@@ -224,14 +283,14 @@
 
 	/* 分组标题 */
 	.section-header {
-		padding: 16px 16px 8px 16px;
-		background-color: #FFFFFF;
+		padding: 8px 16px;
+		background-color: #F5F7FA;
 	}
 
 	.section-title {
 		font-size: 12px;
 		color: #8F959E;
-		font-weight: 500;
+		font-weight: 600;
 	}
 
 	.contact-list {
@@ -288,5 +347,22 @@
 	.contact-role {
 		font-size: 12px;
 		color: #8F959E;
+	}
+
+	/* 右侧索引栏 */
+	.index-bar {
+		position: absolute;
+		right: 4px;
+		top: 50%;
+		transform: translateY(-40%);
+		z-index: 10;
+		align-items: center;
+	}
+
+	.index-item {
+		font-size: 10px;
+		color: #1F2329;
+		padding: 2px 4px;
+		font-weight: 600;
 	}
 </style>
