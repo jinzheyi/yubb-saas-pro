@@ -80,15 +80,12 @@
 	}
 
 	function handleLogout() {
-		uni.showModal({
-			title: '提示',
-			content: '确定要退出登录吗？',
+		uni.showActionSheet({
+			itemList: ['退出登录'],
+			itemColor: '#F54A45',
 			success: (res) => {
-				if (res.confirm) {
+				if (res.tapIndex === 0) {
 					clearUserCache()
-					uni.reLaunch({
-						url: '/pages/login/login'
-					})
 				}
 			}
 		})

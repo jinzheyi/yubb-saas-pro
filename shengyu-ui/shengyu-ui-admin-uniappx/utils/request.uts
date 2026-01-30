@@ -299,9 +299,11 @@ function handleTokenExpired() {
 		title: '提示',
 		content: '登录已过期，请重新登录',
 		showCancel: false,
-		success: () => {
-			// 清除所有用户缓存（会自动跳转到登录页）
-			clearUserCache()
+		success: (res) => {
+			if (res.confirm) {
+				// 清除所有用户缓存（会自动跳转到登录页）
+				clearUserCache()
+			}
 		}
 	})
 }

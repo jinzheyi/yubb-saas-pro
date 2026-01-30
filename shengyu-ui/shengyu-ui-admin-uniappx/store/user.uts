@@ -381,9 +381,28 @@ export function clearUserCache() {
 	removeRoles()
 	
 	// 跳转到登录页
-	uni.reLaunch({
-		url: '/pages/login/login'
+	// 增加延迟并添加 loading 效果，确保之前的 modal 完全关闭，防止 H5 端 $pageLayoutInstance 报错
+	uni.showLoading({
+		title: '正在退出...',
+		mask: true
 	})
+	
+	setTimeout(() => {
+		uni.hideLoading()
+		uni.reLaunch({
+			url: '/pages/login/login',
+			success: () => {
+				console.log('退出成功')
+			},
+			fail: (err) => {
+				// 如果 reLaunch 失败（可能是因为之前的导航还没结束），尝试再次跳转
+				console.error('reLaunch 失败:', err)
+				uni.redirectTo({
+					url: '/pages/login/login'
+				})
+			}
+		})
+	}, 300)
 }
 
 /**
