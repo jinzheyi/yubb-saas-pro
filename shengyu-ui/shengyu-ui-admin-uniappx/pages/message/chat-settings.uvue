@@ -17,10 +17,10 @@
 			<!-- 个人信息卡片 -->
 			<view class="profile-card">
 				<view class="avatar">
-					<text class="avatar-text">胡婷</text>
+					<text class="avatar-text">三</text>
 				</view>
-				<text class="name">胡婷</text>
-				<text class="role">副部长 (主持工作)</text>
+				<text class="name">张三</text>
+				<text class="role">职员</text>
 				
 				<!-- 快捷功能 -->
 				<view class="quick-actions">
@@ -127,16 +127,18 @@
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #1677FF;
+		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #1677FF;
+		background-color: #FFFFFF;
 		height: 44px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
 		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
 	}
 
 	.header-left {
@@ -146,20 +148,20 @@
 	}
 
 	.back-icon {
-		color: #ffffff;
+		color: #1F2329;
 		font-size: 20px;
 	}
 
 	.back-text {
-		color: #ffffff;
+		color: #1F2329;
 		font-size: 16px;
 		margin-left: 4px;
 	}
 
 	.header-title {
-		color: #ffffff;
+		color: #1F2329;
 		font-size: 17px;
-		font-weight: bold;
+		font-weight: 600;
 	}
 
 	.header-right {
@@ -169,19 +171,19 @@
 	.content {
 		flex: 1;
 		height: 0;
-		background-color: #ffffff;
+		background-color: #FFFFFF;
 	}
 
 	.profile-card {
-		background-color: #ffffff;
-		padding: 30px 20px;
+		background-color: #FFFFFF;
+		padding: 24px 20px;
 		align-items: center;
 	}
 
 	.avatar {
-		width: 80px;
-		height: 80px;
-		border-radius: 40px;
+		width: 64px;
+		height: 64px;
+		border-radius: 12px;
 		background-color: #F197BC;
 		justify-content: center;
 		align-items: center;
@@ -189,22 +191,22 @@
 	}
 
 	.avatar-text {
-		color: #ffffff;
-		font-size: 24px;
-		font-weight: bold;
+		color: #FFFFFF;
+		font-size: 18px;
+		font-weight: 600;
 	}
 
 	.name {
-		font-size: 20px;
-		color: #333333;
-		font-weight: bold;
+		font-size: 18px;
+		color: #1F2329;
+		font-weight: 600;
 		margin-bottom: 4px;
 	}
 
 	.role {
-		font-size: 14px;
-		color: #999999;
-		margin-bottom: 30px;
+		font-size: 13px;
+		color: #8F959E;
+		margin-bottom: 24px;
 	}
 
 	.quick-actions {
@@ -218,50 +220,60 @@
 	}
 
 	.action-icon-wrap {
-		width: 48px;
-		height: 48px;
-		background-color: #F8F8F8;
-		border-radius: 12px;
+		width: 44px;
+		height: 44px;
+		background-color: #F5F7FA;
+		border-radius: 10px;
 		justify-content: center;
 		align-items: center;
 		margin-bottom: 8px;
 	}
 
 	.action-icon {
-		font-size: 24px;
-		color: #3b82f6;
+		font-size: 22px;
+		color: #3370FF;
 	}
 
 	.action-text {
-		font-size: 12px;
-		color: #666666;
+		font-size: 11px;
+		color: #646A73;
+	}
+
+	.section-divider {
+		height: 8px;
+		background-color: #F5F7FA;
 	}
 
 	.settings-group {
-		margin-top: 12px;
-		background-color: #ffffff;
-		border-top-width: 0.5px;
-		border-bottom-width: 0.5px;
-		border-color: #e5e5e5;
+		background-color: #FFFFFF;
 	}
 
 	.list-item {
-		height: 56px;
+		height: 52px;
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
 		padding: 0 16px;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #f0f0f0;
+		background-color: #FFFFFF;
+		position: relative;
 	}
 
-	.list-item:last-child {
-		border-bottom-width: 0;
+	.list-item:active {
+		background-color: #F2F3F5;
+	}
+
+	.list-item-border {
+		position: absolute;
+		bottom: 0;
+		left: 16px;
+		right: 0;
+		height: 0.5px;
+		background-color: #EFF0F1;
 	}
 
 	.item-label {
 		font-size: 16px;
-		color: #333333;
+		color: #1F2329;
 	}
 
 	.item-right {
@@ -270,25 +282,25 @@
 	}
 
 	.bubble-preview {
-		width: 24px;
-		height: 24px;
-		background-color: #95D4FF;
-		border-radius: 6px;
+		width: 20px;
+		height: 20px;
+		background-color: #D2E3FC;
+		border-radius: 4px;
 		margin-right: 8px;
 	}
 
 	.arrow-icon {
-		color: #cccccc;
-		font-size: 16px;
+		color: #8F959E;
+		font-size: 14px;
 	}
 
 	.tip-area {
-		padding: 30px 16px;
+		padding: 24px 16px;
 		align-items: center;
 	}
 
 	.tip-text {
 		font-size: 12px;
-		color: #999999;
+		color: #8F959E;
 	}
 </style>

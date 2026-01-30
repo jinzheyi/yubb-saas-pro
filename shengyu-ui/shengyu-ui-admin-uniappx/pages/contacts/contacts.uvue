@@ -96,14 +96,14 @@
 	// 模拟联系人数据
 	const generateRawContacts = () : any[] => {
 		const list : any[] = [
-			{ name: '淘汰', role: '高级经理', avatarText: '淘汰', avatarBg: '#0ea5e9', pinyin: 'T' },
-			{ name: '存储', role: '部门副总经理 (主持工作)', avatarText: '存储', avatarBg: '#f472b6', pinyin: 'C' },
-			{ name: '六点多', role: '行政经理', avatarText: '六点多', avatarBg: '#c084fc', pinyin: 'L' },
-			{ name: '会话', role: '副部长 (主持工作)', avatarText: '会话', avatarBg: '#fb7185', pinyin: 'H' },
-			{ name: '之所以', role: '开发工程师', avatarText: '之所以放入', avatarBg: '#10b981', pinyin: 'Z' },
+			{ name: '张三', role: '高级经理', avatarText: '张三', avatarBg: '#0ea5e9', pinyin: 'Z' },
+			{ name: '李四', role: '部门副总经理 (主持工作)', avatarText: '李四', avatarBg: '#f472b6', pinyin: 'L' },
+			{ name: '王五', role: '行政经理', avatarText: '王五', avatarBg: '#c084fc', pinyin: 'W' },
+			{ name: '赵六', role: '副部长 (主持工作)', avatarText: '赵六', avatarBg: '#fb7185', pinyin: 'Z' },
+			{ name: '钱七', role: '开发工程师', avatarText: '钱七', avatarBg: '#10b981', pinyin: 'Q' },
 			{ name: '阿明', role: '实习生', avatarText: '阿明', avatarBg: '#f59e0b', pinyin: 'A' },
 			{ name: '白雪', role: '设计师', avatarText: '白雪', avatarBg: '#ec4899', pinyin: 'B' },
-			{ name: '曹操', role: '市场总监', avatarText: '曹操', avatarBg: '#ef4444', pinyin: 'C' }
+			{ name: '晨曦', role: '市场总监', avatarText: '晨曦', avatarBg: '#ef4444', pinyin: 'C' }
 		]
 		
 		// 补充至 100 条

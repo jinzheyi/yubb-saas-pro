@@ -30,8 +30,8 @@
 
 			<view class="message-list">
 				<view v-for="(msg, index) in messages" :key="index" :id="'msg-' + index" class="message-group">
-					<view v-if="msg.showTime" class="time-stamp">
-						<text class="time-text">{{ msg.time }}</text>
+					<view v-if="formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0)" class="time-stamp">
+						<text class="time-text">{{ formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0) }}</text>
 					</view>
 					
 					<view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other']">
@@ -39,8 +39,47 @@
 							<text class="avatar-text">{{ msg.avatarText }}</text>
 						</view>
 						<view class="message-bubble-wrap">
-							<view class="message-bubble">
+							<!-- 文字消息 -->
+							<view v-if="msg.type === 'text'" class="message-bubble bubble-text">
 								<text class="message-text">{{ msg.content }}</text>
+							</view>
+							
+							<!-- 图片消息 -->
+							<view v-else-if="msg.type === 'image'" class="message-bubble bubble-image" @click="handleImagePreview(msg.content)">
+								<image class="chat-image" :src="msg.content" mode="widthFix" />
+							</view>
+							
+							<!-- 语音消息 -->
+							<view v-else-if="msg.type === 'voice'" class="message-bubble bubble-voice" :style="{ width: 60 + (msg.duration || 0) * 5 + 'px' }" @click="handleVoicePlay(msg)">
+								<text class="iconfont voice-icon">{{ msg.isSelf ? '\uea89' : '\uea89' }}</text>
+								<text class="voice-duration">{{ msg.duration }}"</text>
+								<!-- 语音未读红点 -->
+								<view v-if="!msg.isSelf && !msg.isRead" class="voice-unread-dot"></view>
+							</view>
+							
+							<!-- 文件消息 -->
+							<view v-else-if="msg.type === 'file'" class="message-bubble bubble-file">
+								<view class="file-info">
+									<text class="file-name">{{ msg.fileName }}</text>
+									<text class="file-size">{{ msg.fileSize }}</text>
+								</view>
+								<view class="file-icon-wrap">
+									<text class="iconfont file-icon">&#xea96;</text>
+								</view>
+							</view>
+							
+							<!-- 位置消息 -->
+							<view v-else-if="msg.type === 'location'" class="message-bubble bubble-location">
+								<view class="location-info">
+									<text class="location-name">{{ msg.locationName }}</text>
+									<text class="location-address">{{ msg.address }}</text>
+								</view>
+								<image class="location-map" src="/static/images/chat/map-placeholder.png" mode="aspectFill" />
+							</view>
+							
+							<!-- 表情包/动图 -->
+							<view v-else-if="msg.type === 'emoji'" class="bubble-emoji">
+								<image class="emoji-img" :src="msg.content" mode="aspectFit" />
 							</view>
 						</view>
 					</view>
@@ -87,30 +126,124 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 
 	const { t } = useI18n()
-	const name = ref('胡婷')
-	const watermark = ref('朱述勇 5653')
+	const name = ref('张三')
+	const watermark = ref('同事A 1234')
 	const inputText = ref('')
 	const showMenu = ref(false)
 	const lastMessageId = ref('')
 
 	const messages = ref([
 		{
+			type: 'text',
 			content: '你今天上班表现不错，下个月绩效给优，再接再厉',
 			isSelf: false,
 			time: '2025-10-11 16:38',
+			timestamp: 1728635880000,
 			showTime: true,
-			avatarText: '小张',
+			avatarText: '三',
 			avatarBg: '#F197BC'
 		},
 		{
-			content: '收到',
+			type: 'voice',
+			duration: 5,
+			isRead: false,
+			isSelf: false,
+			time: '2025-10-11 16:40',
+			timestamp: 1728636000000,
+			showTime: false,
+			avatarText: '三',
+			avatarBg: '#F197BC'
+		},
+		{
+			type: 'image',
+			content: 'https://img.yzcdn.cn/vant/cat.jpeg',
+			isSelf: false,
+			time: '2025-10-11 16:42',
+			timestamp: 1728636120000,
+			showTime: false,
+			avatarText: '三',
+			avatarBg: '#F197BC'
+		},
+		{
+			type: 'file',
+			fileName: '项目进度汇报.pdf',
+			fileSize: '1.2MB',
 			isSelf: true,
 			time: '2025-11-10 16:33',
+			timestamp: 1731227580000,
 			showTime: true,
-			avatarText: '圣钰',
+			avatarText: '我',
+			avatarBg: '#5FB6F7'
+		},
+		{
+			type: 'location',
+			locationName: '财信大厦',
+			address: '长沙市天心区城南西路1号',
+			isSelf: true,
+			time: '2025-11-10 16:35',
+			timestamp: 1731227700000,
+			showTime: false,
+			avatarText: '我',
+			avatarBg: '#5FB6F7'
+		},
+		{
+			type: 'text',
+			content: '收到，谢谢领导！',
+			isSelf: true,
+			time: '2025-11-10 16:36',
+			timestamp: 1731227760000,
+			showTime: false,
+			avatarText: '我',
 			avatarBg: '#5FB6F7'
 		}
 	])
+
+	/**
+	 * 仿微信聊天时间线显示逻辑
+	 */
+	function formatChatTime(timestamp : number, lastTimestamp : number = 0) : string {
+		// 如果两条消息间隔小于5分钟，不显示时间
+		if (lastTimestamp > 0 && timestamp - lastTimestamp < 5 * 60 * 1000) {
+			return ''
+		}
+
+		const date = new Date(timestamp)
+		const now = new Date()
+		const isToday = date.getFullYear() === now.getFullYear() && 
+						date.getMonth() === now.getMonth() && 
+						date.getDate() === now.getDate()
+		
+		const hours = date.getHours().toString().padStart(2, '0')
+		const minutes = date.getMinutes().toString().padStart(2, '0')
+
+		if (isToday) {
+			return `${hours}:${minutes}`
+		}
+		
+		const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+		const isYesterday = date.getFullYear() === yesterday.getFullYear() && 
+							date.getMonth() === yesterday.getMonth() && 
+							date.getDate() === yesterday.getDate()
+		
+		if (isYesterday) {
+			return `昨天 ${hours}:${minutes}`
+		}
+		
+		const oneWeekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000
+		if (timestamp > oneWeekAgo) {
+			const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+			return `${weekDays[date.getDay()]} ${hours}:${minutes}`
+		}
+		
+		const year = date.getFullYear()
+		const month = (date.getMonth() + 1).toString().padStart(2, '0')
+		const day = date.getDate().toString().padStart(2, '0')
+		
+		if (year === now.getFullYear()) {
+			return `${month}月${day}日 ${hours}:${minutes}`
+		}
+		return `${year}年${month}月${day}日 ${hours}:${minutes}`
+	}
 
 	const featureList = [
 		{ icon: '\uea72', bg: '#FFB347', nameKey: 'chat.features.location' },
@@ -134,11 +267,13 @@
 	function handleSend() {
 		if (!inputText.value.trim()) return
 		messages.value.push({
+			type: 'text',
 			content: inputText.value,
 			isSelf: true,
 			time: new Date().toLocaleString(),
+			timestamp: Date.now(),
 			showTime: false,
-			avatarText: '述勇',
+			avatarText: '我',
 			avatarBg: '#5FB6F7'
 		})
 		inputText.value = ''
@@ -152,6 +287,23 @@
 	function handleFeature(item : any) {
 		uni.showToast({
 			title: t(item.nameKey) + '功能开发中',
+			icon: 'none'
+		})
+	}
+
+	function handleImagePreview(url : string) {
+		uni.previewImage({
+			urls: [url],
+			current: url
+		})
+	}
+
+	function handleVoicePlay(msg : any) {
+		if (!msg.isSelf) {
+			msg.isRead = true
+		}
+		uni.showToast({
+			title: '正在播放语音...',
 			icon: 'none'
 		})
 	}
@@ -317,7 +469,6 @@
 	}
 
 	.message-bubble {
-		background-color: #FFFFFF;
 		padding: 10px 14px;
 		border-radius: 10px;
 		max-width: 85%;
@@ -325,9 +476,149 @@
 		border-color: #EFF0F1;
 	}
 
-	.message-self .message-bubble {
+	.bubble-text {
+		background-color: #FFFFFF;
+	}
+
+	.message-self .bubble-text {
 		background-color: #D2E3FC;
 		border-color: #B2CFFB;
+	}
+
+	/* 图片消息 */
+	.bubble-image {
+		padding: 0;
+		overflow: hidden;
+		background-color: transparent;
+		border-width: 0;
+	}
+
+	.chat-image {
+		width: 150px;
+		border-radius: 8px;
+	}
+
+	/* 语音消息 */
+	.bubble-voice {
+		flex-direction: row;
+		align-items: center;
+		background-color: #FFFFFF;
+		min-width: 60px;
+		position: relative;
+		overflow: visible;
+	}
+
+	.message-self .bubble-voice {
+		background-color: #D2E3FC;
+		flex-direction: row-reverse;
+	}
+
+	.voice-icon {
+		font-size: 18px;
+		color: #1F2329;
+	}
+
+	.voice-duration {
+		font-size: 14px;
+		color: #1F2329;
+		margin: 0 8px;
+	}
+
+	.voice-unread-dot {
+		position: absolute;
+		right: -12px;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 8px;
+		height: 8px;
+		background-color: #F54A45;
+		border-radius: 4px;
+	}
+
+	/* 文件消息 */
+	.bubble-file {
+		flex-direction: row;
+		align-items: center;
+		background-color: #FFFFFF;
+		width: 220px;
+		padding: 12px;
+	}
+
+	.file-info {
+		flex: 1;
+		margin-right: 12px;
+	}
+
+	.file-name {
+		font-size: 15px;
+		color: #1F2329;
+		lines: 2;
+		text-overflow: ellipsis;
+	}
+
+	.file-size {
+		font-size: 12px;
+		color: #8F959E;
+		margin-top: 4px;
+	}
+
+	.file-icon-wrap {
+		width: 44px;
+		height: 44px;
+		background-color: #F5F7FA;
+		border-radius: 6px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.file-icon {
+		font-size: 24px;
+		color: #3370FF;
+	}
+
+	/* 位置消息 */
+	.bubble-location {
+		padding: 0;
+		overflow: hidden;
+		background-color: #FFFFFF;
+		width: 220px;
+	}
+
+	.location-info {
+		padding: 10px 12px;
+	}
+
+	.location-name {
+		font-size: 15px;
+		color: #1F2329;
+		lines: 1;
+		text-overflow: ellipsis;
+	}
+
+	.location-address {
+		font-size: 12px;
+		color: #8F959E;
+		margin-top: 2px;
+		lines: 1;
+		text-overflow: ellipsis;
+	}
+
+	.location-map {
+		width: 100%;
+		height: 100px;
+		background-color: #F5F7FA;
+	}
+
+	/* 表情包 */
+	.bubble-emoji {
+		padding: 0;
+		background-color: transparent;
+		border-width: 0;
+	}
+
+	.emoji-img {
+		width: 100px;
+		height: 100px;
 	}
 
 	.message-text {
