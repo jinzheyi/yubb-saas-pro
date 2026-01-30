@@ -8,7 +8,7 @@
 				<image class="avatar" src="/static/avatar.jpg"></image>
 				<view class="user-detail">
 					<view class="name-row">
-						<text class="name">朱述勇</text>
+						<text class="name">圣钰科技</text>
 						<text class="iconfont qr-icon">&#xeaf1;</text>
 					</view>
 				</view>

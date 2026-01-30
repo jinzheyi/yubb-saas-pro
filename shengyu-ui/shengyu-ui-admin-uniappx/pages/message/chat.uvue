@@ -95,11 +95,11 @@
 
 	const messages = ref([
 		{
-			content: '公积金9月调基了，7-8月的补缴还没入账，在公积金里还看不到',
+			content: '你今天上班表现不错，下个月绩效给优，再接再厉',
 			isSelf: false,
 			time: '2025-10-11 16:38',
 			showTime: true,
-			avatarText: '胡婷',
+			avatarText: '小张',
 			avatarBg: '#F197BC'
 		},
 		{
@@ -107,7 +107,7 @@
 			isSelf: true,
 			time: '2025-11-10 16:33',
 			showTime: true,
-			avatarText: '述勇',
+			avatarText: '圣钰',
 			avatarBg: '#5FB6F7'
 		}
 	])
