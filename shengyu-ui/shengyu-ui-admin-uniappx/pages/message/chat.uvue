@@ -114,11 +114,11 @@
 				</view>
 
 				<!-- 输入框/按住说话按钮 -->
-				<view class="input-box" :class="{ 'input-box-full': isFullExpanded }" v-if="!isVoiceMode">
+				<view class="input-box" :class="{ 'input-box-full': isFullExpanded, 'input-box-multi': isMultiLine && !isFullExpanded }" v-if="!isVoiceMode">
 					<editor 
 						id="editor"
 						class="chat-editor" 
-						:class="{ 'chat-editor-full': isFullExpanded }"
+						:class="{ 'chat-editor-full': isFullExpanded, 'chat-editor-multi': isMultiLine && !isFullExpanded }"
 						:placeholder="t('chat.inputPlaceholder')"
 						@ready="onEditorReady"
 						@input="onEditorInput"
@@ -232,6 +232,7 @@
 	const showEmojiMenu = ref(false)
 	const showPlusMenu = ref(false)
 	const isFullExpanded = ref(false)
+	const isMultiLine = ref(false)
 	const isVoiceMode = ref(false)
 	const isRecording = ref(false)
 	const isCancelReady = ref(false)
@@ -405,13 +406,24 @@
 	function onEditorInput(e : any) {
 		// e.detail.text 包含纯文本
 		// e.detail.html 包含富文本
-		const text = e.detail.text.trim()
+		const text = e.detail.text
 		const html = e.detail.html
-		// 如果有文字或者包含图片标签，则认为有输入
-		if (text.length > 0 || html.includes('<img')) {
+		
+		// 启发式判断行数：
+		// 1. 是否有物理换行符
+		// 2. 文本长度是否超过一行（根据屏幕宽度，通常 22-25 个字符左右换行）
+		// 3. HTML 中是否有多个段落标签
+		const hasNewLine = text.includes('\n')
+		const isLongText = text.trim().length > 22
+		const hasMultipleParagraphs = (html.match(/<p>/g) || []).length > 1 || html.includes('<br>')
+		
+		isMultiLine.value = hasNewLine || isLongText || hasMultipleParagraphs
+
+		if (text.trim().length > 0 || html.includes('<img')) {
 			inputText.value = 'has_content'
 		} else {
 			inputText.value = ''
+			isMultiLine.value = false // 清空时恢复单行
 		}
 	}
 
@@ -1008,16 +1020,23 @@
 		background-color: #FFFFFF;
 		border-radius: 4px;
 		margin: 0 8px;
+		height: 40px; /* 默认固定高度 */
 		min-height: 40px;
 		max-height: 35vh;
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
 		overflow: hidden;
+		transition: height 0.2s ease;
+	}
+
+	.input-box-multi {
+		height: 88px; /* 约三行高度 */
 	}
 
 	.input-box-full {
 		flex: 1;
+		height: 100%;
 		max-height: 100%;
 		margin: 0;
 		justify-content: flex-start;
@@ -1037,6 +1056,11 @@
 		font-size: 16px;
 		line-height: 1.5;
 		background-color: transparent;
+	}
+
+	.chat-editor-multi {
+		height: 88px;
+		min-height: 88px;
 	}
 
 	.chat-editor-full {
