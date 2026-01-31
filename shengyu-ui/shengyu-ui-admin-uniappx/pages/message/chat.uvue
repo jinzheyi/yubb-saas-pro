@@ -251,10 +251,34 @@
 
 	const stickerList = ref<StickerItem[]>(getCustomStickers())
 
-	const messages = ref([
+	type MessageItem = {
+		id : string;
+		senderId : string;
+		receiverId : string;
+		type : string;
+		content : string;
+		isSelf : boolean;
+		time : string;
+		timestamp : number;
+		showTime : boolean;
+		avatarText : string;
+		avatarBg : string;
+		duration ?: number;
+		poster ?: string;
+		fileName ?: string;
+		fileSize ?: string;
+		address ?: string;
+		isSticker ?: boolean;
+		status ?: string; // 'sending' | 'success' | 'fail'
+	}
+
+	const messages = ref<MessageItem[]>([
 		{
+			id: '1',
+			senderId: 'user1',
+			receiverId: 'me',
 			type: 'text',
-			content: '你今天上班表现不错，下个月绩效给优，再接再厉',
+			content: '你今天上班表现不错，下个月绩效给你评个A。',
 			isSelf: false,
 			time: '2025-10-11 16:38',
 			timestamp: 1728635880000,
@@ -263,28 +287,52 @@
 			avatarBg: '#F197BC'
 		},
 		{
+			id: '2',
+			senderId: 'user1',
+			receiverId: 'me',
 			type: 'voice',
-			duration: 5,
-			isRead: false,
+			content: 'voice_url_1',
+			duration: 2,
 			isSelf: false,
+			time: '2025-10-11 16:39',
+			timestamp: 1728635940000,
+			showTime: false,
+			avatarText: '三',
+			avatarBg: '#F197BC'
+		},
+		{
+			id: '3',
+			senderId: 'me',
+			receiverId: 'user1',
+			type: 'image',
+			content: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/shuijiao.jpg',
+			isSelf: true,
 			time: '2025-10-11 16:40',
 			timestamp: 1728636000000,
 			showTime: false,
-			avatarText: '三',
-			avatarBg: '#F197BC'
+			avatarText: '我',
+			avatarBg: '#5FB6F7'
 		},
 		{
-			type: 'image',
-			content: 'https://img.yzcdn.cn/vant/cat.jpeg',
+			id: '4',
+			senderId: 'user1',
+			receiverId: 'me',
+			type: 'voice',
+			content: 'voice_url_2',
+			duration: 15,
 			isSelf: false,
-			time: '2025-10-11 16:42',
-			timestamp: 1728636120000,
+			time: '2025-10-11 16:41',
+			timestamp: 1728636060000,
 			showTime: false,
 			avatarText: '三',
 			avatarBg: '#F197BC'
 		},
 		{
+			id: '5',
+			senderId: 'me',
+			receiverId: 'user1',
 			type: 'file',
+			content: '项目进度汇报.pdf',
 			fileName: '项目进度汇报.pdf',
 			fileSize: '1.2MB',
 			isSelf: true,
@@ -295,17 +343,37 @@
 			avatarBg: '#5FB6F7'
 		},
 		{
+			id: '6',
+			senderId: 'me',
+			receiverId: 'user1',
 			type: 'location',
-			locationName: '财信大厦',
+			content: '财信大厦',
 			address: '长沙市天心区城南西路1号',
 			isSelf: true,
-			time: '2025-11-10 16:35',
-			timestamp: 1731227700000,
+			time: '2025-11-10 16:34',
+			timestamp: 1731227640000,
 			showTime: false,
 			avatarText: '我',
 			avatarBg: '#5FB6F7'
 		},
 		{
+			id: '7',
+			senderId: 'user1',
+			receiverId: 'me',
+			type: 'voice',
+			content: 'voice_url_3',
+			duration: 45,
+			isSelf: false,
+			time: '2025-11-10 16:35',
+			timestamp: 1731227700000,
+			showTime: false,
+			avatarText: '三',
+			avatarBg: '#F197BC'
+		},
+		{
+			id: '8',
+			senderId: 'user1',
+			receiverId: 'me',
 			type: 'video',
 			content: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/2.mp4',
 			poster: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/2.mp4?vframe/jpg/offset/0',
@@ -317,12 +385,15 @@
 			avatarBg: '#F197BC'
 		},
 		{
+			id: '9',
+			senderId: 'me',
+			receiverId: 'user1',
 			type: 'text',
 			content: '收到，谢谢领导！',
 			isSelf: true,
 			time: '2025-11-10 16:36',
 			timestamp: 1731227760000,
-			showTime: false,
+			showTime: true,
 			avatarText: '我',
 			avatarBg: '#5FB6F7'
 		}
@@ -470,21 +541,43 @@
 		}
 	}
 
+	/**
+	 * 创建消息对象 (适配后端接口对接)
+	 */
+	function createMessage(params : any) : MessageItem {
+		return {
+			id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+			senderId: params.isSelf ? 'me' : 'user1',
+			receiverId: params.isSelf ? 'user1' : 'me',
+			type: params.type,
+			content: params.content,
+			isSelf: params.isSelf,
+			time: new Date().toLocaleString(),
+			timestamp: Date.now(),
+			showTime: false,
+			avatarText: params.isSelf ? '我' : '三',
+			avatarBg: params.isSelf ? '#5FB6F7' : '#F197BC',
+			duration: params.duration,
+			poster: params.poster,
+			fileName: params.fileName,
+			fileSize: params.fileSize,
+			address: params.address,
+			isSticker: params.isSticker,
+			status: 'success'
+		} as MessageItem
+	}
+
 	function handleVoiceEnd() {
 		if (isCancelReady.value) {
 			console.log('取消录音')
 		} else {
 			console.log('录音结束，发送语音')
-			messages.value.push({
+			messages.value.push(createMessage({
 				type: 'voice',
-				duration: Math.floor(Math.random() * 10) + 1,
-				isRead: true,
-				isSelf: true,
-				time: new Date().toLocaleTimeString(),
-				timestamp: Date.now(),
-				avatarText: '我',
-				avatarBg: '#5FB6F7'
-			})
+				content: 'mock_voice_url',
+				duration: Math.floor(Math.random() * 58) + 2,
+				isSelf: true
+			}))
 			scrollToBottom()
 		}
 		isRecording.value = false
@@ -538,15 +631,12 @@
 	}
 
 	function handleStickerClick(item : StickerItem) {
-		messages.value.push({
+		messages.value.push(createMessage({
 			type: 'sticker',
 			content: item.url,
 			isSelf: true,
-			time: new Date().toLocaleTimeString(),
-			timestamp: Date.now(),
-			avatarText: '我',
-			avatarBg: '#5FB6F7'
-		})
+			isSticker: true
+		}))
 		scrollToBottom()
 		showEmojiMenu.value = false
 	}
@@ -566,31 +656,25 @@
 				if (!content || content === '<p><br></p>') return
 				
 				// 将 <img src="..." alt="[表情]" ...> 替换回 [表情]
-				// 匹配带有 alt 属性的 img 标签
 				const imgReg = /<img [^>]*alt=['"]([^'"]+)['"][^>]*>/g
 				let finalContent = content.replace(imgReg, '$1')
 				
-				// 去除 HTML 标签，只保留文本和已替换的表情代码
+				// 去除 HTML 标签
 				finalContent = finalContent.replace(/<[^>]+>/g, '')
 				
 				if (!finalContent.trim()) return
 				
-				messages.value.push({
+				messages.value.push(createMessage({
 					type: 'text',
 					content: finalContent,
-					isSelf: true,
-					time: new Date().toLocaleString(),
-					timestamp: Date.now(),
-					showTime: false,
-					avatarText: '我',
-					avatarBg: '#5FB6F7'
-				})
+					isSelf: true
+				}))
 				
 				// 清空编辑器
 				editorCtx!.clear({
 					success: () => {
 						inputText.value = ''
-						isFullExpanded.value = false // 发送后收起
+						isFullExpanded.value = false
 						scrollToBottom()
 					}
 				})
@@ -610,16 +694,11 @@
 				success: (res) => {
 					const tempFilePaths = res.tempFilePaths
 					tempFilePaths.forEach((path : string) => {
-						messages.value.push({
+						messages.value.push(createMessage({
 							type: 'image',
 							content: path,
-							isSelf: true,
-							time: new Date().toLocaleString(),
-							timestamp: Date.now(),
-							showTime: false,
-							avatarText: '我',
-							avatarBg: '#5FB6F7'
-						})
+							isSelf: true
+						}))
 					})
 					showPlusMenu.value = false
 					scrollToBottom()
@@ -797,8 +876,10 @@
 	}
 
 	.time-stamp {
+		flex-direction: row;
+		justify-content: center;
 		align-items: center;
-		margin-bottom: 20px;
+		margin: 16px 0 12px;
 	}
 
 	.time-text {
@@ -811,7 +892,7 @@
 
 	.message-item {
 		flex-direction: row;
-		margin-bottom: 24px;
+		margin-bottom: 16px;
 	}
 
 	.message-self {
