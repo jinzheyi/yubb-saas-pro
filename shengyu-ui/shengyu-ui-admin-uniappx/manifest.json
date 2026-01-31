@@ -42,13 +42,16 @@
                 "permissions" : [
                     "<uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>",
                     "<uses-permission android:name=\"android.permission.CAMERA\"/>",
-                    "<uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\"/>"
+                    "<uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\"/>",
+                    "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>"
                 ]
             },
             "ios" : {
                 "privacyDescription" : {
                     "NSMicrophoneUsageDescription" : "我们需要您的麦克风权限来录制语音消息",
-                    "NSCameraUsageDescription" : "我们需要您的相机权限来拍摄照片"
+                    "NSCameraUsageDescription" : "我们需要您的相机权限来拍摄照片",
+                    "NSPhotoLibraryUsageDescription" : "我们需要您的相册权限来发送图片消息"
                 }
             }
         }

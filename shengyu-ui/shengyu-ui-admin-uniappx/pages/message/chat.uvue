@@ -54,8 +54,16 @@
 								<image class="chat-image" :src="msg.content" mode="widthFix" />
 							</view>
 							
+							<!-- 视频消息 -->
+							<view v-else-if="msg.type === 'video'" class="message-bubble bubble-video" @click="handleVideoPlay(msg.content)">
+								<video class="chat-video" :src="msg.content" :poster="msg.poster" :controls="false" :show-center-play-btn="true" mode="aspectFill"></video>
+								<view class="video-play-overlay">
+									<text class="iconfont video-play-icon">&#xe602;</text>
+								</view>
+							</view>
+							
 							<!-- 语音消息 -->
-							<view v-else-if="msg.type === 'voice'" class="message-bubble bubble-voice" :style="{ width: 60 + (msg.duration || 0) * 5 + 'px' }" @click="handleVoicePlay(msg)">
+							<view v-else-if="msg.type === 'voice'" class="message-bubble bubble-voice" :style="{ width: getVoiceBubbleWidth(msg.duration || 0) }" @click="handleVoicePlay(msg)">
 								<text class="iconfont voice-icon">{{ msg.isSelf ? '\ue601' : '\ue601' }}</text>
 								<text class="voice-duration">{{ msg.duration }}"</text>
 								<!-- 语音未读红点 -->
@@ -298,6 +306,17 @@
 			avatarBg: '#5FB6F7'
 		},
 		{
+			type: 'video',
+			content: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/2.mp4',
+			poster: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/2.mp4?vframe/jpg/offset/0',
+			isSelf: false,
+			time: '2025-10-11 16:45',
+			timestamp: 1728636300000,
+			showTime: false,
+			avatarText: '三',
+			avatarBg: '#F197BC'
+		},
+		{
 			type: 'text',
 			content: '收到，谢谢领导！',
 			isSelf: true,
@@ -358,6 +377,7 @@
 
 
 	const featureList = [
+		{ icon: '\ue608', color: '#3370FF', nameKey: 'chat.features.album' },
 		{ icon: '\uea87', color: '#3370FF', nameKey: 'chat.features.camera' },
 		{ icon: '\uea72', color: '#FFB347', nameKey: 'chat.features.location' },
 		{ icon: '\uea96', color: '#62D4A1', nameKey: 'chat.features.file' },
@@ -583,6 +603,33 @@
 	}
 
 	function handleFeature(item : any) {
+		if (item.nameKey === 'chat.features.album') {
+			uni.chooseImage({
+				count: 9,
+				sourceType: ['album'],
+				success: (res) => {
+					const tempFilePaths = res.tempFilePaths
+					tempFilePaths.forEach((path : string) => {
+						messages.value.push({
+							type: 'image',
+							content: path,
+							isSelf: true,
+							time: new Date().toLocaleString(),
+							timestamp: Date.now(),
+							showTime: false,
+							avatarText: '我',
+							avatarBg: '#5FB6F7'
+						})
+					})
+					showPlusMenu.value = false
+					scrollToBottom()
+				},
+				fail: (err) => {
+					console.error('选择相册失败:', err)
+				}
+			})
+			return
+		}
 		uni.showToast({
 			title: t(item.nameKey) + '功能开发中',
 			icon: 'none'
@@ -591,9 +638,34 @@
 
 	function handleImagePreview(url : string) {
 		uni.previewImage({
-			urls: [url],
-			current: url
+			urls: [url]
 		})
+	}
+
+	function handleVideoPlay(url : string) {
+		// 这里简单处理为全屏预览视频
+		uni.showToast({
+			title: '播放视频: ' + url,
+			icon: 'none'
+		})
+	}
+
+	/**
+	 * 计算语音气泡宽度 (仿微信：最短 60px，最长 220px，线性增长)
+	 */
+	function getVoiceBubbleWidth(duration : number) : string {
+		const minWidth = 60
+		const maxWidth = 220
+		const maxDuration = 60 // 假设最长语音为 60 秒
+		
+		// 基础宽度 + (时长比例 * 可增长空间)
+		let width = minWidth + (duration / maxDuration) * (maxWidth - minWidth)
+		
+		// 边界限制
+		if (width > maxWidth) width = maxWidth
+		if (width < minWidth) width = minWidth
+		
+		return `${width}px`
 	}
 
 	function handleVoicePlay(msg : any) {
@@ -818,6 +890,7 @@
 		align-items: center;
 		background-color: #FFFFFF;
 		min-width: 60px;
+		max-width: 220px;
 		position: relative;
 		overflow: visible;
 	}
@@ -836,6 +909,39 @@
 		font-size: 14px;
 		color: #1F2329;
 		margin: 0 8px;
+	}
+
+	/* 视频消息 */
+	.bubble-video {
+		padding: 0;
+		overflow: hidden;
+		background-color: #000000;
+		width: 150px;
+		height: 200px;
+		border-radius: 8px;
+		position: relative;
+	}
+
+	.chat-video {
+		width: 150px;
+		height: 200px;
+	}
+
+	.video-play-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		justify-content: center;
+		align-items: center;
+		background-color: rgba(0, 0, 0, 0.1);
+	}
+
+	.video-play-icon {
+		font-size: 40px;
+		color: #FFFFFF;
+		opacity: 0.8;
 	}
 
 	.voice-unread-dot {

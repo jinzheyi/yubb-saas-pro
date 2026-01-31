@@ -145,6 +145,7 @@ export default {
 		online: '手机在线',
 		inputPlaceholder: '请输入...',
 		features: {
+			album: '相册',
 			camera: '拍摄',
 			location: '位置',
 			file: '文件',
