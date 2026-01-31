@@ -611,6 +611,10 @@
 			lastMessageId.value = 'msg-' + (messages.value.length - 1)
 		}, 100)
 	}
+
+	onMounted(() => {
+		scrollToBottom()
+	})
 </script>
 
 <style>
