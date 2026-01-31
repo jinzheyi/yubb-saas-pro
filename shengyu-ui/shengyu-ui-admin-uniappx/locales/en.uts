@@ -145,6 +145,7 @@ export default {
 		online: 'Mobile Online',
 		inputPlaceholder: 'Type something...',
 		features: {
+			camera: 'Camera',
 			location: 'Location',
 			file: 'File',
 			card: 'Contact',

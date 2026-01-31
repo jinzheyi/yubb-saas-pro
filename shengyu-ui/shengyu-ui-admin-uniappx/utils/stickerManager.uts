@@ -1,0 +1,34 @@
+/**
+ * 自定义表情包管理 (Stickers)
+ * 后期可对接服务端 API
+ */
+
+export type StickerItem = {
+	id: string;
+	url: string;
+	md5: string;
+}
+
+/**
+ * 模拟 30 个自定义表情包数据
+ */
+export function getCustomStickers() : StickerItem[] {
+	const list : StickerItem[] = []
+	for (let i = 1; i <= 30; i++) {
+		list.push({
+			id: `sticker_${i}`,
+			// 这里使用统一的占位图，实际开发中替换为 CDN URL
+			url: `https://picsum.photos/200/200?random=${i}`,
+			md5: `md5_hash_${i}`
+		})
+	}
+	return list
+}
+
+/**
+ * 收藏表情 (存入本地存储模拟)
+ */
+export function addSticker(url : string) {
+	console.log('执行收藏表情逻辑:', url)
+	// TODO: 调用服务端接口或存入本地存储
+}

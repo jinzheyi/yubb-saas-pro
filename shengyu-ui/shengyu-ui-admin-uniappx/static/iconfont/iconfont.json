@@ -6,6 +6,62 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "688141",
+      "name": "展开 全屏 扩展",
+      "font_class": "zhankaiquanpingkuozhan",
+      "unicode": "e7b0",
+      "unicode_decimal": 59312
+    },
+    {
+      "icon_id": "8328310",
+      "name": "相册",
+      "font_class": "tupian1",
+      "unicode": "e608",
+      "unicode_decimal": 58888
+    },
+    {
+      "icon_id": "8288820",
+      "name": "爱心",
+      "font_class": "aixin",
+      "unicode": "e83f",
+      "unicode_decimal": 59455
+    },
+    {
+      "icon_id": "577312",
+      "name": "加号",
+      "font_class": "jiahao",
+      "unicode": "e726",
+      "unicode_decimal": 59174
+    },
+    {
+      "icon_id": "5387387",
+      "name": "键盘",
+      "font_class": "jianpan",
+      "unicode": "eac2",
+      "unicode_decimal": 60098
+    },
+    {
+      "icon_id": "6095589",
+      "name": "添加图片-27",
+      "font_class": "tianjiatupian-",
+      "unicode": "e61c",
+      "unicode_decimal": 58908
+    },
+    {
+      "icon_id": "11869277",
+      "name": "表情包",
+      "font_class": "biaoqingbao",
+      "unicode": "e604",
+      "unicode_decimal": 58884
+    },
+    {
+      "icon_id": "40305317",
+      "name": "语音输入-copy-copy",
+      "font_class": "yuyin",
+      "unicode": "e601",
+      "unicode_decimal": 58881
+    },
+    {
       "icon_id": "666888",
       "name": "手机",
       "font_class": "shouji",

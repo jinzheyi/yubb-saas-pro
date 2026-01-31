@@ -41,7 +41,12 @@
 						<view class="message-bubble-wrap">
 							<!-- 文字消息 -->
 							<view v-if="msg.type === 'text'" class="message-bubble bubble-text">
-								<text class="message-text">{{ msg.content }}</text>
+								<view class="text-content-wrap">
+									<template v-for="(token, tIdx) in parseMessageText(msg.content)" :key="tIdx">
+										<text v-if="token.type === 'text'" class="message-text">{{ token.content }}</text>
+										<image v-else class="inline-emoji" :src="token.content" mode="aspectFit" />
+									</template>
+								</view>
 							</view>
 							
 							<!-- 图片消息 -->
@@ -51,7 +56,7 @@
 							
 							<!-- 语音消息 -->
 							<view v-else-if="msg.type === 'voice'" class="message-bubble bubble-voice" :style="{ width: 60 + (msg.duration || 0) * 5 + 'px' }" @click="handleVoicePlay(msg)">
-								<text class="iconfont voice-icon">{{ msg.isSelf ? '\uea89' : '\uea89' }}</text>
+								<text class="iconfont voice-icon">{{ msg.isSelf ? '\ue601' : '\ue601' }}</text>
 								<text class="voice-duration">{{ msg.duration }}"</text>
 								<!-- 语音未读红点 -->
 								<view v-if="!msg.isSelf && !msg.isRead" class="voice-unread-dot"></view>
@@ -81,6 +86,11 @@
 							<view v-else-if="msg.type === 'emoji'" class="bubble-emoji">
 								<image class="emoji-img" :src="msg.content" mode="aspectFit" />
 							</view>
+							
+							<!-- 自定义收藏表情 (无气泡) -->
+							<view v-else-if="msg.type === 'sticker'" class="sticker-msg-wrap">
+								<image class="sticker-img" :src="msg.content" mode="widthFix" />
+							</view>
 						</view>
 					</view>
 				</view>
@@ -88,35 +98,121 @@
 		</scroll-view>
 
 		<!-- 底部输入区域 -->
-		<view class="footer">
-			<view class="input-row">
-				<text class="iconfont footer-icon">&#xea89;</text>
-				<view class="input-box">
-					<input 
-						class="chat-input" 
-						v-model="inputText" 
+		<view class="footer" :class="{ 'footer-full-expanded': isFullExpanded }">
+			<!-- 全屏模式下的顶部操作栏 -->
+			<view v-if="isFullExpanded" class="full-expand-header">
+				<text class="iconfont collapse-icon" @click="toggleFullExpand">&#xe60e;</text>
+			</view>
+
+			<view class="input-row" :class="{ 'input-row-full': isFullExpanded }">
+				<!-- 左侧图标栏 (仅在非全屏模式下显示) -->
+				<view v-if="!isFullExpanded" class="input-left-actions">
+					<!-- 语音/键盘切换 -->
+					<text class="iconfont footer-icon" @click="toggleInputMode">{{ isVoiceMode ? '\ueac2' : '\ue601' }}</text>
+					<!-- 展开按钮 -->
+					<text v-if="!isVoiceMode && inputText" class="iconfont expand-icon-btn" @click="toggleFullExpand">&#xe7b0;</text>
+				</view>
+
+				<!-- 输入框/按住说话按钮 -->
+				<view class="input-box" :class="{ 'input-box-full': isFullExpanded }" v-if="!isVoiceMode">
+					<editor 
+						id="editor"
+						class="chat-editor" 
+						:class="{ 'chat-editor-full': isFullExpanded }"
 						:placeholder="t('chat.inputPlaceholder')"
-						@confirm="handleSend"
+						@ready="onEditorReady"
+						@input="onEditorInput"
+						:show-confirm-bar="false"
+						:adjust-position="!isFullExpanded"
 					/>
 				</view>
-				<text class="iconfont footer-icon" :style="{ color: inputText ? '#1677FF' : '#999' }" @click="handleSend">&#xea73;</text>
-			</view>
-			<view class="action-row">
-				<text class="iconfont action-icon">&#xea95;</text>
-				<text class="iconfont action-icon">&#xea87;</text>
-				<text class="iconfont action-icon">&#xea8f;</text>
-				<text class="iconfont action-icon">&#xea9e;</text>
-				<text class="iconfont action-icon add-icon" @click="toggleMenu">&#xea9d;</text>
+				<view 
+					v-else 
+					class="voice-btn" 
+					:class="{ 'voice-btn-active': isRecording }"
+					@touchstart="handleVoiceStart"
+					@touchmove="handleVoiceMove"
+					@touchend="handleVoiceEnd"
+					@touchcancel="handleVoiceEnd"
+				>
+					<text class="voice-btn-text">{{ isRecording ? (isCancelReady ? '松开 取消' : '松开 结束') : '按住 说话' }}</text>
+				</view>
+				
+				<!-- 右侧/底部图标栏 -->
+				<view class="input-right-actions" :class="{ 'input-right-actions-full': isFullExpanded }">
+					<!-- 表情图标 -->
+					<text class="iconfont footer-icon" @click="toggleEmojiMenu">&#xe604;</text>
+					
+					<!-- 更多/发送按钮 -->
+					<view v-if="!inputText" class="plus-btn" @click="togglePlusMenu">
+						<text class="iconfont footer-icon">&#xe726;</text>
+					</view>
+					<view v-else class="send-btn" @click="handleSend">
+						<text class="send-btn-text">发送</text>
+					</view>
+				</view>
 			</view>
 			
-			<!-- 功能菜单 -->
-			<view v-if="showMenu" class="features-menu">
+			<!-- 表情包菜单 -->
+			<view v-if="showEmojiMenu" class="emoji-menu">
+				<scroll-view class="emoji-content" scroll-y="true">
+					<!-- 系统表情页签 -->
+					<view class="emoji-grid" v-if="currentEmojiTab === 'emoji'">
+						<view 
+							class="emoji-item" 
+							v-for="(item, index) in emojiList" 
+							:key="index"
+							@click="handleEmojiClick(item)"
+						>
+							<image class="picker-emoji-img" :src="item.path" mode="aspectFit" />
+						</view>
+					</view>
+					
+					<!-- 收藏表情页签 -->
+					<view class="sticker-grid" v-else-if="currentEmojiTab === 'sticker'">
+						<!-- 添加按钮 -->
+						<view class="sticker-item-add">
+							<text class="iconfont sticker-add-icon">&#xe726;</text>
+						</view>
+						<!-- 表情列表 -->
+						<view 
+							class="sticker-item" 
+							v-for="(item, index) in stickerList" 
+							:key="item.id"
+							@click="handleStickerClick(item)"
+						>
+							<image class="picker-sticker-img" :src="item.url" mode="aspectFill" />
+						</view>
+					</view>
+				</scroll-view>
+				
+				<!-- 表情菜单 Tab 栏 -->
+				<view class="emoji-tabs">
+					<view class="emoji-tab-item" :class="{ 'emoji-tab-active': currentEmojiTab === 'emoji' }" @click="currentEmojiTab = 'emoji'">
+						<text class="iconfont emoji-tab-icon">&#xe604;</text>
+					</view>
+					<view class="emoji-tab-item" :class="{ 'emoji-tab-active': currentEmojiTab === 'sticker' }" @click="currentEmojiTab = 'sticker'">
+						<text class="iconfont emoji-tab-icon">&#xe83f;</text>
+					</view>
+				</view>
+			</view>
+
+			<!-- 功能菜单 (更多) -->
+			<view v-if="showPlusMenu" class="features-menu">
 				<view class="feature-item" v-for="(item, index) in featureList" :key="index" @click="handleFeature(item)">
-					<view class="feature-icon-wrap" :style="{ backgroundColor: item.bg }">
-						<text class="iconfont feature-icon">{{ item.icon }}</text>
+					<view class="feature-icon-wrap">
+						<text class="iconfont feature-icon" :style="{ color: item.color }">{{ item.icon }}</text>
 					</view>
 					<text class="feature-name">{{ t(item.nameKey) }}</text>
 				</view>
+			</view>
+		</view>
+
+		<!-- 录音状态浮层 -->
+		<view v-if="isRecording" class="recording-overlay">
+			<view class="recording-card" :class="{ 'recording-card-cancel': isCancelReady }">
+				<text class="iconfont recording-icon">{{ isCancelReady ? '\uea76' : '\ue601' }}</text>
+				<text class="recording-text">{{ isCancelReady ? '松开手指，取消发送' : '手指上滑，取消发送' }}</text>
 			</view>
 		</view>
 	</view>
@@ -124,13 +220,27 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { emojiList } from '../../utils/emojiData.uts'
+	import { parseMessageText } from '../../utils/emojiParser.uts'
+	import { getCustomStickers, StickerItem } from '../../utils/stickerManager.uts'
 
 	const { t } = useI18n()
 	const name = ref('张三')
 	const watermark = ref('同事A 1234')
 	const inputText = ref('')
-	const showMenu = ref(false)
+	const lastInputText = ref('') // 用于退格逻辑
+	const showEmojiMenu = ref(false)
+	const showPlusMenu = ref(false)
+	const isFullExpanded = ref(false)
+	const isVoiceMode = ref(false)
+	const isRecording = ref(false)
+	const isCancelReady = ref(false)
+	const currentEmojiTab = ref('emoji') // 'emoji' | 'sticker'
 	const lastMessageId = ref('')
+	const recordStartY = ref(0)
+	let editorCtx : EditorContext | null = null
+
+	const stickerList = ref<StickerItem[]>(getCustomStickers())
 
 	const messages = ref([
 		{
@@ -245,17 +355,168 @@
 		return `${year}年${month}月${day}日 ${hours}:${minutes}`
 	}
 
+
 	const featureList = [
-		{ icon: '\uea72', bg: '#FFB347', nameKey: 'chat.features.location' },
-		{ icon: '\uea96', bg: '#62D4A1', nameKey: 'chat.features.file' },
-		{ icon: '\uea83', bg: '#F9C349', nameKey: 'chat.features.card' },
-		{ icon: '\uea90', bg: '#FFB347', nameKey: 'chat.features.fav' },
-		{ icon: '\uea89', bg: '#5FB6F7', nameKey: 'chat.features.voice' },
-		{ icon: '\uea84', bg: '#62D4A1', nameKey: 'chat.features.paint' }
+		{ icon: '\uea87', color: '#3370FF', nameKey: 'chat.features.camera' },
+		{ icon: '\uea72', color: '#FFB347', nameKey: 'chat.features.location' },
+		{ icon: '\uea96', color: '#62D4A1', nameKey: 'chat.features.file' },
+		{ icon: '\ue624', color: '#F9C349', nameKey: 'chat.features.card' },
+		{ icon: '\uea90', color: '#FFB347', nameKey: 'chat.features.fav' }
 	]
 
 	function handleBack() {
 		uni.navigateBack()
+	}
+
+	function toggleInputMode() {
+		isVoiceMode.value = !isVoiceMode.value
+		if (isVoiceMode.value) {
+			showEmojiMenu.value = false
+			showPlusMenu.value = false
+		}
+	}
+
+	function toggleEmojiMenu() {
+		showEmojiMenu.value = !showEmojiMenu.value
+		showPlusMenu.value = false
+		isVoiceMode.value = false
+	}
+
+	function togglePlusMenu() {
+		showPlusMenu.value = !showPlusMenu.value
+		showEmojiMenu.value = false
+		isVoiceMode.value = false
+	}
+
+	function toggleFullExpand() {
+		isFullExpanded.value = !isFullExpanded.value
+		if (isFullExpanded.value) {
+			showEmojiMenu.value = false
+			showPlusMenu.value = false
+		}
+	}
+
+	function onEditorReady() {
+		uni.createSelectorQuery().select('#editor').context((res) => {
+			editorCtx = res.context as EditorContext
+		}).exec()
+	}
+
+	function onEditorInput(e : any) {
+		// e.detail.text 包含纯文本
+		// e.detail.html 包含富文本
+		const text = e.detail.text.trim()
+		const html = e.detail.html
+		// 如果有文字或者包含图片标签，则认为有输入
+		if (text.length > 0 || html.includes('<img')) {
+			inputText.value = 'has_content'
+		} else {
+			inputText.value = ''
+		}
+	}
+
+	function handleInputFocus() {
+		showEmojiMenu.value = false
+		showPlusMenu.value = false
+		scrollToBottom()
+	}
+
+	function handleVoiceStart(e : TouchEvent) {
+		recordStartY.value = e.touches[0].pageY
+		isRecording.value = true
+		isCancelReady.value = false
+		// 模拟请求权限并开始录音
+		console.log('开始录音，检查权限：RECORD_AUDIO')
+	}
+
+	function handleVoiceMove(e : TouchEvent) {
+		const currentY = e.touches[0].pageY
+		if (recordStartY.value - currentY > 60) {
+			isCancelReady.value = true
+		} else {
+			isCancelReady.value = false
+		}
+	}
+
+	function handleVoiceEnd() {
+		if (isCancelReady.value) {
+			console.log('取消录音')
+		} else {
+			console.log('录音结束，发送语音')
+			messages.value.push({
+				type: 'voice',
+				duration: Math.floor(Math.random() * 10) + 1,
+				isRead: true,
+				isSelf: true,
+				time: new Date().toLocaleTimeString(),
+				timestamp: Date.now(),
+				avatarText: '我',
+				avatarBg: '#5FB6F7'
+			})
+			scrollToBottom()
+		}
+		isRecording.value = false
+		isCancelReady.value = false
+	}
+
+	function handleEmojiClick(item : any) {
+		if (editorCtx != null) {
+			editorCtx!.insertImage({
+				src: item.path,
+				alt: item.code,
+				data: {
+					code: item.code
+				},
+				width: '24px',
+				height: '24px',
+				success: () => {
+					console.log('插入表情成功:', item.code)
+				}
+			})
+		}
+	}
+
+	/**
+	 * 处理输入，实现表情包整体退格
+	 */
+	function handleInput(e : InputEvent) {
+		const newVal = e.detail.value
+		const oldVal = lastInputText.value
+		
+		// 检查是否是退格删除操作 (新长度小于旧长度)
+		if (newVal.length < oldVal.length) {
+			const diffIndex = newVal.length
+			// 如果删除的是 ']'，尝试向前寻找匹配的 '['
+			if (oldVal[diffIndex] === ']') {
+				const lastLeftBracket = oldVal.lastIndexOf('[', diffIndex)
+				if (lastLeftBracket !== -1) {
+					// 提取可能的表情代码 [xxx]
+					const potentialCode = oldVal.substring(lastLeftBracket, diffIndex + 1)
+					// 验证是否是合法的表情代码
+					const regex = /^\[[\u4e00-\u9fa5\w]+\]$/
+					if (regex.test(potentialCode)) {
+						// 整体删除 [xxx]
+						inputText.value = oldVal.substring(0, lastLeftBracket) + oldVal.substring(diffIndex + 1)
+					}
+				}
+			}
+		}
+		
+		lastInputText.value = inputText.value
+	}
+
+	function handleStickerClick(item : StickerItem) {
+		messages.value.push({
+			type: 'sticker',
+			content: item.url,
+			isSelf: true,
+			time: new Date().toLocaleTimeString(),
+			timestamp: Date.now(),
+			avatarText: '我',
+			avatarBg: '#5FB6F7'
+		})
+		scrollToBottom()
+		showEmojiMenu.value = false
 	}
 
 	function handleToSettings() {
@@ -265,19 +526,44 @@
 	}
 
 	function handleSend() {
-		if (!inputText.value.trim()) return
-		messages.value.push({
-			type: 'text',
-			content: inputText.value,
-			isSelf: true,
-			time: new Date().toLocaleString(),
-			timestamp: Date.now(),
-			showTime: false,
-			avatarText: '我',
-			avatarBg: '#5FB6F7'
+		if (editorCtx == null) return
+		
+		editorCtx!.getContents({
+			success: (res) => {
+				let content = res.html
+				if (!content || content === '<p><br></p>') return
+				
+				// 将 <img src="..." alt="[表情]" ...> 替换回 [表情]
+				// 匹配带有 alt 属性的 img 标签
+				const imgReg = /<img [^>]*alt=['"]([^'"]+)['"][^>]*>/g
+				let finalContent = content.replace(imgReg, '$1')
+				
+				// 去除 HTML 标签，只保留文本和已替换的表情代码
+				finalContent = finalContent.replace(/<[^>]+>/g, '')
+				
+				if (!finalContent.trim()) return
+				
+				messages.value.push({
+					type: 'text',
+					content: finalContent,
+					isSelf: true,
+					time: new Date().toLocaleString(),
+					timestamp: Date.now(),
+					showTime: false,
+					avatarText: '我',
+					avatarBg: '#5FB6F7'
+				})
+				
+				// 清空编辑器
+				editorCtx!.clear({
+					success: () => {
+						inputText.value = ''
+						isFullExpanded.value = false // 发送后收起
+						scrollToBottom()
+					}
+				})
+			}
 		})
-		inputText.value = ''
-		scrollToBottom()
 	}
 
 	function toggleMenu() {
@@ -480,6 +766,18 @@
 		background-color: #FFFFFF;
 	}
 
+	.text-content-wrap {
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	.inline-emoji {
+		width: 22px;
+		height: 22px;
+		margin: 0 2px;
+	}
+
 	.message-self .bubble-text {
 		background-color: #D2E3FC;
 		border-color: #B2CFFB;
@@ -621,6 +919,18 @@
 		height: 100px;
 	}
 
+	/* 自定义表情 (Sticker) */
+	.sticker-msg-wrap {
+		padding: 0;
+		background-color: transparent;
+		border-width: 0;
+	}
+
+	.sticker-img {
+		width: 120px;
+		border-radius: 4px;
+	}
+
 	.message-text {
 		font-size: 15px;
 		color: #1F2329;
@@ -628,72 +938,187 @@
 	}
 
 	.footer {
-		background-color: #FFFFFF;
-		border-top-width: 0.5px;
-		border-top-color: #EFF0F1;
+		background-color: #F7F7F7;
+		border-top-width: 1px;
+		border-top-color: #E5E5E5;
+		border-top-style: solid;
 		padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+		transition: all 0.3s ease;
+	}
+
+	.footer-full-expanded {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 100%;
+		z-index: 1000;
+		background-color: #FFFFFF;
+		padding-bottom: env(safe-area-inset-bottom);
+		border-top-width: 0;
+	}
+
+	.full-expand-header {
+		height: 44px;
+		padding: 0 16px;
+		justify-content: center;
+		background-color: #FFFFFF;
+	}
+
+	.collapse-icon {
+		font-size: 24px;
+		color: #1F2329;
 	}
 
 	.input-row {
 		flex-direction: row;
+		align-items: flex-end;
+		padding: 7px 12px;
+	}
+
+	.input-row-full {
+		flex: 1;
+		flex-direction: column;
+		align-items: stretch;
+		padding: 0 16px 16px;
+		background-color: #FFFFFF;
+	}
+
+	.input-left-actions {
+		flex-direction: row;
 		align-items: center;
-		padding: 10px 12px;
+		height: 40px;
+	}
+
+	.input-right-actions {
+		flex-direction: row;
+		align-items: center;
+		height: 40px;
+	}
+
+	.input-right-actions-full {
+		justify-content: flex-end;
+		height: 44px;
+		padding-top: 0;
 	}
 
 	.input-box {
 		flex: 1;
-		background-color: #F5F7FA;
-		border-radius: 6px;
-		margin: 0 10px;
-		height: 38px;
+		background-color: #FFFFFF;
+		border-radius: 4px;
+		margin: 0 8px;
+		min-height: 40px;
+		max-height: 35vh;
+		display: flex;
+		flex-direction: column;
 		justify-content: center;
-		padding: 0 12px;
+		overflow: hidden;
+	}
+
+	.input-box-full {
+		flex: 1;
+		max-height: 100%;
+		margin: 0;
+		justify-content: flex-start;
+	}
+
+	.expand-icon-btn {
+		font-size: 20px;
+		color: #646A73;
+		margin-left: 8px;
+	}
+
+	.chat-editor {
+		width: 100%;
+		height: 40px;
+		min-height: 40px;
+		padding: 8px 10px;
+		font-size: 16px;
+		line-height: 1.5;
+		background-color: transparent;
+	}
+
+	.chat-editor-full {
+		flex: 1;
+		height: 100%;
+		padding: 12px 0;
 	}
 
 	.chat-input {
-		font-size: 15px;
+		font-size: 16px;
 		color: #1F2329;
+		line-height: 1.2;
+	}
+
+	.voice-btn {
+		flex: 1;
+		background-color: #FFFFFF;
+		border-radius: 4px;
+		margin: 0 10px;
+		height: 38px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.voice-btn-active {
+		background-color: #E5E5E5;
+	}
+
+	.voice-btn-text {
+		font-size: 16px;
+		color: #1F2329;
+		font-weight: 600;
 	}
 
 	.footer-icon {
-		font-size: 24px;
-		color: #646A73;
+		font-size: 28px;
+		color: #1F2329;
+		margin-bottom: 4px;
 	}
 
-	.action-row {
-		flex-direction: row;
-		justify-content: space-around;
+	.plus-btn {
+		justify-content: center;
 		align-items: center;
-		padding: 0 12px 4px 12px;
+		margin-left: 10px;
 	}
 
-	.action-icon {
-		font-size: 24px;
-		color: #646A73;
+	.send-btn {
+		background-color: #07C160;
+		height: 34px;
+		padding: 0 12px;
+		border-radius: 4px;
+		justify-content: center;
+		align-items: center;
+		margin-left: 10px;
+		margin-bottom: 4px;
 	}
 
-	.add-icon {
-		color: #3370FF;
+	.send-btn-text {
+		color: #FFFFFF;
+		font-size: 14px;
+		font-weight: 500;
 	}
 
 	.features-menu {
-		background-color: #FFFFFF;
-		padding: 24px 20px;
+		background-color: #F7F7F7;
+		padding: 20px 10px;
 		flex-direction: row;
 		flex-wrap: wrap;
 		border-top-width: 0.5px;
-		border-top-color: #EFF0F1;
+		border-top-color: #E5E5E5;
 	}
 
 	.feature-item {
 		width: 25%;
 		align-items: center;
-		margin-bottom: 24px;
+		margin-bottom: 20px;
 	}
 
 	.feature-icon-wrap {
-		width: 48px;
-		height: 48px;
+		width: 56px;
+		height: 56px;
+		background-color: #FFFFFF;
 		border-radius: 12px;
 		justify-content: center;
 		align-items: center;
@@ -701,12 +1126,148 @@
 	}
 
 	.feature-icon {
-		font-size: 24px;
-		color: #FFFFFF;
+		font-size: 26px;
 	}
 
 	.feature-name {
 		font-size: 12px;
 		color: #646A73;
+	}
+
+	/* 表情包菜单 */
+	.emoji-menu {
+		background-color: #F7F7F7;
+		height: 260px;
+		border-top-width: 0.5px;
+		border-top-color: #E5E5E5;
+	}
+
+	.emoji-content {
+		flex: 1;
+		padding: 15px;
+	}
+
+	.emoji-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+	}
+
+	.emoji-item {
+		width: 14.28%; /* 7列 */
+		height: 50px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.picker-emoji-img {
+		width: 32px;
+		height: 32px;
+	}
+
+	/* 收藏表情网格 */
+	.sticker-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+	}
+
+	.sticker-item-add {
+		width: 25%;
+		height: 85px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.sticker-add-icon {
+		font-size: 30px;
+		color: #8F959E;
+		background-color: #FFFFFF;
+		width: 65px;
+		height: 65px;
+		border-radius: 8px;
+		text-align: center;
+		line-height: 65px;
+		border-width: 1px;
+		border-color: #E5E5E5;
+		border-style: dashed;
+	}
+
+	.sticker-item {
+		width: 25%;
+		height: 85px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.picker-sticker-img {
+		width: 65px;
+		height: 65px;
+		border-radius: 8px;
+		background-color: #FFFFFF;
+	}
+
+	.emoji-icon {
+		font-size: 28px;
+	}
+
+	.emoji-tabs {
+		height: 44px;
+		background-color: #FFFFFF;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 10px;
+	}
+
+	.emoji-tab-item {
+		width: 50px;
+		height: 44px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.emoji-tab-active {
+		background-color: #F7F7F7;
+	}
+
+	.emoji-tab-icon {
+		font-size: 22px;
+		color: #646A73;
+	}
+
+	/* 录音浮层 */
+	.recording-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		justify-content: center;
+		align-items: center;
+		z-index: 999;
+	}
+
+	.recording-card {
+		width: 150px;
+		height: 150px;
+		background-color: rgba(0, 0, 0, 0.7);
+		border-radius: 12px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.recording-card-cancel {
+		background-color: rgba(245, 74, 69, 0.8);
+	}
+
+	.recording-icon {
+		font-size: 60px;
+		color: #FFFFFF;
+		margin-bottom: 15px;
+	}
+
+	.recording-text {
+		font-size: 14px;
+		color: #FFFFFF;
+		padding: 0 10px;
+		text-align: center;
 	}
 </style>
