@@ -6,6 +6,55 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "2570137",
+      "name": "选择-多选",
+      "font_class": "xuanze-duoxuan-tianchong",
+      "unicode": "e65f",
+      "unicode_decimal": 58975
+    },
+    {
+      "icon_id": "12097377",
+      "name": "撤回",
+      "font_class": "chehui",
+      "unicode": "e643",
+      "unicode_decimal": 58947
+    },
+    {
+      "icon_id": "4890461",
+      "name": "引用",
+      "font_class": "yinyong",
+      "unicode": "e6f4",
+      "unicode_decimal": 59124
+    },
+    {
+      "icon_id": "10157619",
+      "name": "转发",
+      "font_class": "zhuanfa",
+      "unicode": "e63d",
+      "unicode_decimal": 58941
+    },
+    {
+      "icon_id": "20000253",
+      "name": "删除",
+      "font_class": "shanchu",
+      "unicode": "e602",
+      "unicode_decimal": 58882
+    },
+    {
+      "icon_id": "25537527",
+      "name": "复制",
+      "font_class": "fuzhi",
+      "unicode": "e7cb",
+      "unicode_decimal": 59339
+    },
+    {
+      "icon_id": "32056748",
+      "name": "消息多选",
+      "font_class": "xiaoxiduoxuan",
+      "unicode": "e69d",
+      "unicode_decimal": 59037
+    },
+    {
       "icon_id": "688141",
       "name": "展开 全屏 扩展",
       "font_class": "zhankaiquanpingkuozhan",
