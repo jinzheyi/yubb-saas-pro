@@ -154,6 +154,14 @@ export default {
 			voice: '语音输入',
 			paint: '画板'
 		}
+		menu: {
+			copy: '复制',
+			forward: '转发',
+			delete: '删除',
+			favorite: '收藏',
+			multi: '多选',
+			quote: '引用'
+		}
 	},
 	chatSettings: {
 		title: '聊天设置',

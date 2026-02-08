@@ -4,23 +4,27 @@
 		<view class="status-bar"></view>
 		
 		<!-- 头部导航 -->
-		<view class="header">
-			<view class="header-left" @click="handleBack">
+		<view class="header" :class="{ 'header-multi-select': multiSelectMode }">
+			<view v-if="!multiSelectMode" class="header-left" @click="handleBack">
 				<text class="iconfont back-icon">&#xeb04;</text>
 				<text class="back-text">{{ t('common.back', '返回') }}</text>
 			</view>
+			<view v-else class="header-left" @click="exitMultiSelectMode">
+				<text class="cancel-text">取消</text>
+			</view>
 			<view class="header-title-wrap">
-				<text class="header-title">{{ name }}</text>
-				<text class="header-status">{{ t('chat.online', '手机在线') }}</text>
+				<text v-if="!multiSelectMode" class="header-title">{{ name }}</text>
+				<text v-else class="header-title">已选择 {{ selectedIds.length }} 条</text>
+				<text v-if="!multiSelectMode" class="header-status">{{ t('chat.online', '手机在线') }}</text>
 			</view>
 			<view class="header-right">
-				<text class="iconfont header-icon">&#xea74;</text>
-				<text class="iconfont header-icon" @click="handleToSettings">&#xea8d;</text>
+				<text v-if="!multiSelectMode" class="iconfont header-icon">&#xea74;</text>
+				<text v-if="!multiSelectMode" class="iconfont header-icon" @click="handleToSettings">&#xea8d;</text>
 			</view>
 		</view>
 
 		<!-- 聊天内容区域 -->
-		<scroll-view class="chat-content" scroll-y="true" :scroll-into-view="lastMessageId" show-scrollbar="false">
+		<scroll-view class="chat-content" :class="{ 'chat-content-multi-select': multiSelectMode }" scroll-y="true" :scroll-into-view="lastMessageId" show-scrollbar="false">
 			<!-- 水印层 -->
 			<view class="watermark-layer">
 				<view v-for="i in 12" :key="i" class="watermark-item">
@@ -34,13 +38,19 @@
 						<text class="time-text">{{ formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0) }}</text>
 					</view>
 					
-					<view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other']">
+                    <view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other', multiSelectMode && selectedIds.includes(msg.id) ? 'message-selected' : '']">
+						<!-- 多选模式下的复选框（统一在最左侧） -->
+						<view v-if="multiSelectMode && msg.type !== 'voice' && msg.type !== 'location'" class="multi-select-checkbox" @click.stop="toggleSelect(msg)">
+							<text v-if="selectedIds.includes(msg.id)" class="iconfont checkbox-icon checkbox-checked">&#xe65f;</text>
+							<view v-else class="checkbox-icon checkbox-unchecked"></view>
+						</view>
+						
 						<view class="avatar" :style="{ backgroundColor: msg.avatarBg }">
 							<text class="avatar-text">{{ msg.avatarText }}</text>
 						</view>
-						<view class="message-bubble-wrap">
+                        <view class="message-bubble-wrap">
 							<!-- 文字消息 -->
-							<view v-if="msg.type === 'text'" class="message-bubble bubble-text">
+							<view v-if="msg.type === 'text'" class="message-bubble bubble-text" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
 								<view class="text-content-wrap">
 									<template v-for="(token, tIdx) in parseMessageText(msg.content)" :key="tIdx">
 										<text v-if="token.type === 'text'" class="message-text">{{ token.content }}</text>
@@ -50,12 +60,12 @@
 							</view>
 							
 							<!-- 图片消息 -->
-							<view v-else-if="msg.type === 'image'" class="message-bubble bubble-image" @click="handleImagePreview(msg.content)">
+                            <view v-else-if="msg.type === 'image'" class="message-bubble bubble-image" @click="multiSelectMode ? handleBubbleClick(msg) : handleImagePreview(msg.content)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
 								<image class="chat-image" :src="msg.content" mode="widthFix" />
 							</view>
 							
 							<!-- 视频消息 -->
-							<view v-else-if="msg.type === 'video'" class="message-bubble bubble-video" @click="handleVideoPlay(msg.content)">
+                            <view v-else-if="msg.type === 'video'" class="message-bubble bubble-video" @click="multiSelectMode ? handleBubbleClick(msg) : handleVideoPlay(msg.content)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
 								<video class="chat-video" :src="msg.content" :poster="msg.poster" :controls="false" :show-center-play-btn="true" mode="aspectFill"></video>
 								<view class="video-play-overlay">
 									<text class="iconfont video-play-icon">&#xe602;</text>
@@ -63,7 +73,7 @@
 							</view>
 							
 							<!-- 语音消息 -->
-							<view v-else-if="msg.type === 'voice'" class="message-bubble bubble-voice" :style="{ width: getVoiceBubbleWidth(msg.duration || 0) }" @click="handleVoicePlay(msg)">
+                            <view v-else-if="msg.type === 'voice'" class="message-bubble bubble-voice" :style="{ width: getVoiceBubbleWidth(msg.duration || 0) }" @click="handleVoicePlay(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
 								<text class="iconfont voice-icon">{{ msg.isSelf ? '\ue601' : '\ue601' }}</text>
 								<text class="voice-duration">{{ msg.duration }}"</text>
 								<!-- 语音未读红点 -->
@@ -71,7 +81,7 @@
 							</view>
 							
 							<!-- 文件消息 -->
-							<view v-else-if="msg.type === 'file'" class="message-bubble bubble-file">
+                            <view v-else-if="msg.type === 'file'" class="message-bubble bubble-file" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
 								<view class="file-info">
 									<text class="file-name">{{ msg.fileName }}</text>
 									<text class="file-size">{{ msg.fileSize }}</text>
@@ -82,7 +92,7 @@
 							</view>
 							
 							<!-- 位置消息 -->
-							<view v-else-if="msg.type === 'location'" class="message-bubble bubble-location">
+                            <view v-else-if="msg.type === 'location'" class="message-bubble bubble-location" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
 								<view class="location-info">
 									<text class="location-name">{{ msg.locationName }}</text>
 									<text class="location-address">{{ msg.address }}</text>
@@ -91,12 +101,12 @@
 							</view>
 							
 							<!-- 表情包/动图 -->
-							<view v-else-if="msg.type === 'emoji'" class="bubble-emoji">
+                            <view v-else-if="msg.type === 'emoji'" class="bubble-emoji" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
 								<image class="emoji-img" :src="msg.content" mode="aspectFit" />
 							</view>
 							
 							<!-- 自定义收藏表情 (无气泡) -->
-							<view v-else-if="msg.type === 'sticker'" class="sticker-msg-wrap">
+                            <view v-else-if="msg.type === 'sticker'" class="sticker-msg-wrap" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
 								<image class="sticker-img" :src="msg.content" mode="widthFix" />
 							</view>
 						</view>
@@ -106,7 +116,7 @@
 		</scroll-view>
 
 		<!-- 底部输入区域 -->
-		<view class="footer" :class="{ 'footer-full-expanded': isFullExpanded }">
+		<view v-if="!multiSelectMode" class="footer" :class="{ 'footer-full-expanded': isFullExpanded }">
 			<!-- 全屏模式下的顶部操作栏 -->
 			<view v-if="isFullExpanded" class="full-expand-header">
 				<text class="iconfont collapse-icon" @click="toggleFullExpand">&#xe60e;</text>
@@ -216,6 +226,29 @@
 			</view>
 		</view>
 
+        <view v-if="showMsgMenu" class="menu-mask" @click="closeMsgMenu">
+            <view class="menu-content" :style="{ top: menuY + 'px', left: menuX + 'px', opacity: menuOpacity }" @click.stop>
+                <view class="menu-list">
+                    <view class="menu-item-btn" v-for="item in currentMenuItems" :key="item.key" @click="handleMenuAction(item.key)">
+                        <text class="iconfont menu-item-icon" :class="{ 'menu-danger': item.key === 'delete' }">{{ item.icon }}</text>
+                        <text class="menu-item-text" :class="{ 'menu-danger': item.key === 'delete' }">{{ t(item.labelKey) }}</text>
+                    </view>
+                </view>
+            </view>
+        </view>
+
+		<!-- 多选模式底部工具栏 -->
+		<view v-if="multiSelectMode" class="multi-select-toolbar">
+			<view class="toolbar-item" @click="handleMultiForward">
+				<text class="iconfont toolbar-icon">&#xe63d;</text>
+				<text class="toolbar-text">转发</text>
+			</view>
+			<view class="toolbar-item" @click="handleMultiDelete">
+				<text class="iconfont toolbar-icon">&#xe602;</text>
+				<text class="toolbar-text">删除</text>
+			</view>
+		</view>
+
 		<!-- 录音状态浮层 -->
 		<view v-if="isRecording" class="recording-overlay">
 			<view class="recording-card" :class="{ 'recording-card-cancel': isCancelReady }">
@@ -248,6 +281,16 @@
 	const lastMessageId = ref('')
 	const recordStartY = ref(0)
 	let editorCtx : EditorContext | null = null
+    const showMsgMenu = ref(false)
+    const menuX = ref(0)
+    const menuY = ref(0)
+    const selectedMsg = ref<MessageItem | null>(null)
+    const currentMenuItems = ref<any[]>([])
+    const multiSelectMode = ref(false)
+    const selectedIds = ref<string[]>([])
+    const touchStartX = ref(0)
+    const touchStartY = ref(0)
+    const menuOpacity = ref(0)
 
 	const stickerList = ref<StickerItem[]>(getCustomStickers())
 
@@ -729,6 +772,194 @@
 		})
 	}
 
+    function openMsgMenu(msg : MessageItem, e : TouchEvent) {
+        selectedMsg.value = msg
+        
+        // 优先使用 touchstart 记录的坐标，如果没有则使用 longpress 事件的坐标
+        const x = touchStartX.value || (e.touches.length > 0 ? e.touches[0].clientX : 0)
+        const y = touchStartY.value || (e.touches.length > 0 ? e.touches[0].clientY : 0)
+        
+        const systemInfo = uni.getSystemInfoSync()
+        const screenWidth = systemInfo.screenWidth
+        const screenHeight = systemInfo.screenHeight
+        const statusBarHeight = systemInfo.statusBarHeight || 0
+        
+        // 根据消息类型确定菜单项
+        const isRestricted = msg.type === 'voice' || msg.type === 'location'
+        currentMenuItems.value = isRestricted
+            ? [
+                { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' },
+                { key: 'delete', labelKey: 'chat.menu.delete', icon: '\ue602' }
+              ]
+            : [
+                { key: 'copy', labelKey: 'chat.menu.copy', icon: '\ue7cb' },
+                { key: 'forward', labelKey: 'chat.menu.forward', icon: '\ue63d' },
+                { key: 'delete', labelKey: 'chat.menu.delete', icon: '\ue602' },
+                { key: 'favorite', labelKey: 'chat.menu.favorite', icon: '\ue83f' },
+                { key: 'multi', labelKey: 'chat.menu.multi', icon: '\ue69d' },
+                { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' }
+              ]
+        
+        // 菜单尺寸（横向排列，支持换行）
+        const menuItemWidth = 70 // 每个菜单项宽度
+        const menuItemHeight = 70 // 每个菜单项高度（增加以容纳图标+文字）
+        const maxMenuWidth = screenWidth - 20 // 最大宽度，左右各留10px边距
+        const itemsPerRow = Math.floor(maxMenuWidth / menuItemWidth) // 每行最多显示的菜单项数
+        const actualItemsPerRow = Math.min(itemsPerRow, currentMenuItems.value.length) // 实际每行显示数
+        const menuWidth = actualItemsPerRow * menuItemWidth
+        const rows = Math.ceil(currentMenuItems.value.length / actualItemsPerRow) // 总行数
+        const menuHeight = rows * menuItemHeight
+        
+        // 头部高度：状态栏 + 导航栏(44px)
+        const headerHeight = statusBarHeight + 44
+        // 底部输入区域高度（估算）
+        const footerHeight = 120
+        
+        // 可用区域
+        const availableTop = headerHeight + 10 // 留10px边距
+        const availableBottom = screenHeight - footerHeight - 10
+        const availableLeft = 10
+        const availableRight = screenWidth - menuWidth - 10
+        
+        // 水平定位：优先显示在触摸点附近，但不超出屏幕
+        let finalX = x - menuWidth / 2 // 默认居中对齐触摸点
+        if (finalX < availableLeft) {
+            finalX = availableLeft
+        } else if (finalX > availableRight) {
+            finalX = availableRight
+        }
+        
+        // 垂直定位：优先显示在触摸点上方，如果上方空间不足则显示在下方
+        let finalY = y - menuHeight - 10 // 默认显示在上方，留10px间距
+        
+        if (finalY < availableTop) {
+            // 上方空间不足，显示在下方
+            finalY = y + 10
+            
+            // 如果下方也不够，则尽量显示在可用区域内
+            if (finalY + menuHeight > availableBottom) {
+                finalY = availableBottom - menuHeight
+                // 如果还是不够，则显示在触摸点居中位置
+                if (finalY < availableTop) {
+                    finalY = y - menuHeight / 2
+                    // 最后保底：确保不超出边界
+                    if (finalY < availableTop) finalY = availableTop
+                    if (finalY + menuHeight > availableBottom) finalY = availableBottom - menuHeight
+                }
+            }
+        }
+        
+        menuX.value = finalX
+        menuY.value = finalY
+        showMsgMenu.value = true
+        
+        // 添加淡入动画
+        menuOpacity.value = 0
+        setTimeout(() => {
+            menuOpacity.value = 1
+        }, 10)
+    }
+
+    function recordTouchStart(e : TouchEvent) {
+        if (e.touches.length > 0) {
+            touchStartX.value = e.touches[0].clientX
+            touchStartY.value = e.touches[0].clientY
+        }
+    }
+
+    function closeMsgMenu() {
+        menuOpacity.value = 0
+        setTimeout(() => {
+            showMsgMenu.value = false
+        }, 150)
+    }
+
+    function handleMenuAction(action : string) {
+        if (selectedMsg.value == null) return
+        const msg = selectedMsg.value
+        if (action === 'copy') {
+            if (msg.type === 'text') {
+                uni.setClipboardData({ data: msg.content })
+            } else {
+                uni.showToast({ title: t('chat.menu.copy'), icon: 'none' })
+            }
+        } else if (action === 'forward') {
+            uni.showToast({ title: t('chat.menu.forward'), icon: 'none' })
+        } else if (action === 'delete') {
+            const idx = messages.value.findIndex(m => m.id === msg.id)
+            if (idx > -1) messages.value.splice(idx, 1)
+        } else if (action === 'favorite') {
+            if (msg.type !== 'voice' && msg.type !== 'location') {
+                stickerList.value.unshift({ id: Date.now().toString(), url: msg.content })
+            }
+            uni.showToast({ title: t('chat.menu.favorite'), icon: 'none' })
+        } else if (action === 'multi') {
+            multiSelectMode.value = true
+            // 延迟滚动，等待布局更新
+            setTimeout(() => {
+                scrollToBottom()
+            }, 100)
+        } else if (action === 'quote') {
+            if (editorCtx != null) {
+                editorCtx!.insertText({ text: `"${msg.type === 'text' ? msg.content : t('chat.menu.quote')}" ` })
+                inputText.value = 'has_content'
+            }
+        }
+        closeMsgMenu()
+    }
+
+    function toggleSelect(msg : MessageItem) {
+        const idx = selectedIds.value.indexOf(msg.id)
+        if (idx > -1) {
+            selectedIds.value.splice(idx, 1)
+        } else {
+            selectedIds.value.push(msg.id)
+        }
+    }
+
+    function handleBubbleClick(msg : MessageItem) {
+        if (multiSelectMode.value) {
+            toggleSelect(msg)
+        }
+    }
+
+    function exitMultiSelectMode() {
+        multiSelectMode.value = false
+        selectedIds.value = []
+        // 延迟滚动，等待布局更新
+        setTimeout(() => {
+            scrollToBottom()
+        }, 100)
+    }
+
+    function handleMultiForward() {
+        if (selectedIds.value.length === 0) {
+            uni.showToast({ title: '请选择要转发的消息', icon: 'none' })
+            return
+        }
+        uni.showToast({ title: `转发 ${selectedIds.value.length} 条消息`, icon: 'none' })
+        // TODO: 实现转发逻辑
+    }
+
+    function handleMultiDelete() {
+        if (selectedIds.value.length === 0) {
+            uni.showToast({ title: '请选择要删除的消息', icon: 'none' })
+            return
+        }
+        uni.showModal({
+            title: '提示',
+            content: `确定删除选中的 ${selectedIds.value.length} 条消息吗？`,
+            success: (res) => {
+                if (res.confirm) {
+                    // 删除选中的消息
+                    messages.value = messages.value.filter(m => !selectedIds.value.includes(m.id))
+                    exitMultiSelectMode()
+                    uni.showToast({ title: '删除成功', icon: 'success' })
+                }
+            }
+        })
+    }
+
 	/**
 	 * 计算语音气泡宽度 (仿微信：最短 60px，最长 220px，线性增长)
 	 */
@@ -793,6 +1024,15 @@
 		border-bottom-color: #EFF0F1;
 	}
 
+	.header-multi-select {
+		background-color: #F5F7FA;
+	}
+
+	.cancel-text {
+		color: #1F2329;
+		font-size: 16px;
+	}
+
 	.header-left {
 		flex-direction: row;
 		align-items: center;
@@ -844,6 +1084,12 @@
 		position: relative;
 		height: 0;
 		background-color: #F5F7FA;
+		transition: background-color 0.3s ease;
+	}
+
+	.chat-content-multi-select {
+		padding-bottom: 60px;
+		background-color: #F0F2F5;
 	}
 
 	.watermark-layer {
@@ -873,6 +1119,8 @@
 
 	.message-list {
 		padding: 16px;
+		padding-left: 12px;
+		padding-right: 12px;
 	}
 
 	.time-stamp {
@@ -893,10 +1141,56 @@
 	.message-item {
 		flex-direction: row;
 		margin-bottom: 16px;
+		position: relative;
+		width: 100%;
+		transition: background-color 0.2s ease;
 	}
 
 	.message-self {
 		flex-direction: row-reverse;
+	}
+
+	.message-selected {
+		background-color: rgba(7, 193, 96, 0.05);
+		border-radius: 8px;
+		padding: 4px 0;
+	}
+
+	/* 多选复选框 */
+	.multi-select-checkbox {
+		width: 40px;
+		height: 40px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 4px;
+		flex-shrink: 0;
+	}
+
+	.message-self .multi-select-checkbox {
+		margin-right: 0;
+		margin-left: 4px;
+		order: 3;
+	}
+
+	.checkbox-icon {
+		width: 22px;
+		height: 22px;
+		border-radius: 11px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.checkbox-unchecked {
+		border-width: 1.5px;
+		border-color: #8F959E;
+		background-color: #FFFFFF;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	}
+
+	.checkbox-checked {
+		font-size: 22px;
+		color: #07C160;
+		background-color: transparent;
 	}
 
 	.avatar {
@@ -905,6 +1199,7 @@
 		border-radius: 8px;
 		justify-content: center;
 		align-items: center;
+		flex-shrink: 0;
 	}
 
 	.avatar-text {
@@ -917,6 +1212,8 @@
 		flex: 1;
 		margin: 0 12px;
 		align-items: flex-start;
+		max-width: 85%;
+		min-width: 0;
 	}
 
 	.message-self .message-bubble-wrap {
@@ -926,19 +1223,30 @@
 	.message-bubble {
 		padding: 10px 14px;
 		border-radius: 10px;
-		max-width: 85%;
+		max-width: 100%;
 		border-width: 0.5px;
 		border-color: #EFF0F1;
+		word-wrap: break-word;
+		word-break: break-all;
+		overflow-wrap: break-word;
+		white-space: normal;
 	}
 
 	.bubble-text {
 		background-color: #FFFFFF;
+		min-width: 40px;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.text-content-wrap {
 		flex-direction: row;
 		flex-wrap: wrap;
 		align-items: center;
+		word-break: break-word;
+		white-space: pre-wrap;
+		width: 100%;
 	}
 
 	.inline-emoji {
@@ -958,11 +1266,13 @@
 		overflow: hidden;
 		background-color: transparent;
 		border-width: 0;
+		max-width: 100%;
 	}
 
 	.chat-image {
 		width: 150px;
 		border-radius: 8px;
+		max-width: 100%;
 	}
 
 	/* 语音消息 */
@@ -1042,12 +1352,14 @@
 		align-items: center;
 		background-color: #FFFFFF;
 		width: 220px;
+		max-width: 100%;
 		padding: 12px;
 	}
 
 	.file-info {
 		flex: 1;
 		margin-right: 12px;
+		min-width: 0;
 	}
 
 	.file-name {
@@ -1055,6 +1367,7 @@
 		color: #1F2329;
 		lines: 2;
 		text-overflow: ellipsis;
+		word-break: break-all;
 	}
 
 	.file-size {
@@ -1083,10 +1396,12 @@
 		overflow: hidden;
 		background-color: #FFFFFF;
 		width: 220px;
+		max-width: 100%;
 	}
 
 	.location-info {
 		padding: 10px 12px;
+		word-break: break-all;
 	}
 
 	.location-name {
@@ -1094,6 +1409,7 @@
 		color: #1F2329;
 		lines: 1;
 		text-overflow: ellipsis;
+		word-break: break-all;
 	}
 
 	.location-address {
@@ -1102,6 +1418,7 @@
 		margin-top: 2px;
 		lines: 1;
 		text-overflow: ellipsis;
+		word-break: break-all;
 	}
 
 	.location-map {
@@ -1138,6 +1455,11 @@
 		font-size: 15px;
 		color: #1F2329;
 		line-height: 1.5;
+		word-break: break-word;
+		white-space: pre-wrap;
+		overflow-wrap: break-word;
+		max-width: 100%;
+		display: inline;
 	}
 
 	.footer {
@@ -1485,4 +1807,103 @@
 		padding: 0 10px;
 		text-align: center;
 	}
+
+	/* 多选模式底部工具栏 */
+	.multi-select-toolbar {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 60px;
+		background-color: #FFFFFF;
+		border-top-width: 1px;
+		border-top-color: #E5E5E5;
+		box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-around;
+		padding-bottom: env(safe-area-inset-bottom);
+		z-index: 100;
+	}
+
+	.toolbar-item {
+		flex: 1;
+		height: 60px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.toolbar-item:active {
+		background-color: #F5F5F5;
+	}
+
+	.toolbar-icon {
+		font-size: 24px;
+		color: #1F2329;
+		margin-bottom: 4px;
+	}
+
+	.toolbar-text {
+		font-size: 12px;
+		color: #646A73;
+	}
+
+    .menu-mask {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.1);
+        z-index: 999;
+    }
+
+    .menu-content {
+        position: absolute;
+        background-color: #4C4C4C;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        transition: opacity 0.15s ease;
+    }
+
+    .menu-list {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .menu-item-btn {
+        width: 70px;
+        height: 70px;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        border-right-width: 0.5px;
+        border-right-color: rgba(255, 255, 255, 0.2);
+        border-bottom-width: 0.5px;
+        border-bottom-color: rgba(255, 255, 255, 0.2);
+        flex-direction: column;
+        padding: 8px 0;
+    }
+
+    .menu-item-btn:active {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .menu-item-icon {
+        font-size: 22px;
+        color: #FFFFFF;
+        margin-bottom: 4px;
+    }
+
+    .menu-item-text {
+        font-size: 12px;
+        color: #FFFFFF;
+        text-align: center;
+    }
+
+    .menu-danger {
+        color: #FF4D4F;
+    }
 </style>

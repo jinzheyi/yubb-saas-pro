@@ -153,6 +153,14 @@ export default {
 			fav: 'Favorite',
 			voice: 'Voice',
 			paint: 'Paint'
+		},
+		menu: {
+			copy: 'Copy',
+			forward: 'Forward',
+			delete: 'Delete',
+			favorite: 'Favorite',
+			multi: 'Multi-select',
+			quote: 'Quote'
 		}
 	},
 	chatSettings: {
