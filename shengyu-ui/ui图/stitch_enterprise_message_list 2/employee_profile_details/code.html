@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Employee Profile Details</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#C8161D", // Deep red from the header
+                        "background-light": "#F7F7F7",
+                        "background-dark": "#121212",
+                    },
+                    fontFamily: {
+                        display: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "8px",
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        .watermark-container {
+            position: relative;
+            overflow: hidden;
+        }
+        .watermark {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.05;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            transform: rotate(-25deg) scale(1.5);
+        }
+        .watermark span {
+            padding: 40px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .ios-shadow {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<header class="bg-primary text-white pt-12 pb-4 px-4 sticky top-0 z-50 flex items-center justify-between shadow-md">
+<button class="flex items-center gap-1 focus:outline-none">
+<span class="material-icons-round">arrow_back_ios</span>
+<span class="text-lg">返回</span>
+</button>
+<h1 class="text-xl font-medium">许冠芝</h1>
+<button class="text-lg focus:outline-none" id="more-btn">更多</button>
+</header>
+<main class="flex-1 watermark-container relative">
+<div class="watermark dark:opacity-10">
+<span>朱述勇5653 2026-2-9</span>
+<span>朱述勇5653 2026-2-9</span>
+<span>朱述勇5653 2026-2-9</span>
+<span>朱述勇5653 2026-2-9</span>
+<span>朱述勇5653 2026-2-9</span>
+<span>朱述勇5653 2026-2-9</span>
+<span>朱述勇5653 2026-2-9</span>
+<span>朱述勇5653 2026-2-9</span>
+</div>
+<div class="relative z-10 px-4 pt-6 pb-24">
+<div class="bg-white dark:bg-zinc-900 rounded-xl p-6 ios-shadow mb-6 border border-slate-100 dark:border-zinc-800">
+<div class="flex items-center gap-3 mb-2">
+<h2 class="text-2xl font-bold">许冠芝</h2>
+<span class="material-icons-round text-blue-500 text-lg">person</span>
+</div>
+<p class="text-slate-600 dark:text-zinc-400 text-sm">江西省财政投资集团有限公司</p>
+</div>
+<div class="space-y-6">
+<div class="border-b border-slate-200 dark:border-zinc-800 pb-3">
+<p class="text-sm text-slate-400 dark:text-zinc-500 mb-1">姓名</p>
+<p class="text-lg font-medium">许冠芝</p>
+</div>
+<div class="border-b border-slate-200 dark:border-zinc-800 pb-3">
+<p class="text-sm text-slate-400 dark:text-zinc-500 mb-1">手机</p>
+<p class="text-lg font-medium tracking-wide">187-2096-9685</p>
+</div>
+<div class="border-b border-slate-200 dark:border-zinc-800 pb-3">
+<p class="text-sm text-slate-400 dark:text-zinc-500 mb-1">座机</p>
+<p class="text-lg font-medium text-slate-400 dark:text-zinc-600">未设置</p>
+</div>
+<div class="border-b border-slate-200 dark:border-zinc-800 pb-3">
+<p class="text-sm text-slate-400 dark:text-zinc-500 mb-1">其他电话</p>
+<p class="text-lg font-medium text-slate-400 dark:text-zinc-600">未设置</p>
+</div>
+<div class="border-b border-slate-200 dark:border-zinc-800 pb-3">
+<p class="text-sm text-slate-400 dark:text-zinc-500 mb-1">邮箱</p>
+<p class="text-lg font-medium text-slate-400 dark:text-zinc-600">未设置</p>
+</div>
+<div class="border-b border-slate-200 dark:border-zinc-800 pb-3">
+<p class="text-sm text-slate-400 dark:text-zinc-500 mb-1">职级</p>
+<p class="text-lg font-medium text-slate-400 dark:text-zinc-600">未设置</p>
+</div>
+<div class="pb-3">
+<p class="text-sm text-slate-400 dark:text-zinc-500 mb-1">部门</p>
+<p class="text-lg font-medium leading-relaxed">江西省财信科技有限公司/软件研发事业部</p>
+</div>
+</div>
+</div>
+</main>
+<div class="fixed top-28 right-4 z-[60] bg-[#333333] dark:bg-zinc-800 text-white rounded-lg w-40 overflow-hidden shadow-2xl transition-all duration-200 origin-top-right transform hidden" id="more-menu">
+<button class="w-full flex items-center gap-3 px-4 py-3 border-b border-zinc-700 hover:bg-zinc-700 transition-colors">
+<span class="material-icons-round text-lg">star_outline</span>
+<span class="text-sm">已关注</span>
+</button>
+<button class="w-full flex items-center gap-3 px-4 py-3 border-b border-zinc-700 hover:bg-zinc-700 transition-colors">
+<span class="material-icons-round text-lg">contact_phone</span>
+<span class="text-sm">导入手机</span>
+</button>
+<button class="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-700 transition-colors">
+<span class="material-icons-round text-lg">share</span>
+<span class="text-sm">分享名片</span>
+</button>
+</div>
+<div class="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-t border-slate-200 dark:border-zinc-800 px-8 py-3 flex justify-around items-center z-50">
+<button class="flex flex-col items-center gap-1 group">
+<div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white ios-shadow group-active:scale-95 transition-transform">
+<span class="material-icons-round">chat_bubble</span>
+</div>
+<span class="text-xs text-blue-500 font-medium">消息</span>
+</button>
+<button class="flex flex-col items-center gap-1 group">
+<div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white ios-shadow group-active:scale-95 transition-transform">
+<span class="material-icons-round">call</span>
+</div>
+<span class="text-xs text-blue-500 font-medium">通话</span>
+</button>
+</div>
+<script>
+        const moreBtn = document.getElementById('more-btn');
+        const moreMenu = document.getElementById('more-menu');
+        moreBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            moreMenu.classList.toggle('hidden');
+        });
+        document.addEventListener('click', () => {
+            moreMenu.classList.add('hidden');
+        });
+        // Simple dark mode toggle helper if needed (uses system preference by default)
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+
+</body></html>

@@ -57,6 +57,48 @@
 			}
 		},
 		{
+			"path": "pages/contacts/organization",
+			"style": {
+				"navigationBarTitleText": "组织结构",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/contacts/user-detail",
+			"style": {
+				"navigationBarTitleText": "用户详情",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/contacts/my-groups",
+			"style": {
+				"navigationBarTitleText": "我的群组",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/contacts/my-following",
+			"style": {
+				"navigationBarTitleText": "我的关注",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/contacts/search-result",
+			"style": {
+				"navigationBarTitleText": "搜索",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/contacts/my-department",
+			"style": {
+				"navigationBarTitleText": "我的部门",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/index/index",
 			"style": {
 				"navigationBarTitleText": "uni-app x"

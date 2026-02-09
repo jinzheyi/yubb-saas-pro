@@ -206,6 +206,7 @@ export default {
 	initiateGroup: {
 		title: '发起群聊',
 		selectExisting: '选择已有的群',
-		selectedCount: '已选择:{count} 人'
+		selectedCount: '已选择 {count} 人',
+		confirm: '确定({count}/{max})'
 	}
 }

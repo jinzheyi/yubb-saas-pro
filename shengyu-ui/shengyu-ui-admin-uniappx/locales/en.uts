@@ -206,6 +206,7 @@ export default {
 	initiateGroup: {
 		title: 'New Group',
 		selectExisting: 'Select Existing Group',
-		selectedCount: 'Selected:{count} people'
+		selectedCount: 'Selected {count} people',
+		confirm: 'Confirm({count}/{max})'
 	}
 }

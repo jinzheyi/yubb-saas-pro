@@ -1,0 +1,357 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<text class="header-title">我的关注</text>
+			<view class="header-right"></view>
+		</view>
+
+		<view class="search-wrap">
+			<view class="search-bar">
+				<text class="iconfont search-icon">&#xea6e;</text>
+				<input class="search-input" placeholder="搜索" placeholder-class="placeholder" />
+			</view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<view class="contact-list">
+				<view v-for="(contact, index) in followingList" :key="contact.id" 
+					class="contact-item" 
+					@click="handleContactClick(contact)">
+					<!-- 选择模式下显示复选框 -->
+					<view v-if="isSelectMode" :class="['checkbox', contact.selected ? 'checkbox-active' : '']" @click.stop="toggleContactSelect(contact)">
+						<text v-if="contact.selected" class="iconfont check-icon">&#xea73;</text>
+					</view>
+					
+					<view class="contact-avatar" :style="{ backgroundColor: contact.avatarBg }">
+						<text class="avatar-text">{{ contact.avatarText }}</text>
+					</view>
+					<view class="contact-info">
+						<text class="contact-name">{{ contact.name }}</text>
+						<text class="contact-role">{{ contact.role }}</text>
+					</view>
+					<text v-if="!isSelectMode" class="iconfont star-icon">&#xea90;</text>
+				</view>
+			</view>
+		</scroll-view>
+
+		<!-- 选择模式下显示底部操作栏 -->
+		<view v-if="isSelectMode" class="footer">
+			<text class="selected-text">已选择 {{ selectedCount }} 人</text>
+			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
+				<text class="confirm-btn-text">确定</text>
+			</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	// 是否为选择模式
+	const isSelectMode = ref(false)
+
+	// 关注列表数据
+	const followingList = ref([
+		{
+			id: 1,
+			name: '张敏',
+			role: '开发工程师',
+			avatarText: '张敏',
+			avatarBg: '#0ea5e9',
+			selected: false
+		},
+		{
+			id: 2,
+			name: '李强',
+			role: '产品经理',
+			avatarText: '李强',
+			avatarBg: '#f97316',
+			selected: false
+		},
+		{
+			id: 3,
+			name: '王静',
+			role: '高级UI设计师',
+			avatarText: '王静',
+			avatarBg: '#10b981',
+			selected: false
+		},
+		{
+			id: 4,
+			name: '刘伟',
+			role: '技术总监',
+			avatarText: '刘伟',
+			avatarBg: '#6366f1',
+			selected: false
+		},
+		{
+			id: 5,
+			name: '陈佳',
+			role: '人力资源主管',
+			avatarText: '陈佳',
+			avatarBg: '#fb7185',
+			selected: false
+		},
+		{
+			id: 6,
+			name: '赵军',
+			role: '架构师',
+			avatarText: '赵军',
+			avatarBg: '#8b5cf6',
+			selected: false
+		},
+		{
+			id: 7,
+			name: '孙丽',
+			role: '测试经理',
+			avatarText: '孙丽',
+			avatarBg: '#ec4899',
+			selected: false
+		}
+	])
+
+	// 选中的联系人数量
+	const selectedCount = computed(() : number => {
+		let count = 0
+		for (let i = 0; i < followingList.value.length; i++) {
+			if (followingList.value[i].selected) {
+				count++
+			}
+		}
+		return count
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function toggleContactSelect(contact : any) {
+		contact.selected = !contact.selected
+	}
+
+	function handleContactClick(contact : any) {
+		if (isSelectMode.value) {
+			// 选择模式下点击整行也可以切换选中状态
+			toggleContactSelect(contact)
+		} else {
+			// 普通模式下跳转到用户详情
+			uni.navigateTo({
+				url: '/pages/contacts/user-detail?name=' + contact.name
+			})
+		}
+	}
+
+	function handleConfirm() {
+		const selectedContacts = followingList.value.filter(c => c.selected)
+		// TODO: 将选中的联系人添加到发起群聊页面
+		uni.showToast({
+			title: `已选择 ${selectedContacts.length} 人`,
+			icon: 'success'
+		})
+		setTimeout(() => {
+			uni.navigateBack()
+		}, 1000)
+	}
+
+	// 页面加载时检查是否为选择模式
+	onLoad((options : OnLoadOptions) => {
+		if (options.has('mode') && options.get('mode') === 'select') {
+			isSelectMode.value = true
+		}
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F9FAFB;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #1677FF;
+	}
+
+	.header {
+		background-color: #1677FF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #ffffff;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #ffffff;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #ffffff;
+		font-size: 18px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.search-wrap {
+		background-color: #ffffff;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #e5e5e5;
+	}
+
+	.search-bar {
+		background-color: #F3F4F6;
+		border-radius: 12px;
+		height: 36px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+	}
+
+	.search-icon {
+		font-size: 18px;
+		color: #9CA3AF;
+	}
+
+	.search-input {
+		flex: 1;
+		font-size: 14px;
+		margin-left: 8px;
+		color: #333333;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+		background-color: #ffffff;
+	}
+
+	.contact-list {
+		background-color: #ffffff;
+	}
+
+	.contact-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #F5F7FA;
+	}
+
+	.contact-item:active {
+		background-color: #F9FAFB;
+	}
+
+	.contact-avatar {
+		width: 48px;
+		height: 48px;
+		border-radius: 24px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 16px;
+	}
+
+	.avatar-text {
+		color: #ffffff;
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.contact-info {
+		flex: 1;
+	}
+
+	.contact-name {
+		font-size: 17px;
+		font-weight: 600;
+		color: #1F2937;
+		margin-bottom: 4px;
+	}
+
+	.contact-role {
+		font-size: 14px;
+		color: #6B7280;
+	}
+
+	.star-icon {
+		color: #1677FF;
+		font-size: 20px;
+	}
+
+	.checkbox {
+		width: 20px;
+		height: 20px;
+		border-radius: 10px;
+		border-width: 1.5px;
+		border-color: #D1D5DB;
+		margin-right: 12px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.checkbox-active {
+		background-color: #1677FF;
+		border-color: #1677FF;
+	}
+
+	.check-icon {
+		color: #ffffff;
+		font-size: 14px;
+	}
+
+	.footer {
+		background-color: #ffffff;
+		border-top-width: 0.5px;
+		border-top-color: #e5e5e5;
+		padding: 12px 16px;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+	}
+
+	.selected-text {
+		font-size: 15px;
+		color: #333333;
+	}
+
+	.confirm-btn {
+		background-color: rgba(22, 119, 255, 0.1);
+		padding: 0 20px;
+		height: 36px;
+		border-radius: 4px;
+		justify-content: center;
+		border-width: 0;
+	}
+
+	.confirm-btn-text {
+		color: #1677FF;
+		font-size: 14px;
+		font-weight: 500;
+	}
+</style>

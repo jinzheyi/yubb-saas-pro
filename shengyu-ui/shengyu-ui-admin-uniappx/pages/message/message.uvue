@@ -8,8 +8,8 @@
 			<view class="header-top">
 				<text class="header-title">{{ t('message.title', '消息') }}</text>
 				<view class="header-icons">
-					<text class="iconfont header-icon">&#xea8b;</text>
-					<text class="iconfont header-icon">&#xea74;</text>
+					<text class="iconfont header-icon" @click="handleScan">&#xea8b;</text>
+					<text class="iconfont header-icon" @click="handleInitiateGroup">&#xea74;</text>
 				</view>
 			</view>
 			<view class="search-container">
@@ -345,6 +345,25 @@
 				break
 		}
 		closeMenu()
+	}
+
+	/**
+	 * 扫一扫
+	 */
+	function handleScan() {
+		uni.showToast({
+			title: '扫一扫功能开发中',
+			icon: 'none'
+		})
+	}
+
+	/**
+	 * 发起群聊
+	 */
+	function handleInitiateGroup() {
+		uni.navigateTo({
+			url: '/pages/contacts/initiate-group'
+		})
 	}
 </script>
 

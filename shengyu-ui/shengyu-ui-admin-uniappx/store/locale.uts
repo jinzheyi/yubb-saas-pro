@@ -96,10 +96,10 @@ export function getMessages(locale: LocaleType): any {
 /**
  * 翻译函数
  * @param key 翻译键（支持点号分隔的路径，如 'common.login'）
- * @param defaultValue 默认值（可选）
+ * @param params 参数对象或默认值（可选）
  * @returns 翻译后的文本
  */
-export function t(key: string, defaultValue?: string): string {
+export function t(key: string, params?: any): string {
 	const messages = getCurrentMessages()
 	
 	// 分割键路径
@@ -116,12 +116,27 @@ export function t(key: string, defaultValue?: string): string {
 		}
 	}
 	
-	// 返回翻译结果或默认值
+	// 如果找到翻译文本
 	if (value && typeof value === 'string') {
+		// 如果 params 是对象，进行参数替换
+		if (params && typeof params === 'object') {
+			let result = value
+			// 替换所有 {key} 格式的占位符
+			for (const paramKey in params) {
+				const regex = new RegExp('\\{' + paramKey + '\\}', 'g')
+				result = result.replace(regex, params[paramKey].toString())
+			}
+			return result
+		}
 		return value
 	}
 	
-	return defaultValue || key
+	// 如果 params 是字符串，作为默认值返回
+	if (params && typeof params === 'string') {
+		return params
+	}
+	
+	return key
 }
 
 /**

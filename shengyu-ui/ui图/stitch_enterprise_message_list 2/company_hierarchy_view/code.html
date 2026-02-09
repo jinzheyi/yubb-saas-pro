@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>组织结构 - Company Hierarchy View</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#C8161D",
+                        "background-light": "#F5F5F7",
+                        "background-dark": "#121212",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "-apple-system", "BlinkMacSystemFont", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "8px",
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        body { font-family: 'Inter', '-apple-system', 'BlinkMacSystemFont', 'PingFang SC', sans-serif; }
+        .ios-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .node-line { position: relative; }
+        .node-line::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: -10px;
+            bottom: 0;
+            width: 1px;
+            background-color: #E5E7EB;
+        }
+        .dark .node-line::before { background-color: #374151; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<div class="h-10 bg-primary w-full flex items-center justify-between px-6 text-white text-xs font-semibold">
+<span>9:02</span>
+<div class="flex items-center gap-1">
+<span class="material-icons text-[14px]">vpn_lock</span>
+<span class="material-icons text-[14px]">signal_cellular_alt</span>
+<span class="material-icons text-[14px]">wifi</span>
+<span class="material-icons text-[14px]">battery_full</span>
+</div>
+</div>
+<header class="bg-primary text-white h-12 flex items-center px-4 sticky top-0 z-50">
+<button class="flex items-center gap-1">
+<span class="material-icons">chevron_left</span>
+<span class="text-base">返回</span>
+</button>
+<h1 class="flex-1 text-center text-lg font-medium pr-8">组织结构</h1>
+</header>
+<div class="p-3 bg-white dark:bg-neutral-900 sticky top-12 z-40 border-b border-slate-200 dark:border-neutral-800">
+<div class="relative">
+<span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="w-full bg-slate-100 dark:bg-neutral-800 border-none rounded-lg pl-10 py-2 text-sm focus:ring-1 focus:ring-primary" placeholder="搜索" type="text"/>
+</div>
+</div>
+<main class="flex-1 overflow-y-auto pb-20">
+<div class="bg-white dark:bg-neutral-900 mt-2 px-4 py-3 border-y border-slate-200 dark:border-neutral-800">
+<div class="flex items-center justify-between">
+<span class="text-lg font-bold text-slate-800 dark:text-slate-100">江西省财政投资集团有限公司(362)</span>
+<span class="material-icons text-slate-400">expand_more</span>
+</div>
+</div>
+<div class="px-4 py-2 space-y-4">
+<div class="flex items-center gap-3 py-2">
+<span class="material-icons text-sky-500 text-xl">add_box</span>
+<span class="text-slate-700 dark:text-slate-300">江西省财投供应链金融有限公司(63)</span>
+</div>
+<div>
+<div class="flex items-center gap-3 py-2">
+<span class="material-icons text-sky-500 text-xl">indeterminate_check_box</span>
+<span class="text-slate-700 dark:text-slate-300 font-medium">江西省财信科技有限公司(89)</span>
+</div>
+<div class="pl-6 space-y-2 mt-2 border-l border-slate-200 dark:border-neutral-800 ml-2.5">
+<div class="flex items-center gap-3 py-2">
+<span class="material-icons text-sky-500 text-xl">add_box</span>
+<span class="text-slate-600 dark:text-slate-400">管理层(3)</span>
+</div>
+<div class="flex items-center gap-3 py-2">
+<span class="material-icons text-sky-500 text-xl">add_box</span>
+<span class="text-slate-600 dark:text-slate-400">综合管理部(5)</span>
+</div>
+<div>
+<div class="flex items-center gap-3 py-2">
+<span class="material-icons text-sky-500 text-xl">indeterminate_check_box</span>
+<span class="text-slate-600 dark:text-slate-400 font-medium">人力资源部(3)</span>
+</div>
+<div class="pl-2 mt-2 space-y-4">
+<div class="flex items-center justify-between py-2 border-b border-slate-50 dark:border-neutral-800">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-pink-400 flex items-center justify-center text-white text-xs font-bold">胡婷</div>
+<span class="font-medium text-slate-800 dark:text-slate-200">胡婷</span>
+</div>
+<span class="text-slate-500 dark:text-slate-400 text-sm">副部长 (主持工作)</span>
+</div>
+<div class="flex items-center justify-between py-2 border-b border-slate-50 dark:border-neutral-800">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-sky-400 flex items-center justify-center text-white text-xs font-bold">来茂</div>
+<span class="font-medium text-slate-800 dark:text-slate-200">李来茂</span>
+</div>
+<span class="text-slate-500 dark:text-slate-400 text-sm">人力资源经理</span>
+</div>
+<div class="flex items-center justify-between py-2">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-pink-400 flex items-center justify-center text-white text-xs font-bold">甜甜</div>
+<span class="font-medium text-slate-800 dark:text-slate-200">王甜甜</span>
+</div>
+<span class="text-slate-500 dark:text-slate-400 text-sm">人力实习生</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3 py-2">
+<span class="material-icons text-sky-500 text-xl">add_box</span>
+<span class="text-slate-600 dark:text-slate-400">财务管理部(3)</span>
+</div>
+<div class="flex items-center gap-3 py-2">
+<span class="material-icons text-sky-500 text-xl">add_box</span>
+<span class="text-slate-600 dark:text-slate-400">风控法务部(2)</span>
+</div>
+<div class="flex items-center gap-3 py-2">
+<span class="material-icons text-sky-500 text-xl">add_box</span>
+<span class="text-slate-600 dark:text-slate-400">资产运营事业部(31)</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-900 border-t border-slate-200 dark:border-neutral-800 h-16 flex items-center justify-around pb-1">
+<div class="flex flex-col items-center text-slate-400">
+<span class="material-icons">chat_bubble_outline</span>
+<span class="text-[10px] mt-0.5">消息</span>
+</div>
+<div class="flex flex-col items-center text-primary">
+<span class="material-icons">account_tree</span>
+<span class="text-[10px] mt-0.5 font-bold">架构</span>
+</div>
+<div class="flex flex-col items-center text-slate-400">
+<span class="material-icons">contact_page</span>
+<span class="text-[10px] mt-0.5">联系人</span>
+</div>
+<div class="flex flex-col items-center text-slate-400">
+<span class="material-icons">person_outline</span>
+<span class="text-[10px] mt-0.5">我的</span>
+</div>
+</nav>
+<div class="fixed bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-slate-300 dark:bg-neutral-700 rounded-full"></div>
+
+</body></html>

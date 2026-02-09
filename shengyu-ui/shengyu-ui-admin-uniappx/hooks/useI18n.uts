@@ -45,13 +45,13 @@ export function useI18n() {
 	/**
 	 * 翻译函数（响应式）
 	 * @param key 翻译键
-	 * @param defaultValue 默认值
+	 * @param params 参数对象或默认值
 	 * @returns 翻译后的文本
 	 */
-	const t = (key: string, defaultValue?: string): string => {
+	const t = (key: string, params?: any): string => {
 		// 依赖 locale.value 确保响应式更新
 		const currentLocale = locale.value
-		return translate(key, defaultValue)
+		return translate(key, params)
 	}
 	
 	/**

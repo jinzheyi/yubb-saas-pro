@@ -1,0 +1,359 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<text class="header-title">{{ userName }}</text>
+			<text class="header-more" @click="showMoreMenu = !showMoreMenu">更多</text>
+		</view>
+
+		<!-- 更多菜单 -->
+		<view v-if="showMoreMenu" class="more-menu-mask" @click="showMoreMenu = false">
+			<view class="more-menu" @click.stop>
+				<view class="menu-item" @click="handleMenuAction('follow')">
+					<text class="iconfont menu-icon">&#xea90;</text>
+					<text class="menu-text">{{ isFollowing ? '已关注' : '关注' }}</text>
+				</view>
+				<view class="menu-item" @click="handleMenuAction('import')">
+					<text class="iconfont menu-icon">&#xea94;</text>
+					<text class="menu-text">导入手机</text>
+				</view>
+				<view class="menu-item" @click="handleMenuAction('share')">
+					<text class="iconfont menu-icon">&#xea7c;</text>
+					<text class="menu-text">分享名片</text>
+				</view>
+			</view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<!-- 用户卡片 -->
+			<view class="user-card">
+				<view class="user-header">
+					<text class="user-name-large">{{ userName }}</text>
+					<text class="iconfont user-icon">&#xea97;</text>
+				</view>
+				<text class="user-company">{{ userInfo.company }}</text>
+			</view>
+
+			<!-- 详细信息 -->
+			<view class="info-section">
+				<view class="info-item">
+					<text class="info-label">姓名</text>
+					<text class="info-value">{{ userName }}</text>
+				</view>
+				<view class="info-item">
+					<text class="info-label">手机</text>
+					<text class="info-value">{{ userInfo.mobile }}</text>
+				</view>
+				<view class="info-item">
+					<text class="info-label">座机</text>
+					<text class="info-value info-empty">{{ userInfo.phone || '未设置' }}</text>
+				</view>
+				<view class="info-item">
+					<text class="info-label">其他电话</text>
+					<text class="info-value info-empty">{{ userInfo.otherPhone || '未设置' }}</text>
+				</view>
+				<view class="info-item">
+					<text class="info-label">邮箱</text>
+					<text class="info-value info-empty">{{ userInfo.email || '未设置' }}</text>
+				</view>
+				<view class="info-item">
+					<text class="info-label">职级</text>
+					<text class="info-value info-empty">{{ userInfo.level || '未设置' }}</text>
+				</view>
+				<view class="info-item info-item-last">
+					<text class="info-label">部门</text>
+					<text class="info-value">{{ userInfo.department }}</text>
+				</view>
+			</view>
+		</scroll-view>
+
+		<!-- 底部操作栏 -->
+		<view class="footer-actions">
+			<view class="action-btn" @click="handleMessage">
+				<view class="action-icon-wrap">
+					<text class="iconfont action-icon">&#xea98;</text>
+				</view>
+				<text class="action-text">消息</text>
+			</view>
+			<view class="action-btn" @click="handleCall">
+				<view class="action-icon-wrap">
+					<text class="iconfont action-icon">&#xea8c;</text>
+				</view>
+				<text class="action-text">通话</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	const showMoreMenu = ref(false)
+	const isFollowing = ref(false)
+
+	// 从路由参数获取用户名
+	const userName = ref('张敏')
+
+	// 用户信息
+	const userInfo = ref({
+		company: '科技创新集团有限公司',
+		mobile: '187-2096-9685',
+		phone: '',
+		otherPhone: '',
+		email: '',
+		level: '',
+		department: '数字科技有限公司/软件研发事业部'
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function handleMenuAction(action : string) {
+		showMoreMenu.value = false
+		switch (action) {
+			case 'follow':
+				isFollowing.value = !isFollowing.value
+				uni.showToast({
+					title: isFollowing.value ? '已关注' : '已取消关注',
+					icon: 'none'
+				})
+				break
+			case 'import':
+				uni.showToast({
+					title: '导入手机功能开发中',
+					icon: 'none'
+				})
+				break
+			case 'share':
+				uni.showToast({
+					title: '分享名片功能开发中',
+					icon: 'none'
+				})
+				break
+		}
+	}
+
+	function handleMessage() {
+		uni.navigateTo({
+			url: '/pages/message/chat?name=' + userName.value
+		})
+	}
+
+	function handleCall() {
+		uni.showToast({
+			title: '通话功能开发中',
+			icon: 'none'
+		})
+	}
+
+	// 页面加载时获取路由参数
+	onLoad((options : OnLoadOptions) => {
+		if (options.has('name')) {
+			userName.value = options.get('name') as string
+		}
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F7F7F7;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #1677FF;
+	}
+
+	.header {
+		background-color: #1677FF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.back-icon {
+		color: #ffffff;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #ffffff;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #ffffff;
+		font-size: 18px;
+		font-weight: 500;
+	}
+
+	.header-more {
+		color: #ffffff;
+		font-size: 16px;
+	}
+
+	.more-menu-mask {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 999;
+	}
+
+	.more-menu {
+		position: absolute;
+		top: calc(var(--status-bar-height) + 48px);
+		right: 12px;
+		background-color: #333333;
+		border-radius: 8px;
+		width: 160px;
+		overflow: hidden;
+		box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+	}
+
+	.menu-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: rgba(255,255,255,0.1);
+	}
+
+	.menu-item:last-child {
+		border-bottom-width: 0;
+	}
+
+	.menu-icon {
+		color: #ffffff;
+		font-size: 18px;
+		margin-right: 12px;
+	}
+
+	.menu-text {
+		color: #ffffff;
+		font-size: 14px;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+	}
+
+	.user-card {
+		background-color: #ffffff;
+		margin: 24px 16px;
+		padding: 24px;
+		border-radius: 12px;
+		box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+	}
+
+	.user-header {
+		flex-direction: row;
+		align-items: center;
+		margin-bottom: 8px;
+	}
+
+	.user-name-large {
+		font-size: 24px;
+		font-weight: bold;
+		color: #1F2329;
+		margin-right: 8px;
+	}
+
+	.user-icon {
+		color: #0ea5e9;
+		font-size: 18px;
+	}
+
+	.user-company {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
+	.info-section {
+		padding: 0 16px 24px 16px;
+	}
+
+	.info-item {
+		padding: 16px 0;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #E5E7EB;
+	}
+
+	.info-item-last {
+		border-bottom-width: 0;
+	}
+
+	.info-label {
+		font-size: 14px;
+		color: #8F959E;
+		margin-bottom: 8px;
+	}
+
+	.info-value {
+		font-size: 18px;
+		font-weight: 500;
+		color: #1F2329;
+	}
+
+	.info-empty {
+		color: #C1C4C9;
+	}
+
+	.footer-actions {
+		background-color: rgba(255,255,255,0.8);
+		backdrop-filter: blur(10px);
+		border-top-width: 0.5px;
+		border-top-color: #E5E7EB;
+		padding: 12px 32px;
+		flex-direction: row;
+		justify-content: space-around;
+		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+	}
+
+	.action-btn {
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.action-icon-wrap {
+		width: 48px;
+		height: 48px;
+		border-radius: 24px;
+		background-color: #0ea5e9;
+		justify-content: center;
+		align-items: center;
+		margin-bottom: 4px;
+		box-shadow: 0 4px 12px rgba(14,165,233,0.3);
+	}
+
+	.action-icon {
+		color: #ffffff;
+		font-size: 24px;
+	}
+
+	.action-text {
+		font-size: 12px;
+		color: #0ea5e9;
+		font-weight: 500;
+	}
+</style>

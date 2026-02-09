@@ -1,16 +1,5 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
-			<view class="header-top">
-				<text class="header-title">{{ t('contacts.title') }}</text>
-			</view>
-			<view class="search-bar">
-				<text class="iconfont search-icon">&#xea6e;</text>
-				<input class="search-input" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" />
-			</view>
-		</view>
-
+	<view class="contact-selector">
 		<scroll-view 
 			class="content" 
 			scroll-y="true" 
@@ -18,26 +7,19 @@
 			:scroll-into-view="scrollTarget"
 			scroll-with-animation="true"
 		>
-			<!-- 分类列表 -->
-			<view class="category-group">
-				<view class="category-item" v-for="(item, index) in categories1" :key="index" @click="handleCategory(item)">
-					<view class="category-icon-wrap" :style="{ backgroundColor: item.bg }">
-						<text class="iconfont category-icon">{{ item.icon }}</text>
-					</view>
-					<text class="category-name">{{ t(item.nameKey) }}</text>
-					<view v-if="index < categories1.length - 1" class="category-item-border"></view>
+			<!-- 快捷分类（可选） -->
+			<view v-if="showCategories" class="category-section">
+				<view class="section-label">
+					<text class="section-text">{{ t('initiateGroup.selectExisting') }}</text>
 				</view>
-			</view>
-
-			<view class="section-divider"></view>
-
-			<view class="category-group">
-				<view class="category-item" v-for="(item, index) in categories2" :key="index" @click="handleCategory(item)">
-					<view class="category-icon-wrap" :style="{ backgroundColor: item.bg }">
-						<text class="iconfont category-icon">{{ item.icon }}</text>
+				<view class="category-group">
+					<view class="category-item" v-for="(item, index) in categories" :key="index" @click="handleCategory(item)">
+						<view class="category-icon-wrap" :style="{ backgroundColor: item.bg }">
+							<text class="iconfont category-icon">{{ item.icon }}</text>
+						</view>
+						<text class="category-name">{{ t(item.nameKey) }}</text>
+						<view v-if="index < categories.length - 1" class="category-item-border"></view>
 					</view>
-					<text class="category-name">{{ t(item.nameKey) }}</text>
-					<view v-if="index < categories2.length - 1" class="category-item-border"></view>
 				</view>
 			</view>
 
@@ -47,13 +29,21 @@
 					<text class="section-title">{{ group.letter }}</text>
 				</view>
 				<view class="contact-list">
-					<view class="contact-item" v-for="(item, index) in group.contacts" :key="index" @click="handleContact(item)">
+					<view 
+						class="contact-item" 
+						v-for="(item, index) in group.contacts" 
+						:key="index" 
+						@click="toggleSelect(item)"
+					>
 						<view class="contact-avatar" :style="{ backgroundColor: item.avatarBg }">
 							<text class="avatar-text">{{ item.avatarText }}</text>
 						</view>
 						<view class="contact-info">
 							<text class="contact-name">{{ item.name }}</text>
 							<text class="contact-role">{{ item.role }}</text>
+						</view>
+						<view v-if="selectable" :class="['checkbox', item.selected ? 'checkbox-active' : '']">
+							<text v-if="item.selected" class="iconfont check-icon">&#xea73;</text>
 						</view>
 						<view v-if="index < group.contacts.length - 1" class="contact-item-border"></view>
 					</view>
@@ -80,20 +70,43 @@
 
 	const { t } = useI18n()
 
+	// Props
+	const props = defineProps({
+		// 是否显示快捷分类
+		showCategories: {
+			type: Boolean,
+			default: false
+		},
+		// 是否可选择（显示复选框）
+		selectable: {
+			type: Boolean,
+			default: false
+		},
+		// 联系人数据
+		contacts: {
+			type: Array as PropType<any[]>,
+			default: () : any[] => []
+		}
+	})
+
+	// Emits
+	const emit = defineEmits<{
+		(e: 'select', item: any): void
+		(e: 'category-click', item: any): void
+	}>()
+
 	const scrollTarget = ref('')
 
-	const categories1 = [
+	// 快捷分类
+	const categories = [
 		{ icon: '\ue616', bg: '#fb923c', nameKey: 'contacts.groups' },
-		{ icon: '\uea90', bg: '#facc15', nameKey: 'contacts.following' }
-	]
-
-	const categories2 = [
+		{ icon: '\uea90', bg: '#facc15', nameKey: 'contacts.following' },
 		{ icon: '\ue62b', bg: '#84cc16', nameKey: 'contacts.org' },
 		{ icon: '\ue686', bg: '#06b6d4', nameKey: 'contacts.dept' }
 	]
 
-	// 生成联系人数据（使用假名）
-	const generateRawContacts = () : any[] => {
+	// 生成模拟联系人数据（使用假名）
+	const generateDefaultContacts = () : any[] => {
 		const firstNames = ['张', '李', '王', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗']
 		const lastNames = ['伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军', '洋', '勇', '艳', '杰', '娟', '涛', '明', '超', '秀兰', '霞']
 		const roles = ['高级经理', '部门经理', '项目经理', '开发工程师', '测试工程师', '产品经理', '设计师', '运营专员', '市场专员', '行政专员']
@@ -101,7 +114,7 @@
 		const pinyins = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 		const list : any[] = []
-		for (let i = 0; i < 100; i++) {
+		for (let i = 0; i < 50; i++) {
 			const firstName = firstNames[i % firstNames.length]
 			const lastName = lastNames[i % lastNames.length]
 			const name = firstName + lastName
@@ -113,13 +126,17 @@
 				role: roles[i % roles.length],
 				avatarText: name.substring(0, 2),
 				avatarBg: colors[i % colors.length],
-				pinyin: pinyin
+				pinyin: pinyin,
+				selected: false
 			})
 		}
 		return list
 	}
 
-	const rawContacts = generateRawContacts()
+	// 使用传入的联系人数据或默认数据
+	const contactList = computed(() : any[] => {
+		return props.contacts.length > 0 ? props.contacts : generateDefaultContacts()
+	})
 
 	// 按字母分组
 	type ContactGroup = {
@@ -132,7 +149,7 @@
 		const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 		
 		letters.forEach(letter => {
-			const filtered = rawContacts.filter(c => c.pinyin === letter)
+			const filtered = contactList.value.filter(c => c.pinyin === letter)
 			if (filtered.length > 0) {
 				groups.push({
 					letter: letter,
@@ -149,114 +166,56 @@
 
 	function scrollToGroup(letter : string) {
 		scrollTarget.value = 'group-' + letter
-		// 重置 scrollTarget 以允许重复点击同一字母
 		setTimeout(() => {
 			scrollTarget.value = ''
 		}, 100)
 	}
 
 	function handleCategory(item : any) {
-		if (item.nameKey === 'contacts.groups') {
-			uni.navigateTo({
-				url: '/pages/contacts/my-groups'
-			})
-		} else if (item.nameKey === 'contacts.following') {
-			uni.navigateTo({
-				url: '/pages/contacts/my-following'
-			})
-		} else if (item.nameKey === 'contacts.org') {
-			uni.navigateTo({
-				url: '/pages/contacts/organization'
-			})
-		} else if (item.nameKey === 'contacts.dept') {
-			uni.navigateTo({
-				url: '/pages/contacts/my-department'
-			})
-		} else {
-			uni.showToast({
-				title: t(item.nameKey) + '功能开发中',
-				icon: 'none'
-			})
-		}
+		emit('category-click', item)
 	}
 
-	function handleContact(item : any) {
-		uni.navigateTo({
-			url: '/pages/message/chat?name=' + item.name
-		})
+	function toggleSelect(item : any) {
+		if (props.selectable) {
+			// 如果是当前用户且已选中，不允许取消
+			if (item.isCurrentUser && item.selected) {
+				return
+			}
+			item.selected = !item.selected
+		}
+		emit('select', item)
 	}
 </script>
 
 <style>
-	/* 页面基础样式 */
-	.page {
-		height: 100%;
-		background-color: #FFFFFF;
-		display: flex;
-		flex-direction: column;
-		position: relative;
-	}
-
-	.status-bar {
-		height: var(--status-bar-height);
-		background-color: #FFFFFF;
-	}
-
-	/* 头部区域 - 扁平化风格 */
-	.header {
-		background-color: #FFFFFF;
-		padding: 8px 16px 12px 16px;
-	}
-
-	.header-top {
-		flex-direction: row;
-		justify-content: space-between;
-		align-items: center;
-		height: 44px;
-	}
-
-	.header-title {
-		color: #1F2329;
-		font-size: 20px;
-		font-weight: 600;
-	}
-
-	/* 搜索栏 - 浅灰色扁平风格 */
-	.search-bar {
-		background-color: #F2F3F5;
-		border-radius: 6px;
-		height: 36px;
-		flex-direction: row;
-		align-items: center;
-		padding: 0 12px;
-		margin-top: 4px;
-	}
-
-	.search-icon {
-		font-size: 16px;
-		color: #8F959E;
-	}
-
-	.search-input {
+	.contact-selector {
 		flex: 1;
-		font-size: 14px;
-		margin-left: 8px;
-		color: #1F2329;
-	}
-
-	.placeholder {
-		color: #8F959E;
+		height: 0;
+		position: relative;
 	}
 
 	.content {
 		flex: 1;
-		height: 0;
+		height: 100%;
 		background-color: #FFFFFF;
+	}
+
+	/* 分类区域 */
+	.category-section {
+		background-color: #FFFFFF;
+	}
+
+	.section-label {
+		padding: 12px 16px 8px 16px;
+	}
+
+	.section-text {
+		font-size: 13px;
+		color: #999999;
 	}
 
 	.category-group {
 		background-color: #FFFFFF;
-		padding-top: 4px;
 	}
 
 	.category-item {
@@ -291,22 +250,12 @@
 
 	.category-icon {
 		color: #FFFFFF;
-		font-size: 20px;
+		font-size: 18px;
 	}
 
 	.category-name {
-		font-size: 16px;
-		color: #1F2329;
-		font-weight: 400;
-	}
-
-	.mt-2 {
-		margin-top: 8px;
-	}
-
-	.section-divider {
-		height: 8px;
-		background-color: #F5F7FA;
+		font-size: 15px;
+		color: #333333;
 	}
 
 	/* 分组标题 */
@@ -321,6 +270,7 @@
 		font-weight: 600;
 	}
 
+	/* 联系人列表 */
 	.contact-list {
 		background-color: #FFFFFF;
 	}
@@ -366,15 +316,35 @@
 	}
 
 	.contact-name {
-		font-size: 16px;
-		color: #1F2329;
-		font-weight: 400;
-		margin-bottom: 2px;
+		font-size: 15px;
+		color: #333333;
+		font-weight: 500;
 	}
 
 	.contact-role {
 		font-size: 12px;
-		color: #8F959E;
+		color: #999999;
+	}
+
+	/* 复选框 */
+	.checkbox {
+		width: 20px;
+		height: 20px;
+		border-width: 1px;
+		border-color: #d1d5db;
+		border-radius: 10px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.checkbox-active {
+		background-color: #1677FF;
+		border-color: #1677FF;
+	}
+
+	.check-icon {
+		color: #ffffff;
+		font-size: 12px;
 	}
 
 	/* 右侧索引栏 */

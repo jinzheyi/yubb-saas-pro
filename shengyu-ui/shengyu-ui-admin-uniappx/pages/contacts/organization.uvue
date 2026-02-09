@@ -1,0 +1,630 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<text class="header-title">组织结构</text>
+			<view class="header-right"></view>
+		</view>
+
+		<view class="search-wrap">
+			<view class="search-bar">
+				<text class="iconfont search-icon">&#xea6e;</text>
+				<input class="search-input" placeholder="搜索" placeholder-class="placeholder" />
+			</view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<!-- 根节点 -->
+			<view class="root-node">
+				<view class="node-header" @click="toggleNode('root')">
+					<text class="node-title">{{ rootOrg.name }}({{ rootOrg.count }})</text>
+					<text class="iconfont expand-icon">{{ expandedNodes.includes('root') ? '\ue68d' : '\ue60e' }}</text>
+				</view>
+			</view>
+
+			<!-- 子组织列表 -->
+			<view v-if="expandedNodes.includes('root')" class="org-list">
+				<view v-for="(org, index) in organizations" :key="org.id" class="org-item">
+					<view class="org-row" @click="handleOrgClick(org)">
+						<!-- 选择模式下显示复选框 -->
+						<view v-if="isSelectMode" :class="['checkbox', org.selected ? 'checkbox-active' : '']" @click.stop="toggleOrgSelect(org)">
+							<text v-if="org.selected" class="iconfont check-icon">&#xea73;</text>
+						</view>
+						
+						<text v-if="!isSelectMode" class="iconfont node-icon" :style="{ color: org.expanded ? '#0ea5e9' : '#0ea5e9' }">
+							{{ org.expanded ? '\ue68d' : '\ue60e' }}
+						</text>
+						<text class="org-name" :class="{ 'org-name-bold': org.expanded }">{{ org.name }}({{ org.count }})</text>
+					</view>
+
+					<!-- 部门列表 -->
+					<view v-if="org.expanded" class="dept-list">
+						<view v-for="dept in org.departments" :key="dept.id" class="dept-item">
+							<view class="dept-row" @click="handleDeptClick(org, dept)">
+								<!-- 选择模式下显示复选框 -->
+								<view v-if="isSelectMode" :class="['checkbox', dept.selected ? 'checkbox-active' : '']" @click.stop="toggleDeptSelect(org, dept)">
+									<text v-if="dept.selected" class="iconfont check-icon">&#xea73;</text>
+								</view>
+								
+								<text v-if="!isSelectMode" class="iconfont dept-icon">{{ dept.expanded ? '\ue68d' : '\ue60e' }}</text>
+								<text class="dept-name" :class="{ 'dept-name-bold': dept.expanded }">{{ dept.name }}({{ dept.count }})</text>
+							</view>
+
+							<!-- 成员列表 -->
+							<view v-if="dept.expanded" class="member-list">
+								<view v-for="(member, mIndex) in dept.members" :key="member.id" 
+									class="member-item" 
+									:class="{ 'member-item-last': mIndex === dept.members.length - 1 }"
+									@click="handleMemberClick(member)">
+									<!-- 选择模式下显示复选框 -->
+									<view v-if="isSelectMode" :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
+										<text v-if="member.selected" class="iconfont check-icon">&#xea73;</text>
+									</view>
+									
+									<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
+										<text class="avatar-text">{{ member.avatarText }}</text>
+									</view>
+									<text class="member-name">{{ member.name }}</text>
+									<text class="member-role">{{ member.role }}</text>
+								</view>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+
+		<!-- 选择模式下显示底部操作栏 -->
+		<view v-if="isSelectMode" class="footer">
+			<text class="selected-text">已选择 {{ selectedCount }} 人</text>
+			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
+				<text class="confirm-btn-text">确定</text>
+			</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	// 是否为选择模式
+	const isSelectMode = ref(false)
+
+	// 根组织
+	const rootOrg = ref({
+		name: '科技创新集团有限公司',
+		count: 362,
+		selected: false
+	})
+
+	// 展开的节点ID列表
+	const expandedNodes = ref<string[]>(['root'])
+
+	// 组织数据
+	const organizations = ref([
+		{
+			id: 'org1',
+			name: '供应链金融有限公司',
+			count: 63,
+			expanded: false,
+			selected: false,
+			departments: []
+		},
+		{
+			id: 'org2',
+			name: '数字科技有限公司',
+			count: 89,
+			expanded: false,
+			selected: false,
+			departments: [
+				{
+					id: 'dept1',
+					name: '管理层',
+					count: 3,
+					expanded: false,
+					selected: false,
+					members: []
+				},
+				{
+					id: 'dept2',
+					name: '综合管理部',
+					count: 5,
+					expanded: false,
+					selected: false,
+					members: []
+				},
+				{
+					id: 'dept3',
+					name: '人力资源部',
+					count: 3,
+					expanded: false,
+					selected: false,
+					members: [
+						{ id: 1, name: '张敏', role: '副部长 (主持工作)', avatarText: '张敏', avatarBg: '#fb7185', selected: false },
+						{ id: 2, name: '李强', role: '人力资源经理', avatarText: '李强', avatarBg: '#0ea5e9', selected: false },
+						{ id: 3, name: '王静', role: '人力实习生', avatarText: '王静', avatarBg: '#f472b6', selected: false }
+					]
+				},
+				{
+					id: 'dept4',
+					name: '财务管理部',
+					count: 3,
+					expanded: false,
+					selected: false,
+					members: []
+				},
+				{
+					id: 'dept5',
+					name: '风控法务部',
+					count: 2,
+					expanded: false,
+					selected: false,
+					members: []
+				},
+				{
+					id: 'dept6',
+					name: '资产运营事业部',
+					count: 31,
+					expanded: false,
+					selected: false,
+					members: []
+				}
+			]
+		}
+	])
+
+	// 计算选中的总人数
+	const selectedCount = computed(() : number => {
+		let count = 0
+		for (let i = 0; i < organizations.value.length; i++) {
+			const org = organizations.value[i]
+			for (let j = 0; j < org.departments.length; j++) {
+				const dept = org.departments[j]
+				for (let k = 0; k < dept.members.length; k++) {
+					if (dept.members[k].selected) {
+						count++
+					}
+				}
+			}
+		}
+		return count
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function toggleNode(nodeId : string) {
+		const index = expandedNodes.value.indexOf(nodeId)
+		if (index > -1) {
+			expandedNodes.value.splice(index, 1)
+		} else {
+			expandedNodes.value.push(nodeId)
+		}
+
+		// 切换组织展开状态
+		const org = organizations.value.find(o => o.id === nodeId)
+		if (org) {
+			org.expanded = !org.expanded
+		}
+	}
+
+	function toggleDept(deptId : string) {
+		// 查找并切换部门展开状态
+		for (let i = 0; i < organizations.value.length; i++) {
+			const org = organizations.value[i]
+			const dept = org.departments.find(d => d.id === deptId)
+			if (dept) {
+				dept.expanded = !dept.expanded
+				break
+			}
+		}
+	}
+
+	// 切换组织选中状态（选中组织会选中所有部门和成员）
+	function toggleOrgSelect(org : any) {
+		if (!isSelectMode.value) return
+		
+		org.selected = !org.selected
+		// 同步选中状态到所有部门和成员
+		for (let i = 0; i < org.departments.length; i++) {
+			const dept = org.departments[i]
+			dept.selected = org.selected
+			for (let j = 0; j < dept.members.length; j++) {
+				dept.members[j].selected = org.selected
+			}
+		}
+	}
+
+	// 切换部门选中状态（选中部门会选中所有成员）
+	function toggleDeptSelect(org : any, dept : any) {
+		if (!isSelectMode.value) return
+		
+		dept.selected = !dept.selected
+		// 同步选中状态到所有成员
+		for (let i = 0; i < dept.members.length; i++) {
+			dept.members[i].selected = dept.selected
+		}
+		
+		// 检查是否需要更新组织的选中状态
+		updateOrgSelectState(org)
+	}
+
+	// 切换成员选中状态
+	function toggleMemberSelect(member : any) {
+		if (!isSelectMode.value) return
+		
+		member.selected = !member.selected
+		
+		// 查找成员所属的部门和组织，更新它们的选中状态
+		for (let i = 0; i < organizations.value.length; i++) {
+			const org = organizations.value[i]
+			for (let j = 0; j < org.departments.length; j++) {
+				const dept = org.departments[j]
+				if (dept.members.some(m => m.id === member.id)) {
+					updateDeptSelectState(dept)
+					updateOrgSelectState(org)
+					return
+				}
+			}
+		}
+	}
+
+	// 更新部门的选中状态（如果所有成员都选中，则部门也选中）
+	function updateDeptSelectState(dept : any) {
+		if (dept.members.length === 0) {
+			dept.selected = false
+			return
+		}
+		dept.selected = dept.members.every(m => m.selected)
+	}
+
+	// 更新组织的选中状态（如果所有部门都选中，则组织也选中）
+	function updateOrgSelectState(org : any) {
+		if (org.departments.length === 0) {
+			org.selected = false
+			return
+		}
+		org.selected = org.departments.every(d => d.selected)
+	}
+
+	function handleOrgClick(org : any) {
+		if (isSelectMode.value) {
+			// 选择模式下点击组织行切换选中状态
+			toggleOrgSelect(org)
+		} else {
+			// 普通模式下切换展开状态
+			toggleNode(org.id)
+		}
+	}
+
+	function handleDeptClick(org : any, dept : any) {
+		if (isSelectMode.value) {
+			// 选择模式下点击部门行切换选中状态
+			toggleDeptSelect(org, dept)
+		} else {
+			// 普通模式下切换展开状态
+			toggleDept(dept.id)
+		}
+	}
+
+	function handleMemberClick(member : any) {
+		if (isSelectMode.value) {
+			// 选择模式下切换选中状态
+			toggleMemberSelect(member)
+		} else {
+			// 普通模式下跳转到用户详情
+			uni.navigateTo({
+				url: '/pages/contacts/user-detail?name=' + member.name
+			})
+		}
+	}
+
+	function handleConfirm() {
+		// 收集所有选中的成员
+		const selectedMembers : any[] = []
+		for (let i = 0; i < organizations.value.length; i++) {
+			const org = organizations.value[i]
+			for (let j = 0; j < org.departments.length; j++) {
+				const dept = org.departments[j]
+				for (let k = 0; k < dept.members.length; k++) {
+					if (dept.members[k].selected) {
+						selectedMembers.push(dept.members[k])
+					}
+				}
+			}
+		}
+		
+		// TODO: 将选中的成员添加到发起群聊页面
+		uni.showToast({
+			title: `已选择 ${selectedMembers.length} 人`,
+			icon: 'success'
+		})
+		setTimeout(() => {
+			uni.navigateBack()
+		}, 1000)
+	}
+
+	// 页面加载时检查是否为选择模式
+	onLoad((options : OnLoadOptions) => {
+		if (options.has('mode') && options.get('mode') === 'select') {
+			isSelectMode.value = true
+		}
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F5F7;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #1677FF;
+	}
+
+	.header {
+		background-color: #1677FF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #ffffff;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #ffffff;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #ffffff;
+		font-size: 18px;
+		font-weight: 500;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.search-wrap {
+		background-color: #ffffff;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #e5e5e5;
+	}
+
+	.search-bar {
+		background-color: #F2F3F5;
+		border-radius: 8px;
+		height: 36px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+	}
+
+	.search-icon {
+		font-size: 16px;
+		color: #8F959E;
+	}
+
+	.search-input {
+		flex: 1;
+		font-size: 14px;
+		margin-left: 8px;
+		color: #333333;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+	}
+
+	.root-node {
+		background-color: #ffffff;
+		margin-top: 8px;
+		padding: 12px 16px;
+		border-top-width: 0.5px;
+		border-top-color: #e5e5e5;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #e5e5e5;
+	}
+
+	.node-header {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.node-title {
+		font-size: 18px;
+		font-weight: bold;
+		color: #1F2329;
+	}
+
+	.expand-icon {
+		font-size: 16px;
+		color: #8F959E;
+	}
+
+	.org-list {
+		padding: 8px 16px;
+	}
+
+	.org-item {
+		margin-bottom: 16px;
+	}
+
+	.org-row {
+		flex-direction: row;
+		align-items: center;
+		padding: 8px 0;
+	}
+
+	.node-icon {
+		font-size: 20px;
+		margin-right: 12px;
+	}
+
+	.org-name {
+		font-size: 16px;
+		color: #646A73;
+	}
+
+	.org-name-bold {
+		font-weight: 500;
+		color: #1F2329;
+	}
+
+	.dept-list {
+		padding-left: 24px;
+		margin-top: 8px;
+		border-left-width: 1px;
+		border-left-color: #E5E7EB;
+		margin-left: 10px;
+	}
+
+	.dept-item {
+		margin-bottom: 8px;
+	}
+
+	.dept-row {
+		flex-direction: row;
+		align-items: center;
+		padding: 8px 0;
+	}
+
+	.dept-icon {
+		font-size: 20px;
+		color: #0ea5e9;
+		margin-right: 12px;
+	}
+
+	.dept-name {
+		font-size: 15px;
+		color: #646A73;
+	}
+
+	.dept-name-bold {
+		font-weight: 500;
+		color: #1F2329;
+	}
+
+	.member-list {
+		padding-left: 8px;
+		margin-top: 8px;
+	}
+
+	.member-item {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 12px 0;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #F5F7FA;
+	}
+
+	.member-item-last {
+		border-bottom-width: 0;
+	}
+
+	.member-avatar {
+		width: 40px;
+		height: 40px;
+		border-radius: 20px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 12px;
+	}
+
+	.avatar-text {
+		color: #ffffff;
+		font-size: 13px;
+		font-weight: 600;
+	}
+
+	.member-name {
+		flex: 1;
+		font-size: 16px;
+		font-weight: 500;
+		color: #1F2329;
+	}
+
+	.member-role {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
+	.checkbox {
+		width: 20px;
+		height: 20px;
+		border-radius: 10px;
+		border-width: 1.5px;
+		border-color: #D1D5DB;
+		margin-right: 12px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.checkbox-active {
+		background-color: #1677FF;
+		border-color: #1677FF;
+	}
+
+	.check-icon {
+		color: #ffffff;
+		font-size: 14px;
+	}
+
+	.footer {
+		background-color: #ffffff;
+		border-top-width: 0.5px;
+		border-top-color: #e5e5e5;
+		padding: 12px 16px;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+	}
+
+	.selected-text {
+		font-size: 15px;
+		color: #333333;
+	}
+
+	.confirm-btn {
+		background-color: rgba(22, 119, 255, 0.1);
+		padding: 0 20px;
+		height: 36px;
+		border-radius: 4px;
+		justify-content: center;
+		border-width: 0;
+	}
+
+	.confirm-btn-text {
+		color: #1677FF;
+		font-size: 14px;
+		font-weight: 500;
+	}
+</style>

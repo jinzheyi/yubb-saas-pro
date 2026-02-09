@@ -17,42 +17,19 @@
 			</view>
 		</view>
 
-		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
-			<view class="section-label">
-				<text class="section-text">{{ t('initiateGroup.selectExisting') }}</text>
-			</view>
-			<view class="category-group">
-				<view class="category-item" v-for="(item, index) in categories" :key="index" @click="handleCategory(item)">
-					<view class="category-icon-wrap" :style="{ backgroundColor: item.bg }">
-						<text class="iconfont category-icon">{{ item.icon }}</text>
-					</view>
-					<text class="category-name">{{ t(item.nameKey) }}</text>
-				</view>
-			</view>
-
-			<view class="section-label">
-				<text class="section-text">{{ t('contacts.commonContacts') }}</text>
-			</view>
-			<view class="contact-list">
-				<view class="contact-item" v-for="(item, index) in commonContacts" :key="index" @click="toggleSelect(item)">
-					<view class="contact-avatar" :style="{ backgroundColor: item.avatarBg }">
-						<text class="avatar-text">{{ item.avatarText }}</text>
-					</view>
-					<view class="contact-info">
-						<text class="contact-name">{{ item.name }}</text>
-						<text class="contact-role">{{ item.role }}</text>
-					</view>
-					<view :class="['checkbox', item.selected ? 'checkbox-active' : '']">
-						<text v-if="item.selected" class="iconfont check-icon">&#xea73;</text>
-					</view>
-				</view>
-			</view>
-		</scroll-view>
+		<!-- 使用联系人选择组件 -->
+		<contact-selector 
+			:show-categories="true"
+			:selectable="true"
+			:contacts="contactList"
+			@select="handleSelect"
+			@category-click="handleCategory"
+		/>
 
 		<view class="footer">
 			<text class="selected-text">{{ t('initiateGroup.selectedCount', { count: selectedCount.toString() }) }}</text>
 			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
-				<text class="confirm-btn-text">确定({{ selectedCount }}/500)</text>
+				<text class="confirm-btn-text">{{ t('initiateGroup.confirm', { count: selectedCount.toString(), max: '500' }) }}</text>
 			</button>
 		</view>
 	</view>
@@ -60,26 +37,70 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getUserInfo } from '../../store/user.uts'
+	import ContactSelector from '../../components/contact-selector/contact-selector.uvue'
 
 	const { t } = useI18n()
 
-	const categories = [
-		{ icon: '\ue616', bg: '#fb923c', nameKey: 'contacts.groups' },
-		{ icon: '\uea90', bg: '#facc15', nameKey: 'contacts.following' },
-		{ icon: '\ue62b', bg: '#84cc16', nameKey: 'contacts.org' },
-		{ icon: '\ue686', bg: '#06b6d4', nameKey: 'contacts.dept' }
-	]
+	// 生成联系人数据（使用假名）
+	const generateContacts = () : any[] => {
+		const firstNames = ['张', '李', '王', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗']
+		const lastNames = ['伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军', '洋', '勇', '艳', '杰', '娟', '涛', '明', '超', '秀兰', '霞']
+		const roles = ['高级经理', '部门经理', '项目经理', '开发工程师', '测试工程师', '产品经理', '设计师', '运营专员', '市场专员', '行政专员']
+		const colors = ['#0ea5e9', '#f472b6', '#c084fc', '#fb7185', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#3b82f6', '#8b5cf6']
+		const pinyins = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
-	const commonContacts = ref([
-		{ id: 1, name: '陶戈', role: '高级经理', avatarText: '陶戈', avatarBg: '#0ea5e9', selected: false },
-		{ id: 2, name: '陈子蒙', role: '部门副总经理 (主持工作)', avatarText: '子蒙', avatarBg: '#f472b6', selected: false },
-		{ id: 3, name: '刘丹丹', role: '行政经理', avatarText: '丹丹', avatarBg: '#c084fc', selected: false },
-		{ id: 4, name: '胡婷', role: '副部长 (主持工作)', avatarText: '胡婷', avatarBg: '#fb7185', selected: true },
-		{ id: 5, name: '朱述勇', role: '开发工程师', avatarText: '述勇', avatarBg: '#10b981', selected: false }
-	])
+		// 获取当前登录用户信息
+		const userInfo = getUserInfo()
+		const currentUserId = userInfo?.user?.id ?? 0
+		const currentUserName = userInfo?.user?.nickname ?? '我'
 
-	const selectedCount = computed(() => {
-		return commonContacts.value.filter(item => item.selected).length
+		const list : any[] = []
+		
+		// 第一个添加当前登录用户，默认选中
+		list.push({
+			id: currentUserId,
+			name: currentUserName,
+			role: '当前用户',
+			avatarText: currentUserName.substring(0, 2),
+			avatarBg: '#1677FF',
+			pinyin: 'W',
+			selected: true,
+			isCurrentUser: true
+		})
+
+		// 生成其他联系人
+		for (let i = 0; i < 49; i++) {
+			const firstName = firstNames[i % firstNames.length]
+			const lastName = lastNames[i % lastNames.length]
+			const name = firstName + lastName
+			const pinyin = pinyins[i % pinyins.length]
+			
+			list.push({
+				id: i + 1000,
+				name: name,
+				role: roles[i % roles.length],
+				avatarText: name.substring(0, 2),
+				avatarBg: colors[i % colors.length],
+				pinyin: pinyin,
+				selected: false,
+				isCurrentUser: false
+			})
+		}
+		return list
+	}
+
+	const contactList = ref(generateContacts())
+
+	// 使用 computed 确保响应式更新
+	const selectedCount = computed(() : number => {
+		let count = 0
+		for (let i = 0; i < contactList.value.length; i++) {
+			if (contactList.value[i].selected) {
+				count++
+			}
+		}
+		return count
 	})
 
 	function handleBack() {
@@ -87,21 +108,58 @@
 	}
 
 	function handleCategory(item : any) {
-		uni.showToast({
-			title: t(item.nameKey) + '功能开发中',
-			icon: 'none'
-		})
+		// 跳转到对应的分组选择页面
+		if (item.nameKey === 'contacts.groups') {
+			uni.navigateTo({
+				url: '/pages/contacts/my-groups?mode=select'
+			})
+		} else if (item.nameKey === 'contacts.following') {
+			uni.navigateTo({
+				url: '/pages/contacts/my-following?mode=select'
+			})
+		} else if (item.nameKey === 'contacts.org') {
+			uni.navigateTo({
+				url: '/pages/contacts/organization?mode=select'
+			})
+		} else if (item.nameKey === 'contacts.dept') {
+			uni.navigateTo({
+				url: '/pages/contacts/my-department?mode=select'
+			})
+		}
 	}
 
-	function toggleSelect(item : any) {
-		item.selected = !item.selected
+	function handleSelect(item : any) {
+		// 当前用户不能取消选中
+		if (item.isCurrentUser && item.selected) {
+			uni.showToast({
+				title: '不能取消选择自己',
+				icon: 'none'
+			})
+			// 强制保持选中状态
+			item.selected = true
+			return
+		}
+		
+		console.log('选择联系人:', item.name, '选中状态:', item.selected)
 	}
 
 	function handleConfirm() {
+		const selectedContacts = contactList.value.filter(item => item.selected)
+		console.log('已选择的联系人:', selectedContacts)
+		
+		if (selectedContacts.length < 2) {
+			uni.showToast({
+				title: '至少选择2人才能创建群聊',
+				icon: 'none'
+			})
+			return
+		}
+		
 		uni.showToast({
 			title: '创建群聊中...',
 			icon: 'loading'
 		})
+		// TODO: 调用创建群聊 API
 	}
 </script>
 
@@ -180,115 +238,6 @@
 		font-size: 14px;
 		margin-left: 8px;
 		color: #333333;
-	}
-
-	.content {
-		flex: 1;
-		height: 0;
-		background-color: #ffffff;
-	}
-
-	.section-label {
-		padding: 12px 16px 8px 16px;
-	}
-
-	.section-text {
-		font-size: 13px;
-		color: #999999;
-	}
-
-	.category-group {
-		background-color: #ffffff;
-	}
-
-	.category-item {
-		flex-direction: row;
-		align-items: center;
-		padding: 12px 16px;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #f0f0f0;
-	}
-
-	.category-icon-wrap {
-		width: 36px;
-		height: 36px;
-		border-radius: 8px;
-		justify-content: center;
-		align-items: center;
-		margin-right: 12px;
-	}
-
-	.category-icon {
-		color: #ffffff;
-		font-size: 18px;
-	}
-
-	.category-name {
-		font-size: 15px;
-		color: #333333;
-	}
-
-	.contact-list {
-		background-color: #ffffff;
-		margin-bottom: 20px;
-	}
-
-	.contact-item {
-		flex-direction: row;
-		align-items: center;
-		padding: 12px 16px;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #f0f0f0;
-	}
-
-	.contact-avatar {
-		width: 40px;
-		height: 40px;
-		border-radius: 20px;
-		justify-content: center;
-		align-items: center;
-		margin-right: 12px;
-	}
-
-	.avatar-text {
-		color: #ffffff;
-		font-size: 12px;
-		font-weight: bold;
-	}
-
-	.contact-info {
-		flex: 1;
-	}
-
-	.contact-name {
-		font-size: 15px;
-		color: #333333;
-		font-weight: 500;
-	}
-
-	.contact-role {
-		font-size: 12px;
-		color: #999999;
-	}
-
-	.checkbox {
-		width: 20px;
-		height: 20px;
-		border-width: 1px;
-		border-color: #d1d5db;
-		border-radius: 10px;
-		justify-content: center;
-		align-items: center;
-	}
-
-	.checkbox-active {
-		background-color: #1677FF;
-		border-color: #1677FF;
-	}
-
-	.check-icon {
-		color: #ffffff;
-		font-size: 12px;
 	}
 
 	.footer {

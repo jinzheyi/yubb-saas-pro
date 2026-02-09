@@ -1,0 +1,356 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<text class="header-title">我的群组</text>
+			<view class="header-right"></view>
+		</view>
+
+		<view class="search-wrap">
+			<view class="search-bar">
+				<text class="iconfont search-icon">&#xea6e;</text>
+				<input class="search-input" placeholder="搜索群组" placeholder-class="placeholder" />
+			</view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<view class="group-list">
+				<view v-for="(group, index) in groupList" :key="group.id" 
+					class="group-item" 
+					@click="handleGroupClick(group)">
+					<!-- 选择模式下显示复选框 -->
+					<view v-if="isSelectMode" :class="['checkbox', group.selected ? 'checkbox-active' : '']" @click.stop="toggleGroupSelect(group)">
+						<text v-if="group.selected" class="iconfont check-icon">&#xea73;</text>
+					</view>
+					
+					<view class="group-avatar">
+						<view class="avatar-grid">
+							<view v-for="(member, mIndex) in group.avatars" :key="mIndex" class="avatar-cell">
+								<text class="avatar-cell-text">{{ member }}</text>
+							</view>
+						</view>
+					</view>
+					<view class="group-info">
+						<text class="group-name">{{ group.name }}</text>
+						<text class="group-count">{{ group.memberCount }} 人</text>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+
+		<!-- 选择模式下显示底部操作栏 -->
+		<view v-if="isSelectMode" class="footer">
+			<text class="selected-text">已选择 {{ selectedCount }} 个群组</text>
+			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
+				<text class="confirm-btn-text">确定</text>
+			</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	// 是否为选择模式
+	const isSelectMode = ref(false)
+
+	// 群组列表数据
+	const groupList = ref([
+		{
+			id: 1,
+			name: '数字科技工作群',
+			memberCount: 84,
+			avatars: ['丹', '思', '寒', '晨'],
+			selected: false
+		},
+		{
+			id: 2,
+			name: '软件研发二部',
+			memberCount: 17,
+			avatars: ['生', '坤', '丁', '弋'],
+			selected: false
+		},
+		{
+			id: 3,
+			name: '小贷项目试用支撑群',
+			memberCount: 10,
+			avatars: ['生', '坤', '丁', '新'],
+			selected: false
+		},
+		{
+			id: 4,
+			name: '软件研发部',
+			memberCount: 18,
+			avatars: ['生', '坤', '凯', '琴'],
+			selected: false
+		},
+		{
+			id: 5,
+			name: '产品设计讨论组',
+			memberCount: 25,
+			avatars: ['明', '丽', '华', '芳'],
+			selected: false
+		},
+		{
+			id: 6,
+			name: '技术交流群',
+			memberCount: 42,
+			avatars: ['强', '伟', '军', '勇'],
+			selected: false
+		}
+	])
+
+	// 选中的群组数量
+	const selectedCount = computed(() : number => {
+		let count = 0
+		for (let i = 0; i < groupList.value.length; i++) {
+			if (groupList.value[i].selected) {
+				count++
+			}
+		}
+		return count
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function toggleGroupSelect(group : any) {
+		group.selected = !group.selected
+	}
+
+	function handleGroupClick(group : any) {
+		if (isSelectMode.value) {
+			// 选择模式下点击整行也可以切换选中状态
+			toggleGroupSelect(group)
+		} else {
+			// 普通模式下跳转到聊天页面
+			uni.navigateTo({
+				url: '/pages/message/chat?name=' + group.name
+			})
+		}
+	}
+
+	function handleConfirm() {
+		const selectedGroups = groupList.value.filter(g => g.selected)
+		// TODO: 将选中的群组成员添加到发起群聊页面
+		uni.showToast({
+			title: `已选择 ${selectedGroups.length} 个群组`,
+			icon: 'success'
+		})
+		setTimeout(() => {
+			uni.navigateBack()
+		}, 1000)
+	}
+
+	// 页面加载时检查是否为选择模式
+	onLoad((options : OnLoadOptions) => {
+		if (options.has('mode') && options.get('mode') === 'select') {
+			isSelectMode.value = true
+		}
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F2F2F7;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #1677FF;
+	}
+
+	.header {
+		background-color: #1677FF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #ffffff;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #ffffff;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #ffffff;
+		font-size: 18px;
+		font-weight: 500;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.search-wrap {
+		background-color: #ffffff;
+		padding: 8px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #e5e5e5;
+	}
+
+	.search-bar {
+		background-color: #F2F3F5;
+		border-radius: 8px;
+		height: 36px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+	}
+
+	.search-icon {
+		font-size: 16px;
+		color: #8F959E;
+	}
+
+	.search-input {
+		flex: 1;
+		font-size: 14px;
+		margin-left: 8px;
+		color: #333333;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+		background-color: #ffffff;
+	}
+
+	.group-list {
+		background-color: #ffffff;
+	}
+
+	.group-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #F5F7FA;
+	}
+
+	.group-item:active {
+		background-color: #F5F7FA;
+	}
+
+	.group-avatar {
+		width: 48px;
+		height: 48px;
+		margin-right: 16px;
+	}
+
+	.avatar-grid {
+		width: 48px;
+		height: 48px;
+		border-radius: 24px;
+		overflow: hidden;
+		background-color: #0ea5e9;
+		flex-direction: row;
+		flex-wrap: wrap;
+	}
+
+	.avatar-cell {
+		width: 24px;
+		height: 24px;
+		justify-content: center;
+		align-items: center;
+		border-width: 0.5px;
+		border-color: rgba(255,255,255,0.2);
+	}
+
+	.avatar-cell-text {
+		color: #ffffff;
+		font-size: 10px;
+		font-weight: 500;
+	}
+
+	.group-info {
+		flex: 1;
+	}
+
+	.group-name {
+		font-size: 17px;
+		color: #1F2329;
+		margin-bottom: 4px;
+	}
+
+	.group-count {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
+	.checkbox {
+		width: 20px;
+		height: 20px;
+		border-radius: 10px;
+		border-width: 1.5px;
+		border-color: #D1D5DB;
+		margin-right: 12px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.checkbox-active {
+		background-color: #1677FF;
+		border-color: #1677FF;
+	}
+
+	.check-icon {
+		color: #ffffff;
+		font-size: 14px;
+	}
+
+	.footer {
+		background-color: #ffffff;
+		border-top-width: 0.5px;
+		border-top-color: #e5e5e5;
+		padding: 12px 16px;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+	}
+
+	.selected-text {
+		font-size: 15px;
+		color: #333333;
+	}
+
+	.confirm-btn {
+		background-color: rgba(22, 119, 255, 0.1);
+		padding: 0 20px;
+		height: 36px;
+		border-radius: 4px;
+		justify-content: center;
+		border-width: 0;
+	}
+
+	.confirm-btn-text {
+		color: #1677FF;
+		font-size: 14px;
+		font-weight: 500;
+	}
+</style>

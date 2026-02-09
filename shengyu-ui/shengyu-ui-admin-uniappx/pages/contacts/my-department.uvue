@@ -1,0 +1,459 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-content">
+				<view class="header-top">
+					<view class="header-left" @click="handleBack">
+						<text class="iconfont back-icon">&#xeb04;</text>
+						<text class="back-text">{{ t('common.back') }}</text>
+					</view>
+					<text class="header-title">我的部门</text>
+					<view class="header-right"></view>
+				</view>
+				<view class="search-bar">
+					<text class="iconfont search-icon">&#xea6e;</text>
+					<input class="search-input" placeholder="搜索" placeholder-class="placeholder" />
+				</view>
+			</view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<!-- 部门层级 -->
+			<view class="dept-hierarchy">
+				<view class="dept-node" @click="toggleDeptExpand">
+					<text class="dept-node-text">科技创新集团有限公司(30)</text>
+					<text class="iconfont expand-icon">{{ deptExpanded ? '\ue68d' : '\ue60e' }}</text>
+				</view>
+				<view v-if="deptExpanded" class="dept-children">
+					<view class="dept-child">
+						<text class="iconfont child-icon">&#xe60e;</text>
+						<text class="dept-child-text">数字科技有限公司(30)</text>
+					</view>
+					<view class="dept-child dept-child-active">
+						<text class="iconfont child-icon">&#xe60e;</text>
+						<text class="dept-child-text dept-child-text-active">软件研发事业部(30)</text>
+					</view>
+				</view>
+			</view>
+
+			<!-- 成员列表 -->
+			<view class="member-list">
+				<view v-for="(member, index) in memberList" :key="member.id" 
+					class="member-item" 
+					@click="handleMemberClick(member)">
+					<!-- 选择模式下显示复选框 -->
+					<view v-if="isSelectMode" :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
+						<text v-if="member.selected" class="iconfont check-icon">&#xea73;</text>
+					</view>
+					
+					<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
+						<text class="avatar-text">{{ member.avatarText }}</text>
+					</view>
+					<view class="member-info">
+						<text class="member-name">{{ member.name }}</text>
+						<text class="member-role">{{ member.role }}</text>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+
+		<!-- 选择模式下显示底部操作栏 -->
+		<view v-if="isSelectMode" class="footer">
+			<text class="selected-text">已选择 {{ selectedCount }} 人</text>
+			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
+				<text class="confirm-btn-text">确定</text>
+			</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	const deptExpanded = ref(true)
+	
+	// 是否为选择模式
+	const isSelectMode = ref(false)
+
+	// 成员列表数据
+	const memberList = ref([
+		{
+			id: 1,
+			name: '朱付生',
+			role: '副部长（主持工作）',
+			avatarText: '付生',
+			avatarBg: '#0ea5e9',
+			selected: false
+		},
+		{
+			id: 2,
+			name: '王尹',
+			role: '副部长',
+			avatarText: '王尹',
+			avatarBg: '#fb7185',
+			selected: false
+		},
+		{
+			id: 3,
+			name: '喻泽鹏',
+			role: 'UI设计师',
+			avatarText: '泽鹏',
+			avatarBg: '#0ea5e9',
+			selected: false
+		},
+		{
+			id: 4,
+			name: '徐碧',
+			role: '售前经理',
+			avatarText: '徐碧',
+			avatarBg: '#0ea5e9',
+			selected: false
+		},
+		{
+			id: 5,
+			name: '万剑波',
+			role: '产品经理',
+			avatarText: '剑波',
+			avatarBg: '#0ea5e9',
+			selected: false
+		},
+		{
+			id: 6,
+			name: '刘建弋',
+			role: '软件项目经理',
+			avatarText: '建弋',
+			avatarBg: '#0ea5e9',
+			selected: false
+		},
+		{
+			id: 7,
+			name: '曾丁丁',
+			role: '软件项目经理',
+			avatarText: '丁丁',
+			avatarBg: '#0ea5e9',
+			selected: false
+		},
+		{
+			id: 8,
+			name: '胡耀华',
+			role: '软件项目经理',
+			avatarText: '耀华',
+			avatarBg: '#0ea5e9',
+			selected: false
+		},
+		{
+			id: 9,
+			name: '方竞凯',
+			role: '开发工程师',
+			avatarText: '竞凯',
+			avatarBg: '#0ea5e9',
+			selected: false
+		},
+		{
+			id: 10,
+			name: '张敏',
+			role: '开发工程师',
+			avatarText: '张敏',
+			avatarBg: '#10b981',
+			selected: false
+		}
+	])
+
+	// 选中的成员数量
+	const selectedCount = computed(() : number => {
+		let count = 0
+		for (let i = 0; i < memberList.value.length; i++) {
+			if (memberList.value[i].selected) {
+				count++
+			}
+		}
+		return count
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function toggleDeptExpand() {
+		deptExpanded.value = !deptExpanded.value
+	}
+
+	function toggleMemberSelect(member : any) {
+		member.selected = !member.selected
+	}
+
+	function handleMemberClick(member : any) {
+		if (isSelectMode.value) {
+			// 选择模式下点击整行也可以切换选中状态
+			toggleMemberSelect(member)
+		} else {
+			// 普通模式下跳转到用户详情
+			uni.navigateTo({
+				url: '/pages/contacts/user-detail?name=' + member.name
+			})
+		}
+	}
+
+	function handleConfirm() {
+		const selectedMembers = memberList.value.filter(m => m.selected)
+		// TODO: 将选中的成员添加到发起群聊页面
+		uni.showToast({
+			title: `已选择 ${selectedMembers.length} 人`,
+			icon: 'success'
+		})
+		setTimeout(() => {
+			uni.navigateBack()
+		}, 1000)
+	}
+
+	// 页面加载时检查是否为选择模式
+	onLoad((options : OnLoadOptions) => {
+		if (options.has('mode') && options.get('mode') === 'select') {
+			isSelectMode.value = true
+		}
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F5F7;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #1677FF;
+	}
+
+	.header {
+		background-color: #1677FF;
+	}
+
+	.header-content {
+		padding: 8px 16px 16px 16px;
+	}
+
+	.header-top {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 16px;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #ffffff;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #ffffff;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #ffffff;
+		font-size: 18px;
+		font-weight: 500;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.search-bar {
+		background-color: rgba(255,255,255,0.95);
+		border-radius: 8px;
+		height: 36px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+	}
+
+	.search-icon {
+		font-size: 16px;
+		color: #8F959E;
+	}
+
+	.search-input {
+		flex: 1;
+		font-size: 14px;
+		margin-left: 8px;
+		color: #333333;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+	}
+
+	.dept-hierarchy {
+		background-color: #ffffff;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #E5E7EB;
+	}
+
+	.dept-node {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.dept-node-text {
+		font-size: 16px;
+		font-weight: 500;
+		color: #1F2329;
+	}
+
+	.expand-icon {
+		font-size: 16px;
+		color: #8F959E;
+	}
+
+	.dept-children {
+		margin-top: 16px;
+		margin-left: 8px;
+		padding-left: 16px;
+		border-left-width: 2px;
+		border-left-color: rgba(14,165,233,0.2);
+	}
+
+	.dept-child {
+		flex-direction: row;
+		align-items: center;
+		margin-bottom: 16px;
+	}
+
+	.dept-child:last-child {
+		margin-bottom: 0;
+	}
+
+	.child-icon {
+		font-size: 14px;
+		color: #0ea5e9;
+		margin-right: 8px;
+	}
+
+	.dept-child-text {
+		font-size: 15px;
+		color: #646A73;
+	}
+
+	.dept-child-active .dept-child-text {
+		color: #1F2329;
+		font-weight: 500;
+	}
+
+	.member-list {
+		background-color: #ffffff;
+	}
+
+	.member-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #F5F7FA;
+	}
+
+	.member-item:active {
+		background-color: #F9FAFB;
+	}
+
+	.member-avatar {
+		width: 48px;
+		height: 48px;
+		border-radius: 24px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 16px;
+	}
+
+	.avatar-text {
+		color: #ffffff;
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.member-info {
+		flex: 1;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.member-name {
+		font-size: 18px;
+		font-weight: 500;
+		color: #1F2329;
+	}
+
+	.member-role {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
+	.checkbox {
+		width: 20px;
+		height: 20px;
+		border-radius: 10px;
+		border-width: 1.5px;
+		border-color: #D1D5DB;
+		margin-right: 12px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.checkbox-active {
+		background-color: #1677FF;
+		border-color: #1677FF;
+	}
+
+	.check-icon {
+		color: #ffffff;
+		font-size: 14px;
+	}
+
+	.footer {
+		background-color: #ffffff;
+		border-top-width: 0.5px;
+		border-top-color: #e5e5e5;
+		padding: 12px 16px;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+	}
+
+	.selected-text {
+		font-size: 15px;
+		color: #333333;
+	}
+
+	.confirm-btn {
+		background-color: rgba(22, 119, 255, 0.1);
+		padding: 0 20px;
+		height: 36px;
+		border-radius: 4px;
+		justify-content: center;
+		border-width: 0;
+	}
+
+	.confirm-btn-text {
+		color: #1677FF;
+		font-size: 14px;
+		font-weight: 500;
+	}
+</style>
