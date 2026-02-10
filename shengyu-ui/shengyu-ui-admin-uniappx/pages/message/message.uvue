@@ -57,7 +57,10 @@
 					</view>
 					<view class="message-content">
 						<view class="message-top">
-							<text class="message-name">{{ item.titleKey ? t(item.titleKey, item.title) : item.title }}</text>
+							<view class="message-name-wrap">
+								<text class="message-name">{{ item.titleKey ? t(item.titleKey, item.title) : item.title }}</text>
+								<text v-if="item.isGroup && item.memberCount" class="member-count">({{ item.memberCount }})</text>
+							</view>
 							<text class="message-time">{{ formatWeChatTime(item.lastMessageTime) }}</text>
 						</view>
 						<view class="message-bottom">
@@ -94,7 +97,10 @@
 					</view>
 					<view class="message-content">
 						<view class="message-top">
-							<text class="message-name">{{ item.titleKey ? t(item.titleKey, item.title) : item.title }}</text>
+							<view class="message-name-wrap">
+								<text class="message-name">{{ item.titleKey ? t(item.titleKey, item.title) : item.title }}</text>
+								<text v-if="item.isGroup && item.memberCount" class="member-count">({{ item.memberCount }})</text>
+							</view>
 							<text class="message-time">{{ formatWeChatTime(item.lastMessageTime) }}</text>
 						</view>
 						<view class="message-bottom">
@@ -151,27 +157,113 @@
 		const list : any[] = []
 		const categoryIds = ['latest', 'user', 'group', 'business', 'at', 'nodisturb']
 		const now = Date.now()
-		for (let i = 1; i <= 100; i++) {
+		
+		// 先添加几条群聊消息（前5条）
+		const groupChats = [
+			{
+				id: 1,
+				categoryId: 'group',
+				title: '产品研发团队',
+				desc: '张敏: 今天下午3点开会，大家准时参加',
+				lastMessageTime: now - 5 * 60 * 1000, // 5分钟前
+				avatarBg: '#10b981',
+				avatarText: '产品',
+				avatarIcon: '\ue616', // 群聊图标
+				unreadCount: 15,
+				noDisturb: false,
+				isPinned: true,
+				pinnedTime: now - 1000,
+				isGroup: true,
+				memberCount: 12
+			},
+			{
+				id: 2,
+				categoryId: 'group',
+				title: '张敏、李强、王静等4人',
+				desc: '李强: [图片]',
+				lastMessageTime: now - 15 * 60 * 1000, // 15分钟前
+				avatarBg: '#f59e0b',
+				avatarText: '群聊',
+				avatarIcon: '\ue616',
+				unreadCount: 3,
+				noDisturb: false,
+				isPinned: true,
+				pinnedTime: now - 2000,
+				isGroup: true,
+				memberCount: 4
+			},
+			{
+				id: 3,
+				categoryId: 'group',
+				title: '技术交流群',
+				desc: '刘洋: 这个问题我来解答一下...',
+				lastMessageTime: now - 30 * 60 * 1000, // 30分钟前
+				avatarBg: '#8b5cf6',
+				avatarText: '技术',
+				avatarIcon: '\ue616',
+				unreadCount: 99,
+				noDisturb: false,
+				isPinned: false,
+				pinnedTime: 0,
+				isGroup: true,
+				memberCount: 50
+			},
+			{
+				id: 4,
+				categoryId: 'group',
+				title: '周末聚会',
+				desc: '王静: 大家周末有空吗？',
+				lastMessageTime: now - 2 * 60 * 60 * 1000, // 2小时前
+				avatarBg: '#ec4899',
+				avatarText: '聚会',
+				avatarIcon: '\ue616',
+				unreadCount: 0,
+				noDisturb: true, // 免打扰
+				isPinned: false,
+				pinnedTime: 0,
+				isGroup: true,
+				memberCount: 8
+			},
+			{
+				id: 5,
+				categoryId: 'group',
+				title: '项目管理组',
+				desc: '赵敏: @我 请查看最新的项目进度',
+				lastMessageTime: now - 4 * 60 * 60 * 1000, // 4小时前
+				avatarBg: '#3b82f6',
+				avatarText: '项目',
+				avatarIcon: '\ue616',
+				unreadCount: 5,
+				noDisturb: false,
+				isPinned: false,
+				pinnedTime: 0,
+				isGroup: true,
+				memberCount: 15,
+				hasAt: true // 有@消息
+			}
+		]
+		
+		// 添加群聊消息到列表
+		list.push(...groupChats)
+		
+		// 继续添加其他类型的消息
+		for (let i = 6; i <= 100; i++) {
 			const catId = categoryIds[i % categoryIds.length]
 			
 			// 模拟数据逻辑调整：
-			// i=1: 普通未读 > 99
-			// i=2: 普通未读 < 99
-			// i=3: 免打扰未读 (显示红点)
-			// i=4: 免打扰未读 (显示红点)
 			let unreadCount = 0
 			let noDisturb = false
 			
-			if (i === 1) {
+			if (i === 6) {
 				unreadCount = 125
 				noDisturb = false
-			} else if (i === 2) {
+			} else if (i === 7) {
 				unreadCount = 12
 				noDisturb = false
-			} else if (i === 3) {
+			} else if (i === 8) {
 				unreadCount = 5
 				noDisturb = true
-			} else if (i === 4) {
+			} else if (i === 9) {
 				unreadCount = 99
 				noDisturb = true
 			} else {
@@ -181,23 +273,24 @@
 
 			// 模拟不同时间段的时间戳
 			let timeOffset = 0
-			if (i <= 5) timeOffset = i * 10 * 60 * 1000 // 今天内
-			else if (i <= 10) timeOffset = 24 * 60 * 60 * 1000 // 昨天
-			else if (i <= 20) timeOffset = i * 24 * 60 * 60 * 1000 // 几天前
+			if (i <= 10) timeOffset = i * 10 * 60 * 1000 // 今天内
+			else if (i <= 15) timeOffset = 24 * 60 * 60 * 1000 // 昨天
+			else if (i <= 25) timeOffset = i * 24 * 60 * 60 * 1000 // 几天前
 			else timeOffset = i * 30 * 24 * 60 * 60 * 1000 // 很久以前
 
 			list.push({
 				id: i,
 				categoryId: catId,
-				title: i <= 8 ? `置顶消息 ${i}` : `消息测试 ${i}`,
+				title: i <= 10 ? `置顶消息 ${i}` : `消息测试 ${i}`,
 				desc: `这是第 ${i} 条测试消息的内容摘要...`,
 				lastMessageTime: now - timeOffset,
 				avatarBg: i % 2 === 0 ? '#3370FF' : '#F97316',
-				avatarText: i <= 8 ? `顶${i}` : `测${i}`,
+				avatarText: i <= 10 ? `顶${i}` : `测${i}`,
 				unreadCount: unreadCount,
 				noDisturb: noDisturb,
-				isPinned: i <= 8, // 前8条设为置顶
-				pinnedTime: i <= 8 ? Date.now() - i * 1000 : 0
+				isPinned: i <= 10, // 前10条设为置顶
+				pinnedTime: i <= 10 ? Date.now() - i * 1000 : 0,
+				isGroup: false
 			})
 		}
 		return list
@@ -301,9 +394,18 @@
 	}
 
 	function handleMessageClick(item : any) {
-		uni.navigateTo({
-			url: '/pages/message/chat?name=' + (item.titleKey ? t(item.titleKey) : item.title)
-		})
+		// 判断是否是群聊
+		if (item.isGroup) {
+			// 跳转到群聊页面
+			uni.navigateTo({
+				url: `/pages/message/chat?type=group&groupId=${item.id}&name=${encodeURIComponent(item.title)}&memberCount=${item.memberCount || 0}`
+			})
+		} else {
+			// 跳转到单聊页面
+			uni.navigateTo({
+				url: '/pages/message/chat?name=' + (item.titleKey ? t(item.titleKey) : item.title)
+			})
+		}
 	}
 
 	function handleLongPress(item : any, e : TouchEvent) {
@@ -611,10 +713,23 @@
 		margin-bottom: 4px;
 	}
 
+	.message-name-wrap {
+		flex-direction: row;
+		align-items: center;
+		flex: 1;
+		margin-right: 8px;
+	}
+
 	.message-name {
 		font-size: 16px;
 		color: #1F2329;
 		font-weight: 500;
+	}
+
+	.member-count {
+		font-size: 13px;
+		color: #8F959E;
+		margin-left: 4px;
 	}
 
 	.message-time {

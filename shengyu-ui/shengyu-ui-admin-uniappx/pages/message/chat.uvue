@@ -15,7 +15,8 @@
 			<view class="header-title-wrap">
 				<text v-if="!multiSelectMode" class="header-title">{{ name }}</text>
 				<text v-else class="header-title">已选择 {{ selectedIds.length }} 条</text>
-				<text v-if="!multiSelectMode" class="header-status">{{ t('chat.online', '手机在线') }}</text>
+				<text v-if="!multiSelectMode && chatType === 'single'" class="header-status">{{ t('chat.online', '手机在线') }}</text>
+				<text v-if="!multiSelectMode && chatType === 'group'" class="header-status">{{ memberCount }}人</text>
 			</view>
 			<view class="header-right">
 				<text v-if="!multiSelectMode" class="iconfont header-icon">&#xea74;</text>
@@ -266,6 +267,12 @@
 	import { getCustomStickers, StickerItem } from '../../utils/stickerManager.uts'
 
 	const { t } = useI18n()
+	
+	// 聊天类型：single(单聊) 或 group(群聊)
+	const chatType = ref('single')
+	const groupId = ref(0)
+	const memberCount = ref(0)
+	
 	const name = ref('张三')
 	const watermark = ref('同事A 1234')
 	const inputText = ref('')
@@ -591,15 +598,15 @@
 		return {
 			id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
 			senderId: params.isSelf ? 'me' : 'user1',
-			receiverId: params.isSelf ? 'user1' : 'me',
+			receiverId: chatType.value === 'group' ? groupId.value.toString() : (params.isSelf ? 'user1' : 'me'),
 			type: params.type,
 			content: params.content,
 			isSelf: params.isSelf,
 			time: new Date().toLocaleString(),
 			timestamp: Date.now(),
 			showTime: false,
-			avatarText: params.isSelf ? '我' : '三',
-			avatarBg: params.isSelf ? '#5FB6F7' : '#F197BC',
+			avatarText: params.isSelf ? '我' : (params.avatarText || '三'),
+			avatarBg: params.isSelf ? '#5FB6F7' : (params.avatarBg || '#F197BC'),
 			duration: params.duration,
 			poster: params.poster,
 			fileName: params.fileName,
@@ -997,6 +1004,116 @@
 	onMounted(() => {
 		scrollToBottom()
 	})
+	
+	/**
+	 * 页面加载时获取参数
+	 */
+	onLoad((options : any) => {
+		// 获取聊天类型
+		if (options['type']) {
+			chatType.value = options['type']
+		}
+		
+		// 获取群聊 ID
+		if (options['groupId']) {
+			groupId.value = parseInt(options['groupId'])
+		}
+		
+		// 获取名称
+		if (options['name']) {
+			name.value = decodeURIComponent(options['name'])
+		}
+		
+		// 获取成员数量
+		if (options['memberCount']) {
+			memberCount.value = parseInt(options['memberCount'])
+		}
+		
+		// 如果是群聊，加载群聊消息
+		if (chatType.value === 'group') {
+			loadGroupMessages()
+		}
+	})
+	
+	/**
+	 * 加载群聊消息（模拟数据）
+	 */
+	function loadGroupMessages() {
+		// 清空现有消息
+		messages.value = []
+		
+		// 生成群聊模拟消息
+		const groupMessages : MessageItem[] = [
+			{
+				id: '1',
+				senderId: 'user1',
+				receiverId: groupId.value.toString(),
+				type: 'text',
+				content: '大家好，我是张敏',
+				isSelf: false,
+				time: '2025-10-11 16:38',
+				timestamp: Date.now() - 3600000,
+				showTime: true,
+				avatarText: '张敏',
+				avatarBg: '#F197BC'
+			},
+			{
+				id: '2',
+				senderId: 'user2',
+				receiverId: groupId.value.toString(),
+				type: 'text',
+				content: '欢迎欢迎！',
+				isSelf: false,
+				time: '2025-10-11 16:39',
+				timestamp: Date.now() - 3500000,
+				showTime: false,
+				avatarText: '李强',
+				avatarBg: '#5FB6F7'
+			},
+			{
+				id: '3',
+				senderId: 'me',
+				receiverId: groupId.value.toString(),
+				type: 'text',
+				content: '大家好，很高兴加入这个群！',
+				isSelf: true,
+				time: '2025-10-11 16:40',
+				timestamp: Date.now() - 3400000,
+				showTime: false,
+				avatarText: '我',
+				avatarBg: '#5FB6F7'
+			},
+			{
+				id: '4',
+				senderId: 'user3',
+				receiverId: groupId.value.toString(),
+				type: 'image',
+				content: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/shuijiao.jpg',
+				isSelf: false,
+				time: '2025-10-11 16:41',
+				timestamp: Date.now() - 3300000,
+				showTime: false,
+				avatarText: '王静',
+				avatarBg: '#c084fc'
+			},
+			{
+				id: '5',
+				senderId: 'user4',
+				receiverId: groupId.value.toString(),
+				type: 'text',
+				content: '今天下午3点开会，大家准时参加',
+				isSelf: false,
+				time: '2025-10-11 16:45',
+				timestamp: Date.now() - 3000000,
+				showTime: true,
+				avatarText: '刘洋',
+				avatarBg: '#10b981'
+			}
+		]
+		
+		messages.value = groupMessages
+		scrollToBottom()
+	}
 </script>
 
 <style>

@@ -165,17 +165,76 @@
 			return
 		}
 		
+		// 创建群聊数据结构（兼容后端 API 对接）
+		const groupData = {
+			// 群聊基本信息
+			groupId: Date.now(), // 临时 ID，实际应由后端生成
+			groupName: generateGroupName(selectedMembers),
+			groupType: 'normal', // normal: 普通群聊, work: 工作群
+			memberCount: selectedMembers.length,
+			
+			// 成员列表（用于后端 API）
+			memberIds: selectedMembers.map(m => m.id),
+			members: selectedMembers,
+			
+			// 创建时间
+			createTime: Date.now(),
+			
+			// 群聊设置
+			settings: {
+				allowMemberInvite: true, // 允许成员邀请
+				needApproval: false, // 加群是否需要审批
+				muteAll: false // 全员禁言
+			}
+		}
+		
+		console.log('创建群聊数据:', groupData)
+		
 		uni.showToast({
 			title: '创建群聊中...',
-			icon: 'loading'
+			icon: 'loading',
+			duration: 1000
 		})
-		// TODO: 调用创建群聊 API
 		
-		// 创建成功后清空选择状态
+		// TODO: 调用后端创建群聊 API
+		// 示例：
+		// createGroupChat(groupData).then(res => {
+		//   const groupId = res.data.groupId
+		//   navigateToGroupChat(groupId, groupData.groupName)
+		// })
+		
+		// 模拟 API 调用延迟
 		setTimeout(() => {
-			endSelection()
-			uni.navigateBack()
-		}, 1500)
+			// 创建成功后跳转到群聊页面
+			uni.showToast({
+				title: '创建成功',
+				icon: 'success',
+				duration: 1000
+			})
+			
+			// 跳转到群聊页面
+			setTimeout(() => {
+				uni.redirectTo({
+					url: `/pages/message/chat?type=group&groupId=${groupData.groupId}&name=${encodeURIComponent(groupData.groupName)}&memberCount=${groupData.memberCount}`
+				})
+				
+				// 清空选择状态
+				endSelection()
+			}, 1000)
+		}, 1000)
+	}
+	
+	/**
+	 * 生成群聊名称
+	 * 规则：取前3个成员名字，用逗号分隔，超过3个显示"等N人"
+	 */
+	function generateGroupName(members : any[]) : string {
+		if (members.length === 0) return '群聊'
+		if (members.length <= 3) {
+			return members.map(m => m.name).join('、')
+		}
+		const firstThree = members.slice(0, 3).map(m => m.name).join('、')
+		return `${firstThree}等${members.length}人`
 	}
 
 	// 同步本地选中状态与全局状态
