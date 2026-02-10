@@ -1,0 +1,535 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<text class="header-title">群聊设置</text>
+			<view class="header-right"></view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<!-- 群信息卡片 -->
+			<view class="group-info-card">
+				<view class="group-avatar">
+					<text class="iconfont group-icon">&#xe616;</text>
+				</view>
+				<view class="group-details">
+					<text class="group-name">{{ groupName }}</text>
+					<text class="group-member-count">{{ memberCount }}人</text>
+				</view>
+			</view>
+
+			<!-- 群成员列表 -->
+			<view class="section">
+				<view class="section-title">群成员</view>
+				<view class="member-grid">
+					<view class="member-item" v-for="(member, index) in displayMembers" :key="member.id" @click="handleMemberClick(member)">
+						<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
+							<text class="member-avatar-text">{{ member.avatarText }}</text>
+						</view>
+						<text class="member-name">{{ member.name }}</text>
+					</view>
+					<!-- 添加成员按钮 -->
+					<view class="member-item" @click="handleAddMember">
+						<view class="member-avatar add-btn">
+							<text class="iconfont add-icon">&#xe726;</text>
+						</view>
+						<text class="member-name">添加</text>
+					</view>
+					<!-- 删除成员按钮 -->
+					<view class="member-item" @click="handleRemoveMember">
+						<view class="member-avatar remove-btn">
+							<text class="iconfont remove-icon">&#xe602;</text>
+						</view>
+						<text class="member-name">删除</text>
+					</view>
+				</view>
+				<view class="view-all-btn" @click="handleViewAllMembers">
+					<text class="view-all-text">查看全部群成员</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
+				</view>
+			</view>
+
+			<!-- 群聊名称 -->
+			<view class="setting-section">
+				<view class="setting-item" @click="handleEditGroupName">
+					<text class="setting-label">群聊名称</text>
+					<view class="setting-value-wrap">
+						<text class="setting-value">{{ groupName }}</text>
+						<text class="iconfont arrow-icon">&#xeb03;</text>
+					</view>
+				</view>
+			</view>
+
+			<!-- 群聊设置 -->
+			<view class="setting-section">
+				<view class="setting-item" @click="handleGroupQRCode">
+					<text class="setting-label">群二维码</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
+				</view>
+				<view class="setting-item" @click="handleGroupNotice">
+					<text class="setting-label">群公告</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
+				</view>
+				<view class="setting-item" @click="handleGroupFiles">
+					<text class="setting-label">群文件</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
+				</view>
+				<view class="setting-item" @click="handleChatHistory">
+					<text class="setting-label">聊天记录</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
+				</view>
+			</view>
+
+			<!-- 消息设置 -->
+			<view class="setting-section">
+				<view class="setting-item">
+					<text class="setting-label">消息免打扰</text>
+					<switch class="setting-switch" :checked="noDisturb" @change="handleNoDisturbChange" />
+				</view>
+				<view class="setting-item">
+					<text class="setting-label">置顶聊天</text>
+					<switch class="setting-switch" :checked="isPinned" @change="handlePinnedChange" />
+				</view>
+				<view class="setting-item" @click="handleChatBubble">
+					<text class="setting-label">聊天气泡</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
+				</view>
+			</view>
+
+			<!-- 群管理 -->
+			<view class="setting-section">
+				<view class="setting-item">
+					<text class="setting-label">群聊邀请确认</text>
+					<switch class="setting-switch" :checked="needApproval" @change="handleApprovalChange" />
+				</view>
+				<view class="setting-item" @click="handleMyNickname">
+					<text class="setting-label">我在本群的昵称</text>
+					<view class="setting-value-wrap">
+						<text class="setting-value">{{ myNickname }}</text>
+						<text class="iconfont arrow-icon">&#xeb03;</text>
+					</view>
+				</view>
+				<view class="setting-item" @click="handleShowMemberNickname">
+					<text class="setting-label">显示群成员昵称</text>
+					<switch class="setting-switch" :checked="showMemberNickname" @change="handleShowNicknameChange" />
+				</view>
+			</view>
+
+			<!-- 危险操作 -->
+			<view class="setting-section">
+				<view class="setting-item danger-item" @click="handleClearHistory">
+					<text class="setting-label danger-text">清空聊天记录</text>
+				</view>
+				<view class="setting-item danger-item" @click="handleDeleteAndExit">
+					<text class="setting-label danger-text">删除并退出</text>
+				</view>
+			</view>
+
+			<view class="bottom-space"></view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	// 群聊信息
+	const groupName = ref('产品研发团队')
+	const memberCount = ref(12)
+	const myNickname = ref('张敏')
+
+	// 设置状态
+	const noDisturb = ref(false)
+	const isPinned = ref(true)
+	const needApproval = ref(false)
+	const showMemberNickname = ref(true)
+
+	// 群成员数据（显示前8个）
+	const allMembers = ref([
+		{ id: 1, name: '张敏', avatarText: '张敏', avatarBg: '#0ea5e9' },
+		{ id: 2, name: '李强', avatarText: '李强', avatarBg: '#f472b6' },
+		{ id: 3, name: '王静', avatarText: '王静', avatarBg: '#c084fc' },
+		{ id: 4, name: '刘洋', avatarText: '刘洋', avatarBg: '#10b981' },
+		{ id: 5, name: '赵敏', avatarText: '赵敏', avatarBg: '#f59e0b' },
+		{ id: 6, name: '孙伟', avatarText: '孙伟', avatarBg: '#ec4899' },
+		{ id: 7, name: '周芳', avatarText: '周芳', avatarBg: '#3b82f6' },
+		{ id: 8, name: '吴娜', avatarText: '吴娜', avatarBg: '#8b5cf6' }
+	])
+
+	const displayMembers = computed(() : any[] => {
+		return allMembers.value.slice(0, 8)
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function handleMemberClick(member : any) {
+		uni.navigateTo({
+			url: '/pages/contacts/user-detail?id=' + member.id
+		})
+	}
+
+	function handleAddMember() {
+		uni.navigateTo({
+			url: '/pages/contacts/initiate-group?mode=add'
+		})
+	}
+
+	function handleRemoveMember() {
+		uni.showToast({
+			title: '删除成员功能开发中',
+			icon: 'none'
+		})
+	}
+
+	function handleViewAllMembers() {
+		uni.navigateTo({
+			url: '/pages/message/group-members'
+		})
+	}
+
+	function handleEditGroupName() {
+		uni.showToast({
+			title: '编辑群名功能开发中',
+			icon: 'none'
+		})
+	}
+
+	function handleGroupQRCode() {
+		uni.navigateTo({
+			url: '/pages/message/group-qrcode'
+		})
+	}
+
+	function handleGroupNotice() {
+		uni.showToast({
+			title: '群公告功能开发中',
+			icon: 'none'
+		})
+	}
+
+	function handleGroupFiles() {
+		uni.navigateTo({
+			url: '/pages/message/chat-files'
+		})
+	}
+
+	function handleChatHistory() {
+		uni.showToast({
+			title: '聊天记录功能开发中',
+			icon: 'none'
+		})
+	}
+
+	function handleNoDisturbChange(e : any) {
+		noDisturb.value = e.detail.value
+	}
+
+	function handlePinnedChange(e : any) {
+		isPinned.value = e.detail.value
+	}
+
+	function handleChatBubble() {
+		uni.navigateTo({
+			url: '/pages/message/chat-bubble'
+		})
+	}
+
+	function handleApprovalChange(e : any) {
+		needApproval.value = e.detail.value
+	}
+
+	function handleMyNickname() {
+		uni.showToast({
+			title: '修改昵称功能开发中',
+			icon: 'none'
+		})
+	}
+
+	function handleShowNicknameChange(e : any) {
+		showMemberNickname.value = e.detail.value
+	}
+
+	function handleClearHistory() {
+		uni.showModal({
+			title: '清空聊天记录',
+			content: '确定要清空聊天记录吗？',
+			success: (res) => {
+				if (res.confirm) {
+					uni.showToast({
+						title: '已清空',
+						icon: 'success'
+					})
+				}
+			}
+		})
+	}
+
+	function handleDeleteAndExit() {
+		uni.showModal({
+			title: '删除并退出',
+			content: '退出后将删除聊天记录，确定要退出吗？',
+			success: (res) => {
+				if (res.confirm) {
+					uni.navigateBack()
+				}
+			}
+		})
+	}
+
+	onLoad((options : any) => {
+		if (options['groupId']) {
+			// 加载群聊信息
+		}
+		if (options['name']) {
+			groupName.value = decodeURIComponent(options['name'])
+		}
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F7FA;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #1F2329;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #1F2329;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 17px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+	}
+
+	/* 群信息卡片 */
+	.group-info-card {
+		background-color: #FFFFFF;
+		padding: 20px 16px;
+		flex-direction: row;
+		align-items: center;
+		margin-bottom: 10px;
+	}
+
+	.group-avatar {
+		width: 60px;
+		height: 60px;
+		background-color: #10b981;
+		border-radius: 12px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 16px;
+	}
+
+	.group-icon {
+		font-size: 32px;
+		color: #FFFFFF;
+	}
+
+	.group-details {
+		flex: 1;
+	}
+
+	.group-name {
+		font-size: 18px;
+		color: #1F2329;
+		font-weight: 600;
+		margin-bottom: 6px;
+	}
+
+	.group-member-count {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
+	/* 群成员区域 */
+	.section {
+		background-color: #FFFFFF;
+		padding: 16px;
+		margin-bottom: 10px;
+	}
+
+	.section-title {
+		font-size: 14px;
+		color: #8F959E;
+		margin-bottom: 12px;
+	}
+
+	.member-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+	}
+
+	.member-item {
+		width: 20%;
+		align-items: center;
+		margin-bottom: 16px;
+	}
+
+	.member-avatar {
+		width: 50px;
+		height: 50px;
+		border-radius: 8px;
+		justify-content: center;
+		align-items: center;
+		margin-bottom: 6px;
+	}
+
+	.member-avatar-text {
+		color: #FFFFFF;
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.add-btn {
+		background-color: #F5F7FA;
+		border-width: 1px;
+		border-color: #E5E5E5;
+		border-style: dashed;
+	}
+
+	.add-icon {
+		font-size: 24px;
+		color: #8F959E;
+	}
+
+	.remove-btn {
+		background-color: #F5F7FA;
+		border-width: 1px;
+		border-color: #E5E5E5;
+		border-style: dashed;
+	}
+
+	.remove-icon {
+		font-size: 24px;
+		color: #8F959E;
+	}
+
+	.member-name {
+		font-size: 12px;
+		color: #1F2329;
+		text-align: center;
+		lines: 1;
+		text-overflow: ellipsis;
+	}
+
+	.view-all-btn {
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		padding: 12px 0;
+		border-top-width: 0.5px;
+		border-top-color: #EFF0F1;
+		margin-top: 8px;
+	}
+
+	.view-all-text {
+		font-size: 14px;
+		color: #646A73;
+		margin-right: 4px;
+	}
+
+	.arrow-icon {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
+	/* 设置项 */
+	.setting-section {
+		background-color: #FFFFFF;
+		margin-bottom: 10px;
+	}
+
+	.setting-item {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		padding: 14px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.setting-item:last-child {
+		border-bottom-width: 0;
+	}
+
+	.setting-label {
+		font-size: 15px;
+		color: #1F2329;
+	}
+
+	.setting-value-wrap {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.setting-value {
+		font-size: 14px;
+		color: #8F959E;
+		margin-right: 8px;
+	}
+
+	.setting-switch {
+		transform: scale(0.8);
+	}
+
+	.danger-item {
+		justify-content: center;
+	}
+
+	.danger-text {
+		color: #F54A45;
+	}
+
+	.bottom-space {
+		height: 20px;
+	}
+</style>

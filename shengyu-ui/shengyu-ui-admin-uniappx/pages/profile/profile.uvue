@@ -73,10 +73,17 @@
 	const { t } = useI18n()
 
 	function handleAction(type : string) {
-		uni.showToast({
-			title: type + ' 功能开发中',
-			icon: 'none'
-		})
+		if (type === 'fav') {
+			// 跳转到我的收藏页
+			uni.navigateTo({
+				url: '/pages/profile/favorites'
+			})
+		} else {
+			uni.showToast({
+				title: type + ' 功能开发中',
+				icon: 'none'
+			})
+		}
 	}
 
 	function handleLogout() {

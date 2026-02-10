@@ -1,0 +1,427 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="cancel-text">取消</text>
+			</view>
+			<text class="header-title">分享给</text>
+			<view class="header-right"></view>
+		</view>
+
+		<view class="search-wrap">
+			<view class="search-bar">
+				<text class="iconfont search-icon">&#xea6e;</text>
+				<input class="search-input" v-model="searchKeyword" placeholder="搜索" placeholder-class="placeholder" @input="handleSearch" />
+			</view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<!-- 最近聊天 -->
+			<view class="section" v-if="!searchKeyword && recentChats.length > 0">
+				<text class="section-title">最近聊天</text>
+				<view class="chat-list">
+					<view class="chat-item" v-for="chat in recentChats" :key="chat.id" @click="toggleSelect(chat)">
+						<view class="chat-checkbox">
+							<text v-if="isSelected(chat.id)" class="iconfont checkbox-checked">&#xe65f;</text>
+							<view v-else class="checkbox-unchecked"></view>
+						</view>
+						<view class="chat-avatar" :style="{ backgroundColor: chat.avatarBg }">
+							<text v-if="chat.isGroup" class="iconfont group-icon">&#xe616;</text>
+							<text v-else class="chat-avatar-text">{{ chat.avatarText }}</text>
+						</view>
+						<view class="chat-info">
+							<text class="chat-name">{{ chat.name }}</text>
+							<text class="chat-desc" v-if="chat.isGroup">{{ chat.memberCount }}人</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<!-- 联系人列表 -->
+			<view class="section">
+				<text class="section-title">{{ searchKeyword ? '搜索结果' : '联系人' }}</text>
+				<view class="contact-list">
+					<view class="contact-item" v-for="contact in displayContacts" :key="contact.id" @click="toggleSelect(contact)">
+						<view class="contact-checkbox">
+							<text v-if="isSelected(contact.id)" class="iconfont checkbox-checked">&#xe65f;</text>
+							<view v-else class="checkbox-unchecked"></view>
+						</view>
+						<view class="contact-avatar" :style="{ backgroundColor: contact.avatarBg }">
+							<text class="contact-avatar-text">{{ contact.avatarText }}</text>
+						</view>
+						<view class="contact-info">
+							<text class="contact-name">{{ contact.name }}</text>
+							<text class="contact-role">{{ contact.role }}</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<!-- 空状态 -->
+			<view class="empty-state" v-if="searchKeyword && displayContacts.length === 0">
+				<text class="iconfont empty-icon">&#xea6e;</text>
+				<text class="empty-text">未找到"{{ searchKeyword }}"</text>
+			</view>
+		</scroll-view>
+
+		<!-- 底部确认按钮 -->
+		<view class="footer">
+			<text class="selected-text">已选择 {{ selectedItems.length }} 个</text>
+			<button class="confirm-btn" :disabled="selectedItems.length === 0" @click="handleConfirm">
+				<text class="confirm-btn-text">分享</text>
+			</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	const searchKeyword = ref('')
+	const selectedItems = ref<any[]>([])
+
+	// 最近聊天
+	const recentChats = ref([
+		{ id: 'chat1', name: '张敏', avatarText: '张敏', avatarBg: '#0ea5e9', isGroup: false },
+		{ id: 'chat2', name: '产品研发团队', avatarBg: '#10b981', isGroup: true, memberCount: 12 },
+		{ id: 'chat3', name: '李强', avatarText: '李强', avatarBg: '#f472b6', isGroup: false }
+	])
+
+	// 联系人列表
+	const allContacts = ref([
+		{ id: 1, name: '张敏', role: '产品经理', avatarText: '张敏', avatarBg: '#0ea5e9' },
+		{ id: 2, name: '李强', role: '开发工程师', avatarText: '李强', avatarBg: '#f472b6' },
+		{ id: 3, name: '王静', role: '设计师', avatarText: '王静', avatarBg: '#c084fc' },
+		{ id: 4, name: '刘洋', role: '测试工程师', avatarText: '刘洋', avatarBg: '#10b981' },
+		{ id: 5, name: '赵敏', role: '产品经理', avatarText: '赵敏', avatarBg: '#f59e0b' },
+		{ id: 6, name: '孙伟', role: '开发工程师', avatarText: '孙伟', avatarBg: '#ec4899' }
+	])
+
+	// 过滤后的联系人
+	const displayContacts = computed(() : any[] => {
+		if (!searchKeyword.value) {
+			return allContacts.value
+		}
+		return allContacts.value.filter(contact => contact.name.includes(searchKeyword.value))
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function handleSearch() {
+		// 搜索逻辑已在 computed 中实现
+	}
+
+	function isSelected(id : any) : boolean {
+		return selectedItems.value.some(item => item.id === id)
+	}
+
+	function toggleSelect(item : any) {
+		const index = selectedItems.value.findIndex(i => i.id === item.id)
+		if (index > -1) {
+			selectedItems.value.splice(index, 1)
+		} else {
+			selectedItems.value.push(item)
+		}
+	}
+
+	function handleConfirm() {
+		if (selectedItems.value.length === 0) {
+			uni.showToast({
+				title: '请选择分享对象',
+				icon: 'none'
+			})
+			return
+		}
+
+		uni.showToast({
+			title: `已分享给 ${selectedItems.value.length} 个联系人`,
+			icon: 'success'
+		})
+
+		setTimeout(() => {
+			uni.navigateBack()
+		}, 1500)
+	}
+
+	onLoad((options : any) => {
+		// 可以接收要分享的内容参数
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F7FA;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		width: 80px;
+	}
+
+	.cancel-text {
+		color: #1677FF;
+		font-size: 16px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 17px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.search-wrap {
+		background-color: #FFFFFF;
+		padding: 10px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.search-bar {
+		background-color: #F3F4F6;
+		border-radius: 8px;
+		height: 36px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+	}
+
+	.search-icon {
+		font-size: 16px;
+		color: #999999;
+	}
+
+	.search-input {
+		flex: 1;
+		font-size: 14px;
+		margin-left: 8px;
+		color: #333333;
+	}
+
+	.placeholder {
+		color: #999999;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+	}
+
+	.section {
+		background-color: #FFFFFF;
+		margin-bottom: 10px;
+	}
+
+	.section-title {
+		font-size: 13px;
+		color: #8F959E;
+		padding: 12px 16px 8px;
+		background-color: #F5F7FA;
+	}
+
+	/* 聊天列表 */
+	.chat-list {
+	}
+
+	.chat-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.chat-item:last-child {
+		border-bottom-width: 0;
+	}
+
+	.chat-checkbox {
+		width: 24px;
+		height: 24px;
+		margin-right: 12px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.checkbox-checked {
+		font-size: 24px;
+		color: #1677FF;
+	}
+
+	.checkbox-unchecked {
+		width: 20px;
+		height: 20px;
+		border-radius: 10px;
+		border-width: 1.5px;
+		border-color: #C1C4C9;
+		background-color: #FFFFFF;
+	}
+
+	.chat-avatar {
+		width: 44px;
+		height: 44px;
+		border-radius: 8px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 12px;
+	}
+
+	.group-icon {
+		font-size: 24px;
+		color: #FFFFFF;
+	}
+
+	.chat-avatar-text {
+		color: #FFFFFF;
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.chat-info {
+		flex: 1;
+	}
+
+	.chat-name {
+		font-size: 15px;
+		color: #1F2329;
+		margin-bottom: 4px;
+	}
+
+	.chat-desc {
+		font-size: 13px;
+		color: #8F959E;
+	}
+
+	/* 联系人列表 */
+	.contact-list {
+	}
+
+	.contact-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.contact-item:last-child {
+		border-bottom-width: 0;
+	}
+
+	.contact-checkbox {
+		width: 24px;
+		height: 24px;
+		margin-right: 12px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.contact-avatar {
+		width: 44px;
+		height: 44px;
+		border-radius: 8px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 12px;
+	}
+
+	.contact-avatar-text {
+		color: #FFFFFF;
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.contact-info {
+		flex: 1;
+	}
+
+	.contact-name {
+		font-size: 15px;
+		color: #1F2329;
+		margin-bottom: 4px;
+	}
+
+	.contact-role {
+		font-size: 13px;
+		color: #8F959E;
+	}
+
+	/* 空状态 */
+	.empty-state {
+		padding: 80px 16px;
+		align-items: center;
+	}
+
+	.empty-icon {
+		font-size: 64px;
+		color: #E5E5E5;
+		margin-bottom: 16px;
+	}
+
+	.empty-text {
+		font-size: 15px;
+		color: #8F959E;
+	}
+
+	/* 底部 */
+	.footer {
+		background-color: #FFFFFF;
+		border-top-width: 0.5px;
+		border-top-color: #EFF0F1;
+		padding: 12px 16px;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+	}
+
+	.selected-text {
+		font-size: 15px;
+		color: #646A73;
+	}
+
+	.confirm-btn {
+		background-color: #1677FF;
+		padding: 0 24px;
+		height: 36px;
+		border-radius: 18px;
+		justify-content: center;
+		border-width: 0;
+	}
+
+	.confirm-btn[disabled] {
+		background-color: #C1C4C9;
+	}
+
+	.confirm-btn-text {
+		color: #FFFFFF;
+		font-size: 15px;
+		font-weight: 500;
+	}
+</style>

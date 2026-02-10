@@ -106,6 +106,62 @@
 			}
 		},
 		{
+			"path": "pages/message/group-settings",
+			"style": {
+				"navigationBarTitleText": "群聊设置",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/message/group-members",
+			"style": {
+				"navigationBarTitleText": "群成员",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/message/group-qrcode",
+			"style": {
+				"navigationBarTitleText": "群二维码",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/message/chat-files",
+			"style": {
+				"navigationBarTitleText": "聊天文件",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/message/share-contact",
+			"style": {
+				"navigationBarTitleText": "分享",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/message/chat-bubble",
+			"style": {
+				"navigationBarTitleText": "聊天气泡",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/profile/favorites",
+			"style": {
+				"navigationBarTitleText": "我的收藏",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/common/search",
+			"style": {
+				"navigationBarTitleText": "搜索",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/index/index",
 			"style": {
 				"navigationBarTitleText": "uni-app x"

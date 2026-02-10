@@ -1,0 +1,474 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<text class="header-title">聊天文件</text>
+			<view class="header-right"></view>
+		</view>
+
+		<!-- 分类标签 -->
+		<view class="file-tabs">
+			<view class="tab-item" v-for="tab in tabs" :key="tab.type" :class="{ 'tab-active': currentTab === tab.type }" @click="switchTab(tab.type)">
+				<text class="tab-text" :class="{ 'tab-text-active': currentTab === tab.type }">{{ tab.name }}</text>
+			</view>
+		</view>
+
+		<!-- 文件列表 -->
+		<scroll-view class="file-list" scroll-y="true" show-scrollbar="false">
+			<!-- 按日期分组 -->
+			<view class="date-group" v-for="group in displayFileGroups" :key="group.date">
+				<text class="date-title">{{ group.date }}</text>
+
+				<!-- 文件项 -->
+				<view class="file-item" v-for="file in group.files" :key="file.id" @click="handleFileClick(file)" @longpress="handleFileLongPress(file)">
+					<!-- 图片类型 -->
+					<view v-if="file.type === 'image'" class="file-preview image-preview">
+						<image class="preview-image" :src="file.url" mode="aspectFill" />
+					</view>
+
+					<!-- 视频类型 -->
+					<view v-else-if="file.type === 'video'" class="file-preview video-preview">
+						<image class="preview-image" :src="file.thumbnail" mode="aspectFill" />
+						<view class="video-play-icon-wrap">
+							<text class="iconfont video-play-icon">&#xe602;</text>
+						</view>
+					</view>
+
+					<!-- 文件类型 -->
+					<view v-else class="file-icon-wrap">
+						<text class="iconfont file-icon" :style="{ color: getFileColor(file.name) }">{{ getFileIcon(file.name) }}</text>
+					</view>
+
+					<view class="file-info">
+						<text class="file-name">{{ file.name }}</text>
+						<text class="file-meta">{{ file.size }} · {{ file.sender }}</text>
+					</view>
+
+					<text class="iconfont more-icon" @click.stop="handleFileMenu(file)">&#xea8d;</text>
+				</view>
+			</view>
+
+			<!-- 空状态 -->
+			<view class="empty-state" v-if="displayFileGroups.length === 0">
+				<text class="iconfont empty-icon">&#xea96;</text>
+				<text class="empty-text">暂无{{ currentTabName }}文件</text>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	const currentTab = ref('all')
+
+	const tabs = [
+		{ type: 'all', name: '全部' },
+		{ type: 'image', name: '图片' },
+		{ type: 'video', name: '视频' },
+		{ type: 'file', name: '文件' }
+	]
+
+	const currentTabName = computed(() : string => {
+		const tab = tabs.find(t => t.type === currentTab.value)
+		return tab ? tab.name : ''
+	})
+
+	// 模拟文件数据
+	const allFiles = ref([
+		{
+			id: 1,
+			type: 'image',
+			name: '产品原型图.png',
+			size: '2.3MB',
+			url: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/shuijiao.jpg',
+			thumbnail: '',
+			createTime: Date.now() - 2 * 60 * 60 * 1000,
+			sender: '张敏'
+		},
+		{
+			id: 2,
+			type: 'video',
+			name: '产品演示视频.mp4',
+			size: '15.6MB',
+			url: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/2.mp4',
+			thumbnail: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/2.mp4?vframe/jpg/offset/0',
+			createTime: Date.now() - 5 * 60 * 60 * 1000,
+			sender: '李强'
+		},
+		{
+			id: 3,
+			type: 'file',
+			name: '项目需求文档.docx',
+			size: '1.2MB',
+			url: '',
+			thumbnail: '',
+			createTime: Date.now() - 24 * 60 * 60 * 1000,
+			sender: '王静'
+		},
+		{
+			id: 4,
+			type: 'file',
+			name: '数据分析报告.xlsx',
+			size: '856KB',
+			url: '',
+			thumbnail: '',
+			createTime: Date.now() - 24 * 60 * 60 * 1000,
+			sender: '刘洋'
+		},
+		{
+			id: 5,
+			type: 'image',
+			name: 'UI设计稿.jpg',
+			size: '3.5MB',
+			url: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/shuijiao.jpg',
+			thumbnail: '',
+			createTime: Date.now() - 2 * 24 * 60 * 60 * 1000,
+			sender: '赵敏'
+		},
+		{
+			id: 6,
+			type: 'file',
+			name: '会议纪要.pdf',
+			size: '456KB',
+			url: '',
+			thumbnail: '',
+			createTime: Date.now() - 3 * 24 * 60 * 60 * 1000,
+			sender: '孙伟'
+		}
+	])
+
+	// 过滤后的文件
+	const filteredFiles = computed(() : any[] => {
+		if (currentTab.value === 'all') {
+			return allFiles.value
+		}
+		return allFiles.value.filter(file => file.type === currentTab.value)
+	})
+
+	// 按日期分组
+	const displayFileGroups = computed(() : any[] => {
+		const groups : any = {}
+		const now = Date.now()
+
+		filteredFiles.value.forEach(file => {
+			const date = new Date(file.createTime)
+			const today = new Date()
+			const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
+
+			let dateKey = ''
+			if (date.toDateString() === today.toDateString()) {
+				dateKey = '今天'
+			} else if (date.toDateString() === yesterday.toDateString()) {
+				dateKey = '昨天'
+			} else {
+				const month = (date.getMonth() + 1).toString().padStart(2, '0')
+				const day = date.getDate().toString().padStart(2, '0')
+				dateKey = `${month}月${day}日`
+			}
+
+			if (!groups[dateKey]) {
+				groups[dateKey] = []
+			}
+			groups[dateKey].push(file)
+		})
+
+		return Object.keys(groups).map(date => ({
+			date,
+			files: groups[date]
+		}))
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function switchTab(type : string) {
+		currentTab.value = type
+	}
+
+	function getFileIcon(fileName : string) : string {
+		const ext = fileName.split('.').pop()?.toLowerCase() || ''
+		const iconMap : any = {
+			'doc': '\uea96',
+			'docx': '\uea96',
+			'xls': '\uea96',
+			'xlsx': '\uea96',
+			'ppt': '\uea96',
+			'pptx': '\uea96',
+			'pdf': '\uea96',
+			'txt': '\uea96',
+			'zip': '\uea96',
+			'rar': '\uea96'
+		}
+		return iconMap[ext] || '\uea96'
+	}
+
+	function getFileColor(fileName : string) : string {
+		const ext = fileName.split('.').pop()?.toLowerCase() || ''
+		const colorMap : any = {
+			'doc': '#1677FF',
+			'docx': '#1677FF',
+			'xls': '#10b981',
+			'xlsx': '#10b981',
+			'ppt': '#f59e0b',
+			'pptx': '#f59e0b',
+			'pdf': '#F54A45',
+			'txt': '#8F959E',
+			'zip': '#8b5cf6',
+			'rar': '#8b5cf6'
+		}
+		return colorMap[ext] || '#646A73'
+	}
+
+	function handleFileClick(file : any) {
+		if (file.type === 'image') {
+			uni.previewImage({
+				urls: [file.url]
+			})
+		} else if (file.type === 'video') {
+			uni.showToast({
+				title: '播放视频: ' + file.name,
+				icon: 'none'
+			})
+		} else {
+			uni.showToast({
+				title: '打开文件: ' + file.name,
+				icon: 'none'
+			})
+		}
+	}
+
+	function handleFileLongPress(file : any) {
+		handleFileMenu(file)
+	}
+
+	function handleFileMenu(file : any) {
+		uni.showActionSheet({
+			itemList: ['转发', '收藏', '下载', '删除'],
+			success: (res) => {
+				const actions = ['转发', '收藏', '下载', '删除']
+				uni.showToast({
+					title: actions[res.tapIndex] + ': ' + file.name,
+					icon: 'none'
+				})
+			}
+		})
+	}
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F7FA;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #1F2329;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #1F2329;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 17px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	/* 分类标签 */
+	.file-tabs {
+		background-color: #FFFFFF;
+		flex-direction: row;
+		padding: 0 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.tab-item {
+		padding: 12px 16px;
+		margin-right: 8px;
+		position: relative;
+	}
+
+	.tab-text {
+		font-size: 15px;
+		color: #646A73;
+	}
+
+	.tab-active {
+		border-bottom-width: 2px;
+		border-bottom-color: #1677FF;
+	}
+
+	.tab-text-active {
+		color: #1677FF;
+		font-weight: 600;
+	}
+
+	/* 文件列表 */
+	.file-list {
+		flex: 1;
+		height: 0;
+	}
+
+	.date-group {
+		background-color: #FFFFFF;
+		margin-bottom: 10px;
+	}
+
+	.date-title {
+		font-size: 13px;
+		color: #8F959E;
+		padding: 12px 16px 8px;
+		background-color: #F5F7FA;
+	}
+
+	.file-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.file-item:last-child {
+		border-bottom-width: 0;
+	}
+
+	/* 文件预览 */
+	.file-preview {
+		width: 50px;
+		height: 50px;
+		border-radius: 6px;
+		overflow: hidden;
+		margin-right: 12px;
+		flex-shrink: 0;
+	}
+
+	.image-preview {
+		background-color: #F5F7FA;
+	}
+
+	.video-preview {
+		background-color: #000000;
+		position: relative;
+	}
+
+	.preview-image {
+		width: 50px;
+		height: 50px;
+	}
+
+	.video-play-icon-wrap {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		justify-content: center;
+		align-items: center;
+		background-color: rgba(0, 0, 0, 0.3);
+	}
+
+	.video-play-icon {
+		font-size: 20px;
+		color: #FFFFFF;
+	}
+
+	/* 文件图标 */
+	.file-icon-wrap {
+		width: 50px;
+		height: 50px;
+		background-color: #F5F7FA;
+		border-radius: 6px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 12px;
+		flex-shrink: 0;
+	}
+
+	.file-icon {
+		font-size: 28px;
+	}
+
+	.file-info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.file-name {
+		font-size: 15px;
+		color: #1F2329;
+		margin-bottom: 4px;
+		lines: 1;
+		text-overflow: ellipsis;
+	}
+
+	.file-meta {
+		font-size: 12px;
+		color: #8F959E;
+	}
+
+	.more-icon {
+		font-size: 18px;
+		color: #8F959E;
+		padding: 8px;
+		margin-right: -8px;
+	}
+
+	/* 空状态 */
+	.empty-state {
+		padding: 80px 16px;
+		align-items: center;
+	}
+
+	.empty-icon {
+		font-size: 64px;
+		color: #E5E5E5;
+		margin-bottom: 16px;
+	}
+
+	.empty-text {
+		font-size: 15px;
+		color: #8F959E;
+	}
+</style>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Chat Bubble Color Customization</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#D7000F", // Enterprise Red from header
+                        "background-light": "#F2F2F7",
+                        "background-dark": "#000000",
+                        "card-light": "#FFFFFF",
+                        "card-dark": "#1C1C1E",
+                    },
+                    fontFamily: {
+                        display: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "12px",
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        .color-picker-gradient {
+            background: linear-gradient(to bottom, transparent, black), 
+                        linear-gradient(to right, white, transparent), 
+                        rgb(0, 119, 255);
+            height: 280px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .hue-slider {
+            background: linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
+            height: 24px;
+            border-radius: 4px;
+        }
+        .picker-cursor {
+            width: 18px;
+            height: 18px;
+            border: 2px solid white;
+            border-radius: 50%;
+            position: absolute;
+            top: 10px;
+            right: 150px;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+        }
+        .hue-cursor {
+            width: 4px;
+            height: 100%;
+            background: #333;
+            position: absolute;
+            left: 55%;
+            top: 0;
+            border: 1px solid white;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 min-h-screen">
+<header class="bg-primary sticky top-0 z-50 px-4 h-14 flex items-center justify-between text-white">
+<button class="flex items-center space-x-1 active:opacity-60 transition-opacity">
+<span class="material-icons text-2xl">chevron_left</span>
+<span class="text-lg">返回</span>
+</button>
+<h1 class="text-lg font-semibold">气泡设置</h1>
+<button class="active:opacity-60 transition-opacity">
+<span class="material-icons text-2xl">check</span>
+</button>
+</header>
+<main class="max-w-md mx-auto p-4 space-y-8">
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-sm">
+<div class="color-picker-gradient shadow-inner">
+<div class="picker-cursor"></div>
+</div>
+<div class="mt-6 relative">
+<div class="hue-slider"></div>
+<div class="hue-cursor rounded-sm"></div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="text-center text-sm font-medium text-gray-500 dark:text-gray-400">
+                颜色预览
+            </div>
+<div class="flex justify-center">
+<div class="relative px-12 py-3 rounded-full bg-[#A3D1FF] dark:bg-[#2A5A8A] text-gray-800 dark:text-white text-lg font-medium shadow-sm transition-colors duration-300">
+                    Hello
+<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-[#A3D1FF] dark:bg-[#2A5A8A] rounded-full"></div>
+</div>
+</div>
+</div>
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-sm">
+<div class="flex justify-between items-center">
+<button class="w-10 h-10 rounded-full bg-[#E0FBFC] ring-2 ring-offset-2 ring-transparent active:ring-primary dark:ring-offset-card-dark transition-all"></button>
+<button class="w-10 h-10 rounded-full bg-[#F1FAEE] ring-2 ring-offset-2 ring-transparent active:ring-primary dark:ring-offset-card-dark transition-all"></button>
+<button class="w-10 h-10 rounded-full bg-[#FEFAE0] ring-2 ring-offset-2 ring-transparent active:ring-primary dark:ring-offset-card-dark transition-all"></button>
+<button class="w-10 h-10 rounded-full bg-[#FFD7D7] ring-2 ring-offset-2 ring-transparent active:ring-primary dark:ring-offset-card-dark transition-all"></button>
+<button class="w-10 h-10 rounded-full bg-[#FCE1FF] ring-2 ring-offset-2 ring-transparent active:ring-primary dark:ring-offset-card-dark transition-all"></button>
+<button class="w-10 h-10 rounded-full bg-[#D1D9FF] ring-2 ring-offset-2 ring-primary dark:ring-offset-card-dark transition-all"></button>
+</div>
+</div>
+</main>
+<div class="fixed bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-gray-300 dark:bg-gray-700 rounded-full"></div>
+
+</body></html>

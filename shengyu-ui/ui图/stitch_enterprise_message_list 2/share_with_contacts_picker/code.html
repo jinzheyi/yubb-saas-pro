@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Share with Contacts Picker</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#C8161D", // Deep red from the header
+                        "background-light": "#F2F2F7",
+                        "background-dark": "#000000",
+                        "card-light": "#FFFFFF",
+                        "card-dark": "#1C1C1E",
+                    },
+                    fontFamily: {
+                        display: ["-apple-system", "BlinkMacSystemFont", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "10px",
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .ios-shadow {
+            box-shadow: 0 1px 0 0 rgba(0,0,0,0.05);
+        }
+        .checkbox-custom:checked + label .check-inner {
+            background-color: #C8161D;
+            border-color: #C8161D;
+        }
+        .checkbox-custom:checked + label .check-inner::after {
+            content: '';
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(45deg);
+            width: 6px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+<header class="bg-primary pt-12 pb-3 px-4 flex items-center justify-between sticky top-0 z-50">
+<button class="flex items-center text-white">
+<span class="material-icons text-2xl">chevron_left</span>
+<span class="text-lg">返回</span>
+</button>
+<h1 class="text-white text-lg font-semibold absolute left-1/2 -translate-x-1/2">分享</h1>
+<div class="w-10"></div> 
+</header>
+<main class="flex-1 overflow-y-auto pb-24">
+<div class="p-3 bg-card-light dark:bg-card-dark ios-shadow">
+<div class="relative flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2">
+<span class="material-icons text-gray-400 text-lg mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder-gray-400 dark:placeholder-gray-500" placeholder="请输入关键字" type="text"/>
+</div>
+</div>
+<div class="mt-3 bg-card-light dark:bg-card-dark divide-y divide-gray-100 dark:divide-gray-800">
+<button class="w-full flex items-center justify-between px-4 py-4 active:bg-gray-50 dark:active:bg-gray-900">
+<span class="text-[17px]">创建新的单聊</span>
+<span class="material-icons text-gray-400">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between px-4 py-4 active:bg-gray-50 dark:active:bg-gray-900">
+<span class="text-[17px]">创建新的群聊</span>
+<span class="material-icons text-gray-400">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between px-4 py-4 active:bg-gray-50 dark:active:bg-gray-900">
+<span class="text-[17px]">选择一个群</span>
+<span class="material-icons text-gray-400">chevron_right</span>
+</button>
+</div>
+<div class="px-4 py-2 text-gray-500 dark:text-gray-400 text-sm">最近聊天</div>
+<div class="bg-card-light dark:bg-card-dark divide-y divide-gray-100 dark:divide-gray-800">
+<div class="flex items-center px-4 py-3">
+<input class="hidden checkbox-custom" id="contact1" type="checkbox"/>
+<label class="flex items-center w-full cursor-pointer" for="contact1">
+<div class="check-inner w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 mr-4 relative flex-shrink-0"></div>
+<div class="w-12 h-12 rounded-full overflow-hidden mr-4 bg-blue-500 flex flex-wrap p-1">
+<div class="w-1/2 h-1/2 flex items-center justify-center text-[8px] text-white border-[0.5px] border-blue-400">丹</div>
+<div class="w-1/2 h-1/2 flex items-center justify-center text-[8px] text-white border-[0.5px] border-blue-400">思</div>
+<div class="w-1/2 h-1/2 flex items-center justify-center text-[8px] text-white border-[0.5px] border-blue-400">寒</div>
+<div class="w-1/2 h-1/2 flex items-center justify-center text-[8px] text-white border-[0.5px] border-blue-400">晨</div>
+</div>
+<span class="text-[17px] font-medium truncate">财信科技工作群</span>
+</label>
+</div>
+<div class="flex items-center px-4 py-3">
+<input class="hidden checkbox-custom" id="contact2" type="checkbox"/>
+<label class="flex items-center w-full cursor-pointer" for="contact2">
+<div class="check-inner w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 mr-4 relative flex-shrink-0"></div>
+<div class="w-12 h-12 rounded-full mr-4 bg-sky-400 flex items-center justify-center text-white text-sm">来茂</div>
+<span class="text-[17px] font-medium">李来茂</span>
+</label>
+</div>
+<div class="flex items-center px-4 py-3">
+<input class="hidden checkbox-custom" id="contact3" type="checkbox"/>
+<label class="flex items-center w-full cursor-pointer" for="contact3">
+<div class="check-inner w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 mr-4 relative flex-shrink-0"></div>
+<div class="w-12 h-12 rounded-full mr-4 bg-pink-400 flex items-center justify-center text-white text-sm">胡婷</div>
+<span class="text-[17px] font-medium">胡婷</span>
+</label>
+</div>
+<div class="flex items-center px-4 py-3">
+<input class="hidden checkbox-custom" id="contact4" type="checkbox"/>
+<label class="flex items-center w-full cursor-pointer" for="contact4">
+<div class="check-inner w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 mr-4 relative flex-shrink-0"></div>
+<div class="w-12 h-12 rounded-full mr-4 bg-pink-500 flex items-center justify-center text-white text-sm">芬芬</div>
+<span class="text-[17px] font-medium">段芬芬</span>
+</label>
+</div>
+<div class="flex items-center px-4 py-3">
+<input class="hidden checkbox-custom" id="contact5" type="checkbox"/>
+<label class="flex items-center w-full cursor-pointer" for="contact5">
+<div class="check-inner w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 mr-4 relative flex-shrink-0"></div>
+<div class="w-12 h-12 rounded-full mr-4 bg-blue-600 flex items-center justify-center text-white text-sm">丁丁</div>
+<span class="text-[17px] font-medium">曾丁丁</span>
+</label>
+</div>
+<div class="flex items-center px-4 py-3">
+<input class="hidden checkbox-custom" id="contact6" type="checkbox"/>
+<label class="flex items-center w-full cursor-pointer" for="contact6">
+<div class="check-inner w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 mr-4 relative flex-shrink-0"></div>
+<div class="w-12 h-12 rounded-full mr-4 bg-rose-400 flex items-center justify-center text-white text-sm">红霞</div>
+<span class="text-[17px] font-medium">刘红霞</span>
+</label>
+</div>
+<div class="flex items-center px-4 py-3">
+<input class="hidden checkbox-custom" id="contact7" type="checkbox"/>
+<label class="flex items-center w-full cursor-pointer" for="contact7">
+<div class="check-inner w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 mr-4 relative flex-shrink-0"></div>
+<div class="w-12 h-12 rounded-full mr-4 bg-pink-400 flex items-center justify-center text-white text-sm">徐卉</div>
+<span class="text-[17px] font-medium">徐卉</span>
+</label>
+</div>
+<div class="flex items-center px-4 py-3">
+<input class="hidden checkbox-custom" id="contact8" type="checkbox"/>
+<label class="flex items-center w-full cursor-pointer" for="contact8">
+<div class="check-inner w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 mr-4 relative flex-shrink-0"></div>
+<div class="w-12 h-12 rounded-full mr-4 bg-sky-400 flex items-center justify-center text-white text-sm">文照</div>
+<span class="text-[17px] font-medium">文照</span>
+</label>
+</div>
+</div>
+</main>
+<footer class="fixed bottom-0 left-0 right-0 bg-card-light dark:bg-card-dark border-t border-gray-200 dark:border-gray-800 px-4 py-4 flex items-center justify-between safe-area-bottom">
+<div class="text-[17px]">
+            已选择:<span class="ml-1" id="selected-count">0</span>
+</div>
+<button class="bg-gray-300 dark:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50" disabled="" id="confirm-btn">
+            确定(0/10)
+        </button>
+</footer>
+<script>
+        const checkboxes = document.querySelectorAll('.checkbox-custom');
+        const countDisplay = document.getElementById('selected-count');
+        const confirmBtn = document.getElementById('confirm-btn');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const checkedCount = document.querySelectorAll('.checkbox-custom:checked').length;
+                countDisplay.textContent = checkedCount;
+                confirmBtn.textContent = `确定(${checkedCount}/10)`;
+                if (checkedCount > 0) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.classList.remove('bg-gray-300', 'dark:bg-gray-700');
+                    confirmBtn.classList.add('bg-primary');
+                } else {
+                    confirmBtn.disabled = true;
+                    confirmBtn.classList.add('bg-gray-300', 'dark:bg-gray-700');
+                    confirmBtn.classList.remove('bg-primary');
+                }
+            });
+        });
+    </script>
+
+</body></html>

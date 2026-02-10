@@ -5,9 +5,9 @@
 			<view class="header-top">
 				<text class="header-title">{{ t('contacts.title') }}</text>
 			</view>
-			<view class="search-bar">
+			<view class="search-bar" @click="handleSearch">
 				<text class="iconfont search-icon">&#xea6e;</text>
-				<input class="search-input" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" />
+				<input class="search-input" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" disabled />
 			</view>
 		</view>
 
@@ -183,6 +183,15 @@
 	function handleContact(item : any) {
 		uni.navigateTo({
 			url: '/pages/message/chat?name=' + item.name
+		})
+	}
+
+	/**
+	 * 搜索
+	 */
+	function handleSearch() {
+		uni.navigateTo({
+			url: '/pages/common/search'
 		})
 	}
 </script>

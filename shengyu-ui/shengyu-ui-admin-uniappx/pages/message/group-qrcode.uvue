@@ -1,0 +1,348 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<text class="header-title">群二维码</text>
+			<view class="header-right"></view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<!-- 二维码卡片 -->
+			<view class="qrcode-card">
+				<!-- 群信息 -->
+				<view class="group-info">
+					<view class="group-avatar">
+						<text class="iconfont group-icon">&#xe616;</text>
+					</view>
+					<text class="group-name">{{ groupName }}</text>
+					<text class="group-desc">{{ memberCount }}人</text>
+				</view>
+
+				<!-- 二维码 -->
+				<view class="qrcode-wrap">
+					<view class="qrcode-placeholder">
+						<text class="iconfont qrcode-icon">&#xea8b;</text>
+					</view>
+					<!-- 实际项目中使用 canvas 生成二维码 -->
+					<!-- <canvas canvas-id="qrcode" class="qrcode-canvas"></canvas> -->
+				</view>
+
+				<text class="qrcode-tip">扫一扫上面的二维码加入群聊</text>
+			</view>
+
+			<!-- 操作按钮 -->
+			<view class="action-buttons">
+				<button class="action-btn primary-btn" @click="handleSave">
+					<text class="iconfont btn-icon">&#xea72;</text>
+					<text class="btn-text">保存到相册</text>
+				</button>
+				<button class="action-btn secondary-btn" @click="handleShare">
+					<text class="iconfont btn-icon">&#xe63d;</text>
+					<text class="btn-text">分享</text>
+				</button>
+			</view>
+
+			<!-- 说明文字 -->
+			<view class="tips-section">
+				<text class="tips-title">如何使用二维码</text>
+				<view class="tips-item">
+					<text class="tips-number">1</text>
+					<text class="tips-text">打开应用，点击右上角扫一扫</text>
+				</view>
+				<view class="tips-item">
+					<text class="tips-number">2</text>
+					<text class="tips-text">扫描群二维码</text>
+				</view>
+				<view class="tips-item">
+					<text class="tips-number">3</text>
+					<text class="tips-text">确认加入群聊</text>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	const groupName = ref('产品研发团队')
+	const memberCount = ref(12)
+	const groupId = ref(0)
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function handleSave() {
+		// 实际项目中使用 uni.canvasToTempFilePath 生成图片
+		// 然后使用 uni.saveImageToPhotosAlbum 保存到相册
+		uni.showToast({
+			title: '保存成功',
+			icon: 'success'
+		})
+	}
+
+	function handleShare() {
+		// 实际项目中使用 uni.share 分享
+		uni.showActionSheet({
+			itemList: ['分享到微信', '分享到朋友圈', '复制链接'],
+			success: (res) => {
+				uni.showToast({
+					title: '分享功能开发中',
+					icon: 'none'
+				})
+			}
+		})
+	}
+
+	onLoad((options : any) => {
+		if (options['groupId']) {
+			groupId.value = parseInt(options['groupId'])
+		}
+		if (options['name']) {
+			groupName.value = decodeURIComponent(options['name'])
+		}
+		if (options['memberCount']) {
+			memberCount.value = parseInt(options['memberCount'])
+		}
+		
+		// 实际项目中在这里生成二维码
+		// generateQRCode()
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F7FA;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #1F2329;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #1F2329;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 17px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+	}
+
+	/* 二维码卡片 */
+	.qrcode-card {
+		background-color: #FFFFFF;
+		margin: 20px 16px;
+		border-radius: 12px;
+		padding: 24px;
+		align-items: center;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+	}
+
+	.group-info {
+		align-items: center;
+		margin-bottom: 24px;
+	}
+
+	.group-avatar {
+		width: 60px;
+		height: 60px;
+		background-color: #10b981;
+		border-radius: 12px;
+		justify-content: center;
+		align-items: center;
+		margin-bottom: 12px;
+	}
+
+	.group-icon {
+		font-size: 32px;
+		color: #FFFFFF;
+	}
+
+	.group-name {
+		font-size: 18px;
+		color: #1F2329;
+		font-weight: 600;
+		margin-bottom: 6px;
+	}
+
+	.group-desc {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
+	.qrcode-wrap {
+		width: 200px;
+		height: 200px;
+		margin-bottom: 16px;
+	}
+
+	.qrcode-placeholder {
+		width: 200px;
+		height: 200px;
+		background-color: #F5F7FA;
+		border-radius: 8px;
+		justify-content: center;
+		align-items: center;
+		border-width: 2px;
+		border-color: #E5E5E5;
+		border-style: dashed;
+	}
+
+	.qrcode-icon {
+		font-size: 80px;
+		color: #C1C4C9;
+	}
+
+	.qrcode-canvas {
+		width: 200px;
+		height: 200px;
+	}
+
+	.qrcode-tip {
+		font-size: 13px;
+		color: #8F959E;
+		text-align: center;
+	}
+
+	/* 操作按钮 */
+	.action-buttons {
+		padding: 0 16px;
+		margin-bottom: 24px;
+	}
+
+	.action-btn {
+		height: 44px;
+		border-radius: 8px;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		margin-bottom: 12px;
+		border-width: 0;
+	}
+
+	.primary-btn {
+		background-color: #1677FF;
+	}
+
+	.secondary-btn {
+		background-color: #FFFFFF;
+		border-width: 1px;
+		border-color: #E5E5E5;
+	}
+
+	.btn-icon {
+		font-size: 18px;
+		margin-right: 8px;
+	}
+
+	.primary-btn .btn-icon {
+		color: #FFFFFF;
+	}
+
+	.secondary-btn .btn-icon {
+		color: #1677FF;
+	}
+
+	.btn-text {
+		font-size: 15px;
+		font-weight: 500;
+	}
+
+	.primary-btn .btn-text {
+		color: #FFFFFF;
+	}
+
+	.secondary-btn .btn-text {
+		color: #1F2329;
+	}
+
+	/* 说明文字 */
+	.tips-section {
+		background-color: #FFFFFF;
+		padding: 20px 16px;
+		margin: 0 16px 20px;
+		border-radius: 12px;
+	}
+
+	.tips-title {
+		font-size: 15px;
+		color: #1F2329;
+		font-weight: 600;
+		margin-bottom: 16px;
+	}
+
+	.tips-item {
+		flex-direction: row;
+		align-items: flex-start;
+		margin-bottom: 12px;
+	}
+
+	.tips-item:last-child {
+		margin-bottom: 0;
+	}
+
+	.tips-number {
+		width: 20px;
+		height: 20px;
+		background-color: #1677FF;
+		color: #FFFFFF;
+		font-size: 12px;
+		border-radius: 10px;
+		text-align: center;
+		line-height: 20px;
+		margin-right: 12px;
+		flex-shrink: 0;
+	}
+
+	.tips-text {
+		flex: 1;
+		font-size: 14px;
+		color: #646A73;
+		line-height: 20px;
+	}
+</style>

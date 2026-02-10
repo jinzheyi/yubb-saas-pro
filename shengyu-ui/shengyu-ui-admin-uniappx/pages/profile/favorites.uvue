@@ -1,0 +1,532 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<text class="header-title">我的收藏</text>
+			<view class="header-right"></view>
+		</view>
+
+		<!-- 分类标签 -->
+		<view class="category-tabs">
+			<view class="tab-item" v-for="tab in tabs" :key="tab.type" :class="{ 'tab-active': currentTab === tab.type }" @click="switchTab(tab.type)">
+				<text class="iconfont tab-icon">{{ tab.icon }}</text>
+				<text class="tab-text" :class="{ 'tab-text-active': currentTab === tab.type }">{{ tab.name }}</text>
+			</view>
+		</view>
+
+		<!-- 收藏列表 -->
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false" v-if="displayFavorites.length > 0">
+			<view class="favorite-item" v-for="item in displayFavorites" :key="item.id" @click="handleItemClick(item)" @longpress="handleItemLongPress(item)">
+				<!-- 文字类型 -->
+				<view v-if="item.type === 'text'" class="favorite-text-item">
+					<text class="favorite-text-content">{{ item.content }}</text>
+					<view class="favorite-meta">
+						<text class="favorite-from">来自: {{ item.fromChat }}</text>
+						<text class="favorite-time">{{ formatTime(item.createTime) }}</text>
+					</view>
+				</view>
+
+				<!-- 图片类型 -->
+				<view v-else-if="item.type === 'image'" class="favorite-image-item">
+					<image class="favorite-image" :src="item.content" mode="aspectFill" />
+					<view class="favorite-meta">
+						<text class="favorite-from">来自: {{ item.fromChat }}</text>
+						<text class="favorite-time">{{ formatTime(item.createTime) }}</text>
+					</view>
+				</view>
+
+				<!-- 视频类型 -->
+				<view v-else-if="item.type === 'video'" class="favorite-video-item">
+					<view class="video-preview">
+						<image class="favorite-image" :src="item.thumbnail" mode="aspectFill" />
+						<view class="video-play-overlay">
+							<text class="iconfont video-play-icon">&#xe602;</text>
+						</view>
+					</view>
+					<view class="favorite-meta">
+						<text class="favorite-from">来自: {{ item.fromChat }}</text>
+						<text class="favorite-time">{{ formatTime(item.createTime) }}</text>
+					</view>
+				</view>
+
+				<!-- 文件类型 -->
+				<view v-else-if="item.type === 'file'" class="favorite-file-item">
+					<view class="file-icon-wrap">
+						<text class="iconfont file-icon">&#xea96;</text>
+					</view>
+					<view class="file-info">
+						<text class="file-name">{{ item.fileName }}</text>
+						<text class="file-size">{{ item.fileSize }}</text>
+					</view>
+					<view class="favorite-meta">
+						<text class="favorite-from">来自: {{ item.fromChat }}</text>
+						<text class="favorite-time">{{ formatTime(item.createTime) }}</text>
+					</view>
+				</view>
+
+				<!-- 链接类型 -->
+				<view v-else-if="item.type === 'link'" class="favorite-link-item">
+					<view class="link-content">
+						<text class="link-title">{{ item.title }}</text>
+						<text class="link-url">{{ item.content }}</text>
+					</view>
+					<image v-if="item.thumbnail" class="link-thumbnail" :src="item.thumbnail" mode="aspectFill" />
+					<view class="favorite-meta">
+						<text class="favorite-from">来自: {{ item.fromChat }}</text>
+						<text class="favorite-time">{{ formatTime(item.createTime) }}</text>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+
+		<!-- 空状态 -->
+		<view class="empty-state" v-else>
+			<text class="iconfont empty-icon">&#xe83f;</text>
+			<text class="empty-text">暂无{{ currentTabName }}收藏</text>
+			<text class="empty-tip">长按消息可以收藏</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	const currentTab = ref('all')
+
+	const tabs = [
+		{ type: 'all', name: '全部', icon: '\ue616' },
+		{ type: 'text', name: '文字', icon: '\uea98' },
+		{ type: 'image', name: '图片', icon: '\ue608' },
+		{ type: 'video', name: '视频', icon: '\uea87' },
+		{ type: 'file', name: '文件', icon: '\uea96' },
+		{ type: 'link', name: '链接', icon: '\ue7ab' }
+	]
+
+	const currentTabName = computed(() : string => {
+		const tab = tabs.find(t => t.type === currentTab.value)
+		return tab ? tab.name : ''
+	})
+
+	// 模拟收藏数据
+	const allFavorites = ref([
+		{
+			id: 1,
+			type: 'text',
+			content: '今天下午3点开会，大家准时参加。会议室在3楼会议室A。',
+			fromChat: '产品研发团队',
+			createTime: Date.now() - 2 * 60 * 60 * 1000
+		},
+		{
+			id: 2,
+			type: 'image',
+			content: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/shuijiao.jpg',
+			fromChat: '张敏',
+			createTime: Date.now() - 5 * 60 * 60 * 1000
+		},
+		{
+			id: 3,
+			type: 'video',
+			content: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/2.mp4',
+			thumbnail: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/2.mp4?vframe/jpg/offset/0',
+			fromChat: '李强',
+			createTime: Date.now() - 24 * 60 * 60 * 1000
+		},
+		{
+			id: 4,
+			type: 'file',
+			content: '',
+			fileName: '项目需求文档.docx',
+			fileSize: '1.2MB',
+			fromChat: '王静',
+			createTime: Date.now() - 2 * 24 * 60 * 60 * 1000
+		},
+		{
+			id: 5,
+			type: 'link',
+			content: 'https://uniapp.dcloud.net.cn/',
+			title: 'uni-app官网',
+			thumbnail: '',
+			fromChat: '刘洋',
+			createTime: Date.now() - 3 * 24 * 60 * 60 * 1000
+		},
+		{
+			id: 6,
+			type: 'text',
+			content: '记得明天带上笔记本电脑',
+			fromChat: '赵敏',
+			createTime: Date.now() - 4 * 24 * 60 * 60 * 1000
+		}
+	])
+
+	// 过滤后的收藏
+	const displayFavorites = computed(() : any[] => {
+		if (currentTab.value === 'all') {
+			return allFavorites.value
+		}
+		return allFavorites.value.filter(item => item.type === currentTab.value)
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function switchTab(type : string) {
+		currentTab.value = type
+	}
+
+	function formatTime(timestamp : number) : string {
+		const date = new Date(timestamp)
+		const now = new Date()
+		const diff = now.getTime() - timestamp
+
+		if (diff < 60 * 60 * 1000) {
+			return Math.floor(diff / (60 * 1000)) + '分钟前'
+		} else if (diff < 24 * 60 * 60 * 1000) {
+			return Math.floor(diff / (60 * 60 * 1000)) + '小时前'
+		} else if (diff < 7 * 24 * 60 * 60 * 1000) {
+			return Math.floor(diff / (24 * 60 * 60 * 1000)) + '天前'
+		} else {
+			const month = (date.getMonth() + 1).toString().padStart(2, '0')
+			const day = date.getDate().toString().padStart(2, '0')
+			return `${month}-${day}`
+		}
+	}
+
+	function handleItemClick(item : any) {
+		if (item.type === 'image') {
+			uni.previewImage({
+				urls: [item.content]
+			})
+		} else if (item.type === 'video') {
+			uni.showToast({
+				title: '播放视频',
+				icon: 'none'
+			})
+		} else if (item.type === 'link') {
+			uni.showToast({
+				title: '打开链接: ' + item.content,
+				icon: 'none'
+			})
+		} else {
+			uni.showToast({
+				title: '查看详情',
+				icon: 'none'
+			})
+		}
+	}
+
+	function handleItemLongPress(item : any) {
+		uni.showActionSheet({
+			itemList: ['转发', '取消收藏', '删除'],
+			success: (res) => {
+				if (res.tapIndex === 2) {
+					// 删除
+					const index = allFavorites.value.findIndex(f => f.id === item.id)
+					if (index > -1) {
+						allFavorites.value.splice(index, 1)
+						uni.showToast({
+							title: '已删除',
+							icon: 'success'
+						})
+					}
+				} else if (res.tapIndex === 1) {
+					// 取消收藏
+					const index = allFavorites.value.findIndex(f => f.id === item.id)
+					if (index > -1) {
+						allFavorites.value.splice(index, 1)
+						uni.showToast({
+							title: '已取消收藏',
+							icon: 'success'
+						})
+					}
+				} else {
+					uni.showToast({
+						title: '转发功能开发中',
+						icon: 'none'
+					})
+				}
+			}
+		})
+	}
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F7FA;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #1F2329;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #1F2329;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 17px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	/* 分类标签 */
+	.category-tabs {
+		background-color: #FFFFFF;
+		flex-direction: row;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+		overflow-x: scroll;
+	}
+
+	.tab-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 6px 12px;
+		border-radius: 16px;
+		margin-right: 8px;
+		background-color: #F5F7FA;
+		flex-shrink: 0;
+	}
+
+	.tab-active {
+		background-color: #E8EFFF;
+	}
+
+	.tab-icon {
+		font-size: 16px;
+		color: #646A73;
+		margin-right: 4px;
+	}
+
+	.tab-text {
+		font-size: 13px;
+		color: #646A73;
+	}
+
+	.tab-text-active {
+		color: #1677FF;
+		font-weight: 600;
+	}
+
+	.tab-active .tab-icon {
+		color: #1677FF;
+	}
+
+	/* 内容区域 */
+	.content {
+		flex: 1;
+		height: 0;
+	}
+
+	.favorite-item {
+		background-color: #FFFFFF;
+		margin-bottom: 10px;
+		padding: 16px;
+	}
+
+	/* 文字收藏 */
+	.favorite-text-item {
+	}
+
+	.favorite-text-content {
+		font-size: 15px;
+		color: #1F2329;
+		line-height: 1.6;
+		margin-bottom: 12px;
+	}
+
+	/* 图片收藏 */
+	.favorite-image-item {
+	}
+
+	.favorite-image {
+		width: 100%;
+		height: 200px;
+		border-radius: 8px;
+		margin-bottom: 12px;
+	}
+
+	/* 视频收藏 */
+	.favorite-video-item {
+	}
+
+	.video-preview {
+		position: relative;
+		width: 100%;
+		height: 200px;
+		border-radius: 8px;
+		overflow: hidden;
+		margin-bottom: 12px;
+	}
+
+	.video-play-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		justify-content: center;
+		align-items: center;
+		background-color: rgba(0, 0, 0, 0.3);
+	}
+
+	.video-play-icon {
+		font-size: 48px;
+		color: #FFFFFF;
+	}
+
+	/* 文件收藏 */
+	.favorite-file-item {
+		flex-direction: row;
+		align-items: center;
+		padding-bottom: 12px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+		margin-bottom: 12px;
+	}
+
+	.file-icon-wrap {
+		width: 50px;
+		height: 50px;
+		background-color: #F5F7FA;
+		border-radius: 8px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 12px;
+	}
+
+	.file-icon {
+		font-size: 28px;
+		color: #1677FF;
+	}
+
+	.file-info {
+		flex: 1;
+	}
+
+	.file-name {
+		font-size: 15px;
+		color: #1F2329;
+		margin-bottom: 4px;
+	}
+
+	.file-size {
+		font-size: 13px;
+		color: #8F959E;
+	}
+
+	/* 链接收藏 */
+	.favorite-link-item {
+		flex-direction: row;
+		align-items: center;
+		padding-bottom: 12px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+		margin-bottom: 12px;
+	}
+
+	.link-content {
+		flex: 1;
+		margin-right: 12px;
+	}
+
+	.link-title {
+		font-size: 15px;
+		color: #1F2329;
+		margin-bottom: 4px;
+	}
+
+	.link-url {
+		font-size: 12px;
+		color: #1677FF;
+		lines: 1;
+		text-overflow: ellipsis;
+	}
+
+	.link-thumbnail {
+		width: 60px;
+		height: 60px;
+		border-radius: 6px;
+	}
+
+	/* 元信息 */
+	.favorite-meta {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.favorite-from {
+		font-size: 12px;
+		color: #8F959E;
+	}
+
+	.favorite-time {
+		font-size: 12px;
+		color: #8F959E;
+	}
+
+	/* 空状态 */
+	.empty-state {
+		flex: 1;
+		justify-content: center;
+		align-items: center;
+		padding: 80px 16px;
+	}
+
+	.empty-icon {
+		font-size: 80px;
+		color: #E5E5E5;
+		margin-bottom: 16px;
+	}
+
+	.empty-text {
+		font-size: 16px;
+		color: #646A73;
+		margin-bottom: 8px;
+	}
+
+	.empty-tip {
+		font-size: 13px;
+		color: #8F959E;
+	}
+</style>

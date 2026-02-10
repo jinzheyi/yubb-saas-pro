@@ -1,0 +1,449 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<text class="header-title">聊天气泡</text>
+			<view class="header-right"></view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<!-- 预览区域 -->
+			<view class="preview-section">
+				<text class="preview-title">预览效果</text>
+				<view class="preview-chat">
+					<!-- 对方消息 -->
+					<view class="message-item message-other">
+						<view class="message-avatar other-avatar">
+							<text class="avatar-text">对方</text>
+						</view>
+						<view class="message-bubble other-bubble">
+							<text class="message-text">这是对方的消息</text>
+						</view>
+					</view>
+
+					<!-- 我的消息 -->
+					<view class="message-item message-self">
+						<view class="message-bubble self-bubble" :style="{ backgroundColor: selectedColor }">
+							<text class="message-text" :style="{ color: getTextColor(selectedColor) }">这是我的消息</text>
+						</view>
+						<view class="message-avatar self-avatar">
+							<text class="avatar-text">我</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<!-- 颜色选择 -->
+			<view class="color-section">
+				<text class="section-title">选择颜色</text>
+				<view class="color-grid">
+					<view class="color-item" v-for="color in colorList" :key="color.value" @click="selectColor(color.value)">
+						<view class="color-block" :style="{ backgroundColor: color.value }">
+							<text v-if="selectedColor === color.value" class="iconfont check-icon">&#xe65f;</text>
+						</view>
+						<text class="color-name">{{ color.name }}</text>
+					</view>
+				</view>
+			</view>
+
+			<!-- 自定义颜色 -->
+			<view class="custom-section">
+				<text class="section-title">自定义颜色</text>
+				<view class="custom-color-row">
+					<view class="custom-color-preview" :style="{ backgroundColor: customColor }"></view>
+					<input class="custom-color-input" v-model="customColor" placeholder="#1677FF" />
+					<button class="apply-btn" @click="applyCustomColor">
+						<text class="apply-btn-text">应用</text>
+					</button>
+				</view>
+				<text class="custom-tip">输入十六进制颜色代码，如：#1677FF</text>
+			</view>
+		</scroll-view>
+
+		<!-- 底部按钮 -->
+		<view class="footer">
+			<button class="reset-btn" @click="resetColor">
+				<text class="reset-btn-text">恢复默认</text>
+			</button>
+			<button class="confirm-btn" @click="confirmColor">
+				<text class="confirm-btn-text">确定</text>
+			</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	const selectedColor = ref('#D2E3FC')
+	const customColor = ref('')
+
+	const colorList = [
+		{ name: '默认蓝', value: '#D2E3FC' },
+		{ name: '清新绿', value: '#C8E6C9' },
+		{ name: '温暖橙', value: '#FFE0B2' },
+		{ name: '浪漫粉', value: '#F8BBD0' },
+		{ name: '优雅紫', value: '#E1BEE7' },
+		{ name: '天空蓝', value: '#B3E5FC' },
+		{ name: '柠檬黄', value: '#FFF9C4' },
+		{ name: '薄荷绿', value: '#B2DFDB' }
+	]
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function selectColor(color : string) {
+		selectedColor.value = color
+	}
+
+	function applyCustomColor() {
+		if (!customColor.value) {
+			uni.showToast({
+				title: '请输入颜色代码',
+				icon: 'none'
+			})
+			return
+		}
+
+		// 验证颜色代码格式
+		const colorRegex = /^#[0-9A-Fa-f]{6}$/
+		if (!colorRegex.test(customColor.value)) {
+			uni.showToast({
+				title: '颜色代码格式错误',
+				icon: 'none'
+			})
+			return
+		}
+
+		selectedColor.value = customColor.value
+		uni.showToast({
+			title: '已应用自定义颜色',
+			icon: 'success'
+		})
+	}
+
+	function resetColor() {
+		selectedColor.value = '#D2E3FC'
+		customColor.value = ''
+		uni.showToast({
+			title: '已恢复默认颜色',
+			icon: 'success'
+		})
+	}
+
+	function confirmColor() {
+		// 保存颜色设置到本地存储
+		// uni.setStorageSync('chatBubbleColor', selectedColor.value)
+		
+		uni.showToast({
+			title: '设置成功',
+			icon: 'success'
+		})
+
+		setTimeout(() => {
+			uni.navigateBack()
+		}, 1500)
+	}
+
+	function getTextColor(bgColor : string) : string {
+		// 简单判断：浅色背景用深色文字，深色背景用浅色文字
+		// 实际项目中可以使用更精确的算法
+		const lightColors = ['#FFE0B2', '#FFF9C4', '#B3E5FC', '#C8E6C9', '#B2DFDB']
+		return lightColors.includes(bgColor) ? '#1F2329' : '#1F2329'
+	}
+
+	onLoad(() => {
+		// 从本地存储加载颜色设置
+		// const savedColor = uni.getStorageSync('chatBubbleColor')
+		// if (savedColor) {
+		//   selectedColor.value = savedColor
+		// }
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F7FA;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #1F2329;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #1F2329;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 17px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+	}
+
+	/* 预览区域 */
+	.preview-section {
+		background-color: #FFFFFF;
+		padding: 20px 16px;
+		margin-bottom: 10px;
+	}
+
+	.preview-title {
+		font-size: 15px;
+		color: #1F2329;
+		font-weight: 600;
+		margin-bottom: 16px;
+	}
+
+	.preview-chat {
+		background-color: #F5F7FA;
+		border-radius: 8px;
+		padding: 16px;
+	}
+
+	.message-item {
+		flex-direction: row;
+		margin-bottom: 12px;
+		align-items: flex-end;
+	}
+
+	.message-item:last-child {
+		margin-bottom: 0;
+	}
+
+	.message-other {
+		flex-direction: row;
+	}
+
+	.message-self {
+		flex-direction: row-reverse;
+	}
+
+	.message-avatar {
+		width: 36px;
+		height: 36px;
+		border-radius: 6px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.other-avatar {
+		background-color: #F197BC;
+		margin-right: 8px;
+	}
+
+	.self-avatar {
+		background-color: #5FB6F7;
+		margin-left: 8px;
+	}
+
+	.avatar-text {
+		color: #FFFFFF;
+		font-size: 12px;
+		font-weight: 600;
+	}
+
+	.message-bubble {
+		padding: 10px 14px;
+		border-radius: 10px;
+		max-width: 60%;
+	}
+
+	.other-bubble {
+		background-color: #FFFFFF;
+	}
+
+	.self-bubble {
+		/* 背景色由 selectedColor 控制 */
+	}
+
+	.message-text {
+		font-size: 14px;
+		color: #1F2329;
+		line-height: 1.5;
+	}
+
+	/* 颜色选择 */
+	.color-section {
+		background-color: #FFFFFF;
+		padding: 20px 16px;
+		margin-bottom: 10px;
+	}
+
+	.section-title {
+		font-size: 15px;
+		color: #1F2329;
+		font-weight: 600;
+		margin-bottom: 16px;
+	}
+
+	.color-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+	}
+
+	.color-item {
+		width: 25%;
+		align-items: center;
+		margin-bottom: 20px;
+	}
+
+	.color-block {
+		width: 50px;
+		height: 50px;
+		border-radius: 25px;
+		justify-content: center;
+		align-items: center;
+		margin-bottom: 8px;
+		border-width: 2px;
+		border-color: #E5E5E5;
+	}
+
+	.check-icon {
+		font-size: 24px;
+		color: #FFFFFF;
+	}
+
+	.color-name {
+		font-size: 12px;
+		color: #646A73;
+		text-align: center;
+	}
+
+	/* 自定义颜色 */
+	.custom-section {
+		background-color: #FFFFFF;
+		padding: 20px 16px;
+		margin-bottom: 10px;
+	}
+
+	.custom-color-row {
+		flex-direction: row;
+		align-items: center;
+		margin-bottom: 12px;
+	}
+
+	.custom-color-preview {
+		width: 40px;
+		height: 40px;
+		border-radius: 8px;
+		border-width: 1px;
+		border-color: #E5E5E5;
+		margin-right: 12px;
+	}
+
+	.custom-color-input {
+		flex: 1;
+		height: 40px;
+		background-color: #F5F7FA;
+		border-radius: 8px;
+		padding: 0 12px;
+		font-size: 14px;
+		color: #1F2329;
+		margin-right: 12px;
+	}
+
+	.apply-btn {
+		background-color: #1677FF;
+		height: 40px;
+		padding: 0 16px;
+		border-radius: 8px;
+		justify-content: center;
+		border-width: 0;
+	}
+
+	.apply-btn-text {
+		color: #FFFFFF;
+		font-size: 14px;
+		font-weight: 500;
+	}
+
+	.custom-tip {
+		font-size: 12px;
+		color: #8F959E;
+	}
+
+	/* 底部按钮 */
+	.footer {
+		background-color: #FFFFFF;
+		border-top-width: 0.5px;
+		border-top-color: #EFF0F1;
+		padding: 12px 16px;
+		flex-direction: row;
+		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+	}
+
+	.reset-btn {
+		flex: 1;
+		height: 44px;
+		background-color: #F5F7FA;
+		border-radius: 8px;
+		justify-content: center;
+		margin-right: 12px;
+		border-width: 0;
+	}
+
+	.reset-btn-text {
+		color: #646A73;
+		font-size: 15px;
+		font-weight: 500;
+	}
+
+	.confirm-btn {
+		flex: 1;
+		height: 44px;
+		background-color: #1677FF;
+		border-radius: 8px;
+		justify-content: center;
+		border-width: 0;
+	}
+
+	.confirm-btn-text {
+		color: #FFFFFF;
+		font-size: 15px;
+		font-weight: 500;
+	}
+</style>

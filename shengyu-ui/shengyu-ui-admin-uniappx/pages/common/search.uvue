@@ -1,0 +1,437 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		
+		<!-- 搜索头部 -->
+		<view class="search-header">
+			<view class="search-bar">
+				<text class="iconfont search-icon">&#xea6e;</text>
+				<input class="search-input" v-model="keyword" placeholder="搜索联系人、群聊、消息" placeholder-class="placeholder" @input="handleSearch" @confirm="handleSearchConfirm" focus />
+			</view>
+			<text class="cancel-btn" @click="handleBack">取消</text>
+		</view>
+
+		<!-- 搜索历史 -->
+		<view class="search-history" v-if="!keyword && historyList.length > 0">
+			<view class="history-header">
+				<text class="history-title">搜索历史</text>
+				<text class="clear-btn" @click="clearHistory">
+					<text class="iconfont">&#xe602;</text>
+				</text>
+			</view>
+			<view class="history-tags">
+				<view class="history-tag" v-for="(item, index) in historyList" :key="index" @click="searchHistory(item)">
+					<text class="history-text">{{ item }}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 热门搜索 -->
+		<view class="hot-search" v-if="!keyword && hotList.length > 0">
+			<text class="hot-title">热门搜索</text>
+			<view class="hot-tags">
+				<view class="hot-tag" v-for="(item, index) in hotList" :key="index" @click="searchHot(item)">
+					<text class="hot-text">{{ item }}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 搜索结果 -->
+		<scroll-view class="search-results" scroll-y="true" show-scrollbar="false" v-if="keyword">
+			<!-- 联系人结果 -->
+			<view class="result-section" v-if="contactResults.length > 0">
+				<text class="result-title">联系人</text>
+				<view class="result-list">
+					<view class="result-item" v-for="contact in contactResults" :key="contact.id" @click="handleContactClick(contact)">
+						<view class="result-avatar" :style="{ backgroundColor: contact.avatarBg }">
+							<text class="result-avatar-text">{{ contact.avatarText }}</text>
+						</view>
+						<view class="result-info">
+							<text class="result-name">{{ highlightKeyword(contact.name) }}</text>
+							<text class="result-desc">{{ contact.role }}</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<!-- 群聊结果 -->
+			<view class="result-section" v-if="groupResults.length > 0">
+				<text class="result-title">群聊</text>
+				<view class="result-list">
+					<view class="result-item" v-for="group in groupResults" :key="group.id" @click="handleGroupClick(group)">
+						<view class="result-avatar" :style="{ backgroundColor: group.avatarBg }">
+							<text class="iconfont group-icon">&#xe616;</text>
+						</view>
+						<view class="result-info">
+							<text class="result-name">{{ highlightKeyword(group.name) }}</text>
+							<text class="result-desc">{{ group.memberCount }}人</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<!-- 消息结果 -->
+			<view class="result-section" v-if="messageResults.length > 0">
+				<text class="result-title">聊天记录</text>
+				<view class="result-list">
+					<view class="result-item" v-for="message in messageResults" :key="message.id" @click="handleMessageClick(message)">
+						<view class="result-avatar" :style="{ backgroundColor: message.avatarBg }">
+							<text class="result-avatar-text">{{ message.avatarText }}</text>
+						</view>
+						<view class="result-info">
+							<text class="result-name">{{ message.chatName }}</text>
+							<text class="result-desc">{{ highlightKeyword(message.content) }}</text>
+						</view>
+						<text class="result-time">{{ message.time }}</text>
+					</view>
+				</view>
+			</view>
+
+			<!-- 空状态 -->
+			<view class="empty-result" v-if="noResults">
+				<text class="iconfont empty-icon">&#xea6e;</text>
+				<text class="empty-text">未找到"{{ keyword }}"的相关结果</text>
+				<text class="empty-tip">换个关键词试试</text>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	const keyword = ref('')
+	const historyList = ref(['张敏', '产品研发团队', '项目进度'])
+	const hotList = ref(['工作汇报', '会议通知', '项目文档', '周报'])
+
+	// 搜索结果
+	const contactResults = ref<any[]>([])
+	const groupResults = ref<any[]>([])
+	const messageResults = ref<any[]>([])
+
+	// 模拟数据
+	const allContacts = [
+		{ id: 1, name: '张敏', role: '产品经理', avatarText: '张敏', avatarBg: '#0ea5e9' },
+		{ id: 2, name: '李强', role: '开发工程师', avatarText: '李强', avatarBg: '#f472b6' },
+		{ id: 3, name: '王静', role: '设计师', avatarText: '王静', avatarBg: '#c084fc' },
+		{ id: 4, name: '刘洋', role: '测试工程师', avatarText: '刘洋', avatarBg: '#10b981' }
+	]
+
+	const allGroups = [
+		{ id: 1, name: '产品研发团队', memberCount: 12, avatarBg: '#10b981' },
+		{ id: 2, name: '技术交流群', memberCount: 50, avatarBg: '#8b5cf6' },
+		{ id: 3, name: '项目管理组', memberCount: 15, avatarBg: '#3b82f6' }
+	]
+
+	const allMessages = [
+		{ id: 1, chatName: '张敏', content: '今天下午3点开会', time: '10:30', avatarText: '张敏', avatarBg: '#0ea5e9' },
+		{ id: 2, chatName: '产品研发团队', content: '请大家查看最新的项目进度', time: '昨天', avatarText: '产品', avatarBg: '#10b981' }
+	]
+
+	const noResults = computed(() : boolean => {
+		return keyword.value && contactResults.value.length === 0 && groupResults.value.length === 0 && messageResults.value.length === 0
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function handleSearch() {
+		if (!keyword.value) {
+			contactResults.value = []
+			groupResults.value = []
+			messageResults.value = []
+			return
+		}
+
+		// 搜索联系人
+		contactResults.value = allContacts.filter(contact => contact.name.includes(keyword.value))
+
+		// 搜索群聊
+		groupResults.value = allGroups.filter(group => group.name.includes(keyword.value))
+
+		// 搜索消息
+		messageResults.value = allMessages.filter(message => message.content.includes(keyword.value))
+	}
+
+	function handleSearchConfirm() {
+		if (keyword.value && !historyList.value.includes(keyword.value)) {
+			historyList.value.unshift(keyword.value)
+			if (historyList.value.length > 10) {
+				historyList.value.pop()
+			}
+		}
+	}
+
+	function clearHistory() {
+		uni.showModal({
+			title: '清空搜索历史',
+			content: '确定要清空搜索历史吗？',
+			success: (res) => {
+				if (res.confirm) {
+					historyList.value = []
+				}
+			}
+		})
+	}
+
+	function searchHistory(item : string) {
+		keyword.value = item
+		handleSearch()
+	}
+
+	function searchHot(item : string) {
+		keyword.value = item
+		handleSearch()
+	}
+
+	function highlightKeyword(text : string) : string {
+		// 简单实现，实际应该用富文本高亮
+		return text
+	}
+
+	function handleContactClick(contact : any) {
+		uni.navigateTo({
+			url: '/pages/contacts/user-detail?id=' + contact.id
+		})
+	}
+
+	function handleGroupClick(group : any) {
+		uni.navigateTo({
+			url: `/pages/message/chat?type=group&groupId=${group.id}&name=${encodeURIComponent(group.name)}&memberCount=${group.memberCount}`
+		})
+	}
+
+	function handleMessageClick(message : any) {
+		uni.navigateTo({
+			url: '/pages/message/chat?name=' + encodeURIComponent(message.chatName)
+		})
+	}
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #FFFFFF;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.search-header {
+		background-color: #FFFFFF;
+		padding: 8px 16px;
+		flex-direction: row;
+		align-items: center;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.search-bar {
+		flex: 1;
+		background-color: #F3F4F6;
+		border-radius: 8px;
+		height: 36px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		margin-right: 12px;
+	}
+
+	.search-icon {
+		font-size: 16px;
+		color: #999999;
+	}
+
+	.search-input {
+		flex: 1;
+		font-size: 14px;
+		margin-left: 8px;
+		color: #333333;
+	}
+
+	.placeholder {
+		color: #999999;
+	}
+
+	.cancel-btn {
+		font-size: 15px;
+		color: #1677FF;
+	}
+
+	/* 搜索历史 */
+	.search-history {
+		padding: 16px;
+		border-bottom-width: 8px;
+		border-bottom-color: #F5F7FA;
+	}
+
+	.history-header {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 12px;
+	}
+
+	.history-title {
+		font-size: 14px;
+		color: #8F959E;
+		font-weight: 600;
+	}
+
+	.clear-btn {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
+	.history-tags {
+		flex-direction: row;
+		flex-wrap: wrap;
+	}
+
+	.history-tag {
+		background-color: #F5F7FA;
+		padding: 6px 12px;
+		border-radius: 4px;
+		margin-right: 8px;
+		margin-bottom: 8px;
+	}
+
+	.history-text {
+		font-size: 13px;
+		color: #646A73;
+	}
+
+	/* 热门搜索 */
+	.hot-search {
+		padding: 16px;
+	}
+
+	.hot-title {
+		font-size: 14px;
+		color: #8F959E;
+		font-weight: 600;
+		margin-bottom: 12px;
+	}
+
+	.hot-tags {
+		flex-direction: row;
+		flex-wrap: wrap;
+	}
+
+	.hot-tag {
+		background-color: #F5F7FA;
+		padding: 6px 12px;
+		border-radius: 4px;
+		margin-right: 8px;
+		margin-bottom: 8px;
+	}
+
+	.hot-text {
+		font-size: 13px;
+		color: #646A73;
+	}
+
+	/* 搜索结果 */
+	.search-results {
+		flex: 1;
+		height: 0;
+	}
+
+	.result-section {
+		padding: 16px;
+		border-bottom-width: 8px;
+		border-bottom-color: #F5F7FA;
+	}
+
+	.result-title {
+		font-size: 14px;
+		color: #8F959E;
+		font-weight: 600;
+		margin-bottom: 12px;
+	}
+
+	.result-list {
+	}
+
+	.result-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 0;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.result-item:last-child {
+		border-bottom-width: 0;
+	}
+
+	.result-avatar {
+		width: 44px;
+		height: 44px;
+		border-radius: 8px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 12px;
+	}
+
+	.result-avatar-text {
+		color: #FFFFFF;
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.group-icon {
+		font-size: 24px;
+		color: #FFFFFF;
+	}
+
+	.result-info {
+		flex: 1;
+	}
+
+	.result-name {
+		font-size: 15px;
+		color: #1F2329;
+		margin-bottom: 4px;
+	}
+
+	.result-desc {
+		font-size: 13px;
+		color: #8F959E;
+	}
+
+	.result-time {
+		font-size: 12px;
+		color: #8F959E;
+	}
+
+	/* 空状态 */
+	.empty-result {
+		padding: 80px 16px;
+		align-items: center;
+	}
+
+	.empty-icon {
+		font-size: 64px;
+		color: #E5E5E5;
+		margin-bottom: 16px;
+	}
+
+	.empty-text {
+		font-size: 15px;
+		color: #646A73;
+		margin-bottom: 8px;
+	}
+
+	.empty-tip {
+		font-size: 13px;
+		color: #8F959E;
+	}
+</style>

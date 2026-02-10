@@ -13,9 +13,9 @@
 				</view>
 			</view>
 			<view class="search-container">
-				<view class="search-bar">
+				<view class="search-bar" @click="handleSearch">
 					<text class="iconfont search-icon">&#xea6e;</text>
-					<input class="search-input" :placeholder="t('message.searchPlaceholder', '搜索')" placeholder-class="placeholder" />
+					<input class="search-input" :placeholder="t('message.searchPlaceholder', '搜索')" placeholder-class="placeholder" disabled />
 				</view>
 			</view>
 		</view>
@@ -465,6 +465,15 @@
 	function handleInitiateGroup() {
 		uni.navigateTo({
 			url: '/pages/contacts/initiate-group'
+		})
+	}
+
+	/**
+	 * 搜索
+	 */
+	function handleSearch() {
+		uni.navigateTo({
+			url: '/pages/common/search'
 		})
 	}
 </script>

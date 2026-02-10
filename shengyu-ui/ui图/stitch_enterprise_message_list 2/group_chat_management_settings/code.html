@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Group Chat Management Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#C8161D", // Deep red from the header
+                        "background-light": "#F2F2F7",
+                        "background-dark": "#1C1C1E",
+                        "card-light": "#FFFFFF",
+                        "card-dark": "#2C2C2E",
+                    },
+                    fontFamily: {
+                        display: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "12px",
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<header class="bg-primary sticky top-0 z-50 px-4 py-3 flex items-center justify-between safe-top">
+<button class="flex items-center text-white">
+<span class="material-icons-outlined text-2xl">chevron_left</span>
+<span class="text-base">返回</span>
+</button>
+<h1 class="text-white text-lg font-semibold absolute left-1/2 -translate-x-1/2">聊天设置</h1>
+<div class="w-10"></div> 
+</header>
+<main class="pb-10">
+<section class="bg-card-light dark:bg-card-dark p-6 flex flex-col items-center">
+<div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mb-4 text-white shadow-sm overflow-hidden">
+<div class="grid grid-cols-2 gap-px w-full h-full p-0.5">
+<div class="bg-blue-400 flex items-center justify-center text-[10px]">丹</div>
+<div class="bg-blue-300 flex items-center justify-center text-[10px]">思</div>
+<div class="bg-blue-600 flex items-center justify-center text-[10px]">寒</div>
+<div class="bg-blue-500 flex items-center justify-center text-[10px]">晨</div>
+</div>
+</div>
+<h2 class="text-xl font-bold mb-1">财信科技工作群</h2>
+<p class="text-sm text-slate-500 dark:text-slate-400">江西省财政投资集团有限公司</p>
+</section>
+<section class="bg-card-light dark:bg-card-dark grid grid-cols-5 gap-4 py-6 px-4 mb-2 border-t border-slate-100 dark:border-slate-800">
+<button class="flex flex-col items-center space-y-2">
+<div class="w-12 h-12 flex items-center justify-center text-blue-500">
+<span class="material-icons-outlined text-3xl">campaign</span>
+</div>
+<span class="text-xs text-slate-600 dark:text-slate-400">群公告</span>
+</button>
+<button class="flex flex-col items-center space-y-2">
+<div class="w-12 h-12 flex items-center justify-center text-blue-500">
+<span class="material-icons-outlined text-3xl">image</span>
+</div>
+<span class="text-xs text-slate-600 dark:text-slate-400">图片</span>
+</button>
+<button class="flex flex-col items-center space-y-2">
+<div class="w-12 h-12 flex items-center justify-center text-blue-500">
+<span class="material-icons-outlined text-3xl">folder</span>
+</div>
+<span class="text-xs text-slate-600 dark:text-slate-400">文件</span>
+</button>
+<button class="flex flex-col items-center space-y-2">
+<div class="w-12 h-12 flex items-center justify-center text-blue-500">
+<span class="material-icons-outlined text-3xl">link</span>
+</div>
+<span class="text-xs text-slate-600 dark:text-slate-400">链接</span>
+</button>
+<button class="flex flex-col items-center space-y-2">
+<div class="w-12 h-12 flex items-center justify-center text-blue-500">
+<span class="material-icons-outlined text-3xl">search</span>
+</div>
+<span class="text-xs text-slate-600 dark:text-slate-400">搜索</span>
+</button>
+</section>
+<section class="bg-card-light dark:bg-card-dark mb-2 py-4">
+<div class="flex justify-between items-center px-4 mb-4">
+<h3 class="font-medium">群成员</h3>
+<div class="flex items-center text-slate-400">
+<span class="text-sm mr-1">84 人</span>
+<span class="material-icons-outlined text-lg">chevron_right</span>
+</div>
+</div>
+<div class="flex overflow-x-auto hide-scrollbar px-4 space-x-4">
+<div class="flex-shrink-0 flex flex-col items-center space-y-1">
+<div class="w-12 h-12 rounded-full bg-blue-400 flex items-center justify-center text-white text-xs font-medium">来茂</div>
+<span class="text-[10px] text-slate-500 dark:text-slate-400">李来茂</span>
+</div>
+<div class="flex-shrink-0 flex flex-col items-center space-y-1">
+<div class="w-12 h-12 rounded-full bg-blue-300 flex items-center justify-center text-white text-xs font-medium">鑫思</div>
+<span class="text-[10px] text-slate-500 dark:text-slate-400">陈鑫思</span>
+</div>
+<div class="flex-shrink-0 flex flex-col items-center space-y-1">
+<div class="w-12 h-12 rounded-full bg-blue-400 flex items-center justify-center text-white text-xs font-medium">应晨</div>
+<span class="text-[10px] text-slate-500 dark:text-slate-400">应晨</span>
+</div>
+<div class="flex-shrink-0 flex flex-col items-center space-y-1">
+<div class="w-12 h-12 rounded-full bg-blue-400 flex items-center justify-center text-white text-xs font-medium">兰坤</div>
+<span class="text-[10px] text-slate-500 dark:text-slate-400">兰坤</span>
+</div>
+<div class="flex-shrink-0 flex flex-col items-center space-y-1">
+<div class="w-12 h-12 rounded-full bg-pink-300 flex items-center justify-center text-white text-xs font-medium">廖纯</div>
+<span class="text-[10px] text-slate-500 dark:text-slate-400">廖纯</span>
+</div>
+<div class="flex-shrink-0 flex flex-col items-center space-y-1">
+<div class="w-12 h-12 rounded-full bg-blue-400 flex items-center justify-center text-white text-xs font-medium">定钟</div>
+<span class="text-[10px] text-slate-500 dark:text-slate-400">颜定钟</span>
+</div>
+<div class="flex-shrink-0 flex flex-col items-center space-y-1">
+<button class="w-12 h-12 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400">
+<span class="material-icons-outlined">add</span>
+</button>
+<span class="text-[10px] text-transparent">Add</span>
+</div>
+</div>
+</section>
+<section class="bg-card-light dark:bg-card-dark mb-4">
+<div class="px-4 py-4 flex justify-between items-center border-b border-slate-50 dark:border-slate-800">
+<span class="font-medium">群聊名称：</span>
+<span class="text-slate-500 dark:text-slate-400 truncate flex-1 ml-4 text-right">财信科技工作群</span>
+</div>
+<button class="w-full px-4 py-4 flex justify-between items-center border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+<span class="font-medium">群二维码</span>
+<span class="material-icons-outlined text-slate-300">chevron_right</span>
+</button>
+<button class="w-full px-4 py-4 flex justify-between items-center border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left">
+<span class="font-medium">分享</span>
+<span class="material-icons-outlined text-slate-300">chevron_right</span>
+</button>
+<div class="px-4 py-4 flex justify-between items-center border-b border-slate-50 dark:border-slate-800">
+<span class="font-medium">气泡设置</span>
+<div class="flex items-center space-x-2">
+<div class="w-12 h-6 bg-blue-300 dark:bg-blue-600 rounded-full relative">
+<div class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+<span class="material-icons-outlined text-slate-300">chevron_right</span>
+</div>
+</div>
+<div class="px-4 py-4 flex justify-between items-center border-b border-slate-50 dark:border-slate-800">
+<span class="font-medium">置顶</span>
+<div class="w-12 h-6 bg-slate-200 dark:bg-slate-700 rounded-full relative">
+<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+</div>
+<div class="px-4 py-4 flex justify-between items-center">
+<span class="font-medium">新消息通知</span>
+<div class="w-12 h-6 bg-green-500 rounded-full relative">
+<div class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+</div>
+</section>
+<section class="bg-card-light dark:bg-card-dark mb-6">
+<button class="w-full px-4 py-4 flex items-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+<span class="font-medium">清空聊天记录</span>
+</button>
+</section>
+<section class="px-4">
+<button class="w-full py-4 text-red-500 font-semibold bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 active:scale-95 transition-transform">
+                退出群聊
+            </button>
+</section>
+</main>
+<div class="fixed bottom-1 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></div>
+
+</body></html>

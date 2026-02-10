@@ -1,0 +1,319 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">{{ t('common.back') }}</text>
+			</view>
+			<text class="header-title">群成员({{ filteredMembers.length }})</text>
+			<view class="header-right"></view>
+		</view>
+
+		<view class="search-wrap">
+			<view class="search-bar">
+				<text class="iconfont search-icon">&#xea6e;</text>
+				<input class="search-input" v-model="searchKeyword" placeholder="搜索群成员" placeholder-class="placeholder" @input="handleSearch" />
+			</view>
+		</view>
+
+		<scroll-view class="member-list" scroll-y="true" show-scrollbar="false" :scroll-into-view="scrollIntoView">
+			<!-- 按字母分组 -->
+			<view class="letter-group" v-for="group in memberGroups" :key="group.letter" :id="'letter-' + group.letter">
+				<text class="letter-title">{{ group.letter }}</text>
+				
+				<!-- 成员项 -->
+				<view class="member-item" v-for="member in group.members" :key="member.id" @click="handleMemberClick(member)">
+					<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
+						<text class="member-avatar-text">{{ member.avatarText }}</text>
+					</view>
+					<view class="member-info">
+						<text class="member-name">{{ member.name }}</text>
+						<text class="member-role" v-if="member.role">{{ member.role }}</text>
+					</view>
+					<text v-if="member.isOwner" class="member-badge owner-badge">群主</text>
+					<text v-else-if="member.isAdmin" class="member-badge admin-badge">管理员</text>
+				</view>
+			</view>
+		</scroll-view>
+
+		<!-- 字母索引 -->
+		<view class="letter-index">
+			<text class="index-letter" v-for="letter in letters" :key="letter" @click="scrollToLetter(letter)">
+				{{ letter }}
+			</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { useI18n } from '../../hooks/useI18n.uts'
+
+	const { t } = useI18n()
+
+	const searchKeyword = ref('')
+	const scrollIntoView = ref('')
+
+	// 生成成员数据
+	const generateMembers = () : any[] => {
+		const firstNames = ['张', '李', '王', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗']
+		const lastNames = ['伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军', '洋', '勇', '艳', '杰', '娟', '涛', '明', '超', '秀兰', '霞']
+		const roles = ['产品经理', '开发工程师', '测试工程师', '设计师', '运营专员']
+		const colors = ['#0ea5e9', '#f472b6', '#c084fc', '#fb7185', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#3b82f6', '#8b5cf6']
+		const pinyins = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+
+		const list : any[] = []
+		
+		for (let i = 0; i < 50; i++) {
+			const firstName = firstNames[i % firstNames.length]
+			const lastName = lastNames[i % lastNames.length]
+			const name = firstName + lastName
+			const pinyin = pinyins[i % pinyins.length]
+			
+			list.push({
+				id: i + 1,
+				name: name,
+				role: roles[i % roles.length],
+				avatarText: name.substring(0, 2),
+				avatarBg: colors[i % colors.length],
+				pinyin: pinyin,
+				isOwner: i === 0,
+				isAdmin: i === 1 || i === 2
+			})
+		}
+		return list
+	}
+
+	const allMembers = ref(generateMembers())
+
+	// 过滤后的成员
+	const filteredMembers = computed(() : any[] => {
+		if (!searchKeyword.value) {
+			return allMembers.value
+		}
+		return allMembers.value.filter(member => {
+			return member.name.includes(searchKeyword.value)
+		})
+	})
+
+	// 按字母分组
+	const memberGroups = computed(() : any[] => {
+		const groups : any = {}
+		filteredMembers.value.forEach(member => {
+			const letter = member.pinyin
+			if (!groups[letter]) {
+				groups[letter] = []
+			}
+			groups[letter].push(member)
+		})
+		
+		return Object.keys(groups).sort().map(letter => ({
+			letter,
+			members: groups[letter]
+		}))
+	})
+
+	// 字母列表
+	const letters = computed(() : string[] => {
+		return memberGroups.value.map(group => group.letter)
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function handleSearch() {
+		// 搜索逻辑已在 computed 中实现
+	}
+
+	function handleMemberClick(member : any) {
+		uni.navigateTo({
+			url: '/pages/contacts/user-detail?id=' + member.id
+		})
+	}
+
+	function scrollToLetter(letter : string) {
+		scrollIntoView.value = 'letter-' + letter
+	}
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #FFFFFF;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #1F2329;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #1F2329;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 17px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.search-wrap {
+		background-color: #FFFFFF;
+		padding: 10px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.search-bar {
+		background-color: #F3F4F6;
+		border-radius: 8px;
+		height: 36px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+	}
+
+	.search-icon {
+		font-size: 16px;
+		color: #999999;
+	}
+
+	.search-input {
+		flex: 1;
+		font-size: 14px;
+		margin-left: 8px;
+		color: #333333;
+	}
+
+	.placeholder {
+		color: #999999;
+	}
+
+	.member-list {
+		flex: 1;
+		height: 0;
+		padding-right: 30px;
+	}
+
+	.letter-group {
+		padding: 0 16px;
+	}
+
+	.letter-title {
+		font-size: 14px;
+		color: #8F959E;
+		font-weight: 600;
+		padding: 8px 0;
+		background-color: #F5F7FA;
+		margin: 0 -16px;
+		padding-left: 16px;
+	}
+
+	.member-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 0;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.member-item:last-child {
+		border-bottom-width: 0;
+	}
+
+	.member-avatar {
+		width: 44px;
+		height: 44px;
+		border-radius: 8px;
+		justify-content: center;
+		align-items: center;
+		margin-right: 12px;
+	}
+
+	.member-avatar-text {
+		color: #FFFFFF;
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.member-info {
+		flex: 1;
+	}
+
+	.member-name {
+		font-size: 15px;
+		color: #1F2329;
+		margin-bottom: 4px;
+	}
+
+	.member-role {
+		font-size: 12px;
+		color: #8F959E;
+	}
+
+	.member-badge {
+		font-size: 11px;
+		padding: 2px 8px;
+		border-radius: 4px;
+		margin-left: 8px;
+	}
+
+	.owner-badge {
+		background-color: #FFF3E0;
+		color: #F57C00;
+	}
+
+	.admin-badge {
+		background-color: #E3F2FD;
+		color: #1976D2;
+	}
+
+	.letter-index {
+		position: fixed;
+		right: 0;
+		top: 50%;
+		transform: translateY(-50%);
+		flex-direction: column;
+		align-items: center;
+		padding: 4px;
+		z-index: 100;
+	}
+
+	.index-letter {
+		font-size: 11px;
+		color: #1677FF;
+		padding: 2px 6px;
+		font-weight: 600;
+	}
+</style>

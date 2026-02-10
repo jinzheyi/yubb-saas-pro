@@ -692,9 +692,18 @@
 	}
 
 	function handleToSettings() {
-		uni.navigateTo({
-			url: '/pages/message/chat-settings'
-		})
+		// 根据聊天类型跳转到不同的设置页面
+		if (chatType.value === 'group') {
+			// 群聊跳转到群聊设置页
+			uni.navigateTo({
+				url: `/pages/message/group-settings?groupId=${groupId.value}&name=${encodeURIComponent(name.value)}`
+			})
+		} else {
+			// 单聊跳转到聊天设置页
+			uni.navigateTo({
+				url: '/pages/message/chat-settings'
+			})
+		}
 	}
 
 	function handleSend() {
