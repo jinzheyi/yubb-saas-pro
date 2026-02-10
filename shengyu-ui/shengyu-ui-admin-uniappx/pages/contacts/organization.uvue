@@ -2,15 +2,13 @@
 	<view class="page">
 		<view class="status-bar"></view>
 		<view class="header">
-			<view class="header-left" @click="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">{{ t('common.back') }}</text>
+			<view class="header-top">
+				<view class="header-left" @click="handleBack">
+					<text class="iconfont back-icon">&#xeb04;</text>
+				</view>
+				<text class="header-title">组织结构</text>
+				<view class="header-right"></view>
 			</view>
-			<text class="header-title">组织结构</text>
-			<view class="header-right"></view>
-		</view>
-
-		<view class="search-wrap">
 			<view class="search-bar">
 				<text class="iconfont search-icon">&#xea6e;</text>
 				<input class="search-input" placeholder="搜索" placeholder-class="placeholder" />
@@ -22,43 +20,45 @@
 			<view class="root-node">
 				<view class="node-header" @click="toggleNode('root')">
 					<text class="node-title">{{ rootOrg.name }}({{ rootOrg.count }})</text>
-					<text class="iconfont expand-icon">{{ expandedNodes.includes('root') ? '\ue68d' : '\ue60e' }}</text>
+					<text class="iconfont expand-icon">{{ expandedNodes.includes('root') ? '\ueaf5' : '\ueaf3' }}</text>
 				</view>
 			</view>
 
 			<!-- 子组织列表 -->
 			<view v-if="expandedNodes.includes('root')" class="org-list">
-				<view v-for="(org, index) in organizations" :key="org.id" class="org-item">
-					<view class="org-row" @click="handleOrgClick(org)">
+				<view v-for="(org, orgIndex) in organizations" :key="org.id" class="org-item">
+					<view class="org-row" @click="isSelectMode ? null : toggleNode(org.id)">
 						<!-- 选择模式下显示复选框 -->
 						<view v-if="isSelectMode" :class="['checkbox', org.selected ? 'checkbox-active' : '']" @click.stop="toggleOrgSelect(org)">
 							<text v-if="org.selected" class="iconfont check-icon">&#xea73;</text>
 						</view>
 						
-						<text v-if="!isSelectMode" class="iconfont node-icon" :style="{ color: org.expanded ? '#0ea5e9' : '#0ea5e9' }">
-							{{ org.expanded ? '\ue68d' : '\ue60e' }}
+						<!-- 展开/收起图标（选择模式和非选择模式都显示） -->
+						<text class="iconfont node-icon" :style="{ color: org.expanded ? '#0ea5e9' : '#0ea5e9' }" @click.stop="toggleNode(org.id)">
+							{{ org.expanded ? '\ueaf5' : '\ueaf3' }}
 						</text>
 						<text class="org-name" :class="{ 'org-name-bold': org.expanded }">{{ org.name }}({{ org.count }})</text>
 					</view>
+					<view v-if="orgIndex < organizations.length - 1" class="org-item-border"></view>
 
 					<!-- 部门列表 -->
 					<view v-if="org.expanded" class="dept-list">
-						<view v-for="dept in org.departments" :key="dept.id" class="dept-item">
-							<view class="dept-row" @click="handleDeptClick(org, dept)">
+						<view v-for="(dept, deptIndex) in org.departments" :key="dept.id" class="dept-item">
+							<view class="dept-row" @click="isSelectMode ? null : toggleDept(dept.id)">
 								<!-- 选择模式下显示复选框 -->
 								<view v-if="isSelectMode" :class="['checkbox', dept.selected ? 'checkbox-active' : '']" @click.stop="toggleDeptSelect(org, dept)">
 									<text v-if="dept.selected" class="iconfont check-icon">&#xea73;</text>
 								</view>
 								
-								<text v-if="!isSelectMode" class="iconfont dept-icon">{{ dept.expanded ? '\ue68d' : '\ue60e' }}</text>
+								<!-- 展开/收起图标（选择模式和非选择模式都显示） -->
+								<text class="iconfont dept-icon" @click.stop="toggleDept(dept.id)">{{ dept.expanded ? '\ueaf5' : '\ueaf3' }}</text>
 								<text class="dept-name" :class="{ 'dept-name-bold': dept.expanded }">{{ dept.name }}({{ dept.count }})</text>
 							</view>
 
 							<!-- 成员列表 -->
 							<view v-if="dept.expanded" class="member-list">
 								<view v-for="(member, mIndex) in dept.members" :key="member.id" 
-									class="member-item" 
-									:class="{ 'member-item-last': mIndex === dept.members.length - 1 }"
+									class="member-item"
 									@click="handleMemberClick(member)">
 									<!-- 选择模式下显示复选框 -->
 									<view v-if="isSelectMode" :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
@@ -70,6 +70,7 @@
 									</view>
 									<text class="member-name">{{ member.name }}</text>
 									<text class="member-role">{{ member.role }}</text>
+									<view v-if="mIndex < dept.members.length - 1" class="member-item-border"></view>
 								</view>
 							</view>
 						</view>
@@ -90,6 +91,13 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { 
+		isMemberSelected, 
+		toggleMember,
+		addMembers,
+		removeMembers,
+		getSelectedCount
+	} from '../../store/group-selection.uts'
 
 	const { t } = useI18n()
 
@@ -146,9 +154,9 @@
 					expanded: false,
 					selected: false,
 					members: [
-						{ id: 1, name: '张敏', role: '副部长 (主持工作)', avatarText: '张敏', avatarBg: '#fb7185', selected: false },
-						{ id: 2, name: '李强', role: '人力资源经理', avatarText: '李强', avatarBg: '#0ea5e9', selected: false },
-						{ id: 3, name: '王静', role: '人力实习生', avatarText: '王静', avatarBg: '#f472b6', selected: false }
+						{ id: 3001, name: '张敏', role: '副部长 (主持工作)', avatarText: '张敏', avatarBg: '#fb7185', selected: false },
+						{ id: 3002, name: '李强', role: '人力资源经理', avatarText: '李强', avatarBg: '#0ea5e9', selected: false },
+						{ id: 3003, name: '王静', role: '人力实习生', avatarText: '王静', avatarBg: '#f472b6', selected: false }
 					]
 				},
 				{
@@ -179,21 +187,9 @@
 		}
 	])
 
-	// 计算选中的总人数
+	// 计算选中的总人数（使用全局状态）
 	const selectedCount = computed(() : number => {
-		let count = 0
-		for (let i = 0; i < organizations.value.length; i++) {
-			const org = organizations.value[i]
-			for (let j = 0; j < org.departments.length; j++) {
-				const dept = org.departments[j]
-				for (let k = 0; k < dept.members.length; k++) {
-					if (dept.members[k].selected) {
-						count++
-					}
-				}
-			}
-		}
-		return count
+		return getSelectedCount()
 	})
 
 	function handleBack() {
@@ -232,13 +228,24 @@
 		if (!isSelectMode.value) return
 		
 		org.selected = !org.selected
-		// 同步选中状态到所有部门和成员
+		
+		// 收集所有成员
+		const allMembers : any[] = []
 		for (let i = 0; i < org.departments.length; i++) {
 			const dept = org.departments[i]
 			dept.selected = org.selected
 			for (let j = 0; j < dept.members.length; j++) {
+				allMembers.push(dept.members[j])
 				dept.members[j].selected = org.selected
 			}
+		}
+		
+		// 批量更新全局状态
+		if (org.selected) {
+			addMembers(allMembers)
+		} else {
+			const memberIds = allMembers.map(m => m.id)
+			removeMembers(memberIds)
 		}
 	}
 
@@ -247,7 +254,16 @@
 		if (!isSelectMode.value) return
 		
 		dept.selected = !dept.selected
-		// 同步选中状态到所有成员
+		
+		// 批量更新全局状态
+		if (dept.selected) {
+			addMembers(dept.members)
+		} else {
+			const memberIds = dept.members.map(m => m.id)
+			removeMembers(memberIds)
+		}
+		
+		// 同步本地状态到所有成员
 		for (let i = 0; i < dept.members.length; i++) {
 			dept.members[i].selected = dept.selected
 		}
@@ -260,7 +276,10 @@
 	function toggleMemberSelect(member : any) {
 		if (!isSelectMode.value) return
 		
-		member.selected = !member.selected
+		// 使用全局状态管理
+		toggleMember(member)
+		// 同步本地状态
+		member.selected = isMemberSelected(member.id)
 		
 		// 查找成员所属的部门和组织，更新它们的选中状态
 		for (let i = 0; i < organizations.value.length; i++) {
@@ -294,26 +313,6 @@
 		org.selected = org.departments.every(d => d.selected)
 	}
 
-	function handleOrgClick(org : any) {
-		if (isSelectMode.value) {
-			// 选择模式下点击组织行切换选中状态
-			toggleOrgSelect(org)
-		} else {
-			// 普通模式下切换展开状态
-			toggleNode(org.id)
-		}
-	}
-
-	function handleDeptClick(org : any, dept : any) {
-		if (isSelectMode.value) {
-			// 选择模式下点击部门行切换选中状态
-			toggleDeptSelect(org, dept)
-		} else {
-			// 普通模式下切换展开状态
-			toggleDept(dept.id)
-		}
-	}
-
 	function handleMemberClick(member : any) {
 		if (isSelectMode.value) {
 			// 选择模式下切换选中状态
@@ -327,34 +326,40 @@
 	}
 
 	function handleConfirm() {
-		// 收集所有选中的成员
-		const selectedMembers : any[] = []
+		// 返回上一页，选中的数据保留在全局状态中
+		uni.navigateBack()
+	}
+
+	// 同步本地选中状态与全局状态
+	function syncSelectionState() {
 		for (let i = 0; i < organizations.value.length; i++) {
 			const org = organizations.value[i]
 			for (let j = 0; j < org.departments.length; j++) {
 				const dept = org.departments[j]
 				for (let k = 0; k < dept.members.length; k++) {
-					if (dept.members[k].selected) {
-						selectedMembers.push(dept.members[k])
-					}
+					dept.members[k].selected = isMemberSelected(dept.members[k].id)
 				}
+				// 更新部门选中状态
+				updateDeptSelectState(dept)
 			}
+			// 更新组织选中状态
+			updateOrgSelectState(org)
 		}
-		
-		// TODO: 将选中的成员添加到发起群聊页面
-		uni.showToast({
-			title: `已选择 ${selectedMembers.length} 人`,
-			icon: 'success'
-		})
-		setTimeout(() => {
-			uni.navigateBack()
-		}, 1000)
 	}
 
 	// 页面加载时检查是否为选择模式
-	onLoad((options : OnLoadOptions) => {
-		if (options.has('mode') && options.get('mode') === 'select') {
+	onLoad((options : any) => {
+		if (options != null && options['mode'] === 'select') {
 			isSelectMode.value = true
+		}
+		// 同步选中状态
+		syncSelectionState()
+	})
+
+	// 页面显示时同步选中状态（从其他页面返回时）
+	onShow(() => {
+		if (isSelectMode.value) {
+			syncSelectionState()
 		}
 	})
 </script>
@@ -362,66 +367,57 @@
 <style>
 	.page {
 		height: 100%;
-		background-color: #F5F5F7;
+		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #1677FF;
+		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #1677FF;
-		height: 44px;
+		background-color: #FFFFFF;
+		padding: 8px 16px 12px 16px;
+	}
+
+	.header-top {
 		flex-direction: row;
-		align-items: center;
-		padding: 0 12px;
 		justify-content: space-between;
+		align-items: center;
+		height: 44px;
 	}
 
 	.header-left {
 		flex-direction: row;
 		align-items: center;
-		width: 80px;
+		width: 60px;
 	}
 
 	.back-icon {
-		color: #ffffff;
-		font-size: 20px;
-	}
-
-	.back-text {
-		color: #ffffff;
-		font-size: 16px;
-		margin-left: 4px;
+		color: #1F2329;
+		font-size: 24px;
 	}
 
 	.header-title {
-		color: #ffffff;
-		font-size: 18px;
-		font-weight: 500;
+		color: #1F2329;
+		font-size: 20px;
+		font-weight: 600;
 	}
 
 	.header-right {
-		width: 80px;
-	}
-
-	.search-wrap {
-		background-color: #ffffff;
-		padding: 12px 16px;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #e5e5e5;
+		width: 60px;
 	}
 
 	.search-bar {
 		background-color: #F2F3F5;
-		border-radius: 8px;
+		border-radius: 6px;
 		height: 36px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
+		margin-top: 4px;
 	}
 
 	.search-icon {
@@ -433,7 +429,11 @@
 		flex: 1;
 		font-size: 14px;
 		margin-left: 8px;
-		color: #333333;
+		color: #1F2329;
+	}
+
+	.placeholder {
+		color: #8F959E;
 	}
 
 	.content {
@@ -442,13 +442,10 @@
 	}
 
 	.root-node {
-		background-color: #ffffff;
-		margin-top: 8px;
+		background-color: #FFFFFF;
 		padding: 12px 16px;
-		border-top-width: 0.5px;
-		border-top-color: #e5e5e5;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #e5e5e5;
+		border-bottom-width: 8px;
+		border-bottom-color: #F5F7FA;
 	}
 
 	.node-header {
@@ -458,8 +455,8 @@
 	}
 
 	.node-title {
-		font-size: 18px;
-		font-weight: bold;
+		font-size: 16px;
+		font-weight: 600;
 		color: #1F2329;
 	}
 
@@ -469,17 +466,31 @@
 	}
 
 	.org-list {
-		padding: 8px 16px;
+		padding: 0 16px;
+		background-color: #FFFFFF;
 	}
 
 	.org-item {
-		margin-bottom: 16px;
+		position: relative;
+	}
+
+	.org-item-border {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 1px;
+		background-color: #F0F0F0;
 	}
 
 	.org-row {
 		flex-direction: row;
 		align-items: center;
-		padding: 8px 0;
+		padding: 12px 0;
+	}
+
+	.org-row:active {
+		opacity: 0.6;
 	}
 
 	.node-icon {
@@ -490,6 +501,7 @@
 	.org-name {
 		font-size: 16px;
 		color: #646A73;
+		font-weight: 400;
 	}
 
 	.org-name-bold {
@@ -503,6 +515,7 @@
 		border-left-width: 1px;
 		border-left-color: #E5E7EB;
 		margin-left: 10px;
+		margin-bottom: 8px;
 	}
 
 	.dept-item {
@@ -515,6 +528,10 @@
 		padding: 8px 0;
 	}
 
+	.dept-row:active {
+		opacity: 0.6;
+	}
+
 	.dept-icon {
 		font-size: 20px;
 		color: #0ea5e9;
@@ -524,6 +541,7 @@
 	.dept-name {
 		font-size: 15px;
 		color: #646A73;
+		font-weight: 400;
 	}
 
 	.dept-name-bold {
@@ -540,19 +558,27 @@
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
-		padding: 12px 0;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #F5F7FA;
+		padding: 10px 0;
+		position: relative;
 	}
 
-	.member-item-last {
-		border-bottom-width: 0;
+	.member-item:active {
+		opacity: 0.6;
+	}
+
+	.member-item-border {
+		position: absolute;
+		bottom: 0;
+		left: 54px;
+		right: 0;
+		height: 1px;
+		background-color: #F0F0F0;
 	}
 
 	.member-avatar {
 		width: 40px;
 		height: 40px;
-		border-radius: 20px;
+		border-radius: 8px;
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
@@ -567,40 +593,43 @@
 	.member-name {
 		flex: 1;
 		font-size: 16px;
-		font-weight: 500;
+		font-weight: 400;
 		color: #1F2329;
 	}
 
 	.member-role {
-		font-size: 14px;
+		font-size: 12px;
 		color: #8F959E;
 	}
 
 	.checkbox {
-		width: 20px;
-		height: 20px;
-		border-radius: 10px;
-		border-width: 1.5px;
-		border-color: #D1D5DB;
+		width: 22px;
+		height: 22px;
+		border-radius: 4px;
+		border-width: 2px;
+		border-color: #8F959E;
+		background-color: #FFFFFF;
 		margin-right: 12px;
 		justify-content: center;
 		align-items: center;
+		box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
 	}
 
 	.checkbox-active {
 		background-color: #1677FF;
 		border-color: #1677FF;
+		box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.2);
 	}
 
 	.check-icon {
 		color: #ffffff;
-		font-size: 14px;
+		font-size: 16px;
 	}
 
 	.footer {
 		background-color: #ffffff;
 		border-top-width: 0.5px;
-		border-top-color: #e5e5e5;
+		border-top-color: #EFF0F1;
 		padding: 12px 16px;
 		flex-direction: row;
 		justify-content: space-between;
@@ -610,20 +639,20 @@
 
 	.selected-text {
 		font-size: 15px;
-		color: #333333;
+		color: #1F2329;
 	}
 
 	.confirm-btn {
-		background-color: rgba(22, 119, 255, 0.1);
+		background-color: #1677FF;
 		padding: 0 20px;
 		height: 36px;
-		border-radius: 4px;
+		border-radius: 6px;
 		justify-content: center;
 		border-width: 0;
 	}
 
 	.confirm-btn-text {
-		color: #1677FF;
+		color: #FFFFFF;
 		font-size: 14px;
 		font-weight: 500;
 	}

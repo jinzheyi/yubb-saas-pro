@@ -6,45 +6,22 @@
 				<view class="header-left" @click="handleBack">
 					<text class="iconfont back-icon">&#xeb04;</text>
 				</view>
-				<text class="header-title">我的部门</text>
+				<text class="header-title">{{ groupName }}</text>
 				<view class="header-right"></view>
 			</view>
 			<view class="search-bar">
 				<text class="iconfont search-icon">&#xea6e;</text>
-				<input class="search-input" placeholder="搜索" placeholder-class="placeholder" />
+				<input class="search-input" placeholder="搜索成员" placeholder-class="placeholder" />
 			</view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
-			<!-- 部门层级 -->
-			<view class="dept-hierarchy">
-				<view class="dept-node" @click="toggleDeptExpand">
-					<text class="dept-node-text">科技创新集团有限公司(30)</text>
-					<text class="iconfont expand-icon">{{ deptExpanded ? '\ueaf5' : '\ueaf3' }}</text>
-				</view>
-				<view v-if="deptExpanded" class="dept-children">
-					<!-- 二级部门1 -->
-					<view class="dept-child" @click="toggleSubDept1">
-						<text class="iconfont child-icon">{{ subDept1Expanded ? '\ueaf5' : '\ueaf3' }}</text>
-						<text class="dept-child-text">数字科技有限公司(30)</text>
-					</view>
-					<!-- 三级部门（软件研发事业部）- 只在二级部门1展开时显示 -->
-					<view v-if="subDept1Expanded" class="dept-grandchildren">
-						<view class="dept-child dept-child-active" @click="toggleSubDept2">
-							<text class="iconfont child-icon">{{ subDept2Expanded ? '\ueaf5' : '\ueaf3' }}</text>
-							<text class="dept-child-text dept-child-text-active">软件研发事业部(30)</text>
-						</view>
-					</view>
-				</view>
-			</view>
-
-			<!-- 成员列表 - 只在三级部门展开时显示 -->
-			<view v-if="deptExpanded && subDept1Expanded && subDept2Expanded" class="member-list">
+			<view class="member-list">
 				<view v-for="(member, index) in memberList" :key="member.id" 
 					class="member-item" 
 					@click="handleMemberClick(member)">
-					<!-- 选择模式下显示复选框 -->
-					<view v-if="isSelectMode" :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
+					<!-- 显示复选框 -->
+					<view :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
 						<text v-if="member.selected" class="iconfont check-icon">&#xea73;</text>
 					</view>
 					
@@ -60,8 +37,8 @@
 			</view>
 		</scroll-view>
 
-		<!-- 选择模式下显示底部操作栏 -->
-		<view v-if="isSelectMode" class="footer">
+		<!-- 底部操作栏 -->
+		<view class="footer">
 			<text class="selected-text">已选择 {{ selectedCount }} 人</text>
 			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
 				<text class="confirm-btn-text">确定</text>
@@ -80,97 +57,38 @@
 
 	const { t } = useI18n()
 
-	// 部门层级展开状态
-	const deptExpanded = ref(true)
-	const subDept1Expanded = ref(true)  // 数字科技有限公司
-	const subDept2Expanded = ref(true)  // 软件研发事业部
-	
-	// 是否为选择模式
-	const isSelectMode = ref(false)
+	const groupName = ref('数字科技工作群')
+	const groupId = ref(0)
 
-	// 成员列表数据（ID范围：4001-4010，避免与其他页面冲突）
-	const memberList = ref([
-		{
-			id: 4001,
-			name: '朱付生',
-			role: '副部长（主持工作）',
-			avatarText: '付生',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4002,
-			name: '王尹',
-			role: '副部长',
-			avatarText: '王尹',
-			avatarBg: '#fb7185',
-			selected: false
-		},
-		{
-			id: 4003,
-			name: '喻泽鹏',
-			role: 'UI设计师',
-			avatarText: '泽鹏',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4004,
-			name: '徐碧',
-			role: '售前经理',
-			avatarText: '徐碧',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4005,
-			name: '万剑波',
-			role: '产品经理',
-			avatarText: '剑波',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4006,
-			name: '刘建弋',
-			role: '软件项目经理',
-			avatarText: '建弋',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4007,
-			name: '曾丁丁',
-			role: '软件项目经理',
-			avatarText: '丁丁',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4008,
-			name: '胡耀华',
-			role: '软件项目经理',
-			avatarText: '耀华',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4009,
-			name: '方竞凯',
-			role: '开发工程师',
-			avatarText: '竞凯',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4010,
-			name: '张敏',
-			role: '开发工程师',
-			avatarText: '张敏',
-			avatarBg: '#10b981',
-			selected: false
+	// 生成群组成员数据（ID范围：5000+，避免与其他页面冲突）
+	const generateMembers = (groupId : number) : any[] => {
+		const firstNames = ['张', '李', '王', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗']
+		const lastNames = ['伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军', '洋', '勇', '艳', '杰', '娟', '涛', '明', '超', '秀兰', '霞']
+		const roles = ['高级经理', '部门经理', '项目经理', '开发工程师', '测试工程师', '产品经理', '设计师', '运营专员', '市场专员', '行政专员']
+		const colors = ['#0ea5e9', '#f472b6', '#c084fc', '#fb7185', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#3b82f6', '#8b5cf6']
+
+		const list : any[] = []
+		const memberCount = groupId === 1 ? 84 : (groupId === 2 ? 17 : (groupId === 3 ? 10 : 18))
+		const baseId = 5000 + (groupId * 1000)  // 每个群组使用不同的ID范围
+		
+		for (let i = 0; i < memberCount; i++) {
+			const firstName = firstNames[i % firstNames.length]
+			const lastName = lastNames[i % lastNames.length]
+			const name = firstName + lastName
+			
+			list.push({
+				id: baseId + i + 1,
+				name: name,
+				role: roles[i % roles.length],
+				avatarText: name.substring(0, 2),
+				avatarBg: colors[i % colors.length],
+				selected: false
+			})
 		}
-	])
+		return list
+	}
+
+	const memberList = ref<any[]>([])
 
 	// 选中的成员数量（使用全局状态）
 	const selectedCount = computed(() : number => {
@@ -181,18 +99,6 @@
 		uni.navigateBack()
 	}
 
-	function toggleDeptExpand() {
-		deptExpanded.value = !deptExpanded.value
-	}
-
-	function toggleSubDept1() {
-		subDept1Expanded.value = !subDept1Expanded.value
-	}
-
-	function toggleSubDept2() {
-		subDept2Expanded.value = !subDept2Expanded.value
-	}
-
 	function toggleMemberSelect(member : any) {
 		// 使用全局状态管理
 		toggleMember(member)
@@ -201,15 +107,7 @@
 	}
 
 	function handleMemberClick(member : any) {
-		if (isSelectMode.value) {
-			// 选择模式下点击整行也可以切换选中状态
-			toggleMemberSelect(member)
-		} else {
-			// 普通模式下跳转到用户详情
-			uni.navigateTo({
-				url: '/pages/contacts/user-detail?name=' + member.name
-			})
-		}
+		toggleMemberSelect(member)
 	}
 
 	function handleConfirm() {
@@ -224,20 +122,25 @@
 		}
 	}
 
-	// 页面加载时检查是否为选择模式
+	// 页面加载时获取群组信息
 	onLoad((options : any) => {
-		if (options != null && options['mode'] === 'select') {
-			isSelectMode.value = true
+		if (options != null) {
+			if (options['groupId']) {
+				groupId.value = parseInt(options['groupId'])
+			}
+			if (options['groupName']) {
+				groupName.value = options['groupName']
+			}
 		}
+		// 生成成员列表
+		memberList.value = generateMembers(groupId.value)
 		// 同步选中状态
 		syncSelectionState()
 	})
 
 	// 页面显示时同步选中状态（从其他页面返回时）
 	onShow(() => {
-		if (isSelectMode.value) {
-			syncSelectionState()
-		}
+		syncSelectionState()
 	})
 </script>
 
@@ -316,77 +219,7 @@
 	.content {
 		flex: 1;
 		height: 0;
-	}
-
-	.dept-hierarchy {
 		background-color: #FFFFFF;
-		padding: 12px 16px;
-		border-bottom-width: 8px;
-		border-bottom-color: #F5F7FA;
-	}
-
-	.dept-node {
-		flex-direction: row;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.dept-node-text {
-		font-size: 16px;
-		font-weight: 500;
-		color: #1F2329;
-	}
-
-	.expand-icon {
-		font-size: 16px;
-		color: #8F959E;
-	}
-
-	.dept-children {
-		margin-top: 16px;
-		margin-left: 8px;
-		padding-left: 16px;
-		border-left-width: 2px;
-		border-left-color: rgba(14,165,233,0.2);
-	}
-
-	.dept-child {
-		flex-direction: row;
-		align-items: center;
-		margin-bottom: 16px;
-		cursor: pointer;
-	}
-
-	.dept-child:active {
-		opacity: 0.6;
-	}
-
-	.dept-child:last-child {
-		margin-bottom: 0;
-	}
-
-	.child-icon {
-		font-size: 16px;
-		color: #0ea5e9;
-		margin-right: 8px;
-	}
-
-	.dept-child-text {
-		font-size: 15px;
-		color: #646A73;
-	}
-
-	.dept-child-active .dept-child-text {
-		color: #1F2329;
-		font-weight: 500;
-	}
-
-	.dept-grandchildren {
-		margin-left: 24px;
-		margin-top: 8px;
-		padding-left: 16px;
-		border-left-width: 2px;
-		border-left-color: rgba(14,165,233,0.15);
 	}
 
 	.member-list {
@@ -408,7 +241,7 @@
 	.member-item-border {
 		position: absolute;
 		bottom: 0;
-		left: 70px;
+		left: 82px;
 		right: 0;
 		height: 1px;
 		background-color: #F0F0F0;
@@ -431,15 +264,13 @@
 
 	.member-info {
 		flex: 1;
-		flex-direction: row;
-		align-items: center;
-		justify-content: space-between;
 	}
 
 	.member-name {
 		font-size: 16px;
 		font-weight: 400;
 		color: #1F2329;
+		margin-bottom: 2px;
 	}
 
 	.member-role {

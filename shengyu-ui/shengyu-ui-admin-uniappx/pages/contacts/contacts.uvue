@@ -276,8 +276,8 @@
 		bottom: 0;
 		left: 64px;
 		right: 0;
-		height: 0.5px;
-		background-color: #EFF0F1;
+		height: 1px;
+		background-color: #F0F0F0;
 	}
 
 	.category-icon-wrap {
@@ -342,8 +342,8 @@
 		bottom: 0;
 		left: 68px;
 		right: 0;
-		height: 0.5px;
-		background-color: #EFF0F1;
+		height: 1px;
+		background-color: #F0F0F0;
 	}
 
 	.contact-avatar {

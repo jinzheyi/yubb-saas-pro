@@ -154,9 +154,9 @@
 	}
 
 	// 页面加载时获取路由参数
-	onLoad((options : OnLoadOptions) => {
-		if (options.has('name')) {
-			userName.value = options.get('name') as string
+	onLoad((options : any) => {
+		if (options != null && options['name']) {
+			userName.value = options['name'] as string
 		}
 	})
 </script>

@@ -2,15 +2,13 @@
 	<view class="page">
 		<view class="status-bar"></view>
 		<view class="header">
-			<view class="header-left" @click="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">{{ t('common.back') }}</text>
+			<view class="header-top">
+				<view class="header-left" @click="handleBack">
+					<text class="iconfont back-icon">&#xeb04;</text>
+				</view>
+				<text class="header-title">我的关注</text>
+				<view class="header-right"></view>
 			</view>
-			<text class="header-title">我的关注</text>
-			<view class="header-right"></view>
-		</view>
-
-		<view class="search-wrap">
 			<view class="search-bar">
 				<text class="iconfont search-icon">&#xea6e;</text>
 				<input class="search-input" placeholder="搜索" placeholder-class="placeholder" />
@@ -35,6 +33,7 @@
 						<text class="contact-role">{{ contact.role }}</text>
 					</view>
 					<text v-if="!isSelectMode" class="iconfont star-icon">&#xea90;</text>
+					<view v-if="index < followingList.length - 1" class="contact-item-border"></view>
 				</view>
 			</view>
 		</scroll-view>
@@ -51,16 +50,21 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { 
+		isMemberSelected, 
+		toggleMember,
+		getSelectedCount
+	} from '../../store/group-selection.uts'
 
 	const { t } = useI18n()
 
 	// 是否为选择模式
 	const isSelectMode = ref(false)
 
-	// 关注列表数据
+	// 关注列表数据（ID范围：2001-2007，避免与其他页面冲突）
 	const followingList = ref([
 		{
-			id: 1,
+			id: 2001,
 			name: '张敏',
 			role: '开发工程师',
 			avatarText: '张敏',
@@ -68,7 +72,7 @@
 			selected: false
 		},
 		{
-			id: 2,
+			id: 2002,
 			name: '李强',
 			role: '产品经理',
 			avatarText: '李强',
@@ -76,7 +80,7 @@
 			selected: false
 		},
 		{
-			id: 3,
+			id: 2003,
 			name: '王静',
 			role: '高级UI设计师',
 			avatarText: '王静',
@@ -84,7 +88,7 @@
 			selected: false
 		},
 		{
-			id: 4,
+			id: 2004,
 			name: '刘伟',
 			role: '技术总监',
 			avatarText: '刘伟',
@@ -92,7 +96,7 @@
 			selected: false
 		},
 		{
-			id: 5,
+			id: 2005,
 			name: '陈佳',
 			role: '人力资源主管',
 			avatarText: '陈佳',
@@ -100,7 +104,7 @@
 			selected: false
 		},
 		{
-			id: 6,
+			id: 2006,
 			name: '赵军',
 			role: '架构师',
 			avatarText: '赵军',
@@ -108,7 +112,7 @@
 			selected: false
 		},
 		{
-			id: 7,
+			id: 2007,
 			name: '孙丽',
 			role: '测试经理',
 			avatarText: '孙丽',
@@ -117,15 +121,9 @@
 		}
 	])
 
-	// 选中的联系人数量
+	// 选中的联系人数量（使用全局状态）
 	const selectedCount = computed(() : number => {
-		let count = 0
-		for (let i = 0; i < followingList.value.length; i++) {
-			if (followingList.value[i].selected) {
-				count++
-			}
-		}
-		return count
+		return getSelectedCount()
 	})
 
 	function handleBack() {
@@ -133,7 +131,10 @@
 	}
 
 	function toggleContactSelect(contact : any) {
-		contact.selected = !contact.selected
+		// 使用全局状态管理
+		toggleMember(contact)
+		// 同步本地状态
+		contact.selected = isMemberSelected(contact.id)
 	}
 
 	function handleContactClick(contact : any) {
@@ -149,21 +150,30 @@
 	}
 
 	function handleConfirm() {
-		const selectedContacts = followingList.value.filter(c => c.selected)
-		// TODO: 将选中的联系人添加到发起群聊页面
-		uni.showToast({
-			title: `已选择 ${selectedContacts.length} 人`,
-			icon: 'success'
-		})
-		setTimeout(() => {
-			uni.navigateBack()
-		}, 1000)
+		// 返回上一页，选中的数据保留在全局状态中
+		uni.navigateBack()
+	}
+
+	// 同步本地选中状态与全局状态
+	function syncSelectionState() {
+		for (let i = 0; i < followingList.value.length; i++) {
+			followingList.value[i].selected = isMemberSelected(followingList.value[i].id)
+		}
 	}
 
 	// 页面加载时检查是否为选择模式
-	onLoad((options : OnLoadOptions) => {
-		if (options.has('mode') && options.get('mode') === 'select') {
+	onLoad((options : any) => {
+		if (options != null && options['mode'] === 'select') {
 			isSelectMode.value = true
+		}
+		// 同步选中状态
+		syncSelectionState()
+	})
+
+	// 页面显示时同步选中状态（从其他页面返回时）
+	onShow(() => {
+		if (isSelectMode.value) {
+			syncSelectionState()
 		}
 	})
 </script>
@@ -171,114 +181,118 @@
 <style>
 	.page {
 		height: 100%;
-		background-color: #F9FAFB;
+		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #1677FF;
+		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #1677FF;
-		height: 44px;
+		background-color: #FFFFFF;
+		padding: 8px 16px 12px 16px;
+	}
+
+	.header-top {
 		flex-direction: row;
-		align-items: center;
-		padding: 0 12px;
 		justify-content: space-between;
+		align-items: center;
+		height: 44px;
 	}
 
 	.header-left {
 		flex-direction: row;
 		align-items: center;
-		width: 80px;
+		width: 60px;
 	}
 
 	.back-icon {
-		color: #ffffff;
-		font-size: 20px;
-	}
-
-	.back-text {
-		color: #ffffff;
-		font-size: 16px;
-		margin-left: 4px;
+		color: #1F2329;
+		font-size: 24px;
 	}
 
 	.header-title {
-		color: #ffffff;
-		font-size: 18px;
+		color: #1F2329;
+		font-size: 20px;
 		font-weight: 600;
 	}
 
 	.header-right {
-		width: 80px;
-	}
-
-	.search-wrap {
-		background-color: #ffffff;
-		padding: 12px 16px;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #e5e5e5;
+		width: 60px;
 	}
 
 	.search-bar {
-		background-color: #F3F4F6;
-		border-radius: 12px;
+		background-color: #F2F3F5;
+		border-radius: 6px;
 		height: 36px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
+		margin-top: 4px;
 	}
 
 	.search-icon {
-		font-size: 18px;
-		color: #9CA3AF;
+		font-size: 16px;
+		color: #8F959E;
 	}
 
 	.search-input {
 		flex: 1;
 		font-size: 14px;
 		margin-left: 8px;
-		color: #333333;
+		color: #1F2329;
+	}
+
+	.placeholder {
+		color: #8F959E;
 	}
 
 	.content {
 		flex: 1;
 		height: 0;
-		background-color: #ffffff;
+		background-color: #FFFFFF;
 	}
 
 	.contact-list {
-		background-color: #ffffff;
+		background-color: #FFFFFF;
 	}
 
 	.contact-item {
 		flex-direction: row;
 		align-items: center;
-		padding: 16px;
-		border-bottom-width: 0.5px;
-		border-bottom-color: #F5F7FA;
+		padding: 10px 16px;
+		background-color: #FFFFFF;
+		position: relative;
 	}
 
 	.contact-item:active {
-		background-color: #F9FAFB;
+		background-color: #F2F3F5;
+	}
+
+	.contact-item-border {
+		position: absolute;
+		bottom: 0;
+		left: 70px;
+		right: 0;
+		height: 1px;
+		background-color: #F0F0F0;
 	}
 
 	.contact-avatar {
-		width: 48px;
-		height: 48px;
-		border-radius: 24px;
+		width: 42px;
+		height: 42px;
+		border-radius: 8px;
 		justify-content: center;
 		align-items: center;
-		margin-right: 16px;
+		margin-right: 12px;
 	}
 
 	.avatar-text {
 		color: #ffffff;
-		font-size: 14px;
+		font-size: 13px;
 		font-weight: 600;
 	}
 
@@ -287,15 +301,15 @@
 	}
 
 	.contact-name {
-		font-size: 17px;
-		font-weight: 600;
-		color: #1F2937;
-		margin-bottom: 4px;
+		font-size: 16px;
+		font-weight: 400;
+		color: #1F2329;
+		margin-bottom: 2px;
 	}
 
 	.contact-role {
-		font-size: 14px;
-		color: #6B7280;
+		font-size: 12px;
+		color: #8F959E;
 	}
 
 	.star-icon {
@@ -304,30 +318,33 @@
 	}
 
 	.checkbox {
-		width: 20px;
-		height: 20px;
-		border-radius: 10px;
-		border-width: 1.5px;
-		border-color: #D1D5DB;
+		width: 22px;
+		height: 22px;
+		border-radius: 4px;
+		border-width: 2px;
+		border-color: #8F959E;
+		background-color: #FFFFFF;
 		margin-right: 12px;
 		justify-content: center;
 		align-items: center;
+		box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
 	}
 
 	.checkbox-active {
 		background-color: #1677FF;
 		border-color: #1677FF;
+		box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.2);
 	}
 
 	.check-icon {
 		color: #ffffff;
-		font-size: 14px;
+		font-size: 16px;
 	}
 
 	.footer {
 		background-color: #ffffff;
 		border-top-width: 0.5px;
-		border-top-color: #e5e5e5;
+		border-top-color: #EFF0F1;
 		padding: 12px 16px;
 		flex-direction: row;
 		justify-content: space-between;
@@ -337,20 +354,20 @@
 
 	.selected-text {
 		font-size: 15px;
-		color: #333333;
+		color: #1F2329;
 	}
 
 	.confirm-btn {
-		background-color: rgba(22, 119, 255, 0.1);
+		background-color: #1677FF;
 		padding: 0 20px;
 		height: 36px;
-		border-radius: 4px;
+		border-radius: 6px;
 		justify-content: center;
 		border-width: 0;
 	}
 
 	.confirm-btn-text {
-		color: #1677FF;
+		color: #FFFFFF;
 		font-size: 14px;
 		font-weight: 500;
 	}

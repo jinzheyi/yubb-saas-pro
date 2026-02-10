@@ -99,6 +99,13 @@
 			}
 		},
 		{
+			"path": "pages/contacts/group-members",
+			"style": {
+				"navigationBarTitleText": "群组成员",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/index/index",
 			"style": {
 				"navigationBarTitleText": "uni-app x"

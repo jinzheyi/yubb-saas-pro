@@ -6,6 +6,20 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "5387527",
+      "name": "加号",
+      "font_class": "jiahao1",
+      "unicode": "eaf3",
+      "unicode_decimal": 60147
+    },
+    {
+      "icon_id": "5387532",
+      "name": "减号",
+      "font_class": "jianhao",
+      "unicode": "eaf5",
+      "unicode_decimal": 60149
+    },
+    {
       "icon_id": "2570137",
       "name": "选择-多选",
       "font_class": "xuanze-duoxuan-tianchong",

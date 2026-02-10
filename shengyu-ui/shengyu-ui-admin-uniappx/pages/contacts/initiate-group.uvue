@@ -38,6 +38,15 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getUserInfo } from '../../store/user.uts'
+	import { 
+		startSelection, 
+		endSelection, 
+		getSelectedMembers, 
+		getSelectedCount,
+		addMember,
+		toggleMember,
+		isMemberSelected
+	} from '../../store/group-selection.uts'
 	import ContactSelector from '../../components/contact-selector/contact-selector.uvue'
 
 	const { t } = useI18n()
@@ -92,18 +101,14 @@
 
 	const contactList = ref(generateContacts())
 
-	// 使用 computed 确保响应式更新
+	// 使用全局状态的选中数量
 	const selectedCount = computed(() : number => {
-		let count = 0
-		for (let i = 0; i < contactList.value.length; i++) {
-			if (contactList.value[i].selected) {
-				count++
-			}
-		}
-		return count
+		return getSelectedCount()
 	})
 
 	function handleBack() {
+		// 返回时清空选择状态
+		endSelection()
 		uni.navigateBack()
 	}
 
@@ -130,7 +135,7 @@
 
 	function handleSelect(item : any) {
 		// 当前用户不能取消选中
-		if (item.isCurrentUser && item.selected) {
+		if (item.isCurrentUser && !item.selected) {
 			uni.showToast({
 				title: '不能取消选择自己',
 				icon: 'none'
@@ -140,14 +145,19 @@
 			return
 		}
 		
+		// 同步到全局状态
+		toggleMember(item)
+		// 确保本地状态与全局状态一致
+		item.selected = isMemberSelected(item.id)
+		
 		console.log('选择联系人:', item.name, '选中状态:', item.selected)
 	}
 
 	function handleConfirm() {
-		const selectedContacts = contactList.value.filter(item => item.selected)
-		console.log('已选择的联系人:', selectedContacts)
+		const selectedMembers = getSelectedMembers()
+		console.log('已选择的联系人:', selectedMembers)
 		
-		if (selectedContacts.length < 2) {
+		if (selectedMembers.length < 2) {
 			uni.showToast({
 				title: '至少选择2人才能创建群聊',
 				icon: 'none'
@@ -160,7 +170,42 @@
 			icon: 'loading'
 		})
 		// TODO: 调用创建群聊 API
+		
+		// 创建成功后清空选择状态
+		setTimeout(() => {
+			endSelection()
+			uni.navigateBack()
+		}, 1500)
 	}
+
+	// 同步本地选中状态与全局状态
+	function syncSelectionState() {
+		for (let i = 0; i < contactList.value.length; i++) {
+			contactList.value[i].selected = isMemberSelected(contactList.value[i].id)
+		}
+	}
+
+	// 页面加载时初始化选择模式
+	onLoad(() => {
+		startSelection()
+		// 默认添加当前用户
+		const currentUser = contactList.value.find(c => c.isCurrentUser)
+		if (currentUser) {
+			addMember(currentUser)
+		}
+		// 同步选中状态
+		syncSelectionState()
+	})
+
+	// 页面显示时同步选中状态（从子页面返回时）
+	onShow(() => {
+		syncSelectionState()
+	})
+
+	// 页面卸载时清空选择状态（如果没有确认）
+	onUnload(() => {
+		endSelection()
+	})
 </script>
 
 <style>
