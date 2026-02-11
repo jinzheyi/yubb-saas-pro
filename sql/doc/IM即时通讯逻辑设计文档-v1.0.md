@@ -1,13 +1,14 @@
 # IM 即时通讯逻辑设计文档 v1.0
 
-> **文档版本**: v1.0.5  
+> **文档版本**: v1.0.6  
 > **创建日期**: 2026年2月11日  
 > **更新日期**: 2026年2月11日  
 > **项目**: 圣钰 SaaS Pro - IM 即时通讯系统  
 > **定位**: 企业内部IM(无需添加好友、拉黑等社交功能)  
 > **目标**: AI 可执行的详细设计文档  
 > **中间件**: shengyu-spring-boot-starter-websocket (基于 Netty + Protobuf)  
-> **移动端**: shengyu-ui-admin-uniappx (uni-app x + UTS)
+> **移动端**: shengyu-ui-admin-uniappx (uni-app x + UTS)  
+> **数据库**: MySQL 8.0+ (已创建 IM 表结构)
 
 ---
 
@@ -17,7 +18,8 @@
 1. **IM 中间件**: `shengyu-framework/shengyu-spring-boot-starter-websocket` (基于 Netty + Protobuf)
 2. **租户后台**: `shengyu-module-system`
 3. **移动端**: `shengyu-ui/shengyu-ui-admin-uniappx` (已实现 90% UI,待对接后端)
-4. **数据库表**: `sql/mysql/1.0/shengyu-saas.sql` (im_* 表)
+4. **数据库表**: `sql/mysql/1.0/im/` (IM 表结构已创建)
+5. **主数据库**: `sql/mysql/1.0/shengyu-saas.sql` (现有业务表)
 
 **重要说明**:
 - 本系统定位为企业内部IM,联系人直接来源于租户的 `system_users` 表
@@ -29,6 +31,12 @@
 - 支持租户隔离和平台端/租户端双端认证
 - 支持分布式部署(Redis/RocketMQ/Kafka/RabbitMQ 消息总线)
 
+**数据库变更管理**:
+- IM 表结构文件: `sql/mysql/1.0/im/ddl_*.sql` (已创建 6 个表)
+- 变更管理规范: `sql/mysql/1.0/README.md`
+- 禁止直接修改主 SQL 文件 `shengyu-saas.sql`
+- 新增表/字段/数据统一在业务模块目录下创建独立的 DDL/DML 文件
+
 **移动端实现状态**:
 - ✅ UI 层面: 90% 已完成(所有核心页面和组件已实现)
 - ⚠️ 业务逻辑: 30% 已完成(使用模拟数据,未对接后端 API)
@@ -38,7 +46,8 @@
 
 文档包含:
 - 完整的前后端交互接口定义
-- 数据库表结构与字段说明
+- 数据库表结构与字段说明(已创建 DDL 文件)
+- 数据库变更管理规范
 - Protobuf 通信协议(基于中间件实现)
 - 业务逻辑流程图
 - System 模块与中间件的 SPI 接口实现
@@ -340,6 +349,160 @@ system_users ──> system_dept (用户所属部门)
 - 部门数据直接来源于 `system_dept` 表
 - `im_contact_setting` 仅存储用户对联系人的个性化设置(备注名、星标、免打扰)
 - 无需好友申请、拉黑等社交功能
+
+### 2.3 数据库变更管理规范
+
+#### 2.3.1 SQL 文件组织结构
+
+IM 模块的数据库文件统一存放在 `sql/mysql/1.0/im/` 目录下:
+
+```
+sql/mysql/1.0/
+├── shengyu-saas.sql          # 主SQL文件(包含所有现有业务表)
+├── quartz.sql                # Quartz 定时任务表
+├── README.md                 # 数据库变更管理规范文档
+└── im/                       # IM 即时通讯模块 📝设计中
+    ├── ddl_im_tables.sql     # IM 模块所有表结构定义(6张表)
+    ├── dml_im_init_data.sql  # IM 模块初始化数据(字典等)
+    └── README.md             # IM 模块说明文档
+```
+
+**说明**:
+- 每个业务模块一个目录
+- 每个模块包含一个 DDL 文件(所有表结构)和一个 DML 文件(初始化数据)
+- 后续变更直接在对应文件中修改,保持文件的连续性
+
+#### 2.3.2 文件命名规范
+
+**DDL 文件(表结构定义)**:
+- 格式: `ddl_<模块名>_tables.sql`
+- 示例: `ddl_im_tables.sql`, `ddl_workflow_tables.sql`
+- 说明: 一个模块一个 DDL 文件,包含该模块所有表结构
+
+**DML 文件(数据操作)**:
+- 格式: `dml_<模块名>_init_data.sql`
+- 示例: `dml_im_init_data.sql`, `dml_workflow_init_data.sql`
+- 说明: 一个模块一个 DML 文件,包含该模块的初始化数据
+
+**变更文件(ALTER)**:
+- 格式: `alter_<模块名>_<变更描述>_<日期>.sql`
+- 示例: `alter_im_add_quote_field_20260211.sql`
+- 说明: 用于表结构变更(添加字段、修改字段、添加索引等)
+- 注意: 变更文件是临时的,变更完成后应该合并到主 DDL 文件中
+
+#### 2.3.3 表结构设计规范
+
+**必须字段**: 每个业务表必须包含以下字段:
+
+```sql
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+`creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+`create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+`updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+`update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+`deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+`tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+PRIMARY KEY (`id`) USING BTREE
+```
+
+**索引规范**:
+1. 主键索引: 使用 `id` 字段
+2. 唯一索引: 命名格式 `idx_<字段1>_<字段2>` 或 `uk_<字段1>_<字段2>`
+3. 普通索引: 命名格式 `idx_<字段1>_<字段2>`
+4. 租户索引: 每个表必须有 `idx_tenant` 索引
+5. 索引注释: 必须添加 COMMENT 说明索引用途
+
+**字段规范**:
+1. 字符集: 统一使用 `utf8mb4`
+2. 排序规则: 统一使用 `utf8mb4_unicode_ci`
+3. 注释: 每个字段必须有 COMMENT
+4. 默认值: 尽量设置合理的默认值
+5. NOT NULL: 优先使用 NOT NULL,避免 NULL 值
+
+**表引擎和字符集**:
+```sql
+ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '<表注释>' ROW_FORMAT = DYNAMIC;
+```
+
+#### 2.3.4 文件头部注释规范
+
+每个 SQL 文件必须包含以下注释信息:
+
+```sql
+/*
+ <模块名称> - <表名称>
+ 
+ 功能说明: <简要说明表的用途>
+ 创建日期: YYYY-MM-DD
+ 版本: v1.0
+ 作者: <可选>
+ 
+ 注意事项: <可选,特殊说明>
+*/
+
+SET NAMES utf8mb4;
+
+-- 表结构定义...
+```
+
+#### 2.3.5 变更流程
+
+**新增表**:
+1. 在对应业务模块的 DDL 文件中添加新表定义
+2. 按照规范编写表结构
+3. 更新本设计文档
+4. 提交代码审查
+
+**修改表结构**:
+1. 在对应业务模块目录下创建 `alter_<模块名>_<变更描述>_<日期>.sql` 文件
+2. 编写 ALTER 语句
+3. 执行变更后,将变更合并到主 DDL 文件中
+4. 更新本设计文档
+5. 提交代码审查
+
+**初始化数据**:
+1. 在对应业务模块的 DML 文件中添加初始化数据
+2. 编写 INSERT 语句(使用 BEGIN/COMMIT 包裹)
+3. 提交代码审查
+
+#### 2.3.6 注意事项
+
+1. **禁止直接修改 `shengyu-saas.sql` 文件**: 该文件是主SQL文件,包含所有现有业务表,不应直接修改
+2. **一个模块一个 DDL 文件**: 不要为每个表创建单独的文件,保持文件的连续性和可维护性
+3. **变更合并**: ALTER 变更执行后,应该合并到主 DDL 文件中
+4. **文件独立性**: 每个 SQL 文件应该可以独立执行,不依赖其他文件
+5. **幂等性**: DDL 文件应该包含 `DROP TABLE IF EXISTS` 语句,确保可重复执行
+6. **事务控制**: DML 文件应该使用 `BEGIN` 和 `COMMIT` 包裹,确保数据一致性
+7. **向后兼容**: 表结构变更应该考虑向后兼容性,避免破坏现有功能
+8. **性能考虑**: 大表添加索引时应该在业务低峰期执行
+9. **备份**: 执行变更前应该备份数据库
+10. **设计阶段**: 当前处于设计阶段,SQL 文件仅用于设计和讨论,尚未执行
+
+#### 2.3.7 IM 模块数据库设计文件
+
+以下 IM 模块的数据库设计文件已创建(设计阶段):
+
+1. **ddl_im_tables.sql** - IM 模块所有表结构定义
+   - 包含 6 张表: im_conversation, im_message, im_group, im_group_member, im_contact_setting, im_message_read
+   - 每个表都包含完整的字段定义、索引、注释
+   - 遵循统一的设计规范
+
+2. **dml_im_init_data.sql** - IM 模块初始化数据
+   - 消息类型字典(9种类型)
+   - 会话类型字典(单聊/群聊)
+   - 群组类型字典(普通群/工作群)
+   - 群成员角色字典(群主/管理员/普通成员)
+
+**文件位置**: `sql/mysql/1.0/im/`
+
+**执行顺序**(待正式实施时):
+```bash
+# 1. 创建表结构
+mysql -u root -p shengyu-saas < sql/mysql/1.0/im/ddl_im_tables.sql
+
+# 2. 初始化数据
+mysql -u root -p shengyu-saas < sql/mysql/1.0/im/dml_im_init_data.sql
+```
 
 ---
 
