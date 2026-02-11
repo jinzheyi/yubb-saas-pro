@@ -1,12 +1,13 @@
 # IM 即时通讯逻辑设计文档 v1.0
 
-> **文档版本**: v1.0.4  
+> **文档版本**: v1.0.5  
 > **创建日期**: 2026年2月11日  
 > **更新日期**: 2026年2月11日  
 > **项目**: 圣钰 SaaS Pro - IM 即时通讯系统  
 > **定位**: 企业内部IM(无需添加好友、拉黑等社交功能)  
 > **目标**: AI 可执行的详细设计文档  
-> **中间件**: shengyu-spring-boot-starter-websocket (基于 Netty + Protobuf)
+> **中间件**: shengyu-spring-boot-starter-websocket (基于 Netty + Protobuf)  
+> **移动端**: shengyu-ui-admin-uniappx (uni-app x + UTS)
 
 ---
 
@@ -15,7 +16,7 @@
 本文档基于以下现有资料编写:
 1. **IM 中间件**: `shengyu-framework/shengyu-spring-boot-starter-websocket` (基于 Netty + Protobuf)
 2. **租户后台**: `shengyu-module-system`
-3. **移动端**: `shengyu-ui/shengyu-ui-admin-uniappx`
+3. **移动端**: `shengyu-ui/shengyu-ui-admin-uniappx` (已实现 90% UI,待对接后端)
 4. **数据库表**: `sql/mysql/1.0/shengyu-saas.sql` (im_* 表)
 
 **重要说明**:
@@ -24,9 +25,16 @@
 - 无需"是否能看我"、"是否能看他"等隐私设置
 - 部门信息直接从 `system_dept` 表查询
 - 仅提供联系人个性化设置(备注名、星标、免打扰)
-- 支持单用户多设备登录
+- 支持类似微信的多端登录策略(同设备类型互踢,不同设备类型共存)
 - 支持租户隔离和平台端/租户端双端认证
 - 支持分布式部署(Redis/RocketMQ/Kafka/RabbitMQ 消息总线)
+
+**移动端实现状态**:
+- ✅ UI 层面: 90% 已完成(所有核心页面和组件已实现)
+- ⚠️ 业务逻辑: 30% 已完成(使用模拟数据,未对接后端 API)
+- ❌ WebSocket: 0% 未实现(需要集成 Protobuf 通信)
+- ❌ 离线消息: 0% 未实现
+- ❌ 消息持久化: 0% 未实现
 
 文档包含:
 - 完整的前后端交互接口定义
@@ -34,6 +42,7 @@
 - Protobuf 通信协议(基于中间件实现)
 - 业务逻辑流程图
 - System 模块与中间件的 SPI 接口实现
+- 移动端实现状态分析与待办清单
 - 可执行的任务拆解清单
 
 ---
@@ -1175,162 +1184,348 @@ async function fetchOfflineMessages() {
 ### 6.0 移动端技术栈与目录结构
 
 **技术栈**:
-- uni-app x (跨平台框架)
+- uni-app x (跨平台框架,支持 Android/iOS/Web)
 - UTS (TypeScript 语法)
 - uvue (类 Vue 3 语法)
+- Protobuf (WebSocket 通信协议)
 
 **核心目录结构**:
 ```
 shengyu-ui-admin-uniappx/
 ├── pages/
-│   ├── message/          # 消息模块
-│   │   ├── index.uvue    # 消息列表页
-│   │   └── chat.uvue     # 聊天页面
-│   ├── contacts/         # 通讯录模块
-│   │   ├── index.uvue    # 通讯录首页
-│   │   ├── list.uvue     # 联系人列表
-│   │   └── detail.uvue   # 联系人详情
-│   └── profile/          # 个人中心
-├── components/           # 公共组件
-├── store/                # 状态管理
-│   ├── user.uts          # 用户状态
-│   └── locale.uts        # 国际化
-├── utils/                # 工具函数
-│   ├── request.uts       # HTTP 请求
-│   ├── emojiParser.uts   # 表情解析
-│   └── upload.uts        # 文件上传
-└── api/                  # API 接口
-    └── login.uts         # 登录接口
+│   ├── message/                    # 消息模块
+│   │   ├── message.uvue            # 消息列表页 ✅已实现
+│   │   ├── chat.uvue               # 聊天页面 ✅已实现
+│   │   ├── chat-settings.uvue      # 单聊设置 ✅已实现
+│   │   ├── group-settings.uvue     # 群聊设置 ✅已实现
+│   │   ├── group-members.uvue      # 群成员列表 ✅已实现
+│   │   ├── group-qrcode.uvue       # 群二维码 ✅已实现
+│   │   ├── chat-files.uvue         # 聊天文件 ✅已实现
+│   │   ├── chat-bubble.uvue        # 聊天气泡 ✅已实现
+│   │   └── share-contact.uvue      # 分享联系人 ✅已实现
+│   ├── contacts/                   # 通讯录模块
+│   │   ├── contacts.uvue           # 通讯录首页 ✅已实现
+│   │   ├── initiate-group.uvue     # 发起群聊 ✅已实现
+│   │   ├── user-detail.uvue        # 联系人详情 ✅已实现
+│   │   ├── my-groups.uvue          # 我的群组 ✅已实现
+│   │   ├── my-following.uvue       # 我的关注 ✅已实现
+│   │   ├── my-department.uvue      # 我的部门 ✅已实现
+│   │   ├── organization.uvue       # 组织架构 ✅已实现
+│   │   ├── group-members.uvue      # 群成员选择 ✅已实现
+│   │   └── search-result.uvue      # 搜索结果 ✅已实现
+│   ├── workbench/                  # 工作台
+│   ├── profile/                    # 个人中心
+│   ├── login/                      # 登录页面
+│   └── common/                     # 公共页面
+├── components/                     # 公共组件
+│   ├── captcha/                    # 验证码组件 ✅已实现
+│   └── contact-selector/           # 联系人选择器 ✅已实现
+├── store/                          # 状态管理
+│   ├── user.uts                    # 用户状态 ✅已实现
+│   ├── locale.uts                  # 国际化 ✅已实现
+│   └── group-selection.uts         # 群组选择状态 ✅已实现
+├── utils/                          # 工具函数
+│   ├── request.uts                 # HTTP 请求封装 ✅已实现
+│   ├── emojiParser.uts             # 表情解析 ✅已实现
+│   ├── emojiData.uts               # 表情数据 ✅已实现
+│   ├── stickerManager.uts          # 贴纸管理 ✅已实现
+│   ├── upload.uts                  # 文件上传 ✅已实现
+│   ├── file.uts                    # 文件工具 ✅已实现
+│   └── dict.uts                    # 字典工具 ✅已实现
+├── api/                            # API 接口
+│   └── login.uts                   # 登录接口 ✅已实现
+├── locales/                        # 国际化资源
+│   ├── zh-CN.uts                   # 中文 ✅已实现
+│   └── en.uts                      # 英文 ✅已实现
+├── config/
+│   └── app.config.uts              # 应用配置 ✅已实现
+└── static/                         # 静态资源
+    ├── images/                     # 图片资源
+    ├── iconfont/                   # 图标字体
+    └── tabbar/                     # 底部导航图标
 ```
 
-### 6.1 消息列表页 (message/index.uvue)
+**实现状态总结**:
+- ✅ UI 层面: 90% 已完成(所有核心页面和组件已实现)
+- ⚠️ 业务逻辑: 30% 已完成(使用模拟数据,未对接后端 API)
+- ❌ WebSocket: 0% 未实现(需要集成 Protobuf 通信)
+- ❌ 离线消息: 0% 未实现
+- ❌ 消息持久化: 0% 未实现
 
-**功能**:
-- 显示所有会话列表
-- 置顶会话显示在最上方
-- 显示未读消息数量
-- 支持左滑删除会话
+### 6.1 消息列表页 (message/message.uvue)
+
+**已实现功能** ✅:
+- 显示所有会话列表(单聊/群聊)
+- 置顶会话显示在最上方(带置顶标识)
+- 显示未读消息数量(红点/数字)
+- 显示免打扰状态(静音图标)
+- 支持长按菜单(置顶、删除、标为已读、免打扰)
+- 支持分类筛选(全部、单聊、群聊、未读)
 - 支持下拉刷新
+- 时间显示优化(今天显示时间,昨天显示"昨天",更早显示日期)
+- 消息预览(文本/图片/语音/视频/文件等类型)
+
+**数据结构**:
+```typescript
+interface ConversationItem {
+  id: string;                    // 会话 ID
+  type: 'single' | 'group';      // 会话类型
+  name: string;                  // 对方名称或群名
+  avatar: string;                // 头像 URL
+  avatarText: string;            // 头像文字(无头像时显示)
+  avatarBg: string;              // 头像背景色
+  lastMessage: string;           // 最后一条消息内容
+  lastTime: string;              // 最后消息时间
+  unreadCount: number;           // 未读数量
+  isPinned: boolean;             // 是否置顶
+  noDisturb: boolean;            // 是否免打扰
+  groupMemberCount?: number;     // 群成员数量(群聊)
+}
+```
 
 **交互流程**:
 ```
 1. 页面加载
    ├─> 调用 GET /system/im/conversation/list
    ├─> 渲染会话列表
-   └─> 建立 WebSocket 连接
+   └─> 建立 WebSocket 连接 ❌未实现
 
-2. 接收新消息(WebSocket)
+2. 接收新消息(WebSocket) ❌未实现
    ├─> 更新对应会话的最后消息
    ├─> 未读数 +1
    └─> 会话移到列表顶部(如果未置顶)
 
-3. 点击会话
+3. 点击会话 ✅已实现
    └─> 跳转到聊天页面 chat.uvue
 
-4. 左滑会话
-   ├─> 显示"删除"按钮
-   └─> 点击删除 -> 调用 DELETE /system/im/conversation/{id}
+4. 长按会话 ✅已实现
+   ├─> 显示操作菜单(置顶、删除、标为已读、免打扰)
+   ├─> 置顶: 更新本地状态 + 调用 API ❌未对接
+   ├─> 删除: 调用 DELETE /system/im/conversation/{id} ❌未对接
+   ├─> 标为已读: 调用 PUT /system/im/conversation/read/{id} ❌未对接
+   └─> 免打扰: 调用 PUT /system/im/conversation/mute/{id} ❌未对接
+
+5. 分类筛选 ✅已实现
+   ├─> 全部: 显示所有会话
+   ├─> 单聊: 只显示单聊会话
+   ├─> 群聊: 只显示群聊会话
+   └─> 未读: 只显示有未读消息的会话
 ```
 
-**数据结构**:
-```typescript
-interface Conversation {
-  id: number;
-  targetId: number;
-  conversationType: number;  // 1-单聊 2-群聊
-  unreadCount: number;
-  lastMessageContent: string;
-  lastMessageTime: string;
-  isPinned: boolean;
-  noDisturb: boolean;
-  // 扩展字段
-  targetName: string;        // 对方名称或群名
-  targetAvatar: string;      // 对方头像或群头像
-}
-```
+**需要完善的功能** ⚠️:
+1. WebSocket 连接与消息接收
+2. 后端 API 对接(会话列表、置顶、删除、免打扰)
+3. 离线消息拉取
+4. 消息推送通知
+5. 会话草稿保存
 
 ### 6.2 聊天页面 (message/chat.uvue)
 
-**功能**:
-- 显示聊天消息列表
-- 支持多种消息类型(文本、图片、语音、视频、文件)
-- 支持表情输入(109个微信表情)
-- 支持语音输入
-- 支持图片/视频/文件发送
-- 消息长按菜单(复制、删除、撤回、转发)
-- 多选模式(批量删除、转发)
-- 全屏输入模式
+**已实现功能** ✅:
+- 显示聊天消息列表(支持单聊和群聊)
+- 支持多种消息类型:
+  - 文本消息(支持内联表情解析)
+  - 图片消息(150px 宽度,圆角显示)
+  - 语音消息(仿微信气泡,60-220px 动态宽度,未读红点)
+  - 视频消息(150x200px,播放按钮覆盖层)
+  - 文件消息(220px 宽度,显示文件名/大小/图标)
+  - 位置消息(220px 宽度,地图预览)
+  - 表情包消息(100x100px 大图)
+  - 自定义贴纸消息(120px 宽度)
+- 表情输入系统:
+  - 109个微信表情(7列网格布局)
+  - 收藏表情/贴纸(4列网格布局,支持添加)
+  - 表情面板切换(表情 Tab / 贴纸 Tab)
+  - 内联表情解析(22x22px)
+- 语音输入:
+  - 长按录音(显示录音浮层)
+  - 上滑取消(红色警告状态)
+  - 录音时长显示
+- 消息操作:
+  - 长按消息显示菜单(复制、删除、撤回、转发、引用、多选)
+  - 多选模式(批量删除、转发)
+  - 消息选中状态(绿色背景高亮)
+- 输入框功能:
+  - 单行/多行输入切换
+  - 全屏输入模式(点击展开图标)
+  - 语音/文本输入切换
+  - 发送按钮(有内容时显示)
+- 功能菜单(+号):
+  - 相册(图片/视频)
+  - 拍摄(相机)
+  - 文件
+  - 位置
+  - 名片
+  - 语音通话
+  - 视频通话
+  - 红包
+- 顶部导航:
+  - 返回按钮
+  - 会话名称(单聊显示对方名称,群聊显示群名+成员数)
+  - 更多按钮(跳转到设置页)
+- 消息气泡:
+  - 自己的消息:右侧,蓝色气泡(#D2E3FC)
+  - 对方的消息:左侧,白色气泡
+  - 群聊显示发送者头像和昵称
+- 时间戳显示(超过5分钟显示一次)
+- 自动滚动到最底部
+- 水印显示(可选,旋转-25度,透明度0.03)
+
+**数据结构**:
+```typescript
+interface MessageItem {
+  id: string;                    // 消息 ID
+  senderId: string;              // 发送者 ID
+  receiverId: string;            // 接收者 ID(单聊)或群 ID(群聊)
+  type: 'text' | 'image' | 'voice' | 'video' | 'file' | 'location' | 'emoji' | 'sticker';
+  content: string;               // 消息内容
+  isSelf: boolean;               // 是否自己发送
+  time: string;                  // 显示时间
+  timestamp: number;             // 时间戳
+  showTime: boolean;             // 是否显示时间戳
+  avatarText?: string;           // 头像文字(群聊)
+  avatarBg?: string;             // 头像背景色(群聊)
+  isRead?: boolean;              // 是否已读(语音消息)
+  duration?: number;             // 时长(语音/视频)
+  fileSize?: string;             // 文件大小
+  fileName?: string;             // 文件名
+  locationName?: string;         // 位置名称
+  locationAddress?: string;      // 位置地址
+}
+```
 
 **交互流程**:
 ```
-1. 页面加载
-   ├─> 调用 GET /system/im/message/list?conversationId={id}&pageSize=20
+1. 页面加载 ✅已实现
+   ├─> 从路由参数获取会话信息(type, groupId, name, memberCount)
+   ├─> 加载消息列表(模拟数据) ❌未对接 API
    ├─> 渲染消息列表
    └─> 滚动到最底部
 
-2. 发送文本消息
+2. 发送文本消息 ✅UI已实现 ❌未对接
    ├─> 用户输入文本
    ├─> 点击发送按钮
-   ├─> 通过 WebSocket 发送消息
-   ├─> 收到 ACK 确认
+   ├─> 通过 WebSocket 发送消息 ❌未实现
+   ├─> 收到 ACK 确认 ❌未实现
    └─> 消息显示为"已发送"
 
-3. 发送图片消息
-   ├─> 点击图片按钮
-   ├─> 选择图片
-   ├─> 调用 POST /infra/file/upload 上传图片
+3. 发送图片消息 ✅UI已实现 ❌未对接
+   ├─> 点击相册按钮
+   ├─> 选择图片(uni.chooseImage)
+   ├─> 调用 POST /infra/file/upload 上传图片 ❌未对接
    ├─> 获取图片 URL
-   ├─> 通过 WebSocket 发送图片消息
+   ├─> 通过 WebSocket 发送图片消息 ❌未实现
    └─> 显示图片消息
 
-4. 接收消息(WebSocket)
+4. 发送语音消息 ✅UI已实现 ❌未对接
+   ├─> 长按语音按钮开始录音
+   ├─> 显示录音浮层(麦克风图标+提示文字)
+   ├─> 上滑取消(红色警告状态)
+   ├─> 松开发送
+   ├─> 调用 POST /infra/file/upload 上传语音 ❌未对接
+   ├─> 通过 WebSocket 发送语音消息 ❌未实现
+   └─> 显示语音消息
+
+5. 接收消息(WebSocket) ❌未实现
    ├─> 收到新消息
    ├─> 插入到消息列表
    ├─> 滚动到最底部
    └─> 发送已读回执
 
-5. 消息长按
-   ├─> 显示操作菜单
-   ├─> 复制: 复制文本到剪贴板
-   ├─> 删除: 调用 DELETE /system/im/message/{id}
-   ├─> 撤回: 调用 POST /system/im/message/recall/{id}
-   └─> 转发: 进入联系人选择页面
+6. 消息长按 ✅已实现
+   ├─> 显示操作菜单(6宫格布局)
+   ├─> 复制: 复制文本到剪贴板 ✅已实现
+   ├─> 删除: 删除本地消息 ✅已实现 ❌未调用 API
+   ├─> 撤回: 调用 POST /system/im/message/recall/{id} ❌未对接
+   ├─> 转发: 进入联系人选择页面 ❌未实现
+   ├─> 引用: 在输入框插入引用文本 ✅已实现
+   └─> 多选: 进入多选模式 ✅已实现
+
+7. 多选模式 ✅已实现
+   ├─> 消息左侧显示复选框
+   ├─> 点击消息切换选中状态
+   ├─> 底部工具栏显示(转发、删除)
+   ├─> 转发: 选择联系人转发 ❌未实现
+   ├─> 删除: 批量删除消息 ✅已实现 ❌未调用 API
+   └─> 退出多选: 点击取消按钮
+
+8. 表情输入 ✅已实现
+   ├─> 点击表情按钮
+   ├─> 显示表情面板(260px 高度)
+   ├─> 表情 Tab: 109个微信表情(7列网格)
+   ├─> 贴纸 Tab: 收藏的贴纸(4列网格)
+   ├─> 点击表情: 插入到输入框
+   ├─> 点击贴纸: 发送贴纸消息
+   └─> 添加贴纸: 从相册选择图片
+
+9. 全屏输入模式 ✅已实现
+   ├─> 点击展开图标
+   ├─> 输入框全屏显示(fixed 定位,z-index 1000)
+   ├─> 顶部显示收起按钮
+   ├─> 输入框高度自适应
+   └─> 点击收起: 恢复正常模式
+
+10. 功能菜单 ✅UI已实现 ❌未对接
+    ├─> 点击+号按钮
+    ├─> 显示功能菜单(8个功能,4列布局)
+    ├─> 相册: uni.chooseImage ❌未实现
+    ├─> 拍摄: uni.chooseImage(sourceType: camera) ❌未实现
+    ├─> 文件: uni.chooseFile ❌未实现
+    ├─> 位置: uni.chooseLocation ❌未实现
+    ├─> 名片: 选择联系人分享 ❌未实现
+    ├─> 语音通话: 提示开发中 ✅已实现
+    ├─> 视频通话: 提示开发中 ✅已实现
+    └─> 红包: 提示开发中 ✅已实现
 ```
 
-**表情系统**:
-- 109个微信表情
-- 表情面板显示
-- 表情解析与渲染
-- 表情代码: `[微笑]`, `[撇嘴]` 等
+**表情系统详细说明** ✅:
+- 表情数据: `utils/emojiData.uts` (109个微信表情)
+- 表情解析: `utils/emojiParser.uts`
+  - `parseEmoji(text)`: 将文本中的表情代码解析为 HTML
+  - `replaceEmojiWithImage(text)`: 替换为图片标签
+- 表情代码格式: `[微笑]`, `[撇嘴]`, `[色]` 等
+- 内联表情尺寸: 22x22px
+- 表情面板尺寸: 32x32px
+- 贴纸管理: `utils/stickerManager.uts`
+  - 收藏贴纸列表
+  - 添加/删除贴纸
+  - 贴纸持久化存储
 
-### 6.3 通讯录页面 (contacts/index.uvue)
+**需要完善的功能** ⚠️:
+1. WebSocket 消息收发(Protobuf 协议)
+2. 后端 API 对接:
+   - 消息列表加载(分页)
+   - 消息发送(文本/图片/语音/视频/文件/位置)
+   - 消息撤回
+   - 消息删除
+   - 已读回执
+3. 文件上传(图片/语音/视频/文件)
+4. 消息本地缓存
+5. 消息重发机制
+6. 消息发送状态(发送中/已发送/已读/失败)
+7. 语音录制与播放
+8. 视频录制与播放
+9. 位置选择与地图显示
+10. 名片分享
+11. 消息转发
+12. 正在输入状态
+13. 消息搜索
+14. 聊天记录导出
 
-**功能**:
+### 6.3 通讯录页面 (contacts/contacts.uvue)
+
+**已实现功能** ✅:
 - 显示企业内所有联系人(来自 system_users)
-- 按部门分组显示
-- 字母索引快速定位
-- 搜索联系人
-- 星标联系人置顶
-
-**交互流程**:
-```
-1. 页面加载
-   ├─> 调用 GET /system/im/contact/list
-   ├─> 获取联系人列表(包含部门信息)
-   ├─> 按部门分组
-   └─> 渲染列表
-
-2. 搜索联系人
-   ├─> 输入关键词
-   ├─> 调用 GET /system/im/contact/search?keyword={keyword}
-   └─> 显示搜索结果
-
-3. 点击联系人
-   └─> 跳转到联系人详情页 contacts/detail.uvue
-
-4. 点击部门
-   └─> 展开/收起部门成员列表
-```
+- 顶部分类入口:
+  - 我的群组(显示群组数量)
+  - 我的关注(显示关注数量)
+  - 组织架构(树形结构)
+  - 我的部门(当前用户部门)
+- 字母索引快速定位(A-Z + #)
+- 按首字母分组显示
+- 搜索联系人(跳转到搜索页面)
+- 联系人头像(文字头像+背景色)
+- 联系人信息(姓名+角色/职位)
 
 **数据结构**:
 ```typescript
@@ -1341,134 +1536,533 @@ interface Contact {
   avatar: string;
   deptId: number;
   deptName: string;
+  role: string;                  // 角色/职位
+  pinyin: string;                // 拼音首字母
+  avatarText: string;            // 头像文字
+  avatarBg: string;              // 头像背景色
   // 个性化设置
-  remarkName: string;    // 备注名
-  star: boolean;         // 是否星标
-  noDisturb: boolean;    // 是否免打扰
+  remarkName?: string;           // 备注名
+  star?: boolean;                // 是否星标
+  noDisturb?: boolean;           // 是否免打扰
 }
 
-interface Department {
-  id: number;
-  name: string;
-  parentId: number;
-  contacts: Contact[];
+interface ContactCategory {
+  nameKey: string;               // 国际化 key
+  icon: string;                  // 图标
+  count: number;                 // 数量
+  route: string;                 // 跳转路由
 }
 ```
 
-**说明**:
-- 联系人数据直接来源于 `system_users` 表(同租户)
-- 部门数据直接来源于 `system_dept` 表
-- 无需添加好友流程
-- 个性化设置(备注名、星标)存储在 `im_contact_setting` 表
+**交互流程**:
+```
+1. 页面加载 ✅UI已实现 ❌未对接 API
+   ├─> 调用 GET /system/im/contact/list ❌未对接
+   ├─> 获取联系人列表(包含部门信息)
+   ├─> 按拼音首字母分组
+   └─> 渲染列表
 
-### 6.4 联系人详情页 (contacts/detail.uvue)
+2. 搜索联系人 ✅已实现
+   ├─> 点击搜索框
+   └─> 跳转到搜索页面 contacts/search-result.uvue
 
-**功能**:
-- 显示联系人基本信息
+3. 点击联系人 ✅已实现
+   └─> 跳转到联系人详情页 contacts/user-detail.uvue
+
+4. 点击分类入口 ✅已实现
+   ├─> 我的群组: 跳转到 contacts/my-groups.uvue
+   ├─> 我的关注: 跳转到 contacts/my-following.uvue
+   ├─> 组织架构: 跳转到 contacts/organization.uvue
+   └─> 我的部门: 跳转到 contacts/my-department.uvue
+
+5. 字母索引 ✅已实现
+   ├─> 点击字母
+   └─> 滚动到对应分组
+```
+
+**需要完善的功能** ⚠️:
+1. 后端 API 对接(联系人列表)
+2. 联系人搜索(本地搜索+服务端搜索)
+3. 星标联系人置顶
+4. 联系人备注名显示
+5. 联系人在线状态显示
+6. 联系人同步更新
+
+### 6.4 联系人详情页 (contacts/user-detail.uvue)
+
+**已实现功能** ✅:
+- 显示联系人基本信息(头像、姓名、部门、职位)
+- 快捷操作按钮(图片、文件、链接、搜索)
 - 设置备注名
 - 设置星标联系人
 - 设置免打扰
 - 发起单聊
+- 添加到群聊
 
 **交互流程**:
 ```
-1. 页面加载
-   ├─> 调用 GET /system/im/contact/{id}
+1. 页面加载 ✅UI已实现 ❌未对接 API
+   ├─> 调用 GET /system/im/contact/{id} ❌未对接
    └─> 显示联系人信息
 
-2. 设置备注名
+2. 设置备注名 ✅UI已实现 ❌未对接
    ├─> 点击"设置备注名"
    ├─> 输入备注名
-   ├─> 调用 PUT /system/im/contact/setting
+   ├─> 调用 PUT /system/im/contact/setting ❌未对接
    └─> 更新成功
 
-3. 设置星标
+3. 设置星标 ✅UI已实现 ❌未对接
    ├─> 点击"星标联系人"开关
-   ├─> 调用 PUT /system/im/contact/setting
+   ├─> 调用 PUT /system/im/contact/setting ❌未对接
    └─> 更新成功
 
-4. 发起单聊
+4. 发起单聊 ✅UI已实现 ❌未对接
    ├─> 点击"发消息"按钮
-   ├─> 调用 POST /system/im/conversation/create
+   ├─> 调用 POST /system/im/conversation/create ❌未对接
    └─> 跳转到聊天页面
 ```
 
-### 6.5 发起群聊页面 (message/create-group.uvue)
+**需要完善的功能** ⚠️:
+1. 后端 API 对接(联系人详情、设置)
+2. 快捷操作功能实现(图片、文件、链接、搜索)
+3. 添加到群聊功能
+4. 联系人名片分享
 
-**功能**:
-- 选择群成员(多选)
-- 设置群名称
-- 创建群聊
+### 6.5 发起群聊页面 (contacts/initiate-group.uvue)
+
+**已实现功能** ✅:
+- 联系人选择器组件(contact-selector)
+- 多选联系人(复选框)
+- 显示已选成员数量
+- 分类入口(我的群组、我的关注、组织架构、我的部门)
+- 搜索联系人
+- 当前用户默认选中且不可取消
+- 创建群聊逻辑(生成群名、跳转到群聊页面)
+- 全局选择状态管理(store/group-selection.uts)
+
+**数据结构**:
+```typescript
+interface GroupCreateData {
+  groupId: number;               // 群 ID(临时,由后端生成)
+  groupName: string;             // 群名称
+  groupType: 'normal' | 'work';  // 群类型
+  memberCount: number;           // 成员数量
+  memberIds: number[];           // 成员 ID 列表
+  members: Contact[];            // 成员详情列表
+  createTime: number;            // 创建时间
+  settings: {
+    allowMemberInvite: boolean;  // 允许成员邀请
+    needApproval: boolean;       // 加群需要审批
+    muteAll: boolean;            // 全员禁言
+  };
+}
+```
 
 **交互流程**:
 ```
-1. 页面加载
-   ├─> 调用 GET /system/im/contact/list
-   └─> 显示联系人列表(支持多选)
+1. 页面加载 ✅已实现
+   ├─> 初始化选择模式(startSelection)
+   ├─> 生成联系人列表(模拟数据) ❌未对接 API
+   ├─> 默认选中当前用户
+   └─> 渲染联系人列表
 
-2. 选择成员
-   ├─> 勾选联系人
-   └─> 显示已选成员数量
+2. 选择成员 ✅已实现
+   ├─> 点击联系人
+   ├─> 切换选中状态(toggleMember)
+   ├─> 更新全局状态(store/group-selection.uts)
+   └─> 更新已选数量显示
 
-3. 创建群聊
+3. 创建群聊 ✅已实现 ❌未对接 API
    ├─> 点击"完成"按钮
-   ├─> 输入群名称(可选)
-   ├─> 调用 POST /system/im/group/create
-   │   {
-   │     "name": "群名称",
-   │     "memberIds": [1, 2, 3]
-   │   }
-   ├─> 创建成功,返回群ID
-   └─> 跳转到群聊页面
+   ├─> 检查至少选择2人
+   ├─> 生成群名称(前3个成员名字,超过3个显示"等N人")
+   ├─> 构建群聊数据(GroupCreateData)
+   ├─> 调用 POST /system/im/group/create ❌未对接
+   ├─> 创建成功,返回群 ID
+   ├─> 跳转到群聊页面
+   └─> 清空选择状态(endSelection)
+
+4. 分类入口 ✅已实现
+   ├─> 我的群组: 跳转到 contacts/my-groups.uvue?mode=select
+   ├─> 我的关注: 跳转到 contacts/my-following.uvue?mode=select
+   ├─> 组织架构: 跳转到 contacts/organization.uvue?mode=select
+   └─> 我的部门: 跳转到 contacts/my-department.uvue?mode=select
 ```
 
-### 6.6 群聊详情页 (message/group-detail.uvue)
+**群名称生成规则** ✅:
+- 2-3人: 直接显示所有成员名字(用顿号分隔)
+- 4人及以上: 显示前3个成员名字 + "等N人"
+- 示例: "张三、李四、王五等8人"
 
-**功能**:
-- 显示群信息(群名、群公告)
-- 显示群成员列表
-- 添加/移除群成员
-- 设置群名称
-- 设置群公告
-- 退出群聊
-- 解散群聊(群主)
+**需要完善的功能** ⚠️:
+1. 后端 API 对接(联系人列表、创建群聊)
+2. 联系人搜索功能
+3. 从其他页面返回时同步选择状态
+4. 群聊类型选择(普通群/工作群)
+5. 群聊设置(允许邀请、需要审批等)
+
+### 6.6 群聊设置页面 (message/group-settings.uvue)
+
+**已实现功能** ✅:
+- 显示群信息卡片(群头像、群名、成员数)
+- 显示群成员列表(前8个成员)
+- 添加/删除成员按钮
+- 查看全部群成员
+- 群聊名称设置
+- 群二维码
+- 群公告
+- 群文件
+- 聊天记录
+- 消息免打扰开关
+- 置顶聊天开关
+- 聊天气泡设置
+- 群聊邀请确认开关
+- 我在本群的昵称
+- 显示群成员昵称开关
+- 清空聊天记录
+- 删除并退出
 
 **交互流程**:
 ```
-1. 页面加载
-   ├─> 调用 GET /system/im/group/{id}
+1. 页面加载 ✅UI已实现 ❌未对接 API
+   ├─> 从路由参数获取群 ID
+   ├─> 调用 GET /system/im/group/{id} ❌未对接
    └─> 显示群信息和成员列表
 
-2. 添加群成员
+2. 添加群成员 ✅UI已实现 ❌未对接
    ├─> 点击"添加成员"
+   ├─> 跳转到 contacts/initiate-group.uvue?mode=add
    ├─> 选择联系人
-   ├─> 调用 POST /system/im/group/member/add
+   ├─> 调用 POST /system/im/group/member/add ❌未对接
    └─> 刷新成员列表
 
-3. 移除群成员(群主/管理员)
-   ├─> 点击成员头像
-   ├─> 点击"移除"
-   ├─> 调用 DELETE /system/im/group/member/{userId}
+3. 删除群成员 ✅UI已实现 ❌未对接
+   ├─> 点击"删除成员"
+   ├─> 选择要删除的成员
+   ├─> 调用 DELETE /system/im/group/member/{userId} ❌未对接
    └─> 刷新成员列表
 
-4. 设置群名称
-   ├─> 点击"群名称"
+4. 查看全部成员 ✅已实现
+   └─> 跳转到 message/group-members.uvue
+
+5. 设置群名称 ✅UI已实现 ❌未对接
+   ├─> 点击"群聊名称"
    ├─> 输入新群名
-   ├─> 调用 PUT /system/im/group/{id}
+   ├─> 调用 PUT /system/im/group/{id} ❌未对接
    └─> 更新成功
 
-5. 退出群聊
-   ├─> 点击"退出群聊"
-   ├─> 确认对话框
-   ├─> 调用 POST /system/im/group/quit/{id}
-   └─> 返回消息列表
+6. 群二维码 ✅已实现
+   └─> 跳转到 message/group-qrcode.uvue
 
-6. 解散群聊(群主)
-   ├─> 点击"解散群聊"
-   ├─> 确认对话框
-   ├─> 调用 DELETE /system/im/group/{id}
-   └─> 返回消息列表
+7. 群文件 ✅已实现
+   └─> 跳转到 message/chat-files.uvue
+
+8. 聊天气泡 ✅已实现
+   └─> 跳转到 message/chat-bubble.uvue
+
+9. 设置开关 ✅UI已实现 ❌未对接
+   ├─> 消息免打扰: 调用 PUT /system/im/group/setting ❌未对接
+   ├─> 置顶聊天: 调用 PUT /system/im/conversation/pin ❌未对接
+   ├─> 群聊邀请确认: 调用 PUT /system/im/group/setting ❌未对接
+   └─> 显示群成员昵称: 调用 PUT /system/im/group/setting ❌未对接
+
+10. 清空聊天记录 ✅UI已实现 ❌未对接
+    ├─> 点击"清空聊天记录"
+    ├─> 确认对话框
+    ├─> 调用 DELETE /system/im/message/clear/{groupId} ❌未对接
+    └─> 清空成功
+
+11. 删除并退出 ✅UI已实现 ❌未对接
+    ├─> 点击"删除并退出"
+    ├─> 确认对话框
+    ├─> 调用 POST /system/im/group/quit/{id} ❌未对接
+    └─> 返回消息列表
 ```
+
+**需要完善的功能** ⚠️:
+1. 后端 API 对接(群信息、成员管理、设置)
+2. 群公告功能
+3. 聊天记录功能
+4. 我在本群的昵称设置
+5. 群主转让功能
+6. 解散群聊功能(群主)
+
+### 6.7 单聊设置页面 (message/chat-settings.uvue)
+
+**已实现功能** ✅:
+- 显示联系人信息卡片(头像、姓名、职位)
+- 快捷操作按钮(图片、文件、链接、搜索)
+- 添加成员(转为群聊)
+- 聊天气泡设置
+- 置顶聊天开关
+- 消息免打扰开关
+- 清空聊天记录
+- 下属提示信息
+
+**交互流程**:
+```
+1. 页面加载 ✅UI已实现 ❌未对接 API
+   ├─> 从路由参数获取联系人 ID
+   ├─> 调用 GET /system/im/contact/{id} ❌未对接
+   └─> 显示联系人信息
+
+2. 添加成员 ✅UI已实现 ❌未对接
+   ├─> 点击"添加成员"
+   ├─> 跳转到联系人选择页面
+   ├─> 选择成员后创建群聊
+   └─> 跳转到群聊页面
+
+3. 聊天气泡 ✅已实现
+   └─> 跳转到 message/chat-bubble.uvue
+
+4. 设置开关 ✅UI已实现 ❌未对接
+   ├─> 置顶聊天: 调用 PUT /system/im/conversation/pin ❌未对接
+   └─> 消息免打扰: 调用 PUT /system/im/conversation/mute ❌未对接
+
+5. 清空聊天记录 ✅UI已实现 ❌未对接
+   ├─> 点击"清空聊天记录"
+   ├─> 确认对话框
+   ├─> 调用 DELETE /system/im/message/clear/{conversationId} ❌未对接
+   └─> 清空成功
+```
+
+**需要完善的功能** ⚠️:
+1. 后端 API 对接(联系人信息、设置)
+2. 快捷操作功能实现
+3. 添加成员转群聊功能
+
+### 6.8 其他已实现页面
+
+**群成员列表页** (message/group-members.uvue) ✅:
+- 显示所有群成员
+- 字母索引
+- 成员搜索
+- 点击成员查看详情
+
+**群二维码页** (message/group-qrcode.uvue) ✅:
+- 显示群二维码
+- 群信息展示
+- 保存二维码到相册
+- 分享群二维码
+
+**聊天文件页** (message/chat-files.uvue) ✅:
+- 按时间分组显示文件
+- 文件类型图标
+- 文件大小显示
+- 文件下载/打开
+
+**聊天气泡页** (message/chat-bubble.uvue) ✅:
+- 气泡颜色选择
+- 气泡样式预览
+- 自定义气泡
+
+**分享联系人页** (message/share-contact.uvue) ✅:
+- 选择要分享的联系人
+- 联系人搜索
+- 发送名片
+
+**我的群组页** (contacts/my-groups.uvue) ✅:
+- 显示所有群组
+- 群组搜索
+- 创建新群组
+
+**我的关注页** (contacts/my-following.uvue) ✅:
+- 显示关注的联系人
+- 取消关注
+
+**我的部门页** (contacts/my-department.uvue) ✅:
+- 显示当前用户部门成员
+- 部门层级显示
+
+**组织架构页** (contacts/organization.uvue) ✅:
+- 树形结构显示组织架构
+- 展开/收起部门
+- 查看部门成员
+
+**搜索结果页** (contacts/search-result.uvue) ✅:
+- 搜索联系人
+- 搜索群组
+- 搜索历史
+
+### 6.9 移动端实现总结与待办清单
+
+#### 6.9.1 已实现功能清单 ✅
+
+**UI 层面(90%完成度)**:
+1. 消息模块:
+   - ✅ 消息列表页(置顶、分类、长按菜单、未读数)
+   - ✅ 聊天页面(多种消息类型、表情系统、语音输入、多选模式、全屏输入)
+   - ✅ 单聊设置页
+   - ✅ 群聊设置页
+   - ✅ 群成员列表页
+   - ✅ 群二维码页
+   - ✅ 聊天文件页
+   - ✅ 聊天气泡页
+   - ✅ 分享联系人页
+
+2. 通讯录模块:
+   - ✅ 通讯录首页(字母索引、分类入口)
+   - ✅ 联系人详情页
+   - ✅ 发起群聊页(联系人选择器、多选)
+   - ✅ 我的群组页
+   - ✅ 我的关注页
+   - ✅ 我的部门页
+   - ✅ 组织架构页
+   - ✅ 搜索结果页
+
+3. 公共组件:
+   - ✅ 验证码组件(滑块验证)
+   - ✅ 联系人选择器组件(支持多选、分类)
+
+4. 工具函数:
+   - ✅ HTTP 请求封装(request.uts,支持 Token 刷新、租户隔离)
+   - ✅ 表情解析器(emojiParser.uts,109个微信表情)
+   - ✅ 表情数据(emojiData.uts)
+   - ✅ 贴纸管理器(stickerManager.uts)
+   - ✅ 文件上传(upload.uts)
+   - ✅ 文件工具(file.uts)
+   - ✅ 字典工具(dict.uts)
+
+5. 状态管理:
+   - ✅ 用户状态(user.uts,Token/权限/角色管理)
+   - ✅ 国际化(locale.uts,中英文切换)
+   - ✅ 群组选择状态(group-selection.uts)
+
+6. API 接口:
+   - ✅ 登录接口(login.uts,账号密码/短信登录)
+
+#### 6.9.2 待实现功能清单 ❌
+
+**核心功能(优先级 P0)**:
+1. WebSocket 连接与通信:
+   - ❌ WebSocket 连接管理(连接/断开/重连)
+   - ❌ Protobuf 消息编解码
+   - ❌ 心跳保活机制
+   - ❌ 消息发送与接收
+   - ❌ 消息 ACK 确认
+   - ❌ 已读回执
+   - ❌ 正在输入状态
+
+2. 后端 API 对接:
+   - ❌ 会话管理 API(列表、创建、删除、置顶、免打扰)
+   - ❌ 消息管理 API(列表、发送、撤回、删除)
+   - ❌ 联系人管理 API(列表、详情、搜索、设置)
+   - ❌ 群组管理 API(创建、详情、成员管理、设置)
+   - ❌ 文件上传 API(图片、语音、视频、文件)
+
+3. 消息功能:
+   - ❌ 消息本地缓存(SQLite/IndexedDB)
+   - ❌ 消息分页加载(上拉加载更多)
+   - ❌ 消息重发机制(发送失败重试)
+   - ❌ 消息发送状态(发送中/已发送/已读/失败)
+   - ❌ 离线消息拉取
+   - ❌ 消息搜索
+   - ❌ 消息转发
+   - ❌ 聊天记录导出
+
+4. 多媒体功能:
+   - ❌ 语音录制与播放
+   - ❌ 视频录制与播放
+   - ❌ 图片预览与保存
+   - ❌ 文件下载与打开
+   - ❌ 位置选择与地图显示
+
+**增强功能(优先级 P1)**:
+1. 消息推送:
+   - ❌ 离线推送(APNs/FCM/华为/小米/OPPO/vivo)
+   - ❌ 推送通知点击跳转
+   - ❌ 推送通知分组
+
+2. 群组功能:
+   - ❌ 群公告
+   - ❌ 群管理员
+   - ❌ 群禁言
+   - ❌ 群邀请确认
+   - ❌ 群主转让
+   - ❌ 解散群聊
+
+3. 联系人功能:
+   - ❌ 联系人在线状态
+   - ❌ 联系人名片分享
+   - ❌ 联系人同步更新
+
+4. 会话功能:
+   - ❌ 会话草稿保存
+   - ❌ 会话标签分类
+   - ❌ 会话归档
+
+**优化功能(优先级 P2)**:
+1. 性能优化:
+   - ❌ 消息列表虚拟滚动
+   - ❌ 图片懒加载
+   - ❌ 消息预加载
+   - ❌ 内存优化
+
+2. 用户体验:
+   - ❌ 消息动画效果
+   - ❌ 输入框自动聚焦
+   - ❌ 消息撤回倒计时
+   - ❌ 消息引用显示
+
+3. 安全功能:
+   - ❌ 消息加密
+   - ❌ 截屏通知
+   - ❌ 阅后即焚
+
+#### 6.9.3 技术债务与改进建议
+
+**代码质量**:
+1. ⚠️ 大量使用模拟数据,需要替换为真实 API 调用
+2. ⚠️ 缺少错误处理和边界情况处理
+3. ⚠️ 缺少 Loading 状态和空状态处理
+4. ⚠️ 缺少单元测试和集成测试
+
+**架构优化**:
+1. ⚠️ 建议引入状态管理库(Pinia/Vuex)统一管理应用状态
+2. ⚠️ 建议封装 WebSocket 管理类
+3. ⚠️ 建议封装消息处理类
+4. ⚠️ 建议封装本地存储类
+
+**性能优化**:
+1. ⚠️ 消息列表需要虚拟滚动优化(长列表性能)
+2. ⚠️ 图片需要压缩和懒加载
+3. ⚠️ 需要实现消息分页加载
+4. ⚠️ 需要优化内存占用
+
+**用户体验**:
+1. ⚠️ 需要添加骨架屏(Skeleton Screen)
+2. ⚠️ 需要优化加载动画
+3. ⚠️ 需要添加错误提示和重试机制
+4. ⚠️ 需要优化网络异常处理
+
+#### 6.9.4 开发优先级建议
+
+**第一阶段(核心功能,2-3周)**:
+1. WebSocket 连接与 Protobuf 通信
+2. 消息收发基本功能
+3. 会话列表 API 对接
+4. 联系人列表 API 对接
+5. 文件上传功能
+
+**第二阶段(完善功能,2-3周)**:
+1. 消息本地缓存
+2. 离线消息拉取
+3. 消息重发机制
+4. 群组管理功能
+5. 多媒体消息(语音、视频)
+
+**第三阶段(增强功能,2-3周)**:
+1. 消息推送
+2. 消息搜索
+3. 消息转发
+4. 群公告、群管理
+5. 性能优化
+
+**第四阶段(优化功能,1-2周)**:
+1. 用户体验优化
+2. 性能优化
+3. 安全功能
+4. 测试与修复
 
 ---
 
