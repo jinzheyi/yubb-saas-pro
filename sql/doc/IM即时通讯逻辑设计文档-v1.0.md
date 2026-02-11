@@ -1,6 +1,6 @@
 # IM 即时通讯逻辑设计文档 v1.0
 
-> **文档版本**: v1.0.6  
+> **文档版本**: v1.0.7  
 > **创建日期**: 2026年2月11日  
 > **更新日期**: 2026年2月11日  
 > **项目**: 圣钰 SaaS Pro - IM 即时通讯系统  
@@ -9,6 +9,112 @@
 > **中间件**: shengyu-spring-boot-starter-websocket (基于 Netty + Protobuf)  
 > **移动端**: shengyu-ui-admin-uniappx (uni-app x + UTS)  
 > **数据库**: MySQL 8.0+ (已创建 IM 表结构)
+
+---
+
+## 🤖 AI 任务追踪系统
+
+### 任务状态标记说明
+
+本文档采用任务追踪系统,帮助 AI 和开发者清晰了解每个任务的执行状态:
+
+| 状态标记 | 含义 | 说明 |
+|---------|------|------|
+| `[ ]` | 待执行 | 任务尚未开始,AI 可以执行 |
+| `[~]` | 进行中 | 任务正在执行中,请勿重复执行 |
+| `[x]` | 已完成 | 任务已完成,无需再次执行 |
+| `[!]` | 需优化 | 任务已执行但需要优化改进 |
+| `[-]` | 已废弃 | 任务已废弃,不再执行 |
+| `[?]` | 阻塞中 | 任务被阻塞,等待依赖任务完成 |
+
+### 任务元数据格式
+
+每个任务可包含以下元数据(可选):
+
+```markdown
+- [状态] 任务ID: 任务描述
+  - 负责人: AI/人工
+  - 优先级: P0(紧急)/P1(高)/P2(中)/P3(低)
+  - 预计时间: X小时/天
+  - 依赖: 任务ID列表
+  - 文件: 相关文件路径
+  - 备注: 补充说明
+```
+
+### AI 执行规则
+
+1. **自动执行**: AI 遇到 `[ ]` 状态的任务时,应主动执行
+2. **跳过已完成**: AI 遇到 `[x]` 状态的任务时,应跳过不执行
+3. **优化改进**: AI 遇到 `[!]` 状态的任务时,应分析并优化
+4. **检查依赖**: 执行任务前,先检查依赖任务是否已完成
+5. **更新状态**: 执行任务时,先将状态改为 `[~]`,完成后改为 `[x]`
+6. **记录文件**: 执行任务后,在元数据中记录相关文件路径
+
+### 人工干预指令
+
+开发者可通过以下指令控制 AI 执行:
+
+| 指令 | 说明 | 示例 |
+|------|------|------|
+| `重新执行任务 X.X.X` | 将任务状态改为 `[ ]`,AI 重新执行 | "重新执行任务 2.1.1" |
+| `优化任务 X.X.X` | 将任务状态改为 `[!]`,AI 优化改进 | "优化任务 3.1.1" |
+| `废弃任务 X.X.X` | 将任务状态改为 `[-]`,AI 不再执行 | "废弃任务 5.2.7" |
+| `解除阻塞任务 X.X.X` | 将任务状态从 `[?]` 改为 `[ ]` | "解除阻塞任务 4.1.1" |
+| `执行阶段 X` | 执行指定阶段的所有待执行任务 | "执行阶段 2" |
+| `查看进度` | AI 生成当前任务进度报告 | "查看进度" |
+
+### 进度报告模板
+
+当开发者要求"查看进度"时,AI 应生成如下报告:
+
+```markdown
+## IM 项目进度报告
+
+**生成时间**: YYYY-MM-DD HH:mm:ss
+
+### 总体进度
+- 总任务数: X
+- 已完成: X (XX%)
+- 进行中: X (XX%)
+- 待执行: X (XX%)
+- 需优化: X (XX%)
+- 已废弃: X (XX%)
+- 阻塞中: X (XX%)
+
+### 各阶段进度
+- 阶段1: 数据库设计与初始化 - XX% (X/X)
+- 阶段2: 后端基础框架搭建 - XX% (X/X)
+- 阶段3: WebSocket 中间件集成 - XX% (X/X)
+- 阶段4: REST API 接口开发 - XX% (X/X)
+- 阶段5: 移动端开发 - XX% (X/X)
+- 阶段6: 测试与优化 - XX% (X/X)
+
+### 当前可执行任务 (待执行且无依赖阻塞)
+1. 任务 X.X.X: 任务描述
+2. 任务 X.X.X: 任务描述
+...
+
+### 需要优化的任务
+1. 任务 X.X.X: 任务描述 - 原因
+2. 任务 X.X.X: 任务描述 - 原因
+...
+
+### 阻塞任务及原因
+1. 任务 X.X.X: 任务描述 - 等待任务 X.X.X 完成
+2. 任务 X.X.X: 任务描述 - 等待任务 X.X.X 完成
+...
+```
+
+### 任务执行日志
+
+AI 执行任务时,应在任务元数据中添加执行日志:
+
+```markdown
+- [x] 1.1: 创建 im_message 表
+  - 文件: sql/mysql/1.0/im/ddl_im_tables.sql
+  - 执行时间: 2026-02-11 10:30:00
+  - 执行结果: 成功创建表结构,包含 20 个字段
+```
 
 ---
 
@@ -3694,99 +3800,610 @@ public class WebSocketMetrics {
 
 ## 11. 任务拆解清单
 
-### 阶段 1: 数据库设计与初始化 (2天)
+> **说明**: 本清单采用任务追踪系统,每个任务都有状态标记。AI 应根据状态自动执行/跳过任务。
 
-- [ ] 1.1 创建 `im_message` 表
-- [ ] 1.2 创建 `im_conversation` 表
-- [ ] 1.3 创建 `im_group` 表
-- [ ] 1.4 创建 `im_group_user` 表
-- [ ] 1.5 创建 `im_contact_setting` 表
-- [ ] 1.6 创建索引
-- [ ] 1.7 初始化测试数据
+### 阶段 1: 数据库设计与初始化 (预计 2 天)
 
-### 阶段 2: 后端基础框架搭建 (3天)
+**阶段状态**: 🟢 已完成 (设计阶段,SQL 文件已创建但未执行)
 
-#### 2.1 DO 实体类 (0.5天)
-- [ ] 2.1.1 创建 `ImMessageDO.java`
-- [ ] 2.1.2 创建 `ImConversationDO.java`
-- [ ] 2.1.3 创建 `ImGroupDO.java`
-- [ ] 2.1.4 创建 `ImGroupUserDO.java`
-- [ ] 2.1.5 创建 `ImContactSettingDO.java`
+- [x] 1.1: 创建 `im_message` 表
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `sql/mysql/1.0/im/ddl_im_tables.sql`
+  - 执行时间: 2026-02-11
+  - 备注: 包含 20 个字段,支持多种消息类型
 
-#### 2.2 Mapper 接口 (0.5天)
-- [ ] 2.2.1 创建 `ImMessageMapper.java`
-- [ ] 2.2.2 创建 `ImConversationMapper.java`
-- [ ] 2.2.3 创建 `ImGroupMapper.java`
-- [ ] 2.2.4 创建 `ImGroupUserMapper.java`
-- [ ] 2.2.5 创建 `ImContactSettingMapper.java`
+- [x] 1.2: 创建 `im_conversation` 表
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `sql/mysql/1.0/im/ddl_im_tables.sql`
+  - 执行时间: 2026-02-11
+  - 备注: 支持单聊和群聊会话
 
-#### 2.3 VO 类 (0.5天)
-- [ ] 2.3.1 创建 `MessageRespVO.java`
-- [ ] 2.3.2 创建 `ConversationRespVO.java`
-- [ ] 2.3.3 创建 `GroupRespVO.java`
-- [ ] 2.3.4 创建 `ContactRespVO.java`
-- [ ] 2.3.5 创建请求 VO 类
+- [x] 1.3: 创建 `im_group` 表
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `sql/mysql/1.0/im/ddl_im_tables.sql`
+  - 执行时间: 2026-02-11
+  - 备注: 群组基本信息表
 
-#### 2.4 Service 层 (1天)
-- [ ] 2.4.1 创建 `ImMessageService` 接口和实现
-- [ ] 2.4.2 创建 `ImConversationService` 接口和实现
-- [ ] 2.4.3 创建 `ImGroupService` 接口和实现
-- [ ] 2.4.4 创建 `ImContactService` 接口和实现
+- [x] 1.4: 创建 `im_group_user` 表
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `sql/mysql/1.0/im/ddl_im_tables.sql`
+  - 执行时间: 2026-02-11
+  - 备注: 群组成员关系表
 
-#### 2.5 Controller 层 (0.5天)
-- [ ] 2.5.1 创建 `ImMessageController.java`
-- [ ] 2.5.2 创建 `ImConversationController.java`
-- [ ] 2.5.3 创建 `ImGroupController.java`
-- [ ] 2.5.4 创建 `ImContactController.java`
+- [x] 1.5: 创建 `im_contact_setting` 表
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `sql/mysql/1.0/im/ddl_im_tables.sql`
+  - 执行时间: 2026-02-11
+  - 备注: 联系人个性化设置(备注名、星标、免打扰)
 
-### 阶段 3: WebSocket 中间件集成 (3天)
+- [x] 1.6: 创建 `im_sequence` 表
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `sql/mysql/1.0/im/ddl_im_tables.sql`
+  - 执行时间: 2026-02-11
+  - 备注: 消息序列号生成表
 
-#### 3.1 SPI 接口实现 (1天)
-- [ ] 3.1.1 实现 `MessageStorageService` 接口
-- [ ] 3.1.2 实现 `AuthService` 接口
-- [ ] 3.1.3 配置 Spring Bean
+- [x] 1.7: 创建索引
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `sql/mysql/1.0/im/ddl_im_tables.sql`
+  - 执行时间: 2026-02-11
+  - 备注: 已在 DDL 中定义所有必要索引
 
-#### 3.2 消息处理逻辑 (1天)
-- [ ] 3.2.1 实现消息保存逻辑
-- [ ] 3.2.2 实现会话更新逻辑
-- [ ] 3.2.3 实现消息推送逻辑
-- [ ] 3.2.4 实现已读回执处理
+- [x] 1.8: 初始化字典数据
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `sql/mysql/1.0/im/dml_im_init_data.sql`
+  - 执行时间: 2026-02-11
+  - 备注: 消息类型、会话类型等字典数据
 
-#### 3.3 连接管理 (1天)
-- [ ] 3.3.1 实现认证逻辑
-- [ ] 3.3.2 实现心跳检测
-- [ ] 3.3.3 实现断线重连
-- [ ] 3.3.4 实现Session管理
+- [x] 1.9: 创建数据库变更管理规范
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `sql/mysql/1.0/README.md`, `sql/mysql/1.0/im/README.md`
+  - 执行时间: 2026-02-11
+  - 备注: 定义了 DDL/DML 文件管理规范
 
-### 阶段 4: REST API 接口开发 (4天)
 
-#### 4.1 会话管理接口 (1天)
-- [ ] 4.1.1 获取会话列表
-- [ ] 4.1.2 创建会话
-- [ ] 4.1.3 删除会话
-- [ ] 4.1.4 置顶会话
-- [ ] 4.1.5 设置免打扰
+### 阶段 2: 后端基础框架搭建 (预计 3 天)
 
-#### 4.2 消息管理接口 (1天)
-- [ ] 4.2.1 获取消息列表
-- [ ] 4.2.2 撤回消息
-- [ ] 4.2.3 删除消息
-- [ ] 4.2.4 标记已读
+**阶段状态**: 🔴 待执行 (0%)
 
-#### 4.3 联系人管理接口 (1天)
-- [ ] 4.3.1 获取联系人列表(从 system_users 查询)
-- [ ] 4.3.2 搜索联系人
-- [ ] 4.3.3 获取联系人详情
-- [ ] 4.3.4 更新联系人设置(备注名、星标、免打扰)
+#### 2.1 DO 实体类 (预计 0.5 天)
 
-#### 4.4 群组管理接口 (1天)
-- [ ] 4.4.1 创建群组
-- [ ] 4.4.2 获取群组详情
-- [ ] 4.4.3 更新群组信息
-- [ ] 4.4.4 添加群成员
-- [ ] 4.4.5 移除群成员
-- [ ] 4.4.6 退出群组
-- [ ] 4.4.7 解散群组
+- [ ] 2.1.1: 创建 `ImMessageDO.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 1.1
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/dataobject/im/ImMessageDO.java`
+  - 备注: 对应 im_message 表,包含所有字段映射
+
+- [ ] 2.1.2: 创建 `ImConversationDO.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 20分钟
+  - 依赖: 1.2
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/dataobject/im/ImConversationDO.java`
+  - 备注: 对应 im_conversation 表
+
+- [ ] 2.1.3: 创建 `ImGroupDO.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 20分钟
+  - 依赖: 1.3
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/dataobject/im/ImGroupDO.java`
+  - 备注: 对应 im_group 表
+
+- [ ] 2.1.4: 创建 `ImGroupUserDO.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 15分钟
+  - 依赖: 1.4
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/dataobject/im/ImGroupUserDO.java`
+  - 备注: 对应 im_group_user 表
+
+- [ ] 2.1.5: 创建 `ImContactSettingDO.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 15分钟
+  - 依赖: 1.5
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/dataobject/im/ImContactSettingDO.java`
+  - 备注: 对应 im_contact_setting 表
+
+- [ ] 2.1.6: 创建 `ImSequenceDO.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 10分钟
+  - 依赖: 1.6
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/dataobject/im/ImSequenceDO.java`
+  - 备注: 对应 im_sequence 表
+
+#### 2.2 Mapper 接口 (预计 0.5 天)
+
+- [ ] 2.2.1: 创建 `ImMessageMapper.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 2.1.1
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/mysql/im/ImMessageMapper.java`
+  - 备注: 包含消息查询、分页、统计等方法
+
+- [ ] 2.2.2: 创建 `ImConversationMapper.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 20分钟
+  - 依赖: 2.1.2
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/mysql/im/ImConversationMapper.java`
+  - 备注: 包含会话列表查询、更新等方法
+
+- [ ] 2.2.3: 创建 `ImGroupMapper.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 20分钟
+  - 依赖: 2.1.3
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/mysql/im/ImGroupMapper.java`
+  - 备注: 包含群组查询、创建、更新等方法
+
+- [ ] 2.2.4: 创建 `ImGroupUserMapper.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 15分钟
+  - 依赖: 2.1.4
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/mysql/im/ImGroupUserMapper.java`
+  - 备注: 包含群成员查询、添加、删除等方法
+
+- [ ] 2.2.5: 创建 `ImContactSettingMapper.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 15分钟
+  - 依赖: 2.1.5
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/mysql/im/ImContactSettingMapper.java`
+  - 备注: 包含联系人设置查询、更新等方法
+
+- [ ] 2.2.6: 创建 `ImSequenceMapper.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 10分钟
+  - 依赖: 2.1.6
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/mysql/im/ImSequenceMapper.java`
+  - 备注: 包含序列号生成方法
+
+#### 2.3 VO 类 (预计 0.5 天)
+
+- [ ] 2.3.1: 创建消息相关 VO
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 40分钟
+  - 依赖: 2.1.1
+  - 文件: `shengyu-module-system/shengyu-module-system-api/src/main/java/com/shengyu/module/system/controller/admin/im/vo/message/`
+  - 备注: MessageRespVO, MessagePageReqVO, MessageSendReqVO 等
+
+- [ ] 2.3.2: 创建会话相关 VO
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 2.1.2
+  - 文件: `shengyu-module-system/shengyu-module-system-api/src/main/java/com/shengyu/module/system/controller/admin/im/vo/conversation/`
+  - 备注: ConversationRespVO, ConversationPageReqVO 等
+
+- [ ] 2.3.3: 创建群组相关 VO
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 2.1.3
+  - 文件: `shengyu-module-system/shengyu-module-system-api/src/main/java/com/shengyu/module/system/controller/admin/im/vo/group/`
+  - 备注: GroupRespVO, GroupCreateReqVO, GroupUpdateReqVO 等
+
+- [ ] 2.3.4: 创建联系人相关 VO
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 20分钟
+  - 依赖: 2.1.5
+  - 文件: `shengyu-module-system/shengyu-module-system-api/src/main/java/com/shengyu/module/system/controller/admin/im/vo/contact/`
+  - 备注: ContactRespVO, ContactSettingUpdateReqVO 等
+
+#### 2.4 Service 层 (预计 1 天)
+
+- [ ] 2.4.1: 创建 `ImMessageService` 接口和实现
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 3小时
+  - 依赖: 2.2.1, 2.3.1
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/`
+  - 备注: 消息查询、撤回、删除、标记已读等业务逻辑
+
+- [ ] 2.4.2: 创建 `ImConversationService` 接口和实现
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 2.2.2, 2.3.2
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/`
+  - 备注: 会话列表、创建、删除、置顶、免打扰等业务逻辑
+
+- [ ] 2.4.3: 创建 `ImGroupService` 接口和实现
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 2.2.3, 2.2.4, 2.3.3
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/`
+  - 备注: 群组创建、更新、成员管理等业务逻辑
+
+- [ ] 2.4.4: 创建 `ImContactService` 接口和实现
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 2.2.5, 2.3.4
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/`
+  - 备注: 联系人列表(从 system_users 查询)、设置更新等业务逻辑
+
+- [ ] 2.4.5: 创建 `ImSequenceService` 接口和实现
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 2.2.6
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/`
+  - 备注: 消息序列号生成服务
+
+#### 2.5 Controller 层 (预计 0.5 天)
+
+- [ ] 2.5.1: 创建 `ImMessageController.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.4.1
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/admin/im/ImMessageController.java`
+  - 备注: 消息相关 REST API 接口
+
+- [ ] 2.5.2: 创建 `ImConversationController.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.4.2
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/admin/im/ImConversationController.java`
+  - 备注: 会话相关 REST API 接口
+
+- [ ] 2.5.3: 创建 `ImGroupController.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.4.3
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/admin/im/ImGroupController.java`
+  - 备注: 群组相关 REST API 接口
+
+- [ ] 2.5.4: 创建 `ImContactController.java`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 45分钟
+  - 依赖: 2.4.4
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/admin/im/ImContactController.java`
+  - 备注: 联系人相关 REST API 接口
+
+
+
+### 阶段 3: WebSocket 中间件集成 (预计 3 天)
+
+**阶段状态**: 🔴 待执行 (0%)
+
+#### 3.1 SPI 接口实现 (预计 1 天)
+
+- [ ] 3.1.1: 实现 `MessageStorageService` 接口
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 3小时
+  - 依赖: 2.4.1, 2.4.2
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/SystemMessageStorageServiceImpl.java`
+  - 备注: 实现消息保存、查询、更新等方法,对接中间件
+
+- [ ] 3.1.2: 实现 `AuthService` 接口
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 无
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/SystemAuthServiceImpl.java`
+  - 备注: 实现 WebSocket 认证逻辑,支持租户端和平台端
+
+- [ ] 3.1.3: 实现 `MessageCacheService` 接口 (可选)
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1小时
+  - 依赖: 无
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/SystemMessageCacheServiceImpl.java`
+  - 备注: 实现消息缓存逻辑,提升性能
+
+- [ ] 3.1.4: 实现 `OfflinePushService` 接口 (可选)
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 2小时
+  - 依赖: 无
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/SystemOfflinePushServiceImpl.java`
+  - 备注: 实现离线推送逻辑,可集成第三方推送服务
+
+- [ ] 3.1.5: 配置 Spring Bean
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 3.1.1, 3.1.2
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/config/ImWebSocketConfig.java`
+  - 备注: 注册 SPI 接口实现为 Spring Bean
+
+#### 3.2 消息处理逻辑 (预计 1 天)
+
+- [ ] 3.2.1: 实现消息保存逻辑
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 3.1.1
+  - 文件: 在 SystemMessageStorageServiceImpl 中实现
+  - 备注: 保存消息到数据库,生成序列号
+
+- [ ] 3.2.2: 实现会话更新逻辑
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 3小时
+  - 依赖: 3.1.1, 2.4.2
+  - 文件: 在 ImConversationService 中实现
+  - 备注: 新消息到达时更新会话列表,更新未读数
+
+- [ ] 3.2.3: 实现消息推送逻辑
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 3.1.1
+  - 文件: 在 SystemMessageStorageServiceImpl 中实现
+  - 备注: 单聊推送给接收者,群聊推送给所有成员
+
+- [ ] 3.2.4: 实现已读回执处理
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1小时
+  - 依赖: 3.1.1
+  - 文件: 在 SystemMessageStorageServiceImpl 中实现
+  - 备注: 更新消息状态为已读
+
+#### 3.3 连接管理 (预计 1 天)
+
+- [ ] 3.3.1: 实现认证逻辑
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 3.1.2
+  - 文件: 在 SystemAuthServiceImpl 中实现
+  - 备注: 验证 Token,支持租户端和平台端
+
+- [ ] 3.3.2: 配置心跳检测
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 无
+  - 文件: `shengyu-server/src/main/resources/application-dev.yaml`
+  - 备注: 配置心跳超时时间,开发环境和生产环境不同
+
+- [ ] 3.3.3: 实现断线重连逻辑
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 2小时
+  - 依赖: 无
+  - 文件: 移动端实现
+  - 备注: 移动端检测连接断开后自动重连
+
+- [ ] 3.3.4: 实现多端登录策略
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 3小时
+  - 依赖: 3.1.2
+  - 文件: 在 SystemAuthServiceImpl 中实现
+  - 备注: 同设备类型互踢,不同设备类型共存
+
+### 阶段 4: REST API 接口开发 (预计 4 天)
+
+**阶段状态**: 🔴 待执行 (0%)
+
+#### 4.1 会话管理接口 (预计 1 天)
+
+- [ ] 4.1.1: 获取会话列表
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 2.5.2
+  - 文件: ImConversationController
+  - 备注: GET /admin-api/system/im/conversation/list
+
+- [ ] 4.1.2: 创建会话
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.5.2
+  - 文件: ImConversationController
+  - 备注: POST /admin-api/system/im/conversation/create
+
+- [ ] 4.1.3: 删除会话
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 45分钟
+  - 依赖: 2.5.2
+  - 文件: ImConversationController
+  - 备注: DELETE /admin-api/system/im/conversation/delete
+
+- [ ] 4.1.4: 置顶会话
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 45分钟
+  - 依赖: 2.5.2
+  - 文件: ImConversationController
+  - 备注: PUT /admin-api/system/im/conversation/pin
+
+- [ ] 4.1.5: 设置免打扰
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 45分钟
+  - 依赖: 2.5.2
+  - 文件: ImConversationController
+  - 备注: PUT /admin-api/system/im/conversation/mute
+
+- [ ] 4.1.6: 清空未读数
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 2.5.2
+  - 文件: ImConversationController
+  - 备注: PUT /admin-api/system/im/conversation/clear-unread
+
+#### 4.2 消息管理接口 (预计 1 天)
+
+- [ ] 4.2.1: 获取消息列表
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 2.5.1
+  - 文件: ImMessageController
+  - 备注: GET /admin-api/system/im/message/list,支持游标分页
+
+- [ ] 4.2.2: 撤回消息
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.5.1
+  - 文件: ImMessageController
+  - 备注: PUT /admin-api/system/im/message/recall
+
+- [ ] 4.2.3: 删除消息
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 45分钟
+  - 依赖: 2.5.1
+  - 文件: ImMessageController
+  - 备注: DELETE /admin-api/system/im/message/delete
+
+- [ ] 4.2.4: 标记已读
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.5.1
+  - 文件: ImMessageController
+  - 备注: PUT /admin-api/system/im/message/read
+
+- [ ] 4.2.5: 获取未读消息数
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 2.5.1
+  - 文件: ImMessageController
+  - 备注: GET /admin-api/system/im/message/unread-count
+
+#### 4.3 联系人管理接口 (预计 1 天)
+
+- [ ] 4.3.1: 获取联系人列表
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 2.5.4
+  - 文件: ImContactController
+  - 备注: GET /admin-api/system/im/contact/list,从 system_users 查询
+
+- [ ] 4.3.2: 搜索联系人
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 2.5.4
+  - 文件: ImContactController
+  - 备注: GET /admin-api/system/im/contact/search
+
+- [ ] 4.3.3: 获取联系人详情
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.5.4
+  - 文件: ImContactController
+  - 备注: GET /admin-api/system/im/contact/get
+
+- [ ] 4.3.4: 更新联系人设置
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1.5小时
+  - 依赖: 2.5.4
+  - 文件: ImContactController
+  - 备注: PUT /admin-api/system/im/contact/setting,备注名、星标、免打扰
+
+- [ ] 4.3.5: 获取部门联系人
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1小时
+  - 依赖: 2.5.4
+  - 文件: ImContactController
+  - 备注: GET /admin-api/system/im/contact/dept/{deptId}
+
+#### 4.4 群组管理接口 (预计 1 天)
+
+- [ ] 4.4.1: 创建群组
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 2.5.3
+  - 文件: ImGroupController
+  - 备注: POST /admin-api/system/im/group/create
+
+- [ ] 4.4.2: 获取群组详情
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.5.3
+  - 文件: ImGroupController
+  - 备注: GET /admin-api/system/im/group/get
+
+- [ ] 4.4.3: 更新群组信息
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.5.3
+  - 文件: ImGroupController
+  - 备注: PUT /admin-api/system/im/group/update
+
+- [ ] 4.4.4: 添加群成员
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.5.3
+  - 文件: ImGroupController
+  - 备注: POST /admin-api/system/im/group/add-member
+
+- [ ] 4.4.5: 移除群成员
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.5.3
+  - 文件: ImGroupController
+  - 备注: POST /admin-api/system/im/group/remove-member
+
+- [ ] 4.4.6: 退出群组
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 45分钟
+  - 依赖: 2.5.3
+  - 文件: ImGroupController
+  - 备注: POST /admin-api/system/im/group/quit
+
+- [ ] 4.4.7: 解散群组
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.5.3
+  - 文件: ImGroupController
+  - 备注: DELETE /admin-api/system/im/group/dismiss
+
+- [ ] 4.4.8: 获取群成员列表
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 2.5.3
+  - 文件: ImGroupController
+  - 备注: GET /admin-api/system/im/group/member/list
+
 
 ### 阶段 5: 移动端开发 (10天)
 
