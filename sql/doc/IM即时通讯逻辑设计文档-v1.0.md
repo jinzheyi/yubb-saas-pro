@@ -1,6 +1,6 @@
 # IM 即时通讯逻辑设计文档 v1.0
 
-> **文档版本**: v1.0.3  
+> **文档版本**: v1.0.4  
 > **创建日期**: 2026年2月11日  
 > **更新日期**: 2026年2月11日  
 > **项目**: 圣钰 SaaS Pro - IM 即时通讯系统  
@@ -133,10 +133,15 @@
 - **双端认证**: 支持租户端(LoginUser)和平台端(PlatformLoginUser)
 - **租户级推送**: 支持向指定租户的所有用户推送消息
 
-#### 1.3.4 多设备支持
-- **单用户多设备**: 支持同一用户在多个设备同时在线
+#### 1.3.4 多端登录支持 (类似微信)
+- **多端同时在线**: 支持同一用户在不同平台同时登录(手机、PC、平板、Web)
+- **设备类型**: 1-Web, 2-iOS, 3-Android, 4-小程序, 5-iPad, 6-Mac, 7-Windows
+- **互踢策略**: 
+  - 同一设备类型只允许一个在线(如手机端只能一个设备在线)
+  - 不同设备类型可以同时在线(如手机+PC+iPad 同时在线)
+  - 新设备登录时,踢掉同类型的旧设备
 - **设备级推送**: 支持向指定用户的指定设备推送消息
-- **设备管理**: 自动管理设备连接和断开
+- **设备管理**: 自动管理设备连接和断开,记录设备信息
 
 #### 1.3.5 分布式部署
 - **消息总线**: 支持 Redis/RocketMQ/Kafka/RabbitMQ
@@ -787,63 +792,230 @@ ws.onError((err) => {
 });
 ```
 
-### 4.5 多设备支持
+### 4.5 多端登录支持 (类似微信)
 
-#### 4.5.1 会话管理
+#### 4.5.1 设备类型定义
 
 ```java
-// NettySessionManager 支持单用户多设备
-public class NettySessionManager {
+/**
+ * 设备类型枚举
+ */
+public enum DeviceTypeEnum {
     
-    // User ID -> Channel IDs (支持多设备)
-    private final Map<Long, Set<String>> userChannelMap = new ConcurrentHashMap<>();
+    WEB(1, "Web浏览器", "web"),
+    IOS(2, "iPhone", "ios"),
+    ANDROID(3, "Android手机", "android"),
+    MINI_PROGRAM(4, "小程序", "mini"),
+    IPAD(5, "iPad", "ipad"),
+    MAC(6, "Mac电脑", "mac"),
+    WINDOWS(7, "Windows电脑", "windows");
+    
+    private final Integer code;
+    private final String name;
+    private final String platform;
     
     /**
-     * 获取用户的所有会话(所有设备)
+     * 判断是否为移动端
      */
-    public List<NettySession> getSessionsByUserId(Long userId) {
-        Set<String> channelIds = userChannelMap.get(userId);
-        if (channelIds == null || channelIds.isEmpty()) {
-            return Collections.emptyList();
+    public boolean isMobile() {
+        return this == IOS || this == ANDROID;
+    }
+    
+    /**
+     * 判断是否为PC端
+     */
+    public boolean isPC() {
+        return this == MAC || this == WINDOWS || this == WEB;
+    }
+    
+    /**
+     * 判断是否为平板端
+     */
+    public boolean isTablet() {
+        return this == IPAD;
+    }
+}
+```
+
+#### 4.5.2 互踢策略
+
+**规则**:
+1. 同一设备类型只允许一个设备在线
+2. 不同设备类型可以同时在线
+3. 新设备登录时,踢掉同类型的旧设备
+
+**示例场景**:
+```
+用户 A 的登录情况:
+- iPhone (iOS)     ✅ 在线
+- iPad (iPad)      ✅ 在线
+- Mac (Mac)        ✅ 在线
+- Windows (Win)    ✅ 在线
+
+此时用户 A 在另一台 iPhone 上登录:
+- iPhone 1 (iOS)   ❌ 被踢下线
+- iPhone 2 (iOS)   ✅ 新设备上线
+- iPad (iPad)      ✅ 保持在线
+- Mac (Mac)        ✅ 保持在线
+- Windows (Win)    ✅ 保持在线
+```
+
+#### 4.5.3 会话管理实现
+
+```java
+/**
+ * NettySessionManager 支持多端登录
+ */
+@Component
+public class NettySessionManager {
+    
+    // User ID + Device Type -> Channel ID (每个设备类型只保留一个连接)
+    private final Map<String, String> userDeviceChannelMap = new ConcurrentHashMap<>();
+    
+    /**
+     * 添加会话(支持互踢)
+     */
+    public void addSession(NettySession session) {
+        String channelId = session.getChannelId();
+        Long userId = session.getUserId();
+        Integer deviceType = session.getDeviceType();
+        
+        // 1. 检查是否有同类型设备在线
+        String userDeviceKey = userId + ":" + deviceType;
+        String oldChannelId = userDeviceChannelMap.get(userDeviceKey);
+        
+        if (oldChannelId != null && !oldChannelId.equals(channelId)) {
+            // 2. 踢掉旧设备
+            NettySession oldSession = channelSessionMap.get(oldChannelId);
+            if (oldSession != null && oldSession.isActive()) {
+                kickOffDevice(oldSession, "您的账号在其他设备登录");
+            }
         }
         
-        return channelIds.stream()
-            .map(channelSessionMap::get)
-            .filter(Objects::nonNull)
-            .filter(NettySession::isActive)
+        // 3. 保存新会话
+        channelSessionMap.put(channelId, session);
+        userDeviceChannelMap.put(userDeviceKey, channelId);
+        
+        // 4. 添加到用户映射
+        userChannelMap.computeIfAbsent(userId, k -> ConcurrentHashMap.newKeySet())
+            .add(channelId);
+        
+        log.info("[SessionManager] 添加会话, userId: {}, deviceType: {}, channelId: {}", 
+            userId, deviceType, channelId);
+    }
+    
+    /**
+     * 踢掉设备
+     */
+    private void kickOffDevice(NettySession session, String reason) {
+        log.info("[SessionManager] 踢掉设备, userId: {}, deviceType: {}, reason: {}", 
+            session.getUserId(), session.getDeviceType(), reason);
+        
+        // 1. 发送踢下线通知
+        ImMessage kickOffMessage = ImMessage.newBuilder()
+            .setHeader(MessageHeader.newBuilder()
+                .setMessageId(System.currentTimeMillis())
+                .setMessageType(MessageType.CLOSE)
+                .setTimestamp(System.currentTimeMillis())
+                .build())
+            .setBody(ByteString.copyFromUtf8(reason))
+            .build();
+        
+        session.getChannel().writeAndFlush(kickOffMessage);
+        
+        // 2. 关闭连接
+        session.getChannel().close();
+    }
+    
+    /**
+     * 根据用户ID和设备类型获取会话
+     */
+    public NettySession getSessionByUserIdAndDeviceType(Long userId, Integer deviceType) {
+        String userDeviceKey = userId + ":" + deviceType;
+        String channelId = userDeviceChannelMap.get(userDeviceKey);
+        return channelId != null ? channelSessionMap.get(channelId) : null;
+    }
+    
+    /**
+     * 获取用户在线的所有设备类型
+     */
+    public List<Integer> getOnlineDeviceTypes(Long userId) {
+        List<NettySession> sessions = getSessionsByUserId(userId);
+        return sessions.stream()
+            .map(NettySession::getDeviceType)
+            .distinct()
             .collect(Collectors.toList());
     }
 }
 ```
 
-#### 4.5.2 消息推送
+#### 4.5.4 客户端处理
+
+```typescript
+// 监听被踢下线消息
+ws.onMessage((res) => {
+  const message = ImMessage.decode(new Uint8Array(res.data));
+  
+  if (message.header.messageType === MessageType.CLOSE) {
+    const reason = message.body.toString();
+    
+    // 显示提示
+    uni.showModal({
+      title: '下线通知',
+      content: reason,
+      showCancel: false,
+      success: () => {
+        // 跳转到登录页
+        uni.reLaunch({ url: '/pages/login/login' });
+      }
+    });
+    
+    // 关闭连接
+    ws.close();
+  }
+});
+```
+
+#### 4.5.5 设备信息展示
 
 ```java
-// 推送消息给用户的所有设备
-public void sendToUser(Long userId, MessageType messageType, MessageLite body) {
+/**
+ * 获取用户在线设备列表
+ */
+@GetMapping("/online-devices")
+public CommonResult<List<OnlineDeviceVO>> getOnlineDevices() {
+    Long userId = SecurityFrameworkUtils.getLoginUserId();
+    
     List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
     
-    ImMessage message = buildMessage(messageType, body, null, userId, null, null);
+    List<OnlineDeviceVO> devices = sessions.stream()
+        .map(session -> OnlineDeviceVO.builder()
+            .deviceType(session.getDeviceType())
+            .deviceTypeName(DeviceTypeEnum.getByCode(session.getDeviceType()).getName())
+            .deviceId(session.getDeviceId())
+            .clientVersion(session.getClientVersion())
+            .loginTime(session.getConnectTime())
+            .lastActiveTime(session.getLastActiveTime())
+            .build())
+        .collect(Collectors.toList());
     
-    for (NettySession session : sessions) {
-        if (session.isActive()) {
-            session.getChannel().writeAndFlush(message);
-        }
-    }
+    return success(devices);
 }
 
-// 推送消息给指定设备
-public void sendToDevice(Long userId, String deviceId, 
-                        MessageType messageType, MessageLite body) {
-    List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
+/**
+ * 踢掉指定设备
+ */
+@PostMapping("/kick-device")
+public CommonResult<Boolean> kickDevice(@RequestParam("deviceType") Integer deviceType) {
+    Long userId = SecurityFrameworkUtils.getLoginUserId();
     
-    for (NettySession session : sessions) {
-        if (deviceId.equals(session.getDeviceId()) && session.isActive()) {
-            ImMessage message = buildMessage(messageType, body, null, userId, null, null);
-            session.getChannel().writeAndFlush(message);
-            return;
-        }
+    NettySession session = sessionManager.getSessionByUserIdAndDeviceType(userId, deviceType);
+    if (session != null && session.isActive()) {
+        sessionManager.kickOffDevice(session, "您主动踢掉了该设备");
+        return success(true);
     }
+    
+    return success(false);
 }
 ```
 
@@ -4146,6 +4318,489 @@ public interface ImMessageConvert {
 
 本章节基于 `shengyu-spring-boot-starter-websocket` 中间件,提供详细的集成指南。
 
+### 15.1 中间件功能清单
+
+#### 15.1.1 已实现功能 ✅
+
+| 功能模块 | 实现状态 | 说明 |
+|---------|---------|------|
+| Netty 服务器 | ✅ | 支持 Epoll 优化,50w+ 连接 |
+| Protobuf 协议 | ✅ | 高性能二进制序列化 |
+| WebSocket 协议 | ✅ | 兼容 Web/小程序 |
+| 会话管理 | ✅ | 支持多设备,租户隔离 |
+| 认证处理 | ✅ | 支持租户端/平台端双端认证 |
+| 心跳检测 | ✅ | 自动检测连接状态 |
+| 消息处理器 | ✅ | 文本、图片、语音、视频、文件 |
+| 消息路由 | ✅ | 单播、多播、广播 |
+| 分布式消息总线 | ✅ | Redis/RocketMQ/Kafka/RabbitMQ |
+| SPI 接口 | ✅ | MessageStorageService, AuthService |
+| 离线推送接口 | ✅ | OfflinePushService |
+
+#### 15.1.2 需要补充功能 ⚠️
+
+| 功能模块 | 优先级 | 说明 |
+|---------|-------|------|
+| 设备类型枚举 | 🔴 高 | 定义设备类型常量(Web/iOS/Android/iPad/Mac/Windows) |
+| 多端互踢策略 | 🔴 高 | 同设备类型互踢,不同设备类型共存 |
+| 已读回执处理器 | 🟡 中 | ReadReceiptMessageProcessor |
+| 消息撤回处理器 | 🟡 中 | RecallMessageProcessor |
+| 正在输入处理器 | 🟢 低 | TypingMessageProcessor |
+| 群成员查询接口 | 🔴 高 | MessageStorageService.getGroupMemberIds() |
+| 消息序列号生成器 | 🟡 中 | 全局递增序列号(基于 Redis) |
+| 在线设备管理 API | 🟡 中 | 查看/踢掉在线设备 |
+
+### 15.2 需要补充的代码实现
+
+#### 15.2.1 设备类型枚举
+
+**文件**: `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/enums/DeviceTypeEnum.java`
+
+```java
+package com.shengyu.framework.websocket.core.enums;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+/**
+ * 设备类型枚举
+ * 
+ * 说明:
+ * 1. 同一设备类型只允许一个设备在线(互踢)
+ * 2. 不同设备类型可以同时在线
+ * 3. 类似微信的多端登录策略
+ *
+ * @author 圣钰科技
+ */
+@Getter
+@AllArgsConstructor
+public enum DeviceTypeEnum {
+    
+    WEB(1, "Web浏览器", "web"),
+    IOS(2, "iPhone", "ios"),
+    ANDROID(3, "Android手机", "android"),
+    MINI_PROGRAM(4, "小程序", "mini"),
+    IPAD(5, "iPad", "ipad"),
+    MAC(6, "Mac电脑", "mac"),
+    WINDOWS(7, "Windows电脑", "windows");
+    
+    /**
+     * 设备类型代码
+     */
+    private final Integer code;
+    
+    /**
+     * 设备类型名称
+     */
+    private final String name;
+    
+    /**
+     * 平台标识
+     */
+    private final String platform;
+    
+    /**
+     * 根据代码获取枚举
+     */
+    public static DeviceTypeEnum getByCode(Integer code) {
+        if (code == null) {
+            return null;
+        }
+        for (DeviceTypeEnum type : values()) {
+            if (type.getCode().equals(code)) {
+                return type;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 判断是否为移动端
+     */
+    public boolean isMobile() {
+        return this == IOS || this == ANDROID;
+    }
+    
+    /**
+     * 判断是否为PC端
+     */
+    public boolean isPC() {
+        return this == MAC || this == WINDOWS || this == WEB;
+    }
+    
+    /**
+     * 判断是否为平板端
+     */
+    public boolean isTablet() {
+        return this == IPAD;
+    }
+}
+```
+
+#### 15.2.2 多端互踢逻辑
+
+**文件**: `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettySessionManager.java`
+
+**需要添加的字段和方法**:
+
+```java
+@Component
+public class NettySessionManager {
+    
+    // 现有字段...
+    
+    /**
+     * User ID + Device Type -> Channel ID
+     * 用于实现同设备类型互踢
+     */
+    private final Map<String, String> userDeviceChannelMap = new ConcurrentHashMap<>();
+    
+    /**
+     * 添加会话(支持互踢)
+     */
+    public void addSession(NettySession session) {
+        String channelId = session.getChannelId();
+        Long userId = session.getUserId();
+        Integer deviceType = session.getDeviceType();
+        Long tenantId = session.getTenantId();
+        
+        // 1. 检查是否有同类型设备在线
+        if (deviceType != null) {
+            String userDeviceKey = userId + ":" + deviceType;
+            String oldChannelId = userDeviceChannelMap.get(userDeviceKey);
+            
+            if (oldChannelId != null && !oldChannelId.equals(channelId)) {
+                // 踢掉旧设备
+                NettySession oldSession = channelSessionMap.get(oldChannelId);
+                if (oldSession != null && oldSession.isActive()) {
+                    kickOffDevice(oldSession, "您的账号在其他设备登录");
+                }
+            }
+            
+            // 保存新设备映射
+            userDeviceChannelMap.put(userDeviceKey, channelId);
+        }
+        
+        // 2. 添加到 Channel 映射
+        channelSessionMap.put(channelId, session);
+        
+        // 3. 添加到用户映射
+        if (userId != null) {
+            userChannelMap.computeIfAbsent(userId, k -> ConcurrentHashMap.newKeySet())
+                .add(channelId);
+        }
+        
+        // 4. 添加到租户映射
+        if (tenantId != null) {
+            tenantChannelMap.computeIfAbsent(tenantId, k -> ConcurrentHashMap.newKeySet())
+                .add(channelId);
+        }
+        
+        log.info("[SessionManager] 添加会话, userId: {}, deviceType: {}, channelId: {}, 当前在线: {}", 
+            userId, deviceType, channelId, channelSessionMap.size());
+    }
+    
+    /**
+     * 踢掉设备
+     */
+    public void kickOffDevice(NettySession session, String reason) {
+        log.info("[SessionManager] 踢掉设备, userId: {}, deviceType: {}, reason: {}", 
+            session.getUserId(), session.getDeviceType(), reason);
+        
+        try {
+            // 1. 构建踢下线消息
+            MessageHeader header = MessageHeader.newBuilder()
+                .setMessageId(System.currentTimeMillis())
+                .setMessageType(MessageType.CLOSE)
+                .setTimestamp(System.currentTimeMillis())
+                .build();
+            
+            ImMessage kickOffMessage = ImMessage.newBuilder()
+                .setHeader(header)
+                .setBody(ByteString.copyFromUtf8(reason))
+                .build();
+            
+            // 2. 发送消息
+            session.getChannel().writeAndFlush(kickOffMessage);
+            
+            // 3. 延迟关闭连接(确保消息发送成功)
+            session.getChannel().eventLoop().schedule(() -> {
+                session.getChannel().close();
+            }, 500, TimeUnit.MILLISECONDS);
+            
+        } catch (Exception e) {
+            log.error("[SessionManager] 踢掉设备失败", e);
+            session.getChannel().close();
+        }
+    }
+    
+    /**
+     * 根据用户ID和设备类型获取会话
+     */
+    public NettySession getSessionByUserIdAndDeviceType(Long userId, Integer deviceType) {
+        if (userId == null || deviceType == null) {
+            return null;
+        }
+        String userDeviceKey = userId + ":" + deviceType;
+        String channelId = userDeviceChannelMap.get(userDeviceKey);
+        return channelId != null ? channelSessionMap.get(channelId) : null;
+    }
+    
+    /**
+     * 获取用户在线的所有设备类型
+     */
+    public List<Integer> getOnlineDeviceTypes(Long userId) {
+        List<NettySession> sessions = getSessionsByUserId(userId);
+        return sessions.stream()
+            .map(NettySession::getDeviceType)
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * 移除会话(需要更新)
+     */
+    public void removeSession(Channel channel) {
+        if (channel == null) {
+            return;
+        }
+        
+        String channelId = channel.id().asShortText();
+        NettySession session = channelSessionMap.remove(channelId);
+        
+        if (session != null) {
+            Long userId = session.getUserId();
+            Integer deviceType = session.getDeviceType();
+            Long tenantId = session.getTenantId();
+            
+            // 从设备映射中移除
+            if (userId != null && deviceType != null) {
+                String userDeviceKey = userId + ":" + deviceType;
+                userDeviceChannelMap.remove(userDeviceKey);
+            }
+            
+            // 从用户映射中移除
+            if (userId != null) {
+                Set<String> channels = userChannelMap.get(userId);
+                if (channels != null) {
+                    channels.remove(channelId);
+                    if (channels.isEmpty()) {
+                        userChannelMap.remove(userId);
+                    }
+                }
+            }
+            
+            // 从租户映射中移除
+            if (tenantId != null) {
+                Set<String> channels = tenantChannelMap.get(tenantId);
+                if (channels != null) {
+                    channels.remove(channelId);
+                    if (channels.isEmpty()) {
+                        tenantChannelMap.remove(tenantId);
+                    }
+                }
+            }
+            
+            log.info("[SessionManager] 移除会话, userId: {}, deviceType: {}, channelId: {}, 当前在线: {}", 
+                userId, deviceType, channelId, channelSessionMap.size());
+        }
+    }
+}
+```
+
+#### 15.2.3 已读回执处理器
+
+**文件**: `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/processor/impl/ReadReceiptMessageProcessor.java`
+
+```java
+package com.shengyu.framework.websocket.core.processor.impl;
+
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.shengyu.framework.websocket.core.processor.MessageProcessor;
+import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.ReadReceiptMessage;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
+import com.shengyu.framework.websocket.core.session.NettySession;
+import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import io.netty.channel.ChannelHandlerContext;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+/**
+ * 已读回执处理器
+ *
+ * @author 圣钰科技
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class ReadReceiptMessageProcessor implements MessageProcessor {
+
+    private final NettySessionManager sessionManager;
+    private final NettyMessageSender messageSender;
+
+    @Override
+    public void process(ChannelHandlerContext ctx, ImMessage message) {
+        try {
+            // 解析已读回执
+            ReadReceiptMessage receipt = ReadReceiptMessage.parseFrom(message.getBody());
+            
+            NettySession session = sessionManager.getSession(ctx.channel());
+            if (session == null) {
+                log.warn("[ReadReceipt] 会话不存在");
+                return;
+            }
+            
+            log.info("[ReadReceipt] 收到已读回执, userId: {}, messageIds: {}", 
+                session.getUserId(), receipt.getMessageIdsList());
+            
+            // 转发已读回执给发送者
+            // TODO: 需要查询消息的发送者ID,然后推送给发送者
+            
+        } catch (InvalidProtocolBufferException e) {
+            log.error("[ReadReceipt] 解析消息失败", e);
+        }
+    }
+}
+```
+
+#### 15.2.4 消息撤回处理器
+
+**文件**: `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/processor/impl/RecallMessageProcessor.java`
+
+```java
+package com.shengyu.framework.websocket.core.processor.impl;
+
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.shengyu.framework.websocket.core.processor.MessageProcessor;
+import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.RecallMessage;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
+import com.shengyu.framework.websocket.core.session.NettySession;
+import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import io.netty.channel.ChannelHandlerContext;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+/**
+ * 消息撤回处理器
+ *
+ * @author 圣钰科技
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class RecallMessageProcessor implements MessageProcessor {
+
+    private final NettySessionManager sessionManager;
+    private final NettyMessageSender messageSender;
+
+    @Override
+    public void process(ChannelHandlerContext ctx, ImMessage message) {
+        try {
+            // 解析撤回消息
+            RecallMessage recall = RecallMessage.parseFrom(message.getBody());
+            
+            NettySession session = sessionManager.getSession(ctx.channel());
+            if (session == null) {
+                log.warn("[Recall] 会话不存在");
+                return;
+            }
+            
+            log.info("[Recall] 收到撤回请求, userId: {}, messageId: {}", 
+                session.getUserId(), recall.getMessageId());
+            
+            // 转发撤回通知给接收者
+            // TODO: 需要查询消息的接收者ID,然后推送撤回通知
+            
+        } catch (InvalidProtocolBufferException e) {
+            log.error("[Recall] 解析消息失败", e);
+        }
+    }
+}
+```
+
+#### 15.2.5 正在输入处理器
+
+**文件**: `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/processor/impl/TypingMessageProcessor.java`
+
+```java
+package com.shengyu.framework.websocket.core.processor.impl;
+
+import com.shengyu.framework.websocket.core.processor.MessageProcessor;
+import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
+import com.shengyu.framework.websocket.core.session.NettySession;
+import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import io.netty.channel.ChannelHandlerContext;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+/**
+ * 正在输入处理器
+ *
+ * @author 圣钰科技
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class TypingMessageProcessor implements MessageProcessor {
+
+    private final NettySessionManager sessionManager;
+    private final NettyMessageSender messageSender;
+
+    @Override
+    public void process(ChannelHandlerContext ctx, ImMessage message) {
+        NettySession session = sessionManager.getSession(ctx.channel());
+        if (session == null) {
+            log.warn("[Typing] 会话不存在");
+            return;
+        }
+        
+        Long receiverId = message.getHeader().getReceiverId();
+        if (receiverId == null || receiverId == 0) {
+            return;
+        }
+        
+        log.debug("[Typing] 正在输入, from: {}, to: {}", 
+            session.getUserId(), receiverId);
+        
+        // 转发正在输入通知给接收者
+        messageSender.sendToUser(receiverId, MessageType.TYPING, message.getBody());
+    }
+}
+```
+
+#### 15.2.6 MessageStorageService 补充方法
+
+**文件**: `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/service/MessageStorageService.java`
+
+**需要添加的方法**:
+
+```java
+public interface MessageStorageService {
+    
+    // 现有方法...
+    
+    /**
+     * 获取群组成员ID列表
+     * 
+     * 说明:
+     * 1. 用于群聊消息推送
+     * 2. 返回群组的所有成员ID
+     * 3. 建议使用缓存提升性能
+     * 
+     * @param groupId 群组ID
+     * @return 成员ID列表
+     */
+    List<Long> getGroupMemberIds(Long groupId);
+}
+```
+
 ### 15.1 中间件架构概览
 
 ```
@@ -5272,6 +5927,14 @@ shengyu:
   - 补充多设备支持、租户隔离、分布式部署说明
   - 优化性能指标和监控方案
   - 统一使用 Protobuf 协议定义
+- v1.0.4 (2026-02-11):
+  - 全面检查中间件实现,补充需要实现的功能清单
+  - 更新多端登录描述,改为类似微信的多端登录策略
+  - 补充设备类型枚举定义(Web/iOS/Android/iPad/Mac/Windows)
+  - 补充多端互踢逻辑实现(同设备类型互踢,不同设备类型共存)
+  - 补充已读回执、消息撤回、正在输入处理器实现
+  - 补充 MessageStorageService.getGroupMemberIds() 方法
+  - 补充在线设备管理 API 设计
 
 **文档维护**: shengyu 开发团队
 
