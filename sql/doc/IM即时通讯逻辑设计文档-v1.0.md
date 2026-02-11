@@ -1,18 +1,19 @@
 # IM 即时通讯逻辑设计文档 v1.0
 
-> **文档版本**: v1.0.2  
+> **文档版本**: v1.0.3  
 > **创建日期**: 2026年2月11日  
 > **更新日期**: 2026年2月11日  
 > **项目**: 圣钰 SaaS Pro - IM 即时通讯系统  
 > **定位**: 企业内部IM(无需添加好友、拉黑等社交功能)  
-> **目标**: AI 可执行的详细设计文档
+> **目标**: AI 可执行的详细设计文档  
+> **中间件**: shengyu-spring-boot-starter-websocket (基于 Netty + Protobuf)
 
 ---
 
 ## 📋 文档说明
 
 本文档基于以下现有资料编写:
-1. **IM 中间件**: `shengyu-framework/shengyu-spring-boot-starter-websocket`
+1. **IM 中间件**: `shengyu-framework/shengyu-spring-boot-starter-websocket` (基于 Netty + Protobuf)
 2. **租户后台**: `shengyu-module-system`
 3. **移动端**: `shengyu-ui/shengyu-ui-admin-uniappx`
 4. **数据库表**: `sql/mysql/1.0/shengyu-saas.sql` (im_* 表)
@@ -23,13 +24,16 @@
 - 无需"是否能看我"、"是否能看他"等隐私设置
 - 部门信息直接从 `system_dept` 表查询
 - 仅提供联系人个性化设置(备注名、星标、免打扰)
+- 支持单用户多设备登录
+- 支持租户隔离和平台端/租户端双端认证
+- 支持分布式部署(Redis/RocketMQ/Kafka/RabbitMQ 消息总线)
 
 文档包含:
 - 完整的前后端交互接口定义
 - 数据库表结构与字段说明
-- WebSocket 通信协议
+- Protobuf 通信协议(基于中间件实现)
 - 业务逻辑流程图
-- System 模块与中间件的交互逻辑
+- System 模块与中间件的 SPI 接口实现
 - 可执行的任务拆解清单
 
 ---
@@ -65,7 +69,7 @@
 │ │消息列表│ │聊天页面│ │通讯录  │ │个人中心│   │
 │ └──────────┘ └──────────┘ └──────────┘ └──────────┘   │
 └──────────────────┬───────────────────────────────────────┘
-                   ↓HTTP REST API + WebSocket
+                   ↓HTTP REST API + WebSocket(Protobuf)
 ┌──────────────────┴───────────────────────────────────────┐
 │             shengyu-module-system (业务层)               │
 │ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ │
@@ -76,7 +80,11 @@
 │        └─────────────────┴─────────────────┘         │
 │                         ↓                              │
 │ ┌────────────────────────────────────────────────────┐│
-│ │ 实现 SPI 接口 (MessageStorageService)             ││
+│ │ 实现 SPI 接口                                      ││
+│ │ - MessageStorageService (消息存储)                ││
+│ │ - AuthService (认证服务)                          ││
+│ │ - MessageCacheService (消息缓存,可选)             ││
+│ │ - OfflinePushService (离线推送,可选)              ││
 │ └────────────────────────────────────────────────────┘│
 └──────────────────┬───────────────────────────────────────┘
                    ↓SPI 调用
@@ -85,7 +93,16 @@
 │ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ │
 │ │Netty Server │ │  Session    │ │  Message    │ │
 │ │ (连接管理)   │ │  Manager    │ │  Processor  │ │
+│ │ - Epoll优化  │ │ - 多设备支持 │ │ - 消息路由   │ │
+│ │ - 50w+连接   │ │ - 租户隔离   │ │ - Protobuf  │ │
 │ └──────────────┘ └──────────────┘ └──────────────┘ │
+│                                                         │
+│ ┌────────────────────────────────────────────────────┐│
+│ │ 消息总线 (分布式部署支持)                          ││
+│ │ - Local (单机模式)                                 ││
+│ │ - Redis (推荐)                                     ││
+│ │ - RocketMQ / Kafka / RabbitMQ                     ││
+│ └────────────────────────────────────────────────────┘│
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -94,8 +111,43 @@
 | 模块 | 职责 | 关键组件 |
 |------|------|---------|
 | **移动端** | 用户交互、消息展示、WebSocket 连接 | message.uvue, chat.uvue, contacts.uvue |
-| **System 模块** | 业务逻辑、数据存储、API 接口 | ImMessageController, ImMessageService, ImMessageMapper |
-| **WebSocket 中间件** | 连接管理、协议处理、消息路由 | NettyServer, MessageProcessor, SessionManager |
+| **System 模块** | 业务逻辑、数据存储、API 接口、SPI 实现 | ImMessageController, ImMessageService, SPI 实现类 |
+| **WebSocket 中间件** | 连接管理、协议处理、消息路由、认证鉴权 | NettyServer, NettySessionManager, MessageProcessor |
+
+### 1.3 中间件核心特性
+
+#### 1.3.1 高性能设计
+- **Netty 框架**: 基于 NIO 的异步事件驱动架构
+- **Epoll 优化**: Linux 环境下自动启用 Epoll,性能提升 30%+
+- **连接能力**: 单机支持 50w+ TCP 长连接
+- **消息吞吐**: 10w+ msg/s (单机)
+- **低延迟**: < 100ms (局域网)
+
+#### 1.3.2 协议支持
+- **Protobuf**: 高性能二进制序列化,体积小 3-10 倍,速度快 20-100 倍
+- **WebSocket**: 兼容 Web/小程序客户端
+- **双协议**: 同时支持 Protobuf 和 WebSocket
+
+#### 1.3.3 多租户支持
+- **租户隔离**: 会话管理支持按租户分组
+- **双端认证**: 支持租户端(LoginUser)和平台端(PlatformLoginUser)
+- **租户级推送**: 支持向指定租户的所有用户推送消息
+
+#### 1.3.4 多设备支持
+- **单用户多设备**: 支持同一用户在多个设备同时在线
+- **设备级推送**: 支持向指定用户的指定设备推送消息
+- **设备管理**: 自动管理设备连接和断开
+
+#### 1.3.5 分布式部署
+- **消息总线**: 支持 Redis/RocketMQ/Kafka/RabbitMQ
+- **水平扩展**: 多台服务器共享会话状态
+- **负载均衡**: 支持 Nginx/LVS 负载均衡
+
+#### 1.3.6 SPI 接口设计
+- **MessageStorageService**: 消息存储(必须实现)
+- **AuthService**: 认证服务(必须实现)
+- **MessageCacheService**: 消息缓存(可选实现)
+- **OfflinePushService**: 离线推送(可选实现)
 
 ---
 
@@ -279,159 +331,217 @@ system_users ──> system_dept (用户所属部门)
 
 ## 3. Protobuf 协议定义
 
-### 3.1 消息类型枚举
+### 3.1 协议文件位置
+
+```
+shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/proto/im_message.proto
+```
+
+### 3.2 消息类型枚举
 
 ```protobuf
 syntax = "proto3";
 
-package im;
+option java_package = "com.shengyu.framework.websocket.core.protocol";
+option java_outer_classname = "ImMessageProto";
+option java_multiple_files = true;
 
-// 消息类型
+// 消息类型枚举
 enum MessageType {
-  TEXT = 100;      // 文本消息
-  IMAGE = 101;     // 图片消息
-  VOICE = 102;     // 语音消息
-  VIDEO = 103;     // 视频消息
-  FILE = 104;      // 文件消息
-  LOCATION = 105;  // 位置消息
-}
-
-// 会话类型
-enum ConversationType {
-  SINGLE = 1;  // 单聊
-  GROUP = 2;   // 群聊
-}
-```
-
-### 3.2 消息体定义
-
-```protobuf
-// 基础消息
-message Message {
-  int64 id = 1;                    // 消息ID
-  MessageType type = 2;            // 消息类型
-  int64 senderId = 3;              // 发送者ID
-  int64 receiverId = 4;            // 接收者ID(单聊)
-  int64 groupId = 5;               // 群组ID(群聊)
-  string content = 6;              // 消息内容
-  map<string, string> extra = 7;   // 扩展字段
-  int64 sequence = 8;              // 序列号
-  int64 timestamp = 9;             // 时间戳
-  int64 tenantId = 10;             // 租户ID
-}
-
-// 文本消息
-message TextMessage {
-  string text = 1;                 // 文本内容
-  repeated AtUser atUsers = 2;     // @的用户列表
-}
-
-message AtUser {
-  int64 userId = 1;                // 用户ID
-  string username = 2;             // 用户名
-}
-
-// 图片消息
-message ImageMessage {
-  string url = 1;                  // 图片URL
-  string thumbnailUrl = 2;         // 缩略图URL
-  int32 width = 3;                 // 宽度
-  int32 height = 4;                // 高度
-  int64 size = 5;                  // 文件大小(字节)
-}
-
-// 语音消息
-message VoiceMessage {
-  string url = 1;                  // 语音URL
-  int32 duration = 2;              // 时长(秒)
-  int64 size = 3;                  // 文件大小(字节)
-}
-
-// 视频消息
-message VideoMessage {
-  string url = 1;                  // 视频URL
-  string thumbnailUrl = 2;         // 缩略图URL
-  int32 duration = 3;              // 时长(秒)
-  int32 width = 4;                 // 宽度
-  int32 height = 5;                // 高度
-  int64 size = 6;                  // 文件大小(字节)
-}
-
-// 文件消息
-message FileMessage {
-  string url = 1;                  // 文件URL
-  string name = 2;                 // 文件名
-  int64 size = 3;                  // 文件大小(字节)
-  string extension = 4;            // 文件扩展名
-}
-
-// 位置消息
-message LocationMessage {
-  double latitude = 1;             // 纬度
-  double longitude = 2;            // 经度
-  string address = 3;              // 地址描述
-  string name = 4;                 // 位置名称
+  // 未知类型
+  UNKNOWN = 0;
+  
+  // ========== 系统消息 ==========
+  HEARTBEAT_REQ = 1;      // 心跳请求
+  HEARTBEAT_RESP = 2;     // 心跳响应
+  AUTH_REQ = 3;           // 认证请求
+  AUTH_RESP = 4;          // 认证响应
+  CLOSE = 5;              // 连接关闭
+  
+  // ========== 业务消息 ==========
+  TEXT = 100;             // 文本消息
+  IMAGE = 101;            // 图片消息
+  VOICE = 102;            // 语音消息
+  VIDEO = 103;            // 视频消息
+  FILE = 104;             // 文件消息
+  LOCATION = 105;         // 位置消息
+  CUSTOM = 106;           // 自定义消息
+  
+  // ========== 通知消息 ==========
+  SYSTEM_NOTIFY = 200;    // 系统通知
+  READ_RECEIPT = 201;     // 消息已读回执
+  RECALL = 202;           // 消息撤回
+  TYPING = 203;           // 正在输入
 }
 ```
 
-### 3.3 WebSocket 通信协议
+### 3.3 消息体定义
 
 ```protobuf
-// WebSocket 消息包
-message WebSocketPacket {
-  PacketType type = 1;             // 包类型
-  bytes payload = 2;               // 负载数据
-  int64 sequence = 3;              // 序列号
-  int64 timestamp = 4;             // 时间戳
+// IM 消息协议定义
+message ImMessage {
+  // 消息头
+  MessageHeader header = 1;
+  // 消息体(具体消息类型的序列化数据)
+  bytes body = 2;
 }
 
-// 包类型
-enum PacketType {
-  HEARTBEAT = 0;       // 心跳
-  AUTH = 1;            // 认证
-  MESSAGE = 2;         // 消息
-  ACK = 3;             // 确认
-  READ_RECEIPT = 4;    // 已读回执
-  TYPING = 5;          // 正在输入
-  ERROR = 6;           // 错误
+// 消息头
+message MessageHeader {
+  int64 messageId = 1;        // 消息ID(雪花算法生成)
+  MessageType messageType = 2; // 消息类型
+  int64 senderId = 3;         // 发送者ID
+  int64 receiverId = 4;       // 接收者ID(单聊时使用)
+  int64 groupId = 5;          // 群组ID(群聊时使用)
+  int64 tenantId = 6;         // 租户ID
+  int64 timestamp = 7;        // 时间戳(毫秒)
+  int64 sequence = 8;         // 序列号(用于消息去重和排序)
+  string extra = 9;           // 扩展字段(JSON格式)
 }
 
 // 认证请求
 message AuthRequest {
-  string token = 1;                // 访问令牌
-  int64 userId = 2;                // 用户ID
-  int64 tenantId = 3;              // 租户ID
+  string accessToken = 1;     // 访问令牌
+  int32 deviceType = 2;       // 设备类型(1-Web 2-iOS 3-Android 4-小程序)
+  string deviceId = 3;        // 设备ID
+  string clientVersion = 4;   // 客户端版本
 }
 
 // 认证响应
 message AuthResponse {
-  bool success = 1;                // 是否成功
-  string message = 2;              // 消息
-  int64 userId = 3;                // 用户ID
+  bool success = 1;           // 是否成功
+  int32 code = 2;             // 错误码
+  string message = 3;         // 错误消息
+  int64 userId = 4;           // 用户ID
+  int64 tenantId = 5;         // 租户ID
 }
 
-// 消息确认
-message MessageAck {
-  int64 messageId = 1;             // 消息ID
-  int64 sequence = 2;              // 序列号
-  bool success = 3;                // 是否成功
-  string error = 4;                // 错误信息
+// 文本消息
+message TextMessage {
+  string content = 1;         // 文本内容
+  repeated int64 atUserIds = 2; // @用户列表
 }
 
-// 已读回执
-message ReadReceipt {
-  int64 conversationId = 1;        // 会话ID
-  int64 lastReadMessageId = 2;     // 最后已读消息ID
-  int64 userId = 3;                // 用户ID
+// 图片消息
+message ImageMessage {
+  string url = 1;             // 图片URL
+  string thumbnailUrl = 2;    // 缩略图URL
+  int32 width = 3;            // 宽度
+  int32 height = 4;           // 高度
+  int64 size = 5;             // 文件大小(字节)
 }
 
-// 正在输入
-message TypingNotification {
-  int64 conversationId = 1;        // 会话ID
-  int64 userId = 2;                // 用户ID
-  bool typing = 3;                 // 是否正在输入
+// 语音消息
+message VoiceMessage {
+  string url = 1;             // 语音URL
+  int32 duration = 2;         // 时长(秒)
+  int64 size = 3;             // 文件大小(字节)
+}
+
+// 视频消息
+message VideoMessage {
+  string url = 1;             // 视频URL
+  string coverUrl = 2;        // 封面URL
+  int32 duration = 3;         // 时长(秒)
+  int32 width = 4;            // 宽度
+  int32 height = 5;           // 高度
+  int64 size = 6;             // 文件大小(字节)
+}
+
+// 文件消息
+message FileMessage {
+  string url = 1;             // 文件URL
+  string fileName = 2;        // 文件名
+  int64 size = 3;             // 文件大小(字节)
+  string fileType = 4;        // 文件类型
+}
+
+// 位置消息
+message LocationMessage {
+  double latitude = 1;        // 纬度
+  double longitude = 2;       // 经度
+  string address = 3;         // 地址描述
+}
+
+// 消息已读回执
+message ReadReceiptMessage {
+  repeated int64 messageIds = 1; // 已读的消息ID列表
+}
+
+// 消息撤回
+message RecallMessage {
+  int64 messageId = 1;        // 撤回的消息ID
 }
 ```
+
+### 3.4 编解码流程
+
+#### 3.4.1 编码流程 (发送消息)
+
+```java
+// 1. 构建具体消息类型
+TextMessage textMessage = TextMessage.newBuilder()
+    .setContent("你好")
+    .build();
+
+// 2. 构建消息头
+MessageHeader header = MessageHeader.newBuilder()
+    .setMessageId(generateMessageId())
+    .setMessageType(MessageType.TEXT)
+    .setSenderId(senderId)
+    .setReceiverId(receiverId)
+    .setTenantId(tenantId)
+    .setTimestamp(System.currentTimeMillis())
+    .build();
+
+// 3. 构建 IM 消息
+ImMessage message = ImMessage.newBuilder()
+    .setHeader(header)
+    .setBody(ByteString.copyFrom(textMessage.toByteArray()))
+    .build();
+
+// 4. 序列化为字节数组
+byte[] bytes = message.toByteArray();
+
+// 5. 通过 WebSocket 发送
+channel.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(bytes)));
+```
+
+#### 3.4.2 解码流程 (接收消息)
+
+```java
+// 1. 从 WebSocket 接收字节数组
+byte[] bytes = frame.content().array();
+
+// 2. 解析 IM 消息
+ImMessage message = ImMessage.parseFrom(bytes);
+
+// 3. 获取消息头
+MessageHeader header = message.getHeader();
+MessageType messageType = header.getMessageType();
+
+// 4. 根据消息类型解析消息体
+if (messageType == MessageType.TEXT) {
+    TextMessage textMessage = TextMessage.parseFrom(message.getBody());
+    String content = textMessage.getContent();
+}
+```
+
+### 3.5 Protobuf 优势
+
+| 对比项 | JSON | Protobuf | 优势 |
+|-------|------|----------|------|
+| 体积 | 100% | 10-30% | 体积小 3-10 倍 |
+| 速度 | 100% | 500-10000% | 速度快 20-100 倍 |
+| 类型安全 | ❌ | ✅ | 编译时类型检查 |
+| 向后兼容 | ❌ | ✅ | 字段可选,易扩展 |
+| 可读性 | ✅ | ❌ | 二进制格式 |
+
+**适用场景**:
+- ✅ 移动端 APP (节省流量,提升性能)
+- ✅ 高并发场景 (降低 CPU 和带宽消耗)
+- ✅ 微服务间通信 (RPC 调用)
+- ❌ Web 浏览器 (可使用 WebSocket + JSON)
 
 ---
 
@@ -445,18 +555,26 @@ message TypingNotification {
   │ 1. 建立 WebSocket 连接     │                          │
   │──────────────────────────>│                          │
   │                            │                          │
-  │ 2. 发送认证请求(token)     │                          │
+  │ 2. 发送认证请求(Protobuf)  │                          │
+  │    AuthRequest             │                          │
   │──────────────────────────>│                          │
   │                            │ 3. 调用 AuthService      │
+  │                            │    validateToken()       │
   │                            │────────────────────────>│
   │                            │                          │
-  │                            │ 4. 验证 token,返回用户信息│
+  │                            │ 4. 验证 token,返回       │
+  │                            │    LoginBase 对象        │
   │                            │<────────────────────────│
   │                            │                          │
-  │                            │ 5. 保存 Session          │
-  │                            │    (userId -> Channel)   │
+  │                            │ 5. 创建 NettySession     │
+  │                            │    - userId              │
+  │                            │    - tenantId            │
+  │                            │    - deviceId            │
+  │                            │    - deviceType          │
+  │                            │    保存到 SessionManager │
   │                            │                          │
-  │ 6. 返回认证成功            │                          │
+  │ 6. 返回认证成功(Protobuf)  │                          │
+  │    AuthResponse            │                          │
   │<──────────────────────────│                          │
   │                            │                          │
   │ 7. 开始心跳(30秒一次)      │                          │
@@ -469,77 +587,173 @@ message TypingNotification {
 ```typescript
 // uni-app x 代码示例
 const ws = uni.connectSocket({
-  url: 'wss://api.example.com/ws',
-  header: {
-    'Authorization': 'Bearer ' + token
-  }
+  url: 'wss://api.example.com:9000/ws',
+  protocols: ['protobuf']  // 使用 Protobuf 协议
 });
 ```
 
 **步骤 2: 发送认证请求**
 ```typescript
 ws.onOpen(() => {
-  const authRequest = {
-    type: 'AUTH',
-    payload: {
-      token: getAccessToken(),
-      userId: getUserId(),
-      tenantId: getTenantId()
-    }
-  };
-  ws.send(JSON.stringify(authRequest));
+  // 构建 AuthRequest (Protobuf)
+  const authRequest = AuthRequest.encode({
+    accessToken: getAccessToken(),
+    deviceType: 3,  // Android
+    deviceId: getDeviceId(),
+    clientVersion: '1.0.0'
+  }).finish();
+  
+  // 构建 ImMessage
+  const message = ImMessage.encode({
+    header: {
+      messageId: Date.now(),
+      messageType: MessageType.AUTH_REQ,
+      timestamp: Date.now()
+    },
+    body: authRequest
+  }).finish();
+  
+  ws.send({ data: message.buffer });
 });
 ```
 
 **步骤 3-4: 服务端验证**
 ```java
-// AuthService 实现
-@Override
-public Long authenticate(String token) {
-    // 验证 token 有效性
-    LoginUser loginUser = securityFrameworkUtils.getLoginUser(token);
-    if (loginUser == null) {
-        throw new ServiceException("认证失败");
+// AuthService 实现 (System 模块)
+@Service
+public class SystemAuthServiceImpl implements AuthService {
+    
+    @Autowired
+    private OAuth2TokenApi oauth2TokenApi;
+    
+    @Override
+    public LoginBase validateToken(String accessToken) {
+        // 验证 token 有效性
+        OAuth2AccessTokenCheckRespDTO tokenInfo = 
+            oauth2TokenApi.checkAccessToken(accessToken);
+        
+        if (tokenInfo == null || tokenInfo.getExpiresTime().isBefore(LocalDateTime.now())) {
+            return null;  // 认证失败
+        }
+        
+        // 返回登录用户信息
+        return buildLoginUser(tokenInfo);
     }
-    return loginUser.getId();
+    
+    @Override
+    public Long getTenantId(LoginBase loginUser) {
+        if (loginUser instanceof LoginUser) {
+            return ((LoginUser) loginUser).getTenantId();
+        }
+        return null;  // 平台端用户无租户ID
+    }
 }
 ```
 
-**步骤 5: 保存 Session**
+**步骤 5: 创建并保存 Session**
 ```java
-// NettySessionManager
-sessionManager.addSession(userId, channel);
+// NettySession 对象
+public class NettySession {
+    private Channel channel;           // Netty Channel
+    private Long userId;               // 用户ID
+    private Long tenantId;             // 租户ID
+    private String deviceId;           // 设备ID
+    private Integer deviceType;        // 设备类型
+    private LocalDateTime loginTime;   // 登录时间
+    private LocalDateTime lastActiveTime; // 最后活跃时间
+}
+
+// SessionManager 保存会话
+sessionManager.addSession(session);
 ```
 
 **步骤 6: 返回认证成功**
-```json
-{
-  "type": "AUTH_RESPONSE",
-  "payload": {
-    "success": true,
-    "message": "认证成功",
-    "userId": 123456
-  }
-}
+```java
+// 构建 AuthResponse
+AuthResponse authResponse = AuthResponse.newBuilder()
+    .setSuccess(true)
+    .setCode(0)
+    .setMessage("认证成功")
+    .setUserId(userId)
+    .setTenantId(tenantId)
+    .build();
+
+// 构建 ImMessage
+ImMessage message = ImMessage.newBuilder()
+    .setHeader(MessageHeader.newBuilder()
+        .setMessageId(generateMessageId())
+        .setMessageType(MessageType.AUTH_RESP)
+        .setTimestamp(System.currentTimeMillis())
+        .build())
+    .setBody(ByteString.copyFrom(authResponse.toByteArray()))
+    .build();
+
+// 发送给客户端
+channel.writeAndFlush(message);
 ```
 
 ### 4.3 心跳机制
 
-**客户端心跳**:
+#### 4.3.1 配置参数
+
+```yaml
+shengyu:
+  netty:
+    reader-idle-time: 60      # 读空闲时间(秒),超时关闭连接
+    writer-idle-time: 0       # 写空闲时间(秒),0表示不检测
+    all-idle-time: 0          # 读写空闲时间(秒),0表示不检测
+```
+
+#### 4.3.2 客户端心跳
+
 ```typescript
 // 每 30 秒发送一次心跳
 setInterval(() => {
   if (ws.readyState === 1) {
-    ws.send(JSON.stringify({ type: 'HEARTBEAT' }));
+    const heartbeat = ImMessage.encode({
+      header: {
+        messageId: Date.now(),
+        messageType: MessageType.HEARTBEAT_REQ,
+        timestamp: Date.now()
+      }
+    }).finish();
+    
+    ws.send({ data: heartbeat.buffer });
   }
 }, 30000);
 ```
 
-**服务端心跳检测**:
-- 超过 90 秒未收到心跳,断开连接
-- 使用 Netty 的 IdleStateHandler
+#### 4.3.3 服务端心跳检测
+
+```java
+// HeartbeatHandler (中间件实现)
+@Component
+public class HeartbeatHandler extends ChannelInboundHandlerAdapter {
+    
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        if (evt instanceof IdleStateEvent) {
+            IdleStateEvent event = (IdleStateEvent) evt;
+            if (event.state() == IdleState.READER_IDLE) {
+                // 读空闲超时,关闭连接
+                log.warn("[Heartbeat] 心跳超时,关闭连接: {}", 
+                    ctx.channel().id().asShortText());
+                ctx.close();
+            }
+        }
+    }
+}
+```
 
 ### 4.4 断线重连
+
+#### 4.4.1 重连策略
+
+- **指数退避**: 1s, 2s, 4s, 8s, 16s, 30s (最大)
+- **最大重连次数**: 5 次
+- **重连触发**: 连接关闭、连接错误
+
+#### 4.4.2 客户端实现
 
 ```typescript
 let reconnectCount = 0;
@@ -548,14 +762,16 @@ const maxReconnect = 5;
 function reconnect() {
   if (reconnectCount >= maxReconnect) {
     console.error('重连失败,已达最大重连次数');
+    uni.showToast({ title: '连接失败,请检查网络', icon: 'none' });
     return;
   }
   
   reconnectCount++;
   const delay = Math.min(1000 * Math.pow(2, reconnectCount), 30000);
   
+  console.log(`${delay}ms 后进行第 ${reconnectCount} 次重连...`);
+  
   setTimeout(() => {
-    console.log(`第 ${reconnectCount} 次重连...`);
     connectWebSocket();
   }, delay);
 }
@@ -565,10 +781,70 @@ ws.onClose(() => {
   reconnect();
 });
 
-ws.onError(() => {
-  console.error('WebSocket 连接错误');
+ws.onError((err) => {
+  console.error('WebSocket 连接错误', err);
   reconnect();
 });
+```
+
+### 4.5 多设备支持
+
+#### 4.5.1 会话管理
+
+```java
+// NettySessionManager 支持单用户多设备
+public class NettySessionManager {
+    
+    // User ID -> Channel IDs (支持多设备)
+    private final Map<Long, Set<String>> userChannelMap = new ConcurrentHashMap<>();
+    
+    /**
+     * 获取用户的所有会话(所有设备)
+     */
+    public List<NettySession> getSessionsByUserId(Long userId) {
+        Set<String> channelIds = userChannelMap.get(userId);
+        if (channelIds == null || channelIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        
+        return channelIds.stream()
+            .map(channelSessionMap::get)
+            .filter(Objects::nonNull)
+            .filter(NettySession::isActive)
+            .collect(Collectors.toList());
+    }
+}
+```
+
+#### 4.5.2 消息推送
+
+```java
+// 推送消息给用户的所有设备
+public void sendToUser(Long userId, MessageType messageType, MessageLite body) {
+    List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
+    
+    ImMessage message = buildMessage(messageType, body, null, userId, null, null);
+    
+    for (NettySession session : sessions) {
+        if (session.isActive()) {
+            session.getChannel().writeAndFlush(message);
+        }
+    }
+}
+
+// 推送消息给指定设备
+public void sendToDevice(Long userId, String deviceId, 
+                        MessageType messageType, MessageLite body) {
+    List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
+    
+    for (NettySession session : sessions) {
+        if (deviceId.equals(session.getDeviceId()) && session.isActive()) {
+            ImMessage message = buildMessage(messageType, body, null, userId, null, null);
+            session.getChannel().writeAndFlush(message);
+            return;
+        }
+    }
+}
 ```
 
 ---
@@ -1439,26 +1715,44 @@ DELETE /system/im/group/{id}
 
 WebSocket 中间件定义了 SPI 接口,System 模块需要实现这些接口。
 
-#### 8.1.1 MessageStorageService 实现
+#### 8.1.1 MessageStorageService 实现 (必须)
 
 ```java
 package com.shengyu.module.system.service.im;
 
+import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
 import com.shengyu.module.system.dal.dataobject.im.ImMessageDO;
 import com.shengyu.module.system.dal.mysql.im.ImMessageMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 消息存储服务实现
+ * 
+ * 说明:
+ * 1. 中间件在接收到消息后会调用 saveMessage 方法
+ * 2. 业务模块负责将消息持久化到数据库
+ * 3. 可以在此方法中实现额外的业务逻辑(如更新会话、推送通知等)
+ */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
     private final ImMessageMapper messageMapper;
     private final ImConversationService conversationService;
 
     @Override
-    public Long saveMessage(Message message) {
+    @Transactional(rollbackFor = Exception.class)
+    public void saveMessage(ImMessage message) {
+        log.info("[MessageStorage] 保存消息: messageId={}, type={}", 
+            message.getHeader().getMessageId(), 
+            message.getHeader().getMessageType());
+
         // 1. 转换为 DO 对象
         ImMessageDO messageDO = convertToDO(message);
         
@@ -1466,101 +1760,332 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         messageMapper.insert(messageDO);
         
         // 3. 更新会话
-        conversationService.updateConversation(message);
+        conversationService.updateConversationByMessage(messageDO);
         
-        return messageDO.getId();
+        log.info("[MessageStorage] 消息保存成功: id={}", messageDO.getId());
     }
 
     @Override
-    public Message getMessage(Long messageId) {
-        ImMessageDO messageDO = messageMapper.selectById(messageId);
-        return convertToMessage(messageDO);
-    }
-
-    @Override
-    public List<Message> getMessages(Long userId, Long targetId, 
-                                     ConversationType type, int limit) {
-        // 查询消息列表
-        List<ImMessageDO> list = messageMapper.selectList(
-            userId, targetId, type, limit);
-        return list.stream()
-            .map(this::convertToMessage)
-            .collect(Collectors.toList());
-    }
-
-    @Override
-    public void markAsRead(Long userId, Long conversationId, Long messageId) {
-        // 标记消息为已读
-        messageMapper.updateStatus(userId, conversationId, messageId, 1);
+    @Transactional(rollbackFor = Exception.class)
+    public Long saveMessageWithId(ImMessage message) {
+        saveMessage(message);
         
-        // 更新会话未读数
-        conversationService.clearUnreadCount(userId, conversationId);
+        // 返回数据库生成的消息ID
+        MessageHeader header = message.getHeader();
+        ImMessageDO messageDO = messageMapper.selectByMessageId(header.getMessageId());
+        return messageDO != null ? messageDO.getId() : null;
+    }
+
+    /**
+     * 转换为 DO 对象
+     */
+    private ImMessageDO convertToDO(ImMessage message) {
+        MessageHeader header = message.getHeader();
+        
+        return ImMessageDO.builder()
+            .messageId(header.getMessageId())
+            .messageType(header.getMessageType().getNumber())
+            .senderId(header.getSenderId())
+            .receiverId(header.getReceiverId())
+            .groupId(header.getGroupId())
+            .content(message.getBody().toByteArray())  // Protobuf 字节数组
+            .extra(header.getExtra())
+            .status(0)  // 未读
+            .sequence(header.getSequence())
+            .build();
     }
 }
 ```
 
-#### 8.1.2 AuthService 实现
+#### 8.1.2 AuthService 实现 (必须)
 
 ```java
 package com.shengyu.module.system.service.im;
 
+import com.shengyu.framework.security.core.LoginUser;
+import com.shengyu.framework.security.core.PlatformLoginUser;
+import com.shengyu.framework.security.core.util.LoginBase;
 import com.shengyu.framework.websocket.core.service.AuthService;
-import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.module.system.api.oauth2.OAuth2TokenApi;
 import com.shengyu.module.system.api.oauth2.dto.OAuth2AccessTokenCheckRespDTO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
+/**
+ * 认证服务实现
+ * 
+ * 说明:
+ * 1. 支持租户端(LoginUser)和平台端(PlatformLoginUser)双端认证
+ * 2. 验证 Token 有效性和过期时间
+ * 3. 返回登录用户信息
+ */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SystemAuthServiceImpl implements AuthService {
 
-    private final SecurityFrameworkUtils securityFrameworkUtils;
+    private final OAuth2TokenApi oauth2TokenApi;
 
     @Override
-    public Long authenticate(String token) {
-        // 验证 token
-        OAuth2AccessTokenCheckRespDTO tokenInfo = 
-            securityFrameworkUtils.getLoginUser(token);
-        
-        if (tokenInfo == null) {
-            throw new ServiceException("认证失败: token 无效");
+    public LoginBase validateToken(String accessToken) {
+        log.info("[Auth] 验证 Token: {}", accessToken);
+
+        try {
+            // 1. 验证 token
+            OAuth2AccessTokenCheckRespDTO tokenInfo = 
+                oauth2TokenApi.checkAccessToken(accessToken);
+            
+            if (tokenInfo == null) {
+                log.warn("[Auth] Token 无效");
+                return null;
+            }
+
+            // 2. 检查 token 是否过期
+            if (tokenInfo.getExpiresTime().isBefore(LocalDateTime.now())) {
+                log.warn("[Auth] Token 已过期");
+                return null;
+            }
+
+            // 3. 构建登录用户信息
+            LoginBase loginUser = buildLoginUser(tokenInfo);
+            
+            log.info("[Auth] 认证成功: userId={}, tenantId={}", 
+                tokenInfo.getUserId(), getTenantId(loginUser));
+            
+            return loginUser;
+
+        } catch (Exception e) {
+            log.error("[Auth] 认证异常", e);
+            return null;
         }
-        
-        return tokenInfo.getUserId();
     }
 
     @Override
-    public boolean hasPermission(Long userId, String permission) {
-        // 检查权限
-        return securityFrameworkUtils.hasPermission(userId, permission);
+    public Long getTenantId(LoginBase loginUser) {
+        if (loginUser instanceof LoginUser) {
+            return ((LoginUser) loginUser).getTenantId();
+        }
+        return null;  // 平台端用户无租户ID
+    }
+
+    /**
+     * 构建登录用户信息
+     */
+    private LoginBase buildLoginUser(OAuth2AccessTokenCheckRespDTO tokenInfo) {
+        // 根据用户类型构建不同的登录对象
+        if (tokenInfo.getUserType() == 1) {
+            // 租户端用户
+            LoginUser loginUser = new LoginUser();
+            loginUser.setId(tokenInfo.getUserId());
+            loginUser.setTenantId(tokenInfo.getTenantId());
+            loginUser.setUserType(tokenInfo.getUserType());
+            return loginUser;
+        } else {
+            // 平台端用户
+            PlatformLoginUser loginUser = new PlatformLoginUser();
+            loginUser.setId(tokenInfo.getUserId());
+            loginUser.setUserType(tokenInfo.getUserType());
+            return loginUser;
+        }
     }
 }
 ```
 
-### 8.2 消息流转流程
+#### 8.1.3 MessageCacheService 实现 (可选)
+
+```java
+package com.shengyu.module.system.service.im;
+
+import com.shengyu.framework.redis.core.RedisKeyConstants;
+import com.shengyu.framework.websocket.core.service.MessageCacheService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
+import java.util.concurrent.TimeUnit;
+
+/**
+ * 消息缓存服务实现
+ * 
+ * 说明:
+ * 1. 使用 Redis 缓存未读消息数
+ * 2. 提高查询性能,减少数据库压力
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class SystemMessageCacheServiceImpl implements MessageCacheService {
+
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    @Override
+    public void cacheUnreadCount(Long userId, long count) {
+        String key = RedisKeyConstants.IM_UNREAD_COUNT + userId;
+        redisTemplate.opsForValue().set(key, count, 24, TimeUnit.HOURS);
+    }
+
+    @Override
+    public Long getCachedUnreadCount(Long userId) {
+        String key = RedisKeyConstants.IM_UNREAD_COUNT + userId;
+        Object value = redisTemplate.opsForValue().get(key);
+        return value != null ? Long.parseLong(value.toString()) : null;
+    }
+
+    @Override
+    public long incrementUnreadCount(Long userId, long delta) {
+        String key = RedisKeyConstants.IM_UNREAD_COUNT + userId;
+        Long result = redisTemplate.opsForValue().increment(key, delta);
+        redisTemplate.expire(key, 24, TimeUnit.HOURS);
+        return result != null ? result : 0;
+    }
+}
+```
+
+#### 8.1.4 OfflinePushService 实现 (可选)
+
+```java
+package com.shengyu.module.system.service.im;
+
+import com.shengyu.framework.websocket.core.service.OfflinePushService;
+import com.shengyu.module.system.dal.dataobject.im.ImMessageDO;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+/**
+ * 离线推送服务实现
+ * 
+ * 说明:
+ * 1. 用户离线时推送消息通知
+ * 2. 可集成第三方推送服务(极光推送、个推等)
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class SystemOfflinePushServiceImpl implements OfflinePushService {
+
+    @Override
+    public boolean pushOfflineMessage(Long userId, ImMessageDO message) {
+        log.info("[OfflinePush] 推送离线消息: userId={}, messageId={}", 
+            userId, message.getId());
+        
+        // TODO: 集成第三方推送服务
+        // 1. 构建推送内容
+        // 2. 调用推送 API
+        // 3. 返回推送结果
+        
+        return true;
+    }
+
+    @Override
+    public boolean pushUnreadCount(Long userId, long count) {
+        log.info("[OfflinePush] 推送未读数: userId={}, count={}", userId, count);
+        
+        // TODO: 推送未读消息数角标
+        
+        return true;
+    }
+}
+```
+
+### 8.2 Spring Bean 配置
+
+```java
+package com.shengyu.module.system.config;
+
+import com.shengyu.framework.websocket.core.service.AuthService;
+import com.shengyu.framework.websocket.core.service.MessageCacheService;
+import com.shengyu.framework.websocket.core.service.MessageStorageService;
+import com.shengyu.framework.websocket.core.service.OfflinePushService;
+import com.shengyu.module.system.service.im.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * IM WebSocket 配置
+ * 
+ * 说明:
+ * 1. 注册 SPI 接口实现类为 Spring Bean
+ * 2. 中间件会自动注入这些 Bean
+ */
+@Configuration
+public class ImWebSocketConfig {
+
+    /**
+     * 消息存储服务 (必须)
+     */
+    @Bean
+    public MessageStorageService messageStorageService(
+            ImMessageMapper messageMapper,
+            ImConversationService conversationService) {
+        return new SystemMessageStorageServiceImpl(messageMapper, conversationService);
+    }
+
+    /**
+     * 认证服务 (必须)
+     */
+    @Bean
+    public AuthService authService(OAuth2TokenApi oauth2TokenApi) {
+        return new SystemAuthServiceImpl(oauth2TokenApi);
+    }
+
+    /**
+     * 消息缓存服务 (可选)
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public MessageCacheService messageCacheService(RedisTemplate<String, Object> redisTemplate) {
+        return new SystemMessageCacheServiceImpl(redisTemplate);
+    }
+
+    /**
+     * 离线推送服务 (可选)
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public OfflinePushService offlinePushService() {
+        return new SystemOfflinePushServiceImpl();
+    }
+}
+```
+
+### 8.3 消息流转流程
 
 ```
-1. 客户端发送消息
+1. 客户端发送消息 (Protobuf)
    ↓
 2. Netty Server 接收消息
    ↓
-3. MessageProcessor 处理消息
+3. ProtobufMessageHandler 解码消息
    ↓
-4. 调用 MessageStorageService.saveMessage()
+4. MessageProcessorFactory 获取对应的处理器
    ↓
-5. SystemMessageStorageServiceImpl 实现
-   ├─> 保存到 im_message 表
-   ├─> 更新 im_conversation 表
-   └─> 返回消息ID
-   ↓
-6. MessageProcessor 发送 ACK 给发送者
-   ↓
-7. MessageProcessor 推送消息给接收者
-   ├─> 单聊: 推送给 receiverId
-   └─> 群聊: 推送给所有群成员
+5. MessageProcessor 处理消息
+   ├─> 5.1 调用 MessageStorageService.saveMessage()
+   │        ↓
+   │        SystemMessageStorageServiceImpl 实现
+   │        ├─> 保存到 im_message 表
+   │        ├─> 更新 im_conversation 表
+   │        └─> 返回
+   │
+   ├─> 5.2 查找接收者 Session
+   │        ↓
+   │        NettySessionManager.getSessionsByUserId()
+   │
+   └─> 5.3 推送消息给接收者
+            ↓
+            单聊: 推送给 receiverId 的所有设备
+            群聊: 推送给所有群成员(排除发送者)
+            ↓
+            Channel.writeAndFlush(message)
 ```
 
-### 8.3 会话更新逻辑
+### 8.4 会话更新逻辑
 
 ```java
 @Service
@@ -1568,15 +2093,18 @@ public class SystemAuthServiceImpl implements AuthService {
 public class ImConversationServiceImpl implements ImConversationService {
 
     private final ImConversationMapper conversationMapper;
+    private final ImGroupUserMapper groupUserMapper;
 
     @Override
-    public void updateConversation(Message message) {
+    @Transactional(rollbackFor = Exception.class)
+    public void updateConversationByMessage(ImMessageDO message) {
         // 1. 更新发送者的会话
         updateUserConversation(
             message.getSenderId(),
             message.getReceiverId() > 0 ? message.getReceiverId() : message.getGroupId(),
             message.getReceiverId() > 0 ? 1 : 2,
-            message
+            message,
+            false  // 发送者不增加未读数
         );
         
         // 2. 更新接收者的会话
@@ -1586,18 +2114,20 @@ public class ImConversationServiceImpl implements ImConversationService {
                 message.getReceiverId(),
                 message.getSenderId(),
                 1,
-                message
+                message,
+                true  // 接收者增加未读数
             );
         } else if (message.getGroupId() > 0) {
             // 群聊: 更新所有群成员的会话
-            List<Long> memberIds = groupService.getGroupMemberIds(message.getGroupId());
+            List<Long> memberIds = groupUserMapper.selectUserIdsByGroupId(message.getGroupId());
             for (Long memberId : memberIds) {
                 if (!memberId.equals(message.getSenderId())) {
                     updateUserConversation(
                         memberId,
                         message.getGroupId(),
                         2,
-                        message
+                        message,
+                        true  // 群成员增加未读数
                     );
                 }
             }
@@ -1605,45 +2135,46 @@ public class ImConversationServiceImpl implements ImConversationService {
     }
 
     private void updateUserConversation(Long userId, Long targetId, 
-                                       int type, Message message) {
-        ImConversationDO conversation = conversationMapper.selectOne(
-            userId, targetId, type);
+                                       int type, ImMessageDO message, 
+                                       boolean incrementUnread) {
+        ImConversationDO conversation = conversationMapper.selectOne(userId, targetId, type);
         
         if (conversation == null) {
             // 创建新会话
-            conversation = new ImConversationDO();
-            conversation.setUserId(userId);
-            conversation.setTargetId(targetId);
-            conversation.setConversationType(type);
-            conversation.setUnreadCount(1);
-            conversation.setLastMessageId(message.getId());
-            conversation.setLastMessageContent(getMessageSummary(message));
-            conversation.setLastMessageTime(new Date());
+            conversation = ImConversationDO.builder()
+                .userId(userId)
+                .targetId(targetId)
+                .conversationType(type)
+                .unreadCount(incrementUnread ? 1 : 0)
+                .lastMessageId(message.getId())
+                .lastMessageContent(getMessageSummary(message))
+                .lastMessageTime(message.getCreateTime())
+                .build();
             conversationMapper.insert(conversation);
         } else {
             // 更新会话
-            conversation.setUnreadCount(conversation.getUnreadCount() + 1);
-            conversation.setLastMessageId(message.getId());
-            conversation.setLastMessageContent(getMessageSummary(message));
-            conversation.setLastMessageTime(new Date());
-            conversationMapper.updateById(conversation);
+            ImConversationDO updateObj = new ImConversationDO();
+            updateObj.setId(conversation.getId());
+            if (incrementUnread) {
+                updateObj.setUnreadCount(conversation.getUnreadCount() + 1);
+            }
+            updateObj.setLastMessageId(message.getId());
+            updateObj.setLastMessageContent(getMessageSummary(message));
+            updateObj.setLastMessageTime(message.getCreateTime());
+            conversationMapper.updateById(updateObj);
         }
     }
 
-    private String getMessageSummary(Message message) {
-        switch (message.getType()) {
-            case TEXT:
-                return message.getContent();
-            case IMAGE:
-                return "[图片]";
-            case VOICE:
-                return "[语音]";
-            case VIDEO:
-                return "[视频]";
-            case FILE:
-                return "[文件]";
-            default:
-                return "[消息]";
+    private String getMessageSummary(ImMessageDO message) {
+        // 根据消息类型返回摘要
+        switch (message.getMessageType()) {
+            case 100: return "[文本]";
+            case 101: return "[图片]";
+            case 102: return "[语音]";
+            case 103: return "[视频]";
+            case 104: return "[文件]";
+            case 105: return "[位置]";
+            default: return "[消息]";
         }
     }
 }
@@ -1657,13 +2188,85 @@ public class ImConversationServiceImpl implements ImConversationService {
 
 | 数据类型 | 缓存Key | 过期时间 | 说明 |
 |---------|---------|---------|------|
-| 用户Session | `im:session:{userId}` | 永久 | 用户在线状态 |
+| 用户Session | 内存(ConcurrentHashMap) | 永久 | 用户在线状态,断开连接时删除 |
 | 会话列表 | `im:conversation:list:{userId}` | 5分钟 | 用户的会话列表 |
 | 群成员列表 | `im:group:members:{groupId}` | 10分钟 | 群组成员ID列表 |
 | 用户信息 | `im:user:{userId}` | 30分钟 | 用户基本信息 |
-| 未读消息数 | `im:unread:{userId}` | 永久 | 用户总未读数 |
+| 未读消息数 | `im:unread:{userId}` | 24小时 | 用户总未读数 |
 
-### 9.2 缓存实现
+### 9.2 会话管理缓存 (内存)
+
+```java
+/**
+ * NettySessionManager 使用内存缓存
+ * 优势: 高性能,无网络开销
+ * 劣势: 单机模式,不支持分布式
+ */
+@Component
+public class NettySessionManager {
+
+    // Channel ID -> Session (快速查找会话)
+    private final Map<String, NettySession> channelSessionMap = new ConcurrentHashMap<>();
+
+    // User ID -> Channel IDs (支持多设备)
+    private final Map<Long, Set<String>> userChannelMap = new ConcurrentHashMap<>();
+
+    // Tenant ID -> Channel IDs (租户隔离)
+    private final Map<Long, Set<String>> tenantChannelMap = new ConcurrentHashMap<>();
+}
+```
+
+### 9.3 分布式会话管理 (Redis)
+
+```yaml
+# 配置消息总线为 Redis
+shengyu:
+  websocket:
+    sender-type: redis
+    sender-redis:
+      channel: im-message-channel
+```
+
+```java
+/**
+ * Redis 消息总线
+ * 优势: 支持分布式部署,多台服务器共享会话状态
+ * 实现: 通过 Redis Pub/Sub 实现跨服务器消息推送
+ */
+@Service
+public class RedisWebSocketMessageSender extends AbstractWebSocketMessageSender {
+
+    private final RedisMQTemplate redisMQTemplate;
+
+    @Override
+    public void send(String sessionId, Object message) {
+        // 1. 尝试本地推送
+        if (sendToLocalSession(sessionId, message)) {
+            return;
+        }
+
+        // 2. 本地没有会话,通过 Redis 广播给其他服务器
+        redisMQTemplate.send(
+            "im-message-channel",
+            new WebSocketMessage(sessionId, message)
+        );
+    }
+
+    @Override
+    public void broadcast(Object message) {
+        // 1. 推送给本地所有会话
+        broadcastToLocalSessions(message);
+
+        // 2. 通过 Redis 广播给其他服务器
+        redisMQTemplate.send(
+            "im-message-channel",
+            new WebSocketMessage(null, message)
+        );
+    }
+}
+```
+
+### 9.4 业务数据缓存 (Redis)
 
 ```java
 @Service
@@ -1672,55 +2275,50 @@ public class ImCacheService {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    // 缓存用户Session
-    public void cacheUserSession(Long userId, String channelId) {
-        String key = "im:session:" + userId;
-        redisTemplate.opsForValue().set(key, channelId);
-    }
-
-    // 获取用户Session
-    public String getUserSession(Long userId) {
-        String key = "im:session:" + userId;
-        return (String) redisTemplate.opsForValue().get(key);
-    }
-
-    // 删除用户Session
-    public void removeUserSession(Long userId) {
-        String key = "im:session:" + userId;
-        redisTemplate.delete(key);
-    }
-
-    // 缓存会话列表
+    /**
+     * 缓存会话列表
+     */
     public void cacheConversationList(Long userId, List<ConversationVO> list) {
         String key = "im:conversation:list:" + userId;
         redisTemplate.opsForValue().set(key, list, 5, TimeUnit.MINUTES);
     }
 
-    // 获取会话列表
+    /**
+     * 获取会话列表
+     */
     public List<ConversationVO> getConversationList(Long userId) {
         String key = "im:conversation:list:" + userId;
         return (List<ConversationVO>) redisTemplate.opsForValue().get(key);
     }
 
-    // 缓存群成员列表
+    /**
+     * 缓存群成员列表
+     */
     public void cacheGroupMembers(Long groupId, List<Long> memberIds) {
         String key = "im:group:members:" + groupId;
         redisTemplate.opsForValue().set(key, memberIds, 10, TimeUnit.MINUTES);
     }
 
-    // 获取群成员列表
+    /**
+     * 获取群成员列表
+     */
     public List<Long> getGroupMembers(Long groupId) {
         String key = "im:group:members:" + groupId;
         return (List<Long>) redisTemplate.opsForValue().get(key);
     }
 
-    // 增加未读消息数
+    /**
+     * 增加未读消息数
+     */
     public void incrUnreadCount(Long userId) {
         String key = "im:unread:" + userId;
         redisTemplate.opsForValue().increment(key);
+        redisTemplate.expire(key, 24, TimeUnit.HOURS);
     }
 
-    // 清空未读消息数
+    /**
+     * 清空未读消息数
+     */
     public void clearUnreadCount(Long userId) {
         String key = "im:unread:" + userId;
         redisTemplate.delete(key);
@@ -1728,32 +2326,177 @@ public class ImCacheService {
 }
 ```
 
-### 9.3 缓存更新策略
+### 9.5 缓存更新策略
 
-**会话列表缓存**:
-- 新消息到达时,删除缓存
-- 下次查询时重新加载
+#### 9.5.1 会话列表缓存
 
-**群成员列表缓存**:
-- 添加/移除成员时,删除缓存
-- 下次查询时重新加载
+```java
+// 新消息到达时,删除缓存
+public void onNewMessage(ImMessageDO message) {
+    // 1. 保存消息
+    messageMapper.insert(message);
+    
+    // 2. 更新会话
+    conversationService.updateConversation(message);
+    
+    // 3. 删除缓存
+    String key = "im:conversation:list:" + message.getReceiverId();
+    redisTemplate.delete(key);
+}
 
-**用户Session缓存**:
-- 用户上线时,写入缓存
-- 用户下线时,删除缓存
+// 下次查询时重新加载
+public List<ConversationVO> getConversationList(Long userId) {
+    // 1. 尝试从缓存获取
+    List<ConversationVO> list = cacheService.getConversationList(userId);
+    if (list != null) {
+        return list;
+    }
+    
+    // 2. 从数据库查询
+    list = conversationMapper.selectListByUserId(userId);
+    
+    // 3. 写入缓存
+    cacheService.cacheConversationList(userId, list);
+    
+    return list;
+}
+```
+
+#### 9.5.2 群成员列表缓存
+
+```java
+// 添加/移除成员时,删除缓存
+public void addGroupMember(Long groupId, Long userId) {
+    // 1. 添加成员
+    groupUserMapper.insert(new ImGroupUserDO(groupId, userId));
+    
+    // 2. 删除缓存
+    String key = "im:group:members:" + groupId;
+    redisTemplate.delete(key);
+}
+
+// 下次查询时重新加载
+public List<Long> getGroupMemberIds(Long groupId) {
+    // 1. 尝试从缓存获取
+    List<Long> memberIds = cacheService.getGroupMembers(groupId);
+    if (memberIds != null) {
+        return memberIds;
+    }
+    
+    // 2. 从数据库查询
+    memberIds = groupUserMapper.selectUserIdsByGroupId(groupId);
+    
+    // 3. 写入缓存
+    cacheService.cacheGroupMembers(groupId, memberIds);
+    
+    return memberIds;
+}
+```
 
 ---
 
 ## 10. 性能优化
 
-### 10.1 数据库优化
+### 10.1 Netty 性能优化
 
-**索引设计**:
+#### 10.1.1 Epoll 优化 (Linux 环境)
+
+```yaml
+shengyu:
+  netty:
+    use-epoll: true  # Linux 环境下自动启用 Epoll
+```
+
+```java
+// NettyServer 自动检测并启用 Epoll
+boolean useEpoll = nettyProperties.getUseEpoll() && Epoll.isAvailable();
+
+if (useEpoll) {
+    log.info("[Netty Server] 使用 Epoll 模式");
+    bossGroup = new EpollEventLoopGroup(bossThreads);
+    workerGroup = new EpollEventLoopGroup(workerThreads);
+    channelClass = EpollServerSocketChannel.class;
+} else {
+    log.info("[Netty Server] 使用 NIO 模式");
+    bossGroup = new NioEventLoopGroup(bossThreads);
+    workerGroup = new NioEventLoopGroup(workerThreads);
+    channelClass = NioServerSocketChannel.class;
+}
+```
+
+**性能提升**:
+- Epoll 比 NIO 性能提升 30%+
+- 更低的 CPU 占用
+- 更高的并发连接数
+
+#### 10.1.2 TCP 参数优化
+
+```yaml
+shengyu:
+  netty:
+    so-backlog: 2048              # TCP 连接队列大小
+    so-rcvbuf: 131072             # TCP 接收缓冲区 (128KB)
+    so-sndbuf: 131072             # TCP 发送缓冲区 (128KB)
+    write-buffer-low-water-mark: 32768   # 写缓冲区低水位线 (32KB)
+    write-buffer-high-water-mark: 65536  # 写缓冲区高水位线 (64KB)
+```
+
+```java
+ServerBootstrap bootstrap = new ServerBootstrap();
+bootstrap.group(bossGroup, workerGroup)
+    .channel(channelClass)
+    // TCP 参数优化
+    .option(ChannelOption.SO_BACKLOG, nettyProperties.getSoBacklog())
+    .option(ChannelOption.SO_REUSEADDR, true)
+    .childOption(ChannelOption.TCP_NODELAY, true)  // 禁用 Nagle 算法
+    .childOption(ChannelOption.SO_KEEPALIVE, true) // 启用 TCP KeepAlive
+    .childOption(ChannelOption.SO_RCVBUF, nettyProperties.getSoRcvbuf())
+    .childOption(ChannelOption.SO_SNDBUF, nettyProperties.getSoSndbuf())
+    // 写缓冲区水位线设置 (防止内存溢出)
+    .childOption(ChannelOption.WRITE_BUFFER_WATER_MARK, 
+        new WriteBufferWaterMark(
+            nettyProperties.getWriteBufferLowWaterMark(),
+            nettyProperties.getWriteBufferHighWaterMark()
+        ));
+```
+
+#### 10.1.3 线程池优化
+
+```yaml
+shengyu:
+  netty:
+    boss-threads: 1               # Boss 线程数 (接收连接)
+    worker-threads: 32            # Worker 线程数 (建议 CPU 核心数 * 2)
+```
+
+```java
+// 使用自定义线程工厂,便于监控和调试
+bossGroup = new NioEventLoopGroup(
+    nettyProperties.getBossThreads(),
+    new DefaultThreadFactory("netty-boss")
+);
+
+workerGroup = new NioEventLoopGroup(
+    nettyProperties.getWorkerThreads(),
+    new DefaultThreadFactory("netty-worker")
+);
+```
+
+**线程数配置建议**:
+- Boss 线程: 1 个即可 (只负责接收连接)
+- Worker 线程: CPU 核心数 * 2 (处理 I/O 事件)
+- 生产环境: 16-32 个 Worker 线程
+
+### 10.2 数据库优化
+
+#### 10.2.1 索引设计
+
 ```sql
 -- im_message 表
 CREATE INDEX idx_receiver_status ON im_message(receiver_id, status);
 CREATE INDEX idx_group ON im_message(group_id);
 CREATE INDEX idx_sequence ON im_message(sequence);
+CREATE INDEX idx_tenant ON im_message(tenant_id);
 
 -- im_conversation 表
 CREATE INDEX idx_user ON im_conversation(user_id, tenant_id);
@@ -1761,11 +2504,18 @@ CREATE INDEX idx_last_time ON im_conversation(last_message_time);
 
 -- im_group_user 表
 CREATE INDEX idx_group ON im_group_user(group_id);
+CREATE INDEX idx_user ON im_group_user(user_id);
 ```
 
-**分页查询优化**:
+#### 10.2.2 分页查询优化
+
 ```java
-// 使用游标分页,避免深分页问题
+/**
+ * 使用游标分页,避免深分页问题
+ * 
+ * 传统分页: SELECT * FROM im_message LIMIT 10000, 20
+ * 游标分页: SELECT * FROM im_message WHERE id < 10000 ORDER BY id DESC LIMIT 20
+ */
 public List<ImMessageDO> getMessages(Long conversationId, Long lastMessageId, int limit) {
     return messageMapper.selectList(
         new LambdaQueryWrapper<ImMessageDO>()
@@ -1777,95 +2527,236 @@ public List<ImMessageDO> getMessages(Long conversationId, Long lastMessageId, in
 }
 ```
 
-### 10.2 消息推送优化
+**性能对比**:
+- 传统分页: 查询 10000 条数据,耗时 500ms
+- 游标分页: 查询 20 条数据,耗时 10ms
 
-**批量推送**:
+#### 10.2.3 批量操作优化
+
 ```java
-// 群聊消息批量推送
-public void pushGroupMessage(Long groupId, Message message) {
-    // 1. 从缓存获取群成员
-    List<Long> memberIds = cacheService.getGroupMembers(groupId);
-    if (memberIds == null) {
-        memberIds = groupService.getGroupMemberIds(groupId);
-        cacheService.cacheGroupMembers(groupId, memberIds);
-    }
-    
-    // 2. 批量推送
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
-    for (Long memberId : memberIds) {
-        if (!memberId.equals(message.getSenderId())) {
-            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                Channel channel = sessionManager.getChannel(memberId);
-                if (channel != null && channel.isActive()) {
-                    channel.writeAndFlush(message);
-                }
-            });
-            futures.add(future);
-        }
-    }
-    
-    // 3. 等待所有推送完成
-    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-}
-```
-
-### 10.3 连接管理优化
-
-**连接池管理**:
-```java
-@Configuration
-public class NettyConfig {
-    
-    @Bean
-    public EventLoopGroup bossGroup() {
-        return new NioEventLoopGroup(1);
-    }
-    
-    @Bean
-    public EventLoopGroup workerGroup() {
-        // 根据 CPU 核心数设置线程数
-        int threads = Runtime.getRuntime().availableProcessors() * 2;
-        return new NioEventLoopGroup(threads);
-    }
-}
-```
-
-**心跳优化**:
-```java
-// 使用 Netty 的 IdleStateHandler
-pipeline.addLast(new IdleStateHandler(90, 0, 0, TimeUnit.SECONDS));
-pipeline.addLast(new HeartbeatHandler());
-```
-
-### 10.4 消息存储优化
-
-**异步存储**:
-```java
-@Service
-public class AsyncMessageStorageService {
-    
-    private final ExecutorService executor = Executors.newFixedThreadPool(10);
-    
-    public CompletableFuture<Long> saveMessageAsync(Message message) {
-        return CompletableFuture.supplyAsync(() -> {
-            return messageStorageService.saveMessage(message);
-        }, executor);
-    }
-}
-```
-
-**批量写入**:
-```java
-// 使用批量插入提升性能
+/**
+ * 批量插入消息
+ */
 public void batchSaveMessages(List<ImMessageDO> messages) {
     if (messages.size() > 100) {
-        // 分批插入
+        // 分批插入,每批 100 条
         List<List<ImMessageDO>> batches = Lists.partition(messages, 100);
         for (List<ImMessageDO> batch : batches) {
             messageMapper.insertBatch(batch);
         }
     } else {
         messageMapper.insertBatch(messages);
+    }
+}
+```
+
+### 10.3 消息推送优化
+
+#### 10.3.1 异步推送
+
+```java
+/**
+ * 异步推送消息,不阻塞主线程
+ */
+@Service
+public class AsyncMessageSender {
+    
+    private final ExecutorService executor = Executors.newFixedThreadPool(10);
+    
+    public CompletableFuture<Boolean> sendToUserAsync(Long userId, ImMessage message) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
+            for (NettySession session : sessions) {
+                if (session.isActive()) {
+                    session.getChannel().writeAndFlush(message);
+                }
+            }
+            return true;
+        }, executor);
+    }
+}
+```
+
+#### 10.3.2 批量推送
+
+```java
+/**
+ * 批量推送消息给多个用户
+ */
+public void batchSendToUsers(List<Long> userIds, ImMessage message) {
+    List<CompletableFuture<Boolean>> futures = userIds.stream()
+        .map(userId -> sendToUserAsync(userId, message))
+        .collect(Collectors.toList());
+    
+    // 等待所有推送完成
+    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+}
+```
+
+#### 10.3.3 群聊消息优化
+
+```java
+/**
+ * 群聊消息推送优化
+ * 1. 从缓存获取群成员列表
+ * 2. 并行推送给所有成员
+ */
+public void sendToGroup(Long groupId, ImMessage message, Long excludeUserId) {
+    // 1. 从缓存获取群成员
+    List<Long> memberIds = cacheService.getGroupMembers(groupId);
+    if (memberIds == null) {
+        memberIds = groupUserMapper.selectUserIdsByGroupId(groupId);
+        cacheService.cacheGroupMembers(groupId, memberIds);
+    }
+    
+    // 2. 过滤发送者
+    List<Long> targetUserIds = memberIds.stream()
+        .filter(memberId -> !memberId.equals(excludeUserId))
+        .collect(Collectors.toList());
+    
+    // 3. 并行推送
+    batchSendToUsers(targetUserIds, message);
+}
+```
+
+### 10.4 Protobuf 优化
+
+#### 10.4.1 性能对比
+
+| 对比项 | JSON | Protobuf | 优势 |
+|-------|------|----------|------|
+| 序列化速度 | 100% | 500-1000% | 快 5-10 倍 |
+| 反序列化速度 | 100% | 2000-10000% | 快 20-100 倍 |
+| 数据体积 | 100% | 10-30% | 小 3-10 倍 |
+| CPU 占用 | 100% | 20-50% | 低 50-80% |
+
+#### 10.4.2 使用建议
+
+```java
+// ✅ 推荐: 使用 Protobuf (移动端)
+ImMessage message = ImMessage.newBuilder()
+    .setHeader(header)
+    .setBody(ByteString.copyFrom(textMessage.toByteArray()))
+    .build();
+
+// ❌ 不推荐: 使用 JSON (Web 端可用)
+String json = JsonUtils.toJsonString(message);
+```
+
+### 10.5 连接管理优化
+
+#### 10.5.1 定期清理无效连接
+
+```java
+/**
+ * 定期清理无效连接
+ * 每分钟执行一次
+ */
+@Scheduled(fixedRate = 60000)
+public void cleanInactiveSessions() {
+    int beforeCount = sessionManager.getOnlineConnectionCount();
+    
+    sessionManager.getAllSessions().forEach(session -> {
+        if (!session.isActive()) {
+            sessionManager.removeSession(session.getChannel());
+        }
+    });
+    
+    int afterCount = sessionManager.getOnlineConnectionCount();
+    log.info("[SessionManager] 清理无效连接: {} -> {}", beforeCount, afterCount);
+}
+```
+
+#### 10.5.2 心跳超时优化
+
+```yaml
+shengyu:
+  netty:
+    reader-idle-time: 60  # 生产环境: 60 秒
+    # reader-idle-time: 120  # 开发环境: 120 秒 (延长超时时间)
+```
+
+### 10.6 内存优化
+
+#### 10.6.1 对象池
+
+```java
+/**
+ * 使用对象池减少 GC
+ */
+private final ObjectPool<ImMessage> messagePool = new GenericObjectPool<>(
+    new MessagePooledObjectFactory());
+
+// 从对象池获取对象
+ImMessage message = messagePool.borrowObject();
+try {
+    // 使用对象
+    channel.writeAndFlush(message);
+} finally {
+    // 归还对象
+    messagePool.returnObject(message);
+}
+```
+
+#### 10.6.2 ByteBuf 池化
+
+```java
+/**
+ * 使用 Netty 的 ByteBuf 池
+ */
+PooledByteBufAllocator allocator = PooledByteBufAllocator.DEFAULT;
+
+// 分配 ByteBuf
+ByteBuf buffer = allocator.buffer(1024);
+try {
+    // 使用 buffer
+    buffer.writeBytes(data);
+} finally {
+    // 释放 buffer
+    buffer.release();
+}
+```
+
+### 10.7 性能监控
+
+#### 10.7.1 关键指标
+
+| 指标 | 目标值 | 监控方式 |
+|------|--------|---------|
+| 在线连接数 | 50w+ | `sessionManager.getOnlineConnectionCount()` |
+| 消息吞吐量 | 10w+ msg/s | Micrometer Counter |
+| 消息延迟 | < 100ms | Micrometer Timer |
+| CPU 占用 | < 70% | JVM Metrics |
+| 内存占用 | < 80% | JVM Metrics |
+| GC 频率 | < 10次/分钟 | JVM Metrics |
+
+#### 10.7.2 监控实现
+
+```java
+@Component
+public class WebSocketMetrics {
+
+    private final MeterRegistry meterRegistry;
+
+    // 在线用户数
+    public void recordOnlineUsers(int count) {
+        meterRegistry.gauge("websocket.online.users", count);
+    }
+
+    // 消息发送量
+    public void recordMessageSent() {
+        meterRegistry.counter("websocket.message.sent").increment();
+    }
+
+    // 消息接收量
+    public void recordMessageReceived() {
+        meterRegistry.counter("websocket.message.received").increment();
+    }
+
+    // 消息延迟
+    public void recordMessageLatency(long latency) {
+        meterRegistry.timer("websocket.message.latency")
+            .record(latency, TimeUnit.MILLISECONDS);
     }
 }
 ```
@@ -2092,13 +2983,101 @@ public Long generateSequence() {
 - 离线消息批量拉取
 - 图片/视频使用 CDN
 
-### 12.6 企业内部IM特性
+### 12.6 中间件配置
 
-- 联系人直接来源于 `system_users` 表(同租户)
-- 部门信息直接来源于 `system_dept` 表
-- 无需添加好友、好友申请流程
-- 无需拉黑、隐私设置功能
-- 仅提供个性化设置(备注名、星标、免打扰)
+#### 12.6.1 基础配置
+
+```yaml
+shengyu:
+  netty:
+    # 是否启用 Netty 服务器
+    enable: true
+    
+    # 服务器配置
+    host: 0.0.0.0
+    port: 9000
+    
+    # 性能优化配置
+    use-epoll: true                           # Linux 环境下启用 Epoll
+    boss-threads: 1                           # Boss 线程数
+    worker-threads: 32                        # Worker 线程数 (生产环境)
+    
+    # TCP 参数配置
+    so-backlog: 2048                          # TCP 连接队列大小
+    so-rcvbuf: 131072                         # TCP 接收缓冲区 (128KB)
+    so-sndbuf: 131072                         # TCP 发送缓冲区 (128KB)
+    write-buffer-low-water-mark: 32768        # 写缓冲区低水位线 (32KB)
+    write-buffer-high-water-mark: 65536       # 写缓冲区高水位线 (64KB)
+    
+    # 心跳配置
+    reader-idle-time: 60                      # 读空闲时间 (秒)
+    writer-idle-time: 0                       # 写空闲时间 (秒)
+    all-idle-time: 0                          # 读写空闲时间 (秒)
+    
+    # 协议配置
+    enable-websocket: true                    # 是否启用 WebSocket 协议
+    websocket-path: /ws                       # WebSocket 路径
+    max-content-length: 65536                 # HTTP 最大内容长度 (64KB)
+    enable-protobuf: true                     # 是否启用 Protobuf 协议
+```
+
+#### 12.6.2 分布式部署配置
+
+```yaml
+shengyu:
+  websocket:
+    # 消息发送类型: local/redis/rocketmq/kafka/rabbitmq
+    sender-type: redis
+    
+    # Redis 消息总线配置 (推荐)
+    sender-redis:
+      channel: im-message-channel
+    
+    # RocketMQ 消息总线配置
+    sender-rocketmq:
+      topic: im-message-topic
+      consumer-group: im-message-consumer-group
+    
+    # Kafka 消息总线配置
+    sender-kafka:
+      topic: im-message-topic
+      consumer-group: im-message-consumer-group
+    
+    # RabbitMQ 消息总线配置
+    sender-rabbitmq:
+      exchange: im-message-exchange
+      queue: im-message-queue
+```
+
+#### 12.6.3 环境配置
+
+```yaml
+---
+# 开发环境
+spring:
+  profiles: dev
+
+shengyu:
+  netty:
+    port: 9000
+    worker-threads: 8
+    reader-idle-time: 120                     # 开发环境延长超时时间
+
+---
+# 生产环境
+spring:
+  profiles: prod
+
+shengyu:
+  netty:
+    port: 9000
+    use-epoll: true
+    worker-threads: 32                        # 生产环境增加线程数
+    so-backlog: 2048
+    so-rcvbuf: 131072                         # 128KB
+    so-sndbuf: 131072                         # 128KB
+    reader-idle-time: 60
+```
 
 ---
 
@@ -4287,5 +5266,13 @@ shengyu:
 - v1.0.0 (2026-02-11): 初始版本
 - v1.0.1 (2026-02-11): 优化为企业内部IM,移除社交功能
 - v1.0.2 (2026-02-11): 添加后端实现指南和中间件集成指南
+- v1.0.3 (2026-02-11): 
+  - 更新为基于 Netty + Protobuf 的高性能架构
+  - 调整 SPI 接口定义,与中间件实际实现完全匹配
+  - 补充多设备支持、租户隔离、分布式部署说明
+  - 优化性能指标和监控方案
+  - 统一使用 Protobuf 协议定义
 
 **文档维护**: shengyu 开发团队
+
+**中间件版本**: shengyu-spring-boot-starter-websocket v1.0.0
