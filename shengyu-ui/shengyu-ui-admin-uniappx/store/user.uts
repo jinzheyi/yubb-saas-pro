@@ -12,6 +12,9 @@ const DEPT_ID_KEY = 'DEPT_ID'
 const USER_INFO_KEY = 'USER_INFO'
 const PERMISSIONS_KEY = 'PERMISSIONS'
 const ROLES_KEY = 'ROLES'
+const DEVICE_TYPE_KEY = 'DEVICE_TYPE'
+const DEVICE_ID_KEY = 'DEVICE_ID'
+const CLIENT_VERSION_KEY = 'CLIENT_VERSION'
 
 /**
  * 用户信息类型
@@ -32,6 +35,15 @@ export type TokenType = {
 	refreshToken: string
 	tenantId: number | string | null
 	deptId: number | null
+}
+
+/**
+ * 设备信息类型
+ */
+export type DeviceInfoType = {
+	deviceType: number
+	deviceId: string
+	clientVersion: string
 }
 
 /**
@@ -379,6 +391,7 @@ export function clearUserCache() {
 	removeUserInfo()
 	removePermissions()
 	removeRoles()
+	removeDeviceInfo()
 	
 	// 跳转到登录页
 	// 增加延迟并添加 loading 效果，确保之前的 modal 完全关闭，防止 H5 端 $pageLayoutInstance 报错
@@ -420,4 +433,113 @@ export function clearUserInfo() {
 export function isLoggedIn(): boolean {
 	const token = getAccessToken()
 	return token != null && token != ''
+}
+
+// ========== 设备信息相关 ==========
+
+/**
+ * 获取设备类型
+ */
+export function getDeviceType(): number | null {
+	const deviceType = uni.getStorageSync(DEVICE_TYPE_KEY)
+	if (deviceType != null && deviceType != '') {
+		return parseInt(deviceType as string)
+	}
+	return null
+}
+
+/**
+ * 设置设备类型
+ * @param deviceType 设备类型
+ */
+export function setDeviceType(deviceType: number) {
+	uni.setStorageSync(DEVICE_TYPE_KEY, deviceType.toString())
+}
+
+/**
+ * 移除设备类型
+ */
+export function removeDeviceType() {
+	uni.removeStorageSync(DEVICE_TYPE_KEY)
+}
+
+/**
+ * 获取设备ID
+ */
+export function getDeviceId(): string | null {
+	return uni.getStorageSync(DEVICE_ID_KEY)
+}
+
+/**
+ * 设置设备ID
+ * @param deviceId 设备ID
+ */
+export function setDeviceId(deviceId: string) {
+	uni.setStorageSync(DEVICE_ID_KEY, deviceId)
+}
+
+/**
+ * 移除设备ID
+ */
+export function removeDeviceId() {
+	uni.removeStorageSync(DEVICE_ID_KEY)
+}
+
+/**
+ * 获取客户端版本
+ */
+export function getClientVersion(): string | null {
+	return uni.getStorageSync(CLIENT_VERSION_KEY)
+}
+
+/**
+ * 设置客户端版本
+ * @param clientVersion 客户端版本
+ */
+export function setClientVersion(clientVersion: string) {
+	uni.setStorageSync(CLIENT_VERSION_KEY, clientVersion)
+}
+
+/**
+ * 移除客户端版本
+ */
+export function removeClientVersion() {
+	uni.removeStorageSync(CLIENT_VERSION_KEY)
+}
+
+/**
+ * 获取完整的设备信息
+ */
+export function getDeviceInfo(): DeviceInfoType | null {
+	const deviceType = getDeviceType()
+	const deviceId = getDeviceId()
+	const clientVersion = getClientVersion()
+	
+	if (deviceType != null && deviceId != null && clientVersion != null) {
+		return {
+			deviceType: deviceType,
+			deviceId: deviceId,
+			clientVersion: clientVersion
+		}
+	}
+	return null
+}
+
+/**
+ * 设置完整的设备信息
+ * @param deviceInfo 设备信息
+ */
+export function setDeviceInfo(deviceInfo: DeviceInfoType) {
+	setDeviceType(deviceInfo.deviceType)
+	setDeviceId(deviceInfo.deviceId)
+	setClientVersion(deviceInfo.clientVersion)
+}
+
+/**
+ * 移除所有设备信息
+ */
+export function removeDeviceInfo() {
+	removeDeviceType()
+	removeDeviceId()
+	removeClientVersion()
 }
