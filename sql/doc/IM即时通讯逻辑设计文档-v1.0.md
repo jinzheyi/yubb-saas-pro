@@ -1,8 +1,8 @@
 # IM 即时通讯逻辑设计文档 v1.0
 
-> **文档版本**: v1.0.7  
+> **文档版本**: v1.0.11  
 > **创建日期**: 2026年2月11日  
-> **更新日期**: 2026年2月11日  
+> **更新日期**: 2026年2月12日  
 > **项目**: 圣钰 SaaS Pro - IM 即时通讯系统  
 > **定位**: 企业内部IM(无需添加好友、拉黑等社交功能)  
 > **目标**: AI 可执行的详细设计文档  
@@ -122,19 +122,20 @@ AI 执行任务时,应在任务元数据中添加执行日志:
 
 本文档基于以下现有资料编写:
 1. **IM 中间件**: `shengyu-framework/shengyu-spring-boot-starter-websocket` (基于 Netty + Protobuf)
-2. **租户后台**: `shengyu-module-system`
+2. **租户后台**: `shengyu-module-system` (租户端业务模块,包含 admin 和 app 两个端)
 3. **移动端**: `shengyu-ui/shengyu-ui-admin-uniappx` (已实现 90% UI,待对接后端)
 4. **数据库表**: `sql/mysql/1.0/im/` (IM 表结构已创建)
 5. **主数据库**: `sql/mysql/1.0/shengyu-saas.sql` (现有业务表)
 
 **重要说明**:
 - 本系统定位为企业内部IM,联系人直接来源于租户的 `system_users` 表
+- IM 功能属于租户端业务,在 `shengyu-module-system` 模块中实现
 - 无需添加好友、好友申请、拉黑等社交功能
 - 无需"是否能看我"、"是否能看他"等隐私设置
 - 部门信息直接从 `system_dept` 表查询
 - 仅提供联系人个性化设置(备注名、星标、免打扰)
 - 支持类似微信的多端登录策略(同设备类型互踢,不同设备类型共存)
-- 支持租户隔离和平台端/租户端双端认证
+- 支持租户隔离和租户端双端认证(Web 管理后台 + 移动端 App)
 - 支持分布式部署(Redis/RocketMQ/Kafka/RabbitMQ 消息总线)
 
 **数据库变更管理**:
@@ -150,10 +151,59 @@ AI 执行任务时,应在任务元数据中添加执行日志:
 - ❌ 离线消息: 0% 未实现
 - ❌ 消息持久化: 0% 未实现
 
+**后端架构规范**:
+
+本项目采用严格的 API 路由分离架构,通过 `WebProperties.java` 实现不同端的 Controller 自动路由:
+
+1. **API 前缀与目录映射**:
+   - `/admin-api/**` → `**.controller.admin.**` (Web 管理后台 - 租户端)
+   - `/app-api/**` → `**.controller.app.**` (移动端 App - 租户端)
+   - `/platform-api/**` → `**.controller.platform.**` (平台端 - 独立模块)
+
+2. **模块划分**:
+   - **system 模块**: 租户端业务模块,包含 admin(Web管理后台) 和 app(移动端) 两个端
+   - **platform 模块**: 平台端业务模块,独立于租户端,不参与 system 模块的规则
+   - **IM 功能**: 属于 system 模块的租户端业务,仅涉及 admin-api 和 app-api
+
+3. **路由实现原理** (`ShengyuWebAutoConfiguration.java`):
+   ```java
+   // 通过 AntPathMatcher 匹配 Controller 包路径
+   private void putPathPrefix(Map<String, Predicate<Class<?>>> pathPrefixes, 
+                               WebProperties.Api api, AntPathMatcher matcher) {
+       pathPrefixes.put(api.getPrefix(), // API 前缀
+           clazz -> clazz.isAnnotationPresent(RestController.class)
+                   && matcher.match(api.getController(), clazz.getPackage().getName()));
+   }
+   ```
+
+4. **Controller 层规范** (仅针对 system 模块):
+   - Web 端: `com.shengyu.module.system.controller.admin.xxx`
+   - 移动端: `com.shengyu.module.system.controller.app.xxx`
+   - 必须严格遵守目录规范,否则路由不生效
+
+5. **Service 层规范** (仅针对 system 模块):
+   - Service 层可以跨端复用(admin/app 共享)
+   - 如果业务逻辑完全一致,直接复用现有 Service
+   - 如果业务逻辑有差异,创建独立的 Service 实现
+   - Service 接口和实现类放在 `service` 目录下,不区分端
+
+6. **IM 移动端开发规范** (system 模块):
+   - 所有 IM 移动端 Controller 必须放在 `controller.app.im` 包下
+   - 移动端前端请求必须使用 `/app-api` 前缀
+   - 登录认证等通用功能可复用 `AdminAuthService`,但需创建独立的 `AppAuthController`
+   - 避免修改 Web 端的 `AdminAuthController`,保持 Web 端登录逻辑独立
+
+7. **为什么要分离**:
+   - 不同端的业务逻辑可能不同(如权限校验、数据范围)
+   - 避免相互影响(如移动端登录改造不能影响 Web 端)
+   - 便于独立部署和扩展
+   - 符合微服务架构的单一职责原则
+
 文档包含:
 - 完整的前后端交互接口定义
 - 数据库表结构与字段说明(已创建 DDL 文件)
 - 数据库变更管理规范
+- 后端架构规范与路由原理
 - Protobuf 通信协议(基于中间件实现)
 - 业务逻辑流程图
 - System 模块与中间件的 SPI 接口实现
@@ -4405,64 +4455,2138 @@ public class WebSocketMetrics {
   - 备注: GET /admin-api/system/im/group/member/list
 
 
-### 阶段 5: 移动端开发 (10天)
+### 阶段 5: 移动端开发 (预计 10 天)
 
-#### 5.1 基础框架搭建 (1天)
-- [ ] 5.1.1 配置 WebSocket 连接
-- [ ] 5.1.2 配置 HTTP 请求
-- [ ] 5.1.3 配置状态管理
-- [ ] 5.1.4 配置路由
+**阶段状态**: 🟡 进行中 (UI 90%已完成,业务逻辑 30%已完成,WebSocket 0%未实现)
 
-#### 5.2 消息列表页 (2天)
-- [ ] 5.2.1 页面布局
-- [ ] 5.2.2 会话列表渲染
-- [ ] 5.2.3 未读消息显示
-- [ ] 5.2.4 置顶会话
-- [ ] 5.2.5 左滑删除
-- [ ] 5.2.6 下拉刷新
-- [ ] 5.2.7 WebSocket 消息接收
+**说明**: 移动端 UI 层面已基本完成,但大部分功能使用模拟数据,需要对接后端 API 和实现 WebSocket 通信。
 
-#### 5.3 聊天页面 (3天)
-- [ ] 5.3.1 页面布局
-- [ ] 5.3.2 消息列表渲染
-- [ ] 5.3.3 文本消息发送
-- [ ] 5.3.4 图片消息发送
-- [ ] 5.3.5 语音消息发送
-- [ ] 5.3.6 视频消息发送
-- [ ] 5.3.7 文件消息发送
-- [ ] 5.3.8 表情输入(109个微信表情)
-- [ ] 5.3.9 语音输入
-- [ ] 5.3.10 消息长按菜单(复制、删除、撤回、转发)
-- [ ] 5.3.11 多选模式
-- [ ] 5.3.12 全屏输入
-- [ ] 5.3.13 消息已读回执
-- [ ] 5.3.14 正在输入提示
+#### 5.0 登录逻辑改造 (预计 1 天)
 
-#### 5.4 通讯录页面 (2天)
-- [ ] 5.4.1 页面布局
-- [ ] 5.4.2 联系人列表渲染(从 system_users 加载)
-- [ ] 5.4.3 按部门分组显示
-- [ ] 5.4.4 字母索引
-- [ ] 5.4.5 搜索联系人
-- [ ] 5.4.6 星标联系人置顶
+**状态**: 🔴 0% 未实现
 
-#### 5.5 联系人详情页 (1天)
-- [ ] 5.5.1 页面布局
-- [ ] 5.5.2 显示联系人信息
-- [ ] 5.5.3 设置备注名
-- [ ] 5.5.4 设置星标
-- [ ] 5.5.5 设置免打扰
-- [ ] 5.5.6 发起单聊
+**说明**: 
+1. 当前登录逻辑未支持设备类型和多端登录策略,需要改造以支持同设备类型互踢、不同设备类型共存的多端登录机制
+2. 当前移动端沿用了Web端的登录接口(`/admin-api/system/auth/login`),需要调整为移动端专用接口(`/app-api/system/auth/login`)
+3. 需要在后端创建 `app` 目录下的 `AuthController`,避免影响Web端的登录逻辑
 
-#### 5.6 群聊功能 (1天)
-- [ ] 5.6.1 发起群聊页面
-- [ ] 5.6.2 选择群成员
-- [ ] 5.6.3 创建群聊
-- [ ] 5.6.4 群聊详情页
-- [ ] 5.6.5 添加/移除群成员
-- [ ] 5.6.6 设置群名称
-- [ ] 5.6.7 设置群公告
-- [ ] 5.6.8 退出/解散群聊
+- [x] 5.0.1: 登录页面 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/login/login.uvue`
+  - 执行时间: 已完成
+  - 备注: 支持账号密码登录和短信验证码登录
+
+- [x] 5.0.2: 登录 API 接口(旧版)
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `api/login.uts`
+  - 执行时间: 已完成
+  - 备注: 已实现 login、smsLogin、logout、refreshToken 等接口,但使用的是 admin-api 前缀
+
+- [ ] 5.0.3: 调整移动端 API 前缀
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 无
+  - 文件: `utils/request.uts`
+  - 备注: 将 API 前缀从 `/admin-api` 改为 `/app-api`
+
+**修改内容**:
+```typescript
+// 修改前
+const BASE_URL = CONFIG_BASE_URL + '/admin-api' // 添加 API 前缀
+
+// 修改后
+const BASE_URL = CONFIG_BASE_URL + '/app-api' // 移动端使用 app-api 前缀
+```
+
+- [ ] 5.0.4: 添加设备类型枚举
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 无
+  - 文件: `utils/device.uts` (待创建)
+  - 备注: 定义设备类型常量(1-Web, 2-iOS, 3-Android, 4-小程序, 5-iPad, 6-Mac, 7-Windows)
+
+```typescript
+/**
+ * 设备类型枚举
+ */
+export enum DeviceType {
+  WEB = 1,        // Web浏览器
+  IOS = 2,        // iPhone
+  ANDROID = 3,    // Android手机
+  MINI_PROGRAM = 4, // 微信小程序
+  IPAD = 5,       // iPad
+  MAC = 6,        // Mac电脑
+  WINDOWS = 7     // Windows电脑
+}
+
+/**
+ * 获取当前设备类型
+ */
+export function getCurrentDeviceType(): number {
+  // #ifdef APP-PLUS
+  const platform = uni.getSystemInfoSync().platform
+  if (platform === 'ios') {
+    return DeviceType.IOS
+  } else if (platform === 'android') {
+    return DeviceType.ANDROID
+  }
+  // #endif
+  
+  // #ifdef H5
+  return DeviceType.WEB
+  // #endif
+  
+  // #ifdef MP-WEIXIN
+  return DeviceType.MINI_PROGRAM
+  // #endif
+  
+  return DeviceType.WEB
+}
+
+/**
+ * 获取设备唯一标识
+ */
+export function getDeviceId(): string {
+  // 优先从本地存储获取
+  let deviceId = uni.getStorageSync('deviceId')
+  if (deviceId) {
+    return deviceId
+  }
+  
+  // 生成新的设备ID
+  deviceId = generateDeviceId()
+  uni.setStorageSync('deviceId', deviceId)
+  return deviceId
+}
+
+/**
+ * 生成设备ID
+ */
+function generateDeviceId(): string {
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 15)
+  return `${timestamp}-${random}`
+}
+
+/**
+ * 获取应用版本号
+ */
+export function getAppVersion(): string {
+  // #ifdef APP-PLUS
+  return uni.getSystemInfoSync().appVersion || '1.0.0'
+  // #endif
+  
+  // #ifdef H5
+  return '1.0.0'
+  // #endif
+  
+  // #ifdef MP-WEIXIN
+  return uni.getSystemInfoSync().version || '1.0.0'
+  // #endif
+  
+  return '1.0.0'
+}
+```
+
+- [ ] 5.0.5: 改造登录接口,添加设备信息
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 5.0.4
+  - 文件: `api/login.uts`
+  - 备注: 登录时携带设备类型和设备ID
+
+```typescript
+import { getCurrentDeviceType, getDeviceId, getAppVersion } from '../utils/device.uts'
+
+/**
+ * 账号密码登录(改造版)
+ */
+export function login(data: UTSJSONObject): Promise<any> {
+  // 添加设备信息
+  const loginData = {
+    ...data,
+    deviceType: getCurrentDeviceType(),
+    deviceId: getDeviceId(),
+    clientVersion: getAppVersion()
+  }
+  return post('/system/auth/login', loginData)
+}
+
+/**
+ * 短信验证码登录(改造版)
+ */
+export function smsLogin(data: UTSJSONObject): Promise<any> {
+  // 添加设备信息
+  const loginData = {
+    ...data,
+    deviceType: getCurrentDeviceType(),
+    deviceId: getDeviceId(),
+    clientVersion: getAppVersion()
+  }
+  return post('/system/auth/sms-login', loginData)
+}
+```
+
+- [ ] 5.0.6: 保存设备信息到用户状态
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 5.0.4
+  - 文件: `store/user.uts`
+  - 备注: 登录成功后保存设备类型和设备ID
+
+```typescript
+import { getCurrentDeviceType, getDeviceId, getAppVersion } from '../utils/device.uts'
+
+// 在 user.uts 中添加设备信息字段
+export const useUserStore = defineStore('user', {
+  state: () => ({
+    token: '',
+    refreshToken: '',
+    userId: 0,
+    username: '',
+    nickname: '',
+    avatar: '',
+    roles: [] as string[],
+    permissions: [] as string[],
+    tenantId: 0,
+    // 新增设备信息
+    deviceType: 0,
+    deviceId: '',
+    clientVersion: ''
+  }),
+  
+  actions: {
+    // 登录
+    async login(loginData: any) {
+      const res = await login(loginData)
+      this.token = res.data.accessToken
+      this.refreshToken = res.data.refreshToken
+      this.userId = res.data.userId
+      
+      // 保存设备信息
+      this.deviceType = getCurrentDeviceType()
+      this.deviceId = getDeviceId()
+      this.clientVersion = getAppVersion()
+      
+      // 保存到本地存储
+      uni.setStorageSync('token', this.token)
+      uni.setStorageSync('refreshToken', this.refreshToken)
+      uni.setStorageSync('deviceType', this.deviceType)
+      uni.setStorageSync('deviceId', this.deviceId)
+    }
+  }
+})
+```
+
+- [ ] 5.0.7: 处理被踢下线通知
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 5.1.6 (WebSocket连接管理)
+  - 文件: `utils/websocket.uts`
+  - 备注: 监听 WebSocket 的 CLOSE 消息,显示被踢下线提示
+
+```typescript
+/**
+ * 处理被踢下线消息
+ */
+function handleKickOffMessage(message: any) {
+  const reason = message.body.toString()
+  
+  // 显示提示
+  uni.showModal({
+    title: '下线通知',
+    content: reason || '您的账号在其他设备登录',
+    showCancel: false,
+    success: () => {
+      // 清除登录状态
+      const userStore = useUserStore()
+      userStore.logout()
+      
+      // 跳转到登录页
+      uni.reLaunch({ url: '/pages/login/login' })
+    }
+  })
+  
+  // 关闭 WebSocket 连接
+  closeWebSocket()
+}
+```
+
+- [ ] 5.0.8: 添加在线设备管理页面
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 3小时
+  - 依赖: 后端 API (获取在线设备列表、踢掉设备)
+  - 文件: `pages/profile/online-devices.uvue` (待创建)
+  - 备注: 显示当前用户在线的所有设备,支持踢掉指定设备
+
+```vue
+<template>
+  <view class="online-devices-page">
+    <view class="device-list">
+      <view 
+        v-for="device in devices" 
+        :key="device.deviceType"
+        class="device-item"
+      >
+        <view class="device-icon">
+          <text class="iconfont">{{ getDeviceIcon(device.deviceType) }}</text>
+        </view>
+        <view class="device-info">
+          <text class="device-name">{{ device.deviceTypeName }}</text>
+          <text class="device-time">登录时间: {{ device.loginTime }}</text>
+          <text class="device-id">设备ID: {{ device.deviceId }}</text>
+        </view>
+        <view 
+          v-if="device.deviceType !== currentDeviceType"
+          class="kick-btn"
+          @click="handleKickDevice(device.deviceType)"
+        >
+          <text>踢下线</text>
+        </view>
+        <view v-else class="current-tag">
+          <text>当前设备</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script setup lang="uts">
+import { ref, onMounted } from 'vue'
+import { getCurrentDeviceType } from '@/utils/device.uts'
+
+const devices = ref([])
+const currentDeviceType = ref(getCurrentDeviceType())
+
+// 获取在线设备列表
+async function fetchOnlineDevices() {
+  const res = await request({
+    url: '/system/auth/online-devices',
+    method: 'GET'
+  })
+  devices.value = res.data
+}
+
+// 踢掉指定设备
+async function handleKickDevice(deviceType: number) {
+  uni.showModal({
+    title: '确认操作',
+    content: '确定要踢掉该设备吗?',
+    success: async (res) => {
+      if (res.confirm) {
+        await request({
+          url: '/system/auth/kick-device',
+          method: 'POST',
+          data: { deviceType }
+        })
+        uni.showToast({ title: '操作成功', icon: 'success' })
+        fetchOnlineDevices()
+      }
+    }
+  })
+}
+
+// 获取设备图标
+function getDeviceIcon(deviceType: number): string {
+  const icons = {
+    1: '\uea95', // Web
+    2: '\uea94', // iOS
+    3: '\uea94', // Android
+    4: '\uea96', // 小程序
+    5: '\uea93', // iPad
+    6: '\uea92', // Mac
+    7: '\uea91'  // Windows
+  }
+  return icons[deviceType] || '\uea95'
+}
+
+onMounted(() => {
+  fetchOnlineDevices()
+})
+</script>
+```
+
+- [ ] 5.0.9: 创建移动端 AuthController
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 3小时
+  - 依赖: 无
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/app/auth/AppAuthController.java` (待创建)
+  - 备注: 创建移动端专用的认证控制器,路径前缀为 `/app-api/system/auth`,不影响Web端
+
+```java
+package com.shengyu.module.system.controller.app.auth;
+
+import static com.shengyu.framework.common.pojo.CommonResult.success;
+
+import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.module.system.controller.app.auth.vo.AppAuthLoginReqVO;
+import com.shengyu.module.system.controller.app.auth.vo.AppAuthLoginRespVO;
+import com.shengyu.module.system.controller.app.auth.vo.AppAuthSmsLoginReqVO;
+import com.shengyu.module.system.controller.app.auth.vo.AppKickDeviceReqVO;
+import com.shengyu.module.system.controller.app.auth.vo.AppOnlineDeviceVO;
+import com.shengyu.module.system.service.auth.AppAuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
+import javax.annotation.Resource;
+import javax.annotation.security.PermitAll;
+import javax.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 移动端 - 认证控制器
+ * 
+ * 说明:
+ * 1. 路径前缀为 /app-api/system/auth
+ * 2. 支持多端登录策略(同设备类型互踢,不同设备类型共存)
+ * 3. 不影响 Web 端的登录逻辑
+ */
+@Tag(name = "移动端 - 认证")
+@RestController
+@RequestMapping("/system/auth")
+@Validated
+@Slf4j
+public class AppAuthController {
+
+    @Resource
+    private AppAuthService appAuthService;
+
+    @PostMapping("/login")
+    @PermitAll
+    @Operation(summary = "账号密码登录")
+    public CommonResult<AppAuthLoginRespVO> login(@RequestBody @Valid AppAuthLoginReqVO reqVO) {
+        return success(appAuthService.login(reqVO));
+    }
+
+    @PostMapping("/sms-login")
+    @PermitAll
+    @Operation(summary = "短信验证码登录")
+    public CommonResult<AppAuthLoginRespVO> smsLogin(@RequestBody @Valid AppAuthSmsLoginReqVO reqVO) {
+        return success(appAuthService.smsLogin(reqVO));
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "登出")
+    public CommonResult<Boolean> logout() {
+        String token = SecurityFrameworkUtils.getLoginUserToken();
+        appAuthService.logout(token);
+        return success(true);
+    }
+
+    @PostMapping("/refresh-token")
+    @PermitAll
+    @Operation(summary = "刷新访问令牌")
+    public CommonResult<AppAuthLoginRespVO> refreshToken(@RequestParam("refreshToken") String refreshToken) {
+        return success(appAuthService.refreshToken(refreshToken));
+    }
+
+    @GetMapping("/online-devices")
+    @Operation(summary = "获取在线设备列表")
+    public CommonResult<List<AppOnlineDeviceVO>> getOnlineDevices() {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(appAuthService.getOnlineDevices(userId));
+    }
+
+    @PostMapping("/kick-device")
+    @Operation(summary = "踢掉指定设备")
+    public CommonResult<Boolean> kickDevice(@RequestBody @Valid AppKickDeviceReqVO reqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(appAuthService.kickDevice(userId, reqVO.getDeviceType()));
+    }
+}
+```
+
+- [ ] 5.0.10: 创建移动端登录请求 VO
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 5.0.9
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/app/auth/vo/AppAuthLoginReqVO.java` (待创建)
+  - 备注: 添加 deviceType、deviceId、clientVersion 字段
+
+```java
+package com.shengyu.module.system.controller.app.auth.vo;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+import lombok.Data;
+import org.hibernate.validator.constraints.Length;
+
+@Data
+@Schema(description = "移动端 - 账号密码登录 Request VO")
+public class AppAuthLoginReqVO {
+
+    @Schema(description = "账号", requiredMode = Schema.RequiredMode.REQUIRED, example = "admin")
+    @NotEmpty(message = "登录账号不能为空")
+    @Length(min = 4, max = 16, message = "账号长度为 4-16 位")
+    private String username;
+
+    @Schema(description = "密码", requiredMode = Schema.RequiredMode.REQUIRED, example = "123456")
+    @NotEmpty(message = "密码不能为空")
+    @Length(min = 4, max = 16, message = "密码长度为 4-16 位")
+    private String password;
+
+    // 设备信息字段
+    @Schema(description = "设备类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "3")
+    @NotNull(message = "设备类型不能为空")
+    private Integer deviceType;
+
+    @Schema(description = "设备ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1234567890")
+    @NotEmpty(message = "设备ID不能为空")
+    private String deviceId;
+
+    @Schema(description = "客户端版本", example = "1.0.0")
+    private String clientVersion;
+
+}
+```
+
+- [ ] 5.0.11: 创建移动端 AuthService 接口(可选)
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 5.0.9, 5.0.10
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/auth/AppAuthService.java` (可选创建)
+  - 备注: **Service 层可以复用 AdminAuthService**,如果业务逻辑完全一致,直接在 AppAuthController 中注入 AdminAuthService 即可。如果需要移动端特有逻辑(如设备管理),则创建独立的 AppAuthService
+
+**Service 复用策略**:
+1. **完全复用**: 如果登录逻辑与 Web 端一致,直接使用 `AdminAuthService`
+2. **部分复用**: 在 `AppAuthServiceImpl` 中注入 `AdminAuthService`,调用其方法
+3. **独立实现**: 如果业务逻辑差异较大,创建独立的 Service
+
+**推荐方案**: 在 `AppAuthController` 中直接注入 `AdminAuthService`,添加设备信息处理逻辑:
+
+```java
+@RestController
+@RequestMapping("/system/auth")
+public class AppAuthController {
+
+    @Resource
+    private AdminAuthService adminAuthService; // 复用 Web 端 Service
+    
+    @Resource
+    private RedisTemplate<String, String> redisTemplate;
+
+    @PostMapping("/login")
+    @PermitAll
+    public CommonResult<AuthLoginRespVO> login(@RequestBody @Valid AppAuthLoginReqVO reqVO) {
+        // 1. 调用 AdminAuthService 进行登录验证
+        AuthLoginReqVO adminReqVO = new AuthLoginReqVO();
+        adminReqVO.setUsername(reqVO.getUsername());
+        adminReqVO.setPassword(reqVO.getPassword());
+        AuthLoginRespVO respVO = adminAuthService.login(adminReqVO);
+        
+        // 2. 保存设备信息到 Redis
+        String deviceKey = String.format("user:device:%d:%d", 
+            respVO.getUserId(), reqVO.getDeviceType());
+        DeviceInfo deviceInfo = DeviceInfo.builder()
+            .deviceId(reqVO.getDeviceId())
+            .deviceType(reqVO.getDeviceType())
+            .clientVersion(reqVO.getClientVersion())
+            .loginTime(LocalDateTime.now())
+            .build();
+        redisTemplate.opsForValue().set(deviceKey, 
+            JSON.toJSONString(deviceInfo), 7, TimeUnit.DAYS);
+        
+        return success(respVO);
+    }
+}
+```
+
+**如果需要独立 Service,参考以下接口**:
+
+```java
+package com.shengyu.module.system.service.auth;
+
+import com.shengyu.module.system.controller.app.auth.vo.AppAuthLoginReqVO;
+import com.shengyu.module.system.controller.app.auth.vo.AppAuthLoginRespVO;
+import com.shengyu.module.system.controller.app.auth.vo.AppAuthSmsLoginReqVO;
+import com.shengyu.module.system.controller.app.auth.vo.AppOnlineDeviceVO;
+import java.util.List;
+
+/**
+ * 移动端认证服务接口
+ */
+public interface AppAuthService {
+
+    /**
+     * 账号密码登录
+     */
+    AppAuthLoginRespVO login(AppAuthLoginReqVO reqVO);
+
+    /**
+     * 短信验证码登录
+     */
+    AppAuthLoginRespVO smsLogin(AppAuthSmsLoginReqVO reqVO);
+
+    /**
+     * 登出
+     */
+    void logout(String token);
+
+    /**
+     * 刷新访问令牌
+     */
+    AppAuthLoginRespVO refreshToken(String refreshToken);
+
+    /**
+     * 获取在线设备列表
+     */
+    List<AppOnlineDeviceVO> getOnlineDevices(Long userId);
+
+    /**
+     * 踢掉指定设备
+     */
+    Boolean kickDevice(Long userId, Integer deviceType);
+}
+```
+
+- [ ] 5.0.12: 实现移动端 AuthService(可选)
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 3小时
+  - 依赖: 5.0.11
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/auth/AppAuthServiceImpl.java` (可选创建)
+  - 备注: **仅在需要独立 Service 时创建**。推荐在 Controller 中直接复用 AdminAuthService,添加设备信息处理逻辑
+
+**如果需要独立 Service,参考以下实现**:
+
+```java
+@Service
+@Slf4j
+public class AppAuthServiceImpl implements AppAuthService {
+
+    @Resource
+    private AdminAuthService adminAuthService; // 复用 Web 端 Service
+    
+    @Resource
+    private RedisTemplate<String, String> redisTemplate;
+    
+    @Resource
+    private NettySessionManager sessionManager;
+
+    @Override
+    public AppAuthLoginRespVO login(AppAuthLoginReqVO reqVO) {
+        // 1. 调用 AdminAuthService 进行登录验证
+        AuthLoginReqVO adminReqVO = new AuthLoginReqVO();
+        adminReqVO.setUsername(reqVO.getUsername());
+        adminReqVO.setPassword(reqVO.getPassword());
+        AuthLoginRespVO adminRespVO = adminAuthService.login(adminReqVO);
+        
+        // 2. 保存设备信息到 Redis
+        String deviceKey = String.format("user:device:%d:%d", 
+            adminRespVO.getUserId(), reqVO.getDeviceType());
+        DeviceInfo deviceInfo = DeviceInfo.builder()
+            .deviceId(reqVO.getDeviceId())
+            .deviceType(reqVO.getDeviceType())
+            .clientVersion(reqVO.getClientVersion())
+            .loginTime(LocalDateTime.now())
+            .build();
+        redisTemplate.opsForValue().set(deviceKey, 
+            JSON.toJSONString(deviceInfo), 7, TimeUnit.DAYS);
+        
+        // 3. 转换响应对象
+        return AppAuthLoginRespVO.builder()
+            .accessToken(adminRespVO.getAccessToken())
+            .refreshToken(adminRespVO.getRefreshToken())
+            .userId(adminRespVO.getUserId())
+            .expiresTime(adminRespVO.getExpiresTime())
+            .deviceType(reqVO.getDeviceType())
+            .deviceId(reqVO.getDeviceId())
+            .build();
+    }
+
+    @Override
+    public AppAuthLoginRespVO smsLogin(AppAuthSmsLoginReqVO reqVO) {
+        // 调用 AdminAuthService 的短信登录
+        AuthSmsLoginReqVO adminReqVO = new AuthSmsLoginReqVO();
+        adminReqVO.setMobile(reqVO.getMobile());
+        adminReqVO.setCode(reqVO.getCode());
+        AuthLoginRespVO adminRespVO = adminAuthService.smsLogin(adminReqVO);
+        
+        // 保存设备信息
+        String deviceKey = String.format("user:device:%d:%d", 
+            adminRespVO.getUserId(), reqVO.getDeviceType());
+        DeviceInfo deviceInfo = DeviceInfo.builder()
+            .deviceId(reqVO.getDeviceId())
+            .deviceType(reqVO.getDeviceType())
+            .clientVersion(reqVO.getClientVersion())
+            .loginTime(LocalDateTime.now())
+            .build();
+        redisTemplate.opsForValue().set(deviceKey, 
+            JSON.toJSONString(deviceInfo), 7, TimeUnit.DAYS);
+        
+        return AppAuthLoginRespVO.builder()
+            .accessToken(adminRespVO.getAccessToken())
+            .refreshToken(adminRespVO.getRefreshToken())
+            .userId(adminRespVO.getUserId())
+            .expiresTime(adminRespVO.getExpiresTime())
+            .deviceType(reqVO.getDeviceType())
+            .deviceId(reqVO.getDeviceId())
+            .build();
+    }
+
+    @Override
+    public void logout(String token) {
+        // 直接调用 AdminAuthService 的登出逻辑
+        adminAuthService.logout(token, LoginLogTypeEnum.LOGOUT_SELF.getType());
+    }
+
+    @Override
+    public AppAuthLoginRespVO refreshToken(String refreshToken) {
+        // 调用 AdminAuthService 刷新 Token
+        AuthLoginRespVO adminRespVO = adminAuthService.refreshToken(refreshToken);
+        
+        return AppAuthLoginRespVO.builder()
+            .accessToken(adminRespVO.getAccessToken())
+            .refreshToken(adminRespVO.getRefreshToken())
+            .userId(adminRespVO.getUserId())
+            .expiresTime(adminRespVO.getExpiresTime())
+            .build();
+    }
+
+    @Override
+    public List<AppOnlineDeviceVO> getOnlineDevices(Long userId) {
+        // 从 WebSocket SessionManager 获取在线设备
+        List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
+        
+        return sessions.stream()
+            .map(session -> AppOnlineDeviceVO.builder()
+                .deviceType(session.getDeviceType())
+                .deviceTypeName(DeviceTypeEnum.getByCode(session.getDeviceType()).getName())
+                .deviceId(session.getDeviceId())
+                .clientVersion(session.getClientVersion())
+                .loginTime(session.getConnectTime())
+                .lastActiveTime(session.getLastActiveTime())
+                .build())
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public Boolean kickDevice(Long userId, Integer deviceType) {
+        // 获取指定设备的 Session
+        NettySession session = sessionManager.getSessionByUserIdAndDeviceType(
+            userId, deviceType);
+        
+        if (session != null && session.isActive()) {
+            // 发送踢下线消息
+            sessionManager.kickOffDevice(session, "您主动踢掉了该设备");
+            return true;
+        }
+        
+        return false;
+    }
+}
+```
+
+- [ ] 5.0.13: 测试多端登录互踢逻辑
+  - 负责人: AI/人工
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 5.0.1-5.0.12
+  - 文件: 无
+  - 备注: 测试同设备类型互踢、不同设备类型共存的场景
+
+**测试场景**:
+1. 用户在 Android 手机 A 登录 → 成功
+2. 用户在 Android 手机 B 登录 → 手机 A 被踢下线
+3. 用户在 iPad 登录 → 手机 B 和 iPad 同时在线
+4. 用户在 Mac 登录 → 手机 B、iPad、Mac 同时在线
+5. 用户在 Windows 登录 → 手机 B、iPad、Mac、Windows 同时在线
+6. 用户在 Mac 2 登录 → Mac 1 被踢下线,其他设备保持在线
+7. 用户在个人中心查看在线设备 → 显示所有在线设备
+8. 用户踢掉 iPad → iPad 被踢下线,其他设备保持在线
+9. Web 端登录不受影响 → Web 端使用 `/admin-api` 前缀,独立运行
+
+**重要架构说明**:
+
+1. **Controller 层必须分离**: 
+   - 移动端 Controller 必须放在 `controller.app.xxx` 包下
+   - Web 端 Controller 放在 `controller.admin.xxx` 包下
+   - 这是由 `WebProperties.java` 的路由规则强制要求的
+
+2. **Service 层可以复用**:
+   - 如果业务逻辑一致,直接复用现有 Service(如 `AdminAuthService`)
+   - 在 Controller 中添加移动端特有逻辑(如设备信息处理)
+   - 避免重复代码,遵循 DRY 原则
+
+3. **后续 IM 功能开发规范**:
+   - 所有 IM 移动端 API 接口都应放在 `controller.app.im` 包下
+   - 前端请求统一使用 `/app-api/system/im/**` 路径
+   - Service 层优先复用,如 `ImMessageService`、`ImConversationService` 等
+   - 仅在业务逻辑有显著差异时才创建独立的 Service
+
+4. **为什么这样设计**:
+   - 保持 Web 端和移动端的独立性,互不影响
+   - 减少代码重复,提高可维护性
+   - 符合单一职责原则和开闭原则
+   - 便于后续扩展和优化
+
+- [x] 5.0.1: 登录页面 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/login/login.uvue`
+  - 执行时间: 已完成
+  - 备注: 支持账号密码登录和短信验证码登录
+
+- [x] 5.0.2: 登录 API 接口
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `api/login.uts`
+  - 执行时间: 已完成
+  - 备注: 已实现 login、smsLogin、logout、refreshToken 等接口
+
+- [ ] 5.0.3: 调整移动端 API 前缀为 `/app-api`
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 无
+  - 文件: `shengyu-ui/shengyu-ui-admin-uniappx/utils/request.uts`
+  - 备注: 修改 baseURL 为 `/app-api`,避免影响 Web 端登录
+
+```typescript
+// utils/request.uts
+const baseURL = '/app-api' // 移动端使用 /app-api 前缀
+
+export function request(config: RequestConfig): Promise<any> {
+  return new Promise((resolve, reject) => {
+    uni.request({
+      url: baseURL + config.url,
+      method: config.method || 'GET',
+      data: config.data,
+      header: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + getToken(),
+        'tenant-id': getTenantId(),
+        ...config.header
+      },
+      success: (res) => {
+        // 处理响应...
+      },
+      fail: (err) => {
+        reject(err)
+      }
+    })
+  })
+}
+```
+
+```typescript
+/**
+ * 设备类型枚举
+ */
+export enum DeviceType {
+  WEB = 1,        // Web浏览器
+  IOS = 2,        // iPhone
+  ANDROID = 3,    // Android手机
+  MINI_PROGRAM = 4, // 微信小程序
+  IPAD = 5,       // iPad
+  MAC = 6,        // Mac电脑
+  WINDOWS = 7     // Windows电脑
+}
+
+/**
+ * 获取当前设备类型
+ */
+export function getCurrentDeviceType(): number {
+  // #ifdef APP-PLUS
+  const platform = uni.getSystemInfoSync().platform
+  if (platform === 'ios') {
+    return DeviceType.IOS
+  } else if (platform === 'android') {
+    return DeviceType.ANDROID
+  }
+  // #endif
+  
+  // #ifdef H5
+  return DeviceType.WEB
+  // #endif
+  
+  // #ifdef MP-WEIXIN
+  return DeviceType.MINI_PROGRAM
+  // #endif
+  
+  return DeviceType.WEB
+}
+
+/**
+ * 获取设备唯一标识
+ */
+export function getDeviceId(): string {
+  // 优先从本地存储获取
+  let deviceId = uni.getStorageSync('deviceId')
+  if (deviceId) {
+    return deviceId
+  }
+  
+  // 生成新的设备ID
+  deviceId = generateDeviceId()
+  uni.setStorageSync('deviceId', deviceId)
+  return deviceId
+}
+
+/**
+ * 生成设备ID
+ */
+function generateDeviceId(): string {
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 15)
+  return `${timestamp}-${random}`
+}
+```
+
+- [ ] 5.0.4: 添加设备类型枚举
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 无
+  - 文件: `shengyu-ui/shengyu-ui-admin-uniappx/utils/device.uts` (待创建)
+  - 备注: 定义设备类型常量(1-Web, 2-iOS, 3-Android, 4-小程序, 5-iPad, 6-Mac, 7-Windows)
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 5.0.3
+  - 文件: `api/login.uts`
+  - 备注: 登录时携带设备类型和设备ID
+
+```typescript
+/**
+ * 账号密码登录(改造版)
+ */
+export function login(data: UTSJSONObject): Promise<any> {
+  // 添加设备信息
+  const loginData = {
+    ...data,
+    deviceType: getCurrentDeviceType(),
+    deviceId: getDeviceId(),
+    clientVersion: getAppVersion()
+  }
+  return post('/system/auth/login', loginData)
+}
+
+/**
+ * 短信验证码登录(改造版)
+ */
+export function smsLogin(data: UTSJSONObject): Promise<any> {
+  // 添加设备信息
+  const loginData = {
+    ...data,
+    deviceType: getCurrentDeviceType(),
+    deviceId: getDeviceId(),
+    clientVersion: getAppVersion()
+  }
+  return post('/system/auth/sms-login', loginData)
+}
+
+/**
+ * 获取应用版本号
+ */
+function getAppVersion(): string {
+  // #ifdef APP-PLUS
+  return uni.getSystemInfoSync().appVersion || '1.0.0'
+  // #endif
+  
+  // #ifdef H5
+  return '1.0.0'
+  // #endif
+  
+  // #ifdef MP-WEIXIN
+  return uni.getSystemInfoSync().version || '1.0.0'
+  // #endif
+  
+  return '1.0.0'
+}
+```
+
+- [ ] 5.0.5: 保存设备信息到用户状态
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 5.0.3
+  - 文件: `store/user.uts`
+  - 备注: 登录成功后保存设备类型和设备ID
+
+```typescript
+// 在 user.uts 中添加设备信息字段
+export const useUserStore = defineStore('user', {
+  state: () => ({
+    token: '',
+    refreshToken: '',
+    userId: 0,
+    username: '',
+    nickname: '',
+    avatar: '',
+    roles: [] as string[],
+    permissions: [] as string[],
+    tenantId: 0,
+    // 新增设备信息
+    deviceType: 0,
+    deviceId: '',
+    clientVersion: ''
+  }),
+  
+  actions: {
+    // 登录
+    async login(loginData: any) {
+      const res = await login(loginData)
+      this.token = res.data.accessToken
+      this.refreshToken = res.data.refreshToken
+      this.userId = res.data.userId
+      
+      // 保存设备信息
+      this.deviceType = getCurrentDeviceType()
+      this.deviceId = getDeviceId()
+      this.clientVersion = getAppVersion()
+      
+      // 保存到本地存储
+      uni.setStorageSync('token', this.token)
+      uni.setStorageSync('refreshToken', this.refreshToken)
+      uni.setStorageSync('deviceType', this.deviceType)
+      uni.setStorageSync('deviceId', this.deviceId)
+    }
+  }
+})
+```
+
+- [ ] 5.0.6: 处理被踢下线通知
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 5.1.6 (WebSocket连接管理)
+  - 文件: `utils/websocket.uts`
+  - 备注: 监听 WebSocket 的 CLOSE 消息,显示被踢下线提示
+
+```typescript
+/**
+ * 处理被踢下线消息
+ */
+function handleKickOffMessage(message: any) {
+  const reason = message.body.toString()
+  
+  // 显示提示
+  uni.showModal({
+    title: '下线通知',
+    content: reason || '您的账号在其他设备登录',
+    showCancel: false,
+    success: () => {
+      // 清除登录状态
+      const userStore = useUserStore()
+      userStore.logout()
+      
+      // 跳转到登录页
+      uni.reLaunch({ url: '/pages/login/login' })
+    }
+  })
+  
+  // 关闭 WebSocket 连接
+  closeWebSocket()
+}
+```
+
+- [ ] 5.0.7: 添加在线设备管理页面
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 3小时
+  - 依赖: 后端 API (获取在线设备列表、踢掉设备)
+  - 文件: `pages/profile/online-devices.uvue` (待创建)
+  - 备注: 显示当前用户在线的所有设备,支持踢掉指定设备
+
+```vue
+<template>
+  <view class="online-devices-page">
+    <view class="device-list">
+      <view 
+        v-for="device in devices" 
+        :key="device.deviceType"
+        class="device-item"
+      >
+        <view class="device-icon">
+          <text class="iconfont">{{ getDeviceIcon(device.deviceType) }}</text>
+        </view>
+        <view class="device-info">
+          <text class="device-name">{{ device.deviceTypeName }}</text>
+          <text class="device-time">登录时间: {{ device.loginTime }}</text>
+          <text class="device-id">设备ID: {{ device.deviceId }}</text>
+        </view>
+        <view 
+          v-if="device.deviceType !== currentDeviceType"
+          class="kick-btn"
+          @click="handleKickDevice(device.deviceType)"
+        >
+          <text>踢下线</text>
+        </view>
+        <view v-else class="current-tag">
+          <text>当前设备</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script setup lang="uts">
+import { ref, onMounted } from 'vue'
+import { getCurrentDeviceType } from '@/utils/device.uts'
+
+const devices = ref([])
+const currentDeviceType = ref(getCurrentDeviceType())
+
+// 获取在线设备列表
+async function fetchOnlineDevices() {
+  const res = await request({
+    url: '/system/auth/online-devices',
+    method: 'GET'
+  })
+  devices.value = res.data
+}
+
+// 踢掉指定设备
+async function handleKickDevice(deviceType: number) {
+  uni.showModal({
+    title: '确认操作',
+    content: '确定要踢掉该设备吗?',
+    success: async (res) => {
+      if (res.confirm) {
+        await request({
+          url: '/system/auth/kick-device',
+          method: 'POST',
+          data: { deviceType }
+        })
+        uni.showToast({ title: '操作成功', icon: 'success' })
+        fetchOnlineDevices()
+      }
+    }
+  })
+}
+
+// 获取设备图标
+function getDeviceIcon(deviceType: number): string {
+  const icons = {
+    1: '\uea95', // Web
+    2: '\uea94', // iOS
+    3: '\uea94', // Android
+    4: '\uea96', // 小程序
+    5: '\uea93', // iPad
+    6: '\uea92', // Mac
+    7: '\uea91'  // Windows
+  }
+  return icons[deviceType] || '\uea95'
+}
+
+onMounted(() => {
+  fetchOnlineDevices()
+})
+</script>
+```
+
+- [ ] 5.0.8: 后端登录接口改造
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 无
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/admin/auth/AuthController.java`
+  - 备注: 登录接口接收设备类型和设备ID,保存到 Redis
+
+```java
+/**
+ * 账号密码登录(改造版)
+ */
+@PostMapping("/login")
+public CommonResult<AuthLoginRespVO> login(@RequestBody @Valid AuthLoginReqVO reqVO) {
+    // 验证登录
+    AuthLoginRespVO respVO = authService.login(reqVO);
+    
+    // 保存设备信息到 Redis
+    String deviceKey = String.format("user:device:%d:%d", 
+        respVO.getUserId(), reqVO.getDeviceType());
+    redisTemplate.opsForValue().set(deviceKey, reqVO.getDeviceId(), 7, TimeUnit.DAYS);
+    
+    return success(respVO);
+}
+
+/**
+ * 获取在线设备列表
+ */
+@GetMapping("/online-devices")
+public CommonResult<List<OnlineDeviceVO>> getOnlineDevices() {
+    Long userId = SecurityFrameworkUtils.getLoginUserId();
+    
+    // 从 WebSocket SessionManager 获取在线设备
+    List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
+    
+    List<OnlineDeviceVO> devices = sessions.stream()
+        .map(session -> OnlineDeviceVO.builder()
+            .deviceType(session.getDeviceType())
+            .deviceTypeName(DeviceTypeEnum.getByCode(session.getDeviceType()).getName())
+            .deviceId(session.getDeviceId())
+            .clientVersion(session.getClientVersion())
+            .loginTime(session.getConnectTime())
+            .lastActiveTime(session.getLastActiveTime())
+            .build())
+        .collect(Collectors.toList());
+    
+    return success(devices);
+}
+
+/**
+ * 踢掉指定设备
+ */
+@PostMapping("/kick-device")
+public CommonResult<Boolean> kickDevice(@RequestBody @Valid KickDeviceReqVO reqVO) {
+    Long userId = SecurityFrameworkUtils.getLoginUserId();
+    
+    // 获取指定设备的 Session
+    NettySession session = sessionManager.getSessionByUserIdAndDeviceType(
+        userId, reqVO.getDeviceType());
+    
+    if (session != null && session.isActive()) {
+        // 发送踢下线消息
+        sessionManager.kickOffDevice(session, "您主动踢掉了该设备");
+        return success(true);
+    }
+    
+    return success(false);
+}
+```
+
+- [ ] 5.0.9: 登录请求 VO 添加设备字段
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 30分钟
+  - 依赖: 5.0.8
+  - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/admin/auth/vo/AuthLoginReqVO.java`
+  - 备注: 添加 deviceType、deviceId、clientVersion 字段
+
+```java
+@Data
+@Schema(description = "管理后台 - 账号密码登录 Request VO")
+public class AuthLoginReqVO {
+
+    @Schema(description = "账号", requiredMode = Schema.RequiredMode.REQUIRED, example = "admin")
+    @NotEmpty(message = "登录账号不能为空")
+    @Length(min = 4, max = 16, message = "账号长度为 4-16 位")
+    private String username;
+
+    @Schema(description = "密码", requiredMode = Schema.RequiredMode.REQUIRED, example = "123456")
+    @NotEmpty(message = "密码不能为空")
+    @Length(min = 4, max = 16, message = "密码长度为 4-16 位")
+    private String password;
+
+    // 新增设备信息字段
+    @Schema(description = "设备类型", example = "3")
+    private Integer deviceType;
+
+    @Schema(description = "设备ID", example = "1234567890")
+    private String deviceId;
+
+    @Schema(description = "客户端版本", example = "1.0.0")
+    private String clientVersion;
+
+}
+```
+
+- [ ] 5.0.10: 测试多端登录互踢逻辑
+  - 负责人: AI/人工
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 5.0.1-5.0.9
+  - 文件: 无
+  - 备注: 测试同设备类型互踢、不同设备类型共存的场景
+
+**测试场景**:
+1. 用户在 Android 手机 A 登录 → 成功
+2. 用户在 Android 手机 B 登录 → 手机 A 被踢下线
+3. 用户在 iPad 登录 → 手机 B 和 iPad 同时在线
+4. 用户在 Mac 登录 → 手机 B、iPad、Mac 同时在线
+5. 用户在 Windows 登录 → 手机 B、iPad、Mac、Windows 同时在线
+6. 用户在 Mac 2 登录 → Mac 1 被踢下线,其他设备保持在线
+7. 用户在个人中心查看在线设备 → 显示所有在线设备
+8. 用户踢掉 iPad → iPad 被踢下线,其他设备保持在线
+
+#### 5.1 基础框架与工具类 (预计 1 天)
+
+**状态**: 🟢 80% 已完成
+
+- [x] 5.1.1: HTTP 请求封装
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `utils/request.uts`
+  - 执行时间: 已完成
+  - 备注: 已实现 Token 刷新、租户隔离、错误处理
+
+- [x] 5.1.2: 用户状态管理
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `store/user.uts`
+  - 执行时间: 已完成
+  - 备注: 已实现 Token/权限/角色管理
+
+- [x] 5.1.3: 国际化配置
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `store/locale.uts`, `locales/zh-CN.uts`, `locales/en.uts`
+  - 执行时间: 已完成
+  - 备注: 已实现中英文切换
+
+- [x] 5.1.4: 表情解析器
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `utils/emojiParser.uts`, `utils/emojiData.uts`
+  - 执行时间: 已完成
+  - 备注: 已实现 109 个微信表情解析
+
+- [x] 5.1.5: 文件上传工具
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `utils/upload.uts`, `utils/file.uts`
+  - 执行时间: 已完成
+  - 备注: 已实现文件上传封装,但未对接后端 API
+
+- [ ] 5.1.6: WebSocket 连接管理类
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 4小时
+  - 依赖: 无
+  - 文件: `utils/websocket.uts` (待创建)
+  - 备注: 封装 WebSocket 连接、断线重连、心跳保活、消息收发
+
+- [ ] 5.1.7: Protobuf 消息编解码
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 3小时
+  - 依赖: 5.1.6
+  - 文件: `utils/protobuf.uts` (待创建)
+  - 备注: 实现 Protobuf 消息的编码和解码
+
+- [ ] 5.1.8: 消息本地存储类
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 3小时
+  - 依赖: 无
+  - 文件: `utils/storage.uts` (待创建)
+  - 备注: 封装消息本地缓存(SQLite/IndexedDB)
+
+- [x] 5.1.9: 贴纸管理器
+  - 负责人: AI
+  - 优先级: P2
+  - 文件: `utils/stickerManager.uts`
+  - 执行时间: 已完成
+  - 备注: 已实现贴纸收藏、添加、删除,但未对接服务端
+
+#### 5.2 API 接口封装 (预计 1 天)
+
+**状态**: 🔴 10% 已完成
+
+- [x] 5.2.1: 登录接口
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `api/login.uts`
+  - 执行时间: 已完成
+  - 备注: 已实现账号密码登录、短信登录
+
+- [ ] 5.2.2: 会话管理接口
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 4.1.x
+  - 文件: `api/conversation.uts` (待创建)
+  - 备注: 封装会话列表、创建、删除、置顶、免打扰等接口
+
+- [ ] 5.2.3: 消息管理接口
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 4.2.x
+  - 文件: `api/message.uts` (待创建)
+  - 备注: 封装消息列表、撤回、删除、标记已读等接口
+
+- [ ] 5.2.4: 联系人管理接口
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 4.3.x
+  - 文件: `api/contact.uts` (待创建)
+  - 备注: 封装联系人列表、搜索、详情、设置等接口
+
+- [ ] 5.2.5: 群组管理接口
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 4.4.x
+  - 文件: `api/group.uts` (待创建)
+  - 备注: 封装群组创建、详情、成员管理等接口
+
+- [ ] 5.2.6: 文件上传接口
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 无
+  - 文件: `api/file.uts` (待创建)
+  - 备注: 封装图片、语音、视频、文件上传接口
+
+#### 5.3 消息列表页 (预计 2 天)
+
+**状态**: 🟢 90% UI 已完成,🔴 30% 业务逻辑已完成
+
+- [x] 5.3.1: 页面布局
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/message.uvue`
+  - 执行时间: 已完成
+  - 备注: 顶部搜索框、分类筛选、会话列表、底部导航
+
+- [x] 5.3.2: 会话列表 UI 渲染
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/message.uvue`
+  - 执行时间: 已完成
+  - 备注: 头像、名称、最后消息、时间、未读数、置顶标识、免打扰图标
+
+- [x] 5.3.3: 分类筛选功能
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `pages/message/message.uvue`
+  - 执行时间: 已完成
+  - 备注: 全部、单聊、群聊、未读四个分类
+
+- [x] 5.3.4: 长按菜单 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/message.uvue`
+  - 执行时间: 已完成
+  - 备注: 置顶、删除、标为已读、免打扰四个操作
+
+- [x] 5.3.5: 下拉刷新 UI
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `pages/message/message.uvue`
+  - 执行时间: 已完成
+  - 备注: 使用 uni-app 的下拉刷新组件
+
+- [ ] 5.3.6: 对接会话列表 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 5.2.2, 4.1.1
+  - 文件: `pages/message/message.uvue`
+  - 备注: 调用 GET /admin-api/system/im/conversation/list
+
+- [ ] 5.3.7: 对接置顶会话 API
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1小时
+  - 依赖: 5.2.2, 4.1.4
+  - 文件: `pages/message/message.uvue`
+  - 备注: 调用 PUT /admin-api/system/im/conversation/pin
+
+- [ ] 5.3.8: 对接删除会话 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 5.2.2, 4.1.3
+  - 文件: `pages/message/message.uvue`
+  - 备注: 调用 DELETE /admin-api/system/im/conversation/delete
+
+- [ ] 5.3.9: 对接免打扰 API
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1小时
+  - 依赖: 5.2.2, 4.1.5
+  - 文件: `pages/message/message.uvue`
+  - 备注: 调用 PUT /admin-api/system/im/conversation/mute
+
+- [ ] 5.3.10: 对接清空未读数 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 5.2.2, 4.1.6
+  - 文件: `pages/message/message.uvue`
+  - 备注: 调用 PUT /admin-api/system/im/conversation/clear-unread
+
+- [ ] 5.3.11: WebSocket 消息接收
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 3小时
+  - 依赖: 5.1.6, 5.1.7
+  - 文件: `pages/message/message.uvue`
+  - 备注: 接收新消息,更新会话列表,更新未读数
+
+- [ ] 5.3.12: 离线消息拉取
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 5.2.2, 5.2.3
+  - 文件: `pages/message/message.uvue`
+  - 备注: 上线后拉取离线消息,更新会话列表
+
+- [ ] 5.3.13: 会话草稿保存
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 1.5小时
+  - 依赖: 5.1.8
+  - 文件: `pages/message/message.uvue`
+  - 备注: 保存用户输入的草稿,下次打开时恢复
+
+#### 5.4 聊天页面 (预计 3 天)
+
+**状态**: 🟢 95% UI 已完成,🔴 20% 业务逻辑已完成
+
+- [x] 5.4.1: 页面布局
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/chat.uvue`
+  - 执行时间: 已完成
+  - 备注: 顶部导航、消息列表、输入框、功能菜单
+
+- [x] 5.4.2: 消息列表 UI 渲染
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/chat.uvue`
+  - 执行时间: 已完成
+  - 备注: 支持文本、图片、语音、视频、文件、位置、表情包、贴纸
+
+- [x] 5.4.3: 消息气泡样式
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/chat.uvue`
+  - 执行时间: 已完成
+  - 备注: 自己的消息右侧蓝色,对方的消息左侧白色
+
+- [x] 5.4.4: 表情输入系统
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/chat.uvue`
+  - 执行时间: 已完成
+  - 备注: 109个微信表情 + 收藏贴纸,表情面板切换
+
+- [x] 5.4.5: 语音输入 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/chat.uvue`
+  - 执行时间: 已完成
+  - 备注: 长按录音、上滑取消、录音浮层
+
+- [x] 5.4.6: 消息长按菜单
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/chat.uvue`
+  - 执行时间: 已完成
+  - 备注: 复制、删除、撤回、转发、引用、多选
+
+- [x] 5.4.7: 多选模式 UI
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `pages/message/chat.uvue`
+  - 执行时间: 已完成
+  - 备注: 消息左侧复选框、底部工具栏
+
+- [x] 5.4.8: 全屏输入模式
+  - 负责人: AI
+  - 优先级: P2
+  - 文件: `pages/message/chat.uvue`
+  - 执行时间: 已完成
+  - 备注: 点击展开图标,输入框全屏显示
+
+- [x] 5.4.9: 功能菜单 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/chat.uvue`
+  - 执行时间: 已完成
+  - 备注: 相册、拍摄、文件、位置、名片、语音通话、视频通话、红包
+
+- [ ] 5.4.10: 对接消息列表 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 5.2.3, 4.2.1
+  - 文件: `pages/message/chat.uvue`
+  - 备注: 调用 GET /admin-api/system/im/message/list,支持游标分页
+
+- [ ] 5.4.11: WebSocket 发送文本消息
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 3小时
+  - 依赖: 5.1.6, 5.1.7
+  - 文件: `pages/message/chat.uvue`
+  - 备注: 通过 WebSocket 发送 Protobuf 消息,等待 ACK 确认
+
+- [ ] 5.4.12: WebSocket 接收消息
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 5.1.6, 5.1.7
+  - 文件: `pages/message/chat.uvue`
+  - 备注: 接收新消息,插入到消息列表,滚动到底部
+
+- [ ] 5.4.13: 图片选择与上传
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 5.2.6
+  - 文件: `pages/message/chat.uvue`
+  - 备注: uni.chooseImage + 上传接口 + 发送图片消息
+
+- [ ] 5.4.14: 语音录制与上传
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 3小时
+  - 依赖: 5.2.6
+  - 文件: `pages/message/chat.uvue`
+  - 备注: uni.getRecorderManager + 上传接口 + 发送语音消息
+
+- [ ] 5.4.15: 语音播放
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 无
+  - 文件: `pages/message/chat.uvue`
+  - 备注: uni.createInnerAudioContext,点击播放语音
+
+- [ ] 5.4.16: 视频选择与上传
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 2小时
+  - 依赖: 5.2.6
+  - 文件: `pages/message/chat.uvue`
+  - 备注: uni.chooseVideo + 上传接口 + 发送视频消息
+
+- [ ] 5.4.17: 视频播放
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1.5小时
+  - 依赖: 无
+  - 文件: `pages/message/chat.uvue`
+  - 备注: video 组件,点击播放视频
+
+- [ ] 5.4.18: 文件选择与上传
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 2小时
+  - 依赖: 5.2.6
+  - 文件: `pages/message/chat.uvue`
+  - 备注: uni.chooseFile + 上传接口 + 发送文件消息
+
+- [ ] 5.4.19: 位置选择
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 2小时
+  - 依赖: 无
+  - 文件: `pages/message/chat.uvue`
+  - 备注: uni.chooseLocation + 发送位置消息
+
+- [ ] 5.4.20: 对接消息撤回 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 5.2.3, 4.2.2
+  - 文件: `pages/message/chat.uvue`
+  - 备注: 调用 PUT /admin-api/system/im/message/recall
+
+- [ ] 5.4.21: 对接消息删除 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 5.2.3, 4.2.3
+  - 文件: `pages/message/chat.uvue`
+  - 备注: 调用 DELETE /admin-api/system/im/message/delete
+
+- [ ] 5.4.22: 对接消息已读 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 5.2.3, 4.2.4
+  - 文件: `pages/message/chat.uvue`
+  - 备注: 调用 PUT /admin-api/system/im/message/read
+
+- [ ] 5.4.23: 消息重发机制
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 5.4.11
+  - 文件: `pages/message/chat.uvue`
+  - 备注: 发送失败后显示重发按钮,点击重新发送
+
+- [ ] 5.4.24: 消息发送状态
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 5.4.11
+  - 文件: `pages/message/chat.uvue`
+  - 备注: 发送中(loading)、已发送(√)、已读(√√)、失败(!)
+
+- [ ] 5.4.25: 消息本地缓存
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 3小时
+  - 依赖: 5.1.8
+  - 文件: `pages/message/chat.uvue`
+  - 备注: 消息保存到本地数据库,离线可查看
+
+- [ ] 5.4.26: 消息分页加载
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 5.4.10
+  - 文件: `pages/message/chat.uvue`
+  - 备注: 上拉加载更多历史消息
+
+- [ ] 5.4.27: 消息转发功能
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 3小时
+  - 依赖: 5.4.11
+  - 文件: `pages/message/chat.uvue`
+  - 备注: 选择联系人/群组,转发消息
+
+- [ ] 5.4.28: 正在输入提示
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 1.5小时
+  - 依赖: 5.1.6
+  - 文件: `pages/message/chat.uvue`
+  - 备注: 通过 WebSocket 发送正在输入状态
+
+- [ ] 5.4.29: 图片预览与保存
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1小时
+  - 依赖: 无
+  - 文件: `pages/message/chat.uvue`
+  - 备注: uni.previewImage,长按保存到相册
+
+- [ ] 5.4.30: 消息复制功能
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/chat.uvue`
+  - 执行时间: 已完成
+  - 备注: 复制文本消息到剪贴板
+
+- [ ] 5.4.31: 消息引用功能
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `pages/message/chat.uvue`
+  - 执行时间: 已完成(UI),待对接 API
+  - 备注: 在输入框插入引用文本
+
+#### 5.5 通讯录页面 (预计 2 天)
+
+**状态**: 🟢 90% UI 已完成,🔴 20% 业务逻辑已完成
+
+- [x] 5.5.1: 页面布局
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/contacts/contacts.uvue`
+  - 执行时间: 已完成
+  - 备注: 顶部搜索框、分类入口、联系人列表、字母索引
+
+- [x] 5.5.2: 分类入口 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/contacts/contacts.uvue`
+  - 执行时间: 已完成
+  - 备注: 我的群组、我的关注、组织架构、我的部门
+
+- [x] 5.5.3: 联系人列表 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/contacts/contacts.uvue`
+  - 执行时间: 已完成
+  - 备注: 头像、姓名、角色/职位,按首字母分组
+
+- [x] 5.5.4: 字母索引 UI
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `pages/contacts/contacts.uvue`
+  - 执行时间: 已完成
+  - 备注: A-Z + #,点击滚动到对应分组
+
+- [ ] 5.5.5: 对接联系人列表 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 5.2.4, 4.3.1
+  - 文件: `pages/contacts/contacts.uvue`
+  - 备注: 调用 GET /admin-api/system/im/contact/list,从 system_users 查询
+
+- [ ] 5.5.6: 联系人搜索功能
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 5.2.4, 4.3.2
+  - 文件: `pages/contacts/search-result.uvue`
+  - 备注: 本地搜索 + 服务端搜索
+
+- [ ] 5.5.7: 星标联系人置顶
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1小时
+  - 依赖: 5.5.5
+  - 文件: `pages/contacts/contacts.uvue`
+  - 备注: 星标联系人显示在最上方
+
+- [ ] 5.5.8: 联系人备注名显示
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1小时
+  - 依赖: 5.5.5
+  - 文件: `pages/contacts/contacts.uvue`
+  - 备注: 优先显示备注名,无备注名显示昵称
+
+- [ ] 5.5.9: 联系人在线状态
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 2小时
+  - 依赖: 5.1.6
+  - 文件: `pages/contacts/contacts.uvue`
+  - 备注: 显示联系人在线/离线状态
+
+- [ ] 5.5.10: 联系人同步更新
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1.5小时
+  - 依赖: 5.5.5
+  - 文件: `pages/contacts/contacts.uvue`
+  - 备注: 定期同步联系人列表,检测新增/删除
+
+#### 5.6 联系人详情页 (预计 1 天)
+
+**状态**: 🟢 90% UI 已完成,🔴 10% 业务逻辑已完成
+
+- [x] 5.6.1: 页面布局
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/contacts/user-detail.uvue`
+  - 执行时间: 已完成
+  - 备注: 联系人信息卡片、快捷操作、设置项
+
+- [x] 5.6.2: 快捷操作 UI
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `pages/contacts/user-detail.uvue`
+  - 执行时间: 已完成
+  - 备注: 图片、文件、链接、搜索四个按钮
+
+- [x] 5.6.3: 设置项 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/contacts/user-detail.uvue`
+  - 执行时间: 已完成
+  - 备注: 备注名、星标、免打扰、发消息、添加到群聊
+
+- [ ] 5.6.4: 对接联系人详情 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 5.2.4, 4.3.3
+  - 文件: `pages/contacts/user-detail.uvue`
+  - 备注: 调用 GET /admin-api/system/im/contact/get
+
+- [ ] 5.6.5: 对接设置备注名 API
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1小时
+  - 依赖: 5.2.4, 4.3.4
+  - 文件: `pages/contacts/user-detail.uvue`
+  - 备注: 调用 PUT /admin-api/system/im/contact/setting
+
+- [ ] 5.6.6: 对接设置星标 API
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1小时
+  - 依赖: 5.2.4, 4.3.4
+  - 文件: `pages/contacts/user-detail.uvue`
+  - 备注: 调用 PUT /admin-api/system/im/contact/setting
+
+- [ ] 5.6.7: 对接设置免打扰 API
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1小时
+  - 依赖: 5.2.4, 4.3.4
+  - 文件: `pages/contacts/user-detail.uvue`
+  - 备注: 调用 PUT /admin-api/system/im/contact/setting
+
+- [ ] 5.6.8: 发起单聊功能
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 5.2.2, 4.1.2
+  - 文件: `pages/contacts/user-detail.uvue`
+  - 备注: 调用 POST /admin-api/system/im/conversation/create,跳转到聊天页面
+
+- [ ] 5.6.9: 快捷操作功能实现
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 3小时
+  - 依赖: 5.4.10
+  - 文件: `pages/contacts/user-detail.uvue`
+  - 备注: 图片(查看聊天图片)、文件(查看聊天文件)、链接(查看聊天链接)、搜索(搜索聊天记录)
+
+- [ ] 5.6.10: 添加到群聊功能
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 2小时
+  - 依赖: 5.7.x
+  - 文件: `pages/contacts/user-detail.uvue`
+  - 备注: 选择群组,添加联系人到群聊
+
+- [ ] 5.6.11: 联系人名片分享
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 2小时
+  - 依赖: 5.4.11
+  - 文件: `pages/message/share-contact.uvue`
+  - 备注: 生成名片消息,发送给其他联系人
+
+#### 5.7 群聊功能 (预计 1 天)
+
+**状态**: 🟢 90% UI 已完成,🔴 10% 业务逻辑已完成
+
+- [x] 5.7.1: 发起群聊页面 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/contacts/initiate-group.uvue`
+  - 执行时间: 已完成
+  - 备注: 联系人选择器、已选成员数量、完成按钮
+
+- [x] 5.7.2: 联系人选择器组件
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `components/contact-selector/contact-selector.uvue`
+  - 执行时间: 已完成
+  - 备注: 支持多选、分类入口、搜索
+
+- [x] 5.7.3: 群组选择状态管理
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `store/group-selection.uts`
+  - 执行时间: 已完成
+  - 备注: 全局管理群组成员选择状态
+
+- [x] 5.7.4: 群聊设置页面 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/group-settings.uvue`
+  - 执行时间: 已完成
+  - 备注: 群信息卡片、成员列表、设置项
+
+- [x] 5.7.5: 群成员列表页面 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/group-members.uvue`
+  - 执行时间: 已完成
+  - 备注: 显示所有群成员,字母索引,成员搜索
+
+- [x] 5.7.6: 群二维码页面 UI
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `pages/message/group-qrcode.uvue`
+  - 执行时间: 已完成
+  - 备注: 显示群二维码,保存到相册,分享
+
+- [ ] 5.7.7: 对接创建群聊 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 2小时
+  - 依赖: 5.2.5, 4.4.1
+  - 文件: `pages/contacts/initiate-group.uvue`
+  - 备注: 调用 POST /admin-api/system/im/group/create
+
+- [ ] 5.7.8: 对接群组详情 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 5.2.5, 4.4.2
+  - 文件: `pages/message/group-settings.uvue`
+  - 备注: 调用 GET /admin-api/system/im/group/get
+
+- [ ] 5.7.9: 对接更新群组信息 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 5.2.5, 4.4.3
+  - 文件: `pages/message/group-settings.uvue`
+  - 备注: 调用 PUT /admin-api/system/im/group/update
+
+- [ ] 5.7.10: 对接添加群成员 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 5.2.5, 4.4.4
+  - 文件: `pages/message/group-settings.uvue`
+  - 备注: 调用 POST /admin-api/system/im/group/add-member
+
+- [ ] 5.7.11: 对接移除群成员 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 5.2.5, 4.4.5
+  - 文件: `pages/message/group-settings.uvue`
+  - 备注: 调用 POST /admin-api/system/im/group/remove-member
+
+- [ ] 5.7.12: 对接退出群组 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 5.2.5, 4.4.6
+  - 文件: `pages/message/group-settings.uvue`
+  - 备注: 调用 POST /admin-api/system/im/group/quit
+
+- [ ] 5.7.13: 对接解散群组 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1小时
+  - 依赖: 5.2.5, 4.4.7
+  - 文件: `pages/message/group-settings.uvue`
+  - 备注: 调用 DELETE /admin-api/system/im/group/dismiss
+
+- [ ] 5.7.14: 对接群成员列表 API
+  - 负责人: AI
+  - 优先级: P0
+  - 预计时间: 1.5小时
+  - 依赖: 5.2.5, 4.4.8
+  - 文件: `pages/message/group-members.uvue`
+  - 备注: 调用 GET /admin-api/system/im/group/member/list
+
+- [ ] 5.7.15: 群公告功能
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 2小时
+  - 依赖: 5.7.8, 5.7.9
+  - 文件: `pages/message/group-settings.uvue`
+  - 备注: 查看和编辑群公告
+
+- [ ] 5.7.16: 群文件功能
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 3小时
+  - 依赖: 5.4.10
+  - 文件: `pages/message/chat-files.uvue`
+  - 备注: 显示群聊中的所有文件,按时间分组
+
+- [ ] 5.7.17: 我在本群的昵称
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 1.5小时
+  - 依赖: 5.7.8, 5.7.9
+  - 文件: `pages/message/group-settings.uvue`
+  - 备注: 设置在群聊中显示的昵称
+
+- [ ] 5.7.18: 群主转让功能
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 2小时
+  - 依赖: 5.7.8, 5.7.9
+  - 文件: `pages/message/group-settings.uvue`
+  - 备注: 群主可以转让群主身份给其他成员
+
+#### 5.8 其他页面 (预计 1 天)
+
+**状态**: 🟢 80% UI 已完成,🔴 10% 业务逻辑已完成
+
+- [x] 5.8.1: 我的群组页面 UI
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `pages/contacts/my-groups.uvue`
+  - 执行时间: 已完成
+  - 备注: 显示所有群组,群组搜索,创建新群组
+
+- [x] 5.8.2: 我的关注页面 UI
+  - 负责人: AI
+  - 优先级: P2
+  - 文件: `pages/contacts/my-following.uvue`
+  - 执行时间: 已完成
+  - 备注: 显示关注的联系人,取消关注
+
+- [x] 5.8.3: 我的部门页面 UI
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `pages/contacts/my-department.uvue`
+  - 执行时间: 已完成
+  - 备注: 显示当前用户部门成员,部门层级显示
+
+- [x] 5.8.4: 组织架构页面 UI
+  - 负责人: AI
+  - 优先级: P1
+  - 文件: `pages/contacts/organization.uvue`
+  - 执行时间: 已完成
+  - 备注: 树形结构显示组织架构,展开/收起部门
+
+- [x] 5.8.5: 搜索结果页面 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/contacts/search-result.uvue`
+  - 执行时间: 已完成
+  - 备注: 搜索联系人、群组、搜索历史
+
+- [x] 5.8.6: 单聊设置页面 UI
+  - 负责人: AI
+  - 优先级: P0
+  - 文件: `pages/message/chat-settings.uvue`
+  - 执行时间: 已完成
+  - 备注: 联系人信息、快捷操作、设置项
+
+- [x] 5.8.7: 聊天气泡页面 UI
+  - 负责人: AI
+  - 优先级: P2
+  - 文件: `pages/message/chat-bubble.uvue`
+  - 执行时间: 已完成
+  - 备注: 气泡颜色选择、气泡样式预览
+
+- [ ] 5.8.8: 对接我的群组 API
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1.5小时
+  - 依赖: 5.2.5
+  - 文件: `pages/contacts/my-groups.uvue`
+  - 备注: 获取用户加入的所有群组
+
+- [ ] 5.8.9: 对接我的部门 API
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 1.5小时
+  - 依赖: 5.2.4, 4.3.5
+  - 文件: `pages/contacts/my-department.uvue`
+  - 备注: 调用 GET /admin-api/system/im/contact/dept/{deptId}
+
+- [ ] 5.8.10: 对接组织架构 API
+  - 负责人: AI
+  - 优先级: P1
+  - 预计时间: 2小时
+  - 依赖: 无
+  - 文件: `pages/contacts/organization.uvue`
+  - 备注: 获取部门树形结构,从 system_dept 查询
+
+- [ ] 5.8.11: 聊天记录搜索
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 3小时
+  - 依赖: 5.4.10
+  - 文件: `pages/contacts/search-result.uvue`
+  - 备注: 搜索聊天记录,支持关键词高亮
+
+- [ ] 5.8.12: 聊天记录导出
+  - 负责人: AI
+  - 优先级: P2
+  - 预计时间: 3小时
+  - 依赖: 5.4.10
+  - 文件: `pages/message/chat-settings.uvue`
+  - 备注: 导出聊天记录为文本文件
 
 ### 阶段 6: 测试与优化 (3天)
 
@@ -7437,6 +9561,44 @@ shengyu:
   - 补充性能指标、安全规范、监控告警规范
   - 补充日志规范和限流规范
   - 标注阶段 1 已完成(数据库设计),其他阶段待执行
+- v1.0.8 (2026-02-12):
+  - 补充移动端原子性任务清单(阶段 5)
+  - 将移动端任务从 28 个扩展到 100+ 个原子性任务
+  - 添加任务状态标记(已完成/待完成)和详细元数据
+  - 补充 API 接口封装任务(6个接口文件)
+  - 补充 WebSocket 连接管理、Protobuf 编解码任务
+  - 补充消息列表页详细任务(13个子任务)
+  - 补充聊天页面详细任务(31个子任务)
+  - 补充通讯录页面详细任务(10个子任务)
+  - 补充联系人详情页详细任务(11个子任务)
+  - 补充群聊功能详细任务(18个子任务)
+  - 补充其他页面详细任务(12个子任务)
+  - 标注每个任务的优先级、预计时间、依赖关系、文件路径
+  - 基于实际代码检查,标注 UI 已完成和待完成的功能
+- v1.0.9 (2026-02-12):
+  - 补充移动端登录逻辑改造任务(阶段 5.0)
+  - 添加 10 个登录改造子任务,支持多端登录策略
+  - 添加设备类型枚举定义(DeviceType)
+  - 添加获取当前设备类型、设备ID的工具函数
+  - 改造登录接口,携带设备类型和设备ID
+  - 添加被踢下线通知处理逻辑
+  - 添加在线设备管理页面(查看/踢掉设备)
+  - 添加后端登录接口改造任务(接收设备信息)
+  - 添加登录请求 VO 字段(deviceType/deviceId/clientVersion)
+  - 添加多端登录互踢测试场景(8个测试用例)
+  - 提供完整的代码示例和实现指南
+- v1.0.10 (2026-02-12):
+  - 重构移动端登录逻辑改造任务(阶段 5.0)
+  - 调整移动端 API 前缀从 `/admin-api` 改为 `/app-api`
+  - 创建移动端专用 AuthController (app/auth/AppAuthController)
+  - 创建移动端专用 AuthService (AppAuthService/AppAuthServiceImpl)
+  - 创建移动端专用 VO 类(AppAuthLoginReqVO/AppAuthLoginRespVO等)
+  - 确保不影响 Web 端的登录逻辑(admin/auth/AuthController)
+  - 任务数量从 10 个增加到 13 个,更加详细和完整
+  - 添加 request.uts 的 API 前缀调整任务
+  - 添加完整的后端 Service 实现代码示例
+  - 添加 Web 端不受影响的测试场景
+  - 预计工作量从 0.5 天调整为 1 天(更准确)
 
 **文档维护**: shengyu 开发团队
 
