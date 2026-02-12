@@ -10,6 +10,9 @@ import com.shengyu.module.platform.api.sms.dto.code.SmsCodeSendReqDTO;
 import com.shengyu.module.platform.api.sms.dto.code.SmsCodeUseReqDTO;
 import com.shengyu.module.platform.api.social.dto.SocialUserBindReqDTO;
 import com.shengyu.module.system.controller.admin.auth.vo.*;
+import com.shengyu.module.system.controller.app.auth.vo.AppAuthLoginReqVO;
+import com.shengyu.module.system.controller.app.auth.vo.AppAuthSmsLoginReqVO;
+import com.shengyu.module.system.controller.app.auth.vo.AppAuthSmsSendReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import com.shengyu.module.system.dal.dataobject.permission.RoleDO;
@@ -87,5 +90,23 @@ public interface AuthConvert {
     SmsCodeSendReqDTO convert(AuthSmsSendReqVO reqVO);
 
     SmsCodeUseReqDTO convert(AuthSmsLoginReqVO reqVO, Integer scene, String usedIp);
+
+    // ========== 移动端转换方法 ==========
+
+    /**
+     * 移动端登录请求转换为 Web 端登录请求
+     * 注意：设备信息（deviceType、deviceId、clientVersion）会在 WebSocket 认证时使用
+     */
+    AuthLoginReqVO convert(AppAuthLoginReqVO reqVO);
+
+    /**
+     * 移动端短信登录请求转换为 Web 端短信登录请求
+     */
+    AuthSmsLoginReqVO convert(AppAuthSmsLoginReqVO reqVO);
+
+    /**
+     * 移动端发送短信请求转换为 Web 端发送短信请求
+     */
+    AuthSmsSendReqVO convert(AppAuthSmsSendReqVO reqVO);
 
 }

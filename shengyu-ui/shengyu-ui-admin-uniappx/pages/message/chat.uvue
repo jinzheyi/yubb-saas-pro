@@ -265,6 +265,10 @@
 	import { emojiList } from '../../utils/emojiData.uts'
 	import { parseMessageText } from '../../utils/emojiParser.uts'
 	import { getCustomStickers, StickerItem } from '../../utils/stickerManager.uts'
+	import { messageService, MessageItem as ServiceMessageItem, ConversationItem } from '../../services/message-service.uts'
+	import { MessageType } from '../../utils/websocket.uts'
+	import { getMessageList } from '../../api/message.uts'
+	import { getUserId, getTenantId } from '../../store/user.uts'
 
 	const { t } = useI18n()
 	
@@ -273,8 +277,17 @@
 	const groupId = ref(0)
 	const memberCount = ref(0)
 	
+	// 会话信息
+	const conversationId = ref(0)
+	const targetId = ref(0)
 	const name = ref('张三')
 	const watermark = ref('同事A 1234')
+	
+	// 当前用户信息
+	const currentUserId = ref(0)
+	const currentTenantId = ref(0)
+	
+	// UI 状态
 	const inputText = ref('')
 	const lastInputText = ref('') // 用于退格逻辑
 	const showEmojiMenu = ref(false)
@@ -298,11 +311,16 @@
     const touchStartX = ref(0)
     const touchStartY = ref(0)
     const menuOpacity = ref(0)
+	
+	// 加载状态
+	const loading = ref(false)
+	const hasMore = ref(true)
 
 	const stickerList = ref<StickerItem[]>(getCustomStickers())
 
 	type MessageItem = {
 		id : string;
+		messageId : number;
 		senderId : string;
 		receiverId : string;
 		type : string;
@@ -322,132 +340,37 @@
 		status ?: string; // 'sending' | 'success' | 'fail'
 	}
 
-	const messages = ref<MessageItem[]>([
-		{
-			id: '1',
-			senderId: 'user1',
-			receiverId: 'me',
-			type: 'text',
-			content: '你今天上班表现不错，下个月绩效给你评个A。',
-			isSelf: false,
-			time: '2025-10-11 16:38',
-			timestamp: 1728635880000,
-			showTime: true,
-			avatarText: '三',
-			avatarBg: '#F197BC'
-		},
-		{
-			id: '2',
-			senderId: 'user1',
-			receiverId: 'me',
-			type: 'voice',
-			content: 'voice_url_1',
-			duration: 2,
-			isSelf: false,
-			time: '2025-10-11 16:39',
-			timestamp: 1728635940000,
-			showTime: false,
-			avatarText: '三',
-			avatarBg: '#F197BC'
-		},
-		{
-			id: '3',
-			senderId: 'me',
-			receiverId: 'user1',
-			type: 'image',
-			content: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/shuijiao.jpg',
-			isSelf: true,
-			time: '2025-10-11 16:40',
-			timestamp: 1728636000000,
-			showTime: false,
-			avatarText: '我',
-			avatarBg: '#5FB6F7'
-		},
-		{
-			id: '4',
-			senderId: 'user1',
-			receiverId: 'me',
-			type: 'voice',
-			content: 'voice_url_2',
-			duration: 15,
-			isSelf: false,
-			time: '2025-10-11 16:41',
-			timestamp: 1728636060000,
-			showTime: false,
-			avatarText: '三',
-			avatarBg: '#F197BC'
-		},
-		{
-			id: '5',
-			senderId: 'me',
-			receiverId: 'user1',
-			type: 'file',
-			content: '项目进度汇报.pdf',
-			fileName: '项目进度汇报.pdf',
-			fileSize: '1.2MB',
-			isSelf: true,
-			time: '2025-11-10 16:33',
-			timestamp: 1731227580000,
-			showTime: true,
-			avatarText: '我',
-			avatarBg: '#5FB6F7'
-		},
-		{
-			id: '6',
-			senderId: 'me',
-			receiverId: 'user1',
-			type: 'location',
-			content: '财信大厦',
-			address: '长沙市天心区城南西路1号',
-			isSelf: true,
-			time: '2025-11-10 16:34',
-			timestamp: 1731227640000,
-			showTime: false,
-			avatarText: '我',
-			avatarBg: '#5FB6F7'
-		},
-		{
-			id: '7',
-			senderId: 'user1',
-			receiverId: 'me',
-			type: 'voice',
-			content: 'voice_url_3',
-			duration: 45,
-			isSelf: false,
-			time: '2025-11-10 16:35',
-			timestamp: 1731227700000,
-			showTime: false,
-			avatarText: '三',
-			avatarBg: '#F197BC'
-		},
-		{
-			id: '8',
-			senderId: 'user1',
-			receiverId: 'me',
-			type: 'video',
-			content: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/2.mp4',
-			poster: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/2.mp4?vframe/jpg/offset/0',
-			isSelf: false,
-			time: '2025-10-11 16:45',
-			timestamp: 1728636300000,
-			showTime: false,
-			avatarText: '三',
-			avatarBg: '#F197BC'
-		},
-		{
-			id: '9',
-			senderId: 'me',
-			receiverId: 'user1',
-			type: 'text',
-			content: '收到，谢谢领导！',
-			isSelf: true,
-			time: '2025-11-10 16:36',
-			timestamp: 1731227760000,
-			showTime: true,
-			avatarText: '我',
-			avatarBg: '#5FB6F7'
+	const messages = ref<MessageItem[]>([])
+	
+	/**
+	 * 初始化页面
+	 */
+	onMounted(() => {
+		// 1. 获取当前用户信息
+		currentUserId.value = getUserId()
+		currentTenantId.value = getTenantId()
+		
+		// 2. 设置消息服务的当前用户
+		messageService.setCurrentUser(currentUserId.value, currentTenantId.value)
+		
+		// 3. 加载历史消息
+		loadMessages()
+		
+		// 4. 监听新消息
+		messageService.addMessageListener(handleNewMessage)
+		
+		// 5. 清空未读数
+		if (conversationId.value > 0) {
+			messageService.clearUnreadCount(conversationId.value)
 		}
-	])
+		
+		scrollToBottom()
+	})
+	
+	onUnmounted(() => {
+		// 移除消息监听器
+		messageService.removeMessageListener(handleNewMessage)
+	})
 
 	/**
 	 * 仿微信聊天时间线显示逻辑
@@ -494,6 +417,247 @@
 			return `${month}月${day}日 ${hours}:${minutes}`
 		}
 		return `${year}年${month}月${day}日 ${hours}:${minutes}`
+	}
+	
+	/**
+	 * 加载历史消息
+	 */
+	async function loadMessages() {
+		if (loading.value || !hasMore.value) {
+			return
+		}
+		
+		loading.value = true
+		
+		try {
+			// 1. 先从缓存加载（立即显示）
+			const cachedMessages = messageService.getMessages(conversationId.value)
+			if (cachedMessages.length > 0) {
+				messages.value = convertServiceMessages(cachedMessages)
+				scrollToBottom()
+			}
+			
+			// 2. 从服务器加载最新消息
+			const lastMessageId = messages.value.length > 0 
+				? messages.value[0].messageId 
+				: 0
+			
+			const res = await getMessageList(conversationId.value, lastMessageId, 20)
+			
+			if (res.code === 0 && res.data && res.data.list) {
+				const serverMessages = res.data.list as any[]
+				
+				// 转换为 MessageItem 格式
+				const newMessages = serverMessages.map(msg => {
+					return convertServerMessage(msg)
+				})
+				
+				// 合并消息（去重）
+				messages.value = mergeMessages(messages.value, newMessages)
+				
+				hasMore.value = res.data.hasMore
+				scrollToBottom()
+			}
+			
+		} catch (e) {
+			console.error('[Chat] 加载消息失败:', e)
+			uni.showToast({ title: '加载消息失败', icon: 'none' })
+		} finally {
+			loading.value = false
+		}
+	}
+	
+	/**
+	 * 转换服务端消息为 UI 消息格式
+	 */
+	function convertServerMessage(msg : any) : MessageItem {
+		const content = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content
+		
+		return {
+			id: msg.id.toString(),
+			messageId: msg.messageId,
+			senderId: msg.senderId.toString(),
+			receiverId: msg.receiverId ? msg.receiverId.toString() : '',
+			type: getMessageTypeString(msg.messageType),
+			content: getMessageContent(msg.messageType, content),
+			isSelf: msg.senderId === currentUserId.value,
+			time: msg.createTime,
+			timestamp: new Date(msg.createTime).getTime(),
+			showTime: true,
+			avatarText: getAvatarText(msg.senderName),
+			avatarBg: getRandomColor(),
+			status: msg.status === 1 ? 'success' : 'sending'
+		} as MessageItem
+	}
+	
+	/**
+	 * 转换消息服务的消息为 UI 消息格式
+	 */
+	function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : MessageItem[] {
+		return serviceMessages.map(msg => {
+			return {
+				id: msg.id.toString(),
+				messageId: msg.messageId,
+				senderId: msg.senderId.toString(),
+				receiverId: msg.receiverId.toString(),
+				type: msg.type,
+				content: getServiceMessageContent(msg),
+				isSelf: msg.isSelf,
+				time: new Date(msg.timestamp).toLocaleString(),
+				timestamp: msg.timestamp,
+				showTime: true,
+				avatarText: msg.avatarText,
+				avatarBg: msg.avatarBg,
+				status: msg.status
+			} as MessageItem
+		})
+	}
+	
+	/**
+	 * 获取消息类型字符串
+	 */
+	function getMessageTypeString(messageType : number) : string {
+		const typeMap = {
+			100: 'text',
+			101: 'image',
+			102: 'voice',
+			103: 'video',
+			104: 'file',
+			105: 'location'
+		}
+		return typeMap[messageType] || 'text'
+	}
+	
+	/**
+	 * 获取消息内容
+	 */
+	function getMessageContent(messageType : number, content : any) : string {
+		if (messageType === 100) {
+			// 文本消息
+			return content.content || content
+		} else if (messageType === 101) {
+			// 图片消息
+			return content.url || content
+		} else if (messageType === 102) {
+			// 语音消息
+			return content.url || content
+		} else if (messageType === 103) {
+			// 视频消息
+			return content.url || content
+		} else if (messageType === 104) {
+			// 文件消息
+			return content.url || content
+		} else if (messageType === 105) {
+			// 位置消息
+			return content.address || content
+		}
+		return content.toString()
+	}
+	
+	/**
+	 * 获取服务消息的内容
+	 */
+	function getServiceMessageContent(msg : ServiceMessageItem) : string {
+		if (msg.type === 'text') {
+			return msg.content.content || msg.content
+		} else if (msg.type === 'image') {
+			return msg.content.url || msg.content
+		} else if (msg.type === 'voice') {
+			return msg.content.url || msg.content
+		} else if (msg.type === 'video') {
+			return msg.content.url || msg.content
+		} else if (msg.type === 'file') {
+			return msg.content.url || msg.content
+		} else if (msg.type === 'location') {
+			return msg.content.address || msg.content
+		}
+		return msg.content.toString()
+	}
+	
+	/**
+	 * 获取头像文字
+	 */
+	function getAvatarText(name : string) : string {
+		if (!name || name.length === 0) {
+			return '?'
+		}
+		return name.substring(0, 1)
+	}
+	
+	/**
+	 * 获取随机颜色
+	 */
+	function getRandomColor() : string {
+		const colors = ['#F197BC', '#5FB6F7', '#c084fc', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6']
+		return colors[Math.floor(Math.random() * colors.length)]
+	}
+	
+	/**
+	 * 合并消息（去重）
+	 */
+	function mergeMessages(oldMessages : MessageItem[], newMessages : MessageItem[]) : MessageItem[] {
+		const messageMap = new Map<number, MessageItem>()
+		
+		// 先添加旧消息
+		oldMessages.forEach(msg => {
+			messageMap.set(msg.messageId, msg)
+		})
+		
+		// 再添加新消息（覆盖重复的）
+		newMessages.forEach(msg => {
+			messageMap.set(msg.messageId, msg)
+		})
+		
+		// 转换为数组并按时间排序
+		const result : MessageItem[] = []
+		messageMap.forEach(msg => {
+			result.push(msg)
+		})
+		
+		result.sort((a, b) => a.timestamp - b.timestamp)
+		
+		return result
+	}
+	
+	/**
+	 * 处理新消息
+	 */
+	function handleNewMessage(message : ServiceMessageItem) {
+		// 只处理当前会话的消息
+		const msgConversationId = message.groupId > 0 
+			? message.groupId 
+			: (message.isSelf ? message.receiverId : message.senderId)
+		
+		if (msgConversationId !== conversationId.value) {
+			return
+		}
+		
+		// 转换并添加到消息列表
+		const uiMessage = {
+			id: message.id.toString(),
+			messageId: message.messageId,
+			senderId: message.senderId.toString(),
+			receiverId: message.receiverId.toString(),
+			type: message.type,
+			content: getServiceMessageContent(message),
+			isSelf: message.isSelf,
+			time: new Date(message.timestamp).toLocaleString(),
+			timestamp: message.timestamp,
+			showTime: true,
+			avatarText: message.avatarText,
+			avatarBg: message.avatarBg,
+			status: message.status
+		} as MessageItem
+		
+		messages.value.push(uiMessage)
+		
+		// 滚动到底部
+		scrollToBottom()
+		
+		// 发送已读回执（如果不是自己发送的）
+		if (!message.isSelf) {
+			messageService.sendReadReceipt(message.senderId, [message.messageId])
+		}
 	}
 
 
@@ -597,8 +761,9 @@
 	function createMessage(params : any) : MessageItem {
 		return {
 			id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
-			senderId: params.isSelf ? 'me' : 'user1',
-			receiverId: chatType.value === 'group' ? groupId.value.toString() : (params.isSelf ? 'user1' : 'me'),
+			messageId: Date.now(),
+			senderId: params.isSelf ? currentUserId.value.toString() : 'user1',
+			receiverId: chatType.value === 'group' ? groupId.value.toString() : (params.isSelf ? targetId.value.toString() : currentUserId.value.toString()),
 			type: params.type,
 			content: params.content,
 			isSelf: params.isSelf,
@@ -723,11 +888,32 @@
 				
 				if (!finalContent.trim()) return
 				
-				messages.value.push(createMessage({
-					type: 'text',
+				// 使用消息服务发送文本消息
+				const message = messageService.sendTextMessage(
+					chatType.value === 'single' ? targetId.value : 0,  // 单聊时传 receiverId
+					chatType.value === 'group' ? targetId.value : 0,    // 群聊时传 groupId
+					finalContent,
+					[]  // @用户列表（暂不实现）
+				)
+				
+				// 转换并添加到消息列表
+				const uiMessage = {
+					id: message.id.toString(),
+					messageId: message.messageId,
+					senderId: message.senderId.toString(),
+					receiverId: message.receiverId.toString(),
+					type: message.type,
 					content: finalContent,
-					isSelf: true
-				}))
+					isSelf: true,
+					time: new Date(message.timestamp).toLocaleString(),
+					timestamp: message.timestamp,
+					showTime: true,
+					avatarText: message.avatarText,
+					avatarBg: message.avatarBg,
+					status: message.status
+				} as MessageItem
+				
+				messages.value.push(uiMessage)
 				
 				// 清空编辑器
 				editorCtx!.clear({
@@ -1009,15 +1195,21 @@
 			lastMessageId.value = 'msg-' + (messages.value.length - 1)
 		}, 100)
 	}
-
-	onMounted(() => {
-		scrollToBottom()
-	})
 	
 	/**
 	 * 页面加载时获取参数
 	 */
 	onLoad((options : any) => {
+		// 获取会话 ID
+		if (options['conversationId']) {
+			conversationId.value = parseInt(options['conversationId'])
+		}
+		
+		// 获取目标 ID
+		if (options['targetId']) {
+			targetId.value = parseInt(options['targetId'])
+		}
+		
 		// 获取聊天类型
 		if (options['type']) {
 			chatType.value = options['type']
@@ -1026,6 +1218,7 @@
 		// 获取群聊 ID
 		if (options['groupId']) {
 			groupId.value = parseInt(options['groupId'])
+			targetId.value = groupId.value  // 群聊时 targetId 就是 groupId
 		}
 		
 		// 获取名称
@@ -1038,91 +1231,13 @@
 			memberCount.value = parseInt(options['memberCount'])
 		}
 		
-		// 如果是群聊，加载群聊消息
-		if (chatType.value === 'group') {
-			loadGroupMessages()
-		}
+		console.log('[Chat] 页面参数:', {
+			conversationId: conversationId.value,
+			targetId: targetId.value,
+			chatType: chatType.value,
+			name: name.value
+		})
 	})
-	
-	/**
-	 * 加载群聊消息（模拟数据）
-	 */
-	function loadGroupMessages() {
-		// 清空现有消息
-		messages.value = []
-		
-		// 生成群聊模拟消息
-		const groupMessages : MessageItem[] = [
-			{
-				id: '1',
-				senderId: 'user1',
-				receiverId: groupId.value.toString(),
-				type: 'text',
-				content: '大家好，我是张敏',
-				isSelf: false,
-				time: '2025-10-11 16:38',
-				timestamp: Date.now() - 3600000,
-				showTime: true,
-				avatarText: '张敏',
-				avatarBg: '#F197BC'
-			},
-			{
-				id: '2',
-				senderId: 'user2',
-				receiverId: groupId.value.toString(),
-				type: 'text',
-				content: '欢迎欢迎！',
-				isSelf: false,
-				time: '2025-10-11 16:39',
-				timestamp: Date.now() - 3500000,
-				showTime: false,
-				avatarText: '李强',
-				avatarBg: '#5FB6F7'
-			},
-			{
-				id: '3',
-				senderId: 'me',
-				receiverId: groupId.value.toString(),
-				type: 'text',
-				content: '大家好，很高兴加入这个群！',
-				isSelf: true,
-				time: '2025-10-11 16:40',
-				timestamp: Date.now() - 3400000,
-				showTime: false,
-				avatarText: '我',
-				avatarBg: '#5FB6F7'
-			},
-			{
-				id: '4',
-				senderId: 'user3',
-				receiverId: groupId.value.toString(),
-				type: 'image',
-				content: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/shuijiao.jpg',
-				isSelf: false,
-				time: '2025-10-11 16:41',
-				timestamp: Date.now() - 3300000,
-				showTime: false,
-				avatarText: '王静',
-				avatarBg: '#c084fc'
-			},
-			{
-				id: '5',
-				senderId: 'user4',
-				receiverId: groupId.value.toString(),
-				type: 'text',
-				content: '今天下午3点开会，大家准时参加',
-				isSelf: false,
-				time: '2025-10-11 16:45',
-				timestamp: Date.now() - 3000000,
-				showTime: true,
-				avatarText: '刘洋',
-				avatarBg: '#10b981'
-			}
-		]
-		
-		messages.value = groupMessages
-		scrollToBottom()
-	}
 </script>
 
 <style>

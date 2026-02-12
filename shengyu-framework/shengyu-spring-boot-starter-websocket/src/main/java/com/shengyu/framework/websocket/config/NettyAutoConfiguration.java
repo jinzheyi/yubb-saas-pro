@@ -10,6 +10,7 @@ import com.shengyu.framework.websocket.core.netty.handler.WebSocketFrameHandler;
 import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
 import com.shengyu.framework.websocket.core.processor.impl.FileMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.ImageMessageProcessor;
+import com.shengyu.framework.websocket.core.processor.impl.ReadReceiptMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.TextMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.VoiceMessageProcessor;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
@@ -203,6 +204,20 @@ public class NettyAutoConfiguration {
         FileMessageProcessor processor = new FileMessageProcessor(sessionManager, messageStorageService);
         processorFactory.registerProcessor(MessageType.FILE, processor);
         log.info("[Netty] 注册文件消息处理器");
+        return processor;
+    }
+
+    /**
+     * 已读回执消息处理器
+     */
+    @Bean
+    public ReadReceiptMessageProcessor readReceiptMessageProcessor(
+            NettySessionManager sessionManager,
+            MessageStorageService messageStorageService,
+            MessageProcessorFactory processorFactory) {
+        ReadReceiptMessageProcessor processor = new ReadReceiptMessageProcessor(sessionManager, messageStorageService);
+        processorFactory.registerProcessor(MessageType.READ_RECEIPT, processor);
+        log.info("[Netty] 注册已读回执消息处理器");
         return processor;
     }
 

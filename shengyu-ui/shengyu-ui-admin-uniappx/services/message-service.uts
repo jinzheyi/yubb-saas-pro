@@ -1,0 +1,618 @@
+/**
+ * 消息服务
+ * 
+ * 功能:
+ * 1. 消息发送（文本、图片、语音、视频、文件、位置）
+ * 2. 消息接收处理
+ * 3. 消息状态管理（发送中、已发送、已读、失败）
+ * 4. 会话列表更新
+ * 5. 未读消息数管理
+ */
+
+import { wsManager, MessageType, WebSocketState } from '../utils/websocket.uts'
+import { MessageBuilder, MessageParser, ImMessage } from '../utils/message-handler.uts'
+
+/**
+ * 消息状态枚举
+ */
+export enum MessageStatus {
+  SENDING = 0,    // 发送中
+  SENT = 1,       // 已发送
+  READ = 2,       // 已读
+  FAILED = 3      // 发送失败
+}
+
+/**
+ * 消息项（用于 UI 显示）
+ */
+export type MessageItem = {
+  id: number
+  messageId: number
+  senderId: number
+  receiverId: number
+  groupId: number
+  type: MessageType
+  content: any
+  status: MessageStatus
+  timestamp: number
+  isSelf: boolean
+  showTime: boolean
+  avatarText: string
+  avatarBg: string
+  senderName: string
+}
+
+/**
+ * 会话项（用于 UI 显示）
+ */
+export type ConversationItem = {
+  id: number
+  type: number  // 1-单聊 2-群聊
+  targetId: number
+  name: string
+  avatar: string
+  avatarText: string
+  avatarBg: string
+  lastMessage: string
+  lastTime: string
+  timestamp: number
+  unreadCount: number
+  isPinned: boolean
+  noDisturb: boolean
+  groupMemberCount: number
+}
+
+/**
+ * 消息监听器类型
+ */
+export type MessageListener = (message: MessageItem) => void
+
+/**
+ * 会话更新监听器类型
+ */
+export type ConversationUpdateListener = (conversation: ConversationItem) => void
+
+/**
+ * 消息服务类（单例模式）
+ */
+export class MessageService {
+  
+  private static instance: MessageService | null = null
+  
+  // 消息监听器列表
+  private messageListeners: MessageListener[] = []
+  
+  // 会话更新监听器列表
+  private conversationUpdateListeners: ConversationUpdateListener[] = []
+  
+  // 当前用户信息
+  private currentUserId: number = 0
+  private currentTenantId: number = 0
+  
+  // 消息缓存（按会话ID分组）
+  private messageCache: Map<number, MessageItem[]> = new Map()
+  
+  // 会话缓存
+  private conversationCache: Map<number, ConversationItem> = new Map()
+  
+  /**
+   * 私有构造函数（单例模式）
+   */
+  private constructor() {
+    this.initWebSocketListeners()
+  }
+  
+  /**
+   * 获取单例实例
+   */
+  public static getInstance(): MessageService {
+    if (MessageService.instance === null) {
+      MessageService.instance = new MessageService()
+    }
+    return MessageService.instance
+  }
+  
+  /**
+   * 初始化 WebSocket 监听器
+   */
+  private initWebSocketListeners(): void {
+    // 监听文本消息
+    wsManager.addMessageListener(MessageType.TEXT, (message) => {
+      this.handleReceivedMessage(message)
+    })
+    
+    // 监听图片消息
+    wsManager.addMessageListener(MessageType.IMAGE, (message) => {
+      this.handleReceivedMessage(message)
+    })
+    
+    // 监听语音消息
+    wsManager.addMessageListener(MessageType.VOICE, (message) => {
+      this.handleReceivedMessage(message)
+    })
+    
+    // 监听视频消息
+    wsManager.addMessageListener(MessageType.VIDEO, (message) => {
+      this.handleReceivedMessage(message)
+    })
+    
+    // 监听文件消息
+    wsManager.addMessageListener(MessageType.FILE, (message) => {
+      this.handleReceivedMessage(message)
+    })
+    
+    // 监听位置消息
+    wsManager.addMessageListener(MessageType.LOCATION, (message) => {
+      this.handleReceivedMessage(message)
+    })
+    
+    // 监听已读回执
+    wsManager.addMessageListener(MessageType.READ_RECEIPT, (message) => {
+      this.handleReadReceipt(message)
+    })
+    
+    // 监听消息撤回
+    wsManager.addMessageListener(MessageType.RECALL, (message) => {
+      this.handleRecall(message)
+    })
+  }
+  
+  /**
+   * 设置当前用户信息
+   */
+  public setCurrentUser(userId: number, tenantId: number): void {
+    this.currentUserId = userId
+    this.currentTenantId = tenantId
+  }
+  
+  /**
+   * 发送文本消息
+   */
+  public sendTextMessage(
+    receiverId: number,
+    groupId: number,
+    content: string,
+    atUserIds: number[] = []
+  ): MessageItem {
+    const message = MessageBuilder.buildTextMessage(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      content,
+      atUserIds
+    )
+    
+    return this.sendMessage(message)
+  }
+  
+  /**
+   * 发送图片消息
+   */
+  public sendImageMessage(
+    receiverId: number,
+    groupId: number,
+    url: string,
+    thumbnailUrl: string,
+    width: number,
+    height: number,
+    size: number
+  ): MessageItem {
+    const message = MessageBuilder.buildImageMessage(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      url,
+      thumbnailUrl,
+      width,
+      height,
+      size
+    )
+    
+    return this.sendMessage(message)
+  }
+  
+  /**
+   * 发送语音消息
+   */
+  public sendVoiceMessage(
+    receiverId: number,
+    groupId: number,
+    url: string,
+    duration: number,
+    size: number
+  ): MessageItem {
+    const message = MessageBuilder.buildVoiceMessage(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      url,
+      duration,
+      size
+    )
+    
+    return this.sendMessage(message)
+  }
+  
+  /**
+   * 发送视频消息
+   */
+  public sendVideoMessage(
+    receiverId: number,
+    groupId: number,
+    url: string,
+    coverUrl: string,
+    duration: number,
+    width: number,
+    height: number,
+    size: number
+  ): MessageItem {
+    const message = MessageBuilder.buildVideoMessage(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      url,
+      coverUrl,
+      duration,
+      width,
+      height,
+      size
+    )
+    
+    return this.sendMessage(message)
+  }
+  
+  /**
+   * 发送文件消息
+   */
+  public sendFileMessage(
+    receiverId: number,
+    groupId: number,
+    url: string,
+    fileName: string,
+    size: number,
+    fileType: string
+  ): MessageItem {
+    const message = MessageBuilder.buildFileMessage(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      url,
+      fileName,
+      size,
+      fileType
+    )
+    
+    return this.sendMessage(message)
+  }
+  
+  /**
+   * 发送位置消息
+   */
+  public sendLocationMessage(
+    receiverId: number,
+    groupId: number,
+    latitude: number,
+    longitude: number,
+    address: string
+  ): MessageItem {
+    const message = MessageBuilder.buildLocationMessage(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      latitude,
+      longitude,
+      address
+    )
+    
+    return this.sendMessage(message)
+  }
+  
+  /**
+   * 发送消息（通用方法）
+   */
+  private sendMessage(message: ImMessage): MessageItem {
+    // 创建消息项
+    const messageItem: MessageItem = {
+      id: 0,  // 临时ID，服务端返回后更新
+      messageId: message.header.messageId,
+      senderId: message.header.senderId,
+      receiverId: message.header.receiverId,
+      groupId: message.header.groupId,
+      type: message.header.messageType,
+      content: message.body,
+      status: MessageStatus.SENDING,
+      timestamp: message.header.timestamp,
+      isSelf: true,
+      showTime: true,
+      avatarText: '',
+      avatarBg: '',
+      senderName: ''
+    }
+    
+    // 添加到缓存
+    const conversationId = message.header.groupId > 0 ? message.header.groupId : message.header.receiverId
+    this.addMessageToCache(conversationId, messageItem)
+    
+    // 通知监听器
+    this.notifyMessageListeners(messageItem)
+    
+    // 通过 WebSocket 发送
+    wsManager.send(message)
+    
+    // 更新会话
+    this.updateConversation(conversationId, messageItem)
+    
+    return messageItem
+  }
+  
+  /**
+   * 处理接收到的消息
+   */
+  private handleReceivedMessage(data: any): void {
+    const message = data as ImMessage
+    
+    // 创建消息项
+    const messageItem: MessageItem = {
+      id: 0,
+      messageId: message.header.messageId,
+      senderId: message.header.senderId,
+      receiverId: message.header.receiverId,
+      groupId: message.header.groupId,
+      type: message.header.messageType,
+      content: message.body,
+      status: MessageStatus.SENT,
+      timestamp: message.header.timestamp,
+      isSelf: message.header.senderId === this.currentUserId,
+      showTime: true,
+      avatarText: '',
+      avatarBg: '',
+      senderName: ''
+    }
+    
+    // 添加到缓存
+    const conversationId = message.header.groupId > 0 ? message.header.groupId : message.header.senderId
+    this.addMessageToCache(conversationId, messageItem)
+    
+    // 通知监听器
+    this.notifyMessageListeners(messageItem)
+    
+    // 更新会话
+    this.updateConversation(conversationId, messageItem)
+    
+    // 如果不是自己发送的消息，增加未读数
+    if (!messageItem.isSelf) {
+      this.incrementUnreadCount(conversationId)
+    }
+  }
+  
+  /**
+   * 处理已读回执
+   */
+  private handleReadReceipt(data: any): void {
+    const message = data as ImMessage
+    const body = message.body as any
+    const messageIds = body.messageIds as number[]
+    
+    console.log('[MessageService] 收到已读回执:', messageIds)
+    
+    // 更新消息状态为已读
+    // TODO: 实现消息状态更新逻辑
+  }
+  
+  /**
+   * 处理消息撤回
+   */
+  private handleRecall(data: any): void {
+    const message = data as ImMessage
+    const body = message.body as any
+    const messageId = body.messageId as number
+    
+    console.log('[MessageService] 收到消息撤回:', messageId)
+    
+    // 从缓存中移除消息
+    // TODO: 实现消息撤回逻辑
+  }
+  
+  /**
+   * 发送已读回执
+   */
+  public sendReadReceipt(receiverId: number, messageIds: number[]): void {
+    const message = MessageBuilder.buildReadReceiptMessage(
+      this.currentUserId,
+      receiverId,
+      this.currentTenantId,
+      messageIds
+    )
+    
+    wsManager.send(message)
+  }
+  
+  /**
+   * 撤回消息
+   */
+  public recallMessage(receiverId: number, groupId: number, messageId: number): void {
+    const message = MessageBuilder.buildRecallMessage(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      messageId
+    )
+    
+    wsManager.send(message)
+  }
+  
+  /**
+   * 添加消息到缓存
+   */
+  private addMessageToCache(conversationId: number, message: MessageItem): void {
+    let messages = this.messageCache.get(conversationId)
+    if (messages === null || messages === undefined) {
+      messages = []
+      this.messageCache.set(conversationId, messages)
+    }
+    messages.push(message)
+  }
+  
+  /**
+   * 获取会话的消息列表
+   */
+  public getMessages(conversationId: number): MessageItem[] {
+    const messages = this.messageCache.get(conversationId)
+    return messages !== null && messages !== undefined ? messages : []
+  }
+  
+  /**
+   * 更新会话
+   */
+  private updateConversation(conversationId: number, message: MessageItem): void {
+    let conversation = this.conversationCache.get(conversationId)
+    
+    if (conversation === null || conversation === undefined) {
+      // 创建新会话
+      conversation = {
+        id: conversationId,
+        type: message.groupId > 0 ? 2 : 1,
+        targetId: conversationId,
+        name: '',
+        avatar: '',
+        avatarText: '',
+        avatarBg: '',
+        lastMessage: MessageParser.getSummary({ header: { messageType: message.type } as any, body: message.content }),
+        lastTime: MessageParser.formatTime(message.timestamp),
+        timestamp: message.timestamp,
+        unreadCount: 0,
+        isPinned: false,
+        noDisturb: false,
+        groupMemberCount: 0
+      }
+      this.conversationCache.set(conversationId, conversation)
+    } else {
+      // 更新会话
+      conversation.lastMessage = MessageParser.getSummary({ header: { messageType: message.type } as any, body: message.content })
+      conversation.lastTime = MessageParser.formatTime(message.timestamp)
+      conversation.timestamp = message.timestamp
+    }
+    
+    // 通知监听器
+    this.notifyConversationUpdateListeners(conversation)
+  }
+  
+  /**
+   * 增加未读数
+   */
+  private incrementUnreadCount(conversationId: number): void {
+    const conversation = this.conversationCache.get(conversationId)
+    if (conversation !== null && conversation !== undefined) {
+      conversation.unreadCount++
+      this.notifyConversationUpdateListeners(conversation)
+    }
+  }
+  
+  /**
+   * 清空未读数
+   */
+  public clearUnreadCount(conversationId: number): void {
+    const conversation = this.conversationCache.get(conversationId)
+    if (conversation !== null && conversation !== undefined) {
+      conversation.unreadCount = 0
+      this.notifyConversationUpdateListeners(conversation)
+    }
+  }
+  
+  /**
+   * 获取会话列表
+   */
+  public getConversations(): ConversationItem[] {
+    const conversations: ConversationItem[] = []
+    this.conversationCache.forEach((conversation) => {
+      conversations.push(conversation)
+    })
+    
+    // 按时间戳降序排序
+    conversations.sort((a, b) => {
+      return b.timestamp - a.timestamp
+    })
+    
+    return conversations
+  }
+  
+  /**
+   * 添加消息监听器
+   */
+  public addMessageListener(listener: MessageListener): void {
+    this.messageListeners.push(listener)
+  }
+  
+  /**
+   * 移除消息监听器
+   */
+  public removeMessageListener(listener: MessageListener): void {
+    const index = this.messageListeners.indexOf(listener)
+    if (index !== -1) {
+      this.messageListeners.splice(index, 1)
+    }
+  }
+  
+  /**
+   * 通知消息监听器
+   */
+  private notifyMessageListeners(message: MessageItem): void {
+    this.messageListeners.forEach((listener) => {
+      try {
+        listener(message)
+      } catch (e) {
+        console.error('[MessageService] 消息监听器执行失败:', e)
+      }
+    })
+  }
+  
+  /**
+   * 添加会话更新监听器
+   */
+  public addConversationUpdateListener(listener: ConversationUpdateListener): void {
+    this.conversationUpdateListeners.push(listener)
+  }
+  
+  /**
+   * 移除会话更新监听器
+   */
+  public removeConversationUpdateListener(listener: ConversationUpdateListener): void {
+    const index = this.conversationUpdateListeners.indexOf(listener)
+    if (index !== -1) {
+      this.conversationUpdateListeners.splice(index, 1)
+    }
+  }
+  
+  /**
+   * 通知会话更新监听器
+   */
+  private notifyConversationUpdateListeners(conversation: ConversationItem): void {
+    this.conversationUpdateListeners.forEach((listener) => {
+      try {
+        listener(conversation)
+      } catch (e) {
+        console.error('[MessageService] 会话更新监听器执行失败:', e)
+      }
+    })
+  }
+  
+  /**
+   * 清空缓存
+   */
+  public clearCache(): void {
+    this.messageCache.clear()
+    this.conversationCache.clear()
+  }
+}
+
+/**
+ * 导出单例实例
+ */
+export const messageService = MessageService.getInstance()

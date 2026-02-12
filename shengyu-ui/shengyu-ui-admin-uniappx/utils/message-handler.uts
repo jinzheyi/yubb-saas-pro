@@ -1,0 +1,504 @@
+/**
+ * 消息处理器
+ * 
+ * 功能:
+ * 1. 构建各种类型的消息
+ * 2. 解析接收到的消息
+ * 3. 消息格式转换
+ * 
+ * 说明:
+ * 当前使用 JSON 格式，后续可升级为 Protobuf
+ */
+
+import { MessageType } from './websocket.uts'
+
+/**
+ * 消息头
+ */
+export type MessageHeader = {
+  messageId: number
+  messageType: MessageType
+  senderId: number
+  receiverId: number
+  groupId: number
+  tenantId: number
+  timestamp: number
+  sequence: number
+  extra: string
+}
+
+/**
+ * 完整消息
+ */
+export type ImMessage = {
+  header: MessageHeader
+  body: any
+}
+
+/**
+ * 文本消息体
+ */
+export type TextMessageBody = {
+  content: string
+  atUserIds: number[]
+}
+
+/**
+ * 图片消息体
+ */
+export type ImageMessageBody = {
+  url: string
+  thumbnailUrl: string
+  width: number
+  height: number
+  size: number
+}
+
+/**
+ * 语音消息体
+ */
+export type VoiceMessageBody = {
+  url: string
+  duration: number
+  size: number
+}
+
+/**
+ * 视频消息体
+ */
+export type VideoMessageBody = {
+  url: string
+  coverUrl: string
+  duration: number
+  width: number
+  height: number
+  size: number
+}
+
+/**
+ * 文件消息体
+ */
+export type FileMessageBody = {
+  url: string
+  fileName: string
+  size: number
+  fileType: string
+}
+
+/**
+ * 位置消息体
+ */
+export type LocationMessageBody = {
+  latitude: number
+  longitude: number
+  address: string
+}
+
+/**
+ * 已读回执消息体
+ */
+export type ReadReceiptMessageBody = {
+  messageIds: number[]
+}
+
+/**
+ * 消息撤回消息体
+ */
+export type RecallMessageBody = {
+  messageId: number
+}
+
+/**
+ * 消息构建器
+ */
+export class MessageBuilder {
+  
+  /**
+   * 生成消息 ID（使用时间戳 + 随机数）
+   */
+  public static generateMessageId(): number {
+    return Date.now() * 1000 + Math.floor(Math.random() * 1000)
+  }
+  
+  /**
+   * 构建消息头
+   */
+  public static buildHeader(
+    messageType: MessageType,
+    senderId: number,
+    receiverId: number,
+    groupId: number,
+    tenantId: number
+  ): MessageHeader {
+    return {
+      messageId: MessageBuilder.generateMessageId(),
+      messageType: messageType,
+      senderId: senderId,
+      receiverId: receiverId,
+      groupId: groupId,
+      tenantId: tenantId,
+      timestamp: Date.now(),
+      sequence: 0,  // 由服务端生成
+      extra: ''
+    }
+  }
+  
+  /**
+   * 构建文本消息
+   */
+  public static buildTextMessage(
+    senderId: number,
+    receiverId: number,
+    groupId: number,
+    tenantId: number,
+    content: string,
+    atUserIds: number[] = []
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.TEXT,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+    
+    const body: TextMessageBody = {
+      content: content,
+      atUserIds: atUserIds
+    }
+    
+    return {
+      header: header,
+      body: body
+    }
+  }
+  
+  /**
+   * 构建图片消息
+   */
+  public static buildImageMessage(
+    senderId: number,
+    receiverId: number,
+    groupId: number,
+    tenantId: number,
+    url: string,
+    thumbnailUrl: string,
+    width: number,
+    height: number,
+    size: number
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.IMAGE,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+    
+    const body: ImageMessageBody = {
+      url: url,
+      thumbnailUrl: thumbnailUrl,
+      width: width,
+      height: height,
+      size: size
+    }
+    
+    return {
+      header: header,
+      body: body
+    }
+  }
+  
+  /**
+   * 构建语音消息
+   */
+  public static buildVoiceMessage(
+    senderId: number,
+    receiverId: number,
+    groupId: number,
+    tenantId: number,
+    url: string,
+    duration: number,
+    size: number
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.VOICE,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+    
+    const body: VoiceMessageBody = {
+      url: url,
+      duration: duration,
+      size: size
+    }
+    
+    return {
+      header: header,
+      body: body
+    }
+  }
+  
+  /**
+   * 构建视频消息
+   */
+  public static buildVideoMessage(
+    senderId: number,
+    receiverId: number,
+    groupId: number,
+    tenantId: number,
+    url: string,
+    coverUrl: string,
+    duration: number,
+    width: number,
+    height: number,
+    size: number
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.VIDEO,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+    
+    const body: VideoMessageBody = {
+      url: url,
+      coverUrl: coverUrl,
+      duration: duration,
+      width: width,
+      height: height,
+      size: size
+    }
+    
+    return {
+      header: header,
+      body: body
+    }
+  }
+  
+  /**
+   * 构建文件消息
+   */
+  public static buildFileMessage(
+    senderId: number,
+    receiverId: number,
+    groupId: number,
+    tenantId: number,
+    url: string,
+    fileName: string,
+    size: number,
+    fileType: string
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.FILE,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+    
+    const body: FileMessageBody = {
+      url: url,
+      fileName: fileName,
+      size: size,
+      fileType: fileType
+    }
+    
+    return {
+      header: header,
+      body: body
+    }
+  }
+  
+  /**
+   * 构建位置消息
+   */
+  public static buildLocationMessage(
+    senderId: number,
+    receiverId: number,
+    groupId: number,
+    tenantId: number,
+    latitude: number,
+    longitude: number,
+    address: string
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.LOCATION,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+    
+    const body: LocationMessageBody = {
+      latitude: latitude,
+      longitude: longitude,
+      address: address
+    }
+    
+    return {
+      header: header,
+      body: body
+    }
+  }
+  
+  /**
+   * 构建已读回执消息
+   */
+  public static buildReadReceiptMessage(
+    senderId: number,
+    receiverId: number,
+    tenantId: number,
+    messageIds: number[]
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.READ_RECEIPT,
+      senderId,
+      receiverId,
+      0,
+      tenantId
+    )
+    
+    const body: ReadReceiptMessageBody = {
+      messageIds: messageIds
+    }
+    
+    return {
+      header: header,
+      body: body
+    }
+  }
+  
+  /**
+   * 构建消息撤回消息
+   */
+  public static buildRecallMessage(
+    senderId: number,
+    receiverId: number,
+    groupId: number,
+    tenantId: number,
+    messageId: number
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.RECALL,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+    
+    const body: RecallMessageBody = {
+      messageId: messageId
+    }
+    
+    return {
+      header: header,
+      body: body
+    }
+  }
+}
+
+/**
+ * 消息解析器
+ */
+export class MessageParser {
+  
+  /**
+   * 解析消息
+   */
+  public static parse(data: string): ImMessage | null {
+    try {
+      const message = JSON.parse(data) as ImMessage
+      return message
+    } catch (e) {
+      console.error('[MessageParser] 解析消息失败:', e)
+      return null
+    }
+  }
+  
+  /**
+   * 序列化消息
+   */
+  public static stringify(message: ImMessage): string {
+    return JSON.stringify(message)
+  }
+  
+  /**
+   * 获取消息摘要（用于会话列表显示）
+   */
+  public static getSummary(message: ImMessage): string {
+    const messageType = message.header.messageType
+    
+    switch (messageType) {
+      case MessageType.TEXT:
+        const textBody = message.body as TextMessageBody
+        return textBody.content
+      case MessageType.IMAGE:
+        return '[图片]'
+      case MessageType.VOICE:
+        return '[语音]'
+      case MessageType.VIDEO:
+        return '[视频]'
+      case MessageType.FILE:
+        return '[文件]'
+      case MessageType.LOCATION:
+        return '[位置]'
+      case MessageType.CUSTOM:
+        return '[自定义消息]'
+      default:
+        return '[消息]'
+    }
+  }
+  
+  /**
+   * 格式化时间显示
+   */
+  public static formatTime(timestamp: number): string {
+    const now = Date.now()
+    const diff = now - timestamp
+    
+    // 1分钟内
+    if (diff < 60000) {
+      return '刚刚'
+    }
+    
+    // 1小时内
+    if (diff < 3600000) {
+      const minutes = Math.floor(diff / 60000)
+      return minutes + '分钟前'
+    }
+    
+    const date = new Date(timestamp)
+    const today = new Date()
+    
+    // 今天
+    if (date.toDateString() === today.toDateString()) {
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      return hours + ':' + minutes
+    }
+    
+    // 昨天
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    if (date.toDateString() === yesterday.toDateString()) {
+      return '昨天'
+    }
+    
+    // 今年
+    if (date.getFullYear() === today.getFullYear()) {
+      const month = (date.getMonth() + 1).toString().padStart(2, '0')
+      const day = date.getDate().toString().padStart(2, '0')
+      return month + '-' + day
+    }
+    
+    // 更早
+    const year = date.getFullYear()
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const day = date.getDate().toString().padStart(2, '0')
+    return year + '-' + month + '-' + day
+  }
+}

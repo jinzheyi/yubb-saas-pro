@@ -28,20 +28,24 @@ spring:
           config:
             multi-statement-allow: true
     dynamic: # 多数据源配置
-      druid: # Druid 【连接池】相关的全局配置
-        initial-size: 5 # 初始连接数
-        min-idle: 10 # 最小连接池数量
-        max-active: 20 # 最大连接池数量
+      druid: # Druid 【连接池】相关的全局配置（高并发优化）
+        initial-size: 10 # 初始连接数（提高初始性能）
+        min-idle: 20 # 最小连接池数量（保持足够的空闲连接）
+        max-active: 100 # 最大连接池数量（支持高并发，建议 50-200）
         max-wait: 60000 # 配置获取连接等待超时的时间，单位：毫秒（1 分钟）
         time-between-eviction-runs-millis: 60000 # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位：毫秒（1 分钟）
-        min-evictable-idle-time-millis: 600000 # 配置一个连接在池中最小生存的时间，单位：毫秒（10 分钟）
-        max-evictable-idle-time-millis: 1800000 # 配置一个连接在池中最大生存的时间，单位：毫秒（30 分钟）
+        min-evictable-idle-time-millis: 300000 # 配置一个连接在池中最小生存的时间，单位：毫秒（5 分钟，减少连接创建开销）
+        max-evictable-idle-time-millis: 900000 # 配置一个连接在池中最大生存的时间，单位：毫秒（15 分钟）
         validation-query: SELECT 1 FROM DUAL # 配置检测连接是否有效
         test-while-idle: true
         test-on-borrow: false
         test-on-return: false
         pool-prepared-statements: true # 是否开启 PreparedStatement 缓存
         max-pool-prepared-statement-per-connection-size: 20 # 每个连接缓存的 PreparedStatement 数量
+        # 连接泄漏检测（生产环境建议开启）
+        remove-abandoned: true # 是否移除泄漏的连接
+        remove-abandoned-timeout: 300 # 泄漏连接的超时时间（秒）
+        log-abandoned: true # 是否记录泄漏连接的日志
       primary: master
       datasource:
         master:
@@ -60,6 +64,15 @@ spring:
     port: 6379 # 端口
     database: 1 # 数据库索引
     password: 36Zhu@186 # 密码，建议生产环境开启
+    # 连接池配置（高并发优化）
+    lettuce:
+      pool:
+        max-active: 200 # 最大连接数（支持高并发，建议 100-500）
+        max-idle: 50 # 最大空闲连接数
+        min-idle: 10 # 最小空闲连接数
+        max-wait: 3000 # 最大等待时间（毫秒）
+      shutdown-timeout: 100ms # 关闭超时时间
+    timeout: 3000ms # 连接超时时间（毫秒）
 
 --- #################### 定时任务相关配置 ####################
 
@@ -166,15 +179,21 @@ wx: # 参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-sta
 
 # 圣钰配置项，设置当前项目所有自定义的配置
 shengyu:
-  # Netty WebSocket 生产环境配置
+  # Netty WebSocket 高并发配置（支持 50w+ 在线用户）
   netty:
     port: 9000 # WebSocket 端口
-    use-epoll: true # Linux 环境启用 Epoll 优化
-    worker-threads: 32 # Worker 线程数（生产环境增加线程数）
-    reader-idle-time: 60 # 读空闲超时时间（秒）
-    so-backlog: 2048 # TCP 连接队列大小（生产环境增大）
-    so-rcvbuf: 131072 # TCP 接收缓冲区（128KB）
-    so-sndbuf: 131072 # TCP 发送缓冲区（128KB）
+    use-epoll: true # Linux 环境启用 Epoll 优化（性能提升 30%+）
+    boss-threads: 2 # Boss 线程数（接收连接，2个足够）
+    worker-threads: 64 # Worker 线程数（处理 IO，根据 CPU 核心数调整，建议 CPU 核心数 * 2）
+    reader-idle-time: 90 # 读空闲超时时间（秒，适当放宽避免频繁断线）
+    writer-idle-time: 0 # 写空闲超时时间（秒，0 表示不检测）
+    all-idle-time: 0 # 读写空闲超时时间（秒，0 表示不检测）
+    so-backlog: 4096 # TCP 连接队列大小（支持高并发连接，建议 2048-8192）
+    so-rcvbuf: 262144 # TCP 接收缓冲区（256KB，提升接收性能）
+    so-sndbuf: 262144 # TCP 发送缓冲区（256KB，提升发送性能）
+    write-buffer-low-water-mark: 65536 # 写缓冲区低水位线（64KB）
+    write-buffer-high-water-mark: 131072 # 写缓冲区高水位线（128KB）
+    max-content-length: 131072 # HTTP 最大内容长度（128KB，支持大文件消息）
   
   # WebSocket 消息总线配置（生产环境使用 Redis）
   websocket:

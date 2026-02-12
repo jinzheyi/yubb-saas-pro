@@ -2,19 +2,38 @@
  * 登录相关 API
  */
 import { post, postRaw, get } from '../utils/request.uts'
+import { getDeviceInfo } from '../utils/device.uts'
 
 /**
  * 账号密码登录
+ * 自动添加设备信息（设备类型、设备ID、应用版本）
  */
 export function login(data: UTSJSONObject): Promise<any> {
-	return post('/system/auth/login', data)
+	// 添加设备信息
+	const deviceInfo = getDeviceInfo()
+	const loginData = {
+		...data,
+		deviceType: deviceInfo.deviceType,
+		deviceId: deviceInfo.deviceId,
+		clientVersion: deviceInfo.clientVersion
+	}
+	return post('/system/auth/login', loginData)
 }
 
 /**
  * 短信验证码登录
+ * 自动添加设备信息（设备类型、设备ID、应用版本）
  */
 export function smsLogin(data: UTSJSONObject): Promise<any> {
-	return post('/system/auth/sms-login', data)
+	// 添加设备信息
+	const deviceInfo = getDeviceInfo()
+	const loginData = {
+		...data,
+		deviceType: deviceInfo.deviceType,
+		deviceId: deviceInfo.deviceId,
+		clientVersion: deviceInfo.clientVersion
+	}
+	return post('/system/auth/sms-login', loginData)
 }
 
 /**

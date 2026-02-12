@@ -1,0 +1,174 @@
+/**
+ * 设备管理工具类
+ * 提供设备类型识别、设备ID生成等功能
+ */
+
+/**
+ * 设备类型枚举
+ * 与后端 DeviceTypeEnum 保持一致
+ */
+export enum DeviceType {
+	WEB = 1,          // Web浏览器
+	IOS = 2,          // iPhone
+	ANDROID = 3,      // Android手机
+	MINI_PROGRAM = 4, // 微信小程序
+	IPAD = 5,         // iPad
+	MAC = 6,          // Mac电脑
+	WINDOWS = 7       // Windows电脑
+}
+
+/**
+ * 获取当前设备类型
+ * 根据运行平台返回对应的设备类型
+ */
+export function getCurrentDeviceType(): number {
+	// #ifdef APP-PLUS
+	const systemInfo = uni.getSystemInfoSync()
+	const platform = systemInfo.platform
+	
+	if (platform === 'ios') {
+		// 判断是否为 iPad
+		const model = systemInfo.model
+		if (model != null && model.indexOf('iPad') > -1) {
+			return DeviceType.IPAD
+		}
+		return DeviceType.IOS
+	} else if (platform === 'android') {
+		return DeviceType.ANDROID
+	}
+	// #endif
+	
+	// #ifdef H5
+	return DeviceType.WEB
+	// #endif
+	
+	// #ifdef MP-WEIXIN
+	return DeviceType.MINI_PROGRAM
+	// #endif
+	
+	// 默认返回 Web
+	return DeviceType.WEB
+}
+
+/**
+ * 获取设备类型名称
+ */
+export function getDeviceTypeName(deviceType: number): string {
+	switch (deviceType) {
+		case DeviceType.WEB:
+			return 'Web浏览器'
+		case DeviceType.IOS:
+			return 'iPhone'
+		case DeviceType.ANDROID:
+			return 'Android手机'
+		case DeviceType.MINI_PROGRAM:
+			return '微信小程序'
+		case DeviceType.IPAD:
+			return 'iPad'
+		case DeviceType.MAC:
+			return 'Mac电脑'
+		case DeviceType.WINDOWS:
+			return 'Windows电脑'
+		default:
+			return '未知设备'
+	}
+}
+
+/**
+ * 获取设备唯一标识
+ * 优先从本地存储获取，如果不存在则生成新的设备ID
+ */
+export function getDeviceId(): string {
+	// 优先从本地存储获取
+	const deviceId = uni.getStorageSync('deviceId')
+	if (deviceId != null && deviceId != '') {
+		return deviceId as string
+	}
+	
+	// 生成新的设备ID
+	const newDeviceId = generateDeviceId()
+	uni.setStorageSync('deviceId', newDeviceId)
+	return newDeviceId
+}
+
+/**
+ * 生成设备ID
+ * 格式: 时间戳-随机字符串
+ */
+function generateDeviceId(): string {
+	const timestamp = Date.now()
+	const random = Math.random().toString(36).substring(2, 15)
+	return `${timestamp}-${random}`
+}
+
+/**
+ * 获取应用版本号
+ */
+export function getAppVersion(): string {
+	// #ifdef APP-PLUS
+	const systemInfo = uni.getSystemInfoSync()
+	const appVersion = systemInfo.appVersion
+	if (appVersion != null && appVersion != '') {
+		return appVersion as string
+	}
+	// #endif
+	
+	// #ifdef H5
+	return '1.0.0'
+	// #endif
+	
+	// #ifdef MP-WEIXIN
+	const systemInfo = uni.getSystemInfoSync()
+	const version = systemInfo.version
+	if (version != null && version != '') {
+		return version as string
+	}
+	// #endif
+	
+	return '1.0.0'
+}
+
+/**
+ * 获取设备信息对象
+ * 包含设备类型、设备ID、应用版本等信息
+ */
+export type DeviceInfo = {
+	deviceType: number
+	deviceId: string
+	clientVersion: string
+}
+
+/**
+ * 获取完整的设备信息
+ */
+export function getDeviceInfo(): DeviceInfo {
+	return {
+		deviceType: getCurrentDeviceType(),
+		deviceId: getDeviceId(),
+		clientVersion: getAppVersion()
+	}
+}
+
+/**
+ * 判断是否为移动端
+ */
+export function isMobile(): boolean {
+	const deviceType = getCurrentDeviceType()
+	return deviceType === DeviceType.IOS || deviceType === DeviceType.ANDROID
+}
+
+/**
+ * 判断是否为PC端
+ */
+export function isPC(): boolean {
+	const deviceType = getCurrentDeviceType()
+	return deviceType === DeviceType.MAC || deviceType === DeviceType.WINDOWS || deviceType === DeviceType.WEB
+}
+
+/**
+ * 判断是否为平板端
+ */
+export function isTablet(): boolean {
+	const deviceType = getCurrentDeviceType()
+	return deviceType === DeviceType.IPAD
+}

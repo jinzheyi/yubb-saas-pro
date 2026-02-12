@@ -143,7 +143,8 @@
 
 <script setup lang="uts">
 	import { login, smsLogin, sendSmsCode, getPermissionInfo } from '../../api/login.uts'
-	import { setToken, setUserInfo } from '../../store/user.uts'
+	import { setToken, setUserInfo, setDeviceInfo } from '../../store/user.uts'
+	import { getDeviceInfo } from '../../utils/device.uts'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import type { LocaleType } from '../../store/locale.uts'
 	import SliderCaptcha from '../../components/captcha/slider-captcha.uvue'
@@ -242,14 +243,34 @@
 					code: smsCode.value
 				})
 			}
+			
+			// 保存 Token
 			setToken(tokenData)
+			
+			// 保存设备信息（登录接口已自动携带设备信息）
+			const deviceInfo = getDeviceInfo()
+			if (deviceInfo != null) {
+				setDeviceInfo(deviceInfo)
+			}
+			
+			// 获取用户权限信息
 			const userInfo = await getPermissionInfo()
 			if (userInfo) setUserInfo(userInfo)
 			
+			// 记住密码
 			if (loginType.value === 'account' && rememberMe.value) {
 				uni.setStorageSync('REMEMBER_ME', JSON.stringify({ username: username.value }))
 			} else if (loginType.value === 'account') {
 				uni.removeStorageSync('REMEMBER_ME')
+			}
+			
+			// 建立 WebSocket 连接
+			try {
+				const { wsManager } = await import('@/utils/websocket.uts')
+				wsManager.connect()
+				console.log('[Login] WebSocket 连接已启动')
+			} catch (e) {
+				console.error('[Login] WebSocket 连接失败:', e)
 			}
 			
 			uni.showToast({ title: t('sys.login.loginSuccessTitle'), icon: 'success' })

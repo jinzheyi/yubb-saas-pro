@@ -1,0 +1,59 @@
+package com.shengyu.module.system.service.im;
+
+import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactRespVO;
+import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactSettingUpdateReqVO;
+
+import java.util.List;
+
+/**
+ * IM 联系人 Service 接口
+ *
+ * @author 圣钰科技
+ */
+public interface ImContactService {
+
+    /**
+     * 获取联系人列表
+     * 
+     * 说明: 企业内部IM,联系人直接来源于租户的用户表(system_users)
+     *
+     * @param userId 用户ID
+     * @return 联系人列表
+     */
+    List<AppImContactRespVO> getContactList(Long userId);
+
+    /**
+     * 搜索联系人
+     *
+     * @param userId 用户ID
+     * @param keyword 关键词(姓名/部门)
+     * @return 联系人列表
+     */
+    List<AppImContactRespVO> searchContacts(Long userId, String keyword);
+
+    /**
+     * 获取联系人详情
+     *
+     * @param userId 用户ID
+     * @param contactId 联系人ID
+     * @return 联系人详情
+     */
+    AppImContactRespVO getContact(Long userId, Long contactId);
+
+    /**
+     * 更新联系人设置
+     *
+     * @param userId 用户ID
+     * @param updateReqVO 更新请求
+     */
+    void updateContactSetting(Long userId, AppImContactSettingUpdateReqVO updateReqVO);
+
+    /**
+     * 获取星标联系人列表
+     *
+     * @param userId 用户ID
+     * @return 星标联系人列表
+     */
+    List<AppImContactRespVO> getStarContacts(Long userId);
+
+}

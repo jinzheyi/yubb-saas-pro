@@ -16,7 +16,7 @@ import {
 } from '../store/user.uts'
 
 // 请求配置
-const BASE_URL = CONFIG_BASE_URL + '/admin-api' // 添加 API 前缀
+const BASE_URL = CONFIG_BASE_URL + '/app-api' // 移动端使用 app-api 前缀
 const TIMEOUT = CONFIG_TIMEOUT
 
 // Token 刷新相关

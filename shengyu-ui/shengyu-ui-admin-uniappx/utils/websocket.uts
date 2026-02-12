@@ -1,0 +1,629 @@
+/**
+ * WebSocket 连接管理类
+ * 
+ * 功能:
+ * 1. WebSocket 连接建立和管理
+ * 2. 断线自动重连（指数退避策略）
+ * 3. 心跳保活机制
+ * 4. 消息收发队列
+ * 5. 连接状态管理
+ * 
+ * 使用示例:
+ * ```typescript
+ * import { WebSocketManager } from '@/utils/websocket.uts'
+ * 
+ * const wsManager = WebSocketManager.getInstance()
+ * wsManager.connect()
+ * wsManager.send(message)
+ * ```
+ */
+
+import { getAccessToken } from './auth.uts'
+import { getCurrentDeviceType, getDeviceId, getAppVersion } from './device.uts'
+
+/**
+ * WebSocket 连接状态枚举
+ */
+export enum WebSocketState {
+  CONNECTING = 0,  // 连接中
+  OPEN = 1,        // 已连接
+  CLOSING = 2,     // 关闭中
+  CLOSED = 3       // 已关闭
+}
+
+/**
+ * 消息类型枚举（对应 Protobuf MessageType）
+ */
+export enum MessageType {
+  UNKNOWN = 0,
+  
+  // 系统消息
+  HEARTBEAT_REQ = 1,      // 心跳请求
+  HEARTBEAT_RESP = 2,     // 心跳响应
+  AUTH_REQ = 3,           // 认证请求
+  AUTH_RESP = 4,          // 认证响应
+  CLOSE = 5,              // 连接关闭
+  
+  // 业务消息
+  TEXT = 100,             // 文本消息
+  IMAGE = 101,            // 图片消息
+  VOICE = 102,            // 语音消息
+  VIDEO = 103,            // 视频消息
+  FILE = 104,             // 文件消息
+  LOCATION = 105,         // 位置消息
+  CUSTOM = 106,           // 自定义消息
+  
+  // 通知消息
+  SYSTEM_NOTIFY = 200,    // 系统通知
+  READ_RECEIPT = 201,     // 消息已读回执
+  RECALL = 202,           // 消息撤回
+  TYPING = 203            // 正在输入
+}
+
+/**
+ * 消息监听器类型
+ */
+export type MessageListener = (message: any) => void
+
+/**
+ * 连接状态监听器类型
+ */
+export type StateListener = (state: WebSocketState) => void
+
+/**
+ * WebSocket 管理器（单例模式）
+ */
+export class WebSocketManager {
+  
+  private static instance: WebSocketManager | null = null
+  
+  // WebSocket 实例
+  private ws: SocketTask | null = null
+  
+  // 连接状态
+  private state: WebSocketState = WebSocketState.CLOSED
+  
+  // 重连相关
+  private reconnectCount: number = 0
+  private maxReconnectCount: number = 5
+  private reconnectTimer: number = 0
+  
+  // 心跳相关
+  private heartbeatTimer: number = 0
+  private heartbeatInterval: number = 30000  // 30秒
+  private heartbeatTimeout: number = 10000   // 10秒超时
+  private heartbeatTimeoutTimer: number = 0
+  
+  // 消息队列（连接建立前的消息缓存）
+  private messageQueue: any[] = []
+  
+  // 消息监听器
+  private messageListeners: Map<MessageType, MessageListener[]> = new Map()
+  
+  // 连接状态监听器
+  private stateListeners: StateListener[] = []
+  
+  // 是否已认证
+  private authenticated: boolean = false
+  
+  // WebSocket 服务器地址
+  private wsUrl: string = ''
+  
+  /**
+   * 私有构造函数（单例模式）
+   */
+  private constructor() {
+    // 从配置获取 WebSocket 地址
+    // #ifdef APP-PLUS
+    this.wsUrl = 'wss://api.example.com:9000/ws'
+    // #endif
+    
+    // #ifdef H5
+    this.wsUrl = 'ws://localhost:9000/ws'
+    // #endif
+  }
+  
+  /**
+   * 获取单例实例
+   */
+  public static getInstance(): WebSocketManager {
+    if (WebSocketManager.instance === null) {
+      WebSocketManager.instance = new WebSocketManager()
+    }
+    return WebSocketManager.instance
+  }
+  
+  /**
+   * 设置 WebSocket 服务器地址
+   */
+  public setUrl(url: string): void {
+    this.wsUrl = url
+  }
+  
+  /**
+   * 连接 WebSocket
+   */
+  public connect(): void {
+    if (this.state === WebSocketState.CONNECTING || this.state === WebSocketState.OPEN) {
+      console.log('[WebSocket] 已经连接或正在连接中')
+      return
+    }
+    
+    console.log('[WebSocket] 开始连接:', this.wsUrl)
+    this.setState(WebSocketState.CONNECTING)
+    
+    try {
+      this.ws = uni.connectSocket({
+        url: this.wsUrl,
+        success: () => {
+          console.log('[WebSocket] 连接请求已发送')
+        },
+        fail: (err) => {
+          console.error('[WebSocket] 连接失败:', err)
+          this.handleError(err)
+        }
+      })
+      
+      // 监听连接打开
+      this.ws.onOpen(() => {
+        this.handleOpen()
+      })
+      
+      // 监听消息接收
+      this.ws.onMessage((res) => {
+        this.handleMessage(res)
+      })
+      
+      // 监听连接关闭
+      this.ws.onClose(() => {
+        this.handleClose()
+      })
+      
+      // 监听连接错误
+      this.ws.onError((err) => {
+        this.handleError(err)
+      })
+      
+    } catch (e) {
+      console.error('[WebSocket] 连接异常:', e)
+      this.handleError(e)
+    }
+  }
+  
+  /**
+   * 处理连接打开
+   */
+  private handleOpen(): void {
+    console.log('[WebSocket] 连接已建立')
+    this.setState(WebSocketState.OPEN)
+    this.reconnectCount = 0
+    
+    // 发送认证请求
+    this.sendAuthRequest()
+  }
+  
+  /**
+   * 发送认证请求
+   */
+  private sendAuthRequest(): void {
+    const accessToken = getAccessToken()
+    if (accessToken === null || accessToken === '') {
+      console.error('[WebSocket] Token 为空，无法认证')
+      this.close()
+      return
+    }
+    
+    const authMessage = {
+      header: {
+        messageId: Date.now(),
+        messageType: MessageType.AUTH_REQ,
+        timestamp: Date.now()
+      },
+      body: {
+        accessToken: accessToken,
+        deviceType: getCurrentDeviceType(),
+        deviceId: getDeviceId(),
+        clientVersion: getAppVersion()
+      }
+    }
+    
+    console.log('[WebSocket] 发送认证请求')
+    this.sendRaw(JSON.stringify(authMessage))
+  }
+  
+  /**
+   * 处理消息接收
+   */
+  private handleMessage(res: any): void {
+    try {
+      const message = JSON.parse(res.data as string)
+      const messageType = message.header.messageType as MessageType
+      
+      console.log('[WebSocket] 收到消息:', messageType)
+      
+      // 处理系统消息
+      if (messageType === MessageType.AUTH_RESP) {
+        this.handleAuthResponse(message)
+      } else if (messageType === MessageType.HEARTBEAT_RESP) {
+        this.handleHeartbeatResponse()
+      } else if (messageType === MessageType.CLOSE) {
+        this.handleKickOff(message)
+      } else {
+        // 分发业务消息
+        this.dispatchMessage(messageType, message)
+      }
+      
+    } catch (e) {
+      console.error('[WebSocket] 消息解析失败:', e)
+    }
+  }
+  
+  /**
+   * 处理认证响应
+   */
+  private handleAuthResponse(message: any): void {
+    const success = message.body.success as boolean
+    
+    if (success) {
+      console.log('[WebSocket] 认证成功')
+      this.authenticated = true
+      
+      // 启动心跳
+      this.startHeartbeat()
+      
+      // 发送队列中的消息
+      this.flushMessageQueue()
+      
+    } else {
+      const errorMsg = message.body.message as string
+      console.error('[WebSocket] 认证失败:', errorMsg)
+      this.close()
+      
+      // 通知用户
+      uni.showToast({
+        title: '认证失败: ' + errorMsg,
+        icon: 'none'
+      })
+    }
+  }
+  
+  /**
+   * 处理心跳响应
+   */
+  private handleHeartbeatResponse(): void {
+    console.log('[WebSocket] 收到心跳响应')
+    
+    // 清除心跳超时定时器
+    if (this.heartbeatTimeoutTimer !== 0) {
+      clearTimeout(this.heartbeatTimeoutTimer)
+      this.heartbeatTimeoutTimer = 0
+    }
+  }
+  
+  /**
+   * 处理被踢下线
+   */
+  private handleKickOff(message: any): void {
+    const reason = message.body as string
+    console.log('[WebSocket] 被踢下线:', reason)
+    
+    // 停止心跳
+    this.stopHeartbeat()
+    
+    // 关闭连接
+    this.close()
+    
+    // 显示提示
+    uni.showModal({
+      title: '下线通知',
+      content: reason || '您的账号在其他设备登录',
+      showCancel: false,
+      success: () => {
+        // 跳转到登录页
+        uni.reLaunch({ url: '/pages/login/login' })
+      }
+    })
+  }
+  
+  /**
+   * 分发消息给监听器
+   */
+  private dispatchMessage(messageType: MessageType, message: any): void {
+    const listeners = this.messageListeners.get(messageType)
+    if (listeners !== null && listeners !== undefined) {
+      listeners.forEach((listener) => {
+        try {
+          listener(message)
+        } catch (e) {
+          console.error('[WebSocket] 消息监听器执行失败:', e)
+        }
+      })
+    }
+  }
+  
+  /**
+   * 处理连接关闭
+   */
+  private handleClose(): void {
+    console.log('[WebSocket] 连接已关闭')
+    this.setState(WebSocketState.CLOSED)
+    this.authenticated = false
+    
+    // 停止心跳
+    this.stopHeartbeat()
+    
+    // 尝试重连
+    this.reconnect()
+  }
+  
+  /**
+   * 处理连接错误
+   */
+  private handleError(err: any): void {
+    console.error('[WebSocket] 连接错误:', err)
+    this.setState(WebSocketState.CLOSED)
+    this.authenticated = false
+    
+    // 停止心跳
+    this.stopHeartbeat()
+    
+    // 尝试重连
+    this.reconnect()
+  }
+  
+  /**
+   * 重连
+   */
+  private reconnect(): void {
+    if (this.reconnectCount >= this.maxReconnectCount) {
+      console.error('[WebSocket] 重连失败，已达最大重连次数')
+      uni.showToast({
+        title: '连接失败，请检查网络',
+        icon: 'none'
+      })
+      return
+    }
+    
+    this.reconnectCount++
+    
+    // 指数退避策略: 1s, 2s, 4s, 8s, 16s
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectCount - 1), 30000)
+    
+    console.log(`[WebSocket] ${delay}ms 后进行第 ${this.reconnectCount} 次重连...`)
+    
+    this.reconnectTimer = setTimeout(() => {
+      this.connect()
+    }, delay)
+  }
+  
+  /**
+   * 启动心跳
+   */
+  private startHeartbeat(): void {
+    console.log('[WebSocket] 启动心跳')
+    
+    // 清除旧的定时器
+    this.stopHeartbeat()
+    
+    // 定时发送心跳
+    this.heartbeatTimer = setInterval(() => {
+      this.sendHeartbeat()
+    }, this.heartbeatInterval)
+  }
+  
+  /**
+   * 停止心跳
+   */
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer !== 0) {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = 0
+    }
+    
+    if (this.heartbeatTimeoutTimer !== 0) {
+      clearTimeout(this.heartbeatTimeoutTimer)
+      this.heartbeatTimeoutTimer = 0
+    }
+  }
+  
+  /**
+   * 发送心跳
+   */
+  private sendHeartbeat(): void {
+    if (this.state !== WebSocketState.OPEN || !this.authenticated) {
+      return
+    }
+    
+    const heartbeatMessage = {
+      header: {
+        messageId: Date.now(),
+        messageType: MessageType.HEARTBEAT_REQ,
+        timestamp: Date.now()
+      }
+    }
+    
+    console.log('[WebSocket] 发送心跳')
+    this.sendRaw(JSON.stringify(heartbeatMessage))
+    
+    // 设置心跳超时定时器
+    this.heartbeatTimeoutTimer = setTimeout(() => {
+      console.error('[WebSocket] 心跳超时，关闭连接')
+      this.close()
+    }, this.heartbeatTimeout)
+  }
+  
+  /**
+   * 发送消息
+   */
+  public send(message: any): void {
+    if (!this.authenticated) {
+      console.log('[WebSocket] 未认证，消息加入队列')
+      this.messageQueue.push(message)
+      return
+    }
+    
+    if (this.state !== WebSocketState.OPEN) {
+      console.log('[WebSocket] 连接未打开，消息加入队列')
+      this.messageQueue.push(message)
+      return
+    }
+    
+    this.sendRaw(JSON.stringify(message))
+  }
+  
+  /**
+   * 发送原始数据
+   */
+  private sendRaw(data: string): void {
+    if (this.ws === null) {
+      console.error('[WebSocket] WebSocket 实例为空')
+      return
+    }
+    
+    try {
+      this.ws.send({
+        data: data,
+        success: () => {
+          console.log('[WebSocket] 消息发送成功')
+        },
+        fail: (err) => {
+          console.error('[WebSocket] 消息发送失败:', err)
+        }
+      })
+    } catch (e) {
+      console.error('[WebSocket] 消息发送异常:', e)
+    }
+  }
+  
+  /**
+   * 发送队列中的消息
+   */
+  private flushMessageQueue(): void {
+    if (this.messageQueue.length === 0) {
+      return
+    }
+    
+    console.log(`[WebSocket] 发送队列中的 ${this.messageQueue.length} 条消息`)
+    
+    while (this.messageQueue.length > 0) {
+      const message = this.messageQueue.shift()
+      if (message !== null && message !== undefined) {
+        this.sendRaw(JSON.stringify(message))
+      }
+    }
+  }
+  
+  /**
+   * 关闭连接
+   */
+  public close(): void {
+    console.log('[WebSocket] 主动关闭连接')
+    
+    // 清除重连定时器
+    if (this.reconnectTimer !== 0) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = 0
+    }
+    
+    // 停止心跳
+    this.stopHeartbeat()
+    
+    // 关闭 WebSocket
+    if (this.ws !== null) {
+      this.ws.close({
+        success: () => {
+          console.log('[WebSocket] 连接已关闭')
+        },
+        fail: (err) => {
+          console.error('[WebSocket] 关闭失败:', err)
+        }
+      })
+      this.ws = null
+    }
+    
+    this.setState(WebSocketState.CLOSED)
+    this.authenticated = false
+  }
+  
+  /**
+   * 添加消息监听器
+   */
+  public addMessageListener(messageType: MessageType, listener: MessageListener): void {
+    let listeners = this.messageListeners.get(messageType)
+    if (listeners === null || listeners === undefined) {
+      listeners = []
+      this.messageListeners.set(messageType, listeners)
+    }
+    listeners.push(listener)
+  }
+  
+  /**
+   * 移除消息监听器
+   */
+  public removeMessageListener(messageType: MessageType, listener: MessageListener): void {
+    const listeners = this.messageListeners.get(messageType)
+    if (listeners !== null && listeners !== undefined) {
+      const index = listeners.indexOf(listener)
+      if (index !== -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }
+  
+  /**
+   * 添加连接状态监听器
+   */
+  public addStateListener(listener: StateListener): void {
+    this.stateListeners.push(listener)
+  }
+  
+  /**
+   * 移除连接状态监听器
+   */
+  public removeStateListener(listener: StateListener): void {
+    const index = this.stateListeners.indexOf(listener)
+    if (index !== -1) {
+      this.stateListeners.splice(index, 1)
+    }
+  }
+  
+  /**
+   * 设置连接状态
+   */
+  private setState(state: WebSocketState): void {
+    if (this.state === state) {
+      return
+    }
+    
+    this.state = state
+    console.log('[WebSocket] 状态变更:', state)
+    
+    // 通知监听器
+    this.stateListeners.forEach((listener) => {
+      try {
+        listener(state)
+      } catch (e) {
+        console.error('[WebSocket] 状态监听器执行失败:', e)
+      }
+    })
+  }
+  
+  /**
+   * 获取连接状态
+   */
+  public getState(): WebSocketState {
+    return this.state
+  }
+  
+  /**
+   * 判断是否已连接
+   */
+  public isConnected(): boolean {
+    return this.state === WebSocketState.OPEN && this.authenticated
+  }
+}
+
+/**
+ * 导出单例实例
+ */
+export const wsManager = WebSocketManager.getInstance()

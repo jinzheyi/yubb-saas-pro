@@ -1,0 +1,63 @@
+/**
+ * 消息管理 API
+ */
+
+import { request } from '../utils/request.uts'
+
+/**
+ * 获取消息列表（分页）
+ */
+export function getMessageList(conversationId: number, lastMessageId: number | null, pageSize: number = 20): Promise<any> {
+  let url = `/system/im/message/list?conversationId=${conversationId}&pageSize=${pageSize}`
+  if (lastMessageId !== null) {
+    url += `&lastMessageId=${lastMessageId}`
+  }
+  return request({
+    url: url,
+    method: 'GET'
+  })
+}
+
+/**
+ * 撤回消息
+ */
+export function recallMessage(id: number): Promise<any> {
+  return request({
+    url: `/system/im/message/recall?id=${id}`,
+    method: 'POST'
+  })
+}
+
+/**
+ * 删除消息
+ */
+export function deleteMessage(id: number): Promise<any> {
+  return request({
+    url: `/system/im/message/delete?id=${id}`,
+    method: 'DELETE'
+  })
+}
+
+/**
+ * 标记消息已读
+ */
+export function markMessageRead(conversationId: number, lastReadMessageId: number): Promise<any> {
+  return request({
+    url: '/system/im/message/read',
+    method: 'POST',
+    data: {
+      conversationId: conversationId,
+      lastReadMessageId: lastReadMessageId
+    }
+  })
+}
+
+/**
+ * 获取未读消息数
+ */
+export function getUnreadCount(): Promise<any> {
+  return request({
+    url: '/system/im/message/unread-count',
+    method: 'GET'
+  })
+}

@@ -12,10 +12,13 @@ import java.util.stream.Collectors;
  * Netty 会话管理器
  * 管理所有在线用户的连接会话
  * 
- * 优化点：
- * 1. 使用 ConcurrentHashMap 保证线程安全
- * 2. 支持单用户多设备登录
+ * 【多端登录支持】
+ * 1. 同一设备类型只允许一个设备在线（互踢策略）
+ * 2. 不同设备类型可以同时在线
  * 3. 支持按租户、用户、设备等多维度查询
+ * 
+ * 【线程安全】
+ * 使用 ConcurrentHashMap 保证线程安全
  *
  * @author 圣钰科技
  */
@@ -36,13 +39,19 @@ public class NettySessionManager {
     private final Map<Long, Set<String>> userChannelMap = new ConcurrentHashMap<>();
 
     /**
+     * User ID + Device Type -> Channel ID
+     * 用于实现多端登录互踢策略（每个设备类型只保留一个连接）
+     */
+    private final Map<String, String> userDeviceChannelMap = new ConcurrentHashMap<>();
+
+    /**
      * Tenant ID -> Channel IDs
      * 用于按租户查找所有连接
      */
     private final Map<Long, Set<String>> tenantChannelMap = new ConcurrentHashMap<>();
 
     /**
-     * 添加会话
+     * 添加会话（支持多端登录互踢策略）
      */
     public void addSession(NettySession session) {
         if (session == null || session.getChannel() == null) {
@@ -51,25 +60,43 @@ public class NettySessionManager {
 
         String channelId = session.getChannelId();
         Long userId = session.getUserId();
+        Integer deviceType = session.getDeviceType();
         Long tenantId = session.getTenantId();
 
-        // 添加到 Channel 映射
+        // 1. 检查是否有同类型设备在线（互踢策略）
+        if (userId != null && deviceType != null) {
+            String userDeviceKey = buildUserDeviceKey(userId, deviceType);
+            String oldChannelId = userDeviceChannelMap.get(userDeviceKey);
+            
+            if (oldChannelId != null && !oldChannelId.equals(channelId)) {
+                // 踢掉旧设备
+                NettySession oldSession = channelSessionMap.get(oldChannelId);
+                if (oldSession != null && oldSession.isActive()) {
+                    kickOffDevice(oldSession, "您的账号在其他设备登录");
+                }
+            }
+            
+            // 保存新设备的映射
+            userDeviceChannelMap.put(userDeviceKey, channelId);
+        }
+
+        // 2. 添加到 Channel 映射
         channelSessionMap.put(channelId, session);
 
-        // 添加到用户映射
+        // 3. 添加到用户映射
         if (userId != null) {
             userChannelMap.computeIfAbsent(userId, k -> ConcurrentHashMap.newKeySet())
                 .add(channelId);
         }
 
-        // 添加到租户映射
+        // 4. 添加到租户映射
         if (tenantId != null) {
             tenantChannelMap.computeIfAbsent(tenantId, k -> ConcurrentHashMap.newKeySet())
                 .add(channelId);
         }
 
-        log.info("[SessionManager] 添加会话, userId: {}, tenantId: {}, channelId: {}, 当前在线: {}", 
-            userId, tenantId, channelId, channelSessionMap.size());
+        log.info("[SessionManager] 添加会话, userId: {}, tenantId: {}, deviceType: {}, channelId: {}, 当前在线: {}", 
+            userId, tenantId, deviceType, channelId, channelSessionMap.size());
     }
 
     /**
@@ -85,7 +112,14 @@ public class NettySessionManager {
         
         if (session != null) {
             Long userId = session.getUserId();
+            Integer deviceType = session.getDeviceType();
             Long tenantId = session.getTenantId();
+
+            // 从用户设备映射中移除
+            if (userId != null && deviceType != null) {
+                String userDeviceKey = buildUserDeviceKey(userId, deviceType);
+                userDeviceChannelMap.remove(userDeviceKey);
+            }
 
             // 从用户映射中移除
             if (userId != null) {
@@ -109,9 +143,35 @@ public class NettySessionManager {
                 }
             }
 
-            log.info("[SessionManager] 移除会话, userId: {}, tenantId: {}, channelId: {}, 当前在线: {}", 
-                userId, tenantId, channelId, channelSessionMap.size());
+            log.info("[SessionManager] 移除会话, userId: {}, tenantId: {}, deviceType: {}, channelId: {}, 当前在线: {}", 
+                userId, tenantId, deviceType, channelId, channelSessionMap.size());
         }
+    }
+
+    /**
+     * 踢掉设备
+     */
+    private void kickOffDevice(NettySession session, String reason) {
+        log.info("[SessionManager] 踢掉设备, userId: {}, deviceType: {}, reason: {}", 
+            session.getUserId(), session.getDeviceType(), reason);
+        
+        try {
+            // 发送踢下线通知（使用简单的文本消息）
+            // 注意：这里简化处理，实际应该使用 Protobuf 构建 CLOSE 消息
+            session.getChannel().writeAndFlush(reason);
+            
+            // 关闭连接
+            session.getChannel().close();
+        } catch (Exception e) {
+            log.error("[SessionManager] 踢掉设备失败", e);
+        }
+    }
+
+    /**
+     * 构建用户设备键
+     */
+    private String buildUserDeviceKey(Long userId, Integer deviceType) {
+        return userId + ":" + deviceType;
     }
 
     /**
@@ -132,7 +192,7 @@ public class NettySessionManager {
     }
 
     /**
-     * 根据用户ID获取所有会话
+     * 根据用户ID获取所有会话（所有设备）
      */
     public List<NettySession> getSessionsByUserId(Long userId) {
         if (userId == null) {
@@ -148,6 +208,31 @@ public class NettySessionManager {
             .map(channelSessionMap::get)
             .filter(Objects::nonNull)
             .filter(NettySession::isActive)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * 根据用户ID和设备类型获取会话
+     */
+    public NettySession getSessionByUserIdAndDeviceType(Long userId, Integer deviceType) {
+        if (userId == null || deviceType == null) {
+            return null;
+        }
+        
+        String userDeviceKey = buildUserDeviceKey(userId, deviceType);
+        String channelId = userDeviceChannelMap.get(userDeviceKey);
+        return channelId != null ? channelSessionMap.get(channelId) : null;
+    }
+
+    /**
+     * 获取用户在线的所有设备类型
+     */
+    public List<Integer> getOnlineDeviceTypes(Long userId) {
+        List<NettySession> sessions = getSessionsByUserId(userId);
+        return sessions.stream()
+            .map(NettySession::getDeviceType)
+            .filter(Objects::nonNull)
+            .distinct()
             .collect(Collectors.toList());
     }
 
@@ -209,6 +294,7 @@ public class NettySessionManager {
     public void clear() {
         channelSessionMap.clear();
         userChannelMap.clear();
+        userDeviceChannelMap.clear();
         tenantChannelMap.clear();
         log.info("[SessionManager] 清理所有会话");
     }

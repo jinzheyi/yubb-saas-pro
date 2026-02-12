@@ -137,6 +137,8 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { messageService, ConversationItem } from '../../services/message-service.uts'
+	import { getConversationList } from '../../api/conversation.uts'
 
 	const { t } = useI18n()
 
@@ -151,6 +153,10 @@
 	const menuX = ref(0)
 	const menuY = ref(0)
 	const selectedItem = ref<any>(null)
+	
+	// 加载状态
+	const loading = ref(false)
+	const refreshing = ref(false)
 
 	// 生成 100 条模拟消息数据
 	const generateMessages = () : any[] => {
@@ -353,6 +359,148 @@
 	// 消息列表原始数据
 	const messageList = ref(generateMessages())
 	
+	/**
+	 * 初始化页面
+	 */
+	onMounted(() => {
+		// 1. 加载会话列表
+		loadConversations()
+		
+		// 2. 监听会话更新
+		messageService.addConversationUpdateListener(handleConversationUpdate)
+	})
+	
+	onUnmounted(() => {
+		// 移除监听器
+		messageService.removeConversationUpdateListener(handleConversationUpdate)
+	})
+	
+	/**
+	 * 加载会话列表
+	 */
+	async function loadConversations() {
+		loading.value = true
+		
+		try {
+			// 1. 先从缓存加载（立即显示）
+			const cachedConversations = messageService.getConversations()
+			if (cachedConversations.length > 0) {
+				messageList.value = convertServiceConversations(cachedConversations)
+			}
+			
+			// 2. 从服务器加载最新数据
+			const res = await getConversationList()
+			
+			if (res.code === 0 && res.data) {
+				const serverConversations = res.data as any[]
+				
+				// 转换为 UI 格式
+				messageList.value = serverConversations.map(conv => {
+					return {
+						id: conv.id,
+						categoryId: getCategoryId(conv),
+						title: conv.targetName,
+						desc: conv.lastMessageContent,
+						lastMessageTime: new Date(conv.lastMessageTime).getTime(),
+						avatarBg: getRandomColor(),
+						avatarText: conv.targetName.substring(0, 1),
+						avatarIcon: conv.conversationType === 2 ? '\ue616' : '',
+						unreadCount: conv.unreadCount,
+						noDisturb: conv.noDisturb,
+						isPinned: conv.isPinned,
+						pinnedTime: conv.isPinned ? new Date(conv.pinnedTime).getTime() : 0,
+						isGroup: conv.conversationType === 2,
+						memberCount: conv.groupMemberCount || 0
+					}
+				})
+			}
+			
+		} catch (e) {
+			console.error('[Message] 加载会话列表失败:', e)
+			uni.showToast({ title: '加载失败', icon: 'none' })
+		} finally {
+			loading.value = false
+		}
+	}
+	
+	/**
+	 * 转换服务会话为 UI 格式
+	 */
+	function convertServiceConversations(serviceConversations : ConversationItem[]) : any[] {
+		return serviceConversations.map(conv => {
+			return {
+				id: conv.id,
+				categoryId: getCategoryId(conv),
+				title: conv.name,
+				desc: conv.lastMessage,
+				lastMessageTime: conv.timestamp,
+				avatarBg: conv.avatarBg,
+				avatarText: conv.avatarText,
+				avatarIcon: conv.type === 2 ? '\ue616' : '',
+				unreadCount: conv.unreadCount,
+				noDisturb: conv.noDisturb,
+				isPinned: conv.isPinned,
+				pinnedTime: conv.isPinned ? conv.timestamp : 0,
+				isGroup: conv.type === 2,
+				memberCount: conv.groupMemberCount || 0
+			}
+		})
+	}
+	
+	/**
+	 * 获取分类 ID
+	 */
+	function getCategoryId(conv : any) : string {
+		if (conv.isPinned) return 'latest'
+		if (conv.noDisturb) return 'nodisturb'
+		if (conv.conversationType === 2 || conv.type === 2) return 'group'
+		return 'user'
+	}
+	
+	/**
+	 * 获取随机颜色
+	 */
+	function getRandomColor() : string {
+		const colors = ['#F197BC', '#5FB6F7', '#c084fc', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6']
+		return colors[Math.floor(Math.random() * colors.length)]
+	}
+	
+	/**
+	 * 处理会话更新
+	 */
+	function handleConversationUpdate(conversation : ConversationItem) {
+		// 查找会话
+		const index = messageList.value.findIndex(c => c.id === conversation.id)
+		
+		const uiConversation = {
+			id: conversation.id,
+			categoryId: getCategoryId(conversation),
+			title: conversation.name,
+			desc: conversation.lastMessage,
+			lastMessageTime: conversation.timestamp,
+			avatarBg: conversation.avatarBg,
+			avatarText: conversation.avatarText,
+			avatarIcon: conversation.type === 2 ? '\ue616' : '',
+			unreadCount: conversation.unreadCount,
+			noDisturb: conversation.noDisturb,
+			isPinned: conversation.isPinned,
+			pinnedTime: conversation.isPinned ? conversation.timestamp : 0,
+			isGroup: conversation.type === 2,
+			memberCount: conversation.groupMemberCount || 0
+		}
+		
+		if (index !== -1) {
+			// 更新现有会话
+			messageList.value[index] = uiConversation
+		} else {
+			// 添加新会话
+			messageList.value.unshift(uiConversation)
+		}
+		
+		// 重新排序（按时间戳降序）
+		messageList.value.sort((a, b) => b.lastMessageTime - a.lastMessageTime)
+	}
+	
 	// 过滤后的基础列表
 	const filteredBaseList = computed(() : any[] => {
 		if (selectedCategoryId.value === '') {
@@ -398,12 +546,12 @@
 		if (item.isGroup) {
 			// 跳转到群聊页面
 			uni.navigateTo({
-				url: `/pages/message/chat?type=group&groupId=${item.id}&name=${encodeURIComponent(item.title)}&memberCount=${item.memberCount || 0}`
+				url: `/pages/message/chat?conversationId=${item.id}&type=group&groupId=${item.id}&targetId=${item.id}&name=${encodeURIComponent(item.title)}&memberCount=${item.memberCount || 0}`
 			})
 		} else {
 			// 跳转到单聊页面
 			uni.navigateTo({
-				url: '/pages/message/chat?name=' + (item.titleKey ? t(item.titleKey) : item.title)
+				url: `/pages/message/chat?conversationId=${item.id}&type=single&targetId=${item.id}&name=${encodeURIComponent(item.titleKey ? t(item.titleKey) : item.title)}`
 			})
 		}
 	}

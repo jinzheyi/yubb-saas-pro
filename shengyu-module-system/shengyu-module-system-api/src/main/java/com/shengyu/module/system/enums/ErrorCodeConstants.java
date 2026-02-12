@@ -199,6 +199,29 @@ public interface ErrorCodeConstants {
     ErrorCode MAIL_SEND_TEMPLATE_PARAM_MISS = new ErrorCode(1_002_025_000, "模板参数({})缺失");
     ErrorCode MAIL_SEND_MAIL_NOT_EXISTS = new ErrorCode(1_002_025_001, "邮箱不存在");
 
+    // ========== IM 即时通讯 1-002-030-000 ==========
+    // 会话相关 1-002-030-000
+    ErrorCode CONVERSATION_NOT_EXISTS = new ErrorCode(1_002_030_000, "会话不存在");
+    ErrorCode CONVERSATION_CREATE_FAILED = new ErrorCode(1_002_030_001, "创建会话失败");
+    
+    // 消息相关 1-002-030-100
+    ErrorCode MESSAGE_NOT_EXISTS = new ErrorCode(1_002_030_100, "消息不存在");
+    ErrorCode MESSAGE_SEND_FAILED = new ErrorCode(1_002_030_101, "消息发送失败");
+    ErrorCode MESSAGE_RECALL_TIMEOUT = new ErrorCode(1_002_030_102, "消息撤回超时，只能撤回2分钟内的消息");
+    ErrorCode MESSAGE_RECALL_PERMISSION_DENIED = new ErrorCode(1_002_030_103, "无权撤回该消息");
+    
+    // 群组相关 1-002-030-200
+    ErrorCode GROUP_NOT_EXISTS = new ErrorCode(1_002_030_200, "群组不存在");
+    ErrorCode GROUP_MEMBER_NOT_EXISTS = new ErrorCode(1_002_030_201, "群成员不存在");
+    ErrorCode GROUP_PERMISSION_DENIED = new ErrorCode(1_002_030_202, "无权操作该群组");
+    ErrorCode GROUP_MEMBER_LIMIT = new ErrorCode(1_002_030_203, "群成员数量已达上限");
+    ErrorCode GROUP_DISSOLVED = new ErrorCode(1_002_030_204, "群组已解散");
+    ErrorCode GROUP_OWNER_CANNOT_QUIT = new ErrorCode(1_002_030_205, "群主不能退出群组，请先转让群主");
+    
+    // 联系人相关 1-002-030-300
+    ErrorCode CONTACT_NOT_EXISTS = new ErrorCode(1_002_030_300, "联系人不存在");
+    ErrorCode CONTACT_SETTING_UPDATE_FAILED = new ErrorCode(1_002_030_301, "联系人设置更新失败");
+
     // ========== 站内信模版 1-002-026-000 ==========
     ErrorCode NOTIFY_TEMPLATE_NOT_EXISTS = new ErrorCode(1_002_026_000, "站内信模版不存在");
     ErrorCode NOTIFY_TEMPLATE_CODE_DUPLICATE = new ErrorCode(1_002_026_001, "已经存在编码为【{}】的站内信模板");
