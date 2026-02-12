@@ -1,6 +1,6 @@
 # IM 即时通讯逻辑设计文档 v1.0
 
-> **文档版本**: v1.0.11  
+> **文档版本**: v1.0.12  
 > **创建日期**: 2026年2月11日  
 > **更新日期**: 2026年2月12日  
 > **项目**: 圣钰 SaaS Pro - IM 即时通讯系统  
@@ -9,6 +9,29 @@
 > **中间件**: shengyu-spring-boot-starter-websocket (基于 Netty + Protobuf)  
 > **移动端**: shengyu-ui-admin-uniappx (uni-app x + UTS)  
 > **数据库**: MySQL 8.0+ (已创建 IM 表结构)
+
+---
+
+## 🔍 实现状态总览
+
+**当前阶段**: 设计与框架搭建阶段（约 40% 完成）
+
+| 模块 | 完成度 | 状态说明 |
+|------|--------|---------|
+| 数据库设计 | 100% | ✅ 6张核心表设计完成，DDL 文件已创建，**未执行** |
+| WebSocket 中间件 | 80% | ✅ Netty 框架完整，Protobuf 协议定义完整，**缺少业务 SPI 实现** |
+| 移动端 UI | 90% | ✅ 页面框架完整，**缺少 WebSocket 连接和实际数据绑定** |
+| 移动端 API | 10% | ⚠️ 仅有登录接口，**IM 相关接口未实现** |
+| 后端 Controller | 0% | ❌ **IM 相关 Controller 完全缺失** |
+| 后端 Service | 0% | ❌ **IM 相关 Service 完全缺失** |
+| 后端 SPI 实现 | 0% | ❌ **MessageStorageService 等接口未实现** |
+
+**关键缺失**:
+1. ❌ 后端 IM 模块完全未实现（Controller/Service/Mapper/DO/VO）
+2. ❌ WebSocket 中间件的 SPI 接口未在 system 模块中实现
+3. ❌ 移动端 WebSocket 连接逻辑未实现
+4. ❌ 数据库表结构未在数据库中执行
+5. ❌ 前后端接口未对接
 
 ---
 
@@ -146,10 +169,43 @@ AI 执行任务时,应在任务元数据中添加执行日志:
 
 **移动端实现状态**:
 - ✅ UI 层面: 90% 已完成(所有核心页面和组件已实现)
+  - ✅ 消息列表页面（message.uvue）- 支持分类、置顶、免打扰、长按菜单
+  - ✅ 聊天页面（chat.uvue）- 支持文本、图片、语音、视频、文件、位置、表情等
+  - ✅ 通讯录页面（contacts.uvue）- 组织架构、部门、个人
+  - ✅ 个人中心页面（profile.uvue）
 - ⚠️ 业务逻辑: 30% 已完成(使用模拟数据,未对接后端 API)
+  - ✅ API 请求封装（request.uts）- Token 刷新、租户隔离、请求拦截
+  - ✅ Store 状态管理（user.uts）- 用户信息、权限、角色、Token 管理
+  - ✅ 工具类（emoji、sticker、file、upload 等）
+  - ❌ WebSocket 连接逻辑（未实现）
+  - ❌ 消息发送/接收接口调用（未实现）
 - ❌ WebSocket: 0% 未实现(需要集成 Protobuf 通信)
 - ❌ 离线消息: 0% 未实现
 - ❌ 消息持久化: 0% 未实现
+
+**移动端 API 前缀配置**:
+```typescript
+// 当前配置（需要修改）
+BASE_URL = CONFIG_BASE_URL + '/admin-api'  // ❌ 错误：应该使用 /app-api
+
+// 正确配置
+BASE_URL = CONFIG_BASE_URL + '/app-api'    // ✅ 正确：移动端使用 /app-api
+```
+
+**WebSocket 中间件实现状态**:
+- ✅ Netty 服务器框架（NettyServer、NettyChannelInitializer）
+- ✅ Protobuf 协议定义（im_message.proto）- 完整的消息协议
+- ✅ Session 管理（NettySessionManager、NettySession）
+- ✅ 消息处理器（MessageProcessor、MessageProcessorFactory）
+- ✅ 认证处理（AuthHandler、AuthService）
+- ✅ 心跳检测（HeartbeatHandler）
+- ✅ 消息发送器（NettyMessageSender、WebSocketMessageSender）
+- ✅ 多种消息总线支持（Redis、RocketMQ、Kafka、RabbitMQ）
+- ✅ 自动配置（ShengyuWebSocketAutoConfiguration）
+- ❌ **业务模块的 SPI 实现（system 模块未实现）**
+- ❌ **消息存储逻辑（未连接数据库）**
+- ❌ **消息缓存逻辑（仅有 NoOp 实现）**
+- ❌ **离线推送逻辑（仅有 NoOp 实现）**
 
 **后端架构规范**:
 
@@ -198,6 +254,29 @@ AI 执行任务时,应在任务元数据中添加执行日志:
    - 避免相互影响(如移动端登录改造不能影响 Web 端)
    - 便于独立部署和扩展
    - 符合微服务架构的单一职责原则
+
+**关键架构问题**:
+
+1. **消息类型定义不一致**:
+   - 前端支持: text、image、voice、video、file、location、emoji、sticker、system
+   - Protobuf 定义: TEXT(100)、IMAGE(101)、VOICE(102)、VIDEO(103)、FILE(104)、LOCATION(105)、CUSTOM(106)
+   - **问题**: emoji 和 sticker 在 Protobuf 中未明确定义
+   - **解决方案**: emoji 和 sticker 可以使用 CUSTOM(106) 类型，在 extra 字段中标识子类型
+
+2. **SPI 接口实现缺失**:
+   - WebSocket 中间件定义了 `MessageStorageService`、`AuthService` 等 SPI 接口
+   - system 模块必须实现这些接口才能完成消息存储和认证
+   - **当前状态**: 仅有 NoOp 实现，未连接实际业务逻辑
+
+3. **数据库表未执行**:
+   - DDL 文件已创建（`sql/mysql/1.0/im/ddl_im_tables.sql`）
+   - **当前状态**: 设计阶段，未在数据库中执行
+   - **影响**: 后端无法存储消息和会话数据
+
+4. **API 路由配置**:
+   - 移动端当前使用 `/admin-api` 前缀（错误）
+   - 应该使用 `/app-api` 前缀（正确）
+   - **影响**: 需要修改 `utils/request.uts` 中的 BASE_URL 配置
 
 文档包含:
 - 完整的前后端交互接口定义
@@ -3918,6 +3997,29 @@ public class WebSocketMetrics {
   - 文件: `sql/mysql/1.0/README.md`, `sql/mysql/1.0/im/README.md`
   - 执行时间: 2026-02-11
   - 备注: 定义了 DDL/DML 文件管理规范
+
+- [ ] 1.10: 执行数据库脚本
+  - 负责人: 人工
+  - 优先级: P0
+  - 预计时间: 10分钟
+  - 依赖: 1.1-1.8
+  - 文件: `sql/mysql/1.0/im/ddl_im_tables.sql`, `sql/mysql/1.0/im/dml_im_init_data.sql`
+  - 备注: **关键任务** - 在数据库中执行 DDL 和 DML 脚本，创建表结构和初始化数据。后续所有后端开发都依赖此任务。
+
+**执行命令**:
+```bash
+# 连接到数据库
+mysql -h localhost -u root -p shengyu_saas
+
+# 执行 DDL 脚本
+source sql/mysql/1.0/im/ddl_im_tables.sql
+
+# 执行 DML 脚本
+source sql/mysql/1.0/im/dml_im_init_data.sql
+
+# 验证表是否创建成功
+SHOW TABLES LIKE 'im_%';
+```
 
 
 ### 阶段 2: 后端基础框架搭建 (预计 3 天)
@@ -9603,3 +9705,205 @@ shengyu:
 **文档维护**: shengyu 开发团队
 
 **中间件版本**: shengyu-spring-boot-starter-websocket v1.0.0
+
+
+---
+
+## 16. 实现状态检查清单
+
+> **说明**: 本清单基于代码库实际情况，列出所有已实现和未实现的功能，帮助开发者快速了解项目状态。
+
+### 16.1 数据库层
+
+| 项目 | 状态 | 说明 |
+|------|------|------|
+| DDL 文件创建 | ✅ 已完成 | `sql/mysql/1.0/im/ddl_im_tables.sql` |
+| DML 文件创建 | ✅ 已完成 | `sql/mysql/1.0/im/dml_im_init_data.sql` |
+| 表结构设计 | ✅ 已完成 | 6张核心表设计完整 |
+| 数据库执行 | ❌ 未执行 | **需要人工执行 DDL/DML 脚本** |
+
+**执行命令**:
+```bash
+mysql -h localhost -u root -p shengyu_saas < sql/mysql/1.0/im/ddl_im_tables.sql
+mysql -h localhost -u root -p shengyu_saas < sql/mysql/1.0/im/dml_im_init_data.sql
+```
+
+### 16.2 WebSocket 中间件层
+
+| 项目 | 状态 | 说明 |
+|------|------|------|
+| Netty 服务器 | ✅ 已完成 | NettyServer、NettyChannelInitializer |
+| Protobuf 协议 | ✅ 已完成 | im_message.proto 定义完整 |
+| Session 管理 | ✅ 已完成 | NettySessionManager、NettySession |
+| 消息处理器 | ✅ 已完成 | MessageProcessor、MessageProcessorFactory |
+| 认证处理 | ✅ 已完成 | AuthHandler、AuthService 接口 |
+| 心跳检测 | ✅ 已完成 | HeartbeatHandler |
+| 消息发送器 | ✅ 已完成 | NettyMessageSender、WebSocketMessageSender |
+| 消息总线 | ✅ 已完成 | Redis、RocketMQ、Kafka、RabbitMQ 支持 |
+| 自动配置 | ✅ 已完成 | ShengyuWebSocketAutoConfiguration |
+| SPI 接口定义 | ✅ 已完成 | MessageStorageService、AuthService 等 |
+
+### 16.3 后端 System 模块
+
+| 项目 | 状态 | 说明 |
+|------|------|------|
+| IM DO 实体类 | ❌ 未创建 | 需要创建 ImMessageDO、ImConversationDO 等 |
+| IM Mapper 接口 | ❌ 未创建 | 需要创建 ImMessageMapper、ImConversationMapper 等 |
+| IM VO 类 | ❌ 未创建 | 需要创建 MessageRespVO、ConversationRespVO 等 |
+| IM Service 层 | ❌ 未创建 | 需要创建 ImMessageService、ImConversationService 等 |
+| IM Controller 层 | ❌ 未创建 | 需要创建 ImMessageController、ImConversationController 等 |
+| SPI 接口实现 | ❌ 未实现 | **关键缺失** - MessageStorageService、AuthService 实现 |
+| 认证 Controller | ✅ 已完成 | AuthController（Web 端） |
+| 认证 Service | ✅ 已完成 | AdminAuthService |
+| 用户 Service | ✅ 已完成 | AdminUserService |
+
+**关键问题**:
+- ❌ IM 模块完全未实现（0%）
+- ❌ WebSocket 中间件的 SPI 接口未在 system 模块中实现
+- ❌ 消息无法存储到数据库（MessageStorageService 未实现）
+- ❌ WebSocket 认证无法工作（AuthService 未实现）
+
+### 16.4 移动端前端
+
+| 项目 | 状态 | 说明 |
+|------|------|------|
+| 页面框架 | ✅ 已完成 | 消息列表、聊天、通讯录、个人中心等 |
+| API 请求封装 | ✅ 已完成 | request.uts - Token 刷新、租户隔离 |
+| Store 状态管理 | ✅ 已完成 | user.uts - 用户信息、权限、Token |
+| 登录接口 | ✅ 已完成 | api/login.uts |
+| 工具类 | ✅ 已完成 | emoji、sticker、file、upload 等 |
+| WebSocket 连接 | ❌ 未实现 | **关键缺失** - 需要实现 WebSocket 连接逻辑 |
+| Protobuf 编解码 | ❌ 未实现 | 需要实现 Protobuf 消息编解码 |
+| 消息发送接口 | ❌ 未实现 | 需要实现消息发送 API 调用 |
+| 消息接收处理 | ❌ 未实现 | 需要实现消息接收和展示逻辑 |
+| API 前缀配置 | ⚠️ 需修改 | 当前使用 `/admin-api`，应改为 `/app-api` |
+
+**API 前缀问题**:
+```typescript
+// 当前配置（错误）
+BASE_URL = CONFIG_BASE_URL + '/admin-api'  // ❌
+
+// 正确配置
+BASE_URL = CONFIG_BASE_URL + '/app-api'    // ✅
+```
+
+**文件位置**: `shengyu-ui/shengyu-ui-admin-uniappx/utils/request.uts`
+
+### 16.5 架构一致性问题
+
+| 问题 | 严重程度 | 说明 | 解决方案 |
+|------|---------|------|---------|
+| 消息类型定义不一致 | 中 | 前端支持 emoji/sticker，Protobuf 未明确定义 | 使用 CUSTOM(106) 类型，在 extra 字段标识子类型 |
+| SPI 接口实现缺失 | 高 | MessageStorageService 等接口未实现 | 在 system 模块实现所有 SPI 接口 |
+| 数据库表未执行 | 高 | DDL 文件未在数据库中执行 | 人工执行 DDL/DML 脚本 |
+| API 路由配置错误 | 中 | 移动端使用 /admin-api 前缀 | 修改为 /app-api 前缀 |
+| 前后端接口未对接 | 高 | 前端有 UI，后端无接口 | 实现后端 IM Controller 和 Service |
+
+### 16.6 优先级任务清单
+
+**P0 - 必须立即完成**:
+1. ✅ 执行数据库 DDL/DML 脚本（任务 1.10）
+2. ❌ 创建 IM DO/Mapper/VO 类（任务 2.1-2.3）
+3. ❌ 创建 IM Service 层（任务 2.4）
+4. ❌ 创建 IM Controller 层（任务 2.5）
+5. ❌ 实现 MessageStorageService 接口（任务 3.1.1）
+6. ❌ 实现 AuthService 接口（任务 3.1.2）
+7. ❌ 修改移动端 API 前缀为 /app-api（任务 5.0.3）
+8. ❌ 实现移动端 WebSocket 连接（任务 5.1.6）
+
+**P1 - 重要但不紧急**:
+1. ❌ 实现 MessageCacheService 接口（任务 3.1.3）
+2. ❌ 实现消息已读回执逻辑
+3. ❌ 实现消息撤回逻辑
+4. ❌ 实现会话管理逻辑
+5. ❌ 实现群组管理逻辑
+
+**P2 - 优化和完善**:
+1. ❌ 实现 OfflinePushService 接口（任务 3.1.4）
+2. ❌ 性能优化（消息分表、缓存策略）
+3. ❌ 安全加固（敏感词过滤、权限控制）
+4. ❌ 功能完善（消息搜索、消息转发、消息收藏）
+
+### 16.7 关键文件清单
+
+**需要创建的文件**:
+
+**后端 DO 实体类**:
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/dataobject/im/ImMessageDO.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/dataobject/im/ImConversationDO.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/dataobject/im/ImGroupDO.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/dataobject/im/ImGroupUserDO.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/dataobject/im/ImContactSettingDO.java`
+
+**后端 Mapper 接口**:
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/mysql/im/ImMessageMapper.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/mysql/im/ImConversationMapper.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/mysql/im/ImGroupMapper.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/mysql/im/ImGroupUserMapper.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/mysql/im/ImContactSettingMapper.java`
+
+**后端 Service 层**:
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImMessageService.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImMessageServiceImpl.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImConversationService.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImConversationServiceImpl.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImGroupService.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImGroupServiceImpl.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImContactService.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImContactServiceImpl.java`
+
+**后端 Controller 层**:
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/admin/im/ImMessageController.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/admin/im/ImConversationController.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/admin/im/ImGroupController.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/admin/im/ImContactController.java`
+
+**后端 SPI 实现**:
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/SystemMessageStorageServiceImpl.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/SystemAuthServiceImpl.java`
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/SystemMessageCacheServiceImpl.java` (可选)
+- `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/SystemOfflinePushServiceImpl.java` (可选)
+
+**移动端需要创建的文件**:
+- `shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts` - WebSocket 连接管理
+- `shengyu-ui/shengyu-ui-admin-uniappx/utils/protobuf.uts` - Protobuf 编解码
+- `shengyu-ui/shengyu-ui-admin-uniappx/utils/device.uts` - 设备类型枚举
+- `shengyu-ui/shengyu-ui-admin-uniappx/api/message.uts` - 消息相关 API
+- `shengyu-ui/shengyu-ui-admin-uniappx/api/conversation.uts` - 会话相关 API
+- `shengyu-ui/shengyu-ui-admin-uniappx/api/group.uts` - 群组相关 API
+- `shengyu-ui/shengyu-ui-admin-uniappx/api/contact.uts` - 联系人相关 API
+
+**需要修改的文件**:
+- `shengyu-ui/shengyu-ui-admin-uniappx/utils/request.uts` - 修改 API 前缀为 /app-api
+
+### 16.8 下一步行动
+
+**立即执行**:
+1. 人工执行数据库 DDL/DML 脚本
+2. 开始实现后端 IM 模块（DO/Mapper/Service/Controller）
+3. 实现 WebSocket 中间件的 SPI 接口
+4. 修改移动端 API 前缀配置
+
+**验证步骤**:
+1. 验证数据库表是否创建成功：`SHOW TABLES LIKE 'im_%';`
+2. 验证后端接口是否可访问：`curl http://localhost:48080/admin-api/system/im/message/page`
+3. 验证 WebSocket 连接是否成功：查看 Netty 服务器日志
+4. 验证消息是否能正常存储：查询 im_message 表
+
+---
+
+## 17. 文档更新日志
+
+| 版本 | 日期 | 更新内容 | 更新人 |
+|------|------|---------|--------|
+| v1.0.0 | 2026-02-11 | 初始版本，完成基础架构设计 | AI |
+| v1.0.1-v1.0.7 | 2026-02-11 | 完善数据库设计、Protobuf 协议、任务清单 | AI |
+| v1.0.8 | 2026-02-12 | 添加移动端开发原子性任务（100+任务） | AI |
+| v1.0.9 | 2026-02-12 | 添加移动端登录逻辑改造任务 | AI |
+| v1.0.10 | 2026-02-12 | 修正后端架构规范，明确 admin/app 目录划分 | AI |
+| v1.0.11 | 2026-02-12 | 添加后端架构规范详细说明，Service 层复用策略 | AI |
+| v1.0.12 | 2026-02-12 | 全面检查实现状态，添加实现状态检查清单 | AI |
+
+---
+
+**文档结束**
