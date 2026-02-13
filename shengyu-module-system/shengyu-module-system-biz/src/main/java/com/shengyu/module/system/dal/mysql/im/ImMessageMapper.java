@@ -21,12 +21,11 @@ public interface ImMessageMapper extends BaseMapperX<ImMessageDO> {
      * 根据会话ID分页查询消息列表(按发送时间倒序)
      *
      * @param conversationId 会话ID
-     * @param pageNo 页码
-     * @param pageSize 每页数量
+     * @param pageParam 分页参数
      * @return 消息分页结果
      */
-    default PageResult<ImMessageDO> selectPageByConversationId(Long conversationId, Integer pageNo, Integer pageSize) {
-        return selectPage(pageNo, pageSize, new LambdaQueryWrapperX<ImMessageDO>()
+    default PageResult<ImMessageDO> selectPageByConversationId(Long conversationId, com.shengyu.framework.common.pojo.PageParam pageParam) {
+        return selectPage(pageParam, new LambdaQueryWrapperX<ImMessageDO>()
                 .eq(ImMessageDO::getConversationId, conversationId)
                 .orderByDesc(ImMessageDO::getSendTime));
     }
@@ -122,10 +121,11 @@ public interface ImMessageMapper extends BaseMapperX<ImMessageDO> {
      * @return 更新数量
      */
     default int updateStatusByIdsAndReceiverId(List<Long> messageIds, Long receiverId, Integer status) {
-        return update(null, new LambdaQueryWrapperX<ImMessageDO>()
+        ImMessageDO updateEntity = new ImMessageDO();
+        updateEntity.setStatus(status);
+        return update(updateEntity, new LambdaQueryWrapperX<ImMessageDO>()
                 .in(ImMessageDO::getId, messageIds)
-                .eq(ImMessageDO::getReceiverId, receiverId)
-                .set(ImMessageDO::getStatus, status));
+                .eq(ImMessageDO::getReceiverId, receiverId));
     }
 
     /**

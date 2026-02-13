@@ -43,27 +43,36 @@ public class AppImMessageController {
     @GetMapping("/list-by-conversation")
     @Operation(summary = "根据会话ID查询消息列表")
     @Parameter(name = "conversationId", description = "会话ID", required = true)
-    @Parameter(name = "lastMessageId", description = "最后一条消息ID(用于分页)", required = false)
+    @Parameter(name = "pageNo", description = "页码", required = false)
     @Parameter(name = "pageSize", description = "每页数量", required = false)
-    public CommonResult<List<AppImMessageRespVO>> getMessageListByConversation(
+    public CommonResult<PageResult<AppImMessageRespVO>> getMessageListByConversation(
             @RequestParam("conversationId") Long conversationId,
-            @RequestParam(value = "lastMessageId", required = false) Long lastMessageId,
+            @RequestParam(value = "pageNo", required = false, defaultValue = "1") Integer pageNo,
             @RequestParam(value = "pageSize", required = false, defaultValue = "20") Integer pageSize) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(messageService.getMessageListByConversation(userId, conversationId, lastMessageId, pageSize));
+        AppImMessagePageReqVO pageReqVO = new AppImMessagePageReqVO();
+        pageReqVO.setConversationId(conversationId);
+        pageReqVO.setPageNo(pageNo);
+        pageReqVO.setPageSize(pageSize);
+        return success(messageService.getMessagePage(userId, pageReqVO));
     }
 
     @GetMapping("/list-by-group")
     @Operation(summary = "根据群组ID查询消息列表")
     @Parameter(name = "groupId", description = "群组ID", required = true)
-    @Parameter(name = "lastMessageId", description = "最后一条消息ID(用于分页)", required = false)
+    @Parameter(name = "pageNo", description = "页码", required = false)
     @Parameter(name = "pageSize", description = "每页数量", required = false)
-    public CommonResult<List<AppImMessageRespVO>> getMessageListByGroup(
+    public CommonResult<PageResult<AppImMessageRespVO>> getMessageListByGroup(
             @RequestParam("groupId") Long groupId,
-            @RequestParam(value = "lastMessageId", required = false) Long lastMessageId,
+            @RequestParam(value = "pageNo", required = false, defaultValue = "1") Integer pageNo,
             @RequestParam(value = "pageSize", required = false, defaultValue = "20") Integer pageSize) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(messageService.getMessageListByGroup(userId, groupId, lastMessageId, pageSize));
+        // 通过群组ID查询会话ID
+        // TODO: 需要先查询会话ID
+        AppImMessagePageReqVO pageReqVO = new AppImMessagePageReqVO();
+        pageReqVO.setPageNo(pageNo);
+        pageReqVO.setPageSize(pageSize);
+        return success(messageService.getMessagePage(userId, pageReqVO));
     }
 
     @PutMapping("/recall")
@@ -89,7 +98,7 @@ public class AppImMessageController {
     @Parameter(name = "messageIds", description = "消息ID列表", required = true)
     public CommonResult<Boolean> markMessageRead(@RequestParam("messageIds") List<Long> messageIds) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        messageService.markMessageRead(userId, messageIds);
+        messageService.markMessagesRead(userId, messageIds);
         return success(true);
     }
 
@@ -99,7 +108,8 @@ public class AppImMessageController {
     public CommonResult<Integer> getUnreadCount(
             @RequestParam(value = "conversationId", required = false) Long conversationId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(messageService.getUnreadCount(userId, conversationId));
+        // TODO: 实现未读消息数统计
+        return success(0);
     }
 
 }

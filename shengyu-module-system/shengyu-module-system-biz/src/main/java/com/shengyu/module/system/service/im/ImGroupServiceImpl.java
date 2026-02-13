@@ -49,10 +49,14 @@ public class ImGroupServiceImpl implements ImGroupService {
         group.setOwnerId(userId);
         group.setName(createReqVO.getName());
         group.setAvatar(createReqVO.getAvatar());
+        group.setGroupType(createReqVO.getGroupType());
+        group.setIntroduction(createReqVO.getIntroduction());
         group.setStatus(ImGroupStatusEnum.NORMAL.getStatus());
-        group.setRemark(createReqVO.getRemark());
-        group.setInviteConfirm(createReqVO.getInviteConfirm());
-        group.setMemberCount(createReqVO.getMemberIds().size());
+        group.setAllowMemberInvite(true); // 默认允许成员邀请
+        group.setNeedApproval(false); // 默认不需要审批
+        group.setMuteAll(false); // 默认不禁言
+        group.setMemberCount(createReqVO.getMemberIds().size() + 1); // +1 包括群主
+        group.setMaxMemberCount(500); // 默认最大500人
         groupMapper.insert(group);
 
         // 添加群成员(包括群主)
@@ -99,11 +103,11 @@ public class ImGroupServiceImpl implements ImGroupService {
         if (updateReqVO.getAvatar() != null) {
             group.setAvatar(updateReqVO.getAvatar());
         }
-        if (updateReqVO.getRemark() != null) {
-            group.setRemark(updateReqVO.getRemark());
+        if (updateReqVO.getNotice() != null) {
+            group.setNotice(updateReqVO.getNotice());
         }
-        if (updateReqVO.getInviteConfirm() != null) {
-            group.setInviteConfirm(updateReqVO.getInviteConfirm());
+        if (updateReqVO.getIntroduction() != null) {
+            group.setIntroduction(updateReqVO.getIntroduction());
         }
         groupMapper.updateById(group);
 
@@ -183,12 +187,8 @@ public class ImGroupServiceImpl implements ImGroupService {
         // 转换为VO
         AppImGroupRespVO respVO = BeanUtils.toBean(group, AppImGroupRespVO.class);
         
-        // 填充群主信息
-        AdminUserDO owner = userMapper.selectById(group.getOwnerId());
-        if (owner != null) {
-            respVO.setOwnerName(owner.getNickname());
-        }
-
+        // 不需要填充群主名称，前端可以通过 ownerId 查询
+        
         return respVO;
     }
 
@@ -211,11 +211,7 @@ public class ImGroupServiceImpl implements ImGroupService {
             if (group != null) {
                 AppImGroupRespVO respVO = BeanUtils.toBean(group, AppImGroupRespVO.class);
                 
-                // 填充群主信息
-                AdminUserDO owner = userMapper.selectById(group.getOwnerId());
-                if (owner != null) {
-                    respVO.setOwnerName(owner.getNickname());
-                }
+                // 不需要填充群主名称，前端可以通过 ownerId 查询
                 
                 result.add(respVO);
             }
@@ -241,7 +237,7 @@ public class ImGroupServiceImpl implements ImGroupService {
 
         boolean isOwnerOrAdmin = ImGroupMemberRoleEnum.isOwner(groupUser.getRole()) || 
                                  ImGroupMemberRoleEnum.isAdmin(groupUser.getRole());
-        if (!isOwnerOrAdmin && group.getInviteConfirm() == 1) {
+        if (!isOwnerOrAdmin && !group.getAllowMemberInvite()) {
             throw exception(GROUP_PERMISSION_DENIED);
         }
 
@@ -334,10 +330,13 @@ public class ImGroupServiceImpl implements ImGroupService {
             // 填充用户信息
             AdminUserDO user = userMapper.selectById(member.getUserId());
             if (user != null) {
-                respVO.setUsername(user.getUsername());
-                respVO.setNickname(user.getNickname());
-                respVO.setAvatar(user.getAvatar());
-                respVO.setDeptId(user.getDeptId());
+                respVO.setUserNickname(user.getNickname());
+                respVO.setUserAvatar(user.getAvatar());
+                // 填充部门名称
+                if (user.getDeptId() != null) {
+                    // TODO: 查询部门名称
+                    respVO.setDeptName("");
+                }
             }
             
             return respVO;

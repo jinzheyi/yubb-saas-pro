@@ -51,6 +51,12 @@
             <artifactId>shengyu-spring-boot-starter-biz-ip</artifactId>
         </dependency>
 
+        <!-- WebSocket 中间件（IM 即时通讯） -->
+        <dependency>
+            <groupId>com.shengyu.boot</groupId>
+            <artifactId>shengyu-spring-boot-starter-websocket</artifactId>
+        </dependency>
+
         <!-- Web 相关 -->
         <dependency>
             <groupId>com.shengyu.boot</groupId>

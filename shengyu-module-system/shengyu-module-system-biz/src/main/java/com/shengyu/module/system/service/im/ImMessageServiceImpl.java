@@ -88,8 +88,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         // 分页查询消息
         PageResult<ImMessageDO> pageResult = messageMapper.selectPageByConversationId(
                 pageReqVO.getConversationId(),
-                pageReqVO.getPageNo(),
-                pageReqVO.getPageSize()
+                pageReqVO
         );
 
         // 转换为VO并填充发送者信息

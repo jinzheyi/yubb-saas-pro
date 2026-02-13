@@ -8,6 +8,8 @@ import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactSettin
 import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
 import com.shengyu.module.system.dal.dataobject.im.ImContactSettingDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
+
+import java.util.ArrayList;
 import com.shengyu.module.system.dal.mysql.dept.DeptMapper;
 import com.shengyu.module.system.dal.mysql.im.ImContactSettingMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
@@ -185,7 +187,7 @@ public class ImContactServiceImpl implements ImContactService {
                 .collect(Collectors.toList());
         
         if (contactIds.isEmpty()) {
-            return List.of();
+            return new ArrayList<>();
         }
 
         List<AdminUserDO> users = userMapper.selectBatchIds(contactIds);

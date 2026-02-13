@@ -77,8 +77,8 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         MessageHeader header = message.getHeader();
         
         try {
-            // 1. 生成序列号（使用数据库序列或 Redis 计数器）
-            Long sequence = sequenceService.generateSequence();
+            // 1. 生成序列号（已移除，不再需要）
+            // Long sequence = sequenceService.generateMessageSequence();
             
             // 2. 解析消息内容
             String content = parseMessageContent(message);
@@ -93,7 +93,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             messageDO.setContent(content);
             messageDO.setExtra(header.getExtra());
             messageDO.setStatus(0); // 0-未读
-            messageDO.setSequence(sequence);
+            // messageDO.setSequence(sequence); // 已移除 sequence 字段
             
             // 4. 保存到数据库（使用批量插入可进一步优化）
             messageMapper.insert(messageDO);
@@ -101,8 +101,8 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             // 5. 异步更新会话信息（不阻塞消息保存）
             updateConversationAsync(header, messageDO);
             
-            log.debug("[MessageStorage] 消息保存成功, messageId: {}, sequence: {}, type: {}", 
-                    header.getMessageId(), sequence, header.getMessageType());
+            log.debug("[MessageStorage] 消息保存成功, messageId: {}, type: {}", 
+                    header.getMessageId(), header.getMessageType());
             
             return messageDO.getId();
             
@@ -170,7 +170,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
      * 3. 更新会话的最后消息、未读数等信息
      */
     @Async("imTaskExecutor")
-    protected void updateConversationAsync(MessageHeader header, ImMessageDO messageDO) {
+    public void updateConversationAsync(MessageHeader header, ImMessageDO messageDO) {
         try {
             // 单聊：更新发送者和接收者的会话
             if (header.getReceiverId() > 0) {
@@ -225,7 +225,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
      * 3. 会话信息可以缓存到 Redis（可扩展）
      */
     @Transactional(rollbackFor = Exception.class)
-    protected void updateOrCreateConversation(Long userId, Long targetId, Integer conversationType, 
+    public void updateOrCreateConversation(Long userId, Long targetId, Integer conversationType, 
                                              ImMessageDO messageDO, boolean incrementUnread) {
         try {
             // 查询会话
@@ -317,7 +317,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
      * 异步更新会话未读数
      */
     @Async("imTaskExecutor")
-    protected void updateConversationUnreadCountAsync(Long userId) {
+    public void updateConversationUnreadCountAsync(Long userId) {
         try {
             // 重新计算所有会话的未读数
             List<ImConversationDO> conversations = conversationMapper.selectListByUserId(userId);

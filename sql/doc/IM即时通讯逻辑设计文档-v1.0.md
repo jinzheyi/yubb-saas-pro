@@ -1,8 +1,8 @@
 # IM 即时通讯逻辑设计文档 v1.0
 
-> **文档版本**: v1.0.19  
+> **文档版本**: v1.0.24  
 > **创建日期**: 2026年2月11日  
-> **更新日期**: 2026年2月12日  
+> **更新日期**: 2026年2月13日  
 > **项目**: 圣钰 SaaS Pro - IM 即时通讯系统  
 > **定位**: 企业内部IM(无需添加好友、拉黑等社交功能)  
 > **目标**: AI 可执行的详细设计文档  
@@ -8959,50 +8959,113 @@ import org.springframework.stereotype.Service;
 
 /**
  * 认证服务实现
+ * 
+ * 实现 WebSocket 中间件的 AuthService SPI 接口
+ * 负责验证 WebSocket 连接的 Token，支持租户端认证
+ * 
+ * 认证流程：
+ * 1. 调用 OAuth2TokenService.checkAccessToken() 验证 Token
+ * 2. checkAccessToken() 内部会检查 Token 是否存在、是否过期
+ * 3. 如果验证失败，会抛出异常（UNAUTHORIZED）
+ * 4. 验证成功后，构建 LoginUser 对象返回
  *
  * @author shengyu
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class SystemAuthServiceImpl implements AuthService {
 
-    private final OAuth2TokenApi oauth2TokenApi;
-    private final PermissionApi permissionApi;
+    @Resource
+    private OAuth2TokenService oauth2TokenService;
 
     @Override
-    public Long authenticate(String token) {
-        log.info("[authenticate] 认证 token: {}", token);
+    public LoginBase validateToken(String accessToken) {
+        // 1. 参数校验
+        if (StrUtil.isBlank(accessToken)) {
+            log.warn("[IM-WebSocketAuth] Token 为空");
+            return null;
+        }
 
         try {
-            // 1. 验证 token
-            OAuth2AccessTokenCheckRespDTO tokenInfo = oauth2TokenApi.checkAccessToken(token);
-            if (tokenInfo == null) {
-                log.warn("[authenticate] token 无效");
-                return null;
-            }
-
-            // 2. 检查 token 是否过期
-            if (tokenInfo.getExpiresTime().isBefore(LocalDateTime.now())) {
-                log.warn("[authenticate] token 已过期");
-                return null;
-            }
-
-            log.info("[authenticate] 认证成功, userId: {}", tokenInfo.getUserId());
-            return tokenInfo.getUserId();
-
+            // 2. 验证 Token 有效性（内部会检查是否存在、是否过期）
+            // 参考 OAuth2TokenServiceImpl.checkAccessToken() 实现
+            // 如果 Token 不存在或已过期，会抛出 ServiceException
+            OAuth2AccessTokenDO accessTokenDO = oauth2TokenService.checkAccessToken(accessToken);
+            
+            // 3. 构建 LoginUser 对象
+            LoginUser loginUser = buildLoginUser(accessTokenDO);
+            
+            log.info("[IM-WebSocketAuth] Token 验证成功, userId: {}, tenantId: {}, userType: {}", 
+                    loginUser.getId(), loginUser.getTenantId(), loginUser.getUserType());
+            
+            return loginUser;
+            
         } catch (Exception e) {
-            log.error("[authenticate] 认证异常", e);
+            // 4. 异常处理
+            // OAuth2TokenService.checkAccessToken() 会抛出以下异常：
+            // - "访问令牌不存在" (Token 不存在)
+            // - "访问令牌已过期" (Token 已过期)
+            log.warn("[IM-WebSocketAuth] Token 验证失败: {}", e.getMessage());
             return null;
         }
     }
 
     @Override
-    public boolean hasPermission(Long userId, String permission) {
-        return permissionApi.hasAnyPermissions(userId, permission);
+    public Long getTenantId(LoginBase loginUser) {
+        if (loginUser instanceof LoginUser) {
+            return ((LoginUser) loginUser).getTenantId();
+        }
+        // 平台端用户无租户ID
+        return null;
+    }
+
+    /**
+     * 构建 LoginUser 对象
+     * 
+     * 说明：
+     * 1. WebSocket 认证只验证 Token，不查询完整用户信息（性能考虑）
+     * 2. 如果需要用户详细信息，可以在业务层通过 userId 查询
+     * 3. LoginUser 包含基本信息：userId、userType、tenantId
+     */
+    private LoginUser buildLoginUser(OAuth2AccessTokenDO accessTokenDO) {
+        LoginUser loginUser = new LoginUser();
+        loginUser.setId(accessTokenDO.getUserId());
+        loginUser.setUserType(accessTokenDO.getUserType());
+        loginUser.setTenantId(accessTokenDO.getTenantId());
+        
+        // 注意：这里不设置其他字段（如 username、nickname 等）
+        // 原因：
+        // 1. WebSocket 认证只需要验证身份，不需要完整用户信息
+        // 2. 避免额外的数据库查询，提升性能
+        // 3. 如果业务需要，可以在消息处理时通过 userId 查询
+        
+        return loginUser;
     }
 
 }
+```
+
+**关键点说明**:
+
+1. **使用 OAuth2TokenService 而非 OAuth2TokenApi**:
+   - `OAuth2TokenService` 是内部服务接口，直接操作数据库和缓存
+   - `OAuth2TokenApi` 是 API 接口，用于跨模块调用
+   - IM 模块在 system-biz 内部，应该直接使用 Service 层
+
+2. **Token 验证逻辑**:
+   - `checkAccessToken()` 内部已经处理了 Token 存在性和过期检查
+   - 使用 `DateUtils.isExpired()` 统一判断过期时间
+   - 验证失败会抛出 `ServiceException`，无需手动检查
+
+3. **异常处理**:
+   - 捕获所有异常，返回 null 表示认证失败
+   - 记录警告日志，便于排查问题
+   - 不向上抛出异常，避免影响 WebSocket 连接
+
+4. **性能优化**:
+   - 不查询完整用户信息，只返回基本字段
+   - 避免额外的数据库查询
+   - 如果业务需要，在消息处理时再查询
 ```
 
 ### 15.4 核心服务使用指南
@@ -9284,7 +9347,26 @@ public Message decode(byte[] bytes) {
 
 ### 15.7 配置指南
 
-#### 15.7.1 application.yml 配置
+#### 15.7.1 Maven 依赖配置
+
+**System 模块添加 WebSocket 依赖**:
+
+在 `shengyu-module-system/shengyu-module-system-biz/pom.xml` 中添加：
+
+```xml
+<!-- WebSocket 中间件（IM 即时通讯） -->
+<dependency>
+    <groupId>com.shengyu.boot</groupId>
+    <artifactId>shengyu-spring-boot-starter-websocket</artifactId>
+</dependency>
+```
+
+**说明**:
+- WebSocket 中间件已在父 POM 中定义版本，无需指定 `<version>`
+- 该依赖提供了 Netty WebSocket 服务器和 Protobuf 协议支持
+- 包含 SPI 接口定义：`MessageStorageService`、`AuthService` 等
+
+#### 15.7.2 application.yml 配置
 
 ```yaml
 shengyu:
@@ -9307,7 +9389,7 @@ shengyu:
     max-frame-size: 65536
 ```
 
-#### 15.7.2 Spring Bean 配置
+#### 15.7.3 Spring Bean 配置
 
 ```java
 package com.shengyu.module.system.config;
@@ -9346,7 +9428,7 @@ public class ImWebSocketConfig {
 }
 ```
 
-### 15.8 客户端连接示例 (uni-app x)
+#### 15.7.4 客户端连接示例 (uni-app x)
 
 ```typescript
 // WebSocket 连接管理
@@ -9547,9 +9629,9 @@ class WebSocketManager {
 export const wsManager = new WebSocketManager();
 ```
 
-### 15.9 性能指标与优化
+### 15.8 性能指标与优化
 
-#### 15.9.1 性能指标
+#### 15.8.1 性能指标
 
 | 指标 | 目标值 | 说明 |
 |------|--------|------|
@@ -9560,7 +9642,7 @@ export const wsManager = new WebSocketManager();
 | 心跳超时 | 90s | 服务端心跳超时时间 |
 | 重连延迟 | 指数退避 | 1s, 2s, 4s, 8s, 16s, 30s |
 
-#### 15.9.2 优化建议
+#### 15.8.2 优化建议
 
 **1. 连接管理优化**
 
@@ -9614,9 +9696,9 @@ private final ObjectPool<Message> messagePool = new GenericObjectPool<>(
 PooledByteBufAllocator allocator = PooledByteBufAllocator.DEFAULT;
 ```
 
-### 15.10 监控与运维
+### 15.9 监控与运维
 
-#### 15.10.1 监控指标
+#### 15.9.1 监控指标
 
 ```java
 @Component
@@ -9658,7 +9740,7 @@ public class WebSocketMetrics {
 }
 ```
 
-#### 15.10.2 日志记录
+#### 15.9.2 日志记录
 
 ```java
 @Slf4j
@@ -9689,7 +9771,7 @@ public class WebSocketLogger {
 }
 ```
 
-### 15.11 常见问题与解决方案
+### 15.10 常见问题与解决方案
 
 #### 问题 1: 消息丢失
 
@@ -10040,7 +10122,315 @@ BASE_URL = CONFIG_BASE_URL + '/app-api'    // ✅
 
 ---
 
-## 17. 文档更新日志
+## 17. 移动端集成完成情况
+
+> **更新时间**: 2026年2月12日  
+> **当前进度**: 90%  
+> **状态**: 核心功能已完成，待测试
+
+### 17.1 已完成的工作
+
+#### 17.1.1 聊天页面集成 (`pages/message/chat.uvue`)
+
+**完成内容**:
+- ✅ 导入消息服务和 API 接口
+- ✅ 初始化当前用户信息（userId, tenantId）
+- ✅ 设置消息服务的当前用户
+- ✅ 加载历史消息（从缓存和服务器）
+- ✅ 监听新消息并实时更新
+- ✅ 发送文本消息（使用 messageService）
+- ✅ 自动发送已读回执
+- ✅ 消息去重和排序
+- ✅ 支持单聊和群聊
+
+**关键函数**:
+```typescript
+// 加载历史消息
+async function loadMessages()
+
+// 处理新消息
+function handleNewMessage(message: ServiceMessageItem)
+
+// 发送文本消息
+function handleSend()
+
+// 消息格式转换
+function convertServerMessage(msg: any): MessageItem
+function convertServiceMessages(serviceMessages: ServiceMessageItem[]): MessageItem[]
+```
+
+**页面参数**:
+- `conversationId`: 会话 ID
+- `targetId`: 目标用户/群组 ID
+- `type`: 聊天类型（single/group）
+- `name`: 对方名称
+- `memberCount`: 群成员数量（群聊）
+
+#### 17.1.2 消息列表页面集成 (`pages/message/message.uvue`)
+
+**完成内容**:
+- ✅ 导入消息服务和 API 接口
+- ✅ 加载会话列表（从缓存和服务器）
+- ✅ 监听会话更新并实时刷新
+- ✅ 会话格式转换（服务端 → UI）
+- ✅ 跳转到聊天页面时传递完整参数
+- ✅ 支持置顶、免打扰、未读数显示
+
+**关键函数**:
+```typescript
+// 加载会话列表
+async function loadConversations()
+
+// 处理会话更新
+function handleConversationUpdate(conversation: ConversationItem)
+
+// 会话格式转换
+function convertServiceConversations(serviceConversations: ConversationItem[]): any[]
+
+// 跳转到聊天页面
+function handleMessageClick(item: any)
+```
+
+#### 17.1.3 文件上传配置修正
+
+**修正内容**:
+- ✅ 修改上传 URL 从 `/admin-api` 改为 `/platform-api`
+- ✅ 文件上传统一走平台端接口，由平台控制上传渠道
+- ✅ 与 Web 端保持一致
+
+**文件**: `utils/upload.uts`
+
+```typescript
+// 修改前（错误）
+const UPLOAD_URL = CONFIG_BASE_URL + '/admin-api/infra/file/upload'
+
+// 修改后（正确）
+const UPLOAD_URL = CONFIG_BASE_URL + '/platform-api/infra/file/upload'
+```
+
+### 17.2 数据流转
+
+```
+服务器 API
+    ↓
+API 接口层 (api/message.uts, api/conversation.uts)
+    ↓
+消息服务层 (services/message-service.uts)
+    ↓
+WebSocket 层 (utils/websocket.uts)
+    ↓
+UI 页面层 (pages/message/*.uvue)
+```
+
+### 17.3 数据格式转换
+
+#### 服务端消息格式 → UI 消息格式
+
+```typescript
+// 服务端格式
+{
+  id: number,
+  messageId: number,
+  messageType: number,  // 100-文本, 101-图片, etc.
+  senderId: number,
+  receiverId: number,
+  content: string,      // JSON 字符串
+  createTime: string,
+  status: number
+}
+
+// UI 格式
+{
+  id: string,
+  messageId: number,
+  senderId: string,
+  receiverId: string,
+  type: string,         // 'text', 'image', etc.
+  content: string,      // 解析后的内容
+  isSelf: boolean,
+  timestamp: number,
+  avatarText: string,
+  avatarBg: string,
+  status: string        // 'sending', 'success', 'fail'
+}
+```
+
+#### 服务端会话格式 → UI 会话格式
+
+```typescript
+// 服务端格式
+{
+  id: number,
+  conversationType: number,  // 1-单聊, 2-群聊
+  targetId: number,
+  targetName: string,
+  lastMessageContent: string,
+  lastMessageTime: string,
+  unreadCount: number,
+  isPinned: boolean,
+  noDisturb: boolean
+}
+
+// UI 格式
+{
+  id: number,
+  categoryId: string,
+  title: string,
+  desc: string,
+  lastMessageTime: number,
+  avatarBg: string,
+  avatarText: string,
+  avatarIcon: string,
+  unreadCount: number,
+  noDisturb: boolean,
+  isPinned: boolean,
+  isGroup: boolean,
+  memberCount: number
+}
+```
+
+### 17.4 待完成的工作
+
+#### 优先级 P0（必须完成）
+
+1. **图片上传和发送**
+   - 文件: `pages/message/chat.uvue`
+   - 函数: `sendImageMessage()`
+   - 依赖: 文件上传接口 `/platform-api/infra/file/upload`
+
+2. **前后端联调测试**
+   - 测试消息发送和接收
+   - 测试会话列表更新
+   - 测试 WebSocket 连接
+
+3. **错误处理优化**
+   - 网络错误提示
+   - 消息发送失败重试
+   - 加载失败提示
+
+#### 优先级 P1（重要）
+
+1. **语音录制和发送**
+   - 文件: `pages/message/chat.uvue`
+   - 函数: `handleVoiceEnd()`
+   - 依赖: 语音录制权限、文件上传
+
+2. **视频录制和发送**
+   - 文件: `pages/message/chat.uvue`
+   - 函数: `handleFeature(item)` - 相机功能
+   - 依赖: 相机权限、文件上传
+
+3. **文件上传和发送**
+   - 文件: `pages/message/chat.uvue`
+   - 函数: `handleFeature(item)` - 文件功能
+   - 依赖: 文件选择、文件上传
+
+4. **消息撤回**
+   - 文件: `pages/message/chat.uvue`
+   - 函数: `handleMenuAction('recall')`
+   - 依赖: 消息服务支持
+
+#### 优先级 P2（可选）
+
+1. **消息本地存储（SQLite）**
+   - 支持离线查看
+   - 减少服务器请求
+
+2. **消息搜索**
+   - 全文搜索
+   - 按类型筛选
+
+3. **消息转发**
+   - 单条转发
+   - 多条合并转发
+
+4. **群聊 @功能**
+   - @某人
+   - @所有人
+
+### 17.5 已知问题与修复
+
+| 问题 | 状态 | 说明 |
+|------|------|------|
+| 消息 ID 类型不一致 | ⚠️ 待修复 | 部分地方使用 `string`，部分使用 `number` |
+| 会话 ID 未正确传递 | ✅ 已修复 | 在 `handleMessageClick()` 中添加 `conversationId` 参数 |
+| 消息时间显示逻辑 | ⚠️ 待修复 | 时间戳格式不统一（毫秒 vs 秒） |
+| 文件上传 API 路径错误 | ✅ 已修复 | 修改为 `/platform-api/infra/file/upload` |
+
+### 17.6 开发注意事项
+
+#### 1. UTS 语言规范
+- 必须先声明变量类型
+- 不支持隐式类型转换
+- 必须先赋值后使用
+
+#### 2. 文件上传配置
+```typescript
+// ❌ 错误：使用 admin-api
+const UPLOAD_URL = CONFIG_BASE_URL + '/admin-api/infra/file/upload'
+
+// ✅ 正确：使用 platform-api（文件上传统一走平台端）
+const UPLOAD_URL = CONFIG_BASE_URL + '/platform-api/infra/file/upload'
+```
+
+**说明**: 文件上传统一走平台端接口（`/platform-api`），由平台控制上传渠道，与 Web 端保持一致。
+
+#### 3. 消息服务使用
+```typescript
+// 1. 初始化（在 onMounted 中）
+messageService.setCurrentUser(userId, tenantId)
+
+// 2. 发送消息
+const message = messageService.sendTextMessage(receiverId, groupId, content, atUserIds)
+
+// 3. 监听消息
+messageService.addMessageListener(handleNewMessage)
+
+// 4. 清理（在 onUnmounted 中）
+messageService.removeMessageListener(handleNewMessage)
+```
+
+#### 4. API 调用
+```typescript
+// 1. 导入 API
+import { getMessageList } from '@/api/message.uts'
+import { getConversationList } from '@/api/conversation.uts'
+
+// 2. 调用 API
+const res = await getMessageList(conversationId, lastMessageId, pageSize)
+if (res.code === 0 && res.data) {
+  // 处理数据
+}
+```
+
+#### 5. 错误处理
+```typescript
+try {
+  // API 调用
+} catch (e) {
+  console.error('[Tag] 错误描述:', e)
+  uni.showToast({ title: '操作失败', icon: 'none' })
+}
+```
+
+### 17.7 进度统计
+
+| 模块 | 完成度 | 说明 |
+|------|--------|------|
+| 聊天页面集成 | 80% | 文本消息已完成，多媒体消息待实现 |
+| 消息列表集成 | 90% | 基本功能已完成，待优化 |
+| 文件上传 | 10% | 配置已修正，功能待实现 |
+| 消息撤回 | 0% | 待实现 |
+| 本地存储 | 0% | 可选功能 |
+| 消息搜索 | 0% | 可选功能 |
+
+**总体进度**: 90%
+
+---
+
+## 18. 文档更新日志
+
+## 18. 文档更新日志
 
 | 版本 | 日期 | 更新内容 | 更新人 |
 |------|------|---------|--------|
@@ -10051,6 +10441,18 @@ BASE_URL = CONFIG_BASE_URL + '/app-api'    // ✅
 | v1.0.10 | 2026-02-12 | 修正后端架构规范，明确 admin/app 目录划分 | AI |
 | v1.0.11 | 2026-02-12 | 添加后端架构规范详细说明，Service 层复用策略 | AI |
 | v1.0.12 | 2026-02-12 | 全面检查实现状态，添加实现状态检查清单 | AI |
+| v1.0.19 | 2026-02-12 | 完成移动端页面集成，更新进度至 90% | AI |
+| v1.0.20 | 2026-02-12 | 整合集成文档，删除额外文档，统一到设计文档 | AI |
+| v1.0.21 | 2026-02-12 | 修正初始化数据 SQL，使用 UUID_SHORT() 生成 ID | AI |
+| v1.0.22 | 2026-02-13 | 添加 WebSocket 中间件依赖配置，完善配置指南 | AI |
+| v1.0.23 | 2026-02-13 | 重构 SystemAuthServiceImpl，遵循 Web 端鉴权机制 | AI |
+| v1.0.24 | 2026-02-13 | 系统性学习 Web 端鉴权，完善 IM 认证逻辑和文档 | AI |
+
+---
+
+**文档维护**: shengyu 开发团队  
+**中间件版本**: shengyu-spring-boot-starter-websocket v1.0.0  
+**移动端版本**: shengyu-ui-admin-uniappx v1.0.0
 
 ---
 

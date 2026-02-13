@@ -1,12 +1,14 @@
 /**
  * 文件上传工具类
  * 兼容 Android、iOS、Web 三端
+ * 
+ * 说明：文件上传统一走平台端接口（/platform-api），由平台控制上传渠道
  */
 import { BASE_URL as CONFIG_BASE_URL } from '../config/app.config.uts'
 import { getToken, getTenantId } from './request.uts'
 
-// 上传配置
-const UPLOAD_URL = CONFIG_BASE_URL + '/admin-api/infra/file/upload'
+// 上传配置 - 使用平台端接口
+const UPLOAD_URL = CONFIG_BASE_URL + '/platform-api/infra/file/upload'
 
 /**
  * 上传进度回调类型

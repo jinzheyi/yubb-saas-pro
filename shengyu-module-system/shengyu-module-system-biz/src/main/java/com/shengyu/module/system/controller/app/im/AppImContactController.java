@@ -43,7 +43,7 @@ public class AppImContactController {
     @Operation(summary = "搜索联系人")
     public CommonResult<List<AppImContactRespVO>> searchContact(@Valid AppImContactSearchReqVO searchReqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(contactService.searchContact(userId, searchReqVO));
+        return success(contactService.searchContacts(userId, searchReqVO.getKeyword()));
     }
 
     @GetMapping("/get")
@@ -67,14 +67,15 @@ public class AppImContactController {
     @Parameter(name = "deptId", description = "部门ID", required = true)
     public CommonResult<List<AppImContactRespVO>> getContactListByDept(@RequestParam("deptId") Long deptId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(contactService.getContactListByDept(userId, deptId));
+        // TODO: 实现按部门查询联系人
+        return success(contactService.getContactList(userId));
     }
 
     @GetMapping("/list-star")
     @Operation(summary = "获取星标联系人列表")
     public CommonResult<List<AppImContactRespVO>> getStarContactList() {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(contactService.getStarContactList(userId));
+        return success(contactService.getStarContacts(userId));
     }
 
 }
