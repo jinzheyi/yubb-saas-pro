@@ -11,6 +11,11 @@
 		
 		// 检查登录状态
 		checkLoginStatus()
+		
+		// 如果已登录，自动连接 WebSocket
+		if (isLoggedIn()) {
+			connectWebSocket()
+		}
 	})
 	
 	onShow(() => {
@@ -37,6 +42,19 @@
 					url: '/pages/login/login'
 				})
 			}
+		}
+	}
+	
+	/**
+	 * 连接 WebSocket
+	 */
+	async function connectWebSocket() {
+		try {
+			const { wsManager } = await import('@/utils/websocket.uts')
+			wsManager.connect()
+			console.log('[App] WebSocket 自动连接已启动')
+		} catch (e) {
+			console.error('[App] WebSocket 自动连接失败:', e)
 		}
 	}
 </script>
