@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 
 /**
- * System 模块 - IM 认证服务实现
+ * System 模块 - WebSocket 认证服务实现
  * 
  * 实现 WebSocket 中间件的 AuthService SPI 接口
  * 负责验证 WebSocket 连接的 Token，支持租户端认证
@@ -33,11 +33,21 @@ import javax.annotation.Resource;
  * - 共同点：都使用 OAuth2TokenService.checkAccessToken() 验证 Token
  * - 差异点：Web 端需要完整用户信息（权限、角色等），IM 端只需要基本身份信息
  *
+ * Bean 命名说明：
+ * - 类名：WebSocketAuthServiceImpl
+ * - Bean名称：webSocketAuthServiceImpl（Spring自动生成）
+ * - 实现接口：com.shengyu.framework.websocket.core.service.AuthService
+ * - 不会与 AdminAuthService（不同接口）冲突
+ * 
+ * 注意：
+ * - 不使用 @Primary，因为 AdminAuthService 和 AuthService 是不同的接口
+ * - WebSocket 中间件会通过类型自动注入此实现
+ *
  * @author 圣钰科技
  */
 @Service
 @Slf4j
-public class SystemAuthServiceImpl implements AuthService {
+public class WebSocketAuthServiceImpl implements AuthService {
 
     @Resource
     private OAuth2TokenService oauth2TokenService;
