@@ -1,1 +1,2 @@
 com.shengyu.framework.websocket.config.ShengyuWebSocketAutoConfiguration
+com.shengyu.framework.websocket.config.NettyAutoConfiguration

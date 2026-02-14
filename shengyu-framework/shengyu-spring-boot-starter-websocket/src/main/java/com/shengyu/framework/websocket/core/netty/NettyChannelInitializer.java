@@ -52,10 +52,10 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
                 new WebSocketServerProtocolHandler(nettyProperties.getWebSocketPath(), null, true));
             // WebSocket 帧处理器
             pipeline.addLast("websocket-frame-handler", webSocketFrameHandler);
-        }
-
-        // ========== Protobuf 协议支持（内部） ==========
-        if (nettyProperties.getEnableProtobuf()) {
+        } 
+        // ========== Protobuf 协议支持（内部 TCP 直连） ==========
+        // 注意：WebSocket 和 Protobuf 不能同时启用，WebSocket 使用 JSON 格式
+        else if (nettyProperties.getEnableProtobuf()) {
             // Protobuf 解码器（处理粘包拆包）
             pipeline.addLast("protobuf-frame-decoder", new ProtobufVarint32FrameDecoder());
             pipeline.addLast("protobuf-decoder", 

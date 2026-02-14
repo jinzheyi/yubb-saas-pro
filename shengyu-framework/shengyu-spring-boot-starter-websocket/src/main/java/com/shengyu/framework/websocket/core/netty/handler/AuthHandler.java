@@ -1,14 +1,18 @@
 package com.shengyu.framework.websocket.core.netty.handler;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.shengyu.framework.security.core.util.LoginBase;
 import com.shengyu.framework.websocket.core.protocol.*;
 import com.shengyu.framework.websocket.core.service.AuthService;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,10 +25,13 @@ import lombok.extern.slf4j.Slf4j;
  * 2. 平台端（platform）认证
  * 3. Token 验证
  * 4. 多设备登录
+ * 5. JSON 格式消息（WebSocket）
+ * 6. Protobuf 格式消息（TCP）
  *
  * @author 圣钰科技
  */
 @Slf4j
+@ChannelHandler.Sharable  // 标记为可共享的Handler
 public class AuthHandler extends ChannelInboundHandlerAdapter {
 
     private static final AttributeKey<Boolean> AUTH_KEY = AttributeKey.valueOf("AUTH");
@@ -47,32 +54,55 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        // 只处理认证消息
-        if (msg instanceof ImMessage) {
+        // 处理 JSON 格式认证消息（WebSocket）
+        if (msg instanceof String) {
+            String text = (String) msg;
+            try {
+                JSONObject json = JSONUtil.parseObj(text);
+                JSONObject header = json.getJSONObject("header");
+                if (header != null && header.getInt("messageType") == MessageType.AUTH_REQ_VALUE) {
+                    handleJsonAuthRequest(ctx, json);
+                    return;
+                }
+            } catch (Exception e) {
+                log.error("[Auth] JSON 认证请求解析失败: {}", text, e);
+                sendJsonAuthResponse(ctx, false, 400, "请求格式错误", 0L, 0L);
+                ctx.close();
+                return;
+            }
+        }
+        // 处理 Protobuf 格式认证消息（TCP）
+        else if (msg instanceof ImMessage) {
             ImMessage imMessage = (ImMessage) msg;
             if (imMessage.getHeader().getMessageType() == MessageType.AUTH_REQ) {
-                handleAuthRequest(ctx, imMessage);
+                handleProtobufAuthRequest(ctx, imMessage);
                 return;
             }
         }
 
         // 未认证且不是认证消息，拒绝处理
-        log.warn("[Auth] 未认证的连接尝试发送消息: {}", ctx.channel().id().asShortText());
-        sendAuthResponse(ctx, false, 401, "未认证，请先发送认证请求", 0L, 0L);
+        log.warn("[Auth] 未找到认证请求: {}, msgType: {}", ctx.channel().id().asShortText(), msg.getClass().getSimpleName());
+        if (msg instanceof String) {
+            sendJsonAuthResponse(ctx, false, 401, "未认证，请先发送认证请求", 0L, 0L);
+        } else {
+            sendProtobufAuthResponse(ctx, false, 401, "未认证，请先发送认证请求", 0L, 0L);
+        }
         ctx.close();
     }
 
     /**
-     * 处理认证请求
+     * 处理 JSON 格式认证请求
      */
-    private void handleAuthRequest(ChannelHandlerContext ctx, ImMessage message) {
+    private void handleJsonAuthRequest(ChannelHandlerContext ctx, JSONObject json) {
         try {
-            // 解析认证请求
-            AuthRequest authRequest = AuthRequest.parseFrom(message.getBody());
-            String accessToken = authRequest.getAccessToken();
+            JSONObject body = json.getJSONObject("body");
+            String accessToken = body.getStr("accessToken");
+            Integer deviceType = body.getInt("deviceType", 0);
+            String deviceId = body.getStr("deviceId", "");
+            String clientVersion = body.getStr("clientVersion", "");
 
             if (StrUtil.isBlank(accessToken)) {
-                sendAuthResponse(ctx, false, 400, "Token 不能为空", 0L, 0L);
+                sendJsonAuthResponse(ctx, false, 400, "Token 不能为空", 0L, 0L);
                 ctx.close();
                 return;
             }
@@ -80,7 +110,69 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             // 验证 Token（集成项目鉴权）
             LoginBase loginUser = authService.validateToken(accessToken);
             if (loginUser == null) {
-                sendAuthResponse(ctx, false, 401, "Token 无效或已过期", 0L, 0L);
+                sendJsonAuthResponse(ctx, false, 401, "Token 无效或已过期", 0L, 0L);
+                ctx.close();
+                return;
+            }
+
+            // 获取租户ID（如果是租户端用户）
+            Long tenantId = authService.getTenantId(loginUser);
+
+            // 认证成功，标记为已认证
+            ctx.channel().attr(AUTH_KEY).set(true);
+            ctx.channel().attr(USER_ID_KEY).set(loginUser.getId());
+            if (tenantId != null) {
+                ctx.channel().attr(TENANT_ID_KEY).set(tenantId);
+            }
+
+            // 创建会话
+            NettySession session = NettySession.builder()
+                .channel(ctx.channel())
+                .userId(loginUser.getId())
+                .tenantId(tenantId)
+                .userType(loginUser.getUserType())
+                .nickname(loginUser.getNickname())
+                .deviceType(deviceType)
+                .deviceId(deviceId)
+                .clientVersion(clientVersion)
+                .connectTime(System.currentTimeMillis())
+                .lastActiveTime(System.currentTimeMillis())
+                .build();
+
+            sessionManager.addSession(session);
+
+            // 发送认证成功响应
+            sendJsonAuthResponse(ctx, true, 0, "认证成功", loginUser.getId(), tenantId);
+
+            log.info("[Auth] JSON 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}",
+                loginUser.getId(), tenantId, loginUser.getUserType(), ctx.channel().id().asShortText());
+
+        } catch (Exception e) {
+            log.error("[Auth] JSON 认证处理异常", e);
+            sendJsonAuthResponse(ctx, false, 500, "服务器内部错误", 0L, 0L);
+            ctx.close();
+        }
+    }
+
+    /**
+     * 处理 Protobuf 格式认证请求
+     */
+    private void handleProtobufAuthRequest(ChannelHandlerContext ctx, ImMessage message) {
+        try {
+            // 解析认证请求
+            AuthRequest authRequest = AuthRequest.parseFrom(message.getBody());
+            String accessToken = authRequest.getAccessToken();
+
+            if (StrUtil.isBlank(accessToken)) {
+                sendProtobufAuthResponse(ctx, false, 400, "Token 不能为空", 0L, 0L);
+                ctx.close();
+                return;
+            }
+
+            // 验证 Token（集成项目鉴权）
+            LoginBase loginUser = authService.validateToken(accessToken);
+            if (loginUser == null) {
+                sendProtobufAuthResponse(ctx, false, 401, "Token 无效或已过期", 0L, 0L);
                 ctx.close();
                 return;
             }
@@ -112,27 +204,47 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             sessionManager.addSession(session);
 
             // 发送认证成功响应
-            sendAuthResponse(ctx, true, 0, "认证成功", loginUser.getId(), tenantId);
+            sendProtobufAuthResponse(ctx, true, 0, "认证成功", loginUser.getId(), tenantId);
 
-            log.info("[Auth] 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}",
+            log.info("[Auth] Protobuf 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}",
                 loginUser.getId(), tenantId, loginUser.getUserType(), ctx.channel().id().asShortText());
 
         } catch (InvalidProtocolBufferException e) {
-            log.error("[Auth] 解析认证请求失败", e);
-            sendAuthResponse(ctx, false, 400, "请求格式错误", 0L, 0L);
+            log.error("[Auth] 解析 Protobuf 认证请求失败", e);
+            sendProtobufAuthResponse(ctx, false, 400, "请求格式错误", 0L, 0L);
             ctx.close();
         } catch (Exception e) {
-            log.error("[Auth] 认证处理异常", e);
-            sendAuthResponse(ctx, false, 500, "服务器内部错误", 0L, 0L);
+            log.error("[Auth] Protobuf 认证处理异常", e);
+            sendProtobufAuthResponse(ctx, false, 500, "服务器内部错误", 0L, 0L);
             ctx.close();
         }
     }
 
     /**
-     * 发送认证响应
+     * 发送 JSON 格式认证响应
      */
-    private void sendAuthResponse(ChannelHandlerContext ctx, boolean success, int code,
-                                  String message, Long userId, Long tenantId) {
+    private void sendJsonAuthResponse(ChannelHandlerContext ctx, boolean success, int code,
+                                     String message, Long userId, Long tenantId) {
+        JSONObject response = JSONUtil.createObj()
+            .set("header", JSONUtil.createObj()
+                .set("messageId", System.currentTimeMillis())
+                .set("messageType", MessageType.AUTH_RESP_VALUE)
+                .set("timestamp", System.currentTimeMillis()))
+            .set("body", JSONUtil.createObj()
+                .set("success", success)
+                .set("code", code)
+                .set("message", message)
+                .set("userId", userId != null ? userId : 0L)
+                .set("tenantId", tenantId != null ? tenantId : 0L));
+
+        ctx.writeAndFlush(new TextWebSocketFrame(response.toString()));
+    }
+
+    /**
+     * 发送 Protobuf 格式认证响应
+     */
+    private void sendProtobufAuthResponse(ChannelHandlerContext ctx, boolean success, int code,
+                                         String message, Long userId, Long tenantId) {
         AuthResponse authResponse = AuthResponse.newBuilder()
             .setSuccess(success)
             .setCode(code)

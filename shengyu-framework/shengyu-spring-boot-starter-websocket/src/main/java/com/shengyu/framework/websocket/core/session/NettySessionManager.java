@@ -298,4 +298,17 @@ public class NettySessionManager {
         tenantChannelMap.clear();
         log.info("[SessionManager] 清理所有会话");
     }
+
+    /**
+     * 更新会话最后活跃时间
+     */
+    public void updateLastActiveTime(Channel channel) {
+        if (channel == null) {
+            return;
+        }
+        NettySession session = getSession(channel);
+        if (session != null) {
+            session.updateLastActiveTime();
+        }
+    }
 }

@@ -1,6 +1,7 @@
 package com.shengyu.framework.websocket.core.netty.handler;
 
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.*;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ChannelHandler.Sharable  // 标记为可共享的Handler
 public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
     private final NettySessionManager sessionManager;
