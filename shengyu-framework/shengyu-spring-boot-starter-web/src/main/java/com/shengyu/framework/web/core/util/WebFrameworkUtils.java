@@ -105,7 +105,7 @@ public class WebFrameworkUtils {
             return UserTypeEnum.ADMIN.getValue();
         }
         if (request.getRequestURI().startsWith(properties.getAppApi().getPrefix())) {
-            return UserTypeEnum.MEMBER.getValue();
+            return UserTypeEnum.ADMIN.getValue();
         }
         return null;
     }
