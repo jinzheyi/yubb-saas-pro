@@ -157,6 +157,7 @@ export default {
 		menu: {
 			copy: 'Copy',
 			forward: 'Forward',
+			recall: 'Recall',
 			delete: 'Delete',
 			favorite: 'Favorite',
 			multi: 'Multi-select',

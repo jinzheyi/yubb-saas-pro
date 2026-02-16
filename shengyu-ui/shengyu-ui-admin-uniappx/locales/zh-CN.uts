@@ -153,10 +153,11 @@ export default {
 			fav: '收藏',
 			voice: '语音输入',
 			paint: '画板'
-		}
+		},
 		menu: {
 			copy: '复制',
 			forward: '转发',
+			recall: '撤回',
 			delete: '删除',
 			favorite: '收藏',
 			multi: '多选',

@@ -178,7 +178,7 @@ export function chooseAndUploadVideo(
 
 
 /**
- * 选择并上传文件（仅 H5 支持）
+ * 选择并上传文件（支持 H5、Android、iOS）
  * @param accept 接受的文件类型（如 'image/*', '.pdf'）
  * @param directory 目录（可选）
  * @param onProgress 进度回调（可选）
@@ -189,8 +189,8 @@ export function chooseAndUploadFile(
 	directory?: string,
 	onProgress?: UploadProgressCallback
 ): Promise<UploadResult> {
-	// #ifdef H5
 	return new Promise((resolve, reject) => {
+		// #ifdef H5
 		uni.chooseFile({
 			count: 1,
 			extension: [accept],
@@ -206,12 +206,46 @@ export function chooseAndUploadFile(
 				reject(err)
 			}
 		})
+		// #endif
+		
+		// #ifdef APP-PLUS
+		// App 平台使用 chooseMessageFile 选择文件
+		uni.chooseMessageFile({
+			count: 1,
+			type: 'all',  // 'all' | 'video' | 'image' | 'file'
+			success: async (res) => {
+				try {
+					const result = await uploadFile(res.tempFiles[0].path, directory, onProgress)
+					resolve(result)
+				} catch (e) {
+					reject(e)
+				}
+			},
+			fail: (err) => {
+				reject(err)
+			}
+		})
+		// #endif
+		
+		// #ifdef MP-WEIXIN
+		// 微信小程序使用 chooseMessageFile
+		uni.chooseMessageFile({
+			count: 1,
+			type: 'all',
+			success: async (res) => {
+				try {
+					const result = await uploadFile(res.tempFiles[0].path, directory, onProgress)
+					resolve(result)
+				} catch (e) {
+					reject(e)
+				}
+			},
+			fail: (err) => {
+				reject(err)
+			}
+		})
+		// #endif
 	})
-	// #endif
-	
-	// #ifndef H5
-	return Promise.reject(new Error('当前平台不支持选择文件'))
-	// #endif
 }
 
 /**

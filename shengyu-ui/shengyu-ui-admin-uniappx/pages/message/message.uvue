@@ -138,7 +138,7 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { messageService, ConversationItem } from '../../services/message-service.uts'
-	import { getConversationList } from '../../api/conversation.uts'
+	import { getConversationList, deleteConversation, pinConversation, setNoDisturb, clearUnreadCount } from '../../api/conversation.uts'
 
 	const { t } = useI18n()
 
@@ -569,31 +569,84 @@
 		showContextMenu.value = false
 	}
 
-	function handleMenuAction(action : string) {
+	async function handleMenuAction(action : string) {
 		if (!selectedItem.value) return
 		
 		const targetItem = selectedItem.value
-		switch (action) {
-			case 'pin':
-				targetItem.isPinned = !targetItem.isPinned
-				if (targetItem.isPinned) {
-					targetItem.pinnedTime = Date.now()
-				} else {
-					targetItem.pinnedTime = 0
-				}
-				break
-			case 'unread':
-				if (targetItem.unreadCount > 0) {
-					targetItem.unreadCount = 0
-				} else {
-					targetItem.unreadCount = 1
-				}
-				break
-			case 'remove':
-				const index = messageList.value.findIndex(i => i.id === targetItem.id)
-				if (index > -1) messageList.value.splice(index, 1)
-				break
+		
+		try {
+			switch (action) {
+				case 'pin':
+					// 调用置顶 API
+					const newPinnedState = !targetItem.isPinned
+					await pinConversation(targetItem.id, newPinnedState)
+					
+					// 更新本地状态
+					targetItem.isPinned = newPinnedState
+					if (targetItem.isPinned) {
+						targetItem.pinnedTime = Date.now()
+					} else {
+						targetItem.pinnedTime = 0
+					}
+					
+					uni.showToast({
+						title: newPinnedState ? '已置顶' : '已取消置顶',
+						icon: 'success'
+					})
+					break
+					
+				case 'unread':
+					// 标记已读/未读
+					if (targetItem.unreadCount > 0) {
+						// 清空未读数
+						await clearUnreadCount(targetItem.id)
+						targetItem.unreadCount = 0
+						uni.showToast({
+							title: '已标记为已读',
+							icon: 'success'
+						})
+					} else {
+						// 标记为未读（设置未读数为1）
+						targetItem.unreadCount = 1
+						uni.showToast({
+							title: '已标记为未读',
+							icon: 'success'
+						})
+					}
+					break
+					
+				case 'remove':
+					// 删除会话
+					uni.showModal({
+						title: '删除会话',
+						content: '确定要删除该会话吗？',
+						success: async (res) => {
+							if (res.confirm) {
+								await deleteConversation(targetItem.id)
+								
+								// 从列表中移除
+								const index = messageList.value.findIndex(i => i.id === targetItem.id)
+								if (index > -1) {
+									messageList.value.splice(index, 1)
+								}
+								
+								uni.showToast({
+									title: '已删除',
+									icon: 'success'
+								})
+							}
+						}
+					})
+					break
+			}
+		} catch (e) {
+			console.error('[Message] 操作失败:', e)
+			uni.showToast({
+				title: '操作失败',
+				icon: 'none'
+			})
 		}
+		
 		closeMenu()
 	}
 

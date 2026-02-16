@@ -40,18 +40,28 @@
             },
             "android" : {
                 "permissions" : [
+                    "<uses-permission android:name=\"android.permission.INTERNET\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"/>",
                     "<uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>",
                     "<uses-permission android:name=\"android.permission.CAMERA\"/>",
                     "<uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\"/>",
                     "<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\"/>",
-                    "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>"
+                    "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_MEDIA_VIDEO\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_MEDIA_AUDIO\"/>",
+                    "<uses-permission android:name=\"android.permission.VIBRATE\"/>",
+                    "<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>"
                 ]
             },
             "ios" : {
                 "privacyDescription" : {
                     "NSMicrophoneUsageDescription" : "我们需要您的麦克风权限来录制语音消息",
-                    "NSCameraUsageDescription" : "我们需要您的相机权限来拍摄照片",
-                    "NSPhotoLibraryUsageDescription" : "我们需要您的相册权限来发送图片消息"
+                    "NSCameraUsageDescription" : "我们需要您的相机权限来拍摄照片和录制视频",
+                    "NSPhotoLibraryUsageDescription" : "我们需要您的相册权限来发送图片和视频消息",
+                    "NSPhotoLibraryAddUsageDescription" : "我们需要您的相册权限来保存图片和视频",
+                    "NSLocationWhenInUseUsageDescription" : "我们需要您的位置权限来发送位置消息"
                 }
             }
         }

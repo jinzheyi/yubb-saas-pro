@@ -267,7 +267,8 @@
 	import { getCustomStickers, StickerItem } from '../../utils/stickerManager.uts'
 	import { messageService, MessageItem as ServiceMessageItem, ConversationItem } from '../../services/message-service.uts'
 	import { MessageType } from '../../utils/websocket.uts'
-	import { getMessageList } from '../../api/message.uts'
+	import { getMessageList, recallMessage, deleteMessage } from '../../api/message.uts'
+	import { clearUnreadCount as clearUnreadCountApi } from '../../api/conversation.uts'
 	import { getUserId, getTenantIdAsNumber } from '../../store/user.uts'
 	import { uploadFile, chooseAndUploadImage, chooseAndUploadVideo, chooseAndUploadFile } from '../../utils/upload.uts'
 
@@ -360,9 +361,13 @@
 		// 4. 监听新消息
 		messageService.addMessageListener(handleNewMessage)
 		
-		// 5. 清空未读数
+		// 5. 清空未读数（本地 + 服务端）
 		if (conversationId.value > 0) {
 			messageService.clearUnreadCount(conversationId.value)
+			// 同时调用后端 API 清空未读数
+			clearUnreadCountApi(conversationId.value).catch((e) => {
+				console.error('[Chat] 清空未读数失败:', e)
+			})
 		}
 		
 		scrollToBottom()
@@ -743,8 +748,26 @@
 		recordStartY.value = e.touches[0].pageY
 		isRecording.value = true
 		isCancelReady.value = false
-		// 模拟请求权限并开始录音
-		console.log('开始录音，检查权限：RECORD_AUDIO')
+		
+		// 开始录音
+		uni.getRecorderManager().start({
+			duration: 60000,  // 最长录音时间 60 秒
+			sampleRate: 16000,
+			numberOfChannels: 1,
+			encodeBitRate: 48000,
+			format: 'mp3',
+			success: () => {
+				console.log('[Chat] 开始录音')
+			},
+			fail: (err) => {
+				console.error('[Chat] 录音失败:', err)
+				uni.showToast({
+					title: '录音失败，请检查麦克风权限',
+					icon: 'none'
+				})
+				isRecording.value = false
+			}
+		})
 	}
 
 	function handleVoiceMove(e : TouchEvent) {
@@ -785,17 +808,65 @@
 
 	function handleVoiceEnd() {
 		if (isCancelReady.value) {
-			console.log('取消录音')
+			console.log('[Chat] 取消录音')
+			// 停止录音
+			uni.getRecorderManager().stop()
 		} else {
-			console.log('录音结束，发送语音')
-			messages.value.push(createMessage({
-				type: 'voice',
-				content: 'mock_voice_url',
-				duration: Math.floor(Math.random() * 58) + 2,
-				isSelf: true
-			}))
-			scrollToBottom()
+			console.log('[Chat] 录音结束，准备上传')
+			
+			// 停止录音并获取录音文件
+			uni.getRecorderManager().stop()
+			
+			// 监听录音结束事件
+			uni.getRecorderManager().onStop((res) => {
+				const tempFilePath = res.tempFilePath
+				const duration = Math.floor(res.duration / 1000)  // 转换为秒
+				
+				console.log('[Chat] 录音文件:', tempFilePath, '时长:', duration)
+				
+				// 上传语音文件
+				uploadFile(tempFilePath, 'im/voice', (progress) => {
+					console.log('[Chat] 上传进度:', progress)
+				}).then((result) => {
+					const voiceUrl = result.data.url
+					const voiceSize = result.data.size
+					
+					// 使用消息服务发送语音消息
+					const message = messageService.sendVoiceMessage(
+						chatType.value === 'single' ? targetId.value : 0,
+						chatType.value === 'group' ? targetId.value : 0,
+						voiceUrl,
+						duration,
+						voiceSize
+					)
+					
+					// 转换并添加到消息列表
+					const uiMessage = {
+						id: message.id.toString(),
+						messageId: message.messageId,
+						senderId: message.senderId.toString(),
+						receiverId: message.receiverId.toString(),
+						type: 'voice',
+						content: voiceUrl,
+						duration: duration,
+						isSelf: true,
+						time: new Date(message.timestamp).toLocaleString(),
+						timestamp: message.timestamp,
+						showTime: true,
+						avatarText: message.avatarText,
+						avatarBg: message.avatarBg,
+						status: message.status
+					} as MessageItem
+					
+					messages.value.push(uiMessage)
+					scrollToBottom()
+				}).catch((err) => {
+					console.error('[Chat] 上传语音失败:', err)
+					uni.showToast({ title: '上传失败', icon: 'none' })
+				})
+			})
 		}
+		
 		isRecording.value = false
 		isCancelReady.value = false
 	}
@@ -1088,7 +1159,7 @@
 		}
 		
 		if (item.nameKey === 'chat.features.file') {
-			// 选择并上传文件
+			// 选择并上传文件（支持 H5、Android、iOS）
 			chooseAndUploadFile('*/*', 'im/file', (progress) => {
 				console.log('[Chat] 上传进度:', progress)
 			}).then((result) => {
@@ -1185,19 +1256,37 @@
         
         // 根据消息类型确定菜单项
         const isRestricted = msg.type === 'voice' || msg.type === 'location'
-        currentMenuItems.value = isRestricted
-            ? [
+        
+        // 基础菜单项
+        let menuItems : any[] = []
+        
+        if (isRestricted) {
+            // 语音和位置消息只显示引用和删除
+            menuItems = [
                 { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' },
                 { key: 'delete', labelKey: 'chat.menu.delete', icon: '\ue602' }
-              ]
-            : [
+            ]
+        } else {
+            // 其他消息类型显示完整菜单
+            menuItems = [
                 { key: 'copy', labelKey: 'chat.menu.copy', icon: '\ue7cb' },
                 { key: 'forward', labelKey: 'chat.menu.forward', icon: '\ue63d' },
                 { key: 'delete', labelKey: 'chat.menu.delete', icon: '\ue602' },
                 { key: 'favorite', labelKey: 'chat.menu.favorite', icon: '\ue83f' },
                 { key: 'multi', labelKey: 'chat.menu.multi', icon: '\ue69d' },
                 { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' }
-              ]
+            ]
+        }
+        
+        // 如果是自己发送的消息，添加撤回选项（在删除之前）
+        if (msg.isSelf) {
+            const deleteIndex = menuItems.findIndex(item => item.key === 'delete')
+            if (deleteIndex > -1) {
+                menuItems.splice(deleteIndex, 0, { key: 'recall', labelKey: 'chat.menu.recall', icon: '\ue6a0' })
+            }
+        }
+        
+        currentMenuItems.value = menuItems
         
         // 菜单尺寸（横向排列，支持换行）
         const menuItemWidth = 70 // 每个菜单项宽度
@@ -1273,37 +1362,89 @@
         }, 150)
     }
 
-    function handleMenuAction(action : string) {
+    async function handleMenuAction(action : string) {
         if (selectedMsg.value == null) return
         const msg = selectedMsg.value
-        if (action === 'copy') {
-            if (msg.type === 'text') {
-                uni.setClipboardData({ data: msg.content })
-            } else {
-                uni.showToast({ title: t('chat.menu.copy'), icon: 'none' })
+        
+        try {
+            if (action === 'copy') {
+                if (msg.type === 'text') {
+                    uni.setClipboardData({ data: msg.content })
+                } else {
+                    uni.showToast({ title: t('chat.menu.copy'), icon: 'none' })
+                }
+            } else if (action === 'forward') {
+                uni.showToast({ title: t('chat.menu.forward'), icon: 'none' })
+            } else if (action === 'recall') {
+                // 撤回消息
+                uni.showModal({
+                    title: '提示',
+                    content: '确定要撤回这条消息吗？',
+                    success: async (res) => {
+                        if (res.confirm) {
+                            try {
+                                await recallMessage(msg.messageId)
+                                
+                                // 更新本地消息状态
+                                const idx = messages.value.findIndex(m => m.id === msg.id)
+                                if (idx > -1) {
+                                    messages.value[idx].status = 'recalled'
+                                    messages.value[idx].content = '你撤回了一条消息'
+                                }
+                                
+                                uni.showToast({ title: '已撤回', icon: 'success' })
+                            } catch (e) {
+                                console.error('[Chat] 撤回消息失败:', e)
+                                uni.showToast({ title: '撤回失败', icon: 'none' })
+                            }
+                        }
+                    }
+                })
+            } else if (action === 'delete') {
+                // 删除消息
+                uni.showModal({
+                    title: '提示',
+                    content: '确定要删除这条消息吗？',
+                    success: async (res) => {
+                        if (res.confirm) {
+                            try {
+                                await deleteMessage(msg.messageId)
+                                
+                                // 从本地消息列表中移除
+                                const idx = messages.value.findIndex(m => m.id === msg.id)
+                                if (idx > -1) {
+                                    messages.value.splice(idx, 1)
+                                }
+                                
+                                uni.showToast({ title: '已删除', icon: 'success' })
+                            } catch (e) {
+                                console.error('[Chat] 删除消息失败:', e)
+                                uni.showToast({ title: '删除失败', icon: 'none' })
+                            }
+                        }
+                    }
+                })
+            } else if (action === 'favorite') {
+                if (msg.type !== 'voice' && msg.type !== 'location') {
+                    stickerList.value.unshift({ id: Date.now().toString(), url: msg.content })
+                }
+                uni.showToast({ title: t('chat.menu.favorite'), icon: 'none' })
+            } else if (action === 'multi') {
+                multiSelectMode.value = true
+                // 延迟滚动，等待布局更新
+                setTimeout(() => {
+                    scrollToBottom()
+                }, 100)
+            } else if (action === 'quote') {
+                if (editorCtx != null) {
+                    editorCtx!.insertText({ text: `"${msg.type === 'text' ? msg.content : t('chat.menu.quote')}" ` })
+                    inputText.value = 'has_content'
+                }
             }
-        } else if (action === 'forward') {
-            uni.showToast({ title: t('chat.menu.forward'), icon: 'none' })
-        } else if (action === 'delete') {
-            const idx = messages.value.findIndex(m => m.id === msg.id)
-            if (idx > -1) messages.value.splice(idx, 1)
-        } else if (action === 'favorite') {
-            if (msg.type !== 'voice' && msg.type !== 'location') {
-                stickerList.value.unshift({ id: Date.now().toString(), url: msg.content })
-            }
-            uni.showToast({ title: t('chat.menu.favorite'), icon: 'none' })
-        } else if (action === 'multi') {
-            multiSelectMode.value = true
-            // 延迟滚动，等待布局更新
-            setTimeout(() => {
-                scrollToBottom()
-            }, 100)
-        } else if (action === 'quote') {
-            if (editorCtx != null) {
-                editorCtx!.insertText({ text: `"${msg.type === 'text' ? msg.content : t('chat.menu.quote')}" ` })
-                inputText.value = 'has_content'
-            }
+        } catch (e) {
+            console.error('[Chat] 菜单操作失败:', e)
         }
+        
         closeMsgMenu()
     }
 
