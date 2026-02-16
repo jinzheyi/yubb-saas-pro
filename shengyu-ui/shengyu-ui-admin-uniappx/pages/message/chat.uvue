@@ -268,7 +268,8 @@
 	import { messageService, MessageItem as ServiceMessageItem, ConversationItem } from '../../services/message-service.uts'
 	import { MessageType } from '../../utils/websocket.uts'
 	import { getMessageList } from '../../api/message.uts'
-	import { getUserId, getTenantId } from '../../store/user.uts'
+	import { getUserId, getTenantIdAsNumber } from '../../store/user.uts'
+	import { uploadFile, chooseAndUploadImage, chooseAndUploadVideo, chooseAndUploadFile } from '../../utils/upload.uts'
 
 	const { t } = useI18n()
 	
@@ -348,7 +349,7 @@
 	onMounted(() => {
 		// 1. 获取当前用户信息
 		currentUserId.value = getUserId()
-		currentTenantId.value = getTenantId()
+		currentTenantId.value = getTenantIdAsNumber()
 		
 		// 2. 设置消息服务的当前用户
 		messageService.setCurrentUser(currentUserId.value, currentTenantId.value)
@@ -933,31 +934,227 @@
 
 	function handleFeature(item : any) {
 		if (item.nameKey === 'chat.features.album') {
+			// 选择并上传图片
+			chooseAndUploadImage(9, 'im/image', (progress) => {
+				console.log('[Chat] 上传进度:', progress)
+			}).then((results) => {
+				// 上传成功,发送图片消息
+				results.forEach((result) => {
+					const imageUrl = result.data.url
+					const imageSize = result.data.size
+					
+					// 使用消息服务发送图片消息
+					const message = messageService.sendImageMessage(
+						chatType.value === 'single' ? targetId.value : 0,
+						chatType.value === 'group' ? targetId.value : 0,
+						imageUrl,
+						imageUrl,  // 缩略图使用同一个 URL
+						0,  // 宽度(暂不获取)
+						0,  // 高度(暂不获取)
+						imageSize
+					)
+					
+					// 转换并添加到消息列表
+					const uiMessage = {
+						id: message.id.toString(),
+						messageId: message.messageId,
+						senderId: message.senderId.toString(),
+						receiverId: message.receiverId.toString(),
+						type: 'image',
+						content: imageUrl,
+						isSelf: true,
+						time: new Date(message.timestamp).toLocaleString(),
+						timestamp: message.timestamp,
+						showTime: true,
+						avatarText: message.avatarText,
+						avatarBg: message.avatarBg,
+						status: message.status
+					} as MessageItem
+					
+					messages.value.push(uiMessage)
+				})
+				
+				showPlusMenu.value = false
+				scrollToBottom()
+			}).catch((err) => {
+				console.error('[Chat] 上传图片失败:', err)
+				uni.showToast({ title: '上传失败', icon: 'none' })
+			})
+			return
+		}
+		
+		if (item.nameKey === 'chat.features.camera') {
+			// 拍照并上传
 			uni.chooseImage({
-				count: 9,
-				sourceType: ['album'],
+				count: 1,
+				sourceType: ['camera'],
 				success: (res) => {
-					const tempFilePaths = res.tempFilePaths
-					tempFilePaths.forEach((path : string) => {
-						messages.value.push(createMessage({
+					const filePath = res.tempFilePaths[0]
+					uploadFile(filePath, 'im/image', (progress) => {
+						console.log('[Chat] 上传进度:', progress)
+					}).then((result) => {
+						const imageUrl = result.data.url
+						const imageSize = result.data.size
+						
+						// 使用消息服务发送图片消息
+						const message = messageService.sendImageMessage(
+							chatType.value === 'single' ? targetId.value : 0,
+							chatType.value === 'group' ? targetId.value : 0,
+							imageUrl,
+							imageUrl,
+							0,
+							0,
+							imageSize
+						)
+						
+						// 转换并添加到消息列表
+						const uiMessage = {
+							id: message.id.toString(),
+							messageId: message.messageId,
+							senderId: message.senderId.toString(),
+							receiverId: message.receiverId.toString(),
 							type: 'image',
-							content: path,
-							isSelf: true
-						}))
+							content: imageUrl,
+							isSelf: true,
+							time: new Date(message.timestamp).toLocaleString(),
+							timestamp: message.timestamp,
+							showTime: true,
+							avatarText: message.avatarText,
+							avatarBg: message.avatarBg,
+							status: message.status
+						} as MessageItem
+						
+						messages.value.push(uiMessage)
+						showPlusMenu.value = false
+						scrollToBottom()
+					}).catch((err) => {
+						console.error('[Chat] 上传图片失败:', err)
+						uni.showToast({ title: '上传失败', icon: 'none' })
 					})
-					showPlusMenu.value = false
-					scrollToBottom()
 				},
 				fail: (err) => {
-					console.error('选择相册失败:', err)
+					console.error('[Chat] 拍照失败:', err)
 				}
 			})
 			return
 		}
+		
+		if (item.nameKey === 'chat.features.video') {
+			// 选择并上传视频
+			chooseAndUploadVideo('im/video', (progress) => {
+				console.log('[Chat] 上传进度:', progress)
+			}).then((result) => {
+				const videoUrl = result.data.url
+				const videoSize = result.data.size
+				
+				// 使用消息服务发送视频消息
+				const message = messageService.sendVideoMessage(
+					chatType.value === 'single' ? targetId.value : 0,
+					chatType.value === 'group' ? targetId.value : 0,
+					videoUrl,
+					videoUrl,  // 封面使用同一个 URL(暂不生成)
+					0,  // 时长(暂不获取)
+					0,  // 宽度
+					0,  // 高度
+					videoSize
+				)
+				
+				// 转换并添加到消息列表
+				const uiMessage = {
+					id: message.id.toString(),
+					messageId: message.messageId,
+					senderId: message.senderId.toString(),
+					receiverId: message.receiverId.toString(),
+					type: 'video',
+					content: videoUrl,
+					poster: videoUrl,
+					isSelf: true,
+					time: new Date(message.timestamp).toLocaleString(),
+					timestamp: message.timestamp,
+					showTime: true,
+					avatarText: message.avatarText,
+					avatarBg: message.avatarBg,
+					status: message.status
+				} as MessageItem
+				
+				messages.value.push(uiMessage)
+				showPlusMenu.value = false
+				scrollToBottom()
+			}).catch((err) => {
+				console.error('[Chat] 上传视频失败:', err)
+				uni.showToast({ title: '上传失败', icon: 'none' })
+			})
+			return
+		}
+		
+		if (item.nameKey === 'chat.features.file') {
+			// 选择并上传文件
+			chooseAndUploadFile('*/*', 'im/file', (progress) => {
+				console.log('[Chat] 上传进度:', progress)
+			}).then((result) => {
+				const fileUrl = result.data.url
+				const fileName = result.data.name
+				const fileSize = result.data.size
+				const fileType = result.data.type
+				
+				// 使用消息服务发送文件消息
+				const message = messageService.sendFileMessage(
+					chatType.value === 'single' ? targetId.value : 0,
+					chatType.value === 'group' ? targetId.value : 0,
+					fileUrl,
+					fileName,
+					fileSize,
+					fileType
+				)
+				
+				// 转换并添加到消息列表
+				const uiMessage = {
+					id: message.id.toString(),
+					messageId: message.messageId,
+					senderId: message.senderId.toString(),
+					receiverId: message.receiverId.toString(),
+					type: 'file',
+					content: fileUrl,
+					fileName: fileName,
+					fileSize: formatFileSize(fileSize),
+					isSelf: true,
+					time: new Date(message.timestamp).toLocaleString(),
+					timestamp: message.timestamp,
+					showTime: true,
+					avatarText: message.avatarText,
+					avatarBg: message.avatarBg,
+					status: message.status
+				} as MessageItem
+				
+				messages.value.push(uiMessage)
+				showPlusMenu.value = false
+				scrollToBottom()
+			}).catch((err) => {
+				console.error('[Chat] 上传文件失败:', err)
+				uni.showToast({ title: '上传失败', icon: 'none' })
+			})
+			return
+		}
+		
 		uni.showToast({
 			title: t(item.nameKey) + '功能开发中',
 			icon: 'none'
 		})
+	}
+	
+	/**
+	 * 格式化文件大小
+	 */
+	function formatFileSize(size : number) : string {
+		if (size < 1024) {
+			return size + ' B'
+		} else if (size < 1024 * 1024) {
+			return (size / 1024).toFixed(2) + ' KB'
+		} else if (size < 1024 * 1024 * 1024) {
+			return (size / 1024 / 1024).toFixed(2) + ' MB'
+		} else {
+			return (size / 1024 / 1024 / 1024).toFixed(2) + ' GB'
+		}
 	}
 
 	function handleImagePreview(url : string) {

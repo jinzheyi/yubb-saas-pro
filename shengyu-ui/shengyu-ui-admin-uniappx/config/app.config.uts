@@ -47,3 +47,27 @@ export const TIMEOUT = 30000
  * 短信验证码倒计时（秒）
  */
 export const SMS_CODE_COUNTDOWN = 60
+
+/**
+ * WebSocket 服务器地址
+ * 根据实际部署环境修改
+ * 
+ * 开发环境：ws://localhost:9000/ws
+ * 生产环境：wss://api.example.com:9000/ws
+ */
+export const WS_URL = 'ws://localhost:9000/ws'
+
+/**
+ * WebSocket 心跳间隔（毫秒）
+ */
+export const WS_HEARTBEAT_INTERVAL = 30000
+
+/**
+ * WebSocket 心跳超时（毫秒）
+ */
+export const WS_HEARTBEAT_TIMEOUT = 10000
+
+/**
+ * WebSocket 最大重连次数
+ */
+export const WS_MAX_RECONNECT_COUNT = 5

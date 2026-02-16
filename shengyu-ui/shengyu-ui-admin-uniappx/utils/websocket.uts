@@ -20,6 +20,7 @@
 
 import { getAccessToken } from '../store/user.uts'
 import { getCurrentDeviceType, getDeviceId, getAppVersion } from './device.uts'
+import { WS_URL, WS_HEARTBEAT_INTERVAL, WS_HEARTBEAT_TIMEOUT, WS_MAX_RECONNECT_COUNT } from '../config/app.config.uts'
 
 /**
  * WebSocket 连接状态枚举
@@ -85,13 +86,13 @@ export class WebSocketManager {
   
   // 重连相关
   private reconnectCount: number = 0
-  private maxReconnectCount: number = 5
+  private maxReconnectCount: number = WS_MAX_RECONNECT_COUNT
   private reconnectTimer: number = 0
   
   // 心跳相关
   private heartbeatTimer: number = 0
-  private heartbeatInterval: number = 30000  // 30秒
-  private heartbeatTimeout: number = 10000   // 10秒超时
+  private heartbeatInterval: number = WS_HEARTBEAT_INTERVAL
+  private heartbeatTimeout: number = WS_HEARTBEAT_TIMEOUT
   private heartbeatTimeoutTimer: number = 0
   
   // 消息队列（连接建立前的消息缓存）
@@ -114,13 +115,7 @@ export class WebSocketManager {
    */
   private constructor() {
     // 从配置获取 WebSocket 地址
-    // #ifdef APP-PLUS
-    this.wsUrl = 'wss://api.example.com:9000/ws'
-    // #endif
-    
-    // #ifdef H5
-    this.wsUrl = 'ws://localhost:9000/ws'
-    // #endif
+    this.wsUrl = WS_URL
   }
   
   /**

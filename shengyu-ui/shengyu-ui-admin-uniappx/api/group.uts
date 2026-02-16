@@ -1,0 +1,128 @@
+/**
+ * 群组管理 API
+ */
+
+import { request } from '../utils/request.uts'
+
+/**
+ * 创建群组
+ */
+export function createGroup(data: any): Promise<any> {
+  return request({
+    url: '/system/im/group/create',
+    method: 'POST',
+    data: data
+  })
+}
+
+/**
+ * 更新群组信息
+ */
+export function updateGroup(data: any): Promise<any> {
+  return request({
+    url: '/system/im/group/update',
+    method: 'PUT',
+    data: data
+  })
+}
+
+/**
+ * 解散群组
+ */
+export function dissolveGroup(id: number): Promise<any> {
+  return request({
+    url: `/system/im/group/dissolve?id=${id}`,
+    method: 'DELETE'
+  })
+}
+
+/**
+ * 退出群组
+ */
+export function quitGroup(id: number): Promise<any> {
+  return request({
+    url: `/system/im/group/quit?id=${id}`,
+    method: 'POST'
+  })
+}
+
+/**
+ * 获取群组信息
+ */
+export function getGroup(id: number): Promise<any> {
+  return request({
+    url: `/system/im/group/get?id=${id}`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 获取用户的群组列表
+ */
+export function getGroupList(): Promise<any> {
+  return request({
+    url: '/system/im/group/list',
+    method: 'GET'
+  })
+}
+
+/**
+ * 添加群成员
+ */
+export function addGroupMembers(data: any): Promise<any> {
+  return request({
+    url: '/system/im/group/member/add',
+    method: 'POST',
+    data: data
+  })
+}
+
+/**
+ * 移除群成员
+ */
+export function removeGroupMember(groupId: number, memberUserId: number): Promise<any> {
+  return request({
+    url: `/system/im/group/member/remove?groupId=${groupId}&memberUserId=${memberUserId}`,
+    method: 'DELETE'
+  })
+}
+
+/**
+ * 获取群成员列表
+ */
+export function getGroupMembers(groupId: number): Promise<any> {
+  return request({
+    url: `/system/im/group/member/list?groupId=${groupId}`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 设置群成员角色
+ */
+export function setGroupMemberRole(groupId: number, memberUserId: number, role: number): Promise<any> {
+  return request({
+    url: `/system/im/group/member/set-role?groupId=${groupId}&memberUserId=${memberUserId}&role=${role}`,
+    method: 'PUT'
+  })
+}
+
+/**
+ * 设置群成员禁言
+ */
+export function setGroupMemberMuted(groupId: number, memberUserId: number, muted: boolean): Promise<any> {
+  return request({
+    url: `/system/im/group/member/set-muted?groupId=${groupId}&memberUserId=${memberUserId}&muted=${muted}`,
+    method: 'PUT'
+  })
+}
+
+/**
+ * 转让群主
+ */
+export function transferGroupOwner(groupId: number, newOwnerId: number): Promise<any> {
+  return request({
+    url: `/system/im/group/transfer-owner?groupId=${groupId}&newOwnerId=${newOwnerId}`,
+    method: 'PUT'
+  })
+}

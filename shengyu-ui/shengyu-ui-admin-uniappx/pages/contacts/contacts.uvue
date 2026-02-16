@@ -77,10 +77,13 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getContactList } from '../../api/contact.uts'
 
 	const { t } = useI18n()
 
 	const scrollTarget = ref('')
+	const loading = ref(false)
+	const rawContacts = ref<any[]>([])
 
 	const categories1 = [
 		{ icon: '\ue616', bg: '#fb923c', nameKey: 'contacts.groups' },
@@ -92,34 +95,65 @@
 		{ icon: '\ue686', bg: '#06b6d4', nameKey: 'contacts.dept' }
 	]
 
-	// 生成联系人数据（使用假名）
-	const generateRawContacts = () : any[] => {
-		const firstNames = ['张', '李', '王', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗']
-		const lastNames = ['伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军', '洋', '勇', '艳', '杰', '娟', '涛', '明', '超', '秀兰', '霞']
-		const roles = ['高级经理', '部门经理', '项目经理', '开发工程师', '测试工程师', '产品经理', '设计师', '运营专员', '市场专员', '行政专员']
-		const colors = ['#0ea5e9', '#f472b6', '#c084fc', '#fb7185', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#3b82f6', '#8b5cf6']
-		const pinyins = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
-
-		const list : any[] = []
-		for (let i = 0; i < 100; i++) {
-			const firstName = firstNames[i % firstNames.length]
-			const lastName = lastNames[i % lastNames.length]
-			const name = firstName + lastName
-			const pinyin = pinyins[i % pinyins.length]
-			
-			list.push({
-				id: i + 1,
-				name: name,
-				role: roles[i % roles.length],
-				avatarText: name.substring(0, 2),
-				avatarBg: colors[i % colors.length],
-				pinyin: pinyin
-			})
+	const colors = ['#0ea5e9', '#f472b6', '#c084fc', '#fb7185', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#3b82f6', '#8b5cf6']
+	
+	/**
+	 * 获取拼音首字母
+	 */
+	function getPinyinFirstLetter(name : string) : string {
+		// 简单实现：取第一个字符的 Unicode 编码判断
+		// 实际项目中应使用专业的拼音库
+		const code = name.charCodeAt(0)
+		if (code >= 19968 && code <= 40869) {
+			// 中文字符，简单映射到 A-Z
+			const index = (code - 19968) % 26
+			return String.fromCharCode(65 + index)
 		}
-		return list
+		// 非中文字符，取首字母大写
+		return name.charAt(0).toUpperCase()
 	}
-
-	const rawContacts = generateRawContacts()
+	
+	/**
+	 * 加载联系人列表
+	 */
+	async function loadContacts() {
+		loading.value = true
+		
+		try {
+			const res = await getContactList()
+			
+			if (res.code === 0 && res.data) {
+				const contacts = res.data as any[]
+				
+				// 转换为 UI 格式
+				rawContacts.value = contacts.map((contact, index) => {
+					const userName = contact.userName || contact.nickname || '未知'
+					return {
+						id: contact.id,
+						userId: contact.userId,
+						name: userName,
+						role: contact.deptName || contact.postNames || '',
+						avatarText: userName.substring(0, 2),
+						avatarBg: colors[index % colors.length],
+						pinyin: getPinyinFirstLetter(userName)
+					}
+				})
+			}
+			
+		} catch (e) {
+			console.error('[Contacts] 加载联系人列表失败:', e)
+			uni.showToast({ title: '加载失败', icon: 'none' })
+		} finally {
+			loading.value = false
+		}
+	}
+	
+	/**
+	 * 页面加载时获取联系人列表
+	 */
+	onMounted(() => {
+		loadContacts()
+	})
 
 	// 按字母分组
 	type ContactGroup = {
@@ -132,7 +166,7 @@
 		const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 		
 		letters.forEach(letter => {
-			const filtered = rawContacts.filter(c => c.pinyin === letter)
+			const filtered = rawContacts.value.filter(c => c.pinyin === letter)
 			if (filtered.length > 0) {
 				groups.push({
 					letter: letter,

@@ -1,0 +1,66 @@
+/**
+ * 联系人管理 API
+ */
+
+import { request } from '../utils/request.uts'
+
+/**
+ * 获取联系人列表
+ */
+export function getContactList(): Promise<any> {
+  return request({
+    url: '/system/im/contact/list',
+    method: 'GET'
+  })
+}
+
+/**
+ * 搜索联系人
+ */
+export function searchContact(keyword: string): Promise<any> {
+  return request({
+    url: `/system/im/contact/search?keyword=${keyword}`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 获取联系人详情
+ */
+export function getContact(contactId: number): Promise<any> {
+  return request({
+    url: `/system/im/contact/get?contactId=${contactId}`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 更新联系人设置
+ */
+export function updateContactSetting(data: any): Promise<any> {
+  return request({
+    url: '/system/im/contact/setting/update',
+    method: 'PUT',
+    data: data
+  })
+}
+
+/**
+ * 根据部门ID获取联系人列表
+ */
+export function getContactListByDept(deptId: number): Promise<any> {
+  return request({
+    url: `/system/im/contact/list-by-dept?deptId=${deptId}`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 获取星标联系人列表
+ */
+export function getStarContactList(): Promise<any> {
+  return request({
+    url: '/system/im/contact/list-star',
+    method: 'GET'
+  })
+}

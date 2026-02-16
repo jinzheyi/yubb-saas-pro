@@ -1,0 +1,788 @@
+{
+  "info": {
+    "name": "IM 即时通讯 REST API",
+    "description": "IM 即时通讯系统的 REST API 接口集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:48080/app-api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tenantId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "认证",
+      "item": [
+        {
+          "name": "登录",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.code === 0) {",
+                  "        pm.collectionVariables.set('token', jsonData.data.accessToken);",
+                  "        pm.environment.set('token', jsonData.data.accessToken);",
+                  "        console.log('Token saved:', jsonData.data.accessToken);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/system/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "会话管理",
+      "item": [
+        {
+          "name": "获取会话列表",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/conversation/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "conversation", "list"]
+            }
+          }
+        },
+        {
+          "name": "创建会话",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetId\": 2,\n  \"conversationType\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/system/im/conversation/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "conversation", "create"]
+            }
+          }
+        },
+        {
+          "name": "删除会话",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/conversation/delete?id=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "conversation", "delete"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "更新会话设置",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"isPinned\": true,\n  \"noDisturb\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/system/im/conversation/update",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "conversation", "update"]
+            }
+          }
+        },
+        {
+          "name": "标记会话已读",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/conversation/mark-read?id=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "conversation", "mark-read"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "获取未读消息总数",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/conversation/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "conversation", "unread-count"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "消息管理",
+      "item": [
+        {
+          "name": "获取消息列表",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/message/page?pageNo=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "message", "page"],
+              "query": [
+                {
+                  "key": "pageNo",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "根据会话查询消息",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/message/list-by-conversation?conversationId=1&pageNo=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "message", "list-by-conversation"],
+              "query": [
+                {
+                  "key": "conversationId",
+                  "value": "1"
+                },
+                {
+                  "key": "pageNo",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "撤回消息",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/message/recall?id=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "message", "recall"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "删除消息",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/message/delete?id=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "message", "delete"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "标记消息已读",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/message/mark-read?messageIds=1,2,3",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "message", "mark-read"],
+              "query": [
+                {
+                  "key": "messageIds",
+                  "value": "1,2,3"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "获取未读消息数",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/message/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "message", "unread-count"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "联系人管理",
+      "item": [
+        {
+          "name": "获取联系人列表",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/contact/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "contact", "list"]
+            }
+          }
+        },
+        {
+          "name": "搜索联系人",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/contact/search?keyword=admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "contact", "search"],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "admin"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "获取联系人详情",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/contact/get?contactId=2",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "contact", "get"],
+              "query": [
+                {
+                  "key": "contactId",
+                  "value": "2"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "更新联系人设置",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contactId\": 2,\n  \"remarkName\": \"老张\",\n  \"star\": true,\n  \"noDisturb\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/system/im/contact/setting/update",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "contact", "setting", "update"]
+            }
+          }
+        },
+        {
+          "name": "获取星标联系人",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/contact/list-star",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "contact", "list-star"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "群组管理",
+      "item": [
+        {
+          "name": "创建群组",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"技术交流群\",\n  \"avatar\": \"https://example.com/avatar.jpg\",\n  \"memberIds\": [2]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/system/im/group/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "group", "create"]
+            }
+          }
+        },
+        {
+          "name": "获取群组信息",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/group/get?id=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "group", "get"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "更新群组信息",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"name\": \"新群名\",\n  \"remark\": \"群公告内容\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/system/im/group/update",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "group", "update"]
+            }
+          }
+        },
+        {
+          "name": "获取群组列表",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/group/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "group", "list"]
+            }
+          }
+        },
+        {
+          "name": "添加群成员",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupId\": 1,\n  \"memberIds\": [3, 4]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/system/im/group/member/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "group", "member", "add"]
+            }
+          }
+        },
+        {
+          "name": "移除群成员",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/group/member/remove?groupId=1&memberUserId=3",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "group", "member", "remove"],
+              "query": [
+                {
+                  "key": "groupId",
+                  "value": "1"
+                },
+                {
+                  "key": "memberUserId",
+                  "value": "3"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "获取群成员列表",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/group/member/list?groupId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "group", "member", "list"],
+              "query": [
+                {
+                  "key": "groupId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "退出群组",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/group/quit?id=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "group", "quit"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "解散群组",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenant-id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/im/group/dissolve?id=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "im", "group", "dissolve"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

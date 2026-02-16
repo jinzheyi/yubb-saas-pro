@@ -162,6 +162,28 @@ export function removeDeptId() {
 	uni.removeStorageSync(DEPT_ID_KEY)
 }
 
+/**
+ * 获取用户 ID
+ */
+export function getUserId(): number {
+	const userInfo = getUserInfo()
+	if (userInfo && userInfo.user) {
+		return userInfo.user.id
+	}
+	return 0
+}
+
+/**
+ * 获取租户 ID（数字类型）
+ */
+export function getTenantIdAsNumber(): number {
+	const tenantId = getTenantId()
+	if (tenantId) {
+		return parseInt(tenantId)
+	}
+	return 0
+}
+
 // ========== 用户信息相关 ==========
 
 /**

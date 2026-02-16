@@ -40,51 +40,65 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getGroupList } from '../../api/group.uts'
 
 	const { t } = useI18n()
 
 	// 是否为选择模式
 	const isSelectMode = ref(false)
+	const loading = ref(false)
 
 	// 群组列表数据
-	const groupList = ref([
-		{
-			id: 1,
-			name: '数字科技工作群',
-			memberCount: 84,
-			avatars: ['丹', '思', '寒', '晨']
-		},
-		{
-			id: 2,
-			name: '软件研发二部',
-			memberCount: 17,
-			avatars: ['生', '坤', '丁', '弋']
-		},
-		{
-			id: 3,
-			name: '小贷项目试用支撑群',
-			memberCount: 10,
-			avatars: ['生', '坤', '丁', '新']
-		},
-		{
-			id: 4,
-			name: '软件研发部',
-			memberCount: 18,
-			avatars: ['生', '坤', '凯', '琴']
-		},
-		{
-			id: 5,
-			name: '产品设计讨论组',
-			memberCount: 25,
-			avatars: ['明', '丽', '华', '芳']
-		},
-		{
-			id: 6,
-			name: '技术交流群',
-			memberCount: 42,
-			avatars: ['强', '伟', '军', '勇']
+	const groupList = ref<any[]>([])
+	
+	/**
+	 * 加载群组列表
+	 */
+	async function loadGroups() {
+		loading.value = true
+		
+		try {
+			const res = await getGroupList()
+			
+			if (res.code === 0 && res.data) {
+				const groups = res.data as any[]
+				
+				// 转换为 UI 格式
+				groupList.value = groups.map(group => {
+					// 生成头像网格（取群名前4个字）
+					const name = group.name || '未命名群组'
+					const avatars : string[] = []
+					for (let i = 0; i < Math.min(4, name.length); i++) {
+						avatars.push(name.charAt(i))
+					}
+					// 如果不足4个，用空格填充
+					while (avatars.length < 4) {
+						avatars.push('')
+					}
+					
+					return {
+						id: group.id,
+						name: name,
+						memberCount: group.memberCount || 0,
+						avatars: avatars
+					}
+				})
+			}
+			
+		} catch (e) {
+			console.error('[MyGroups] 加载群组列表失败:', e)
+			uni.showToast({ title: '加载失败', icon: 'none' })
+		} finally {
+			loading.value = false
 		}
-	])
+	}
+	
+	/**
+	 * 页面加载时获取群组列表
+	 */
+	onMounted(() => {
+		loadGroups()
+	})
 
 	function handleBack() {
 		uni.navigateBack()
@@ -99,7 +113,7 @@
 		} else {
 			// 普通模式下跳转到聊天页面
 			uni.navigateTo({
-				url: '/pages/message/chat?name=' + group.name
+				url: '/pages/message/chat?conversationId=' + group.id + '&type=group&groupId=' + group.id + '&targetId=' + group.id + '&name=' + encodeURIComponent(group.name) + '&memberCount=' + group.memberCount
 			})
 		}
 	}
