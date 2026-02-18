@@ -1,6 +1,6 @@
 <script setup lang="uts">
 	import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
-	import { isLoggedIn } from './store/user.uts'
+	import { isLoggedIn, getAccessToken } from './store/user.uts'
 	import { initLocale } from './store/locale.uts'
 	
 	onLaunch(() => {
@@ -12,9 +12,12 @@
 		// 检查登录状态
 		checkLoginStatus()
 		
-		// 如果已登录，自动连接 WebSocket
+		// 如果已登录且有有效 Token，自动连接 WebSocket
 		if (isLoggedIn()) {
-			connectWebSocket()
+			const token = getAccessToken()
+			if (token != null && token != '') {
+				connectWebSocket()
+			}
 		}
 	})
 	

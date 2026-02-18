@@ -1,16 +1,16 @@
 {
 	"pages": [
 		{
-			"path": "pages/login/login",
+			"path": "pages/message/message",
 			"style": {
-				"navigationBarTitleText": "登录",
+				"navigationBarTitleText": "消息",
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path": "pages/message/message",
+			"path": "pages/login/login",
 			"style": {
-				"navigationBarTitleText": "消息",
+				"navigationBarTitleText": "登录",
 				"navigationStyle": "custom"
 			}
 		},

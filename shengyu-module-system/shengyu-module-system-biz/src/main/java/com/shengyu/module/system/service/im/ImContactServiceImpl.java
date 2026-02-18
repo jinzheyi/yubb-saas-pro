@@ -62,7 +62,7 @@ public class ImContactServiceImpl implements ImContactService {
                     // 填充个性化设置
                     ImContactSettingDO setting = settingMap.get(user.getId());
                     if (setting != null) {
-                        respVO.setRemarkName(setting.getNickname());
+                        respVO.setRemarkName(setting.getRemarkName());
                         respVO.setStar(setting.getStar());
                         respVO.setNoDisturb(setting.getNoDisturb());
                     } else {
@@ -94,7 +94,7 @@ public class ImContactServiceImpl implements ImContactService {
                         return true;
                     }
                     ImContactSettingDO setting = settingMap.get(user.getId());
-                    return setting != null && StrUtil.contains(setting.getNickname(), keyword);
+                    return setting != null && StrUtil.contains(setting.getRemarkName(), keyword);
                 })
                 .map(user -> {
                     AppImContactRespVO respVO = buildContactRespVO(user);
@@ -102,7 +102,7 @@ public class ImContactServiceImpl implements ImContactService {
                     // 填充个性化设置
                     ImContactSettingDO setting = settingMap.get(user.getId());
                     if (setting != null) {
-                        respVO.setRemarkName(setting.getNickname());
+                        respVO.setRemarkName(setting.getRemarkName());
                         respVO.setStar(setting.getStar());
                         respVO.setNoDisturb(setting.getNoDisturb());
                     } else {
@@ -128,7 +128,7 @@ public class ImContactServiceImpl implements ImContactService {
         // 查询个性化设置
         ImContactSettingDO setting = contactSettingMapper.selectByUserIdAndContactId(userId, contactId);
         if (setting != null) {
-            respVO.setRemarkName(setting.getNickname());
+            respVO.setRemarkName(setting.getRemarkName());
             respVO.setStar(setting.getStar());
             respVO.setNoDisturb(setting.getNoDisturb());
         } else {
@@ -157,14 +157,14 @@ public class ImContactServiceImpl implements ImContactService {
             setting = new ImContactSettingDO();
             setting.setUserId(userId);
             setting.setContactId(updateReqVO.getContactId());
-            setting.setNickname(updateReqVO.getNickname());
+            setting.setRemarkName(updateReqVO.getNickname());
             setting.setStar(updateReqVO.getStar() != null ? updateReqVO.getStar() : false);
             setting.setNoDisturb(updateReqVO.getNoDisturb() != null ? updateReqVO.getNoDisturb() : false);
             contactSettingMapper.insert(setting);
         } else {
             // 更新设置
             if (updateReqVO.getNickname() != null) {
-                setting.setNickname(updateReqVO.getNickname());
+                setting.setRemarkName(updateReqVO.getNickname());
             }
             if (updateReqVO.getStar() != null) {
                 setting.setStar(updateReqVO.getStar());
@@ -201,7 +201,7 @@ public class ImContactServiceImpl implements ImContactService {
                     // 填充个性化设置
                     ImContactSettingDO setting = settingMap.get(user.getId());
                     if (setting != null) {
-                        respVO.setRemarkName(setting.getNickname());
+                        respVO.setRemarkName(setting.getRemarkName());
                         respVO.setStar(setting.getStar());
                         respVO.setNoDisturb(setting.getNoDisturb());
                     }

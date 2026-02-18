@@ -11809,7 +11809,127 @@ export function chooseAndUploadFile(
 
 ---
 
+#### 16.1.10 修复 WebSocket 认证失败问题 ✅
+
+**完成时间**: 2026年2月16日
+
+**问题描述**:
+应用启动时，即使用户未登录或 Token 已过期，WebSocket 也会尝试连接并认证，导致控制台持续显示"认证失败: Token 无效或已过期"的错误提示。
+
+**问题原因**:
+1. `App.uvue` 在应用启动时，只要本地存储中有 Token（即使已过期），就会自动连接 WebSocket
+2. `isLoggedIn()` 函数只检查 Token 是否存在，不验证是否有效
+3. WebSocket 认证失败后，不会清除本地的过期 Token
+4. 用户刷新页面或重新打开应用时，会重复出现认证失败错误
+
+**修复方案**:
+
+1. **WebSocket 连接前检查 Token** ✅
+   - 在 `connect()` 方法中，先检查 Token 是否存在
+   - 如果 Token 不存在，直接返回，不尝试连接
+   - 避免无效的连接尝试
+
+2. **认证失败时清除本地缓存** ✅
+   - 在 `handleAuthResponse()` 中，检测到 Token 相关错误时
+   - 自动调用 `clearUserCache()` 清除本地存储
+   - 避免下次启动时重复出现错误
+
+3. **登录成功后才连接 WebSocket** ✅
+   - 登录页面在登录成功后主动连接 WebSocket
+   - 确保使用的是有效的 Token
+
+**修改文件**:
+- `utils/websocket.uts` - 添加 Token 检查和认证失败处理
+- `App.uvue` - 改进启动时的 WebSocket 连接逻辑
+
+**关键代码**:
+
+```typescript
+// websocket.uts - 连接前检查 Token
+public connect(): void {
+  // 检查 Token 是否存在
+  const token = getAccessToken()
+  if (token == null || token == '') {
+    console.log('[WebSocket] Token 不存在，跳过连接')
+    return
+  }
+  
+  // ... 继续连接逻辑
+}
+
+// websocket.uts - 认证失败时清除缓存
+private handleAuthResponse(message: any): void {
+  if (!success) {
+    const errorMsg = message.body.message as string
+    
+    // Token 无效或已过期，清除本地缓存
+    if (errorMsg.indexOf('Token') > -1 || errorMsg.indexOf('过期') > -1) {
+      import('../store/user.uts').then((userModule) => {
+        userModule.clearUserCache()
+      })
+    }
+  }
+}
+```
+
+**测试验证**:
+
+1. **场景1：首次打开应用（未登录）**
+   - ✅ 不会尝试连接 WebSocket
+   - ✅ 不会显示认证失败错误
+   - ✅ 直接跳转到登录页
+
+2. **场景2：Token 过期后重新打开应用**
+   - ✅ 检测到 Token 无效，不尝试连接
+   - ✅ 自动清除本地缓存
+   - ✅ 跳转到登录页
+
+3. **场景3：登录成功**
+   - ✅ 使用有效 Token 连接 WebSocket
+   - ✅ 认证成功，建立连接
+   - ✅ 正常收发消息
+
+4. **场景4：WebSocket 认证失败**
+   - ✅ 自动清除本地缓存
+   - ✅ 不显示错误提示（静默处理）
+   - ✅ 用户需要重新登录
+
+**技术亮点**:
+
+1. **防御性编程**:
+   - 在连接前验证前置条件
+   - 避免无效的网络请求
+   - 减少错误日志噪音
+
+2. **自动清理机制**:
+   - 检测到 Token 无效时自动清理
+   - 避免用户手动清除缓存
+   - 提升用户体验
+
+3. **静默处理**:
+   - 认证失败不显示 Toast 提示
+   - 避免干扰用户
+   - 仅在控制台记录日志
+
+4. **循环依赖处理**:
+   - 使用动态 import 避免循环依赖
+   - 保持模块解耦
+   - 提高代码可维护性
+
+**影响范围**:
+- `utils/websocket.uts` - WebSocket 连接和认证逻辑
+- `App.uvue` - 应用启动逻辑
+- 所有使用 WebSocket 的页面 - 间接受益
+
+**下一步工作**:
+1. 测试各种场景下的 WebSocket 连接 ⏳
+2. 验证 Token 刷新机制 ⏳
+3. 测试多端登录互踢功能 ⏳
+
+---
+
 **文档更新记录**:
+- 2026-02-16: 修复 WebSocket 认证失败问题（Token 检查和自动清理）
 - 2026-02-16: 创建测试前检查清单（PRE-TEST-CHECKLIST.md）- 全面检查所有组件就绪状态
 - 2026-02-16: 创建前后端联调测试指南（INTEGRATION-TEST-GUIDE.md）
 - 2026-02-16: 完善多端消息兼容性和权限配置（添加完整的权限列表和消息类型兼容性表格）

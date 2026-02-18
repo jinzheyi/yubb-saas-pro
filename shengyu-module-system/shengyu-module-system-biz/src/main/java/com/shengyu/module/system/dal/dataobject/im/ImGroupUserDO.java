@@ -10,16 +10,18 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
  * IM 群成员 DO
  * 
- * 对应表: im_group_user
+ * 对应表: im_group_member
  * 功能: 存储群组成员关系
  *
  * @author 圣钰科技
  */
-@TableName(value = "im_group_user", autoResultMap = true)
-@KeySequence("im_group_user_seq")
+@TableName(value = "im_group_member", autoResultMap = true)
+@KeySequence("im_group_member_seq")
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Builder
@@ -44,21 +46,26 @@ public class ImGroupUserDO extends TenantBaseDO {
     private Long userId;
 
     /**
+     * 群成员角色
+     * 
+     * 枚举: {@link com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum}
+     * 1-群主, 2-管理员, 3-普通成员
+     */
+    private Integer role;
+
+    /**
      * 在群里的昵称
      */
     private String nickname;
 
     /**
-     * 群成员角色
-     * 
-     * 枚举: {@link com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum}
-     * 0-普通成员, 1-管理员, 2-群主
+     * 加入时间
      */
-    private Integer role;
+    private LocalDateTime joinTime;
 
     /**
-     * 是否禁言
+     * 禁言结束时间
      */
-    private Boolean muted;
+    private LocalDateTime muteEndTime;
 
 }

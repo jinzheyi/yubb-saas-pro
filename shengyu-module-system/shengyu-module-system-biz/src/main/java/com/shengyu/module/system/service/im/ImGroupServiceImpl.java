@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -65,6 +66,7 @@ public class ImGroupServiceImpl implements ImGroupService {
             ImGroupUserDO groupUser = new ImGroupUserDO();
             groupUser.setGroupId(group.getId());
             groupUser.setUserId(memberId);
+            groupUser.setJoinTime(LocalDateTime.now());
             // 群主角色
             if (memberId.equals(userId)) {
                 groupUser.setRole(ImGroupMemberRoleEnum.OWNER.getRole());
@@ -255,6 +257,7 @@ public class ImGroupServiceImpl implements ImGroupService {
             newMember.setGroupId(addReqVO.getGroupId());
             newMember.setUserId(memberId);
             newMember.setRole(ImGroupMemberRoleEnum.MEMBER.getRole());
+            newMember.setJoinTime(LocalDateTime.now());
             groupUserMapper.insert(newMember);
             addedCount++;
         }
@@ -405,7 +408,12 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
 
         // 更新禁言状态
-        member.setMuted(muted);
+        // 如果禁言，设置禁言结束时间为24小时后；如果取消禁言，设置为null
+        if (muted) {
+            member.setMuteEndTime(LocalDateTime.now().plusHours(24));
+        } else {
+            member.setMuteEndTime(null);
+        }
         groupUserMapper.updateById(member);
 
         log.info("[ImGroupService] 设置群成员禁言成功, groupId: {}, memberUserId: {}, muted: {}", 

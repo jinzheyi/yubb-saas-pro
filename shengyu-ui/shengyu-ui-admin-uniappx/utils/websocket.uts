@@ -144,6 +144,13 @@ export class WebSocketManager {
       return
     }
     
+    // 检查 Token 是否存在
+    const token = getAccessToken()
+    if (token == null || token == '') {
+      console.log('[WebSocket] Token 不存在，跳过连接')
+      return
+    }
+    
     console.log('[WebSocket] 开始连接:', this.wsUrl)
     this.setState(WebSocketState.CONNECTING)
     
@@ -274,11 +281,18 @@ export class WebSocketManager {
       console.error('[WebSocket] 认证失败:', errorMsg)
       this.close()
       
-      // 通知用户
-      uni.showToast({
-        title: '认证失败: ' + errorMsg,
-        icon: 'none'
-      })
+      // Token 无效或已过期，清除本地缓存
+      if (errorMsg.indexOf('Token') > -1 || errorMsg.indexOf('token') > -1 || 
+          errorMsg.indexOf('过期') > -1 || errorMsg.indexOf('无效') > -1) {
+        console.log('[WebSocket] Token 无效，清除本地缓存')
+        
+        // 动态导入 clearUserCache 避免循环依赖
+        import('../store/user.uts').then((userModule) => {
+          userModule.clearUserCache()
+        }).catch((e) => {
+          console.error('[WebSocket] 清除用户缓存失败:', e)
+        })
+      }
     }
   }
   

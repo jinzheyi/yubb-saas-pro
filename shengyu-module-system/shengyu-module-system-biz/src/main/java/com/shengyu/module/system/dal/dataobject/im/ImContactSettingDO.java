@@ -47,7 +47,7 @@ public class ImContactSettingDO extends TenantBaseDO {
     /**
      * 备注名
      */
-    private String nickname;
+    private String remarkName;
 
     /**
      * 是否星标联系人

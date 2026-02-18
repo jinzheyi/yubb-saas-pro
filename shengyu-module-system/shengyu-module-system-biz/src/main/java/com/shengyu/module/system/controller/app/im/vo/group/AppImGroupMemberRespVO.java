@@ -15,11 +15,14 @@ public class AppImGroupMemberRespVO {
     @Schema(description = "在群里的昵称", example = "小明")
     private String nickname;
 
-    @Schema(description = "群成员角色(0-普通成员 1-管理员 2-群主)", requiredMode = Schema.RequiredMode.REQUIRED, example = "0")
+    @Schema(description = "群成员角色(1-群主 2-管理员 3-普通成员)", requiredMode = Schema.RequiredMode.REQUIRED, example = "3")
     private Integer role;
 
-    @Schema(description = "是否禁言", requiredMode = Schema.RequiredMode.REQUIRED, example = "false")
-    private Boolean muted;
+    @Schema(description = "加入时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    private LocalDateTime joinTime;
+
+    @Schema(description = "禁言结束时间(为空表示未禁言)")
+    private LocalDateTime muteEndTime;
 
     @Schema(description = "用户昵称", example = "张三")
     private String userNickname;
@@ -29,8 +32,5 @@ public class AppImGroupMemberRespVO {
 
     @Schema(description = "部门名称", example = "技术部")
     private String deptName;
-
-    @Schema(description = "加入时间", requiredMode = Schema.RequiredMode.REQUIRED)
-    private LocalDateTime createTime;
 
 }
