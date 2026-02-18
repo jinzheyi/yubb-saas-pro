@@ -117,34 +117,70 @@
 	 * 加载联系人列表
 	 */
 	async function loadContacts() {
+		console.log('[Contacts] 开始加载联系人列表')
 		loading.value = true
 		
 		try {
-			const res = await getContactList()
+			// request 函数在成功时直接返回 data.data，失败时 reject
+			const contacts = await getContactList() as any[]
+			console.log('[Contacts] 联系人数量:', contacts.length)
 			
-			if (res.code === 0 && res.data) {
-				const contacts = res.data as any[]
+			if (contacts.length === 0) {
+				console.warn('[Contacts] 联系人列表为空')
+				uni.showToast({ title: '暂无联系人', icon: 'none' })
+				return
+			}
+			
+			// 打印第一个联系人的数据结构
+			if (contacts.length > 0) {
+				const firstContact = contacts[0]
+				console.log('[Contacts] 第一个联系人数据:')
+				console.log('  - id:', firstContact.id)
+				console.log('  - nickname:', firstContact.nickname)
+				console.log('  - remarkName:', firstContact.remarkName)
+				console.log('  - deptName:', firstContact.deptName)
+				console.log('  - pinyin:', firstContact.pinyin)
+			}
+			
+			// 转换为 UI 格式
+			rawContacts.value = contacts.map((contact, index) => {
+				// 优先使用 remarkName（备注名），其次使用 nickname（昵称）
+				const displayName = contact.remarkName || contact.nickname || '未知'
+				// 使用后端返回的拼音首字母（取第一个字符）
+				let pinyinLetter = contact.pinyin || getPinyinFirstLetter(displayName)
+				// 如果后端返回的是多字符拼音（如 "SY"），只取第一个字符
+				if (pinyinLetter.length > 1) {
+					pinyinLetter = pinyinLetter.charAt(0)
+				}
 				
-				// 转换为 UI 格式
-				rawContacts.value = contacts.map((contact, index) => {
-					const userName = contact.userName || contact.nickname || '未知'
-					return {
-						id: contact.id,
-						userId: contact.userId,
-						name: userName,
-						role: contact.deptName || contact.postNames || '',
-						avatarText: userName.substring(0, 2),
-						avatarBg: colors[index % colors.length],
-						pinyin: getPinyinFirstLetter(userName)
-					}
-				})
+				return {
+					id: contact.id,
+					userId: contact.id,
+					name: displayName,
+					role: contact.deptName || '',
+					avatarText: displayName.substring(0, 2),
+					avatarBg: colors[index % colors.length],
+					pinyin: pinyinLetter
+				}
+			})
+			
+			console.log('[Contacts] 处理后的联系人数量:', rawContacts.value.length)
+			if (rawContacts.value.length > 0) {
+				console.log('[Contacts] 第一个处理后的联系人:', JSON.stringify(rawContacts.value[0]))
+			}
+			console.log('[Contacts] 分组后的联系人数量:', groupedContacts.value.length)
+			if (groupedContacts.value.length > 0) {
+				console.log('[Contacts] 第一个分组:', JSON.stringify(groupedContacts.value[0]))
 			}
 			
 		} catch (e) {
-			console.error('[Contacts] 加载联系人列表失败:', e)
-			uni.showToast({ title: '加载失败', icon: 'none' })
+			console.error('[Contacts] 加载联系人列表异常:', e)
+			// e 可能是包含 msg 的错误对象
+			const errorMsg = (e as any).msg || '加载失败'
+			uni.showToast({ title: errorMsg, icon: 'none' })
 		} finally {
 			loading.value = false
+			console.log('[Contacts] 加载完成')
 		}
 	}
 	
