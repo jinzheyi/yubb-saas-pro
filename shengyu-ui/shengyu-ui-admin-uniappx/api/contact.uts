@@ -27,7 +27,7 @@ export function searchContact(keyword: string): Promise<any> {
 /**
  * 获取联系人详情
  */
-export function getContact(contactId: number): Promise<any> {
+export function getContact(contactId: string): Promise<any> {
   return request({
     url: `/system/im/contact/get?contactId=${contactId}`,
     method: 'GET'
@@ -48,7 +48,7 @@ export function updateContactSetting(data: any): Promise<any> {
 /**
  * 根据部门ID获取联系人列表
  */
-export function getContactListByDept(deptId: number): Promise<any> {
+export function getContactListByDept(deptId: string): Promise<any> {
   return request({
     url: `/system/im/contact/list-by-dept?deptId=${deptId}`,
     method: 'GET'

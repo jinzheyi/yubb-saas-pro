@@ -2,12 +2,12 @@
 	<view class="page">
 		<view class="status-bar"></view>
 		<view class="header">
-			<view class="header-left" @click="handleBack">
+			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon">&#xeb04;</text>
 				<text class="back-text">{{ t('common.back') }}</text>
 			</view>
 			<text class="header-title">{{ userName }}</text>
-			<text class="header-more" @click="showMoreMenu = !showMoreMenu">更多</text>
+			<text class="header-more" @click.stop="showMoreMenu = !showMoreMenu">更多</text>
 		</view>
 
 		<!-- 更多菜单 -->
@@ -91,13 +91,16 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getUserDetail } from '../../api/user.uts'
 
 	const { t } = useI18n()
 
 	const showMoreMenu = ref(false)
 	const isFollowing = ref(false)
+	const loading = ref(false)
 
-	// 从路由参数获取用户名
+	// 从路由参数获取用户信息
+	const userId = ref<string>('')
 	const userName = ref('张敏')
 
 	// 用户信息
@@ -141,8 +144,9 @@
 	}
 
 	function handleMessage() {
+		// 跳转到聊天页面，传递用户ID和会话类型
 		uni.navigateTo({
-			url: '/pages/message/chat?name=' + userName.value
+			url: `/pages/message/chat?type=single&targetId=${userId.value}&name=${encodeURIComponent(userName.value)}`
 		})
 	}
 
@@ -153,10 +157,56 @@
 		})
 	}
 
+	/**
+	 * 加载用户详情
+	 */
+	async function loadUserDetail(id: string) {
+		loading.value = true
+		
+		try {
+			// 注意：request 拦截器已经解包了 data.data，所以 res 直接是用户数据
+			const data = await getUserDetail(id)
+			
+			if (data) {
+				// 更新用户名（优先真实姓名）
+				userName.value = data.realName || data.nickname || '未知用户'
+				
+				// 更新用户信息
+				userInfo.value = {
+					company: data.companyName || '',
+					mobile: data.mobile || '',
+					phone: '',
+					otherPhone: '',
+					email: data.email || '',
+					level: data.postName || '',
+					department: data.deptName || ''
+				}
+			}
+		} catch (e) {
+			console.error('[UserDetail] 加载用户详情失败:', e)
+			uni.showToast({
+				title: '加载失败',
+				icon: 'none'
+			})
+		} finally {
+			loading.value = false
+		}
+	}
+
 	// 页面加载时获取路由参数
 	onLoad((options : any) => {
-		if (options != null && options['name']) {
-			userName.value = options['name'] as string
+		if (options != null) {
+			if (options['userId']) {
+				userId.value = options['userId'] as string
+			}
+			if (options['name']) {
+				userName.value = decodeURIComponent(options['name'] as string)
+			}
+			
+			// 根据 userId 从后端加载用户详细信息
+			if (userId.value !== '') {
+				loadUserDetail(userId.value)
+			}
 		}
 	})
 </script>

@@ -2,7 +2,7 @@
 	<view class="page">
 		<view class="status-bar"></view>
 		<view class="header">
-			<view class="header-left" @click="handleBack">
+			<view class="header-left" @click.stop="handleBack">
 				<text class="cancel-text">取消</text>
 			</view>
 			<text class="header-title">分享给</text>

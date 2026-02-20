@@ -2,7 +2,7 @@
 	<view class="page">
 		<view class="status-bar"></view>
 		<view class="header">
-			<view class="header-left" @click="handleBack">
+			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon">&#xeb04;</text>
 				<text class="back-text">{{ t('common.back') }}</text>
 			</view>
@@ -166,14 +166,16 @@
 	}
 
 	function handleContactClick(contact : any) {
+		// 跳转到联系人详情页面
 		uni.navigateTo({
-			url: '/pages/contacts/user-detail?name=' + contact.name
+			url: `/pages/contacts/user-detail?userId=${contact.id}&name=${encodeURIComponent(contact.name)}`
 		})
 	}
 
 	function handleGroupClick(group : any) {
+		// TODO: 待实现群组详情页面，暂时跳转到聊天页面
 		uni.navigateTo({
-			url: '/pages/message/chat?name=' + group.name
+			url: `/pages/message/chat?type=group&groupId=${group.id}&targetId=${group.id}&name=${encodeURIComponent(group.name)}&memberCount=${group.memberCount || 0}`
 		})
 	}
 </script>

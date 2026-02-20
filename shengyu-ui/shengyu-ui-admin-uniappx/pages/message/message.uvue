@@ -139,6 +139,7 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { messageService, ConversationItem } from '../../services/message-service.uts'
 	import { getConversationList, deleteConversation, pinConversation, setNoDisturb, clearUnreadCount } from '../../api/conversation.uts'
+	import { getConversationAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
 
@@ -158,148 +159,43 @@
 	const loading = ref(false)
 	const refreshing = ref(false)
 
-	// 生成 100 条模拟消息数据
-	const generateMessages = () : any[] => {
-		const list : any[] = []
-		const categoryIds = ['latest', 'user', 'group', 'business', 'at', 'nodisturb']
+	/**
+	 * 获取分类 ID（根据会话属性自动分类）
+	 */
+	function getCategoryId(conv : any) : string {
+		// 优先级：置顶 > 免打扰 > 群聊 > 单聊
+		if (conv.isPinned) return 'latest'
+		if (conv.noDisturb) return 'nodisturb'
+		if (conv.conversationType === 2) return 'group'
+		return 'user'
+	}
+	
+	/**
+	 * 转换后端会话数据为 UI 格式
+	 */
+	function convertServerConversation(serverConv : any) : any {
 		const now = Date.now()
+		const lastMessageTime = serverConv.lastMessageTime ? new Date(serverConv.lastMessageTime).getTime() : now
+		const isGroup = serverConv.conversationType === 2
 		
-		// 先添加几条群聊消息（前5条）
-		const groupChats = [
-			{
-				id: 1,
-				categoryId: 'group',
-				title: '产品研发团队',
-				desc: '张敏: 今天下午3点开会，大家准时参加',
-				lastMessageTime: now - 5 * 60 * 1000, // 5分钟前
-				avatarBg: '#10b981',
-				avatarText: '产品',
-				avatarIcon: '\ue616', // 群聊图标
-				unreadCount: 15,
-				noDisturb: false,
-				isPinned: true,
-				pinnedTime: now - 1000,
-				isGroup: true,
-				memberCount: 12
-			},
-			{
-				id: 2,
-				categoryId: 'group',
-				title: '张敏、李强、王静等4人',
-				desc: '李强: [图片]',
-				lastMessageTime: now - 15 * 60 * 1000, // 15分钟前
-				avatarBg: '#f59e0b',
-				avatarText: '群聊',
-				avatarIcon: '\ue616',
-				unreadCount: 3,
-				noDisturb: false,
-				isPinned: true,
-				pinnedTime: now - 2000,
-				isGroup: true,
-				memberCount: 4
-			},
-			{
-				id: 3,
-				categoryId: 'group',
-				title: '技术交流群',
-				desc: '刘洋: 这个问题我来解答一下...',
-				lastMessageTime: now - 30 * 60 * 1000, // 30分钟前
-				avatarBg: '#8b5cf6',
-				avatarText: '技术',
-				avatarIcon: '\ue616',
-				unreadCount: 99,
-				noDisturb: false,
-				isPinned: false,
-				pinnedTime: 0,
-				isGroup: true,
-				memberCount: 50
-			},
-			{
-				id: 4,
-				categoryId: 'group',
-				title: '周末聚会',
-				desc: '王静: 大家周末有空吗？',
-				lastMessageTime: now - 2 * 60 * 60 * 1000, // 2小时前
-				avatarBg: '#ec4899',
-				avatarText: '聚会',
-				avatarIcon: '\ue616',
-				unreadCount: 0,
-				noDisturb: true, // 免打扰
-				isPinned: false,
-				pinnedTime: 0,
-				isGroup: true,
-				memberCount: 8
-			},
-			{
-				id: 5,
-				categoryId: 'group',
-				title: '项目管理组',
-				desc: '赵敏: @我 请查看最新的项目进度',
-				lastMessageTime: now - 4 * 60 * 60 * 1000, // 4小时前
-				avatarBg: '#3b82f6',
-				avatarText: '项目',
-				avatarIcon: '\ue616',
-				unreadCount: 5,
-				noDisturb: false,
-				isPinned: false,
-				pinnedTime: 0,
-				isGroup: true,
-				memberCount: 15,
-				hasAt: true // 有@消息
-			}
-		]
-		
-		// 添加群聊消息到列表
-		list.push(...groupChats)
-		
-		// 继续添加其他类型的消息
-		for (let i = 6; i <= 100; i++) {
-			const catId = categoryIds[i % categoryIds.length]
-			
-			// 模拟数据逻辑调整：
-			let unreadCount = 0
-			let noDisturb = false
-			
-			if (i === 6) {
-				unreadCount = 125
-				noDisturb = false
-			} else if (i === 7) {
-				unreadCount = 12
-				noDisturb = false
-			} else if (i === 8) {
-				unreadCount = 5
-				noDisturb = true
-			} else if (i === 9) {
-				unreadCount = 99
-				noDisturb = true
-			} else {
-				unreadCount = 0
-				noDisturb = i % 10 === 0
-			}
-
-			// 模拟不同时间段的时间戳
-			let timeOffset = 0
-			if (i <= 10) timeOffset = i * 10 * 60 * 1000 // 今天内
-			else if (i <= 15) timeOffset = 24 * 60 * 60 * 1000 // 昨天
-			else if (i <= 25) timeOffset = i * 24 * 60 * 60 * 1000 // 几天前
-			else timeOffset = i * 30 * 24 * 60 * 60 * 1000 // 很久以前
-
-			list.push({
-				id: i,
-				categoryId: catId,
-				title: i <= 10 ? `置顶消息 ${i}` : `消息测试 ${i}`,
-				desc: `这是第 ${i} 条测试消息的内容摘要...`,
-				lastMessageTime: now - timeOffset,
-				avatarBg: i % 2 === 0 ? '#3370FF' : '#F97316',
-				avatarText: i <= 10 ? `顶${i}` : `测${i}`,
-				unreadCount: unreadCount,
-				noDisturb: noDisturb,
-				isPinned: i <= 10, // 前10条设为置顶
-				pinnedTime: i <= 10 ? Date.now() - i * 1000 : 0,
-				isGroup: false
-			})
+		return {
+			id: serverConv.id,
+			categoryId: getCategoryId(serverConv),
+			title: serverConv.targetName || '未知',
+			desc: serverConv.lastMessageContent || '',
+			lastMessageTime: lastMessageTime,
+			avatarBg: getConversationAvatarColor(serverConv.conversationType, serverConv.targetId),
+			avatarText: getAvatarText(serverConv.targetName || ''),
+			avatarIcon: isGroup ? '\ue616' : '', // 群聊显示群图标
+			unreadCount: serverConv.unreadCount || 0,
+			noDisturb: serverConv.noDisturb || false,
+			isPinned: serverConv.isPinned || false,
+			pinnedTime: serverConv.isPinned ? lastMessageTime : 0,
+			isGroup: isGroup,
+			memberCount: serverConv.groupMemberCount || 0,
+			targetId: serverConv.targetId,
+			conversationType: serverConv.conversationType
 		}
-		return list
 	}
 
 	/**
@@ -357,7 +253,7 @@
 	]
 
 	// 消息列表原始数据
-	const messageList = ref(generateMessages())
+	const messageList = ref<any[]>([])
 	
 	/**
 	 * 初始化页面
@@ -385,34 +281,46 @@
 			// 1. 先从缓存加载（立即显示）
 			const cachedConversations = messageService.getConversations()
 			if (cachedConversations.length > 0) {
-				messageList.value = convertServiceConversations(cachedConversations)
-			}
-			
-			// 2. 从服务器加载最新数据
-			const res = await getConversationList()
-			
-			if (res.code === 0 && res.data) {
-				const serverConversations = res.data as any[]
-				
-				// 转换为 UI 格式
-				messageList.value = serverConversations.map(conv => {
+				messageList.value = cachedConversations.map(conv => {
 					return {
 						id: conv.id,
-						categoryId: getCategoryId(conv),
-						title: conv.targetName,
-						desc: conv.lastMessageContent,
-						lastMessageTime: new Date(conv.lastMessageTime).getTime(),
-						avatarBg: getRandomColor(),
-						avatarText: conv.targetName.substring(0, 1),
-						avatarIcon: conv.conversationType === 2 ? '\ue616' : '',
+						categoryId: getCategoryId({ 
+							isPinned: conv.isPinned, 
+							noDisturb: conv.noDisturb, 
+							conversationType: conv.type 
+						}),
+						title: conv.name,
+						desc: conv.lastMessage,
+						lastMessageTime: conv.timestamp,
+						avatarBg: conv.avatarBg,
+						avatarText: conv.avatarText,
+						avatarIcon: conv.type === 2 ? '\ue616' : '',
 						unreadCount: conv.unreadCount,
 						noDisturb: conv.noDisturb,
 						isPinned: conv.isPinned,
-						pinnedTime: conv.isPinned ? new Date(conv.pinnedTime).getTime() : 0,
-						isGroup: conv.conversationType === 2,
-						memberCount: conv.groupMemberCount || 0
+						pinnedTime: conv.isPinned ? conv.timestamp : 0,
+						isGroup: conv.type === 2,
+						memberCount: conv.groupMemberCount || 0,
+						targetId: conv.targetId,
+						conversationType: conv.type
 					}
 				})
+			}
+			
+			// 2. 从服务器加载最新数据
+			const serverConversations = await getConversationList()
+			
+			if (serverConversations && Array.isArray(serverConversations)) {
+				// 转换为 UI 格式并排序
+				messageList.value = serverConversations
+					.map(conv => convertServerConversation(conv))
+					.sort((a, b) => {
+						// 置顶的排在前面
+						if (a.isPinned && !b.isPinned) return -1
+						if (!a.isPinned && b.isPinned) return 1
+						// 都置顶或都不置顶，按时间排序
+						return b.lastMessageTime - a.lastMessageTime
+					})
 			}
 			
 		} catch (e) {
@@ -424,49 +332,7 @@
 	}
 	
 	/**
-	 * 转换服务会话为 UI 格式
-	 */
-	function convertServiceConversations(serviceConversations : ConversationItem[]) : any[] {
-		return serviceConversations.map(conv => {
-			return {
-				id: conv.id,
-				categoryId: getCategoryId(conv),
-				title: conv.name,
-				desc: conv.lastMessage,
-				lastMessageTime: conv.timestamp,
-				avatarBg: conv.avatarBg,
-				avatarText: conv.avatarText,
-				avatarIcon: conv.type === 2 ? '\ue616' : '',
-				unreadCount: conv.unreadCount,
-				noDisturb: conv.noDisturb,
-				isPinned: conv.isPinned,
-				pinnedTime: conv.isPinned ? conv.timestamp : 0,
-				isGroup: conv.type === 2,
-				memberCount: conv.groupMemberCount || 0
-			}
-		})
-	}
-	
-	/**
-	 * 获取分类 ID
-	 */
-	function getCategoryId(conv : any) : string {
-		if (conv.isPinned) return 'latest'
-		if (conv.noDisturb) return 'nodisturb'
-		if (conv.conversationType === 2 || conv.type === 2) return 'group'
-		return 'user'
-	}
-	
-	/**
-	 * 获取随机颜色
-	 */
-	function getRandomColor() : string {
-		const colors = ['#F197BC', '#5FB6F7', '#c084fc', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6']
-		return colors[Math.floor(Math.random() * colors.length)]
-	}
-	
-	/**
-	 * 处理会话更新
+	 * 处理会话更新（来自 WebSocket 或其他页面）
 	 */
 	function handleConversationUpdate(conversation : ConversationItem) {
 		// 查找会话
@@ -474,7 +340,11 @@
 		
 		const uiConversation = {
 			id: conversation.id,
-			categoryId: getCategoryId(conversation),
+			categoryId: getCategoryId({ 
+				isPinned: conversation.isPinned, 
+				noDisturb: conversation.noDisturb, 
+				conversationType: conversation.type 
+			}),
 			title: conversation.name,
 			desc: conversation.lastMessage,
 			lastMessageTime: conversation.timestamp,
@@ -486,7 +356,9 @@
 			isPinned: conversation.isPinned,
 			pinnedTime: conversation.isPinned ? conversation.timestamp : 0,
 			isGroup: conversation.type === 2,
-			memberCount: conversation.groupMemberCount || 0
+			memberCount: conversation.groupMemberCount || 0,
+			targetId: conversation.targetId,
+			conversationType: conversation.type
 		}
 		
 		if (index !== -1) {
@@ -497,8 +369,12 @@
 			messageList.value.unshift(uiConversation)
 		}
 		
-		// 重新排序（按时间戳降序）
-		messageList.value.sort((a, b) => b.lastMessageTime - a.lastMessageTime)
+		// 重新排序（置顶优先，然后按时间）
+		messageList.value.sort((a, b) => {
+			if (a.isPinned && !b.isPinned) return -1
+			if (!a.isPinned && b.isPinned) return 1
+			return b.lastMessageTime - a.lastMessageTime
+		})
 	}
 	
 	// 过滤后的基础列表
@@ -585,9 +461,19 @@
 					targetItem.isPinned = newPinnedState
 					if (targetItem.isPinned) {
 						targetItem.pinnedTime = Date.now()
+						targetItem.categoryId = 'latest'
 					} else {
 						targetItem.pinnedTime = 0
+						// 重新计算分类
+						targetItem.categoryId = getCategoryId(targetItem)
 					}
+					
+					// 重新排序
+					messageList.value.sort((a, b) => {
+						if (a.isPinned && !b.isPinned) return -1
+						if (!a.isPinned && b.isPinned) return 1
+						return b.lastMessageTime - a.lastMessageTime
+					})
 					
 					uni.showToast({
 						title: newPinnedState ? '已置顶' : '已取消置顶',

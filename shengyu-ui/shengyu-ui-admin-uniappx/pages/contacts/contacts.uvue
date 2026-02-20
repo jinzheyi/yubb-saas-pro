@@ -251,8 +251,9 @@
 	}
 
 	function handleContact(item : any) {
+		// 跳转到联系人详情页面
 		uni.navigateTo({
-			url: '/pages/message/chat?name=' + item.name
+			url: `/pages/contacts/user-detail?userId=${item.id}&name=${encodeURIComponent(item.name)}`
 		})
 	}
 

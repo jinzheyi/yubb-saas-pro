@@ -3,7 +3,7 @@
 		<view class="status-bar"></view>
 		<view class="header">
 			<view class="header-top">
-				<view class="header-left" @click="handleBack">
+				<view class="header-left" @click.stop="handleBack">
 					<text class="iconfont back-icon">&#xeb04;</text>
 				</view>
 				<text class="header-title">我的部门</text>
@@ -205,9 +205,9 @@
 			// 选择模式下点击整行也可以切换选中状态
 			toggleMemberSelect(member)
 		} else {
-			// 普通模式下跳转到用户详情
+			// 普通模式下跳转到用户详情页面
 			uni.navigateTo({
-				url: '/pages/contacts/user-detail?name=' + member.name
+				url: `/pages/contacts/user-detail?userId=${member.id}&name=${encodeURIComponent(member.name)}`
 			})
 		}
 	}

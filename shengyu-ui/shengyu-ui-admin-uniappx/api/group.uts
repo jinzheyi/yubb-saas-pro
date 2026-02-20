@@ -29,7 +29,7 @@ export function updateGroup(data: any): Promise<any> {
 /**
  * 解散群组
  */
-export function dissolveGroup(id: number): Promise<any> {
+export function dissolveGroup(id: string): Promise<any> {
   return request({
     url: `/system/im/group/dissolve?id=${id}`,
     method: 'DELETE'
@@ -39,7 +39,7 @@ export function dissolveGroup(id: number): Promise<any> {
 /**
  * 退出群组
  */
-export function quitGroup(id: number): Promise<any> {
+export function quitGroup(id: string): Promise<any> {
   return request({
     url: `/system/im/group/quit?id=${id}`,
     method: 'POST'
@@ -49,7 +49,7 @@ export function quitGroup(id: number): Promise<any> {
 /**
  * 获取群组信息
  */
-export function getGroup(id: number): Promise<any> {
+export function getGroup(id: string): Promise<any> {
   return request({
     url: `/system/im/group/get?id=${id}`,
     method: 'GET'
@@ -80,7 +80,7 @@ export function addGroupMembers(data: any): Promise<any> {
 /**
  * 移除群成员
  */
-export function removeGroupMember(groupId: number, memberUserId: number): Promise<any> {
+export function removeGroupMember(groupId: string, memberUserId: string): Promise<any> {
   return request({
     url: `/system/im/group/member/remove?groupId=${groupId}&memberUserId=${memberUserId}`,
     method: 'DELETE'
@@ -90,7 +90,7 @@ export function removeGroupMember(groupId: number, memberUserId: number): Promis
 /**
  * 获取群成员列表
  */
-export function getGroupMembers(groupId: number): Promise<any> {
+export function getGroupMembers(groupId: string): Promise<any> {
   return request({
     url: `/system/im/group/member/list?groupId=${groupId}`,
     method: 'GET'
@@ -100,7 +100,7 @@ export function getGroupMembers(groupId: number): Promise<any> {
 /**
  * 设置群成员角色
  */
-export function setGroupMemberRole(groupId: number, memberUserId: number, role: number): Promise<any> {
+export function setGroupMemberRole(groupId: string, memberUserId: string, role: number): Promise<any> {
   return request({
     url: `/system/im/group/member/set-role?groupId=${groupId}&memberUserId=${memberUserId}&role=${role}`,
     method: 'PUT'
@@ -110,7 +110,7 @@ export function setGroupMemberRole(groupId: number, memberUserId: number, role: 
 /**
  * 设置群成员禁言
  */
-export function setGroupMemberMuted(groupId: number, memberUserId: number, muted: boolean): Promise<any> {
+export function setGroupMemberMuted(groupId: string, memberUserId: string, muted: boolean): Promise<any> {
   return request({
     url: `/system/im/group/member/set-muted?groupId=${groupId}&memberUserId=${memberUserId}&muted=${muted}`,
     method: 'PUT'
@@ -120,7 +120,7 @@ export function setGroupMemberMuted(groupId: number, memberUserId: number, muted
 /**
  * 转让群主
  */
-export function transferGroupOwner(groupId: number, newOwnerId: number): Promise<any> {
+export function transferGroupOwner(groupId: string, newOwnerId: string): Promise<any> {
   return request({
     url: `/system/im/group/transfer-owner?groupId=${groupId}&newOwnerId=${newOwnerId}`,
     method: 'PUT'

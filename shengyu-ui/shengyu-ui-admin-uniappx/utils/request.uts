@@ -295,6 +295,18 @@ async function refreshAccessToken(): Promise<any> {
  * Token 过期处理
  */
 function handleTokenExpired() {
+	// 获取当前页面路径
+	const pages = getCurrentPages()
+	const currentPage = pages[pages.length - 1]
+	const currentRoute = currentPage ? currentPage.route : ''
+	
+	// 如果已经在登录页，不显示提示框，直接清除缓存
+	if (currentRoute.indexOf('login') > -1) {
+		clearUserCache()
+		return
+	}
+	
+	// 不在登录页，显示提示框
 	uni.showModal({
 		title: '提示',
 		content: '登录已过期，请重新登录',

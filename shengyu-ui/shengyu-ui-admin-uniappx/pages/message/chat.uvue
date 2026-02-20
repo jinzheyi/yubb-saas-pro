@@ -5,7 +5,7 @@
 		
 		<!-- 头部导航 -->
 		<view class="header" :class="{ 'header-multi-select': multiSelectMode }">
-			<view v-if="!multiSelectMode" class="header-left" @click="handleBack">
+			<view v-if="!multiSelectMode" class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon">&#xeb04;</text>
 				<text class="back-text">{{ t('common.back', '返回') }}</text>
 			</view>
@@ -271,6 +271,7 @@
 	import { clearUnreadCount as clearUnreadCountApi } from '../../api/conversation.uts'
 	import { getUserId, getTenantIdAsNumber } from '../../store/user.uts'
 	import { uploadFile, chooseAndUploadImage, chooseAndUploadVideo, chooseAndUploadFile } from '../../utils/upload.uts'
+	import { getUserAvatarColor, getAvatarText as getAvatarTextUtil } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
 	
@@ -448,10 +449,11 @@
 				? messages.value[0].messageId 
 				: 0
 			
-			const res = await getMessageList(conversationId.value, lastMessageId, 20)
+			// 注意：request 拦截器已经解包了 data.data，返回的是 PageResult 对象
+			const pageResult = await getMessageList(conversationId.value, lastMessageId, 20)
 			
-			if (res.code === 0 && res.data && res.data.list) {
-				const serverMessages = res.data.list as any[]
+			if (pageResult && pageResult.list) {
+				const serverMessages = pageResult.list as any[]
 				
 				// 转换为 MessageItem 格式
 				const newMessages = serverMessages.map(msg => {
@@ -461,7 +463,8 @@
 				// 合并消息（去重）
 				messages.value = mergeMessages(messages.value, newMessages)
 				
-				hasMore.value = res.data.hasMore
+				// PageResult 可能没有 hasMore 字段，根据 list 长度判断
+				hasMore.value = serverMessages.length >= 20
 				scrollToBottom()
 			}
 			
@@ -490,8 +493,8 @@
 			time: msg.createTime,
 			timestamp: new Date(msg.createTime).getTime(),
 			showTime: true,
-			avatarText: getAvatarText(msg.senderName),
-			avatarBg: getRandomColor(),
+			avatarText: getAvatarTextUtil(msg.senderName || ''),
+			avatarBg: getUserAvatarColor(msg.senderId),
 			status: msg.status === 1 ? 'success' : 'sending'
 		} as MessageItem
 	}
@@ -581,23 +584,6 @@
 	}
 	
 	/**
-	 * 获取头像文字
-	 */
-	function getAvatarText(name : string) : string {
-		if (!name || name.length === 0) {
-			return '?'
-		}
-		return name.substring(0, 1)
-	}
-	
-	/**
-	 * 获取随机颜色
-	 */
-	function getRandomColor() : string {
-		const colors = ['#F197BC', '#5FB6F7', '#c084fc', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6']
-		return colors[Math.floor(Math.random() * colors.length)]
-	}
-	
 	/**
 	 * 合并消息（去重）
 	 */

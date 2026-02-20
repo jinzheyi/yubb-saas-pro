@@ -7,7 +7,7 @@ import { request } from '../utils/request.uts'
 /**
  * 获取消息列表（分页）
  */
-export function getMessageList(conversationId: number, lastMessageId: number | null, pageSize: number = 20): Promise<any> {
+export function getMessageList(conversationId: string, lastMessageId: string | null, pageSize: number = 20): Promise<any> {
   let url = `/system/im/message/list?conversationId=${conversationId}&pageSize=${pageSize}`
   if (lastMessageId !== null) {
     url += `&lastMessageId=${lastMessageId}`
@@ -21,7 +21,7 @@ export function getMessageList(conversationId: number, lastMessageId: number | n
 /**
  * 撤回消息
  */
-export function recallMessage(id: number): Promise<any> {
+export function recallMessage(id: string): Promise<any> {
   return request({
     url: `/system/im/message/recall?id=${id}`,
     method: 'POST'
@@ -31,7 +31,7 @@ export function recallMessage(id: number): Promise<any> {
 /**
  * 删除消息
  */
-export function deleteMessage(id: number): Promise<any> {
+export function deleteMessage(id: string): Promise<any> {
   return request({
     url: `/system/im/message/delete?id=${id}`,
     method: 'DELETE'
@@ -41,7 +41,7 @@ export function deleteMessage(id: number): Promise<any> {
 /**
  * 标记消息已读
  */
-export function markMessageRead(conversationId: number, lastReadMessageId: number): Promise<any> {
+export function markMessageRead(conversationId: string, lastReadMessageId: string): Promise<any> {
   return request({
     url: '/system/im/message/read',
     method: 'POST',

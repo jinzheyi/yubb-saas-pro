@@ -1,0 +1,85 @@
+/**
+ * 头像相关工具函数
+ */
+
+/**
+ * 预定义的头像背景色列表
+ */
+const AVATAR_COLORS = ['#F197BC', '#5FB6F7', '#c084fc', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6']
+
+/**
+ * 根据用户ID获取固定的头像背景色
+ * 同一个用户ID总是返回相同的颜色
+ * 
+ * @param userId 用户ID
+ * @returns 头像背景色（十六进制颜色值）
+ */
+export function getUserAvatarColor(userId : number) : string {
+	const index = userId % AVATAR_COLORS.length
+	return AVATAR_COLORS[index]
+}
+
+/**
+ * 根据群组ID获取固定的头像背景色
+ * 同一个群组ID总是返回相同的颜色
+ * 为了避免与用户ID冲突，群组使用不同的偏移量
+ * 
+ * @param groupId 群组ID
+ * @returns 头像背景色（十六进制颜色值）
+ */
+export function getGroupAvatarColor(groupId : number) : string {
+	// 加上偏移量，确保与用户颜色区分
+	const seed = groupId + 100000
+	const index = seed % AVATAR_COLORS.length
+	return AVATAR_COLORS[index]
+}
+
+/**
+ * 根据会话类型和目标ID获取固定的头像背景色
+ * 适用于消息列表等需要区分单聊和群聊的场景
+ * 
+ * @param conversationType 会话类型 (1-单聊 2-群聊)
+ * @param targetId 目标ID (单聊为用户ID，群聊为群组ID)
+ * @returns 头像背景色（十六进制颜色值）
+ */
+export function getConversationAvatarColor(conversationType : number, targetId : number) : string {
+	if (conversationType === 2) {
+		// 群聊
+		return getGroupAvatarColor(targetId)
+	} else {
+		// 单聊或其他类型
+		return getUserAvatarColor(targetId)
+	}
+}
+
+/**
+ * 从姓名中提取头像文字
+ * 中文姓名取前2个字符，英文姓名取首字母
+ * 
+ * @param name 姓名
+ * @returns 头像文字
+ */
+export function getAvatarText(name : string) : string {
+	if (!name || name.length === 0) {
+		return '?'
+	}
+	
+	// 中文姓名取前2个字符
+	if (name.length <= 2) {
+		return name
+	}
+	
+	// 检查是否包含中文字符
+	const hasChinese = /[\u4e00-\u9fa5]/.test(name)
+	if (hasChinese) {
+		return name.substring(0, 2)
+	}
+	
+	// 英文姓名取首字母
+	const words = name.split(' ')
+	if (words.length >= 2) {
+		return (words[0].substring(0, 1) + words[1].substring(0, 1)).toUpperCase()
+	}
+	
+	return name.substring(0, 1).toUpperCase()
+}

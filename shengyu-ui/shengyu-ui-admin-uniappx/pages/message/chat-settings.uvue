@@ -5,7 +5,7 @@
 		
 		<!-- 头部导航 -->
 		<view class="header">
-			<view class="header-left" @click="handleBack">
+			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon">&#xeb04;</text>
 				<text class="back-text">{{ t('common.back') }}</text>
 			</view>

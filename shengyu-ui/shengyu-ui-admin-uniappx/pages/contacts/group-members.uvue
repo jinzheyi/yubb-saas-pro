@@ -3,7 +3,7 @@
 		<view class="status-bar"></view>
 		<view class="header">
 			<view class="header-top">
-				<view class="header-left" @click="handleBack">
+				<view class="header-left" @click.stop="handleBack">
 					<text class="iconfont back-icon">&#xeb04;</text>
 				</view>
 				<text class="header-title">{{ groupName }}</text>

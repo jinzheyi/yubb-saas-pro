@@ -3,7 +3,7 @@
 		<view class="status-bar"></view>
 		<view class="header">
 			<view class="header-top">
-				<view class="header-left" @click="handleBack">
+				<view class="header-left" @click.stop="handleBack">
 					<text class="iconfont back-icon">&#xeb04;</text>
 				</view>
 				<text class="header-title">我的群组</text>
@@ -58,11 +58,10 @@
 		loading.value = true
 		
 		try {
-			const res = await getGroupList()
+			// 注意：request 拦截器已经解包了 data.data
+			const groups = await getGroupList()
 			
-			if (res.code === 0 && res.data) {
-				const groups = res.data as any[]
-				
+			if (groups && Array.isArray(groups)) {
 				// 转换为 UI 格式
 				groupList.value = groups.map(group => {
 					// 生成头像网格（取群名前4个字）

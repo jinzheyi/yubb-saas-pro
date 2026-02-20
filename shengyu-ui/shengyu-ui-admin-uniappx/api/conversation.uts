@@ -28,7 +28,7 @@ export function createConversation(data: any): Promise<any> {
 /**
  * 删除会话
  */
-export function deleteConversation(id: number): Promise<any> {
+export function deleteConversation(id: string): Promise<any> {
   return request({
     url: `/system/im/conversation/delete?id=${id}`,
     method: 'DELETE'
@@ -38,31 +38,38 @@ export function deleteConversation(id: number): Promise<any> {
 /**
  * 置顶会话
  */
-export function pinConversation(id: number, pinned: boolean): Promise<any> {
+export function pinConversation(id: string, pinned: boolean): Promise<any> {
   return request({
-    url: `/system/im/conversation/pin?id=${id}`,
+    url: '/system/im/conversation/update',
     method: 'PUT',
-    data: { pinned: pinned }
+    data: { 
+      id: id,
+      isPinned: pinned 
+    }
   })
 }
 
 /**
  * 设置免打扰
  */
-export function setNoDisturb(id: number, noDisturb: boolean): Promise<any> {
+export function setNoDisturb(id: string, noDisturb: boolean): Promise<any> {
   return request({
-    url: `/system/im/conversation/no-disturb?id=${id}`,
+    url: '/system/im/conversation/update',
     method: 'PUT',
-    data: { noDisturb: noDisturb }
+    data: { 
+      id: id,
+      noDisturb: noDisturb 
+    }
   })
 }
 
 /**
  * 清空未读数
  */
-export function clearUnreadCount(id: number): Promise<any> {
+export function clearUnreadCount(id: string): Promise<any> {
   return request({
-    url: `/system/im/conversation/clear-unread?id=${id}`,
-    method: 'PUT'
+    url: '/system/im/conversation/mark-read',
+    method: 'PUT',
+    params: { id: id }
   })
 }

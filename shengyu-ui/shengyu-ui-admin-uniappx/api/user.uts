@@ -1,0 +1,26 @@
+/**
+ * 用户管理 API
+ */
+
+import { request } from '../utils/request.uts'
+
+/**
+ * 获取用户详情
+ * @param id 用户ID（字符串，避免精度丢失）
+ */
+export function getUserDetail(id: string): Promise<any> {
+  return request({
+    url: `/system/user/get?id=${id}`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 获取当前用户详情
+ */
+export function getCurrentUserDetail(): Promise<any> {
+  return request({
+    url: '/system/user/get-profile',
+    method: 'GET'
+  })
+}

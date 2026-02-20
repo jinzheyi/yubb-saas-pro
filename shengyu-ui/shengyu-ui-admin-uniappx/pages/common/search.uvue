@@ -8,7 +8,7 @@
 				<text class="iconfont search-icon">&#xea6e;</text>
 				<input class="search-input" v-model="keyword" placeholder="搜索联系人、群聊、消息" placeholder-class="placeholder" @input="handleSearch" @confirm="handleSearchConfirm" focus />
 			</view>
-			<text class="cancel-btn" @click="handleBack">取消</text>
+			<text class="cancel-btn" @click.stop="handleBack">取消</text>
 		</view>
 
 		<!-- 搜索历史 -->
