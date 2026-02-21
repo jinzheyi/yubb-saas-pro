@@ -11,35 +11,78 @@
 			</view>
 			<view class="search-bar">
 				<text class="iconfont search-icon">&#xea6e;</text>
-				<input class="search-input" placeholder="搜索" placeholder-class="placeholder" />
+				<input 
+					class="search-input" 
+					v-model="searchKeyword"
+					placeholder="搜索" 
+					placeholder-class="placeholder"
+					@input="handleSearch"
+				/>
 			</view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<!-- 部门层级 -->
 			<view class="dept-hierarchy">
-				<view class="dept-node" @click="toggleDeptExpand">
-					<text class="dept-node-text">科技创新集团有限公司(30)</text>
-					<text class="iconfont expand-icon">{{ deptExpanded ? '\ueaf5' : '\ueaf3' }}</text>
-				</view>
-				<view v-if="deptExpanded" class="dept-children">
-					<!-- 二级部门1 -->
-					<view class="dept-child" @click="toggleSubDept1">
-						<text class="iconfont child-icon">{{ subDept1Expanded ? '\ueaf5' : '\ueaf3' }}</text>
-						<text class="dept-child-text">数字科技有限公司(30)</text>
+				<view 
+					v-for="dept in deptTree" 
+					:key="dept.id"
+					class="dept-node-wrapper"
+				>
+					<!-- 一级部门 -->
+					<view class="dept-node" @click="toggleDeptExpand(dept)">
+						<view class="dept-node-content">
+							<text v-if="dept.children && dept.children.length > 0" class="iconfont expand-icon-left">
+								{{ dept.expanded ? '\ueaf5' : '\ueaf3' }}
+							</text>
+							<text class="dept-node-text">{{ dept.name }}({{ dept.userCount || 0 }})</text>
+						</view>
 					</view>
-					<!-- 三级部门（软件研发事业部）- 只在二级部门1展开时显示 -->
-					<view v-if="subDept1Expanded" class="dept-grandchildren">
-						<view class="dept-child dept-child-active" @click="toggleSubDept2">
-							<text class="iconfont child-icon">{{ subDept2Expanded ? '\ueaf5' : '\ueaf3' }}</text>
-							<text class="dept-child-text dept-child-text-active">软件研发事业部(30)</text>
+					
+					<!-- 子部门（递归渲染） -->
+					<view v-if="dept.expanded && dept.children && dept.children.length > 0" class="dept-children">
+						<view 
+							v-for="child in dept.children" 
+							:key="child.id"
+							class="dept-child-wrapper"
+						>
+							<view 
+								:class="['dept-child', currentDeptId === child.id ? 'dept-child-active' : '']" 
+								@click="selectDept(child)"
+							>
+								<text v-if="child.children && child.children.length > 0" class="iconfont child-icon">
+									{{ child.expanded ? '\ueaf5' : '\ueaf3' }}
+								</text>
+								<text v-else class="child-icon-placeholder"></text>
+								<text :class="['dept-child-text', currentDeptId === child.id ? 'dept-child-text-active' : '']">
+									{{ child.name }}({{ child.userCount || 0 }})
+								</text>
+							</view>
+							
+							<!-- 三级部门 -->
+							<view v-if="child.expanded && child.children && child.children.length > 0" class="dept-grandchildren">
+								<view 
+									v-for="grandchild in child.children" 
+									:key="grandchild.id"
+									:class="['dept-child', currentDeptId === grandchild.id ? 'dept-child-active' : '']" 
+									@click="selectDept(grandchild)"
+								>
+									<text v-if="grandchild.children && grandchild.children.length > 0" class="iconfont child-icon">
+										{{ grandchild.expanded ? '\ueaf5' : '\ueaf3' }}
+									</text>
+									<text v-else class="child-icon-placeholder"></text>
+									<text :class="['dept-child-text', currentDeptId === grandchild.id ? 'dept-child-text-active' : '']">
+										{{ grandchild.name }}({{ grandchild.userCount || 0 }})
+									</text>
+								</view>
+							</view>
 						</view>
 					</view>
 				</view>
 			</view>
 
-			<!-- 成员列表 - 只在三级部门展开时显示 -->
-			<view v-if="deptExpanded && subDept1Expanded && subDept2Expanded" class="member-list">
+			<!-- 成员列表 -->
+			<view v-if="memberList.length > 0" class="member-list">
 				<view v-for="(member, index) in memberList" :key="member.id" 
 					class="member-item" 
 					@click="handleMemberClick(member)">
@@ -57,6 +100,11 @@
 					</view>
 					<view v-if="index < memberList.length - 1" class="member-item-border"></view>
 				</view>
+			</view>
+			
+			<!-- 空状态 -->
+			<view v-if="!loading && memberList.length === 0 && currentDeptId !== null" class="empty-state">
+				<text class="empty-text">暂无成员</text>
 			</view>
 		</scroll-view>
 
@@ -77,122 +125,326 @@
 		toggleMember,
 		getSelectedCount
 	} from '../../store/group-selection.uts'
+	import { getMyDeptTree } from '../../api/dept.uts'
+	import { getUserList } from '../../api/user.uts'
+	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
 
-	// 部门层级展开状态
-	const deptExpanded = ref(true)
-	const subDept1Expanded = ref(true)  // 数字科技有限公司
-	const subDept2Expanded = ref(true)  // 软件研发事业部
+	// 部门树数据
+	const deptTree = ref<any[]>([])
+	
+	// 当前选中的部门ID（默认为用户所在部门）
+	const currentDeptId = ref<number | null>(null)
 	
 	// 是否为选择模式
 	const isSelectMode = ref(false)
+	
+	// 加载状态
+	const loading = ref(false)
+	
+	// 搜索关键词
+	const searchKeyword = ref('')
+	
+	// 搜索定时器
+	let searchTimer: number = 0
 
-	// 成员列表数据（ID范围：4001-4010，避免与其他页面冲突）
-	const memberList = ref([
-		{
-			id: 4001,
-			name: '朱付生',
-			role: '副部长（主持工作）',
-			avatarText: '付生',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4002,
-			name: '王尹',
-			role: '副部长',
-			avatarText: '王尹',
-			avatarBg: '#fb7185',
-			selected: false
-		},
-		{
-			id: 4003,
-			name: '喻泽鹏',
-			role: 'UI设计师',
-			avatarText: '泽鹏',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4004,
-			name: '徐碧',
-			role: '售前经理',
-			avatarText: '徐碧',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4005,
-			name: '万剑波',
-			role: '产品经理',
-			avatarText: '剑波',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4006,
-			name: '刘建弋',
-			role: '软件项目经理',
-			avatarText: '建弋',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4007,
-			name: '曾丁丁',
-			role: '软件项目经理',
-			avatarText: '丁丁',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4008,
-			name: '胡耀华',
-			role: '软件项目经理',
-			avatarText: '耀华',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4009,
-			name: '方竞凯',
-			role: '开发工程师',
-			avatarText: '竞凯',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 4010,
-			name: '张敏',
-			role: '开发工程师',
-			avatarText: '张敏',
-			avatarBg: '#10b981',
-			selected: false
-		}
-	])
+	// 成员列表数据
+	const memberList = ref<any[]>([])
 
 	// 选中的成员数量（使用全局状态）
 	const selectedCount = computed(() : number => {
 		return getSelectedCount()
 	})
 
+	/**
+	 * 返回上一页
+	 */
 	function handleBack() {
 		uni.navigateBack()
 	}
 
-	function toggleDeptExpand() {
-		deptExpanded.value = !deptExpanded.value
+	/**
+	 * 加载我的部门树
+	 */
+	async function loadDeptList() {
+		try {
+			loading.value = true
+			const data = await getMyDeptTree()
+			
+			if (data && data.length > 0) {
+				// 后端返回的是已排序的扁平列表，包含所有相关部门
+				// 构建树形结构
+				deptTree.value = buildDeptTreeFromPath(data)
+				
+				// 查找第一个有用户数据的部门作为默认选中
+				let firstUserDept = null
+				for (let i = 0; i < data.length; i++) {
+					if (data[i].users && data[i].users.length > 0) {
+						firstUserDept = data[i]
+						break
+					}
+				}
+				
+				if (firstUserDept !== null) {
+					currentDeptId.value = firstUserDept.id
+					// 显示该部门的成员
+					showDeptMembers(firstUserDept)
+				}
+			}
+		} catch (e) {
+			console.error('[MyDepartment] 加载部门列表失败:', e)
+			uni.showToast({
+				title: '加载失败',
+				icon: 'none'
+			})
+		} finally {
+			loading.value = false
+		}
 	}
 
-	function toggleSubDept1() {
-		subDept1Expanded.value = !subDept1Expanded.value
+	/**
+	 * 从扁平列表构建部门树
+	 * 后端返回的是已排序的扁平列表，包含所有相关部门
+	 */
+	function buildDeptTreeFromPath(pathList: any[]): any[] {
+		if (pathList.length === 0) {
+			return []
+		}
+		
+		// 创建部门映射表
+		const deptMap = new Map<number, any>()
+		const userDeptIds = new Set<number>()
+		
+		// 第一遍：创建所有节点，并标记用户所属部门
+		for (let i = 0; i < pathList.length; i++) {
+			const dept = pathList[i]
+			const node = {
+				id: dept.id,
+				name: dept.name,
+				parentId: dept.parentId,
+				sort: dept.sort || 0,
+				expanded: false, // 默认收起
+				userCount: dept.users ? dept.users.length : 0,
+				children: [] as any[]
+			}
+			deptMap.set(dept.id, node)
+			
+			// 如果部门有用户数据，说明是用户所属部门
+			if (dept.users && dept.users.length > 0) {
+				userDeptIds.add(dept.id)
+			}
+		}
+		
+		// 第二遍：建立父子关系
+		const rootNodes: any[] = []
+		for (const [id, node] of deptMap) {
+			if (node.parentId === null || node.parentId === 0) {
+				// 根节点
+				rootNodes.push(node)
+			} else {
+				// 子节点，添加到父节点的children中
+				const parent = deptMap.get(node.parentId)
+				if (parent !== null) {
+					parent.children.push(node)
+				}
+			}
+		}
+		
+		// 对每个节点的children按sort排序
+		function sortChildren(nodes: any[]) {
+			for (let i = 0; i < nodes.length; i++) {
+				const node = nodes[i]
+				if (node.children.length > 0) {
+					node.children.sort((a: any, b: any) => {
+						return a.sort - b.sort
+					})
+					sortChildren(node.children)
+				}
+			}
+		}
+		
+		// 对根节点排序
+		rootNodes.sort((a: any, b: any) => {
+			return a.sort - b.sort
+		})
+		sortChildren(rootNodes)
+		
+		// 展开到用户所属部门的路径
+		function expandToUserDepts(nodes: any[]): boolean {
+			let hasUserDept = false
+			for (let i = 0; i < nodes.length; i++) {
+				const node = nodes[i]
+				// 检查当前节点或其子节点是否包含用户部门
+				const childHasUserDept = expandToUserDepts(node.children)
+				const isUserDept = userDeptIds.has(node.id)
+				
+				if (isUserDept || childHasUserDept) {
+					node.expanded = true
+					hasUserDept = true
+				}
+			}
+			return hasUserDept
+		}
+		
+		expandToUserDepts(rootNodes)
+		
+		return rootNodes
 	}
 
-	function toggleSubDept2() {
-		subDept2Expanded.value = !subDept2Expanded.value
+	/**
+	 * 切换部门展开状态
+	 */
+	function toggleDeptExpand(dept: any) {
+		// 如果有子部门，切换展开状态
+		if (dept.children && dept.children.length > 0) {
+			dept.expanded = !dept.expanded
+		}
+		
+		// 如果点击的是用户所属部门，也选中它
+		if (dept.userCount > 0) {
+			currentDeptId.value = dept.id
+			loadMemberList(dept.id)
+		}
 	}
 
+	/**
+	 * 选择部门
+	 */
+	function selectDept(dept: any) {
+		// 如果有子部门，切换展开状态
+		if (dept.children && dept.children.length > 0) {
+			dept.expanded = !dept.expanded
+		}
+		
+		// 设置当前选中的部门
+		currentDeptId.value = dept.id
+		
+		// 如果部门有用户数据（用户所属部门），直接显示
+		// 否则从后端加载
+		if (dept.userCount > 0) {
+			// 从后端数据中查找该部门的用户
+			loadMemberList(dept.id)
+		} else {
+			// 清空成员列表
+			memberList.value = []
+		}
+	}
+
+	/**
+	 * 加载成员列表
+	 */
+	async function loadMemberList(deptId: number) {
+		try {
+			loading.value = true
+			
+			const params: UTSJSONObject = {
+				deptId: deptId,
+				status: 0 // 只查询正常状态的用户
+			}
+			
+			// 如果有搜索关键词，添加到查询参数
+			if (searchKeyword.value !== '') {
+				params['keyword'] = searchKeyword.value
+			}
+			
+			const data = await getUserList(params)
+			
+			if (data && data.length > 0) {
+				// 转换为页面需要的格式
+				memberList.value = data.map((user: any) => {
+					return {
+						id: user.id,
+						name: user.nickname,
+						role: user.postName || '未设置岗位',
+						avatarText: getAvatarText(user.nickname),
+						avatarBg: getUserAvatarColor(user.id),
+						selected: isMemberSelected(user.id)
+					}
+				})
+				
+				// 更新部门的用户数量
+				updateDeptUserCount(deptId, data.length)
+			} else {
+				memberList.value = []
+				updateDeptUserCount(deptId, 0)
+			}
+		} catch (e) {
+			console.error('[MyDepartment] 加载成员列表失败:', e)
+			uni.showToast({
+				title: '加载失败',
+				icon: 'none'
+			})
+			memberList.value = []
+		} finally {
+			loading.value = false
+		}
+	}
+	
+	/**
+	 * 从后端返回的数据中显示部门成员
+	 */
+	function showDeptMembers(dept: any) {
+		if (dept.users && dept.users.length > 0) {
+			memberList.value = dept.users.map((user: any) => {
+				return {
+					id: user.id,
+					name: user.nickname,
+					role: user.postName || '未设置岗位',
+					avatarText: getAvatarText(user.nickname),
+					avatarBg: getUserAvatarColor(user.id),
+					selected: isMemberSelected(user.id)
+				}
+			})
+		} else {
+			memberList.value = []
+		}
+	}
+
+	/**
+	 * 更新部门的用户数量
+	 */
+	function updateDeptUserCount(deptId: number, count: number) {
+		// 递归查找并更新部门的用户数量
+		function updateCount(depts: any[]): boolean {
+			for (let i = 0; i < depts.length; i++) {
+				const dept = depts[i]
+				if (dept.id === deptId) {
+					dept.userCount = count
+					return true
+				}
+				if (dept.children && dept.children.length > 0) {
+					if (updateCount(dept.children)) {
+						return true
+					}
+				}
+			}
+			return false
+		}
+		
+		updateCount(deptTree.value)
+	}
+
+	/**
+	 * 处理搜索
+	 */
+	function handleSearch() {
+		// 清除之前的定时器
+		if (searchTimer !== 0) {
+			clearTimeout(searchTimer)
+		}
+		
+		// 延迟500ms执行搜索
+		searchTimer = setTimeout(() => {
+			if (currentDeptId.value !== null) {
+				loadMemberList(currentDeptId.value)
+			}
+		}, 500)
+	}
+
+	/**
+	 * 切换成员选中状态
+	 */
 	function toggleMemberSelect(member : any) {
 		// 使用全局状态管理
 		toggleMember(member)
@@ -200,6 +452,9 @@
 		member.selected = isMemberSelected(member.id)
 	}
 
+	/**
+	 * 处理成员点击
+	 */
 	function handleMemberClick(member : any) {
 		if (isSelectMode.value) {
 			// 选择模式下点击整行也可以切换选中状态
@@ -212,12 +467,17 @@
 		}
 	}
 
+	/**
+	 * 确认选择
+	 */
 	function handleConfirm() {
 		// 返回上一页，选中的数据保留在全局状态中
 		uni.navigateBack()
 	}
 
-	// 同步本地选中状态与全局状态
+	/**
+	 * 同步本地选中状态与全局状态
+	 */
 	function syncSelectionState() {
 		for (let i = 0; i < memberList.value.length; i++) {
 			memberList.value[i].selected = isMemberSelected(memberList.value[i].id)
@@ -229,8 +489,9 @@
 		if (options != null && options['mode'] === 'select') {
 			isSelectMode.value = true
 		}
-		// 同步选中状态
-		syncSelectionState()
+		
+		// 加载我的部门树
+		loadDeptList()
 	})
 
 	// 页面显示时同步选中状态（从其他页面返回时）
@@ -329,6 +590,19 @@
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
+		padding: 4px 0;
+	}
+	
+	.dept-node-content {
+		flex-direction: row;
+		align-items: center;
+	}
+	
+	.expand-icon-left {
+		font-size: 16px;
+		color: #8F959E;
+		margin-right: 8px;
+		width: 20px;
 	}
 
 	.dept-node-text {
@@ -343,7 +617,7 @@
 	}
 
 	.dept-children {
-		margin-top: 16px;
+		margin-top: 12px;
 		margin-left: 8px;
 		padding-left: 16px;
 		border-left-width: 2px;
@@ -353,8 +627,9 @@
 	.dept-child {
 		flex-direction: row;
 		align-items: center;
-		margin-bottom: 16px;
+		margin-bottom: 12px;
 		cursor: pointer;
+		padding: 4px 0;
 	}
 
 	.dept-child:active {
@@ -366,8 +641,14 @@
 	}
 
 	.child-icon {
-		font-size: 16px;
+		font-size: 14px;
 		color: #0ea5e9;
+		margin-right: 8px;
+		width: 20px;
+	}
+	
+	.child-icon-placeholder {
+		width: 20px;
 		margin-right: 8px;
 	}
 
@@ -376,21 +657,47 @@
 		color: #646A73;
 	}
 
+	.dept-child-active {
+		background-color: rgba(14,165,233,0.08);
+		border-radius: 4px;
+		padding: 6px 8px;
+		margin-left: -8px;
+	}
+	
 	.dept-child-active .dept-child-text {
-		color: #1F2329;
+		color: #0ea5e9;
 		font-weight: 500;
 	}
 
 	.dept-grandchildren {
-		margin-left: 24px;
+		margin-left: 20px;
 		margin-top: 8px;
 		padding-left: 16px;
 		border-left-width: 2px;
 		border-left-color: rgba(14,165,233,0.15);
 	}
+	
+	.dept-node-wrapper {
+		margin-bottom: 0;
+	}
+	
+	.dept-child-wrapper {
+		margin-bottom: 0;
+	}
 
 	.member-list {
 		background-color: #FFFFFF;
+	}
+	
+	.empty-state {
+		padding: 60px 0;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.empty-text {
+		font-size: 14px;
+		color: #8F959E;
 	}
 
 	.member-item {

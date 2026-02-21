@@ -1,0 +1,21 @@
+/**
+ * 部门管理 API
+ */
+
+import { get } from '../utils/request.uts'
+
+/**
+ * 获取我的部门树
+ * 获取当前用户所在部门及其父级部门的树形结构
+ */
+export function getMyDeptTree(): Promise<any> {
+	return get('/system/dept/my-dept-tree')
+}
+
+/**
+ * 获取部门详情
+ * @param id 部门ID（字符串，避免精度丢失）
+ */
+export function getDept(id: string): Promise<any> {
+	return get(`/system/dept/get?id=${id}`)
+}

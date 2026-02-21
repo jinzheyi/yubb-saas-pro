@@ -1,13 +1,19 @@
 package com.shengyu.module.system.controller.app.user;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
+import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.module.system.controller.admin.user.vo.user.UserPageReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserDetailRespVO;
+import com.shengyu.module.system.controller.app.user.vo.AppUserListReqVO;
+import com.shengyu.module.system.controller.app.user.vo.AppUserSimpleRespVO;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.UserDeptRespVO;
 import com.shengyu.module.system.controller.admin.dept.vo.post.UserPostRespVO;
 import com.shengyu.module.system.convert.user.UserConvert;
+import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.service.dept.DeptService;
 import com.shengyu.module.system.service.dept.PostService;
 import com.shengyu.module.system.service.user.AdminUserService;
@@ -18,8 +24,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.pojo.CommonResult.success;
@@ -98,6 +103,80 @@ public class AppUserController {
     public CommonResult<AppUserDetailRespVO> getCurrentUserDetail() {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return getUserDetail(userId);
+    }
+
+    @GetMapping("/list")
+    @Operation(summary = "获取用户列表（按部门）")
+    public CommonResult<List<AppUserSimpleRespVO>> getUserList(AppUserListReqVO reqVO) {
+        // 1. 构建查询条件
+        UserPageReqVO pageReqVO = new UserPageReqVO();
+        pageReqVO.setDeptId(reqVO.getDeptId());
+        pageReqVO.setStatus(reqVO.getStatus() != null ? reqVO.getStatus() : CommonStatusEnum.ENABLE.getStatus());
+        pageReqVO.setPageSize(1000); // 移动端不分页，一次性返回所有数据
+        
+        // 2. 支持关键词搜索（姓名或手机号）
+        if (StrUtil.isNotBlank(reqVO.getKeyword())) {
+            // 先按手机号搜索
+            pageReqVO.setMobile(reqVO.getKeyword());
+        }
+        
+        // 3. 查询用户列表
+        List<UserRespVO> userList = userService.getUserPage(pageReqVO).getList();
+        
+        // 4. 如果按手机号没找到，再按用户名搜索
+        if (CollUtil.isEmpty(userList) && StrUtil.isNotBlank(reqVO.getKeyword())) {
+            pageReqVO.setMobile(null);
+            pageReqVO.setUsername(reqVO.getKeyword());
+            userList = userService.getUserPage(pageReqVO).getList();
+        }
+        
+        if (CollUtil.isEmpty(userList)) {
+            return success(Collections.emptyList());
+        }
+        
+        // 5. 获取用户ID集合
+        Set<Long> userIds = userList.stream().map(UserRespVO::getId).collect(Collectors.toSet());
+        
+        // 6. 批量获取部门信息
+        Map<Long, List<UserDeptRespVO>> userDeptMap = deptService.getUserDeptMap(userIds);
+        
+        // 7. 批量获取岗位信息
+        Map<Long, List<UserPostRespVO>> userPostMap = postService.getUserPostMap(userIds);
+        
+        // 8. 转换为移动端VO
+        List<AppUserSimpleRespVO> result = userList.stream().map(user -> {
+            AppUserSimpleRespVO vo = new AppUserSimpleRespVO();
+            vo.setId(user.getId());
+            vo.setNickname(user.getNickname());
+            vo.setAvatar(user.getAvatar());
+            vo.setMobile(user.getMobile());
+            vo.setEmail(user.getEmail());
+            vo.setSex(user.getSex());
+            vo.setDeptId(user.getDeptId());
+            vo.setStatus(user.getStatus());
+            
+            // 构建部门层级路径
+            List<UserDeptRespVO> deptList = userDeptMap.get(user.getId());
+            if (CollUtil.isNotEmpty(deptList)) {
+                String deptPath = deptList.stream()
+                        .map(this::buildDeptPath)
+                        .collect(Collectors.joining(", "));
+                vo.setDeptName(deptPath);
+            }
+            
+            // 获取岗位名称（多个岗位用逗号分隔）
+            List<UserPostRespVO> postList = userPostMap.get(user.getId());
+            if (CollUtil.isNotEmpty(postList)) {
+                String postNames = postList.stream()
+                        .map(UserPostRespVO::getName)
+                        .collect(Collectors.joining(", "));
+                vo.setPostName(postNames);
+            }
+            
+            return vo;
+        }).collect(Collectors.toList());
+        
+        return success(result);
     }
 
     /**
