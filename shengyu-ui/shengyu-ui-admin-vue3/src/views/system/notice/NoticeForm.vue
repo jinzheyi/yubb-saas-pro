@@ -5,7 +5,7 @@
       v-loading="formLoading"
       :model="formData"
       :rules="formRules"
-      label-width="80px"
+      label-width="100px"
     >
       <el-form-item label="公告标题" prop="title">
         <el-input v-model="formData.title" placeholder="请输入公告标题" />

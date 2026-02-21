@@ -5,7 +5,7 @@
       v-loading="formLoading"
       :model="formData"
       :rules="formRules"
-      label-width="80px"
+      label-width="100px"
     >
       <el-form-item label="上级部门" prop="parentId">
         <el-tree-select
