@@ -6,6 +6,20 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "3406917",
+      "name": "男",
+      "font_class": "nan",
+      "unicode": "e6ef",
+      "unicode_decimal": 59119
+    },
+    {
+      "icon_id": "3406919",
+      "name": "女",
+      "font_class": "nv",
+      "unicode": "e6f0",
+      "unicode_decimal": 59120
+    },
+    {
       "icon_id": "5387527",
       "name": "加号",
       "font_class": "jiahao1",

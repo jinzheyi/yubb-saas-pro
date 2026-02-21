@@ -17,12 +17,8 @@
 					<text class="iconfont menu-icon">&#xea90;</text>
 					<text class="menu-text">{{ isFollowing ? '已关注' : '关注' }}</text>
 				</view>
-				<view class="menu-item" @click="handleMenuAction('import')">
-					<text class="iconfont menu-icon">&#xea94;</text>
-					<text class="menu-text">导入手机</text>
-				</view>
 				<view class="menu-item" @click="handleMenuAction('share')">
-					<text class="iconfont menu-icon">&#xea7c;</text>
+					<text class="iconfont menu-icon">&#xe63d;</text>
 					<text class="menu-text">分享名片</text>
 				</view>
 			</view>
@@ -33,9 +29,8 @@
 			<view class="user-card">
 				<view class="user-header">
 					<text class="user-name-large">{{ userName }}</text>
-					<text class="iconfont user-icon">&#xea97;</text>
+					<text v-if="userInfo.sex !== null" :class="['iconfont', 'user-icon', userInfo.sex === 0 ? 'user-icon-male' : 'user-icon-female']">{{ userInfo.sex === 0 ? '&#xe6ef;' : '&#xe6f0;' }}</text>
 				</view>
-				<text class="user-company">{{ userInfo.company }}</text>
 			</view>
 
 			<!-- 详细信息 -->
@@ -49,20 +44,12 @@
 					<text class="info-value">{{ userInfo.mobile }}</text>
 				</view>
 				<view class="info-item">
-					<text class="info-label">座机</text>
-					<text class="info-value info-empty">{{ userInfo.phone || '未设置' }}</text>
-				</view>
-				<view class="info-item">
-					<text class="info-label">其他电话</text>
-					<text class="info-value info-empty">{{ userInfo.otherPhone || '未设置' }}</text>
-				</view>
-				<view class="info-item">
 					<text class="info-label">邮箱</text>
 					<text class="info-value info-empty">{{ userInfo.email || '未设置' }}</text>
 				</view>
 				<view class="info-item">
-					<text class="info-label">职级</text>
-					<text class="info-value info-empty">{{ userInfo.level || '未设置' }}</text>
+					<text class="info-label">岗位</text>
+					<text class="info-value info-empty">{{ userInfo.postName || '未设置' }}</text>
 				</view>
 				<view class="info-item info-item-last">
 					<text class="info-label">部门</text>
@@ -105,13 +92,11 @@
 
 	// 用户信息
 	const userInfo = ref({
-		company: '科技创新集团有限公司',
-		mobile: '187-2096-9685',
-		phone: '',
-		otherPhone: '',
+		sex: null as number | null,
+		mobile: '',
 		email: '',
-		level: '',
-		department: '数字科技有限公司/软件研发事业部'
+		postName: '',
+		department: ''
 	})
 
 	function handleBack() {
@@ -125,12 +110,6 @@
 				isFollowing.value = !isFollowing.value
 				uni.showToast({
 					title: isFollowing.value ? '已关注' : '已取消关注',
-					icon: 'none'
-				})
-				break
-			case 'import':
-				uni.showToast({
-					title: '导入手机功能开发中',
 					icon: 'none'
 				})
 				break
@@ -169,16 +148,14 @@
 			
 			if (data) {
 				// 更新用户名（优先真实姓名）
-				userName.value = data.realName || data.nickname || '未知用户'
+				userName.value = data.nickname || '未知用户'
 				
 				// 更新用户信息
 				userInfo.value = {
-					company: data.companyName || '',
+					sex: data.sex,
 					mobile: data.mobile || '',
-					phone: '',
-					otherPhone: '',
 					email: data.email || '',
-					level: data.postName || '',
+					postName: data.postName || '',
 					department: data.deptName || ''
 				}
 			}
@@ -330,8 +307,15 @@
 	}
 
 	.user-icon {
-		color: #0ea5e9;
 		font-size: 18px;
+	}
+
+	.user-icon-male {
+		color: #0ea5e9;
+	}
+
+	.user-icon-female {
+		color: #ec4899;
 	}
 
 	.user-company {

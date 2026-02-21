@@ -13,9 +13,6 @@ public class AppUserDetailRespVO {
     @Schema(description = "用户昵称", requiredMode = Schema.RequiredMode.REQUIRED, example = "张三")
     private String nickname;
 
-    @Schema(description = "真实姓名", example = "张三")
-    private String realName;
-
     @Schema(description = "手机号码", example = "13800138000")
     private String mobile;
 
@@ -25,7 +22,7 @@ public class AppUserDetailRespVO {
     @Schema(description = "用户头像", example = "https://...")
     private String avatar;
 
-    @Schema(description = "用户性别(1-男 2-女)", example = "1")
+    @Schema(description = "用户性别(0-男 1-女)", example = "0")
     private Integer sex;
 
     @Schema(description = "部门ID", example = "1")
@@ -36,9 +33,6 @@ public class AppUserDetailRespVO {
 
     @Schema(description = "岗位名称", example = "Java开发工程师")
     private String postName;
-
-    @Schema(description = "公司名称", example = "科技创新集团有限公司")
-    private String companyName;
 
     @Schema(description = "备注", example = "这是一个备注")
     private String remark;
