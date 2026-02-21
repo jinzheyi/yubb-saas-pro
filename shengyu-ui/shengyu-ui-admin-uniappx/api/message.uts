@@ -6,14 +6,13 @@ import { request } from '../utils/request.uts'
 
 /**
  * 获取消息列表（分页）
+ * @param conversationId 会话ID
+ * @param pageNo 页码（默认1）
+ * @param pageSize 每页数量（默认20）
  */
-export function getMessageList(conversationId: string, lastMessageId: string | null, pageSize: number = 20): Promise<any> {
-  let url = `/system/im/message/list?conversationId=${conversationId}&pageSize=${pageSize}`
-  if (lastMessageId !== null) {
-    url += `&lastMessageId=${lastMessageId}`
-  }
+export function getMessageList(conversationId: string, pageNo: number = 1, pageSize: number = 20): Promise<any> {
   return request({
-    url: url,
+    url: `/system/im/message/list-by-conversation?conversationId=${conversationId}&pageNo=${pageNo}&pageSize=${pageSize}`,
     method: 'GET'
   })
 }
@@ -21,17 +20,17 @@ export function getMessageList(conversationId: string, lastMessageId: string | n
 /**
  * 撤回消息
  */
-export function recallMessage(id: string): Promise<any> {
+export function recallMessage(id: number): Promise<any> {
   return request({
     url: `/system/im/message/recall?id=${id}`,
-    method: 'POST'
+    method: 'PUT'
   })
 }
 
 /**
  * 删除消息
  */
-export function deleteMessage(id: string): Promise<any> {
+export function deleteMessage(id: number): Promise<any> {
   return request({
     url: `/system/im/message/delete?id=${id}`,
     method: 'DELETE'
@@ -40,16 +39,14 @@ export function deleteMessage(id: string): Promise<any> {
 
 /**
  * 标记消息已读
- * @param conversationId 会话ID（字符串，避免精度丢失）
- * @param lastReadMessageId 最后已读消息ID（字符串，避免精度丢失）
+ * @param messageIds 消息ID列表
  */
-export function markMessageRead(conversationId: string, lastReadMessageId: string): Promise<any> {
+export function markMessageRead(messageIds: number[]): Promise<any> {
   return request({
-    url: '/system/im/message/read',
-    method: 'POST',
-    data: {
-      conversationId: conversationId,
-      lastReadMessageId: lastReadMessageId
+    url: '/system/im/message/mark-read',
+    method: 'PUT',
+    params: {
+      messageIds: messageIds
     }
   })
 }

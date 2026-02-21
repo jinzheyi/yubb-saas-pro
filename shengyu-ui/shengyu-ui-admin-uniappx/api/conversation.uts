@@ -72,8 +72,7 @@ export function setNoDisturb(id: string, noDisturb: boolean): Promise<any> {
  */
 export function clearUnreadCount(id: string): Promise<any> {
   return request({
-    url: '/system/im/conversation/mark-read',
-    method: 'PUT',
-    params: { id: id }
+    url: `/system/im/conversation/mark-read?id=${id}`,
+    method: 'PUT'
   })
 }

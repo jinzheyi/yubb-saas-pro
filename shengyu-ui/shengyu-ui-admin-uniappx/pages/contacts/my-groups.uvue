@@ -11,12 +11,24 @@
 			</view>
 			<view class="search-bar">
 				<text class="iconfont search-icon">&#xea6e;</text>
-				<input class="search-input" placeholder="搜索群组" placeholder-class="placeholder" />
+				<input 
+					class="search-input" 
+					v-model="searchKeyword"
+					placeholder="搜索群组" 
+					placeholder-class="placeholder"
+					@input="handleSearch"
+				/>
 			</view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
-			<view class="group-list">
+			<!-- 加载状态 -->
+			<view v-if="loading && groupList.length === 0" class="loading-state">
+				<text class="loading-text">加载中...</text>
+			</view>
+			
+			<!-- 群组列表 -->
+			<view v-else-if="groupList.length > 0" class="group-list">
 				<view v-for="(group, index) in groupList" :key="group.id" 
 					class="group-item" 
 					@click="handleGroupClick(group)">
@@ -34,6 +46,11 @@
 					<view v-if="index < groupList.length - 1" class="group-item-border"></view>
 				</view>
 			</view>
+			
+			<!-- 空状态 -->
+			<view v-else-if="!loading" class="empty-state">
+				<text class="empty-text">{{ searchKeyword ? '未找到相关群组' : '暂无群组' }}</text>
+			</view>
 		</scroll-view>
 	</view>
 </template>
@@ -47,23 +64,30 @@
 	// 是否为选择模式
 	const isSelectMode = ref(false)
 	const loading = ref(false)
+	
+	// 搜索关键词
+	const searchKeyword = ref('')
+	
+	// 搜索定时器
+	let searchTimer: number = 0
 
 	// 群组列表数据
 	const groupList = ref<any[]>([])
+	
+	// 原始群组列表（用于搜索后恢复）
+	const originalGroupList = ref<any[]>([])
 	
 	/**
 	 * 加载群组列表
 	 */
 	async function loadGroups() {
-		loading.value = true
-		
 		try {
-			// 注意：request 拦截器已经解包了 data.data
+			loading.value = true
 			const groups = await getGroupList()
 			
 			if (groups && Array.isArray(groups)) {
 				// 转换为 UI 格式
-				groupList.value = groups.map(group => {
+				const formattedGroups = groups.map(group => {
 					// 生成头像网格（取群名前4个字）
 					const name = group.name || '未命名群组'
 					const avatars : string[] = []
@@ -82,22 +106,64 @@
 						avatars: avatars
 					}
 				})
+				
+				groupList.value = formattedGroups
+				// 保存原始数据（深拷贝）
+				originalGroupList.value = JSON.parse(JSON.stringify(formattedGroups))
+			} else {
+				groupList.value = []
+				originalGroupList.value = []
 			}
-			
 		} catch (e) {
 			console.error('[MyGroups] 加载群组列表失败:', e)
-			uni.showToast({ title: '加载失败', icon: 'none' })
+			uni.showToast({
+				title: '加载失败',
+				icon: 'none'
+			})
+			groupList.value = []
+			originalGroupList.value = []
 		} finally {
 			loading.value = false
 		}
 	}
 	
 	/**
-	 * 页面加载时获取群组列表
+	 * 处理搜索
 	 */
-	onMounted(() => {
-		loadGroups()
-	})
+	function handleSearch() {
+		// 清除之前的定时器
+		if (searchTimer !== 0) {
+			clearTimeout(searchTimer)
+		}
+		
+		// 延迟300ms执行搜索
+		searchTimer = setTimeout(() => {
+			if (searchKeyword.value && searchKeyword.value.length > 0) {
+				// 执行本地搜索
+				performLocalSearch()
+			} else {
+				// 清空搜索时，恢复原始数据
+				restoreOriginalData()
+			}
+		}, 300)
+	}
+	
+	/**
+	 * 执行本地搜索
+	 */
+	function performLocalSearch() {
+		const keyword = searchKeyword.value.toLowerCase()
+		groupList.value = originalGroupList.value.filter(group => {
+			return group.name.toLowerCase().indexOf(keyword) > -1
+		})
+	}
+	
+	/**
+	 * 恢复原始数据
+	 */
+	function restoreOriginalData() {
+		groupList.value = JSON.parse(JSON.stringify(originalGroupList.value))
+	}
 
 	function handleBack() {
 		uni.navigateBack()
@@ -122,6 +188,9 @@
 		if (options != null && options['mode'] === 'select') {
 			isSelectMode.value = true
 		}
+		
+		// 加载群组列表
+		loadGroups()
 	})
 </script>
 
@@ -205,6 +274,28 @@
 
 	.group-list {
 		background-color: #FFFFFF;
+	}
+	
+	.loading-state {
+		padding: 60px 0;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.loading-text {
+		font-size: 14px;
+		color: #8F959E;
+	}
+	
+	.empty-state {
+		padding: 60px 0;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.empty-text {
+		font-size: 14px;
+		color: #8F959E;
 	}
 
 	.group-item {

@@ -71,15 +71,22 @@ public class ImConversationServiceImpl implements ImConversationService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AppImConversationRespVO createOrGetConversation(Long userId, AppImConversationCreateReqVO createReqVO) {
+        log.info("[ImConversationService] 创建或获取会话, userId: {}, targetId: {}, type: {}", 
+                userId, createReqVO.getTargetId(), createReqVO.getConversationType());
+        
         // 检查会话是否已存在
         ImConversationDO existConversation = conversationMapper.selectByUserIdAndTargetIdAndType(
                 userId, createReqVO.getTargetId(), createReqVO.getConversationType());
         
         if (existConversation != null) {
+            log.info("[ImConversationService] 会话已存在, conversationId: {}, deletedByUser: {}", 
+                    existConversation.getId(), existConversation.getDeletedByUser());
+            
             // 如果会话已存在且被用户删除,则恢复
             if (existConversation.getDeletedByUser()) {
                 existConversation.setDeletedByUser(false);
                 conversationMapper.updateById(existConversation);
+                log.info("[ImConversationService] 恢复已删除的会话, conversationId: {}", existConversation.getId());
             }
             
             AppImConversationRespVO respVO = BeanUtils.toBean(existConversation, AppImConversationRespVO.class);
@@ -97,6 +104,9 @@ public class ImConversationServiceImpl implements ImConversationService {
         conversation.setNoDisturb(false);
         conversation.setDeletedByUser(false);
         conversationMapper.insert(conversation);
+        
+        log.info("[ImConversationService] 创建新会话成功, conversationId: {}, userId: {}, targetId: {}, type: {}", 
+                conversation.getId(), userId, createReqVO.getTargetId(), createReqVO.getConversationType());
 
         AppImConversationRespVO respVO = BeanUtils.toBean(conversation, AppImConversationRespVO.class);
         fillTargetInfo(respVO, conversation);

@@ -363,10 +363,10 @@
 		messageService.addMessageListener(handleNewMessage)
 		
 		// 5. 清空未读数（本地 + 服务端）
-		if (conversationId.value > 0) {
+		if (conversationId.value && conversationId.value !== '' && conversationId.value !== '0') {
 			messageService.clearUnreadCount(conversationId.value)
 			// 同时调用后端 API 清空未读数
-			clearUnreadCountApi(conversationId.value).catch((e) => {
+			clearUnreadCountApi(conversationId.value.toString()).catch((e) => {
 				console.error('[Chat] 清空未读数失败:', e)
 			})
 		}
@@ -434,6 +434,13 @@
 			return
 		}
 		
+		// 如果没有 conversationId，说明是新创建的群聊，暂时不加载消息
+		if (!conversationId.value || conversationId.value === '' || conversationId.value === '0') {
+			console.log('[Chat] conversationId 为空，跳过加载消息（新创建的群聊）')
+			loading.value = false
+			return
+		}
+		
 		loading.value = true
 		
 		try {
@@ -445,12 +452,10 @@
 			}
 			
 			// 2. 从服务器加载最新消息
-			const lastMessageId = messages.value.length > 0 
-				? messages.value[0].messageId 
-				: 0
+			const pageNo = 1  // 第一页
 			
 			// 注意：request 拦截器已经解包了 data.data，返回的是 PageResult 对象
-			const pageResult = await getMessageList(conversationId.value, lastMessageId, 20)
+			const pageResult = await getMessageList(conversationId.value, pageNo, 20)
 			
 			if (pageResult && pageResult.list) {
 				const serverMessages = pageResult.list as any[]

@@ -1,15 +1,40 @@
 # IM 即时通讯逻辑设计文档 v1.0
 
-> **文档版本**: v1.0.25  
+> **文档版本**: v1.0.28  
 > **创建日期**: 2026年2月11日  
-> **更新日期**: 2026年2月20日  
+> **更新日期**: 2026年2月21日  
 > **项目**: 圣钰 SaaS Pro - IM 即时通讯系统  
 > **定位**: 企业内部IM(无需添加好友、拉黑等社交功能)  
 > **目标**: AI 可执行的详细设计文档  
 > **中间件**: shengyu-spring-boot-starter-websocket (基于 Netty + Protobuf)  
 > **移动端**: shengyu-ui-admin-uniappx (uni-app x + UTS)  
 > **数据库**: MySQL 8.0+ (已创建 IM 表结构)  
-> **最新进展**: 消息列表页面已完成真实接口对接，移除模拟数据
+> **最新进展**: 修复会话创建逻辑，增强日志记录
+
+---
+
+## 📝 最近更新记录
+
+### 2026-02-21 (v1.0.28)
+- ✅ 修复会话未创建问题：确保群主也在 memberIds 中
+- ✅ 增强日志记录：添加详细的创建群聊和会话日志
+- ✅ 添加异常处理：会话创建失败不影响群聊创建
+- ✅ 优化成员数量计算：基于实际 memberIds 数量
+- ✅ 修复清空未读数 API 调用：参数传递方式从 params 改为 URL 拼接
+
+### 2026-02-21 (v1.0.27)
+- ✅ 修复创建群聊后 404 错误问题
+- ✅ 后端自动为群成员创建会话（ImGroupServiceImpl）
+- ✅ 前端创建群聊后自动获取会话ID（initiate-group.uvue）
+- ✅ 优化聊天页面消息加载逻辑（conversationId 为空时跳过加载）
+- ✅ 完善 API 方法匹配（recallMessage 使用 PUT，deleteMessage 使用 DELETE）
+
+### 2026-02-21 (v1.0.26)
+- ✅ 完成创建群聊功能的前后端对接
+- ✅ 修正创建群聊 API 字段名（memberUserIds → memberIds）
+- ✅ 修正消息列表 API 路径（/list → /list-by-conversation）
+- ✅ 发起群聊页面集成真实数据（从后端 API 获取联系人）
+- ✅ 优化新创建群聊的消息加载逻辑（conversationId 为空时跳过）
 
 ---
 
@@ -2047,22 +2072,25 @@ interface ContactCategory {
 - 当前用户默认选中且不可取消
 - 创建群聊逻辑(生成群名、跳转到群聊页面)
 - 全局选择状态管理(store/group-selection.uts)
+- ✅ **真实数据获取**: 从后端 API 获取联系人列表
+- ✅ **后端 API 集成**: 调用创建群聊接口
 
 **数据结构**:
 ```typescript
-interface GroupCreateData {
-  groupId: number;               // 群 ID(临时,由后端生成)
-  groupName: string;             // 群名称
-  groupType: 'normal' | 'work';  // 群类型
-  memberCount: number;           // 成员数量
-  memberIds: number[];           // 成员 ID 列表
-  members: Contact[];            // 成员详情列表
-  createTime: number;            // 创建时间
-  settings: {
-    allowMemberInvite: boolean;  // 允许成员邀请
-    needApproval: boolean;       // 加群需要审批
-    muteAll: boolean;            // 全员禁言
-  };
+// 后端 API 请求数据（已对接）
+interface GroupCreateRequest {
+  name: string;              // 群名称（必填）
+  groupType: number;         // 群类型：1-普通群 2-工作群（必填）
+  memberIds: number[];       // 群成员 ID 列表（必填，List<Long>）
+  introduction?: string;     // 群简介（可选）
+  avatar?: string;           // 群头像（可选）
+}
+
+// 后端 API 响应数据
+interface GroupCreateResponse {
+  code: number;              // 响应码：0-成功
+  data: number;              // 群 ID（Long 类型）
+  msg: string;               // 响应消息
 }
 ```
 
@@ -2070,7 +2098,9 @@ interface GroupCreateData {
 ```
 1. 页面加载 ✅已实现
    ├─> 初始化选择模式(startSelection)
-   ├─> 生成联系人列表(模拟数据) ❌未对接 API
+   ├─> 调用 getContactList() 获取真实联系人 ✅已对接
+   ├─> 数据转换（添加 UI 字段）
+   ├─> 添加当前用户到列表首位
    ├─> 默认选中当前用户
    └─> 渲染联系人列表
 
@@ -2080,12 +2110,18 @@ interface GroupCreateData {
    ├─> 更新全局状态(store/group-selection.uts)
    └─> 更新已选数量显示
 
-3. 创建群聊 ✅已实现 ❌未对接 API
+3. 创建群聊 ✅已实现 ✅已对接 API
    ├─> 点击"完成"按钮
    ├─> 检查至少选择2人
    ├─> 生成群名称(前3个成员名字,超过3个显示"等N人")
-   ├─> 构建群聊数据(GroupCreateData)
-   ├─> 调用 POST /system/im/group/create ❌未对接
+   ├─> 构建请求数据：
+   │   {
+   │     name: "张三、李四、王五等8人",
+   │     groupType: 1,
+   │     memberIds: [1, 2, 3, 4, 5, 6, 7, 8],
+   │     introduction: ""
+   │   }
+   ├─> 调用 POST /system/im/group/create ✅已对接
    ├─> 创建成功,返回群 ID
    ├─> 跳转到群聊页面
    └─> 清空选择状态(endSelection)
@@ -2097,17 +2133,120 @@ interface GroupCreateData {
    └─> 我的部门: 跳转到 contacts/my-department.uvue?mode=select
 ```
 
+**后端 API 对接详情**:
+
+1. **获取联系人列表**:
+```typescript
+// API: GET /system/im/contact/list
+const contacts = await getContactList()
+
+// 响应数据结构
+interface Contact {
+  id: number;           // 用户 ID
+  nickname: string;     // 昵称
+  remarkName?: string;  // 备注名（优先显示）
+  deptName?: string;    // 部门名称
+  pinyin?: string;      // 拼音首字母
+}
+```
+
+2. **创建群聊**:
+```typescript
+// API: POST /system/im/group/create
+const result = await createGroup({
+  name: "张三、李四、王五等8人",
+  groupType: 1,
+  memberIds: [1, 2, 3, 4, 5, 6, 7, 8],
+  introduction: ""
+})
+
+// 返回：群 ID（Long 类型）
+const groupId = result  // 直接是数字，如 123456
+```
+
 **群名称生成规则** ✅:
 - 2-3人: 直接显示所有成员名字(用顿号分隔)
 - 4人及以上: 显示前3个成员名字 + "等N人"
 - 示例: "张三、李四、王五等8人"
 
+**数据处理逻辑** ✅:
+- 优先显示备注名（remarkName），其次显示昵称（nickname）
+- 自动处理拼音首字母（支持后端返回或本地生成）
+- 当前用户自动添加到列表首位且默认选中
+- 排除联系人列表中的当前用户重复项
+- 支持加载状态和空状态显示
+
+**已完成的功能** ✅:
+1. ✅ 真实数据获取（getContactList API）
+2. ✅ 创建群聊（createGroup API）
+3. ✅ 会话自动创建（createConversation API）
+4. ✅ 数据转换和处理
+5. ✅ 加载状态和空状态
+6. ✅ 错误处理和用户提示
+7. ✅ 当前用户自动选中
+8. ✅ 群名称自动生成
+9. ✅ 跳转到群聊页面（包含 conversationId）
+
+**技术实现细节** 🔧:
+
+**问题**: 创建群聊后进入聊天页面时，调用消息列表 API 返回 404 错误
+- 原因：新创建的群聊没有对应的会话记录（conversation）
+- 影响：无法加载历史消息，用户体验不佳
+
+**解决方案** (v1.0.27):
+
+1. **后端自动创建会话** (`ImGroupServiceImpl.java`):
+   ```java
+   // 在创建群聊时，为每个群成员自动创建会话
+   for (Long memberId : memberIds) {
+       // ... 添加群成员逻辑 ...
+       
+       // 为每个群成员创建会话
+       AppImConversationCreateReqVO conversationReqVO = new AppImConversationCreateReqVO();
+       conversationReqVO.setTargetId(group.getId());
+       conversationReqVO.setConversationType(2); // 2-群聊
+       conversationService.createOrGetConversation(memberId, conversationReqVO);
+   }
+   ```
+
+2. **前端获取会话ID** (`initiate-group.uvue`):
+   ```typescript
+   // 创建群聊成功后，立即创建/获取会话
+   const conversationData = {
+       targetId: groupId,
+       conversationType: 2  // 2-群聊
+   }
+   const conversationResult = await createConversation(conversationData)
+   const conversationId = conversationResult.id
+   
+   // 跳转时携带 conversationId
+   uni.redirectTo({
+       url: `/pages/message/chat?type=group&groupId=${groupId}&conversationId=${conversationId}&...`
+   })
+   ```
+
+3. **聊天页面优化** (`chat.uvue`):
+   ```typescript
+   // 在 loadMessages() 中添加检查
+   if (!conversationId.value || conversationId.value === '' || conversationId.value === '0') {
+       console.log('[Chat] conversationId 为空，跳过加载消息（新创建的群聊）')
+       loading.value = false
+       return
+   }
+   ```
+
+**相关 API 修正**:
+- ✅ 消息列表: `/system/im/message/list-by-conversation` (GET)
+- ✅ 撤回消息: `/system/im/message/recall` (PUT)
+- ✅ 删除消息: `/system/im/message/delete` (DELETE)
+- ✅ 标记已读: `/system/im/message/mark-read` (PUT)
+
 **需要完善的功能** ⚠️:
-1. 后端 API 对接(联系人列表、创建群聊)
-2. 联系人搜索功能
-3. 从其他页面返回时同步选择状态
-4. 群聊类型选择(普通群/工作群)
-5. 群聊设置(允许邀请、需要审批等)
+1. 联系人搜索功能
+2. 从其他页面返回时同步选择状态
+3. 群聊类型选择(普通群/工作群)
+4. 群头像上传
+5. 群简介编辑
 
 ### 6.6 群聊设置页面 (message/group-settings.uvue)
 

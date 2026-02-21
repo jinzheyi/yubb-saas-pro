@@ -2,6 +2,7 @@ package com.shengyu.module.system.service.im;
 
 import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.group.*;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupUserDO;
@@ -42,9 +43,14 @@ public class ImGroupServiceImpl implements ImGroupService {
     @Resource
     private AdminUserMapper userMapper;
 
+    @Resource
+    private ImConversationService conversationService;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createGroup(Long userId, AppImGroupCreateReqVO createReqVO) {
+        log.info("[ImGroupService] 开始创建群组, ownerId: {}, memberIds: {}", userId, createReqVO.getMemberIds());
+        
         // 创建群组
         ImGroupDO group = new ImGroupDO();
         group.setOwnerId(userId);
@@ -56,13 +62,23 @@ public class ImGroupServiceImpl implements ImGroupService {
         group.setAllowMemberInvite(true); // 默认允许成员邀请
         group.setNeedApproval(false); // 默认不需要审批
         group.setMuteAll(false); // 默认不禁言
-        group.setMemberCount(createReqVO.getMemberIds().size() + 1); // +1 包括群主
+        
+        // 确保 memberIds 包含群主
+        List<Long> memberIds = new ArrayList<>(createReqVO.getMemberIds());
+        if (!memberIds.contains(userId)) {
+            memberIds.add(userId);
+            log.info("[ImGroupService] 群主不在成员列表中，自动添加: {}", userId);
+        }
+        
+        group.setMemberCount(memberIds.size());
         group.setMaxMemberCount(500); // 默认最大500人
         groupMapper.insert(group);
+        
+        log.info("[ImGroupService] 群组创建成功, groupId: {}, 开始添加成员和创建会话", group.getId());
 
-        // 添加群成员(包括群主)
-        List<Long> memberIds = createReqVO.getMemberIds();
+        // 添加群成员并创建会话
         for (Long memberId : memberIds) {
+            // 添加群成员
             ImGroupUserDO groupUser = new ImGroupUserDO();
             groupUser.setGroupId(group.getId());
             groupUser.setUserId(memberId);
@@ -74,9 +90,23 @@ public class ImGroupServiceImpl implements ImGroupService {
                 groupUser.setRole(ImGroupMemberRoleEnum.MEMBER.getRole());
             }
             groupUserMapper.insert(groupUser);
+            log.info("[ImGroupService] 添加群成员成功, groupId: {}, memberId: {}, role: {}", 
+                    group.getId(), memberId, groupUser.getRole());
+            
+            // 为每个群成员创建会话
+            try {
+                AppImConversationCreateReqVO conversationReqVO = new AppImConversationCreateReqVO();
+                conversationReqVO.setTargetId(group.getId());
+                conversationReqVO.setConversationType(2); // 2-群聊
+                conversationService.createOrGetConversation(memberId, conversationReqVO);
+                log.info("[ImGroupService] 为成员创建会话成功, groupId: {}, memberId: {}", group.getId(), memberId);
+            } catch (Exception e) {
+                log.error("[ImGroupService] 为成员创建会话失败, groupId: {}, memberId: {}, error: {}", 
+                        group.getId(), memberId, e.getMessage(), e);
+            }
         }
 
-        log.info("[ImGroupService] 创建群组成功, groupId: {}, ownerId: {}, memberCount: {}", 
+        log.info("[ImGroupService] 创建群组完成, groupId: {}, ownerId: {}, memberCount: {}", 
                 group.getId(), userId, memberIds.size());
         return group.getId();
     }

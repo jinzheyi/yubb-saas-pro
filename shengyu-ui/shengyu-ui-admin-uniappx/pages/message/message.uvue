@@ -485,7 +485,7 @@
 					// 标记已读/未读
 					if (targetItem.unreadCount > 0) {
 						// 清空未读数
-						await clearUnreadCount(targetItem.id)
+						await clearUnreadCount(targetItem.id.toString())
 						targetItem.unreadCount = 0
 						uni.showToast({
 							title: '已标记为已读',
