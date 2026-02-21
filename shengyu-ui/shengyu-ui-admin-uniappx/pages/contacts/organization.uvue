@@ -539,7 +539,7 @@
 	}
 
 	function toggleDept(deptId : string | number) {
-		const deptIdNum = typeof deptId === 'string' ? parseInt(deptId) : deptId
+		const deptIdNum = typeof deptId === 'string' ? Number(deptId) : deptId
 		
 		// 递归查找并切换部门展开状态
 		function findAndToggle(depts: any[]): any | null {

@@ -58,10 +58,10 @@
 	const { t } = useI18n()
 
 	const groupName = ref('数字科技工作群')
-	const groupId = ref(0)
+	const groupId = ref<string>('')
 
 	// 生成群组成员数据（ID范围：5000+，避免与其他页面冲突）
-	const generateMembers = (groupId : number) : any[] => {
+	const generateMembers = (groupId : string) : any[] => {
 		const firstNames = ['张', '李', '王', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗']
 		const lastNames = ['伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军', '洋', '勇', '艳', '杰', '娟', '涛', '明', '超', '秀兰', '霞']
 		const roles = ['高级经理', '部门经理', '项目经理', '开发工程师', '测试工程师', '产品经理', '设计师', '运营专员', '市场专员', '行政专员']
@@ -126,7 +126,7 @@
 	onLoad((options : any) => {
 		if (options != null) {
 			if (options['groupId']) {
-				groupId.value = parseInt(options['groupId'])
+				groupId.value = options['groupId'] as string
 			}
 			if (options['groupName']) {
 				groupName.value = options['groupName']

@@ -14,8 +14,8 @@
 		<view v-if="showMoreMenu" class="more-menu-mask" @click="showMoreMenu = false">
 			<view class="more-menu" @click.stop>
 				<view class="menu-item" @click="handleMenuAction('follow')">
-					<text class="iconfont menu-icon">&#xea90;</text>
-					<text class="menu-text">{{ isFollowing ? '已关注' : '关注' }}</text>
+					<text :class="['iconfont', 'menu-icon', isFollowing ? 'menu-icon-active' : '']">&#xea90;</text>
+					<text class="menu-text">{{ isFollowing ? '取消关注' : '关注' }}</text>
 				</view>
 				<view class="menu-item" @click="handleMenuAction('share')">
 					<text class="iconfont menu-icon">&#xe63d;</text>
@@ -79,12 +79,14 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getUserDetail } from '../../api/user.uts'
+	import { getContact, toggleContactStar } from '../../api/contact.uts'
 
 	const { t } = useI18n()
 
 	const showMoreMenu = ref(false)
 	const isFollowing = ref(false)
 	const loading = ref(false)
+	const followLoading = ref(false)
 
 	// 从路由参数获取用户信息
 	const userId = ref<string>('')
@@ -103,15 +105,14 @@
 		uni.navigateBack()
 	}
 
-	function handleMenuAction(action : string) {
+	/**
+	 * 处理菜单操作
+	 */
+	async function handleMenuAction(action : string) {
 		showMoreMenu.value = false
 		switch (action) {
 			case 'follow':
-				isFollowing.value = !isFollowing.value
-				uni.showToast({
-					title: isFollowing.value ? '已关注' : '已取消关注',
-					icon: 'none'
-				})
+				await handleFollowToggle()
 				break
 			case 'share':
 				uni.showToast({
@@ -119,6 +120,47 @@
 					icon: 'none'
 				})
 				break
+		}
+	}
+	
+	/**
+	 * 处理关注/取消关注
+	 */
+	async function handleFollowToggle() {
+		if (followLoading.value) {
+			return
+		}
+		
+		if (!userId.value) {
+			uni.showToast({
+				title: '用户信息错误',
+				icon: 'none'
+			})
+			return
+		}
+		
+		try {
+			followLoading.value = true
+			const newStarStatus = !isFollowing.value
+			
+			// 调用API更新关注状态（传递字符串ID，避免精度丢失）
+			await toggleContactStar(userId.value, newStarStatus)
+			
+			// 更新本地状态
+			isFollowing.value = newStarStatus
+			
+			uni.showToast({
+				title: newStarStatus ? '关注成功' : '已取消关注',
+				icon: 'success'
+			})
+		} catch (e) {
+			console.error('[UserDetail] 更新关注状态失败:', e)
+			uni.showToast({
+				title: '操作失败，请重试',
+				icon: 'none'
+			})
+		} finally {
+			followLoading.value = false
 		}
 	}
 
@@ -159,6 +201,9 @@
 					department: data.deptName || ''
 				}
 			}
+			
+			// 加载联系人信息（获取关注状态）
+			await loadContactInfo(id)
 		} catch (e) {
 			console.error('[UserDetail] 加载用户详情失败:', e)
 			uni.showToast({
@@ -167,6 +212,24 @@
 			})
 		} finally {
 			loading.value = false
+		}
+	}
+	
+	/**
+	 * 加载联系人信息（获取关注状态）
+	 */
+	async function loadContactInfo(id: string) {
+		try {
+			const contactData = await getContact(id)
+			
+			if (contactData) {
+				// 更新关注状态
+				isFollowing.value = contactData.star === true
+			}
+		} catch (e) {
+			// 如果获取联系人信息失败，可能是还不是联系人，默认未关注
+			console.log('[UserDetail] 获取联系人信息失败，可能还不是联系人:', e)
+			isFollowing.value = false
 		}
 	}
 
@@ -273,6 +336,10 @@
 		color: #ffffff;
 		font-size: 18px;
 		margin-right: 12px;
+	}
+	
+	.menu-icon-active {
+		color: #1677FF;
 	}
 
 	.menu-text {

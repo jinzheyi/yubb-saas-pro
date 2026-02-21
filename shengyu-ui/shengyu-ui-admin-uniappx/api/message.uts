@@ -40,6 +40,8 @@ export function deleteMessage(id: string): Promise<any> {
 
 /**
  * 标记消息已读
+ * @param conversationId 会话ID（字符串，避免精度丢失）
+ * @param lastReadMessageId 最后已读消息ID（字符串，避免精度丢失）
  */
 export function markMessageRead(conversationId: string, lastReadMessageId: string): Promise<any> {
   return request({

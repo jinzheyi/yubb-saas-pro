@@ -277,12 +277,12 @@
 	
 	// 聊天类型：single(单聊) 或 group(群聊)
 	const chatType = ref('single')
-	const groupId = ref(0)
+	const groupId = ref<string>('')
 	const memberCount = ref(0)
 	
-	// 会话信息
-	const conversationId = ref(0)
-	const targetId = ref(0)
+	// 会话信息（使用字符串避免精度丢失）
+	const conversationId = ref<string>('')
+	const targetId = ref<string>('')
 	const name = ref('张三')
 	const watermark = ref('同事A 1234')
 	
@@ -1524,14 +1524,14 @@
 	 * 页面加载时获取参数
 	 */
 	onLoad((options : any) => {
-		// 获取会话 ID
+		// 获取会话 ID（字符串，避免精度丢失）
 		if (options['conversationId']) {
-			conversationId.value = parseInt(options['conversationId'])
+			conversationId.value = options['conversationId'] as string
 		}
 		
-		// 获取目标 ID
+		// 获取目标 ID（字符串，避免精度丢失）
 		if (options['targetId']) {
-			targetId.value = parseInt(options['targetId'])
+			targetId.value = options['targetId'] as string
 		}
 		
 		// 获取聊天类型
@@ -1539,9 +1539,9 @@
 			chatType.value = options['type']
 		}
 		
-		// 获取群聊 ID
+		// 获取群聊 ID（字符串，避免精度丢失）
 		if (options['groupId']) {
-			groupId.value = parseInt(options['groupId'])
+			groupId.value = options['groupId'] as string
 			targetId.value = groupId.value  // 群聊时 targetId 就是 groupId
 		}
 		

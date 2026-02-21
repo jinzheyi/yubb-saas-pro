@@ -37,6 +37,8 @@ export function deleteConversation(id: string): Promise<any> {
 
 /**
  * 置顶会话
+ * @param id 会话ID（字符串，避免精度丢失）
+ * @param pinned 是否置顶
  */
 export function pinConversation(id: string, pinned: boolean): Promise<any> {
   return request({
@@ -51,6 +53,8 @@ export function pinConversation(id: string, pinned: boolean): Promise<any> {
 
 /**
  * 设置免打扰
+ * @param id 会话ID（字符串，避免精度丢失）
+ * @param noDisturb 是否免打扰
  */
 export function setNoDisturb(id: string, noDisturb: boolean): Promise<any> {
   return request({

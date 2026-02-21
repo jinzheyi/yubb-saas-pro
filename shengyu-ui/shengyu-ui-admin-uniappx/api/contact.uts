@@ -46,6 +46,22 @@ export function updateContactSetting(data: any): Promise<any> {
 }
 
 /**
+ * 关注/取消关注联系人
+ * @param contactId 联系人ID（字符串，避免精度丢失）
+ * @param star 是否关注（true=关注，false=取消关注）
+ */
+export function toggleContactStar(contactId: string, star: boolean): Promise<any> {
+  return request({
+    url: '/system/im/contact/setting/update',
+    method: 'PUT',
+    data: {
+      contactId: contactId,
+      star: star
+    }
+  })
+}
+
+/**
  * 根据部门ID获取联系人列表
  */
 export function getContactListByDept(deptId: string): Promise<any> {

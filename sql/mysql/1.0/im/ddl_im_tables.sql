@@ -133,15 +133,16 @@ CREATE TABLE `im_group_member`  (
 
 -- ----------------------------
 -- Table structure for im_contact_setting
--- 联系人设置表: 存储用户对联系人的个性化设置(备注名、星标、免打扰)
+-- 联系人设置表: 存储用户对联系人的个性化设置(星标、免打扰)
 -- 说明: 企业内部IM,联系人直接来源于 system_users 表,本表仅存储个性化设置
+-- 注意: remark_name 字段保留用于未来扩展,当前版本API不返回此字段
 -- ----------------------------
 DROP TABLE IF EXISTS `im_contact_setting`;
 CREATE TABLE `im_contact_setting`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '设置ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `contact_id` bigint NOT NULL COMMENT '联系人ID',
-  `remark_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '备注名',
+  `remark_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '备注名(保留字段,当前版本未使用)',
   `star` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否星标',
   `no_disturb` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否免打扰',
   `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',

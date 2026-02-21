@@ -25,9 +25,6 @@ public class AppImContactRespVO {
     @Schema(description = "岗位名称", example = "Java工程师")
     private String postName;
 
-    @Schema(description = "备注名", example = "小张")
-    private String remarkName;
-
     @Schema(description = "是否星标联系人", requiredMode = Schema.RequiredMode.REQUIRED, example = "false")
     private Boolean star;
 

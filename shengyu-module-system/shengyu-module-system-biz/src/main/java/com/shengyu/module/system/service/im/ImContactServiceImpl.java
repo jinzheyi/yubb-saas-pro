@@ -6,11 +6,15 @@ import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactRespVO;
 import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactSettingUpdateReqVO;
 import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
+import com.shengyu.module.system.dal.dataobject.dept.PostDO;
+import com.shengyu.module.system.dal.dataobject.dept.UserPostDO;
 import com.shengyu.module.system.dal.dataobject.im.ImContactSettingDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 
 import java.util.ArrayList;
 import com.shengyu.module.system.dal.mysql.dept.DeptMapper;
+import com.shengyu.module.system.dal.mysql.dept.PostMapper;
+import com.shengyu.module.system.dal.mysql.dept.UserPostMapper;
 import com.shengyu.module.system.dal.mysql.im.ImContactSettingMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +46,12 @@ public class ImContactServiceImpl implements ImContactService {
 
     @Resource
     private ImContactSettingMapper contactSettingMapper;
+    
+    @Resource
+    private UserPostMapper userPostMapper;
+    
+    @Resource
+    private PostMapper postMapper;
 
     @Override
     public List<AppImContactRespVO> getContactList(Long userId) {
@@ -62,7 +72,6 @@ public class ImContactServiceImpl implements ImContactService {
                     // 填充个性化设置
                     ImContactSettingDO setting = settingMap.get(user.getId());
                     if (setting != null) {
-                        respVO.setRemarkName(setting.getRemarkName());
                         respVO.setStar(setting.getStar());
                         respVO.setNoDisturb(setting.getNoDisturb());
                     } else {
@@ -88,21 +97,13 @@ public class ImContactServiceImpl implements ImContactService {
         // 过滤并转换
         return users.stream()
                 .filter(user -> !user.getId().equals(userId)) // 排除自己
-                .filter(user -> {
-                    // 按姓名或备注名搜索
-                    if (StrUtil.contains(user.getNickname(), keyword)) {
-                        return true;
-                    }
-                    ImContactSettingDO setting = settingMap.get(user.getId());
-                    return setting != null && StrUtil.contains(setting.getRemarkName(), keyword);
-                })
+                .filter(user -> StrUtil.contains(user.getNickname(), keyword)) // 按姓名搜索
                 .map(user -> {
                     AppImContactRespVO respVO = buildContactRespVO(user);
                     
                     // 填充个性化设置
                     ImContactSettingDO setting = settingMap.get(user.getId());
                     if (setting != null) {
-                        respVO.setRemarkName(setting.getRemarkName());
                         respVO.setStar(setting.getStar());
                         respVO.setNoDisturb(setting.getNoDisturb());
                     } else {
@@ -128,7 +129,6 @@ public class ImContactServiceImpl implements ImContactService {
         // 查询个性化设置
         ImContactSettingDO setting = contactSettingMapper.selectByUserIdAndContactId(userId, contactId);
         if (setting != null) {
-            respVO.setRemarkName(setting.getRemarkName());
             respVO.setStar(setting.getStar());
             respVO.setNoDisturb(setting.getNoDisturb());
         } else {
@@ -201,7 +201,6 @@ public class ImContactServiceImpl implements ImContactService {
                     // 填充个性化设置
                     ImContactSettingDO setting = settingMap.get(user.getId());
                     if (setting != null) {
-                        respVO.setRemarkName(setting.getRemarkName());
                         respVO.setStar(setting.getStar());
                         respVO.setNoDisturb(setting.getNoDisturb());
                     }
@@ -226,6 +225,16 @@ public class ImContactServiceImpl implements ImContactService {
             DeptDO dept = deptMapper.selectById(user.getDeptId());
             if (dept != null) {
                 respVO.setDeptName(dept.getName());
+            }
+        }
+        
+        // 查询岗位信息（取第一个岗位）
+        List<UserPostDO> userPosts = userPostMapper.selectListByUserId(user.getId());
+        if (userPosts != null && !userPosts.isEmpty()) {
+            Long postId = userPosts.get(0).getPostId();
+            PostDO post = postMapper.selectById(postId);
+            if (post != null) {
+                respVO.setPostName(post.getName());
             }
         }
         

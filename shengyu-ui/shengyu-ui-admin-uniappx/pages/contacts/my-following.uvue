@@ -11,12 +11,29 @@
 			</view>
 			<view class="search-bar">
 				<text class="iconfont search-icon">&#xea6e;</text>
-				<input class="search-input" placeholder="搜索" placeholder-class="placeholder" />
+				<input 
+					class="search-input" 
+					v-model="searchKeyword"
+					placeholder="搜索" 
+					placeholder-class="placeholder"
+					@input="handleSearch"
+				/>
 			</view>
 		</view>
 
-		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
-			<view class="contact-list">
+		<scroll-view 
+			class="content" 
+			scroll-y="true" 
+			show-scrollbar="false"
+			@scrolltolower="handleLoadMore"
+		>
+			<!-- 加载状态 -->
+			<view v-if="loading && followingList.length === 0" class="loading-state">
+				<text class="loading-text">加载中...</text>
+			</view>
+			
+			<!-- 联系人列表 -->
+			<view v-else-if="followingList.length > 0" class="contact-list">
 				<view v-for="(contact, index) in followingList" :key="contact.id" 
 					class="contact-item" 
 					@click="handleContactClick(contact)">
@@ -29,12 +46,17 @@
 						<text class="avatar-text">{{ contact.avatarText }}</text>
 					</view>
 					<view class="contact-info">
-						<text class="contact-name">{{ contact.name }}</text>
+						<text class="contact-name">{{ contact.displayName }}</text>
 						<text class="contact-role">{{ contact.role }}</text>
 					</view>
 					<text v-if="!isSelectMode" class="iconfont star-icon">&#xea90;</text>
 					<view v-if="index < followingList.length - 1" class="contact-item-border"></view>
 				</view>
+			</view>
+			
+			<!-- 空状态 -->
+			<view v-else-if="!loading" class="empty-state">
+				<text class="empty-text">暂无关注的联系人</text>
 			</view>
 		</scroll-view>
 
@@ -55,81 +77,165 @@
 		toggleMember,
 		getSelectedCount
 	} from '../../store/group-selection.uts'
+	import { getStarContactList, searchContact } from '../../api/contact.uts'
+	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
 
 	// 是否为选择模式
 	const isSelectMode = ref(false)
+	
+	// 加载状态
+	const loading = ref(false)
+	
+	// 搜索关键词
+	const searchKeyword = ref('')
+	
+	// 搜索定时器
+	let searchTimer: number = 0
+	
+	// 原始关注列表（用于搜索后恢复）
+	const originalFollowingList = ref<any[]>([])
 
-	// 关注列表数据（ID范围：2001-2007，避免与其他页面冲突）
-	const followingList = ref([
-		{
-			id: 2001,
-			name: '张敏',
-			role: '开发工程师',
-			avatarText: '张敏',
-			avatarBg: '#0ea5e9',
-			selected: false
-		},
-		{
-			id: 2002,
-			name: '李强',
-			role: '产品经理',
-			avatarText: '李强',
-			avatarBg: '#f97316',
-			selected: false
-		},
-		{
-			id: 2003,
-			name: '王静',
-			role: '高级UI设计师',
-			avatarText: '王静',
-			avatarBg: '#10b981',
-			selected: false
-		},
-		{
-			id: 2004,
-			name: '刘伟',
-			role: '技术总监',
-			avatarText: '刘伟',
-			avatarBg: '#6366f1',
-			selected: false
-		},
-		{
-			id: 2005,
-			name: '陈佳',
-			role: '人力资源主管',
-			avatarText: '陈佳',
-			avatarBg: '#fb7185',
-			selected: false
-		},
-		{
-			id: 2006,
-			name: '赵军',
-			role: '架构师',
-			avatarText: '赵军',
-			avatarBg: '#8b5cf6',
-			selected: false
-		},
-		{
-			id: 2007,
-			name: '孙丽',
-			role: '测试经理',
-			avatarText: '孙丽',
-			avatarBg: '#ec4899',
-			selected: false
-		}
-	])
+	// 关注列表数据
+	const followingList = ref<any[]>([])
 
 	// 选中的联系人数量（使用全局状态）
 	const selectedCount = computed(() : number => {
 		return getSelectedCount()
 	})
 
+	/**
+	 * 返回上一页
+	 */
 	function handleBack() {
 		uni.navigateBack()
 	}
+	
+	/**
+	 * 加载关注列表
+	 */
+	async function loadFollowingList() {
+		try {
+			loading.value = true
+			const data = await getStarContactList()
+			
+			if (data && data.length > 0) {
+				const contacts = data.map((contact: any) => {
+					return {
+						id: contact.id,
+						nickname: contact.nickname,
+						displayName: contact.nickname, // 直接使用昵称
+						role: contact.postName || '未设置岗位',
+						deptName: contact.deptName || '',
+						avatarText: getAvatarText(contact.nickname),
+						avatarBg: getUserAvatarColor(contact.id),
+						star: contact.star,
+						selected: isMemberSelected(contact.id)
+					}
+				})
+				
+				followingList.value = contacts
+				// 保存原始数据（深拷贝）
+				originalFollowingList.value = JSON.parse(JSON.stringify(contacts))
+			} else {
+				followingList.value = []
+				originalFollowingList.value = []
+			}
+		} catch (e) {
+			console.error('[MyFollowing] 加载关注列表失败:', e)
+			uni.showToast({
+				title: '加载失败',
+				icon: 'none'
+			})
+			followingList.value = []
+			originalFollowingList.value = []
+		} finally {
+			loading.value = false
+		}
+	}
+	
+	/**
+	 * 处理搜索
+	 */
+	function handleSearch() {
+		// 清除之前的定时器
+		if (searchTimer !== 0) {
+			clearTimeout(searchTimer)
+		}
+		
+		// 延迟500ms执行搜索
+		searchTimer = setTimeout(() => {
+			if (searchKeyword.value && searchKeyword.value.length > 0) {
+				// 执行搜索
+				performSearch()
+			} else {
+				// 清空搜索时，恢复原始数据
+				restoreOriginalData()
+			}
+		}, 500)
+	}
+	
+	/**
+	 * 执行搜索
+	 */
+	async function performSearch() {
+		try {
+			loading.value = true
+			const data = await searchContact(searchKeyword.value)
+			
+			if (data && data.length > 0) {
+				// 只显示星标联系人
+				const starContacts = data.filter((contact: any) => contact.star === true)
+				
+				const contacts = starContacts.map((contact: any) => {
+					return {
+						id: contact.id,
+						nickname: contact.nickname,
+						displayName: contact.nickname, // 直接使用昵称
+						role: contact.postName || '未设置岗位',
+						deptName: contact.deptName || '',
+						avatarText: getAvatarText(contact.nickname),
+						avatarBg: getUserAvatarColor(contact.id),
+						star: contact.star,
+						selected: isMemberSelected(contact.id)
+					}
+				})
+				
+				followingList.value = contacts
+			} else {
+				followingList.value = []
+			}
+		} catch (e) {
+			console.error('[MyFollowing] 搜索失败:', e)
+			uni.showToast({
+				title: '搜索失败',
+				icon: 'none'
+			})
+			followingList.value = []
+		} finally {
+			loading.value = false
+		}
+	}
+	
+	/**
+	 * 恢复原始数据
+	 */
+	function restoreOriginalData() {
+		followingList.value = JSON.parse(JSON.stringify(originalFollowingList.value))
+	}
+	
+	/**
+	 * 加载更多（预留接口，当前使用星标联系人API，无分页）
+	 */
+	function handleLoadMore() {
+		// 星标联系人通常数量不多，暂不实现分页
+		// 如果后续需要分页，可以在这里实现
+	}
 
+	/**
+	 * 切换联系人选中状态
+	 */
 	function toggleContactSelect(contact : any) {
 		// 使用全局状态管理
 		toggleMember(contact)
@@ -137,6 +243,9 @@
 		contact.selected = isMemberSelected(contact.id)
 	}
 
+	/**
+	 * 处理联系人点击
+	 */
 	function handleContactClick(contact : any) {
 		if (isSelectMode.value) {
 			// 选择模式下点击整行也可以切换选中状态
@@ -144,17 +253,22 @@
 		} else {
 			// 普通模式下跳转到用户详情页面
 			uni.navigateTo({
-				url: `/pages/contacts/user-detail?userId=${contact.id}&name=${encodeURIComponent(contact.name)}`
+				url: `/pages/contacts/user-detail?userId=${contact.id}&name=${encodeURIComponent(contact.displayName)}`
 			})
 		}
 	}
 
+	/**
+	 * 确认选择
+	 */
 	function handleConfirm() {
 		// 返回上一页，选中的数据保留在全局状态中
 		uni.navigateBack()
 	}
 
-	// 同步本地选中状态与全局状态
+	/**
+	 * 同步本地选中状态与全局状态
+	 */
 	function syncSelectionState() {
 		for (let i = 0; i < followingList.value.length; i++) {
 			followingList.value[i].selected = isMemberSelected(followingList.value[i].id)
@@ -166,14 +280,18 @@
 		if (options != null && options['mode'] === 'select') {
 			isSelectMode.value = true
 		}
-		// 同步选中状态
-		syncSelectionState()
+		
+		// 加载关注列表
+		loadFollowingList()
 	})
 
 	// 页面显示时同步选中状态（从其他页面返回时）
 	onShow(() => {
 		if (isSelectMode.value) {
 			syncSelectionState()
+		} else {
+			// 非选择模式下，每次显示都重新加载列表（以防用户在详情页取消关注）
+			loadFollowingList()
 		}
 	})
 </script>
@@ -258,6 +376,28 @@
 
 	.contact-list {
 		background-color: #FFFFFF;
+	}
+	
+	.loading-state {
+		padding: 60px 0;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.loading-text {
+		font-size: 14px;
+		color: #8F959E;
+	}
+	
+	.empty-state {
+		padding: 60px 0;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.empty-text {
+		font-size: 14px;
+		color: #8F959E;
 	}
 
 	.contact-item {

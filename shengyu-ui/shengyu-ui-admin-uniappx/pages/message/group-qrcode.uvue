@@ -73,7 +73,7 @@
 
 	const groupName = ref('产品研发团队')
 	const memberCount = ref(12)
-	const groupId = ref(0)
+	const groupId = ref<string>('')
 
 	function handleBack() {
 		uni.navigateBack()
@@ -103,7 +103,7 @@
 
 	onLoad((options : any) => {
 		if (options['groupId']) {
-			groupId.value = parseInt(options['groupId'])
+			groupId.value = options['groupId'] as string
 		}
 		if (options['name']) {
 			groupName.value = decodeURIComponent(options['name'])
