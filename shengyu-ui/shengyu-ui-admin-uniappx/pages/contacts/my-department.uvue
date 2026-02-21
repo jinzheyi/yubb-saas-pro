@@ -125,8 +125,7 @@
 		toggleMember,
 		getSelectedCount
 	} from '../../store/group-selection.uts'
-	import { getMyDeptTree } from '../../api/dept.uts'
-	import { getUserList } from '../../api/user.uts'
+	import { getMyDeptTree, getDeptMembers } from '../../api/dept.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
@@ -134,7 +133,10 @@
 	// 部门树数据
 	const deptTree = ref<any[]>([])
 	
-	// 当前选中的部门ID（默认为用户所在部门）
+	// 原始部门树数据（用于搜索后恢复）
+	const originalDeptTree = ref<any[]>([])
+	
+	// 当前选中的部门ID
 	const currentDeptId = ref<number | null>(null)
 	
 	// 是否为选择模式
@@ -143,13 +145,19 @@
 	// 加载状态
 	const loading = ref(false)
 	
+	// 成员加载状态
+	const loadingMembers = ref(false)
+	
 	// 搜索关键词
 	const searchKeyword = ref('')
 	
 	// 搜索定时器
 	let searchTimer: number = 0
+	
+	// 已加载成员的部门缓存 Map<deptId, members[]>
+	const deptMembersCache = new Map<number, any[]>()
 
-	// 成员列表数据
+	// 成员列表数据（当前选中部门的成员）
 	const memberList = ref<any[]>([])
 
 	// 选中的成员数量（使用全局状态）
@@ -173,24 +181,23 @@
 			const data = await getMyDeptTree()
 			
 			if (data && data.length > 0) {
-				// 后端返回的是已排序的扁平列表，包含所有相关部门
-				// 构建树形结构
-				deptTree.value = buildDeptTreeFromPath(data)
+				// 构建树形结构（不包含用户数据）
+				const tree = buildDeptTreeFromPath(data)
+				deptTree.value = tree
 				
-				// 查找第一个有用户数据的部门作为默认选中
-				let firstUserDept = null
-				for (let i = 0; i < data.length; i++) {
-					if (data[i].users && data[i].users.length > 0) {
-						firstUserDept = data[i]
-						break
-					}
-				}
+				// 保存原始部门树数据（深拷贝）
+				originalDeptTree.value = JSON.parse(JSON.stringify(tree))
 				
-				if (firstUserDept !== null) {
-					currentDeptId.value = firstUserDept.id
-					// 显示该部门的成员
-					showDeptMembers(firstUserDept)
-				}
+				// 清空成员列表和缓存
+				memberList.value = []
+				deptMembersCache.clear()
+				currentDeptId.value = null
+			} else {
+				// 没有数据时清空
+				deptTree.value = []
+				originalDeptTree.value = []
+				memberList.value = []
+				deptMembersCache.clear()
 			}
 		} catch (e) {
 			console.error('[MyDepartment] 加载部门列表失败:', e)
@@ -214,9 +221,8 @@
 		
 		// 创建部门映射表
 		const deptMap = new Map<number, any>()
-		const userDeptIds = new Set<number>()
 		
-		// 第一遍：创建所有节点，并标记用户所属部门
+		// 第一遍：创建所有节点
 		for (let i = 0; i < pathList.length; i++) {
 			const dept = pathList[i]
 			const node = {
@@ -225,15 +231,10 @@
 				parentId: dept.parentId,
 				sort: dept.sort || 0,
 				expanded: false, // 默认收起
-				userCount: dept.users ? dept.users.length : 0,
+				userCount: dept.memberCount || 0, // 使用后端返回的成员数量
 				children: [] as any[]
 			}
 			deptMap.set(dept.id, node)
-			
-			// 如果部门有用户数据，说明是用户所属部门
-			if (dept.users && dept.users.length > 0) {
-				userDeptIds.add(dept.id)
-			}
 		}
 		
 		// 第二遍：建立父子关系
@@ -270,24 +271,10 @@
 		})
 		sortChildren(rootNodes)
 		
-		// 展开到用户所属部门的路径
-		function expandToUserDepts(nodes: any[]): boolean {
-			let hasUserDept = false
-			for (let i = 0; i < nodes.length; i++) {
-				const node = nodes[i]
-				// 检查当前节点或其子节点是否包含用户部门
-				const childHasUserDept = expandToUserDepts(node.children)
-				const isUserDept = userDeptIds.has(node.id)
-				
-				if (isUserDept || childHasUserDept) {
-					node.expanded = true
-					hasUserDept = true
-				}
-			}
-			return hasUserDept
+		// 默认展开第一层
+		for (let i = 0; i < rootNodes.length; i++) {
+			rootNodes[i].expanded = true
 		}
-		
-		expandToUserDepts(rootNodes)
 		
 		return rootNodes
 	}
@@ -300,18 +287,12 @@
 		if (dept.children && dept.children.length > 0) {
 			dept.expanded = !dept.expanded
 		}
-		
-		// 如果点击的是用户所属部门，也选中它
-		if (dept.userCount > 0) {
-			currentDeptId.value = dept.id
-			loadMemberList(dept.id)
-		}
 	}
 
 	/**
-	 * 选择部门
+	 * 选择部门（点击加载成员）
 	 */
-	function selectDept(dept: any) {
+	async function selectDept(dept: any) {
 		// 如果有子部门，切换展开状态
 		if (dept.children && dept.children.length > 0) {
 			dept.expanded = !dept.expanded
@@ -320,39 +301,26 @@
 		// 设置当前选中的部门
 		currentDeptId.value = dept.id
 		
-		// 如果部门有用户数据（用户所属部门），直接显示
-		// 否则从后端加载
-		if (dept.userCount > 0) {
-			// 从后端数据中查找该部门的用户
-			loadMemberList(dept.id)
-		} else {
-			// 清空成员列表
-			memberList.value = []
-		}
+		// 加载该部门的成员
+		await loadDeptMembers(dept.id)
 	}
-
+	
 	/**
-	 * 加载成员列表
+	 * 加载部门成员
 	 */
-	async function loadMemberList(deptId: number) {
+	async function loadDeptMembers(deptId: number, keyword?: string) {
+		// 如果有缓存且没有搜索关键词，直接使用缓存
+		if (!keyword && deptMembersCache.has(deptId)) {
+			memberList.value = deptMembersCache.get(deptId) || []
+			return
+		}
+		
 		try {
-			loading.value = true
-			
-			const params: UTSJSONObject = {
-				deptId: deptId,
-				status: 0 // 只查询正常状态的用户
-			}
-			
-			// 如果有搜索关键词，添加到查询参数
-			if (searchKeyword.value !== '') {
-				params['keyword'] = searchKeyword.value
-			}
-			
-			const data = await getUserList(params)
+			loadingMembers.value = true
+			const data = await getDeptMembers(String(deptId), keyword)
 			
 			if (data && data.length > 0) {
-				// 转换为页面需要的格式
-				memberList.value = data.map((user: any) => {
+				const members = data.map((user: any) => {
 					return {
 						id: user.id,
 						name: user.nickname,
@@ -363,58 +331,46 @@
 					}
 				})
 				
-				// 更新部门的用户数量
-				updateDeptUserCount(deptId, data.length)
+				memberList.value = members
+				
+				// 如果没有搜索关键词，缓存结果
+				if (!keyword) {
+					deptMembersCache.set(deptId, members)
+					// 更新部门的userCount
+					updateDeptUserCount(deptId, members.length)
+				}
 			} else {
 				memberList.value = []
-				updateDeptUserCount(deptId, 0)
+				if (!keyword) {
+					deptMembersCache.set(deptId, [])
+					updateDeptUserCount(deptId, 0)
+				}
 			}
 		} catch (e) {
-			console.error('[MyDepartment] 加载成员列表失败:', e)
+			console.error('[MyDepartment] 加载部门成员失败:', e)
 			uni.showToast({
-				title: '加载失败',
+				title: '加载成员失败',
 				icon: 'none'
 			})
 			memberList.value = []
 		} finally {
-			loading.value = false
+			loadingMembers.value = false
 		}
 	}
 	
 	/**
-	 * 从后端返回的数据中显示部门成员
-	 */
-	function showDeptMembers(dept: any) {
-		if (dept.users && dept.users.length > 0) {
-			memberList.value = dept.users.map((user: any) => {
-				return {
-					id: user.id,
-					name: user.nickname,
-					role: user.postName || '未设置岗位',
-					avatarText: getAvatarText(user.nickname),
-					avatarBg: getUserAvatarColor(user.id),
-					selected: isMemberSelected(user.id)
-				}
-			})
-		} else {
-			memberList.value = []
-		}
-	}
-
-	/**
 	 * 更新部门的用户数量
 	 */
 	function updateDeptUserCount(deptId: number, count: number) {
-		// 递归查找并更新部门的用户数量
-		function updateCount(depts: any[]): boolean {
-			for (let i = 0; i < depts.length; i++) {
-				const dept = depts[i]
-				if (dept.id === deptId) {
-					dept.userCount = count
+		function updateInTree(nodes: any[]): boolean {
+			for (let i = 0; i < nodes.length; i++) {
+				const node = nodes[i]
+				if (node.id === deptId) {
+					node.userCount = count
 					return true
 				}
-				if (dept.children && dept.children.length > 0) {
-					if (updateCount(dept.children)) {
+				if (node.children && node.children.length > 0) {
+					if (updateInTree(node.children)) {
 						return true
 					}
 				}
@@ -422,9 +378,9 @@
 			return false
 		}
 		
-		updateCount(deptTree.value)
+		updateInTree(deptTree.value)
 	}
-
+	
 	/**
 	 * 处理搜索
 	 */
@@ -436,10 +392,125 @@
 		
 		// 延迟500ms执行搜索
 		searchTimer = setTimeout(() => {
-			if (currentDeptId.value !== null) {
-				loadMemberList(currentDeptId.value)
+			if (searchKeyword.value && searchKeyword.value.length > 0) {
+				// 执行搜索：只显示包含搜索结果的部门和成员
+				performSearch()
+			} else {
+				// 清空搜索时，恢复原始数据
+				restoreOriginalData()
 			}
 		}, 500)
+	}
+	
+	/**
+	 * 执行搜索：只显示包含搜索结果的部门和成员
+	 */
+	async function performSearch() {
+		try {
+			loadingMembers.value = true
+			
+			// 递归搜索所有部门
+			const filteredTree = await searchAndFilterDepts(originalDeptTree.value, searchKeyword.value)
+			
+			// 更新显示数据
+			deptTree.value = filteredTree
+			
+			// 如果有搜索结果，自动选中第一个有成员的部门
+			const firstDeptWithMembers = findFirstDeptWithMembers(filteredTree)
+			if (firstDeptWithMembers !== null) {
+				currentDeptId.value = firstDeptWithMembers.id
+				memberList.value = firstDeptWithMembers.members || []
+			} else {
+				currentDeptId.value = null
+				memberList.value = []
+			}
+			
+		} catch (e) {
+			console.error('[MyDepartment] 搜索失败:', e)
+		} finally {
+			loadingMembers.value = false
+		}
+	}
+	
+	/**
+	 * 递归搜索并过滤部门
+	 * 只返回包含搜索结果的部门
+	 */
+	async function searchAndFilterDepts(depts: any[], keyword: string): Promise<any[]> {
+		const result: any[] = []
+		
+		for (let i = 0; i < depts.length; i++) {
+			const dept = depts[i]
+			
+			// 搜索当前部门的成员
+			const data = await getDeptMembers(String(dept.id), keyword)
+			let members: any[] = []
+			if (data && data.length > 0) {
+				members = data.map((user: any) => {
+					return {
+						id: user.id,
+						name: user.nickname,
+						role: user.postName || '未设置岗位',
+						avatarText: getAvatarText(user.nickname),
+						avatarBg: getUserAvatarColor(user.id),
+						selected: isMemberSelected(user.id)
+					}
+				})
+			}
+			
+			// 递归搜索子部门
+			let filteredChildren: any[] = []
+			if (dept.children && dept.children.length > 0) {
+				filteredChildren = await searchAndFilterDepts(dept.children, keyword)
+			}
+			
+			// 如果当前部门有匹配的成员或子部门有结果，则保留该部门
+			if (members.length > 0 || filteredChildren.length > 0) {
+				result.push({
+					id: dept.id,
+					name: dept.name,
+					parentId: dept.parentId,
+					sort: dept.sort,
+					expanded: true, // 搜索结果默认展开
+					userCount: members.length,
+					children: filteredChildren,
+					members: members // 临时保存成员数据用于显示
+				})
+			}
+		}
+		
+		return result
+	}
+	
+	/**
+	 * 查找第一个有成员的部门
+	 */
+	function findFirstDeptWithMembers(depts: any[]): any | null {
+		for (let i = 0; i < depts.length; i++) {
+			const dept = depts[i]
+			if (dept.members && dept.members.length > 0) {
+				return dept
+			}
+			if (dept.children && dept.children.length > 0) {
+				const found = findFirstDeptWithMembers(dept.children)
+				if (found !== null) {
+					return found
+				}
+			}
+		}
+		return null
+	}
+	
+	/**
+	 * 恢复原始数据
+	 */
+	function restoreOriginalData() {
+		// 恢复部门树
+		deptTree.value = JSON.parse(JSON.stringify(originalDeptTree.value))
+		
+		// 清空选中和成员列表
+		currentDeptId.value = null
+		memberList.value = []
 	}
 
 	/**

@@ -148,7 +148,7 @@
 		removeMembers,
 		getSelectedCount
 	} from '../../store/group-selection.uts'
-	import { getOrgTree } from '../../api/dept.uts'
+	import { getOrgTree, getDeptMembers } from '../../api/dept.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
@@ -159,14 +159,31 @@
 	// 加载状态
 	const loading = ref(false)
 	
+	// 成员加载状态
+	const loadingMembers = ref(false)
+	
 	// 搜索关键词
 	const searchKeyword = ref('')
 	
 	// 搜索定时器
 	let searchTimer: number = 0
+	
+	// 已加载成员的部门缓存 Map<deptId, members[]>
+	const deptMembersCache = new Map<number, any[]>()
+	
+	// 原始组织数据（用于搜索后恢复）
+	const originalOrganizations = ref<any[]>([])
+	const originalRootOrg = ref<any>({
+		id: 0,
+		name: '公司',
+		count: 0,
+		selected: false,
+		members: [] as any[]
+	})
 
 	// 根组织
 	const rootOrg = ref({
+		id: 0,
 		name: '公司',
 		count: 0,
 		selected: false,
@@ -191,10 +208,10 @@
 	/**
 	 * 加载组织结构树
 	 */
-	async function loadOrgTree(keyword?: string) {
+	async function loadOrgTree() {
 		try {
 			loading.value = true
-			const data = await getOrgTree(keyword)
+			const data = await getOrgTree()
 			
 			if (data && data.length > 0) {
 				// 找到根部门
@@ -202,22 +219,18 @@
 				
 				if (rootDept) {
 					// 设置根组织信息
+					rootOrg.value.id = rootDept.id
 					rootOrg.value.name = rootDept.name
+					rootOrg.value.count = rootDept.memberCount || 0
+					rootOrg.value.members = []
 					
-					// 设置根部门的成员
-					if (rootDept.users && rootDept.users.length > 0) {
-						rootOrg.value.members = rootDept.users.map((user: any) => {
-							return {
-								id: user.id,
-								name: user.nickname,
-								role: user.postName || '未设置岗位',
-								avatarText: getAvatarText(user.nickname),
-								avatarBg: getUserAvatarColor(user.id),
-								selected: isMemberSelected(user.id)
-							}
-						})
-					} else {
-						rootOrg.value.members = []
+					// 保存原始根组织信息
+					originalRootOrg.value = {
+						id: rootDept.id,
+						name: rootDept.name,
+						count: rootDept.memberCount || 0,
+						selected: false,
+						members: []
 					}
 				}
 				
@@ -225,19 +238,27 @@
 				const tree = buildOrgTree(data)
 				organizations.value = tree
 				
-				// 计算根节点的总人数（包括根部门的成员）
-				rootOrg.value.count = (rootOrg.value.members ? rootOrg.value.members.length : 0) + calculateTotalCount(tree)
+				// 保存原始组织数据（深拷贝）
+				originalOrganizations.value = JSON.parse(JSON.stringify(tree))
 				
-				// 如果是搜索模式，自动展开所有节点
-				if (keyword && keyword.length > 0) {
-					expandedNodes.value = ['root']
-					expandAllNodes(tree)
+				// 清空缓存
+				deptMembersCache.clear()
+				
+				// 根节点默认展开，自动加载根部门成员
+				if (rootOrg.value.id && rootOrg.value.count > 0) {
+					await loadDeptMembers(rootOrg.value.id, rootOrg.value)
+					// 同时保存到原始数据
+					originalRootOrg.value.members = JSON.parse(JSON.stringify(rootOrg.value.members))
 				}
 			} else {
 				// 没有数据时清空
 				organizations.value = []
+				originalOrganizations.value = []
 				rootOrg.value.members = []
 				rootOrg.value.count = 0
+				originalRootOrg.value.members = []
+				originalRootOrg.value.count = 0
+				deptMembersCache.clear()
 			}
 		} catch (e) {
 			console.error('[Organization] 加载组织结构失败:', e)
@@ -247,21 +268,6 @@
 			})
 		} finally {
 			loading.value = false
-		}
-	}
-	
-	/**
-	 * 展开所有节点（用于搜索结果展示）
-	 */
-	function expandAllNodes(nodes: any[]) {
-		for (let i = 0; i < nodes.length; i++) {
-			const node = nodes[i]
-			node.expanded = true
-			expandedNodes.value.push(String(node.id))
-			
-			if (node.departments && node.departments.length > 0) {
-				expandAllNodes(node.departments)
-			}
 		}
 	}
 	
@@ -284,20 +290,11 @@
 				name: dept.name,
 				parentId: dept.parentId,
 				sort: dept.sort || 0,
-				count: dept.users ? dept.users.length : 0,
+				count: dept.memberCount || 0, // 使用后端返回的成员数量
 				expanded: false,
 				selected: false,
 				departments: [] as any[],
-				members: dept.users ? dept.users.map((user: any) => {
-					return {
-						id: user.id,
-						name: user.nickname,
-						role: user.postName || '未设置岗位',
-						avatarText: getAvatarText(user.nickname),
-						avatarBg: getUserAvatarColor(user.id),
-						selected: isMemberSelected(user.id)
-					}
-				}) : []
+				members: [] as any[] // 初始为空，点击时才加载
 			}
 			deptMap.set(dept.id, node)
 		}
@@ -348,10 +345,10 @@
 				const dept = {
 					id: node.id,
 					name: node.name,
-					count: node.count,
+					count: node.count, // 使用已设置的成员数量
 					expanded: false,
 					selected: false,
-					members: node.members,
+					members: [] as any[], // 初始为空，点击时才加载
 					departments: subDepts
 				}
 				
@@ -370,23 +367,6 @@
 	}
 	
 	/**
-	 * 计算总人数（递归计算所有部门的成员）
-	 */
-	function calculateTotalCount(nodes: any[]): number {
-		let total = 0
-		for (let i = 0; i < nodes.length; i++) {
-			const node = nodes[i]
-			// 加上当前节点的成员数
-			total += node.members ? node.members.length : 0
-			// 递归加上子部门的成员数
-			if (node.departments && node.departments.length > 0) {
-				total += calculateTotalCount(node.departments)
-			}
-		}
-		return total
-	}
-	
-	/**
 	 * 处理搜索
 	 */
 	function handleSearch() {
@@ -397,9 +377,134 @@
 		
 		// 延迟500ms执行搜索
 		searchTimer = setTimeout(() => {
-			// 重新加载数据，传入搜索关键词
-			loadOrgTree(searchKeyword.value)
+			if (searchKeyword.value && searchKeyword.value.length > 0) {
+				// 执行搜索：只显示包含搜索结果的部门和成员
+				performSearch()
+			} else {
+				// 清空搜索时，恢复原始数据
+				restoreOriginalData()
+			}
 		}, 500)
+	}
+	
+	/**
+	 * 执行搜索：只显示包含搜索结果的部门和成员
+	 */
+	async function performSearch() {
+		try {
+			loadingMembers.value = true
+			
+			// 1. 搜索根部门成员
+			let rootMembers: any[] = []
+			if (originalRootOrg.value.id) {
+				const data = await getDeptMembers(String(originalRootOrg.value.id), searchKeyword.value)
+				if (data && data.length > 0) {
+					rootMembers = data.map((user: any) => {
+						return {
+							id: user.id,
+							name: user.nickname,
+							role: user.postName || '未设置岗位',
+							avatarText: getAvatarText(user.nickname),
+							avatarBg: getUserAvatarColor(user.id),
+							selected: isMemberSelected(user.id)
+						}
+					})
+				}
+			}
+			
+			// 2. 递归搜索所有部门
+			const filteredOrgs = await searchAndFilterDepts(originalOrganizations.value, searchKeyword.value)
+			
+			// 3. 更新显示数据
+			rootOrg.value.members = rootMembers
+			rootOrg.value.count = rootMembers.length
+			organizations.value = filteredOrgs
+			
+			// 4. 自动展开所有节点
+			expandedNodes.value = ['root']
+			expandAllFilteredNodes(filteredOrgs)
+			
+		} catch (e) {
+			console.error('[Organization] 搜索失败:', e)
+		} finally {
+			loadingMembers.value = false
+		}
+	}
+	
+	/**
+	 * 递归搜索并过滤部门
+	 * 只返回包含搜索结果的部门
+	 */
+	async function searchAndFilterDepts(depts: any[], keyword: string): Promise<any[]> {
+		const result: any[] = []
+		
+		for (let i = 0; i < depts.length; i++) {
+			const dept = depts[i]
+			
+			// 搜索当前部门的成员
+			const data = await getDeptMembers(String(dept.id), keyword)
+			let members: any[] = []
+			if (data && data.length > 0) {
+				members = data.map((user: any) => {
+					return {
+						id: user.id,
+						name: user.nickname,
+						role: user.postName || '未设置岗位',
+						avatarText: getAvatarText(user.nickname),
+						avatarBg: getUserAvatarColor(user.id),
+						selected: isMemberSelected(user.id)
+					}
+				})
+			}
+			
+			// 递归搜索子部门
+			let filteredSubDepts: any[] = []
+			if (dept.departments && dept.departments.length > 0) {
+				filteredSubDepts = await searchAndFilterDepts(dept.departments, keyword)
+			}
+			
+			// 如果当前部门有匹配的成员或子部门有结果，则保留该部门
+			if (members.length > 0 || filteredSubDepts.length > 0) {
+				result.push({
+					id: dept.id,
+					name: dept.name,
+					count: members.length,
+					expanded: true, // 搜索结果默认展开
+					selected: false,
+					members: members,
+					departments: filteredSubDepts
+				})
+			}
+		}
+		
+		return result
+	}
+	
+	/**
+	 * 展开所有过滤后的节点
+	 */
+	function expandAllFilteredNodes(depts: any[]) {
+		for (let i = 0; i < depts.length; i++) {
+			const dept = depts[i]
+			expandedNodes.value.push(String(dept.id))
+			if (dept.departments && dept.departments.length > 0) {
+				expandAllFilteredNodes(dept.departments)
+			}
+		}
+	}
+	
+	/**
+	 * 恢复原始数据
+	 */
+	function restoreOriginalData() {
+		// 恢复根组织
+		rootOrg.value = JSON.parse(JSON.stringify(originalRootOrg.value))
+		
+		// 恢复组织树
+		organizations.value = JSON.parse(JSON.stringify(originalOrganizations.value))
+		
+		// 重置展开状态为默认（只展开根节点）
+		expandedNodes.value = ['root']
 	}
 
 	function toggleNode(nodeId : string | number) {
@@ -411,10 +516,25 @@
 			expandedNodes.value.push(nodeIdStr)
 		}
 
+		// 如果是根节点
+		if (nodeIdStr === 'root') {
+			// 如果展开根节点且根部门有成员但未加载，则加载
+			if (expandedNodes.value.includes('root') && rootOrg.value.count > 0) {
+				if (rootOrg.value.members.length === 0 && !deptMembersCache.has(rootOrg.value.id)) {
+					loadDeptMembers(rootOrg.value.id, rootOrg.value)
+				}
+			}
+			return
+		}
+
 		// 切换组织展开状态
 		const org = organizations.value.find(o => String(o.id) === nodeIdStr)
 		if (org) {
 			org.expanded = !org.expanded
+			// 如果展开且没有加载过成员，加载成员
+			if (org.expanded && org.members.length === 0 && !deptMembersCache.has(org.id)) {
+				loadDeptMembers(org.id, org)
+			}
 		}
 	}
 
@@ -422,20 +542,21 @@
 		const deptIdNum = typeof deptId === 'string' ? parseInt(deptId) : deptId
 		
 		// 递归查找并切换部门展开状态
-		function findAndToggle(depts: any[]): boolean {
+		function findAndToggle(depts: any[]): any | null {
 			for (let i = 0; i < depts.length; i++) {
 				const dept = depts[i]
 				if (dept.id === deptIdNum) {
 					dept.expanded = !dept.expanded
-					return true
+					return dept
 				}
 				if (dept.departments && dept.departments.length > 0) {
-					if (findAndToggle(dept.departments)) {
-						return true
+					const found = findAndToggle(dept.departments)
+					if (found !== null) {
+						return found
 					}
 				}
 			}
-			return false
+			return null
 		}
 		
 		// 在所有组织中查找
@@ -444,11 +565,81 @@
 			// 先检查是否是组织本身
 			if (org.id === deptIdNum) {
 				org.expanded = !org.expanded
+				// 如果展开且没有加载过成员，加载成员
+				if (org.expanded && org.members.length === 0 && !deptMembersCache.has(org.id)) {
+					loadDeptMembers(org.id, org)
+				}
 				return
 			}
 			// 再检查子部门
-			if (findAndToggle(org.departments)) {
+			const dept = findAndToggle(org.departments)
+			if (dept !== null) {
+				// 如果展开且没有加载过成员，加载成员
+				if (dept.expanded && dept.members.length === 0 && !deptMembersCache.has(dept.id)) {
+					loadDeptMembers(dept.id, dept)
+				}
 				break
+			}
+		}
+	}
+	
+	/**
+	 * 加载部门成员
+	 */
+	async function loadDeptMembers(deptId: number, deptNode: any, keyword?: string) {
+		// 如果有缓存且没有搜索关键词，直接使用缓存
+		if (!keyword && deptMembersCache.has(deptId)) {
+			deptNode.members = deptMembersCache.get(deptId) || []
+			return
+		}
+		
+		try {
+			// 搜索时不显示全局loading，避免影响用户体验
+			if (!keyword) {
+				loadingMembers.value = true
+			}
+			
+			const data = await getDeptMembers(String(deptId), keyword)
+			
+			if (data && data.length > 0) {
+				const members = data.map((user: any) => {
+					return {
+						id: user.id,
+						name: user.nickname,
+						role: user.postName || '未设置岗位',
+						avatarText: getAvatarText(user.nickname),
+						avatarBg: getUserAvatarColor(user.id),
+						selected: isMemberSelected(user.id)
+					}
+				})
+				
+				deptNode.members = members
+				
+				// 如果没有搜索关键词，缓存结果并更新count
+				if (!keyword) {
+					deptMembersCache.set(deptId, members)
+					deptNode.count = members.length
+				}
+			} else {
+				deptNode.members = []
+				if (!keyword) {
+					deptMembersCache.set(deptId, [])
+					deptNode.count = 0
+				}
+			}
+		} catch (e) {
+			console.error('[Organization] 加载部门成员失败:', e)
+			// 搜索时不显示错误提示，避免频繁弹窗
+			if (!keyword) {
+				uni.showToast({
+					title: '加载成员失败',
+					icon: 'none'
+				})
+			}
+			deptNode.members = []
+		} finally {
+			if (!keyword) {
+				loadingMembers.value = false
 			}
 		}
 	}

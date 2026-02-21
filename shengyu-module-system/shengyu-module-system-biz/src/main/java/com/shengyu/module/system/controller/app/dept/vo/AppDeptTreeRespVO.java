@@ -22,6 +22,9 @@ public class AppDeptTreeRespVO {
     @Schema(description = "排序", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer sort;
 
+    @Schema(description = "部门成员数量", example = "10")
+    private Integer memberCount;
+
     @Schema(description = "部门成员列表（仅用户所属部门才有数据）")
     private List<AppUserSimpleRespVO> users;
 
