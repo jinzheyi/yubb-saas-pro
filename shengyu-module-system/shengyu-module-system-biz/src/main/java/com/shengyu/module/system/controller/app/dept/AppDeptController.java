@@ -1,9 +1,11 @@
 package com.shengyu.module.system.controller.app.dept;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptListReqVO;
 import com.shengyu.module.system.controller.admin.dept.vo.post.UserPostRespVO;
 import com.shengyu.module.system.controller.app.dept.vo.AppDeptTreeRespVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserSimpleRespVO;
@@ -152,6 +154,131 @@ public class AppDeptController {
         }
         
         // 10. 按照层级排序：先按parentId分组，然后按sort排序
+        result.sort(Comparator
+                .comparing(AppDeptTreeRespVO::getParentId, Comparator.nullsFirst(Long::compareTo))
+                .thenComparing(AppDeptTreeRespVO::getSort, Comparator.nullsFirst(Integer::compareTo))
+                .thenComparing(AppDeptTreeRespVO::getId));
+        
+        return success(result);
+    }
+
+    @GetMapping("/org-tree")
+    @Operation(summary = "获取组织结构树", description = "获取完整的组织结构树，包含所有部门和成员")
+    public CommonResult<List<AppDeptTreeRespVO>> getOrgTree(@RequestParam(value = "keyword", required = false) String keyword) {
+        // 1. 获取所有部门
+        List<DeptDO> allDepts = deptService.getDeptList(new DeptListReqVO());
+        if (CollUtil.isEmpty(allDepts)) {
+            return success(new ArrayList<>());
+        }
+        
+        // 2. 查询每个部门的成员
+        Map<Long, List<AdminUserDO>> deptUsersMap = new HashMap<>();
+        Set<Long> matchedDeptIds = new HashSet<>(); // 记录包含匹配用户的部门
+        
+        for (DeptDO dept : allDepts) {
+            List<UserDeptDO> deptUsers = userDeptMapper.selectListByDeptIds(Collections.singletonList(dept.getId()));
+            if (CollUtil.isNotEmpty(deptUsers)) {
+                List<Long> userIds = deptUsers.stream()
+                        .map(UserDeptDO::getUserId)
+                        .collect(Collectors.toList());
+                List<AdminUserDO> users = adminUserService.getUserList(userIds);
+                
+                // 如果有搜索关键词，过滤用户
+                if (StrUtil.isNotBlank(keyword)) {
+                    users = users.stream()
+                            .filter(user -> StrUtil.containsIgnoreCase(user.getNickname(), keyword))
+                            .collect(Collectors.toList());
+                    
+                    // 如果过滤后还有用户，记录这个部门
+                    if (CollUtil.isNotEmpty(users)) {
+                        matchedDeptIds.add(dept.getId());
+                    }
+                }
+                
+                if (CollUtil.isNotEmpty(users)) {
+                    deptUsersMap.put(dept.getId(), users);
+                }
+            }
+        }
+        
+        // 3. 如果有搜索关键词，只返回包含匹配用户的部门及其父级部门
+        List<DeptDO> filteredDepts = allDepts;
+        if (StrUtil.isNotBlank(keyword) && CollUtil.isNotEmpty(matchedDeptIds)) {
+            Set<Long> deptIdsToShow = new HashSet<>(matchedDeptIds);
+            
+            // 创建部门ID到部门对象的映射，方便快速查找
+            Map<Long, DeptDO> deptIdMap = allDepts.stream()
+                    .collect(Collectors.toMap(DeptDO::getId, dept -> dept));
+            
+            // 添加所有匹配部门的父级部门
+            for (Long deptId : matchedDeptIds) {
+                DeptDO dept = deptIdMap.get(deptId);
+                if (dept != null) {
+                    // 向上遍历添加所有父级部门
+                    Long currentParentId = dept.getParentId();
+                    while (currentParentId != null && currentParentId != 0) {
+                        deptIdsToShow.add(currentParentId);
+                        DeptDO parentDept = deptIdMap.get(currentParentId);
+                        if (parentDept != null) {
+                            currentParentId = parentDept.getParentId();
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            filteredDepts = allDepts.stream()
+                    .filter(dept -> deptIdsToShow.contains(dept.getId()))
+                    .collect(Collectors.toList());
+        }
+        
+        // 4. 获取所有用户的岗位信息
+        Set<Long> allUserIds = deptUsersMap.values().stream()
+                .flatMap(List::stream)
+                .map(AdminUserDO::getId)
+                .collect(Collectors.toSet());
+        Map<Long, List<UserPostRespVO>> userPostMap = postService.getUserPostMap(allUserIds);
+        
+        // 5. 创建部门映射
+        Map<Long, DeptDO> deptMap = filteredDepts.stream()
+                .collect(Collectors.toMap(DeptDO::getId, dept -> dept));
+        
+        // 6. 转换为VO
+        List<AppDeptTreeRespVO> result = new ArrayList<>();
+        for (DeptDO dept : filteredDepts) {
+            AppDeptTreeRespVO vo = BeanUtils.toBean(dept, AppDeptTreeRespVO.class);
+            
+            // 添加成员列表
+            List<AdminUserDO> users = deptUsersMap.get(dept.getId());
+            if (CollUtil.isNotEmpty(users)) {
+                List<AppUserSimpleRespVO> userVOs = users.stream().map(user -> {
+                    AppUserSimpleRespVO userVO = BeanUtils.toBean(user, AppUserSimpleRespVO.class);
+                    
+                    // 设置部门信息
+                    if (user.getDeptId() != null) {
+                        DeptDO userDept = deptMap.get(user.getDeptId());
+                        if (userDept != null) {
+                            userVO.setDeptName(userDept.getName());
+                        }
+                    }
+                    
+                    // 设置岗位信息（取第一个岗位名称）
+                    List<UserPostRespVO> userPosts = userPostMap.get(user.getId());
+                    if (CollUtil.isNotEmpty(userPosts)) {
+                        userVO.setPostName(userPosts.get(0).getName());
+                    }
+                    
+                    return userVO;
+                }).collect(Collectors.toList());
+                
+                vo.setUsers(userVOs);
+            }
+            
+            result.add(vo);
+        }
+        
+        // 7. 按照层级排序：先按parentId分组，然后按sort排序
         result.sort(Comparator
                 .comparing(AppDeptTreeRespVO::getParentId, Comparator.nullsFirst(Long::compareTo))
                 .thenComparing(AppDeptTreeRespVO::getSort, Comparator.nullsFirst(Integer::compareTo))

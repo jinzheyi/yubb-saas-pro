@@ -11,7 +11,13 @@
 			</view>
 			<view class="search-bar">
 				<text class="iconfont search-icon">&#xea6e;</text>
-				<input class="search-input" placeholder="搜索" placeholder-class="placeholder" />
+				<input 
+					class="search-input" 
+					v-model="searchKeyword"
+					placeholder="搜索" 
+					placeholder-class="placeholder"
+					@input="handleSearch"
+				/>
 			</view>
 		</view>
 
@@ -24,40 +30,30 @@
 				</view>
 			</view>
 
-			<!-- 子组织列表 -->
-			<view v-if="expandedNodes.includes('root')" class="org-list">
-				<view v-for="(org, orgIndex) in organizations" :key="org.id" class="org-item">
-					<view class="org-row" @click="isSelectMode ? null : toggleNode(org.id)">
-						<!-- 选择模式下显示复选框 -->
-						<view v-if="isSelectMode" :class="['checkbox', org.selected ? 'checkbox-active' : '']" @click.stop="toggleOrgSelect(org)">
-							<text v-if="org.selected" class="iconfont check-icon">&#xea73;</text>
-						</view>
-						
-						<!-- 展开/收起图标（选择模式和非选择模式都显示） -->
-						<text class="iconfont node-icon" :style="{ color: org.expanded ? '#0ea5e9' : '#0ea5e9' }" @click.stop="toggleNode(org.id)">
-							{{ org.expanded ? '\ueaf5' : '\ueaf3' }}
-						</text>
-						<text class="org-name" :class="{ 'org-name-bold': org.expanded }">{{ org.name }}({{ org.count }})</text>
-					</view>
-					<view v-if="orgIndex < organizations.length - 1" class="org-item-border"></view>
-
-					<!-- 部门列表 -->
-					<view v-if="org.expanded" class="dept-list">
-						<view v-for="(dept, deptIndex) in org.departments" :key="dept.id" class="dept-item">
-							<view class="dept-row" @click="isSelectMode ? null : toggleDept(dept.id)">
-								<!-- 选择模式下显示复选框 -->
-								<view v-if="isSelectMode" :class="['checkbox', dept.selected ? 'checkbox-active' : '']" @click.stop="toggleDeptSelect(org, dept)">
-									<text v-if="dept.selected" class="iconfont check-icon">&#xea73;</text>
-								</view>
-								
-								<!-- 展开/收起图标（选择模式和非选择模式都显示） -->
-								<text class="iconfont dept-icon" @click.stop="toggleDept(dept.id)">{{ dept.expanded ? '\ueaf5' : '\ueaf3' }}</text>
-								<text class="dept-name" :class="{ 'dept-name-bold': dept.expanded }">{{ dept.name }}({{ dept.count }})</text>
+			<!-- 根节点展开后的内容 -->
+			<view v-if="expandedNodes.includes('root')">
+				<!-- 子组织列表 -->
+				<view class="org-list">
+					<view v-for="(org, orgIndex) in organizations" :key="org.id" class="org-item">
+						<view class="org-row" @click="toggleNode(org.id)">
+							<!-- 选择模式下显示复选框 -->
+							<view v-if="isSelectMode" :class="['checkbox', org.selected ? 'checkbox-active' : '']" @click.stop="toggleOrgSelect(org)">
+								<text v-if="org.selected" class="iconfont check-icon">&#xea73;</text>
 							</view>
+							
+							<!-- 展开/收起图标（选择模式和非选择模式都显示） -->
+							<text class="iconfont node-icon" :style="{ color: '#0ea5e9' }">
+								{{ org.expanded ? '\ueaf5' : '\ueaf3' }}
+							</text>
+							<text class="org-name" :class="{ 'org-name-bold': org.expanded }">{{ org.name }}({{ org.count }})</text>
+						</view>
+						<view v-if="orgIndex < organizations.length - 1" class="org-item-border"></view>
 
-							<!-- 成员列表 -->
-							<view v-if="dept.expanded" class="member-list">
-								<view v-for="(member, mIndex) in dept.members" :key="member.id" 
+						<!-- 部门列表 -->
+						<view v-if="org.expanded" class="dept-list">
+							<!-- 显示部门的成员 -->
+							<view v-if="org.members && org.members.length > 0" class="member-list">
+								<view v-for="(member, mIndex) in org.members" :key="member.id" 
 									class="member-item"
 									@click="handleMemberClick(member)">
 									<!-- 选择模式下显示复选框 -->
@@ -70,10 +66,64 @@
 									</view>
 									<text class="member-name">{{ member.name }}</text>
 									<text class="member-role">{{ member.role }}</text>
-									<view v-if="mIndex < dept.members.length - 1" class="member-item-border"></view>
+									<view v-if="mIndex < org.members.length - 1" class="member-item-border"></view>
+								</view>
+							</view>
+							
+							<!-- 子部门 -->
+							<view v-if="org.departments && org.departments.length > 0">
+								<view v-for="(dept, deptIndex) in org.departments" :key="dept.id" class="dept-item">
+									<view class="dept-row" @click="isSelectMode ? null : toggleDept(dept.id)">
+										<!-- 选择模式下显示复选框 -->
+										<view v-if="isSelectMode" :class="['checkbox', dept.selected ? 'checkbox-active' : '']" @click.stop="toggleDeptSelect(org, dept)">
+											<text v-if="dept.selected" class="iconfont check-icon">&#xea73;</text>
+										</view>
+										
+										<!-- 展开/收起图标（选择模式和非选择模式都显示） -->
+										<text class="iconfont dept-icon" @click.stop="toggleDept(dept.id)">{{ dept.expanded ? '\ueaf5' : '\ueaf3' }}</text>
+										<text class="dept-name" :class="{ 'dept-name-bold': dept.expanded }">{{ dept.name }}({{ dept.count }})</text>
+									</view>
+
+									<!-- 成员列表 -->
+									<view v-if="dept.expanded" class="member-list">
+										<view v-for="(member, mIndex) in dept.members" :key="member.id" 
+											class="member-item"
+											@click="handleMemberClick(member)">
+											<!-- 选择模式下显示复选框 -->
+											<view v-if="isSelectMode" :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
+												<text v-if="member.selected" class="iconfont check-icon">&#xea73;</text>
+											</view>
+											
+											<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
+												<text class="avatar-text">{{ member.avatarText }}</text>
+											</view>
+											<text class="member-name">{{ member.name }}</text>
+											<text class="member-role">{{ member.role }}</text>
+											<view v-if="mIndex < dept.members.length - 1" class="member-item-border"></view>
+										</view>
+									</view>
 								</view>
 							</view>
 						</view>
+					</view>
+				</view>
+				
+				<!-- 根部门的直接成员（显示在所有子部门之后） -->
+				<view v-if="rootOrg.members && rootOrg.members.length > 0" class="root-members">
+					<view v-for="(member, mIndex) in rootOrg.members" :key="member.id" 
+						class="member-item"
+						@click="handleMemberClick(member)">
+						<!-- 选择模式下显示复选框 -->
+						<view v-if="isSelectMode" :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
+							<text v-if="member.selected" class="iconfont check-icon">&#xea73;</text>
+						</view>
+						
+						<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
+							<text class="avatar-text">{{ member.avatarText }}</text>
+						</view>
+						<text class="member-name">{{ member.name }}</text>
+						<text class="member-role">{{ member.role }}</text>
+						<view v-if="mIndex < rootOrg.members.length - 1" class="member-item-border"></view>
 					</view>
 				</view>
 			</view>
@@ -98,94 +148,36 @@
 		removeMembers,
 		getSelectedCount
 	} from '../../store/group-selection.uts'
+	import { getOrgTree } from '../../api/dept.uts'
+	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
 
 	// 是否为选择模式
 	const isSelectMode = ref(false)
+	
+	// 加载状态
+	const loading = ref(false)
+	
+	// 搜索关键词
+	const searchKeyword = ref('')
+	
+	// 搜索定时器
+	let searchTimer: number = 0
 
 	// 根组织
 	const rootOrg = ref({
-		name: '科技创新集团有限公司',
-		count: 362,
-		selected: false
+		name: '公司',
+		count: 0,
+		selected: false,
+		members: [] as any[]
 	})
 
 	// 展开的节点ID列表
 	const expandedNodes = ref<string[]>(['root'])
 
-	// 组织数据
-	const organizations = ref([
-		{
-			id: 'org1',
-			name: '供应链金融有限公司',
-			count: 63,
-			expanded: false,
-			selected: false,
-			departments: []
-		},
-		{
-			id: 'org2',
-			name: '数字科技有限公司',
-			count: 89,
-			expanded: false,
-			selected: false,
-			departments: [
-				{
-					id: 'dept1',
-					name: '管理层',
-					count: 3,
-					expanded: false,
-					selected: false,
-					members: []
-				},
-				{
-					id: 'dept2',
-					name: '综合管理部',
-					count: 5,
-					expanded: false,
-					selected: false,
-					members: []
-				},
-				{
-					id: 'dept3',
-					name: '人力资源部',
-					count: 3,
-					expanded: false,
-					selected: false,
-					members: [
-						{ id: 3001, name: '张敏', role: '副部长 (主持工作)', avatarText: '张敏', avatarBg: '#fb7185', selected: false },
-						{ id: 3002, name: '李强', role: '人力资源经理', avatarText: '李强', avatarBg: '#0ea5e9', selected: false },
-						{ id: 3003, name: '王静', role: '人力实习生', avatarText: '王静', avatarBg: '#f472b6', selected: false }
-					]
-				},
-				{
-					id: 'dept4',
-					name: '财务管理部',
-					count: 3,
-					expanded: false,
-					selected: false,
-					members: []
-				},
-				{
-					id: 'dept5',
-					name: '风控法务部',
-					count: 2,
-					expanded: false,
-					selected: false,
-					members: []
-				},
-				{
-					id: 'dept6',
-					name: '资产运营事业部',
-					count: 31,
-					expanded: false,
-					selected: false,
-					members: []
-				}
-			]
-		}
-	])
+	// 组织数据（实际上是部门树）
+	const organizations = ref<any[]>([])
 
 	// 计算选中的总人数（使用全局状态）
 	const selectedCount = computed(() : number => {
@@ -195,29 +187,267 @@
 	function handleBack() {
 		uni.navigateBack()
 	}
+	
+	/**
+	 * 加载组织结构树
+	 */
+	async function loadOrgTree(keyword?: string) {
+		try {
+			loading.value = true
+			const data = await getOrgTree(keyword)
+			
+			if (data && data.length > 0) {
+				// 找到根部门
+				const rootDept = data.find((dept: any) => dept.parentId === null || dept.parentId === 0)
+				
+				if (rootDept) {
+					// 设置根组织信息
+					rootOrg.value.name = rootDept.name
+					
+					// 设置根部门的成员
+					if (rootDept.users && rootDept.users.length > 0) {
+						rootOrg.value.members = rootDept.users.map((user: any) => {
+							return {
+								id: user.id,
+								name: user.nickname,
+								role: user.postName || '未设置岗位',
+								avatarText: getAvatarText(user.nickname),
+								avatarBg: getUserAvatarColor(user.id),
+								selected: isMemberSelected(user.id)
+							}
+						})
+					} else {
+						rootOrg.value.members = []
+					}
+				}
+				
+				// 构建树形结构（不包括根部门）
+				const tree = buildOrgTree(data)
+				organizations.value = tree
+				
+				// 计算根节点的总人数（包括根部门的成员）
+				rootOrg.value.count = (rootOrg.value.members ? rootOrg.value.members.length : 0) + calculateTotalCount(tree)
+				
+				// 如果是搜索模式，自动展开所有节点
+				if (keyword && keyword.length > 0) {
+					expandedNodes.value = ['root']
+					expandAllNodes(tree)
+				}
+			} else {
+				// 没有数据时清空
+				organizations.value = []
+				rootOrg.value.members = []
+				rootOrg.value.count = 0
+			}
+		} catch (e) {
+			console.error('[Organization] 加载组织结构失败:', e)
+			uni.showToast({
+				title: '加载失败',
+				icon: 'none'
+			})
+		} finally {
+			loading.value = false
+		}
+	}
+	
+	/**
+	 * 展开所有节点（用于搜索结果展示）
+	 */
+	function expandAllNodes(nodes: any[]) {
+		for (let i = 0; i < nodes.length; i++) {
+			const node = nodes[i]
+			node.expanded = true
+			expandedNodes.value.push(String(node.id))
+			
+			if (node.departments && node.departments.length > 0) {
+				expandAllNodes(node.departments)
+			}
+		}
+	}
+	
+	/**
+	 * 从扁平列表构建组织树
+	 */
+	function buildOrgTree(flatList: any[]): any[] {
+		if (flatList.length === 0) {
+			return []
+		}
+		
+		// 创建部门映射表
+		const deptMap = new Map<number, any>()
+		
+		// 第一遍：创建所有节点
+		for (let i = 0; i < flatList.length; i++) {
+			const dept = flatList[i]
+			const node = {
+				id: dept.id,
+				name: dept.name,
+				parentId: dept.parentId,
+				sort: dept.sort || 0,
+				count: dept.users ? dept.users.length : 0,
+				expanded: false,
+				selected: false,
+				departments: [] as any[],
+				members: dept.users ? dept.users.map((user: any) => {
+					return {
+						id: user.id,
+						name: user.nickname,
+						role: user.postName || '未设置岗位',
+						avatarText: getAvatarText(user.nickname),
+						avatarBg: getUserAvatarColor(user.id),
+						selected: isMemberSelected(user.id)
+					}
+				}) : []
+			}
+			deptMap.set(dept.id, node)
+		}
+		
+		// 第二遍：建立父子关系
+		const rootNodes: any[] = []
+		let rootDeptId: number | null = null
+		
+		// 找到根部门
+		for (const [id, node] of deptMap) {
+			if (node.parentId === null || node.parentId === 0) {
+				rootDeptId = node.id
+				break
+			}
+		}
+		
+		// 如果没有根部门，返回空数组
+		if (rootDeptId === null) {
+			return []
+		}
+		
+		// 获取根部门的直接子部门作为顶级组织
+		for (const [id, node] of deptMap) {
+			if (node.parentId === rootDeptId) {
+				// 递归构建子部门
+				node.departments = buildSubDepts(node.id, deptMap)
+				rootNodes.push(node)
+			}
+		}
+		
+		// 排序
+		rootNodes.sort((a: any, b: any) => a.sort - b.sort)
+		
+		return rootNodes
+	}
+	
+	/**
+	 * 递归构建子部门
+	 */
+	function buildSubDepts(parentId: number, deptMap: Map<number, any>): any[] {
+		const children: any[] = []
+		
+		for (const [id, node] of deptMap) {
+			if (node.parentId === parentId) {
+				// 递归查找子部门
+				const subDepts = buildSubDepts(node.id, deptMap)
+				
+				const dept = {
+					id: node.id,
+					name: node.name,
+					count: node.count,
+					expanded: false,
+					selected: false,
+					members: node.members,
+					departments: subDepts
+				}
+				
+				children.push(dept)
+			}
+		}
+		
+		// 按sort排序
+		children.sort((a: any, b: any) => {
+			const aNode = deptMap.get(a.id)
+			const bNode = deptMap.get(b.id)
+			return (aNode?.sort || 0) - (bNode?.sort || 0)
+		})
+		
+		return children
+	}
+	
+	/**
+	 * 计算总人数（递归计算所有部门的成员）
+	 */
+	function calculateTotalCount(nodes: any[]): number {
+		let total = 0
+		for (let i = 0; i < nodes.length; i++) {
+			const node = nodes[i]
+			// 加上当前节点的成员数
+			total += node.members ? node.members.length : 0
+			// 递归加上子部门的成员数
+			if (node.departments && node.departments.length > 0) {
+				total += calculateTotalCount(node.departments)
+			}
+		}
+		return total
+	}
+	
+	/**
+	 * 处理搜索
+	 */
+	function handleSearch() {
+		// 清除之前的定时器
+		if (searchTimer !== 0) {
+			clearTimeout(searchTimer)
+		}
+		
+		// 延迟500ms执行搜索
+		searchTimer = setTimeout(() => {
+			// 重新加载数据，传入搜索关键词
+			loadOrgTree(searchKeyword.value)
+		}, 500)
+	}
 
-	function toggleNode(nodeId : string) {
-		const index = expandedNodes.value.indexOf(nodeId)
+	function toggleNode(nodeId : string | number) {
+		const nodeIdStr = String(nodeId)
+		const index = expandedNodes.value.indexOf(nodeIdStr)
 		if (index > -1) {
 			expandedNodes.value.splice(index, 1)
 		} else {
-			expandedNodes.value.push(nodeId)
+			expandedNodes.value.push(nodeIdStr)
 		}
 
 		// 切换组织展开状态
-		const org = organizations.value.find(o => o.id === nodeId)
+		const org = organizations.value.find(o => String(o.id) === nodeIdStr)
 		if (org) {
 			org.expanded = !org.expanded
 		}
 	}
 
-	function toggleDept(deptId : string) {
-		// 查找并切换部门展开状态
+	function toggleDept(deptId : string | number) {
+		const deptIdNum = typeof deptId === 'string' ? parseInt(deptId) : deptId
+		
+		// 递归查找并切换部门展开状态
+		function findAndToggle(depts: any[]): boolean {
+			for (let i = 0; i < depts.length; i++) {
+				const dept = depts[i]
+				if (dept.id === deptIdNum) {
+					dept.expanded = !dept.expanded
+					return true
+				}
+				if (dept.departments && dept.departments.length > 0) {
+					if (findAndToggle(dept.departments)) {
+						return true
+					}
+				}
+			}
+			return false
+		}
+		
+		// 在所有组织中查找
 		for (let i = 0; i < organizations.value.length; i++) {
 			const org = organizations.value[i]
-			const dept = org.departments.find(d => d.id === deptId)
-			if (dept) {
-				dept.expanded = !dept.expanded
+			// 先检查是否是组织本身
+			if (org.id === deptIdNum) {
+				org.expanded = !org.expanded
+				return
+			}
+			// 再检查子部门
+			if (findAndToggle(org.departments)) {
 				break
 			}
 		}
@@ -231,14 +461,22 @@
 		
 		// 收集所有成员
 		const allMembers : any[] = []
-		for (let i = 0; i < org.departments.length; i++) {
-			const dept = org.departments[i]
-			dept.selected = org.selected
-			for (let j = 0; j < dept.members.length; j++) {
-				allMembers.push(dept.members[j])
-				dept.members[j].selected = org.selected
+		
+		function collectMembers(depts: any[]) {
+			for (let i = 0; i < depts.length; i++) {
+				const dept = depts[i]
+				dept.selected = org.selected
+				for (let j = 0; j < dept.members.length; j++) {
+					allMembers.push(dept.members[j])
+					dept.members[j].selected = org.selected
+				}
+				if (dept.departments && dept.departments.length > 0) {
+					collectMembers(dept.departments)
+				}
 			}
 		}
+		
+		collectMembers(org.departments)
 		
 		// 批量更新全局状态
 		if (org.selected) {
@@ -255,17 +493,29 @@
 		
 		dept.selected = !dept.selected
 		
-		// 批量更新全局状态
-		if (dept.selected) {
-			addMembers(dept.members)
-		} else {
-			const memberIds = dept.members.map(m => m.id)
-			removeMembers(memberIds)
+		// 收集所有成员（包括子部门）
+		const allMembers : any[] = []
+		
+		function collectMembers(d: any) {
+			for (let i = 0; i < d.members.length; i++) {
+				allMembers.push(d.members[i])
+				d.members[i].selected = dept.selected
+			}
+			if (d.departments && d.departments.length > 0) {
+				for (let j = 0; j < d.departments.length; j++) {
+					collectMembers(d.departments[j])
+				}
+			}
 		}
 		
-		// 同步本地状态到所有成员
-		for (let i = 0; i < dept.members.length; i++) {
-			dept.members[i].selected = dept.selected
+		collectMembers(dept)
+		
+		// 批量更新全局状态
+		if (dept.selected) {
+			addMembers(allMembers)
+		} else {
+			const memberIds = allMembers.map(m => m.id)
+			removeMembers(memberIds)
 		}
 		
 		// 检查是否需要更新组织的选中状态
@@ -284,24 +534,51 @@
 		// 查找成员所属的部门和组织，更新它们的选中状态
 		for (let i = 0; i < organizations.value.length; i++) {
 			const org = organizations.value[i]
-			for (let j = 0; j < org.departments.length; j++) {
-				const dept = org.departments[j]
-				if (dept.members.some(m => m.id === member.id)) {
+			if (updateMemberInDepts(org.departments, member.id)) {
+				updateOrgSelectState(org)
+				break
+			}
+		}
+	}
+	
+	/**
+	 * 在部门树中更新成员状态
+	 */
+	function updateMemberInDepts(depts: any[], memberId: number): boolean {
+		for (let i = 0; i < depts.length; i++) {
+			const dept = depts[i]
+			const member = dept.members.find((m: any) => m.id === memberId)
+			if (member) {
+				updateDeptSelectState(dept)
+				return true
+			}
+			if (dept.departments && dept.departments.length > 0) {
+				if (updateMemberInDepts(dept.departments, memberId)) {
 					updateDeptSelectState(dept)
-					updateOrgSelectState(org)
-					return
+					return true
 				}
 			}
 		}
+		return false
 	}
 
 	// 更新部门的选中状态（如果所有成员都选中，则部门也选中）
 	function updateDeptSelectState(dept : any) {
-		if (dept.members.length === 0) {
+		if (dept.members.length === 0 && (!dept.departments || dept.departments.length === 0)) {
 			dept.selected = false
 			return
 		}
-		dept.selected = dept.members.every(m => m.selected)
+		
+		// 检查所有成员是否都选中
+		const allMembersSelected = dept.members.length > 0 && dept.members.every((m: any) => m.selected)
+		
+		// 检查所有子部门是否都选中
+		let allSubDeptsSelected = true
+		if (dept.departments && dept.departments.length > 0) {
+			allSubDeptsSelected = dept.departments.every((d: any) => d.selected)
+		}
+		
+		dept.selected = allMembersSelected && allSubDeptsSelected
 	}
 
 	// 更新组织的选中状态（如果所有部门都选中，则组织也选中）
@@ -310,7 +587,7 @@
 			org.selected = false
 			return
 		}
-		org.selected = org.departments.every(d => d.selected)
+		org.selected = org.departments.every((d: any) => d.selected)
 	}
 
 	function handleMemberClick(member : any) {
@@ -332,16 +609,25 @@
 
 	// 同步本地选中状态与全局状态
 	function syncSelectionState() {
-		for (let i = 0; i < organizations.value.length; i++) {
-			const org = organizations.value[i]
-			for (let j = 0; j < org.departments.length; j++) {
-				const dept = org.departments[j]
-				for (let k = 0; k < dept.members.length; k++) {
-					dept.members[k].selected = isMemberSelected(dept.members[k].id)
+		function syncDepts(depts: any[]) {
+			for (let i = 0; i < depts.length; i++) {
+				const dept = depts[i]
+				for (let j = 0; j < dept.members.length; j++) {
+					dept.members[j].selected = isMemberSelected(dept.members[j].id)
 				}
 				// 更新部门选中状态
 				updateDeptSelectState(dept)
+				
+				// 递归处理子部门
+				if (dept.departments && dept.departments.length > 0) {
+					syncDepts(dept.departments)
+				}
 			}
+		}
+		
+		for (let i = 0; i < organizations.value.length; i++) {
+			const org = organizations.value[i]
+			syncDepts(org.departments)
 			// 更新组织选中状态
 			updateOrgSelectState(org)
 		}
@@ -352,8 +638,9 @@
 		if (options != null && options['mode'] === 'select') {
 			isSelectMode.value = true
 		}
-		// 同步选中状态
-		syncSelectionState()
+		
+		// 加载组织结构
+		loadOrgTree()
 	})
 
 	// 页面显示时同步选中状态（从其他页面返回时）
@@ -446,6 +733,12 @@
 		padding: 12px 16px;
 		border-bottom-width: 8px;
 		border-bottom-color: #F5F7FA;
+	}
+	
+	.root-members {
+		background-color: #FFFFFF;
+		padding: 0 16px;
+		padding-top: 8px;
 	}
 
 	.node-header {

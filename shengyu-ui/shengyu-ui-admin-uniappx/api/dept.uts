@@ -13,6 +13,16 @@ export function getMyDeptTree(): Promise<any> {
 }
 
 /**
+ * 获取组织结构树
+ * 获取完整的组织结构树，包含所有部门和成员
+ * @param keyword 搜索关键词（可选）
+ */
+export function getOrgTree(keyword?: string): Promise<any> {
+	const url = keyword ? `/system/dept/org-tree?keyword=${encodeURIComponent(keyword)}` : '/system/dept/org-tree'
+	return get(url)
+}
+
+/**
  * 获取部门详情
  * @param id 部门ID（字符串，避免精度丢失）
  */
