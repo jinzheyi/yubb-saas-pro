@@ -127,6 +127,13 @@
 			}
 		},
 		{
+			"path": "pages/message/group-notice",
+			"style": {
+				"navigationBarTitleText": "群公告",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/message/join-group",
 			"style": {
 				"navigationBarTitleText": "加入群聊",

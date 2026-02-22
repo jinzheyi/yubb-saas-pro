@@ -33,6 +33,9 @@ public class AppImGroupRespVO {
     @Schema(description = "群公告", example = "欢迎加入技术交流群")
     private String notice;
 
+    @Schema(description = "群公告是否置顶", example = "false")
+    private Boolean noticePinned;
+
     @Schema(description = "群简介", example = "这是一个技术交流群")
     private String introduction;
 

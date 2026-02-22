@@ -91,6 +91,7 @@ CREATE TABLE `im_group`  (
   `member_count` int NOT NULL DEFAULT 0 COMMENT '成员数量',
   `max_member_count` int NOT NULL DEFAULT 500 COMMENT '最大成员数量',
   `notice` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '群公告',
+  `notice_pinned` bit(1) NOT NULL DEFAULT b'0' COMMENT '群公告是否置顶',
   `introduction` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '群简介',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '群状态(1-正常 2-已解散)',
   `allow_member_invite` bit(1) NOT NULL DEFAULT b'1' COMMENT '是否允许成员邀请',

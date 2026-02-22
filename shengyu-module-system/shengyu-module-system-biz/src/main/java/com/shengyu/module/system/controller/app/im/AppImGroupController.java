@@ -226,4 +226,15 @@ public class AppImGroupController {
         response.getOutputStream().flush();
     }
 
+    // ==================== 群公告相关接口 ====================
+
+    @PutMapping("/notice/update")
+    @Operation(summary = "更新群公告", description = "更新群公告内容，群主和管理员可操作")
+    public CommonResult<Boolean> updateGroupNotice(
+            @Valid @RequestBody AppImGroupNoticeUpdateReqVO reqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        groupService.updateGroupNotice(userId, reqVO);
+        return success(true);
+    }
+
 }

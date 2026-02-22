@@ -72,6 +72,11 @@ public class ImGroupDO extends TenantBaseDO {
     private String notice;
 
     /**
+     * 群公告是否置顶
+     */
+    private Boolean noticePinned;
+
+    /**
      * 群简介
      */
     private String introduction;

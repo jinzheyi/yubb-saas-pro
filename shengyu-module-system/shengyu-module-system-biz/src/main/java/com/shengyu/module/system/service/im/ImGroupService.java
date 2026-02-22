@@ -168,4 +168,12 @@ public interface ImGroupService {
      */
     String getQRCodeContentByInviteCode(String inviteCode, Long groupId);
 
+    /**
+     * 更新群公告
+     *
+     * @param userId 操作者ID（群主或管理员）
+     * @param reqVO 更新请求
+     */
+    void updateGroupNotice(Long userId, AppImGroupNoticeUpdateReqVO reqVO);
+
 }

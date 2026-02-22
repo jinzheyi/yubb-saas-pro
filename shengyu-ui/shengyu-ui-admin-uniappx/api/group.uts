@@ -174,3 +174,17 @@ export function getGroupInviteCode(groupId: string): Promise<any> {
     method: 'GET'
   })
 }
+
+// ==================== 群公告相关接口 ====================
+
+/**
+ * 更新群公告
+ * @param data { groupId: string, notice: string }
+ */
+export function updateGroupNotice(data: any): Promise<any> {
+  return request({
+    url: '/system/im/group/notice/update',
+    method: 'PUT',
+    data: data
+  })
+}

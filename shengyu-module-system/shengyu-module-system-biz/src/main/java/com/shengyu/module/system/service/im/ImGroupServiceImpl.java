@@ -793,4 +793,66 @@ public class ImGroupServiceImpl implements ImGroupService {
         return String.format("/pages/message/join-group?code=%s&groupId=%d", inviteCode, groupId);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateGroupNotice(Long userId, AppImGroupNoticeUpdateReqVO reqVO) {
+        log.info("[ImGroupService] 开始更新群公告, userId: {}, groupId: {}", userId, reqVO.getGroupId());
+        
+        // 1. 查询群组
+        ImGroupDO group = groupMapper.selectById(reqVO.getGroupId());
+        if (group == null) {
+            throw exception(GROUP_NOT_EXISTS);
+        }
+        
+        // 2. 检查群组状态
+        if (ImGroupStatusEnum.DISSOLVED.getStatus().equals(group.getStatus())) {
+            throw exception(GROUP_DISSOLVED);
+        }
+        
+        // 3. 查询用户在群中的角色
+        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(reqVO.getGroupId(), userId);
+        if (groupUser == null) {
+            throw exception(GROUP_MEMBER_NOT_EXISTS);
+        }
+        
+        // 4. 检查权限：只有群主和管理员可以修改群公告
+        if (!ImGroupMemberRoleEnum.OWNER.getRole().equals(groupUser.getRole()) 
+                && !ImGroupMemberRoleEnum.ADMIN.getRole().equals(groupUser.getRole())) {
+            throw exception(GROUP_NO_PERMISSION);
+        }
+        
+        // 5. 更新群公告和置顶状态
+        ImGroupDO updateGroup = new ImGroupDO();
+        updateGroup.setId(reqVO.getGroupId());
+        updateGroup.setNotice(reqVO.getNotice());
+        updateGroup.setNoticePinned(reqVO.getPinNotice() != null ? reqVO.getPinNotice() : false);
+        groupMapper.updateById(updateGroup);
+        
+        log.info("[ImGroupService] 群公告更新成功, groupId: {}, notice: {}, pinned: {}, notifyMembers: {}", 
+                reqVO.getGroupId(), 
+                reqVO.getNotice() != null && reqVO.getNotice().length() > 50 
+                        ? reqVO.getNotice().substring(0, 50) + "..." 
+                        : reqVO.getNotice(),
+                reqVO.getPinNotice(),
+                reqVO.getNotifyMembers());
+        
+        // 6. 如果需要推送通知，发送系统消息给所有群成员
+        if (Boolean.TRUE.equals(reqVO.getNotifyMembers()) && reqVO.getNotice() != null && !reqVO.getNotice().isEmpty()) {
+            // 获取群成员ID列表
+            List<Long> memberIds = getGroupMemberIds(reqVO.getGroupId());
+            
+            // 构建通知内容
+            String noticePreview = reqVO.getNotice().length() > 30 
+                    ? reqVO.getNotice().substring(0, 30) + "..." 
+                    : reqVO.getNotice();
+            String notificationContent = String.format("群主发布了新公告：%s", noticePreview);
+            
+            log.info("[ImGroupService] 准备推送群公告通知, groupId: {}, memberCount: {}", 
+                    reqVO.getGroupId(), memberIds.size());
+            
+            // TODO: 调用消息服务发送系统通知
+            // messageService.sendSystemNotification(memberIds, notificationContent, reqVO.getGroupId());
+        }
+    }
+
 }

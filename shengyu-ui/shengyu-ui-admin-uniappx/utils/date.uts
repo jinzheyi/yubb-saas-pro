@@ -1,0 +1,113 @@
+/**
+ * 日期时间工具函数
+ */
+
+/**
+ * 格式化日期时间
+ * @param date 日期对象、时间戳或日期字符串
+ * @param format 格式化模板，默认 'YYYY-MM-DD HH:mm:ss'
+ * @returns 格式化后的字符串
+ */
+export function formatDateTime(date : any, format : string = 'YYYY-MM-DD HH:mm:ss') : string {
+	let d : Date
+	
+	if (date instanceof Date) {
+		d = date
+	} else if (typeof date === 'number') {
+		d = new Date(date)
+	} else if (typeof date === 'string') {
+		d = new Date(date)
+	} else {
+		return ''
+	}
+	
+	const year = d.getFullYear()
+	const month = d.getMonth() + 1
+	const day = d.getDate()
+	const hour = d.getHours()
+	const minute = d.getMinutes()
+	const second = d.getSeconds()
+	
+	const pad = (n : number) : string => {
+		return n < 10 ? '0' + n : n.toString()
+	}
+	
+	return format
+		.replace('YYYY', year.toString())
+		.replace('MM', pad(month))
+		.replace('DD', pad(day))
+		.replace('HH', pad(hour))
+		.replace('mm', pad(minute))
+		.replace('ss', pad(second))
+}
+
+/**
+ * 格式化日期
+ * @param date 日期对象、时间戳或日期字符串
+ * @returns 格式化后的字符串 YYYY-MM-DD
+ */
+export function formatDate(date : any) : string {
+	return formatDateTime(date, 'YYYY-MM-DD')
+}
+
+/**
+ * 格式化时间
+ * @param date 日期对象、时间戳或日期字符串
+ * @returns 格式化后的字符串 HH:mm:ss
+ */
+export function formatTime(date : any) : string {
+	return formatDateTime(date, 'HH:mm:ss')
+}
+
+/**
+ * 获取相对时间描述
+ * @param date 日期对象、时间戳或日期字符串
+ * @returns 相对时间描述，如"刚刚"、"5分钟前"、"昨天"等
+ */
+export function getRelativeTime(date : any) : string {
+	let d : Date
+	
+	if (date instanceof Date) {
+		d = date
+	} else if (typeof date === 'number') {
+		d = new Date(date)
+	} else if (typeof date === 'string') {
+		d = new Date(date)
+	} else {
+		return ''
+	}
+	
+	const now = new Date()
+	const diff = now.getTime() - d.getTime()
+	
+	// 1分钟内
+	if (diff < 60 * 1000) {
+		return '刚刚'
+	}
+	
+	// 1小时内
+	if (diff < 60 * 60 * 1000) {
+		const minutes = Math.floor(diff / (60 * 1000))
+		return minutes + '分钟前'
+	}
+	
+	// 今天
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+	if (d >= today) {
+		return formatTime(d)
+	}
+	
+	// 昨天
+	const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
+	if (d >= yesterday) {
+		return '昨天 ' + formatTime(d)
+	}
+	
+	// 今年
+	if (d.getFullYear() === now.getFullYear()) {
+		return formatDateTime(d, 'MM-DD HH:mm')
+	}
+	
+	// 其他
+	return formatDateTime(d, 'YYYY-MM-DD HH:mm')
+}

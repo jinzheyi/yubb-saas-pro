@@ -1,0 +1,565 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click.stop="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">返回</text>
+			</view>
+			<text class="header-title">群公告</text>
+			<view class="header-right">
+				<text v-if="canEdit" class="edit-btn" @click="handleEdit">{{ isEditing ? '完成' : '编辑' }}</text>
+			</view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<!-- 查看模式 -->
+			<view v-if="!isEditing" class="view-mode">
+				<view v-if="notice" class="notice-content">
+					<text class="notice-text">{{ notice }}</text>
+				</view>
+				<view v-else class="empty-notice">
+					<text class="iconfont empty-icon">&#xe60e;</text>
+					<text class="empty-text">暂无群公告</text>
+					<text v-if="canEdit" class="empty-hint">点击右上角"编辑"可以发布群公告</text>
+				</view>
+				
+				<!-- 发布信息 -->
+				<view v-if="notice && publishInfo" class="publish-info">
+					<text class="publish-label">发布人：</text>
+					<text class="publish-value">{{ publishInfo.publisherName }}</text>
+				</view>
+				<view v-if="notice && publishInfo" class="publish-info">
+					<text class="publish-label">发布时间：</text>
+					<text class="publish-value">{{ publishInfo.publishTime }}</text>
+				</view>
+			</view>
+			
+			<!-- 编辑模式 -->
+			<view v-else class="edit-mode">
+				<textarea 
+					class="notice-textarea" 
+					v-model="editingNotice" 
+					placeholder="请输入群公告内容（最多500字）"
+					maxlength="500"
+					:focus="isEditing"
+					:auto-height="true"
+				/>
+				<view class="char-count">
+					<text class="char-count-text">{{ editingNotice.length }}/500</text>
+				</view>
+				
+				<!-- 推送通知选项 -->
+				<view class="option-item">
+					<view class="option-left">
+						<text class="iconfont option-icon">&#xe60a;</text>
+						<text class="option-label">推送通知</text>
+					</view>
+					<switch class="option-switch" :checked="notifyMembers" @change="handleNotifyChange" />
+				</view>
+				<view v-if="notifyMembers" class="option-hint">
+					<text class="hint-text">发布后将通知所有群成员</text>
+				</view>
+				
+				<!-- 置顶公告选项 -->
+				<view class="option-item">
+					<view class="option-left">
+						<text class="iconfont option-icon">&#xe726;</text>
+						<text class="option-label">置顶公告</text>
+					</view>
+					<switch class="option-switch" :checked="pinNotice" @change="handlePinChange" />
+				</view>
+				<view v-if="pinNotice" class="option-hint">
+					<text class="hint-text">公告将在聊天页面顶部显示</text>
+				</view>
+				
+				<view class="btn-group">
+					<view class="btn btn-cancel" @click="handleCancelEdit">
+						<text class="btn-text">取消</text>
+					</view>
+					<view class="btn btn-publish" @click="handlePublish">
+						<text class="btn-text btn-text-primary">发布</text>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getGroup, updateGroupNotice } from '../../api/group.uts'
+	import { getUserId } from '../../store/user.uts'
+	import { formatDateTime } from '../../utils/date.uts'
+
+	// 页面参数
+	const groupId = ref('')
+	const groupName = ref('')
+	
+	// 当前用户
+	const currentUserId = ref(0)
+	
+	// 群公告内容
+	const notice = ref('')
+	const editingNotice = ref('')
+	
+	// 编辑状态
+	const isEditing = ref(false)
+	const canEdit = ref(false) // 是否有编辑权限（群主或管理员）
+	
+	// 发布选项
+	const notifyMembers = ref(true) // 是否推送通知，默认true
+	const pinNotice = ref(false) // 是否置顶公告，默认false
+	
+	// 发布信息
+	const publishInfo = ref<any>(null)
+	
+	// 加载状态
+	const loading = ref(false)
+	
+	/**
+	 * 加载群组信息
+	 */
+	async function loadGroupInfo() {
+		if (!groupId.value) return
+		
+		try {
+			loading.value = true
+			const result = await getGroup(groupId.value)
+			
+			if (result) {
+				notice.value = result.notice || ''
+				
+				// 判断是否有编辑权限（群主或管理员）
+				// TODO: 需要后端返回当前用户在群中的角色
+				// 临时方案：假设群主可以编辑
+				canEdit.value = result.ownerId === currentUserId.value
+				
+				// 发布信息
+				if (result.notice) {
+					publishInfo.value = {
+						publisherName: result.ownerName || '群主',
+						publishTime: result.updateTime ? formatDateTime(result.updateTime) : ''
+					}
+				}
+				
+				console.log('[GroupNotice] 加载群组信息成功:', result)
+			}
+		} catch (e) {
+			console.error('[GroupNotice] 加载群组信息失败:', e)
+			uni.showToast({
+				title: '加载失败',
+				icon: 'none'
+			})
+		} finally {
+			loading.value = false
+		}
+	}
+	
+	/**
+	 * 返回
+	 */
+	function handleBack() {
+		if (isEditing.value) {
+			// 编辑模式下，提示是否放弃编辑
+			if (editingNotice.value !== notice.value) {
+				uni.showModal({
+					title: '提示',
+					content: '是否放弃编辑？',
+					success: (res) => {
+						if (res.confirm) {
+							uni.navigateBack()
+						}
+					}
+				})
+			} else {
+				uni.navigateBack()
+			}
+		} else {
+			uni.navigateBack()
+		}
+	}
+	
+	/**
+	 * 切换编辑模式
+	 */
+	function handleEdit() {
+		if (isEditing.value) {
+			// 完成编辑
+			handlePublish()
+		} else {
+			// 进入编辑模式
+			editingNotice.value = notice.value
+			// 重置选项为默认值
+			notifyMembers.value = true
+			pinNotice.value = false
+			isEditing.value = true
+		}
+	}
+	
+	/**
+	 * 推送通知开关变化
+	 */
+	function handleNotifyChange(e : any) {
+		notifyMembers.value = e.detail.value as boolean
+	}
+	
+	/**
+	 * 置顶公告开关变化
+	 */
+	function handlePinChange(e : any) {
+		pinNotice.value = e.detail.value as boolean
+	}
+	
+	/**
+	 * 取消编辑
+	 */
+	function handleCancelEdit() {
+		if (editingNotice.value !== notice.value) {
+			uni.showModal({
+				title: '提示',
+				content: '是否放弃编辑？',
+				success: (res) => {
+					if (res.confirm) {
+						editingNotice.value = notice.value
+						notifyMembers.value = true
+						pinNotice.value = false
+						isEditing.value = false
+					}
+				}
+			})
+		} else {
+			isEditing.value = false
+		}
+	}
+	
+	/**
+	 * 发布群公告
+	 */
+	async function handlePublish() {
+		const newNotice = editingNotice.value.trim()
+		
+		// 验证
+		if (newNotice.length > 500) {
+			uni.showToast({
+				title: '群公告不能超过500字',
+				icon: 'none'
+			})
+			return
+		}
+		
+		// 如果内容没有变化，直接退出编辑模式
+		if (newNotice === notice.value) {
+			isEditing.value = false
+			return
+		}
+		
+		try {
+			loading.value = true
+			
+			await updateGroupNotice({
+				groupId: groupId.value,
+				notice: newNotice,
+				notifyMembers: notifyMembers.value,
+				pinNotice: pinNotice.value
+			})
+			
+			notice.value = newNotice
+			isEditing.value = false
+			
+			// 更新发布信息
+			publishInfo.value = {
+				publisherName: '我',
+				publishTime: formatDateTime(new Date())
+			}
+			
+			// 根据选项显示不同的提示
+			let toastTitle = newNotice ? '发布成功' : '已清空群公告'
+			if (newNotice && notifyMembers.value) {
+				toastTitle += '，已通知所有成员'
+			}
+			
+			uni.showToast({
+				title: toastTitle,
+				icon: 'success',
+				duration: 2000
+			})
+		} catch (e) {
+			console.error('[GroupNotice] 发布群公告失败:', e)
+			uni.showToast({
+				title: '发布失败',
+				icon: 'none'
+			})
+		} finally {
+			loading.value = false
+		}
+	}
+	
+	onLoad((options : any) => {
+		// 获取当前用户ID
+		currentUserId.value = getUserId()
+		
+		// 获取群组ID
+		if (options['groupId']) {
+			groupId.value = options['groupId'] as string
+		}
+		
+		// 获取群名称
+		if (options['groupName']) {
+			groupName.value = decodeURIComponent(options['groupName'])
+		}
+		
+		console.log('[GroupNotice] 页面参数:', { groupId: groupId.value, groupName: groupName.value })
+	})
+	
+	onMounted(async () => {
+		await loadGroupInfo()
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F7FA;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #1F2329;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #1F2329;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 17px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+		align-items: flex-end;
+	}
+	
+	.edit-btn {
+		color: #1677FF;
+		font-size: 15px;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+	}
+	
+	/* 查看模式 */
+	.view-mode {
+		background-color: #FFFFFF;
+		padding: 20px 16px;
+	}
+	
+	.notice-content {
+		margin-bottom: 20px;
+	}
+	
+	.notice-text {
+		font-size: 15px;
+		color: #1F2329;
+		line-height: 24px;
+	}
+	
+	.empty-notice {
+		padding: 60px 0;
+		align-items: center;
+	}
+	
+	.empty-icon {
+		font-size: 64px;
+		color: #C9CDD4;
+		margin-bottom: 16px;
+	}
+	
+	.empty-text {
+		font-size: 15px;
+		color: #8F959E;
+		margin-bottom: 8px;
+	}
+	
+	.empty-hint {
+		font-size: 13px;
+		color: #C9CDD4;
+	}
+	
+	.publish-info {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 12px;
+	}
+	
+	.publish-label {
+		font-size: 13px;
+		color: #8F959E;
+	}
+	
+	.publish-value {
+		font-size: 13px;
+		color: #646A73;
+	}
+	
+	/* 编辑模式 */
+	.edit-mode {
+		background-color: #FFFFFF;
+		padding: 16px;
+	}
+	
+	.notice-textarea {
+		width: 100%;
+		min-height: 200px;
+		font-size: 15px;
+		color: #1F2329;
+		line-height: 24px;
+		padding: 12px;
+		background-color: #F5F7FA;
+		border-radius: 8px;
+		border-width: 1px;
+		border-color: #E5E5E5;
+	}
+	
+	.notice-textarea:focus {
+		border-color: #1677FF;
+		background-color: #FFFFFF;
+	}
+	
+	.char-count {
+		margin-top: 8px;
+		align-items: flex-end;
+	}
+	
+	.char-count-text {
+		font-size: 12px;
+		color: #8F959E;
+	}
+	
+	/* 选项项 */
+	.option-item {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		padding: 14px 12px;
+		background-color: #F5F7FA;
+		border-radius: 8px;
+		margin-top: 16px;
+	}
+	
+	.option-left {
+		flex-direction: row;
+		align-items: center;
+		flex: 1;
+	}
+	
+	.option-icon {
+		font-size: 18px;
+		color: #1677FF;
+		margin-right: 10px;
+	}
+	
+	.option-label {
+		font-size: 15px;
+		color: #1F2329;
+		font-weight: 500;
+	}
+	
+	.option-switch {
+		transform: scale(0.9);
+	}
+	
+	.option-hint {
+		padding: 8px 12px;
+		margin-top: 4px;
+	}
+	
+	.hint-text {
+		font-size: 12px;
+		color: #8F959E;
+		line-height: 18px;
+	}
+	
+	.edit-tips {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 16px;
+		padding: 12px;
+		background-color: #FFF7E6;
+		border-radius: 6px;
+	}
+	
+	.tip-icon {
+		font-size: 16px;
+		color: #FA8C16;
+		margin-right: 8px;
+	}
+	
+	.tip-text {
+		font-size: 13px;
+		color: #D46B08;
+		flex: 1;
+	}
+	
+	.btn-group {
+		flex-direction: row;
+		margin-top: 24px;
+		gap: 12px;
+	}
+	
+	.btn {
+		flex: 1;
+		height: 44px;
+		border-radius: 8px;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.btn-cancel {
+		background-color: #F5F7FA;
+	}
+	
+	.btn-publish {
+		background-color: #1677FF;
+	}
+	
+	.btn-text {
+		font-size: 15px;
+		color: #646A73;
+	}
+	
+	.btn-text-primary {
+		color: #FFFFFF;
+		font-weight: 500;
+	}
+</style>

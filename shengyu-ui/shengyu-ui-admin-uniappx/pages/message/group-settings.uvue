@@ -409,9 +409,8 @@
 	}
 
 	function handleGroupNotice() {
-		uni.showToast({
-			title: '群公告功能开发中',
-			icon: 'none'
+		uni.navigateTo({
+			url: '/pages/message/group-notice?groupId=' + groupId.value + '&groupName=' + encodeURIComponent(groupName.value)
 		})
 	}
 
