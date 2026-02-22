@@ -107,11 +107,23 @@
 
 	// 过期时间文本
 	const expireText = computed(() : string => {
-		if (!expireTime.value || expireTime.value === 0) return ''
+		console.log('[GroupQRCode] expireText 计算中, expireTime.value:', expireTime.value)
+		
+		if (!expireTime.value || expireTime.value === 0) {
+			console.log('[GroupQRCode] expireTime 为空或0，返回空字符串')
+			return ''
+		}
 		
 		const expire = new Date(expireTime.value)
 		const now = new Date()
 		const diff = expire.getTime() - now.getTime()
+		
+		console.log('[GroupQRCode] 过期时间计算:', {
+			expireTime: expireTime.value,
+			expire: expire.toString(),
+			now: now.toString(),
+			diff: diff
+		})
 		
 		if (diff <= 0) {
 			return '已过期'
@@ -189,14 +201,20 @@
 				inviteCode.value = result.inviteCode
 				// 后端返回相对路径，前端拼接完整 URL
 				qrCodeUrl.value = result.qrCodeUrl ? `${BASE_URL}${result.qrCodeUrl}` : ''
-				expireTime.value = result.expireTime || 0
+				
+				// 确保 expireTime 是数字类型（时间戳）
+				const newExpireTime = result.expireTime || 0
+				console.log('[GroupQRCode] 新的 expireTime 类型:', typeof newExpireTime, '值:', newExpireTime)
+				expireTime.value = newExpireTime
+				
 				usedCount.value = result.usedCount || 0
 				maxUseCount.value = result.maxUseCount || 0
 
 				console.log('[GroupQRCode] 生成邀请码成功:', {
 					inviteCode: inviteCode.value,
 					qrCodeUrl: qrCodeUrl.value,
-					expireTime: expireTime.value
+					expireTime: expireTime.value,
+					expireTimeType: typeof expireTime.value
 				})
 
 				// 生成二维码
@@ -243,8 +261,23 @@
 			return
 		}
 
+		// 判断当前平台
+		const platform = uni.getSystemInfoSync().platform
+		console.log('[GroupQRCode] 当前平台:', platform)
+		
+		// H5 环境：提示用户右键保存或长按保存
+		if (platform === 'web') {
+			uni.showModal({
+				title: '保存二维码',
+				content: 'PC端：请右键点击二维码图片选择"图片另存为"\n移动端：请长按二维码图片保存',
+				showCancel: false,
+				confirmText: '知道了'
+			})
+			return
+		}
+
+		// App 环境：保存到相册
 		try {
-			// 先下载图片到本地
 			uni.showLoading({
 				title: '保存中...'
 			})
@@ -349,7 +382,11 @@
 		})
 
 		try {
+			console.log('[GroupQRCode] 刷新前 expireTime:', expireTime.value)
 			await generateNewInviteCode()
+			console.log('[GroupQRCode] 刷新后 expireTime:', expireTime.value)
+			console.log('[GroupQRCode] 刷新后 expireText:', expireText.value)
+			
 			uni.showToast({
 				title: '刷新成功',
 				icon: 'success'

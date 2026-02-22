@@ -59,7 +59,7 @@ export const BASE_URL = 'http://localhost:48080'
  * - 开发时建议使用本机 IP，方便其他设备访问
  * - 生产环境必须使用 HTTPS 协议
  */
-export const ADMIN_APP_DOMAIN = 'http://localhost:5173/#'
+export const ADMIN_APP_DOMAIN = 'http://169.254.81.175:5173/#'
 
 /**
  * 请求超时时间（毫秒）
