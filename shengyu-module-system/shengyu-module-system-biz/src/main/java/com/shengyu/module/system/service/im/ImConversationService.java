@@ -96,4 +96,13 @@ public interface ImConversationService {
      */
     ImConversationDO getConversation(Long conversationId);
 
+    /**
+     * 根据目标ID和类型删除会话
+     *
+     * @param userId 用户ID
+     * @param targetId 目标ID(单聊为对方用户ID,群聊为群ID)
+     * @param conversationType 会话类型(1-单聊 2-群聊)
+     */
+    void deleteConversationByTarget(Long userId, Long targetId, Integer conversationType);
+
 }

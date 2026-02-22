@@ -6,7 +6,7 @@
 				<text class="iconfont back-icon">&#xeb04;</text>
 				<text class="back-text">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title">{{ t('initiateGroup.title') }}</text>
+			<text class="header-title">{{ mode === 'add' ? '添加群成员' : t('initiateGroup.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
@@ -38,9 +38,9 @@
 		</view>
 
 		<view class="footer">
-			<text class="selected-text">{{ t('initiateGroup.selectedCount', { count: selectedCount.toString() }) }}</text>
+			<text class="selected-text">{{ mode === 'add' ? `已选择 ${selectedCount} 人` : t('initiateGroup.selectedCount', { count: selectedCount.toString() }) }}</text>
 			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
-				<text class="confirm-btn-text">{{ t('initiateGroup.confirm', { count: selectedCount.toString(), max: '500' }) }}</text>
+				<text class="confirm-btn-text">{{ mode === 'add' ? '确定' : t('initiateGroup.confirm', { count: selectedCount.toString(), max: '500' }) }}</text>
 			</button>
 		</view>
 	</view>
@@ -58,7 +58,7 @@
 		toggleMember,
 		isMemberSelected
 	} from '../../store/group-selection.uts'
-	import { createGroup } from '../../api/group.uts'
+	import { createGroup, addGroupMembers, getGroupMembers } from '../../api/group.uts'
 	import { getContactList } from '../../api/contact.uts'
 	import { createConversation } from '../../api/conversation.uts'
 	import ContactSelector from '../../components/contact-selector/contact-selector.uvue'
@@ -68,6 +68,11 @@
 	const contactList = ref<any[]>([])
 	const loading = ref(false)
 	const colors = ['#0ea5e9', '#f472b6', '#c084fc', '#fb7185', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#3b82f6', '#8b5cf6']
+	
+	// 页面模式：create-创建群聊，add-添加成员
+	const mode = ref('create')
+	const groupId = ref('')
+	const existingMemberIds = ref<number[]>([])
 	
 	/**
 	 * 获取拼音首字母
@@ -88,7 +93,7 @@
 	 * 加载联系人列表
 	 */
 	async function loadContacts() {
-		console.log('[InitiateGroup] 开始加载联系人列表')
+		console.log('[InitiateGroup] 开始加载联系人列表, mode:', mode.value)
 		loading.value = true
 		
 		try {
@@ -96,6 +101,13 @@
 			const userInfo = getUserInfo()
 			const currentUserId = userInfo?.user?.id ?? 0
 			const currentUserName = userInfo?.user?.nickname ?? '我'
+			
+			// 如果是添加成员模式，先加载现有成员
+			if (mode.value === 'add' && groupId.value) {
+				const members = await getGroupMembers(groupId.value)
+				existingMemberIds.value = members.map((m : any) => m.userId)
+				console.log('[InitiateGroup] 现有成员ID:', existingMemberIds.value)
+			}
 			
 			// 获取联系人列表
 			const contacts = await getContactList() as any[]
@@ -110,22 +122,29 @@
 			// 转换为 UI 格式
 			const list : any[] = []
 			
-			// 第一个添加当前登录用户，默认选中
-			list.push({
-				id: currentUserId,
-				name: currentUserName,
-				role: '当前用户',
-				avatarText: currentUserName.substring(0, 2),
-				avatarBg: '#1677FF',
-				pinyin: 'W',
-				selected: true,
-				isCurrentUser: true
-			})
+			// 创建模式：第一个添加当前登录用户，默认选中
+			if (mode.value === 'create') {
+				list.push({
+					id: currentUserId,
+					name: currentUserName,
+					role: '当前用户',
+					avatarText: currentUserName.substring(0, 2),
+					avatarBg: '#1677FF',
+					pinyin: 'W',
+					selected: true,
+					isCurrentUser: true
+				})
+			}
 			
-			// 添加其他联系人（排除当前用户）
+			// 添加其他联系人
 			contacts.forEach((contact, index) => {
-				// 跳过当前用户
-				if (contact.id === currentUserId) {
+				// 跳过当前用户（创建模式已添加）
+				if (mode.value === 'create' && contact.id === currentUserId) {
+					return
+				}
+				
+				// 添加模式：过滤掉已经在群里的成员
+				if (mode.value === 'add' && existingMemberIds.value.includes(contact.id)) {
 					return
 				}
 				
@@ -146,7 +165,7 @@
 					avatarBg: colors[index % colors.length],
 					pinyin: pinyinLetter,
 					selected: false,
-					isCurrentUser: false
+					isCurrentUser: mode.value === 'add' && contact.id === currentUserId
 				})
 			})
 			
@@ -219,6 +238,56 @@
 		const selectedMembers = getSelectedMembers()
 		console.log('已选择的联系人:', selectedMembers)
 		
+		// 添加成员模式
+		if (mode.value === 'add') {
+			if (selectedMembers.length === 0) {
+				uni.showToast({
+					title: '请至少选择1人',
+					icon: 'none'
+				})
+				return
+			}
+			
+			const addData = {
+				groupId: groupId.value,
+				memberIds: selectedMembers.map(m => m.id)
+			}
+			
+			console.log('[InitiateGroup] 添加成员请求数据:', addData)
+			
+			uni.showToast({
+				title: '添加成员中...',
+				icon: 'loading',
+				duration: 2000
+			})
+			
+			try {
+				await addGroupMembers(addData)
+				
+				uni.showToast({
+					title: '添加成功',
+					icon: 'success',
+					duration: 1000
+				})
+				
+				setTimeout(() => {
+					endSelection()
+					uni.navigateBack()
+				}, 1000)
+				
+			} catch (e) {
+				console.error('[InitiateGroup] 添加成员失败:', e)
+				const errorMsg = (e as any).msg || (e as any).message || '添加失败，请重试'
+				uni.showToast({
+					title: errorMsg,
+					icon: 'none',
+					duration: 2000
+				})
+			}
+			return
+		}
+		
+		// 创建群聊模式
 		if (selectedMembers.length < 2) {
 			uni.showToast({
 				title: '至少选择2人才能创建群聊',
@@ -322,14 +391,26 @@
 	}
 
 	// 页面加载时初始化选择模式
-	onLoad(() => {
+	onLoad((options : any) => {
+		// 获取页面参数
+		if (options['mode']) {
+			mode.value = options['mode'] as string
+		}
+		if (options['groupId']) {
+			groupId.value = options['groupId'] as string
+		}
+		
+		console.log('[InitiateGroup] 页面参数:', { mode: mode.value, groupId: groupId.value })
+		
 		startSelection()
 		// 加载联系人列表
 		loadContacts().then(() => {
-			// 默认添加当前用户
-			const currentUser = contactList.value.find(c => c.isCurrentUser)
-			if (currentUser) {
-				addMember(currentUser)
+			// 创建模式：默认添加当前用户
+			if (mode.value === 'create') {
+				const currentUser = contactList.value.find(c => c.isCurrentUser)
+				if (currentUser) {
+					addMember(currentUser)
+				}
 			}
 			// 同步选中状态
 			syncSelectionState()

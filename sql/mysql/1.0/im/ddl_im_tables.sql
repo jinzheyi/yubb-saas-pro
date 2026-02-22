@@ -16,6 +16,7 @@ SET NAMES utf8mb4;
 -- ----------------------------
 -- Table structure for im_conversation
 -- 会话表: 存储用户的会话列表(单聊/群聊)
+-- 注意: 唯一索引包含 deleted 字段,支持逻辑删除后重新创建会话
 -- ----------------------------
 DROP TABLE IF EXISTS `im_conversation`;
 CREATE TABLE `im_conversation`  (
@@ -37,7 +38,7 @@ CREATE TABLE `im_conversation`  (
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `idx_user_target`(`user_id` ASC, `target_id` ASC, `conversation_type` ASC, `tenant_id` ASC) USING BTREE COMMENT '用户+目标+类型唯一索引',
+  UNIQUE INDEX `idx_user_target_deleted`(`user_id` ASC, `target_id` ASC, `conversation_type` ASC, `tenant_id` ASC, `deleted` ASC) USING BTREE COMMENT '用户+目标+类型+删除状态唯一索引',
   INDEX `idx_user_time`(`user_id` ASC, `last_message_time` DESC) USING BTREE COMMENT '用户+时间索引',
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM会话表' ROW_FORMAT = DYNAMIC;
@@ -109,6 +110,7 @@ CREATE TABLE `im_group`  (
 -- ----------------------------
 -- Table structure for im_group_member
 -- 群成员表: 存储群组成员关系
+-- 注意: 唯一索引包含 deleted 字段,支持逻辑删除后重新加入
 -- ----------------------------
 DROP TABLE IF EXISTS `im_group_member`;
 CREATE TABLE `im_group_member`  (
@@ -126,7 +128,7 @@ CREATE TABLE `im_group_member`  (
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `idx_group_user`(`group_id` ASC, `user_id` ASC, `tenant_id` ASC) USING BTREE COMMENT '群+用户唯一索引',
+  UNIQUE INDEX `idx_group_user_deleted`(`group_id` ASC, `user_id` ASC, `tenant_id` ASC, `deleted` ASC) USING BTREE COMMENT '群+用户+删除状态唯一索引',
   INDEX `idx_user`(`user_id` ASC) USING BTREE COMMENT '用户索引',
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM群成员表' ROW_FORMAT = DYNAMIC;
@@ -135,7 +137,9 @@ CREATE TABLE `im_group_member`  (
 -- Table structure for im_contact_setting
 -- 联系人设置表: 存储用户对联系人的个性化设置(星标、免打扰)
 -- 说明: 企业内部IM,联系人直接来源于 system_users 表,本表仅存储个性化设置
--- 注意: remark_name 字段保留用于未来扩展,当前版本API不返回此字段
+-- 注意: 
+-- 1. remark_name 字段保留用于未来扩展,当前版本API不返回此字段
+-- 2. 唯一索引包含 deleted 字段,支持逻辑删除后重新创建设置
 -- ----------------------------
 DROP TABLE IF EXISTS `im_contact_setting`;
 CREATE TABLE `im_contact_setting`  (
@@ -152,14 +156,16 @@ CREATE TABLE `im_contact_setting`  (
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `idx_user_contact`(`user_id` ASC, `contact_id` ASC, `tenant_id` ASC) USING BTREE COMMENT '用户+联系人唯一索引',
+  UNIQUE INDEX `idx_user_contact_deleted`(`user_id` ASC, `contact_id` ASC, `tenant_id` ASC, `deleted` ASC) USING BTREE COMMENT '用户+联系人+删除状态唯一索引',
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM联系人设置表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for im_message_read
 -- 消息已读表: 存储群聊消息的已读状态(单聊通过 im_message.status 字段判断)
--- 说明: 仅用于群聊消息已读回执
+-- 说明: 
+-- 1. 仅用于群聊消息已读回执
+-- 2. 唯一索引包含 deleted 字段,支持逻辑删除
 -- ----------------------------
 DROP TABLE IF EXISTS `im_message_read`;
 CREATE TABLE `im_message_read`  (
@@ -169,9 +175,41 @@ CREATE TABLE `im_message_read`  (
   `read_time` datetime NOT NULL COMMENT '已读时间',
   `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `idx_message_user`(`message_id` ASC, `user_id` ASC, `tenant_id` ASC) USING BTREE COMMENT '消息+用户唯一索引',
+  UNIQUE INDEX `idx_message_user_deleted`(`message_id` ASC, `user_id` ASC, `tenant_id` ASC, `deleted` ASC) USING BTREE COMMENT '消息+用户+删除状态唯一索引',
   INDEX `idx_user`(`user_id` ASC) USING BTREE COMMENT '用户索引',
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM消息已读表(群聊)' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for im_group_invite
+-- 群邀请码表: 存储群二维码邀请信息
+-- 说明: 
+-- 1. 用于生成群二维码和验证扫码加入
+-- 2. 支持设置有效期和使用次数限制
+-- 3. 邀请码具有时效性，过期自动失效
+-- ----------------------------
+DROP TABLE IF EXISTS `im_group_invite`;
+CREATE TABLE `im_group_invite`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '邀请ID',
+  `group_id` bigint NOT NULL COMMENT '群ID',
+  `invite_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '邀请码(唯一)',
+  `creator_id` bigint NOT NULL COMMENT '创建者ID',
+  `expire_time` datetime NOT NULL COMMENT '过期时间',
+  `max_use_count` int NOT NULL DEFAULT 0 COMMENT '最大使用次数(0表示不限制)',
+  `used_count` int NOT NULL DEFAULT 0 COMMENT '已使用次数',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态(1-有效 2-已过期 3-已禁用)',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `idx_invite_code`(`invite_code` ASC) USING BTREE COMMENT '邀请码唯一索引',
+  INDEX `idx_group`(`group_id` ASC) USING BTREE COMMENT '群组索引',
+  INDEX `idx_expire`(`expire_time` ASC, `status` ASC) USING BTREE COMMENT '过期时间+状态索引',
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM群邀请码表' ROW_FORMAT = DYNAMIC;

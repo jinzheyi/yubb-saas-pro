@@ -268,7 +268,7 @@
 	import { messageService, MessageItem as ServiceMessageItem, ConversationItem } from '../../services/message-service.uts'
 	import { MessageType } from '../../utils/websocket.uts'
 	import { getMessageList, recallMessage, deleteMessage } from '../../api/message.uts'
-	import { clearUnreadCount as clearUnreadCountApi } from '../../api/conversation.uts'
+	import { clearUnreadCount as clearUnreadCountApi, getConversationByTarget } from '../../api/conversation.uts'
 	import { getUserId, getTenantIdAsNumber } from '../../store/user.uts'
 	import { uploadFile, chooseAndUploadImage, chooseAndUploadVideo, chooseAndUploadFile } from '../../utils/upload.uts'
 	import { getUserAvatarColor, getAvatarText as getAvatarTextUtil } from '../../utils/avatar.uts'
@@ -348,7 +348,7 @@
 	/**
 	 * 初始化页面
 	 */
-	onMounted(() => {
+	onMounted(async () => {
 		// 1. 获取当前用户信息
 		currentUserId.value = getUserId()
 		currentTenantId.value = getTenantIdAsNumber()
@@ -356,13 +356,36 @@
 		// 2. 设置消息服务的当前用户
 		messageService.setCurrentUser(currentUserId.value, currentTenantId.value)
 		
-		// 3. 加载历史消息
+		// 3. 如果没有 conversationId 但有 groupId/targetId，则查询会话
+		if ((!conversationId.value || conversationId.value === '' || conversationId.value === '0') && 
+		    targetId.value && targetId.value !== '') {
+			try {
+				console.log('[Chat] 没有 conversationId，查询会话, targetId:', targetId.value, 'type:', chatType.value)
+				const conversationType = chatType.value === 'group' ? 2 : 1
+				const conversationResult = await getConversationByTarget(targetId.value, conversationType)
+				
+				if (conversationResult && conversationResult.id) {
+					conversationId.value = conversationResult.id.toString()
+					console.log('[Chat] 查询会话成功, conversationId:', conversationId.value)
+				} else {
+					console.error('[Chat] 查询会话失败：返回数据无效', conversationResult)
+				}
+			} catch (e) {
+				console.error('[Chat] 查询会话失败:', e)
+				uni.showToast({
+					title: '获取会话失败',
+					icon: 'none'
+				})
+			}
+		}
+		
+		// 4. 加载历史消息
 		loadMessages()
 		
-		// 4. 监听新消息
+		// 5. 监听新消息
 		messageService.addMessageListener(handleNewMessage)
 		
-		// 5. 清空未读数（本地 + 服务端）
+		// 6. 清空未读数（本地 + 服务端）
 		if (conversationId.value && conversationId.value !== '' && conversationId.value !== '0') {
 			messageService.clearUnreadCount(conversationId.value)
 			// 同时调用后端 API 清空未读数

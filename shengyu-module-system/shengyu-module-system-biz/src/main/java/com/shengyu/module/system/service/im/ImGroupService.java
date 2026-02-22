@@ -124,4 +124,48 @@ public interface ImGroupService {
      */
     List<Long> getGroupMemberIds(Long groupId);
 
+    /**
+     * 生成群邀请码
+     *
+     * @param userId 操作者ID
+     * @param reqVO 生成请求
+     * @return 邀请码信息
+     */
+    AppImGroupInviteRespVO generateInviteCode(Long userId, AppImGroupInviteGenerateReqVO reqVO);
+
+    /**
+     * 验证邀请码
+     *
+     * @param inviteCode 邀请码
+     * @return 验证结果
+     */
+    AppImGroupInviteVerifyRespVO verifyInviteCode(String inviteCode);
+
+    /**
+     * 通过邀请码加入群
+     *
+     * @param userId 用户ID
+     * @param inviteCode 邀请码
+     */
+    void joinGroupByInviteCode(Long userId, String inviteCode);
+
+    /**
+     * 获取群的有效邀请码
+     *
+     * @param userId 用户ID
+     * @param groupId 群组ID
+     * @return 邀请码信息
+     */
+    AppImGroupInviteRespVO getGroupInviteCode(Long userId, Long groupId);
+
+    /**
+     * 根据邀请码获取二维码内容（URL）
+     * 用于生成二维码图片
+     *
+     * @param inviteCode 邀请码
+     * @param groupId 群组ID（可选，用于构建完整URL）
+     * @return 二维码内容（URL）
+     */
+    String getQRCodeContentByInviteCode(String inviteCode, Long groupId);
+
 }

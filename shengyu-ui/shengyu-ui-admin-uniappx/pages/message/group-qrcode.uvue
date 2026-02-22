@@ -4,116 +4,406 @@
 		<view class="header">
 			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">{{ t('common.back') }}</text>
+				<text class="back-text">返回</text>
 			</view>
 			<text class="header-title">群二维码</text>
 			<view class="header-right"></view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<!-- 加载中 -->
+			<view v-if="loading" class="loading-container">
+				<text class="loading-text">加载中...</text>
+			</view>
+
 			<!-- 二维码卡片 -->
-			<view class="qrcode-card">
+			<view v-else class="qrcode-card">
 				<!-- 群信息 -->
 				<view class="group-info">
 					<view class="group-avatar">
 						<text class="iconfont group-icon">&#xe616;</text>
 					</view>
 					<text class="group-name">{{ groupName }}</text>
-					<text class="group-desc">{{ memberCount }}人</text>
+					<text class="group-desc">扫一扫加入群聊</text>
 				</view>
 
 				<!-- 二维码 -->
-				<view class="qrcode-wrap">
-					<view class="qrcode-placeholder">
-						<text class="iconfont qrcode-icon">&#xea8b;</text>
+				<view class="qrcode-container">
+					<image 
+						v-if="qrCodeImageUrl" 
+						:src="qrCodeImageUrl" 
+						class="qrcode-image"
+						mode="aspectFit"
+						@load="handleImageLoad"
+						@error="handleImageError"
+					></image>
+					<view v-else class="qrcode-placeholder">
+						<text class="placeholder-text">二维码加载中...</text>
 					</view>
-					<!-- 实际项目中使用 canvas 生成二维码 -->
-					<!-- <canvas canvas-id="qrcode" class="qrcode-canvas"></canvas> -->
 				</view>
 
-				<text class="qrcode-tip">扫一扫上面的二维码加入群聊</text>
+				<!-- 邀请码信息 -->
+				<view class="invite-info">
+					<view class="invite-code-row">
+						<text class="invite-label">邀请码：</text>
+						<text class="invite-code">{{ inviteCode }}</text>
+					</view>
+					<view class="invite-expire-row">
+						<text class="invite-expire">{{ expireText }}</text>
+					</view>
+				</view>
 			</view>
 
 			<!-- 操作按钮 -->
-			<view class="action-buttons">
-				<button class="action-btn primary-btn" @click="handleSave">
-					<text class="iconfont btn-icon">&#xea72;</text>
-					<text class="btn-text">保存到相册</text>
-				</button>
-				<button class="action-btn secondary-btn" @click="handleShare">
-					<text class="iconfont btn-icon">&#xe63d;</text>
-					<text class="btn-text">分享</text>
-				</button>
+			<view v-if="!loading" class="action-section">
+				<view class="action-btn" @click="handleSaveImage">
+					<text class="iconfont action-icon">&#xe60d;</text>
+					<text class="action-text">保存到相册</text>
+				</view>
+				<view class="action-btn" @click="handleShare">
+					<text class="iconfont action-icon">&#xe60e;</text>
+					<text class="action-text">分享给好友</text>
+				</view>
+				<view class="action-btn" @click="handleRefresh">
+					<text class="iconfont action-icon">&#xe60f;</text>
+					<text class="action-text">刷新二维码</text>
+				</view>
 			</view>
 
 			<!-- 说明文字 -->
-			<view class="tips-section">
-				<text class="tips-title">如何使用二维码</text>
-				<view class="tips-item">
-					<text class="tips-number">1</text>
-					<text class="tips-text">打开应用，点击右上角扫一扫</text>
-				</view>
-				<view class="tips-item">
-					<text class="tips-number">2</text>
-					<text class="tips-text">扫描群二维码</text>
-				</view>
-				<view class="tips-item">
-					<text class="tips-number">3</text>
-					<text class="tips-text">确认加入群聊</text>
-				</view>
+			<view v-if="!loading" class="tips-section">
+				<text class="tips-title">使用说明</text>
+				<text class="tips-item">• 二维码有效期为24小时</text>
+				<text class="tips-item">• 扫码后可直接加入群聊</text>
+				<text class="tips-item">• 可保存图片分享给好友</text>
 			</view>
+
+			<view class="bottom-space"></view>
 		</scroll-view>
 	</view>
 </template>
 
 <script setup lang="uts">
-	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getGroupInviteCode, generateGroupInvite } from '../../api/group.uts'
+	import { saveImageToAlbum } from '../../utils/qrcode.uts'
+	import { BASE_URL, ADMIN_APP_DOMAIN } from '../../config/app.config.uts'
 
-	const { t } = useI18n()
+	// 页面参数
+	const groupId = ref('')
+	const groupName = ref('')
 
-	const groupName = ref('产品研发团队')
-	const memberCount = ref(12)
-	const groupId = ref<string>('')
+	// 邀请码信息
+	const inviteCode = ref('')
+	const qrCodeUrl = ref('')
+	const expireTime = ref(0) // 改为数字类型，存储时间戳
+	const usedCount = ref(0)
+	const maxUseCount = ref(0)
+
+	// 加载状态
+	const loading = ref(true)
+	
+	// 二维码图片 URL（后端生成）
+	const qrCodeImageUrl = ref('')
+
+	// 过期时间文本
+	const expireText = computed(() : string => {
+		if (!expireTime.value || expireTime.value === 0) return ''
+		
+		const expire = new Date(expireTime.value)
+		const now = new Date()
+		const diff = expire.getTime() - now.getTime()
+		
+		if (diff <= 0) {
+			return '已过期'
+		}
+		
+		const hours = Math.floor(diff / (1000 * 60 * 60))
+		const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+		
+		if (hours > 0) {
+			return `有效期：${hours}小时${minutes}分钟`
+		} else {
+			return `有效期：${minutes}分钟`
+		}
+	})
+
+	/**
+	 * 加载群邀请码
+	 */
+	async function loadInviteCode() {
+		if (!groupId.value) return
+
+		try {
+			loading.value = true
+			const result = await getGroupInviteCode(groupId.value)
+
+			console.log('[GroupQRCode] API 返回结果:', JSON.stringify(result))
+
+			if (result && result.inviteCode) {
+				inviteCode.value = result.inviteCode
+				// 后端返回相对路径，前端拼接完整 URL
+				qrCodeUrl.value = result.qrCodeUrl ? `${BASE_URL}${result.qrCodeUrl}` : ''
+				expireTime.value = result.expireTime || 0
+				usedCount.value = result.usedCount || 0
+				maxUseCount.value = result.maxUseCount || 0
+
+				console.log('[GroupQRCode] 加载邀请码成功:', {
+					inviteCode: inviteCode.value,
+					qrCodeUrl: qrCodeUrl.value,
+					expireTime: expireTime.value
+				})
+
+				// 生成二维码
+				await generateQRCode()
+			} else {
+				console.log('[GroupQRCode] 没有有效邀请码，尝试生成新的')
+				// 如果没有有效邀请码，尝试生成新的
+				await generateNewInviteCode()
+			}
+		} catch (e) {
+			console.error('[GroupQRCode] 加载邀请码失败:', e)
+			
+			// 如果没有有效邀请码，尝试生成新的
+			await generateNewInviteCode()
+		} finally {
+			loading.value = false
+		}
+	}
+
+	/**
+	 * 生成新的邀请码
+	 */
+	async function generateNewInviteCode() {
+		if (!groupId.value) return
+
+		try {
+			const result = await generateGroupInvite({
+				groupId: groupId.value,
+				expireHours: 24,
+				maxUseCount: 0
+			})
+
+			console.log('[GroupQRCode] 生成邀请码 API 返回:', JSON.stringify(result))
+
+			if (result && result.inviteCode) {
+				inviteCode.value = result.inviteCode
+				// 后端返回相对路径，前端拼接完整 URL
+				qrCodeUrl.value = result.qrCodeUrl ? `${BASE_URL}${result.qrCodeUrl}` : ''
+				expireTime.value = result.expireTime || 0
+				usedCount.value = result.usedCount || 0
+				maxUseCount.value = result.maxUseCount || 0
+
+				console.log('[GroupQRCode] 生成邀请码成功:', {
+					inviteCode: inviteCode.value,
+					qrCodeUrl: qrCodeUrl.value,
+					expireTime: expireTime.value
+				})
+
+				// 生成二维码
+				await generateQRCode()
+			}
+		} catch (e) {
+			console.error('[GroupQRCode] 生成邀请码失败:', e)
+			uni.showToast({
+				title: '生成邀请码失败',
+				icon: 'none'
+			})
+		}
+	}
+
+	/**
+	 * 生成二维码
+	 */
+	async function generateQRCode() {
+		if (!inviteCode.value) {
+			console.log('[GroupQRCode] inviteCode 为空，无法生成二维码')
+			return
+		}
+
+		// 使用后端生成的二维码图片 URL
+		// 传递 ADMIN_APP_DOMAIN 参数，让后端生成包含移动端域名的完整 URL
+		qrCodeImageUrl.value = `${BASE_URL}/app-api/system/im/group/invite/qrcode-image?code=${inviteCode.value}&groupId=${groupId.value}&baseUrl=${encodeURIComponent(ADMIN_APP_DOMAIN)}`
+		
+		console.log('[GroupQRCode] 二维码图片 URL:', qrCodeImageUrl.value)
+		console.log('[GroupQRCode] inviteCode:', inviteCode.value)
+		console.log('[GroupQRCode] groupId:', groupId.value)
+		console.log('[GroupQRCode] BASE_URL:', BASE_URL)
+		console.log('[GroupQRCode] ADMIN_APP_DOMAIN:', ADMIN_APP_DOMAIN)
+	}
+
+	/**
+	 * 保存图片到相册
+	 */
+	async function handleSaveImage() {
+		if (!qrCodeImageUrl.value) {
+			uni.showToast({
+				title: '二维码未生成',
+				icon: 'none'
+			})
+			return
+		}
+
+		try {
+			// 先下载图片到本地
+			uni.showLoading({
+				title: '保存中...'
+			})
+			
+			const downloadRes = await uni.downloadFile({
+				url: qrCodeImageUrl.value
+			})
+			
+			if (downloadRes.statusCode !== 200) {
+				throw new Error('下载图片失败')
+			}
+
+			// 保存到相册
+			await saveImageToAlbum(downloadRes.tempFilePath)
+			
+			uni.hideLoading()
+			uni.showToast({
+				title: '保存成功',
+				icon: 'success'
+			})
+		} catch (e) {
+			console.error('[GroupQRCode] 保存图片失败:', e)
+			uni.hideLoading()
+			
+			// 如果是权限问题，引导用户去设置
+			uni.showModal({
+				title: '提示',
+				content: '保存图片需要相册权限，是否前往设置？',
+				success: (res) => {
+					if (res.confirm) {
+						uni.openSetting({
+							success: (settingRes) => {
+								console.log('打开设置页面', settingRes)
+							}
+						})
+					}
+				}
+			})
+		}
+	}
+
+	/**
+	 * 分享给好友
+	 */
+	async function handleShare() {
+		if (!qrCodeImageUrl.value) {
+			uni.showToast({
+				title: '二维码未生成',
+				icon: 'none'
+			})
+			return
+		}
+
+		try {
+			// 先下载图片到本地
+			uni.showLoading({
+				title: '准备中...'
+			})
+			
+			const downloadRes = await uni.downloadFile({
+				url: qrCodeImageUrl.value
+			})
+			
+			uni.hideLoading()
+			
+			if (downloadRes.statusCode !== 200) {
+				throw new Error('下载图片失败')
+			}
+
+			// 分享图片
+			uni.share({
+				provider: 'weixin',
+				type: 0, // 图片
+				imageUrl: downloadRes.tempFilePath,
+				title: `邀请你加入群聊：${groupName.value}`,
+				success: () => {
+					console.log('[GroupQRCode] 分享成功')
+				},
+				fail: (err: any) => {
+					console.error('[GroupQRCode] 分享失败:', err)
+					throw err
+				}
+			} as any)
+		} catch (e) {
+			console.error('[GroupQRCode] 分享失败:', e)
+			
+			// 分享功能可能不支持，提供备选方案
+			uni.showModal({
+				title: '提示',
+				content: '当前平台暂不支持直接分享，您可以保存图片后手动分享',
+				showCancel: false
+			})
+		}
+	}
+
+	/**
+	 * 刷新二维码
+	 */
+	async function handleRefresh() {
+		uni.showLoading({
+			title: '刷新中...'
+		})
+
+		try {
+			await generateNewInviteCode()
+			uni.showToast({
+				title: '刷新成功',
+				icon: 'success'
+			})
+		} catch (e) {
+			console.error('[GroupQRCode] 刷新失败:', e)
+			uni.showToast({
+				title: '刷新失败',
+				icon: 'none'
+			})
+		} finally {
+			uni.hideLoading()
+		}
+	}
 
 	function handleBack() {
 		uni.navigateBack()
 	}
 
-	function handleSave() {
-		// 实际项目中使用 uni.canvasToTempFilePath 生成图片
-		// 然后使用 uni.saveImageToPhotosAlbum 保存到相册
-		uni.showToast({
-			title: '保存成功',
-			icon: 'success'
-		})
+	/**
+	 * 图片加载成功
+	 */
+	function handleImageLoad(e: any) {
+		console.log('[GroupQRCode] 二维码图片加载成功:', e)
 	}
 
-	function handleShare() {
-		// 实际项目中使用 uni.share 分享
-		uni.showActionSheet({
-			itemList: ['分享到微信', '分享到朋友圈', '复制链接'],
-			success: (res) => {
-				uni.showToast({
-					title: '分享功能开发中',
-					icon: 'none'
-				})
-			}
+	/**
+	 * 图片加载失败
+	 */
+	function handleImageError(e: any) {
+		console.error('[GroupQRCode] 二维码图片加载失败:', e)
+		uni.showToast({
+			title: '二维码加载失败',
+			icon: 'none'
 		})
 	}
 
 	onLoad((options : any) => {
+		// 获取群组ID
 		if (options['groupId']) {
 			groupId.value = options['groupId'] as string
 		}
-		if (options['name']) {
-			groupName.value = decodeURIComponent(options['name'])
+
+		// 获取群名称
+		if (options['groupName']) {
+			groupName.value = decodeURIComponent(options['groupName'])
 		}
-		if (options['memberCount']) {
-			memberCount.value = parseInt(options['memberCount'])
-		}
-		
-		// 实际项目中在这里生成二维码
-		// generateQRCode()
+
+		console.log('[GroupQRCode] 页面参数:', { groupId: groupId.value, groupName: groupName.value })
+	})
+
+	onMounted(async () => {
+		// 加载邀请码
+		await loadInviteCode()
 	})
 </script>
 
@@ -173,16 +463,28 @@
 		height: 0;
 	}
 
+	/* 加载状态 */
+	.loading-container {
+		padding: 60px 0;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.loading-text {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
 	/* 二维码卡片 */
 	.qrcode-card {
 		background-color: #FFFFFF;
-		margin: 20px 16px;
+		margin: 16px;
 		border-radius: 12px;
 		padding: 24px;
 		align-items: center;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 	}
 
+	/* 群信息 */
 	.group-info {
 		align-items: center;
 		margin-bottom: 24px;
@@ -215,134 +517,136 @@
 		color: #8F959E;
 	}
 
-	.qrcode-wrap {
-		width: 200px;
-		height: 200px;
-		margin-bottom: 16px;
-	}
-
-	.qrcode-placeholder {
+	/* 二维码 */
+	.qrcode-container {
 		width: 200px;
 		height: 200px;
 		background-color: #F5F7FA;
 		border-radius: 8px;
 		justify-content: center;
 		align-items: center;
-		border-width: 2px;
-		border-color: #E5E5E5;
-		border-style: dashed;
+		margin-bottom: 20px;
+		overflow: hidden;
 	}
 
-	.qrcode-icon {
-		font-size: 80px;
-		color: #C1C4C9;
-	}
-
-	.qrcode-canvas {
+	.qrcode-image {
 		width: 200px;
 		height: 200px;
 	}
 
-	.qrcode-tip {
-		font-size: 13px;
+	.qrcode-placeholder {
+		width: 100%;
+		height: 100%;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.placeholder-text {
+		font-size: 14px;
 		color: #8F959E;
-		text-align: center;
+	}
+
+	/* 邀请码信息 */
+	.invite-info {
+		width: 100%;
+		align-items: center;
+	}
+
+	.invite-code-row {
+		flex-direction: row;
+		align-items: center;
+		margin-bottom: 8px;
+	}
+
+	.invite-label {
+		font-size: 14px;
+		color: #646A73;
+	}
+
+	.invite-code {
+		font-size: 14px;
+		color: #1F2329;
+		font-weight: 600;
+		font-family: monospace;
+	}
+
+	.invite-expire-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.invite-expire {
+		font-size: 12px;
+		color: #8F959E;
 	}
 
 	/* 操作按钮 */
-	.action-buttons {
-		padding: 0 16px;
-		margin-bottom: 24px;
+	.action-section {
+		background-color: #FFFFFF;
+		margin: 0 16px 16px;
+		border-radius: 12px;
+		overflow: hidden;
 	}
 
 	.action-btn {
-		height: 44px;
-		border-radius: 8px;
 		flex-direction: row;
-		justify-content: center;
 		align-items: center;
-		margin-bottom: 12px;
-		border-width: 0;
+		padding: 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
 	}
 
-	.primary-btn {
-		background-color: #1677FF;
+	.action-btn:last-child {
+		border-bottom-width: 0;
 	}
 
-	.secondary-btn {
-		background-color: #FFFFFF;
-		border-width: 1px;
-		border-color: #E5E5E5;
-	}
-
-	.btn-icon {
-		font-size: 18px;
-		margin-right: 8px;
-	}
-
-	.primary-btn .btn-icon {
-		color: #FFFFFF;
-	}
-
-	.secondary-btn .btn-icon {
+	.action-icon {
+		font-size: 20px;
 		color: #1677FF;
+		margin-right: 12px;
 	}
 
-	.btn-text {
+	.action-text {
 		font-size: 15px;
-		font-weight: 500;
-	}
-
-	.primary-btn .btn-text {
-		color: #FFFFFF;
-	}
-
-	.secondary-btn .btn-text {
 		color: #1F2329;
 	}
 
 	/* 说明文字 */
 	.tips-section {
 		background-color: #FFFFFF;
-		padding: 20px 16px;
-		margin: 0 16px 20px;
+		margin: 0 16px;
 		border-radius: 12px;
+		padding: 16px;
 	}
 
 	.tips-title {
-		font-size: 15px;
+		font-size: 14px;
 		color: #1F2329;
 		font-weight: 600;
-		margin-bottom: 16px;
-	}
-
-	.tips-item {
-		flex-direction: row;
-		align-items: flex-start;
 		margin-bottom: 12px;
 	}
 
-	.tips-item:last-child {
-		margin-bottom: 0;
-	}
-
-	.tips-number {
-		width: 20px;
-		height: 20px;
-		background-color: #1677FF;
-		color: #FFFFFF;
-		font-size: 12px;
-		border-radius: 10px;
-		text-align: center;
-		line-height: 20px;
-		margin-right: 12px;
-		flex-shrink: 0;
-	}
-
-	.tips-text {
-		flex: 1;
-		font-size: 14px;
+	.tips-item {
+		font-size: 13px;
 		color: #646A73;
-		line-height: 20px;
+		line-height: 22px;
+	}
+
+	.bottom-space {
+		height: 20px;
+	}
+
+	/* 调试信息 */
+	.debug-info {
+		margin-top: 12px;
+		padding: 8px;
+		background-color: #FFF3CD;
+		border-radius: 4px;
+	}
+
+	.debug-text {
+		font-size: 11px;
+		color: #856404;
+		word-break: break-all;
 	}
 </style>

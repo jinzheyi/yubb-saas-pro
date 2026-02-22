@@ -76,3 +76,15 @@ export function clearUnreadCount(id: string): Promise<any> {
     method: 'PUT'
   })
 }
+
+/**
+ * 根据目标ID和类型获取会话
+ * @param targetId 目标ID（群聊为群ID，单聊为对方用户ID）
+ * @param conversationType 会话类型（1-单聊 2-群聊）
+ */
+export function getConversationByTarget(targetId: string, conversationType: number): Promise<any> {
+  return request({
+    url: `/system/im/conversation/get-by-target?targetId=${targetId}&conversationType=${conversationType}`,
+    method: 'GET'
+  })
+}

@@ -1,0 +1,388 @@
+# IM 群二维码功能设计方案
+
+## 功能概述
+
+群二维码功能允许用户通过扫描二维码快速加入群聊，提升用户体验和群组推广效率。
+
+## 业务流程
+
+```
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│  生成二维码  │ ───> │  扫码识别    │ ───> │  验证有效性  │
+└─────────────┘      └─────────────┘      └─────────────┘
+                                                  │
+                                                  ▼
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│  加入成功    │ <─── │  审批通过    │ <─── │  申请加入    │
+└─────────────┘      └─────────────┘      └─────────────┘
+                     (需要审批时)
+```
+
+## 数据库设计
+
+### im_group_invite 表
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | bigint | 主键 |
+| group_id | bigint | 群组ID |
+| invite_code | varchar(64) | 邀请码（唯一） |
+| creator_id | bigint | 创建者ID |
+| expire_time | datetime | 过期时间 |
+| max_use_count | int | 最大使用次数（0=不限制） |
+| used_count | int | 已使用次数 |
+| status | tinyint | 状态（1-有效 2-已过期 3-已禁用） |
+
+### 索引设计
+
+1. **唯一索引**：`idx_invite_code(invite_code)` - 确保邀请码唯一
+2. **群组索引**：`idx_group(group_id)` - 快速查询群的邀请码
+3. **过期索引**：`idx_expire(expire_time, status)` - 定时清理过期邀请码
+
+## 二维码内容设计
+
+### 方案一：Deep Link（推荐）✅
+
+```
+shengyu://group/join?code=ABC123XYZ&groupId=123456
+```
+
+**优点：**
+- 原生应用可直接唤起
+- 支持 App 内跳转
+- 用户体验最佳
+
+**缺点：**
+- 需要配置 URL Scheme
+- Web 端需要额外处理
+
+### 方案二：H5 页面
+
+```
+https://app.shengyu.com/group/join?code=ABC123XYZ
+```
+
+**优点：**
+- 跨平台兼容性好
+- 可以做引导下载页面
+- 支持分享到外部
+
+**缺点：**
+- 需要额外的 H5 页面
+- 用户体验略差
+
+### 最终方案：混合模式
+
+二维码内容：`https://app.shengyu.com/group/join?code=ABC123XYZ&groupId=123456`
+
+- App 内扫码：直接解析并跳转
+- 外部扫码：打开 H5 页面，引导下载或唤起 App
+
+## 邀请码生成规则
+
+### 格式设计
+
+```
+{prefix}{timestamp}{random}{checksum}
+```
+
+- **prefix**: 固定前缀（如 "GRP"）
+- **timestamp**: 时间戳（6位，精确到秒）
+- **random**: 随机字符串（8位）
+- **checksum**: 校验码（2位）
+
+示例：`GRP1A2B3C4D5E6F7G8H`
+
+### 生成算法
+
+```java
+public String generateInviteCode() {
+    // 1. 前缀
+    String prefix = "GRP";
+    
+    // 2. 时间戳（Base36编码，6位）
+    long timestamp = System.currentTimeMillis() / 1000;
+    String timeStr = Long.toString(timestamp, 36).toUpperCase();
+    timeStr = timeStr.substring(timeStr.length() - 6);
+    
+    // 3. 随机字符串（8位）
+    String random = RandomStringUtils.randomAlphanumeric(8).toUpperCase();
+    
+    // 4. 校验码（前面字符的CRC校验）
+    String data = prefix + timeStr + random;
+    String checksum = calculateChecksum(data);
+    
+    return data + checksum;
+}
+```
+
+## API 设计
+
+### 1. 生成群二维码
+
+**接口**：`POST /system/im/group/invite/generate`
+
+**请求参数**：
+```json
+{
+  "groupId": 123456,
+  "expireHours": 24,      // 有效期（小时），默认24小时
+  "maxUseCount": 0        // 最大使用次数，0表示不限制
+}
+```
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": {
+    "inviteCode": "GRP1A2B3C4D5E6F7G8H",
+    "qrCodeUrl": "https://app.shengyu.com/group/join?code=GRP1A2B3C4D5E6F7G8H&groupId=123456",
+    "expireTime": "2026-02-23 12:00:00"
+  }
+}
+```
+
+### 2. 验证邀请码
+
+**接口**：`GET /system/im/group/invite/verify`
+
+**请求参数**：
+```
+?code=GRP1A2B3C4D5E6F7G8H
+```
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": {
+    "valid": true,
+    "groupId": 123456,
+    "groupName": "技术交流群",
+    "groupAvatar": "https://...",
+    "memberCount": 50,
+    "needApproval": false,
+    "expireTime": "2026-02-23 12:00:00"
+  }
+}
+```
+
+### 3. 通过邀请码加入群
+
+**接口**：`POST /system/im/group/invite/join`
+
+**请求参数**：
+```json
+{
+  "inviteCode": "GRP1A2B3C4D5E6F7G8H"
+}
+```
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": {
+    "success": true,
+    "groupId": 123456,
+    "needApproval": false,  // 是否需要审批
+    "message": "加入成功"
+  }
+}
+```
+
+### 4. 获取群的有效邀请码
+
+**接口**：`GET /system/im/group/invite/get`
+
+**请求参数**：
+```
+?groupId=123456
+```
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": {
+    "inviteCode": "GRP1A2B3C4D5E6F7G8H",
+    "qrCodeUrl": "https://app.shengyu.com/group/join?code=GRP1A2B3C4D5E6F7G8H&groupId=123456",
+    "expireTime": "2026-02-23 12:00:00",
+    "usedCount": 10,
+    "maxUseCount": 0
+  }
+}
+```
+
+## 前端实现
+
+### 1. 群二维码页面（group-qrcode.uvue）
+
+**功能：**
+- 显示群信息（名称、头像、成员数）
+- 显示二维码
+- 显示邀请码和有效期
+- 支持保存二维码到相册
+- 支持分享二维码
+
+**页面结构：**
+```
+┌─────────────────────────┐
+│      群信息卡片          │
+│  [头像] 技术交流群       │
+│         50人            │
+├─────────────────────────┤
+│                         │
+│      [二维码图片]        │
+│                         │
+│   邀请码: GRP1A2B3C...  │
+│   有效期: 24小时后过期   │
+├─────────────────────────┤
+│  [保存图片] [分享二维码] │
+└─────────────────────────┘
+```
+
+### 2. 扫码加入页面（join-group.uvue）
+
+**功能：**
+- 显示群信息预览
+- 显示加入按钮
+- 处理加入逻辑
+- 显示加入结果
+
+**页面结构：**
+```
+┌─────────────────────────┐
+│      群信息预览          │
+│  [头像] 技术交流群       │
+│         50人            │
+│                         │
+│  群简介: ...            │
+├─────────────────────────┤
+│    [加入群聊按钮]        │
+└─────────────────────────┘
+```
+
+## 安全设计
+
+### 1. 邀请码安全
+
+- ✅ 唯一性：每个邀请码全局唯一
+- ✅ 时效性：支持设置过期时间
+- ✅ 次数限制：支持限制使用次数
+- ✅ 校验码：防止伪造和篡改
+
+### 2. 权限控制
+
+- ✅ 只有群成员可以生成邀请码
+- ✅ 群主和管理员可以禁用邀请码
+- ✅ 支持群设置"加群需要审批"
+
+### 3. 防刷机制
+
+- ✅ 同一用户短时间内多次加入同一群：限制
+- ✅ 同一邀请码被大量使用：监控告警
+- ✅ IP 限流：防止恶意扫码
+
+## 业务规则
+
+### 1. 邀请码生成规则
+
+- 每个群同时只能有一个有效的邀请码
+- 生成新邀请码时，旧邀请码自动失效
+- 默认有效期：24小时
+- 默认使用次数：不限制
+
+### 2. 加入群规则
+
+- 已经是群成员：提示"您已经在群里"
+- 群已满员：提示"群人数已达上限"
+- 需要审批：创建加群申请，等待审批
+- 不需要审批：直接加入群聊
+
+### 3. 邀请码失效规则
+
+- 过期时间到达：自动失效
+- 使用次数达到上限：自动失效
+- 群主/管理员手动禁用：立即失效
+- 群解散：所有邀请码失效
+
+## 定时任务
+
+### 清理过期邀请码
+
+**执行频率**：每小时执行一次
+
+**任务内容**：
+```sql
+UPDATE im_group_invite 
+SET status = 2 
+WHERE status = 1 
+  AND expire_time < NOW()
+  AND deleted = 0;
+```
+
+## 监控指标
+
+1. **邀请码生成量**：每日生成的邀请码数量
+2. **扫码加入量**：通过二维码加入的用户数
+3. **转化率**：扫码/加入的比例
+4. **平均有效期**：邀请码的平均使用时长
+5. **异常告警**：单个邀请码短时间内大量使用
+
+## 扩展功能
+
+### 1. 邀请统计
+
+- 记录每个邀请码的使用明细
+- 统计每个用户邀请的人数
+- 邀请排行榜
+
+### 2. 个性化二维码
+
+- 支持自定义二维码样式
+- 支持添加群头像到二维码中心
+- 支持品牌化定制
+
+### 3. 邀请奖励
+
+- 邀请达到一定人数给予奖励
+- 积分系统集成
+- 邀请活动
+
+## 技术选型
+
+### 二维码生成库
+
+**Java 后端**：
+- ZXing（推荐）：功能强大，社区活跃
+- QRGen：基于 ZXing 的简化封装
+
+**前端**：
+- uQRCode：uni-app 专用二维码库
+- 支持生成、识别、美化
+
+## 实施计划
+
+### Phase 1：基础功能（本次实现）
+- ✅ 数据库表设计
+- ✅ 后端 API 实现
+- ✅ 前端二维码页面
+- ✅ 扫码加入流程
+
+### Phase 2：增强功能
+- ⏳ 邀请统计
+- ⏳ 个性化二维码
+- ⏳ 分享功能优化
+
+### Phase 3：运营功能
+- ⏳ 邀请奖励
+- ⏳ 邀请活动
+- ⏳ 数据分析
+
+## 参考资料
+
+- [微信群二维码功能](https://weixin.qq.com/)
+- [钉钉群二维码功能](https://www.dingtalk.com/)
+- [ZXing 文档](https://github.com/zxing/zxing)

@@ -192,6 +192,21 @@ public class ImConversationServiceImpl implements ImConversationService {
         return conversationMapper.selectById(conversationId);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteConversationByTarget(Long userId, Long targetId, Integer conversationType) {
+        // 查询会话
+        ImConversationDO conversation = conversationMapper.selectByUserIdAndTargetIdAndType(userId, targetId, conversationType);
+        if (conversation != null) {
+            conversationMapper.deleteById(conversation.getId());
+            log.info("[ImConversationService] 根据目标删除会话成功, userId: {}, targetId: {}, conversationType: {}", 
+                    userId, targetId, conversationType);
+        } else {
+            log.warn("[ImConversationService] 会话不存在, userId: {}, targetId: {}, conversationType: {}", 
+                    userId, targetId, conversationType);
+        }
+    }
+
     /**
      * 填充目标信息(对方名称、头像等)
      */

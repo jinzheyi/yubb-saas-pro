@@ -217,6 +217,11 @@ public interface ErrorCodeConstants {
     ErrorCode GROUP_MEMBER_LIMIT = new ErrorCode(1_002_030_203, "群成员数量已达上限");
     ErrorCode GROUP_DISSOLVED = new ErrorCode(1_002_030_204, "群组已解散");
     ErrorCode GROUP_OWNER_CANNOT_QUIT = new ErrorCode(1_002_030_205, "群主不能退出群组，请先转让群主");
+    ErrorCode GROUP_INVITE_CODE_INVALID = new ErrorCode(1_002_030_206, "邀请码无效");
+    ErrorCode GROUP_MEMBER_ALREADY_EXISTS = new ErrorCode(1_002_030_207, "您已经是群成员");
+    ErrorCode GROUP_MEMBER_FULL = new ErrorCode(1_002_030_208, "群人数已达上限");
+    ErrorCode GROUP_JOIN_NEED_APPROVAL = new ErrorCode(1_002_030_209, "加入该群需要审批");
+    ErrorCode GROUP_INVITE_CODE_NOT_EXISTS = new ErrorCode(1_002_030_210, "邀请码不存在");
     
     // 联系人相关 1-002-030-300
     ErrorCode CONTACT_NOT_EXISTS = new ErrorCode(1_002_030_300, "联系人不存在");

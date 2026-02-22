@@ -33,10 +33,33 @@ export const TENANT_ENABLE = 'true'
 export const DEFAULT_TENANT_NAME = '圣钰科技'
 
 /**
- * API 基础地址
+ * API 基础地址（后端接口地址）
  * 根据实际部署环境修改
+ * 
+ * 注意：uniappx 的 image 组件不支持 localhost，开发时请使用本机 IP 地址
+ * 例如：export const BASE_URL = 'http://192.168.1.100:48080'
+ * 
+ * 获取本机 IP 的方法：
+ * - macOS/Linux: ifconfig | grep "inet " | grep -v 127.0.0.1
+ * - Windows: ipconfig | findstr IPv4
  */
 export const BASE_URL = 'http://localhost:48080'
+
+/**
+ * 移动端应用域名（前端页面地址）
+ * 用于生成二维码、分享链接等场景
+ * 
+ * 使用说明：
+ * - 开发环境：使用本机 IP 地址，如 'http://192.168.1.100:48080'
+ * - 测试环境：使用测试域名，如 'https://app-test.shengyu.com'
+ * - 生产环境：使用生产域名，如 'https://app.shengyu.com'
+ * 
+ * 注意：
+ * - 此域名用于用户扫码后跳转到移动端页面
+ * - 开发时建议使用本机 IP，方便其他设备访问
+ * - 生产环境必须使用 HTTPS 协议
+ */
+export const ADMIN_APP_DOMAIN = 'http://localhost:5173/#'
 
 /**
  * 请求超时时间（毫秒）

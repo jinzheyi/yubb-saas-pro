@@ -126,3 +126,51 @@ export function transferGroupOwner(groupId: string, newOwnerId: string): Promise
     method: 'PUT'
   })
 }
+
+// ==================== 群邀请码相关接口 ====================
+
+/**
+ * 生成群邀请码
+ * @param data { groupId: string, expireHours?: number, maxUseCount?: number }
+ */
+export function generateGroupInvite(data: any): Promise<any> {
+  return request({
+    url: '/system/im/group/invite/generate',
+    method: 'POST',
+    data: data
+  })
+}
+
+/**
+ * 验证邀请码
+ * @param code 邀请码
+ */
+export function verifyInviteCode(code: string): Promise<any> {
+  return request({
+    url: `/system/im/group/invite/verify?code=${code}`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 通过邀请码加入群
+ * @param code 邀请码
+ */
+export function joinGroupByInvite(code: string): Promise<any> {
+  return request({
+    url: '/system/im/group/invite/join',
+    method: 'POST',
+    data: { inviteCode: code }
+  })
+}
+
+/**
+ * 获取群的有效邀请码
+ * @param groupId 群组ID
+ */
+export function getGroupInviteCode(groupId: string): Promise<any> {
+  return request({
+    url: `/system/im/group/invite/get?groupId=${groupId}`,
+    method: 'GET'
+  })
+}

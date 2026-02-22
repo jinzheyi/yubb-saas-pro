@@ -177,8 +177,9 @@
 			})
 		} else {
 			// 普通模式下跳转到聊天页面
+			// 注意：不传 conversationId，让聊天页面自动创建或获取会话
 			uni.navigateTo({
-				url: '/pages/message/chat?conversationId=' + group.id + '&type=group&groupId=' + group.id + '&targetId=' + group.id + '&name=' + encodeURIComponent(group.name) + '&memberCount=' + group.memberCount
+				url: '/pages/message/chat?type=group&groupId=' + group.id + '&targetId=' + group.id + '&name=' + encodeURIComponent(group.name) + '&memberCount=' + group.memberCount
 			})
 		}
 	}

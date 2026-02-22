@@ -139,6 +139,8 @@
         <mqtt.version>1.2.5</mqtt.version>
         <pf4j-spring.version>0.9.0</pf4j-spring.version>
         <vertx.version>4.5.13</vertx.version>
+        <!-- 二维码相关 -->
+        <zxing.version>3.5.3</zxing.version>
         <!-- 三方云服务相关 -->
         <awssdk.version>2.40.15</awssdk.version>
         <!--<justauth.version>1.16.7</justauth.version>-->
@@ -740,6 +742,18 @@
                 <groupId>org.jsoup</groupId>
                 <artifactId>jsoup</artifactId>
                 <version>${jsoup.version}</version>
+            </dependency>
+
+            <!-- 二维码生成 -->
+            <dependency>
+                <groupId>com.google.zxing</groupId>
+                <artifactId>core</artifactId>
+                <version>${zxing.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.zxing</groupId>
+                <artifactId>javase</artifactId>
+                <version>${zxing.version}</version>
             </dependency>
 
             <!-- 三方云服务相关 -->

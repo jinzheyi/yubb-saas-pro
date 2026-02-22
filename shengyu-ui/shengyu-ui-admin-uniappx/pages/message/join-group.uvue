@@ -1,0 +1,505 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click.stop="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">返回</text>
+			</view>
+			<text class="header-title">加入群聊</text>
+			<view class="header-right"></view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<!-- 加载中 -->
+			<view v-if="loading" class="loading-container">
+				<text class="loading-text">验证中...</text>
+			</view>
+
+			<!-- 验证失败 -->
+			<view v-else-if="!isValid" class="error-container">
+				<text class="iconfont error-icon">&#xe60a;</text>
+				<text class="error-title">{{ errorMessage }}</text>
+				<text class="error-desc">请检查邀请码是否正确或已过期</text>
+				<view class="error-btn" @click="handleBack">
+					<text class="error-btn-text">返回</text>
+				</view>
+			</view>
+
+			<!-- 群信息预览 -->
+			<view v-else class="group-preview">
+				<!-- 群头像 -->
+				<view class="group-avatar-large">
+					<text class="iconfont group-icon-large">&#xe616;</text>
+				</view>
+
+				<!-- 群信息 -->
+				<view class="group-info">
+					<text class="group-name">{{ groupInfo.groupName }}</text>
+					<text class="group-member-count">{{ groupInfo.memberCount }}人</text>
+				</view>
+
+				<!-- 邀请码信息 -->
+				<view class="invite-info-card">
+					<view class="invite-row">
+						<text class="invite-label">邀请码</text>
+						<text class="invite-value">{{ inviteCode }}</text>
+					</view>
+					<view class="invite-row">
+						<text class="invite-label">有效期</text>
+						<text class="invite-value">{{ expireText }}</text>
+					</view>
+					<view v-if="groupInfo.needApproval" class="invite-row">
+						<text class="invite-label">加群方式</text>
+						<text class="invite-value approval-text">需要群主或管理员审核</text>
+					</view>
+				</view>
+
+				<!-- 已在群中提示 -->
+				<view v-if="alreadyInGroup" class="already-in-group">
+					<text class="iconfont check-icon">&#xe60b;</text>
+					<text class="already-text">您已经是群成员</text>
+				</view>
+
+				<!-- 加入按钮 -->
+				<view v-if="!alreadyInGroup" class="action-container">
+					<view class="join-btn" @click="handleJoinGroup">
+						<text class="join-btn-text">{{ joining ? '加入中...' : '加入群聊' }}</text>
+					</view>
+				</view>
+
+				<!-- 查看群聊按钮（已在群中） -->
+				<view v-else class="action-container">
+					<view class="view-btn" @click="handleViewGroup">
+						<text class="view-btn-text">查看群聊</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="bottom-space"></view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { verifyInviteCode, joinGroupByInvite } from '../../api/group.uts'
+
+	// 页面参数
+	const inviteCode = ref('')
+	const groupId = ref('')
+
+	// 验证状态
+	const loading = ref(true)
+	const isValid = ref(false)
+	const errorMessage = ref('邀请码无效')
+
+	// 群信息
+	const groupInfo = ref({
+		groupId: '',
+		groupName: '',
+		groupAvatar: '',
+		memberCount: 0,
+		needApproval: false,
+		expireTime: ''
+	})
+
+	// 加入状态
+	const joining = ref(false)
+	const alreadyInGroup = ref(false)
+
+	// 过期时间文本
+	const expireText = computed(() : string => {
+		if (!groupInfo.value.expireTime) return ''
+
+		const expire = new Date(groupInfo.value.expireTime)
+		const now = new Date()
+		const diff = expire.getTime() - now.getTime()
+
+		if (diff <= 0) {
+			return '已过期'
+		}
+
+		const hours = Math.floor(diff / (1000 * 60 * 60))
+		const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+
+		if (hours > 0) {
+			return `${hours}小时${minutes}分钟`
+		} else {
+			return `${minutes}分钟`
+		}
+	})
+
+	/**
+	 * 验证邀请码
+	 */
+	async function verifyCode() {
+		if (!inviteCode.value) {
+			isValid.value = false
+			errorMessage.value = '邀请码不能为空'
+			loading.value = false
+			return
+		}
+
+		try {
+			loading.value = true
+			const result = await verifyInviteCode(inviteCode.value)
+
+			console.log('[JoinGroup] 验证邀请码结果:', result)
+
+			if (result && result.valid) {
+				isValid.value = true
+				groupInfo.value = {
+					groupId: result.groupId?.toString() || '',
+					groupName: result.groupName || '',
+					groupAvatar: result.groupAvatar || '',
+					memberCount: result.memberCount || 0,
+					needApproval: result.needApproval || false,
+					expireTime: result.expireTime || ''
+				}
+				groupId.value = result.groupId?.toString() || ''
+			} else {
+				isValid.value = false
+				errorMessage.value = '邀请码无效或已过期'
+			}
+		} catch (e : any) {
+			console.error('[JoinGroup] 验证邀请码失败:', e)
+			isValid.value = false
+			
+			// 解析错误信息
+			if (e && e.data && e.data.msg) {
+				errorMessage.value = e.data.msg
+			} else {
+				errorMessage.value = '验证失败，请稍后重试'
+			}
+		} finally {
+			loading.value = false
+		}
+	}
+
+	/**
+	 * 加入群聊
+	 */
+	async function handleJoinGroup() {
+		if (joining.value) return
+
+		try {
+			joining.value = true
+
+			await joinGroupByInvite(inviteCode.value)
+
+			console.log('[JoinGroup] 加入群聊成功')
+
+			uni.showToast({
+				title: '加入成功',
+				icon: 'success'
+			})
+
+			// 延迟跳转到群聊页面
+			setTimeout(() => {
+				uni.redirectTo({
+					url: `/pages/message/chat?targetId=${groupId.value}&targetType=2`
+				})
+			}, 1000)
+		} catch (e : any) {
+			console.error('[JoinGroup] 加入群聊失败:', e)
+
+			// 解析错误信息
+			let errorMsg = '加入失败，请稍后重试'
+			if (e && e.data && e.data.msg) {
+				errorMsg = e.data.msg
+				
+				// 检查是否已在群中
+				if (errorMsg.includes('已经是群成员') || errorMsg.includes('已在群中')) {
+					alreadyInGroup.value = true
+					return
+				}
+			}
+
+			uni.showToast({
+				title: errorMsg,
+				icon: 'none',
+				duration: 2000
+			})
+		} finally {
+			joining.value = false
+		}
+	}
+
+	/**
+	 * 查看群聊（已在群中）
+	 */
+	function handleViewGroup() {
+		uni.redirectTo({
+			url: `/pages/message/chat?targetId=${groupId.value}&targetType=2`
+		})
+	}
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	onLoad((options : any) => {
+		// 获取邀请码
+		if (options['code']) {
+			inviteCode.value = options['code'] as string
+		}
+
+		// 获取群组ID（可选）
+		if (options['groupId']) {
+			groupId.value = options['groupId'] as string
+		}
+
+		console.log('[JoinGroup] 页面参数:', { inviteCode: inviteCode.value, groupId: groupId.value })
+	})
+
+	onMounted(async () => {
+		// 验证邀请码
+		await verifyCode()
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F7FA;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #1F2329;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #1F2329;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 17px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+	}
+
+	/* 加载状态 */
+	.loading-container {
+		padding: 80px 0;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.loading-text {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
+	/* 错误状态 */
+	.error-container {
+		padding: 80px 40px;
+		align-items: center;
+	}
+
+	.error-icon {
+		font-size: 64px;
+		color: #F54A45;
+		margin-bottom: 20px;
+	}
+
+	.error-title {
+		font-size: 18px;
+		color: #1F2329;
+		font-weight: 600;
+		margin-bottom: 8px;
+	}
+
+	.error-desc {
+		font-size: 14px;
+		color: #8F959E;
+		text-align: center;
+		margin-bottom: 32px;
+	}
+
+	.error-btn {
+		width: 200px;
+		height: 44px;
+		background-color: #1677FF;
+		border-radius: 22px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.error-btn-text {
+		font-size: 16px;
+		color: #FFFFFF;
+		font-weight: 500;
+	}
+
+	/* 群信息预览 */
+	.group-preview {
+		padding: 40px 24px;
+		align-items: center;
+	}
+
+	.group-avatar-large {
+		width: 80px;
+		height: 80px;
+		background-color: #10b981;
+		border-radius: 16px;
+		justify-content: center;
+		align-items: center;
+		margin-bottom: 20px;
+	}
+
+	.group-icon-large {
+		font-size: 40px;
+		color: #FFFFFF;
+	}
+
+	.group-info {
+		align-items: center;
+		margin-bottom: 24px;
+	}
+
+	.group-name {
+		font-size: 22px;
+		color: #1F2329;
+		font-weight: 600;
+		margin-bottom: 8px;
+	}
+
+	.group-member-count {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
+	/* 邀请信息卡片 */
+	.invite-info-card {
+		width: 100%;
+		background-color: #FFFFFF;
+		border-radius: 12px;
+		padding: 16px;
+		margin-bottom: 24px;
+	}
+
+	.invite-row {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		padding: 10px 0;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.invite-row:last-child {
+		border-bottom-width: 0;
+	}
+
+	.invite-label {
+		font-size: 14px;
+		color: #646A73;
+	}
+
+	.invite-value {
+		font-size: 14px;
+		color: #1F2329;
+		font-weight: 500;
+	}
+
+	.approval-text {
+		color: #FF8C00;
+	}
+
+	/* 已在群中提示 */
+	.already-in-group {
+		flex-direction: row;
+		align-items: center;
+		background-color: #E8F5E9;
+		padding: 12px 20px;
+		border-radius: 8px;
+		margin-bottom: 24px;
+	}
+
+	.check-icon {
+		font-size: 18px;
+		color: #10b981;
+		margin-right: 8px;
+	}
+
+	.already-text {
+		font-size: 14px;
+		color: #10b981;
+		font-weight: 500;
+	}
+
+	/* 操作按钮 */
+	.action-container {
+		width: 100%;
+	}
+
+	.join-btn {
+		width: 100%;
+		height: 48px;
+		background-color: #1677FF;
+		border-radius: 24px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.join-btn-text {
+		font-size: 16px;
+		color: #FFFFFF;
+		font-weight: 500;
+	}
+
+	.view-btn {
+		width: 100%;
+		height: 48px;
+		background-color: #10b981;
+		border-radius: 24px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.view-btn-text {
+		font-size: 16px;
+		color: #FFFFFF;
+		font-weight: 500;
+	}
+
+	.bottom-space {
+		height: 40px;
+	}
+</style>

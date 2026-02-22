@@ -90,4 +90,19 @@ public class AppImConversationController {
         return success(conversationService.getUnreadCount(userId));
     }
 
+    @GetMapping("/get-by-target")
+    @Operation(summary = "根据目标ID和类型获取会话")
+    @Parameter(name = "targetId", description = "目标ID(单聊为对方用户ID,群聊为群ID)", required = true)
+    @Parameter(name = "conversationType", description = "会话类型(1-单聊 2-群聊)", required = true)
+    public CommonResult<AppImConversationRespVO> getConversationByTarget(
+            @RequestParam("targetId") Long targetId,
+            @RequestParam("conversationType") Integer conversationType) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        // 先尝试获取已存在的会话
+        AppImConversationCreateReqVO createReqVO = new AppImConversationCreateReqVO();
+        createReqVO.setTargetId(targetId);
+        createReqVO.setConversationType(conversationType);
+        return success(conversationService.createOrGetConversation(userId, createReqVO));
+    }
+
 }

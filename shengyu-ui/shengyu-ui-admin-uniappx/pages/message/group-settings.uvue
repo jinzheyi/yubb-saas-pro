@@ -131,40 +131,191 @@
 
 			<view class="bottom-space"></view>
 		</scroll-view>
+		
+		<!-- 修改群名称弹窗 -->
+		<view v-if="showEditNameDialog" class="dialog-mask" @click.stop="handleCancelEditName">
+			<view class="dialog-container" @click.stop="">
+				<view class="dialog-header">
+					<text class="dialog-title">修改群名称</text>
+				</view>
+				<view class="dialog-content">
+					<input 
+						class="dialog-input" 
+						v-model="editingGroupName" 
+						placeholder="请输入群名称（最多30字）"
+						maxlength="30"
+						:focus="showEditNameDialog"
+					/>
+					<text class="dialog-hint">{{ editingGroupName.length }}/30</text>
+				</view>
+				<view class="dialog-footer">
+					<view class="dialog-btn dialog-btn-cancel" @click.stop="handleCancelEditName">
+						<text class="dialog-btn-text">取消</text>
+					</view>
+					<view class="dialog-btn dialog-btn-confirm" @click.stop="handleConfirmEditName">
+						<text class="dialog-btn-text dialog-btn-text-primary">确定</text>
+					</view>
+				</view>
+			</view>
+		</view>
+		
+		<!-- 修改昵称弹窗 -->
+		<view v-if="showEditNicknameDialog" class="dialog-mask" @click.stop="handleCancelEditNickname">
+			<view class="dialog-container" @click.stop="">
+				<view class="dialog-header">
+					<text class="dialog-title">修改我的群昵称</text>
+				</view>
+				<view class="dialog-content">
+					<input 
+						class="dialog-input" 
+						v-model="editingNickname" 
+						placeholder="请输入昵称（最多15字）"
+						maxlength="15"
+						:focus="showEditNicknameDialog"
+					/>
+					<text class="dialog-hint">{{ editingNickname.length }}/15</text>
+				</view>
+				<view class="dialog-footer">
+					<view class="dialog-btn dialog-btn-cancel" @click.stop="handleCancelEditNickname">
+						<text class="dialog-btn-text">取消</text>
+					</view>
+					<view class="dialog-btn dialog-btn-confirm" @click.stop="handleConfirmEditNickname">
+						<text class="dialog-btn-text dialog-btn-text-primary">确定</text>
+					</view>
+				</view>
+			</view>
+		</view>
 	</view>
 </template>
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getGroup, getGroupMembers, updateGroup, quitGroup } from '../../api/group.uts'
+	import { getConversationByTarget, pinConversation, setNoDisturb } from '../../api/conversation.uts'
+	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
+	import { getUserId } from '../../store/user.uts'
 
 	const { t } = useI18n()
 
+	// 页面参数
+	const groupId = ref('')
+	const conversationId = ref('')
+	
+	// 当前用户
+	const currentUserId = ref(0)
+
 	// 群聊信息
-	const groupName = ref('产品研发团队')
-	const memberCount = ref(12)
-	const myNickname = ref('张敏')
+	const groupName = ref('')
+	const memberCount = ref(0)
+	const myNickname = ref('')
+	const groupInfo = ref<any>(null)
+	
+	// 加载状态
+	const loading = ref(false)
+	
+	// 编辑群名称弹窗
+	const showEditNameDialog = ref(false)
+	const editingGroupName = ref('')
+	
+	// 编辑昵称弹窗
+	const showEditNicknameDialog = ref(false)
+	const editingNickname = ref('')
 
 	// 设置状态
 	const noDisturb = ref(false)
-	const isPinned = ref(true)
+	const isPinned = ref(false)
 	const needApproval = ref(false)
 	const showMemberNickname = ref(true)
 
-	// 群成员数据（显示前8个）
-	const allMembers = ref([
-		{ id: 1, name: '张敏', avatarText: '张敏', avatarBg: '#0ea5e9' },
-		{ id: 2, name: '李强', avatarText: '李强', avatarBg: '#f472b6' },
-		{ id: 3, name: '王静', avatarText: '王静', avatarBg: '#c084fc' },
-		{ id: 4, name: '刘洋', avatarText: '刘洋', avatarBg: '#10b981' },
-		{ id: 5, name: '赵敏', avatarText: '赵敏', avatarBg: '#f59e0b' },
-		{ id: 6, name: '孙伟', avatarText: '孙伟', avatarBg: '#ec4899' },
-		{ id: 7, name: '周芳', avatarText: '周芳', avatarBg: '#3b82f6' },
-		{ id: 8, name: '吴娜', avatarText: '吴娜', avatarBg: '#8b5cf6' }
-	])
+	// 群成员数据
+	const allMembers = ref<any[]>([])
 
 	const displayMembers = computed(() : any[] => {
 		return allMembers.value.slice(0, 8)
 	})
+	
+	/**
+	 * 加载群组信息
+	 */
+	async function loadGroupInfo() {
+		if (!groupId.value) return
+		
+		try {
+			loading.value = true
+			const result = await getGroup(groupId.value)
+			
+			if (result) {
+				groupInfo.value = result
+				groupName.value = result.name || ''
+				memberCount.value = result.memberCount || 0
+				needApproval.value = result.needApproval || false
+				
+				console.log('[GroupSettings] 加载群组信息成功:', result)
+			}
+		} catch (e) {
+			console.error('[GroupSettings] 加载群组信息失败:', e)
+			uni.showToast({
+				title: '加载群组信息失败',
+				icon: 'none'
+			})
+		} finally {
+			loading.value = false
+		}
+	}
+	
+	/**
+	 * 加载群成员列表
+	 */
+	async function loadGroupMembers() {
+		if (!groupId.value) return
+		
+		try {
+			const members = await getGroupMembers(groupId.value)
+			
+			if (members && Array.isArray(members)) {
+				allMembers.value = members.map(member => {
+					// 查找当前用户的昵称
+					if (member.userId === currentUserId.value) {
+						myNickname.value = member.nickname || member.userNickname || ''
+					}
+					
+					return {
+						id: member.userId,
+						name: member.nickname || member.userNickname || '未知',
+						avatarText: getAvatarText(member.nickname || member.userNickname || ''),
+						avatarBg: getUserAvatarColor(member.userId),
+						role: member.role
+					}
+				})
+				
+				console.log('[GroupSettings] 加载群成员成功, 数量:', allMembers.value.length)
+			}
+		} catch (e) {
+			console.error('[GroupSettings] 加载群成员失败:', e)
+		}
+	}
+	
+	/**
+	 * 加载会话设置
+	 */
+	async function loadConversationSettings() {
+		if (!groupId.value) return
+		
+		try {
+			// 通过 groupId 查询会话
+			const conversation = await getConversationByTarget(groupId.value, 2)
+			
+			if (conversation && conversation.id) {
+				conversationId.value = conversation.id.toString()
+				noDisturb.value = conversation.noDisturb || false
+				isPinned.value = conversation.isPinned || false
+				
+				console.log('[GroupSettings] 加载会话设置成功, conversationId:', conversationId.value)
+			}
+		} catch (e) {
+			console.error('[GroupSettings] 加载会话设置失败:', e)
+		}
+	}
 
 	function handleBack() {
 		uni.navigateBack()
@@ -178,33 +329,82 @@
 
 	function handleAddMember() {
 		uni.navigateTo({
-			url: '/pages/contacts/initiate-group?mode=add'
+			url: '/pages/contacts/initiate-group?mode=add&groupId=' + groupId.value
 		})
 	}
 
 	function handleRemoveMember() {
-		uni.showToast({
-			title: '删除成员功能开发中',
-			icon: 'none'
+		// 跳转到成员列表页面，选择要删除的成员
+		uni.navigateTo({
+			url: '/pages/message/group-members?groupId=' + groupId.value + '&groupName=' + encodeURIComponent(groupName.value) + '&mode=remove'
 		})
 	}
 
 	function handleViewAllMembers() {
 		uni.navigateTo({
-			url: '/pages/message/group-members'
+			url: '/pages/message/group-members?groupId=' + groupId.value + '&groupName=' + encodeURIComponent(groupName.value)
 		})
 	}
 
 	function handleEditGroupName() {
-		uni.showToast({
-			title: '编辑群名功能开发中',
-			icon: 'none'
-		})
+		editingGroupName.value = groupName.value
+		showEditNameDialog.value = true
+	}
+	
+	function handleCancelEditName() {
+		showEditNameDialog.value = false
+		editingGroupName.value = ''
+	}
+	
+	async function handleConfirmEditName() {
+		const newName = editingGroupName.value.trim()
+		
+		// 验证群名称
+		if (!newName) {
+			uni.showToast({
+				title: '群名称不能为空',
+				icon: 'none'
+			})
+			return
+		}
+		
+		if (newName.length > 30) {
+			uni.showToast({
+				title: '群名称不能超过30个字',
+				icon: 'none'
+			})
+			return
+		}
+		
+		// 如果名称没有变化，不调用接口
+		if (newName === groupName.value) {
+			showEditNameDialog.value = false
+			return
+		}
+		
+		try {
+			await updateGroup({
+				id: groupId.value,
+				name: newName
+			})
+			groupName.value = newName
+			showEditNameDialog.value = false
+			uni.showToast({
+				title: '修改成功',
+				icon: 'success'
+			})
+		} catch (e) {
+			console.error('[GroupSettings] 修改群名称失败:', e)
+			uni.showToast({
+				title: '修改失败',
+				icon: 'none'
+			})
+		}
 	}
 
 	function handleGroupQRCode() {
 		uni.navigateTo({
-			url: '/pages/message/group-qrcode'
+			url: '/pages/message/group-qrcode?groupId=' + groupId.value + '&groupName=' + encodeURIComponent(groupName.value)
 		})
 	}
 
@@ -217,7 +417,7 @@
 
 	function handleGroupFiles() {
 		uni.navigateTo({
-			url: '/pages/message/chat-files'
+			url: '/pages/message/chat-files?groupId=' + groupId.value
 		})
 	}
 
@@ -228,12 +428,58 @@
 		})
 	}
 
-	function handleNoDisturbChange(e : any) {
-		noDisturb.value = e.detail.value
+	async function handleNoDisturbChange(e : any) {
+		const newValue = e.detail.value as boolean
+		
+		if (!conversationId.value) {
+			uni.showToast({
+				title: '会话信息未加载',
+				icon: 'none'
+			})
+			return
+		}
+		
+		try {
+			await setNoDisturb(conversationId.value, newValue)
+			noDisturb.value = newValue
+			uni.showToast({
+				title: newValue ? '已开启免打扰' : '已关闭免打扰',
+				icon: 'success'
+			})
+		} catch (e) {
+			console.error('[GroupSettings] 设置免打扰失败:', e)
+			uni.showToast({
+				title: '设置失败',
+				icon: 'none'
+			})
+		}
 	}
 
-	function handlePinnedChange(e : any) {
-		isPinned.value = e.detail.value
+	async function handlePinnedChange(e : any) {
+		const newValue = e.detail.value as boolean
+		
+		if (!conversationId.value) {
+			uni.showToast({
+				title: '会话信息未加载',
+				icon: 'none'
+			})
+			return
+		}
+		
+		try {
+			await pinConversation(conversationId.value, newValue)
+			isPinned.value = newValue
+			uni.showToast({
+				title: newValue ? '已置顶' : '已取消置顶',
+				icon: 'success'
+			})
+		} catch (e) {
+			console.error('[GroupSettings] 设置置顶失败:', e)
+			uni.showToast({
+				title: '设置失败',
+				icon: 'none'
+			})
+		}
 	}
 
 	function handleChatBubble() {
@@ -244,13 +490,75 @@
 
 	function handleApprovalChange(e : any) {
 		needApproval.value = e.detail.value
+		// TODO: 调用后端 API 更新群设置
+		uni.showToast({
+			title: '群设置更新功能开发中',
+			icon: 'none'
+		})
 	}
 
 	function handleMyNickname() {
+		editingNickname.value = myNickname.value
+		showEditNicknameDialog.value = true
+	}
+	
+	function handleCancelEditNickname() {
+		showEditNicknameDialog.value = false
+		editingNickname.value = ''
+	}
+	
+	async function handleConfirmEditNickname() {
+		const newNickname = editingNickname.value.trim()
+		
+		// 验证昵称
+		if (!newNickname) {
+			uni.showToast({
+				title: '昵称不能为空',
+				icon: 'none'
+			})
+			return
+		}
+		
+		if (newNickname.length > 15) {
+			uni.showToast({
+				title: '昵称不能超过15个字',
+				icon: 'none'
+			})
+			return
+		}
+		
+		// 如果昵称没有变化，不调用接口
+		if (newNickname === myNickname.value) {
+			showEditNicknameDialog.value = false
+			return
+		}
+		
+		// TODO: 需要后端添加更新群成员昵称的 API
+		showEditNicknameDialog.value = false
 		uni.showToast({
-			title: '修改昵称功能开发中',
+			title: '该功能需要后端支持',
 			icon: 'none'
 		})
+		
+		// 后端 API 实现后的代码：
+		// try {
+		// 	await updateGroupMemberNickname({
+		// 		groupId: groupId.value,
+		// 		nickname: newNickname
+		// 	})
+		// 	myNickname.value = newNickname
+		// 	showEditNicknameDialog.value = false
+		// 	uni.showToast({
+		// 		title: '修改成功',
+		// 		icon: 'success'
+		// 	})
+		// } catch (e) {
+		// 	console.error('[GroupSettings] 修改昵称失败:', e)
+		// 	uni.showToast({
+		// 		title: '修改失败',
+		// 		icon: 'none'
+		// 	})
+		// }
 	}
 
 	function handleShowNicknameChange(e : any) {
@@ -260,12 +568,13 @@
 	function handleClearHistory() {
 		uni.showModal({
 			title: '清空聊天记录',
-			content: '确定要清空聊天记录吗？',
+			content: '确定要清空聊天记录吗？此操作不可恢复',
 			success: (res) => {
 				if (res.confirm) {
+					// TODO: 需要后端添加清空聊天记录的 API
 					uni.showToast({
-						title: '已清空',
-						icon: 'success'
+						title: '该功能需要后端支持',
+						icon: 'none'
 					})
 				}
 			}
@@ -274,22 +583,65 @@
 
 	function handleDeleteAndExit() {
 		uni.showModal({
-			title: '删除并退出',
-			content: '退出后将删除聊天记录，确定要退出吗？',
-			success: (res) => {
+			title: '退出群聊',
+			content: '退出后将不再接收此群消息，确定要退出吗？',
+			success: async (res) => {
 				if (res.confirm) {
-					uni.navigateBack()
+					try {
+						await quitGroup(groupId.value)
+						uni.showToast({
+							title: '已退出群聊',
+							icon: 'success'
+						})
+						
+						// 延迟返回，让用户看到提示
+						setTimeout(() => {
+							uni.navigateBack({
+								delta: 2 // 返回到消息列表页
+							})
+						}, 1000)
+					} catch (e) {
+						console.error('[GroupSettings] 退出群聊失败:', e)
+						uni.showToast({
+							title: '退出失败',
+							icon: 'none'
+						})
+					}
 				}
 			}
 		})
 	}
 
 	onLoad((options : any) => {
+		// 获取当前用户ID
+		currentUserId.value = getUserId()
+		
+		// 获取群组ID
 		if (options['groupId']) {
-			// 加载群聊信息
+			groupId.value = options['groupId'] as string
 		}
+		
+		// 获取群名称（临时显示）
 		if (options['name']) {
 			groupName.value = decodeURIComponent(options['name'])
+		}
+		
+		console.log('[GroupSettings] 页面参数:', { groupId: groupId.value, groupName: groupName.value })
+	})
+	
+	onMounted(async () => {
+		// 加载数据
+		await loadGroupInfo()
+		await loadGroupMembers()
+		await loadConversationSettings()
+	})
+	
+	onShow(async () => {
+		// 页面显示时刷新数据（从添加成员页面返回时）
+		if (groupId.value) {
+			console.log('[GroupSettings] 页面显示，刷新数据')
+			await loadGroupInfo()
+			await loadGroupMembers()
 		}
 	})
 </script>
@@ -531,5 +883,94 @@
 
 	.bottom-space {
 		height: 20px;
+	}
+	
+	/* 自定义弹窗样式 */
+	.dialog-mask {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.5);
+		z-index: 9999;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.dialog-container {
+		width: 280px;
+		background-color: #FFFFFF;
+		border-radius: 12px;
+		overflow: hidden;
+	}
+	
+	.dialog-header {
+		padding: 20px 20px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+	
+	.dialog-title {
+		font-size: 17px;
+		color: #1F2329;
+		font-weight: 600;
+		text-align: center;
+	}
+	
+	.dialog-content {
+		padding: 16px 20px;
+	}
+	
+	.dialog-input {
+		width: 100%;
+		height: 40px;
+		background-color: #F5F7FA;
+		border-radius: 6px;
+		padding: 0 12px;
+		font-size: 15px;
+		color: #1F2329;
+		border-width: 1px;
+		border-color: #E5E5E5;
+	}
+	
+	.dialog-input:focus {
+		border-color: #1677FF;
+		background-color: #FFFFFF;
+	}
+	
+	.dialog-hint {
+		font-size: 12px;
+		color: #8F959E;
+		margin-top: 8px;
+		text-align: right;
+	}
+	
+	.dialog-footer {
+		flex-direction: row;
+		border-top-width: 0.5px;
+		border-top-color: #EFF0F1;
+	}
+	
+	.dialog-btn {
+		flex: 1;
+		height: 50px;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.dialog-btn-cancel {
+		border-right-width: 0.5px;
+		border-right-color: #EFF0F1;
+	}
+	
+	.dialog-btn-text {
+		font-size: 16px;
+		color: #646A73;
+	}
+	
+	.dialog-btn-text-primary {
+		color: #1677FF;
+		font-weight: 500;
 	}
 </style>

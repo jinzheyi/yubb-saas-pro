@@ -127,6 +127,13 @@
 			}
 		},
 		{
+			"path": "pages/message/join-group",
+			"style": {
+				"navigationBarTitleText": "加入群聊",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/message/chat-files",
 			"style": {
 				"navigationBarTitleText": "聊天文件",

@@ -5,11 +5,15 @@ import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.group.*;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
+import com.shengyu.module.system.dal.dataobject.im.ImGroupInviteDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupUserDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
+import com.shengyu.module.system.dal.mysql.im.ImGroupInviteMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupUserMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
+import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
+import com.shengyu.module.system.enums.im.ImGroupInviteStatusEnum;
 import com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum;
 import com.shengyu.module.system.enums.im.ImGroupStatusEnum;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +49,9 @@ public class ImGroupServiceImpl implements ImGroupService {
 
     @Resource
     private ImConversationService conversationService;
+
+    @Resource
+    private ImGroupInviteMapper groupInviteMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -336,7 +343,18 @@ public class ImGroupServiceImpl implements ImGroupService {
         group.setMemberCount(group.getMemberCount() - 1);
         groupMapper.updateById(group);
 
-        log.info("[ImGroupService] 移除群成员成功, groupId: {}, memberUserId: {}", groupId, memberUserId);
+        // 删除该成员的会话记录
+        try {
+            conversationService.deleteConversationByTarget(memberUserId, groupId, ImConversationTypeEnum.GROUP.getType());
+            log.info("[ImGroupService] 删除被移除成员的会话记录成功, userId: {}, groupId: {}", memberUserId, groupId);
+        } catch (Exception e) {
+            log.warn("[ImGroupService] 删除被移除成员的会话记录失败, userId: {}, groupId: {}, error: {}", 
+                    memberUserId, groupId, e.getMessage());
+            // 会话删除失败不影响成员移除操作
+        }
+
+        log.info("[ImGroupService] 移除群成员成功, groupId: {}, memberUserId: {}, 剩余成员数: {}", 
+                groupId, memberUserId, group.getMemberCount());
     }
 
     @Override
@@ -497,6 +515,282 @@ public class ImGroupServiceImpl implements ImGroupService {
         return members.stream()
                 .map(ImGroupUserDO::getUserId)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AppImGroupInviteRespVO generateInviteCode(Long userId, AppImGroupInviteGenerateReqVO reqVO) {
+        Long groupId = reqVO.getGroupId();
+        
+        // 1. 验证群组存在
+        ImGroupDO group = groupMapper.selectById(groupId);
+        if (group == null) {
+            throw exception(GROUP_NOT_EXISTS);
+        }
+
+        // 2. 验证用户是群成员
+        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
+        if (groupUser == null) {
+            throw exception(GROUP_MEMBER_NOT_EXISTS);
+        }
+
+        // 3. 查询是否已有有效邀请码
+        ImGroupInviteDO existingInvite = groupInviteMapper.selectValidByGroupId(groupId);
+        if (existingInvite != null) {
+            // 返回现有邀请码
+            return buildInviteRespVO(existingInvite, groupId);
+        }
+
+        // 4. 生成新邀请码
+        String inviteCode = generateUniqueInviteCode();
+        LocalDateTime expireTime = LocalDateTime.now().plusHours(reqVO.getExpireHours());
+
+        ImGroupInviteDO invite = ImGroupInviteDO.builder()
+                .groupId(groupId)
+                .inviteCode(inviteCode)
+                .creatorId(userId)
+                .expireTime(expireTime)
+                .maxUseCount(reqVO.getMaxUseCount())
+                .usedCount(0)
+                .status(ImGroupInviteStatusEnum.VALID.getStatus())
+                .build();
+
+        groupInviteMapper.insert(invite);
+
+        log.info("[ImGroupService] 生成群邀请码成功, groupId: {}, inviteCode: {}, expireTime: {}", 
+                groupId, inviteCode, expireTime);
+
+        return buildInviteRespVO(invite, groupId);
+    }
+
+    @Override
+    public AppImGroupInviteVerifyRespVO verifyInviteCode(String inviteCode) {
+        AppImGroupInviteVerifyRespVO respVO = new AppImGroupInviteVerifyRespVO();
+
+        // 1. 查询邀请码
+        ImGroupInviteDO invite = groupInviteMapper.selectByInviteCode(inviteCode);
+        if (invite == null) {
+            respVO.setValid(false);
+            respVO.setErrorMessage("邀请码不存在");
+            return respVO;
+        }
+
+        // 2. 验证状态
+        if (!ImGroupInviteStatusEnum.isValid(invite.getStatus())) {
+            respVO.setValid(false);
+            respVO.setErrorMessage("邀请码已失效");
+            return respVO;
+        }
+
+        // 3. 验证过期时间
+        if (invite.getExpireTime().isBefore(LocalDateTime.now())) {
+            respVO.setValid(false);
+            respVO.setErrorMessage("邀请码已过期");
+            return respVO;
+        }
+
+        // 4. 验证使用次数
+        if (invite.getMaxUseCount() > 0 && invite.getUsedCount() >= invite.getMaxUseCount()) {
+            respVO.setValid(false);
+            respVO.setErrorMessage("邀请码使用次数已达上限");
+            return respVO;
+        }
+
+        // 5. 查询群组信息
+        ImGroupDO group = groupMapper.selectById(invite.getGroupId());
+        if (group == null || !ImGroupStatusEnum.isNormal(group.getStatus())) {
+            respVO.setValid(false);
+            respVO.setErrorMessage("群组不存在或已解散");
+            return respVO;
+        }
+
+        // 6. 返回验证成功信息
+        respVO.setValid(true);
+        respVO.setGroupId(group.getId());
+        respVO.setGroupName(group.getName());
+        respVO.setGroupAvatar(group.getAvatar());
+        respVO.setMemberCount(group.getMemberCount());
+        respVO.setNeedApproval(group.getNeedApproval());
+        respVO.setExpireTime(invite.getExpireTime());
+
+        return respVO;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void joinGroupByInviteCode(Long userId, String inviteCode) {
+        // 1. 验证邀请码
+        AppImGroupInviteVerifyRespVO verifyResult = verifyInviteCode(inviteCode);
+        if (!verifyResult.getValid()) {
+            throw exception(GROUP_INVITE_CODE_INVALID, verifyResult.getErrorMessage());
+        }
+
+        Long groupId = verifyResult.getGroupId();
+
+        // 2. 检查是否已是群成员
+        ImGroupUserDO existingMember = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
+        if (existingMember != null) {
+            throw exception(GROUP_MEMBER_ALREADY_EXISTS);
+        }
+
+        // 3. 检查群人数是否已满
+        ImGroupDO group = groupMapper.selectById(groupId);
+        if (group.getMemberCount() >= group.getMaxMemberCount()) {
+            throw exception(GROUP_MEMBER_FULL);
+        }
+
+        // 4. 如果需要审批，创建加群申请（暂不实现，直接加入）
+        if (verifyResult.getNeedApproval()) {
+            // TODO: 创建加群申请，等待审批
+            throw exception(GROUP_JOIN_NEED_APPROVAL);
+        }
+
+        // 5. 添加群成员
+        ImGroupUserDO groupUser = new ImGroupUserDO();
+        groupUser.setGroupId(groupId);
+        groupUser.setUserId(userId);
+        groupUser.setRole(ImGroupMemberRoleEnum.MEMBER.getRole());
+        groupUser.setJoinTime(LocalDateTime.now());
+        groupUserMapper.insert(groupUser);
+
+        // 6. 更新群成员数量
+        group.setMemberCount(group.getMemberCount() + 1);
+        groupMapper.updateById(group);
+
+        // 7. 创建会话
+        AppImConversationCreateReqVO conversationReqVO = new AppImConversationCreateReqVO();
+        conversationReqVO.setTargetId(groupId);
+        conversationReqVO.setConversationType(2); // 2-群聊
+        conversationService.createOrGetConversation(userId, conversationReqVO);
+
+        // 8. 更新邀请码使用次数
+        ImGroupInviteDO invite = groupInviteMapper.selectByInviteCode(inviteCode);
+        invite.setUsedCount(invite.getUsedCount() + 1);
+        groupInviteMapper.updateById(invite);
+
+        log.info("[ImGroupService] 通过邀请码加入群成功, userId: {}, groupId: {}, inviteCode: {}", 
+                userId, groupId, inviteCode);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AppImGroupInviteRespVO getGroupInviteCode(Long userId, Long groupId) {
+        // 1. 验证群组存在
+        ImGroupDO group = groupMapper.selectById(groupId);
+        if (group == null) {
+            throw exception(GROUP_NOT_EXISTS);
+        }
+
+        // 2. 验证用户是群成员
+        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
+        if (groupUser == null) {
+            throw exception(GROUP_MEMBER_NOT_EXISTS);
+        }
+
+        // 3. 查询有效邀请码
+        ImGroupInviteDO invite = groupInviteMapper.selectValidByGroupId(groupId);
+        
+        // 4. 如果没有有效邀请码，自动生成一个
+        if (invite == null) {
+            log.info("[ImGroupService] 群组没有有效邀请码，自动生成, groupId: {}", groupId);
+            
+            // 生成邀请码
+            String inviteCode = generateUniqueInviteCode();
+            LocalDateTime expireTime = LocalDateTime.now().plusHours(24); // 默认24小时
+            
+            invite = ImGroupInviteDO.builder()
+                    .id(cn.hutool.core.util.IdUtil.getSnowflakeNextId())
+                    .groupId(groupId)
+                    .inviteCode(inviteCode)
+                    .creatorId(userId)
+                    .expireTime(expireTime)
+                    .maxUseCount(0) // 不限制使用次数
+                    .usedCount(0)
+                    .status(ImGroupInviteStatusEnum.VALID.getStatus())
+                    .build();
+            
+            groupInviteMapper.insert(invite);
+            log.info("[ImGroupService] 自动生成邀请码成功, inviteCode: {}", inviteCode);
+        }
+
+        return buildInviteRespVO(invite, groupId);
+    }
+
+    /**
+     * 生成唯一邀请码
+     */
+    private String generateUniqueInviteCode() {
+        String inviteCode;
+        int maxRetries = 10;
+        int retries = 0;
+
+        do {
+            inviteCode = generateInviteCode();
+            ImGroupInviteDO existing = groupInviteMapper.selectByInviteCode(inviteCode);
+            if (existing == null) {
+                return inviteCode;
+            }
+            retries++;
+        } while (retries < maxRetries);
+
+        throw new RuntimeException("生成邀请码失败，请重试");
+    }
+
+    /**
+     * 生成邀请码
+     * 格式: GRP + 时间戳(6位Base36) + 随机字符串(8位) + 校验码(2位)
+     */
+    private String generateInviteCode() {
+        // 1. 前缀
+        String prefix = "GRP";
+
+        // 2. 时间戳（Base36编码，6位）
+        long timestamp = System.currentTimeMillis() / 1000;
+        String timeStr = Long.toString(timestamp, 36).toUpperCase();
+        timeStr = timeStr.substring(Math.max(0, timeStr.length() - 6));
+
+        // 3. 随机字符串（8位）
+        String random = cn.hutool.core.util.RandomUtil.randomString(
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 8);
+
+        // 4. 校验码（2位）
+        String data = prefix + timeStr + random;
+        int crc = data.hashCode() & 0xFF;
+        String checksum = String.format("%02X", crc);
+
+        return data + checksum;
+    }
+
+    /**
+     * 构建邀请码响应VO
+     */
+    private AppImGroupInviteRespVO buildInviteRespVO(ImGroupInviteDO invite, Long groupId) {
+        AppImGroupInviteRespVO respVO = new AppImGroupInviteRespVO();
+        respVO.setInviteCode(invite.getInviteCode());
+        // 返回前端页面路径（uniapp 页面路径）
+        respVO.setQrCodeUrl(String.format("/pages/message/join-group?code=%s&groupId=%d",
+                invite.getInviteCode(), groupId));
+        respVO.setExpireTime(invite.getExpireTime());
+        respVO.setUsedCount(invite.getUsedCount());
+        respVO.setMaxUseCount(invite.getMaxUseCount());
+        return respVO;
+    }
+
+    @Override
+    public String getQRCodeContentByInviteCode(String inviteCode, Long groupId) {
+        // 1. 查询邀请码信息
+        ImGroupInviteDO invite = groupInviteMapper.selectByInviteCode(inviteCode);
+        if (invite == null) {
+            throw exception(GROUP_INVITE_CODE_NOT_EXISTS);
+        }
+
+        // 2. 使用邀请码对应的群组ID（如果参数没有传）
+        if (groupId == null) {
+            groupId = invite.getGroupId();
+        }
+
+        // 3. 返回前端页面路径（uniapp 页面路径）
+        return String.format("/pages/message/join-group?code=%s&groupId=%d", inviteCode, groupId);
     }
 
 }

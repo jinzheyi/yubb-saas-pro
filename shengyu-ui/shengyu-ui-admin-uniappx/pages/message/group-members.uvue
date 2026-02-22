@@ -4,10 +4,14 @@
 		<view class="header">
 			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">{{ t('common.back') }}</text>
+				<text class="back-text">{{ mode === 'remove' ? '取消' : t('common.back') }}</text>
 			</view>
-			<text class="header-title">群成员({{ filteredMembers.length }})</text>
-			<view class="header-right"></view>
+			<text class="header-title">{{ mode === 'remove' ? '删除群成员' : '群成员(' + filteredMembers.length + ')' }}</text>
+			<view class="header-right">
+				<text v-if="mode === 'remove' && selectedMembers.length > 0" class="confirm-text" @click="handleConfirmRemove">
+					确定({{ selectedMembers.length }})
+				</text>
+			</view>
 		</view>
 
 		<view class="search-wrap">
@@ -18,18 +22,30 @@
 		</view>
 
 		<scroll-view class="member-list" scroll-y="true" show-scrollbar="false" :scroll-into-view="scrollIntoView">
+			<!-- 加载状态 -->
+			<view v-if="loading" class="loading-wrap">
+				<text class="loading-text">加载中...</text>
+			</view>
+			
 			<!-- 按字母分组 -->
-			<view class="letter-group" v-for="group in memberGroups" :key="group.letter" :id="'letter-' + group.letter">
+			<view v-else class="letter-group" v-for="group in memberGroups" :key="group.letter" :id="'letter-' + group.letter">
 				<text class="letter-title">{{ group.letter }}</text>
 				
 				<!-- 成员项 -->
 				<view class="member-item" v-for="member in group.members" :key="member.id" @click="handleMemberClick(member)">
+					<!-- 删除模式：显示复选框 -->
+					<view v-if="mode === 'remove'" class="checkbox-wrap">
+						<view class="checkbox" :class="{ checked: member.selected, disabled: member.cannotRemove }">
+							<text v-if="member.selected" class="iconfont check-icon">&#xe60c;</text>
+						</view>
+					</view>
+					
 					<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
 						<text class="member-avatar-text">{{ member.avatarText }}</text>
 					</view>
 					<view class="member-info">
 						<text class="member-name">{{ member.name }}</text>
-						<text class="member-role" v-if="member.role">{{ member.role }}</text>
+						<text class="member-role" v-if="member.deptName">{{ member.deptName }}</text>
 					</view>
 					<text v-if="member.isOwner" class="member-badge owner-badge">群主</text>
 					<text v-else-if="member.isAdmin" class="member-badge admin-badge">管理员</text>
@@ -48,43 +64,89 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getGroupMembers, removeGroupMember } from '../../api/group.uts'
+	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
+	import { getUserId } from '../../store/user.uts'
 
 	const { t } = useI18n()
 
 	const searchKeyword = ref('')
 	const scrollIntoView = ref('')
-
-	// 生成成员数据
-	const generateMembers = () : any[] => {
-		const firstNames = ['张', '李', '王', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗']
-		const lastNames = ['伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军', '洋', '勇', '艳', '杰', '娟', '涛', '明', '超', '秀兰', '霞']
-		const roles = ['产品经理', '开发工程师', '测试工程师', '设计师', '运营专员']
-		const colors = ['#0ea5e9', '#f472b6', '#c084fc', '#fb7185', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#3b82f6', '#8b5cf6']
-		const pinyins = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
-
-		const list : any[] = []
-		
-		for (let i = 0; i < 50; i++) {
-			const firstName = firstNames[i % firstNames.length]
-			const lastName = lastNames[i % lastNames.length]
-			const name = firstName + lastName
-			const pinyin = pinyins[i % pinyins.length]
-			
-			list.push({
-				id: i + 1,
-				name: name,
-				role: roles[i % roles.length],
-				avatarText: name.substring(0, 2),
-				avatarBg: colors[i % colors.length],
-				pinyin: pinyin,
-				isOwner: i === 0,
-				isAdmin: i === 1 || i === 2
-			})
+	const loading = ref(false)
+	
+	// 页面参数
+	const groupId = ref('')
+	const groupName = ref('')
+	const mode = ref('view') // view-查看模式, remove-删除模式
+	const currentUserId = ref(0)
+	
+	// 成员数据
+	const allMembers = ref<any[]>([])
+	const selectedMembers = computed(() : any[] => {
+		return allMembers.value.filter(m => m.selected)
+	})
+	
+	/**
+	 * 获取拼音首字母
+	 */
+	function getPinyinFirstLetter(name : string) : string {
+		const code = name.charCodeAt(0)
+		if (code >= 19968 && code <= 40869) {
+			const index = (code - 19968) % 26
+			return String.fromCharCode(65 + index)
 		}
-		return list
+		return name.charAt(0).toUpperCase()
 	}
-
-	const allMembers = ref(generateMembers())
+	
+	/**
+	 * 加载群成员列表
+	 */
+	async function loadMembers() {
+		if (!groupId.value) return
+		
+		loading.value = true
+		try {
+			const members = await getGroupMembers(groupId.value)
+			
+			if (members && Array.isArray(members)) {
+				allMembers.value = members.map(member => {
+					const displayName = member.nickname || member.userNickname || '未知'
+					const pinyinLetter = getPinyinFirstLetter(displayName)
+					
+					// 判断角色
+					const isOwner = member.role === 1
+					const isAdmin = member.role === 2
+					
+					// 判断是否可以删除（群主和当前用户自己不能删除）
+					const cannotRemove = isOwner || member.userId === currentUserId.value
+					
+					return {
+						id: member.userId,
+						name: displayName,
+						deptName: member.deptName || '',
+						avatarText: getAvatarText(displayName),
+						avatarBg: getUserAvatarColor(member.userId),
+						pinyin: pinyinLetter,
+						isOwner: isOwner,
+						isAdmin: isAdmin,
+						role: member.role,
+						selected: false,
+						cannotRemove: cannotRemove
+					}
+				})
+				
+				console.log('[GroupMembers] 加载成员成功, 数量:', allMembers.value.length)
+			}
+		} catch (e) {
+			console.error('[GroupMembers] 加载成员失败:', e)
+			uni.showToast({
+				title: '加载失败',
+				icon: 'none'
+			})
+		} finally {
+			loading.value = false
+		}
+	}
 
 	// 过滤后的成员
 	const filteredMembers = computed(() : any[] => {
@@ -127,14 +189,112 @@
 	}
 
 	function handleMemberClick(member : any) {
+		// 删除模式：切换选中状态
+		if (mode.value === 'remove') {
+			// 不能删除群主和自己
+			if (member.cannotRemove) {
+				uni.showToast({
+					title: member.isOwner ? '不能删除群主' : '不能删除自己',
+					icon: 'none'
+				})
+				return
+			}
+			member.selected = !member.selected
+			return
+		}
+		
+		// 查看模式：跳转到用户详情（传递 userId 参数）
 		uni.navigateTo({
-			url: '/pages/contacts/user-detail?id=' + member.id
+			url: '/pages/contacts/user-detail?userId=' + member.id + '&name=' + encodeURIComponent(member.name)
 		})
+	}
+	
+	/**
+	 * 确认删除成员
+	 */
+	function handleConfirmRemove() {
+		const selected = selectedMembers.value
+		if (selected.length === 0) {
+			uni.showToast({
+				title: '请选择要删除的成员',
+				icon: 'none'
+			})
+			return
+		}
+		
+		const memberNames = selected.map(m => m.name).join('、')
+		uni.showModal({
+			title: '删除群成员',
+			content: `确定要删除 ${memberNames} 吗？`,
+			success: async (res) => {
+				if (res.confirm) {
+					await performRemoveMembers(selected)
+				}
+			}
+		})
+	}
+	
+	/**
+	 * 执行删除成员操作
+	 */
+	async function performRemoveMembers(members : any[]) {
+		uni.showLoading({
+			title: '删除中...'
+		})
+		
+		try {
+			// 逐个删除成员
+			for (let i = 0; i < members.length; i++) {
+				const member = members[i]
+				await removeGroupMember(groupId.value, member.id.toString())
+				console.log('[GroupMembers] 删除成员成功:', member.name)
+			}
+			
+			uni.hideLoading()
+			uni.showToast({
+				title: '删除成功',
+				icon: 'success'
+			})
+			
+			// 延迟返回
+			setTimeout(() => {
+				uni.navigateBack()
+			}, 1000)
+			
+		} catch (e) {
+			uni.hideLoading()
+			console.error('[GroupMembers] 删除成员失败:', e)
+			uni.showToast({
+				title: '删除失败',
+				icon: 'none'
+			})
+		}
 	}
 
 	function scrollToLetter(letter : string) {
 		scrollIntoView.value = 'letter-' + letter
 	}
+	
+	onLoad((options : any) => {
+		// 获取当前用户ID
+		currentUserId.value = getUserId()
+		
+		// 获取页面参数
+		if (options['groupId']) {
+			groupId.value = options['groupId'] as string
+		}
+		if (options['groupName']) {
+			groupName.value = decodeURIComponent(options['groupName'])
+		}
+		if (options['mode']) {
+			mode.value = options['mode'] as string
+		}
+		
+		console.log('[GroupMembers] 页面参数:', { groupId: groupId.value, mode: mode.value })
+		
+		// 加载成员列表
+		loadMembers()
+	})
 </script>
 
 <style>
@@ -186,6 +346,13 @@
 
 	.header-right {
 		width: 80px;
+		align-items: flex-end;
+	}
+	
+	.confirm-text {
+		color: #1677FF;
+		font-size: 15px;
+		font-weight: 500;
 	}
 
 	.search-wrap {
@@ -251,6 +418,38 @@
 	.member-item:last-child {
 		border-bottom-width: 0;
 	}
+	
+	.checkbox-wrap {
+		margin-right: 12px;
+	}
+	
+	.checkbox {
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		border-width: 1.5px;
+		border-color: #C4C6CC;
+		border-style: solid;
+		justify-content: center;
+		align-items: center;
+		background-color: #FFFFFF;
+	}
+	
+	.checkbox.checked {
+		background-color: #1677FF;
+		border-color: #1677FF;
+	}
+	
+	.checkbox.disabled {
+		background-color: #F5F7FA;
+		border-color: #E5E7EB;
+		opacity: 0.6;
+	}
+	
+	.check-icon {
+		font-size: 12px;
+		color: #FFFFFF;
+	}
 
 	.member-avatar {
 		width: 44px;
@@ -315,5 +514,16 @@
 		color: #1677FF;
 		padding: 2px 6px;
 		font-weight: 600;
+	}
+	
+	.loading-wrap {
+		padding: 40px 0;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.loading-text {
+		font-size: 14px;
+		color: #8F959E;
 	}
 </style>
