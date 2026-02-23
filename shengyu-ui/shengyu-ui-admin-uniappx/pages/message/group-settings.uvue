@@ -421,9 +421,8 @@
 	}
 
 	function handleChatHistory() {
-		uni.showToast({
-			title: '聊天记录功能开发中',
-			icon: 'none'
+		uni.navigateTo({
+			url: `/pages/message/chat-history?conversationId=${conversationId.value}&groupName=${groupName.value}`
 		})
 	}
 

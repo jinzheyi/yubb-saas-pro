@@ -4,6 +4,7 @@ import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
 import com.shengyu.module.system.dal.dataobject.im.ImConversationDO;
 import com.shengyu.module.system.dal.dataobject.im.ImMessageDO;
@@ -184,6 +185,39 @@ public class ImMessageServiceImpl implements ImMessageService {
         // 注意: 这里简化处理,实际应该只删除用户自己的消息记录
         // TODO: 实现消息的用户级删除标记
         log.warn("清空会话消息功能待完善，conversationId: {}, userId: {}", conversationId, userId);
+    }
+
+    @Override
+    public PageResult<AppImMessageRespVO> searchMessages(Long userId, AppImMessageSearchReqVO searchReqVO) {
+        // 验证会话是否存在
+        ImConversationDO conversation = conversationService.getConversation(searchReqVO.getConversationId());
+        if (conversation == null) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+
+        // 验证权限：用户必须是会话参与者
+        if (!conversation.getUserId().equals(userId)) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+
+        // 搜索消息
+        PageResult<ImMessageDO> pageResult = messageMapper.searchMessages(
+                searchReqVO.getConversationId(),
+                searchReqVO.getKeyword(),
+                searchReqVO.getStartTime(),
+                searchReqVO.getEndTime(),
+                searchReqVO
+        );
+
+        // 转换为VO并填充发送者信息
+        List<AppImMessageRespVO> respVOList = pageResult.getList().stream().map(message -> {
+            AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
+            fillSenderInfo(respVO, message);
+            respVO.setIsSelf(message.getSenderId().equals(userId));
+            return respVO;
+        }).collect(Collectors.toList());
+
+        return new PageResult<>(respVOList, pageResult.getTotal());
     }
 
     /**

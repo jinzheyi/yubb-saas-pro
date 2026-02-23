@@ -1,0 +1,435 @@
+<template>
+  <view class="chat-history-container">
+    <!-- 搜索栏 -->
+    <view class="search-bar">
+      <view class="search-input-wrapper">
+        <input
+          class="search-input"
+          v-model="searchKeyword"
+          placeholder="搜索聊天记录"
+          confirm-type="search"
+          @confirm="handleSearch"
+        />
+        <text class="search-icon">🔍</text>
+      </view>
+      <button class="search-btn" @click="handleSearch">搜索</button>
+    </view>
+
+    <!-- 时间筛选 -->
+    <view class="filter-bar">
+      <view class="filter-item" @click="showStartTimePicker = true">
+        <text class="filter-label">开始时间：</text>
+        <text class="filter-value">{{ startTimeText || '不限' }}</text>
+      </view>
+      <view class="filter-item" @click="showEndTimePicker = true">
+        <text class="filter-label">结束时间：</text>
+        <text class="filter-value">{{ endTimeText || '不限' }}</text>
+      </view>
+      <button class="reset-btn" @click="resetFilter">重置</button>
+    </view>
+
+    <!-- 搜索结果列表 -->
+    <scroll-view
+      class="result-list"
+      scroll-y
+      @scrolltolower="loadMore"
+    >
+      <view v-if="messageList.length === 0 && !loading" class="empty-state">
+        <text class="empty-text">{{ searched ? '未找到相关聊天记录' : '请输入关键词搜索' }}</text>
+      </view>
+
+      <view
+        v-for="(message, index) in messageList"
+        :key="message.id"
+        class="message-item"
+        @click="handleMessageClick(message)"
+      >
+        <view class="message-header">
+          <image
+            class="sender-avatar"
+            :src="message.senderAvatar || '/static/avatar.jpg'"
+            mode="aspectFill"
+          />
+          <view class="message-info">
+            <text class="sender-name">{{ message.senderNickname }}</text>
+            <text class="send-time">{{ formatTime(message.sendTime) }}</text>
+          </view>
+        </view>
+        <view class="message-content">
+          <text class="content-text">{{ highlightKeyword(message.content) }}</text>
+        </view>
+      </view>
+
+      <view v-if="loading" class="loading-more">
+        <text>加载中...</text>
+      </view>
+
+      <view v-if="!hasMore && messageList.length > 0" class="no-more">
+        <text>没有更多了</text>
+      </view>
+    </scroll-view>
+
+    <!-- 时间选择器 -->
+    <picker
+      v-if="showStartTimePicker"
+      mode="date"
+      :value="startTime"
+      @change="handleStartTimeChange"
+      @cancel="showStartTimePicker = false"
+    >
+    </picker>
+
+    <picker
+      v-if="showEndTimePicker"
+      mode="date"
+      :value="endTime"
+      @change="handleEndTimeChange"
+      @cancel="showEndTimePicker = false"
+    >
+    </picker>
+  </view>
+</template>
+
+<script setup lang="uts">
+import { ref, computed } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { searchMessages } from '../../api/message.uts'
+
+// 页面参数
+const conversationId = ref<number>(0)
+const groupName = ref<string>('')
+
+// 搜索相关
+const searchKeyword = ref<string>('')
+const startTime = ref<string>('')
+const endTime = ref<string>('')
+const searched = ref<boolean>(false)
+
+// 时间选择器
+const showStartTimePicker = ref<boolean>(false)
+const showEndTimePicker = ref<boolean>(false)
+
+// 列表数据
+const messageList = ref<any[]>([])
+const loading = ref<boolean>(false)
+const hasMore = ref<boolean>(true)
+const pageNo = ref<number>(1)
+const pageSize = ref<number>(20)
+
+// 格式化时间显示
+const startTimeText = computed(() => {
+  return startTime.value ? startTime.value : ''
+})
+
+const endTimeText = computed(() => {
+  return endTime.value ? endTime.value : ''
+})
+
+// 页面加载
+onLoad((options: any) => {
+  if (options.conversationId) {
+    conversationId.value = parseInt(options.conversationId)
+  }
+  if (options.groupName) {
+    groupName.value = options.groupName
+  }
+  
+  // 设置导航栏标题
+  uni.setNavigationBarTitle({
+    title: groupName.value ? `${groupName.value} - 聊天记录` : '聊天记录'
+  })
+})
+
+// 执行搜索
+const handleSearch = () => {
+  if (!searchKeyword.value.trim()) {
+    uni.showToast({
+      title: '请输入搜索关键词',
+      icon: 'none'
+    })
+    return
+  }
+
+  // 重置列表
+  pageNo.value = 1
+  messageList.value = []
+  hasMore.value = true
+  searched.value = true
+
+  loadMessages()
+}
+
+// 加载消息列表
+const loadMessages = async () => {
+  if (loading.value || !hasMore.value) {
+    return
+  }
+
+  loading.value = true
+
+  try {
+    const res = await searchMessages(
+      conversationId.value,
+      searchKeyword.value,
+      startTime.value ? `${startTime.value} 00:00:00` : undefined,
+      endTime.value ? `${endTime.value} 23:59:59` : undefined,
+      pageNo.value,
+      pageSize.value
+    )
+
+    if (res.code === 0) {
+      const newMessages = res.data.list || []
+      messageList.value = [...messageList.value, ...newMessages]
+      
+      // 判断是否还有更多数据
+      hasMore.value = newMessages.length >= pageSize.value
+    } else {
+      uni.showToast({
+        title: res.msg || '搜索失败',
+        icon: 'none'
+      })
+    }
+  } catch (error) {
+    console.error('搜索聊天记录失败:', error)
+    uni.showToast({
+      title: '搜索失败',
+      icon: 'none'
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+// 加载更多
+const loadMore = () => {
+  if (!searched.value || !hasMore.value || loading.value) {
+    return
+  }
+  pageNo.value++
+  loadMessages()
+}
+
+// 重置筛选
+const resetFilter = () => {
+  startTime.value = ''
+  endTime.value = ''
+  if (searched.value) {
+    handleSearch()
+  }
+}
+
+// 开始时间选择
+const handleStartTimeChange = (e: any) => {
+  startTime.value = e.detail.value
+  showStartTimePicker.value = false
+  if (searched.value) {
+    handleSearch()
+  }
+}
+
+// 结束时间选择
+const handleEndTimeChange = (e: any) => {
+  endTime.value = e.detail.value
+  showEndTimePicker.value = false
+  if (searched.value) {
+    handleSearch()
+  }
+}
+
+// 格式化时间
+const formatTime = (timeStr: string): string => {
+  if (!timeStr) return ''
+  
+  const date = new Date(timeStr)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  
+  const diffDays = Math.floor((today.getTime() - messageDate.getTime()) / (1000 * 60 * 60 * 24))
+  
+  const timeFormat = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  
+  if (diffDays === 0) {
+    return `今天 ${timeFormat}`
+  } else if (diffDays === 1) {
+    return `昨天 ${timeFormat}`
+  } else if (diffDays < 7) {
+    return `${diffDays}天前 ${timeFormat}`
+  } else {
+    return `${date.getMonth() + 1}月${date.getDate()}日 ${timeFormat}`
+  }
+}
+
+// 高亮关键词
+const highlightKeyword = (content: string): string => {
+  if (!searchKeyword.value || !content) {
+    return content
+  }
+  // 简单处理，实际应该用富文本高亮
+  return content
+}
+
+// 点击消息项
+const handleMessageClick = (message: any) => {
+  // TODO: 跳转到聊天页面并定位到该消息
+  console.log('点击消息:', message)
+}
+</script>
+
+<style scoped>
+.chat-history-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: #fff;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  position: relative;
+  margin-right: 10px;
+}
+
+.search-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 35px 0 10px;
+  background-color: #f5f5f5;
+  border-radius: 18px;
+  font-size: 14px;
+}
+
+.search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+}
+
+.search-btn {
+  padding: 8px 16px;
+  background-color: #07c160;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: #fff;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.filter-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+
+.filter-label {
+  color: #666;
+}
+
+.filter-value {
+  color: #333;
+  margin-left: 5px;
+}
+
+.reset-btn {
+  padding: 5px 12px;
+  background-color: #f5f5f5;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  margin-left: 10px;
+}
+
+.result-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+}
+
+.empty-text {
+  color: #999;
+  font-size: 14px;
+}
+
+.message-item {
+  background-color: #fff;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.sender-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  margin-right: 10px;
+}
+
+.message-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sender-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.send-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.message-content {
+  padding-left: 46px;
+}
+
+.content-text {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.loading-more,
+.no-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 15px;
+  font-size: 13px;
+  color: #999;
+}
+</style>

@@ -63,8 +63,13 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getGroupFileList, deleteGroupFile, downloadGroupFile } from '../../api/file.uts'
 
 	const { t } = useI18n()
+
+	// 页面参数
+	const groupId = ref('')
+	const loading = ref(false)
 
 	const currentTab = ref('all')
 
@@ -80,70 +85,79 @@
 		return tab ? tab.name : ''
 	})
 
-	// 模拟文件数据
-	const allFiles = ref([
-		{
-			id: 1,
-			type: 'image',
-			name: '产品原型图.png',
-			size: '2.3MB',
-			url: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/shuijiao.jpg',
-			thumbnail: '',
-			createTime: Date.now() - 2 * 60 * 60 * 1000,
-			sender: '张敏'
-		},
-		{
-			id: 2,
-			type: 'video',
-			name: '产品演示视频.mp4',
-			size: '15.6MB',
-			url: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/2.mp4',
-			thumbnail: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/2.mp4?vframe/jpg/offset/0',
-			createTime: Date.now() - 5 * 60 * 60 * 1000,
-			sender: '李强'
-		},
-		{
-			id: 3,
-			type: 'file',
-			name: '项目需求文档.docx',
-			size: '1.2MB',
-			url: '',
-			thumbnail: '',
-			createTime: Date.now() - 24 * 60 * 60 * 1000,
-			sender: '王静'
-		},
-		{
-			id: 4,
-			type: 'file',
-			name: '数据分析报告.xlsx',
-			size: '856KB',
-			url: '',
-			thumbnail: '',
-			createTime: Date.now() - 24 * 60 * 60 * 1000,
-			sender: '刘洋'
-		},
-		{
-			id: 5,
-			type: 'image',
-			name: 'UI设计稿.jpg',
-			size: '3.5MB',
-			url: 'https://qiniu-web-assets.dcloud.net.cn/unidoc/zh/shuijiao.jpg',
-			thumbnail: '',
-			createTime: Date.now() - 2 * 24 * 60 * 60 * 1000,
-			sender: '赵敏'
-		},
-		{
-			id: 6,
-			type: 'file',
-			name: '会议纪要.pdf',
-			size: '456KB',
-			url: '',
-			thumbnail: '',
-			createTime: Date.now() - 3 * 24 * 60 * 60 * 1000,
-			sender: '孙伟'
-		}
-	])
+	// 文件数据
+	const allFiles = ref<any[]>([])
 
+	/**
+	 * 加载文件列表
+	 */
+	async function loadFiles() {
+		if (!groupId.value) return
+		
+		try {
+			loading.value = true
+			const result = await getGroupFileList({
+				groupId: groupId.value,
+				pageNo: 1,
+				pageSize: 100
+			})
+			
+			if (result && result.list) {
+				// 转换数据格式
+				allFiles.value = result.list.map((item: any) => {
+					return {
+						id: item.id,
+						type: getFileTypeFromName(item.fileName),
+						name: item.fileName,
+						size: formatFileSize(item.fileSize),
+						url: item.fileUrl,
+						thumbnail: item.fileUrl,  // 视频缩略图可以后续优化
+						createTime: new Date(item.createTime).getTime(),
+						sender: item.uploaderName || '未知',
+						uploaderId: item.uploaderId
+					}
+				})
+				
+				console.log('[ChatFiles] 加载文件列表成功, 数量:', allFiles.value.length)
+			}
+		} catch (e) {
+			console.error('[ChatFiles] 加载文件列表失败:', e)
+			uni.showToast({
+				title: '加载失败',
+				icon: 'none'
+			})
+		} finally {
+			loading.value = false
+		}
+	}
+
+	/**
+	 * 根据文件名判断文件类型
+	 */
+	function getFileTypeFromName(fileName: string): string {
+		const ext = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase()
+		
+		const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
+		const videoExts = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv']
+		
+		if (imageExts.includes(ext)) return 'image'
+		if (videoExts.includes(ext)) return 'video'
+		
+		return 'file'
+	}
+
+	/**
+	 * 格式化文件大小
+	 */
+	function formatFileSize(bytes: number): string {
+		if (bytes === 0) return '0 B'
+		
+		const k = 1024
+		const sizes = ['B', 'KB', 'MB', 'GB']
+		const i = Math.floor(Math.log(bytes) / Math.log(k))
+		
+		return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i]
+	}
 	// 过滤后的文件
 	const filteredFiles = computed(() : any[] => {
 		if (currentTab.value === 'all') {
@@ -155,7 +169,6 @@
 	// 按日期分组
 	const displayFileGroups = computed(() : any[] => {
 		const groups : any = {}
-		const now = Date.now()
 
 		filteredFiles.value.forEach(file => {
 			const date = new Date(file.createTime)
@@ -227,20 +240,53 @@
 		return colorMap[ext] || '#646A73'
 	}
 
-	function handleFileClick(file : any) {
+	/**
+	 * 点击文件
+	 */
+	async function handleFileClick(file : any) {
+		// 记录下载次数
+		try {
+			await downloadGroupFile(file.id)
+		} catch (e) {
+			console.error('[ChatFiles] 记录下载失败:', e)
+		}
+		
 		if (file.type === 'image') {
+			// 预览图片
 			uni.previewImage({
-				urls: [file.url]
+				urls: [file.url],
+				current: file.url
 			})
 		} else if (file.type === 'video') {
+			// 播放视频
 			uni.showToast({
-				title: '播放视频: ' + file.name,
+				title: '视频播放功能开发中',
 				icon: 'none'
 			})
 		} else {
-			uni.showToast({
-				title: '打开文件: ' + file.name,
-				icon: 'none'
+			// 下载文件
+			uni.downloadFile({
+				url: file.url,
+				success: (res) => {
+					if (res.statusCode === 200) {
+						uni.showToast({
+							title: '下载成功',
+							icon: 'success'
+						})
+						// 可以打开文件预览
+						uni.openDocument({
+							filePath: res.tempFilePath,
+							showMenu: true
+						})
+					}
+				},
+				fail: (err) => {
+					console.error('[ChatFiles] 下载失败:', err)
+					uni.showToast({
+						title: '下载失败',
+						icon: 'none'
+					})
+				}
 			})
 		}
 	}
@@ -249,18 +295,62 @@
 		handleFileMenu(file)
 	}
 
+	/**
+	 * 文件菜单
+	 */
 	function handleFileMenu(file : any) {
 		uni.showActionSheet({
-			itemList: ['转发', '收藏', '下载', '删除'],
-			success: (res) => {
-				const actions = ['转发', '收藏', '下载', '删除']
-				uni.showToast({
-					title: actions[res.tapIndex] + ': ' + file.name,
-					icon: 'none'
-				})
+			itemList: ['下载', '转发', '删除'],
+			success: async (res) => {
+				if (res.tapIndex === 0) {
+					// 下载
+					handleFileClick(file)
+				} else if (res.tapIndex === 1) {
+					// 转发
+					uni.showToast({
+						title: '转发功能开发中',
+						icon: 'none'
+					})
+				} else if (res.tapIndex === 2) {
+					// 删除
+					uni.showModal({
+						title: '删除文件',
+						content: '确定要删除这个文件吗？',
+						success: async (modalRes) => {
+							if (modalRes.confirm) {
+								try {
+									await deleteGroupFile(file.id)
+									uni.showToast({
+										title: '删除成功',
+										icon: 'success'
+									})
+									// 刷新列表
+									await loadFiles()
+								} catch (e) {
+									console.error('[ChatFiles] 删除失败:', e)
+									uni.showToast({
+										title: '删除失败',
+										icon: 'none'
+									})
+								}
+							}
+						}
+					})
+				}
 			}
 		})
 	}
+
+	onLoad((options: any) => {
+		if (options['groupId']) {
+			groupId.value = options['groupId']
+			console.log('[ChatFiles] 页面参数:', { groupId: groupId.value })
+		}
+	})
+
+	onMounted(async () => {
+		await loadFiles()
+	})
 </script>
 
 <style>

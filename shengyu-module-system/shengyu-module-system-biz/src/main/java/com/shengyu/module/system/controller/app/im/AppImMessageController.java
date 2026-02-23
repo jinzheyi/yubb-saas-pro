@@ -5,6 +5,7 @@ import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
 import com.shengyu.module.system.service.im.ImMessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -110,6 +111,14 @@ public class AppImMessageController {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         // TODO: 实现未读消息数统计
         return success(0);
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "搜索聊天记录")
+    public CommonResult<PageResult<AppImMessageRespVO>> searchMessages(
+            @Valid AppImMessageSearchReqVO searchReqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(messageService.searchMessages(userId, searchReqVO));
     }
 
 }

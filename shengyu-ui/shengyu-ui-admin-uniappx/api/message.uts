@@ -60,3 +60,33 @@ export function getUnreadCount(): Promise<any> {
     method: 'GET'
   })
 }
+
+/**
+ * 搜索聊天记录
+ * @param conversationId 会话ID
+ * @param keyword 搜索关键词
+ * @param startTime 开始时间（可选）
+ * @param endTime 结束时间（可选）
+ * @param pageNo 页码（默认1）
+ * @param pageSize 每页数量（默认20）
+ */
+export function searchMessages(
+  conversationId: number,
+  keyword: string,
+  startTime?: string,
+  endTime?: string,
+  pageNo: number = 1,
+  pageSize: number = 20
+): Promise<any> {
+  let url = `/system/im/message/search?conversationId=${conversationId}&keyword=${keyword}&pageNo=${pageNo}&pageSize=${pageSize}`
+  if (startTime) {
+    url += `&startTime=${startTime}`
+  }
+  if (endTime) {
+    url += `&endTime=${endTime}`
+  }
+  return request({
+    url: url,
+    method: 'GET'
+  })
+}

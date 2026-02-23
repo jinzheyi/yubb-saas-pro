@@ -1039,6 +1039,16 @@
 						imageSize
 					)
 					
+					// 如果是群聊，同时保存到群文件
+					if (chatType.value === 'group') {
+						const { uploadGroupFile } = require('../../api/file.uts')
+						uploadGroupFile(targetId.value, result.tempFilePath).then((res : any) => {
+							console.log('[Chat] 图片已保存到群文件:', res)
+						}).catch((err : any) => {
+							console.error('[Chat] 保存图片到群文件失败:', err)
+						})
+					}
+					
 					// 转换并添加到消息列表
 					const uiMessage = {
 						id: message.id.toString(),
@@ -1144,6 +1154,16 @@
 					videoSize
 				)
 				
+				// 如果是群聊，同时保存到群文件
+				if (chatType.value === 'group') {
+					const { uploadGroupFile } = require('../../api/file.uts')
+					uploadGroupFile(targetId.value, result.tempFilePath).then((res : any) => {
+						console.log('[Chat] 视频已保存到群文件:', res)
+					}).catch((err : any) => {
+						console.error('[Chat] 保存视频到群文件失败:', err)
+					})
+				}
+				
 				// 转换并添加到消息列表
 				const uiMessage = {
 					id: message.id.toString(),
@@ -1191,6 +1211,20 @@
 					fileSize,
 					fileType
 				)
+				
+				// 如果是群聊，同时保存到群文件
+				if (chatType.value === 'group') {
+					// 导入群文件 API
+					const { uploadGroupFile } = require('../../api/file.uts')
+					
+					// 调用群文件上传接口（使用文件路径）
+					uploadGroupFile(targetId.value, result.tempFilePath).then((res : any) => {
+						console.log('[Chat] 文件已保存到群文件:', res)
+					}).catch((err : any) => {
+						console.error('[Chat] 保存到群文件失败:', err)
+						// 不影响消息发送，只是提示
+					})
+				}
 				
 				// 转换并添加到消息列表
 				const uiMessage = {

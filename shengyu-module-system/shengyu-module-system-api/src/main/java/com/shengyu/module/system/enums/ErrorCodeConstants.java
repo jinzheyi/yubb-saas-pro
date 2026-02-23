@@ -223,6 +223,10 @@ public interface ErrorCodeConstants {
     ErrorCode GROUP_JOIN_NEED_APPROVAL = new ErrorCode(1_002_030_209, "加入该群需要审批");
     ErrorCode GROUP_INVITE_CODE_NOT_EXISTS = new ErrorCode(1_002_030_210, "邀请码不存在");
     
+    // 群文件相关 1-002-030-250
+    ErrorCode GROUP_FILE_NOT_EXISTS = new ErrorCode(1_002_030_250, "群文件不存在");
+    ErrorCode NOT_GROUP_MEMBER = new ErrorCode(1_002_030_251, "您不是该群成员");
+    
     // 联系人相关 1-002-030-300
     ErrorCode CONTACT_NOT_EXISTS = new ErrorCode(1_002_030_300, "联系人不存在");
     ErrorCode CONTACT_SETTING_UPDATE_FAILED = new ErrorCode(1_002_030_301, "联系人设置更新失败");

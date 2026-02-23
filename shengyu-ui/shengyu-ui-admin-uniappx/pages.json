@@ -148,6 +148,13 @@
 			}
 		},
 		{
+			"path": "pages/message/chat-history",
+			"style": {
+				"navigationBarTitleText": "聊天记录",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/message/share-contact",
 			"style": {
 				"navigationBarTitleText": "分享",

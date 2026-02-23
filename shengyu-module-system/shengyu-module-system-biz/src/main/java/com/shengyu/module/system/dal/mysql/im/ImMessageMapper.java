@@ -153,4 +153,26 @@ public interface ImMessageMapper extends BaseMapperX<ImMessageDO> {
         return selectCount(wrapper).intValue();
     }
 
+    /**
+     * 搜索聊天记录（支持关键词和时间范围）
+     *
+     * @param conversationId 会话ID
+     * @param keyword 搜索关键词
+     * @param startTime 开始时间
+     * @param endTime 结束时间
+     * @param pageParam 分页参数
+     * @return 消息分页结果
+     */
+    default PageResult<ImMessageDO> searchMessages(Long conversationId, String keyword, 
+                                                   LocalDateTime startTime, LocalDateTime endTime,
+                                                   com.shengyu.framework.common.pojo.PageParam pageParam) {
+        return selectPage(pageParam, new LambdaQueryWrapperX<ImMessageDO>()
+                .eq(ImMessageDO::getConversationId, conversationId)
+                .eq(ImMessageDO::getMessageType, 1) // 只搜索文本消息
+                .like(ImMessageDO::getContent, keyword)
+                .geIfPresent(ImMessageDO::getSendTime, startTime)
+                .leIfPresent(ImMessageDO::getSendTime, endTime)
+                .orderByDesc(ImMessageDO::getSendTime));
+    }
+
 }

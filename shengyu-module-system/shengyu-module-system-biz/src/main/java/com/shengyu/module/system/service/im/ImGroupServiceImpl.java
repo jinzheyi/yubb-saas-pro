@@ -818,7 +818,7 @@ public class ImGroupServiceImpl implements ImGroupService {
         // 4. 检查权限：只有群主和管理员可以修改群公告
         if (!ImGroupMemberRoleEnum.OWNER.getRole().equals(groupUser.getRole()) 
                 && !ImGroupMemberRoleEnum.ADMIN.getRole().equals(groupUser.getRole())) {
-            throw exception(GROUP_NO_PERMISSION);
+            throw exception(GROUP_PERMISSION_DENIED);
         }
         
         // 5. 更新群公告和置顶状态

@@ -3,6 +3,7 @@ package com.shengyu.module.system.service.im;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
 
 /**
@@ -71,5 +72,14 @@ public interface ImMessageService {
      * @param conversationId 会话ID
      */
     void clearConversationMessages(Long userId, Long conversationId);
+
+    /**
+     * 搜索聊天记录
+     *
+     * @param userId 用户ID
+     * @param searchReqVO 搜索请求
+     * @return 消息分页结果
+     */
+    PageResult<AppImMessageRespVO> searchMessages(Long userId, AppImMessageSearchReqVO searchReqVO);
 
 }

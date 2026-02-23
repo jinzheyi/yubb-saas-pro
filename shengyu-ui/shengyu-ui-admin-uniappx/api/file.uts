@@ -1,0 +1,48 @@
+import { request } from '../utils/request.uts'
+
+/**
+ * 上传群文件
+ */
+export function uploadGroupFile(groupId: number, filePath: string) {
+  return request({
+    url: '/system/im/group/file/upload',
+    method: 'POST',
+    formData: {
+      groupId: groupId,
+      file: filePath
+    }
+  })
+}
+
+/**
+ * 获取群文件列表
+ */
+export function getGroupFileList(params: any) {
+  return request({
+    url: '/system/im/group/file/list',
+    method: 'GET',
+    params: params
+  })
+}
+
+/**
+ * 删除群文件
+ */
+export function deleteGroupFile(id: number) {
+  return request({
+    url: '/system/im/group/file/delete',
+    method: 'DELETE',
+    params: { id }
+  })
+}
+
+/**
+ * 记录文件下载
+ */
+export function downloadGroupFile(id: number) {
+  return request({
+    url: '/system/im/group/file/download',
+    method: 'POST',
+    params: { id }
+  })
+}
