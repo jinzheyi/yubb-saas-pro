@@ -6,10 +6,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
-import com.shengyu.module.infra.controller.platform.file.vo.file.FileCreateReqVO;
-import com.shengyu.module.infra.dal.dataobject.file.FileDO;
-import com.shengyu.module.infra.dal.mysql.file.FileMapper;
-import com.shengyu.module.infra.service.file.FileService;
+import com.shengyu.module.infra.api.file.FileApi;
+import com.shengyu.module.infra.api.file.dto.FileDTO;
 import com.shengyu.module.system.controller.app.im.vo.file.AppImGroupFilePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.file.AppImGroupFileRespVO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupFileDO;
@@ -49,10 +47,7 @@ public class ImGroupFileServiceImpl implements ImGroupFileService {
     private AdminUserMapper userMapper;
 
     @Resource
-    private FileService fileService;
-
-    @Resource
-    private FileMapper fileMapper;
+    private FileApi fileApi;  // ✅ 正确：通过 API 接口调用
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -62,23 +57,24 @@ public class ImGroupFileServiceImpl implements ImGroupFileService {
         // 1. 验证权限：用户必须是群成员
         validateGroupMember(groupId, userId);
         
-        // 2. 上传文件到文件服务，获取文件 URL
+        // 2. 通过 FileApi 上传文件，获取文件 ID
         String directory = "im/group/" + groupId;
         byte[] content = IoUtil.readBytes(file.getInputStream());
-        String fileUrl = fileService.createFile(content, file.getOriginalFilename(), directory, file.getContentType());
+        Long fileId = fileApi.createFileAndReturnId(
+            content, 
+            file.getOriginalFilename(), 
+            directory, 
+            file.getContentType()
+        );
         
-        // 3. 通过 URL 查询文件 ID
-        // 注意：这里需要从 URL 中提取路径，然后查询文件
-        // URL 格式通常是：http://domain/path 或 /path
-        FileDO fileDO = findFileByUrl(fileUrl);
-        if (fileDO == null) {
+        if (fileId == null) {
             throw exception(GROUP_FILE_NOT_EXISTS);
         }
         
-        // 4. 创建群文件关联记录
+        // 3. 创建群文件关联记录
         ImGroupFileDO groupFile = ImGroupFileDO.builder()
                 .groupId(groupId)
-                .fileId(fileDO.getId())
+                .fileId(fileId)
                 .uploaderId(userId)
                 .folderId(0L)
                 .isFavorite(false)
@@ -88,10 +84,10 @@ public class ImGroupFileServiceImpl implements ImGroupFileService {
         groupFileMapper.insert(groupFile);
         
         log.info("[ImGroupFileService] 上传群文件成功, groupId: {}, userId: {}, fileId: {}, fileName: {}", 
-                groupId, userId, fileDO.getId(), file.getOriginalFilename());
+                groupId, userId, fileId, file.getOriginalFilename());
         
-        // 5. 返回文件信息
-        return buildFileRespVO(groupFile, fileDO);
+        // 4. 返回文件信息
+        return convertToRespVO(groupFile);
     }
 
     @Override
@@ -232,45 +228,18 @@ public class ImGroupFileServiceImpl implements ImGroupFileService {
     }
 
     /**
-     * 构建文件响应 VO
-     */
-    private AppImGroupFileRespVO buildFileRespVO(ImGroupFileDO groupFile, FileDO fileDO) {
-        AppImGroupFileRespVO vo = new AppImGroupFileRespVO();
-        vo.setId(groupFile.getId());
-        vo.setGroupId(groupFile.getGroupId());
-        vo.setFileId(groupFile.getFileId());
-        vo.setUploaderId(groupFile.getUploaderId());
-        vo.setDownloadCount(groupFile.getDownloadCount());
-        vo.setCreateTime(groupFile.getCreateTime());
-        
-        // 文件信息
-        vo.setFileName(fileDO.getName());
-        vo.setFileUrl(fileDO.getUrl());
-        vo.setFileType(fileDO.getType());
-        vo.setFileSize(fileDO.getSize());
-        
-        // 上传者名称
-        AdminUserDO user = userMapper.selectById(groupFile.getUploaderId());
-        if (user != null) {
-            vo.setUploaderName(user.getNickname());
-        }
-        
-        return vo;
-    }
-
-    /**
      * 转换为响应 VO
      */
     private AppImGroupFileRespVO convertToRespVO(ImGroupFileDO groupFile) {
         AppImGroupFileRespVO vo = BeanUtils.toBean(groupFile, AppImGroupFileRespVO.class);
         
-        // 查询文件信息
-        FileDO fileDO = fileService.getFile(groupFile.getFileId());
-        if (fileDO != null) {
-            vo.setFileName(fileDO.getName());
-            vo.setFileUrl(fileDO.getUrl());
-            vo.setFileType(fileDO.getType());
-            vo.setFileSize(fileDO.getSize());
+        // 通过 FileApi 查询文件信息
+        FileDTO fileDTO = fileApi.getFile(groupFile.getFileId());
+        if (fileDTO != null) {
+            vo.setFileName(fileDTO.getName());
+            vo.setFileUrl(fileDTO.getUrl());
+            vo.setFileType(fileDTO.getType());
+            vo.setFileSize(fileDTO.getSize());
         } else {
             // 文件不存在时的默认值
             vo.setFileName("文件已删除");
@@ -286,18 +255,6 @@ public class ImGroupFileServiceImpl implements ImGroupFileService {
         }
         
         return vo;
-    }
-
-    /**
-     * 通过 URL 查找文件
-     */
-    private FileDO findFileByUrl(String url) {
-        // 通过 URL 查询文件
-        LambdaQueryWrapper<FileDO> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(FileDO::getUrl, url);
-        wrapper.orderByDesc(FileDO::getId);
-        wrapper.last("LIMIT 1");
-        return fileMapper.selectOne(wrapper);
     }
 
 }

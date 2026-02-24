@@ -1,6 +1,6 @@
 # IM 即时通讯逻辑设计文档 v1.0
 
-> **文档版本**: v1.0.33  
+> **文档版本**: v1.0.35  
 > **创建日期**: 2026年2月11日  
 > **更新日期**: 2026年2月24日  
 > **项目**: 圣钰 SaaS Pro - IM 即时通讯系统  
@@ -9,7 +9,7 @@
 > **中间件**: shengyu-spring-boot-starter-websocket (基于 Netty + Protobuf)  
 > **移动端**: shengyu-ui-admin-uniappx (uni-app x + UTS)  
 > **数据库**: MySQL 8.0+ (已创建 IM 表结构)  
-> **最新进展**: 群文件和聊天记录功能100%完成（包括P0和P1所有任务）
+> **最新进展**: 架构违规问题已修复，群文件功能符合模块分离规范
 
 ---
 
@@ -56,6 +56,41 @@
 **优先级排序**: P0（紧急） > P1（高） > P2（中） > P3（低）
 
 #### 当前可执行任务（无依赖阻塞）
+
+**紧急任务: 修复架构违规问题** (P0优先级)
+
+```
+状态: [x] 已完成
+负责人: AI
+预计时间: 2小时
+依赖: 无
+完成时间: 2026-02-24
+```
+
+任务列表:
+1. [x] 0.1: 修复 ImGroupFileServiceImpl 的架构违规
+   - 文件: `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImGroupFileServiceImpl.java`
+   - 说明: 移除对 infra-biz 的直接依赖，改为通过 FileApi 接口调用
+   - 完成时间: 2026-02-24
+   - 优先级: P0（架构规范问题）
+
+2. [x] 0.2: 扩展 FileApi 接口
+   - 文件: `shengyu-module-infra/shengyu-module-infra-api/src/main/java/com/shengyu/module/infra/api/file/FileApi.java`
+   - 说明: 添加 IM 群文件功能需要的接口方法（createFileAndReturnId、getFile、getFileByUrl、deleteFile）
+   - 完成时间: 2026-02-24
+   - 优先级: P0
+
+3. [x] 0.3: 实现新增的 FileApi 方法
+   - 文件: `shengyu-module-infra/shengyu-module-infra-biz/src/main/java/com/shengyu/module/infra/api/file/FileApiImpl.java`
+   - 说明: 在 infra-biz 中实现新增的 API 方法
+   - 完成时间: 2026-02-24
+   - 优先级: P0
+
+4. [x] 0.4: 创建 FileDTO 数据传输对象
+   - 文件: `shengyu-module-infra/shengyu-module-infra-api/src/main/java/com/shengyu/module/infra/api/file/dto/FileDTO.java`
+   - 说明: 用于跨模块传输文件信息
+   - 完成时间: 2026-02-24
+   - 优先级: P0
 
 **阶段5: 移动端开发 - 登录逻辑改造** (P0优先级)
 
@@ -156,6 +191,24 @@
 ---
 
 ## 📝 最近更新记录
+
+### 2026-02-24 (v1.0.35)
+- ✅ 修复 ImGroupFileServiceImpl 的架构违规问题
+- ✅ 扩展 FileApi 接口，添加 createFileAndReturnId、getFile、getFileByUrl、deleteFile 方法
+- ✅ 创建 FileDTO 数据传输对象
+- ✅ 在 FileApiImpl 中实现新增的 API 方法
+- ✅ 重构 ImGroupFileServiceImpl，移除所有违规依赖，改为通过 FileApi 接口调用
+- ✅ 编译验证通过，无编译错误
+- 🎉 群文件功能现在完全符合模块分离架构规范
+
+### 2026-02-24 (v1.0.34)
+- ✅ 添加"模块架构设计与依赖规范"章节
+- ✅ 明确 infra、system、platform 三个模块的职责和依赖规则
+- ✅ 说明正确的跨模块调用方式（通过 API 接口）
+- ✅ 指出错误的依赖方式（直接依赖 biz 实现）
+- ✅ 提供 IM 群文件功能的正确实现示例
+- ✅ 标记需要修复的架构问题（ImGroupFileServiceImpl）
+- 🔧 架构规范：禁止 system-biz 直接依赖 infra-biz
 
 ### 2026-02-24 (v1.0.33)
 - ✅ 优化文档结构：添加"AI快速开始指南"章节
@@ -501,6 +554,339 @@ BASE_URL = CONFIG_BASE_URL + '/app-api'    // ✅ 正确：移动端使用 /app-
 - System 模块与中间件的 SPI 接口实现
 - 移动端实现状态分析与待办清单
 - 可执行的任务拆解清单
+
+---
+
+## 🏗️ 模块架构设计与依赖规范
+
+> **重要**: 本项目采用严格的模块分离架构，各业务模块之间通过 API 模块进行通信，禁止直接依赖其他模块的 biz 实现。
+
+### 模块划分
+
+项目分为三个独立的业务模块：
+
+```
+shengyu (根项目)
+├── shengyu-framework/          # 框架层（通用组件）
+├── shengyu-module-infra/       # 基础设施模块（通用业务）
+│   ├── shengyu-module-infra-api/    # 对外API接口
+│   └── shengyu-module-infra-biz/    # 业务实现
+├── shengyu-module-system/      # 系统模块（租户端业务）
+│   ├── shengyu-module-system-api/   # 对外API接口
+│   └── shengyu-module-system-biz/   # 业务实现
+├── shengyu-module-platform/    # 平台模块（平台端业务）
+│   ├── shengyu-module-platform-api/ # 对外API接口
+│   └── shengyu-module-platform-biz/ # 业务实现
+└── shengyu-server/             # 启动模块
+```
+
+### 模块职责
+
+| 模块 | 职责 | 示例功能 |
+|------|------|---------|
+| **infra** | 基础设施、通用业务 | 文件存储、日志、配置、代码生成 |
+| **system** | 租户端业务 | 用户、部门、权限、IM即时通讯 |
+| **platform** | 平台端业务 | 租户管理、套餐管理、平台配置 |
+
+### 依赖规则
+
+#### ✅ 正确的依赖方式
+
+```xml
+<!-- system-biz 依赖 infra-api（正确） -->
+<dependency>
+    <groupId>com.shengyu.boot</groupId>
+    <artifactId>shengyu-module-infra-api</artifactId>
+    <version>${revision}</version>
+</dependency>
+```
+
+```java
+// 通过 API 接口调用 infra 模块的服务（正确）
+import com.shengyu.module.infra.api.file.FileApi;
+
+@Service
+public class ImGroupFileServiceImpl implements ImGroupFileService {
+    
+    @Resource
+    private FileApi fileApi;  // ✅ 通过 API 接口调用
+    
+    public String uploadFile(MultipartFile file) {
+        byte[] content = file.getBytes();
+        return fileApi.createFile(content, file.getOriginalFilename());
+    }
+}
+```
+
+#### ❌ 错误的依赖方式
+
+```xml
+<!-- system-biz 依赖 infra-biz（错误！） -->
+<dependency>
+    <groupId>com.shengyu.boot</groupId>
+    <artifactId>shengyu-module-infra-biz</artifactId>  <!-- ❌ 禁止 -->
+    <version>${revision}</version>
+</dependency>
+```
+
+```java
+// 直接引用 infra-biz 的实现类（错误！）
+import com.shengyu.module.infra.service.file.FileService;  // ❌ 禁止
+import com.shengyu.module.infra.dal.dataobject.file.FileDO;  // ❌ 禁止
+import com.shengyu.module.infra.dal.mysql.file.FileMapper;  // ❌ 禁止
+
+@Service
+public class ImGroupFileServiceImpl implements ImGroupFileService {
+    
+    @Resource
+    private FileService fileService;  // ❌ 错误：直接依赖 biz 实现
+    
+    @Resource
+    private FileMapper fileMapper;  // ❌ 错误：直接依赖 Mapper
+}
+```
+
+### API 模块设计规范
+
+#### API 接口定义
+
+每个模块的 `api` 子模块应该包含：
+
+1. **接口定义** (`XxxApi.java`)
+   ```java
+   package com.shengyu.module.infra.api.file;
+   
+   /**
+    * 文件 API 接口
+    */
+   public interface FileApi {
+       /**
+        * 保存文件，并返回文件的访问路径
+        */
+       String createFile(byte[] content, String name, String directory, String type);
+   }
+   ```
+
+2. **DTO 对象** (如果需要)
+   ```java
+   package com.shengyu.module.infra.api.file.dto;
+   
+   @Data
+   public class FileCreateDTO {
+       private byte[] content;
+       private String name;
+       private String directory;
+       private String type;
+   }
+   ```
+
+#### API 实现类
+
+在 `biz` 子模块中实现 API 接口：
+
+```java
+package com.shengyu.module.infra.api.file;
+
+import com.shengyu.module.infra.service.file.FileService;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
+
+/**
+ * 文件 API 实现类
+ */
+@Service
+public class FileApiImpl implements FileApi {
+    
+    @Resource
+    private FileService fileService;  // ✅ 在 biz 模块内部可以直接调用
+    
+    @Override
+    public String createFile(byte[] content, String name, String directory, String type) {
+        return fileService.createFile(content, name, directory, type);
+    }
+}
+```
+
+### IM 模块的正确实现方式
+
+#### 问题代码（需要修复）
+
+```java
+// ❌ 错误：ImGroupFileServiceImpl 直接依赖 infra-biz
+import com.shengyu.module.infra.controller.platform.file.vo.file.FileCreateReqVO;
+import com.shengyu.module.infra.dal.dataobject.file.FileDO;
+import com.shengyu.module.infra.dal.mysql.file.FileMapper;
+import com.shengyu.module.infra.service.file.FileService;
+
+@Service
+public class ImGroupFileServiceImpl implements ImGroupFileService {
+    @Resource
+    private FileService fileService;  // ❌ 错误
+    
+    @Resource
+    private FileMapper fileMapper;  // ❌ 错误
+}
+```
+
+#### 正确实现方式
+
+**步骤1**: 确保 `infra-api` 提供了必要的接口
+
+```java
+// shengyu-module-infra-api/src/main/java/com/shengyu/module/infra/api/file/FileApi.java
+public interface FileApi {
+    /**
+     * 保存文件，并返回文件ID
+     */
+    Long createFileAndReturnId(byte[] content, String name, String directory, String type);
+    
+    /**
+     * 根据ID获取文件信息
+     */
+    FileDTO getFile(Long id);
+    
+    /**
+     * 删除文件
+     */
+    void deleteFile(Long id);
+}
+```
+
+**步骤2**: 在 `infra-biz` 中实现 API
+
+```java
+// shengyu-module-infra-biz/src/main/java/com/shengyu/module/infra/api/file/FileApiImpl.java
+@Service
+public class FileApiImpl implements FileApi {
+    
+    @Resource
+    private FileService fileService;
+    
+    @Resource
+    private FileMapper fileMapper;
+    
+    @Override
+    public Long createFileAndReturnId(byte[] content, String name, String directory, String type) {
+        String url = fileService.createFile(content, name, directory, type);
+        FileDO file = fileMapper.selectByUrl(url);
+        return file.getId();
+    }
+    
+    @Override
+    public FileDTO getFile(Long id) {
+        FileDO file = fileMapper.selectById(id);
+        return BeanUtils.toBean(file, FileDTO.class);
+    }
+    
+    @Override
+    public void deleteFile(Long id) {
+        fileService.deleteFile(id);
+    }
+}
+```
+
+**步骤3**: 在 `system-biz` 中通过 API 调用
+
+```java
+// shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImGroupFileServiceImpl.java
+import com.shengyu.module.infra.api.file.FileApi;  // ✅ 正确：只引用 API
+
+@Service
+public class ImGroupFileServiceImpl implements ImGroupFileService {
+    
+    @Resource
+    private FileApi fileApi;  // ✅ 正确：通过 API 接口调用
+    
+    @Resource
+    private ImGroupFileMapper groupFileMapper;
+    
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long uploadFile(Long groupId, MultipartFile file) throws IOException {
+        // 1. 通过 FileApi 上传文件
+        byte[] content = IoUtil.readBytes(file.getInputStream());
+        String directory = "im/group/" + groupId;
+        Long fileId = fileApi.createFileAndReturnId(
+            content, 
+            file.getOriginalFilename(), 
+            directory, 
+            file.getContentType()
+        );
+        
+        // 2. 创建群文件关联记录
+        ImGroupFileDO groupFile = new ImGroupFileDO();
+        groupFile.setGroupId(groupId);
+        groupFile.setFileId(fileId);
+        groupFile.setUploaderId(SecurityFrameworkUtils.getLoginUserId());
+        groupFileMapper.insert(groupFile);
+        
+        return groupFile.getId();
+    }
+    
+    @Override
+    public AppImGroupFileRespVO getFile(Long id) {
+        // 1. 查询群文件关联记录
+        ImGroupFileDO groupFile = groupFileMapper.selectById(id);
+        
+        // 2. 通过 FileApi 获取文件信息
+        FileDTO file = fileApi.getFile(groupFile.getFileId());
+        
+        // 3. 组装返回对象
+        AppImGroupFileRespVO resp = BeanUtils.toBean(groupFile, AppImGroupFileRespVO.class);
+        resp.setFileName(file.getName());
+        resp.setFileUrl(file.getUrl());
+        resp.setFileSize(file.getSize());
+        return resp;
+    }
+}
+```
+
+### 依赖检查清单
+
+在开发过程中，请遵循以下检查清单：
+
+- [ ] ✅ 只依赖其他模块的 `api` 子模块
+- [ ] ❌ 不依赖其他模块的 `biz` 子模块
+- [ ] ❌ 不直接 import 其他模块的 `service`、`mapper`、`dal` 包
+- [ ] ❌ 不直接 import 其他模块的 `controller` 包（除非是 VO 对象且已移到 api）
+- [ ] ✅ 通过 `XxxApi` 接口调用其他模块的功能
+- [ ] ✅ 如果 API 接口不存在，先在对应模块的 `api` 子模块中添加
+
+### 常见问题
+
+**Q: 为什么要这样设计？**
+
+A: 
+1. **解耦**: 各模块独立开发、独立部署
+2. **可维护性**: 修改一个模块的实现不影响其他模块
+3. **可扩展性**: 可以轻松替换某个模块的实现
+4. **微服务化**: 未来可以拆分为独立的微服务
+
+**Q: 如果 infra-api 没有我需要的接口怎么办？**
+
+A: 
+1. 在 `infra-api` 中添加接口定义
+2. 在 `infra-biz` 中实现该接口
+3. 在 `system-biz` 中通过接口调用
+
+**Q: VO 对象可以跨模块使用吗？**
+
+A: 
+- ✅ 可以：如果 VO 是 API 接口的参数或返回值，应该放在 `api` 模块中
+- ❌ 不可以：如果 VO 是 Controller 的请求/响应对象，不应该跨模块使用
+
+### 待修复的架构问题
+
+~~根据代码扫描，发现以下文件违反了架构规范，需要修复：~~
+
+~~❌ shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImGroupFileServiceImpl.java~~
+~~   - 直接引用: com.shengyu.module.infra.controller.platform.file.vo.file.FileCreateReqVO~~
+~~   - 直接引用: com.shengyu.module.infra.dal.dataobject.file.FileDO~~
+~~   - 直接引用: com.shengyu.module.infra.dal.mysql.file.FileMapper~~
+~~   - 直接引用: com.shengyu.module.infra.service.file.FileService~~
+
+**✅ 已修复 (2026-02-24)**: 所有架构违规问题已修复，ImGroupFileServiceImpl 现在通过 FileApi 接口调用 infra 模块功能。
 
 ---
 
