@@ -261,6 +261,9 @@ shengyu:
       - /platform-api/system/captcha/check # 校验图片验证码，和租户无关
       - /platform-api/infra/file/*/get/** # 获取图片，和租户无关
       - /platform-api/system/sms/callback/* # 短信回调接口，无法带上租户编号
+      # 文件下载（所有端）
+      - /admin-api/infra/file/*/get/** # 管理端文件下载，公开访问
+      - /app-api/infra/file/*/get/** # 移动端文件下载，公开访问
       # 插件
       - /admin-api/pay/notify/** # 支付回调通知，不携带租户编号
       - /jmreport/* # 积木报表，无法携带租户编号

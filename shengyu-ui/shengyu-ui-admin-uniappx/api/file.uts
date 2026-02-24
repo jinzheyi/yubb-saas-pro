@@ -1,16 +1,54 @@
 import { request } from '../utils/request.uts'
+import { BASE_URL as CONFIG_BASE_URL } from '../config/app.config.uts'
+import { getToken, getTenantId } from '../utils/request.uts'
 
 /**
  * 上传群文件
  */
-export function uploadGroupFile(groupId: number, filePath: string) {
-  return request({
-    url: '/system/im/group/file/upload',
-    method: 'POST',
-    formData: {
-      groupId: groupId,
-      file: filePath
+export function uploadGroupFile(groupId: string, filePath: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    // 获取 token 和租户 ID
+    const token = getToken()
+    const tenantId = getTenantId()
+    
+    // 构建请求头
+    const header: UTSJSONObject = {}
+    if (token) {
+      header['Authorization'] = 'Bearer ' + token
     }
+    if (tenantId) {
+      header['tenant-id'] = tenantId
+    }
+    
+    // 使用 uni.uploadFile 上传
+    uni.uploadFile({
+      url: CONFIG_BASE_URL + '/app-api/system/im/group/file/upload',
+      filePath: filePath,
+      name: 'file',
+      formData: {
+        groupId: groupId
+      },
+      header: header,
+      success: (res) => {
+        if (res.statusCode === 200) {
+          try {
+            const data = JSON.parse(res.data)
+            if (data.code === 0) {
+              resolve(data.data)
+            } else {
+              reject(data)
+            }
+          } catch (e) {
+            reject(new Error('解析响应失败'))
+          }
+        } else {
+          reject(new Error('上传失败，状态码：' + res.statusCode))
+        }
+      },
+      fail: (err) => {
+        reject(err)
+      }
+    })
   })
 }
 

@@ -272,6 +272,8 @@
 	import { getUserId, getTenantIdAsNumber } from '../../store/user.uts'
 	import { uploadFile, chooseAndUploadImage, chooseAndUploadVideo, chooseAndUploadFile } from '../../utils/upload.uts'
 	import { getUserAvatarColor, getAvatarText as getAvatarTextUtil } from '../../utils/avatar.uts'
+	import { uploadGroupFile } from '../../api/file.uts'
+	import { BASE_URL as CONFIG_BASE_URL } from '../../config/app.config.uts'
 
 	const { t } = useI18n()
 	
@@ -1037,8 +1039,25 @@
 			}).then((results) => {
 				// 上传成功,发送图片消息
 				results.forEach((result) => {
-					const imageUrl = result.data.url
-					const imageSize = result.data.size
+					console.log('[Chat] 上传结果:', result)
+					
+					// 后端返回的data是字符串URL
+					let imageUrl = typeof result.data === 'string' ? result.data : result.data.url
+					const imageSize = typeof result.data === 'string' ? 0 : (result.data.size || 0)
+					
+					if (!imageUrl) {
+						console.error('[Chat] 图片URL为空:', result)
+						uni.showToast({ title: '图片URL获取失败', icon: 'none' })
+						return
+					}
+					
+					// 如果是相对路径，拼接完整URL
+					// 注意：uniappx的image组件不支持localhost，需要使用IP地址
+					if (imageUrl.startsWith('/')) {
+						imageUrl = CONFIG_BASE_URL + imageUrl
+					}
+					
+					console.log('[Chat] 图片完整URL:', imageUrl)
 					
 					// 使用消息服务发送图片消息
 					const message = messageService.sendImageMessage(
@@ -1052,8 +1071,7 @@
 					)
 					
 					// 如果是群聊，同时保存到群文件
-					if (chatType.value === 'group') {
-						const { uploadGroupFile } = require('../../api/file.uts')
+					if (chatType.value === 'group' && result.tempFilePath) {
 						uploadGroupFile(targetId.value, result.tempFilePath).then((res : any) => {
 							console.log('[Chat] 图片已保存到群文件:', res)
 						}).catch((err : any) => {

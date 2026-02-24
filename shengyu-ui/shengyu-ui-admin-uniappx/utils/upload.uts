@@ -28,6 +28,7 @@ export type UploadResult = {
 		size: number
 		type: string
 	}
+	tempFilePath?: string  // 添加临时文件路径
 }
 
 /**
@@ -132,7 +133,12 @@ export function chooseAndUploadImage(
 					
 					for (let i = 0; i < res.tempFilePaths.length; i++) {
 						const filePath = res.tempFilePaths[i]
-						uploadPromises.push(uploadFile(filePath, directory, onProgress))
+						const uploadPromise = uploadFile(filePath, directory, onProgress).then((result) => {
+							// 将临时文件路径添加到结果中
+							result.tempFilePath = filePath
+							return result
+						})
+						uploadPromises.push(uploadPromise)
 					}
 					
 					const results = await Promise.all(uploadPromises)
