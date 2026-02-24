@@ -39,7 +39,7 @@
 						<text class="time-text">{{ formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0) }}</text>
 					</view>
 					
-                    <view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other', multiSelectMode && selectedIds.includes(msg.id) ? 'message-selected' : '']">
+                    <view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other', multiSelectMode && selectedIds.includes(msg.id) ? 'message-selected' : '', highlightedMessageId === msg.id ? 'message-highlighted' : '']">
 						<!-- 多选模式下的复选框（统一在最左侧） -->
 						<view v-if="multiSelectMode && msg.type !== 'voice' && msg.type !== 'location'" class="multi-select-checkbox" @click.stop="toggleSelect(msg)">
 							<text v-if="selectedIds.includes(msg.id)" class="iconfont checkbox-icon checkbox-checked">&#xe65f;</text>
@@ -286,6 +286,11 @@
 	const name = ref('张三')
 	const watermark = ref('同事A 1234')
 	
+	// 消息定位相关（从搜索页面跳转过来时使用）
+	const targetMessageId = ref<string>('')  // 要定位的消息ID
+	const shouldHighlight = ref(false)  // 是否需要高亮显示
+	const highlightedMessageId = ref<string>('')  // 当前高亮的消息ID
+	
 	// 当前用户信息
 	const currentUserId = ref(0)
 	const currentTenantId = ref(0)
@@ -494,6 +499,13 @@
 				// PageResult 可能没有 hasMore 字段，根据 list 长度判断
 				hasMore.value = serverMessages.length >= 20
 				scrollToBottom()
+				
+				// 3. 如果有目标消息ID，定位到该消息
+				if (targetMessageId.value) {
+					setTimeout(() => {
+						scrollToTargetMessage(targetMessageId.value)
+					}, 300)  // 延迟300ms确保DOM已渲染
+				}
 			}
 			
 		} catch (e) {
@@ -1583,6 +1595,45 @@
 	}
 	
 	/**
+	 * 滚动到目标消息并高亮显示
+	 */
+	function scrollToTargetMessage(messageId: string) {
+		console.log('[Chat] 开始定位消息:', messageId)
+		
+		// 查找消息在列表中的索引
+		const messageIndex = messages.value.findIndex(msg => msg.id === messageId)
+		
+		if (messageIndex === -1) {
+			console.warn('[Chat] 未找到目标消息:', messageId)
+			uni.showToast({
+				title: '消息不在当前页面',
+				icon: 'none'
+			})
+			return
+		}
+		
+		console.log('[Chat] 找到消息，索引:', messageIndex)
+		
+		// 滚动到目标消息
+		lastMessageId.value = 'msg-' + messageIndex
+		
+		// 如果需要高亮显示
+		if (shouldHighlight.value) {
+			highlightedMessageId.value = messageId
+			console.log('[Chat] 高亮显示消息:', messageId)
+			
+			// 3秒后取消高亮
+			setTimeout(() => {
+				highlightedMessageId.value = ''
+				console.log('[Chat] 取消高亮显示')
+			}, 3000)
+		}
+		
+		// 清空目标消息ID，避免重复定位
+		targetMessageId.value = ''
+	}
+	
+	/**
 	 * 页面加载时获取参数
 	 */
 	onLoad((options : any) => {
@@ -1617,11 +1668,25 @@
 			memberCount.value = parseInt(options['memberCount'])
 		}
 		
+		// 获取要定位的消息ID（从搜索页面跳转过来）
+		if (options['messageId']) {
+			targetMessageId.value = options['messageId'] as string
+			console.log('[Chat] 需要定位到消息:', targetMessageId.value)
+		}
+		
+		// 获取是否需要高亮显示
+		if (options['highlight']) {
+			shouldHighlight.value = options['highlight'] === 'true'
+			console.log('[Chat] 需要高亮显示消息')
+		}
+		
 		console.log('[Chat] 页面参数:', {
 			conversationId: conversationId.value,
 			targetId: targetId.value,
 			chatType: chatType.value,
-			name: name.value
+			name: name.value,
+			messageId: targetMessageId.value,
+			highlight: shouldHighlight.value
 		})
 	})
 </script>
@@ -1781,6 +1846,26 @@
 		background-color: rgba(7, 193, 96, 0.05);
 		border-radius: 8px;
 		padding: 4px 0;
+	}
+	
+	/* 高亮显示的消息（从搜索跳转过来） */
+	.message-highlighted {
+		background-color: rgba(255, 193, 7, 0.15);
+		border-radius: 8px;
+		padding: 4px 0;
+		animation: highlight-pulse 0.6s ease-in-out;
+	}
+	
+	@keyframes highlight-pulse {
+		0% {
+			background-color: rgba(255, 193, 7, 0.3);
+		}
+		50% {
+			background-color: rgba(255, 193, 7, 0.15);
+		}
+		100% {
+			background-color: rgba(255, 193, 7, 0.15);
+		}
 	}
 
 	/* 多选复选框 */

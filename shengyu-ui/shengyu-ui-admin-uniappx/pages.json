@@ -155,6 +155,13 @@
 			}
 		},
 		{
+			"path": "pages/message/video-player",
+			"style": {
+				"navigationBarTitleText": "视频播放",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/message/share-contact",
 			"style": {
 				"navigationBarTitleText": "分享",

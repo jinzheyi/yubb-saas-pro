@@ -56,7 +56,7 @@
           </view>
         </view>
         <view class="message-content">
-          <text class="content-text">{{ highlightKeyword(message.content) }}</text>
+          <rich-text class="content-rich-text" :nodes="getHighlightedContent(message.content)"></rich-text>
         </view>
       </view>
 
@@ -260,19 +260,50 @@ const formatTime = (timeStr: string): string => {
   }
 }
 
-// 高亮关键词
-const highlightKeyword = (content: string): string => {
+// 获取高亮显示的内容（使用rich-text组件）
+const getHighlightedContent = (content: string): string => {
   if (!searchKeyword.value || !content) {
     return content
   }
-  // 简单处理，实际应该用富文本高亮
-  return content
+  
+  const keyword = searchKeyword.value.trim()
+  if (!keyword) return content
+  
+  // 转义HTML特殊字符
+  const escapeHtml = (text: string): string => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+  }
+  
+  // 转义关键词中的正则特殊字符
+  const escapeRegex = (text: string): string => {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  }
+  
+  // 先转义HTML
+  const escapedContent = escapeHtml(content)
+  const escapedKeyword = escapeRegex(keyword)
+  
+  // 使用正则表达式进行不区分大小写的匹配和替换
+  const regex = new RegExp(`(${escapedKeyword})`, 'gi')
+  const highlightedContent = escapedContent.replace(
+    regex,
+    '<span style="background-color: #FFF3CD; color: #856404; padding: 2px 4px; border-radius: 3px; font-weight: 500;">$1</span>'
+  )
+  
+  return highlightedContent
 }
 
-// 点击消息项
+// 点击消息项 - 跳转到聊天页面并定位到该消息
 const handleMessageClick = (message: any) => {
-  // TODO: 跳转到聊天页面并定位到该消息
-  console.log('点击消息:', message)
+  // 跳转到聊天页面，传递消息ID用于定位
+  uni.navigateTo({
+    url: `/pages/message/chat?conversationId=${conversationId.value}&messageId=${message.id}&highlight=true`
+  })
 }
 </script>
 
@@ -421,6 +452,13 @@ const handleMessageClick = (message: any) => {
   font-size: 14px;
   color: #666;
   line-height: 1.5;
+}
+
+.content-rich-text {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+  word-break: break-all;
 }
 
 .loading-more,

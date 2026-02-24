@@ -259,9 +259,8 @@
 			})
 		} else if (file.type === 'video') {
 			// 播放视频
-			uni.showToast({
-				title: '视频播放功能开发中',
-				icon: 'none'
+			uni.navigateTo({
+				url: `/pages/message/video-player?url=${encodeURIComponent(file.url)}&title=${encodeURIComponent(file.name)}`
 			})
 		} else {
 			// 下载文件
