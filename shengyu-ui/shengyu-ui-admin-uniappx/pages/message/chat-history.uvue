@@ -1,8 +1,20 @@
 <template>
   <view class="chat-history-container">
+    <view class="status-bar"></view>
+    
+    <!-- 顶部导航栏 -->
+    <view class="header">
+      <view class="header-left" @click="handleBack">
+        <text class="iconfont back-icon">&#xeb04;</text>
+      </view>
+      <text class="header-title">聊天记录</text>
+      <view class="header-right"></view>
+    </view>
+
     <!-- 搜索栏 -->
     <view class="search-bar">
       <view class="search-input-wrapper">
+        <text class="iconfont search-icon">&#xea6e;</text>
         <input
           class="search-input"
           v-model="searchKeyword"
@@ -10,31 +22,58 @@
           confirm-type="search"
           @confirm="handleSearch"
         />
-        <text class="search-icon">🔍</text>
       </view>
-      <button class="search-btn" @click="handleSearch">搜索</button>
+      <view class="search-btn" @click="handleSearch">
+        <text class="search-btn-text">搜索</text>
+      </view>
     </view>
 
     <!-- 时间筛选 -->
     <view class="filter-bar">
-      <view class="filter-item" @click="showStartTimePicker = true">
-        <text class="filter-label">开始时间：</text>
-        <text class="filter-value">{{ startTimeText || '不限' }}</text>
+      <view class="filter-item">
+        <picker
+          mode="date"
+          :value="startTime"
+          :end="getStartTimeMax()"
+          @change="handleStartTimeChange"
+        >
+          <view class="picker-content">
+            <text class="filter-label">开始时间</text>
+            <text class="filter-value">{{ startTimeText || '不限' }}</text>
+            <text class="iconfont filter-arrow">&#xeb09;</text>
+          </view>
+        </picker>
       </view>
-      <view class="filter-item" @click="showEndTimePicker = true">
-        <text class="filter-label">结束时间：</text>
-        <text class="filter-value">{{ endTimeText || '不限' }}</text>
+      <view class="filter-divider"></view>
+      <view class="filter-item">
+        <picker
+          mode="date"
+          :value="endTime"
+          :start="startTime"
+          :end="getTodayDate()"
+          @change="handleEndTimeChange"
+        >
+          <view class="picker-content">
+            <text class="filter-label">结束时间</text>
+            <text class="filter-value">{{ endTimeText || '不限' }}</text>
+            <text class="iconfont filter-arrow">&#xeb09;</text>
+          </view>
+        </picker>
       </view>
-      <button class="reset-btn" @click="resetFilter">重置</button>
+      <view class="reset-btn" @click="resetFilter">
+        <text class="reset-btn-text">重置</text>
+      </view>
     </view>
 
     <!-- 搜索结果列表 -->
     <scroll-view
       class="result-list"
       scroll-y
+      show-scrollbar="false"
       @scrolltolower="loadMore"
     >
       <view v-if="messageList.length === 0 && !loading" class="empty-state">
+        <text class="iconfont empty-icon">&#xea96;</text>
         <text class="empty-text">{{ searched ? '未找到相关聊天记录' : '请输入关键词搜索' }}</text>
       </view>
 
@@ -61,32 +100,13 @@
       </view>
 
       <view v-if="loading" class="loading-more">
-        <text>加载中...</text>
+        <text class="loading-text">加载中...</text>
       </view>
 
       <view v-if="!hasMore && messageList.length > 0" class="no-more">
-        <text>没有更多了</text>
+        <text class="no-more-text">没有更多了</text>
       </view>
     </scroll-view>
-
-    <!-- 时间选择器 -->
-    <picker
-      v-if="showStartTimePicker"
-      mode="date"
-      :value="startTime"
-      @change="handleStartTimeChange"
-      @cancel="showStartTimePicker = false"
-    >
-    </picker>
-
-    <picker
-      v-if="showEndTimePicker"
-      mode="date"
-      :value="endTime"
-      @change="handleEndTimeChange"
-      @cancel="showEndTimePicker = false"
-    >
-    </picker>
   </view>
 </template>
 
@@ -96,7 +116,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { searchMessages } from '../../api/message.uts'
 
 // 页面参数
-const conversationId = ref<number>(0)
+const conversationId = ref<string>('')
 const groupName = ref<string>('')
 
 // 搜索相关
@@ -104,10 +124,6 @@ const searchKeyword = ref<string>('')
 const startTime = ref<string>('')
 const endTime = ref<string>('')
 const searched = ref<boolean>(false)
-
-// 时间选择器
-const showStartTimePicker = ref<boolean>(false)
-const showEndTimePicker = ref<boolean>(false)
 
 // 列表数据
 const messageList = ref<any[]>([])
@@ -125,19 +141,36 @@ const endTimeText = computed(() => {
   return endTime.value ? endTime.value : ''
 })
 
+// 返回上一页
+const handleBack = () => {
+  uni.navigateBack()
+}
+
+// 获取今天的日期（YYYY-MM-DD格式）
+const getTodayDate = (): string => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// 获取开始时间的最大值（结束时间或今天，取较小的）
+const getStartTimeMax = (): string => {
+  if (endTime.value) {
+    return endTime.value
+  }
+  return getTodayDate()
+}
+
 // 页面加载
 onLoad((options: any) => {
   if (options.conversationId) {
-    conversationId.value = parseInt(options.conversationId)
+    conversationId.value = options.conversationId
   }
   if (options.groupName) {
     groupName.value = options.groupName
   }
-  
-  // 设置导航栏标题
-  uni.setNavigationBarTitle({
-    title: groupName.value ? `${groupName.value} - 聊天记录` : '聊天记录'
-  })
 })
 
 // 执行搜索
@@ -145,7 +178,8 @@ const handleSearch = () => {
   if (!searchKeyword.value.trim()) {
     uni.showToast({
       title: '请输入搜索关键词',
-      icon: 'none'
+      icon: 'none',
+      duration: 2000
     })
     return
   }
@@ -168,6 +202,15 @@ const loadMessages = async () => {
   loading.value = true
 
   try {
+    console.log('[ChatHistory] 开始搜索, 参数:', {
+      conversationId: conversationId.value,
+      keyword: searchKeyword.value,
+      startTime: startTime.value,
+      endTime: endTime.value,
+      pageNo: pageNo.value,
+      pageSize: pageSize.value
+    })
+    
     const res = await searchMessages(
       conversationId.value,
       searchKeyword.value,
@@ -177,24 +220,46 @@ const loadMessages = async () => {
       pageSize.value
     )
 
-    if (res.code === 0) {
-      const newMessages = res.data.list || []
-      messageList.value = [...messageList.value, ...newMessages]
-      
-      // 判断是否还有更多数据
-      hasMore.value = newMessages.length >= pageSize.value
-    } else {
-      uni.showToast({
-        title: res.msg || '搜索失败',
-        icon: 'none'
-      })
+    console.log('[ChatHistory] 搜索返回数据:', res)
+    
+    // 处理返回数据
+    const newMessages = res.list || []
+    messageList.value = [...messageList.value, ...newMessages]
+    
+    // 判断是否还有更多数据
+    hasMore.value = newMessages.length >= pageSize.value
+    
+    console.log('[ChatHistory] 搜索成功, 页码:', pageNo.value, '数量:', newMessages.length, '总数:', messageList.value.length)
+    
+    // 如果是第一页且没有数据，不显示错误提示（显示空状态即可）
+    if (pageNo.value === 1 && newMessages.length === 0) {
+      console.log('[ChatHistory] 搜索结果为空')
     }
-  } catch (error) {
-    console.error('搜索聊天记录失败:', error)
-    uni.showToast({
-      title: '搜索失败',
-      icon: 'none'
-    })
+  } catch (error : any) {
+    console.error('[ChatHistory] 搜索聊天记录失败:', error)
+    
+    // 根据错误类型显示不同的提示
+    let errorMsg = '搜索失败，请稍后重试'
+    
+    if (error && error.msg) {
+      errorMsg = error.msg
+    } else if (error && error.message) {
+      errorMsg = error.message
+    } else if (typeof error === 'string') {
+      errorMsg = error
+    }
+    
+    // 只在第一页加载失败时显示错误提示
+    if (pageNo.value === 1) {
+      uni.showToast({
+        title: errorMsg,
+        icon: 'none',
+        duration: 2000
+      })
+    } else {
+      // 加载更多失败时，恢复页码
+      pageNo.value--
+    }
   } finally {
     loading.value = false
   }
@@ -220,8 +285,28 @@ const resetFilter = () => {
 
 // 开始时间选择
 const handleStartTimeChange = (e: any) => {
-  startTime.value = e.detail.value
-  showStartTimePicker.value = false
+  const selectedDate = e.detail.value
+  const today = getTodayDate()
+  
+  // 验证：开始时间不能大于今天
+  if (selectedDate > today) {
+    uni.showToast({
+      title: '开始时间不能大于当前日期',
+      icon: 'none'
+    })
+    return
+  }
+  
+  // 验证：开始时间不能大于结束时间
+  if (endTime.value && selectedDate > endTime.value) {
+    uni.showToast({
+      title: '开始时间不能大于结束时间',
+      icon: 'none'
+    })
+    return
+  }
+  
+  startTime.value = selectedDate
   if (searched.value) {
     handleSearch()
   }
@@ -229,8 +314,28 @@ const handleStartTimeChange = (e: any) => {
 
 // 结束时间选择
 const handleEndTimeChange = (e: any) => {
-  endTime.value = e.detail.value
-  showEndTimePicker.value = false
+  const selectedDate = e.detail.value
+  const today = getTodayDate()
+  
+  // 验证：结束时间不能大于今天
+  if (selectedDate > today) {
+    uni.showToast({
+      title: '结束时间不能大于当前日期',
+      icon: 'none'
+    })
+    return
+  }
+  
+  // 验证：结束时间不能小于开始时间
+  if (startTime.value && selectedDate < startTime.value) {
+    uni.showToast({
+      title: '结束时间不能小于开始时间',
+      icon: 'none'
+    })
+    return
+  }
+  
+  endTime.value = selectedDate
   if (searched.value) {
     handleSearch()
   }
@@ -307,167 +412,238 @@ const handleMessageClick = (message: any) => {
 }
 </script>
 
-<style scoped>
+<style>
 .chat-history-container {
+  height: 100%;
+  background-color: #F5F7FA;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background-color: #f5f5f5;
+}
+
+.status-bar {
+  height: var(--status-bar-height);
+  background-color: #FFFFFF;
+}
+
+.header {
+  background-color: #FFFFFF;
+  height: 44px;
+  flex-direction: row;
+  align-items: center;
+  padding: 0 12px;
+  justify-content: space-between;
+  border-bottom-width: 0.5px;
+  border-bottom-color: #EFF0F1;
+}
+
+.header-left {
+  flex-direction: row;
+  align-items: center;
+  width: 44px;
+}
+
+.back-icon {
+  color: #1F2329;
+  font-size: 20px;
+}
+
+.header-title {
+  color: #1F2329;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.header-right {
+  width: 44px;
 }
 
 .search-bar {
-  display: flex;
+  flex-direction: row;
   align-items: center;
-  padding: 10px;
-  background-color: #fff;
-  border-bottom: 1px solid #e5e5e5;
+  padding: 12px 16px;
+  background-color: #FFFFFF;
+  border-bottom-width: 0.5px;
+  border-bottom-color: #EFF0F1;
 }
 
 .search-input-wrapper {
   flex: 1;
   position: relative;
-  margin-right: 10px;
-}
-
-.search-input {
-  width: 100%;
-  height: 36px;
-  padding: 0 35px 0 10px;
-  background-color: #f5f5f5;
-  border-radius: 18px;
-  font-size: 14px;
+  flex-direction: row;
+  align-items: center;
+  background-color: #F5F7FA;
+  border-radius: 8px;
+  padding: 0 12px;
+  margin-right: 12px;
 }
 
 .search-icon {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 16px;
+  font-size: 18px;
+  color: #8F959E;
+  margin-right: 8px;
+}
+
+.search-input {
+  flex: 1;
+  height: 36px;
+  font-size: 15px;
+  color: #1F2329;
 }
 
 .search-btn {
   padding: 8px 16px;
-  background-color: #07c160;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
+  background-color: #1677FF;
+  border-radius: 6px;
+  justify-content: center;
+  align-items: center;
+}
+
+.search-btn-text {
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .filter-bar {
-  display: flex;
+  flex-direction: row;
   align-items: center;
-  padding: 10px;
-  background-color: #fff;
-  border-bottom: 1px solid #e5e5e5;
+  padding: 12px 16px;
+  background-color: #FFFFFF;
+  border-bottom-width: 0.5px;
+  border-bottom-color: #EFF0F1;
 }
 
 .filter-item {
   flex: 1;
-  display: flex;
+  flex-direction: row;
   align-items: center;
-  font-size: 13px;
+}
+
+.picker-content {
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #F5F7FA;
+  border-radius: 6px;
 }
 
 .filter-label {
-  color: #666;
+  font-size: 14px;
+  color: #646A73;
+  margin-right: 4px;
 }
 
 .filter-value {
-  color: #333;
-  margin-left: 5px;
+  flex: 1;
+  font-size: 14px;
+  color: #1F2329;
+  font-weight: 500;
+}
+
+.filter-arrow {
+  font-size: 14px;
+  color: #8F959E;
+}
+
+.filter-divider {
+  width: 8px;
 }
 
 .reset-btn {
-  padding: 5px 12px;
-  background-color: #f5f5f5;
-  color: #333;
-  border: none;
-  border-radius: 4px;
-  font-size: 13px;
-  margin-left: 10px;
+  padding: 8px 16px;
+  background-color: #F5F7FA;
+  border-radius: 6px;
+  margin-left: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.reset-btn-text {
+  font-size: 14px;
+  color: #646A73;
 }
 
 .result-list {
   flex: 1;
-  overflow-y: auto;
+  height: 0;
 }
 
 .empty-state {
-  display: flex;
-  justify-content: center;
+  padding: 100px 16px;
   align-items: center;
-  height: 300px;
+  justify-content: center;
+}
+
+.empty-icon {
+  font-size: 64px;
+  color: #E5E5E5;
+  margin-bottom: 16px;
 }
 
 .empty-text {
-  color: #999;
-  font-size: 14px;
+  color: #8F959E;
+  font-size: 15px;
 }
 
 .message-item {
-  background-color: #fff;
-  padding: 12px;
+  background-color: #FFFFFF;
+  padding: 16px;
   margin-bottom: 8px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom-width: 0.5px;
+  border-bottom-color: #EFF0F1;
 }
 
 .message-header {
-  display: flex;
+  flex-direction: row;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .sender-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 18px;
-  margin-right: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  margin-right: 12px;
 }
 
 .message-info {
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  justify-content: center;
 }
 
 .sender-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
-  color: #333;
+  color: #1F2329;
   margin-bottom: 4px;
 }
 
 .send-time {
   font-size: 12px;
-  color: #999;
+  color: #8F959E;
 }
 
 .message-content {
-  padding-left: 46px;
-}
-
-.content-text {
-  font-size: 14px;
-  color: #666;
-  line-height: 1.5;
+  padding-left: 52px;
 }
 
 .content-rich-text {
   font-size: 14px;
-  color: #666;
-  line-height: 1.5;
-  word-break: break-all;
+  color: #646A73;
+  line-height: 1.6;
 }
 
 .loading-more,
 .no-more {
-  display: flex;
-  justify-content: center;
+  padding: 20px 16px;
   align-items: center;
-  padding: 15px;
+  justify-content: center;
+}
+
+.loading-text,
+.no-more-text {
   font-size: 13px;
-  color: #999;
+  color: #8F959E;
 }
 </style>

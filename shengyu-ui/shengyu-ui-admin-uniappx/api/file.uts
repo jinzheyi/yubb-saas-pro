@@ -18,10 +18,23 @@ export function uploadGroupFile(groupId: number, filePath: string) {
  * 获取群文件列表
  */
 export function getGroupFileList(params: any) {
+  const groupId = params.groupId || ''
+  const pageNo = params.pageNo || 1
+  const pageSize = params.pageSize || 20
+  const fileName = params.fileName || ''
+  const fileType = params.fileType || ''
+  
+  let url = `/system/im/group/file/list?groupId=${groupId}&pageNo=${pageNo}&pageSize=${pageSize}`
+  if (fileName) {
+    url += `&fileName=${fileName}`
+  }
+  if (fileType) {
+    url += `&fileType=${fileType}`
+  }
+  
   return request({
-    url: '/system/im/group/file/list',
-    method: 'GET',
-    params: params
+    url: url,
+    method: 'GET'
   })
 }
 
@@ -30,9 +43,8 @@ export function getGroupFileList(params: any) {
  */
 export function deleteGroupFile(id: number) {
   return request({
-    url: '/system/im/group/file/delete',
-    method: 'DELETE',
-    params: { id }
+    url: `/system/im/group/file/delete?id=${id}`,
+    method: 'DELETE'
   })
 }
 
@@ -41,8 +53,7 @@ export function deleteGroupFile(id: number) {
  */
 export function downloadGroupFile(id: number) {
   return request({
-    url: '/system/im/group/file/download',
-    method: 'POST',
-    params: { id }
+    url: `/system/im/group/file/download?id=${id}`,
+    method: 'POST'
   })
 }

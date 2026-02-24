@@ -169,7 +169,7 @@ public interface ImMessageMapper extends BaseMapperX<ImMessageDO> {
         return selectPage(pageParam, new LambdaQueryWrapperX<ImMessageDO>()
                 .eq(ImMessageDO::getConversationId, conversationId)
                 .eq(ImMessageDO::getMessageType, 1) // 只搜索文本消息
-                .like(ImMessageDO::getContent, keyword)
+                .likeIfPresent(ImMessageDO::getContent, keyword)
                 .geIfPresent(ImMessageDO::getSendTime, startTime)
                 .leIfPresent(ImMessageDO::getSendTime, endTime)
                 .orderByDesc(ImMessageDO::getSendTime));

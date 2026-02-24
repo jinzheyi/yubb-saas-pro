@@ -18,7 +18,11 @@
 		</view>
 
 		<!-- 文件列表 -->
-		<scroll-view class="file-list" scroll-y="true" show-scrollbar="false">
+		<scroll-view class="file-list" scroll-y="true" show-scrollbar="false" 
+			@scrolltolower="handleLoadMore" 
+			refresher-enabled="true" 
+			:refresher-triggered="refreshing" 
+			@refresherrefresh="handleRefresh">
 			<!-- 按日期分组 -->
 			<view class="date-group" v-for="group in displayFileGroups" :key="group.date">
 				<text class="date-title">{{ group.date }}</text>
@@ -53,9 +57,16 @@
 			</view>
 
 			<!-- 空状态 -->
-			<view class="empty-state" v-if="displayFileGroups.length === 0">
+			<view class="empty-state" v-if="displayFileGroups.length === 0 && !loading">
 				<text class="iconfont empty-icon">&#xea96;</text>
 				<text class="empty-text">暂无{{ currentTabName }}文件</text>
+			</view>
+
+			<!-- 加载更多提示 -->
+			<view class="load-more" v-if="displayFileGroups.length > 0">
+				<text class="load-more-text" v-if="loadingMore">加载中...</text>
+				<text class="load-more-text" v-else-if="noMore">没有更多了</text>
+				<text class="load-more-text" v-else>上拉加载更多</text>
 			</view>
 		</scroll-view>
 	</view>
@@ -70,8 +81,13 @@
 	// 页面参数
 	const groupId = ref('')
 	const loading = ref(false)
+	const refreshing = ref(false)
+	const loadingMore = ref(false)
+	const noMore = ref(false)
 
 	const currentTab = ref('all')
+	const currentPage = ref(1)
+	const pageSize = 20
 
 	const tabs = [
 		{ type: 'all', name: '全部' },
@@ -91,20 +107,37 @@
 	/**
 	 * 加载文件列表
 	 */
-	async function loadFiles() {
+	async function loadFiles(isLoadMore: boolean = false) {
 		if (!groupId.value) return
 		
+		// 防止重复加载
+		if (isLoadMore && (loadingMore.value || noMore.value)) return
+		if (!isLoadMore && loading.value) return
+		
 		try {
-			loading.value = true
-			const result = await getGroupFileList({
+			if (isLoadMore) {
+				loadingMore.value = true
+			} else {
+				loading.value = true
+			}
+			
+			// 根据当前tab构建请求参数
+			const params: any = {
 				groupId: groupId.value,
-				pageNo: 1,
-				pageSize: 100
-			})
+				pageNo: currentPage.value,
+				pageSize: pageSize
+			}
+			
+			// 如果不是"全部"tab，传递fileType参数
+			if (currentTab.value !== 'all') {
+				params.fileType = currentTab.value
+			}
+			
+			const result = await getGroupFileList(params)
 			
 			if (result && result.list) {
 				// 转换数据格式
-				allFiles.value = result.list.map((item: any) => {
+				const newFiles = result.list.map((item: any) => {
 					return {
 						id: item.id,
 						type: getFileTypeFromName(item.fileName),
@@ -118,16 +151,35 @@
 					}
 				})
 				
-				console.log('[ChatFiles] 加载文件列表成功, 数量:', allFiles.value.length)
+				if (isLoadMore) {
+					// 加载更多：追加数据
+					allFiles.value = allFiles.value.concat(newFiles)
+				} else {
+					// 首次加载或刷新：替换数据
+					allFiles.value = newFiles
+				}
+				
+				// 判断是否还有更多数据
+				if (newFiles.length < pageSize) {
+					noMore.value = true
+				} else {
+					noMore.value = false
+				}
+				
+				console.log('[ChatFiles] 加载文件列表成功, 当前页:', currentPage.value, '数量:', newFiles.length, '总数:', allFiles.value.length)
 			}
 		} catch (e) {
 			console.error('[ChatFiles] 加载文件列表失败:', e)
-			uni.showToast({
-				title: '加载失败',
-				icon: 'none'
-			})
+			if (!isLoadMore) {
+				uni.showToast({
+					title: '加载失败',
+					icon: 'none'
+				})
+			}
 		} finally {
 			loading.value = false
+			loadingMore.value = false
+			refreshing.value = false
 		}
 	}
 
@@ -158,12 +210,9 @@
 		
 		return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i]
 	}
-	// 过滤后的文件
+	// 过滤后的文件（现在由后端过滤，前端直接使用）
 	const filteredFiles = computed(() : any[] => {
-		if (currentTab.value === 'all') {
-			return allFiles.value
-		}
-		return allFiles.value.filter(file => file.type === currentTab.value)
+		return allFiles.value
 	})
 
 	// 按日期分组
@@ -204,6 +253,30 @@
 
 	function switchTab(type : string) {
 		currentTab.value = type
+		// 切换tab时重置分页并重新加载
+		currentPage.value = 1
+		noMore.value = false
+		allFiles.value = []
+		loadFiles()
+	}
+
+	/**
+	 * 下拉刷新
+	 */
+	function handleRefresh() {
+		refreshing.value = true
+		currentPage.value = 1
+		noMore.value = false
+		loadFiles()
+	}
+
+	/**
+	 * 上拉加载更多
+	 */
+	function handleLoadMore() {
+		if (loadingMore.value || noMore.value) return
+		currentPage.value++
+		loadFiles(true)
 	}
 
 	function getFileIcon(fileName : string) : string {
@@ -324,6 +397,8 @@
 										icon: 'success'
 									})
 									// 刷新列表
+									currentPage.value = 1
+									noMore.value = false
 									await loadFiles()
 								} catch (e) {
 									console.error('[ChatFiles] 删除失败:', e)
@@ -558,6 +633,18 @@
 
 	.empty-text {
 		font-size: 15px;
+		color: #8F959E;
+	}
+
+	/* 加载更多 */
+	.load-more {
+		padding: 20px 16px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.load-more-text {
+		font-size: 13px;
 		color: #8F959E;
 	}
 </style>
