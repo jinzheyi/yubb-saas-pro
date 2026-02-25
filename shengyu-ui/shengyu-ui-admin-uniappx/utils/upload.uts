@@ -66,38 +66,20 @@ function formatFileSize(bytes: number): string {
 
 /**
  * 上传文件（核心方法）
- * 支持两种调用方式：
- * 1. uploadFile(filePath, config) - 新方式
- * 2. uploadFile(filePath, directory, onProgress) - 旧方式（向后兼容）
- * 
  * @param filePath 文件路径
- * @param configOrDirectory 上传配置对象 或 目录字符串（向后兼容）
- * @param onProgress 进度回调（仅在旧方式下使用）
+ * @param config 上传配置
  * @returns Promise<UploadResult>
  */
 export function uploadFile(
 	filePath: string,
-	configOrDirectory?: UploadConfig | string,
-	onProgress?: UploadProgressCallback
+	config?: UploadConfig
 ): Promise<UploadResult> {
 	return new Promise((resolve, reject) => {
-		// 兼容旧的调用方式：uploadFile(filePath, directory, onProgress)
-		let uploadConfig: UploadConfig
-		if (typeof configOrDirectory === 'string') {
-			// 旧方式：第二个参数是 directory 字符串
-			uploadConfig = {
-				url: UPLOAD_URL,
-				directory: configOrDirectory,
-				onProgress: onProgress,
-				showToast: true
-			}
-		} else {
-			// 新方式：第二个参数是配置对象
-			uploadConfig = {
-				url: UPLOAD_URL,
-				showToast: true,
-				...configOrDirectory
-			}
+		// 默认配置
+		const uploadConfig: UploadConfig = {
+			url: UPLOAD_URL,
+			showToast: true,
+			...config
 		}
 		
 		// 构建表单数据
@@ -206,14 +188,12 @@ function validateFileSize(size: number, maxSize: number): boolean {
 /**
  * 选择并上传图片
  * @param count 最多可选择的图片数量（默认 1）
- * @param directory 目录（可选）
- * @param onProgress 进度回调（可选）
+ * @param config 上传配置（可选）
  * @returns Promise<UploadResult[]>
  */
 export function chooseAndUploadImage(
 	count: number = 1,
-	directory?: string,
-	onProgress?: UploadProgressCallback
+	config?: UploadConfig
 ): Promise<UploadResult[]> {
 	return new Promise((resolve, reject) => {
 		uni.chooseImage({
@@ -230,15 +210,13 @@ export function chooseAndUploadImage(
 						// 验证文件大小（如果有 tempFiles 信息）
 						if (res.tempFiles && res.tempFiles[i]) {
 							const fileSize = res.tempFiles[i].size
-							if (!validateFileSize(fileSize, MAX_IMAGE_SIZE)) {
+							const maxSize = config?.maxSize || MAX_IMAGE_SIZE
+							if (!validateFileSize(fileSize, maxSize)) {
 								continue
 							}
 						}
 						
-						const uploadPromise = uploadFile(filePath, {
-							directory: directory,
-							onProgress: onProgress
-						})
+						const uploadPromise = uploadFile(filePath, config)
 						uploadPromises.push(uploadPromise)
 					}
 					
@@ -257,13 +235,11 @@ export function chooseAndUploadImage(
 
 /**
  * 选择并上传视频
- * @param directory 目录（可选）
- * @param onProgress 进度回调（可选）
+ * @param config 上传配置（可选）
  * @returns Promise<UploadResult>
  */
 export function chooseAndUploadVideo(
-	directory?: string,
-	onProgress?: UploadProgressCallback
+	config?: UploadConfig
 ): Promise<UploadResult> {
 	return new Promise((resolve, reject) => {
 		uni.chooseVideo({
@@ -271,15 +247,15 @@ export function chooseAndUploadVideo(
 			success: async (res) => {
 				try {
 					// 验证文件大小
-					if (res.size && !validateFileSize(res.size, MAX_VIDEO_SIZE)) {
-						reject(new Error('视频文件过大'))
-						return
+					if (res.size) {
+						const maxSize = config?.maxSize || MAX_VIDEO_SIZE
+						if (!validateFileSize(res.size, maxSize)) {
+							reject(new Error('视频文件过大'))
+							return
+						}
 					}
 					
-					const result = await uploadFile(res.tempFilePath, {
-						directory: directory,
-						onProgress: onProgress
-					})
+					const result = await uploadFile(res.tempFilePath, config)
 					resolve(result)
 				} catch (e) {
 					reject(e)
@@ -295,14 +271,12 @@ export function chooseAndUploadVideo(
 /**
  * 选择并上传文件（支持 H5、Android、iOS）
  * @param accept 接受的文件类型（如 'image/*', '.pdf'）
- * @param directory 目录（可选）
- * @param onProgress 进度回调（可选）
+ * @param config 上传配置（可选）
  * @returns Promise<UploadResult>
  */
 export function chooseAndUploadFile(
 	accept: string = '*/*',
-	directory?: string,
-	onProgress?: UploadProgressCallback
+	config?: UploadConfig
 ): Promise<UploadResult> {
 	return new Promise((resolve, reject) => {
 		// #ifdef H5
@@ -311,10 +285,7 @@ export function chooseAndUploadFile(
 			extension: [accept],
 			success: async (res) => {
 				try {
-					const result = await uploadFile(res.tempFilePaths[0], {
-						directory: directory,
-						onProgress: onProgress
-					})
+					const result = await uploadFile(res.tempFilePaths[0], config)
 					resolve(result)
 				} catch (e) {
 					reject(e)
@@ -334,15 +305,15 @@ export function chooseAndUploadFile(
 			success: async (res) => {
 				try {
 					// 验证文件大小
-					if (res.tempFiles[0].size && !validateFileSize(res.tempFiles[0].size, MAX_FILE_SIZE)) {
-						reject(new Error('文件过大'))
-						return
+					if (res.tempFiles[0].size) {
+						const maxSize = config?.maxSize || MAX_FILE_SIZE
+						if (!validateFileSize(res.tempFiles[0].size, maxSize)) {
+							reject(new Error('文件过大'))
+							return
+						}
 					}
 					
-					const result = await uploadFile(res.tempFiles[0].path, {
-						directory: directory,
-						onProgress: onProgress
-					})
+					const result = await uploadFile(res.tempFiles[0].path, config)
 					resolve(result)
 				} catch (e) {
 					reject(e)
@@ -362,15 +333,15 @@ export function chooseAndUploadFile(
 			success: async (res) => {
 				try {
 					// 验证文件大小
-					if (res.tempFiles[0].size && !validateFileSize(res.tempFiles[0].size, MAX_FILE_SIZE)) {
-						reject(new Error('文件过大'))
-						return
+					if (res.tempFiles[0].size) {
+						const maxSize = config?.maxSize || MAX_FILE_SIZE
+						if (!validateFileSize(res.tempFiles[0].size, maxSize)) {
+							reject(new Error('文件过大'))
+							return
+						}
 					}
 					
-					const result = await uploadFile(res.tempFiles[0].path, {
-						directory: directory,
-						onProgress: onProgress
-					})
+					const result = await uploadFile(res.tempFiles[0].path, config)
 					resolve(result)
 				} catch (e) {
 					reject(e)

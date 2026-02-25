@@ -874,8 +874,11 @@
 				console.log('[Chat] 录音文件:', tempFilePath, '时长:', duration)
 				
 				// 上传语音文件
-				uploadFile(tempFilePath, 'im/voice', (progress) => {
-					console.log('[Chat] 上传进度:', progress)
+				uploadFile(tempFilePath, {
+					directory: 'im/voice',
+					onProgress: (progress) => {
+						console.log('[Chat] 上传进度:', progress)
+					}
 				}).then((result) => {
 					const voiceUrl = result.data.url
 					const voiceSize = result.data.size
@@ -1066,8 +1069,11 @@
 	function handleFeature(item : any) {
 		if (item.nameKey === 'chat.features.album') {
 			// 选择并上传图片
-			chooseAndUploadImage(9, 'im/image', (progress) => {
-				console.log('[Chat] 上传进度:', progress)
+			chooseAndUploadImage(9, {
+				directory: 'im/image',
+				onProgress: (progress) => {
+					console.log('[Chat] 上传进度:', progress)
+				}
 			}).then((results) => {
 				console.log('[Chat] 上传成功，共', results.length, '张图片')
 				
@@ -1163,8 +1169,11 @@
 				sourceType: ['camera'],
 				success: (res) => {
 					const filePath = res.tempFilePaths[0]
-					uploadFile(filePath, 'im/image', (progress) => {
-						console.log('[Chat] 上传进度:', progress)
+					uploadFile(filePath, {
+						directory: 'im/image',
+						onProgress: (progress) => {
+							console.log('[Chat] 上传进度:', progress)
+						}
 					}).then((result) => {
 						const imageUrl = result.data.url
 						const imageSize = result.data.size
@@ -1225,8 +1234,11 @@
 		
 		if (item.nameKey === 'chat.features.video') {
 			// 选择并上传视频
-			chooseAndUploadVideo('im/video', (progress) => {
-				console.log('[Chat] 上传进度:', progress)
+			chooseAndUploadVideo({
+				directory: 'im/video',
+				onProgress: (progress) => {
+					console.log('[Chat] 上传进度:', progress)
+				}
 			}).then((result) => {
 				const videoUrl = result.data.url
 				const videoSize = result.data.size
@@ -1293,8 +1305,11 @@
 		
 		if (item.nameKey === 'chat.features.file') {
 			// 选择并上传文件（支持 H5、Android、iOS）
-			chooseAndUploadFile('*/*', 'im/file', (progress) => {
-				console.log('[Chat] 上传进度:', progress)
+			chooseAndUploadFile('*/*', {
+				directory: 'im/file',
+				onProgress: (progress) => {
+					console.log('[Chat] 上传进度:', progress)
+				}
 			}).then((result) => {
 				const fileUrl = result.data.url
 				const fileName = result.data.name
