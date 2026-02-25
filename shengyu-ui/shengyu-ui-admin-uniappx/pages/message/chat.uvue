@@ -297,6 +297,27 @@
 	const currentUserId = ref(0)
 	const currentTenantId = ref(0)
 	
+	/**
+	 * 辅助函数：获取 targetId 的数字值
+	 */
+	function getTargetIdAsNumber(): number {
+		return targetId.value ? parseInt(targetId.value) : 0
+	}
+	
+	/**
+	 * 辅助函数：获取接收者ID（单聊时使用）
+	 */
+	function getReceiverIdForMessage(): number {
+		return chatType.value === 'single' ? getTargetIdAsNumber() : 0
+	}
+	
+	/**
+	 * 辅助函数：获取群组ID（群聊时使用）
+	 */
+	function getGroupIdForMessage(): number {
+		return chatType.value === 'group' ? getTargetIdAsNumber() : 0
+	}
+	
 	// UI 状态
 	const inputText = ref('')
 	const lastInputText = ref('') // 用于退格逻辑
@@ -859,11 +880,19 @@
 					const voiceUrl = result.data.url
 					const voiceSize = result.data.size
 					
+					// 构建完整URL
+					let fullVoiceUrl = voiceUrl
+					if (voiceUrl.startsWith('/')) {
+						fullVoiceUrl = CONFIG_BASE_URL + voiceUrl
+					}
+					
+					console.log('[Chat] 语音URL:', fullVoiceUrl)
+					
 					// 使用消息服务发送语音消息
 					const message = messageService.sendVoiceMessage(
-						chatType.value === 'single' ? targetId.value : 0,
-						chatType.value === 'group' ? targetId.value : 0,
-						voiceUrl,
+						getReceiverIdForMessage(),
+						getGroupIdForMessage(),
+						fullVoiceUrl,
 						duration,
 						voiceSize
 					)
@@ -875,7 +904,7 @@
 						senderId: message.senderId.toString(),
 						receiverId: message.receiverId.toString(),
 						type: 'voice',
-						content: voiceUrl,
+						content: fullVoiceUrl,
 						duration: duration,
 						isSelf: true,
 						time: new Date(message.timestamp).toLocaleString(),
@@ -990,8 +1019,8 @@
 				
 				// 使用消息服务发送文本消息
 				const message = messageService.sendTextMessage(
-					chatType.value === 'single' ? targetId.value : 0,  // 单聊时传 receiverId
-					chatType.value === 'group' ? targetId.value : 0,    // 群聊时传 groupId
+					getReceiverIdForMessage(),  // 单聊时传 receiverId
+					getGroupIdForMessage(),     // 群聊时传 groupId
 					finalContent,
 					[]  // @用户列表（暂不实现）
 				)
@@ -1020,7 +1049,10 @@
 					success: () => {
 						inputText.value = ''
 						isFullExpanded.value = false
-						scrollToBottom()
+						
+						setTimeout(() => {
+							scrollToBottom()
+						}, 100)
 					}
 				})
 			}
@@ -1037,13 +1069,15 @@
 			chooseAndUploadImage(9, 'im/image', (progress) => {
 				console.log('[Chat] 上传进度:', progress)
 			}).then((results) => {
+				console.log('[Chat] 上传成功，共', results.length, '张图片')
+				
 				// 上传成功,发送图片消息
-				results.forEach((result) => {
-					console.log('[Chat] 上传结果:', result)
+				results.forEach((result, index) => {
+					console.log(`[Chat] 处理第 ${index + 1} 张图片:`, result)
 					
-					// 后端返回的data是字符串URL
-					let imageUrl = typeof result.data === 'string' ? result.data : result.data.url
-					const imageSize = typeof result.data === 'string' ? 0 : (result.data.size || 0)
+					// 获取图片URL（优化后的upload.uts返回的是对象）
+					const imageUrl = result.data.url
+					const imageSize = result.data.size || 0
 					
 					if (!imageUrl) {
 						console.error('[Chat] 图片URL为空:', result)
@@ -1051,24 +1085,32 @@
 						return
 					}
 					
-					// 如果是相对路径，拼接完整URL
-					// 注意：uniappx的image组件不支持localhost，需要使用IP地址
+					// 构建完整URL
+					let fullImageUrl = imageUrl
 					if (imageUrl.startsWith('/')) {
-						imageUrl = CONFIG_BASE_URL + imageUrl
+						fullImageUrl = CONFIG_BASE_URL + imageUrl
 					}
 					
-					console.log('[Chat] 图片完整URL:', imageUrl)
+					console.log('[Chat] 图片完整URL:', fullImageUrl)
+					console.log('[Chat] 发送消息参数:', {
+						receiverId: getReceiverIdForMessage(),
+						groupId: getGroupIdForMessage(),
+						url: fullImageUrl,
+						size: imageSize
+					})
 					
 					// 使用消息服务发送图片消息
 					const message = messageService.sendImageMessage(
-						chatType.value === 'single' ? targetId.value : 0,
-						chatType.value === 'group' ? targetId.value : 0,
-						imageUrl,
-						imageUrl,  // 缩略图使用同一个 URL
+						getReceiverIdForMessage(),
+						getGroupIdForMessage(),
+						fullImageUrl,
+						fullImageUrl,  // 缩略图使用同一个 URL
 						0,  // 宽度(暂不获取)
 						0,  // 高度(暂不获取)
 						imageSize
 					)
+					
+					console.log('[Chat] 消息服务返回:', message)
 					
 					// 如果是群聊，同时保存到群文件
 					if (chatType.value === 'group' && result.tempFilePath) {
@@ -1086,7 +1128,7 @@
 						senderId: message.senderId.toString(),
 						receiverId: message.receiverId.toString(),
 						type: 'image',
-						content: imageUrl,
+						content: fullImageUrl,
 						isSelf: true,
 						time: new Date(message.timestamp).toLocaleString(),
 						timestamp: message.timestamp,
@@ -1096,11 +1138,17 @@
 						status: message.status
 					} as MessageItem
 					
+					console.log('[Chat] 添加消息到列表:', uiMessage)
 					messages.value.push(uiMessage)
 				})
 				
+				console.log('[Chat] 当前消息列表长度:', messages.value.length)
 				showPlusMenu.value = false
-				scrollToBottom()
+				
+				// 延迟滚动，确保DOM已更新
+				setTimeout(() => {
+					scrollToBottom()
+				}, 100)
 			}).catch((err) => {
 				console.error('[Chat] 上传图片失败:', err)
 				uni.showToast({ title: '上传失败', icon: 'none' })
@@ -1121,12 +1169,20 @@
 						const imageUrl = result.data.url
 						const imageSize = result.data.size
 						
+						// 构建完整URL
+						let fullImageUrl = imageUrl
+						if (imageUrl.startsWith('/')) {
+							fullImageUrl = CONFIG_BASE_URL + imageUrl
+						}
+						
+						console.log('[Chat] 拍照图片URL:', fullImageUrl)
+						
 						// 使用消息服务发送图片消息
 						const message = messageService.sendImageMessage(
-							chatType.value === 'single' ? targetId.value : 0,
-							chatType.value === 'group' ? targetId.value : 0,
-							imageUrl,
-							imageUrl,
+							getReceiverIdForMessage(),
+							getGroupIdForMessage(),
+							fullImageUrl,
+							fullImageUrl,
 							0,
 							0,
 							imageSize
@@ -1139,7 +1195,7 @@
 							senderId: message.senderId.toString(),
 							receiverId: message.receiverId.toString(),
 							type: 'image',
-							content: imageUrl,
+							content: fullImageUrl,
 							isSelf: true,
 							time: new Date(message.timestamp).toLocaleString(),
 							timestamp: message.timestamp,
@@ -1151,7 +1207,10 @@
 						
 						messages.value.push(uiMessage)
 						showPlusMenu.value = false
-						scrollToBottom()
+						
+						setTimeout(() => {
+							scrollToBottom()
+						}, 100)
 					}).catch((err) => {
 						console.error('[Chat] 上传图片失败:', err)
 						uni.showToast({ title: '上传失败', icon: 'none' })
@@ -1172,12 +1231,20 @@
 				const videoUrl = result.data.url
 				const videoSize = result.data.size
 				
+				// 构建完整URL
+				let fullVideoUrl = videoUrl
+				if (videoUrl.startsWith('/')) {
+					fullVideoUrl = CONFIG_BASE_URL + videoUrl
+				}
+				
+				console.log('[Chat] 视频URL:', fullVideoUrl)
+				
 				// 使用消息服务发送视频消息
 				const message = messageService.sendVideoMessage(
-					chatType.value === 'single' ? targetId.value : 0,
-					chatType.value === 'group' ? targetId.value : 0,
-					videoUrl,
-					videoUrl,  // 封面使用同一个 URL(暂不生成)
+					getReceiverIdForMessage(),
+					getGroupIdForMessage(),
+					fullVideoUrl,
+					fullVideoUrl,  // 封面使用同一个 URL(暂不生成)
 					0,  // 时长(暂不获取)
 					0,  // 宽度
 					0,  // 高度
@@ -1185,8 +1252,7 @@
 				)
 				
 				// 如果是群聊，同时保存到群文件
-				if (chatType.value === 'group') {
-					const { uploadGroupFile } = require('../../api/file.uts')
+				if (chatType.value === 'group' && result.tempFilePath) {
 					uploadGroupFile(targetId.value, result.tempFilePath).then((res : any) => {
 						console.log('[Chat] 视频已保存到群文件:', res)
 					}).catch((err : any) => {
@@ -1201,8 +1267,8 @@
 					senderId: message.senderId.toString(),
 					receiverId: message.receiverId.toString(),
 					type: 'video',
-					content: videoUrl,
-					poster: videoUrl,
+					content: fullVideoUrl,
+					poster: fullVideoUrl,
 					isSelf: true,
 					time: new Date(message.timestamp).toLocaleString(),
 					timestamp: message.timestamp,
@@ -1214,7 +1280,10 @@
 				
 				messages.value.push(uiMessage)
 				showPlusMenu.value = false
-				scrollToBottom()
+				
+				setTimeout(() => {
+					scrollToBottom()
+				}, 100)
 			}).catch((err) => {
 				console.error('[Chat] 上传视频失败:', err)
 				uni.showToast({ title: '上传失败', icon: 'none' })
@@ -1232,27 +1301,30 @@
 				const fileSize = result.data.size
 				const fileType = result.data.type
 				
+				// 构建完整URL
+				let fullFileUrl = fileUrl
+				if (fileUrl.startsWith('/')) {
+					fullFileUrl = CONFIG_BASE_URL + fileUrl
+				}
+				
+				console.log('[Chat] 文件URL:', fullFileUrl)
+				
 				// 使用消息服务发送文件消息
 				const message = messageService.sendFileMessage(
-					chatType.value === 'single' ? targetId.value : 0,
-					chatType.value === 'group' ? targetId.value : 0,
-					fileUrl,
+					getReceiverIdForMessage(),
+					getGroupIdForMessage(),
+					fullFileUrl,
 					fileName,
 					fileSize,
 					fileType
 				)
 				
 				// 如果是群聊，同时保存到群文件
-				if (chatType.value === 'group') {
-					// 导入群文件 API
-					const { uploadGroupFile } = require('../../api/file.uts')
-					
-					// 调用群文件上传接口（使用文件路径）
+				if (chatType.value === 'group' && result.tempFilePath) {
 					uploadGroupFile(targetId.value, result.tempFilePath).then((res : any) => {
 						console.log('[Chat] 文件已保存到群文件:', res)
 					}).catch((err : any) => {
 						console.error('[Chat] 保存到群文件失败:', err)
-						// 不影响消息发送，只是提示
 					})
 				}
 				
@@ -1263,7 +1335,7 @@
 					senderId: message.senderId.toString(),
 					receiverId: message.receiverId.toString(),
 					type: 'file',
-					content: fileUrl,
+					content: fullFileUrl,
 					fileName: fileName,
 					fileSize: formatFileSize(fileSize),
 					isSelf: true,
@@ -1277,7 +1349,10 @@
 				
 				messages.value.push(uiMessage)
 				showPlusMenu.value = false
-				scrollToBottom()
+				
+				setTimeout(() => {
+					scrollToBottom()
+				}, 100)
 			}).catch((err) => {
 				console.error('[Chat] 上传文件失败:', err)
 				uni.showToast({ title: '上传失败', icon: 'none' })

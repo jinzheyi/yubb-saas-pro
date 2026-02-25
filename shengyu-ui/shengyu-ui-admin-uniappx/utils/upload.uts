@@ -66,20 +66,38 @@ function formatFileSize(bytes: number): string {
 
 /**
  * 上传文件（核心方法）
+ * 支持两种调用方式：
+ * 1. uploadFile(filePath, config) - 新方式
+ * 2. uploadFile(filePath, directory, onProgress) - 旧方式（向后兼容）
+ * 
  * @param filePath 文件路径
- * @param config 上传配置
+ * @param configOrDirectory 上传配置对象 或 目录字符串（向后兼容）
+ * @param onProgress 进度回调（仅在旧方式下使用）
  * @returns Promise<UploadResult>
  */
 export function uploadFile(
 	filePath: string,
-	config?: UploadConfig
+	configOrDirectory?: UploadConfig | string,
+	onProgress?: UploadProgressCallback
 ): Promise<UploadResult> {
 	return new Promise((resolve, reject) => {
-		// 默认配置
-		const uploadConfig: UploadConfig = {
-			url: UPLOAD_URL,
-			showToast: true,
-			...config
+		// 兼容旧的调用方式：uploadFile(filePath, directory, onProgress)
+		let uploadConfig: UploadConfig
+		if (typeof configOrDirectory === 'string') {
+			// 旧方式：第二个参数是 directory 字符串
+			uploadConfig = {
+				url: UPLOAD_URL,
+				directory: configOrDirectory,
+				onProgress: onProgress,
+				showToast: true
+			}
+		} else {
+			// 新方式：第二个参数是配置对象
+			uploadConfig = {
+				url: UPLOAD_URL,
+				showToast: true,
+				...configOrDirectory
+			}
 		}
 		
 		// 构建表单数据
