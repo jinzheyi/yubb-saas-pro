@@ -15,6 +15,7 @@ public class AppFileUploadReqVO {
 
     @Schema(description = "文件附件", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "文件附件不能为空")
+    @JsonIgnore  // 防止序列化时出现 FileNotFoundException
     private MultipartFile file;
 
     @Schema(description = "文件目录", example = "XXX/YYY")
