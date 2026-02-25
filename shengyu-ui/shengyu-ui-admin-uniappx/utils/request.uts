@@ -4,7 +4,13 @@
  * 兼容 Android、iOS、Web 三端
  */
 
-import { BASE_URL as CONFIG_BASE_URL, TIMEOUT as CONFIG_TIMEOUT, TENANT_ENABLE } from '../config/app.config.uts'
+import { 
+	BASE_URL as CONFIG_BASE_URL, 
+	API_PREFIX,
+	API_BASE_URL,
+	TIMEOUT as CONFIG_TIMEOUT, 
+	TENANT_ENABLE 
+} from '../config/app.config.uts'
 import { 
 	getAccessToken, 
 	getRefreshToken, 
@@ -15,8 +21,8 @@ import {
 	formatToken
 } from '../store/user.uts'
 
-// 请求配置
-const BASE_URL = CONFIG_BASE_URL + '/app-api' // 移动端使用 app-api 前缀
+// 请求配置 - 使用统一的 API 配置
+const BASE_URL = API_BASE_URL // 移动端使用 app-api 前缀
 const TIMEOUT = CONFIG_TIMEOUT
 
 // Token 刷新相关

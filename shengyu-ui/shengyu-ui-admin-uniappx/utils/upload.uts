@@ -2,13 +2,19 @@
  * 文件上传工具类
  * 兼容 Android、iOS、Web 三端
  * 
- * 说明：文件上传统一走平台端接口（/platform-api），由平台控制上传渠道
+ * 说明：文件上传统一走移动端代理接口（/app-api），由后端统一处理
  */
-import { BASE_URL as CONFIG_BASE_URL } from '../config/app.config.uts'
+import { 
+	API_BASE_URL,
+	MAX_FILE_SIZE,
+	MAX_IMAGE_SIZE,
+	MAX_VIDEO_SIZE
+} from '../config/app.config.uts'
 import { getToken, getTenantId } from './request.uts'
+import { formatToken } from '../store/user.uts'
 
-// 上传配置 - 使用平台端接口
-const UPLOAD_URL = CONFIG_BASE_URL + '/platform-api/infra/file/upload'
+// 上传配置 - 使用统一的 API 配置
+const UPLOAD_URL = API_BASE_URL + '/infra/file/upload'
 
 /**
  * 上传进度回调类型
@@ -28,26 +34,64 @@ export type UploadResult = {
 		size: number
 		type: string
 	}
-	tempFilePath?: string  // 添加临时文件路径
+	tempFilePath?: string  // 临时文件路径
 }
 
 /**
- * 上传文件
+ * 上传配置类型
+ */
+export type UploadConfig = {
+	url?: string           // 上传地址（可选，默认使用 UPLOAD_URL）
+	directory?: string     // 文件目录
+	formData?: UTSJSONObject  // 额外的表单数据
+	maxSize?: number       // 最大文件大小（字节）
+	showToast?: boolean    // 是否显示错误提示（默认 true）
+	onProgress?: UploadProgressCallback  // 进度回调
+}
+
+/**
+ * 格式化文件大小
+ */
+function formatFileSize(bytes: number): string {
+	if (bytes < 1024) {
+		return bytes + 'B'
+	} else if (bytes < 1024 * 1024) {
+		return (bytes / 1024).toFixed(2) + 'KB'
+	} else if (bytes < 1024 * 1024 * 1024) {
+		return (bytes / 1024 / 1024).toFixed(2) + 'MB'
+	} else {
+		return (bytes / 1024 / 1024 / 1024).toFixed(2) + 'GB'
+	}
+}
+
+/**
+ * 上传文件（核心方法）
  * @param filePath 文件路径
- * @param directory 目录（可选）
- * @param onProgress 进度回调（可选）
+ * @param config 上传配置
  * @returns Promise<UploadResult>
  */
 export function uploadFile(
 	filePath: string,
-	directory?: string,
-	onProgress?: UploadProgressCallback
+	config?: UploadConfig
 ): Promise<UploadResult> {
 	return new Promise((resolve, reject) => {
+		// 默认配置
+		const uploadConfig: UploadConfig = {
+			url: UPLOAD_URL,
+			showToast: true,
+			...config
+		}
+		
 		// 构建表单数据
 		const formData: UTSJSONObject = {}
-		if (directory) {
-			formData['directory'] = directory
+		if (uploadConfig.directory) {
+			formData['directory'] = uploadConfig.directory
+		}
+		// 合并额外的表单数据
+		if (uploadConfig.formData) {
+			for (const key in uploadConfig.formData) {
+				formData[key] = uploadConfig.formData[key]
+			}
 		}
 		
 		// 获取 token 和租户 ID
@@ -57,16 +101,15 @@ export function uploadFile(
 		// 构建请求头
 		const header: UTSJSONObject = {}
 		if (token) {
-			header['Authorization'] = 'Bearer ' + token
+			header['Authorization'] = formatToken(token)
 		}
 		if (tenantId) {
 			header['tenant-id'] = tenantId
 		}
-
 		
 		// 创建上传任务
 		const uploadTask = uni.uploadFile({
-			url: UPLOAD_URL,
+			url: uploadConfig.url!,
 			filePath: filePath,
 			name: 'file',
 			formData: formData,
@@ -76,39 +119,71 @@ export function uploadFile(
 					try {
 						const data = JSON.parse(res.data)
 						if (data.code === 0) {
-							resolve(data as UploadResult)
+							const result = data as UploadResult
+							result.tempFilePath = filePath
+							resolve(result)
 						} else {
-							uni.showToast({
-								title: data.msg || '上传失败',
-								icon: 'none'
-							})
+							if (uploadConfig.showToast) {
+								uni.showToast({
+									title: data.msg || '上传失败',
+									icon: 'none'
+								})
+							}
 							reject(new Error(data.msg || '上传失败'))
 						}
 					} catch (e) {
+						if (uploadConfig.showToast) {
+							uni.showToast({
+								title: '解析响应失败',
+								icon: 'none'
+							})
+						}
 						reject(new Error('解析响应失败'))
 					}
 				} else {
+					if (uploadConfig.showToast) {
+						uni.showToast({
+							title: '上传失败，状态码：' + res.statusCode,
+							icon: 'none'
+						})
+					}
 					reject(new Error('上传失败，状态码：' + res.statusCode))
 				}
 			},
 			fail: (err) => {
-				uni.showToast({
-					title: '上传失败',
-					icon: 'none'
-				})
+				if (uploadConfig.showToast) {
+					uni.showToast({
+						title: '上传失败',
+						icon: 'none'
+					})
+				}
 				reject(err)
 			}
 		})
 		
 		// 监听上传进度
-		if (onProgress) {
+		if (uploadConfig.onProgress) {
 			uploadTask.onProgressUpdate((res) => {
-				onProgress(res.progress)
+				uploadConfig.onProgress!(res.progress)
 			})
 		}
 	})
 }
 
+/**
+ * 验证文件大小
+ */
+function validateFileSize(size: number, maxSize: number): boolean {
+	if (size > maxSize) {
+		uni.showToast({
+			title: `文件大小不能超过 ${formatFileSize(maxSize)}`,
+			icon: 'none',
+			duration: 2000
+		})
+		return false
+	}
+	return true
+}
 
 /**
  * 选择并上传图片
@@ -133,10 +208,18 @@ export function chooseAndUploadImage(
 					
 					for (let i = 0; i < res.tempFilePaths.length; i++) {
 						const filePath = res.tempFilePaths[i]
-						const uploadPromise = uploadFile(filePath, directory, onProgress).then((result) => {
-							// 将临时文件路径添加到结果中
-							result.tempFilePath = filePath
-							return result
+						
+						// 验证文件大小（如果有 tempFiles 信息）
+						if (res.tempFiles && res.tempFiles[i]) {
+							const fileSize = res.tempFiles[i].size
+							if (!validateFileSize(fileSize, MAX_IMAGE_SIZE)) {
+								continue
+							}
+						}
+						
+						const uploadPromise = uploadFile(filePath, {
+							directory: directory,
+							onProgress: onProgress
 						})
 						uploadPromises.push(uploadPromise)
 					}
@@ -169,7 +252,16 @@ export function chooseAndUploadVideo(
 			sourceType: ['album', 'camera'],
 			success: async (res) => {
 				try {
-					const result = await uploadFile(res.tempFilePath, directory, onProgress)
+					// 验证文件大小
+					if (res.size && !validateFileSize(res.size, MAX_VIDEO_SIZE)) {
+						reject(new Error('视频文件过大'))
+						return
+					}
+					
+					const result = await uploadFile(res.tempFilePath, {
+						directory: directory,
+						onProgress: onProgress
+					})
 					resolve(result)
 				} catch (e) {
 					reject(e)
@@ -181,7 +273,6 @@ export function chooseAndUploadVideo(
 		})
 	})
 }
-
 
 /**
  * 选择并上传文件（支持 H5、Android、iOS）
@@ -202,7 +293,10 @@ export function chooseAndUploadFile(
 			extension: [accept],
 			success: async (res) => {
 				try {
-					const result = await uploadFile(res.tempFilePaths[0], directory, onProgress)
+					const result = await uploadFile(res.tempFilePaths[0], {
+						directory: directory,
+						onProgress: onProgress
+					})
 					resolve(result)
 				} catch (e) {
 					reject(e)
@@ -221,7 +315,16 @@ export function chooseAndUploadFile(
 			type: 'all',  // 'all' | 'video' | 'image' | 'file'
 			success: async (res) => {
 				try {
-					const result = await uploadFile(res.tempFiles[0].path, directory, onProgress)
+					// 验证文件大小
+					if (res.tempFiles[0].size && !validateFileSize(res.tempFiles[0].size, MAX_FILE_SIZE)) {
+						reject(new Error('文件过大'))
+						return
+					}
+					
+					const result = await uploadFile(res.tempFiles[0].path, {
+						directory: directory,
+						onProgress: onProgress
+					})
 					resolve(result)
 				} catch (e) {
 					reject(e)
@@ -240,7 +343,16 @@ export function chooseAndUploadFile(
 			type: 'all',
 			success: async (res) => {
 				try {
-					const result = await uploadFile(res.tempFiles[0].path, directory, onProgress)
+					// 验证文件大小
+					if (res.tempFiles[0].size && !validateFileSize(res.tempFiles[0].size, MAX_FILE_SIZE)) {
+						reject(new Error('文件过大'))
+						return
+					}
+					
+					const result = await uploadFile(res.tempFiles[0].path, {
+						directory: directory,
+						onProgress: onProgress
+					})
 					resolve(result)
 				} catch (e) {
 					reject(e)
@@ -271,7 +383,7 @@ export function getUploadHeader(): UTSJSONObject {
 	
 	const token = getToken()
 	if (token) {
-		header['Authorization'] = 'Bearer ' + token
+		header['Authorization'] = formatToken(token)
 	}
 	
 	const tenantId = getTenantId()

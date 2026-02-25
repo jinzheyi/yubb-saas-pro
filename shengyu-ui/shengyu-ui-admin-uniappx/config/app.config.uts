@@ -46,6 +46,24 @@ export const DEFAULT_TENANT_NAME = '圣钰科技'
 export const BASE_URL = 'http://localhost:48080'
 
 /**
+ * API 前缀配置
+ * 
+ * 后端路由规范：
+ * - /admin-api/** → Web 管理后台（租户端）
+ * - /app-api/** → 移动端 App（租户端）
+ * - /platform-api/** → 平台端（独立模块）
+ * 
+ * 移动端统一使用 /app-api 前缀
+ */
+export const API_PREFIX = '/app-api'
+
+/**
+ * 完整的 API 地址（BASE_URL + API_PREFIX）
+ * 移动端所有接口请求都应使用此地址
+ */
+export const API_BASE_URL = BASE_URL + API_PREFIX
+
+/**
  * 移动端应用域名（前端页面地址）
  * 用于生成二维码、分享链接等场景
  * 
@@ -65,6 +83,14 @@ export const ADMIN_APP_DOMAIN = 'http://169.254.81.175:5173/#'
  * 请求超时时间（毫秒）
  */
 export const TIMEOUT = 30000
+
+/**
+ * 文件上传大小限制（字节）
+ */
+export const MAX_FILE_SIZE = 100 * 1024 * 1024      // 100MB - 普通文件
+export const MAX_IMAGE_SIZE = 10 * 1024 * 1024      // 10MB - 图片
+export const MAX_VIDEO_SIZE = 100 * 1024 * 1024     // 100MB - 视频
+export const MAX_VOICE_SIZE = 10 * 1024 * 1024      // 10MB - 语音
 
 /**
  * 短信验证码倒计时（秒）
