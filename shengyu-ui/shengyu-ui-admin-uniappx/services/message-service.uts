@@ -11,6 +11,8 @@
 
 import { wsManager, MessageType, WebSocketState } from '../utils/websocket.uts'
 import { MessageBuilder, MessageParser, ImMessage } from '../utils/message-handler.uts'
+import { getAvatarText, getUserAvatarColor } from '@/utils/avatar.uts'
+import { getUserInfo } from '@/store/user.uts'
 
 /**
  * 消息状态枚举
@@ -317,6 +319,15 @@ export class MessageService {
    * 发送消息（通用方法）
    */
   private sendMessage(message: ImMessage): MessageItem {
+    // 从store获取当前用户信息
+    const userInfo = getUserInfo()
+    const currentUser = userInfo?.user
+    
+    // 生成头像信息
+    const userName = currentUser?.nickname || ''
+    const avatarText = getAvatarText(userName)
+    const avatarBg = getUserAvatarColor(this.currentUserId)
+    
     // 创建消息项
     const messageItem: MessageItem = {
       id: 0,  // 临时ID，服务端返回后更新
@@ -330,9 +341,9 @@ export class MessageService {
       timestamp: message.header.timestamp,
       isSelf: true,
       showTime: true,
-      avatarText: '',
-      avatarBg: '',
-      senderName: ''
+      avatarText: avatarText,
+      avatarBg: avatarBg,
+      senderName: userName
     }
     
     // 添加到缓存
@@ -370,9 +381,9 @@ export class MessageService {
       timestamp: message.header.timestamp,
       isSelf: message.header.senderId === this.currentUserId,
       showTime: true,
-      avatarText: '',
-      avatarBg: '',
-      senderName: ''
+      avatarText: '?',  // 占位符 - 加载历史记录时会正确
+      avatarBg: getUserAvatarColor(message.header.senderId),
+      senderName: ''  // 占位符 - 加载历史记录时会正确
     }
     
     // 添加到缓存

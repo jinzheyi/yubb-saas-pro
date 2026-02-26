@@ -50,6 +50,11 @@
 							<text class="avatar-text">{{ msg.avatarText }}</text>
 						</view>
                         <view class="message-bubble-wrap">
+							<!-- 发送者名称 (仅在群聊中,仅对他人消息) -->
+							<text v-if="chatType === 'group' && !msg.isSelf" class="sender-name">
+								{{ msg.senderName }}
+							</text>
+							
 							<!-- 文字消息 -->
 							<view v-if="msg.type === 'text'" class="message-bubble bubble-text" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
 								<view class="text-content-wrap">
@@ -362,6 +367,7 @@
 		showTime : boolean;
 		avatarText : string;
 		avatarBg : string;
+		senderName : string;
 		duration ?: number;
 		poster ?: string;
 		fileName ?: string;
@@ -533,7 +539,12 @@
 			
 		} catch (e) {
 			console.error('[Chat] 加载消息失败:', e)
-			uni.showToast({ title: '加载消息失败', icon: 'none' })
+			// 显示网络错误提示,允许用户重试
+			uni.showToast({ 
+				title: '网络异常，加载消息失败', 
+				icon: 'none',
+				duration: 2000
+			})
 		} finally {
 			loading.value = false
 		}
@@ -543,7 +554,23 @@
 	 * 转换服务端消息为 UI 消息格式
 	 */
 	function convertServerMessage(msg : any) : MessageItem {
-		const content = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content
+		// 解析内容,带错误处理
+		let content : any
+		if (typeof msg.content === 'string') {
+			try {
+				content = JSON.parse(msg.content)
+			} catch (e) {
+				// 解析失败时返回原始字符串
+				console.error('[Content Parse Error]', e, 'Content:', msg.content)
+				content = msg.content
+			}
+		} else {
+			content = msg.content
+		}
+		
+		// 处理发送者信息缺失的后备方案
+		const senderNickname = msg.senderNickname || ''
+		const avatarText = senderNickname ? getAvatarTextUtil(senderNickname) : '?'
 		
 		return {
 			id: msg.id.toString(),
@@ -556,8 +583,9 @@
 			time: msg.createTime,
 			timestamp: new Date(msg.createTime).getTime(),
 			showTime: true,
-			avatarText: getAvatarTextUtil(msg.senderName || ''),
+			avatarText: avatarText,
 			avatarBg: getUserAvatarColor(msg.senderId),
+			senderName: senderNickname,
 			status: msg.status === 1 ? 'success' : 'sending'
 		} as MessageItem
 	}
@@ -580,6 +608,7 @@
 				showTime: true,
 				avatarText: msg.avatarText,
 				avatarBg: msg.avatarBg,
+				senderName: msg.senderName,
 				status: msg.status
 			} as MessageItem
 		})
@@ -587,39 +616,53 @@
 	
 	/**
 	 * 获取消息类型字符串
+	 * 支持两种格式: REST API (1-6) 和 WebSocket (100-105)
 	 */
 	function getMessageTypeString(messageType : number) : string {
 		const typeMap = {
+			// REST API 格式 (数据库存储)
+			1: 'text',
+			2: 'image',
+			3: 'voice',
+			4: 'video',
+			5: 'file',
+			6: 'location',
+			// WebSocket/Protobuf 格式
 			100: 'text',
 			101: 'image',
 			102: 'voice',
 			103: 'video',
 			104: 'file',
-			105: 'location'
+			105: 'location',
+			106: 'custom'
 		}
 		return typeMap[messageType] || 'text'
 	}
 	
 	/**
 	 * 获取消息内容
+	 * 使用字符串类型而非数字,统一处理 REST API (1-6) 和 WebSocket (100-105) 两种格式
 	 */
 	function getMessageContent(messageType : number, content : any) : string {
-		if (messageType === 100) {
+		// 先转换为字符串类型
+		const typeStr = getMessageTypeString(messageType)
+		
+		if (typeStr === 'text') {
 			// 文本消息
 			return content.content || content
-		} else if (messageType === 101) {
+		} else if (typeStr === 'image') {
 			// 图片消息
 			return content.url || content
-		} else if (messageType === 102) {
+		} else if (typeStr === 'voice') {
 			// 语音消息
 			return content.url || content
-		} else if (messageType === 103) {
+		} else if (typeStr === 'video') {
 			// 视频消息
 			return content.url || content
-		} else if (messageType === 104) {
+		} else if (typeStr === 'file') {
 			// 文件消息
 			return content.url || content
-		} else if (messageType === 105) {
+		} else if (typeStr === 'location') {
 			// 位置消息
 			return content.address || content
 		}
@@ -701,6 +744,7 @@
 			showTime: true,
 			avatarText: message.avatarText,
 			avatarBg: message.avatarBg,
+			senderName: message.senderName,
 			status: message.status
 		} as MessageItem
 		
@@ -845,6 +889,7 @@
 			showTime: false,
 			avatarText: params.isSelf ? '我' : (params.avatarText || '三'),
 			avatarBg: params.isSelf ? '#5FB6F7' : (params.avatarBg || '#F197BC'),
+			senderName: params.senderName || '',
 			duration: params.duration,
 			poster: params.poster,
 			fileName: params.fileName,
@@ -2042,6 +2087,12 @@
 
 	.message-self .message-bubble-wrap {
 		align-items: flex-end;
+	}
+
+	.sender-name {
+		font-size: 12px;
+		color: #8F959E;
+		margin-bottom: 4px;
 	}
 
 	.message-bubble {
