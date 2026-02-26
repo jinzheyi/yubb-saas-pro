@@ -6,73 +6,109 @@
 
 1. **BadgeService 服务**: 统一管理所有角标数据和逻辑
 2. **WebSocket 集成**: 处理 BADGE_UPDATE (messageType = 204) 消息
-3. **消息列表角标**: 每个会话显示未读消息数
+3. **消息列表角标**: 每个会话显示未读消息数 ✅ (已部分实现)
 4. **底部导航栏角标**: 显示总未读消息数
-5. **工作台菜单角标**: 显示待办数量
+5. **工作台菜单角标**: 显示待办数量 ✅ (UI已实现,需要动态数据)
 6. **本地持久化**: 角标数据缓存和恢复
 7. **多端同步**: 利用 WebSocket 中间件实现多设备同步
 8. **后端 API**: 提供角标数据查询和清空接口
 
+**当前状态分析**:
+- ✅ 消息列表页面已实现角标显示UI (unreadCount, 99+, 免打扰红点)
+- ✅ 工作台菜单已实现角标UI (badge字段, 99+显示)
+- ✅ MessageService 已实现基础未读数管理 (incrementUnreadCount, clearUnreadCount)
+- ✅ WebSocket 已实现基础消息类型 (TEXT=100, READ_RECEIPT=201, RECALL=202, TYPING=203)
+- ❌ 缺少 BADGE_UPDATE (204) 消息类型定义
+- ❌ 缺少 BadgeService 统一角标管理服务
+- ❌ 缺少底部导航栏角标集成
+- ❌ 缺少本地持久化实现
+- ❌ 缺少后端角标API和推送逻辑
+
 **关键理解**: 
-- WebSocket 中间件已支持 BADGE_UPDATE (messageType = 204)
-- 前端使用 BadgeService 统一管理角标状态
-- 后端通过 WebSocket 主动推送角标更新
-- 本地缓存确保离线时的用户体验
+- 前端UI层已就绪,需要实现数据层和服务层
+- WebSocket 基础设施完善,需要添加 BADGE_UPDATE 消息类型
+- 后端需要新增角标相关API和推送逻辑
 
 ## 任务
 
-### 阶段1: 核心服务层
+### 阶段1: Protobuf 协议扩展
 
-- [ ] 1. 创建 BadgeService 服务类
-  - [ ] 1.1 创建 badge-service.uts 文件
+- [ ] 1. 在 Protobuf 中添加 BADGE_UPDATE 消息类型
+  - [ ] 1.1 更新 im_message.proto 文件
+    - 文件位置: `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/proto/im_message.proto`
+    - 在 MessageType 枚举中添加 `BADGE_UPDATE = 204`
+    - 定义 BadgeUpdateMessage (totalUnread, conversationBadges, menuBadges)
+    - 定义 ConversationBadge (conversationId, unreadCount)
+    - 定义 MenuBadge (menuId, badgeCount)
+    - _需求: 3.1, 3.2, 3.3, 10.1, 10.2_
+  
+  - [ ] 1.2 重新编译 Protobuf 文件
+    - 在 `shengyu-framework/shengyu-spring-boot-starter-websocket` 目录运行 `mvn clean compile`
+    - 验证生成的 Java 类可以正常使用
+    - _需求: 10.1, 10.4_
+
+### 阶段2: 核心服务层
+
+- [ ] 2. 创建 BadgeService 服务类
+  - [ ] 2.1 创建 badge-service.uts 文件
     - 文件位置: `shengyu-ui/shengyu-ui-admin-uniappx/services/badge-service.uts`
     - 定义 BadgeData 类型 (totalUnread, conversationBadges, menuBadges, lastUpdateTime)
+    - 定义 BadgeUpdateMessage, ConversationBadge, MenuBadge 类型 (对应 Protobuf)
     - 定义 BadgeListener 接口
     - 创建 BadgeService 类骨架
-    - _需求: 6.1, 6.2_
+    - _需求: 6.1, 6.2, 10.1, 10.2_
   
-  - [ ] 1.2 实现基础角标管理方法
+  - [ ] 2.2 实现基础角标管理方法
     - 实现 `getTotalUnread()`: 返回总未读数
     - 实现 `getConversationBadge(conversationId)`: 返回会话未读数
     - 实现 `getMenuBadge(menuId)`: 返回菜单角标
     - 实现 `incrementConversationBadge()`: 增加会话未读数
     - 实现 `decrementConversationBadge()`: 减少会话未读数
-    - 实现 `clearConversationBadge()`: 清空会话未读数
+    - 实现 `clearConversationBadge()`: 清空会话未读数并调用后端API
     - 实现 `updateMenuBadge()`: 更新菜单角标
     - _需求: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 4.1, 4.2, 4.3, 4.4_
   
-  - [ ] 1.3 实现监听器机制
+  - [ ] 2.3 实现监听器机制
     - 实现 `addListener()`: 添加角标监听器
     - 实现 `removeListener()`: 移除角标监听器
     - 实现 `notifyListeners()`: 通知所有监听器
     - 使用防抖机制避免频繁通知 (300ms)
     - _需求: 6.3, 8.1_
   
-  - [ ] 1.4 实现本地存储功能
-    - 实现 `saveToLocal()`: 保存角标数据到 localStorage
-    - 实现 `loadFromLocal()`: 从 localStorage 加载角标数据
+  - [ ] 2.4 实现本地存储功能
+    - 实现 `saveToLocal()`: 保存角标数据到 uni.setStorageSync
+    - 实现 `loadFromLocal()`: 从 uni.getStorageSync 加载角标数据
     - 数据格式: StoredBadgeData (包含 version 字段)
     - 使用节流机制避免频繁保存 (1000ms)
-    - 添加错误处理,存储失败时继续使用内存数据
+    - 添加 try-catch 错误处理,存储失败时继续使用内存数据
     - _需求: 5.1, 5.2, 5.3, 5.4, 5.5, 9.3_
   
-  - [ ] 1.5 实现初始化方法
+  - [ ] 2.5 实现 WebSocket 消息处理方法
+    - 实现 `handleBadgeUpdate(message)`: 处理 BADGE_UPDATE 消息
+    - 批量更新 totalUnread, conversationBadges, menuBadges
+    - 更新 lastUpdateTime
+    - 保存到本地存储
+    - 通知所有监听器
+    - _需求: 3.1, 3.2, 3.3, 7.1, 7.2, 7.3, 8.2_
+  
+  - [ ] 2.6 实现服务器同步方法
+    - 实现 `syncFromServer()`: 从服务器同步角标数据
+    - 调用后端 API: `GET /app-api/system/im/badge/get`
+    - 解析响应并更新本地数据
+    - 保存到本地存储
+    - 通知所有监听器
+    - 添加 try-catch 错误处理,失败时使用本地缓存
+    - _需求: 3.5, 5.3, 9.2_
+  
+  - [ ] 2.7 实现初始化方法
     - 实现 `init()`: 初始化角标服务
     - 从本地存储加载数据
     - 如果本地数据不存在或过期,从服务器同步
-    - 注册 MessageService 监听器
     - _需求: 5.2, 6.5_
 
-- [ ] 1.6 编写 BadgeService 的单元测试
-  - 测试角标增加/减少/清空逻辑
-  - 测试本地存储和加载
-  - 测试监听器通知机制
-  - 测试防抖和节流机制
-  - **验证: 需求 1.1-1.6, 4.1-4.4, 5.1-5.5**
+### 阶段3: WebSocket 集成
 
-### 阶段2: WebSocket 集成
-
-- [ ] 2. 集成 WebSocket BADGE_UPDATE 消息处理
+- [ ] 3. 在前端 WebSocket 中添加 BADGE_UPDATE 支持
   - [ ] 2.1 在 message-service.uts 中添加 BADGE_UPDATE 处理
     - 文件位置: `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`
     - 在 `handleReceivedMessage()` 中添加 messageType === 204 的判断
