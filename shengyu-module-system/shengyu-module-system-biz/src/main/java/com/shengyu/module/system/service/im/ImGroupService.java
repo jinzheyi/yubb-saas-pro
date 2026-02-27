@@ -37,6 +37,16 @@ public interface ImGroupService {
     void dissolveGroup(Long userId, Long groupId);
 
     /**
+     * 解散群组(别名)
+     *
+     * @param userId 操作者ID(必须是群主)
+     * @param groupId 群组ID
+     */
+    default void dismissGroup(Long userId, Long groupId) {
+        dissolveGroup(userId, groupId);
+    }
+
+    /**
      * 退出群组
      *
      * @param userId 用户ID
@@ -70,6 +80,20 @@ public interface ImGroupService {
     void addGroupMembers(Long userId, AppImGroupMemberAddReqVO addReqVO);
 
     /**
+     * 添加群成员(别名)
+     *
+     * @param userId 操作者ID
+     * @param groupId 群组ID
+     * @param memberIds 成员ID列表
+     */
+    default void addMembers(Long userId, Long groupId, List<Long> memberIds) {
+        AppImGroupMemberAddReqVO reqVO = new AppImGroupMemberAddReqVO();
+        reqVO.setGroupId(groupId);
+        reqVO.setMemberIds(memberIds);
+        addGroupMembers(userId, reqVO);
+    }
+
+    /**
      * 移除群成员
      *
      * @param userId 操作者ID
@@ -77,6 +101,19 @@ public interface ImGroupService {
      * @param memberUserId 成员用户ID
      */
     void removeGroupMember(Long userId, Long groupId, Long memberUserId);
+
+    /**
+     * 移除多个群成员(别名)
+     *
+     * @param userId 操作者ID
+     * @param groupId 群组ID
+     * @param memberIds 成员ID列表
+     */
+    default void removeMembers(Long userId, Long groupId, List<Long> memberIds) {
+        for (Long memberId : memberIds) {
+            removeGroupMember(userId, groupId, memberId);
+        }
+    }
 
     /**
      * 获取群成员列表
@@ -98,6 +135,19 @@ public interface ImGroupService {
     void setGroupMemberRole(Long userId, Long groupId, Long memberUserId, Integer role);
 
     /**
+     * 设置管理员(别名)
+     *
+     * @param userId 操作者ID
+     * @param groupId 群组ID
+     * @param memberUserId 成员用户ID
+     * @param isAdmin 是否设为管理员
+     */
+    default void setAdmin(Long userId, Long groupId, Long memberUserId, Boolean isAdmin) {
+        // 1-管理员, 0-普通成员
+        setGroupMemberRole(userId, groupId, memberUserId, isAdmin ? 1 : 0);
+    }
+
+    /**
      * 设置群成员禁言
      *
      * @param userId 操作者ID
@@ -108,6 +158,38 @@ public interface ImGroupService {
     void setGroupMemberMuted(Long userId, Long groupId, Long memberUserId, Boolean muted);
 
     /**
+     * 禁言成员(别名)
+     *
+     * @param userId 操作者ID
+     * @param groupId 群组ID
+     * @param memberUserId 成员用户ID
+     * @param duration 禁言时长(小时),null表示永久禁言
+     */
+    default void muteMember(Long userId, Long groupId, Long memberUserId, Integer duration) {
+        setGroupMemberMuted(userId, groupId, memberUserId, true);
+    }
+
+    /**
+     * 解除禁言(别名)
+     *
+     * @param userId 操作者ID
+     * @param groupId 群组ID
+     * @param memberUserId 成员用户ID
+     */
+    default void unmuteMember(Long userId, Long groupId, Long memberUserId) {
+        setGroupMemberMuted(userId, groupId, memberUserId, false);
+    }
+
+    /**
+     * 全员禁言
+     *
+     * @param userId 操作者ID
+     * @param groupId 群组ID
+     * @param muted 是否禁言
+     */
+    void muteAll(Long userId, Long groupId, Boolean muted);
+
+    /**
      * 转让群主
      *
      * @param userId 当前群主ID
@@ -115,6 +197,17 @@ public interface ImGroupService {
      * @param newOwnerId 新群主ID
      */
     void transferGroupOwner(Long userId, Long groupId, Long newOwnerId);
+
+    /**
+     * 转让群组(别名)
+     *
+     * @param userId 当前群主ID
+     * @param groupId 群组ID
+     * @param newOwnerId 新群主ID
+     */
+    default void transferGroup(Long userId, Long groupId, Long newOwnerId) {
+        transferGroupOwner(userId, groupId, newOwnerId);
+    }
 
     /**
      * 获取群成员ID列表
@@ -175,5 +268,34 @@ public interface ImGroupService {
      * @param reqVO 更新请求
      */
     void updateGroupNotice(Long userId, AppImGroupNoticeUpdateReqVO reqVO);
+
+    /**
+     * 发布群公告(别名)
+     *
+     * @param userId 操作者ID（群主或管理员）
+     * @param reqVO 更新请求
+     */
+    default void publishAnnouncement(Long userId, AppImGroupNoticeUpdateReqVO reqVO) {
+        updateGroupNotice(userId, reqVO);
+    }
+
+    /**
+     * 获取群公告
+     *
+     * @param userId 用户ID
+     * @param groupId 群组ID
+     * @return 群公告内容
+     */
+    String getAnnouncements(Long userId, Long groupId);
+
+    /**
+     * 设置群成员昵称(群名片)
+     *
+     * @param userId 操作者ID
+     * @param groupId 群组ID
+     * @param memberUserId 成员用户ID(如果为null则设置自己的昵称)
+     * @param nickname 昵称
+     */
+    void setMemberNickname(Long userId, Long groupId, Long memberUserId, String nickname);
 
 }

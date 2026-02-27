@@ -1,0 +1,246 @@
+/**
+ * 正在输入指示器
+ * 
+ * 功能:
+ * 1. 发送正在输入状态
+ * 2. 接收正在输入状态
+ * 3. 自动超时（3秒）
+ * 4. 防抖处理
+ */
+
+import { messageService } from '../services/message-service.uts'
+import { MessageBuilder } from './message-handler.uts'
+import { wsManager } from './websocket.uts'
+
+/**
+ * 正在输入状态
+ */
+export type TypingStatus = {
+  userId: number
+  userName: string
+  timestamp: number
+}
+
+/**
+ * 正在输入管理器
+ */
+export class TypingIndicator {
+  
+  private static instance: TypingIndicator | null = null
+  
+  // 正在输入状态缓存（按会话ID分组）
+  private typingStatus: Map<number, TypingStatus[]> = new Map()
+  
+  // 发送防抖定时器
+  private sendTimer: number = 0
+  
+  // 清理定时器
+  private cleanupTimer: number = 0
+  
+  // 当前用户信息
+  private currentUserId: number = 0
+  private currentUserName: string = ''
+  private currentTenantId: number = 0
+  
+  // 正在输入超时时间（3秒）
+  private readonly TYPING_TIMEOUT = 3000
+  
+  // 发送防抖延迟（500毫秒）
+  private readonly SEND_DEBOUNCE = 500
+  
+  /**
+   * 私有构造函数（单例模式）
+   */
+  private constructor() {
+    this.startCleanupTimer()
+  }
+  
+  /**
+   * 获取单例实例
+   */
+  public static getInstance(): TypingIndicator {
+    if (TypingIndicator.instance === null) {
+      TypingIndicator.instance = new TypingIndicator()
+    }
+    return TypingIndicator.instance
+  }
+  
+  /**
+   * 设置当前用户信息
+   */
+  public setCurrentUser(userId: number, userName: string, tenantId: number): void {
+    this.currentUserId = userId
+    this.currentUserName = userName
+    this.currentTenantId = tenantId
+  }
+  
+  /**
+   * 发送正在输入状态（带防抖）
+   */
+  public sendTyping(receiverId: number, groupId: number): void {
+    // 清除之前的定时器
+    if (this.sendTimer > 0) {
+      clearTimeout(this.sendTimer)
+    }
+    
+    // 设置新的定时器（防抖）
+    this.sendTimer = setTimeout(() => {
+      this.doSendTyping(receiverId, groupId)
+    }, this.SEND_DEBOUNCE)
+  }
+  
+  /**
+   * 实际发送正在输入状态
+   */
+  private doSendTyping(receiverId: number, groupId: number): void {
+    try {
+      // 构建正在输入消息
+      const message = MessageBuilder.buildTypingMessage(
+        this.currentUserId,
+        receiverId,
+        groupId,
+        this.currentTenantId,
+        this.currentUserName
+      )
+      
+      // 通过 WebSocket 发送
+      wsManager.send(message)
+      
+      console.log('[TypingIndicator] 发送正在输入状态, receiverId:', receiverId, 'groupId:', groupId)
+    } catch (e) {
+      console.error('[TypingIndicator] 发送正在输入状态失败:', e)
+    }
+  }
+  
+  /**
+   * 停止发送正在输入状态
+   */
+  public stopTyping(): void {
+    if (this.sendTimer > 0) {
+      clearTimeout(this.sendTimer)
+      this.sendTimer = 0
+    }
+  }
+  
+  /**
+   * 接收正在输入状态
+   */
+  public receiveTyping(conversationId: number, userId: number, userName: string): void {
+    // 获取或创建会话的正在输入列表
+    let statusList = this.typingStatus.get(conversationId)
+    if (statusList === null || statusList === undefined) {
+      statusList = []
+      this.typingStatus.set(conversationId, statusList)
+    }
+    
+    // 查找是否已存在该用户的状态
+    const existingIndex = statusList.findIndex(s => s.userId === userId)
+    
+    const newStatus: TypingStatus = {
+      userId: userId,
+      userName: userName,
+      timestamp: Date.now()
+    }
+    
+    if (existingIndex !== -1) {
+      // 更新现有状态
+      statusList[existingIndex] = newStatus
+    } else {
+      // 添加新状态
+      statusList.push(newStatus)
+    }
+    
+    console.log('[TypingIndicator] 接收正在输入状态, conversationId:', conversationId, 'userName:', userName)
+  }
+  
+  /**
+   * 获取会话的正在输入状态文本
+   */
+  public getTypingText(conversationId: number, isGroup: boolean): string {
+    const statusList = this.typingStatus.get(conversationId)
+    
+    if (statusList === null || statusList === undefined || statusList.length === 0) {
+      return ''
+    }
+    
+    // 过滤掉超时的状态
+    const now = Date.now()
+    const activeStatus = statusList.filter(s => now - s.timestamp < this.TYPING_TIMEOUT)
+    
+    if (activeStatus.length === 0) {
+      return ''
+    }
+    
+    // 单聊：显示"正在输入..."
+    if (!isGroup) {
+      return '正在输入...'
+    }
+    
+    // 群聊：显示"XXX正在输入..."
+    if (activeStatus.length === 1) {
+      return activeStatus[0].userName + ' 正在输入...'
+    }
+    
+    // 多人正在输入：显示"XXX、YYY正在输入..."
+    const names = activeStatus.slice(0, 3).map(s => s.userName).join('、')
+    if (activeStatus.length > 3) {
+      return names + ' 等人正在输入...'
+    }
+    return names + ' 正在输入...'
+  }
+  
+  /**
+   * 清除会话的正在输入状态
+   */
+  public clearTyping(conversationId: number): void {
+    this.typingStatus.delete(conversationId)
+  }
+  
+  /**
+   * 启动清理定时器（每秒清理一次超时状态）
+   */
+  private startCleanupTimer(): void {
+    this.cleanupTimer = setInterval(() => {
+      this.cleanupExpiredStatus()
+    }, 1000)
+  }
+  
+  /**
+   * 清理超时的正在输入状态
+   */
+  private cleanupExpiredStatus(): void {
+    const now = Date.now()
+    
+    this.typingStatus.forEach((statusList, conversationId) => {
+      // 过滤掉超时的状态
+      const activeStatus = statusList.filter(s => now - s.timestamp < this.TYPING_TIMEOUT)
+      
+      if (activeStatus.length === 0) {
+        // 如果没有活跃状态，删除整个会话
+        this.typingStatus.delete(conversationId)
+      } else if (activeStatus.length < statusList.length) {
+        // 如果有状态被过滤，更新列表
+        this.typingStatus.set(conversationId, activeStatus)
+      }
+    })
+  }
+  
+  /**
+   * 销毁（清理定时器）
+   */
+  public destroy(): void {
+    this.stopTyping()
+    
+    if (this.cleanupTimer > 0) {
+      clearInterval(this.cleanupTimer)
+      this.cleanupTimer = 0
+    }
+    
+    this.typingStatus.clear()
+  }
+}
+
+/**
+ * 导出单例实例
+ */
+export const typingIndicator = TypingIndicator.getInstance()

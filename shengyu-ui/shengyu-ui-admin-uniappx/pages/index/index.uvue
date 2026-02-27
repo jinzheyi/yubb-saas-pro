@@ -6,7 +6,69 @@
 </template>
 
 <script setup lang="uts">
+	import { badgeService, type BadgeListener, type BadgeData } from '../../services/badge-service.uts'
+	
 	const title = ref('Hello')
+	
+	// 角标监听器
+	let badgeListener: BadgeListener | null = null
+	
+	/**
+	 * 更新 TabBar 角标
+	 */
+	const updateTabBarBadge = (totalUnread: number): void => {
+		if (totalUnread > 0) {
+			const badgeText = totalUnread > 99 ? '99+' : totalUnread.toString()
+			uni.setTabBarBadge({
+				index: 1,  // 消息标签的索引
+				text: badgeText,
+				success: () => {
+					console.log(`[Index] 设置 TabBar 角标成功: ${badgeText}`)
+				},
+				fail: (err: any) => {
+					console.error('[Index] 设置 TabBar 角标失败:', err)
+				}
+			})
+		} else {
+			uni.removeTabBarBadge({
+				index: 1,
+				success: () => {
+					console.log('[Index] 移除 TabBar 角标成功')
+				},
+				fail: (err: any) => {
+					console.error('[Index] 移除 TabBar 角标失败:', err)
+				}
+			})
+		}
+	}
+	
+	onMounted(() => {
+		console.log('[Index] 页面挂载，添加角标监听器')
+		
+		// 创建角标监听器
+		badgeListener = {
+			onBadgeUpdate: (badgeData: BadgeData): void => {
+				console.log('[Index] 收到角标更新:', badgeData.totalUnread)
+				updateTabBarBadge(badgeData.totalUnread)
+			}
+		}
+		
+		// 添加监听器
+		badgeService.addListener(badgeListener)
+		
+		// 立即更新一次角标（使用当前数据）
+		updateTabBarBadge(badgeService.getTotalUnread())
+	})
+	
+	onUnmounted(() => {
+		console.log('[Index] 页面卸载，移除角标监听器')
+		
+		// 移除监听器
+		if (badgeListener !== null) {
+			badgeService.removeListener(badgeListener)
+			badgeListener = null
+		}
+	})
 </script>
 
 <style>

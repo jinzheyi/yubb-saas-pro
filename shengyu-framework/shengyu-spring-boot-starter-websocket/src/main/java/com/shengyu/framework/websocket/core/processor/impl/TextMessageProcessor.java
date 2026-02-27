@@ -2,34 +2,48 @@ package com.shengyu.framework.websocket.core.processor.impl;
 
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.TextMessage;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
+import com.shengyu.framework.websocket.core.service.SensitiveWordFilterService;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.netty.channel.ChannelHandlerContext;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
  * 文本消息处理器
+ * 
+ * 功能：
+ * 1. 解析文本消息
+ * 2. 敏感词过滤（可选）
+ * 3. 存储消息到数据库
+ * 4. 转发消息到接收者
  *
  * @author 圣钰科技
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class TextMessageProcessor implements MessageProcessor {
 
-    private final NettySessionManager sessionManager;
-    private final MessageStorageService messageStorageService;
+    @Autowired
+    private NettySessionManager sessionManager;
+    
+    @Autowired
+    private MessageStorageService messageStorageService;
+    
+    @Autowired(required = false)
+    private SensitiveWordFilterService sensitiveWordFilterService;
 
     @Override
     public void process(ChannelHandlerContext ctx, ImMessage message) {
         try {
             // 解析文本消息
             TextMessage textMessage = TextMessage.parseFrom(message.getBody());
+            String originalContent = textMessage.getContent();
             
             // 获取发送者会话
             NettySession senderSession = sessionManager.getSession(ctx.channel());
@@ -42,12 +56,34 @@ public class TextMessageProcessor implements MessageProcessor {
                 message.getHeader().getSenderId(),
                 message.getHeader().getReceiverId(),
                 message.getHeader().getGroupId(),
-                textMessage.getContent());
+                originalContent);
 
-            // 1. 存储消息到数据库
+            // 1. 敏感词过滤（如果服务可用）
+            String filteredContent = originalContent;
+            if (sensitiveWordFilterService != null) {
+                filteredContent = sensitiveWordFilterService.filter(originalContent);
+                if (!filteredContent.equals(originalContent)) {
+                    log.info("[TextMessage] 敏感词过滤: userId={}, 原内容长度={}, 过滤后长度={}", 
+                        message.getHeader().getSenderId(), 
+                        originalContent.length(), 
+                        filteredContent.length());
+                    
+                    // 重新构建消息（使用过滤后的内容）
+                    TextMessage filteredTextMessage = TextMessage.newBuilder()
+                        .setContent(filteredContent)
+                        .build();
+                    
+                    message = ImMessage.newBuilder()
+                        .setHeader(message.getHeader())
+                        .setBody(filteredTextMessage.toByteString())
+                        .build();
+                }
+            }
+
+            // 2. 存储消息到数据库
             messageStorageService.saveMessage(message);
 
-            // 2. 转发消息
+            // 3. 转发消息
             Long receiverId = message.getHeader().getReceiverId();
             Long groupId = message.getHeader().getGroupId();
             
@@ -62,7 +98,7 @@ public class TextMessageProcessor implements MessageProcessor {
                 // TODO: 查询群成员列表并转发（可选，也可以在 SystemMessageStorageServiceImpl 中处理）
             }
 
-            // 3. 如果接收者离线，推送离线通知
+            // 4. 如果接收者离线，推送离线通知
             // TODO: 实现离线推送逻辑
 
         } catch (InvalidProtocolBufferException e) {

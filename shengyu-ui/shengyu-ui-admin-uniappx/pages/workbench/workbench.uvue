@@ -17,8 +17,8 @@
 					<view class="grid-item" v-for="(item, index) in processList" :key="index" @click="handleAction(item)">
 						<view class="icon-wrap" :style="{ backgroundImage: item.gradient }">
 							<text class="iconfont grid-icon">{{ item.icon }}</text>
-							<view v-if="item.badge" class="badge">
-								<text class="badge-text">{{ item.badge }}</text>
+							<view v-if="item.badge > 0" class="badge">
+								<text class="badge-text">{{ item.badge > 99 ? '99+' : item.badge }}</text>
 							</view>
 						</view>
 						<text class="grid-label">{{ t(item.nameKey) }}</text>
@@ -47,18 +47,19 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { badgeService, type BadgeData, type BadgeListener } from '../../services/badge-service.uts'
 
 	const { t } = useI18n()
 	const isProcessExpanded = ref(true)
 	const isFeatureExpanded = ref(true)
 
-	const processList = [
-		{ nameKey: 'workbench.todo', icon: '\uea83', gradient: 'linear-gradient(135deg, #fb923c, #f97316)', badge: '99+' },
-		{ nameKey: 'workbench.done', icon: '\uea81', gradient: 'linear-gradient(135deg, #34d399, #10b981)', badge: '' },
-		{ nameKey: 'workbench.finished', icon: '\uea80', gradient: 'linear-gradient(135deg, #fb7185, #f43f5e)', badge: '' },
-		{ nameKey: 'workbench.myStarted', icon: '\uea97', gradient: 'linear-gradient(135deg, #38bdf8, #0ea5e9)', badge: '' },
-		{ nameKey: 'workbench.newProcess', icon: '\uea9d', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)', badge: '' }
-	]
+	const processList = ref([
+		{ nameKey: 'workbench.todo', icon: '\uea83', gradient: 'linear-gradient(135deg, #fb923c, #f97316)', badge: 0 },
+		{ nameKey: 'workbench.done', icon: '\uea81', gradient: 'linear-gradient(135deg, #34d399, #10b981)', badge: 0 },
+		{ nameKey: 'workbench.finished', icon: '\uea80', gradient: 'linear-gradient(135deg, #fb7185, #f43f5e)', badge: 0 },
+		{ nameKey: 'workbench.myStarted', icon: '\uea97', gradient: 'linear-gradient(135deg, #38bdf8, #0ea5e9)', badge: 0 },
+		{ nameKey: 'workbench.newProcess', icon: '\uea9d', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)', badge: 0 }
+	])
 
 	const featureList = [
 		{ nameKey: 'workbench.notice', icon: '\uea93', gradient: 'linear-gradient(135deg, #fb923c, #f97316)' },
@@ -71,6 +72,72 @@
 		{ nameKey: 'workbench.attendance', icon: '\uea81', gradient: 'linear-gradient(135deg, #60a5fa, #2563eb)' },
 		{ nameKey: 'workbench.field', icon: '\uea72', gradient: 'linear-gradient(135deg, #fb923c, #f59e0b)' }
 	]
+
+	// 角标监听器
+	let badgeListener: BadgeListener | null = null
+
+	/**
+	 * 将 nameKey 转换为 menuId
+	 */
+	function getMenuId(nameKey: string): string {
+		// 提取 nameKey 的最后一部分作为 menuId
+		// 例如: 'workbench.todo' -> 'todo'
+		const parts = nameKey.split('.')
+		return parts[parts.length - 1]
+	}
+
+	/**
+	 * 更新菜单角标
+	 */
+	function updateMenuBadges(badgeData: BadgeData): void {
+		processList.value.forEach((item: any) => {
+			const menuId = getMenuId(item.nameKey)
+			const badgeCount = badgeData.menuBadges.get(menuId) || 0
+			item.badge = badgeCount
+		})
+	}
+
+	onMounted(() => {
+		console.log('[Workbench] 页面挂载，添加角标监听器')
+		
+		// 创建角标监听器
+		badgeListener = {
+			onBadgeUpdate: (badgeData: BadgeData) => {
+				console.log('[Workbench] 收到角标更新通知')
+				updateMenuBadges(badgeData)
+			}
+		}
+		
+		// 添加监听器
+		badgeService.addListener(badgeListener)
+		
+		// 立即更新一次角标（使用当前缓存的数据）
+		const currentBadgeData: BadgeData = {
+			totalUnread: badgeService.getTotalUnread(),
+			conversationBadges: new Map<number, number>(),
+			menuBadges: new Map<string, number>(),
+			lastUpdateTime: 0
+		}
+		
+		// 手动填充 menuBadges
+		processList.value.forEach((item: any) => {
+			const menuId = getMenuId(item.nameKey)
+			const badgeCount = badgeService.getMenuBadge(menuId)
+			currentBadgeData.menuBadges.set(menuId, badgeCount)
+		})
+		
+		updateMenuBadges(currentBadgeData)
+	})
+
+	onUnmounted(() => {
+		console.log('[Workbench] 页面卸载，移除角标监听器')
+		
+		// 移除监听器
+		if (badgeListener !== null) {
+			badgeService.removeListener(badgeListener)
+			badgeListener = null
+		}
+	})
 
 	function handleAction(item : any) {
 		uni.showToast({

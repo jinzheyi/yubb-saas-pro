@@ -21,6 +21,7 @@
 import { getAccessToken } from '../store/user.uts'
 import { getCurrentDeviceType, getDeviceId, getAppVersion } from './device.uts'
 import { WS_URL, WS_HEARTBEAT_INTERVAL, WS_HEARTBEAT_TIMEOUT, WS_MAX_RECONNECT_COUNT } from '../config/app.config.uts'
+import { badgeService } from '../services/badge-service.uts'
 
 /**
  * WebSocket 连接状态枚举
@@ -276,6 +277,9 @@ export class WebSocketManager {
       // 发送队列中的消息
       this.flushMessageQueue()
       
+      // 同步角标数据
+      this.syncBadgeData()
+      
     } else {
       const errorMsg = message.body.message as string
       console.error('[WebSocket] 认证失败:', errorMsg)
@@ -519,6 +523,22 @@ export class WebSocketManager {
       if (message !== null && message !== undefined) {
         this.sendRaw(JSON.stringify(message))
       }
+    }
+  }
+  
+  /**
+   * 同步角标数据
+   * WebSocket 重连后从服务器同步最新的角标数据
+   */
+  private syncBadgeData(): void {
+    console.log('[WebSocket] WebSocket 连接成功，同步角标数据')
+    
+    try {
+      // 调用 badgeService 从服务器同步角标数据
+      badgeService.syncFromServer()
+    } catch (e) {
+      console.error('[WebSocket] 同步角标数据失败:', e)
+      // 失败不影响其他功能，badgeService 会使用本地缓存
     }
   }
   

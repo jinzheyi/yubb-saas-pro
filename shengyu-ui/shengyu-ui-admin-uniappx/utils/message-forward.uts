@@ -1,0 +1,159 @@
+/**
+ * 消息转发工具
+ * 
+ * 功能:
+ * 1. 消息转发到单个会话
+ * 2. 消息转发到多个会话
+ * 3. 转发内容处理（保留原始文件URL和元数据）
+ */
+
+import { messageService, MessageItem } from '../services/message-service.uts'
+import { MessageType } from '../utils/websocket.uts'
+
+/**
+ * 转发消息到指定会话
+ * 
+ * @param message 要转发的消息
+ * @param targetConversationIds 目标会话ID列表
+ * @returns 转发成功的数量
+ */
+export function forwardMessage(message: MessageItem, targetConversationIds: number[]): number {
+  let successCount = 0
+  
+  targetConversationIds.forEach(conversationId => {
+    try {
+      // 判断是单聊还是群聊
+      const isGroup = conversationId > 1000000  // 假设群ID大于1000000
+      const receiverId = isGroup ? 0 : conversationId
+      const groupId = isGroup ? conversationId : 0
+      
+      // 根据消息类型转发
+      switch (message.type) {
+        case MessageType.TEXT:
+          messageService.sendTextMessage(receiverId, groupId, message.content as string)
+          break
+          
+        case MessageType.IMAGE:
+          const imageContent = message.content as any
+          messageService.sendImageMessage(
+            receiverId,
+            groupId,
+            imageContent.url,
+            imageContent.thumbnailUrl || imageContent.url,
+            imageContent.width || 0,
+            imageContent.height || 0,
+            imageContent.size || 0
+          )
+          break
+          
+        case MessageType.VOICE:
+          const voiceContent = message.content as any
+          messageService.sendVoiceMessage(
+            receiverId,
+            groupId,
+            voiceContent.url,
+            voiceContent.duration || 0,
+            voiceContent.size || 0
+          )
+          break
+          
+        case MessageType.VIDEO:
+          const videoContent = message.content as any
+          messageService.sendVideoMessage(
+            receiverId,
+            groupId,
+            videoContent.url,
+            videoContent.coverUrl || '',
+            videoContent.duration || 0,
+            videoContent.width || 0,
+            videoContent.height || 0,
+            videoContent.size || 0
+          )
+          break
+          
+        case MessageType.FILE:
+          const fileContent = message.content as any
+          messageService.sendFileMessage(
+            receiverId,
+            groupId,
+            fileContent.url,
+            fileContent.fileName || '文件',
+            fileContent.size || 0,
+            fileContent.fileType || ''
+          )
+          break
+          
+        case MessageType.LOCATION:
+          const locationContent = message.content as any
+          messageService.sendLocationMessage(
+            receiverId,
+            groupId,
+            locationContent.latitude || 0,
+            locationContent.longitude || 0,
+            locationContent.address || ''
+          )
+          break
+          
+        default:
+          console.warn('[MessageForward] 不支持转发的消息类型:', message.type)
+          return
+      }
+      
+      successCount++
+    } catch (e) {
+      console.error('[MessageForward] 转发消息失败:', e)
+    }
+  })
+  
+  return successCount
+}
+
+/**
+ * 批量转发消息
+ * 
+ * @param messages 要转发的消息列表
+ * @param targetConversationIds 目标会话ID列表
+ * @returns 转发成功的总数
+ */
+export function forwardMessages(messages: MessageItem[], targetConversationIds: number[]): number {
+  let totalSuccess = 0
+  
+  messages.forEach(message => {
+    totalSuccess += forwardMessage(message, targetConversationIds)
+  })
+  
+  return totalSuccess
+}
+
+/**
+ * 获取消息转发预览文本
+ * 
+ * @param message 消息
+ * @returns 预览文本
+ */
+export function getForwardPreview(message: MessageItem): string {
+  switch (message.type) {
+    case MessageType.TEXT:
+      const text = message.content as string
+      return text.length > 50 ? text.substring(0, 50) + '...' : text
+      
+    case MessageType.IMAGE:
+      return '[图片]'
+      
+    case MessageType.VOICE:
+      return '[语音]'
+      
+    case MessageType.VIDEO:
+      return '[视频]'
+      
+    case MessageType.FILE:
+      const fileContent = message.content as any
+      return `[文件] ${fileContent.fileName || '未知文件'}`
+      
+    case MessageType.LOCATION:
+      return '[位置]'
+      
+    default:
+      return '[消息]'
+  }
+}

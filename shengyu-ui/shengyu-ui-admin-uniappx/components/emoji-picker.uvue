@@ -1,0 +1,125 @@
+<template>
+  <view class="emoji-picker-overlay" v-if="visible" @click="onClose">
+    <view class="emoji-picker-container" @click.stop>
+      <view class="emoji-picker-header">
+        <text class="emoji-picker-title">选择表情</text>
+        <view class="emoji-picker-close" @click="onClose">
+          <text class="emoji-picker-close-icon">×</text>
+        </view>
+      </view>
+      <view class="emoji-picker-content">
+        <view 
+          v-for="(emoji, index) in emojis" 
+          :key="index"
+          class="emoji-item"
+          @click="onEmojiClick(emoji)"
+        >
+          <text class="emoji-text">{{ emoji }}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script setup lang="uts">
+import { ref, PropType } from 'vue'
+import { COMMON_EMOJIS } from '@/services/message-reaction-service.uts'
+
+const props = defineProps({
+  visible: {
+    type: Boolean,
+    default: false
+  },
+  emojis: {
+    type: Array as PropType<string[]>,
+    default: () => COMMON_EMOJIS
+  }
+})
+
+const emit = defineEmits<{
+  close: []
+  select: [emoji: string]
+}>()
+
+const onClose = () => {
+  emit('close')
+}
+
+const onEmojiClick = (emoji: string) => {
+  emit('select', emoji)
+}
+</script>
+
+<style scoped>
+.emoji-picker-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.emoji-picker-container {
+  width: 100%;
+  max-height: 60vh;
+  background-color: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  overflow: hidden;
+}
+
+.emoji-picker-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32rpx;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.emoji-picker-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.emoji-picker-close {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emoji-picker-close-icon {
+  font-size: 48rpx;
+  color: #999;
+  line-height: 48rpx;
+}
+
+.emoji-picker-content {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: 32rpx;
+  gap: 16rpx;
+}
+
+.emoji-item {
+  width: 96rpx;
+  height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+  border-radius: 16rpx;
+}
+
+.emoji-text {
+  font-size: 48rpx;
+}
+</style>

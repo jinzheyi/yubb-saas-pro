@@ -42,6 +42,9 @@ public class ImMessageServiceImpl implements ImMessageService {
     @Resource
     private AdminUserMapper userMapper;
 
+    @Resource
+    private ImBadgeService imBadgeService;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long sendMessage(Long userId, AppImMessageSendReqVO sendReqVO) {
@@ -75,6 +78,11 @@ public class ImMessageServiceImpl implements ImMessageService {
         // 增加接收者的未读数
         conversationService.incrementUnreadCount(sendReqVO.getConversationId());
 
+        // 推送角标更新到接收方的所有设备
+        if (sendReqVO.getReceiverId() != null) {
+            imBadgeService.pushBadgeUpdate(sendReqVO.getReceiverId());
+        }
+
         return message.getId();
     }
 
@@ -101,6 +109,182 @@ public class ImMessageServiceImpl implements ImMessageService {
         }).collect(Collectors.toList());
 
         return new PageResult<>(respVOList, pageResult.getTotal());
+    }
+
+    @Override
+    public List<AppImMessageRespVO> getConversationMessages(Long userId, Long conversationId, Long lastMessageId, Integer pageSize) {
+        // 验证会话是否存在
+        ImConversationDO conversation = conversationService.getConversation(conversationId);
+        if (conversation == null || !conversation.getUserId().equals(userId)) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+
+        // 设置默认分页大小
+        if (pageSize == null || pageSize <= 0) {
+            pageSize = 20;
+        }
+
+        // 查询消息列表
+        List<ImMessageDO> messages;
+        if (lastMessageId == null) {
+            // 首次查询：获取最新的消息
+            messages = messageMapper.selectListByConversationId(conversationId, pageSize);
+        } else {
+            // 分页查询：获取指定消息之前的消息
+            messages = messageMapper.selectListByConversationIdBeforeMessageId(conversationId, lastMessageId, pageSize);
+        }
+
+        // 转换为VO并填充发送者信息
+        return messages.stream().map(message -> {
+            AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
+            fillSenderInfo(respVO, message);
+            respVO.setIsSelf(message.getSenderId().equals(userId));
+            return respVO;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public AppImMessageRespVO getMessageDetail(Long userId, Long messageId) {
+        // 查询消息
+        ImMessageDO message = messageMapper.selectById(messageId);
+        if (message == null) {
+            throw exception(MESSAGE_NOT_EXISTS);
+        }
+
+        // 验证权限：用户必须是消息的发送者或接收者
+        boolean isParticipant = message.getSenderId().equals(userId) || 
+                                (message.getReceiverId() != null && message.getReceiverId().equals(userId));
+        
+        if (!isParticipant) {
+            // 如果是群聊消息，需要验证用户是否是群成员
+            if (message.getGroupId() != null) {
+                // TODO: 验证用户是否是群成员（需要群组服务支持）
+                log.debug("[ImMessageService] 群聊消息权限验证待实现, messageId: {}, userId: {}", messageId, userId);
+            } else {
+                throw exception(MESSAGE_NOT_EXISTS);
+            }
+        }
+
+        // 转换为VO并填充发送者信息
+        AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
+        fillSenderInfo(respVO, message);
+        respVO.setIsSelf(message.getSenderId().equals(userId));
+        
+        return respVO;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateMessageStatus(Long userId, Long messageId, Integer status) {
+        // 查询消息
+        ImMessageDO message = messageMapper.selectById(messageId);
+        if (message == null) {
+            throw exception(MESSAGE_NOT_EXISTS);
+        }
+
+        // 验证权限：只能更新发给自己的消息状态
+        if (!message.getReceiverId().equals(userId)) {
+            throw exception(MESSAGE_NOT_EXISTS);
+        }
+
+        // 验证状态转换是否合法
+        if (!isValidStatusTransition(message.getStatus(), status)) {
+            log.warn("[ImMessageService] 非法的状态转换, messageId: {}, oldStatus: {}, newStatus: {}", 
+                    messageId, message.getStatus(), status);
+            throw exception(MESSAGE_STATUS_INVALID);
+        }
+
+        // 更新消息状态
+        message.setStatus(status);
+        messageMapper.updateById(message);
+        
+        log.debug("[ImMessageService] 更新消息状态成功, messageId: {}, status: {}", messageId, status);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchUpdateMessageStatus(Long userId, List<Long> messageIds, Integer status) {
+        if (messageIds == null || messageIds.isEmpty()) {
+            return;
+        }
+
+        // 批量更新消息状态（只更新属于当前用户接收的消息）
+        int updatedCount = messageMapper.updateStatusByIdsAndReceiverId(messageIds, userId, status);
+        
+        log.debug("[ImMessageService] 批量更新消息状态成功, userId: {}, messageCount: {}, updated: {}, status: {}", 
+                userId, messageIds.size(), updatedCount, status);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long forwardMessage(Long userId, Long messageId, Long targetConversationId) {
+        // 查询原消息
+        ImMessageDO originalMessage = messageMapper.selectById(messageId);
+        if (originalMessage == null) {
+            throw exception(MESSAGE_NOT_EXISTS);
+        }
+
+        // 验证目标会话是否存在
+        ImConversationDO targetConversation = conversationService.getConversation(targetConversationId);
+        if (targetConversation == null || !targetConversation.getUserId().equals(userId)) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+
+        // 创建新消息（复制原消息内容）
+        ImMessageDO newMessage = new ImMessageDO();
+        newMessage.setConversationId(targetConversationId);
+        newMessage.setSenderId(userId);
+        newMessage.setReceiverId(targetConversation.getTargetId());
+        newMessage.setGroupId(targetConversation.getConversationType() == 2 ? targetConversation.getTargetId() : null);
+        newMessage.setMessageType(originalMessage.getMessageType());
+        newMessage.setContent(originalMessage.getContent());
+        newMessage.setExtra(originalMessage.getExtra());
+        newMessage.setSendTime(LocalDateTime.now());
+        newMessage.setStatus(ImMessageStatusEnum.SENT.getStatus());
+        messageMapper.insert(newMessage);
+
+        // 更新目标会话的最后消息
+        conversationService.updateLastMessage(
+                targetConversationId,
+                newMessage.getId(),
+                getMessagePreview(newMessage.getMessageType(), newMessage.getContent())
+        );
+
+        // 增加接收者的未读数
+        conversationService.incrementUnreadCount(targetConversationId);
+
+        // 推送角标更新到接收方的所有设备
+        if (newMessage.getReceiverId() != null) {
+            imBadgeService.pushBadgeUpdate(newMessage.getReceiverId());
+        }
+
+        log.debug("[ImMessageService] 转发消息成功, originalMessageId: {}, newMessageId: {}, targetConversationId: {}", 
+                messageId, newMessage.getId(), targetConversationId);
+
+        return newMessage.getId();
+    }
+
+    /**
+     * 验证消息状态转换是否合法
+     * 
+     * 状态转换规则:
+     * - 0(未读) -> 1(已读)
+     * - 1(已读) -> 1(已读) (幂等)
+     * - 其他转换不允许
+     */
+    private boolean isValidStatusTransition(Integer oldStatus, Integer newStatus) {
+        // 如果状态相同，允许（幂等操作）
+        if (oldStatus.equals(newStatus)) {
+            return true;
+        }
+
+        // 未读 -> 已读
+        if (oldStatus == 0 && newStatus == 1) {
+            return true;
+        }
+
+        // 其他转换不允许
+        return false;
     }
 
     @Override

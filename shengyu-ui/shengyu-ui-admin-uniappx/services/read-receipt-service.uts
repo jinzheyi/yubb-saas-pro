@@ -1,0 +1,247 @@
+/**
+ * 已读回执服务
+ * 
+ * 功能:
+ * 1. 发送已读回执
+ * 2. 接收已读回执
+ * 3. 更新消息已读状态
+ * 4. 查看已读详情（群聊）
+ * 5. 批量标记已读
+ */
+
+import { request } from '@/utils/request.uts'
+import { messageService } from './message-service.uts'
+
+/**
+ * 已读详情项
+ */
+export type ReadDetailItem = {
+  userId: number
+  userName: string
+  avatar: string
+  readTime: number
+}
+
+/**
+ * 已读回执服务类（单例模式）
+ */
+export class ReadReceiptService {
+  
+  private static instance: ReadReceiptService | null = null
+  
+  // 已读状态缓存（messageId -> 已读用户ID列表）
+  private readStatus: Map<number, number[]> = new Map()
+  
+  /**
+   * 私有构造函数（单例模式）
+   */
+  private constructor() {
+    // 初始化
+  }
+  
+  /**
+   * 获取单例实例
+   */
+  public static getInstance(): ReadReceiptService {
+    if (ReadReceiptService.instance === null) {
+      ReadReceiptService.instance = new ReadReceiptService()
+    }
+    return ReadReceiptService.instance
+  }
+  
+  /**
+   * 标记消息为已读（进入会话时调用）
+   */
+  public async markMessagesAsRead(conversationId: number, messageIds: number[]): Promise<boolean> {
+    if (messageIds.length === 0) {
+      return true
+    }
+    
+    try {
+      // 调用后端 API 标记已读
+      const response = await request({
+        url: '/system/im-message/mark-read',
+        method: 'POST',
+        data: {
+          conversationId: conversationId,
+          messageIds: messageIds
+        }
+      })
+      
+      if (response.code === 0) {
+        // 发送已读回执到发送者
+        this.sendReadReceipt(conversationId, messageIds)
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[ReadReceiptService] 标记消息已读失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 发送已读回执
+   */
+  private sendReadReceipt(conversationId: number, messageIds: number[]): void {
+    // 通过 MessageService 发送已读回执
+    // 注意：这里需要知道接收者ID，实际应该从会话信息中获取
+    // 简化处理：使用 conversationId 作为 receiverId
+    messageService.sendReadReceipt(conversationId, messageIds)
+  }
+  
+  /**
+   * 接收已读回执（更新本地消息状态）
+   */
+  public receiveReadReceipt(messageIds: number[], readUserId: number): void {
+    messageIds.forEach(messageId => {
+      // 获取或创建已读用户列表
+      let readUserIds = this.readStatus.get(messageId)
+      if (readUserIds === null || readUserIds === undefined) {
+        readUserIds = []
+        this.readStatus.set(messageId, readUserIds)
+      }
+      
+      // 添加已读用户（去重）
+      if (!readUserIds.includes(readUserId)) {
+        readUserIds.push(readUserId)
+      }
+    })
+    
+    console.log('[ReadReceiptService] 接收已读回执, messageIds:', messageIds, 'readUserId:', readUserId)
+  }
+  
+  /**
+   * 获取消息的已读状态（单聊）
+   */
+  public getReadStatus(messageId: number): 'unread' | 'read' {
+    const readUserIds = this.readStatus.get(messageId)
+    return (readUserIds !== null && readUserIds !== undefined && readUserIds.length > 0) ? 'read' : 'unread'
+  }
+  
+  /**
+   * 获取消息的已读人数（群聊）
+   */
+  public getReadCount(messageId: number): number {
+    const readUserIds = this.readStatus.get(messageId)
+    return (readUserIds !== null && readUserIds !== undefined) ? readUserIds.length : 0
+  }
+  
+  /**
+   * 获取消息的已读详情（群聊）
+   */
+  public async getReadDetail(messageId: number): Promise<ReadDetailItem[]> {
+    try {
+      const response = await request({
+        url: '/system/im-message/read-detail',
+        method: 'GET',
+        params: {
+          messageId: messageId
+        }
+      })
+      
+      if (response.code === 0 && response.data) {
+        return response.data.map((item: any) => ({
+          userId: item.userId,
+          userName: item.userName || '',
+          avatar: item.avatar || '',
+          readTime: item.readTime || 0
+        }))
+      }
+      return []
+    } catch (e) {
+      console.error('[ReadReceiptService] 获取已读详情失败:', e)
+      return []
+    }
+  }
+  
+  /**
+   * 获取消息的未读详情（群聊）
+   */
+  public async getUnreadDetail(messageId: number): Promise<ReadDetailItem[]> {
+    try {
+      const response = await request({
+        url: '/system/im-message/unread-detail',
+        method: 'GET',
+        params: {
+          messageId: messageId
+        }
+      })
+      
+      if (response.code === 0 && response.data) {
+        return response.data.map((item: any) => ({
+          userId: item.userId,
+          userName: item.userName || '',
+          avatar: item.avatar || '',
+          readTime: 0
+        }))
+      }
+      return []
+    } catch (e) {
+      console.error('[ReadReceiptService] 获取未读详情失败:', e)
+      return []
+    }
+  }
+  
+  /**
+   * 批量标记会话消息为已读
+   */
+  public async markConversationAsRead(conversationId: number): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-conversation/mark-read',
+        method: 'POST',
+        data: {
+          conversationId: conversationId
+        }
+      })
+      
+      return response.code === 0
+    } catch (e) {
+      console.error('[ReadReceiptService] 批量标记会话已读失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 获取会话的未读消息列表
+   */
+  public async getUnreadMessages(conversationId: number): Promise<number[]> {
+    try {
+      const response = await request({
+        url: '/system/im-message/unread-list',
+        method: 'GET',
+        params: {
+          conversationId: conversationId
+        }
+      })
+      
+      if (response.code === 0 && response.data) {
+        return response.data.map((item: any) => item.messageId)
+      }
+      return []
+    } catch (e) {
+      console.error('[ReadReceiptService] 获取未读消息列表失败:', e)
+      return []
+    }
+  }
+  
+  /**
+   * 清空缓存
+   */
+  public clearCache(): void {
+    this.readStatus.clear()
+  }
+  
+  /**
+   * 清空指定消息的已读状态
+   */
+  public clearMessageReadStatus(messageId: number): void {
+    this.readStatus.delete(messageId)
+  }
+}
+
+/**
+ * 导出单例实例
+ */
+export const readReceiptService = ReadReceiptService.getInstance()

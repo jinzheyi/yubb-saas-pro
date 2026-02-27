@@ -32,6 +32,9 @@ public class AppImConversationController {
     @Resource
     private ImConversationService conversationService;
 
+    @Resource
+    private ImBadgeService imBadgeService;
+
     @GetMapping("/list")
     @Operation(summary = "获取会话列表")
     public CommonResult<List<AppImConversationRespVO>> getConversationList() {
@@ -80,6 +83,18 @@ public class AppImConversationController {
     public CommonResult<Boolean> markConversationRead(@RequestParam("id") Long id) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         conversationService.markConversationRead(userId, id);
+        return success(true);
+    }
+
+    @PutMapping("/clear-unread/{id}")
+    @Operation(summary = "清空会话未读数")
+    @Parameter(name = "id", description = "会话ID", required = true)
+    public CommonResult<Boolean> clearUnread(@PathVariable("id") Long id) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        // 清空数据库中的未读数
+        conversationService.markConversationRead(userId, id);
+        // 推送角标更新到用户的其他设备
+        imBadgeService.pushBadgeUpdate(userId);
         return success(true);
     }
 

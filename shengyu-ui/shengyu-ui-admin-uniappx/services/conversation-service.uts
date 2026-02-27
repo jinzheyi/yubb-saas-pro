@@ -1,0 +1,386 @@
+/**
+ * 会话服务
+ * 
+ * 功能:
+ * 1. 会话列表管理
+ * 2. 会话操作（置顶、删除、免打扰、清空未读）
+ * 3. 会话更新和排序
+ * 4. 已读未读管理
+ * 5. 草稿管理
+ */
+
+import { request } from '@/utils/request.uts'
+import { badgeService } from './badge-service.uts'
+
+/**
+ * 会话类型枚举
+ */
+export enum ConversationType {
+  SINGLE = 1,  // 单聊
+  GROUP = 2    // 群聊
+}
+
+/**
+ * 会话项（用于 UI 显示）
+ */
+export type ConversationItem = {
+  id: number
+  type: ConversationType
+  targetId: number
+  name: string
+  avatar: string
+  avatarText: string
+  avatarBg: string
+  lastMessage: string
+  lastTime: string
+  timestamp: number
+  unreadCount: number
+  isPinned: boolean
+  noDisturb: boolean
+  draft: string
+  groupMemberCount: number
+}
+
+/**
+ * 会话更新监听器类型
+ */
+export type ConversationUpdateListener = (conversations: ConversationItem[]) => void
+
+/**
+ * 会话服务类（单例模式）
+ */
+export class ConversationService {
+  
+  private static instance: ConversationService | null = null
+  
+  // 会话列表缓存
+  private conversations: ConversationItem[] = []
+  
+  // 会话更新监听器列表
+  private updateListeners: ConversationUpdateListener[] = []
+  
+  /**
+   * 私有构造函数（单例模式）
+   */
+  private constructor() {
+    // 初始化
+  }
+  
+  /**
+   * 获取单例实例
+   */
+  public static getInstance(): ConversationService {
+    if (ConversationService.instance === null) {
+      ConversationService.instance = new ConversationService()
+    }
+    return ConversationService.instance
+  }
+  
+  /**
+   * 从服务器加载会话列表
+   */
+  public async loadConversations(): Promise<void> {
+    try {
+      const response = await request({
+        url: '/system/im-conversation/list',
+        method: 'GET'
+      })
+      
+      if (response.code === 0 && response.data) {
+        this.conversations = response.data.map((item: any) => this.mapToConversationItem(item))
+        this.sortConversations()
+        this.notifyUpdateListeners()
+      }
+    } catch (e) {
+      console.error('[ConversationService] 加载会话列表失败:', e)
+    }
+  }
+  
+  /**
+   * 获取会话列表
+   */
+  public getConversations(): ConversationItem[] {
+    return this.conversations
+  }
+  
+  /**
+   * 获取单个会话
+   */
+  public getConversation(conversationId: number): ConversationItem | null {
+    const conversation = this.conversations.find(c => c.id === conversationId)
+    return conversation !== undefined ? conversation : null
+  }
+  
+  /**
+   * 更新会话（接收到新消息时调用）
+   */
+  public updateConversation(
+    conversationId: number,
+    lastMessage: string,
+    timestamp: number,
+    incrementUnread: boolean = false
+  ): void {
+    let conversation = this.conversations.find(c => c.id === conversationId)
+    
+    if (conversation !== undefined) {
+      // 更新现有会话
+      conversation.lastMessage = lastMessage
+      conversation.timestamp = timestamp
+      conversation.lastTime = this.formatTime(timestamp)
+      
+      if (incrementUnread) {
+        conversation.unreadCount++
+      }
+    } else {
+      // 创建新会话（实际应该从服务器获取完整信息）
+      console.warn('[ConversationService] 会话不存在，需要从服务器获取:', conversationId)
+      // TODO: 从服务器获取会话详情
+    }
+    
+    this.sortConversations()
+    this.notifyUpdateListeners()
+  }
+  
+  /**
+   * 置顶会话
+   */
+  public async pinConversation(conversationId: number, isPinned: boolean): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-conversation/pin',
+        method: 'PUT',
+        data: {
+          id: conversationId,
+          isPinned: isPinned
+        }
+      })
+      
+      if (response.code === 0) {
+        const conversation = this.conversations.find(c => c.id === conversationId)
+        if (conversation !== undefined) {
+          conversation.isPinned = isPinned
+          this.sortConversations()
+          this.notifyUpdateListeners()
+        }
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[ConversationService] 置顶会话失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 删除会话
+   */
+  public async deleteConversation(conversationId: number): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-conversation/delete',
+        method: 'DELETE',
+        params: {
+          id: conversationId
+        }
+      })
+      
+      if (response.code === 0) {
+        const index = this.conversations.findIndex(c => c.id === conversationId)
+        if (index !== -1) {
+          this.conversations.splice(index, 1)
+          this.notifyUpdateListeners()
+        }
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[ConversationService] 删除会话失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 设置免打扰
+   */
+  public async setMute(conversationId: number, noDisturb: boolean): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-conversation/mute',
+        method: 'PUT',
+        data: {
+          id: conversationId,
+          noDisturb: noDisturb
+        }
+      })
+      
+      if (response.code === 0) {
+        const conversation = this.conversations.find(c => c.id === conversationId)
+        if (conversation !== undefined) {
+          conversation.noDisturb = noDisturb
+          this.notifyUpdateListeners()
+        }
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[ConversationService] 设置免打扰失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 清空未读数
+   */
+  public async clearUnread(conversationId: number): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-conversation/clear-unread',
+        method: 'PUT',
+        params: {
+          id: conversationId
+        }
+      })
+      
+      if (response.code === 0) {
+        const conversation = this.conversations.find(c => c.id === conversationId)
+        if (conversation !== undefined) {
+          conversation.unreadCount = 0
+          this.notifyUpdateListeners()
+          
+          // 同步清空角标
+          badgeService.clearConversationBadge(conversationId)
+        }
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[ConversationService] 清空未读数失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 保存草稿
+   */
+  public saveDraft(conversationId: number, draft: string): void {
+    const conversation = this.conversations.find(c => c.id === conversationId)
+    if (conversation !== undefined) {
+      conversation.draft = draft
+      this.notifyUpdateListeners()
+    }
+  }
+  
+  /**
+   * 获取草稿
+   */
+  public getDraft(conversationId: number): string {
+    const conversation = this.conversations.find(c => c.id === conversationId)
+    return conversation !== undefined ? conversation.draft : ''
+  }
+  
+  /**
+   * 会话排序（置顶优先，按时间倒序）
+   */
+  private sortConversations(): void {
+    this.conversations.sort((a, b) => {
+      // 置顶的会话排在前面
+      if (a.isPinned !== b.isPinned) {
+        return a.isPinned ? -1 : 1
+      }
+      // 按时间戳降序排序
+      return b.timestamp - a.timestamp
+    })
+  }
+  
+  /**
+   * 格式化时间
+   */
+  private formatTime(timestamp: number): string {
+    const now = Date.now()
+    const diff = now - timestamp
+    const oneDay = 24 * 60 * 60 * 1000
+    
+    if (diff < 60 * 1000) {
+      return '刚刚'
+    } else if (diff < 60 * 60 * 1000) {
+      return Math.floor(diff / (60 * 1000)) + '分钟前'
+    } else if (diff < oneDay) {
+      const date = new Date(timestamp)
+      return date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0')
+    } else if (diff < 2 * oneDay) {
+      return '昨天'
+    } else if (diff < 7 * oneDay) {
+      const days = ['日', '一', '二', '三', '四', '五', '六']
+      const date = new Date(timestamp)
+      return '星期' + days[date.getDay()]
+    } else {
+      const date = new Date(timestamp)
+      return (date.getMonth() + 1) + '/' + date.getDate()
+    }
+  }
+  
+  /**
+   * 映射服务器数据到会话项
+   */
+  private mapToConversationItem(data: any): ConversationItem {
+    return {
+      id: data.id,
+      type: data.type,
+      targetId: data.targetId,
+      name: data.name || '',
+      avatar: data.avatar || '',
+      avatarText: data.avatarText || '',
+      avatarBg: data.avatarBg || '#409EFF',
+      lastMessage: data.lastMessage || '',
+      lastTime: this.formatTime(data.lastTime || 0),
+      timestamp: data.lastTime || 0,
+      unreadCount: data.unreadCount || 0,
+      isPinned: data.isPinned || false,
+      noDisturb: data.noDisturb || false,
+      draft: '',
+      groupMemberCount: data.groupMemberCount || 0
+    }
+  }
+  
+  /**
+   * 添加更新监听器
+   */
+  public addUpdateListener(listener: ConversationUpdateListener): void {
+    this.updateListeners.push(listener)
+  }
+  
+  /**
+   * 移除更新监听器
+   */
+  public removeUpdateListener(listener: ConversationUpdateListener): void {
+    const index = this.updateListeners.indexOf(listener)
+    if (index !== -1) {
+      this.updateListeners.splice(index, 1)
+    }
+  }
+  
+  /**
+   * 通知更新监听器
+   */
+  private notifyUpdateListeners(): void {
+    this.updateListeners.forEach((listener) => {
+      try {
+        listener(this.conversations)
+      } catch (e) {
+        console.error('[ConversationService] 更新监听器执行失败:', e)
+      }
+    })
+  }
+  
+  /**
+   * 清空缓存
+   */
+  public clearCache(): void {
+    this.conversations = []
+  }
+}
+
+/**
+ * 导出单例实例
+ */
+export const conversationService = ConversationService.getInstance()

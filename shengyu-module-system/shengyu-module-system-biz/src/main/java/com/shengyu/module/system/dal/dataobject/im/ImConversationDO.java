@@ -84,6 +84,16 @@ public class ImConversationDO extends TenantBaseDO {
     private Boolean noDisturb;
 
     /**
+     * 草稿内容
+     */
+    private String draft;
+
+    /**
+     * 标签列表(逗号分隔)
+     */
+    private String tags;
+
+    /**
      * 用户是否删除会话
      */
     private Boolean deletedByUser;

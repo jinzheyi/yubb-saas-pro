@@ -31,6 +31,42 @@ public interface ImMessageMapper extends BaseMapperX<ImMessageDO> {
     }
 
     /**
+     * 根据会话ID查询消息列表（限制数量，按发送时间倒序）
+     *
+     * @param conversationId 会话ID
+     * @param limit 限制数量
+     * @return 消息列表
+     */
+    default List<ImMessageDO> selectListByConversationId(Long conversationId, Integer limit) {
+        return selectList(new LambdaQueryWrapperX<ImMessageDO>()
+                .eq(ImMessageDO::getConversationId, conversationId)
+                .orderByDesc(ImMessageDO::getSendTime)
+                .last("LIMIT " + limit));
+    }
+
+    /**
+     * 根据会话ID查询指定消息之前的消息列表（用于分页加载历史消息）
+     *
+     * @param conversationId 会话ID
+     * @param lastMessageId 最后一条消息ID
+     * @param limit 限制数量
+     * @return 消息列表
+     */
+    default List<ImMessageDO> selectListByConversationIdBeforeMessageId(Long conversationId, Long lastMessageId, Integer limit) {
+        // 先查询lastMessageId的发送时间
+        ImMessageDO lastMessage = selectById(lastMessageId);
+        if (lastMessage == null) {
+            return new java.util.ArrayList<>();
+        }
+        
+        return selectList(new LambdaQueryWrapperX<ImMessageDO>()
+                .eq(ImMessageDO::getConversationId, conversationId)
+                .lt(ImMessageDO::getSendTime, lastMessage.getSendTime())
+                .orderByDesc(ImMessageDO::getSendTime)
+                .last("LIMIT " + limit));
+    }
+
+    /**
      * 根据会话ID查询最后一条消息
      *
      * @param conversationId 会话ID

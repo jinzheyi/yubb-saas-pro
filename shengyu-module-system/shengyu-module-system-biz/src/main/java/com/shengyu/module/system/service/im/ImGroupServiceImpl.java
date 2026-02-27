@@ -470,6 +470,30 @@ public class ImGroupServiceImpl implements ImGroupService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void muteAll(Long userId, Long groupId, Boolean muted) {
+        // 查询群组
+        ImGroupDO group = groupMapper.selectById(groupId);
+        if (group == null) {
+            throw exception(GROUP_NOT_EXISTS);
+        }
+
+        // 检查权限(只有群主和管理员可以全员禁言)
+        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
+        if (groupUser == null || 
+            (!ImGroupMemberRoleEnum.isOwner(groupUser.getRole()) && 
+             !ImGroupMemberRoleEnum.isAdmin(groupUser.getRole()))) {
+            throw exception(GROUP_PERMISSION_DENIED);
+        }
+
+        // 更新群组全员禁言状态
+        group.setMuteAll(muted);
+        groupMapper.updateById(group);
+
+        log.info("[ImGroupService] 设置全员禁言成功, groupId: {}, muted: {}", groupId, muted);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void transferGroupOwner(Long userId, Long groupId, Long newOwnerId) {
         // 查询群组
         ImGroupDO group = groupMapper.selectById(groupId);
@@ -853,6 +877,70 @@ public class ImGroupServiceImpl implements ImGroupService {
             // TODO: 调用消息服务发送系统通知
             // messageService.sendSystemNotification(memberIds, notificationContent, reqVO.getGroupId());
         }
+    }
+
+    @Override
+    public String getAnnouncements(Long userId, Long groupId) {
+        log.info("[ImGroupService] 查询群公告, userId: {}, groupId: {}", userId, groupId);
+        
+        // 1. 查询群组
+        ImGroupDO group = groupMapper.selectById(groupId);
+        if (group == null) {
+            throw exception(GROUP_NOT_EXISTS);
+        }
+        
+        // 2. 检查是否是群成员
+        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
+        if (groupUser == null) {
+            throw exception(GROUP_MEMBER_NOT_EXISTS);
+        }
+        
+        // 3. 返回群公告
+        return group.getNotice();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void setMemberNickname(Long userId, Long groupId, Long memberUserId, String nickname) {
+        // 如果memberUserId为null，则设置自己的昵称
+        Long targetUserId = memberUserId != null ? memberUserId : userId;
+        
+        log.info("[ImGroupService] 设置群成员昵称, userId: {}, groupId: {}, targetUserId: {}, nickname: {}", 
+                userId, groupId, targetUserId, nickname);
+        
+        // 1. 查询群组
+        ImGroupDO group = groupMapper.selectById(groupId);
+        if (group == null) {
+            throw exception(GROUP_NOT_EXISTS);
+        }
+        
+        // 2. 查询操作者在群中的角色
+        ImGroupUserDO operatorGroupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
+        if (operatorGroupUser == null) {
+            throw exception(GROUP_MEMBER_NOT_EXISTS);
+        }
+        
+        // 3. 查询目标成员
+        ImGroupUserDO targetGroupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, targetUserId);
+        if (targetGroupUser == null) {
+            throw exception(GROUP_MEMBER_NOT_EXISTS);
+        }
+        
+        // 4. 权限检查
+        // 如果是设置自己的昵称，任何成员都可以
+        // 如果是设置别人的昵称，只有群主可以
+        if (!targetUserId.equals(userId)) {
+            if (!ImGroupMemberRoleEnum.isOwner(operatorGroupUser.getRole())) {
+                throw exception(GROUP_PERMISSION_DENIED);
+            }
+        }
+        
+        // 5. 更新昵称
+        targetGroupUser.setNickname(nickname);
+        groupUserMapper.updateById(targetGroupUser);
+        
+        log.info("[ImGroupService] 群成员昵称设置成功, groupId: {}, targetUserId: {}, nickname: {}", 
+                groupId, targetUserId, nickname);
     }
 
 }

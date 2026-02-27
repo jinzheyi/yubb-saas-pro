@@ -1,0 +1,713 @@
+/**
+ * 角标服务
+ * 
+ * 功能:
+ * 1. 管理消息角标（会话未读数、总未读数）
+ * 2. 管理菜单角标（工作台待办数量等）
+ * 3. 处理 WebSocket BADGE_UPDATE 消息
+ * 4. 本地持久化角标数据
+ * 5. 多端同步角标数据
+ */
+
+/**
+ * 角标更新消息
+ * 对应 Protobuf: BadgeUpdateMessage
+ */
+export type BadgeUpdateMessage = {
+  // 总未读数
+  unreadCount: number
+  // 会话角标列表
+  conversationBadges: ConversationBadge[]
+  // 菜单角标列表
+  menuBadges: MenuBadge[]
+}
+
+/**
+ * 会话角标
+ * 对应 Protobuf: ConversationBadge
+ */
+export type ConversationBadge = {
+  // 会话ID
+  conversationId: number
+  // 未读数
+  unreadCount: number
+}
+
+/**
+ * 菜单角标
+ * 对应 Protobuf: MenuBadge
+ */
+export type MenuBadge = {
+  // 菜单ID
+  menuId: string
+  // 角标数量
+  badgeCount: number
+}
+
+/**
+ * 角标数据结构
+ */
+export type BadgeData = {
+  // 总未读数
+  totalUnread: number
+  // 会话ID -> 未读数
+  conversationBadges: Map<number, number>
+  // 菜单ID -> 角标数
+  menuBadges: Map<string, number>
+  // 最后更新时间
+  lastUpdateTime: number
+}
+
+/**
+ * 本地存储的角标数据结构
+ * 用于序列化到 localStorage
+ */
+export type StoredBadgeData = {
+  // 总未读数
+  totalUnread: number
+  // 会话角标（转换为普通对象以便序列化）
+  conversationBadges: UTSJSONObject
+  // 菜单角标（转换为普通对象以便序列化）
+  menuBadges: UTSJSONObject
+  // 最后更新时间
+  lastUpdateTime: number
+  // 数据版本，用于兼容性检查
+  version: string
+}
+
+/**
+ * 角标监听器接口
+ */
+export interface BadgeListener {
+  /**
+   * 角标更新回调
+   */
+  onBadgeUpdate(badgeData: BadgeData): void
+}
+
+/**
+ * 角标服务类（单例模式）
+ */
+export class BadgeService {
+  
+  private static instance: BadgeService | null = null
+  
+  // 角标数据
+  private badgeData: BadgeData
+  
+  // 监听器列表
+  private listeners: BadgeListener[] = []
+  
+  // 防抖定时器
+  private notifyTimer: number = 0
+  
+  // 防抖延迟时间（毫秒）
+  private static readonly NOTIFY_DEBOUNCE_DELAY = 300
+  
+  // 节流定时器
+  private saveTimer: number = 0
+  
+  // 节流延迟时间（毫秒）
+  private static readonly SAVE_THROTTLE_DELAY = 1000
+  
+  // 是否有待保存的数据
+  private hasPendingSave: boolean = false
+  
+  // 本地存储键名
+  private static readonly STORAGE_KEY = 'badge_data'
+  
+  // 数据版本
+  private static readonly DATA_VERSION = '1.0'
+  
+  // 最大会话角标缓存数量
+  private static readonly MAX_CONVERSATION_BADGES = 1000
+  
+  /**
+   * 私有构造函数（单例模式）
+   */
+  private constructor() {
+    // 初始化角标数据
+    this.badgeData = {
+      totalUnread: 0,
+      conversationBadges: new Map<number, number>(),
+      menuBadges: new Map<string, number>(),
+      lastUpdateTime: 0
+    }
+  }
+  
+  /**
+   * 获取单例实例
+   */
+  public static getInstance(): BadgeService {
+    if (BadgeService.instance === null) {
+      BadgeService.instance = new BadgeService()
+    }
+    return BadgeService.instance
+  }
+  
+  /**
+   * 初始化角标服务
+   */
+  public init(): void {
+    console.log('[BadgeService] 初始化角标服务')
+    
+    // 1. 从本地存储加载角标数据
+    this.loadFromLocal()
+    
+    // 2. 检查本地数据是否存在或过期
+    const hasLocalData = this.badgeData.lastUpdateTime > 0
+    const isExpired = this.isDataExpired()
+    
+    // 3. 如果本地数据不存在或过期，从服务器同步
+    if (!hasLocalData || isExpired) {
+      console.log('[BadgeService] 本地数据不存在或已过期，从服务器同步')
+      this.syncFromServer()
+    } else {
+      console.log('[BadgeService] 使用本地缓存的角标数据')
+      // 通知监听器初始数据
+      this.notifyListeners()
+    }
+  }
+  
+  /**
+   * 检查数据是否过期
+   * 数据超过24小时视为过期
+   */
+  private isDataExpired(): boolean {
+    if (this.badgeData.lastUpdateTime === 0) {
+      return true
+    }
+    
+    const now = Date.now()
+    const age = now - this.badgeData.lastUpdateTime
+    const MAX_AGE = 24 * 60 * 60 * 1000 // 24小时
+    
+    return age > MAX_AGE
+  }
+  
+  /**
+   * 获取总未读数
+   */
+  public getTotalUnread(): number {
+    return this.badgeData.totalUnread
+  }
+  
+  /**
+   * 获取会话未读数
+   */
+  public getConversationBadge(conversationId: number): number {
+    const count = this.badgeData.conversationBadges.get(conversationId)
+    return count !== null && count !== undefined ? count : 0
+  }
+  
+  /**
+   * 获取菜单角标
+   */
+  public getMenuBadge(menuId: string): number {
+    const count = this.badgeData.menuBadges.get(menuId)
+    return count !== null && count !== undefined ? count : 0
+  }
+  
+  /**
+   * 增加会话未读数
+   */
+  public incrementConversationBadge(conversationId: number, delta: number = 1): void {
+    console.log(`[BadgeService] 增加会话 ${conversationId} 未读数: ${delta}`)
+    
+    // 获取当前会话未读数
+    const currentCount = this.getConversationBadge(conversationId)
+    const newCount = currentCount + delta
+    
+    // 更新会话未读数
+    this.badgeData.conversationBadges.set(conversationId, newCount)
+    
+    // 更新总未读数
+    this.badgeData.totalUnread += delta
+    
+    // 更新时间戳
+    this.badgeData.lastUpdateTime = Date.now()
+    
+    // 触发通知和保存
+    this.notifyListeners()
+    this.saveToLocal()
+  }
+  
+  /**
+   * 减少会话未读数
+   */
+  public decrementConversationBadge(conversationId: number, delta: number = 1): void {
+    console.log(`[BadgeService] 减少会话 ${conversationId} 未读数: ${delta}`)
+    
+    // 获取当前会话未读数
+    const currentCount = this.getConversationBadge(conversationId)
+    
+    // 计算新的未读数，确保不小于0
+    const actualDelta = Math.min(delta, currentCount)
+    const newCount = Math.max(0, currentCount - delta)
+    
+    // 更新会话未读数
+    this.badgeData.conversationBadges.set(conversationId, newCount)
+    
+    // 更新总未读数，确保不小于0
+    this.badgeData.totalUnread = Math.max(0, this.badgeData.totalUnread - actualDelta)
+    
+    // 更新时间戳
+    this.badgeData.lastUpdateTime = Date.now()
+    
+    // 触发通知和保存
+    this.notifyListeners()
+    this.saveToLocal()
+  }
+  
+  /**
+   * 清空会话未读数
+   */
+  public clearConversationBadge(conversationId: number): void {
+    console.log(`[BadgeService] 清空会话 ${conversationId} 未读数`)
+    
+    // 获取当前会话未读数
+    const currentCount = this.getConversationBadge(conversationId)
+    
+    if (currentCount > 0) {
+      // 清空会话未读数
+      this.badgeData.conversationBadges.set(conversationId, 0)
+      
+      // 更新总未读数
+      this.badgeData.totalUnread = Math.max(0, this.badgeData.totalUnread - currentCount)
+      
+      // 更新时间戳
+      this.badgeData.lastUpdateTime = Date.now()
+      
+      // 触发通知和保存
+      this.notifyListeners()
+      this.saveToLocal()
+      
+      // 调用后端API清空服务器端未读数
+      this.clearUnreadOnServer(conversationId)
+    }
+  }
+  
+  /**
+   * 更新菜单角标
+   */
+  public updateMenuBadge(menuId: string, count: number): void {
+    console.log(`[BadgeService] 更新菜单 ${menuId} 角标: ${count}`)
+    
+    // 确保count不小于0
+    const newCount = Math.max(0, count)
+    
+    // 更新菜单角标
+    this.badgeData.menuBadges.set(menuId, newCount)
+    
+    // 更新时间戳
+    this.badgeData.lastUpdateTime = Date.now()
+    
+    // 触发通知和保存
+    this.notifyListeners()
+    this.saveToLocal()
+  }
+  
+  /**
+   * 调用后端API清空服务器端未读数
+   */
+  private clearUnreadOnServer(conversationId: number): void {
+    // 动态导入API函数以避免循环依赖
+    import { clearUnreadCount } from '../api/conversation.uts'
+    
+    // 将number转换为string（API要求）
+    const conversationIdStr = conversationId.toString()
+    
+    clearUnreadCount(conversationIdStr).then((response: any) => {
+      console.log(`[BadgeService] 清空会话 ${conversationId} 服务器端未读数成功`)
+    }).catch((error: any) => {
+      console.error(`[BadgeService] 清空会话 ${conversationId} 服务器端未读数失败:`, error)
+      // 失败不影响本地角标显示
+    })
+  }
+  
+  /**
+   * 处理 WebSocket BADGE_UPDATE 消息
+   */
+  public handleBadgeUpdate(message: BadgeUpdateMessage): void {
+    console.log('[BadgeService] 处理角标更新消息:', message)
+    
+    // 批量更新总未读数
+    this.badgeData.totalUnread = message.unreadCount
+    
+    // 批量更新会话角标
+    if (message.conversationBadges !== null && message.conversationBadges !== undefined) {
+      message.conversationBadges.forEach((badge: ConversationBadge) => {
+        this.badgeData.conversationBadges.set(badge.conversationId, badge.unreadCount)
+      })
+    }
+    
+    // 批量更新菜单角标
+    if (message.menuBadges !== null && message.menuBadges !== undefined) {
+      message.menuBadges.forEach((badge: MenuBadge) => {
+        this.badgeData.menuBadges.set(badge.menuId, badge.badgeCount)
+      })
+    }
+    
+    // 更新最后更新时间
+    this.badgeData.lastUpdateTime = Date.now()
+    
+    // 检查并清理过多的会话角标缓存
+    this.pruneConversationBadges()
+    
+    // 保存到本地存储
+    this.saveToLocal()
+    
+    // 通知所有监听器
+    this.notifyListeners()
+  }
+  
+  /**
+   * 从服务器同步角标数据
+   */
+  public syncFromServer(): void {
+    console.log('[BadgeService] 从服务器同步角标数据')
+    
+    // 动态导入API函数以避免循环依赖
+    import { getBadgeData } from '../api/badge.uts'
+    
+    getBadgeData().then((response: any) => {
+      try {
+        // 检查响应状态
+        if (response.code === 0 && response.data !== null && response.data !== undefined) {
+          const data = response.data
+          
+          // 更新总未读数
+          this.badgeData.totalUnread = data.totalUnread || 0
+          
+          // 更新会话角标
+          this.badgeData.conversationBadges.clear()
+          if (data.conversationBadges !== null && data.conversationBadges !== undefined) {
+            const conversationBadges = data.conversationBadges as ConversationBadge[]
+            conversationBadges.forEach((badge: ConversationBadge) => {
+              this.badgeData.conversationBadges.set(badge.conversationId, badge.unreadCount)
+            })
+          }
+          
+          // 更新菜单角标
+          this.badgeData.menuBadges.clear()
+          if (data.menuBadges !== null && data.menuBadges !== undefined) {
+            const menuBadges = data.menuBadges as MenuBadge[]
+            menuBadges.forEach((badge: MenuBadge) => {
+              this.badgeData.menuBadges.set(badge.menuId, badge.badgeCount)
+            })
+          }
+          
+          // 更新最后更新时间
+          this.badgeData.lastUpdateTime = Date.now()
+          
+          // 检查并清理过多的会话角标缓存
+          this.pruneConversationBadges()
+          
+          // 保存到本地存储
+          this.saveToLocal()
+          
+          // 通知所有监听器
+          this.notifyListeners()
+          
+          console.log('[BadgeService] 从服务器同步角标数据成功')
+        } else {
+          console.error('[BadgeService] 服务器返回错误:', response)
+          // 使用本地缓存的数据
+        }
+      } catch (e) {
+        console.error('[BadgeService] 解析服务器响应失败:', e)
+        // 使用本地缓存的数据
+      }
+    }).catch((error: any) => {
+      console.error('[BadgeService] 从服务器同步角标数据失败:', error)
+      // 使用本地缓存的数据
+    })
+  }
+  
+  /**
+   * 强制从服务器同步角标数据
+   * 用于手动同步功能，会显示加载提示
+   */
+  public forceSync(): void {
+    console.log('[BadgeService] 强制从服务器同步角标数据')
+    
+    // 显示加载提示
+    uni.showLoading({
+      title: '同步中...',
+      mask: true
+    })
+    
+    // 动态导入API函数以避免循环依赖
+    import { getBadgeData } from '../api/badge.uts'
+    
+    getBadgeData().then((response: any) => {
+      try {
+        // 检查响应状态
+        if (response.code === 0 && response.data !== null && response.data !== undefined) {
+          const data = response.data
+          
+          // 更新总未读数
+          this.badgeData.totalUnread = data.totalUnread || 0
+          
+          // 更新会话角标
+          this.badgeData.conversationBadges.clear()
+          if (data.conversationBadges !== null && data.conversationBadges !== undefined) {
+            const conversationBadges = data.conversationBadges as ConversationBadge[]
+            conversationBadges.forEach((badge: ConversationBadge) => {
+              this.badgeData.conversationBadges.set(badge.conversationId, badge.unreadCount)
+            })
+          }
+          
+          // 更新菜单角标
+          this.badgeData.menuBadges.clear()
+          if (data.menuBadges !== null && data.menuBadges !== undefined) {
+            const menuBadges = data.menuBadges as MenuBadge[]
+            menuBadges.forEach((badge: MenuBadge) => {
+              this.badgeData.menuBadges.set(badge.menuId, badge.badgeCount)
+            })
+          }
+          
+          // 更新最后更新时间
+          this.badgeData.lastUpdateTime = Date.now()
+          
+          // 检查并清理过多的会话角标缓存
+          this.pruneConversationBadges()
+          
+          // 保存到本地存储
+          this.saveToLocal()
+          
+          // 通知所有监听器
+          this.notifyListeners()
+          
+          console.log('[BadgeService] 强制同步角标数据成功')
+          
+          // 隐藏加载提示并显示成功消息
+          uni.hideLoading()
+          uni.showToast({
+            title: '同步成功',
+            icon: 'success',
+            duration: 1500
+          })
+        } else {
+          console.error('[BadgeService] 服务器返回错误:', response)
+          uni.hideLoading()
+          uni.showToast({
+            title: '同步失败',
+            icon: 'none',
+            duration: 2000
+          })
+        }
+      } catch (e) {
+        console.error('[BadgeService] 解析服务器响应失败:', e)
+        uni.hideLoading()
+        uni.showToast({
+          title: '同步失败',
+          icon: 'none',
+          duration: 2000
+        })
+      }
+    }).catch((error: any) => {
+      console.error('[BadgeService] 强制同步角标数据失败:', error)
+      uni.hideLoading()
+      uni.showToast({
+        title: '同步失败',
+        icon: 'none',
+        duration: 2000
+      })
+    })
+  }
+  
+  /**
+   * 添加角标监听器
+   */
+  public addListener(listener: BadgeListener): void {
+    this.listeners.push(listener)
+    console.log(`[BadgeService] 添加监听器，当前监听器数量: ${this.listeners.length}`)
+  }
+  
+  /**
+   * 移除角标监听器
+   */
+  public removeListener(listener: BadgeListener): void {
+    const index = this.listeners.indexOf(listener)
+    if (index !== -1) {
+      this.listeners.splice(index, 1)
+      console.log(`[BadgeService] 移除监听器，当前监听器数量: ${this.listeners.length}`)
+    }
+  }
+  
+  /**
+   * 保存到本地存储（带节流机制）
+   * 使用节流避免频繁保存，间隔1000ms
+   */
+  private saveToLocal(): void {
+    // 标记有待保存的数据
+    this.hasPendingSave = true
+    
+    // 如果已经有定时器在运行，直接返回
+    if (this.saveTimer !== 0) {
+      return
+    }
+    
+    // 立即执行一次保存
+    this.doSaveToLocal()
+    
+    // 设置节流定时器
+    this.saveTimer = setTimeout(() => {
+      // 如果有待保存的数据，再执行一次保存
+      if (this.hasPendingSave) {
+        this.doSaveToLocal()
+      }
+      
+      // 重置定时器ID
+      this.saveTimer = 0
+    }, BadgeService.SAVE_THROTTLE_DELAY)
+  }
+  
+  /**
+   * 实际执行保存操作
+   */
+  private doSaveToLocal(): void {
+    try {
+      // 将Map转换为普通对象以便序列化
+      const conversationBadgesObj: UTSJSONObject = {}
+      this.badgeData.conversationBadges.forEach((value: number, key: number) => {
+        conversationBadgesObj[key.toString()] = value
+      })
+      
+      const menuBadgesObj: UTSJSONObject = {}
+      this.badgeData.menuBadges.forEach((value: number, key: string) => {
+        menuBadgesObj[key] = value
+      })
+      
+      const data: StoredBadgeData = {
+        totalUnread: this.badgeData.totalUnread,
+        conversationBadges: conversationBadgesObj,
+        menuBadges: menuBadgesObj,
+        lastUpdateTime: this.badgeData.lastUpdateTime,
+        version: BadgeService.DATA_VERSION
+      }
+      
+      uni.setStorageSync(BadgeService.STORAGE_KEY, JSON.stringify(data))
+      console.log('[BadgeService] 保存角标数据到本地存储成功')
+      
+      // 清除待保存标记
+      this.hasPendingSave = false
+    } catch (e) {
+      console.error('[BadgeService] 保存角标数据失败:', e)
+      // 继续使用内存中的数据
+    }
+  }
+  
+  /**
+   * 从本地存储加载
+   */
+  private loadFromLocal(): void {
+    try {
+      const dataStr = uni.getStorageSync(BadgeService.STORAGE_KEY)
+      if (dataStr !== null && dataStr !== undefined && dataStr !== '') {
+        const data = JSON.parse(dataStr as string) as StoredBadgeData
+        
+        // 检查数据版本
+        if (data.version !== BadgeService.DATA_VERSION) {
+          console.warn('[BadgeService] 数据版本不匹配，清除旧数据')
+          uni.removeStorageSync(BadgeService.STORAGE_KEY)
+          return
+        }
+        
+        // 恢复角标数据
+        this.badgeData.totalUnread = data.totalUnread
+        this.badgeData.lastUpdateTime = data.lastUpdateTime
+        
+        // 将普通对象转换为Map
+        this.badgeData.conversationBadges.clear()
+        const conversationBadgesObj = data.conversationBadges as UTSJSONObject
+        for (const key in conversationBadgesObj) {
+          const conversationId = parseInt(key)
+          const count = conversationBadgesObj[key] as number
+          this.badgeData.conversationBadges.set(conversationId, count)
+        }
+        
+        this.badgeData.menuBadges.clear()
+        const menuBadgesObj = data.menuBadges as UTSJSONObject
+        for (const key in menuBadgesObj) {
+          const count = menuBadgesObj[key] as number
+          this.badgeData.menuBadges.set(key, count)
+        }
+        
+        console.log('[BadgeService] 从本地存储加载角标数据成功')
+      }
+    } catch (e) {
+      console.error('[BadgeService] 从本地存储加载角标数据失败:', e)
+      // 使用默认的空数据
+    }
+  }
+  
+  /**
+   * 通知所有监听器（带防抖机制）
+   * 使用防抖避免频繁更新UI，延迟300ms
+   */
+  private notifyListeners(): void {
+    // 清除之前的定时器
+    if (this.notifyTimer !== 0) {
+      clearTimeout(this.notifyTimer)
+    }
+    
+    // 设置新的定时器
+    this.notifyTimer = setTimeout(() => {
+      console.log(`[BadgeService] 通知 ${this.listeners.length} 个监听器`)
+      
+      // 遍历所有监听器并调用回调
+      this.listeners.forEach((listener: BadgeListener) => {
+        try {
+          listener.onBadgeUpdate(this.badgeData)
+        } catch (e) {
+          console.error('[BadgeService] 监听器回调执行失败:', e)
+        }
+      })
+      
+      // 重置定时器ID
+      this.notifyTimer = 0
+    }, BadgeService.NOTIFY_DEBOUNCE_DELAY)
+  }
+  
+  /**
+   * 限制会话角标缓存数量
+   * 当会话角标数量超过 MAX_CONVERSATION_BADGES (1000) 时，移除最旧的角标数据
+   */
+  private pruneConversationBadges(): void {
+    // 检查是否超过最大缓存数量
+    if (this.badgeData.conversationBadges.size <= BadgeService.MAX_CONVERSATION_BADGES) {
+      return
+    }
+    
+    console.log(`[BadgeService] 会话角标数量 ${this.badgeData.conversationBadges.size} 超过限制 ${BadgeService.MAX_CONVERSATION_BADGES}，开始清理`)
+    
+    // 将Map转换为数组并按conversationId排序（conversationId越小越旧）
+    const sortedEntries: Array<[number, number]> = []
+    this.badgeData.conversationBadges.forEach((value: number, key: number) => {
+      sortedEntries.push([key, value])
+    })
+    
+    // 按conversationId升序排序
+    sortedEntries.sort((a: [number, number], b: [number, number]): number => {
+      return a[0] - b[0]
+    })
+    
+    // 计算需要移除的数量
+    const toRemoveCount = sortedEntries.length - BadgeService.MAX_CONVERSATION_BADGES
+    
+    // 移除最旧的角标数据
+    for (let i = 0; i < toRemoveCount; i++) {
+      const conversationId = sortedEntries[i][0]
+      this.badgeData.conversationBadges.delete(conversationId)
+    }
+    
+    console.log(`[BadgeService] 已移除 ${toRemoveCount} 个旧的会话角标，当前数量: ${this.badgeData.conversationBadges.size}`)
+  }
+}
+
+/**
+ * 导出单例实例
+ */
+export const badgeService = BadgeService.getInstance()

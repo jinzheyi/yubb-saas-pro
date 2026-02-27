@@ -1,0 +1,277 @@
+<template>
+  <view class="edit-dialog-overlay" v-if="visible" @click="onCancel">
+    <view class="edit-dialog-container" @click.stop>
+      <view class="edit-dialog-header">
+        <text class="edit-dialog-title">编辑消息</text>
+        <view class="edit-dialog-close" @click="onCancel">
+          <text class="edit-dialog-close-icon">×</text>
+        </view>
+      </view>
+      
+      <view class="edit-dialog-content">
+        <!-- 时间提示 -->
+        <view class="edit-time-hint" v-if="timeHint">
+          <text class="edit-time-hint-text">{{ timeHint }}</text>
+        </view>
+        
+        <!-- 输入框 -->
+        <textarea
+          class="edit-textarea"
+          v-model="editContent"
+          :placeholder="placeholder"
+          :maxlength="maxLength"
+          :auto-height="true"
+          :focus="visible"
+        />
+        
+        <!-- 字数统计 -->
+        <view class="edit-char-count">
+          <text class="edit-char-count-text">{{ editContent.length }}/{{ maxLength }}</text>
+        </view>
+        
+        <!-- 编辑历史入口 -->
+        <view class="edit-history-link" v-if="showHistory" @click="onViewHistory">
+          <text class="edit-history-link-text">查看编辑历史</text>
+          <text class="edit-history-link-icon">›</text>
+        </view>
+      </view>
+      
+      <view class="edit-dialog-footer">
+        <view class="edit-dialog-btn edit-dialog-btn-cancel" @click="onCancel">
+          <text class="edit-dialog-btn-text">取消</text>
+        </view>
+        <view 
+          class="edit-dialog-btn edit-dialog-btn-confirm" 
+          :class="{ 'edit-dialog-btn-disabled': !canConfirm }"
+          @click="onConfirm"
+        >
+          <text class="edit-dialog-btn-text">确定</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script setup lang="uts">
+import { ref, computed, watch, PropType } from 'vue'
+
+const props = defineProps({
+  visible: {
+    type: Boolean,
+    default: false
+  },
+  content: {
+    type: String,
+    default: ''
+  },
+  placeholder: {
+    type: String,
+    default: '请输入消息内容'
+  },
+  maxLength: {
+    type: Number,
+    default: 5000
+  },
+  timeHint: {
+    type: String,
+    default: ''
+  },
+  showHistory: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits<{
+  cancel: []
+  confirm: [content: string]
+  viewHistory: []
+}>()
+
+const editContent = ref('')
+
+// 监听 visible 变化，重置内容
+watch(() => props.visible, (newVal) => {
+  if (newVal) {
+    editContent.value = props.content
+  }
+})
+
+// 监听 content 变化
+watch(() => props.content, (newVal) => {
+  if (props.visible) {
+    editContent.value = newVal
+  }
+})
+
+// 是否可以确认
+const canConfirm = computed(() => {
+  const trimmed = editContent.value.trim()
+  return trimmed.length > 0 && trimmed !== props.content.trim()
+})
+
+const onCancel = () => {
+  emit('cancel')
+}
+
+const onConfirm = () => {
+  if (!canConfirm.value) {
+    return
+  }
+  emit('confirm', editContent.value.trim())
+}
+
+const onViewHistory = () => {
+  emit('viewHistory')
+}
+</script>
+
+<style scoped>
+.edit-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.edit-dialog-container {
+  width: 80%;
+  max-width: 600rpx;
+  background-color: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.edit-dialog-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32rpx;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.edit-dialog-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.edit-dialog-close {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-dialog-close-icon {
+  font-size: 48rpx;
+  color: #999;
+  line-height: 48rpx;
+}
+
+.edit-dialog-content {
+  padding: 32rpx;
+}
+
+.edit-time-hint {
+  margin-bottom: 16rpx;
+  padding: 12rpx 16rpx;
+  background-color: #fff3e0;
+  border-radius: 8rpx;
+}
+
+.edit-time-hint-text {
+  font-size: 24rpx;
+  color: #ff9800;
+}
+
+.edit-textarea {
+  width: 100%;
+  min-height: 200rpx;
+  max-height: 400rpx;
+  padding: 16rpx;
+  font-size: 28rpx;
+  color: #333;
+  background-color: #f5f5f5;
+  border-radius: 8rpx;
+  border: 1px solid #e0e0e0;
+}
+
+.edit-char-count {
+  margin-top: 8rpx;
+  text-align: right;
+}
+
+.edit-char-count-text {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.edit-history-link {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16rpx;
+  padding: 16rpx;
+  background-color: #f5f5f5;
+  border-radius: 8rpx;
+}
+
+.edit-history-link-text {
+  font-size: 28rpx;
+  color: #2196f3;
+}
+
+.edit-history-link-icon {
+  font-size: 32rpx;
+  color: #2196f3;
+}
+
+.edit-dialog-footer {
+  display: flex;
+  flex-direction: row;
+  padding: 32rpx;
+  gap: 16rpx;
+  border-top: 1px solid #f0f0f0;
+}
+
+.edit-dialog-btn {
+  flex: 1;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8rpx;
+}
+
+.edit-dialog-btn-cancel {
+  background-color: #f5f5f5;
+}
+
+.edit-dialog-btn-confirm {
+  background-color: #2196f3;
+}
+
+.edit-dialog-btn-disabled {
+  background-color: #e0e0e0;
+  opacity: 0.6;
+}
+
+.edit-dialog-btn-text {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.edit-dialog-btn-confirm .edit-dialog-btn-text {
+  color: #fff;
+}
+</style>

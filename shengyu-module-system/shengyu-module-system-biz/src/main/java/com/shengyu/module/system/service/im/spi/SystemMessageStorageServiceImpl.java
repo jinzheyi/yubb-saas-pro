@@ -47,6 +47,12 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
     @Resource
     private ImSequenceService sequenceService;
 
+    @Resource
+    private ImBadgeService imBadgeService;
+
+    @Resource
+    private ImGroupService imGroupService;
+
     /**
      * 保存消息（同步方法，用于需要立即返回结果的场景）
      * 
@@ -168,6 +174,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
      * 1. 新消息到达时，需要更新对应的会话
      * 2. 如果会话不存在，则创建新会话
      * 3. 更新会话的最后消息、未读数等信息
+     * 4. 推送角标更新到接收者的所有设备
      */
     @Async("imTaskExecutor")
     public void updateConversationAsync(MessageHeader header, ImMessageDO messageDO) {
@@ -191,17 +198,21 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         messageDO,
                         false
                 );
+                
+                // 推送角标更新到接收者的所有设备
+                try {
+                    imBadgeService.pushBadgeUpdate(header.getReceiverId());
+                    log.debug("[MessageStorage] 推送角标更新成功, receiverId: {}", header.getReceiverId());
+                } catch (Exception e) {
+                    log.error("[MessageStorage] 推送角标更新失败, receiverId: {}", header.getReceiverId(), e);
+                }
             }
             // 群聊：更新所有群成员的会话
             else if (header.getGroupId() > 0) {
                 // 群聊会话更新逻辑
-                // 注意：群成员可能很多，这里需要优化
-                // 方案1：使用消息队列异步处理
-                // 方案2：使用批量更新SQL
-                // 方案3：只更新发送者的会话，接收者的会话在拉取消息时更新
                 log.debug("[MessageStorage] 群聊消息，groupId: {}, 需要更新群成员会话", header.getGroupId());
                 
-                // 这里简化处理，只更新发送者的会话
+                // 更新发送者的会话（不增加未读数）
                 updateOrCreateConversation(
                         header.getSenderId(),
                         header.getGroupId(),
@@ -209,6 +220,41 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         messageDO,
                         false
                 );
+                
+                // 推送角标更新到所有群成员（除发送者外）
+                try {
+                    // 查询群成员ID列表
+                    List<Long> memberIds = imGroupService.getGroupMemberIds(header.getGroupId());
+                    
+                    // 遍历群成员，更新会话并推送角标
+                    for (Long memberId : memberIds) {
+                        // 跳过发送者
+                        if (memberId.equals(header.getSenderId())) {
+                            continue;
+                        }
+                        
+                        // 更新群成员的会话（增加未读数）
+                        updateOrCreateConversation(
+                                memberId,
+                                header.getGroupId(),
+                                ImConversationTypeEnum.GROUP.getType(),
+                                messageDO,
+                                true
+                        );
+                        
+                        // 推送角标更新到该群成员的所有设备
+                        try {
+                            imBadgeService.pushBadgeUpdate(memberId);
+                        } catch (Exception e) {
+                            log.error("[MessageStorage] 推送群成员角标更新失败, memberId: {}", memberId, e);
+                        }
+                    }
+                    
+                    log.debug("[MessageStorage] 群聊角标推送完成, groupId: {}, memberCount: {}", 
+                            header.getGroupId(), memberIds.size());
+                } catch (Exception e) {
+                    log.error("[MessageStorage] 群聊角标推送失败, groupId: {}", header.getGroupId(), e);
+                }
             }
         } catch (Exception e) {
             log.error("[MessageStorage] 更新会话失败", e);

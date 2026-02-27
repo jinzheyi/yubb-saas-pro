@@ -1,0 +1,569 @@
+/**
+ * 群组服务
+ * 
+ * 功能:
+ * 1. 群组创建和管理
+ * 2. 群成员管理
+ * 3. 群公告管理
+ * 4. 群名片管理
+ * 5. 群成员禁言
+ */
+
+import { request } from '@/utils/request.uts'
+
+/**
+ * 群组信息
+ */
+export type GroupInfo = {
+  id: number
+  name: string
+  avatar: string
+  ownerId: number
+  ownerName: string
+  memberCount: number
+  maxMembers: number
+  announcement: string
+  createTime: number
+  muteAll: boolean
+}
+
+/**
+ * 群成员信息
+ */
+export type GroupMember = {
+  userId: number
+  userName: string
+  avatar: string
+  avatarText: string
+  avatarBg: string
+  role: number  // 1-群主 2-管理员 3-普通成员
+  nickname: string  // 群名片
+  joinTime: number
+  muteEndTime: number  // 禁言结束时间，0表示未禁言
+}
+
+/**
+ * 群公告信息
+ */
+export type GroupAnnouncement = {
+  id: number
+  groupId: number
+  content: string
+  publisherId: number
+  publisherName: string
+  publishTime: number
+  mustRead: boolean
+}
+
+/**
+ * 群组服务类（单例模式）
+ */
+export class GroupService {
+  
+  private static instance: GroupService | null = null
+  
+  // 群组信息缓存
+  private groupCache: Map<number, GroupInfo> = new Map()
+  
+  // 群成员缓存
+  private memberCache: Map<number, GroupMember[]> = new Map()
+  
+  /**
+   * 私有构造函数（单例模式）
+   */
+  private constructor() {
+    // 初始化
+  }
+  
+  /**
+   * 获取单例实例
+   */
+  public static getInstance(): GroupService {
+    if (GroupService.instance === null) {
+      GroupService.instance = new GroupService()
+    }
+    return GroupService.instance
+  }
+  
+  /**
+   * 创建群组
+   */
+  public async createGroup(name: string, memberIds: number[]): Promise<number> {
+    try {
+      const response = await request({
+        url: '/system/im-group/create',
+        method: 'POST',
+        data: {
+          name: name,
+          memberIds: memberIds
+        }
+      })
+      
+      if (response.code === 0 && response.data) {
+        return response.data.groupId
+      }
+      return 0
+    } catch (e) {
+      console.error('[GroupService] 创建群组失败:', e)
+      return 0
+    }
+  }
+  
+  /**
+   * 获取群组信息
+   */
+  public async getGroupInfo(groupId: number): Promise<GroupInfo | null> {
+    // 先从缓存获取
+    const cached = this.groupCache.get(groupId)
+    if (cached !== null && cached !== undefined) {
+      return cached
+    }
+    
+    try {
+      const response = await request({
+        url: '/system/im-group/get',
+        method: 'GET',
+        params: {
+          id: groupId
+        }
+      })
+      
+      if (response.code === 0 && response.data) {
+        const groupInfo = this.mapToGroupInfo(response.data)
+        this.groupCache.set(groupId, groupInfo)
+        return groupInfo
+      }
+      return null
+    } catch (e) {
+      console.error('[GroupService] 获取群组信息失败:', e)
+      return null
+    }
+  }
+  
+  /**
+   * 更新群组信息
+   */
+  public async updateGroup(groupId: number, name: string, avatar: string): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-group/update',
+        method: 'PUT',
+        data: {
+          id: groupId,
+          name: name,
+          avatar: avatar
+        }
+      })
+      
+      if (response.code === 0) {
+        // 清除缓存
+        this.groupCache.delete(groupId)
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[GroupService] 更新群组信息失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 解散群组
+   */
+  public async dismissGroup(groupId: number): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-group/dismiss',
+        method: 'DELETE',
+        params: {
+          id: groupId
+        }
+      })
+      
+      if (response.code === 0) {
+        // 清除缓存
+        this.groupCache.delete(groupId)
+        this.memberCache.delete(groupId)
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[GroupService] 解散群组失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 获取群成员列表
+   */
+  public async getGroupMembers(groupId: number): Promise<GroupMember[]> {
+    // 先从缓存获取
+    const cached = this.memberCache.get(groupId)
+    if (cached !== null && cached !== undefined) {
+      return cached
+    }
+    
+    try {
+      const response = await request({
+        url: '/system/im-group/members',
+        method: 'GET',
+        params: {
+          groupId: groupId
+        }
+      })
+      
+      if (response.code === 0 && response.data) {
+        const members = response.data.map((item: any) => this.mapToGroupMember(item))
+        this.memberCache.set(groupId, members)
+        return members
+      }
+      return []
+    } catch (e) {
+      console.error('[GroupService] 获取群成员列表失败:', e)
+      return []
+    }
+  }
+  
+  /**
+   * 添加群成员
+   */
+  public async addMembers(groupId: number, memberIds: number[]): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-group/add-members',
+        method: 'POST',
+        data: {
+          groupId: groupId,
+          memberIds: memberIds
+        }
+      })
+      
+      if (response.code === 0) {
+        // 清除缓存
+        this.memberCache.delete(groupId)
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[GroupService] 添加群成员失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 移除群成员
+   */
+  public async removeMembers(groupId: number, memberIds: number[]): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-group/remove-members',
+        method: 'POST',
+        data: {
+          groupId: groupId,
+          memberIds: memberIds
+        }
+      })
+      
+      if (response.code === 0) {
+        // 清除缓存
+        this.memberCache.delete(groupId)
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[GroupService] 移除群成员失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 退出群组
+   */
+  public async quitGroup(groupId: number): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-group/quit',
+        method: 'POST',
+        data: {
+          groupId: groupId
+        }
+      })
+      
+      if (response.code === 0) {
+        // 清除缓存
+        this.groupCache.delete(groupId)
+        this.memberCache.delete(groupId)
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[GroupService] 退出群组失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 转让群组
+   */
+  public async transferGroup(groupId: number, newOwnerId: number): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-group/transfer',
+        method: 'POST',
+        data: {
+          groupId: groupId,
+          newOwnerId: newOwnerId
+        }
+      })
+      
+      if (response.code === 0) {
+        // 清除缓存
+        this.groupCache.delete(groupId)
+        this.memberCache.delete(groupId)
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[GroupService] 转让群组失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 设置管理员
+   */
+  public async setAdmin(groupId: number, userId: number, isAdmin: boolean): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-group/set-admin',
+        method: 'POST',
+        data: {
+          groupId: groupId,
+          userId: userId,
+          isAdmin: isAdmin
+        }
+      })
+      
+      if (response.code === 0) {
+        // 清除缓存
+        this.memberCache.delete(groupId)
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[GroupService] 设置管理员失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 禁言成员
+   */
+  public async muteMember(groupId: number, userId: number, duration: number): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-group/mute-member',
+        method: 'POST',
+        data: {
+          groupId: groupId,
+          userId: userId,
+          duration: duration
+        }
+      })
+      
+      if (response.code === 0) {
+        // 清除缓存
+        this.memberCache.delete(groupId)
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[GroupService] 禁言成员失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 解除禁言
+   */
+  public async unmuteMember(groupId: number, userId: number): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-group/unmute-member',
+        method: 'POST',
+        data: {
+          groupId: groupId,
+          userId: userId
+        }
+      })
+      
+      if (response.code === 0) {
+        // 清除缓存
+        this.memberCache.delete(groupId)
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[GroupService] 解除禁言失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 全员禁言
+   */
+  public async muteAll(groupId: number, mute: boolean): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-group/mute-all',
+        method: 'POST',
+        data: {
+          groupId: groupId,
+          mute: mute
+        }
+      })
+      
+      if (response.code === 0) {
+        // 清除缓存
+        this.groupCache.delete(groupId)
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[GroupService] 全员禁言失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 设置群名片
+   */
+  public async setMemberNickname(groupId: number, userId: number, nickname: string): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-group/set-nickname',
+        method: 'POST',
+        data: {
+          groupId: groupId,
+          userId: userId,
+          nickname: nickname
+        }
+      })
+      
+      if (response.code === 0) {
+        // 清除缓存
+        this.memberCache.delete(groupId)
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('[GroupService] 设置群名片失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 发布群公告
+   */
+  public async publishAnnouncement(
+    groupId: number,
+    content: string,
+    mustRead: boolean
+  ): Promise<boolean> {
+    try {
+      const response = await request({
+        url: '/system/im-group/publish-announcement',
+        method: 'POST',
+        data: {
+          groupId: groupId,
+          content: content,
+          mustRead: mustRead
+        }
+      })
+      
+      return response.code === 0
+    } catch (e) {
+      console.error('[GroupService] 发布群公告失败:', e)
+      return false
+    }
+  }
+  
+  /**
+   * 获取群公告列表
+   */
+  public async getAnnouncements(groupId: number): Promise<GroupAnnouncement[]> {
+    try {
+      const response = await request({
+        url: '/system/im-group/announcements',
+        method: 'GET',
+        params: {
+          groupId: groupId
+        }
+      })
+      
+      if (response.code === 0 && response.data) {
+        return response.data.map((item: any) => ({
+          id: item.id,
+          groupId: item.groupId,
+          content: item.content,
+          publisherId: item.publisherId,
+          publisherName: item.publisherName || '',
+          publishTime: item.publishTime || 0,
+          mustRead: item.mustRead || false
+        }))
+      }
+      return []
+    } catch (e) {
+      console.error('[GroupService] 获取群公告列表失败:', e)
+      return []
+    }
+  }
+  
+  /**
+   * 映射服务器数据到群组信息
+   */
+  private mapToGroupInfo(data: any): GroupInfo {
+    return {
+      id: data.id,
+      name: data.name || '',
+      avatar: data.avatar || '',
+      ownerId: data.ownerId,
+      ownerName: data.ownerName || '',
+      memberCount: data.memberCount || 0,
+      maxMembers: data.maxMembers || 500,
+      announcement: data.announcement || '',
+      createTime: data.createTime || 0,
+      muteAll: data.muteAll || false
+    }
+  }
+  
+  /**
+   * 映射服务器数据到群成员信息
+   */
+  private mapToGroupMember(data: any): GroupMember {
+    return {
+      userId: data.userId,
+      userName: data.userName || '',
+      avatar: data.avatar || '',
+      avatarText: data.avatarText || '',
+      avatarBg: data.avatarBg || '#409EFF',
+      role: data.role || 3,
+      nickname: data.nickname || '',
+      joinTime: data.joinTime || 0,
+      muteEndTime: data.muteEndTime || 0
+    }
+  }
+  
+  /**
+   * 清空缓存
+   */
+  public clearCache(): void {
+    this.groupCache.clear()
+    this.memberCache.clear()
+  }
+}
+
+/**
+ * 导出单例实例
+ */
+export const groupService = GroupService.getInstance()

@@ -1,0 +1,259 @@
+/**
+ * 消息搜索服务
+ * 
+ * 功能:
+ * 1. 全局消息搜索
+ * 2. 会话内消息搜索
+ * 3. 按类型筛选
+ * 4. 关键词高亮
+ * 5. 搜索防抖
+ */
+
+import { request } from '@/utils/request.uts'
+
+/**
+ * 搜索结果项
+ */
+export type SearchResultItem = {
+  id: number
+  messageId: number
+  conversationId: number
+  conversationName: string
+  conversationAvatar: string
+  senderId: number
+  senderName: string
+  type: string
+  content: string
+  timestamp: number
+  highlightedContent: string
+}
+
+/**
+ * 搜索选项
+ */
+export type SearchOptions = {
+  keyword: string
+  conversationId?: number
+  messageType?: string
+  startTime?: number
+  endTime?: number
+  pageNo?: number
+  pageSize?: number
+}
+
+/**
+ * 消息搜索服务类（单例模式）
+ */
+export class MessageSearchService {
+  
+  private static instance: MessageSearchService | null = null
+  
+  // 搜索防抖定时器
+  private searchTimer: number = 0
+  
+  // 搜索防抖延迟（300毫秒）
+  private readonly SEARCH_DEBOUNCE = 300
+  
+  // 最小搜索关键词长度
+  private readonly MIN_KEYWORD_LENGTH = 2
+  
+  /**
+   * 私有构造函数（单例模式）
+   */
+  private constructor() {
+    // 初始化
+  }
+  
+  /**
+   * 获取单例实例
+   */
+  public static getInstance(): MessageSearchService {
+    if (MessageSearchService.instance === null) {
+      MessageSearchService.instance = new MessageSearchService()
+    }
+    return MessageSearchService.instance
+  }
+  
+  /**
+   * 搜索消息（带防抖）
+   */
+  public searchMessages(
+    options: SearchOptions,
+    callback: (results: SearchResultItem[]) => void
+  ): void {
+    // 验证关键词长度
+    if (options.keyword.length < this.MIN_KEYWORD_LENGTH) {
+      callback([])
+      return
+    }
+    
+    // 清除之前的定时器
+    if (this.searchTimer > 0) {
+      clearTimeout(this.searchTimer)
+    }
+    
+    // 设置新的定时器（防抖）
+    this.searchTimer = setTimeout(() => {
+      this.doSearch(options, callback)
+    }, this.SEARCH_DEBOUNCE)
+  }
+  
+  /**
+   * 实际执行搜索
+   */
+  private async doSearch(
+    options: SearchOptions,
+    callback: (results: SearchResultItem[]) => void
+  ): Promise<void> {
+    try {
+      const params: any = {
+        keyword: options.keyword,
+        pageNo: options.pageNo || 1,
+        pageSize: options.pageSize || 20
+      }
+      
+      if (options.conversationId !== undefined && options.conversationId !== null) {
+        params.conversationId = options.conversationId
+      }
+      
+      if (options.messageType !== undefined && options.messageType !== null) {
+        params.messageType = options.messageType
+      }
+      
+      if (options.startTime !== undefined && options.startTime !== null) {
+        params.startTime = options.startTime
+      }
+      
+      if (options.endTime !== undefined && options.endTime !== null) {
+        params.endTime = options.endTime
+      }
+      
+      const response = await request({
+        url: '/system/im-message/search',
+        method: 'GET',
+        params: params
+      })
+      
+      if (response.code === 0 && response.data) {
+        const results = response.data.list.map((item: any) => this.mapToSearchResult(item, options.keyword))
+        callback(results)
+      } else {
+        callback([])
+      }
+    } catch (e) {
+      console.error('[MessageSearchService] 搜索消息失败:', e)
+      callback([])
+    }
+  }
+  
+  /**
+   * 取消搜索
+   */
+  public cancelSearch(): void {
+    if (this.searchTimer > 0) {
+      clearTimeout(this.searchTimer)
+      this.searchTimer = 0
+    }
+  }
+  
+  /**
+   * 高亮关键词
+   */
+  public highlightKeyword(text: string, keyword: string): string {
+    if (!keyword || keyword.length === 0) {
+      return text
+    }
+    
+    // 转义特殊字符
+    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    
+    // 使用正则表达式替换（不区分大小写）
+    const regex = new RegExp(escapedKeyword, 'gi')
+    return text.replace(regex, (match) => {
+      return '<span class="highlight">' + match + '</span>'
+    })
+  }
+  
+  /**
+   * 获取消息内容摘要（用于搜索结果显示）
+   */
+  public getContentSummary(type: string, content: any, maxLength: number = 100): string {
+    switch (type) {
+      case 'text':
+        const text = typeof content === 'string' ? content : content.content || ''
+        return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+      case 'image':
+        return '[图片]'
+      case 'voice':
+        return '[语音]'
+      case 'video':
+        return '[视频]'
+      case 'file':
+        return '[文件]'
+      case 'location':
+        return '[位置]'
+      default:
+        return '[消息]'
+    }
+  }
+  
+  /**
+   * 映射服务器数据到搜索结果项
+   */
+  private mapToSearchResult(data: any, keyword: string): SearchResultItem {
+    const content = this.getContentSummary(data.type, data.content)
+    
+    return {
+      id: data.id,
+      messageId: data.messageId,
+      conversationId: data.conversationId,
+      conversationName: data.conversationName || '',
+      conversationAvatar: data.conversationAvatar || '',
+      senderId: data.senderId,
+      senderName: data.senderName || '',
+      type: data.type,
+      content: content,
+      timestamp: data.timestamp || 0,
+      highlightedContent: this.highlightKeyword(content, keyword)
+    }
+  }
+  
+  /**
+   * 按消息类型筛选
+   */
+  public filterByType(results: SearchResultItem[], messageType: string): SearchResultItem[] {
+    if (!messageType || messageType === 'all') {
+      return results
+    }
+    
+    return results.filter(item => item.type === messageType)
+  }
+  
+  /**
+   * 按时间范围筛选
+   */
+  public filterByTimeRange(
+    results: SearchResultItem[],
+    startTime: number,
+    endTime: number
+  ): SearchResultItem[] {
+    return results.filter(item => {
+      return item.timestamp >= startTime && item.timestamp <= endTime
+    })
+  }
+  
+  /**
+   * 按会话筛选
+   */
+  public filterByConversation(
+    results: SearchResultItem[],
+    conversationId: number
+  ): SearchResultItem[] {
+    return results.filter(item => item.conversationId === conversationId)
+  }
+}
+
+/**
+ * 导出单例实例
+ */
+export const messageSearchService = MessageSearchService.getInstance()

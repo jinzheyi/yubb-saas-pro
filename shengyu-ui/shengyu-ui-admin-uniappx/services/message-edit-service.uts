@@ -1,0 +1,193 @@
+/**
+ * 消息编辑服务
+ * 
+ * 功能:
+ * 1. 编辑消息内容
+ * 2. 检查编辑时间限制（5分钟）
+ * 3. 获取编辑历史
+ * 4. 通知接收者消息已编辑
+ */
+
+import { request } from '@/utils/request.uts'
+
+/**
+ * 编辑历史记录
+ */
+export type EditHistory = {
+  content: string
+  editTime: string
+  editTimestamp: number
+}
+
+/**
+ * 消息编辑结果
+ */
+export type EditResult = {
+  success: boolean
+  message?: string
+}
+
+/**
+ * 编辑时间限制（5分钟）
+ */
+const EDIT_TIME_LIMIT = 5 * 60 * 1000
+
+/**
+ * 消息编辑服务类（单例模式）
+ */
+export class MessageEditService {
+  
+  private static instance: MessageEditService | null = null
+  
+  /**
+   * 私有构造函数（单例模式）
+   */
+  private constructor() {
+    // 初始化
+  }
+  
+  /**
+   * 获取单例实例
+   */
+  public static getInstance(): MessageEditService {
+    if (MessageEditService.instance === null) {
+      MessageEditService.instance = new MessageEditService()
+    }
+    return MessageEditService.instance
+  }
+  
+  /**
+   * 检查消息是否可以编辑
+   * @param messageTimestamp 消息发送时间戳
+   * @returns 是否可以编辑
+   */
+  public canEdit(messageTimestamp: number): boolean {
+    const now = Date.now()
+    const elapsed = now - messageTimestamp
+    return elapsed <= EDIT_TIME_LIMIT
+  }
+  
+  /**
+   * 获取剩余可编辑时间（秒）
+   * @param messageTimestamp 消息发送时间戳
+   * @returns 剩余秒数，如果已超时返回0
+   */
+  public getRemainingEditTime(messageTimestamp: number): number {
+    const now = Date.now()
+    const elapsed = now - messageTimestamp
+    const remaining = EDIT_TIME_LIMIT - elapsed
+    return remaining > 0 ? Math.floor(remaining / 1000) : 0
+  }
+  
+  /**
+   * 编辑消息
+   * @param messageId 消息ID
+   * @param newContent 新内容
+   * @returns 编辑结果
+   */
+  public async editMessage(messageId: number, newContent: string): Promise<EditResult> {
+    try {
+      // 验证内容不为空
+      if (!newContent || newContent.trim().length === 0) {
+        return {
+          success: false,
+          message: '消息内容不能为空'
+        }
+      }
+      
+      const response = await request({
+        url: '/system/im-message/edit',
+        method: 'POST',
+        data: {
+          messageId: messageId,
+          content: newContent
+        }
+      })
+      
+      if (response.code === 0) {
+        return {
+          success: true
+        }
+      } else {
+        return {
+          success: false,
+          message: response.msg || '编辑失败'
+        }
+      }
+    } catch (e) {
+      console.error('[MessageEditService] 编辑消息失败:', e)
+      return {
+        success: false,
+        message: '网络错误，请稍后重试'
+      }
+    }
+  }
+  
+  /**
+   * 获取消息编辑历史
+   * @param messageId 消息ID
+   * @returns 编辑历史列表
+   */
+  public async getEditHistory(messageId: number): Promise<EditHistory[]> {
+    try {
+      const response = await request({
+        url: '/system/im-message/edit-history',
+        method: 'GET',
+        params: {
+          messageId: messageId
+        }
+      })
+      
+      if (response.code === 0 && response.data) {
+        return response.data.map((item: any) => {
+          return {
+            content: item.content,
+            editTime: item.editTime,
+            editTimestamp: new Date(item.editTime).getTime()
+          } as EditHistory
+        })
+      }
+      return []
+    } catch (e) {
+      console.error('[MessageEditService] 获取编辑历史失败:', e)
+      return []
+    }
+  }
+  
+  /**
+   * 格式化编辑时间提示
+   * @param messageTimestamp 消息发送时间戳
+   * @returns 时间提示文本
+   */
+  public formatEditTimeHint(messageTimestamp: number): string {
+    const remaining = this.getRemainingEditTime(messageTimestamp)
+    
+    if (remaining <= 0) {
+      return '已超过编辑时间限制'
+    }
+    
+    const minutes = Math.floor(remaining / 60)
+    const seconds = remaining % 60
+    
+    if (minutes > 0) {
+      return `还可编辑 ${minutes} 分 ${seconds} 秒`
+    } else {
+      return `还可编辑 ${seconds} 秒`
+    }
+  }
+  
+  /**
+   * 检查消息内容是否有变化
+   * @param originalContent 原始内容
+   * @param newContent 新内容
+   * @returns 是否有变化
+   */
+  public hasContentChanged(originalContent: string, newContent: string): boolean {
+    return originalContent.trim() !== newContent.trim()
+  }
+}
+
+/**
+ * 导出单例实例
+ */
+export const messageEditService = MessageEditService.getInstance()

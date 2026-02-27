@@ -76,6 +76,16 @@ enum MessageType {
   RECALL = 202;
   // 正在输入
   TYPING = 203;
+  // 角标更新
+  BADGE_UPDATE = 204;
+  // 引用回复
+  QUOTE_REPLY = 205;
+  // 通话信令
+  CALL_SIGNAL = 206;
+  // 流程通知
+  WORKFLOW_NOTIFY = 207;
+  // 待办提醒
+  TODO_REMINDER = 208;
 }
 
 // 认证请求
@@ -184,4 +194,122 @@ message ReadReceiptMessage {
 message RecallMessage {
   // 撤回的消息ID
   int64 messageId = 1;
+}
+
+// 引用回复消息
+message QuoteReplyMessage {
+  // 引用的消息ID
+  int64 quoteMessageId = 1;
+  // 引用的消息内容摘要
+  string quoteContent = 2;
+  // 引用的消息发送者ID
+  int64 quoteSenderId = 3;
+  // 引用的消息发送者名称
+  string quoteSenderName = 4;
+  // 回复的文本内容
+  string replyContent = 5;
+  // @用户列表
+  repeated int64 atUserIds = 6;
+}
+
+// 正在输入消息
+message TypingMessage {
+  // 目标用户ID（单聊时使用）
+  int64 targetUserId = 1;
+  // 群组ID（群聊时使用）
+  int64 groupId = 2;
+  // 是否正在输入
+  bool isTyping = 3;
+}
+
+// 角标更新消息
+message BadgeUpdateMessage {
+  // 总未读数
+  int32 unreadCount = 1;
+  // 会话角标列表
+  repeated ConversationBadge conversationBadges = 2;
+  // 菜单角标列表
+  repeated MenuBadge menuBadges = 3;
+}
+
+// 会话角标
+message ConversationBadge {
+  // 会话ID
+  int64 conversationId = 1;
+  // 未读数
+  int32 unreadCount = 2;
+}
+
+// 菜单角标
+message MenuBadge {
+  // 菜单ID
+  string menuId = 1;
+  // 角标数量
+  int32 badgeCount = 2;
+}
+
+// 通话信令消息
+message CallSignalMessage {
+  // 通话ID
+  string callId = 1;
+  // 通话类型（1-语音 2-视频）
+  int32 callType = 2;
+  // 信令类型（1-呼叫 2-接听 3-拒绝 4-挂断 5-忙线 6-切换摄像头）
+  int32 signalType = 3;
+  // 呼叫方ID
+  int64 callerId = 4;
+  // 接听方ID
+  int64 calleeId = 5;
+  // 拒绝原因（信令类型为拒绝时使用）
+  string rejectReason = 6;
+  // 扩展数据（JSON格式，用于传递WebRTC信令）
+  string extraData = 7;
+}
+
+// 流程通知消息
+message WorkflowNotifyMessage {
+  // 流程实例ID
+  string processInstanceId = 1;
+  // 流程名称
+  string processName = 2;
+  // 发起人ID
+  int64 initiatorId = 3;
+  // 发起人名称
+  string initiatorName = 4;
+  // 审批内容
+  string content = 5;
+  // 操作按钮列表
+  repeated WorkflowButton buttons = 6;
+  // 流程状态（1-待审批 2-已通过 3-已拒绝 4-已撤回）
+  int32 status = 7;
+  // 跳转URL
+  string jumpUrl = 8;
+}
+
+// 流程操作按钮
+message WorkflowButton {
+  // 按钮ID
+  string buttonId = 1;
+  // 按钮文本
+  string buttonText = 2;
+  // 按钮类型（1-同意 2-拒绝 3-转交 4-查看详情）
+  int32 buttonType = 3;
+}
+
+// 待办提醒消息
+message TodoReminderMessage {
+  // 待办ID
+  string todoId = 1;
+  // 待办标题
+  string title = 2;
+  // 待办内容
+  string content = 3;
+  // 截止日期（时间戳，毫秒）
+  int64 dueTime = 4;
+  // 提醒类型（1-新待办 2-截止日期提醒 3-过期提醒 4-完成通知）
+  int32 reminderType = 5;
+  // 跳转URL
+  string jumpUrl = 6;
+  // 待办状态（1-待处理 2-已完成 3-已过期）
+  int32 status = 7;
 }

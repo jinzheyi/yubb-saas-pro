@@ -109,6 +109,17 @@ export type RecallMessageBody = {
 }
 
 /**
+ * 引用回复消息体
+ */
+export type QuoteReplyMessageBody = {
+  content: string
+  quotedMessageId: number
+  quotedContent: string
+  quotedSenderName: string
+  atUserIds: number[]
+}
+
+/**
  * 消息构建器
  */
 export class MessageBuilder {
@@ -392,6 +403,70 @@ export class MessageBuilder {
     
     const body: RecallMessageBody = {
       messageId: messageId
+    }
+    
+    return {
+      header: header,
+      body: body
+    }
+  }
+  
+  /**
+   * 构建引用回复消息
+   */
+  public static buildQuoteReplyMessage(
+    senderId: number,
+    receiverId: number,
+    groupId: number,
+    tenantId: number,
+    content: string,
+    quotedMessageId: number,
+    quotedContent: string,
+    quotedSenderName: string,
+    atUserIds: number[] = []
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.QUOTE_REPLY,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+    
+    const body: QuoteReplyMessageBody = {
+      content: content,
+      quotedMessageId: quotedMessageId,
+      quotedContent: quotedContent,
+      quotedSenderName: quotedSenderName,
+      atUserIds: atUserIds
+    }
+    
+    return {
+      header: header,
+      body: body
+    }
+  }
+  
+  /**
+   * 构建正在输入消息
+   */
+  public static buildTypingMessage(
+    senderId: number,
+    receiverId: number,
+    groupId: number,
+    tenantId: number,
+    senderName: string
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.TYPING,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+    
+    const body = {
+      senderName: senderName
     }
     
     return {

@@ -13,6 +13,8 @@ import { wsManager, MessageType, WebSocketState } from '../utils/websocket.uts'
 import { MessageBuilder, MessageParser, ImMessage } from '../utils/message-handler.uts'
 import { getAvatarText, getUserAvatarColor } from '@/utils/avatar.uts'
 import { getUserInfo } from '@/store/user.uts'
+import { badgeService, BadgeUpdateMessage } from './badge-service.uts'
+import { conversationService } from './conversation-service.uts'
 
 /**
  * 消息状态枚举
@@ -368,6 +370,12 @@ export class MessageService {
   private handleReceivedMessage(data: any): void {
     const message = data as ImMessage
     
+    // 处理角标更新消息 (messageType = 204)
+    if (message.header.messageType === 204) {
+      this.handleBadgeUpdateMessage(message)
+      return
+    }
+    
     // 创建消息项
     const messageItem: MessageItem = {
       id: 0,
@@ -396,9 +404,11 @@ export class MessageService {
     // 更新会话
     this.updateConversation(conversationId, messageItem)
     
-    // 如果不是自己发送的消息，增加未读数
+    // 如果不是自己发送的消息，增加未读数和角标
     if (!messageItem.isSelf) {
       this.incrementUnreadCount(conversationId)
+      // 自动增加对应会话的角标未读数
+      badgeService.incrementConversationBadge(conversationId)
     }
   }
   
@@ -423,11 +433,63 @@ export class MessageService {
     const message = data as ImMessage
     const body = message.body as any
     const messageId = body.messageId as number
+    const recallerId = message.header.senderId
     
-    console.log('[MessageService] 收到消息撤回:', messageId)
+    console.log('[MessageService] 收到消息撤回:', messageId, '撤回者:', recallerId)
     
-    // 从缓存中移除消息
-    // TODO: 实现消息撤回逻辑
+    // 从缓存中查找并更新消息
+    this.messageCache.forEach((messages, conversationId) => {
+      const index = messages.findIndex(m => m.messageId === messageId)
+      if (index !== -1) {
+        const originalMessage = messages[index]
+        
+        // 创建撤回提示消息
+        const recallTip: MessageItem = {
+          id: originalMessage.id,
+          messageId: originalMessage.messageId,
+          senderId: recallerId,
+          receiverId: originalMessage.receiverId,
+          groupId: originalMessage.groupId,
+          type: MessageType.TEXT,  // 使用文本类型显示撤回提示
+          content: recallerId === this.currentUserId ? '你撤回了一条消息' : `${originalMessage.senderName} 撤回了一条消息`,
+          status: MessageStatus.SENT,
+          timestamp: Date.now(),
+          isSelf: recallerId === this.currentUserId,
+          showTime: false,
+          avatarText: originalMessage.avatarText,
+          avatarBg: originalMessage.avatarBg,
+          senderName: originalMessage.senderName
+        }
+        
+        // 替换原消息
+        messages[index] = recallTip
+        
+        // 通知监听器
+        this.notifyMessageListeners(recallTip)
+        
+        // 更新会话最后消息
+        this.updateConversation(conversationId, recallTip)
+      }
+    })
+  }
+  
+  /**
+   * 处理角标更新消息
+   */
+  private handleBadgeUpdateMessage(message: ImMessage): void {
+    try {
+      // 解析 message.body 为 BadgeUpdateMessage 对象
+      const badgeUpdate = JSON.parse(message.body as string) as BadgeUpdateMessage
+      
+      console.log('[MessageService] 收到角标更新消息:', badgeUpdate)
+      
+      // 调用 badgeService 处理角标更新
+      badgeService.handleBadgeUpdate(badgeUpdate)
+    } catch (e) {
+      console.error('[MessageService] 解析角标更新消息失败:', e)
+      // 解析失败时记录错误并使用本地数据
+      // badgeService 会继续使用本地缓存的角标数据
+    }
   }
   
   /**
@@ -460,6 +522,33 @@ export class MessageService {
   }
   
   /**
+   * 发送引用回复消息
+   */
+  public sendQuoteReplyMessage(
+    receiverId: number,
+    groupId: number,
+    content: string,
+    quotedMessageId: number,
+    quotedContent: string,
+    quotedSenderName: string,
+    atUserIds: number[] = []
+  ): MessageItem {
+    const message = MessageBuilder.buildQuoteReplyMessage(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      content,
+      quotedMessageId,
+      quotedContent,
+      quotedSenderName,
+      atUserIds
+    )
+    
+    return this.sendMessage(message)
+  }
+  
+  /**
    * 添加消息到缓存
    */
   private addMessageToCache(conversationId: number, message: MessageItem): void {
@@ -483,36 +572,18 @@ export class MessageService {
    * 更新会话
    */
   private updateConversation(conversationId: number, message: MessageItem): void {
-    let conversation = this.conversationCache.get(conversationId)
+    const summary = MessageParser.getSummary({ 
+      header: { messageType: message.type } as any, 
+      body: message.content 
+    })
     
-    if (conversation === null || conversation === undefined) {
-      // 创建新会话
-      conversation = {
-        id: conversationId,
-        type: message.groupId > 0 ? 2 : 1,
-        targetId: conversationId,
-        name: '',
-        avatar: '',
-        avatarText: '',
-        avatarBg: '',
-        lastMessage: MessageParser.getSummary({ header: { messageType: message.type } as any, body: message.content }),
-        lastTime: MessageParser.formatTime(message.timestamp),
-        timestamp: message.timestamp,
-        unreadCount: 0,
-        isPinned: false,
-        noDisturb: false,
-        groupMemberCount: 0
-      }
-      this.conversationCache.set(conversationId, conversation)
-    } else {
-      // 更新会话
-      conversation.lastMessage = MessageParser.getSummary({ header: { messageType: message.type } as any, body: message.content })
-      conversation.lastTime = MessageParser.formatTime(message.timestamp)
-      conversation.timestamp = message.timestamp
-    }
-    
-    // 通知监听器
-    this.notifyConversationUpdateListeners(conversation)
+    // 调用 ConversationService 更新会话
+    conversationService.updateConversation(
+      conversationId,
+      summary,
+      message.timestamp,
+      !message.isSelf  // 只有接收到的消息才增加未读数
+    )
   }
   
   /**

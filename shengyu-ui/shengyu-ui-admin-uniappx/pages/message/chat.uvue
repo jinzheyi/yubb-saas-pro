@@ -271,6 +271,7 @@
 	import { parseMessageText } from '../../utils/emojiParser.uts'
 	import { getCustomStickers, StickerItem } from '../../utils/stickerManager.uts'
 	import { messageService, MessageItem as ServiceMessageItem, ConversationItem } from '../../services/message-service.uts'
+	import { badgeService } from '../../services/badge-service.uts'
 	import { MessageType } from '../../utils/websocket.uts'
 	import { getMessageList, recallMessage, deleteMessage } from '../../api/message.uts'
 	import { clearUnreadCount as clearUnreadCountApi, getConversationByTarget } from '../../api/conversation.uts'
@@ -421,11 +422,13 @@
 		
 		// 6. 清空未读数（本地 + 服务端）
 		if (conversationId.value && conversationId.value !== '' && conversationId.value !== '0') {
+			// 调用 BadgeService 清空会话角标
+			// BadgeService 会自动调用后端 API 并更新本地数据
+			const conversationIdNum = parseInt(conversationId.value)
+			badgeService.clearConversationBadge(conversationIdNum)
+			
+			// 同时清空 MessageService 的本地未读数
 			messageService.clearUnreadCount(conversationId.value)
-			// 同时调用后端 API 清空未读数
-			clearUnreadCountApi(conversationId.value.toString()).catch((e) => {
-				console.error('[Chat] 清空未读数失败:', e)
-			})
 		}
 		
 		scrollToBottom()

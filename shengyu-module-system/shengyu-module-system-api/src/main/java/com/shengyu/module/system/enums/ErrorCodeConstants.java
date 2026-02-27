@@ -209,6 +209,7 @@ public interface ErrorCodeConstants {
     ErrorCode MESSAGE_SEND_FAILED = new ErrorCode(1_002_030_101, "消息发送失败");
     ErrorCode MESSAGE_RECALL_TIMEOUT = new ErrorCode(1_002_030_102, "消息撤回超时，只能撤回2分钟内的消息");
     ErrorCode MESSAGE_RECALL_PERMISSION_DENIED = new ErrorCode(1_002_030_103, "无权撤回该消息");
+    ErrorCode MESSAGE_STATUS_INVALID = new ErrorCode(1_002_030_104, "消息状态转换无效");
     
     // 群组相关 1-002-030-200
     ErrorCode GROUP_NOT_EXISTS = new ErrorCode(1_002_030_200, "群组不存在");
@@ -230,6 +231,14 @@ public interface ErrorCodeConstants {
     // 联系人相关 1-002-030-300
     ErrorCode CONTACT_NOT_EXISTS = new ErrorCode(1_002_030_300, "联系人不存在");
     ErrorCode CONTACT_SETTING_UPDATE_FAILED = new ErrorCode(1_002_030_301, "联系人设置更新失败");
+    
+    // 通知相关 1-002-030-400
+    ErrorCode NOTIFICATION_NOT_EXISTS = new ErrorCode(1_002_030_400, "通知不存在");
+    ErrorCode NOTIFICATION_PERMISSION_DENIED = new ErrorCode(1_002_030_401, "无权操作该通知");
+    
+    // 通话相关 1-002-030-500
+    ErrorCode CALL_RECORD_NOT_EXISTS = new ErrorCode(1_002_030_500, "通话记录不存在");
+    ErrorCode CALL_PERMISSION_DENIED = new ErrorCode(1_002_030_501, "无权操作该通话");
 
     // ========== 站内信模版 1-002-026-000 ==========
     ErrorCode NOTIFY_TEMPLATE_NOT_EXISTS = new ErrorCode(1_002_026_000, "站内信模版不存在");

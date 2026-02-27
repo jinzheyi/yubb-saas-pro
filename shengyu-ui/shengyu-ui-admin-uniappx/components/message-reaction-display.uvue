@@ -1,0 +1,100 @@
+<template>
+  <view class="reaction-display" v-if="reactions.length > 0">
+    <view 
+      v-for="(reaction, index) in reactions" 
+      :key="index"
+      class="reaction-item"
+      :class="{ 'reaction-self': reaction.isSelf }"
+      @click="onReactionClick(reaction)"
+      @longpress="onReactionLongPress(reaction)"
+    >
+      <text class="reaction-emoji">{{ reaction.emoji }}</text>
+      <text class="reaction-count">{{ reaction.count }}</text>
+    </view>
+    <view class="reaction-add" @click="onAddClick">
+      <text class="reaction-add-icon">+</text>
+    </view>
+  </view>
+</template>
+
+<script setup lang="uts">
+import { ref, PropType } from 'vue'
+import type { ReactionItem } from '@/services/message-reaction-service.uts'
+
+const props = defineProps({
+  reactions: {
+    type: Array as PropType<ReactionItem[]>,
+    default: () => [] as ReactionItem[]
+  }
+})
+
+const emit = defineEmits<{
+  reactionClick: [reaction: ReactionItem]
+  reactionLongPress: [reaction: ReactionItem]
+  addClick: []
+}>()
+
+const onReactionClick = (reaction: ReactionItem) => {
+  emit('reactionClick', reaction)
+}
+
+const onReactionLongPress = (reaction: ReactionItem) => {
+  emit('reactionLongPress', reaction)
+}
+
+const onAddClick = () => {
+  emit('addClick')
+}
+</script>
+
+<style scoped>
+.reaction-display {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-top: 8rpx;
+  gap: 8rpx;
+}
+
+.reaction-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 4rpx 12rpx;
+  background-color: #f5f5f5;
+  border-radius: 16rpx;
+  border: 1px solid #e0e0e0;
+}
+
+.reaction-item.reaction-self {
+  background-color: #e3f2fd;
+  border-color: #2196f3;
+}
+
+.reaction-emoji {
+  font-size: 32rpx;
+  line-height: 40rpx;
+}
+
+.reaction-count {
+  font-size: 24rpx;
+  color: #666;
+  margin-left: 4rpx;
+}
+
+.reaction-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48rpx;
+  height: 48rpx;
+  background-color: #f5f5f5;
+  border-radius: 16rpx;
+  border: 1px solid #e0e0e0;
+}
+
+.reaction-add-icon {
+  font-size: 32rpx;
+  color: #999;
+}
+</style>

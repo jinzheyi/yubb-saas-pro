@@ -8,6 +8,7 @@
 			<view class="header-top">
 				<text class="header-title">{{ t('message.title', '消息') }}</text>
 				<view class="header-icons">
+					<text class="iconfont header-icon" @click="handleSyncBadge">&#xea5f;</text>
 					<text class="iconfont header-icon" @click="handleScan">&#xea8b;</text>
 					<text class="iconfont header-icon" @click="handleInitiateGroup">&#xea74;</text>
 				</view>
@@ -138,6 +139,7 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { messageService, ConversationItem } from '../../services/message-service.uts'
+	import { badgeService, BadgeData } from '../../services/badge-service.uts'
 	import { getConversationList, deleteConversation, pinConversation, setNoDisturb, clearUnreadCount } from '../../api/conversation.uts'
 	import { getConversationAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 
@@ -158,6 +160,16 @@
 	// 加载状态
 	const loading = ref(false)
 	const refreshing = ref(false)
+	
+	// 角标监听器
+	const badgeListener = {
+		onBadgeUpdate: (badgeData: BadgeData) => {
+			// 更新会话列表的未读数
+			messageList.value.forEach(conv => {
+				conv.unreadCount = badgeData.conversationBadges.get(conv.id) || 0
+			})
+		}
+	}
 
 	/**
 	 * 获取分类 ID（根据会话属性自动分类）
@@ -264,11 +276,15 @@
 		
 		// 2. 监听会话更新
 		messageService.addConversationUpdateListener(handleConversationUpdate)
+		
+		// 3. 监听角标更新
+		badgeService.addListener(badgeListener)
 	})
 	
 	onUnmounted(() => {
 		// 移除监听器
 		messageService.removeConversationUpdateListener(handleConversationUpdate)
+		badgeService.removeListener(badgeListener)
 	})
 	
 	/**
@@ -544,6 +560,13 @@
 			title: '扫一扫功能开发中',
 			icon: 'none'
 		})
+	}
+
+	/**
+	 * 同步角标
+	 */
+	function handleSyncBadge() {
+		badgeService.forceSync()
 	}
 
 	/**
