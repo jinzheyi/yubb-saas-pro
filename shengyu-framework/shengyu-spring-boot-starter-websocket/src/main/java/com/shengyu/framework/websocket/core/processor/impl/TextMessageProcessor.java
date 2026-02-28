@@ -10,6 +10,7 @@ import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.netty.channel.ChannelHandlerContext;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -27,16 +28,17 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class TextMessageProcessor implements MessageProcessor {
 
-    @Autowired
-    private NettySessionManager sessionManager;
-    
-    @Autowired
-    private MessageStorageService messageStorageService;
-    
-    @Autowired(required = false)
+    private final NettySessionManager sessionManager;
+    private final MessageStorageService messageStorageService;
     private SensitiveWordFilterService sensitiveWordFilterService;
+
+    @Autowired(required = false)
+    public void setSensitiveWordFilterService(SensitiveWordFilterService sensitiveWordFilterService) {
+        this.sensitiveWordFilterService = sensitiveWordFilterService;
+    }
 
     @Override
     public void process(ChannelHandlerContext ctx, ImMessage message) {

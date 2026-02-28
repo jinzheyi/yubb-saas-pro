@@ -8,6 +8,8 @@ import com.shengyu.module.system.dal.dataobject.im.ImMessageDO;
 import com.shengyu.module.system.dal.mysql.im.ImConversationMapper;
 import com.shengyu.module.system.dal.mysql.im.ImMessageMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
+import com.shengyu.module.system.service.im.ImBadgeService;
+import com.shengyu.module.system.service.im.ImGroupService;
 import com.shengyu.module.system.service.im.ImSequenceService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;

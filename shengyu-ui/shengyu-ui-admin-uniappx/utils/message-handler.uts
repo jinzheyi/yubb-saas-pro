@@ -523,6 +523,9 @@ export class MessageParser {
         return '[位置]'
       case MessageType.CUSTOM:
         return '[自定义消息]'
+      case MessageType.QUOTE_REPLY:
+        const quoteBody = message.body as QuoteReplyMessageBody
+        return quoteBody.content
       default:
         return '[消息]'
     }

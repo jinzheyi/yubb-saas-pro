@@ -1,13 +1,15 @@
 package com.shengyu.framework.websocket.core.processor.impl;
 
-import com.shengyu.framework.websocket.core.message.ImMessage;
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
-import com.shengyu.framework.websocket.core.sender.WebSocketMessageSender;
-import com.shengyu.framework.websocket.core.session.WebSocketSession;
+import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.session.NettySession;
+import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import io.netty.channel.ChannelHandlerContext;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
+import java.util.List;
 
 /**
  * 角标更新消息处理器
@@ -39,23 +41,13 @@ import javax.annotation.Resource;
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class BadgeUpdateMessageProcessor implements MessageProcessor {
 
-    @Resource
-    private WebSocketMessageSender messageSender;
-
-    /**
-     * 消息类型：角标更新消息
-     */
-    private static final int MESSAGE_TYPE = 204;
+    private final NettySessionManager sessionManager;
 
     @Override
-    public int getMessageType() {
-        return MESSAGE_TYPE;
-    }
-
-    @Override
-    public void process(WebSocketSession session, ImMessage message) {
+    public void process(ChannelHandlerContext ctx, ImMessage message) {
         try {
             Long userId = message.getHeader().getReceiverId();
             
@@ -65,24 +57,26 @@ public class BadgeUpdateMessageProcessor implements MessageProcessor {
             }
 
             // 转发角标更新消息到目标用户的所有在线设备
-            messageSender.sendToUser(userId, message);
+            List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
+            if (sessions.isEmpty()) {
+                log.debug("[BadgeUpdateProcessor] 用户不在线, userId: {}", userId);
+                return;
+            }
+
+            int successCount = 0;
+            for (NettySession targetSession : sessions) {
+                if (targetSession.isActive()) {
+                    targetSession.getChannel().writeAndFlush(message);
+                    targetSession.updateLastActiveTime();
+                    successCount++;
+                }
+            }
             
-            log.debug("[BadgeUpdateProcessor] 角标更新消息已转发, userId: {}", userId);
+            log.debug("[BadgeUpdateProcessor] 角标更新消息已转发, userId: {}, success: {}", 
+                userId, successCount);
 
         } catch (Exception e) {
             log.error("[BadgeUpdateProcessor] 处理角标更新消息失败", e);
         }
-    }
-
-    @Override
-    public boolean needStore() {
-        // 角标更新消息不需要存储到数据库
-        return false;
-    }
-
-    @Override
-    public boolean needForward() {
-        // 需要转发到接收者
-        return true;
     }
 }

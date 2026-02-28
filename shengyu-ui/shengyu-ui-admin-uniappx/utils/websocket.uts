@@ -59,7 +59,12 @@ export enum MessageType {
   SYSTEM_NOTIFY = 200,    // 系统通知
   READ_RECEIPT = 201,     // 消息已读回执
   RECALL = 202,           // 消息撤回
-  TYPING = 203            // 正在输入
+  TYPING = 203,           // 正在输入
+  BADGE_UPDATE = 204,     // 角标更新
+  QUOTE_REPLY = 205,      // 引用回复
+  CALL_SIGNAL = 206,      // 通话信令
+  WORKFLOW_NOTIFY = 207,  // 流程通知
+  TODO_REMINDER = 208     // 待办提醒
 }
 
 /**

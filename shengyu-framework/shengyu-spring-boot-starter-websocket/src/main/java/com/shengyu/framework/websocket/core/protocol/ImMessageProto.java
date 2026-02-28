@@ -74,6 +74,51 @@ public final class ImMessageProto {
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_RecallMessage_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_QuoteReplyMessage_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_QuoteReplyMessage_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_TypingMessage_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_TypingMessage_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_BadgeUpdateMessage_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_BadgeUpdateMessage_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_ConversationBadge_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_ConversationBadge_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_MenuBadge_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_MenuBadge_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_CallSignalMessage_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_CallSignalMessage_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_WorkflowNotifyMessage_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_WorkflowNotifyMessage_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_WorkflowButton_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_WorkflowButton_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_TodoReminderMessage_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_TodoReminderMessage_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -108,15 +153,44 @@ public final class ImMessageProto {
       "sage\022\020\n\010latitude\030\001 \001(\001\022\021\n\tlongitude\030\002 \001(" +
       "\001\022\017\n\007address\030\003 \001(\t\"(\n\022ReadReceiptMessage" +
       "\022\022\n\nmessageIds\030\001 \003(\003\"\"\n\rRecallMessage\022\021\n" +
-      "\tmessageId\030\001 \001(\003*\371\001\n\013MessageType\022\013\n\007UNKN" +
-      "OWN\020\000\022\021\n\rHEARTBEAT_REQ\020\001\022\022\n\016HEARTBEAT_RE" +
-      "SP\020\002\022\014\n\010AUTH_REQ\020\003\022\r\n\tAUTH_RESP\020\004\022\t\n\005CLO" +
-      "SE\020\005\022\010\n\004TEXT\020d\022\t\n\005IMAGE\020e\022\t\n\005VOICE\020f\022\t\n\005" +
-      "VIDEO\020g\022\010\n\004FILE\020h\022\014\n\010LOCATION\020i\022\n\n\006CUSTO" +
-      "M\020j\022\022\n\rSYSTEM_NOTIFY\020\310\001\022\021\n\014READ_RECEIPT\020" +
-      "\311\001\022\013\n\006RECALL\020\312\001\022\013\n\006TYPING\020\313\001BA\n-com.shen" +
-      "gyu.framework.websocket.core.protocolB\016I" +
-      "mMessageProtoP\001b\006proto3"
+      "\tmessageId\030\001 \001(\003\"\232\001\n\021QuoteReplyMessage\022\026" +
+      "\n\016quoteMessageId\030\001 \001(\003\022\024\n\014quoteContent\030\002" +
+      " \001(\t\022\025\n\rquoteSenderId\030\003 \001(\003\022\027\n\017quoteSend" +
+      "erName\030\004 \001(\t\022\024\n\014replyContent\030\005 \001(\t\022\021\n\tat" +
+      "UserIds\030\006 \003(\003\"H\n\rTypingMessage\022\024\n\014target" +
+      "UserId\030\001 \001(\003\022\017\n\007groupId\030\002 \001(\003\022\020\n\010isTypin" +
+      "g\030\003 \001(\010\"y\n\022BadgeUpdateMessage\022\023\n\013unreadC" +
+      "ount\030\001 \001(\005\022.\n\022conversationBadges\030\002 \003(\0132\022" +
+      ".ConversationBadge\022\036\n\nmenuBadges\030\003 \003(\0132\n" +
+      ".MenuBadge\"@\n\021ConversationBadge\022\026\n\016conve" +
+      "rsationId\030\001 \001(\003\022\023\n\013unreadCount\030\002 \001(\005\"/\n\t" +
+      "MenuBadge\022\016\n\006menuId\030\001 \001(\t\022\022\n\nbadgeCount\030" +
+      "\002 \001(\005\"\226\001\n\021CallSignalMessage\022\016\n\006callId\030\001 " +
+      "\001(\t\022\020\n\010callType\030\002 \001(\005\022\022\n\nsignalType\030\003 \001(" +
+      "\005\022\020\n\010callerId\030\004 \001(\003\022\020\n\010calleeId\030\005 \001(\003\022\024\n" +
+      "\014rejectReason\030\006 \001(\t\022\021\n\textraData\030\007 \001(\t\"\307" +
+      "\001\n\025WorkflowNotifyMessage\022\031\n\021processInsta" +
+      "nceId\030\001 \001(\t\022\023\n\013processName\030\002 \001(\t\022\023\n\013init" +
+      "iatorId\030\003 \001(\003\022\025\n\rinitiatorName\030\004 \001(\t\022\017\n\007" +
+      "content\030\005 \001(\t\022 \n\007buttons\030\006 \003(\0132\017.Workflo" +
+      "wButton\022\016\n\006status\030\007 \001(\005\022\017\n\007jumpUrl\030\010 \001(\t" +
+      "\"J\n\016WorkflowButton\022\020\n\010buttonId\030\001 \001(\t\022\022\n\n" +
+      "buttonText\030\002 \001(\t\022\022\n\nbuttonType\030\003 \001(\005\"\215\001\n" +
+      "\023TodoReminderMessage\022\016\n\006todoId\030\001 \001(\t\022\r\n\005" +
+      "title\030\002 \001(\t\022\017\n\007content\030\003 \001(\t\022\017\n\007dueTime\030" +
+      "\004 \001(\003\022\024\n\014reminderType\030\005 \001(\005\022\017\n\007jumpUrl\030\006" +
+      " \001(\t\022\016\n\006status\030\007 \001(\005*\332\002\n\013MessageType\022\013\n\007" +
+      "UNKNOWN\020\000\022\021\n\rHEARTBEAT_REQ\020\001\022\022\n\016HEARTBEA" +
+      "T_RESP\020\002\022\014\n\010AUTH_REQ\020\003\022\r\n\tAUTH_RESP\020\004\022\t\n" +
+      "\005CLOSE\020\005\022\010\n\004TEXT\020d\022\t\n\005IMAGE\020e\022\t\n\005VOICE\020f" +
+      "\022\t\n\005VIDEO\020g\022\010\n\004FILE\020h\022\014\n\010LOCATION\020i\022\n\n\006C" +
+      "USTOM\020j\022\022\n\rSYSTEM_NOTIFY\020\310\001\022\021\n\014READ_RECE" +
+      "IPT\020\311\001\022\013\n\006RECALL\020\312\001\022\013\n\006TYPING\020\313\001\022\021\n\014BADG" +
+      "E_UPDATE\020\314\001\022\020\n\013QUOTE_REPLY\020\315\001\022\020\n\013CALL_SI" +
+      "GNAL\020\316\001\022\024\n\017WORKFLOW_NOTIFY\020\317\001\022\022\n\rTODO_RE" +
+      "MINDER\020\320\001BA\n-com.shengyu.framework.webso" +
+      "cket.core.protocolB\016ImMessageProtoP\001b\006pr" +
+      "oto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -194,6 +268,60 @@ public final class ImMessageProto {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_RecallMessage_descriptor,
         new java.lang.String[] { "MessageId", });
+    internal_static_QuoteReplyMessage_descriptor =
+      getDescriptor().getMessageTypes().get(12);
+    internal_static_QuoteReplyMessage_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_QuoteReplyMessage_descriptor,
+        new java.lang.String[] { "QuoteMessageId", "QuoteContent", "QuoteSenderId", "QuoteSenderName", "ReplyContent", "AtUserIds", });
+    internal_static_TypingMessage_descriptor =
+      getDescriptor().getMessageTypes().get(13);
+    internal_static_TypingMessage_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_TypingMessage_descriptor,
+        new java.lang.String[] { "TargetUserId", "GroupId", "IsTyping", });
+    internal_static_BadgeUpdateMessage_descriptor =
+      getDescriptor().getMessageTypes().get(14);
+    internal_static_BadgeUpdateMessage_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_BadgeUpdateMessage_descriptor,
+        new java.lang.String[] { "UnreadCount", "ConversationBadges", "MenuBadges", });
+    internal_static_ConversationBadge_descriptor =
+      getDescriptor().getMessageTypes().get(15);
+    internal_static_ConversationBadge_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_ConversationBadge_descriptor,
+        new java.lang.String[] { "ConversationId", "UnreadCount", });
+    internal_static_MenuBadge_descriptor =
+      getDescriptor().getMessageTypes().get(16);
+    internal_static_MenuBadge_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_MenuBadge_descriptor,
+        new java.lang.String[] { "MenuId", "BadgeCount", });
+    internal_static_CallSignalMessage_descriptor =
+      getDescriptor().getMessageTypes().get(17);
+    internal_static_CallSignalMessage_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_CallSignalMessage_descriptor,
+        new java.lang.String[] { "CallId", "CallType", "SignalType", "CallerId", "CalleeId", "RejectReason", "ExtraData", });
+    internal_static_WorkflowNotifyMessage_descriptor =
+      getDescriptor().getMessageTypes().get(18);
+    internal_static_WorkflowNotifyMessage_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_WorkflowNotifyMessage_descriptor,
+        new java.lang.String[] { "ProcessInstanceId", "ProcessName", "InitiatorId", "InitiatorName", "Content", "Buttons", "Status", "JumpUrl", });
+    internal_static_WorkflowButton_descriptor =
+      getDescriptor().getMessageTypes().get(19);
+    internal_static_WorkflowButton_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_WorkflowButton_descriptor,
+        new java.lang.String[] { "ButtonId", "ButtonText", "ButtonType", });
+    internal_static_TodoReminderMessage_descriptor =
+      getDescriptor().getMessageTypes().get(20);
+    internal_static_TodoReminderMessage_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_TodoReminderMessage_descriptor,
+        new java.lang.String[] { "TodoId", "Title", "Content", "DueTime", "ReminderType", "JumpUrl", "Status", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

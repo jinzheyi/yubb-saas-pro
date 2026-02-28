@@ -14,6 +14,7 @@ import com.shengyu.framework.websocket.core.processor.impl.ReadReceiptMessagePro
 import com.shengyu.framework.websocket.core.processor.impl.TextMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.VoiceMessageProcessor;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.service.AuthService;
 import com.shengyu.framework.websocket.core.service.MessageCacheService;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
@@ -59,6 +60,12 @@ public class NettyAutoConfiguration {
     @ConditionalOnMissingBean
     public AuthService authService() {
         return new AuthServiceImpl();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public NettyMessageSender nettyMessageSender(NettySessionManager sessionManager) {
+        return new NettyMessageSender(sessionManager);
     }
 
     /**

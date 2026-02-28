@@ -1,0 +1,138 @@
+/**
+ * 虚拟滚动管理器
+ * 用于长列表性能优化，只渲染可视区域及其上下的少量元素
+ */
+
+export type ItemSizeGetter = (index: number) => number
+
+export class VirtualScroller {
+  private itemHeights: number[] = []
+  private itemTops: number[] = []
+  private totalHeight: number = 0
+  private visibleCount: number = 0
+  private bufferCount: number = 5
+  
+  private startIndex: number = 0
+  private endIndex: number = 0
+  private offsetTop: number = 0
+
+  constructor(
+    private viewportHeight: number,
+    private defaultItemHeight: number = 60
+  ) {
+    this.visibleCount = Math.ceil(this.viewportHeight / this.defaultItemHeight)
+    this.endIndex = this.startIndex + this.visibleCount + this.bufferCount
+  }
+
+  /**
+   * 更新视口高度
+   */
+  public setViewportHeight(height: number) {
+    this.viewportHeight = height
+    this.visibleCount = Math.ceil(this.viewportHeight / this.defaultItemHeight)
+    this.updateRange()
+  }
+
+  /**
+   * 初始化所有元素的高度
+   */
+  public initItems(count: number, itemSizeGetter?: ItemSizeGetter) {
+    this.itemHeights = new Array(count)
+    this.itemTops = new Array(count)
+    
+    let currentTop = 0
+    for (let i = 0; i < count; i++) {
+      const h = itemSizeGetter ? itemSizeGetter(i) : this.defaultItemHeight
+      this.itemHeights[i] = h
+      this.itemTops[i] = currentTop
+      currentTop += h
+    }
+    
+    this.totalHeight = currentTop
+    this.updateRange()
+  }
+
+  /**
+   * 动态更新某个元素的高度
+   */
+  public updateItemHeight(index: number, newHeight: number) {
+    if (index < 0 || index >= this.itemHeights.length) return
+    
+    const diff = newHeight - this.itemHeights[index]
+    if (diff === 0) return
+    
+    this.itemHeights[index] = newHeight
+    this.totalHeight += diff
+    
+    // 更新后续元素的top值
+    for (let i = index + 1; i < this.itemTops.length; i++) {
+      this.itemTops[i] += diff
+    }
+    
+    this.updateRange()
+  }
+
+  /**
+   * 追加新元素
+   */
+  public appendItem(height: number = this.defaultItemHeight) {
+    const index = this.itemHeights.length
+    this.itemHeights.push(height)
+    this.itemTops.push(this.totalHeight)
+    this.totalHeight += height
+    this.updateRange()
+  }
+
+  /**
+   * 滚动时更新可见区域计算
+   */
+  public updateScrollTop(scrollTop: number) {
+    // 找出第一个可视元素的索引
+    let low = 0
+    let high = this.itemTops.length - 1
+    let startIdx = 0
+    
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2)
+      const top = this.itemTops[mid]
+      
+      if (top === scrollTop) {
+        startIdx = mid
+        break
+      } else if (top < scrollTop) {
+        startIdx = mid
+        low = mid + 1
+      } else {
+        high = mid - 1
+      }
+    }
+    
+    this.startIndex = Math.max(0, startIdx - this.bufferCount)
+    
+    // 根据 startIndex 计算 endIndex
+    let tempHeight = 0
+    let currentIdx = startIdx
+    while (currentIdx < this.itemHeights.length && tempHeight < this.viewportHeight) {
+      tempHeight += this.itemHeights[currentIdx]
+      currentIdx++
+    }
+    
+    this.endIndex = Math.min(this.itemHeights.length - 1, currentIdx + this.bufferCount)
+    this.offsetTop = this.startIndex > 0 ? this.itemTops[this.startIndex] : 0
+  }
+
+  /**
+   * 获取当前可见范围
+   * 返回 [startIndex, endIndex, offsetTop]
+   */
+  public getVisibleRange(): number[] {
+    return [this.startIndex, this.endIndex, this.offsetTop]
+  }
+
+  /**
+   * 获取总高度，用于占位
+   */
+  public getTotalHeight(): number {
+    return this.totalHeight
+  }
+}

@@ -56,7 +56,14 @@
 							</text>
 							
 							<!-- 文字消息 -->
-							<view v-if="msg.type === 'text'" class="message-bubble bubble-text" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
+							<view v-if="msg.type === 'text' || msg.type === 'quote'" class="message-bubble bubble-text" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
+								<!-- 引用内容预览 -->
+								<view v-if="hasQuote(msg)" class="quote-preview" @click.stop="scrollToQuotedMessage(msg.quoteMessageId)">
+									<view v-for="(quote, qIdx) in buildQuoteChain(msg)" :key="quote.messageId + '-' + qIdx" class="quote-chain-item" :class="{ 'quote-chain-sub': qIdx > 0 }">
+										<text class="quote-sender">{{ quote.senderName }}</text>
+										<text class="quote-content" :numberOfLines="1">{{ quote.content }}</text>
+									</view>
+								</view>
 								<view class="text-content-wrap">
 									<template v-for="(token, tIdx) in parseMessageText(msg.content)" :key="tIdx">
 										<text v-if="token.type === 'text'" class="message-text">{{ token.content }}</text>
@@ -126,6 +133,15 @@
 			<!-- 全屏模式下的顶部操作栏 -->
 			<view v-if="isFullExpanded" class="full-expand-header">
 				<text class="iconfont collapse-icon" @click="toggleFullExpand">&#xe60e;</text>
+			</view>
+			
+			<!-- 引用回复预览栏 -->
+			<view v-if="quoteReplyMsg !== null" class="quote-reply-bar">
+				<view class="quote-reply-content">
+					<text class="quote-reply-sender">{{ quoteReplyMsg ? quoteReplyMsg.senderName : '' }}</text>
+					<text class="quote-reply-text" :numberOfLines="1">{{ quoteReplyMsg ? (quoteReplyMsg.type === 'text' ? quoteReplyMsg.content : '[' + quoteReplyMsg.type + ']') : '' }}</text>
+				</view>
+				<text class="iconfont quote-reply-close" @click="clearQuoteReply">&#xeb08;</text>
 			</view>
 
 			<view class="input-row" :class="{ 'input-row-full': isFullExpanded }">
@@ -262,6 +278,32 @@
 				<text class="recording-text">{{ isCancelReady ? '松开手指，取消发送' : '手指上滑，取消发送' }}</text>
 			</view>
 		</view>
+
+		<!-- 转发确认对话框 -->
+		<view v-if="showForwardConfirm" class="forward-dialog-overlay" @click="cancelForward">
+			<view class="forward-dialog" @click.stop>
+				<view class="forward-dialog-header">
+					<text class="forward-dialog-title">发送给</text>
+				</view>
+				<view class="forward-dialog-content">
+					<view class="forward-target">
+						<text class="iconfont target-icon">&#xe624;</text>
+						<text class="target-name">选择联系人/群组</text>
+					</view>
+					<view class="forward-preview">
+						<text class="preview-text">[逐条转发] {{ selectedIds.length }} 条消息</text>
+					</view>
+				</view>
+				<view class="forward-dialog-footer">
+					<view class="dialog-btn cancel-btn" @click="cancelForward">
+						<text class="btn-text">取消</text>
+					</view>
+					<view class="dialog-btn confirm-btn" @click="confirmForward">
+						<text class="btn-text highlight">发送</text>
+					</view>
+				</view>
+			</view>
+		</view>
 	</view>
 </template>
 
@@ -275,9 +317,10 @@
 	import { MessageType } from '../../utils/websocket.uts'
 	import { getMessageList, recallMessage, deleteMessage } from '../../api/message.uts'
 	import { clearUnreadCount as clearUnreadCountApi, getConversationByTarget } from '../../api/conversation.uts'
-	import { getUserId, getTenantIdAsNumber } from '../../store/user.uts'
+	import { getUserId, getTenantIdAsNumber, hasRole } from '../../store/user.uts'
 	import { uploadFile, chooseAndUploadImage, chooseAndUploadVideo, chooseAndUploadFile } from '../../utils/upload.uts'
 	import { getUserAvatarColor, getAvatarText as getAvatarTextUtil } from '../../utils/avatar.uts'
+	import { parseMessageContent } from '../../utils/message-utils.uts'
 	import { uploadGroupFile } from '../../api/file.uts'
 	import { BASE_URL as CONFIG_BASE_URL } from '../../config/app.config.uts'
 
@@ -348,12 +391,23 @@
     const touchStartX = ref(0)
     const touchStartY = ref(0)
     const menuOpacity = ref(0)
+    // 引用回复状态
+    const quoteReplyMsg = ref<MessageItem | null>(null)
+    // 转发状态
+    const showForwardConfirm = ref(false)
 	
 	// 加载状态
 	const loading = ref(false)
 	const hasMore = ref(true)
 
 	const stickerList = ref<StickerItem[]>(getCustomStickers())
+
+	type QuoteChainItem = {
+		messageId : number;
+		senderName : string;
+		content : string;
+		missing ?: boolean;
+	}
 
 	type MessageItem = {
 		id : string;
@@ -376,6 +430,11 @@
 		address ?: string;
 		isSticker ?: boolean;
 		status ?: string; // 'sending' | 'success' | 'fail'
+		// 引用回复字段
+		quoteMessageId ?: number;
+		quoteContent ?: string;
+		quoteSenderName ?: string;
+		quoteChain ?: QuoteChainItem[];
 	}
 
 	const messages = ref<MessageItem[]>([])
@@ -557,25 +616,14 @@
 	 * 转换服务端消息为 UI 消息格式
 	 */
 	function convertServerMessage(msg : any) : MessageItem {
-		// 解析内容,带错误处理
-		let content : any
-		if (typeof msg.content === 'string') {
-			try {
-				content = JSON.parse(msg.content)
-			} catch (e) {
-				// 解析失败时返回原始字符串
-				console.error('[Content Parse Error]', e, 'Content:', msg.content)
-				content = msg.content
-			}
-		} else {
-			content = msg.content
-		}
+		const rawContent = parseRawContent(msg.content)
+		const content = parseMessageContent(rawContent)
 		
 		// 处理发送者信息缺失的后备方案
 		const senderNickname = msg.senderNickname || ''
 		const avatarText = senderNickname ? getAvatarTextUtil(senderNickname) : '?'
 		
-		return {
+		const uiMessage = {
 			id: msg.id.toString(),
 			messageId: msg.messageId,
 			senderId: msg.senderId.toString(),
@@ -591,6 +639,9 @@
 			senderName: senderNickname,
 			status: msg.status === 1 ? 'success' : 'sending'
 		} as MessageItem
+
+		applyQuoteFields(uiMessage, rawContent)
+		return uiMessage
 	}
 	
 	/**
@@ -598,12 +649,12 @@
 	 */
 	function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : MessageItem[] {
 		return serviceMessages.map(msg => {
-			return {
+			const uiMessage = {
 				id: msg.id.toString(),
 				messageId: msg.messageId,
 				senderId: msg.senderId.toString(),
 				receiverId: msg.receiverId.toString(),
-				type: msg.type,
+				type: getMessageTypeString(msg.type),
 				content: getServiceMessageContent(msg),
 				isSelf: msg.isSelf,
 				time: new Date(msg.timestamp).toLocaleString(),
@@ -614,6 +665,9 @@
 				senderName: msg.senderName,
 				status: msg.status
 			} as MessageItem
+
+			applyQuoteFields(uiMessage, msg.content)
+			return uiMessage
 		})
 	}
 	
@@ -621,7 +675,11 @@
 	 * 获取消息类型字符串
 	 * 支持两种格式: REST API (1-6) 和 WebSocket (100-105)
 	 */
-	function getMessageTypeString(messageType : number) : string {
+	function getMessageTypeString(messageType : any) : string {
+		if (typeof messageType === 'string') {
+			return messageType
+		}
+
 		const typeMap = {
 			// REST API 格式 (数据库存储)
 			1: 'text',
@@ -637,7 +695,8 @@
 			103: 'video',
 			104: 'file',
 			105: 'location',
-			106: 'custom'
+			106: 'custom',
+			205: 'quote'
 		}
 		return typeMap[messageType] || 'text'
 	}
@@ -650,7 +709,7 @@
 		// 先转换为字符串类型
 		const typeStr = getMessageTypeString(messageType)
 		
-		if (typeStr === 'text') {
+		if (typeStr === 'text' || typeStr === 'quote') {
 			// 文本消息
 			return content.content || content
 		} else if (typeStr === 'image') {
@@ -676,20 +735,117 @@
 	 * 获取服务消息的内容
 	 */
 	function getServiceMessageContent(msg : ServiceMessageItem) : string {
-		if (msg.type === 'text') {
-			return msg.content.content || msg.content
-		} else if (msg.type === 'image') {
-			return msg.content.url || msg.content
-		} else if (msg.type === 'voice') {
-			return msg.content.url || msg.content
-		} else if (msg.type === 'video') {
-			return msg.content.url || msg.content
-		} else if (msg.type === 'file') {
-			return msg.content.url || msg.content
-		} else if (msg.type === 'location') {
-			return msg.content.address || msg.content
+		const typeStr = getMessageTypeString(msg.type)
+		const content = parseMessageContent(msg.content)
+
+		if (typeStr === 'text' || typeStr === 'quote') {
+			return content?.content || content
+		} else if (typeStr === 'image') {
+			return content?.url || content
+		} else if (typeStr === 'voice') {
+			return content?.url || content
+		} else if (typeStr === 'video') {
+			return content?.url || content
+		} else if (typeStr === 'file') {
+			return content?.url || content
+		} else if (typeStr === 'location') {
+			return content?.address || content
 		}
-		return msg.content.toString()
+		return content?.toString ? content.toString() : ''
+	}
+
+	function parseRawContent(content : any) : any {
+		if (content === null || content === undefined) {
+			return content
+		}
+
+		if (typeof content === 'string') {
+			try {
+				return JSON.parse(content)
+			} catch (e) {
+				return content
+			}
+		}
+
+		return content
+	}
+
+	function applyQuoteFields(target : MessageItem, rawContent : any) : void {
+		const parsed = parseRawContent(rawContent)
+		if (parsed && typeof parsed === 'object') {
+			if (parsed.quotedMessageId !== null && parsed.quotedMessageId !== undefined) {
+				target.quoteMessageId = Number(parsed.quotedMessageId)
+				target.quoteContent = parsed.quotedContent || ''
+				target.quoteSenderName = parsed.quotedSenderName || ''
+			}
+		}
+	}
+
+	function hasQuote(msg : MessageItem) : boolean {
+		return msg.quoteMessageId !== null && msg.quoteMessageId !== undefined
+	}
+
+	function isRecallTip(content : string) : boolean {
+		return content.indexOf('撤回') > -1 && content.indexOf('消息') > -1
+	}
+
+	function getMessagePreview(msg : MessageItem) : string {
+		if (msg.type === 'text' || msg.type === 'quote') {
+			const text = msg.content || ''
+			return isRecallTip(text) ? '[消息已撤回]' : text
+		}
+		if (msg.type === 'image') return '[图片]'
+		if (msg.type === 'voice') return '[语音]'
+		if (msg.type === 'video') return '[视频]'
+		if (msg.type === 'file') {
+			return msg.fileName ? `[文件] ${msg.fileName}` : '[文件]'
+		}
+		if (msg.type === 'location') return '[位置]'
+		return '[消息]'
+	}
+
+	function buildQuoteChain(msg : MessageItem) : QuoteChainItem[] {
+		if (!hasQuote(msg)) {
+			return []
+		}
+
+		const chain : QuoteChainItem[] = []
+		let currentId = msg.quoteMessageId as number
+		let currentSender = msg.quoteSenderName || ''
+		let currentContent = msg.quoteContent || ''
+		let depth = 0
+		const maxDepth = 5
+
+		while (currentId && depth < maxDepth) {
+			const referenced = messages.value.find(m => m.messageId === currentId)
+			if (referenced !== undefined) {
+				chain.push({
+					messageId: currentId,
+					senderName: referenced.senderName || currentSender || '未知',
+					content: getMessagePreview(referenced),
+					missing: false
+				})
+
+				if (referenced.quoteMessageId === null || referenced.quoteMessageId === undefined) {
+					break
+				}
+
+				currentId = referenced.quoteMessageId
+				currentSender = referenced.quoteSenderName || ''
+				currentContent = referenced.quoteContent || ''
+			} else {
+				chain.push({
+					messageId: currentId,
+					senderName: currentSender || '未知',
+					content: currentContent || '原消息已删除',
+					missing: true
+				})
+				break
+			}
+			depth++
+		}
+
+		return chain
 	}
 	
 	/**
@@ -739,7 +895,7 @@
 			messageId: message.messageId,
 			senderId: message.senderId.toString(),
 			receiverId: message.receiverId.toString(),
-			type: message.type,
+			type: getMessageTypeString(message.type),
 			content: getServiceMessageContent(message),
 			isSelf: message.isSelf,
 			time: new Date(message.timestamp).toLocaleString(),
@@ -750,6 +906,8 @@
 			senderName: message.senderName,
 			status: message.status
 		} as MessageItem
+
+		applyQuoteFields(uiMessage, message.content)
 		
 		messages.value.push(uiMessage)
 		
@@ -1069,16 +1227,34 @@
 				
 				if (!finalContent.trim()) return
 				
-				// 使用消息服务发送文本消息
-				const message = messageService.sendTextMessage(
-					getReceiverIdForMessage(),  // 单聊时传 receiverId
-					getGroupIdForMessage(),     // 群聊时传 groupId
-					finalContent,
-					[]  // @用户列表（暂不实现）
-				)
+				// 检查是否有引用回复
+				const quoteMsg = quoteReplyMsg.value
+				
+				let message: any
+				if (quoteMsg !== null) {
+					// 发送引用回复消息
+					const quoteContent = quoteMsg.type === 'text' ? quoteMsg.content : '[' + quoteMsg.type + ']'
+					message = messageService.sendQuoteReplyMessage(
+						getReceiverIdForMessage(),
+						getGroupIdForMessage(),
+						finalContent,
+						quoteMsg.messageId,
+						quoteContent,
+						quoteMsg.senderName,
+						[]
+					)
+				} else {
+					// 发送普通文本消息
+					message = messageService.sendTextMessage(
+						getReceiverIdForMessage(),  // 单聊时传 receiverId
+						getGroupIdForMessage(),     // 群聊时传 groupId
+						finalContent,
+						[]  // @用户列表（暂不实现）
+					)
+				}
 				
 				// 转换并添加到消息列表
-				const uiMessage = {
+				const uiMessage: MessageItem = {
 					id: message.id.toString(),
 					messageId: message.messageId,
 					senderId: message.senderId.toString(),
@@ -1092,7 +1268,16 @@
 					avatarText: message.avatarText,
 					avatarBg: message.avatarBg,
 					status: message.status
-				} as MessageItem
+				}
+				
+				// 如果有引用回复，设置引用字段
+				if (quoteMsg !== null) {
+					uiMessage.quoteMessageId = quoteMsg.messageId
+					uiMessage.quoteContent = quoteMsg.type === 'text' ? quoteMsg.content : '[' + quoteMsg.type + ']'
+					uiMessage.quoteSenderName = quoteMsg.senderName
+					// 清除引用回复状态
+					quoteReplyMsg.value = null
+				}
 				
 				messages.value.push(uiMessage)
 				
@@ -1498,8 +1683,9 @@
             ]
         }
         
-        // 如果是自己发送的消息，添加撤回选项（在删除之前）
-        if (msg.isSelf) {
+        // 如果是自己发送的消息，或者是管理员，添加撤回选项（在删除之前）
+        const isAdmin = hasRole('admin') || hasRole('tenant_admin') || hasRole('super_admin')
+        if (msg.isSelf || isAdmin) {
             const deleteIndex = menuItems.findIndex(item => item.key === 'delete')
             if (deleteIndex > -1) {
                 menuItems.splice(deleteIndex, 0, { key: 'recall', labelKey: 'chat.menu.recall', icon: '\ue6a0' })
@@ -1656,9 +1842,11 @@
                     scrollToBottom()
                 }, 100)
             } else if (action === 'quote') {
-                if (editorCtx != null) {
-                    editorCtx!.insertText({ text: `"${msg.type === 'text' ? msg.content : t('chat.menu.quote')}" ` })
-                    inputText.value = 'has_content'
+                // 设置引用回复状态
+                quoteReplyMsg.value = msg
+                // 如果当前是语音模式，切换到文字输入模式
+                if (isVoiceMode.value) {
+                    isVoiceMode.value = false
                 }
             }
         } catch (e) {
@@ -1668,12 +1856,40 @@
         closeMsgMenu()
     }
 
+
     function toggleSelect(msg : MessageItem) {
         const idx = selectedIds.value.indexOf(msg.id)
         if (idx > -1) {
             selectedIds.value.splice(idx, 1)
         } else {
             selectedIds.value.push(msg.id)
+        }
+    }
+
+    /**
+     * 清除引用回复状态
+     */
+    function clearQuoteReply() {
+        quoteReplyMsg.value = null
+    }
+
+    /**
+     * 定位到被引用的消息
+     */
+    function scrollToQuotedMessage(quoteMessageId: number) {
+        // 查找消息在列表中的索引
+        const index = messages.value.findIndex(m => m.messageId === quoteMessageId)
+        if (index !== -1) {
+            // 高亮显示该消息
+            highlightedMessageId.value = messages.value[index].id
+            // 滚动到该消息
+            lastMessageId.value = 'msg-' + index
+            // 3秒后清除高亮
+            setTimeout(() => {
+                highlightedMessageId.value = ''
+            }, 3000)
+        } else {
+            uni.showToast({ title: '原消息已不存在', icon: 'none' })
         }
     }
 
@@ -1697,8 +1913,20 @@
             uni.showToast({ title: '请选择要转发的消息', icon: 'none' })
             return
         }
-        uni.showToast({ title: `转发 ${selectedIds.value.length} 条消息`, icon: 'none' })
-        // TODO: 实现转发逻辑
+        // 显示转发确认对话框
+        showForwardConfirm.value = true
+    }
+
+    function cancelForward() {
+        showForwardConfirm.value = false
+    }
+
+    function confirmForward() {
+        uni.showToast({ title: `已转发 ${selectedIds.value.length} 条消息`, icon: 'success' })
+        showForwardConfirm.value = false
+        exitMultiSelectMode()
+        
+        // TODO: 集成实际的 target 选择和 message-forward.uts 调用
     }
 
     function handleMultiDelete() {
@@ -2783,5 +3011,180 @@
 
     .menu-danger {
         color: #FF4D4F;
+    }
+
+    /* 转发确认对话框 */
+    .forward-dialog-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .forward-dialog {
+        width: 300px;
+        background-color: #FFFFFF;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .forward-dialog-header {
+        padding: 20px 20px 10px;
+    }
+
+    .forward-dialog-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1F2329;
+    }
+
+    .forward-dialog-content {
+        padding: 0 20px 20px;
+    }
+
+    .forward-target {
+        flex-direction: row;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom-width: 0.5px;
+        border-bottom-color: #E5E6EB;
+    }
+
+    .target-icon {
+        font-size: 36px;
+        color: #8F959E;
+        background-color: #F2F3F5;
+        border-radius: 4px;
+    }
+
+    .target-name {
+        font-size: 16px;
+        color: #1F2329;
+        margin-left: 10px;
+        font-weight: 500;
+    }
+
+    .forward-preview {
+        background-color: #F2F3F5;
+        border-radius: 4px;
+        padding: 10px;
+        margin-top: 15px;
+    }
+
+    .preview-text {
+        font-size: 13px;
+        color: #646A73;
+    }
+
+    .forward-dialog-footer {
+        flex-direction: row;
+        border-top-width: 0.5px;
+        border-top-color: #E5E6EB;
+        height: 50px;
+    }
+
+    .dialog-btn {
+        flex: 1;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .cancel-btn {
+        border-right-width: 0.5px;
+        border-right-color: #E5E6EB;
+    }
+
+    .btn-text {
+        font-size: 16px;
+        color: #1F2329;
+    }
+
+    .highlight {
+        color: #1677FF;
+        font-weight: 500;
+    }
+
+    /* 引用回复样式 */
+    .quote-preview {
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 4px;
+        padding: 6px 10px;
+        margin-bottom: 6px;
+        border-left-width: 3px;
+        border-left-color: #1677FF;
+        border-left-style: solid;
+        flex-direction: column;
+    }
+
+    .quote-chain-item {
+        flex-direction: column;
+    }
+
+    .quote-chain-sub {
+        margin-top: 4px;
+        padding-left: 6px;
+        border-left-width: 1px;
+        border-left-color: rgba(0, 0, 0, 0.12);
+        border-left-style: solid;
+    }
+
+    .quote-sender {
+        font-size: 12px;
+        color: #646A73;
+        margin-bottom: 2px;
+    }
+
+    .quote-content {
+        font-size: 13px;
+        color: #8F959E;
+        line-height: 1.4;
+    }
+    
+    .quote-reply-bar {
+        flex-direction: row;
+        align-items: center;
+        background-color: #F8F9FA;
+        padding: 8px 16px;
+        border-top-width: 0.5px;
+        border-top-color: #E5E6EB;
+    }
+    
+    .quote-reply-content {
+        flex: 1;
+        flex-direction: row;
+        align-items: center;
+        background-color: #FFFFFF;
+        border-radius: 4px;
+        padding: 6px 10px;
+        border-left-width: 3px;
+        border-left-color: #1677FF;
+        border-left-style: solid;
+        margin-right: 12px;
+        overflow: hidden;
+    }
+    
+    .quote-reply-sender {
+        font-size: 12px;
+        color: #646A73;
+        margin-right: 6px;
+    }
+    
+    .quote-reply-text {
+        font-size: 13px;
+        color: #8F959E;
+        flex: 1;
+        lines: 1;
+        text-overflow: ellipsis;
+    }
+    
+    .quote-reply-close {
+        font-size: 20px;
+        color: #8F959E;
+        padding: 4px;
     }
 </style>

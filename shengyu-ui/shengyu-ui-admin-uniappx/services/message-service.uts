@@ -27,6 +27,20 @@ export enum MessageStatus {
 }
 
 /**
+ * 队列中的消息
+ */
+export type QueuedMessage = {
+  message: any
+  retryCount: number
+  timestamp: number
+}
+
+/**
+ * 消息状态监听器类型
+ */
+export type MessageStatusListener = (messageId: number, status: MessageStatus) => void
+
+/**
  * 消息项（用于 UI 显示）
  */
 export type MessageItem = {
@@ -86,6 +100,9 @@ export class MessageService {
   // 消息监听器列表
   private messageListeners: MessageListener[] = []
   
+  // 消息状态监听器列表
+  private messageStatusListeners: MessageStatusListener[] = []
+  
   // 会话更新监听器列表
   private conversationUpdateListeners: ConversationUpdateListener[] = []
   
@@ -98,6 +115,15 @@ export class MessageService {
   
   // 会话缓存
   private conversationCache: Map<number, ConversationItem> = new Map()
+  
+  // 消息队列（用于离线消息重发）
+  private messageQueue: QueuedMessage[] = []
+  
+  // 最大重试次数
+  private static readonly MAX_RETRY_COUNT = 3
+  
+  // 是否正在处理队列
+  private isProcessingQueue: boolean = false
   
   /**
    * 私有构造函数（单例模式）
@@ -212,6 +238,33 @@ export class MessageService {
       width,
       height,
       size
+    )
+    
+    return this.sendMessage(message)
+  }
+  
+  /**
+   * 发送引用回复消息
+   */
+  public sendQuoteReplyMessage(
+    receiverId: number,
+    groupId: number,
+    content: string,
+    quotedMessageId: number,
+    quotedContent: string,
+    quotedSenderName: string,
+    atUserIds: number[] = []
+  ): MessageItem {
+    const message = MessageBuilder.buildQuoteReplyMessage(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      content,
+      quotedMessageId,
+      quotedContent,
+      quotedSenderName,
+      atUserIds
     )
     
     return this.sendMessage(message)
@@ -418,12 +471,38 @@ export class MessageService {
   private handleReadReceipt(data: any): void {
     const message = data as ImMessage
     const body = message.body as any
-    const messageIds = body.messageIds as number[]
+    
+    // 解析 messageIds：支持数组和单个 ID 两种格式
+    let messageIds: number[] = []
+    if (body.messageIds !== null && body.messageIds !== undefined) {
+      messageIds = body.messageIds as number[]
+    } else if (body.messageId !== null && body.messageId !== undefined) {
+      messageIds = [body.messageId as number]
+    }
     
     console.log('[MessageService] 收到已读回执:', messageIds)
     
+    if (messageIds.length === 0) {
+      return
+    }
+    
     // 更新消息状态为已读
-    // TODO: 实现消息状态更新逻辑
+    const updatedIds: number[] = []
+    this.messageCache.forEach((messages) => {
+      messages.forEach(msg => {
+        if (messageIds.includes(msg.messageId) && msg.status !== MessageStatus.READ) {
+          msg.status = MessageStatus.READ
+          updatedIds.push(msg.messageId)
+        }
+      })
+    })
+    
+    // 通知状态监听器
+    updatedIds.forEach(msgId => {
+      this.notifyStatusListeners(msgId, MessageStatus.READ)
+    })
+    
+    console.log('[MessageService] 已将', updatedIds.length, '条消息状态更新为已读')
   }
   
   /**
@@ -594,6 +673,151 @@ export class MessageService {
     if (conversation !== null && conversation !== undefined) {
       conversation.unreadCount++
       this.notifyConversationUpdateListeners(conversation)
+    }
+  }
+  
+  /**
+   * 将消息入队（网络不可用时）
+   */
+  private enqueueMessage(message: any): void {
+    const queuedMsg: QueuedMessage = {
+      message: message,
+      retryCount: 0,
+      timestamp: Date.now()
+    }
+    this.messageQueue.push(queuedMsg)
+    console.log('[MessageService] 消息入队，当前队列长度:', this.messageQueue.length)
+    
+    // 保存队列到本地存储
+    this.saveQueueToLocal()
+  }
+  
+  /**
+   * 处理消息队列（重连后调用）
+   */
+  public processQueue(): void {
+    if (this.isProcessingQueue || this.messageQueue.length === 0) {
+      return
+    }
+    
+    this.isProcessingQueue = true
+    console.log('[MessageService] 开始处理消息队列，共', this.messageQueue.length, '条消息')
+    
+    const processNext = (): void => {
+      if (this.messageQueue.length === 0) {
+        this.isProcessingQueue = false
+        console.log('[MessageService] 消息队列处理完成')
+        this.saveQueueToLocal()
+        return
+      }
+      
+      const queued = this.messageQueue[0]
+      
+      // 超过最大重试次数则丢弃
+      if (queued.retryCount >= MessageService.MAX_RETRY_COUNT) {
+        this.messageQueue.shift()
+        console.warn('[MessageService] 消息重试次数超限，已丢弃')
+        processNext()
+        return
+      }
+      
+      try {
+        wsManager.send(queued.message)
+        this.messageQueue.shift()
+        queued.retryCount++
+        console.log('[MessageService] 队列消息发送成功')
+      } catch (e) {
+        queued.retryCount++
+        console.error('[MessageService] 队列消息发送失败:', e)
+        this.isProcessingQueue = false
+        this.saveQueueToLocal()
+        return
+      }
+      
+      // 逐条处理，限速100ms
+      setTimeout(() => {
+        processNext()
+      }, 100)
+    }
+    
+    processNext()
+  }
+  
+  /**
+   * 保存队列到本地存储
+   */
+  private saveQueueToLocal(): void {
+    try {
+      const queueData = this.messageQueue.map(item => ({
+        retryCount: item.retryCount,
+        timestamp: item.timestamp
+      }))
+      uni.setStorageSync('message_queue_count', queueData.length.toString())
+    } catch (e) {
+      console.error('[MessageService] 保存队列失败:', e)
+    }
+  }
+  
+  /**
+   * 获取队列长度
+   */
+  public getQueueLength(): number {
+    return this.messageQueue.length
+  }
+  
+  /**
+   * 清空消息队列
+   */
+  public clearQueue(): void {
+    this.messageQueue = []
+    this.saveQueueToLocal()
+  }
+  
+  /**
+   * 添加消息状态监听器
+   */
+  public addMessageStatusListener(listener: MessageStatusListener): void {
+    this.messageStatusListeners.push(listener)
+  }
+  
+  /**
+   * 移除消息状态监听器
+   */
+  public removeMessageStatusListener(listener: MessageStatusListener): void {
+    const index = this.messageStatusListeners.indexOf(listener)
+    if (index !== -1) {
+      this.messageStatusListeners.splice(index, 1)
+    }
+  }
+  
+  /**
+   * 通知消息状态监听器
+   */
+  private notifyStatusListeners(messageId: number, status: MessageStatus): void {
+    this.messageStatusListeners.forEach(listener => {
+      try {
+        listener(messageId, status)
+      } catch (e) {
+        console.error('[MessageService] 状态监听器执行失败:', e)
+      }
+    })
+  }
+  
+  /**
+   * 更新消息状态
+   */
+  public updateMessageStatus(messageId: number, status: MessageStatus): void {
+    let updated = false
+    this.messageCache.forEach(messages => {
+      const msg = messages.find(m => m.messageId === messageId)
+      if (msg !== null && msg !== undefined) {
+        msg.status = status
+        updated = true
+      }
+    })
+    
+    if (updated) {
+      this.notifyStatusListeners(messageId, status)
     }
   }
   

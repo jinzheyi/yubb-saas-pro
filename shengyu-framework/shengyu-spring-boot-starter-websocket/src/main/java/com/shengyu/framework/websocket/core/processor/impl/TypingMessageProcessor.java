@@ -44,7 +44,7 @@ public class TypingMessageProcessor implements MessageProcessor {
             log.debug("[TypingMessage] 收到正在输入消息, from: {}, to: {}, typing: {}", 
                 message.getHeader().getSenderId(),
                 message.getHeader().getReceiverId(),
-                typingMessage.getTyping());
+                typingMessage.getIsTyping());
 
             // 转发给接收者（不存储到数据库）
             Long receiverId = message.getHeader().getReceiverId();

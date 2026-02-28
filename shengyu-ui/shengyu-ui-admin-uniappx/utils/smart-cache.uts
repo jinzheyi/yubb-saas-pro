@@ -1,0 +1,185 @@
+/**
+ * 智能缓存管理器
+ * 用于管理用户信息和消息内容的 LRU 缓存
+ */
+
+/**
+ * LRU 缓存基础实现
+ */
+export class LRUCache<K, V> {
+  private capacity: number
+  private map: Map<K, V>
+
+  constructor(capacity: number) {
+    this.capacity = capacity
+    this.map = new Map<K, V>()
+  }
+
+  public get(key: K): V | null {
+    if (this.map.has(key)) {
+      const val = this.map.get(key) as V
+      // 重新插入，更新到最新
+      this.map.delete(key)
+      this.map.set(key, val)
+      return val
+    }
+    return null
+  }
+
+  public put(key: K, value: V) {
+    if (this.map.has(key)) {
+      this.map.delete(key)
+    } else if (this.map.size >= this.capacity) {
+      // 删除最旧的（Map 迭代顺序是按插入顺序的）
+      const firstKey = this.map.keys().next().value
+      if (firstKey !== undefined) {
+        this.map.delete(firstKey)
+      }
+    }
+    this.map.set(key, value)
+  }
+
+  public delete(key: K) {
+    this.map.delete(key)
+  }
+
+  public clear() {
+    this.map.clear()
+  }
+
+  public size(): number {
+    return this.map.size
+  }
+}
+
+/**
+ * 用户信息缓存
+ */
+export type CachedUserInfo = {
+  id: number
+  nickname: string
+  avatar: string
+  timestamp: number // 缓存的时间戳，用于判断过期
+}
+
+export class UserInfoCache {
+  private cache: LRUCache<number, CachedUserInfo>
+  private expireTime: number = 24 * 60 * 60 * 1000 // 默认过期时间为 24 小时
+
+  constructor(capacity: number = 500) {
+    this.cache = new LRUCache<number, CachedUserInfo>(capacity)
+  }
+
+  public getUser(userId: number): CachedUserInfo | null {
+    const user = this.cache.get(userId)
+    if (user) {
+      // 检查是否过期
+      if (Date.now() - user.timestamp > this.expireTime) {
+        this.cache.delete(userId)
+        return null
+      }
+      return user
+    }
+    return null
+  }
+
+  public putUser(user: Omit<CachedUserInfo, 'timestamp'>) {
+    this.cache.put(user.id, {
+      ...user,
+      timestamp: Date.now()
+    })
+  }
+
+  public clear() {
+    this.cache.clear()
+  }
+}
+
+/**
+ * 消息缓存选项
+ */
+export interface MessageCacheOptions {
+  capacity?: number
+}
+
+/**
+ * 消息缓存 (Task 43.2)
+ * 用于缓存最近的消息列表和会话消息索引
+ */
+export class MessageCache<T> {
+  // 缓存会话的消息索引：conversationId -> Map<messageId, T>
+  private convoMessageMap: Map<string, Map<string, T>>
+  // 缓存每个会话的最新消息列表：conversationId -> T[] (通常限制一定数量)
+  private convoRecentMessages: Map<string, T[]>
+  private listCapacity: number
+
+  constructor(options?: MessageCacheOptions) {
+    this.listCapacity = options?.capacity || 100 // 每个会话默认缓存近 100 条
+    this.convoMessageMap = new Map()
+    this.convoRecentMessages = new Map()
+  }
+
+  /**
+   * 缓存一条消息
+   */
+  public putMessage(conversationId: string, messageId: string, message: T) {
+    // 1. 更新索引 Map
+    if (!this.convoMessageMap.has(conversationId)) {
+      this.convoMessageMap.set(conversationId, new Map())
+    }
+    const msgMap = this.convoMessageMap.get(conversationId)!
+    msgMap.set(messageId, message)
+
+    // 2. 更新最近消息列表
+    if (!this.convoRecentMessages.has(conversationId)) {
+      this.convoRecentMessages.set(conversationId, [])
+    }
+    const recentList = this.convoRecentMessages.get(conversationId)!
+    
+    // 我们在这个数组中追加。实际如果作为LRU，可以限制长度
+    recentList.push(message)
+    if (recentList.length > this.listCapacity) {
+      const removed = recentList.shift()
+      // 注意：这里简单起见，移除最旧的消息，但不对 msgMap 进行强清理
+      // 实际实现中可能需要级联清理 msgMap，或者让 msgMap 自身就是个 LRU
+    }
+  }
+
+  /**
+   * 按 ID 获取缓存消息
+   */
+  public getMessage(conversationId: string, messageId: string): T | null {
+    const msgMap = this.convoMessageMap.get(conversationId)
+    if (msgMap && msgMap.has(messageId)) {
+      return msgMap.get(messageId) as T
+    }
+    return null
+  }
+
+  /**
+   * 获取会话最近消息缓存
+   */
+  public getRecentMessages(conversationId: string): T[] {
+    return this.convoRecentMessages.get(conversationId) || []
+  }
+
+  /**
+   * 清理某个会话缓存
+   */
+  public clearConversation(conversationId: string) {
+    this.convoMessageMap.delete(conversationId)
+    this.convoRecentMessages.delete(conversationId)
+  }
+
+  /**
+   * 清理所有缓存
+   */
+  public clearAll() {
+    this.convoMessageMap.clear()
+    this.convoRecentMessages.clear()
+  }
+}
+
+// 导出全局单例
+export const userInfoCache = new UserInfoCache()
+export const globalMessageCache = new MessageCache<any>()

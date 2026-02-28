@@ -1,0 +1,91 @@
+/**
+ * 图片懒加载管理器
+ * 用于长列表中的图片懒加载，使用 uni.createIntersectionObserver 进行可见性检测
+ */
+
+export interface LazyLoadOptions {
+  containerSelector: string
+  threshold?: number // 预加载阈值（例如 0.5 表示提前50%的距离加载）
+  errorPlaceholder?: string // 加载失败的占位图
+  loadingPlaceholder?: string // 加载中的占位图
+}
+
+export class ImageLazyLoader {
+  private observer: UniIntersectionObserver | null = null
+  private containerSelector: string
+  private callbackMap: Map<string, (src: string, isError: boolean) => void> = new Map()
+
+  constructor(private context: ComponentPublicInstance, options: LazyLoadOptions) {
+    this.containerSelector = options.containerSelector
+    this.initObserver(options.threshold || 0)
+  }
+
+  /**
+   * 初始化观察者
+   */
+  private initObserver(threshold: number) {
+    const margins = { 
+      bottom: threshold * 100 + '%',
+      top: threshold * 100 + '%'
+    }
+    
+    // 使用 uni.createIntersectionObserver 监听元素内容是否可见
+    this.observer = uni.createIntersectionObserver(this.context)
+    this.observer!.relativeTo(this.containerSelector, margins)
+      .observe('.lazy-image-item', (res) => {
+        if (res.intersectionRatio > 0) {
+          const dataset = res.dataset as UTSJSONObject
+          const src = dataset['src'] as string
+          const id = dataset['id'] as string
+          
+          if (src && id && this.callbackMap.has(id)) {
+            // 预加载图片
+            this.preloadImage(src, id)
+            // 停止观察该元素
+            // 实际上 uni-app 没法单独停止某个 target，所以就靠组件自己不再挂载这个 class 或者在 callback 里去重
+          }
+        }
+      })
+  }
+
+  /**
+   * 预加载图片
+   */
+  private preloadImage(src: string, id: string) {
+    uni.getImageInfo({
+      src: src,
+      success: (_) => {
+        const cb = this.callbackMap.get(id)
+        if (cb != null) {
+          cb(src, false)
+        }
+        this.callbackMap.delete(id)
+      },
+      fail: (_) => {
+        const cb = this.callbackMap.get(id)
+        if (cb != null) {
+          cb(src, true)
+        }
+        this.callbackMap.delete(id)
+      }
+    })
+  }
+
+  /**
+   * 注册图片进行观察
+   */
+  public observeImage(id: string, src: string, callback: (actualSrc: string, isError: boolean) => void) {
+    this.callbackMap.set(id, callback)
+  }
+
+  /**
+   * 销毁观察者
+   */
+  public disconnect() {
+    if (this.observer !== null) {
+      this.observer!.disconnect()
+      this.observer = null
+    }
+    this.callbackMap.clear()
+  }
+}

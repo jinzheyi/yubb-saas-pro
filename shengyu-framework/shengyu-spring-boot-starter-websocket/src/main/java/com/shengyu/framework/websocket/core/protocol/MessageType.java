@@ -151,6 +151,46 @@ public enum MessageType
    * <code>TYPING = 203;</code>
    */
   TYPING(203),
+  /**
+   * <pre>
+   * 角标更新
+   * </pre>
+   *
+   * <code>BADGE_UPDATE = 204;</code>
+   */
+  BADGE_UPDATE(204),
+  /**
+   * <pre>
+   * 引用回复
+   * </pre>
+   *
+   * <code>QUOTE_REPLY = 205;</code>
+   */
+  QUOTE_REPLY(205),
+  /**
+   * <pre>
+   * 通话信令
+   * </pre>
+   *
+   * <code>CALL_SIGNAL = 206;</code>
+   */
+  CALL_SIGNAL(206),
+  /**
+   * <pre>
+   * 流程通知
+   * </pre>
+   *
+   * <code>WORKFLOW_NOTIFY = 207;</code>
+   */
+  WORKFLOW_NOTIFY(207),
+  /**
+   * <pre>
+   * 待办提醒
+   * </pre>
+   *
+   * <code>TODO_REMINDER = 208;</code>
+   */
+  TODO_REMINDER(208),
   UNRECOGNIZED(-1),
   ;
 
@@ -293,6 +333,46 @@ public enum MessageType
    * <code>TYPING = 203;</code>
    */
   public static final int TYPING_VALUE = 203;
+  /**
+   * <pre>
+   * 角标更新
+   * </pre>
+   *
+   * <code>BADGE_UPDATE = 204;</code>
+   */
+  public static final int BADGE_UPDATE_VALUE = 204;
+  /**
+   * <pre>
+   * 引用回复
+   * </pre>
+   *
+   * <code>QUOTE_REPLY = 205;</code>
+   */
+  public static final int QUOTE_REPLY_VALUE = 205;
+  /**
+   * <pre>
+   * 通话信令
+   * </pre>
+   *
+   * <code>CALL_SIGNAL = 206;</code>
+   */
+  public static final int CALL_SIGNAL_VALUE = 206;
+  /**
+   * <pre>
+   * 流程通知
+   * </pre>
+   *
+   * <code>WORKFLOW_NOTIFY = 207;</code>
+   */
+  public static final int WORKFLOW_NOTIFY_VALUE = 207;
+  /**
+   * <pre>
+   * 待办提醒
+   * </pre>
+   *
+   * <code>TODO_REMINDER = 208;</code>
+   */
+  public static final int TODO_REMINDER_VALUE = 208;
 
 
   public final int getNumber() {
@@ -336,6 +416,11 @@ public enum MessageType
       case 201: return READ_RECEIPT;
       case 202: return RECALL;
       case 203: return TYPING;
+      case 204: return BADGE_UPDATE;
+      case 205: return QUOTE_REPLY;
+      case 206: return CALL_SIGNAL;
+      case 207: return WORKFLOW_NOTIFY;
+      case 208: return TODO_REMINDER;
       default: return null;
     }
   }

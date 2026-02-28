@@ -673,7 +673,7 @@
     - _需求: 77.1, 77.2, 77.3, 77.5, 77.6_
 
 - [x] 22. 验证和集成现有 BadgeService (移动端角标服务)
-  - [ ] 22.1 验证现有 BadgeService 实现
+  - [x] 22.1 验证现有 BadgeService 实现
     - 验证 BadgeService 类存在于 services/badge-service.uts
     - 验证 getTotalUnread() 方法可用
     - 验证 getConversationBadge() 方法可用
@@ -683,29 +683,29 @@
     - 验证 updateMenuBadge() 方法可用
     - 验证 handleBadgeUpdate() 方法可用
     - 验证 syncFromServer() 方法可用
-    - **参考**: im-badge-notifications spec 已完整实现
+    - **参考**: im-badge-notifications spec 已完整实现 ✅
     - _需求: 28.1, 29.1_
   
-  - [ ] 22.2 集成 BadgeService 到 MessageService
-    - 在 MessageService 中导入 badgeService
-    - 在 handleReceivedMessage() 中调用 incrementConversationBadge()
-    - 确保接收新消息时角标自动增加
-    - 确保 BADGE_UPDATE 消息正确路由到 badgeService.handleBadgeUpdate()
+  - [x] 22.2 集成 BadgeService 到 MessageService
+    - 在 MessageService 中导入 badgeService ✅
+    - 在 handleReceivedMessage() 中调用 incrementConversationBadge() ✅
+    - 确保接收新消息时角标自动增加 ✅
+    - 确保 BADGE_UPDATE 消息正确路由到 badgeService.handleBadgeUpdate() ✅
     - **参考**: im-badge-notifications spec 的集成示例
     - _需求: 30.1, 30.2_
   
-  - [ ] 22.3 集成 BadgeService 到 ConversationService
-    - 在 ConversationService 中导入 badgeService
-    - 在 clearUnread() 方法中调用 clearConversationBadge()
-    - 确保清空未读数时角标同步更新
+  - [x] 22.3 集成 BadgeService 到 ConversationService
+    - 在 ConversationService 中导入 badgeService ✅
+    - 在 clearUnread() 方法中调用 clearConversationBadge() ✅
+    - 确保清空未读数时角标同步更新 ✅
     - _需求: 28.5_
   
-  - [ ] 22.4 验证 UI 组件集成
-    - 验证 message.uvue 已监听 BadgeService 更新
-    - 验证 index.uvue 已实现底部导航栏角标
-    - 验证 workbench.uvue 已实现菜单角标
-    - 确保角标显示格式正确 (99+)
-    - 确保免打扰模式下只显示红点
+  - [x] 22.4 验证 UI 组件集成
+    - 验证 message.uvue 已监听 BadgeService 更新 ✅
+    - 验证 index.uvue 已实现底部导航栏角标 ✅
+    - 验证 workbench.uvue 已实现菜单角标 ✅
+    - 确保角标显示格式正确 (99+) ✅
+    - 确保免打扰模式下只显示红点 ✅
     - **参考**: im-badge-notifications spec 的 UI 集成
     - _需求: 28.1, 28.2, 28.3, 28.4, 28.5, 29.1, 29.2, 29.3, 29.4_
   
@@ -875,30 +875,30 @@
     - 确保与现有 BadgeService 集成正常
     - _需求: 28.6, 30.1_
 
-- [ ] 28. 验证底部导航栏角标集成
-  - [ ] 28.1 验证总未读数角标显示
-    - 验证 uni.setTabBarBadge API 调用 (im-badge-notifications spec 已实现)
-    - 验证 BadgeService 监听器已注册
-    - 验证角标格式化 (99+)
-    - 确保与现有实现兼容
+- [x] 28. 验证底部导航栏角标集成
+  - [x] 28.1 验证总未读数角标显示
+    - 验证 uni.setTabBarBadge API 调用 ✅ (index.uvue 中已实现)
+    - 验证 BadgeService 监听器已注册 ✅
+    - 验证角标格式化 (99+) ✅
+    - 确保与现有实现兼容 ✅
     - _需求: 28.6_
   
-  - [ ] 28.2 验证角标清空
-    - 验证总未读数为0时移除角标
-    - 测试角标显示和隐藏逻辑
+  - [x] 28.2 验证角标清空
+    - 验证总未读数为0时移除角标 ✅ (uni.removeTabBarBadge 已调用)
+    - 测试角标显示和隐藏逻辑 ✅
     - _需求: 28.6_
 
-- [ ] 29. 验证工作台菜单角标集成
-  - [ ] 29.1 验证菜单角标显示
-    - 验证菜单项角标显示 (im-badge-notifications spec 已实现)
-    - 验证 BadgeService 监听器已注册
-    - 验证角标格式化
-    - 确保与现有实现兼容
+- [x] 29. 验证工作台菜单角标集成
+  - [x] 29.1 验证菜单角标显示
+    - 验证菜单项角标显示 ✅ (workbench.uvue 中已实现)
+    - 验证 BadgeService 监听器已注册 ✅
+    - 验证角标格式化 ✅
+    - 确保与现有实现兼容 ✅
     - _需求: 29.1, 29.2, 29.3, 29.4_
   
-  - [ ] 29.2 验证菜单角标更新
-    - 验证 WebSocket BADGE_UPDATE 消息处理
-    - 验证菜单角标数据更新
+  - [x] 29.2 验证菜单角标更新
+    - 验证 WebSocket BADGE_UPDATE 消息处理 ✅
+    - 验证菜单角标数据更新 ✅
     - _需求: 29.5, 29.6_
 
 - [ ] 30. Checkpoint - 基础消息功能完成
@@ -960,13 +960,13 @@
     - **属性11: 引用回复完整性**
     - **验证: 需求 8.3, 8.4**
   
-  - [ ] 33.4 实现引用显示 (待实现)
+- [x] 33.4 实现引用显示
     - 在消息气泡中显示引用预览
     - 实现点击跳转到原消息
     - 处理原消息已撤回/删除情况
     - _需求: 8.4, 8.5, 8.6_
   
-  - [ ] 33.5 实现引用链追踪 (待实现)
+- [x] 33.5 实现引用链追踪
     - 实现多级引用追踪
     - 实现引用链显示
     - _需求: 55.1, 55.2, 55.3, 55.4, 55.5, 55.6_
@@ -1105,7 +1105,7 @@
 ### 阶段7: 性能优化实现
 
 - [ ] 41. 实现虚拟滚动
-  - [ ] 41.1 实现 VirtualScroller 类
+  - [x] 41.1 实现 VirtualScroller 类
     - 实现可见范围计算 getVisibleRange()
     - 实现滚动位置更新 updateScrollTop()
     - 实现总高度计算 getTotalHeight()
@@ -1122,7 +1122,7 @@
     - _需求: 31.3, 31.4, 31.5, 64.3_
 
 - [ ] 42. 实现消息批量加载
-  - [ ] 42.1 实现 MessageLoader 类
+  - [x] 42.1 实现 MessageLoader 类
     - 实现 loadMore() 方法
     - 实现 preloadNext() 方法
     - 实现加载状态管理
@@ -1142,13 +1142,13 @@
     - _需求: 32.4, 32.5, 32.6, 64.1, 64.2_
 
 - [ ] 43. 实现智能缓存
-  - [ ] 43.1 实现 UserInfoCache 类
+  - [x] 43.1 实现 UserInfoCache 类
     - 实现 LRU 缓存策略
     - 实现缓存大小限制
     - 实现缓存失效
     - _需求: 33.1, 33.3, 33.4_
   
-  - [ ] 43.2 实现 MessageCache 类
+  - [x] 43.2 实现 MessageCache 类
     - 实现消息缓存
     - 实现会话消息索引
     - 实现缓存清理
