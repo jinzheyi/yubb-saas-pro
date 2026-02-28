@@ -45,7 +45,7 @@
 1. **完整的消息功能**: 单聊、群聊、7种消息类型、消息状态管理
 2. **高级交互功能**: 已读回执、消息撤回、转发、引用回复、@提醒、正在输入
 3. **实时通话支持**: 语音/视频通话信令处理、通话记录管理
-4. **业务通知集成**: 流程引擎通知、待办提醒、系统公告、自定义通知
+4. **业务通知集成**: 系统公告、自定义通知
 5. **性能优化**: 虚拟滚动、智能缓存、懒加载、消息预加载
 6. **多端同步**: 消息同步、已读同步、会话同步、设置同步
 7. **离线处理**: 离线消息拉取、离线推送、消息队列管理
@@ -152,7 +152,7 @@
 - 会话列表页: 显示所有会话、未读数、最后消息
 - 聊天页面: 显示消息列表、输入框、消息操作
 - 联系人页面: 显示好友列表、群组列表
-- 工作台: 显示菜单角标、待办事项
+- 工作台: 显示菜单角标
 
 **服务层**:
 - MessageService: 消息发送、接收、存储、状态管理
@@ -1137,8 +1137,6 @@ public interface ImGroupService {
 
 **职责**:
 - 系统通知发送
-- 流程通知集成
-- 待办提醒管理
 - 自定义通知处理
 
 **核心接口**:
@@ -1151,16 +1149,7 @@ public interface ImNotifyService {
      */
     void sendSystemNotify(Long userId, String title, String content, String type);
     
-    /**
-     * 发送流程审批通知
-     */
-    void sendWorkflowNotify(Long userId, WorkflowNotifyDTO notifyDTO);
-    
-    /**
-     * 发送待办提醒
-     */
-    void sendTodoReminder(Long userId, TodoReminderDTO reminderDTO);
-    
+
     /**
      * 发送自定义通知
      */
@@ -1256,7 +1245,6 @@ public interface ImCallService {
 **集成点**:
 - MessageStorageService 在保存消息后调用 pushBadgeUpdate
 - ConversationService 在清空未读数后调用 pushBadgeUpdate
-- WorkflowService 在待办变化时调用 updateMenuBadge
 
 **核心接口** (已实现):
 
@@ -1960,7 +1948,7 @@ CREATE TABLE im_call_record (
 
 #### 1.8 通知表 (im_notification) - 需要创建
 
-**说明**: 此表需要新建，用于存储系统通知、流程通知、待办提醒等
+**说明**: 此表需要新建，用于存储系统通知、自定义通知等
 
 ```sql
 CREATE TABLE im_call_record (
@@ -1986,7 +1974,7 @@ CREATE TABLE im_call_record (
 
 #### 1.8 通知表 (im_notification) - 需要创建
 
-**说明**: 此表需要新建，用于存储系统通知、流程通知、待办提醒等
+**说明**: 此表需要新建，用于存储系统通知、自定义通知等
 
 ```sql
 CREATE TABLE im_notification (
@@ -2276,24 +2264,7 @@ message SystemNotifyMessage {
   string extra = 4;             // 扩展数据(JSON)
 }
 
-// 流程通知消息
-message WorkflowNotifyMessage {
-  int64 processInstanceId = 1;  // 流程实例ID
-  string processName = 2;       // 流程名称
-  string taskName = 3;          // 任务名称
-  string initiatorName = 4;     // 发起人名称
-  string content = 5;           // 通知内容
-  repeated string actions = 6;  // 可执行操作
-}
 
-// 待办提醒消息
-message TodoReminderMessage {
-  int64 todoId = 1;             // 待办ID
-  string todoTitle = 2;         // 待办标题
-  string todoContent = 3;       // 待办内容
-  string dueTime = 4;           // 截止时间
-  string priority = 5;          // 优先级
-}
 ```
 
 ### 4. API 接口设计

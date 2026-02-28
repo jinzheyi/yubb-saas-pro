@@ -17,7 +17,7 @@
 - ✅ ImMessageService - 消息保存、查询、状态更新、撤回、转发、删除、搜索
 - ✅ ImConversationService - 会话查询、创建/更新、未读数管理、设置、标签
 - ✅ ImGroupService - 群组操作、成员管理、禁言、公告、群名片
-- ✅ ImNotifyService - 系统通知、流程通知、待办提醒、自定义通知
+- ✅ ImNotifyService - 系统通知、自定义通知
 - ✅ ImCallService - 通话信令、通话记录（基础框架，通话功能搁置）
 - ✅ ImBadgeService - 角标计算和推送（已在 im-badge-notifications spec 中实现）
 

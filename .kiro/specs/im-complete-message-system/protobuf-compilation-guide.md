@@ -38,36 +38,14 @@
   - `rejectReason`: 拒绝原因
   - `extraData`: 扩展数据 (JSON格式，用于传递WebRTC信令)
 
-#### 1.4 WorkflowNotifyMessage (流程通知消息)
-- **需求**: 24.1 (流程引擎通知集成)
-- **字段**:
-  - `processInstanceId`: 流程实例ID
-  - `processName`: 流程名称
-  - `initiatorId`: 发起人ID
-  - `initiatorName`: 发起人名称
-  - `content`: 审批内容
-  - `buttons`: 操作按钮列表
-  - `status`: 流程状态 (1-待审批 2-已通过 3-已拒绝 4-已撤回)
-  - `jumpUrl`: 跳转URL
 
-#### 1.5 TodoReminderMessage (待办提醒消息)
-- **需求**: 25.1 (待办提醒通知)
-- **字段**:
-  - `todoId`: 待办ID
-  - `title`: 待办标题
-  - `content`: 待办内容
-  - `dueTime`: 截止日期 (时间戳，毫秒)
-  - `reminderType`: 提醒类型 (1-新待办 2-截止日期提醒 3-过期提醒 4-完成通知)
-  - `jumpUrl`: 跳转URL
-  - `status`: 待办状态 (1-待处理 2-已完成 3-已过期)
 
 #### 1.6 MessageType 枚举扩展
 
 已在 `MessageType` 枚举中添加以下新类型:
 - `QUOTE_REPLY = 205`: 引用回复
 - `CALL_SIGNAL = 206`: 通话信令
-- `WORKFLOW_NOTIFY = 207`: 流程通知
-- `TODO_REMINDER = 208`: 待办提醒
+
 
 **注意**: `TYPING = 203` 和 `BADGE_UPDATE = 204` 已在原始定义中存在。
 
@@ -103,12 +81,7 @@ shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengy
 - `TypingMessageOrBuilder.java`
 - `CallSignalMessage.java`
 - `CallSignalMessageOrBuilder.java`
-- `WorkflowNotifyMessage.java`
-- `WorkflowNotifyMessageOrBuilder.java`
-- `WorkflowButton.java`
-- `WorkflowButtonOrBuilder.java`
-- `TodoReminderMessage.java`
-- `TodoReminderMessageOrBuilder.java`
+
 - `MessageType.java` (更新)
 - `ImMessageProto.java` (更新)
 
@@ -206,8 +179,7 @@ const message = ImMessage.create({
 ls shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/protocol/QuoteReplyMessage.java
 ls shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/protocol/TypingMessage.java
 ls shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/protocol/CallSignalMessage.java
-ls shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/protocol/WorkflowNotifyMessage.java
-ls shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/protocol/TodoReminderMessage.java
+
 ```
 
 ### 检查 MessageType 枚举
@@ -215,8 +187,7 @@ ls shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/she
 打开 `MessageType.java` 确认包含以下枚举值:
 - `QUOTE_REPLY(205)`
 - `CALL_SIGNAL(206)`
-- `WORKFLOW_NOTIFY(207)`
-- `TODO_REMINDER(208)`
+
 
 ### 编译项目
 
