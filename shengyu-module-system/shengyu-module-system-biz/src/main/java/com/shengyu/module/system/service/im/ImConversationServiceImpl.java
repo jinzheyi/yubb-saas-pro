@@ -81,6 +81,39 @@ public class ImConversationServiceImpl implements ImConversationService {
     public AppImConversationRespVO createOrGetConversation(Long userId, AppImConversationCreateReqVO createReqVO) {
         log.info("[ImConversationService] 创建或获取会话, userId: {}, targetId: {}, type: {}", 
                 userId, createReqVO.getTargetId(), createReqVO.getConversationType());
+
+		// 参数校验（避免脏数据写入）
+		if (createReqVO.getTargetId() == null || createReqVO.getConversationType() == null) {
+			log.warn("[ImConversationService] 创建会话参数非法, userId: {}, targetId: {}, type: {}",
+					userId, createReqVO.getTargetId(), createReqVO.getConversationType());
+			throw exception(CONVERSATION_CREATE_FAILED);
+		}
+		if (!ImConversationTypeEnum.SINGLE.getType().equals(createReqVO.getConversationType())
+				&& !ImConversationTypeEnum.GROUP.getType().equals(createReqVO.getConversationType())) {
+			log.warn("[ImConversationService] 创建会话类型非法, userId: {}, targetId: {}, type: {}",
+					userId, createReqVO.getTargetId(), createReqVO.getConversationType());
+			throw exception(CONVERSATION_CREATE_FAILED);
+		}
+		if (ImConversationTypeEnum.GROUP.getType().equals(createReqVO.getConversationType())) {
+			ImGroupDO group = groupMapper.selectById(createReqVO.getTargetId());
+			if (group == null) {
+				log.warn("[ImConversationService] 创建群聊会话失败，群组不存在, userId: {}, groupId: {}",
+						userId, createReqVO.getTargetId());
+				throw exception(GROUP_NOT_EXISTS);
+			}
+		} else {
+			// 单聊：targetId 必须是对方用户 ID
+			if (createReqVO.getTargetId().equals(userId)) {
+				log.warn("[ImConversationService] 创建单聊会话失败，不能与自己创建会话, userId: {}", userId);
+				throw exception(CONVERSATION_CREATE_FAILED);
+			}
+			AdminUserDO targetUser = userMapper.selectById(createReqVO.getTargetId());
+			if (targetUser == null) {
+				log.warn("[ImConversationService] 创建单聊会话失败，用户不存在, userId: {}, targetUserId: {}",
+						userId, createReqVO.getTargetId());
+				throw exception(USER_NOT_EXISTS);
+			}
+		}
         
         // 检查会话是否已存在
         ImConversationDO existConversation = conversationMapper.selectByUserIdAndTargetIdAndType(

@@ -438,12 +438,12 @@
 		if (item.isGroup) {
 			// 跳转到群聊页面
 			uni.navigateTo({
-				url: `/pages/message/chat?conversationId=${item.id}&type=group&groupId=${item.id}&targetId=${item.id}&name=${encodeURIComponent(item.title)}&memberCount=${item.memberCount || 0}`
+				url: `/pages/message/chat?conversationId=${item.id}&type=group&groupId=${item.targetId}&targetId=${item.targetId}&name=${encodeURIComponent(item.title)}&memberCount=${item.memberCount || 0}`
 			})
 		} else {
 			// 跳转到单聊页面
 			uni.navigateTo({
-				url: `/pages/message/chat?conversationId=${item.id}&type=single&targetId=${item.id}&name=${encodeURIComponent(item.titleKey ? t(item.titleKey) : item.title)}`
+				url: `/pages/message/chat?conversationId=${item.id}&type=single&targetId=${item.targetId}&name=${encodeURIComponent(item.titleKey ? t(item.titleKey) : item.title)}`
 			})
 		}
 	}

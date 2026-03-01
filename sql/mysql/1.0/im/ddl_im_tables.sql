@@ -211,7 +211,7 @@ CREATE TABLE `im_group_invite`  (
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `idx_invite_code`(`invite_code` ASC) USING BTREE COMMENT '邀请码唯一索引',
+  UNIQUE INDEX `idx_tenant_invite_code`(`tenant_id` ASC, `invite_code` ASC) USING BTREE COMMENT '租户+邀请码唯一索引',
   INDEX `idx_group`(`group_id` ASC) USING BTREE COMMENT '群组索引',
   INDEX `idx_expire`(`expire_time` ASC, `status` ASC) USING BTREE COMMENT '过期时间+状态索引',
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
@@ -299,7 +299,7 @@ CREATE TABLE `im_call_record` (
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `idx_call_id`(`call_id` ASC) USING BTREE COMMENT '通话ID唯一索引',
+  UNIQUE INDEX `idx_tenant_call_id`(`tenant_id` ASC, `call_id` ASC) USING BTREE COMMENT '租户+通话ID唯一索引',
   INDEX `idx_caller`(`caller_id` ASC, `start_time` DESC) USING BTREE COMMENT '呼叫者+时间索引',
   INDEX `idx_callee`(`callee_id` ASC, `start_time` DESC) USING BTREE COMMENT '被叫者+时间索引',
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
