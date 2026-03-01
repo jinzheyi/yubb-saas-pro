@@ -16,12 +16,12 @@ import { MessageType } from './websocket.uts'
  * 消息头
  */
 export type MessageHeader = {
-  messageId: number
+  messageId: string
   messageType: MessageType
-  senderId: number
-  receiverId: number
-  groupId: number
-  tenantId: number
+  senderId: string
+  receiverId: string
+  groupId: string
+  tenantId: string
   timestamp: number
   sequence: number
   extra: string
@@ -40,7 +40,7 @@ export type ImMessage = {
  */
 export type TextMessageBody = {
   content: string
-  atUserIds: number[]
+  atUserIds: string[]
 }
 
 /**
@@ -98,14 +98,14 @@ export type LocationMessageBody = {
  * 已读回执消息体
  */
 export type ReadReceiptMessageBody = {
-  messageIds: number[]
+  messageIds: string[]
 }
 
 /**
  * 消息撤回消息体
  */
 export type RecallMessageBody = {
-  messageId: number
+  messageId: string
 }
 
 /**
@@ -113,10 +113,10 @@ export type RecallMessageBody = {
  */
 export type QuoteReplyMessageBody = {
   content: string
-  quotedMessageId: number
+  quotedMessageId: string
   quotedContent: string
   quotedSenderName: string
-  atUserIds: number[]
+  atUserIds: string[]
 }
 
 /**
@@ -127,8 +127,8 @@ export class MessageBuilder {
   /**
    * 生成消息 ID（使用时间戳 + 随机数）
    */
-  public static generateMessageId(): number {
-    return Date.now() * 1000 + Math.floor(Math.random() * 1000)
+  public static generateMessageId(): string {
+    return Date.now().toString() + Math.floor(Math.random() * 1000).toString().padStart(3, '0')
   }
   
   /**
@@ -136,10 +136,10 @@ export class MessageBuilder {
    */
   public static buildHeader(
     messageType: MessageType,
-    senderId: number,
-    receiverId: number,
-    groupId: number,
-    tenantId: number
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string
   ): MessageHeader {
     return {
       messageId: MessageBuilder.generateMessageId(),
@@ -158,12 +158,12 @@ export class MessageBuilder {
    * 构建文本消息
    */
   public static buildTextMessage(
-    senderId: number,
-    receiverId: number,
-    groupId: number,
-    tenantId: number,
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
     content: string,
-    atUserIds: number[] = []
+    atUserIds: string[] = []
   ): ImMessage {
     const header = MessageBuilder.buildHeader(
       MessageType.TEXT,
@@ -188,10 +188,10 @@ export class MessageBuilder {
    * 构建图片消息
    */
   public static buildImageMessage(
-    senderId: number,
-    receiverId: number,
-    groupId: number,
-    tenantId: number,
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
     url: string,
     thumbnailUrl: string,
     width: number,
@@ -224,10 +224,10 @@ export class MessageBuilder {
    * 构建语音消息
    */
   public static buildVoiceMessage(
-    senderId: number,
-    receiverId: number,
-    groupId: number,
-    tenantId: number,
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
     url: string,
     duration: number,
     size: number
@@ -256,10 +256,10 @@ export class MessageBuilder {
    * 构建视频消息
    */
   public static buildVideoMessage(
-    senderId: number,
-    receiverId: number,
-    groupId: number,
-    tenantId: number,
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
     url: string,
     coverUrl: string,
     duration: number,
@@ -294,10 +294,10 @@ export class MessageBuilder {
    * 构建文件消息
    */
   public static buildFileMessage(
-    senderId: number,
-    receiverId: number,
-    groupId: number,
-    tenantId: number,
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
     url: string,
     fileName: string,
     size: number,
@@ -328,10 +328,10 @@ export class MessageBuilder {
    * 构建位置消息
    */
   public static buildLocationMessage(
-    senderId: number,
-    receiverId: number,
-    groupId: number,
-    tenantId: number,
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
     latitude: number,
     longitude: number,
     address: string
@@ -360,16 +360,16 @@ export class MessageBuilder {
    * 构建已读回执消息
    */
   public static buildReadReceiptMessage(
-    senderId: number,
-    receiverId: number,
-    tenantId: number,
-    messageIds: number[]
+    senderId: string,
+    receiverId: string,
+    tenantId: string,
+    messageIds: string[]
   ): ImMessage {
     const header = MessageBuilder.buildHeader(
       MessageType.READ_RECEIPT,
       senderId,
       receiverId,
-      0,
+      '0',
       tenantId
     )
     
@@ -387,11 +387,11 @@ export class MessageBuilder {
    * 构建消息撤回消息
    */
   public static buildRecallMessage(
-    senderId: number,
-    receiverId: number,
-    groupId: number,
-    tenantId: number,
-    messageId: number
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
+    messageId: string
   ): ImMessage {
     const header = MessageBuilder.buildHeader(
       MessageType.RECALL,
@@ -415,15 +415,15 @@ export class MessageBuilder {
    * 构建引用回复消息
    */
   public static buildQuoteReplyMessage(
-    senderId: number,
-    receiverId: number,
-    groupId: number,
-    tenantId: number,
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
     content: string,
-    quotedMessageId: number,
+    quotedMessageId: string,
     quotedContent: string,
     quotedSenderName: string,
-    atUserIds: number[] = []
+    atUserIds: string[] = []
   ): ImMessage {
     const header = MessageBuilder.buildHeader(
       MessageType.QUOTE_REPLY,
@@ -451,10 +451,10 @@ export class MessageBuilder {
    * 构建正在输入消息
    */
   public static buildTypingMessage(
-    senderId: number,
-    receiverId: number,
-    groupId: number,
-    tenantId: number,
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
     senderName: string
   ): ImMessage {
     const header = MessageBuilder.buildHeader(

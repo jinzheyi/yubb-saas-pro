@@ -12,7 +12,7 @@
  * @提醒信息
  */
 export type AtMention = {
-  userId: number
+  userId: string
   userName: string
   startIndex: number
   endIndex: number
@@ -33,7 +33,7 @@ export function parseAtMentions(text: string): AtMention[] {
   
   while ((match = regex.exec(text)) !== null) {
     mentions.push({
-      userId: 0,  // 需要从用户列表中查找
+      userId: '0',  // 需要从用户列表中查找
       userName: match[1],
       startIndex: match.index,
       endIndex: match.index + match[0].length
@@ -50,14 +50,14 @@ export function parseAtMentions(text: string): AtMention[] {
  * @param userMap 用户名到用户ID的映射
  * @returns 用户ID列表
  */
-export function extractAtUserIds(text: string, userMap: Map<string, number>): number[] {
+export function extractAtUserIds(text: string, userMap: Map<string, string>): string[] {
   const mentions = parseAtMentions(text)
-  const userIds: number[] = []
+  const userIds: string[] = []
   
   mentions.forEach(mention => {
     // 检查是否是@所有人
     if (mention.userName === '所有人' || mention.userName === 'all') {
-      userIds.push(-1)  // -1 表示@所有人
+      userIds.push('-1')  // -1 表示@所有人
       return
     }
     
@@ -112,9 +112,9 @@ export function containsAtAll(text: string): boolean {
  * @param atUserIds @的用户ID列表
  * @returns 是否包含@我
  */
-export function containsAtMe(text: string, myUserId: number, atUserIds: number[]): boolean {
+export function containsAtMe(text: string, myUserId: string, atUserIds: string[]): boolean {
   // 检查是否@所有人
-  if (atUserIds.includes(-1)) {
+  if (atUserIds.includes('-1')) {
     return true
   }
   
@@ -180,13 +180,13 @@ export function highlightAtMentions(text: string): TextSegment[] {
  * @param myUserId 当前用户ID
  * @returns @提醒标识文本
  */
-export function getAtMentionLabel(atUserIds: number[], myUserId: number): string {
+export function getAtMentionLabel(atUserIds: string[], myUserId: string): string {
   if (atUserIds.length === 0) {
     return ''
   }
   
   // 检查是否@所有人
-  if (atUserIds.includes(-1)) {
+  if (atUserIds.includes('-1')) {
     return '[有人@我]'
   }
   
@@ -227,7 +227,7 @@ export function buildAtAllUserIds(groupMemberIds: number[]): number[] {
  * @param myUserId 当前用户ID
  * @returns 包含@我的消息列表
  */
-export function filterAtMeMessages(messages: any[], myUserId: number): any[] {
+export function filterAtMeMessages(messages: any[], myUserId: string): any[] {
   return messages.filter(msg => {
     if (msg.type !== 'text') {
       return false

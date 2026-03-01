@@ -7,6 +7,15 @@
  */
 const AVATAR_COLORS = ['#F197BC', '#5FB6F7', '#c084fc', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6']
 
+function hashToIndex(value: string): number {
+	let hash = 0
+	for (let i = 0; i < value.length; i++) {
+		hash = (hash * 31 + value.charCodeAt(i)) | 0
+	}
+	const positive = hash < 0 ? -hash : hash
+	return positive % AVATAR_COLORS.length
+}
+
 /**
  * 根据用户ID获取固定的头像背景色
  * 同一个用户ID总是返回相同的颜色
@@ -14,9 +23,13 @@ const AVATAR_COLORS = ['#F197BC', '#5FB6F7', '#c084fc', '#10b981', '#f59e0b', '#
  * @param userId 用户ID
  * @returns 头像背景色（十六进制颜色值）
  */
-export function getUserAvatarColor(userId : number) : string {
-	const index = userId % AVATAR_COLORS.length
-	return AVATAR_COLORS[index]
+
+export function getUserAvatarColor(userId : number | string) : string {
+	if (typeof userId === 'number') {
+		const index = userId % AVATAR_COLORS.length
+		return AVATAR_COLORS[index]
+	}
+	return AVATAR_COLORS[hashToIndex(userId)]
 }
 
 /**
@@ -27,11 +40,14 @@ export function getUserAvatarColor(userId : number) : string {
  * @param groupId 群组ID
  * @returns 头像背景色（十六进制颜色值）
  */
-export function getGroupAvatarColor(groupId : number) : string {
-	// 加上偏移量，确保与用户颜色区分
-	const seed = groupId + 100000
-	const index = seed % AVATAR_COLORS.length
-	return AVATAR_COLORS[index]
+
+export function getGroupAvatarColor(groupId : number | string) : string {
+	if (typeof groupId === 'number') {
+		const seed = groupId + 100000
+		const index = seed % AVATAR_COLORS.length
+		return AVATAR_COLORS[index]
+	}
+	return AVATAR_COLORS[hashToIndex(groupId + ':group')]
 }
 
 /**
@@ -42,14 +58,12 @@ export function getGroupAvatarColor(groupId : number) : string {
  * @param targetId 目标ID (单聊为用户ID，群聊为群组ID)
  * @returns 头像背景色（十六进制颜色值）
  */
-export function getConversationAvatarColor(conversationType : number, targetId : number) : string {
+
+export function getConversationAvatarColor(conversationType : number, targetId : number | string) : string {
 	if (conversationType === 2) {
-		// 群聊
 		return getGroupAvatarColor(targetId)
-	} else {
-		// 单聊或其他类型
-		return getUserAvatarColor(targetId)
 	}
+	return getUserAvatarColor(targetId)
 }
 
 /**

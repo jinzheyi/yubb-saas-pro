@@ -15,12 +15,12 @@ import { request } from '@/utils/request.uts'
  * 搜索结果项
  */
 export type SearchResultItem = {
-  id: number
-  messageId: number
-  conversationId: number
+  id: string
+  messageId: string
+  conversationId: string
   conversationName: string
   conversationAvatar: string
-  senderId: number
+  senderId: string
   senderName: string
   type: string
   content: string
@@ -33,7 +33,7 @@ export type SearchResultItem = {
  */
 export type SearchOptions = {
   keyword: string
-  conversationId?: number
+  conversationId?: string
   messageType?: string
   startTime?: number
   endTime?: number
@@ -204,12 +204,12 @@ export class MessageSearchService {
     const content = this.getContentSummary(data.type, data.content)
     
     return {
-      id: data.id,
-      messageId: data.messageId,
-      conversationId: data.conversationId,
+      id: data.id != null ? data.id.toString() : '0',
+      messageId: data.messageId != null ? data.messageId.toString() : '0',
+      conversationId: data.conversationId != null ? data.conversationId.toString() : '0',
       conversationName: data.conversationName || '',
       conversationAvatar: data.conversationAvatar || '',
-      senderId: data.senderId,
+      senderId: data.senderId != null ? data.senderId.toString() : '0',
       senderName: data.senderName || '',
       type: data.type,
       content: content,
@@ -247,7 +247,7 @@ export class MessageSearchService {
    */
   public filterByConversation(
     results: SearchResultItem[],
-    conversationId: number
+    conversationId: string
   ): SearchResultItem[] {
     return results.filter(item => item.conversationId === conversationId)
   }

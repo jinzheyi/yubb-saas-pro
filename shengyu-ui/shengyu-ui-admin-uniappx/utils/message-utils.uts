@@ -220,7 +220,7 @@ export function getAvatarText(name: string): string {
  * @param userId 用户ID
  * @returns 颜色值（十六进制）
  */
-export function getUserAvatarColor(userId: number): string {
+export function getUserAvatarColor(userId: number | string): string {
   const colors = [
     '#409EFF', // 蓝色
     '#67C23A', // 绿色
@@ -234,8 +234,17 @@ export function getUserAvatarColor(userId: number): string {
     '#34D399'  // 翠绿色
   ]
   
-  const index = userId % colors.length
-  return colors[index]
+  if (typeof userId === 'number') {
+    const index = userId % colors.length
+    return colors[index]
+  }
+  // 字符串 ID：用简单 hash 避免 parseInt 导致精度丢失
+  let hash = 0
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash * 31 + userId.charCodeAt(i)) | 0
+  }
+  const positive = hash < 0 ? -hash : hash
+  return colors[positive % colors.length]
 }
 
 /**
@@ -246,7 +255,7 @@ export function getUserAvatarColor(userId: number): string {
 let sequence = 0
 let lastTimestamp = 0
 
-export function generateMessageId(): number {
+export function generateMessageId(): string {
   let timestamp = Date.now()
   
   // 如果在同一毫秒内，序列号递增
@@ -266,7 +275,7 @@ export function generateMessageId(): number {
   
   // 组合：时间戳（42位） + 序列号（12位）
   // 注意：JavaScript 的 number 类型是 64 位浮点数，可以安全表示 53 位整数
-  return timestamp * 4096 + sequence
+  return (timestamp * 4096 + sequence).toString()
 }
 
 /**
@@ -274,8 +283,8 @@ export function generateMessageId(): number {
  * 
  * @returns 序列号
  */
-export function generateSequence(): number {
-  return sequence++
+export function generateSequence(): string {
+  return (sequence++).toString()
 }
 
 /**

@@ -16,7 +16,7 @@ import { request } from '@/utils/request.uts'
 export type ReactionItem = {
   emoji: string
   count: number
-  userIds: number[]
+  userIds: string[]
   userNames: string[]
   isSelf: boolean
 }
@@ -25,7 +25,7 @@ export type ReactionItem = {
  * 表情回应详情
  */
 export type ReactionDetail = {
-  messageId: number
+  messageId: string
   reactions: ReactionItem[]
 }
 
@@ -44,7 +44,7 @@ export class MessageReactionService {
   private static instance: MessageReactionService | null = null
   
   // 表情回应缓存（messageId -> ReactionDetail）
-  private reactionCache: Map<number, ReactionDetail> = new Map()
+  private reactionCache: Map<string, ReactionDetail> = new Map()
   
   /**
    * 私有构造函数（单例模式）
@@ -66,7 +66,7 @@ export class MessageReactionService {
   /**
    * 添加表情回应
    */
-  public async addReaction(messageId: number, emoji: string): Promise<boolean> {
+  public async addReaction(messageId: string, emoji: string): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-message/add-reaction',
@@ -92,7 +92,7 @@ export class MessageReactionService {
   /**
    * 取消表情回应
    */
-  public async removeReaction(messageId: number, emoji: string): Promise<boolean> {
+  public async removeReaction(messageId: string, emoji: string): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-message/remove-reaction',
@@ -118,7 +118,7 @@ export class MessageReactionService {
   /**
    * 获取消息的表情回应列表
    */
-  public async getReactions(messageId: number): Promise<ReactionItem[]> {
+  public async getReactions(messageId: string): Promise<ReactionItem[]> {
     // 先从缓存获取
     const cached = this.reactionCache.get(messageId)
     if (cached !== null && cached !== undefined) {
@@ -160,7 +160,7 @@ export class MessageReactionService {
     
     data.forEach((item: any) => {
       const emoji = item.emoji
-      const userId = item.userId
+      const userId = item.userId != null ? item.userId.toString() : '0'
       const userName = item.userName || ''
       const isSelf = item.isSelf || false
       
@@ -198,7 +198,7 @@ export class MessageReactionService {
   /**
    * 切换表情回应（如果已存在则取消，否则添加）
    */
-  public async toggleReaction(messageId: number, emoji: string, currentIsSelf: boolean): Promise<boolean> {
+  public async toggleReaction(messageId: string, emoji: string, currentIsSelf: boolean): Promise<boolean> {
     if (currentIsSelf) {
       // 已经回应过，取消回应
       return await this.removeReaction(messageId, emoji)
@@ -243,7 +243,7 @@ export class MessageReactionService {
   /**
    * 清空指定消息的表情回应缓存
    */
-  public clearMessageReactions(messageId: number): void {
+  public clearMessageReactions(messageId: string): void {
     this.reactionCache.delete(messageId)
   }
 }

@@ -16,7 +16,7 @@ import { wsManager } from './websocket.uts'
  * 正在输入状态
  */
 export type TypingStatus = {
-  userId: number
+  userId: string
   userName: string
   timestamp: number
 }
@@ -29,7 +29,7 @@ export class TypingIndicator {
   private static instance: TypingIndicator | null = null
   
   // 正在输入状态缓存（按会话ID分组）
-  private typingStatus: Map<number, TypingStatus[]> = new Map()
+  private typingStatus: Map<string, TypingStatus[]> = new Map()
   
   // 发送防抖定时器
   private sendTimer: number = 0
@@ -38,9 +38,9 @@ export class TypingIndicator {
   private cleanupTimer: number = 0
   
   // 当前用户信息
-  private currentUserId: number = 0
+  private currentUserId: string = '0'
   private currentUserName: string = ''
-  private currentTenantId: number = 0
+  private currentTenantId: string = '0'
   
   // 正在输入超时时间（3秒）
   private readonly TYPING_TIMEOUT = 3000
@@ -68,7 +68,7 @@ export class TypingIndicator {
   /**
    * 设置当前用户信息
    */
-  public setCurrentUser(userId: number, userName: string, tenantId: number): void {
+  public setCurrentUser(userId: string, userName: string, tenantId: string): void {
     this.currentUserId = userId
     this.currentUserName = userName
     this.currentTenantId = tenantId
@@ -77,7 +77,7 @@ export class TypingIndicator {
   /**
    * 发送正在输入状态（带防抖）
    */
-  public sendTyping(receiverId: number, groupId: number): void {
+  public sendTyping(receiverId: string, groupId: string): void {
     // 清除之前的定时器
     if (this.sendTimer > 0) {
       clearTimeout(this.sendTimer)
@@ -92,7 +92,7 @@ export class TypingIndicator {
   /**
    * 实际发送正在输入状态
    */
-  private doSendTyping(receiverId: number, groupId: number): void {
+  private doSendTyping(receiverId: string, groupId: string): void {
     try {
       // 构建正在输入消息
       const message = MessageBuilder.buildTypingMessage(
@@ -125,7 +125,7 @@ export class TypingIndicator {
   /**
    * 接收正在输入状态
    */
-  public receiveTyping(conversationId: number, userId: number, userName: string): void {
+  public receiveTyping(conversationId: string, userId: string, userName: string): void {
     // 获取或创建会话的正在输入列表
     let statusList = this.typingStatus.get(conversationId)
     if (statusList === null || statusList === undefined) {
@@ -156,7 +156,7 @@ export class TypingIndicator {
   /**
    * 获取会话的正在输入状态文本
    */
-  public getTypingText(conversationId: number, isGroup: boolean): string {
+  public getTypingText(conversationId: string, isGroup: boolean): string {
     const statusList = this.typingStatus.get(conversationId)
     
     if (statusList === null || statusList === undefined || statusList.length === 0) {
@@ -192,7 +192,7 @@ export class TypingIndicator {
   /**
    * 清除会话的正在输入状态
    */
-  public clearTyping(conversationId: number): void {
+  public clearTyping(conversationId: string): void {
     this.typingStatus.delete(conversationId)
   }
   

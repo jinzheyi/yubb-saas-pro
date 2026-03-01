@@ -95,7 +95,7 @@
 	
 	// 数据
 	const searchKeyword = ref('')
-	const selectedIds = ref<number[]>([])
+	const selectedIds = ref<string[]>([])
 	const conversations = ref(conversationService.getConversations())
 	
 	// 过滤后的会话列表
@@ -111,13 +111,14 @@
 	})
 	
 	// 判断是否已选择
-	const isSelected = (conversationId: number): boolean => {
+	const isSelected = (conversationId: string): boolean => {
 		return selectedIds.value.includes(conversationId)
 	}
 	
 	// 切换选择
 	const handleToggleSelect = (conversation: any) => {
-		const index = selectedIds.value.indexOf(conversation.id)
+		const conversationId = conversation && conversation.id != null ? conversation.id.toString() : '0'
+		const index = selectedIds.value.indexOf(conversationId)
 		
 		if (index !== -1) {
 			// 取消选择
@@ -125,9 +126,9 @@
 		} else {
 			// 选择
 			if (props.multiple) {
-				selectedIds.value.push(conversation.id)
+				selectedIds.value.push(conversationId)
 			} else {
-				selectedIds.value = [conversation.id]
+				selectedIds.value = [conversationId]
 			}
 		}
 	}

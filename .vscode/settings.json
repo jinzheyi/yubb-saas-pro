@@ -3,5 +3,5 @@
     "java.configuration.updateBuildConfiguration": "interactive",
     "java.debug.settings.onBuildFailureProceed": true,
     "kiroAgent.configureMCP": "Enabled",
-    "workbench.colorTheme": "Default Light Modern"
+    "workbench.colorTheme": "Default Dark Modern"
 }

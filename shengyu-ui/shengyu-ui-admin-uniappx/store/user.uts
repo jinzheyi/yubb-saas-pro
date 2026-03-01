@@ -174,6 +174,18 @@ export function getUserId(): number {
 }
 
 /**
+ * 获取用户 ID（字符串类型）
+ * 注意：用户 ID 可能是大整数，使用字符串类型避免精度丢失
+ */
+export function getUserIdStr(): string {
+	const userInfo = getUserInfo()
+	if (userInfo && userInfo.user && userInfo.user.id != null) {
+		return userInfo.user.id.toString()
+	}
+	return '0'
+}
+
+/**
  * 获取租户 ID（数字类型）
  */
 export function getTenantIdAsNumber(): number {
@@ -182,6 +194,15 @@ export function getTenantIdAsNumber(): number {
 		return parseInt(tenantId)
 	}
 	return 0
+}
+
+/**
+ * 获取租户 ID（字符串类型）
+ * getTenantId() 本身就是字符串，这里提供一个更明确的别名，方便调用方迁移
+ */
+export function getTenantIdStr(): string {
+	const tenantId = getTenantId()
+	return tenantId != null ? tenantId : '0'
 }
 
 // ========== 用户信息相关 ==========

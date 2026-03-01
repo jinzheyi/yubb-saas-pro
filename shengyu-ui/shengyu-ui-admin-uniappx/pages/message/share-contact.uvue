@@ -92,12 +92,12 @@
 
 	// 联系人列表
 	const allContacts = ref([
-		{ id: 1, name: '张敏', role: '产品经理', avatarText: '张敏', avatarBg: '#0ea5e9' },
-		{ id: 2, name: '李强', role: '开发工程师', avatarText: '李强', avatarBg: '#f472b6' },
-		{ id: 3, name: '王静', role: '设计师', avatarText: '王静', avatarBg: '#c084fc' },
-		{ id: 4, name: '刘洋', role: '测试工程师', avatarText: '刘洋', avatarBg: '#10b981' },
-		{ id: 5, name: '赵敏', role: '产品经理', avatarText: '赵敏', avatarBg: '#f59e0b' },
-		{ id: 6, name: '孙伟', role: '开发工程师', avatarText: '孙伟', avatarBg: '#ec4899' }
+		{ id: '1', name: '张敏', role: '产品经理', avatarText: '张敏', avatarBg: '#0ea5e9' },
+		{ id: '2', name: '李强', role: '开发工程师', avatarText: '李强', avatarBg: '#f472b6' },
+		{ id: '3', name: '王静', role: '设计师', avatarText: '王静', avatarBg: '#c084fc' },
+		{ id: '4', name: '刘洋', role: '测试工程师', avatarText: '刘洋', avatarBg: '#10b981' },
+		{ id: '5', name: '赵敏', role: '产品经理', avatarText: '赵敏', avatarBg: '#f59e0b' },
+		{ id: '6', name: '孙伟', role: '开发工程师', avatarText: '孙伟', avatarBg: '#ec4899' }
 	])
 
 	// 过滤后的联系人

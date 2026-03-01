@@ -66,7 +66,7 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getGroupMembers, removeGroupMember } from '../../api/group.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
-	import { getUserId } from '../../store/user.uts'
+	import { getUserIdStr } from '../../store/user.uts'
 
 	const { t } = useI18n()
 
@@ -78,7 +78,7 @@
 	const groupId = ref('')
 	const groupName = ref('')
 	const mode = ref('view') // view-查看模式, remove-删除模式
-	const currentUserId = ref(0)
+	const currentUserId = ref<string>('0')
 	
 	// 成员数据
 	const allMembers = ref<any[]>([])
@@ -277,7 +277,7 @@
 	
 	onLoad((options : any) => {
 		// 获取当前用户ID
-		currentUserId.value = getUserId()
+		currentUserId.value = getUserIdStr()
 		
 		// 获取页面参数
 		if (options['groupId']) {

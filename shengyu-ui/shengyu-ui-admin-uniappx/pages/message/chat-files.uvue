@@ -139,7 +139,7 @@
 				// 转换数据格式
 				const newFiles = result.list.map((item: any) => {
 					return {
-						id: item.id,
+						id: item.id != null ? item.id.toString() : '0',
 						type: getFileTypeFromName(item.fileName),
 						name: item.fileName,
 						size: formatFileSize(item.fileSize),
@@ -147,7 +147,7 @@
 						thumbnail: item.fileUrl,  // 视频缩略图可以后续优化
 						createTime: new Date(item.createTime).getTime(),
 						sender: item.uploaderName || '未知',
-						uploaderId: item.uploaderId
+						uploaderId: item.uploaderId != null ? item.uploaderId.toString() : '0'
 					}
 				})
 				

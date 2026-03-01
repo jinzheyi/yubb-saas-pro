@@ -16,7 +16,7 @@ import { messageService } from './message-service.uts'
  * 已读详情项
  */
 export type ReadDetailItem = {
-  userId: number
+  userId: string
   userName: string
   avatar: string
   readTime: number
@@ -30,7 +30,7 @@ export class ReadReceiptService {
   private static instance: ReadReceiptService | null = null
   
   // 已读状态缓存（messageId -> 已读用户ID列表）
-  private readStatus: Map<number, number[]> = new Map()
+  private readStatus: Map<string, string[]> = new Map()
   
   /**
    * 私有构造函数（单例模式）
@@ -52,7 +52,7 @@ export class ReadReceiptService {
   /**
    * 标记消息为已读（进入会话时调用）
    */
-  public async markMessagesAsRead(conversationId: number, messageIds: number[]): Promise<boolean> {
+  public async markMessagesAsRead(conversationId: string, messageIds: string[]): Promise<boolean> {
     if (messageIds.length === 0) {
       return true
     }
@@ -83,7 +83,7 @@ export class ReadReceiptService {
   /**
    * 发送已读回执
    */
-  private sendReadReceipt(conversationId: number, messageIds: number[]): void {
+  private sendReadReceipt(conversationId: string, messageIds: string[]): void {
     // 通过 MessageService 发送已读回执
     // 注意：这里需要知道接收者ID，实际应该从会话信息中获取
     // 简化处理：使用 conversationId 作为 receiverId
@@ -93,7 +93,7 @@ export class ReadReceiptService {
   /**
    * 接收已读回执（更新本地消息状态）
    */
-  public receiveReadReceipt(messageIds: number[], readUserId: number): void {
+  public receiveReadReceipt(messageIds: string[], readUserId: string): void {
     messageIds.forEach(messageId => {
       // 获取或创建已读用户列表
       let readUserIds = this.readStatus.get(messageId)
@@ -114,7 +114,7 @@ export class ReadReceiptService {
   /**
    * 获取消息的已读状态（单聊）
    */
-  public getReadStatus(messageId: number): 'unread' | 'read' {
+  public getReadStatus(messageId: string): 'unread' | 'read' {
     const readUserIds = this.readStatus.get(messageId)
     return (readUserIds !== null && readUserIds !== undefined && readUserIds.length > 0) ? 'read' : 'unread'
   }
@@ -122,7 +122,7 @@ export class ReadReceiptService {
   /**
    * 获取消息的已读人数（群聊）
    */
-  public getReadCount(messageId: number): number {
+  public getReadCount(messageId: string): number {
     const readUserIds = this.readStatus.get(messageId)
     return (readUserIds !== null && readUserIds !== undefined) ? readUserIds.length : 0
   }
@@ -130,7 +130,7 @@ export class ReadReceiptService {
   /**
    * 获取消息的已读详情（群聊）
    */
-  public async getReadDetail(messageId: number): Promise<ReadDetailItem[]> {
+  public async getReadDetail(messageId: string): Promise<ReadDetailItem[]> {
     try {
       const response = await request({
         url: '/system/im-message/read-detail',
@@ -142,7 +142,7 @@ export class ReadReceiptService {
       
       if (response.code === 0 && response.data) {
         return response.data.map((item: any) => ({
-          userId: item.userId,
+          userId: item.userId != null ? item.userId.toString() : '0',
           userName: item.userName || '',
           avatar: item.avatar || '',
           readTime: item.readTime || 0
@@ -158,7 +158,7 @@ export class ReadReceiptService {
   /**
    * 获取消息的未读详情（群聊）
    */
-  public async getUnreadDetail(messageId: number): Promise<ReadDetailItem[]> {
+  public async getUnreadDetail(messageId: string): Promise<ReadDetailItem[]> {
     try {
       const response = await request({
         url: '/system/im-message/unread-detail',
@@ -170,7 +170,7 @@ export class ReadReceiptService {
       
       if (response.code === 0 && response.data) {
         return response.data.map((item: any) => ({
-          userId: item.userId,
+          userId: item.userId != null ? item.userId.toString() : '0',
           userName: item.userName || '',
           avatar: item.avatar || '',
           readTime: 0
@@ -186,7 +186,7 @@ export class ReadReceiptService {
   /**
    * 批量标记会话消息为已读
    */
-  public async markConversationAsRead(conversationId: number): Promise<boolean> {
+  public async markConversationAsRead(conversationId: string): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-conversation/mark-read',
@@ -206,7 +206,7 @@ export class ReadReceiptService {
   /**
    * 获取会话的未读消息列表
    */
-  public async getUnreadMessages(conversationId: number): Promise<number[]> {
+  public async getUnreadMessages(conversationId: string): Promise<string[]> {
     try {
       const response = await request({
         url: '/system/im-message/unread-list',
@@ -217,7 +217,7 @@ export class ReadReceiptService {
       })
       
       if (response.code === 0 && response.data) {
-        return response.data.map((item: any) => item.messageId)
+        return response.data.map((item: any) => (item.messageId != null ? item.messageId.toString() : '0'))
       }
       return []
     } catch (e) {
@@ -236,7 +236,7 @@ export class ReadReceiptService {
   /**
    * 清空指定消息的已读状态
    */
-  public clearMessageReadStatus(messageId: number): void {
+  public clearMessageReadStatus(messageId: string): void {
     this.readStatus.delete(messageId)
   }
 }

@@ -222,8 +222,17 @@ const loadMessages = async () => {
 
     console.log('[ChatHistory] 搜索返回数据:', res)
     
-    // 处理返回数据
-    const newMessages = res.list || []
+    // 处理返回数据（ID 统一为 string，避免 H5 大整数精度丢失）
+    const newMessages = (res.list || []).map((m: any) => {
+      return {
+        ...m,
+        id: m && m.id != null ? m.id.toString() : '0',
+        messageId: m && m.messageId != null ? m.messageId.toString() : undefined,
+        senderId: m && m.senderId != null ? m.senderId.toString() : undefined,
+        receiverId: m && m.receiverId != null ? m.receiverId.toString() : undefined,
+        groupId: m && m.groupId != null ? m.groupId.toString() : undefined
+      }
+    })
     messageList.value = [...messageList.value, ...newMessages]
     
     // 判断是否还有更多数据

@@ -28,7 +28,7 @@ export type BadgeUpdateMessage = {
  */
 export type ConversationBadge = {
   // 会话ID
-  conversationId: number
+  conversationId: string
   // 未读数
   unreadCount: number
 }
@@ -51,7 +51,7 @@ export type BadgeData = {
   // 总未读数
   totalUnread: number
   // 会话ID -> 未读数
-  conversationBadges: Map<number, number>
+  conversationBadges: Map<string, number>
   // 菜单ID -> 角标数
   menuBadges: Map<string, number>
   // 最后更新时间
@@ -129,7 +129,7 @@ export class BadgeService {
     // 初始化角标数据
     this.badgeData = {
       totalUnread: 0,
-      conversationBadges: new Map<number, number>(),
+      conversationBadges: new Map<string, number>(),
       menuBadges: new Map<string, number>(),
       lastUpdateTime: 0
     }
@@ -195,7 +195,7 @@ export class BadgeService {
   /**
    * 获取会话未读数
    */
-  public getConversationBadge(conversationId: number): number {
+  public getConversationBadge(conversationId: string): number {
     const count = this.badgeData.conversationBadges.get(conversationId)
     return count !== null && count !== undefined ? count : 0
   }
@@ -211,7 +211,7 @@ export class BadgeService {
   /**
    * 增加会话未读数
    */
-  public incrementConversationBadge(conversationId: number, delta: number = 1): void {
+  public incrementConversationBadge(conversationId: string, delta: number = 1): void {
     console.log(`[BadgeService] 增加会话 ${conversationId} 未读数: ${delta}`)
     
     // 获取当前会话未读数
@@ -235,7 +235,7 @@ export class BadgeService {
   /**
    * 减少会话未读数
    */
-  public decrementConversationBadge(conversationId: number, delta: number = 1): void {
+  public decrementConversationBadge(conversationId: string, delta: number = 1): void {
     console.log(`[BadgeService] 减少会话 ${conversationId} 未读数: ${delta}`)
     
     // 获取当前会话未读数
@@ -262,7 +262,7 @@ export class BadgeService {
   /**
    * 清空会话未读数
    */
-  public clearConversationBadge(conversationId: number): void {
+  public clearConversationBadge(conversationId: string): void {
     console.log(`[BadgeService] 清空会话 ${conversationId} 未读数`)
     
     // 获取当前会话未读数
@@ -310,13 +310,10 @@ export class BadgeService {
   /**
    * 调用后端API清空服务器端未读数
    */
-  private clearUnreadOnServer(conversationId: number): void {
+  private clearUnreadOnServer(conversationId: string): void {
     // 动态导入API函数以避免循环依赖
     import('../api/conversation.uts').then((conversationApi) => {
-      // 将number转换为string（API要求）
-      const conversationIdStr = conversationId.toString()
-      
-      conversationApi.clearUnreadCount(conversationIdStr).then((response: any) => {
+      conversationApi.clearUnreadCount(conversationId).then((response: any) => {
         console.log(`[BadgeService] 清空会话 ${conversationId} 服务器端未读数成功`)
       }).catch((error: any) => {
         console.error(`[BadgeService] 清空会话 ${conversationId} 服务器端未读数失败:`, error)
@@ -340,7 +337,7 @@ export class BadgeService {
     // 批量更新会话角标
     if (message.conversationBadges !== null && message.conversationBadges !== undefined) {
       message.conversationBadges.forEach((badge: ConversationBadge) => {
-        this.badgeData.conversationBadges.set(badge.conversationId, badge.unreadCount)
+        this.badgeData.conversationBadges.set(badge.conversationId != null ? badge.conversationId.toString() : '0', badge.unreadCount)
       })
     }
     

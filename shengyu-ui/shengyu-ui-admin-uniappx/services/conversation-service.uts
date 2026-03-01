@@ -24,9 +24,9 @@ export enum ConversationType {
  * 会话项（用于 UI 显示）
  */
 export type ConversationItem = {
-  id: number
+  id: string
   type: ConversationType
-  targetId: number
+  targetId: string
   name: string
   avatar: string
   avatarText: string
@@ -106,23 +106,27 @@ export class ConversationService {
   /**
    * 获取单个会话
    */
-  public getConversation(conversationId: number): ConversationItem | null {
+  public getConversation(conversationId: string): ConversationItem | null {
     const conversation = this.conversations.find(c => c.id === conversationId)
-    return conversation !== undefined ? conversation : null
+    return conversation != null ? conversation : null
   }
   
   /**
    * 更新会话（接收到新消息时调用）
    */
   public updateConversation(
-    conversationId: number,
+    conversationId: string,
     lastMessage: string,
     timestamp: number,
     incrementUnread: boolean = false
   ): void {
     let conversation = this.conversations.find(c => c.id === conversationId)
+    // 兼容调用方传入 targetId 的情况（群聊：groupId；单聊：对方 userId）
+    if (conversation == null) {
+      conversation = this.conversations.find(c => c.targetId === conversationId)
+    }
     
-    if (conversation !== undefined) {
+    if (conversation != null) {
       // 更新现有会话
       conversation.lastMessage = lastMessage
       conversation.timestamp = timestamp
@@ -144,7 +148,7 @@ export class ConversationService {
   /**
    * 置顶会话
    */
-  public async pinConversation(conversationId: number, isPinned: boolean): Promise<boolean> {
+  public async pinConversation(conversationId: string, isPinned: boolean): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-conversation/pin',
@@ -157,7 +161,7 @@ export class ConversationService {
       
       if (response.code === 0) {
         const conversation = this.conversations.find(c => c.id === conversationId)
-        if (conversation !== undefined) {
+        if (conversation != null) {
           conversation.isPinned = isPinned
           this.sortConversations()
           this.notifyUpdateListeners()
@@ -174,7 +178,7 @@ export class ConversationService {
   /**
    * 删除会话
    */
-  public async deleteConversation(conversationId: number): Promise<boolean> {
+  public async deleteConversation(conversationId: string): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-conversation/delete',
@@ -202,7 +206,7 @@ export class ConversationService {
   /**
    * 设置免打扰
    */
-  public async setMute(conversationId: number, noDisturb: boolean): Promise<boolean> {
+  public async setMute(conversationId: string, noDisturb: boolean): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-conversation/mute',
@@ -215,7 +219,7 @@ export class ConversationService {
       
       if (response.code === 0) {
         const conversation = this.conversations.find(c => c.id === conversationId)
-        if (conversation !== undefined) {
+        if (conversation != null) {
           conversation.noDisturb = noDisturb
           this.notifyUpdateListeners()
         }
@@ -231,7 +235,7 @@ export class ConversationService {
   /**
    * 清空未读数
    */
-  public async clearUnread(conversationId: number): Promise<boolean> {
+  public async clearUnread(conversationId: string): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-conversation/clear-unread',
@@ -243,7 +247,7 @@ export class ConversationService {
       
       if (response.code === 0) {
         const conversation = this.conversations.find(c => c.id === conversationId)
-        if (conversation !== undefined) {
+        if (conversation != null) {
           conversation.unreadCount = 0
           this.notifyUpdateListeners()
           
@@ -262,9 +266,9 @@ export class ConversationService {
   /**
    * 保存草稿
    */
-  public saveDraft(conversationId: number, draft: string): void {
+  public saveDraft(conversationId: string, draft: string): void {
     const conversation = this.conversations.find(c => c.id === conversationId)
-    if (conversation !== undefined) {
+    if (conversation != null) {
       conversation.draft = draft
       this.notifyUpdateListeners()
     }
@@ -273,9 +277,9 @@ export class ConversationService {
   /**
    * 获取草稿
    */
-  public getDraft(conversationId: number): string {
+  public getDraft(conversationId: string): string {
     const conversation = this.conversations.find(c => c.id === conversationId)
-    return conversation !== undefined ? conversation.draft : ''
+    return conversation != null ? conversation.draft : ''
   }
   
   /**
@@ -324,9 +328,9 @@ export class ConversationService {
    */
   private mapToConversationItem(data: any): ConversationItem {
     return {
-      id: data.id,
+      id: data.id != null ? data.id.toString() : '0',
       type: data.type,
-      targetId: data.targetId,
+      targetId: data.targetId != null ? data.targetId.toString() : '0',
       name: data.name || '',
       avatar: data.avatar || '',
       avatarText: data.avatarText || '',

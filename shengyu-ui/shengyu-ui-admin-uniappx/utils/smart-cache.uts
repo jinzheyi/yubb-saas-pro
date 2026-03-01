@@ -56,21 +56,21 @@ export class LRUCache<K, V> {
  * 用户信息缓存
  */
 export type CachedUserInfo = {
-  id: number
+  id: string
   nickname: string
   avatar: string
   timestamp: number // 缓存的时间戳，用于判断过期
 }
 
 export class UserInfoCache {
-  private cache: LRUCache<number, CachedUserInfo>
+  private cache: LRUCache<string, CachedUserInfo>
   private expireTime: number = 24 * 60 * 60 * 1000 // 默认过期时间为 24 小时
 
   constructor(capacity: number = 500) {
-    this.cache = new LRUCache<number, CachedUserInfo>(capacity)
+    this.cache = new LRUCache<string, CachedUserInfo>(capacity)
   }
 
-  public getUser(userId: number): CachedUserInfo | null {
+  public getUser(userId: string): CachedUserInfo | null {
     const user = this.cache.get(userId)
     if (user) {
       // 检查是否过期

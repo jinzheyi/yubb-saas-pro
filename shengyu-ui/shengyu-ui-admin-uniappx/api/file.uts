@@ -52,7 +52,7 @@ export function getGroupFileList(params: any) {
 /**
  * 删除群文件
  */
-export function deleteGroupFile(id: number) {
+export function deleteGroupFile(id: string) {
   return request({
     url: `/system/im/group/file/delete?id=${id}`,
     method: 'DELETE'
@@ -62,7 +62,7 @@ export function deleteGroupFile(id: number) {
 /**
  * 记录文件下载
  */
-export function downloadGroupFile(id: number) {
+export function downloadGroupFile(id: string) {
   return request({
     url: `/system/im/group/file/download?id=${id}`,
     method: 'POST'

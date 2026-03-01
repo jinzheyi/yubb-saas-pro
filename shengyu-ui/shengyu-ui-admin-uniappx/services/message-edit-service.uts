@@ -85,7 +85,7 @@ export class MessageEditService {
    * @param newContent 新内容
    * @returns 编辑结果
    */
-  public async editMessage(messageId: number, newContent: string): Promise<EditResult> {
+  public async editMessage(messageId: string, newContent: string): Promise<EditResult> {
     try {
       // 验证内容不为空
       if (!newContent || newContent.trim().length === 0) {
@@ -128,7 +128,7 @@ export class MessageEditService {
    * @param messageId 消息ID
    * @returns 编辑历史列表
    */
-  public async getEditHistory(messageId: number): Promise<EditHistory[]> {
+  public async getEditHistory(messageId: string): Promise<EditHistory[]> {
     try {
       const response = await request({
         url: '/system/im-message/edit-history',

@@ -193,7 +193,7 @@
 	import { getGroup, getGroupMembers, updateGroup, quitGroup } from '../../api/group.uts'
 	import { getConversationByTarget, pinConversation, setNoDisturb } from '../../api/conversation.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
-	import { getUserId } from '../../store/user.uts'
+	import { getUserIdStr } from '../../store/user.uts'
 
 	const { t } = useI18n()
 
@@ -202,7 +202,7 @@
 	const conversationId = ref('')
 	
 	// 当前用户
-	const currentUserId = ref(0)
+	const currentUserId = ref<string>('0')
 
 	// 群聊信息
 	const groupName = ref('')
@@ -612,7 +612,7 @@
 
 	onLoad((options : any) => {
 		// 获取当前用户ID
-		currentUserId.value = getUserId()
+		currentUserId.value = getUserIdStr()
 		
 		// 获取群组ID
 		if (options['groupId']) {

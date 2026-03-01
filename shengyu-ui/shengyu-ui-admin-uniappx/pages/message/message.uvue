@@ -191,7 +191,7 @@
 		const isGroup = serverConv.conversationType === 2
 		
 		return {
-			id: serverConv.id,
+			id: serverConv.id != null ? serverConv.id.toString() : '0',
 			categoryId: getCategoryId(serverConv),
 			title: serverConv.targetName || '未知',
 			desc: serverConv.lastMessageContent || '',
@@ -205,7 +205,7 @@
 			pinnedTime: serverConv.isPinned ? lastMessageTime : 0,
 			isGroup: isGroup,
 			memberCount: serverConv.groupMemberCount || 0,
-			targetId: serverConv.targetId,
+			targetId: serverConv.targetId != null ? serverConv.targetId.toString() : '0',
 			conversationType: serverConv.conversationType
 		}
 	}
@@ -501,7 +501,7 @@
 					// 标记已读/未读
 					if (targetItem.unreadCount > 0) {
 						// 清空未读数
-						await clearUnreadCount(targetItem.id.toString())
+						await clearUnreadCount(targetItem.id)
 						targetItem.unreadCount = 0
 						uni.showToast({
 							title: '已标记为已读',

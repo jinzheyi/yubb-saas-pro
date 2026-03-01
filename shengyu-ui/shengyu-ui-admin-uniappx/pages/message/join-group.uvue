@@ -149,14 +149,14 @@
 			if (result && result.valid) {
 				isValid.value = true
 				groupInfo.value = {
-					groupId: result.groupId?.toString() || '',
+					groupId: result.groupId != null ? result.groupId.toString() : '',
 					groupName: result.groupName || '',
 					groupAvatar: result.groupAvatar || '',
 					memberCount: result.memberCount || 0,
 					needApproval: result.needApproval || false,
 					expireTime: result.expireTime || ''
 				}
-				groupId.value = result.groupId?.toString() || ''
+				groupId.value = result.groupId != null ? result.groupId.toString() : ''
 			} else {
 				isValid.value = false
 				errorMessage.value = '邀请码无效或已过期'

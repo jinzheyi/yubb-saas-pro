@@ -20,7 +20,7 @@ export function getMessageList(conversationId: string, pageNo: number = 1, pageS
 /**
  * 撤回消息
  */
-export function recallMessage(id: number): Promise<any> {
+export function recallMessage(id: string): Promise<any> {
   return request({
     url: `/system/im/message/recall?id=${id}`,
     method: 'PUT'
@@ -30,7 +30,7 @@ export function recallMessage(id: number): Promise<any> {
 /**
  * 删除消息
  */
-export function deleteMessage(id: number): Promise<any> {
+export function deleteMessage(id: string): Promise<any> {
   return request({
     url: `/system/im/message/delete?id=${id}`,
     method: 'DELETE'
@@ -41,7 +41,7 @@ export function deleteMessage(id: number): Promise<any> {
  * 标记消息已读
  * @param messageIds 消息ID列表
  */
-export function markMessageRead(messageIds: number[]): Promise<any> {
+export function markMessageRead(messageIds: string[]): Promise<any> {
   return request({
     url: '/system/im/message/mark-read',
     method: 'PUT',

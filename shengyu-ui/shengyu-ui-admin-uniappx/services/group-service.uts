@@ -15,10 +15,10 @@ import { request } from '@/utils/request.uts'
  * 群组信息
  */
 export type GroupInfo = {
-  id: number
+  id: string
   name: string
   avatar: string
-  ownerId: number
+  ownerId: string
   ownerName: string
   memberCount: number
   maxMembers: number
@@ -31,7 +31,7 @@ export type GroupInfo = {
  * 群成员信息
  */
 export type GroupMember = {
-  userId: number
+  userId: string
   userName: string
   avatar: string
   avatarText: string
@@ -46,10 +46,10 @@ export type GroupMember = {
  * 群公告信息
  */
 export type GroupAnnouncement = {
-  id: number
-  groupId: number
+  id: string
+  groupId: string
   content: string
-  publisherId: number
+  publisherId: string
   publisherName: string
   publishTime: number
   mustRead: boolean
@@ -63,10 +63,10 @@ export class GroupService {
   private static instance: GroupService | null = null
   
   // 群组信息缓存
-  private groupCache: Map<number, GroupInfo> = new Map()
+  private groupCache: Map<string, GroupInfo> = new Map()
   
   // 群成员缓存
-  private memberCache: Map<number, GroupMember[]> = new Map()
+  private memberCache: Map<string, GroupMember[]> = new Map()
   
   /**
    * 私有构造函数（单例模式）
@@ -88,7 +88,7 @@ export class GroupService {
   /**
    * 创建群组
    */
-  public async createGroup(name: string, memberIds: number[]): Promise<number> {
+  public async createGroup(name: string, memberIds: string[]): Promise<string> {
     try {
       const response = await request({
         url: '/system/im-group/create',
@@ -100,19 +100,19 @@ export class GroupService {
       })
       
       if (response.code === 0 && response.data) {
-        return response.data.groupId
+        return response.data.groupId != null ? response.data.groupId.toString() : '0'
       }
-      return 0
+      return '0'
     } catch (e) {
       console.error('[GroupService] 创建群组失败:', e)
-      return 0
+      return '0'
     }
   }
   
   /**
    * 获取群组信息
    */
-  public async getGroupInfo(groupId: number): Promise<GroupInfo | null> {
+  public async getGroupInfo(groupId: string): Promise<GroupInfo | null> {
     // 先从缓存获取
     const cached = this.groupCache.get(groupId)
     if (cached !== null && cached !== undefined) {
@@ -143,7 +143,7 @@ export class GroupService {
   /**
    * 更新群组信息
    */
-  public async updateGroup(groupId: number, name: string, avatar: string): Promise<boolean> {
+  public async updateGroup(groupId: string, name: string, avatar: string): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-group/update',
@@ -170,7 +170,7 @@ export class GroupService {
   /**
    * 解散群组
    */
-  public async dismissGroup(groupId: number): Promise<boolean> {
+  public async dismissGroup(groupId: string): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-group/dismiss',
@@ -196,7 +196,7 @@ export class GroupService {
   /**
    * 获取群成员列表
    */
-  public async getGroupMembers(groupId: number): Promise<GroupMember[]> {
+  public async getGroupMembers(groupId: string): Promise<GroupMember[]> {
     // 先从缓存获取
     const cached = this.memberCache.get(groupId)
     if (cached !== null && cached !== undefined) {
@@ -227,7 +227,7 @@ export class GroupService {
   /**
    * 添加群成员
    */
-  public async addMembers(groupId: number, memberIds: number[]): Promise<boolean> {
+  public async addMembers(groupId: string, memberIds: string[]): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-group/add-members',
@@ -253,7 +253,7 @@ export class GroupService {
   /**
    * 移除群成员
    */
-  public async removeMembers(groupId: number, memberIds: number[]): Promise<boolean> {
+  public async removeMembers(groupId: string, memberIds: string[]): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-group/remove-members',
@@ -279,7 +279,7 @@ export class GroupService {
   /**
    * 退出群组
    */
-  public async quitGroup(groupId: number): Promise<boolean> {
+  public async quitGroup(groupId: string): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-group/quit',
@@ -305,7 +305,7 @@ export class GroupService {
   /**
    * 转让群组
    */
-  public async transferGroup(groupId: number, newOwnerId: number): Promise<boolean> {
+  public async transferGroup(groupId: string, newOwnerId: string): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-group/transfer',
@@ -332,7 +332,7 @@ export class GroupService {
   /**
    * 设置管理员
    */
-  public async setAdmin(groupId: number, userId: number, isAdmin: boolean): Promise<boolean> {
+  public async setAdmin(groupId: string, userId: string, isAdmin: boolean): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-group/set-admin',
@@ -359,7 +359,7 @@ export class GroupService {
   /**
    * 禁言成员
    */
-  public async muteMember(groupId: number, userId: number, duration: number): Promise<boolean> {
+  public async muteMember(groupId: string, userId: string, duration: number): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-group/mute-member',
@@ -386,7 +386,7 @@ export class GroupService {
   /**
    * 解除禁言
    */
-  public async unmuteMember(groupId: number, userId: number): Promise<boolean> {
+  public async unmuteMember(groupId: string, userId: string): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-group/unmute-member',
@@ -412,7 +412,7 @@ export class GroupService {
   /**
    * 全员禁言
    */
-  public async muteAll(groupId: number, mute: boolean): Promise<boolean> {
+  public async muteAll(groupId: string, mute: boolean): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-group/mute-all',
@@ -438,7 +438,7 @@ export class GroupService {
   /**
    * 设置群名片
    */
-  public async setMemberNickname(groupId: number, userId: number, nickname: string): Promise<boolean> {
+  public async setMemberNickname(groupId: string, userId: string, nickname: string): Promise<boolean> {
     try {
       const response = await request({
         url: '/system/im-group/set-nickname',
@@ -466,7 +466,7 @@ export class GroupService {
    * 发布群公告
    */
   public async publishAnnouncement(
-    groupId: number,
+    groupId: string,
     content: string,
     mustRead: boolean
   ): Promise<boolean> {
@@ -491,7 +491,7 @@ export class GroupService {
   /**
    * 获取群公告列表
    */
-  public async getAnnouncements(groupId: number): Promise<GroupAnnouncement[]> {
+  public async getAnnouncements(groupId: string): Promise<GroupAnnouncement[]> {
     try {
       const response = await request({
         url: '/system/im-group/announcements',
@@ -503,10 +503,10 @@ export class GroupService {
       
       if (response.code === 0 && response.data) {
         return response.data.map((item: any) => ({
-          id: item.id,
-          groupId: item.groupId,
+          id: item.id != null ? item.id.toString() : '0',
+          groupId: item.groupId != null ? item.groupId.toString() : '0',
           content: item.content,
-          publisherId: item.publisherId,
+          publisherId: item.publisherId != null ? item.publisherId.toString() : '0',
           publisherName: item.publisherName || '',
           publishTime: item.publishTime || 0,
           mustRead: item.mustRead || false
@@ -524,10 +524,10 @@ export class GroupService {
    */
   private mapToGroupInfo(data: any): GroupInfo {
     return {
-      id: data.id,
+      id: data.id != null ? data.id.toString() : '0',
       name: data.name || '',
       avatar: data.avatar || '',
-      ownerId: data.ownerId,
+      ownerId: data.ownerId != null ? data.ownerId.toString() : '0',
       ownerName: data.ownerName || '',
       memberCount: data.memberCount || 0,
       maxMembers: data.maxMembers || 500,
@@ -542,7 +542,7 @@ export class GroupService {
    */
   private mapToGroupMember(data: any): GroupMember {
     return {
-      userId: data.userId,
+      userId: data.userId != null ? data.userId.toString() : '0',
       userName: data.userName || '',
       avatar: data.avatar || '',
       avatarText: data.avatarText || '',

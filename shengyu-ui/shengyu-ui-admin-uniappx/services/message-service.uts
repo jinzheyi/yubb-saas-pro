@@ -38,17 +38,17 @@ export type QueuedMessage = {
 /**
  * 消息状态监听器类型
  */
-export type MessageStatusListener = (messageId: number, status: MessageStatus) => void
+export type MessageStatusListener = (messageId: string, status: MessageStatus) => void
 
 /**
  * 消息项（用于 UI 显示）
  */
 export type MessageItem = {
-  id: number
-  messageId: number
-  senderId: number
-  receiverId: number
-  groupId: number
+  id: string
+  messageId: string
+  senderId: string
+  receiverId: string
+  groupId: string
   type: MessageType
   content: any
   status: MessageStatus
@@ -64,9 +64,9 @@ export type MessageItem = {
  * 会话项（用于 UI 显示）
  */
 export type ConversationItem = {
-  id: number
+  id: string
   type: number  // 1-单聊 2-群聊
-  targetId: number
+  targetId: string
   name: string
   avatar: string
   avatarText: string
@@ -107,14 +107,14 @@ export class MessageService {
   private conversationUpdateListeners: ConversationUpdateListener[] = []
   
   // 当前用户信息
-  private currentUserId: number = 0
-  private currentTenantId: number = 0
+  private currentUserId: string = '0'
+  private currentTenantId: string = '0'
   
   // 消息缓存（按会话ID分组）
-  private messageCache: Map<number, MessageItem[]> = new Map()
+  private messageCache: Map<string, MessageItem[]> = new Map()
   
   // 会话缓存
-  private conversationCache: Map<number, ConversationItem> = new Map()
+  private conversationCache: Map<string, ConversationItem> = new Map()
   
   // 消息队列（用于离线消息重发）
   private messageQueue: QueuedMessage[] = []
@@ -190,7 +190,7 @@ export class MessageService {
   /**
    * 设置当前用户信息
    */
-  public setCurrentUser(userId: number, tenantId: number): void {
+  public setCurrentUser(userId: string, tenantId: string): void {
     this.currentUserId = userId
     this.currentTenantId = tenantId
   }
@@ -199,10 +199,10 @@ export class MessageService {
    * 发送文本消息
    */
   public sendTextMessage(
-    receiverId: number,
-    groupId: number,
+    receiverId: string,
+    groupId: string,
     content: string,
-    atUserIds: number[] = []
+    atUserIds: string[] = []
   ): MessageItem {
     const message = MessageBuilder.buildTextMessage(
       this.currentUserId,
@@ -220,8 +220,8 @@ export class MessageService {
    * 发送图片消息
    */
   public sendImageMessage(
-    receiverId: number,
-    groupId: number,
+    receiverId: string,
+    groupId: string,
     url: string,
     thumbnailUrl: string,
     width: number,
@@ -247,13 +247,13 @@ export class MessageService {
    * 发送引用回复消息
    */
   public sendQuoteReplyMessage(
-    receiverId: number,
-    groupId: number,
+    receiverId: string,
+    groupId: string,
     content: string,
-    quotedMessageId: number,
+    quotedMessageId: string,
     quotedContent: string,
     quotedSenderName: string,
-    atUserIds: number[] = []
+    atUserIds: string[] = []
   ): MessageItem {
     const message = MessageBuilder.buildQuoteReplyMessage(
       this.currentUserId,
@@ -274,8 +274,8 @@ export class MessageService {
    * 发送语音消息
    */
   public sendVoiceMessage(
-    receiverId: number,
-    groupId: number,
+    receiverId: string,
+    groupId: string,
     url: string,
     duration: number,
     size: number
@@ -297,8 +297,8 @@ export class MessageService {
    * 发送视频消息
    */
   public sendVideoMessage(
-    receiverId: number,
-    groupId: number,
+    receiverId: string,
+    groupId: string,
     url: string,
     coverUrl: string,
     duration: number,
@@ -326,8 +326,8 @@ export class MessageService {
    * 发送文件消息
    */
   public sendFileMessage(
-    receiverId: number,
-    groupId: number,
+    receiverId: string,
+    groupId: string,
     url: string,
     fileName: string,
     size: number,
@@ -351,8 +351,8 @@ export class MessageService {
    * 发送位置消息
    */
   public sendLocationMessage(
-    receiverId: number,
-    groupId: number,
+    receiverId: string,
+    groupId: string,
     latitude: number,
     longitude: number,
     address: string
@@ -385,7 +385,7 @@ export class MessageService {
     
     // 创建消息项
     const messageItem: MessageItem = {
-      id: 0,  // 临时ID，服务端返回后更新
+      id: '0',  // 临时ID，服务端返回后更新
       messageId: message.header.messageId,
       senderId: message.header.senderId,
       receiverId: message.header.receiverId,
@@ -402,7 +402,7 @@ export class MessageService {
     }
     
     // 添加到缓存
-    const conversationId = message.header.groupId > 0 ? message.header.groupId : message.header.receiverId
+    const conversationId = message.header.groupId !== '0' && message.header.groupId !== '' ? message.header.groupId : message.header.receiverId
     this.addMessageToCache(conversationId, messageItem)
     
     // 通知监听器
@@ -431,7 +431,7 @@ export class MessageService {
     
     // 创建消息项
     const messageItem: MessageItem = {
-      id: 0,
+      id: '0',
       messageId: message.header.messageId,
       senderId: message.header.senderId,
       receiverId: message.header.receiverId,
@@ -448,7 +448,7 @@ export class MessageService {
     }
     
     // 添加到缓存
-    const conversationId = message.header.groupId > 0 ? message.header.groupId : message.header.senderId
+    const conversationId = message.header.groupId !== '0' && message.header.groupId !== '' ? message.header.groupId : message.header.senderId
     this.addMessageToCache(conversationId, messageItem)
     
     // 通知监听器
@@ -473,11 +473,11 @@ export class MessageService {
     const body = message.body as any
     
     // 解析 messageIds：支持数组和单个 ID 两种格式
-    let messageIds: number[] = []
+    let messageIds: string[] = []
     if (body.messageIds !== null && body.messageIds !== undefined) {
-      messageIds = body.messageIds as number[]
+      messageIds = body.messageIds as string[]
     } else if (body.messageId !== null && body.messageId !== undefined) {
-      messageIds = [body.messageId as number]
+      messageIds = [body.messageId as string]
     }
     
     console.log('[MessageService] 收到已读回执:', messageIds)
@@ -487,7 +487,7 @@ export class MessageService {
     }
     
     // 更新消息状态为已读
-    const updatedIds: number[] = []
+    const updatedIds: string[] = []
     this.messageCache.forEach((messages) => {
       messages.forEach(msg => {
         if (messageIds.includes(msg.messageId) && msg.status !== MessageStatus.READ) {
@@ -511,7 +511,7 @@ export class MessageService {
   private handleRecall(data: any): void {
     const message = data as ImMessage
     const body = message.body as any
-    const messageId = body.messageId as number
+    const messageId = body.messageId as string
     const recallerId = message.header.senderId
     
     console.log('[MessageService] 收到消息撤回:', messageId, '撤回者:', recallerId)
@@ -574,7 +574,7 @@ export class MessageService {
   /**
    * 发送已读回执
    */
-  public sendReadReceipt(receiverId: number, messageIds: number[]): void {
+  public sendReadReceipt(receiverId: string, messageIds: string[]): void {
     const message = MessageBuilder.buildReadReceiptMessage(
       this.currentUserId,
       receiverId,
@@ -588,7 +588,7 @@ export class MessageService {
   /**
    * 撤回消息
    */
-  public recallMessage(receiverId: number, groupId: number, messageId: number): void {
+  public recallMessage(receiverId: string, groupId: string, messageId: string): void {
     const message = MessageBuilder.buildRecallMessage(
       this.currentUserId,
       receiverId,
@@ -601,36 +601,9 @@ export class MessageService {
   }
   
   /**
-   * 发送引用回复消息
-   */
-  public sendQuoteReplyMessage(
-    receiverId: number,
-    groupId: number,
-    content: string,
-    quotedMessageId: number,
-    quotedContent: string,
-    quotedSenderName: string,
-    atUserIds: number[] = []
-  ): MessageItem {
-    const message = MessageBuilder.buildQuoteReplyMessage(
-      this.currentUserId,
-      receiverId,
-      groupId,
-      this.currentTenantId,
-      content,
-      quotedMessageId,
-      quotedContent,
-      quotedSenderName,
-      atUserIds
-    )
-    
-    return this.sendMessage(message)
-  }
-  
-  /**
    * 添加消息到缓存
    */
-  private addMessageToCache(conversationId: number, message: MessageItem): void {
+  private addMessageToCache(conversationId: string, message: MessageItem): void {
     let messages = this.messageCache.get(conversationId)
     if (messages === null || messages === undefined) {
       messages = []
@@ -642,7 +615,7 @@ export class MessageService {
   /**
    * 获取会话的消息列表
    */
-  public getMessages(conversationId: number): MessageItem[] {
+  public getMessages(conversationId: string): MessageItem[] {
     const messages = this.messageCache.get(conversationId)
     return messages !== null && messages !== undefined ? messages : []
   }
@@ -650,7 +623,7 @@ export class MessageService {
   /**
    * 更新会话
    */
-  private updateConversation(conversationId: number, message: MessageItem): void {
+  private updateConversation(conversationId: string, message: MessageItem): void {
     const summary = MessageParser.getSummary({ 
       header: { messageType: message.type } as any, 
       body: message.content 
@@ -668,7 +641,7 @@ export class MessageService {
   /**
    * 增加未读数
    */
-  private incrementUnreadCount(conversationId: number): void {
+  private incrementUnreadCount(conversationId: string): void {
     const conversation = this.conversationCache.get(conversationId)
     if (conversation !== null && conversation !== undefined) {
       conversation.unreadCount++
@@ -793,7 +766,7 @@ export class MessageService {
   /**
    * 通知消息状态监听器
    */
-  private notifyStatusListeners(messageId: number, status: MessageStatus): void {
+  private notifyStatusListeners(messageId: string, status: MessageStatus): void {
     this.messageStatusListeners.forEach(listener => {
       try {
         listener(messageId, status)
@@ -806,11 +779,11 @@ export class MessageService {
   /**
    * 更新消息状态
    */
-  public updateMessageStatus(messageId: number, status: MessageStatus): void {
+  public updateMessageStatus(messageId: string, status: MessageStatus): void {
     let updated = false
     this.messageCache.forEach(messages => {
       const msg = messages.find(m => m.messageId === messageId)
-      if (msg !== null && msg !== undefined) {
+      if (msg !== null && msg !== undefined && msg.status !== status) {
         msg.status = status
         updated = true
       }
@@ -824,7 +797,7 @@ export class MessageService {
   /**
    * 清空未读数
    */
-  public clearUnreadCount(conversationId: number): void {
+  public clearUnreadCount(conversationId: string): void {
     const conversation = this.conversationCache.get(conversationId)
     if (conversation !== null && conversation !== undefined) {
       conversation.unreadCount = 0

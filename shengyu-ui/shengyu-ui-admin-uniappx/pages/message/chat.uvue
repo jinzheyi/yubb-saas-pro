@@ -317,7 +317,7 @@
 	import { MessageType } from '../../utils/websocket.uts'
 	import { getMessageList, recallMessage, deleteMessage } from '../../api/message.uts'
 	import { clearUnreadCount as clearUnreadCountApi, getConversationByTarget } from '../../api/conversation.uts'
-	import { getUserId, getTenantIdAsNumber, hasRole } from '../../store/user.uts'
+	import { getUserIdStr, getTenantId, hasRole } from '../../store/user.uts'
 	import { uploadFile, chooseAndUploadImage, chooseAndUploadVideo, chooseAndUploadFile } from '../../utils/upload.uts'
 	import { getUserAvatarColor, getAvatarText as getAvatarTextUtil } from '../../utils/avatar.uts'
 	import { parseMessageContent } from '../../utils/message-utils.uts'
@@ -342,29 +342,16 @@
 	const shouldHighlight = ref(false)  // 是否需要高亮显示
 	const highlightedMessageId = ref<string>('')  // 当前高亮的消息ID
 	
-	// 当前用户信息
-	const currentUserId = ref(0)
-	const currentTenantId = ref(0)
+	// 当前用户信息（使用字符串避免精度丢失）
+	const currentUserId = ref<string>('0')
+	const currentTenantId = ref<string>('0')
 	
-	/**
-	 * 辅助函数：获取 targetId 的数字值
-	 */
-	function getTargetIdAsNumber(): number {
-		return targetId.value ? parseInt(targetId.value) : 0
+	function getReceiverIdForMessage(): string {
+		return chatType.value === 'single' ? (targetId.value || '0') : '0'
 	}
 	
-	/**
-	 * 辅助函数：获取接收者ID（单聊时使用）
-	 */
-	function getReceiverIdForMessage(): number {
-		return chatType.value === 'single' ? getTargetIdAsNumber() : 0
-	}
-	
-	/**
-	 * 辅助函数：获取群组ID（群聊时使用）
-	 */
-	function getGroupIdForMessage(): number {
-		return chatType.value === 'group' ? getTargetIdAsNumber() : 0
+	function getGroupIdForMessage(): string {
+		return chatType.value === 'group' ? (targetId.value || '0') : '0'
 	}
 	
 	// UI 状态
@@ -403,7 +390,7 @@
 	const stickerList = ref<StickerItem[]>(getCustomStickers())
 
 	type QuoteChainItem = {
-		messageId : number;
+		messageId : string;
 		senderName : string;
 		content : string;
 		missing ?: boolean;
@@ -411,7 +398,7 @@
 
 	type MessageItem = {
 		id : string;
-		messageId : number;
+		messageId : string;
 		senderId : string;
 		receiverId : string;
 		type : string;
@@ -431,7 +418,7 @@
 		isSticker ?: boolean;
 		status ?: string; // 'sending' | 'success' | 'fail'
 		// 引用回复字段
-		quoteMessageId ?: number;
+		quoteMessageId ?: string;
 		quoteContent ?: string;
 		quoteSenderName ?: string;
 		quoteChain ?: QuoteChainItem[];
@@ -444,8 +431,8 @@
 	 */
 	onMounted(async () => {
 		// 1. 获取当前用户信息
-		currentUserId.value = getUserId()
-		currentTenantId.value = getTenantIdAsNumber()
+		currentUserId.value = getUserIdStr()
+		currentTenantId.value = getTenantId() || '0'
 		
 		// 2. 设置消息服务的当前用户
 		messageService.setCurrentUser(currentUserId.value, currentTenantId.value)
@@ -458,7 +445,7 @@
 				const conversationType = chatType.value === 'group' ? 2 : 1
 				const conversationResult = await getConversationByTarget(targetId.value, conversationType)
 				
-				if (conversationResult && conversationResult.id) {
+				if (conversationResult && conversationResult.id != null) {
 					conversationId.value = conversationResult.id.toString()
 					console.log('[Chat] 查询会话成功, conversationId:', conversationId.value)
 				} else {
@@ -483,8 +470,7 @@
 		if (conversationId.value && conversationId.value !== '' && conversationId.value !== '0') {
 			// 调用 BadgeService 清空会话角标
 			// BadgeService 会自动调用后端 API 并更新本地数据
-			const conversationIdNum = parseInt(conversationId.value)
-			badgeService.clearConversationBadge(conversationIdNum)
+			badgeService.clearConversationBadge(conversationId.value)
 			
 			// 同时清空 MessageService 的本地未读数
 			messageService.clearUnreadCount(conversationId.value)
@@ -619,23 +605,28 @@
 		const rawContent = parseRawContent(msg.content)
 		const content = parseMessageContent(rawContent)
 		
+		const senderIdStr = msg && msg.senderId != null ? msg.senderId.toString() : '0'
+		const receiverIdStr = msg && msg.receiverId != null ? msg.receiverId.toString() : ''
+		const messageIdStr = msg && msg.messageId != null ? msg.messageId.toString() : '0'
+		const idStr = msg && msg.id != null ? msg.id.toString() : '0'
+		
 		// 处理发送者信息缺失的后备方案
 		const senderNickname = msg.senderNickname || ''
 		const avatarText = senderNickname ? getAvatarTextUtil(senderNickname) : '?'
 		
 		const uiMessage = {
-			id: msg.id.toString(),
-			messageId: msg.messageId,
-			senderId: msg.senderId.toString(),
-			receiverId: msg.receiverId ? msg.receiverId.toString() : '',
+			id: idStr,
+			messageId: messageIdStr,
+			senderId: senderIdStr,
+			receiverId: receiverIdStr,
 			type: getMessageTypeString(msg.messageType),
 			content: getMessageContent(msg.messageType, content),
-			isSelf: msg.senderId === currentUserId.value,
+			isSelf: senderIdStr === currentUserId.value,
 			time: msg.createTime,
 			timestamp: new Date(msg.createTime).getTime(),
 			showTime: true,
 			avatarText: avatarText,
-			avatarBg: getUserAvatarColor(msg.senderId),
+			avatarBg: getUserAvatarColor(senderIdStr),
 			senderName: senderNickname,
 			status: msg.status === 1 ? 'success' : 'sending'
 		} as MessageItem
@@ -649,11 +640,16 @@
 	 */
 	function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : MessageItem[] {
 		return serviceMessages.map(msg => {
+			const senderIdStr = msg && msg.senderId != null ? msg.senderId.toString() : '0'
+			const receiverIdStr = msg && msg.receiverId != null ? msg.receiverId.toString() : '0'
+			const messageIdStr = msg && msg.messageId != null ? msg.messageId.toString() : '0'
+			const idStr = msg && msg.id != null ? msg.id.toString() : '0'
+			
 			const uiMessage = {
-				id: msg.id.toString(),
-				messageId: msg.messageId,
-				senderId: msg.senderId.toString(),
-				receiverId: msg.receiverId.toString(),
+				id: idStr,
+				messageId: messageIdStr,
+				senderId: senderIdStr,
+				receiverId: receiverIdStr,
 				type: getMessageTypeString(msg.type),
 				content: getServiceMessageContent(msg),
 				isSelf: msg.isSelf,
@@ -774,7 +770,7 @@
 		const parsed = parseRawContent(rawContent)
 		if (parsed && typeof parsed === 'object') {
 			if (parsed.quotedMessageId !== null && parsed.quotedMessageId !== undefined) {
-				target.quoteMessageId = Number(parsed.quotedMessageId)
+				target.quoteMessageId = parsed.quotedMessageId.toString()
 				target.quoteContent = parsed.quotedContent || ''
 				target.quoteSenderName = parsed.quotedSenderName || ''
 			}
@@ -810,7 +806,7 @@
 		}
 
 		const chain : QuoteChainItem[] = []
-		let currentId = msg.quoteMessageId as number
+		let currentId = msg.quoteMessageId as string
 		let currentSender = msg.quoteSenderName || ''
 		let currentContent = msg.quoteContent || ''
 		let depth = 0
@@ -849,11 +845,10 @@
 	}
 	
 	/**
-	/**
 	 * 合并消息（去重）
 	 */
 	function mergeMessages(oldMessages : MessageItem[], newMessages : MessageItem[]) : MessageItem[] {
-		const messageMap = new Map<number, MessageItem>()
+		const messageMap = new Map<string, MessageItem>()
 		
 		// 先添加旧消息
 		oldMessages.forEach(msg => {
@@ -881,8 +876,8 @@
 	 */
 	function handleNewMessage(message : ServiceMessageItem) {
 		// 只处理当前会话的消息
-		const msgConversationId = message.groupId > 0 
-			? message.groupId 
+		const msgConversationId = (message.groupId !== '0' && message.groupId !== '')
+			? message.groupId
 			: (message.isSelf ? message.receiverId : message.senderId)
 		
 		if (msgConversationId !== conversationId.value) {
@@ -1034,29 +1029,6 @@
 	}
 
 	/**
-	 * 创建消息对象 (适配后端接口对接)
-	 */
-	function createMessage(params : any) : MessageItem {
-		return {
-			id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
-			messageId: Date.now(),
-			senderId: params.isSelf ? currentUserId.value.toString() : 'user1',
-			receiverId: chatType.value === 'group' ? groupId.value.toString() : (params.isSelf ? targetId.value.toString() : currentUserId.value.toString()),
-			type: params.type,
-			content: params.content,
-			isSelf: params.isSelf,
-			time: new Date().toLocaleString(),
-			timestamp: Date.now(),
-			showTime: false,
-			avatarText: params.isSelf ? '我' : (params.avatarText || '三'),
-			avatarBg: params.isSelf ? '#5FB6F7' : (params.avatarBg || '#F197BC'),
-			senderName: params.senderName || '',
-			duration: params.duration,
-			poster: params.poster,
-			fileName: params.fileName,
-			fileSize: params.fileSize,
-			address: params.address,
-			isSticker: params.isSticker,
 			status: 'success'
 		} as MessageItem
 	}
@@ -1267,6 +1239,7 @@
 					showTime: true,
 					avatarText: message.avatarText,
 					avatarBg: message.avatarBg,
+					senderName: message.senderName,
 					status: message.status
 				}
 				
@@ -1426,11 +1399,20 @@
 							getReceiverIdForMessage(),
 							getGroupIdForMessage(),
 							fullImageUrl,
-							fullImageUrl,
-							0,
-							0,
+							fullImageUrl,  // 缩略图使用同一个 URL
+							0,  // 宽度(暂不获取)
+							0,  // 高度(暂不获取)
 							imageSize
 						)
+						
+						// 如果是群聊，同时保存到群文件
+						if (chatType.value === 'group') {
+							uploadGroupFile(targetId.value, filePath).then((res : any) => {
+								console.log('[Chat] 图片已保存到群文件:', res)
+							}).catch((err : any) => {
+								console.error('[Chat] 保存图片到群文件失败:', err)
+							})
+						}
 						
 						// 转换并添加到消息列表
 						const uiMessage = {
@@ -1448,7 +1430,7 @@
 							avatarBg: message.avatarBg,
 							status: message.status
 						} as MessageItem
-						
+							
 						messages.value.push(uiMessage)
 						showPlusMenu.value = false
 						
@@ -1789,7 +1771,9 @@
                     success: async (res) => {
                         if (res.confirm) {
                             try {
-                                await recallMessage(msg.messageId)
+                                if (msg.messageId && msg.messageId !== '0') {
+                                    await recallMessage(msg.messageId)
+                                }
                                 
                                 // 更新本地消息状态
                                 const idx = messages.value.findIndex(m => m.id === msg.id)
@@ -1814,7 +1798,9 @@
                     success: async (res) => {
                         if (res.confirm) {
                             try {
-                                await deleteMessage(msg.messageId)
+                                if (msg.messageId && msg.messageId !== '0') {
+                                    await deleteMessage(msg.messageId)
+                                }
                                 
                                 // 从本地消息列表中移除
                                 const idx = messages.value.findIndex(m => m.id === msg.id)
@@ -1876,7 +1862,7 @@
     /**
      * 定位到被引用的消息
      */
-    function scrollToQuotedMessage(quoteMessageId: number) {
+    function scrollToQuotedMessage(quoteMessageId: string) {
         // 查找消息在列表中的索引
         const index = messages.value.findIndex(m => m.messageId === quoteMessageId)
         if (index !== -1) {
