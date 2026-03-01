@@ -127,8 +127,24 @@ function requestInterceptor(config: UTSJSONObject): UTSJSONObject {
  * 严格参考 PC 端 service.ts 的 response 拦截器
  */
 function responseInterceptor(response: any): any {
-	const data = response.data
+	let data = response.data
 	const config = response.config
+	
+	if (data === null || data === undefined) {
+		throw new Error('响应数据为空')
+	}
+	if (typeof data === 'string') {
+		try {
+			data = JSON.parse(data)
+		} catch (e) {
+			// #ifdef H5
+			const raw = (data as string)
+			const snippet = raw.length > 200 ? raw.substring(0, 200) : raw
+			console.error('[request] JSON.parse 失败，响应片段：', snippet)
+			// #endif
+			throw new Error('响应不是有效 JSON')
+		}
+	}
 	
 	// 二进制数据则直接返回（例如 Excel 导出）
 	if (response.request && response.request.responseType === 'arraybuffer') {
@@ -343,8 +359,12 @@ export function request(options: UTSJSONObject): Promise<any> {
 			...config,
 			success: (res) => {
 				try {
-					const data = responseInterceptor(res)
-					resolve(data)
+					const out = responseInterceptor(res)
+					if (out && typeof (out as any).then === 'function') {
+						;(out as Promise<any>).then(resolve).catch(reject)
+					} else {
+						resolve(out)
+					}
 				} catch (e) {
 					reject(e)
 				}

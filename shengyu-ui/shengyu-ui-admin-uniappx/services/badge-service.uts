@@ -374,12 +374,11 @@ export class BadgeService {
     import('../api/badge.uts').then((badgeApi) => {
       badgeApi.getBadgeData().then((response: any) => {
         try {
-          // 检查响应状态
-          if (response.code === 0 && response.data !== null && response.data !== undefined) {
-            const data = response.data
+          const data = response
+          if (data !== null && data !== undefined) {
             
             // 更新总未读数
-            this.badgeData.totalUnread = data.totalUnread || 0
+            this.badgeData.totalUnread = data.unreadCount || 0
             
             // 更新会话角标
             this.badgeData.conversationBadges.clear()
@@ -447,12 +446,11 @@ export class BadgeService {
     import('../api/badge.uts').then((badgeApi) => {
       badgeApi.getBadgeData().then((response: any) => {
         try {
-          // 检查响应状态
-          if (response.code === 0 && response.data !== null && response.data !== undefined) {
-            const data = response.data
+          const data = response
+          if (data !== null && data !== undefined) {
             
             // 更新总未读数
-            this.badgeData.totalUnread = data.totalUnread || 0
+            this.badgeData.totalUnread = data.unreadCount || 0
             
             // 更新会话角标
             this.badgeData.conversationBadges.clear()

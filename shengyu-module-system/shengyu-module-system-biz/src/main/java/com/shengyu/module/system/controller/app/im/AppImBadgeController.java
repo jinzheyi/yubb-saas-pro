@@ -3,6 +3,9 @@ package com.shengyu.module.system.controller.app.im;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.framework.websocket.core.protocol.BadgeUpdateMessage;
+import com.shengyu.module.system.controller.app.im.vo.badge.AppImBadgeRespVO;
+import com.shengyu.module.system.controller.app.im.vo.badge.AppImConversationBadgeRespVO;
+import com.shengyu.module.system.controller.app.im.vo.badge.AppImMenuBadgeRespVO;
 import com.shengyu.module.system.service.im.ImBadgeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,9 +34,25 @@ public class AppImBadgeController {
 
     @GetMapping("/get")
     @Operation(summary = "获取角标数据")
-    public CommonResult<BadgeUpdateMessage> getBadgeData() {
+    public CommonResult<AppImBadgeRespVO> getBadgeData() {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(imBadgeService.getBadgeData(userId));
+
+		BadgeUpdateMessage badgeUpdateMessage = imBadgeService.getBadgeData(userId);
+		AppImBadgeRespVO respVO = new AppImBadgeRespVO();
+		respVO.setUnreadCount(badgeUpdateMessage.getUnreadCount());
+		respVO.setConversationBadges(badgeUpdateMessage.getConversationBadgesList().stream().map(item -> {
+			AppImConversationBadgeRespVO badge = new AppImConversationBadgeRespVO();
+			badge.setConversationId(item.getConversationId());
+			badge.setUnreadCount(item.getUnreadCount());
+			return badge;
+		}).collect(java.util.stream.Collectors.toList()));
+		respVO.setMenuBadges(badgeUpdateMessage.getMenuBadgesList().stream().map(item -> {
+			AppImMenuBadgeRespVO badge = new AppImMenuBadgeRespVO();
+			badge.setMenuId(item.getMenuId());
+			badge.setBadgeCount(item.getBadgeCount());
+			return badge;
+		}).collect(java.util.stream.Collectors.toList()));
+		return success(respVO);
     }
 
 }
