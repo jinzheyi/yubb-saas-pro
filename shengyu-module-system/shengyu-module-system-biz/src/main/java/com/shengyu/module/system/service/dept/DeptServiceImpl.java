@@ -228,6 +228,7 @@ public class DeptServiceImpl implements DeptService {
     }
 
     @Override
+    @DataPermission(enable = false)
     public Map<Long, List<UserDeptRespVO>> getUserDeptMap(Collection<Long> ids) {
         if (CollUtil.isEmpty(ids)) {
             return Collections.emptyMap();

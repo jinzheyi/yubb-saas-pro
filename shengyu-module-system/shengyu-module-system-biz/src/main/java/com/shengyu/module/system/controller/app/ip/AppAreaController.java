@@ -3,6 +3,7 @@ package com.shengyu.module.system.controller.app.ip;
 import cn.hutool.core.lang.Assert;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.ip.core.Area;
 import com.shengyu.framework.ip.core.utils.AreaUtils;
 import com.shengyu.module.system.controller.app.ip.vo.AppAreaNodeRespVO;
@@ -21,6 +22,7 @@ import static com.shengyu.framework.common.pojo.CommonResult.success;
 @RestController
 @RequestMapping("/system/area")
 @Validated
+@DataPermission(enable = false)
 public class AppAreaController {
 
     @GetMapping("/tree")

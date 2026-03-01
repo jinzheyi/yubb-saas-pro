@@ -2,6 +2,7 @@ package com.shengyu.module.system.controller.app.im;
 
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.util.qrcode.QRCodeUtil;
+import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.app.im.vo.group.*;
 import com.shengyu.module.system.service.im.ImGroupService;
@@ -30,6 +31,7 @@ import static com.shengyu.framework.common.pojo.CommonResult.success;
 @RestController
 @RequestMapping("/system/im/group")
 @Validated
+@DataPermission(enable = false)
 public class AppImGroupController {
 
     @Resource

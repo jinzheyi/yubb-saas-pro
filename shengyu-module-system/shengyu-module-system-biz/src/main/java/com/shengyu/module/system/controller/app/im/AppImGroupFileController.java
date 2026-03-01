@@ -2,6 +2,7 @@ package com.shengyu.module.system.controller.app.im;
 
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.module.system.controller.app.im.vo.file.AppImGroupFilePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.file.AppImGroupFileRespVO;
 import com.shengyu.module.system.service.im.ImGroupFileService;
@@ -28,6 +29,7 @@ import static com.shengyu.framework.common.pojo.CommonResult.success;
 @RequestMapping("/system/im/group/file")
 @Validated
 @Slf4j
+@DataPermission(enable = false)
 public class AppImGroupFileController {
 
     @Resource

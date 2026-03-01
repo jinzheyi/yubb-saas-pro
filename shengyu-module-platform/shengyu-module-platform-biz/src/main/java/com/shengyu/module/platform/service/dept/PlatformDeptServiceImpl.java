@@ -149,11 +149,13 @@ public class PlatformDeptServiceImpl implements PlatformDeptService {
     }
 
     @Override
+    @DataPermission(enable = false)
     public PlatformDeptDO getDept(Long id) {
         return platformDeptMapper.selectById(id);
     }
 
     @Override
+    @DataPermission(enable = false)
     public List<PlatformDeptDO> getDeptList(Collection<Long> ids) {
         if (CollUtil.isEmpty(ids)) {
             return Collections.emptyList();

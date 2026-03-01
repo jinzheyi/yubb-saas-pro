@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptListReqVO;
 import com.shengyu.module.system.controller.admin.dept.vo.post.UserPostRespVO;
@@ -36,6 +37,7 @@ import static com.shengyu.framework.common.pojo.CommonResult.success;
 @RestController
 @RequestMapping("/system/dept")
 @Validated
+@DataPermission(enable = false)
 public class AppDeptController {
 
     @Resource

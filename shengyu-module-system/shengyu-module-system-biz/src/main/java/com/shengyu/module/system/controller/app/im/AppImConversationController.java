@@ -1,6 +1,7 @@
 package com.shengyu.module.system.controller.app.im;
 
 import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
@@ -28,6 +29,7 @@ import static com.shengyu.framework.common.pojo.CommonResult.success;
 @RestController
 @RequestMapping("/system/im/conversation")
 @Validated
+@DataPermission(enable = false)
 public class AppImConversationController {
 
     @Resource

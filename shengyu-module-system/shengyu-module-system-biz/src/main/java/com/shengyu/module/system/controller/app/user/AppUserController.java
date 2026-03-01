@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserPageReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
@@ -38,6 +39,7 @@ import static com.shengyu.framework.common.pojo.CommonResult.success;
 @RestController
 @RequestMapping("/system/user")
 @Validated
+@DataPermission(enable = false)
 public class AppUserController {
 
     @Resource

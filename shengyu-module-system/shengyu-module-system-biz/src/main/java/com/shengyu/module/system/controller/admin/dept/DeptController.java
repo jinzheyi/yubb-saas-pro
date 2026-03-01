@@ -3,6 +3,7 @@ package com.shengyu.module.system.controller.admin.dept;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptListReqVO;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptRespVO;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.DeptSaveReqVO;
@@ -71,6 +72,7 @@ public class DeptController {
     }
 
     @GetMapping(value = {"/list-all-simple", "/simple-list"})
+    @DataPermission(enable = false)
     @Operation(summary = "获取部门精简信息列表", description = "只包含被开启的部门，主要用于前端的下拉选项")
     public CommonResult<List<DeptSimpleRespVO>> getSimpleDeptList() {
         List<DeptDO> list = deptService.getDeptList(

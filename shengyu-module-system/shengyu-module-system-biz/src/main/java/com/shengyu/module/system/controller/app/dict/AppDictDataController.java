@@ -4,6 +4,7 @@ import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.module.platform.api.dict.dto.DictDataRespDTO;
 import com.shengyu.module.system.controller.app.dict.vo.AppDictDataRespVO;
 import com.shengyu.module.system.service.dict.DictDataApiService;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/system/dict-data")
 @Validated
+@DataPermission(enable = false)
 public class AppDictDataController {
 
     @Resource

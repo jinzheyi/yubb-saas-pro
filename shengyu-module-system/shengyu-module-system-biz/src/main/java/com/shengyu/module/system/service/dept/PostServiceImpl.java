@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.common.enums.CommonStatusEnum;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.module.system.controller.admin.dept.vo.post.PostPageReqVO;
 import com.shengyu.module.system.controller.admin.dept.vo.post.PostSaveReqVO;
 import com.shengyu.module.system.controller.admin.dept.vo.post.UserPostRespVO;
@@ -157,6 +158,7 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @DataPermission(enable = false)
     public Map<Long, List<UserPostRespVO>> getUserPostMap(Collection<Long> ids) {
         if (CollUtil.isEmpty(ids)) {
             return Collections.emptyMap();
