@@ -312,13 +312,16 @@ export class BadgeService {
    */
   private clearUnreadOnServer(conversationId: number): void {
     // 动态导入API函数以避免循环依赖
-    import { clearUnreadCount } from '../api/conversation.uts'
-    
-    // 将number转换为string（API要求）
-    const conversationIdStr = conversationId.toString()
-    
-    clearUnreadCount(conversationIdStr).then((response: any) => {
-      console.log(`[BadgeService] 清空会话 ${conversationId} 服务器端未读数成功`)
+    import('../api/conversation.uts').then((conversationApi) => {
+      // 将number转换为string（API要求）
+      const conversationIdStr = conversationId.toString()
+      
+      conversationApi.clearUnreadCount(conversationIdStr).then((response: any) => {
+        console.log(`[BadgeService] 清空会话 ${conversationId} 服务器端未读数成功`)
+      }).catch((error: any) => {
+        console.error(`[BadgeService] 清空会话 ${conversationId} 服务器端未读数失败:`, error)
+        // 失败不影响本地角标显示
+      })
     }).catch((error: any) => {
       console.error(`[BadgeService] 清空会话 ${conversationId} 服务器端未读数失败:`, error)
       // 失败不影响本地角标显示
@@ -368,56 +371,59 @@ export class BadgeService {
     console.log('[BadgeService] 从服务器同步角标数据')
     
     // 动态导入API函数以避免循环依赖
-    import { getBadgeData } from '../api/badge.uts'
-    
-    getBadgeData().then((response: any) => {
-      try {
-        // 检查响应状态
-        if (response.code === 0 && response.data !== null && response.data !== undefined) {
-          const data = response.data
-          
-          // 更新总未读数
-          this.badgeData.totalUnread = data.totalUnread || 0
-          
-          // 更新会话角标
-          this.badgeData.conversationBadges.clear()
-          if (data.conversationBadges !== null && data.conversationBadges !== undefined) {
-            const conversationBadges = data.conversationBadges as ConversationBadge[]
-            conversationBadges.forEach((badge: ConversationBadge) => {
-              this.badgeData.conversationBadges.set(badge.conversationId, badge.unreadCount)
-            })
+    import('../api/badge.uts').then((badgeApi) => {
+      badgeApi.getBadgeData().then((response: any) => {
+        try {
+          // 检查响应状态
+          if (response.code === 0 && response.data !== null && response.data !== undefined) {
+            const data = response.data
+            
+            // 更新总未读数
+            this.badgeData.totalUnread = data.totalUnread || 0
+            
+            // 更新会话角标
+            this.badgeData.conversationBadges.clear()
+            if (data.conversationBadges !== null && data.conversationBadges !== undefined) {
+              const conversationBadges = data.conversationBadges as ConversationBadge[]
+              conversationBadges.forEach((badge: ConversationBadge) => {
+                this.badgeData.conversationBadges.set(badge.conversationId, badge.unreadCount)
+              })
+            }
+            
+            // 更新菜单角标
+            this.badgeData.menuBadges.clear()
+            if (data.menuBadges !== null && data.menuBadges !== undefined) {
+              const menuBadges = data.menuBadges as MenuBadge[]
+              menuBadges.forEach((badge: MenuBadge) => {
+                this.badgeData.menuBadges.set(badge.menuId, badge.badgeCount)
+              })
+            }
+            
+            // 更新时间戳
+            this.badgeData.lastUpdateTime = Date.now()
+            
+            // 检查并清理过多的会话角标缓存
+            this.pruneConversationBadges()
+            
+            // 保存到本地存储
+            this.saveToLocal()
+            
+            // 通知所有监听器
+            this.notifyListeners()
+            
+            console.log('[BadgeService] 从服务器同步角标数据成功')
+          } else {
+            console.error('[BadgeService] 服务器返回错误:', response)
+            // 使用本地缓存的数据
           }
-          
-          // 更新菜单角标
-          this.badgeData.menuBadges.clear()
-          if (data.menuBadges !== null && data.menuBadges !== undefined) {
-            const menuBadges = data.menuBadges as MenuBadge[]
-            menuBadges.forEach((badge: MenuBadge) => {
-              this.badgeData.menuBadges.set(badge.menuId, badge.badgeCount)
-            })
-          }
-          
-          // 更新最后更新时间
-          this.badgeData.lastUpdateTime = Date.now()
-          
-          // 检查并清理过多的会话角标缓存
-          this.pruneConversationBadges()
-          
-          // 保存到本地存储
-          this.saveToLocal()
-          
-          // 通知所有监听器
-          this.notifyListeners()
-          
-          console.log('[BadgeService] 从服务器同步角标数据成功')
-        } else {
-          console.error('[BadgeService] 服务器返回错误:', response)
+        } catch (e) {
+          console.error('[BadgeService] 解析服务器响应失败:', e)
           // 使用本地缓存的数据
         }
-      } catch (e) {
-        console.error('[BadgeService] 解析服务器响应失败:', e)
+      }).catch((error: any) => {
+        console.error('[BadgeService] 从服务器同步角标数据失败:', error)
         // 使用本地缓存的数据
-      }
+      })
     }).catch((error: any) => {
       console.error('[BadgeService] 从服务器同步角标数据失败:', error)
       // 使用本地缓存的数据
@@ -438,58 +444,66 @@ export class BadgeService {
     })
     
     // 动态导入API函数以避免循环依赖
-    import { getBadgeData } from '../api/badge.uts'
-    
-    getBadgeData().then((response: any) => {
-      try {
-        // 检查响应状态
-        if (response.code === 0 && response.data !== null && response.data !== undefined) {
-          const data = response.data
-          
-          // 更新总未读数
-          this.badgeData.totalUnread = data.totalUnread || 0
-          
-          // 更新会话角标
-          this.badgeData.conversationBadges.clear()
-          if (data.conversationBadges !== null && data.conversationBadges !== undefined) {
-            const conversationBadges = data.conversationBadges as ConversationBadge[]
-            conversationBadges.forEach((badge: ConversationBadge) => {
-              this.badgeData.conversationBadges.set(badge.conversationId, badge.unreadCount)
+    import('../api/badge.uts').then((badgeApi) => {
+      badgeApi.getBadgeData().then((response: any) => {
+        try {
+          // 检查响应状态
+          if (response.code === 0 && response.data !== null && response.data !== undefined) {
+            const data = response.data
+            
+            // 更新总未读数
+            this.badgeData.totalUnread = data.totalUnread || 0
+            
+            // 更新会话角标
+            this.badgeData.conversationBadges.clear()
+            if (data.conversationBadges !== null && data.conversationBadges !== undefined) {
+              const conversationBadges = data.conversationBadges as ConversationBadge[]
+              conversationBadges.forEach((badge: ConversationBadge) => {
+                this.badgeData.conversationBadges.set(badge.conversationId, badge.unreadCount)
+              })
+            }
+            
+            // 更新菜单角标
+            this.badgeData.menuBadges.clear()
+            if (data.menuBadges !== null && data.menuBadges !== undefined) {
+              const menuBadges = data.menuBadges as MenuBadge[]
+              menuBadges.forEach((badge: MenuBadge) => {
+                this.badgeData.menuBadges.set(badge.menuId, badge.badgeCount)
+              })
+            }
+            
+            // 更新最后更新时间
+            this.badgeData.lastUpdateTime = Date.now()
+            
+            // 检查并清理过多的会话角标缓存
+            this.pruneConversationBadges()
+            
+            // 保存到本地存储
+            this.saveToLocal()
+            
+            // 通知所有监听器
+            this.notifyListeners()
+            
+            console.log('[BadgeService] 强制同步角标数据成功')
+            
+            // 隐藏加载提示并显示成功消息
+            uni.hideLoading()
+            uni.showToast({
+              title: '同步成功',
+              icon: 'success',
+              duration: 1500
+            })
+          } else {
+            console.error('[BadgeService] 服务器返回错误:', response)
+            uni.hideLoading()
+            uni.showToast({
+              title: '同步失败',
+              icon: 'none',
+              duration: 2000
             })
           }
-          
-          // 更新菜单角标
-          this.badgeData.menuBadges.clear()
-          if (data.menuBadges !== null && data.menuBadges !== undefined) {
-            const menuBadges = data.menuBadges as MenuBadge[]
-            menuBadges.forEach((badge: MenuBadge) => {
-              this.badgeData.menuBadges.set(badge.menuId, badge.badgeCount)
-            })
-          }
-          
-          // 更新最后更新时间
-          this.badgeData.lastUpdateTime = Date.now()
-          
-          // 检查并清理过多的会话角标缓存
-          this.pruneConversationBadges()
-          
-          // 保存到本地存储
-          this.saveToLocal()
-          
-          // 通知所有监听器
-          this.notifyListeners()
-          
-          console.log('[BadgeService] 强制同步角标数据成功')
-          
-          // 隐藏加载提示并显示成功消息
-          uni.hideLoading()
-          uni.showToast({
-            title: '同步成功',
-            icon: 'success',
-            duration: 1500
-          })
-        } else {
-          console.error('[BadgeService] 服务器返回错误:', response)
+        } catch (e) {
+          console.error('[BadgeService] 解析服务器响应失败:', e)
           uni.hideLoading()
           uni.showToast({
             title: '同步失败',
@@ -497,15 +511,15 @@ export class BadgeService {
             duration: 2000
           })
         }
-      } catch (e) {
-        console.error('[BadgeService] 解析服务器响应失败:', e)
+      }).catch((error: any) => {
+        console.error('[BadgeService] 强制同步角标数据失败:', error)
         uni.hideLoading()
         uni.showToast({
           title: '同步失败',
           icon: 'none',
           duration: 2000
         })
-      }
+      })
     }).catch((error: any) => {
       console.error('[BadgeService] 强制同步角标数据失败:', error)
       uni.hideLoading()
