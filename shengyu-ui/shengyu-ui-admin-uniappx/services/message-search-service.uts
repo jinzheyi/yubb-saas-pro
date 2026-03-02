@@ -17,7 +17,7 @@ import { request } from '@/utils/request.uts'
 export type SearchResultItem = {
   id: string
   messageId: string
-  conversationId: string
+  chatId: string
   conversationName: string
   conversationAvatar: string
   senderId: string
@@ -33,7 +33,7 @@ export type SearchResultItem = {
  */
 export type SearchOptions = {
   keyword: string
-  conversationId?: string
+  chatId?: string
   messageType?: string
   startTime?: number
   endTime?: number
@@ -112,8 +112,8 @@ export class MessageSearchService {
         pageSize: options.pageSize || 20
       }
       
-      if (options.conversationId !== undefined && options.conversationId !== null) {
-        params.conversationId = options.conversationId
+      if (options.chatId !== undefined && options.chatId !== null) {
+        params.chatId = options.chatId
       }
       
       if (options.messageType !== undefined && options.messageType !== null) {
@@ -129,7 +129,7 @@ export class MessageSearchService {
       }
       
       const response = await request({
-        url: '/system/im-message/search',
+        url: '/system/im/message/search',
         method: 'GET',
         params: params
       })
@@ -206,7 +206,7 @@ export class MessageSearchService {
     return {
       id: data.id != null ? data.id.toString() : '0',
       messageId: data.messageId != null ? data.messageId.toString() : '0',
-      conversationId: data.conversationId != null ? data.conversationId.toString() : '0',
+      chatId: data.chatId != null ? data.chatId.toString() : '0',
       conversationName: data.conversationName || '',
       conversationAvatar: data.conversationAvatar || '',
       senderId: data.senderId != null ? data.senderId.toString() : '0',
@@ -247,9 +247,9 @@ export class MessageSearchService {
    */
   public filterByConversation(
     results: SearchResultItem[],
-    conversationId: string
+    chatId: string
   ): SearchResultItem[] {
-    return results.filter(item => item.conversationId === conversationId)
+    return results.filter(item => item.chatId === chatId)
   }
 }
 

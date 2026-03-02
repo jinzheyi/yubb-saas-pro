@@ -52,7 +52,7 @@ export class ReadReceiptService {
   /**
    * 标记消息为已读（进入会话时调用）
    */
-  public async markMessagesAsRead(conversationId: string, messageIds: string[]): Promise<boolean> {
+  public async markMessagesAsRead(chatId: string, messageIds: string[]): Promise<boolean> {
     if (messageIds.length === 0) {
       return true
     }
@@ -60,17 +60,17 @@ export class ReadReceiptService {
     try {
       // 调用后端 API 标记已读
       const response = await request({
-        url: '/system/im-message/mark-read',
+        url: '/system/im/message/mark-read',
         method: 'POST',
         data: {
-          conversationId: conversationId,
+          chatId: chatId,
           messageIds: messageIds
         }
       })
       
       if (response.code === 0) {
         // 发送已读回执到发送者
-        this.sendReadReceipt(conversationId, messageIds)
+        this.sendReadReceipt(chatId, messageIds)
         return true
       }
       return false
@@ -83,11 +83,11 @@ export class ReadReceiptService {
   /**
    * 发送已读回执
    */
-  private sendReadReceipt(conversationId: string, messageIds: string[]): void {
+  private sendReadReceipt(chatId: string, messageIds: string[]): void {
     // 通过 MessageService 发送已读回执
     // 注意：这里需要知道接收者ID，实际应该从会话信息中获取
-    // 简化处理：使用 conversationId 作为 receiverId
-    messageService.sendReadReceipt(conversationId, messageIds)
+    // 简化处理：使用 chatId 作为 receiverId
+    messageService.sendReadReceipt(chatId, messageIds)
   }
   
   /**
@@ -133,7 +133,7 @@ export class ReadReceiptService {
   public async getReadDetail(messageId: string): Promise<ReadDetailItem[]> {
     try {
       const response = await request({
-        url: '/system/im-message/read-detail',
+        url: '/system/im/message/read-detail',
         method: 'GET',
         params: {
           messageId: messageId
@@ -161,7 +161,7 @@ export class ReadReceiptService {
   public async getUnreadDetail(messageId: string): Promise<ReadDetailItem[]> {
     try {
       const response = await request({
-        url: '/system/im-message/unread-detail',
+        url: '/system/im/message/unread-detail',
         method: 'GET',
         params: {
           messageId: messageId
@@ -186,14 +186,11 @@ export class ReadReceiptService {
   /**
    * 批量标记会话消息为已读
    */
-  public async markConversationAsRead(conversationId: string): Promise<boolean> {
+  public async markConversationAsRead(chatId: string): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-conversation/mark-read',
-        method: 'POST',
-        data: {
-          conversationId: conversationId
-        }
+        url: '/system/im/conversation/clear-unread/' + chatId,
+        method: 'PUT'
       })
       
       return response.code === 0
@@ -206,13 +203,13 @@ export class ReadReceiptService {
   /**
    * 获取会话的未读消息列表
    */
-  public async getUnreadMessages(conversationId: string): Promise<string[]> {
+  public async getUnreadMessages(chatId: string): Promise<string[]> {
     try {
       const response = await request({
-        url: '/system/im-message/unread-list',
+        url: '/system/im/message/unread-list',
         method: 'GET',
         params: {
-          conversationId: conversationId
+          chatId: chatId
         }
       })
       

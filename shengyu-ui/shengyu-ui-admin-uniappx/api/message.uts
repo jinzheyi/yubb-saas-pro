@@ -6,13 +6,13 @@ import { request } from '../utils/request.uts'
 
 /**
  * 获取消息列表（分页）
- * @param conversationId 会话ID
+ * @param chatId ChatID
  * @param pageNo 页码（默认1）
  * @param pageSize 每页数量（默认20）
  */
-export function getMessageList(conversationId: string, pageNo: number = 1, pageSize: number = 20): Promise<any> {
+export function getMessageList(chatId: string, pageNo: number = 1, pageSize: number = 20): Promise<any> {
   return request({
-    url: `/system/im/message/list-by-conversation?conversationId=${conversationId}&pageNo=${pageNo}&pageSize=${pageSize}`,
+    url: `/system/im/message/list-by-chat?chatId=${chatId}&pageNo=${pageNo}&pageSize=${pageSize}`,
     method: 'GET'
   })
 }
@@ -63,7 +63,7 @@ export function getUnreadCount(): Promise<any> {
 
 /**
  * 搜索聊天记录
- * @param conversationId 会话ID
+ * @param chatId ChatID
  * @param keyword 搜索关键词
  * @param startTime 开始时间（可选）
  * @param endTime 结束时间（可选）
@@ -71,14 +71,14 @@ export function getUnreadCount(): Promise<any> {
  * @param pageSize 每页数量（默认20）
  */
 export function searchMessages(
-  conversationId: string,
+  chatId: string,
   keyword: string,
   startTime?: string,
   endTime?: string,
   pageNo: number = 1,
   pageSize: number = 20
 ): Promise<any> {
-  let url = `/system/im/message/search?conversationId=${conversationId}&keyword=${encodeURIComponent(keyword)}&pageNo=${pageNo}&pageSize=${pageSize}`
+  let url = `/system/im/message/search?chatId=${chatId}&keyword=${encodeURIComponent(keyword)}&pageNo=${pageNo}&pageSize=${pageSize}`
   if (startTime) {
     url += `&startTime=${encodeURIComponent(startTime)}`
   }

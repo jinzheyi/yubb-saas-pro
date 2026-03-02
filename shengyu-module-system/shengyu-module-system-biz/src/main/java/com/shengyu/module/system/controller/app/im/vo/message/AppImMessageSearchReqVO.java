@@ -19,9 +19,9 @@ import static com.shengyu.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH
 @ToString(callSuper = true)
 public class AppImMessageSearchReqVO extends PageParam {
 
-    @Schema(description = "会话ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "会话ID不能为空")
-    private Long conversationId;
+    @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @NotNull(message = "ChatID不能为空")
+    private Long chatId;
 
     @Schema(description = "搜索关键词", requiredMode = Schema.RequiredMode.REQUIRED, example = "会议")
     @NotBlank(message = "搜索关键词不能为空")

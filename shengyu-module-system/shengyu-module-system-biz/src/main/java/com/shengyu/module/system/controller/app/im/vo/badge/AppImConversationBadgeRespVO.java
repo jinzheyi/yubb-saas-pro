@@ -7,8 +7,8 @@ import lombok.Data;
 @Data
 public class AppImConversationBadgeRespVO {
 
-    @Schema(description = "会话 ID", requiredMode = Schema.RequiredMode.REQUIRED)
-    private Long conversationId;
+    @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED)
+    private Long chatId;
 
     @Schema(description = "未读数", requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer unreadCount;

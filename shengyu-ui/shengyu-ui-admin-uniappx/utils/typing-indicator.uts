@@ -125,12 +125,12 @@ export class TypingIndicator {
   /**
    * 接收正在输入状态
    */
-  public receiveTyping(conversationId: string, userId: string, userName: string): void {
+  public receiveTyping(chatId: string, userId: string, userName: string): void {
     // 获取或创建会话的正在输入列表
-    let statusList = this.typingStatus.get(conversationId)
+    let statusList = this.typingStatus.get(chatId)
     if (statusList === null || statusList === undefined) {
       statusList = []
-      this.typingStatus.set(conversationId, statusList)
+      this.typingStatus.set(chatId, statusList)
     }
     
     // 查找是否已存在该用户的状态
@@ -150,14 +150,14 @@ export class TypingIndicator {
       statusList.push(newStatus)
     }
     
-    console.log('[TypingIndicator] 接收正在输入状态, conversationId:', conversationId, 'userName:', userName)
+    console.log('[TypingIndicator] 接收正在输入状态, chatId:', chatId, 'userName:', userName)
   }
   
   /**
    * 获取会话的正在输入状态文本
    */
-  public getTypingText(conversationId: string, isGroup: boolean): string {
-    const statusList = this.typingStatus.get(conversationId)
+  public getTypingText(chatId: string, isGroup: boolean): string {
+    const statusList = this.typingStatus.get(chatId)
     
     if (statusList === null || statusList === undefined || statusList.length === 0) {
       return ''
@@ -192,8 +192,8 @@ export class TypingIndicator {
   /**
    * 清除会话的正在输入状态
    */
-  public clearTyping(conversationId: string): void {
-    this.typingStatus.delete(conversationId)
+  public clearTyping(chatId: string): void {
+    this.typingStatus.delete(chatId)
   }
   
   /**
@@ -211,16 +211,16 @@ export class TypingIndicator {
   private cleanupExpiredStatus(): void {
     const now = Date.now()
     
-    this.typingStatus.forEach((statusList, conversationId) => {
+    this.typingStatus.forEach((statusList, chatId) => {
       // 过滤掉超时的状态
       const activeStatus = statusList.filter(s => now - s.timestamp < this.TYPING_TIMEOUT)
       
       if (activeStatus.length === 0) {
         // 如果没有活跃状态，删除整个会话
-        this.typingStatus.delete(conversationId)
+        this.typingStatus.delete(chatId)
       } else if (activeStatus.length < statusList.length) {
         // 如果有状态被过滤，更新列表
-        this.typingStatus.set(conversationId, activeStatus)
+        this.typingStatus.set(chatId, activeStatus)
       }
     })
   }

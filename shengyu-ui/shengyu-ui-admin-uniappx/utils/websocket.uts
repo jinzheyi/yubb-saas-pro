@@ -156,6 +156,8 @@ export class WebSocketManager {
       console.log('[WebSocket] Token 不存在，跳过连接')
       return
     }
+
+    console.log('[WebSocket] connect() token length:', token.length)
     
     console.log('[WebSocket] 开始连接:', this.wsUrl)
     this.setState(WebSocketState.CONNECTING)
@@ -248,6 +250,27 @@ export class WebSocketManager {
       const messageType = message.header.messageType as MessageType
       
       console.log('[WebSocket] 收到消息:', messageType)
+
+	  // 打印业务消息概要，便于定位服务端是否返回错误/ACK
+	  if (messageType !== MessageType.AUTH_RESP
+		  && messageType !== MessageType.HEARTBEAT_RESP
+		  && messageType !== MessageType.CLOSE) {
+		try {
+			const header = message.header || {}
+			const body = message.body || {}
+			console.log('[WebSocket] 收到业务消息概要:', {
+				messageType: header.messageType,
+				messageId: header.messageId,
+				senderId: header.senderId,
+				receiverId: header.receiverId,
+				groupId: header.groupId,
+				tenantId: header.tenantId,
+				bodyKeys: body && typeof body === 'object' ? Object.keys(body) : typeof body
+			})
+		} catch (e) {
+			console.log('[WebSocket] 收到业务消息概要解析失败:', e)
+		}
+	  }
       
       // 处理系统消息
       if (messageType === MessageType.AUTH_RESP) {
@@ -271,7 +294,7 @@ export class WebSocketManager {
    */
   private handleAuthResponse(message: any): void {
     const success = message.body.success as boolean
-    
+
     if (success) {
       console.log('[WebSocket] 认证成功')
       this.authenticated = true
@@ -286,22 +309,9 @@ export class WebSocketManager {
       this.syncBadgeData()
       
     } else {
-      const errorMsg = message.body.message as string
-      console.error('[WebSocket] 认证失败:', errorMsg)
+      console.error('[WebSocket] 认证失败:', message.body)
+      console.error('[WebSocket] 认证失败后状态:', { state: this.state, authenticated: this.authenticated })
       this.close()
-      
-      // Token 无效或已过期，清除本地缓存
-      if (errorMsg.indexOf('Token') > -1 || errorMsg.indexOf('token') > -1 || 
-          errorMsg.indexOf('过期') > -1 || errorMsg.indexOf('无效') > -1) {
-        console.log('[WebSocket] Token 无效，清除本地缓存')
-        
-        // 动态导入 clearUserCache 避免循环依赖
-        import('../store/user.uts').then((userModule) => {
-          userModule.clearUserCache()
-        }).catch((e) => {
-          console.error('[WebSocket] 清除用户缓存失败:', e)
-        })
-      }
     }
   }
   
@@ -474,6 +484,14 @@ export class WebSocketManager {
    * 发送消息
    */
   public send(message: any): void {
+    try {
+      const mt = message && message.header ? message.header.messageType : undefined
+      const mid = message && message.header ? message.header.messageId : undefined
+      console.log('[WebSocket] send() attempt:', { state: this.state, authenticated: this.authenticated, messageType: mt, messageId: mid })
+    } catch (e) {
+      console.log('[WebSocket] send() attempt: <unable to inspect message>', e)
+    }
+
     if (!this.authenticated) {
       console.log('[WebSocket] 未认证，消息加入队列')
       this.messageQueue.push(message)
@@ -499,17 +517,45 @@ export class WebSocketManager {
     }
     
     try {
+      let parsedType: any = undefined
+      let parsedId: any = undefined
+	  let parsedHeader: any = undefined
+      try {
+        const parsed = JSON.parse(data)
+        parsedType = parsed && parsed.header ? parsed.header.messageType : undefined
+        parsedId = parsed && parsed.header ? parsed.header.messageId : undefined
+		parsedHeader = parsed && parsed.header ? parsed.header : undefined
+      } catch (e) {
+        // ignore
+      }
+
+	  // 仅对业务消息打印概要（避免图片/文件过大）
+	  if (parsedType !== null && parsedType !== undefined && typeof parsedType === 'number' && parsedType >= 100) {
+		try {
+			console.log('[WebSocket] sendRaw business header:', {
+				messageType: parsedHeader ? parsedHeader.messageType : parsedType,
+				messageId: parsedHeader ? parsedHeader.messageId : parsedId,
+				senderId: parsedHeader ? parsedHeader.senderId : undefined,
+				receiverId: parsedHeader ? parsedHeader.receiverId : undefined,
+				groupId: parsedHeader ? parsedHeader.groupId : undefined,
+				tenantId: parsedHeader ? parsedHeader.tenantId : undefined
+			})
+		} catch (e) {
+			console.log('[WebSocket] sendRaw business header log failed:', e)
+		}
+	  }
+
       this.ws.send({
         data: data,
         success: () => {
-          console.log('[WebSocket] 消息发送成功')
+          console.log('[WebSocket] 消息发送成功', { messageType: parsedType, messageId: parsedId })
         },
         fail: (err) => {
-          console.error('[WebSocket] 消息发送失败:', err)
+          console.error('[WebSocket] 消息发送失败:', err, { messageType: parsedType, messageId: parsedId })
         }
       })
     } catch (e) {
-      console.error('[WebSocket] 消息发送异常:', e)
+      console.error('[WebSocket] 发送异常:', e)
     }
   }
   
@@ -520,8 +566,8 @@ export class WebSocketManager {
     if (this.messageQueue.length === 0) {
       return
     }
-    
-    console.log(`[WebSocket] 发送队列中的 ${this.messageQueue.length} 条消息`)
+
+    console.log(`[WebSocket] 发送队列中的 ${this.messageQueue.length} 条消息`, { state: this.state, authenticated: this.authenticated })
     
     while (this.messageQueue.length > 0) {
       const message = this.messageQueue.shift()

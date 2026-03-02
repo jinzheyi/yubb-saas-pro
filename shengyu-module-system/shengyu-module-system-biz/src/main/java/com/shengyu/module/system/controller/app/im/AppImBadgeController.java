@@ -44,7 +44,7 @@ public class AppImBadgeController {
 		respVO.setUnreadCount(badgeUpdateMessage.getUnreadCount());
 		respVO.setConversationBadges(badgeUpdateMessage.getConversationBadgesList().stream().map(item -> {
 			AppImConversationBadgeRespVO badge = new AppImConversationBadgeRespVO();
-			badge.setConversationId(item.getConversationId());
+			badge.setChatId(item.getConversationId());
 			badge.setUnreadCount(item.getUnreadCount());
 			return badge;
 		}).collect(java.util.stream.Collectors.toList()));

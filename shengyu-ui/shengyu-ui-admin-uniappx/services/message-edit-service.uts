@@ -96,7 +96,7 @@ export class MessageEditService {
       }
       
       const response = await request({
-        url: '/system/im-message/edit',
+        url: '/system/im/message/edit',
         method: 'POST',
         data: {
           messageId: messageId,
@@ -131,7 +131,7 @@ export class MessageEditService {
   public async getEditHistory(messageId: string): Promise<EditHistory[]> {
     try {
       const response = await request({
-        url: '/system/im-message/edit-history',
+        url: '/system/im/message/edit-history',
         method: 'GET',
         params: {
           messageId: messageId

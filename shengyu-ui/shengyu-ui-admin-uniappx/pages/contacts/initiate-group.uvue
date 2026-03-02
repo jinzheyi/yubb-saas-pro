@@ -340,8 +340,8 @@
 			const conversationResult = await createConversation(conversationData)
 			console.log('[InitiateGroup] 创建会话成功:', conversationResult)
 			
-			// 获取会话ID
-			const conversationId = conversationResult.id || conversationResult.data?.id || conversationResult
+			// 获取会话ID (chatId) - 后端返回 AppImConversationRespVO，字段名为 chatId
+			const chatId = conversationResult.data?.chatId || conversationResult.chatId || conversationResult
 			
 			uni.showToast({
 				title: '创建成功',
@@ -349,10 +349,10 @@
 				duration: 1000
 			})
 			
-			// 跳转到群聊页面（包含 conversationId）
+			// 跳转到群聊页面（包含 chatId）
 			setTimeout(() => {
 				uni.redirectTo({
-					url: `/pages/message/chat?type=group&groupId=${groupId}&conversationId=${conversationId}&name=${encodeURIComponent(groupName)}&memberCount=${selectedMembers.length}`
+					url: `/pages/message/chat?type=group&groupId=${groupId}&chatId=${chatId}&name=${encodeURIComponent(groupName)}&memberCount=${selectedMembers.length}`
 				})
 				
 				// 清空选择状态

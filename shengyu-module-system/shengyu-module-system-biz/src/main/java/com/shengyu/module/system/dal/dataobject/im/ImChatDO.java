@@ -10,44 +10,26 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-/**
- * IM 序列号 DO
- * 
- * 对应表: im_sequence
- * 功能: 消息序列号生成,用于消息排序和去重
- *
- * @author 圣钰科技
- */
-@TableName(value = "im_sequence", autoResultMap = true)
-@KeySequence("im_sequence_seq")
+@TableName(value = "im_chat", autoResultMap = true)
+@KeySequence("im_chat_seq")
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ImSequenceDO extends TenantBaseDO {
+public class ImChatDO extends TenantBaseDO {
 
-    /**
-     * 主键ID
-     */
     @TableId
     private Long id;
 
-    /**
-     * 序列号类型
-     * 
-     * 1-消息序列号
-     */
-    private Integer sequenceType;
+    private Integer chatType;
 
-    /**
-     * 当前序列号值
-     */
-    private Long currentValue;
+    private Long singleUser1;
 
-    /**
-     * 步长
-     */
-    private Integer step;
+    private Long singleUser2;
+
+    private Long groupId;
+
+    private Integer status;
 
 }

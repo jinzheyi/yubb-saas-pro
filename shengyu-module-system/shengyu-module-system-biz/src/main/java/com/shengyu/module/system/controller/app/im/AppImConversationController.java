@@ -73,29 +73,29 @@ public class AppImConversationController {
 
     @DeleteMapping("/delete")
     @Operation(summary = "删除会话")
-    @Parameter(name = "id", description = "会话ID", required = true)
-    public CommonResult<Boolean> deleteConversation(@RequestParam("id") Long id) {
+    @Parameter(name = "chatId", description = "ChatID", required = true)
+    public CommonResult<Boolean> deleteConversation(@RequestParam("chatId") Long chatId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        conversationService.deleteConversation(userId, id);
+        conversationService.deleteConversation(userId, chatId);
         return success(true);
     }
 
     @PutMapping("/mark-read")
     @Operation(summary = "标记会话已读")
-    @Parameter(name = "id", description = "会话ID", required = true)
-    public CommonResult<Boolean> markConversationRead(@RequestParam("id") Long id) {
+    @Parameter(name = "chatId", description = "ChatID", required = true)
+    public CommonResult<Boolean> markConversationRead(@RequestParam("chatId") Long chatId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        conversationService.markConversationRead(userId, id);
+        conversationService.markConversationRead(userId, chatId);
         return success(true);
     }
 
-    @PutMapping("/clear-unread/{id}")
+    @PutMapping("/clear-unread/{chatId}")
     @Operation(summary = "清空会话未读数")
-    @Parameter(name = "id", description = "会话ID", required = true)
-    public CommonResult<Boolean> clearUnread(@PathVariable("id") Long id) {
+    @Parameter(name = "chatId", description = "ChatID", required = true)
+    public CommonResult<Boolean> clearUnread(@PathVariable("chatId") Long chatId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         // 清空数据库中的未读数
-        conversationService.markConversationRead(userId, id);
+        conversationService.markConversationRead(userId, chatId);
         // 推送角标更新到用户的其他设备
         imBadgeService.pushBadgeUpdate(userId);
         return success(true);

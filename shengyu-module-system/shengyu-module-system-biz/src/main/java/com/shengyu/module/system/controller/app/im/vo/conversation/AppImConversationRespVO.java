@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
 @Data
 public class AppImConversationRespVO {
 
-    @Schema(description = "会话ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    private Long id;
+    @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    private Long chatId;
 
     @Schema(description = "目标ID(单聊为对方用户ID,群聊为群ID)", requiredMode = Schema.RequiredMode.REQUIRED, example = "100")
     private Long targetId;

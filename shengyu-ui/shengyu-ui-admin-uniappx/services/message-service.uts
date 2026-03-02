@@ -62,22 +62,23 @@ export type MessageItem = {
 
 /**
  * 会话项（用于 UI 显示）
+ * 字段名与后端 AppImConversationRespVO 保持一致
  */
 export type ConversationItem = {
-  id: string
-  type: number  // 1-单聊 2-群聊
-  targetId: string
-  name: string
-  avatar: string
+  chatId: string           // 对应后端 chatId
+  conversationType: number  // 1-单聊 2-群聊，对应后端 conversationType
+  targetId: string         // 对应后端 targetId
+  targetName: string       // 对应后端 targetName
+  targetAvatar: string     // 对应后端 targetAvatar
   avatarText: string
   avatarBg: string
-  lastMessage: string
-  lastTime: string
-  timestamp: number
-  unreadCount: number
-  isPinned: boolean
-  noDisturb: boolean
-  groupMemberCount: number
+  lastMessageContent: string  // 对应后端 lastMessageContent
+  lastMessageTime: string     // 对应后端 lastMessageTime（格式化后）
+  timestamp: number        // 对应后端 lastMessageTime（原始时间戳）
+  unreadCount: number       // 对应后端 unreadCount
+  isPinned: boolean        // 对应后端 isPinned
+  noDisturb: boolean       // 对应后端 noDisturb
+  groupMemberCount: number // 对应后端 groupMemberCount
 }
 
 /**
@@ -377,6 +378,20 @@ export class MessageService {
     // 从store获取当前用户信息
     const userInfo = getUserInfo()
     const currentUser = userInfo?.user
+
+    console.log('[MessageService] sendMessage()', {
+      currentUserId: this.currentUserId,
+      currentTenantId: this.currentTenantId,
+      header: {
+        messageId: message?.header?.messageId,
+        messageType: message?.header?.messageType,
+        senderId: message?.header?.senderId,
+        receiverId: message?.header?.receiverId,
+        groupId: message?.header?.groupId,
+        tenantId: message?.header?.tenantId,
+        timestamp: message?.header?.timestamp
+      }
+    })
     
     // 生成头像信息
     const userName = currentUser?.nickname || ''
@@ -402,17 +417,19 @@ export class MessageService {
     }
     
     // 添加到缓存
-    const conversationId = message.header.groupId !== '0' && message.header.groupId !== '' ? message.header.groupId : message.header.receiverId
-    this.addMessageToCache(conversationId, messageItem)
+    const chatId = message.header.groupId !== '0' && message.header.groupId !== '' ? message.header.groupId : message.header.receiverId
+    console.log('[MessageService] computed chatId:', chatId)
+    this.addMessageToCache(chatId, messageItem)
     
     // 通知监听器
     this.notifyMessageListeners(messageItem)
     
     // 通过 WebSocket 发送
+    console.log('[MessageService] wsManager.isConnected():', wsManager.isConnected())
     wsManager.send(message)
     
     // 更新会话
-    this.updateConversation(conversationId, messageItem)
+    this.updateConversation(chatId, messageItem)
     
     return messageItem
   }
@@ -448,20 +465,20 @@ export class MessageService {
     }
     
     // 添加到缓存
-    const conversationId = message.header.groupId !== '0' && message.header.groupId !== '' ? message.header.groupId : message.header.senderId
-    this.addMessageToCache(conversationId, messageItem)
+    const chatId = message.header.groupId !== '0' && message.header.groupId !== '' ? message.header.groupId : message.header.senderId
+    this.addMessageToCache(chatId, messageItem)
     
     // 通知监听器
     this.notifyMessageListeners(messageItem)
     
     // 更新会话
-    this.updateConversation(conversationId, messageItem)
+    this.updateConversation(chatId, messageItem)
     
     // 如果不是自己发送的消息，增加未读数和角标
     if (!messageItem.isSelf) {
-      this.incrementUnreadCount(conversationId)
+      this.incrementUnreadCount(chatId)
       // 自动增加对应会话的角标未读数
-      badgeService.incrementConversationBadge(conversationId)
+      badgeService.incrementConversationBadge(chatId)
     }
   }
   
@@ -517,7 +534,7 @@ export class MessageService {
     console.log('[MessageService] 收到消息撤回:', messageId, '撤回者:', recallerId)
     
     // 从缓存中查找并更新消息
-    this.messageCache.forEach((messages, conversationId) => {
+    this.messageCache.forEach((messages, chatId) => {
       const index = messages.findIndex(m => m.messageId === messageId)
       if (index !== -1) {
         const originalMessage = messages[index]
@@ -547,7 +564,7 @@ export class MessageService {
         this.notifyMessageListeners(recallTip)
         
         // 更新会话最后消息
-        this.updateConversation(conversationId, recallTip)
+        this.updateConversation(chatId, recallTip)
       }
     })
   }
@@ -603,11 +620,11 @@ export class MessageService {
   /**
    * 添加消息到缓存
    */
-  private addMessageToCache(conversationId: string, message: MessageItem): void {
-    let messages = this.messageCache.get(conversationId)
+  private addMessageToCache(chatId: string, message: MessageItem): void {
+    let messages = this.messageCache.get(chatId)
     if (messages === null || messages === undefined) {
       messages = []
-      this.messageCache.set(conversationId, messages)
+      this.messageCache.set(chatId, messages)
     }
     messages.push(message)
   }
@@ -615,15 +632,15 @@ export class MessageService {
   /**
    * 获取会话的消息列表
    */
-  public getMessages(conversationId: string): MessageItem[] {
-    const messages = this.messageCache.get(conversationId)
+  public getMessages(chatId: string): MessageItem[] {
+    const messages = this.messageCache.get(chatId)
     return messages !== null && messages !== undefined ? messages : []
   }
   
   /**
    * 更新会话
    */
-  private updateConversation(conversationId: string, message: MessageItem): void {
+  private updateConversation(chatId: string, message: MessageItem): void {
     const summary = MessageParser.getSummary({ 
       header: { messageType: message.type } as any, 
       body: message.content 
@@ -631,7 +648,7 @@ export class MessageService {
     
     // 调用 ConversationService 更新会话
     conversationService.updateConversation(
-      conversationId,
+      chatId,
       summary,
       message.timestamp,
       !message.isSelf  // 只有接收到的消息才增加未读数
@@ -641,8 +658,8 @@ export class MessageService {
   /**
    * 增加未读数
    */
-  private incrementUnreadCount(conversationId: string): void {
-    const conversation = this.conversationCache.get(conversationId)
+  private incrementUnreadCount(chatId: string): void {
+    const conversation = this.conversationCache.get(chatId)
     if (conversation !== null && conversation !== undefined) {
       conversation.unreadCount++
       this.notifyConversationUpdateListeners(conversation)
@@ -797,8 +814,8 @@ export class MessageService {
   /**
    * 清空未读数
    */
-  public clearUnreadCount(conversationId: string): void {
-    const conversation = this.conversationCache.get(conversationId)
+  public clearUnreadCount(chatId: string): void {
+    const conversation = this.conversationCache.get(chatId)
     if (conversation !== null && conversation !== undefined) {
       conversation.unreadCount = 0
       this.notifyConversationUpdateListeners(conversation)

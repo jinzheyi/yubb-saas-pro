@@ -69,9 +69,9 @@ public interface ImMessageService {
      * 清空会话消息
      *
      * @param userId 用户ID
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      */
-    void clearConversationMessages(Long userId, Long conversationId);
+    void clearConversationMessages(Long userId, Long chatId);
 
     /**
      * 搜索聊天记录
@@ -86,12 +86,12 @@ public interface ImMessageService {
      * 查询会话的消息列表（按时间倒序，支持分页加载）
      *
      * @param userId 用户ID
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      * @param lastMessageId 最后一条消息ID（用于分页，首次查询传null）
      * @param pageSize 每页大小
      * @return 消息列表
      */
-    java.util.List<AppImMessageRespVO> getConversationMessages(Long userId, Long conversationId, Long lastMessageId, Integer pageSize);
+    java.util.List<AppImMessageRespVO> getConversationMessages(Long userId, Long chatId, Long lastMessageId, Integer pageSize);
 
     /**
      * 获取消息详情
@@ -125,9 +125,9 @@ public interface ImMessageService {
      *
      * @param userId 用户ID
      * @param messageId 消息ID
-     * @param targetConversationId 目标会话ID
+     * @param targetChatId 目标 ChatID
      * @return 新消息ID
      */
-    Long forwardMessage(Long userId, Long messageId, Long targetConversationId);
+    Long forwardMessage(Long userId, Long messageId, Long targetChatId);
 
 }

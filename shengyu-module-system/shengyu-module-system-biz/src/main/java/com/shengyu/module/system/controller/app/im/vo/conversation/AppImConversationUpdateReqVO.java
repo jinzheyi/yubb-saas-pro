@@ -9,9 +9,9 @@ import javax.validation.constraints.NotNull;
 @Data
 public class AppImConversationUpdateReqVO {
 
-    @Schema(description = "会话ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "会话ID不能为空")
-    private Long id;
+    @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @NotNull(message = "ChatID不能为空")
+    private Long chatId;
 
     @Schema(description = "是否置顶", example = "true")
     private Boolean isPinned;

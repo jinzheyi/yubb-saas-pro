@@ -9,9 +9,9 @@ import javax.validation.constraints.NotNull;
 @Data
 public class AppImMessageSendReqVO {
 
-    @Schema(description = "会话ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "会话ID不能为空")
-    private Long conversationId;
+    @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @NotNull(message = "ChatID不能为空")
+    private Long chatId;
 
     @Schema(description = "接收者ID(单聊有值,群聊为NULL)", example = "100")
     private Long receiverId;

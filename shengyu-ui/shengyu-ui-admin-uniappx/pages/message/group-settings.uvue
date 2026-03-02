@@ -199,7 +199,7 @@
 
 	// 页面参数
 	const groupId = ref('')
-	const conversationId = ref('')
+	const chatId = ref('')
 	
 	// 当前用户
 	const currentUserId = ref<string>('0')
@@ -305,12 +305,12 @@
 			// 通过 groupId 查询会话
 			const conversation = await getConversationByTarget(groupId.value, 2)
 			
-			if (conversation && conversation.id) {
-				conversationId.value = conversation.id.toString()
+			if (conversation && conversation.chatId) {
+				chatId.value = conversation.chatId.toString()
 				noDisturb.value = conversation.noDisturb || false
 				isPinned.value = conversation.isPinned || false
 				
-				console.log('[GroupSettings] 加载会话设置成功, conversationId:', conversationId.value)
+				console.log('[GroupSettings] 加载会话设置成功, chatId:', chatId.value)
 			}
 		} catch (e) {
 			console.error('[GroupSettings] 加载会话设置失败:', e)
@@ -422,14 +422,14 @@
 
 	function handleChatHistory() {
 		uni.navigateTo({
-			url: `/pages/message/chat-history?conversationId=${conversationId.value}&groupName=${groupName.value}`
+			url: `/pages/message/chat-history?chatId=${chatId.value}&groupName=${groupName.value}`
 		})
 	}
 
 	async function handleNoDisturbChange(e : any) {
 		const newValue = e.detail.value as boolean
 		
-		if (!conversationId.value) {
+		if (!chatId.value) {
 			uni.showToast({
 				title: '会话信息未加载',
 				icon: 'none'
@@ -438,7 +438,7 @@
 		}
 		
 		try {
-			await setNoDisturb(conversationId.value, newValue)
+			await setNoDisturb(chatId.value, newValue)
 			noDisturb.value = newValue
 			uni.showToast({
 				title: newValue ? '已开启免打扰' : '已关闭免打扰',
@@ -456,7 +456,7 @@
 	async function handlePinnedChange(e : any) {
 		const newValue = e.detail.value as boolean
 		
-		if (!conversationId.value) {
+		if (!chatId.value) {
 			uni.showToast({
 				title: '会话信息未加载',
 				icon: 'none'
@@ -465,7 +465,7 @@
 		}
 		
 		try {
-			await pinConversation(conversationId.value, newValue)
+			await pinConversation(chatId.value, newValue)
 			isPinned.value = newValue
 			uni.showToast({
 				title: newValue ? '已置顶' : '已取消置顶',

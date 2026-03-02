@@ -12,9 +12,9 @@ import javax.validation.constraints.NotNull;
 @EqualsAndHashCode(callSuper = true)
 public class AppImMessagePageReqVO extends PageParam {
 
-    @Schema(description = "会话ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "会话ID不能为空")
-    private Long conversationId;
+    @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @NotNull(message = "ChatID不能为空")
+    private Long chatId;
 
     @Schema(description = "消息类型(1-文本 2-图片 3-语音 4-视频 5-文件 6-位置 7-表情包 8-自定义贴纸 10-系统消息)", example = "1")
     private Integer messageType;

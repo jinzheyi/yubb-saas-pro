@@ -14,24 +14,42 @@
 SET NAMES utf8mb4;
 
 -- ----------------------------
--- Table structure for im_conversation
--- 会话表: 存储用户的会话列表(单聊/群聊)
--- 注意: 唯一索引包含 deleted 字段,支持逻辑删除后重新创建会话
+-- Table structure for im_chat
+-- 全局会话表: 存储所有会话信息(单聊/群聊)
 -- ----------------------------
-DROP TABLE IF EXISTS `im_conversation`;
-CREATE TABLE `im_conversation`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '会话ID',
+DROP TABLE IF EXISTS `im_chat`;
+CREATE TABLE `im_chat` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ChatID',
+  `chat_type` tinyint NOT NULL COMMENT '会话类型(1-单聊 2-群聊)',
+  `single_user1` bigint NULL DEFAULT NULL COMMENT '单聊用户1(较小ID)',
+  `single_user2` bigint NULL DEFAULT NULL COMMENT '单聊用户2(较大ID)',
+  `group_id` bigint NULL DEFAULT NULL COMMENT '群ID',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态(1-正常 2-已解散)',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_single_chat`(`tenant_id` ASC, `chat_type` ASC, `single_user1` ASC, `single_user2` ASC, `deleted` ASC) USING BTREE,
+  UNIQUE INDEX `uk_group_chat`(`tenant_id` ASC, `chat_type` ASC, `group_id` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM全局会话表' ROW_FORMAT = DYNAMIC;
+
+DROP TABLE IF EXISTS `im_chat_user`;
+CREATE TABLE `im_chat_user` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '用户会话ID',
+  `chat_id` bigint NOT NULL COMMENT 'ChatID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
-  `target_id` bigint NOT NULL COMMENT '目标ID(单聊为对方用户ID,群聊为群ID)',
-  `conversation_type` tinyint NOT NULL COMMENT '会话类型(1-单聊 2-群聊)',
   `unread_count` int NOT NULL DEFAULT 0 COMMENT '未读消息数',
+  `last_read_message_id` bigint NULL DEFAULT NULL COMMENT '最后已读消息ID',
   `last_message_id` bigint NULL DEFAULT NULL COMMENT '最后一条消息ID',
-  `last_message_content` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '最后一条消息内容',
+  `last_message_content` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '最后一条消息预览',
   `last_message_time` datetime NULL DEFAULT NULL COMMENT '最后一条消息时间',
   `is_pinned` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否置顶',
   `no_disturb` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否免打扰',
   `draft` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '草稿内容',
-  `tags` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '标签列表(逗号分隔)',
   `deleted_by_user` bit(1) NOT NULL DEFAULT b'0' COMMENT '用户是否删除会话',
   `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -40,28 +58,21 @@ CREATE TABLE `im_conversation`  (
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `idx_user_target_deleted`(`user_id` ASC, `target_id` ASC, `conversation_type` ASC, `tenant_id` ASC, `deleted` ASC) USING BTREE COMMENT '用户+目标+类型+删除状态唯一索引',
-  INDEX `idx_user_time`(`user_id` ASC, `last_message_time` DESC) USING BTREE COMMENT '用户+时间索引',
-  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM会话表' ROW_FORMAT = DYNAMIC;
+  UNIQUE INDEX `uk_user_chat`(`tenant_id` ASC, `user_id` ASC, `chat_id` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_user_time`(`tenant_id` ASC, `user_id` ASC, `last_message_time` DESC) USING BTREE,
+  INDEX `idx_chat`(`tenant_id` ASC, `chat_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM用户会话状态表' ROW_FORMAT = DYNAMIC;
 
--- ----------------------------
--- Table structure for im_message
--- 消息表: 存储所有聊天消息(单聊/群聊)
--- 注意: 消息表数据量大,建议按月分表
--- ----------------------------
-DROP TABLE IF EXISTS `im_message`;
-CREATE TABLE `im_message`  (
+DROP TABLE IF EXISTS `im_chat_message`;
+CREATE TABLE `im_chat_message` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '消息ID',
-  `conversation_id` bigint NOT NULL COMMENT '会话ID',
+  `chat_id` bigint NOT NULL COMMENT 'ChatID',
   `sender_id` bigint NOT NULL COMMENT '发送者ID',
-  `receiver_id` bigint NULL DEFAULT NULL COMMENT '接收者ID(单聊有值,群聊为NULL)',
-  `group_id` bigint NULL DEFAULT NULL COMMENT '群ID(群聊有值,单聊为NULL)',
   `message_type` tinyint NOT NULL COMMENT '消息类型(1-文本 2-图片 3-语音 4-视频 5-文件 6-位置 7-表情包 8-自定义贴纸 10-系统消息)',
-  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '消息内容',
-  `extra` json NULL COMMENT '扩展信息(JSON格式,存储文件URL、时长、大小等)',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '消息内容',
+  `extra` longtext NULL COMMENT '扩展信息(JSON格式,存储文件URL、时长、大小等)',
   `send_time` datetime NOT NULL COMMENT '发送时间',
-  `status` tinyint NOT NULL DEFAULT 1 COMMENT '消息状态(1-发送中 2-已发送 3-已送达 4-已读 5-发送失败 6-已撤回)',
+  `status` tinyint NOT NULL DEFAULT 2 COMMENT '消息状态(2-已发送 6-已撤回)',
   `recall_time` datetime NULL DEFAULT NULL COMMENT '撤回时间',
   `recall_by` bigint NULL DEFAULT NULL COMMENT '撤回人ID',
   `quote_message_id` bigint NULL DEFAULT NULL COMMENT '引用消息ID',
@@ -72,12 +83,10 @@ CREATE TABLE `im_message`  (
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_conversation`(`conversation_id` ASC, `send_time` DESC) USING BTREE COMMENT '会话+时间索引',
-  INDEX `idx_sender`(`sender_id` ASC, `send_time` DESC) USING BTREE COMMENT '发送者+时间索引',
-  INDEX `idx_receiver`(`receiver_id` ASC, `send_time` DESC) USING BTREE COMMENT '接收者+时间索引',
-  INDEX `idx_group`(`group_id` ASC, `send_time` DESC) USING BTREE COMMENT '群组+时间索引',
-  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM消息表' ROW_FORMAT = DYNAMIC;
+  INDEX `idx_chat_id`(`tenant_id` ASC, `chat_id` ASC, `id` DESC) USING BTREE,
+  INDEX `idx_sender_time`(`tenant_id` ASC, `sender_id` ASC, `send_time` DESC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM消息表(全局会话单份存储)' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for im_group
@@ -315,27 +324,27 @@ CREATE TABLE `im_call_record` (
 -- ----------------------------
 DROP TABLE IF EXISTS `im_notification`;
 CREATE TABLE `im_notification` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '通知ID',
-  `user_id` bigint NOT NULL COMMENT '接收用户ID',
-  `notify_type` tinyint NOT NULL COMMENT '通知类型(1-系统公告 2-流程审批 3-待办提醒 4-自定义通知)',
-  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '通知标题',
-  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '通知内容',
-  `icon` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '通知图标URL',
-  `extra` json NULL COMMENT '扩展信息(JSON格式,存储操作按钮、跳转配置、业务数据等)',
-  `is_read` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否已读',
-  `read_time` datetime NULL DEFAULT NULL COMMENT '已读时间',
-  `is_important` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否重要(重要通知需强制阅读)',
-  `expire_time` datetime NULL DEFAULT NULL COMMENT '过期时间',
-  `status` tinyint NOT NULL DEFAULT 1 COMMENT '通知状态(1-正常 2-已过期 3-已撤回)',
-  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
-  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
-  PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_user_time`(`user_id` ASC, `create_time` DESC) USING BTREE COMMENT '用户+时间索引',
-  INDEX `idx_user_read`(`user_id` ASC, `is_read` ASC) USING BTREE COMMENT '用户+已读状态索引',
-  INDEX `idx_type`(`notify_type` ASC) USING BTREE COMMENT '通知类型索引',
-  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
+   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '通知ID',
+   `user_id` bigint NOT NULL COMMENT '接收用户ID',
+   `notify_type` tinyint NOT NULL COMMENT '通知类型(1-系统公告 2-流程审批 3-待办提醒 4-自定义通知)',
+   `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '通知标题',
+   `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '通知内容',
+   `icon` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '通知图标URL',
+   `extra` longtext NULL COMMENT '扩展信息(JSON格式,存储操作按钮、跳转配置、业务数据等)',
+   `is_read` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否已读',
+   `read_time` datetime NULL DEFAULT NULL COMMENT '已读时间',
+   `is_important` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否重要(重要通知需强制阅读)',
+   `expire_time` datetime NULL DEFAULT NULL COMMENT '过期时间',
+   `status` tinyint NOT NULL DEFAULT 1 COMMENT '通知状态(1-正常 2-已过期 3-已撤回)',
+   `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+   `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+   PRIMARY KEY (`id`) USING BTREE,
+   INDEX `idx_user_time`(`user_id` ASC, `create_time` DESC) USING BTREE COMMENT '用户+时间索引',
+   INDEX `idx_user_read`(`user_id` ASC, `is_read` ASC) USING BTREE COMMENT '用户+已读状态索引',
+   INDEX `idx_type`(`notify_type` ASC) USING BTREE COMMENT '通知类型索引',
+   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM通知表' ROW_FORMAT = DYNAMIC;

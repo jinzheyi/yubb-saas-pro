@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * IM 消息已读 DO
  * 
  * 对应表: im_message_read
- * 功能: 存储群聊消息的已读状态(单聊通过 im_message.status 字段判断)
+ * 功能: 存储群聊消息的已读状态(单聊通过 im_chat_message.status 字段判断)
  * 说明: 仅用于群聊消息已读回执
  *
  * @author 圣钰科技

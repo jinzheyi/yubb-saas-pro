@@ -1,16 +1,21 @@
 package com.shengyu.module.system.service.im;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
-import com.shengyu.module.system.dal.dataobject.im.ImConversationDO;
-import com.shengyu.module.system.dal.dataobject.im.ImMessageDO;
+import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
+import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
+import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
-import com.shengyu.module.system.dal.mysql.im.ImMessageMapper;
+import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
+import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
+import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
+import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -34,10 +40,16 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 public class ImMessageServiceImpl implements ImMessageService {
 
     @Resource
-    private ImMessageMapper messageMapper;
+    private ImChatMessageMapper chatMessageMapper;
 
     @Resource
-    private ImConversationService conversationService;
+    private ImChatMapper chatMapper;
+
+    @Resource
+    private ImChatUserMapper chatUserMapper;
+
+    @Resource
+    private ImGroupService imGroupService;
 
     @Resource
     private AdminUserMapper userMapper;
@@ -48,157 +60,89 @@ public class ImMessageServiceImpl implements ImMessageService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long sendMessage(Long userId, AppImMessageSendReqVO sendReqVO) {
-        // 验证会话是否存在
-        ImConversationDO conversation = conversationService.getConversation(sendReqVO.getConversationId());
-        if (conversation == null) {
+        Long chatId = sendReqVO.getChatId();
+        ImChatUserDO selfChatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+        if (selfChatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
 
-        // 创建消息
-        ImMessageDO message = new ImMessageDO();
-        message.setConversationId(sendReqVO.getConversationId());
+        ImChatDO chat = chatMapper.selectById(chatId);
+        if (chat == null) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+
+        ImChatMessageDO message = new ImChatMessageDO();
+        message.setChatId(chatId);
         message.setSenderId(userId);
-        message.setReceiverId(sendReqVO.getReceiverId());
-        message.setGroupId(sendReqVO.getGroupId());
         message.setMessageType(sendReqVO.getMessageType());
         message.setContent(sendReqVO.getContent());
         message.setExtra(sendReqVO.getExtra());
         message.setSendTime(LocalDateTime.now());
         message.setStatus(ImMessageStatusEnum.SENT.getStatus());
         message.setQuoteMessageId(sendReqVO.getQuoteMessageId());
-        messageMapper.insert(message);
+        chatMessageMapper.insert(message);
 
-        // 更新会话的最后消息
-        conversationService.updateLastMessage(
-                sendReqVO.getConversationId(),
-                message.getId(),
-                getMessagePreview(sendReqVO.getMessageType(), sendReqVO.getContent())
-        );
-
-        // 增加接收者的未读数
-        conversationService.incrementUnreadCount(sendReqVO.getConversationId());
-
-        // 推送角标更新到接收方的所有设备
-        if (sendReqVO.getReceiverId() != null) {
-            imBadgeService.pushBadgeUpdate(sendReqVO.getReceiverId());
-        }
-
+        String preview = getMessagePreview(sendReqVO.getMessageType(), sendReqVO.getContent());
+        updateChatUsersAfterSend(chat, message.getId(), preview, message.getSendTime(), userId);
         return message.getId();
     }
 
     @Override
     public PageResult<AppImMessageRespVO> getMessagePage(Long userId, AppImMessagePageReqVO pageReqVO) {
-        // 验证会话是否存在
-        ImConversationDO conversation = conversationService.getConversation(pageReqVO.getConversationId());
-        if (conversation == null) {
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, pageReqVO.getChatId());
+        if (chatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
-
-        // 分页查询消息
-        PageResult<ImMessageDO> pageResult = messageMapper.selectPageByConversationId(
-                pageReqVO.getConversationId(),
-                pageReqVO
-        );
-
-        // 转换为VO并填充发送者信息
+        PageResult<ImChatMessageDO> pageResult = chatMessageMapper.selectPageByChatId(pageReqVO.getChatId(), pageReqVO);
         List<AppImMessageRespVO> respVOList = pageResult.getList().stream().map(message -> {
             AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
-            fillSenderInfo(respVO, message);
-            respVO.setIsSelf(message.getSenderId().equals(userId));
+            respVO.setChatId(message.getChatId());
+            fillSenderInfo(respVO, message.getSenderId());
+            respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
+            fillChatTargetFields(respVO, userId);
             return respVO;
         }).collect(Collectors.toList());
-
         return new PageResult<>(respVOList, pageResult.getTotal());
     }
 
     @Override
-    public List<AppImMessageRespVO> getConversationMessages(Long userId, Long conversationId, Long lastMessageId, Integer pageSize) {
-        // 验证会话是否存在
-        ImConversationDO conversation = conversationService.getConversation(conversationId);
-        if (conversation == null || !conversation.getUserId().equals(userId)) {
-            throw exception(CONVERSATION_NOT_EXISTS);
-        }
-
-        // 设置默认分页大小
-        if (pageSize == null || pageSize <= 0) {
-            pageSize = 20;
-        }
-
-        // 查询消息列表
-        List<ImMessageDO> messages;
-        if (lastMessageId == null) {
-            // 首次查询：获取最新的消息
-            messages = messageMapper.selectListByConversationId(conversationId, pageSize);
-        } else {
-            // 分页查询：获取指定消息之前的消息
-            messages = messageMapper.selectListByConversationIdBeforeMessageId(conversationId, lastMessageId, pageSize);
-        }
-
-        // 转换为VO并填充发送者信息
-        return messages.stream().map(message -> {
-            AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
-            fillSenderInfo(respVO, message);
-            respVO.setIsSelf(message.getSenderId().equals(userId));
-            return respVO;
-        }).collect(Collectors.toList());
+    public List<AppImMessageRespVO> getConversationMessages(Long userId, Long chatId, Long lastMessageId, Integer pageSize) {
+        // 旧接口不再支持（线路 A 统一走分页接口）
+        throw exception(MESSAGE_SEND_FAILED);
     }
 
     @Override
     public AppImMessageRespVO getMessageDetail(Long userId, Long messageId) {
-        // 查询消息
-        ImMessageDO message = messageMapper.selectById(messageId);
+        ImChatMessageDO message = chatMessageMapper.selectById(messageId);
         if (message == null) {
             throw exception(MESSAGE_NOT_EXISTS);
         }
-
-        // 验证权限：用户必须是消息的发送者或接收者
-        boolean isParticipant = message.getSenderId().equals(userId) || 
-                                (message.getReceiverId() != null && message.getReceiverId().equals(userId));
-        
-        if (!isParticipant) {
-            // 如果是群聊消息，需要验证用户是否是群成员
-            if (message.getGroupId() != null) {
-                // TODO: 验证用户是否是群成员（需要群组服务支持）
-                log.debug("[ImMessageService] 群聊消息权限验证待实现, messageId: {}, userId: {}", messageId, userId);
-            } else {
-                throw exception(MESSAGE_NOT_EXISTS);
-            }
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, message.getChatId());
+        if (chatUser == null) {
+            throw exception(MESSAGE_NOT_EXISTS);
         }
-
-        // 转换为VO并填充发送者信息
         AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
-        fillSenderInfo(respVO, message);
-        respVO.setIsSelf(message.getSenderId().equals(userId));
-        
+        respVO.setChatId(message.getChatId());
+        fillSenderInfo(respVO, message.getSenderId());
+        respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
+        fillChatTargetFields(respVO, userId);
         return respVO;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateMessageStatus(Long userId, Long messageId, Integer status) {
-        // 查询消息
-        ImMessageDO message = messageMapper.selectById(messageId);
+        ImChatMessageDO message = chatMessageMapper.selectById(messageId);
         if (message == null) {
             throw exception(MESSAGE_NOT_EXISTS);
         }
-
-        // 验证权限：只能更新发给自己的消息状态
-        if (!message.getReceiverId().equals(userId)) {
+        // 仅允许发送者撤回
+        if (!Objects.equals(message.getSenderId(), userId)) {
             throw exception(MESSAGE_NOT_EXISTS);
         }
-
-        // 验证状态转换是否合法
-        if (!isValidStatusTransition(message.getStatus(), status)) {
-            log.warn("[ImMessageService] 非法的状态转换, messageId: {}, oldStatus: {}, newStatus: {}", 
-                    messageId, message.getStatus(), status);
-            throw exception(MESSAGE_STATUS_INVALID);
-        }
-
-        // 更新消息状态
-        message.setStatus(status);
-        messageMapper.updateById(message);
-        
-        log.debug("[ImMessageService] 更新消息状态成功, messageId: {}, status: {}", messageId, status);
+        chatMessageMapper.update(null, new LambdaUpdateWrapper<ImChatMessageDO>()
+                .eq(ImChatMessageDO::getId, messageId)
+                .set(ImChatMessageDO::getStatus, status));
     }
 
     @Override
@@ -208,211 +152,166 @@ public class ImMessageServiceImpl implements ImMessageService {
             return;
         }
 
-        // 批量更新消息状态（只更新属于当前用户接收的消息）
-        int updatedCount = messageMapper.updateStatusByIdsAndReceiverId(messageIds, userId, status);
-        
-        log.debug("[ImMessageService] 批量更新消息状态成功, userId: {}, messageCount: {}, updated: {}, status: {}", 
+        // 线路 A：按 messageId 批量更新
+        int updatedCount = chatMessageMapper.updateStatusByIds(messageIds, status);
+        log.debug("[ImMessageService] 批量更新消息状态成功, userId: {}, messageCount: {}, updated: {}, status: {}",
                 userId, messageIds.size(), updatedCount, status);
+    }
+
+    private void updateChatUsersAfterSend(ImChatDO chat, Long lastMessageId, String lastMessageContent, LocalDateTime lastMessageTime, Long senderId) {
+        if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
+            List<Long> memberIds = imGroupService.getGroupMemberIds(chat.getGroupId());
+            for (Long memberId : memberIds) {
+                ImChatUserDO chatUser = ensureChatUser(memberId, chat.getId());
+                boolean isSender = Objects.equals(memberId, senderId);
+                chatUserMapper.updateLastMessageAndIncrementUnread(
+                        chatUser.getId(), lastMessageId, lastMessageContent, lastMessageTime,
+                        isSender ? 0 : 1,
+                        Boolean.TRUE.equals(chatUser.getNoDisturb()));
+                if (!isSender) {
+                    imBadgeService.pushBadgeUpdate(memberId);
+                }
+            }
+        } else {
+            ImChatUserDO sender = ensureChatUser(senderId, chat.getId());
+            chatUserMapper.updateLastMessageAndIncrementUnread(
+                    sender.getId(), lastMessageId, lastMessageContent, lastMessageTime,
+                    0,
+                    Boolean.TRUE.equals(sender.getNoDisturb()));
+
+            Long receiverId = Objects.equals(chat.getSingleUser1(), senderId) ? chat.getSingleUser2() : chat.getSingleUser1();
+            ImChatUserDO receiver = ensureChatUser(receiverId, chat.getId());
+            chatUserMapper.updateLastMessageAndIncrementUnread(
+                    receiver.getId(), lastMessageId, lastMessageContent, lastMessageTime,
+                    1,
+                    Boolean.TRUE.equals(receiver.getNoDisturb()));
+            imBadgeService.pushBadgeUpdate(receiverId);
+        }
+    }
+
+    private ImChatUserDO ensureChatUser(Long userId, Long chatId) {
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+        if (chatUser != null) {
+            return chatUser;
+        }
+        chatUser = new ImChatUserDO();
+        chatUser.setUserId(userId);
+        chatUser.setChatId(chatId);
+        chatUser.setUnreadCount(0);
+        chatUser.setIsPinned(false);
+        chatUser.setNoDisturb(false);
+        chatUser.setDeletedByUser(false);
+        chatUserMapper.insert(chatUser);
+        return chatUser;
+    }
+
+    private void fillSenderInfo(AppImMessageRespVO respVO, Long senderId) {
+        if (senderId == null) {
+            return;
+        }
+        AdminUserDO sender = userMapper.selectById(senderId);
+        if (sender != null) {
+            respVO.setSenderNickname(sender.getNickname());
+            respVO.setSenderAvatar(sender.getAvatar());
+        }
+    }
+
+    private void fillChatTargetFields(AppImMessageRespVO respVO, Long currentUserId) {
+        if (respVO.getChatId() == null) {
+            return;
+        }
+        ImChatDO chat = chatMapper.selectById(respVO.getChatId());
+        if (chat == null) {
+            return;
+        }
+        if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
+            respVO.setGroupId(chat.getGroupId());
+        } else {
+            Long receiverId = Objects.equals(chat.getSingleUser1(), currentUserId) ? chat.getSingleUser2() : chat.getSingleUser1();
+            respVO.setReceiverId(receiverId);
+        }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Long forwardMessage(Long userId, Long messageId, Long targetConversationId) {
-        // 查询原消息
-        ImMessageDO originalMessage = messageMapper.selectById(messageId);
-        if (originalMessage == null) {
-            throw exception(MESSAGE_NOT_EXISTS);
-        }
-
-        // 验证目标会话是否存在
-        ImConversationDO targetConversation = conversationService.getConversation(targetConversationId);
-        if (targetConversation == null || !targetConversation.getUserId().equals(userId)) {
-            throw exception(CONVERSATION_NOT_EXISTS);
-        }
-
-        // 创建新消息（复制原消息内容）
-        ImMessageDO newMessage = new ImMessageDO();
-        newMessage.setConversationId(targetConversationId);
-        newMessage.setSenderId(userId);
-        newMessage.setReceiverId(targetConversation.getTargetId());
-        newMessage.setGroupId(targetConversation.getConversationType() == 2 ? targetConversation.getTargetId() : null);
-        newMessage.setMessageType(originalMessage.getMessageType());
-        newMessage.setContent(originalMessage.getContent());
-        newMessage.setExtra(originalMessage.getExtra());
-        newMessage.setSendTime(LocalDateTime.now());
-        newMessage.setStatus(ImMessageStatusEnum.SENT.getStatus());
-        messageMapper.insert(newMessage);
-
-        // 更新目标会话的最后消息
-        conversationService.updateLastMessage(
-                targetConversationId,
-                newMessage.getId(),
-                getMessagePreview(newMessage.getMessageType(), newMessage.getContent())
-        );
-
-        // 增加接收者的未读数
-        conversationService.incrementUnreadCount(targetConversationId);
-
-        // 推送角标更新到接收方的所有设备
-        if (newMessage.getReceiverId() != null) {
-            imBadgeService.pushBadgeUpdate(newMessage.getReceiverId());
-        }
-
-        log.debug("[ImMessageService] 转发消息成功, originalMessageId: {}, newMessageId: {}, targetConversationId: {}", 
-                messageId, newMessage.getId(), targetConversationId);
-
-        return newMessage.getId();
-    }
-
-    /**
-     * 验证消息状态转换是否合法
-     * 
-     * 状态转换规则:
-     * - 0(未读) -> 1(已读)
-     * - 1(已读) -> 1(已读) (幂等)
-     * - 其他转换不允许
-     */
-    private boolean isValidStatusTransition(Integer oldStatus, Integer newStatus) {
-        // 如果状态相同，允许（幂等操作）
-        if (oldStatus.equals(newStatus)) {
-            return true;
-        }
-
-        // 未读 -> 已读
-        if (oldStatus == 0 && newStatus == 1) {
-            return true;
-        }
-
-        // 其他转换不允许
-        return false;
+    public Long forwardMessage(Long userId, Long messageId, Long targetChatId) {
+        throw exception(MESSAGE_SEND_FAILED);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void recallMessage(Long userId, Long messageId) {
-        // 查询消息
-        ImMessageDO message = messageMapper.selectById(messageId);
+        ImChatMessageDO message = chatMessageMapper.selectById(messageId);
         if (message == null) {
             throw exception(MESSAGE_NOT_EXISTS);
         }
-
-        // 验证权限(只能撤回自己的消息)
-        if (!message.getSenderId().equals(userId)) {
+        if (!Objects.equals(message.getSenderId(), userId)) {
             throw exception(MESSAGE_RECALL_PERMISSION_DENIED);
         }
-
-        // 验证时间(只能撤回2分钟内的消息)
         LocalDateTime twoMinutesAgo = LocalDateTime.now().minusMinutes(2);
         if (message.getSendTime().isBefore(twoMinutesAgo)) {
             throw exception(MESSAGE_RECALL_TIMEOUT);
         }
-
-        // 更新消息状态为已撤回
-        message.setStatus(ImMessageStatusEnum.RECALLED.getStatus());
-        message.setRecallTime(LocalDateTime.now());
-        message.setRecallBy(userId);
-        messageMapper.updateById(message);
+        chatMessageMapper.update(null, new LambdaUpdateWrapper<ImChatMessageDO>()
+                .eq(ImChatMessageDO::getId, messageId)
+                .set(ImChatMessageDO::getStatus, ImMessageStatusEnum.RECALLED.getStatus())
+                .set(ImChatMessageDO::getRecallTime, LocalDateTime.now())
+                .set(ImChatMessageDO::getRecallBy, userId));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteMessage(Long userId, Long messageId) {
-        // 查询消息
-        ImMessageDO message = messageMapper.selectById(messageId);
-        if (message == null) {
-            throw exception(MESSAGE_NOT_EXISTS);
-        }
-
-        // 删除消息(物理删除)
-        messageMapper.deleteById(messageId);
+        // Route-A：暂不提供物理删除消息能力（通常是撤回/客户端侧隐藏）
+        throw exception(MESSAGE_SEND_FAILED);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void markMessageRead(Long userId, Long messageId) {
-        // 查询消息
-        ImMessageDO message = messageMapper.selectById(messageId);
+        // Route-A：获取消息的 chatId，更新用户的 last_read_message_id
+        ImChatMessageDO message = chatMessageMapper.selectById(messageId);
         if (message == null) {
-            throw exception(MESSAGE_NOT_EXISTS);
-        }
-
-        // 只能标记发给自己的消息
-        if (!message.getReceiverId().equals(userId)) {
             return;
         }
-
-        // 更新消息状态为已读
-        if (!ImMessageStatusEnum.isRead(message.getStatus())) {
-            message.setStatus(ImMessageStatusEnum.READ.getStatus());
-            messageMapper.updateById(message);
-        }
+        Long chatId = message.getChatId();
+        // 更新用户会话状态：设置最后读取消息ID，清空未读数
+        chatUserMapper.markReadWithLastMessageId(userId, chatId, messageId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void markMessagesRead(Long userId, List<Long> messageIds) {
-        for (Long messageId : messageIds) {
-            markMessageRead(userId, messageId);
+        // Route-A：找到这些消息中的最大 messageId 和对应的 chatId
+        if (messageIds == null || messageIds.isEmpty()) {
+            return;
         }
+        // 获取第一条消息的 chatId（假设所有消息都在同一个会话中）
+        ImChatMessageDO firstMessage = chatMessageMapper.selectById(messageIds.get(0));
+        if (firstMessage == null) {
+            return;
+        }
+        Long chatId = firstMessage.getChatId();
+        // 找出最大的 messageId
+        Long maxMessageId = messageIds.stream()
+                .mapToLong(Long::longValue)
+                .max()
+                .orElse(0L);
+        // 更新用户会话状态
+        chatUserMapper.markReadWithLastMessageId(userId, chatId, maxMessageId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void clearConversationMessages(Long userId, Long conversationId) {
-        // 验证会话是否存在
-        ImConversationDO conversation = conversationService.getConversation(conversationId);
-        if (conversation == null || !conversation.getUserId().equals(userId)) {
-            throw exception(CONVERSATION_NOT_EXISTS);
-        }
-
-        // 删除会话的所有消息(物理删除)
-        // 注意: 这里简化处理,实际应该只删除用户自己的消息记录
-        // TODO: 实现消息的用户级删除标记
-        log.warn("清空会话消息功能待完善，conversationId: {}, userId: {}", conversationId, userId);
+    public void clearConversationMessages(Long userId, Long chatId) {
+        // Route-A：消息是全局单份存储，清空需要用户侧隐藏/删除标记表，暂不支持
+        throw exception(MESSAGE_SEND_FAILED);
     }
 
     @Override
     public PageResult<AppImMessageRespVO> searchMessages(Long userId, AppImMessageSearchReqVO searchReqVO) {
-        // 验证会话是否存在
-        ImConversationDO conversation = conversationService.getConversation(searchReqVO.getConversationId());
-        if (conversation == null) {
-            throw exception(CONVERSATION_NOT_EXISTS);
-        }
-
-        // 验证权限：用户必须是会话参与者
-        if (!conversation.getUserId().equals(userId)) {
-            throw exception(CONVERSATION_NOT_EXISTS);
-        }
-
-        // 搜索消息
-        PageResult<ImMessageDO> pageResult = messageMapper.searchMessages(
-                searchReqVO.getConversationId(),
-                searchReqVO.getKeyword(),
-                searchReqVO.getStartTime(),
-                searchReqVO.getEndTime(),
-                searchReqVO
-        );
-
-        // 转换为VO并填充发送者信息
-        List<AppImMessageRespVO> respVOList = pageResult.getList().stream().map(message -> {
-            AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
-            fillSenderInfo(respVO, message);
-            respVO.setIsSelf(message.getSenderId().equals(userId));
-            return respVO;
-        }).collect(Collectors.toList());
-
-        return new PageResult<>(respVOList, pageResult.getTotal());
-    }
-
-    /**
-     * 填充发送者信息
-     */
-    private void fillSenderInfo(AppImMessageRespVO respVO, ImMessageDO message) {
-        AdminUserDO sender = userMapper.selectById(message.getSenderId());
-        if (sender != null) {
-            respVO.setSenderNickname(sender.getNickname());
-            respVO.setSenderAvatar(sender.getAvatar());
-        }
+        // Route-A：搜索需要全文索引/ES，暂不支持
+        throw exception(MESSAGE_SEND_FAILED);
     }
 
     /**

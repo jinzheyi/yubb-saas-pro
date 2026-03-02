@@ -3,8 +3,6 @@ package com.shengyu.module.system.service.im;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationUpdateReqVO;
-import com.shengyu.module.system.dal.dataobject.im.ImConversationDO;
-import com.shengyu.module.system.dal.dataobject.im.ImMessageDO;
 
 import java.util.List;
 
@@ -53,17 +51,17 @@ public interface ImConversationService {
      * 删除会话
      *
      * @param userId 用户ID
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      */
-    void deleteConversation(Long userId, Long conversationId);
+    void deleteConversation(Long userId, Long chatId);
 
     /**
      * 标记会话已读
      *
      * @param userId 用户ID
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      */
-    void markConversationRead(Long userId, Long conversationId);
+    void markConversationRead(Long userId, Long chatId);
 
     /**
      * 获取用户未读消息总数
@@ -76,49 +74,43 @@ public interface ImConversationService {
     /**
      * 更新会话的最后消息
      *
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      * @param messageId 消息ID
      * @param messageContent 消息内容
      */
-    void updateLastMessage(Long conversationId, Long messageId, String messageContent);
-
-    /**
-     * 更新会话的最后消息(使用消息对象)
-     *
-     * @param conversationId 会话ID
-     * @param message 消息对象
-     */
-    void updateLastMessage(Long conversationId, ImMessageDO message);
+    void updateLastMessage(Long chatId, Long messageId, String messageContent);
 
     /**
      * 增加会话未读数
      *
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      */
-    void incrementUnreadCount(Long conversationId);
+    void incrementUnreadCount(Long chatId);
 
     /**
      * 增加会话未读数(指定增量)
      *
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      * @param delta 增量
      */
-    void incrementUnreadCount(Long conversationId, Integer delta);
+    void incrementUnreadCount(Long chatId, Integer delta);
 
     /**
      * 清空会话未读数
      *
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      */
-    void clearUnreadCount(Long conversationId);
+    void clearUnreadCount(Long chatId);
 
     /**
-     * 根据ID获取会话
+     * 根据ID获取会话（已废弃，保留接口兼容性）
      *
-     * @param conversationId 会话ID
-     * @return 会话DO
+     * @param chatId ChatID
+     * @return 始终返回 null，Route-A 使用 chatId 直接操作
      */
-    ImConversationDO getConversation(Long conversationId);
+    default Object getConversation(Long chatId) {
+        return null;
+    }
 
     /**
      * 根据目标ID和类型删除会话
@@ -150,10 +142,10 @@ public interface ImConversationService {
      * 获取会话详情
      *
      * @param userId 用户ID
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      * @return 会话详情
      */
-    AppImConversationRespVO getConversationDetail(Long userId, Long conversationId);
+    AppImConversationRespVO getConversationDetail(Long userId, Long chatId);
 
     /**
      * 获取或创建单聊会话
@@ -177,64 +169,64 @@ public interface ImConversationService {
      * 置顶会话
      *
      * @param userId 用户ID
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      * @param isPinned 是否置顶
      */
-    void pinConversation(Long userId, Long conversationId, Boolean isPinned);
+    void pinConversation(Long userId, Long chatId, Boolean isPinned);
 
     /**
      * 设置免打扰
      *
      * @param userId 用户ID
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      * @param noDisturb 是否免打扰
      */
-    void setMute(Long userId, Long conversationId, Boolean noDisturb);
+    void setMute(Long userId, Long chatId, Boolean noDisturb);
 
     /**
      * 保存草稿
      *
      * @param userId 用户ID
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      * @param draft 草稿内容
      */
-    void saveDraft(Long userId, Long conversationId, String draft);
+    void saveDraft(Long userId, Long chatId, String draft);
 
     /**
      * 获取草稿
      *
      * @param userId 用户ID
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      * @return 草稿内容
      */
-    String getDraft(Long userId, Long conversationId);
+    String getDraft(Long userId, Long chatId);
 
     /**
      * 添加标签
      *
      * @param userId 用户ID
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      * @param tag 标签
      */
-    void addTag(Long userId, Long conversationId, String tag);
+    void addTag(Long userId, Long chatId, String tag);
 
     /**
      * 移除标签
      *
      * @param userId 用户ID
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      * @param tag 标签
      */
-    void removeTag(Long userId, Long conversationId, String tag);
+    void removeTag(Long userId, Long chatId, String tag);
 
     /**
      * 获取会话标签列表
      *
      * @param userId 用户ID
-     * @param conversationId 会话ID
+     * @param chatId ChatID
      * @return 标签列表
      */
-    List<String> getTags(Long userId, Long conversationId);
+    List<String> getTags(Long userId, Long chatId);
 
     /**
      * 按标签筛选会话

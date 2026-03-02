@@ -27,25 +27,26 @@ export function createConversation(data: any): Promise<any> {
 
 /**
  * 删除会话
+ * @param chatId ChatID
  */
-export function deleteConversation(id: string): Promise<any> {
+export function deleteConversation(chatId: string): Promise<any> {
   return request({
-    url: `/system/im/conversation/delete?id=${id}`,
+    url: `/system/im/conversation/delete?chatId=${chatId}`,
     method: 'DELETE'
   })
 }
 
 /**
  * 置顶会话
- * @param id 会话ID（字符串，避免精度丢失）
+ * @param chatId ChatID（字符串，避免精度丢失）
  * @param pinned 是否置顶
  */
-export function pinConversation(id: string, pinned: boolean): Promise<any> {
+export function pinConversation(chatId: string, pinned: boolean): Promise<any> {
   return request({
     url: '/system/im/conversation/update',
     method: 'PUT',
     data: { 
-      id: id,
+      chatId: chatId,
       isPinned: pinned 
     }
   })
@@ -53,15 +54,15 @@ export function pinConversation(id: string, pinned: boolean): Promise<any> {
 
 /**
  * 设置免打扰
- * @param id 会话ID（字符串，避免精度丢失）
+ * @param chatId ChatID（字符串，避免精度丢失）
  * @param noDisturb 是否免打扰
  */
-export function setNoDisturb(id: string, noDisturb: boolean): Promise<any> {
+export function setNoDisturb(chatId: string, noDisturb: boolean): Promise<any> {
   return request({
     url: '/system/im/conversation/update',
     method: 'PUT',
     data: { 
-      id: id,
+      chatId: chatId,
       noDisturb: noDisturb 
     }
   })
@@ -69,10 +70,11 @@ export function setNoDisturb(id: string, noDisturb: boolean): Promise<any> {
 
 /**
  * 清空未读数
+ * @param chatId ChatID
  */
-export function clearUnreadCount(id: string): Promise<any> {
+export function clearUnreadCount(chatId: string): Promise<any> {
   return request({
-    url: `/system/im/conversation/mark-read?id=${id}`,
+    url: `/system/im/conversation/clear-unread/${chatId}`,
     method: 'PUT'
   })
 }

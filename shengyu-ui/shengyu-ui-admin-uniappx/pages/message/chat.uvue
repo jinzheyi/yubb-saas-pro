@@ -332,7 +332,7 @@
 	const memberCount = ref(0)
 	
 	// 会话信息（使用字符串避免精度丢失）
-	const conversationId = ref<string>('')
+	const chatId = ref<string>('')
 	const targetId = ref<string>('')
 	const name = ref('张三')
 	const watermark = ref('同事A 1234')
@@ -437,17 +437,17 @@
 		// 2. 设置消息服务的当前用户
 		messageService.setCurrentUser(currentUserId.value, currentTenantId.value)
 		
-		// 3. 如果没有 conversationId 但有 groupId/targetId，则查询会话
-		if ((!conversationId.value || conversationId.value === '' || conversationId.value === '0') && 
+		// 3. 如果没有 chatId 但有 groupId/targetId，则查询会话
+		if ((!chatId.value || chatId.value === '' || chatId.value === '0') && 
 		    targetId.value && targetId.value !== '') {
 			try {
-				console.log('[Chat] 没有 conversationId，查询会话, targetId:', targetId.value, 'type:', chatType.value)
+				console.log('[Chat] 没有 chatId，查询会话, targetId:', targetId.value, 'type:', chatType.value)
 				const conversationType = chatType.value === 'group' ? 2 : 1
 				const conversationResult = await getConversationByTarget(targetId.value, conversationType)
 				
 				if (conversationResult && conversationResult.id != null) {
-					conversationId.value = conversationResult.id.toString()
-					console.log('[Chat] 查询会话成功, conversationId:', conversationId.value)
+					chatId.value = conversationResult.id.toString()
+					console.log('[Chat] 查询会话成功, chatId:', chatId.value)
 				} else {
 					console.error('[Chat] 查询会话失败：返回数据无效', conversationResult)
 				}
@@ -467,13 +467,13 @@
 		messageService.addMessageListener(handleNewMessage)
 		
 		// 6. 清空未读数（本地 + 服务端）
-		if (conversationId.value && conversationId.value !== '' && conversationId.value !== '0') {
+		if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
 			// 调用 BadgeService 清空会话角标
 			// BadgeService 会自动调用后端 API 并更新本地数据
-			badgeService.clearConversationBadge(conversationId.value)
+			badgeService.clearConversationBadge(chatId.value)
 			
 			// 同时清空 MessageService 的本地未读数
-			messageService.clearUnreadCount(conversationId.value)
+			messageService.clearUnreadCount(chatId.value)
 		}
 		
 		scrollToBottom()
@@ -539,9 +539,9 @@
 			return
 		}
 		
-		// 如果没有 conversationId，说明是新创建的群聊，暂时不加载消息
-		if (!conversationId.value || conversationId.value === '' || conversationId.value === '0') {
-			console.log('[Chat] conversationId 为空，跳过加载消息（新创建的群聊）')
+		// 如果没有 chatId，说明是新创建的群聊，暂时不加载消息
+		if (!chatId.value || chatId.value === '' || chatId.value === '0') {
+			console.log('[Chat] chatId 为空，跳过加载消息（新创建的群聊）')
 			loading.value = false
 			return
 		}
@@ -550,7 +550,7 @@
 		
 		try {
 			// 1. 先从缓存加载（立即显示）
-			const cachedMessages = messageService.getMessages(conversationId.value)
+			const cachedMessages = messageService.getMessages(chatId.value)
 			if (cachedMessages.length > 0) {
 				messages.value = convertServiceMessages(cachedMessages)
 				scrollToBottom()
@@ -560,7 +560,7 @@
 			const pageNo = 1  // 第一页
 			
 			// 注意：request 拦截器已经解包了 data.data，返回的是 PageResult 对象
-			const pageResult = await getMessageList(conversationId.value, pageNo, 20)
+			const pageResult = await getMessageList(chatId.value, pageNo, 20)
 			
 			if (pageResult && pageResult.list) {
 				const serverMessages = pageResult.list as any[]
@@ -602,70 +602,79 @@
 	 * 转换服务端消息为 UI 消息格式
 	 */
 	function convertServerMessage(msg : any) : MessageItem {
-		const rawContent = parseRawContent(msg.content)
-		const content = parseMessageContent(rawContent)
+		// 安全地解析内容，防止 JSON 解析错误
+		let rawContent : any
+		let content : any
+		try {
+			rawContent = parseRawContent(msg.content)
+			content = parseMessageContent(rawContent)
+		} catch (e) {
+			console.error('[Chat] 解析消息内容失败:', e, msg.content)
+			rawContent = msg.content
+			content = msg.content
+		}
 		
 		const senderIdStr = msg && msg.senderId != null ? msg.senderId.toString() : '0'
-		const receiverIdStr = msg && msg.receiverId != null ? msg.receiverId.toString() : ''
+	const receiverIdStr = msg && msg.receiverId != null ? msg.receiverId.toString() : ''
+	const messageIdStr = msg && msg.messageId != null ? msg.messageId.toString() : '0'
+	const idStr = msg && msg.id != null ? msg.id.toString() : '0'
+	
+	// 处理发送者信息缺失的后备方案
+	const senderNickname = msg.senderNickname || ''
+	const avatarText = senderNickname ? getAvatarTextUtil(senderNickname) : '?'
+	
+	const uiMessage = {
+		id: idStr,
+		messageId: messageIdStr,
+		senderId: senderIdStr,
+		receiverId: receiverIdStr,
+		type: getMessageTypeString(msg.messageType),
+		content: getMessageContent(msg.messageType, content),
+		isSelf: senderIdStr === currentUserId.value,
+		time: msg.sendTime || msg.createTime || '',
+		timestamp: new Date(msg.sendTime || msg.createTime || Date.now()).getTime(),
+		showTime: true,
+		avatarText: avatarText,
+		avatarBg: getUserAvatarColor(senderIdStr),
+		senderName: senderNickname,
+		status: msg.status === 1 ? 'success' : 'sending'
+	} as MessageItem
+
+	applyQuoteFields(uiMessage, rawContent)
+	return uiMessage
+}
+
+/**
+ * 转换消息服务的消息为 UI 消息格式
+ */
+function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : MessageItem[] {
+	return serviceMessages.map(msg => {
+		const senderIdStr = msg && msg.senderId != null ? msg.senderId.toString() : '0'
+		const receiverIdStr = msg && msg.receiverId != null ? msg.receiverId.toString() : '0'
 		const messageIdStr = msg && msg.messageId != null ? msg.messageId.toString() : '0'
 		const idStr = msg && msg.id != null ? msg.id.toString() : '0'
-		
-		// 处理发送者信息缺失的后备方案
-		const senderNickname = msg.senderNickname || ''
-		const avatarText = senderNickname ? getAvatarTextUtil(senderNickname) : '?'
 		
 		const uiMessage = {
 			id: idStr,
 			messageId: messageIdStr,
 			senderId: senderIdStr,
 			receiverId: receiverIdStr,
-			type: getMessageTypeString(msg.messageType),
-			content: getMessageContent(msg.messageType, content),
-			isSelf: senderIdStr === currentUserId.value,
-			time: msg.createTime,
-			timestamp: new Date(msg.createTime).getTime(),
+			type: getMessageTypeString(msg.type),
+			content: getServiceMessageContent(msg),
+			isSelf: msg.isSelf,
+			time: new Date(msg.timestamp).toLocaleString(),
+			timestamp: msg.timestamp,
 			showTime: true,
-			avatarText: avatarText,
-			avatarBg: getUserAvatarColor(senderIdStr),
-			senderName: senderNickname,
-			status: msg.status === 1 ? 'success' : 'sending'
+			avatarText: msg.avatarText,
+			avatarBg: msg.avatarBg,
+			senderName: msg.senderName,
+			status: msg.status
 		} as MessageItem
 
-		applyQuoteFields(uiMessage, rawContent)
+		applyQuoteFields(uiMessage, msg.content)
 		return uiMessage
-	}
-	
-	/**
-	 * 转换消息服务的消息为 UI 消息格式
-	 */
-	function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : MessageItem[] {
-		return serviceMessages.map(msg => {
-			const senderIdStr = msg && msg.senderId != null ? msg.senderId.toString() : '0'
-			const receiverIdStr = msg && msg.receiverId != null ? msg.receiverId.toString() : '0'
-			const messageIdStr = msg && msg.messageId != null ? msg.messageId.toString() : '0'
-			const idStr = msg && msg.id != null ? msg.id.toString() : '0'
-			
-			const uiMessage = {
-				id: idStr,
-				messageId: messageIdStr,
-				senderId: senderIdStr,
-				receiverId: receiverIdStr,
-				type: getMessageTypeString(msg.type),
-				content: getServiceMessageContent(msg),
-				isSelf: msg.isSelf,
-				time: new Date(msg.timestamp).toLocaleString(),
-				timestamp: msg.timestamp,
-				showTime: true,
-				avatarText: msg.avatarText,
-				avatarBg: msg.avatarBg,
-				senderName: msg.senderName,
-				status: msg.status
-			} as MessageItem
-
-			applyQuoteFields(uiMessage, msg.content)
-			return uiMessage
-		})
-	}
+	})
+}
 	
 	/**
 	 * 获取消息类型字符串
@@ -732,7 +741,14 @@
 	 */
 	function getServiceMessageContent(msg : ServiceMessageItem) : string {
 		const typeStr = getMessageTypeString(msg.type)
-		const content = parseMessageContent(msg.content)
+		// 安全地解析内容
+		let content : any
+		try {
+			content = parseMessageContent(msg.content)
+		} catch (e) {
+			console.warn('[Chat] getServiceMessageContent 解析失败:', e)
+			content = msg.content
+		}
 
 		if (typeStr === 'text' || typeStr === 'quote') {
 			return content?.content || content
@@ -751,29 +767,54 @@
 	}
 
 	function parseRawContent(content : any) : any {
+		// 处理 null/undefined
 		if (content === null || content === undefined) {
 			return content
 		}
 
-		if (typeof content === 'string') {
-			try {
-				return JSON.parse(content)
-			} catch (e) {
-				return content
-			}
+		// 如果不是字符串，直接返回
+		if (typeof content !== 'string') {
+			return content
 		}
 
-		return content
+		// 空字符串直接返回
+		const trimmed = content.trim()
+		if (trimmed.length === 0) {
+			return content
+		}
+
+		// 检查是否可能是 JSON（以 { 或 [ 开头）
+		const firstChar = trimmed.charAt(0)
+		const lastChar = trimmed.charAt(trimmed.length - 1)
+		const couldBeJson = (firstChar === '{' && lastChar === '}') || (firstChar === '[' && lastChar === ']')
+		
+		if (!couldBeJson) {
+			// 肯定不是 JSON，直接返回原字符串
+			return content
+		}
+
+		// 尝试解析 JSON，使用安全的方式
+		try {
+			return JSON.parse(trimmed)
+		} catch (e) {
+			// 解析失败，返回原字符串
+			return content
+		}
 	}
 
 	function applyQuoteFields(target : MessageItem, rawContent : any) : void {
-		const parsed = parseRawContent(rawContent)
-		if (parsed && typeof parsed === 'object') {
-			if (parsed.quotedMessageId !== null && parsed.quotedMessageId !== undefined) {
-				target.quoteMessageId = parsed.quotedMessageId.toString()
-				target.quoteContent = parsed.quotedContent || ''
-				target.quoteSenderName = parsed.quotedSenderName || ''
+		try {
+			const parsed = parseRawContent(rawContent)
+			if (parsed && typeof parsed === 'object') {
+				if (parsed.quotedMessageId !== null && parsed.quotedMessageId !== undefined) {
+					target.quoteMessageId = parsed.quotedMessageId.toString()
+					target.quoteContent = parsed.quotedContent || ''
+					target.quoteSenderName = parsed.quotedSenderName || ''
+				}
 			}
+		} catch (e) {
+			// 解析引用字段失败，忽略错误
+			console.warn('[Chat] 解析引用字段失败:', e)
 		}
 	}
 
@@ -876,11 +917,11 @@
 	 */
 	function handleNewMessage(message : ServiceMessageItem) {
 		// 只处理当前会话的消息
-		const msgConversationId = (message.groupId !== '0' && message.groupId !== '')
+		const msgChatId = (message.groupId !== '0' && message.groupId !== '')
 			? message.groupId
 			: (message.isSelf ? message.receiverId : message.senderId)
 		
-		if (msgConversationId !== conversationId.value) {
+		if (msgChatId !== chatId.value) {
 			return
 		}
 		
@@ -2011,9 +2052,9 @@
 	 * 页面加载时获取参数
 	 */
 	onLoad((options : any) => {
-		// 获取会话 ID（字符串，避免精度丢失）
-		if (options['conversationId']) {
-			conversationId.value = options['conversationId'] as string
+		// 获取 ChatID（字符串，避免精度丢失）
+		if (options['chatId']) {
+			chatId.value = options['chatId'] as string
 		}
 		
 		// 获取目标 ID（字符串，避免精度丢失）
@@ -2055,7 +2096,7 @@
 		}
 		
 		console.log('[Chat] 页面参数:', {
-			conversationId: conversationId.value,
+			chatId: chatId.value,
 			targetId: targetId.value,
 			chatType: chatType.value,
 			name: name.value,

@@ -91,7 +91,7 @@ export class GroupService {
   public async createGroup(name: string, memberIds: string[]): Promise<string> {
     try {
       const response = await request({
-        url: '/system/im-group/create',
+        url: '/system/im/group/create',
         method: 'POST',
         data: {
           name: name,
@@ -121,7 +121,7 @@ export class GroupService {
     
     try {
       const response = await request({
-        url: '/system/im-group/get',
+        url: '/system/im/group/get',
         method: 'GET',
         params: {
           id: groupId
@@ -146,7 +146,7 @@ export class GroupService {
   public async updateGroup(groupId: string, name: string, avatar: string): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-group/update',
+        url: '/system/im/group/update',
         method: 'PUT',
         data: {
           id: groupId,
@@ -173,7 +173,7 @@ export class GroupService {
   public async dismissGroup(groupId: string): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-group/dismiss',
+        url: '/system/im/group/dismiss',
         method: 'DELETE',
         params: {
           id: groupId
@@ -205,7 +205,7 @@ export class GroupService {
     
     try {
       const response = await request({
-        url: '/system/im-group/members',
+        url: '/system/im/group/members',
         method: 'GET',
         params: {
           groupId: groupId
@@ -230,7 +230,7 @@ export class GroupService {
   public async addMembers(groupId: string, memberIds: string[]): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-group/add-members',
+        url: '/system/im/group/add-members',
         method: 'POST',
         data: {
           groupId: groupId,
@@ -256,7 +256,7 @@ export class GroupService {
   public async removeMembers(groupId: string, memberIds: string[]): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-group/remove-members',
+        url: '/system/im/group/remove-members',
         method: 'POST',
         data: {
           groupId: groupId,
@@ -282,7 +282,7 @@ export class GroupService {
   public async quitGroup(groupId: string): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-group/quit',
+        url: '/system/im/group/quit',
         method: 'POST',
         data: {
           groupId: groupId
@@ -308,7 +308,7 @@ export class GroupService {
   public async transferGroup(groupId: string, newOwnerId: string): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-group/transfer',
+        url: '/system/im/group/transfer',
         method: 'POST',
         data: {
           groupId: groupId,
@@ -335,7 +335,7 @@ export class GroupService {
   public async setAdmin(groupId: string, userId: string, isAdmin: boolean): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-group/set-admin',
+        url: '/system/im/group/set-admin',
         method: 'POST',
         data: {
           groupId: groupId,
@@ -362,7 +362,7 @@ export class GroupService {
   public async muteMember(groupId: string, userId: string, duration: number): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-group/mute-member',
+        url: '/system/im/group/mute-member',
         method: 'POST',
         data: {
           groupId: groupId,
@@ -389,7 +389,7 @@ export class GroupService {
   public async unmuteMember(groupId: string, userId: string): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-group/unmute-member',
+        url: '/system/im/group/unmute-member',
         method: 'POST',
         data: {
           groupId: groupId,
@@ -415,7 +415,7 @@ export class GroupService {
   public async muteAll(groupId: string, mute: boolean): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-group/mute-all',
+        url: '/system/im/group/mute-all',
         method: 'POST',
         data: {
           groupId: groupId,
@@ -441,7 +441,7 @@ export class GroupService {
   public async setMemberNickname(groupId: string, userId: string, nickname: string): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-group/set-nickname',
+        url: '/system/im/group/set-nickname',
         method: 'POST',
         data: {
           groupId: groupId,
@@ -472,7 +472,7 @@ export class GroupService {
   ): Promise<boolean> {
     try {
       const response = await request({
-        url: '/system/im-group/publish-announcement',
+        url: '/system/im/group/publish-announcement',
         method: 'POST',
         data: {
           groupId: groupId,
@@ -494,7 +494,7 @@ export class GroupService {
   public async getAnnouncements(groupId: string): Promise<GroupAnnouncement[]> {
     try {
       const response = await request({
-        url: '/system/im-group/announcements',
+        url: '/system/im/group/announcements',
         method: 'GET',
         params: {
           groupId: groupId

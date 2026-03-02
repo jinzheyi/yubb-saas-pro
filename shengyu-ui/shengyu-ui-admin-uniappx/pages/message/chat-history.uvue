@@ -116,7 +116,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { searchMessages } from '../../api/message.uts'
 
 // 页面参数
-const conversationId = ref<string>('')
+const chatId = ref<string>('')
 const groupName = ref<string>('')
 
 // 搜索相关
@@ -165,8 +165,8 @@ const getStartTimeMax = (): string => {
 
 // 页面加载
 onLoad((options: any) => {
-  if (options.conversationId) {
-    conversationId.value = options.conversationId
+  if (options.chatId) {
+    chatId.value = options.chatId
   }
   if (options.groupName) {
     groupName.value = options.groupName
@@ -203,7 +203,7 @@ const loadMessages = async () => {
 
   try {
     console.log('[ChatHistory] 开始搜索, 参数:', {
-      conversationId: conversationId.value,
+      chatId: chatId.value,
       keyword: searchKeyword.value,
       startTime: startTime.value,
       endTime: endTime.value,
@@ -212,7 +212,7 @@ const loadMessages = async () => {
     })
     
     const res = await searchMessages(
-      conversationId.value,
+      chatId.value,
       searchKeyword.value,
       startTime.value ? `${startTime.value} 00:00:00` : undefined,
       endTime.value ? `${endTime.value} 23:59:59` : undefined,
@@ -416,7 +416,7 @@ const getHighlightedContent = (content: string): string => {
 const handleMessageClick = (message: any) => {
   // 跳转到聊天页面，传递消息ID用于定位
   uni.navigateTo({
-    url: `/pages/message/chat?conversationId=${conversationId.value}&messageId=${message.id}&highlight=true`
+    url: `/pages/message/chat?chatId=${chatId.value}&messageId=${message.id}&highlight=true`
   })
 }
 </script>

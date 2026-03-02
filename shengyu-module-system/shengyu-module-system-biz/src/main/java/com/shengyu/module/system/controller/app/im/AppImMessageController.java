@@ -7,6 +7,9 @@ import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
+import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
+import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
+import com.shengyu.module.system.service.im.ImConversationService;
 import com.shengyu.module.system.service.im.ImMessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,6 +38,12 @@ public class AppImMessageController {
     @Resource
     private ImMessageService messageService;
 
+    @Resource
+    private ImChatUserMapper chatUserMapper;
+
+    @Resource
+    private ImConversationService conversationService;
+
     @GetMapping("/page")
     @Operation(summary = "分页查询消息列表")
     public CommonResult<PageResult<AppImMessageRespVO>> getMessagePage(
@@ -43,18 +52,18 @@ public class AppImMessageController {
         return success(messageService.getMessagePage(userId, pageReqVO));
     }
 
-    @GetMapping("/list-by-conversation")
-    @Operation(summary = "根据会话ID查询消息列表")
-    @Parameter(name = "conversationId", description = "会话ID", required = true)
+    @GetMapping("/list-by-chat")
+    @Operation(summary = "根据 ChatID 查询消息列表")
+    @Parameter(name = "chatId", description = "ChatID", required = true)
     @Parameter(name = "pageNo", description = "页码", required = false)
     @Parameter(name = "pageSize", description = "每页数量", required = false)
     public CommonResult<PageResult<AppImMessageRespVO>> getMessageListByConversation(
-            @RequestParam("conversationId") Long conversationId,
+            @RequestParam("chatId") Long chatId,
             @RequestParam(value = "pageNo", required = false, defaultValue = "1") Integer pageNo,
             @RequestParam(value = "pageSize", required = false, defaultValue = "20") Integer pageSize) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         AppImMessagePageReqVO pageReqVO = new AppImMessagePageReqVO();
-        pageReqVO.setConversationId(conversationId);
+        pageReqVO.setChatId(chatId);
         pageReqVO.setPageNo(pageNo);
         pageReqVO.setPageSize(pageSize);
         return success(messageService.getMessagePage(userId, pageReqVO));
@@ -107,12 +116,18 @@ public class AppImMessageController {
 
     @GetMapping("/unread-count")
     @Operation(summary = "获取未读消息数")
-    @Parameter(name = "conversationId", description = "会话ID", required = false)
+    @Parameter(name = "chatId", description = "ChatID", required = false)
     public CommonResult<Integer> getUnreadCount(
-            @RequestParam(value = "conversationId", required = false) Long conversationId) {
+            @RequestParam(value = "chatId", required = false) Long chatId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        // TODO: 实现未读消息数统计
-        return success(0);
+        if (chatId == null) {
+            return success(conversationService.getUnreadCount(userId));
+        }
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+        if (chatUser == null || chatUser.getUnreadCount() == null) {
+            return success(0);
+        }
+        return success(chatUser.getUnreadCount());
     }
 
     @GetMapping("/search")

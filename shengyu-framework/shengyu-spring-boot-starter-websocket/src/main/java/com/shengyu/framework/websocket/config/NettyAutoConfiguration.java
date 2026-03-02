@@ -2,18 +2,19 @@ package com.shengyu.framework.websocket.config;
 
 import com.shengyu.framework.websocket.core.netty.NettyChannelInitializer;
 import com.shengyu.framework.websocket.core.netty.NettyServer;
+import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
+import com.shengyu.framework.websocket.core.protocol.MessageType;
 import com.shengyu.framework.websocket.core.netty.handler.AuthHandler;
 import com.shengyu.framework.websocket.core.netty.handler.ExceptionHandler;
 import com.shengyu.framework.websocket.core.netty.handler.HeartbeatHandler;
+import com.shengyu.framework.websocket.core.netty.handler.JsonBusinessMessageHandler;
 import com.shengyu.framework.websocket.core.netty.handler.ProtobufMessageHandler;
 import com.shengyu.framework.websocket.core.netty.handler.WebSocketFrameHandler;
-import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
 import com.shengyu.framework.websocket.core.processor.impl.FileMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.ImageMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.ReadReceiptMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.TextMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.VoiceMessageProcessor;
-import com.shengyu.framework.websocket.core.protocol.MessageType;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.service.AuthService;
 import com.shengyu.framework.websocket.core.service.MessageCacheService;
@@ -127,6 +128,11 @@ public class NettyAutoConfiguration {
     }
 
     @Bean
+    public JsonBusinessMessageHandler jsonBusinessMessageHandler(MessageProcessorFactory processorFactory) {
+        return new JsonBusinessMessageHandler(processorFactory);
+    }
+
+    @Bean
     public ExceptionHandler exceptionHandler() {
         return new ExceptionHandler();
     }
@@ -139,13 +145,15 @@ public class NettyAutoConfiguration {
             WebSocketFrameHandler webSocketFrameHandler,
             ProtobufMessageHandler protobufMessageHandler,
             HeartbeatHandler heartbeatHandler,
-            AuthHandler authHandler) {
+            AuthHandler authHandler,
+            JsonBusinessMessageHandler jsonBusinessMessageHandler) {
         return new NettyChannelInitializer(
             nettyProperties,
             webSocketFrameHandler,
             protobufMessageHandler,
             heartbeatHandler,
-            authHandler
+            authHandler,
+            jsonBusinessMessageHandler
         );
     }
 

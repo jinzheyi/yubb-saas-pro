@@ -12,8 +12,8 @@ public class AppImMessageRespVO {
     @Schema(description = "消息ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Long id;
 
-    @Schema(description = "会话ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    private Long conversationId;
+    @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    private Long chatId;
 
     @Schema(description = "发送者ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Long senderId;

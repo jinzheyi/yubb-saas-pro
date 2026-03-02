@@ -44,7 +44,7 @@
 				<view 
 					class="message-item pinned-item" 
 					v-for="(item, index) in displayPinnedList" 
-					:key="'pinned-' + item.id" 
+					:key="'pinned-' + item.chatId" 
 					@click="handleMessageClick(item)"
 					@longpress="handleLongPress(item, $event)"
 				>
@@ -59,13 +59,13 @@
 					<view class="message-content">
 						<view class="message-top">
 							<view class="message-name-wrap">
-								<text class="message-name">{{ item.titleKey ? t(item.titleKey, item.title) : item.title }}</text>
-								<text v-if="item.isGroup && item.memberCount" class="member-count">({{ item.memberCount }})</text>
+								<text class="message-name">{{ item.targetName }}</text>
+								<text v-if="item.conversationType === 2 && item.groupMemberCount" class="member-count">({{ item.groupMemberCount }})</text>
 							</view>
 							<text class="message-time">{{ formatWeChatTime(item.lastMessageTime) }}</text>
 						</view>
 						<view class="message-bottom">
-							<text class="message-desc">{{ item.desc }}</text>
+							<text class="message-desc">{{ item.lastMessageContent }}</text>
 							<text v-if="item.noDisturb" class="iconfont nodisturb-icon">&#xe63a;</text>
 						</view>
 					</view>
@@ -84,7 +84,7 @@
 				<view 
 					class="message-item" 
 					v-for="(item, index) in displayNormalList" 
-					:key="'normal-' + item.id" 
+					:key="'normal-' + item.chatId" 
 					@click="handleMessageClick(item)"
 					@longpress="handleLongPress(item, $event)"
 				>
@@ -99,13 +99,13 @@
 					<view class="message-content">
 						<view class="message-top">
 							<view class="message-name-wrap">
-								<text class="message-name">{{ item.titleKey ? t(item.titleKey, item.title) : item.title }}</text>
-								<text v-if="item.isGroup && item.memberCount" class="member-count">({{ item.memberCount }})</text>
+								<text class="message-name">{{ item.targetName }}</text>
+								<text v-if="item.conversationType === 2 && item.groupMemberCount" class="member-count">({{ item.groupMemberCount }})</text>
 							</view>
 							<text class="message-time">{{ formatWeChatTime(item.lastMessageTime) }}</text>
 						</view>
 						<view class="message-bottom">
-							<text class="message-desc">{{ item.desc }}</text>
+							<text class="message-desc">{{ item.lastMessageContent }}</text>
 							<text v-if="item.noDisturb" class="iconfont nodisturb-icon">&#xe63a;</text>
 						</view>
 					</view>
@@ -118,7 +118,7 @@
 		<view v-if="showContextMenu" class="menu-mask" @click="closeMenu">
 			<view class="menu-content" :style="{ top: menuY + 'px', left: menuX + 'px' }" @click.stop>
 				<view class="menu-header">
-					<text class="menu-title">{{ t(selectedItem?.titleKey ?? '', selectedItem?.title ?? '') }}</text>
+					<text class="menu-title">{{ selectedItem?.targetName ?? '' }}</text>
 				</view>
 				<view class="menu-list">
 					<view class="menu-item-btn" @click="handleMenuAction('pin')">
@@ -191,10 +191,10 @@
 		const isGroup = serverConv.conversationType === 2
 		
 		return {
-			id: serverConv.id != null ? serverConv.id.toString() : '0',
+			chatId: serverConv.chatId != null ? serverConv.chatId.toString() : '0',
 			categoryId: getCategoryId(serverConv),
-			title: serverConv.targetName || '未知',
-			desc: serverConv.lastMessageContent || '',
+			targetName: serverConv.targetName || '未知',
+			lastMessageContent: serverConv.lastMessageContent || '',
 			lastMessageTime: lastMessageTime,
 			avatarBg: getConversationAvatarColor(serverConv.conversationType, serverConv.targetId),
 			avatarText: getAvatarText(serverConv.targetName || ''),
@@ -203,10 +203,9 @@
 			noDisturb: serverConv.noDisturb || false,
 			isPinned: serverConv.isPinned || false,
 			pinnedTime: serverConv.isPinned ? lastMessageTime : 0,
-			isGroup: isGroup,
-			memberCount: serverConv.groupMemberCount || 0,
-			targetId: serverConv.targetId != null ? serverConv.targetId.toString() : '0',
-			conversationType: serverConv.conversationType
+			conversationType: serverConv.conversationType,
+			groupMemberCount: serverConv.groupMemberCount || 0,
+			targetId: serverConv.targetId != null ? serverConv.targetId.toString() : '0'
 		}
 	}
 
@@ -299,26 +298,25 @@
 			if (cachedConversations.length > 0) {
 				messageList.value = cachedConversations.map(conv => {
 					return {
-						id: conv.id,
+						chatId: conv.chatId,
 						categoryId: getCategoryId({ 
 							isPinned: conv.isPinned, 
 							noDisturb: conv.noDisturb, 
-							conversationType: conv.type 
+							conversationType: conv.conversationType 
 						}),
-						title: conv.name,
-						desc: conv.lastMessage,
+						targetName: conv.targetName,
+						lastMessageContent: conv.lastMessageContent,
 						lastMessageTime: conv.timestamp,
 						avatarBg: conv.avatarBg,
 						avatarText: conv.avatarText,
-						avatarIcon: conv.type === 2 ? '\ue616' : '',
+						avatarIcon: conv.conversationType === 2 ? '\ue616' : '',
 						unreadCount: conv.unreadCount,
 						noDisturb: conv.noDisturb,
 						isPinned: conv.isPinned,
 						pinnedTime: conv.isPinned ? conv.timestamp : 0,
-						isGroup: conv.type === 2,
-						memberCount: conv.groupMemberCount || 0,
-						targetId: conv.targetId,
-						conversationType: conv.type
+						conversationType: conv.conversationType,
+						groupMemberCount: conv.groupMemberCount || 0,
+						targetId: conv.targetId
 					}
 				})
 			}
@@ -352,29 +350,28 @@
 	 */
 	function handleConversationUpdate(conversation : ConversationItem) {
 		// 查找会话
-		const index = messageList.value.findIndex(c => c.id === conversation.id)
+		const index = messageList.value.findIndex(c => c.chatId === conversation.chatId)
 		
 		const uiConversation = {
-			id: conversation.id,
+			chatId: conversation.chatId,
 			categoryId: getCategoryId({ 
 				isPinned: conversation.isPinned, 
 				noDisturb: conversation.noDisturb, 
-				conversationType: conversation.type 
+				conversationType: conversation.conversationType 
 			}),
-			title: conversation.name,
-			desc: conversation.lastMessage,
+			targetName: conversation.targetName,
+			lastMessageContent: conversation.lastMessageContent,
 			lastMessageTime: conversation.timestamp,
 			avatarBg: conversation.avatarBg,
 			avatarText: conversation.avatarText,
-			avatarIcon: conversation.type === 2 ? '\ue616' : '',
+			avatarIcon: conversation.conversationType === 2 ? '\ue616' : '',
 			unreadCount: conversation.unreadCount,
 			noDisturb: conversation.noDisturb,
 			isPinned: conversation.isPinned,
 			pinnedTime: conversation.isPinned ? conversation.timestamp : 0,
-			isGroup: conversation.type === 2,
-			memberCount: conversation.groupMemberCount || 0,
-			targetId: conversation.targetId,
-			conversationType: conversation.type
+			conversationType: conversation.conversationType,
+			groupMemberCount: conversation.groupMemberCount || 0,
+			targetId: conversation.targetId
 		}
 		
 		if (index !== -1) {
@@ -435,15 +432,15 @@
 
 	function handleMessageClick(item : any) {
 		// 判断是否是群聊
-		if (item.isGroup) {
+		if (item.conversationType === 2) {
 			// 跳转到群聊页面
 			uni.navigateTo({
-				url: `/pages/message/chat?conversationId=${item.id}&type=group&groupId=${item.targetId}&targetId=${item.targetId}&name=${encodeURIComponent(item.title)}&memberCount=${item.memberCount || 0}`
+				url: `/pages/message/chat?chatId=${item.chatId}&type=group&groupId=${item.targetId}&targetId=${item.targetId}&name=${encodeURIComponent(item.targetName)}&memberCount=${item.groupMemberCount || 0}`
 			})
 		} else {
 			// 跳转到单聊页面
 			uni.navigateTo({
-				url: `/pages/message/chat?conversationId=${item.id}&type=single&targetId=${item.targetId}&name=${encodeURIComponent(item.titleKey ? t(item.titleKey) : item.title)}`
+				url: `/pages/message/chat?chatId=${item.chatId}&type=single&targetId=${item.targetId}&name=${encodeURIComponent(item.targetName)}`
 			})
 		}
 	}
@@ -471,7 +468,7 @@
 				case 'pin':
 					// 调用置顶 API
 					const newPinnedState = !targetItem.isPinned
-					await pinConversation(targetItem.id, newPinnedState)
+					await pinConversation(targetItem.chatId, newPinnedState)
 					
 					// 更新本地状态
 					targetItem.isPinned = newPinnedState
@@ -501,7 +498,7 @@
 					// 标记已读/未读
 					if (targetItem.unreadCount > 0) {
 						// 清空未读数
-						await clearUnreadCount(targetItem.id)
+						await clearUnreadCount(targetItem.chatId)
 						targetItem.unreadCount = 0
 						uni.showToast({
 							title: '已标记为已读',
@@ -524,10 +521,10 @@
 						content: '确定要删除该会话吗？',
 						success: async (res) => {
 							if (res.confirm) {
-								await deleteConversation(targetItem.id)
+								await deleteConversation(targetItem.chatId)
 								
 								// 从列表中移除
-								const index = messageList.value.findIndex(i => i.id === targetItem.id)
+								const index = messageList.value.findIndex(i => i.chatId === targetItem.chatId)
 								if (index > -1) {
 									messageList.value.splice(index, 1)
 								}

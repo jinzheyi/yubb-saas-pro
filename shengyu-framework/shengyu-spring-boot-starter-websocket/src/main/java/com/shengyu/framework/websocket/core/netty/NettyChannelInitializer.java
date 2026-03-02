@@ -34,6 +34,7 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
     private final ProtobufMessageHandler protobufMessageHandler;
     private final HeartbeatHandler heartbeatHandler;
     private final AuthHandler authHandler;
+    private final JsonBusinessMessageHandler jsonBusinessMessageHandler;
 
     @Override
     protected void initChannel(SocketChannel ch) {
@@ -83,6 +84,9 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
         
         // 认证处理器
         pipeline.addLast("auth-handler", authHandler);
+
+        // WebSocket(JSON) 业务消息处理器（将 {header, body} JSON 转为 Protobuf 并分发）
+        pipeline.addLast("json-business-message-handler", jsonBusinessMessageHandler);
         
         // 异常处理器
         pipeline.addLast("exception-handler", new ExceptionHandler());

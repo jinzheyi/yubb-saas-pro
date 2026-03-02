@@ -5,7 +5,6 @@ import com.shengyu.framework.websocket.core.protocol.ConversationBadge;
 import com.shengyu.framework.websocket.core.protocol.MenuBadge;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
-import com.shengyu.module.system.dal.mysql.im.ImConversationMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -24,9 +23,6 @@ public class ImBadgeServiceImpl implements ImBadgeService {
 
     @Resource
     private NettyMessageSender messageSender;
-
-    @Resource
-    private ImConversationMapper conversationMapper;
 
     @Resource
     private ImConversationService conversationService;

@@ -3,14 +3,16 @@ package com.shengyu.module.system.service.im.spi;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.shengyu.framework.websocket.core.protocol.*;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
-import com.shengyu.module.system.dal.dataobject.im.ImConversationDO;
-import com.shengyu.module.system.dal.dataobject.im.ImMessageDO;
-import com.shengyu.module.system.dal.mysql.im.ImConversationMapper;
-import com.shengyu.module.system.dal.mysql.im.ImMessageMapper;
+import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
+import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
+import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
+import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
+import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
+import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
+import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.service.im.ImBadgeService;
 import com.shengyu.module.system.service.im.ImGroupService;
-import com.shengyu.module.system.service.im.ImSequenceService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -41,13 +43,13 @@ import java.util.stream.Collectors;
 public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
     @Resource
-    private ImMessageMapper messageMapper;
+    private ImChatMessageMapper chatMessageMapper;
 
     @Resource
-    private ImConversationMapper conversationMapper;
+    private ImChatMapper chatMapper;
 
     @Resource
-    private ImSequenceService sequenceService;
+    private ImChatUserMapper chatUserMapper;
 
     @Resource
     private ImBadgeService imBadgeService;
@@ -85,29 +87,26 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         MessageHeader header = message.getHeader();
         
         try {
-            // 1. 生成序列号（已移除，不再需要）
-            // Long sequence = sequenceService.generateMessageSequence();
-            
-            // 2. 解析消息内容
+            // 1. 解析消息内容
             String content = parseMessageContent(message);
             
-            // 3. 转换为 DO 对象
-            ImMessageDO messageDO = new ImMessageDO();
-            messageDO.setId(header.getMessageId());
-            messageDO.setMessageType(header.getMessageType().getNumber());
+            // 2. 确定/创建全局 ChatID
+            Long chatId = getOrCreateChatId(header);
+
+            // 3. 保存到新消息表（全局会话单份存储）
+            LocalDateTime sendTime = LocalDateTime.now();
+            ImChatMessageDO messageDO = new ImChatMessageDO();
+            messageDO.setChatId(chatId);
             messageDO.setSenderId(header.getSenderId());
-            messageDO.setReceiverId(header.getReceiverId());
-            messageDO.setGroupId(header.getGroupId());
+            messageDO.setMessageType(header.getMessageType().getNumber());
             messageDO.setContent(content);
             messageDO.setExtra(header.getExtra());
-            messageDO.setStatus(0); // 0-未读
-            // messageDO.setSequence(sequence); // 已移除 sequence 字段
-            
-            // 4. 保存到数据库（使用批量插入可进一步优化）
-            messageMapper.insert(messageDO);
-            
+            messageDO.setSendTime(sendTime);
+            messageDO.setStatus(ImMessageStatusEnum.SENT.getStatus());
+            chatMessageMapper.insert(messageDO);
+
             // 5. 异步更新会话信息（不阻塞消息保存）
-            updateConversationAsync(header, messageDO);
+            updateChatUserAsync(header, messageDO);
             
             log.debug("[MessageStorage] 消息保存成功, messageId: {}, type: {}", 
                     header.getMessageId(), header.getMessageType());
@@ -118,6 +117,36 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             log.error("[MessageStorage] 消息保存失败, messageId: {}", header.getMessageId(), e);
             throw e;
         }
+    }
+
+    private Long getOrCreateChatId(MessageHeader header) {
+        Integer chatType;
+        ImChatDO chat;
+        if (header.getGroupId() > 0) {
+            chatType = ImConversationTypeEnum.GROUP.getType();
+            chat = chatMapper.selectGroupChat(header.getGroupId(), chatType);
+            if (chat == null) {
+                chat = new ImChatDO();
+                chat.setChatType(chatType);
+                chat.setGroupId(header.getGroupId());
+                chat.setStatus(1);
+                chatMapper.insert(chat);
+            }
+        } else {
+            chatType = ImConversationTypeEnum.SINGLE.getType();
+            Long user1 = Math.min(header.getSenderId(), header.getReceiverId());
+            Long user2 = Math.max(header.getSenderId(), header.getReceiverId());
+            chat = chatMapper.selectSingleChat(user1, user2, chatType);
+            if (chat == null) {
+                chat = new ImChatDO();
+                chat.setChatType(chatType);
+                chat.setSingleUser1(user1);
+                chat.setSingleUser2(user2);
+                chat.setStatus(1);
+                chatMapper.insert(chat);
+            }
+        }
+        return chat.getId();
     }
 
     /**
@@ -179,84 +208,49 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
      * 4. 推送角标更新到接收者的所有设备
      */
     @Async("imTaskExecutor")
-    public void updateConversationAsync(MessageHeader header, ImMessageDO messageDO) {
+    public void updateChatUserAsync(MessageHeader header, ImChatMessageDO messageDO) {
         try {
-            // 单聊：更新发送者和接收者的会话
-            if (header.getReceiverId() > 0) {
-                // 更新接收者的会话（增加未读数）
-                updateOrCreateConversation(
-                        header.getReceiverId(),
-                        header.getSenderId(),
-                        ImConversationTypeEnum.SINGLE.getType(),
-                        messageDO,
-                        true
-                );
-                
-                // 更新发送者的会话（不增加未读数）
-                updateOrCreateConversation(
-                        header.getSenderId(),
-                        header.getReceiverId(),
-                        ImConversationTypeEnum.SINGLE.getType(),
-                        messageDO,
-                        false
-                );
-                
-                // 推送角标更新到接收者的所有设备
-                try {
-                    imBadgeService.pushBadgeUpdate(header.getReceiverId());
-                    log.debug("[MessageStorage] 推送角标更新成功, receiverId: {}", header.getReceiverId());
-                } catch (Exception e) {
-                    log.error("[MessageStorage] 推送角标更新失败, receiverId: {}", header.getReceiverId(), e);
-                }
-            }
-            // 群聊：更新所有群成员的会话
-            else if (header.getGroupId() > 0) {
-                // 群聊会话更新逻辑
-                log.debug("[MessageStorage] 群聊消息，groupId: {}, 需要更新群成员会话", header.getGroupId());
-                
-                // 更新发送者的会话（不增加未读数）
-                updateOrCreateConversation(
-                        header.getSenderId(),
-                        header.getGroupId(),
-                        ImConversationTypeEnum.GROUP.getType(),
-                        messageDO,
-                        false
-                );
-                
-                // 推送角标更新到所有群成员（除发送者外）
-                try {
-                    // 查询群成员ID列表
-                    List<Long> memberIds = imGroupService.getGroupMemberIds(header.getGroupId());
-                    
-                    // 遍历群成员，更新会话并推送角标
-                    for (Long memberId : memberIds) {
-                        // 跳过发送者
-                        if (memberId.equals(header.getSenderId())) {
-                            continue;
-                        }
-                        
-                        // 更新群成员的会话（增加未读数）
-                        updateOrCreateConversation(
-                                memberId,
-                                header.getGroupId(),
-                                ImConversationTypeEnum.GROUP.getType(),
-                                messageDO,
-                                true
-                        );
-                        
-                        // 推送角标更新到该群成员的所有设备
-                        try {
-                            imBadgeService.pushBadgeUpdate(memberId);
-                        } catch (Exception e) {
-                            log.error("[MessageStorage] 推送群成员角标更新失败, memberId: {}", memberId, e);
-                        }
+            Long chatId = messageDO.getChatId();
+            String lastMessageContent = truncateContent(messageDO.getContent());
+
+            if (header.getGroupId() > 0) {
+                List<Long> memberIds = imGroupService.getGroupMemberIds(header.getGroupId());
+                for (Long memberId : memberIds) {
+                    boolean isSender = memberId.equals(header.getSenderId());
+                    ImChatUserDO chatUser = ensureChatUser(memberId, chatId);
+                    chatUserMapper.updateLastMessageAndIncrementUnread(
+                            chatUser.getId(),
+                            messageDO.getId(),
+                            lastMessageContent,
+                            messageDO.getSendTime(),
+                            isSender ? 0 : 1,
+                            Boolean.TRUE.equals(chatUser.getNoDisturb())
+                    );
+                    if (!isSender) {
+                        imBadgeService.pushBadgeUpdate(memberId);
                     }
-                    
-                    log.debug("[MessageStorage] 群聊角标推送完成, groupId: {}, memberCount: {}", 
-                            header.getGroupId(), memberIds.size());
-                } catch (Exception e) {
-                    log.error("[MessageStorage] 群聊角标推送失败, groupId: {}", header.getGroupId(), e);
                 }
+            } else {
+                ImChatUserDO sender = ensureChatUser(header.getSenderId(), chatId);
+                chatUserMapper.updateLastMessageAndIncrementUnread(
+                        sender.getId(),
+                        messageDO.getId(),
+                        lastMessageContent,
+                        messageDO.getSendTime(),
+                        0,
+                        Boolean.TRUE.equals(sender.getNoDisturb())
+                );
+
+                ImChatUserDO receiver = ensureChatUser(header.getReceiverId(), chatId);
+                chatUserMapper.updateLastMessageAndIncrementUnread(
+                        receiver.getId(),
+                        messageDO.getId(),
+                        lastMessageContent,
+                        messageDO.getSendTime(),
+                        1,
+                        Boolean.TRUE.equals(receiver.getNoDisturb())
+                );
+                imBadgeService.pushBadgeUpdate(header.getReceiverId());
             }
         } catch (Exception e) {
             log.error("[MessageStorage] 更新会话失败", e);
@@ -264,57 +258,26 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         }
     }
 
-    /**
-     * 更新或创建会话
-     * 
-     * 【性能优化】
-     * 1. 使用唯一索引避免重复创建会话
-     * 2. 使用乐观锁更新未读数
-     * 3. 会话信息可以缓存到 Redis（可扩展）
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public void updateOrCreateConversation(Long userId, Long targetId, Integer conversationType, 
-                                             ImMessageDO messageDO, boolean incrementUnread) {
-        try {
-            // 查询会话
-            ImConversationDO conversation = conversationMapper.selectByUserIdAndTargetIdAndType(
-                    userId, targetId, conversationType);
-            
-            if (conversation == null) {
-                // 创建新会话
-                conversation = new ImConversationDO();
-                conversation.setUserId(userId);
-                conversation.setTargetId(targetId);
-                conversation.setConversationType(conversationType);
-                conversation.setUnreadCount(incrementUnread ? 1 : 0);
-                conversation.setLastMessageId(messageDO.getId());
-                conversation.setLastMessageContent(truncateContent(messageDO.getContent()));
-                conversation.setLastMessageTime(LocalDateTime.now());
-                conversation.setIsPinned(false);
-                conversation.setNoDisturb(false);
-                conversation.setDeletedByUser(false);
-                conversationMapper.insert(conversation);
-            } else {
-                // 更新会话
-                conversation.setLastMessageId(messageDO.getId());
-                conversation.setLastMessageContent(truncateContent(messageDO.getContent()));
-                conversation.setLastMessageTime(LocalDateTime.now());
-                
-                // 增加未读数（如果不是发送者且未免打扰）
-                if (incrementUnread && !conversation.getNoDisturb()) {
-                    conversation.setUnreadCount(conversation.getUnreadCount() + 1);
-                }
-                
-                // 如果会话被用户删除，则恢复
-                if (conversation.getDeletedByUser()) {
-                    conversation.setDeletedByUser(false);
-                }
-                
-                conversationMapper.updateById(conversation);
-            }
-        } catch (Exception e) {
-            log.error("[MessageStorage] 更新会话失败, userId: {}, targetId: {}", userId, targetId, e);
+    private ImChatUserDO ensureChatUser(Long userId, Long chatId) {
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+        if (chatUser != null) {
+            return chatUser;
         }
+        chatUser = new ImChatUserDO();
+        chatUser.setUserId(userId);
+        chatUser.setChatId(chatId);
+        chatUser.setUnreadCount(0);
+        chatUser.setIsPinned(false);
+        chatUser.setNoDisturb(false);
+        chatUser.setDeletedByUser(false);
+        chatUserMapper.insert(chatUser);
+        return chatUser;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateOrCreateConversation(Long userId, Long targetId, Integer conversationType,
+                                          ImChatMessageDO messageDO, boolean incrementUnread) {
+        // 已迁移到 updateChatUserAsync；线路 A 不再使用旧的 conversation 维度更新
     }
 
     /**
@@ -328,6 +291,43 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             return content.substring(0, 100) + "...";
         }
         return content;
+    }
+
+    /**
+     * 异步更新会话未读数
+     */
+    @Async("imTaskExecutor")
+    public void updateConversationUnreadCountAsync(Long userId) {
+        try {
+            log.debug("[MessageStorage] updateConversationUnreadCountAsync 已废弃, userId: {}", userId);
+        } catch (Exception e) {
+            log.error("[MessageStorage] 更新会话未读数失败, userId: {}", userId, e);
+        }
+    }
+
+    /**
+     * 根据消息ID列表查询发送者ID集合
+     * 
+     * 用于已读回执转发
+     * 
+     * @param messageIds 消息ID列表
+     * @return 发送者ID集合
+     */
+    public Set<Long> getSenderIdsByMessageIds(List<Long> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        try {
+            List<ImChatMessageDO> messages = chatMessageMapper.selectBatchIds(messageIds);
+            return messages.stream()
+                    .map(ImChatMessageDO::getSenderId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+        } catch (Exception e) {
+            log.error("[MessageStorage] 查询发送者ID失败", e);
+            return Collections.emptySet();
+        }
     }
 
     /**
@@ -348,7 +348,9 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
         try {
             // 1. 批量更新消息状态为已读
-            int updatedCount = messageMapper.updateStatusByIdsAndReceiverId(messageIds, userId, 1);
+            // 说明：线路 A 的 im_chat_message 不存 receiverId，已读需要按 chat_user.last_read_message_id 设计；
+            // 这里先保留为“按 messageIds 直接更新状态”，不做用户隔离。
+            int updatedCount = chatMessageMapper.updateStatusByIds(messageIds, 1);
             
             log.debug("[MessageStorage] 标记消息已读, userId: {}, messageCount: {}, updated: {}", 
                     userId, messageIds.size(), updatedCount);
@@ -360,60 +362,4 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             log.error("[MessageStorage] 标记消息已读失败, userId: {}", userId, e);
         }
     }
-
-    /**
-     * 异步更新会话未读数
-     */
-    @Async("imTaskExecutor")
-    public void updateConversationUnreadCountAsync(Long userId) {
-        try {
-            // 重新计算所有会话的未读数
-            List<ImConversationDO> conversations = conversationMapper.selectListByUserId(userId);
-            
-            for (ImConversationDO conversation : conversations) {
-                // 查询该会话的未读消息数
-                int unreadCount = messageMapper.countUnreadByReceiverIdAndTargetId(
-                        userId, 
-                        conversation.getTargetId(), 
-                        conversation.getConversationType()
-                );
-                
-                // 更新会话未读数
-                if (conversation.getUnreadCount() != unreadCount) {
-                    conversation.setUnreadCount(unreadCount);
-                    conversationMapper.updateById(conversation);
-                }
-            }
-            
-            log.debug("[MessageStorage] 更新会话未读数完成, userId: {}", userId);
-        } catch (Exception e) {
-            log.error("[MessageStorage] 更新会话未读数失败, userId: {}", userId, e);
-        }
-    }
-
-    /**
-     * 根据消息ID列表查询发送者ID集合
-     * 
-     * 用于已读回执转发
-     * 
-     * @param messageIds 消息ID列表
-     * @return 发送者ID集合
-     */
-    public Set<Long> getSenderIdsByMessageIds(List<Long> messageIds) {
-        if (messageIds == null || messageIds.isEmpty()) {
-            return Collections.emptySet();
-        }
-
-        try {
-            List<ImMessageDO> messages = messageMapper.selectBatchIds(messageIds);
-            return messages.stream()
-                    .map(ImMessageDO::getSenderId)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
-        } catch (Exception e) {
-            log.error("[MessageStorage] 查询发送者ID失败", e);
-            return Collections.emptySet();
-        }
-    }
-
 }

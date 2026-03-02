@@ -1,0 +1,287 @@
+package com.shengyu.framework.websocket.core.netty.handler;
+
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
+import com.shengyu.framework.websocket.core.processor.MessageProcessor;
+import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
+import com.shengyu.framework.tenant.core.util.TenantUtils;
+import com.shengyu.framework.websocket.core.protocol.*;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * WebSocket(JSON) 业务消息处理器
+ *
+ * 负责将前端发送的 JSON 格式 { header, body } 消息转换为 Protobuf {@link ImMessage}，
+ * 并复用现有 {@link MessageProcessorFactory} 进行分发处理（存储/转发等）。
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+@ChannelHandler.Sharable
+public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
+
+    private final MessageProcessorFactory processorFactory;
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // 只处理 WebSocket 文本帧转发出来的 String
+        if (!(msg instanceof String)) {
+            super.channelRead(ctx, msg);
+            return;
+        }
+
+        final String text = (String) msg;
+        JSONObject json;
+        try {
+            json = JSONUtil.parseObj(text);
+        } catch (Exception e) {
+            // 非 JSON，交给后续处理（例如 ping/pong 或其他协议）
+            super.channelRead(ctx, msg);
+            return;
+        }
+
+        JSONObject headerJson = json.getJSONObject("header");
+        if (headerJson == null) {
+            super.channelRead(ctx, msg);
+            return;
+        }
+
+        Integer messageTypeValue = headerJson.getInt("messageType");
+        if (messageTypeValue == null) {
+            super.channelRead(ctx, msg);
+            return;
+        }
+
+        // 系统消息在 HeartbeatHandler/AuthHandler 已处理，这里只处理业务消息（>=100）
+        if (messageTypeValue < MessageType.TEXT_VALUE) {
+            super.channelRead(ctx, msg);
+            return;
+        }
+
+        try {
+            ImMessage imMessage = buildImMessageFromJson(ctx, headerJson, json.get("body"));
+            MessageType messageType = imMessage.getHeader().getMessageType();
+
+            MessageProcessor processor = processorFactory.getProcessor(messageType);
+            if (processor == null) {
+                log.warn("[JsonBusiness] 未找到消息处理器, type: {}", messageType);
+                return;
+            }
+
+            Long tenantId = imMessage.getHeader().getTenantId();
+            TenantUtils.execute(tenantId, () -> processor.process(ctx, imMessage));
+        } catch (Exception e) {
+            log.error("[JsonBusiness] 处理业务 JSON 消息异常, payload: {}", text, e);
+        }
+    }
+
+    private ImMessage buildImMessageFromJson(ChannelHandlerContext ctx, JSONObject headerJson, Object bodyObj) {
+        // 1) header
+        MessageHeader.Builder headerBuilder = MessageHeader.newBuilder();
+
+        Long authedUserId = AuthHandler.getUserId(ctx);
+        Long authedTenantId = AuthHandler.getTenantId(ctx);
+
+        Long messageId = headerJson.getLong("messageId", System.currentTimeMillis());
+        headerBuilder.setMessageId(messageId != null ? messageId : System.currentTimeMillis());
+
+        Integer messageTypeValue = headerJson.getInt("messageType");
+        headerBuilder.setMessageType(MessageType.forNumber(messageTypeValue));
+
+        // senderId：优先使用认证用户，避免前端伪造
+        Long senderId = authedUserId != null ? authedUserId : headerJson.getLong("senderId", 0L);
+        headerBuilder.setSenderId(senderId != null ? senderId : 0L);
+
+        Long receiverId = headerJson.getLong("receiverId", 0L);
+        headerBuilder.setReceiverId(receiverId != null ? receiverId : 0L);
+
+        Long groupId = headerJson.getLong("groupId", 0L);
+        headerBuilder.setGroupId(groupId != null ? groupId : 0L);
+
+        Long tenantId = authedTenantId != null ? authedTenantId : headerJson.getLong("tenantId", 0L);
+        headerBuilder.setTenantId(tenantId != null ? tenantId : 0L);
+
+        Long timestamp = headerJson.getLong("timestamp", System.currentTimeMillis());
+        headerBuilder.setTimestamp(timestamp != null ? timestamp : System.currentTimeMillis());
+
+        Long sequence = headerJson.getLong("sequence", 0L);
+        headerBuilder.setSequence(sequence != null ? sequence : 0L);
+
+        String extra = headerJson.getStr("extra", "");
+        headerBuilder.setExtra(extra != null ? extra : "");
+
+        // 2) body（将 JSON body 转为对应 Protobuf message bytes）
+        byte[] bodyBytes = buildBodyBytes(headerBuilder.getMessageType(), bodyObj);
+
+        return ImMessage.newBuilder()
+                .setHeader(headerBuilder.build())
+                .setBody(com.google.protobuf.ByteString.copyFrom(bodyBytes))
+                .build();
+    }
+
+    private byte[] buildBodyBytes(MessageType messageType, Object bodyObj) {
+        JSONObject bodyJson = null;
+        if (bodyObj instanceof JSONObject) {
+            bodyJson = (JSONObject) bodyObj;
+        } else if (bodyObj != null) {
+            try {
+                bodyJson = JSONUtil.parseObj(bodyObj);
+            } catch (Exception ignore) {
+            }
+        }
+
+        switch (messageType) {
+            case TEXT: {
+                String content = bodyJson != null ? bodyJson.getStr("content", "") : "";
+                List<Long> atUserIds = new ArrayList<>();
+                if (bodyJson != null) {
+                    Object atObj = bodyJson.get("atUserIds");
+                    if (atObj instanceof JSONArray) {
+                        JSONArray arr = (JSONArray) atObj;
+                        for (int i = 0; i < arr.size(); i++) {
+                            Long v = arr.getLong(i);
+                            if (v != null) {
+                                atUserIds.add(v);
+                            }
+                        }
+                    }
+                }
+                TextMessage.Builder builder = TextMessage.newBuilder().setContent(content);
+                if (!atUserIds.isEmpty()) {
+                    builder.addAllAtUserIds(atUserIds);
+                }
+                return builder.build().toByteArray();
+            }
+            case IMAGE: {
+                if (bodyJson == null) {
+                    return ImageMessage.getDefaultInstance().toByteArray();
+                }
+                ImageMessage.Builder builder = ImageMessage.newBuilder()
+                        .setUrl(bodyJson.getStr("url", ""))
+                        .setThumbnailUrl(bodyJson.getStr("thumbnailUrl", ""))
+                        .setWidth(bodyJson.getInt("width", 0))
+                        .setHeight(bodyJson.getInt("height", 0))
+                        .setSize(bodyJson.getLong("size", 0L));
+                return builder.build().toByteArray();
+            }
+            case VOICE: {
+                if (bodyJson == null) {
+                    return VoiceMessage.getDefaultInstance().toByteArray();
+                }
+                VoiceMessage.Builder builder = VoiceMessage.newBuilder()
+                        .setUrl(bodyJson.getStr("url", ""))
+                        .setDuration(bodyJson.getInt("duration", 0))
+                        .setSize(bodyJson.getLong("size", 0L));
+                return builder.build().toByteArray();
+            }
+            case VIDEO: {
+                if (bodyJson == null) {
+                    return VideoMessage.getDefaultInstance().toByteArray();
+                }
+                VideoMessage.Builder builder = VideoMessage.newBuilder()
+                        .setUrl(bodyJson.getStr("url", ""))
+                        .setCoverUrl(bodyJson.getStr("coverUrl", ""))
+                        .setDuration(bodyJson.getInt("duration", 0))
+                        .setWidth(bodyJson.getInt("width", 0))
+                        .setHeight(bodyJson.getInt("height", 0))
+                        .setSize(bodyJson.getLong("size", 0L));
+                return builder.build().toByteArray();
+            }
+            case FILE: {
+                if (bodyJson == null) {
+                    return FileMessage.getDefaultInstance().toByteArray();
+                }
+                FileMessage.Builder builder = FileMessage.newBuilder()
+                        .setUrl(bodyJson.getStr("url", ""))
+                        .setFileName(bodyJson.getStr("fileName", ""))
+                        .setSize(bodyJson.getLong("size", 0L))
+                        .setFileType(bodyJson.getStr("fileType", ""));
+                return builder.build().toByteArray();
+            }
+            case LOCATION: {
+                if (bodyJson == null) {
+                    return LocationMessage.getDefaultInstance().toByteArray();
+                }
+                LocationMessage.Builder builder = LocationMessage.newBuilder()
+                        .setLatitude(bodyJson.getDouble("latitude", 0D))
+                        .setLongitude(bodyJson.getDouble("longitude", 0D))
+                        .setAddress(bodyJson.getStr("address", ""));
+                return builder.build().toByteArray();
+            }
+            case READ_RECEIPT: {
+                if (bodyJson == null) {
+                    return ReadReceiptMessage.getDefaultInstance().toByteArray();
+                }
+                ReadReceiptMessage.Builder builder = ReadReceiptMessage.newBuilder();
+                Object idsObj = bodyJson.get("messageIds");
+                if (idsObj instanceof JSONArray) {
+                    JSONArray arr = (JSONArray) idsObj;
+                    List<Long> ids = new ArrayList<>();
+                    for (int i = 0; i < arr.size(); i++) {
+                        Long v = arr.getLong(i);
+                        if (v != null) {
+                            ids.add(v);
+                        }
+                    }
+                    builder.addAllMessageIds(ids);
+                }
+                return builder.build().toByteArray();
+            }
+            case RECALL: {
+                if (bodyJson == null) {
+                    return RecallMessage.getDefaultInstance().toByteArray();
+                }
+                RecallMessage.Builder builder = RecallMessage.newBuilder().setMessageId(bodyJson.getLong("messageId", 0L));
+                return builder.build().toByteArray();
+            }
+            case TYPING: {
+                if (bodyJson == null) {
+                    return TypingMessage.getDefaultInstance().toByteArray();
+                }
+                TypingMessage.Builder builder = TypingMessage.newBuilder()
+                        .setTargetUserId(bodyJson.getLong("targetUserId", 0L))
+                        .setGroupId(bodyJson.getLong("groupId", 0L))
+                        .setIsTyping(bodyJson.getBool("isTyping", false));
+                return builder.build().toByteArray();
+            }
+            case QUOTE_REPLY: {
+                if (bodyJson == null) {
+                    return QuoteReplyMessage.getDefaultInstance().toByteArray();
+                }
+                QuoteReplyMessage.Builder builder = QuoteReplyMessage.newBuilder()
+                        .setQuoteMessageId(bodyJson.getLong("quoteMessageId", 0L))
+                        .setQuoteContent(bodyJson.getStr("quoteContent", ""))
+                        .setQuoteSenderId(bodyJson.getLong("quoteSenderId", 0L))
+                        .setQuoteSenderName(bodyJson.getStr("quoteSenderName", ""))
+                        .setReplyContent(bodyJson.getStr("replyContent", ""));
+
+                Object atObj = bodyJson.get("atUserIds");
+                if (atObj instanceof JSONArray) {
+                    JSONArray arr = (JSONArray) atObj;
+                    List<Long> ids = new ArrayList<>();
+                    for (int i = 0; i < arr.size(); i++) {
+                        Long v = arr.getLong(i);
+                        if (v != null) {
+                            ids.add(v);
+                        }
+                    }
+                    builder.addAllAtUserIds(ids);
+                }
+
+                return builder.build().toByteArray();
+            }
+            default:
+                // 未覆盖的类型，尽量透传 JSON 字符串（便于排查）
+                return bodyObj != null ? bodyObj.toString().getBytes() : new byte[0];
+        }
+    }
+}

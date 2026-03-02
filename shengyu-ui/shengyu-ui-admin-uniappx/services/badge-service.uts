@@ -27,8 +27,8 @@ export type BadgeUpdateMessage = {
  * 对应 Protobuf: ConversationBadge
  */
 export type ConversationBadge = {
-  // 会话ID
-  conversationId: string
+  // ChatID
+  chatId: string
   // 未读数
   unreadCount: number
 }
@@ -195,8 +195,8 @@ export class BadgeService {
   /**
    * 获取会话未读数
    */
-  public getConversationBadge(conversationId: string): number {
-    const count = this.badgeData.conversationBadges.get(conversationId)
+  public getConversationBadge(chatId: string): number {
+    const count = this.badgeData.conversationBadges.get(chatId)
     return count !== null && count !== undefined ? count : 0
   }
   
@@ -211,15 +211,15 @@ export class BadgeService {
   /**
    * 增加会话未读数
    */
-  public incrementConversationBadge(conversationId: string, delta: number = 1): void {
-    console.log(`[BadgeService] 增加会话 ${conversationId} 未读数: ${delta}`)
+  public incrementConversationBadge(chatId: string, delta: number = 1): void {
+    console.log(`[BadgeService] 增加会话 ${chatId} 未读数: ${delta}`)
     
     // 获取当前会话未读数
-    const currentCount = this.getConversationBadge(conversationId)
+    const currentCount = this.getConversationBadge(chatId)
     const newCount = currentCount + delta
     
     // 更新会话未读数
-    this.badgeData.conversationBadges.set(conversationId, newCount)
+    this.badgeData.conversationBadges.set(chatId, newCount)
     
     // 更新总未读数
     this.badgeData.totalUnread += delta
@@ -235,18 +235,18 @@ export class BadgeService {
   /**
    * 减少会话未读数
    */
-  public decrementConversationBadge(conversationId: string, delta: number = 1): void {
-    console.log(`[BadgeService] 减少会话 ${conversationId} 未读数: ${delta}`)
+  public decrementConversationBadge(chatId: string, delta: number = 1): void {
+    console.log(`[BadgeService] 减少会话 ${chatId} 未读数: ${delta}`)
     
     // 获取当前会话未读数
-    const currentCount = this.getConversationBadge(conversationId)
+    const currentCount = this.getConversationBadge(chatId)
     
     // 计算新的未读数，确保不小于0
     const actualDelta = Math.min(delta, currentCount)
     const newCount = Math.max(0, currentCount - delta)
     
     // 更新会话未读数
-    this.badgeData.conversationBadges.set(conversationId, newCount)
+    this.badgeData.conversationBadges.set(chatId, newCount)
     
     // 更新总未读数，确保不小于0
     this.badgeData.totalUnread = Math.max(0, this.badgeData.totalUnread - actualDelta)
@@ -262,15 +262,15 @@ export class BadgeService {
   /**
    * 清空会话未读数
    */
-  public clearConversationBadge(conversationId: string): void {
-    console.log(`[BadgeService] 清空会话 ${conversationId} 未读数`)
+  public clearConversationBadge(chatId: string): void {
+    console.log(`[BadgeService] 清空会话 ${chatId} 未读数`)
     
     // 获取当前会话未读数
-    const currentCount = this.getConversationBadge(conversationId)
+    const currentCount = this.getConversationBadge(chatId)
     
     if (currentCount > 0) {
       // 清空会话未读数
-      this.badgeData.conversationBadges.set(conversationId, 0)
+      this.badgeData.conversationBadges.set(chatId, 0)
       
       // 更新总未读数
       this.badgeData.totalUnread = Math.max(0, this.badgeData.totalUnread - currentCount)
@@ -283,8 +283,26 @@ export class BadgeService {
       this.saveToLocal()
       
       // 调用后端API清空服务器端未读数
-      this.clearUnreadOnServer(conversationId)
+      this.clearUnreadOnServer(chatId)
     }
+  }
+  
+  /**
+   * 调用后端API清空服务器端未读数
+   */
+  private clearUnreadOnServer(chatId: string): void {
+    // 动态导入API函数以避免循环依赖
+    import('../api/conversation.uts').then((conversationApi) => {
+      conversationApi.clearUnreadCount(chatId).then((response: any) => {
+        console.log(`[BadgeService] 清空会话 ${chatId} 服务器端未读数成功`)
+      }).catch((error: any) => {
+        console.error(`[BadgeService] 清空会话 ${chatId} 服务器端未读数失败:`, error)
+        // 失败不影响本地角标显示
+      })
+    }).catch((error: any) => {
+      console.error(`[BadgeService] 清空会话 ${chatId} 服务器端未读数失败:`, error)
+      // 失败不影响本地角标显示
+    })
   }
   
   /**
@@ -308,24 +326,6 @@ export class BadgeService {
   }
   
   /**
-   * 调用后端API清空服务器端未读数
-   */
-  private clearUnreadOnServer(conversationId: string): void {
-    // 动态导入API函数以避免循环依赖
-    import('../api/conversation.uts').then((conversationApi) => {
-      conversationApi.clearUnreadCount(conversationId).then((response: any) => {
-        console.log(`[BadgeService] 清空会话 ${conversationId} 服务器端未读数成功`)
-      }).catch((error: any) => {
-        console.error(`[BadgeService] 清空会话 ${conversationId} 服务器端未读数失败:`, error)
-        // 失败不影响本地角标显示
-      })
-    }).catch((error: any) => {
-      console.error(`[BadgeService] 清空会话 ${conversationId} 服务器端未读数失败:`, error)
-      // 失败不影响本地角标显示
-    })
-  }
-  
-  /**
    * 处理 WebSocket BADGE_UPDATE 消息
    */
   public handleBadgeUpdate(message: BadgeUpdateMessage): void {
@@ -337,7 +337,7 @@ export class BadgeService {
     // 批量更新会话角标
     if (message.conversationBadges !== null && message.conversationBadges !== undefined) {
       message.conversationBadges.forEach((badge: ConversationBadge) => {
-        this.badgeData.conversationBadges.set(badge.conversationId != null ? badge.conversationId.toString() : '0', badge.unreadCount)
+        this.badgeData.conversationBadges.set(badge.chatId != null ? badge.chatId.toString() : '0', badge.unreadCount)
       })
     }
     
@@ -382,7 +382,7 @@ export class BadgeService {
             if (data.conversationBadges !== null && data.conversationBadges !== undefined) {
               const conversationBadges = data.conversationBadges as ConversationBadge[]
               conversationBadges.forEach((badge: ConversationBadge) => {
-                this.badgeData.conversationBadges.set(badge.conversationId, badge.unreadCount)
+                this.badgeData.conversationBadges.set(badge.chatId, badge.unreadCount)
               })
             }
             
@@ -454,7 +454,7 @@ export class BadgeService {
             if (data.conversationBadges !== null && data.conversationBadges !== undefined) {
               const conversationBadges = data.conversationBadges as ConversationBadge[]
               conversationBadges.forEach((badge: ConversationBadge) => {
-                this.badgeData.conversationBadges.set(badge.conversationId, badge.unreadCount)
+                this.badgeData.conversationBadges.set(badge.chatId, badge.unreadCount)
               })
             }
             
@@ -632,9 +632,10 @@ export class BadgeService {
         this.badgeData.conversationBadges.clear()
         const conversationBadgesObj = data.conversationBadges as UTSJSONObject
         for (const key in conversationBadgesObj) {
-          const conversationId = parseInt(key)
+          // key 本身就是字符串 chatId，不要 parseInt，避免精度丢失
+          const chatId = key
           const count = conversationBadgesObj[key] as number
-          this.badgeData.conversationBadges.set(conversationId, count)
+          this.badgeData.conversationBadges.set(chatId, count)
         }
         
         this.badgeData.menuBadges.clear()
@@ -692,24 +693,22 @@ export class BadgeService {
     
     console.log(`[BadgeService] 会话角标数量 ${this.badgeData.conversationBadges.size} 超过限制 ${BadgeService.MAX_CONVERSATION_BADGES}，开始清理`)
     
-    // 将Map转换为数组并按conversationId排序（conversationId越小越旧）
-    const sortedEntries: Array<[number, number]> = []
-    this.badgeData.conversationBadges.forEach((value: number, key: number) => {
+    // 将Map转换为数组并按最后更新时间排序（越早更新的越旧）
+    const sortedEntries: Array<[string, number]> = []
+    this.badgeData.conversationBadges.forEach((value: number, key: string) => {
       sortedEntries.push([key, value])
     })
     
-    // 按conversationId升序排序
-    sortedEntries.sort((a: [number, number], b: [number, number]): number => {
-      return a[0] - b[0]
-    })
+    // 按插入顺序排序（Map 的遍历顺序就是插入顺序，前面的更旧）
+    // 直接取前 toRemoveCount 个进行删除
     
     // 计算需要移除的数量
     const toRemoveCount = sortedEntries.length - BadgeService.MAX_CONVERSATION_BADGES
     
     // 移除最旧的角标数据
     for (let i = 0; i < toRemoveCount; i++) {
-      const conversationId = sortedEntries[i][0]
-      this.badgeData.conversationBadges.delete(conversationId)
+      const chatId = sortedEntries[i][0]
+      this.badgeData.conversationBadges.delete(chatId)
     }
     
     console.log(`[BadgeService] 已移除 ${toRemoveCount} 个旧的会话角标，当前数量: ${this.badgeData.conversationBadges.size}`)

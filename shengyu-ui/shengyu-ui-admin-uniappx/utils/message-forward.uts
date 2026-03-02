@@ -14,18 +14,18 @@ import { MessageType } from '../utils/websocket.uts'
  * 转发消息到指定会话
  * 
  * @param message 要转发的消息
- * @param targetConversationIds 目标会话ID列表
+ * @param targetChatIds 目标 ChatID 列表
  * @returns 转发成功的数量
  */
-export function forwardMessage(message: MessageItem, targetConversationIds: number[]): number {
+export function forwardMessage(message: MessageItem, targetChatIds: string[]): number {
   let successCount = 0
   
-  targetConversationIds.forEach(conversationId => {
+  targetChatIds.forEach(chatId => {
     try {
       // 判断是单聊还是群聊
-      const isGroup = conversationId > 1000000  // 假设群ID大于1000000
-      const receiverId = isGroup ? 0 : conversationId
-      const groupId = isGroup ? conversationId : 0
+      const isGroup = chatId.startsWith('G') || chatId.length > 15  // 简单判断群聊
+      const receiverId = isGroup ? '0' : chatId
+      const groupId = isGroup ? chatId : '0'
       
       // 根据消息类型转发
       switch (message.type) {
@@ -112,14 +112,14 @@ export function forwardMessage(message: MessageItem, targetConversationIds: numb
  * 批量转发消息
  * 
  * @param messages 要转发的消息列表
- * @param targetConversationIds 目标会话ID列表
+ * @param targetChatIds 目标 ChatID 列表
  * @returns 转发成功的总数
  */
-export function forwardMessages(messages: MessageItem[], targetConversationIds: number[]): number {
+export function forwardMessages(messages: MessageItem[], targetChatIds: string[]): number {
   let totalSuccess = 0
   
   messages.forEach(message => {
-    totalSuccess += forwardMessage(message, targetConversationIds)
+    totalSuccess += forwardMessage(message, targetChatIds)
   })
   
   return totalSuccess

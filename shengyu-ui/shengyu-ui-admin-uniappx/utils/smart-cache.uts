@@ -107,9 +107,9 @@ export interface MessageCacheOptions {
  * 用于缓存最近的消息列表和会话消息索引
  */
 export class MessageCache<T> {
-  // 缓存会话的消息索引：conversationId -> Map<messageId, T>
+  // 缓存会话的消息索引：chatId -> Map<messageId, T>
   private convoMessageMap: Map<string, Map<string, T>>
-  // 缓存每个会话的最新消息列表：conversationId -> T[] (通常限制一定数量)
+  // 缓存每个会话的最新消息列表：chatId -> T[] (通常限制一定数量)
   private convoRecentMessages: Map<string, T[]>
   private listCapacity: number
 
@@ -122,19 +122,19 @@ export class MessageCache<T> {
   /**
    * 缓存一条消息
    */
-  public putMessage(conversationId: string, messageId: string, message: T) {
+  public putMessage(chatId: string, messageId: string, message: T) {
     // 1. 更新索引 Map
-    if (!this.convoMessageMap.has(conversationId)) {
-      this.convoMessageMap.set(conversationId, new Map())
+    if (!this.convoMessageMap.has(chatId)) {
+      this.convoMessageMap.set(chatId, new Map())
     }
-    const msgMap = this.convoMessageMap.get(conversationId)!
+    const msgMap = this.convoMessageMap.get(chatId)!
     msgMap.set(messageId, message)
 
     // 2. 更新最近消息列表
-    if (!this.convoRecentMessages.has(conversationId)) {
-      this.convoRecentMessages.set(conversationId, [])
+    if (!this.convoRecentMessages.has(chatId)) {
+      this.convoRecentMessages.set(chatId, [])
     }
-    const recentList = this.convoRecentMessages.get(conversationId)!
+    const recentList = this.convoRecentMessages.get(chatId)!
     
     // 我们在这个数组中追加。实际如果作为LRU，可以限制长度
     recentList.push(message)
@@ -148,8 +148,8 @@ export class MessageCache<T> {
   /**
    * 按 ID 获取缓存消息
    */
-  public getMessage(conversationId: string, messageId: string): T | null {
-    const msgMap = this.convoMessageMap.get(conversationId)
+  public getMessage(chatId: string, messageId: string): T | null {
+    const msgMap = this.convoMessageMap.get(chatId)
     if (msgMap && msgMap.has(messageId)) {
       return msgMap.get(messageId) as T
     }
@@ -159,16 +159,16 @@ export class MessageCache<T> {
   /**
    * 获取会话最近消息缓存
    */
-  public getRecentMessages(conversationId: string): T[] {
-    return this.convoRecentMessages.get(conversationId) || []
+  public getRecentMessages(chatId: string): T[] {
+    return this.convoRecentMessages.get(chatId) || []
   }
 
   /**
    * 清理某个会话缓存
    */
-  public clearConversation(conversationId: string) {
-    this.convoMessageMap.delete(conversationId)
-    this.convoRecentMessages.delete(conversationId)
+  public clearConversation(chatId: string) {
+    this.convoMessageMap.delete(chatId)
+    this.convoRecentMessages.delete(chatId)
   }
 
   /**
