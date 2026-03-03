@@ -10,10 +10,15 @@ import com.shengyu.framework.websocket.core.netty.handler.HeartbeatHandler;
 import com.shengyu.framework.websocket.core.netty.handler.JsonBusinessMessageHandler;
 import com.shengyu.framework.websocket.core.netty.handler.ProtobufMessageHandler;
 import com.shengyu.framework.websocket.core.netty.handler.WebSocketFrameHandler;
+import com.shengyu.framework.websocket.core.processor.impl.BadgeUpdateMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.FileMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.ImageMessageProcessor;
+import com.shengyu.framework.websocket.core.processor.impl.LocationMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.ReadReceiptMessageProcessor;
+import com.shengyu.framework.websocket.core.processor.impl.RecallMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.TextMessageProcessor;
+import com.shengyu.framework.websocket.core.processor.impl.TypingMessageProcessor;
+import com.shengyu.framework.websocket.core.processor.impl.VideoMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.VoiceMessageProcessor;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.service.AuthService;
@@ -173,8 +178,9 @@ public class NettyAutoConfiguration {
     public TextMessageProcessor textMessageProcessor(
             NettySessionManager sessionManager,
             MessageStorageService messageStorageService,
+            com.shengyu.framework.websocket.core.sender.NettyMessageSender messageSender,
             MessageProcessorFactory processorFactory) {
-        TextMessageProcessor processor = new TextMessageProcessor(sessionManager, messageStorageService);
+        TextMessageProcessor processor = new TextMessageProcessor(sessionManager, messageStorageService, messageSender);
         processorFactory.registerProcessor(MessageType.TEXT, processor);
         log.info("[Netty] 注册文本消息处理器");
         return processor;
@@ -187,8 +193,9 @@ public class NettyAutoConfiguration {
     public ImageMessageProcessor imageMessageProcessor(
             NettySessionManager sessionManager,
             MessageStorageService messageStorageService,
+            com.shengyu.framework.websocket.core.sender.NettyMessageSender messageSender,
             MessageProcessorFactory processorFactory) {
-        ImageMessageProcessor processor = new ImageMessageProcessor(sessionManager, messageStorageService);
+        ImageMessageProcessor processor = new ImageMessageProcessor(sessionManager, messageStorageService, messageSender);
         processorFactory.registerProcessor(MessageType.IMAGE, processor);
         log.info("[Netty] 注册图片消息处理器");
         return processor;
@@ -201,8 +208,9 @@ public class NettyAutoConfiguration {
     public VoiceMessageProcessor voiceMessageProcessor(
             NettySessionManager sessionManager,
             MessageStorageService messageStorageService,
+            com.shengyu.framework.websocket.core.sender.NettyMessageSender messageSender,
             MessageProcessorFactory processorFactory) {
-        VoiceMessageProcessor processor = new VoiceMessageProcessor(sessionManager, messageStorageService);
+        VoiceMessageProcessor processor = new VoiceMessageProcessor(sessionManager, messageStorageService, messageSender);
         processorFactory.registerProcessor(MessageType.VOICE, processor);
         log.info("[Netty] 注册语音消息处理器");
         return processor;
@@ -215,8 +223,9 @@ public class NettyAutoConfiguration {
     public FileMessageProcessor fileMessageProcessor(
             NettySessionManager sessionManager,
             MessageStorageService messageStorageService,
+            com.shengyu.framework.websocket.core.sender.NettyMessageSender messageSender,
             MessageProcessorFactory processorFactory) {
-        FileMessageProcessor processor = new FileMessageProcessor(sessionManager, messageStorageService);
+        FileMessageProcessor processor = new FileMessageProcessor(sessionManager, messageStorageService, messageSender);
         processorFactory.registerProcessor(MessageType.FILE, processor);
         log.info("[Netty] 注册文件消息处理器");
         return processor;
@@ -229,16 +238,83 @@ public class NettyAutoConfiguration {
     public ReadReceiptMessageProcessor readReceiptMessageProcessor(
             NettySessionManager sessionManager,
             MessageStorageService messageStorageService,
+            com.shengyu.framework.websocket.core.sender.NettyMessageSender messageSender,
             MessageProcessorFactory processorFactory) {
-        ReadReceiptMessageProcessor processor = new ReadReceiptMessageProcessor(sessionManager, messageStorageService);
+        ReadReceiptMessageProcessor processor = new ReadReceiptMessageProcessor(sessionManager, messageStorageService, messageSender);
         processorFactory.registerProcessor(MessageType.READ_RECEIPT, processor);
         log.info("[Netty] 注册已读回执消息处理器");
         return processor;
     }
 
-    // TODO: 可以继续添加其他消息类型的处理器
-    // @Bean
-    // public VideoMessageProcessor videoMessageProcessor(...) { ... }
-    // @Bean
-    // public LocationMessageProcessor locationMessageProcessor(...) { ... }
+    /**
+     * 视频消息处理器
+     */
+    @Bean
+    public VideoMessageProcessor videoMessageProcessor(
+            NettySessionManager sessionManager,
+            MessageStorageService messageStorageService,
+            com.shengyu.framework.websocket.core.sender.NettyMessageSender messageSender,
+            MessageProcessorFactory processorFactory) {
+        VideoMessageProcessor processor = new VideoMessageProcessor(sessionManager, messageStorageService, messageSender);
+        processorFactory.registerProcessor(MessageType.VIDEO, processor);
+        log.info("[Netty] 注册视频消息处理器");
+        return processor;
+    }
+
+    /**
+     * 位置消息处理器
+     */
+    @Bean
+    public LocationMessageProcessor locationMessageProcessor(
+            NettySessionManager sessionManager,
+            MessageStorageService messageStorageService,
+            com.shengyu.framework.websocket.core.sender.NettyMessageSender messageSender,
+            MessageProcessorFactory processorFactory) {
+        LocationMessageProcessor processor = new LocationMessageProcessor(sessionManager, messageStorageService, messageSender);
+        processorFactory.registerProcessor(MessageType.LOCATION, processor);
+        log.info("[Netty] 注册位置消息处理器");
+        return processor;
+    }
+
+    /**
+     * 消息撤回处理器
+     */
+    @Bean
+    public RecallMessageProcessor recallMessageProcessor(
+            NettySessionManager sessionManager,
+            com.shengyu.framework.websocket.core.sender.NettyMessageSender messageSender,
+            MessageProcessorFactory processorFactory) {
+        RecallMessageProcessor processor = new RecallMessageProcessor(sessionManager, messageSender);
+        processorFactory.registerProcessor(MessageType.RECALL, processor);
+        log.info("[Netty] 注册消息撤回处理器");
+        return processor;
+    }
+
+    /**
+     * 正在输入消息处理器
+     */
+    @Bean
+    public TypingMessageProcessor typingMessageProcessor(
+            NettySessionManager sessionManager,
+            com.shengyu.framework.websocket.core.sender.NettyMessageSender messageSender,
+            MessageProcessorFactory processorFactory) {
+        TypingMessageProcessor processor = new TypingMessageProcessor(sessionManager, messageSender);
+        processorFactory.registerProcessor(MessageType.TYPING, processor);
+        log.info("[Netty] 注册正在输入消息处理器");
+        return processor;
+    }
+
+    /**
+     * 角标更新消息处理器
+     */
+    @Bean
+    public BadgeUpdateMessageProcessor badgeUpdateMessageProcessor(
+            NettySessionManager sessionManager,
+            com.shengyu.framework.websocket.core.sender.NettyMessageSender messageSender,
+            MessageProcessorFactory processorFactory) {
+        BadgeUpdateMessageProcessor processor = new BadgeUpdateMessageProcessor(sessionManager, messageSender);
+        processorFactory.registerProcessor(MessageType.BADGE_UPDATE, processor);
+        log.info("[Netty] 注册角标更新消息处理器");
+        return processor;
+    }
 }

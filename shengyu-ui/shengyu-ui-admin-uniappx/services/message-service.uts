@@ -13,6 +13,7 @@ import { wsManager, MessageType, WebSocketState } from '../utils/websocket.uts'
 import { MessageBuilder, MessageParser, ImMessage } from '../utils/message-handler.uts'
 import { getAvatarText, getUserAvatarColor } from '@/utils/avatar.uts'
 import { getUserInfo } from '@/store/user.uts'
+import { getUserDetail } from '@/api/user.uts'
 import { badgeService, BadgeUpdateMessage } from './badge-service.uts'
 import { conversationService } from './conversation-service.uts'
 
@@ -110,6 +111,10 @@ export class MessageService {
   // 当前用户信息
   private currentUserId: string = '0'
   private currentTenantId: string = '0'
+
+  // 用户信息缓存（用于补齐实时消息的 senderName/avatarText）
+  private userNicknameCache: Map<string, string> = new Map()
+  private userNicknameLoading: Map<string, Promise<string>> = new Map()
   
   // 消息缓存（按会话ID分组）
   private messageCache: Map<string, MessageItem[]> = new Map()
@@ -132,6 +137,54 @@ export class MessageService {
   private constructor() {
     this.initWebSocketListeners()
   }
+
+  private async resolveUserNickname(userId: string): Promise<string> {
+    if (userId === '0' || userId === '') {
+      return ''
+    }
+
+    if (userId === this.currentUserId) {
+      const userInfo = getUserInfo()
+      return userInfo?.user?.nickname || ''
+    }
+
+    const cached = this.userNicknameCache.get(userId)
+    if (cached !== null && cached !== undefined) {
+      return cached
+    }
+
+    const loading = this.userNicknameLoading.get(userId)
+    if (loading !== null && loading !== undefined) {
+      return await loading
+    }
+
+    const task = (async (): Promise<string> => {
+      try {
+        const resp = await getUserDetail(userId)
+        // 兼容两种返回结构：
+        // 1) request 已解包：resp 直接是用户对象 { nickname, ... }
+        // 2) 未解包：{ code, data: { nickname, ... } }
+        const respAny: any = resp as any
+        const userObj: any = (respAny && typeof respAny === 'object' && 'code' in respAny)
+          ? (respAny.code === 0 ? respAny.data : null)
+          : respAny
+
+        const nickname = userObj ? (userObj.nickname || userObj.name || '') : ''
+        if (nickname) {
+          this.userNicknameCache.set(userId, nickname)
+        }
+        return nickname
+      } catch (e) {
+        console.warn('[MessageService] resolveUserNickname failed:', userId, e)
+        return ''
+      } finally {
+        this.userNicknameLoading.delete(userId)
+      }
+    })()
+
+    this.userNicknameLoading.set(userId, task)
+    return await task
+  }
   
   /**
    * 获取单例实例
@@ -149,32 +202,32 @@ export class MessageService {
   private initWebSocketListeners(): void {
     // 监听文本消息
     wsManager.addMessageListener(MessageType.TEXT, (message) => {
-      this.handleReceivedMessage(message)
+      void this.handleReceivedMessage(message)
     })
     
     // 监听图片消息
     wsManager.addMessageListener(MessageType.IMAGE, (message) => {
-      this.handleReceivedMessage(message)
+      void this.handleReceivedMessage(message)
     })
     
     // 监听语音消息
     wsManager.addMessageListener(MessageType.VOICE, (message) => {
-      this.handleReceivedMessage(message)
+      void this.handleReceivedMessage(message)
     })
     
     // 监听视频消息
     wsManager.addMessageListener(MessageType.VIDEO, (message) => {
-      this.handleReceivedMessage(message)
+      void this.handleReceivedMessage(message)
     })
     
     // 监听文件消息
     wsManager.addMessageListener(MessageType.FILE, (message) => {
-      this.handleReceivedMessage(message)
+      void this.handleReceivedMessage(message)
     })
     
     // 监听位置消息
     wsManager.addMessageListener(MessageType.LOCATION, (message) => {
-      this.handleReceivedMessage(message)
+      void this.handleReceivedMessage(message)
     })
     
     // 监听已读回执
@@ -437,7 +490,7 @@ export class MessageService {
   /**
    * 处理接收到的消息
    */
-  private handleReceivedMessage(data: any): void {
+  private async handleReceivedMessage(data: any): Promise<void> {
     const message = data as ImMessage
     
     // 处理角标更新消息 (messageType = 204)
@@ -445,23 +498,28 @@ export class MessageService {
       this.handleBadgeUpdateMessage(message)
       return
     }
+
+    const senderIdStr = message.header.senderId != null ? message.header.senderId.toString() : '0'
+    const isSelf = senderIdStr === this.currentUserId
+    const senderName = isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr)
+    const avatarText = senderName ? getAvatarText(senderName) : '?'
     
     // 创建消息项
     const messageItem: MessageItem = {
       id: '0',
       messageId: message.header.messageId,
-      senderId: message.header.senderId,
+      senderId: senderIdStr,
       receiverId: message.header.receiverId,
       groupId: message.header.groupId,
       type: message.header.messageType,
       content: message.body,
       status: MessageStatus.SENT,
       timestamp: message.header.timestamp,
-      isSelf: message.header.senderId === this.currentUserId,
+      isSelf: isSelf,
       showTime: true,
-      avatarText: '?',  // 占位符 - 加载历史记录时会正确
-      avatarBg: getUserAvatarColor(message.header.senderId),
-      senderName: ''  // 占位符 - 加载历史记录时会正确
+      avatarText: avatarText,
+      avatarBg: getUserAvatarColor(senderIdStr),
+      senderName: senderName
     }
     
     // 添加到缓存

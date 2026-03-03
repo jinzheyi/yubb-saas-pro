@@ -54,27 +54,8 @@ public class NettyMessageSender {
      * @param senderId    发送者ID
      */
     public void sendToUser(Long userId, MessageType messageType, MessageLite body, Long senderId, Long tenantId) {
-        // 使用租户上下文执行
-        TenantUtils.execute(tenantId, () -> {
-            List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
-            if (sessions.isEmpty()) {
-                log.debug("[MessageSender] 用户不在线: {}", userId);
-                return;
-            }
-
-            ImMessage message = buildMessage(messageType, body, senderId, userId, null, tenantId);
-            
-            int successCount = 0;
-            for (NettySession session : sessions) {
-                if (session.isActive()) {
-                    session.getChannel().writeAndFlush(message);
-                    successCount++;
-                }
-            }
-
-            log.debug("[MessageSender] 发送消息给用户: {}, 设备数: {}, 成功: {}", 
-                userId, sessions.size(), successCount);
-        });
+        // 兼容旧调用：默认 receiverId=userId，groupId=null，messageId=null（由发送器生成）
+        sendToUser(userId, messageType, body, senderId, userId, null, tenantId, null);
     }
 
     /**
@@ -88,8 +69,14 @@ public class NettyMessageSender {
         TenantUtils.execute(tenantId, () -> {
             List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
             if (sessions.isEmpty()) {
-                log.debug("[MessageSender] 用户不在线: {}", userId);
+                log.info("[MessageSender] 用户不在线: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}",
+                        userId, messageType, messageId, senderId, receiverId, groupId, tenantId);
                 return;
+            }
+
+            if (log.isInfoEnabled()) {
+                log.info("[MessageSender] sendToUser begin: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}, sessions={}",
+                        userId, messageType, messageId, senderId, receiverId, groupId, tenantId, sessions.size());
             }
 
             ImMessage protobufMessage = buildMessage(messageType, body, senderId, receiverId, groupId, tenantId, messageId);
@@ -100,18 +87,46 @@ public class NettyMessageSender {
                 if (session.isActive()) {
                     Channel channel = session.getChannel();
                     if (channel != null) {
-                        if (isWebSocketChannel(channel)) {
-                            channel.writeAndFlush(new TextWebSocketFrame(jsonPayload));
+                        boolean ws = isWebSocketChannel(channel);
+                        if (log.isInfoEnabled()) {
+                            log.info("[MessageSender] write: userId={}, sessionUserId={}, deviceType={}, active={}, ws={}, channelId={}, messageId={}, type={}",
+                                    userId,
+                                    session.getUserId(),
+                                    session.getDeviceType(),
+                                    session.isActive(),
+                                    ws,
+                                    channel.id(),
+                                    messageId,
+                                    messageType);
+                        }
+
+                        if (ws) {
+                            channel.writeAndFlush(new TextWebSocketFrame(jsonPayload)).addListener(f -> {
+                                if (!f.isSuccess()) {
+                                    log.warn("[MessageSender] ws write failed: userId={}, channelId={}, messageId={}, type={}",
+                                            userId, channel.id(), messageId, messageType, f.cause());
+                                }
+                            });
                         } else {
-                            channel.writeAndFlush(protobufMessage);
+                            channel.writeAndFlush(protobufMessage).addListener(f -> {
+                                if (!f.isSuccess()) {
+                                    log.warn("[MessageSender] protobuf write failed: userId={}, channelId={}, messageId={}, type={}",
+                                            userId, channel.id(), messageId, messageType, f.cause());
+                                }
+                            });
                         }
                     }
                     successCount++;
+                } else {
+                    if (log.isInfoEnabled()) {
+                        log.info("[MessageSender] session inactive skip: targetUserId={}, sessionUserId={}, deviceType={}, messageId={}, type={}",
+                                userId, session.getUserId(), session.getDeviceType(), messageId, messageType);
+                    }
                 }
             }
 
-            log.debug("[MessageSender] 发送消息给用户: {}, 设备数: {}, 成功: {}",
-                    userId, sessions.size(), successCount);
+            log.info("[MessageSender] sendToUser done: userId={}, type={}, messageId={}, devices={}, activeWritten={}",
+                    userId, messageType, messageId, sessions.size(), successCount);
         });
     }
 
@@ -150,18 +165,28 @@ public class NettyMessageSender {
                 return;
             }
 
-            ImMessage message = buildMessage(messageType, body, null, null, null, tenantId);
-            
+            ImMessage protobufMessage = buildMessage(messageType, body, null, null, null, tenantId, null);
+            String jsonPayload = buildJsonPayload(messageType, body, null, null, null, tenantId, null);
+
             int successCount = 0;
             for (NettySession session : sessions) {
-                if (session.isActive()) {
-                    session.getChannel().writeAndFlush(message);
-                    successCount++;
+                if (!session.isActive()) {
+                    continue;
                 }
+                Channel channel = session.getChannel();
+                if (channel == null) {
+                    continue;
+                }
+                if (isWebSocketChannel(channel)) {
+                    channel.writeAndFlush(new TextWebSocketFrame(jsonPayload));
+                } else {
+                    channel.writeAndFlush(protobufMessage);
+                }
+                successCount++;
             }
 
-            log.debug("[MessageSender] 发送消息给租户: {}, 用户数: {}, 成功: {}", 
-                tenantId, sessions.size(), successCount);
+            log.debug("[MessageSender] 发送消息给租户: {}, 用户数: {}, 成功: {}",
+                    tenantId, sessions.size(), successCount);
         });
     }
 
@@ -348,6 +373,47 @@ public class NettyMessageSender {
                     json.put("quotedContent", m.getQuoteContent());
                     json.put("quotedSenderName", m.getQuoteSenderName());
                     json.put("atUserIds", m.getAtUserIdsList());
+                }
+                return json;
+            case READ_RECEIPT:
+                if (body instanceof com.shengyu.framework.websocket.core.protocol.ReadReceiptMessage) {
+                    com.shengyu.framework.websocket.core.protocol.ReadReceiptMessage m = (com.shengyu.framework.websocket.core.protocol.ReadReceiptMessage) body;
+                    json.put("messageIds", m.getMessageIdsList());
+                }
+                return json;
+            case RECALL:
+                if (body instanceof com.shengyu.framework.websocket.core.protocol.RecallMessage) {
+                    com.shengyu.framework.websocket.core.protocol.RecallMessage m = (com.shengyu.framework.websocket.core.protocol.RecallMessage) body;
+                    json.put("messageId", String.valueOf(m.getMessageId()));
+                }
+                return json;
+            case TYPING:
+                if (body instanceof com.shengyu.framework.websocket.core.protocol.TypingMessage) {
+                    com.shengyu.framework.websocket.core.protocol.TypingMessage m = (com.shengyu.framework.websocket.core.protocol.TypingMessage) body;
+                    json.put("isTyping", m.getIsTyping());
+                }
+                return json;
+            case BADGE_UPDATE:
+                if (body instanceof com.shengyu.framework.websocket.core.protocol.BadgeUpdateMessage) {
+                    com.shengyu.framework.websocket.core.protocol.BadgeUpdateMessage m = (com.shengyu.framework.websocket.core.protocol.BadgeUpdateMessage) body;
+                    json.put("unreadCount", m.getUnreadCount());
+                    java.util.List<java.util.Map<String, Object>> conversationBadges = new java.util.ArrayList<>();
+                    for (com.shengyu.framework.websocket.core.protocol.ConversationBadge b : m.getConversationBadgesList()) {
+                        java.util.Map<String, Object> item = new java.util.HashMap<>();
+                        item.put("conversationId", String.valueOf(b.getConversationId()));
+                        item.put("unreadCount", b.getUnreadCount());
+                        conversationBadges.add(item);
+                    }
+                    json.put("conversationBadges", conversationBadges);
+
+                    java.util.List<java.util.Map<String, Object>> menuBadges = new java.util.ArrayList<>();
+                    for (com.shengyu.framework.websocket.core.protocol.MenuBadge b : m.getMenuBadgesList()) {
+                        java.util.Map<String, Object> item = new java.util.HashMap<>();
+                        item.put("menuId", b.getMenuId());
+                        item.put("count", b.getBadgeCount());
+                        menuBadges.add(item);
+                    }
+                    json.put("menuBadges", menuBadges);
                 }
                 return json;
             default:

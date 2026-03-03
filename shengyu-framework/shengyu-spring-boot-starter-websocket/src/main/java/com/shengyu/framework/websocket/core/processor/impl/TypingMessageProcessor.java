@@ -2,7 +2,9 @@ package com.shengyu.framework.websocket.core.processor.impl;
 
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.TypingMessage;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -27,6 +29,7 @@ import org.springframework.stereotype.Component;
 public class TypingMessageProcessor implements MessageProcessor {
 
     private final NettySessionManager sessionManager;
+    private final NettyMessageSender messageSender;
 
     @Override
     public void process(ChannelHandlerContext ctx, ImMessage message) {
@@ -49,12 +52,17 @@ public class TypingMessageProcessor implements MessageProcessor {
             // 转发给接收者（不存储到数据库）
             Long receiverId = message.getHeader().getReceiverId();
             if (receiverId != null && receiverId > 0) {
-                sessionManager.getSessionsByUserId(receiverId).forEach(session -> {
-                    if (session.isActive()) {
-                        session.getChannel().writeAndFlush(message);
-                        log.debug("[TypingMessage] 转发正在输入状态给用户: {}", receiverId);
-                    }
-                });
+                MessageHeader header = message.getHeader();
+                messageSender.sendToUser(
+                        receiverId,
+                        header.getMessageType(),
+                        typingMessage,
+                        header.getSenderId(),
+                        receiverId,
+                        header.getGroupId() > 0 ? header.getGroupId() : null,
+                        header.getTenantId(),
+                        header.getMessageId()
+                );
             }
 
         } catch (InvalidProtocolBufferException e) {

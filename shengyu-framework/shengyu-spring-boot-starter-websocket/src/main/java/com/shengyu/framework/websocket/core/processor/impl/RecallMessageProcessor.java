@@ -3,6 +3,8 @@ package com.shengyu.framework.websocket.core.processor.impl;
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.RecallMessage;
+import com.shengyu.framework.websocket.core.protocol.MessageHeader;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -27,6 +29,7 @@ import org.springframework.stereotype.Component;
 public class RecallMessageProcessor implements MessageProcessor {
 
     private final NettySessionManager sessionManager;
+    private final NettyMessageSender messageSender;
 
     @Override
     public void process(ChannelHandlerContext ctx, ImMessage message) {
@@ -51,14 +54,18 @@ public class RecallMessageProcessor implements MessageProcessor {
             Long groupId = message.getHeader().getGroupId();
             
             if (receiverId != null && receiverId > 0) {
-                // 单聊：转发给接收者的所有在线设备
-                sessionManager.getSessionsByUserId(receiverId).forEach(session -> {
-                    if (session.isActive()) {
-                        session.getChannel().writeAndFlush(message);
-                        session.updateLastActiveTime();
-                        log.debug("[RecallMessage] 转发撤回通知给用户: {}", receiverId);
-                    }
-                });
+                // 单聊：转发给接收者的所有在线设备（兼容 WebSocket JSON/TextFrame）
+                MessageHeader header = message.getHeader();
+                messageSender.sendToUser(
+                        receiverId,
+                        header.getMessageType(),
+                        recallMessage,
+                        header.getSenderId(),
+                        receiverId,
+                        groupId != null && groupId > 0 ? groupId : null,
+                        header.getTenantId(),
+                        header.getMessageId()
+                );
             } else if (groupId != null && groupId > 0) {
                 // 群聊：由消息总线处理转发到所有群成员
                 log.debug("[RecallMessage] 群聊消息，groupId: {}, 由消息总线处理转发", groupId);

@@ -61,6 +61,25 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
             return;
         }
 
+        if (log.isInfoEnabled()) {
+            Object rawMessageId = headerJson.get("messageId");
+            Object rawSenderId = headerJson.get("senderId");
+            Object rawReceiverId = headerJson.get("receiverId");
+            Object rawGroupId = headerJson.get("groupId");
+            Object rawTenantId = headerJson.get("tenantId");
+            Object rawTimestamp = headerJson.get("timestamp");
+            Object rawSequence = headerJson.get("sequence");
+            log.info("[JsonBusiness] inbound header raw types: type={}, messageId={}({}), senderId={}({}), receiverId={}({}), groupId={}({}), tenantId={}({}), timestamp={}({}), sequence={}({})",
+                    messageTypeValue,
+                    rawMessageId, rawMessageId == null ? "null" : rawMessageId.getClass().getSimpleName(),
+                    rawSenderId, rawSenderId == null ? "null" : rawSenderId.getClass().getSimpleName(),
+                    rawReceiverId, rawReceiverId == null ? "null" : rawReceiverId.getClass().getSimpleName(),
+                    rawGroupId, rawGroupId == null ? "null" : rawGroupId.getClass().getSimpleName(),
+                    rawTenantId, rawTenantId == null ? "null" : rawTenantId.getClass().getSimpleName(),
+                    rawTimestamp, rawTimestamp == null ? "null" : rawTimestamp.getClass().getSimpleName(),
+                    rawSequence, rawSequence == null ? "null" : rawSequence.getClass().getSimpleName());
+        }
+
         // 系统消息在 HeartbeatHandler/AuthHandler 已处理，这里只处理业务消息（>=100）
         if (messageTypeValue < MessageType.TEXT_VALUE) {
             super.channelRead(ctx, msg);
@@ -71,13 +90,26 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
             ImMessage imMessage = buildImMessageFromJson(ctx, headerJson, json.get("body"));
             MessageType messageType = imMessage.getHeader().getMessageType();
 
+            if (log.isInfoEnabled()) {
+                MessageHeader h = imMessage.getHeader();
+                log.info("[JsonBusiness] parsed header: messageType={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}, timestamp={}, sequence={}",
+                        h.getMessageType(), h.getMessageId(), h.getSenderId(), h.getReceiverId(), h.getGroupId(), h.getTenantId(), h.getTimestamp(), h.getSequence());
+            }
+
             MessageProcessor processor = processorFactory.getProcessor(messageType);
             if (processor == null) {
                 log.warn("[JsonBusiness] 未找到消息处理器, type: {}", messageType);
                 return;
             }
 
+            if (log.isInfoEnabled()) {
+                log.info("[JsonBusiness] dispatch to processor: type={}, processor={} ", messageType, processor.getClass().getSimpleName());
+            }
+
             Long tenantId = imMessage.getHeader().getTenantId();
+            if (log.isInfoEnabled()) {
+                log.info("[JsonBusiness] execute with tenantId={}, type={}, messageId={}", tenantId, messageType, imMessage.getHeader().getMessageId());
+            }
             TenantUtils.execute(tenantId, () -> processor.process(ctx, imMessage));
         } catch (Exception e) {
             log.error("[JsonBusiness] 处理业务 JSON 消息异常, payload: {}", text, e);
@@ -91,8 +123,8 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
         Long authedUserId = AuthHandler.getUserId(ctx);
         Long authedTenantId = AuthHandler.getTenantId(ctx);
 
-        Long messageId = headerJson.getLong("messageId", System.currentTimeMillis());
-        headerBuilder.setMessageId(messageId != null ? messageId : System.currentTimeMillis());
+        Long messageId = readLong(headerJson, "messageId", System.currentTimeMillis());
+        headerBuilder.setMessageId(messageId);
 
         Integer messageTypeValue = headerJson.getInt("messageType");
         headerBuilder.setMessageType(MessageType.forNumber(messageTypeValue));
@@ -101,20 +133,20 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
         Long senderId = authedUserId != null ? authedUserId : headerJson.getLong("senderId", 0L);
         headerBuilder.setSenderId(senderId != null ? senderId : 0L);
 
-        Long receiverId = headerJson.getLong("receiverId", 0L);
-        headerBuilder.setReceiverId(receiverId != null ? receiverId : 0L);
+        Long receiverId = readLong(headerJson, "receiverId", 0L);
+        headerBuilder.setReceiverId(receiverId);
 
-        Long groupId = headerJson.getLong("groupId", 0L);
-        headerBuilder.setGroupId(groupId != null ? groupId : 0L);
+        Long groupId = readLong(headerJson, "groupId", 0L);
+        headerBuilder.setGroupId(groupId);
 
-        Long tenantId = authedTenantId != null ? authedTenantId : headerJson.getLong("tenantId", 0L);
+        Long tenantId = authedTenantId != null ? authedTenantId : readLong(headerJson, "tenantId", 0L);
         headerBuilder.setTenantId(tenantId != null ? tenantId : 0L);
 
-        Long timestamp = headerJson.getLong("timestamp", System.currentTimeMillis());
-        headerBuilder.setTimestamp(timestamp != null ? timestamp : System.currentTimeMillis());
+        Long timestamp = readLong(headerJson, "timestamp", System.currentTimeMillis());
+        headerBuilder.setTimestamp(timestamp);
 
-        Long sequence = headerJson.getLong("sequence", 0L);
-        headerBuilder.setSequence(sequence != null ? sequence : 0L);
+        Long sequence = readLong(headerJson, "sequence", 0L);
+        headerBuilder.setSequence(sequence);
 
         String extra = headerJson.getStr("extra", "");
         headerBuilder.setExtra(extra != null ? extra : "");
@@ -126,6 +158,28 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
                 .setHeader(headerBuilder.build())
                 .setBody(com.google.protobuf.ByteString.copyFrom(bodyBytes))
                 .build();
+    }
+
+    private long readLong(JSONObject obj, String key, long defaultValue) {
+        if (obj == null || key == null) {
+            return defaultValue;
+        }
+        try {
+            Object raw = obj.get(key);
+            if (raw == null) {
+                return defaultValue;
+            }
+            if (raw instanceof Number) {
+                return ((Number) raw).longValue();
+            }
+            String s = String.valueOf(raw);
+            if (s.isEmpty() || "null".equalsIgnoreCase(s)) {
+                return defaultValue;
+            }
+            return Long.parseLong(s);
+        } catch (Exception ignore) {
+            return defaultValue;
+        }
     }
 
     private byte[] buildBodyBytes(MessageType messageType, Object bodyObj) {

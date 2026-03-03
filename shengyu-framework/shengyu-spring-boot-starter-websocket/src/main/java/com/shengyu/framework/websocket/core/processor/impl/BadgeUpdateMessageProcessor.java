@@ -1,9 +1,13 @@
 package com.shengyu.framework.websocket.core.processor.impl;
 
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
+import com.shengyu.framework.websocket.core.protocol.BadgeUpdateMessage;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.MessageHeader;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +49,7 @@ import java.util.List;
 public class BadgeUpdateMessageProcessor implements MessageProcessor {
 
     private final NettySessionManager sessionManager;
+    private final NettyMessageSender messageSender;
 
     @Override
     public void process(ChannelHandlerContext ctx, ImMessage message) {
@@ -56,6 +61,8 @@ public class BadgeUpdateMessageProcessor implements MessageProcessor {
                 return;
             }
 
+            BadgeUpdateMessage badgeUpdateMessage = BadgeUpdateMessage.parseFrom(message.getBody());
+
             // 转发角标更新消息到目标用户的所有在线设备
             List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
             if (sessions.isEmpty()) {
@@ -63,18 +70,23 @@ public class BadgeUpdateMessageProcessor implements MessageProcessor {
                 return;
             }
 
-            int successCount = 0;
-            for (NettySession targetSession : sessions) {
-                if (targetSession.isActive()) {
-                    targetSession.getChannel().writeAndFlush(message);
-                    targetSession.updateLastActiveTime();
-                    successCount++;
-                }
-            }
+            MessageHeader header = message.getHeader();
+            messageSender.sendToUser(
+                    userId,
+                    header.getMessageType(),
+                    badgeUpdateMessage,
+                    header.getSenderId(),
+                    userId,
+                    header.getGroupId() > 0 ? header.getGroupId() : null,
+                    header.getTenantId(),
+                    header.getMessageId()
+            );
             
             log.debug("[BadgeUpdateProcessor] 角标更新消息已转发, userId: {}, success: {}", 
-                userId, successCount);
+                userId, sessions.size());
 
+        } catch (InvalidProtocolBufferException e) {
+            log.error("[BadgeUpdateProcessor] 解析角标更新消息失败", e);
         } catch (Exception e) {
             log.error("[BadgeUpdateProcessor] 处理角标更新消息失败", e);
         }

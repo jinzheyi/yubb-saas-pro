@@ -2,7 +2,9 @@ package com.shengyu.framework.websocket.core.processor.impl;
 
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.VoiceMessage;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
@@ -24,6 +26,7 @@ public class VoiceMessageProcessor implements MessageProcessor {
 
     private final NettySessionManager sessionManager;
     private final MessageStorageService messageStorageService;
+    private final NettyMessageSender messageSender;
 
     @Override
     public void process(ChannelHandlerContext ctx, ImMessage message) {
@@ -49,13 +52,17 @@ public class VoiceMessageProcessor implements MessageProcessor {
             // 2. 转发给接收者
             Long receiverId = message.getHeader().getReceiverId();
             if (receiverId != null && receiverId > 0) {
-                sessionManager.getSessionsByUserId(receiverId).forEach(session -> {
-                    if (session.isActive()) {
-                        session.getChannel().writeAndFlush(message);
-                        session.updateLastActiveTime();
-                        log.debug("[VoiceMessage] 转发语音消息给用户: {}", receiverId);
-                    }
-                });
+                MessageHeader header = message.getHeader();
+                messageSender.sendToUser(
+                        receiverId,
+                        header.getMessageType(),
+                        voiceMessage,
+                        header.getSenderId(),
+                        receiverId,
+                        header.getGroupId() > 0 ? header.getGroupId() : null,
+                        header.getTenantId(),
+                        header.getMessageId()
+                );
             }
 
             // 3. 如果接收者离线，推送离线通知

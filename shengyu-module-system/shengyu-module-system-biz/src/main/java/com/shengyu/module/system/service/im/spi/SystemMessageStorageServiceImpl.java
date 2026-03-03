@@ -3,6 +3,7 @@ package com.shengyu.module.system.service.im.spi;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.shengyu.framework.websocket.core.protocol.*;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
@@ -56,6 +57,9 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
     @Resource
     private ImGroupService imGroupService;
+
+    @Resource
+    private NettyMessageSender nettyMessageSender;
 
     /**
      * 保存消息（同步方法，用于需要立即返回结果的场景）
@@ -255,6 +259,22 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                     );
                     if (!isSender) {
                         imBadgeService.pushBadgeUpdate(memberId);
+
+                        if (header.getMessageType() == MessageType.TEXT) {
+                            TextMessage textMessage = TextMessage.newBuilder()
+                                    .setContent(messageDO.getContent() == null ? "" : messageDO.getContent())
+                                    .build();
+                            nettyMessageSender.sendToUser(
+                                    memberId,
+                                    MessageType.TEXT,
+                                    textMessage,
+                                    header.getSenderId(),
+                                    memberId,
+                                    header.getGroupId(),
+                                    header.getTenantId(),
+                                    messageDO.getId()
+                            );
+                        }
                     }
                 }
             } else {

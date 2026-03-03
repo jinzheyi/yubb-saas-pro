@@ -4,6 +4,7 @@ import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.TextMessage;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
 import com.shengyu.framework.websocket.core.service.SensitiveWordFilterService;
 import com.shengyu.framework.websocket.core.session.NettySession;
@@ -33,6 +34,7 @@ public class TextMessageProcessor implements MessageProcessor {
 
     private final NettySessionManager sessionManager;
     private final MessageStorageService messageStorageService;
+    private final NettyMessageSender messageSender;
     private SensitiveWordFilterService sensitiveWordFilterService;
 
     @Autowired(required = false)
@@ -43,6 +45,18 @@ public class TextMessageProcessor implements MessageProcessor {
     @Override
     public void process(ChannelHandlerContext ctx, ImMessage message) {
         try {
+            MessageHeader inHeader = message.getHeader();
+            if (log.isInfoEnabled()) {
+                log.info("[TextMessage] process enter: messageId={}, messageType={}, senderId={}, receiverId={}, groupId={}, tenantId={}, channelId={}",
+                        inHeader.getMessageId(), inHeader.getMessageType(), inHeader.getSenderId(), inHeader.getReceiverId(), inHeader.getGroupId(), inHeader.getTenantId(),
+                        ctx != null && ctx.channel() != null ? ctx.channel().id() : null);
+            }
+
+            if (ctx == null || ctx.channel() == null) {
+                log.warn("[TextMessage] ctx/channel is null, skip process. messageId={}", inHeader.getMessageId());
+                return;
+            }
+
             // 解析文本消息
             TextMessage textMessage = TextMessage.parseFrom(message.getBody());
             String originalContent = textMessage.getContent();
@@ -52,6 +66,11 @@ public class TextMessageProcessor implements MessageProcessor {
             if (senderSession == null) {
                 log.warn("[TextMessage] 发送者会话不存在");
                 return;
+            }
+
+            if (log.isInfoEnabled()) {
+                log.info("[TextMessage] senderSession: userId={}, deviceType={}, active={}",
+                        senderSession.getUserId(), senderSession.getDeviceType(), senderSession.isActive());
             }
 
             log.info("[TextMessage] 收到文本消息, from: {}, to: {}, group: {}, content: {}", 
@@ -83,21 +102,52 @@ public class TextMessageProcessor implements MessageProcessor {
             }
 
             // 2. 存储消息到数据库
+            if (log.isInfoEnabled()) {
+                MessageHeader h = message.getHeader();
+                log.info("[TextMessage] saveMessage begin: messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}",
+                        h.getMessageId(), h.getSenderId(), h.getReceiverId(), h.getGroupId(), h.getTenantId());
+            }
             messageStorageService.saveMessage(message);
+            if (log.isInfoEnabled()) {
+                log.info("[TextMessage] saveMessage done: messageId={}", message.getHeader().getMessageId());
+            }
 
             // 3. 转发消息
             Long receiverId = message.getHeader().getReceiverId();
             Long groupId = message.getHeader().getGroupId();
-            
+
             if (receiverId != null && receiverId > 0) {
                 // 单聊：转发给接收者的所有在线设备
-                forwardToUser(receiverId, message);
+                MessageHeader header = message.getHeader();
+
+                if (log.isInfoEnabled()) {
+                    log.info("[TextMessage] forward(single) begin: messageId={}, from={}, to={}, groupId={}, tenantId={}",
+                            header.getMessageId(), header.getSenderId(), receiverId, groupId, header.getTenantId());
+                }
+                messageSender.sendToUser(
+                        receiverId,
+                        header.getMessageType(),
+                        textMessage,
+                        header.getSenderId(),
+                        receiverId,
+                        groupId != null && groupId > 0 ? groupId : null,
+                        header.getTenantId(),
+                        header.getMessageId()
+                );
+
+                if (log.isInfoEnabled()) {
+                    log.info("[TextMessage] forward(single) called sender: messageId={}, to={}", header.getMessageId(), receiverId);
+                }
             } else if (groupId != null && groupId > 0) {
                 // 群聊：转发给群成员的所有在线设备（由中间件的消息总线处理）
                 // 注意：这里只是示例，实际群聊需要查询群成员列表
                 // 在分布式环境下，消息总线会自动转发到其他节点
                 log.debug("[TextMessage] 群聊消息，groupId: {}, 由消息总线处理转发", groupId);
                 // TODO: 查询群成员列表并转发（可选，也可以在 SystemMessageStorageServiceImpl 中处理）
+            } else {
+                MessageHeader header = message.getHeader();
+                log.warn("[TextMessage] no forward target: messageId={}, receiverId={}, groupId={}, senderId={}, tenantId={}",
+                        header.getMessageId(), receiverId, groupId, header.getSenderId(), header.getTenantId());
             }
 
             // 4. 如果接收者离线，推送离线通知

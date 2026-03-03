@@ -3,7 +3,9 @@ package com.shengyu.framework.websocket.core.processor.impl;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.ReadReceiptMessage;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
@@ -13,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Set;
 
 /**
  * 已读回执消息处理器
@@ -34,6 +35,7 @@ public class ReadReceiptMessageProcessor implements MessageProcessor {
 
     private final NettySessionManager sessionManager;
     private final MessageStorageService messageStorageService;
+    private final NettyMessageSender messageSender;
 
     @Override
     public void process(ChannelHandlerContext ctx, ImMessage message) {
@@ -67,7 +69,7 @@ public class ReadReceiptMessageProcessor implements MessageProcessor {
             
             // 2. 转发已读回执给消息发送者
             // 让发送者知道对方已读消息
-            forwardReadReceiptToSenders(message);
+            forwardReadReceiptToSenders(message, readReceipt);
 
             log.debug("[ReadReceipt] 已读回执处理完成, userId: {}, messageCount: {}", 
                 userId, messageIds.size());
@@ -87,35 +89,31 @@ public class ReadReceiptMessageProcessor implements MessageProcessor {
      * 注意：这里简化处理，直接转发给消息头中的发送者
      * 实际应用中可能需要查询数据库获取所有相关发送者
      */
-    private void forwardReadReceiptToSenders(ImMessage readReceiptMessage) {
+    private void forwardReadReceiptToSenders(ImMessage readReceiptMessage, ReadReceiptMessage readReceiptBody) {
         try {
             // 从消息头获取发送者ID（这里的senderId是发送已读回执的用户）
             // 需要转发给原始消息的发送者
             // 由于已读回执消息的header.senderId是当前用户，我们需要查询原始消息的发送者
             
             // 简化处理：直接转发给header中指定的receiverId（如果有的话）
-            Long targetUserId = readReceiptMessage.getHeader().getReceiverId();
+            MessageHeader header = readReceiptMessage.getHeader();
+            Long targetUserId = header.getReceiverId();
             if (targetUserId != null && targetUserId > 0) {
-                forwardToUser(targetUserId, readReceiptMessage);
+                messageSender.sendToUser(
+                        targetUserId,
+                        header.getMessageType(),
+                        readReceiptBody,
+                        header.getSenderId(),
+                        targetUserId,
+                        header.getGroupId() > 0 ? header.getGroupId() : null,
+                        header.getTenantId(),
+                        header.getMessageId()
+                );
             }
             
             log.debug("[ReadReceipt] 已读回执转发完成");
         } catch (Exception e) {
             log.error("[ReadReceipt] 转发已读回执失败", e);
         }
-    }
-
-    /**
-     * 转发消息给指定用户的所有在线设备
-     */
-    private void forwardToUser(Long userId, ImMessage message) {
-        sessionManager.getSessionsByUserId(userId).forEach(session -> {
-            if (session.isActive()) {
-                session.getChannel().writeAndFlush(message);
-                session.updateLastActiveTime();
-                log.debug("[ReadReceipt] 转发已读回执给用户: {}, 设备类型: {}", 
-                    userId, session.getDeviceType());
-            }
-        });
     }
 }
