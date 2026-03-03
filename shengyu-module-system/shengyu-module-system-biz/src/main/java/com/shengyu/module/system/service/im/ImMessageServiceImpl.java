@@ -1,6 +1,12 @@
 package com.shengyu.module.system.service.im;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.shengyu.framework.tenant.core.context.TenantContextHolder;
+import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.protocol.TextMessage;
+import com.shengyu.framework.websocket.core.protocol.ImageMessage;
+import com.shengyu.framework.websocket.core.protocol.VoiceMessage;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
@@ -57,6 +63,9 @@ public class ImMessageServiceImpl implements ImMessageService {
     @Resource
     private ImBadgeService imBadgeService;
 
+    @Resource
+    private NettyMessageSender messageSender;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long sendMessage(Long userId, AppImMessageSendReqVO sendReqVO) {
@@ -74,7 +83,8 @@ public class ImMessageServiceImpl implements ImMessageService {
         ImChatMessageDO message = new ImChatMessageDO();
         message.setChatId(chatId);
         message.setSenderId(userId);
-        message.setMessageType(sendReqVO.getMessageType());
+        Integer dbMessageType = normalizeDbMessageType(sendReqVO.getMessageType());
+        message.setMessageType(dbMessageType);
         message.setContent(sendReqVO.getContent());
         message.setExtra(sendReqVO.getExtra());
         message.setSendTime(LocalDateTime.now());
@@ -82,8 +92,8 @@ public class ImMessageServiceImpl implements ImMessageService {
         message.setQuoteMessageId(sendReqVO.getQuoteMessageId());
         chatMessageMapper.insert(message);
 
-        String preview = getMessagePreview(sendReqVO.getMessageType(), sendReqVO.getContent());
-        updateChatUsersAfterSend(chat, message.getId(), preview, message.getSendTime(), userId);
+        String preview = getMessagePreview(dbMessageType, sendReqVO.getContent());
+        updateChatUsersAfterSend(chat, message.getId(), preview, message.getSendTime(), userId, sendReqVO);
         return message.getId();
     }
 
@@ -97,6 +107,8 @@ public class ImMessageServiceImpl implements ImMessageService {
         List<AppImMessageRespVO> respVOList = pageResult.getList().stream().map(message -> {
             AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
             respVO.setChatId(message.getChatId());
+            // 兼容历史数据：如果 messageType 被存成了 Protobuf 的 100+，则转换回 REST/DB 的 1-10
+            respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
             fillSenderInfo(respVO, message.getSenderId());
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
             fillChatTargetFields(respVO, userId);
@@ -158,7 +170,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                 userId, messageIds.size(), updatedCount, status);
     }
 
-    private void updateChatUsersAfterSend(ImChatDO chat, Long lastMessageId, String lastMessageContent, LocalDateTime lastMessageTime, Long senderId) {
+    private void updateChatUsersAfterSend(ImChatDO chat, Long lastMessageId, String lastMessageContent, LocalDateTime lastMessageTime, Long senderId, AppImMessageSendReqVO sendReqVO) {
         if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
             List<Long> memberIds = imGroupService.getGroupMemberIds(chat.getGroupId());
             for (Long memberId : memberIds) {
@@ -170,6 +182,8 @@ public class ImMessageServiceImpl implements ImMessageService {
                         Boolean.TRUE.equals(chatUser.getNoDisturb()));
                 if (!isSender) {
                     imBadgeService.pushBadgeUpdate(memberId);
+                    // 推送消息内容给接收者
+                    pushMessageToUser(memberId, chat.getId(), lastMessageId, senderId, sendReqVO);
                 }
             }
         } else {
@@ -186,6 +200,105 @@ public class ImMessageServiceImpl implements ImMessageService {
                     1,
                     Boolean.TRUE.equals(receiver.getNoDisturb()));
             imBadgeService.pushBadgeUpdate(receiverId);
+            // 推送消息内容给接收者
+            pushMessageToUser(receiverId, chat.getId(), lastMessageId, senderId, sendReqVO);
+        }
+    }
+
+    /**
+     * 统一 REST/DB 的 messageType（1-10）与 Protobuf/WebSocket 的 MessageType（100+）
+     */
+    private Integer normalizeDbMessageType(Integer messageType) {
+        if (messageType == null) {
+            return null;
+        }
+        // Protobuf/WebSocket 业务消息（100+）映射到 REST/DB（1-10）
+        switch (messageType) {
+            case 100:
+                return 1;
+            case 101:
+                return 2;
+            case 102:
+                return 3;
+            case 103:
+                return 4;
+            case 104:
+                return 5;
+            case 105:
+                return 6;
+            case 106:
+                return 8;
+            case 205:
+                // 引用回复本质上仍然是文本（前端用 quote 渲染），DB 侧按文本存储
+                return 1;
+            default:
+                return messageType;
+        }
+    }
+
+    private void pushMessageToUser(Long userId, Long chatId, Long messageId, Long senderId, AppImMessageSendReqVO sendReqVO) {
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+
+            // 根据消息类型构建不同的消息体
+            MessageType messageType;
+            com.google.protobuf.MessageLite messageBody;
+
+            Integer dbMessageType = normalizeDbMessageType(sendReqVO.getMessageType());
+            switch (dbMessageType) {
+                case 1: // 文本消息
+                    messageType = MessageType.TEXT;
+                    messageBody = TextMessage.newBuilder()
+                            .setContent(sendReqVO.getContent())
+                            .build();
+                    break;
+                case 2: // 图片消息
+                    messageType = MessageType.IMAGE;
+                    messageBody = ImageMessage.newBuilder()
+                            .setUrl(sendReqVO.getContent())
+                            .build();
+                    break;
+                case 3: // 语音消息
+                    messageType = MessageType.VOICE;
+                    messageBody = VoiceMessage.newBuilder()
+                            .setUrl(sendReqVO.getContent())
+                            .build();
+                    break;
+                case 4: // 视频消息
+                    messageType = MessageType.VIDEO;
+                    messageBody = TextMessage.newBuilder()
+                            .setContent(sendReqVO.getContent())
+                            .build();
+                    break;
+                case 5: // 文件消息
+                    messageType = MessageType.FILE;
+                    messageBody = TextMessage.newBuilder()
+                            .setContent(sendReqVO.getContent())
+                            .build();
+                    break;
+                case 6: // 位置消息
+                    messageType = MessageType.LOCATION;
+                    messageBody = TextMessage.newBuilder()
+                            .setContent(sendReqVO.getContent())
+                            .build();
+                    break;
+                default:
+                    // 默认使用系统通知类型
+                    messageType = MessageType.SYSTEM_NOTIFY;
+                    messageBody = TextMessage.newBuilder()
+                            .setContent(sendReqVO.getContent())
+                            .build();
+                    break;
+            }
+
+            Long receiverId = sendReqVO.getReceiverId();
+            Long groupId = sendReqVO.getGroupId();
+            // 群聊推送给成员时，前端会话路由依赖 groupId；单聊依赖 receiverId/senderId
+            messageSender.sendToUser(userId, messageType, messageBody,
+                    senderId, receiverId, groupId, tenantId, messageId);
+            log.debug("[ImMessageService] WebSocket 消息推送成功, userId: {}, messageId: {}", userId, messageId);
+        } catch (Exception e) {
+            log.error("[ImMessageService] WebSocket 消息推送失败, userId: {}, messageId: {}", userId, messageId, e);
         }
     }
 

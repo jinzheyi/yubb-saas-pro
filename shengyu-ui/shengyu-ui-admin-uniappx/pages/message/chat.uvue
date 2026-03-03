@@ -616,8 +616,9 @@
 		
 		const senderIdStr = msg && msg.senderId != null ? msg.senderId.toString() : '0'
 	const receiverIdStr = msg && msg.receiverId != null ? msg.receiverId.toString() : ''
-	const messageIdStr = msg && msg.messageId != null ? msg.messageId.toString() : '0'
 	const idStr = msg && msg.id != null ? msg.id.toString() : '0'
+	// 后端 REST API 历史消息通常只有 id 字段，没有 messageId 字段
+	const messageIdStr = msg && msg.messageId != null ? msg.messageId.toString() : idStr
 	
 	// 处理发送者信息缺失的后备方案
 	const senderNickname = msg.senderNickname || ''
@@ -921,7 +922,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			? message.groupId
 			: (message.isSelf ? message.receiverId : message.senderId)
 		
-		if (msgChatId !== chatId.value) {
+		// 注意：chatId 是会话 ID（后端生成），而实时消息路由应按对端/群 ID（targetId）判断
+		if (msgChatId !== targetId.value) {
 			return
 		}
 		
@@ -1256,6 +1258,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						quoteMsg.senderName,
 						[]
 					)
+					// 清除引用回复状态
+					quoteReplyMsg.value = null
 				} else {
 					// 发送普通文本消息
 					message = messageService.sendTextMessage(
@@ -1265,35 +1269,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						[]  // @用户列表（暂不实现）
 					)
 				}
-				
-				// 转换并添加到消息列表
-				const uiMessage: MessageItem = {
-					id: message.id.toString(),
-					messageId: message.messageId,
-					senderId: message.senderId.toString(),
-					receiverId: message.receiverId.toString(),
-					type: message.type,
-					content: finalContent,
-					isSelf: true,
-					time: new Date(message.timestamp).toLocaleString(),
-					timestamp: message.timestamp,
-					showTime: true,
-					avatarText: message.avatarText,
-					avatarBg: message.avatarBg,
-					senderName: message.senderName,
-					status: message.status
-				}
-				
-				// 如果有引用回复，设置引用字段
-				if (quoteMsg !== null) {
-					uiMessage.quoteMessageId = quoteMsg.messageId
-					uiMessage.quoteContent = quoteMsg.type === 'text' ? quoteMsg.content : '[' + quoteMsg.type + ']'
-					uiMessage.quoteSenderName = quoteMsg.senderName
-					// 清除引用回复状态
-					quoteReplyMsg.value = null
-				}
-				
-				messages.value.push(uiMessage)
 				
 				// 清空编辑器
 				editorCtx!.clear({

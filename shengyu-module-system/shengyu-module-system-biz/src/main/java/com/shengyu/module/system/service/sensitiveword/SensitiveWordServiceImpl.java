@@ -9,6 +9,7 @@ import com.shengyu.module.system.controller.admin.sensitiveword.vo.SensitiveWord
 import com.shengyu.module.system.controller.admin.sensitiveword.vo.SensitiveWordSaveVO;
 import com.shengyu.module.system.dal.dataobject.sensitiveword.SensitiveWordDO;
 import com.shengyu.module.system.dal.mysql.sensitiveword.SensitiveWordMapper;
+import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.module.system.util.collection.SimpleTrie;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -83,18 +84,21 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
             return;
         }
 
-        // 第一步：查询数据
-        List<SensitiveWordDO> sensitiveWords = sensitiveWordMapper.selectList();
-        log.info("[initLocalCache][缓存敏感词，数量为:{}]", sensitiveWords.size());
+        // 使用忽略租户执行查询（敏感词是全局的，不区分租户）
+        TenantUtils.executeIgnore(() -> {
+            // 第一步：查询数据
+            List<SensitiveWordDO> sensitiveWords = sensitiveWordMapper.selectList();
+            log.info("[initLocalCache][缓存敏感词，数量为:{}]", sensitiveWords.size());
 
-        // 第二步：构建缓存
-        // 写入 sensitiveWordTagsCache 缓存
-        Set<String> tags = new HashSet<>();
-        sensitiveWords.forEach(word -> tags.addAll(word.getTags()));
-        sensitiveWordTagsCache = tags;
-        sensitiveWordCache = sensitiveWords;
-        // 写入 defaultSensitiveWordTrie、tagSensitiveWordTries 缓存
-        initSensitiveWordTrie(sensitiveWords);
+            // 第二步：构建缓存
+            // 写入 sensitiveWordTagsCache 缓存
+            Set<String> tags = new HashSet<>();
+            sensitiveWords.forEach(word -> tags.addAll(word.getTags()));
+            sensitiveWordTagsCache = tags;
+            sensitiveWordCache = sensitiveWords;
+            // 写入 defaultSensitiveWordTrie、tagSensitiveWordTries 缓存
+            initSensitiveWordTrie(sensitiveWords);
+        });
     }
 
     private void initSensitiveWordTrie(List<SensitiveWordDO> wordDOs) {
@@ -125,17 +129,20 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
      */
     @Scheduled(initialDelay = 60, fixedRate = 60, timeUnit = TimeUnit.SECONDS)
     public void refreshLocalCache() {
-        // 情况一：如果缓存里没有数据，则直接刷新缓存
-        if (CollUtil.isEmpty(sensitiveWordCache)) {
-            initLocalCache();
-            return;
-        }
+        // 使用忽略租户执行查询（敏感词是全局的，不区分租户）
+        TenantUtils.executeIgnore(() -> {
+            // 情况一：如果缓存里没有数据，则直接刷新缓存
+            if (CollUtil.isEmpty(sensitiveWordCache)) {
+                initLocalCache();
+                return;
+            }
 
-        // 情况二，如果缓存里数据，则通过 updateTime 判断是否有数据变更，有变更则刷新缓存
-        LocalDateTime maxTime = getMaxValue(sensitiveWordCache, SensitiveWordDO::getUpdateTime);
-        if (sensitiveWordMapper.selectCountByUpdateTimeGt(maxTime) > 0) {
-            initLocalCache();
-        }
+            // 情况二，如果缓存里数据，则通过 updateTime 判断是否有数据变更，有变更则刷新缓存
+            LocalDateTime maxTime = getMaxValue(sensitiveWordCache, SensitiveWordDO::getUpdateTime);
+            if (sensitiveWordMapper.selectCountByUpdateTimeGt(maxTime) > 0) {
+                initLocalCache();
+            }
+        });
     }
 
     @Override

@@ -5,13 +5,21 @@ import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import com.shengyu.framework.common.util.json.JsonUtils;
+import com.shengyu.framework.tenant.core.context.TenantContextHolder;
+import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.MessageLite;
+import io.netty.channel.Channel;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Netty 消息发送器
@@ -45,25 +53,85 @@ public class NettyMessageSender {
      * @param body        消息体
      * @param senderId    发送者ID
      */
-    public void sendToUser(Long userId, MessageType messageType, MessageLite body, Long senderId) {
-        List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
-        if (sessions.isEmpty()) {
-            log.debug("[MessageSender] 用户不在线: {}", userId);
-            return;
-        }
-
-        ImMessage message = buildMessage(messageType, body, senderId, userId, null, null);
-        
-        int successCount = 0;
-        for (NettySession session : sessions) {
-            if (session.isActive()) {
-                session.getChannel().writeAndFlush(message);
-                successCount++;
+    public void sendToUser(Long userId, MessageType messageType, MessageLite body, Long senderId, Long tenantId) {
+        // 使用租户上下文执行
+        TenantUtils.execute(tenantId, () -> {
+            List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
+            if (sessions.isEmpty()) {
+                log.debug("[MessageSender] 用户不在线: {}", userId);
+                return;
             }
-        }
 
-        log.debug("[MessageSender] 发送消息给用户: {}, 设备数: {}, 成功: {}", 
-            userId, sessions.size(), successCount);
+            ImMessage message = buildMessage(messageType, body, senderId, userId, null, tenantId);
+            
+            int successCount = 0;
+            for (NettySession session : sessions) {
+                if (session.isActive()) {
+                    session.getChannel().writeAndFlush(message);
+                    successCount++;
+                }
+            }
+
+            log.debug("[MessageSender] 发送消息给用户: {}, 设备数: {}, 成功: {}", 
+                userId, sessions.size(), successCount);
+        });
+    }
+
+    /**
+     * 发送消息给指定用户（可显式指定 receiverId/groupId/messageId）
+     *
+     * 说明：部分业务（如群聊）需要依赖 groupId 进行前端会话路由；同时 messageId 需要与业务消息 ID 保持一致，
+     * 以便前端去重/对齐历史消息。
+     */
+    public void sendToUser(Long userId, MessageType messageType, MessageLite body,
+                           Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId) {
+        TenantUtils.execute(tenantId, () -> {
+            List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
+            if (sessions.isEmpty()) {
+                log.debug("[MessageSender] 用户不在线: {}", userId);
+                return;
+            }
+
+            ImMessage protobufMessage = buildMessage(messageType, body, senderId, receiverId, groupId, tenantId, messageId);
+            String jsonPayload = buildJsonPayload(messageType, body, senderId, receiverId, groupId, tenantId, messageId);
+
+            int successCount = 0;
+            for (NettySession session : sessions) {
+                if (session.isActive()) {
+                    Channel channel = session.getChannel();
+                    if (channel != null) {
+                        if (isWebSocketChannel(channel)) {
+                            channel.writeAndFlush(new TextWebSocketFrame(jsonPayload));
+                        } else {
+                            channel.writeAndFlush(protobufMessage);
+                        }
+                    }
+                    successCount++;
+                }
+            }
+
+            log.debug("[MessageSender] 发送消息给用户: {}, 设备数: {}, 成功: {}",
+                    userId, sessions.size(), successCount);
+        });
+    }
+
+    /**
+     * 发送消息给指定用户（重载，自动获取租户ID）
+     *
+     * @param userId      用户ID
+     * @param messageType 消息类型
+     * @param body        消息体
+     * @param senderId    发送者ID
+     */
+    public void sendToUser(Long userId, MessageType messageType, MessageLite body, Long senderId) {
+        // 尝试从当前上下文获取租户ID
+        Long tenantId = null;
+        try {
+            tenantId = TenantContextHolder.getTenantId();
+        } catch (Exception e) {
+            log.debug("[MessageSender] 无法获取当前租户ID，将不使用租户上下文");
+        }
+        sendToUser(userId, messageType, body, senderId, tenantId);
     }
 
     /**
@@ -74,24 +142,27 @@ public class NettyMessageSender {
      * @param body        消息体
      */
     public void sendToTenant(Long tenantId, MessageType messageType, MessageLite body) {
-        List<NettySession> sessions = sessionManager.getSessionsByTenantId(tenantId);
-        if (sessions.isEmpty()) {
-            log.debug("[MessageSender] 租户无在线用户: {}", tenantId);
-            return;
-        }
-
-        ImMessage message = buildMessage(messageType, body, null, null, null, tenantId);
-        
-        int successCount = 0;
-        for (NettySession session : sessions) {
-            if (session.isActive()) {
-                session.getChannel().writeAndFlush(message);
-                successCount++;
+        // 使用租户上下文执行
+        TenantUtils.execute(tenantId, () -> {
+            List<NettySession> sessions = sessionManager.getSessionsByTenantId(tenantId);
+            if (sessions.isEmpty()) {
+                log.debug("[MessageSender] 租户无在线用户: {}", tenantId);
+                return;
             }
-        }
 
-        log.debug("[MessageSender] 发送消息给租户: {}, 用户数: {}, 成功: {}", 
-            tenantId, sessions.size(), successCount);
+            ImMessage message = buildMessage(messageType, body, null, null, null, tenantId);
+            
+            int successCount = 0;
+            for (NettySession session : sessions) {
+                if (session.isActive()) {
+                    session.getChannel().writeAndFlush(message);
+                    successCount++;
+                }
+            }
+
+            log.debug("[MessageSender] 发送消息给租户: {}, 用户数: {}, 成功: {}", 
+                tenantId, sessions.size(), successCount);
+        });
     }
 
     /**
@@ -134,8 +205,12 @@ public class NettyMessageSender {
         
         for (NettySession session : sessions) {
             if (deviceId.equals(session.getDeviceId()) && session.isActive()) {
-                ImMessage message = buildMessage(messageType, body, null, userId, null, session.getTenantId());
-                session.getChannel().writeAndFlush(message);
+                Long tenantId = session.getTenantId();
+                // 使用租户上下文执行
+                TenantUtils.execute(tenantId, () -> {
+                    ImMessage message = buildMessage(messageType, body, null, userId, null, tenantId);
+                    session.getChannel().writeAndFlush(message);
+                });
                 log.debug("[MessageSender] 发送消息给设备: userId={}, deviceId={}", userId, deviceId);
                 return;
             }
@@ -149,8 +224,13 @@ public class NettyMessageSender {
      */
     private ImMessage buildMessage(MessageType messageType, MessageLite body, 
                                    Long senderId, Long receiverId, Long groupId, Long tenantId) {
+        return buildMessage(messageType, body, senderId, receiverId, groupId, tenantId, null);
+    }
+
+    private ImMessage buildMessage(MessageType messageType, MessageLite body,
+                                   Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId) {
         MessageHeader.Builder headerBuilder = MessageHeader.newBuilder()
-            .setMessageId(generateMessageId())
+            .setMessageId(messageId != null ? messageId : generateMessageId())
             .setMessageType(messageType)
             .setTimestamp(System.currentTimeMillis());
 
@@ -175,6 +255,107 @@ public class NettyMessageSender {
         }
 
         return messageBuilder.build();
+    }
+
+    private boolean isWebSocketChannel(Channel channel) {
+        try {
+            return channel.pipeline().get(WebSocketServerProtocolHandler.class) != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String buildJsonPayload(MessageType messageType, MessageLite body,
+                                   Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId) {
+        Map<String, Object> root = new HashMap<>();
+        Map<String, Object> header = new HashMap<>();
+        header.put("messageId", messageId != null ? String.valueOf(messageId) : String.valueOf(generateMessageId()));
+        header.put("messageType", messageType != null ? messageType.getNumber() : null);
+        header.put("timestamp", System.currentTimeMillis());
+        header.put("senderId", senderId != null ? String.valueOf(senderId) : "0");
+        header.put("receiverId", receiverId != null ? String.valueOf(receiverId) : "0");
+        header.put("groupId", groupId != null ? String.valueOf(groupId) : "0");
+        header.put("tenantId", tenantId != null ? String.valueOf(tenantId) : "0");
+        root.put("header", header);
+        root.put("body", buildJsonBody(messageType, body));
+        return JsonUtils.toJsonString(root);
+    }
+
+    private Object buildJsonBody(MessageType messageType, MessageLite body) {
+        if (messageType == null) {
+            return new HashMap<>();
+        }
+        Map<String, Object> json = new HashMap<>();
+        switch (messageType) {
+            case TEXT:
+                if (body instanceof com.shengyu.framework.websocket.core.protocol.TextMessage) {
+                    com.shengyu.framework.websocket.core.protocol.TextMessage m = (com.shengyu.framework.websocket.core.protocol.TextMessage) body;
+                    json.put("content", m.getContent());
+                    json.put("atUserIds", m.getAtUserIdsList());
+                }
+                return json;
+            case IMAGE:
+                if (body instanceof com.shengyu.framework.websocket.core.protocol.ImageMessage) {
+                    com.shengyu.framework.websocket.core.protocol.ImageMessage m = (com.shengyu.framework.websocket.core.protocol.ImageMessage) body;
+                    json.put("url", m.getUrl());
+                    json.put("thumbnailUrl", m.getThumbnailUrl());
+                    json.put("width", m.getWidth());
+                    json.put("height", m.getHeight());
+                    json.put("size", m.getSize());
+                }
+                return json;
+            case VOICE:
+                if (body instanceof com.shengyu.framework.websocket.core.protocol.VoiceMessage) {
+                    com.shengyu.framework.websocket.core.protocol.VoiceMessage m = (com.shengyu.framework.websocket.core.protocol.VoiceMessage) body;
+                    json.put("url", m.getUrl());
+                    json.put("duration", m.getDuration());
+                    json.put("size", m.getSize());
+                }
+                return json;
+            case VIDEO:
+                if (body instanceof com.shengyu.framework.websocket.core.protocol.VideoMessage) {
+                    com.shengyu.framework.websocket.core.protocol.VideoMessage m = (com.shengyu.framework.websocket.core.protocol.VideoMessage) body;
+                    json.put("url", m.getUrl());
+                    json.put("coverUrl", m.getCoverUrl());
+                    json.put("duration", m.getDuration());
+                    json.put("width", m.getWidth());
+                    json.put("height", m.getHeight());
+                    json.put("size", m.getSize());
+                }
+                return json;
+            case FILE:
+                if (body instanceof com.shengyu.framework.websocket.core.protocol.FileMessage) {
+                    com.shengyu.framework.websocket.core.protocol.FileMessage m = (com.shengyu.framework.websocket.core.protocol.FileMessage) body;
+                    json.put("url", m.getUrl());
+                    json.put("fileName", m.getFileName());
+                    json.put("size", m.getSize());
+                    json.put("fileType", m.getFileType());
+                }
+                return json;
+            case LOCATION:
+                if (body instanceof com.shengyu.framework.websocket.core.protocol.LocationMessage) {
+                    com.shengyu.framework.websocket.core.protocol.LocationMessage m = (com.shengyu.framework.websocket.core.protocol.LocationMessage) body;
+                    json.put("latitude", m.getLatitude());
+                    json.put("longitude", m.getLongitude());
+                    json.put("address", m.getAddress());
+                }
+                return json;
+            case QUOTE_REPLY:
+                if (body instanceof com.shengyu.framework.websocket.core.protocol.QuoteReplyMessage) {
+                    com.shengyu.framework.websocket.core.protocol.QuoteReplyMessage m = (com.shengyu.framework.websocket.core.protocol.QuoteReplyMessage) body;
+                    json.put("content", m.getReplyContent());
+                    json.put("quotedMessageId", String.valueOf(m.getQuoteMessageId()));
+                    json.put("quotedContent", m.getQuoteContent());
+                    json.put("quotedSenderName", m.getQuoteSenderName());
+                    json.put("atUserIds", m.getAtUserIdsList());
+                }
+                return json;
+            default:
+                if (body instanceof com.shengyu.framework.websocket.core.protocol.TextMessage) {
+                    json.put("content", ((com.shengyu.framework.websocket.core.protocol.TextMessage) body).getContent());
+                }
+                return json;
+        }
     }
 
     /**

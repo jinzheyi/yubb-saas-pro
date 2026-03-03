@@ -98,7 +98,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             ImChatMessageDO messageDO = new ImChatMessageDO();
             messageDO.setChatId(chatId);
             messageDO.setSenderId(header.getSenderId());
-            messageDO.setMessageType(header.getMessageType().getNumber());
+            messageDO.setMessageType(normalizeDbMessageType(header.getMessageType()));
             messageDO.setContent(content);
             messageDO.setExtra(header.getExtra());
             messageDO.setSendTime(sendTime);
@@ -116,6 +116,33 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         } catch (Exception e) {
             log.error("[MessageStorage] 消息保存失败, messageId: {}", header.getMessageId(), e);
             throw e;
+        }
+    }
+
+    private Integer normalizeDbMessageType(MessageType messageType) {
+        if (messageType == null) {
+            return null;
+        }
+        // Protobuf/WebSocket MessageType（100+）映射到 REST/DB ImMessageTypeEnum（1-10）
+        switch (messageType) {
+            case TEXT:
+                return 1;
+            case IMAGE:
+                return 2;
+            case VOICE:
+                return 3;
+            case VIDEO:
+                return 4;
+            case FILE:
+                return 5;
+            case LOCATION:
+                return 6;
+            case CUSTOM:
+                return 8;
+            case QUOTE_REPLY:
+                return 1;
+            default:
+                return 10;
         }
     }
 

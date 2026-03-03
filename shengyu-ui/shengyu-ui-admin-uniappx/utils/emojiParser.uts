@@ -30,9 +30,20 @@ export function getVisualWidthUnits(text : string) : number {
 /**
  * 将包含表情代码的字符串解析为 Token 数组
  */
-export function parseMessageText(text : string) : MessageToken[] {
+export function parseMessageText(text : string | any) : MessageToken[] {
 	const tokens : MessageToken[] = []
-	if (!text) return tokens
+	// 如果不是字符串，先转换为字符串
+	if (typeof text !== 'string') {
+		if (text == null) return tokens
+		// 如果是对象，尝试获取 content 字段，否则转为字符串
+		if (typeof text === 'object') {
+			text = text.content || text.toString()
+		} else {
+			text = String(text)
+		}
+	}
+	// 空字符串检查
+	if (!text || text.trim().length === 0) return tokens
 
 	const regex = /\[[\u4e00-\u9fa5\w]+\]/g
 	let lastIndex = 0
