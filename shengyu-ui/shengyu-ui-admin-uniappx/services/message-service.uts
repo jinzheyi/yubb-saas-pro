@@ -470,7 +470,8 @@ export class MessageService {
     }
     
     // 添加到缓存
-    const chatId = message.header.groupId !== '0' && message.header.groupId !== '' ? message.header.groupId : message.header.receiverId
+    const rawChatId = message.header.groupId !== '0' && message.header.groupId !== '' ? message.header.groupId : message.header.receiverId
+    const chatId = rawChatId != null ? (rawChatId as any).toString() : '0'
     console.log('[MessageService] computed chatId:', chatId)
     this.addMessageToCache(chatId, messageItem)
     
@@ -523,7 +524,8 @@ export class MessageService {
     }
     
     // 添加到缓存
-    const chatId = message.header.groupId !== '0' && message.header.groupId !== '' ? message.header.groupId : message.header.senderId
+    const rawChatId = message.header.groupId !== '0' && message.header.groupId !== '' ? message.header.groupId : message.header.senderId
+    const chatId = rawChatId != null ? (rawChatId as any).toString() : '0'
     this.addMessageToCache(chatId, messageItem)
     
     // 通知监听器

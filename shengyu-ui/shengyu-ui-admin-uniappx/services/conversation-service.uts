@@ -57,6 +57,8 @@ export class ConversationService {
   
   // 会话列表缓存
   private conversations: ConversationItem[] = []
+
+  private loaded: boolean = false
   
   // 会话更新监听器列表
   private updateListeners: ConversationUpdateListener[] = []
@@ -95,6 +97,8 @@ export class ConversationService {
       }
     } catch (e) {
       console.error('[ConversationService] 加载会话列表失败:', e)
+    } finally {
+      this.loaded = true
     }
   }
   
@@ -109,7 +113,8 @@ export class ConversationService {
    * 获取单个会话
    */
   public getConversation(chatId: string): ConversationItem | null {
-    const conversation = this.conversations.find(c => c.chatId === chatId || ((c as any).id === chatId))
+    const chatIdStr = chatId != null ? (chatId as any).toString() : ''
+    const conversation = this.conversations.find(c => c.chatId === chatIdStr || ((c as any).id === chatIdStr))
     return conversation != null ? conversation : null
   }
   
@@ -122,10 +127,16 @@ export class ConversationService {
     timestamp: number,
     incrementUnread: boolean = false
   ): void {
-    let conversation = this.conversations.find(c => c.chatId === chatId || ((c as any).id === chatId))
+    const chatIdStr = chatId != null ? (chatId as any).toString() : ''
+    if (!this.loaded) {
+      void this.loadConversations()
+      return
+    }
+
+    let conversation = this.conversations.find(c => c.chatId === chatIdStr || ((c as any).id === chatIdStr))
     // 兼容调用方传入 targetId 的情况（群聊：groupId；单聊：对方 userId）
     if (conversation == null) {
-      conversation = this.conversations.find(c => c.targetId === chatId)
+      conversation = this.conversations.find(c => c.targetId === chatIdStr)
     }
     
     if (conversation != null) {
@@ -139,7 +150,7 @@ export class ConversationService {
       }
     } else {
       // 创建新会话（实际应该从服务器获取完整信息）
-      console.warn('[ConversationService] 会话不存在，需要从服务器获取:', chatId)
+      console.warn('[ConversationService] 会话不存在，需要从服务器获取:', chatIdStr)
       // TODO: 从服务器获取会话详情
     }
     
