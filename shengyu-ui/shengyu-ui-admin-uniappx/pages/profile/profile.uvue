@@ -5,16 +5,19 @@
 		<!-- 个人信息头部 -->
 		<view class="user-header">
 			<view class="user-info-row">
-				<image class="avatar" src="/static/avatar.jpg"></image>
+				<image v-if="userInfo.avatar" class="avatar" :src="userInfo.avatar"></image>
+				<view v-else class="avatar" :style="{ backgroundColor: userAvatarBg }">
+					<text class="avatar-text">{{ userAvatarText }}</text>
+				</view>
 				<view class="user-detail">
 					<view class="name-row">
-						<text class="name">用户名称</text>
+						<text class="name">{{ userInfo.nickname || '-' }}</text>
 						<text class="iconfont qr-icon">&#xeaf1;</text>
 					</view>
 				</view>
 			</view>
 			<view class="dept-row">
-				<text class="dept-text">软件研发事业部 | 开发工程师</text>
+				<text class="dept-text">{{ deptPostText }}</text>
 			</view>
 			<view class="status-row" @click="handleAction('status')">
 				<text class="status-text">{{ t('profile.user.status') }}</text>
@@ -69,8 +72,57 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { clearUserCache } from '../../store/user.uts'
+	import { getCurrentUserDetail } from '../../api/user.uts'
+	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
+
+	const loading = ref(false)
+	const userInfo = ref({
+		id: '' as string,
+		nickname: '' as string,
+		avatar: '' as string,
+		deptName: '' as string,
+		postName: '' as string
+	})
+
+	const userAvatarText = computed(() : string => {
+		return getAvatarText(userInfo.value.nickname)
+	})
+	const userAvatarBg = computed(() : string => {
+		return getUserAvatarColor(userInfo.value.id || '0')
+	})
+	const deptPostText = computed(() : string => {
+		const dept = userInfo.value.deptName || ''
+		const post = userInfo.value.postName || ''
+		if (dept && post) return dept + ' | ' + post
+		if (dept) return dept
+		if (post) return post
+		return '-'
+	})
+
+	async function loadProfile() {
+		if (loading.value) return
+		try {
+			loading.value = true
+			const data = await getCurrentUserDetail()
+			userInfo.value = {
+				id: data && data.id != null ? data.id.toString() : '',
+				nickname: data && data.nickname ? data.nickname : '',
+				avatar: data && data.avatar ? data.avatar : '',
+				deptName: data && data.deptName ? data.deptName : '',
+				postName: data && data.postName ? data.postName : ''
+			}
+		} catch (e) {
+			console.error('[Profile] 加载当前用户信息失败:', e)
+			uni.showToast({
+				title: '加载失败',
+				icon: 'none'
+			})
+		} finally {
+			loading.value = false
+		}
+	}
 
 	function handleAction(type : string) {
 		if (type === 'fav') {
@@ -97,6 +149,14 @@
 			}
 		})
 	}
+
+	onLoad(async () => {
+		await loadProfile()
+	})
+
+	onShow(async () => {
+		await loadProfile()
+	})
 </script>
 
 <style>
@@ -130,6 +190,14 @@
 		background-color: #FFFFFF;
 		border-width: 2px;
 		border-color: rgba(255, 255, 255, 0.3);
+		justify-content: center;
+		align-items: center;
+	}
+
+	.avatar-text {
+		color: #FFFFFF;
+		font-size: 18px;
+		font-weight: 600;
 	}
 
 	.user-detail {
