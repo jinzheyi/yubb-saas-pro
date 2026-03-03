@@ -78,6 +78,7 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getContactList } from '../../api/contact.uts'
+	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
 
@@ -146,6 +147,7 @@
 			rawContacts.value = contacts.map((contact, index) => {
 				// 优先使用 remarkName（备注名），其次使用 nickname（昵称）
 				const displayName = contact.remarkName || contact.nickname || '未知'
+				const userIdStr = contact.id != null ? contact.id.toString() : '0'
 				// 使用后端返回的拼音首字母（取第一个字符）
 				let pinyinLetter = contact.pinyin || getPinyinFirstLetter(displayName)
 				// 如果后端返回的是多字符拼音（如 "SY"），只取第一个字符
@@ -154,12 +156,12 @@
 				}
 				
 				return {
-					id: contact.id,
-					userId: contact.id,
+					id: userIdStr,
+					userId: userIdStr,
 					name: displayName,
 					role: contact.deptName || '',
-					avatarText: displayName.substring(0, 2),
-					avatarBg: colors[index % colors.length],
+					avatarText: getAvatarText(displayName),
+					avatarBg: getUserAvatarColor(userIdStr),
 					pinyin: pinyinLetter
 				}
 			})

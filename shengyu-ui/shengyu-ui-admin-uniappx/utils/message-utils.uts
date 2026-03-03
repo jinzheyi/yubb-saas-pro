@@ -10,6 +10,7 @@
  */
 
 import { MessageType } from './websocket.uts'
+import { getAvatarText as getAvatarTextFromAvatar, getUserAvatarColor as getUserAvatarColorFromAvatar } from './avatar.uts'
 
 /**
  * 数据库消息类型映射到字符串
@@ -195,30 +196,7 @@ export function shouldShowTime(currentTimestamp: number, previousTimestamp: numb
  * @returns 头像文本
  */
 export function getAvatarText(name: string): string {
-  if (!name || name.length === 0) {
-    return '?'
-  }
-  
-  // 移除空格
-  name = name.trim()
-  
-  // 中文名：取最后两个字
-  // 英文名：取首字母
-  const chineseRegex = /[\u4e00-\u9fa5]/
-  if (chineseRegex.test(name)) {
-    // 包含中文
-    return name.length > 2 ? name.substring(name.length - 2) : name
-  } else {
-    // 英文或其他
-    const words = name.split(' ')
-    if (words.length >= 2) {
-      // 取前两个单词的首字母
-      return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase()
-    } else {
-      // 取前两个字符
-      return name.substring(0, Math.min(2, name.length)).toUpperCase()
-    }
-  }
+  return getAvatarTextFromAvatar(name)
 }
 
 /**
@@ -228,30 +206,7 @@ export function getAvatarText(name: string): string {
  * @returns 颜色值（十六进制）
  */
 export function getUserAvatarColor(userId: number | string): string {
-  const colors = [
-    '#409EFF', // 蓝色
-    '#67C23A', // 绿色
-    '#E6A23C', // 橙色
-    '#F56C6C', // 红色
-    '#909399', // 灰色
-    '#00D7FF', // 青色
-    '#FF6EC7', // 粉色
-    '#A78BFA', // 紫色
-    '#FCD34D', // 黄色
-    '#34D399'  // 翠绿色
-  ]
-  
-  if (typeof userId === 'number') {
-    const index = userId % colors.length
-    return colors[index]
-  }
-  // 字符串 ID：用简单 hash 避免 parseInt 导致精度丢失
-  let hash = 0
-  for (let i = 0; i < userId.length; i++) {
-    hash = (hash * 31 + userId.charCodeAt(i)) | 0
-  }
-  const positive = hash < 0 ? -hash : hash
-  return colors[positive % colors.length]
+  return getUserAvatarColorFromAvatar(userId)
 }
 
 /**

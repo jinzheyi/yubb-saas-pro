@@ -10,6 +10,7 @@
  */
 
 import { request } from '@/utils/request.uts'
+import { getUserAvatarColor } from '@/utils/avatar.uts'
 
 /**
  * 群组信息
@@ -546,7 +547,7 @@ export class GroupService {
       userName: data.userName || '',
       avatar: data.avatar || '',
       avatarText: data.avatarText || '',
-      avatarBg: data.avatarBg || '#409EFF',
+      avatarBg: data.avatarBg || getUserAvatarColor(data.userId != null ? data.userId.toString() : '0'),
       role: data.role || 3,
       nickname: data.nickname || '',
       joinTime: data.joinTime || 0,

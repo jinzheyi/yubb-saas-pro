@@ -77,6 +77,7 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getAvatarText, getGroupAvatarColor, getUserAvatarColor } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
 
@@ -85,19 +86,19 @@
 
 	// 最近聊天
 	const recentChats = ref([
-		{ id: 'chat1', name: '张敏', avatarText: '张敏', avatarBg: '#0ea5e9', isGroup: false },
-		{ id: 'chat2', name: '产品研发团队', avatarBg: '#10b981', isGroup: true, memberCount: 12 },
-		{ id: 'chat3', name: '李强', avatarText: '李强', avatarBg: '#f472b6', isGroup: false }
+		{ id: 'chat1', name: '张敏', avatarText: getAvatarText('张敏'), avatarBg: getUserAvatarColor('chat1'), isGroup: false },
+		{ id: 'chat2', name: '产品研发团队', avatarBg: getGroupAvatarColor('chat2'), isGroup: true, memberCount: 12 },
+		{ id: 'chat3', name: '李强', avatarText: getAvatarText('李强'), avatarBg: getUserAvatarColor('chat3'), isGroup: false }
 	])
 
 	// 联系人列表
 	const allContacts = ref([
-		{ id: '1', name: '张敏', role: '产品经理', avatarText: '张敏', avatarBg: '#0ea5e9' },
-		{ id: '2', name: '李强', role: '开发工程师', avatarText: '李强', avatarBg: '#f472b6' },
-		{ id: '3', name: '王静', role: '设计师', avatarText: '王静', avatarBg: '#c084fc' },
-		{ id: '4', name: '刘洋', role: '测试工程师', avatarText: '刘洋', avatarBg: '#10b981' },
-		{ id: '5', name: '赵敏', role: '产品经理', avatarText: '赵敏', avatarBg: '#f59e0b' },
-		{ id: '6', name: '孙伟', role: '开发工程师', avatarText: '孙伟', avatarBg: '#ec4899' }
+		{ id: '1', name: '张敏', role: '产品经理', avatarText: getAvatarText('张敏'), avatarBg: getUserAvatarColor('1') },
+		{ id: '2', name: '李强', role: '开发工程师', avatarText: getAvatarText('李强'), avatarBg: getUserAvatarColor('2') },
+		{ id: '3', name: '王静', role: '设计师', avatarText: getAvatarText('王静'), avatarBg: getUserAvatarColor('3') },
+		{ id: '4', name: '刘洋', role: '测试工程师', avatarText: getAvatarText('刘洋'), avatarBg: getUserAvatarColor('4') },
+		{ id: '5', name: '赵敏', role: '产品经理', avatarText: getAvatarText('赵敏'), avatarBg: getUserAvatarColor('5') },
+		{ id: '6', name: '孙伟', role: '开发工程师', avatarText: getAvatarText('孙伟'), avatarBg: getUserAvatarColor('6') }
 	])
 
 	// 过滤后的联系人

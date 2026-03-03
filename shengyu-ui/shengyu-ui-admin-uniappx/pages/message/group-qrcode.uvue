@@ -20,7 +20,7 @@
 			<view v-else class="qrcode-card">
 				<!-- 群信息 -->
 				<view class="group-info">
-					<view class="group-avatar">
+					<view class="group-avatar" :style="{ backgroundColor: groupAvatarBg }">
 						<text class="iconfont group-icon">&#xe616;</text>
 					</view>
 					<text class="group-name">{{ groupName }}</text>
@@ -87,10 +87,15 @@
 	import { getGroupInviteCode, generateGroupInvite } from '../../api/group.uts'
 	import { saveImageToAlbum } from '../../utils/qrcode.uts'
 	import { BASE_URL, ADMIN_APP_DOMAIN } from '../../config/app.config.uts'
+	import { getGroupAvatarColor } from '../../utils/avatar.uts'
 
 	// 页面参数
 	const groupId = ref('')
 	const groupName = ref('')
+
+	const groupAvatarBg = computed(() : string => {
+		return groupId.value ? getGroupAvatarColor(groupId.value) : getGroupAvatarColor('0')
+	})
 
 	// 邀请码信息
 	const inviteCode = ref('')

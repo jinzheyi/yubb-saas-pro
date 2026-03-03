@@ -92,6 +92,7 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
 
@@ -100,11 +101,11 @@
 
 	// 所有联系人数据
 	const allContacts = [
-		{ id: 1, name: '张敏', role: '开发工程师', avatarText: '张敏', avatarBg: '#0ea5e9' },
-		{ id: 2, name: '张强', role: '高级产品经理', avatarText: '张强', avatarBg: '#f97316' },
-		{ id: 3, name: '张晴', role: '人力资源主管', avatarText: '张晴', avatarBg: '#10b981' },
-		{ id: 4, name: '李伟', role: '技术总监', avatarText: '李伟', avatarBg: '#6366f1' },
-		{ id: 5, name: '王丽', role: 'UI设计师', avatarText: '王丽', avatarBg: '#fb7185' }
+		{ id: 1, name: '张敏', role: '开发工程师', avatarText: getAvatarText('张敏'), avatarBg: getUserAvatarColor('1') },
+		{ id: 2, name: '张强', role: '高级产品经理', avatarText: getAvatarText('张强'), avatarBg: getUserAvatarColor('2') },
+		{ id: 3, name: '张晴', role: '人力资源主管', avatarText: getAvatarText('张晴'), avatarBg: getUserAvatarColor('3') },
+		{ id: 4, name: '李伟', role: '技术总监', avatarText: getAvatarText('李伟'), avatarBg: getUserAvatarColor('4') },
+		{ id: 5, name: '王丽', role: 'UI设计师', avatarText: getAvatarText('王丽'), avatarBg: getUserAvatarColor('5') }
 	]
 
 	// 所有群组数据

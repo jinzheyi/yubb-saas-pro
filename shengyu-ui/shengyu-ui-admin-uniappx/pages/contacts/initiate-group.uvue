@@ -61,6 +61,7 @@
 	import { createGroup, addGroupMembers, getGroupMembers } from '../../api/group.uts'
 	import { getContactList } from '../../api/contact.uts'
 	import { createConversation } from '../../api/conversation.uts'
+	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 	import ContactSelector from '../../components/contact-selector/contact-selector.uvue'
 
 	const { t } = useI18n()
@@ -128,8 +129,8 @@
 					id: currentUserId,
 					name: currentUserName,
 					role: '当前用户',
-					avatarText: currentUserName.substring(0, 2),
-					avatarBg: '#1677FF',
+					avatarText: getAvatarText(currentUserName),
+					avatarBg: getUserAvatarColor(currentUserId),
 					pinyin: 'W',
 					selected: true,
 					isCurrentUser: true
@@ -138,6 +139,7 @@
 			
 			// 添加其他联系人
 			contacts.forEach((contact, index) => {
+				const userIdStr = contact.id != null ? contact.id.toString() : '0'
 				// 跳过当前用户（创建模式已添加）
 				if (mode.value === 'create' && contact.id === currentUserId) {
 					return
@@ -158,11 +160,11 @@
 				}
 				
 				list.push({
-					id: contact.id,
+					id: userIdStr,
 					name: displayName,
 					role: contact.deptName || '',
-					avatarText: displayName.substring(0, 2),
-					avatarBg: colors[index % colors.length],
+					avatarText: getAvatarText(displayName),
+					avatarBg: getUserAvatarColor(userIdStr),
 					pinyin: pinyinLetter,
 					selected: false,
 					isCurrentUser: mode.value === 'add' && contact.id === currentUserId

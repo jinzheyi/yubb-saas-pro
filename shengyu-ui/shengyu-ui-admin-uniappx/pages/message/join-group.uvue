@@ -29,7 +29,7 @@
 			<!-- 群信息预览 -->
 			<view v-else class="group-preview">
 				<!-- 群头像 -->
-				<view class="group-avatar-large">
+				<view class="group-avatar-large" :style="{ backgroundColor: groupAvatarBg }">
 					<text class="iconfont group-icon-large">&#xe616;</text>
 				</view>
 

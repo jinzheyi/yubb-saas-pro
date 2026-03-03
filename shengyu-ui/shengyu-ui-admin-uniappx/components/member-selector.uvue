@@ -7,7 +7,7 @@
 				class="member-item"
 				@click="handleSelectMember({ userId: -1, userName: '所有人', avatar: '' })"
 			>
-				<view class="member-avatar" style="background-color: #FF6B6B;">
+				<view class="member-avatar" :style="{ backgroundColor: getBusinessAvatarColor('mention_all', '-1') }">
 					<text class="avatar-text">@</text>
 				</view>
 				<text class="member-name">所有人</text>
@@ -30,6 +30,7 @@
 </template>
 
 <script setup lang="ts">
+	import { getBusinessAvatarColor } from '@/utils/avatar.uts'
 	/**
 	 * 群成员选择器组件
 	 * 

@@ -99,6 +99,7 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getAvatarText, getGroupAvatarColor, getUserAvatarColor } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
 
@@ -113,21 +114,21 @@
 
 	// 模拟数据
 	const allContacts = [
-		{ id: 1, name: '张敏', role: '产品经理', avatarText: '张敏', avatarBg: '#0ea5e9' },
-		{ id: 2, name: '李强', role: '开发工程师', avatarText: '李强', avatarBg: '#f472b6' },
-		{ id: 3, name: '王静', role: '设计师', avatarText: '王静', avatarBg: '#c084fc' },
-		{ id: 4, name: '刘洋', role: '测试工程师', avatarText: '刘洋', avatarBg: '#10b981' }
+		{ id: 1, name: '张敏', role: '产品经理', avatarText: getAvatarText('张敏'), avatarBg: getUserAvatarColor('1') },
+		{ id: 2, name: '李强', role: '开发工程师', avatarText: getAvatarText('李强'), avatarBg: getUserAvatarColor('2') },
+		{ id: 3, name: '王静', role: '设计师', avatarText: getAvatarText('王静'), avatarBg: getUserAvatarColor('3') },
+		{ id: 4, name: '刘洋', role: '测试工程师', avatarText: getAvatarText('刘洋'), avatarBg: getUserAvatarColor('4') }
 	]
 
 	const allGroups = [
-		{ id: 1, name: '产品研发团队', memberCount: 12, avatarBg: '#10b981' },
-		{ id: 2, name: '技术交流群', memberCount: 50, avatarBg: '#8b5cf6' },
-		{ id: 3, name: '项目管理组', memberCount: 15, avatarBg: '#3b82f6' }
+		{ id: 1, name: '产品研发团队', memberCount: 12, avatarBg: getGroupAvatarColor('1') },
+		{ id: 2, name: '技术交流群', memberCount: 50, avatarBg: getGroupAvatarColor('2') },
+		{ id: 3, name: '项目管理组', memberCount: 15, avatarBg: getGroupAvatarColor('3') }
 	]
 
 	const allMessages = [
-		{ id: 1, chatName: '张敏', content: '今天下午3点开会', time: '10:30', avatarText: '张敏', avatarBg: '#0ea5e9' },
-		{ id: 2, chatName: '产品研发团队', content: '请大家查看最新的项目进度', time: '昨天', avatarText: '产品', avatarBg: '#10b981' }
+		{ id: 1, chatName: '张敏', content: '今天下午3点开会', time: '10:30', avatarText: getAvatarText('张敏'), avatarBg: getUserAvatarColor('1') },
+		{ id: 2, chatName: '产品研发团队', content: '请大家查看最新的项目进度', time: '昨天', avatarText: getAvatarText('产品研发团队'), avatarBg: getGroupAvatarColor('2') }
 	]
 
 	const noResults = computed(() : boolean => {

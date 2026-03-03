@@ -54,6 +54,7 @@
 		toggleMember,
 		getSelectedCount
 	} from '../../store/group-selection.uts'
+	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
 
@@ -65,7 +66,6 @@
 		const firstNames = ['张', '李', '王', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗']
 		const lastNames = ['伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军', '洋', '勇', '艳', '杰', '娟', '涛', '明', '超', '秀兰', '霞']
 		const roles = ['高级经理', '部门经理', '项目经理', '开发工程师', '测试工程师', '产品经理', '设计师', '运营专员', '市场专员', '行政专员']
-		const colors = ['#0ea5e9', '#f472b6', '#c084fc', '#fb7185', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#3b82f6', '#8b5cf6']
 
 		const list : any[] = []
 		const memberCount = groupId === 1 ? 84 : (groupId === 2 ? 17 : (groupId === 3 ? 10 : 18))
@@ -75,13 +75,14 @@
 			const firstName = firstNames[i % firstNames.length]
 			const lastName = lastNames[i % lastNames.length]
 			const name = firstName + lastName
+			const memberId = baseId + i + 1
 			
 			list.push({
-				id: baseId + i + 1,
+				id: memberId,
 				name: name,
 				role: roles[i % roles.length],
-				avatarText: name.substring(0, 2),
-				avatarBg: colors[i % colors.length],
+				avatarText: getAvatarText(name),
+				avatarBg: getUserAvatarColor(memberId.toString()),
 				selected: false
 			})
 		}

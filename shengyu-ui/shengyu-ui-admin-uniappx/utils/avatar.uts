@@ -5,7 +5,19 @@
 /**
  * 预定义的头像背景色列表
  */
-const AVATAR_COLORS = ['#F197BC', '#5FB6F7', '#c084fc', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6']
+const AVATAR_COLORS = ['#F197BC', '#5FB6F7', '#c084fc', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6', '#22c55e', '#f43f5e', '#14b8a6', '#a855f7', '#0ea5e9', '#f97316', '#84cc16', '#06b6d4']
+
+function modFromNumericString(value: string, mod: number): number {
+	let result = 0
+	for (let i = 0; i < value.length; i++) {
+		const code = value.charCodeAt(i)
+		if (code < 48 || code > 57) {
+			return hashToIndex(value)
+		}
+		result = (result * 10 + (code - 48)) % mod
+	}
+	return result
+}
 
 function hashToIndex(value: string): number {
 	let hash = 0
@@ -14,6 +26,32 @@ function hashToIndex(value: string): number {
 	}
 	const positive = hash < 0 ? -hash : hash
 	return positive % AVATAR_COLORS.length
+}
+
+function hashToInt(value: string): number {
+	let hash = 0
+	for (let i = 0; i < value.length; i++) {
+		hash = (hash * 31 + value.charCodeAt(i)) | 0
+	}
+	return hash
+}
+
+function toHex2(n: number): string {
+	const v = n & 0xff
+	const s = v.toString(16)
+	return s.length === 1 ? ('0' + s) : s
+}
+
+function hashToPastelHex(value: string, salt: number): string {
+	const h = (hashToInt(value) ^ salt) >>> 0
+	let r = (h >> 16) & 0xff
+	let g = (h >> 8) & 0xff
+	let b = h & 0xff
+	// pastelize: mix with white to ensure readable, pleasant colors
+	r = Math.floor((r + 255) / 2)
+	g = Math.floor((g + 255) / 2)
+	b = Math.floor((b + 255) / 2)
+	return '#' + toHex2(r) + toHex2(g) + toHex2(b)
 }
 
 /**
@@ -25,11 +63,8 @@ function hashToIndex(value: string): number {
  */
 
 export function getUserAvatarColor(userId : number | string) : string {
-	if (typeof userId === 'number') {
-		const index = userId % AVATAR_COLORS.length
-		return AVATAR_COLORS[index]
-	}
-	return AVATAR_COLORS[hashToIndex(userId)]
+	const userIdStr = typeof userId === 'number' ? userId.toString() : userId
+	return hashToPastelHex(userIdStr, 0)
 }
 
 /**
@@ -42,12 +77,8 @@ export function getUserAvatarColor(userId : number | string) : string {
  */
 
 export function getGroupAvatarColor(groupId : number | string) : string {
-	if (typeof groupId === 'number') {
-		const seed = groupId + 100000
-		const index = seed % AVATAR_COLORS.length
-		return AVATAR_COLORS[index]
-	}
-	return AVATAR_COLORS[hashToIndex(groupId + ':group')]
+	const groupIdStr = typeof groupId === 'number' ? groupId.toString() : groupId
+	return hashToPastelHex(groupIdStr, 100000)
 }
 
 /**
@@ -64,6 +95,11 @@ export function getConversationAvatarColor(conversationType : number, targetId :
 		return getGroupAvatarColor(targetId)
 	}
 	return getUserAvatarColor(targetId)
+}
+
+export function getBusinessAvatarColor(scene: string, id: number | string): string {
+	const idStr = typeof id === 'number' ? id.toString() : id
+	return hashToPastelHex(scene + ':' + idStr, 200000)
 }
 
 /**
