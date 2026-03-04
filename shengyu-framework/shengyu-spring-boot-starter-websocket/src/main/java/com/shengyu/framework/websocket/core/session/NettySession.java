@@ -54,6 +54,11 @@ public class NettySession {
     private String deviceId;
 
     /**
+     * 设备名称（用于展示，例如 Chrome浏览器、iPhone 15、小米 14）
+     */
+    private String deviceName;
+
+    /**
      * 客户端版本
      */
     private String clientVersion;

@@ -128,6 +128,52 @@ export function getAppVersion(): string {
 	return '1.0.0'
 }
 
+export function getDeviceName(): string {
+	// #ifdef APP-PLUS
+	try {
+		const systemInfo = uni.getSystemInfoSync()
+		const brand = (systemInfo as any).brand
+		const model = (systemInfo as any).model
+		if (brand != null && brand !== '' && model != null && model !== '') {
+			return `${brand} ${model}`
+		}
+		if (model != null && model !== '') {
+			return model as string
+		}
+	} catch (e) {
+		// ignore
+	}
+	// #endif
+
+	// #ifdef H5
+	try {
+		const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : ''
+		const l = ua.toLowerCase()
+		if (l.indexOf('edg') > -1) {
+			return 'Edge浏览器'
+		}
+		if (l.indexOf('chrome') > -1 && l.indexOf('safari') > -1) {
+			return 'Chrome浏览器'
+		}
+		if (l.indexOf('safari') > -1 && l.indexOf('chrome') === -1) {
+			return 'Safari浏览器'
+		}
+		if (l.indexOf('firefox') > -1) {
+			return 'Firefox浏览器'
+		}
+		return 'Web浏览器'
+	} catch (e) {
+		return 'Web浏览器'
+	}
+	// #endif
+
+	// #ifdef MP-WEIXIN
+	return '微信小程序'
+	// #endif
+
+	return getDeviceTypeName(getCurrentDeviceType())
+}
+
 /**
  * 获取设备信息对象
  * 包含设备类型、设备ID、应用版本等信息

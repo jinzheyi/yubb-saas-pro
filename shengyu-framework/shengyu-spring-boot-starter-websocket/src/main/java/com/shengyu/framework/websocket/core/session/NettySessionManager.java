@@ -1,10 +1,19 @@
 package com.shengyu.framework.websocket.core.session;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
+import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.MessageHeader;
+import com.shengyu.framework.websocket.core.protocol.MessageType;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -26,6 +35,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class NettySessionManager {
+
+    private static final DateTimeFormatter KICK_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        .withZone(ZoneId.systemDefault());
 
     /**
      * Channel ID -> Session
@@ -90,7 +102,7 @@ public class NettySessionManager {
                 // 踢掉旧设备
                 NettySession oldSession = channelSessionMap.get(oldChannelId);
                 if (oldSession != null && oldSession.isActive()) {
-                    kickOffDevice(oldSession, "您的账号在其他设备登录");
+                    kickOffDevice(oldSession, session);
                 }
             }
             
@@ -189,20 +201,93 @@ public class NettySessionManager {
     /**
      * 踢掉设备
      */
-    private void kickOffDevice(NettySession session, String reason) {
-        log.info("[SessionManager] 踢掉设备, userId: {}, deviceType: {}, reason: {}", 
-            session.getUserId(), session.getDeviceType(), reason);
-        
+    private void kickOffDevice(NettySession kickedSession, NettySession bySession) {
+        long kickedAt = System.currentTimeMillis();
+        String byDevice = buildDeviceDisplay(bySession);
+        String kickedAtText = KICK_TIME_FORMATTER.format(Instant.ofEpochMilli(kickedAt));
+        String reason = "当前账号于" + kickedAtText + "在" + byDevice + "设备上登录。此客户端已退出登录。";
+
+        log.info("[SessionManager] 踢掉设备, userId: {}, deviceType: {}, byDeviceType: {}, byDeviceId: {}",
+            kickedSession.getUserId(), kickedSession.getDeviceType(),
+            bySession != null ? bySession.getDeviceType() : null, bySession != null ? bySession.getDeviceId() : null);
+
         try {
-            // 发送踢下线通知（使用简单的文本消息）
-            // 注意：这里简化处理，实际应该使用 Protobuf 构建 CLOSE 消息
-            // TODO: 标准化 CLOSE/KICKED 协议体（JSON + Protobuf），携带 code/reason
-            session.getChannel().writeAndFlush(reason);
-            
-            // 关闭连接
-            session.getChannel().close();
+            Channel ch = kickedSession.getChannel();
+            if (ch == null) {
+                return;
+            }
+
+            // 先移除会话索引，避免关闭链路延迟导致旧索引残留
+            removeSession(ch);
+
+            if (isWebSocketChannel(ch)) {
+                String payload = JSONUtil.createObj()
+                    .set("header", JSONUtil.createObj()
+                        .set("messageId", System.currentTimeMillis())
+                        .set("messageType", MessageType.CLOSE_VALUE)
+                        .set("timestamp", System.currentTimeMillis()))
+                    .set("body", JSONUtil.createObj()
+                        .set("action", "KICKED")
+                        .set("code", 403)
+                        .set("message", reason)
+                        .set("kickedAt", kickedAt)
+                        .set("byDevice", byDevice))
+                    .toString();
+                ch.writeAndFlush(new TextWebSocketFrame(payload));
+            } else {
+                String extra = JSONUtil.createObj()
+                    .set("action", "KICKED")
+                    .set("code", 403)
+                    .set("message", reason)
+                    .set("kickedAt", kickedAt)
+                    .set("byDevice", byDevice)
+                    .toString();
+                MessageHeader header = MessageHeader.newBuilder()
+                    .setMessageId(System.currentTimeMillis())
+                    .setMessageType(MessageType.CLOSE)
+                    .setTimestamp(System.currentTimeMillis())
+                    .setExtra(extra)
+                    .build();
+                ch.writeAndFlush(ImMessage.newBuilder().setHeader(header).build());
+            }
+
+            ch.close();
         } catch (Exception e) {
             log.error("[SessionManager] 踢掉设备失败", e);
+        }
+    }
+
+    private String buildDeviceDisplay(NettySession session) {
+        if (session == null) {
+            return "未知";
+        }
+
+        if (StrUtil.isNotBlank(session.getDeviceName())) {
+            return session.getDeviceName();
+        }
+        String deviceName;
+        Integer dt = session.getDeviceType();
+        if (dt == null) {
+            deviceName = "未知";
+        } else if (dt == 1) {
+            deviceName = "Web";
+        } else if (dt == 2) {
+            deviceName = "iOS";
+        } else if (dt == 3) {
+            deviceName = "Android";
+        } else if (dt == 4) {
+            deviceName = "小程序";
+        } else {
+            deviceName = "设备" + dt;
+        }
+        return deviceName;
+    }
+
+    private boolean isWebSocketChannel(Channel channel) {
+        try {
+            return channel.pipeline().get(WebSocketServerProtocolHandler.class) != null;
+        } catch (Exception ignore) {
+            return false;
         }
     }
 

@@ -96,6 +96,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             String accessToken = body.getStr("accessToken");
             Integer deviceType = body.getInt("deviceType", 0);
             String deviceId = body.getStr("deviceId", "");
+            String deviceName = body.getStr("deviceName", "");
             String clientVersion = body.getStr("clientVersion", "");
 
             if (StrUtil.isBlank(accessToken)) {
@@ -133,6 +134,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 .nickname(loginUser.getNickname())
                 .deviceType(deviceType)
                 .deviceId(deviceId)
+                .deviceName(deviceName)
                 .clientVersion(clientVersion)
                 .accessToken(accessToken)
                 .connectTime(now)

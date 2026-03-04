@@ -19,7 +19,7 @@
  */
 
 import { getAccessToken, getRefreshToken, setToken, removeToken } from '../store/user.uts'
-import { getCurrentDeviceType, getDeviceId, getAppVersion } from './device.uts'
+import { getCurrentDeviceType, getDeviceId, getAppVersion, getDeviceName } from './device.uts'
 import { WS_URL, WS_HEARTBEAT_INTERVAL, WS_HEARTBEAT_TIMEOUT, WS_MAX_RECONNECT_COUNT } from '../config/app.config.uts'
 import { badgeService } from '../services/badge-service.uts'
 import { refreshToken as refreshTokenApi } from '../api/login.uts'
@@ -274,6 +274,7 @@ export class WebSocketManager {
         accessToken: accessToken,
         deviceType: getCurrentDeviceType(),
         deviceId: getDeviceId(),
+        deviceName: getDeviceName(),
         clientVersion: getAppVersion()
       }
     }
@@ -438,6 +439,8 @@ export class WebSocketManager {
     const action = body && typeof body === 'object' ? (body.action as string) : ''
     const code = body && typeof body === 'object' ? (body.code as number) : 0
     const reason = body && typeof body === 'object' ? (body.message as string) : (body as string)
+    const kickedAt = body && typeof body === 'object' ? (body.kickedAt as number) : 0
+    const byDevice = body && typeof body === 'object' ? (body.byDevice as string) : ''
 
     console.log('[WebSocket] 收到 CLOSE:', { action: action, code: code, reason: reason })
 
@@ -468,9 +471,21 @@ export class WebSocketManager {
 
     if (action === 'LOGOUT' || action === 'KICKED' || action === 'REVOKED') {
       removeToken()
+
+      let content = reason || '您的账号已下线'
+      if (action === 'KICKED' && kickedAt > 0 && byDevice != null && byDevice != '') {
+        try {
+          const dt = new Date(kickedAt)
+          const pad2 = (n: number): string => (n < 10 ? '0' + n : '' + n)
+          const kickedAtText = `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())} ${pad2(dt.getHours())}:${pad2(dt.getMinutes())}:${pad2(dt.getSeconds())}`
+          content = `当前账号于${kickedAtText}在${byDevice}设备上登录。此客户端已退出登录。`
+        } catch (e) {
+          content = reason || '您的账号已下线'
+        }
+      }
       uni.showModal({
         title: '下线通知',
-        content: reason || '您的账号已下线',
+        content: content,
         showCancel: false,
         success: () => {
           uni.reLaunch({ url: '/pages/login/login' })

@@ -205,6 +205,9 @@ function aesDecryptIOS(word: string, keyWord: string): string {
 
 
 // #ifdef H5
+// @ts-ignore
+import CryptoJS from 'crypto-js'
+
 /**
  * Web 平台 AES 加密
  * 使用 crypto-js 库
@@ -214,13 +217,9 @@ function aesDecryptIOS(word: string, keyWord: string): string {
  */
 function aesEncryptWeb(word: string, keyWord: string): string {
 	try {
-		// 检查 crypto-js 是否已加载
-		// 在某些 ESM/模块化环境下，直接访问 CryptoJS 标识符可能取不到全局对象上的属性
-		// @ts-ignore
-		const crypto = (globalThis as any).CryptoJS || (typeof window !== 'undefined' ? (window as any).CryptoJS : null)
+		const crypto: any = CryptoJS as any
 		if (crypto === null || crypto === undefined) {
-			console.error('crypto-js 未加载，请在 index.html 中引入')
-			console.error('添加: <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>')
+			console.error('crypto-js 未安装或无法加载：请通过 npm 安装依赖（例如在项目根执行 npm i crypto-js）')
 			return word
 		}
 		
@@ -257,10 +256,9 @@ function aesEncryptWeb(word: string, keyWord: string): string {
  */
 function aesDecryptWeb(word: string, keyWord: string): string {
 	try {
-		// @ts-ignore
-		const crypto = (globalThis as any).CryptoJS || (typeof window !== 'undefined' ? (window as any).CryptoJS : null)
+		const crypto: any = CryptoJS as any
 		if (crypto === null || crypto === undefined) {
-			console.error('crypto-js 未加载')
+			console.error('crypto-js 未安装或无法加载：请通过 npm 安装依赖（例如在项目根执行 npm i crypto-js）')
 			return word
 		}
 		

@@ -1,0 +1,8 @@
+{
+  "name": "shengyu-ui-admin-uniappx",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "crypto-js": "^4.1.1"
+  }
+}
