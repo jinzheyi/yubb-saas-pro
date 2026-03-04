@@ -463,7 +463,9 @@ export class WebSocketManager {
         content: reason || '登录已过期，请重新登录',
         showCancel: false,
         success: () => {
-          uni.reLaunch({ url: '/pages/login/login' })
+          setTimeout(() => {
+            uni.reLaunch({ url: '/pages/login/login' })
+          }, 50)
         }
       })
       return
@@ -488,7 +490,9 @@ export class WebSocketManager {
         content: content,
         showCancel: false,
         success: () => {
-          uni.reLaunch({ url: '/pages/login/login' })
+          setTimeout(() => {
+            uni.reLaunch({ url: '/pages/login/login' })
+          }, 50)
         }
       })
       return

@@ -55,6 +55,64 @@ function notifyAccessTokenRefreshed(tokenData: any) {
 	}
 }
 
+function ensureHeader(config: UTSJSONObject): any {
+	const existing: any = config['header']
+	if (existing != null) {
+		try {
+			const merged: any = {}
+			Object.assign(merged, existing)
+			config['header'] = merged
+			return merged
+		} catch (e) {
+			// ignore
+		}
+	}
+	const header: any = {}
+	config['header'] = header
+	return header
+}
+
+function applyAuthHeader(config: UTSJSONObject, token: string) {
+	const header = ensureHeader(config)
+	const v = formatToken(token)
+	// 规范化：避免大小写不同导致在 H5/部分实现中被合并为重复值（"Bearer x, Bearer x"）
+	try {
+		delete header['Authorization']
+		delete header['authorization']
+	} catch (e) {
+		// ignore
+	}
+	header['Authorization'] = v
+}
+
+function applyTenantHeaderIfNeeded(config: UTSJSONObject) {
+	if (TENANT_ENABLE !== 'true') {
+		return
+	}
+	const url = config['url'] as string
+	if (url == null) {
+		return
+	}
+	// 检查是否在租户白名单中
+	for (let i = 0; i < tenantWhiteList.length; i++) {
+		if (url.indexOf(tenantWhiteList[i]) > -1) {
+			return
+		}
+	}
+	const tenantId = getTenantId()
+	if (tenantId != null && tenantId != '') {
+		const header = ensureHeader(config)
+		try {
+			delete header['tenant-id']
+			delete header['Tenant-Id']
+			delete header['Tenant-ID']
+		} catch (e) {
+			// ignore
+		}
+		header['tenant-id'] = tenantId
+	}
+}
+
 // 请求白名单，无须 token 的接口
 const whiteList: string[] = [
 	'/system/captcha/',              // 验证码相关接口
@@ -92,56 +150,28 @@ function requestInterceptor(config: UTSJSONObject): UTSJSONObject {
 	if (isToken) {
 		const token = getAccessToken()
 		if (token != null && token != '') {
-			if (config['header'] == null) {
-				config['header'] = {}
-			}
-			config['header']['Authorization'] = formatToken(token)
+			applyAuthHeader(config, token)
 		}
 	}
 	
 	// 设置租户 ID（严格参考 PC 端逻辑）
 	// PC 端代码：if (tenantEnable && tenantEnable === 'true')
-	if (TENANT_ENABLE === 'true') {
-		// 检查是否在租户白名单中
-		let needTenantId = true
-		for (let i = 0; i < tenantWhiteList.length; i++) {
-			if (url.indexOf(tenantWhiteList[i]) > -1) {
-				needTenantId = false
-				break
-			}
-		}
-		
-		// 只有不在白名单中的接口才添加租户 ID
-		if (needTenantId) {
-			const tenantId = getTenantId()
-			if (tenantId != null && tenantId != '') {
-				if (config['header'] == null) {
-					config['header'] = {}
-				}
-				// 租户 ID 已经是字符串，直接使用
-				config['header']['tenant-id'] = tenantId
-			}
-		}
-	}
+	applyTenantHeaderIfNeeded(config)
 	
 	// 防止 GET 请求缓存（参考 PC 端）
 	const method = config['method'] as string
 	if (method && method.toUpperCase() === 'GET') {
-		if (config['header'] == null) {
-			config['header'] = {}
-		}
-		config['header']['Cache-Control'] = 'no-cache'
-		config['header']['Pragma'] = 'no-cache'
+		const header = ensureHeader(config)
+		header['Cache-Control'] = 'no-cache'
+		header['Pragma'] = 'no-cache'
 	}
 	
 	// POST 请求设置 Content-Type
 	if (method && method.toUpperCase() === 'POST') {
-		if (config['header'] == null) {
-			config['header'] = {}
-		}
+		const header = ensureHeader(config)
 		// 如果没有设置 Content-Type，默认使用 application/json
-		if (!config['header']['Content-Type'] && !config['header']['content-type']) {
-			config['header']['Content-Type'] = 'application/json'
+		if (!header['Content-Type'] && !header['content-type']) {
+			header['Content-Type'] = 'application/json'
 		}
 	}
 	
@@ -277,12 +307,18 @@ async function handle401Error(response: any): Promise<any> {
 		
 		// 重试原请求
 		const newToken = getAccessToken()
-		config['header']['Authorization'] = 'Bearer ' + newToken
+		if (newToken != null && newToken != '') {
+			applyAuthHeader(config, newToken)
+		}
+		applyTenantHeaderIfNeeded(config)
 		const retryResponse = await uni.request(config)
 		
 		// 处理队列中的请求
 		requestQueue.forEach(item => {
-			item.config['header']['Authorization'] = 'Bearer ' + newToken
+			if (newToken != null && newToken != '') {
+				applyAuthHeader(item.config, newToken)
+			}
+			applyTenantHeaderIfNeeded(item.config)
 			uni.request(item.config).then(res => {
 				item.resolve(responseInterceptor(res))
 			}).catch(err => {
