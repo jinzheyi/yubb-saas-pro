@@ -35,7 +35,12 @@ public class ImSessionRevokeConsumer extends AbstractRedisChannelMessageListener
 
     @Override
     public void onMessage(ImSessionRevokeMessage message) {
-        if (message == null || message.getUserId() == null) {
+        if (message == null) {
+            return;
+        }
+        // 精确撤销优先级：accessToken -> (userId, deviceType, deviceId) -> userId
+        // 只要有 accessToken 或 userId 任一维度，就可以处理（兼容批量撤销只带 userId 的场景）
+        if (StrUtil.isBlank(message.getAccessToken()) && message.getUserId() == null) {
             return;
         }
 
@@ -48,13 +53,37 @@ public class ImSessionRevokeConsumer extends AbstractRedisChannelMessageListener
             return;
         }
 
+        String action = StrUtil.blankToDefault(message.getAction(), "REVOKED");
+        String reason = StrUtil.blankToDefault(message.getReason(), "会话已失效");
+
+        // 1) accessToken 精确撤销（O(1)）
+        if (StrUtil.isNotBlank(message.getAccessToken())) {
+            NettySession session = sessionManager.getSessionByAccessToken(message.getAccessToken());
+            if (session == null || !session.isActive()) {
+                return;
+            }
+            kickAndClose(session, action, reason);
+            return;
+        }
+
+        // 2) 设备精确撤销（O(1)）
+        if (message.getUserId() != null && message.getDeviceType() != null && StrUtil.isNotBlank(message.getDeviceId())) {
+            NettySession session = sessionManager.getSessionByUserIdAndDevice(message.getUserId(), message.getDeviceType(), message.getDeviceId());
+            if (session == null || !session.isActive()) {
+                return;
+            }
+            kickAndClose(session, action, reason);
+            return;
+        }
+
+        // 3) fallback：按 userId 批量撤销
+        if (message.getUserId() == null) {
+            return;
+        }
         List<NettySession> sessions = sessionManager.getSessionsByUserId(message.getUserId());
         if (sessions.isEmpty()) {
             return;
         }
-
-        String action = StrUtil.blankToDefault(message.getAction(), "REVOKED");
-        String reason = StrUtil.blankToDefault(message.getReason(), "会话已失效");
 
         log.info("[ImSessionRevokeConsumer] revoke userId={}, sessions={}, action={}, reason={}",
             message.getUserId(), sessions.size(), action, reason);
@@ -63,21 +92,19 @@ public class ImSessionRevokeConsumer extends AbstractRedisChannelMessageListener
             if (session == null || !session.isActive()) {
                 continue;
             }
-            Channel ch = session.getChannel();
-            if (ch == null) {
-                continue;
-            }
-
-            // 标记状态
-            session.setAuthState(NettySessionAuthState.REVOKED);
-
-            // TODO: 标准化 CLOSE/KICKED 协议体（JSON + Protobuf），携带 code/reason
-            sendKicked(ch, 403, reason, action);
-
-            // 断链
-            sessionManager.removeSession(ch);
-            ch.close();
+            kickAndClose(session, action, reason);
         }
+    }
+
+    private void kickAndClose(NettySession session, String action, String reason) {
+        Channel ch = session.getChannel();
+        if (ch == null) {
+            return;
+        }
+        session.setAuthState(NettySessionAuthState.REVOKED);
+        sendKicked(ch, 403, reason, action);
+        sessionManager.removeSession(ch);
+        ch.close();
     }
 
     private void sendKicked(Channel channel, int code, String message, String action) {

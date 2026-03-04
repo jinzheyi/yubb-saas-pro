@@ -138,6 +138,7 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
             .setUserType(accessTokenDO.getUserType())
             .setTenantId(accessTokenDO.getTenantId())
             .setClientId(accessTokenDO.getClientId())
+            .setAccessToken(accessToken)
             .setAction("REVOKED")
             .setReason("Token 被撤销");
         imSessionRevokeProducer.send(revokeMessage);

@@ -1,5 +1,6 @@
 package com.shengyu.framework.websocket.core.session;
 
+import cn.hutool.core.util.StrUtil;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -45,6 +46,18 @@ public class NettySessionManager {
     private final Map<String, String> userDeviceChannelMap = new ConcurrentHashMap<>();
 
     /**
+     * AccessToken -> Channel ID
+     * 用于按 accessToken 精确撤销（O(1) 定位连接）
+     */
+    private final Map<String, String> accessTokenChannelMap = new ConcurrentHashMap<>();
+
+    /**
+     * User ID + Device Type + Device ID -> Channel ID
+     * 用于按设备精确撤销（O(1) 定位连接）
+     */
+    private final Map<String, String> userDeviceIdChannelMap = new ConcurrentHashMap<>();
+
+    /**
      * Tenant ID -> Channel IDs
      * 用于按租户查找所有连接
      */
@@ -59,6 +72,11 @@ public class NettySessionManager {
         }
 
         String channelId = session.getChannelId();
+
+        // 同一条连接重复认证（续期/换 token）：先清理旧 session 的索引，避免 accessToken 等索引残留
+        if (channelId != null && channelSessionMap.containsKey(channelId)) {
+            removeSession(session.getChannel());
+        }
         Long userId = session.getUserId();
         Integer deviceType = session.getDeviceType();
         Long tenantId = session.getTenantId();
@@ -82,6 +100,16 @@ public class NettySessionManager {
 
         // 2. 添加到 Channel 映射
         channelSessionMap.put(channelId, session);
+
+        // 2.1 添加到 accessToken 映射（用于精确撤销）
+        if (StrUtil.isNotBlank(session.getAccessToken())) {
+            accessTokenChannelMap.put(session.getAccessToken(), channelId);
+        }
+
+        // 2.2 添加到 userId + deviceType + deviceId 映射（用于设备精确撤销）
+        if (userId != null && deviceType != null && StrUtil.isNotBlank(session.getDeviceId())) {
+            userDeviceIdChannelMap.put(buildUserDeviceIdKey(userId, deviceType, session.getDeviceId()), channelId);
+        }
 
         // 3. 添加到用户映射
         if (userId != null) {
@@ -114,6 +142,16 @@ public class NettySessionManager {
             Long userId = session.getUserId();
             Integer deviceType = session.getDeviceType();
             Long tenantId = session.getTenantId();
+
+            // 从 accessToken 映射中移除
+            if (StrUtil.isNotBlank(session.getAccessToken())) {
+                accessTokenChannelMap.remove(session.getAccessToken());
+            }
+
+            // 从 userId + deviceType + deviceId 映射中移除
+            if (userId != null && deviceType != null && StrUtil.isNotBlank(session.getDeviceId())) {
+                userDeviceIdChannelMap.remove(buildUserDeviceIdKey(userId, deviceType, session.getDeviceId()));
+            }
 
             // 从用户设备映射中移除
             if (userId != null && deviceType != null) {
@@ -175,6 +213,10 @@ public class NettySessionManager {
         return userId + ":" + deviceType;
     }
 
+    private String buildUserDeviceIdKey(Long userId, Integer deviceType, String deviceId) {
+        return userId + ":" + deviceType + ":" + deviceId;
+    }
+
     /**
      * 根据 Channel ID 获取会话
      */
@@ -222,6 +264,22 @@ public class NettySessionManager {
         
         String userDeviceKey = buildUserDeviceKey(userId, deviceType);
         String channelId = userDeviceChannelMap.get(userDeviceKey);
+        return channelId != null ? channelSessionMap.get(channelId) : null;
+    }
+
+    public NettySession getSessionByAccessToken(String accessToken) {
+        if (StrUtil.isBlank(accessToken)) {
+            return null;
+        }
+        String channelId = accessTokenChannelMap.get(accessToken);
+        return channelId != null ? channelSessionMap.get(channelId) : null;
+    }
+
+    public NettySession getSessionByUserIdAndDevice(Long userId, Integer deviceType, String deviceId) {
+        if (userId == null || deviceType == null || StrUtil.isBlank(deviceId)) {
+            return null;
+        }
+        String channelId = userDeviceIdChannelMap.get(buildUserDeviceIdKey(userId, deviceType, deviceId));
         return channelId != null ? channelSessionMap.get(channelId) : null;
     }
 
@@ -296,6 +354,8 @@ public class NettySessionManager {
         channelSessionMap.clear();
         userChannelMap.clear();
         userDeviceChannelMap.clear();
+        accessTokenChannelMap.clear();
+        userDeviceIdChannelMap.clear();
         tenantChannelMap.clear();
         log.info("[SessionManager] 清理所有会话");
     }

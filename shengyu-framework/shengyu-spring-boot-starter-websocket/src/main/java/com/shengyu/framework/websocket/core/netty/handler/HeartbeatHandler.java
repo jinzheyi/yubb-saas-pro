@@ -50,7 +50,16 @@ public class HeartbeatHandler extends ChannelInboundHandlerAdapter {
                     // presence：业务活跃
                     try {
                         JSONObject body = json.getJSONObject("body");
-                        if (body != null && "presence".equalsIgnoreCase(body.getStr("scene"))) {
+                        boolean presence = false;
+                        if (body != null) {
+                            // 新版：前端发送 body.presence=true
+                            presence = Boolean.TRUE.equals(body.getBool("presence"));
+                            // 兼容旧版：scene="presence"
+                            if (!presence) {
+                                presence = "presence".equalsIgnoreCase(body.getStr("scene"));
+                            }
+                        }
+                        if (presence) {
                             sessionManager.updateLastBizActiveTime(ctx.channel());
                         }
                     } catch (Exception ignore) {
@@ -73,7 +82,9 @@ public class HeartbeatHandler extends ChannelInboundHandlerAdapter {
                     String extra = imMessage.getHeader().getExtra();
                     if (extra != null && !extra.isEmpty()) {
                         JSONObject extraJson = JSONUtil.parseObj(extra);
-                        if ("presence".equalsIgnoreCase(extraJson.getStr("scene"))) {
+                        boolean presence = Boolean.TRUE.equals(extraJson.getBool("presence"))
+                            || "presence".equalsIgnoreCase(extraJson.getStr("scene"));
+                        if (presence) {
                             sessionManager.updateLastBizActiveTime(ctx.channel());
                         }
                     }

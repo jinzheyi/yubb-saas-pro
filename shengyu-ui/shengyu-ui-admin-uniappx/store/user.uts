@@ -430,6 +430,21 @@ export function hasAllRoles(roleList: string[]): boolean {
  * 清除后自动跳转到登录页
  */
 export function clearUserCache() {
+	try {
+		// 清理 WS：企微/钉钉体验：退出后立即断链且禁止自动重连
+		void import('@/utils/websocket.uts').then((m) => {
+			try {
+				m.wsManager.disableReconnectAndClose()
+			} catch (e) {
+				console.error('[user] disableReconnectAndClose failed:', e)
+			}
+		}).catch((e) => {
+			console.error('[user] load wsManager failed:', e)
+		})
+	} catch (e) {
+		console.error('[user] clearUserCache ws cleanup failed:', e)
+	}
+
 	removeToken()
 	removeUserInfo()
 	removePermissions()

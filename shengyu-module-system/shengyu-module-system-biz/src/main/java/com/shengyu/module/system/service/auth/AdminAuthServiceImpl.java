@@ -16,10 +16,7 @@ import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.framework.common.enums.logger.LoginLogTypeEnum;
 import com.shengyu.framework.common.enums.logger.LoginResultEnum;
 import com.shengyu.framework.common.enums.oauth2.OAuth2ClientConstants;
-import com.shengyu.framework.common.enums.permission.DataScopeEnum;
-import com.shengyu.framework.common.enums.social.SocialTypeEnum;
 import com.shengyu.framework.common.enums.sms.SmsSceneEnum;
-import com.shengyu.framework.common.pojo.PageParam;
 import com.shengyu.framework.common.util.date.DateUtils;
 import com.shengyu.framework.common.util.monitor.TracerUtils;
 import com.shengyu.framework.common.util.object.BeanUtils;
@@ -71,8 +68,6 @@ import javax.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import javax.servlet.http.HttpServletRequest;
@@ -348,6 +343,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             .setUserType(accessTokenDO.getUserType())
             .setTenantId(accessTokenDO.getTenantId())
             .setClientId(accessTokenDO.getClientId())
+            .setAccessToken(token)
             .setAction("LOGOUT")
             .setReason("用户登出");
         imSessionRevokeProducer.send(revokeMessage);

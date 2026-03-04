@@ -72,6 +72,7 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { clearUserCache } from '../../store/user.uts'
+	import { logout } from '../../api/login.uts'
 	import { getCurrentUserDetail } from '../../api/user.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 
@@ -142,8 +143,13 @@
 		uni.showActionSheet({
 			itemList: ['退出登录'],
 			itemColor: '#F54A45',
-			success: (res) => {
+			success: async (res) => {
 				if (res.tapIndex === 0) {
+					try {
+						await logout()
+					} catch (e) {
+						console.warn('[Profile] logout api failed, fallback to local clear', e)
+					}
 					clearUserCache()
 				}
 			}

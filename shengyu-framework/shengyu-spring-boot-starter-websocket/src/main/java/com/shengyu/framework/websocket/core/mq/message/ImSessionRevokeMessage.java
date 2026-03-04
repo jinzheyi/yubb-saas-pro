@@ -52,4 +52,14 @@ public class ImSessionRevokeMessage extends AbstractRedisChannelMessage {
      */
     private Integer deviceType;
 
+    /**
+     * 可选：设备ID
+     */
+    private String deviceId;
+
+    /**
+     * 可选：访问令牌（最精确撤销维度）
+     */
+    private String accessToken;
+
 }

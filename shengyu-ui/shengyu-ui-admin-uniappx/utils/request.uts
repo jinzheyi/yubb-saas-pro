@@ -29,6 +29,32 @@ const TIMEOUT = CONFIG_TIMEOUT
 let isRefreshing = false // 是否正在刷新 Token
 let requestQueue: any[] = [] // 请求队列
 
+let accessTokenRefreshedListeners: any[] = []
+
+export function onAccessTokenRefreshed(listener: (tokenData: any) => void): () => void {
+	accessTokenRefreshedListeners.push(listener)
+	return () => {
+		const idx = accessTokenRefreshedListeners.indexOf(listener)
+		if (idx !== -1) {
+			accessTokenRefreshedListeners.splice(idx, 1)
+		}
+	}
+}
+
+function notifyAccessTokenRefreshed(tokenData: any) {
+	try {
+		accessTokenRefreshedListeners.forEach((listener) => {
+			try {
+				listener(tokenData)
+			} catch (e) {
+				console.warn('[request] onAccessTokenRefreshed listener error:', e)
+			}
+		})
+	} catch (e) {
+		console.warn('[request] notifyAccessTokenRefreshed error:', e)
+	}
+}
+
 // 请求白名单，无须 token 的接口
 const whiteList: string[] = [
 	'/system/captcha/',              // 验证码相关接口
@@ -247,6 +273,7 @@ async function handle401Error(response: any): Promise<any> {
 		
 		// 保存新的 Token
 		setToken(tokenData)
+		notifyAccessTokenRefreshed(tokenData)
 		
 		// 重试原请求
 		const newToken = getAccessToken()

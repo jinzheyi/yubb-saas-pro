@@ -59,6 +59,11 @@ public class NettySession {
     private String clientVersion;
 
     /**
+     * 认证使用的访问令牌（用于精确撤销/踢下线）
+     */
+    private String accessToken;
+
+    /**
      * 连接时间
      */
     private Long connectTime;
