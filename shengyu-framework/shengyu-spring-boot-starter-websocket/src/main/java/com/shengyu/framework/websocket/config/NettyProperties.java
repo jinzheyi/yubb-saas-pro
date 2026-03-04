@@ -1,5 +1,6 @@
 package com.shengyu.framework.websocket.config;
 
+import com.shengyu.framework.common.enums.oauth2.OAuth2ClientConstants;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -111,4 +112,29 @@ public class NettyProperties {
      * 是否启用 Protobuf 协议
      */
     private Boolean enableProtobuf = true;
+
+    /**
+     * IM 专用 OAuth2 clientId（用于撤销联动过滤，避免影响其他客户端）
+     */
+    private String imOAuth2ClientId = OAuth2ClientConstants.CLIENT_ID_TENANT_IM_UNIAPPX;
+
+    /**
+     * IM 鉴权租约有效期（秒）
+     */
+    private Long authLeaseSeconds = 30 * 60L;
+
+    /**
+     * IM 租约到期前的续期建议窗口（秒）
+     */
+    private Long authRenewSuggestSeconds = 5 * 60L;
+
+    /**
+     * 业务活跃窗口（秒）。在该窗口内有业务活跃，才触发续期建议。
+     */
+    private Long bizActiveWindowSeconds = 2 * 60L;
+
+    /**
+     * Lease 扫描周期（秒）
+     */
+    private Long authLeaseMonitorIntervalSeconds = 10L;
 }

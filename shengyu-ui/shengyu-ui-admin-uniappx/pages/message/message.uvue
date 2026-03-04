@@ -137,11 +137,13 @@
 </template>
 
 <script setup lang="uts">
+	import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { messageService, ConversationItem } from '../../services/message-service.uts'
 	import { badgeService, BadgeData } from '../../services/badge-service.uts'
 	import { getConversationList, deleteConversation, pinConversation, setNoDisturb, clearUnreadCount } from '../../api/conversation.uts'
 	import { getConversationAvatarColor, getAvatarText } from '../../utils/avatar.uts'
+	import { wsManager } from '../../utils/websocket.uts'
 
 	const { t } = useI18n()
 
@@ -170,6 +172,19 @@
 			})
 		}
 	}
+
+	onShow(() => {
+		wsManager.setRealtimeBizActive(true)
+		wsManager.connect()
+	})
+
+	onHide(() => {
+		wsManager.setRealtimeBizActive(false)
+	})
+
+	onUnload(() => {
+		wsManager.setRealtimeBizActive(false)
+	})
 
 	/**
 	 * 获取分类 ID（根据会话属性自动分类）

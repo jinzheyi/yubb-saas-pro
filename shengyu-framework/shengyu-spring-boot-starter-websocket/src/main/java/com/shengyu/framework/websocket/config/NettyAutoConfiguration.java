@@ -10,6 +10,7 @@ import com.shengyu.framework.websocket.core.netty.handler.HeartbeatHandler;
 import com.shengyu.framework.websocket.core.netty.handler.JsonBusinessMessageHandler;
 import com.shengyu.framework.websocket.core.netty.handler.ProtobufMessageHandler;
 import com.shengyu.framework.websocket.core.netty.handler.WebSocketFrameHandler;
+import com.shengyu.framework.websocket.core.session.NettyAuthLeaseMonitor;
 import com.shengyu.framework.websocket.core.processor.impl.BadgeUpdateMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.FileMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.ImageMessageProcessor;
@@ -118,8 +119,9 @@ public class NettyAutoConfiguration {
     }
 
     @Bean
-    public ProtobufMessageHandler protobufMessageHandler(MessageProcessorFactory processorFactory) {
-        return new ProtobufMessageHandler(processorFactory);
+    public ProtobufMessageHandler protobufMessageHandler(MessageProcessorFactory processorFactory,
+                                                         NettySessionManager sessionManager) {
+        return new ProtobufMessageHandler(processorFactory, sessionManager);
     }
 
     @Bean
@@ -128,13 +130,22 @@ public class NettyAutoConfiguration {
     }
 
     @Bean
-    public AuthHandler authHandler(NettySessionManager sessionManager, AuthService authService) {
-        return new AuthHandler(sessionManager, authService);
+    public AuthHandler authHandler(NettySessionManager sessionManager,
+                                   AuthService authService,
+                                   NettyProperties nettyProperties) {
+        return new AuthHandler(sessionManager, authService, nettyProperties);
     }
 
     @Bean
-    public JsonBusinessMessageHandler jsonBusinessMessageHandler(MessageProcessorFactory processorFactory) {
-        return new JsonBusinessMessageHandler(processorFactory);
+    public NettyAuthLeaseMonitor nettyAuthLeaseMonitor(NettySessionManager sessionManager,
+                                                       NettyProperties nettyProperties) {
+        return new NettyAuthLeaseMonitor(sessionManager, nettyProperties);
+    }
+
+    @Bean
+    public JsonBusinessMessageHandler jsonBusinessMessageHandler(MessageProcessorFactory processorFactory,
+                                                                 NettySessionManager sessionManager) {
+        return new JsonBusinessMessageHandler(processorFactory, sessionManager);
     }
 
     @Bean

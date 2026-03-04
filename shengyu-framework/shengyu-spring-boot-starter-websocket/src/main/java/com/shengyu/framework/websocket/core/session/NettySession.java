@@ -69,6 +69,26 @@ public class NettySession {
     private Long lastActiveTime;
 
     /**
+     * 最后一次业务活跃时间（用于 IM 鉴权租约续期）
+     */
+    private Long lastBizActiveTime;
+
+    /**
+     * 鉴权租约到期时间（毫秒时间戳）
+     */
+    private Long leaseExpireTime;
+
+    /**
+     * 最近一次提示续期时间（毫秒时间戳），用于防止频繁提示
+     */
+    private Long lastRenewSuggestTime;
+
+    /**
+     * 会话鉴权状态
+     */
+    private NettySessionAuthState authState;
+
+    /**
      * 获取 Channel ID
      */
     public String getChannelId() {
@@ -87,6 +107,18 @@ public class NettySession {
      */
     public void updateLastActiveTime() {
         this.lastActiveTime = System.currentTimeMillis();
+    }
+
+    public void updateLastBizActiveTime() {
+        this.lastBizActiveTime = System.currentTimeMillis();
+    }
+
+    public boolean isLeaseExpired() {
+        return leaseExpireTime != null && leaseExpireTime > 0 && System.currentTimeMillis() > leaseExpireTime;
+    }
+
+    public void markRenewSuggested() {
+        this.lastRenewSuggestTime = System.currentTimeMillis();
     }
 
     /**

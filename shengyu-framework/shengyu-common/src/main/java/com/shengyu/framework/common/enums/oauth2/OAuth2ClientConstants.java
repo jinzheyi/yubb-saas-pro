@@ -17,4 +17,9 @@ public interface OAuth2ClientConstants {
      */
     String CLIENT_ID_TENANT = "tenant";
 
+    /**
+     * 租户im移动端使用
+     */
+    String CLIENT_ID_TENANT_IM_UNIAPPX = "tenant_im_uniappx";
+
 }

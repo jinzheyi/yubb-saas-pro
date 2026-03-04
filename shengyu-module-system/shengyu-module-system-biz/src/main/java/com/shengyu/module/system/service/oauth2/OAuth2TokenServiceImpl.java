@@ -15,8 +15,11 @@ import com.shengyu.module.system.dal.dataobject.oauth2.OAuth2RefreshTokenDO;
 import com.shengyu.module.system.dal.mysql.oauth2.OAuth2AccessTokenMapper;
 import com.shengyu.module.system.dal.mysql.oauth2.OAuth2RefreshTokenMapper;
 import com.shengyu.module.system.dal.redis.oauth2.OAuth2AccessTokenRedisDAO;
+import com.shengyu.module.system.mq.producer.im.ImSessionRevokeProducer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.shengyu.framework.websocket.core.mq.message.ImSessionRevokeMessage;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
@@ -43,6 +46,9 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
 
     @Resource
     private PlatformOAuth2ClientApi auth2ClientApi;
+
+    @Resource
+    private ImSessionRevokeProducer imSessionRevokeProducer;
 
     @Override
     @Transactional
@@ -125,6 +131,16 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
         oauth2AccessTokenRedisDAO.delete(accessToken);
         // 删除刷新令牌
         oauth2RefreshTokenMapper.deleteByRefreshToken(accessTokenDO.getRefreshToken());
+
+        // 通知 IM 网关撤销会话
+        ImSessionRevokeMessage revokeMessage = new ImSessionRevokeMessage()
+            .setUserId(accessTokenDO.getUserId())
+            .setUserType(accessTokenDO.getUserType())
+            .setTenantId(accessTokenDO.getTenantId())
+            .setClientId(accessTokenDO.getClientId())
+            .setAction("REVOKED")
+            .setReason("Token 被撤销");
+        imSessionRevokeProducer.send(revokeMessage);
         return accessTokenDO;
     }
 
@@ -141,6 +157,15 @@ public class OAuth2TokenServiceImpl implements OAuth2TokenService {
             // 删除刷新令牌
             oauth2RefreshTokenMapper.deleteByRefreshToken(accessToken.getRefreshToken());
         });
+
+        // 通知 IM 网关撤销会话
+        ImSessionRevokeMessage revokeMessage = new ImSessionRevokeMessage()
+            .setUserId(userId)
+            .setUserType(userType)
+            .setTenantId(TenantContextHolder.getTenantId())
+            .setAction("REVOKED")
+            .setReason("用户 Token 被批量撤销");
+        imSessionRevokeProducer.send(revokeMessage);
     }
 
     @Override

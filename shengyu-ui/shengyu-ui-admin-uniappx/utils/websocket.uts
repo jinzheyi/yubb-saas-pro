@@ -18,10 +18,11 @@
  * ```
  */
 
-import { getAccessToken } from '../store/user.uts'
+import { getAccessToken, getRefreshToken, setToken, removeToken } from '../store/user.uts'
 import { getCurrentDeviceType, getDeviceId, getAppVersion } from './device.uts'
 import { WS_URL, WS_HEARTBEAT_INTERVAL, WS_HEARTBEAT_TIMEOUT, WS_MAX_RECONNECT_COUNT } from '../config/app.config.uts'
 import { badgeService } from '../services/badge-service.uts'
+import { refreshToken as refreshTokenApi } from '../api/login.uts'
 
 /**
  * WebSocket 连接状态枚举
@@ -112,6 +113,18 @@ export class WebSocketManager {
   
   // 是否已认证
   private authenticated: boolean = false
+
+  // 是否允许自动重连（被踢下线/需要重登时应停止重连）
+  private allowReconnect: boolean = true
+
+  // 是否正在执行无感续期
+  private renewing: boolean = false
+
+  private appForeground: boolean = true
+
+  private strictPresenceMode: boolean = false
+
+  private realtimeBizActive: boolean = false
   
   // WebSocket 服务器地址
   private wsUrl: string = ''
@@ -140,6 +153,18 @@ export class WebSocketManager {
   public setUrl(url: string): void {
     this.wsUrl = url
   }
+
+  public setAppForeground(isForeground: boolean): void {
+    this.appForeground = isForeground
+  }
+
+  public setStrictPresenceMode(strict: boolean): void {
+    this.strictPresenceMode = strict
+  }
+
+  public setRealtimeBizActive(active: boolean): void {
+    this.realtimeBizActive = active
+  }
   
   /**
    * 连接 WebSocket
@@ -156,6 +181,9 @@ export class WebSocketManager {
       console.log('[WebSocket] Token 不存在，跳过连接')
       return
     }
+
+    // 新一轮连接，恢复默认允许重连（除非后续被 CLOSE/KICKED 设置为 false）
+    this.allowReconnect = true
 
     console.log('[WebSocket] connect() token length:', token.length)
     
@@ -277,8 +305,10 @@ export class WebSocketManager {
         this.handleAuthResponse(message)
       } else if (messageType === MessageType.HEARTBEAT_RESP) {
         this.handleHeartbeatResponse()
+      } else if (messageType === MessageType.SYSTEM_NOTIFY) {
+        void this.handleSystemNotify(message)
       } else if (messageType === MessageType.CLOSE) {
-        this.handleKickOff(message)
+        this.handleCloseMessage(message)
       } else {
         // 分发业务消息
         this.dispatchMessage(messageType, message)
@@ -331,26 +361,71 @@ export class WebSocketManager {
   /**
    * 处理被踢下线
    */
-  private handleKickOff(message: any): void {
-    const reason = message.body as string
-    console.log('[WebSocket] 被踢下线:', reason)
-    
+  private handleCloseMessage(message: any): void {
+    const body: any = message && message.body ? message.body : {}
+    const action = body && typeof body === 'object' ? (body.action as string) : ''
+    const code = body && typeof body === 'object' ? (body.code as number) : 0
+    const reason = body && typeof body === 'object' ? (body.message as string) : (body as string)
+
+    console.log('[WebSocket] 收到 CLOSE:', { action: action, code: code, reason: reason })
+
+    // 关键：被踢/需要重登时禁止重连（避免死循环）
+    if (action === 'KICKED' || action === 'LOGOUT' || action === 'REVOKED' || action === 'REAUTH_REQUIRED') {
+      this.allowReconnect = false
+    }
+
     // 停止心跳
     this.stopHeartbeat()
-    
-    // 关闭连接
+
+    // 关闭连接（会触发 onClose -> handleClose，但 allowReconnect 已经控制不会再重连）
     this.close()
-    
-    // 显示提示
-    uni.showModal({
-      title: '下线通知',
-      content: reason || '您的账号在其他设备登录',
-      showCancel: false,
-      success: () => {
-        // 跳转到登录页
-        uni.reLaunch({ url: '/pages/login/login' })
-      }
+
+    // 根据 action 做 UX（企微/钉钉：明确提示原因 + 引导登录）
+    if (action === 'REAUTH_REQUIRED') {
+      removeToken()
+      uni.showModal({
+        title: '登录已过期',
+        content: reason || '登录已过期，请重新登录',
+        showCancel: false,
+        success: () => {
+          uni.reLaunch({ url: '/pages/login/login' })
+        }
+      })
+      return
+    }
+
+    if (action === 'LOGOUT' || action === 'KICKED' || action === 'REVOKED') {
+      removeToken()
+      uni.showModal({
+        title: '下线通知',
+        content: reason || '您的账号已下线',
+        showCancel: false,
+        success: () => {
+          uni.reLaunch({ url: '/pages/login/login' })
+        }
+      })
+      return
+    }
+
+    // 未知 CLOSE：保持原有行为（提示后自动重连由 allowReconnect 控制）
+    uni.showToast({
+      title: reason || '连接已关闭',
+      icon: 'none'
     })
+  }
+
+  private async handleSystemNotify(message: any): Promise<void> {
+    const body: any = message && message.body ? message.body : {}
+    const action = body && typeof body === 'object' ? (body.action as string) : ''
+
+    if (action === 'RENEW_SUGGEST') {
+      console.log('[WebSocket] 收到 RENEW_SUGGEST:', body)
+      await this.renewAuthSilently()
+      return
+    }
+
+    // 其他系统通知交给业务层监听（如有需要可在 MessageService 里注册）
+    this.dispatchMessage(MessageType.SYSTEM_NOTIFY, message)
   }
   
   /**
@@ -403,6 +478,17 @@ export class WebSocketManager {
    * 重连
    */
   private reconnect(): void {
+    if (!this.allowReconnect) {
+      console.log('[WebSocket] allowReconnect=false，跳过重连')
+      return
+    }
+
+    const token = getAccessToken()
+    if (token == null || token == '') {
+      console.log('[WebSocket] token 为空，跳过重连')
+      return
+    }
+
     if (this.reconnectCount >= this.maxReconnectCount) {
       console.error('[WebSocket] 重连失败，已达最大重连次数')
       uni.showToast({
@@ -461,12 +547,18 @@ export class WebSocketManager {
     if (this.state !== WebSocketState.OPEN || !this.authenticated) {
       return
     }
+
+    const presence = this.appForeground && (!this.strictPresenceMode || this.realtimeBizActive)
     
     const heartbeatMessage = {
       header: {
         messageId: Date.now(),
         messageType: MessageType.HEARTBEAT_REQ,
         timestamp: Date.now()
+      },
+      body: {
+        // presence：让服务端将心跳视为业务活跃，从而延长 lease（企微/钉钉体验）
+        presence: presence
       }
     }
     
@@ -623,6 +715,35 @@ export class WebSocketManager {
     
     this.setState(WebSocketState.CLOSED)
     this.authenticated = false
+  }
+
+  private async renewAuthSilently(): Promise<void> {
+    if (this.renewing) {
+      return
+    }
+    if (this.state !== WebSocketState.OPEN) {
+      return
+    }
+
+    this.renewing = true
+    try {
+      const refresh = getRefreshToken()
+      if (refresh != null && refresh != '') {
+        try {
+          const tokenData = await refreshTokenApi(refresh)
+          if (tokenData != null) {
+            setToken(tokenData)
+          }
+        } catch (e) {
+          console.warn('[WebSocket] refreshToken failed, fallback to AUTH_REQ with existing token', e)
+        }
+      }
+
+      // 无感续期：同一条连接重新发送 AUTH_REQ（服务端允许已认证连接重复 AUTH_REQ）
+      this.sendAuthRequest()
+    } finally {
+      this.renewing = false
+    }
   }
   
   /**

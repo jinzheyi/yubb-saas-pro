@@ -5,14 +5,17 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.shengyu.framework.security.core.util.LoginBase;
+import com.shengyu.framework.websocket.config.NettyProperties;
 import com.shengyu.framework.websocket.core.protocol.*;
 import com.shengyu.framework.websocket.core.service.AuthService;
 import com.shengyu.framework.websocket.core.session.NettySession;
+import com.shengyu.framework.websocket.core.session.NettySessionAuthState;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 
@@ -40,44 +43,38 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
 
     private final NettySessionManager sessionManager;
     private final AuthService authService;
+    private final NettyProperties nettyProperties;
 
-    public AuthHandler(NettySessionManager sessionManager, AuthService authService) {
+    public AuthHandler(NettySessionManager sessionManager, AuthService authService, NettyProperties nettyProperties) {
         this.sessionManager = sessionManager;
         this.authService = authService;
+        this.nettyProperties = nettyProperties;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        // 如果已认证，直接放行
-        if (isAuthenticated(ctx)) {
-            super.channelRead(ctx, msg);
+        // 1) 如果是认证请求（AUTH_REQ），即使已认证也允许走 renew
+        if (isAuthRequestMessage(msg)) {
+            if (msg instanceof String) {
+                handleJsonAuthRequest(ctx, JSONUtil.parseObj((String) msg));
+            } else {
+                handleProtobufAuthRequest(ctx, (ImMessage) msg);
+            }
             return;
         }
 
-        // 处理 JSON 格式认证消息（WebSocket）
-        if (msg instanceof String) {
-            String text = (String) msg;
-            try {
-                JSONObject json = JSONUtil.parseObj(text);
-                JSONObject header = json.getJSONObject("header");
-                if (header != null && header.getInt("messageType") == MessageType.AUTH_REQ_VALUE) {
-                    handleJsonAuthRequest(ctx, json);
-                    return;
-                }
-            } catch (Exception e) {
-                log.error("[Auth] JSON 认证请求解析失败: {}", text, e);
-                sendJsonAuthResponse(ctx, false, 400, "请求格式错误", 0L, 0L);
+        // 2) 已认证连接：检查租约
+        if (isAuthenticated(ctx)) {
+            NettySession session = sessionManager.getSession(ctx.channel());
+            if (session != null && session.isLeaseExpired()) {
+                // TODO: 使用独立的 REAUTH_REQUIRED 协议消息替代 CLOSE reason
+                sendReAuthRequired(ctx, 401, "登录已过期，请重新登录");
+                sessionManager.removeSession(ctx.channel());
                 ctx.close();
                 return;
             }
-        }
-        // 处理 Protobuf 格式认证消息（TCP）
-        else if (msg instanceof ImMessage) {
-            ImMessage imMessage = (ImMessage) msg;
-            if (imMessage.getHeader().getMessageType() == MessageType.AUTH_REQ) {
-                handleProtobufAuthRequest(ctx, imMessage);
-                return;
-            }
+            super.channelRead(ctx, msg);
+            return;
         }
 
         // 未认证且不是认证消息，拒绝处理
@@ -126,6 +123,8 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             }
 
             // 创建会话
+            long now = System.currentTimeMillis();
+            long leaseExpireTime = now + Math.max(1L, nettyProperties.getAuthLeaseSeconds()) * 1000L;
             NettySession session = NettySession.builder()
                 .channel(ctx.channel())
                 .userId(loginUser.getId())
@@ -135,8 +134,11 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 .deviceType(deviceType)
                 .deviceId(deviceId)
                 .clientVersion(clientVersion)
-                .connectTime(System.currentTimeMillis())
-                .lastActiveTime(System.currentTimeMillis())
+                .connectTime(now)
+                .lastActiveTime(now)
+                .lastBizActiveTime(now)
+                .leaseExpireTime(leaseExpireTime)
+                .authState(NettySessionAuthState.ACTIVE)
                 .build();
 
             sessionManager.addSession(session);
@@ -188,6 +190,8 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             }
 
             // 创建会话
+            long now = System.currentTimeMillis();
+            long leaseExpireTime = now + Math.max(1L, nettyProperties.getAuthLeaseSeconds()) * 1000L;
             NettySession session = NettySession.builder()
                 .channel(ctx.channel())
                 .userId(loginUser.getId())
@@ -197,8 +201,11 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 .deviceType(authRequest.getDeviceType())
                 .deviceId(authRequest.getDeviceId())
                 .clientVersion(authRequest.getClientVersion())
-                .connectTime(System.currentTimeMillis())
-                .lastActiveTime(System.currentTimeMillis())
+                .connectTime(now)
+                .lastActiveTime(now)
+                .lastBizActiveTime(now)
+                .leaseExpireTime(leaseExpireTime)
+                .authState(NettySessionAuthState.ACTIVE)
                 .build();
 
             sessionManager.addSession(session);
@@ -271,6 +278,56 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
     private boolean isAuthenticated(ChannelHandlerContext ctx) {
         Boolean auth = ctx.channel().attr(AUTH_KEY).get();
         return auth != null && auth;
+    }
+
+    private boolean isAuthRequestMessage(Object msg) {
+        try {
+            if (msg instanceof ImMessage) {
+                return ((ImMessage) msg).getHeader().getMessageType() == MessageType.AUTH_REQ;
+            }
+            if (msg instanceof String) {
+                JSONObject json = JSONUtil.parseObj((String) msg);
+                JSONObject header = json.getJSONObject("header");
+                return header != null && header.getInt("messageType") == MessageType.AUTH_REQ_VALUE;
+            }
+        } catch (Exception ignore) {
+        }
+        return false;
+    }
+
+    private void sendReAuthRequired(ChannelHandlerContext ctx, int code, String message) {
+        if (isWebSocketChannel(ctx)) {
+            JSONObject response = JSONUtil.createObj()
+                .set("header", JSONUtil.createObj()
+                    .set("messageId", System.currentTimeMillis())
+                    .set("messageType", MessageType.CLOSE_VALUE)
+                    .set("timestamp", System.currentTimeMillis()))
+                .set("body", JSONUtil.createObj()
+                    .set("code", code)
+                    .set("message", message)
+                    .set("action", "REAUTH_REQUIRED"));
+            ctx.writeAndFlush(new TextWebSocketFrame(response.toString()));
+            return;
+        }
+
+        // Protobuf：使用 CLOSE + header.extra 携带原因（兼容现有协议）
+        // TODO: 使用独立的 REAUTH_REQUIRED Protobuf message 替代 extra 透传
+        MessageHeader header = MessageHeader.newBuilder()
+            .setMessageId(System.currentTimeMillis())
+            .setMessageType(MessageType.CLOSE)
+            .setTimestamp(System.currentTimeMillis())
+            .setExtra(JSONUtil.createObj().set("code", code).set("message", message).set("action", "REAUTH_REQUIRED").toString())
+            .build();
+        ImMessage close = ImMessage.newBuilder().setHeader(header).build();
+        ctx.writeAndFlush(close);
+    }
+
+    private boolean isWebSocketChannel(ChannelHandlerContext ctx) {
+        try {
+            return ctx.channel().pipeline().get(WebSocketServerProtocolHandler.class) != null;
+        } catch (Exception ignore) {
+            return false;
+        }
     }
 
     /**

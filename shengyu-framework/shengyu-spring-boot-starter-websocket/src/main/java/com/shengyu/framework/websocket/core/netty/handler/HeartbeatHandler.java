@@ -47,6 +47,14 @@ public class HeartbeatHandler extends ChannelInboundHandlerAdapter {
                     sendJsonHeartbeatResponse(ctx);
                     // 更新会话活跃时间
                     sessionManager.updateLastActiveTime(ctx.channel());
+                    // presence：业务活跃
+                    try {
+                        JSONObject body = json.getJSONObject("body");
+                        if (body != null && "presence".equalsIgnoreCase(body.getStr("scene"))) {
+                            sessionManager.updateLastBizActiveTime(ctx.channel());
+                        }
+                    } catch (Exception ignore) {
+                    }
                     return; // 心跳消息不继续传递
                 }
             } catch (Exception e) {
@@ -60,6 +68,17 @@ public class HeartbeatHandler extends ChannelInboundHandlerAdapter {
                 sendProtobufHeartbeatResponse(ctx);
                 // 更新会话活跃时间
                 sessionManager.updateLastActiveTime(ctx.channel());
+                // presence：业务活跃（使用 header.extra 透传 JSON）
+                try {
+                    String extra = imMessage.getHeader().getExtra();
+                    if (extra != null && !extra.isEmpty()) {
+                        JSONObject extraJson = JSONUtil.parseObj(extra);
+                        if ("presence".equalsIgnoreCase(extraJson.getStr("scene"))) {
+                            sessionManager.updateLastBizActiveTime(ctx.channel());
+                        }
+                    }
+                } catch (Exception ignore) {
+                }
                 return; // 心跳消息不继续传递
             }
         }

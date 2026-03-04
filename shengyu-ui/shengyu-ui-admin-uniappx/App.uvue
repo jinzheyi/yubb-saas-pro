@@ -2,6 +2,15 @@
 	import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
 	import { isLoggedIn, getAccessToken } from './store/user.uts'
 	import { initLocale } from './store/locale.uts'
+
+	async function withWsManager(action: (wsManager: any) => void | Promise<void>) {
+		try {
+			const { wsManager } = await import('@/utils/websocket.uts')
+			await action(wsManager)
+		} catch (e) {
+			console.error('[App] load wsManager failed:', e)
+		}
+	}
 	
 	onLaunch(() => {
 		console.log('App Launch')
@@ -23,10 +32,22 @@
 	
 	onShow(() => {
 		console.log('App Show')
+		void withWsManager(async (wsManager) => {
+			wsManager.setAppForeground(true)
+			if (isLoggedIn()) {
+				const token = getAccessToken()
+				if (token != null && token != '') {
+					wsManager.connect()
+				}
+			}
+		})
 	})
 	
 	onHide(() => {
 		console.log('App Hide')
+		void withWsManager((wsManager) => {
+			wsManager.setAppForeground(false)
+		})
 	})
 	
 	/**
@@ -52,13 +73,10 @@
 	 * 连接 WebSocket
 	 */
 	async function connectWebSocket() {
-		try {
-			const { wsManager } = await import('@/utils/websocket.uts')
+		await withWsManager((wsManager) => {
 			wsManager.connect()
 			console.log('[App] WebSocket 自动连接已启动')
-		} catch (e) {
-			console.error('[App] WebSocket 自动连接失败:', e)
-		}
+		})
 	}
 </script>
 

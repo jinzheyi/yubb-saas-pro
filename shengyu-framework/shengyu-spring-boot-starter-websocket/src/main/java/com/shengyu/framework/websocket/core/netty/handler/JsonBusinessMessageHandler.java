@@ -7,6 +7,7 @@ import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.framework.websocket.core.protocol.*;
+import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -30,6 +31,8 @@ import java.util.List;
 public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
 
     private final MessageProcessorFactory processorFactory;
+
+    private final NettySessionManager sessionManager;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -85,6 +88,9 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
             super.channelRead(ctx, msg);
             return;
         }
+
+        // 业务消息视为业务活跃
+        sessionManager.updateLastBizActiveTime(ctx.channel());
 
         try {
             ImMessage imMessage = buildImMessageFromJson(ctx, headerJson, json.get("body"));

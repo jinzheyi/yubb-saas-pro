@@ -158,6 +158,7 @@ public class NettySessionManager {
         try {
             // 发送踢下线通知（使用简单的文本消息）
             // 注意：这里简化处理，实际应该使用 Protobuf 构建 CLOSE 消息
+            // TODO: 标准化 CLOSE/KICKED 协议体（JSON + Protobuf），携带 code/reason
             session.getChannel().writeAndFlush(reason);
             
             // 关闭连接
@@ -309,6 +310,16 @@ public class NettySessionManager {
         NettySession session = getSession(channel);
         if (session != null) {
             session.updateLastActiveTime();
+        }
+    }
+
+    public void updateLastBizActiveTime(Channel channel) {
+        if (channel == null) {
+            return;
+        }
+        NettySession session = getSession(channel);
+        if (session != null) {
+            session.updateLastBizActiveTime();
         }
     }
 }

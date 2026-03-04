@@ -308,13 +308,14 @@
 </template>
 
 <script setup lang="uts">
+	import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { emojiList } from '../../utils/emojiData.uts'
 	import { parseMessageText } from '../../utils/emojiParser.uts'
 	import { getCustomStickers, StickerItem } from '../../utils/stickerManager.uts'
 	import { messageService, MessageItem as ServiceMessageItem, ConversationItem } from '../../services/message-service.uts'
 	import { badgeService } from '../../services/badge-service.uts'
-	import { MessageType } from '../../utils/websocket.uts'
+	import { MessageType, wsManager } from '../../utils/websocket.uts'
 	import { getMessageList, recallMessage, deleteMessage } from '../../api/message.uts'
 	import { clearUnreadCount as clearUnreadCountApi, getConversationByTarget } from '../../api/conversation.uts'
 	import { getUserIdStr, getTenantId, hasRole } from '../../store/user.uts'
@@ -2078,6 +2079,19 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			messageId: targetMessageId.value,
 			highlight: shouldHighlight.value
 		})
+	})
+
+	onShow(() => {
+		wsManager.setRealtimeBizActive(true)
+		wsManager.connect()
+	})
+
+	onHide(() => {
+		wsManager.setRealtimeBizActive(false)
+	})
+
+	onUnload(() => {
+		wsManager.setRealtimeBizActive(false)
 	})
 </script>
 

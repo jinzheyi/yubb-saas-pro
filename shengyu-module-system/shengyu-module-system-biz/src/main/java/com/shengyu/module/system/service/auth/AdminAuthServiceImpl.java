@@ -16,7 +16,10 @@ import com.shengyu.framework.common.enums.UserTypeEnum;
 import com.shengyu.framework.common.enums.logger.LoginLogTypeEnum;
 import com.shengyu.framework.common.enums.logger.LoginResultEnum;
 import com.shengyu.framework.common.enums.oauth2.OAuth2ClientConstants;
+import com.shengyu.framework.common.enums.permission.DataScopeEnum;
+import com.shengyu.framework.common.enums.social.SocialTypeEnum;
 import com.shengyu.framework.common.enums.sms.SmsSceneEnum;
+import com.shengyu.framework.common.pojo.PageParam;
 import com.shengyu.framework.common.util.date.DateUtils;
 import com.shengyu.framework.common.util.monitor.TracerUtils;
 import com.shengyu.framework.common.util.object.BeanUtils;
@@ -47,11 +50,13 @@ import com.shengyu.module.system.dal.dataobject.oauth2.OAuth2AccessTokenDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.dataobject.user.SaasUserDO;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
-import com.shengyu.module.system.service.dept.DeptService;
-import com.shengyu.module.system.service.logger.LoginLogService;
+import com.shengyu.module.system.mq.producer.im.ImSessionRevokeProducer;
 import com.shengyu.module.system.service.oauth2.OAuth2TokenService;
+import com.shengyu.module.system.service.logger.LoginLogService;
 import com.shengyu.module.system.service.tenant.TenantService;
+import com.shengyu.module.system.service.dept.DeptService;
 import com.shengyu.module.system.service.user.AdminUserService;
+import com.shengyu.framework.websocket.core.mq.message.ImSessionRevokeMessage;
 import com.shengyu.module.system.service.user.SaasUserService;
 import com.xingyuv.captcha.model.common.ResponseModel;
 import com.xingyuv.captcha.model.vo.CaptchaVO;
@@ -62,11 +67,17 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import javax.annotation.Resource;
 import javax.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import javax.servlet.http.HttpServletRequest;
+
+import javax.annotation.Resource;
 
 /**
  * Auth Service 实现类
@@ -85,6 +96,9 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     private LoginLogService loginLogService;
     @Resource
     private OAuth2TokenService oauth2TokenService;
+
+    @Resource
+    private ImSessionRevokeProducer imSessionRevokeProducer;
     @Resource
     private TenantSocialUserApi socialUserService;
     @Resource
@@ -229,7 +243,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         createLoginLog(user.getId(), username, logType, LoginResultEnum.SUCCESS);
         // 创建访问令牌
         OAuth2AccessTokenDO accessTokenDO = oauth2TokenService.createAccessToken(user.getId(), getUserType().getValue(),
-                OAuth2ClientConstants.CLIENT_ID_TENANT, null);
+                resolveOAuth2ClientIdForCurrentRequest(), null);
         // 构建返回结果
         AuthLoginRespVO loginRespVO = BeanUtils.toBean(accessTokenDO, AuthLoginRespVO.class);
         loginRespVO.setDeptId(user.getDeptId());
@@ -238,8 +252,28 @@ public class AdminAuthServiceImpl implements AdminAuthService {
 
     @Override
     public AuthLoginRespVO refreshToken(String refreshToken) {
-        OAuth2AccessTokenDO accessTokenDO = oauth2TokenService.refreshAccessToken(refreshToken, OAuth2ClientConstants.CLIENT_ID_TENANT);
+        OAuth2AccessTokenDO accessTokenDO = oauth2TokenService.refreshAccessToken(refreshToken, resolveOAuth2ClientIdForCurrentRequest());
         return BeanUtils.toBean(accessTokenDO, AuthLoginRespVO.class);
+    }
+
+    private String resolveOAuth2ClientIdForCurrentRequest() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) {
+                return OAuth2ClientConstants.CLIENT_ID_TENANT;
+            }
+            HttpServletRequest request = attrs.getRequest();
+            if (request == null) {
+                return OAuth2ClientConstants.CLIENT_ID_TENANT;
+            }
+            String uri = request.getRequestURI();
+            if (StrUtil.isNotBlank(uri) && StrUtil.containsIgnoreCase(uri, "/app-api/")) {
+                return OAuth2ClientConstants.CLIENT_ID_TENANT_IM_UNIAPPX;
+            }
+        } catch (Exception ignore) {
+            // ignore
+        }
+        return OAuth2ClientConstants.CLIENT_ID_TENANT;
     }
 
     @Override
@@ -306,6 +340,17 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         }
         // 删除成功，则记录登出日志
         createLogoutLog(accessTokenDO.getUserId(), accessTokenDO.getUserType(), logType);
+
+        // 通知 IM 网关撤销会话，立即断开连接
+        // TODO: 增加按 deviceType/deviceId 维度的精确撤销（当前按 userId 全量撤销）
+        ImSessionRevokeMessage revokeMessage = new ImSessionRevokeMessage()
+            .setUserId(accessTokenDO.getUserId())
+            .setUserType(accessTokenDO.getUserType())
+            .setTenantId(accessTokenDO.getTenantId())
+            .setClientId(accessTokenDO.getClientId())
+            .setAction("LOGOUT")
+            .setReason("用户登出");
+        imSessionRevokeProducer.send(revokeMessage);
     }
 
     private void createLogoutLog(Long userId, Integer userType, Integer logType) {
