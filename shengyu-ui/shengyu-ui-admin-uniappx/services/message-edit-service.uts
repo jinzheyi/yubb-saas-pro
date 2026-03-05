@@ -8,8 +8,6 @@
  * 4. 通知接收者消息已编辑
  */
 
-import { request } from '@/utils/request.uts'
-
 /**
  * 编辑历史记录
  */
@@ -95,24 +93,9 @@ export class MessageEditService {
         }
       }
       
-      const response = await request({
-        url: '/system/im/message/edit',
-        method: 'POST',
-        data: {
-          messageId: messageId,
-          content: newContent
-        }
-      })
-      
-      if (response.code === 0) {
-        return {
-          success: true
-        }
-      } else {
-        return {
-          success: false,
-          message: response.msg || '编辑失败'
-        }
+      return {
+        success: false,
+        message: '接口未实现'
       }
     } catch (e) {
       console.error('[MessageEditService] 编辑消息失败:', e)
@@ -130,23 +113,7 @@ export class MessageEditService {
    */
   public async getEditHistory(messageId: string): Promise<EditHistory[]> {
     try {
-      const response = await request({
-        url: '/system/im/message/edit-history',
-        method: 'GET',
-        params: {
-          messageId: messageId
-        }
-      })
-      
-      if (response.code === 0 && response.data) {
-        return response.data.map((item: any) => {
-          return {
-            content: item.content,
-            editTime: item.editTime,
-            editTimestamp: new Date(item.editTime).getTime()
-          } as EditHistory
-        })
-      }
+      console.error('[MessageEditService] 获取编辑历史接口未实现, messageId:', messageId)
       return []
     } catch (e) {
       console.error('[MessageEditService] 获取编辑历史失败:', e)

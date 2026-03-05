@@ -128,18 +128,19 @@ export class MessageSearchService {
         params.endTime = options.endTime
       }
       
-      const response = await request({
+      const data: any = await request({
         url: '/system/im/message/search',
         method: 'GET',
         params: params
       })
-      
-      if (response.code === 0 && response.data) {
-        const results = response.data.list.map((item: any) => this.mapToSearchResult(item, options.keyword))
-        callback(results)
-      } else {
+
+      if (data == null) {
         callback([])
+        return
       }
+      const list = (data.list != null ? data.list : []) as any[]
+      const results = list.map((item: any) => this.mapToSearchResult(item, options.keyword))
+      callback(results)
     } catch (e) {
       console.error('[MessageSearchService] 搜索消息失败:', e)
       callback([])

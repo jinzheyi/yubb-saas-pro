@@ -9,8 +9,8 @@
  * 5. 批量标记已读
  */
 
-import { request } from '@/utils/request.uts'
 import { messageService } from './message-service.uts'
+import { markMessageRead as apiMarkMessageRead } from '@/api/message.uts'
 
 /**
  * 已读详情项
@@ -58,22 +58,11 @@ export class ReadReceiptService {
     }
     
     try {
-      // 调用后端 API 标记已读
-      const response = await request({
-        url: '/system/im/message/mark-read',
-        method: 'POST',
-        data: {
-          chatId: chatId,
-          messageIds: messageIds
-        }
-      })
-      
-      if (response.code === 0) {
-        // 发送已读回执到发送者
-        this.sendReadReceipt(chatId, messageIds)
-        return true
-      }
-      return false
+      await apiMarkMessageRead(messageIds)
+
+      // 发送已读回执到发送者
+      this.sendReadReceipt(chatId, messageIds)
+      return true
     } catch (e) {
       console.error('[ReadReceiptService] 标记消息已读失败:', e)
       return false
@@ -132,22 +121,7 @@ export class ReadReceiptService {
    */
   public async getReadDetail(messageId: string): Promise<ReadDetailItem[]> {
     try {
-      const response = await request({
-        url: '/system/im/message/read-detail',
-        method: 'GET',
-        params: {
-          messageId: messageId
-        }
-      })
-      
-      if (response.code === 0 && response.data) {
-        return response.data.map((item: any) => ({
-          userId: item.userId != null ? item.userId.toString() : '0',
-          userName: item.userName || '',
-          avatar: item.avatar || '',
-          readTime: item.readTime || 0
-        }))
-      }
+      console.error('[ReadReceiptService] 获取已读详情接口未实现, messageId:', messageId)
       return []
     } catch (e) {
       console.error('[ReadReceiptService] 获取已读详情失败:', e)
@@ -160,22 +134,7 @@ export class ReadReceiptService {
    */
   public async getUnreadDetail(messageId: string): Promise<ReadDetailItem[]> {
     try {
-      const response = await request({
-        url: '/system/im/message/unread-detail',
-        method: 'GET',
-        params: {
-          messageId: messageId
-        }
-      })
-      
-      if (response.code === 0 && response.data) {
-        return response.data.map((item: any) => ({
-          userId: item.userId != null ? item.userId.toString() : '0',
-          userName: item.userName || '',
-          avatar: item.avatar || '',
-          readTime: 0
-        }))
-      }
+      console.error('[ReadReceiptService] 获取未读详情接口未实现, messageId:', messageId)
       return []
     } catch (e) {
       console.error('[ReadReceiptService] 获取未读详情失败:', e)
@@ -188,12 +147,12 @@ export class ReadReceiptService {
    */
   public async markConversationAsRead(chatId: string): Promise<boolean> {
     try {
-      const response = await request({
+      await request({
         url: '/system/im/conversation/clear-unread/' + chatId,
         method: 'PUT'
       })
-      
-      return response.code === 0
+
+      return true
     } catch (e) {
       console.error('[ReadReceiptService] 批量标记会话已读失败:', e)
       return false
@@ -205,17 +164,7 @@ export class ReadReceiptService {
    */
   public async getUnreadMessages(chatId: string): Promise<string[]> {
     try {
-      const response = await request({
-        url: '/system/im/message/unread-list',
-        method: 'GET',
-        params: {
-          chatId: chatId
-        }
-      })
-      
-      if (response.code === 0 && response.data) {
-        return response.data.map((item: any) => (item.messageId != null ? item.messageId.toString() : '0'))
-      }
+      console.error('[ReadReceiptService] 获取未读消息列表接口未实现, chatId:', chatId)
       return []
     } catch (e) {
       console.error('[ReadReceiptService] 获取未读消息列表失败:', e)

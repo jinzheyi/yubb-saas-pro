@@ -161,13 +161,9 @@ export class MessageService {
     const task = (async (): Promise<string> => {
       try {
         const resp = await getUserDetail(userId)
-        // 兼容两种返回结构：
-        // 1) request 已解包：resp 直接是用户对象 { nickname, ... }
-        // 2) 未解包：{ code, data: { nickname, ... } }
-        const respAny: any = resp as any
-        const userObj: any = (respAny && typeof respAny === 'object' && 'code' in respAny)
-          ? (respAny.code === 0 ? respAny.data : null)
-          : respAny
+        const userObj: any = (resp && typeof resp === 'object' && 'data' in resp)
+          ? resp.data
+          : resp
 
         const nickname = userObj ? (userObj.nickname || userObj.name || '') : ''
         if (nickname) {

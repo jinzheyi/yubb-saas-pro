@@ -9,8 +9,20 @@
  * 5. 群成员禁言
  */
 
-import { request } from '@/utils/request.uts'
 import { getUserAvatarColor } from '@/utils/avatar.uts'
+import {
+  createGroup as apiCreateGroup,
+  getGroup as apiGetGroup,
+  updateGroup as apiUpdateGroup,
+  dissolveGroup as apiDissolveGroup,
+  quitGroup as apiQuitGroup,
+  addGroupMembers as apiAddGroupMembers,
+  removeGroupMember as apiRemoveGroupMember,
+  getGroupMembers as apiGetGroupMembers,
+  setGroupMemberRole as apiSetGroupMemberRole,
+  setGroupMemberMuted as apiSetGroupMemberMuted,
+  transferGroupOwner as apiTransferGroupOwner
+} from '@/api/group.uts'
 
 /**
  * 群组信息
@@ -91,18 +103,24 @@ export class GroupService {
    */
   public async createGroup(name: string, memberIds: string[]): Promise<string> {
     try {
-      const response = await request({
-        url: '/system/im/group/create',
-        method: 'POST',
-        data: {
-          name: name,
-          memberIds: memberIds
-        }
+      const data: any = await apiCreateGroup({
+        name: name,
+        memberIds: memberIds
       })
-      
-      if (response.code === 0 && response.data) {
-        return response.data.groupId != null ? response.data.groupId.toString() : '0'
+
+      if (data == null) {
+        return '0'
       }
+
+      // 兼容多种返回形态：number/string/object
+      if (typeof data === 'number' || typeof data === 'string') {
+        return (data as any).toString()
+      }
+      if (typeof data === 'object') {
+        const groupId = (data.groupId != null ? data.groupId : data.id)
+        return groupId != null ? groupId.toString() : '0'
+      }
+
       return '0'
     } catch (e) {
       console.error('[GroupService] 创建群组失败:', e)
@@ -121,20 +139,14 @@ export class GroupService {
     }
     
     try {
-      const response = await request({
-        url: '/system/im/group/get',
-        method: 'GET',
-        params: {
-          id: groupId
-        }
-      })
-      
-      if (response.code === 0 && response.data) {
-        const groupInfo = this.mapToGroupInfo(response.data)
-        this.groupCache.set(groupId, groupInfo)
-        return groupInfo
+      const data: any = await apiGetGroup(groupId)
+
+      if (data == null) {
+        return null
       }
-      return null
+      const groupInfo = this.mapToGroupInfo(data)
+      this.groupCache.set(groupId, groupInfo)
+      return groupInfo
     } catch (e) {
       console.error('[GroupService] 获取群组信息失败:', e)
       return null
@@ -146,22 +158,15 @@ export class GroupService {
    */
   public async updateGroup(groupId: string, name: string, avatar: string): Promise<boolean> {
     try {
-      const response = await request({
-        url: '/system/im/group/update',
-        method: 'PUT',
-        data: {
-          id: groupId,
-          name: name,
-          avatar: avatar
-        }
+      await apiUpdateGroup({
+        id: groupId,
+        name: name,
+        avatar: avatar
       })
-      
-      if (response.code === 0) {
-        // 清除缓存
-        this.groupCache.delete(groupId)
-        return true
-      }
-      return false
+
+      // 清除缓存
+      this.groupCache.delete(groupId)
+      return true
     } catch (e) {
       console.error('[GroupService] 更新群组信息失败:', e)
       return false
@@ -173,21 +178,12 @@ export class GroupService {
    */
   public async dismissGroup(groupId: string): Promise<boolean> {
     try {
-      const response = await request({
-        url: '/system/im/group/dismiss',
-        method: 'DELETE',
-        params: {
-          id: groupId
-        }
-      })
-      
-      if (response.code === 0) {
-        // 清除缓存
-        this.groupCache.delete(groupId)
-        this.memberCache.delete(groupId)
-        return true
-      }
-      return false
+      await apiDissolveGroup(groupId)
+
+      // 清除缓存
+      this.groupCache.delete(groupId)
+      this.memberCache.delete(groupId)
+      return true
     } catch (e) {
       console.error('[GroupService] 解散群组失败:', e)
       return false
@@ -205,20 +201,14 @@ export class GroupService {
     }
     
     try {
-      const response = await request({
-        url: '/system/im/group/members',
-        method: 'GET',
-        params: {
-          groupId: groupId
-        }
-      })
-      
-      if (response.code === 0 && response.data) {
-        const members = response.data.map((item: any) => this.mapToGroupMember(item))
-        this.memberCache.set(groupId, members)
-        return members
+      const data: any = await apiGetGroupMembers(groupId)
+
+      if (data == null) {
+        return []
       }
-      return []
+      const members = (data as any[]).map((item: any) => this.mapToGroupMember(item))
+      this.memberCache.set(groupId, members)
+      return members
     } catch (e) {
       console.error('[GroupService] 获取群成员列表失败:', e)
       return []
@@ -230,21 +220,14 @@ export class GroupService {
    */
   public async addMembers(groupId: string, memberIds: string[]): Promise<boolean> {
     try {
-      const response = await request({
-        url: '/system/im/group/add-members',
-        method: 'POST',
-        data: {
-          groupId: groupId,
-          memberIds: memberIds
-        }
+      await apiAddGroupMembers({
+        groupId: groupId,
+        memberIds: memberIds
       })
-      
-      if (response.code === 0) {
-        // 清除缓存
-        this.memberCache.delete(groupId)
-        return true
-      }
-      return false
+
+      // 清除缓存
+      this.memberCache.delete(groupId)
+      return true
     } catch (e) {
       console.error('[GroupService] 添加群成员失败:', e)
       return false
@@ -256,21 +239,14 @@ export class GroupService {
    */
   public async removeMembers(groupId: string, memberIds: string[]): Promise<boolean> {
     try {
-      const response = await request({
-        url: '/system/im/group/remove-members',
-        method: 'POST',
-        data: {
-          groupId: groupId,
-          memberIds: memberIds
-        }
-      })
-      
-      if (response.code === 0) {
-        // 清除缓存
-        this.memberCache.delete(groupId)
-        return true
+      for (let i = 0; i < memberIds.length; i++) {
+        const memberUserId = memberIds[i]
+        await apiRemoveGroupMember(groupId, memberUserId)
       }
-      return false
+
+      // 清除缓存
+      this.memberCache.delete(groupId)
+      return true
     } catch (e) {
       console.error('[GroupService] 移除群成员失败:', e)
       return false
@@ -282,21 +258,12 @@ export class GroupService {
    */
   public async quitGroup(groupId: string): Promise<boolean> {
     try {
-      const response = await request({
-        url: '/system/im/group/quit',
-        method: 'POST',
-        data: {
-          groupId: groupId
-        }
-      })
-      
-      if (response.code === 0) {
-        // 清除缓存
-        this.groupCache.delete(groupId)
-        this.memberCache.delete(groupId)
-        return true
-      }
-      return false
+      await apiQuitGroup(groupId)
+
+      // 清除缓存
+      this.groupCache.delete(groupId)
+      this.memberCache.delete(groupId)
+      return true
     } catch (e) {
       console.error('[GroupService] 退出群组失败:', e)
       return false
@@ -308,22 +275,12 @@ export class GroupService {
    */
   public async transferGroup(groupId: string, newOwnerId: string): Promise<boolean> {
     try {
-      const response = await request({
-        url: '/system/im/group/transfer',
-        method: 'POST',
-        data: {
-          groupId: groupId,
-          newOwnerId: newOwnerId
-        }
-      })
-      
-      if (response.code === 0) {
-        // 清除缓存
-        this.groupCache.delete(groupId)
-        this.memberCache.delete(groupId)
-        return true
-      }
-      return false
+      await apiTransferGroupOwner(groupId, newOwnerId)
+
+      // 清除缓存
+      this.groupCache.delete(groupId)
+      this.memberCache.delete(groupId)
+      return true
     } catch (e) {
       console.error('[GroupService] 转让群组失败:', e)
       return false
@@ -335,22 +292,11 @@ export class GroupService {
    */
   public async setAdmin(groupId: string, userId: string, isAdmin: boolean): Promise<boolean> {
     try {
-      const response = await request({
-        url: '/system/im/group/set-admin',
-        method: 'POST',
-        data: {
-          groupId: groupId,
-          userId: userId,
-          isAdmin: isAdmin
-        }
-      })
-      
-      if (response.code === 0) {
-        // 清除缓存
-        this.memberCache.delete(groupId)
-        return true
-      }
-      return false
+      await apiSetGroupMemberRole(groupId, userId, isAdmin ? 1 : 0)
+
+      // 清除缓存
+      this.memberCache.delete(groupId)
+      return true
     } catch (e) {
       console.error('[GroupService] 设置管理员失败:', e)
       return false
@@ -362,22 +308,11 @@ export class GroupService {
    */
   public async muteMember(groupId: string, userId: string, duration: number): Promise<boolean> {
     try {
-      const response = await request({
-        url: '/system/im/group/mute-member',
-        method: 'POST',
-        data: {
-          groupId: groupId,
-          userId: userId,
-          duration: duration
-        }
-      })
-      
-      if (response.code === 0) {
-        // 清除缓存
-        this.memberCache.delete(groupId)
-        return true
-      }
-      return false
+      await apiSetGroupMemberMuted(groupId, userId, true)
+
+      // 清除缓存
+      this.memberCache.delete(groupId)
+      return true
     } catch (e) {
       console.error('[GroupService] 禁言成员失败:', e)
       return false
@@ -389,21 +324,11 @@ export class GroupService {
    */
   public async unmuteMember(groupId: string, userId: string): Promise<boolean> {
     try {
-      const response = await request({
-        url: '/system/im/group/unmute-member',
-        method: 'POST',
-        data: {
-          groupId: groupId,
-          userId: userId
-        }
-      })
-      
-      if (response.code === 0) {
-        // 清除缓存
-        this.memberCache.delete(groupId)
-        return true
-      }
-      return false
+      await apiSetGroupMemberMuted(groupId, userId, false)
+
+      // 清除缓存
+      this.memberCache.delete(groupId)
+      return true
     } catch (e) {
       console.error('[GroupService] 解除禁言失败:', e)
       return false
@@ -415,20 +340,7 @@ export class GroupService {
    */
   public async muteAll(groupId: string, mute: boolean): Promise<boolean> {
     try {
-      const response = await request({
-        url: '/system/im/group/mute-all',
-        method: 'POST',
-        data: {
-          groupId: groupId,
-          mute: mute
-        }
-      })
-      
-      if (response.code === 0) {
-        // 清除缓存
-        this.groupCache.delete(groupId)
-        return true
-      }
+      console.error('[GroupService] 全员禁言接口未实现, groupId:', groupId, 'mute:', mute)
       return false
     } catch (e) {
       console.error('[GroupService] 全员禁言失败:', e)
@@ -441,21 +353,7 @@ export class GroupService {
    */
   public async setMemberNickname(groupId: string, userId: string, nickname: string): Promise<boolean> {
     try {
-      const response = await request({
-        url: '/system/im/group/set-nickname',
-        method: 'POST',
-        data: {
-          groupId: groupId,
-          userId: userId,
-          nickname: nickname
-        }
-      })
-      
-      if (response.code === 0) {
-        // 清除缓存
-        this.memberCache.delete(groupId)
-        return true
-      }
+      console.error('[GroupService] 设置群名片接口未实现, groupId:', groupId, 'userId:', userId)
       return false
     } catch (e) {
       console.error('[GroupService] 设置群名片失败:', e)
@@ -472,17 +370,8 @@ export class GroupService {
     mustRead: boolean
   ): Promise<boolean> {
     try {
-      const response = await request({
-        url: '/system/im/group/publish-announcement',
-        method: 'POST',
-        data: {
-          groupId: groupId,
-          content: content,
-          mustRead: mustRead
-        }
-      })
-      
-      return response.code === 0
+      console.error('[GroupService] 发布群公告接口未实现, groupId:', groupId, 'mustRead:', mustRead)
+      return false
     } catch (e) {
       console.error('[GroupService] 发布群公告失败:', e)
       return false
@@ -494,25 +383,7 @@ export class GroupService {
    */
   public async getAnnouncements(groupId: string): Promise<GroupAnnouncement[]> {
     try {
-      const response = await request({
-        url: '/system/im/group/announcements',
-        method: 'GET',
-        params: {
-          groupId: groupId
-        }
-      })
-      
-      if (response.code === 0 && response.data) {
-        return response.data.map((item: any) => ({
-          id: item.id != null ? item.id.toString() : '0',
-          groupId: item.groupId != null ? item.groupId.toString() : '0',
-          content: item.content,
-          publisherId: item.publisherId != null ? item.publisherId.toString() : '0',
-          publisherName: item.publisherName || '',
-          publishTime: item.publishTime || 0,
-          mustRead: item.mustRead || false
-        }))
-      }
+      console.error('[GroupService] 获取群公告列表接口未实现, groupId:', groupId)
       return []
     } catch (e) {
       console.error('[GroupService] 获取群公告列表失败:', e)

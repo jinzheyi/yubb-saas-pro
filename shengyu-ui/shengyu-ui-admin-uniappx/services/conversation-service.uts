@@ -86,16 +86,18 @@ export class ConversationService {
    */
   public async loadConversations(): Promise<void> {
     try {
-      const response = await request({
+      const data = await request({
         url: '/system/im/conversation/list',
         method: 'GET'
       })
-      
-      if (response.code === 0 && response.data) {
-        this.conversations = response.data.map((item: any) => this.mapToConversationItem(item))
-        this.sortConversations()
-        this.notifyUpdateListeners()
+
+      if (data != null) {
+        this.conversations = (data as any[]).map((item: any) => this.mapToConversationItem(item))
+      } else {
+        this.conversations = []
       }
+      this.sortConversations()
+      this.notifyUpdateListeners()
     } catch (e) {
       console.error('[ConversationService] 加载会话列表失败:', e)
     } finally {
@@ -164,7 +166,7 @@ export class ConversationService {
    */
   public async pinConversation(chatId: string, isPinned: boolean): Promise<boolean> {
     try {
-      const response = await request({
+      await request({
         url: '/system/im/conversation/update',
         method: 'PUT',
         data: {
@@ -172,17 +174,14 @@ export class ConversationService {
           isPinned: isPinned
         }
       })
-      
-      if (response.code === 0) {
-        const conversation = this.conversations.find(c => c.chatId === chatId || ((c as any).id === chatId))
-        if (conversation != null) {
-          conversation.isPinned = isPinned
-          this.sortConversations()
-          this.notifyUpdateListeners()
-        }
-        return true
+
+      const conversation = this.conversations.find(c => c.chatId === chatId || ((c as any).id === chatId))
+      if (conversation != null) {
+        conversation.isPinned = isPinned
+        this.sortConversations()
+        this.notifyUpdateListeners()
       }
-      return false
+      return true
     } catch (e) {
       console.error('[ConversationService] 置顶会话失败:', e)
       return false
@@ -194,23 +193,20 @@ export class ConversationService {
    */
   public async deleteConversation(chatId: string): Promise<boolean> {
     try {
-      const response = await request({
+      await request({
         url: '/system/im/conversation/delete',
         method: 'DELETE',
         params: {
           chatId: chatId
         }
       })
-      
-      if (response.code === 0) {
-        const index = this.conversations.findIndex(c => c.chatId === chatId || ((c as any).id === chatId))
-        if (index !== -1) {
-          this.conversations.splice(index, 1)
-          this.notifyUpdateListeners()
-        }
-        return true
+
+      const index = this.conversations.findIndex(c => c.chatId === chatId || ((c as any).id === chatId))
+      if (index !== -1) {
+        this.conversations.splice(index, 1)
+        this.notifyUpdateListeners()
       }
-      return false
+      return true
     } catch (e) {
       console.error('[ConversationService] 删除会话失败:', e)
       return false
@@ -222,7 +218,7 @@ export class ConversationService {
    */
   public async setMute(chatId: string, noDisturb: boolean): Promise<boolean> {
     try {
-      const response = await request({
+      await request({
         url: '/system/im/conversation/update',
         method: 'PUT',
         data: {
@@ -230,16 +226,13 @@ export class ConversationService {
           noDisturb: noDisturb
         }
       })
-      
-      if (response.code === 0) {
-        const conversation = this.conversations.find(c => c.chatId === chatId)
-        if (conversation != null) {
-          conversation.noDisturb = noDisturb
-          this.notifyUpdateListeners()
-        }
-        return true
+
+      const conversation = this.conversations.find(c => c.chatId === chatId)
+      if (conversation != null) {
+        conversation.noDisturb = noDisturb
+        this.notifyUpdateListeners()
       }
-      return false
+      return true
     } catch (e) {
       console.error('[ConversationService] 设置免打扰失败:', e)
       return false
@@ -251,23 +244,20 @@ export class ConversationService {
    */
   public async clearUnread(chatId: string): Promise<boolean> {
     try {
-      const response = await request({
+      await request({
         url: `/system/im/conversation/clear-unread/${chatId}`,
         method: 'PUT'
       })
-      
-      if (response.code === 0) {
-        const conversation = this.conversations.find(c => c.chatId === chatId)
-        if (conversation != null) {
-          conversation.unreadCount = 0
-          this.notifyUpdateListeners()
-          
-          // 同步清空角标
-          badgeService.clearConversationBadge(chatId)
-        }
-        return true
+
+      const conversation = this.conversations.find(c => c.chatId === chatId)
+      if (conversation != null) {
+        conversation.unreadCount = 0
+        this.notifyUpdateListeners()
+
+        // 同步清空角标
+        badgeService.clearConversationBadge(chatId)
       }
-      return false
+      return true
     } catch (e) {
       console.error('[ConversationService] 清空未读数失败:', e)
       return false
