@@ -256,6 +256,156 @@ Header 校验规则（企业级必须明确，避免灰色错误）：
 - `extra` 是扩展域，不得承载“鉴权与权限判断”的关键字段
 - JSON 侧建议 `extra` 为对象（而非 stringified JSON），避免多次序列化与歧义
 
+#### 6.4.4 消息体（body）Schema 冻结（企业级必须，避免端到端漂移）
+
+说明：本节冻结各 `messageType` 的 body 最小字段集（minimum viable schema）。各端必须遵守：
+
+- 新增字段只能“可选追加”，不得改名/改语义
+- 端侧必须忽略未知字段
+- 大体积内容禁止走 WS（见 6.5.2 MaxFrameSize），附件/媒体必须走 HTTP 上传，消息仅携带引用
+
+媒体上传能力复用（与现有系统框架对齐）：
+
+- 服务端统一复用 `shengyu-module-infra` 的文件能力（`/infra/file/*`、`FileApi`），IM 不再重复造轮子
+- 推荐主路径（模式一）：`POST /infra/file/upload` 上传文件，返回“可访问引用”（建议演进为 `fileId`，见下）
+- 推荐主路径（模式二）：`GET /infra/file/presigned-url` + `POST /infra/file/create`（前端直传对象存储）
+
+推荐补齐的企业级接口契约（用于 IM 媒体消息的 `fileId` 化）：
+
+- `POST /infra/file/upload-and-return-id`
+  - form-data：
+    - `file`：binary
+    - `directory`：string（例如 `im/chat/{conversationId}`、`im/group/{groupId}`）
+  - 响应（`CommonResult<T>`，客户端 `request()` 成功时返回 `data`）：
+    - `data = { fileId: string, url?: string, name: string, size: number, mimeType?: string, md5?: string, thumbFileId?: string }`
+  - 约束：
+    - `fileId` 为权威引用；`url` 仅用于兼容与临时预览
+    - 对于图片/视频：如能生成缩略图，返回 `thumbFileId`
+
+错误码与限制建议（企业级必须统一，端侧可自动化处理）：
+
+- `400xxx`：参数错误（缺 directory / file 为空 / directory 非法字符）
+- `403xxx`：无权限（directory 不允许、跨租户访问 fileId、无下载权限）
+- `413xxx`：文件过大（与端侧 `MAX_IMAGE_SIZE/MAX_VIDEO_SIZE/MAX_FILE_SIZE` 对齐）
+- `415xxx`：不支持的 MIME 类型（可按白名单：image/*、video/*、audio/*、application/pdf 等）
+- `429xxx`：限流（建议返回 `retryAfterMs`，端侧退避重试）
+- `500xxx`：存储/缩略图处理失败（端侧可提示并允许重试/改走降级）
+
+端侧处理建议：
+
+- 上传成功后立即本地预览：使用 `tempFilePath` 直接预览；`fileId->url` 解析可异步
+- 下载/预览失败（403/过期）：重新换取短期 URL（expirationSeconds）
+
+缩略图（thumbFileId）生成策略建议（企业级建议明确，避免端侧各自压缩导致体验不一致）：
+
+- 适用范围：`IMAGE`、`VIDEO`
+- 生成时机：
+  - 推荐：上传成功后异步生成缩略图（不阻塞主上传响应）；生成完成后可通过后续查询/同步补齐 `thumbFileId`
+  - 可选：小图/小视频可同步生成（以耗时阈值控制，例如 <=200ms）
+- 推荐规格（示例值，最终按端侧展示与带宽调优）：
+  - 图片缩略图：短边 240~360px，JPEG/WebP，质量 60~75
+  - 视频封面：抽帧 + 同图片规格
+- 失败降级：
+  - thumb 生成失败不影响主消息投递；端侧可回退显示原图/原视频封面（或默认占位）
+- 回收策略（建议）：
+  - thumb 与原文件生命周期绑定；支持按租户策略定期清理孤儿文件
+
+兼容方案（可选）：
+
+- 若短期无法新增上传返回 `fileId`：可新增 `POST /infra/file/resolve`，实现 `url -> fileId` 的映射，用于渐进迁移。
+
+企业级建议：IM 消息体中优先使用 `fileId`（稳定、可控、可审计），而不是直接携带裸 `url`：
+
+- `fileId` 可用于：权限校验、过期 URL 生成（`presignGetUrl`）、审计与撤回一致性
+- 若现有上传接口仅返回 `url string`，属于“可用但不够企业级”的阶段性形态，建议在 infra 层补齐“上传返回 fileId”（或提供 url->fileId 映射），再让 IM 消息体全部切换为 `fileId`
+
+兼容迁移建议（必须可灰度/可回滚）：
+
+- 灰度期允许 body 同时包含：`fileId` + `url`（`url` 仅临时兼容）
+- 渲染优先级：能通过 `fileId` 换取可访问 URL -> 优先使用；否则 fallback 到 `url`
+- url 退场策略：当存量端均升级后，移除 body.url（或仅服务端返回，端侧不再发送）
+
+下载/预览建议：
+
+- 端侧不直接持久化长期可访问 URL，而是在需要预览/下载时通过服务端换取短期地址
+- 推荐接口形态（与 infra/FileApi 对齐）：`fileId -> presigned get url (expirationSeconds)`
+
+推荐契约（用于端侧渲染/预览/下载时解析 `fileId`）：
+
+- `GET /infra/file/presigned-get-url?fileId=...&expirationSeconds=...`
+  - 权限：必须鉴权（禁止 `@PermitAll`）；需校验租户与访问权限
+  - 响应：`{ url: string, expiresAt: number }`
+  - 说明：
+    - `expirationSeconds` 建议有上限（例如 60~600s），避免生成长期可访问 URL
+    - 如对象存储不支持 presign，可退化为服务端代理下载（但需注意带宽成本）
+
+端侧缓存策略建议（企业级必须一致）：
+
+- URL 仅做短 TTL 内存缓存（不落永久存储），到期前可提前刷新
+- 渲染优先：列表/缩略图优先拿 `thumbFileId` 的 url；点击查看再解析 `fileId`
+
+统一约束（所有消息类型通用）：
+
+- `messageId` 由 header 承载（幂等键），body 不重复
+- `conversationId` 建议在持久化后由服务端关联，端侧可在 body 中携带用于路由，但服务端必须校验
+
+最小字段集建议（示例，不含可选扩展字段）：
+
+- `TEXT`：
+  - `text: string`
+  - `mentions?: { userIds: string[], all?: boolean }`
+
+- `IMAGE`：
+  - `fileId: string`（或 `urlKey`，由服务端换取可访问 URL）
+  - `width: number` / `height: number`
+  - `sizeBytes: number`
+  - `thumbFileId?: string`
+  - `md5?: string`
+
+- `VOICE`：
+  - `fileId: string`
+  - `durationMs: number`
+  - `format: string`（amr/aac 等）
+  - `sizeBytes: number`
+  - `asrText?: string`（可选）
+
+- `VIDEO`：
+  - `fileId: string`
+  - `durationMs: number`
+  - `width: number` / `height: number`
+  - `sizeBytes: number`
+  - `thumbFileId?: string`
+
+- `FILE`：
+  - `fileId: string`
+  - `fileName: string`
+  - `sizeBytes: number`
+  - `mimeType?: string`
+
+- `LOCATION`：
+  - `lat: number` / `lng: number`
+  - `address: string`
+  - `name?: string`（POI 名称）
+  - `mapProvider?: string`
+
+- `CARD`（应用消息卡片/业务卡片）：
+  - `cardType: string`
+  - `title: string`
+  - `summary?: string`
+  - `actions: { type: string, label: string, url?: string, payload?: object }[]`
+  - `data?: object`（必须白名单字段；禁止端侧渲染任意脚本）
+
+- `CUSTOM`（统一扩展）：
+  - `subType: string`
+  - `data: object`
+  - 约束：`subType` 受白名单控制；服务端必须做 schema 校验/降级
+
+- `CALL_RECORD`（通话记录消息，见 10.5.5）：
+  - `callId: string`
+  - `callType: string`（AUDIO/VIDEO）
+  - `durationMs?: number`
+  - `endReason: string`（END/BUSY/TIMEOUT/REJECT 等）
+
 #### 6.4.2 Protobuf Envelope（现有形态）
 
 - `ImMessage{ header: MessageHeader, body: bytes }`
@@ -913,6 +1063,68 @@ WS 增强（后续）：
 - 建议受 feature-flag 控制，默认关闭。
 - 建议独立路由：`/system/im/reaction/add`、`/system/im/reaction/remove`、`/system/im/reaction/list?messageId=...`
 - 返回建议仅包含聚合结果（`emoji/count/isSelf`），避免返回全量 userId 列表导致大群风暴。
+
+### 10.5 音视频/语音通话（RTC，可选，方案 1：信令复用 IM WS）
+
+目标：对标企微/钉钉的“通话能力”时，优先把最难的部分（鉴权、多端一致、push 拉起、可观测、降级）复用到现有 IM 体系；媒体传输不走 IM，由第三方/WebRTC 承担。
+
+范围拆分：
+
+- 信令（Signaling）：复用当前 IM WebSocket（JSON/PB 双栈、鉴权续期、灰度/降级、错误码）
+- 媒体（Media）：WebRTC + 第三方（声网/腾讯云/自建 SFU 任选其一），与 IM 解耦
+
+#### 10.5.1 信令消息模型（建议）
+
+建议两种方式（二选一，推荐先用 CUSTOM 演进，后续需要强约束再升为枚举）：
+
+- 方式 A：`messageType=CUSTOM` + `body.subType=CALL_*`
+- 方式 B：新增 `CALL_*` 枚举（proto 为权威）
+
+最小信令集：
+
+- `CALL_INVITE`（呼叫）
+- `CALL_RINGING`（响铃/已送达）
+- `CALL_ACCEPT`（接听）
+- `CALL_REJECT`（拒绝）
+- `CALL_END`（挂断/结束）
+- `CALL_BUSY`（忙线）
+- `CALL_TIMEOUT`（超时未接）
+
+建议 body 最小字段：
+
+- `callId`（全局唯一，幂等主键）
+- `fromUserId/toUserId` 或 `conversationId`（单聊/群呼可演进）
+- `callType`：AUDIO/VIDEO
+- `sdpOffer/iceCandidates`（若采用“信令承载 SDP”，需注意大小限制与分片；也可仅承载第三方房间信息）
+- `roomId/token`（第三方 RTC 鉴权信息，短 TTL）
+- `clientTime/serverTime`、`traceId`
+
+#### 10.5.2 通话状态机（企业级必须可回归）
+
+建议服务端维护 call 会话的最终态与超时，端侧只做展示与媒体控制：
+
+- 状态：INIT -> INVITED -> RINGING -> CONNECTED -> ENDED
+- 超时：INVITED/RINGING 超过阈值（例如 30s）自动转 TIMEOUT 并推送结束事件
+- 幂等：同一 `callId` 重复 INVITE/ACCEPT/END 不产生多次状态迁移
+
+#### 10.5.3 多端一致与互斥规则（同账号多端）
+
+- 同一账号多端：
+  - 允许“多端同时响铃”，但只允许一个端 ACCEPT 成功（其余端收到 END/BUSY 并停止响铃）
+  - 若配置“主端优先”（见 8.11）：仅主端响铃，其余端仅同步通话记录
+
+#### 10.5.4 推送拉起与一致性
+
+- 被叫离线：通过离线推送发送最小 payload（tenantId/callId/conversationId/callType），点击拉起后先走鉴权与 `syncConversations/syncMessages`，再进入通话页
+- 推送不承载权威通话状态：权威状态以服务端 call state 为准
+
+#### 10.5.5 与 IM 的耦合点：通话记录消息（必选）
+
+- 每次通话结束（END/BUSY/TIMEOUT/REJECT）落一条“通话记录消息”（可作为 `messageType=CUSTOM` 的一种子类型）
+- 目的：
+  - 漫游/同步可见（在 `syncMessages` 中出现）
+  - 可搜索/可审计（按租户合规策略）
+  - push 摘要可控（例如“未接来电/通话时长”）
 
 ### 10.3 系统通知/机器人/应用消息
 

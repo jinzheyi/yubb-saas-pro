@@ -667,6 +667,217 @@
 
 ---
 
+## Milestone R（P2，可选）：音视频/语音通话（RTC，方案 1：信令复用 IM WS）
+
+### R1（P2）：RTC 信令契约与消息类型（WS）
+
+- **目标**：通话信令复用现有 IM WS（JSON/PB 双栈、鉴权续期、灰度/降级、错误码），媒体走第三方/WebRTC，不走 IM。
+- **建议信令集**（最小闭环）：
+  - `CALL_INVITE` / `CALL_RINGING` / `CALL_ACCEPT` / `CALL_REJECT` / `CALL_END` / `CALL_BUSY` / `CALL_TIMEOUT`
+- **建议建模**：
+  - 优先：`messageType=CUSTOM` + `body.subType=CALL_*`（后续需要强约束再升为枚举）
+  - body 最小字段：`callId`、`callType(AUDIO/VIDEO)`、`conversationId` 或 `fromUserId/toUserId`、`roomId/token`（第三方短 TTL）、`clientTime/traceId`
+- **验收标准**：
+  - 双端在线：INVITE->RINGING->ACCEPT->END 全链路可回归
+  - 乱序/重复信令幂等：同 callId 重复 INVITE/END 不产生多次状态迁移
+
+### R2（P2）：服务端通话状态机与超时回收
+
+- **目标**：服务端维护通话最终态，端侧只做 UI 与媒体控制。
+- **范围**：
+  - 状态：INIT -> INVITED -> RINGING -> CONNECTED -> ENDED
+  - 超时：INVITED/RINGING 超过阈值（如 30s）自动 TIMEOUT 并下发结束事件
+- **验收标准**：
+  - 超时未接自动结束，双方端侧 UI 统一
+  - 服务端状态可查询/可审计（最小可观测）
+
+### R3（P2）：多端一致与互斥（同账号多端）
+
+- **目标**：允许多端同时响铃，但只允许一个端 ACCEPT 成功，其余端必须收到 END/BUSY 并停止响铃。
+- **依赖**：Milestone A（设备体系）、C6（多端同步事件）
+- **验收标准**：
+  - 同账号两台手机：同时响铃，A 端接听后 B 端自动停止并展示“已在其他设备接听”
+
+### R4（P2）：离线推送拉起（通话场景）
+
+- **目标**：被叫离线/后台时可通过 push 唤醒进入通话页，且不破坏 IM 一致性。
+- **约束**：push payload 仅携带最小字段（`tenantId/callId/conversationId/callType`），权威状态以服务端为准。
+- **验收标准**：
+  - 离线被叫收到来电 push，点击后可拉起进入通话（先鉴权与必要 sync）
+  - push 不承载权威通话状态，异常场景可正确提示（超时/已结束）
+
+### R5（P2）：通话记录消息（必选耦合点）
+
+- **目标**：每次通话结束（END/BUSY/TIMEOUT/REJECT）落一条“通话记录消息”，用于漫游、搜索、审计与 push 摘要。
+- **建议形态**：`messageType=CUSTOM` + `subType=CALL_RECORD`，body 包含 `callId/duration/endReason/callType`。
+- **验收标准**：
+  - `syncMessages` 可拉到通话记录，跨端一致
+
+### R6（P2）：Feature Flag 与可观测性
+
+- **目标**：RTC 能力默认关闭，按 tenant/user 灰度开启；具备最小指标与日志支撑排障。
+- **验收标准**：
+  - 关闭时端侧入口隐藏；开启后按灰度生效
+  - 具备基础指标：`rtc_invite_total/accept_total/end_total/timeout_total`（按 tenantId 聚合）
+
+---
+
+## Milestone S（P1）：消息体 Schema 冻结 + 媒体资产治理（对标企微/钉钉）
+
+### S1（P1）：MessageType body schema 冻结表（端到端权威）
+
+- **目标**：冻结 `TEXT/IMAGE/VOICE/VIDEO/FILE/LOCATION/CARD/CUSTOM/CALL_RECORD` 的 body 最小字段集，避免端/后端/多端渲染各自扩展导致漂移。
+- **范围**：
+  - 设计文档：补齐 `6.4.4 消息体（body）Schema 冻结`
+  - proto/枚举：以 proto 为权威（JSON/CUSTOM 走 subType）
+  - 端侧渲染：未知字段忽略；禁止依赖未冻结字段
+- **验收标准**：
+  - 新增字段只做可选追加，不改名/改语义
+  - 端到端联调时，任一端升级不导致旧端崩溃（兼容回归）
+
+### S2（P1）：媒体/附件上行闭环（上传、引用、权限、缩略图）
+
+- **目标**：图片/视频/语音/文件不走 WS，统一走 HTTP 上传，消息只携带 `fileId` 引用；对标企业级的权限/审计/去重；并最大化复用系统已有文件能力。
+- **范围**：
+  - 复用现有能力（必须优先）：
+    - uniappx：`utils/upload.uts` 已统一走 `POST /infra/file/upload`
+    - server：`shengyu-module-infra` 的 `AppFileController(/infra/file/*)` + `FileApi`
+    - IM 群文件：`POST /system/im/group/file/upload` 已通过 `FileApi#createFileAndReturnId` 生成 `fileId`
+  - 需要补齐/对齐的企业级改造点（不重复造上传轮子）：
+    - 统一“IM 媒体上传返回值”形态：优先返回 `fileId`（而不是仅 url string）
+      - 现状：`/infra/file/upload` 返回 `String`（url），端侧发送消息时使用 url（见 chat 页面现有逻辑）
+      - To-Be：infra 层新增/演进为 `upload -> fileId`（或提供 `url -> fileId` 映射）后，IM 消息体全部切换 `fileId`
+    - 目录规范：
+      - 单聊：`im/chat/{conversationId}`
+      - 群聊：`im/group/{groupId}`（与群文件保持一致）
+    - 下载/预览：
+      - 统一走“鉴权 + 过期 URL”（或服务端代理下载），禁止静态直链裸奔
+      - 与 `FileApi#presignGetUrl` 能力对齐
+    - 缩略图：图片/视频生成 thumb 并返回 `thumbFileId`（列表预览与弱网优化）
+    - 去重（可选）：按 `md5` 秒传/合并上传
+- **验收标准**：
+  - 弱网/断点续传（可选）不影响消息幂等
+  - 无权限用户无法访问附件（403xxx），且日志可审计
+  - IM 消息体中不再携带“裸 url”，统一以 `fileId` 为权威引用（url 仅作为临时兼容）
+
+- **涉及文件/目录**：
+  - uniappx：`utils/upload.uts`；`pages/message/chat.uvue`；`services/message-service.uts`
+  - infra：`shengyu-module-infra/.../AppFileController.java`；`FileService`；`FileApi`
+  - module-system：`AppImGroupFileController`/`ImGroupFileServiceImpl`（作为 fileId 复用示例）
+
+#### S2.1（P1）：infra 上传返回 fileId（或提供 url -> fileId 映射）
+
+- **目标**：把当前 `/infra/file/upload -> url string` 的“阶段性形态”演进为企业级 `fileId` 权威引用。
+- **建议方案**（二选一，推荐 A）：
+  - A：新增 `POST /infra/file/upload-and-return-id`（推荐命名）
+    - form-data：`file` + `directory`
+    - 返回：`{ fileId, url?, name, size, mimeType?, md5?, thumbFileId? }`
+    - 目录规范：`im/chat/{conversationId}`、`im/group/{groupId}`
+    - 对图片/视频：如生成缩略图，返回 `thumbFileId`
+  - B：保留 `/infra/file/upload` 返回 url，但新增 `POST /infra/file/resolve`：`{ url } -> { fileId }`
+- **兼容要求**：
+  - 旧端仍可使用 url；新端优先用 fileId
+- **验收标准**：
+  - 上传后可拿到稳定 `fileId`
+  - fileId 可用于生成过期下载地址（与 `FileApi#presignGetUrl` 对齐）
+
+##### S2.1.a（P1）：错误码/限流/大小限制对齐
+
+- **目标**：上传/下载链路的错误码与限制项端到端一致，端侧可自动化处理（重试/提示/降级）。
+- **建议错误码**：
+  - `413xxx`：文件过大
+  - `415xxx`：不支持的 MIME
+  - `429xxx`：限流（返回 retryAfterMs）
+  - `403xxx`：目录/下载无权限
+- **验收标准**：
+  - uniappx 与后端使用同一套限制阈值与提示语（至少语义一致）
+  - 429 触发后端侧退避重试策略可回归
+
+#### S2.2（P1）：IM 消息体双写兼容（fileId + url 临时并存）
+
+- **目标**：灰度期间，服务端与端侧同时支持两种引用，保证回滚安全。
+- **建议规则**：
+  - To-Be：消息体以 `fileId` 为权威；`url` 仅作为临时兼容字段
+  - 渲染优先级：`fileId` 可解析则用 `fileId` 生成可访问 url；否则 fallback 到 `url`
+- **验收标准**：
+  - 新旧端互通：新端发 fileId，旧端至少可降级展示；旧端发 url，新端可展示
+
+#### S2.3（P1）：端侧发送链路切换（chat.uvue/message-service）
+
+- **目标**：端侧发图/视频/语音/文件消息时不再拼接 `CONFIG_BASE_URL + url` 作为权威内容，而是发送 `fileId`（并按 schema 填充 size/width/height/duration 等）。
+- **范围**：
+  - `utils/upload.uts`：支持拿到 fileId（对接 S2.1）
+  - `pages/message/chat.uvue`：构建消息 body 时写入 `fileId`
+  - `services/message-service.uts`：发送/渲染统一按 schema
+- **验收标准**：
+  - 发送成功后，消息列表可立即本地预览（fileId->url 解析可异步）
+  - 断线补偿后仍能正确展示（以 fileId 为权威）
+
+#### S2.4（P1）：下载/预览鉴权（过期 URL / 服务端代理）
+
+- **目标**：消灭“静态直链裸奔”，所有附件访问都可审计、可控。
+- **建议契约**：
+  - `GET /infra/file/presigned-get-url?fileId=...&expirationSeconds=...`（或等价接口）
+  - 或：`GET /infra/file/download?fileId=...`（服务端代理，适用于必须强审计场景）
+- **验收标准**：
+  - 无权限访问返回 403xxx，且有审计日志
+  - url 过期后不可访问，端侧可重新换取
+
+##### S2.4.a（P1）：fileId -> url 解析契约与端侧缓存策略冻结
+
+- **目标**：端侧渲染/预览/下载统一通过“短期 URL”解析 `fileId`，禁止把长期 URL 写入消息体或本地永久缓存。
+- **建议契约**：
+  - `GET /infra/file/presigned-get-url?fileId=...&expirationSeconds=...` -> `{ url, expiresAt }`
+  - `expirationSeconds` 设上限（例如 60~600s）
+- **端侧策略**：
+  - URL 仅做短 TTL 内存缓存；过期/403 自动重取
+  - 列表优先解析 `thumbFileId`，点击查看再解析原 `fileId`
+- **验收标准**：
+  - 抓包检查：消息体不再出现长期可访问 URL（仅 fileId）
+  - URL 过期后能自动重取，不影响浏览体验
+
+- **涉及文件/目录**：
+  - infra：`AppFileController`（新增 presigned-get-url）/`FileService`
+  - uniappx：媒体渲染组件/消息列表（按 fileId 解析 url）
+
+#### S2.5（P1）：灰度/回滚策略（与 B6 统一）
+
+- **目标**：fileId 化迁移必须可灰度、可回滚，避免一次性切换导致大面积媒体不可用。
+- **建议开关**：
+  - `im.media.useFileId`：端侧发送是否使用 fileId
+  - `im.media.renderPreferFileId`：端侧渲染是否优先 fileId
+- **验收标准**：
+  - 开关分钟级生效；关闭后可回滚到 url 路径
+
+#### S2.6（P1）：缩略图生成与回收策略（thumbFileId）
+
+- **目标**：图片/视频消息统一具备缩略图能力，列表/会话页优先展示缩略图以提升加载体验与弱网表现；缩略图与原文件生命周期一致可回收。
+- **范围**：
+  - 生成策略：推荐异步生成（不阻塞上传响应），必要时可对“小文件”同步生成
+  - 规格建议：短边 240~360px，质量 60~75；视频取封面帧
+  - 失败降级：thumb 失败不阻断消息投递，端侧回退原图/占位
+  - 回收：thumb 与原文件绑定，支持定期清理孤儿文件
+- **验收标准**：
+  - 会话列表加载时默认走缩略图，显著减少首屏流量
+  - 异步生成完成后，后续 sync/query 能补齐 `thumbFileId`
+  - 清理任务不误删仍被引用的文件
+- **涉及文件/目录**：
+  - infra：`FileService`（扩展 thumb 生成能力/任务）
+  - （可选）异步任务：job/queue（用于生成与清理）
+
+### S3（P1）：CARD/CUSTOM 安全与降级渲染规则
+
+- **目标**：卡片/业务消息可扩展，但必须安全可控、可降级、可审计。
+- **范围**：
+  - schema 白名单校验：`cardType/subType` 白名单 + 字段校验
+  - 降级：不识别的 card/subType 以“不可用占位”展示，不影响会话/同步
+  - 跳转：url/payload 必须服务端校验（租户/权限）
+- **验收标准**：
+  - 任何未知 card/subType 不会导致端侧崩溃
+  - 安全扫描：卡片不允许执行任意脚本/富文本注入
+
+---
+
 ## Milestone H（P1）：通讯录/组织架构（企业级通讯录能力基线）
 
 ### H1（P1）：部门联系人列表（list-by-dept）闭环
