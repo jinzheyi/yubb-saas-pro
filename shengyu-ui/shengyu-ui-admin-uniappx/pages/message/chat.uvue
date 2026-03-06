@@ -73,13 +73,13 @@
 							</view>
 							
 							<!-- 图片消息 -->
-                            <view v-else-if="msg.type === 'image'" class="message-bubble bubble-image" @click="multiSelectMode ? handleBubbleClick(msg) : handleImagePreview(msg.content)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
+							<view v-else-if="msg.type === 'image'" class="message-bubble bubble-image" @click="multiSelectMode ? handleBubbleClick(msg) : handleImagePreview(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
 								<image class="chat-image" :src="msg.content" mode="widthFix" />
 							</view>
 							
 							<!-- 视频消息 -->
-                            <view v-else-if="msg.type === 'video'" class="message-bubble bubble-video" @click="multiSelectMode ? handleBubbleClick(msg) : handleVideoPlay(msg.content)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
-								<video class="chat-video" :src="msg.content" :poster="msg.poster" :controls="false" :show-center-play-btn="true" mode="aspectFill"></video>
+							<view v-else-if="msg.type === 'video'" class="message-bubble bubble-video" @click="multiSelectMode ? handleBubbleClick(msg) : handleVideoPlay(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
+								<image class="chat-video" :src="msg.poster || msg.content" mode="aspectFill" />
 								<view class="video-play-overlay">
 									<text class="iconfont video-play-icon">&#xe602;</text>
 								</view>
@@ -94,7 +94,7 @@
 							</view>
 							
 							<!-- 文件消息 -->
-                            <view v-else-if="msg.type === 'file'" class="message-bubble bubble-file" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
+                            <view v-else-if="msg.type === 'file'" class="message-bubble bubble-file" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleFileOpen(msg)">
 								<view class="file-info">
 									<text class="file-name">{{ msg.fileName }}</text>
 									<text class="file-size">{{ msg.fileSize }}</text>
@@ -328,7 +328,7 @@
 	} from '../../utils/upload.uts'
 	import { getUserAvatarColor, getAvatarText as getAvatarTextUtil } from '../../utils/avatar.uts'
 	import { parseMessageContent } from '../../utils/message-utils.uts'
-	import { uploadGroupFile } from '../../api/file.uts'
+	import { uploadGroupFile, getFilePresignedGetUrl } from '../../api/file.uts'
 	import {
 		BASE_URL as CONFIG_BASE_URL,
 		IM_MEDIA_USE_FILE_ID,
@@ -356,6 +356,48 @@
 	// 当前用户信息（使用字符串避免精度丢失）
 	const currentUserId = ref<string>('0')
 	const currentTenantId = ref<string>('0')
+
+	const PRESIGNED_DEFAULT_SECONDS = 600
+	const PRESIGNED_REFRESH_GUARD_MS = 30 * 1000
+	const presignedUrlCache = new Map<string, { url: string; expiresAt: number }>()
+	let voiceAudioContext: any = null
+
+	async function resolvePresignedUrl(fileId: string): Promise<string> {
+		const id = (fileId || '').toString()
+		if (!id || id === '0') {
+			return ''
+		}
+		const now = Date.now()
+		const cached = presignedUrlCache.get(id)
+		if (cached && cached.url && cached.expiresAt && cached.expiresAt - now > PRESIGNED_REFRESH_GUARD_MS) {
+			return cached.url
+		}
+		const resp: any = await getFilePresignedGetUrl(id, PRESIGNED_DEFAULT_SECONDS)
+		if (!resp || !resp.url) {
+			return ''
+		}
+		presignedUrlCache.set(id, { url: resp.url, expiresAt: resp.expiresAt || (now + PRESIGNED_DEFAULT_SECONDS * 1000) })
+		return resp.url
+	}
+
+	function tryExtractFileId(raw: any): string {
+		if (!raw) return ''
+		try {
+			if (typeof raw === 'string') {
+				const parsed = parseRawContent(raw)
+				if (parsed && typeof parsed === 'object' && parsed.fileId != null) {
+					return parsed.fileId.toString()
+				}
+				return ''
+			}
+			if (typeof raw === 'object' && raw.fileId != null) {
+				return raw.fileId.toString()
+			}
+			return ''
+		} catch (e) {
+			return ''
+		}
+	}
 	
 	function getReceiverIdForMessage(): string {
 		return chatType.value === 'single' ? (targetId.value || '0') : '0'
@@ -932,6 +974,8 @@
 
 		applyQuoteFields(uiMessage, rawContent)
 		applyFileFields(uiMessage, extraContent && typeof extraContent === 'object' ? extraContent : content)
+		applyMediaFileId(uiMessage, extraContent && typeof extraContent === 'object' ? extraContent : content)
+		maybePatchMediaDisplayUrl(uiMessage as any)
 		return uiMessage
 	}
 
@@ -964,6 +1008,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 			applyQuoteFields(uiMessage, msg.content)
 			applyFileFields(uiMessage, msg.content)
+			applyMediaFileId(uiMessage, msg.content)
+			maybePatchMediaDisplayUrl(uiMessage as any)
 			return uiMessage
 		})
 	}
@@ -1114,6 +1160,41 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
+	function applyMediaFileId(target : MessageItem, rawExtraOrBody : any) : void {
+		const id = tryExtractFileId(rawExtraOrBody)
+		if (id) {
+			;(target as any).fileId = id
+		}
+	}
+
+	function maybePatchMediaDisplayUrl(target: any) : void {
+		try {
+			if (IM_MEDIA_USE_FILE_ID !== 'true') {
+				return
+			}
+			if (!target || !target.type || !target.fileId) {
+				return
+			}
+			if (target.type !== 'image' && target.type !== 'video') {
+				return
+			}
+			resolvePresignedUrl(String(target.fileId)).then((signed) => {
+				if (!signed) {
+					return
+				}
+				if (target.type === 'image') {
+					target.content = signed
+				} else if (target.type === 'video') {
+					target.poster = signed
+				}
+			}).catch((e) => {
+				console.error('[Chat] 获取预签名URL失败:', e)
+			})
+		} catch (e) {
+			// ignore
+		}
+	}
+
 	function hasQuote(msg : MessageItem) : boolean {
 		return msg.quoteMessageId !== null && msg.quoteMessageId !== undefined
 	}
@@ -1250,6 +1331,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 		applyQuoteFields(uiMessage, message.content)
 		applyFileFields(uiMessage, message.content)
+		applyMediaFileId(uiMessage, message.content)
+		maybePatchMediaDisplayUrl(uiMessage as any)
 		
 		messages.value.push(uiMessage)
 		
@@ -1977,7 +2060,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 							}, 100)
 						} catch (err) {
 							console.error('[Chat] upload-and-return-id 上传文件失败:', err)
-							uni.showToast({ title: '上传失败', icon: 'none' })
+							const msg = (err as any)?.message || '上传失败'
+							uni.showToast({ title: msg, icon: 'none' })
 						}
 					}
 				})
@@ -2074,18 +2158,93 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
-	function handleImagePreview(url : string) {
-		uni.previewImage({
-			urls: [url]
-		})
+	async function handleImagePreview(msg : any) {
+		try {
+			let url = msg && msg.content ? String(msg.content) : ''
+			if (IM_MEDIA_USE_FILE_ID === 'true' && msg && msg.fileId) {
+				const signed = await resolvePresignedUrl(String(msg.fileId))
+				if (signed) {
+					url = signed
+				}
+			}
+			if (!url) {
+				uni.showToast({ title: '图片地址为空', icon: 'none' })
+				return
+			}
+			uni.previewImage({
+				urls: [url]
+			})
+		} catch (e) {
+			console.error('[Chat] 图片预览失败:', e)
+			uni.showToast({ title: '预览失败', icon: 'none' })
+		}
 	}
 
-	function handleVideoPlay(url : string) {
-		// 这里简单处理为全屏预览视频
-		uni.showToast({
-			title: '播放视频: ' + url,
-			icon: 'none'
-		})
+	async function handleVideoPlay(msg : any) {
+		try {
+			let url = msg && msg.content ? String(msg.content) : ''
+			const title = msg && msg.fileName ? String(msg.fileName) : '视频播放'
+			if (IM_MEDIA_USE_FILE_ID === 'true' && msg && msg.fileId) {
+				const signed = await resolvePresignedUrl(String(msg.fileId))
+				if (signed) {
+					url = signed
+				}
+			}
+			if (!url) {
+				uni.showToast({ title: '视频地址为空', icon: 'none' })
+				return
+			}
+			uni.navigateTo({
+				url: `/pages/message/video-player?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`
+			})
+		} catch (e) {
+			console.error('[Chat] 视频播放失败:', e)
+			uni.showToast({ title: '播放失败', icon: 'none' })
+		}
+	}
+
+	async function handleFileOpen(msg : any) {
+		try {
+			let url = msg && msg.content ? String(msg.content) : ''
+			if (IM_MEDIA_USE_FILE_ID === 'true' && msg && msg.fileId) {
+				const signed = await resolvePresignedUrl(String(msg.fileId))
+				if (signed) {
+					url = signed
+				}
+			}
+			if (!url) {
+				uni.showToast({ title: '文件地址为空', icon: 'none' })
+				return
+			}
+			uni.showLoading({ title: '正在下载' })
+			uni.downloadFile({
+				url: url,
+				success: (res) => {
+					uni.hideLoading()
+					if (res.statusCode === 200) {
+						uni.openDocument({
+							filePath: res.tempFilePath,
+							showMenu: true,
+							fail: (err) => {
+								console.error('[Chat] 打开文件失败:', err)
+								uni.showToast({ title: '打开失败', icon: 'none' })
+							}
+						})
+						return
+					}
+					uni.showToast({ title: '下载失败', icon: 'none' })
+				},
+				fail: (err) => {
+					uni.hideLoading()
+					console.error('[Chat] 下载失败:', err)
+					uni.showToast({ title: '下载失败', icon: 'none' })
+				}
+			})
+		} catch (e) {
+			uni.hideLoading()
+			console.error('[Chat] 打开文件失败:', e)
+			uni.showToast({ title: '打开失败', icon: 'none' })
+		}
 	}
 
     function openMsgMenu(msg : MessageItem, e : TouchEvent) {
@@ -2415,9 +2574,40 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (!msg.isSelf) {
 			msg.isRead = true
 		}
-		uni.showToast({
-			title: '正在播放语音...',
-			icon: 'none'
+		Promise.resolve().then(async () => {
+			let url = msg && msg.content ? String(msg.content) : ''
+			if (IM_MEDIA_USE_FILE_ID === 'true' && msg && msg.fileId) {
+				const signed = await resolvePresignedUrl(String(msg.fileId))
+				if (signed) {
+					url = signed
+				}
+			}
+			if (!url) {
+				uni.showToast({ title: '语音地址为空', icon: 'none' })
+				return
+			}
+			try {
+				if (voiceAudioContext) {
+					try {
+						voiceAudioContext.stop()
+						voiceAudioContext.destroy && voiceAudioContext.destroy()
+					} catch (e) {
+						// ignore
+					}
+					voiceAudioContext = null
+				}
+				voiceAudioContext = uni.createInnerAudioContext()
+				voiceAudioContext.autoplay = true
+				voiceAudioContext.src = url
+				voiceAudioContext.onError((err: any) => {
+					console.error('[Chat] 语音播放失败:', err)
+					uni.showToast({ title: '播放失败', icon: 'none' })
+				})
+				voiceAudioContext.play()
+			} catch (e) {
+				console.error('[Chat] 语音播放异常:', e)
+				uni.showToast({ title: '播放失败', icon: 'none' })
+			}
 		})
 	}
 
@@ -2534,6 +2724,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	onUnload(() => {
 		wsManager.setRealtimeBizActive(false)
+		if (voiceAudioContext) {
+			try {
+				voiceAudioContext.stop()
+				voiceAudioContext.destroy && voiceAudioContext.destroy()
+			} catch (e) {
+				// ignore
+			}
+			voiceAudioContext = null
+		}
 	})
 </script>
 

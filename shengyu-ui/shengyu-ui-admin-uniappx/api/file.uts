@@ -2,6 +2,11 @@ import { request } from '../utils/request.uts'
 import { API_BASE_URL } from '../config/app.config.uts'
 import { uploadFile, UploadResult } from '../utils/upload.uts'
 
+export type FilePresignedGetUrlRespVO = {
+  url: string
+  expiresAt: number
+}
+
 /**
  * 上传群文件
  * 复用通用上传逻辑，然后调用群文件接口
@@ -66,5 +71,15 @@ export function downloadGroupFile(id: string) {
   return request({
     url: `/system/im/group/file/download?id=${id}`,
     method: 'POST'
+  })
+}
+
+/**
+ * 获取文件预签名地址（读取）
+ */
+export function getFilePresignedGetUrl(fileId: string, expirationSeconds: number = 600): Promise<FilePresignedGetUrlRespVO> {
+  return request({
+    url: `/infra/file/presigned-get-url?fileId=${fileId}&expirationSeconds=${expirationSeconds}`,
+    method: 'GET'
   })
 }

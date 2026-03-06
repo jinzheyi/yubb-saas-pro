@@ -10,7 +10,9 @@ import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.http.HttpUtils;
 import com.shengyu.framework.common.util.io.FileUtils;
 import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.exception.ServiceException;
 import com.shengyu.framework.file.core.client.FileClient;
+import com.shengyu.framework.file.core.client.db.DBFileClient;
 import com.shengyu.framework.file.core.utils.FileTypeUtils;
 import com.shengyu.module.infra.controller.platform.file.vo.file.FileCreateReqVO;
 import com.shengyu.module.infra.controller.platform.file.vo.file.FilePageReqVO;
@@ -35,6 +37,8 @@ import static com.shengyu.module.infra.enums.ErrorCodeConstants.FILE_NOT_EXISTS;
  */
 @Service
 public class FileServiceImpl implements FileService {
+
+	private static final int DB_UPLOAD_MAX_BYTES = 20 * 1024 * 1024; // 20MB（开发环境 DBFileClient 限制），避免触发 MySQL max_allowed_packet
 
     /**
      * 上传文件的前缀，是否包含日期（yyyyMMdd）
@@ -85,6 +89,11 @@ public class FileServiceImpl implements FileService {
         // 2.2 上传到文件存储器
         FileClient client = fileConfigService.getMasterFileClient();
         Assert.notNull(client, "客户端(master) 不能为空");
+
+		// DB 存储不适合大文件：避免 MySQL PacketTooBigException
+		if (client instanceof DBFileClient && content != null && content.length > DB_UPLOAD_MAX_BYTES) {
+			throw new ServiceException(413, "文件过大，当前存储为数据库模式(DB)，请切换到 OSS/MinIO/本地存储 或降低文件大小");
+		}
         String url = client.upload(content, path, type);
 
         // 3. 保存到数据库
@@ -143,7 +152,12 @@ public class FileServiceImpl implements FileService {
     @Override
     public String presignGetUrl(String url, Integer expirationSeconds) {
         FileClient fileClient = fileConfigService.getMasterFileClient();
-        return fileClient.presignGetUrl(url, expirationSeconds);
+		try {
+			return fileClient.presignGetUrl(url, expirationSeconds);
+		} catch (UnsupportedOperationException ignored) {
+			// 非 S3 存储（例如 DB / 本地）不支持预签名，直接返回原始 URL 即可访问
+			return url;
+		}
     }
 
     @Override

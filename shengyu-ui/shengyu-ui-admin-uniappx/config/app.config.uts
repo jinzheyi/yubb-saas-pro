@@ -87,9 +87,9 @@ export const TIMEOUT = 30000
 /**
  * 文件上传大小限制（字节）
  */
-export const MAX_FILE_SIZE = 100 * 1024 * 1024      // 100MB - 普通文件
+export const MAX_FILE_SIZE = 200 * 1024 * 1024      // 200MB - 普通文件
 export const MAX_IMAGE_SIZE = 10 * 1024 * 1024      // 10MB - 图片
-export const MAX_VIDEO_SIZE = 100 * 1024 * 1024     // 100MB - 视频
+export const MAX_VIDEO_SIZE = 200 * 1024 * 1024     // 200MB - 视频
 export const MAX_VOICE_SIZE = 10 * 1024 * 1024      // 10MB - 语音
 
 /**

@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.shengyu.framework.common.exception.ServiceException;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.websocket.core.protocol.FileMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
@@ -31,6 +32,7 @@ import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
@@ -90,6 +92,26 @@ public class ImMessageServiceImpl implements ImMessageService {
         message.setSenderId(userId);
         Integer dbMessageType = normalizeDbMessageType(sendReqVO.getMessageType());
         message.setMessageType(dbMessageType);
+
+        if (dbMessageType == 5) {
+            if (StrUtil.isBlank(sendReqVO.getExtra())) {
+                throw ServiceExceptionUtil.invalidParamException("FILE 消息缺少 extra：必须包含 url/fileName/size/fileType(mimeType)");
+            }
+            try {
+                JSONObject obj = JSONUtil.parseObj(sendReqVO.getExtra());
+                String fileName = obj.getStr("fileName", obj.getStr("name", ""));
+                Long size = obj.getLong("size", null);
+                String fileType = obj.getStr("fileType", obj.getStr("mimeType", ""));
+                String url = obj.getStr("url", "");
+                if (StrUtil.isBlank(fileName) || size == null || size <= 0 || StrUtil.isBlank(fileType) || StrUtil.isBlank(url)) {
+                    throw ServiceExceptionUtil.invalidParamException("FILE 消息 extra 字段不完整：必须包含 url/fileName/size/fileType(mimeType)");
+                }
+            } catch (ServiceException ex) {
+                throw ex;
+            } catch (Exception ex) {
+                throw ServiceExceptionUtil.invalidParamException("FILE 消息 extra 不是合法 JSON：{}", ex.getMessage());
+            }
+        }
         message.setContent(sendReqVO.getContent());
         message.setExtra(sendReqVO.getExtra());
         message.setSendTime(LocalDateTime.now());

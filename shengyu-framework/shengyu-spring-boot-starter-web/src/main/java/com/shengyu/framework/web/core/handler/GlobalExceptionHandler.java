@@ -21,9 +21,10 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import javax.servlet.http.HttpServletRequest;
@@ -49,6 +50,12 @@ public class GlobalExceptionHandler {
     private final String applicationName;
 
     private final ApiErrorLogFrameworkService apiErrorLogFrameworkService;
+
+    @ExceptionHandler(value = MaxUploadSizeExceededException.class)
+    public CommonResult<?> maxUploadSizeExceededExceptionHandler(MaxUploadSizeExceededException ex) {
+        log.warn("[maxUploadSizeExceededExceptionHandler]", ex);
+        return CommonResult.error(413, "文件过大，最大支持 200MB");
+    }
 
     /**
      * 处理所有异常，主要是提供给 Filter 使用
@@ -216,6 +223,14 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(value = Exception.class)
     public CommonResult<?> defaultExceptionHandler(HttpServletRequest req, Throwable ex) {
+        // 情况零：DB 存储模式写入大文件触发 MySQL PacketTooBigException
+        Throwable root = ExceptionUtil.getRootCause(ex);
+        if (root != null && "com.mysql.cj.jdbc.exceptions.PacketTooBigException".equals(root.getClass().getName())) {
+            log.warn("[defaultExceptionHandler][PacketTooBig] {}", ExceptionUtil.getMessage(ex));
+            return CommonResult.error(413,
+                    "文件过大，当前存储为数据库模式(DB)且 MySQL max_allowed_packet 限制无法写入，请切换 OSS/MinIO/本地存储 或降低文件大小");
+        }
+
         // 情况一：处理表不存在的异常
         CommonResult<?> tableNotExistsResult = handleTableNotExists(ex);
         if (tableNotExistsResult != null) {
@@ -270,12 +285,27 @@ public class GlobalExceptionHandler {
         errorLog.setRequestUrl(request.getRequestURI());
         Map<String, Object> requestParams = MapUtil.<String, Object>builder()
                 .put("query", ServletUtils.getParamMap(request))
-                .put("body", ServletUtils.getBody(request)).build();
+                .put("body", resolveRequestBodyForLog(request, e)).build();
         errorLog.setRequestParams(JsonUtils.toJsonString(requestParams));
         errorLog.setRequestMethod(request.getMethod());
         errorLog.setUserAgent(ServletUtils.getUserAgent(request));
         errorLog.setUserIp(ServletUtils.getClientIP(request));
         errorLog.setExceptionTime(LocalDateTime.now());
+    }
+
+    private Object resolveRequestBodyForLog(HttpServletRequest request, Throwable e) {
+        String contentType = request.getContentType();
+        if (contentType != null && StrUtil.startWithIgnoreCase(contentType, "multipart/")) {
+            return null;
+        }
+        if (e instanceof MaxUploadSizeExceededException) {
+            return null;
+        }
+        try {
+            return ServletUtils.getBody(request);
+        } catch (Throwable ignore) {
+            return null;
+        }
     }
 
     /**

@@ -231,7 +231,7 @@ export function uploadFileAndReturnId(
 		
 		// 创建上传任务
 		const uploadTask = uni.uploadFile({
-			url: uploadConfig.url!,
+			url: uploadConfig.url || UPLOAD_AND_RETURN_ID_URL,
 			filePath: filePath,
 			name: 'file',
 			formData: formData,
@@ -244,15 +244,15 @@ export function uploadFileAndReturnId(
 							const result = data as UploadAndReturnIdResult
 							result.tempFilePath = filePath
 							resolve(result)
-						} else {
-							if (uploadConfig.showToast) {
-								uni.showToast({
-									title: data.msg || '上传失败',
-									icon: 'none'
-								})
-							}
-							reject(new Error(data.msg || '上传失败'))
+							return
 						}
+						if (uploadConfig.showToast) {
+							uni.showToast({
+								title: data.msg || '上传失败',
+								icon: 'none'
+							})
+						}
+						reject(new Error(data.msg || '上传失败'))
 					} catch (e) {
 						if (uploadConfig.showToast) {
 							uni.showToast({
@@ -262,15 +262,24 @@ export function uploadFileAndReturnId(
 						}
 						reject(new Error('解析响应失败'))
 					}
-				} else {
-					if (uploadConfig.showToast) {
-						uni.showToast({
-							title: '上传失败，状态码：' + res.statusCode,
-							icon: 'none'
-						})
-					}
-					reject(new Error('上传失败，状态码：' + res.statusCode))
+					return
 				}
+				let msg = '上传失败，状态码：' + res.statusCode
+				try {
+					const data = JSON.parse(res.data)
+					if (data && data.msg) {
+						msg = data.msg
+					}
+				} catch (e) {
+					// ignore
+				}
+				if (uploadConfig.showToast) {
+					uni.showToast({
+						title: msg,
+						icon: 'none'
+					})
+				}
+				reject(new Error(msg))
 			},
 			fail: (err) => {
 				if (uploadConfig.showToast) {
