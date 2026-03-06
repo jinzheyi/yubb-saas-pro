@@ -724,6 +724,23 @@
 
 ## Milestone S（P1）：消息体 Schema 冻结 + 媒体资产治理（对标企微/钉钉）
 
+### S0（P0）：开发阶段最优策略：严格 Schema（Strict Mode，Fail-Fast）落地
+
+- **目标**：开发阶段以“字段权威来源唯一 + 缺字段立即暴露”为准则，杜绝端侧从 URL/content 推断媒体元数据导致的图标误判与三端不一致。
+- **范围**：
+  - uniappx：聊天页/会话列表的媒体渲染与消息转换（只从 `extra/body` 取 `fileName/size/mimeType`）
+  - module-system：发送/入库路径确保 `extra` 存在且包含最小字段集
+  - websocket-starter：FILE 推送时 `header.extra` 与 `FileMessage body` 一致（便于端侧统一消费）
+- **依赖**：S1（Schema 冻结表）
+- **验收标准**：
+  - FILE 消息在 REST 历史列表与 WS 推送中都必须满足：`extra` 或 body 包含 `url/fileName/size/fileType(mimeType)`
+  - 客户端渲染不再从 url/content 解析 fileName/mimeType；缺字段直接报错（console.error/断言失败）
+  - 任意端发送 Excel/Word/PDF/ZIP：图标稳定正确（不因 URL 混合内容/编码差异误判）
+- **涉及文件/目录**（示例）：
+  - uniappx：`pages/message/chat.uvue`；`services/message-service.uts`；`utils/message-handler.uts`
+  - module-system：`service/im/*`（发送/查询/落库补齐 extra）
+  - websocket-starter：`core/sender/NettyMessageSender.java`
+
 ### S1（P1）：MessageType body schema 冻结表（端到端权威）
 
 - **目标**：冻结 `TEXT/IMAGE/VOICE/VIDEO/FILE/LOCATION/CARD/CUSTOM/CALL_RECORD` 的 body 最小字段集，避免端/后端/多端渲染各自扩展导致漂移。

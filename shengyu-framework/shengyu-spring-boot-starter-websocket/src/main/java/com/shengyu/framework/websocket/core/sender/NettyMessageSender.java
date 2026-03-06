@@ -1,6 +1,10 @@
 package com.shengyu.framework.websocket.core.sender;
 
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.FileMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
 import com.shengyu.framework.websocket.core.session.NettySession;
@@ -259,6 +263,11 @@ public class NettyMessageSender {
             .setMessageType(messageType)
             .setTimestamp(System.currentTimeMillis());
 
+        String derivedExtra = deriveHeaderExtra(messageType, body);
+        if (StrUtil.isNotBlank(derivedExtra)) {
+            headerBuilder.setExtra(derivedExtra);
+        }
+
         if (senderId != null) {
             headerBuilder.setSenderId(senderId);
         }
@@ -301,9 +310,34 @@ public class NettyMessageSender {
         header.put("receiverId", receiverId != null ? String.valueOf(receiverId) : "0");
         header.put("groupId", groupId != null ? String.valueOf(groupId) : "0");
         header.put("tenantId", tenantId != null ? String.valueOf(tenantId) : "0");
+
+        String derivedExtra = deriveHeaderExtra(messageType, body);
+        if (StrUtil.isNotBlank(derivedExtra)) {
+            header.put("extra", derivedExtra);
+        }
         root.put("header", header);
         root.put("body", buildJsonBody(messageType, body));
         return JsonUtils.toJsonString(root);
+    }
+
+    private String deriveHeaderExtra(MessageType messageType, MessageLite body) {
+        if (messageType != MessageType.FILE) {
+            return null;
+        }
+        if (!(body instanceof FileMessage)) {
+            return null;
+        }
+        try {
+            FileMessage m = (FileMessage) body;
+            JSONObject obj = JSONUtil.createObj();
+            obj.set("url", m.getUrl());
+            obj.set("fileName", m.getFileName());
+            obj.set("size", m.getSize());
+            obj.set("fileType", m.getFileType());
+            return obj.toString();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private Object buildJsonBody(MessageType messageType, MessageLite body) {

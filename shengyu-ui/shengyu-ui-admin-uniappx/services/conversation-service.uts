@@ -345,6 +345,7 @@ export class ConversationService {
       unreadCount: data.unreadCount || 0,
       isPinned: data.isPinned || false,
       noDisturb: data.noDisturb || false,
+      draft: data.draft || '',
       groupMemberCount: data.groupMemberCount || 0
     }
   }

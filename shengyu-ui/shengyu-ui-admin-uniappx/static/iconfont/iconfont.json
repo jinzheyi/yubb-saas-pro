@@ -6,6 +6,97 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "1453447",
+      "name": "html",
+      "font_class": "html",
+      "unicode": "e609",
+      "unicode_decimal": 58889
+    },
+    {
+      "icon_id": "2546305",
+      "name": "文件类型",
+      "font_class": "wenjianleixing",
+      "unicode": "e69b",
+      "unicode_decimal": 59035
+    },
+    {
+      "icon_id": "12205301",
+      "name": "文本文件",
+      "font_class": "file_type_text",
+      "unicode": "e603",
+      "unicode_decimal": 58883
+    },
+    {
+      "icon_id": "21721548",
+      "name": "文件类型-标准图-工作表",
+      "font_class": "wenjianleixing-biaozhuntu-gongzuobiao",
+      "unicode": "e6a4",
+      "unicode_decimal": 59044
+    },
+    {
+      "icon_id": "21721549",
+      "name": "文件类型-标准图-幻灯片",
+      "font_class": "wenjianleixing-biaozhuntu-huandengpian",
+      "unicode": "e6a5",
+      "unicode_decimal": 59045
+    },
+    {
+      "icon_id": "21721550",
+      "name": "文件类型-标准图-视频文件",
+      "font_class": "wenjianleixing-biaozhuntu-shipinwenjian",
+      "unicode": "e6a6",
+      "unicode_decimal": 59046
+    },
+    {
+      "icon_id": "21721552",
+      "name": "文件类型-标准图-图片文件",
+      "font_class": "wenjianleixing-biaozhuntu-tupianwenjian",
+      "unicode": "e6a7",
+      "unicode_decimal": 59047
+    },
+    {
+      "icon_id": "21721553",
+      "name": "文件类型-标准图-未知文件",
+      "font_class": "wenjianleixing-biaozhuntu-weizhiwenjian",
+      "unicode": "e6a8",
+      "unicode_decimal": 59048
+    },
+    {
+      "icon_id": "21721554",
+      "name": "文件类型-标准图-压缩文件",
+      "font_class": "wenjianleixing-biaozhuntu-yasuowenjian",
+      "unicode": "e6a9",
+      "unicode_decimal": 59049
+    },
+    {
+      "icon_id": "21721556",
+      "name": "文件类型-标准图-PDF文档",
+      "font_class": "wenjianleixing-biaozhuntu-PDFwendang",
+      "unicode": "e6aa",
+      "unicode_decimal": 59050
+    },
+    {
+      "icon_id": "21721557",
+      "name": "文件类型-标准图-Word文档",
+      "font_class": "wenjianleixing-biaozhuntu-Wordwendang",
+      "unicode": "e6ab",
+      "unicode_decimal": 59051
+    },
+    {
+      "icon_id": "21721558",
+      "name": "文件类型-标准图-声音文件",
+      "font_class": "wenjianleixing-biaozhuntu-shengyinwenjian",
+      "unicode": "e6ac",
+      "unicode_decimal": 59052
+    },
+    {
+      "icon_id": "21721572",
+      "name": "文件类型-缩略图-文件夹",
+      "font_class": "wenjianleixing-suolvetu-wenjianjia",
+      "unicode": "e6ad",
+      "unicode_decimal": 59053
+    },
+    {
       "icon_id": "3406917",
       "name": "男",
       "font_class": "nan",

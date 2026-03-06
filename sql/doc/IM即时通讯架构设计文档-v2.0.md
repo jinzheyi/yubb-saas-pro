@@ -521,6 +521,25 @@ JSON 兼容建议：
 - App 若 protobuf 握手失败：自动降级 JSON（并上报埋点）
 - 协议升级：先服务端双栈上线 -> 再客户端灰度 -> 最后收敛老版本
 
+#### 6.8.4 开发阶段最优策略：严格 Schema（Strict Mode，Fail-Fast）
+
+说明：开发阶段为提升联调效率与避免“兜底逻辑掩盖数据问题”，允许开启严格模式。
+
+核心原则：
+
+- FILE/VIDEO/IMAGE/VOICE 等媒体消息：**必须携带结构化元数据**
+  - WS（业务消息）：body 必须为对应的 Protobuf message（如 `FileMessage`），并包含最小字段集（见 Backlog 的 Schema 冻结表）
+  - REST（历史/初始化）：`extra` 必须为 JSON（字符串）且包含最小字段集
+- 客户端渲染：**禁止从 url/content 推断 fileName/mimeType**（避免误判）
+- 缺字段处理：**直接报错暴露（console.error / 断言失败）**，不做“静默降级为 unknown/word/excel”等
+- 服务端：消息入库前应保证 `extra` 已补齐；若无法补齐应返回可定位的错误码（Fail-Fast）
+
+Strict Mode 的收益：
+
+- 端到端字段来源唯一（extra/body）
+- 图标/预览/文件名展示不依赖 URL 解析，避免三端差异与误判
+- 缺字段问题可在开发阶段第一时间暴露，而不是上线后在历史数据/重连补偿中隐性出现
+
 建议输出“兼容矩阵”（以配置为权威，便于回归）：
 
 - clientCodec：PB/JSON

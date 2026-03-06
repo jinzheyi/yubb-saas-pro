@@ -100,7 +100,7 @@
 									<text class="file-size">{{ msg.fileSize }}</text>
 								</view>
 								<view class="file-icon-wrap">
-									<text class="iconfont file-icon">&#xea96;</text>
+									<text class="iconfont file-icon" :style="{ color: getFileIconColor(msg) }">{{ getFileIconUnicode(msg) }}</text>
 								</view>
 							</view>
 							
@@ -319,11 +319,21 @@
 	import { getMessageList, recallMessage, deleteMessage } from '../../api/message.uts'
 	import { clearUnreadCount as clearUnreadCountApi, getConversationByTarget } from '../../api/conversation.uts'
 	import { getUserIdStr, getTenantId, hasRole } from '../../store/user.uts'
-	import { uploadFile, chooseAndUploadImage, chooseAndUploadVideo, chooseAndUploadFile } from '../../utils/upload.uts'
+	import { 
+		chooseAndUploadFile,
+		chooseAndUploadImage,
+		chooseAndUploadVideo,
+		uploadFile,
+		uploadFileAndReturnId
+	} from '../../utils/upload.uts'
 	import { getUserAvatarColor, getAvatarText as getAvatarTextUtil } from '../../utils/avatar.uts'
 	import { parseMessageContent } from '../../utils/message-utils.uts'
 	import { uploadGroupFile } from '../../api/file.uts'
-	import { BASE_URL as CONFIG_BASE_URL } from '../../config/app.config.uts'
+	import {
+		BASE_URL as CONFIG_BASE_URL,
+		IM_MEDIA_USE_FILE_ID,
+		WS_URL
+	} from '../../config/app.config.uts'
 
 	const { t } = useI18n()
 	
@@ -446,8 +456,9 @@
 				const conversationType = chatType.value === 'group' ? 2 : 1
 				const conversationResult = await getConversationByTarget(targetId.value, conversationType)
 				
-				if (conversationResult && conversationResult.id != null) {
-					chatId.value = conversationResult.id.toString()
+				const resolvedChatId = conversationResult && (conversationResult.chatId != null ? conversationResult.chatId : conversationResult.id)
+				if (resolvedChatId != null) {
+					chatId.value = resolvedChatId.toString()
 					console.log('[Chat] 查询会话成功, chatId:', chatId.value)
 				} else {
 					console.error('[Chat] 查询会话失败：返回数据无效', conversationResult)
@@ -531,6 +542,276 @@
 		}
 		return `${year}年${month}月${day}日 ${hours}:${minutes}`
 	}
+
+	function getFileExt(name : string) : string {
+		if (!name) {
+			return ''
+		}
+		const idx = name.lastIndexOf('.')
+		if (idx < 0) {
+			return ''
+		}
+		return name.substring(idx + 1).toLowerCase()
+	}
+
+	function getFileExtFromUrl(url : string) : string {
+		if (!url) {
+			return ''
+		}
+		let cleanUrl = url
+		const q = cleanUrl.indexOf('?')
+		if (q >= 0) {
+			cleanUrl = cleanUrl.substring(0, q)
+		}
+		const hash = cleanUrl.indexOf('#')
+		if (hash >= 0) {
+			cleanUrl = cleanUrl.substring(0, hash)
+		}
+		const slash = cleanUrl.lastIndexOf('/')
+		if (slash >= 0) {
+			cleanUrl = cleanUrl.substring(slash + 1)
+		}
+		return getFileExt(cleanUrl)
+	}
+
+	function isImageExt(ext : string) : boolean {
+		return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(ext)
+	}
+
+	function isVideoExt(ext : string) : boolean {
+		return ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', '3gp'].includes(ext)
+	}
+
+	function isAudioExt(ext : string) : boolean {
+		return ['mp3', 'wav', 'aac', 'm4a', 'ogg', 'flac'].includes(ext)
+	}
+
+	function isZipExt(ext : string) : boolean {
+		return ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'].includes(ext)
+	}
+
+	function isWordExt(ext : string) : boolean {
+		return ['doc', 'docx', 'dot', 'dotx'].includes(ext)
+	}
+
+	function isExcelExt(ext : string) : boolean {
+		return ['xls', 'xlsx', 'csv'].includes(ext)
+	}
+
+	function isPptExt(ext : string) : boolean {
+		return ['ppt', 'pptx', 'pps', 'ppsx'].includes(ext)
+	}
+
+	function isTextExt(ext : string) : boolean {
+		return ['txt', 'log', 'md', 'json', 'xml', 'yml', 'yaml', 'ini', 'conf'].includes(ext)
+	}
+
+	function getFileIconUnicode(msg : MessageItem) : string {
+		// iconfont.json 对应的 unicode：
+		// html=e609, sql=e69b, text=e603, excel=e6a4, ppt=e6a5, video=e6a6, image=e6a7,
+		// unknown=e6a8, zip=e6a9, pdf=e6aa, word=e6ab, music=e6ac, folder=e6ad
+		const name = msg.fileName || ''
+		const mime = (msg as any).mimeType ? String((msg as any).mimeType) : ''
+		let ext = getFileExt(name)
+
+		// 开发阶段强约束：不再从 URL 推断 ext，FILE 消息必须携带 fileName/mimeType
+
+		// 优先 mimeType 兜底（避免 ext 解析/混合 content 场景误判）
+		if (mime) {
+			const lowerMime = mime.toLowerCase()
+			if (lowerMime.includes('ms-excel') || lowerMime.includes('spreadsheetml')) {
+				return '\ue6a4'
+			}
+			if (lowerMime.includes('msword') || lowerMime.includes('wordprocessingml')) {
+				return '\ue6ab'
+			}
+			if (lowerMime.includes('ms-powerpoint') || lowerMime.includes('presentationml')) {
+				return '\ue6a5'
+			}
+			if (lowerMime === 'application/pdf') {
+				return '\ue6aa'
+			}
+		}
+
+		if (mime.startsWith('image/')) {
+			return '\ue6a7'
+		}
+		if (mime.startsWith('video/')) {
+			return '\ue6a6'
+		}
+		if (mime.startsWith('audio/')) {
+			return '\ue6ac'
+		}
+
+		if (ext === 'html' || ext === 'htm') {
+			return '\ue609'
+		}
+		if (ext === 'sql') {
+			return '\ue69b'
+		}
+		if (ext === 'pdf') {
+			return '\ue6aa'
+		}
+		if (isWordExt(ext)) {
+			return '\ue6ab'
+		}
+		if (isExcelExt(ext)) {
+			return '\ue6a4'
+		}
+		if (isPptExt(ext)) {
+			return '\ue6a5'
+		}
+		if (isVideoExt(ext)) {
+			return '\ue6a6'
+		}
+		if (isImageExt(ext)) {
+			return '\ue6a7'
+		}
+		if (isAudioExt(ext)) {
+			return '\ue6ac'
+		}
+		if (isZipExt(ext)) {
+			return '\ue6a9'
+		}
+		if (isTextExt(ext)) {
+			return '\ue603'
+		}
+
+		return '\ue6a8'
+	}
+
+	function getFileIconColor(msg : MessageItem) : string {
+		const name = msg.fileName || ''
+		const mime = (msg as any).mimeType ? String((msg as any).mimeType) : ''
+		const ext = getFileExt(name)
+		const lowerMime = mime ? mime.toLowerCase() : ''
+
+		if (lowerMime.includes('ms-excel') || lowerMime.includes('spreadsheetml') || isExcelExt(ext)) {
+			return '#34C759'
+		}
+		if (lowerMime.includes('msword') || lowerMime.includes('wordprocessingml') || isWordExt(ext)) {
+			return '#3370FF'
+		}
+		if (lowerMime.includes('ms-powerpoint') || lowerMime.includes('presentationml') || isPptExt(ext)) {
+			return '#FF9500'
+		}
+		if (lowerMime === 'application/pdf' || ext === 'pdf') {
+			return '#F54A45'
+		}
+		if (mime.startsWith('image/') || isImageExt(ext)) {
+			return '#FFB020'
+		}
+		if (mime.startsWith('video/') || isVideoExt(ext)) {
+			return '#8A5CF6'
+		}
+		if (mime.startsWith('audio/') || isAudioExt(ext)) {
+			return '#FF9500'
+		}
+		if (isZipExt(ext)) {
+			return '#5AC8FA'
+		}
+		if (ext === 'html' || ext === 'htm') {
+			return '#FF6A00'
+		}
+		if (ext === 'sql') {
+			return '#8F959E'
+		}
+		if (isTextExt(ext)) {
+			return '#4A90E2'
+		}
+		return '#C7CBD1'
+	}
+
+	function getFileNameFromMixedContent(content : any) : string {
+		if (content === null || content === undefined) {
+			return ''
+		}
+		// REST 历史消息可能直接存字符串：
+		// 1) "http://.../xxx.pdf"
+		// 2) "http://.../ 何肖肖入职offfer.pdf"（中间有空格）
+		const raw = String(content)
+		const trimmed = raw.trim()
+		if (!trimmed) {
+			return ''
+		}
+		// 如果包含空格，优先取最后一段作为文件名
+		const parts = trimmed.split(' ').filter(p => !!p)
+		const lastPart = parts.length > 1 ? parts[parts.length - 1] : trimmed
+		// 尝试从 URL 截取
+		let urlPart = parts.length > 1 ? parts[0] : trimmed
+		// 如果 lastPart 本身就是一个 URL（极端情况），则直接走 URL 解析
+		if (lastPart.startsWith('http://') || lastPart.startsWith('https://')) {
+			urlPart = lastPart
+		}
+		let candidate = lastPart
+		if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
+			// url 里取最后 path segment
+			let cleanUrl = candidate
+			const q = cleanUrl.indexOf('?')
+			if (q >= 0) cleanUrl = cleanUrl.substring(0, q)
+			const hash = cleanUrl.indexOf('#')
+			if (hash >= 0) cleanUrl = cleanUrl.substring(0, hash)
+			const slash = cleanUrl.lastIndexOf('/')
+			candidate = slash >= 0 ? cleanUrl.substring(slash + 1) : cleanUrl
+		} else if (urlPart.startsWith('http://') || urlPart.startsWith('https://')) {
+			// url + 文件名 混合场景，candidate 就是文件名
+		}
+		try {
+			candidate = decodeURIComponent(candidate)
+		} catch (e) {
+			// ignore
+		}
+		return candidate
+	}
+
+	function getFileUrlFromMixedContent(content : any) : string {
+		if (content === null || content === undefined) {
+			return ''
+		}
+		const raw = String(content).trim()
+		if (!raw) {
+			return ''
+		}
+		// url + 文件名 混合场景：取第一个 token 作为 url
+		const parts = raw.split(' ').filter(p => !!p)
+		const candidate = parts.length > 1 ? parts[0] : raw
+		if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
+			return candidate
+		}
+		return raw
+	}
+
+	function applyFileFields(uiMessage : MessageItem, rawContent : any) {
+		if (uiMessage.type !== 'file') {
+			return
+		}
+		// rawContent 可能是对象（ws/body 或后端存 json），也可能是字符串
+		let fileName = ''
+		let sizeNum : number | null = null
+		let mimeType = ''
+		if (rawContent && typeof rawContent === 'object') {
+			fileName = rawContent.fileName || rawContent.name || ''
+			// size 可能是 number 或 string
+			if (rawContent.size !== null && rawContent.size !== undefined) {
+				const n = Number(rawContent.size)
+				sizeNum = isNaN(n) ? null : n
+			}
+			mimeType = rawContent.fileType || rawContent.mimeType || ''
+		} else {
+			console.error('[Chat] FILE 消息缺少结构化元数据(rawContent object)，请确保后端 extra 或 WS FileMessage body 携带 fileName/size/fileType')
+		}
+
+		// 开发阶段强约束：不再从 content/url 推断 fileName 或规范化 url
+		if (fileName) {
+			uiMessage.fileName = fileName
+		}
+		if (sizeNum !== null) {
+			uiMessage.fileSize = formatFileSize(sizeNum)
+		}
+		if (mimeType) {
+			;(uiMessage as any).mimeType = mimeType
+		}
+	}
 	
 	/**
 	 * 加载历史消息
@@ -606,6 +887,7 @@
 		// 安全地解析内容，防止 JSON 解析错误
 		let rawContent : any
 		let content : any
+		let extraContent : any
 		try {
 			rawContent = parseRawContent(msg.content)
 			content = parseMessageContent(rawContent)
@@ -613,6 +895,12 @@
 			console.error('[Chat] 解析消息内容失败:', e, msg.content)
 			rawContent = msg.content
 			content = msg.content
+		}
+		// extra 通常为 JSON 字符串（尤其是文件消息），用于补齐 fileName/size/mimeType
+		try {
+			extraContent = parseRawContent(msg.extra)
+		} catch (e) {
+			extraContent = msg.extra
 		}
 		
 		const senderIdStr = msg && msg.senderId != null ? msg.senderId.toString() : '0'
@@ -642,9 +930,10 @@
 		status: msg.status === 1 ? 'success' : 'sending'
 	} as MessageItem
 
-	applyQuoteFields(uiMessage, rawContent)
-	return uiMessage
-}
+		applyQuoteFields(uiMessage, rawContent)
+		applyFileFields(uiMessage, extraContent && typeof extraContent === 'object' ? extraContent : content)
+		return uiMessage
+	}
 
 /**
  * 转换消息服务的消息为 UI 消息格式
@@ -673,10 +962,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			status: msg.status
 		} as MessageItem
 
-		applyQuoteFields(uiMessage, msg.content)
-		return uiMessage
-	})
-}
+			applyQuoteFields(uiMessage, msg.content)
+			applyFileFields(uiMessage, msg.content)
+			return uiMessage
+		})
+	}
 	
 	/**
 	 * 获取消息类型字符串
@@ -730,7 +1020,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return content.url || content
 		} else if (typeStr === 'file') {
 			// 文件消息
-			return content.url || content
+			if (content && typeof content === 'object') {
+				return content.url || content
+			}
+			// 兼容历史数据：url 后面拼了文件名
+			return getFileUrlFromMixedContent(content)
 		} else if (typeStr === 'location') {
 			// 位置消息
 			return content.address || content
@@ -923,13 +1217,21 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			? message.groupId
 			: (message.isSelf ? message.receiverId : message.senderId)
 		
-		// 注意：chatId 是会话 ID（后端生成），而实时消息路由应按对端/群 ID（targetId）判断
-		if (msgChatId !== targetId.value) {
+		const currentChatId = chatType.value === 'group'
+			? targetId.value
+			: getReceiverIdForMessage()
+		
+		if (msgChatId !== currentChatId) {
+			return
+		}
+
+		// 去重：sendMessage() 会先 notifyMessageListeners，本地发送路径也可能手动 push，导致重复展示
+		if (message.messageId && messages.value.some((m) => m.messageId === message.messageId)) {
 			return
 		}
 		
-		// 转换并添加到消息列表
-		const uiMessage = {
+		// 转换消息格式
+		const uiMessage : MessageItem = {
 			id: message.id.toString(),
 			messageId: message.messageId,
 			senderId: message.senderId.toString(),
@@ -947,6 +1249,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} as MessageItem
 
 		applyQuoteFields(uiMessage, message.content)
+		applyFileFields(uiMessage, message.content)
 		
 		messages.value.push(uiMessage)
 		
@@ -1096,15 +1399,23 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				console.log('[Chat] 录音文件:', tempFilePath, '时长:', duration)
 				
 				// 上传语音文件
-				uploadFile(tempFilePath, {
+			const uploadPromise = IM_MEDIA_USE_FILE_ID === 'true'
+				? uploadFileAndReturnId(tempFilePath, {
 					directory: 'im/voice',
 					onProgress: (progress) => {
 						console.log('[Chat] 上传进度:', progress)
 					}
-				}).then((result) => {
-					// 后端返回的 data 字段直接是 URL 字符串
-					const voiceUrl = typeof result.data === 'string' ? result.data : result.data.url
-					const voiceSize = result.data.size || 0
+				})
+				: uploadFile(tempFilePath, {
+					directory: 'im/voice',
+					onProgress: (progress) => {
+						console.log('[Chat] 上传进度:', progress)
+					}
+				})
+			uploadPromise.then((result: any) => {
+				const voiceUrl = result.data.url || ''
+				const voiceSize = result.data.size || 0
+				const voiceFileId = result.data.fileId?.toString() || '0'
 					
 					// 构建完整URL
 					let fullVoiceUrl = voiceUrl
@@ -1114,8 +1425,17 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					
 					console.log('[Chat] 语音URL:', fullVoiceUrl)
 					
-					// 使用消息服务发送语音消息
-					const message = messageService.sendVoiceMessage(
+					// 使用消息服务发送语音消息（灰度：V2 双写 fileId + url）
+				const message = IM_MEDIA_USE_FILE_ID === 'true'
+					? messageService.sendVoiceMessageV2(
+						getReceiverIdForMessage(),
+						getGroupIdForMessage(),
+						voiceFileId,
+						fullVoiceUrl,
+						duration,
+						voiceSize
+					)
+					: messageService.sendVoiceMessage(
 						getReceiverIdForMessage(),
 						getGroupIdForMessage(),
 						fullVoiceUrl,
@@ -1123,25 +1443,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						voiceSize
 					)
 					
-					// 转换并添加到消息列表
-					const uiMessage = {
-						id: message.id.toString(),
-						messageId: message.messageId,
-						senderId: message.senderId.toString(),
-						receiverId: message.receiverId.toString(),
-						type: 'voice',
-						content: fullVoiceUrl,
-						duration: duration,
-						isSelf: true,
-						time: new Date(message.timestamp).toLocaleString(),
-						timestamp: message.timestamp,
-						showTime: true,
-						avatarText: message.avatarText,
-						avatarBg: message.avatarBg,
-						status: message.status
-					} as MessageItem
-					
-					messages.value.push(uiMessage)
+					// IM_MEDIA_USE_FILE_ID=true 时，消息入栈统一由 messageService listener 处理，避免重复展示
 					scrollToBottom()
 				}).catch((err) => {
 					console.error('[Chat] 上传语音失败:', err)
@@ -1293,6 +1595,56 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	function handleFeature(item : any) {
 		if (item.nameKey === 'chat.features.album') {
 			// 选择并上传图片
+			if (IM_MEDIA_USE_FILE_ID === 'true') {
+				uni.chooseImage({
+					count: 9,
+					sizeType: ['original', 'compressed'],
+					sourceType: ['album', 'camera'],
+					success: async (res) => {
+						try {
+							const uploadPromises: Promise<any>[] = []
+							for (let i = 0; i < res.tempFilePaths.length; i++) {
+								uploadPromises.push(uploadFileAndReturnId(res.tempFilePaths[i], {
+									directory: 'im/image'
+								}))
+							}
+							const results = await Promise.all(uploadPromises)
+							console.log('[Chat] upload-and-return-id 上传成功，共', results.length, '张图片')
+							results.forEach((result: any, index: number) => {
+								const fileId = result.data.fileId?.toString() || '0'
+								const imageUrl = result.data.url || ''
+								const imageSize = result.data.size || 0
+								if (!imageUrl) {
+									return
+								}
+								let fullImageUrl = imageUrl
+								if (imageUrl.startsWith('/')) {
+									fullImageUrl = CONFIG_BASE_URL + imageUrl
+								}
+								const message = messageService.sendImageMessageV2(
+									getReceiverIdForMessage(),
+									getGroupIdForMessage(),
+									fileId,
+									fullImageUrl,
+									fullImageUrl,
+									0,
+									0,
+									imageSize
+								)
+								void message
+							})
+							showPlusMenu.value = false
+							setTimeout(() => {
+								scrollToBottom()
+							}, 100)
+						} catch (err) {
+							console.error('[Chat] upload-and-return-id 上传图片失败:', err)
+							uni.showToast({ title: '上传失败', icon: 'none' })
+						}
+					}
+				})
+				return
+			}
 			chooseAndUploadImage(9, {
 				directory: 'im/image',
 				onProgress: (progress) => {
@@ -1329,16 +1681,27 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						size: imageSize
 					})
 					
-					// 使用消息服务发送图片消息
-					const message = messageService.sendImageMessage(
-						getReceiverIdForMessage(),
-						getGroupIdForMessage(),
-						fullImageUrl,
-						fullImageUrl,  // 缩略图使用同一个 URL
-						0,  // 宽度(暂不获取)
-						0,  // 高度(暂不获取)
-						imageSize
-					)
+					// 使用消息服务发送图片消息（灰度：V2 双写 fileId + url）
+					const message = IM_MEDIA_USE_FILE_ID === 'true'
+						? messageService.sendImageMessageV2(
+							getReceiverIdForMessage(),
+							getGroupIdForMessage(),
+							'0',
+							fullImageUrl,
+							fullImageUrl,
+							0,
+							0,
+							imageSize
+						)
+						: messageService.sendImageMessage(
+							getReceiverIdForMessage(),
+							getGroupIdForMessage(),
+							fullImageUrl,
+							fullImageUrl,  // 缩略图使用同一个 URL
+							0,  // 宽度(暂不获取)
+							0,  // 高度(暂不获取)
+							imageSize
+						)
 					
 					console.log('[Chat] 消息服务返回:', message)
 					
@@ -1468,13 +1831,51 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		
 		if (item.nameKey === 'chat.features.video') {
 			// 选择并上传视频
+			if (IM_MEDIA_USE_FILE_ID === 'true') {
+				uni.chooseVideo({
+					sourceType: ['album', 'camera'],
+					success: async (res) => {
+						try {
+							const uploadRes: any = await uploadFileAndReturnId(res.tempFilePath, {
+								directory: 'im/video'
+							})
+							const fileId = uploadRes.data.fileId?.toString() || '0'
+							const videoUrl = uploadRes.data.url || ''
+							const videoSize = uploadRes.data.size || 0
+							let fullVideoUrl = videoUrl
+							if (videoUrl.startsWith('/')) {
+								fullVideoUrl = CONFIG_BASE_URL + videoUrl
+							}
+							const message = messageService.sendVideoMessageV2(
+								getReceiverIdForMessage(),
+								getGroupIdForMessage(),
+								fileId,
+								fullVideoUrl,
+								fullVideoUrl,
+								0,
+								0,
+								0,
+								videoSize
+							)
+							void message
+							showPlusMenu.value = false
+							setTimeout(() => {
+								scrollToBottom()
+							}, 100)
+						} catch (err) {
+							console.error('[Chat] upload-and-return-id 上传视频失败:', err)
+							uni.showToast({ title: '上传失败', icon: 'none' })
+						}
+					}
+				})
+				return
+			}
 			chooseAndUploadVideo({
 				directory: 'im/video',
 				onProgress: (progress) => {
 					console.log('[Chat] 上传进度:', progress)
 				}
 			}).then((result) => {
-				// 后端返回的 data 字段直接是 URL 字符串
 				const videoUrl = typeof result.data === 'string' ? result.data : result.data.url
 				const videoSize = result.data.size || 0
 				
@@ -1540,17 +1941,58 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		
 		if (item.nameKey === 'chat.features.file') {
 			// 选择并上传文件（支持 H5、Android、iOS）
+			if (IM_MEDIA_USE_FILE_ID === 'true') {
+				uni.chooseFile({
+					type: 'all',
+					count: 1,
+					success: async (res) => {
+						try {
+							const path = (res.tempFilePaths && res.tempFilePaths.length > 0) ? res.tempFilePaths[0] : ''
+							if (!path) {
+								return
+							}
+							const uploadRes: any = await uploadFileAndReturnId(path, { directory: 'im/file' })
+							const fileId = uploadRes.data.fileId?.toString() || '0'
+							const fileUrl = uploadRes.data.url || ''
+							const fileName = uploadRes.data.name || '文件'
+							const fileSize = uploadRes.data.size || 0
+							const fileType = uploadRes.data.mimeType || '*/*'
+							let fullFileUrl = fileUrl
+							if (fileUrl.startsWith('/')) {
+								fullFileUrl = CONFIG_BASE_URL + fileUrl
+							}
+							const message = messageService.sendFileMessageV2(
+								getReceiverIdForMessage(),
+								getGroupIdForMessage(),
+								fileId,
+								fullFileUrl,
+								fileName,
+								fileSize,
+								fileType
+							)
+							void message
+							showPlusMenu.value = false
+							setTimeout(() => {
+								scrollToBottom()
+							}, 100)
+						} catch (err) {
+							console.error('[Chat] upload-and-return-id 上传文件失败:', err)
+							uni.showToast({ title: '上传失败', icon: 'none' })
+						}
+					}
+				})
+				return
+			}
 			chooseAndUploadFile('*/*', {
 				directory: 'im/file',
 				onProgress: (progress) => {
 					console.log('[Chat] 上传进度:', progress)
 				}
 			}).then((result) => {
-				// 后端返回的 data 字段直接是 URL 字符串
 				const fileUrl = typeof result.data === 'string' ? result.data : result.data.url
-				const fileName = result.data.name || '未知文件'
+				const fileName = result.data.name || '文件'
 				const fileSize = result.data.size || 0
-				const fileType = result.data.type || ''
+				const fileType = result.data.type || '*/*'
 				
 				// 构建完整URL
 				let fullFileUrl = fileUrl
@@ -2501,15 +2943,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.file-icon-wrap {
 		width: 44px;
 		height: 44px;
-		background-color: #F5F7FA;
-		border-radius: 6px;
+		background-color: transparent;
+		border-radius: 0;
 		justify-content: center;
 		align-items: center;
 	}
 
 	.file-icon {
 		font-size: 24px;
-		color: #3370FF;
+		color: inherit;
 	}
 
 	/* 位置消息 */

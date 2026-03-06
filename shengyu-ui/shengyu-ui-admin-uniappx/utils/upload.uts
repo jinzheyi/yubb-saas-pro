@@ -15,6 +15,7 @@ import { formatToken } from '../store/user.uts'
 
 // 上传配置 - 使用统一的 API 配置
 const UPLOAD_URL = API_BASE_URL + '/infra/file/upload'
+const UPLOAD_AND_RETURN_ID_URL = API_BASE_URL + '/infra/file/upload-and-return-id'
 
 /**
  * 上传进度回调类型
@@ -35,6 +36,24 @@ export type UploadResult = {
 		type: string
 	}
 	tempFilePath?: string  // 临时文件路径
+}
+
+/**
+ * 上传并返回 fileId 的结果类型
+ */
+export type UploadAndReturnIdResult = {
+	code: number
+	msg: string
+	data: {
+		fileId: number
+		url?: string
+		name: string
+		size: number
+		mimeType?: string
+		md5?: string
+		thumbFileId?: number
+	}
+	tempFilePath?: string
 }
 
 /**
@@ -120,6 +139,109 @@ export function uploadFile(
 						const data = JSON.parse(res.data)
 						if (data.code === 0) {
 							const result = data as UploadResult
+							result.tempFilePath = filePath
+							resolve(result)
+						} else {
+							if (uploadConfig.showToast) {
+								uni.showToast({
+									title: data.msg || '上传失败',
+									icon: 'none'
+								})
+							}
+							reject(new Error(data.msg || '上传失败'))
+						}
+					} catch (e) {
+						if (uploadConfig.showToast) {
+							uni.showToast({
+								title: '解析响应失败',
+								icon: 'none'
+							})
+						}
+						reject(new Error('解析响应失败'))
+					}
+				} else {
+					if (uploadConfig.showToast) {
+						uni.showToast({
+							title: '上传失败，状态码：' + res.statusCode,
+							icon: 'none'
+						})
+					}
+					reject(new Error('上传失败，状态码：' + res.statusCode))
+				}
+			},
+			fail: (err) => {
+				if (uploadConfig.showToast) {
+					uni.showToast({
+						title: '上传失败',
+						icon: 'none'
+					})
+				}
+				reject(err)
+			}
+		})
+		
+		// 监听上传进度
+		if (uploadConfig.onProgress) {
+			uploadTask.onProgressUpdate((res) => {
+				uploadConfig.onProgress!(res.progress)
+			})
+		}
+	})
+}
+
+/**
+ * 上传文件并返回 fileId（核心方法）
+ */
+export function uploadFileAndReturnId(
+	filePath: string,
+	config?: UploadConfig
+): Promise<UploadAndReturnIdResult> {
+	return new Promise((resolve, reject) => {
+		// 默认配置
+		const uploadConfig: UploadConfig = {
+			url: UPLOAD_AND_RETURN_ID_URL,
+			showToast: true,
+			...config
+		}
+		
+		// 构建表单数据
+		const formData: UTSJSONObject = {}
+		if (uploadConfig.directory) {
+			formData['directory'] = uploadConfig.directory
+		}
+		// 合并额外的表单数据
+		if (uploadConfig.formData) {
+			for (const key in uploadConfig.formData) {
+				formData[key] = uploadConfig.formData[key]
+			}
+		}
+		
+		// 获取 token 和租户 ID
+		const token = getToken()
+		const tenantId = getTenantId()
+		
+		// 构建请求头
+		const header: UTSJSONObject = {}
+		if (token) {
+			header['Authorization'] = formatToken(token)
+		}
+		if (tenantId) {
+			header['tenant-id'] = tenantId
+		}
+		
+		// 创建上传任务
+		const uploadTask = uni.uploadFile({
+			url: uploadConfig.url!,
+			filePath: filePath,
+			name: 'file',
+			formData: formData,
+			header: header,
+			success: (res) => {
+				if (res.statusCode === 200) {
+					try {
+						const data = JSON.parse(res.data)
+						if (data.code === 0) {
+							const result = data as UploadAndReturnIdResult
 							result.tempFilePath = filePath
 							resolve(result)
 						} else {

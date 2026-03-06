@@ -1,10 +1,15 @@
 package com.shengyu.module.system.service.im;
 
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
+import com.shengyu.framework.websocket.core.protocol.FileMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
 import com.shengyu.framework.websocket.core.protocol.TextMessage;
 import com.shengyu.framework.websocket.core.protocol.ImageMessage;
+import com.shengyu.framework.websocket.core.protocol.VideoMessage;
 import com.shengyu.framework.websocket.core.protocol.VoiceMessage;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.common.pojo.PageResult;
@@ -243,6 +248,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             // 根据消息类型构建不同的消息体
             MessageType messageType;
             com.google.protobuf.MessageLite messageBody;
+            String headerExtra = sendReqVO.getExtra();
 
             Integer dbMessageType = normalizeDbMessageType(sendReqVO.getMessageType());
             switch (dbMessageType) {
@@ -266,15 +272,49 @@ public class ImMessageServiceImpl implements ImMessageService {
                     break;
                 case 4: // 视频消息
                     messageType = MessageType.VIDEO;
-                    messageBody = TextMessage.newBuilder()
-                            .setContent(sendReqVO.getContent())
+                    messageBody = VideoMessage.newBuilder()
+                            .setUrl(sendReqVO.getContent())
                             .build();
                     break;
                 case 5: // 文件消息
                     messageType = MessageType.FILE;
-                    messageBody = TextMessage.newBuilder()
-                            .setContent(sendReqVO.getContent())
-                            .build();
+                    // 优先从 extra JSON 中取元数据（fileName/size/fileType/url），确保端侧展示一致
+                    String url = sendReqVO.getContent();
+                    String fileName = "";
+                    long size = 0L;
+                    String fileType = "";
+                    if (StrUtil.isNotBlank(sendReqVO.getExtra())) {
+                        try {
+                            JSONObject obj = JSONUtil.parseObj(sendReqVO.getExtra());
+                            if (StrUtil.isBlank(url)) {
+                                url = obj.getStr("url", "");
+                            }
+                            fileName = obj.getStr("fileName", obj.getStr("name", ""));
+                            size = obj.getLong("size", 0L);
+                            fileType = obj.getStr("fileType", obj.getStr("mimeType", ""));
+                        } catch (Exception ignore) {
+                            // ignore
+                        }
+                    }
+                    if (StrUtil.isBlank(fileName) && StrUtil.isNotBlank(url)) {
+                        int idx = url.lastIndexOf('/');
+                        fileName = idx >= 0 ? url.substring(idx + 1) : url;
+                    }
+                    FileMessage.Builder fileBuilder = FileMessage.newBuilder()
+                            .setUrl(url == null ? "" : url)
+                            .setFileName(fileName == null ? "" : fileName)
+                            .setSize(size)
+                            .setFileType(fileType == null ? "" : fileType);
+                    messageBody = fileBuilder.build();
+                    // 同步补齐 header.extra，便于存储侧直接落库
+                    if (StrUtil.isBlank(headerExtra)) {
+                        JSONObject obj = JSONUtil.createObj();
+                        obj.set("url", url);
+                        obj.set("fileName", fileName);
+                        obj.set("size", size);
+                        obj.set("fileType", fileType);
+                        headerExtra = obj.toString();
+                    }
                     break;
                 case 6: // 位置消息
                     messageType = MessageType.LOCATION;

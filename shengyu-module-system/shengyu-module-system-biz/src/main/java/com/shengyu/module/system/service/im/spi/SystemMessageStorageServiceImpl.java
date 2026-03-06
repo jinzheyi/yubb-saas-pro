@@ -1,6 +1,10 @@
 package com.shengyu.module.system.service.im.spi;
 
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.MessageLite;
 import com.shengyu.framework.websocket.core.protocol.*;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
@@ -77,6 +81,31 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         }
     }
 
+    private String buildExtraForDb(ImMessage message) {
+        if (message == null || message.getHeader() == null) {
+            return null;
+        }
+        String extra = message.getHeader().getExtra();
+        if (StrUtil.isNotBlank(extra)) {
+            return extra;
+        }
+        if (message.getHeader().getMessageType() != MessageType.FILE) {
+            return extra;
+        }
+        try {
+            FileMessage fileMsg = FileMessage.parseFrom(message.getBody());
+            JSONObject obj = JSONUtil.createObj();
+            obj.set("url", fileMsg.getUrl());
+            obj.set("fileName", fileMsg.getFileName());
+            obj.set("size", fileMsg.getSize());
+            obj.set("fileType", fileMsg.getFileType());
+            return obj.toString();
+        } catch (Exception e) {
+            log.warn("[MessageStorage] 构建文件消息 extra 失败, messageId: {}", message.getHeader().getMessageId(), e);
+            return extra;
+        }
+    }
+
     /**
      * 保存消息并返回ID（同步方法）
      * 
@@ -93,6 +122,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         try {
             // 1. 解析消息内容
             String content = parseMessageContent(message);
+            String extra = buildExtraForDb(message);
             
             // 2. 确定/创建全局 ChatID
             Long chatId = getOrCreateChatId(header);
@@ -104,13 +134,13 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             messageDO.setSenderId(header.getSenderId());
             messageDO.setMessageType(normalizeDbMessageType(header.getMessageType()));
             messageDO.setContent(content);
-            messageDO.setExtra(header.getExtra());
+            messageDO.setExtra(extra);
             messageDO.setSendTime(sendTime);
             messageDO.setStatus(ImMessageStatusEnum.SENT.getStatus());
             chatMessageMapper.insert(messageDO);
 
             // 5. 异步更新会话信息（不阻塞消息保存）
-            updateChatUserAsync(header, messageDO);
+            updateChatUserAsync(header, messageDO, message);
             
             log.debug("[MessageStorage] 消息保存成功, messageId: {}, type: {}", 
                     header.getMessageId(), header.getMessageType());
@@ -239,10 +269,13 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
      * 4. 推送角标更新到接收者的所有设备
      */
     @Async("imTaskExecutor")
-    public void updateChatUserAsync(MessageHeader header, ImChatMessageDO messageDO) {
+    public void updateChatUserAsync(MessageHeader header, ImChatMessageDO messageDO, ImMessage rawMessage) {
         try {
             Long chatId = messageDO.getChatId();
             String lastMessageContent = truncateContent(messageDO.getContent());
+
+            // 解析原始消息体，便于群聊实时转发（避免仅角标更新 204）
+            MessageLite bizBody = parseBizBody(rawMessage);
 
             if (header.getGroupId() > 0) {
                 List<Long> memberIds = imGroupService.getGroupMemberIds(header.getGroupId());
@@ -259,15 +292,11 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                     );
                     if (!isSender) {
                         imBadgeService.pushBadgeUpdate(memberId);
-
-                        if (header.getMessageType() == MessageType.TEXT) {
-                            TextMessage textMessage = TextMessage.newBuilder()
-                                    .setContent(messageDO.getContent() == null ? "" : messageDO.getContent())
-                                    .build();
+                        if (bizBody != null) {
                             nettyMessageSender.sendToUser(
                                     memberId,
-                                    MessageType.TEXT,
-                                    textMessage,
+                                    header.getMessageType(),
+                                    bizBody,
                                     header.getSenderId(),
                                     memberId,
                                     header.getGroupId(),
@@ -302,6 +331,36 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         } catch (Exception e) {
             log.error("[MessageStorage] 更新会话失败", e);
             // 不抛出异常，避免影响消息保存
+        }
+    }
+
+    private MessageLite parseBizBody(ImMessage rawMessage) {
+        if (rawMessage == null || rawMessage.getHeader() == null) {
+            return null;
+        }
+        MessageType messageType = rawMessage.getHeader().getMessageType();
+        try {
+            switch (messageType) {
+                case TEXT:
+                    return TextMessage.parseFrom(rawMessage.getBody());
+                case IMAGE:
+                    return ImageMessage.parseFrom(rawMessage.getBody());
+                case VOICE:
+                    return VoiceMessage.parseFrom(rawMessage.getBody());
+                case VIDEO:
+                    return VideoMessage.parseFrom(rawMessage.getBody());
+                case FILE:
+                    return FileMessage.parseFrom(rawMessage.getBody());
+                case LOCATION:
+                    return LocationMessage.parseFrom(rawMessage.getBody());
+                case QUOTE_REPLY:
+                    return QuoteReplyMessage.parseFrom(rawMessage.getBody());
+                default:
+                    return null;
+            }
+        } catch (InvalidProtocolBufferException e) {
+            log.error("[MessageStorage] 解析业务消息体失败, type: {}", messageType, e);
+            return null;
         }
     }
 

@@ -47,6 +47,7 @@ export type TextMessageBody = {
  * 图片消息体
  */
 export type ImageMessageBody = {
+  fileId?: string
   url: string
   thumbnailUrl: string
   width: number
@@ -58,6 +59,7 @@ export type ImageMessageBody = {
  * 语音消息体
  */
 export type VoiceMessageBody = {
+  fileId?: string
   url: string
   duration: number
   size: number
@@ -67,6 +69,7 @@ export type VoiceMessageBody = {
  * 视频消息体
  */
 export type VideoMessageBody = {
+  fileId?: string
   url: string
   coverUrl: string
   duration: number
@@ -79,6 +82,7 @@ export type VideoMessageBody = {
  * 文件消息体
  */
 export type FileMessageBody = {
+  fileId?: string
   url: string
   fileName: string
   size: number
@@ -129,6 +133,118 @@ export class MessageBuilder {
    */
   public static generateMessageId(): string {
     return Date.now().toString() + Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+  }
+
+  /**
+   * 构建图片消息（V2：双写 fileId + url，便于灰度迁移）
+   */
+  public static buildImageMessageV2(
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
+    fileId: string,
+    url: string,
+    thumbnailUrl: string,
+    width: number,
+    height: number,
+    size: number
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.IMAGE,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+
+    const body: ImageMessageBody = {
+      fileId: fileId,
+      url: url,
+      thumbnailUrl: thumbnailUrl,
+      width: width,
+      height: height,
+      size: size
+    }
+
+    return {
+      header: header,
+      body: body
+    }
+  }
+
+  /**
+   * 构建视频消息（V2：双写 fileId + url，便于灰度迁移）
+   */
+  public static buildVideoMessageV2(
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
+    fileId: string,
+    url: string,
+    coverUrl: string,
+    duration: number,
+    width: number,
+    height: number,
+    size: number
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.VIDEO,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+    
+    const body: VideoMessageBody = {
+      fileId: fileId,
+      url: url,
+      coverUrl: coverUrl,
+      duration: duration,
+      width: width,
+      height: height,
+      size: size
+    }
+    
+    return {
+      header: header,
+      body: body
+    }
+  }
+
+  /**
+   * 构建语音消息（V2：双写 fileId + url，便于灰度迁移）
+   */
+  public static buildVoiceMessageV2(
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
+    fileId: string,
+    url: string,
+    duration: number,
+    size: number
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.VOICE,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+
+    const body: VoiceMessageBody = {
+      fileId: fileId,
+      url: url,
+      duration: duration,
+      size: size
+    }
+
+    return {
+      header: header,
+      body: body
+    }
   }
   
   /**
@@ -310,8 +426,69 @@ export class MessageBuilder {
       groupId,
       tenantId
     )
+
+    // 三端一致：header.extra 也写入文件元数据（JSON）
+    try {
+      header.extra = JSON.stringify({
+        url: url,
+        fileName: fileName,
+        size: size,
+        fileType: fileType
+      })
+    } catch (e) {
+      // ignore
+    }
     
     const body: FileMessageBody = {
+      url: url,
+      fileName: fileName,
+      size: size,
+      fileType: fileType
+    }
+    
+    return {
+      header: header,
+      body: body
+    }
+  }
+
+  /**
+   * 构建文件消息（V2：双写 fileId + url，便于灰度迁移）
+   */
+  public static buildFileMessageV2(
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
+    fileId: string,
+    url: string,
+    fileName: string,
+    size: number,
+    fileType: string
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.FILE,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+
+    // 三端一致：header.extra 也写入文件元数据（JSON）
+    try {
+      header.extra = JSON.stringify({
+        fileId: fileId,
+        url: url,
+        fileName: fileName,
+        size: size,
+        fileType: fileType
+      })
+    } catch (e) {
+      // ignore
+    }
+    
+    const body: FileMessageBody = {
+      fileId: fileId,
       url: url,
       fileName: fileName,
       size: size,

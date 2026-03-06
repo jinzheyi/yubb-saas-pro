@@ -265,6 +265,91 @@ export class MessageService {
     
     return this.sendMessage(message)
   }
+
+  /**
+   * 发送视频消息（V2：双写 fileId + url）
+   */
+  public sendVideoMessageV2(
+    receiverId: string,
+    groupId: string,
+    fileId: string,
+    url: string,
+    coverUrl: string,
+    duration: number,
+    width: number,
+    height: number,
+    size: number
+  ): MessageItem {
+    const message = MessageBuilder.buildVideoMessageV2(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      fileId,
+      url,
+      coverUrl,
+      duration,
+      width,
+      height,
+      size
+    )
+
+    return this.sendMessage(message)
+  }
+
+  /**
+   * 发送语音消息（V2：双写 fileId + url）
+   */
+  public sendVoiceMessageV2(
+    receiverId: string,
+    groupId: string,
+    fileId: string,
+    url: string,
+    duration: number,
+    size: number
+  ): MessageItem {
+    const message = MessageBuilder.buildVoiceMessageV2(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      fileId,
+      url,
+      duration,
+      size
+    )
+
+    return this.sendMessage(message)
+  }
+
+  /**
+   * 发送图片消息（V2：双写 fileId + url）
+   */
+  public sendImageMessageV2(
+    receiverId: string,
+    groupId: string,
+    fileId: string,
+    url: string,
+    thumbnailUrl: string,
+    width: number,
+    height: number,
+    size: number
+  ): MessageItem {
+    const message = MessageBuilder.buildImageMessageV2(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      fileId,
+      url,
+      thumbnailUrl,
+      width,
+      height,
+      size
+    )
+
+    return this.sendMessage(message)
+  }
   
   /**
    * 发送图片消息
@@ -394,6 +479,33 @@ export class MessageService {
       fileType
     )
     
+    return this.sendMessage(message)
+  }
+
+  /**
+   * 发送文件消息（V2：双写 fileId + url）
+   */
+  public sendFileMessageV2(
+    receiverId: string,
+    groupId: string,
+    fileId: string,
+    url: string,
+    fileName: string,
+    size: number,
+    fileType: string
+  ): MessageItem {
+    const message = MessageBuilder.buildFileMessageV2(
+      this.currentUserId,
+      receiverId,
+      groupId,
+      this.currentTenantId,
+      fileId,
+      url,
+      fileName,
+      size,
+      fileType
+    )
+
     return this.sendMessage(message)
   }
   

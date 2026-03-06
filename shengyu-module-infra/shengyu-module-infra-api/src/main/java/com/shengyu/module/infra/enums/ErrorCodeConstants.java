@@ -32,6 +32,9 @@ public interface ErrorCodeConstants {
     ErrorCode FILE_NOT_EXISTS = new ErrorCode(1_001_003_001, "文件不存在");
     ErrorCode FILE_IS_EMPTY = new ErrorCode(1_001_003_002, "文件为空");
 
+    ErrorCode FILE_UPLOAD_FAIL = new ErrorCode(1_001_003_003, "文件上传失败");
+    ErrorCode FILE_UPLOAD_RECORD_NOT_FOUND = new ErrorCode(1_001_003_004, "文件上传记录不存在");
+
     // ========== 代码生成器 1-001-004-000 ==========
     ErrorCode CODEGEN_TABLE_EXISTS = new ErrorCode(1_003_001_000, "表定义已经存在");
     ErrorCode CODEGEN_IMPORT_TABLE_NULL = new ErrorCode(1_003_001_001, "导入的表不存在");
