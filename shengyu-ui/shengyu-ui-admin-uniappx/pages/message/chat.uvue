@@ -99,9 +99,7 @@
 									<text class="file-name">{{ msg.fileName }}</text>
 									<text class="file-size">{{ msg.fileSize }}</text>
 								</view>
-								<view class="file-icon-wrap">
-									<text class="iconfont file-icon" :style="{ color: getFileIconColor(msg) }">{{ getFileIconUnicode(msg) }}</text>
-								</view>
+								<text class="iconfont file-icon" :style="{ color: getFileIconColor(msg) }">{{ getFileIconUnicode(msg) }}</text>
 							</view>
 							
 							<!-- 位置消息 -->
@@ -428,9 +426,9 @@
     const currentMenuItems = ref<any[]>([])
     const multiSelectMode = ref(false)
     const selectedIds = ref<string[]>([])
-    const touchStartX = ref(0)
-    const touchStartY = ref(0)
-    const menuOpacity = ref(0)
+   	const isDragSelecting = ref(false)
+	const dragStartIndex = ref(-1)
+	const menuOpacity = ref(0)
     // 引用回复状态
     const quoteReplyMsg = ref<MessageItem | null>(null)
     // 转发状态
@@ -671,15 +669,15 @@
 				return '\ue6a5'
 			}
 			if (lowerMime === 'application/pdf') {
-				return '\ue6aa'
+				return '\ue60c'
 			}
 		}
 
 		if (mime.startsWith('image/')) {
-			return '\ue6a7'
+			return '\ue606'
 		}
 		if (mime.startsWith('video/')) {
-			return '\ue6a6'
+			return '\ue605'
 		}
 		if (mime.startsWith('audio/')) {
 			return '\ue6ac'
@@ -692,7 +690,7 @@
 			return '\ue69b'
 		}
 		if (ext === 'pdf') {
-			return '\ue6aa'
+			return '\ue60c'
 		}
 		if (isWordExt(ext)) {
 			return '\ue6ab'
@@ -704,22 +702,22 @@
 			return '\ue6a5'
 		}
 		if (isVideoExt(ext)) {
-			return '\ue6a6'
+			return '\ue605'
 		}
 		if (isImageExt(ext)) {
-			return '\ue6a7'
+			return '\ue606'
 		}
 		if (isAudioExt(ext)) {
 			return '\ue6ac'
 		}
 		if (isZipExt(ext)) {
-			return '\ue6a9'
+			return '\ue6d6'
 		}
 		if (isTextExt(ext)) {
-			return '\ue603'
+			return '\ue854'
 		}
 
-		return '\ue6a8'
+		return '\ue603'
 	}
 
 	function getFileIconColor(msg : MessageItem) : string {
@@ -750,7 +748,7 @@
 			return '#FF9500'
 		}
 		if (isZipExt(ext)) {
-			return '#5AC8FA'
+			return '#586c76'
 		}
 		if (ext === 'html' || ext === 'htm') {
 			return '#FF6A00'
@@ -3139,17 +3137,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		margin-top: 4px;
 	}
 
-	.file-icon-wrap {
+	.file-icon {
 		width: 44px;
 		height: 44px;
-		background-color: transparent;
+		line-height: 44px;
+		text-align: center;
+		background-color: #F5F7FA;
 		border-radius: 0;
-		justify-content: center;
-		align-items: center;
-	}
-
-	.file-icon {
-		font-size: 24px;
+		font-size: 44px;
 		color: inherit;
 	}
 

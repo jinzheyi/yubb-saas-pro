@@ -43,9 +43,7 @@
 					</view>
 
 					<!-- 文件类型 -->
-					<view v-else class="file-icon-wrap">
-						<text class="iconfont file-icon" :style="{ color: getFileColor(file.name) }">{{ getFileIcon(file.name) }}</text>
-					</view>
+					<text v-else class="iconfont file-icon" :style="{ color: getFileColor(file.name) }">{{ getFileIcon(file.name) }}</text>
 
 					<view class="file-info">
 						<text class="file-name">{{ file.name }}</text>
@@ -281,19 +279,31 @@
 
 	function getFileIcon(fileName : string) : string {
 		const ext = fileName.split('.').pop()?.toLowerCase() || ''
-		const iconMap : any = {
-			'doc': '\uea96',
-			'docx': '\uea96',
-			'xls': '\uea96',
-			'xlsx': '\uea96',
-			'ppt': '\uea96',
-			'pptx': '\uea96',
-			'pdf': '\uea96',
-			'txt': '\uea96',
-			'zip': '\uea96',
-			'rar': '\uea96'
+		if (ext === 'pdf') {
+			return '\ue60c'
 		}
-		return iconMap[ext] || '\uea96'
+		if (ext === 'txt' || ext === 'log' || ext === 'md' || ext === 'json' || ext === 'xml' || ext === 'yml' || ext === 'yaml') {
+			return '\ue854'
+		}
+		if (ext === 'zip' || ext === 'rar' || ext === '7z' || ext === 'tar' || ext === 'gz' || ext === 'bz2' || ext === 'xz') {
+			return '\ue6d6'
+		}
+		if (ext === 'doc' || ext === 'docx' || ext === 'dot' || ext === 'dotx') {
+			return '\ue6ab'
+		}
+		if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') {
+			return '\ue6a4'
+		}
+		if (ext === 'ppt' || ext === 'pptx' || ext === 'pps' || ext === 'ppsx') {
+			return '\ue6a5'
+		}
+		if (ext === 'html' || ext === 'htm') {
+			return '\ue609'
+		}
+		if (ext === 'sql') {
+			return '\ue69b'
+		}
+		return '\ue603'
 	}
 
 	function getFileColor(fileName : string) : string {
@@ -306,9 +316,9 @@
 			'ppt': '#f59e0b',
 			'pptx': '#f59e0b',
 			'pdf': '#F54A45',
-			'txt': '#8F959E',
-			'zip': '#8b5cf6',
-			'rar': '#8b5cf6'
+			'txt': '#4A90E2',
+			'zip': '#586c76',
+			'rar': '#586c76'
 		}
 		return colorMap[ext] || '#646A73'
 	}
@@ -579,19 +589,16 @@
 	}
 
 	/* 文件图标 */
-	.file-icon-wrap {
+	.file-icon {
 		width: 50px;
 		height: 50px;
+		line-height: 50px;
+		text-align: center;
 		background-color: #F5F7FA;
-		border-radius: 6px;
-		justify-content: center;
-		align-items: center;
+		border-radius: 0;
 		margin-right: 12px;
 		flex-shrink: 0;
-	}
-
-	.file-icon {
-		font-size: 28px;
+		font-size: 50px;
 	}
 
 	.file-info {

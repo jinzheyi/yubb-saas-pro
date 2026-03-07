@@ -6,6 +6,48 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "30647692",
+      "name": "icon-kfckfc",
+      "font_class": "zhuyaolunwenzhuzuo",
+      "unicode": "e854",
+      "unicode_decimal": 59476
+    },
+    {
+      "icon_id": "23052276",
+      "name": "zip",
+      "font_class": "zip",
+      "unicode": "e6d6",
+      "unicode_decimal": 59094
+    },
+    {
+      "icon_id": "22509167",
+      "name": "wentigenzong",
+      "font_class": "wentigenzong",
+      "unicode": "e603",
+      "unicode_decimal": 58883
+    },
+    {
+      "icon_id": "22761829",
+      "name": "文件类型-视频",
+      "font_class": "shipin1",
+      "unicode": "e605",
+      "unicode_decimal": 58885
+    },
+    {
+      "icon_id": "22761831",
+      "name": "文件类型-图片",
+      "font_class": "tupian2",
+      "unicode": "e606",
+      "unicode_decimal": 58886
+    },
+    {
+      "icon_id": "22761836",
+      "name": "文件类型-Pdf",
+      "font_class": "Pdf",
+      "unicode": "e60c",
+      "unicode_decimal": 58892
+    },
+    {
       "icon_id": "1453447",
       "name": "html",
       "font_class": "html",
@@ -20,13 +62,6 @@
       "unicode_decimal": 59035
     },
     {
-      "icon_id": "12205301",
-      "name": "文本文件",
-      "font_class": "file_type_text",
-      "unicode": "e603",
-      "unicode_decimal": 58883
-    },
-    {
       "icon_id": "21721548",
       "name": "文件类型-标准图-工作表",
       "font_class": "wenjianleixing-biaozhuntu-gongzuobiao",
@@ -39,41 +74,6 @@
       "font_class": "wenjianleixing-biaozhuntu-huandengpian",
       "unicode": "e6a5",
       "unicode_decimal": 59045
-    },
-    {
-      "icon_id": "21721550",
-      "name": "文件类型-标准图-视频文件",
-      "font_class": "wenjianleixing-biaozhuntu-shipinwenjian",
-      "unicode": "e6a6",
-      "unicode_decimal": 59046
-    },
-    {
-      "icon_id": "21721552",
-      "name": "文件类型-标准图-图片文件",
-      "font_class": "wenjianleixing-biaozhuntu-tupianwenjian",
-      "unicode": "e6a7",
-      "unicode_decimal": 59047
-    },
-    {
-      "icon_id": "21721553",
-      "name": "文件类型-标准图-未知文件",
-      "font_class": "wenjianleixing-biaozhuntu-weizhiwenjian",
-      "unicode": "e6a8",
-      "unicode_decimal": 59048
-    },
-    {
-      "icon_id": "21721554",
-      "name": "文件类型-标准图-压缩文件",
-      "font_class": "wenjianleixing-biaozhuntu-yasuowenjian",
-      "unicode": "e6a9",
-      "unicode_decimal": 59049
-    },
-    {
-      "icon_id": "21721556",
-      "name": "文件类型-标准图-PDF文档",
-      "font_class": "wenjianleixing-biaozhuntu-PDFwendang",
-      "unicode": "e6aa",
-      "unicode_decimal": 59050
     },
     {
       "icon_id": "21721557",
