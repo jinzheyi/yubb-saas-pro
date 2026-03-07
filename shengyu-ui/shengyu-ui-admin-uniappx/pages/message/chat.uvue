@@ -327,6 +327,7 @@
 	import { getUserAvatarColor, getAvatarText as getAvatarTextUtil } from '../../utils/avatar.uts'
 	import { parseMessageContent } from '../../utils/message-utils.uts'
 	import { uploadGroupFile, getFilePresignedGetUrl } from '../../api/file.uts'
+	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
 	import {
 		BASE_URL as CONFIG_BASE_URL,
 		IM_MEDIA_USE_FILE_ID,
@@ -418,6 +419,8 @@
 	const currentEmojiTab = ref('emoji') // 'emoji' | 'sticker'
 	const lastMessageId = ref('')
 	const recordStartY = ref(0)
+	const touchStartX = ref(0)
+	const touchStartY = ref(0)
 	let editorCtx : EditorContext | null = null
     const showMsgMenu = ref(false)
     const menuX = ref(0)
@@ -2214,33 +2217,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				uni.showToast({ title: '文件地址为空', icon: 'none' })
 				return
 			}
-			uni.showLoading({ title: '正在下载' })
-			uni.downloadFile({
-				url: url,
-				success: (res) => {
-					uni.hideLoading()
-					if (res.statusCode === 200) {
-						uni.openDocument({
-							filePath: res.tempFilePath,
-							showMenu: true,
-							fail: (err) => {
-								console.error('[Chat] 打开文件失败:', err)
-								uni.showToast({ title: '打开失败', icon: 'none' })
-							}
-						})
-						return
-					}
-					uni.showToast({ title: '下载失败', icon: 'none' })
-				},
-				fail: (err) => {
-					uni.hideLoading()
-					console.error('[Chat] 下载失败:', err)
-					uni.showToast({ title: '下载失败', icon: 'none' })
-				}
-			})
+			await downloadAndOpenDocumentWithRetry(url, '正在下载')
 		} catch (e) {
-			uni.hideLoading()
-			console.error('[Chat] 打开文件失败:', e)
 			uni.showToast({ title: '打开失败', icon: 'none' })
 		}
 	}

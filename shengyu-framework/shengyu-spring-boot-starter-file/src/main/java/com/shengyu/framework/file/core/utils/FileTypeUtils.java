@@ -1,5 +1,6 @@
 package com.shengyu.framework.file.core.utils;
 
+import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.common.util.http.HttpUtils;
@@ -95,7 +96,36 @@ public class FileTypeUtils {
             response.setHeader("Content-Length", String.valueOf(content.length));
         }
         // 输出附件
-        IoUtil.write(response.getOutputStream(), false, content);
+        try {
+            IoUtil.write(response.getOutputStream(), false, content);
+        } catch (Throwable ex) {
+            if (isClientAbort(ex)) {
+                return;
+            }
+            if (ex instanceof IOException) {
+                throw (IOException) ex;
+            }
+            if (ex instanceof RuntimeException) {
+                throw (RuntimeException) ex;
+            }
+            throw new IOException(ex);
+        }
+    }
+
+    private static boolean isClientAbort(Throwable ex) {
+        Throwable root = ExceptionUtil.getRootCause(ex);
+        if (root == null) {
+            root = ex;
+        }
+        String rootClassName = root.getClass().getName();
+        if (StrUtil.containsIgnoreCase(rootClassName, "ClientAbortException")
+                || StrUtil.containsIgnoreCase(rootClassName, "AsyncRequestNotUsableException")) {
+            return true;
+        }
+        String msg = ExceptionUtil.getRootCauseMessage(ex);
+        return StrUtil.containsIgnoreCase(msg, "Broken pipe")
+                || StrUtil.containsIgnoreCase(msg, "Connection reset by peer")
+                || StrUtil.containsIgnoreCase(msg, "Connection reset");
     }
 
     /**

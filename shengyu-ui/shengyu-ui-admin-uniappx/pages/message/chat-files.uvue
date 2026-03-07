@@ -73,6 +73,7 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getGroupFileList, deleteGroupFile, downloadGroupFile } from '../../api/file.uts'
+	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
 
 	const { t } = useI18n()
 
@@ -331,7 +332,7 @@
 		try {
 			await downloadGroupFile(file.id)
 		} catch (e) {
-			console.error('[ChatFiles] 记录下载失败:', e)
+			// ignore
 		}
 		
 		if (file.type === 'image') {
@@ -346,30 +347,7 @@
 				url: `/pages/message/video-player?url=${encodeURIComponent(file.url)}&title=${encodeURIComponent(file.name)}`
 			})
 		} else {
-			// 下载文件
-			uni.downloadFile({
-				url: file.url,
-				success: (res) => {
-					if (res.statusCode === 200) {
-						uni.showToast({
-							title: '下载成功',
-							icon: 'success'
-						})
-						// 可以打开文件预览
-						uni.openDocument({
-							filePath: res.tempFilePath,
-							showMenu: true
-						})
-					}
-				},
-				fail: (err) => {
-					console.error('[ChatFiles] 下载失败:', err)
-					uni.showToast({
-						title: '下载失败',
-						icon: 'none'
-					})
-				}
-			})
+			await downloadAndOpenDocumentWithRetry(file.url, '正在下载')
 		}
 	}
 

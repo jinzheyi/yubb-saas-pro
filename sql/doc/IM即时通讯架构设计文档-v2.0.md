@@ -344,6 +344,91 @@ Header 校验规则（企业级必须明确，避免灰色错误）：
 - URL 仅做短 TTL 内存缓存（不落永久存储），到期前可提前刷新
 - 渲染优先：列表/缩略图优先拿 `thumbFileId` 的 url；点击查看再解析 `fileId`
 
+#### 6.4.4.1 文件在线预览体系（kkFileView，企业级建议）
+
+背景：移动端（uniappx）与 H5 对 `openDocument` 的支持存在显著差异，且依赖用户是否安装第三方 Office 应用（WPS/Office）。企业级体验要求“**绝大多数常见 Office/PDF 文件可直接预览**”，而不是“下载后无法打开/提示异常”。
+
+本节给出一套与现有 `fileId + presigned-get-url` 体系兼容的“在线预览”方案：**kkFileView 私有化部署 + WebView 打开预览链接**。
+
+##### 6.4.4.1.1 目标体验（对齐企微/钉钉的可接受程度）
+
+- 优先目标：Word/Excel/PPT/PDF/图片/文本类文件可预览（无需安装 WPS）
+- 体验要求：点击文件 -> 进入预览页（loading）-> 可查看/可下载/可分享
+- 权限要求：无权限不可预览（403），且可审计；URL 过期自动换取
+- 可靠性要求：预览失败可降级为“仅下载”；弱网/中断可提示重试
+
+##### 6.4.4.1.2 范围与非目标
+
+- In Scope：IM 聊天消息 FILE；群文件列表；聊天记录搜索结果中的文件
+- Out of Scope（阶段性）：在线编辑、协作编辑（OnlyOffice/Collabora 属于更重方案）
+
+##### 6.4.4.1.3 总体架构
+
+- IM 客户端（uniappx/H5）新增统一预览入口：`file-preview` 页面（WebView）
+- kkFileView：独立服务私有化部署（同环境同网络、同租户体系的“基础组件”）
+- 文件服务：复用现有 infra 文件能力（`fileId`、`presigned-get-url`、下载权限校验）
+
+关键原则（安全边界必须明确）：
+
+- 客户端只拿 **短期 URL**（presigned），不得生成长期直链
+- kkFileView 只消费短期 URL，不直接持有 token；URL 过期由客户端重新换取
+- 预览不等价于下载权限：后端必须统一做“下载/预览权限”校验（租户隔离 + 业务权限）
+
+##### 6.4.4.1.4 端到端链路（推荐时序）
+
+1. 用户点击文件（chat / chat-files / search 结果）
+2. 客户端判断类型：
+   - 图片：`previewImage`
+   - 视频：`video-player`
+   - 其它：进入 `file-preview`（WebView）
+3. `file-preview` 启动后：
+   - 若已有 `fileId`：调用 `GET /infra/file/presigned-get-url?fileId=...&expirationSeconds=...` 获得短期 `url`
+   - 若仅有历史 `url`（兼容期）：可直接使用（但建议尽快迁移为 fileId）
+4. `file-preview` 拼接 kkFileView 预览地址并加载 WebView：
+   - `KK_URL/onlinePreview?url=${encodeURIComponent(presignedUrl)}`
+5. 预览页提供按钮：下载/复制链接/用其它应用打开（端能力允许时）
+
+失败与兜底：
+
+- presigned 获取失败（401/403/过期）：提示“无权限或登录失效”，允许重新登录/重试
+- kkFileView 加载失败/转换失败：提示“预览失败”，提供“仅下载”兜底
+
+##### 6.4.4.1.5 接口契约（与现有 infra 对齐）
+
+- 必选：`GET /infra/file/presigned-get-url?fileId=...&expirationSeconds=...` -> `{ url, expiresAt }`
+- 可选增强（企业级建议，后续迭代）：
+  - `POST /system/im/file/preview-url`（服务端聚合接口）
+    - 输入：`fileId` + `scene(chat|groupFile|search)`
+    - 输出：`{ previewUrl, expiresAt }`（直接返回 kkFileView 的 onlinePreview 完整 URL）
+    - 作用：在服务端集中处理：权限、审计、URL 生成策略与域名统一
+
+##### 6.4.4.1.6 权限、安全与审计（企业级门禁）
+
+- 租户隔离：`fileId` 必须校验 tenantId 一致（禁止跨租户）
+- 场景权限：
+  - 聊天文件：需校验“是否会话成员/是否群成员”
+  - 群文件：需校验“是否群成员/是否具备下载权限（可选：群文件权限模型）”
+- 审计日志：建议记录 `userId/tenantId/fileId/scene/ip/userAgent/resultCode`
+- URL TTL：`expirationSeconds` 设上限（建议 60~600s）
+
+##### 6.4.4.1.7 多端策略（uniappx/H5 一致）
+
+- App（uniappx）：默认走在线预览（WebView），并提供“用其它应用打开/下载到本地”按钮作为增强
+- H5：默认走在线预览（新标签/内嵌 iframe/WebView），避免 XHR 下载触发 CORS；下载走浏览器原生行为
+
+##### 6.4.4.1.8 运维与可观测性（必须纳入闭环）
+
+- 部署：kkFileView 作为独立组件（推荐 Docker），与现有后端同网络可访问对象存储/文件代理
+- 监控：
+  - kkFileView：可用性（health）、转换失败率、转换耗时 p95/p99
+  - 文件服务：presigned QPS/失败率（401/403/5xx）、下载 QPS
+- 容量与资源：LibreOffice 转换 CPU/内存占用较高，必须限制并发与队列
+
+##### 6.4.4.1.9 灰度与回滚
+
+- Feature Flag：`im.file.preview.mode = native | kkfileview | mixed`
+- 回滚策略：kkFileView 异常时可一键切回“仅下载/原生打开”兜底，不阻塞主聊天能力
+
 统一约束（所有消息类型通用）：
 
 - `messageId` 由 header 承载（幂等键），body 不重复
