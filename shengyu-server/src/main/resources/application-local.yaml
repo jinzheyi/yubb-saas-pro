@@ -1,6 +1,9 @@
 server:
   port: 48080
 
+kkfileview:
+  base-url: http://127.0.0.1:48090
+
 --- #################### 数据库相关配置 ####################
 spring:
   autoconfigure:
@@ -8,7 +11,6 @@ spring:
     exclude:
       - com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure # 排除 Druid 的自动配置，使用 dynamic-datasource-spring-boot-starter 配置多数据源
       - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration # 排除积木报表带来的 MongoDB 的自动配置
-      - org.springframework.boot.autoconfigure.quartz.QuartzAutoConfiguration # 默认 local 环境，不开启 Quartz 的自动配置
   # 数据源配置项
   datasource:
     druid: # Druid 【监控】相关的全局配置

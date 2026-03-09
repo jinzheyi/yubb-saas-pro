@@ -125,7 +125,6 @@ const whiteList: string[] = [
 const tenantWhiteList: string[] = [
 	'/system/captcha/',              // 验证码相关接口
 	'/login',                        // 登录接口
-	'/refresh-token',                // 刷新 Token 接口
 	'/system/tenant/get-id-by-name'  // 获取租户 ID 接口
 ]
 

@@ -6,12 +6,15 @@ import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.infra.controller.app.file.vo.AppFileUploadReqVO;
 import com.shengyu.module.infra.controller.app.file.vo.AppFileUploadRespVO;
 import com.shengyu.module.infra.controller.app.file.vo.AppFilePresignedGetUrlRespVO;
+import com.shengyu.module.infra.controller.app.file.vo.AppFileOpenStrategyRespVO;
 import com.shengyu.module.infra.controller.platform.file.vo.file.FileCreateReqVO;
 import com.shengyu.module.infra.controller.platform.file.vo.file.FilePresignedUrlRespVO;
 import com.shengyu.module.infra.dal.dataobject.file.FileDO;
 import com.shengyu.module.infra.dal.mysql.file.FileMapper;
 import com.shengyu.module.infra.enums.ErrorCodeConstants;
 import com.shengyu.module.infra.service.file.FileService;
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -27,6 +30,11 @@ import javax.validation.Valid;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Arrays;
+import java.util.List;
 
 import static com.shengyu.framework.common.pojo.CommonResult.success;
 import static com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants.BAD_REQUEST;
@@ -39,11 +47,30 @@ import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.e
 @Slf4j
 public class AppFileController {
 
+    private static final int KK_PROBE_TIMEOUT_MS = 2500;
+
+    private static final List<String> KK_ERROR_KEYWORDS = Arrays.asList(
+            "预览失败",
+            "文件预览失败",
+            "不支持",
+            "not supported",
+            "Unsupported",
+            "转换失败",
+            "Conversion failed",
+            "系统异常",
+            "系统错误",
+            "error",
+            "Exception"
+    );
+
     @Resource
     private FileService fileService;
 
     @Resource
     private FileMapper fileMapper;
+
+    @org.springframework.beans.factory.annotation.Value("${kkfileview.base-url:http://127.0.0.1:48090}")
+    private String kkFileViewBaseUrl;
 
     @PostMapping("/upload")
     @Operation(summary = "上传文件")
@@ -86,6 +113,138 @@ public class AppFileController {
         return success(respVO);
     }
 
+    @GetMapping("/open-strategy")
+    @Operation(summary = "获取文件打开策略（预览或下载）")
+    @Parameters({
+            @Parameter(name = "fileId", description = "文件ID", required = true),
+            @Parameter(name = "expirationSeconds", description = "有效期（秒），建议 60~600")
+    })
+    public CommonResult<AppFileOpenStrategyRespVO> getFileOpenStrategy(
+            @RequestParam("fileId") Long fileId,
+            @RequestParam(value = "expirationSeconds", required = false) Integer expirationSeconds) {
+        if (fileId == null) {
+            throw exception(BAD_REQUEST);
+        }
+        int seconds = expirationSeconds == null ? 600 : expirationSeconds;
+        if (expirationSeconds != null && (seconds < 60 || seconds > 600)) {
+            throw exception(BAD_REQUEST);
+        }
+
+        FileDO fileDO = fileService.getFile(fileId);
+        if (fileDO == null || fileDO.getUrl() == null) {
+            throw exception(ErrorCodeConstants.FILE_NOT_EXISTS);
+        }
+
+        String downloadUrl = fileService.presignGetUrl(fileDO.getUrl(), seconds);
+
+        String ext = "";
+        String name = fileDO.getName();
+        if (name != null) {
+            int idx = name.lastIndexOf('.');
+            if (idx >= 0 && idx < name.length() - 1) {
+                ext = name.substring(idx + 1).toLowerCase();
+            }
+        }
+
+        boolean previewable = isKkPreviewableExt(ext);
+        boolean unstable = isUnstableKkPreviewExt(ext);
+
+        AppFileOpenStrategyRespVO respVO = new AppFileOpenStrategyRespVO();
+        respVO.setDownloadUrl(downloadUrl);
+        respVO.setUnstable(unstable);
+
+        if (!previewable) {
+            respVO.setAction("DOWNLOAD");
+            respVO.setMessage("该文件暂不支持在线预览，将为你下载打开");
+            return success(respVO);
+        }
+
+        String previewUrl = buildKkPreviewUrl(downloadUrl);
+        if (previewUrl == null || previewUrl.isEmpty()) {
+            respVO.setAction("DOWNLOAD");
+            respVO.setMessage("预览链接生成失败，将为你下载打开");
+            return success(respVO);
+        }
+
+        // 探测 kkFileView 是否真实可预览，避免跳转错误页
+        if (!probeKkPreviewable(previewUrl)) {
+            respVO.setAction("DOWNLOAD");
+            respVO.setMessage("该文件在线预览失败，将为你下载打开");
+            return success(respVO);
+        }
+
+        respVO.setAction("PREVIEW");
+        respVO.setPreviewUrl(previewUrl);
+        return success(respVO);
+    }
+
+    private String buildKkPreviewUrl(String sourceUrl) {
+        try {
+            String raw = sourceUrl == null ? "" : sourceUrl;
+            String b64 = Base64.getEncoder().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
+            String encoded = URLEncoder.encode(b64, StandardCharsets.UTF_8.name());
+            String base = kkFileViewBaseUrl;
+            if (base.endsWith("/")) {
+                base = base.substring(0, base.length() - 1);
+            }
+            return base + "/onlinePreview?url=" + encoded;
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private static boolean isKkPreviewableExt(String ext) {
+        if (ext == null || ext.isEmpty()) {
+            return false;
+        }
+        return "pdf".equals(ext)
+                || "doc".equals(ext) || "docx".equals(ext)
+                || "xls".equals(ext) || "xlsx".equals(ext)
+                || "ppt".equals(ext) || "pptx".equals(ext)
+                || "txt".equals(ext);
+    }
+
+    private static boolean isUnstableKkPreviewExt(String ext) {
+        if (ext == null || ext.isEmpty()) {
+            return false;
+        }
+        return "ppt".equals(ext) || "pptx".equals(ext);
+    }
+
+    private boolean probeKkPreviewable(String previewUrl) {
+        if (previewUrl == null || previewUrl.isEmpty()) {
+            return false;
+        }
+        try (HttpResponse resp = HttpRequest.get(previewUrl)
+                .timeout(KK_PROBE_TIMEOUT_MS)
+                .setFollowRedirects(true)
+                .execute()) {
+            int status = resp.getStatus();
+            if (status >= 400) {
+                log.warn("[probeKkPreviewable][previewUrl({}) status({})]", previewUrl, status);
+                return false;
+            }
+            String body = resp.body();
+            if (body == null || body.isEmpty()) {
+                return false;
+            }
+            String lower = body.toLowerCase();
+            for (String kw : KK_ERROR_KEYWORDS) {
+                if (kw == null || kw.isEmpty()) {
+                    continue;
+                }
+                if (lower.contains(kw.toLowerCase())) {
+                    log.warn("[probeKkPreviewable][previewUrl({}) hitKeyword({})]", previewUrl, kw);
+                    return false;
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            log.warn("[probeKkPreviewable][previewUrl({}) probeError] {}", previewUrl, e.getMessage());
+            return false;
+        }
+    }
+
     @GetMapping("/presigned-url")
     @Operation(summary = "获取文件预签名地址（上传）", description = "模式二：前端上传文件：用于前端直接上传七牛、阿里云 OSS 等文件存储器")
     @Parameters({
@@ -119,6 +278,7 @@ public class AppFileController {
         if (fileDO == null || fileDO.getUrl() == null) {
             throw exception(ErrorCodeConstants.FILE_NOT_EXISTS);
         }
+
         String signedUrl = fileService.presignGetUrl(fileDO.getUrl(), seconds);
 
         AppFilePresignedGetUrlRespVO respVO = new AppFilePresignedGetUrlRespVO();

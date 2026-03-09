@@ -1,45 +1,43 @@
 version: "3.4"
 
-name: shengyu-system
+name: shengyu-system-local
 
 services:
   mysql:
-    container_name: shengyu-mysql
+    container_name: shengyu-mysql-local
     image: mysql:8
     restart: unless-stopped
     tty: true
-    # 生产机若已在宿主机运行 MySQL（占用 3306），这里不要再强绑定宿主机端口，避免冲突。
-    # 如需暴露端口，可自行加回 ports 映射。
+    ports:
+      - "${MYSQL_HOST_PORT:-3306}:3306"
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-shengyu-saas}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
     volumes:
       - mysql:/var/lib/mysql/
-      - ./sql/mysql/shengyu-saas.sql:/docker-entrypoint-initdb.d/shengyu-saas.sql:ro
+      - ../../sql/mysql/shengyu-saas.sql:/docker-entrypoint-initdb.d/shengyu-saas.sql:ro
 
   redis:
-    container_name: shengyu-redis
+    container_name: shengyu-redis-local
     image: redis:6-alpine
     restart: unless-stopped
-    # 生产机若已在宿主机运行 Redis（占用 6379），这里不要再强绑定宿主机端口，避免冲突。
-    # 如需暴露端口，可自行加回 ports 映射。
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis:/data
 
   kkfileview:
-    container_name: shengyu-kkfileview
+    container_name: shengyu-kkfileview-local
     build:
-      context: .
+      context: ../../
       dockerfile: deploy/docker/kkfileview/Dockerfile
       args:
         KK_VERSION: 4.4.0
     image: shengyu-kkfileview:4.4.0
     restart: unless-stopped
     ports:
-      # TODO(需要你确认/可调整)：宿主机端口（对外访问）
       - "${KKFILEVIEW_HOST_PORT:-48090}:8012"
     environment:
-      # TODO(需要你确认/可调整)：Java 内存参数（转换 Office 时 CPU/内存占用较高）
       JAVA_OPTS:
         ${KKFILEVIEW_JAVA_OPTS:-
           -Xms512m
@@ -48,18 +46,14 @@ services:
         }
 
   server:
-    container_name: shengyu-server
+    container_name: shengyu-server-local
     build:
-      context: ./shengyu-server/
-    image: shengyu-server
+      context: ../../shengyu-server/
+    image: shengyu-server-local
     restart: unless-stopped
     ports:
-      - "48080:48080"
-    extra_hosts:
-      # 让容器内可用 host.docker.internal 访问宿主机服务（MySQL/Redis 等）
-      - "host.docker.internal:host-gateway"
+      - "${SERVER_HOST_PORT:-48080}:48080"
     environment:
-      # https://github.com/polovyivan/docker-pass-configs-to-container
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
       JAVA_OPTS:
         ${JAVA_OPTS:-
@@ -68,30 +62,32 @@ services:
           -Djava.security.egd=file:/dev/./urandom
         }
       ARGS:
-        --spring.datasource.dynamic.datasource.master.url=${MASTER_DATASOURCE_URL:-jdbc:mysql://shengyu-mysql:3306/shengyu-saas?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true}
+        --spring.datasource.dynamic.datasource.master.url=${MASTER_DATASOURCE_URL:-jdbc:mysql://mysql:3306/shengyu-saas?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true}
         --spring.datasource.dynamic.datasource.master.username=${MASTER_DATASOURCE_USERNAME:-root}
         --spring.datasource.dynamic.datasource.master.password=${MASTER_DATASOURCE_PASSWORD:-123456}
-        --spring.datasource.dynamic.datasource.slave.url=${SLAVE_DATASOURCE_URL:-jdbc:mysql://shengyu-mysql:3306/shengyu-saas?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true}
+        --spring.datasource.dynamic.datasource.slave.url=${SLAVE_DATASOURCE_URL:-jdbc:mysql://mysql:3306/shengyu-saas?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true}
         --spring.datasource.dynamic.datasource.slave.username=${SLAVE_DATASOURCE_USERNAME:-root}
         --spring.datasource.dynamic.datasource.slave.password=${SLAVE_DATASOURCE_PASSWORD:-123456}
-        --spring.redis.host=${REDIS_HOST:-shengyu-redis}
+        --spring.redis.host=${REDIS_HOST:-redis}
         --spring.redis.port=${REDIS_PORT:-6379}
         --spring.redis.database=${REDIS_DATABASE:-0}
         --spring.redis.password=${REDIS_PASSWORD:-}
     depends_on:
+      - mysql
+      - redis
       - kkfileview
 
   admin-vue3:
-    container_name: shengyu-admin-vue3
+    container_name: shengyu-admin-vue3-local
     build:
-      context: ./shengyu-ui/shengyu-ui-admin-vue3
+      context: ../../shengyu-ui/shengyu-ui-admin-vue3
       args:
-        VITE_BASE_URL: ${ADMIN_VITE_BASE_URL:-http://127.0.0.1:48080}
+        VITE_BASE_URL: ${ADMIN_VITE_BASE_URL:-http://localhost:48080}
         VITE_API_URL: ${ADMIN_VITE_API_URL:-/admin-api}
         VITE_PLATFORM_API_URL: ${ADMIN_VITE_PLATFORM_API_URL:-/platform-api}
         VITE_BASE_PATH: ${ADMIN_VITE_BASE_PATH:-/}
         VITE_OUT_DIR: ${ADMIN_VITE_OUT_DIR:-dist-admin}
-    image: shengyu-admin-vue3
+    image: shengyu-admin-vue3-local
     restart: unless-stopped
     ports:
       - "${ADMIN_HOST_PORT:-8080}:80"
@@ -99,15 +95,15 @@ services:
       - server
 
   platform-vue3:
-    container_name: shengyu-platform-vue3
+    container_name: shengyu-platform-vue3-local
     build:
-      context: ./shengyu-ui/shengyu-ui-platform-vue3
+      context: ../../shengyu-ui/shengyu-ui-platform-vue3
       args:
-        VITE_BASE_URL: ${PLATFORM_VITE_BASE_URL:-http://127.0.0.1:48080}
+        VITE_BASE_URL: ${PLATFORM_VITE_BASE_URL:-http://localhost:48080}
         VITE_API_URL: ${PLATFORM_VITE_API_URL:-/platform-api}
         VITE_BASE_PATH: ${PLATFORM_VITE_BASE_PATH:-/}
         VITE_OUT_DIR: ${PLATFORM_VITE_OUT_DIR:-dist-platform}
-    image: shengyu-platform-vue3
+    image: shengyu-platform-vue3-local
     restart: unless-stopped
     ports:
       - "${PLATFORM_HOST_PORT:-8081}:80"

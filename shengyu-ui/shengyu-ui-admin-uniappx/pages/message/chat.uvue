@@ -326,7 +326,7 @@
 	} from '../../utils/upload.uts'
 	import { getUserAvatarColor, getAvatarText as getAvatarTextUtil } from '../../utils/avatar.uts'
 	import { parseMessageContent } from '../../utils/message-utils.uts'
-	import { uploadGroupFile, getFilePresignedGetUrl } from '../../api/file.uts'
+	import { uploadGroupFile, getFilePresignedGetUrl, getFileOpenStrategy } from '../../api/file.uts'
 	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
 	import {
 		BASE_URL as CONFIG_BASE_URL,
@@ -360,6 +360,145 @@
 	const PRESIGNED_REFRESH_GUARD_MS = 30 * 1000
 	const presignedUrlCache = new Map<string, { url: string; expiresAt: number }>()
 	let voiceAudioContext: any = null
+
+	function getKkFileViewBaseUrl(): string {
+		try {
+			const base = (CONFIG_BASE_URL || '').toString()
+			if (!base) return 'http://localhost:48090'
+			if (base.indexOf('://') < 0) return 'http://localhost:48090'
+			const u = new URL(base)
+			u.port = '48090'
+			return u.origin
+		} catch (e) {
+			return 'http://localhost:48090'
+		}
+	}
+
+	function getFileExtByNameOrUrl(fileName: string, url: string): string {
+		try {
+			const n = (fileName || '').toLowerCase()
+			const pick = (s: string): string => {
+				const idx = s.lastIndexOf('.')
+				if (idx < 0) return ''
+				return s.substring(idx + 1)
+			}
+			let ext = pick(n)
+			if (ext) return ext
+			if (url) {
+				const u = new URL(url)
+				ext = pick((u.pathname || '').toLowerCase())
+				return ext
+			}
+			return ''
+		} catch (e) {
+			return ''
+		}
+	}
+
+	function shouldUseKkFileView(ext: string): boolean {
+		const e = (ext || '').toLowerCase()
+		if (!e) return false
+		return (
+			e === 'pdf' ||
+			e === 'doc' || e === 'docx' ||
+			e === 'xls' || e === 'xlsx' ||
+			e === 'ppt' || e === 'pptx' ||
+			e === 'txt'
+		)
+	}
+
+	function isUnstableKkPreviewExt(ext: string): boolean {
+		const e = (ext || '').toLowerCase()
+		return e === 'ppt' || e === 'pptx'
+	}
+
+	function normalizeSourceUrlForKkFileView(rawUrl: string): string {
+		try {
+			if (!rawUrl) return rawUrl
+			const u = new URL(rawUrl)
+			if ((u.hostname === '127.0.0.1' || u.hostname === 'localhost') && u.port === '48080') {
+				u.hostname = 'host.docker.internal'
+				return u.toString()
+			}
+			return rawUrl
+		} catch (e) {
+			return rawUrl
+		}
+	}
+
+	function base64EncodeUtf8(raw: string): string {
+		if (!raw) return ''
+		// #ifdef H5
+		try {
+			return btoa(unescape(encodeURIComponent(raw)))
+		} catch (e) {
+			return ''
+		}
+		// #endif
+
+		try {
+			const bytes = raw.toByteArray('utf-8')
+			const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+			let out = ''
+			let i = 0
+			while (i < bytes.length) {
+				const c1 = bytes[i++]
+				const c2 = i < bytes.length ? bytes[i++] : -1
+				const c3 = i < bytes.length ? bytes[i++] : -1
+				const e1 = (c1 >> 2) & 0x3f
+				const e2 = ((c1 & 0x3) << 4) | ((c2 >= 0 ? c2 : 0) >> 4)
+				let e3 = ((c2 >= 0 ? c2 : 0) & 0xf) << 2
+				let e4 = 0
+				if (c2 >= 0) {
+					e3 |= ((c3 >= 0 ? c3 : 0) >> 6) & 0x3
+					e4 = (c3 >= 0 ? c3 : 0) & 0x3f
+				}
+				out += chars.charAt(e1)
+				out += chars.charAt(e2)
+				out += c2 >= 0 ? chars.charAt(e3) : '='
+				out += c3 >= 0 ? chars.charAt(e4) : '='
+			}
+			return out
+		} catch (e) {
+			return ''
+		}
+	}
+
+	function buildKkFileViewPreviewUrl(sourceUrl: string): string {
+		const kkBase = getKkFileViewBaseUrl()
+		const normalized = normalizeSourceUrlForKkFileView(sourceUrl)
+		const b64 = base64EncodeUtf8(normalized)
+		if (!b64) return ''
+		return `${kkBase}/onlinePreview?url=${encodeURIComponent(b64)}`
+	}
+
+	function openUrlInWebViewOrBrowser(url: string): void {
+		if (!url) return
+		// #ifdef H5
+		try {
+			window.open(url, '_blank')
+			return
+		} catch (e) {
+			return
+		}
+		// #endif
+
+		// #ifdef APP-ANDROID || APP-IOS
+		try {
+			;(plus as any).runtime.openURL(url)
+			return
+		} catch (e) {
+			// ignore
+		}
+		// #endif
+
+		try {
+			uni.setClipboardData({ data: url })
+			uni.showToast({ title: '已复制预览链接', icon: 'none' })
+		} catch (e) {
+			// ignore
+		}
+	}
 
 	async function resolvePresignedUrl(fileId: string): Promise<string> {
 		const id = (fileId || '').toString()
@@ -2207,16 +2346,75 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	async function handleFileOpen(msg : any) {
 		try {
 			let url = msg && msg.content ? String(msg.content) : ''
-			if (IM_MEDIA_USE_FILE_ID === 'true' && msg && msg.fileId) {
-				const signed = await resolvePresignedUrl(String(msg.fileId))
+			const fileName = msg && msg.fileName ? String(msg.fileName) : ''
+			const fileId = msg && msg.fileId != null ? String(msg.fileId) : ''
+
+			// 优先走后端策略接口（防绕过/统一规则）
+			if (IM_MEDIA_USE_FILE_ID === 'true' && fileId) {
+				let strategy: any = null
+				try {
+					strategy = await getFileOpenStrategy(fileId, PRESIGNED_DEFAULT_SECONDS)
+				} catch (e) {
+					strategy = null
+				}
+				if (strategy && strategy.downloadUrl) {
+					const downloadUrl = String(strategy.downloadUrl)
+					const previewUrl = strategy.previewUrl ? String(strategy.previewUrl) : ''
+					const tip = strategy.message ? String(strategy.message) : ''
+
+					if (strategy.action === 'PREVIEW' && previewUrl) {
+						// #ifdef H5
+						openUrlInWebViewOrBrowser(previewUrl)
+						return
+						// #endif
+
+						await downloadAndOpenDocumentWithRetry(downloadUrl, '正在下载')
+						return
+					}
+
+					if (tip) {
+						uni.showToast({ title: tip, icon: 'none' })
+					}
+					await downloadAndOpenDocumentWithRetry(downloadUrl, '正在下载')
+					return
+				}
+
+				const signed = await resolvePresignedUrl(fileId)
 				if (signed) {
 					url = signed
 				}
 			}
+
 			if (!url) {
 				uni.showToast({ title: '文件地址为空', icon: 'none' })
 				return
 			}
+			// #ifdef H5
+			const ext = getFileExtByNameOrUrl(fileName, url)
+			if (shouldUseKkFileView(ext)) {
+				if (isUnstableKkPreviewExt(ext)) {
+					const ok = await new Promise<boolean>((resolve) => {
+						uni.showModal({
+							title: '打开方式',
+							content: '该格式在线预览可能失败，是否尝试预览？',
+							confirmText: '尝试预览',
+							cancelText: '直接下载',
+							success: (res) => resolve(!!res.confirm),
+							fail: () => resolve(false)
+						})
+					})
+					if (!ok) {
+						await downloadAndOpenDocumentWithRetry(url, '正在下载')
+						return
+					}
+				}
+				const localPreviewUrl = buildKkFileViewPreviewUrl(url)
+				if (localPreviewUrl) {
+					openUrlInWebViewOrBrowser(localPreviewUrl)
+					return
+				}
+			}
+			// #endif
 			await downloadAndOpenDocumentWithRetry(url, '正在下载')
 		} catch (e) {
 			uni.showToast({ title: '打开失败', icon: 'none' })

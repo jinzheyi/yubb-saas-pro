@@ -1,0 +1,86 @@
+version: "3.4"
+
+name: shengyu-system-local-host
+
+services:
+  kkfileview:
+    container_name: shengyu-kkfileview-local
+    build:
+      context: ../../
+      dockerfile: deploy/docker/kkfileview/Dockerfile
+      args:
+        KK_VERSION: 4.4.0
+    image: shengyu-kkfileview:4.4.0
+    restart: unless-stopped
+    ports:
+      - "${KKFILEVIEW_HOST_PORT:-48090}:8012"
+    environment:
+      JAVA_OPTS:
+        ${KKFILEVIEW_JAVA_OPTS:-
+          -Xms512m
+          -Xmx1024m
+          -Djava.security.egd=file:/dev/./urandom
+        }
+
+  server:
+    container_name: shengyu-server-local
+    build:
+      context: ../../shengyu-server/
+    image: shengyu-server-local
+    restart: unless-stopped
+    ports:
+      - "${SERVER_HOST_PORT:-48080}:48080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      JAVA_OPTS:
+        ${JAVA_OPTS:-
+          -Xms512m
+          -Xmx512m
+          -Djava.security.egd=file:/dev/./urandom
+        }
+      ARGS:
+        --spring.datasource.dynamic.datasource.master.url=${MASTER_DATASOURCE_URL}
+        --spring.datasource.dynamic.datasource.master.username=${MASTER_DATASOURCE_USERNAME}
+        --spring.datasource.dynamic.datasource.master.password=${MASTER_DATASOURCE_PASSWORD}
+        --spring.datasource.dynamic.datasource.slave.url=${SLAVE_DATASOURCE_URL}
+        --spring.datasource.dynamic.datasource.slave.username=${SLAVE_DATASOURCE_USERNAME}
+        --spring.datasource.dynamic.datasource.slave.password=${SLAVE_DATASOURCE_PASSWORD}
+        --spring.redis.host=${REDIS_HOST}
+        --spring.redis.port=${REDIS_PORT:-6379}
+        --spring.redis.database=${REDIS_DATABASE:-0}
+        --spring.redis.password=${REDIS_PASSWORD:-}
+    depends_on:
+      - kkfileview
+
+  admin-vue3:
+    container_name: shengyu-admin-vue3-local
+    build:
+      context: ../../shengyu-ui/shengyu-ui-admin-vue3
+      args:
+        VITE_BASE_URL: ${ADMIN_VITE_BASE_URL:-http://localhost:48080}
+        VITE_API_URL: ${ADMIN_VITE_API_URL:-/admin-api}
+        VITE_PLATFORM_API_URL: ${ADMIN_VITE_PLATFORM_API_URL:-/platform-api}
+        VITE_BASE_PATH: ${ADMIN_VITE_BASE_PATH:-/}
+        VITE_OUT_DIR: ${ADMIN_VITE_OUT_DIR:-dist-admin}
+    image: shengyu-admin-vue3-local
+    restart: unless-stopped
+    ports:
+      - "${ADMIN_HOST_PORT:-8080}:80"
+    depends_on:
+      - server
+
+  platform-vue3:
+    container_name: shengyu-platform-vue3-local
+    build:
+      context: ../../shengyu-ui/shengyu-ui-platform-vue3
+      args:
+        VITE_BASE_URL: ${PLATFORM_VITE_BASE_URL:-http://localhost:48080}
+        VITE_API_URL: ${PLATFORM_VITE_API_URL:-/platform-api}
+        VITE_BASE_PATH: ${PLATFORM_VITE_BASE_PATH:-/}
+        VITE_OUT_DIR: ${PLATFORM_VITE_OUT_DIR:-dist-platform}
+    image: shengyu-platform-vue3-local
+    restart: unless-stopped
+    ports:
+      - "${PLATFORM_HOST_PORT:-8081}:80"
+    depends_on:
+      - server

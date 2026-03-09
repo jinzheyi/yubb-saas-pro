@@ -1,6 +1,9 @@
 server:
   port: 48080
 
+kkfileview:
+  base-url: ${KKFILEVIEW_BASE_URL:http://127.0.0.1:48090}
+
 --- #################### 数据库相关配置 ####################
 
 spring:

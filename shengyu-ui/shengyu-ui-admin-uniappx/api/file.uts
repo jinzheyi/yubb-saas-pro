@@ -7,6 +7,14 @@ export type FilePresignedGetUrlRespVO = {
   expiresAt: number
 }
 
+export type FileOpenStrategyRespVO = {
+  action: 'PREVIEW' | 'DOWNLOAD'
+  previewUrl?: string
+  downloadUrl: string
+  unstable?: boolean
+  message?: string
+}
+
 /**
  * 上传群文件
  * 复用通用上传逻辑，然后调用群文件接口
@@ -80,6 +88,16 @@ export function downloadGroupFile(id: string) {
 export function getFilePresignedGetUrl(fileId: string, expirationSeconds: number = 600): Promise<FilePresignedGetUrlRespVO> {
   return request({
     url: `/infra/file/presigned-get-url?fileId=${fileId}&expirationSeconds=${expirationSeconds}`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 获取文件打开策略（预览或下载）
+ */
+export function getFileOpenStrategy(fileId: string, expirationSeconds: number = 600): Promise<FileOpenStrategyRespVO> {
+  return request({
+    url: `/infra/file/open-strategy?fileId=${fileId}&expirationSeconds=${expirationSeconds}`,
     method: 'GET'
   })
 }
