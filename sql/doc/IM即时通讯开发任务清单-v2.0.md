@@ -18,9 +18,8 @@
 
 ### 0.2 通用验收（所有 Milestone 都必须满足）
 
-- HTTP：非白名单接口请求头稳定包含 `Authorization` 与 `tenant-id`（且不重复）
+- HTTP：鉴权接口可正常调用
 - IM：被踢/重登时停止重连，弹窗提示信息可读
-- 日志：关键链路打印 tenantId/userId/deviceType/channelId/messageId/sequence
 
 ### 0.3 实现入口索引（开工必看）
 
@@ -28,14 +27,14 @@
 
 | 能力域 | 当前关键入口（模块/文件） | 备注 |
 | --- | --- | --- |
-| HTTP 统一鉴权 | `shengyu-ui/shengyu-ui-admin-uniappx/utils/request.uts`；`store/user.uts` | 401 refresh 单飞、队列重放、Authorization/tenant-id 规范化 |
+| HTTP 统一鉴权 | `shengyu-ui/shengyu-ui-admin-uniappx/utils/request.uts`；`store/user.uts` | 401 refresh 单飞、队列重放 |
 | IM 统一鉴权/续期 | `shengyu-ui/.../utils/websocket.uts`；`shengyu-framework/.../AuthHandler.java` | AUTH_REQ/AUTH_RENEW/RENEW_SUGGEST/REAUTH_REQUIRED |
 | 撤销闭环（RedisMQ） | `shengyu-framework/.../core/mq/consumer/ImSessionRevokeConsumer.java` | clientId 过滤、精确撤销优先级 |
 | 多端互踢 | `shengyu-framework/.../NettySessionManager.java`；`NettySession.java` | 同 deviceType 互踢、byDevice 友好展示 |
 | JSON 双栈入口 | `WebSocketFrameHandler.java`；`JsonBusinessMessageHandler.java` | WebSocket TextFrame JSON -> processor |
 | Protobuf 链路入口 | `ProtobufMessageHandler.java`；`NettyAutoConfiguration.java` | App 端 Protobuf 编解码待补 |
 | 消息处理器注册 | `NettyAutoConfiguration.java` | 处理器注册存在≠可靠性闭环完成 |
-| 存储 SPI | `MessageStorageService`；`NoOpMessageStorageServiceImpl` | 默认 NoOp，企业级必须由业务模块覆盖 |
+| 存储 SPI | `MessageStorageService`；`NoOpMessageStorageServiceImpl` | 默认 NoOp，需要由业务模块覆盖 |
 | 会话 REST | `AppImConversationController.java`；`ImConversationService` | 已有基础接口，需补 sequence 水位与增量 sync |
 
 ---
@@ -49,7 +48,7 @@
 | 能力 | uniappx 调用入口 | HTTP URL | module-system Controller（入口） | 备注 |
 | --- | --- | --- | --- | --- |
 | 角标获取 | `api/badge.uts#getBadgeData`；`services/badge-service.uts` | `GET /system/im/badge/get` | `AppImBadgeController#getBadgeData` | 用于首页/会话列表角标同步 |
-| 会话列表 | `api/conversation.uts#getConversationList`；`services/conversation-service.uts#loadConversations` | `GET /system/im/conversation/list` | `AppImConversationController#getConversationList` | 当前为全量列表；企业级建议补增量 sync（见 Milestone C3） |
+| 会话列表 | `api/conversation.uts#getConversationList`；`services/conversation-service.uts#loadConversations` | `GET /system/im/conversation/list` | `AppImConversationController#getConversationList` | 当前为全量列表；建议补增量 sync（见 Milestone C3） |
 | 创建/获取会话 | `api/conversation.uts#createConversation` / `getConversationByTarget` | `POST /system/im/conversation/create`；`GET /system/im/conversation/get-by-target` | `AppImConversationController#createOrGetConversation` / `getConversationByTarget` | 单聊/群聊统一会话模型 |
 | 会话设置（置顶/免打扰） | `api/conversation.uts#pinConversation` / `setNoDisturb` | `PUT /system/im/conversation/update` | `AppImConversationController#updateConversation` | 字段：`isPinned`、`noDisturb` |
 | 清空未读 | `api/conversation.uts#clearUnreadCount` | `PUT /system/im/conversation/clear-unread/{chatId}` | `AppImConversationController#clearUnread` | 会触发角标推送到其他端 |
@@ -85,7 +84,7 @@
 | --- | --- | --- | --- | --- |
 | 文本/图片/语音/视频/文件/位置接收 | `services/message-service.uts#handleReceivedMessage` | `TEXT(100)`/`IMAGE(101)`/`VOICE(102)`/`VIDEO(103)`/`FILE(104)`/`LOCATION(105)` | `NettyAutoConfiguration` 注册的对应 Processor | 依赖消息存储/ACK/sequence 等闭环（Milestone C） |
 | 已读回执 | `services/message-service.uts#handleReadReceipt` | `READ_RECEIPT(201)` | READ_RECEIPT Processor | 群已读需聚合（Milestone C5） |
-| 撤回通知 | `services/message-service.uts#handleRecall` | `RECALL(202)` | RECALL Processor | 必须与离线推送/拉取一致（Milestone F1/D4） |
+| 撤回通知 | `services/message-service.uts#handleRecall` | `RECALL(202)` | RECALL Processor | |
 | 角标更新（跨端） | `services/badge-service.uts`（或 WS listener） | `BADGE_UPDATE(204)` | `ImBadgeService#pushBadgeUpdate`（业务侧触发） | 需与会话未读一致（Milestone C3） |
 
 #### 0.4.4 已知缺口（代码级 TODO，需补齐到闭环）
@@ -96,7 +95,7 @@
 建议落地方式：
 
 - 群消息分页：统一按 conversation/chatId 做查询；若仅有 groupId，需先提供 groupId -> chatId 的映射接口或在服务端内部完成转换
-- 部门联系人：补齐按 deptId 查询接口的真实实现（含权限/租户过滤）
+- 部门联系人：补齐按 deptId 查询接口的真实实现
 
 #### 0.4.5 已发现的对接不一致（需统一，避免“接口能编译但运行不通”）
 
@@ -151,7 +150,7 @@
 
 - **验收**：固定 `im.pb.v1`/`im.json.v1`；首帧 MAGIC/VERSION/CODEC/FLAGS；形成兼容矩阵。
 
-- **目标**：冻结“连接层协商”协议基线，确保后续演进可灰度、可回归。
+- **目标**：冻结“连接层协商”协议基线。
 - **范围**：
   - 服务端：SubProtocol 列表、首帧探测格式、ProbeTimeout
   - 客户端：App/H5 的 protocol 声明与降级重连策略
@@ -159,7 +158,6 @@
 - **验收标准**：
   - 固定：`im.pb.v1`、`im.json.v1`
   - 固定首帧字段：MAGIC/VERSION/CODEC/FLAGS
-  - 输出一份“兼容矩阵”到文档（clientCodec x serverAllowed x expectedResult）
 - **涉及文件/目录**：
   - `shengyu-framework/shengyu-spring-boot-starter-websocket/.../WebSocketFrameHandler.java`
   - `shengyu-framework/.../ProtobufMessageHandler.java`
@@ -169,18 +167,17 @@
 
 ### B1（P0）：服务端握手协商并绑定 codec
 
-- **验收**：SubProtocol 优先；无 SubProtocol 时首帧探测；失败返回 CLOSE(协议错误+code)。
+- **验收**：SubProtocol 优先；无 SubProtocol 时首帧探测；失败关闭连接。
 
 - **目标**：服务端在 Upgrade 后完成协商，且把 `codec/negotiationMode` 绑定到连接会话上下文。
 - **范围**：
   - Netty pipeline：协商 handler + CODEC_BOUND 状态
-  - CLOSE：协商失败输出 4004xx（可观测）
+  - CLOSE：协商失败关闭连接
 - **依赖**：B0
 - **验收标准**：
   - SubProtocol 传 `im.pb.v1` -> 绑定 PB
   - 不传 SubProtocol：Text 首帧 -> JSON；Binary magic -> PB/JSON
-  - 不可识别首帧 -> CLOSE(400402)
-  - 协商失败日志包含：clientIp/channelId/subProtocol/firstFrameHex/reason
+  - 不可识别首帧 -> 关闭连接
 - **涉及文件/目录**：
   - `shengyu-framework/.../WebSocketFrameHandler.java`
   - `shengyu-framework/.../core/session/NettySession.java`（或等价上下文字段）
@@ -194,12 +191,10 @@
 - **范围**：
   - decoder：JSON -> ImMessage；PB -> ImMessage
   - encoder：ImMessage -> JSON/PB
-  - 资源保护：MaxFrameSize、JSON 最大嵌套/长度、PB 最大 message size
+  - 资源保护：MaxFrameSize
 - **依赖**：B1
 - **验收标准**：
   - JSON/PB 两栈：AUTH_REQ/HEARTBEAT/CLOSE 全部跑通
-  - 未 AUTH 发送业务 messageType（>=TEXT）：CLOSE(401xxx)
-  - 超过 MaxFrameSize：CLOSE(400xxx)
 - **涉及文件/目录**：
   - `shengyu-framework/.../AuthHandler.java`
   - `shengyu-framework/.../JsonBusinessMessageHandler.java`
@@ -208,7 +203,7 @@
 
 ### B3（P0）：JSON Envelope 与字段语义对齐
 
-- **验收**：服务端不信任客户端 tenantId/userId；CUSTOM 扩展规范固定；JSON decode 失败返回 400xxx。
+- **验收**：JSON decode 失败可处理。
 
 - **目标**：冻结 JSON Envelope 校验规则，与 Protobuf header 语义完全一致。
 - **范围**：
@@ -217,9 +212,7 @@
   - `extra` 扩展域约束
 - **依赖**：B2
 - **验收标准**：
-  - header 缺必填字段：400xxx
-  - 客户端传 tenantId/userId：服务端忽略并覆盖（以鉴权会话为准）
-  - JSON body 解码失败：400404
+  - header 缺必填字段时可返回错误
 - **涉及文件/目录**：
   - `shengyu-framework/.../JsonBusinessMessageHandler.java`
   - `shengyu-framework/.../core/netty/handler/*`（若有 Envelope 校验器）
@@ -227,52 +220,19 @@
 
 ### B4（P0）：App 端 Protobuf 编解码 + 自动降级
 
-- **验收**：App 宣告 pb；收发二进制可解码；服务端不支持 pb 时自动降级 json 并记录埋点。
+- **验收**：App 宣告 pb；收发二进制可解码；服务端不支持 pb 时可降级 json。
 
-- **目标**：App 端在支持 pb 的情况下使用 pb；灰度拒绝/不支持时自动降级 json，体验无感。
+- **目标**：App 端在支持 pb 的情况下使用 pb；不支持时可降级 json。
 - **范围**：
   - uniappx：pb 编解码、subProtocol 声明、错误码识别与降级重连
-  - 埋点：降级次数、原因
 - **依赖**：B0~B3
 - **验收标准**：
   - App 使用 `im.pb.v1` 建链成功后收发二进制消息可解码
-  - 服务端返回 CLOSE(400403/400401)：App 自动切换 `im.json.v1` 重连
-  - 降级埋点：`codec_downgrade_total{from="pb",to="json",reason}`
+  - 服务端不支持 pb 时：App 可切换 `im.json.v1` 重连
 - **涉及文件/目录**：
   - `shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts`
   - `shengyu-ui/.../utils/protobuf.uts`（待新增或待落地文件）
 
-
-### B5（P0）：限流/背压/异常保护
-
-- **验收**：连接级、用户级、租户级限流（429xxx）；写队列过大可降级/断开异常连接。
-
-- **目标**：保护服务端稳定性，避免异常客户端拖垮（对齐企微/钉钉的“可用性优先”）。
-- **范围**：
-  - 连接级 QPS
-  - 用户/租户级 QPS
-  - 写队列与背压策略（超阈值关闭/降级）
-- **依赖**：B2
-- **验收标准**：
-  - 超限返回/推送 CLOSE(429xxx) 并可观测
-  - 写队列超过阈值：主动断开，并记录 reason
-
-
-### B6（P0）：观测与灰度开关（codec 白名单）
-
-- **验收**：按 tenant/user/device 灰度 pb；可观测 json/pb 连接数、失败率、降级次数。
-
-- **目标**：协议能力可灰度、可回滚、可观测。
-- **范围**：
-  - 灰度维度：tenantId/userId/deviceType
-  - 指标：连接数、协商失败率、降级次数、decode 失败率
-- **依赖**：B1~B5
-- **验收标准**：
-  - 可配置“仅允许 JSON”时，pb 连接进入自动降级（而非业务不可用）
-  - 仪表盘可看到 PB/JSON 连接数与失败率
-- **涉及文件/目录**：
-  - `shengyu-framework/.../config/*`（feature flag/白名单配置落点）
-  - `shengyu-framework/.../metrics/*`（若有指标组件）
 
 ---
 
@@ -282,7 +242,7 @@
 
 - **验收**：ACK 超时重发不产生重复消息；服务端幂等返回同一 sequence。
 
-补充拆解（企业级落地必须项）：
+补充拆解：
 
 - **目标**：服务端具备“先持久化后投递”的发送闭环，并返回 SendAck（含 `sequence/serverTime`）；客户端重投不产生重复消息。
 - **范围**：
@@ -293,8 +253,8 @@
 - **验收标准**：
   - 发送端断网/弱网时重投同一 `messageId`，服务端返回同一 `sequence`
   - 服务端重启后再次重投同一 `messageId`，仍返回同一 `sequence`
-  - 服务端必须先写入消息存储成功后才进行 fanout（可通过断点/日志验证顺序）
-  - 日志可按 `tenantId/userId/conversationId/messageId/sequence` 对账一次完整链路
+  - 服务端先写入消息存储成功后再进行 fanout
+
 - **涉及文件/目录**（示例，后续按实现细化）：
   - `shengyu-framework/shengyu-spring-boot-starter-websocket/.../MessageStorageService`（替换 NoOp）
   - `shengyu-framework/.../NoOpMessageStorageServiceImpl`（仅作对比，不直接改）
@@ -339,12 +299,10 @@
   - 端侧仅知道 `groupId` 时：可拉到该群会话的消息分页（pageNo/pageSize 生效）
   - 后端 `list-by-group` 返回的数据与 `list-by-chat` 返回一致（同 chatId 的同一页结果一致）
   - 查询结果按 `sequence` 单调排序，不出现跨页乱序
-  - 失败场景：
-    - groupId 不存在/无权限：返回 403xxx
-    - 群存在但用户未入群：返回 403xxx
+
 
 - **涉及文件/目录**：
-  - `shengyu-module-system/.../controller/app/im/AppImMessageController.java`（补齐 list-by-group 的 TODO 或标记 deprecated）
+  - `shengyu-module-system/.../controller/app/im/AppImMessageController.java`（补齐 list-by-group 的 TODO）
   - `shengyu-module-system/.../service/im/ImConversationService`（提供 groupId->chatId 查询能力，或复用已有 createOrGetConversation）
   - `shengyu-ui/shengyu-ui-admin-uniappx/api/message.uts`（如需增加 groupId 入口，需保证最终走 chatId 查询）
 
@@ -370,7 +328,7 @@
 
 #### C3.1（P0）：冻结会话水位字段与单调性规则
 
-- **目标**：服务端成为“未读/已读”的权威来源，水位只升不降（`max(old,new)`），并提供端到端可对账字段。
+- **目标**：服务端成为“未读/已读”的权威来源，水位只升不降（`max(old,new)`）。
 - **范围**：
   - 会话用户维度（`chatId + userId`）：`lastReadSequence`、`lastReadTime`
   - 会话维度：`lastMessageSequence`、`lastMessageId`、`lastMessageTime`
@@ -416,10 +374,10 @@
 - **目标**：在不破坏现有端侧逻辑的前提下，平滑迁移到水位上报。
 - **策略**：
   - 短期保留 `PUT /system/im/message/mark-read?messageIds=...`（仅用于过渡/兼容）
-  - 端侧优先使用 `read-watermark`；若服务端未上线可降级到旧接口（feature flag）
+  - 端侧优先使用 `read-watermark`；若服务端未上线可降级到旧接口
 - **验收标准**：
   - 旧接口与新接口不会互相打架导致水位回退
-  - 灰度开关可按 tenant/user 切换
+
 
 #### C3.6（P0）：数据模型与 SQL 落点（会话用户水位）
 
@@ -884,15 +842,6 @@
 
 说明：本 Milestone 目标是把“文件点击预览”体验提升到企业可接受程度（对齐企微/钉钉），避免 `openDocument` 依赖第三方 Office 导致“无法打开/系统异常”。方案选择：**kkFileView 私有化部署**，端侧通过 **WebView 打开 onlinePreview**。
 
-### V0（P0）：预览能力总开关与降级策略冻结
-
-- **目标**：预览能力可灰度、可回滚，任何预览异常不阻塞主聊天能力。
-- **范围**：uniappx + H5
-- **依赖**：无（可先行）
-- **验收标准**：
-  - 支持配置：`im.file.preview.mode = native | kkfileview | mixed | download_only`
-  - 任意模式下，点击文件不会出现“不可解释的统一异常”，至少能“下载/保存”
-
 ### V1（P1）：kkFileView 组件化部署（同环境一套）
 
 - **目标**：在开发/测试环境可一键拉起 kkFileView，并具备最小健康检查与日志定位能力。
@@ -923,35 +872,6 @@
   - chat-files 群文件：非图片/视频默认走在线预览
   - 预览页包含：加载态、失败态、下载按钮
   - 失败可降级为“仅下载/保存到本地”
-
-### V4（P1）：权限与审计（企业级门禁）
-
-- **目标**：预览与下载权限一致可控、可审计，杜绝跨租户或越权预览。
-- **范围**：module-system + infra
-- **依赖**：V2
-- **验收标准**：
-  - 校验 tenantId 一致；跨租户访问返回 403xxx
-  - 会话/群成员校验（非成员不可预览）
-  - 审计日志包含：tenantId/userId/fileId/scene/result
-
-### V5（P1）：观测与告警（预览链路闭环）
-
-- **目标**：上线后可定位“预览失败/转换失败/权限失败/资源不足”的根因，不靠用户截图。
-- **范围**：kkFileView + 后端
-- **依赖**：V1~V4
-- **验收标准**：
-  - kkFileView：转换失败率、耗时 p95/p99 有日志可查
-  - 后端：presigned-get-url 的 401/403/5xx 有统计与告警阈值建议
-
-### V6（P1）：端到端验收用例（企业级可回归）
-
-- **目标**：形成可回归的验收清单，覆盖常见文件与异常场景。
-- **范围**：测试用例/联调
-- **依赖**：V0~V5
-- **验收标准**：
-  - 文件类型覆盖：doc/docx/xls/xlsx/ppt/pptx/pdf/txt/jpg/png/zip
-  - 异常覆盖：无权限 403、URL 过期、kkFileView 不可用、转换失败
-  - 回滚验证：关闭 kkFileView 模式后仍可下载/保存
 
 ---
 

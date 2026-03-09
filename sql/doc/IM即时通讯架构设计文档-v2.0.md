@@ -21,11 +21,6 @@
 - 离线与补偿：离线消息拉取、断线补偿、会话未读一致
 - 离线推送：优先 DCloud 厂商推送组件；备份方案极光推送
 
-### 1.2 非目标（Out of Scope）
-
-- 社交功能：好友申请、拉黑、隐私可见性
-- 复杂社交推荐与广场
-
 ---
 
 ## 2. 总体架构
@@ -63,7 +58,6 @@
 ### 3.1 Token 与租户
 
 - `Authorization: Bearer <accessToken>`
-- `tenant-id: <tenantId>`（租户开关开启时，白名单接口除外）
 
 ### 3.2 HTTP 刷新与队列重放（关键不变式）
 
@@ -86,7 +80,7 @@
 ### 4.1 目标
 
 - 前台活跃：连接稳定、续租及时、消息实时
-- 后台闲置：减少 presence 与续租，最终要求重登（安全与资源平衡）
+- 后台闲置：减少 presence 与续租
 
 ### 4.2 客户端 gating 策略
 
@@ -130,7 +124,7 @@
 
 ### 6.2 传输与编解码分层（强制统一）
 
-- **Transport**：WebSocket（建议统一 WSS）
+- **Transport**：WebSocket
 - **Encoding**：
   - App：Protobuf（二进制）
   - H5：JSON（文本）
@@ -138,7 +132,7 @@
 
 > 关键原则：**编码与业务完全解耦**。即：Decoder 把输入统一成内存对象，Encoder 把输出统一成网络字节。
 
-### 6.3 连接层协商（企业级推荐：SubProtocol 优先，首帧探测兜底）
+### 6.3 连接层协商（SubProtocol 优先，首帧探测兜底）
 
 #### 6.3.1 协商优先级
 
@@ -176,14 +170,13 @@
 原因：
 
 - 部分终端/代理可能不透传 `Sec-WebSocket-Protocol`
-- 灰度期可能需要自动降级
 
 建议首帧格式（Binary）：
 
 - `MAGIC(4 bytes) = 0x49 0x4D 0x50 0x42`（示例："IMPB"）
 - `VERSION(1 byte) = 1`
 - `CODEC(1 byte) = 1(pb) / 2(json)`
-- `FLAGS(2 bytes)`（压缩/加密/保留位）
+- `FLAGS(2 bytes)`
 
 建议补充字段（可选）：
 
@@ -191,7 +184,7 @@
 
 读超时建议：
 
-- 连接升级成功后 `ProbeTimeoutMs`（例如 3s）内必须收到首帧；否则 CLOSE（`401xxx` 或 `400xxx`，取决于是否已判定为“需要先协商”）
+- 连接升级成功后 `ProbeTimeoutMs`（例如 3s）内必须收到首帧；否则关闭连接
 
 探测规则：
 
@@ -208,21 +201,7 @@
 - `AUTHED`（鉴权成功，允许业务消息）
 - `CLOSED`（关闭）
 
-协商失败必须输出可观测信息（见 11 章指标/日志建议）：
 
-- `reason=NEGOTIATION_FAILED`
-- `clientIp/channelId/tenantId?`（tenantId 可能未知）
-- `selectedProtocols/subProtocol/firstFrameHex`
-
-### 6.3.4 降级与重试（客户端必须实现）
-
-企微/钉钉风格的体验要求：客户端在协议不支持/灰度拒绝时应可自动降级，而不是“无脑失败”。
-
-- App 首选 `im.pb.v1`
-- 若服务端拒绝 pb（例如 codec 白名单未命中，或不支持）：
-  - 服务端 CLOSE：`action=REAUTH_REQUIRED` 不适用；应使用 `action=CLOSE`（或等价）+ `code=4004xx`（协议不支持）
-  - 客户端捕获该 code：自动改用 `im.json.v1` 重连
-- 降级必须打点：`codec_downgrade_total{from="pb",to="json",reason=...}`
 
 ### 6.4 统一消息 Envelope（跨编码一致语义）
 
@@ -235,28 +214,9 @@
 - `timestamp`：客户端时间（服务端可回填 serverTime）
 - `tenantId/userId`：服务端认证后补齐/校验；客户端只可读不可写
 - `sequence`：服务端生成（建议会话维度递增），用于排序与断线补偿
-- `traceId`：链路追踪（可选，但企业级强烈建议）
-- `extra`：扩展 JSON（存放 feature flags / subType / debug 等）
+- `extra`：扩展 JSON（存放 subType / debug 等）
 
-Header 校验规则（企业级必须明确，避免灰色错误）：
-
-- 客户端写入字段：
-  - 必填：`messageId`、`messageType`、`timestamp`
-  - 可选：`traceId`、`extra`
-- 服务端覆盖/回填字段：
-  - `tenantId/userId`：从鉴权会话读取并覆盖（客户端同名字段一律忽略）
-  - `sequence/serverTime`：持久化后分配并回填
-- 服务端拒绝规则：
-  - `messageType` 不在白名单：`400xxx`（协议错误）
-  - `body` 解码失败：`400xxx`（协议错误）
-  - 未鉴权发送业务消息：`401xxx`（未认证）
-
-`extra` 约束：
-
-- `extra` 是扩展域，不得承载“鉴权与权限判断”的关键字段
-- JSON 侧建议 `extra` 为对象（而非 stringified JSON），避免多次序列化与歧义
-
-#### 6.4.4 消息体（body）Schema 冻结（企业级必须，避免端到端漂移）
+#### 6.4.4 消息体（body）Schema 冻结
 
 说明：本节冻结各 `messageType` 的 body 最小字段集（minimum viable schema）。各端必须遵守：
 
@@ -282,21 +242,14 @@ Header 校验规则（企业级必须明确，避免灰色错误）：
     - `fileId` 为权威引用；`url` 仅用于兼容与临时预览
     - 对于图片/视频：如能生成缩略图，返回 `thumbFileId`
 
-错误码与限制建议（企业级必须统一，端侧可自动化处理）：
-
-- `400xxx`：参数错误（缺 directory / file 为空 / directory 非法字符）
-- `403xxx`：无权限（directory 不允许、跨租户访问 fileId、无下载权限）
-- `413xxx`：文件过大（与端侧 `MAX_IMAGE_SIZE/MAX_VIDEO_SIZE/MAX_FILE_SIZE` 对齐）
-- `415xxx`：不支持的 MIME 类型（可按白名单：image/*、video/*、audio/*、application/pdf 等）
-- `429xxx`：限流（建议返回 `retryAfterMs`，端侧退避重试）
-- `500xxx`：存储/缩略图处理失败（端侧可提示并允许重试/改走降级）
+错误码与限制建议：
 
 端侧处理建议：
 
 - 上传成功后立即本地预览：使用 `tempFilePath` 直接预览；`fileId->url` 解析可异步
 - 下载/预览失败（403/过期）：重新换取短期 URL（expirationSeconds）
 
-缩略图（thumbFileId）生成策略建议（企业级建议明确，避免端侧各自压缩导致体验不一致）：
+缩略图（thumbFileId）生成策略建议：
 
 - 适用范围：`IMAGE`、`VIDEO`
 - 生成时机：
@@ -314,12 +267,12 @@ Header 校验规则（企业级必须明确，避免灰色错误）：
 
 - 若短期无法新增上传返回 `fileId`：可新增 `POST /infra/file/resolve`，实现 `url -> fileId` 的映射，用于渐进迁移。
 
-企业级建议：IM 消息体中优先使用 `fileId`（稳定、可控、可审计），而不是直接携带裸 `url`：
+建议：IM 消息体中优先使用 `fileId`，而不是直接携带裸 `url`：
 
-- `fileId` 可用于：权限校验、过期 URL 生成（`presignGetUrl`）、审计与撤回一致性
+- `fileId` 可用于：过期 URL 生成（`presignGetUrl`）、撤回一致性
 - 若现有上传接口仅返回 `url string`，属于“可用但不够企业级”的阶段性形态，建议在 infra 层补齐“上传返回 fileId”（或提供 url->fileId 映射），再让 IM 消息体全部切换为 `fileId`
 
-兼容迁移建议（必须可灰度/可回滚）：
+兼容迁移建议：
 
 - 灰度期允许 body 同时包含：`fileId` + `url`（`url` 仅临时兼容）
 - 渲染优先级：能通过 `fileId` 换取可访问 URL -> 优先使用；否则 fallback 到 `url`
@@ -333,18 +286,18 @@ Header 校验规则（企业级必须明确，避免灰色错误）：
 推荐契约（用于端侧渲染/预览/下载时解析 `fileId`）：
 
 - `GET /infra/file/presigned-get-url?fileId=...&expirationSeconds=...`
-  - 权限：必须鉴权（禁止 `@PermitAll`）；需校验租户与访问权限
+  - 鉴权：需登录
   - 响应：`{ url: string, expiresAt: number }`
   - 说明：
     - `expirationSeconds` 建议有上限（例如 60~600s），避免生成长期可访问 URL
     - 如对象存储不支持 presign，可退化为服务端代理下载（但需注意带宽成本）
 
-端侧缓存策略建议（企业级必须一致）：
+端侧缓存策略建议：
 
 - URL 仅做短 TTL 内存缓存（不落永久存储），到期前可提前刷新
 - 渲染优先：列表/缩略图优先拿 `thumbFileId` 的 url；点击查看再解析 `fileId`
 
-#### 6.4.4.1 文件在线预览体系（kkFileView，企业级建议）
+#### 6.4.4.1 文件在线预览体系（kkFileView）
 
 背景：移动端（uniappx）与 H5 对 `openDocument` 的支持存在显著差异，且依赖用户是否安装第三方 Office 应用（WPS/Office）。企业级体验要求“**绝大多数常见 Office/PDF 文件可直接预览**”，而不是“下载后无法打开/提示异常”。
 
@@ -354,7 +307,7 @@ Header 校验规则（企业级必须明确，避免灰色错误）：
 
 - 优先目标：Word/Excel/PPT/PDF/图片/文本类文件可预览（无需安装 WPS）
 - 体验要求：点击文件 -> 进入预览页（loading）-> 可查看/可下载/可分享
-- 权限要求：无权限不可预览（403），且可审计；URL 过期自动换取
+- 权限要求：无权限不可预览（403）；URL 过期自动换取
 - 可靠性要求：预览失败可降级为“仅下载”；弱网/中断可提示重试
 
 ##### 6.4.4.1.2 范围与非目标
@@ -366,13 +319,12 @@ Header 校验规则（企业级必须明确，避免灰色错误）：
 
 - IM 客户端（uniappx/H5）新增统一预览入口：`file-preview` 页面（WebView）
 - kkFileView：独立服务私有化部署（同环境同网络、同租户体系的“基础组件”）
-- 文件服务：复用现有 infra 文件能力（`fileId`、`presigned-get-url`、下载权限校验）
+- 文件服务：复用现有 infra 文件能力（`fileId`、`presigned-get-url`）
 
-关键原则（安全边界必须明确）：
+关键原则：
 
-- 客户端只拿 **短期 URL**（presigned），不得生成长期直链
-- kkFileView 只消费短期 URL，不直接持有 token；URL 过期由客户端重新换取
-- 预览不等价于下载权限：后端必须统一做“下载/预览权限”校验（租户隔离 + 业务权限）
+- 客户端只拿 **短期 URL**（presigned）
+- kkFileView 只消费短期 URL；URL 过期由客户端重新换取
 
 ##### 6.4.4.1.4 端到端链路（推荐时序）
 
@@ -400,34 +352,12 @@ Header 校验规则（企业级必须明确，避免灰色错误）：
   - `POST /system/im/file/preview-url`（服务端聚合接口）
     - 输入：`fileId` + `scene(chat|groupFile|search)`
     - 输出：`{ previewUrl, expiresAt }`（直接返回 kkFileView 的 onlinePreview 完整 URL）
-    - 作用：在服务端集中处理：权限、审计、URL 生成策略与域名统一
-
-##### 6.4.4.1.6 权限、安全与审计（企业级门禁）
-
-- 租户隔离：`fileId` 必须校验 tenantId 一致（禁止跨租户）
-- 场景权限：
-  - 聊天文件：需校验“是否会话成员/是否群成员”
-  - 群文件：需校验“是否群成员/是否具备下载权限（可选：群文件权限模型）”
-- 审计日志：建议记录 `userId/tenantId/fileId/scene/ip/userAgent/resultCode`
-- URL TTL：`expirationSeconds` 设上限（建议 60~600s）
+    - 作用：在服务端集中处理：URL 生成策略与域名统一
 
 ##### 6.4.4.1.7 多端策略（uniappx/H5 一致）
 
 - App（uniappx）：默认走在线预览（WebView），并提供“用其它应用打开/下载到本地”按钮作为增强
 - H5：默认走在线预览（新标签/内嵌 iframe/WebView），避免 XHR 下载触发 CORS；下载走浏览器原生行为
-
-##### 6.4.4.1.8 运维与可观测性（必须纳入闭环）
-
-- 部署：kkFileView 作为独立组件（推荐 Docker），与现有后端同网络可访问对象存储/文件代理
-- 监控：
-  - kkFileView：可用性（health）、转换失败率、转换耗时 p95/p99
-  - 文件服务：presigned QPS/失败率（401/403/5xx）、下载 QPS
-- 容量与资源：LibreOffice 转换 CPU/内存占用较高，必须限制并发与队列
-
-##### 6.4.4.1.9 灰度与回滚
-
-- Feature Flag：`im.file.preview.mode = native | kkfileview | mixed`
-- 回滚策略：kkFileView 异常时可一键切回“仅下载/原生打开”兜底，不阻塞主聊天能力
 
 统一约束（所有消息类型通用）：
 
@@ -530,110 +460,12 @@ JSON 兼容建议：
 3. **Frame 聚合与大小限制**（防止超大帧 OOM）
 4. **Decoder**（JSON / Protobuf） -> 统一领域对象
 5. **AuthHandler**（鉴权前置，未认证仅允许 AUTH_REQ/HEARTBEAT）
-6. **RateLimit / Backpressure**（企业级必备）
 7. **Business Processor**（MessageProcessor）
 8. **Encoder**（JSON / Protobuf）
 
-#### 6.5.2 关键限制项（必须配置）
-
-- **MaxFrameSize**：例如 1MB（文件类消息禁止走 WS，改走 HTTP 上传）
-- **AuthTimeout**：连接建立后 X 秒内必须完成 AUTH，否则 CLOSE
-- **IdleTimeout**：读空闲超时策略（与 presence/lease 配合）
-- **Per-Connection QPS**：防刷与错误客户端保护
-- **Per-User QPS**：按 userId/tenantId 限流（企业级稳定性）
-
-补充：编码层资源保护（企业级必须）：
-
-- JSON：限制最大字符串长度、最大嵌套深度（防止恶意 JSON）
-- Protobuf：限制最大 message size、禁止未知超大 field
-
-### 6.6 安全与合规（对齐企业 IM）
-
-- **WSS 强制**：生产环境必须 WSS
-- **鉴权前置**：未 AUTH 的连接只能发送 AUTH/HEARTBEAT，其他消息直接 CLOSE
-- **Token 过期策略**：
-  - 可续期：发 `RENEW_SUGGEST` 或接受 `AUTH_RENEW_REQ`
-  - 不可续期：发 `REAUTH_REQUIRED`
-- **敏感字段**：客户端不可信，服务端必须覆盖/校验 header 中的 tenantId/userId
-
-### 6.7 统一错误码与 CLOSE 语义（企微/钉钉风格）
-
-企业级要求：错误必须可观测、可定位、可自动化处理。
-
-建议错误码分类：
-
-- `400xxx`：协议/参数错误（如不支持的 messageType、body decode 失败）
-- `401xxx`：鉴权失败（token 过期/无效/撤销）
-- `403xxx`：权限不足（无权发言/不在群等）
-- `429xxx`：限流（连接级/用户级/租户级）
-- `500xxx`：服务端异常（可重试/不可重试需区分）
-
-`CLOSE`（或系统通知）必须包含：
-
-- `action`：KICKED / LOGOUT / REVOKED / REAUTH_REQUIRED
-- `code`：错误码
-- `message`：可展示的友好文案
-- `kickedAt/byDevice`：互踢场景补充
-
-补充：协议协商相关错误码建议（用于客户端自动降级/回归验证）：
-
-- `400401`：SubProtocol 不支持（客户端可降级）
-- `400402`：首帧探测失败（客户端不应重试同 codec）
-- `400403`：codec 被灰度拒绝（客户端可降级）
-- `400404`：消息体解码失败（协议不匹配/客户端 bug）
-
-补充：CLOSE action 约束（避免语义漂移）：
-
-- 协议/解码类问题：使用 `code=400xxx`，不使用 `REAUTH_REQUIRED`
-- 鉴权失败/过期不可续：使用 `REAUTH_REQUIRED`
-- 互踢/撤销：使用 `KICKED/REVOKED/LOGOUT`
-
-### 6.8 版本兼容与演进策略（企业级必须）
-
-#### 6.8.1 Protobuf 兼容规则
-
-- 只增不删字段，保留 field number
-- 禁止重用已废弃 field number
-
-#### 6.8.2 JSON 兼容规则
-
-- 新字段可选，客户端必须忽略未知字段
-- Body 允许按 `body.subType` 扩展（配合 CUSTOM）
-
-#### 6.8.3 灰度/降级策略
-
-- 服务端按 tenantId/userId/deviceType 配置 codec 白名单
-- App 若 protobuf 握手失败：自动降级 JSON（并上报埋点）
-- 协议升级：先服务端双栈上线 -> 再客户端灰度 -> 最后收敛老版本
-
-#### 6.8.4 开发阶段最优策略：严格 Schema（Strict Mode，Fail-Fast）
-
-说明：开发阶段为提升联调效率与避免“兜底逻辑掩盖数据问题”，允许开启严格模式。
-
-核心原则：
-
-- FILE/VIDEO/IMAGE/VOICE 等媒体消息：**必须携带结构化元数据**
-  - WS（业务消息）：body 必须为对应的 Protobuf message（如 `FileMessage`），并包含最小字段集（见 Backlog 的 Schema 冻结表）
-  - REST（历史/初始化）：`extra` 必须为 JSON（字符串）且包含最小字段集
-- 客户端渲染：**禁止从 url/content 推断 fileName/mimeType**（避免误判）
-- 缺字段处理：**直接报错暴露（console.error / 断言失败）**，不做“静默降级为 unknown/word/excel”等
-- 服务端：消息入库前应保证 `extra` 已补齐；若无法补齐应返回可定位的错误码（Fail-Fast）
-
-Strict Mode 的收益：
-
-- 端到端字段来源唯一（extra/body）
-- 图标/预览/文件名展示不依赖 URL 解析，避免三端差异与误判
-- 缺字段问题可在开发阶段第一时间暴露，而不是上线后在历史数据/重连补偿中隐性出现
-
-建议输出“兼容矩阵”（以配置为权威，便于回归）：
-
-- clientCodec：PB/JSON
-- serverAllowed：PB/JSON
-- expectedResult：ACCEPT / CLOSE(400403) / DOWNGRADE
-
 ---
 
-## 7. 消息可靠性模型（必须补齐）
+## 7. 消息可靠性模型
 
 ### 7.1 核心字段
 
@@ -641,55 +473,19 @@ Strict Mode 的收益：
 - `sequence`：会话维度或全局递增，用于排序与断线补偿
 - `timestamp`：客户端/服务端时间戳（用于展示与冲突处理）
 
-补充约束（对齐企微/钉钉的“可对账”要求）：
-
-- `messageId`：**发送端生成**，用于幂等（服务端必须把它当作幂等键，而不是仅用于展示）
-- `sequence`：**服务端生成**，且对同一 `conversationId` 必须严格单调递增（只增不减）
-- `serverTime`：服务端回填（用于统一展示、审计与跨端一致）
-- `clientId/deviceId/deviceType`：用于多端一致与追踪（服务端从鉴权会话取值，不信任客户端透传）
-
 ### 7.2 ACK / 重投 / 幂等
 
 - 发送方本地先落 UI（pending），发送后等待 ACK
 - 服务端收到消息：
-  - 幂等校验（messageId/sequence）
-  - 先持久化再 fanout
-  - 返回 ACK（含 messageId/sequence/服务端时间）
+  - 持久化并分配 `sequence`
+  - 返回 ACK（含 messageId/sequence）
 - 发送方超时未收到 ACK：
   - 按退避策略重投（需服务端幂等保证）
 
-建议 ACK 分层（企业级闭环必须明确）：
+重投建议：
 
-- **SendAck**（必选）：表示“服务端已持久化 + 已分配 `sequence`”，发送端可把 pending -> sent
-- **DeliveryReceipt**（可选但建议）：表示“已投递到在线端”或“已进入离线队列”，用于可观测与对账
-- **ReadReceipt**（可选）：表示“接收端确认阅读”，用于已读一致
-
-幂等建议（服务端必须执行）：
-
-- 幂等键：`tenantId + conversationId + senderId + messageId`
-- 幂等语义：
-  - 若已存在同一幂等键的消息：直接返回同一条消息的 `sequence/serverTime`（不得生成新 sequence）
-  - 若存在但状态为“已撤回/被删除”：仍返回原 `sequence`，并在 body 中体现最新状态（避免重投“复活”）
-
-重投建议（客户端必须执行）：
-
-- 触发条件：发送后未收到 SendAck（例如 3s/5s/10s 退避）
-- 重投上限：建议 3-5 次；超过后标记 failed 并允许用户手动重试
+- 发送后未收到 ACK：可按退避策略重投
 - 重投必须复用同一 `messageId`
-
-### 7.3 投递闭环（fanout、回执、未读一致）
-
-企业级 IM 要求“消息不丢 + 不重 + 可对账”。在本项目中建议把闭环分成 3 个层次：
-
-- **发送 ACK（SendAck）**：服务端确认已持久化并分配 `sequence`
-- **投递回执（DeliveryReceipt）**：服务端确认已投递到接收端（在线）或已进入离线队列
-- **已读回执（ReadReceipt）**：接收端确认阅读（单聊强一致优先，群聊可做聚合/抽样）
-
-关键不变式：
-
-- **先持久化，再 fanout**（否则断电/重启会造成“发出但丢失”）
-- **同一会话按 sequence 有序**（客户端渲染必须按 `sequence` 排序）
-- **幂等基于 messageId**（重投不产生新 sequence）
 
 ### 7.4 断线补偿与离线/漫游消息
 
@@ -702,12 +498,6 @@ Strict Mode 的收益：
 
 - `syncConversations(cursor)`：同步会话列表、未读与会话级游标
 - `syncMessages(conversationId, afterSequence, limit)`：按序列补齐消息
-
-增量同步的“权威水位”建议（对齐企微/钉钉）：
-
-- **会话水位**：`lastMessageSequence`（会话最新消息）
-- **用户已读水位**：`lastReadSequence`（用户在该会话读到哪里）
-- **客户端拉取水位**：`lastPulledSequence`（本端已拉取到哪里，用于断线补偿与减少全量）
 
 客户端重连后的推荐流程（先会话，再消息）：
 
@@ -731,14 +521,13 @@ Strict Mode 的收益：
 - 客户端渲染/分页/补偿天然按会话维度进行
 - 大租户/大并发下，全局 sequence 更容易成为热点
 
-推荐实现方式（可选其一，需在 Backlog 固化为实现任务）：
+推荐实现方式（可选其一）：
 
 - **方案 S1：DB 自增（每会话一行水位表）**
   - `im_conversation_seq(conversation_id, max_sequence, updated_at)`
   - 更新：`UPDATE ... SET max_sequence = max_sequence + 1 WHERE conversation_id=?`（需事务/行锁）
-- **方案 S2：Redis INCR（会话 key）**
-  - key：`im:seq:{tenantId}:{conversationId}`
-  - 优点：性能好；缺点：需要与 DB 水位对账与容灾策略
+* **方案 S2：Redis INCR（会话 key）**
+  - key：`im:seq:{conversationId}`
 
 不变式：
 
@@ -754,23 +543,9 @@ Strict Mode 的收益：
 - `FANOUT_DONE`：已完成投递尝试（在线投递或入离线队列）
 - `RECALLED`：被撤回（状态更新，不物理删除）
 
-### 7.8 可靠性错误码与可重试判定
-
-企业级要求：客户端必须知道“该不该重试”。建议在 ACK 或业务错误中携带：
-
-- `code`：错误码
-- `retryable`：是否可重试
-- `retryAfterMs`：建议重试等待
-
-示例：
-
-- 业务校验失败（不重试）：`403xxx`（不在群/禁言）
-- 服务端暂时不可用（可重试）：`500xxx` 且 `retryable=true`
-- 限流（可退避）：`429xxx` 且 `retryAfterMs>0`
-
 ---
 
-## 8. 会话模型与数据一致性（对齐企微/钉钉）
+## 8. 会话模型与数据一致性
 
 ### 8.1 会话（Conversation）与未读
 
