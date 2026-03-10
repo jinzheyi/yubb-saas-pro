@@ -66,12 +66,43 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
         return update(null, wrapper);
     }
 
+    default int updateLastMessageAndIncrementUnread(Long id, Long lastMessageId, Integer lastMessageType, String lastMessageContent,
+                                                   LocalDateTime lastMessageTime, Integer unreadIncrement, boolean noDisturb) {
+        LambdaUpdateWrapper<ImChatUserDO> wrapper = new LambdaUpdateWrapper<ImChatUserDO>()
+                .eq(ImChatUserDO::getId, id)
+                .set(ImChatUserDO::getLastMessageId, lastMessageId)
+                .set(ImChatUserDO::getLastMessageSequence, 0L)
+                .set(ImChatUserDO::getLastMessageType, lastMessageType)
+                .set(ImChatUserDO::getLastMessageContent, lastMessageContent)
+                .set(ImChatUserDO::getLastMessageTime, lastMessageTime);
+        if (unreadIncrement != null && unreadIncrement > 0 && !noDisturb) {
+            wrapper.setSql("unread_count = unread_count + " + unreadIncrement);
+        }
+        return update(null, wrapper);
+    }
+
     default int updateLastMessageAndIncrementUnread(Long id, Long lastMessageId, Long lastMessageSequence, String lastMessageContent,
                                                    LocalDateTime lastMessageTime, Integer unreadIncrement, boolean noDisturb) {
         LambdaUpdateWrapper<ImChatUserDO> wrapper = new LambdaUpdateWrapper<ImChatUserDO>()
                 .eq(ImChatUserDO::getId, id)
                 .set(ImChatUserDO::getLastMessageId, lastMessageId)
                 .set(ImChatUserDO::getLastMessageSequence, lastMessageSequence)
+                .set(ImChatUserDO::getLastMessageContent, lastMessageContent)
+                .set(ImChatUserDO::getLastMessageTime, lastMessageTime);
+        if (unreadIncrement != null && unreadIncrement > 0 && !noDisturb) {
+            wrapper.setSql("unread_count = unread_count + " + unreadIncrement);
+        }
+        return update(null, wrapper);
+    }
+
+    default int updateLastMessageAndIncrementUnread(Long id, Long lastMessageId, Long lastMessageSequence, Integer lastMessageType,
+                                                   String lastMessageContent, LocalDateTime lastMessageTime,
+                                                   Integer unreadIncrement, boolean noDisturb) {
+        LambdaUpdateWrapper<ImChatUserDO> wrapper = new LambdaUpdateWrapper<ImChatUserDO>()
+                .eq(ImChatUserDO::getId, id)
+                .set(ImChatUserDO::getLastMessageId, lastMessageId)
+                .set(ImChatUserDO::getLastMessageSequence, lastMessageSequence)
+                .set(ImChatUserDO::getLastMessageType, lastMessageType)
                 .set(ImChatUserDO::getLastMessageContent, lastMessageContent)
                 .set(ImChatUserDO::getLastMessageTime, lastMessageTime);
         if (unreadIncrement != null && unreadIncrement > 0 && !noDisturb) {

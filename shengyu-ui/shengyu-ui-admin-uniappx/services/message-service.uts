@@ -75,6 +75,7 @@ export type ConversationItem = {
   targetAvatar: string     // 对应后端 targetAvatar
   avatarText: string
   avatarBg: string
+  lastMessageType: number     // 对应后端 lastMessageType
   lastMessageContent: string  // 对应后端 lastMessageContent
   lastMessageTime: string     // 对应后端 lastMessageTime（格式化后）
   timestamp: number        // 对应后端 lastMessageTime（原始时间戳）
@@ -806,6 +807,7 @@ export class MessageService {
     // 更新会话
     conversationService.updateConversation(
       chatId,
+      messageItem.type,
       summary,
       messageItem.timestamp,
       !messageItem.isSelf,
@@ -1070,36 +1072,19 @@ export class MessageService {
    * 更新会话
    */
   private updateConversation(chatId: string, message: MessageItem): void {
-    const summary = MessageParser.getSummary({ 
-      header: { messageType: message.type } as any, 
-      body: message.content 
-    })
-    
-    // 调用 ConversationService 更新会话（附带 sequence 用于水位模型计算未读）
+    const summary = MessageParser.getSummary({
+      header: { messageType: message.type } as any,
+      body: message.content
+    } as any)
     const seq = message.sequence != null ? message.sequence.toString() : null
     conversationService.updateConversation(
       chatId,
+      message.type,
       summary,
       message.timestamp,
-      !message.isSelf,  // 只有接收到的消息才增加未读数
+      !message.isSelf,
       seq
     )
-  }
-  
-  /**
-   * 将消息入队（网络不可用时）
-   */
-  private enqueueMessage(message: any): void {
-    const queuedMsg: QueuedMessage = {
-      message: message,
-      retryCount: 0,
-      timestamp: Date.now()
-    }
-    this.messageQueue.push(queuedMsg)
-    console.log('[MessageService] 消息入队，当前队列长度:', this.messageQueue.length)
-    
-    // 保存队列到本地存储
-    this.saveQueueToLocal()
   }
   
   /**

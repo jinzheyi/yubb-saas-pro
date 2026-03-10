@@ -6,10 +6,12 @@ import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversa
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationUpdateReqVO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
+import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
+import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
@@ -40,6 +42,9 @@ public class ImConversationServiceImpl implements ImConversationService {
 
     @Resource
     private ImChatUserMapper chatUserMapper;
+
+    @Resource
+    private ImChatMessageMapper chatMessageMapper;
 
     @Resource
     private ImGroupMapper groupMapper;
@@ -242,7 +247,16 @@ public class ImConversationServiceImpl implements ImConversationService {
             unread = chatUser.getUnreadCount() != null ? chatUser.getUnreadCount() : 0;
         }
         respVO.setUnreadCount(unread);
-        respVO.setLastMessageContent(chatUser.getLastMessageContent());
+
+        Integer lastType = chatUser.getLastMessageType();
+        if (lastType == null && chatUser.getLastMessageId() != null) {
+            ImChatMessageDO lastMsg = chatMessageMapper.selectById(chatUser.getLastMessageId());
+            if (lastMsg != null) {
+                lastType = lastMsg.getMessageType();
+            }
+        }
+        respVO.setLastMessageType(lastType);
+        respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent()));
         respVO.setLastMessageTime(chatUser.getLastMessageTime());
         respVO.setIsPinned(chatUser.getIsPinned());
         respVO.setNoDisturb(chatUser.getNoDisturb());
@@ -265,7 +279,42 @@ public class ImConversationServiceImpl implements ImConversationService {
              }
          }
          return respVO;
-     }
+    }
+
+    private String buildPreviewByType(Integer messageType, String raw) {
+        if (messageType == null) {
+            return raw != null ? raw : "";
+        }
+        switch (messageType) {
+            case 1:
+                if (raw == null) {
+                    return "";
+                }
+                String trimmed = raw.trim();
+                if (trimmed.length() > 100) {
+                    return trimmed.substring(0, 100) + "...";
+                }
+                return trimmed;
+            case 2:
+                return "[图片]";
+            case 3:
+                return "[语音]";
+            case 4:
+                return "[视频]";
+            case 5:
+                return "[文件]";
+            case 6:
+                return "[位置]";
+            case 7:
+                return "[表情]";
+            case 8:
+                return "[贴纸]";
+            case 10:
+                return "[系统消息]";
+            default:
+                return "[消息]";
+        }
+    }
 
      private ImChatDO getOrCreateChat(Integer conversationType, Long userId, Long targetId) {
          if (ImConversationTypeEnum.isGroup(conversationType)) {

@@ -229,13 +229,14 @@ public class ImMessageServiceImpl implements ImMessageService {
     }
 
     private void updateChatUsersAfterSend(ImChatDO chat, Long lastMessageId, String lastMessageContent, LocalDateTime lastMessageTime, Long senderId, AppImMessageSendReqVO sendReqVO) {
+        Integer dbMessageType = normalizeDbMessageType(sendReqVO.getMessageType());
         if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
             List<Long> memberIds = imGroupService.getGroupMemberIds(chat.getGroupId());
             for (Long memberId : memberIds) {
                 ImChatUserDO chatUser = ensureChatUser(memberId, chat.getId());
                 boolean isSender = Objects.equals(memberId, senderId);
                 chatUserMapper.updateLastMessageAndIncrementUnread(
-                        chatUser.getId(), lastMessageId, lastMessageContent, lastMessageTime,
+                        chatUser.getId(), lastMessageId, dbMessageType, lastMessageContent, lastMessageTime,
                         isSender ? 0 : 1,
                         Boolean.TRUE.equals(chatUser.getNoDisturb()));
                 if (!isSender) {
@@ -247,14 +248,14 @@ public class ImMessageServiceImpl implements ImMessageService {
         } else {
             ImChatUserDO sender = ensureChatUser(senderId, chat.getId());
             chatUserMapper.updateLastMessageAndIncrementUnread(
-                    sender.getId(), lastMessageId, lastMessageContent, lastMessageTime,
+                    sender.getId(), lastMessageId, dbMessageType, lastMessageContent, lastMessageTime,
                     0,
                     Boolean.TRUE.equals(sender.getNoDisturb()));
 
             Long receiverId = Objects.equals(chat.getSingleUser1(), senderId) ? chat.getSingleUser2() : chat.getSingleUser1();
             ImChatUserDO receiver = ensureChatUser(receiverId, chat.getId());
             chatUserMapper.updateLastMessageAndIncrementUnread(
-                    receiver.getId(), lastMessageId, lastMessageContent, lastMessageTime,
+                    receiver.getId(), lastMessageId, dbMessageType, lastMessageContent, lastMessageTime,
                     1,
                     Boolean.TRUE.equals(receiver.getNoDisturb()));
             imBadgeService.pushBadgeUpdate(receiverId);

@@ -308,7 +308,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
     public void updateChatUserAsync(MessageHeader header, ImChatMessageDO messageDO, ImMessage rawMessage) {
         try {
             Long chatId = messageDO.getChatId();
-            String lastMessageContent = truncateContent(messageDO.getContent());
+            String lastMessageContent = truncateContent(buildConversationPreview(header, messageDO, rawMessage));
 
             // 解析原始消息体，便于群聊实时转发（避免仅角标更新 204）
             MessageLite bizBody = parseBizBody(rawMessage);
@@ -322,6 +322,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                             chatUser.getId(),
                             messageDO.getId(),
                             messageDO.getSequence(),
+                            messageDO.getMessageType(),
                             lastMessageContent,
                             messageDO.getSendTime(),
                             isSender ? 0 : 1,
@@ -351,6 +352,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         sender.getId(),
                         messageDO.getId(),
                         messageDO.getSequence(),
+                        messageDO.getMessageType(),
                         lastMessageContent,
                         messageDO.getSendTime(),
                         0,
@@ -362,6 +364,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         receiver.getId(),
                         messageDO.getId(),
                         messageDO.getSequence(),
+                        messageDO.getMessageType(),
                         lastMessageContent,
                         messageDO.getSendTime(),
                         1,
@@ -372,6 +375,65 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         } catch (Exception e) {
             log.error("[MessageStorage] 更新会话失败", e);
             // 不抛出异常，避免影响消息保存
+        }
+    }
+
+    private String buildConversationPreview(MessageHeader header, ImChatMessageDO messageDO, ImMessage rawMessage) {
+        if (header == null || header.getMessageType() == null) {
+            return messageDO != null && messageDO.getContent() != null ? messageDO.getContent() : "";
+        }
+        try {
+            MessageType type = header.getMessageType();
+            switch (type) {
+                case TEXT: {
+                    TextMessage textMsg = rawMessage != null ? TextMessage.parseFrom(rawMessage.getBody()) : null;
+                    String content = textMsg != null ? textMsg.getContent() : null;
+                    if (content == null) {
+                        content = messageDO != null ? messageDO.getContent() : "";
+                    }
+                    return content;
+                }
+                case QUOTE_REPLY: {
+                    QuoteReplyMessage quoteMsg = rawMessage != null ? QuoteReplyMessage.parseFrom(rawMessage.getBody()) : null;
+                    String content = quoteMsg != null ? quoteMsg.getReplyContent() : null;
+                    if (content == null) {
+                        content = messageDO != null ? messageDO.getContent() : "";
+                    }
+                    return content;
+                }
+                case IMAGE:
+                    return "[图片]";
+                case VOICE:
+                    return "[语音]";
+                case VIDEO:
+                    return "[视频]";
+                case FILE:
+                    return "[文件]";
+                case LOCATION:
+                    return "[位置]";
+                case SYSTEM_NOTIFY:
+                    return "[系统通知]";
+                case READ_RECEIPT:
+                    return "[已读回执]";
+                case RECALL:
+                    return "[消息撤回]";
+                case TYPING:
+                    return "[正在输入]";
+                case BADGE_UPDATE:
+                    return "[角标更新]";
+                case CALL_SIGNAL:
+                    return "[通话]";
+                case WORKFLOW_NOTIFY:
+                    return "[流程通知]";
+                case TODO_REMINDER:
+                    return "[待办提醒]";
+                case CUSTOM:
+                    return "[自定义消息]";
+                default:
+                    return "[消息]";
+            }
+        } catch (Exception ignore) {
+            return messageDO != null && messageDO.getContent() != null ? messageDO.getContent() : "";
         }
     }
 

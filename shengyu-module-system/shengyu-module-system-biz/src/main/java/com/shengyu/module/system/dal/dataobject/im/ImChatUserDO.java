@@ -38,6 +38,8 @@ public class ImChatUserDO extends TenantBaseDO {
 
     private Long lastMessageSequence;
 
+    private Integer lastMessageType;
+
     private String lastMessageContent;
 
     private LocalDateTime lastMessageTime;

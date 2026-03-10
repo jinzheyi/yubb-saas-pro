@@ -33,6 +33,9 @@ public class AppImConversationRespVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long lastReadSequence;
 
+    @Schema(description = "最后一条消息类型(同 im_chat_message.message_type)", example = "2")
+    private Integer lastMessageType;
+
     @Schema(description = "最后一条消息内容", example = "你好")
     private String lastMessageContent;
 

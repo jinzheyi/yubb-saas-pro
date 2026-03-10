@@ -48,6 +48,7 @@ CREATE TABLE `im_chat_user` (
   `last_read_sequence` bigint NOT NULL DEFAULT 0 COMMENT '最后已读序列号水位（单调递增）',
   `last_message_id` bigint NULL DEFAULT NULL COMMENT '最后一条消息ID',
   `last_message_sequence` bigint NOT NULL DEFAULT 0 COMMENT '最后一条消息序列号水位（单调递增）',
+  `last_message_type` tinyint NULL DEFAULT NULL COMMENT '最后一条消息类型(同 im_chat_message.message_type)',
   `last_message_content` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '最后一条消息预览',
   `last_message_time` datetime NULL DEFAULT NULL COMMENT '最后一条消息时间',
   `is_pinned` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否置顶',

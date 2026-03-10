@@ -34,6 +34,7 @@ export type ConversationItem = {
   targetAvatar: string        // 对应后端 targetAvatar
   avatarText: string           // 头像文字
   avatarBg: string            // 头像背景色
+  lastMessageType: number      // 对应后端 lastMessageType
   lastMessageContent: string  // 对应后端 lastMessageContent
   lastMessageTime: string     // 对应后端 lastMessageTime (格式化后)
   timestamp: number           // 时间戳（用于排序）
@@ -110,12 +111,15 @@ export class ConversationService {
       existing.lastReadSequence = conv.lastReadSequence
       existing.lastMessageSequence = conv.lastMessageSequence
       existing.unreadCount = conv.unreadCount
+      existing.lastMessageType = conv.lastMessageType
       existing.lastMessageContent = conv.lastMessageContent
       existing.lastMessageTime = conv.lastMessageTime
       existing.timestamp = conv.timestamp
     }
 
-    this.updateConversation(conv.chatId, lastMessage, timestamp, incrementUnread, messageSequence)
+    const preview = conv.lastMessageContent != null && conv.lastMessageContent !== '' ? conv.lastMessageContent : lastMessage
+    const ts = timestamp != null && timestamp > 0 ? timestamp : conv.timestamp
+    this.updateConversation(conv.chatId, conv.lastMessageType, preview, ts, incrementUnread, messageSequence)
     return conv.chatId
   }
 
@@ -170,7 +174,9 @@ export class ConversationService {
         this.conversations.unshift(conv)
       }
 
-      this.updateConversation(conv.chatId, lastMessage, timestamp, incrementUnread, messageSequence)
+      const preview = conv.lastMessageContent != null && conv.lastMessageContent !== '' ? conv.lastMessageContent : lastMessage
+      const ts = timestamp != null && timestamp > 0 ? timestamp : conv.timestamp
+      this.updateConversation(conv.chatId, conv.lastMessageType, preview, ts, incrementUnread, messageSequence)
       return conv.chatId
     } catch (e) {
       console.error('[ConversationService] ensureConversationByTarget 失败:', e)
@@ -270,6 +276,7 @@ export class ConversationService {
    */
   public updateConversation(
     chatId: string,
+    lastMessageType: number,
     lastMessage: string,
     timestamp: number,
     incrementUnread: boolean = false,
@@ -281,6 +288,10 @@ export class ConversationService {
       return
     }
 
+    if (lastMessageType == null || (lastMessageType as any) === '' || (lastMessageType as any) === 0) {
+      console.warn('[ConversationService] lastMessageType 缺失，可能导致摘要不准确:', chatIdStr, lastMessage)
+    }
+
     let conversation = this.conversations.find(c => c.chatId === chatIdStr || ((c as any).id === chatIdStr))
     // 兼容调用方传入 targetId 的情况（群聊：groupId；单聊：对方 userId）
     if (conversation == null) {
@@ -289,6 +300,7 @@ export class ConversationService {
     
     if (conversation != null) {
       // 更新现有会话
+      conversation.lastMessageType = lastMessageType
       conversation.lastMessageContent = lastMessage
       conversation.timestamp = timestamp
       conversation.lastMessageTime = this.formatTime(timestamp)
@@ -509,6 +521,7 @@ export class ConversationService {
       targetAvatar: data.targetAvatar || '',
       avatarText: data.avatarText || '',
       avatarBg: data.avatarBg || getConversationAvatarColor(conversationType, targetId),
+      lastMessageType: data.lastMessageType != null ? Number(data.lastMessageType) : 0,
       lastMessageContent: data.lastMessageContent || '',
       lastMessageTime: this.formatTime(data.lastMessageTime ? new Date(data.lastMessageTime).getTime() : 0),
       timestamp: data.lastMessageTime ? new Date(data.lastMessageTime).getTime() : 0,
@@ -557,6 +570,7 @@ export class ConversationService {
    */
   public clearCache(): void {
     this.conversations = []
+    this.loaded = false
   }
 }
 

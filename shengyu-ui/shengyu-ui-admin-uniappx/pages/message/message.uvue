@@ -211,7 +211,8 @@
 			lastReadSequence: serverConv.lastReadSequence != null ? serverConv.lastReadSequence.toString() : '0',
 			categoryId: getCategoryId(serverConv),
 			targetName: serverConv.targetName || '未知',
-			lastMessageContent: serverConv.lastMessageContent || '',
+			lastMessageType: serverConv.lastMessageType || 0,
+			lastMessageContent: buildConversationPreview(serverConv.lastMessageType || 0, serverConv.lastMessageContent || ''),
 			lastMessageTime: lastMessageTime,
 			avatarBg: getConversationAvatarColor(serverConv.conversationType, serverConv.targetId),
 			avatarText: getAvatarText(serverConv.targetName || ''),
@@ -280,6 +281,22 @@
 		{ id: 'nodisturb', icon: '\ue63a', color: '#666', nameKey: 'message.categories.noDisturb' }
 	]
 
+	function buildConversationPreview(messageType : number, raw : string) : string {
+		const trimmed = raw != null ? raw.toString().trim() : ''
+		if (messageType === 1) {
+			return trimmed
+		}
+		if (messageType === 2) return '[图片]'
+		if (messageType === 3) return '[语音]'
+		if (messageType === 4) return '[视频]'
+		if (messageType === 5) return '[文件]'
+		if (messageType === 6) return '[位置]'
+		if (messageType === 7) return '[表情]'
+		if (messageType === 8) return '[贴纸]'
+		if (messageType === 10) return '[系统消息]'
+		return trimmed
+	}
+
 	// 消息列表原始数据
 	const messageList = ref<any[]>([])
 	
@@ -324,7 +341,8 @@
 							conversationType: conv.conversationType 
 						}),
 						targetName: conv.targetName,
-						lastMessageContent: conv.lastMessageContent,
+						lastMessageType: (conv as any).lastMessageType || 0,
+						lastMessageContent: buildConversationPreview((conv as any).lastMessageType || 0, conv.lastMessageContent),
 						lastMessageTime: conv.timestamp,
 						avatarBg: conv.avatarBg,
 						avatarText: conv.avatarText,
@@ -380,7 +398,8 @@
 					conversationType: conv.conversationType
 				}),
 				targetName: conv.targetName,
-				lastMessageContent: conv.lastMessageContent,
+				lastMessageType: (conv as any).lastMessageType || 0,
+				lastMessageContent: buildConversationPreview((conv as any).lastMessageType || 0, conv.lastMessageContent),
 				lastMessageTime: conv.timestamp,
 				avatarBg: conv.avatarBg,
 				avatarText: conv.avatarText,
