@@ -711,9 +711,17 @@ export class MessageService {
       senderName: userName
     }
     
-    // 添加到缓存
-    const rawChatId = message.header.groupId !== '0' && message.header.groupId !== '' ? message.header.groupId : message.header.receiverId
-    const chatId = rawChatId != null ? (rawChatId as any).toString() : '0'
+    // 添加到缓存（群聊优先使用真实 chatId，而不是 groupId）
+    const isGroup = message.header.groupId !== '0' && message.header.groupId !== ''
+    let chatId = '0'
+    if (isGroup) {
+      const groupIdStr = message.header.groupId != null ? (message.header.groupId as any).toString() : '0'
+      const cached = conversationService.getCachedChatIdByTarget(groupIdStr, 2)
+      chatId = cached != null && cached !== '' ? cached : groupIdStr
+    } else {
+      const rawChatId = message.header.receiverId
+      chatId = rawChatId != null ? (rawChatId as any).toString() : '0'
+    }
     console.log('[MessageService] computed chatId:', chatId)
     this.addMessageToCache(chatId, messageItem)
     
@@ -724,8 +732,24 @@ export class MessageService {
     console.log('[MessageService] wsManager.isConnected():', wsManager.isConnected())
     wsManager.send(message)
     
-    // 更新会话
-    this.updateConversation(chatId, messageItem)
+    // 更新会话（群聊摘要增加发送者前缀）
+    if (isGroup) {
+      const summary = MessageParser.getSummary({
+        header: { messageType: messageItem.type } as any,
+        body: messageItem.content
+      } as any)
+      const prefix = '我'
+      conversationService.updateConversation(
+        chatId,
+        messageItem.type,
+        `${prefix}: ${summary}`,
+        messageItem.timestamp,
+        false,
+        null
+      )
+    } else {
+      this.updateConversation(chatId, messageItem)
+    }
     
     return messageItem
   }
@@ -752,13 +776,15 @@ export class MessageService {
       const msgId = message.header.messageId
       const seq = message.header.sequence
       let updated = false
+      let resolvedChatId = this.resolveChatIdFromHeader(message.header)
       this.messageCache.forEach((messages) => {
         messages.forEach(msg => {
           if (msg.messageId === msgId && msg.status === MessageStatus.SENDING) {
             msg.status = MessageStatus.SENT
             if (seq !== null && seq !== undefined) {
               msg.sequence = seq.toString()
-              this.updateLastPulledSequence(this.resolveChatIdFromHeader(message.header), msg.sequence)
+              resolvedChatId = this.resolveChatIdFromHeader(message.header)
+              this.updateLastPulledSequence(resolvedChatId, msg.sequence)
             }
             updated = true
           }
@@ -766,7 +792,49 @@ export class MessageService {
       })
       if (updated) {
         this.notifyStatusListeners(msgId, MessageStatus.SENT)
-        return
+
+			// 自己的消息也需要更新会话（否则会话水位/红点会错）
+			const seqStr = seq != null && seq !== undefined ? seq.toString() : null
+			const isGroupSelf = message.header.groupId !== '0' && message.header.groupId !== ''
+			const summary = MessageParser.getSummary({
+				header: { messageType: message.header.messageType } as any,
+				body: message.body
+			} as any)
+			let preview = isGroupSelf ? `我: ${summary}` : summary
+
+			const snapshot: any = (message as any).conversationSnapshot
+			if (snapshot != null) {
+				try {
+					if ((snapshot as any).lastMessageContent != null && (snapshot as any).lastMessageContent !== '') {
+						preview = (snapshot as any).lastMessageContent.toString()
+					}
+				} catch (e) { /* ignore */ }
+				const snapChatId = conversationService.upsertFromSnapshot(
+					snapshot,
+					preview,
+					message.header.timestamp,
+					false,
+					seqStr
+				)
+				if (snapChatId != null && snapChatId !== '') {
+					resolvedChatId = snapChatId
+				}
+			}
+
+			conversationService.updateConversation(
+				resolvedChatId,
+				message.header.messageType,
+				preview,
+				message.header.timestamp,
+				false,
+				seqStr
+			)
+
+			// 发送端：自己发送的消息视为已读，推进读水位避免出现红点
+			if (seqStr != null && seqStr !== '') {
+				conversationService.applyReadWatermark(resolvedChatId, seqStr)
+			}
+			return
       }
     }
 
@@ -789,13 +857,14 @@ export class MessageService {
       senderName: senderName
     }
 
-    let chatId = this.resolveChatIdFromHeader(message.header)
-    const summary = MessageParser.getSummary({
-      header: { messageType: messageItem.type } as any,
-      body: messageItem.content
-    })
-    const seq = messageItem.sequence != null ? messageItem.sequence.toString() : null
     const isGroup = message.header.groupId !== '0' && message.header.groupId !== ''
+	let chatId = this.resolveChatIdFromHeader(message.header)
+	const summary = MessageParser.getSummary({
+	  header: { messageType: messageItem.type } as any,
+	  body: messageItem.content
+	})
+	let preview = isGroup ? `${(messageItem.isSelf ? '我' : senderName)}: ${summary}` : summary
+	const seq = messageItem.sequence != null ? messageItem.sequence.toString() : null
     const targetId = isGroup
       ? (message.header.groupId != null ? message.header.groupId.toString() : '0')
       : (isSelf
@@ -805,7 +874,12 @@ export class MessageService {
 
     const snapshot: any = (message as any).conversationSnapshot
     if (snapshot != null) {
-      const snapChatId = conversationService.upsertFromSnapshot(snapshot, summary, messageItem.timestamp, !messageItem.isSelf, seq)
+		try {
+			if ((snapshot as any).lastMessageContent != null && (snapshot as any).lastMessageContent !== '') {
+				preview = (snapshot as any).lastMessageContent.toString()
+			}
+		} catch (e) { /* ignore */ }
+      const snapChatId = conversationService.upsertFromSnapshot(snapshot, preview, messageItem.timestamp, !messageItem.isSelf, seq)
       if (snapChatId != null && snapChatId !== '') {
         chatId = snapChatId
       }
@@ -815,7 +889,7 @@ export class MessageService {
       const ensuredChatId = await conversationService.ensureConversationByTarget(
         targetId,
         conversationType,
-        summary,
+        preview,
         messageItem.timestamp,
         !messageItem.isSelf,
         seq
@@ -838,7 +912,7 @@ export class MessageService {
     conversationService.updateConversation(
       chatId,
       messageItem.type,
-      summary,
+      preview,
       messageItem.timestamp,
       !messageItem.isSelf,
       seq

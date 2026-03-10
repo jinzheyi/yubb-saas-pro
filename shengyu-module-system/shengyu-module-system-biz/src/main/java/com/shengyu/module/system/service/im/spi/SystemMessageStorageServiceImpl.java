@@ -12,9 +12,11 @@ import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
+import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
+import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.service.im.ImBadgeService;
@@ -63,6 +65,9 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
     @Resource
     private ImGroupService imGroupService;
+
+    @Resource
+    private AdminUserMapper userMapper;
 
     @Resource
     private NettyMessageSender nettyMessageSender;
@@ -307,8 +312,27 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
     @Async("imTaskExecutor")
     public void updateChatUserAsync(MessageHeader header, ImChatMessageDO messageDO, ImMessage rawMessage) {
         try {
+            if (header == null) {
+                return;
+            }
             Long chatId = messageDO.getChatId();
-            String lastMessageContent = truncateContent(buildConversationPreview(header, messageDO, rawMessage));
+            String basePreview = buildConversationPreview(header, messageDO, rawMessage);
+            String lastMessageContent = truncateContent(basePreview);
+
+            // 群聊：摘要需要带发送者（对标企微/钉钉）
+            String senderName = "";
+            if (header.getGroupId() > 0
+                    && header.getMessageType() != MessageType.BADGE_UPDATE
+                    && header.getMessageType() != MessageType.READ_RECEIPT) {
+                try {
+                    if (userMapper != null && header.getSenderId() > 0) {
+                        AdminUserDO user = userMapper.selectById(header.getSenderId());
+                        senderName = user != null && StrUtil.isNotBlank(user.getNickname()) ? user.getNickname() : "";
+                    }
+                } catch (Exception ignore) {
+                    senderName = "";
+                }
+            }
 
             // 解析原始消息体，便于群聊实时转发（避免仅角标更新 204）
             MessageLite bizBody = parseBizBody(rawMessage);
@@ -317,13 +341,20 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                 List<Long> memberIds = imGroupService.getGroupMemberIds(header.getGroupId());
                 for (Long memberId : memberIds) {
                     boolean isSender = memberId.equals(header.getSenderId());
+                    String finalPreview = lastMessageContent;
+                    if (StrUtil.isNotBlank(senderName) || isSender) {
+                        String prefix = isSender ? "我" : senderName;
+                        if (StrUtil.isNotBlank(prefix) && StrUtil.isNotBlank(basePreview)) {
+                            finalPreview = truncateContent(prefix + ": " + basePreview);
+                        }
+                    }
                     ImChatUserDO chatUser = ensureChatUser(memberId, chatId);
                     chatUserMapper.updateLastMessageAndIncrementUnread(
                             chatUser.getId(),
                             messageDO.getId(),
                             messageDO.getSequence(),
                             messageDO.getMessageType(),
-                            lastMessageContent,
+                            finalPreview,
                             messageDO.getSendTime(),
                             isSender ? 0 : 1,
                             Boolean.TRUE.equals(chatUser.getNoDisturb())
