@@ -405,15 +405,46 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 
 - **目标**：端侧会话列表可通过 cursor 增量同步（对齐企微/钉钉的“拉增量 + 本地合并”）。
 - **建议契约**：
-  - `GET /system/im/conversation/sync?cursor=...&limit=...`
-  - 响应：`{ nextCursor, hasMore, items: [ { chatId, conversationType, targetId, lastMessageSequence, lastReadSequence, unreadCount, isPinned, noDisturb, updatedAt } ] }`
+  - `GET /system/im/conversation/sync?cursorVersion=...&limit=...`
+  - 响应：`{ nextCursorVersion, hasMore, items: [ { chatId, conversationType, targetId, cursorVersion, conversationVersion, lastMessageSequence, lastReadSequence, unreadCount, isPinned, noDisturb } ] }`
 - **验收标准**：
-  - cursor 初次为空：返回全量 + `nextCursor`
-  - cursor 非空：只返回 `updatedAt > cursor` 的会话变更
-  - 端侧合并规则：同 chatId 以 `updatedAt` 或 `version` 较大者覆盖
+  - cursorVersion 初次为 0/空：返回全量 + `nextCursorVersion`
+  - cursorVersion 非空：只返回 `cursorVersion > 入参` 的会话变更（按 cursorVersion 升序）
+  - 端侧合并规则：
+    - 同 chatId：以 `conversationVersion` 更大者覆盖
+    - 游标推进：以 `cursorVersion` 作为唯一推进依据
 - **涉及文件/目录**：
   - `AppImConversationController.java`（新增 `sync`）
   - `services/conversation-service.uts`（增量同步与合并）
+
+补充（完整版本号版，P0，强烈建议对标企微/钉钉落地）：
+
+#### C3.2.1（P0）：cursorVersion（用户维度游标）分配器
+
+- **目标**：为同一 `tenantId + userId` 的“会话列表态变更”分配单调递增 `cursorVersion`，用于增量 sync 与缺口检测。
+- **实现建议**：
+  - 新表 `im_user_cursor(tenant_id, user_id, next_cursor_version)` 或 Redis 原子自增
+  - 每次会话用户态变更写入时获取 `cursorVersion = ++next`
+- **验收**：
+  - 并发下不重复、不回退
+  - 单用户高频消息下仍可分配（不成为瓶颈）
+
+#### C3.2.2（P0）：会话-用户态表增加 cursorVersion + conversationVersion
+
+- **目标**：为每个 `(chatId,userId)` 维护：
+  - `cursorVersion`（用于 sync 扫描）
+  - `conversationVersion`（用于同 chat 快照合并）
+- **验收**：
+  - `GET /conversation/sync` 可走索引 `(tenant_id,user_id,cursor_version)`
+
+#### C3.2.3（P0）：WS 事件携带 cursorVersion + 缺口补偿
+
+- **目标**：WS 推送（CONVERSATION_UPSERT / WATERMARK_UPDATE / 新消息事件）必须包含 `cursorVersion`。
+- **端侧策略**：
+  - 若收到 version 跳跃（`v > local+1`）：立刻 `sync(cursorVersion=local)` 补齐
+  - 若重复/乱序：按 `conversationVersion` 去重合并
+- **验收**：
+  - WS 丢包/断线后，sync 可完全补齐会话列表变更
 
 #### C3.3（P0）：已读水位上报接口（reportReadWatermark）
 

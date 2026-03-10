@@ -598,6 +598,99 @@ JSON 兼容建议：
 
 建议先以 HTTP 落地，保证可调试/可回归：
 
+#### 8.5.1 完整版本号版（对标企微/钉钉）
+
+本项目建议采用“完整版本号版”的增量同步：用服务端分配的 **单调递增游标版本号** 代替 `updatedAt` 时间戳做 cursor。
+
+核心思想：
+
+- **cursorVersion（会话同步游标）是用户维度的全局版本号**：同一 `tenantId + userId` 下，只要“会话列表态”发生变化（新会话出现、最后消息变更、已读水位推进、置顶/免打扰修改、对我删除等），服务端就为该用户分配一个新的 `cursorVersion`。
+- 客户端只需要保存一个 `cursorVersion`，即可通过 `sync` 拉取“自上次游标之后的全部变更”。
+
+与 `conversationVersion` 的区别：
+
+- `conversationVersion`：会话级版本号（同一 chat 的设置/元信息变更递增），用于端侧合并同一会话的不同快照。
+- `cursorVersion`：用户级同步游标（全量会话列表变更序列），用于增量同步与缺口检测。
+
+##### （1）数据落点（建议）
+
+推荐在“会话-用户态”表中增加以下字段（若沿用 `im_chat_user` 也同理）：
+
+- `cursor_version BIGINT NOT NULL DEFAULT 0`：该行（userId+chatId）的最近一次变更游标
+- `conversation_version BIGINT NOT NULL DEFAULT 0`：该会话用户态的版本号（仅该会话相关变更递增）
+
+并增加索引：
+
+- `(tenant_id, user_id, cursor_version)`：支持按游标增量扫描
+
+同时维护一张“用户游标分配器”（可 DB/Redis）：
+
+- `im_user_cursor`
+  - 唯一键：`(tenant_id, user_id)`
+  - 字段：`next_cursor_version BIGINT NOT NULL`
+  - 分配规则：每次需要产生会话列表变更时做原子 `+1`（可用 `UPDATE ... SET next=LAST_INSERT_ID(next+1)`）
+
+说明：
+
+- 选择 `cursorVersion` 的收益是**天然可检测缺口**：端侧发现 push version 跳跃即可触发补偿 sync。
+- 相比 `updatedAt`，`cursorVersion` 不受时钟漂移、精度、同毫秒多次更新的影响。
+
+##### （2）服务端版本号分配触发点
+
+以下场景必须分配新的 `cursorVersion`（对齐企微/钉钉“会话列表强一致体验”）：
+
+- 新会话出现（createOrGet、创建群成员入群触发会话创建）
+- 新消息入会话导致 `lastMessage*` 变化
+- 已读水位推进导致 `lastReadSequence/unreadCount` 变化
+- 置顶/免打扰/草稿 等会话设置变更
+- 对我删除（delete-for-me）/会话恢复（可选）
+
+##### （3）HTTP：会话增量同步接口（完整版契约）
+
+- `GET /system/im/conversation/sync?cursorVersion=...&limit=...`
+- 响应：
+  - `nextCursorVersion`：本次返回的最大游标（客户端保存）
+  - `hasMore`：是否还有更多
+  - `items`：会话变更快照列表（按 cursor_version 升序）
+
+建议返回字段（最小闭环）：
+
+- `chatId, conversationType, targetId`
+- `cursorVersion, conversationVersion`
+- `lastMessageSequence, lastReadSequence, unreadCount`
+- `lastMessageType, lastMessageContent, lastMessageTime`
+- `isPinned, noDisturb, draft`
+- `deletedByUser`（或 tombstone 语义）
+
+服务端实现要求：
+
+- 只返回 `cursor_version > cursorVersion` 的记录
+- 排序必须按 `cursor_version ASC`
+- `nextCursorVersion` = 本次 items 中最大 `cursorVersion`（若空则回传入参）
+
+##### （4）WS：会话事件与缺口补偿
+
+WS 推送必须携带 `cursorVersion`（或将其作为 envelope 字段），端侧策略：
+
+- 收到 `CONVERSATION_UPSERT`（或 `CONVERSATION_WATERMARK_UPDATE`）：
+  - 若 `cursorVersion == localCursor+1`：直接 apply，并推进 localCursor
+  - 若 `cursorVersion > localCursor+1`：判定缺口，立刻调用 `sync(cursorVersion=localCursor)` 补齐，然后再推进
+  - 若 `cursorVersion <= localCursor`：认为是重复/乱序，按 `conversationVersion` 去重合并
+
+##### （5）一致性与性能目标（对标）
+
+- **最终一致**：WS 丢包/断线后，通过 `sync(cursorVersion)` 100% 恢复
+- **弱网体验**：单次 sync 请求只返回变更集合（增量），避免全量 list
+- **性能目标**（建议验收口径）：
+  - `sync` P95 < 200ms（limit=100）
+  - 端侧会话合并 O(k log n)（k 为变更数）
+  - WS 事件到达后会话列表 UI 刷新 < 300ms（端侧）
+
+#### 8.5.2 时间戳版（过渡/不推荐作为企业级最终形态）
+
+说明：时间戳 cursor 实现简单，但存在时钟漂移、同毫秒多次更新丢变更、无法天然检测缺口等问题。
+如需过渡可保留，但企业级对标企微/钉钉建议最终以 **8.5.1 cursorVersion 版**为准。
+
 - `GET /system/im/conversation/sync?cursor=...&limit=...`
   - 返回：会话变更列表 + `nextCursor`
   - 建议最小字段集（避免端侧各自推导口径导致不一致）：
