@@ -303,7 +303,12 @@ export class ConversationService {
       conversation.lastMessageType = lastMessageType
       conversation.lastMessageContent = lastMessage
       conversation.timestamp = timestamp
-      conversation.lastMessageTime = this.formatTime(timestamp)
+
+	  if (timestamp != null && timestamp > 0 && !isNaN(timestamp)) {
+		  conversation.lastMessageTime = this.formatTime(timestamp)
+	  } else {
+		  conversation.lastMessageTime = ''
+	  }
 
       if (messageSequence != null && messageSequence !== '') {
         const newSeq = messageSequence.toString()
@@ -513,6 +518,15 @@ export class ConversationService {
   private mapToConversationItem(data: any): ConversationItem {
     const targetId = data.targetId != null ? data.targetId.toString() : '0'
     const conversationType = data.conversationType ?? 1
+	let ts = 0
+	try {
+		if (data.lastMessageTime) {
+			const parsed = new Date(data.lastMessageTime).getTime()
+			ts = !isNaN(parsed) && parsed > 0 ? parsed : 0
+		}
+	} catch (e) {
+		ts = 0
+	}
     return {
       chatId: data.chatId != null ? data.chatId.toString() : '0',
       conversationType: conversationType,
@@ -523,8 +537,8 @@ export class ConversationService {
       avatarBg: data.avatarBg || getConversationAvatarColor(conversationType, targetId),
       lastMessageType: data.lastMessageType != null ? Number(data.lastMessageType) : 0,
       lastMessageContent: data.lastMessageContent || '',
-      lastMessageTime: this.formatTime(data.lastMessageTime ? new Date(data.lastMessageTime).getTime() : 0),
-      timestamp: data.lastMessageTime ? new Date(data.lastMessageTime).getTime() : 0,
+      lastMessageTime: ts > 0 ? this.formatTime(ts) : '',
+      timestamp: ts,
       unreadCount: data.unreadCount || 0,
       lastMessageSequence: data.lastMessageSequence != null ? data.lastMessageSequence.toString() : '0',
       lastReadSequence: data.lastReadSequence != null ? data.lastReadSequence.toString() : '0',

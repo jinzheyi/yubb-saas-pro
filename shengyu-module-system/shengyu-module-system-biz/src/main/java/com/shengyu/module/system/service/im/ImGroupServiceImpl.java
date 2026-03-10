@@ -3,6 +3,7 @@ package com.shengyu.module.system.service.im;
 import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
+import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
 import com.shengyu.module.system.controller.app.im.vo.group.*;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupInviteDO;
@@ -16,6 +17,10 @@ import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import com.shengyu.module.system.enums.im.ImGroupInviteStatusEnum;
 import com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum;
 import com.shengyu.module.system.enums.im.ImGroupStatusEnum;
+import com.shengyu.framework.tenant.core.context.TenantContextHolder;
+import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.protocol.TextMessage;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +54,9 @@ public class ImGroupServiceImpl implements ImGroupService {
 
     @Resource
     private ImConversationService conversationService;
+
+    @Resource
+    private NettyMessageSender messageSender;
 
     @Resource
     private ImGroupInviteMapper groupInviteMapper;
@@ -105,8 +113,30 @@ public class ImGroupServiceImpl implements ImGroupService {
                 AppImConversationCreateReqVO conversationReqVO = new AppImConversationCreateReqVO();
                 conversationReqVO.setTargetId(group.getId());
                 conversationReqVO.setConversationType(2); // 2-群聊
-                conversationService.createOrGetConversation(memberId, conversationReqVO);
+                AppImConversationRespVO resp = conversationService.createOrGetConversation(memberId, conversationReqVO);
                 log.info("[ImGroupService] 为成员创建会话成功, groupId: {}, memberId: {}", group.getId(), memberId);
+
+                // 推送会话快照给成员（让端侧无需手动刷新即可出现群会话）
+                if (resp != null && resp.getChatId() != null) {
+                    try {
+                        Long tenantId = TenantContextHolder.getTenantId();
+                        messageSender.sendToUser(memberId,
+                                MessageType.SYSTEM_NOTIFY,
+                                TextMessage.newBuilder().setContent("CONVERSATION_UPSERT").build(),
+                                userId,
+                                memberId,
+                                group.getId(),
+                                tenantId,
+                                null,
+                                null,
+                                resp.getChatId());
+                        log.info("[ImGroupService] 已推送会话快照, groupId: {}, chatId: {}, memberId: {}",
+                                group.getId(), resp.getChatId(), memberId);
+                    } catch (Exception e) {
+                        log.warn("[ImGroupService] 推送会话快照失败, groupId: {}, memberId: {}, error: {}",
+                                group.getId(), memberId, e.getMessage(), e);
+                    }
+                }
             } catch (Exception e) {
                 log.error("[ImGroupService] 为成员创建会话失败, groupId: {}, memberId: {}, error: {}", 
                         group.getId(), memberId, e.getMessage(), e);

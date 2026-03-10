@@ -752,12 +752,30 @@ export class WebSocketManager {
     if (!this.authenticated) {
       console.log('[WebSocket] 未认证，消息加入队列')
       this.messageQueue.push(message)
+
+	  // 未认证但连接已断开：主动触发连接（否则消息会一直堆在队列里）
+	  if (this.state === WebSocketState.CLOSED) {
+		  try {
+			  this.connect()
+		  } catch (e) {
+			  // ignore
+		  }
+	  }
       return
     }
     
     if (this.state !== WebSocketState.OPEN) {
       console.log('[WebSocket] 连接未打开，消息加入队列')
       this.messageQueue.push(message)
+
+	  // 连接未打开：主动触发连接（避免无声排队）
+	  if (this.state === WebSocketState.CLOSED) {
+		  try {
+			  this.connect()
+		  } catch (e) {
+			  // ignore
+		  }
+	  }
       return
     }
     

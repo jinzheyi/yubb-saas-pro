@@ -257,6 +257,7 @@ public class ImConversationServiceImpl implements ImConversationService {
         }
         respVO.setLastMessageType(lastType);
         respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent()));
+        // 无消息时：群聊会话时间取群创建时间（体验对标企微/钉钉）；有消息时取最后一条消息时间
         respVO.setLastMessageTime(chatUser.getLastMessageTime());
         respVO.setIsPinned(chatUser.getIsPinned());
         respVO.setNoDisturb(chatUser.getNoDisturb());
@@ -268,6 +269,13 @@ public class ImConversationServiceImpl implements ImConversationService {
                  respVO.setTargetName(group.getName());
                  respVO.setTargetAvatar(group.getAvatar());
                  respVO.setGroupMemberCount(group.getMemberCount());
+
+				// 群聊无消息：使用群创建时间作为会话时间
+				if (respVO.getLastMessageTime() == null
+						&& chatUser.getLastMessageId() == null
+						&& (chatUser.getLastMessageSequence() == null || chatUser.getLastMessageSequence() <= 0L)) {
+					respVO.setLastMessageTime(group.getCreateTime());
+				}
              }
          } else {
              Long otherUserId = Objects.equals(chat.getSingleUser1(), userId) ? chat.getSingleUser2() : chat.getSingleUser1();

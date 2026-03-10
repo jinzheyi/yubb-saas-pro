@@ -338,6 +338,36 @@ export class MessageService {
     wsManager.addMessageListener(MessageType.RECALL, (message) => {
       this.handleRecall(message)
     })
+
+    // 监听系统通知（用于会话快照推送等轻量事件）
+    wsManager.addMessageListener(MessageType.SYSTEM_NOTIFY, (message) => {
+      this.handleSystemNotify(message)
+    })
+  }
+
+  private handleSystemNotify(message: any): void {
+    try {
+      const snapshot: any = message != null ? (message as any).conversationSnapshot : null
+      if (snapshot == null) {
+        return
+      }
+      const lastMessage = snapshot.lastMessageContent != null ? snapshot.lastMessageContent.toString() : ''
+      let ts = Date.now()
+      try {
+        if (snapshot.lastMessageTime != null && snapshot.lastMessageTime !== '') {
+          const parsed = new Date(snapshot.lastMessageTime as string).getTime()
+          if (!isNaN(parsed) && parsed > 0) {
+            ts = parsed
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      conversationService.upsertFromSnapshot(snapshot, lastMessage, ts, false, snapshot.lastMessageSequence != null ? snapshot.lastMessageSequence.toString() : null)
+    } catch (e) {
+      console.warn('[MessageService] handleSystemNotify failed:', e)
+    }
   }
   
   /**
