@@ -163,6 +163,8 @@
 	// 加载状态
 	const loading = ref(false)
 	const refreshing = ref(false)
+	// onShow 刷新节流，避免频繁请求会话列表
+	let lastOnShowRefreshAt = 0
 	
 	// 角标监听器
 	const badgeListener = {
@@ -176,6 +178,13 @@
 
 	onShow(() => {
 		wsManager.setRealtimeBizActive(true)
+		// 返回到会话列表时刷新一次，确保新创建的群聊/会话能立刻展示（不依赖推送时机）
+		// 同时做节流，避免频繁触发 /conversation/list
+		const now = Date.now()
+		if (now - lastOnShowRefreshAt > 1500) {
+			lastOnShowRefreshAt = now
+			void loadConversations()
+		}
 	})
 
 	onHide(() => {

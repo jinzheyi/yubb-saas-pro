@@ -111,7 +111,7 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
         return update(null, wrapper);
     }
 
-    @Update("UPDATE im_chat_user SET last_read_sequence = GREATEST(last_read_sequence, #{readSequence}), unread_count = 0 " +
+    @Update("UPDATE im_chat_user SET last_read_sequence = GREATEST(IFNULL(last_read_sequence, 0), #{readSequence}), unread_count = 0 " +
             "WHERE user_id = #{userId} AND chat_id = #{chatId} AND deleted_by_user = 0 AND deleted = 0")
     int markReadToSequence(@Param("userId") Long userId, @Param("chatId") Long chatId, @Param("readSequence") Long readSequence);
 

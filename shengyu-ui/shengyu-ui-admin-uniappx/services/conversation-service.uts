@@ -288,7 +288,9 @@ export class ConversationService {
       return
     }
 
-    if (lastMessageType == null || (lastMessageType as any) === '' || (lastMessageType as any) === 0) {
+    const seqStr = messageSequence != null ? messageSequence.toString() : ''
+    const hasBizMessage = (seqStr !== '' && seqStr !== '0') || (lastMessage != null && lastMessage.toString().trim() !== '')
+    if (hasBizMessage && (lastMessageType == null || (lastMessageType as any) === '' || (lastMessageType as any) === 0)) {
       console.warn('[ConversationService] lastMessageType 缺失，可能导致摘要不准确:', chatIdStr, lastMessage)
     }
 

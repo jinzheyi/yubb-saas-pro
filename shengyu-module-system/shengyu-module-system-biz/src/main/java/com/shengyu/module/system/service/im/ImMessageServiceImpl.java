@@ -115,13 +115,16 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
         message.setContent(sendReqVO.getContent());
         message.setExtra(sendReqVO.getExtra());
+        // 分配会话内 sequence（单调递增），用于会话水位与未读计算
+        Long sequence = chatMapper.nextSequence(chatId);
+        message.setSequence(sequence);
         message.setSendTime(LocalDateTime.now());
         message.setStatus(ImMessageStatusEnum.SENT.getStatus());
         message.setQuoteMessageId(sendReqVO.getQuoteMessageId());
         chatMessageMapper.insert(message);
 
         String preview = getMessagePreview(dbMessageType, sendReqVO.getContent());
-        updateChatUsersAfterSend(chat, message.getId(), preview, message.getSendTime(), userId, sendReqVO);
+        updateChatUsersAfterSend(chat, message.getId(), message.getSequence(), preview, message.getSendTime(), userId, sendReqVO);
         return message.getId();
     }
 
@@ -228,7 +231,9 @@ public class ImMessageServiceImpl implements ImMessageService {
                 userId, messageIds.size(), updatedCount, status);
     }
 
-    private void updateChatUsersAfterSend(ImChatDO chat, Long lastMessageId, String lastMessageContent, LocalDateTime lastMessageTime, Long senderId, AppImMessageSendReqVO sendReqVO) {
+    private void updateChatUsersAfterSend(ImChatDO chat, Long lastMessageId, Long lastMessageSequence,
+                                         String lastMessageContent, LocalDateTime lastMessageTime,
+                                         Long senderId, AppImMessageSendReqVO sendReqVO) {
         Integer dbMessageType = normalizeDbMessageType(sendReqVO.getMessageType());
         if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
             List<Long> memberIds = imGroupService.getGroupMemberIds(chat.getGroupId());
@@ -236,9 +241,18 @@ public class ImMessageServiceImpl implements ImMessageService {
                 ImChatUserDO chatUser = ensureChatUser(memberId, chat.getId());
                 boolean isSender = Objects.equals(memberId, senderId);
                 chatUserMapper.updateLastMessageAndIncrementUnread(
-                        chatUser.getId(), lastMessageId, dbMessageType, lastMessageContent, lastMessageTime,
+                        chatUser.getId(), lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime,
                         isSender ? 0 : 1,
                         Boolean.TRUE.equals(chatUser.getNoDisturb()));
+
+				// 发送者侧：持久化推进已读水位，避免重登后自己的消息出现未读角标
+				if (isSender && lastMessageSequence != null) {
+					try {
+						chatUserMapper.markReadToSequence(senderId, chat.getId(), lastMessageSequence);
+					} catch (Exception ignore) {
+						// ignore
+					}
+				}
                 if (!isSender) {
                     imBadgeService.pushBadgeUpdate(memberId);
                     // 推送消息内容给接收者
@@ -248,9 +262,18 @@ public class ImMessageServiceImpl implements ImMessageService {
         } else {
             ImChatUserDO sender = ensureChatUser(senderId, chat.getId());
             chatUserMapper.updateLastMessageAndIncrementUnread(
-                    sender.getId(), lastMessageId, dbMessageType, lastMessageContent, lastMessageTime,
+                    sender.getId(), lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime,
                     0,
                     Boolean.TRUE.equals(sender.getNoDisturb()));
+
+			// 发送者侧：持久化推进已读水位，避免重登后自己的消息出现未读角标
+			if (lastMessageSequence != null) {
+				try {
+					chatUserMapper.markReadToSequence(senderId, chat.getId(), lastMessageSequence);
+				} catch (Exception ignore) {
+					// ignore
+				}
+			}
 
             Long receiverId = Objects.equals(chat.getSingleUser1(), senderId) ? chat.getSingleUser2() : chat.getSingleUser1();
             ImChatUserDO receiver = ensureChatUser(receiverId, chat.getId());

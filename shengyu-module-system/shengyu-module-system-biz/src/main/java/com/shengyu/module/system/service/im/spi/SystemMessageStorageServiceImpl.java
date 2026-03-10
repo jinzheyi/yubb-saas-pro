@@ -359,6 +359,15 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                             isSender ? 0 : 1,
                             Boolean.TRUE.equals(chatUser.getNoDisturb())
                     );
+
+					// 发送者侧：持久化推进已读水位，避免重登后自己的消息出现未读角标
+					if (isSender && messageDO.getSequence() != null) {
+						try {
+							chatUserMapper.markReadToSequence(memberId, chatId, messageDO.getSequence());
+						} catch (Exception ignore) {
+							// ignore
+						}
+					}
                     if (!isSender) {
                         imBadgeService.pushBadgeUpdate(memberId);
                         if (bizBody != null) {
@@ -389,6 +398,15 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         0,
                         Boolean.TRUE.equals(sender.getNoDisturb())
                 );
+
+				// 发送者侧：持久化推进已读水位，避免重登后自己的消息出现未读角标
+				if (messageDO.getSequence() != null) {
+					try {
+						chatUserMapper.markReadToSequence(header.getSenderId(), chatId, messageDO.getSequence());
+					} catch (Exception ignore) {
+						// ignore
+					}
+				}
 
                 ImChatUserDO receiver = ensureChatUser(header.getReceiverId(), chatId);
                 chatUserMapper.updateLastMessageAndIncrementUnread(
