@@ -1,4 +1,10 @@
-# IM 即时通讯开发任务清单（Backlog）v2.0
+# IM即时通讯开发任务清单-v2.0
+
+## 强制规范：Long 精度（前端 / JSON）
+
+1. 所有涉及 ID / 序列号的 `Long` 字段（包含但不限于：`messageId`、`sequence`、`chatId`、`groupId`、`userId`、`targetId`、`tenantId` 等），在 **前端与 JSON 传输层必须按 `string` 处理**，禁止按 JS `number` 持久化或参与去重/索引。
+2. App/uniapp 对应的后端 **Response VO** 中，所有 `Long` 字段必须使用 `@JsonSerialize(using = ToStringSerializer.class)` 输出为字符串，避免超过 `2^53-1` 时前端精度丢失导致的去重/ACK/排序错误。
+3. 前端消息/会话模型中，上述字段必须定义为 `string`，仅在排序/比较需要时临时转换（例如 `BigInt`），且不得把转换后的 `number` 写回缓存。
 
 > **版本**: v2.0.0  \
 > **创建日期**: 2026-03-05  \
@@ -20,6 +26,11 @@
 
 - HTTP：鉴权接口可正常调用
 - IM：被踢/重登时停止重连，弹窗提示信息可读
+
+### 0.2.a 已执行变更标记规则
+
+- 状态取值：`已完成` / `进行中` / `未开始`
+- 标记位置：写在对应任务块的第一条说明后
 
 ### 0.3 实现入口索引（开工必看）
 
@@ -51,14 +62,14 @@
 | 会话列表 | `api/conversation.uts#getConversationList`；`services/conversation-service.uts#loadConversations` | `GET /system/im/conversation/list` | `AppImConversationController#getConversationList` | 当前为全量列表；建议补增量 sync（见 Milestone C3） |
 | 创建/获取会话 | `api/conversation.uts#createConversation` / `getConversationByTarget` | `POST /system/im/conversation/create`；`GET /system/im/conversation/get-by-target` | `AppImConversationController#createOrGetConversation` / `getConversationByTarget` | 单聊/群聊统一会话模型 |
 | 会话设置（置顶/免打扰） | `api/conversation.uts#pinConversation` / `setNoDisturb` | `PUT /system/im/conversation/update` | `AppImConversationController#updateConversation` | 字段：`isPinned`、`noDisturb` |
-| 清空未读 | `api/conversation.uts#clearUnreadCount` | `PUT /system/im/conversation/clear-unread/{chatId}` | `AppImConversationController#clearUnread` | 会触发角标推送到其他端 |
+| 清空未读/标记已读 | `api/conversation.uts#markReadBySequence` | `PUT /system/im/conversation/mark-read-seq?chatId=&readSequence=` | `AppImConversationController#markConversationReadBySequence` | 唯一权威接口：按 sequence 水位推进，单调递增 |
 | 删除会话 | `api/conversation.uts#deleteConversation` | `DELETE /system/im/conversation/delete?chatId=...` | `AppImConversationController#deleteConversation` | 参数名：chatId |
 | 联系人列表/搜索/详情 | `api/contact.uts` | `/system/im/contact/*` | `AppImContactController` | `list-by-dept` 当前后端存在 TODO（见 0.4.3） |
 | 群组（创建/更新/列表/成员/公告/邀请） | `api/group.uts`；`services/group-service.uts` | `/system/im/group/*` | `AppImGroupController` | 邀请码/二维码接口已具备 |
 | 群文件（上传/列表/删除/下载计数） | `services/group-service.uts`（调用 `/system/im/group/file/*`） | `/system/im/group/file/*` | `AppImGroupFileController` | `upload` multipart；`download` 为记录下载次数 |
 | 消息列表 | `api/message.uts#getMessageList` | `GET /system/im/message/list-by-chat` | `AppImMessageController#getMessageListByConversation` | `chatId` + 分页参数 |
 | 消息撤回/删除 | `api/message.uts#recallMessage` / `deleteMessage` | `PUT /system/im/message/recall`；`DELETE /system/im/message/delete` | `AppImMessageController#recallMessage` / `deleteMessage` | 撤回闭环需配合 WS 广播（Milestone F1） |
-| 消息已读上报 | `api/message.uts#markMessageRead` | `PUT /system/im/message/mark-read` | `AppImMessageController#markMessageRead` | 目前按 messageIds，上线建议演进为 lastReadSequence（Milestone C3） |
+| 消息已读上报 | - | - | - | 已收敛为会话水位：`PUT /system/im/conversation/mark-read-seq?chatId=&readSequence=` |
 | 搜索聊天记录 | `api/message.uts#searchMessages`；`services/message-search-service.uts` | `GET /system/im/message/search` | `AppImMessageController#searchMessages` | keyword + chatId + 时间范围 |
 
 #### 0.4.2 WebSocket 对接清单（系统消息）
@@ -86,6 +97,49 @@
 | 已读回执 | `services/message-service.uts#handleReadReceipt` | `READ_RECEIPT(201)` | READ_RECEIPT Processor | 群已读需聚合（Milestone C5） |
 | 撤回通知 | `services/message-service.uts#handleRecall` | `RECALL(202)` | RECALL Processor | |
 | 角标更新（跨端） | `services/badge-service.uts`（或 WS listener） | `BADGE_UPDATE(204)` | `ImBadgeService#pushBadgeUpdate`（业务侧触发） | 需与会话未读一致（Milestone C3） |
+
+补充：企业级推送协议（Push-Driven 会话同步）
+
+1. 原则：推送为会话同步/新会话出现的主路径；HTTP 拉取为兜底。
+2. 适用范围：服务端向客户端推送的业务消息（WebSocket TextFrame JSON）统一遵循以下 envelope 约束。
+
+WS(JSON) envelope 字段（服务端 -> 客户端）：
+
+- `header.messageId`: string
+- `header.messageType`: number
+- `header.timestamp`: number
+- `header.senderId/receiverId/groupId/tenantId`: string
+- `header.sequence`: string
+- `header.chatId`: string
+- `conversationSnapshot`: object（可选）
+
+`conversationSnapshot` 字段要求（建议与 `AppImConversationRespVO` 对齐，Long 按 string 输出）：
+
+- `chatId`: string
+- `targetId`: string
+- `conversationType`: number
+- `unreadCount`: number
+- `lastMessageSequence`: string
+- `lastReadSequence`: string
+- `lastMessageContent`: string
+- `lastMessageTime`: datetime
+- `isPinned`: boolean
+- `noDisturb`: boolean
+- `targetName`: string
+- `targetAvatar`: string
+- `groupMemberCount`: number
+
+端侧处理规则（必须遵循）：
+
+- 收到业务消息时，优先使用 `header.chatId` 作为会话主键，禁止使用 `groupId/receiverId` 作为会话主键写缓存。
+- 若携带 `conversationSnapshot`：端侧必须先 upsert 会话列表缓存（创建或更新），再落消息与角标更新，保证“首条推送即出现会话”。
+- 若缺失 `conversationSnapshot` 或会话不存在：端侧允许调用 `GET /system/im/conversation/get-by-target` 做兜底补齐（只作为安全网）。
+
+验收标准（Push-Driven 新会话创建）：
+
+- 单聊/群聊：接收端本地无会话时，收到首条 WS 消息后，会话列表必须自动出现新会话。
+- 新会话出现不得依赖用户手动刷新或定时轮询。
+- 端侧会话未读展示必须使用服务端水位模型（`lastMessageSequence/lastReadSequence/unreadCount`），本地仅允许做“水位推进后的立即一致性更新”。
 
 #### 0.4.4 已知缺口（代码级 TODO，需补齐到闭环）
 
@@ -125,7 +179,7 @@
 
 | 能力 | uniappx 调用点 | 端侧现状 URL/Method | module-system 现状 | 建议的权威契约（推荐） |
 | --- | --- | --- | --- | --- |
-| 按 groupId 分页查询群消息 | `AppImMessageController#getMessageListByGroup`（后端已有但 TODO） | `GET /system/im/message/list-by-group?groupId=&pageNo=&pageSize=` | Controller 存在，但内部 `// TODO: 需要先查询会话ID`，实际不会按 groupId 生效 | 建议后端内部完成 groupId->chatId 映射后复用 `getMessagePage`；或新增 `GET /system/im/conversation/get-by-target?targetId={groupId}&conversationType=2` 后端先拿 chatId 再查 |
+| 按 groupId 分页查询群消息 | 不再提供（开发阶段按最优解收敛） | - | - | 统一使用 `chatId`：会话列表返回 chatId；群聊场景通过会话创建/会话列表获取 chatId，然后调用 `list-by-chat`/`pull` |
 | 按 deptId 获取联系人 | `api/contact.uts#getContactListByDept` | `GET /system/im/contact/list-by-dept?deptId=` | `AppImContactController#getContactListByDept` 存在 TODO（当前直接返回全量） | 落地为真实 deptId 过滤（含租户/数据权限约束），并补齐分页/排序策略 |
 | 群组：dismiss/members/add-members 等“历史 URL” | `services/group-service.uts` 多处 | 见 0.4.5（大量 /system/im/group/* 非标准路由） | `AppImGroupController` 未提供这些路由 | 端侧统一改为复用 `api/group.uts`；如确需保兼容，可在后端做临时别名路由，但最终以 `AppImGroupController` 为权威 |
 | 消息表情回应 | `services/message-reaction-service.uts` | `POST /system/im/message/add-reaction`；`POST /remove-reaction`；`GET /reactions` | 后端缺路由 | 若要做：建议新增 `AppImMessageReactionController`（或挂在 message controller 下），并定义：`POST /reaction/add`、`POST /reaction/remove`、`GET /reaction/list?messageId=`（注意幂等与去重） |
@@ -137,10 +191,17 @@
 ### A1（P0）：撤销事件模型固化
 
 - **验收**：logout/互踢/强退都能映射到统一撤销事件；IM 定向收到 CLOSE/KICKED，且不影响不同 deviceType。
+- 状态：未开始
 
 ### A2（P0）：在线设备列表与踢人 API（管理态）
 
 - **验收**：返回 deviceName/deviceType/loginTime/lastActive；主动踢人后目标端立即弹窗并退出登录。
+- 状态：未开始
+
+### A3（P0）：refresh-token 自动续期 tenant-id 透传修复
+
+- **验收**：客户端自动刷新 token 时请求头携带 `tenant-id`，服务端不再报“租户 ID 未传”。
+- 状态：已完成
 
 ---
 
@@ -149,6 +210,7 @@
 ### B0（P0）：协议与版本基线冻结（SubProtocol + 首帧探测）
 
 - **验收**：固定 `im.pb.v1`/`im.json.v1`；首帧 MAGIC/VERSION/CODEC/FLAGS；形成兼容矩阵。
+- 状态：未开始
 
 - **目标**：冻结“连接层协商”协议基线。
 - **范围**：
@@ -168,6 +230,7 @@
 ### B1（P0）：服务端握手协商并绑定 codec
 
 - **验收**：SubProtocol 优先；无 SubProtocol 时首帧探测；失败关闭连接。
+- 状态：未开始
 
 - **目标**：服务端在 Upgrade 后完成协商，且把 `codec/negotiationMode` 绑定到连接会话上下文。
 - **范围**：
@@ -186,6 +249,7 @@
 ### B2（P0）：服务端双 decoder/encoder（业务无感）
 
 - **验收**：MaxFrameSize/AuthTimeout 生效；未认证仅允许 AUTH/HEARTBEAT；两栈跑通 AUTH/HEARTBEAT/CLOSE。
+- 状态：未开始
 
 - **目标**：做到“业务 processor 只面对统一领域对象”，编解码对业务无侵入。
 - **范围**：
@@ -204,6 +268,7 @@
 ### B3（P0）：JSON Envelope 与字段语义对齐
 
 - **验收**：JSON decode 失败可处理。
+- 状态：未开始
 
 - **目标**：冻结 JSON Envelope 校验规则，与 Protobuf header 语义完全一致。
 - **范围**：
@@ -221,6 +286,7 @@
 ### B4（P0）：App 端 Protobuf 编解码 + 自动降级
 
 - **验收**：App 宣告 pb；收发二进制可解码；服务端不支持 pb 时可降级 json。
+- 状态：未开始
 
 - **目标**：App 端在支持 pb 的情况下使用 pb；不支持时可降级 json。
 - **范围**：
@@ -241,6 +307,7 @@
 ### C1（P0）：ACK + 先存储后 fanout
 
 - **验收**：ACK 超时重发不产生重复消息；服务端幂等返回同一 sequence。
+- 状态：进行中
 
 补充拆解：
 
@@ -293,18 +360,16 @@
     - `GET /system/im/conversation/get-by-target?targetId={groupId}&conversationType=2`
   - 然后统一使用：
     - `GET /system/im/message/list-by-chat?chatId=...&pageNo=...&pageSize=...`
-  - `GET /system/im/message/list-by-group` 作为兼容接口保留，但实现上应内部转换并复用 `getMessagePage`
+  - 开发阶段不保留 `list-by-group`，避免双标准与误用
 
 - **验收标准**：
-  - 端侧仅知道 `groupId` 时：可拉到该群会话的消息分页（pageNo/pageSize 生效）
-  - 后端 `list-by-group` 返回的数据与 `list-by-chat` 返回一致（同 chatId 的同一页结果一致）
+  - 端侧仅知道 `groupId` 时：先通过会话接口拿到 `chatId`，再分页/补偿拉取消息（pageNo/pageSize 生效）
   - 查询结果按 `sequence` 单调排序，不出现跨页乱序
 
 
 - **涉及文件/目录**：
-  - `shengyu-module-system/.../controller/app/im/AppImMessageController.java`（补齐 list-by-group 的 TODO）
-  - `shengyu-module-system/.../service/im/ImConversationService`（提供 groupId->chatId 查询能力，或复用已有 createOrGetConversation）
-  - `shengyu-ui/shengyu-ui-admin-uniappx/api/message.uts`（如需增加 groupId 入口，需保证最终走 chatId 查询）
+  - `shengyu-module-system/.../controller/app/im/AppImConversationController.java`（提供 groupId->chatId 查询能力，或复用已有 createOrGetConversation）
+  - `shengyu-ui/shengyu-ui-admin-uniappx`：端侧统一通过 `chatId` 调用 `list-by-chat`/`pull`
 
 
 ### C3（P0）：会话同步与未读水位模型（对齐企微/钉钉）
@@ -371,12 +436,11 @@
 
 #### C3.5（P0）：从 messageIds 兼容迁移（过渡期）
 
-- **目标**：在不破坏现有端侧逻辑的前提下，平滑迁移到水位上报。
+- **目标**：统一已读口径为服务端水位模型。
 - **策略**：
-  - 短期保留 `PUT /system/im/message/mark-read?messageIds=...`（仅用于过渡/兼容）
-  - 端侧优先使用 `read-watermark`；若服务端未上线可降级到旧接口
+  - 只保留 `PUT /system/im/conversation/mark-read-seq?chatId=&readSequence=`（按 sequence 水位推进）
 - **验收标准**：
-  - 旧接口与新接口不会互相打架导致水位回退
+  - 不出现水位回退
 
 
 #### C3.6（P0）：数据模型与 SQL 落点（会话用户水位）
@@ -413,10 +477,9 @@
   - 端侧策略：
     - 首次进入：优先 `list` 出首屏，然后以 `sync(cursor)` 补齐/对齐（或直接只用 sync）
     - 后续刷新：只用 `sync(cursor)`
-- **mark-read 废弃策略**：
-  - `PUT /system/im/message/mark-read?messageIds=` 标记为“兼容接口（deprecated）”
-  - 新端只走 `PUT /system/im/conversation/read-watermark`（水位上报）
-  - 灰度：按 tenant/user/device 逐步切换；出现问题可回退到旧接口（但旧接口内部也应推进水位，避免口径分裂）
+- **已读上报（唯一权威）**：
+  - 只保留 `PUT /system/im/conversation/mark-read-seq?chatId=&readSequence=`
+  - 端侧进入会话立即上报 `readSequence = 本地最大 sequence`
 - **验收标准**：
   - 同一用户在灰度切换前后，不出现未读口径变化或水位回退
   - list 与 sync 返回字段口径一致（至少 chatId/lastMessageSequence/lastReadSequence/unreadCount/isPinned/noDisturb）
@@ -844,6 +907,8 @@
 
 ### V1（P1）：kkFileView 组件化部署（同环境一套）
 
+- 状态：未开始
+
 - **目标**：在开发/测试环境可一键拉起 kkFileView，并具备最小健康检查与日志定位能力。
 - **范围**：运维/部署（docker-compose 或 k8s 均可）
 - **依赖**：无
@@ -854,6 +919,8 @@
 
 ### V2（P1）：预览 URL 生成链路（fileId -> presigned -> kkFileView onlinePreview）
 
+- 状态：已完成
+
 - **目标**：端侧只依赖 `fileId`，并能获取可预览的短期 URL。
 - **范围**：infra（文件服务）+ uniappx
 - **依赖**：S2.4 / S2.4.a（presigned-get-url 契约与缓存策略）
@@ -863,6 +930,8 @@
   - 403/401 可明确提示（无权限/登录失效）
 
 ### V3（P1）：端侧统一预览入口（file-preview 页面）
+
+- 状态：未开始
 
 - **目标**：聊天页、群文件列表、搜索结果点击文件统一进入预览页，体验一致。
 - **范围**：uniappx

@@ -1,6 +1,7 @@
 package com.shengyu.framework.websocket.core.service;
 
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.service.dto.MessageSaveResult;
 
 /**
  * 消息存储服务接口（SPI）
@@ -75,5 +76,15 @@ public interface MessageStorageService {
     default Long saveMessageWithId(ImMessage message) {
         saveMessage(message);
         return null;
+    }
+
+    /**
+     * 保存消息并返回落库结果（用于回填 messageId/sequence 等元数据）
+     */
+    default MessageSaveResult saveMessageWithResult(ImMessage message) {
+        Long id = saveMessageWithId(message);
+        return MessageSaveResult.builder()
+                .messageId(id)
+                .build();
     }
 }

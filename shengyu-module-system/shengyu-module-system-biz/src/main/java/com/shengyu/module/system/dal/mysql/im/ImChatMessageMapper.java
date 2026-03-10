@@ -29,4 +29,12 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "</script>"})
     int updateStatusByIds(@Param("ids") List<Long> ids, @Param("status") Integer status);
 
+    default List<ImChatMessageDO> selectListByChatIdAndSequenceGt(Long chatId, Long lastSequence, Integer limit) {
+        return selectList(new LambdaQueryWrapperX<ImChatMessageDO>()
+                .eq(ImChatMessageDO::getChatId, chatId)
+                .gt(ImChatMessageDO::getSequence, lastSequence)
+                .orderByAsc(ImChatMessageDO::getSequence)
+                .last("LIMIT " + limit));
+    }
+
 }

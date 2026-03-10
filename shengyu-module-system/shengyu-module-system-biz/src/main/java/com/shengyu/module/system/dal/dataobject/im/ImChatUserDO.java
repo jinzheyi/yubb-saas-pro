@@ -32,7 +32,11 @@ public class ImChatUserDO extends TenantBaseDO {
 
     private Long lastReadMessageId;
 
+    private Long lastReadSequence;
+
     private Long lastMessageId;
+
+    private Long lastMessageSequence;
 
     private String lastMessageContent;
 

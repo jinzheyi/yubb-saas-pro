@@ -80,23 +80,14 @@ public class AppImConversationController {
         return success(true);
     }
 
-    @PutMapping("/mark-read")
-    @Operation(summary = "标记会话已读")
+    @PutMapping("/mark-read-seq")
+    @Operation(summary = "标记会话已读（按 sequence 水位推进）")
     @Parameter(name = "chatId", description = "ChatID", required = true)
-    public CommonResult<Boolean> markConversationRead(@RequestParam("chatId") Long chatId) {
+    @Parameter(name = "readSequence", description = "已读 sequence 水位", required = true)
+    public CommonResult<Boolean> markConversationReadBySequence(@RequestParam("chatId") Long chatId,
+                                                               @RequestParam("readSequence") Long readSequence) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        conversationService.markConversationRead(userId, chatId);
-        return success(true);
-    }
-
-    @PutMapping("/clear-unread/{chatId}")
-    @Operation(summary = "清空会话未读数")
-    @Parameter(name = "chatId", description = "ChatID", required = true)
-    public CommonResult<Boolean> clearUnread(@PathVariable("chatId") Long chatId) {
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
-        // 清空数据库中的未读数
-        conversationService.markConversationRead(userId, chatId);
-        // 推送角标更新到用户的其他设备
+        conversationService.markConversationReadBySequence(userId, chatId, readSequence);
         imBadgeService.pushBadgeUpdate(userId);
         return success(true);
     }

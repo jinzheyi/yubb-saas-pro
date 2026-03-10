@@ -20,14 +20,6 @@
 		
 		// 检查登录状态
 		checkLoginStatus()
-		
-		// 如果已登录且有有效 Token，自动连接 WebSocket
-		if (isLoggedIn()) {
-			const token = getAccessToken()
-			if (token != null && token != '') {
-				connectWebSocket()
-			}
-		}
 	})
 	
 	onShow(() => {
@@ -37,7 +29,7 @@
 			if (isLoggedIn()) {
 				const token = getAccessToken()
 				if (token != null && token != '') {
-					wsManager.connect()
+					connectWebSocket()
 				}
 			}
 		})

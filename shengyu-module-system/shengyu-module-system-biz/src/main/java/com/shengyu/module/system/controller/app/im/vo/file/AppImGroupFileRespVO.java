@@ -1,5 +1,7 @@
 package com.shengyu.module.system.controller.app.im.vo.file;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -10,15 +12,19 @@ import java.time.LocalDateTime;
 public class AppImGroupFileRespVO {
 
     @Schema(description = "主键ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     @Schema(description = "群组ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long groupId;
 
     @Schema(description = "文件ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long fileId;
 
     @Schema(description = "上传者ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long uploaderId;
 
     @Schema(description = "上传者名称", example = "张三")

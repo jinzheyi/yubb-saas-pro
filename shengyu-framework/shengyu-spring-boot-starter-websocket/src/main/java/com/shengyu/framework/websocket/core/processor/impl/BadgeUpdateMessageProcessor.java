@@ -7,6 +7,8 @@ import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import com.shengyu.framework.common.util.json.JsonUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 角标更新消息处理器
@@ -71,6 +74,19 @@ public class BadgeUpdateMessageProcessor implements MessageProcessor {
             }
 
             MessageHeader header = message.getHeader();
+            Long chatId = null;
+            try {
+                String extra = header.getExtra();
+                if (extra != null && !extra.isEmpty() && JsonUtils.isJson(extra)) {
+                    Map<String, Object> map = JsonUtils.parseObject(extra, new TypeReference<Map<String, Object>>() {});
+                    Object v = map != null ? map.get("chatId") : null;
+                    if (v != null) {
+                        chatId = Long.valueOf(String.valueOf(v));
+                    }
+                }
+            } catch (Exception ignore) {
+                chatId = null;
+            }
             messageSender.sendToUser(
                     userId,
                     header.getMessageType(),
@@ -79,7 +95,9 @@ public class BadgeUpdateMessageProcessor implements MessageProcessor {
                     userId,
                     header.getGroupId() > 0 ? header.getGroupId() : null,
                     header.getTenantId(),
-                    header.getMessageId()
+                    header.getMessageId(),
+                    null,
+                    chatId
             );
             
             log.debug("[BadgeUpdateProcessor] 角标更新消息已转发, userId: {}, success: {}", 

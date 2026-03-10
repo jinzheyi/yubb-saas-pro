@@ -6,6 +6,7 @@ import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
+import com.shengyu.framework.websocket.core.service.dto.MessageSaveResult;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -48,7 +49,22 @@ public class FileMessageProcessor implements MessageProcessor {
                 fileMessage.getSize());
 
             // 1. 存储消息到数据库
-            messageStorageService.saveMessage(message);
+            MessageSaveResult saveResult = messageStorageService.saveMessageWithResult(message);
+
+            // 1.1 回推给发送者（用于端侧把 SENDING -> SENT）
+            MessageHeader ackHeader = message.getHeader();
+            messageSender.sendToUser(
+                    ackHeader.getSenderId(),
+                    ackHeader.getMessageType(),
+                    fileMessage,
+                    ackHeader.getSenderId(),
+                    ackHeader.getReceiverId(),
+                    ackHeader.getGroupId() > 0 ? ackHeader.getGroupId() : null,
+                    ackHeader.getTenantId(),
+                    ackHeader.getMessageId(),
+                    saveResult != null ? saveResult.getSequence() : null,
+                    saveResult != null ? saveResult.getChatId() : null
+            );
 
             // 2. 转发给接收者
             Long receiverId = message.getHeader().getReceiverId();
@@ -62,7 +78,9 @@ public class FileMessageProcessor implements MessageProcessor {
                         receiverId,
                         header.getGroupId() > 0 ? header.getGroupId() : null,
                         header.getTenantId(),
-                        header.getMessageId()
+                        header.getMessageId(),
+                        saveResult != null ? saveResult.getSequence() : null,
+                        saveResult != null ? saveResult.getChatId() : null
                 );
             }
 

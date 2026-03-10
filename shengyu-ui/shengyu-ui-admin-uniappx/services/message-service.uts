@@ -14,6 +14,7 @@ import { MessageBuilder, MessageParser, ImMessage } from '../utils/message-handl
 import { getAvatarText, getUserAvatarColor } from '@/utils/avatar.uts'
 import { getUserInfo } from '@/store/user.uts'
 import { getUserDetail } from '@/api/user.uts'
+import { pullMessages as pullMessagesApi } from '@/api/message.uts'
 import { badgeService, BadgeUpdateMessage } from './badge-service.uts'
 import { conversationService } from './conversation-service.uts'
 
@@ -47,6 +48,7 @@ export type MessageStatusListener = (messageId: string, status: MessageStatus) =
 export type MessageItem = {
   id: string
   messageId: string
+  sequence?: string
   senderId: string
   receiverId: string
   groupId: string
@@ -77,6 +79,8 @@ export type ConversationItem = {
   lastMessageTime: string     // 对应后端 lastMessageTime（格式化后）
   timestamp: number        // 对应后端 lastMessageTime（原始时间戳）
   unreadCount: number       // 对应后端 unreadCount
+  lastMessageSequence: string // 对应后端 lastMessageSequence（服务端权威水位）
+  lastReadSequence: string    // 对应后端 lastReadSequence（服务端权威水位）
   isPinned: boolean        // 对应后端 isPinned
   noDisturb: boolean       // 对应后端 noDisturb
   groupMemberCount: number // 对应后端 groupMemberCount
@@ -105,8 +109,6 @@ export class MessageService {
   // 消息状态监听器列表
   private messageStatusListeners: MessageStatusListener[] = []
   
-  // 会话更新监听器列表
-  private conversationUpdateListeners: ConversationUpdateListener[] = []
   
   // 当前用户信息
   private currentUserId: string = '0'
@@ -118,9 +120,9 @@ export class MessageService {
   
   // 消息缓存（按会话ID分组）
   private messageCache: Map<string, MessageItem[]> = new Map()
-  
-  // 会话缓存
-  private conversationCache: Map<string, ConversationItem> = new Map()
+
+  // 每个会话最后拉取/确认的序列号（用于断线补偿水位）
+  private lastPulledSequence: Map<string, string> = new Map()
   
   // 消息队列（用于离线消息重发）
   private messageQueue: QueuedMessage[] = []
@@ -136,6 +138,106 @@ export class MessageService {
    */
   private constructor() {
     this.initWebSocketListeners()
+    this.initWebSocketStateListener()
+  }
+
+  private initWebSocketStateListener(): void {
+    // 认证成功后 websocket.uts 不会向业务层分发 AUTH_RESP，这里通过状态监听 + isConnected() 轮询兜底
+    wsManager.addStateListener((state) => {
+      if (state !== WebSocketState.OPEN) {
+        return
+      }
+      // 延迟一点，等认证流程完成
+      setTimeout(() => {
+        void this.tryPullAfterConnected()
+      }, 300)
+    })
+  }
+
+  private async tryPullAfterConnected(): Promise<void> {
+    if (!wsManager.isConnected()) {
+      // 最多等待 3 秒（每 200ms 检查一次）
+      for (let i = 0; i < 15; i++) {
+        await new Promise<void>((resolve) => setTimeout(() => resolve(), 200))
+        if (wsManager.isConnected()) {
+          break
+        }
+      }
+    }
+    if (!wsManager.isConnected()) {
+      return
+    }
+    await this.pullMissingMessagesForLoadedConversations()
+  }
+
+  /**
+   * 连接恢复后，对已加载的会话执行断线补偿拉取
+   */
+  private async pullMissingMessagesForLoadedConversations(): Promise<void> {
+    try {
+      // 如果会话未加载，这里主动加载一次
+      const conversations = conversationService.getConversations()
+      if (conversations == null || conversations.length === 0) {
+        await conversationService.loadConversations()
+      }
+      const list = conversationService.getConversations()
+      if (list == null || list.length === 0) {
+        return
+      }
+
+      for (let i = 0; i < list.length; i++) {
+        const c = list[i]
+        const chatId = c.chatId != null ? (c.chatId as any).toString() : '0'
+        await this.pullMissingMessagesForChat(chatId)
+      }
+    } catch (e) {
+      console.warn('[MessageService] pullMissingMessagesForLoadedConversations failed:', e)
+    }
+  }
+
+  private async pullMissingMessagesForChat(chatId: string): Promise<void> {
+    try {
+      const lastSeq = this.getLastPulledSequence(chatId)
+      const resp = await pullMessagesApi(chatId, lastSeq, 200)
+      const arr = resp as any[]
+      if (arr == null || arr.length === 0) {
+        return
+      }
+
+      for (let i = 0; i < arr.length; i++) {
+        const m: any = arr[i]
+        const senderIdStr = m.senderId != null ? m.senderId.toString() : '0'
+        const isSelf = senderIdStr === this.currentUserId
+        const senderName = (m.senderNickname != null && m.senderNickname !== '')
+          ? m.senderNickname
+          : (isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr))
+
+        const messageItem: MessageItem = {
+          id: '0',
+          messageId: m.id != null ? m.id.toString() : '0',
+          sequence: m.sequence != null ? m.sequence.toString() : undefined,
+          senderId: senderIdStr,
+          receiverId: m.receiverId != null ? m.receiverId.toString() : '0',
+          groupId: m.groupId != null ? m.groupId.toString() : '0',
+          type: m.messageType,
+          content: { content: m.content, extra: m.extra },
+          status: MessageStatus.SENT,
+          timestamp: m.sendTime != null ? new Date(m.sendTime as string).getTime() : Date.now(),
+          isSelf: isSelf,
+          showTime: true,
+          avatarText: senderName ? getAvatarText(senderName) : '?',
+          avatarBg: getUserAvatarColor(senderIdStr),
+          senderName: senderName
+        }
+
+        this.addMessageToCache(chatId, messageItem)
+        if (messageItem.sequence != null) {
+          this.updateLastPulledSequence(chatId, messageItem.sequence)
+        }
+      }
+    } catch (e) {
+      console.warn('[MessageService] pullMissingMessagesForChat failed:', { chatId: chatId, e: e })
+    }
   }
 
   private async resolveUserNickname(userId: string): Promise<string> {
@@ -563,6 +665,7 @@ export class MessageService {
     const messageItem: MessageItem = {
       id: '0',  // 临时ID，服务端返回后更新
       messageId: message.header.messageId,
+      sequence: message.header.sequence != null ? message.header.sequence.toString() : undefined,
       senderId: message.header.senderId,
       receiverId: message.header.receiverId,
       groupId: message.header.groupId,
@@ -612,11 +715,35 @@ export class MessageService {
     const isSelf = senderIdStr === this.currentUserId
     const senderName = isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr)
     const avatarText = senderName ? getAvatarText(senderName) : '?'
-    
+
+    // 自己发送的消息：服务端回推用于确认投递（SENDING -> SENT），避免重复插入
+    if (isSelf) {
+      const msgId = message.header.messageId
+      const seq = message.header.sequence
+      let updated = false
+      this.messageCache.forEach((messages) => {
+        messages.forEach(msg => {
+          if (msg.messageId === msgId && msg.status === MessageStatus.SENDING) {
+            msg.status = MessageStatus.SENT
+            if (seq !== null && seq !== undefined) {
+              msg.sequence = seq.toString()
+              this.updateLastPulledSequence(this.resolveChatIdFromHeader(message.header), msg.sequence)
+            }
+            updated = true
+          }
+        })
+      })
+      if (updated) {
+        this.notifyStatusListeners(msgId, MessageStatus.SENT)
+        return
+      }
+    }
+
     // 创建消息项
     const messageItem: MessageItem = {
       id: '0',
       messageId: message.header.messageId,
+      sequence: message.header.sequence != null ? message.header.sequence.toString() : undefined,
       senderId: senderIdStr,
       receiverId: message.header.receiverId,
       groupId: message.header.groupId,
@@ -630,21 +757,63 @@ export class MessageService {
       avatarBg: getUserAvatarColor(senderIdStr),
       senderName: senderName
     }
-    
+
+    let chatId = this.resolveChatIdFromHeader(message.header)
+    const summary = MessageParser.getSummary({
+      header: { messageType: messageItem.type } as any,
+      body: messageItem.content
+    })
+    const seq = messageItem.sequence != null ? messageItem.sequence.toString() : null
+    const isGroup = message.header.groupId !== '0' && message.header.groupId !== ''
+    const targetId = isGroup
+      ? (message.header.groupId != null ? message.header.groupId.toString() : '0')
+      : (isSelf
+        ? (message.header.receiverId != null ? message.header.receiverId.toString() : '0')
+        : senderIdStr)
+    const conversationType = isGroup ? 2 : 1
+
+    const snapshot: any = (message as any).conversationSnapshot
+    if (snapshot != null) {
+      const snapChatId = conversationService.upsertFromSnapshot(snapshot, summary, messageItem.timestamp, !messageItem.isSelf, seq)
+      if (snapChatId != null && snapChatId !== '') {
+        chatId = snapChatId
+      }
+    }
+
+    if (conversationService.getConversation(chatId) == null) {
+      const ensuredChatId = await conversationService.ensureConversationByTarget(
+        targetId,
+        conversationType,
+        summary,
+        messageItem.timestamp,
+        !messageItem.isSelf,
+        seq
+      )
+      if (ensuredChatId != null && ensuredChatId !== '') {
+        chatId = ensuredChatId
+      }
+    }
+
     // 添加到缓存
-    const rawChatId = message.header.groupId !== '0' && message.header.groupId !== '' ? message.header.groupId : message.header.senderId
-    const chatId = rawChatId != null ? (rawChatId as any).toString() : '0'
     this.addMessageToCache(chatId, messageItem)
+    if (messageItem.sequence != null) {
+      this.updateLastPulledSequence(chatId, messageItem.sequence)
+    }
     
     // 通知监听器
     this.notifyMessageListeners(messageItem)
     
     // 更新会话
-    this.updateConversation(chatId, messageItem)
+    conversationService.updateConversation(
+      chatId,
+      summary,
+      messageItem.timestamp,
+      !messageItem.isSelf,
+      seq
+    )
     
     // 如果不是自己发送的消息，增加未读数和角标
     if (!messageItem.isSelf) {
-      this.incrementUnreadCount(chatId)
       // 自动增加对应会话的角标未读数
       badgeService.incrementConversationBadge(chatId)
     }
@@ -795,6 +964,34 @@ export class MessageService {
       this.messageCache.set(chatId, messages)
     }
     messages.push(message)
+
+    // 优先按 sequence 排序（断线补偿/严格顺序），否则退化为 timestamp+messageId
+    messages.sort((a, b) => {
+      const as = a.sequence
+      const bs = b.sequence
+      if (as != null && bs != null) {
+        try {
+          const diff = BigInt(as) - BigInt(bs)
+          if (diff !== BigInt(0)) {
+            return diff > BigInt(0) ? 1 : -1
+          }
+        } catch (e) {
+          // ignore
+        }
+      } else if (as != null && bs == null) {
+        return 1
+      } else if (as == null && bs != null) {
+        return -1
+      }
+
+      if (a.timestamp !== b.timestamp) {
+        return a.timestamp - b.timestamp
+      }
+      if (a.messageId !== b.messageId) {
+        return a.messageId > b.messageId ? 1 : -1
+      }
+      return 0
+    })
   }
   
   /**
@@ -803,6 +1000,70 @@ export class MessageService {
   public getMessages(chatId: string): MessageItem[] {
     const messages = this.messageCache.get(chatId)
     return messages !== null && messages !== undefined ? messages : []
+  }
+
+  private resolveChatIdFromHeader(header: any): string {
+    if (header != null && header.chatId != null && header.chatId !== '') {
+      return (header.chatId as any).toString()
+    }
+    const isGroup = header.groupId !== '0' && header.groupId !== ''
+    if (isGroup) {
+      const groupId = header.groupId != null ? (header.groupId as any).toString() : '0'
+      const cached = conversationService.getCachedChatIdByTarget(groupId, 2)
+      if (cached != null) {
+        return cached
+      }
+      return groupId
+    }
+    const receiverId = header.receiverId != null ? (header.receiverId as any).toString() : '0'
+    const cached = conversationService.getCachedChatIdByTarget(receiverId, 1)
+    if (cached != null) {
+      return cached
+    }
+    return receiverId
+  }
+
+  private getLastPulledSequenceStorageKey(chatId: string): string {
+    const tenantId = this.currentTenantId != null ? this.currentTenantId : '0'
+    const userId = this.currentUserId != null ? this.currentUserId : '0'
+    return `im_last_pulled_sequence_${tenantId}_${userId}_${chatId}`
+  }
+
+  public getLastPulledSequence(chatId: string): string {
+    const cached = this.lastPulledSequence.get(chatId)
+    if (cached != null) {
+      return cached
+    }
+    try {
+      const v = uni.getStorageSync(this.getLastPulledSequenceStorageKey(chatId))
+      const s = v != null && v !== '' ? v.toString() : '0'
+      this.lastPulledSequence.set(chatId, s)
+      return s
+    } catch (e) {
+      return '0'
+    }
+  }
+
+  private updateLastPulledSequence(chatId: string, seq: string): void {
+    if (seq == null || seq === '') {
+      return
+    }
+    const current = this.getLastPulledSequence(chatId)
+    let shouldUpdate = false
+    try {
+      shouldUpdate = BigInt(seq) > BigInt(current)
+    } catch (e) {
+      shouldUpdate = seq > current
+    }
+    if (!shouldUpdate) {
+      return
+    }
+    this.lastPulledSequence.set(chatId, seq)
+    try {
+      uni.setStorageSync(this.getLastPulledSequenceStorageKey(chatId), seq)
+    } catch (e) {
+      // ignore
+    }
   }
   
   /**
@@ -814,24 +1075,15 @@ export class MessageService {
       body: message.content 
     })
     
-    // 调用 ConversationService 更新会话
+    // 调用 ConversationService 更新会话（附带 sequence 用于水位模型计算未读）
+    const seq = message.sequence != null ? message.sequence.toString() : null
     conversationService.updateConversation(
       chatId,
       summary,
       message.timestamp,
-      !message.isSelf  // 只有接收到的消息才增加未读数
+      !message.isSelf,  // 只有接收到的消息才增加未读数
+      seq
     )
-  }
-  
-  /**
-   * 增加未读数
-   */
-  private incrementUnreadCount(chatId: string): void {
-    const conversation = this.conversationCache.get(chatId)
-    if (conversation !== null && conversation !== undefined) {
-      conversation.unreadCount++
-      this.notifyConversationUpdateListeners(conversation)
-    }
   }
   
   /**
@@ -979,32 +1231,12 @@ export class MessageService {
     }
   }
   
-  /**
-   * 清空未读数
-   */
   public clearUnreadCount(chatId: string): void {
-    const conversation = this.conversationCache.get(chatId)
-    if (conversation !== null && conversation !== undefined) {
-      conversation.unreadCount = 0
-      this.notifyConversationUpdateListeners(conversation)
-    }
+    badgeService.clearConversationBadgeLocal(chatId)
   }
-  
-  /**
-   * 获取会话列表
-   */
+
   public getConversations(): ConversationItem[] {
-    const conversations: ConversationItem[] = []
-    this.conversationCache.forEach((conversation) => {
-      conversations.push(conversation)
-    })
-    
-    // 按时间戳降序排序
-    conversations.sort((a, b) => {
-      return b.timestamp - a.timestamp
-    })
-    
-    return conversations
+    return conversationService.getConversations() as any
   }
   
   /**
@@ -1038,41 +1270,10 @@ export class MessageService {
   }
   
   /**
-   * 添加会话更新监听器
-   */
-  public addConversationUpdateListener(listener: ConversationUpdateListener): void {
-    this.conversationUpdateListeners.push(listener)
-  }
-  
-  /**
-   * 移除会话更新监听器
-   */
-  public removeConversationUpdateListener(listener: ConversationUpdateListener): void {
-    const index = this.conversationUpdateListeners.indexOf(listener)
-    if (index !== -1) {
-      this.conversationUpdateListeners.splice(index, 1)
-    }
-  }
-  
-  /**
-   * 通知会话更新监听器
-   */
-  private notifyConversationUpdateListeners(conversation: ConversationItem): void {
-    this.conversationUpdateListeners.forEach((listener) => {
-      try {
-        listener(conversation)
-      } catch (e) {
-        console.error('[MessageService] 会话更新监听器执行失败:', e)
-      }
-    })
-  }
-  
-  /**
    * 清空缓存
    */
   public clearCache(): void {
     this.messageCache.clear()
-    this.conversationCache.clear()
   }
 }
 

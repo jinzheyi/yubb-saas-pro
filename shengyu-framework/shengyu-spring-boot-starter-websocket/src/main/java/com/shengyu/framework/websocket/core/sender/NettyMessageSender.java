@@ -7,6 +7,7 @@ import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.FileMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.service.ConversationSnapshotService;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import com.shengyu.framework.common.util.json.JsonUtils;
@@ -37,6 +38,9 @@ import java.util.Map;
 public class NettyMessageSender {
 
     private final NettySessionManager sessionManager;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ConversationSnapshotService conversationSnapshotService;
 
     /**
      * 发送消息给指定用户
@@ -70,6 +74,22 @@ public class NettyMessageSender {
      */
     public void sendToUser(Long userId, MessageType messageType, MessageLite body,
                            Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId) {
+        sendToUser(userId, messageType, body, senderId, receiverId, groupId, tenantId, messageId, null);
+    }
+
+    /**
+     * 发送消息给指定用户（可显式指定 receiverId/groupId/messageId/sequence）
+     */
+    public void sendToUser(Long userId, MessageType messageType, MessageLite body,
+                           Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence) {
+        sendToUser(userId, messageType, body, senderId, receiverId, groupId, tenantId, messageId, sequence, null);
+    }
+
+    /**
+     * 发送消息给指定用户（可显式指定 receiverId/groupId/messageId/sequence/chatId）
+     */
+    public void sendToUser(Long userId, MessageType messageType, MessageLite body,
+                           Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence, Long chatId) {
         TenantUtils.execute(tenantId, () -> {
             List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
             if (sessions.isEmpty()) {
@@ -83,8 +103,8 @@ public class NettyMessageSender {
                         userId, messageType, messageId, senderId, receiverId, groupId, tenantId, sessions.size());
             }
 
-            ImMessage protobufMessage = buildMessage(messageType, body, senderId, receiverId, groupId, tenantId, messageId);
-            String jsonPayload = buildJsonPayload(messageType, body, senderId, receiverId, groupId, tenantId, messageId);
+            ImMessage protobufMessage = buildMessage(messageType, body, senderId, receiverId, groupId, tenantId, messageId, sequence);
+            String jsonPayload = buildJsonPayload(messageType, body, senderId, receiverId, groupId, tenantId, messageId, sequence, chatId, userId);
 
             int successCount = 0;
             for (NettySession session : sessions) {
@@ -169,8 +189,8 @@ public class NettyMessageSender {
                 return;
             }
 
-            ImMessage protobufMessage = buildMessage(messageType, body, null, null, null, tenantId, null);
-            String jsonPayload = buildJsonPayload(messageType, body, null, null, null, tenantId, null);
+            ImMessage protobufMessage = buildMessage(messageType, body, null, null, null, tenantId, null, null);
+            String jsonPayload = buildJsonPayload(messageType, body, null, null, null, tenantId, null, null, null, null);
 
             int successCount = 0;
             for (NettySession session : sessions) {
@@ -251,17 +271,26 @@ public class NettyMessageSender {
     /**
      * 构建 IM 消息
      */
-    private ImMessage buildMessage(MessageType messageType, MessageLite body, 
+    private ImMessage buildMessage(MessageType messageType, MessageLite body,
                                    Long senderId, Long receiverId, Long groupId, Long tenantId) {
-        return buildMessage(messageType, body, senderId, receiverId, groupId, tenantId, null);
+        return buildMessage(messageType, body, senderId, receiverId, groupId, tenantId, null, null);
     }
 
     private ImMessage buildMessage(MessageType messageType, MessageLite body,
                                    Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId) {
+        return buildMessage(messageType, body, senderId, receiverId, groupId, tenantId, messageId, null);
+    }
+
+    private ImMessage buildMessage(MessageType messageType, MessageLite body,
+                                   Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence) {
         MessageHeader.Builder headerBuilder = MessageHeader.newBuilder()
-            .setMessageId(messageId != null ? messageId : generateMessageId())
-            .setMessageType(messageType)
-            .setTimestamp(System.currentTimeMillis());
+                .setMessageId(messageId != null ? messageId : generateMessageId())
+                .setMessageType(messageType)
+                .setTimestamp(System.currentTimeMillis());
+
+        if (sequence != null) {
+            headerBuilder.setSequence(sequence);
+        }
 
         String derivedExtra = deriveHeaderExtra(messageType, body);
         if (StrUtil.isNotBlank(derivedExtra)) {
@@ -282,7 +311,7 @@ public class NettyMessageSender {
         }
 
         ImMessage.Builder messageBuilder = ImMessage.newBuilder()
-            .setHeader(headerBuilder.build());
+                .setHeader(headerBuilder.build());
 
         if (body != null) {
             messageBuilder.setBody(ByteString.copyFrom(body.toByteArray()));
@@ -300,7 +329,8 @@ public class NettyMessageSender {
     }
 
     private String buildJsonPayload(MessageType messageType, MessageLite body,
-                                   Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId) {
+                                   Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence,
+                                   Long chatId, Long toUserId) {
         Map<String, Object> root = new HashMap<>();
         Map<String, Object> header = new HashMap<>();
         header.put("messageId", messageId != null ? String.valueOf(messageId) : String.valueOf(generateMessageId()));
@@ -310,6 +340,12 @@ public class NettyMessageSender {
         header.put("receiverId", receiverId != null ? String.valueOf(receiverId) : "0");
         header.put("groupId", groupId != null ? String.valueOf(groupId) : "0");
         header.put("tenantId", tenantId != null ? String.valueOf(tenantId) : "0");
+        if (chatId != null) {
+            header.put("chatId", String.valueOf(chatId));
+        }
+        if (sequence != null) {
+            header.put("sequence", String.valueOf(sequence));
+        }
 
         String derivedExtra = deriveHeaderExtra(messageType, body);
         if (StrUtil.isNotBlank(derivedExtra)) {
@@ -317,6 +353,18 @@ public class NettyMessageSender {
         }
         root.put("header", header);
         root.put("body", buildJsonBody(messageType, body));
+
+        if (chatId != null && toUserId != null && conversationSnapshotService != null) {
+            try {
+                Map<String, Object> snapshot = conversationSnapshotService.buildSnapshot(toUserId, chatId);
+                if (snapshot != null && !snapshot.isEmpty()) {
+                    root.put("conversationSnapshot", snapshot);
+                }
+            } catch (Exception e) {
+                log.warn("[MessageSender] buildSnapshot failed: toUserId={}, chatId={}, messageId={}, type={}",
+                        toUserId, chatId, messageId, messageType, e);
+            }
+        }
         return JsonUtils.toJsonString(root);
     }
 

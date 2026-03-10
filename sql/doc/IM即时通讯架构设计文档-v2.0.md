@@ -49,6 +49,12 @@
 - **可靠性优先**：序列号/ACK/幂等/重投/断线补偿闭环
 - **可演进**：协议双栈，H5 JSON 便于调试，App Protobuf 优化流量与性能
 
+### 2.3 强制规范：Long 精度（前端 / JSON）
+
+- 所有涉及 ID / 序列号的 `Long` 字段（包含但不限于：`messageId`、`sequence`、`chatId`、`groupId`、`userId`、`targetId`、`tenantId` 等），在 **前端与 JSON 传输层必须按 `string` 处理**，禁止按 JS `number` 持久化或参与去重/索引。
+- App/uniapp 对应的后端 **Response VO** 中，所有 `Long` 字段必须使用 `@JsonSerialize(using = ToStringSerializer.class)` 输出为字符串，避免超过 `2^53-1` 时前端精度丢失导致的去重/ACK/排序错误。
+- 前端消息/会话模型中，上述字段必须定义为 `string`，仅在排序/比较需要时临时转换（例如 `BigInt`），且不得把转换后的 `number` 写回缓存。
+
 ---
 
 ## 3. 统一鉴权体系（HTTP + IM）
@@ -613,7 +619,7 @@ list vs sync 并存策略：
 
 - `GET /system/im/conversation/list`：可作为“全量兜底/首屏快速加载”。
 - `GET /system/im/conversation/sync`：作为企业级权威同步入口（多端一致、离线补偿、点击 push 拉起对齐）。
-- 兼容迁移：`PUT /system/im/message/mark-read?messageIds=...` 可短期保留（deprecated），但其内部也应推进水位，避免口径分裂。
+- 已读上报：统一使用 `PUT /system/im/conversation/mark-read-seq?chatId=&readSequence=`（按 sequence 水位推进，单调递增）。
 
 群聊场景下的 groupId -> conversationId 映射建议：
 

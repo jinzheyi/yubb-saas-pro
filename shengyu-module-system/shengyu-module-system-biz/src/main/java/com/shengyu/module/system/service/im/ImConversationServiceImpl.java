@@ -130,18 +130,30 @@ public class ImConversationServiceImpl implements ImConversationService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void markConversationRead(Long userId, Long conversationId) {
-        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, conversationId);
+    public void markConversationReadBySequence(Long userId, Long chatId, Long readSequence) {
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
         if (chatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
-        chatUserMapper.markRead(userId, conversationId);
+        Long seq = readSequence != null ? readSequence : 0L;
+        if (seq < 0) {
+            seq = 0L;
+        }
+        chatUserMapper.markReadToSequence(userId, chatId, seq);
     }
 
     @Override
     public Integer getUnreadCount(Long userId) {
         List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserId(userId);
-        return chatUsers.stream().map(ImChatUserDO::getUnreadCount).filter(v -> v != null && v > 0).mapToInt(Integer::intValue).sum();
+        return chatUsers.stream().mapToInt(cu -> {
+            Long lastMsgSeq = cu.getLastMessageSequence() != null ? cu.getLastMessageSequence() : 0L;
+            Long lastReadSeq = cu.getLastReadSequence() != null ? cu.getLastReadSequence() : 0L;
+            try {
+                return (int) Math.max(lastMsgSeq - lastReadSeq, 0L);
+            } catch (Exception ignore) {
+                return cu.getUnreadCount() != null ? Math.max(cu.getUnreadCount(), 0) : 0;
+            }
+        }).sum();
     }
 
     @Override
@@ -160,12 +172,6 @@ public class ImConversationServiceImpl implements ImConversationService {
     @Transactional(rollbackFor = Exception.class)
     public void incrementUnreadCount(Long conversationId, Integer delta) {
         // 未读数由 SystemMessageStorageServiceImpl 写入 im_chat_user.unread_count，HTTP 不再直接递增
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void clearUnreadCount(Long conversationId) {
-        // 由 markConversationRead 处理
     }
 
     @Override
@@ -189,10 +195,21 @@ public class ImConversationServiceImpl implements ImConversationService {
     public List<ConversationBadge> getConversationBadges(Long userId) {
         List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserId(userId);
         return chatUsers.stream()
-                .filter(cu -> cu.getUnreadCount() != null && cu.getUnreadCount() > 0)
+                .map(cu -> {
+                    Long lastMsgSeq = cu.getLastMessageSequence() != null ? cu.getLastMessageSequence() : 0L;
+                    Long lastReadSeq = cu.getLastReadSequence() != null ? cu.getLastReadSequence() : 0L;
+                    int unread = 0;
+                    try {
+                        unread = (int) Math.max(lastMsgSeq - lastReadSeq, 0L);
+                    } catch (Exception ignore) {
+                        unread = cu.getUnreadCount() != null ? Math.max(cu.getUnreadCount(), 0) : 0;
+                    }
+                    return new Object[]{cu.getChatId(), unread};
+                })
+                .filter(arr -> (int) arr[1] > 0)
                 .map(cu -> ConversationBadge.newBuilder()
-                        .setConversationId(cu.getChatId())
-                        .setUnreadCount(cu.getUnreadCount())
+                        .setConversationId((Long) cu[0])
+                        .setUnreadCount((Integer) cu[1])
                         .build())
                 .collect(Collectors.toList());
     }
@@ -212,13 +229,23 @@ public class ImConversationServiceImpl implements ImConversationService {
              throw exception(CONVERSATION_NOT_EXISTS);
          }
          AppImConversationRespVO respVO = new AppImConversationRespVO();
-         respVO.setChatId(chatUser.getChatId());
-         respVO.setConversationType(chat.getChatType());
-         respVO.setUnreadCount(chatUser.getUnreadCount());
-         respVO.setLastMessageContent(chatUser.getLastMessageContent());
-         respVO.setLastMessageTime(chatUser.getLastMessageTime());
-         respVO.setIsPinned(chatUser.getIsPinned());
-         respVO.setNoDisturb(chatUser.getNoDisturb());
+        respVO.setChatId(chatUser.getChatId());
+        respVO.setConversationType(chat.getChatType());
+        Long lastMsgSeq = chatUser.getLastMessageSequence() != null ? chatUser.getLastMessageSequence() : 0L;
+        Long lastReadSeq = chatUser.getLastReadSequence() != null ? chatUser.getLastReadSequence() : 0L;
+        respVO.setLastMessageSequence(lastMsgSeq);
+        respVO.setLastReadSequence(lastReadSeq);
+        int unread = 0;
+        try {
+            unread = (int) Math.max(lastMsgSeq - lastReadSeq, 0L);
+        } catch (Exception ignore) {
+            unread = chatUser.getUnreadCount() != null ? chatUser.getUnreadCount() : 0;
+        }
+        respVO.setUnreadCount(unread);
+        respVO.setLastMessageContent(chatUser.getLastMessageContent());
+        respVO.setLastMessageTime(chatUser.getLastMessageTime());
+        respVO.setIsPinned(chatUser.getIsPinned());
+        respVO.setNoDisturb(chatUser.getNoDisturb());
 
          if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
              respVO.setTargetId(chat.getGroupId());

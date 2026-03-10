@@ -1,5 +1,7 @@
 package com.shengyu.module.system.controller.app.im.vo.contact;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -8,6 +10,7 @@ import lombok.Data;
 public class AppImContactRespVO {
 
     @Schema(description = "用户ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     @Schema(description = "用户昵称", requiredMode = Schema.RequiredMode.REQUIRED, example = "张三")
@@ -17,6 +20,7 @@ public class AppImContactRespVO {
     private String avatar;
 
     @Schema(description = "部门ID", example = "1")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
     @Schema(description = "部门名称", example = "技术部")

@@ -264,15 +264,6 @@
 				uni.removeStorageSync('REMEMBER_ME')
 			}
 			
-			// 建立 WebSocket 连接
-			try {
-				const { wsManager } = await import('@/utils/websocket.uts')
-				wsManager.connect()
-				console.log('[Login] WebSocket 连接已启动')
-			} catch (e) {
-				console.error('[Login] WebSocket 连接失败:', e)
-			}
-			
 			uni.showToast({ title: t('sys.login.loginSuccessTitle'), icon: 'success' })
 			setTimeout(() => {
 				uni.switchTab({ url: '/pages/message/message' })

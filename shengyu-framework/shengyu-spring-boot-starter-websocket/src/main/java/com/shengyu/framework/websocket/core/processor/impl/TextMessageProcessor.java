@@ -6,6 +6,7 @@ import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.TextMessage;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
+import com.shengyu.framework.websocket.core.service.dto.MessageSaveResult;
 import com.shengyu.framework.websocket.core.service.SensitiveWordFilterService;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
@@ -107,10 +108,25 @@ public class TextMessageProcessor implements MessageProcessor {
                 log.info("[TextMessage] saveMessage begin: messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}",
                         h.getMessageId(), h.getSenderId(), h.getReceiverId(), h.getGroupId(), h.getTenantId());
             }
-            messageStorageService.saveMessage(message);
+            MessageSaveResult saveResult = messageStorageService.saveMessageWithResult(message);
             if (log.isInfoEnabled()) {
                 log.info("[TextMessage] saveMessage done: messageId={}", message.getHeader().getMessageId());
             }
+
+            // 2.1 回推给发送者（用于端侧把 SENDING -> SENT，避免仅本地乐观渲染）
+            MessageHeader ackHeader = message.getHeader();
+            messageSender.sendToUser(
+                    ackHeader.getSenderId(),
+                    ackHeader.getMessageType(),
+                    textMessage,
+                    ackHeader.getSenderId(),
+                    ackHeader.getReceiverId(),
+                    ackHeader.getGroupId() > 0 ? ackHeader.getGroupId() : null,
+                    ackHeader.getTenantId(),
+                    ackHeader.getMessageId(),
+                    saveResult != null ? saveResult.getSequence() : null,
+                    saveResult != null ? saveResult.getChatId() : null
+            );
 
             // 3. 转发消息
             Long receiverId = message.getHeader().getReceiverId();
@@ -132,7 +148,9 @@ public class TextMessageProcessor implements MessageProcessor {
                         receiverId,
                         groupId != null && groupId > 0 ? groupId : null,
                         header.getTenantId(),
-                        header.getMessageId()
+                        header.getMessageId(),
+                        saveResult != null ? saveResult.getSequence() : null,
+                        saveResult != null ? saveResult.getChatId() : null
                 );
 
                 if (log.isInfoEnabled()) {

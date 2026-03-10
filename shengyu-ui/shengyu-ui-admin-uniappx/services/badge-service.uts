@@ -262,45 +262,57 @@ export class BadgeService {
   /**
    * 清空会话未读数
    */
-  public clearConversationBadge(chatId: string): void {
+  public clearConversationBadge(chatId: string, readSequence: string = '0'): void {
     console.log(`[BadgeService] 清空会话 ${chatId} 未读数`)
     
     // 获取当前会话未读数
     const currentCount = this.getConversationBadge(chatId)
     
     if (currentCount > 0) {
-      // 清空会话未读数
-      this.badgeData.conversationBadges.set(chatId, 0)
-      
-      // 更新总未读数
-      this.badgeData.totalUnread = Math.max(0, this.badgeData.totalUnread - currentCount)
-      
-      // 更新时间戳
-      this.badgeData.lastUpdateTime = Date.now()
-      
-      // 触发通知和保存
-      this.notifyListeners()
-      this.saveToLocal()
-      
-      // 调用后端API清空服务器端未读数
-      this.clearUnreadOnServer(chatId)
+      this.clearConversationBadgeLocal(chatId)
+      this.clearUnreadOnServer(chatId, readSequence)
     }
+  }
+
+  public clearConversationBadgeLocal(chatId: string): void {
+    const currentCount = this.getConversationBadge(chatId)
+    if (currentCount <= 0) {
+      return
+    }
+    this.badgeData.conversationBadges.set(chatId, 0)
+    this.badgeData.totalUnread = Math.max(0, this.badgeData.totalUnread - currentCount)
+    this.badgeData.lastUpdateTime = Date.now()
+    this.notifyListeners()
+    this.saveToLocal()
   }
   
   /**
    * 调用后端API清空服务器端未读数
    */
-  private clearUnreadOnServer(chatId: string): void {
+  private clearUnreadOnServer(chatId: string, readSequence: string): void {
     // 动态导入API函数以避免循环依赖
     import('../api/conversation.uts').then((conversationApi) => {
-      conversationApi.clearUnreadCount(chatId).then((response: any) => {
-        console.log(`[BadgeService] 清空会话 ${chatId} 服务器端未读数成功`)
+      const seq = readSequence != null && readSequence !== '' ? readSequence : '0'
+      conversationApi.markReadBySequence(chatId, seq).then((response: any) => {
+        console.log(`[BadgeService] 标记会话 ${chatId} 已读水位成功`)
+
+        // 同步推进本地会话水位，避免列表短暂不一致
+        import('../services/conversation-service.uts').then((convServiceModule) => {
+          try {
+            const cs = (convServiceModule as any).conversationService
+            if (cs == null) {
+              return
+            }
+            cs.applyReadWatermark(chatId, seq)
+          } catch (e) {
+            // ignore
+          }
+        })
       }).catch((error: any) => {
-        console.error(`[BadgeService] 清空会话 ${chatId} 服务器端未读数失败:`, error)
-        // 失败不影响本地角标显示
+        console.error(`[BadgeService] 标记会话 ${chatId} 已读水位失败:`, error)
       })
     }).catch((error: any) => {
-      console.error(`[BadgeService] 清空会话 ${chatId} 服务器端未读数失败:`, error)
+      console.error(`[BadgeService] 标记会话 ${chatId} 已读水位失败:`, error)
       // 失败不影响本地角标显示
     })
   }

@@ -69,12 +69,13 @@ export function setNoDisturb(chatId: string, noDisturb: boolean): Promise<any> {
 }
 
 /**
- * 清空未读数
+ * 标记会话已读（按 sequence 水位推进）
  * @param chatId ChatID
+ * @param readSequence 已读 sequence 水位
  */
-export function clearUnreadCount(chatId: string): Promise<any> {
+export function markReadBySequence(chatId: string, readSequence: string): Promise<any> {
   return request({
-    url: `/system/im/conversation/clear-unread/${chatId}`,
+    url: `/system/im/conversation/mark-read-seq?chatId=${chatId}&readSequence=${readSequence}`,
     method: 'PUT'
   })
 }

@@ -56,12 +56,13 @@ public interface ImConversationService {
     void deleteConversation(Long userId, Long chatId);
 
     /**
-     * 标记会话已读
+     * 标记会话已读（按 sequence 水位推进，单调递增）
      *
      * @param userId 用户ID
      * @param chatId ChatID
+     * @param readSequence 已读 sequence 水位
      */
-    void markConversationRead(Long userId, Long chatId);
+    void markConversationReadBySequence(Long userId, Long chatId, Long readSequence);
 
     /**
      * 获取用户未读消息总数
@@ -94,13 +95,6 @@ public interface ImConversationService {
      * @param delta 增量
      */
     void incrementUnreadCount(Long chatId, Integer delta);
-
-    /**
-     * 清空会话未读数
-     *
-     * @param chatId ChatID
-     */
-    void clearUnreadCount(Long chatId);
 
     /**
      * 根据ID获取会话（已废弃，保留接口兼容性）

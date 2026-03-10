@@ -139,9 +139,10 @@
 <script setup lang="uts">
 	import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
-	import { messageService, ConversationItem } from '../../services/message-service.uts'
+	import { messageService } from '../../services/message-service.uts'
+	import { conversationService, ConversationItem } from '../../services/conversation-service.uts'
 	import { badgeService, BadgeData } from '../../services/badge-service.uts'
-	import { getConversationList, deleteConversation, pinConversation, setNoDisturb, clearUnreadCount } from '../../api/conversation.uts'
+	import { getConversationList, deleteConversation, pinConversation, setNoDisturb } from '../../api/conversation.uts'
 	import { getConversationAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { wsManager } from '../../utils/websocket.uts'
 
@@ -168,14 +169,13 @@
 		onBadgeUpdate: (badgeData: BadgeData) => {
 			// 更新会话列表的未读数
 			messageList.value.forEach(conv => {
-				conv.unreadCount = badgeData.conversationBadges.get(conv.id) || 0
+				conv.unreadCount = badgeData.conversationBadges.get(conv.chatId) || 0
 			})
 		}
 	}
 
 	onShow(() => {
 		wsManager.setRealtimeBizActive(true)
-		wsManager.connect()
 	})
 
 	onHide(() => {
@@ -207,6 +207,8 @@
 		
 		return {
 			chatId: serverConv.chatId != null ? serverConv.chatId.toString() : '0',
+			lastMessageSequence: serverConv.lastMessageSequence != null ? serverConv.lastMessageSequence.toString() : '0',
+			lastReadSequence: serverConv.lastReadSequence != null ? serverConv.lastReadSequence.toString() : '0',
 			categoryId: getCategoryId(serverConv),
 			targetName: serverConv.targetName || '未知',
 			lastMessageContent: serverConv.lastMessageContent || '',
@@ -289,7 +291,7 @@
 		loadConversations()
 		
 		// 2. 监听会话更新
-		messageService.addConversationUpdateListener(handleConversationUpdate)
+		conversationService.addUpdateListener(handleConversationsUpdate)
 		
 		// 3. 监听角标更新
 		badgeService.addListener(badgeListener)
@@ -297,7 +299,7 @@
 	
 	onUnmounted(() => {
 		// 移除监听器
-		messageService.removeConversationUpdateListener(handleConversationUpdate)
+		conversationService.removeUpdateListener(handleConversationsUpdate)
 		badgeService.removeListener(badgeListener)
 	})
 	
@@ -314,6 +316,8 @@
 				messageList.value = cachedConversations.map(conv => {
 					return {
 						chatId: conv.chatId,
+						lastMessageSequence: (conv as any).lastMessageSequence != null ? (conv as any).lastMessageSequence.toString() : '0',
+						lastReadSequence: (conv as any).lastReadSequence != null ? (conv as any).lastReadSequence.toString() : '0',
 						categoryId: getCategoryId({ 
 							isPinned: conv.isPinned, 
 							noDisturb: conv.noDisturb, 
@@ -363,42 +367,33 @@
 	/**
 	 * 处理会话更新（来自 WebSocket 或其他页面）
 	 */
-	function handleConversationUpdate(conversation : ConversationItem) {
-		// 查找会话
-		const index = messageList.value.findIndex(c => c.chatId === conversation.chatId)
-		
-		const uiConversation = {
-			chatId: conversation.chatId,
-			categoryId: getCategoryId({ 
-				isPinned: conversation.isPinned, 
-				noDisturb: conversation.noDisturb, 
-				conversationType: conversation.conversationType 
-			}),
-			targetName: conversation.targetName,
-			lastMessageContent: conversation.lastMessageContent,
-			lastMessageTime: conversation.timestamp,
-			avatarBg: conversation.avatarBg,
-			avatarText: conversation.avatarText,
-			avatarIcon: conversation.conversationType === 2 ? '\ue616' : '',
-			unreadCount: conversation.unreadCount,
-			noDisturb: conversation.noDisturb,
-			isPinned: conversation.isPinned,
-			pinnedTime: conversation.isPinned ? conversation.timestamp : 0,
-			conversationType: conversation.conversationType,
-			groupMemberCount: conversation.groupMemberCount || 0,
-			targetId: conversation.targetId
-		}
-		
-		if (index !== -1) {
-			// 更新现有会话
-			messageList.value[index] = uiConversation
-		} else {
-			// 添加新会话
-			messageList.value.unshift(uiConversation)
-		}
-		
-		// 重新排序（置顶优先，然后按时间）
-		messageList.value.sort((a, b) => {
+	function handleConversationsUpdate(conversations : ConversationItem[]) {
+		// 全量刷新（来源：ConversationService，服务端权威水位 + 本地实时更新）
+		messageList.value = conversations.map(conv => {
+			return {
+				chatId: conv.chatId,
+				lastMessageSequence: (conv as any).lastMessageSequence != null ? (conv as any).lastMessageSequence.toString() : '0',
+				lastReadSequence: (conv as any).lastReadSequence != null ? (conv as any).lastReadSequence.toString() : '0',
+				categoryId: getCategoryId({
+					isPinned: conv.isPinned,
+					noDisturb: conv.noDisturb,
+					conversationType: conv.conversationType
+				}),
+				targetName: conv.targetName,
+				lastMessageContent: conv.lastMessageContent,
+				lastMessageTime: conv.timestamp,
+				avatarBg: conv.avatarBg,
+				avatarText: conv.avatarText,
+				avatarIcon: conv.conversationType === 2 ? '\ue616' : '',
+				unreadCount: conv.unreadCount,
+				noDisturb: conv.noDisturb,
+				isPinned: conv.isPinned,
+				pinnedTime: conv.isPinned ? conv.timestamp : 0,
+				conversationType: conv.conversationType,
+				groupMemberCount: conv.groupMemberCount || 0,
+				targetId: conv.targetId
+			}
+		}).sort((a, b) => {
 			if (a.isPinned && !b.isPinned) return -1
 			if (!a.isPinned && b.isPinned) return 1
 			return b.lastMessageTime - a.lastMessageTime
@@ -512,8 +507,9 @@
 				case 'unread':
 					// 标记已读/未读
 					if (targetItem.unreadCount > 0) {
-						// 清空未读数
-						await clearUnreadCount(targetItem.chatId)
+						// 清空未读数（按 sequence 水位优先）
+						const seq = (targetItem as any).lastMessageSequence != null ? (targetItem as any).lastMessageSequence.toString() : '0'
+						badgeService.clearConversationBadge(targetItem.chatId, seq)
 						targetItem.unreadCount = 0
 						uni.showToast({
 							title: '已标记为已读',

@@ -102,6 +102,12 @@ export class WebSocketManager {
   private heartbeatInterval: number = WS_HEARTBEAT_INTERVAL
   private heartbeatTimeout: number = WS_HEARTBEAT_TIMEOUT
   private heartbeatTimeoutTimer: number = 0
+
+  // 会话是否已被服务端宣告失效（如被踢下线/注销/需要重新登录）
+  private sessionInvalidated: boolean = false
+
+  // 防止重复 connect（多处 onShow/login/app 同时触发）
+  private connectInFlight: boolean = false
   
   // 消息队列（连接建立前的消息缓存）
   private messageQueue: any[] = []
@@ -183,11 +189,17 @@ export class WebSocketManager {
    * 连接 WebSocket
    */
   public connect(): void {
-    if (this.state === WebSocketState.CONNECTING || this.state === WebSocketState.OPEN) {
-      console.log('[WebSocket] 已经连接或正在连接中')
+    if (this.connectInFlight) {
       return
     }
-    
+
+    // 已在连接中/已连接：避免重复发起连接导致服务端“自踢”
+    if (this.state === WebSocketState.CONNECTING || this.state === WebSocketState.OPEN) {
+      if (this.ws !== null) {
+        return
+      }
+    }
+
     // 检查 Token 是否存在
     const token = getAccessToken()
     if (token == null || token == '') {
@@ -195,8 +207,11 @@ export class WebSocketManager {
       return
     }
 
+    this.connectInFlight = true
+
     // 新一轮连接，恢复默认允许重连（除非后续被 CLOSE/KICKED 设置为 false）
     this.allowReconnect = true
+    this.sessionInvalidated = false
 
     console.log('[WebSocket] connect() token length:', token.length)
     
@@ -211,7 +226,8 @@ export class WebSocketManager {
         },
         fail: (err) => {
           console.error('[WebSocket] 连接失败:', err)
-          this.handleError(err)
+          this.connectInFlight = false
+          this.setState(WebSocketState.CLOSED)
         }
       })
       
@@ -237,7 +253,8 @@ export class WebSocketManager {
       
     } catch (e) {
       console.error('[WebSocket] 连接异常:', e)
-      this.handleError(e)
+      this.connectInFlight = false
+      this.setState(WebSocketState.CLOSED)
     }
   }
   
@@ -246,6 +263,7 @@ export class WebSocketManager {
    */
   private handleOpen(): void {
     console.log('[WebSocket] 连接已建立')
+    this.connectInFlight = false
     this.setState(WebSocketState.OPEN)
     this.reconnectCount = 0
     
@@ -303,10 +321,12 @@ export class WebSocketManager {
 			console.log('[WebSocket] 收到业务消息概要:', {
 				messageType: header.messageType,
 				messageId: header.messageId,
+				chatId: header.chatId,
 				senderId: header.senderId,
 				receiverId: header.receiverId,
 				groupId: header.groupId,
 				tenantId: header.tenantId,
+				sequence: header.sequence,
 				bodyKeys: body && typeof body === 'object' ? Object.keys(body) : typeof body
 			})
 		} catch (e) {
@@ -340,6 +360,17 @@ export class WebSocketManager {
     const success = message.body.success as boolean
 
     if (success) {
+      if (this.sessionInvalidated || !this.allowReconnect) {
+        console.warn('[WebSocket] ignore AUTH_SUCCESS because sessionInvalidated/allowReconnect=false')
+        return
+      }
+
+      const token = getAccessToken()
+      if (token == null || token == '') {
+        console.warn('[WebSocket] ignore AUTH_SUCCESS because accessToken missing')
+        return
+      }
+
       console.log('[WebSocket] 认证成功')
       this.authenticated = true
 
@@ -352,8 +383,10 @@ export class WebSocketManager {
       // 发送队列中的消息
       this.flushMessageQueue()
       
-      // 同步角标数据
-      this.syncBadgeData()
+      // 同步角标数据（仅在会话仍有效时执行）
+      if (!this.sessionInvalidated) {
+        this.syncBadgeData()
+      }
       
     } else {
       const body: any = message && message.body ? message.body : {}
@@ -447,6 +480,7 @@ export class WebSocketManager {
     // 关键：被踢/需要重登时禁止重连（避免死循环）
     if (action === 'KICKED' || action === 'LOGOUT' || action === 'REVOKED' || action === 'REAUTH_REQUIRED') {
       this.allowReconnect = false
+      this.sessionInvalidated = true
     }
 
     // 停止心跳
@@ -579,6 +613,7 @@ export class WebSocketManager {
    */
   private handleClose(): void {
     console.log('[WebSocket] 连接已关闭')
+    this.connectInFlight = false
     this.setState(WebSocketState.CLOSED)
     this.authenticated = false
     

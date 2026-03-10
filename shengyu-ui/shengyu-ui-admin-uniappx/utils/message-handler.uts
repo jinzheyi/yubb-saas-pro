@@ -21,9 +21,10 @@ export type MessageHeader = {
   senderId: string
   receiverId: string
   groupId: string
+  chatId?: string
   tenantId: string
   timestamp: number
-  sequence: number
+  sequence: string
   extra: string
 }
 
@@ -33,6 +34,7 @@ export type MessageHeader = {
 export type ImMessage = {
   header: MessageHeader
   body: any
+  conversationSnapshot?: any
 }
 
 /**
@@ -265,7 +267,7 @@ export class MessageBuilder {
       groupId: groupId,
       tenantId: tenantId,
       timestamp: Date.now(),
-      sequence: 0,  // 由服务端生成
+      sequence: '0',  // 由服务端生成
       extra: ''
     }
   }

@@ -26,6 +26,8 @@ public class ImChatMessageDO extends TenantBaseDO {
 
     private Long chatId;
 
+    private Long sequence;
+
     private Long senderId;
 
     private Integer messageType;

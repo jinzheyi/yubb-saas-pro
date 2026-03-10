@@ -24,6 +24,7 @@ CREATE TABLE `im_chat` (
   `single_user1` bigint NULL DEFAULT NULL COMMENT '单聊用户1(较小ID)',
   `single_user2` bigint NULL DEFAULT NULL COMMENT '单聊用户2(较大ID)',
   `group_id` bigint NULL DEFAULT NULL COMMENT '群ID',
+  `last_sequence` bigint NOT NULL DEFAULT 0 COMMENT '会话内消息序列号水位（自增）',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态(1-正常 2-已解散)',
   `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -44,7 +45,9 @@ CREATE TABLE `im_chat_user` (
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `unread_count` int NOT NULL DEFAULT 0 COMMENT '未读消息数',
   `last_read_message_id` bigint NULL DEFAULT NULL COMMENT '最后已读消息ID',
+  `last_read_sequence` bigint NOT NULL DEFAULT 0 COMMENT '最后已读序列号水位（单调递增）',
   `last_message_id` bigint NULL DEFAULT NULL COMMENT '最后一条消息ID',
+  `last_message_sequence` bigint NOT NULL DEFAULT 0 COMMENT '最后一条消息序列号水位（单调递增）',
   `last_message_content` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '最后一条消息预览',
   `last_message_time` datetime NULL DEFAULT NULL COMMENT '最后一条消息时间',
   `is_pinned` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否置顶',
@@ -67,6 +70,7 @@ DROP TABLE IF EXISTS `im_chat_message`;
 CREATE TABLE `im_chat_message` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '消息ID',
   `chat_id` bigint NOT NULL COMMENT 'ChatID',
+  `sequence` bigint NOT NULL DEFAULT 0 COMMENT '会话内序列号（单调递增，用于排序与断线补偿）',
   `sender_id` bigint NOT NULL COMMENT '发送者ID',
   `message_type` tinyint NOT NULL COMMENT '消息类型(1-文本 2-图片 3-语音 4-视频 5-文件 6-位置 7-表情包 8-自定义贴纸 10-系统消息)',
   `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '消息内容',
@@ -83,7 +87,7 @@ CREATE TABLE `im_chat_message` (
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_chat_id`(`tenant_id` ASC, `chat_id` ASC, `id` DESC) USING BTREE,
+  INDEX `idx_chat_seq`(`tenant_id` ASC, `chat_id` ASC, `sequence` DESC) USING BTREE,
   INDEX `idx_sender_time`(`tenant_id` ASC, `sender_id` ASC, `send_time` DESC) USING BTREE,
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM消息表(全局会话单份存储)' ROW_FORMAT = DYNAMIC;

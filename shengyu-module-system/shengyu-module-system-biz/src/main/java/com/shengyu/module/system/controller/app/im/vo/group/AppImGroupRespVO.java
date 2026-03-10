@@ -1,5 +1,7 @@
 package com.shengyu.module.system.controller.app.im.vo.group;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -10,6 +12,7 @@ import java.time.LocalDateTime;
 public class AppImGroupRespVO {
 
     @Schema(description = "群ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     @Schema(description = "群名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "技术交流群")
@@ -19,6 +22,7 @@ public class AppImGroupRespVO {
     private String avatar;
 
     @Schema(description = "群主ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long ownerId;
 
     @Schema(description = "群类型(1-普通群 2-工作群)", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")

@@ -6,6 +6,7 @@ import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.VideoMessage;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
+import com.shengyu.framework.websocket.core.service.dto.MessageSaveResult;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -47,7 +48,22 @@ public class VideoMessageProcessor implements MessageProcessor {
                 videoMessage.getUrl());
 
             // 1. 存储消息到数据库
-            messageStorageService.saveMessage(message);
+            MessageSaveResult saveResult = messageStorageService.saveMessageWithResult(message);
+
+            // 1.1 回推给发送者（用于端侧把 SENDING -> SENT）
+            MessageHeader ackHeader = message.getHeader();
+            messageSender.sendToUser(
+                    ackHeader.getSenderId(),
+                    ackHeader.getMessageType(),
+                    videoMessage,
+                    ackHeader.getSenderId(),
+                    ackHeader.getReceiverId(),
+                    ackHeader.getGroupId() > 0 ? ackHeader.getGroupId() : null,
+                    ackHeader.getTenantId(),
+                    ackHeader.getMessageId(),
+                    saveResult != null ? saveResult.getSequence() : null,
+                    saveResult != null ? saveResult.getChatId() : null
+            );
 
             // 2. 转发给接收者
             Long receiverId = message.getHeader().getReceiverId();
@@ -64,7 +80,9 @@ public class VideoMessageProcessor implements MessageProcessor {
                         receiverId,
                         groupId != null && groupId > 0 ? groupId : null,
                         header.getTenantId(),
-                        header.getMessageId()
+                        header.getMessageId(),
+                        saveResult != null ? saveResult.getSequence() : null,
+                        saveResult != null ? saveResult.getChatId() : null
                 );
             } else if (groupId != null && groupId > 0) {
                 // 群聊：由消息总线处理转发

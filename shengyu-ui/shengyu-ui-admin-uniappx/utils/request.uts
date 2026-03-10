@@ -150,6 +150,8 @@ function requestInterceptor(config: UTSJSONObject): UTSJSONObject {
 		const token = getAccessToken()
 		if (token != null && token != '') {
 			applyAuthHeader(config, token)
+		} else {
+			console.warn('[request] missing accessToken for request:', url)
 		}
 	}
 	
@@ -271,6 +273,17 @@ function responseInterceptor(response: any): any {
  */
 async function handle401Error(response: any): Promise<any> {
 	const config = response.config
+	try {
+		const url = config != null ? (config.url as string) : ''
+		console.warn('[request] handle401Error:', {
+			url: url,
+			statusCode: response.statusCode,
+			code: response.data != null ? response.data.code : undefined,
+			msg: response.data != null ? response.data.msg : undefined
+		})
+	} catch (e) {
+		// ignore
+	}
 	
 	// 如果正在刷新 Token，将请求加入队列
 	if (isRefreshing) {
@@ -292,6 +305,11 @@ async function handle401Error(response: any): Promise<any> {
 	// 如果没有 RefreshToken，直接跳转登录
 	if (refreshToken == null || refreshToken == '') {
 		isRefreshing = false
+		try {
+			console.warn('[request] refreshToken missing, will expire session')
+		} catch (e) {
+			// ignore
+		}
 		handleTokenExpired()
 		return Promise.reject('Token 已过期')
 	}
@@ -332,6 +350,11 @@ async function handle401Error(response: any): Promise<any> {
 		return responseInterceptor(retryResponse)
 	} catch (error) {
 		// 刷新失败，清空队列并跳转登录
+		try {
+			console.warn('[request] refreshAccessToken failed, will expire session:', error)
+		} catch (e) {
+			// ignore
+		}
 		requestQueue.forEach(item => {
 			item.reject(error)
 		})

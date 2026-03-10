@@ -5,6 +5,7 @@ import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePullReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
@@ -69,24 +70,6 @@ public class AppImMessageController {
         return success(messageService.getMessagePage(userId, pageReqVO));
     }
 
-    @GetMapping("/list-by-group")
-    @Operation(summary = "根据群组ID查询消息列表")
-    @Parameter(name = "groupId", description = "群组ID", required = true)
-    @Parameter(name = "pageNo", description = "页码", required = false)
-    @Parameter(name = "pageSize", description = "每页数量", required = false)
-    public CommonResult<PageResult<AppImMessageRespVO>> getMessageListByGroup(
-            @RequestParam("groupId") Long groupId,
-            @RequestParam(value = "pageNo", required = false, defaultValue = "1") Integer pageNo,
-            @RequestParam(value = "pageSize", required = false, defaultValue = "20") Integer pageSize) {
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
-        // 通过群组ID查询会话ID
-        // TODO: 需要先查询会话ID
-        AppImMessagePageReqVO pageReqVO = new AppImMessagePageReqVO();
-        pageReqVO.setPageNo(pageNo);
-        pageReqVO.setPageSize(pageSize);
-        return success(messageService.getMessagePage(userId, pageReqVO));
-    }
-
     @PutMapping("/recall")
     @Operation(summary = "撤回消息")
     @Parameter(name = "id", description = "消息ID", required = true)
@@ -102,15 +85,6 @@ public class AppImMessageController {
     public CommonResult<Boolean> deleteMessage(@RequestParam("id") Long id) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         messageService.deleteMessage(userId, id);
-        return success(true);
-    }
-
-    @PutMapping("/mark-read")
-    @Operation(summary = "标记消息已读")
-    @Parameter(name = "messageIds", description = "消息ID列表", required = true)
-    public CommonResult<Boolean> markMessageRead(@RequestParam("messageIds") List<Long> messageIds) {
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
-        messageService.markMessagesRead(userId, messageIds);
         return success(true);
     }
 
@@ -136,6 +110,13 @@ public class AppImMessageController {
             @Valid AppImMessageSearchReqVO searchReqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return success(messageService.searchMessages(userId, searchReqVO));
+    }
+
+    @GetMapping("/pull")
+    @Operation(summary = "增量拉取消息（断线补偿）")
+    public CommonResult<List<AppImMessageRespVO>> pullMessages(@Valid AppImMessagePullReqVO pullReqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(messageService.pullMessages(userId, pullReqVO));
     }
 
 }

@@ -7,6 +7,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 import com.shengyu.framework.websocket.core.protocol.*;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
+import com.shengyu.framework.websocket.core.service.dto.MessageSaveResult;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
@@ -19,6 +20,7 @@ import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.service.im.ImBadgeService;
 import com.shengyu.module.system.service.im.ImGroupService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,6 +81,22 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             log.error("[MessageStorage] 消息保存失败", e);
             // 不抛出异常，避免影响 WebSocket 连接
         }
+
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public MessageSaveResult saveMessageWithResult(ImMessage message) {
+        MessageHeader header = message.getHeader();
+        Long id = saveMessageWithId(message);
+        Long chatId = getOrCreateChatId(header);
+        ImChatMessageDO existing = chatMessageMapper.selectById(id);
+        Long seq = existing != null ? existing.getSequence() : null;
+        return MessageSaveResult.builder()
+                .messageId(id)
+                .chatId(chatId)
+                .sequence(seq)
+                .build();
     }
 
     private String buildExtraForDb(ImMessage message) {
@@ -127,17 +145,35 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             // 2. 确定/创建全局 ChatID
             Long chatId = getOrCreateChatId(header);
 
+            // 2.1 分配会话内 sequence（单调递增）
+            Long sequence = chatMapper.nextSequence(chatId);
+
             // 3. 保存到新消息表（全局会话单份存储）
             LocalDateTime sendTime = LocalDateTime.now();
             ImChatMessageDO messageDO = new ImChatMessageDO();
+            if (header.getMessageId() > 0) {
+                messageDO.setId(header.getMessageId());
+            }
             messageDO.setChatId(chatId);
+            messageDO.setSequence(sequence);
             messageDO.setSenderId(header.getSenderId());
             messageDO.setMessageType(normalizeDbMessageType(header.getMessageType()));
             messageDO.setContent(content);
             messageDO.setExtra(extra);
             messageDO.setSendTime(sendTime);
             messageDO.setStatus(ImMessageStatusEnum.SENT.getStatus());
-            chatMessageMapper.insert(messageDO);
+            try {
+                chatMessageMapper.insert(messageDO);
+            } catch (DuplicateKeyException e) {
+                // 幂等：同一 messageId 重投时，直接返回既有记录
+                if (header.getMessageId() > 0) {
+                    ImChatMessageDO existing = chatMessageMapper.selectById(header.getMessageId());
+                    if (existing != null) {
+                        return existing.getId();
+                    }
+                }
+                throw e;
+            }
 
             // 5. 异步更新会话信息（不阻塞消息保存）
             updateChatUserAsync(header, messageDO, message);
@@ -285,6 +321,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                     chatUserMapper.updateLastMessageAndIncrementUnread(
                             chatUser.getId(),
                             messageDO.getId(),
+                            messageDO.getSequence(),
                             lastMessageContent,
                             messageDO.getSendTime(),
                             isSender ? 0 : 1,
@@ -301,7 +338,9 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                                     memberId,
                                     header.getGroupId(),
                                     header.getTenantId(),
-                                    messageDO.getId()
+                                    messageDO.getId(),
+                                    messageDO.getSequence(),
+                                    chatId
                             );
                         }
                     }
@@ -311,6 +350,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                 chatUserMapper.updateLastMessageAndIncrementUnread(
                         sender.getId(),
                         messageDO.getId(),
+                        messageDO.getSequence(),
                         lastMessageContent,
                         messageDO.getSendTime(),
                         0,
@@ -321,6 +361,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                 chatUserMapper.updateLastMessageAndIncrementUnread(
                         receiver.getId(),
                         messageDO.getId(),
+                        messageDO.getSequence(),
                         lastMessageContent,
                         messageDO.getSendTime(),
                         1,

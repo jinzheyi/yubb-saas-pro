@@ -10,7 +10,6 @@
  */
 
 import { messageService } from './message-service.uts'
-import { markMessageRead as apiMarkMessageRead } from '@/api/message.uts'
 
 /**
  * 已读详情项
@@ -57,16 +56,9 @@ export class ReadReceiptService {
       return true
     }
     
-    try {
-      await apiMarkMessageRead(messageIds)
-
-      // 发送已读回执到发送者
-      this.sendReadReceipt(chatId, messageIds)
-      return true
-    } catch (e) {
-      console.error('[ReadReceiptService] 标记消息已读失败:', e)
-      return false
-    }
+    // 最优路径：服务端已读以会话 readSequence 水位为准；这里仅做端到端“已读回执”可视化（WebSocket）
+    this.sendReadReceipt(chatId, messageIds)
+    return true
   }
   
   /**
@@ -147,14 +139,13 @@ export class ReadReceiptService {
    */
   public async markConversationAsRead(chatId: string): Promise<boolean> {
     try {
-      await request({
-        url: '/system/im/conversation/clear-unread/' + chatId,
-        method: 'PUT'
-      })
+      // 最优路径：会话已读由进入会话时上报 readSequence（水位）处理，这里不再直接调用后端接口
 
+      // 更新本地会话未读数（不触发服务端水位推进）
+      badgeService.clearConversationBadgeLocal(chatId)
       return true
     } catch (e) {
-      console.error('[ReadReceiptService] 批量标记会话已读失败:', e)
+      console.error('[ReadReceiptService] 标记会话已读失败:', e)
       return false
     }
   }

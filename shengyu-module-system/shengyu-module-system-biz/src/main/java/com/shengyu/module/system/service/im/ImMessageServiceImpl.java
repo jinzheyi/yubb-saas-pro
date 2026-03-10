@@ -16,6 +16,7 @@ import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePullReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
@@ -37,7 +38,7 @@ import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -122,6 +123,36 @@ public class ImMessageServiceImpl implements ImMessageService {
         String preview = getMessagePreview(dbMessageType, sendReqVO.getContent());
         updateChatUsersAfterSend(chat, message.getId(), preview, message.getSendTime(), userId, sendReqVO);
         return message.getId();
+    }
+
+    @Override
+    public List<AppImMessageRespVO> pullMessages(Long userId, AppImMessagePullReqVO pullReqVO) {
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, pullReqVO.getChatId());
+        if (chatUser == null) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+
+        Long lastSequence = pullReqVO.getLastSequence() != null ? pullReqVO.getLastSequence() : 0L;
+        Integer limit = pullReqVO.getLimit() != null ? pullReqVO.getLimit() : 200;
+        if (limit <= 0) {
+            limit = 200;
+        }
+        if (limit > 500) {
+            limit = 500;
+        }
+
+        List<ImChatMessageDO> list = chatMessageMapper.selectListByChatIdAndSequenceGt(pullReqVO.getChatId(), lastSequence, limit);
+        return list.stream().map(message -> {
+            AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
+            respVO.setChatId(message.getChatId());
+            respVO.setSequence(message.getSequence());
+            // 兼容历史数据：如果 messageType 被存成了 Protobuf 的 100+，则转换回 REST/DB 的 1-10
+            respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
+            fillSenderInfo(respVO, message.getSenderId());
+            respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
+            fillChatTargetFields(respVO, userId);
+            return respVO;
+        }).collect(Collectors.toList());
     }
 
     @Override
@@ -357,7 +388,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             Long groupId = sendReqVO.getGroupId();
             // 群聊推送给成员时，前端会话路由依赖 groupId；单聊依赖 receiverId/senderId
             messageSender.sendToUser(userId, messageType, messageBody,
-                    senderId, receiverId, groupId, tenantId, messageId);
+                    senderId, receiverId, groupId, tenantId, messageId, null, chatId);
             log.debug("[ImMessageService] WebSocket 消息推送成功, userId: {}, messageId: {}", userId, messageId);
         } catch (Exception e) {
             log.error("[ImMessageService] WebSocket 消息推送失败, userId: {}, messageId: {}", userId, messageId, e);
@@ -439,41 +470,6 @@ public class ImMessageServiceImpl implements ImMessageService {
     public void deleteMessage(Long userId, Long messageId) {
         // Route-A：暂不提供物理删除消息能力（通常是撤回/客户端侧隐藏）
         throw exception(MESSAGE_SEND_FAILED);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void markMessageRead(Long userId, Long messageId) {
-        // Route-A：获取消息的 chatId，更新用户的 last_read_message_id
-        ImChatMessageDO message = chatMessageMapper.selectById(messageId);
-        if (message == null) {
-            return;
-        }
-        Long chatId = message.getChatId();
-        // 更新用户会话状态：设置最后读取消息ID，清空未读数
-        chatUserMapper.markReadWithLastMessageId(userId, chatId, messageId);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void markMessagesRead(Long userId, List<Long> messageIds) {
-        // Route-A：找到这些消息中的最大 messageId 和对应的 chatId
-        if (messageIds == null || messageIds.isEmpty()) {
-            return;
-        }
-        // 获取第一条消息的 chatId（假设所有消息都在同一个会话中）
-        ImChatMessageDO firstMessage = chatMessageMapper.selectById(messageIds.get(0));
-        if (firstMessage == null) {
-            return;
-        }
-        Long chatId = firstMessage.getChatId();
-        // 找出最大的 messageId
-        Long maxMessageId = messageIds.stream()
-                .mapToLong(Long::longValue)
-                .max()
-                .orElse(0L);
-        // 更新用户会话状态
-        chatUserMapper.markReadWithLastMessageId(userId, chatId, maxMessageId);
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.shengyu.module.system.controller.app.im.vo.group;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -13,6 +15,7 @@ public class AppImGroupInviteVerifyRespVO {
     private Boolean valid;
 
     @Schema(description = "群组ID", example = "123456")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long groupId;
 
     @Schema(description = "群名称", example = "技术交流群")

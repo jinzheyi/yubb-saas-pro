@@ -30,6 +30,8 @@ public class ImChatDO extends TenantBaseDO {
 
     private Long groupId;
 
+    private Long lastSequence;
+
     private Integer status;
 
 }

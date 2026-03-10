@@ -38,6 +38,8 @@ export type ConversationItem = {
   lastMessageTime: string     // 对应后端 lastMessageTime (格式化后)
   timestamp: number           // 时间戳（用于排序）
   unreadCount: number         // 对应后端 unreadCount
+  lastMessageSequence: string // 对应后端 lastMessageSequence（服务端权威水位）
+  lastReadSequence: string    // 对应后端 lastReadSequence（服务端权威水位）
   isPinned: boolean           // 对应后端 isPinned
   noDisturb: boolean          // 对应后端 noDisturb
   draft: string               // 草稿
@@ -60,6 +62,8 @@ export class ConversationService {
   private conversations: ConversationItem[] = []
 
   private loaded: boolean = false
+
+  private targetChatIdCache: Map<string, string> = new Map()
   
   // 会话更新监听器列表
   private updateListeners: ConversationUpdateListener[] = []
@@ -69,6 +73,141 @@ export class ConversationService {
    */
   private constructor() {
     // 初始化
+  }
+
+  public upsertFromSnapshot(
+    snapshot: any,
+    lastMessage: string,
+    timestamp: number,
+    incrementUnread: boolean = false,
+    messageSequence: string | null = null
+  ): string | null {
+    if (snapshot == null) {
+      return null
+    }
+
+    const conv = this.mapToConversationItem(snapshot)
+    if (conv.chatId == null || conv.chatId === '' || conv.chatId === '0') {
+      return null
+    }
+
+    if (conv.targetId != null && conv.targetId !== '' && conv.conversationType != null) {
+      this.cacheTargetChatId(conv.targetId, conv.conversationType, conv.chatId)
+    }
+
+    const existing = this.getConversation(conv.chatId)
+    if (existing == null) {
+      this.conversations.unshift(conv)
+    } else {
+      existing.targetId = conv.targetId
+      existing.targetName = conv.targetName
+      existing.targetAvatar = conv.targetAvatar
+      existing.avatarText = conv.avatarText
+      existing.avatarBg = conv.avatarBg
+      existing.groupMemberCount = conv.groupMemberCount
+      existing.isPinned = conv.isPinned
+      existing.noDisturb = conv.noDisturb
+      existing.lastReadSequence = conv.lastReadSequence
+      existing.lastMessageSequence = conv.lastMessageSequence
+      existing.unreadCount = conv.unreadCount
+      existing.lastMessageContent = conv.lastMessageContent
+      existing.lastMessageTime = conv.lastMessageTime
+      existing.timestamp = conv.timestamp
+    }
+
+    this.updateConversation(conv.chatId, lastMessage, timestamp, incrementUnread, messageSequence)
+    return conv.chatId
+  }
+
+  private buildTargetKey(targetId: string, conversationType: number): string {
+    const t = targetId != null ? (targetId as any).toString() : ''
+    return `${conversationType}_${t}`
+  }
+
+  public getCachedChatIdByTarget(targetId: string, conversationType: number): string | null {
+    const key = this.buildTargetKey(targetId, conversationType)
+    const cached = this.targetChatIdCache.get(key)
+    return cached != null && cached !== '' ? cached : null
+  }
+
+  private cacheTargetChatId(targetId: string, conversationType: number, chatId: string): void {
+    if (targetId == null || targetId === '' || chatId == null || chatId === '') {
+      return
+    }
+    const key = this.buildTargetKey(targetId, conversationType)
+    this.targetChatIdCache.set(key, chatId)
+  }
+
+  public async ensureConversationByTarget(
+    targetId: string,
+    conversationType: number,
+    lastMessage: string,
+    timestamp: number,
+    incrementUnread: boolean = false,
+    messageSequence: string | null = null
+  ): Promise<string | null> {
+    const cachedChatId = this.getCachedChatIdByTarget(targetId, conversationType)
+    if (cachedChatId != null) {
+      return cachedChatId
+    }
+
+    try {
+      const targetIdStr = targetId != null ? (targetId as any).toString() : ''
+      const data = await request({
+        url: `/system/im/conversation/get-by-target?targetId=${targetIdStr}&conversationType=${conversationType}`,
+        method: 'GET'
+      })
+      if (data == null) {
+        return null
+      }
+      const conv = this.mapToConversationItem(data as any)
+      if (conv.chatId != null && conv.chatId !== '') {
+        this.cacheTargetChatId(targetIdStr, conversationType, conv.chatId)
+      }
+
+      const existing = this.getConversation(conv.chatId)
+      if (existing == null) {
+        this.conversations.unshift(conv)
+      }
+
+      this.updateConversation(conv.chatId, lastMessage, timestamp, incrementUnread, messageSequence)
+      return conv.chatId
+    } catch (e) {
+      console.error('[ConversationService] ensureConversationByTarget 失败:', e)
+      return null
+    }
+  }
+
+  public applyReadWatermark(chatId: string, readSequence: string): void {
+    const chatIdStr = chatId != null ? (chatId as any).toString() : ''
+    const conversation = this.conversations.find(c => c.chatId === chatIdStr || ((c as any).id === chatIdStr))
+    if (conversation == null) {
+      return
+    }
+    const seq = readSequence != null && readSequence !== '' ? readSequence.toString() : '0'
+    const currentRead = conversation.lastReadSequence != null ? conversation.lastReadSequence.toString() : '0'
+    let shouldUpdate = false
+    try {
+      shouldUpdate = BigInt(seq) > BigInt(currentRead)
+    } catch (e) {
+      shouldUpdate = seq > currentRead
+    }
+    if (shouldUpdate) {
+      conversation.lastReadSequence = seq
+    }
+    const lastMsgSeq = conversation.lastMessageSequence != null ? conversation.lastMessageSequence.toString() : '0'
+    const lastReadSeq = conversation.lastReadSequence != null ? conversation.lastReadSequence.toString() : '0'
+    let unread = 0
+    try {
+      const diff = BigInt(lastMsgSeq) - BigInt(lastReadSeq)
+      unread = diff > BigInt(0) ? Number(diff) : 0
+    } catch (e) {
+      const diff = parseInt(lastMsgSeq) - parseInt(lastReadSeq)
+      unread = diff > 0 ? diff : 0
+    }
+    conversation.unreadCount = unread
+    this.sortConversations()
+    this.notifyUpdateListeners()
   }
   
   /**
@@ -96,6 +235,11 @@ export class ConversationService {
       } else {
         this.conversations = []
       }
+      this.conversations.forEach(c => {
+        if (c != null && c.targetId != null && c.targetId !== '' && c.chatId != null && c.chatId !== '') {
+          this.cacheTargetChatId(c.targetId, c.conversationType, c.chatId)
+        }
+      })
       this.sortConversations()
       this.notifyUpdateListeners()
     } catch (e) {
@@ -128,7 +272,8 @@ export class ConversationService {
     chatId: string,
     lastMessage: string,
     timestamp: number,
-    incrementUnread: boolean = false
+    incrementUnread: boolean = false,
+    messageSequence: string | null = null
   ): void {
     const chatIdStr = chatId != null ? (chatId as any).toString() : ''
     if (!this.loaded) {
@@ -147,9 +292,33 @@ export class ConversationService {
       conversation.lastMessageContent = lastMessage
       conversation.timestamp = timestamp
       conversation.lastMessageTime = this.formatTime(timestamp)
+
+      if (messageSequence != null && messageSequence !== '') {
+        const newSeq = messageSequence.toString()
+        const currentSeq = conversation.lastMessageSequence != null ? conversation.lastMessageSequence.toString() : '0'
+        let shouldUpdate = false
+        try {
+          shouldUpdate = BigInt(newSeq) > BigInt(currentSeq)
+        } catch (e) {
+          shouldUpdate = newSeq > currentSeq
+        }
+        if (shouldUpdate) {
+          conversation.lastMessageSequence = newSeq
+        }
+      }
       
       if (incrementUnread) {
-        conversation.unreadCount++
+        const lastMsgSeq = conversation.lastMessageSequence != null ? conversation.lastMessageSequence.toString() : '0'
+        const lastReadSeq = conversation.lastReadSequence != null ? conversation.lastReadSequence.toString() : '0'
+        let unread = 0
+        try {
+          const diff = BigInt(lastMsgSeq) - BigInt(lastReadSeq)
+          unread = diff > BigInt(0) ? Number(diff) : 0
+        } catch (e) {
+          const diff = parseInt(lastMsgSeq) - parseInt(lastReadSeq)
+          unread = diff > 0 ? diff : 0
+        }
+        conversation.unreadCount = unread
       }
     } else {
       // 创建新会话（实际应该从服务器获取完整信息）
@@ -244,18 +413,19 @@ export class ConversationService {
    */
   public async clearUnread(chatId: string): Promise<boolean> {
     try {
-      await request({
-        url: `/system/im/conversation/clear-unread/${chatId}`,
-        method: 'PUT'
-      })
-
       const conversation = this.conversations.find(c => c.chatId === chatId)
+      const seq = conversation != null && (conversation as any).lastMessageSequence != null
+        ? (conversation as any).lastMessageSequence.toString()
+        : '0'
+
+      badgeService.clearConversationBadge(chatId, seq)
+
       if (conversation != null) {
         conversation.unreadCount = 0
         this.notifyUpdateListeners()
 
         // 同步清空角标
-        badgeService.clearConversationBadge(chatId)
+        // badgeService 已在上面触发服务端水位推进
       }
       return true
     } catch (e) {
@@ -343,6 +513,8 @@ export class ConversationService {
       lastMessageTime: this.formatTime(data.lastMessageTime ? new Date(data.lastMessageTime).getTime() : 0),
       timestamp: data.lastMessageTime ? new Date(data.lastMessageTime).getTime() : 0,
       unreadCount: data.unreadCount || 0,
+      lastMessageSequence: data.lastMessageSequence != null ? data.lastMessageSequence.toString() : '0',
+      lastReadSequence: data.lastReadSequence != null ? data.lastReadSequence.toString() : '0',
       isPinned: data.isPinned || false,
       noDisturb: data.noDisturb || false,
       draft: data.draft || '',

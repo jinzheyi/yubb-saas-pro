@@ -315,7 +315,7 @@
 	import { badgeService } from '../../services/badge-service.uts'
 	import { MessageType, wsManager } from '../../utils/websocket.uts'
 	import { getMessageList, recallMessage, deleteMessage } from '../../api/message.uts'
-	import { clearUnreadCount as clearUnreadCountApi, getConversationByTarget } from '../../api/conversation.uts'
+	import { getConversationByTarget } from '../../api/conversation.uts'
 	import { getUserIdStr, getTenantId, hasRole } from '../../store/user.uts'
 	import { 
 		chooseAndUploadFile,
@@ -655,16 +655,37 @@
 		}
 		
 		// 4. 加载历史消息
-		loadMessages()
+		await loadMessages()
 		
 		// 5. 监听新消息
 		messageService.addMessageListener(handleNewMessage)
 		
-		// 6. 清空未读数（本地 + 服务端）
+		// 6. 清空未读数（本地 + 服务端：按 sequence 水位上报）
 		if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
+			let maxSeq = '0'
+			try {
+				const localMsgs = messageService.getMessages(chatId.value)
+				for (let i = 0; i < localMsgs.length; i++) {
+					const s = (localMsgs[i] as any).sequence
+					if (s == null || s === '') {
+						continue
+					}
+					try {
+						if (BigInt(s) > BigInt(maxSeq)) {
+							maxSeq = s
+						}
+					} catch (e) {
+						if (s > maxSeq) {
+							maxSeq = s
+						}
+					}
+				}
+			} catch (e) {
+				maxSeq = '0'
+			}
 			// 调用 BadgeService 清空会话角标
 			// BadgeService 会自动调用后端 API 并更新本地数据
-			badgeService.clearConversationBadge(chatId.value)
+			badgeService.clearConversationBadge(chatId.value, maxSeq)
 			
 			// 同时清空 MessageService 的本地未读数
 			messageService.clearUnreadCount(chatId.value)
@@ -2889,7 +2910,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	onShow(() => {
 		wsManager.setRealtimeBizActive(true)
-		wsManager.connect()
 	})
 
 	onHide(() => {

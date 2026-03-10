@@ -38,20 +38,6 @@ export function deleteMessage(id: string): Promise<any> {
 }
 
 /**
- * 标记消息已读
- * @param messageIds 消息ID列表
- */
-export function markMessageRead(messageIds: string[]): Promise<any> {
-  return request({
-    url: '/system/im/message/mark-read',
-    method: 'PUT',
-    params: {
-      messageIds: messageIds
-    }
-  })
-}
-
-/**
  * 获取未读消息数
  */
 export function getUnreadCount(): Promise<any> {
@@ -87,6 +73,19 @@ export function searchMessages(
   }
   return request({
     url: url,
+    method: 'GET'
+  })
+}
+
+/**
+ * 增量拉取消息（断线补偿）
+ * @param chatId ChatID
+ * @param lastSequence 最后拉取的 sequence（水位）
+ * @param limit 拉取条数（默认200，最大500）
+ */
+export function pullMessages(chatId: string, lastSequence: string = '0', limit: number = 200): Promise<any> {
+  return request({
+    url: `/system/im/message/pull?chatId=${chatId}&lastSequence=${lastSequence}&limit=${limit}`,
     method: 'GET'
   })
 }

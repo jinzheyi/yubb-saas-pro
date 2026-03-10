@@ -2,6 +2,7 @@ package com.shengyu.module.system.service.im;
 
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePullReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
@@ -50,22 +51,6 @@ public interface ImMessageService {
     void deleteMessage(Long userId, Long messageId);
 
     /**
-     * 标记消息已读
-     *
-     * @param userId 用户ID
-     * @param messageId 消息ID
-     */
-    void markMessageRead(Long userId, Long messageId);
-
-    /**
-     * 批量标记消息已读
-     *
-     * @param userId 用户ID
-     * @param messageIds 消息ID列表
-     */
-    void markMessagesRead(Long userId, java.util.List<Long> messageIds);
-
-    /**
      * 清空会话消息
      *
      * @param userId 用户ID
@@ -81,6 +66,11 @@ public interface ImMessageService {
      * @return 消息分页结果
      */
     PageResult<AppImMessageRespVO> searchMessages(Long userId, AppImMessageSearchReqVO searchReqVO);
+
+    /**
+     * 增量拉取消息（断线补偿）：按 sequence 水位拉取 sequence > lastSequence 的消息
+     */
+    java.util.List<AppImMessageRespVO> pullMessages(Long userId, AppImMessagePullReqVO pullReqVO);
 
     /**
      * 查询会话的消息列表（按时间倒序，支持分页加载）

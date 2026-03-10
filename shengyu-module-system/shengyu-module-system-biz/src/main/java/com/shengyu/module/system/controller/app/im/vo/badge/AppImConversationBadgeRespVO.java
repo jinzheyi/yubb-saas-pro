@@ -1,5 +1,7 @@
 package com.shengyu.module.system.controller.app.im.vo.badge;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -8,6 +10,7 @@ import lombok.Data;
 public class AppImConversationBadgeRespVO {
 
     @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long chatId;
 
     @Schema(description = "未读数", requiredMode = Schema.RequiredMode.REQUIRED)
