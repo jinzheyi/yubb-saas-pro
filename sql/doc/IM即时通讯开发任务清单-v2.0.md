@@ -12,6 +12,17 @@
 
 ---
 
+## 已落地能力清单（截至当前工程实现）
+
+- **会话增量同步（cursorVersion 版）**：`GET /system/im/conversation/sync`，服务端按 `cursor_version > cursor` 增量扫描，端侧合并并存储本地 cursor。
+- **会话幂等/乱序保护（conversationVersion）**：端侧基于 `conversationVersion` 丢弃旧快照，避免乱序覆盖。
+- **WS 推送版本透传（cursorVersion/conversationVersion）**：WS payload root 透传版本号，端侧可做 gap 检测与补偿。
+- **WS 重连补偿**：WS 鉴权成功后触发节流的会话补偿 sync。
+- **已读/角标一致性闭环（按 sequence 水位）**：`PUT /system/im/conversation/mark-read-seq` 推进水位，角标刷新与会话列表一致。
+- **群聊会话摘要前缀一致性**：非文本消息摘要在推送与刷新场景均保留发送者前缀（如 `"张三: [图片]"` / `"我: [图片]"`）。
+
+---
+
 ## 0. 说明与验收通用规则
 
 ### 0.1 任务格式
@@ -375,6 +386,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 ### C3（P0）：会话同步与未读水位模型（对齐企微/钉钉）
 
 - **验收**：服务端维护 lastReadSequence/lastMessageSequence；已读上报只升不降；跨端一致。
+- 状态：已完成
 
 - **目标**：把“会话未读/已读”从端侧计算升级为服务端权威水位模型，支持增量同步（cursor）。
 - **范围**：
@@ -404,6 +416,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 #### C3.2（P0）：增量会话同步接口（syncConversations）
 
 - **目标**：端侧会话列表可通过 cursor 增量同步（对齐企微/钉钉的“拉增量 + 本地合并”）。
+- 状态：已完成
 - **建议契约**：
   - `GET /system/im/conversation/sync?cursorVersion=...&limit=...`
   - 响应：`{ nextCursorVersion, hasMore, items: [ { chatId, conversationType, targetId, cursorVersion, conversationVersion, lastMessageSequence, lastReadSequence, unreadCount, isPinned, noDisturb } ] }`
@@ -422,6 +435,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 #### C3.2.1（P0）：cursorVersion（用户维度游标）分配器
 
 - **目标**：为同一 `tenantId + userId` 的“会话列表态变更”分配单调递增 `cursorVersion`，用于增量 sync 与缺口检测。
+- 状态：已完成
 - **实现建议**：
   - 新表 `im_user_cursor(tenant_id, user_id, next_cursor_version)` 或 Redis 原子自增
   - 每次会话用户态变更写入时获取 `cursorVersion = ++next`
@@ -436,10 +450,12 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
   - `conversationVersion`（用于同 chat 快照合并）
 - **验收**：
   - `GET /conversation/sync` 可走索引 `(tenant_id,user_id,cursor_version)`
+- 状态：已完成
 
 #### C3.2.3（P0）：WS 事件携带 cursorVersion + 缺口补偿
 
 - **目标**：WS 推送（CONVERSATION_UPSERT / WATERMARK_UPDATE / 新消息事件）必须包含 `cursorVersion`。
+- 状态：已完成
 - **端侧策略**：
   - 若收到 version 跳跃（`v > local+1`）：立刻 `sync(cursorVersion=local)` 补齐
   - 若重复/乱序：按 `conversationVersion` 去重合并

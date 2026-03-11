@@ -57,6 +57,63 @@
 
 ---
 
+## 2.4 当前工程落地情况（关键落点）
+
+说明：本节用于把“对标企微/钉钉的设计”与“当前工程已落地实现”对齐，便于回归与后续迭代。
+
+### 2.4.1 会话增量同步（cursorVersion）
+
+- **后端**：`shengyu-module-system/.../service/im/ImConversationServiceImpl#syncConversations`
+  - 数据源：`im_conversation_user_state`
+  - 过滤：`cursor_version > cursorVersion`
+  - 返回：`nextCursorVersion/hasMore/items`（items 含 `cursorVersion/conversationVersion/lastMessageSequence/lastReadSequence/unreadCount`）
+
+- **前端**：`shengyu-ui/shengyu-ui-admin-uniappx/services/conversation-service.uts#syncConversationsIncrementally`
+  - 本地存储：按 `tenantId+userId` 维度持久化 cursorVersion
+  - reset 策略：本地列表为空但 cursor>0 时强制 reset（避免“刷新后列表为空”）
+
+### 2.4.2 会话幂等/乱序保护（conversationVersion）
+
+- **前端**：`conversation-service.uts#upsertFromSnapshot`
+  - 合并规则：incoming `conversationVersion` 不大于 current 时丢弃，避免旧快照覆盖新状态
+
+### 2.4.3 WebSocket 推送版本透传与补偿
+
+- **后端 WS Sender**：`shengyu-framework/.../NettyMessageSender#sendToUser`
+  - payload root 透传：`cursorVersion/conversationVersion`
+  - cursorVersion 非空时可跳过 snapshot 构建（避免额外查询）
+
+- **前端 WS**：
+  - `shengyu-ui/.../utils/websocket.uts`：AUTH 成功后触发节流补偿 sync（对标企微/钉钉的断线恢复）
+  - `shengyu-ui/.../services/message-service.uts`：支持从 WS root 读取 `cursorVersion` 做 gap 检测（snapshot 为空也可补偿）
+
+### 2.4.4 已读水位/角标一致性（对标企微/钉钉）
+
+- **权威接口**：`PUT /system/im/conversation/mark-read-seq?chatId=&readSequence=`
+  - **后端**：`ImConversationServiceImpl#markConversationReadBySequence` + `ImChatUserMapper#markReadToSequence`
+  - 规则：水位只升不降（GREATEST），并把 `unread_count` 清零
+
+- **角标刷新**：`GET /system/im/badge/get`
+  - **后端**：`ImBadgeServiceImpl#getBadgeData` -> `ImConversationServiceImpl#getConversationBadges`
+  - 口径：`unread = lastMessageSequence - lastReadSequence`（与会话列表一致）
+
+- **前端**：
+  - `badge-service.uts#clearConversationBadge`：进入会话始终推进服务端已读水位（幂等），避免“本地 badge 未加载导致服务端未清”
+  - `pages/message/chat.uvue`：进入会话上报 readSequence 使用权威 `lastMessageSequence`（并兜底页面消息最大 seq），避免上报 0 导致未清
+
+### 2.4.5 群聊摘要一致性（对标企微/钉钉）
+
+- **后端写入**：`SystemMessageStorageServiceImpl#updateChatUserAsync`
+  - 群聊 `last_message_content` 按成员写入 `"我: ..."/"昵称: ..."`（兜底 senderId），保证刷新后仍可展示发送者
+
+- **后端读取**：`ImConversationServiceImpl#buildPreviewByType`
+  - raw 非空优先返回 raw（截断），避免类型占位文案覆盖发送者前缀
+
+- **前端渲染**：`pages/message/message.uvue#buildConversationPreview`
+  - raw 非空优先展示 raw（截断），保证推送与刷新一致
+
+---
+
 ## 3. 统一鉴权体系（HTTP + IM）
 
 本章以本文档的 **附录 16（统一鉴权详细版）** 为权威来源，本章只做归纳与 IM 侧补充。
