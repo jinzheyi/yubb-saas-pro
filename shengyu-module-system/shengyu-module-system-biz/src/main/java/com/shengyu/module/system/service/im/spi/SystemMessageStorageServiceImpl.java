@@ -16,10 +16,12 @@ import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
+import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.service.im.ImBadgeService;
+import com.shengyu.module.system.service.im.ImCursorVersionService;
 import com.shengyu.module.system.service.im.ImGroupService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -61,6 +63,9 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
     private ImChatUserMapper chatUserMapper;
 
     @Resource
+    private ImConversationUserStateMapper conversationUserStateMapper;
+
+    @Resource
     private ImBadgeService imBadgeService;
 
     @Resource
@@ -68,6 +73,9 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
     @Resource
     private AdminUserMapper userMapper;
+
+    @Resource
+    private ImCursorVersionService cursorVersionService;
 
     @Resource
     private NettyMessageSender nettyMessageSender;
@@ -316,6 +324,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                 return;
             }
             Long chatId = messageDO.getChatId();
+            Long tenantId = header.getTenantId();
             String basePreview = buildConversationPreview(header, messageDO, rawMessage);
             String lastMessageContent = truncateContent(basePreview);
 
@@ -360,6 +369,24 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                             Boolean.TRUE.equals(chatUser.getNoDisturb())
                     );
 
+                    Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, memberId);
+                    Long lastReadSeqForUpsert = isSender ? messageDO.getSequence() : 0L;
+                    LocalDateTime lastReadTimeForUpsert = isSender ? messageDO.getSendTime() : null;
+                    conversationUserStateMapper.upsertAfterMessage(
+                            tenantId,
+                            chatId,
+                            memberId,
+                            cursorVersion,
+                            isSender ? 0 : 1,
+                            lastReadSeqForUpsert,
+                            lastReadTimeForUpsert,
+                            messageDO.getId(),
+                            messageDO.getSequence(),
+                            messageDO.getMessageType(),
+                            finalPreview,
+                            messageDO.getSendTime()
+                    );
+
 					// 发送者侧：持久化推进已读水位，避免重登后自己的消息出现未读角标
 					if (isSender && messageDO.getSequence() != null) {
 						try {
@@ -381,7 +408,9 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                                     header.getTenantId(),
                                     messageDO.getId(),
                                     messageDO.getSequence(),
-                                    chatId
+                                    chatId,
+                                    cursorVersion,
+                                    null
                             );
                         }
                     }
@@ -397,6 +426,22 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         messageDO.getSendTime(),
                         0,
                         Boolean.TRUE.equals(sender.getNoDisturb())
+                );
+
+                Long senderCursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, header.getSenderId());
+                conversationUserStateMapper.upsertAfterMessage(
+                        tenantId,
+                        chatId,
+                        header.getSenderId(),
+                        senderCursorVersion,
+                        0,
+                        messageDO.getSequence(),
+                        messageDO.getSendTime(),
+                        messageDO.getId(),
+                        messageDO.getSequence(),
+                        messageDO.getMessageType(),
+                        lastMessageContent,
+                        messageDO.getSendTime()
                 );
 
 				// 发送者侧：持久化推进已读水位，避免重登后自己的消息出现未读角标
@@ -418,6 +463,22 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         messageDO.getSendTime(),
                         1,
                         Boolean.TRUE.equals(receiver.getNoDisturb())
+                );
+
+                Long receiverCursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, header.getReceiverId());
+                conversationUserStateMapper.upsertAfterMessage(
+                        tenantId,
+                        chatId,
+                        header.getReceiverId(),
+                        receiverCursorVersion,
+                        1,
+                        0L,
+                        null,
+                        messageDO.getId(),
+                        messageDO.getSequence(),
+                        messageDO.getMessageType(),
+                        lastMessageContent,
+                        messageDO.getSendTime()
                 );
                 imBadgeService.pushBadgeUpdate(header.getReceiverId());
             }

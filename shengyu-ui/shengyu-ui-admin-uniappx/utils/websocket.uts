@@ -139,6 +139,8 @@ export class WebSocketManager {
   private strictPresenceMode: boolean = false
 
   private realtimeBizActive: boolean = false
+
+  private lastResumeSyncAt: number = 0
   
   // WebSocket 服务器地址
   private wsUrl: string = ''
@@ -154,6 +156,27 @@ export class WebSocketManager {
 	onAccessTokenRefreshed((_tokenData) => {
 		this.requestReauth('http_refresh')
 	})
+  }
+
+  private triggerResumeConversationSync(): void {
+	try {
+		const now = Date.now()
+		if (now - this.lastResumeSyncAt < 1200) {
+			return
+		}
+		this.lastResumeSyncAt = now
+		void import('@/services/conversation-service.uts').then((m) => {
+			try {
+				void m.conversationService.syncConversationsIncrementally(false)
+			} catch (e) {
+				console.error('[WebSocket] resume conversation sync failed:', e)
+			}
+		}).catch((e) => {
+			console.error('[WebSocket] load conversationService failed:', e)
+		})
+	} catch (e) {
+		console.error('[WebSocket] triggerResumeConversationSync failed:', e)
+	}
   }
   
   /**
@@ -373,6 +396,9 @@ export class WebSocketManager {
 
       console.log('[WebSocket] 认证成功')
       this.authenticated = true
+
+	  // P1：重连/认证成功后首包补偿 sync，避免断线期间无 WS 也不触发 gap 检测
+	  this.triggerResumeConversationSync()
 
       this.authFail401Count = 0
       this.authFail401WindowStartAt = 0

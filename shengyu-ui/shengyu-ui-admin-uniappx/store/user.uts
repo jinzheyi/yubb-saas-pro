@@ -445,6 +445,20 @@ export function clearUserCache() {
 		console.error('[user] clearUserCache ws cleanup failed:', e)
 	}
 
+	try {
+		void import('@/services/conversation-service.uts').then((m) => {
+			try {
+				m.conversationService.clearCache()
+			} catch (e) {
+				console.error('[user] clearUserCache conversation cleanup failed:', e)
+			}
+		}).catch((e) => {
+			console.error('[user] load conversationService failed:', e)
+		})
+	} catch (e) {
+		console.error('[user] clearUserCache conversation cleanup failed:', e)
+	}
+
 	removeToken()
 	removeUserInfo()
 	removePermissions()

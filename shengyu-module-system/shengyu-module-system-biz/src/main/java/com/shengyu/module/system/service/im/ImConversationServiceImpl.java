@@ -2,18 +2,24 @@ package com.shengyu.module.system.service.im;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.shengyu.framework.websocket.core.protocol.ConversationBadge;
+import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
+import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSyncItemRespVO;
+import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSyncRespVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationUpdateReqVO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
+import com.shengyu.module.system.dal.dataobject.im.ImConversationUserStateDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
+import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
+import com.shengyu.module.system.dal.mysql.im.ImUserCursorMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -44,6 +51,9 @@ public class ImConversationServiceImpl implements ImConversationService {
     private ImChatUserMapper chatUserMapper;
 
     @Resource
+    private ImConversationUserStateMapper conversationUserStateMapper;
+
+    @Resource
     private ImChatMessageMapper chatMessageMapper;
 
     @Resource
@@ -52,10 +62,109 @@ public class ImConversationServiceImpl implements ImConversationService {
     @Resource
     private AdminUserMapper userMapper;
 
+    @Resource
+    private ImCursorVersionService cursorVersionService;
+
+    @Resource
+    private ImUserCursorMapper userCursorMapper;
+
+    @Transactional(rollbackFor = Exception.class)
+    public Long allocateNextCursorVersion(Long userId) {
+        if (userId == null || userId <= 0) {
+            return 0L;
+        }
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        userCursorMapper.insertIgnore(tenantId, userId);
+        com.shengyu.module.system.dal.dataobject.im.ImUserCursorDO cursor = userCursorMapper.selectForUpdate(tenantId, userId);
+        long next = 1L;
+        if (cursor != null && cursor.getNextCursorVersion() != null) {
+            next = cursor.getNextCursorVersion() + 1L;
+        }
+        userCursorMapper.updateNext(tenantId, userId, next);
+        return next;
+    }
+
     @Override
     public List<AppImConversationRespVO> getConversationList(Long userId) {
         List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserId(userId);
         return chatUsers.stream().map(chatUser -> toConversationRespVO(userId, chatUser)).collect(Collectors.toList());
+    }
+
+    @Override
+    public AppImConversationSyncRespVO syncConversations(Long userId, Long cursorVersion, Integer limit) {
+        long cursor = cursorVersion != null && cursorVersion > 0 ? cursorVersion : 0L;
+        int pageSize = limit != null && limit > 0 ? Math.min(limit, 200) : 100;
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+
+        List<ImConversationUserStateDO> states = conversationUserStateMapper.selectSyncList(tenantId, userId, cursor, pageSize);
+        List<AppImConversationSyncItemRespVO> items = new ArrayList<>();
+        long next = cursor;
+
+        if (states != null) {
+            for (ImConversationUserStateDO state : states) {
+                if (state == null) {
+                    continue;
+                }
+                AppImConversationSyncItemRespVO item = new AppImConversationSyncItemRespVO();
+                item.setChatId(state.getChatId());
+                item.setCursorVersion(state.getCursorVersion() != null ? state.getCursorVersion() : 0L);
+                item.setConversationVersion(state.getConversationVersion() != null ? state.getConversationVersion() : 0L);
+                item.setUnreadCount(state.getUnreadCount() != null ? Math.max(state.getUnreadCount(), 0) : 0);
+                item.setLastMessageSequence(state.getLastMessageSequence() != null ? state.getLastMessageSequence() : 0L);
+                item.setLastReadSequence(state.getLastReadSequence() != null ? state.getLastReadSequence() : 0L);
+                item.setLastMessageType(state.getLastMessageType());
+                item.setLastMessageContent(buildPreviewByType(state.getLastMessageType(), state.getLastMessageContent()));
+                item.setLastMessageTime(state.getLastMessageTime());
+                item.setIsPinned(state.getIsPinned());
+                item.setNoDisturb(state.getNoDisturb());
+                item.setDraft(state.getDraft());
+                item.setDeletedByUser(state.getDeletedByUser());
+
+                ImChatDO chat = chatMapper.selectById(state.getChatId());
+                if (chat != null) {
+                    item.setConversationType(chat.getChatType());
+                    if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
+                        item.setTargetId(chat.getGroupId());
+                        ImGroupDO group = groupMapper.selectById(chat.getGroupId());
+                        if (group != null) {
+                            item.setTargetName(group.getName());
+                            item.setTargetAvatar(group.getAvatar());
+                            item.setGroupMemberCount(group.getMemberCount());
+                            if (item.getLastMessageTime() == null
+                                    && state.getLastMessageId() == null
+                                    && (state.getLastMessageSequence() == null || state.getLastMessageSequence() <= 0L)) {
+                                item.setLastMessageTime(group.getCreateTime());
+                            }
+                        }
+                    } else {
+                        Long otherUserId = Objects.equals(chat.getSingleUser1(), userId) ? chat.getSingleUser2() : chat.getSingleUser1();
+                        item.setTargetId(otherUserId);
+                        AdminUserDO targetUser = userMapper.selectById(otherUserId);
+                        if (targetUser != null) {
+                            item.setTargetName(targetUser.getNickname());
+                            item.setTargetAvatar(targetUser.getAvatar());
+                        }
+                    }
+                }
+
+                items.add(item);
+                if (item.getCursorVersion() != null && item.getCursorVersion() > next) {
+                    next = item.getCursorVersion();
+                }
+            }
+        }
+
+        AppImConversationSyncRespVO respVO = new AppImConversationSyncRespVO();
+        respVO.setNextCursorVersion(next);
+        respVO.setHasMore(states != null && states.size() >= pageSize);
+        respVO.setItems(items);
+        return respVO;
     }
 
     @Override
@@ -110,6 +219,55 @@ public class ImConversationServiceImpl implements ImConversationService {
         }
         ImChatDO chat = getOrCreateChat(createReqVO.getConversationType(), userId, createReqVO.getTargetId());
         ImChatUserDO chatUser = ensureChatUser(userId, chat.getId());
+
+        // 初始化会话-用户态（无消息也要可 sync 出现，对标企微/钉钉）
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
+
+            Integer unreadCount = chatUser.getUnreadCount() != null ? Math.max(chatUser.getUnreadCount(), 0) : 0;
+            Long lastReadSeq = chatUser.getLastReadSequence() != null ? chatUser.getLastReadSequence() : 0L;
+            Long lastMsgId = chatUser.getLastMessageId();
+            Long lastMsgSeq = chatUser.getLastMessageSequence() != null ? chatUser.getLastMessageSequence() : 0L;
+            Integer lastMsgType = chatUser.getLastMessageType();
+            String lastMsgContent = chatUser.getLastMessageContent();
+            java.time.LocalDateTime lastMsgTime = chatUser.getLastMessageTime();
+
+            // 群聊无消息：使用群创建时间作为会话时间
+            if (ImConversationTypeEnum.isGroup(chat.getChatType())
+                    && lastMsgTime == null
+                    && lastMsgId == null
+                    && (lastMsgSeq == null || lastMsgSeq <= 0L)) {
+                ImGroupDO group = groupMapper.selectById(chat.getGroupId());
+                if (group != null) {
+                    lastMsgTime = group.getCreateTime();
+                }
+            }
+
+            conversationUserStateMapper.upsertInitConversation(
+                    tenantId,
+                    chat.getId(),
+                    userId,
+                    cursorVersion,
+                    unreadCount,
+                    lastReadSeq,
+                    null,
+                    lastMsgId,
+                    lastMsgSeq,
+                    lastMsgType,
+                    lastMsgContent,
+                    lastMsgTime,
+                    chatUser.getIsPinned(),
+                    chatUser.getNoDisturb(),
+                    chatUser.getDraft()
+            );
+        } catch (Exception e) {
+            log.warn("[ImConversationService] 初始化会话-用户态失败, userId: {}, chatId: {}, error: {}",
+                    userId, chat.getId(), e.getMessage(), e);
+        }
         return toConversationRespVO(userId, chatUser);
     }
 
@@ -121,6 +279,29 @@ public class ImConversationServiceImpl implements ImConversationService {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
         chatUserMapper.updateSettings(userId, updateReqVO.getChatId(), updateReqVO.getIsPinned(), updateReqVO.getNoDisturb());
+
+        // 同步写入会话-用户态 + 分配 cursorVersion（跨端设置一致）
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            Boolean newPinned = updateReqVO.getIsPinned() != null ? updateReqVO.getIsPinned() : chatUser.getIsPinned();
+            Boolean newNoDisturb = updateReqVO.getNoDisturb() != null ? updateReqVO.getNoDisturb() : chatUser.getNoDisturb();
+            Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
+            conversationUserStateMapper.upsertAfterSettings(
+                    tenantId,
+                    updateReqVO.getChatId(),
+                    userId,
+                    cursorVersion,
+                    newPinned,
+                    newNoDisturb,
+                    chatUser.getDraft()
+            );
+        } catch (Exception e) {
+            log.warn("[ImConversationService] 写入会话-用户态设置变更失败, userId: {}, chatId: {}, error: {}",
+                    userId, updateReqVO.getChatId(), e.getMessage(), e);
+        }
     }
 
     @Override
@@ -131,6 +312,25 @@ public class ImConversationServiceImpl implements ImConversationService {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
         chatUserMapper.softDelete(userId, conversationId);
+
+        // 同步写入会话-用户态 + 分配 cursorVersion（跨端删除一致）
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
+            conversationUserStateMapper.upsertAfterDelete(
+                    tenantId,
+                    conversationId,
+                    userId,
+                    cursorVersion,
+                    true
+            );
+        } catch (Exception e) {
+            log.warn("[ImConversationService] 写入会话-用户态删除失败, userId: {}, chatId: {}, error: {}",
+                    userId, conversationId, e.getMessage(), e);
+        }
     }
 
     @Override
@@ -145,6 +345,34 @@ public class ImConversationServiceImpl implements ImConversationService {
             seq = 0L;
         }
         chatUserMapper.markReadToSequence(userId, chatId, seq);
+
+        // 同步写入会话-用户态 + 分配 cursorVersion（跨端已读一致）
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
+            conversationUserStateMapper.upsertAfterRead(
+                    tenantId,
+                    chatId,
+                    userId,
+                    cursorVersion,
+                    seq,
+                    java.time.LocalDateTime.now(),
+                    chatUser.getLastMessageId(),
+                    chatUser.getLastMessageSequence() != null ? chatUser.getLastMessageSequence() : 0L,
+                    chatUser.getLastMessageType(),
+                    chatUser.getLastMessageContent(),
+                    chatUser.getLastMessageTime(),
+                    chatUser.getIsPinned(),
+                    chatUser.getNoDisturb(),
+                    chatUser.getDraft()
+            );
+        } catch (Exception e) {
+            log.warn("[ImConversationService] 写入会话-用户态已读水位失败, userId: {}, chatId: {}, error: {}",
+                    userId, chatId, e.getMessage(), e);
+        }
     }
 
     @Override
@@ -189,6 +417,25 @@ public class ImConversationServiceImpl implements ImConversationService {
     public void deleteConversationByTarget(Long userId, Long targetId, Integer conversationType) {
         ImChatDO chat = getOrCreateChat(conversationType, userId, targetId);
         chatUserMapper.softDelete(userId, chat.getId());
+
+        // 同步写入会话-用户态 + 分配 cursorVersion（跨端删除一致）
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
+            conversationUserStateMapper.upsertAfterDelete(
+                    tenantId,
+                    chat.getId(),
+                    userId,
+                    cursorVersion,
+                    true
+            );
+        } catch (Exception e) {
+            log.warn("[ImConversationService] 写入会话-用户态按 target 删除失败, userId: {}, chatId: {}, error: {}",
+                    userId, chat.getId(), e.getMessage(), e);
+        }
     }
 
     @Override
@@ -236,6 +483,25 @@ public class ImConversationServiceImpl implements ImConversationService {
          AppImConversationRespVO respVO = new AppImConversationRespVO();
         respVO.setChatId(chatUser.getChatId());
         respVO.setConversationType(chat.getChatType());
+
+		// cursorVersion/conversationVersion：用于 WS gap 检测 + 端侧幂等/乱序保护
+		try {
+			Long tenantId = TenantContextHolder.getTenantId();
+			if (tenantId == null) {
+				tenantId = 0L;
+			}
+			ImConversationUserStateDO state = conversationUserStateMapper.selectOne(new com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX<ImConversationUserStateDO>()
+					.eq(ImConversationUserStateDO::getTenantId, tenantId)
+					.eq(ImConversationUserStateDO::getUserId, userId)
+					.eq(ImConversationUserStateDO::getChatId, chatUser.getChatId())
+					.eq(ImConversationUserStateDO::getDeleted, false));
+			if (state != null) {
+				respVO.setCursorVersion(state.getCursorVersion());
+				respVO.setConversationVersion(state.getConversationVersion());
+			}
+		} catch (Exception ignore) {
+			// ignore
+		}
         Long lastMsgSeq = chatUser.getLastMessageSequence() != null ? chatUser.getLastMessageSequence() : 0L;
         Long lastReadSeq = chatUser.getLastReadSequence() != null ? chatUser.getLastReadSequence() : 0L;
         respVO.setLastMessageSequence(lastMsgSeq);

@@ -24,6 +24,7 @@ public class ImConversationSnapshotServiceImpl implements ConversationSnapshotSe
         if (detail == null) {
             return null;
         }
+
         Map<String, Object> map = new HashMap<>();
         map.put("chatId", detail.getChatId() != null ? String.valueOf(detail.getChatId()) : null);
         map.put("targetId", detail.getTargetId() != null ? String.valueOf(detail.getTargetId()) : null);
@@ -39,6 +40,9 @@ public class ImConversationSnapshotServiceImpl implements ConversationSnapshotSe
         map.put("targetName", detail.getTargetName());
         map.put("targetAvatar", detail.getTargetAvatar());
         map.put("groupMemberCount", detail.getGroupMemberCount());
+
+        map.put("cursorVersion", detail.getCursorVersion() != null ? String.valueOf(detail.getCursorVersion()) : null);
+        map.put("conversationVersion", detail.getConversationVersion() != null ? String.valueOf(detail.getConversationVersion()) : null);
         return map;
     }
 

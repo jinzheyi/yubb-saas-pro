@@ -90,6 +90,17 @@ public class NettyMessageSender {
      */
     public void sendToUser(Long userId, MessageType messageType, MessageLite body,
                            Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence, Long chatId) {
+        sendToUser(userId, messageType, body, senderId, receiverId, groupId, tenantId, messageId, sequence, chatId, null, null);
+    }
+
+    /**
+     * 发送消息给指定用户（可显式指定 receiverId/groupId/messageId/sequence/chatId/cursorVersion/conversationVersion）
+     *
+     * 说明：当 cursorVersion/conversationVersion 由业务侧已知时，可透传到 WS payload，避免为 gap 检测额外查库构建 snapshot。
+     */
+    public void sendToUser(Long userId, MessageType messageType, MessageLite body,
+                           Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence, Long chatId,
+                           Long cursorVersion, Long conversationVersion) {
         TenantUtils.execute(tenantId, () -> {
             List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
             if (sessions.isEmpty()) {
@@ -104,7 +115,8 @@ public class NettyMessageSender {
             }
 
             ImMessage protobufMessage = buildMessage(messageType, body, senderId, receiverId, groupId, tenantId, messageId, sequence);
-            String jsonPayload = buildJsonPayload(messageType, body, senderId, receiverId, groupId, tenantId, messageId, sequence, chatId, userId);
+            String jsonPayload = buildJsonPayload(messageType, body, senderId, receiverId, groupId, tenantId, messageId, sequence, chatId, userId,
+                    cursorVersion, conversationVersion);
 
             int successCount = 0;
             for (NettySession session : sessions) {
@@ -331,6 +343,13 @@ public class NettyMessageSender {
     private String buildJsonPayload(MessageType messageType, MessageLite body,
                                    Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence,
                                    Long chatId, Long toUserId) {
+        return buildJsonPayload(messageType, body, senderId, receiverId, groupId, tenantId, messageId, sequence,
+                chatId, toUserId, null, null);
+    }
+
+    private String buildJsonPayload(MessageType messageType, MessageLite body,
+                                   Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence,
+                                   Long chatId, Long toUserId, Long cursorVersion, Long conversationVersion) {
         Map<String, Object> root = new HashMap<>();
         Map<String, Object> header = new HashMap<>();
         header.put("messageId", messageId != null ? String.valueOf(messageId) : String.valueOf(generateMessageId()));
@@ -354,7 +373,16 @@ public class NettyMessageSender {
         root.put("header", header);
         root.put("body", buildJsonBody(messageType, body));
 
-        if (chatId != null && toUserId != null && conversationSnapshotService != null) {
+        if (cursorVersion != null) {
+            root.put("cursorVersion", String.valueOf(cursorVersion));
+        }
+        if (conversationVersion != null) {
+            root.put("conversationVersion", String.valueOf(conversationVersion));
+        }
+
+        // 当 cursorVersion 已透传，端侧可基于 cursorVersion 做 gap 检测并走增量补偿，同步状态由 /conversation/sync 保证
+        // 这里默认不再额外查库构建 snapshot，以降低写扩散下的 DB 压力
+        if (cursorVersion == null && chatId != null && toUserId != null && conversationSnapshotService != null) {
             try {
                 Map<String, Object> snapshot = conversationSnapshotService.buildSnapshot(toUserId, chatId);
                 if (snapshot != null && !snapshot.isEmpty()) {

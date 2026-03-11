@@ -67,6 +67,53 @@ CREATE TABLE `im_chat_user` (
   INDEX `idx_chat`(`tenant_id` ASC, `chat_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM用户会话状态表' ROW_FORMAT = DYNAMIC;
 
+DROP TABLE IF EXISTS `im_user_cursor`;
+CREATE TABLE `im_user_cursor` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `next_cursor_version` bigint NOT NULL DEFAULT 0 COMMENT '下一个会话同步游标版本号',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_cursor`(`tenant_id` ASC, `user_id` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM用户会话游标分配器' ROW_FORMAT = DYNAMIC;
+
+DROP TABLE IF EXISTS `im_conversation_user_state`;
+CREATE TABLE `im_conversation_user_state` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `chat_id` bigint NOT NULL COMMENT 'ChatID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `cursor_version` bigint NOT NULL DEFAULT 0 COMMENT '会话同步游标版本号（用户维度）',
+  `conversation_version` bigint NOT NULL DEFAULT 0 COMMENT '会话版本号（会话级，用于合并快照）',
+  `unread_count` int NOT NULL DEFAULT 0 COMMENT '未读消息数',
+  `last_read_sequence` bigint NOT NULL DEFAULT 0 COMMENT '最后已读序列号水位（单调递增）',
+  `last_read_time` datetime NULL DEFAULT NULL COMMENT '最后已读时间',
+  `last_message_id` bigint NULL DEFAULT NULL COMMENT '最后一条消息ID',
+  `last_message_sequence` bigint NOT NULL DEFAULT 0 COMMENT '最后一条消息序列号水位（单调递增）',
+  `last_message_type` tinyint NULL DEFAULT NULL COMMENT '最后一条消息类型(同 im_chat_message.message_type)',
+  `last_message_content` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '最后一条消息预览',
+  `last_message_time` datetime NULL DEFAULT NULL COMMENT '最后一条消息时间',
+  `is_pinned` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否置顶',
+  `no_disturb` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否免打扰',
+  `draft` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '草稿内容',
+  `deleted_by_user` bit(1) NOT NULL DEFAULT b'0' COMMENT '用户是否删除会话',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_chat_state`(`tenant_id` ASC, `user_id` ASC, `chat_id` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_user_cursor`(`tenant_id` ASC, `user_id` ASC, `cursor_version` ASC) USING BTREE,
+  INDEX `idx_chat`(`tenant_id` ASC, `chat_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM会话-用户态表' ROW_FORMAT = DYNAMIC;
+
 DROP TABLE IF EXISTS `im_chat_message`;
 CREATE TABLE `im_chat_message` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '消息ID',

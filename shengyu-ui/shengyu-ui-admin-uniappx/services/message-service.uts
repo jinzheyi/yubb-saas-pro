@@ -805,20 +805,31 @@ export class MessageService {
 			const snapshot: any = (message as any).conversationSnapshot
 			if (snapshot != null) {
 				try {
+					const cv = (snapshot as any).cursorVersion
+					conversationService.handleRealtimeCursorVersion(cv)
+				} catch (e) { /* ignore */ }
+				try {
 					if ((snapshot as any).lastMessageContent != null && (snapshot as any).lastMessageContent !== '') {
 						preview = (snapshot as any).lastMessageContent.toString()
 					}
 				} catch (e) { /* ignore */ }
-				const snapChatId = conversationService.upsertFromSnapshot(
-					snapshot,
-					preview,
-					message.header.timestamp,
-					false,
-					seqStr
-				)
-				if (snapChatId != null && snapChatId !== '') {
-					resolvedChatId = snapChatId
-				}
+				try {
+					const snapChatId = conversationService.upsertFromSnapshot(
+						snapshot,
+						preview,
+						message.header.timestamp,
+						false,
+						seqStr
+					)
+					if (snapChatId != null && snapChatId !== '') {
+						resolvedChatId = snapChatId
+					}
+				} catch (e) { /* ignore */ }
+			} else {
+				try {
+					const cv = (message as any).cursorVersion
+					conversationService.handleRealtimeCursorVersion(cv)
+				} catch (e) { /* ignore */ }
 			}
 
 			conversationService.updateConversation(
@@ -875,6 +886,10 @@ export class MessageService {
     const snapshot: any = (message as any).conversationSnapshot
     if (snapshot != null) {
 		try {
+			const cv = (snapshot as any).cursorVersion
+			conversationService.handleRealtimeCursorVersion(cv)
+		} catch (e) { /* ignore */ }
+		try {
 			if ((snapshot as any).lastMessageContent != null && (snapshot as any).lastMessageContent !== '') {
 				preview = (snapshot as any).lastMessageContent.toString()
 			}
@@ -883,6 +898,11 @@ export class MessageService {
       if (snapChatId != null && snapChatId !== '') {
         chatId = snapChatId
       }
+    } else {
+      try {
+        const cv = (message as any).cursorVersion
+        conversationService.handleRealtimeCursorVersion(cv)
+      } catch (e) { /* ignore */ }
     }
 
     if (conversationService.getConversation(chatId) == null) {

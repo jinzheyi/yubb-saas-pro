@@ -142,7 +142,7 @@
 	import { messageService } from '../../services/message-service.uts'
 	import { conversationService, ConversationItem } from '../../services/conversation-service.uts'
 	import { badgeService, BadgeData } from '../../services/badge-service.uts'
-	import { getConversationList, deleteConversation, pinConversation, setNoDisturb } from '../../api/conversation.uts'
+	import { deleteConversation, pinConversation, setNoDisturb } from '../../api/conversation.uts'
 	import { getConversationAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { wsManager } from '../../utils/websocket.uts'
 
@@ -313,11 +313,11 @@
 	 * 初始化页面
 	 */
 	onMounted(() => {
-		// 1. 加载会话列表
-		loadConversations()
-		
-		// 2. 监听会话更新
+		// 1. 监听会话更新
 		conversationService.addUpdateListener(handleConversationsUpdate)
+		
+		// 2. 加载会话列表
+		loadConversations()
 		
 		// 3. 监听角标更新
 		badgeService.addListener(badgeListener)
@@ -367,21 +367,8 @@
 				})
 			}
 			
-			// 2. 从服务器加载最新数据
-			const serverConversations = await getConversationList()
-			
-			if (serverConversations && Array.isArray(serverConversations)) {
-				// 转换为 UI 格式并排序
-				messageList.value = serverConversations
-					.map(conv => convertServerConversation(conv))
-					.sort((a, b) => {
-						// 置顶的排在前面
-						if (a.isPinned && !b.isPinned) return -1
-						if (!a.isPinned && b.isPinned) return 1
-						// 都置顶或都不置顶，按时间排序
-						return b.lastMessageTime - a.lastMessageTime
-					})
-			}
+			// 2. 增量同步会话列表（服务端 cursorVersion）
+			await conversationService.syncConversationsIncrementally(false)
 			
 		} catch (e) {
 			console.error('[Message] 加载会话列表失败:', e)

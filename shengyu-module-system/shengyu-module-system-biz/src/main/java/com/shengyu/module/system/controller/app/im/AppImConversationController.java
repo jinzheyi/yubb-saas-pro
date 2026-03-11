@@ -5,6 +5,7 @@ import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
+import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSyncRespVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationUpdateReqVO;
 import com.shengyu.module.system.service.im.ImBadgeService;
 import com.shengyu.module.system.service.im.ImConversationService;
@@ -43,6 +44,17 @@ public class AppImConversationController {
     public CommonResult<List<AppImConversationRespVO>> getConversationList() {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return success(conversationService.getConversationList(userId));
+    }
+
+    @GetMapping("/sync")
+    @Operation(summary = "会话增量同步（cursorVersion 版）")
+    @Parameter(name = "cursorVersion", description = "同步游标（用户维度版本号）", required = false)
+    @Parameter(name = "limit", description = "拉取条数", required = false)
+    public CommonResult<AppImConversationSyncRespVO> syncConversations(
+            @RequestParam(value = "cursorVersion", required = false) Long cursorVersion,
+            @RequestParam(value = "limit", required = false) Integer limit) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(conversationService.syncConversations(userId, cursorVersion, limit));
     }
 
     @GetMapping("/list-by-type")

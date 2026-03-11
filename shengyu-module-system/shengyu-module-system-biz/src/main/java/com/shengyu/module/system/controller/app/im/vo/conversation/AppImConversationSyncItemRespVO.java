@@ -7,9 +7,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-@Schema(description = "移动端 - IM 会话 Response VO")
+@Schema(description = "移动端 - IM 会话增量同步 Item")
 @Data
-public class AppImConversationRespVO {
+public class AppImConversationSyncItemRespVO {
 
     @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     @JsonSerialize(using = ToStringSerializer.class)
@@ -22,16 +22,16 @@ public class AppImConversationRespVO {
     @Schema(description = "会话类型(1-单聊 2-群聊)", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer conversationType;
 
-    @Schema(description = "未读消息数", requiredMode = Schema.RequiredMode.REQUIRED, example = "5")
-    private Integer unreadCount;
-
-    @Schema(description = "会话用户态全局游标版本号", example = "100")
+    @Schema(description = "用户维度游标版本号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1000")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long cursorVersion;
 
-    @Schema(description = "会话内版本号（用于幂等/乱序保护）", example = "10")
+    @Schema(description = "会话级版本号", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long conversationVersion;
+
+    @Schema(description = "未读消息数", requiredMode = Schema.RequiredMode.REQUIRED, example = "5")
+    private Integer unreadCount;
 
     @Schema(description = "最后一条消息序列号水位", example = "100")
     @JsonSerialize(using = ToStringSerializer.class)
@@ -56,6 +56,12 @@ public class AppImConversationRespVO {
     @Schema(description = "是否免打扰", requiredMode = Schema.RequiredMode.REQUIRED, example = "false")
     private Boolean noDisturb;
 
+    @Schema(description = "草稿内容", example = "xxx")
+    private String draft;
+
+    @Schema(description = "用户是否删除会话", requiredMode = Schema.RequiredMode.REQUIRED, example = "false")
+    private Boolean deletedByUser;
+
     @Schema(description = "目标名称(对方名称或群名)", example = "张三")
     private String targetName;
 
@@ -64,5 +70,4 @@ public class AppImConversationRespVO {
 
     @Schema(description = "群成员数量(群聊时有值)", example = "10")
     private Integer groupMemberCount;
-
 }

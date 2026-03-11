@@ -2,6 +2,7 @@ package com.shengyu.module.system.service.im;
 
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
+import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSyncRespVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationUpdateReqVO;
 
 import java.util.List;
@@ -71,6 +72,16 @@ public interface ImConversationService {
      * @return 未读消息总数
      */
     Integer getUnreadCount(Long userId);
+
+    /**
+     * 会话增量同步（cursorVersion 版）
+     *
+     * @param userId 用户ID
+     * @param cursorVersion 同步游标（用户维度版本号），首次可传 null/0
+     * @param limit 拉取条数
+     * @return 增量同步结果
+     */
+    AppImConversationSyncRespVO syncConversations(Long userId, Long cursorVersion, Integer limit);
 
     /**
      * 更新会话的最后消息
