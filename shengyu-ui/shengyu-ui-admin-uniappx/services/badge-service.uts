@@ -270,8 +270,10 @@ export class BadgeService {
     
     if (currentCount > 0) {
       this.clearConversationBadgeLocal(chatId)
-      this.clearUnreadOnServer(chatId, readSequence)
     }
+    // 本地角标可能未加载/过期（例如：首次进入会话、跨端角标不同步、或刚重连）
+    // 为保证刷新后 badge/get 与本地一致，这里始终推进服务端已读水位（幂等）。
+    this.clearUnreadOnServer(chatId, readSequence)
   }
 
   public clearConversationBadgeLocal(chatId: string): void {

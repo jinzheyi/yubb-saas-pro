@@ -663,10 +663,24 @@
 		// 6. 清空未读数（本地 + 服务端：按 sequence 水位上报）
 		if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
 			let maxSeq = '0'
+			// 优先使用会话服务里的权威 lastMessageSequence（通常来源于 sync/list）
 			try {
-				const localMsgs = messageService.getMessages(chatId.value)
-				for (let i = 0; i < localMsgs.length; i++) {
-					const s = (localMsgs[i] as any).sequence
+				const convServiceModule = await import('../../services/conversation-service.uts')
+				const cs = (convServiceModule as any).conversationService
+				const conv = cs != null ? cs.getConversation(chatId.value) : null
+				const seqFromConv = conv != null && (conv as any).lastMessageSequence != null
+					? (conv as any).lastMessageSequence.toString()
+					: '0'
+				if (seqFromConv != null && seqFromConv !== '' && seqFromConv !== '0') {
+					maxSeq = seqFromConv
+				}
+			} catch (e) {
+				// ignore
+			}
+			// 兜底：使用当前页面已加载的消息列表的最大 sequence（比 messageService 缓存更可靠）
+			try {
+				for (let i = 0; i < messages.value.length; i++) {
+					const s = (messages.value[i] as any).sequence
 					if (s == null || s === '') {
 						continue
 					}
@@ -681,7 +695,30 @@
 					}
 				}
 			} catch (e) {
-				maxSeq = '0'
+				// ignore
+			}
+			// 最后兜底：仍使用 messageService 缓存（可能为空）
+			if (maxSeq === '0') {
+				try {
+					const localMsgs = messageService.getMessages(chatId.value)
+					for (let i = 0; i < localMsgs.length; i++) {
+						const s = (localMsgs[i] as any).sequence
+						if (s == null || s === '') {
+							continue
+						}
+						try {
+							if (BigInt(s) > BigInt(maxSeq)) {
+								maxSeq = s
+							}
+						} catch (e) {
+							if (s > maxSeq) {
+								maxSeq = s
+							}
+						}
+					}
+				} catch (e) {
+					maxSeq = '0'
+				}
 			}
 			// 调用 BadgeService 清空会话角标
 			// BadgeService 会自动调用后端 API 并更新本地数据
