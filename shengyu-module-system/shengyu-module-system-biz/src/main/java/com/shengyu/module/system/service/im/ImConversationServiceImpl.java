@@ -556,19 +556,23 @@ public class ImConversationServiceImpl implements ImConversationService {
     }
 
     private String buildPreviewByType(Integer messageType, String raw) {
-        if (messageType == null) {
-            return raw != null ? raw : "";
-        }
-        switch (messageType) {
-            case 1:
-                if (raw == null) {
-                    return "";
-                }
-                String trimmed = raw.trim();
+        // raw 里可能已经包含群聊发送者前缀（例如："张三: [图片]"）。
+        // 为保证推送与刷新一致：raw 非空则优先使用 raw（并做截断），避免被类型默认文案覆盖。
+        if (raw != null) {
+            String trimmed = raw.trim();
+            if (!trimmed.isEmpty()) {
                 if (trimmed.length() > 100) {
                     return trimmed.substring(0, 100) + "...";
                 }
                 return trimmed;
+            }
+        }
+        if (messageType == null) {
+            return "";
+        }
+        switch (messageType) {
+            case 1:
+                return "";
             case 2:
                 return "[图片]";
             case 3:

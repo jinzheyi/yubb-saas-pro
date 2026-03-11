@@ -351,11 +351,9 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                 for (Long memberId : memberIds) {
                     boolean isSender = memberId.equals(header.getSenderId());
                     String finalPreview = lastMessageContent;
-                    if (StrUtil.isNotBlank(senderName) || isSender) {
-                        String prefix = isSender ? "我" : senderName;
-                        if (StrUtil.isNotBlank(prefix) && StrUtil.isNotBlank(basePreview)) {
-                            finalPreview = truncateContent(prefix + ": " + basePreview);
-                        }
+                    String prefix = isSender ? "我" : (StrUtil.isNotBlank(senderName) ? senderName : String.valueOf(header.getSenderId()));
+                    if (StrUtil.isNotBlank(prefix) && StrUtil.isNotBlank(basePreview)) {
+                        finalPreview = truncateContent(prefix + ": " + basePreview);
                     }
                     ImChatUserDO chatUser = ensureChatUser(memberId, chatId);
                     chatUserMapper.updateLastMessageAndIncrementUnread(

@@ -292,8 +292,14 @@
 
 	function buildConversationPreview(messageType : number, raw : string) : string {
 		const trimmed = raw != null ? raw.toString().trim() : ''
-		if (messageType === 1) {
+		if (trimmed !== '') {
+			if (trimmed.length > 100) {
+				return trimmed.substring(0, 100) + '...'
+			}
 			return trimmed
+		}
+		if (messageType === 1) {
+			return ''
 		}
 		if (messageType === 2) return '[图片]'
 		if (messageType === 3) return '[语音]'
@@ -303,7 +309,7 @@
 		if (messageType === 7) return '[表情]'
 		if (messageType === 8) return '[贴纸]'
 		if (messageType === 10) return '[系统消息]'
-		return trimmed
+		return ''
 	}
 
 	// 消息列表原始数据
@@ -367,8 +373,8 @@
 				})
 			}
 			
-			// 2. 增量同步会话列表（服务端 cursorVersion）
-			await conversationService.syncConversationsIncrementally(false)
+			// 2. 加载会话列表（内部根据本地 cursor + 内存缓存决定是否 reset）
+			await conversationService.loadConversations()
 			
 		} catch (e) {
 			console.error('[Message] 加载会话列表失败:', e)
