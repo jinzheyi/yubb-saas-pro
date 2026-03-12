@@ -131,8 +131,7 @@ export class ReadReceiptService {
 
   public async getSummary(messageId: string): Promise<ReadReceiptSummary | null> {
     try {
-      const res: any = await getReadReceiptSummary(messageId)
-      const data: any = res && res.data != null ? res.data : null
+      const data: any = await getReadReceiptSummary(messageId)
       if (data == null) {
         return null
       }
@@ -152,8 +151,7 @@ export class ReadReceiptService {
 
   public async getDetailPage(messageId: string, status: 'read' | 'unread', pageNo: number = 1, pageSize: number = 20): Promise<ReadReceiptDetailPage> {
     try {
-      const res: any = await getReadReceiptDetail(messageId, status, pageNo, pageSize)
-      const data: any = res && res.data != null ? res.data : null
+      const data: any = await getReadReceiptDetail(messageId, status, pageNo, pageSize)
       const listRaw: any[] = data && data.list != null ? data.list : []
       const list: ReadDetailItem[] = listRaw.map((it: any) => {
         let readTime = 0

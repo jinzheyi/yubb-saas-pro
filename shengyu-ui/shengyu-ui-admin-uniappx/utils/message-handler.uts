@@ -11,6 +11,7 @@
  */
 
 import { MessageType } from './websocket.uts'
+import { generateMessageId as generateLongSafeMessageId } from './message-utils.uts'
 
 /**
  * 消息头
@@ -134,7 +135,7 @@ export class MessageBuilder {
    * 生成消息 ID（使用时间戳 + 随机数）
    */
   public static generateMessageId(): string {
-    return Date.now().toString() + Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+    return generateLongSafeMessageId()
   }
 
   /**

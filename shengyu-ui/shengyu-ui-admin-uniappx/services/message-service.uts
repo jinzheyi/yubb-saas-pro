@@ -127,6 +127,8 @@ export class MessageService {
 
   private activeChatId: string = ''
 
+  private activeChatAutoReadEnabled: boolean = true
+
   private lastReconnectPullAt: number = 0
 
   private debugStats: {
@@ -323,6 +325,10 @@ export class MessageService {
   public setActiveChatId(chatId: string | null): void {
     const v = chatId != null ? chatId.toString() : ''
     this.activeChatId = v
+  }
+
+  public setActiveChatAutoReadEnabled(enabled: boolean): void {
+    this.activeChatAutoReadEnabled = enabled
   }
 
   public getActiveChatId(): string {
@@ -1299,7 +1305,7 @@ export class MessageService {
     if (!messageItem.isSelf) {
       try {
         const active = this.getActiveChatId()
-        if (active != null && active !== '' && active === chatId) {
+        if (active != null && active !== '' && active === chatId && this.activeChatAutoReadEnabled) {
           if (seq != null && seq !== '') {
             conversationService.applyReadWatermark(chatId, seq)
           }

@@ -307,6 +307,21 @@
 - `messageType`：枚举（以 proto 为权威）
 - `timestamp`：客户端时间（服务端可回填 serverTime）
 - `tenantId/userId`：服务端认证后补齐/校验；客户端只可读不可写
+
+补充约束（企业级落地口径，以当前工程为准）：
+
+- `messageId` 必须为 **可被服务端 int64 解析的纯数字字符串**（long-safe），用于：
+  - 服务端落库主键（`im_chat_message.id`）
+  - 服务端幂等去重（重投复用同一 `messageId`，`DuplicateKey` 命中后返回既有记录）
+  - 已读回执聚合/撤回等按 `messageId` 查询的业务接口
+- 前端不得再使用“时间戳+随机字符串”作为 `messageId`（否则服务端 `Long.parseLong` 失败或查库不命中）。
+
+实现锚点：
+
+- **前端**：`shengyu-ui/shengyu-ui-admin-uniappx/utils/message-utils.uts#generateMessageId`（snowflake-like）
+  - `utils/message-handler.uts#MessageBuilder.generateMessageId` 统一复用该实现
+- **后端**：`shengyu-framework/.../JsonBusinessMessageHandler#readLong` 兼容 `header.messageId` 为 string/number
+  - `shengyu-module-system/.../SystemMessageStorageServiceImpl#saveMessageWithId`：`messageDO.setId(header.getMessageId())`
 - `sequence`：服务端生成（建议会话维度递增），用于排序与断线补偿
 - `extra`：扩展 JSON（存放 subType / debug 等）
 

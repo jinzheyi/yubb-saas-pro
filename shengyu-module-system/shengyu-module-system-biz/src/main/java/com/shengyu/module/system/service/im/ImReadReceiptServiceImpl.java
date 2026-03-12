@@ -62,14 +62,19 @@ public class ImReadReceiptServiceImpl implements ImReadReceiptService {
             throw exception(GROUP_MEMBER_NOT_EXISTS);
         }
 
+        // 口径：发送者侧查看“已读/未读”时，不统计发送者本人
+        Long excludeUserId = msg.getSenderId();
         Long total = groupUserMapper.selectCountByGroupId(chat.getGroupId());
-        Long seq = msg.getSequence() != null ? msg.getSequence() : 0L;
-        Long read = readReceiptMapper.countReadMembers(tenantId, chat.getGroupId(), chat.getId(), seq);
-        if (read == null) {
-            read = 0L;
-        }
         if (total == null) {
             total = 0L;
+        }
+        if (excludeUserId != null && excludeUserId > 0 && total > 0) {
+            total = Math.max(total - 1, 0L);
+        }
+        Long seq = msg.getSequence() != null ? msg.getSequence() : 0L;
+        Long read = readReceiptMapper.countReadMembers(tenantId, chat.getGroupId(), chat.getId(), excludeUserId, seq);
+        if (read == null) {
+            read = 0L;
         }
         Long unread = Math.max(total - read, 0L);
 
@@ -121,18 +126,19 @@ public class ImReadReceiptServiceImpl implements ImReadReceiptService {
         int offset = (pageNo - 1) * pageSize;
 
         Long seq = msg.getSequence() != null ? msg.getSequence() : 0L;
+        Long excludeUserId = msg.getSenderId();
         Long total;
         if ("read".equals(status)) {
-            total = readReceiptMapper.countReadMembers(tenantId, chat.getGroupId(), chat.getId(), seq);
+            total = readReceiptMapper.countReadMembers(tenantId, chat.getGroupId(), chat.getId(), excludeUserId, seq);
         } else {
-            total = readReceiptMapper.countUnreadMembers(tenantId, chat.getGroupId(), chat.getId(), seq);
+            total = readReceiptMapper.countUnreadMembers(tenantId, chat.getGroupId(), chat.getId(), excludeUserId, seq);
         }
         if (total == null) {
             total = 0L;
         }
 
         return new PageResult<>(
-                readReceiptMapper.selectDetailPage(tenantId, chat.getGroupId(), chat.getId(), seq, status, offset, pageSize),
+                readReceiptMapper.selectDetailPage(tenantId, chat.getGroupId(), chat.getId(), excludeUserId, seq, status, offset, pageSize),
                 total
         );
     }

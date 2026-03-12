@@ -351,6 +351,22 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
   - 独立 ACK 协议类型（ACK_REQ/ACK_RESP/SendAck 等）与超时重发契约。
   - App Protobuf / H5 JSON 双栈协商（B0~B4 未开始），因此 C1 的“协议级 ACK”暂不具备落地前提。
 
+本期补充关键前置（企业级落地口径，确保 C1 幂等/重投/已读聚合可闭环）：
+
+- **统一 `messageId` 为可落库 int64 主键**（端侧生成，服务端按该值落库到 `im_chat_message.id`）
+  - 原因：read-receipt/撤回等接口按 `messageId(Long)` 查库；若端侧使用不可解析的字符串/或与 DB 主键不一致，会出现“消息不存在”。
+  - 前端落点：
+    - `shengyu-ui/shengyu-ui-admin-uniappx/utils/message-utils.uts#generateMessageId`
+    - `shengyu-ui/shengyu-ui-admin-uniappx/utils/message-handler.uts#MessageBuilder.generateMessageId`（统一复用）
+  - 服务端落点：
+    - `shengyu-framework/.../JsonBusinessMessageHandler#readLong`（兼容 string/number）
+    - `shengyu-module-system/.../SystemMessageStorageServiceImpl#saveMessageWithId`（`messageDO.setId(header.getMessageId())`）
+
+验收标准补充：
+
+- 发送端发消息后（服务端回推确认），调用 `GET /system/im/read-receipt/summary?messageId=` **不再出现** `消息不存在`。
+- 弱网重投复用同一 `messageId`，服务端不会重复插入（DB 主键幂等命中），并返回相同 `sequence`。
+
 当前阶段落地口径（移动端优先，隐式 ACK）：
 
 - **ACK 形态**：不引入独立 ACK 消息类型；以“服务端回推同一条业务消息（同 `messageId`，携带 `sequence/chatId`）”作为 ACK。
@@ -464,6 +480,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
   - `pages/message/chat.uvue`：
     - 进入会话：按最大 `sequence` 调用 `badgeService.clearConversationBadge(chatId, maxSeq)`（推进服务端 read 水位 + 本地清零）
     - 离开会话（`onHide/onUnload/onUnmounted`）：再次 flush 最大 `sequence`，保证返回列表立即一致
+    - 性能优化：flush 带去重/节流（in-flight 保护 + 相同 `maxSeq` 短窗口内跳过），避免生命周期多次触发导致重复请求
   - `services/message-service.uts`：
     - 若收到消息且 `activeChatId === chatId`：视为已读，不增加角标；推进本地读水位并清本地角标
 - **验收标准**：

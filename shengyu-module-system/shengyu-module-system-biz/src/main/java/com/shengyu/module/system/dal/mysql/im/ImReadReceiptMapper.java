@@ -15,10 +15,12 @@ public interface ImReadReceiptMapper {
             "  ON s.tenant_id = gm.tenant_id AND s.user_id = gm.user_id AND s.chat_id = #{chatId} " +
             "  AND s.deleted = 0 AND s.deleted_by_user = 0 " +
             "WHERE gm.tenant_id = #{tenantId} AND gm.group_id = #{groupId} AND gm.deleted = 0 " +
+            "  AND gm.user_id != #{excludeUserId} " +
             "  AND IFNULL(s.last_read_sequence, 0) >= #{sequence}")
     Long countReadMembers(@Param("tenantId") Long tenantId,
                          @Param("groupId") Long groupId,
                          @Param("chatId") Long chatId,
+                         @Param("excludeUserId") Long excludeUserId,
                          @Param("sequence") Long sequence);
 
     @Select("SELECT COUNT(1) FROM im_group_member gm " +
@@ -26,10 +28,12 @@ public interface ImReadReceiptMapper {
             "  ON s.tenant_id = gm.tenant_id AND s.user_id = gm.user_id AND s.chat_id = #{chatId} " +
             "  AND s.deleted = 0 AND s.deleted_by_user = 0 " +
             "WHERE gm.tenant_id = #{tenantId} AND gm.group_id = #{groupId} AND gm.deleted = 0 " +
+            "  AND gm.user_id != #{excludeUserId} " +
             "  AND IFNULL(s.last_read_sequence, 0) < #{sequence}")
     Long countUnreadMembers(@Param("tenantId") Long tenantId,
                            @Param("groupId") Long groupId,
                            @Param("chatId") Long chatId,
+                           @Param("excludeUserId") Long excludeUserId,
                            @Param("sequence") Long sequence);
 
     @Select("<script>" +
@@ -40,6 +44,7 @@ public interface ImReadReceiptMapper {
             "  AND s.deleted = 0 AND s.deleted_by_user = 0 " +
             "LEFT JOIN system_users u ON u.id = gm.user_id AND u.deleted = 0 AND u.tenant_id = gm.tenant_id " +
             "WHERE gm.tenant_id = #{tenantId} AND gm.group_id = #{groupId} AND gm.deleted = 0 " +
+            "  AND gm.user_id != #{excludeUserId} " +
             "<choose>" +
             "  <when test='status == \"read\"'> AND IFNULL(s.last_read_sequence, 0) &gt;= #{sequence} </when>" +
             "  <otherwise> AND IFNULL(s.last_read_sequence, 0) &lt; #{sequence} </otherwise>" +
@@ -53,6 +58,7 @@ public interface ImReadReceiptMapper {
     List<AppImReadReceiptDetailRespVO> selectDetailPage(@Param("tenantId") Long tenantId,
                                                        @Param("groupId") Long groupId,
                                                        @Param("chatId") Long chatId,
+                                                       @Param("excludeUserId") Long excludeUserId,
                                                        @Param("sequence") Long sequence,
                                                        @Param("status") String status,
                                                        @Param("offset") Integer offset,

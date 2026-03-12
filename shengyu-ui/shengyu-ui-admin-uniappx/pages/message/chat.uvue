@@ -25,7 +25,7 @@
 		</view>
 
 		<!-- 聊天内容区域 -->
-		<scroll-view class="chat-content" :class="{ 'chat-content-multi-select': multiSelectMode }" scroll-y="true" :scroll-into-view="lastMessageId" show-scrollbar="false">
+		<scroll-view class="chat-content" :class="{ 'chat-content-multi-select': multiSelectMode }" scroll-y="true" :scroll-into-view="lastMessageId" show-scrollbar="false" @scroll="handleChatScroll" @scrolltolower="handleChatScrollToLower" lower-threshold="80">
 			<!-- 水印层 -->
 			<view class="watermark-layer">
 				<view v-for="i in 12" :key="i" class="watermark-item">
@@ -119,6 +119,10 @@
 							<!-- 自定义收藏表情 (无气泡) -->
                             <view v-else-if="msg.type === 'sticker'" class="sticker-msg-wrap" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
 								<image class="sticker-img" :src="msg.content" mode="widthFix" />
+							</view>
+							
+							<view v-if="shouldShowReadReceiptEntry(msg)" class="read-receipt-entry" :class="{'read-receipt-entry-self': msg.isSelf}" @click.stop="handleReadReceiptEntryClick(msg)">
+								<text class="read-receipt-entry-text">{{ buildReadReceiptEntryText(msg) }}</text>
 							</view>
 						</view>
 					</view>
@@ -413,6 +417,43 @@
 		}
 	}
 
+	function applyAutoReadEnabled(enabled: boolean): void {
+		try {
+			messageService.setActiveChatAutoReadEnabled(enabled)
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	function handleChatScroll(e: any): void {
+		try {
+			const now = Date.now()
+			lastScrollAt = now
+			const top = e && e.detail && e.detail.scrollTop != null ? Number(e.detail.scrollTop) : 0
+			const delta = top - lastScrollTop
+			lastScrollTop = top
+			if (delta < -20) {
+				if (isAtBottom.value) {
+					isAtBottom.value = false
+					applyAutoReadEnabled(false)
+				}
+			}
+		} catch (err) {
+			// ignore
+		}
+	}
+
+	function handleChatScrollToLower(): void {
+		try {
+			if (!isAtBottom.value) {
+				isAtBottom.value = true
+				applyAutoReadEnabled(true)
+			}
+		} catch (e) {
+			// ignore
+		}
+	}
+
 	function getFileExtByNameOrUrl(fileName: string, url: string): string {
 		try {
 			const n = (fileName || '').toLowerCase()
@@ -614,6 +655,9 @@
 	const readReceiptHasMore = ref(true)
 	const readReceiptLoading = ref(false)
 	const readReceiptMessageId = ref<string>('')
+	const readReceiptSummaryCache = ref<Record<string, { summary: any | null; fetchedAt: number }>>({})
+	const readReceiptSummaryInFlight = ref<Record<string, boolean>>({})
+	const READ_RECEIPT_SUMMARY_TTL_MS = 30 * 1000
     const multiSelectMode = ref(false)
     const selectedIds = ref<string[]>([])
    	const isDragSelecting = ref(false)
@@ -716,6 +760,7 @@
 		
 		// 5. 监听新消息
 		messageService.addMessageListener(handleNewMessage)
+		messageService.addMessageStatusListener(handleMessageStatusChange)
 		
 		// 6. 清空未读数（本地 + 服务端：按 sequence 水位上报）
 		if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
@@ -741,6 +786,14 @@
 			// ignore
 		}
 	})
+
+	let lastFlushedSeq: string = ''
+	let lastFlushedAt: number = 0
+	let flushInFlight: boolean = false
+
+	const isAtBottom = ref(true)
+	let lastScrollTop = 0
+	let lastScrollAt = 0
 
 	async function computeMaxSeqForRead(): Promise<string> {
 		let maxSeq = '0'
@@ -809,11 +862,23 @@
 			if (!chatId.value || chatId.value === '' || chatId.value === '0') {
 				return
 			}
+			if (flushInFlight) {
+				return
+			}
 			const maxSeq = await computeMaxSeqForRead()
+			const now = Date.now()
+			if (maxSeq != null && maxSeq !== '' && maxSeq === lastFlushedSeq && (now - lastFlushedAt) < 1000) {
+				return
+			}
+			flushInFlight = true
+			lastFlushedSeq = maxSeq
+			lastFlushedAt = now
 			badgeService.clearConversationBadge(chatId.value, maxSeq)
 			messageService.clearUnreadCount(chatId.value)
 		} catch (e) {
 			// ignore
+		} finally {
+			flushInFlight = false
 		}
 	}
 
@@ -1361,17 +1426,26 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return content.content || content
 		} else if (typeStr === 'image') {
 			// 图片消息
-			return content.url || content
+			if (content && typeof content === 'object') {
+				return content.url != null ? String(content.url) : ''
+			}
+			return content != null ? String(content) : ''
 		} else if (typeStr === 'voice') {
 			// 语音消息
-			return content.url || content
+			if (content && typeof content === 'object') {
+				return content.url != null ? String(content.url) : ''
+			}
+			return content != null ? String(content) : ''
 		} else if (typeStr === 'video') {
 			// 视频消息
-			return content.url || content
+			if (content && typeof content === 'object') {
+				return content.url != null ? String(content.url) : ''
+			}
+			return content != null ? String(content) : ''
 		} else if (typeStr === 'file') {
 			// 文件消息
 			if (content && typeof content === 'object') {
-				return content.url || content
+				return content.url != null ? String(content.url) : ''
 			}
 			// 兼容历史数据：url 后面拼了文件名
 			return getFileUrlFromMixedContent(content)
@@ -1379,7 +1453,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			// 位置消息
 			return content.address || content
 		}
-		return content.toString()
+		return content != null ? String(content) : ''
 	}
 	
 	/**
@@ -1397,19 +1471,40 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 
 		if (typeStr === 'text' || typeStr === 'quote') {
-			return content?.content || content
+			return content?.content != null ? String(content.content) : (content != null ? String(content) : '')
 		} else if (typeStr === 'image') {
-			return content?.url || content
+			if (content && typeof content === 'object') {
+				return content.url != null ? String(content.url) : ''
+			}
+			return content != null ? String(content) : ''
 		} else if (typeStr === 'voice') {
-			return content?.url || content
+			if (content && typeof content === 'object') {
+				return content.url != null ? String(content.url) : ''
+			}
+			return content != null ? String(content) : ''
 		} else if (typeStr === 'video') {
-			return content?.url || content
+			if (content && typeof content === 'object') {
+				return content.url != null ? String(content.url) : ''
+			}
+			return content != null ? String(content) : ''
 		} else if (typeStr === 'file') {
-			return content?.url || content
+			if (content && typeof content === 'object') {
+				return content.url != null ? String(content.url) : ''
+			}
+			return content != null ? String(content) : ''
 		} else if (typeStr === 'location') {
-			return content?.address || content
+			return content?.address != null ? String(content.address) : (content != null ? String(content) : '')
 		}
 		return content?.toString ? content.toString() : ''
+	}
+
+	function isMsgConfirmedSent(msg: any): boolean {
+		try {
+			const s = (msg as any)?.status
+			return s === 'success' || s === 1 || s === '1'
+		} catch (e) {
+			return false
+		}
 	}
 
 	function parseRawContent(content : any) : any {
@@ -1623,6 +1718,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			receiverId: message.receiverId.toString(),
 			type: getMessageTypeString(message.type),
 			content: getServiceMessageContent(message),
+			sequence: (message as any).sequence != null ? String((message as any).sequence) : undefined,
+			groupId: (message as any).groupId != null ? String((message as any).groupId) : undefined,
 			isSelf: message.isSelf,
 			time: new Date(message.timestamp).toLocaleString(),
 			timestamp: message.timestamp,
@@ -1649,6 +1746,46 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			if (chatType.value !== 'group') {
 				messageService.sendReadReceipt(message.senderId, [message.messageId])
 			}
+		}
+	}
+
+	function handleMessageStatusChange(messageId: string, status: any) {
+		try {
+			if (!messageId) return
+			const idx = messages.value.findIndex((m: any) => m && m.messageId === messageId)
+			if (idx < 0) return
+			const uiMsg: any = messages.value[idx]
+
+			// MessageService.MessageStatus: SENDING=0 SENT=1 READ=2 FAILED=3
+			if (status === 1 || status === '1') {
+				uiMsg.status = 'success'
+				// 补齐 sequence（服务端确认后才会有）
+				try {
+					if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
+						const cached = messageService.getMessages(chatId.value) as any[]
+						const hit = cached && cached.length > 0
+							? cached.find((m: any) => m && m.messageId === messageId)
+							: null
+						if (hit && hit.sequence != null && hit.sequence !== '') {
+							uiMsg.sequence = String(hit.sequence)
+						}
+					}
+				} catch (e) {
+					// ignore
+				}
+				return
+			}
+
+			if (status === 0 || status === '0') {
+				uiMsg.status = 'sending'
+				return
+			}
+			if (status === 3 || status === '3') {
+				uiMsg.status = 'failed'
+				return
+			}
+		} catch (e) {
+			// ignore
 		}
 	}
 
@@ -2819,10 +2956,138 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			readReceiptPageNo.value = 1
 			readReceiptHasMore.value = true
 			readReceiptSummary.value = await readReceiptService.getSummary(messageId)
+			try {
+				const next: Record<string, { summary: any | null; fetchedAt: number }> = {}
+				Object.assign(next, readReceiptSummaryCache.value)
+				next[messageId] = { summary: readReceiptSummary.value, fetchedAt: Date.now() }
+				readReceiptSummaryCache.value = next
+			} catch (e) {
+				// ignore
+			}
 			await reloadReadReceiptList()
 		} catch (e) {
 			console.error('[Chat] openReadReceiptSheet failed:', e)
 			uni.showToast({ title: '加载失败', icon: 'none' })
+		}
+	}
+
+	function getCachedReadReceiptSummary(messageId: string): { summary: any | null; fetchedAt: number } | null {
+		try {
+			const cache = readReceiptSummaryCache.value
+			const item = cache && cache[messageId] ? cache[messageId] : null
+			return item ? item : null
+		} catch (e) {
+			return null
+		}
+	}
+
+	function shouldFetchReadReceiptSummary(messageId: string): boolean {
+		try {
+			const cached = getCachedReadReceiptSummary(messageId)
+			if (!cached) return true
+			const age = Date.now() - (cached.fetchedAt || 0)
+			return age > READ_RECEIPT_SUMMARY_TTL_MS
+		} catch (e) {
+			return true
+		}
+	}
+
+	function markReadReceiptSummaryInFlight(messageId: string, inFlight: boolean) {
+		try {
+			const next: Record<string, boolean> = {}
+			Object.assign(next, readReceiptSummaryInFlight.value)
+			if (inFlight) {
+				next[messageId] = true
+			} else {
+				try {
+					delete next[messageId]
+				} catch (e) {
+					// ignore
+				}
+			}
+			readReceiptSummaryInFlight.value = next
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	function isReadReceiptSummaryInFlight(messageId: string): boolean {
+		try {
+			return !!(readReceiptSummaryInFlight.value && readReceiptSummaryInFlight.value[messageId])
+		} catch (e) {
+			return false
+		}
+	}
+
+	function ensureReadReceiptSummaryFetched(messageId: string) {
+		try {
+			if (!messageId) return
+			if (!shouldFetchReadReceiptSummary(messageId)) return
+			if (isReadReceiptSummaryInFlight(messageId)) return
+			markReadReceiptSummaryInFlight(messageId, true)
+			Promise.resolve().then(async () => {
+				try {
+					const summary = await readReceiptService.getSummary(messageId)
+					const next: Record<string, { summary: any | null; fetchedAt: number }> = {}
+					Object.assign(next, readReceiptSummaryCache.value)
+					next[messageId] = { summary, fetchedAt: Date.now() }
+					readReceiptSummaryCache.value = next
+				} catch (e) {
+					// ignore
+				} finally {
+					markReadReceiptSummaryInFlight(messageId, false)
+				}
+			})
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	function shouldShowReadReceiptEntry(msg: any): boolean {
+		try {
+			if (chatType.value !== 'group') return false
+			if (!msg || !msg.isSelf) return false
+			if (!msg.messageId || msg.messageId === '0') return false
+			// 仅服务端已确认（回推后）才展示/拉取 summary，避免“消息不存在”
+			if (!isMsgConfirmedSent(msg)) return false
+			if (!msg.sequence || String(msg.sequence) === '0') return false
+			ensureReadReceiptSummaryFetched(String(msg.messageId))
+			return true
+		} catch (e) {
+			return false
+		}
+	}
+
+	function buildReadReceiptEntryText(msg: any): string {
+		try {
+			const mid = msg && msg.messageId ? String(msg.messageId) : ''
+			if (!mid) return '已读'
+			const cached = getCachedReadReceiptSummary(mid)
+			if (cached && cached.summary) {
+				const s: any = cached.summary
+				const unread = s.unreadCount != null ? Number(s.unreadCount) : 0
+				if (unread > 0) {
+					return `未读${unread}`
+				}
+				return '已读'
+			}
+			ensureReadReceiptSummaryFetched(mid)
+			return '已读'
+		} catch (e) {
+			return '已读'
+		}
+	}
+
+	async function handleReadReceiptEntryClick(msg: any) {
+		try {
+			if (!msg || !msg.messageId) return
+			if (!isMsgConfirmedSent(msg)) {
+				uni.showToast({ title: '发送中', icon: 'none' })
+				return
+			}
+			await openReadReceiptSheet(String(msg.messageId))
+		} catch (e) {
+			// ignore
 		}
 	}
 
@@ -3204,6 +3469,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		try {
 			if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
 				messageService.setActiveChatId(chatId.value)
+				messageService.setActiveChatAutoReadEnabled(isAtBottom.value)
 			}
 		} catch (e) {
 			// ignore
@@ -3214,6 +3480,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		wsManager.setRealtimeBizActive(false)
 		void flushReadOnLeave()
 		try {
+			messageService.setActiveChatAutoReadEnabled(false)
 			messageService.setActiveChatId(null)
 		} catch (e) {
 			// ignore
@@ -3224,6 +3491,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		wsManager.setRealtimeBizActive(false)
 		void flushReadOnLeave()
 		try {
+			messageService.setActiveChatAutoReadEnabled(false)
 			messageService.setActiveChatId(null)
 		} catch (e) {
 			// ignore
@@ -3475,6 +3743,21 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		align-items: flex-start;
 		max-width: 85%;
 		min-width: 0;
+	}
+
+	.read-receipt-entry {
+		margin-top: 4px;
+		margin-bottom: 0px;
+	}
+
+	.read-receipt-entry-self {
+		align-self: flex-end;
+		padding-right: 2px;
+	}
+
+	.read-receipt-entry-text {
+		font-size: 10px;
+		color: #8F959E;
 	}
 
 	.message-self .message-bubble-wrap {

@@ -24,6 +24,7 @@ import { WS_URL, WS_HEARTBEAT_INTERVAL, WS_HEARTBEAT_TIMEOUT, WS_MAX_RECONNECT_C
 import { badgeService } from '../services/badge-service.uts'
 import { refreshToken as refreshTokenApi } from '../api/login.uts'
 import { onAccessTokenRefreshed } from './request.uts'
+import { generateMessageId as generateLongSafeMessageId } from './message-utils.uts'
 
 /**
  * WebSocket 连接状态枚举
@@ -307,7 +308,7 @@ export class WebSocketManager {
     
     const authMessage = {
       header: {
-        messageId: Date.now(),
+        messageId: generateLongSafeMessageId(),
         messageType: MessageType.AUTH_REQ,
         timestamp: Date.now()
       },
@@ -743,7 +744,7 @@ export class WebSocketManager {
     
     const heartbeatMessage = {
       header: {
-        messageId: Date.now(),
+        messageId: generateLongSafeMessageId(),
         messageType: MessageType.HEARTBEAT_REQ,
         timestamp: Date.now()
       },
