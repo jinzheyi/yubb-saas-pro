@@ -684,6 +684,9 @@
 	type MessageItem = {
 		id : string;
 		messageId : string;
+		chatId ?: string;
+		groupId ?: string;
+		sequence ?: string;
 		senderId : string;
 		receiverId : string;
 		type : string;
@@ -701,7 +704,7 @@
 		fileSize ?: string;
 		address ?: string;
 		isSticker ?: boolean;
-		status ?: string; // 'sending' | 'success' | 'fail'
+		status ?: any; // legacy string or numeric enum
 		// 引用回复字段
 		quoteMessageId ?: string;
 		quoteContent ?: string;
@@ -1323,29 +1326,55 @@
 		const senderIdStr = msg && msg.senderId != null ? msg.senderId.toString() : '0'
 	const receiverIdStr = msg && msg.receiverId != null ? msg.receiverId.toString() : ''
 	const idStr = msg && msg.id != null ? msg.id.toString() : '0'
+	const chatIdStr = msg && msg.chatId != null ? msg.chatId.toString() : (chatId.value != null ? chatId.value.toString() : '0')
+	const groupIdStr = msg && msg.groupId != null ? msg.groupId.toString() : ''
+	const sequenceStr = msg && msg.sequence != null ? msg.sequence.toString() : '0'
 	// 后端 REST API 历史消息通常只有 id 字段，没有 messageId 字段
 	const messageIdStr = msg && msg.messageId != null ? msg.messageId.toString() : idStr
 	
 	// 处理发送者信息缺失的后备方案
 	const senderNickname = msg.senderNickname || ''
 	const avatarText = senderNickname ? getAvatarTextUtil(senderNickname) : '?'
+	let isSelfVal = false
+	try {
+		if ((msg as any).isSelf !== null && (msg as any).isSelf !== undefined) {
+			isSelfVal = !!(msg as any).isSelf
+		} else {
+			isSelfVal = senderIdStr === currentUserId.value
+		}
+	} catch (e) {
+		isSelfVal = senderIdStr === currentUserId.value
+	}
+		// 后端 status: 0-发送中 1-已发送 2-已读 3-失败
+		// 这里保留数值状态，避免把 status=2 误映射为 'sending' 导致气泡旁已读/未读入口不展示
+		let statusVal: any = (msg as any).status
+		try {
+			if (statusVal === null || statusVal === undefined || statusVal === '') {
+				statusVal = 0
+			}
+		} catch (e) {
+			statusVal = 0
+		}
 	
-	const uiMessage = {
-		id: idStr,
-		messageId: messageIdStr,
-		senderId: senderIdStr,
-		receiverId: receiverIdStr,
-		type: getMessageTypeString(msg.messageType),
-		content: getMessageContent(msg.messageType, content),
-		isSelf: senderIdStr === currentUserId.value,
-		time: msg.sendTime || msg.createTime || '',
-		timestamp: new Date(msg.sendTime || msg.createTime || Date.now()).getTime(),
-		showTime: true,
-		avatarText: avatarText,
-		avatarBg: getUserAvatarColor(senderIdStr),
-		senderName: senderNickname,
-		status: msg.status === 1 ? 'success' : 'sending'
-	} as MessageItem
+		const uiMessage = {
+			id: idStr,
+			messageId: messageIdStr,
+			chatId: chatIdStr,
+			groupId: groupIdStr,
+			sequence: sequenceStr,
+			senderId: senderIdStr,
+			receiverId: receiverIdStr,
+			type: getMessageTypeString(msg.messageType),
+			content: getMessageContent(msg.messageType, content),
+			isSelf: isSelfVal,
+			time: msg.sendTime || msg.createTime || '',
+			timestamp: new Date(msg.sendTime || msg.createTime || Date.now()).getTime(),
+			showTime: true,
+			avatarText: avatarText,
+			avatarBg: getUserAvatarColor(senderIdStr),
+			senderName: senderNickname,
+			status: statusVal
+		} as MessageItem
 
 		applyQuoteFields(uiMessage, rawContent)
 		applyFileFields(uiMessage, extraContent && typeof extraContent === 'object' ? extraContent : content)
@@ -1363,10 +1392,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		const receiverIdStr = msg && msg.receiverId != null ? msg.receiverId.toString() : '0'
 		const messageIdStr = msg && msg.messageId != null ? msg.messageId.toString() : '0'
 		const idStr = msg && msg.id != null ? msg.id.toString() : '0'
+		const chatIdStr = (msg as any) && (msg as any).chatId != null ? (msg as any).chatId.toString() : (chatId.value != null ? chatId.value.toString() : '0')
+		const groupIdStr = (msg as any) && (msg as any).groupId != null ? (msg as any).groupId.toString() : ''
+		const sequenceStr = (msg as any) && (msg as any).sequence != null ? (msg as any).sequence.toString() : '0'
 		
 		const uiMessage = {
 			id: idStr,
 			messageId: messageIdStr,
+			chatId: chatIdStr,
+			groupId: groupIdStr,
+			sequence: sequenceStr,
 			senderId: senderIdStr,
 			receiverId: receiverIdStr,
 			type: getMessageTypeString(msg.type),
@@ -1378,7 +1413,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			avatarText: msg.avatarText,
 			avatarBg: msg.avatarBg,
 			senderName: msg.senderName,
-			status: msg.status
+			status: (msg as any).status
 		} as MessageItem
 
 			applyQuoteFields(uiMessage, msg.content)
@@ -1507,10 +1542,20 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	function isMsgConfirmedSent(msg: any): boolean {
 		try {
 			const s = (msg as any)?.status
-			return s === 'success' || s === 1 || s === '1'
+			// 兼容：
+			// - 旧 UI 层: 'success'
+			// - 新状态枚举: 1=SENT, 2=READ
+			return s === 'success' || s === 1 || s === '1' || s === 2 || s === '2'
 		} catch (e) {
 			return false
 		}
+	}
+
+	function safeToString(content: any): string {
+		if (content == null) {
+			return ''
+		}
+		return content?.toString ? content.toString() : ''
 	}
 
 	function parseRawContent(content : any) : any {
@@ -1672,15 +1717,47 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	 */
 	function mergeMessages(oldMessages : MessageItem[], newMessages : MessageItem[]) : MessageItem[] {
 		const messageMap = new Map<string, MessageItem>()
+		const pickNonEmpty = (a: any, b: any): any => {
+			// prefer b if b is meaningful, else keep a
+			if (b === null || b === undefined) return a
+			if (typeof b === 'string') {
+				if (b === '' || b === '0' || b === 'undefined') return a
+			}
+			return b
+		}
+		const mergeOne = (prev: any, next: any): any => {
+			if (!prev) return next
+			if (!next) return prev
+			const merged: any = { ...prev, ...next }
+			// 补齐关键字段：HTTP 刷新回来的消息应当补齐缓存缺失的水位字段
+			merged.sequence = pickNonEmpty(prev.sequence, next.sequence)
+			merged.groupId = pickNonEmpty(prev.groupId, next.groupId)
+			merged.chatId = pickNonEmpty(prev.chatId, next.chatId)
+			merged.status = pickNonEmpty(prev.status, next.status)
+			merged.senderId = pickNonEmpty(prev.senderId, next.senderId)
+			merged.receiverId = pickNonEmpty(prev.receiverId, next.receiverId)
+			merged.isSelf = (next.isSelf !== null && next.isSelf !== undefined) ? next.isSelf : prev.isSelf
+			return merged
+		}
 		
 		// 先添加旧消息
 		oldMessages.forEach(msg => {
-			messageMap.set(msg.messageId, msg)
+			const key = msg && (msg as any).messageId ? String((msg as any).messageId) : (msg && (msg as any).id ? String((msg as any).id) : '')
+			if (!key) {
+				return
+			}
+			const prev: any = messageMap.get(key)
+			messageMap.set(key, mergeOne(prev, msg))
 		})
 		
-		// 再添加新消息（覆盖重复的）
+		// 再添加新消息（补齐字段 + 覆盖重复的）
 		newMessages.forEach(msg => {
-			messageMap.set(msg.messageId, msg)
+			const key = msg && (msg as any).messageId ? String((msg as any).messageId) : (msg && (msg as any).id ? String((msg as any).id) : '')
+			if (!key) {
+				return
+			}
+			const prev: any = messageMap.get(key)
+			messageMap.set(key, mergeOne(prev, msg))
 		})
 		
 		// 转换为数组并按时间排序
