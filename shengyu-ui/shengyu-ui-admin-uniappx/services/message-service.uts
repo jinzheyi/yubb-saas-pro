@@ -124,12 +124,46 @@ export class MessageService {
 
   // 每个会话最后拉取/确认的序列号（用于断线补偿水位）
   private lastPulledSequence: Map<string, string> = new Map()
+
+  private activeChatId: string = ''
+
+  private lastReconnectPullAt: number = 0
+
+  private debugStats: {
+    reconnectAttempt: number
+    reconnectSkippedByThrottle: number
+    reconnectSyncMs: number
+    reconnectPullMs: number
+    pullCallCount: number
+    pullFetchedCount: number
+    pullRoundCount: number
+    pullNoProgressStopCount: number
+    wsGapDetectedCount: number
+    wsGapTriggeredPullCount: number
+    dedupMergeHitCount: number
+  } = {
+    reconnectAttempt: 0,
+    reconnectSkippedByThrottle: 0,
+    reconnectSyncMs: 0,
+    reconnectPullMs: 0,
+    pullCallCount: 0,
+    pullFetchedCount: 0,
+    pullRoundCount: 0,
+    pullNoProgressStopCount: 0,
+    wsGapDetectedCount: 0,
+    wsGapTriggeredPullCount: 0,
+    dedupMergeHitCount: 0
+  }
   
   // 消息队列（用于离线消息重发）
   private messageQueue: QueuedMessage[] = []
   
   // 最大重试次数
   private static readonly MAX_RETRY_COUNT = 3
+
+  private pendingRetryMap: Map<string, { message: any, retryCount: number, timer: any }> = new Map()
+
+  private static readonly SEND_RETRY_BASE_DELAY_MS = 2000
   
   // 是否正在处理队列
   private isProcessingQueue: boolean = false
@@ -155,6 +189,43 @@ export class MessageService {
     })
   }
 
+  public getDebugStats(): any {
+    return { ...this.debugStats }
+  }
+
+  public resetDebugStats(): void {
+    this.debugStats = {
+      reconnectAttempt: 0,
+      reconnectSkippedByThrottle: 0,
+      reconnectSyncMs: 0,
+      reconnectPullMs: 0,
+      pullCallCount: 0,
+      pullFetchedCount: 0,
+      pullRoundCount: 0,
+      pullNoProgressStopCount: 0,
+      wsGapDetectedCount: 0,
+      wsGapTriggeredPullCount: 0,
+      dedupMergeHitCount: 0
+    }
+  }
+
+  /**
+   * 初始化/修正会话的本地拉取水位
+   * 场景：聊天页通过 HTTP 加载了最新历史消息，但 MessageService 还未收到 WS 推送，避免后续 gap 检测/重连补偿从 0 拉爆。
+   */
+  public seedLastPulledSequence(chatId: string, seq: string): void {
+    try {
+      const id = chatId != null ? chatId.toString() : ''
+      const s = seq != null ? seq.toString() : ''
+      if (id === '' || id === '0' || s === '' || s === '0') {
+        return
+      }
+      this.updateLastPulledSequence(id, s)
+    } catch (e) {
+      // ignore
+    }
+  }
+
   private async tryPullAfterConnected(): Promise<void> {
     if (!wsManager.isConnected()) {
       // 最多等待 3 秒（每 200ms 检查一次）
@@ -168,7 +239,39 @@ export class MessageService {
     if (!wsManager.isConnected()) {
       return
     }
+
+    const now = Date.now()
+    if (now - this.lastReconnectPullAt < 1000) {
+      this.debugStats.reconnectSkippedByThrottle += 1
+      return
+    }
+    this.lastReconnectPullAt = now
+
+    this.debugStats.reconnectAttempt += 1
+
+    // 重连一致性：先对齐会话水位（cursorVersion 增量 sync），再按会话 lastMessageSequence 拉取缺失消息
+    const syncStart = Date.now()
+    try {
+      await conversationService.syncConversationsIncrementally(false)
+    } catch (e) {
+      // ignore
+    }
+    this.debugStats.reconnectSyncMs = Date.now() - syncStart
+
+    const pullStart = Date.now()
     await this.pullMissingMessagesForLoadedConversations()
+    this.debugStats.reconnectPullMs = Date.now() - pullStart
+
+    console.log('[MessageService][Reconnect] syncMs/pullMs/stats:', {
+      syncMs: this.debugStats.reconnectSyncMs,
+      pullMs: this.debugStats.reconnectPullMs,
+      pullCallCount: this.debugStats.pullCallCount,
+      pullFetchedCount: this.debugStats.pullFetchedCount,
+      pullRoundCount: this.debugStats.pullRoundCount,
+      wsGapDetectedCount: this.debugStats.wsGapDetectedCount,
+      wsGapTriggeredPullCount: this.debugStats.wsGapTriggeredPullCount,
+      dedupMergeHitCount: this.debugStats.dedupMergeHitCount
+    })
   }
 
   /**
@@ -176,7 +279,7 @@ export class MessageService {
    */
   private async pullMissingMessagesForLoadedConversations(): Promise<void> {
     try {
-      // 如果会话未加载，这里主动加载一次
+      // 如果会话未加载，这里主动加载一次（load 内部会走 sync 增量兜底）
       const conversations = conversationService.getConversations()
       if (conversations == null || conversations.length === 0) {
         await conversationService.loadConversations()
@@ -186,55 +289,168 @@ export class MessageService {
         return
       }
 
+      const candidates: any[] = []
+      const active = this.getActiveChatId()
       for (let i = 0; i < list.length; i++) {
-        const c = list[i]
+        const c = list[i] as any
+        const chatId = c != null && c.chatId != null ? c.chatId.toString() : '0'
+        const unread = c != null && c.unreadCount != null ? Number(c.unreadCount) : 0
+        if ((active != null && active !== '' && chatId === active) || unread > 0) {
+          candidates.push(c)
+        }
+      }
+      // active chat 优先
+      candidates.sort((a, b) => {
+        const ac = active != null && active !== ''
+        const aIsActive = ac && (a != null && a.chatId != null && a.chatId.toString() === active)
+        const bIsActive = ac && (b != null && b.chatId != null && b.chatId.toString() === active)
+        if (aIsActive && !bIsActive) return -1
+        if (!aIsActive && bIsActive) return 1
+        return 0
+      })
+
+      for (let i = 0; i < candidates.length; i++) {
+        const c = candidates[i]
         const chatId = c.chatId != null ? (c.chatId as any).toString() : '0'
-        await this.pullMissingMessagesForChat(chatId)
+        const targetSeq = (c as any).lastMessageSequence != null ? (c as any).lastMessageSequence.toString() : '0'
+        await this.pullMissingMessagesForChatToSequence(chatId, targetSeq)
       }
     } catch (e) {
       console.warn('[MessageService] pullMissingMessagesForLoadedConversations failed:', e)
     }
   }
 
+  public setActiveChatId(chatId: string | null): void {
+    const v = chatId != null ? chatId.toString() : ''
+    this.activeChatId = v
+  }
+
+  public getActiveChatId(): string {
+    return this.activeChatId
+  }
+
+  private compareSeq(a: string, b: string): number {
+    const as = a != null && a !== '' ? a : '0'
+    const bs = b != null && b !== '' ? b : '0'
+    try {
+      const diff = BigInt(as) - BigInt(bs)
+      if (diff === BigInt(0)) {
+        return 0
+      }
+      return diff > BigInt(0) ? 1 : -1
+    } catch (e) {
+      if (as === bs) {
+        return 0
+      }
+      return as > bs ? 1 : -1
+    }
+  }
+
+  private async pullMissingMessagesForChatToSequence(chatId: string, targetSequence: string): Promise<void> {
+    const target = targetSequence != null && targetSequence !== '' ? targetSequence.toString() : '0'
+    const current = this.getLastPulledSequence(chatId)
+    if (this.compareSeq(current, target) >= 0) {
+      return
+    }
+    await this.pullMissingMessagesForChat(chatId)
+    const updated = this.getLastPulledSequence(chatId)
+    if (this.compareSeq(updated, target) < 0) {
+      // 仍未追平：再次拉取（后端 pull 受 limit 限制，这里再兜底一次）
+      await this.pullMissingMessagesForChat(chatId)
+    }
+  }
+
   private async pullMissingMessagesForChat(chatId: string): Promise<void> {
     try {
-      const lastSeq = this.getLastPulledSequence(chatId)
-      const resp = await pullMessagesApi(chatId, lastSeq, 200)
-      const arr = resp as any[]
-      if (arr == null || arr.length === 0) {
-        return
+      this.debugStats.pullCallCount += 1
+      const pageSize = 200
+      let cursor = this.getLastPulledSequence(chatId)
+
+      const shouldNotify = this.activeChatId != null && this.activeChatId !== '' && this.activeChatId === chatId
+
+      const startedAt = Date.now()
+      let fetched = 0
+      let rounds = 0
+
+      // 循环拉取，直到无更多或水位不再推进（防御性）
+      for (let round = 0; round < 10; round++) {
+        rounds += 1
+        this.debugStats.pullRoundCount += 1
+        const resp = await pullMessagesApi(chatId, cursor, pageSize)
+        const arr = resp as any[]
+        if (arr == null || arr.length === 0) {
+          if (rounds > 0) {
+            console.log('[MessageService][Pull] done(empty):', { chatId: chatId, cursor: cursor, rounds: rounds, fetched: fetched, costMs: Date.now() - startedAt })
+          }
+          return
+        }
+
+        let maxSeqInBatch = cursor
+        for (let i = 0; i < arr.length; i++) {
+          const m: any = arr[i]
+          fetched += 1
+          const senderIdStr = m.senderId != null ? m.senderId.toString() : '0'
+          const isSelf = senderIdStr === this.currentUserId
+          const senderName = (m.senderNickname != null && m.senderNickname !== '')
+            ? m.senderNickname
+            : (isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr))
+
+          const seqStr = m.sequence != null ? m.sequence.toString() : undefined
+          const messageItem: MessageItem = {
+            id: '0',
+            messageId: m.id != null ? m.id.toString() : '0',
+            sequence: seqStr,
+            senderId: senderIdStr,
+            receiverId: m.receiverId != null ? m.receiverId.toString() : '0',
+            groupId: m.groupId != null ? m.groupId.toString() : '0',
+            type: m.messageType,
+            content: { content: m.content, extra: m.extra },
+            status: MessageStatus.SENT,
+            timestamp: m.sendTime != null ? new Date(m.sendTime as string).getTime() : Date.now(),
+            isSelf: isSelf,
+            showTime: true,
+            avatarText: senderName ? getAvatarText(senderName) : '?',
+            avatarBg: getUserAvatarColor(senderIdStr),
+            senderName: senderName
+          }
+
+          this.addMessageToCache(chatId, messageItem)
+          if (shouldNotify) {
+            this.notifyMessageListeners(messageItem)
+          }
+          if (seqStr != null) {
+            this.updateLastPulledSequence(chatId, seqStr)
+            try {
+              if (BigInt(seqStr) > BigInt(maxSeqInBatch)) {
+                maxSeqInBatch = seqStr
+              }
+            } catch (e) {
+              if (seqStr > maxSeqInBatch) {
+                maxSeqInBatch = seqStr
+              }
+            }
+          }
+        }
+
+        // 水位未推进则停止，避免死循环
+        if (maxSeqInBatch === cursor) {
+          this.debugStats.pullNoProgressStopCount += 1
+          console.warn('[MessageService][Pull] stop(no progress):', { chatId: chatId, cursor: cursor, rounds: rounds, fetched: fetched, costMs: Date.now() - startedAt })
+          return
+        }
+        cursor = maxSeqInBatch
+
+        // 未满页则认为无更多
+        if (arr.length < pageSize) {
+          console.log('[MessageService][Pull] done(less than pageSize):', { chatId: chatId, cursor: cursor, rounds: rounds, fetched: fetched, costMs: Date.now() - startedAt })
+          return
+        }
       }
 
-      for (let i = 0; i < arr.length; i++) {
-        const m: any = arr[i]
-        const senderIdStr = m.senderId != null ? m.senderId.toString() : '0'
-        const isSelf = senderIdStr === this.currentUserId
-        const senderName = (m.senderNickname != null && m.senderNickname !== '')
-          ? m.senderNickname
-          : (isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr))
+      console.log('[MessageService][Pull] stop(max rounds):', { chatId: chatId, cursor: cursor, rounds: rounds, fetched: fetched, costMs: Date.now() - startedAt })
 
-        const messageItem: MessageItem = {
-          id: '0',
-          messageId: m.id != null ? m.id.toString() : '0',
-          sequence: m.sequence != null ? m.sequence.toString() : undefined,
-          senderId: senderIdStr,
-          receiverId: m.receiverId != null ? m.receiverId.toString() : '0',
-          groupId: m.groupId != null ? m.groupId.toString() : '0',
-          type: m.messageType,
-          content: { content: m.content, extra: m.extra },
-          status: MessageStatus.SENT,
-          timestamp: m.sendTime != null ? new Date(m.sendTime as string).getTime() : Date.now(),
-          isSelf: isSelf,
-          showTime: true,
-          avatarText: senderName ? getAvatarText(senderName) : '?',
-          avatarBg: getUserAvatarColor(senderIdStr),
-          senderName: senderName
-        }
-
-        this.addMessageToCache(chatId, messageItem)
-        if (messageItem.sequence != null) {
-          this.updateLastPulledSequence(chatId, messageItem.sequence)
-        }
+      if (fetched > 0) {
+        this.debugStats.pullFetchedCount += fetched
       }
     } catch (e) {
       console.warn('[MessageService] pullMissingMessagesForChat failed:', { chatId: chatId, e: e })
@@ -731,6 +947,15 @@ export class MessageService {
     // 通过 WebSocket 发送
     console.log('[MessageService] wsManager.isConnected():', wsManager.isConnected())
     wsManager.send(message)
+
+    try {
+      const mid = message != null && message.header != null && message.header.messageId != null ? message.header.messageId.toString() : ''
+      if (mid !== '' && mid !== '0') {
+        this.scheduleSendRetry(mid, message)
+      }
+    } catch (e) {
+      // ignore
+    }
     
     // 更新会话（群聊摘要增加发送者前缀）
     if (isGroup) {
@@ -752,6 +977,112 @@ export class MessageService {
     }
     
     return messageItem
+  }
+
+  private isMessageStillSending(messageId: string): boolean {
+    if (messageId == null || messageId === '' || messageId === '0') {
+      return false
+    }
+    let still = false
+    try {
+      this.messageCache.forEach((messages) => {
+        for (let i = 0; i < messages.length; i++) {
+          const msg: any = messages[i]
+          if (msg != null && msg.messageId === messageId && msg.status === MessageStatus.SENDING) {
+            still = true
+            break
+          }
+        }
+      })
+    } catch (e) {
+      return false
+    }
+    return still
+  }
+
+  private setMessageFailed(messageId: string): void {
+    if (messageId == null || messageId === '' || messageId === '0') {
+      return
+    }
+    try {
+      this.messageCache.forEach((messages) => {
+        messages.forEach((msg: any) => {
+          if (msg != null && msg.messageId === messageId && msg.status === MessageStatus.SENDING) {
+            msg.status = MessageStatus.FAILED
+          }
+        })
+      })
+    } catch (e) {
+      // ignore
+    }
+    try {
+      this.notifyStatusListeners(messageId, MessageStatus.FAILED)
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  private clearSendRetry(messageId: string): void {
+    if (messageId == null || messageId === '' || messageId === '0') {
+      return
+    }
+    const pending = this.pendingRetryMap.get(messageId)
+    if (pending != null && pending.timer != null) {
+      try {
+        clearTimeout(pending.timer)
+      } catch (e) {
+        // ignore
+      }
+    }
+    this.pendingRetryMap.delete(messageId)
+  }
+
+  private scheduleSendRetry(messageId: string, message: any): void {
+    if (messageId == null || messageId === '' || messageId === '0') {
+      return
+    }
+    if (!this.isMessageStillSending(messageId)) {
+      this.clearSendRetry(messageId)
+      return
+    }
+
+    const existing = this.pendingRetryMap.get(messageId)
+    const retryCount = existing != null ? existing.retryCount : 0
+    if (retryCount >= MessageService.MAX_RETRY_COUNT) {
+      this.clearSendRetry(messageId)
+      this.setMessageFailed(messageId)
+      return
+    }
+
+    if (existing != null && existing.timer != null) {
+      return
+    }
+
+    const delay = MessageService.SEND_RETRY_BASE_DELAY_MS * (retryCount + 1)
+    const timer = setTimeout(() => {
+      const latest = this.pendingRetryMap.get(messageId)
+      const latestRetry = latest != null ? latest.retryCount : retryCount
+      if (!this.isMessageStillSending(messageId)) {
+        this.clearSendRetry(messageId)
+        return
+      }
+      if (latestRetry >= MessageService.MAX_RETRY_COUNT) {
+        this.clearSendRetry(messageId)
+        this.setMessageFailed(messageId)
+        return
+      }
+
+      try {
+        this.pendingRetryMap.set(messageId, { message: message, retryCount: latestRetry + 1, timer: null })
+        wsManager.send(message)
+      } catch (e) {
+        this.pendingRetryMap.set(messageId, { message: message, retryCount: latestRetry + 1, timer: null })
+      }
+
+      this.scheduleSendRetry(messageId, message)
+    }, delay)
+
+    this.pendingRetryMap.set(messageId, { message: message, retryCount: retryCount, timer: timer })
   }
   
   /**
@@ -791,6 +1122,11 @@ export class MessageService {
         })
       })
       if (updated) {
+        try {
+          this.clearSendRetry(msgId)
+        } catch (e) {
+          // ignore
+        }
         this.notifyStatusListeners(msgId, MessageStatus.SENT)
 
 			// 自己的消息也需要更新会话（否则会话水位/红点会错）
@@ -870,6 +1206,27 @@ export class MessageService {
 
     const isGroup = message.header.groupId !== '0' && message.header.groupId !== ''
 	let chatId = this.resolveChatIdFromHeader(message.header)
+	// gap 检测：sequence 跳跃则优先补偿拉取，避免渲染乱序/丢洞
+	try {
+		const seqStr = messageItem.sequence != null ? messageItem.sequence.toString() : ''
+		if (seqStr !== '') {
+			const lastPulled = this.getLastPulledSequence(chatId)
+			let hasGap = false
+			try {
+				hasGap = BigInt(seqStr) > BigInt(lastPulled) + BigInt(1)
+			} catch (e) {
+				// ignore
+			}
+			if (hasGap) {
+				this.debugStats.wsGapDetectedCount += 1
+				console.warn('[MessageService][Gap] detected:', { chatId: chatId, lastPulled: lastPulled, incoming: seqStr })
+				await this.pullMissingMessagesForChat(chatId)
+				this.debugStats.wsGapTriggeredPullCount += 1
+			}
+		}
+	} catch (e) {
+		// ignore
+	}
 	const summary = MessageParser.getSummary({
 	  header: { messageType: messageItem.type } as any,
 	  body: messageItem.content
@@ -940,6 +1297,18 @@ export class MessageService {
     
     // 如果不是自己发送的消息，增加未读数和角标
     if (!messageItem.isSelf) {
+      try {
+        const active = this.getActiveChatId()
+        if (active != null && active !== '' && active === chatId) {
+          if (seq != null && seq !== '') {
+            conversationService.applyReadWatermark(chatId, seq)
+          }
+          badgeService.clearConversationBadgeLocal(chatId)
+          return
+        }
+      } catch (e) {
+        // ignore
+      }
       // 自动增加对应会话的角标未读数
       badgeService.incrementConversationBadge(chatId)
     }
@@ -1089,7 +1458,33 @@ export class MessageService {
       messages = []
       this.messageCache.set(chatId, messages)
     }
-    messages.push(message)
+
+    // 去重/合并：pull 补偿与 WS/ACK 可能重叠；以 messageId 为幂等键
+    const incomingId = message.messageId != null ? message.messageId.toString() : ''
+    if (incomingId !== '') {
+      const existing = messages.find(m => m != null && m.messageId === incomingId)
+      if (existing != null) {
+        this.debugStats.dedupMergeHitCount += 1
+        // 仅做“信息补齐”，避免覆盖已确认的状态
+        if ((existing.sequence == null || existing.sequence === '') && message.sequence != null && message.sequence !== '') {
+          existing.sequence = message.sequence
+        }
+        if ((existing.status == null || existing.status === MessageStatus.SENDING) && message.status != null) {
+          existing.status = message.status
+        }
+        if ((existing.content == null || existing.content === '') && message.content != null) {
+          existing.content = message.content
+        }
+        if ((existing.timestamp == null || existing.timestamp <= 0) && message.timestamp != null) {
+          existing.timestamp = message.timestamp
+        }
+        // 合并后仍需要排序
+      } else {
+        messages.push(message)
+      }
+    } else {
+      messages.push(message)
+    }
 
     // 优先按 sequence 排序（断线补偿/严格顺序），否则退化为 timestamp+messageId
     messages.sort((a, b) => {

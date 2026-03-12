@@ -10,6 +10,9 @@
  */
 
 import { messageService } from './message-service.uts'
+import { badgeService } from './badge-service.uts'
+import { getReadReceiptDetail, getReadReceiptSummary } from '../api/read-receipt.uts'
+import { markMessageRead } from '../api/message.uts'
 
 /**
  * 已读详情项
@@ -19,6 +22,20 @@ export type ReadDetailItem = {
   userName: string
   avatar: string
   readTime: number
+}
+
+export type ReadReceiptSummary = {
+  messageId: string
+  chatId: string
+  sequence: string
+  readCount: number
+  unreadCount: number
+  totalCount: number
+}
+
+export type ReadReceiptDetailPage = {
+  list: ReadDetailItem[]
+  total: number
 }
 
 /**
@@ -55,10 +72,14 @@ export class ReadReceiptService {
     if (messageIds.length === 0) {
       return true
     }
-    
-    // 最优路径：服务端已读以会话 readSequence 水位为准；这里仅做端到端“已读回执”可视化（WebSocket）
-    this.sendReadReceipt(chatId, messageIds)
-    return true
+
+    try {
+      await markMessageRead(messageIds)
+      return true
+    } catch (e) {
+      console.error('[ReadReceiptService] markMessagesAsRead failed:', e)
+      return false
+    }
   }
   
   /**
@@ -107,14 +128,67 @@ export class ReadReceiptService {
     const readUserIds = this.readStatus.get(messageId)
     return (readUserIds !== null && readUserIds !== undefined) ? readUserIds.length : 0
   }
+
+  public async getSummary(messageId: string): Promise<ReadReceiptSummary | null> {
+    try {
+      const res: any = await getReadReceiptSummary(messageId)
+      const data: any = res && res.data != null ? res.data : null
+      if (data == null) {
+        return null
+      }
+      return {
+        messageId: data.messageId != null ? data.messageId.toString() : messageId,
+        chatId: data.chatId != null ? data.chatId.toString() : '0',
+        sequence: data.sequence != null ? data.sequence.toString() : '0',
+        readCount: data.readCount != null ? Number(data.readCount) : 0,
+        unreadCount: data.unreadCount != null ? Number(data.unreadCount) : 0,
+        totalCount: data.totalCount != null ? Number(data.totalCount) : 0
+      }
+    } catch (e) {
+      console.error('[ReadReceiptService] getSummary failed:', e)
+      return null
+    }
+  }
+
+  public async getDetailPage(messageId: string, status: 'read' | 'unread', pageNo: number = 1, pageSize: number = 20): Promise<ReadReceiptDetailPage> {
+    try {
+      const res: any = await getReadReceiptDetail(messageId, status, pageNo, pageSize)
+      const data: any = res && res.data != null ? res.data : null
+      const listRaw: any[] = data && data.list != null ? data.list : []
+      const list: ReadDetailItem[] = listRaw.map((it: any) => {
+        let readTime = 0
+        try {
+          if (it.readTime) {
+            const ts = new Date(it.readTime).getTime()
+            if (!isNaN(ts) && ts > 0) {
+              readTime = ts
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+        return {
+          userId: it.userId != null ? it.userId.toString() : '0',
+          userName: (it.userNickname || '').toString(),
+          avatar: (it.userAvatar || '').toString(),
+          readTime
+        }
+      })
+      const total = data && data.total != null ? Number(data.total) : list.length
+      return { list, total }
+    } catch (e) {
+      console.error('[ReadReceiptService] getDetailPage failed:', e)
+      return { list: [], total: 0 }
+    }
+  }
   
   /**
    * 获取消息的已读详情（群聊）
    */
   public async getReadDetail(messageId: string): Promise<ReadDetailItem[]> {
     try {
-      console.error('[ReadReceiptService] 获取已读详情接口未实现, messageId:', messageId)
-      return []
+      const page = await this.getDetailPage(messageId, 'read', 1, 200)
+      return page.list
     } catch (e) {
       console.error('[ReadReceiptService] 获取已读详情失败:', e)
       return []
@@ -126,8 +200,8 @@ export class ReadReceiptService {
    */
   public async getUnreadDetail(messageId: string): Promise<ReadDetailItem[]> {
     try {
-      console.error('[ReadReceiptService] 获取未读详情接口未实现, messageId:', messageId)
-      return []
+      const page = await this.getDetailPage(messageId, 'unread', 1, 200)
+      return page.list
     } catch (e) {
       console.error('[ReadReceiptService] 获取未读详情失败:', e)
       return []

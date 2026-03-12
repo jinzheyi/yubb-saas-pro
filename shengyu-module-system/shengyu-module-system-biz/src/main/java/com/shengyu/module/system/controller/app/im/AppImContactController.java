@@ -69,8 +69,7 @@ public class AppImContactController {
     @Parameter(name = "deptId", description = "部门ID", required = true)
     public CommonResult<List<AppImContactRespVO>> getContactListByDept(@RequestParam("deptId") Long deptId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        // TODO: 实现按部门查询联系人
-        return success(contactService.getContactList(userId));
+        return success(contactService.getContactListByDept(userId, deptId));
     }
 
     @GetMapping("/list-star")

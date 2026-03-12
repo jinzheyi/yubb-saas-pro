@@ -56,4 +56,13 @@ public interface ImContactService {
      */
     List<AppImContactRespVO> getStarContacts(Long userId);
 
+    /**
+     * 根据部门ID获取联系人列表
+     *
+     * @param userId 用户ID
+     * @param deptId 部门ID
+     * @return 联系人列表
+     */
+    List<AppImContactRespVO> getContactListByDept(Long userId, Long deptId);
+
 }

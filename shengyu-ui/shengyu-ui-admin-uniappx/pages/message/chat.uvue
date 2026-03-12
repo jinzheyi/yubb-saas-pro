@@ -251,7 +251,7 @@
                 <view class="menu-list">
                     <view class="menu-item-btn" v-for="item in currentMenuItems" :key="item.key" @click="handleMenuAction(item.key)">
                         <text class="iconfont menu-item-icon" :class="{ 'menu-danger': item.key === 'delete' }">{{ item.icon }}</text>
-                        <text class="menu-item-text" :class="{ 'menu-danger': item.key === 'delete' }">{{ t(item.labelKey) }}</text>
+                        <text class="menu-item-text" :class="{ 'menu-danger': item.key === 'delete' }">{{ item.labelKey ? t(item.labelKey) : item.label }}</text>
                     </view>
                 </view>
             </view>
@@ -302,6 +302,44 @@
 				</view>
 			</view>
 		</view>
+
+		<view v-if="showReadReceiptSheet" class="read-receipt-mask" @click="closeReadReceiptSheet">
+			<view class="read-receipt-sheet" @click.stop>
+				<view class="read-receipt-header">
+					<text class="read-receipt-title">已读详情</text>
+					<text class="read-receipt-close" @click="closeReadReceiptSheet">关闭</text>
+				</view>
+				<view class="read-receipt-summary">
+					<view class="summary-item" @click="switchReadReceiptTab('read')">
+						<text class="summary-num">{{ readReceiptSummary ? readReceiptSummary.readCount : 0 }}</text>
+						<text class="summary-label" :class="{ 'summary-label-active': readReceiptTab === 'read' }">已读</text>
+					</view>
+					<view class="summary-divider"></view>
+					<view class="summary-item" @click="switchReadReceiptTab('unread')">
+						<text class="summary-num">{{ readReceiptSummary ? readReceiptSummary.unreadCount : 0 }}</text>
+						<text class="summary-label" :class="{ 'summary-label-active': readReceiptTab === 'unread' }">未读</text>
+					</view>
+				</view>
+				<scroll-view class="read-receipt-list" scroll-y="true" @scrolltolower="loadMoreReadReceipt">
+					<view v-for="item in readReceiptList" :key="item.userId" class="read-receipt-row">
+						<image v-if="item.avatar" class="read-receipt-avatar" :src="item.avatar" mode="aspectFill" />
+						<view v-else class="read-receipt-avatar-fallback" :style="{ backgroundColor: getReadReceiptAvatarBg(item) }">
+							<text class="read-receipt-avatar-text">{{ getReadReceiptAvatarText(item) }}</text>
+						</view>
+						<view class="read-receipt-info">
+							<text class="read-receipt-name">{{ item.userName }}</text>
+							<text v-if="readReceiptTab === 'read' && item.readTime" class="read-receipt-time">{{ formatReadReceiptTime(item.readTime) }}</text>
+						</view>
+					</view>
+					<view v-if="readReceiptLoading" class="read-receipt-loading">
+						<text class="read-receipt-loading-text">加载中...</text>
+					</view>
+					<view v-else-if="!readReceiptHasMore" class="read-receipt-loading">
+						<text class="read-receipt-loading-text">没有更多了</text>
+					</view>
+				</scroll-view>
+			</view>
+		</view>
 	</view>
 </template>
 
@@ -328,6 +366,7 @@
 	import { parseMessageContent } from '../../utils/message-utils.uts'
 	import { uploadGroupFile, getFilePresignedGetUrl, getFileOpenStrategy } from '../../api/file.uts'
 	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
+	import { readReceiptService } from '../../services/read-receipt-service.uts'
 	import {
 		BASE_URL as CONFIG_BASE_URL,
 		IM_MEDIA_USE_FILE_ID,
@@ -566,6 +605,15 @@
     const menuY = ref(0)
     const selectedMsg = ref<MessageItem | null>(null)
     const currentMenuItems = ref<any[]>([])
+	const showReadReceiptSheet = ref(false)
+	const readReceiptSummary = ref<any | null>(null)
+	const readReceiptTab = ref<'read' | 'unread'>('read')
+	const readReceiptList = ref<any[]>([])
+	const readReceiptPageNo = ref(1)
+	const readReceiptPageSize = 20
+	const readReceiptHasMore = ref(true)
+	const readReceiptLoading = ref(false)
+	const readReceiptMessageId = ref<string>('')
     const multiSelectMode = ref(false)
     const selectedIds = ref<string[]>([])
    	const isDragSelecting = ref(false)
@@ -656,31 +704,86 @@
 		
 		// 4. 加载历史消息
 		await loadMessages()
+
+		// 4.1 标记当前活跃会话（用于重连补偿只补活跃/未读会话）
+		try {
+			if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
+				messageService.setActiveChatId(chatId.value)
+			}
+		} catch (e) {
+			// ignore
+		}
 		
 		// 5. 监听新消息
 		messageService.addMessageListener(handleNewMessage)
 		
 		// 6. 清空未读数（本地 + 服务端：按 sequence 水位上报）
 		if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
-			let maxSeq = '0'
-			// 优先使用会话服务里的权威 lastMessageSequence（通常来源于 sync/list）
-			try {
-				const convServiceModule = await import('../../services/conversation-service.uts')
-				const cs = (convServiceModule as any).conversationService
-				const conv = cs != null ? cs.getConversation(chatId.value) : null
-				const seqFromConv = conv != null && (conv as any).lastMessageSequence != null
-					? (conv as any).lastMessageSequence.toString()
-					: '0'
-				if (seqFromConv != null && seqFromConv !== '' && seqFromConv !== '0') {
-					maxSeq = seqFromConv
-				}
-			} catch (e) {
-				// ignore
+			const maxSeq = await computeMaxSeqForRead()
+			// 调用 BadgeService 清空会话角标
+			// BadgeService 会自动调用后端 API 并更新本地数据
+			badgeService.clearConversationBadge(chatId.value, maxSeq)
+			
+			// 同时清空 MessageService 的本地未读数
+			messageService.clearUnreadCount(chatId.value)
+		}
+		
+		scrollToBottom()
+	})
+	
+	onUnmounted(async () => {
+		await flushReadOnLeave()
+		// 移除消息监听器
+		messageService.removeMessageListener(handleNewMessage)
+		try {
+			messageService.setActiveChatId(null)
+		} catch (e) {
+			// ignore
+		}
+	})
+
+	async function computeMaxSeqForRead(): Promise<string> {
+		let maxSeq = '0'
+		// 优先使用会话服务里的权威 lastMessageSequence（通常来源于 sync/list）
+		try {
+			const convServiceModule = await import('../../services/conversation-service.uts')
+			const cs = (convServiceModule as any).conversationService
+			const conv = cs != null ? cs.getConversation(chatId.value) : null
+			const seqFromConv = conv != null && (conv as any).lastMessageSequence != null
+				? (conv as any).lastMessageSequence.toString()
+				: '0'
+			if (seqFromConv != null && seqFromConv !== '' && seqFromConv !== '0') {
+				maxSeq = seqFromConv
 			}
-			// 兜底：使用当前页面已加载的消息列表的最大 sequence（比 messageService 缓存更可靠）
+		} catch (e) {
+			// ignore
+		}
+		// 兜底：使用当前页面已加载的消息列表的最大 sequence（比 messageService 缓存更可靠）
+		try {
+			for (let i = 0; i < messages.value.length; i++) {
+				const s = (messages.value[i] as any).sequence
+				if (s == null || s === '') {
+					continue
+				}
+				try {
+					if (BigInt(s) > BigInt(maxSeq)) {
+						maxSeq = s
+					}
+				} catch (e) {
+					if (s > maxSeq) {
+						maxSeq = s
+					}
+				}
+			}
+		} catch (e) {
+			// ignore
+		}
+		// 最后兜底：仍使用 messageService 缓存（可能为空）
+		if (maxSeq === '0') {
 			try {
-				for (let i = 0; i < messages.value.length; i++) {
-					const s = (messages.value[i] as any).sequence
+				const localMsgs = messageService.getMessages(chatId.value)
+				for (let i = 0; i < localMsgs.length; i++) {
+					const s = (localMsgs[i] as any).sequence
 					if (s == null || s === '') {
 						continue
 					}
@@ -695,46 +798,24 @@
 					}
 				}
 			} catch (e) {
-				// ignore
+				maxSeq = '0'
 			}
-			// 最后兜底：仍使用 messageService 缓存（可能为空）
-			if (maxSeq === '0') {
-				try {
-					const localMsgs = messageService.getMessages(chatId.value)
-					for (let i = 0; i < localMsgs.length; i++) {
-						const s = (localMsgs[i] as any).sequence
-						if (s == null || s === '') {
-							continue
-						}
-						try {
-							if (BigInt(s) > BigInt(maxSeq)) {
-								maxSeq = s
-							}
-						} catch (e) {
-							if (s > maxSeq) {
-								maxSeq = s
-							}
-						}
-					}
-				} catch (e) {
-					maxSeq = '0'
-				}
-			}
-			// 调用 BadgeService 清空会话角标
-			// BadgeService 会自动调用后端 API 并更新本地数据
-			badgeService.clearConversationBadge(chatId.value, maxSeq)
-			
-			// 同时清空 MessageService 的本地未读数
-			messageService.clearUnreadCount(chatId.value)
 		}
-		
-		scrollToBottom()
-	})
-	
-	onUnmounted(() => {
-		// 移除消息监听器
-		messageService.removeMessageListener(handleNewMessage)
-	})
+		return maxSeq
+	}
+
+	async function flushReadOnLeave(): Promise<void> {
+		try {
+			if (!chatId.value || chatId.value === '' || chatId.value === '0') {
+				return
+			}
+			const maxSeq = await computeMaxSeqForRead()
+			badgeService.clearConversationBadge(chatId.value, maxSeq)
+			messageService.clearUnreadCount(chatId.value)
+		} catch (e) {
+			// ignore
+		}
+	}
 
 	/**
 	 * 仿微信聊天时间线显示逻辑
@@ -1094,6 +1175,31 @@
 				
 				// 合并消息（去重）
 				messages.value = mergeMessages(messages.value, newMessages)
+				
+				// 断线补偿水位初始化：HTTP 拉到的最新消息也需要推进本地 lastPulledSequence
+				try {
+					let maxSeq = '0'
+					for (let i = 0; i < messages.value.length; i++) {
+						const s = (messages.value[i] as any).sequence
+						if (s == null || s === '') {
+							continue
+						}
+						try {
+							if (BigInt(s) > BigInt(maxSeq)) {
+								maxSeq = s
+							}
+						} catch (e) {
+							if (s > maxSeq) {
+								maxSeq = s
+							}
+						}
+					}
+					if (maxSeq !== '0') {
+						messageService.seedLastPulledSequence(chatId.value, maxSeq)
+					}
+				} catch (e) {
+					// ignore
+				}
 				
 				// PageResult 可能没有 hasMore 字段，根据 list 长度判断
 				hasMore.value = serverMessages.length >= 20
@@ -1539,7 +1645,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		
 		// 发送已读回执（如果不是自己发送的）
 		if (!message.isSelf) {
-			messageService.sendReadReceipt(message.senderId, [message.messageId])
+			// 群聊已读以服务端 readSequence 水位为准，禁用逐条回执，避免回执风暴
+			if (chatType.value !== 'group') {
+				messageService.sendReadReceipt(message.senderId, [message.messageId])
+			}
 		}
 	}
 
@@ -2524,6 +2633,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             }
         }
         
+        if (chatType.value === 'group' && msg.isSelf && msg.messageId && msg.messageId !== '0') {
+            menuItems.push({ key: 'read_receipt', label: '已读', icon: '\ue6cf' })
+        }
+        
         currentMenuItems.value = menuItems
         
         // 菜单尺寸（横向排列，支持换行）
@@ -2684,6 +2797,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                 if (isVoiceMode.value) {
                     isVoiceMode.value = false
                 }
+			} else if (action === 'read_receipt') {
+				if (chatType.value !== 'group' || !msg.isSelf || !msg.messageId || msg.messageId === '0') {
+					return
+				}
+				await openReadReceiptSheet(msg.messageId)
             }
         } catch (e) {
             console.error('[Chat] 菜单操作失败:', e)
@@ -2691,6 +2809,142 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         
         closeMsgMenu()
     }
+
+	async function openReadReceiptSheet(messageId: string) {
+		try {
+			showReadReceiptSheet.value = true
+			readReceiptMessageId.value = messageId
+			readReceiptTab.value = 'read'
+			readReceiptList.value = []
+			readReceiptPageNo.value = 1
+			readReceiptHasMore.value = true
+			readReceiptSummary.value = await readReceiptService.getSummary(messageId)
+			await reloadReadReceiptList()
+		} catch (e) {
+			console.error('[Chat] openReadReceiptSheet failed:', e)
+			uni.showToast({ title: '加载失败', icon: 'none' })
+		}
+	}
+
+	function closeReadReceiptSheet() {
+		showReadReceiptSheet.value = false
+		readReceiptList.value = []
+		readReceiptSummary.value = null
+		readReceiptHasMore.value = true
+		readReceiptLoading.value = false
+		readReceiptMessageId.value = ''
+	}
+
+	async function switchReadReceiptTab(tab: 'read' | 'unread') {
+		if (readReceiptTab.value === tab) {
+			return
+		}
+		readReceiptTab.value = tab
+		await reloadReadReceiptList()
+	}
+
+	async function reloadReadReceiptList() {
+		readReceiptList.value = []
+		readReceiptPageNo.value = 1
+		readReceiptHasMore.value = true
+		await loadMoreReadReceipt()
+	}
+
+	async function loadMoreReadReceipt() {
+		if (!showReadReceiptSheet.value) {
+			return
+		}
+		if (readReceiptLoading.value || !readReceiptHasMore.value) {
+			return
+		}
+		if (!readReceiptMessageId.value) {
+			return
+		}
+		readReceiptLoading.value = true
+		try {
+			const page = await readReceiptService.getDetailPage(readReceiptMessageId.value, readReceiptTab.value, readReceiptPageNo.value, readReceiptPageSize)
+			const list = page && page.list ? page.list : []
+			readReceiptList.value = readReceiptList.value.concat(list)
+			const loaded = readReceiptList.value.length
+			const total = page && page.total != null ? page.total : loaded
+			readReceiptHasMore.value = loaded < total
+			if (list.length > 0) {
+				readReceiptPageNo.value = readReceiptPageNo.value + 1
+			} else {
+				readReceiptHasMore.value = false
+			}
+		} catch (e) {
+			console.error('[Chat] loadMoreReadReceipt failed:', e)
+			readReceiptHasMore.value = false
+		} finally {
+			readReceiptLoading.value = false
+		}
+	}
+
+	function formatReadReceiptTime(ts: number): string {
+		try {
+			if (!ts || ts <= 0) {
+				return ''
+			}
+			const d = new Date(ts)
+			const now = new Date()
+			const diff = now.getTime() - d.getTime()
+			if (diff >= 0 && diff < 60 * 1000) {
+				return '刚刚'
+			}
+			if (isSameDay(d, now)) {
+				return '今天 ' + formatHHmm(d)
+			}
+			const y = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+			if (isSameDay(d, y)) {
+				return '昨天 ' + formatHHmm(d)
+			}
+			return formatYYYYMMDDHHmm(d)
+		} catch (e) {
+			return ''
+		}
+	}
+
+	function pad2(n: number): string {
+		return n < 10 ? '0' + n : String(n)
+	}
+
+	function formatHHmm(d: Date): string {
+		return pad2(d.getHours()) + ':' + pad2(d.getMinutes())
+	}
+
+	function formatYYYYMMDDHHmm(d: Date): string {
+		const yyyy = d.getFullYear()
+		const mm = pad2(d.getMonth() + 1)
+		const dd = pad2(d.getDate())
+		return `${yyyy}-${mm}-${dd} ${formatHHmm(d)}`
+	}
+
+	function isSameDay(a: Date, b: Date): boolean {
+		return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+	}
+
+	function getReadReceiptAvatarText(item: any): string {
+		try {
+			const name = (item && item.userName ? String(item.userName) : '').trim()
+			if (name) {
+				return getAvatarTextUtil(name)
+			}
+			const id = item && item.userId != null ? String(item.userId) : ''
+			return id ? id.substring(Math.max(0, id.length - 2)) : '?'
+		} catch (e) {
+			return '?'
+		}
+	}
+
+	function getReadReceiptAvatarBg(item: any): string {
+		try {
+			const id = item && item.userId != null ? String(item.userId) : '0'
+			return getUserAvatarColor(id)
+		} catch (e) {
+			return '#8F959E'
+		}
+	}
 
 
     function toggleSelect(msg : MessageItem) {
@@ -2947,14 +3201,33 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	onShow(() => {
 		wsManager.setRealtimeBizActive(true)
+		try {
+			if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
+				messageService.setActiveChatId(chatId.value)
+			}
+		} catch (e) {
+			// ignore
+		}
 	})
 
 	onHide(() => {
 		wsManager.setRealtimeBizActive(false)
+		void flushReadOnLeave()
+		try {
+			messageService.setActiveChatId(null)
+		} catch (e) {
+			// ignore
+		}
 	})
 
 	onUnload(() => {
 		wsManager.setRealtimeBizActive(false)
+		void flushReadOnLeave()
+		try {
+			messageService.setActiveChatId(null)
+		} catch (e) {
+			// ignore
+		}
 		if (voiceAudioContext) {
 			try {
 				voiceAudioContext.stop()
@@ -3224,6 +3497,139 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		word-break: break-all;
 		overflow-wrap: break-word;
 		white-space: normal;
+	}
+
+	.read-receipt-mask {
+		position: fixed;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.4);
+		justify-content: flex-end;
+		z-index: 1000;
+	}
+
+	.read-receipt-sheet {
+		background-color: #FFFFFF;
+		border-top-left-radius: 14px;
+		border-top-right-radius: 14px;
+		padding-bottom: 12px;
+		max-height: 70%;
+	}
+
+	.read-receipt-header {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 12px 16px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.read-receipt-title {
+		font-size: 16px;
+		font-weight: 600;
+		color: #1F2329;
+	}
+
+	.read-receipt-close {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
+	.read-receipt-summary {
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		padding: 10px 16px;
+	}
+
+	.summary-item {
+		width: 120px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.summary-num {
+		font-size: 22px;
+		font-weight: 600;
+		color: #1F2329;
+	}
+
+	.summary-label {
+		font-size: 12px;
+		color: #8F959E;
+		margin-top: 2px;
+	}
+
+	.summary-label-active {
+		color: #3370FF;
+	}
+
+	.summary-divider {
+		width: 1px;
+		height: 28px;
+		background-color: #EFF0F1;
+	}
+
+	.read-receipt-list {
+		height: 360px;
+		padding: 4px 0;
+	}
+
+	.read-receipt-row {
+		flex-direction: row;
+		align-items: center;
+		padding: 10px 16px;
+	}
+
+	.read-receipt-avatar {
+		width: 34px;
+		height: 34px;
+		border-radius: 8px;
+		background-color: #F0F2F5;
+	}
+
+	.read-receipt-avatar-fallback {
+		width: 34px;
+		height: 34px;
+		border-radius: 8px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.read-receipt-avatar-text {
+		color: #FFFFFF;
+		font-size: 12px;
+		font-weight: 600;
+	}
+
+	.read-receipt-info {
+		flex: 1;
+		margin-left: 10px;
+	}
+
+	.read-receipt-name {
+		font-size: 14px;
+		color: #1F2329;
+	}
+
+	.read-receipt-time {
+		margin-top: 2px;
+		font-size: 11px;
+		color: #8F959E;
+	}
+
+	.read-receipt-loading {
+		padding: 10px 0;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.read-receipt-loading-text {
+		font-size: 12px;
+		color: #8F959E;
 	}
 
 	.bubble-text {

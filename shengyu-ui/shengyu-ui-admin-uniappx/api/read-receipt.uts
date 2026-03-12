@@ -1,0 +1,30 @@
+/**
+ * 已读回执（群聊聚合）API
+ */
+
+import { request } from '../utils/request.uts'
+
+/**
+ * 群聊已读聚合摘要
+ * @param messageId 消息ID
+ */
+export function getReadReceiptSummary(messageId: string): Promise<any> {
+  return request({
+    url: `/system/im/read-receipt/summary?messageId=${messageId}`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 群聊已读/未读详情分页
+ * @param messageId 消息ID
+ * @param status read | unread
+ * @param pageNo 页码
+ * @param pageSize 每页数量
+ */
+export function getReadReceiptDetail(messageId: string, status: 'read' | 'unread', pageNo: number = 1, pageSize: number = 20): Promise<any> {
+  return request({
+    url: `/system/im/read-receipt/detail?messageId=${messageId}&status=${status}&pageNo=${pageNo}&pageSize=${pageSize}`,
+    method: 'GET'
+  })
+}

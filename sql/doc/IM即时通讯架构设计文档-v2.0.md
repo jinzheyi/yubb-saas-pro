@@ -57,6 +57,18 @@
 
 ---
 
+## 2.3.1 文档维护规则（必须遵循）
+
+- 本文档与 `IM即时通讯开发任务清单-v2.0.md` 必须以“当前工程代码”为准，不为兼容旧业务保留历史契约。
+- **权威来源优先级**（从高到低）：
+  - module-system 的 Controller 路由（`AppIm*Controller`）
+  - uniappx 的 `api/*.uts`（端侧权威调用口径）
+  - uniappx 的 `services/*.uts`（只允许做缓存/聚合，不允许自维护 URL）
+- 任一接口/字段在文档中出现时，必须同时给出：
+  - 后端路由（URL + Method + 入参形态）
+  - 端侧唯一调用点（`api/*.uts` 的函数名）
+  - 关键不变式（例如“水位只升不降”、“只以 chatId 作为主键”）
+
 ## 2.4 当前工程落地情况（关键落点）
 
 说明：本节用于把“对标企微/钉钉的设计”与“当前工程已落地实现”对齐，便于回归与后续迭代。
@@ -93,6 +105,9 @@
   - **后端**：`ImConversationServiceImpl#markConversationReadBySequence` + `ImChatUserMapper#markReadToSequence`
   - 规则：水位只升不降（GREATEST），并把 `unread_count` 清零
 
+- **短期补充接口（仅用于端到端状态闭环；长期以水位为准）**：`PUT /system/im/message/mark-read?messageIds=...`
+  - 说明：用于端侧按 messageIds 快速落“已读”状态（例如已读回执可视化），但未读数/跨端一致仍以 `lastReadSequence` 为权威。
+
 - **角标刷新**：`GET /system/im/badge/get`
   - **后端**：`ImBadgeServiceImpl#getBadgeData` -> `ImConversationServiceImpl#getConversationBadges`
   - 口径：`unread = lastMessageSequence - lastReadSequence`（与会话列表一致）
@@ -100,6 +115,16 @@
 - **前端**：
   - `badge-service.uts#clearConversationBadge`：进入会话始终推进服务端已读水位（幂等），避免“本地 badge 未加载导致服务端未清”
   - `pages/message/chat.uvue`：进入会话上报 readSequence 使用权威 `lastMessageSequence`（并兜底页面消息最大 seq），避免上报 0 导致未清
+
+端侧交互规则（对标企微/钉钉的“看见即已读/离开即落水位”）：
+
+- **进入会话页**：立即按“当前可见的最大 `sequence`”推进 `lastReadSequence`（服务端幂等），并清空本地角标。
+- **会话页停留中**：若收到该会话新消息（WS 实时），视为用户已读：
+  - 不增加会话角标
+  - 直接推进本地读水位（`applyReadWatermark`）
+- **离开会话页（onHide/onUnload/onUnmounted）**：再次按“当前可见最大 `sequence`”推进服务端读水位，确保：
+  - 返回会话列表页未读角标立即消失
+  - 刷新/重启后从 `GET /badge/get` 或会话列表刷新时仍保持一致
 
 ### 2.4.5 群聊摘要一致性（对标企微/钉钉）
 
@@ -111,6 +136,12 @@
 
 - **前端渲染**：`pages/message/message.uvue#buildConversationPreview`
   - raw 非空优先展示 raw（截断），保证推送与刷新一致
+
+### 2.4.6 群消息分页查询口径（对标企微/钉钉）
+
+- **唯一消息分页接口**：`GET /system/im/message/list-by-chat?chatId=&pageNo=&pageSize=`
+- **不提供** `list-by-group` 作为长期契约（避免双标准与误用）。
+- 端侧若仅持有 `groupId`：必须先通过会话接口映射到 `chatId`（`GET /system/im/conversation/get-by-target?targetId={groupId}&conversationType=2`），再按 `chatId` 拉消息。
 
 ---
 

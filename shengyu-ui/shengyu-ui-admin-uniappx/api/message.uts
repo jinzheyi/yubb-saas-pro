@@ -89,3 +89,19 @@ export function pullMessages(chatId: string, lastSequence: string = '0', limit: 
     method: 'GET'
   })
 }
+
+/**
+ * 标记消息已读（批量）
+ * @param messageIds 消息ID列表
+ */
+export function markMessageRead(messageIds: string[]): Promise<any> {
+  const ids = messageIds != null ? messageIds.filter(id => id != null && id !== '' && id !== '0') : []
+  if (ids.length === 0) {
+    return Promise.resolve(true)
+  }
+  const qs = ids.map(id => `messageIds=${encodeURIComponent(id)}`).join('&')
+  return request({
+    url: `/system/im/message/mark-read?${qs}`,
+    method: 'PUT'
+  })
+}

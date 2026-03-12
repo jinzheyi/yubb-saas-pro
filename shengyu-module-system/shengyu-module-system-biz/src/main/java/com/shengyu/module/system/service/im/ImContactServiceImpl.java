@@ -10,10 +10,13 @@ import com.shengyu.module.system.dal.dataobject.dept.PostDO;
 import com.shengyu.module.system.dal.dataobject.dept.UserPostDO;
 import com.shengyu.module.system.dal.dataobject.im.ImContactSettingDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
+import com.shengyu.module.system.dal.dataobject.dept.UserDeptDO;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import com.shengyu.module.system.dal.mysql.dept.DeptMapper;
 import com.shengyu.module.system.dal.mysql.dept.PostMapper;
+import com.shengyu.module.system.dal.mysql.dept.UserDeptMapper;
 import com.shengyu.module.system.dal.mysql.dept.UserPostMapper;
 import com.shengyu.module.system.dal.mysql.im.ImContactSettingMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
@@ -53,6 +56,9 @@ public class ImContactServiceImpl implements ImContactService {
     @Resource
     private PostMapper postMapper;
 
+    @Resource
+    private UserDeptMapper userDeptMapper;
+
     @Override
     public List<AppImContactRespVO> getContactList(Long userId) {
         // 查询同租户下的所有用户(企业内部IM,联系人直接来源于system_users)
@@ -79,6 +85,75 @@ public class ImContactServiceImpl implements ImContactService {
                         respVO.setNoDisturb(false);
                     }
                     
+                    return respVO;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<AppImContactRespVO> getContactListByDept(Long userId, Long deptId) {
+        // 1. 查询部门及其子部门（包含自身）
+        DeptDO dept = deptMapper.selectById(deptId);
+        if (dept == null) {
+            throw exception(DEPT_NOT_FOUND);
+        }
+        List<Long> deptIds = new ArrayList<>();
+        deptIds.add(deptId);
+        // BFS 获取所有子部门（避免仅查一层导致漏人）
+        List<Long> queue = new ArrayList<>();
+        queue.add(deptId);
+        for (int i = 0; i < queue.size(); i++) {
+            Long current = queue.get(i);
+            List<DeptDO> children = deptMapper.selectListByParentId(Collections.singleton(current));
+            if (children == null || children.isEmpty()) {
+                continue;
+            }
+            for (DeptDO child : children) {
+                if (child == null || child.getId() == null) {
+                    continue;
+                }
+                Long childId = child.getId();
+                if (deptIds.contains(childId)) {
+                    continue;
+                }
+                deptIds.add(childId);
+                queue.add(childId);
+            }
+        }
+
+        // 2. 查询这些部门下的用户ID
+        List<UserDeptDO> userDeptList = userDeptMapper.selectListByDeptIds(deptIds);
+        if (userDeptList == null || userDeptList.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Long> contactIds = userDeptList.stream().map(UserDeptDO::getUserId).distinct().collect(Collectors.toList());
+        // 排除自己
+        contactIds = contactIds.stream().filter(id -> id != null && !id.equals(userId)).collect(Collectors.toList());
+        if (contactIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 3. 查询联系人用户信息
+        List<AdminUserDO> users = userMapper.selectBatchIds(contactIds);
+
+        // 4. 查询当前用户的联系人设置
+        List<ImContactSettingDO> settings = contactSettingMapper.selectListByUserId(userId);
+        Map<Long, ImContactSettingDO> settingMap = settings.stream()
+                .collect(Collectors.toMap(ImContactSettingDO::getContactId, s -> s, (a, b) -> a));
+
+        // 5. 转换为VO并填充设置信息
+        return users.stream()
+                .filter(u -> u != null && u.getId() != null && !u.getId().equals(userId))
+                .map(u -> {
+                    AppImContactRespVO respVO = buildContactRespVO(u);
+                    ImContactSettingDO setting = settingMap.get(u.getId());
+                    if (setting != null) {
+                        respVO.setStar(setting.getStar());
+                        respVO.setNoDisturb(setting.getNoDisturb());
+                    } else {
+                        respVO.setStar(false);
+                        respVO.setNoDisturb(false);
+                    }
                     return respVO;
                 })
                 .collect(Collectors.toList());

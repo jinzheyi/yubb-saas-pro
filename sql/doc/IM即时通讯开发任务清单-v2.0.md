@@ -154,13 +154,17 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 
 #### 0.4.4 已知缺口（代码级 TODO，需补齐到闭环）
 
-- `AppImMessageController#getMessageListByGroup`：存在 `// TODO: 需要先查询会话ID`（当前按 groupId 查消息链路不闭环）
-- `AppImContactController#getContactListByDept`：存在 `// TODO: 实现按部门查询联系人`
+（以当前工程为准）已补齐。
 
 建议落地方式：
 
 - 群消息分页：统一按 conversation/chatId 做查询；若仅有 groupId，需先提供 groupId -> chatId 的映射接口或在服务端内部完成转换
 - 部门联系人：补齐按 deptId 查询接口的真实实现
+
+说明（以当前工程为准，目标对齐企微/钉钉，不兼容旧业务）：
+
+- 群消息分页 **不提供** `list-by-group` 作为长期契约；统一使用 `GET /system/im/message/list-by-chat`。
+- 端侧若仅持有 `groupId`：先 `GET /system/im/conversation/get-by-target?targetId={groupId}&conversationType=2` 得到 `chatId`，再按 `chatId` 拉消息。
 
 #### 0.4.5 已发现的对接不一致（需统一，避免“接口能编译但运行不通”）
 
@@ -168,13 +172,13 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 
 | 模块 | uniappx 调用点 | 现状 URL/Method | 服务端现状 | 风险/建议 |
 | --- | --- | --- | --- | --- |
-| 群组（路径漂移） | `services/group-service.uts` | `DELETE /system/im/group/dismiss`；`GET /system/im/group/members`；`POST /system/im/group/add-members`；`POST /system/im/group/remove-members`；`POST /system/im/group/transfer`；`POST /system/im/group/set-admin`；`POST /system/im/group/mute-member`；`POST /system/im/group/unmute-member`；`POST /system/im/group/mute-all`；`POST /system/im/group/set-nickname`；`POST /system/im/group/publish-announcement`；`GET /system/im/group/announcements` | `AppImGroupController` 真实路由为：`DELETE /dissolve?id=`；`GET /member/list?groupId=`；`POST /member/add`；`DELETE /member/remove?groupId=&memberUserId=`；`PUT /transfer-owner`；`PUT /member/set-role`；`PUT /member/set-muted`；`PUT /notice/update` 等 | service 自维护了一套“历史 URL”，会直接 404。建议：统一以 `api/group.uts` 为权威；`services/group-service.uts` 禁止手写 URL（仅做缓存/聚合逻辑），全部复用 api 层 |
-| 已读回执/标记已读（Method + 入参形态漂移） | `api/message.uts#markMessageRead` vs `services/read-receipt-service.uts#markMessagesAsRead` | api：`PUT /system/im/message/mark-read`（params: messageIds[]）；service：`POST /system/im/message/mark-read`（body: chatId + messageIds） | `AppImMessageController#markMessageRead`：`PUT /mark-read`，`@RequestParam List<Long> messageIds` | 目前 service 会 405/400。建议短期：端侧统一走 api（PUT + query）；中期：按 Milestone C3 演进为 `reportReadWatermark`（sequence 水位），届时服务端应提供 `PUT /conversation/read-watermark`（body） |
+| 群组（路径漂移） | `services/group-service.uts` | 统一复用 `api/group.uts` | `AppImGroupController` | 以 `api/group.uts` 为端侧唯一权威契约；`services/group-service.uts` 仅做缓存/聚合，禁止手写 URL |
+| 已读回执/标记已读（已对齐） | `api/message.uts#markMessageRead`；`services/read-receipt-service.uts#markMessagesAsRead` | 统一：`PUT /system/im/message/mark-read`（query: `messageIds=...`） | `AppImMessageController#markMessageRead`：`PUT /mark-read`，`@RequestParam List<Long> messageIds` | 端侧保持“按水位推进已读”为权威（`PUT /system/im/conversation/mark-read-seq`）；`mark-read` 仅用于端到端“已读状态可视化/兜底”。 |
 | 会话删除（参数形态不一致） | `api/conversation.uts#deleteConversation` vs `services/conversation-service.uts#deleteConversation` | api 通过 URL query：`DELETE /conversation/delete?chatId=...`；service 通过 `params`：`DELETE /conversation/delete` | `AppImConversationController#deleteConversation` 需要 query `chatId`（`@RequestParam`） | 两种写法可能都可用，但建议端侧统一使用 api 层实现，service 不再手写 URL/params，避免漂移 |
-| 消息扩展能力（后端缺接口） | `services/message-reaction-service.uts`、`services/message-edit-service.uts`、`services/read-receipt-service.uts` | reaction：`POST /system/im/message/add-reaction`、`POST /system/im/message/remove-reaction`、`GET /system/im/message/reactions`；edit：`POST /system/im/message/edit`、`GET /system/im/message/edit-history`；read-detail：`GET /system/im/message/read-detail`、`GET /system/im/message/unread-detail`、`GET /system/im/message/unread-list` | `AppImMessageController` 当前仅有：`/page`、`/list-by-chat`、`/list-by-group(TODO)`、`/recall`、`/delete`、`/mark-read`、`/unread-count`、`/search` | 端侧调用会直接 404。建议：
+| 消息扩展能力（后端缺接口） | `services/message-reaction-service.uts`、`services/message-edit-service.uts`、`services/read-receipt-service.uts` | reaction：`POST /system/im/message/add-reaction`、`POST /system/im/message/remove-reaction`、`GET /system/im/message/reactions`；edit：`POST /system/im/message/edit`、`GET /system/im/message/edit-history`；read-detail：`GET /system/im/message/read-detail`、`GET /system/im/message/unread-detail`、`GET /system/im/message/unread-list` | `AppImMessageController` 当前主要路由：`/page`、`/list-by-chat`、`/pull`、`/recall`、`/delete`、`/mark-read`、`/unread-count`、`/search` | 端侧调用会直接 404。建议：
   - 若产品需要：补齐 Controller/Service（纳入 Milestone C5/F/C7）
   - 若短期不做：端侧入口需隐藏，并在文档标注“未支持/待实现”避免误用 |
-| 响应结构（隐性逻辑 bug） | `services/*` 多处（`conversation-service.uts`、`group-service.uts`、`read-receipt-service.uts`、`message-reaction-service.uts`、`message-edit-service.uts`、`message-search-service.uts`） | `request()` 成功时被当作 `{code,data}` 使用 | `utils/request.uts` 在 `code===0` 时直接 `return data.data` | service 层大量 `if (response.code === 0)` 永远不成立。建议统一约定：`request()` 返回值=业务 data（推荐），则 service 不应再判断 code；或另提供 `rawRequest()` 返回原始 `{code,data}`（二选一固定） |
+| 响应结构（约定需固定） | `utils/request.uts` | `request()` 成功时直接返回业务 `data` | `utils/request.uts` 在 `code===0` 时 `return data.data` | 统一约定：`request()` 返回值=业务 data（推荐）；`api/*.uts` 与 `services/*.uts` 禁止再判断 `code`。需要原始 envelope 时另提供 `rawRequest()`（必须显式命名，避免误用）。 |
 
 #### 0.4.6 对接一致性检查清单（开工前必过）
 
@@ -190,8 +194,8 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 
 | 能力 | uniappx 调用点 | 端侧现状 URL/Method | module-system 现状 | 建议的权威契约（推荐） |
 | --- | --- | --- | --- | --- |
-| 按 groupId 分页查询群消息 | 不再提供（开发阶段按最优解收敛） | - | - | 统一使用 `chatId`：会话列表返回 chatId；群聊场景通过会话创建/会话列表获取 chatId，然后调用 `list-by-chat`/`pull` |
-| 按 deptId 获取联系人 | `api/contact.uts#getContactListByDept` | `GET /system/im/contact/list-by-dept?deptId=` | `AppImContactController#getContactListByDept` 存在 TODO（当前直接返回全量） | 落地为真实 deptId 过滤（含租户/数据权限约束），并补齐分页/排序策略 |
+| 按 groupId 分页查询群消息 | 不提供（对齐企微/钉钉的单一口径） | - | - | 统一使用 `chatId`：端侧必须先通过会话获取 `chatId`，再调用 `list-by-chat`/`pull` |
+| 按 deptId 获取联系人 | `api/contact.uts#getContactListByDept` | `GET /system/im/contact/list-by-dept?deptId=` | `AppImContactController#getContactListByDept` 已按 deptId 过滤 | 后续可补齐分页/排序策略（如有性能压力再加） |
 | 群组：dismiss/members/add-members 等“历史 URL” | `services/group-service.uts` 多处 | 见 0.4.5（大量 /system/im/group/* 非标准路由） | `AppImGroupController` 未提供这些路由 | 端侧统一改为复用 `api/group.uts`；如确需保兼容，可在后端做临时别名路由，但最终以 `AppImGroupController` 为权威 |
 | 消息表情回应 | `services/message-reaction-service.uts` | `POST /system/im/message/add-reaction`；`POST /remove-reaction`；`GET /reactions` | 后端缺路由 | 若要做：建议新增 `AppImMessageReactionController`（或挂在 message controller 下），并定义：`POST /reaction/add`、`POST /reaction/remove`、`GET /reaction/list?messageId=`（注意幂等与去重） |
 | 消息编辑与编辑历史 | `services/message-edit-service.uts` | `POST /system/im/message/edit`；`GET /system/im/message/edit-history` | 后端缺路由 | 若要做：建议新增 `PUT /system/im/message/edit`（body: messageId, content, clientTime）与 `GET /edit-history?messageId=`；并与 10.2.3 的 `rev/edited` 最终态一致 |
@@ -202,12 +206,23 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 ### A1（P0）：撤销事件模型固化
 
 - **验收**：logout/互踢/强退都能映射到统一撤销事件；IM 定向收到 CLOSE/KICKED，且不影响不同 deviceType。
-- 状态：未开始
+- 状态：已完成（以当前工程为准）
+
+实现对齐点（以代码为准）：
+
+- 同 deviceType 互踢：服务端 `NettySessionManager#addSession` 发现同 `userId + deviceType` 已在线时，向旧连接下发 `CLOSE`，`body.action = KICKED`，并携带 `kickedAt/byDevice`。
+- 会话撤销（token 失效/强退）：服务端 `ImSessionRevokeConsumer` 下发 `CLOSE`，`body.action = REVOKED`（或指定 action），并关闭连接。
+- 端侧处理：`utils/websocket.uts#handleCloseMessage` 对 `KICKED/LOGOUT/REVOKED/REAUTH_REQUIRED` 禁止自动重连并清 token，弹窗引导登录（对齐企微/钉钉）。
 
 ### A2（P0）：在线设备列表与踢人 API（管理态）
 
 - **验收**：返回 deviceName/deviceType/loginTime/lastActive；主动踢人后目标端立即弹窗并退出登录。
-- 状态：未开始
+- 状态：不做（本期范围仅聚焦 IM 移动端，管理态/后台运维能力不排期）
+
+说明（以当前工程为准）：
+
+- 服务端已具备会话查询基础能力（`NettySessionManager#getSessionsByUserId/getSessionsByTenantId/getOnlineDeviceTypes` 等）。
+- 由于本期仅聚焦 IM 移动端：不提供“管理态 REST API（在线设备列表/踢人）”，也不在本期验收范围内。
 
 ### A3（P0）：refresh-token 自动续期 tenant-id 透传修复
 
@@ -217,6 +232,12 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 ---
 
 ## Milestone B（P0）：协议双栈（App Protobuf + H5 JSON）落地
+
+对齐说明（以当前工程代码为准）：
+
+- 当前对外链路为 **WebSocket + JSON Envelope 单栈**：端侧 `uni.connectSocket` 发送 JSON（`{header, body}`），服务端通过 `WebSocketFrameHandler` -> `JsonBusinessMessageHandler` 转为 Protobuf 并进入 processor。
+- `enableProtobuf` 分支为 **内部 TCP 直连 Protobuf**（`ProtobufVarint32FrameDecoder/ProtobufDecoder/ProtobufMessageHandler`），并非 WebSocket 子协议（SubProtocol）协商。
+- 目前未实现：`im.pb.v1/im.json.v1` SubProtocol 列表、首帧探测（MAGIC/VERSION/CODEC/FLAGS）、端侧 Protobuf 编解码与自动降级。
 
 ### B0（P0）：协议与版本基线冻结（SubProtocol + 首帧探测）
 
@@ -320,6 +341,26 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 - **验收**：ACK 超时重发不产生重复消息；服务端幂等返回同一 sequence。
 - 状态：进行中
 
+对齐说明（以当前工程代码为准）：
+
+- 已具备：
+  - 服务端“先存储后投递”的基本链路（processor -> storage -> sender）。
+  - 幂等基础：服务端对同一 `messageId` 重投可做到不重复落库（`DuplicateKeyException` 分支已存在）。
+  - 发送端状态推进：服务端会把消息回推给发送者（用于端侧把 `SENDING -> SENT`，但这不是独立 ACK 协议）。
+- 尚缺：
+  - 独立 ACK 协议类型（ACK_REQ/ACK_RESP/SendAck 等）与超时重发契约。
+  - App Protobuf / H5 JSON 双栈协商（B0~B4 未开始），因此 C1 的“协议级 ACK”暂不具备落地前提。
+
+当前阶段落地口径（移动端优先，隐式 ACK）：
+
+- **ACK 形态**：不引入独立 ACK 消息类型；以“服务端回推同一条业务消息（同 `messageId`，携带 `sequence/chatId`）”作为 ACK。
+- **重投策略（端侧）**：同一 `messageId` 在超时未收到回推时自动重发（限次 + 退避）；收到回推后立刻停止重试并将本地状态置为 `SENT`；超过最大重试次数标记 `FAILED`。
+- **幂等要求（服务端）**：同一 `messageId` 重投时不重复落库，且回推给发送者必须返回同一 `sequence/chatId`（保证端侧不会产生重复消息与乱序）。
+
+当前关键落点（便于回归定位）：
+
+- `shengyu-framework/.../processor/impl/TextMessageProcessor`：保存消息后回推发送者，并转发给接收者（群聊 fanout 在该类里仍有 TODO 注释，但最终 fanout 已在 `SystemMessageStorageServiceImpl` 中按群成员处理）。
+
 补充拆解：
 
 - **目标**：服务端具备“先持久化后投递”的发送闭环，并返回 SendAck（含 `sequence/serverTime`）；客户端重投不产生重复消息。
@@ -343,27 +384,28 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 ### C2（P1）：断线补偿（lastSequence）
 
 - **验收**：断网 30s 恢复后不丢不重、顺序正确；未读与角标一致。
+- 状态：已完成（以当前工程为准）
 
 - **目标**：端侧能基于 `lastPulledSequence` 拉取缺失消息；缺洞超过阈值自动触发补偿。
 - **范围**：
-  - module-system：提供按 `conversationId + afterSequence` 的增量消息拉取接口
+  - module-system：提供按 `chatId + lastSequence`（拉取 `sequence > lastSequence`）的增量消息拉取接口
   - uniappx：实现 gap 检测、补偿拉取与本地归并
 - **验收标准**：
   - 人为制造 WS 丢包/断链：重连后消息按 `sequence` 补齐
   - 同一会话消息严格按 `sequence` 渲染，不出现倒序
-  - 补偿拉取不引入重复消息（去重键：`conversationId + messageId`）
+  - 补偿拉取不引入重复消息（去重键：`chatId + messageId`）
 - **涉及文件/目录**：
-  - `shengyu-module-system/.../AppImMessageController.java`（新增 sync 接口）
-  - `shengyu-ui/.../services/message-service.uts`（gap 检测与补偿）
+  - `shengyu-module-system/.../AppImMessageController.java`（`GET /system/im/message/pull` 增量拉取）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`（`lastPulledSequence` 持久化、WS gap 检测、重连后先 sync 再 pull）
 
 ### C2.1（P0）：群消息分页查询闭环（groupId -> chatId）
 
-- **背景**：`AppImMessageController#getMessageListByGroup` 当前存在 `// TODO: 需要先查询会话ID`，导致“按 groupId 拉群消息”链路不闭环。
+- **背景**：目标对齐企微/钉钉，群消息分页查询只保留一套标准（按 `chatId`），端侧若只有 `groupId` 需先映射出 `chatId`。
 
 - **目标**：端侧仅持有 `groupId` 时，也能稳定分页拉取群聊消息，并与会话/sequence 体系一致（不引入第二套消息查询口径）。
 
 - **范围**：
-  - module-system：实现 groupId -> chatId 映射获取，并复用统一的 message page 查询
+  - module-system：提供 groupId -> chatId 查询能力（复用会话接口），并复用统一的 message page 查询
   - uniappx：统一通过 `chatId` 做消息分页；若页面入口只有 `groupId`，先获取 chatId 再拉取
 
 - **推荐落地方式（优先）**：
@@ -412,6 +454,21 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 - **验收标准**：
   - 任意顺序上报（旧值/重复值）不会导致 `lastReadSequence` 回退
   - 会话未读数计算口径固定：`unread = lastMessageSequence - lastReadSequence`（需处理异常/负值保护）
+
+#### C3.x（P0）：会话列表角标即时一致性（对齐企微/钉钉）
+
+- **问题现象**：A、B 都在聊天页；B 给 A 连续发 N 条；A 从聊天页返回会话列表时未读角标仍为 N，刷新也不消失；重新进入会话后才消失。
+- **原因**：进入会话时已推进一次 read 水位，但“会话页停留期间新增消息”未在离开页面时再 flush 到服务端；导致服务端 badge 仍认为未读。
+- **目标**：返回会话列表页即可清零未读；刷新/重启后一致。
+- **落点（端侧）**：
+  - `pages/message/chat.uvue`：
+    - 进入会话：按最大 `sequence` 调用 `badgeService.clearConversationBadge(chatId, maxSeq)`（推进服务端 read 水位 + 本地清零）
+    - 离开会话（`onHide/onUnload/onUnmounted`）：再次 flush 最大 `sequence`，保证返回列表立即一致
+  - `services/message-service.uts`：
+    - 若收到消息且 `activeChatId === chatId`：视为已读，不增加角标；推进本地读水位并清本地角标
+- **验收标准**：
+  - A 在会话页停留收到消息后，直接返回会话列表：该会话未读为 0
+  - 在会话列表页刷新/重新打开 App：该会话未读仍为 0
 
 #### C3.2（P0）：增量会话同步接口（syncConversations）
 
