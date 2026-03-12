@@ -271,6 +271,25 @@ export class BadgeService {
     if (currentCount > 0) {
       this.clearConversationBadgeLocal(chatId)
     }
+    // 先本地推进会话已读水位，保证返回会话列表时角标/未读数立即刷新
+    try {
+      const seq = readSequence != null && readSequence !== '' ? readSequence : '0'
+      import('../services/conversation-service.uts').then((convServiceModule) => {
+        try {
+          const cs = (convServiceModule as any).conversationService
+          if (cs == null) {
+            return
+          }
+          cs.applyReadWatermark(chatId, seq)
+        } catch (e) {
+          // ignore
+        }
+      }).catch((_e: any) => {
+        // ignore
+      })
+    } catch (e) {
+      // ignore
+    }
     // 本地角标可能未加载/过期（例如：首次进入会话、跨端角标不同步、或刚重连）
     // 为保证刷新后 badge/get 与本地一致，这里始终推进服务端已读水位（幂等）。
     this.clearUnreadOnServer(chatId, readSequence)

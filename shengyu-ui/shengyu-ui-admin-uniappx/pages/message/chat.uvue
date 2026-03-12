@@ -866,8 +866,14 @@
 				return
 			}
 			const maxSeq = await computeMaxSeqForRead()
+			let localUnread = 0
+			try {
+				localUnread = badgeService.getConversationBadge(chatId.value)
+			} catch (e) {
+				localUnread = 0
+			}
 			const now = Date.now()
-			if (maxSeq != null && maxSeq !== '' && maxSeq === lastFlushedSeq && (now - lastFlushedAt) < 1000) {
+			if (localUnread <= 0 && maxSeq != null && maxSeq !== '' && maxSeq === lastFlushedSeq && (now - lastFlushedAt) < 1000) {
 				return
 			}
 			flushInFlight = true
