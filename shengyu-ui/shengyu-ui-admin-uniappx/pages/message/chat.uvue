@@ -34,7 +34,7 @@
 			</view>
 
 			<view class="message-list">
-				<view v-for="(msg, index) in messages" :key="index" :id="'msg-' + index" class="message-group">
+				<view v-for="(msg, index) in messages" :key="index" :id="'msg-' + index" class="message-group read-observe-item" :data-seq="msg.sequence || ''" :data-self="msg.isSelf ? '1' : '0'">
 					<view v-if="formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0)" class="time-stamp">
 						<text class="time-text">{{ formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0) }}</text>
 					</view>
@@ -348,6 +348,7 @@
 </template>
 
 <script setup lang="uts">
+	import { getCurrentInstance } from 'vue'
 	import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { emojiList } from '../../utils/emojiData.uts'
@@ -776,11 +777,13 @@
 			messageService.clearUnreadCount(chatId.value)
 		}
 		
+		initVisibleReadObserver()
 		scrollToBottom()
 	})
 	
 	onUnmounted(async () => {
 		await flushReadOnLeave()
+		destroyVisibleReadObserver()
 		// 移除消息监听器
 		messageService.removeMessageListener(handleNewMessage)
 		try {
@@ -797,6 +800,150 @@
 	const isAtBottom = ref(true)
 	let lastScrollTop = 0
 	let lastScrollAt = 0
+	let visibleObserver: UniIntersectionObserver | null = null
+	let visibleReadMaxSeq: string = '0'
+	let serverReadDebounceTimer: any = null
+	let serverReadPendingSeq: string = '0'
+	let serverReadLastSentSeq: string = '0'
+	const SERVER_READ_DEBOUNCE_MS = 800
+
+	function compareSeqLocal(a: string, b: string): number {
+		const as = a != null && a !== '' ? a : '0'
+		const bs = b != null && b !== '' ? b : '0'
+		try {
+			const ai = BigInt(as)
+			const bi = BigInt(bs)
+			if (ai === bi) return 0
+			return ai > bi ? 1 : -1
+		} catch (e) {
+			if (as === bs) return 0
+			return as > bs ? 1 : -1
+		}
+	}
+
+	function scheduleServerReadAdvance(seq: string): void {
+		try {
+			const s = seq != null && seq !== '' ? seq.toString() : '0'
+			if (compareSeqLocal(s, serverReadPendingSeq) > 0) {
+				serverReadPendingSeq = s
+			}
+			if (serverReadDebounceTimer != null) {
+				clearTimeout(serverReadDebounceTimer)
+				serverReadDebounceTimer = null
+			}
+			serverReadDebounceTimer = setTimeout(() => {
+				try {
+					if (!chatId.value || chatId.value === '' || chatId.value === '0') {
+						return
+					}
+					const pending = serverReadPendingSeq
+					if (compareSeqLocal(pending, serverReadLastSentSeq) <= 0) {
+						return
+					}
+					serverReadLastSentSeq = pending
+					badgeService.clearConversationBadge(chatId.value, pending)
+				} catch (e) {
+					// ignore
+				}
+			}, SERVER_READ_DEBOUNCE_MS)
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	function applyVisibleReadAdvance(seq: string): void {
+		try {
+			if (!chatId.value || chatId.value === '' || chatId.value === '0') {
+				return
+			}
+			const s = seq != null && seq !== '' ? seq.toString() : '0'
+			if (s === '0') {
+				return
+			}
+			if (compareSeqLocal(s, visibleReadMaxSeq) <= 0) {
+				return
+			}
+			visibleReadMaxSeq = s
+			try {
+				import('../../services/conversation-service.uts').then((convServiceModule) => {
+					try {
+						const cs = (convServiceModule as any).conversationService
+						if (cs == null) {
+							return
+						}
+						cs.applyReadWatermark(chatId.value, s)
+					} catch (e) {
+						// ignore
+					}
+				}).catch((_e: any) => {
+					// ignore
+				})
+			} catch (e) {
+				// ignore
+			}
+			try {
+				badgeService.clearConversationBadgeLocal(chatId.value)
+			} catch (e) {
+				// ignore
+			}
+			scheduleServerReadAdvance(s)
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	function initVisibleReadObserver(): void {
+		try {
+			if (visibleObserver != null) {
+				return
+			}
+			const inst = getCurrentInstance()
+			const ctx = inst != null ? (inst as any).proxy : null
+			if (ctx == null) {
+				return
+			}
+			visibleObserver = uni.createIntersectionObserver(ctx)
+			visibleObserver!.relativeTo('.chat-content', { top: '0px', bottom: '0px' })
+				.observe('.read-observe-item', (res) => {
+					try {
+						if (res == null || (res as any).intersectionRatio == null) {
+							return
+						}
+						const ratio = Number((res as any).intersectionRatio)
+						if (ratio < 0.5) {
+							return
+						}
+						const now = Date.now()
+						if (now - lastScrollAt < 120) {
+							return
+						}
+						const dataset = (res as any).dataset as UTSJSONObject
+						const selfFlag = dataset != null ? (dataset['self'] as any) : null
+						if (selfFlag != null && selfFlag.toString() === '1') {
+							return
+						}
+						const seq = dataset != null ? (dataset['seq'] as any) : null
+						const s = seq != null ? seq.toString() : '0'
+						applyVisibleReadAdvance(s)
+					} catch (e) {
+						// ignore
+					}
+				})
+		} catch (e) {
+			visibleObserver = null
+		}
+	}
+
+	function destroyVisibleReadObserver(): void {
+		try {
+			if (visibleObserver != null) {
+				visibleObserver!.disconnect()
+				visibleObserver = null
+			}
+		} catch (e) {
+			visibleObserver = null
+		}
+	}
 
 	async function computeMaxSeqForRead(): Promise<string> {
 		let maxSeq = '0'
@@ -1345,7 +1492,7 @@
 	} catch (e) {
 		isSelfVal = senderIdStr === currentUserId.value
 	}
-		// 后端 status: 0-发送中 1-已发送 2-已读 3-失败
+		// 后端 status: 0-发送中 1-已发送 2-已读 3-失败 6-已撤回
 		// 这里保留数值状态，避免把 status=2 误映射为 'sending' 导致气泡旁已读/未读入口不展示
 		let statusVal: any = (msg as any).status
 		try {
@@ -1354,6 +1501,12 @@
 			}
 		} catch (e) {
 			statusVal = 0
+		}
+		let isRecalled = false
+		try {
+			isRecalled = statusVal === 6 || statusVal === '6'
+		} catch (e) {
+			isRecalled = false
 		}
 	
 		const uiMessage = {
@@ -1364,8 +1517,8 @@
 			sequence: sequenceStr,
 			senderId: senderIdStr,
 			receiverId: receiverIdStr,
-			type: getMessageTypeString(msg.messageType),
-			content: getMessageContent(msg.messageType, content),
+			type: isRecalled ? 'text' : getMessageTypeString(msg.messageType),
+			content: isRecalled ? (isSelfVal ? '你撤回了一条消息' : `${senderNickname} 撤回了一条消息`) : getMessageContent(msg.messageType, content),
 			isSelf: isSelfVal,
 			time: msg.sendTime || msg.createTime || '',
 			timestamp: new Date(msg.sendTime || msg.createTime || Date.now()).getTime(),
@@ -1725,9 +1878,41 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}
 			return b
 		}
+		const isRecalledFinal = (m: any): boolean => {
+			try {
+				const s = m != null ? (m as any).status : null
+				return s === 6 || s === '6'
+			} catch (e) {
+				return false
+			}
+		}
 		const mergeOne = (prev: any, next: any): any => {
 			if (!prev) return next
 			if (!next) return prev
+			const prevRecalled = isRecalledFinal(prev)
+			const nextRecalled = isRecalledFinal(next)
+			// 最终态优先：撤回提示一旦成立，不允许被旧原文覆盖
+			if (prevRecalled || nextRecalled) {
+				const finalMsg: any = nextRecalled ? { ...prev, ...next } : { ...next, ...prev }
+				finalMsg.sequence = pickNonEmpty(prev.sequence, next.sequence)
+				finalMsg.groupId = pickNonEmpty(prev.groupId, next.groupId)
+				finalMsg.chatId = pickNonEmpty(prev.chatId, next.chatId)
+				finalMsg.status = 6
+				// type/content 保持撤回提示（以 recalled 那一方为准）
+				if (nextRecalled) {
+					finalMsg.type = pickNonEmpty(prev.type, next.type)
+					finalMsg.content = pickNonEmpty(prev.content, next.content)
+				} else {
+					finalMsg.type = pickNonEmpty(next.type, prev.type)
+					finalMsg.content = pickNonEmpty(next.content, prev.content)
+				}
+				finalMsg.timestamp = pickNonEmpty(prev.timestamp, next.timestamp)
+				finalMsg.time = pickNonEmpty(prev.time, next.time)
+				finalMsg.senderId = pickNonEmpty(prev.senderId, next.senderId)
+				finalMsg.receiverId = pickNonEmpty(prev.receiverId, next.receiverId)
+				finalMsg.isSelf = (next.isSelf !== null && next.isSelf !== undefined) ? next.isSelf : prev.isSelf
+				return finalMsg
+			}
 			const merged: any = { ...prev, ...next }
 			// 补齐关键字段：HTTP 刷新回来的消息应当补齐缓存缺失的水位字段
 			merged.sequence = pickNonEmpty(prev.sequence, next.sequence)
@@ -3549,6 +3734,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	onShow(() => {
 		wsManager.setRealtimeBizActive(true)
+		initVisibleReadObserver()
 		try {
 			if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
 				messageService.setActiveChatId(chatId.value)
@@ -3562,6 +3748,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	onHide(() => {
 		wsManager.setRealtimeBizActive(false)
 		void flushReadOnLeave()
+		destroyVisibleReadObserver()
 		try {
 			messageService.setActiveChatAutoReadEnabled(false)
 			messageService.setActiveChatId(null)
@@ -3573,6 +3760,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	onUnload(() => {
 		wsManager.setRealtimeBizActive(false)
 		void flushReadOnLeave()
+		destroyVisibleReadObserver()
 		try {
 			messageService.setActiveChatAutoReadEnabled(false)
 			messageService.setActiveChatId(null)

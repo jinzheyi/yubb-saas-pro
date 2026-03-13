@@ -217,6 +217,40 @@ export function getUserAvatarColor(userId: number | string): string {
 let sequence = 0
 let lastTimestamp = 0
 
+let cachedWorkerId: number | null = null
+
+function getWorkerId10Bits(): number {
+	if (cachedWorkerId != null) {
+		return cachedWorkerId as number
+	}
+	let wid: number = -1
+	try {
+		const stored = uni.getStorageSync('IM_WORKER_ID')
+		if (stored != null && stored !== '') {
+			const n = Number(stored)
+			if (!isNaN(n)) {
+				wid = n
+			}
+		}
+	} catch (e) {
+		// ignore
+	}
+	if (wid < 0 || wid > 1023) {
+		try {
+			wid = Math.floor(Math.random() * 1024)
+		} catch (e) {
+			wid = 0
+		}
+		try {
+			uni.setStorageSync('IM_WORKER_ID', wid.toString())
+		} catch (e) {
+			// ignore
+		}
+	}
+	cachedWorkerId = wid
+	return wid
+}
+
 export function generateMessageId(): string {
   let timestamp = Date.now()
   
@@ -234,10 +268,20 @@ export function generateMessageId(): string {
   }
   
   lastTimestamp = timestamp
-  
-  // 组合：时间戳（42位） + 序列号（12位）
-  // 注意：JavaScript 的 number 类型是 64 位浮点数，可以安全表示 53 位整数
-  return (timestamp * 4096 + sequence).toString()
+
+	try {
+		const epoch = BigInt(1700000000000)
+		let ts = BigInt(timestamp)
+		if (ts < epoch) {
+			ts = epoch
+		}
+		const workerId = BigInt(getWorkerId10Bits() & 0x3ff)
+		const seq = BigInt(sequence & 0xfff)
+		const id = ((ts - epoch) << BigInt(22)) | (workerId << BigInt(12)) | seq
+		return id.toString()
+	} catch (e) {
+		return (timestamp.toString() + (sequence.toString().padStart(3, '0')))
+	}
 }
 
 /**

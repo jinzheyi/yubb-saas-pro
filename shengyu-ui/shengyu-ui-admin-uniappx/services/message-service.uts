@@ -25,7 +25,8 @@ export enum MessageStatus {
   SENDING = 0,    // 发送中
   SENT = 1,       // 已发送
   READ = 2,       // 已读
-  FAILED = 3      // 发送失败
+  FAILED = 5,     // 发送失败
+  RECALLED = 6    // 已撤回（最终态，禁止被旧内容覆盖）
 }
 
 /**
@@ -156,6 +157,65 @@ export class MessageService {
     wsGapTriggeredPullCount: 0,
     dedupMergeHitCount: 0
   }
+
+	private normalizeOutboundMessageId(message: ImMessage): string {
+		try {
+			const raw = message != null && message.header != null && message.header.messageId != null
+				? message.header.messageId.toString()
+				: ''
+			let ok = false
+			if (raw !== '' && raw !== '0') {
+				const re = /^\d+$/
+				if (re.test(raw)) {
+					try {
+						const v = BigInt(raw)
+						const max = BigInt('9223372036854775807')
+						ok = v > BigInt(0) && v <= max
+					} catch (e) {
+						ok = false
+					}
+				}
+			}
+			if (ok) {
+				return raw
+			}
+			const regenerated = MessageBuilder.generateMessageId()
+			try {
+				if (message != null && message.header != null) {
+					message.header.messageId = regenerated
+				}
+			} catch (e) {
+				// ignore
+			}
+			return regenerated
+		} catch (e) {
+			const regenerated = MessageBuilder.generateMessageId()
+			try {
+				if (message != null && message.header != null) {
+					message.header.messageId = regenerated
+				}
+			} catch (e2) {
+				// ignore
+			}
+			return regenerated
+		}
+	}
+
+	private normalizeInboundMessageId(rawId: any): string {
+		try {
+			const raw = rawId != null ? rawId.toString() : ''
+			if (raw === '' || raw === '0') {
+				return ''
+			}
+			const re = /^\d+$/
+			if (!re.test(raw)) {
+				return ''
+			}
+			return raw
+		} catch (e) {
+			return ''
+		}
+	}
   
   // 消息队列（用于离线消息重发）
   private messageQueue: QueuedMessage[] = []
@@ -402,16 +462,24 @@ export class MessageService {
             : (isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr))
 
           const seqStr = m.sequence != null ? m.sequence.toString() : undefined
+          const serverStatusRaw: any = (m as any).status
+          const serverStatus = serverStatusRaw != null ? Number(serverStatusRaw) : null
+
+          const messageIdStr = m.id != null ? m.id.toString() : '0'
+          const isRecalled = serverStatus === 6
+
           const messageItem: MessageItem = {
             id: '0',
-            messageId: m.id != null ? m.id.toString() : '0',
+            messageId: messageIdStr,
             sequence: seqStr,
             senderId: senderIdStr,
             receiverId: m.receiverId != null ? m.receiverId.toString() : '0',
             groupId: m.groupId != null ? m.groupId.toString() : '0',
-            type: m.messageType,
-            content: { content: m.content, extra: m.extra },
-            status: MessageStatus.SENT,
+            type: isRecalled ? MessageType.TEXT : m.messageType,
+            content: isRecalled
+              ? { content: (isSelf ? '你撤回了一条消息' : `${senderName} 撤回了一条消息`) }
+              : { content: m.content, extra: m.extra },
+            status: isRecalled ? MessageStatus.RECALLED : MessageStatus.SENT,
             timestamp: m.sendTime != null ? new Date(m.sendTime as string).getTime() : Date.now(),
             isSelf: isSelf,
             showTime: true,
@@ -895,6 +963,8 @@ export class MessageService {
     const userInfo = getUserInfo()
     const currentUser = userInfo?.user
 
+		const normalizedMessageId = this.normalizeOutboundMessageId(message)
+
     console.log('[MessageService] sendMessage()', {
       currentUserId: this.currentUserId,
       currentTenantId: this.currentTenantId,
@@ -917,7 +987,7 @@ export class MessageService {
     // 创建消息项
     const messageItem: MessageItem = {
       id: '0',  // 临时ID，服务端返回后更新
-      messageId: message.header.messageId,
+      messageId: normalizedMessageId,
       sequence: message.header.sequence != null ? message.header.sequence.toString() : undefined,
       senderId: message.header.senderId,
       receiverId: message.header.receiverId,
@@ -1110,7 +1180,10 @@ export class MessageService {
 
     // 自己发送的消息：服务端回推用于确认投递（SENDING -> SENT），避免重复插入
     if (isSelf) {
-      const msgId = message.header.messageId
+	  	const msgId = this.normalizeInboundMessageId((message as any).header != null ? (message as any).header.messageId : null)
+			if (msgId === '') {
+				return
+			}
       const seq = message.header.sequence
       let updated = false
       let resolvedChatId = this.resolveChatIdFromHeader(message.header)
@@ -1194,7 +1267,7 @@ export class MessageService {
     // 创建消息项
     const messageItem: MessageItem = {
       id: '0',
-      messageId: message.header.messageId,
+	  	messageId: this.normalizeInboundMessageId((message as any).header != null ? (message as any).header.messageId : null) || (message.header.messageId != null ? message.header.messageId.toString() : ''),
       sequence: message.header.sequence != null ? message.header.sequence.toString() : undefined,
       senderId: senderIdStr,
       receiverId: message.header.receiverId,
@@ -1366,7 +1439,7 @@ export class MessageService {
   private handleRecall(data: any): void {
     const message = data as ImMessage
     const body = message.body as any
-    const messageId = body.messageId as string
+    const messageId = body != null && body.messageId != null ? body.messageId.toString() : ''
     const recallerId = message.header.senderId
     
     console.log('[MessageService] 收到消息撤回:', messageId, '撤回者:', recallerId)
@@ -1386,7 +1459,7 @@ export class MessageService {
           groupId: originalMessage.groupId,
           type: MessageType.TEXT,  // 使用文本类型显示撤回提示
           content: recallerId === this.currentUserId ? '你撤回了一条消息' : `${originalMessage.senderName} 撤回了一条消息`,
-          status: MessageStatus.SENT,
+          status: MessageStatus.RECALLED,
           timestamp: Date.now(),
           isSelf: recallerId === this.currentUserId,
           showTime: false,
@@ -1471,6 +1544,29 @@ export class MessageService {
       const existing = messages.find(m => m != null && m.messageId === incomingId)
       if (existing != null) {
         this.debugStats.dedupMergeHitCount += 1
+        const existingStatus: any = (existing as any).status
+        const incomingStatus: any = (message as any).status
+        const existingIsRecalled = existingStatus === MessageStatus.RECALLED || existingStatus === 6 || existingStatus === '6'
+        const incomingIsRecalled = incomingStatus === MessageStatus.RECALLED || incomingStatus === 6 || incomingStatus === '6'
+
+        // 最终态保护：撤回优先，禁止被 pull/缓存里的“未撤回原文”覆盖
+        if (existingIsRecalled && !incomingIsRecalled) {
+          if ((existing.sequence == null || existing.sequence === '') && message.sequence != null && message.sequence !== '') {
+            existing.sequence = message.sequence
+          }
+          if ((existing.timestamp == null || existing.timestamp <= 0) && message.timestamp != null) {
+            existing.timestamp = message.timestamp
+          }
+          return
+        }
+
+        // 当新数据为撤回最终态：允许覆盖内容与状态
+        if (incomingIsRecalled && !existingIsRecalled) {
+          ;(existing as any).status = MessageStatus.RECALLED
+          ;(existing as any).type = MessageType.TEXT
+          ;(existing as any).content = message.content
+        }
+
         // 仅做“信息补齐”，避免覆盖已确认的状态
         if ((existing.sequence == null || existing.sequence === '') && message.sequence != null && message.sequence !== '') {
           existing.sequence = message.sequence

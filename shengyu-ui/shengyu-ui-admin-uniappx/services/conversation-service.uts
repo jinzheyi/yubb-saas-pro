@@ -74,6 +74,32 @@ export class ConversationService {
 
   private lastGapSyncAt: number = 0
 
+  private isSeqGreater(a: string, b: string): boolean {
+    const av = a != null && a !== '' ? a.toString() : '0'
+    const bv = b != null && b !== '' ? b.toString() : '0'
+    try {
+      return BigInt(av) > BigInt(bv)
+    } catch (e) {
+      return av > bv
+    }
+  }
+
+  private maxSeq(a: string, b: string): string {
+    return this.isSeqGreater(a, b) ? (a != null && a !== '' ? a.toString() : '0') : (b != null && b !== '' ? b.toString() : '0')
+  }
+
+  private computeUnreadCount(lastMessageSequence: string, lastReadSequence: string): number {
+    const lastMsgSeq = lastMessageSequence != null && lastMessageSequence !== '' ? lastMessageSequence.toString() : '0'
+    const lastReadSeq = lastReadSequence != null && lastReadSequence !== '' ? lastReadSequence.toString() : '0'
+    try {
+      const diff = BigInt(lastMsgSeq) - BigInt(lastReadSeq)
+      return diff > BigInt(0) ? Number(diff) : 0
+    } catch (e) {
+      const diff = parseInt(lastMsgSeq) - parseInt(lastReadSeq)
+      return diff > 0 ? diff : 0
+    }
+  }
+
   private buildCursorStorageKey(): string {
     const tenantId = getTenantIdStr()
     const userId = getUserIdStr()
@@ -183,9 +209,9 @@ export class ConversationService {
       existing.groupMemberCount = conv.groupMemberCount
       existing.isPinned = conv.isPinned
       existing.noDisturb = conv.noDisturb
-      existing.lastReadSequence = conv.lastReadSequence
-      existing.lastMessageSequence = conv.lastMessageSequence
-      existing.unreadCount = conv.unreadCount
+      existing.lastReadSequence = this.maxSeq(existing.lastReadSequence, conv.lastReadSequence)
+      existing.lastMessageSequence = this.maxSeq(existing.lastMessageSequence, conv.lastMessageSequence)
+      existing.unreadCount = this.computeUnreadCount(existing.lastMessageSequence, existing.lastReadSequence)
       existing.lastMessageType = conv.lastMessageType
       existing.lastMessageContent = conv.lastMessageContent
       existing.lastMessageTime = conv.lastMessageTime
@@ -391,6 +417,21 @@ export class ConversationService {
           if (existing == null) {
             this.conversations.unshift(conv)
           } else {
+			// 幂等/乱序保护（旧数据不覆盖新状态）
+			const incomingVer = (it as any).conversationVersion != null ? (it as any).conversationVersion.toString() : ''
+			const currentVer = (existing as any).conversationVersion != null ? (existing as any).conversationVersion.toString() : ''
+			if (incomingVer !== '' && currentVer !== '') {
+				let shouldApply = true
+				try {
+					shouldApply = BigInt(incomingVer) > BigInt(currentVer)
+				} catch (e) {
+					shouldApply = incomingVer > currentVer
+				}
+				if (!shouldApply) {
+					return
+				}
+			}
+			;(existing as any).conversationVersion = incomingVer !== '' ? incomingVer : (existing as any).conversationVersion
             existing.conversationType = conv.conversationType
             existing.targetId = conv.targetId
             existing.targetName = conv.targetName
@@ -401,9 +442,9 @@ export class ConversationService {
             existing.isPinned = conv.isPinned
             existing.noDisturb = conv.noDisturb
             existing.draft = conv.draft
-            existing.lastReadSequence = conv.lastReadSequence
-            existing.lastMessageSequence = conv.lastMessageSequence
-            existing.unreadCount = conv.unreadCount
+			existing.lastReadSequence = this.maxSeq(existing.lastReadSequence, conv.lastReadSequence)
+			existing.lastMessageSequence = this.maxSeq(existing.lastMessageSequence, conv.lastMessageSequence)
+			existing.unreadCount = this.computeUnreadCount(existing.lastMessageSequence, existing.lastReadSequence)
             existing.lastMessageType = conv.lastMessageType
             existing.lastMessageContent = conv.lastMessageContent
             existing.lastMessageTime = conv.lastMessageTime

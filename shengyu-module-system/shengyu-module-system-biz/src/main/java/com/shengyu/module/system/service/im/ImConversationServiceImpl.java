@@ -2,6 +2,9 @@ package com.shengyu.module.system.service.im;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.shengyu.framework.websocket.core.protocol.ConversationBadge;
+import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.protocol.TextMessage;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
@@ -64,6 +67,9 @@ public class ImConversationServiceImpl implements ImConversationService {
 
     @Resource
     private ImCursorVersionService cursorVersionService;
+
+    @Resource
+    private NettyMessageSender messageSender;
 
     @Resource
     private ImUserCursorMapper userCursorMapper;
@@ -369,6 +375,18 @@ public class ImConversationServiceImpl implements ImConversationService {
                     chatUser.getNoDisturb(),
                     chatUser.getDraft()
             );
+
+            // 多端已读一致：推送会话快照给同账号所有在线设备（端侧 upsertFromSnapshot + applyReadWatermark）
+            try {
+                TextMessage body = TextMessage.newBuilder().setContent("").build();
+                messageSender.sendToUser(userId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, userId, 0L, tenantId,
+                        null, null, chatId,
+                        null, null);
+            } catch (Exception e) {
+                log.warn("[ImConversationService] 推送已读水位变更事件失败, userId: {}, chatId: {}, error: {}",
+                        userId, chatId, e.getMessage(), e);
+            }
         } catch (Exception e) {
             log.warn("[ImConversationService] 写入会话-用户态已读水位失败, userId: {}, chatId: {}, error: {}",
                     userId, chatId, e.getMessage(), e);

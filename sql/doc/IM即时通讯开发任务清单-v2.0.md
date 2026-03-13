@@ -354,10 +354,13 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 本期补充关键前置（企业级落地口径，确保 C1 幂等/重投/已读聚合可闭环）：
 
 - **统一 `messageId` 为可落库 int64 主键**（端侧生成，服务端按该值落库到 `im_chat_message.id`）
+  - 状态：已完成（端侧 snowflake-like 生成 + 发送前校验 + 回推归一化匹配）
   - 原因：read-receipt/撤回等接口按 `messageId(Long)` 查库；若端侧使用不可解析的字符串/或与 DB 主键不一致，会出现“消息不存在”。
   - 前端落点：
     - `shengyu-ui/shengyu-ui-admin-uniappx/utils/message-utils.uts#generateMessageId`
     - `shengyu-ui/shengyu-ui-admin-uniappx/utils/message-handler.uts#MessageBuilder.generateMessageId`（统一复用）
+    - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts#normalizeOutboundMessageId`（发送前兜底校验，不合法则重生成并回写 header）
+    - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts#normalizeInboundMessageId`（回推/ACK 归一化，避免 number/string 形态不一致导致匹配失败）
   - 服务端落点：
     - `shengyu-framework/.../JsonBusinessMessageHandler#readLong`（兼容 string/number）
     - `shengyu-module-system/.../SystemMessageStorageServiceImpl#saveMessageWithId`（`messageDO.setId(header.getMessageId())`）
@@ -366,6 +369,10 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 
 - 发送端发消息后（服务端回推确认），调用 `GET /system/im/read-receipt/summary?messageId=` **不再出现** `消息不存在`。
 - 弱网重投复用同一 `messageId`，服务端不会重复插入（DB 主键幂等命中），并返回相同 `sequence`。
+- 回归项（端侧）：
+  - `messageId` 必须为纯数字字符串，且 `0 < messageId <= 9223372036854775807`
+  - 发送前若发现 `messageId` 非法（空/0/非数字/超 Long）：必须重生成，并保证本地渲染/重试/回推匹配使用同一个 `messageId`
+  - 服务端回推时 `messageId` 可能为 number/string：端侧必须归一化为字符串后再匹配本地 `SENDING` 消息，避免“发送成功但一直转圈”
 
 当前阶段落地口径（移动端优先，隐式 ACK）：
 
@@ -620,6 +627,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 ### C5（P1）：群已读聚合
 
 - **验收**：默认只展示已读/未读人数；可选分页查询成员列表。
+- 状态：已完成（群聊气泡旁“已读/未读”在刷新/重进后稳定显示）
 
 - **目标**：群已读避免风暴，提供聚合统计与按需分页详情。
 - **范围**：
@@ -690,6 +698,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 ### C6（P0）：多端已读水位推进与同步事件
 
 - **目标**：同账号多端在线时，已读推进跨端一致（只升不降），并能通过 WS/HTTP 增量同步到所有端。
+- 状态：已完成（`mark-read-seq` 落库后 WS 推送 `SYSTEM_NOTIFY + conversationSnapshot`；端侧合并时对 `lastReadSequence/lastMessageSequence` 做 `max(old,new)`，并按差值重算 `unreadCount`，避免乱序覆盖）
 - **范围**：
   - module-system：落库 `lastReadSequence`；产生“会话水位变更事件”（WS 推送或增量可见）
   - uniappx：接收水位变更事件并更新会话未读与角标
@@ -698,15 +707,40 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
   - A 端上报 `lastReadSequence` 后，B 端会话未读数在 1s 内推进（WS 在线）
   - 重复/乱序上报不回退（服务端 `max(old,new)`）
   - 离线端重新上线后，通过 `syncConversations(cursor)` 可拉到最新水位
+- 回归项（企微/钉钉口径）：
+  - 只升不降（端侧）
+    - 端侧合并会话快照/增量项时：
+      - `lastReadSequence = max(local.lastReadSequence, incoming.lastReadSequence)`
+      - `lastMessageSequence = max(local.lastMessageSequence, incoming.lastMessageSequence)`
+      - `unreadCount` 禁止直接覆盖，必须按 `maxSeq - maxReadSeq` 重算（负值保护为 0）
+  - 只升不降（服务端）
+    - 重复/乱序调用 `PUT /system/im/conversation/mark-read-seq`（旧 readSequence/相同 readSequence）不会导致水位回退
+  - 乱序/旧快照不覆盖新快照
+    - 端侧合并 `conversationSnapshot` / `sync(items)` 时，必须按 `conversationVersion` 丢弃旧版本（旧快照不得把新状态覆盖掉）
+  - 事件顺序无关
+    - `BADGE_UPDATE` 与 `SYSTEM_NOTIFY(conversationSnapshot)` 的到达顺序不固定；任意顺序下最终会话未读口径一致
+  - 离线兜底（断线补偿）
+    - 端侧重连/重新认证成功后，必须触发一次节流的 `syncConversationsIncrementally(false)`；确保断线期间无 WS 也能拉到最新水位
+  - 必测复现路径（可回归）
+    - 用例 1（多端在线推进）：A 端进入会话读到 sequence=S；B 端停留会话列表；1s 内 B 端 `lastReadSequence>=S` 且未读清零
+    - 用例 2（重复/乱序上报）：A 端先上报 S=100，再上报 S=80/100；服务端与 B 端都不得出现未读反弹
+    - 用例 3（旧快照乱序到达）：先收到包含 `lastReadSequence=100` 的快照，再收到 `lastReadSequence=90` 的旧快照；端侧最终必须保持 100
+    - 用例 4（离线端上线兜底）：B 端离线期间 A 端推进已读水位；B 端上线触发 `sync(cursor)` 后能拉到最新 `lastReadSequence/unreadCount`
+- 当前落地方式（最小侵入复用既有通道）：
+  - 服务端在 `PUT /system/im/conversation/mark-read-seq` 成功落库并写入 `im_conversation_user_state` 后，向同一 userId 的所有 WS 连接推送 `MessageType.SYSTEM_NOTIFY`
+  - WS payload 携带 `conversationSnapshot`（由 `NettyMessageSender` 在 JSON 模式下自动构建/透传），端侧收到后调用 `conversationService.upsertFromSnapshot` 推进水位
 - **涉及文件/目录**：
   - `shengyu-module-system/.../AppImConversationController.java`（read watermark 上报 + sync 输出）
-  - `shengyu-framework/.../MessageProcessor`（若采用 WS 推送水位变更事件）
+  - `shengyu-module-system/.../ImConversationServiceImpl.java`（mark-read-seq 后推送 `SYSTEM_NOTIFY`）
+  - `shengyu-framework/.../NettyMessageSender`（JSON payload 自动附带 `conversationSnapshot`）
   - `shengyu-ui/shengyu-ui-admin-uniappx/services/conversation-service.uts`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`（`handleSystemNotify -> upsertFromSnapshot`）
   - `shengyu-ui/shengyu-ui-admin-uniappx/services/badge-service.uts`
 
 ### C7（P0/P1）：消息最终态字段（status/rev/edited）与端侧合并规则
 
 - **目标**：撤回/编辑/删除等事件在“实时 WS + 补偿拉取”两条链路下保持最终一致，避免撤回后被补偿拉回原文。
+- 状态：进行中（已完成撤回最终态一致：status=6 不回滚；编辑/多次变更 rev 待补齐）
 - **范围**：
   - 服务端：消息模型增加最终态字段（至少 `status`、`rev`、`edited`）并在查询/sync 返回
   - 客户端：同一 `messageId` 合并以 `rev` 更大者覆盖（或 serverTime 更新者覆盖）
@@ -715,6 +749,15 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
   - 先收到撤回事件、后收到原消息：最终渲染为“已撤回”
   - 断线补偿拉取不会把撤回/编辑前的旧内容覆盖回去
   - 同一消息多次编辑/撤回：端侧最终态与服务端一致（可回归复现）
+- 本期已落地（撤回最终态一致，企微/钉钉口径）：
+  - 服务端落库 `im_chat_message.status=6`（撤回）后，`list-by-chat`/`pull` 返回 `status`
+  - 端侧 WS 收到 `MessageType.RECALL` 后，替换为撤回提示（最终态）
+  - 端侧从 HTTP `pull`/`list-by-chat` 映射消息时，若 `status=6` 直接渲染撤回提示
+  - 端侧合并去重时：若任一侧为撤回最终态（6），禁止被非撤回原文覆盖
+- 回归项（必测复现路径）：
+  - A 端发送消息 -> 撤回
+  - B 端离线/断网 -> 重新上线触发 pull/list-by-chat
+  - 期望：B 端最终展示为“已撤回”，不会被补偿拉回原文
 - **涉及文件/目录**：
   - `shengyu-module-system/.../AppImMessageController.java`（查询/sync 输出最终态字段）
   - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`（合并逻辑）
