@@ -111,6 +111,19 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
         return update(null, wrapper);
     }
 
+    /**
+     * 仅更新会话预览（lastMessageType/lastMessageContent），用于撤回等“最终态变更”。
+     *
+     * 约束：只在 lastMessageId 仍然等于目标 messageId 时才更新，避免 lastMessage 已推进后被回写覆盖。
+     */
+    default int updateLastMessagePreviewIfMatch(Long id, Long messageId, Integer lastMessageType, String lastMessageContent) {
+        return update(null, new LambdaUpdateWrapper<ImChatUserDO>()
+                .eq(ImChatUserDO::getId, id)
+                .eq(ImChatUserDO::getLastMessageId, messageId)
+                .set(ImChatUserDO::getLastMessageType, lastMessageType)
+                .set(ImChatUserDO::getLastMessageContent, lastMessageContent));
+    }
+
     @Update("UPDATE im_chat_user SET last_read_sequence = GREATEST(IFNULL(last_read_sequence, 0), #{readSequence}), unread_count = 0 " +
             "WHERE user_id = #{userId} AND chat_id = #{chatId} AND deleted_by_user = 0 AND deleted = 0")
     int markReadToSequence(@Param("userId") Long userId, @Param("chatId") Long chatId, @Param("readSequence") Long readSequence);

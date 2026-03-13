@@ -38,6 +38,8 @@ public class ImChatMessageDO extends TenantBaseDO {
 
     private LocalDateTime sendTime;
 
+    private Long rev;
+
     private Integer status;
 
     private LocalDateTime recallTime;

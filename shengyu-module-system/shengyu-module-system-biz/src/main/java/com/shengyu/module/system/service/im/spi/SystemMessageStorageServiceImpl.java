@@ -174,6 +174,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             messageDO.setContent(content);
             messageDO.setExtra(extra);
             messageDO.setSendTime(sendTime);
+            messageDO.setRev(1L);
             messageDO.setStatus(ImMessageStatusEnum.SENT.getStatus());
             try {
                 chatMessageMapper.insert(messageDO);
@@ -346,6 +347,22 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             // 解析原始消息体，便于群聊实时转发（避免仅角标更新 204）
             MessageLite bizBody = parseBizBody(rawMessage);
 
+            // enterprise: extra must carry rev for final-state merge; merge with file metadata when needed
+            String extraWithRev = null;
+            try {
+                JSONObject obj = StrUtil.isNotBlank(messageDO.getExtra()) ? JSONUtil.parseObj(messageDO.getExtra()) : JSONUtil.createObj();
+                obj.set("rev", 1);
+                extraWithRev = obj.toString();
+            } catch (Exception e) {
+                try {
+                    JSONObject obj = JSONUtil.createObj();
+                    obj.set("rev", 1);
+                    extraWithRev = obj.toString();
+                } catch (Exception ignore) {
+                    extraWithRev = null;
+                }
+            }
+
             if (header.getGroupId() > 0) {
                 List<Long> memberIds = imGroupService.getGroupMemberIds(header.getGroupId());
                 for (Long memberId : memberIds) {
@@ -396,7 +413,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                     if (!isSender) {
                         imBadgeService.pushBadgeUpdate(memberId);
                         if (bizBody != null) {
-                            nettyMessageSender.sendToUser(
+                            nettyMessageSender.sendToUserWithExtra(
                                     memberId,
                                     header.getMessageType(),
                                     bizBody,
@@ -408,7 +425,8 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                                     messageDO.getSequence(),
                                     chatId,
                                     cursorVersion,
-                                    null
+                                    null,
+                                    extraWithRev
                             );
                         }
                     }
@@ -479,6 +497,29 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         messageDO.getSendTime()
                 );
                 imBadgeService.pushBadgeUpdate(header.getReceiverId());
+
+                // 单聊接收方实时转发业务消息（携带 rev），保证后续最终态合并一致
+                try {
+                    if (bizBody != null) {
+                        nettyMessageSender.sendToUserWithExtra(
+                                header.getReceiverId(),
+                                header.getMessageType(),
+                                bizBody,
+                                header.getSenderId(),
+                                header.getReceiverId(),
+                                0L,
+                                header.getTenantId(),
+                                messageDO.getId(),
+                                messageDO.getSequence(),
+                                chatId,
+                                receiverCursorVersion,
+                                null,
+                                extraWithRev
+                        );
+                    }
+                } catch (Exception ignore) {
+                    // ignore
+                }
             }
         } catch (Exception e) {
             log.error("[MessageStorage] 更新会话失败", e);

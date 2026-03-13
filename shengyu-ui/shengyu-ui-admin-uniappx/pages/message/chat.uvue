@@ -39,92 +39,98 @@
 						<text class="time-text">{{ formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0) }}</text>
 					</view>
 					
-                    <view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other', multiSelectMode && selectedIds.includes(msg.id) ? 'message-selected' : '', highlightedMessageId === msg.id ? 'message-highlighted' : '']">
+					<view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other', multiSelectMode && selectedIds.includes(msg.id) ? 'message-selected' : '', highlightedMessageId === msg.id ? 'message-highlighted' : '']">
 						<!-- 多选模式下的复选框（统一在最左侧） -->
 						<view v-if="multiSelectMode && msg.type !== 'voice' && msg.type !== 'location'" class="multi-select-checkbox" @click.stop="toggleSelect(msg)">
 							<text v-if="selectedIds.includes(msg.id)" class="iconfont checkbox-icon checkbox-checked">&#xe65f;</text>
 							<view v-else class="checkbox-icon checkbox-unchecked"></view>
 						</view>
 						
-						<view class="avatar" :style="{ backgroundColor: msg.avatarBg }">
-							<text class="avatar-text">{{ msg.avatarText }}</text>
+						<!-- 企业级撤回：对齐企微/钉钉，展示为居中系统提示条（不走左右气泡，不显示头像） -->
+						<view v-if="isRecalledFinalMsg(msg)" class="recall-system-tip">
+							<text class="recall-system-tip-text">{{ msg.content }}</text>
 						</view>
-                        <view class="message-bubble-wrap">
-							<!-- 发送者名称 (仅在群聊中,仅对他人消息) -->
-							<text v-if="chatType === 'group' && !msg.isSelf" class="sender-name">
-								{{ msg.senderName }}
-							</text>
-							
-							<!-- 文字消息 -->
-							<view v-if="msg.type === 'text' || msg.type === 'quote'" class="message-bubble bubble-text" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
-								<!-- 引用内容预览 -->
-								<view v-if="hasQuote(msg)" class="quote-preview" @click.stop="scrollToQuotedMessage(msg.quoteMessageId)">
-									<view v-for="(quote, qIdx) in buildQuoteChain(msg)" :key="quote.messageId + '-' + qIdx" class="quote-chain-item" :class="{ 'quote-chain-sub': qIdx > 0 }">
-										<text class="quote-sender">{{ quote.senderName }}</text>
-										<text class="quote-content" :numberOfLines="1">{{ quote.content }}</text>
+						<template v-else>
+							<view class="avatar" :style="{ backgroundColor: msg.avatarBg }">
+								<text class="avatar-text">{{ msg.avatarText }}</text>
+							</view>
+							<view class="message-bubble-wrap">
+								<!-- 发送者名称 (仅在群聊中,仅对他人消息) -->
+								<text v-if="chatType === 'group' && !msg.isSelf" class="sender-name">
+									{{ msg.senderName }}
+								</text>
+								
+								<!-- 文字消息 -->
+								<view v-if="msg.type === 'text' || msg.type === 'quote'" class="message-bubble bubble-text" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
+									<!-- 引用内容预览 -->
+									<view v-if="hasQuote(msg)" class="quote-preview" @click.stop="scrollToQuotedMessage(msg.quoteMessageId)">
+										<view v-for="(quote, qIdx) in buildQuoteChain(msg)" :key="quote.messageId + '-' + qIdx" class="quote-chain-item" :class="{ 'quote-chain-sub': qIdx > 0 }">
+											<text class="quote-sender">{{ quote.senderName }}</text>
+											<text class="quote-content" :numberOfLines="1">{{ quote.content }}</text>
+										</view>
+									</view>
+									<view class="text-content-wrap">
+										<template v-for="(token, tIdx) in parseMessageText(msg.content)" :key="tIdx">
+											<text v-if="token.type === 'text'" class="message-text">{{ token.content }}</text>
+											<image v-else class="inline-emoji" :src="token.content" mode="aspectFit" />
+										</template>
 									</view>
 								</view>
-								<view class="text-content-wrap">
-									<template v-for="(token, tIdx) in parseMessageText(msg.content)" :key="tIdx">
-										<text v-if="token.type === 'text'" class="message-text">{{ token.content }}</text>
-										<image v-else class="inline-emoji" :src="token.content" mode="aspectFit" />
-									</template>
+								
+								<!-- 图片消息 -->
+								<view v-else-if="msg.type === 'image'" class="message-bubble bubble-image" @click="multiSelectMode ? handleBubbleClick(msg) : handleImagePreview(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
+									<image class="chat-image" :src="msg.content" mode="widthFix" />
+								</view>
+								
+								<!-- 视频消息 -->
+								<view v-else-if="msg.type === 'video'" class="message-bubble bubble-video" @click="multiSelectMode ? handleBubbleClick(msg) : handleVideoPlay(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
+									<image class="chat-video" :src="msg.poster || msg.content" mode="aspectFill" />
+									<view class="video-play-overlay">
+										<text class="iconfont video-play-icon">&#xe602;</text>
+									</view>
+								</view>
+								
+								<!-- 语音消息 -->
+                                <view v-else-if="msg.type === 'voice'" class="message-bubble bubble-voice" :style="{ width: getVoiceBubbleWidth(msg.duration || 0) }" @click="handleVoicePlay(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
+									<text class="iconfont voice-icon">{{ msg.isSelf ? '\ue601' : '\ue601' }}</text>
+									<text class="voice-duration">{{ msg.duration }}"</text>
+									<!-- 语音未读红点 -->
+									<view v-if="!msg.isSelf && !msg.isRead" class="voice-unread-dot"></view>
+								</view>
+								
+								<!-- 文件消息 -->
+                                <view v-else-if="msg.type === 'file'" class="message-bubble bubble-file" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleFileOpen(msg)">
+									<view class="file-info">
+										<text class="file-name">{{ msg.fileName }}</text>
+										<text class="file-size">{{ msg.fileSize }}</text>
+									</view>
+									<text class="iconfont file-icon" :style="{ color: getFileIconColor(msg) }">{{ getFileIconUnicode(msg) }}</text>
+								</view>
+								
+								<!-- 位置消息 -->
+                                <view v-else-if="msg.type === 'location'" class="message-bubble bubble-location" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
+									<view class="location-info">
+										<text class="location-name">{{ msg.locationName }}</text>
+										<text class="location-address">{{ msg.address }}</text>
+									</view>
+									<image class="location-map" src="/static/images/chat/map-placeholder.png" mode="aspectFill" />
+								</view>
+								
+								<!-- 表情包/动图 -->
+                                <view v-else-if="msg.type === 'emoji'" class="bubble-emoji" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
+									<image class="emoji-img" :src="msg.content" mode="aspectFit" />
+								</view>
+								
+								<!-- 自定义收藏表情 (无气泡) -->
+                                <view v-else-if="msg.type === 'sticker'" class="sticker-msg-wrap" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
+									<image class="sticker-img" :src="msg.content" mode="widthFix" />
+								</view>
+								
+								<view v-if="shouldShowReadReceiptEntry(msg)" class="read-receipt-entry" :class="{'read-receipt-entry-self': msg.isSelf}" @click.stop="handleReadReceiptEntryClick(msg)">
+									<text class="read-receipt-entry-text">{{ buildReadReceiptEntryText(msg) }}</text>
 								</view>
 							</view>
-							
-							<!-- 图片消息 -->
-							<view v-else-if="msg.type === 'image'" class="message-bubble bubble-image" @click="multiSelectMode ? handleBubbleClick(msg) : handleImagePreview(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
-								<image class="chat-image" :src="msg.content" mode="widthFix" />
-							</view>
-							
-							<!-- 视频消息 -->
-							<view v-else-if="msg.type === 'video'" class="message-bubble bubble-video" @click="multiSelectMode ? handleBubbleClick(msg) : handleVideoPlay(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
-								<image class="chat-video" :src="msg.poster || msg.content" mode="aspectFill" />
-								<view class="video-play-overlay">
-									<text class="iconfont video-play-icon">&#xe602;</text>
-								</view>
-							</view>
-							
-							<!-- 语音消息 -->
-                            <view v-else-if="msg.type === 'voice'" class="message-bubble bubble-voice" :style="{ width: getVoiceBubbleWidth(msg.duration || 0) }" @click="handleVoicePlay(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
-								<text class="iconfont voice-icon">{{ msg.isSelf ? '\ue601' : '\ue601' }}</text>
-								<text class="voice-duration">{{ msg.duration }}"</text>
-								<!-- 语音未读红点 -->
-								<view v-if="!msg.isSelf && !msg.isRead" class="voice-unread-dot"></view>
-							</view>
-							
-							<!-- 文件消息 -->
-                            <view v-else-if="msg.type === 'file'" class="message-bubble bubble-file" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleFileOpen(msg)">
-								<view class="file-info">
-									<text class="file-name">{{ msg.fileName }}</text>
-									<text class="file-size">{{ msg.fileSize }}</text>
-								</view>
-								<text class="iconfont file-icon" :style="{ color: getFileIconColor(msg) }">{{ getFileIconUnicode(msg) }}</text>
-							</view>
-							
-							<!-- 位置消息 -->
-                            <view v-else-if="msg.type === 'location'" class="message-bubble bubble-location" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
-								<view class="location-info">
-									<text class="location-name">{{ msg.locationName }}</text>
-									<text class="location-address">{{ msg.address }}</text>
-								</view>
-								<image class="location-map" src="/static/images/chat/map-placeholder.png" mode="aspectFill" />
-							</view>
-							
-							<!-- 表情包/动图 -->
-                            <view v-else-if="msg.type === 'emoji'" class="bubble-emoji" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
-								<image class="emoji-img" :src="msg.content" mode="aspectFit" />
-							</view>
-							
-							<!-- 自定义收藏表情 (无气泡) -->
-                            <view v-else-if="msg.type === 'sticker'" class="sticker-msg-wrap" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
-								<image class="sticker-img" :src="msg.content" mode="widthFix" />
-							</view>
-							
-							<view v-if="shouldShowReadReceiptEntry(msg)" class="read-receipt-entry" :class="{'read-receipt-entry-self': msg.isSelf}" @click.stop="handleReadReceiptEntryClick(msg)">
-								<text class="read-receipt-entry-text">{{ buildReadReceiptEntryText(msg) }}</text>
-							</view>
-						</view>
+						</template>
 					</view>
 				</view>
 			</view>
@@ -685,6 +691,7 @@
 	type MessageItem = {
 		id : string;
 		messageId : string;
+		rev ?: string;
 		chatId ?: string;
 		groupId ?: string;
 		sequence ?: string;
@@ -1512,6 +1519,7 @@
 		const uiMessage = {
 			id: idStr,
 			messageId: messageIdStr,
+			rev: (msg as any).rev != null ? String((msg as any).rev) : '1',
 			chatId: chatIdStr,
 			groupId: groupIdStr,
 			sequence: sequenceStr,
@@ -1552,6 +1560,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		const uiMessage = {
 			id: idStr,
 			messageId: messageIdStr,
+			rev: (msg as any).rev != null ? String((msg as any).rev) : '1',
 			chatId: chatIdStr,
 			groupId: groupIdStr,
 			sequence: sequenceStr,
@@ -1806,6 +1815,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		return content.indexOf('撤回') > -1 && content.indexOf('消息') > -1
 	}
 
+	function isRecalledFinalMsg(m: any): boolean {
+		try {
+			const s = m != null ? (m as any).status : null
+			return s === 6 || s === '6'
+		} catch (e) {
+			return false
+		}
+	}
+
 	function getMessagePreview(msg : MessageItem) : string {
 		if (msg.type === 'text' || msg.type === 'quote') {
 			const text = msg.content || ''
@@ -1886,9 +1904,35 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				return false
 			}
 		}
+		const getRev = (m: any): string => {
+			try {
+				const r = m != null ? (m as any).rev : null
+				return r != null && r !== '' ? r.toString() : '0'
+			} catch (e) {
+				return '0'
+			}
+		}
+		const cmpRev = (a: string, b: string): number => {
+			try {
+				const diff = BigInt(a) - BigInt(b)
+				if (diff === BigInt(0)) return 0
+				return diff > BigInt(0) ? 1 : -1
+			} catch (e) {
+				if (a === b) return 0
+				return a > b ? 1 : -1
+			}
+		}
 		const mergeOne = (prev: any, next: any): any => {
 			if (!prev) return next
 			if (!next) return prev
+			// enterprise: prefer higher rev as final state base
+			const prevRev = getRev(prev)
+			const nextRev = getRev(next)
+			if (cmpRev(nextRev, prevRev) > 0) {
+				const tmp = prev
+				prev = next
+				next = tmp
+			}
 			const prevRecalled = isRecalledFinal(prev)
 			const nextRecalled = isRecalledFinal(next)
 			// 最终态优先：撤回提示一旦成立，不允许被旧原文覆盖
@@ -1897,6 +1941,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				finalMsg.sequence = pickNonEmpty(prev.sequence, next.sequence)
 				finalMsg.groupId = pickNonEmpty(prev.groupId, next.groupId)
 				finalMsg.chatId = pickNonEmpty(prev.chatId, next.chatId)
+				finalMsg.rev = pickNonEmpty(prev.rev, next.rev)
 				finalMsg.status = 6
 				// type/content 保持撤回提示（以 recalled 那一方为准）
 				if (nextRecalled) {
@@ -1974,7 +2019,18 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 
 		// 去重：sendMessage() 会先 notifyMessageListeners，本地发送路径也可能手动 push，导致重复展示
-		if (message.messageId && messages.value.some((m) => m.messageId === message.messageId)) {
+		// 但撤回属于“最终态变更”，必须覆盖已有消息（不能被去重丢弃）
+		const existingIndex = message.messageId
+			? messages.value.findIndex((m: any) => m && m.messageId === message.messageId)
+			: -1
+		let incomingIsRecalled = false
+		try {
+			const s: any = (message as any).status
+			incomingIsRecalled = s === 6 || s === '6'
+		} catch (e) {
+			incomingIsRecalled = false
+		}
+		if (existingIndex > -1 && !incomingIsRecalled) {
 			return
 		}
 		
@@ -1982,6 +2038,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		const uiMessage : MessageItem = {
 			id: message.id.toString(),
 			messageId: message.messageId,
+			rev: (message as any).rev != null ? String((message as any).rev) : '1',
 			senderId: message.senderId.toString(),
 			receiverId: message.receiverId.toString(),
 			type: getMessageTypeString(message.type),
@@ -2003,7 +2060,24 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		applyMediaFileId(uiMessage, message.content)
 		maybePatchMediaDisplayUrl(uiMessage as any)
 		
-		messages.value.push(uiMessage)
+		// 最终态覆盖：撤回到达时，替换掉列表中的原消息
+		if (existingIndex > -1 && incomingIsRecalled) {
+			const prev: any = messages.value[existingIndex]
+			const next: any = uiMessage
+			const merged: any = { ...prev, ...next }
+			merged.status = 6
+			// 撤回提示优先：type/content 以撤回提示为准
+			merged.type = next.type
+			merged.content = next.content
+			merged.timestamp = prev.timestamp != null ? prev.timestamp : next.timestamp
+			merged.time = prev.time != null ? prev.time : next.time
+			merged.sequence = prev.sequence != null && prev.sequence !== '' ? prev.sequence : next.sequence
+			merged.groupId = prev.groupId != null && prev.groupId !== '' ? prev.groupId : next.groupId
+			merged.chatId = prev.chatId != null && prev.chatId !== '' ? prev.chatId : next.chatId
+			messages.value[existingIndex] = merged
+		} else {
+			messages.value.push(uiMessage)
+		}
 		
 		// 滚动到底部
 		scrollToBottom()
@@ -3029,13 +3103,22 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             ]
         }
         
-        // 如果是自己发送的消息，或者是管理员，添加撤回选项（在删除之前）
-        const isAdmin = hasRole('admin') || hasRole('tenant_admin') || hasRole('super_admin')
-        if (msg.isSelf || isAdmin) {
-            const deleteIndex = menuItems.findIndex(item => item.key === 'delete')
-            if (deleteIndex > -1) {
-                menuItems.splice(deleteIndex, 0, { key: 'recall', labelKey: 'chat.menu.recall', icon: '\ue6a0' })
+        // 企业级撤回：仅允许撤回自己发送且在时效窗口内的消息（后端也会兜底校验）
+        try {
+            const statusVal: any = (msg as any).status
+            const isRecalled = statusVal === 6 || statusVal === '6' || statusVal === 'recalled'
+            const nowTs = Date.now()
+            const msgTs = (msg as any).timestamp != null ? Number((msg as any).timestamp) : 0
+            const withinWindow = msgTs > 0 ? (nowTs - msgTs <= 2 * 60 * 1000) : false
+            const canRecall = !!msg.isSelf && !isRecalled && withinWindow && !!msg.messageId && msg.messageId !== '0'
+            if (canRecall) {
+                const deleteIndex = menuItems.findIndex(item => item.key === 'delete')
+                if (deleteIndex > -1) {
+                    menuItems.splice(deleteIndex, 0, { key: 'recall', labelKey: 'chat.menu.recall', icon: '\ue6a0' })
+                }
             }
+        } catch (e) {
+            // ignore
         }
         
         if (chatType.value === 'group' && msg.isSelf && msg.messageId && msg.messageId !== '0') {
@@ -3924,6 +4007,25 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		position: relative;
 		width: 100%;
 		transition: background-color 0.2s ease;
+	}
+
+	.recall-system-tip {
+		width: 100%;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		padding: 4px 0;
+	}
+
+	.recall-system-tip-text {
+		font-size: 12px;
+		color: #8F959E;
+		background-color: rgba(31, 35, 41, 0.06);
+		padding: 3px 10px;
+		border-radius: 10px;
+		max-width: 80%;
+		text-align: center;
+		line-height: 18px;
 	}
 
 	.message-self {

@@ -50,10 +50,11 @@ export type MessageItem = {
   id: string
   messageId: string
   sequence?: string
+  rev?: string
   senderId: string
   receiverId: string
-  groupId: string
-  type: MessageType
+  groupId?: string
+  type: number
   content: any
   status: MessageStatus
   timestamp: number
@@ -1178,6 +1179,20 @@ export class MessageService {
     const senderName = isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr)
     const avatarText = senderName ? getAvatarText(senderName) : '?'
 
+    // enterprise: parse rev from header.extra (JSON); default 1
+    let revStr: string = '1'
+    try {
+      const extraRaw: any = (message as any).header != null ? (message as any).header.extra : null
+      if (extraRaw != null && extraRaw !== '') {
+        const extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
+        if (extraObj != null && extraObj.rev != null) {
+          revStr = extraObj.rev.toString()
+        }
+      }
+    } catch (e) {
+      revStr = '1'
+    }
+
     // 自己发送的消息：服务端回推用于确认投递（SENDING -> SENT），避免重复插入
     if (isSelf) {
 	  	const msgId = this.normalizeInboundMessageId((message as any).header != null ? (message as any).header.messageId : null)
@@ -1191,6 +1206,11 @@ export class MessageService {
         messages.forEach(msg => {
           if (msg.messageId === msgId && msg.status === MessageStatus.SENDING) {
             msg.status = MessageStatus.SENT
+            try {
+              ;(msg as any).rev = revStr
+            } catch (e) {
+              // ignore
+            }
             if (seq !== null && seq !== undefined) {
               msg.sequence = seq.toString()
               resolvedChatId = this.resolveChatIdFromHeader(message.header)
@@ -1269,6 +1289,7 @@ export class MessageService {
       id: '0',
 	  	messageId: this.normalizeInboundMessageId((message as any).header != null ? (message as any).header.messageId : null) || (message.header.messageId != null ? message.header.messageId.toString() : ''),
       sequence: message.header.sequence != null ? message.header.sequence.toString() : undefined,
+      rev: revStr,
       senderId: senderIdStr,
       receiverId: message.header.receiverId,
       groupId: message.header.groupId,
@@ -1441,6 +1462,26 @@ export class MessageService {
     const body = message.body as any
     const messageId = body != null && body.messageId != null ? body.messageId.toString() : ''
     const recallerId = message.header.senderId
+
+    // enterprise: final-state metadata from header.extra
+    let incomingRev: string = ''
+    let incomingRecallBy: string = ''
+    let incomingRecallTime: string = ''
+    try {
+      const extraRaw: any = (message as any).header != null ? (message as any).header.extra : null
+      if (extraRaw != null && extraRaw !== '') {
+        const extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
+        if (extraObj != null) {
+          if (extraObj.rev != null) incomingRev = extraObj.rev.toString()
+          if (extraObj.recallBy != null) incomingRecallBy = extraObj.recallBy.toString()
+          if (extraObj.recallTime != null) incomingRecallTime = extraObj.recallTime.toString()
+        }
+      }
+    } catch (e) {
+      incomingRev = ''
+      incomingRecallBy = ''
+      incomingRecallTime = ''
+    }
     
     console.log('[MessageService] 收到消息撤回:', messageId, '撤回者:', recallerId)
     
@@ -1449,6 +1490,13 @@ export class MessageService {
       const index = messages.findIndex(m => m.messageId === messageId)
       if (index !== -1) {
         const originalMessage = messages[index]
+
+        const senderName = (originalMessage as any).senderName != null && (originalMessage as any).senderName !== ''
+          ? (originalMessage as any).senderName
+          : ((originalMessage as any).senderNickname != null && (originalMessage as any).senderNickname !== ''
+            ? (originalMessage as any).senderNickname
+            : '对方')
+        const originalTs = (originalMessage as any).timestamp != null ? Number((originalMessage as any).timestamp) : 0
         
         // 创建撤回提示消息
         const recallTip: MessageItem = {
@@ -1458,14 +1506,16 @@ export class MessageService {
           receiverId: originalMessage.receiverId,
           groupId: originalMessage.groupId,
           type: MessageType.TEXT,  // 使用文本类型显示撤回提示
-          content: recallerId === this.currentUserId ? '你撤回了一条消息' : `${originalMessage.senderName} 撤回了一条消息`,
+          content: recallerId === this.currentUserId ? '你撤回了一条消息' : `${senderName} 撤回了一条消息`,
           status: MessageStatus.RECALLED,
-          timestamp: Date.now(),
+          // 撤回提示应保持原消息的时间与位置（不应作为一条“新消息”插入到末尾）
+          timestamp: originalTs > 0 ? originalTs : Date.now(),
           isSelf: recallerId === this.currentUserId,
           showTime: false,
           avatarText: originalMessage.avatarText,
           avatarBg: originalMessage.avatarBg,
-          senderName: originalMessage.senderName
+          senderName: senderName,
+          rev: incomingRev !== '' ? incomingRev : ((originalMessage as any).rev != null ? (originalMessage as any).rev.toString() : '')
         }
         
         // 替换原消息
@@ -1544,10 +1594,49 @@ export class MessageService {
       const existing = messages.find(m => m != null && m.messageId === incomingId)
       if (existing != null) {
         this.debugStats.dedupMergeHitCount += 1
+
+        // enterprise: same messageId pick higher rev as final state
+        const getRev = (m: any): string => {
+          try {
+            const r = m != null ? (m as any).rev : null
+            return r != null && r !== '' ? r.toString() : '0'
+          } catch (e) {
+            return '0'
+          }
+        }
+        const cmpRev = (a: string, b: string): number => {
+          try {
+            const diff = BigInt(a) - BigInt(b)
+            if (diff === BigInt(0)) return 0
+            return diff > BigInt(0) ? 1 : -1
+          } catch (e) {
+            if (a === b) return 0
+            return a > b ? 1 : -1
+          }
+        }
+        const existingRev = getRev(existing)
+        const incomingRev = getRev(message)
+        const incomingNewer = cmpRev(incomingRev, existingRev) > 0
+
         const existingStatus: any = (existing as any).status
         const incomingStatus: any = (message as any).status
         const existingIsRecalled = existingStatus === MessageStatus.RECALLED || existingStatus === 6 || existingStatus === '6'
         const incomingIsRecalled = incomingStatus === MessageStatus.RECALLED || incomingStatus === 6 || incomingStatus === '6'
+
+        // newer rev always wins (final-state overwrite), but keep missing fields from old
+        if (incomingNewer) {
+          ;(existing as any).rev = incomingRev
+          ;(existing as any).status = incomingStatus
+          ;(existing as any).type = (message as any).type
+          ;(existing as any).content = (message as any).content
+          if ((existing.sequence == null || existing.sequence === '') && message.sequence != null && message.sequence !== '') {
+            existing.sequence = message.sequence
+          }
+          if ((existing.timestamp == null || existing.timestamp <= 0) && message.timestamp != null) {
+            existing.timestamp = message.timestamp
+          }
+          return
+        }
 
         // 最终态保护：撤回优先，禁止被 pull/缓存里的“未撤回原文”覆盖
         if (existingIsRecalled && !incomingIsRecalled) {
@@ -1693,10 +1782,19 @@ export class MessageService {
    * 更新会话
    */
   private updateConversation(chatId: string, message: MessageItem): void {
-    const summary = MessageParser.getSummary({
+    let summary = MessageParser.getSummary({
       header: { messageType: message.type } as any,
       body: message.content
     } as any)
+    try {
+      const s: any = (message as any).status
+      const isRecalled = s === MessageStatus.RECALLED || s === 6 || s === '6'
+      if (isRecalled) {
+        summary = '[消息已撤回]'
+      }
+    } catch (e) {
+      // ignore
+    }
     const seq = message.sequence != null ? message.sequence.toString() : null
     conversationService.updateConversation(
       chatId,

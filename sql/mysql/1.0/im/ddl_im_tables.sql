@@ -124,6 +124,7 @@ CREATE TABLE `im_chat_message` (
   `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '消息内容',
   `extra` longtext NULL COMMENT '扩展信息(JSON格式,存储文件URL、时长、大小等)',
   `send_time` datetime NOT NULL COMMENT '发送时间',
+  `rev` bigint NOT NULL DEFAULT 1 COMMENT '消息版本号（最终态：撤回/编辑/删除等变更时 rev+1，用于乱序合并）',
   `status` tinyint NOT NULL DEFAULT 2 COMMENT '消息状态(2-已发送 6-已撤回)',
   `recall_time` datetime NULL DEFAULT NULL COMMENT '撤回时间',
   `recall_by` bigint NULL DEFAULT NULL COMMENT '撤回人ID',

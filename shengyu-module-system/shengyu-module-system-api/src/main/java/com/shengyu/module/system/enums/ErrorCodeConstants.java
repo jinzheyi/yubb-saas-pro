@@ -207,7 +207,7 @@ public interface ErrorCodeConstants {
     // 消息相关 1-002-030-100
     ErrorCode MESSAGE_NOT_EXISTS = new ErrorCode(1_002_030_100, "消息不存在");
     ErrorCode MESSAGE_SEND_FAILED = new ErrorCode(1_002_030_101, "消息发送失败");
-    ErrorCode MESSAGE_RECALL_TIMEOUT = new ErrorCode(1_002_030_102, "消息撤回超时，只能撤回2分钟内的消息");
+    ErrorCode MESSAGE_RECALL_TIMEOUT = new ErrorCode(1_002_030_102, "消息撤回超时");
     ErrorCode MESSAGE_RECALL_PERMISSION_DENIED = new ErrorCode(1_002_030_103, "无权撤回该消息");
     ErrorCode MESSAGE_STATUS_INVALID = new ErrorCode(1_002_030_104, "消息状态转换无效");
     

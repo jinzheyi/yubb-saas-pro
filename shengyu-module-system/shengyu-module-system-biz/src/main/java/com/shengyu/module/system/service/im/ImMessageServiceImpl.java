@@ -8,6 +8,7 @@ import com.shengyu.framework.common.exception.ServiceException;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.websocket.core.protocol.FileMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.protocol.RecallMessage;
 import com.shengyu.framework.websocket.core.protocol.TextMessage;
 import com.shengyu.framework.websocket.core.protocol.ImageMessage;
 import com.shengyu.framework.websocket.core.protocol.VideoMessage;
@@ -27,10 +28,13 @@ import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
+import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
+import com.shengyu.module.system.service.im.ImCursorVersionService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
@@ -53,6 +57,9 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 @Slf4j
 public class ImMessageServiceImpl implements ImMessageService {
 
+    @Value("${im.recall.window-seconds:120}")
+    private long recallWindowSeconds;
+
     @Resource
     private ImChatMessageMapper chatMessageMapper;
 
@@ -63,6 +70,9 @@ public class ImMessageServiceImpl implements ImMessageService {
     private ImChatUserMapper chatUserMapper;
 
     @Resource
+    private ImConversationUserStateMapper conversationUserStateMapper;
+
+    @Resource
     private ImGroupService imGroupService;
 
     @Resource
@@ -70,6 +80,9 @@ public class ImMessageServiceImpl implements ImMessageService {
 
     @Resource
     private ImBadgeService imBadgeService;
+
+    @Resource
+    private ImCursorVersionService cursorVersionService;
 
     @Resource
     private NettyMessageSender messageSender;
@@ -119,6 +132,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         Long sequence = chatMapper.nextSequence(chatId);
         message.setSequence(sequence);
         message.setSendTime(LocalDateTime.now());
+        message.setRev(1L);
         message.setStatus(ImMessageStatusEnum.SENT.getStatus());
         message.setQuoteMessageId(sendReqVO.getQuoteMessageId());
         chatMessageMapper.insert(message);
@@ -410,9 +424,27 @@ public class ImMessageServiceImpl implements ImMessageService {
 
             Long receiverId = sendReqVO.getReceiverId();
             Long groupId = sendReqVO.getGroupId();
+
+            // enterprise: include rev for final-state merge; merge with existing header.extra (e.g. file metadata)
+            String extraWithRev = null;
+            try {
+                JSONObject obj = StrUtil.isNotBlank(headerExtra) ? JSONUtil.parseObj(headerExtra) : JSONUtil.createObj();
+                obj.set("rev", 1);
+                extraWithRev = obj.toString();
+            } catch (Exception e) {
+                try {
+                    JSONObject obj = JSONUtil.createObj();
+                    obj.set("rev", 1);
+                    extraWithRev = obj.toString();
+                } catch (Exception ignore) {
+                    extraWithRev = null;
+                }
+            }
+
             // 群聊推送给成员时，前端会话路由依赖 groupId；单聊依赖 receiverId/senderId
-            messageSender.sendToUser(userId, messageType, messageBody,
-                    senderId, receiverId, groupId, tenantId, messageId, null, chatId);
+            messageSender.sendToUserWithExtra(userId, messageType, messageBody,
+                    senderId, receiverId, groupId, tenantId, messageId, null, chatId,
+                    null, null, extraWithRev);
             log.debug("[ImMessageService] WebSocket 消息推送成功, userId: {}, messageId: {}", userId, messageId);
         } catch (Exception e) {
             log.error("[ImMessageService] WebSocket 消息推送失败, userId: {}, messageId: {}", userId, messageId, e);
@@ -478,15 +510,142 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (!Objects.equals(message.getSenderId(), userId)) {
             throw exception(MESSAGE_RECALL_PERMISSION_DENIED);
         }
-        LocalDateTime twoMinutesAgo = LocalDateTime.now().minusMinutes(2);
-        if (message.getSendTime().isBefore(twoMinutesAgo)) {
+        long windowSec = recallWindowSeconds > 0 ? recallWindowSeconds : 120L;
+        LocalDateTime windowAgo = LocalDateTime.now().minusSeconds(windowSec);
+        if (message.getSendTime().isBefore(windowAgo)) {
             throw exception(MESSAGE_RECALL_TIMEOUT);
         }
+        LocalDateTime recallTime = LocalDateTime.now();
+        Long oldRev = message.getRev() != null && message.getRev() > 0 ? message.getRev() : 1L;
+        Long newRev = oldRev + 1L;
         chatMessageMapper.update(null, new LambdaUpdateWrapper<ImChatMessageDO>()
                 .eq(ImChatMessageDO::getId, messageId)
                 .set(ImChatMessageDO::getStatus, ImMessageStatusEnum.RECALLED.getStatus())
-                .set(ImChatMessageDO::getRecallTime, LocalDateTime.now())
-                .set(ImChatMessageDO::getRecallBy, userId));
+                .set(ImChatMessageDO::getRecallTime, recallTime)
+                .set(ImChatMessageDO::getRecallBy, userId)
+                .setSql("rev = IFNULL(rev, 1) + 1"));
+
+        // 企微/钉钉口径：撤回影响会话列表预览的“最终态一致”，需持久化落库并通过 cursorVersion 增量同步到其它端
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            ImChatDO chat = chatMapper.selectById(message.getChatId());
+            if (chat != null) {
+                List<ImChatUserDO> chatUsers = chatUserMapper.selectList(new com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX<ImChatUserDO>()
+                        .eq(ImChatUserDO::getChatId, message.getChatId())
+                        .eq(ImChatUserDO::getDeletedByUser, false)
+                        .eq(ImChatUserDO::getDeleted, false));
+                if (chatUsers != null) {
+                    for (ImChatUserDO cu : chatUsers) {
+                        if (cu == null) {
+                            continue;
+                        }
+                        // 仅当撤回消息仍是该用户会话 lastMessage 时才更新预览（避免 lastMessage 已推进造成回写覆盖）
+                        int updated = chatUserMapper.updateLastMessagePreviewIfMatch(
+                                cu.getId(),
+                                messageId,
+                                10,
+                                "[消息已撤回]"
+                        );
+                        if (updated <= 0) {
+                            continue;
+                        }
+
+                        Long targetUserId = cu.getUserId();
+                        Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, targetUserId);
+                        // unreadCount/lastReadSeq 由 existing state/max 规则兜底，这里只用于推动“会话预览变更”跨端可见
+                        conversationUserStateMapper.upsertAfterMessage(
+                                tenantId,
+                                message.getChatId(),
+                                targetUserId,
+                                cursorVersion,
+                                0,
+                                null,
+                                null,
+                                messageId,
+                                message.getSequence() != null ? message.getSequence() : 0L,
+                                10,
+                                "[消息已撤回]",
+                                message.getSendTime() != null ? message.getSendTime() : recallTime
+                        );
+
+                        // 主动推送“会话快照变更提示”，促使端侧增量 sync(cursor) 及时拉取预览变更（对标企微/钉钉多端一致）
+                        try {
+                            TextMessage notifyBody = TextMessage.newBuilder().setContent("").build();
+                            messageSender.sendToUser(targetUserId, MessageType.SYSTEM_NOTIFY, notifyBody,
+                                    0L, targetUserId, 0L, tenantId,
+                                    null, null, message.getChatId(),
+                                    cursorVersion, null);
+                        } catch (Exception ignore) {
+                            // ignore
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[ImMessageService] 撤回预览落库/增量同步失败, userId: {}, messageId: {}, error: {}",
+                    userId, messageId, e.getMessage(), e);
+        }
+
+        // 企业级一致性：撤回必须通过 WS 实时广播到会话参与方（对端/群成员）以及操作者的其他设备
+        try {
+            ImChatDO chat = chatMapper.selectById(message.getChatId());
+            if (chat == null) {
+                return;
+            }
+            Long tenantId = TenantContextHolder.getTenantId();
+            RecallMessage body = RecallMessage.newBuilder().setMessageId(messageId).build();
+
+            // WS 元数据：rev/recallTime/recallBy，端侧用 rev 做最终态合并（对标企微/钉钉乱序与补偿）
+            String extra = null;
+            try {
+                JSONObject obj = JSONUtil.createObj();
+                obj.set("rev", newRev);
+                obj.set("recallBy", userId);
+                obj.set("recallTime", recallTime != null ? recallTime.toString() : "");
+                extra = obj.toString();
+            } catch (Exception ignore) {
+                extra = null;
+            }
+
+            if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
+                Long groupId = chat.getGroupId();
+                List<Long> memberIds = imGroupService.getGroupMemberIds(groupId);
+                if (memberIds != null) {
+                    for (Long memberId : memberIds) {
+                        if (memberId == null || memberId <= 0) {
+                            continue;
+                        }
+                        messageSender.sendToUserWithExtra(memberId, MessageType.RECALL, body,
+                                userId, 0L, groupId, tenantId,
+                                messageId, message.getSequence(), message.getChatId(),
+                                null, null, extra);
+                    }
+                }
+                // 确保操作者本人多端可见（即便不在 memberIds 里）
+                messageSender.sendToUserWithExtra(userId, MessageType.RECALL, body,
+                        userId, 0L, groupId, tenantId,
+                        messageId, message.getSequence(), message.getChatId(),
+                        null, null, extra);
+            } else {
+                Long otherUserId = Objects.equals(chat.getSingleUser1(), userId) ? chat.getSingleUser2() : chat.getSingleUser1();
+                // 对端
+                messageSender.sendToUserWithExtra(otherUserId, MessageType.RECALL, body,
+                        userId, otherUserId, 0L, tenantId,
+                        messageId, message.getSequence(), message.getChatId(),
+                        null, null, extra);
+                // 自己多端
+                messageSender.sendToUserWithExtra(userId, MessageType.RECALL, body,
+                        userId, otherUserId, 0L, tenantId,
+                        messageId, message.getSequence(), message.getChatId(),
+                        null, null, extra);
+            }
+        } catch (Exception e) {
+            log.warn("[ImMessageService] 推送撤回事件失败, userId: {}, messageId: {}, error: {}",
+                    userId, messageId, e.getMessage(), e);
+        }
     }
 
     @Override

@@ -167,6 +167,72 @@ public class NettyMessageSender {
     }
 
     /**
+     * 发送消息给指定用户（显式指定 header.extra，用于最终态事件携带 rev/操作人/时间等元数据）
+     */
+    public void sendToUserWithExtra(Long userId, MessageType messageType, MessageLite body,
+                                    Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence, Long chatId,
+                                    Long cursorVersion, Long conversationVersion, String headerExtra) {
+        TenantUtils.execute(tenantId, () -> {
+            List<NettySession> sessions = sessionManager.getSessionsByUserId(userId);
+            if (sessions.isEmpty()) {
+                log.info("[MessageSender] 用户不在线: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}",
+                        userId, messageType, messageId, senderId, receiverId, groupId, tenantId);
+                return;
+            }
+
+            if (log.isInfoEnabled()) {
+                log.info("[MessageSender] sendToUserWithExtra begin: userId={}, type={}, messageId={}, senderId={}, receiverId={}, groupId={}, tenantId={}, sessions={}",
+                        userId, messageType, messageId, senderId, receiverId, groupId, tenantId, sessions.size());
+            }
+
+            ImMessage protobufMessage = buildMessageWithExtra(messageType, body, senderId, receiverId, groupId, tenantId, messageId, sequence, headerExtra);
+            String jsonPayload = buildJsonPayloadWithExtra(messageType, body, senderId, receiverId, groupId, tenantId, messageId, sequence, chatId, userId,
+                    cursorVersion, conversationVersion, headerExtra);
+
+            int successCount = 0;
+            for (NettySession session : sessions) {
+                if (session.isActive()) {
+                    Channel channel = session.getChannel();
+                    if (channel != null) {
+                        boolean ws = isWebSocketChannel(channel);
+                        if (log.isInfoEnabled()) {
+                            log.info("[MessageSender] write: userId={}, sessionUserId={}, deviceType={}, active={}, ws={}, channelId={}, messageId={}, type={}",
+                                    userId,
+                                    session.getUserId(),
+                                    session.getDeviceType(),
+                                    session.isActive(),
+                                    ws,
+                                    channel.id(),
+                                    messageId,
+                                    messageType);
+                        }
+
+                        if (ws) {
+                            channel.writeAndFlush(new TextWebSocketFrame(jsonPayload)).addListener(f -> {
+                                if (!f.isSuccess()) {
+                                    log.warn("[MessageSender] ws write failed: userId={}, channelId={}, messageId={}, type={}",
+                                            userId, channel.id(), messageId, messageType, f.cause());
+                                }
+                            });
+                        } else {
+                            channel.writeAndFlush(protobufMessage).addListener(f -> {
+                                if (!f.isSuccess()) {
+                                    log.warn("[MessageSender] protobuf write failed: userId={}, channelId={}, messageId={}, type={}",
+                                            userId, channel.id(), messageId, messageType, f.cause());
+                                }
+                            });
+                        }
+                    }
+                    successCount++;
+                }
+            }
+
+            log.info("[MessageSender] sendToUserWithExtra done: userId={}, type={}, messageId={}, devices={}, activeWritten={}",
+                    userId, messageType, messageId, sessions.size(), successCount);
+        });
+    }
+
+    /**
      * 发送消息给指定用户（重载，自动获取租户ID）
      *
      * @param userId      用户ID
@@ -332,6 +398,47 @@ public class NettyMessageSender {
         return messageBuilder.build();
     }
 
+    private ImMessage buildMessageWithExtra(MessageType messageType, MessageLite body,
+                                           Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence,
+                                           String explicitExtra) {
+        MessageHeader.Builder headerBuilder = MessageHeader.newBuilder()
+                .setMessageId(messageId != null ? messageId : generateMessageId())
+                .setMessageType(messageType)
+                .setTimestamp(System.currentTimeMillis());
+
+        if (sequence != null) {
+            headerBuilder.setSequence(sequence);
+        }
+
+        String derivedExtra = deriveHeaderExtra(messageType, body);
+        String finalExtra = StrUtil.isNotBlank(explicitExtra) ? explicitExtra : derivedExtra;
+        if (StrUtil.isNotBlank(finalExtra)) {
+            headerBuilder.setExtra(finalExtra);
+        }
+
+        if (senderId != null) {
+            headerBuilder.setSenderId(senderId);
+        }
+        if (receiverId != null) {
+            headerBuilder.setReceiverId(receiverId);
+        }
+        if (groupId != null) {
+            headerBuilder.setGroupId(groupId);
+        }
+        if (tenantId != null) {
+            headerBuilder.setTenantId(tenantId);
+        }
+
+        ImMessage.Builder messageBuilder = ImMessage.newBuilder()
+                .setHeader(headerBuilder.build());
+
+        if (body != null) {
+            messageBuilder.setBody(ByteString.copyFrom(body.toByteArray()));
+        }
+
+        return messageBuilder.build();
+    }
+
     private boolean isWebSocketChannel(Channel channel) {
         try {
             return channel.pipeline().get(WebSocketServerProtocolHandler.class) != null;
@@ -382,6 +489,54 @@ public class NettyMessageSender {
 
         // 当 cursorVersion 已透传，端侧可基于 cursorVersion 做 gap 检测并走增量补偿，同步状态由 /conversation/sync 保证
         // 这里默认不再额外查库构建 snapshot，以降低写扩散下的 DB 压力
+        if (cursorVersion == null && chatId != null && toUserId != null && conversationSnapshotService != null) {
+            try {
+                Map<String, Object> snapshot = conversationSnapshotService.buildSnapshot(toUserId, chatId);
+                if (snapshot != null && !snapshot.isEmpty()) {
+                    root.put("conversationSnapshot", snapshot);
+                }
+            } catch (Exception e) {
+                log.warn("[MessageSender] buildSnapshot failed: toUserId={}, chatId={}, messageId={}, type={}",
+                        toUserId, chatId, messageId, messageType, e);
+            }
+        }
+        return JsonUtils.toJsonString(root);
+    }
+
+    private String buildJsonPayloadWithExtra(MessageType messageType, MessageLite body,
+                                            Long senderId, Long receiverId, Long groupId, Long tenantId, Long messageId, Long sequence,
+                                            Long chatId, Long toUserId, Long cursorVersion, Long conversationVersion, String explicitExtra) {
+        Map<String, Object> root = new HashMap<>();
+        Map<String, Object> header = new HashMap<>();
+        header.put("messageId", messageId != null ? String.valueOf(messageId) : String.valueOf(generateMessageId()));
+        header.put("messageType", messageType != null ? messageType.getNumber() : null);
+        header.put("timestamp", System.currentTimeMillis());
+        header.put("senderId", senderId != null ? String.valueOf(senderId) : "0");
+        header.put("receiverId", receiverId != null ? String.valueOf(receiverId) : "0");
+        header.put("groupId", groupId != null ? String.valueOf(groupId) : "0");
+        header.put("tenantId", tenantId != null ? String.valueOf(tenantId) : "0");
+        if (chatId != null) {
+            header.put("chatId", String.valueOf(chatId));
+        }
+        if (sequence != null) {
+            header.put("sequence", String.valueOf(sequence));
+        }
+
+        String derivedExtra = deriveHeaderExtra(messageType, body);
+        String finalExtra = StrUtil.isNotBlank(explicitExtra) ? explicitExtra : derivedExtra;
+        if (StrUtil.isNotBlank(finalExtra)) {
+            header.put("extra", finalExtra);
+        }
+        root.put("header", header);
+        root.put("body", buildJsonBody(messageType, body));
+
+        if (cursorVersion != null) {
+            root.put("cursorVersion", String.valueOf(cursorVersion));
+        }
+        if (conversationVersion != null) {
+            root.put("conversationVersion", String.valueOf(conversationVersion));
+        }
+
         if (cursorVersion == null && chatId != null && toUserId != null && conversationSnapshotService != null) {
             try {
                 Map<String, Object> snapshot = conversationSnapshotService.buildSnapshot(toUserId, chatId);
