@@ -232,8 +232,8 @@ public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocket
 
                 // 企业级兼容策略：
                 // - 优先使用 SubProtocol（Sec-WebSocket-Protocol）协商结果
-                // - 若协商成功（pb/json 任一）：视为已完成首帧探测（PROBE_DONE=true），避免严格模式误伤
-                // - 若未协商：仍要求按严格模式发送 PROBE（由 AuthHandler/WebSocketFrameHandler 的 timeout 兜底）
+                // - 严格模式：即使协商成功（pb/json 任一），仍要求客户端先发送 PROBE，再发送 AUTH_REQ
+                // - SubProtocol 仅用于提前绑定 codec/negotiationMode，不能替代 PROBE（避免跳过能力/版本协商）
                 if (sp != null && !sp.isEmpty()) {
                     ctx.channel().attr(NEGOTIATION_MODE_KEY).set("subprotocol");
                     try {
@@ -242,10 +242,6 @@ public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocket
                         } else {
                             ctx.channel().attr(CODEC_KEY).set("json");
                         }
-                    } catch (Exception ignore) {
-                    }
-                    try {
-                        ctx.channel().attr(PROBE_DONE_KEY).set(true);
                     } catch (Exception ignore) {
                     }
                 }

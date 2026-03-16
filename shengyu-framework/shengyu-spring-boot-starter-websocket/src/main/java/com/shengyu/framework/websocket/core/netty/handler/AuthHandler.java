@@ -93,6 +93,12 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                     ctx.close();
                     return;
                 }
+                // 严格模式：未完成 PROBE 不允许 AUTH_REQ（Protobuf）
+                if (im.getHeader() != null && im.getHeader().getMessageType() == MessageType.AUTH_REQ && !isProbeDone(ctx)) {
+                    sendProtobufClose(ctx, "PROBE_REQUIRED", 426, "协议不兼容：请先发送 PROBE");
+                    ctx.close();
+                    return;
+                }
             } catch (Exception ignore) {
             }
         }
@@ -230,6 +236,20 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                     .set("code", code)
                     .set("message", message));
             ctx.writeAndFlush(new TextWebSocketFrame(payload.toString()));
+        } catch (Exception ignore) {
+        }
+    }
+
+    private void sendProtobufClose(ChannelHandlerContext ctx, String action, int code, String message) {
+        try {
+            MessageHeader header = MessageHeader.newBuilder()
+                .setMessageId(System.currentTimeMillis())
+                .setMessageType(MessageType.CLOSE)
+                .setTimestamp(System.currentTimeMillis())
+                .setExtra(JSONUtil.createObj().set("action", action).set("code", code).set("message", message).toString())
+                .build();
+            ImMessage close = ImMessage.newBuilder().setHeader(header).build();
+            ctx.channel().writeAndFlush(close);
         } catch (Exception ignore) {
         }
     }

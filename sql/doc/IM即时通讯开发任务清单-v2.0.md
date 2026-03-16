@@ -309,7 +309,19 @@ PROBE_RESP（JSON TextFrame）字段约定：
 ### B2（P0）：服务端双 decoder/encoder（业务无感）
 
 - **验收**：MaxFrameSize/AuthTimeout 生效；未认证仅允许 AUTH/HEARTBEAT；两栈跑通 AUTH/HEARTBEAT/CLOSE。
-- 状态：进行中（已接入 WebSocket(pb) 出站统一封装：ImMessage -> BinaryWebSocketFrame + varint32 length-prefix；未认证 CLOSE 白名单已对齐）
+- 状态：已完成（WebSocket(pb) 出站统一封装：ImMessage -> BinaryWebSocketFrame + varint32 length-prefix；AUTH_RESP/HEARTBEAT_RESP 已可被端侧稳定解码；队列 flush 已按 PB 发送 BinaryFrame，不再触发 CODEC_MISMATCH(415)）
+
+- 已完成项（本期闭环点）：
+  - 服务端：`AuthHandler` PB 认证响应走统一出站封装（`ctx.channel().writeAndFlush(ImMessage)`）
+  - 服务端：`HeartbeatHandler` PB 心跳响应走统一出站封装（`ctx.channel().writeAndFlush(ImMessage)`）
+  - 端侧：PB 模式下 `flushMessageQueue()` 统一走二进制发送（避免误发 TextFrame 导致 415）
+  - 端侧：App Hide/Show 后若 `OPEN` 但未认证会补发 `AUTH_REQ`，确保心跳与队列可恢复
+
+- 下一步（避免重复）：
+  - B0：协议基线冻结后补齐“严格模式 PROBE -> AUTH_REQ”与 PB BinaryFrame 双栈解码前置点
+  - B1：把协商结果（codec/negotiationMode）作为连接上下文的权威来源，并据此绑定 codec
+  - B3：JSON Envelope 必填校验/错误返回（与 PB header 语义对齐）
+  - B4：App 端 PB 编解码 + 自动降级（pb 建链失败回落 json）
 
 - **目标**：做到“业务 processor 只面对统一领域对象”，编解码对业务无侵入。
 - **范围**：
