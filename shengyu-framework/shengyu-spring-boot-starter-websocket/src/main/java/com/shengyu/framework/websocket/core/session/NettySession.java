@@ -68,6 +68,12 @@ public class NettySession {
      */
     private String accessToken;
 
+    private String codec;
+
+    private String negotiatedSubprotocol;
+
+    private String negotiationMode;
+
     /**
      * 连接时间
      */

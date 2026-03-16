@@ -343,32 +343,6 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 ctx.channel().attr(TENANT_ID_KEY).set(tenantId);
             }
 
-            // 创建会话
-            long now = System.currentTimeMillis();
-            long leaseExpireTime = now + Math.max(1L, nettyProperties.getAuthLeaseSeconds()) * 1000L;
-            NettySession session = NettySession.builder()
-                .channel(ctx.channel())
-                .userId(loginUser.getId())
-                .tenantId(tenantId)
-                .userType(loginUser.getUserType())
-                .nickname(loginUser.getNickname())
-                .deviceType(deviceType)
-                .deviceId(deviceId)
-                .deviceName(deviceName)
-                .clientVersion(clientVersion)
-                .accessToken(accessToken)
-                .connectTime(now)
-                .lastActiveTime(now)
-                .lastBizActiveTime(now)
-                .leaseExpireTime(leaseExpireTime)
-                .authState(NettySessionAuthState.ACTIVE)
-                .build();
-
-            sessionManager.addSession(session);
-
-            // 发送认证成功响应
-            sendJsonAuthResponse(ctx, true, 0, "认证成功", loginUser.getId(), tenantId);
-
             String codec = "";
             String sp = "";
             String mode = "";
@@ -387,6 +361,35 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 mode = m != null ? m : "";
             } catch (Exception ignore) {
             }
+
+            // 创建会话
+            long now = System.currentTimeMillis();
+            long leaseExpireTime = now + Math.max(1L, nettyProperties.getAuthLeaseSeconds()) * 1000L;
+            NettySession session = NettySession.builder()
+                .channel(ctx.channel())
+                .userId(loginUser.getId())
+                .tenantId(tenantId)
+                .userType(loginUser.getUserType())
+                .nickname(loginUser.getNickname())
+                .deviceType(deviceType)
+                .deviceId(deviceId)
+                .deviceName(deviceName)
+                .clientVersion(clientVersion)
+                .accessToken(accessToken)
+                .codec(codec)
+                .negotiatedSubprotocol(sp)
+                .negotiationMode(mode)
+                .connectTime(now)
+                .lastActiveTime(now)
+                .lastBizActiveTime(now)
+                .leaseExpireTime(leaseExpireTime)
+                .authState(NettySessionAuthState.ACTIVE)
+                .build();
+
+            sessionManager.addSession(session);
+
+            // 发送认证成功响应
+            sendJsonAuthResponse(ctx, true, 0, "认证成功", loginUser.getId(), tenantId);
             log.info("[Auth] JSON 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}, codec: {}, subprotocol: {}, negotiationMode: {}",
                 loginUser.getId(), tenantId, loginUser.getUserType(), ctx.channel().id().asShortText(), codec, sp, mode);
 
@@ -430,31 +433,6 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 ctx.channel().attr(TENANT_ID_KEY).set(tenantId);
             }
 
-            // 创建会话
-            long now = System.currentTimeMillis();
-            long leaseExpireTime = now + Math.max(1L, nettyProperties.getAuthLeaseSeconds()) * 1000L;
-            NettySession session = NettySession.builder()
-                .channel(ctx.channel())
-                .userId(loginUser.getId())
-                .tenantId(tenantId)
-                .userType(loginUser.getUserType())
-                .nickname(loginUser.getNickname())
-                .deviceType(authRequest.getDeviceType())
-                .deviceId(authRequest.getDeviceId())
-                .clientVersion(authRequest.getClientVersion())
-                .accessToken(accessToken)
-                .connectTime(now)
-                .lastActiveTime(now)
-                .lastBizActiveTime(now)
-                .leaseExpireTime(leaseExpireTime)
-                .authState(NettySessionAuthState.ACTIVE)
-                .build();
-
-            sessionManager.addSession(session);
-
-            // 发送认证成功响应
-            sendProtobufAuthResponse(ctx, true, 0, "认证成功", loginUser.getId(), tenantId);
-
             String codec = "";
             String sp = "";
             String mode = "";
@@ -473,6 +451,34 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 mode = m != null ? m : "";
             } catch (Exception ignore) {
             }
+
+            // 创建会话
+            long now = System.currentTimeMillis();
+            long leaseExpireTime = now + Math.max(1L, nettyProperties.getAuthLeaseSeconds()) * 1000L;
+            NettySession session = NettySession.builder()
+                .channel(ctx.channel())
+                .userId(loginUser.getId())
+                .tenantId(tenantId)
+                .userType(loginUser.getUserType())
+                .nickname(loginUser.getNickname())
+                .deviceType(authRequest.getDeviceType())
+                .deviceId(authRequest.getDeviceId())
+                .clientVersion(authRequest.getClientVersion())
+                .accessToken(accessToken)
+                .codec(codec)
+                .negotiatedSubprotocol(sp)
+                .negotiationMode(mode)
+                .connectTime(now)
+                .lastActiveTime(now)
+                .lastBizActiveTime(now)
+                .leaseExpireTime(leaseExpireTime)
+                .authState(NettySessionAuthState.ACTIVE)
+                .build();
+
+            sessionManager.addSession(session);
+
+            // 发送认证成功响应
+            sendProtobufAuthResponse(ctx, true, 0, "认证成功", loginUser.getId(), tenantId);
             log.info("[Auth] Protobuf 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}, codec: {}, subprotocol: {}, negotiationMode: {}",
                 loginUser.getId(), tenantId, loginUser.getUserType(), ctx.channel().id().asShortText(), codec, sp, mode);
 
@@ -501,8 +507,8 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 .set("success", success)
                 .set("code", code)
                 .set("message", message)
-                .set("userId", userId != null ? userId : 0L)
-                .set("tenantId", tenantId != null ? tenantId : 0L));
+                .set("userId", userId != null ? String.valueOf(userId) : "0")
+                .set("tenantId", tenantId != null ? String.valueOf(tenantId) : "0"));
 
         ctx.writeAndFlush(new TextWebSocketFrame(response.toString()));
     }

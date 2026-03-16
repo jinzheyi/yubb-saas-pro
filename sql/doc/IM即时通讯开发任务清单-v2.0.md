@@ -301,7 +301,7 @@ PROBE_RESP（JSON TextFrame）字段约定：
 ### B1（P0）：服务端握手协商并绑定 codec
 
 - **验收**：SubProtocol 优先；无 SubProtocol 时首帧探测；失败关闭连接。
-- 状态：进行中（已落地：codec 未绑定前的载体约束与失败关闭）
+- 状态：已完成（已落地：codec 未绑定前的载体约束与失败关闭；无 SubProtocol 场景 PROBE->AUTH(JSON) 已联调验收通过）
 
 - **目标**：服务端在 Upgrade 后完成协商，且把 `codec/negotiationMode` 绑定到连接会话上下文。
 - **范围**：
@@ -320,6 +320,16 @@ PROBE_RESP（JSON TextFrame）字段约定：
   - 收到非 PROBE 的 TextFrame -> `CLOSE(action=CODEC_UNBOUND, code=428)`
   - 收到 BinaryFrame -> `CLOSE(action=CODEC_UNBOUND, code=428)`
 - 取消了在 `channelActive` 阶段“兜底绑定 codec=json”的行为，避免未协商状态被误判为 json
+
+联调验收要点（浏览器原生 WebSocket，无 SubProtocol）：
+
+- 不发送 PROBE 直接发非 PROBE TextFrame：服务端返回 `CLOSE(action=CODEC_UNBOUND, code=428)` 并断开
+- 先发送 `PROBE(6)`：收到 `PROBE_RESP(7)`（`codec=json, negotiationMode=probe`），再发送 `AUTH_REQ(3)`：收到 `AUTH_RESP(4)` 且认证成功
+
+补充实现（排障/一致性）：
+
+- JSON `AUTH_RESP` 中的 `userId/tenantId` 按 string 输出，避免浏览器/端侧 Long 精度丢失
+- `NettySession` 增加并持久化 `codec/negotiatedSubprotocol/negotiationMode`（认证成功创建 session 时写入），便于租约/踢人/排障统一取值
 - **涉及文件/目录**：
   - `shengyu-framework/.../WebSocketFrameHandler.java`
   - `shengyu-framework/.../core/session/NettySession.java`（或等价上下文字段）
