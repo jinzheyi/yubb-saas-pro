@@ -242,7 +242,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 ### B0（P0）：协议与版本基线冻结（SubProtocol + 首帧探测）
 
 - **验收**：固定 `im.pb.v1`/`im.json.v1`；首帧 MAGIC/VERSION/CODEC/FLAGS；形成兼容矩阵。
-- 状态：进行中（已落地 SubProtocol 列表 + PROBE/PROBE_RESP；PB BinaryFrame 双栈解码待 B3/B4）
+- 状态：已完成（已落地 SubProtocol 列表 + PROBE/PROBE_RESP；严格模式 `PROBE -> AUTH_REQ` 在 pb 子协议/二进制链路下一致生效）
 
 - **目标**：冻结“连接层协商”协议基线。
 - **范围**：
@@ -269,6 +269,17 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 - `probeTimeoutMs` 内未收到 PROBE：服务端下发 `CLOSE(action=PROBE_TIMEOUT)` 并断开
 - 收到 `AUTH_REQ` 但未 PROBE：服务端下发 `CLOSE(action=PROBE_REQUIRED)` 并断开
 
+已验收证据（联调日志要点）：
+
+- pb 子协议（`im.pb.v1`）建链后：端侧先发送 `PROBE(6)`（TextFrame），再发送 `AUTH_REQ(pb)`（BinaryFrame）
+- 服务端返回：`PROBE_RESP(7)`（TextFrame，`codec=pb, negotiationMode=subprotocol, subprotocol=im.pb.v1`）
+- 端侧可稳定解码并置认证成功：收到 `AUTH_RESP(pb)(4)`，标记 `authenticated=true`，随后心跳 `HEARTBEAT_REQ/RESP` 正常闭环
+
+关键实现约束（避免回退）：
+
+- SubProtocol 协商仅用于绑定 `codec/negotiationMode`，不再默认将 `PROBE_DONE=true`
+- Protobuf `AUTH_REQ` 未完成 PROBE 时也会被严格模式拦截并返回 `CLOSE(extra.action=PROBE_REQUIRED, code=426)`
+
 PROBE（JSON TextFrame）字段约定（Long/ID 均按 string 透传）：
 
 - `header.messageType = 6`
@@ -290,7 +301,7 @@ PROBE_RESP（JSON TextFrame）字段约定：
 ### B1（P0）：服务端握手协商并绑定 codec
 
 - **验收**：SubProtocol 优先；无 SubProtocol 时首帧探测；失败关闭连接。
-- 状态：未开始
+- 状态：进行中（已落地：codec 未绑定前的载体约束与失败关闭）
 
 - **目标**：服务端在 Upgrade 后完成协商，且把 `codec/negotiationMode` 绑定到连接会话上下文。
 - **范围**：
@@ -299,8 +310,16 @@ PROBE_RESP（JSON TextFrame）字段约定：
 - **依赖**：B0
 - **验收标准**：
   - SubProtocol 传 `im.pb.v1` -> 绑定 PB
-  - 不传 SubProtocol：Text 首帧 -> JSON；Binary magic -> PB/JSON
+  - 不传 SubProtocol：必须先发送 `PROBE(6)`（TextFrame）完成协商并绑定 codec（本期不做“首帧 Binary magic 探测”）
   - 不可识别首帧 -> 关闭连接
+
+已落地点（避免重复）：
+
+- 连接存在 `CODEC_UNBOUND` 阶段：在 `codec` 未绑定前，只允许 `PROBE/CLOSE`（TextFrame）进入业务链路
+- `codec` 未绑定时：
+  - 收到非 PROBE 的 TextFrame -> `CLOSE(action=CODEC_UNBOUND, code=428)`
+  - 收到 BinaryFrame -> `CLOSE(action=CODEC_UNBOUND, code=428)`
+- 取消了在 `channelActive` 阶段“兜底绑定 codec=json”的行为，避免未协商状态被误判为 json
 - **涉及文件/目录**：
   - `shengyu-framework/.../WebSocketFrameHandler.java`
   - `shengyu-framework/.../core/session/NettySession.java`（或等价上下文字段）

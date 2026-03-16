@@ -79,13 +79,48 @@ public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocket
         String text = frame.text();
         log.debug("[WebSocket] 收到文本消息: {}, channel: {}", text, ctx.channel().id().asShortText());
 
-        // B1：严格绑定载体与 codec；pb codec 仅允许 PROBE/PROBE_RESP/CLOSE 使用 TextFrame
+        // B1：严格绑定载体与 codec；在 codec 尚未绑定前，仅允许 PROBE/CLOSE（TextFrame）
+        // codec 绑定后：pb codec 仅允许 PROBE/PROBE_RESP/CLOSE 使用 TextFrame
         // 其余消息（包括 AUTH_REQ/HEARTBEAT/业务消息）必须走 BinaryFrame（Protobuf）
         String codec = null;
         try {
             codec = ctx.channel().attr(CODEC_KEY).get();
         } catch (Exception ignore) {
         }
+
+        if (codec == null || codec.isEmpty()) {
+            boolean allowed = false;
+            try {
+                JSONObject json = JSONUtil.parseObj(text);
+                JSONObject header = json.getJSONObject("header");
+                Integer mt = header != null ? header.getInt("messageType") : null;
+                if (mt != null) {
+                    allowed = (mt == 6 || mt == MessageType.CLOSE_VALUE);
+                }
+            } catch (Exception ignore) {
+                allowed = false;
+            }
+
+            if (!allowed) {
+                try {
+                    String payload = JSONUtil.createObj()
+                        .set("header", JSONUtil.createObj()
+                            .set("messageId", System.currentTimeMillis())
+                            .set("messageType", MessageType.CLOSE_VALUE)
+                            .set("timestamp", System.currentTimeMillis()))
+                        .set("body", JSONUtil.createObj()
+                            .set("action", "CODEC_UNBOUND")
+                            .set("code", 428)
+                            .set("message", "当前连接尚未完成 codec 协商，请先发送 PROBE 或声明 SubProtocol"))
+                        .toString();
+                    ctx.writeAndFlush(new TextWebSocketFrame(payload));
+                } catch (Exception ignore) {
+                }
+                ctx.close();
+                return;
+            }
+        }
+
         if ("pb".equalsIgnoreCase(codec)) {
             boolean allowed = false;
             try {
@@ -135,6 +170,24 @@ public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocket
             codec = ctx.channel().attr(CODEC_KEY).get();
         } catch (Exception ignore) {
         }
+        if (codec == null || codec.isEmpty()) {
+            try {
+                String payload = JSONUtil.createObj()
+                    .set("header", JSONUtil.createObj()
+                        .set("messageId", System.currentTimeMillis())
+                        .set("messageType", MessageType.CLOSE_VALUE)
+                        .set("timestamp", System.currentTimeMillis()))
+                    .set("body", JSONUtil.createObj()
+                        .set("action", "CODEC_UNBOUND")
+                        .set("code", 428)
+                        .set("message", "当前连接尚未完成 codec 协商，不允许发送 BinaryFrame"))
+                    .toString();
+                ctx.writeAndFlush(new TextWebSocketFrame(payload));
+            } catch (Exception ignore) {
+            }
+            ctx.close();
+            return;
+        }
         if (!"pb".equalsIgnoreCase(codec)) {
             try {
                 String payload = JSONUtil.createObj()
@@ -161,15 +214,6 @@ public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocket
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         log.info("[WebSocket] 连接建立: {}", ctx.channel().id().asShortText());
-
-        // B1：兜底绑定 codec（当前阶段对外 WebSocket 仅支持 JSON TextFrame）
-        try {
-            String codec = ctx.channel().attr(CODEC_KEY).get();
-            if (codec == null || codec.isEmpty()) {
-                ctx.channel().attr(CODEC_KEY).set("json");
-            }
-        } catch (Exception ignore) {
-        }
 
         // 严格模式：连接建立后必须在 probeTimeoutMs 内收到 PROBE
         try {
