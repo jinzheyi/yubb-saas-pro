@@ -63,6 +63,22 @@ public enum MessageType
   CLOSE(5),
   /**
    * <pre>
+   * 协议控制：轻量投递回执（phase1：仅回执，不做重发）
+   * </pre>
+   *
+   * <code>ACK = 8;</code>
+   */
+  ACK(8),
+  /**
+   * <pre>
+   * ACK 响应（可选，便于联调与打点）
+   * </pre>
+   *
+   * <code>ACK_RESP = 9;</code>
+   */
+  ACK_RESP(9),
+  /**
+   * <pre>
    * ========== 业务消息 ==========
    * 文本消息
    * </pre>
@@ -245,6 +261,22 @@ public enum MessageType
   public static final int CLOSE_VALUE = 5;
   /**
    * <pre>
+   * 协议控制：轻量投递回执（phase1：仅回执，不做重发）
+   * </pre>
+   *
+   * <code>ACK = 8;</code>
+   */
+  public static final int ACK_VALUE = 8;
+  /**
+   * <pre>
+   * ACK 响应（可选，便于联调与打点）
+   * </pre>
+   *
+   * <code>ACK_RESP = 9;</code>
+   */
+  public static final int ACK_RESP_VALUE = 9;
+  /**
+   * <pre>
    * ========== 业务消息 ==========
    * 文本消息
    * </pre>
@@ -405,6 +437,8 @@ public enum MessageType
       case 3: return AUTH_REQ;
       case 4: return AUTH_RESP;
       case 5: return CLOSE;
+      case 8: return ACK;
+      case 9: return ACK_RESP;
       case 100: return TEXT;
       case 101: return IMAGE;
       case 102: return VOICE;

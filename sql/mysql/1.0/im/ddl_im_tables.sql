@@ -141,6 +141,44 @@ CREATE TABLE `im_chat_message` (
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM消息表(全局会话单份存储)' ROW_FORMAT = DYNAMIC;
 
+DROP TABLE IF EXISTS `im_chat_message_tombstone`;
+CREATE TABLE `im_chat_message_tombstone` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `chat_id` bigint NOT NULL COMMENT 'ChatID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `message_id` bigint NOT NULL COMMENT '消息ID',
+  `deleted_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '对我删除时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_message`(`tenant_id` ASC, `user_id` ASC, `message_id` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_user_chat`(`tenant_id` ASC, `user_id` ASC, `chat_id` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_chat_message`(`tenant_id` ASC, `chat_id` ASC, `message_id` ASC, `deleted` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM消息对我删除墓碑表(多端一致)' ROW_FORMAT = DYNAMIC;
+
+DROP TABLE IF EXISTS `im_chat_clear_watermark`;
+CREATE TABLE `im_chat_clear_watermark` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `chat_id` bigint NOT NULL COMMENT 'ChatID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `clear_sequence` bigint NOT NULL DEFAULT 0 COMMENT '清空水位（单调递增）：消息 sequence <= clear_sequence 对该用户不可见',
+  `cleared_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '清空时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_chat`(`tenant_id` ASC, `user_id` ASC, `chat_id` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_user_time`(`tenant_id` ASC, `user_id` ASC, `update_time` DESC) USING BTREE,
+  INDEX `idx_chat`(`tenant_id` ASC, `chat_id` ASC, `deleted` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM会话清空水位表(对我清空，多端一致)' ROW_FORMAT = DYNAMIC;
+
 -- ----------------------------
 -- Table structure for im_group
 -- 群组表: 存储群组基本信息

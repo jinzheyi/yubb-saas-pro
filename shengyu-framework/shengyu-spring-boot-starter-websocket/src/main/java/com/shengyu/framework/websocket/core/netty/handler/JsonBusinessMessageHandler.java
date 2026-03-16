@@ -6,7 +6,20 @@ import cn.hutool.json.JSONUtil;
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
-import com.shengyu.framework.websocket.core.protocol.*;
+import com.shengyu.framework.websocket.core.protocol.FileMessage;
+import com.shengyu.framework.websocket.core.protocol.ImageMessage;
+import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.LocationMessage;
+import com.shengyu.framework.websocket.core.protocol.MessageHeader;
+import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.protocol.AckMessage;
+import com.shengyu.framework.websocket.core.protocol.QuoteReplyMessage;
+import com.shengyu.framework.websocket.core.protocol.ReadReceiptMessage;
+import com.shengyu.framework.websocket.core.protocol.RecallMessage;
+import com.shengyu.framework.websocket.core.protocol.TextMessage;
+import com.shengyu.framework.websocket.core.protocol.TypingMessage;
+import com.shengyu.framework.websocket.core.protocol.VideoMessage;
+import com.shengyu.framework.websocket.core.protocol.VoiceMessage;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -84,7 +97,9 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
         }
 
         // 系统消息在 HeartbeatHandler/AuthHandler 已处理，这里只处理业务消息（>=100）
-        if (messageTypeValue < MessageType.TEXT_VALUE) {
+        // 但 ACK 是协议级回执，需要在这里进入 processorFactory 统一处理
+        // 注意：ACK=8 是新协议类型；在 protobuf 生成代码尚未更新时避免直接引用 MessageType.ACK_VALUE
+        if (messageTypeValue < MessageType.TEXT_VALUE && messageTypeValue != 8) {
             super.channelRead(ctx, msg);
             return;
         }
@@ -133,7 +148,8 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
         headerBuilder.setMessageId(messageId);
 
         Integer messageTypeValue = headerJson.getInt("messageType");
-        headerBuilder.setMessageType(MessageType.forNumber(messageTypeValue));
+        MessageType resolvedType = MessageType.forNumber(messageTypeValue);
+        headerBuilder.setMessageType(resolvedType != null ? resolvedType : MessageType.UNKNOWN);
 
         // senderId：优先使用认证用户，避免前端伪造
         Long senderId = authedUserId != null ? authedUserId : headerJson.getLong("senderId", 0L);
@@ -200,6 +216,19 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
         }
 
         switch (messageType) {
+            case ACK: {
+                if (bodyJson == null) {
+                    return AckMessage.getDefaultInstance().toByteArray();
+                }
+                AckMessage.Builder builder = AckMessage.newBuilder()
+                        .setMessageId(bodyJson.getLong("messageId", 0L))
+                        .setChatId(bodyJson.getLong("chatId", 0L))
+                        .setSequence(bodyJson.getLong("sequence", 0L))
+                        .setAckType(bodyJson.getStr("ackType", ""))
+                        .setClientReceivedAt(bodyJson.getLong("clientReceivedAt", 0L))
+                        .setOriginalTimestamp(bodyJson.getLong("originalTimestamp", 0L));
+                return builder.build().toByteArray();
+            }
             case TEXT: {
                 String content = bodyJson != null ? bodyJson.getStr("content", "") : "";
                 List<Long> atUserIds = new ArrayList<>();

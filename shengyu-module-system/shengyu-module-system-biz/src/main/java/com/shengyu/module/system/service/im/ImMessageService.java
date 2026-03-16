@@ -51,7 +51,7 @@ public interface ImMessageService {
     void deleteMessage(Long userId, Long messageId);
 
     /**
-     * 清空会话消息
+     * 清空会话消息（对我清空，跨端一致）
      *
      * @param userId 用户ID
      * @param chatId ChatID

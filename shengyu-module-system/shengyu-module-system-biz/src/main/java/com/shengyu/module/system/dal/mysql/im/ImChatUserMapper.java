@@ -6,6 +6,7 @@ import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDateTime;
@@ -28,6 +29,77 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
                 .orderByDesc(ImChatUserDO::getIsPinned)
                 .orderByDesc(ImChatUserDO::getLastMessageTime));
     }
+
+    default List<ImChatUserDO> selectListByUserIdAndChatIds(Long userId, List<Long> chatIds) {
+        return selectList(new LambdaQueryWrapperX<ImChatUserDO>()
+                .eq(ImChatUserDO::getUserId, userId)
+                .in(ImChatUserDO::getChatId, chatIds)
+                .eq(ImChatUserDO::getDeletedByUser, false));
+    }
+
+    @Select({"<script>",
+            "SELECT COUNT(1)",
+            "FROM im_chat_user cu",
+            "JOIN im_chat c ON c.id = cu.chat_id",
+            "LEFT JOIN im_group g ON g.id = c.group_id",
+            "LEFT JOIN system_users u1 ON u1.id = c.single_user1",
+            "LEFT JOIN system_users u2 ON u2.id = c.single_user2",
+            "WHERE cu.tenant_id = #{tenantId}",
+            "  AND cu.user_id = #{userId}",
+            "  AND cu.deleted_by_user = 0",
+            "<if test='conversationType != null'>",
+            "  AND c.chat_type = #{conversationType}",
+            "</if>",
+            "<if test='keyword != null and keyword != \"\"'>",
+            "  AND (",
+            "    (c.chat_type = 2 AND g.name LIKE CONCAT('%', #{keyword}, '%'))",
+            "    OR",
+            "    (c.chat_type = 1 AND (",
+            "       (c.single_user1 = #{userId} AND u2.nickname LIKE CONCAT('%', #{keyword}, '%'))",
+            "       OR",
+            "       (c.single_user2 = #{userId} AND u1.nickname LIKE CONCAT('%', #{keyword}, '%'))",
+            "    ))",
+            "  )",
+            "</if>",
+            "</script>"})
+    Long countChatIdsByUserForSearch(@Param("tenantId") Long tenantId,
+                                    @Param("userId") Long userId,
+                                    @Param("conversationType") Integer conversationType,
+                                    @Param("keyword") String keyword);
+
+    @Select({"<script>",
+            "SELECT cu.chat_id",
+            "FROM im_chat_user cu",
+            "JOIN im_chat c ON c.id = cu.chat_id",
+            "LEFT JOIN im_group g ON g.id = c.group_id",
+            "LEFT JOIN system_users u1 ON u1.id = c.single_user1",
+            "LEFT JOIN system_users u2 ON u2.id = c.single_user2",
+            "WHERE cu.tenant_id = #{tenantId}",
+            "  AND cu.user_id = #{userId}",
+            "  AND cu.deleted_by_user = 0",
+            "<if test='conversationType != null'>",
+            "  AND c.chat_type = #{conversationType}",
+            "</if>",
+            "<if test='keyword != null and keyword != \"\"'>",
+            "  AND (",
+            "    (c.chat_type = 2 AND g.name LIKE CONCAT('%', #{keyword}, '%'))",
+            "    OR",
+            "    (c.chat_type = 1 AND (",
+            "       (c.single_user1 = #{userId} AND u2.nickname LIKE CONCAT('%', #{keyword}, '%'))",
+            "       OR",
+            "       (c.single_user2 = #{userId} AND u1.nickname LIKE CONCAT('%', #{keyword}, '%'))",
+            "    ))",
+            "  )",
+            "</if>",
+            "ORDER BY cu.is_pinned DESC, cu.last_message_time DESC, cu.id DESC",
+            "LIMIT #{limit} OFFSET #{offset}",
+            "</script>"})
+    List<Long> selectChatIdsByUserForSearch(@Param("tenantId") Long tenantId,
+                                           @Param("userId") Long userId,
+                                           @Param("conversationType") Integer conversationType,
+                                           @Param("keyword") String keyword,
+                                           @Param("offset") Long offset,
+                                           @Param("limit") Long limit);
 
     default int updateSettings(Long userId, Long chatId, Boolean isPinned, Boolean noDisturb) {
         return update(null, new LambdaUpdateWrapper<ImChatUserDO>()

@@ -1,7 +1,9 @@
 package com.shengyu.module.system.service.im;
 
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
+import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSyncRespVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationUpdateReqVO;
 
@@ -30,6 +32,15 @@ public interface ImConversationService {
      * @return 会话列表
      */
     List<AppImConversationRespVO> getConversationListByType(Long userId, Integer conversationType);
+
+    /**
+     * 会话搜索（仅返回当前用户可见会话）
+     *
+     * @param userId 用户ID
+     * @param searchReqVO 搜索请求
+     * @return 会话分页结果
+     */
+    PageResult<AppImConversationRespVO> searchConversations(Long userId, AppImConversationSearchReqVO searchReqVO);
 
     /**
      * 创建或获取会话

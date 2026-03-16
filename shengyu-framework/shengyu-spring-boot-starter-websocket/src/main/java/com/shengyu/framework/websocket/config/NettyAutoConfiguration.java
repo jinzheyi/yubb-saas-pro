@@ -2,15 +2,11 @@ package com.shengyu.framework.websocket.config;
 
 import com.shengyu.framework.websocket.core.netty.NettyChannelInitializer;
 import com.shengyu.framework.websocket.core.netty.NettyServer;
+import com.shengyu.framework.websocket.core.netty.handler.*;
 import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
-import com.shengyu.framework.websocket.core.netty.handler.AuthHandler;
-import com.shengyu.framework.websocket.core.netty.handler.ExceptionHandler;
-import com.shengyu.framework.websocket.core.netty.handler.HeartbeatHandler;
-import com.shengyu.framework.websocket.core.netty.handler.JsonBusinessMessageHandler;
-import com.shengyu.framework.websocket.core.netty.handler.ProtobufMessageHandler;
-import com.shengyu.framework.websocket.core.netty.handler.WebSocketFrameHandler;
 import com.shengyu.framework.websocket.core.session.NettyAuthLeaseMonitor;
+import com.shengyu.framework.websocket.core.processor.impl.AckMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.BadgeUpdateMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.FileMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.ImageMessageProcessor;
@@ -114,8 +110,8 @@ public class NettyAutoConfiguration {
     // ========== Handler ==========
 
     @Bean
-    public WebSocketFrameHandler webSocketFrameHandler(NettySessionManager sessionManager) {
-        return new WebSocketFrameHandler(sessionManager);
+    public WebSocketFrameHandler webSocketFrameHandler(NettySessionManager sessionManager, NettyProperties nettyProperties) {
+        return new WebSocketFrameHandler(sessionManager, nettyProperties);
     }
 
     @Bean
@@ -149,6 +145,11 @@ public class NettyAutoConfiguration {
     }
 
     @Bean
+    public WebSocketProtobufOutboundHandler webSocketProtobufOutboundHandler() {
+        return new WebSocketProtobufOutboundHandler();
+    }
+
+    @Bean
     public ExceptionHandler exceptionHandler() {
         return new ExceptionHandler();
     }
@@ -159,6 +160,7 @@ public class NettyAutoConfiguration {
     public NettyChannelInitializer nettyChannelInitializer(
             NettyProperties nettyProperties,
             WebSocketFrameHandler webSocketFrameHandler,
+            WebSocketProtobufOutboundHandler webSocketProtobufOutboundHandler,
             ProtobufMessageHandler protobufMessageHandler,
             HeartbeatHandler heartbeatHandler,
             AuthHandler authHandler,
@@ -166,6 +168,7 @@ public class NettyAutoConfiguration {
         return new NettyChannelInitializer(
             nettyProperties,
             webSocketFrameHandler,
+            webSocketProtobufOutboundHandler,
             protobufMessageHandler,
             heartbeatHandler,
             authHandler,
@@ -326,6 +329,19 @@ public class NettyAutoConfiguration {
         BadgeUpdateMessageProcessor processor = new BadgeUpdateMessageProcessor(sessionManager, messageSender);
         processorFactory.registerProcessor(MessageType.BADGE_UPDATE, processor);
         log.info("[Netty] 注册角标更新消息处理器");
+        return processor;
+    }
+
+    /**
+     * ACK 消息处理器（轻量投递回执，phase1：仅日志/指标 + 去重）
+     */
+    @Bean
+    public AckMessageProcessor ackMessageProcessor(
+            NettySessionManager sessionManager,
+            MessageProcessorFactory processorFactory) {
+        AckMessageProcessor processor = new AckMessageProcessor(sessionManager);
+        processorFactory.registerProcessor(MessageType.ACK, processor);
+        log.info("[Netty] 注册 ACK 消息处理器");
         return processor;
     }
 }

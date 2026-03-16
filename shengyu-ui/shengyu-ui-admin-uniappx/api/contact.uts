@@ -4,6 +4,11 @@
 
 import { request } from '../utils/request.uts'
 
+export type PageResult<T> = {
+	list: T[]
+	total: number
+}
+
 /**
  * 获取联系人列表
  */
@@ -67,6 +72,18 @@ export function toggleContactStar(contactId: string, star: boolean): Promise<any
 export function getContactListByDept(deptId: string): Promise<any> {
   return request({
     url: `/system/im/contact/list-by-dept?deptId=${deptId}`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 根据部门ID分页获取联系人列表
+ */
+export function getContactPageByDept(deptId: string, pageNo: number = 1, pageSize: number = 20, keyword: string = ''): Promise<PageResult<any>> {
+  const kw = keyword != null ? String(keyword) : ''
+  const kwPart = kw !== '' ? `&keyword=${encodeURIComponent(kw)}` : ''
+  return request({
+    url: `/system/im/contact/list-by-dept-page?deptId=${deptId}&pageNo=${pageNo}&pageSize=${pageSize}${kwPart}`,
     method: 'GET'
   })
 }

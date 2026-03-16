@@ -4,45 +4,35 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.google.protobuf.MessageLite;
 import com.shengyu.framework.common.exception.ServiceException;
-import com.shengyu.framework.tenant.core.context.TenantContextHolder;
-import com.shengyu.framework.websocket.core.protocol.FileMessage;
-import com.shengyu.framework.websocket.core.protocol.MessageType;
-import com.shengyu.framework.websocket.core.protocol.RecallMessage;
-import com.shengyu.framework.websocket.core.protocol.TextMessage;
-import com.shengyu.framework.websocket.core.protocol.ImageMessage;
-import com.shengyu.framework.websocket.core.protocol.VideoMessage;
-import com.shengyu.framework.websocket.core.protocol.VoiceMessage;
-import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.object.BeanUtils;
-import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
-import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePullReqVO;
-import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
-import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
-import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
+import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.shengyu.framework.tenant.core.context.TenantContextHolder;
+import com.shengyu.framework.websocket.core.protocol.*;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
+import com.shengyu.module.system.controller.app.im.vo.message.*;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
-import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
-import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
-import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
-import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
+import com.shengyu.module.system.dal.mysql.im.*;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
-import com.shengyu.module.system.service.im.ImCursorVersionService;
+import com.shengyu.module.system.enums.im.ImMessageTypeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
-import java.util.*;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -68,6 +58,12 @@ public class ImMessageServiceImpl implements ImMessageService {
 
     @Resource
     private ImChatUserMapper chatUserMapper;
+
+    @Resource
+    private ImChatMessageTombstoneMapper chatMessageTombstoneMapper;
+
+    @Resource
+    private ImChatClearWatermarkMapper chatClearWatermarkMapper;
 
     @Resource
     private ImConversationUserStateMapper conversationUserStateMapper;
@@ -138,7 +134,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         chatMessageMapper.insert(message);
 
         String preview = getMessagePreview(dbMessageType, sendReqVO.getContent());
-        updateChatUsersAfterSend(chat, message.getId(), message.getSequence(), preview, message.getSendTime(), userId, sendReqVO);
+        updateChatUsersAfterSend(chat, message.getId(), message.getSequence(), message.getRev(), preview, message.getSendTime(), userId, sendReqVO);
         return message.getId();
     }
 
@@ -159,7 +155,41 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
 
         List<ImChatMessageDO> list = chatMessageMapper.selectListByChatIdAndSequenceGt(pullReqVO.getChatId(), lastSequence, limit);
-        return list.stream().map(message -> {
+
+        // enterprise: clear-history watermark filter (sequence <= clearSequence not visible)
+        Long clearSeq = null;
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            clearSeq = chatClearWatermarkMapper.selectClearSequence(tenantId, userId, pullReqVO.getChatId());
+        } catch (Exception ignore) {
+            clearSeq = null;
+        }
+        final Long finalClearSeq = clearSeq;
+
+        // enterprise: delete-for-me tombstone filter
+        List<Long> messageIds = list.stream().filter(m -> m != null && m.getId() != null).map(ImChatMessageDO::getId).collect(Collectors.toList());
+        List<Long> deletedIds = null;
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            if (!messageIds.isEmpty()) {
+                deletedIds = chatMessageTombstoneMapper.selectDeletedMessageIds(tenantId, userId, pullReqVO.getChatId(), messageIds);
+            }
+        } catch (Exception ignore) {
+            deletedIds = null;
+        }
+        final List<Long> finalDeletedIds = deletedIds;
+
+        return list.stream()
+                .filter(m -> m != null && m.getId() != null
+                        && (finalClearSeq == null || finalClearSeq <= 0 || (m.getSequence() != null && m.getSequence() > finalClearSeq))
+                        && (finalDeletedIds == null || !finalDeletedIds.contains(m.getId())))
+                .map(message -> {
             AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
             respVO.setChatId(message.getChatId());
             respVO.setSequence(message.getSequence());
@@ -179,9 +209,44 @@ public class ImMessageServiceImpl implements ImMessageService {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
         PageResult<ImChatMessageDO> pageResult = chatMessageMapper.selectPageByChatId(pageReqVO.getChatId(), pageReqVO);
-        List<AppImMessageRespVO> respVOList = pageResult.getList().stream().map(message -> {
+
+        // enterprise: clear-history watermark filter
+        Long clearSeq = null;
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            clearSeq = chatClearWatermarkMapper.selectClearSequence(tenantId, userId, pageReqVO.getChatId());
+        } catch (Exception ignore) {
+            clearSeq = null;
+        }
+        final Long finalClearSeq = clearSeq;
+
+        // enterprise: delete-for-me tombstone filter
+        List<Long> pageIds = pageResult.getList().stream().filter(m -> m != null && m.getId() != null).map(ImChatMessageDO::getId).collect(Collectors.toList());
+        List<Long> deletedIds = null;
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            if (!pageIds.isEmpty()) {
+                deletedIds = chatMessageTombstoneMapper.selectDeletedMessageIds(tenantId, userId, pageReqVO.getChatId(), pageIds);
+            }
+        } catch (Exception ignore) {
+            deletedIds = null;
+        }
+        final List<Long> finalDeletedIds = deletedIds;
+
+        List<AppImMessageRespVO> respVOList = pageResult.getList().stream()
+                .filter(m -> m != null && m.getId() != null
+                        && (finalClearSeq == null || finalClearSeq <= 0 || (m.getSequence() != null && m.getSequence() > finalClearSeq))
+                        && (finalDeletedIds == null || !finalDeletedIds.contains(m.getId())))
+                .map(message -> {
             AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
             respVO.setChatId(message.getChatId());
+            respVO.setSequence(message.getSequence());
             // 兼容历史数据：如果 messageType 被存成了 Protobuf 的 100+，则转换回 REST/DB 的 1-10
             respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
             fillSenderInfo(respVO, message.getSenderId());
@@ -208,8 +273,37 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (chatUser == null) {
             throw exception(MESSAGE_NOT_EXISTS);
         }
+
+        // enterprise: visibility filter (clear-history watermark + delete-for-me tombstone)
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        boolean invisible = false;
+        try {
+            Long clearSeq = chatClearWatermarkMapper.selectClearSequence(tenantId, userId, message.getChatId());
+            if (clearSeq != null && clearSeq > 0 && message.getSequence() != null && message.getSequence() <= clearSeq) {
+                invisible = true;
+            }
+        } catch (Exception ignore) {
+            // ignore
+        }
+        try {
+            List<Long> deletedIds = chatMessageTombstoneMapper.selectDeletedMessageIds(tenantId, userId, message.getChatId(), Collections.singletonList(messageId));
+            if (deletedIds != null && !deletedIds.isEmpty()) {
+                invisible = true;
+            }
+        } catch (Exception ignore) {
+            // ignore
+        }
+        if (invisible) {
+            throw exception(MESSAGE_NOT_EXISTS);
+        }
+
         AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
         respVO.setChatId(message.getChatId());
+        respVO.setSequence(message.getSequence());
+        respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
         fillSenderInfo(respVO, message.getSenderId());
         respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
         fillChatTargetFields(respVO, userId);
@@ -245,10 +339,11 @@ public class ImMessageServiceImpl implements ImMessageService {
                 userId, messageIds.size(), updatedCount, status);
     }
 
-    private void updateChatUsersAfterSend(ImChatDO chat, Long lastMessageId, Long lastMessageSequence,
+    private void updateChatUsersAfterSend(ImChatDO chat, Long lastMessageId, Long lastMessageSequence, Long messageRev,
                                          String lastMessageContent, LocalDateTime lastMessageTime,
                                          Long senderId, AppImMessageSendReqVO sendReqVO) {
         Integer dbMessageType = normalizeDbMessageType(sendReqVO.getMessageType());
+        Long finalRev = messageRev != null && messageRev > 0 ? messageRev : 1L;
         if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
             List<Long> memberIds = imGroupService.getGroupMemberIds(chat.getGroupId());
             for (Long memberId : memberIds) {
@@ -270,7 +365,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                 if (!isSender) {
                     imBadgeService.pushBadgeUpdate(memberId);
                     // 推送消息内容给接收者
-                    pushMessageToUser(memberId, chat.getId(), lastMessageId, senderId, sendReqVO);
+                    pushMessageToUser(memberId, chat.getId(), lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO);
                 }
             }
         } else {
@@ -292,12 +387,12 @@ public class ImMessageServiceImpl implements ImMessageService {
             Long receiverId = Objects.equals(chat.getSingleUser1(), senderId) ? chat.getSingleUser2() : chat.getSingleUser1();
             ImChatUserDO receiver = ensureChatUser(receiverId, chat.getId());
             chatUserMapper.updateLastMessageAndIncrementUnread(
-                    receiver.getId(), lastMessageId, dbMessageType, lastMessageContent, lastMessageTime,
+                    receiver.getId(), lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime,
                     1,
                     Boolean.TRUE.equals(receiver.getNoDisturb()));
             imBadgeService.pushBadgeUpdate(receiverId);
             // 推送消息内容给接收者
-            pushMessageToUser(receiverId, chat.getId(), lastMessageId, senderId, sendReqVO);
+            pushMessageToUser(receiverId, chat.getId(), lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO);
         }
     }
 
@@ -332,13 +427,13 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
     }
 
-    private void pushMessageToUser(Long userId, Long chatId, Long messageId, Long senderId, AppImMessageSendReqVO sendReqVO) {
+    private void pushMessageToUser(Long userId, Long chatId, Long messageId, Long sequence, Long rev, Long senderId, AppImMessageSendReqVO sendReqVO) {
         try {
             Long tenantId = TenantContextHolder.getTenantId();
 
             // 根据消息类型构建不同的消息体
             MessageType messageType;
-            com.google.protobuf.MessageLite messageBody;
+            MessageLite messageBody;
             String headerExtra = sendReqVO.getExtra();
 
             Integer dbMessageType = normalizeDbMessageType(sendReqVO.getMessageType());
@@ -427,14 +522,15 @@ public class ImMessageServiceImpl implements ImMessageService {
 
             // enterprise: include rev for final-state merge; merge with existing header.extra (e.g. file metadata)
             String extraWithRev = null;
+            Long finalRev = rev != null && rev > 0 ? rev : 1L;
             try {
                 JSONObject obj = StrUtil.isNotBlank(headerExtra) ? JSONUtil.parseObj(headerExtra) : JSONUtil.createObj();
-                obj.set("rev", 1);
+                obj.set("rev", finalRev);
                 extraWithRev = obj.toString();
             } catch (Exception e) {
                 try {
                     JSONObject obj = JSONUtil.createObj();
-                    obj.set("rev", 1);
+                    obj.set("rev", finalRev);
                     extraWithRev = obj.toString();
                 } catch (Exception ignore) {
                     extraWithRev = null;
@@ -443,7 +539,7 @@ public class ImMessageServiceImpl implements ImMessageService {
 
             // 群聊推送给成员时，前端会话路由依赖 groupId；单聊依赖 receiverId/senderId
             messageSender.sendToUserWithExtra(userId, messageType, messageBody,
-                    senderId, receiverId, groupId, tenantId, messageId, null, chatId,
+                    senderId, receiverId, groupId, tenantId, messageId, sequence, chatId,
                     null, null, extraWithRev);
             log.debug("[ImMessageService] WebSocket 消息推送成功, userId: {}, messageId: {}", userId, messageId);
         } catch (Exception e) {
@@ -533,7 +629,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             }
             ImChatDO chat = chatMapper.selectById(message.getChatId());
             if (chat != null) {
-                List<ImChatUserDO> chatUsers = chatUserMapper.selectList(new com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX<ImChatUserDO>()
+                List<ImChatUserDO> chatUsers = chatUserMapper.selectList(new LambdaQueryWrapperX<ImChatUserDO>()
                         .eq(ImChatUserDO::getChatId, message.getChatId())
                         .eq(ImChatUserDO::getDeletedByUser, false)
                         .eq(ImChatUserDO::getDeleted, false));
@@ -642,6 +738,37 @@ public class ImMessageServiceImpl implements ImMessageService {
                         messageId, message.getSequence(), message.getChatId(),
                         null, null, extra);
             }
+
+            // enterprise: re-edit-after-recall hint (ONLY to sender devices; never broadcast original content)
+            try {
+                boolean isText = Objects.equals(message.getMessageType(), ImMessageTypeEnum.TEXT.getType());
+                if (isText) {
+                    long reeditWindowSec = 300L;
+                    long deadlineTs = recallTime != null ? recallTime.plusSeconds(reeditWindowSec).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : 0L;
+                    String hintExtra = null;
+                    try {
+                        JSONObject obj = JSONUtil.createObj();
+                        obj.set("action", "reedit_after_recall");
+                        obj.set("chatId", message.getChatId());
+                        obj.set("messageId", messageId);
+                        obj.set("rev", newRev);
+                        obj.set("recallBy", userId);
+                        obj.set("recallTime", recallTime != null ? recallTime.toString() : "");
+                        obj.set("deadlineTs", deadlineTs);
+                        obj.set("originalContent", message.getContent() != null ? message.getContent() : "");
+                        hintExtra = obj.toString();
+                    } catch (Exception ignore) {
+                        hintExtra = null;
+                    }
+                    TextMessage notifyBody = TextMessage.newBuilder().setContent("").build();
+                    messageSender.sendToUserWithExtra(userId, MessageType.SYSTEM_NOTIFY, notifyBody,
+                            0L, userId, 0L, tenantId,
+                            null, null, message.getChatId(),
+                            null, null, hintExtra);
+                }
+            } catch (Exception ignore) {
+                // ignore
+            }
         } catch (Exception e) {
             log.warn("[ImMessageService] 推送撤回事件失败, userId: {}, messageId: {}, error: {}",
                     userId, messageId, e.getMessage(), e);
@@ -651,15 +778,122 @@ public class ImMessageServiceImpl implements ImMessageService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteMessage(Long userId, Long messageId) {
-        // Route-A：暂不提供物理删除消息能力（通常是撤回/客户端侧隐藏）
-        throw exception(MESSAGE_SEND_FAILED);
+        ImChatMessageDO message = chatMessageMapper.selectById(messageId);
+        if (message == null) {
+            throw exception(MESSAGE_NOT_EXISTS);
+        }
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, message.getChatId());
+        if (chatUser == null) {
+            throw exception(MESSAGE_NOT_EXISTS);
+        }
+
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+
+        // idempotent tombstone insert
+        chatMessageTombstoneMapper.insertIgnore(tenantId, message.getChatId(), userId, messageId);
+
+        // push conversation state change via cursorVersion so other devices hide this message on refresh/sync
+        try {
+            Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
+            conversationUserStateMapper.upsertAfterSettings(
+                    tenantId,
+                    message.getChatId(),
+                    userId,
+                    cursorVersion,
+                    chatUser.getIsPinned(),
+                    chatUser.getNoDisturb(),
+                    chatUser.getDraft()
+            );
+
+            try {
+                TextMessage body = TextMessage.newBuilder().setContent("").build();
+                messageSender.sendToUser(userId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, userId, 0L, tenantId,
+                        null, null, message.getChatId(),
+                        cursorVersion, null);
+            } catch (Exception e) {
+                log.warn("[ImMessageService] 推送删除消息增量同步通知失败, userId: {}, messageId: {}, error: {}",
+                        userId, messageId, e.getMessage(), e);
+            }
+
+            try {
+                imBadgeService.pushBadgeUpdate(userId);
+            } catch (Exception e) {
+                log.warn("[ImMessageService] 推送删除消息角标更新失败, userId: {}, messageId: {}, error: {}",
+                        userId, messageId, e.getMessage(), e);
+            }
+        } catch (Exception e) {
+            log.warn("[ImMessageService] 删除消息写入会话用户态失败, userId: {}, messageId: {}, error: {}",
+                    userId, messageId, e.getMessage(), e);
+        }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void clearConversationMessages(Long userId, Long chatId) {
-        // Route-A：消息是全局单份存储，清空需要用户侧隐藏/删除标记表，暂不支持
-        throw exception(MESSAGE_SEND_FAILED);
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+        if (chatUser == null) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+
+        // enterprise: clear to current chat last_sequence (monotonic)
+        Long clearSeq = 0L;
+        try {
+            ImChatDO chat = chatMapper.selectById(chatId);
+            if (chat != null && chat.getLastSequence() != null && chat.getLastSequence() > 0) {
+                clearSeq = chat.getLastSequence();
+            }
+        } catch (Exception ignore) {
+            clearSeq = 0L;
+        }
+        if (clearSeq == null) {
+            clearSeq = 0L;
+        }
+
+        chatClearWatermarkMapper.upsertMax(tenantId, chatId, userId, clearSeq);
+
+        // push cross-device conversation state change
+        try {
+            Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
+            conversationUserStateMapper.upsertAfterSettings(
+                    tenantId,
+                    chatId,
+                    userId,
+                    cursorVersion,
+                    chatUser.getIsPinned(),
+                    chatUser.getNoDisturb(),
+                    chatUser.getDraft()
+            );
+
+            try {
+                TextMessage body = TextMessage.newBuilder().setContent("").build();
+                messageSender.sendToUser(userId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, userId, 0L, tenantId,
+                        null, null, chatId,
+                        cursorVersion, null);
+            } catch (Exception e) {
+                log.warn("[ImMessageService] 推送清空聊天记录增量同步通知失败, userId: {}, chatId: {}, error: {}",
+                        userId, chatId, e.getMessage(), e);
+            }
+
+            try {
+                imBadgeService.pushBadgeUpdate(userId);
+            } catch (Exception e) {
+                log.warn("[ImMessageService] 推送清空聊天记录角标更新失败, userId: {}, chatId: {}, error: {}",
+                        userId, chatId, e.getMessage(), e);
+            }
+        } catch (Exception e) {
+            log.warn("[ImMessageService] 清空聊天记录写入会话用户态失败, userId: {}, chatId: {}, error: {}",
+                    userId, chatId, e.getMessage(), e);
+        }
     }
 
     @Override

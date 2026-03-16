@@ -1,0 +1,15 @@
+/**
+ * 搜索相关 API
+ */
+
+import { request } from '../utils/request.uts'
+
+/**
+ * 获取热门搜索词
+ */
+export function getHotSearch(limit: number = 10): Promise<any> {
+  return request({
+    url: `/system/im/search/hot?limit=${limit}`,
+    method: 'GET'
+  })
+}

@@ -73,7 +73,7 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getGroupFileList, deleteGroupFile, downloadGroupFile } from '../../api/file.uts'
-	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
+	import { navToFilePreview } from '../../utils/nav.uts'
 
 	const { t } = useI18n()
 
@@ -347,7 +347,10 @@
 				url: `/pages/message/video-player?url=${encodeURIComponent(file.url)}&title=${encodeURIComponent(file.name)}`
 			})
 		} else {
-			await downloadAndOpenDocumentWithRetry(file.url, '正在下载')
+			const fid = file && file.fileId != null ? String(file.fileId) : null
+			const url = file && file.url ? String(file.url) : null
+			const name = file && file.name ? String(file.name) : null
+			navToFilePreview({ fileId: fid, url: url, name: name })
 		}
 	}
 

@@ -53,6 +53,50 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // 0) 企业级协议控制：PROBE/ACK（JSON TextFrame）
+        // PROBE 允许在未认证阶段执行，用于能力协商/打点；ACK 仅在已认证阶段接收
+        if (msg instanceof String) {
+            try {
+                JSONObject json = JSONUtil.parseObj((String) msg);
+                JSONObject header = json.getJSONObject("header");
+                Integer mt = header != null ? header.getInt("messageType") : null;
+                if (mt != null) {
+                    // B2：未认证阶段允许 CLOSE（协议控制帧），直接关闭连接
+                    if (mt == MessageType.CLOSE_VALUE) {
+                        ctx.close();
+                        return;
+                    }
+                    if (mt == 6) {
+                        handleJsonProbe(ctx, json);
+                        return;
+                    }
+                    if (mt == 8 && isAuthenticated(ctx)) {
+                        handleJsonAck(ctx, json);
+                        return;
+                    }
+                    // 严格模式：未完成 PROBE 不允许 AUTH_REQ
+                    if (mt == MessageType.AUTH_REQ_VALUE && !isProbeDone(ctx)) {
+                        sendJsonClose(ctx, "PROBE_REQUIRED", 426, "协议不兼容：请先发送 PROBE");
+                        ctx.close();
+                        return;
+                    }
+                }
+            } catch (Exception ignore) {
+            }
+        }
+
+        // B2：未认证阶段允许 Protobuf CLOSE（协议控制帧），直接关闭连接
+        if (msg instanceof ImMessage) {
+            try {
+                ImMessage im = (ImMessage) msg;
+                if (im.getHeader() != null && im.getHeader().getMessageType() == MessageType.CLOSE) {
+                    ctx.close();
+                    return;
+                }
+            } catch (Exception ignore) {
+            }
+        }
+
         // 1) 如果是认证请求（AUTH_REQ），即使已认证也允许走 renew
         if (isAuthRequestMessage(msg)) {
             if (msg instanceof String) {
@@ -85,6 +129,162 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             sendProtobufAuthResponse(ctx, false, 401, "未认证，请先发送认证请求", 0L, 0L);
         }
         ctx.close();
+    }
+
+    private void handleJsonProbe(ChannelHandlerContext ctx, JSONObject json) {
+        try {
+            markProbeDone(ctx);
+            JSONObject body = json.getJSONObject("body");
+            String requestedCodec = body != null ? body.getStr("codec") : "";
+
+            // B1：绑定 codec（严格模式下，codec 影响 Text/Binary 载体约束）
+            try {
+                String sp = ctx.channel().attr(WebSocketFrameHandler.NEGOTIATED_SUBPROTOCOL_KEY).get();
+                // 若握手已选 subprotocol，则以 subprotocol 为准；否则以 PROBE.codec 为准
+                if (sp == null || sp.isEmpty()) {
+                    if (requestedCodec != null && !requestedCodec.isEmpty()) {
+                        if ("pb".equalsIgnoreCase(requestedCodec)) {
+                            ctx.channel().attr(WebSocketFrameHandler.CODEC_KEY).set("pb");
+                        } else {
+                            ctx.channel().attr(WebSocketFrameHandler.CODEC_KEY).set("json");
+                        }
+                    } else {
+                        ctx.channel().attr(WebSocketFrameHandler.CODEC_KEY).set("json");
+                    }
+                    ctx.channel().attr(WebSocketFrameHandler.NEGOTIATION_MODE_KEY).set("probe");
+                }
+            } catch (Exception ignore) {
+            }
+
+            String negotiatedSubprotocol = "";
+            String negotiatedCodec = "json";
+            String negotiationMode = "";
+            try {
+                negotiatedSubprotocol = ctx.channel().attr(WebSocketFrameHandler.NEGOTIATED_SUBPROTOCOL_KEY).get();
+                String c = ctx.channel().attr(WebSocketFrameHandler.CODEC_KEY).get();
+                String m = ctx.channel().attr(WebSocketFrameHandler.NEGOTIATION_MODE_KEY).get();
+                if (c != null && !c.isEmpty()) {
+                    negotiatedCodec = c;
+                }
+                if (m != null) {
+                    negotiationMode = m;
+                }
+                if (negotiatedSubprotocol == null) {
+                    negotiatedSubprotocol = "";
+                }
+            } catch (Exception ignore) {
+            }
+
+            JSONObject features = body != null ? body.getJSONObject("features") : null;
+            boolean ack = features != null && Boolean.TRUE.equals(features.getBool("ack"));
+
+            JSONObject response = JSONUtil.createObj()
+                .set("header", JSONUtil.createObj()
+                    .set("messageId", System.currentTimeMillis())
+                    .set("messageType", 7)
+                    .set("timestamp", System.currentTimeMillis()))
+                .set("body", JSONUtil.createObj()
+                    .set("version", 1)
+                    .set("codec", negotiatedCodec)
+                    .set("negotiationMode", negotiationMode)
+                    .set("subprotocol", negotiatedSubprotocol)
+                    .set("features", JSONUtil.createObj().set("ack", ack))
+                    .set("serverTime", System.currentTimeMillis()));
+
+            if (log.isInfoEnabled()) {
+                log.info("[PROBE] ok: channel={}, codec={}, mode={}, subprotocol={}, requestedCodec={}",
+                    ctx.channel().id().asShortText(), negotiatedCodec, negotiationMode, negotiatedSubprotocol, requestedCodec);
+            }
+
+            ctx.writeAndFlush(new TextWebSocketFrame(response.toString()));
+        } catch (Exception e) {
+            log.warn("[Auth] handleJsonProbe failed: {}", ctx.channel().id().asShortText(), e);
+        }
+    }
+
+    private boolean isProbeDone(ChannelHandlerContext ctx) {
+        try {
+            Boolean done = ctx.channel().attr(WebSocketFrameHandler.PROBE_DONE_KEY).get();
+            return Boolean.TRUE.equals(done);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void markProbeDone(ChannelHandlerContext ctx) {
+        try {
+            ctx.channel().attr(WebSocketFrameHandler.PROBE_DONE_KEY).set(true);
+        } catch (Exception ignore) {
+        }
+    }
+
+    private void sendJsonClose(ChannelHandlerContext ctx, String action, int code, String message) {
+        try {
+            JSONObject payload = JSONUtil.createObj()
+                .set("header", JSONUtil.createObj()
+                    .set("messageId", System.currentTimeMillis())
+                    .set("messageType", MessageType.CLOSE_VALUE)
+                    .set("timestamp", System.currentTimeMillis()))
+                .set("body", JSONUtil.createObj()
+                    .set("action", action)
+                    .set("code", code)
+                    .set("message", message));
+            ctx.writeAndFlush(new TextWebSocketFrame(payload.toString()));
+        } catch (Exception ignore) {
+        }
+    }
+
+    private void handleJsonAck(ChannelHandlerContext ctx, JSONObject json) {
+        try {
+            JSONObject body = json.getJSONObject("body");
+            String messageId = body != null ? body.getStr("messageId") : "";
+            String chatId = body != null ? body.getStr("chatId") : "";
+            String sequence = body != null ? body.getStr("sequence") : "";
+            String ackType = body != null ? body.getStr("ackType") : "";
+
+            long clientReceivedAt = 0L;
+            long originalTimestamp = 0L;
+            long deliveryDelayMs = -1L;
+            try {
+                Object cr = body != null ? body.get("clientReceivedAt") : null;
+                if (cr != null) {
+                    clientReceivedAt = Long.parseLong(String.valueOf(cr));
+                }
+            } catch (Exception ignore) {
+                clientReceivedAt = 0L;
+            }
+            try {
+                Object ot = body != null ? body.get("originalTimestamp") : null;
+                if (ot != null) {
+                    originalTimestamp = Long.parseLong(String.valueOf(ot));
+                }
+            } catch (Exception ignore) {
+                originalTimestamp = 0L;
+            }
+            if (clientReceivedAt > 0 && originalTimestamp > 0) {
+                deliveryDelayMs = clientReceivedAt - originalTimestamp;
+            }
+
+            if (log.isInfoEnabled()) {
+                log.info("[ACK] received: channel={}, userId={}, messageId={}, chatId={}, sequence={}, ackType={}, clientReceivedAt={}, originalTimestamp={}, deliveryDelayMs={}",
+                    ctx.channel().id().asShortText(), ctx.channel().attr(USER_ID_KEY).get(), messageId, chatId, sequence, ackType,
+                    clientReceivedAt, originalTimestamp, deliveryDelayMs);
+            }
+
+            JSONObject response = JSONUtil.createObj()
+                .set("header", JSONUtil.createObj()
+                    .set("messageId", System.currentTimeMillis())
+                    .set("messageType", 9)
+                    .set("timestamp", System.currentTimeMillis()))
+                .set("body", JSONUtil.createObj()
+                    .set("success", true)
+                    .set("messageId", messageId)
+                    .set("chatId", chatId)
+                    .set("sequence", sequence));
+            ctx.writeAndFlush(new TextWebSocketFrame(response.toString()));
+        } catch (Exception e) {
+            log.warn("[Auth] handleJsonAck failed: {}", ctx.channel().id().asShortText(), e);
+        }
     }
 
     /**
@@ -149,8 +349,26 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             // 发送认证成功响应
             sendJsonAuthResponse(ctx, true, 0, "认证成功", loginUser.getId(), tenantId);
 
-            log.info("[Auth] JSON 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}",
-                loginUser.getId(), tenantId, loginUser.getUserType(), ctx.channel().id().asShortText());
+            String codec = "";
+            String sp = "";
+            String mode = "";
+            try {
+                String c = ctx.channel().attr(WebSocketFrameHandler.CODEC_KEY).get();
+                codec = c != null ? c : "";
+            } catch (Exception ignore) {
+            }
+            try {
+                String s = ctx.channel().attr(WebSocketFrameHandler.NEGOTIATED_SUBPROTOCOL_KEY).get();
+                sp = s != null ? s : "";
+            } catch (Exception ignore) {
+            }
+            try {
+                String m = ctx.channel().attr(WebSocketFrameHandler.NEGOTIATION_MODE_KEY).get();
+                mode = m != null ? m : "";
+            } catch (Exception ignore) {
+            }
+            log.info("[Auth] JSON 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}, codec: {}, subprotocol: {}, negotiationMode: {}",
+                loginUser.getId(), tenantId, loginUser.getUserType(), ctx.channel().id().asShortText(), codec, sp, mode);
 
         } catch (Exception e) {
             log.error("[Auth] JSON 认证处理异常", e);
@@ -217,8 +435,26 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             // 发送认证成功响应
             sendProtobufAuthResponse(ctx, true, 0, "认证成功", loginUser.getId(), tenantId);
 
-            log.info("[Auth] Protobuf 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}",
-                loginUser.getId(), tenantId, loginUser.getUserType(), ctx.channel().id().asShortText());
+            String codec = "";
+            String sp = "";
+            String mode = "";
+            try {
+                String c = ctx.channel().attr(WebSocketFrameHandler.CODEC_KEY).get();
+                codec = c != null ? c : "";
+            } catch (Exception ignore) {
+            }
+            try {
+                String s = ctx.channel().attr(WebSocketFrameHandler.NEGOTIATED_SUBPROTOCOL_KEY).get();
+                sp = s != null ? s : "";
+            } catch (Exception ignore) {
+            }
+            try {
+                String m = ctx.channel().attr(WebSocketFrameHandler.NEGOTIATION_MODE_KEY).get();
+                mode = m != null ? m : "";
+            } catch (Exception ignore) {
+            }
+            log.info("[Auth] Protobuf 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}, codec: {}, subprotocol: {}, negotiationMode: {}",
+                loginUser.getId(), tenantId, loginUser.getUserType(), ctx.channel().id().asShortText(), codec, sp, mode);
 
         } catch (InvalidProtocolBufferException e) {
             log.error("[Auth] 解析 Protobuf 认证请求失败", e);
@@ -273,7 +509,17 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             .setBody(authResponse.toByteString())
             .build();
 
-        ctx.writeAndFlush(imMessage);
+        ctx.channel().writeAndFlush(imMessage);
+    }
+
+    private boolean isWebSocketChannel(ChannelHandlerContext ctx) {
+        try {
+            return ctx != null
+                && ctx.channel() != null
+                && ctx.channel().pipeline().get(WebSocketServerProtocolHandler.class) != null;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -324,14 +570,6 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             .build();
         ImMessage close = ImMessage.newBuilder().setHeader(header).build();
         ctx.writeAndFlush(close);
-    }
-
-    private boolean isWebSocketChannel(ChannelHandlerContext ctx) {
-        try {
-            return ctx.channel().pipeline().get(WebSocketServerProtocolHandler.class) != null;
-        } catch (Exception ignore) {
-            return false;
-        }
     }
 
     /**

@@ -50,6 +50,11 @@ enum MessageType {
   AUTH_RESP = 4;
   // 连接关闭
   CLOSE = 5;
+
+  // 协议控制：轻量投递回执（phase1：仅回执，不做重发）
+  ACK = 8;
+  // ACK 响应（可选，便于联调与打点）
+  ACK_RESP = 9;
   
   // ========== 业务消息 ==========
   // 文本消息
@@ -112,6 +117,28 @@ message AuthResponse {
   int64 userId = 4;
   // 租户ID
   int64 tenantId = 5;
+}
+
+// 轻量 ACK（客户端投递回执）
+message AckMessage {
+  // 被确认的消息ID
+  int64 messageId = 1;
+  // 会话ID（可选）
+  int64 chatId = 2;
+  // 被确认的序列号（可选）
+  int64 sequence = 3;
+  // ACK 类型：RECEIVED / READ 等（phase1 使用 RECEIVED）
+  string ackType = 4;
+  // 客户端收到时间（毫秒）
+  int64 clientReceivedAt = 5;
+  // 原消息时间戳（可选，用于计算端到端延迟）
+  int64 originalTimestamp = 6;
+}
+
+message AckResponse {
+  bool success = 1;
+  int32 code = 2;
+  string message = 3;
 }
 
 // 文本消息

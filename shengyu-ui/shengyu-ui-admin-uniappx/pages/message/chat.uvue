@@ -49,6 +49,7 @@
 						<!-- 企业级撤回：对齐企微/钉钉，展示为居中系统提示条（不走左右气泡，不显示头像） -->
 						<view v-if="isRecalledFinalMsg(msg)" class="recall-system-tip">
 							<text class="recall-system-tip-text">{{ msg.content }}</text>
+							<text v-if="shouldShowReeditEntry(msg)" class="recall-system-tip-action" @click.stop="handleReeditAfterRecall(msg)">重新编辑</text>
 						</view>
 						<template v-else>
 							<view class="avatar" :style="{ backgroundColor: msg.avatarBg }">
@@ -368,20 +369,23 @@
 	import { getUserIdStr, getTenantId, hasRole } from '../../store/user.uts'
 	import { 
 		chooseAndUploadFile,
-		chooseAndUploadImage,
-		chooseAndUploadVideo,
+		uploadFileAndReturnId,
 		uploadFile,
-		uploadFileAndReturnId
+		uploadFileForMulti,
+		chooseImage,
+		chooseVideo,
+		chooseFile,
+		formatSeconds,
+		uploadAudio
 	} from '../../utils/upload.uts'
 	import { getUserAvatarColor, getAvatarText as getAvatarTextUtil } from '../../utils/avatar.uts'
 	import { parseMessageContent } from '../../utils/message-utils.uts'
-	import { uploadGroupFile, getFilePresignedGetUrl, getFileOpenStrategy } from '../../api/file.uts'
-	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
+	import { uploadGroupFile, getFilePresignedGetUrl } from '../../api/file.uts'
+	import { navToFilePreview } from '../../utils/nav.uts'
 	import { readReceiptService } from '../../services/read-receipt-service.uts'
 	import {
 		BASE_URL as CONFIG_BASE_URL,
-		IM_MEDIA_USE_FILE_ID,
-		WS_URL
+		IM_MEDIA_USE_FILE_ID
 	} from '../../config/app.config.uts'
 
 	const { t } = useI18n()
@@ -808,11 +812,15 @@
 	let lastScrollTop = 0
 	let lastScrollAt = 0
 	let visibleObserver: UniIntersectionObserver | null = null
+	let visibleObserverWatching: boolean = false
 	let visibleReadMaxSeq: string = '0'
 	let serverReadDebounceTimer: any = null
 	let serverReadPendingSeq: string = '0'
 	let serverReadLastSentSeq: string = '0'
 	const SERVER_READ_DEBOUNCE_MS = 800
+	let visibleObserveRetryTimer: any = null
+	let visibleObserveRetryCount: number = 0
+	const VISIBLE_OBSERVE_MAX_RETRY: number = 10
 
 	function compareSeqLocal(a: string, b: string): number {
 		const as = a != null && a !== '' ? a : '0'
@@ -911,44 +919,97 @@
 			}
 			visibleObserver = uni.createIntersectionObserver(ctx)
 			visibleObserver!.relativeTo('.chat-content', { top: '0px', bottom: '0px' })
-				.observe('.read-observe-item', (res) => {
-					try {
-						if (res == null || (res as any).intersectionRatio == null) {
-							return
-						}
-						const ratio = Number((res as any).intersectionRatio)
-						if (ratio < 0.5) {
-							return
-						}
-						const now = Date.now()
-						if (now - lastScrollAt < 120) {
-							return
-						}
-						const dataset = (res as any).dataset as UTSJSONObject
-						const selfFlag = dataset != null ? (dataset['self'] as any) : null
-						if (selfFlag != null && selfFlag.toString() === '1') {
-							return
-						}
-						const seq = dataset != null ? (dataset['seq'] as any) : null
-						const s = seq != null ? seq.toString() : '0'
-						applyVisibleReadAdvance(s)
-					} catch (e) {
-						// ignore
-					}
-				})
+			startVisibleReadObserve(ctx)
 		} catch (e) {
 			visibleObserver = null
 		}
 	}
 
+	function startVisibleReadObserve(ctx: any): void {
+		try {
+			if (visibleObserver == null) {
+				return
+			}
+			if (visibleObserverWatching) {
+				return
+			}
+			if (visibleObserveRetryTimer != null) {
+				clearTimeout(visibleObserveRetryTimer)
+				visibleObserveRetryTimer = null
+			}
+			uni.nextTick(() => {
+				try {
+					if (visibleObserver == null) {
+						return
+					}
+					const query = uni.createSelectorQuery().in(ctx)
+					query.selectAll('.read-observe-item').boundingClientRect((rects: any) => {
+						try {
+							const arr = rects as any[]
+							if (arr == null || arr.length <= 0) {
+								if (visibleObserveRetryCount < VISIBLE_OBSERVE_MAX_RETRY) {
+									visibleObserveRetryCount = visibleObserveRetryCount + 1
+									visibleObserveRetryTimer = setTimeout(() => {
+										visibleObserveRetryTimer = null
+										startVisibleReadObserve(ctx)
+									}, 120)
+								}
+								return
+							}
+							visibleObserveRetryCount = 0
+							visibleObserverWatching = true
+							visibleObserver!.observe('.read-observe-item', (res) => {
+								try {
+									if (res == null || (res as any).intersectionRatio == null) {
+										return
+									}
+									const ratio = Number((res as any).intersectionRatio)
+									if (ratio < 0.5) {
+										return
+									}
+									const now = Date.now()
+									if (now - lastScrollAt < 120) {
+										return
+									}
+									const dataset = (res as any).dataset as UTSJSONObject
+									const selfFlag = dataset != null ? (dataset['self'] as any) : null
+									if (selfFlag != null && selfFlag.toString() === '1') {
+										return
+									}
+									const seq = dataset != null ? (dataset['seq'] as any) : null
+									const s = seq != null ? seq.toString() : '0'
+									applyVisibleReadAdvance(s)
+								} catch (e) {
+									// ignore
+								}
+							})
+						} catch (e) {
+							// ignore
+						}
+					}).exec()
+				} catch (e) {
+					// ignore
+				}
+			})
+		} catch (e) {
+			// ignore
+		}
+	}
+
 	function destroyVisibleReadObserver(): void {
 		try {
+			if (visibleObserveRetryTimer != null) {
+				clearTimeout(visibleObserveRetryTimer)
+				visibleObserveRetryTimer = null
+			}
 			if (visibleObserver != null) {
 				visibleObserver!.disconnect()
 				visibleObserver = null
+				visibleObserverWatching = false
 			}
 		} catch (e) {
 			visibleObserver = null
+			visibleObserverWatching = false
 		}
 	}
 
@@ -1395,6 +1456,11 @@
 			
 			if (pageResult && pageResult.list) {
 				const serverMessages = pageResult.list as any[]
+				try {
+					await messageService.ingestRestHistoryPage(chatId.value, serverMessages)
+				} catch (e) {
+					// ignore
+				}
 				
 				// 转换为 MessageItem 格式
 				const newMessages = serverMessages.map(msg => {
@@ -1403,6 +1469,14 @@
 				
 				// 合并消息（去重）
 				messages.value = mergeMessages(messages.value, newMessages)
+				try {
+					const cachedNow = messageService.getMessages(chatId.value)
+					if (cachedNow && cachedNow.length > 0) {
+						messages.value = convertServiceMessages(cachedNow)
+					}
+				} catch (e) {
+					// ignore
+				}
 				
 				// 断线补偿水位初始化：HTTP 拉到的最新消息也需要推进本地 lastPulledSequence
 				try {
@@ -1536,6 +1610,20 @@
 			senderName: senderNickname,
 			status: statusVal
 		} as MessageItem
+
+		// enterprise: re-edit-after-recall rehydration for refresh/re-enter (REST history lacks original content)
+		try {
+			if (isRecalled && isSelfVal) {
+				const hint = messageService.getReeditHint(chatIdStr, messageIdStr)
+				if (hint != null && hint.content) {
+					;(uiMessage as any).reeditContent = hint.content
+					if (hint.deadlineTs) {
+						;(uiMessage as any).reeditDeadlineTs = hint.deadlineTs
+					}
+				}
+			}
+		} catch (e) {
+		}
 
 		applyQuoteFields(uiMessage, rawContent)
 		applyFileFields(uiMessage, extraContent && typeof extraContent === 'object' ? extraContent : content)
@@ -1956,6 +2044,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				finalMsg.senderId = pickNonEmpty(prev.senderId, next.senderId)
 				finalMsg.receiverId = pickNonEmpty(prev.receiverId, next.receiverId)
 				finalMsg.isSelf = (next.isSelf !== null && next.isSelf !== undefined) ? next.isSelf : prev.isSelf
+				finalMsg.reeditContent = pickNonEmpty(prev.reeditContent, next.reeditContent)
+				finalMsg.reeditDeadlineTs = pickNonEmpty(prev.reeditDeadlineTs, next.reeditDeadlineTs)
 				return finalMsg
 			}
 			const merged: any = { ...prev, ...next }
@@ -1967,6 +2057,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			merged.senderId = pickNonEmpty(prev.senderId, next.senderId)
 			merged.receiverId = pickNonEmpty(prev.receiverId, next.receiverId)
 			merged.isSelf = (next.isSelf !== null && next.isSelf !== undefined) ? next.isSelf : prev.isSelf
+			merged.reeditContent = pickNonEmpty(prev.reeditContent, next.reeditContent)
+			merged.reeditDeadlineTs = pickNonEmpty(prev.reeditDeadlineTs, next.reeditDeadlineTs)
 			return merged
 		}
 		
@@ -2031,7 +2123,22 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			incomingIsRecalled = false
 		}
 		if (existingIndex > -1 && !incomingIsRecalled) {
-			return
+			try {
+				const prev: any = messages.value[existingIndex]
+				const prevRev = prev && (prev as any).rev != null ? String((prev as any).rev) : '0'
+				const nextRev = (message as any).rev != null ? String((message as any).rev) : '0'
+				let newer = false
+				try {
+					newer = BigInt(nextRev) > BigInt(prevRev)
+				} catch (e) {
+					newer = nextRev > prevRev
+				}
+				if (!newer) {
+					return
+				}
+			} catch (e) {
+				return
+			}
 		}
 		
 		// 转换消息格式
@@ -2074,6 +2181,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			merged.sequence = prev.sequence != null && prev.sequence !== '' ? prev.sequence : next.sequence
 			merged.groupId = prev.groupId != null && prev.groupId !== '' ? prev.groupId : next.groupId
 			merged.chatId = prev.chatId != null && prev.chatId !== '' ? prev.chatId : next.chatId
+			messages.value[existingIndex] = merged
+		} else if (existingIndex > -1) {
+			const prev: any = messages.value[existingIndex]
+			const next: any = uiMessage
+			const merged: any = { ...prev, ...next }
+			merged.sequence = prev.sequence != null && prev.sequence !== '' ? prev.sequence : next.sequence
+			merged.groupId = prev.groupId != null && prev.groupId !== '' ? prev.groupId : next.groupId
+			merged.chatId = prev.chatId != null && prev.chatId !== '' ? prev.chatId : next.chatId
+			merged.rev = next.rev != null && next.rev !== '' ? next.rev : prev.rev
 			messages.value[existingIndex] = merged
 		} else {
 			messages.value.push(uiMessage)
@@ -2207,6 +2323,69 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		showEmojiMenu.value = false
 		showPlusMenu.value = false
 		scrollToBottom()
+	}
+
+	function shouldShowReeditEntry(msg: any): boolean {
+		try {
+			if (!msg) return false
+			const s: any = (msg as any).status
+			const isRecalled = s === 6 || s === '6' || s === 'recalled' || s === 'recalled_final'
+			if (!isRecalled) return false
+			if (!(msg as any).isSelf) return false
+			const senderIdStr = (msg as any).senderId != null ? String((msg as any).senderId) : ''
+			if (!senderIdStr || senderIdStr !== currentUserId.value) return false
+			const content = (msg as any).reeditContent != null ? String((msg as any).reeditContent) : ''
+			if (!content) return false
+			const deadlineStr = (msg as any).reeditDeadlineTs != null ? String((msg as any).reeditDeadlineTs) : ''
+			if (!deadlineStr) return false
+			let deadline = 0
+			try {
+				deadline = Number(deadlineStr)
+			} catch (e) {
+				deadline = 0
+			}
+			if (deadline <= 0) return false
+			return Date.now() <= deadline
+		} catch (e) {
+			return false
+		}
+	}
+
+	function handleReeditAfterRecall(msg: any) {
+		try {
+			if (editorCtx == null) {
+				uni.showToast({ title: '编辑器未就绪', icon: 'none' })
+				return
+			}
+			const content = (msg as any).reeditContent != null ? String((msg as any).reeditContent) : ''
+			if (!content) {
+				uni.showToast({ title: '原内容为空', icon: 'none' })
+				return
+			}
+			// re-edit must send a NEW normal message (not quote-reply)
+			try {
+				quoteReplyMsg.value = null
+			} catch (e) {
+			}
+			showEmojiMenu.value = false
+			showPlusMenu.value = false
+			isVoiceMode.value = false
+			isFullExpanded.value = false
+			editorCtx!.clear({
+				success: () => {
+					try {
+						editorCtx!.insertText({ text: content })
+					} catch (e) {
+						// ignore
+					}
+					inputText.value = 'has_content'
+					scrollToBottom()
+				}
+			})
+		} catch (e) {
+			console.error('[Chat] handleReeditAfterRecall failed:', e)
+			uni.showToast({ title: '操作失败', icon: 'none' })
+		}
 	}
 
 	function handleVoiceStart(e : TouchEvent) {
@@ -2991,77 +3170,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	async function handleFileOpen(msg : any) {
 		try {
-			let url = msg && msg.content ? String(msg.content) : ''
 			const fileName = msg && msg.fileName ? String(msg.fileName) : ''
 			const fileId = msg && msg.fileId != null ? String(msg.fileId) : ''
-
-			// 优先走后端策略接口（防绕过/统一规则）
-			if (IM_MEDIA_USE_FILE_ID === 'true' && fileId) {
-				let strategy: any = null
-				try {
-					strategy = await getFileOpenStrategy(fileId, PRESIGNED_DEFAULT_SECONDS)
-				} catch (e) {
-					strategy = null
-				}
-				if (strategy && strategy.downloadUrl) {
-					const downloadUrl = String(strategy.downloadUrl)
-					const previewUrl = strategy.previewUrl ? String(strategy.previewUrl) : ''
-					const tip = strategy.message ? String(strategy.message) : ''
-
-					if (strategy.action === 'PREVIEW' && previewUrl) {
-						// #ifdef H5
-						openUrlInWebViewOrBrowser(previewUrl)
-						return
-						// #endif
-
-						await downloadAndOpenDocumentWithRetry(downloadUrl, '正在下载')
-						return
-					}
-
-					if (tip) {
-						uni.showToast({ title: tip, icon: 'none' })
-					}
-					await downloadAndOpenDocumentWithRetry(downloadUrl, '正在下载')
-					return
-				}
-
-				const signed = await resolvePresignedUrl(fileId)
-				if (signed) {
-					url = signed
-				}
-			}
-
-			if (!url) {
-				uni.showToast({ title: '文件地址为空', icon: 'none' })
-				return
-			}
-			// #ifdef H5
-			const ext = getFileExtByNameOrUrl(fileName, url)
-			if (shouldUseKkFileView(ext)) {
-				if (isUnstableKkPreviewExt(ext)) {
-					const ok = await new Promise<boolean>((resolve) => {
-						uni.showModal({
-							title: '打开方式',
-							content: '该格式在线预览可能失败，是否尝试预览？',
-							confirmText: '尝试预览',
-							cancelText: '直接下载',
-							success: (res) => resolve(!!res.confirm),
-							fail: () => resolve(false)
-						})
-					})
-					if (!ok) {
-						await downloadAndOpenDocumentWithRetry(url, '正在下载')
-						return
-					}
-				}
-				const localPreviewUrl = buildKkFileViewPreviewUrl(url)
-				if (localPreviewUrl) {
-					openUrlInWebViewOrBrowser(localPreviewUrl)
-					return
-				}
-			}
-			// #endif
-			await downloadAndOpenDocumentWithRetry(url, '正在下载')
+			const url = msg && msg.content ? String(msg.content) : ''
+			navToFilePreview({
+				fileId: fileId != '' ? fileId : null,
+				url: url != '' ? url : null,
+				name: fileName != '' ? fileName : null
+			})
 		} catch (e) {
 			uni.showToast({ title: '打开失败', icon: 'none' })
 		}
@@ -3251,6 +3367,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                             try {
                                 if (msg.messageId && msg.messageId !== '0') {
                                     await deleteMessage(msg.messageId)
+                                }
+                                
+                                try {
+                                    if (chatId.value && chatId.value !== '' && chatId.value !== '0' && msg.messageId && msg.messageId !== '0') {
+                                        messageService.removeMessageFromCache(chatId.value, msg.messageId)
+                                    }
+                                } catch (e) {
+                                    // ignore
                                 }
                                 
                                 // 从本地消息列表中移除
@@ -4026,6 +4150,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		max-width: 80%;
 		text-align: center;
 		line-height: 18px;
+	}
+
+	.recall-system-tip-action {
+		margin-left: 8px;
+		font-size: 12px;
+		color: #3370FF;
 	}
 
 	.message-self {

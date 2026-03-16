@@ -25,6 +25,7 @@ import { badgeService } from '../services/badge-service.uts'
 import { refreshToken as refreshTokenApi } from '../api/login.uts'
 import { onAccessTokenRefreshed } from './request.uts'
 import { generateMessageId as generateLongSafeMessageId } from './message-utils.uts'
+import * as ImProto from './proto/im_message_pb.esm.js'
 
 /**
  * WebSocket 连接状态枚举
@@ -48,6 +49,12 @@ export enum MessageType {
   AUTH_REQ = 3,           // 认证请求
   AUTH_RESP = 4,          // 认证响应
   CLOSE = 5,              // 连接关闭
+
+  // 协议控制（企业级扩展）：连接建立后的探测与回执
+  PROBE = 6,              // 首帧探测（协商能力/codec/features）
+  PROBE_RESP = 7,         // 探测响应
+  ACK = 8,                // 协议级 ACK（轻量阶段：仅回执，不做重发）
+  ACK_RESP = 9,           // ACK 响应（可选，便于联调与打点）
   
   // 业务消息
   TEXT = 100,             // 文本消息
@@ -145,6 +152,8 @@ export class WebSocketManager {
   
   // WebSocket 服务器地址
   private wsUrl: string = ''
+
+  private wsProtocols: string[] = ['im.json.v1']
   
   /**
    * 私有构造函数（单例模式）
@@ -197,6 +206,91 @@ export class WebSocketManager {
     this.wsUrl = url
   }
 
+  public setProtocols(protocols: string[]): void {
+    try {
+      if (protocols != null && Array.isArray(protocols) && protocols.length > 0) {
+        this.wsProtocols = protocols
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  private maybeSendAckForInboundMessage(messageType: MessageType, message: any): void {
+    try {
+      if (!this.authenticated) {
+        return
+      }
+      if (messageType === MessageType.ACK || messageType === MessageType.ACK_RESP || messageType === MessageType.PROBE || messageType === MessageType.PROBE_RESP) {
+        return
+      }
+      if (messageType === MessageType.AUTH_RESP || messageType === MessageType.HEARTBEAT_RESP || messageType === MessageType.CLOSE) {
+        return
+      }
+      const header: any = message && message.header ? message.header : {}
+
+      const messageIdStr = header && header.messageId != null ? String(header.messageId) : ''
+      const chatIdStr = header && header.chatId != null ? String(header.chatId) : ''
+      const sequenceStr = header && header.sequence != null ? String(header.sequence) : ''
+      const tenantIdStr = header && header.tenantId != null ? String(header.tenantId) : ''
+      const originalTimestampStr = header && header.timestamp != null ? String(header.timestamp) : ''
+      const clientReceivedAt = Date.now()
+
+      if (this.isPbEnabled()) {
+        try {
+          const root: any = (ImProto as any)
+          if (root != null && root.AckMessage != null) {
+            const ackBody = root.AckMessage.create({
+              messageId: messageIdStr,
+              chatId: chatIdStr,
+              sequence: sequenceStr,
+              ackType: 'RECEIVED',
+              clientReceivedAt: clientReceivedAt.toString(),
+              originalTimestamp: originalTimestampStr
+            })
+            const bodyBytes = root.AckMessage.encode(ackBody).finish() as Uint8Array
+            const ackHeader: any = {
+              messageId: generateLongSafeMessageId(),
+              messageType: MessageType.ACK,
+              senderId: '0',
+              receiverId: '0',
+              groupId: '0',
+              tenantId: tenantIdStr != '' ? tenantIdStr : '0',
+              timestamp: Date.now().toString(),
+              sequence: '0',
+              extra: ''
+            }
+            this.sendPbImMessage(ackHeader, bodyBytes)
+            return
+          }
+        } catch (e) {
+        }
+      }
+
+      const ack = {
+        header: {
+          messageId: generateLongSafeMessageId(),
+          messageType: MessageType.ACK,
+          timestamp: Date.now()
+        },
+        body: {
+          // 关键：ID/sequence 全程 string，禁止 number 化（避免精度丢失影响去重/重发/观测）
+          messageId: messageIdStr,
+          chatId: chatIdStr,
+          sequence: sequenceStr,
+          tenantId: tenantIdStr,
+          ackType: 'RECEIVED',
+          // 观测字段：用于统计端到端投递延迟（phase1 仅日志/指标，不做重发）
+          clientReceivedAt: clientReceivedAt,
+          originalTimestamp: originalTimestampStr
+        }
+      }
+      this.sendRaw(JSON.stringify(ack))
+    } catch (e) {
+      // ignore
+    }
+  }
+
   public setAppForeground(isForeground: boolean): void {
     this.appForeground = isForeground
   }
@@ -220,6 +314,21 @@ export class WebSocketManager {
     // 已在连接中/已连接：避免重复发起连接导致服务端“自踢”
     if (this.state === WebSocketState.CONNECTING || this.state === WebSocketState.OPEN) {
       if (this.ws !== null) {
+        if (this.state === WebSocketState.OPEN && !this.authenticated) {
+          try {
+            console.log('[WebSocket] connect() detected OPEN but unauthenticated, resend AUTH_REQ')
+          } catch (e) {
+          }
+          try {
+            if (this.isPbEnabled()) {
+              this.sendAuthRequestPb()
+            } else {
+              this.sendAuthRequest()
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
         return
       }
     }
@@ -245,6 +354,7 @@ export class WebSocketManager {
     try {
       this.ws = uni.connectSocket({
         url: this.wsUrl,
+        protocols: this.wsProtocols,
         success: () => {
           console.log('[WebSocket] 连接请求已发送')
         },
@@ -290,9 +400,47 @@ export class WebSocketManager {
     this.connectInFlight = false
     this.setState(WebSocketState.OPEN)
     this.reconnectCount = 0
-    
-    // 发送认证请求
+
+    // 企业级：pb 子协议下优先走二进制 AUTH_REQ（服务端会按 subprotocol 绑定 codec=pb）
+    if (this.isPbEnabled()) {
+      this.sendAuthRequestPb()
+      return
+    }
+
+    // JSON 栈：先发送 PROBE（探测/协商），再发送认证请求
+    this.sendProbe()
     this.sendAuthRequest()
+  }
+
+  private sendProbe(): void {
+    try {
+      const protocolCodec = (this.wsProtocols != null
+        && Array.isArray(this.wsProtocols)
+        && this.wsProtocols.indexOf('im.pb.v1') >= 0) ? 'pb' : 'json'
+      const probeMessage = {
+        header: {
+          messageId: generateLongSafeMessageId(),
+          messageType: MessageType.PROBE,
+          timestamp: Date.now()
+        },
+        body: {
+          version: 1,
+          codec: protocolCodec,
+          features: {
+            ack: true
+          },
+          client: {
+            deviceType: getCurrentDeviceType(),
+            deviceId: getDeviceId(),
+            deviceName: getDeviceName(),
+            clientVersion: getAppVersion()
+          }
+        }
+      }
+      this.sendRaw(JSON.stringify(probeMessage))
+    } catch (e) {
+      // ignore
+    }
   }
   
   /**
@@ -324,56 +472,349 @@ export class WebSocketManager {
     console.log('[WebSocket] 发送认证请求')
     this.sendRaw(JSON.stringify(authMessage))
   }
-  
+
+  private sendAuthRequestPb(): void {
+    const accessToken = getAccessToken()
+    if (accessToken === null || accessToken === '') {
+      console.error('[WebSocket] Token 为空，无法认证')
+      this.close()
+      return
+    }
+
+    try {
+      const root: any = (ImProto as any)
+      const bodyBytes: Uint8Array = root.AuthRequest.encode({
+        accessToken: accessToken,
+        deviceType: getCurrentDeviceType(),
+        deviceId: getDeviceId(),
+        clientVersion: getAppVersion()
+      }).finish() as Uint8Array
+
+      const header: any = {
+        messageId: generateLongSafeMessageId(),
+        messageType: MessageType.AUTH_REQ,
+        senderId: '0',
+        receiverId: '0',
+        groupId: '0',
+        tenantId: '0',
+        timestamp: Date.now().toString(),
+        sequence: '0',
+        extra: ''
+      }
+
+      console.log('[WebSocket] 发送认证请求(pb)')
+      this.sendPbImMessage(header, bodyBytes)
+    } catch (e) {
+      console.error('[WebSocket] 发送认证请求(pb)失败:', e)
+      this.close()
+    }
+  }
+
   /**
    * 处理消息接收
    */
   private handleMessage(res: any): void {
     try {
+      // B4：二进制帧（pb stack）：BinaryFrame = varint32 length-prefix + ImMessage bytes
+      try {
+        if (res != null && (res as any).data != null && typeof (res as any).data !== 'string') {
+          const u8 = this.toUint8Array((res as any).data)
+          if (u8 === null) {
+            console.log('[WebSocket] 收到二进制消息(无法转 Uint8Array)')
+            return
+          }
+          this.handleBinaryPayload(u8)
+          return
+        }
+      } catch (e) {
+        console.error('[WebSocket] binary message handling failed:', e)
+        return
+      }
+
       const message = JSON.parse(res.data as string)
+      this.normalizeInboundJsonMessage(message)
       const messageType = message.header.messageType as MessageType
       
       console.log('[WebSocket] 收到消息:', messageType)
 
-	  // 打印业务消息概要，便于定位服务端是否返回错误/ACK
-	  if (messageType !== MessageType.AUTH_RESP
-		  && messageType !== MessageType.HEARTBEAT_RESP
-		  && messageType !== MessageType.CLOSE) {
-		try {
-			const header = message.header || {}
-			const body = message.body || {}
-			console.log('[WebSocket] 收到业务消息概要:', {
-				messageType: header.messageType,
-				messageId: header.messageId,
-				chatId: header.chatId,
-				senderId: header.senderId,
-				receiverId: header.receiverId,
-				groupId: header.groupId,
-				tenantId: header.tenantId,
-				sequence: header.sequence,
-				bodyKeys: body && typeof body === 'object' ? Object.keys(body) : typeof body
-			})
-		} catch (e) {
-			console.log('[WebSocket] 收到业务消息概要解析失败:', e)
-		}
-	  }
+  // 打印业务消息概要，便于定位服务端是否返回错误/ACK
+  if (messageType !== MessageType.AUTH_RESP
+      && messageType !== MessageType.HEARTBEAT_RESP
+      && messageType !== MessageType.CLOSE) {
+    try {
+      const header = message.header || {}
+      const body = message.body || {}
+      console.log('[WebSocket] 收到业务消息概要:', {
+        messageType: header.messageType,
+        messageId: header.messageId,
+        chatId: header.chatId,
+        senderId: header.senderId,
+        receiverId: header.receiverId,
+        groupId: header.groupId,
+        tenantId: header.tenantId,
+        sequence: header.sequence,
+        bodyKeys: body && typeof body === 'object' ? Object.keys(body) : typeof body
+      })
+    } catch (e) {
+      console.log('[WebSocket] 收到业务消息概要解析失败:', e)
+    }
+  }
       
-      // 处理系统消息
-      if (messageType === MessageType.AUTH_RESP) {
-        this.handleAuthResponse(message)
-      } else if (messageType === MessageType.HEARTBEAT_RESP) {
-        this.handleHeartbeatResponse()
-      } else if (messageType === MessageType.SYSTEM_NOTIFY) {
-        void this.handleSystemNotify(message)
-      } else if (messageType === MessageType.CLOSE) {
-        this.handleCloseMessage(message)
-      } else {
-        // 分发业务消息
-        this.dispatchMessage(messageType, message)
-      }
+      this.handleDecodedMessage(messageType, message)
       
     } catch (e) {
       console.error('[WebSocket] 消息解析失败:', e)
+    }
+  }
+
+  private handleDecodedMessage(messageType: MessageType, message: any): void {
+    if (messageType === MessageType.AUTH_RESP) {
+      this.handleAuthResponse(message)
+      return
+    }
+    if (messageType === MessageType.HEARTBEAT_RESP) {
+      this.handleHeartbeatResponse()
+      return
+    }
+    if (messageType === MessageType.SYSTEM_NOTIFY) {
+      this.maybeSendAckForInboundMessage(messageType, message)
+      void this.handleSystemNotify(message)
+      return
+    }
+    if (messageType === MessageType.CLOSE) {
+      this.handleCloseMessage(message)
+      return
+    }
+    if (messageType === MessageType.PROBE_RESP) {
+      try {
+        console.log('[WebSocket] 收到 PROBE_RESP:', message.body)
+      } catch (e) {
+      }
+      return
+    }
+
+    this.maybeSendAckForInboundMessage(messageType, message)
+    this.dispatchMessage(messageType, message)
+  }
+
+  private toUint8Array(dataAny: any): Uint8Array | null {
+    try {
+      if (dataAny == null) {
+        return null
+      }
+      try {
+        if (dataAny instanceof ArrayBuffer) {
+          return new Uint8Array(dataAny as ArrayBuffer)
+        }
+      } catch (e) {
+      }
+      try {
+        if ((dataAny as any).buffer != null && (dataAny as any).byteLength != null) {
+          const offset = (dataAny as any).byteOffset != null ? Number((dataAny as any).byteOffset) : 0
+          const len = Number((dataAny as any).byteLength)
+          return new Uint8Array((dataAny as any).buffer as ArrayBuffer, offset, len)
+        }
+      } catch (e) {
+      }
+      return null
+    } catch (e) {
+      return null
+    }
+  }
+
+  private normalizeInboundJsonMessage(message: any): void {
+    try {
+      if (message == null) {
+        return
+      }
+      const header: any = (message as any).header
+      if (header != null) {
+        if (header.messageId != null) header.messageId = header.messageId.toString()
+        if (header.chatId != null) header.chatId = header.chatId.toString()
+        if (header.senderId != null) header.senderId = header.senderId.toString()
+        if (header.receiverId != null) header.receiverId = header.receiverId.toString()
+        if (header.groupId != null) header.groupId = header.groupId.toString()
+        if (header.tenantId != null) header.tenantId = header.tenantId.toString()
+        if (header.sequence != null) header.sequence = header.sequence.toString()
+      }
+      const body: any = (message as any).body
+      if (body != null) {
+        if (body.messageId != null) body.messageId = body.messageId.toString()
+        if (Array.isArray(body.messageIds)) {
+          body.messageIds = (body.messageIds as any[]).map((x: any) => x != null ? x.toString() : '')
+        }
+      }
+    } catch (e) {
+    }
+  }
+
+  private readVarint32(buf: Uint8Array, offset: number): { value: number; bytes: number } | null {
+    let result = 0
+    let shift = 0
+    let pos = offset
+    while (pos < buf.length && shift < 35) {
+      const b = buf[pos]
+      result |= (b & 0x7f) << shift
+      pos++
+      if ((b & 0x80) === 0) {
+        return { value: (result >>> 0), bytes: pos - offset }
+      }
+      shift += 7
+    }
+    return null
+  }
+
+  private handleBinaryPayload(u8: Uint8Array): void {
+    let pos = 0
+    const total = u8.byteLength
+    console.log('[WebSocket] 收到二进制消息:', { byteLength: total })
+
+    while (pos < total) {
+      const lenInfo = this.readVarint32(u8, pos)
+      if (lenInfo === null) {
+        console.error('[WebSocket] binary decode failed: invalid length prefix')
+        return
+      }
+      pos += lenInfo.bytes
+      const frameLen = lenInfo.value
+      if (frameLen <= 0 || pos + frameLen > total) {
+        console.error('[WebSocket] binary decode failed: length out of range', { frameLen, pos, total })
+        return
+      }
+
+      const msgBytes = u8.subarray(pos, pos + frameLen)
+      pos += frameLen
+
+      try {
+        const root: any = (ImProto as any)
+        const im = root.ImMessage.decode(msgBytes)
+        const imObj = root.ImMessage.toObject(im, { longs: String, enums: Number, bytes: Uint8Array })
+        const converted = this.convertPbImMessageToJson(imObj)
+        if (converted != null) {
+          const mt = converted.header.messageType as MessageType
+          try {
+            console.log('[WebSocket] 二进制帧解码成功:', {
+              frameLen: frameLen,
+              messageType: mt,
+              messageId: converted.header && converted.header.messageId ? converted.header.messageId : '',
+              tenantId: converted.header && converted.header.tenantId ? converted.header.tenantId : ''
+            })
+            if (mt === MessageType.AUTH_RESP) {
+              console.log('[WebSocket] 收到 AUTH_RESP(pb):', converted.body)
+            }
+          } catch (e) {
+          }
+          this.handleDecodedMessage(mt, converted)
+        }
+      } catch (e) {
+        console.error('[WebSocket] ImMessage.decode failed:', e)
+      }
+    }
+  }
+
+  private convertPbImMessageToJson(imObj: any): any | null {
+    try {
+      if (imObj == null || (imObj as any).header == null) {
+        return null
+      }
+
+      const h: any = (imObj as any).header
+      const messageTypeNum = Number(h.messageType)
+
+      const jsonHeader: any = {
+        messageId: h.messageId != null ? String(h.messageId) : generateLongSafeMessageId(),
+        messageType: messageTypeNum,
+        senderId: h.senderId != null ? String(h.senderId) : '0',
+        receiverId: h.receiverId != null ? String(h.receiverId) : '0',
+        groupId: h.groupId != null ? String(h.groupId) : '0',
+        tenantId: h.tenantId != null ? String(h.tenantId) : '0',
+        timestamp: h.timestamp != null ? String(h.timestamp) : String(Date.now()),
+        sequence: h.sequence != null ? String(h.sequence) : '0',
+        extra: h.extra != null ? String(h.extra) : ''
+      }
+
+      const bodyBytes: Uint8Array = (imObj as any).body != null ? ((imObj as any).body as Uint8Array) : new Uint8Array(0)
+      const bodyObj = this.decodePbBody(messageTypeNum, bodyBytes)
+
+      return {
+        header: jsonHeader,
+        body: bodyObj
+      }
+    } catch (e) {
+      console.error('[WebSocket] convertPbImMessageToJson failed:', e)
+      return null
+    }
+  }
+
+  private decodePbBody(messageTypeNum: number, bodyBytes: Uint8Array): any {
+    const mt = messageTypeNum as MessageType
+    try {
+      const root: any = (ImProto as any)
+      if (mt === MessageType.AUTH_RESP) {
+        const o: any = root.AuthResponse.toObject(root.AuthResponse.decode(bodyBytes), { longs: String, enums: Number, bytes: Uint8Array })
+        try {
+          if (o != null) {
+            if (o.userId != null) o.userId = String(o.userId)
+            if (o.tenantId != null) o.tenantId = String(o.tenantId)
+          }
+        } catch (e) {
+        }
+        return o
+      }
+      if (mt === MessageType.AUTH_REQ) {
+        return root.AuthRequest.toObject(root.AuthRequest.decode(bodyBytes), { longs: String, enums: Number, bytes: Uint8Array })
+      }
+      if (mt === MessageType.TEXT) {
+        const o: any = root.TextMessage.toObject(root.TextMessage.decode(bodyBytes), { longs: String, enums: Number, bytes: Uint8Array })
+        try {
+          if (o != null && o.atUserIds != null && o.atUserIds instanceof Array) {
+            const out: string[] = []
+            for (let i = 0; i < o.atUserIds.length; i++) {
+              out.push(String(o.atUserIds[i]))
+            }
+            o.atUserIds = out
+          }
+        } catch (e) {
+        }
+        return o
+      }
+
+      return {
+        rawBytes: bodyBytes
+      }
+    } catch (e) {
+      return {
+        rawBytes: bodyBytes
+      }
+    }
+  }
+
+  public sendBinary(data: ArrayBuffer): void {
+    if (this.ws === null) {
+      console.error('[WebSocket] WebSocket 实例为空')
+      return
+    }
+    if (this.state !== WebSocketState.OPEN) {
+      console.log('[WebSocket] 连接未打开，跳过 sendBinary')
+      return
+    }
+    try {
+      const len = data != null ? (data as any).byteLength : 0
+      console.log('[WebSocket] sendBinary:', { byteLength: len })
+    } catch (e) {
+    }
+    try {
+      this.ws.send({
+        data: data as any,
+        success: () => {
+          console.log('[WebSocket] 二进制消息发送成功')
+        },
+        fail: (err) => {
+          console.error('[WebSocket] 二进制消息发送失败:', err)
+        }
+      })
+    } catch (e) {
+      console.error('[WebSocket] sendBinary 异常:', e)
     }
   }
   
@@ -397,6 +838,11 @@ export class WebSocketManager {
 
       console.log('[WebSocket] 认证成功')
       this.authenticated = true
+
+      try {
+        console.log('[WebSocket] AUTH 标记完成:', { state: this.state, authenticated: this.authenticated })
+      } catch (e) {
+      }
 
 	  // P1：重连/认证成功后首包补偿 sync，避免断线期间无 WS 也不触发 gap 检测
 	  this.triggerResumeConversationSync()
@@ -742,20 +1188,41 @@ export class WebSocketManager {
 
     const presence = this.appForeground && (!this.strictPresenceMode || this.realtimeBizActive)
     
-    const heartbeatMessage = {
-      header: {
-        messageId: generateLongSafeMessageId(),
-        messageType: MessageType.HEARTBEAT_REQ,
-        timestamp: Date.now()
-      },
-      body: {
-        // presence：让服务端将心跳视为业务活跃，从而延长 lease（企微/钉钉体验）
-        presence: presence
+    if (this.isPbEnabled()) {
+      try {
+        const header: any = {
+          messageId: generateLongSafeMessageId(),
+          messageType: MessageType.HEARTBEAT_REQ,
+          senderId: '0',
+          receiverId: '0',
+          groupId: '0',
+          tenantId: '0',
+          timestamp: Date.now().toString(),
+          sequence: '0',
+          extra: ''
+        }
+        // 当前 proto 未定义 HeartbeatRequest，按 bytes 空体发送（服务端仅用 messageType 即可）
+        console.log('[WebSocket] 发送心跳(pb)')
+        this.sendPbImMessage(header, new Uint8Array(0))
+      } catch (e) {
+        console.error('[WebSocket] 发送心跳(pb)失败:', e)
       }
+    } else {
+      const heartbeatMessage = {
+        header: {
+          messageId: generateLongSafeMessageId(),
+          messageType: MessageType.HEARTBEAT_REQ,
+          timestamp: Date.now()
+        },
+        body: {
+          // presence：让服务端将心跳视为业务活跃，从而延长 lease（企微/钉钉体验）
+          presence: presence
+        }
+      }
+
+      console.log('[WebSocket] 发送心跳')
+      this.sendRaw(JSON.stringify(heartbeatMessage))
     }
-    
-    console.log('[WebSocket] 发送心跳')
-    this.sendRaw(JSON.stringify(heartbeatMessage))
     
     // 设置心跳超时定时器
     this.heartbeatTimeoutTimer = setTimeout(() => {
@@ -806,7 +1273,111 @@ export class WebSocketManager {
       return
     }
     
+    if (this.isPbEnabled()) {
+      try {
+        this.sendPbFromJsonMessage(message)
+      } catch (e) {
+        console.error('[WebSocket] pb send failed, fallback to json:', e)
+        this.sendRaw(JSON.stringify(message))
+      }
+      return
+    }
+
     this.sendRaw(JSON.stringify(message))
+  }
+
+  private isPbEnabled(): boolean {
+    try {
+      return this.wsProtocols != null
+        && Array.isArray(this.wsProtocols)
+        && this.wsProtocols.indexOf('im.pb.v1') >= 0
+    } catch (e) {
+      return false
+    }
+  }
+
+  private writeVarint32(value: number): Uint8Array {
+    const out: number[] = []
+    let v = value >>> 0
+    while (v >= 0x80) {
+      out.push((v & 0x7f) | 0x80)
+      v >>>= 7
+    }
+    out.push(v)
+    return new Uint8Array(out)
+  }
+
+  private concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
+    const out = new Uint8Array(a.byteLength + b.byteLength)
+    out.set(a, 0)
+    out.set(b, a.byteLength)
+    return out
+  }
+
+  private sendPbImMessage(header: any, bodyBytes: Uint8Array): void {
+    const root: any = (ImProto as any)
+    const im = root.ImMessage.create({
+      header: header,
+      body: bodyBytes
+    })
+    const raw: Uint8Array = root.ImMessage.encode(im).finish() as Uint8Array
+    const prefix = this.writeVarint32(raw.byteLength)
+    const framed = this.concatBytes(prefix, raw)
+    this.sendBinary(framed.buffer)
+  }
+
+  private encodePbBody(messageType: MessageType, bodyAny: any): Uint8Array {
+    const root: any = (ImProto as any)
+
+    if (bodyAny == null) {
+      return new Uint8Array(0)
+    }
+
+    // 兼容：上层若已放入 rawBytes，则直接发送
+    try {
+      if (bodyAny.rawBytes != null) {
+        const rb: any = bodyAny.rawBytes
+        if (rb instanceof Uint8Array) {
+          return rb
+        }
+        if (rb instanceof ArrayBuffer) {
+          return new Uint8Array(rb as ArrayBuffer)
+        }
+      }
+    } catch (e) {
+    }
+
+    if (messageType === MessageType.TEXT) {
+      return root.TextMessage.encode({
+        content: bodyAny.content != null ? String(bodyAny.content) : '',
+        atUserIds: Array.isArray(bodyAny.atUserIds) ? bodyAny.atUserIds.map((x: any) => x != null ? String(x) : '0') : []
+      }).finish() as Uint8Array
+    }
+
+    return new Uint8Array(0)
+  }
+
+  private sendPbFromJsonMessage(message: any): void {
+    if (message == null || message.header == null) {
+      return
+    }
+    const headerIn: any = message.header
+    const mt: MessageType = headerIn.messageType as MessageType
+    const bodyBytes = this.encodePbBody(mt, message.body)
+
+    const header: any = {
+      messageId: headerIn.messageId != null ? headerIn.messageId.toString() : generateLongSafeMessageId(),
+      messageType: mt,
+      senderId: headerIn.senderId != null ? headerIn.senderId.toString() : '0',
+      receiverId: headerIn.receiverId != null ? headerIn.receiverId.toString() : '0',
+      groupId: headerIn.groupId != null ? headerIn.groupId.toString() : '0',
+      tenantId: headerIn.tenantId != null ? headerIn.tenantId.toString() : '0',
+      timestamp: headerIn.timestamp != null ? headerIn.timestamp.toString() : Date.now().toString(),
+      sequence: headerIn.sequence != null ? headerIn.sequence.toString() : '0',
+      extra: headerIn.extra != null ? String(headerIn.extra) : ''
+    }
+
+    this.sendPbImMessage(header, bodyBytes)
   }
   
   /**
@@ -874,7 +1445,19 @@ export class WebSocketManager {
     while (this.messageQueue.length > 0) {
       const message = this.messageQueue.shift()
       if (message !== null && message !== undefined) {
-        this.sendRaw(JSON.stringify(message))
+        try {
+          if (this.isPbEnabled()) {
+            this.sendPbFromJsonMessage(message)
+          } else {
+            this.sendRaw(JSON.stringify(message))
+          }
+        } catch (e) {
+          try {
+            this.sendRaw(JSON.stringify(message))
+          } catch (e2) {
+            // ignore
+          }
+        }
       }
     }
   }

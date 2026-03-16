@@ -21,7 +21,7 @@
 			</view>
 		</view>
 
-		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false" @scrolltolower="handleLoadMoreMembers">
 			<!-- 部门层级 -->
 			<view class="dept-hierarchy">
 				<view 
@@ -125,7 +125,8 @@
 		toggleMember,
 		getSelectedCount
 	} from '../../store/group-selection.uts'
-	import { getMyDeptTree, getDeptMembers } from '../../api/dept.uts'
+	import { getMyDeptTree } from '../../api/dept.uts'
+	import { getContactPageByDept } from '../../api/contact.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
@@ -147,6 +148,9 @@
 	
 	// 成员加载状态
 	const loadingMembers = ref(false)
+	const memberPageNo = ref(1)
+	const memberHasMore = ref(true)
+	const memberLoadingMore = ref(false)
 	
 	// 搜索关键词
 	const searchKeyword = ref('')
@@ -159,6 +163,7 @@
 
 	// 成员列表数据（当前选中部门的成员）
 	const memberList = ref<any[]>([])
+	const lastMemberKeyword = ref('')
 
 	// 选中的成员数量（使用全局状态）
 	const selectedCount = computed(() : number => {
@@ -192,12 +197,18 @@
 				memberList.value = []
 				deptMembersCache.clear()
 				currentDeptId.value = null
+				memberPageNo.value = 1
+				memberHasMore.value = true
+				lastMemberKeyword.value = ''
 			} else {
 				// 没有数据时清空
 				deptTree.value = []
 				originalDeptTree.value = []
 				memberList.value = []
 				deptMembersCache.clear()
+				memberPageNo.value = 1
+				memberHasMore.value = true
+				lastMemberKeyword.value = ''
 			}
 		} catch (e) {
 			console.error('[MyDepartment] 加载部门列表失败:', e)
@@ -293,111 +304,118 @@
 	 * 选择部门（点击加载成员）
 	 */
 	async function selectDept(dept: any) {
-		// 如果有子部门，切换展开状态
-		if (dept.children && dept.children.length > 0) {
-			dept.expanded = !dept.expanded
-		}
-		
-		// 设置当前选中的部门
 		currentDeptId.value = dept.id
-		
-		// 加载该部门的成员
-		await loadDeptMembers(dept.id)
+		loadDeptMembers(dept.id, true)
 	}
-	
+
 	/**
 	 * 加载部门成员
 	 */
-	async function loadDeptMembers(deptId: number, keyword?: string) {
-		// 如果有缓存且没有搜索关键词，直接使用缓存
-		if (!keyword && deptMembersCache.has(deptId)) {
+	async function loadDeptMembers(deptId: number, reset: boolean, keyword?: string) {
+		// 如果缓存中有数据且不是搜索，直接使用缓存
+		if (deptMembersCache.has(deptId) && !keyword && !reset) {
 			memberList.value = deptMembersCache.get(deptId) || []
 			return
 		}
 		
 		try {
 			loadingMembers.value = true
-			const data = await getDeptMembers(String(deptId), keyword)
+			memberPageNo.value = 1
+			memberHasMore.value = true
+			lastMemberKeyword.value = keyword != null ? String(keyword) : ''
+			const res = await getContactPageByDept(String(deptId), 1, 20, lastMemberKeyword.value) as any
+			const data = res && Array.isArray(res.list) ? res.list : []
+			const total = res && res.total != null ? Number(res.total) : data.length
 			
 			if (data && data.length > 0) {
 				const members = data.map((user: any) => {
 					return {
-						id: user.id,
-						name: user.nickname,
-						role: user.postName || '未设置岗位',
-						avatarText: getAvatarText(user.nickname),
-						avatarBg: getUserAvatarColor(user.id),
-						selected: isMemberSelected(user.id)
+						id: String(user.id),
+						name: user.remarkName || user.nickname || '未知',
+						role: user.deptName || '',
+						avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
+						avatarBg: getUserAvatarColor(String(user.id)),
+						selected: isMemberSelected(String(user.id))
 					}
 				})
 				
 				memberList.value = members
 				
-				// 如果没有搜索关键词，缓存结果
+				// 缓存非搜索结果
 				if (!keyword) {
 					deptMembersCache.set(deptId, members)
-					// 更新部门的userCount
-					updateDeptUserCount(deptId, members.length)
 				}
+				memberHasMore.value = memberList.value.length < total
 			} else {
 				memberList.value = []
-				if (!keyword) {
-					deptMembersCache.set(deptId, [])
-					updateDeptUserCount(deptId, 0)
-				}
+				memberHasMore.value = false
 			}
 		} catch (e) {
 			console.error('[MyDepartment] 加载部门成员失败:', e)
+			memberList.value = []
+			memberHasMore.value = false
 			uni.showToast({
 				title: '加载成员失败',
 				icon: 'none'
 			})
-			memberList.value = []
 		} finally {
 			loadingMembers.value = false
 		}
 	}
-	
-	/**
-	 * 更新部门的用户数量
-	 */
-	function updateDeptUserCount(deptId: number, count: number) {
-		function updateInTree(nodes: any[]): boolean {
-			for (let i = 0; i < nodes.length; i++) {
-				const node = nodes[i]
-				if (node.id === deptId) {
-					node.userCount = count
-					return true
-				}
-				if (node.children && node.children.length > 0) {
-					if (updateInTree(node.children)) {
-						return true
+
+	function handleLoadMoreMembers() {
+		try {
+			if (memberLoadingMore.value) return
+			if (!memberHasMore.value) return
+			if (currentDeptId.value == null) return
+			memberLoadingMore.value = true
+			const nextPage = memberPageNo.value + 1
+			Promise.resolve().then(async () => {
+				try {
+					const res = await getContactPageByDept(String(currentDeptId.value), nextPage, 20, lastMemberKeyword.value) as any
+					const data = res && Array.isArray(res.list) ? res.list : []
+					const total = res && res.total != null ? Number(res.total) : (memberList.value.length + data.length)
+					if (data && data.length > 0) {
+						const appended = data.map((user: any) => {
+							return {
+								id: String(user.id),
+								name: user.remarkName || user.nickname || '未知',
+								role: user.deptName || '',
+								avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
+								avatarBg: getUserAvatarColor(String(user.id)),
+								selected: isMemberSelected(String(user.id))
+							}
+						})
+						memberList.value = memberList.value.concat(appended)
+						memberPageNo.value = nextPage
 					}
+					memberHasMore.value = memberList.value.length < total
+				} catch (e) {
+					// ignore
+				} finally {
+					memberLoadingMore.value = false
 				}
-			}
-			return false
+			})
+		} catch (e) {
+			memberLoadingMore.value = false
 		}
-		
-		updateInTree(deptTree.value)
 	}
-	
+
 	/**
 	 * 处理搜索
 	 */
 	function handleSearch() {
 		// 清除之前的定时器
-		if (searchTimer !== 0) {
+		if (searchTimer > 0) {
 			clearTimeout(searchTimer)
 		}
 		
 		// 延迟500ms执行搜索
 		searchTimer = setTimeout(() => {
-			if (searchKeyword.value && searchKeyword.value.length > 0) {
-				// 执行搜索：只显示包含搜索结果的部门和成员
-				performSearch()
-			} else {
-				// 清空搜索时，恢复原始数据
-				restoreOriginalData()
+			// 执行搜索
+			searchDeptTree(searchKeyword.value)
+			if (currentDeptId.value != null) {
+				loadDeptMembers(currentDeptId.value, true, searchKeyword.value)
 			}
 		}, 500)
 	}
@@ -448,12 +466,12 @@
 			if (data && data.length > 0) {
 				members = data.map((user: any) => {
 					return {
-						id: user.id,
+						id: String(user.id),
 						name: user.nickname,
 						role: user.postName || '未设置岗位',
 						avatarText: getAvatarText(user.nickname),
 						avatarBg: getUserAvatarColor(user.id),
-						selected: isMemberSelected(user.id)
+						selected: isMemberSelected(String(user.id))
 					}
 				})
 			}
@@ -516,11 +534,12 @@
 	/**
 	 * 切换成员选中状态
 	 */
-	function toggleMemberSelect(member : any) {
+	function toggleMemberSelect(member: any) {
+		if (!isSelectMode.value) return
 		// 使用全局状态管理
 		toggleMember(member)
 		// 同步本地状态
-		member.selected = isMemberSelected(member.id)
+		member.selected = isMemberSelected(String(member.id))
 	}
 
 	/**
@@ -551,7 +570,7 @@
 	 */
 	function syncSelectionState() {
 		for (let i = 0; i < memberList.value.length; i++) {
-			memberList.value[i].selected = isMemberSelected(memberList.value[i].id)
+			memberList.value[i].selected = isMemberSelected(String(memberList.value[i].id))
 		}
 	}
 

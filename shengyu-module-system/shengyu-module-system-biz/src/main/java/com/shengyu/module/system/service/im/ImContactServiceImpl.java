@@ -2,7 +2,8 @@ package com.shengyu.module.system.service.im;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.pinyin.PinyinUtil;
-import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactListByDeptReqVO;
 import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactRespVO;
 import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactSettingUpdateReqVO;
 import com.shengyu.module.system.dal.dataobject.dept.DeptDO;
@@ -88,6 +89,113 @@ public class ImContactServiceImpl implements ImContactService {
                     return respVO;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public PageResult<AppImContactRespVO> getContactPageByDept(Long userId, AppImContactListByDeptReqVO reqVO) {
+        Long deptId = reqVO.getDeptId();
+        // 1. 查询部门及其子部门（包含自身）
+        DeptDO dept = deptMapper.selectById(deptId);
+        if (dept == null) {
+            throw exception(DEPT_NOT_FOUND);
+        }
+        List<Long> deptIds = new ArrayList<>();
+        deptIds.add(deptId);
+        List<Long> queue = new ArrayList<>();
+        queue.add(deptId);
+        for (int i = 0; i < queue.size(); i++) {
+            Long current = queue.get(i);
+            List<DeptDO> children = deptMapper.selectListByParentId(Collections.singleton(current));
+            if (children == null || children.isEmpty()) {
+                continue;
+            }
+            for (DeptDO child : children) {
+                if (child == null || child.getId() == null) {
+                    continue;
+                }
+                Long childId = child.getId();
+                if (deptIds.contains(childId)) {
+                    continue;
+                }
+                deptIds.add(childId);
+                queue.add(childId);
+            }
+        }
+
+        // 2. 查询部门下用户ID
+        List<UserDeptDO> userDeptList = userDeptMapper.selectListByDeptIds(deptIds);
+        if (userDeptList == null || userDeptList.isEmpty()) {
+            return PageResult.empty();
+        }
+        List<Long> contactIds = userDeptList.stream()
+                .map(UserDeptDO::getUserId)
+                .filter(id -> id != null && !id.equals(userId))
+                .distinct()
+                .collect(Collectors.toList());
+        if (contactIds.isEmpty()) {
+            return PageResult.empty();
+        }
+
+        // 3. 查询用户信息
+        List<AdminUserDO> users = userMapper.selectBatchIds(contactIds);
+        if (users == null || users.isEmpty()) {
+            return PageResult.empty();
+        }
+
+        String keyword = reqVO.getKeyword();
+        List<AdminUserDO> filtered = users.stream()
+                .filter(u -> u != null && u.getId() != null)
+                .filter(u -> {
+                    if (StrUtil.isBlank(keyword)) {
+                        return true;
+                    }
+                    String nick = u.getNickname() != null ? u.getNickname() : "";
+                    return StrUtil.contains(nick, keyword);
+                })
+                .collect(Collectors.toList());
+
+        long total = filtered.size();
+        if (total <= 0) {
+            return PageResult.empty();
+        }
+
+        int pageNo = reqVO.getPageNo() != null ? reqVO.getPageNo() : 1;
+        int pageSize = reqVO.getPageSize() != null ? reqVO.getPageSize() : 10;
+        if (pageNo < 1) {
+            pageNo = 1;
+        }
+        if (pageSize < 1) {
+            pageSize = 10;
+        }
+        int fromIndex = (pageNo - 1) * pageSize;
+        if (fromIndex >= filtered.size()) {
+            return new PageResult<>(Collections.emptyList(), total);
+        }
+        int toIndex = Math.min(fromIndex + pageSize, filtered.size());
+        List<AdminUserDO> pageUsers = filtered.subList(fromIndex, toIndex);
+
+        // 4. 查询当前用户的联系人设置
+        List<ImContactSettingDO> settings = contactSettingMapper.selectListByUserId(userId);
+        Map<Long, ImContactSettingDO> settingMap = settings.stream()
+                .collect(Collectors.toMap(ImContactSettingDO::getContactId, s -> s, (a, b) -> a));
+
+        // 5. 转换为VO
+        List<AppImContactRespVO> voList = pageUsers.stream()
+                .map(u -> {
+                    AppImContactRespVO respVO = buildContactRespVO(u);
+                    ImContactSettingDO setting = settingMap.get(u.getId());
+                    if (setting != null) {
+                        respVO.setStar(setting.getStar());
+                        respVO.setNoDisturb(setting.getNoDisturb());
+                    } else {
+                        respVO.setStar(false);
+                        respVO.setNoDisturb(false);
+                    }
+                    return respVO;
+                })
+                .collect(Collectors.toList());
+
+        return new PageResult<>(voList, total);
     }
 
     @Override

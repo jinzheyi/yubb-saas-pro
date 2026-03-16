@@ -4,6 +4,7 @@ import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
+import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -47,8 +48,25 @@ public class ProtobufMessageHandler extends SimpleChannelInboundHandler<ImMessag
                 return;
             }
 
-            // 处理消息
-            processor.process(ctx, msg);
+            Long tenantId = null;
+            try {
+                tenantId = msg.getHeader().getTenantId();
+                if (tenantId != null && tenantId <= 0) {
+                    tenantId = null;
+                }
+            } catch (Exception ignore) {
+                tenantId = null;
+            }
+            if (tenantId == null) {
+                try {
+                    tenantId = AuthHandler.getTenantId(ctx);
+                } catch (Exception ignore) {
+                    tenantId = null;
+                }
+            }
+
+            // 处理消息（在 Netty 线程中显式绑定 TenantContextHolder，避免 MyBatis 租户拦截器 NPE）
+            TenantUtils.execute(tenantId, () -> processor.process(ctx, msg));
             
         } catch (Exception e) {
             log.error("[Protobuf] 消息处理异常", e);

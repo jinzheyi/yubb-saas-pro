@@ -20,7 +20,7 @@
 				</text>
 			</view>
 			<view class="history-tags">
-				<view class="history-tag" v-for="(item, index) in historyList" :key="index" @click="searchHistory(item)">
+				<view class="history-tag" v-for="(item, index) in historyList" :key="index" @click="searchHistory(item)" @longpress="handleHistoryLongPress(item)">
 					<text class="history-text">{{ item }}</text>
 				</view>
 			</view>
@@ -38,6 +38,22 @@
 
 		<!-- 搜索结果 -->
 		<scroll-view class="search-results" scroll-y="true" show-scrollbar="false" v-if="keyword">
+			<!-- 详细搜索 -->
+			<view class="result-section">
+				<text class="result-title">详细搜索</text>
+				<view class="result-list">
+					<view class="result-item" @click="handleSearchChatHistory">
+						<view class="result-avatar" :style="{ backgroundColor: '#1677FF' }">
+							<text class="iconfont group-icon">&#xea6e;</text>
+						</view>
+						<view class="result-info">
+							<text class="result-name">搜聊天记录:{{ keyword }}</text>
+							<text class="result-desc">查找聊天记录</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
 			<!-- 联系人结果 -->
 			<view class="result-section" v-if="contactResults.length > 0">
 				<text class="result-title">联系人</text>
@@ -47,7 +63,7 @@
 							<text class="result-avatar-text">{{ contact.avatarText }}</text>
 						</view>
 						<view class="result-info">
-							<text class="result-name">{{ highlightKeyword(contact.name) }}</text>
+							<rich-text class="result-name" :nodes="highlightKeyword(contact.name)"></rich-text>
 							<text class="result-desc">{{ contact.role }}</text>
 						</view>
 					</view>
@@ -63,7 +79,7 @@
 							<text class="iconfont group-icon">&#xe616;</text>
 						</view>
 						<view class="result-info">
-							<text class="result-name">{{ highlightKeyword(group.name) }}</text>
+							<rich-text class="result-name" :nodes="highlightKeyword(group.name)"></rich-text>
 							<text class="result-desc">{{ group.memberCount }}人</text>
 						</view>
 					</view>
@@ -75,14 +91,14 @@
 				<text class="result-title">聊天记录</text>
 				<view class="result-list">
 					<view class="result-item" v-for="message in messageResults" :key="message.id" @click="handleMessageClick(message)">
-						<view class="result-avatar" :style="{ backgroundColor: message.avatarBg }">
-							<text class="result-avatar-text">{{ message.avatarText }}</text>
+						<view class="result-avatar" :style="{ backgroundColor: '#1677FF' }">
+							<text class="iconfont group-icon">&#xe616;</text>
 						</view>
 						<view class="result-info">
-							<text class="result-name">{{ message.chatName }}</text>
-							<text class="result-desc">{{ highlightKeyword(message.content) }}</text>
+							<text class="result-name">{{ message.conversationName }}</text>
+							<rich-text class="result-desc" :nodes="message.highlightedContent || message.content"></rich-text>
 						</view>
-						<text class="result-time">{{ message.time }}</text>
+						<text class="result-time">{{ formatMessageTime(message.timestamp) }}</text>
 					</view>
 				</view>
 			</view>
@@ -100,36 +116,32 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getAvatarText, getGroupAvatarColor, getUserAvatarColor } from '../../utils/avatar.uts'
+	import { messageSearchService, type SearchResultItem } from '../../services/message-search-service.uts'
+	import { searchContact } from '../../api/contact.uts'
+	import { getConversationList, searchConversations } from '../../api/conversation.uts'
+	import { getHotSearch } from '../../api/search.uts'
+	import { getJsonObject, setJsonObject, remove } from '../../utils/storage.uts'
 
 	const { t } = useI18n()
+	const SEARCH_HISTORY_KEY = 'IM_SEARCH_HISTORY'
+	const HOT_SEARCH_KEY = 'IM_SEARCH_HOT'
+	const HOT_SEARCH_TTL_MS = 6 * 60 * 60 * 1000
 
 	const keyword = ref('')
-	const historyList = ref(['张敏', '产品研发团队', '项目进度'])
-	const hotList = ref(['工作汇报', '会议通知', '项目文档', '周报'])
+	const historyList = ref<string[]>([])
+	const defaultHotList = ['工作汇报', '会议通知', '项目文档', '周报']
+	const hotList = ref<string[]>(defaultHotList)
 
 	// 搜索结果
 	const contactResults = ref<any[]>([])
 	const groupResults = ref<any[]>([])
-	const messageResults = ref<any[]>([])
+	const messageResults = ref<SearchResultItem[]>([])
 
-	// 模拟数据
-	const allContacts = [
-		{ id: 1, name: '张敏', role: '产品经理', avatarText: getAvatarText('张敏'), avatarBg: getUserAvatarColor('1') },
-		{ id: 2, name: '李强', role: '开发工程师', avatarText: getAvatarText('李强'), avatarBg: getUserAvatarColor('2') },
-		{ id: 3, name: '王静', role: '设计师', avatarText: getAvatarText('王静'), avatarBg: getUserAvatarColor('3') },
-		{ id: 4, name: '刘洋', role: '测试工程师', avatarText: getAvatarText('刘洋'), avatarBg: getUserAvatarColor('4') }
-	]
-
-	const allGroups = [
-		{ id: 1, name: '产品研发团队', memberCount: 12, avatarBg: getGroupAvatarColor('1') },
-		{ id: 2, name: '技术交流群', memberCount: 50, avatarBg: getGroupAvatarColor('2') },
-		{ id: 3, name: '项目管理组', memberCount: 15, avatarBg: getGroupAvatarColor('3') }
-	]
-
-	const allMessages = [
-		{ id: 1, chatName: '张敏', content: '今天下午3点开会', time: '10:30', avatarText: getAvatarText('张敏'), avatarBg: getUserAvatarColor('1') },
-		{ id: 2, chatName: '产品研发团队', content: '请大家查看最新的项目进度', time: '昨天', avatarText: getAvatarText('产品研发团队'), avatarBg: getGroupAvatarColor('2') }
-	]
+	const allMessages: any[] = []
+	const conversationsCache = ref<any[] | null>(null)
+	let contactSearchSeq = 0
+	let groupSearchSeq = 0
+	let hotSearchSeq = 0
 
 	const noResults = computed(() : boolean => {
 		return keyword.value && contactResults.value.length === 0 && groupResults.value.length === 0 && messageResults.value.length === 0
@@ -139,30 +151,221 @@
 		uni.navigateBack()
 	}
 
+	function loadHistoryFromStorage(): void {
+		try {
+			const list = getJsonObject<string[]>(SEARCH_HISTORY_KEY, [])
+			historyList.value = Array.isArray(list) ? list : []
+		} catch (e) {
+			historyList.value = []
+		}
+	}
+
+	function persistHistory(): void {
+		try {
+			setJsonObject<string[]>(SEARCH_HISTORY_KEY, historyList.value)
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	type HotSearchCache = {
+		list: string[]
+		fetchedAt: number
+	}
+
+	function loadHotFromStorage(): void {
+		try {
+			const cached = getJsonObject<HotSearchCache | null>(HOT_SEARCH_KEY, null)
+			if (cached == null || cached.list == null || !Array.isArray(cached.list)) {
+				hotList.value = defaultHotList
+				triggerFetchHotIfNeeded()
+				return
+			}
+			const fetchedAt = cached.fetchedAt != null ? Number(cached.fetchedAt) : 0
+			const age = Date.now() - fetchedAt
+			if (fetchedAt > 0 && age >= 0 && age <= HOT_SEARCH_TTL_MS) {
+				hotList.value = cached.list.filter(it => it != null && String(it).trim() !== '').map(it => String(it))
+				if (hotList.value.length === 0) hotList.value = defaultHotList
+				return
+			}
+			hotList.value = defaultHotList
+			triggerFetchHotIfNeeded()
+		} catch (e) {
+			hotList.value = defaultHotList
+			triggerFetchHotIfNeeded()
+		}
+	}
+
+	function triggerFetchHotIfNeeded(): void {
+		try {
+			const seq = ++hotSearchSeq
+			Promise.resolve().then(async () => {
+				try {
+					const res = await getHotSearch(10) as any
+					if (seq !== hotSearchSeq) return
+					const list = Array.isArray(res) ? res : (res && Array.isArray(res.list) ? res.list : [])
+					const normalized = (list as any[])
+						.filter(it => it != null && String(it).trim() !== '')
+						.map(it => String(it))
+					if (normalized.length === 0) {
+						return
+					}
+					hotList.value = normalized
+					persistHotToStorage(normalized)
+				} catch (e) {
+					// ignore
+				}
+			})
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	function persistHotToStorage(list: string[]): void {
+		try {
+			const payload: HotSearchCache = {
+				list: list,
+				fetchedAt: Date.now()
+			}
+			setJsonObject<HotSearchCache>(HOT_SEARCH_KEY, payload)
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	async function ensureConversationsLoaded(): Promise<any[]> {
+		if (conversationsCache.value != null) {
+			return conversationsCache.value as any[]
+		}
+		try {
+			const list = await getConversationList() as any[]
+			conversationsCache.value = Array.isArray(list) ? list : []
+			return conversationsCache.value as any[]
+		} catch (e) {
+			conversationsCache.value = []
+			return []
+		}
+	}
+
+	function normalizeContactToUi(contact: any): any {
+		const userIdStr = contact && contact.id != null ? String(contact.id) : (contact && contact.userId != null ? String(contact.userId) : '0')
+		const displayName = (contact && (contact.remarkName || contact.nickname)) ? String(contact.remarkName || contact.nickname) : (contact && contact.name ? String(contact.name) : '未知')
+		const role = contact && contact.deptName != null ? String(contact.deptName) : (contact && contact.role != null ? String(contact.role) : '')
+		return {
+			id: userIdStr,
+			userId: userIdStr,
+			name: displayName,
+			role: role,
+			avatarText: getAvatarText(displayName),
+			avatarBg: getUserAvatarColor(userIdStr)
+		}
+	}
+
+	function normalizeGroupToUi(conv: any): any {
+		const chatId = conv && conv.chatId != null ? String(conv.chatId) : '0'
+		const name = conv && conv.targetName != null ? String(conv.targetName) : ''
+		const memberCount = conv && conv.groupMemberCount != null ? Number(conv.groupMemberCount) : 0
+		return {
+			id: chatId,
+			chatId: chatId,
+			name: name,
+			memberCount: memberCount,
+			avatarBg: getGroupAvatarColor(chatId)
+		}
+	}
+
 	function handleSearch() {
 		if (!keyword.value) {
 			contactResults.value = []
 			groupResults.value = []
 			messageResults.value = []
+			try {
+				messageSearchService.cancelSearch()
+			} catch (e) {
+				// ignore
+			}
 			return
 		}
 
-		// 搜索联系人
-		contactResults.value = allContacts.filter(contact => contact.name.includes(keyword.value))
+		// 搜索联系人（真实接口）
+		try {
+			const kw = String(keyword.value).trim()
+			const seq = ++contactSearchSeq
+			Promise.resolve().then(async () => {
+				try {
+					const res = await searchContact(kw) as any
+					if (seq !== contactSearchSeq) return
+					const list = Array.isArray(res) ? res : (res && Array.isArray(res.list) ? res.list : [])
+					contactResults.value = (list as any[]).map(it => normalizeContactToUi(it))
+				} catch (e) {
+					if (seq !== contactSearchSeq) return
+					contactResults.value = []
+				}
+			})
+		} catch (e) {
+			contactResults.value = []
+		}
 
-		// 搜索群聊
-		groupResults.value = allGroups.filter(group => group.name.includes(keyword.value))
+		// 搜索群聊（服务端优先，失败回退本地过滤）
+		try {
+			const kw = String(keyword.value).trim()
+			const seq = ++groupSearchSeq
+			Promise.resolve().then(async () => {
+				try {
+					try {
+						const res = await searchConversations(kw, 2, 1, 20) as any
+						if (seq !== groupSearchSeq) return
+						const list = res && Array.isArray(res.list) ? res.list : (Array.isArray(res) ? res : [])
+						groupResults.value = (list as any[]).map(it => normalizeGroupToUi(it))
+						return
+					} catch (e) {
+						// fallback
+					}
 
-		// 搜索消息
-		messageResults.value = allMessages.filter(message => message.content.includes(keyword.value))
+					const list = await ensureConversationsLoaded()
+					if (seq !== groupSearchSeq) return
+					const filtered = (list as any[])
+						.filter(it => it && it.conversationType === 2)
+						.filter(it => {
+							const n = it && it.targetName != null ? String(it.targetName) : ''
+							return n.indexOf(kw) >= 0
+						})
+					groupResults.value = filtered.map(it => normalizeGroupToUi(it))
+				} catch (e) {
+					if (seq !== groupSearchSeq) return
+					groupResults.value = []
+				}
+			})
+		} catch (e) {
+			groupResults.value = []
+		}
+
+		// 搜索消息（真实接口 + 防抖）
+		try {
+			const kw = String(keyword.value).trim()
+			messageSearchService.searchMessages(
+				{ keyword: kw, pageNo: 1, pageSize: 20 },
+				(results: SearchResultItem[]) => {
+					// 仅当 keyword 未变化时才更新（避免异步回调覆盖）
+					if (String(keyword.value).trim() !== kw) return
+					messageResults.value = results
+				}
+			)
+		} catch (e) {
+			messageResults.value = []
+		}
 	}
 
 	function handleSearchConfirm() {
-		if (keyword.value && !historyList.value.includes(keyword.value)) {
-			historyList.value.unshift(keyword.value)
-			if (historyList.value.length > 10) {
-				historyList.value.pop()
-			}
+		try {
+			const kw = keyword.value != null ? String(keyword.value).trim() : ''
+			if (kw === '') return
+			const next = historyList.value.filter(it => it != null && String(it).trim() !== '' && String(it) !== kw)
+			next.unshift(kw)
+			historyList.value = next.slice(0, 10)
+			persistHistory()
+		} catch (e) {
+			// ignore
 		}
 	}
 
@@ -173,6 +376,11 @@
 			success: (res) => {
 				if (res.confirm) {
 					historyList.value = []
+					try {
+						remove(SEARCH_HISTORY_KEY)
+					} catch (e) {
+						// ignore
+					}
 				}
 			}
 		})
@@ -183,33 +391,96 @@
 		handleSearch()
 	}
 
+	function handleHistoryLongPress(item: string): void {
+		try {
+			const kw = item != null ? String(item).trim() : ''
+			if (kw === '') return
+			uni.showModal({
+				title: '删除历史记录',
+				content: `确定删除“${kw}”吗？`,
+				success: (res) => {
+					if (res.confirm) {
+						historyList.value = historyList.value.filter(it => it != null && String(it) !== kw)
+						persistHistory()
+					}
+				}
+			})
+		} catch (e) {
+			// ignore
+		}
+	}
+
 	function searchHot(item : string) {
 		keyword.value = item
+		try {
+			handleSearchConfirm()
+		} catch (e) {
+			// ignore
+		}
 		handleSearch()
 	}
 
 	function highlightKeyword(text : string) : string {
-		// 简单实现，实际应该用富文本高亮
-		return text
+		try {
+			const kw = keyword.value != null ? String(keyword.value).trim() : ''
+			if (!kw || kw.length === 0) return text
+			return messageSearchService.highlightKeyword(text, kw)
+		} catch (e) {
+			return text
+		}
+	}
+
+	function formatMessageTime(ts: number): string {
+		try {
+			if (!ts) return ''
+			const d = new Date(ts)
+			const mm = String(d.getMonth() + 1).padStart(2, '0')
+			const dd = String(d.getDate()).padStart(2, '0')
+			const hh = String(d.getHours()).padStart(2, '0')
+			const mi = String(d.getMinutes()).padStart(2, '0')
+			return `${mm}-${dd} ${hh}:${mi}`
+		} catch (e) {
+			return ''
+		}
 	}
 
 	function handleContactClick(contact : any) {
 		uni.navigateTo({
-			url: '/pages/contacts/user-detail?id=' + contact.id
+			url: '/pages/contacts/user-detail?id=' + (contact && (contact.userId || contact.id) ? String(contact.userId || contact.id) : '')
 		})
 	}
 
 	function handleGroupClick(group : any) {
 		uni.navigateTo({
-			url: `/pages/message/chat?type=group&groupId=${group.id}&name=${encodeURIComponent(group.name)}&memberCount=${group.memberCount}`
+			url: `/pages/message/chat?chatId=${encodeURIComponent(group && (group.chatId || group.id) ? String(group.chatId || group.id) : '')}&name=${encodeURIComponent(group && group.name ? String(group.name) : '')}`
 		})
 	}
 
-	function handleMessageClick(message : any) {
+	function handleMessageClick(message: SearchResultItem) {
+		const chatId = message && message.chatId ? String(message.chatId) : ''
+		const mid = message && message.messageId ? String(message.messageId) : ''
+		if (!chatId || chatId === '0' || !mid || mid === '0') {
+			uni.showToast({ title: '无法定位消息', icon: 'none' })
+			return
+		}
 		uni.navigateTo({
-			url: '/pages/message/chat?name=' + encodeURIComponent(message.chatName)
+			url: `/pages/message/chat?chatId=${encodeURIComponent(chatId)}&messageId=${encodeURIComponent(mid)}&highlight=true`
 		})
 	}
+
+	function handleSearchChatHistory() {
+		const kw = keyword.value != null ? String(keyword.value).trim() : ''
+		if (kw === '') {
+			uni.showToast({ title: '请输入关键词', icon: 'none' })
+			return
+		}
+		uni.navigateTo({
+			url: `/pages/common/search-chat-history?keyword=${encodeURIComponent(kw)}`
+		})
+	}
+
+	loadHistoryFromStorage()
+	loadHotFromStorage()
 </script>
 
 <style>
@@ -433,6 +704,15 @@
 
 	.empty-tip {
 		font-size: 13px;
-		color: #8F959E;
+		color: #999999;
+		margin-top: 8px;
+	}
+
+	.highlight {
+		background-color: #FFF3CD;
+		color: #856404;
+		padding: 2px 4px;
+		border-radius: 3px;
+		font-weight: 500;
 	}
 </style>

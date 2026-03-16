@@ -1,0 +1,256 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click.stop="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">返回</text>
+			</view>
+			<text class="header-title">文件预览</text>
+			<view class="header-right"></view>
+		</view>
+
+		<view class="content">
+			<view v-if="loading" class="loading">
+				<text class="loading-text">加载中...</text>
+			</view>
+
+			<view v-else-if="errorMsg" class="error">
+				<text class="error-text">{{ errorMsg }}</text>
+				<view class="btn-row">
+					<view class="btn" @click="loadStrategy"><text class="btn-text">重试</text></view>
+					<view class="btn" v-if="downloadUrl" @click="handleDownload"><text class="btn-text">下载打开</text></view>
+				</view>
+			</view>
+
+			<view v-else>
+				<web-view v-if="previewUrl" :src="previewUrl" class="webview"></web-view>
+
+				<view v-else class="fallback">
+					<text class="fallback-title">暂不支持在线预览</text>
+					<text class="fallback-sub" v-if="tip">{{ tip }}</text>
+					<view class="btn-row">
+						<view class="btn" @click="handleDownload"><text class="btn-text">下载打开</text></view>
+					</view>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { ref } from 'vue'
+	import { onLoad } from '@dcloudio/uni-app'
+	import { getFileOpenStrategy } from '../../api/file.uts'
+	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
+
+	const fileId = ref<string>('')
+	const rawUrl = ref<string>('')
+	const fileName = ref<string>('')
+
+	const loading = ref<boolean>(false)
+	const errorMsg = ref<string>('')
+	const tip = ref<string>('')
+
+	const previewUrl = ref<string>('')
+	const downloadUrl = ref<string>('')
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function safeDecode(s : string) : string {
+		try {
+			return decodeURIComponent(s)
+		} catch (e) {
+			return s
+		}
+	}
+
+	async function loadStrategy() {
+		loading.value = true
+		errorMsg.value = ''
+		tip.value = ''
+		previewUrl.value = ''
+		downloadUrl.value = ''
+		try {
+			const fid = (fileId.value || '').trim()
+			if (fid) {
+				const strategy : any = await getFileOpenStrategy(fid, 600)
+				if (strategy && strategy.downloadUrl) {
+					downloadUrl.value = String(strategy.downloadUrl)
+				}
+				if (strategy && strategy.message) {
+					tip.value = String(strategy.message)
+				}
+				if (strategy && strategy.action === 'PREVIEW' && strategy.previewUrl) {
+					previewUrl.value = String(strategy.previewUrl)
+					return
+				}
+				return
+			}
+
+			const u = (rawUrl.value || '').trim()
+			if (!u) {
+				errorMsg.value = '文件地址为空'
+				return
+			}
+			downloadUrl.value = u
+		} catch (e) {
+			errorMsg.value = '加载失败，请稍后重试'
+		} finally {
+			loading.value = false
+		}
+	}
+
+	async function handleDownload() {
+		try {
+			const url = (downloadUrl.value || '').trim()
+			if (!url) {
+				uni.showToast({ title: '下载地址为空', icon: 'none' })
+				return
+			}
+			await downloadAndOpenDocumentWithRetry(url, '正在下载')
+		} catch (e) {
+			uni.showToast({ title: '打开失败', icon: 'none' })
+		}
+	}
+
+	onLoad((options : any) => {
+		try {
+			if (options && options.fileId) {
+				fileId.value = String(options.fileId)
+			}
+			if (options && options.url) {
+				rawUrl.value = safeDecode(String(options.url))
+			}
+			if (options && options.name) {
+				fileName.value = safeDecode(String(options.name))
+			}
+		} catch (e) {
+			// ignore
+		}
+		loadStrategy()
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #FFFFFF;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 90px;
+	}
+
+	.back-icon {
+		color: #1F2329;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #1F2329;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 16px;
+		font-weight: 500;
+	}
+
+	.header-right {
+		width: 90px;
+	}
+
+	.content {
+		flex: 1;
+	}
+
+	.webview {
+		flex: 1;
+	}
+
+	.loading {
+		flex: 1;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.loading-text {
+		color: #646A73;
+		font-size: 14px;
+	}
+
+	.error {
+		flex: 1;
+		align-items: center;
+		justify-content: center;
+		padding: 24px;
+	}
+
+	.error-text {
+		color: #646A73;
+		font-size: 14px;
+		text-align: center;
+	}
+
+	.fallback {
+		flex: 1;
+		align-items: center;
+		justify-content: center;
+		padding: 24px;
+	}
+
+	.fallback-title {
+		color: #1F2329;
+		font-size: 15px;
+		font-weight: 500;
+	}
+
+	.fallback-sub {
+		color: #646A73;
+		font-size: 13px;
+		margin-top: 8px;
+		text-align: center;
+	}
+
+	.btn-row {
+		flex-direction: row;
+		margin-top: 16px;
+	}
+
+	.btn {
+		background-color: #1677FF;
+		padding: 10px 14px;
+		border-radius: 8px;
+		margin: 0 6px;
+	}
+
+	.btn-text {
+		color: #FFFFFF;
+		font-size: 14px;
+	}
+</style>

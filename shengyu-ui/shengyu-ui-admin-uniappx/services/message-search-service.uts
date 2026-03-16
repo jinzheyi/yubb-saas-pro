@@ -26,6 +26,7 @@ export type SearchResultItem = {
   content: string
   timestamp: number
   highlightedContent: string
+	raw?: any
 }
 
 /**
@@ -97,6 +98,52 @@ export class MessageSearchService {
       this.doSearch(options, callback)
     }, this.SEARCH_DEBOUNCE)
   }
+
+	/**
+	 * 搜索消息（无防抖，适用于分页/明确触发的搜索）
+	 */
+	public async searchMessagesAsync(options: SearchOptions): Promise<SearchResultItem[]> {
+		if (options.keyword.length < this.MIN_KEYWORD_LENGTH) {
+			return []
+		}
+		try {
+			const params: any = {
+				keyword: options.keyword,
+				pageNo: options.pageNo || 1,
+				pageSize: options.pageSize || 20
+			}
+
+			if (options.chatId !== undefined && options.chatId !== null) {
+				params.chatId = options.chatId
+			}
+
+			if (options.messageType !== undefined && options.messageType !== null) {
+				params.messageType = options.messageType
+			}
+
+			if (options.startTime !== undefined && options.startTime !== null) {
+				params.startTime = options.startTime
+			}
+
+			if (options.endTime !== undefined && options.endTime !== null) {
+				params.endTime = options.endTime
+			}
+
+			const data: any = await request({
+				url: '/system/im/message/search',
+				method: 'GET',
+				params: params
+			})
+			if (data == null) {
+				return []
+			}
+			const list = (data.list != null ? data.list : []) as any[]
+			return list.map((item: any) => this.mapToSearchResult(item, options.keyword))
+		} catch (e) {
+			console.error('[MessageSearchService] 搜索消息失败:', e)
+			return []
+		}
+	}
   
   /**
    * 实际执行搜索
@@ -215,7 +262,8 @@ export class MessageSearchService {
       type: data.type,
       content: content,
       timestamp: data.timestamp || 0,
-      highlightedContent: this.highlightKeyword(content, keyword)
+      highlightedContent: this.highlightKeyword(content, keyword),
+		raw: data
     }
   }
   

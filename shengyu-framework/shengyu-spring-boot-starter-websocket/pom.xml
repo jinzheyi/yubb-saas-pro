@@ -43,6 +43,7 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
+            <version>3.21.7</version>
         </dependency>
 
         <!-- 兼容 Spring WebSocket（可选，用于向后兼容） -->

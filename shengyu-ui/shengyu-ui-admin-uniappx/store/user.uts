@@ -23,7 +23,7 @@ export type UserVO = {
 	id: number
 	avatar: string
 	nickname: string
-	deptId: number
+	deptId: string
 }
 
 /**
@@ -34,7 +34,7 @@ export type TokenType = {
 	accessToken: string
 	refreshToken: string
 	tenantId: number | string | null
-	deptId: number | null
+	deptId: number | string | null
 }
 
 /**
@@ -137,10 +137,10 @@ export function removeTenantId() {
 /**
  * 获取部门 ID
  */
-export function getDeptId(): number | null {
+export function getDeptId(): string | null {
 	const deptId = uni.getStorageSync(DEPT_ID_KEY)
-	if (deptId) {
-		return parseInt(deptId as string)
+	if (deptId != null && deptId !== '') {
+		return String(deptId)
 	}
 	return null
 }
@@ -149,9 +149,9 @@ export function getDeptId(): number | null {
  * 设置部门 ID
  * @param deptId 部门 ID
  */
-export function setDeptId(deptId: number | null) {
+export function setDeptId(deptId: number | string | null) {
 	if (deptId != null) {
-		uni.setStorageSync(DEPT_ID_KEY, deptId.toString())
+		uni.setStorageSync(DEPT_ID_KEY, String(deptId))
 	}
 }
 
@@ -189,10 +189,6 @@ export function getUserIdStr(): string {
  * 获取租户 ID（数字类型）
  */
 export function getTenantIdAsNumber(): number {
-	const tenantId = getTenantId()
-	if (tenantId) {
-		return parseInt(tenantId)
-	}
 	return 0
 }
 

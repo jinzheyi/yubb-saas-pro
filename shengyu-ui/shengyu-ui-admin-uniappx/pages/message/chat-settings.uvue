@@ -92,10 +92,21 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { messageService } from '../../services/message-service.uts'
 
 	const { t } = useI18n()
 	const isTop = ref(false)
 	const isNotify = ref(true)
+	const chatId = ref('')
+
+	onLoad((options : any) => {
+		try {
+			if (options && options.chatId) {
+				chatId.value = options.chatId.toString()
+			}
+		} catch (e) {
+		}
+	})
 
 	function handleBack() {
 		uni.navigateBack()
@@ -110,6 +121,36 @@
 	}
 
 	function handleAction(type : string) {
+		if (type === 'clear') {
+			uni.showModal({
+				title: t('chatSettings.clearHistory'),
+				content: '确定要清空聊天记录吗？此操作不可恢复',
+				success: (res) => {
+					if (res.confirm) {
+						import('@/api/message.uts').then(async (api: any) => {
+							if (api && api.clearConversationMessages && chatId.value) {
+								await api.clearConversationMessages(chatId.value)
+							}
+							try {
+								messageService.clearUnreadCount(chatId.value)
+								messageService.clearChatCache(chatId.value)
+							} catch (e) {
+							}
+							uni.showToast({
+								title: '已清空',
+								icon: 'success'
+							})
+						}).catch(() => {
+							uni.showToast({
+								title: '清空失败',
+								icon: 'none'
+							})
+						})
+					}
+				}
+			})
+			return
+		}
 		uni.showToast({
 			title: type + ' 功能开发中',
 			icon: 'none'

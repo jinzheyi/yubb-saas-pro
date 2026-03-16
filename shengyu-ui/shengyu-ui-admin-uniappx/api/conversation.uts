@@ -15,6 +15,18 @@ export function getConversationList(): Promise<any> {
 }
 
 /**
+ * 搜索会话（群聊/单聊）
+ */
+export function searchConversations(keyword: string, conversationType: number | null, pageNo: number = 1, pageSize: number = 20): Promise<any> {
+  const kw = keyword != null ? String(keyword) : ''
+  const typePart = conversationType != null ? `&conversationType=${conversationType}` : ''
+  return request({
+    url: `/system/im/conversation/search?keyword=${encodeURIComponent(kw)}${typePart}&pageNo=${pageNo}&pageSize=${pageSize}`,
+    method: 'GET'
+  })
+}
+
+/**
  * 创建会话
  */
 export function createConversation(data: any): Promise<any> {

@@ -153,11 +153,7 @@
 				ts: Date.now()
 			}
 			
-			console.log('获取验证码请求参数:', data)
-			
 			const result = await getCaptcha(data)
-			
-			console.log('获取验证码响应:', result)
 			
 			// 验证码接口返回的数据结构不同，直接使用 result
 			if (result && result.repCode == '0000') {
@@ -165,12 +161,6 @@
 				blockImgBase.value = result.repData.jigsawImageBase64
 				token.value = result.repData.token
 				secretKey.value = result.repData.secretKey
-				
-				console.log('验证码图片已加载:', {
-					hasBackImg: !!backImgBase.value,
-					hasBlockImg: !!blockImgBase.value,
-					token: token.value
-				})
 			} else {
 				console.error('获取验证码失败:', result)
 				uni.showToast({
@@ -199,8 +189,6 @@
 			startTime.value = Date.now()
 			sliderText.value = ''
 			buttonColor.value = '#337ab7'
-			
-			console.log('开始滑动:', startX.value)
 		}
 	}
 	
@@ -234,16 +222,8 @@
 			// 计算移动距离（需要按比例转换）
 			const moveDistance = currentX.value - startX.value
 			
-			console.log('结束滑动:', {
-				startX: startX.value,
-				currentX: currentX.value,
-				moveDistance: moveDistance,
-				耗时: (endTime.value - startTime.value) + 'ms'
-			})
-			
 			// 如果滑动距离太小，不进行验证
 			if (moveDistance < 10) {
-				console.log('滑动距离太小，重置')
 				reset()
 				return
 			}
@@ -259,27 +239,15 @@
 	// 校验验证码
 	async function verifyCaptcha(distance: number) {
 		try {
-			console.log('=== 开始校验验证码 ===')
-			console.log('距离:', distance)
-			console.log('token:', token.value)
-			console.log('secretKey:', secretKey.value)
-			
 			const pointJson = JSON.stringify({ x: distance, y: 5.0 })
-			console.log('原始坐标 JSON:', pointJson)
 			
 			// 使用 AES 加密
 			let encryptedPoint = pointJson
 			if (secretKey.value) {
 				try {
 					encryptedPoint = aesEncrypt(pointJson, secretKey.value)
-					console.log('✅ AES 加密成功:', {
-						原文: pointJson,
-						密钥: secretKey.value,
-						加密后: encryptedPoint
-					})
 				} catch (e) {
-					console.error('❌ AES 加密失败:', e)
-					// 加密失败，使用明文
+					console.error('❌ AES 加密失败，使用明文:', e)
 					encryptedPoint = pointJson
 				}
 			} else {
@@ -292,16 +260,11 @@
 				token: token.value
 			}
 			
-			console.log('校验验证码请求参数:', data)
-			
 			const result = await checkCaptcha(data)
-			
-			console.log('校验验证码响应:', result)
 			
 			// 验证码接口返回的数据结构不同，直接使用 result
 			if (result && result.repCode == '0000') {
 				// 验证成功
-				console.log('✅ 验证成功')
 				handleSuccess()
 			} else {
 				// 验证失败
@@ -316,29 +279,18 @@
 	
 	// 验证成功
 	function handleSuccess() {
-		console.log('=== handleSuccess 被调用 ===')
-		
 		buttonColor.value = '#5cb85c'
 		sliderIcon.value = '✓'
+		sliderText.value = '验证成功'
 		tipSuccess.value = true
 		tipText.value = `${((endTime.value - startTime.value) / 1000).toFixed(2)}s验证成功`
 		
 		setTimeout(() => {
-			console.log('准备生成 captchaVerification')
-			console.log('token:', token.value)
-			console.log('secretKey:', secretKey.value)
-			console.log('移动距离:', currentX.value - startX.value)
-			
 			const captchaVerification = secretKey.value ? 
 				aesEncrypt(token.value + '---' + JSON.stringify({ x: currentX.value - startX.value, y: 5.0 }), secretKey.value) :
 				token.value + '---' + JSON.stringify({ x: currentX.value - startX.value, y: 5.0 })
 			
-			console.log('captchaVerification:', captchaVerification)
-			console.log('准备触发 success 事件')
-			
 			emit('success', { captchaVerification })
-			
-			console.log('✅ success 事件已触发')
 			visible.value = false
 			reset()
 		}, 1000)

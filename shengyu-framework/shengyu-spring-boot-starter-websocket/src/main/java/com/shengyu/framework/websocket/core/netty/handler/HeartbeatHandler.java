@@ -148,10 +148,10 @@ public class HeartbeatHandler extends ChannelInboundHandlerAdapter {
                 .setMessageId(System.currentTimeMillis())
                 .setMessageType(MessageType.HEARTBEAT_RESP)
                 .setTimestamp(System.currentTimeMillis())
-                .build())
+            .build())
             .build();
-        
-        ctx.writeAndFlush(heartbeat);
+
+        ctx.channel().writeAndFlush(heartbeat);
         log.debug("[Heartbeat] 发送 Protobuf 心跳响应: {}", ctx.channel().id().asShortText());
     }
 

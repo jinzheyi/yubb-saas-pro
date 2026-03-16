@@ -101,6 +101,9 @@
 											<text class="member-role">{{ member.role }}</text>
 											<view v-if="mIndex < dept.members.length - 1" class="member-item-border"></view>
 										</view>
+										<view v-if="dept.hasMore" class="load-more" @click.stop="loadMoreDeptMembers(dept.id, dept)">
+											<text class="load-more-text">加载更多</text>
+										</view>
 									</view>
 								</view>
 							</view>
@@ -148,7 +151,8 @@
 		removeMembers,
 		getSelectedCount
 	} from '../../store/group-selection.uts'
-	import { getOrgTree, getDeptMembers } from '../../api/dept.uts'
+	import { getOrgTree } from '../../api/dept.uts'
+	import { getContactPageByDept } from '../../api/contact.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
@@ -169,7 +173,7 @@
 	let searchTimer: number = 0
 	
 	// 已加载成员的部门缓存 Map<deptId, members[]>
-	const deptMembersCache = new Map<number, any[]>()
+	const deptMembersCache = new Map<number, any>()
 	
 	// 原始组织数据（用于搜索后恢复）
 	const originalOrganizations = ref<any[]>([])
@@ -178,7 +182,10 @@
 		name: '公司',
 		count: 0,
 		selected: false,
-		members: [] as any[]
+		members: [] as any[],
+		pageNo: 0,
+		hasMore: false,
+		loadingMore: false
 	})
 
 	// 根组织
@@ -187,7 +194,10 @@
 		name: '公司',
 		count: 0,
 		selected: false,
-		members: [] as any[]
+		members: [] as any[],
+		pageNo: 0,
+		hasMore: false,
+		loadingMore: false
 	})
 
 	// 展开的节点ID列表
@@ -223,6 +233,9 @@
 					rootOrg.value.name = rootDept.name
 					rootOrg.value.count = rootDept.memberCount || 0
 					rootOrg.value.members = []
+					rootOrg.value.pageNo = 0
+					rootOrg.value.hasMore = false
+					rootOrg.value.loadingMore = false
 					
 					// 保存原始根组织信息
 					originalRootOrg.value = {
@@ -230,7 +243,10 @@
 						name: rootDept.name,
 						count: rootDept.memberCount || 0,
 						selected: false,
-						members: []
+						members: [],
+						pageNo: 0,
+						hasMore: false,
+						loadingMore: false
 					}
 				}
 				
@@ -294,7 +310,10 @@
 				expanded: false,
 				selected: false,
 				departments: [] as any[],
-				members: [] as any[] // 初始为空，点击时才加载
+				members: [] as any[], // 初始为空，点击时才加载
+				pageNo: 0,
+				hasMore: false,
+				loadingMore: false
 			}
 			deptMap.set(dept.id, node)
 		}
@@ -349,6 +368,9 @@
 					expanded: false,
 					selected: false,
 					members: [] as any[], // 初始为空，点击时才加载
+					pageNo: 0,
+					hasMore: false,
+					loadingMore: false,
 					departments: subDepts
 				}
 				
@@ -397,16 +419,17 @@
 			// 1. 搜索根部门成员
 			let rootMembers: any[] = []
 			if (originalRootOrg.value.id) {
-				const data = await getDeptMembers(String(originalRootOrg.value.id), searchKeyword.value)
+				const res = await getContactPageByDept(String(originalRootOrg.value.id), 1, 200, searchKeyword.value) as any
+				const data = res && Array.isArray(res.list) ? res.list : []
 				if (data && data.length > 0) {
 					rootMembers = data.map((user: any) => {
 						return {
-							id: user.id,
-							name: user.nickname,
-							role: user.postName || '未设置岗位',
-							avatarText: getAvatarText(user.nickname),
-							avatarBg: getUserAvatarColor(user.id),
-							selected: isMemberSelected(user.id)
+							id: String(user.id),
+							name: user.remarkName || user.nickname || '未知',
+							role: user.deptName || '',
+							avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
+							avatarBg: getUserAvatarColor(String(user.id)),
+							selected: isMemberSelected(String(user.id))
 						}
 					})
 				}
@@ -442,17 +465,18 @@
 			const dept = depts[i]
 			
 			// 搜索当前部门的成员
-			const data = await getDeptMembers(String(dept.id), keyword)
+			const res = await getContactPageByDept(String(dept.id), 1, 200, keyword) as any
+			const data = res && Array.isArray(res.list) ? res.list : []
 			let members: any[] = []
 			if (data && data.length > 0) {
 				members = data.map((user: any) => {
 					return {
-						id: user.id,
-						name: user.nickname,
-						role: user.postName || '未设置岗位',
-						avatarText: getAvatarText(user.nickname),
-						avatarBg: getUserAvatarColor(user.id),
-						selected: isMemberSelected(user.id)
+						id: String(user.id),
+						name: user.remarkName || user.nickname || '未知',
+						role: user.deptName || '',
+						avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
+						avatarBg: getUserAvatarColor(String(user.id)),
+						selected: isMemberSelected(String(user.id))
 					}
 				})
 			}
@@ -472,6 +496,9 @@
 					expanded: true, // 搜索结果默认展开
 					selected: false,
 					members: members,
+					pageNo: 1,
+					hasMore: false,
+					loadingMore: false,
 					departments: filteredSubDepts
 				})
 			}
@@ -539,13 +566,13 @@
 	}
 
 	function toggleDept(deptId : string | number) {
-		const deptIdNum = typeof deptId === 'string' ? Number(deptId) : deptId
+		const deptIdStr = String(deptId)
 		
 		// 递归查找并切换部门展开状态
 		function findAndToggle(depts: any[]): any | null {
 			for (let i = 0; i < depts.length; i++) {
 				const dept = depts[i]
-				if (dept.id === deptIdNum) {
+				if (String(dept.id) === deptIdStr) {
 					dept.expanded = !dept.expanded
 					return dept
 				}
@@ -563,7 +590,7 @@
 		for (let i = 0; i < organizations.value.length; i++) {
 			const org = organizations.value[i]
 			// 先检查是否是组织本身
-			if (org.id === deptIdNum) {
+			if (String(org.id) === deptIdStr) {
 				org.expanded = !org.expanded
 				// 如果展开且没有加载过成员，加载成员
 				if (org.expanded && org.members.length === 0 && !deptMembersCache.has(org.id)) {
@@ -589,7 +616,10 @@
 	async function loadDeptMembers(deptId: number, deptNode: any, keyword?: string) {
 		// 如果有缓存且没有搜索关键词，直接使用缓存
 		if (!keyword && deptMembersCache.has(deptId)) {
-			deptNode.members = deptMembersCache.get(deptId) || []
+			const cache = deptMembersCache.get(deptId) as any
+			deptNode.members = cache && Array.isArray(cache.members) ? cache.members : []
+			deptNode.pageNo = cache && cache.pageNo != null ? cache.pageNo : 1
+			deptNode.hasMore = cache && cache.hasMore === true
 			return
 		}
 		
@@ -599,31 +629,48 @@
 				loadingMembers.value = true
 			}
 			
-			const data = await getDeptMembers(String(deptId), keyword)
+			deptNode.pageNo = 0
+			deptNode.hasMore = false
+			const kw = keyword != null ? String(keyword) : ''
+			const res = await getContactPageByDept(String(deptId), 1, 20, kw) as any
+			const data = res && Array.isArray(res.list) ? res.list : []
+			const total = res && res.total != null ? Number(res.total) : data.length
 			
 			if (data && data.length > 0) {
 				const members = data.map((user: any) => {
 					return {
-						id: user.id,
-						name: user.nickname,
-						role: user.postName || '未设置岗位',
-						avatarText: getAvatarText(user.nickname),
-						avatarBg: getUserAvatarColor(user.id),
-						selected: isMemberSelected(user.id)
+						id: String(user.id),
+						name: user.remarkName || user.nickname || '未知',
+						role: user.deptName || '',
+						avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
+						avatarBg: getUserAvatarColor(String(user.id)),
+						selected: isMemberSelected(String(user.id))
 					}
 				})
 				
 				deptNode.members = members
+				deptNode.pageNo = 1
+				deptNode.hasMore = members.length < total
 				
 				// 如果没有搜索关键词，缓存结果并更新count
 				if (!keyword) {
-					deptMembersCache.set(deptId, members)
-					deptNode.count = members.length
+					deptMembersCache.set(deptId, {
+						members: members,
+						pageNo: deptNode.pageNo,
+						hasMore: deptNode.hasMore
+					})
+					deptNode.count = total
 				}
 			} else {
 				deptNode.members = []
+				deptNode.pageNo = 1
+				deptNode.hasMore = false
 				if (!keyword) {
-					deptMembersCache.set(deptId, [])
+					deptMembersCache.set(deptId, {
+						members: [],
+						pageNo: deptNode.pageNo,
+						hasMore: deptNode.hasMore
+					})
 					deptNode.count = 0
 				}
 			}
@@ -637,10 +684,50 @@
 				})
 			}
 			deptNode.members = []
+			deptNode.pageNo = 1
+			deptNode.hasMore = false
 		} finally {
 			if (!keyword) {
 				loadingMembers.value = false
 			}
+		}
+	}
+
+	async function loadMoreDeptMembers(deptId: number, deptNode: any) {
+		if (deptNode.loadingMore) return
+		if (!deptNode.hasMore) return
+		deptNode.loadingMore = true
+		try {
+			const nextPage = (deptNode.pageNo != null ? Number(deptNode.pageNo) : 1) + 1
+			const res = await getContactPageByDept(String(deptId), nextPage, 20, '') as any
+			const data = res && Array.isArray(res.list) ? res.list : []
+			const total = res && res.total != null ? Number(res.total) : (deptNode.members.length + data.length)
+			if (data && data.length > 0) {
+				const appended = data.map((user: any) => {
+					return {
+						id: String(user.id),
+						name: user.remarkName || user.nickname || '未知',
+						role: user.deptName || '',
+						avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
+						avatarBg: getUserAvatarColor(String(user.id)),
+						selected: isMemberSelected(String(user.id))
+					}
+				})
+				deptNode.members = deptNode.members.concat(appended)
+				deptNode.pageNo = nextPage
+			}
+			deptNode.hasMore = deptNode.members.length < total
+			if (deptMembersCache.has(deptId)) {
+				deptMembersCache.set(deptId, {
+					members: deptNode.members,
+					pageNo: deptNode.pageNo,
+					hasMore: deptNode.hasMore
+				})
+			}
+		} catch (e) {
+			// ignore
+		} finally {
+			deptNode.loadingMore = false
 		}
 	}
 
@@ -673,7 +760,7 @@
 		if (org.selected) {
 			addMembers(allMembers)
 		} else {
-			const memberIds = allMembers.map(m => m.id)
+			const memberIds = allMembers.map(m => String(m.id))
 			removeMembers(memberIds)
 		}
 	}
@@ -705,7 +792,7 @@
 		if (dept.selected) {
 			addMembers(allMembers)
 		} else {
-			const memberIds = allMembers.map(m => m.id)
+			const memberIds = allMembers.map(m => String(m.id))
 			removeMembers(memberIds)
 		}
 		
@@ -720,7 +807,7 @@
 		// 使用全局状态管理
 		toggleMember(member)
 		// 同步本地状态
-		member.selected = isMemberSelected(member.id)
+		member.selected = isMemberSelected(String(member.id))
 		
 		// 查找成员所属的部门和组织，更新它们的选中状态
 		for (let i = 0; i < organizations.value.length; i++) {
@@ -804,7 +891,7 @@
 			for (let i = 0; i < depts.length; i++) {
 				const dept = depts[i]
 				for (let j = 0; j < dept.members.length; j++) {
-					dept.members[j].selected = isMemberSelected(dept.members[j].id)
+					dept.members[j].selected = isMemberSelected(String(dept.members[j].id))
 				}
 				// 更新部门选中状态
 				updateDeptSelectState(dept)

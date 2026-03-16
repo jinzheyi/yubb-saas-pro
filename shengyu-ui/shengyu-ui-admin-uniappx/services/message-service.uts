@@ -51,10 +51,13 @@ export type MessageItem = {
   messageId: string
   sequence?: string
   rev?: string
+  // enterprise: re-edit-after-recall metadata (sender devices only)
+  reeditContent?: string
+  reeditDeadlineTs?: string
   senderId: string
   receiverId: string
   groupId?: string
-  type: number
+  type: MessageType
   content: any
   status: MessageStatus
   timestamp: number
@@ -117,6 +120,52 @@ export class MessageService {
   private currentUserId: string = '0'
   private currentTenantId: string = '0'
 
+	private getReeditHintStorageKey(chatId: string, messageId: string): string {
+		const tenantId = this.currentTenantId != null ? this.currentTenantId : '0'
+		const userId = this.currentUserId != null ? this.currentUserId : '0'
+		return `im_reedit_hint_${tenantId}_${userId}_${chatId}_${messageId}`
+	}
+
+	public getReeditHint(chatId: string, messageId: string): { content: string, deadlineTs: string } | null {
+		return this.loadReeditHint(chatId, messageId)
+	}
+
+	private persistReeditHint(chatId: string, messageId: string, content: string, deadlineTs: string): void {
+		try {
+			if (!chatId || !messageId || !content) {
+				return
+			}
+			const payload: any = { c: content }
+			if (deadlineTs != null && deadlineTs !== '') {
+				payload.d = deadlineTs
+			}
+			uni.setStorageSync(this.getReeditHintStorageKey(chatId, messageId), JSON.stringify(payload))
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	private loadReeditHint(chatId: string, messageId: string): { content: string, deadlineTs: string } | null {
+		try {
+			if (!chatId || !messageId) {
+				return null
+			}
+			const raw: any = uni.getStorageSync(this.getReeditHintStorageKey(chatId, messageId))
+			if (raw == null || raw === '') {
+				return null
+			}
+			const obj: any = typeof raw === 'string' ? JSON.parse(raw) : raw
+			const c = obj != null && obj.c != null ? obj.c.toString() : ''
+			const d = obj != null && obj.d != null ? obj.d.toString() : ''
+			if (!c) {
+				return null
+			}
+			return { content: c, deadlineTs: d }
+		} catch (e) {
+			return null
+		}
+	}
+
   // 用户信息缓存（用于补齐实时消息的 senderName/avatarText）
   private userNicknameCache: Map<string, string> = new Map()
   private userNicknameLoading: Map<string, Promise<string>> = new Map()
@@ -157,6 +206,28 @@ export class MessageService {
     wsGapDetectedCount: 0,
     wsGapTriggeredPullCount: 0,
     dedupMergeHitCount: 0
+  }
+
+  public removeMessageFromCache(chatId: string, messageId: string): void {
+    const cid = chatId != null ? chatId.toString() : ''
+    const mid = messageId != null ? messageId.toString() : ''
+    if (cid === '' || cid === '0' || mid === '' || mid === '0') {
+      return
+    }
+    try {
+      const messages = this.messageCache.get(cid)
+      if (messages == null || messages.length === 0) {
+        return
+      }
+      const idx = messages.findIndex((m: any) => m != null && m.messageId === mid)
+      if (idx < 0) {
+        return
+      }
+      messages.splice(idx, 1)
+      this.messageCache.set(cid, messages)
+    } catch (e) {
+      // ignore
+    }
   }
 
 	private normalizeOutboundMessageId(message: ImMessage): string {
@@ -223,6 +294,8 @@ export class MessageService {
   
   // 最大重试次数
   private static readonly MAX_RETRY_COUNT = 3
+
+  private sendRetryEnabled: boolean = false
 
   private pendingRetryMap: Map<string, { message: any, retryCount: number, timer: any }> = new Map()
 
@@ -317,24 +390,13 @@ export class MessageService {
     try {
       await conversationService.syncConversationsIncrementally(false)
     } catch (e) {
-      // ignore
+      console.error('[MessageService][Reconnect] sync failed:', e)
     }
     this.debugStats.reconnectSyncMs = Date.now() - syncStart
 
     const pullStart = Date.now()
     await this.pullMissingMessagesForLoadedConversations()
     this.debugStats.reconnectPullMs = Date.now() - pullStart
-
-    console.log('[MessageService][Reconnect] syncMs/pullMs/stats:', {
-      syncMs: this.debugStats.reconnectSyncMs,
-      pullMs: this.debugStats.reconnectPullMs,
-      pullCallCount: this.debugStats.pullCallCount,
-      pullFetchedCount: this.debugStats.pullFetchedCount,
-      pullRoundCount: this.debugStats.pullRoundCount,
-      wsGapDetectedCount: this.debugStats.wsGapDetectedCount,
-      wsGapTriggeredPullCount: this.debugStats.wsGapTriggeredPullCount,
-      dedupMergeHitCount: this.debugStats.dedupMergeHitCount
-    })
   }
 
   /**
@@ -379,7 +441,7 @@ export class MessageService {
         await this.pullMissingMessagesForChatToSequence(chatId, targetSeq)
       }
     } catch (e) {
-      console.warn('[MessageService] pullMissingMessagesForLoadedConversations failed:', e)
+      console.error('[MessageService] pullMissingMessagesForLoadedConversations failed:', e)
     }
   }
 
@@ -394,6 +456,82 @@ export class MessageService {
 
   public getActiveChatId(): string {
     return this.activeChatId
+  }
+
+  public async ingestRestHistoryPage(chatId: string, serverMessages: any[]): Promise<void> {
+    const cid = chatId != null ? chatId.toString() : ''
+    if (cid === '' || cid === '0') {
+      return
+    }
+    if (serverMessages == null || !Array.isArray(serverMessages) || serverMessages.length === 0) {
+      return
+    }
+    try {
+      for (let i = 0; i < serverMessages.length; i++) {
+        const m: any = serverMessages[i]
+        if (m == null) {
+          continue
+        }
+        const senderIdStr = m.senderId != null ? m.senderId.toString() : '0'
+        const isSelf = senderIdStr === this.currentUserId
+        const senderName = (m.senderNickname != null && m.senderNickname !== '')
+          ? m.senderNickname
+          : (isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr))
+
+        const messageIdStr = m.id != null ? m.id.toString() : '0'
+        if (messageIdStr === '' || messageIdStr === '0') {
+          continue
+        }
+
+        const seqStr = m.sequence != null ? m.sequence.toString() : undefined
+        const revStr = (m as any).rev != null && (m as any).rev !== '' ? (m as any).rev.toString() : '1'
+        const serverStatusRaw: any = (m as any).status
+        const serverStatus = serverStatusRaw != null ? Number(serverStatusRaw) : null
+        const isRecalled = serverStatus === 6
+
+        const messageItem: MessageItem = {
+          id: '0',
+          messageId: messageIdStr,
+          sequence: seqStr,
+          rev: revStr,
+          senderId: senderIdStr,
+          receiverId: m.receiverId != null ? m.receiverId.toString() : '0',
+          groupId: m.groupId != null ? m.groupId.toString() : '0',
+          type: isRecalled ? MessageType.TEXT : m.messageType,
+          content: isRecalled
+            ? { content: (isSelf ? '你撤回了一条消息' : `${senderName} 撤回了一条消息`) }
+            : { content: m.content, extra: m.extra },
+          status: isRecalled ? MessageStatus.RECALLED : MessageStatus.SENT,
+          timestamp: m.sendTime != null ? new Date(m.sendTime as string).getTime() : Date.now(),
+          isSelf: isSelf,
+          showTime: true,
+          avatarText: senderName ? getAvatarText(senderName) : '?',
+          avatarBg: getUserAvatarColor(senderIdStr),
+          senderName: senderName
+        }
+
+        // enterprise: re-edit-after-recall rehydration for refresh/re-enter
+        try {
+          if (isRecalled && isSelf) {
+            const hint = this.loadReeditHint(cid, messageIdStr)
+            if (hint != null && hint.content !== '') {
+              ;(messageItem as any).reeditContent = hint.content
+              if (hint.deadlineTs !== '') {
+                ;(messageItem as any).reeditDeadlineTs = hint.deadlineTs
+              }
+            }
+          }
+        } catch (e) {
+        }
+
+        this.addMessageToCache(cid, messageItem)
+        if (seqStr != null) {
+          this.updateLastPulledSequence(cid, seqStr)
+        }
+      }
+    } catch (e) {
+      console.error('[MessageService] ingestRestHistoryPage failed:', e)
+    }
   }
 
   private compareSeq(a: string, b: string): number {
@@ -446,9 +584,6 @@ export class MessageService {
         const resp = await pullMessagesApi(chatId, cursor, pageSize)
         const arr = resp as any[]
         if (arr == null || arr.length === 0) {
-          if (rounds > 0) {
-            console.log('[MessageService][Pull] done(empty):', { chatId: chatId, cursor: cursor, rounds: rounds, fetched: fetched, costMs: Date.now() - startedAt })
-          }
           return
         }
 
@@ -463,6 +598,7 @@ export class MessageService {
             : (isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr))
 
           const seqStr = m.sequence != null ? m.sequence.toString() : undefined
+          const revStr = (m as any).rev != null && (m as any).rev !== '' ? (m as any).rev.toString() : '1'
           const serverStatusRaw: any = (m as any).status
           const serverStatus = serverStatusRaw != null ? Number(serverStatusRaw) : null
 
@@ -473,6 +609,7 @@ export class MessageService {
             id: '0',
             messageId: messageIdStr,
             sequence: seqStr,
+            rev: revStr,
             senderId: senderIdStr,
             receiverId: m.receiverId != null ? m.receiverId.toString() : '0',
             groupId: m.groupId != null ? m.groupId.toString() : '0',
@@ -488,6 +625,19 @@ export class MessageService {
             avatarBg: getUserAvatarColor(senderIdStr),
             senderName: senderName
           }
+				// enterprise: re-edit-after-recall rehydration for refresh/re-enter
+				try {
+					if (isRecalled && isSelf) {
+						const hint = this.loadReeditHint(chatId, messageIdStr)
+						if (hint != null && hint.content !== '') {
+							;(messageItem as any).reeditContent = hint.content
+							if (hint.deadlineTs !== '') {
+								;(messageItem as any).reeditDeadlineTs = hint.deadlineTs
+							}
+						}
+					}
+				} catch (e) {
+				}
 
           this.addMessageToCache(chatId, messageItem)
           if (shouldNotify) {
@@ -517,18 +667,15 @@ export class MessageService {
 
         // 未满页则认为无更多
         if (arr.length < pageSize) {
-          console.log('[MessageService][Pull] done(less than pageSize):', { chatId: chatId, cursor: cursor, rounds: rounds, fetched: fetched, costMs: Date.now() - startedAt })
           return
         }
       }
-
-      console.log('[MessageService][Pull] stop(max rounds):', { chatId: chatId, cursor: cursor, rounds: rounds, fetched: fetched, costMs: Date.now() - startedAt })
 
       if (fetched > 0) {
         this.debugStats.pullFetchedCount += fetched
       }
     } catch (e) {
-      console.warn('[MessageService] pullMissingMessagesForChat failed:', { chatId: chatId, e: e })
+      console.error('[MessageService] pullMissingMessagesForChat failed:', { chatId: chatId, e: e })
     }
   }
 
@@ -565,7 +712,7 @@ export class MessageService {
         }
         return nickname
       } catch (e) {
-        console.warn('[MessageService] resolveUserNickname failed:', userId, e)
+        console.error('[MessageService] resolveUserNickname failed:', userId, e)
         return ''
       } finally {
         this.userNicknameLoading.delete(userId)
@@ -638,8 +785,58 @@ export class MessageService {
 
   private handleSystemNotify(message: any): void {
     try {
-      const snapshot: any = message != null ? (message as any).conversationSnapshot : null
-      if (snapshot == null) {
+      const body: any = message != null ? (message as any).body : null
+      const content: any = body != null ? (body as any).content : null
+      if (content == null) {
+        // enterprise: re-edit-after-recall hint (ONLY for sender devices)
+        try {
+          const extraRaw: any = message != null && (message as any).header != null ? (message as any).header.extra : null
+          if (extraRaw != null && extraRaw !== '') {
+            const extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
+            if (extraObj != null && extraObj.action === 'reedit_after_recall') {
+              const chatId = extraObj.chatId != null ? extraObj.chatId.toString() : ''
+              const messageId = extraObj.messageId != null ? extraObj.messageId.toString() : ''
+              const originalContent = extraObj.originalContent != null ? extraObj.originalContent.toString() : ''
+              const deadlineTsStr = extraObj.deadlineTs != null ? extraObj.deadlineTs.toString() : ''
+              if (chatId !== '' && messageId !== '' && originalContent !== '') {
+                const list = this.messageCache.get(chatId)
+                if (list != null) {
+                  const idx = list.findIndex((m: any) => m != null && (m as any).messageId === messageId)
+                  if (idx > -1) {
+                    try {
+                      const existing: any = list[idx]
+                      const next: any = { ...existing }
+                      next.reeditContent = originalContent
+                      if (deadlineTsStr !== '') {
+                        next.reeditDeadlineTs = deadlineTsStr
+                      }
+                      list[idx] = next
+                      this.notifyMessageListeners(next)
+                      try {
+                        this.persistReeditHint(chatId, messageId, originalContent, deadlineTsStr)
+                      } catch (e) {
+                      }
+                    } catch (e) {
+                    }
+                  }
+                }
+              }
+              return
+            }
+          }
+        } catch (e) {
+        }
+
+        // enterprise: cursorVersion-only notify, trigger incremental sync for cross-device state (read watermark/preview/etc)
+        try {
+          const cv: any = (message as any).cursorVersion
+          if (cv != null && cv !== '') {
+            conversationService.handleRealtimeCursorVersion(cv)
+          }
+        } catch (e) { /* ignore */ }
+        try {
+          void conversationService.syncConversationsIncrementally(false)
+        } catch (e) { /* ignore */ }
         return
       }
       const lastMessage = snapshot.lastMessageContent != null ? snapshot.lastMessageContent.toString() : ''
@@ -657,7 +854,7 @@ export class MessageService {
 
       conversationService.upsertFromSnapshot(snapshot, lastMessage, ts, false, snapshot.lastMessageSequence != null ? snapshot.lastMessageSequence.toString() : null)
     } catch (e) {
-      console.warn('[MessageService] handleSystemNotify failed:', e)
+      console.error('[MessageService] handleSystemNotify failed:', e)
     }
   }
   
@@ -966,20 +1163,6 @@ export class MessageService {
 
 		const normalizedMessageId = this.normalizeOutboundMessageId(message)
 
-    console.log('[MessageService] sendMessage()', {
-      currentUserId: this.currentUserId,
-      currentTenantId: this.currentTenantId,
-      header: {
-        messageId: message?.header?.messageId,
-        messageType: message?.header?.messageType,
-        senderId: message?.header?.senderId,
-        receiverId: message?.header?.receiverId,
-        groupId: message?.header?.groupId,
-        tenantId: message?.header?.tenantId,
-        timestamp: message?.header?.timestamp
-      }
-    })
-    
     // 生成头像信息
     const userName = currentUser?.nickname || ''
     const avatarText = getAvatarText(userName)
@@ -1015,17 +1198,18 @@ export class MessageService {
       const rawChatId = message.header.receiverId
       chatId = rawChatId != null ? (rawChatId as any).toString() : '0'
     }
-    console.log('[MessageService] computed chatId:', chatId)
     this.addMessageToCache(chatId, messageItem)
     
     // 通知监听器
     this.notifyMessageListeners(messageItem)
     
     // 通过 WebSocket 发送
-    console.log('[MessageService] wsManager.isConnected():', wsManager.isConnected())
     wsManager.send(message)
 
     try {
+      if (!this.sendRetryEnabled) {
+        return messageItem
+      }
       const mid = message != null && message.header != null && message.header.messageId != null ? message.header.messageId.toString() : ''
       if (mid !== '' && mid !== '0') {
         this.scheduleSendRetry(mid, message)
@@ -1232,8 +1416,8 @@ export class MessageService {
 			const seqStr = seq != null && seq !== undefined ? seq.toString() : null
 			const isGroupSelf = message.header.groupId !== '0' && message.header.groupId !== ''
 			const summary = MessageParser.getSummary({
-				header: { messageType: message.header.messageType } as any,
-				body: message.body
+				header: { messageType: messageItem.type } as any,
+				body: messageItem.content
 			} as any)
 			let preview = isGroupSelf ? `我: ${summary}` : summary
 
@@ -1429,8 +1613,6 @@ export class MessageService {
       messageIds = [body.messageId as string]
     }
     
-    console.log('[MessageService] 收到已读回执:', messageIds)
-    
     if (messageIds.length === 0) {
       return
     }
@@ -1450,8 +1632,6 @@ export class MessageService {
     updatedIds.forEach(msgId => {
       this.notifyStatusListeners(msgId, MessageStatus.READ)
     })
-    
-    console.log('[MessageService] 已将', updatedIds.length, '条消息状态更新为已读')
   }
   
   /**
@@ -1483,8 +1663,6 @@ export class MessageService {
       incomingRecallTime = ''
     }
     
-    console.log('[MessageService] 收到消息撤回:', messageId, '撤回者:', recallerId)
-    
     // 从缓存中查找并更新消息
     this.messageCache.forEach((messages, chatId) => {
       const index = messages.findIndex(m => m.messageId === messageId)
@@ -1497,6 +1675,36 @@ export class MessageService {
             ? (originalMessage as any).senderNickname
             : '对方')
         const originalTs = (originalMessage as any).timestamp != null ? Number((originalMessage as any).timestamp) : 0
+
+			// enterprise: re-edit-after-recall (same-device fast path)
+			let reeditContent: string = ''
+			let reeditDeadlineTs: string = ''
+			try {
+				const isSelfRecall = recallerId === this.currentUserId && (originalMessage as any).isSelf === true
+				const isText = (originalMessage as any).type === MessageType.TEXT
+				if (isSelfRecall && isText) {
+					const c: any = (originalMessage as any).content
+					if (c != null && c !== '') {
+						reeditContent = c.toString()
+					}
+					let baseTs = 0
+					try {
+						if (incomingRecallTime !== '') {
+							const t = new Date(incomingRecallTime).getTime()
+							if (!isNaN(t) && t > 0) baseTs = t
+						}
+					} catch (e) {
+						baseTs = 0
+					}
+					if (baseTs <= 0) {
+						baseTs = Date.now()
+					}
+					reeditDeadlineTs = (baseTs + 5 * 60 * 1000).toString()
+				}
+			} catch (e) {
+				reeditContent = ''
+				reeditDeadlineTs = ''
+			}
         
         // 创建撤回提示消息
         const recallTip: MessageItem = {
@@ -1517,6 +1725,19 @@ export class MessageService {
           senderName: senderName,
           rev: incomingRev !== '' ? incomingRev : ((originalMessage as any).rev != null ? (originalMessage as any).rev.toString() : '')
         }
+			try {
+				if (reeditContent !== '') {
+					;(recallTip as any).reeditContent = reeditContent
+					if (reeditDeadlineTs !== '') {
+						;(recallTip as any).reeditDeadlineTs = reeditDeadlineTs
+					}
+					try {
+						this.persistReeditHint(chatId, messageId, reeditContent, reeditDeadlineTs)
+					} catch (e) {
+					}
+				}
+			} catch (e) {
+			}
         
         // 替换原消息
         messages[index] = recallTip
@@ -1535,10 +1756,20 @@ export class MessageService {
    */
   private handleBadgeUpdateMessage(message: ImMessage): void {
     try {
-      // 解析 message.body 为 BadgeUpdateMessage 对象
-      const badgeUpdate = JSON.parse(message.body as string) as BadgeUpdateMessage
-      
-      console.log('[MessageService] 收到角标更新消息:', badgeUpdate)
+      // WS(JSON) 下 body 可能已是对象；兼容 string/object 两种形态
+      let badgeUpdate: BadgeUpdateMessage | null = null
+      const bodyAny: any = (message as any).body
+      if (bodyAny == null) {
+        return
+      }
+      if (typeof bodyAny === 'string') {
+        badgeUpdate = JSON.parse(bodyAny) as BadgeUpdateMessage
+      } else if (typeof bodyAny === 'object') {
+        badgeUpdate = bodyAny as BadgeUpdateMessage
+      }
+      if (badgeUpdate == null) {
+        return
+      }
       
       // 调用 badgeService 处理角标更新
       badgeService.handleBadgeUpdate(badgeUpdate)
@@ -1607,10 +1838,14 @@ export class MessageService {
         const cmpRev = (a: string, b: string): number => {
           try {
             const diff = BigInt(a) - BigInt(b)
-            if (diff === BigInt(0)) return 0
+            if (diff === BigInt(0)) {
+              return 0
+            }
             return diff > BigInt(0) ? 1 : -1
           } catch (e) {
-            if (a === b) return 0
+            if (a === b) {
+              return 0
+            }
             return a > b ? 1 : -1
           }
         }
@@ -1669,6 +1904,18 @@ export class MessageService {
         if ((existing.timestamp == null || existing.timestamp <= 0) && message.timestamp != null) {
           existing.timestamp = message.timestamp
         }
+			// re-edit-after-recall metadata fill
+			try {
+				const ex: any = existing as any
+				const inc: any = message as any
+				if ((!ex.reeditContent || ex.reeditContent === '') && inc.reeditContent) {
+					ex.reeditContent = inc.reeditContent
+				}
+				if ((!ex.reeditDeadlineTs || ex.reeditDeadlineTs === '') && inc.reeditDeadlineTs) {
+					ex.reeditDeadlineTs = inc.reeditDeadlineTs
+				}
+			} catch (e) {
+			}
         // 合并后仍需要排序
       } else {
         messages.push(message)
@@ -1937,6 +2184,17 @@ export class MessageService {
   
   public clearUnreadCount(chatId: string): void {
     badgeService.clearConversationBadgeLocal(chatId)
+  }
+
+  public clearChatCache(chatId: string): void {
+    try {
+      if (chatId == null || chatId === '') {
+        return
+      }
+      this.messageCache.delete(chatId)
+      this.lastPulledSequence.delete(chatId)
+    } catch (e) {
+    }
   }
 
   public getConversations(): ConversationItem[] {

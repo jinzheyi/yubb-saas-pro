@@ -116,6 +116,14 @@
   - `badge-service.uts#clearConversationBadge`：进入会话始终推进服务端已读水位（幂等），避免“本地 badge 未加载导致服务端未清”
   - `pages/message/chat.uvue`：进入会话上报 readSequence 使用权威 `lastMessageSequence`（并兜底页面消息最大 seq），避免上报 0 导致未清
 
+多端同步（企业级推荐：推送触发 sync，最终态以 sync 为准）：
+
+- 服务端：已读水位推进成功后，写入 `im_conversation_user_state` 并推进 `cursorVersion`
+- WS：
+  - 推送 `SYSTEM_NOTIFY` 透传 `cursorVersion`（允许不携带 `conversationSnapshot`）用于触发端侧增量 `syncConversations(cursor)`
+  - 推送 `BADGE_UPDATE` 用于即时刷新 tab 红点（最终态仍以 sync 为准）
+- 端侧：收到 `SYSTEM_NOTIFY` 且无 snapshot 时，触发 `syncConversationsIncrementally(false)` 拉取增量会话状态
+
 端侧交互规则（对标企微/钉钉的“看见即已读/离开即落水位”）：
 
 - **进入会话页**：立即按“当前可见的最大 `sequence`”推进 `lastReadSequence`（服务端幂等），并清空本地角标。
@@ -142,6 +150,35 @@
 - **唯一消息分页接口**：`GET /system/im/message/list-by-chat?chatId=&pageNo=&pageSize=`
 - **不提供** `list-by-group` 作为长期契约（避免双标准与误用）。
 - 端侧若仅持有 `groupId`：必须先通过会话接口映射到 `chatId`（`GET /system/im/conversation/get-by-target?targetId={groupId}&conversationType=2`），再按 `chatId` 拉消息。
+
+### 2.4.7 撤回最终态一致（rev 版，对标企微/钉钉）
+
+说明：本节固化“当前工程已落地”的撤回一致性闭环，目标是确保撤回在 **实时 WS + 断线补偿拉取** 两条链路下均不被旧数据覆盖。
+
+- 服务端数据模型：`im_chat_message.rev`
+  - 初始：新消息 `rev = 1`
+  - 状态变更：撤回/编辑/删除等“最终态变更”执行 `rev = rev + 1`（原子递增）
+  - 输出：REST 查询（`list-by-chat/pull/page`）返回 `rev`，用于端侧合并
+
+- WS 撤回事件（MessageType.RECALL）：
+  - 事件体：`RecallMessage{ messageId }`
+  - `header.extra`（JSON）最少包含：
+    - `rev`
+    - `recallBy`
+    - `recallTime`
+  - 端侧合并规则：同一 `messageId` 以 `rev` 更大者覆盖，保证“撤回最终态不回滚”
+
+- WS 普通业务消息（TEXT/IMAGE/FILE/...）：
+  - `header.extra`（JSON）携带 `rev`（默认 1），并与文件元数据等扩展字段合并（同一个 JSON）
+
+- 撤回时间窗配置：
+  - 配置键：`im.recall.window-seconds`
+  - 默认值：`120`（秒）
+  - 语义：超过窗口期返回 `MESSAGE_RECALL_TIMEOUT`（提示文案不硬编码具体分钟数）
+
+- 会话列表预览一致性（撤回最后一条消息）：
+  - 服务端仅当 `last_message_id == messageId` 时才更新会话预览（避免竞态回退）
+  - 更新后写入 `im_conversation_user_state` 并推进 `cursorVersion`，确保换端/重登/增量 sync 不回滚
 
 ---
 
@@ -887,17 +924,43 @@ WS 增强（后续）：
 
 企业级常见语义：删除仅影响当前用户的展示，但需跨端保持一致（同一账号在其他设备也不再显示）。
 
-推荐实现：
+落地实现（当前工程，Route-A：全局消息单份存储）：
 
-- 服务端为用户维度维护“删除墓碑（tombstone）”：`(userId, conversationId, messageId, deletedAt)`
-- 同步方式：
-  - WS：推送删除事件
-  - HTTP：`syncMessages` 返回消息时附带 tombstone 过滤（或返回状态字段）
+- 服务端为用户维度维护“删除墓碑（tombstone）”表：`im_chat_message_tombstone(tenantId, chatId, userId, messageId, deletedAt)`
+- REST：`DELETE /system/im/message/delete?id={messageId}`（对我删除，幂等）
+- 查询口径（必须过滤）：
+  - `GET /system/im/message/list-by-chat?chatId=...`
+  - `GET /system/im/message/pull?chatId=...&lastSequence=...`
+  - `GET /system/im/message/page`
+  - `getMessageDetail(messageId)`（若命中 tombstone：按不存在处理）
+- 多端同步：删除成功后分配 `cursorVersion` 并推送 `SYSTEM_NOTIFY(cursorVersion)`，端侧触发增量 `syncConversations(cursor)`；同时推送 `BADGE_UPDATE` 作为即时角标刷新（最终态仍以 sync 为准）
 
 端侧规则：
 
 - tombstone 命中：本地不展示该 messageId
 - tombstone 不得影响审计与管理员能力（服务端仍保留原消息）
+
+回归用例（企业级必测）：
+
+- A 端删除 messageId=M；B 端在线：收到 `SYSTEM_NOTIFY(cursorVersion)` 后增量 sync，会话/消息列表最终不再出现 M
+- B 端离线：A 删除后，B 重连并 `pull/list-by-chat`，返回结果必须过滤 M（不允许“删除后又被补偿拉回”）
+
+### 8.10.1 “清空聊天记录”（Clear-history，按水位）跨端一致
+
+企业级常见语义：清空仅影响当前用户视图，服务端保留历史（审计/合规），并要求跨端一致。
+
+落地实现（当前工程）：
+
+- 服务端为用户维度维护“清空水位”表：`im_chat_clear_watermark(tenantId, chatId, userId, clearSequence, clearedAt)`
+- clearSequence 规则：单调递增；对该用户 `sequence <= clearSequence` 的消息不可见
+- REST：`DELETE /system/im/message/clear?chatId={chatId}`（对我清空，幂等）
+- 查询口径（必须过滤）：`list-by-chat/pull/page/detail`
+- 多端同步：同 delete-for-me，分配 `cursorVersion` 并推送 `SYSTEM_NOTIFY(cursorVersion)` + `BADGE_UPDATE`
+
+回归用例（企业级必测）：
+
+- A 端清空 chatId=C；B 端在线：增量 sync 后该会话消息列表不再展示清空前消息
+- B 端离线：A 清空后，B 重连并 `pull/list-by-chat`，返回结果不得包含 `sequence <= clearSequence` 的消息
 
 ### 8.11 主端策略（可选，对齐企业产品的“多端体验一致”）
 
@@ -910,6 +973,90 @@ WS 增强（后续）：
 
 - `syncConversations/syncMessages` 仍可把非主端补齐到最新状态
 - 被踢/撤销/重登等系统 CLOSE 仍需所有端一致生效
+
+### 8.12 全局搜索与聊天记录搜索（对齐 UI 方案）
+
+目标：对齐企业微信/钉钉的“搜索入口”体验，形成可回归的页面流转与数据契约，并与本项目既有的“文件统一预览入口（file-preview）”保持一致。
+
+后端接口权威入口：
+
+- App 端 IM 相关接口以 `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/app/im` 下的 Controller 为准。
+- 任何端侧 API 封装、文档契约、联调口径，必须以该目录中 `@RequestMapping/@GetMapping/...` 的映射为最终依据。
+
+#### 8.12.1 页面信息架构（按 UI 方案拆分）
+
+1. **聚合搜索页**：`/pages/common/search`
+    - 输入框：placeholder = “搜索联系人、群聊、消息”
+    - 结果分区（可按产品需要启用/隐藏）：
+      - 联系人（TopN）
+      - 群聊（TopN，显示成员数）
+      - 应用（可选，工作台/应用入口）
+      - 详细搜索：
+        - 搜我的群组：`keyword` 维度的群组搜索
+        - 搜聊天记录：`keyword` 维度的消息全文搜索
+
+2. **聊天记录搜索页**（独立结果页）：`/pages/common/search-chat-history`
+    - 标题：`搜聊天记录:{keyword}`
+    - 展示：命中的会话摘要（chatName/群名）+ 命中消息片段（高亮 keyword）+ 时间
+    - 交互：点击某条结果 -> 进入对应会话并定位到命中消息
+    - 列表：支持“上拉加载更多”（分页）
+
+#### 8.12.2 页面流转（强制统一）
+
+- 任意页面点击“搜索”入口 -> `navigateTo('/pages/common/search')`
+- 聚合搜索页：
+  - 点击联系人 -> 用户详情页（或发起单聊并进入会话）
+  - 点击群聊 -> 进入群聊会话页
+  - 点击“搜聊天记录” -> 进入 `search-chat-history`（携带 `keyword`）
+- 聊天记录搜索页：
+  - 点击结果 -> 进入 `pages/message/chat`，并携带 `chatId` + `anchorMessageId/anchorSequence`（用于定位）
+
+#### 8.12.3 数据契约与索引（以现有工程为准）
+
+本项目已存在后端接口与端侧调用口径：
+
+- `GET /system/im/message/search`
+- 端侧：`api/message.uts#searchMessages`；`services/message-search-service.uts`
+
+当前缺口（需企业级补齐）：
+
+- 会话/群聊维度的服务端搜索接口（端侧聚合搜索中“群聊”目前只能基于 `conversation/list` 本地过滤，数据量大时性能与实时性不可控）
+- 热门搜索（热词）服务端配置接口（端侧目前为本地默认 + storage 缓存兜底）
+
+建议补齐契约（示意）：
+
+- `GET /system/im/conversation/search?keyword=...&conversationType=2&pageNo=...&pageSize=...`
+  - 响应：`PageResult<AppImConversationRespVO>`（或精简 VO，至少含 chatId/targetName/groupMemberCount/conversationType）
+- `GET /system/im/search/hot`（或 `GET /system/im/config/hot-search`）
+  - 响应：`{ list: string[], version?: string, ttlSeconds?: number }`
+
+建议冻结返回结构（示意，Long 全部按 string）：
+
+- `items[]`：
+  - `chatId: string`
+  - `conversationType: number`（单聊/群聊）
+  - `targetId: string`（对端 userId 或 groupId）
+  - `chatName: string`
+  - `messageId: string`
+  - `sequence: string`
+  - `senderId: string`
+  - `sendTime: string|number`
+  - `snippet: string`（命中片段，允许服务端生成高亮标记或纯文本）
+- `pageNo/pageSize/hasMore` 或 `cursor/hasMore`
+
+端侧合并规则：
+
+- 点击跳转定位优先使用 `sequence`（会话维度单调递增）
+- 若仅能拿到 `messageId`：进入会话后通过 pull/list-by-chat 定位 messageId 对应的 sequence 再定位
+
+#### 8.12.4 与“文件统一预览入口”的耦合点（必须遵循）
+
+搜索结果中若展示到 FILE/IMAGE/VIDEO 类型消息：
+
+- 点击文件：必须走 `pages/common/file-preview`（端侧统一入口），禁止在搜索页单独实现下载/预览。
+- 传参规则：
+  - 能拿到 `fileId`：只传 `fileId`（优先），由后端 `getFileOpenStrategy` 决定 PREVIEW/DOWNLOAD。
+  - 仅兼容期才传 `url`（fallback）。
 
 ### 8.3 大会话/大群优化（企业 IM 常见约束）
 
@@ -1130,14 +1277,19 @@ WS 增强（后续）：
 - 服务端维护 tombstone（userId/conversationId/messageId/deletedAt）
 - 查询与 sync 输出必须过滤/标记 tombstone
 
-#### 10.2.3 编辑（Edit）与历史（可选）
+#### 10.2.3 撤回后的重新编辑（Re-edit after recall，对齐企微/钉钉）
 
-编辑能力若开启：
-
-- 权限：仅编辑自己发送的消息
-- 时限：默认 5 分钟（可配置）
-- 更新：`edited=true`，`rev+1`，并记录 editHistory（可选）
-- 同步：WS 推送编辑事件；syncMessages 返回最终态
+- **撤回后的重新编辑（Re-edit after recall，对齐企微/钉钉）**
+  - **语义（必须遵循）**：撤回后的“重新编辑”不是修改原消息，而是**回填原内容后发送一条新消息**；原撤回消息保持最终态不变。
+  - **触发条件**：
+    - 仅支持**文字消息**（图片/文件/位置/语音等不支持）
+    - 仅当“撤回操作由发送者本人发起”时支持（群主/群管理员代撤回时：群主/群管理员/发送者均不允许重新编辑）
+    - 仅在撤回后的 **5 分钟窗口** 内显示入口；超过窗口入口消失
+  - **跨设备规则（2B）**：发送者账号的所有设备都应可看到“重新编辑”入口并可回填原文。
+  - **实现要求**：
+    - 服务端在撤回事件中，仅对“发送者本人”的所有在线设备下发 `originalContent/recallTime/recallBy`（不得广播给接收方）
+    - 端侧点击“重新编辑”后，将 `originalContent` 回填到输入框，用户修改后走正常发送链路生成**新 messageId**
+  - **禁止项（强制）**：未在本文档与 Backlog 明确设计/排期前，**禁止实现“编辑历史消息（Edit existing message）”**（即修改已发送消息内容并 `rev+1` 的能力）。
 
 补充：表情回应（Reaction，可选）
 

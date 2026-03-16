@@ -1,6 +1,7 @@
 package com.shengyu.module.system.service.im;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.websocket.core.protocol.ConversationBadge;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
 import com.shengyu.framework.websocket.core.protocol.TextMessage;
@@ -8,6 +9,7 @@ import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
+import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSyncItemRespVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSyncRespVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationUpdateReqVO;
@@ -31,7 +33,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -67,6 +72,9 @@ public class ImConversationServiceImpl implements ImConversationService {
 
     @Resource
     private ImCursorVersionService cursorVersionService;
+
+    @Resource
+    private ImBadgeService imBadgeService;
 
     @Resource
     private NettyMessageSender messageSender;
@@ -183,6 +191,71 @@ public class ImConversationServiceImpl implements ImConversationService {
                 .map(chatUser -> toConversationRespVO(userId, chatUser))
                 .filter(vo -> conversationType.equals(vo.getConversationType()))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public PageResult<AppImConversationRespVO> searchConversations(Long userId, AppImConversationSearchReqVO searchReqVO) {
+        if (searchReqVO == null) {
+            return new PageResult<>(Collections.emptyList(), 0L);
+        }
+
+        String keyword = searchReqVO.getKeyword() != null ? searchReqVO.getKeyword().trim() : "";
+        if (keyword.isEmpty()) {
+            return new PageResult<>(Collections.emptyList(), 0L);
+        }
+
+        Integer conversationType = searchReqVO.getConversationType();
+        Integer pageNo = searchReqVO.getPageNo() != null ? searchReqVO.getPageNo() : 1;
+        Integer pageSize = searchReqVO.getPageSize() != null ? searchReqVO.getPageSize() : 20;
+
+        if (pageNo < 1) {
+            pageNo = 1;
+        }
+        if (pageSize < 1) {
+            pageSize = 1;
+        }
+        if (pageSize > 200) {
+            pageSize = 200;
+        }
+
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+
+        Long total = chatUserMapper.countChatIdsByUserForSearch(tenantId, userId, conversationType, keyword);
+        if (total == null || total <= 0L) {
+            return new PageResult<>(Collections.emptyList(), 0L);
+        }
+
+        long offset = (long) (pageNo - 1) * (long) pageSize;
+        List<Long> chatIds = chatUserMapper.selectChatIdsByUserForSearch(tenantId, userId, conversationType, keyword, offset, (long) pageSize);
+        if (chatIds == null || chatIds.isEmpty()) {
+            return new PageResult<>(Collections.emptyList(), total);
+        }
+
+        List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserIdAndChatIds(userId, chatIds);
+        if (chatUsers == null || chatUsers.isEmpty()) {
+            return new PageResult<>(Collections.emptyList(), total);
+        }
+
+        Map<Long, ImChatUserDO> map = new HashMap<>();
+        for (ImChatUserDO cu : chatUsers) {
+            if (cu != null && cu.getChatId() != null) {
+                map.put(cu.getChatId(), cu);
+            }
+        }
+
+        List<AppImConversationRespVO> list = new ArrayList<>();
+        for (Long chatId : chatIds) {
+            ImChatUserDO cu = map.get(chatId);
+            if (cu == null) {
+                continue;
+            }
+            list.add(toConversationRespVO(userId, cu));
+        }
+
+        return new PageResult<>(list, total);
     }
 
     @Override
@@ -350,7 +423,15 @@ public class ImConversationServiceImpl implements ImConversationService {
         if (seq < 0) {
             seq = 0L;
         }
+
+        Long oldReadSeq = chatUser.getLastReadSequence() != null ? chatUser.getLastReadSequence() : 0L;
+        boolean advanced = seq > oldReadSeq;
         chatUserMapper.markReadToSequence(userId, chatId, seq);
+
+        // 幂等：未推进水位时不产生 cursorVersion 与跨端事件（避免乱序/重复上报导致无意义扩散）
+        if (!advanced) {
+            return;
+        }
 
         // 同步写入会话-用户态 + 分配 cursorVersion（跨端已读一致）
         try {
@@ -376,15 +457,23 @@ public class ImConversationServiceImpl implements ImConversationService {
                     chatUser.getDraft()
             );
 
-            // 多端已读一致：推送会话快照给同账号所有在线设备（端侧 upsertFromSnapshot + applyReadWatermark）
+            // 多端已读一致：推送 cursorVersion 触发端侧增量 sync（对标企微/钉钉跨端清未读）
             try {
                 TextMessage body = TextMessage.newBuilder().setContent("").build();
                 messageSender.sendToUser(userId, MessageType.SYSTEM_NOTIFY, body,
                         0L, userId, 0L, tenantId,
                         null, null, chatId,
-                        null, null);
+                        cursorVersion, null);
             } catch (Exception e) {
                 log.warn("[ImConversationService] 推送已读水位变更事件失败, userId: {}, chatId: {}, error: {}",
+                        userId, chatId, e.getMessage(), e);
+            }
+
+            // 角标即时刷新：跨端推进已读水位后，推送 BADGE_UPDATE 让其它端立刻清红点（最终态仍以 sync 为准）
+            try {
+                imBadgeService.pushBadgeUpdate(userId);
+            } catch (Exception e) {
+                log.warn("[ImConversationService] 推送角标更新失败, userId: {}, chatId: {}, error: {}",
                         userId, chatId, e.getMessage(), e);
             }
         } catch (Exception e) {

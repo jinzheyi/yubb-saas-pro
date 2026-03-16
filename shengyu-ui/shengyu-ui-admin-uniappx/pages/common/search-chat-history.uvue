@@ -1,0 +1,206 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+			</view>
+			<text class="header-title">搜聊天记录:{{ keyword }}</text>
+			<view class="header-right"></view>
+		</view>
+
+		<view class="search-bar">
+			<view class="search-input-wrapper">
+				<text class="iconfont search-icon">&#xea6e;</text>
+				<input class="search-input" v-model="keyword" placeholder="搜索聊天记录" confirm-type="search" @confirm="handleSearch" />
+			</view>
+			<view class="search-btn" @click="handleSearch">
+				<text class="search-btn-text">搜索</text>
+			</view>
+		</view>
+
+		<scroll-view class="list" scroll-y show-scrollbar="false" @scrolltolower="loadMore">
+			<view v-if="items.length === 0 && !loading" class="empty">
+				<text class="empty-text">{{ searched ? '暂时没有数据' : '请输入关键词搜索' }}</text>
+			</view>
+
+			<view v-for="item in items" :key="item.id" class="row" @click="handleItemClick(item)">
+				<view class="row-info">
+					<text class="row-title">{{ item.conversationName || '-' }}</text>
+					<rich-text class="row-snippet" :nodes="item.highlightedContent || item.content || ''"></rich-text>
+				</view>
+				<text class="row-time">{{ formatTime(item.timestamp) }}</text>
+			</view>
+
+			<view v-if="loading" class="loading">
+				<text class="loading-text">加载中...</text>
+			</view>
+
+			<view v-if="!hasMore && items.length > 0" class="no-more">
+				<text class="no-more-text">没有更多了</text>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { ref } from 'vue'
+	import { onLoad } from '@dcloudio/uni-app'
+	import { messageSearchService, type SearchResultItem } from '../../services/message-search-service.uts'
+	import { navToFilePreview } from '../../utils/nav.uts'
+
+	const keyword = ref('')
+	const searched = ref(false)
+	const loading = ref(false)
+	const hasMore = ref(true)
+	const pageNo = ref(1)
+	const pageSize = ref(20)
+	const items = ref<SearchResultItem[]>([])
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function formatTime(ts: number): string {
+		try {
+			if (!ts) return ''
+			const d = new Date(ts)
+			const mm = String(d.getMonth() + 1).padStart(2, '0')
+			const dd = String(d.getDate()).padStart(2, '0')
+			const hh = String(d.getHours()).padStart(2, '0')
+			const mi = String(d.getMinutes()).padStart(2, '0')
+			return `${mm}-${dd} ${hh}:${mi}`
+		} catch (e) {
+			return ''
+		}
+	}
+
+	async function fetchPage(reset: boolean): Promise<void> {
+		if (loading.value) return
+		const kw = keyword.value.trim()
+		if (!kw) {
+			items.value = []
+			searched.value = false
+			return
+		}
+		if (kw.length < 2) {
+			uni.showToast({ title: '至少输入2个字', icon: 'none' })
+			return
+		}
+		if (!hasMore.value && !reset) return
+
+		if (reset) {
+			pageNo.value = 1
+			hasMore.value = true
+			items.value = []
+		}
+		searched.value = true
+		loading.value = true
+		try {
+			const next = await messageSearchService.searchMessagesAsync({
+				keyword: kw,
+				pageNo: pageNo.value,
+				pageSize: pageSize.value
+			})
+			items.value = [...items.value, ...next]
+			hasMore.value = next.length >= pageSize.value
+			if (hasMore.value) {
+				pageNo.value = pageNo.value + 1
+			}
+		} catch (e) {
+			console.error('[SearchChatHistory] 搜索失败:', e)
+			uni.showToast({ title: '搜索失败', icon: 'none' })
+		} finally {
+			loading.value = false
+		}
+	}
+
+	function handleSearch() {
+		fetchPage(true)
+	}
+
+	function loadMore() {
+		fetchPage(false)
+	}
+
+	function pickFromRaw(raw: any, keys: string[]): string {
+		try {
+			for (let i = 0; i < keys.length; i++) {
+				const k = keys[i]
+				const v = raw && raw[k] != null ? raw[k] : null
+				if (v != null && String(v).trim() !== '') {
+					return String(v)
+				}
+			}
+			return ''
+		} catch (e) {
+			return ''
+		}
+	}
+
+	function handleItemClick(item: SearchResultItem) {
+		const raw = item.raw
+		const t = (item.type || '').toLowerCase()
+		if (t === 'file' || t === 'image' || t === 'video') {
+			const fileId = pickFromRaw(raw, ['fileId', 'file_id'])
+			const url = pickFromRaw(raw, ['url', 'fileUrl', 'downloadUrl', 'download_url'])
+			const name = pickFromRaw(raw, ['name', 'fileName', 'filename'])
+			if (fileId || url) {
+				navToFilePreview({ fileId: fileId ? fileId : null, url: url ? url : null, name: name ? name : null })
+				return
+			}
+		}
+
+		const chatId = item.chatId
+		const mid = item.messageId || item.id
+		if (!chatId || chatId === '0' || !mid || mid === '0') {
+			uni.showToast({ title: '无法定位消息', icon: 'none' })
+			return
+		}
+		uni.navigateTo({
+			url: `/pages/message/chat?chatId=${encodeURIComponent(chatId)}&messageId=${encodeURIComponent(mid)}&highlight=true`
+		})
+	}
+
+	onLoad((options: any) => {
+		try {
+			if (options && options['keyword']) {
+				keyword.value = decodeURIComponent(options['keyword'])
+			}
+			if (keyword.value.trim()) {
+				fetchPage(true)
+			}
+		} catch (e) {
+			// ignore
+		}
+	})
+</script>
+
+<style>
+	.page { height: 100%; background-color: #FFFFFF; display: flex; flex-direction: column; }
+	.status-bar { height: var(--status-bar-height); background-color: #FFFFFF; }
+	.header { height: 44px; padding: 0 12px; flex-direction: row; align-items: center; justify-content: space-between; border-bottom-width: 0.5px; border-bottom-color: #EFF0F1; }
+	.header-left { width: 40px; height: 44px; justify-content: center; }
+	.header-right { width: 40px; height: 44px; }
+	.back-icon { font-size: 18px; color: #1F2329; }
+	.header-title { font-size: 16px; color: #1F2329; font-weight: 600; flex: 1; margin-left: 8px; }
+	.search-bar { padding: 10px 12px; flex-direction: row; align-items: center; border-bottom-width: 8px; border-bottom-color: #F5F7FA; }
+	.search-input-wrapper { flex: 1; height: 36px; background-color: #F3F4F6; border-radius: 8px; flex-direction: row; align-items: center; padding: 0 10px; }
+	.search-icon { font-size: 16px; color: #8F959E; }
+	.search-input { flex: 1; font-size: 14px; color: #1F2329; margin-left: 8px; }
+	.search-btn { margin-left: 10px; height: 36px; padding: 0 12px; background-color: #1677FF; border-radius: 8px; justify-content: center; }
+	.search-btn-text { color: #FFFFFF; font-size: 14px; }
+	.list { flex: 1; height: 0; }
+	.row { padding: 12px; flex-direction: row; align-items: flex-start; border-bottom-width: 0.5px; border-bottom-color: #EFF0F1; }
+	.row-info { flex: 1; }
+	.row-title { font-size: 14px; color: #1F2329; margin-bottom: 6px; font-weight: 600; }
+	.row-snippet { font-size: 13px; color: #646A73; }
+	.row-time { font-size: 12px; color: #8F959E; margin-left: 10px; }
+	.empty { padding: 60px 12px; align-items: center; }
+	.empty-text { font-size: 14px; color: #8F959E; }
+	.loading { padding: 12px; align-items: center; }
+	.loading-text { font-size: 13px; color: #8F959E; }
+	.no-more { padding: 12px; align-items: center; }
+	.no-more-text { font-size: 13px; color: #8F959E; }
+</style>

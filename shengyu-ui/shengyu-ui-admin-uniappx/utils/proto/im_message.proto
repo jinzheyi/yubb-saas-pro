@@ -1,0 +1,342 @@
+syntax = "proto3";
+
+option java_package = "com.shengyu.framework.websocket.core.protocol";
+option java_outer_classname = "ImMessageProto";
+option java_multiple_files = true;
+
+// IM 消息协议定义
+message ImMessage {
+  // 消息头
+  MessageHeader header = 1;
+  // 消息体
+  bytes body = 2;
+}
+
+// 消息头
+message MessageHeader {
+  // 消息ID（雪花算法生成）
+  int64 messageId = 1;
+  // 消息类型
+  MessageType messageType = 2;
+  // 发送者ID
+  int64 senderId = 3;
+  // 接收者ID（单聊时使用）
+  int64 receiverId = 4;
+  // 群组ID（群聊时使用）
+  int64 groupId = 5;
+  // 租户ID
+  int64 tenantId = 6;
+  // 时间戳（毫秒）
+  int64 timestamp = 7;
+  // 序列号（用于消息去重和排序）
+  int64 sequence = 8;
+  // 扩展字段（JSON格式）
+  string extra = 9;
+}
+
+// 消息类型枚举
+enum MessageType {
+  // 未知类型
+  UNKNOWN = 0;
+
+  // ========== 系统消息 ==========
+  // 心跳请求
+  HEARTBEAT_REQ = 1;
+  // 心跳响应
+  HEARTBEAT_RESP = 2;
+  // 认证请求
+  AUTH_REQ = 3;
+  // 认证响应
+  AUTH_RESP = 4;
+  // 连接关闭
+  CLOSE = 5;
+
+  // 协议控制：轻量投递回执（phase1：仅回执，不做重发）
+  ACK = 8;
+  // ACK 响应（可选，便于联调与打点）
+  ACK_RESP = 9;
+
+  // ========== 业务消息 ==========
+  // 文本消息
+  TEXT = 100;
+  // 图片消息
+  IMAGE = 101;
+  // 语音消息
+  VOICE = 102;
+  // 视频消息
+  VIDEO = 103;
+  // 文件消息
+  FILE = 104;
+  // 位置消息
+  LOCATION = 105;
+  // 自定义消息
+  CUSTOM = 106;
+
+  // ========== 通知消息 ==========
+  // 系统通知
+  SYSTEM_NOTIFY = 200;
+  // 消息已读回执
+  READ_RECEIPT = 201;
+  // 消息撤回
+  RECALL = 202;
+  // 正在输入
+  TYPING = 203;
+  // 角标更新
+  BADGE_UPDATE = 204;
+  // 引用回复
+  QUOTE_REPLY = 205;
+  // 通话信令
+  CALL_SIGNAL = 206;
+  // 流程通知
+  WORKFLOW_NOTIFY = 207;
+  // 待办提醒
+  TODO_REMINDER = 208;
+}
+
+// 认证请求
+message AuthRequest {
+  // 访问令牌
+  string accessToken = 1;
+  // 设备类型（1-Web 2-iOS 3-Android 4-小程序）
+  int32 deviceType = 2;
+  // 设备ID
+  string deviceId = 3;
+  // 客户端版本
+  string clientVersion = 4;
+}
+
+// 认证响应
+message AuthResponse {
+  // 是否成功
+  bool success = 1;
+  // 错误码
+  int32 code = 2;
+  // 错误消息
+  string message = 3;
+  // 用户ID
+  int64 userId = 4;
+  // 租户ID
+  int64 tenantId = 5;
+}
+
+// 轻量 ACK（客户端投递回执）
+message AckMessage {
+  // 被确认的消息ID
+  int64 messageId = 1;
+  // 会话ID（可选）
+  int64 chatId = 2;
+  // 被确认的序列号（可选）
+  int64 sequence = 3;
+  // ACK 类型：RECEIVED / READ 等（phase1 使用 RECEIVED）
+  string ackType = 4;
+  // 客户端收到时间（毫秒）
+  int64 clientReceivedAt = 5;
+  // 原消息时间戳（可选，用于计算端到端延迟）
+  int64 originalTimestamp = 6;
+}
+
+message AckResponse {
+  bool success = 1;
+  int32 code = 2;
+  string message = 3;
+}
+
+// 文本消息
+message TextMessage {
+  // 文本内容
+  string content = 1;
+  // @用户列表
+  repeated int64 atUserIds = 2;
+}
+
+// 图片消息
+message ImageMessage {
+  // 图片URL
+  string url = 1;
+  // 缩略图URL
+  string thumbnailUrl = 2;
+  // 宽度
+  int32 width = 3;
+  // 高度
+  int32 height = 4;
+  // 文件大小（字节）
+  int64 size = 5;
+}
+
+// 语音消息
+message VoiceMessage {
+  // 语音URL
+  string url = 1;
+  // 时长（秒）
+  int32 duration = 2;
+  // 文件大小（字节）
+  int64 size = 3;
+}
+
+// 视频消息
+message VideoMessage {
+  // 视频URL
+  string url = 1;
+  // 封面URL
+  string coverUrl = 2;
+  // 时长（秒）
+  int32 duration = 3;
+  // 宽度
+  int32 width = 4;
+  // 高度
+  int32 height = 5;
+  // 文件大小（字节）
+  int64 size = 6;
+}
+
+// 文件消息
+message FileMessage {
+  // 文件URL
+  string url = 1;
+  // 文件名
+  string fileName = 2;
+  // 文件大小（字节）
+  int64 size = 3;
+  // 文件类型
+  string fileType = 4;
+}
+
+// 位置消息
+message LocationMessage {
+  // 纬度
+  double latitude = 1;
+  // 经度
+  double longitude = 2;
+  // 地址描述
+  string address = 3;
+}
+
+// 消息已读回执
+message ReadReceiptMessage {
+  // 已读的消息ID列表
+  repeated int64 messageIds = 1;
+}
+
+// 消息撤回
+message RecallMessage {
+  // 撤回的消息ID
+  int64 messageId = 1;
+}
+
+// 引用回复消息
+message QuoteReplyMessage {
+  // 引用的消息ID
+  int64 quoteMessageId = 1;
+  // 引用的消息内容摘要
+  string quoteContent = 2;
+  // 引用的消息发送者ID
+  int64 quoteSenderId = 3;
+  // 引用的消息发送者名称
+  string quoteSenderName = 4;
+  // 回复的文本内容
+  string replyContent = 5;
+  // @用户列表
+  repeated int64 atUserIds = 6;
+}
+
+// 正在输入消息
+message TypingMessage {
+  // 目标用户ID（单聊时使用）
+  int64 targetUserId = 1;
+  // 群组ID（群聊时使用）
+  int64 groupId = 2;
+  // 是否正在输入
+  bool isTyping = 3;
+}
+
+// 角标更新消息
+message BadgeUpdateMessage {
+  // 总未读数
+  int32 unreadCount = 1;
+  // 会话角标列表
+  repeated ConversationBadge conversationBadges = 2;
+  // 菜单角标列表
+  repeated MenuBadge menuBadges = 3;
+}
+
+// 会话角标
+message ConversationBadge {
+  // 会话ID
+  int64 conversationId = 1;
+  // 未读数
+  int32 unreadCount = 2;
+}
+
+// 菜单角标
+message MenuBadge {
+  // 菜单ID
+  string menuId = 1;
+  // 角标数量
+  int32 badgeCount = 2;
+}
+
+// 通话信令消息
+message CallSignalMessage {
+  // 通话ID
+  string callId = 1;
+  // 通话类型（1-语音 2-视频）
+  int32 callType = 2;
+  // 信令类型（1-呼叫 2-接听 3-拒绝 4-挂断 5-忙线 6-切换摄像头）
+  int32 signalType = 3;
+  // 呼叫方ID
+  int64 callerId = 4;
+  // 接听方ID
+  int64 calleeId = 5;
+  // 拒绝原因（信令类型为拒绝时使用）
+  string rejectReason = 6;
+  // 扩展数据（JSON格式，用于传递WebRTC信令）
+  string extraData = 7;
+}
+
+// 流程通知消息
+message WorkflowNotifyMessage {
+  // 流程实例ID
+  string processInstanceId = 1;
+  // 流程名称
+  string processName = 2;
+  // 发起人ID
+  int64 initiatorId = 3;
+  // 发起人名称
+  string initiatorName = 4;
+  // 审批内容
+  string content = 5;
+  // 操作按钮列表
+  repeated WorkflowButton buttons = 6;
+  // 流程状态（1-待审批 2-已通过 3-已拒绝 4-已撤回）
+  int32 status = 7;
+  // 跳转URL
+  string jumpUrl = 8;
+}
+
+// 流程操作按钮
+message WorkflowButton {
+  // 按钮ID
+  string buttonId = 1;
+  // 按钮文本
+  string buttonText = 2;
+  // 按钮类型（1-同意 2-拒绝 3-转交 4-查看详情）
+  int32 buttonType = 3;
+}
+
+// 待办提醒消息
+message TodoReminderMessage {
+  // 待办ID
+  string todoId = 1;
+  // 待办标题
+  string title = 2;
+  // 待办内容
+  string content = 3;
+  // 截止日期（时间戳，毫秒）
+  int64 dueTime = 4;
+  // 提醒类型（1-新待办 2-截止日期提醒 3-过期提醒 4-完成通知）
+  int32 reminderType = 5;
+  // 跳转URL
+  string jumpUrl = 6;
+  // 待办状态（1-待处理 2-已完成 3-已过期）
+  int32 status = 7;
+}

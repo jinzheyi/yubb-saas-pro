@@ -36,10 +36,11 @@ export function getIsInSelectionMode() : boolean {
  */
 export function addMember(member : any) {
 	// 检查是否已存在（根据 id 去重）
-	const exists = selectedMembers.value.some(m => m.id === member.id)
+	const memberId = member != null && member.id != null ? String(member.id) : ''
+	const exists = selectedMembers.value.some(m => String(m.id) === memberId)
 	if (!exists) {
 		selectedMembers.value.push({
-			id: member.id,
+			id: memberId,
 			name: member.name,
 			role: member.role,
 			avatarText: member.avatarText,
@@ -51,8 +52,8 @@ export function addMember(member : any) {
 /**
  * 从选中列表移除成员
  */
-export function removeMember(memberId : number) {
-	const index = selectedMembers.value.findIndex(m => m.id === memberId)
+export function removeMember(memberId : string) {
+	const index = selectedMembers.value.findIndex(m => String(m.id) === memberId)
 	if (index > -1) {
 		selectedMembers.value.splice(index, 1)
 	}
@@ -70,7 +71,7 @@ export function addMembers(members : any[]) {
 /**
  * 批量移除成员
  */
-export function removeMembers(memberIds : number[]) {
+export function removeMembers(memberIds : string[]) {
 	for (let i = 0; i < memberIds.length; i++) {
 		removeMember(memberIds[i])
 	}
@@ -79,8 +80,8 @@ export function removeMembers(memberIds : number[]) {
 /**
  * 检查成员是否已选中
  */
-export function isMemberSelected(memberId : number) : boolean {
-	return selectedMembers.value.some(m => m.id === memberId)
+export function isMemberSelected(memberId : string) : boolean {
+	return selectedMembers.value.some(m => String(m.id) === memberId)
 }
 
 /**
@@ -101,8 +102,9 @@ export function getSelectedCount() : number {
  * 切换成员选中状态
  */
 export function toggleMember(member : any) {
-	if (isMemberSelected(member.id)) {
-		removeMember(member.id)
+	const memberId = member != null && member.id != null ? String(member.id) : ''
+	if (isMemberSelected(memberId)) {
+		removeMember(memberId)
 	} else {
 		addMember(member)
 	}

@@ -74,6 +74,45 @@ export class ConversationService {
 
   private lastGapSyncAt: number = 0
 
+  private normalizeCursorVersion(v: string | number | null): string {
+    if (v == null) {
+      return '0'
+    }
+    const s = String(v)
+    if (s === '') {
+      return '0'
+    }
+    // 仅允许纯数字，避免 NaN/空白等异常写入
+    return /^[0-9]+$/.test(s) ? s : '0'
+  }
+
+  private isCursorGreater(a: string, b: string): boolean {
+    const av = a != null && a !== '' ? a.toString() : '0'
+    const bv = b != null && b !== '' ? b.toString() : '0'
+    try {
+      return BigInt(av) > BigInt(bv)
+    } catch (e) {
+      if (av.length !== bv.length) {
+        return av.length > bv.length
+      }
+      return av > bv
+    }
+  }
+
+  private isCursorEqual(a: string, b: string): boolean {
+    return (a != null ? a.toString() : '0') === (b != null ? b.toString() : '0')
+  }
+
+  private addCursorOne(v: string): string {
+    const s = v != null && v !== '' ? v.toString() : '0'
+    try {
+      return (BigInt(s) + BigInt(1)).toString()
+    } catch (e) {
+      // 极端兜底：无法加 1 时返回原值
+      return s
+    }
+  }
+
   private isSeqGreater(a: string, b: string): boolean {
     const av = a != null && a !== '' ? a.toString() : '0'
     const bv = b != null && b !== '' ? b.toString() : '0'
@@ -95,8 +134,15 @@ export class ConversationService {
       const diff = BigInt(lastMsgSeq) - BigInt(lastReadSeq)
       return diff > BigInt(0) ? Number(diff) : 0
     } catch (e) {
-      const diff = parseInt(lastMsgSeq) - parseInt(lastReadSeq)
-      return diff > 0 ? diff : 0
+      // BigInt 不可用或序列号非纯数字时，禁止使用 parseInt/Number 做兜底（可能触发精度丢失）
+      // 这里仅做“是否存在未读”的保守判断，避免 badge/未读状态错乱
+      if (lastMsgSeq === lastReadSeq) {
+        return 0
+      }
+      if (lastMsgSeq.length !== lastReadSeq.length) {
+        return lastMsgSeq.length > lastReadSeq.length ? 1 : 0
+      }
+      return lastMsgSeq > lastReadSeq ? 1 : 0
     }
   }
 
@@ -107,20 +153,18 @@ export class ConversationService {
   }
 
   public handleRealtimeCursorVersion(cursorVersion: string | number | null): void {
-    if (cursorVersion == null) {
-      return
-    }
-    const incoming = Number(cursorVersion)
-    if (isNaN(incoming) || incoming <= 0) {
+    const incoming = this.normalizeCursorVersion(cursorVersion)
+    if (incoming === '0') {
       return
     }
     const stored = this.getStoredCursorVersion()
-    if (incoming <= stored) {
+    if (!this.isCursorGreater(incoming, stored)) {
       return
     }
     const now = Date.now()
     // gap：触发补偿 sync，但不要推进本地 cursor，避免跳过缺失版本
-    if (stored > 0 && incoming > stored + 1) {
+    const storedPlusOne = this.addCursorOne(stored)
+    if (stored !== '0' && this.isCursorGreater(incoming, storedPlusOne)) {
       if (now - this.lastGapSyncAt > 800) {
         this.lastGapSyncAt = now
         void this.syncConversationsIncrementally(false)
@@ -131,24 +175,20 @@ export class ConversationService {
     this.setStoredCursorVersion(incoming)
   }
 
-  private getStoredCursorVersion(): number {
+  private getStoredCursorVersion(): string {
     try {
       const key = this.buildCursorStorageKey()
       const v = uni.getStorageSync(key)
-      if (v == null || v === '') {
-        return 0
-      }
-      const n = Number(v)
-      return !isNaN(n) && n > 0 ? n : 0
+      return this.normalizeCursorVersion(v as any)
     } catch (e) {
-      return 0
+      return '0'
     }
   }
 
-  private setStoredCursorVersion(cursorVersion: number): void {
+  private setStoredCursorVersion(cursorVersion: string): void {
     try {
       const key = this.buildCursorStorageKey()
-      const v = cursorVersion != null && cursorVersion > 0 ? cursorVersion.toString() : '0'
+      const v = this.normalizeCursorVersion(cursorVersion)
       uni.setStorageSync(key, v)
     } catch (e) {
       // ignore
@@ -309,8 +349,13 @@ export class ConversationService {
       const diff = BigInt(lastMsgSeq) - BigInt(lastReadSeq)
       unread = diff > BigInt(0) ? Number(diff) : 0
     } catch (e) {
-      const diff = parseInt(lastMsgSeq) - parseInt(lastReadSeq)
-      unread = diff > 0 ? diff : 0
+      if (lastMsgSeq === lastReadSeq) {
+        unread = 0
+      } else if (lastMsgSeq.length !== lastReadSeq.length) {
+        unread = lastMsgSeq.length > lastReadSeq.length ? 1 : 0
+      } else {
+        unread = lastMsgSeq > lastReadSeq ? 1 : 0
+      }
     }
     conversation.unreadCount = unread
     this.sortConversations()
@@ -333,7 +378,7 @@ export class ConversationService {
   public async loadConversations(): Promise<void> {
     try {
       const stored = this.getStoredCursorVersion()
-      const shouldReset = stored <= 0
+      const shouldReset = stored === '0'
       await this.syncConversationsIncrementally(shouldReset)
     } catch (e) {
       try {
@@ -365,8 +410,8 @@ export class ConversationService {
   public async syncConversationsIncrementally(reset: boolean = false, limit: number = 200): Promise<void> {
     const pageSize = limit != null && limit > 0 ? Math.min(limit, 200) : 200
     const storedCursor = this.getStoredCursorVersion()
-    const shouldForceReset = reset !== true && (this.conversations == null || this.conversations.length === 0) && storedCursor > 0
-    let cursor = (reset || shouldForceReset) ? 0 : storedCursor
+    const shouldForceReset = reset !== true && (this.conversations == null || this.conversations.length === 0) && storedCursor !== '0'
+    let cursor = (reset || shouldForceReset) ? '0' : storedCursor
     let hasMore = true
     let maxCursor = cursor
     while (hasMore) {
@@ -375,12 +420,12 @@ export class ConversationService {
         method: 'GET'
       })
       const nextCursorVersion = data != null && (data as any).nextCursorVersion != null
-        ? Number((data as any).nextCursorVersion)
+        ? this.normalizeCursorVersion((data as any).nextCursorVersion)
         : cursor
       const items: any[] = data != null && Array.isArray((data as any).items) ? (data as any).items : []
       hasMore = data != null && (data as any).hasMore === true
 
-      if (!isNaN(nextCursorVersion) && nextCursorVersion > maxCursor) {
+      if (this.isCursorGreater(nextCursorVersion, maxCursor)) {
         maxCursor = nextCursorVersion
       }
 
@@ -543,8 +588,13 @@ export class ConversationService {
           const diff = BigInt(lastMsgSeq) - BigInt(lastReadSeq)
           unread = diff > BigInt(0) ? Number(diff) : 0
         } catch (e) {
-          const diff = parseInt(lastMsgSeq) - parseInt(lastReadSeq)
-          unread = diff > 0 ? diff : 0
+          if (lastMsgSeq === lastReadSeq) {
+            unread = 0
+          } else if (lastMsgSeq.length !== lastReadSeq.length) {
+            unread = lastMsgSeq.length > lastReadSeq.length ? 1 : 0
+          } else {
+            unread = lastMsgSeq > lastReadSeq ? 1 : 0
+          }
         }
         conversation.unreadCount = unread
       }

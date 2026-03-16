@@ -8,6 +8,7 @@ import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageRe
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePullReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
@@ -93,6 +94,15 @@ public class AppImMessageController {
     public CommonResult<Boolean> deleteMessage(@RequestParam("id") Long id) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         messageService.deleteMessage(userId, id);
+        return success(true);
+    }
+
+    @DeleteMapping("/clear")
+    @Operation(summary = "清空聊天记录（对我清空，多端一致）")
+    @Parameter(name = "chatId", description = "ChatID", required = true)
+    public CommonResult<Boolean> clearConversationMessages(@RequestParam("chatId") Long chatId) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        messageService.clearConversationMessages(userId, chatId);
         return success(true);
     }
 

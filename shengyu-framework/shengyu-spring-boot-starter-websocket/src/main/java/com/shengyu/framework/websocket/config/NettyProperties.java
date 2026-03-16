@@ -104,6 +104,16 @@ public class NettyProperties {
     private String webSocketPath = "/ws";
 
     /**
+     * WebSocket SubProtocol（Sec-WebSocket-Protocol）协商列表，逗号分隔。
+     */
+    private String webSocketSubProtocols = "im.json.v1,im.pb.v1";
+
+    /**
+     * 严格模式：连接建立后必须在该时间内完成 PROBE（毫秒），否则关闭连接。
+     */
+    private Long probeTimeoutMs = 3000L;
+
+    /**
      * HTTP 最大内容长度（字节）
      */
     private Integer maxContentLength = 64 * 1024;

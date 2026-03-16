@@ -22,6 +22,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import com.shengyu.framework.websocket.core.netty.handler.WebSocketFrameHandler;
+
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -137,12 +139,28 @@ public class NettyMessageSender {
                         }
 
                         if (ws) {
-                            channel.writeAndFlush(new TextWebSocketFrame(jsonPayload)).addListener(f -> {
-                                if (!f.isSuccess()) {
-                                    log.warn("[MessageSender] ws write failed: userId={}, channelId={}, messageId={}, type={}",
-                                            userId, channel.id(), messageId, messageType, f.cause());
-                                }
-                            });
+                            String codec = null;
+                            try {
+                                codec = channel.attr(WebSocketFrameHandler.CODEC_KEY).get();
+                            } catch (Exception ignore) {
+                                codec = null;
+                            }
+
+                            if ("pb".equalsIgnoreCase(codec)) {
+                                channel.writeAndFlush(protobufMessage).addListener(f -> {
+                                    if (!f.isSuccess()) {
+                                        log.warn("[MessageSender] ws(pb) write failed: userId={}, channelId={}, messageId={}, type={}",
+                                                userId, channel.id(), messageId, messageType, f.cause());
+                                    }
+                                });
+                            } else {
+                                channel.writeAndFlush(new TextWebSocketFrame(jsonPayload)).addListener(f -> {
+                                    if (!f.isSuccess()) {
+                                        log.warn("[MessageSender] ws write failed: userId={}, channelId={}, messageId={}, type={}",
+                                                userId, channel.id(), messageId, messageType, f.cause());
+                                    }
+                                });
+                            }
                         } else {
                             channel.writeAndFlush(protobufMessage).addListener(f -> {
                                 if (!f.isSuccess()) {

@@ -190,6 +190,123 @@ export function uploadFile(
 }
 
 /**
+ * 选择图片（不上传）
+ * @param count 最多可选择的图片数量（默认 9）
+ */
+export function chooseImage(count: number = 9): Promise<string[]> {
+	return new Promise((resolve, reject) => {
+		uni.chooseImage({
+			count: count,
+			sizeType: ['original', 'compressed'],
+			sourceType: ['album', 'camera'],
+			success: (res) => {
+				resolve(res.tempFilePaths)
+			},
+			fail: (err) => {
+				reject(err)
+			}
+		})
+	})
+}
+
+/**
+ * 选择视频（不上传）
+ */
+export function chooseVideo(): Promise<any> {
+	return new Promise((resolve, reject) => {
+		uni.chooseVideo({
+			sourceType: ['album', 'camera'],
+			success: (res) => {
+				resolve(res)
+			},
+			fail: (err) => {
+				reject(err)
+			}
+		})
+	})
+}
+
+export function formatSeconds(totalSeconds: number): string {
+	const s = totalSeconds != null ? Math.max(0, Math.floor(totalSeconds)) : 0
+	const m = Math.floor(s / 60)
+	const ss = s % 60
+	const mmStr = m < 10 ? '0' + m.toString() : m.toString()
+	const ssStr = ss < 10 ? '0' + ss.toString() : ss.toString()
+	return mmStr + ':' + ssStr
+}
+
+export function uploadFileForMulti(
+	filePaths: string[],
+	config?: UploadConfig
+): Promise<UploadResult[]> {
+	return new Promise((resolve, reject) => {
+		try {
+			const paths = Array.isArray(filePaths) ? filePaths : []
+			const tasks: Promise<UploadResult>[] = []
+			for (let i = 0; i < paths.length; i++) {
+				const p = paths[i]
+				if (p != null && String(p) !== '') {
+					tasks.push(uploadFile(String(p), config))
+				}
+			}
+			Promise.all(tasks).then(resolve).catch(reject)
+		} catch (e) {
+			reject(e)
+		}
+	})
+}
+
+export function uploadAudio(filePath: string, config?: UploadConfig): Promise<UploadResult> {
+	return uploadFile(filePath, config)
+}
+
+/**
+ * 选择文件（不上传，支持 H5 / App / 小程序）
+ */
+export function chooseFile(accept: string = '*/*', count: number = 1): Promise<any> {
+	return new Promise((resolve, reject) => {
+		// #ifdef H5
+		uni.chooseFile({
+			count: count,
+			extension: [accept],
+			success: (res) => {
+				resolve(res)
+			},
+			fail: (err) => {
+				reject(err)
+			}
+		})
+		// #endif
+
+		// #ifdef APP-PLUS
+		uni.chooseMessageFile({
+			count: count,
+			type: 'all',
+			success: (res) => {
+				resolve(res)
+			},
+			fail: (err) => {
+				reject(err)
+			}
+		})
+		// #endif
+
+		// #ifdef MP-WEIXIN
+		uni.chooseMessageFile({
+			count: count,
+			type: 'all',
+			success: (res) => {
+				resolve(res)
+			},
+			fail: (err) => {
+				reject(err)
+			}
+		})
+		// #endif
+	})
+}
+
+/**
  * 上传文件并返回 fileId（核心方法）
  */
 export function uploadFileAndReturnId(

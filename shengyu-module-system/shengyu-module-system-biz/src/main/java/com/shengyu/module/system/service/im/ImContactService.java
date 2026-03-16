@@ -1,5 +1,7 @@
 package com.shengyu.module.system.service.im;
 
+import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactListByDeptReqVO;
 import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactRespVO;
 import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactSettingUpdateReqVO;
 
@@ -64,5 +66,10 @@ public interface ImContactService {
      * @return 联系人列表
      */
     List<AppImContactRespVO> getContactListByDept(Long userId, Long deptId);
+
+    /**
+     * 根据部门ID分页获取联系人列表
+     */
+    PageResult<AppImContactRespVO> getContactPageByDept(Long userId, AppImContactListByDeptReqVO reqVO);
 
 }

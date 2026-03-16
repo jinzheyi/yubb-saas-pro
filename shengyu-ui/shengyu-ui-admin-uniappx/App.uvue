@@ -66,6 +66,7 @@
 	 */
 	async function connectWebSocket() {
 		await withWsManager((wsManager) => {
+			wsManager.setProtocols(['im.pb.v1'])
 			wsManager.connect()
 			console.log('[App] WebSocket 自动连接已启动')
 		})

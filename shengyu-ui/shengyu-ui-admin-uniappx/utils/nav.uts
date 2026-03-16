@@ -1,0 +1,39 @@
+/**
+ * 路由跳转工具
+ */
+
+export type FilePreviewNavArgs = {
+	fileId: string | null
+	url: string | null
+	name: string | null
+}
+
+function encode(s: string): string {
+	try {
+		return encodeURIComponent(s)
+	} catch (e) {
+		return s
+	}
+}
+
+export function navToFilePreview(args: FilePreviewNavArgs): void {
+	const fid = args.fileId != null ? String(args.fileId).trim() : ''
+	const url = args.url != null ? String(args.url).trim() : ''
+	const name = args.name != null ? String(args.name) : ''
+
+	if (fid != '') {
+		uni.navigateTo({
+			url: `/pages/common/file-preview?fileId=${encode(fid)}&name=${encode(name)}`
+		})
+		return
+	}
+
+	if (url != '') {
+		uni.navigateTo({
+			url: `/pages/common/file-preview?url=${encode(url)}&name=${encode(name)}`
+		})
+		return
+	}
+
+	uni.showToast({ title: '文件地址为空', icon: 'none' })
+}

@@ -4,6 +4,7 @@
 			class="content" 
 			scroll-y="true" 
 			show-scrollbar="false"
+			@scrolltolower="handleScrollToLower"
 			:scroll-into-view="scrollTarget"
 			scroll-with-animation="true"
 		>
@@ -94,6 +95,7 @@
 	const emit = defineEmits<{
 		(e: 'select', item: any): void
 		(e: 'category-click', item: any): void
+		(e: 'load-more'): void
 	}>()
 
 	const scrollTarget = ref('')
@@ -135,7 +137,7 @@
 
 	// 使用传入的联系人数据或默认数据
 	const contactList = computed(() : any[] => {
-		return props.contacts.length > 0 ? props.contacts : generateDefaultContacts()
+		return props.contacts
 	})
 
 	// 按字母分组
@@ -184,6 +186,10 @@
 			item.selected = !item.selected
 		}
 		emit('select', item)
+	}
+
+	function handleScrollToLower() {
+		emit('load-more')
 	}
 </script>
 

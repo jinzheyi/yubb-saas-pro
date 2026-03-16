@@ -31,6 +31,7 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     private final NettyProperties nettyProperties;
     private final WebSocketFrameHandler webSocketFrameHandler;
+    private final WebSocketProtobufOutboundHandler webSocketProtobufOutboundHandler;
     private final ProtobufMessageHandler protobufMessageHandler;
     private final HeartbeatHandler heartbeatHandler;
     private final AuthHandler authHandler;
@@ -50,9 +51,14 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
             pipeline.addLast("http-chunked", new ChunkedWriteHandler());
             // WebSocket 协议处理器
             pipeline.addLast("websocket-protocol", 
-                new WebSocketServerProtocolHandler(nettyProperties.getWebSocketPath(), null, true));
+                new WebSocketServerProtocolHandler(nettyProperties.getWebSocketPath(), nettyProperties.getWebSocketSubProtocols(), true));
             // WebSocket 帧处理器
             pipeline.addLast("websocket-frame-handler", webSocketFrameHandler);
+
+            // B3/B4：WebSocket BinaryFrame -> Protobuf(ImMessage)
+            pipeline.addLast("ws-protobuf-frame-decoder", new ProtobufVarint32FrameDecoder());
+            pipeline.addLast("ws-protobuf-decoder",
+                new ProtobufDecoder(com.shengyu.framework.websocket.core.protocol.ImMessage.getDefaultInstance()));
         } 
         // ========== Protobuf 协议支持（内部 TCP 直连） ==========
         // 注意：WebSocket 和 Protobuf 不能同时启用，WebSocket 使用 JSON 格式
@@ -87,6 +93,13 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
 
         // WebSocket(JSON) 业务消息处理器（将 {header, body} JSON 转为 Protobuf 并分发）
         pipeline.addLast("json-business-message-handler", jsonBusinessMessageHandler);
+
+        // B3/B4：Protobuf 业务消息处理器（WebSocket BinaryFrame / TCP 直连共用）
+        pipeline.addLast("protobuf-message-handler", protobufMessageHandler);
+        
+        // B2：WebSocket(pb) 出站统一封装（ImMessage -> BinaryWebSocketFrame + varint32 length-prefix）
+        // 放在业务 handler 之后，确保任意 handler writeAndFlush(ImMessage) 都能被拦截并封装
+        pipeline.addLast("ws-protobuf-outbound", webSocketProtobufOutboundHandler);
         
         // 异常处理器
         pipeline.addLast("exception-handler", new ExceptionHandler());

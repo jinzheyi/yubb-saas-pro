@@ -25,6 +25,7 @@
 			:contacts="contactList"
 			@select="handleSelect"
 			@category-click="handleCategory"
+			@load-more="handleLoadMore"
 		/>
 		
 		<!-- 加载状态 -->
@@ -48,7 +49,7 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
-	import { getUserInfo } from '../../store/user.uts'
+	import { getUserInfo, getDeptId } from '../../store/user.uts'
 	import { 
 		startSelection, 
 		endSelection, 
@@ -59,7 +60,7 @@
 		isMemberSelected
 	} from '../../store/group-selection.uts'
 	import { createGroup, addGroupMembers, getGroupMembers } from '../../api/group.uts'
-	import { getContactList } from '../../api/contact.uts'
+	import { getContactList, getContactPageByDept } from '../../api/contact.uts'
 	import { createConversation } from '../../api/conversation.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 	import ContactSelector from '../../components/contact-selector/contact-selector.uvue'
@@ -68,12 +69,17 @@
 
 	const contactList = ref<any[]>([])
 	const loading = ref(false)
+	const pageNo = ref(1)
+	const pageSize = ref(50)
+	const hasMore = ref(true)
+	const loadingMore = ref(false)
+	const deptId = ref<string>('')
 	const colors = ['#0ea5e9', '#f472b6', '#c084fc', '#fb7185', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#3b82f6', '#8b5cf6']
 	
 	// 页面模式：create-创建群聊，add-添加成员
 	const mode = ref('create')
 	const groupId = ref('')
-	const existingMemberIds = ref<number[]>([])
+	const existingMemberIds = ref<string[]>([])
 	
 	/**
 	 * 获取拼音首字母
@@ -106,12 +112,26 @@
 			// 如果是添加成员模式，先加载现有成员
 			if (mode.value === 'add' && groupId.value) {
 				const members = await getGroupMembers(groupId.value)
-				existingMemberIds.value = members.map((m : any) => m.userId)
+				existingMemberIds.value = members.map((m : any) => m != null && m.userId != null ? String(m.userId) : '0')
 				console.log('[InitiateGroup] 现有成员ID:', existingMemberIds.value)
 			}
 			
-			// 获取联系人列表
-			const contacts = await getContactList() as any[]
+			const deptIdStr = getDeptId()
+			deptId.value = deptIdStr != null ? deptIdStr : ''
+			pageNo.value = 1
+			hasMore.value = true
+			
+			let contacts: any[] = []
+			if (deptId.value !== '') {
+				const res = await getContactPageByDept(deptId.value, 1, pageSize.value, '') as any
+				contacts = res && Array.isArray(res.list) ? res.list : []
+				const total = res && res.total != null ? Number(res.total) : contacts.length
+				hasMore.value = contacts.length < total
+			} else {
+				const res = await getContactList() as any
+				contacts = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : [])
+				hasMore.value = false
+			}
 			console.log('[InitiateGroup] 联系人数量:', contacts.length)
 			
 			if (contacts.length === 0) {
@@ -126,11 +146,11 @@
 			// 创建模式：第一个添加当前登录用户，默认选中
 			if (mode.value === 'create') {
 				list.push({
-					id: currentUserId,
+					id: currentUserId.toString(),
 					name: currentUserName,
 					role: '当前用户',
 					avatarText: getAvatarText(currentUserName),
-					avatarBg: getUserAvatarColor(currentUserId),
+					avatarBg: getUserAvatarColor(String(currentUserId)),
 					pinyin: 'W',
 					selected: true,
 					isCurrentUser: true
@@ -139,24 +159,25 @@
 			
 			// 添加其他联系人
 			contacts.forEach((contact, index) => {
-				const userIdStr = contact.id != null ? contact.id.toString() : '0'
+				const userIdStr = contact.id != null ? String(contact.id) : '0'
 				// 跳过当前用户（创建模式已添加）
 				if (mode.value === 'create' && contact.id === currentUserId) {
 					return
 				}
 				
 				// 添加模式：过滤掉已经在群里的成员
-				if (mode.value === 'add' && existingMemberIds.value.includes(contact.id)) {
+				if (mode.value === 'add' && existingMemberIds.value.includes(userIdStr)) {
 					return
 				}
 				
 				// 优先使用 remarkName（备注名），其次使用 nickname（昵称）
 				const displayName = contact.remarkName || contact.nickname || '未知'
+				const pinyinLetter = contact.pinyin || getPinyinFirstLetter(displayName)
 				// 使用后端返回的拼音首字母（取第一个字符）
-				let pinyinLetter = contact.pinyin || getPinyinFirstLetter(displayName)
+				let pinyin = pinyinLetter
 				// 如果后端返回的是多字符拼音（如 "SY"），只取第一个字符
-				if (pinyinLetter.length > 1) {
-					pinyinLetter = pinyinLetter.charAt(0)
+				if (pinyin.length > 1) {
+					pinyin = pinyin.charAt(0)
 				}
 				
 				list.push({
@@ -165,7 +186,7 @@
 					role: contact.deptName || '',
 					avatarText: getAvatarText(displayName),
 					avatarBg: getUserAvatarColor(userIdStr),
-					pinyin: pinyinLetter,
+					pinyin: pinyin,
 					selected: false,
 					isCurrentUser: mode.value === 'add' && contact.id === currentUserId
 				})
@@ -181,6 +202,56 @@
 		} finally {
 			loading.value = false
 			console.log('[InitiateGroup] 加载完成')
+		}
+	}
+
+	async function handleLoadMore() {
+		if (loadingMore.value) return
+		if (!hasMore.value) return
+		if (deptId.value === '') return
+		loadingMore.value = true
+		try {
+			const nextPage = pageNo.value + 1
+			const res = await getContactPageByDept(deptId.value, nextPage, pageSize.value, '') as any
+			const data = res && Array.isArray(res.list) ? res.list : []
+			const total = res && res.total != null ? Number(res.total) : (contactList.value.length + data.length)
+			if (data && data.length > 0) {
+				const userInfo = getUserInfo()
+				const currentUserId = userInfo?.user?.id ?? 0
+				const list: any[] = []
+				data.forEach((contact, index) => {
+					if (contact == null || contact.id == null) return
+					const userIdStr = String(contact.id)
+					if (mode.value === 'create' && contact.id === currentUserId) {
+						return
+					}
+					if (contactList.value.some(c => String(c.id) === userIdStr)) {
+						return
+					}
+					const displayName = contact.remarkName || contact.nickname || '未知'
+					let pinyin = contact.pinyin || getPinyinFirstLetter(displayName)
+					if (pinyin.length > 1) {
+						pinyin = pinyin.charAt(0)
+					}
+					list.push({
+						id: userIdStr,
+						name: displayName,
+						role: contact.deptName || '',
+						avatarText: getAvatarText(displayName),
+						avatarBg: getUserAvatarColor(userIdStr),
+						pinyin: pinyin,
+						selected: false,
+						isCurrentUser: mode.value === 'add' && contact.id === currentUserId
+					})
+				})
+				contactList.value = contactList.value.concat(list)
+				pageNo.value = nextPage
+			}
+			hasMore.value = contactList.value.length < total
+		} catch (e) {
+			// ignore
+		} finally {
+			loadingMore.value = false
 		}
 	}
 
@@ -231,7 +302,7 @@
 		// 同步到全局状态
 		toggleMember(item)
 		// 确保本地状态与全局状态一致
-		item.selected = isMemberSelected(item.id)
+		item.selected = isMemberSelected(String(item.id))
 		
 		console.log('选择联系人:', item.name, '选中状态:', item.selected)
 	}
@@ -388,7 +459,7 @@
 	// 同步本地选中状态与全局状态
 	function syncSelectionState() {
 		for (let i = 0; i < contactList.value.length; i++) {
-			contactList.value[i].selected = isMemberSelected(contactList.value[i].id)
+			contactList.value[i].selected = isMemberSelected(String(contactList.value[i].id))
 		}
 	}
 

@@ -37,6 +37,13 @@ export function deleteMessage(id: string): Promise<any> {
   })
 }
 
+export function clearConversationMessages(chatId: string): Promise<any> {
+  return request({
+    url: `/system/im/message/clear?chatId=${chatId}`,
+    method: 'DELETE'
+  })
+}
+
 /**
  * 获取未读消息数
  */

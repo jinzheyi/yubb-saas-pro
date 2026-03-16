@@ -198,7 +198,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 | 按 deptId 获取联系人 | `api/contact.uts#getContactListByDept` | `GET /system/im/contact/list-by-dept?deptId=` | `AppImContactController#getContactListByDept` 已按 deptId 过滤 | 后续可补齐分页/排序策略（如有性能压力再加） |
 | 群组：dismiss/members/add-members 等“历史 URL” | `services/group-service.uts` 多处 | 见 0.4.5（大量 /system/im/group/* 非标准路由） | `AppImGroupController` 未提供这些路由 | 端侧统一改为复用 `api/group.uts`；如确需保兼容，可在后端做临时别名路由，但最终以 `AppImGroupController` 为权威 |
 | 消息表情回应 | `services/message-reaction-service.uts` | `POST /system/im/message/add-reaction`；`POST /remove-reaction`；`GET /reactions` | 后端缺路由 | 若要做：建议新增 `AppImMessageReactionController`（或挂在 message controller 下），并定义：`POST /reaction/add`、`POST /reaction/remove`、`GET /reaction/list?messageId=`（注意幂等与去重） |
-| 消息编辑与编辑历史 | `services/message-edit-service.uts` | `POST /system/im/message/edit`；`GET /system/im/message/edit-history` | 后端缺路由 | 若要做：建议新增 `PUT /system/im/message/edit`（body: messageId, content, clientTime）与 `GET /edit-history?messageId=`；并与 10.2.3 的 `rev/edited` 最终态一致 |
+| 撤回后重新编辑（企微/钉钉口径） | - | - | - | 以文档为准：**重新编辑=回填后发送新消息（1A）**，且**发送者所有设备可用（2B）**。禁止实现“编辑历史消息”能力（修改原消息内容）。 |
 | 群已读详情（read-detail/unread-detail/unread-list） | `services/read-receipt-service.uts` | `GET /system/im/message/read-detail`；`GET /unread-detail`；`GET /unread-list` | 后端缺路由 | 企业级推荐优先做聚合（Milestone C5）；详情接口可选：`GET /read-receipt/summary?messageId=`（已读/未读人数）+ `GET /read-receipt/detail?messageId=&pageNo=&pageSize=` |
 
 ## Milestone A（P0）：统一鉴权一致性 + 撤销闭环（HTTP <-> IM）
@@ -242,7 +242,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 ### B0（P0）：协议与版本基线冻结（SubProtocol + 首帧探测）
 
 - **验收**：固定 `im.pb.v1`/`im.json.v1`；首帧 MAGIC/VERSION/CODEC/FLAGS；形成兼容矩阵。
-- 状态：未开始
+- 状态：进行中（已落地 SubProtocol 列表 + PROBE/PROBE_RESP；PB BinaryFrame 双栈解码待 B3/B4）
 
 - **目标**：冻结“连接层协商”协议基线。
 - **范围**：
@@ -257,6 +257,34 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
   - `shengyu-framework/.../ProtobufMessageHandler.java`
   - `shengyu-framework/.../JsonBusinessMessageHandler.java`
   - `shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts`
+
+本期冻结的协商口径（以当前工程为准）：
+
+- SubProtocol：服务端支持 `im.json.v1,im.pb.v1`（可配置）；端侧默认宣告 `im.json.v1`
+- 首帧探测（PROBE）：端侧连接建立后先发送 `MessageType.PROBE(6)`，服务端返回 `MessageType.PROBE_RESP(7)`
+
+严格模式（不兼容旧客户端）的硬约束（本期启用）：
+
+- 端侧 **必须** `PROBE -> AUTH_REQ`，禁止 `AUTH_REQ` 作为首帧
+- `probeTimeoutMs` 内未收到 PROBE：服务端下发 `CLOSE(action=PROBE_TIMEOUT)` 并断开
+- 收到 `AUTH_REQ` 但未 PROBE：服务端下发 `CLOSE(action=PROBE_REQUIRED)` 并断开
+
+PROBE（JSON TextFrame）字段约定（Long/ID 均按 string 透传）：
+
+- `header.messageType = 6`
+- `header.messageId`: string
+- `header.timestamp`: number
+- `body.version`: number
+- `body.codec`: string（当前落地 `json`；pb 待 B3/B4）
+- `body.features.ack`: boolean
+- `body.client.deviceType/deviceId/deviceName/clientVersion`
+
+PROBE_RESP（JSON TextFrame）字段约定：
+
+- `header.messageType = 7`
+- `body.codec`: string
+- `body.features.ack`: boolean
+- `body.serverTime`: number
 
 
 ### B1（P0）：服务端握手协商并绑定 codec
@@ -281,7 +309,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 ### B2（P0）：服务端双 decoder/encoder（业务无感）
 
 - **验收**：MaxFrameSize/AuthTimeout 生效；未认证仅允许 AUTH/HEARTBEAT；两栈跑通 AUTH/HEARTBEAT/CLOSE。
-- 状态：未开始
+- 状态：进行中（已接入 WebSocket(pb) 出站统一封装：ImMessage -> BinaryWebSocketFrame + varint32 length-prefix；未认证 CLOSE 白名单已对齐）
 
 - **目标**：做到“业务 processor 只面对统一领域对象”，编解码对业务无侵入。
 - **范围**：
@@ -339,7 +367,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 ### C1（P0）：ACK + 先存储后 fanout
 
 - **验收**：ACK 超时重发不产生重复消息；服务端幂等返回同一 sequence。
-- 状态：进行中
+- 状态：已完成（Phase1：ACK 协议双栈 pb+json 已联调验收通过）
 
 对齐说明（以当前工程代码为准）：
 
@@ -348,8 +376,8 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
   - 幂等基础：服务端对同一 `messageId` 重投可做到不重复落库（`DuplicateKeyException` 分支已存在）。
   - 发送端状态推进：服务端会把消息回推给发送者（用于端侧把 `SENDING -> SENT`，但这不是独立 ACK 协议）。
 - 尚缺：
-  - 独立 ACK 协议类型（ACK_REQ/ACK_RESP/SendAck 等）与超时重发契约。
-  - App Protobuf / H5 JSON 双栈协商（B0~B4 未开始），因此 C1 的“协议级 ACK”暂不具备落地前提。
+  - ACK 驱动的服务端重发队列/超时策略/限流（Phase2，待灰度开关）。
+  - WebSocket BinaryFrame 的 PB decode/encode 真正接通（B3/B4），以便 PB 子栈也能使用相同 ACK 协议。
 
 本期补充关键前置（企业级落地口径，确保 C1 幂等/重投/已读聚合可闭环）：
 
@@ -374,11 +402,29 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
   - 发送前若发现 `messageId` 非法（空/0/非数字/超 Long）：必须重生成，并保证本地渲染/重试/回推匹配使用同一个 `messageId`
   - 服务端回推时 `messageId` 可能为 number/string：端侧必须归一化为字符串后再匹配本地 `SENDING` 消息，避免“发送成功但一直转圈”
 
-当前阶段落地口径（移动端优先，隐式 ACK）：
+当前阶段落地口径（Phase1：独立 ACK + 可观测，不做重发）：
 
-- **ACK 形态**：不引入独立 ACK 消息类型；以“服务端回推同一条业务消息（同 `messageId`，携带 `sequence/chatId`）”作为 ACK。
-- **重投策略（端侧）**：同一 `messageId` 在超时未收到回推时自动重发（限次 + 退避）；收到回推后立刻停止重试并将本地状态置为 `SENT`；超过最大重试次数标记 `FAILED`。
-- **幂等要求（服务端）**：同一 `messageId` 重投时不重复落库，且回推给发送者必须返回同一 `sequence/chatId`（保证端侧不会产生重复消息与乱序）。
+- **ACK 形态**：新增独立 ACK 消息类型（JSON TextFrame）。端侧收到业务/通知消息后自动回 `ACK(8)`；服务端记录并返回 `ACK_RESP(9)`（可选，便于联调）。
+- **目的**：建立端到端可观测性（投递->回执延迟），并为 Phase2（ACK 驱动重发）提供协议与指标基线。
+- **幂等要求（端侧）**：ACK 的 `messageId/chatId/sequence` 必须按 string 回传，禁止 number 化导致精度丢失。
+
+ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
+
+- `header.messageType = 8`
+- `header.messageId`: string（ACK 自己的消息ID）
+- `header.timestamp`: number
+- `body.messageId`: string（被确认的业务消息 messageId）
+- `body.chatId`: string
+- `body.sequence`: string
+- `body.senderId/receiverId/groupId/tenantId`: string
+- `body.ackType`: string（当前落地 `RECEIVED`）
+- `body.clientReceivedAt`: number（客户端收到业务消息的本地时间戳）
+- `body.originalTimestamp`: string（原业务消息 header.timestamp，按 string 透传）
+
+观测口径：
+
+- `deliveryDelayMs = clientReceivedAt - originalTimestamp`
+- Phase1 只做日志/指标，不做重发；Phase2 才引入重发队列/超时策略/限流/灰度。
 
 当前关键落点（便于回归定位）：
 
@@ -698,7 +744,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 ### C6（P0）：多端已读水位推进与同步事件
 
 - **目标**：同账号多端在线时，已读推进跨端一致（只升不降），并能通过 WS/HTTP 增量同步到所有端。
-- 状态：已完成（`mark-read-seq` 落库后 WS 推送 `SYSTEM_NOTIFY + conversationSnapshot`；端侧合并时对 `lastReadSequence/lastMessageSequence` 做 `max(old,new)`，并按差值重算 `unreadCount`，避免乱序覆盖）
+- 状态：已完成（企微/钉钉口径：水位只升不降；仅水位推进才产生事件；WS 推送 `SYSTEM_NOTIFY(cursorVersion)` 触发端侧增量 `syncConversations(cursor)`；并推送 `BADGE_UPDATE` 让其它端即时清 tab 红点，最终态以 sync 为准）
 - **范围**：
   - module-system：落库 `lastReadSequence`；产生“会话水位变更事件”（WS 推送或增量可见）
   - uniappx：接收水位变更事件并更新会话未读与角标
@@ -718,7 +764,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
   - 乱序/旧快照不覆盖新快照
     - 端侧合并 `conversationSnapshot` / `sync(items)` 时，必须按 `conversationVersion` 丢弃旧版本（旧快照不得把新状态覆盖掉）
   - 事件顺序无关
-    - `BADGE_UPDATE` 与 `SYSTEM_NOTIFY(conversationSnapshot)` 的到达顺序不固定；任意顺序下最终会话未读口径一致
+    - `BADGE_UPDATE` 与 `SYSTEM_NOTIFY(cursorVersion)` 的到达顺序不固定；任意顺序下最终会话未读口径一致（最终态以 `syncConversations(cursor)` 为准）
   - 离线兜底（断线补偿）
     - 端侧重连/重新认证成功后，必须触发一次节流的 `syncConversationsIncrementally(false)`；确保断线期间无 WS 也能拉到最新水位
   - 必测复现路径（可回归）
@@ -728,40 +774,75 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
     - 用例 4（离线端上线兜底）：B 端离线期间 A 端推进已读水位；B 端上线触发 `sync(cursor)` 后能拉到最新 `lastReadSequence/unreadCount`
 - 当前落地方式（最小侵入复用既有通道）：
   - 服务端在 `PUT /system/im/conversation/mark-read-seq` 成功落库并写入 `im_conversation_user_state` 后，向同一 userId 的所有 WS 连接推送 `MessageType.SYSTEM_NOTIFY`
-  - WS payload 携带 `conversationSnapshot`（由 `NettyMessageSender` 在 JSON 模式下自动构建/透传），端侧收到后调用 `conversationService.upsertFromSnapshot` 推进水位
+  - WS payload 透传 `cursorVersion`（允许不携带 `conversationSnapshot`），端侧收到后触发 `syncConversationsIncrementally(false)` 拉取增量会话状态
+  - 同时推送 `MessageType.BADGE_UPDATE` 用于即时刷新 tab 红点（最终态仍以 sync 为准）
 - **涉及文件/目录**：
   - `shengyu-module-system/.../AppImConversationController.java`（read watermark 上报 + sync 输出）
   - `shengyu-module-system/.../ImConversationServiceImpl.java`（mark-read-seq 后推送 `SYSTEM_NOTIFY`）
-  - `shengyu-framework/.../NettyMessageSender`（JSON payload 自动附带 `conversationSnapshot`）
+  - `shengyu-framework/.../NettyMessageSender`（JSON payload 透传 `cursorVersion`，并支持 BADGE_UPDATE body 序列化）
   - `shengyu-ui/shengyu-ui-admin-uniappx/services/conversation-service.uts`
-  - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`（`handleSystemNotify -> upsertFromSnapshot`）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`（`handleSystemNotify -> syncConversationsIncrementally`）
   - `shengyu-ui/shengyu-ui-admin-uniappx/services/badge-service.uts`
 
-### C7（P0/P1）：消息最终态字段（status/rev/edited）与端侧合并规则
+### C7（P0/P1）：消息最终态字段（status/rev）与端侧合并规则
 
-- **目标**：撤回/编辑/删除等事件在“实时 WS + 补偿拉取”两条链路下保持最终一致，避免撤回后被补偿拉回原文。
-- 状态：进行中（已完成撤回最终态一致：status=6 不回滚；编辑/多次变更 rev 待补齐）
+- **目标**：撤回/删除等事件在“实时 WS + 补偿拉取”两条链路下保持最终一致，避免撤回后被补偿拉回原文。
+- 状态：已完成（待联调/待验收；撤回/删除最终态一致：status=6 不回滚；rev 合并规则已固化）
 - **范围**：
-  - 服务端：消息模型增加最终态字段（至少 `status`、`rev`、`edited`）并在查询/sync 返回
+  - 服务端：消息模型增加最终态字段（至少 `status`、`rev`）并在查询/sync 返回
   - 客户端：同一 `messageId` 合并以 `rev` 更大者覆盖（或 serverTime 更新者覆盖）
 - **依赖**：C2（断线补偿 syncMessages）、F1（撤回）、（如有）消息编辑能力
 - **验收标准**：
   - 先收到撤回事件、后收到原消息：最终渲染为“已撤回”
-  - 断线补偿拉取不会把撤回/编辑前的旧内容覆盖回去
-  - 同一消息多次编辑/撤回：端侧最终态与服务端一致（可回归复现）
+  - 断线补偿拉取不会把撤回前的旧内容覆盖回去
+  - 同一消息多次撤回/最终态变更：端侧最终态与服务端一致（可回归复现）
 - 本期已落地（撤回最终态一致，企微/钉钉口径）：
   - 服务端落库 `im_chat_message.status=6`（撤回）后，`list-by-chat`/`pull` 返回 `status`
+  - 服务端落库 `im_chat_message.rev`：新消息 `rev=1`；撤回 `rev+1`（原子递增）
+  - REST 输出 `rev`（消息列表/补偿拉取）用于端侧最终态合并
+  - WS 撤回事件 `header.extra` 携带 `rev/recallBy/recallTime`
+  - WS 普通业务消息 `header.extra` 携带 `rev=1`（并与文件元数据等字段合并为同一 JSON）
+  - 撤回时间窗配置化：`im.recall.window-seconds`（默认 120 秒）
   - 端侧 WS 收到 `MessageType.RECALL` 后，替换为撤回提示（最终态）
   - 端侧从 HTTP `pull`/`list-by-chat` 映射消息时，若 `status=6` 直接渲染撤回提示
+  - 端侧 HTTP `pull` 断线补偿：已透传 `rev` 到 `MessageItem.rev`，确保 pull 场景同样遵循“rev 更大者为最终态”的合并规则
+  - 端侧 REST 历史分页 `list-by-chat`：拉取后先写入 `MessageService` 缓存并复用 `addMessageToCache(messageId+rev)` 合并规则，再从缓存读取渲染，避免 UI 层与 Service 层合并规则分叉
   - 端侧合并去重时：若任一侧为撤回最终态（6），禁止被非撤回原文覆盖
+  - 端侧 Delete-for-me：删除成功后同步清理 `MessageService` 本地缓存，避免重进会话“死灰复燃”
+  - 会话列表预览落库：撤回最后一条消息时，仅当 `last_message_id` 命中才更新 `lastMessageContent/type` 为 `[消息已撤回]`，并通过 `cursorVersion` 增量 sync 跨端可见
 - 回归项（必测复现路径）：
   - A 端发送消息 -> 撤回
   - B 端离线/断网 -> 重新上线触发 pull/list-by-chat
   - 期望：B 端最终展示为“已撤回”，不会被补偿拉回原文
+  - A 端撤回后，B 端会话列表最后一条预览应更新为 `[消息已撤回]`，换端/重登后仍不回滚
+  - 乱序到达：先收到撤回 WS（rev=2），后补偿拉取到原文（rev=1）时仍保持撤回最终态
 - **涉及文件/目录**：
   - `shengyu-module-system/.../AppImMessageController.java`（查询/sync 输出最终态字段）
   - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`（合并逻辑）
   - `sql/mysql/1.0/im/ddl_im_tables.sql`（消息表字段/索引）
+
+#### C7.x（P0）：对我删除（Delete-for-me）与清空聊天记录（Clear-history）跨端一致（已落地）
+
+- **目标**：对我删除/对我清空必须在“实时 WS + 断线补偿拉取”两条链路下保持最终一致；不会出现删除/清空后被 pull/list-by-chat 拉回。
+- **当前落地**：
+  - Delete-for-me：落库 `im_chat_message_tombstone`；`DELETE /system/im/message/delete?id=...` 幂等；`page/pull/detail` 过滤
+  - Clear-history：落库 `im_chat_clear_watermark(clear_sequence 单调递增)`；`DELETE /system/im/message/clear?chatId=...`；`page/pull/detail` 过滤
+  - 多端同步：两者均分配 `cursorVersion` 并 WS 推送 `SYSTEM_NOTIFY(cursorVersion)` 触发端侧增量 sync，同时推送 `BADGE_UPDATE`
+- **验收/回归（企业级必测）**：
+  - 用例 1（在线多端删除）：A 端删除 messageId=M；B 端在线，1s 内通过 `SYSTEM_NOTIFY(cursorVersion)` 增量 sync 后不再展示 M
+  - 用例 2（离线补偿删除）：B 端离线；A 删除 M；B 上线后 `pull/list-by-chat` 返回必须过滤 M
+  - 用例 3（在线多端清空）：A 端清空 chatId=C；B 端在线，增量 sync 后消息列表不展示清空前消息
+  - 用例 4（离线补偿清空）：B 端离线；A 清空 C；B 上线后 `pull/list-by-chat` 返回不得包含 `sequence <= clear_sequence` 的消息
+- **涉及文件/目录**：
+  - module-system：
+    - `.../service/im/ImMessageServiceImpl.java`（delete/clear 落库 + WS 通知 + 查询过滤）
+    - `.../controller/app/im/AppImMessageController.java`（新增 `DELETE /clear`）
+    - `.../dal/mysql/im/ImChatMessageTombstoneMapper.java`
+    - `.../dal/mysql/im/ImChatClearWatermarkMapper.java`
+    - `sql/mysql/1.0/im/ddl_im_tables.sql`（tombstone/clear-watermark 表）
+  - uniappx：
+    - `api/message.uts`（新增 `clearConversationMessages`）
+    - `pages/message/group-settings.uvue`（清空聊天记录调用后端）
 
 ### C7.1（P2，可选）：消息表情回应（Reaction）能力（受控开关 + 最终态一致性）
 
@@ -796,32 +877,36 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
   - `sql/mysql/1.0/im/ddl_im_tables.sql`（reaction 表/索引）
   - uniappx：`services/message-reaction-service.uts`（解除降级并对接新契约）
 
-### C7.2（P2，可选）：消息编辑（Edit）能力（受控开关 + rev 规则）
+### C7.2（P0/P1）：撤回后重新编辑（Re-edit after recall，对齐企微/钉钉）
 
-- **背景**：uniappx 已存在 `services/message-edit-service.uts` 调用，但 module-system 当前缺对应接口。编辑能力与撤回一样属于“最终态”，必须与 C7 合并规则绑定。
+- 状态：已完成
 
-- **目标**：支持消息编辑（窗口期/权限/审计），并保证补偿拉取不会覆盖回旧内容。
+- **目标**：仅当发送者本人撤回的**文字消息**，在撤回后 **5 分钟窗口内**展示“重新编辑”入口；点击后回填原文并**发送一条新消息**（原撤回消息保持最终态）。
+- **强制规则**：
+  - 重新编辑=发新消息（1A），禁止修改原撤回消息内容
+  - 发送者所有设备可重新编辑（2B）：撤回事件需仅对发送者本人多端下发 `originalContent`
+  - 群主/群管理员代撤回：发送者与管理员均不允许重新编辑
+  - 非文字消息撤回不支持重新编辑
 
-- **建议契约**：
-  - `PUT /system/im/message/edit` body：`{ messageId: string, content: string, clientTime?: number }`
-  - `GET /system/im/message/edit-history?messageId=...&pageNo=...&pageSize=...`（可选）
-
-- **一致性约束**：
-  - 编辑成功必须推进消息 `rev`，并设置 `edited=true`、`editTime/serverTime`
-  - WS 推送 `EDIT(203)`（或等价事件）必须携带 `messageId + rev + edited + content摘要/或拉取标记`
-  - `syncMessages` 返回必须包含最新 content + rev（或保证按 rev 合并）
-
-- **灰度/开关**：
-  - 默认关闭；按 tenant/user 灰度
+- **范围**：
+  - 服务端：撤回事件对“发送者本人”补充下发 `originalContent`（仅发送者可见，不广播）
+  - 端侧：撤回提示条显示“重新编辑”入口；点击后回填输入框并发送新消息
 
 - **验收标准**：
-  - 超过时间窗口编辑返回 403xxx（或业务码），端侧提示明确
-  - 先收到 edit 事件、后补偿拉旧消息：最终展示为已编辑（rev 合并生效）
-  - 编辑历史（如开启）分页稳定，且与最终态一致
+  - 自撤回文字消息：5 分钟内任意设备均可重新编辑并成功发送新消息
+  - 超过 5 分钟：入口消失，不可重新编辑
+  - 管理员/群主代撤回：所有端均无入口
+  - 非文字撤回：无入口
+  - 断线补偿：恢复后不出现“撤回被原文覆盖/重新编辑入口异常”
 
 - **涉及文件/目录**：
-  - module-system：`AppImMessageController`（新增 edit/edit-history）
-  - uniappx：`services/message-edit-service.uts`（解除降级并对接新契约）
+  - module-system：`ImMessageServiceImpl#recallMessage`（对发送者补充 originalContent 的通知）
+  - uniappx：`pages/message/chat.uvue`（撤回提示 + 重新编辑入口）
+  - uniappx：`services/message-service.uts`（处理撤回通知并保存 originalContent）
+
+- **接口说明（必须遵循）**：
+  - 本功能不提供“编辑原消息内容”的接口，因此 **不应新增** `PUT /system/im/message/edit` 或 edit-history。
+  - 重新编辑的发送行为复用“发送消息”接口（端侧回填后正常发送一条新消息）。
 
 ### C8（P1）：对我删除（Delete-for-me）墓碑（tombstone）与跨端保持
 
@@ -1071,7 +1156,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 
 ### V1（P1）：kkFileView 组件化部署（同环境一套）
 
-- 状态：未开始
+- 状态：已完成
 
 - **目标**：在开发/测试环境可一键拉起 kkFileView，并具备最小健康检查与日志定位能力。
 - **范围**：运维/部署（docker-compose 或 k8s 均可）
@@ -1095,7 +1180,7 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 
 ### V3（P1）：端侧统一预览入口（file-preview 页面）
 
-- 状态：未开始
+- 状态：已完成
 
 - **目标**：聊天页、群文件列表、搜索结果点击文件统一进入预览页，体验一致。
 - **范围**：uniappx
@@ -1108,11 +1193,120 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 
 ---
 
+## Milestone Q（P1）：全局搜索 + 聊天记录搜索（对齐 UI 方案）
+
+说明：本 Milestone 目标是落地“聚合搜索页 + 聊天记录搜索结果页”的可用闭环，并保证与 IM 会话模型（chatId/sequence）一致、与文件统一预览入口（file-preview）一致。
+
+权威接口入口：后端 App 端 IM 接口以 `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/app/im` 为准（Controller 上的 `@RequestMapping/@GetMapping/...` 为最终口径），端侧 API 层需要对齐该目录的路径与 VO。
+
+### Q1（P1）：聚合搜索页（/pages/common/search）
+
+- 状态：已完成
+
+- **目标**：支持搜索联系人/群聊/聊天记录入口，符合 UI 方案的分区结构与交互。
+- **范围**：uniappx
+- **依赖**：H（通讯录）/C3（会话模型）
+- **验收标准**：
+  - 输入关键词后展示分区结果：联系人/群聊/聊天记录（TopN）
+  - 空态可用、取消返回行为一致
+  - 点击“搜聊天记录”进入独立结果页并携带 keyword
+- **涉及文件/目录**：
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/common/search.uvue`
+
+### Q2（P1）：聊天记录搜索结果页（/pages/common/search-chat-history）
+
+- 状态：已完成
+
+- **目标**：分页展示“命中消息”列表，支持上拉加载更多。
+- **范围**：uniappx
+- **依赖**：接口 `GET /system/im/message/search`（端侧：`api/message.uts#searchMessages`）
+- **验收标准**：
+  - keyword 搜索返回稳定可回归（分页参数生效）
+  - 展示字段最少包含：chatName、snippet、sendTime
+  - 上拉加载更多可用，重复加载不重复渲染（去重 key：`chatId + messageId`）
+- **涉及文件/目录**：
+  - `shengyu-ui/shengyu-ui-admin-uniappx/api/message.uts#searchMessages`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-search-service.uts`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/common/search-chat-history.uvue`（需新增页面并注册 pages.json）
+
+### Q3（P1）：点击结果定位到会话消息（chatId + anchor）
+
+- 状态：已完成
+
+- **目标**：从搜索结果进入会话页后，自动定位到命中的消息。
+- **范围**：uniappx
+- **依赖**：C2（pull/list-by-chat）
+- **验收标准**：
+  - 若结果携带 `sequence`：进入会话后能定位到该 sequence 附近（并补齐缺失消息）
+  - 若仅携带 `messageId`：能在会话内解析出对应 sequence 并定位
+  - 弱网/大群场景不出现“定位失败但无提示”的静默失败
+
+### Q4（P1）：搜索结果中的文件打开统一入口（file-preview）
+
+- 状态：已完成
+
+- **目标**：搜索结果中点击 FILE/IMAGE/VIDEO 等附件时，统一走既有的预览/下载策略闭环。
+- **范围**：uniappx
+- **依赖**：Milestone V3（file-preview 统一入口）
+- **验收标准**：
+  - 点击文件：必须调用 `navToFilePreview({ fileId, url, name })`
+  - 能传 `fileId` 就必须传 `fileId`，由后端 `getFileOpenStrategy` 决定 PREVIEW/DOWNLOAD
+  - 禁止在搜索页直接调用 `uni.openDocument` 或自行实现下载预览逻辑
+- **涉及文件/目录**：
+  - `shengyu-ui/shengyu-ui-admin-uniappx/utils/nav.uts`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/common/file-preview.uvue`
+
+### Q5（P2，可选）：搜索历史/热门搜索/清空能力
+
+- 状态：已完成
+
+- **目标**：完善聚合搜索页体验：历史记录、热门搜索、清空确认。
+- **范围**：uniappx
+- **验收标准**：
+  - 历史记录最多 N 条，去重、最近优先
+  - 清空二次确认
+  - 热门搜索可配置/可隐藏
+
+### Q6（P1）：后端补齐（企业级适配）— 群聊/会话搜索 + 热门搜索（热词）
+
+- 状态：已完成
+
+- **背景**：当前后端 App 端 IM Controller 已包含 `GET /system/im/message/search`，但未提供
+  - 会话/群聊维度的“按 keyword 搜索”（端侧当前用 `conversation/list` 本地过滤，数据量大时性能与实时性不可控）
+  - “热门搜索（热词）”的可运营化配置接口（端侧当前为本地默认 + storage 缓存兜底）
+
+- **目标**：补齐企业级搜索能力所需的服务端接口，使端侧聚合搜索完全可由服务端驱动（可运营、可审计、可控）。
+
+- **建议契约**：
+  - `GET /system/im/conversation/search?keyword=...&conversationType=2&pageNo=...&pageSize=...`
+    - 仅返回当前用户可见的会话（群聊/单聊），默认推荐支持 `conversationType` 筛选
+    - 响应：`PageResult<AppImConversationRespVO>`（或精简 VO，至少含 chatId/targetName/groupMemberCount/conversationType）
+  - `GET /system/im/search/hot`（或 `GET /system/im/config/hot-search`）
+    - 响应：`{ list: string[], version?: string, ttlSeconds?: number }`
+    - 支持“可隐藏/可为空”（为空表示不展示热搜区块）
+
+- **验收标准**：
+  - 群聊/会话搜索：大租户（会话>=1w）查询响应可接受，分页参数生效
+  - 权限：仅返回当前用户可见的会话/群组
+  - 热搜：支持运营配置生效（无需发版），端侧可缓存并在 TTL 后刷新
+
+- **涉及文件/目录**：
+  - `shengyu-module-system/.../controller/app/im/AppImConversationController.java`（新增 search 接口）
+  - `shengyu-module-system/.../service/im/ImConversationService`（新增 search 能力）
+  - `shengyu-module-system/.../controller/app/im`（新增热搜接口 Controller，如单独 Controller）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/common/search.uvue`（对接服务端热搜/会话搜索）
+
+- **实现说明（以代码为准）**：
+  - 会话搜索：`GET /system/im/conversation/search`
+  - 热门搜索：`GET /system/im/search/hot`
+
 ## Milestone H（P1）：通讯录/组织架构（企业级通讯录能力基线）
 
 ### H1（P1）：部门联系人列表（list-by-dept）闭环
 
 - **背景**：`AppImContactController#getContactListByDept` 当前存在 `// TODO: 实现按部门查询联系人`，现状会返回全量联系人，端侧使用会产生“看似可用但数据不可信”。
+
+- 状态：进行中
 
 - **目标**：按部门维度稳定拉取联系人，具备企业级的租户隔离、数据权限与分页/排序能力（对齐企微/钉钉的组织通讯录）。
 
@@ -1137,6 +1331,30 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
   - `shengyu-module-system/.../service/im/ImContactService`（新增按部门查询能力）
   - `shengyu-module-system/.../dal/*`（按部门关联 user/dept 的 mapper/dao）
   - `shengyu-ui/shengyu-ui-admin-uniappx/api/contact.uts`（已存在调用，补齐分页参数后对齐）
+
+- **实现说明（以代码为准）**：
+  - 新增分页接口：`GET /system/im/contact/list-by-dept-page`（入参：deptId/pageNo/pageSize/keyword）
+  - 端侧接入：已完成（组织结构/我的部门/发起群聊选人均已按部门分页拉取，并支持跨部门选择）
+  - 精度规则：端侧已落地“ID 全程 string 化避免精度丢失”强制规则（见 `sql/doc/uni-app-x开发资料-摘录.md` 6.1）
+
+- **验收步骤（待联调/待验收）**：
+  - **接口可用性**：
+    - 调用 `GET /system/im/contact/list-by-dept-page?deptId=xxx&pageNo=1&pageSize=20` 返回结构包含 `list`、`total` 且分页参数生效。
+    - `pageNo=2` 时返回结果不与 `pageNo=1` 重叠（除非服务端排序不稳定，需修复排序）。
+  - **数据正确性**：
+    - `deptId=本部门`：返回成员数与后台组织成员一致（不多不少）。
+    - `deptId=子部门/上级部门`：符合预期的组织范围策略（当前实现包含子部门成员；若产品期望仅本部门需确认并调整）。
+  - **keyword 过滤**：
+    - `keyword=张`：仅返回部门范围内命中用户；清空 keyword 后可恢复全量。
+  - **跨部门选人（发起群聊/添加成员）**：
+    - 进入 `initiate-group` 后从“组织结构/我的部门”跨部门选择成员，返回后选中数量正确、重复选择不重复计数。
+    - 确认提交时 `memberIds` 为 string 数组（不发生精度丢失，ID 不被截断/四舍五入）。
+  - **精度回归点（必须）**：
+    - 任意页面/全局状态中不得出现对 ID 的 `Number()`/`parseInt()`/`+id` 转换；路由参数与 storage 中 ID 均为 string。
+  - **权限与租户隔离（必须）**：
+    - 跨租户/无权限 `deptId` 访问：按产品要求返回明确错误（403/业务错误码），不得泄露其它租户成员。
+  - **性能**：
+    - 大部门（>=5000）分页滚动加载无明显卡顿；接口响应时间在可接受范围。
 
 ---
 

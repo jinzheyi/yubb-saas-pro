@@ -131,7 +131,7 @@
 						avatarText: getAvatarText(contact.nickname),
 						avatarBg: getUserAvatarColor(contact.id),
 						star: contact.star,
-						selected: isMemberSelected(contact.id)
+						selected: isMemberSelected(String(contact.id))
 					}
 				})
 				
@@ -198,7 +198,7 @@
 						avatarText: getAvatarText(contact.nickname),
 						avatarBg: getUserAvatarColor(contact.id),
 						star: contact.star,
-						selected: isMemberSelected(contact.id)
+						selected: isMemberSelected(String(contact.id))
 					}
 				})
 				
@@ -240,7 +240,7 @@
 		// 使用全局状态管理
 		toggleMember(contact)
 		// 同步本地状态
-		contact.selected = isMemberSelected(contact.id)
+		contact.selected = isMemberSelected(String(contact.id))
 	}
 
 	/**
@@ -271,7 +271,7 @@
 	 */
 	function syncSelectionState() {
 		for (let i = 0; i < followingList.value.length; i++) {
-			followingList.value[i].selected = isMemberSelected(followingList.value[i].id)
+			followingList.value[i].selected = isMemberSelected(String(followingList.value[i].id))
 		}
 	}
 

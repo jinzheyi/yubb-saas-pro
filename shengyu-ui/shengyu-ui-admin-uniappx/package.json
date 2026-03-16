@@ -4,5 +4,12 @@
   "private": true,
   "dependencies": {
     "crypto-js": "^4.1.1"
+  },
+  "devDependencies": {
+    "protobufjs": "^7.2.6",
+    "protobufjs-cli": "^1.1.1"
+  },
+  "scripts": {
+    "proto:gen": "pbjs --force-string -t static-module -w es6 -o utils/proto/im_message_pb.esm.js utils/proto/im_message.proto && pbts -o utils/proto/im_message_pb.esm.d.ts utils/proto/im_message_pb.esm.js"
   }
 }

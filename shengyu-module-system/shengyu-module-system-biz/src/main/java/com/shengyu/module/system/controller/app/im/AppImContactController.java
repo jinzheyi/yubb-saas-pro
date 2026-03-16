@@ -1,8 +1,10 @@
 package com.shengyu.module.system.controller.app.im;
 
 import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactListByDeptReqVO;
 import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactRespVO;
 import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.contact.AppImContactSettingUpdateReqVO;
@@ -70,6 +72,13 @@ public class AppImContactController {
     public CommonResult<List<AppImContactRespVO>> getContactListByDept(@RequestParam("deptId") Long deptId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return success(contactService.getContactListByDept(userId, deptId));
+    }
+
+    @GetMapping("/list-by-dept-page")
+    @Operation(summary = "根据部门ID分页获取联系人列表")
+    public CommonResult<PageResult<AppImContactRespVO>> getContactPageByDept(@Valid AppImContactListByDeptReqVO reqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(contactService.getContactPageByDept(userId, reqVO));
     }
 
     @GetMapping("/list-star")

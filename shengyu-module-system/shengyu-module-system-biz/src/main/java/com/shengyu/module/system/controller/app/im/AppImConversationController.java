@@ -1,10 +1,12 @@
 package com.shengyu.module.system.controller.app.im;
 
 import com.shengyu.framework.common.pojo.CommonResult;
+import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
+import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationSyncRespVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationUpdateReqVO;
 import com.shengyu.module.system.service.im.ImBadgeService;
@@ -44,6 +46,14 @@ public class AppImConversationController {
     public CommonResult<List<AppImConversationRespVO>> getConversationList() {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return success(conversationService.getConversationList(userId));
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "搜索会话（群聊/单聊）")
+    public CommonResult<PageResult<AppImConversationRespVO>> searchConversations(
+            @Valid AppImConversationSearchReqVO searchReqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(conversationService.searchConversations(userId, searchReqVO));
     }
 
     @GetMapping("/sync")
