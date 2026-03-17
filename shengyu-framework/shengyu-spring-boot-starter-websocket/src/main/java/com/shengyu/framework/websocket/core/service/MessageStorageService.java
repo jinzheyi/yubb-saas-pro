@@ -3,6 +3,8 @@ package com.shengyu.framework.websocket.core.service;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.service.dto.MessageSaveResult;
 
+import java.util.List;
+
 /**
  * 消息存储服务接口（SPI）
  * 
@@ -86,5 +88,19 @@ public interface MessageStorageService {
         return MessageSaveResult.builder()
                 .messageId(id)
                 .build();
+    }
+
+    /**
+     * 标记消息为已读（用于 WS 已读回执）
+     *
+     * 说明：
+     * - 中间件收到 READ_RECEIPT 后会调用此方法
+     * - 默认实现为空，业务模块按需实现落库逻辑
+     *
+     * @param userId 当前读者用户ID
+     * @param messageIds 消息ID列表
+     */
+    default void markMessagesRead(Long userId, List<Long> messageIds) {
+        // no-op
     }
 }

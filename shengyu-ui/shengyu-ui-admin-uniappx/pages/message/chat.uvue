@@ -3900,11 +3900,35 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (options['type']) {
 			chatType.value = options['type']
 		}
+
+		// 兼容：部分入口使用 targetType 标识会话类型（2=群聊，1=单聊）
+		// 若未显式传 type，则按 targetType 推断 chatType，避免群聊被误判为单聊导致 groupId->chatId 映射失败
+		try {
+			const tt = options['targetType']
+			if (tt != null && tt !== '') {
+				const ttStr = tt.toString()
+				if (ttStr === '2' && (chatType.value == null || chatType.value === '')) {
+					chatType.value = 'group'
+				}
+				if (ttStr === '1' && (chatType.value == null || chatType.value === '')) {
+					chatType.value = 'single'
+				}
+			}
+		} catch (e) {
+			// ignore
+		}
 		
 		// 获取群聊 ID（字符串，避免精度丢失）
 		if (options['groupId']) {
 			groupId.value = options['groupId'] as string
 			targetId.value = groupId.value  // 群聊时 targetId 就是 groupId
+		}
+
+		// 兼容：仅传 targetId + targetType=2 的群聊跳转场景
+		if ((groupId.value == null || groupId.value === '' || groupId.value === '0')
+			&& (chatType.value === 'group')
+			&& targetId.value && targetId.value !== '' && targetId.value !== '0') {
+			groupId.value = targetId.value
 		}
 		
 		// 获取名称

@@ -24,6 +24,7 @@ import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -60,20 +61,22 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
         try {
             json = JSONUtil.parseObj(text);
         } catch (Exception e) {
-            // 非 JSON，交给后续处理（例如 ping/pong 或其他协议）
-            super.channelRead(ctx, msg);
+            sendJsonClose(ctx, "JSON_PARSE_ERROR", 400, "请求格式错误：无法解析为 JSON");
+            ctx.close();
             return;
         }
 
         JSONObject headerJson = json.getJSONObject("header");
         if (headerJson == null) {
-            super.channelRead(ctx, msg);
+            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：缺少 header");
+            ctx.close();
             return;
         }
 
         Integer messageTypeValue = headerJson.getInt("messageType");
         if (messageTypeValue == null) {
-            super.channelRead(ctx, msg);
+            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：缺少 header.messageType");
+            ctx.close();
             return;
         }
 
@@ -99,8 +102,32 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
         // 系统消息在 HeartbeatHandler/AuthHandler 已处理，这里只处理业务消息（>=100）
         // 但 ACK 是协议级回执，需要在这里进入 processorFactory 统一处理
         // 注意：ACK=8 是新协议类型；在 protobuf 生成代码尚未更新时避免直接引用 MessageType.ACK_VALUE
-        if (messageTypeValue < MessageType.TEXT_VALUE && messageTypeValue != 8) {
+        if (messageTypeValue < MessageType.TEXT_VALUE) {
             super.channelRead(ctx, msg);
+            return;
+        }
+
+        if (headerJson.get("messageId") == null) {
+            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：缺少 header.messageId");
+            ctx.close();
+            return;
+        }
+        long messageIdParsed = readLong(headerJson, "messageId", -1L);
+        if (messageIdParsed <= 0L) {
+            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：header.messageId 非法");
+            ctx.close();
+            return;
+        }
+
+        if (headerJson.get("timestamp") == null) {
+            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：缺少 header.timestamp");
+            ctx.close();
+            return;
+        }
+        long ts = readLong(headerJson, "timestamp", -1L);
+        if (ts <= 0L) {
+            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：header.timestamp 非法");
+            ctx.close();
             return;
         }
 
@@ -108,8 +135,33 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
         sessionManager.updateLastBizActiveTime(ctx.channel());
 
         try {
-            ImMessage imMessage = buildImMessageFromJson(ctx, headerJson, json.get("body"));
+            Object bodyObj = json.get("body");
+            if (messageTypeValue == MessageType.TEXT_VALUE) {
+                JSONObject bodyJson = null;
+                if (bodyObj instanceof JSONObject) {
+                    bodyJson = (JSONObject) bodyObj;
+                } else if (bodyObj != null) {
+                    try {
+                        bodyJson = JSONUtil.parseObj(bodyObj);
+                    } catch (Exception ignore) {
+                    }
+                }
+                String content = bodyJson != null ? bodyJson.getStr("content", "") : "";
+                if (content == null || content.trim().isEmpty()) {
+                    sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：TEXT.content 不能为空");
+                    ctx.close();
+                    return;
+                }
+            }
+
+            ImMessage imMessage = buildImMessageFromJson(ctx, headerJson, bodyObj);
             MessageType messageType = imMessage.getHeader().getMessageType();
+
+            if (messageType == null || messageType == MessageType.UNKNOWN) {
+                sendJsonClose(ctx, "UNSUPPORTED_MESSAGE_TYPE", 400, "不支持的 messageType: " + messageTypeValue);
+                ctx.close();
+                return;
+            }
 
             if (log.isInfoEnabled()) {
                 MessageHeader h = imMessage.getHeader();
@@ -134,6 +186,22 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
             TenantUtils.execute(tenantId, () -> processor.process(ctx, imMessage));
         } catch (Exception e) {
             log.error("[JsonBusiness] 处理业务 JSON 消息异常, payload: {}", text, e);
+        }
+    }
+
+    private void sendJsonClose(ChannelHandlerContext ctx, String action, int code, String message) {
+        try {
+            JSONObject payload = JSONUtil.createObj()
+                .set("header", JSONUtil.createObj()
+                    .set("messageId", System.currentTimeMillis())
+                    .set("messageType", MessageType.CLOSE_VALUE)
+                    .set("timestamp", System.currentTimeMillis()))
+                .set("body", JSONUtil.createObj()
+                    .set("action", action)
+                    .set("code", code)
+                    .set("message", message));
+            ctx.writeAndFlush(new TextWebSocketFrame(payload.toString()));
+        } catch (Exception ignore) {
         }
     }
 

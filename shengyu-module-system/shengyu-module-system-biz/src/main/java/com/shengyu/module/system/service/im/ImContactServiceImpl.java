@@ -13,6 +13,7 @@ import com.shengyu.module.system.dal.dataobject.im.ImContactSettingDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.dataobject.dept.UserDeptDO;
 
+import java.util.Comparator;
 import java.util.ArrayList;
 import java.util.Collections;
 import com.shengyu.module.system.dal.mysql.dept.DeptMapper;
@@ -153,6 +154,10 @@ public class ImContactServiceImpl implements ImContactService {
                     return StrUtil.contains(nick, keyword);
                 })
                 .collect(Collectors.toList());
+
+        filtered.sort(Comparator
+                .comparing((AdminUserDO u) -> u.getNickname() != null ? u.getNickname() : "")
+                .thenComparing(u -> u.getId() != null ? u.getId() : 0L));
 
         long total = filtered.size();
         if (total <= 0) {

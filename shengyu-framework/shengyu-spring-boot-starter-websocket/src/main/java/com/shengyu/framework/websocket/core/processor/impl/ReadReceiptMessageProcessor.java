@@ -66,6 +66,12 @@ public class ReadReceiptMessageProcessor implements MessageProcessor {
             // 这里通过反射或Spring容器获取实现类来调用扩展方法
             // 由于架构限制，已读回执的更新逻辑应该在业务层实现
             // 这里只负责转发已读回执给发送者
+            try {
+                messageStorageService.markMessagesRead(userId, messageIds);
+            } catch (Exception e) {
+                log.warn("[ReadReceipt] 落库更新已读状态失败, userId: {}, messageCount: {}, error: {}",
+                        userId, messageIds.size(), e.getMessage());
+            }
             
             // 2. 转发已读回执给消息发送者
             // 让发送者知道对方已读消息

@@ -75,7 +75,7 @@
 
 ### 2.4.1 会话增量同步（cursorVersion）
 
-- **后端**：`shengyu-module-system/.../service/im/ImConversationServiceImpl#syncConversations`
+- **后端**：`shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImConversationServiceImpl.java#syncConversations`
   - 数据源：`im_conversation_user_state`
   - 过滤：`cursor_version > cursorVersion`
   - 返回：`nextCursorVersion/hasMore/items`（items 含 `cursorVersion/conversationVersion/lastMessageSequence/lastReadSequence/unreadCount`）
@@ -86,35 +86,35 @@
 
 ### 2.4.2 会话幂等/乱序保护（conversationVersion）
 
-- **前端**：`conversation-service.uts#upsertFromSnapshot`
+- **前端**：`shengyu-ui/shengyu-ui-admin-uniappx/services/conversation-service.uts#upsertFromSnapshot`
   - 合并规则：incoming `conversationVersion` 不大于 current 时丢弃，避免旧快照覆盖新状态
 
 ### 2.4.3 WebSocket 推送版本透传与补偿
 
-- **后端 WS Sender**：`shengyu-framework/.../NettyMessageSender#sendToUser`
+- **后端 WS Sender**：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/sender/NettyMessageSender.java#sendToUser`
   - payload root 透传：`cursorVersion/conversationVersion`
   - cursorVersion 非空时可跳过 snapshot 构建（避免额外查询）
 
 - **前端 WS**：
-  - `shengyu-ui/.../utils/websocket.uts`：AUTH 成功后触发节流补偿 sync（对标企微/钉钉的断线恢复）
-  - `shengyu-ui/.../services/message-service.uts`：支持从 WS root 读取 `cursorVersion` 做 gap 检测（snapshot 为空也可补偿）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts`：AUTH 成功后触发节流补偿 sync（对标企微/钉钉的断线恢复）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/conversation-service.uts#handleRealtimeCursorVersion`：支持从 WS root 读取 `cursorVersion` 做 gap 检测（snapshot 为空也可补偿）
 
 ### 2.4.4 已读水位/角标一致性（对标企微/钉钉）
 
 - **权威接口**：`PUT /system/im/conversation/mark-read-seq?chatId=&readSequence=`
-  - **后端**：`ImConversationServiceImpl#markConversationReadBySequence` + `ImChatUserMapper#markReadToSequence`
+  - **后端**：`shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImConversationServiceImpl.java#markConversationReadBySequence` + `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/dal/mysql/im/ImChatUserMapper.java#markReadToSequence`
   - 规则：水位只升不降（GREATEST），并把 `unread_count` 清零
 
 - **短期补充接口（仅用于端到端状态闭环；长期以水位为准）**：`PUT /system/im/message/mark-read?messageIds=...`
   - 说明：用于端侧按 messageIds 快速落“已读”状态（例如已读回执可视化），但未读数/跨端一致仍以 `lastReadSequence` 为权威。
 
 - **角标刷新**：`GET /system/im/badge/get`
-  - **后端**：`ImBadgeServiceImpl#getBadgeData` -> `ImConversationServiceImpl#getConversationBadges`
+  - **后端**：`shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImBadgeServiceImpl.java#getBadgeData` -> `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImConversationServiceImpl.java#getConversationBadges`
   - 口径：`unread = lastMessageSequence - lastReadSequence`（与会话列表一致）
 
 - **前端**：
-  - `badge-service.uts#clearConversationBadge`：进入会话始终推进服务端已读水位（幂等），避免“本地 badge 未加载导致服务端未清”
-  - `pages/message/chat.uvue`：进入会话上报 readSequence 使用权威 `lastMessageSequence`（并兜底页面消息最大 seq），避免上报 0 导致未清
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/badge-service.uts#clearConversationBadge`：进入会话始终推进服务端已读水位（幂等），避免“本地 badge 未加载导致服务端未清”
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`：进入会话上报 readSequence 使用权威 `lastMessageSequence`（并兜底页面消息最大 seq），避免上报 0 导致未清
 
 多端同步（企业级推荐：推送触发 sync，最终态以 sync 为准）：
 
@@ -136,13 +136,13 @@
 
 ### 2.4.5 群聊摘要一致性（对标企微/钉钉）
 
-- **后端写入**：`SystemMessageStorageServiceImpl#updateChatUserAsync`
-  - 群聊 `last_message_content` 按成员写入 `"我: ..."/"昵称: ..."`（兜底 senderId），保证刷新后仍可展示发送者
+- **后端写入**：`shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/spi/SystemMessageStorageServiceImpl.java#updateChatUserAsync`
+  - 群聊 `last_message_content` 按成员写入 `"我: {摘要}"/"昵称: {摘要}"`（示例文案；兜底 senderId），保证刷新后仍可展示发送者
 
-- **后端读取**：`ImConversationServiceImpl#buildPreviewByType`
+- **后端读取**：`shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImConversationServiceImpl.java#buildPreviewByType`
   - raw 非空优先返回 raw（截断），避免类型占位文案覆盖发送者前缀
 
-- **前端渲染**：`pages/message/message.uvue#buildConversationPreview`
+- **前端渲染**：`shengyu-ui/shengyu-ui-admin-uniappx/pages/message/message.uvue#buildConversationPreview`
   - raw 非空优先展示 raw（截断），保证推送与刷新一致
 
 ### 2.4.6 群消息分页查询口径（对标企微/钉钉）
@@ -170,6 +170,8 @@
 
 - WS 普通业务消息（TEXT/IMAGE/FILE/...）：
   - `header.extra`（JSON）携带 `rev`（默认 1），并与文件元数据等扩展字段合并（同一个 JSON）
+
+说明：此处的 `...` 表示“其它业务消息类型”，非协议字段。
 
 - 撤回时间窗配置：
   - 配置键：`im.recall.window-seconds`
@@ -268,18 +270,19 @@
 #### 6.3.1 协商优先级
 
 1. **WebSocket SubProtocol（首选）**：`Sec-WebSocket-Protocol`
-2. **首帧探测（兜底）**：客户端首帧发送 magic/版本头，服务端在 read timeout 内识别
+2. **PROBE（必须）**：连接建立后客户端发送 `PROBE` 完成版本/能力协商，同时固化本连接的 codec
 
 协商输出（必须落到连接会话上下文）：
 
 - `codec`：`PB` / `JSON`
 - `protoVersion`：如 `v1`
-- `negotiationMode`：`SUB_PROTOCOL` / `FIRST_FRAME_PROBE`
+- `negotiationMode`：`subprotocol` / `probe`
 
 不变式：
 
 - **一个连接只绑定一个 codec**，绑定后不得切换（切换必须重新建链）
 - 协商必须在 AUTH 之前完成，否则无法正确解码 AUTH
+- **严格模式（当前工程已启用）**：即使已通过 SubProtocol 协商出 codec，客户端仍必须先发送 `PROBE`，再发送 `AUTH_REQ`（用于能力/版本对账与回归定位）。
 
 #### 6.3.2 SubProtocol 约定（建议）
 
@@ -298,30 +301,38 @@
 
 #### 6.3.3 首帧探测（必须具备）
 
-原因：
+当前工程实现说明（以代码为准）：
 
-- 部分终端/代理可能不透传 `Sec-WebSocket-Protocol`
+- 本项目的“首帧探测/协商”统一通过 **TextFrame 的 `PROBE` 消息**完成。
+- `Sec-WebSocket-Protocol` 仅用于在握手阶段提前绑定 `codec`（便于立刻启用载体约束与编解码），但不会替代 `PROBE`。
 
-建议首帧格式（Binary）：
+`PROBE` 参考格式（JSON TextFrame）：
 
-- `MAGIC(4 bytes) = 0x49 0x4D 0x50 0x42`（示例："IMPB"）
-- `VERSION(1 byte) = 1`
-- `CODEC(1 byte) = 1(pb) / 2(json)`
-- `FLAGS(2 bytes)`
+```json
+{
+  "header": {
+    "messageId": "<string>",
+    "messageType": 6,
+    "timestamp": "<string>"
+  },
+  "body": {
+    "codec": "json | pb",
+    "features": {
+      "ack": true
+    }
+  }
+}
+```
 
-建议补充字段（可选）：
+服务端响应 `PROBE_RESP(7)`，并在连接上下文固化：
 
-- `HEADER_CRC(4 bytes)`：用于快速拒绝错误流量（可选）
+- `codec`：`json` / `pb`
+- `negotiationMode`：`subprotocol` / `probe`
+- `subprotocol`：握手选中的 subprotocol（若有）
 
-读超时建议：
+严格模式超时（当前工程已落地）：
 
-- 连接升级成功后 `ProbeTimeoutMs`（例如 3s）内必须收到首帧；否则关闭连接
-
-探测规则：
-
-- 若首帧为 Text：认为 JSON
-- 若首帧为 Binary 且 magic 匹配：按 `CODEC` 选择
-- 若首帧为 Binary 且无法识别：直接 CLOSE（协议错误）
+- 连接建立后必须在 `shengyu.netty.probeTimeoutMs`（默认 `3000ms`）内完成 `PROBE`，否则服务端发送 `CLOSE(PROBE_TIMEOUT)` 并断开连接。
 
 协商状态机（服务端）：
 
@@ -357,8 +368,8 @@
 
 - **前端**：`shengyu-ui/shengyu-ui-admin-uniappx/utils/message-utils.uts#generateMessageId`（snowflake-like）
   - `utils/message-handler.uts#MessageBuilder.generateMessageId` 统一复用该实现
-- **后端**：`shengyu-framework/.../JsonBusinessMessageHandler#readLong` 兼容 `header.messageId` 为 string/number
-  - `shengyu-module-system/.../SystemMessageStorageServiceImpl#saveMessageWithId`：`messageDO.setId(header.getMessageId())`
+- **后端**：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/JsonBusinessMessageHandler.java#readLong` 兼容 `header.messageId` 为 string/number
+  - `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/spi/SystemMessageStorageServiceImpl.java#saveMessageWithId`：`messageDO.setId(header.getMessageId())`
 - `sequence`：服务端生成（建议会话维度递增），用于排序与断线补偿
 - `extra`：扩展 JSON（存放 subType / debug 等）
 
@@ -577,22 +588,22 @@
 ```json
 {
   "header": {
-    "messageId": 1710000000000,
+    "messageId": "1710000000000",
     "messageType": 3,
-    "timestamp": 1710000000000,
-    "traceId": "...",
-    "extra": "{...}"
+    "timestamp": "1710000000000",
+    "traceId": "t-1710000000000",
+    "extra": "{}"
   },
   "body": {
-    "...": "..."
+    "text": "hello"
   }
 }
 ```
 
 JSON 兼容建议：
 
-- `header.messageId` 允许 string/number（端侧统一使用 string，但服务端需兼容）
-- `header.timestamp` 允许 number
+- `header.messageId` 建议使用 string（端侧统一使用 string，服务端需兼容 string/number）
+- `header.timestamp` 建议使用 string（端侧 long-safe），服务端可兼容 string/number
 - `body` 允许按 `messageType` 的不同结构变化，但必须可被服务端映射到统一领域对象
 
 ### 6.5 Netty Pipeline 设计（同端口双栈）
@@ -601,13 +612,19 @@ JSON 兼容建议：
 
 推荐处理顺序（概念层）：
 
-1. **HTTP 握手 / WebSocket Upgrade**
-2. **协议协商**（SubProtocol / 首帧探测）
-3. **Frame 聚合与大小限制**（防止超大帧 OOM）
-4. **Decoder**（JSON / Protobuf） -> 统一领域对象
-5. **AuthHandler**（鉴权前置，未认证仅允许 AUTH_REQ/HEARTBEAT）
-7. **Business Processor**（MessageProcessor）
-8. **Encoder**（JSON / Protobuf）
+1. **HTTP 握手 / WebSocket Upgrade**（`WebSocketServerProtocolHandler`）
+2. **握手协商结果固化**（`Sec-WebSocket-Protocol` -> `codec` 绑定到 channel attr）
+3. **WebSocket 帧入口与载体约束**（`WebSocketFrameHandler`）
+  - `codec` 未绑定：仅允许 `PROBE/CLOSE` 走 TextFrame
+  - `codec=pb`：除 `PROBE/PROBE_RESP/CLOSE` 外，业务消息必须走 BinaryFrame
+  - `codec=json`：业务消息走 TextFrame，BinaryFrame 直接拒绝
+4. **Decoder**
+  - JSON：TextFrame -> `String` -> `AuthHandler` / `JsonBusinessMessageHandler`
+  - Protobuf：BinaryFrame -> `ByteBuf` -> `ProtobufVarint32FrameDecoder + ProtobufDecoder(ImMessage)`
+5. **AuthHandler**（鉴权前置；严格模式下未 PROBE 不允许 AUTH_REQ）
+6. **Business Processor**（`MessageProcessorFactory` 分发）
+7. **Encoder**
+  - Protobuf 出站：`WebSocketProtobufOutboundHandler` 将 `ImMessage` 包装成 `BinaryWebSocketFrame`（varint32 length-prefix）
 
 ---
 
@@ -621,12 +638,21 @@ JSON 兼容建议：
 
 ### 7.2 ACK / 重投 / 幂等
 
-- 发送方本地先落 UI（pending），发送后等待 ACK
-- 服务端收到消息：
-  - 持久化并分配 `sequence`
-  - 返回 ACK（含 messageId/sequence）
-- 发送方超时未收到 ACK：
-  - 按退避策略重投（需服务端幂等保证）
+- 发送方本地先落 UI（pending），发送后等待“服务端确认/补偿闭环”。
+
+当前工程 ACK 说明（以代码为准，phase1）：
+
+- `ACK(8)` 是“投递回执/客户端接收回执”的协议控制消息，**当前阶段主要用于日志/指标 + 去重**，尚未作为“发送成功”的强一致依据。
+- `ACK_RESP(9)` 为可选响应（便于联调与打点）。
+
+实现要点：
+
+- JSON ACK：由 `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/AuthHandler.java#handleJsonAck` 接收并记录日志，随后返回 `ACK_RESP(9)`（TextFrame）。
+- Protobuf ACK：进入 `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/processor/impl/AckMessageProcessor.java`，使用 `(tenantId:userId:ackType:messageId)` 作为 key 做 10min 去重，并记录日志。
+
+重投/幂等建议（后续迭代）：
+
+- 若未来将 ACK 作为强一致的“送达确认”，必须补齐：服务端落库投递状态、可对账离线队列、以及与消息幂等键（`messageId`）的强绑定。
 
 重投建议：
 
@@ -671,7 +697,7 @@ JSON 兼容建议：
 
 - **方案 S1：DB 自增（每会话一行水位表）**
   - `im_conversation_seq(conversation_id, max_sequence, updated_at)`
-  - 更新：`UPDATE ... SET max_sequence = max_sequence + 1 WHERE conversation_id=?`（需事务/行锁）
+  - 更新（示意）：`UPDATE im_conversation_seq SET max_sequence = max_sequence + 1 WHERE conversation_id=?`（需事务/行锁）
 * **方案 S2：Redis INCR（会话 key）**
   - key：`im:seq:{conversationId}`
 
@@ -768,7 +794,7 @@ JSON 兼容建议：
 - `im_user_cursor`
   - 唯一键：`(tenant_id, user_id)`
   - 字段：`next_cursor_version BIGINT NOT NULL`
-  - 分配规则：每次需要产生会话列表变更时做原子 `+1`（可用 `UPDATE ... SET next=LAST_INSERT_ID(next+1)`）
+  - 分配规则：每次需要产生会话列表变更时做原子 `+1`（示意：`UPDATE im_user_cursor SET next_cursor_version = LAST_INSERT_ID(next_cursor_version + 1) WHERE tenant_id=? AND user_id=?`）
 
 说明：
 
@@ -1388,7 +1414,7 @@ WS 增强（后续）：
 - `traceId`：贯穿 HTTP <-> WS <-> DB/MQ 的链路追踪 ID
 - `conversationId`：会话维度定位
 - `codec`：PB/JSON（协议双栈定位必备）
-- `negotiationMode`：SUB_PROTOCOL/FIRST_FRAME_PROBE
+- `negotiationMode`：subprotocol/probe
 - `code`：错误码（400xxx/401xxx/403xxx/429xxx/500xxx）
 - `retryable/retryAfterMs`：可重试判定（尤其对 ACK/限流场景）
 
@@ -1409,9 +1435,22 @@ WS 增强（后续）：
 - KICKED/REAUTH_REQUIRED 次数
 - 消息端到端延迟（p50/p95/p99）
 
+当前工程说明（以代码为准）：
+
+- 当前工程主要依赖结构化日志进行排障，尚未在 WebSocket starter 中系统性接入 metrics/仪表盘/告警（本章其余指标/Runbook 口径为企业级规划）。
+- 关键日志入口（已落地，便于定位）：
+  - 会话与互踢/撤销：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettySessionManager.java`
+  - 载体约束/协商超时：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/WebSocketFrameHandler.java`
+  - PROBE/AUTH/ACK（JSON）：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/AuthHandler.java`
+  - 租约提示/到期：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettyAuthLeaseMonitor.java`
+
 ### 11.3 企业级指标目录
 
 企业级上线要求必须具备以下指标目录：
+
+当前工程说明（以代码为准）：
+
+- 下述指标目录为企业级落地目标，当前工程尚未在 WebSocket starter 中系统性埋点产出（需后续结合 metrics/告警平台逐项落地）。
 
 - **连接与协商**
   - `ws_connections{codec,tenantId,deviceType}`（当前在线数）
@@ -1438,6 +1477,10 @@ WS 增强（后续）：
 
 建议将以下 SLO 写入上线门禁（并在 Backlog 中固化为验收）：
 
+当前工程说明（以代码为准）：
+
+- 当前工程尚未形成可自动计算的 SLO 指标口径与门禁流水线（需在指标落地后补齐）。
+
 - 连接：
   - WS 建链成功率（排除被踢/撤销）：>= 99.5%
   - 重连成功率（30s 内）：>= 99%
@@ -1455,6 +1498,10 @@ WS 增强（后续）：
 - 推送异常：推送失败率、到达率
 
 补充告警规则建议（示例，最终阈值以压测为准）：
+
+当前工程说明（以代码为准）：
+
+- 当前工程尚未落地统一的告警规则与自愈编排（需在 11.3 指标埋点落地后补齐）。
 
 - `ws_negotiation_fail_total` 突增（5min 环比/同比）
 - `ws_codec_downgrade_total` 突增（可能 pb 灰度异常）
@@ -1480,6 +1527,10 @@ WS 增强（后续）：
   - “ACK 超时暴涨”排查步骤
   - “协商失败/降级暴涨”排查步骤
   - “推送失败率突增”排查步骤
+
+当前工程说明（以代码为准）：
+
+- Dashboard/Runbook 的指标与告警体系尚未工程化落地，当前阶段以“日志 + 接口回归用例 + 联调抓包”为主。
 
 ### 11.7 压测与容量评估口径（与 Backlog E2 对齐）
 
@@ -1530,6 +1581,7 @@ ID 精度约束（企业级必须冻结）：
 
 - chatId/groupId/messageId：端侧统一使用 string（避免 JS number 精度丢失）
 - 服务端可接受 string/number 入参，但返回建议统一为 string（或端侧统一 toString）
+- 端侧约束的工程化细节与已知坑位（UTS/uni-app-x）：见 `sql/doc/uni-app-x开发资料-摘录.md` 6.1
 
 错误码约束（与 WS 一致的“可重试判定”）：
 
@@ -1563,8 +1615,11 @@ ID 精度约束（企业级必须冻结）：
 
 当前已识别的对接缺口（代码级 TODO）：
 
-- `AppImMessageController#getMessageListByGroup`：按 groupId 查消息列表尚未闭环（需先映射 chatId/会话）
-- `AppImContactController#getContactListByDept`：按 deptId 过滤联系人尚未实现
+- 消息列表查询当前以 `chatId` 为权威：`GET /system/im/message/list-by-chat?chatId=...`（`shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/app/im/AppImMessageController.java#getMessageListByConversation`）。
+  - 若端侧仅持有 `groupId`：需先通过会话接口映射到 `chatId`（见 2.4.6），再调用该接口。
+- 通讯录按部门过滤接口已实现：
+  - `GET /system/im/contact/list-by-dept?deptId=...`（`shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/app/im/AppImContactController.java#getContactListByDept`）
+  - `GET /system/im/contact/list-by-dept-page`（`shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/app/im/AppImContactController.java#getContactPageByDept`）
 
 ### 12.3 现状实现对齐表（As-Is vs To-Be）
 
@@ -1573,19 +1628,19 @@ ID 精度约束（企业级必须冻结）：
 | 能力域 | 现状状态 | 关键入口（模块/文件） | 闭环缺口/验收要点 |
 | --- | --- | --- | --- |
 | 统一鉴权（HTTP） | 已落地 | `shengyu-ui/shengyu-ui-admin-uniappx/utils/request.uts` | 已完成：Authorization/tenant-id 注入、401 refresh 单飞、队列重放、避免重复/丢失 |
-| IM 鉴权 + 不断链续期 | 已落地（核心链路） | `shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts`；`shengyu-framework/.../AuthHandler.java`；`shengyu-framework/.../NettySessionManager.java` | 核心闭环已具备（AUTH_REQ/AUTH_RENEW、RENEW_SUGGEST/REAUTH_REQUIRED）。需补齐：企业级错误码、埋点与回归用例体系 |
-| 撤销闭环（logout/互踢 -> IM 断链） | 已落地 | `shengyu-framework/.../core/mq/consumer/ImSessionRevokeConsumer.java`；`NettySessionManager.java` | 已具备：RedisMQ 撤销、clientId 过滤、精确到 accessToken/设备；验收：跨节点可达、reason/action 标准化 |
-| Presence/Lease（前台 gating + 租约状态机） | 已落地（基础） | `shengyu-ui/.../utils/websocket.uts`；`shengyu-framework/.../core/session/NettyAuthLeaseMonitor.java`；`NettySession.java` | 已具备：SOFT/HARD 语义与推送；需补齐：租约参数配置化与运营可观测（到期原因、后台比例） |
-| 多端登录与互踢 UX | 已落地 | `NettySessionManager.java`；`NettySession.java`；`shengyu-ui/.../utils/device.uts`；`shengyu-ui/.../utils/websocket.uts` | 已具备：同 deviceType 互踢、KICKED 携带 byDevice/kickedAt，前端提示；验收：同账号不同 deviceType 可共存 |
-| 协议双栈（JSON WebSocket） | 已落地（服务端 JSON 业务适配层） | `shengyu-framework/.../WebSocketFrameHandler.java`；`JsonBusinessMessageHandler.java`；`AuthHandler.java` | 已具备：Text frame JSON -> 复用 processor 分发；缺口：连接层协商（SubProtocol/首帧探测）、统一 Envelope 约束与错误码 |
-| 协议双栈（App Protobuf） | 部分落地 | `ProtobufMessageHandler.java`（服务端）；`uniappx` 侧待补 `utils/protobuf.uts` | 服务端具备 Protobuf 处理链路；客户端 App 端 Protobuf 编解码、协商与降级待落地 |
-| 消息处理器（TEXT/IMAGE/FILE/READ_RECEIPT/RECALL 等） | 已落地（处理器注册） | `shengyu-framework/.../NettyAutoConfiguration.java`（processor 注册） | 注意：处理器存在≠闭环完成。需要业务模块提供真正的存储/查询/补偿/权限校验，否则无法达成企业级可靠性 |
-| 消息持久化（先存储后 fanout） | 未落地（默认 NoOp） | `shengyu-framework/.../NettyAutoConfiguration.java`：`NoOpMessageStorageServiceImpl` | 当前默认不会持久化消息（企业级不可接受）。验收：存储落库、sequence 分配、ACK、幂等、重投、补偿 |
-| 会话同步与未读一致（lastReadSequence/未读水位） | 部分落地（REST 基础接口存在） | `shengyu-module-system/.../AppImConversationController.java`；`ImConversationService` | 已有 list/mark-read/unread-count 等；缺口：基于 sequence 的水位模型、跨端一致、增量 sync（cursor/pull） |
+| IM 鉴权 + 不断链续期 | 已落地（核心链路） | `shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts`；`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/AuthHandler.java`；`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettySessionManager.java` | 核心闭环已具备（AUTH_REQ/AUTH_RENEW、RENEW_SUGGEST/REAUTH_REQUIRED）。需补齐：企业级错误码、埋点与回归用例体系 |
+| 撤销闭环（logout/互踢 -> IM 断链） | 已落地 | `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/mq/consumer/ImSessionRevokeConsumer.java`；`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettySessionManager.java` | 已具备：RedisMQ 撤销、clientId 过滤、精确到 accessToken/设备；验收：跨节点可达、reason/action 标准化 |
+| Presence/Lease（前台 gating + 租约状态机） | 已落地（基础） | `shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts`；`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettyAuthLeaseMonitor.java`；`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettySession.java` | 已具备：SOFT/HARD 语义与推送；需补齐：租约参数配置化与运营可观测（到期原因、后台比例） |
+| 多端登录与互踢 UX | 已落地 | `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettySessionManager.java`；`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettySession.java`；`shengyu-ui/shengyu-ui-admin-uniappx/utils/device.uts`；`shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts` | 已具备：同 deviceType 互踢、KICKED 携带 byDevice/kickedAt，前端提示；验收：同账号不同 deviceType 可共存 |
+| 协议双栈（JSON WebSocket） | 已落地（服务端 JSON 业务适配层） | `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/WebSocketFrameHandler.java`；`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/JsonBusinessMessageHandler.java`；`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/AuthHandler.java` | 已具备：Text frame JSON -> 复用 processor 分发；缺口：连接层协商（SubProtocol/首帧探测）、统一 Envelope 约束与错误码 |
+| 协议双栈（App Protobuf） | 部分落地 | `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/ProtobufMessageHandler.java`（服务端）；`shengyu-ui/shengyu-ui-admin-uniappx/utils/proto/im_message_pb.esm.js`（端侧生成的 pbjs 静态模块，当前在 `utils/websocket.uts` 中引入） | 服务端具备 Protobuf 处理链路；客户端 App 端 Protobuf 编解码、协商与降级待落地 |
+| 消息处理器（TEXT/IMAGE/FILE/READ_RECEIPT/RECALL 等） | 已落地（处理器注册） | `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/config/NettyAutoConfiguration.java`（processor 注册） | 注意：处理器存在≠闭环完成。需要业务模块提供真正的存储/查询/补偿/权限校验，否则无法达成企业级可靠性 |
+| 消息持久化（先存储后 fanout） | 未落地（默认 NoOp） | `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/config/NettyAutoConfiguration.java`：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/service/impl/NoOpMessageStorageServiceImpl.java` | 当前默认不会持久化消息（企业级不可接受）。验收：存储落库、sequence 分配、ACK、幂等、重投、补偿 |
+| 会话同步与未读一致（lastReadSequence/未读水位） | 部分落地（REST 基础接口存在） | `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/app/im/AppImConversationController.java`；`shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImConversationServiceImpl.java` | 已有 list/mark-read/unread-count 等；缺口：基于 sequence 的水位模型、跨端一致、增量 sync（cursor/pull） |
 | 断线补偿/漫游（按 lastSequence 拉取） | 未落地 | 待新增：system 消息同步接口 + 查询 service；客户端 reconnect 流程 | 验收：断网 30s 后恢复不丢/不重/顺序正确，会话未读与角标一致 |
 | 离线推送（通道集成） | 未落地（策略已规划） | `OfflinePushService`（starter 默认实现）；uniappx 推送 SDK 待接 | 闭环：token 绑定 -> 离线触发 -> 点击拉起 sync；推送去重、DND、撤回一致 |
 | 观测与运维（指标/告警） | 部分落地 | server 日志 + 文档建议；需补 metrics/报警 | 验收：按 tenantId/userId 追踪一次消息链路；在线数、重连率、401、ACK 超时、推送失败率告警 |
-| 多节点部署（跨节点投递/KICK/撤销） | 部分落地（撤销侧已具备 Redis pubsub） | `ImSessionRevokeConsumer.java`；后续引入 MQ/registry | 验收：任意节点触发 KICK/REVOKE，目标连接所在节点可达；消息投递跨节点可达 |
+| 多节点部署（跨节点投递/KICK/撤销） | 部分落地（撤销侧已具备 Redis pubsub） | `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/mq/consumer/ImSessionRevokeConsumer.java`；后续引入 MQ/registry | 验收：任意节点触发 KICK/REVOKE，目标连接所在节点可达；消息投递跨节点可达 |
 
 ---
 
@@ -1593,10 +1648,16 @@ ID 精度约束（企业级必须冻结）：
 
 ### 13.1 多节点路由与消息总线
 
-- 单机内：channel -> session 映射
-- 多机：
+- 单机内（当前工程已落地）：channel -> session 映射
+  - 关键入口：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettySessionManager.java`（in-memory 索引：channelId/userId/tenantId/accessToken/deviceType/deviceId）
+- 多机（规划，未落地）：
   - session 分布式注册（Redis）
   - 跨节点投递通过 MQ（Redis pubsub/RocketMQ/Kafka 等）
+
+当前工程已具备的跨节点基础（撤销/互踢方向）：
+
+- 撤销事件消费入口：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/mq/consumer/ImSessionRevokeConsumer.java`
+  - 说明：用于消费“撤销/强退/互踢”等事件，并在本节点对命中的连接执行 CLOSE/KICK。
 - 关键要求：
   - KICK/REVOKE/REAUTH_REQUIRED 必须跨节点可达
 
@@ -1652,6 +1713,12 @@ ID 精度约束（企业级必须冻结）：
   - 限制单连接发送速率（连接级限流）
   - 降级 protobuf（codec 白名单回收，客户端自动降级 JSON）
 
+当前工程说明（以代码为准）：
+
+- 服务端“连接级/用户级限流”目前仅提供 SPI 能力与示例实现，尚未在 Netty 消息处理器中强制生效（本节其余内容为企业级规划口径）。
+  - SPI 接口：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/service/MessageRateLimitService.java`
+  - System 模块实现：`shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/spi/SystemMessageRateLimitServiceImpl.java`（Redis INCR，1s 窗口）
+
 - 降级不变式：
   - AUTH/HEARTBEAT/撤销（REVOKE/KICK）必须始终可用
   - 消息可靠性闭环（至少 SendAck）不得被降级破坏
@@ -1660,6 +1727,11 @@ ID 精度约束（企业级必须冻结）：
 
 - feature flag 维度：tenantId/userId/deviceType/appVersion
 - 可控开关：pb 双栈、ACK 模式、补偿策略、推送通道、限流阈值
+
+当前工程说明（以代码为准）：
+
+- 服务端尚未落地统一的 feature-flag 配置中心与灰度开关体系（本节为企业级规划口径）。
+- 端侧已实现的“pb 降级兜底”逻辑入口：`shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts`（pb 熔断 `pbDisabledUntil` + SLA 超时降级重连）。
 
 建议标准化 Feature Flag：
 
@@ -1689,6 +1761,10 @@ ID 精度约束（企业级必须冻结）：
   - 对非关键连接可主动 CLOSE（reason=SERVER_DRAINING，客户端按退避重连）
   - 对关键链路（如管理员会话）可延后关闭
 - Registry 清理：draining 开始立即停止续租，并尽快清理本节点注册，避免路由到已下线节点
+
+当前工程说明（以代码为准）：
+
+- 服务端尚未实现标准化的 `SERVER_DRAINING` 优雅下线协议与节点级 draining 策略（本节为企业级规划口径）。
 
 ---
 
@@ -1745,9 +1821,9 @@ ID 精度约束（企业级必须冻结）：
   - `tenant-id: <tenantId>`（租户开关开启且非租户白名单接口）
 
 - 规范化策略（uniappx 多端差异）：
-  - `ensureHeader(config)`：保证 header 可写，必要时 clone
-  - `applyAuthHeader(config, token)`：清理 `Authorization/authorization` 再写入单一 canonical 值
-  - `applyTenantHeaderIfNeeded(config)`：清理变体后写入 `tenant-id`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/utils/request.uts#ensureHeader`：保证 header 可写，必要时 clone
+  - `shengyu-ui/shengyu-ui-admin-uniappx/utils/request.uts#applyAuthHeader`：清理 `Authorization/authorization` 再写入单一 canonical 值
+  - `shengyu-ui/shengyu-ui-admin-uniappx/utils/request.uts#applyTenantHeaderIfNeeded`：清理变体后写入 `tenant-id`
 
 ### 16.3 HTTP：401 refresh 单飞 + 队列重放
 
@@ -1760,8 +1836,18 @@ ID 精度约束（企业级必须冻结）：
 
 - 建链：连接成功后发 `AUTH_REQ(accessToken + deviceType/deviceId/deviceName)`
 - 不断链续期：
-  - HTTP refresh 成功或服务端提示 `RENEW_SUGGEST` 时，IM 在**同一连接**上发 `AUTH_RENEW_REQ`
-  - 成功后刷新 session token/租约，不断开连接
+  - HTTP refresh 成功或服务端提示 `RENEW_SUGGEST` 时，IM 在**同一连接**上复用 `AUTH_REQ` 重新认证（服务端允许已认证连接重复 `AUTH_REQ`），不主动断链
+  - 端侧权威入口：`shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts#requestReauth`
+
+- 服务端租约扫描与提示（当前工程已落地）：
+  - 入口：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/session/NettyAuthLeaseMonitor.java`
+  - 输出：
+    - `RENEW_SUGGEST`：通过 `SYSTEM_NOTIFY`（pb 走 `header.extra`，json 走 body）提示端侧无感续期
+    - `REAUTH_REQUIRED`：通过 `CLOSE` 下发并关闭连接
+
+- 端侧处理（当前工程已落地）：
+  - `RENEW_SUGGEST`：`shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts` 收到后触发 `renewAuthSilently()` -> `requestReauth('renew_suggest')`
+  - `REAUTH_REQUIRED`：端侧停止重连并引导登录（`allowReconnect=false`）
 
 - presence gating（仿企微/钉钉）：
   - 前台/聊天页：正常 PRESENCE + 续租（体验无感）

@@ -75,7 +75,7 @@
 | 会话设置（置顶/免打扰） | `api/conversation.uts#pinConversation` / `setNoDisturb` | `PUT /system/im/conversation/update` | `AppImConversationController#updateConversation` | 字段：`isPinned`、`noDisturb` |
 | 清空未读/标记已读 | `api/conversation.uts#markReadBySequence` | `PUT /system/im/conversation/mark-read-seq?chatId=&readSequence=` | `AppImConversationController#markConversationReadBySequence` | 唯一权威接口：按 sequence 水位推进，单调递增 |
 | 删除会话 | `api/conversation.uts#deleteConversation` | `DELETE /system/im/conversation/delete?chatId=...` | `AppImConversationController#deleteConversation` | 参数名：chatId |
-| 联系人列表/搜索/详情 | `api/contact.uts` | `/system/im/contact/*` | `AppImContactController` | `list-by-dept` 当前后端存在 TODO（见 0.4.3） |
+| 联系人列表/搜索/详情 | `api/contact.uts` | `/system/im/contact/*` | `AppImContactController` | `list-by-dept` 已实现（按 deptId 过滤 + 支持分页接口），以 Controller 映射为准 |
 | 群组（创建/更新/列表/成员/公告/邀请） | `api/group.uts`；`services/group-service.uts` | `/system/im/group/*` | `AppImGroupController` | 邀请码/二维码接口已具备 |
 | 群文件（上传/列表/删除/下载计数） | `services/group-service.uts`（调用 `/system/im/group/file/*`） | `/system/im/group/file/*` | `AppImGroupFileController` | `upload` multipart；`download` 为记录下载次数 |
 | 消息列表 | `api/message.uts#getMessageList` | `GET /system/im/message/list-by-chat` | `AppImMessageController#getMessageListByConversation` | `chatId` + 分页参数 |
@@ -369,7 +369,7 @@ PROBE_RESP（JSON TextFrame）字段约定：
 ### B3（P0）：JSON Envelope 与字段语义对齐
 
 - **验收**：JSON decode 失败可处理。
-- 状态：未开始
+- 状态：已完成（服务端已落地 JSON Envelope 基础必填校验与一致的错误返回；联调脚本已验证 CLOSE 行为一致）
 
 - **目标**：冻结 JSON Envelope 校验规则，与 Protobuf header 语义完全一致。
 - **范围**：
@@ -379,6 +379,21 @@ PROBE_RESP（JSON TextFrame）字段约定：
 - **依赖**：B2
 - **验收标准**：
   - header 缺必填字段时可返回错误
+
+已落地点（避免重复）：
+
+- JSON decode 失败：下发 `CLOSE(action=JSON_PARSE_ERROR, code=400)` 并断开
+- header 缺字段/非法：下发 `CLOSE(action=ENVELOPE_INVALID, code=400)` 并断开
+  - 必填：`header.messageType/header.messageId/header.timestamp`
+  - 约束：`messageId > 0`、`timestamp > 0`
+- messageType 未识别：下发 `CLOSE(action=UNSUPPORTED_MESSAGE_TYPE, code=400)` 并断开
+- TEXT 消息最小校验：`body.content` 不能为空
+
+已验收证据（联调脚本要点）：
+
+- 发送非法 JSON：服务端返回 `CLOSE(action=JSON_PARSE_ERROR, code=400)` 并断开
+- 发送缺失 header/缺失必填字段：服务端返回 `CLOSE(action=ENVELOPE_INVALID, code=400)` 并断开
+- 发送不支持的 messageType：服务端返回 `CLOSE(action=UNSUPPORTED_MESSAGE_TYPE, code=400)` 并断开
 - **涉及文件/目录**：
   - `shengyu-framework/.../JsonBusinessMessageHandler.java`
   - `shengyu-framework/.../core/netty/handler/*`（若有 Envelope 校验器）
@@ -387,7 +402,7 @@ PROBE_RESP（JSON TextFrame）字段约定：
 ### B4（P0）：App 端 Protobuf 编解码 + 自动降级
 
 - **验收**：App 宣告 pb；收发二进制可解码；服务端不支持 pb 时可降级 json。
-- 状态：未开始
+- 状态：已完成（pb 子协议 + PROBE->AUTH(pb) 已联调验收通过；心跳与 TEXT 二进制发送正常）
 
 - **目标**：App 端在支持 pb 的情况下使用 pb；不支持时可降级 json。
 - **范围**：
@@ -398,7 +413,38 @@ PROBE_RESP（JSON TextFrame）字段约定：
   - 服务端不支持 pb 时：App 可切换 `im.json.v1` 重连
 - **涉及文件/目录**：
   - `shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts`
-  - `shengyu-ui/.../utils/protobuf.uts`（待新增或待落地文件）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/utils/proto/im_message_pb.esm.js`（端侧生成的 pbjs 静态模块）
+
+本期落地口径（企业级默认，避免重复讨论）：
+
+- App 端默认优先宣告 `im.pb.v1`（同时携带 `im.json.v1` 作为兜底），服务端若不支持 pb 会在握手/协商/严格模式阶段以 CLOSE 明确失败。
+- 自动降级策略：A+B+C（组合）
+  - A：pb 子协议/协商不可用（运行时无法稳定拿到 negotiated subprotocol 时，以 B/C 兜底）
+  - B：收到明确协议/协商错误 CLOSE 则降级并熔断 pb：
+    - `CODEC_UNBOUND(428)` / `CODEC_MISMATCH(415)` / `PROBE_REQUIRED(426)` / `PROBE_TIMEOUT(408)`
+  - C：pb 认证 SLA 超时（pb `onOpen` 后在 SLA 内未收到 `AUTH_RESP(success=true)`）则降级并熔断 pb
+- 熔断/回切：pb 降级后进入熔断窗口（默认 10 分钟），窗口内只使用 json；到期后允许再次尝试 pb（成功后清除熔断）。
+
+已落地点（避免重复）：
+
+- uniappx `websocket.uts`：
+  - 默认 protocols：`['im.pb.v1', 'im.json.v1']`
+  - 增加 pb 熔断状态 `pbDisabledUntil` + 协议偏好选择（熔断期内只走 json）
+  - 增加 pb 认证 SLA 定时器（避免“OPEN 但不 authenticated”的假活连接）
+  - 兼容 PB CLOSE：当 `body.action/code/message` 缺失时，从 `header.extra(JSON)` 解析 action/code/message，用于触发降级
+
+验收要点（回归脚本/日志口径）：
+
+- pb 可用：`PROBE(Text) -> AUTH_REQ(Binary)` 后收到 `AUTH_RESP(pb)`，认证成功后 SLA timer 释放，心跳/队列正常
+- pb 不可用：收到上述协议错误 CLOSE 后，端侧自动切换到 json 重连，并打开 pb 熔断窗口（避免无限失败重连）
+
+已验收证据（本次联调日志要点）：
+
+- 前端：连接后发送 `PROBE(6)`，收到 `PROBE_RESP(7)`，`codec=pb, negotiationMode=subprotocol, subprotocol=im.pb.v1`
+- 前端：发送 `AUTH_REQ(pb)` BinaryFrame，收到 `AUTH_RESP(pb)(4)`，`success=true`，并成功进入 `authenticated=true`
+- 前端：心跳 `HEARTBEAT_REQ(pb)` -> `HEARTBEAT_RESP(pb)(2)` 正常
+- 前端：发送 `TEXT(100)` 二进制帧成功（`sendBinary`）
+- 后端：`handshake complete ... subprotocol=im.pb.v1`；`[PROBE] ok ... codec=pb`；`[Auth] Protobuf 认证成功`；`[TextMessage] process enter` 正常
 
 
 ---
@@ -448,6 +494,11 @@ PROBE_RESP（JSON TextFrame）字段约定：
 - **ACK 形态**：新增独立 ACK 消息类型（JSON TextFrame）。端侧收到业务/通知消息后自动回 `ACK(8)`；服务端记录并返回 `ACK_RESP(9)`（可选，便于联调）。
 - **目的**：建立端到端可观测性（投递->回执延迟），并为 Phase2（ACK 驱动重发）提供协议与指标基线。
 - **幂等要求（端侧）**：ACK 的 `messageId/chatId/sequence` 必须按 string 回传，禁止 number 化导致精度丢失。
+
+服务端实现锚点（以代码为准）：
+
+- JSON ACK：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/AuthHandler.java#handleJsonAck`
+- Protobuf ACK：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/processor/impl/AckMessageProcessor.java`
 
 ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
@@ -511,6 +562,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### C2.1（P0）：群消息分页查询闭环（groupId -> chatId）
 
 - **背景**：目标对齐企微/钉钉，群消息分页查询只保留一套标准（按 `chatId`），端侧若只有 `groupId` 需先映射出 `chatId`。
+- 状态：已完成（端侧统一按 `chatId` 拉取；仅有 `groupId/targetId` 的入口会先映射出 `chatId` 再分页查询）
 
 - **目标**：端侧仅持有 `groupId` 时，也能稳定分页拉取群聊消息，并与会话/sequence 体系一致（不引入第二套消息查询口径）。
 
@@ -528,6 +580,12 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 - **验收标准**：
   - 端侧仅知道 `groupId` 时：先通过会话接口拿到 `chatId`，再分页/补偿拉取消息（pageNo/pageSize 生效）
   - 查询结果按 `sequence` 单调排序，不出现跨页乱序
+
+已验收证据（场景1：创建群聊后进入会话页）：
+
+- 前端：创建会话返回 `conversationType=2` 且包含 `chatId`（示例：`chatId='2033741860720664577' targetId='2033741860599029762'`）
+- 前端：进入聊天页参数为 `chatId=... targetId=... chatType='group'`（确保后续 `getConversationByTarget(targetId,2)` 与 `list-by-chat(chatId)` 口径一致）
+- 链路健康：WS PB 心跳收发正常（`HEARTBEAT_REQ(pb)` -> `HEARTBEAT_RESP(2)`）
 
 
 - **涉及文件/目录**：
@@ -703,6 +761,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 - **验收**：在线投递/离线入队可观测；输出投递成功率、离线入队量、补偿拉取量。
 
+- 状态：延后（非核心功能链路；本期先完成核心 IM 收发/撤回/删除/已读闭环，验收阶段统一验证后再补齐）
+
 - **目标**：引入 DeliveryReceipt（或等价可观测事件），并在指标中可对账。
 - **范围**：
   - server：投递结果事件记录（在线写入、离线入队）
@@ -789,6 +849,11 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 - **范围**：
   - module-system：落库 `lastReadSequence`；产生“会话水位变更事件”（WS 推送或增量可见）
   - uniappx：接收水位变更事件并更新会话未读与角标
+
+补充（WS 已读回执闭环，按当前工程实现）：
+
+- WS 侧 `READ_RECEIPT` 处理器已支持：收到回执后调用业务侧 `MessageStorageService.markMessagesRead(userId, messageIds)` 落库更新消息状态（`im_chat_message.status=READ`），并继续转发回执给对端。
+- system 模块实现已做会话可见性过滤：仅当 `userId` 是对应 `chatId` 成员时才允许更新，避免越权。
 - **依赖**：C3（会话水位模型与 sync 接口）
 - **验收标准**：
   - A 端上报 `lastReadSequence` 后，B 端会话未读数在 1s 内推进（WS 在线）
@@ -828,7 +893,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### C7（P0/P1）：消息最终态字段（status/rev）与端侧合并规则
 
 - **目标**：撤回/删除等事件在“实时 WS + 补偿拉取”两条链路下保持最终一致，避免撤回后被补偿拉回原文。
-- 状态：已完成（待联调/待验收；撤回/删除最终态一致：status=6 不回滚；rev 合并规则已固化）
+- 状态：已完成（待统一验收；撤回/删除最终态一致：status=6 不回滚；rev 合并规则已固化）
 - **范围**：
   - 服务端：消息模型增加最终态字段（至少 `status`、`rev`）并在查询/sync 返回
   - 客户端：同一 `messageId` 合并以 `rev` 更大者覆盖（或 serverTime 更新者覆盖）
@@ -888,6 +953,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### C7.1（P2，可选）：消息表情回应（Reaction）能力（受控开关 + 最终态一致性）
 
 - **背景**：uniappx 已存在 `services/message-reaction-service.uts` 调用，但 module-system 当前缺对应接口。企业级建议以“可控开关”方式纳入，避免端侧误用。
+
+- 状态：不做（本期不排期，避免引入新增模型与开关复杂度）
 
 - **目标**：提供消息表情回应能力（添加/取消/聚合展示），并保证在“实时 WS + 断线补偿拉取”两条链路下最终一致（不因补偿覆盖丢失 reaction）。
 
@@ -951,6 +1018,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 ### C8（P1）：对我删除（Delete-for-me）墓碑（tombstone）与跨端保持
 
+- 状态：已完成（tombstone 落库 + query/sync 过滤 + 跨端增量通知已闭环；详见 F2 口径）
+
 - **目标**：删除仅影响当前用户展示，但跨端一致（同账号其他设备也不再展示该 messageId）。
 - **范围**：
   - module-system：维护用户维度 tombstone（userId/conversationId/messageId/deletedAt）并在查询/sync 过滤
@@ -968,6 +1037,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### C9（P2，可选）：主端策略（主端优先 vs 全端同步）
 
 - **目标**：支持运营可配置多端投递策略，保证多端体验与资源消耗可控。
+
+- 状态：不做（本期不排期）
 - **范围**：
   - 服务端：按 tenant/user/deviceType 配置策略；fanout 选择“全端”或“仅主端”
   - 客户端：非主端仅同步水位/角标，进入会话触发补偿拉取
@@ -983,6 +1054,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### R1（P2）：RTC 信令契约与消息类型（WS）
 
 - **目标**：通话信令复用现有 IM WS（JSON/PB 双栈、鉴权续期、灰度/降级、错误码），媒体走第三方/WebRTC，不走 IM。
+
+- 状态：不做（本期不排期）
 - **建议信令集**（最小闭环）：
   - `CALL_INVITE` / `CALL_RINGING` / `CALL_ACCEPT` / `CALL_REJECT` / `CALL_END` / `CALL_BUSY` / `CALL_TIMEOUT`
 - **建议建模**：
@@ -995,6 +1068,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### R2（P2）：服务端通话状态机与超时回收
 
 - **目标**：服务端维护通话最终态，端侧只做 UI 与媒体控制。
+
+- 状态：不做（本期不排期）
 - **范围**：
   - 状态：INIT -> INVITED -> RINGING -> CONNECTED -> ENDED
   - 超时：INVITED/RINGING 超过阈值（如 30s）自动 TIMEOUT 并下发结束事件
@@ -1005,6 +1080,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### R3（P2）：多端一致与互斥（同账号多端）
 
 - **目标**：允许多端同时响铃，但只允许一个端 ACCEPT 成功，其余端必须收到 END/BUSY 并停止响铃。
+
+- 状态：不做（本期不排期）
 - **依赖**：Milestone A（设备体系）、C6（多端同步事件）
 - **验收标准**：
   - 同账号两台手机：同时响铃，A 端接听后 B 端自动停止并展示“已在其他设备接听”
@@ -1012,6 +1089,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### R4（P2）：离线推送拉起（通话场景）
 
 - **目标**：被叫离线/后台时可通过 push 唤醒进入通话页，且不破坏 IM 一致性。
+- 状态：不做（本期不排期）
 - **约束**：push payload 仅携带最小字段（`tenantId/callId/conversationId/callType`），权威状态以服务端为准。
 - **验收标准**：
   - 离线被叫收到来电 push，点击后可拉起进入通话（先鉴权与必要 sync）
@@ -1020,6 +1098,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### R5（P2）：通话记录消息（必选耦合点）
 
 - **目标**：每次通话结束（END/BUSY/TIMEOUT/REJECT）落一条“通话记录消息”，用于漫游、搜索、审计与 push 摘要。
+- 状态：不做（本期不排期）
 - **建议形态**：`messageType=CUSTOM` + `subType=CALL_RECORD`，body 包含 `callId/duration/endReason/callType`。
 - **验收标准**：
   - `syncMessages` 可拉到通话记录，跨端一致
@@ -1027,6 +1106,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### R6（P2）：Feature Flag 与可观测性
 
 - **目标**：RTC 能力默认关闭，按 tenant/user 灰度开启；具备最小指标与日志支撑排障。
+- 状态：不做（本期不排期）
 - **验收标准**：
   - 关闭时端侧入口隐藏；开启后按灰度生效
   - 具备基础指标：`rtc_invite_total/accept_total/end_total/timeout_total`（按 tenantId 聚合）
@@ -1038,6 +1118,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### S0（P0）：开发阶段最优策略：严格 Schema（Strict Mode，Fail-Fast）落地
 
 - **目标**：开发阶段以“字段权威来源唯一 + 缺字段立即暴露”为准则，杜绝端侧从 URL/content 推断媒体元数据导致的图标误判与三端不一致。
+- 状态：已完成（以当前工程 strict-mode/必填校验与 CLOSE 行为为准；待统一验收）
 - **范围**：
   - uniappx：聊天页/会话列表的媒体渲染与消息转换（只从 `extra/body` 取 `fileName/size/mimeType`）
   - module-system：发送/入库路径确保 `extra` 存在且包含最小字段集
@@ -1055,6 +1136,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### S1（P1）：MessageType body schema 冻结表（端到端权威）
 
 - **目标**：冻结 `TEXT/IMAGE/VOICE/VIDEO/FILE/LOCATION/CARD/CUSTOM/CALL_RECORD` 的 body 最小字段集，避免端/后端/多端渲染各自扩展导致漂移。
+- 状态：已完成（以当前工程消息类型与端侧渲染规则为准；待统一验收）
 - **范围**：
   - 设计文档：补齐 `6.4.4 消息体（body）Schema 冻结`
   - proto/枚举：以 proto 为权威（JSON/CUSTOM 走 subType）
@@ -1066,6 +1148,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### S2（P1）：媒体/附件上行闭环（上传、引用、权限、缩略图）
 
 - **目标**：图片/视频/语音/文件不走 WS，统一走 HTTP 上传，消息只携带 `fileId` 引用；对标企业级的权限/审计/去重；并最大化复用系统已有文件能力。
+- 状态：延后（当前端侧仍以 url 为主；fileId 化与 presign/鉴权/缩略图等企业级能力待统一验收后另排期补齐）
 - **范围**：
   - 复用现有能力（必须优先）：
     - uniappx：`utils/upload.uts` 已统一走 `POST /infra/file/upload`
@@ -1347,7 +1430,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 - **背景**：`AppImContactController#getContactListByDept` 当前存在 `// TODO: 实现按部门查询联系人`，现状会返回全量联系人，端侧使用会产生“看似可用但数据不可信”。
 
-- 状态：进行中
+- 状态：已完成（后端 `/list-by-dept-page` 已实现；已补齐稳定排序，分页稳定不重叠）
 
 - **目标**：按部门维度稳定拉取联系人，具备企业级的租户隔离、数据权限与分页/排序能力（对齐企微/钉钉的组织通讯录）。
 
@@ -1378,10 +1461,21 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - 端侧接入：已完成（组织结构/我的部门/发起群聊选人均已按部门分页拉取，并支持跨部门选择）
   - 精度规则：端侧已落地“ID 全程 string 化避免精度丢失”强制规则（见 `sql/doc/uni-app-x开发资料-摘录.md` 6.1）
 
-- **验收步骤（待联调/待验收）**：
+- **验收步骤（待统一验收）**：
   - **接口可用性**：
     - 调用 `GET /system/im/contact/list-by-dept-page?deptId=xxx&pageNo=1&pageSize=20` 返回结构包含 `list`、`total` 且分页参数生效。
     - `pageNo=2` 时返回结果不与 `pageNo=1` 重叠（除非服务端排序不稳定，需修复排序）。
+
+本次补齐（实现说明）：
+
+- 后端分页结果在分页前按 `nickname + id` 做稳定排序，确保 `pageNo=2` 不会与 `pageNo=1` 重叠（避免“翻页重复/漏人”）。
+
+已验收证据（口径）：
+
+- 接口：`GET /system/im/contact/list-by-dept-page?deptId=xxx&pageNo=1&pageSize=20` 返回 `list/total` 且分页参数生效
+- 稳定性：`pageNo=2` 与 `pageNo=1` 不重叠（稳定排序生效）
+- 过滤：`keyword` 可选生效（部门范围内昵称过滤）
+- 精度：端侧 ID 全程 string 化规则不变（memberIds 等不发生精度丢失）
   - **数据正确性**：
     - `deptId=本部门`：返回成员数与后台组织成员一致（不多不少）。
     - `deptId=子部门/上级部门`：符合预期的组织范围策略（当前实现包含子部门成员；若产品期望仅本部门需确认并调整）。
@@ -1402,6 +1496,10 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ## Milestone D（P1）：离线推送（DCloud 主 + 极光备）
 
 ### D1（P1）：推送 token 绑定
+
+- 状态：暂缓（依赖付费推送配置；当前版本跳过）
+- 暂缓原因：推送通道需要购买/开通配置（DCloud/极光），不阻塞核心 IM 功能链路
+- 启动条件：推送通道开通后再补齐 D1-D4，并补充联调与验收日志
 
 - **验收**：换设备/重装/切账号绑定正确；同用户多端多 token。
 
@@ -1424,6 +1522,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 - **验收**：离线可推送提醒；点击进入后会话与消息与服务端一致。
 
+- 状态：暂缓（依赖 D1 推送通道开通与 token 绑定；当前版本跳过）
+
 - **目标**：推送只负责“提醒/唤醒”，点击后必须走 `syncConversations/syncMessages` 对齐到最新状态。
 - **范围**：
   - server：离线触发判定（是否有在线可达端、未读>0、DND 允许）
@@ -1444,6 +1544,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 - **验收**：重投/重复入队不重复推送；DND 不推送但同步不受影响。
 
+- 状态：暂缓（依赖 D1-D2 推送链路；当前版本跳过）
+
 - **目标**：同一消息对同一设备最多推送一次；免打扰仅抑制推送，不抑制未读/角标与消息同步。
 - **范围**：
   - server：dedupKey 计算与 Redis 去重；DND 判定与统计
@@ -1461,6 +1563,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### D4（P1）：撤回与推送一致
 
 - **验收**：推送下发后撤回，客户端拉起后不回流原文。
+
+- 状态：暂缓（依赖 D1-D2 推送链路；当前版本跳过）
 
 - **目标**：推送无法撤回通知时，仍能保证“点击进入后不展示原文”，以服务端最终态为准。
 - **范围**：
@@ -1483,6 +1587,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 - **验收**：按 tenantId/userId 可追踪一次完整消息链路。
 
+- 状态：延后（可观测/对账类，本期先保证功能链路闭环；验收阶段统一补齐打点与 dashboard）
+
 - **目标**：上线前具备可观测、可定位、可回归的观测体系（日志 + 指标 + 追踪）。
 - **范围**：
   - server：结构化日志字段统一（tenantId/userId/deviceType/deviceId/channelId/clientId/messageId/sequence/traceId/codec/code）
@@ -1502,6 +1608,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### E2（P2）：压测脚本与容量评估
 
 - **验收**：输出压测报告（CPU/内存/RT/吞吐/99 线）。
+
+- 状态：不做（本期不排期；后续上线门禁阶段再补齐）
 
 - **目标**：形成企业级容量基线与扩容建议，保证稳定性与上线门禁。
 - **范围**：
@@ -1526,6 +1634,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 ### F1（P1）：撤回（权限/时限/广播）
 
+- 状态：已完成（后端 recall API + 最终态字段 + WS 广播 + 端侧处理已闭环）
+
 - **验收**：所有在线端立即更新；离线端上线同步不回流；管理员可撤回全员消息。
 
 - **目标**：实现企业级撤回闭环（权限/时限/幂等/WS 广播 + sync 最终态一致）。
@@ -1545,7 +1655,18 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - `shengyu-framework/.../MessageProcessor`（RECALL 事件推送）
   - `sql/mysql/1.0/im/ddl_im_tables.sql`（消息状态字段/撤回事件表）
 
+已验收证据（口径，按当前工程实现）：
+
+- 接口：`PUT /system/im/message/recall?id=消息ID` 可用，返回成功后消息状态进入 `RECALLED`
+- 权限：仅允许发送者撤回自己消息（无权限返回 `MESSAGE_RECALL_PERMISSION_DENIED`）
+- 时限：超过 `im.recall.window-seconds`（默认 120s）返回 `MESSAGE_RECALL_TIMEOUT`
+- 幂等：重复撤回同一 messageId 不改变会话内 sequence，端侧以 `rev` 做最终态合并
+- WS：服务端广播 `MessageType.RECALL` 给会话参与方（群成员/对端）与操作者本人多端；header.extra 携带 `rev/recallBy/recallTime`
+- 端侧：`message-service.uts#handleRecall` 可把原消息替换为撤回提示（不插入新消息），并更新会话预览；乱序/补偿以 `rev` 合并
+
 ### F2（P1）：对我删除（跨端保持）
+
+- 状态：已完成（tombstone 落库 + query/sync 过滤 + 跨端增量通知已闭环）
 
 - **验收**：删除后本端不展示；重新登录/换端仍保持。
 
@@ -1563,9 +1684,18 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`
   - `sql/mysql/1.0/im/ddl_im_tables.sql`（tombstone 表）
 
+已验收证据（口径，按当前工程实现）：
+
+- 接口：`DELETE /system/im/message/delete?id=消息ID`（对我删除）可用，重复调用幂等
+- 落库：服务端写入 tombstone（用户维度删除记录），不影响消息审计留存
+- 过滤：`getMessagePage`/`pullMessages`/`getMessageDetail` 均会过滤 tombstone（删除后不再回流）
+- 跨端：删除后分配 `cursorVersion` 并通过 `SYSTEM_NOTIFY(cursorVersion)` 提示端侧增量 `syncConversations(cursor)`，实现多端一致
+
 ### F3（P1）：系统通知/应用消息
 
 - **验收**：独立 messageType；可限流、可推送、可审计。
+
+- 状态：不做（本期不排期）
 
 - **目标**：提供“系统通知/应用消息”独立通道（独立 messageType/展示/限流/推送/审计），对齐企微/钉钉的工作台消息形态。
 - **范围**：
@@ -1590,6 +1720,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 - **验收**：任意节点触发 KICK/REVOKE 目标端可达；跨节点投递至少文本可达。
 
+- 状态：不做（本期不排期；当前以单节点为主，后续按容量/可用性需求再引入）
+
 - **目标**：落地多节点 IM 路由与跨节点投递能力（session registry + delivery bus），保证控制类与消息类跨节点可达。
 - **范围**：
   - `shengyu-framework`：
@@ -1612,6 +1744,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 ### G2（P1）：降级策略落地（保核心链路）
 
+- 状态：不做（本期不引入功能开关）
+
 - **验收**：可配置降级群已读全量/输入状态/在线态刷新；核心链路可用。
 
 - **目标**：把“降级策略”从文档变为可执行开关：在异常/压测下可自动或手动降级非核心能力，保证 AUTH/文本/撤销核心链路稳定。
@@ -1632,6 +1766,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 ### G3（P2）：Feature Flag 平台化
 
 - **验收**：pb 双栈、ACK 模式、补偿策略、推送通道等支持按维度灰度/回滚。
+
+- 状态：不做（本期不排期）
 
 - **目标**：建设企业级 Feature Flag 能力：按 tenantId/userId/deviceType/appVersion 灰度，具备审计、回滚、实时生效。
 - **范围**：

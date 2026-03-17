@@ -153,7 +153,17 @@ export class WebSocketManager {
   // WebSocket 服务器地址
   private wsUrl: string = ''
 
-  private wsProtocols: string[] = ['im.json.v1']
+  // 企业级默认：PB 优先，JSON 兜底（pb 不可用时会自动熔断并回落到 json）
+  private wsProtocols: string[] = ['im.pb.v1', 'im.json.v1']
+
+  // PB 熔断截止时间（ms）：在该时间前不再尝试 pb，直接走 json
+  private pbDisabledUntil: number = 0
+
+  // PB 认证 SLA 定时器（pb onOpen 后在 SLA 内必须完成认证，否则降级）
+  private pbAuthSlaTimer: number = 0
+
+  // PB 认证 SLA：默认 5s（可按 probeTimeoutMs+buffer 调整，但端侧先保守固定）
+  private pbAuthSlaMs: number = 5000
   
   /**
    * 私有构造函数（单例模式）
@@ -166,6 +176,103 @@ export class WebSocketManager {
 	onAccessTokenRefreshed((_tokenData) => {
 		this.requestReauth('http_refresh')
 	})
+  }
+
+  private nowMs(): number {
+    return Date.now()
+  }
+
+  private isPbCircuitOpen(): boolean {
+    try {
+      const now = this.nowMs()
+      return this.pbDisabledUntil > 0 && now < this.pbDisabledUntil
+    } catch (e) {
+      return false
+    }
+  }
+
+  private openPbCircuit(ttlMs: number, reason: string): void {
+    try {
+      const now = this.nowMs()
+      const ttl = ttlMs > 0 ? ttlMs : 10 * 60 * 1000
+      this.pbDisabledUntil = now + ttl
+      console.warn('[WebSocket] PB circuit opened:', { until: this.pbDisabledUntil, ttlMs: ttl, reason: reason })
+    } catch (e) {
+    }
+  }
+
+  private closePbCircuitIfExpired(): void {
+    try {
+      if (this.pbDisabledUntil > 0 && this.nowMs() >= this.pbDisabledUntil) {
+        this.pbDisabledUntil = 0
+      }
+    } catch (e) {
+    }
+  }
+
+  private ensureProtocolsByPreference(): void {
+    try {
+      this.closePbCircuitIfExpired()
+      if (this.isPbCircuitOpen()) {
+        this.wsProtocols = ['im.json.v1']
+        return
+      }
+      this.wsProtocols = ['im.pb.v1', 'im.json.v1']
+    } catch (e) {
+    }
+  }
+
+  private clearPbAuthSlaTimer(): void {
+    try {
+      if (this.pbAuthSlaTimer !== 0) {
+        clearTimeout(this.pbAuthSlaTimer)
+        this.pbAuthSlaTimer = 0
+      }
+    } catch (e) {
+    }
+  }
+
+  private startPbAuthSlaTimer(source: string): void {
+    try {
+      this.clearPbAuthSlaTimer()
+      const sla = this.pbAuthSlaMs > 0 ? this.pbAuthSlaMs : 5000
+      this.pbAuthSlaTimer = setTimeout(() => {
+        try {
+          if (this.state !== WebSocketState.OPEN) return
+          if (this.authenticated) return
+          if (!this.allowReconnect || this.sessionInvalidated) return
+          if (!this.isPbEnabled()) return
+          console.warn('[WebSocket] PB auth SLA timeout, downgrade to json:', { source: source, slaMs: sla })
+          this.downgradePbToJsonAndReconnect('PB_AUTH_SLA_TIMEOUT')
+        } catch (e) {
+        }
+      }, sla)
+    } catch (e) {
+    }
+  }
+
+  private downgradePbToJsonAndReconnect(reason: string): void {
+    try {
+      if (!this.isPbEnabled()) return
+      this.openPbCircuit(10 * 60 * 1000, reason)
+      this.wsProtocols = ['im.json.v1']
+      try { this.close() } catch (e) {}
+      try { this.connect() } catch (e) {}
+    } catch (e) {
+    }
+  }
+
+  private tryParseCloseBodyFromHeaderExtra(message: any): any | null {
+    try {
+      if (message == null || message.header == null) return null
+      const extra: any = (message.header as any).extra
+      if (extra == null || extra === '') return null
+      if (typeof extra !== 'string') return null
+      const obj = JSON.parse(extra)
+      return (obj != null && typeof obj === 'object') ? obj : null
+    } catch (e) {
+      return null
+    }
   }
 
   private triggerResumeConversationSync(): void {
@@ -342,6 +449,9 @@ export class WebSocketManager {
 
     this.connectInFlight = true
 
+    // 建链前按熔断状态调整协议优先级（pb 熔断时直接走 json）
+    this.ensureProtocolsByPreference()
+
     // 新一轮连接，恢复默认允许重连（除非后续被 CLOSE/KICKED 设置为 false）
     this.allowReconnect = true
     this.sessionInvalidated = false
@@ -403,6 +513,7 @@ export class WebSocketManager {
 
     // 企业级：pb 子协议下优先走二进制 AUTH_REQ（服务端会按 subprotocol 绑定 codec=pb）
     if (this.isPbEnabled()) {
+      this.startPbAuthSlaTimer('pb_open')
       this.sendAuthRequestPb()
       return
     }
@@ -828,6 +939,17 @@ export class WebSocketManager {
     const success = message.body.success as boolean
 
     if (success) {
+      // pb 模式：认证成功即停止 SLA 计时（避免误触发降级）
+      this.clearPbAuthSlaTimer()
+
+      // pb 成功后解除熔断，允许后续继续尝试 pb 优先
+      try {
+        if (this.isPbEnabled()) {
+          this.pbDisabledUntil = 0
+        }
+      } catch (e) {
+      }
+
       if (this.sessionInvalidated || !this.allowReconnect) {
         console.warn('[WebSocket] ignore AUTH_SUCCESS because sessionInvalidated/allowReconnect=false')
         return
@@ -945,13 +1067,42 @@ export class WebSocketManager {
    */
   private handleCloseMessage(message: any): void {
     const body: any = message && message.body ? message.body : {}
-    const action = body && typeof body === 'object' ? (body.action as string) : ''
-    const code = body && typeof body === 'object' ? (body.code as number) : 0
-    const reason = body && typeof body === 'object' ? (body.message as string) : (body as string)
+    let action = body && typeof body === 'object' ? (body.action as string) : ''
+    let code = body && typeof body === 'object' ? (body.code as number) : 0
+    let reason = body && typeof body === 'object' ? (body.message as string) : (body as string)
     const kickedAt = body && typeof body === 'object' ? (body.kickedAt as number) : 0
     const byDevice = body && typeof body === 'object' ? (body.byDevice as string) : ''
 
+    // PB CLOSE：服务端把 action/code/message 写在 header.extra(JSON string)
+    // 这里做兼容读取，避免 pb 模式下丢失关闭原因导致无法降级
+    if ((action == null || action === '') && (code == null || code === 0)) {
+      try {
+        const extraBody = this.tryParseCloseBodyFromHeaderExtra(message)
+        if (extraBody != null) {
+          if (action == null || action === '') action = extraBody.action != null ? String(extraBody.action) : ''
+          if (code == null || code === 0) {
+            try {
+              code = extraBody.code != null ? Number(extraBody.code) : 0
+            } catch (e) {
+              code = 0
+            }
+          }
+          if (reason == null || reason === '') reason = extraBody.message != null ? String(extraBody.message) : ''
+        }
+      } catch (e) {
+      }
+    }
+
     console.log('[WebSocket] 收到 CLOSE:', { action: action, code: code, reason: reason })
+
+    // 企业级：pb 协议/协商错误，直接降级 json 并熔断 pb（避免无限重连失败）
+    if (this.isPbEnabled()) {
+      if (action === 'CODEC_UNBOUND' || action === 'CODEC_MISMATCH' || action === 'PROBE_REQUIRED' || action === 'PROBE_TIMEOUT') {
+        console.warn('[WebSocket] downgrade pb -> json due to CLOSE action:', { action: action, code: code, reason: reason })
+        this.downgradePbToJsonAndReconnect(action)
+        return
+      }
+    }
 
     // 关键：被踢/需要重登时禁止重连（避免死循环）
     if (action === 'KICKED' || action === 'LOGOUT' || action === 'REVOKED' || action === 'REAUTH_REQUIRED') {
@@ -961,6 +1112,9 @@ export class WebSocketManager {
 
     // 停止心跳
     this.stopHeartbeat()
+
+    // 主动关闭也需要清理 pb 认证 SLA 定时器（避免降级/断开后误触发）
+    this.clearPbAuthSlaTimer()
 
     // 关闭连接（会触发 onClose -> handleClose，但 allowReconnect 已经控制不会再重连）
     this.close()
@@ -1060,7 +1214,11 @@ export class WebSocketManager {
           return
         }
         console.log('[WebSocket] requestReauth -> AUTH_REQ', { source: source })
-        this.sendAuthRequest()
+        if (this.isPbEnabled()) {
+          this.sendAuthRequestPb()
+        } else {
+          this.sendAuthRequest()
+        }
         this.lastReauthAt = Date.now()
       } finally {
         this.reauthPending = false
@@ -1092,6 +1250,9 @@ export class WebSocketManager {
     this.connectInFlight = false
     this.setState(WebSocketState.CLOSED)
     this.authenticated = false
+
+	// 连接关闭：清理 pb 认证 SLA 定时器
+	this.clearPbAuthSlaTimer()
     
     // 停止心跳
     this.stopHeartbeat()
@@ -1107,6 +1268,9 @@ export class WebSocketManager {
     console.error('[WebSocket] 连接错误:', err)
     this.setState(WebSocketState.CLOSED)
     this.authenticated = false
+
+	// 连接错误：清理 pb 认证 SLA 定时器
+	this.clearPbAuthSlaTimer()
     
     // 停止心跳
     this.stopHeartbeat()
@@ -1489,6 +1653,9 @@ export class WebSocketManager {
     
     // 停止心跳
     this.stopHeartbeat()
+
+    // 主动关闭也需要清理 pb 认证 SLA 定时器（避免降级/断开后误触发）
+    this.clearPbAuthSlaTimer()
     
     // 关闭 WebSocket
     if (this.ws !== null) {

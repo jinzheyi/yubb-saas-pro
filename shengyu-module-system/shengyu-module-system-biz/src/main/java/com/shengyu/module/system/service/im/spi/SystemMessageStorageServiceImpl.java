@@ -80,6 +80,36 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
     @Resource
     private NettyMessageSender nettyMessageSender;
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void markMessagesRead(Long userId, List<Long> messageIds) {
+        if (userId == null || messageIds == null || messageIds.isEmpty()) {
+            return;
+        }
+
+        List<ImChatMessageDO> messages = chatMessageMapper.selectBatchIds(messageIds);
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+
+        List<Long> filteredIds = new ArrayList<>();
+        for (ImChatMessageDO m : messages) {
+            if (m == null || m.getId() == null || m.getChatId() == null) {
+                continue;
+            }
+            ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, m.getChatId());
+            if (chatUser == null) {
+                continue;
+            }
+            filteredIds.add(m.getId());
+        }
+        if (filteredIds.isEmpty()) {
+            return;
+        }
+
+        chatMessageMapper.updateStatusByIds(filteredIds, ImMessageStatusEnum.READ.getStatus());
+    }
+
     /**
      * 保存消息（同步方法，用于需要立即返回结果的场景）
      * 
