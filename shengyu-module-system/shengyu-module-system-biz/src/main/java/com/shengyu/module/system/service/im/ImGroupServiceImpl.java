@@ -5,10 +5,12 @@ import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
 import com.shengyu.module.system.controller.app.im.vo.group.*;
+import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupInviteDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupUserDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
+import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupInviteMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupUserMapper;
@@ -57,6 +59,9 @@ public class ImGroupServiceImpl implements ImGroupService {
 
     @Resource
     private NettyMessageSender messageSender;
+
+    @Resource
+    private ImChatMapper chatMapper;
 
     @Resource
     private ImGroupInviteMapper groupInviteMapper;
@@ -197,13 +202,35 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_PERMISSION_DENIED);
         }
 
+        // 获取群会话（在删除群前查询，确保 im_chat 记录仍在）
+        ImChatDO groupChat = chatMapper.selectGroupChat(groupId, 2);
+        Long chatId = groupChat != null ? groupChat.getId() : null;
+
         // 删除群组
         groupMapper.deleteById(groupId);
 
-        // 删除所有群成员
+        // 删除所有群成员，清理各成员会话记录，并推送通知
         List<ImGroupUserDO> members = groupUserMapper.selectListByGroupId(groupId);
+        Long tenantId = TenantContextHolder.getTenantId();
         for (ImGroupUserDO member : members) {
             groupUserMapper.deleteById(member.getId());
+            Long memberId = member.getUserId();
+            // 清理该成员的会话记录
+            try {
+                conversationService.deleteConversationByTarget(memberId, groupId, ImConversationTypeEnum.GROUP.getType());
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 解散群时删除成员会话失败, groupId: {}, memberId: {}, error: {}",
+                        groupId, memberId, e.getMessage());
+            }
+            // 推送 CONVERSATION_UPSERT，让成员端侧实时感知群已解散
+            try {
+                messageSender.sendToUser(memberId, MessageType.SYSTEM_NOTIFY,
+                        TextMessage.newBuilder().setContent("CONVERSATION_UPSERT").build(),
+                        userId, memberId, groupId, tenantId, null, null, chatId);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 解散群推送成员通知失败, groupId: {}, memberId: {}, error: {}",
+                        groupId, memberId, e.getMessage());
+            }
         }
 
         log.info("[ImGroupService] 解散群组成功, groupId: {}, ownerId: {}", groupId, userId);
@@ -235,6 +262,26 @@ public class ImGroupServiceImpl implements ImGroupService {
         // 更新群成员数量
         group.setMemberCount(group.getMemberCount() - 1);
         groupMapper.updateById(group);
+
+        // 删除退出者的会话记录
+        try {
+            conversationService.deleteConversationByTarget(userId, groupId, ImConversationTypeEnum.GROUP.getType());
+            log.info("[ImGroupService] 删除退出成员会话成功, userId: {}, groupId: {}", userId, groupId);
+        } catch (Exception e) {
+            log.warn("[ImGroupService] 删除退出成员会话失败, userId: {}, groupId: {}, error: {}", userId, groupId, e.getMessage());
+        }
+
+        // 推送 CONVERSATION_UPSERT，让退出者端侧实时移除该群会话
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            ImChatDO chat = chatMapper.selectGroupChat(groupId, 2);
+            Long chatId = chat != null ? chat.getId() : null;
+            messageSender.sendToUser(userId, MessageType.SYSTEM_NOTIFY,
+                    TextMessage.newBuilder().setContent("CONVERSATION_UPSERT").build(),
+                    userId, userId, groupId, tenantId, null, null, chatId);
+        } catch (Exception e) {
+            log.warn("[ImGroupService] 推送退出群组通知失败, userId: {}, groupId: {}, error: {}", userId, groupId, e.getMessage());
+        }
 
         log.info("[ImGroupService] 退出群组成功, groupId: {}, userId: {}", groupId, userId);
     }
@@ -326,6 +373,36 @@ public class ImGroupServiceImpl implements ImGroupService {
             newMember.setRole(ImGroupMemberRoleEnum.MEMBER.getRole());
             newMember.setJoinTime(LocalDateTime.now());
             groupUserMapper.insert(newMember);
+
+            // 为新成员创建会话 + 推送 CONVERSATION_UPSERT（对标 createGroup 链路）
+            try {
+                AppImConversationCreateReqVO conversationReqVO = new AppImConversationCreateReqVO();
+                conversationReqVO.setTargetId(addReqVO.getGroupId());
+                conversationReqVO.setConversationType(2); // 2-群聊
+                AppImConversationRespVO resp = conversationService.createOrGetConversation(memberId, conversationReqVO);
+                if (resp != null && resp.getChatId() != null) {
+                    try {
+                        Long tenantId = TenantContextHolder.getTenantId();
+                        messageSender.sendToUser(memberId,
+                                MessageType.SYSTEM_NOTIFY,
+                                TextMessage.newBuilder().setContent("CONVERSATION_UPSERT").build(),
+                                userId,
+                                memberId,
+                                addReqVO.getGroupId(),
+                                tenantId,
+                                null,
+                                null,
+                                resp.getChatId());
+                    } catch (Exception e) {
+                        log.warn("[ImGroupService] 推送会话快照失败, groupId: {}, memberId: {}, error: {}",
+                                addReqVO.getGroupId(), memberId, e.getMessage(), e);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("[ImGroupService] 为新成员创建会话失败, groupId: {}, memberId: {}, error: {}",
+                        addReqVO.getGroupId(), memberId, e.getMessage(), e);
+            }
+
             addedCount++;
         }
 
@@ -378,12 +455,25 @@ public class ImGroupServiceImpl implements ImGroupService {
             conversationService.deleteConversationByTarget(memberUserId, groupId, ImConversationTypeEnum.GROUP.getType());
             log.info("[ImGroupService] 删除被移除成员的会话记录成功, userId: {}, groupId: {}", memberUserId, groupId);
         } catch (Exception e) {
-            log.warn("[ImGroupService] 删除被移除成员的会话记录失败, userId: {}, groupId: {}, error: {}", 
+            log.warn("[ImGroupService] 删除被移除成员的会话记录失败, userId: {}, groupId: {}, error: {}",
                     memberUserId, groupId, e.getMessage());
             // 会话删除失败不影响成员移除操作
         }
 
-        log.info("[ImGroupService] 移除群成员成功, groupId: {}, memberUserId: {}, 剩余成员数: {}", 
+        // 推送 CONVERSATION_UPSERT，让被移除成员端侧实时移除该群会话
+        try {
+            Long tenantId = TenantContextHolder.getTenantId();
+            ImChatDO chat = chatMapper.selectGroupChat(groupId, 2);
+            Long chatId = chat != null ? chat.getId() : null;
+            messageSender.sendToUser(memberUserId, MessageType.SYSTEM_NOTIFY,
+                    TextMessage.newBuilder().setContent("CONVERSATION_UPSERT").build(),
+                    userId, memberUserId, groupId, tenantId, null, null, chatId);
+        } catch (Exception e) {
+            log.warn("[ImGroupService] 推送被移除成员通知失败, groupId: {}, memberUserId: {}, error: {}",
+                    groupId, memberUserId, e.getMessage());
+        }
+
+        log.info("[ImGroupService] 移除群成员成功, groupId: {}, memberUserId: {}, 剩余成员数: {}",
                 groupId, memberUserId, group.getMemberCount());
     }
 
@@ -715,9 +805,29 @@ public class ImGroupServiceImpl implements ImGroupService {
         AppImConversationCreateReqVO conversationReqVO = new AppImConversationCreateReqVO();
         conversationReqVO.setTargetId(groupId);
         conversationReqVO.setConversationType(2); // 2-群聊
-        conversationService.createOrGetConversation(userId, conversationReqVO);
+        AppImConversationRespVO convResp = conversationService.createOrGetConversation(userId, conversationReqVO);
 
-        // 8. 更新邀请码使用次数
+        // 8. 推送 CONVERSATION_UPSERT，让加入者立即看到群聊出现在会话列表
+        if (convResp != null && convResp.getChatId() != null) {
+            try {
+                Long tenantId = TenantContextHolder.getTenantId();
+                messageSender.sendToUser(userId,
+                        MessageType.SYSTEM_NOTIFY,
+                        TextMessage.newBuilder().setContent("CONVERSATION_UPSERT").build(),
+                        userId,
+                        userId,
+                        groupId,
+                        tenantId,
+                        null,
+                        null,
+                        convResp.getChatId());
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送会话快照失败(邀请码加入), userId: {}, groupId: {}, error: {}",
+                        userId, groupId, e.getMessage(), e);
+            }
+        }
+
+        // 9. 更新邀请码使用次数
         ImGroupInviteDO invite = groupInviteMapper.selectByInviteCode(inviteCode);
         invite.setUsedCount(invite.getUsedCount() + 1);
         groupInviteMapper.updateById(invite);

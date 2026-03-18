@@ -2231,6 +2231,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				} catch (e) {
 					// ignore
 				}
+				// 群聊自发消息确认后，在数据层触发已读回执 summary 拉取（不在模板渲染中发网络请求）
+				try {
+					if (chatType.value === 'group' && uiMsg.isSelf === true) {
+						ensureReadReceiptSummaryFetched(messageId)
+					}
+				} catch (e) {
+					// ignore
+				}
 				return
 			}
 
@@ -3341,14 +3349,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                                 if (msg.messageId && msg.messageId !== '0') {
                                     await recallMessage(msg.messageId)
                                 }
-                                
-                                // 更新本地消息状态
-                                const idx = messages.value.findIndex(m => m.id === msg.id)
-                                if (idx > -1) {
-                                    messages.value[idx].status = 'recalled'
-                                    messages.value[idx].content = '你撤回了一条消息'
+
+                                // 乐观更新：与 WS RECALL_NOTIFY 走同一路径（status=6 + reeditContent + 会话更新）
+                                // handleNewMessage 监听器会自动刷新 messages.value
+                                try {
+                                    messageService.applyLocalRecall(chatId.value, msg.messageId)
+                                } catch (e) {
+                                    // ignore，WS push 到达后自愈
                                 }
-                                
+
                                 uni.showToast({ title: '已撤回', icon: 'success' })
                             } catch (e) {
                                 console.error('[Chat] 撤回消息失败:', e)
@@ -3523,10 +3532,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			if (chatType.value !== 'group') return false
 			if (!msg || !msg.isSelf) return false
 			if (!msg.messageId || msg.messageId === '0') return false
-			// 仅服务端已确认（回推后）才展示/拉取 summary，避免“消息不存在”
+			// 仅服务端已确认（回推后）才展示 summary，避免”消息不存在”
 			if (!isMsgConfirmedSent(msg)) return false
 			if (!msg.sequence || String(msg.sequence) === '0') return false
-			ensureReadReceiptSummaryFetched(String(msg.messageId))
 			return true
 		} catch (e) {
 			return false
@@ -3546,7 +3554,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				}
 				return '已读'
 			}
-			ensureReadReceiptSummaryFetched(mid)
 			return '已读'
 		} catch (e) {
 			return '已读'

@@ -1195,8 +1195,10 @@ export class MessageService {
       const cached = conversationService.getCachedChatIdByTarget(groupIdStr, 2)
       chatId = cached != null && cached !== '' ? cached : groupIdStr
     } else {
-      const rawChatId = message.header.receiverId
-      chatId = rawChatId != null ? (rawChatId as any).toString() : '0'
+      // 单聊：优先从会话缓存拿真实 chatId，避免用 receiverId（对方userId）做 key 导致会话预览不更新
+      const receiverIdStr = message.header.receiverId != null ? (message.header.receiverId as any).toString() : '0'
+      const cachedSingle = conversationService.getCachedChatIdByTarget(receiverIdStr, 1)
+      chatId = cachedSingle != null && cachedSingle !== '' ? cachedSingle : receiverIdStr
     }
     this.addMessageToCache(chatId, messageItem)
     
@@ -1805,10 +1807,91 @@ export class MessageService {
       this.currentTenantId,
       messageId
     )
-    
+
     wsManager.send(message)
   }
-  
+
+  /**
+   * 乐观撤回：REST 请求成功后立即在本地应用撤回状态，
+   * 与 WS RECALL_NOTIFY 推送走同一条逻辑路径（status=6 + reeditContent/deadline + 通知监听器 + 更新会话），
+   * 消除 REST 确认 → WS 到达之间的视觉闪烁窗口。
+   */
+  public applyLocalRecall(chatId: string, messageId: string): void {
+    try {
+      const messages = this.messageCache.get(chatId)
+      if (messages == null) {
+        return
+      }
+      const index = messages.findIndex(m => m.messageId === messageId)
+      if (index === -1) {
+        return
+      }
+      const originalMessage = messages[index]
+      const senderName = (originalMessage as any).senderName != null && (originalMessage as any).senderName !== ''
+        ? (originalMessage as any).senderName as string
+        : '对方'
+      const originalTs = (originalMessage as any).timestamp != null ? Number((originalMessage as any).timestamp) : 0
+
+      // 仅自己发的文本消息才支持重新编辑
+      let reeditContent: string = ''
+      let reeditDeadlineTs: string = ''
+      try {
+        const isText = (originalMessage as any).type === MessageType.TEXT
+        if ((originalMessage as any).isSelf === true && isText) {
+          const c: any = (originalMessage as any).content
+          if (c != null && c !== '') {
+            reeditContent = c.toString()
+          }
+          // 截止时间：撤回时刻 + 5 分钟，与 WS 路径保持一致
+          reeditDeadlineTs = (Date.now() + 5 * 60 * 1000).toString()
+        }
+      } catch (e) {
+        reeditContent = ''
+        reeditDeadlineTs = ''
+      }
+
+      const recallTip: MessageItem = {
+        id: originalMessage.id,
+        messageId: originalMessage.messageId,
+        senderId: originalMessage.senderId,
+        receiverId: originalMessage.receiverId,
+        groupId: originalMessage.groupId,
+        type: MessageType.TEXT,
+        content: '你撤回了一条消息',
+        status: MessageStatus.RECALLED,
+        timestamp: originalTs > 0 ? originalTs : Date.now(),
+        isSelf: true,
+        showTime: false,
+        avatarText: originalMessage.avatarText,
+        avatarBg: originalMessage.avatarBg,
+        senderName: senderName,
+        rev: (originalMessage as any).rev != null ? (originalMessage as any).rev.toString() : ''
+      }
+
+      try {
+        if (reeditContent !== '') {
+          ;(recallTip as any).reeditContent = reeditContent
+          if (reeditDeadlineTs !== '') {
+            ;(recallTip as any).reeditDeadlineTs = reeditDeadlineTs
+          }
+          try {
+            this.persistReeditHint(chatId, messageId, reeditContent, reeditDeadlineTs)
+          } catch (e) {
+            // ignore
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      messages[index] = recallTip
+      this.notifyMessageListeners(recallTip)
+      this.updateConversation(chatId, recallTip)
+    } catch (e) {
+      // ignore
+    }
+  }
+
   /**
    * 添加消息到缓存
    */

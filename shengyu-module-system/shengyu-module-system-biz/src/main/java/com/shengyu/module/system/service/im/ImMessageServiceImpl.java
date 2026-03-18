@@ -344,6 +344,10 @@ public class ImMessageServiceImpl implements ImMessageService {
                                          Long senderId, AppImMessageSendReqVO sendReqVO) {
         Integer dbMessageType = normalizeDbMessageType(sendReqVO.getMessageType());
         Long finalRev = messageRev != null && messageRev > 0 ? messageRev : 1L;
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
         if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
             List<Long> memberIds = imGroupService.getGroupMemberIds(chat.getGroupId());
             for (Long memberId : memberIds) {
@@ -362,6 +366,21 @@ public class ImMessageServiceImpl implements ImMessageService {
 						// ignore
 					}
 				}
+                // 同步写入 im_conversation_user_state，支持离线重连后 /sync 增量拉取
+                try {
+                    Long cursorVer = cursorVersionService.allocateNextCursorVersion(tenantId, memberId);
+                    int unreadDelta = isSender ? 0 : 1;
+                    Long lastReadSeq = isSender ? lastMessageSequence : null;
+                    LocalDateTime lastReadTime = isSender ? lastMessageTime : null;
+                    conversationUserStateMapper.upsertAfterMessage(
+                            tenantId, chat.getId(), memberId, cursorVer,
+                            unreadDelta, lastReadSeq, lastReadTime,
+                            lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime);
+                } catch (Exception e) {
+                    log.warn("[ImMessageService] 写入会话-用户态失败(群消息), chatId: {}, memberId: {}, error: {}",
+                            chat.getId(), memberId, e.getMessage());
+                }
+
                 if (!isSender) {
                     imBadgeService.pushBadgeUpdate(memberId);
                     // 推送消息内容给接收者
@@ -384,12 +403,37 @@ public class ImMessageServiceImpl implements ImMessageService {
 				}
 			}
 
+            // 发送者侧写入 im_conversation_user_state（lastRead=lastSeq，自己发的消息已读）
+            try {
+                Long senderCursorVer = cursorVersionService.allocateNextCursorVersion(tenantId, senderId);
+                conversationUserStateMapper.upsertAfterMessage(
+                        tenantId, chat.getId(), senderId, senderCursorVer,
+                        0, lastMessageSequence, lastMessageTime,
+                        lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime);
+            } catch (Exception e) {
+                log.warn("[ImMessageService] 写入会话-用户态失败(单聊发送者), chatId: {}, senderId: {}, error: {}",
+                        chat.getId(), senderId, e.getMessage());
+            }
+
             Long receiverId = Objects.equals(chat.getSingleUser1(), senderId) ? chat.getSingleUser2() : chat.getSingleUser1();
             ImChatUserDO receiver = ensureChatUser(receiverId, chat.getId());
             chatUserMapper.updateLastMessageAndIncrementUnread(
                     receiver.getId(), lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime,
                     1,
                     Boolean.TRUE.equals(receiver.getNoDisturb()));
+
+            // 接收者侧写入 im_conversation_user_state（unreadDelta=1，支持离线 /sync 拉取未读）
+            try {
+                Long receiverCursorVer = cursorVersionService.allocateNextCursorVersion(tenantId, receiverId);
+                conversationUserStateMapper.upsertAfterMessage(
+                        tenantId, chat.getId(), receiverId, receiverCursorVer,
+                        1, null, null,
+                        lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime);
+            } catch (Exception e) {
+                log.warn("[ImMessageService] 写入会话-用户态失败(单聊接收者), chatId: {}, receiverId: {}, error: {}",
+                        chat.getId(), receiverId, e.getMessage());
+            }
+
             imBadgeService.pushBadgeUpdate(receiverId);
             // 推送消息内容给接收者
             pushMessageToUser(receiverId, chat.getId(), lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO);

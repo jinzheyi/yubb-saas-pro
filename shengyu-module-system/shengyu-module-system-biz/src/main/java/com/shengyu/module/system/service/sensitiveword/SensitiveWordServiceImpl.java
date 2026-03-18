@@ -88,7 +88,7 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
         TenantUtils.executeIgnore(() -> {
             // 第一步：查询数据
             List<SensitiveWordDO> sensitiveWords = sensitiveWordMapper.selectList();
-            log.info("[initLocalCache][缓存敏感词，数量为:{}]", sensitiveWords.size());
+//            log.info("[initLocalCache][缓存敏感词，数量为:{}]", sensitiveWords.size());
 
             // 第二步：构建缓存
             // 写入 sensitiveWordTagsCache 缓存
