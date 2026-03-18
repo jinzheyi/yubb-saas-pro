@@ -24,7 +24,6 @@ import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
 import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
-import com.shengyu.module.system.dal.mysql.im.ImUserCursorMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import lombok.extern.slf4j.Slf4j;
@@ -33,11 +32,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -79,32 +81,10 @@ public class ImConversationServiceImpl implements ImConversationService {
     @Resource
     private NettyMessageSender messageSender;
 
-    @Resource
-    private ImUserCursorMapper userCursorMapper;
-
-    @Transactional(rollbackFor = Exception.class)
-    public Long allocateNextCursorVersion(Long userId) {
-        if (userId == null || userId <= 0) {
-            return 0L;
-        }
-        Long tenantId = TenantContextHolder.getTenantId();
-        if (tenantId == null) {
-            tenantId = 0L;
-        }
-        userCursorMapper.insertIgnore(tenantId, userId);
-        com.shengyu.module.system.dal.dataobject.im.ImUserCursorDO cursor = userCursorMapper.selectForUpdate(tenantId, userId);
-        long next = 1L;
-        if (cursor != null && cursor.getNextCursorVersion() != null) {
-            next = cursor.getNextCursorVersion() + 1L;
-        }
-        userCursorMapper.updateNext(tenantId, userId, next);
-        return next;
-    }
-
     @Override
     public List<AppImConversationRespVO> getConversationList(Long userId) {
         List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserId(userId);
-        return chatUsers.stream().map(chatUser -> toConversationRespVO(userId, chatUser)).collect(Collectors.toList());
+        return toConversationRespVOList(userId, chatUsers);
     }
 
     @Override
@@ -119,6 +99,67 @@ public class ImConversationServiceImpl implements ImConversationService {
         List<ImConversationUserStateDO> states = conversationUserStateMapper.selectSyncList(tenantId, userId, cursor, pageSize);
         List<AppImConversationSyncItemRespVO> items = new ArrayList<>();
         long next = cursor;
+
+        Map<Long, ImChatDO> chatMap = new HashMap<>();
+        Map<Long, ImGroupDO> groupMap = new HashMap<>();
+        Map<Long, AdminUserDO> userMap = new HashMap<>();
+
+        if (states != null && !states.isEmpty()) {
+            List<Long> chatIds = states.stream()
+                    .filter(s -> s != null && s.getChatId() != null)
+                    .map(ImConversationUserStateDO::getChatId)
+                    .distinct()
+                    .collect(Collectors.toList());
+            if (!chatIds.isEmpty()) {
+                List<ImChatDO> chats = chatMapper.selectBatchIds(chatIds);
+                if (chats != null) {
+                    for (ImChatDO c : chats) {
+                        if (c != null && c.getId() != null) {
+                            chatMap.put(c.getId(), c);
+                        }
+                    }
+                }
+
+                Set<Long> groupIds = new HashSet<>();
+                Set<Long> otherUserIds = new HashSet<>();
+                for (ImChatDO c : chatMap.values()) {
+                    if (c == null) {
+                        continue;
+                    }
+                    if (ImConversationTypeEnum.isGroup(c.getChatType())) {
+                        if (c.getGroupId() != null) {
+                            groupIds.add(c.getGroupId());
+                        }
+                    } else {
+                        Long otherUserId = Objects.equals(c.getSingleUser1(), userId) ? c.getSingleUser2() : c.getSingleUser1();
+                        if (otherUserId != null) {
+                            otherUserIds.add(otherUserId);
+                        }
+                    }
+                }
+
+                if (!groupIds.isEmpty()) {
+                    List<ImGroupDO> groups = groupMapper.selectBatchIds(new ArrayList<>(groupIds));
+                    if (groups != null) {
+                        for (ImGroupDO g : groups) {
+                            if (g != null && g.getId() != null) {
+                                groupMap.put(g.getId(), g);
+                            }
+                        }
+                    }
+                }
+                if (!otherUserIds.isEmpty()) {
+                    List<AdminUserDO> users = userMapper.selectBatchIds(new ArrayList<>(otherUserIds));
+                    if (users != null) {
+                        for (AdminUserDO u : users) {
+                            if (u != null && u.getId() != null) {
+                                userMap.put(u.getId(), u);
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         if (states != null) {
             for (ImConversationUserStateDO state : states) {
@@ -140,12 +181,12 @@ public class ImConversationServiceImpl implements ImConversationService {
                 item.setDraft(state.getDraft());
                 item.setDeletedByUser(state.getDeletedByUser());
 
-                ImChatDO chat = chatMapper.selectById(state.getChatId());
+                ImChatDO chat = state.getChatId() != null ? chatMap.get(state.getChatId()) : null;
                 if (chat != null) {
                     item.setConversationType(chat.getChatType());
                     if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
                         item.setTargetId(chat.getGroupId());
-                        ImGroupDO group = groupMapper.selectById(chat.getGroupId());
+                        ImGroupDO group = chat.getGroupId() != null ? groupMap.get(chat.getGroupId()) : null;
                         if (group != null) {
                             item.setTargetName(group.getName());
                             item.setTargetAvatar(group.getAvatar());
@@ -159,7 +200,7 @@ public class ImConversationServiceImpl implements ImConversationService {
                     } else {
                         Long otherUserId = Objects.equals(chat.getSingleUser1(), userId) ? chat.getSingleUser2() : chat.getSingleUser1();
                         item.setTargetId(otherUserId);
-                        AdminUserDO targetUser = userMapper.selectById(otherUserId);
+                        AdminUserDO targetUser = otherUserId != null ? userMap.get(otherUserId) : null;
                         if (targetUser != null) {
                             item.setTargetName(targetUser.getNickname());
                             item.setTargetAvatar(targetUser.getAvatar());
@@ -185,10 +226,9 @@ public class ImConversationServiceImpl implements ImConversationService {
     public List<AppImConversationRespVO> getConversationListByType(Long userId, Integer conversationType) {
         List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserId(userId);
         if (conversationType == null) {
-            return chatUsers.stream().map(chatUser -> toConversationRespVO(userId, chatUser)).collect(Collectors.toList());
+            return toConversationRespVOList(userId, chatUsers);
         }
-        return chatUsers.stream()
-                .map(chatUser -> toConversationRespVO(userId, chatUser))
+        return toConversationRespVOList(userId, chatUsers).stream()
                 .filter(vo -> conversationType.equals(vo.getConversationType()))
                 .collect(Collectors.toList());
     }
@@ -246,14 +286,15 @@ public class ImConversationServiceImpl implements ImConversationService {
             }
         }
 
-        List<AppImConversationRespVO> list = new ArrayList<>();
+        List<ImChatUserDO> orderedChatUsers = new ArrayList<>();
         for (Long chatId : chatIds) {
             ImChatUserDO cu = map.get(chatId);
             if (cu == null) {
                 continue;
             }
-            list.add(toConversationRespVO(userId, cu));
+            orderedChatUsers.add(cu);
         }
+        List<AppImConversationRespVO> list = toConversationRespVOList(userId, orderedChatUsers);
 
         return new PageResult<>(list, total);
     }
@@ -522,7 +563,11 @@ public class ImConversationServiceImpl implements ImConversationService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteConversationByTarget(Long userId, Long targetId, Integer conversationType) {
-        ImChatDO chat = getOrCreateChat(conversationType, userId, targetId);
+        ImChatDO chat = findChat(conversationType, userId, targetId);
+        if (chat == null || chat.getId() == null) {
+            return;
+        }
+
         chatUserMapper.softDelete(userId, chat.getId());
 
         // 同步写入会话-用户态 + 分配 cursorVersion（跨端删除一致）
@@ -579,7 +624,189 @@ public class ImConversationServiceImpl implements ImConversationService {
         if (chatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
+        List<AppImConversationRespVO> list = toConversationRespVOList(userId, Arrays.asList(chatUser));
+        if (list != null && !list.isEmpty()) {
+            return list.get(0);
+        }
         return toConversationRespVO(userId, chatUser);
+    }
+
+    private List<AppImConversationRespVO> toConversationRespVOList(Long userId, List<ImChatUserDO> chatUsers) {
+        if (chatUsers == null || chatUsers.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+
+        List<Long> chatIds = chatUsers.stream()
+                .filter(cu -> cu != null && cu.getChatId() != null)
+                .map(ImChatUserDO::getChatId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (chatIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Map<Long, ImChatDO> chatMap = new HashMap<>();
+        List<ImChatDO> chats = chatMapper.selectBatchIds(chatIds);
+        if (chats != null) {
+            for (ImChatDO c : chats) {
+                if (c != null && c.getId() != null) {
+                    chatMap.put(c.getId(), c);
+                }
+            }
+        }
+
+        Map<Long, ImConversationUserStateDO> stateMap = new HashMap<>();
+        try {
+            List<ImConversationUserStateDO> states = conversationUserStateMapper.selectListByUserIdAndChatIds(tenantId, userId, chatIds);
+            if (states != null) {
+                for (ImConversationUserStateDO s : states) {
+                    if (s != null && s.getChatId() != null) {
+                        stateMap.put(s.getChatId(), s);
+                    }
+                }
+            }
+        } catch (Exception ignore) {
+            // ignore
+        }
+
+        Set<Long> groupIds = new HashSet<>();
+        Set<Long> otherUserIds = new HashSet<>();
+        for (ImChatDO c : chatMap.values()) {
+            if (c == null) {
+                continue;
+            }
+            if (ImConversationTypeEnum.isGroup(c.getChatType())) {
+                if (c.getGroupId() != null) {
+                    groupIds.add(c.getGroupId());
+                }
+            } else {
+                Long otherUserId = Objects.equals(c.getSingleUser1(), userId) ? c.getSingleUser2() : c.getSingleUser1();
+                if (otherUserId != null) {
+                    otherUserIds.add(otherUserId);
+                }
+            }
+        }
+
+        Map<Long, ImGroupDO> groupMap = new HashMap<>();
+        if (!groupIds.isEmpty()) {
+            List<ImGroupDO> groups = groupMapper.selectBatchIds(new ArrayList<>(groupIds));
+            if (groups != null) {
+                for (ImGroupDO g : groups) {
+                    if (g != null && g.getId() != null) {
+                        groupMap.put(g.getId(), g);
+                    }
+                }
+            }
+        }
+
+        Map<Long, AdminUserDO> userMap = new HashMap<>();
+        if (!otherUserIds.isEmpty()) {
+            List<AdminUserDO> users = userMapper.selectBatchIds(new ArrayList<>(otherUserIds));
+            if (users != null) {
+                for (AdminUserDO u : users) {
+                    if (u != null && u.getId() != null) {
+                        userMap.put(u.getId(), u);
+                    }
+                }
+            }
+        }
+
+        Map<Long, Integer> lastMessageTypeMap = new HashMap<>();
+        List<Long> needLastMsgIds = chatUsers.stream()
+                .filter(cu -> cu != null && cu.getLastMessageId() != null && cu.getLastMessageType() == null)
+                .map(ImChatUserDO::getLastMessageId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (!needLastMsgIds.isEmpty()) {
+            List<ImChatMessageDO> msgs = chatMessageMapper.selectBatchIds(needLastMsgIds);
+            if (msgs != null) {
+                for (ImChatMessageDO m : msgs) {
+                    if (m != null && m.getId() != null) {
+                        lastMessageTypeMap.put(m.getId(), m.getMessageType());
+                    }
+                }
+            }
+        }
+
+        List<AppImConversationRespVO> list = new ArrayList<>();
+        for (ImChatUserDO chatUser : chatUsers) {
+            if (chatUser == null || chatUser.getChatId() == null) {
+                continue;
+            }
+            ImChatDO chat = chatMap.get(chatUser.getChatId());
+            if (chat == null) {
+                throw exception(CONVERSATION_NOT_EXISTS);
+            }
+
+            AppImConversationRespVO respVO = new AppImConversationRespVO();
+            respVO.setChatId(chatUser.getChatId());
+            respVO.setConversationType(chat.getChatType());
+
+            // cursorVersion/conversationVersion：用于 WS gap 检测 + 端侧幂等/乱序保护
+            ImConversationUserStateDO state = stateMap.get(chatUser.getChatId());
+            if (state != null) {
+                respVO.setCursorVersion(state.getCursorVersion());
+                respVO.setConversationVersion(state.getConversationVersion());
+            }
+
+            Long lastMsgSeq = chatUser.getLastMessageSequence() != null ? chatUser.getLastMessageSequence() : 0L;
+            Long lastReadSeq = chatUser.getLastReadSequence() != null ? chatUser.getLastReadSequence() : 0L;
+            respVO.setLastMessageSequence(lastMsgSeq);
+            respVO.setLastReadSequence(lastReadSeq);
+            int unread = 0;
+            try {
+                unread = (int) Math.max(lastMsgSeq - lastReadSeq, 0L);
+            } catch (Exception ignore) {
+                unread = chatUser.getUnreadCount() != null ? chatUser.getUnreadCount() : 0;
+            }
+            respVO.setUnreadCount(unread);
+
+            Integer lastType = chatUser.getLastMessageType();
+            if (lastType == null && chatUser.getLastMessageId() != null) {
+                Integer t = lastMessageTypeMap.get(chatUser.getLastMessageId());
+                if (t != null) {
+                    lastType = t;
+                }
+            }
+            respVO.setLastMessageType(lastType);
+            respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent()));
+            // 无消息时：群聊会话时间取群创建时间；有消息时取最后一条消息时间
+            respVO.setLastMessageTime(chatUser.getLastMessageTime());
+            respVO.setIsPinned(chatUser.getIsPinned());
+            respVO.setNoDisturb(chatUser.getNoDisturb());
+
+            if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
+                respVO.setTargetId(chat.getGroupId());
+                ImGroupDO group = chat.getGroupId() != null ? groupMap.get(chat.getGroupId()) : null;
+                if (group != null) {
+                    respVO.setTargetName(group.getName());
+                    respVO.setTargetAvatar(group.getAvatar());
+                    respVO.setGroupMemberCount(group.getMemberCount());
+
+                    // 群聊无消息：使用群创建时间作为会话时间
+                    if (respVO.getLastMessageTime() == null
+                            && chatUser.getLastMessageId() == null
+                            && (chatUser.getLastMessageSequence() == null || chatUser.getLastMessageSequence() <= 0L)) {
+                        respVO.setLastMessageTime(group.getCreateTime());
+                    }
+                }
+            } else {
+                Long otherUserId = Objects.equals(chat.getSingleUser1(), userId) ? chat.getSingleUser2() : chat.getSingleUser1();
+                respVO.setTargetId(otherUserId);
+                AdminUserDO targetUser = otherUserId != null ? userMap.get(otherUserId) : null;
+                if (targetUser != null) {
+                    respVO.setTargetName(targetUser.getNickname());
+                    respVO.setTargetAvatar(targetUser.getAvatar());
+                }
+            }
+            list.add(respVO);
+        }
+        return list;
     }
 
      private AppImConversationRespVO toConversationRespVO(Long userId, ImChatUserDO chatUser) {
@@ -728,6 +955,18 @@ public class ImConversationServiceImpl implements ImConversationService {
          chat.setStatus(1);
          chatMapper.insert(chat);
          return chat;
+     }
+
+     private ImChatDO findChat(Integer conversationType, Long userId, Long targetId) {
+         if (conversationType == null || userId == null || targetId == null) {
+             return null;
+         }
+         if (ImConversationTypeEnum.isGroup(conversationType)) {
+             return chatMapper.selectGroupChat(targetId, conversationType);
+         }
+         Long user1 = Math.min(userId, targetId);
+         Long user2 = Math.max(userId, targetId);
+         return chatMapper.selectSingleChat(user1, user2, conversationType);
      }
 
      private ImChatUserDO ensureChatUser(Long userId, Long chatId) {

@@ -22,12 +22,15 @@ public class AppImReadReceiptSummaryRespVO {
     private Long sequence;
 
     @Schema(description = "已读人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long readCount;
 
     @Schema(description = "未读人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long unreadCount;
 
     @Schema(description = "总人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "2")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long totalCount;
 
 }

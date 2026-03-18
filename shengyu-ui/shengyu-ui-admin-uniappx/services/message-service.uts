@@ -1198,7 +1198,16 @@ export class MessageService {
       // 单聊：优先从会话缓存拿真实 chatId，避免用 receiverId（对方userId）做 key 导致会话预览不更新
       const receiverIdStr = message.header.receiverId != null ? (message.header.receiverId as any).toString() : '0'
       const cachedSingle = conversationService.getCachedChatIdByTarget(receiverIdStr, 1)
-      chatId = cachedSingle != null && cachedSingle !== '' ? cachedSingle : receiverIdStr
+      if (cachedSingle != null && cachedSingle !== '' && cachedSingle !== receiverIdStr) {
+        try {
+          this.migrateMessageCacheKey(receiverIdStr, cachedSingle)
+        } catch (e) {
+          // ignore
+        }
+        chatId = cachedSingle
+      } else {
+        chatId = receiverIdStr
+      }
     }
     this.addMessageToCache(chatId, messageItem)
     
@@ -2042,6 +2051,64 @@ export class MessageService {
   public getMessages(chatId: string): MessageItem[] {
     const messages = this.messageCache.get(chatId)
     return messages !== null && messages !== undefined ? messages : []
+  }
+
+  private migrateMessageCacheKey(fromKey: string, toKey: string): void {
+    if (fromKey == null || fromKey === '' || fromKey === '0') {
+      return
+    }
+    if (toKey == null || toKey === '' || toKey === '0') {
+      return
+    }
+    if (fromKey === toKey) {
+      return
+    }
+    try {
+      const fromList = this.messageCache.get(fromKey)
+      if (fromList != null && fromList.length > 0) {
+        let toList = this.messageCache.get(toKey)
+        if (toList == null) {
+          toList = []
+          this.messageCache.set(toKey, toList)
+        }
+        for (let i = 0; i < fromList.length; i++) {
+          try {
+            const m = fromList[i]
+            if (m != null) {
+              this.addMessageToCache(toKey, m)
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+        this.messageCache.delete(fromKey)
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    try {
+      const seq = this.lastPulledSequence.get(fromKey)
+      if (seq != null && seq !== '' && seq !== '0') {
+        const current = this.lastPulledSequence.get(toKey)
+        if (current == null || current === '' || current === '0') {
+          this.lastPulledSequence.set(toKey, seq)
+          try {
+            uni.setStorageSync(this.getLastPulledSequenceStorageKey(toKey), seq)
+          } catch (e) {
+            // ignore
+          }
+        }
+        this.lastPulledSequence.delete(fromKey)
+        try {
+          uni.removeStorageSync(this.getLastPulledSequenceStorageKey(fromKey))
+        } catch (e) {
+          // ignore
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
   private resolveChatIdFromHeader(header: any): string {

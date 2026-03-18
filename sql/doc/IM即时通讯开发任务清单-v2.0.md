@@ -20,6 +20,23 @@
 - **WS 重连补偿**：WS 鉴权成功后触发节流的会话补偿 sync。
 - **已读/角标一致性闭环（按 sequence 水位）**：`PUT /system/im/conversation/mark-read-seq` 推进水位，角标刷新与会话列表一致。
 - **群聊会话摘要前缀一致性**：非文本消息摘要在推送与刷新场景均保留发送者前缀（如 `"张三: [图片]"` / `"我: [图片]"`）。
+- **会话读路径批量预取（消除 N+1）**：`/conversation/sync` + `/conversation/list` + `/conversation/search` + `/conversation/detail` 统一批量预取 `chat/group/user/state/lastMessageType`，减少 DB 往返。
+  - 关键实现：
+    - `shengyu-module-system/.../service/im/ImConversationServiceImpl.java`：批量预取组装（`syncConversations` + `toConversationRespVOList`）
+    - `shengyu-module-system/.../dal/mysql/im/ImConversationUserStateMapper.java`：`selectListByUserIdAndChatIds` 批量查询
+  - 验收证据（代码级）：`toConversationRespVOList` 内部使用 `selectBatchIds` 批量查询 chat/group/user/message，并按 chatId 在内存 Map 组装，避免 per-item `selectById/selectOne`。
+- **Long 精度补齐（已读聚合 + 端侧入口兜底）**：补齐已读聚合 VO 的 Long count 字段 ToString；移除端侧无用 PB import，避免 proto 生成物对 Long 执行 `parseInt`。
+  - 关键实现：
+    - `shengyu-module-system/.../vo/readreceipt/AppImReadReceiptSummaryRespVO.java`：`readCount/unreadCount/totalCount` 增加 `ToStringSerializer`
+    - `shengyu-ui/.../utils/websocket.uts`：移除未使用的 `im_message_pb.esm.js` import
+- **群组成员会话异步化（after-commit + Redis Stream）**：群组相关的“成员循环重操作”（创建/删除会话 + 推送 `CONVERSATION_UPSERT`）已从事务内同步执行改为事务提交后投递消息，消费者异步处理。
+  - 范围：建群/解散群/退群/踢人/拉人入群/邀请码入群。
+  - 关键实现：
+    - `shengyu-module-system/.../mq/message/im/ImGroupConversationRefreshMessage.java`
+    - `shengyu-module-system/.../mq/producer/im/ImGroupConversationRefreshProducer.java`
+    - `shengyu-module-system/.../mq/consumer/im/ImGroupConversationRefreshConsumer.java`
+    - `shengyu-module-system/.../service/im/ImGroupServiceImpl.java`
+  - 关键约束：`deleteConversationByTarget` 删除场景不允许隐式创建 `im_chat`（已修复）。
 
 ---
 

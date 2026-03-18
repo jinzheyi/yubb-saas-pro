@@ -25,7 +25,6 @@ import { badgeService } from '../services/badge-service.uts'
 import { refreshToken as refreshTokenApi } from '../api/login.uts'
 import { onAccessTokenRefreshed } from './request.uts'
 import { generateMessageId as generateLongSafeMessageId } from './message-utils.uts'
-import * as ImProto from './proto/im_message_pb.esm.js'
 
 /**
  * WebSocket 连接状态枚举

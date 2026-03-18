@@ -48,9 +48,48 @@ public class ProtobufMessageHandler extends SimpleChannelInboundHandler<ImMessag
                 return;
             }
 
+            // 安全与一致性：Protobuf 入站 header 以认证会话为准，禁止端侧伪造 senderId/tenantId。
+            // 典型症状：tenantId 不一致导致群成员查询为空，最终无法 fanout。
+            Long authedUserId = null;
+            Long authedTenantId = null;
+            try {
+                authedUserId = AuthHandler.getUserId(ctx);
+            } catch (Exception ignore) {
+                authedUserId = null;
+            }
+            try {
+                authedTenantId = AuthHandler.getTenantId(ctx);
+            } catch (Exception ignore) {
+                authedTenantId = null;
+            }
+
+            ImMessage actualMsg = msg;
+            boolean overridden = false;
+            try {
+                if (msg.getHeader() != null) {
+                    long incomingSenderId = msg.getHeader().getSenderId();
+                    long incomingTenantId = msg.getHeader().getTenantId();
+                    long fixedSenderId = authedUserId != null && authedUserId > 0 ? authedUserId : incomingSenderId;
+                    long fixedTenantId = authedTenantId != null && authedTenantId > 0 ? authedTenantId : incomingTenantId;
+
+                    if (fixedSenderId != incomingSenderId || fixedTenantId != incomingTenantId) {
+                        actualMsg = ImMessage.newBuilder(msg)
+                                .setHeader(msg.getHeader().toBuilder()
+                                        .setSenderId(fixedSenderId)
+                                        .setTenantId(fixedTenantId)
+                                        .build())
+                                .build();
+                        overridden = true;
+                    }
+                }
+            } catch (Exception ignore) {
+                actualMsg = msg;
+                overridden = false;
+            }
+
             Long tenantId = null;
             try {
-                tenantId = msg.getHeader().getTenantId();
+                tenantId = actualMsg.getHeader().getTenantId();
                 if (tenantId != null && tenantId <= 0) {
                     tenantId = null;
                 }
@@ -58,15 +97,24 @@ public class ProtobufMessageHandler extends SimpleChannelInboundHandler<ImMessag
                 tenantId = null;
             }
             if (tenantId == null) {
-                try {
-                    tenantId = AuthHandler.getTenantId(ctx);
-                } catch (Exception ignore) {
-                    tenantId = null;
-                }
+                tenantId = authedTenantId;
+            }
+
+            if (overridden && log.isInfoEnabled()) {
+                log.info("[Protobuf] override inbound header by auth: messageId={}, type={}, incomingSenderId={}, authedUserId={}, incomingTenantId={}, authedTenantId={}, channel={}",
+                        msg.getHeader() != null ? msg.getHeader().getMessageId() : null,
+                        messageType,
+                        msg.getHeader() != null ? msg.getHeader().getSenderId() : null,
+                        authedUserId,
+                        msg.getHeader() != null ? msg.getHeader().getTenantId() : null,
+                        authedTenantId,
+                        ctx.channel().id().asShortText());
             }
 
             // 处理消息（在 Netty 线程中显式绑定 TenantContextHolder，避免 MyBatis 租户拦截器 NPE）
-            TenantUtils.execute(tenantId, () -> processor.process(ctx, msg));
+            final Long finalTenantId = tenantId;
+            final ImMessage finalMsg = actualMsg;
+            TenantUtils.execute(finalTenantId, () -> processor.process(ctx, finalMsg));
             
         } catch (Exception e) {
             log.error("[Protobuf] 消息处理异常", e);

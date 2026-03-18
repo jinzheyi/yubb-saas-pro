@@ -23,6 +23,19 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
                                                   @Param("cursorVersion") Long cursorVersion,
                                                   @Param("limit") Integer limit);
 
+    @Select({"<script>",
+            "SELECT * FROM im_conversation_user_state ",
+            "WHERE tenant_id = #{tenantId} AND user_id = #{userId} ",
+            "  AND deleted = 0 ",
+            "  AND chat_id IN ",
+            "  <foreach collection='chatIds' item='cid' open='(' separator=',' close=')'>",
+            "    #{cid}",
+            "  </foreach>",
+            "</script>"})
+    List<ImConversationUserStateDO> selectListByUserIdAndChatIds(@Param("tenantId") Long tenantId,
+                                                                @Param("userId") Long userId,
+                                                                @Param("chatIds") List<Long> chatIds);
+
     @Insert("INSERT INTO im_conversation_user_state(" +
             "tenant_id, chat_id, user_id, cursor_version, conversation_version, " +
             "unread_count, last_read_sequence, last_read_time, " +

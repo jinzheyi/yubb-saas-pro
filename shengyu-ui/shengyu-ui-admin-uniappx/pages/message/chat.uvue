@@ -668,7 +668,8 @@
 	const readReceiptMessageId = ref<string>('')
 	const readReceiptSummaryCache = ref<Record<string, { summary: any | null; fetchedAt: number }>>({})
 	const readReceiptSummaryInFlight = ref<Record<string, boolean>>({})
-	const READ_RECEIPT_SUMMARY_TTL_MS = 30 * 1000
+	const READ_RECEIPT_SUMMARY_TTL_MS = 10 * 60 * 1000
+	const READ_RECEIPT_SUMMARY_CACHE_MAX = 200
     const multiSelectMode = ref(false)
     const selectedIds = ref<string[]>([])
    	const isDragSelecting = ref(false)
@@ -3445,6 +3446,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				Object.assign(next, readReceiptSummaryCache.value)
 				next[messageId] = { summary: readReceiptSummary.value, fetchedAt: Date.now() }
 				readReceiptSummaryCache.value = next
+				pruneReadReceiptSummaryCache()
 			} catch (e) {
 				// ignore
 			}
@@ -3462,6 +3464,42 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return item ? item : null
 		} catch (e) {
 			return null
+		}
+	}
+
+	function pruneReadReceiptSummaryCache(): void {
+		try {
+			const cache = readReceiptSummaryCache.value
+			if (!cache) return
+			const now = Date.now()
+			const keys = Object.keys(cache)
+			if (keys.length === 0) return
+
+			const entries: Array<{ id: string; fetchedAt: number; item: { summary: any | null; fetchedAt: number } }> = []
+			for (let i = 0; i < keys.length; i++) {
+				const id = keys[i]
+				const it = cache[id]
+				if (!it) continue
+				const age = now - (it.fetchedAt || 0)
+				if (age <= READ_RECEIPT_SUMMARY_TTL_MS) {
+					entries.push({ id, fetchedAt: it.fetchedAt || 0, item: it })
+				}
+			}
+
+			// if nothing pruned by ttl and under size limit, keep as-is
+			if (entries.length === keys.length && entries.length <= READ_RECEIPT_SUMMARY_CACHE_MAX) {
+				return
+			}
+
+			entries.sort((a, b) => b.fetchedAt - a.fetchedAt)
+			const kept = entries.slice(0, READ_RECEIPT_SUMMARY_CACHE_MAX)
+			const next: Record<string, { summary: any | null; fetchedAt: number }> = {}
+			for (let i = 0; i < kept.length; i++) {
+				next[kept[i].id] = kept[i].item
+			}
+			readReceiptSummaryCache.value = next
+		} catch (e) {
+			// ignore
 		}
 	}
 
@@ -3516,6 +3554,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					Object.assign(next, readReceiptSummaryCache.value)
 					next[messageId] = { summary, fetchedAt: Date.now() }
 					readReceiptSummaryCache.value = next
+					pruneReadReceiptSummaryCache()
 				} catch (e) {
 					// ignore
 				} finally {

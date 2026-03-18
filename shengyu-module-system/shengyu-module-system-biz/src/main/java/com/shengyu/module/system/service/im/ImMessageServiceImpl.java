@@ -30,8 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -350,6 +352,15 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
         if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
             List<Long> memberIds = imGroupService.getGroupMemberIds(chat.getGroupId());
+            Map<Long, Long> cursorVerMap;
+            try {
+                cursorVerMap = cursorVersionService.allocateNextCursorVersions(tenantId, memberIds);
+            } catch (Exception e) {
+                cursorVerMap = Collections.emptyMap();
+                log.warn("[ImMessageService] 批量分配 cursorVersion 失败(群消息), chatId: {}, groupId: {}, error: {}",
+                        chat.getId(), chat.getGroupId(), e.getMessage());
+            }
+
             for (Long memberId : memberIds) {
                 ImChatUserDO chatUser = ensureChatUser(memberId, chat.getId());
                 boolean isSender = Objects.equals(memberId, senderId);
@@ -366,9 +377,13 @@ public class ImMessageServiceImpl implements ImMessageService {
 						// ignore
 					}
 				}
+
                 // 同步写入 im_conversation_user_state，支持离线重连后 /sync 增量拉取
                 try {
-                    Long cursorVer = cursorVersionService.allocateNextCursorVersion(tenantId, memberId);
+                    Long cursorVer = cursorVerMap.get(memberId);
+                    if (cursorVer == null) {
+                        cursorVer = cursorVersionService.allocateNextCursorVersion(tenantId, memberId);
+                    }
                     int unreadDelta = isSender ? 0 : 1;
                     Long lastReadSeq = isSender ? lastMessageSequence : null;
                     LocalDateTime lastReadTime = isSender ? lastMessageTime : null;
@@ -404,8 +419,20 @@ public class ImMessageServiceImpl implements ImMessageService {
 			}
 
             // 发送者侧写入 im_conversation_user_state（lastRead=lastSeq，自己发的消息已读）
+            Long receiverId = Objects.equals(chat.getSingleUser1(), senderId) ? chat.getSingleUser2() : chat.getSingleUser1();
+            Map<Long, Long> cursorVerMap;
             try {
-                Long senderCursorVer = cursorVersionService.allocateNextCursorVersion(tenantId, senderId);
+                cursorVerMap = cursorVersionService.allocateNextCursorVersions(tenantId, Arrays.asList(senderId, receiverId));
+            } catch (Exception e) {
+                cursorVerMap = Collections.emptyMap();
+                log.warn("[ImMessageService] 批量分配 cursorVersion 失败(单聊消息), chatId: {}, senderId: {}, error: {}",
+                        chat.getId(), senderId, e.getMessage());
+            }
+            try {
+                Long senderCursorVer = cursorVerMap.get(senderId);
+                if (senderCursorVer == null) {
+                    senderCursorVer = cursorVersionService.allocateNextCursorVersion(tenantId, senderId);
+                }
                 conversationUserStateMapper.upsertAfterMessage(
                         tenantId, chat.getId(), senderId, senderCursorVer,
                         0, lastMessageSequence, lastMessageTime,
@@ -415,7 +442,6 @@ public class ImMessageServiceImpl implements ImMessageService {
                         chat.getId(), senderId, e.getMessage());
             }
 
-            Long receiverId = Objects.equals(chat.getSingleUser1(), senderId) ? chat.getSingleUser2() : chat.getSingleUser1();
             ImChatUserDO receiver = ensureChatUser(receiverId, chat.getId());
             chatUserMapper.updateLastMessageAndIncrementUnread(
                     receiver.getId(), lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime,
@@ -424,7 +450,10 @@ public class ImMessageServiceImpl implements ImMessageService {
 
             // 接收者侧写入 im_conversation_user_state（unreadDelta=1，支持离线 /sync 拉取未读）
             try {
-                Long receiverCursorVer = cursorVersionService.allocateNextCursorVersion(tenantId, receiverId);
+                Long receiverCursorVer = cursorVerMap.get(receiverId);
+                if (receiverCursorVer == null) {
+                    receiverCursorVer = cursorVersionService.allocateNextCursorVersion(tenantId, receiverId);
+                }
                 conversationUserStateMapper.upsertAfterMessage(
                         tenantId, chat.getId(), receiverId, receiverCursorVer,
                         1, null, null,
