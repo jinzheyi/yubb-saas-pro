@@ -129,8 +129,7 @@
 
 	const keyword = ref('')
 	const historyList = ref<string[]>([])
-	const defaultHotList = ['工作汇报', '会议通知', '项目文档', '周报']
-	const hotList = ref<string[]>(defaultHotList)
+	const hotList = ref<string[]>([])
 
 	// 搜索结果
 	const contactResults = ref<any[]>([])
@@ -177,7 +176,7 @@
 		try {
 			const cached = getJsonObject<HotSearchCache | null>(HOT_SEARCH_KEY, null)
 			if (cached == null || cached.list == null || !Array.isArray(cached.list)) {
-				hotList.value = defaultHotList
+				hotList.value = []
 				triggerFetchHotIfNeeded()
 				return
 			}
@@ -185,13 +184,13 @@
 			const age = Date.now() - fetchedAt
 			if (fetchedAt > 0 && age >= 0 && age <= HOT_SEARCH_TTL_MS) {
 				hotList.value = cached.list.filter(it => it != null && String(it).trim() !== '').map(it => String(it))
-				if (hotList.value.length === 0) hotList.value = defaultHotList
+				if (hotList.value.length === 0) hotList.value = []
 				return
 			}
-			hotList.value = defaultHotList
+			hotList.value = []
 			triggerFetchHotIfNeeded()
 		} catch (e) {
-			hotList.value = defaultHotList
+			hotList.value = []
 			triggerFetchHotIfNeeded()
 		}
 	}
@@ -640,7 +639,7 @@
 		border-bottom-color: #EFF0F1;
 	}
 
-	.result-item:last-child {
+	.result-item-last {
 		border-bottom-width: 0;
 	}
 

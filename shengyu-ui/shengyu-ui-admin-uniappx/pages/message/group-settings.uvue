@@ -868,7 +868,7 @@
 		border-bottom-color: #EFF0F1;
 	}
 
-	.setting-item:last-child {
+	.setting-item-last {
 		border-bottom-width: 0;
 	}
 
@@ -953,7 +953,7 @@
 		border-color: #E5E5E5;
 	}
 	
-	.dialog-input:focus {
+	.dialog-input-focus {
 		border-color: #1677FF;
 		background-color: #FFFFFF;
 	}

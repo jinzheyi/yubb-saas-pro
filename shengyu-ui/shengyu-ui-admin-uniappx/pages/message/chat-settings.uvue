@@ -53,7 +53,7 @@
 
 			<!-- 设置列表 -->
 			<view class="settings-group">
-				<view class="list-item" @click="handleAction('add')">
+				<view class="list-item" hover-class="list-item-active" @click="handleAction('add')">
 					<text class="item-label">{{ t('chatSettings.addMember') }}</text>
 					<text class="iconfont arrow-icon">&#xeb03;</text>
 				</view>
@@ -78,7 +78,7 @@
 			</view>
 
 			<view class="settings-group">
-				<view class="list-item" @click="handleAction('clear')">
+				<view class="list-item" hover-class="list-item-active" @click="handleAction('clear')">
 					<text class="item-label">{{ t('chatSettings.clearHistory') }}</text>
 				</view>
 			</view>
@@ -299,7 +299,7 @@
 		position: relative;
 	}
 
-	.list-item:active {
+	.list-item-active {
 		background-color: #F2F3F5;
 	}
 

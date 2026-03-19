@@ -248,7 +248,7 @@ export class MessageService {
 					}
 				}
 			}
-			if (ok) {
+			if (ok === true) {
 				return raw
 			}
 			const regenerated = MessageBuilder.generateMessageId()
@@ -483,7 +483,7 @@ export class MessageService {
           continue
         }
 
-        const seqStr = m.sequence != null ? m.sequence.toString() : undefined
+        const seqStr = m.sequence != null ? m.sequence.toString() : null
         const revStr = (m as any).rev != null && (m as any).rev !== '' ? (m as any).rev.toString() : '1'
         const serverStatusRaw: any = (m as any).status
         const serverStatus = serverStatusRaw != null ? Number(serverStatusRaw) : null
@@ -597,7 +597,7 @@ export class MessageService {
             ? m.senderNickname
             : (isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr))
 
-          const seqStr = m.sequence != null ? m.sequence.toString() : undefined
+          const seqStr = m.sequence != null ? m.sequence.toString() : null
           const revStr = (m as any).rev != null && (m as any).rev !== '' ? (m as any).rev.toString() : '1'
           const serverStatusRaw: any = (m as any).status
           const serverStatus = serverStatusRaw != null ? Number(serverStatusRaw) : null
@@ -640,7 +640,7 @@ export class MessageService {
 				}
 
           this.addMessageToCache(chatId, messageItem)
-          if (shouldNotify) {
+          if (shouldNotify === true) {
             this.notifyMessageListeners(messageItem)
           }
           if (seqStr != null) {
@@ -690,12 +690,12 @@ export class MessageService {
     }
 
     const cached = this.userNicknameCache.get(userId)
-    if (cached !== null && cached !== undefined) {
+    if (cached !== null) {
       return cached
     }
 
     const loading = this.userNicknameLoading.get(userId)
-    if (loading !== null && loading !== undefined) {
+    if (loading !== null) {
       return await loading
     }
 
@@ -707,7 +707,7 @@ export class MessageService {
           : resp
 
         const nickname = userObj ? (userObj.nickname || userObj.name || '') : ''
-        if (nickname) {
+        if (nickname !== '') {
           this.userNicknameCache.set(userId, nickname)
         }
         return nickname
@@ -1172,7 +1172,7 @@ export class MessageService {
     const messageItem: MessageItem = {
       id: '0',  // 临时ID，服务端返回后更新
       messageId: normalizedMessageId,
-      sequence: message.header.sequence != null ? message.header.sequence.toString() : undefined,
+      sequence: message.header.sequence != null ? message.header.sequence.toString() : null,
       senderId: message.header.senderId,
       receiverId: message.header.receiverId,
       groupId: message.header.groupId,
@@ -1406,7 +1406,7 @@ export class MessageService {
             } catch (e) {
               // ignore
             }
-            if (seq !== null && seq !== undefined) {
+            if (seq !== null) {
               msg.sequence = seq.toString()
               resolvedChatId = this.resolveChatIdFromHeader(message.header)
               this.updateLastPulledSequence(resolvedChatId, msg.sequence)
@@ -1415,7 +1415,7 @@ export class MessageService {
           }
         })
       })
-      if (updated) {
+      if (updated === true) {
         try {
           this.clearSendRetry(msgId)
         } catch (e) {
@@ -1424,7 +1424,7 @@ export class MessageService {
         this.notifyStatusListeners(msgId, MessageStatus.SENT)
 
 			// 自己的消息也需要更新会话（否则会话水位/红点会错）
-			const seqStr = seq != null && seq !== undefined ? seq.toString() : null
+			const seqStr = seq != null ? seq.toString() : null
 			const isGroupSelf = message.header.groupId !== '0' && message.header.groupId !== ''
 			const summary = MessageParser.getSummary({
 				header: { messageType: messageItem.type } as any,
@@ -1483,7 +1483,7 @@ export class MessageService {
     const messageItem: MessageItem = {
       id: '0',
 	  	messageId: this.normalizeInboundMessageId((message as any).header != null ? (message as any).header.messageId : null) || (message.header.messageId != null ? message.header.messageId.toString() : ''),
-      sequence: message.header.sequence != null ? message.header.sequence.toString() : undefined,
+      sequence: message.header.sequence != null ? message.header.sequence.toString() : null,
       rev: revStr,
       senderId: senderIdStr,
       receiverId: message.header.receiverId,
@@ -1512,7 +1512,7 @@ export class MessageService {
 			} catch (e) {
 				// ignore
 			}
-			if (hasGap) {
+			if (hasGap === true) {
 				this.debugStats.wsGapDetectedCount += 1
 				console.warn('[MessageService][Gap] detected:', { chatId: chatId, lastPulled: lastPulled, incoming: seqStr })
 				await this.pullMissingMessagesForChat(chatId)
@@ -1618,9 +1618,9 @@ export class MessageService {
     
     // 解析 messageIds：支持数组和单个 ID 两种格式
     let messageIds: string[] = []
-    if (body.messageIds !== null && body.messageIds !== undefined) {
+    if (body.messageIds !== null) {
       messageIds = body.messageIds as string[]
-    } else if (body.messageId !== null && body.messageId !== undefined) {
+    } else if (body.messageId !== null) {
       messageIds = [body.messageId as string]
     }
     
@@ -1906,7 +1906,7 @@ export class MessageService {
    */
   private addMessageToCache(chatId: string, message: MessageItem): void {
     let messages = this.messageCache.get(chatId)
-    if (messages === null || messages === undefined) {
+    if (messages === null) {
       messages = []
       this.messageCache.set(chatId, messages)
     }
@@ -1951,7 +1951,7 @@ export class MessageService {
         const incomingIsRecalled = incomingStatus === MessageStatus.RECALLED || incomingStatus === 6 || incomingStatus === '6'
 
         // newer rev always wins (final-state overwrite), but keep missing fields from old
-        if (incomingNewer) {
+        if (incomingNewer === true) {
           ;(existing as any).rev = incomingRev
           ;(existing as any).status = incomingStatus
           ;(existing as any).type = (message as any).type
@@ -2050,7 +2050,7 @@ export class MessageService {
    */
   public getMessages(chatId: string): MessageItem[] {
     const messages = this.messageCache.get(chatId)
-    return messages !== null && messages !== undefined ? messages : []
+    return messages !== null ? messages : []
   }
 
   private migrateMessageCacheKey(fromKey: string, toKey: string): void {
@@ -2321,13 +2321,13 @@ export class MessageService {
     let updated = false
     this.messageCache.forEach(messages => {
       const msg = messages.find(m => m.messageId === messageId)
-      if (msg !== null && msg !== undefined && msg.status !== status) {
+      if (msg !== null && msg.status !== status) {
         msg.status = status
         updated = true
       }
     })
     
-    if (updated) {
+    if (updated === true) {
       this.notifyStatusListeners(messageId, status)
     }
   }

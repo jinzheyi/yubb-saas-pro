@@ -35,7 +35,8 @@
 			<!-- 联系人列表 -->
 			<view v-else-if="followingList.length > 0" class="contact-list">
 				<view v-for="(contact, index) in followingList" :key="contact.id" 
-					class="contact-item" 
+					class="contact-item"
+					hover-class="contact-item-active" 
 					@click="handleContactClick(contact)">
 					<!-- 选择模式下显示复选框 -->
 					<view v-if="isSelectMode" :class="['checkbox', contact.selected ? 'checkbox-active' : '']" @click.stop="toggleContactSelect(contact)">
@@ -61,7 +62,7 @@
 		</scroll-view>
 
 		<!-- 选择模式下显示底部操作栏 -->
-		<view v-if="isSelectMode" class="footer">
+		<view v-if="isSelectMode" class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px' }">
 			<text class="selected-text">已选择 {{ selectedCount }} 人</text>
 			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
 				<text class="confirm-btn-text">确定</text>
@@ -81,6 +82,8 @@
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
+
+	const safeAreaBottom = ref(0)
 
 	// 是否为选择模式
 	const isSelectMode = ref(false)
@@ -277,6 +280,7 @@
 
 	// 页面加载时检查是否为选择模式
 	onLoad((options : any) => {
+		safeAreaBottom.value = uni.getWindowInfo().safeAreaInsets?.bottom ?? 0
 		if (options != null && options['mode'] === 'select') {
 			isSelectMode.value = true
 		}
@@ -408,7 +412,7 @@
 		position: relative;
 	}
 
-	.contact-item:active {
+	.contact-item-active {
 		background-color: #F2F3F5;
 	}
 
@@ -489,7 +493,7 @@
 		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
-		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+		padding-bottom: 12px;
 	}
 
 	.selected-text {

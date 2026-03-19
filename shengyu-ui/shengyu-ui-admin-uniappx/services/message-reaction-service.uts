@@ -93,7 +93,7 @@ export class MessageReactionService {
   public async getReactions(messageId: string): Promise<ReactionItem[]> {
     // 先从缓存获取
     const cached = this.reactionCache.get(messageId)
-    if (cached !== null && cached !== undefined) {
+    if (cached !== null) {
       return cached.reactions
     }
     
@@ -119,7 +119,7 @@ export class MessageReactionService {
       const isSelf = item.isSelf || false
       
       let reaction = reactionMap.get(emoji)
-      if (reaction === null || reaction === undefined) {
+      if (reaction === null) {
         reaction = {
           emoji: emoji,
           count: 0,

@@ -48,7 +48,7 @@ class DictStore {
 	static getAllDict(): Map<string, DictDataType[]> {
 		try {
 			const data = uni.getStorageSync(this.STORAGE_KEY)
-			if (data) {
+			if (data != null) {
 				const jsonData = JSON.parse(data as string)
 				const map = new Map<string, DictDataType[]>()
 				for (const key in jsonData) {

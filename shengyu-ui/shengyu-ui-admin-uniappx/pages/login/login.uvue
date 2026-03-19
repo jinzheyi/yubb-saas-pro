@@ -105,7 +105,8 @@
 				
 				<!-- 登录按钮 -->
 				<button 
-					class="login-btn" 
+					class="login-btn"
+							hover-class="login-btn-active"
 					:loading="loading"
 					@click="handleLogin"
 				>
@@ -491,7 +492,7 @@
 		border-width: 0;
 	}
 
-	.login-btn:active {
+	.login-btn-active {
 		opacity: 0.9;
 	}
 

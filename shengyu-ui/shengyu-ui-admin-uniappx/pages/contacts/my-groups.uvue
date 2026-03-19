@@ -30,8 +30,9 @@
 			<!-- 群组列表 -->
 			<view v-else-if="groupList.length > 0" class="group-list">
 				<view v-for="(group, index) in groupList" :key="group.id" 
-					class="group-item" 
-					@click="handleGroupClick(group)">
+				class="group-item" 
+				hover-class="group-item-active"
+						@click="handleGroupClick(group)">
 					<view class="group-avatar">
 						<view class="avatar-grid">
 							<view v-for="(member, mIndex) in group.avatars" :key="mIndex" class="avatar-cell">
@@ -307,7 +308,7 @@
 		position: relative;
 	}
 
-	.group-item:active {
+	.group-item-active {
 		background-color: #F2F3F5;
 	}
 
@@ -375,7 +376,7 @@
 		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
-		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+		padding-bottom: 12px;
 	}
 
 	.selected-text {

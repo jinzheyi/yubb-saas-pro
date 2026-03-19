@@ -32,7 +32,7 @@ export class LRUCache<K, V> {
     } else if (this.map.size >= this.capacity) {
       // 删除最旧的（Map 迭代顺序是按插入顺序的）
       const firstKey = this.map.keys().next().value
-      if (firstKey !== undefined) {
+      if (firstKey !== null) {
         this.map.delete(firstKey)
       }
     }
@@ -72,7 +72,7 @@ export class UserInfoCache {
 
   public getUser(userId: string): CachedUserInfo | null {
     const user = this.cache.get(userId)
-    if (user) {
+    if (user !== null) {
       // 检查是否过期
       if (Date.now() - user.timestamp > this.expireTime) {
         this.cache.delete(userId)

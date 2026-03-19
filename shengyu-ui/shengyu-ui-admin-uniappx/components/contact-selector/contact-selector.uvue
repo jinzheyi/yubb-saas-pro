@@ -14,7 +14,7 @@
 					<text class="section-text">{{ t('initiateGroup.selectExisting') }}</text>
 				</view>
 				<view class="category-group">
-					<view class="category-item" v-for="(item, index) in categories" :key="index" @click="handleCategory(item)">
+					<view class="category-item" hover-class="category-item-active" v-for="(item, index) in categories" :key="index" @click="handleCategory(item)">
 						<view class="category-icon-wrap" :style="{ backgroundColor: item.bg }">
 							<text class="iconfont category-icon">{{ item.icon }}</text>
 						</view>
@@ -32,6 +32,7 @@
 				<view class="contact-list">
 					<view 
 						class="contact-item" 
+						hover-class="contact-item-active"
 						v-for="(item, index) in group.contacts" 
 						:key="index" 
 						@click="toggleSelect(item)"
@@ -232,7 +233,7 @@
 		position: relative;
 	}
 
-	.category-item:active {
+	.category-item-active {
 		background-color: #F2F3F5;
 	}
 
@@ -289,7 +290,7 @@
 		position: relative;
 	}
 
-	.contact-item:active {
+	.contact-item-active {
 		background-color: #F2F3F5;
 	}
 

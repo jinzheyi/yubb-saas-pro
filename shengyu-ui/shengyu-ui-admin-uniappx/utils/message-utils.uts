@@ -67,7 +67,7 @@ export function getMessageTypeString(type: any): string {
  * 解析消息内容（支持 JSON 字符串和对象）
  */
 export function parseMessageContent(content: any): any {
-  if (content === null || content === undefined) {
+  if (content === null) {
     return null
   }
   
@@ -300,7 +300,7 @@ export function generateSequence(): string {
  * @returns 是否为空
  */
 export function isEmptyContent(content: any): boolean {
-  if (content === null || content === undefined) {
+  if (content === null) {
     return true
   }
   

@@ -1,5 +1,118 @@
 # IM即时通讯开发任务清单-v2.0
 
+---
+
+## 当前迭代焦点（AI快速定位）
+
+> **更新日期**: 2026-03-19
+> **迭代目标**: Milestone L - 消息扩展能力
+
+### 正在执行
+- 无（等待启动）
+
+### 本期排期（P1）
+| 任务 | 状态 | 依赖 | 关键文件 |
+|------|------|------|----------|
+| L1 消息转发 | 待开发 | C7, S1 | `ImMessageServiceImpl.java`, `chat.uvue` |
+| L2 消息重发 | 待开发 | C7 | `message-service.uts` |
+| L3 群@提及 | 待开发 | C7, D1-D3 | `ImMessageServiceImpl.java`, `mention-selector.uvue` |
+| L4 管理员撤回 | 待开发 | F1 | `ImMessageServiceImpl.java` |
+
+### 已完成（近两轮）
+- [x] 架构审查：后端消息发送/撤回/删除核心链路验证
+- [x] 架构审查：前端WebSocket/消息服务/会话服务验证
+- [x] 文档更新：补充功能关联性与业界最佳实践对比章节
+
+### 关键约束（必读）
+1. **Long精度**: 所有ID字段前端必须用`string`，后端VO用`@JsonSerialize(using = ToStringSerializer.class)`
+2. **UTS规范**: 禁止truthy/falsy判断、禁止undefined、禁止var
+3. **消息可靠性**: 先存储后投递、幂等保证、sequence单调递增
+4. **会话一致性**: 已读水位只升不降、未读以服务端为准
+
+### 快速导航
+- **架构文档**: `sql/doc/IM即时通讯架构设计文档-v2.0.md`
+- **前端规范**: 见下方 §前端开发规范
+- **已落地能力**: 见下方 §已落地能力清单
+- **任务详情**: 搜索 `## Milestone L` 跳转
+
+---
+
+## 前端开发规范（UTS/uvue，强制遵循）
+
+> **说明**：本节固化 Uni-App X 前端开发规范，后续开发新页面时无需重复强调。
+
+### 1. 页面文件规范
+- 使用 `.uvue` 作为页面后缀名（非 `.vue`）
+- 页面放置在 `pages/` 目录下，按模块分类（message/contacts/profile/workbench/common/login/index）
+- 所有页面必须在 `pages.json` 中注册
+
+### 2. 滚动容器规范
+- 可滚动内容必须在 `scroll-view`、`list-view`、waterflow 等滚动容器中
+- 如果页面需要滚动，在 template 一级子节点放置滚动容器
+- 示例：`<scroll-view class="content" scroll-y="true" show-scrollbar="false">`
+
+### 3. UTS 语言规范（强制）
+#### 3.1 条件语句
+- **禁止 truthy/falsy 判断**：if 条件必须使用显式布尔类型
+- 正确写法：`if (token != null)`、`if (userInfo !== null)`、`if (ok === true)`
+- 错误写法：`if (token)`、`if (userInfo)`、`if (ok)`
+
+#### 3.2 undefined 处理
+- **禁止使用 undefined**：统一使用 `null` 表示空值
+- 类型定义：`string | null` 而非 `string | undefined`
+- 默认值：`const value: string | null = null`
+
+#### 3.3 变量声明
+- **禁止使用 var**：统一使用 `let` 或 `const`
+- 注意声明顺序：UTS 无变量/函数提升，必须先声明后使用
+
+#### 3.4 类型定义
+- 对象字面量类型使用 `type` 而非 `interface`
+- 示例：`type UserInfo = { id: string, name: string }`
+
+### 4. CSS 规范（ucss 子集）
+#### 4.1 布局
+- **必须使用 flex 布局**：禁止 float、grid
+- 容器样式：`display: flex; flex-direction: row/column;`
+
+#### 4.2 选择器
+- **仅使用类选择器**：`.class-name { ... }`
+- 禁止标签选择器、ID 选择器、属性选择器
+
+#### 4.3 文字样式
+- `font-size`、`color` 等文字样式必须设置在 `<text>` 组件上
+- 禁止在 `<view>` 上设置文字样式
+
+#### 4.4 长度单位
+- 推荐使用 `px`、`rpx`
+- 禁止使用 `em`、`rem`、`vh`、`vw`
+
+#### 4.5 禁止的 CSS 特性
+- 禁止 `@media` 媒体查询
+- 禁止 `position: fixed`（部分场景可用）
+- 禁止 CSS 动画（使用组件动画替代）
+
+### 5. Long 精度规范（强制）
+- 所有 ID 字段（messageId、chatId、groupId、userId、tenantId 等）必须定义为 `string`
+- 禁止使用 `number` 类型存储 ID，避免超过 `2^53-1` 精度丢失
+- 排序/比较时临时使用 `BigInt`，不得将转换后的 `number` 写回缓存
+
+### 6. API 调用规范
+- 统一在 `api/*.uts` 中定义接口调用
+- `services/*.uts` 仅做缓存/聚合，禁止手写 URL
+- `utils/request.uts` 成功时返回业务 `data`，service/api 层禁止再判断 `code`
+
+### 7. 条件编译规范
+- 平台专用代码使用条件编译：`// #ifdef APP-ANDROID`、`// #ifdef WEB`
+- 条件编译包围的代码块应尽量小，避免影响其他平台
+
+### 8. 代码风格
+- 简洁易懂，复杂代码配上中文注释
+- 严格类型匹配，不使用隐式转换
+- 不使用变量和函数的声明提升
+
+---
+
 ## 强制规范：Long 精度（前端 / JSON）
 
 1. 所有涉及 ID / 序列号的 `Long` 字段（包含但不限于：`messageId`、`sequence`、`chatId`、`groupId`、`userId`、`targetId`、`tenantId` 等），在 **前端与 JSON 传输层必须按 `string` 处理**，禁止按 JS `number` 持久化或参与去重/索引。
@@ -1728,6 +1841,227 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - `shengyu-module-system/.../im`（system notice service/controller）
   - `shengyu-framework/.../MessageProcessor`（SYSTEM_NOTICE 处理器）
   - `shengyu-ui/.../services/*`（系统通知 UI/数据源，按端侧现状落地）
+
+---
+
+## Milestone L（P1/P2）：消息扩展能力（转发/重发/@提及/位置/草稿/输入状态/收藏）
+
+### L1（P1）：消息转发（逐条/合并）
+
+- **验收**：支持逐条转发和合并转发；转发消息生成新 messageId；接收方可查看原消息来源。
+
+- 状态：待开发（本期排期）
+
+- **目标**：实现企业级消息转发能力，对齐企微/钉钉的转发体验。
+- **范围**：
+  - module-system：
+    - `POST /system/im/message/forward`（逐条转发）
+    - `POST /system/im/message/forward-combine`（合并转发）
+    - 转发权限校验（仅可转发自己可见的消息）
+  - uniappx：
+    - 长按消息弹出转发菜单
+    - 选择目标会话（单聊/群聊）
+    - 合并转发预览与发送
+- **依赖**：C7（消息最终态字段）、S1（消息体 schema 冻结）
+- **验收标准**：
+  - 逐条转发：生成新消息，body.forwardedFrom 包含原消息来源信息
+  - 合并转发：生成 FORWARD_COMBINE 类型消息，body.messages 包含被合并消息列表
+  - 权限：已被删除/撤回的消息不可转发
+  - 隐私：转发后接收方可看到原发送者信息，但不暴露原会话成员列表
+- **涉及文件/目录**：
+  - `shengyu-module-system/.../AppImMessageController.java`（forward API）
+  - `shengyu-module-system/.../im/ImMessageServiceImpl.java`（转发逻辑）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`（转发入口）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/components/forward-dialog.uvue`（转发选择器）
+
+### L2（P1）：消息重发
+
+- **验收**：发送失败消息显示重发按钮；重发复用原 messageId；重发成功后更新状态。
+
+- 状态：待开发（本期排期）
+
+- **目标**：实现消息重发能力，保证弱网下的用户体验。
+- **范围**：
+  - uniappx：
+    - 失败消息标记 `status=FAILED`，显示重发按钮
+    - 重发时复用原 `messageId`、`clientTime`
+    - 重发成功后更新本地状态
+  - module-system：
+    - 按 `messageId` 幂等处理重发请求
+- **依赖**：C7（消息发送链路）、7.2（幂等保证）
+- **验收标准**：
+  - 网络超时/服务端异常：消息显示发送失败状态
+  - 点击重发：复用原 messageId 走正常发送链路
+  - 重发成功：更新本地消息状态，移除失败标记
+  - 幂等：服务端按 messageId 去重，返回同一 sequence
+- **涉及文件/目录**：
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`（重发逻辑）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`（重发入口）
+  - `shengyu-module-system/.../AppImMessageController.java`（幂等处理）
+
+### L3（P1）：群@提及功能
+
+- **验收**：输入@弹出成员列表；被提及用户收到推送（即使群免打扰）；消息中高亮显示@昵称。
+
+- 状态：待开发（本期排期）
+
+- **目标**：实现群聊@提及能力，保证通知可达与体验一致。
+- **范围**：
+  - uniappx：
+    - 输入@弹出成员选择器
+    - 选择后插入@昵称到输入框
+    - 发送时在 body.mentions 中携带被提及用户列表
+  - module-system：
+    - 解析 mentions 字段
+    - 对被提及用户触发强提醒推送
+  - WS：广播消息时携带 mentions 信息
+- **依赖**：C7（消息发送链路）、D1-D3（推送链路）
+- **验收标准**：
+  - 输入@：弹出群成员列表，支持搜索
+  - @特定人：仅被提及者收到强提醒推送
+  - @所有人：仅群主/管理员可用，所有成员收到推送
+  - 渲染：消息中高亮显示@昵称，点击可跳转用户资料页
+  - 会话列表：被提及消息显示 [有人@我] 标记
+- **涉及文件/目录**：
+  - `shengyu-ui/shengyu-ui-admin-uniappx/components/mention-selector.uvue`（@选择器）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`（@输入处理）
+  - `shengyu-module-system/.../im/ImMessageServiceImpl.java`（mentions 解析与推送）
+  - `sql/mysql/1.0/im/ddl_im_tables.sql`（mentions 字段或表）
+
+### L4（P1）：群管理员撤回权限扩展
+
+- **验收**：群主/管理员可撤回群内任意消息；撤回时限可配置；撤回通知显示操作者信息。
+
+- 状态：待开发（本期排期，基于 F1 扩展）
+
+- **目标**：扩展撤回权限模型，支持群管理员撤回群成员消息。
+- **范围**：
+  - module-system：
+    - 扩展撤回权限校验逻辑
+    - 配置项：`group.admin.recall.enabled`、`group.admin.recall.window-hours`
+    - 撤回通知文案区分"自己撤回"和"管理员撤回"
+  - uniappx：
+    - 管理员长按消息显示"撤回"选项（对非自己消息）
+    - 撤回提示显示操作者信息
+- **依赖**：F1（撤回基础能力）
+- **验收标准**：
+  - 群主：可撤回群内任意消息（不限时）
+  - 群管理员：可撤回群内任意消息（默认 24 小时时限，可配置）
+  - 普通成员：仅可撤回自己发送的消息（默认 2 分钟）
+  - 管理员撤回时：系统消息显示"管理员XXX撤回了成员YYY的消息"
+  - 被撤回消息不支持重新编辑
+- **涉及文件/目录**：
+  - `shengyu-module-system/.../im/ImMessageServiceImpl.java`（权限校验扩展）
+  - `shengyu-module-system/.../config/ImGroupConfig.java`（配置项）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`（撤回处理）
+
+### L5（P2）：位置消息
+
+- **验收**：支持发送地理位置；消息展示地图缩略图+名称；点击跳转地图应用。
+
+- 状态：待开发（后续迭代）
+
+- **目标**：实现位置消息发送与展示能力。
+- **范围**：
+  - uniappx：
+    - 集成地图 SDK（高德/腾讯）
+    - 选点页面，获取坐标后发送
+    - 位置消息渲染（缩略图+名称/地址）
+  - module-system：
+    - 新增 `messageType=LOCATION`
+    - 消息体包含 latitude/longitude/name/address 等
+- **依赖**：S1（消息体 schema）、地图 SDK 集成
+- **验收标准**：
+  - 发送：点击"+"弹出位置选项，调用地图 SDK 选点
+  - 展示：显示静态地图缩略图 + 名称/地址
+  - 点击：跳转到地图应用/组件查看详情
+- **涉及文件/目录**：
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/common/location-picker.uvue`（选点页）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/components/message-location.uvue`（位置消息组件）
+  - `shengyu-framework/.../proto/im_message.proto`（LOCATION 枚举）
+  - `shengyu-module-system/.../im/ImMessageServiceImpl.java`（位置消息处理）
+
+### L6（P2）：草稿保存
+
+- **验收**：退出会话页保存草稿；再次进入自动恢复；发送成功后清除草稿。
+
+- 状态：待开发（后续迭代）
+
+- **目标**：实现草稿保存能力，确保用户输入不丢失。
+- **范围**：
+  - uniappx：
+    - 本地存储草稿（文本、@列表、引用回复、附件）
+    - 存储时机：onHide/onUnload/输入停止 N 秒后
+    - 恢复时机：进入会话页时读取草稿
+  - module-system（可选，Phase 2）：
+    - 跨端草稿同步接口
+- **依赖**：无
+- **验收标准**：
+  - 本地优先：草稿优先保存在本地
+  - 生命周期：消息发送成功后清除草稿；切换会话时保留
+  - 草稿内容：文本、@提及列表、引用回复、附件路径
+- **涉及文件/目录**：
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/draft-service.uts`（草稿服务）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`（草稿保存/恢复）
+
+### L7（P2）：输入状态同步
+
+- **验收**：单聊显示"对方正在输入..."；频率控制避免风暴；超时自动清除状态。
+
+- 状态：待开发（后续迭代）
+
+- **目标**：实现输入状态同步，增强实时沟通体验。
+- **范围**：
+  - uniappx：
+    - 输入时发送 TYPING 状态（每 3 秒最多一次）
+    - 停止输入时发送 STOP_TYPING（或超时自动）
+    - 接收方展示"对方正在输入..."
+  - WS：
+    - 新增 `messageType=TYPING`
+    - 广播输入状态
+  - module-system：
+    - 按 userId+chatId 去重，避免重复广播
+- **依赖**：B2（WS 双栈基础链路）
+- **验收标准**：
+  - 单聊：双方可见输入状态
+  - 群聊：默认关闭（可配置开启，仅显示"有人正在输入"）
+  - 频率控制：客户端每 3 秒最多发送一次 TYPING
+  - 超时：5 秒未收到 STOP_TYPING，自动清除状态
+- **涉及文件/目录**：
+  - `shengyu-framework/.../proto/im_message.proto`（TYPING 枚举）
+  - `shengyu-framework/.../processor/impl/TypingMessageProcessor.java`（TYPING 处理器）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts`（TYPING 发送/接收）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`（状态展示）
+
+### L8（P2）：收藏功能
+
+- **验收**：支持收藏消息；收藏列表分页查询；跨端可见收藏记录。
+
+- 状态：待开发（后续迭代）
+
+- **目标**：实现消息收藏能力，便于用户保存重要消息。
+- **范围**：
+  - module-system：
+    - `POST /system/im/favorite/add`
+    - `DELETE /system/im/favorite/remove`
+    - `GET /system/im/favorite/list`
+    - `GET /system/im/favorite/check`
+    - 收藏表：im_message_favorite
+  - uniappx：
+    - 长按消息弹出收藏选项
+    - 收藏列表页
+    - 收藏状态标记
+- **依赖**：C7（消息查询）
+- **验收标准**：
+  - 用户维度：收藏属于用户个人，跨端可见
+  - 消息引用：收藏不复制消息内容，仅保存引用
+  - 数量限制：建议上限 1000 条/用户
+  - 最终态：原消息被撤回/删除时，收藏记录保留但展示"原消息已撤回/删除"
+- **涉及文件/目录**：
+  - `shengyu-module-system/.../controller/app/im/AppImFavoriteController.java`
+  - `shengyu-module-system/.../im/ImFavoriteServiceImpl.java`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/common/favorite.uvue`（收藏列表页）
+  - `sql/mysql/1.0/im/ddl_im_tables.sql`（im_message_favorite 表）
 
 ---
 

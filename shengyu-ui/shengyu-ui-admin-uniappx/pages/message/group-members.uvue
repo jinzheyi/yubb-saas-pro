@@ -415,7 +415,7 @@
 		border-bottom-color: #EFF0F1;
 	}
 
-	.member-item:last-child {
+	.member-item-last {
 		border-bottom-width: 0;
 	}
 	

@@ -134,7 +134,7 @@ export class GroupService {
   public async getGroupInfo(groupId: string): Promise<GroupInfo | null> {
     // 先从缓存获取
     const cached = this.groupCache.get(groupId)
-    if (cached !== null && cached !== undefined) {
+    if (cached !== null) {
       return cached
     }
     
@@ -196,7 +196,7 @@ export class GroupService {
   public async getGroupMembers(groupId: string): Promise<GroupMember[]> {
     // 先从缓存获取
     const cached = this.memberCache.get(groupId)
-    if (cached !== null && cached !== undefined) {
+    if (cached !== null) {
       return cached
     }
     

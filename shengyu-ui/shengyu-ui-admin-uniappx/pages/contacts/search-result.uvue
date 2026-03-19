@@ -48,6 +48,7 @@
 					<view class="result-list">
 						<view v-for="contact in contactResults" :key="contact.id" 
 							class="result-item" 
+									hover-class="result-item-active"
 							@click="handleContactClick(contact)">
 							<view class="result-avatar" :style="{ backgroundColor: contact.avatarBg }">
 								<text class="avatar-text">{{ contact.avatarText }}</text>
@@ -71,6 +72,7 @@
 					<view class="result-list">
 						<view v-for="group in groupResults" :key="group.id" 
 							class="result-item" 
+							hover-class="result-item-active"
 							@click="handleGroupClick(group)">
 							<view class="group-icon-wrap">
 								<text class="iconfont group-icon">&#xea94;</text>
@@ -324,7 +326,6 @@
 		font-size: 12px;
 		font-weight: 600;
 		color: #6B7280;
-		text-transform: uppercase;
 	}
 
 	.result-list {
@@ -339,7 +340,7 @@
 		border-bottom-color: #F5F7FA;
 	}
 
-	.result-item:active {
+	.result-item-active {
 		background-color: #F9FAFB;
 	}
 

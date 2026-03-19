@@ -63,7 +63,7 @@ export function extractAtUserIds(text: string, userMap: Map<string, string>): st
     
     // 从映射中查找用户ID
     const userId = userMap.get(mention.userName)
-    if (userId !== undefined && userId !== null && !userIds.includes(userId)) {
+    if (userId !== null && !userIds.includes(userId)) {
       userIds.push(userId)
     }
   })

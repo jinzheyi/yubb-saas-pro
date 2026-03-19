@@ -50,7 +50,7 @@ const onEmojiClick = (emoji: string) => {
 }
 </script>
 
-<style scoped>
+<style>
 .emoji-picker-overlay {
   position: fixed;
   top: 0;

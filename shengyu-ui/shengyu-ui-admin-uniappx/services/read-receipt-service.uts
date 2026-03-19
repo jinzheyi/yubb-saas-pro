@@ -99,7 +99,7 @@ export class ReadReceiptService {
     messageIds.forEach(messageId => {
       // 获取或创建已读用户列表
       let readUserIds = this.readStatus.get(messageId)
-      if (readUserIds === null || readUserIds === undefined) {
+      if (readUserIds === null) {
         readUserIds = []
         this.readStatus.set(messageId, readUserIds)
       }
@@ -118,7 +118,7 @@ export class ReadReceiptService {
    */
   public getReadStatus(messageId: string): 'unread' | 'read' {
     const readUserIds = this.readStatus.get(messageId)
-    return (readUserIds !== null && readUserIds !== undefined && readUserIds.length > 0) ? 'read' : 'unread'
+    return (readUserIds !== null && readUserIds.length > 0) ? 'read' : 'unread'
   }
   
   /**
@@ -126,7 +126,7 @@ export class ReadReceiptService {
    */
   public getReadCount(messageId: string): number {
     const readUserIds = this.readStatus.get(messageId)
-    return (readUserIds !== null && readUserIds !== undefined) ? readUserIds.length : 0
+    return readUserIds !== null ? readUserIds.length : 0
   }
 
   public async getSummary(messageId: string): Promise<ReadReceiptSummary | null> {

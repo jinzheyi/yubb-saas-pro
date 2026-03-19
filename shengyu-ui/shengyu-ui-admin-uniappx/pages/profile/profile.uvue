@@ -26,7 +26,7 @@
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<view class="menu-group">
-				<view class="menu-item" @click="handleAction('theme')">
+				<view class="menu-item" hover-class="menu-item-active" @click="handleAction('theme')">
 					<view class="menu-icon-wrap" style="background-color: #06b6d4;">
 						<text class="iconfont menu-icon">&#xe984;</text>
 					</view>
@@ -34,7 +34,7 @@
 					<text class="iconfont arrow-icon">&#xeb03;</text>
 					<view class="menu-item-border"></view>
 				</view>
-				<view class="menu-item" @click="handleAction('fav')">
+				<view class="menu-item" hover-class="menu-item-active" @click="handleAction('fav')">
 					<view class="menu-icon-wrap" style="background-color: #fb923c;">
 						<text class="iconfont menu-icon">&#xea90;</text>
 					</view>
@@ -42,7 +42,7 @@
 					<text class="iconfont arrow-icon">&#xeb03;</text>
 					<view class="menu-item-border"></view>
 				</view>
-				<view class="menu-item" @click="handleAction('scan')">
+				<view class="menu-item" hover-class="menu-item-active" @click="handleAction('scan')">
 					<view class="menu-icon-wrap" style="background-color: #f97316;">
 						<text class="iconfont menu-icon">&#xea8b;</text>
 					</view>
@@ -50,7 +50,7 @@
 					<text class="iconfont arrow-icon">&#xeb03;</text>
 					<view class="menu-item-border"></view>
 				</view>
-				<view class="menu-item" @click="handleAction('settings')">
+				<view class="menu-item" hover-class="menu-item-active" @click="handleAction('settings')">
 					<view class="menu-icon-wrap" style="background-color: #fdba74;">
 						<text class="iconfont menu-icon">&#xea8d;</text>
 					</view>
@@ -61,7 +61,7 @@
 
 			<!-- 退出登录 -->
 			<view class="logout-wrap">
-				<button class="logout-btn" @click="handleLogout">
+				<button class="logout-btn" hover-class="logout-btn-active" @click="handleLogout">
 					<text class="logout-btn-text">退出登录</text>
 				</button>
 			</view>
@@ -271,7 +271,7 @@
 		position: relative;
 	}
 
-	.menu-item:active {
+	.menu-item-active {
 		background-color: #F2F3F5;
 	}
 
@@ -324,7 +324,7 @@
 		border-color: #EFF0F1;
 	}
 
-	.logout-btn:active {
+	.logout-btn-active {
 		background-color: #FEEEEE;
 	}
 

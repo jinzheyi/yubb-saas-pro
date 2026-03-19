@@ -66,7 +66,7 @@
 		</scroll-view>
 
 		<!-- 底部确认按钮 -->
-		<view class="footer">
+		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px' }">
 			<text class="selected-text">已选择 {{ selectedItems.length }} 个</text>
 			<button class="confirm-btn" :disabled="selectedItems.length === 0" @click="handleConfirm">
 				<text class="confirm-btn-text">分享</text>
@@ -80,6 +80,8 @@
 	import { getAvatarText, getGroupAvatarColor, getUserAvatarColor } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
+
+	const safeAreaBottom = ref(0)
 
 	const searchKeyword = ref('')
 	const selectedItems = ref<any[]>([])
@@ -150,6 +152,7 @@
 	}
 
 	onLoad((options : any) => {
+		safeAreaBottom.value = uni.getWindowInfo().safeAreaInsets?.bottom ?? 0
 		// 可以接收要分享的内容参数
 	})
 </script>
@@ -258,7 +261,7 @@
 		border-bottom-color: #EFF0F1;
 	}
 
-	.chat-item:last-child {
+	.chat-item-last {
 		border-bottom-width: 0;
 	}
 
@@ -331,7 +334,7 @@
 		border-bottom-color: #EFF0F1;
 	}
 
-	.contact-item:last-child {
+	.contact-item-last {
 		border-bottom-width: 0;
 	}
 
@@ -399,7 +402,7 @@
 		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
-		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+		padding-bottom: 12px;
 	}
 
 	.selected-text {

@@ -16,8 +16,8 @@ export class MessageLoader {
   private hasMore: boolean = true
   private pageNum: number = 1
   
-  constructor(options?: MessageLoaderOptions) {
-    if (options) {
+  constructor(options: MessageLoaderOptions | null = null) {
+    if (options !== null) {
       this.pageSize = options.pageSize || 20
       this.preloadThreshold = options.preloadThreshold || 5
     }

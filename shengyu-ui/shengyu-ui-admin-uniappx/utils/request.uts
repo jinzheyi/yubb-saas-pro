@@ -187,7 +187,7 @@ function responseInterceptor(response: any): any {
 	let data = response.data
 	const config = response.config
 	
-	if (data === null || data === undefined) {
+	if (data === null) {
 		throw new Error('响应数据为空')
 	}
 	if (typeof data === 'string') {
@@ -278,8 +278,8 @@ async function handle401Error(response: any): Promise<any> {
 		console.warn('[request] handle401Error:', {
 			url: url,
 			statusCode: response.statusCode,
-			code: response.data != null ? response.data.code : undefined,
-			msg: response.data != null ? response.data.msg : undefined
+			code: response.data != null ? response.data.code : null,
+			msg: response.data != null ? response.data.msg : null
 		})
 	} catch (e) {
 		// ignore

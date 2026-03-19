@@ -43,6 +43,7 @@
 			<view class="message-list" v-if="displayPinnedList.length > 0">
 				<view 
 					class="message-item pinned-item" 
+					hover-class="pinned-item-active"
 					v-for="(item, index) in displayPinnedList" 
 					:key="'pinned-' + item.chatId" 
 					@click="handleMessageClick(item)"
@@ -83,6 +84,7 @@
 			<view class="message-list">
 				<view 
 					class="message-item" 
+					hover-class="message-item-active"
 					v-for="(item, index) in displayNormalList" 
 					:key="'normal-' + item.chatId" 
 					@click="handleMessageClick(item)"
@@ -121,13 +123,13 @@
 					<text class="menu-title">{{ selectedItem?.targetName ?? '' }}</text>
 				</view>
 				<view class="menu-list">
-					<view class="menu-item-btn" @click="handleMenuAction('pin')">
+					<view class="menu-item-btn" hover-class="menu-item-btn-active" @click="handleMenuAction('pin')">
 						<text class="menu-item-text">{{ selectedItem?.isPinned ? t('message.menu.unpin') : t('message.menu.pin') }}</text>
 					</view>
-					<view class="menu-item-btn" @click="handleMenuAction('unread')">
+					<view class="menu-item-btn" hover-class="menu-item-btn-active" @click="handleMenuAction('unread')">
 						<text class="menu-item-text">{{ selectedItem?.unread ? t('message.menu.read') : t('message.menu.unread') }}</text>
 					</view>
-					<view class="menu-item-btn" @click="handleMenuAction('remove')">
+					<view class="menu-item-btn" hover-class="menu-item-btn-active" @click="handleMenuAction('remove')">
 						<text class="menu-item-text menu-danger">{{ t('message.menu.remove') }}</text>
 					</view>
 				</view>
@@ -719,7 +721,6 @@
 		justify-content: center;
 		align-items: center;
 		margin-bottom: 6px;
-		transition: all 0.2s;
 	}
 
 	.category-active {
@@ -758,11 +759,11 @@
 		background-color: #F5F7FA;
 	}
 
-	.message-item:active {
+	.message-item-active {
 		background-color: #F2F3F5;
 	}
 
-	.pinned-item:active {
+	.pinned-item-active {
 		background-color: #EBEDF0;
 	}
 
@@ -948,7 +949,7 @@
 		padding: 12px 16px;
 	}
 
-	.menu-item-btn:active {
+	.menu-item-btn-active {
 		background-color: #f5f5f5;
 	}
 

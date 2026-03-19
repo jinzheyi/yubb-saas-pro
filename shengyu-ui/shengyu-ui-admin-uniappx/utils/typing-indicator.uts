@@ -128,7 +128,7 @@ export class TypingIndicator {
   public receiveTyping(chatId: string, userId: string, userName: string): void {
     // 获取或创建会话的正在输入列表
     let statusList = this.typingStatus.get(chatId)
-    if (statusList === null || statusList === undefined) {
+    if (statusList === null) {
       statusList = []
       this.typingStatus.set(chatId, statusList)
     }
@@ -159,7 +159,7 @@ export class TypingIndicator {
   public getTypingText(chatId: string, isGroup: boolean): string {
     const statusList = this.typingStatus.get(chatId)
     
-    if (statusList === null || statusList === undefined || statusList.length === 0) {
+    if (statusList === null || statusList.length === 0) {
       return ''
     }
     

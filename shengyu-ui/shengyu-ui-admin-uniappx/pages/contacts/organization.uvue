@@ -35,7 +35,7 @@
 				<!-- 子组织列表 -->
 				<view class="org-list">
 					<view v-for="(org, orgIndex) in organizations" :key="org.id" class="org-item">
-						<view class="org-row" @click="toggleNode(org.id)">
+						<view class="org-row" hover-class="org-row-active" @click="toggleNode(org.id)">
 							<!-- 选择模式下显示复选框 -->
 							<view v-if="isSelectMode" :class="['checkbox', org.selected ? 'checkbox-active' : '']" @click.stop="toggleOrgSelect(org)">
 								<text v-if="org.selected" class="iconfont check-icon">&#xea73;</text>
@@ -73,7 +73,7 @@
 							<!-- 子部门 -->
 							<view v-if="org.departments && org.departments.length > 0">
 								<view v-for="(dept, deptIndex) in org.departments" :key="dept.id" class="dept-item">
-									<view class="dept-row" @click="isSelectMode ? null : toggleDept(dept.id)">
+									<view class="dept-row" hover-class="dept-row-active" @click="isSelectMode ? null : toggleDept(dept.id)">
 										<!-- 选择模式下显示复选框 -->
 										<view v-if="isSelectMode" :class="['checkbox', dept.selected ? 'checkbox-active' : '']" @click.stop="toggleDeptSelect(org, dept)">
 											<text v-if="dept.selected" class="iconfont check-icon">&#xea73;</text>
@@ -88,6 +88,7 @@
 									<view v-if="dept.expanded" class="member-list">
 										<view v-for="(member, mIndex) in dept.members" :key="member.id" 
 											class="member-item"
+										hover-class="member-item-active"
 											@click="handleMemberClick(member)">
 											<!-- 选择模式下显示复选框 -->
 											<view v-if="isSelectMode" :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
@@ -133,7 +134,7 @@
 		</scroll-view>
 
 		<!-- 选择模式下显示底部操作栏 -->
-		<view v-if="isSelectMode" class="footer">
+		<view v-if="isSelectMode" class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px' }">
 			<text class="selected-text">已选择 {{ selectedCount }} 人</text>
 			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
 				<text class="confirm-btn-text">确定</text>
@@ -156,6 +157,8 @@
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
+
+	const safeAreaBottom = ref(0)
 
 	// 是否为选择模式
 	const isSelectMode = ref(false)
@@ -913,6 +916,7 @@
 
 	// 页面加载时检查是否为选择模式
 	onLoad((options : any) => {
+		safeAreaBottom.value = uni.getWindowInfo().safeAreaInsets?.bottom ?? 0
 		if (options != null && options['mode'] === 'select') {
 			isSelectMode.value = true
 		}
@@ -1060,7 +1064,7 @@
 		padding: 12px 0;
 	}
 
-	.org-row:active {
+	.org-row-active {
 		opacity: 0.6;
 	}
 
@@ -1099,7 +1103,7 @@
 		padding: 8px 0;
 	}
 
-	.dept-row:active {
+	.dept-row-active {
 		opacity: 0.6;
 	}
 
@@ -1133,7 +1137,7 @@
 		position: relative;
 	}
 
-	.member-item:active {
+	.member-item-active {
 		opacity: 0.6;
 	}
 
@@ -1205,7 +1209,7 @@
 		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
-		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+		padding-bottom: 12px;
 	}
 
 	.selected-text {

@@ -314,7 +314,7 @@
 		padding: 12px 16px;
 		border-bottom-width: 0.5px;
 		border-bottom-color: #EFF0F1;
-		overflow-x: scroll;
+		overflow: scroll;
 	}
 
 	.tab-item {

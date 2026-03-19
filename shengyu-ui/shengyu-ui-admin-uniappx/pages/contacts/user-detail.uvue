@@ -12,7 +12,7 @@
 
 		<!-- 更多菜单 -->
 		<view v-if="showMoreMenu" class="more-menu-mask" @click="showMoreMenu = false">
-			<view class="more-menu" @click.stop>
+			<view class="more-menu" :style="{ top: (statusBarHeight + 48) + 'px' }" @click.stop>
 				<view class="menu-item" @click="handleMenuAction('follow')">
 					<text :class="['iconfont', 'menu-icon', isFollowing ? 'menu-icon-active' : '']">&#xea90;</text>
 					<text class="menu-text">{{ isFollowing ? '取消关注' : '关注' }}</text>
@@ -59,7 +59,7 @@
 		</scroll-view>
 
 		<!-- 底部操作栏 -->
-		<view class="footer-actions">
+		<view class="footer-actions" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px' }">
 			<view class="action-btn" @click="handleMessage">
 				<view class="action-icon-wrap">
 					<text class="iconfont action-icon">&#xea98;</text>
@@ -83,6 +83,8 @@
 
 	const { t } = useI18n()
 
+	const statusBarHeight = ref(0)
+	const safeAreaBottom = ref(0)
 	const showMoreMenu = ref(false)
 	const isFollowing = ref(false)
 	const loading = ref(false)
@@ -90,7 +92,7 @@
 
 	// 从路由参数获取用户信息
 	const userId = ref<string>('')
-	const userName = ref('张敏')
+	const userName = ref('')
 
 	// 用户信息
 	const userInfo = ref({
@@ -235,6 +237,9 @@
 
 	// 页面加载时获取路由参数
 	onLoad((options : any) => {
+		const winInfo = uni.getWindowInfo()
+		statusBarHeight.value = winInfo.statusBarHeight ?? 0
+		safeAreaBottom.value = winInfo.safeAreaInsets?.bottom ?? 0
 		if (options != null) {
 			if (options['userId']) {
 				userId.value = options['userId'] as string
@@ -311,7 +316,7 @@
 
 	.more-menu {
 		position: absolute;
-		top: calc(var(--status-bar-height) + 48px);
+		top: 0;
 		right: 12px;
 		background-color: #333333;
 		border-radius: 8px;
@@ -328,7 +333,7 @@
 		border-bottom-color: rgba(255,255,255,0.1);
 	}
 
-	.menu-item:last-child {
+	.menu-item-last {
 		border-bottom-width: 0;
 	}
 
@@ -428,7 +433,7 @@
 		padding: 12px 32px;
 		flex-direction: row;
 		justify-content: space-around;
-		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+		padding-bottom: 12px;
 	}
 
 	.action-btn {

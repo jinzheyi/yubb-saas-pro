@@ -18,7 +18,8 @@
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<view class="member-list">
 				<view v-for="(member, index) in memberList" :key="member.id" 
-					class="member-item" 
+					class="member-item"
+							hover-class="member-item-active"
 					@click="handleMemberClick(member)">
 					<!-- 显示复选框 -->
 					<view :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
@@ -38,7 +39,7 @@
 		</scroll-view>
 
 		<!-- 底部操作栏 -->
-		<view class="footer">
+		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px' }">
 			<text class="selected-text">已选择 {{ selectedCount }} 人</text>
 			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
 				<text class="confirm-btn-text">确定</text>
@@ -54,42 +55,52 @@
 		toggleMember,
 		getSelectedCount
 	} from '../../store/group-selection.uts'
+	import { getGroupMembers } from '../../api/group.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
 
+	const safeAreaBottom = ref(0)
 	const groupName = ref('数字科技工作群')
 	const groupId = ref<string>('')
 
-	// 生成群组成员数据（ID范围：5000+，避免与其他页面冲突）
-	const generateMembers = (groupId : string) : any[] => {
-		const firstNames = ['张', '李', '王', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗']
-		const lastNames = ['伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军', '洋', '勇', '艳', '杰', '娟', '涛', '明', '超', '秀兰', '霞']
-		const roles = ['高级经理', '部门经理', '项目经理', '开发工程师', '测试工程师', '产品经理', '设计师', '运营专员', '市场专员', '行政专员']
-
-		const list : any[] = []
-		const memberCount = groupId === 1 ? 84 : (groupId === 2 ? 17 : (groupId === 3 ? 10 : 18))
-		const baseId = 5000 + (groupId * 1000)  // 每个群组使用不同的ID范围
-		
-		for (let i = 0; i < memberCount; i++) {
-			const firstName = firstNames[i % firstNames.length]
-			const lastName = lastNames[i % lastNames.length]
-			const name = firstName + lastName
-			const memberId = baseId + i + 1
-			
-			list.push({
-				id: memberId,
-				name: name,
-				role: roles[i % roles.length],
-				avatarText: getAvatarText(name),
-				avatarBg: getUserAvatarColor(memberId.toString()),
-				selected: false
-			})
-		}
-		return list
-	}
-
+	// 成员列表数据（从后端加载）
 	const memberList = ref<any[]>([])
+	const loading = ref(false)
+
+	/**
+	 * 加载群成员列表
+	 */
+	async function loadGroupMembers() {
+		if (!groupId.value) return
+		
+		loading.value = true
+		try {
+			const members = await getGroupMembers(groupId.value) as any[]
+			if (members && Array.isArray(members)) {
+				memberList.value = members.map((m: any) => {
+					const userIdStr = m.userId != null ? String(m.userId) : '0'
+					const displayName = m.nickname || m.name || '未知'
+					return {
+						id: userIdStr,
+						name: displayName,
+						role: m.roleName || '',
+						avatarText: getAvatarText(displayName),
+						avatarBg: getUserAvatarColor(userIdStr),
+						selected: isMemberSelected(userIdStr)
+					}
+				})
+			} else {
+				memberList.value = []
+			}
+		} catch (e) {
+			console.error('[GroupMembers] 加载群成员失败:', e)
+			uni.showToast({ title: '加载失败', icon: 'none' })
+			memberList.value = []
+		} finally {
+			loading.value = false
+		}
+	}
 
 	// 选中的成员数量（使用全局状态）
 	const selectedCount = computed(() : number => {
@@ -125,6 +136,7 @@
 
 	// 页面加载时获取群组信息
 	onLoad((options : any) => {
+		safeAreaBottom.value = uni.getWindowInfo().safeAreaInsets?.bottom ?? 0
 		if (options != null) {
 			if (options['groupId']) {
 				groupId.value = options['groupId'] as string
@@ -133,8 +145,8 @@
 				groupName.value = options['groupName']
 			}
 		}
-		// 生成成员列表
-		memberList.value = generateMembers(groupId.value)
+		// 加载群成员列表
+		loadGroupMembers()
 		// 同步选中状态
 		syncSelectionState()
 	})
@@ -235,7 +247,7 @@
 		position: relative;
 	}
 
-	.member-item:active {
+	.member-item-active {
 		background-color: #F2F3F5;
 	}
 
@@ -311,7 +323,7 @@
 		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
-		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+		padding-bottom: 12px;
 	}
 
 	.selected-text {

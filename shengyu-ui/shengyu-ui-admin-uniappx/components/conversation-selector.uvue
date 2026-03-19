@@ -160,7 +160,7 @@
 	}
 </script>
 
-<style scoped>
+<style>
 	.conversation-selector-overlay {
 		position: fixed;
 		top: 0;
@@ -232,7 +232,7 @@
 	
 	.selector-list {
 		flex: 1;
-		overflow-y: auto;
+		overflow: auto;
 	}
 	
 	.conversation-item {
@@ -325,7 +325,6 @@
 	.footer-btn {
 		padding: 8px 20px;
 		border-radius: 6px;
-		cursor: pointer;
 	}
 	
 	.footer-btn-cancel {

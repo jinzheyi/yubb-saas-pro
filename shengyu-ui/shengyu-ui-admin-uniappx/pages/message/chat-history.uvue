@@ -214,8 +214,8 @@ const loadMessages = async () => {
     const res = await searchMessages(
       chatId.value,
       searchKeyword.value,
-      startTime.value ? `${startTime.value} 00:00:00` : undefined,
-      endTime.value ? `${endTime.value} 23:59:59` : undefined,
+      startTime.value ? `${startTime.value} 00:00:00` : null,
+      endTime.value ? `${endTime.value} 23:59:59` : null,
       pageNo.value,
       pageSize.value
     )
@@ -227,10 +227,10 @@ const loadMessages = async () => {
       return {
         ...m,
         id: m && m.id != null ? m.id.toString() : '0',
-        messageId: m && m.messageId != null ? m.messageId.toString() : undefined,
-        senderId: m && m.senderId != null ? m.senderId.toString() : undefined,
-        receiverId: m && m.receiverId != null ? m.receiverId.toString() : undefined,
-        groupId: m && m.groupId != null ? m.groupId.toString() : undefined
+        messageId: m && m.messageId != null ? m.messageId.toString() : null,
+        senderId: m && m.senderId != null ? m.senderId.toString() : null,
+        receiverId: m && m.receiverId != null ? m.receiverId.toString() : null,
+        groupId: m && m.groupId != null ? m.groupId.toString() : null
       }
     })
     messageList.value = [...messageList.value, ...newMessages]

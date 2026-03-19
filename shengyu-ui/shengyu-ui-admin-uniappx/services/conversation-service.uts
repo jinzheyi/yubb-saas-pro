@@ -807,7 +807,7 @@ export class ConversationService {
       noDisturb: data.noDisturb || false,
       draft: data.draft || '',
       groupMemberCount: data.groupMemberCount || 0,
-	  conversationVersion: data.conversationVersion != null ? data.conversationVersion.toString() : undefined
+	  conversationVersion: data.conversationVersion != null ? data.conversationVersion.toString() : null
     }
   }
   

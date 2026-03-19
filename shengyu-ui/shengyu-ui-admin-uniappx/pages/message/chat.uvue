@@ -260,7 +260,7 @@
         <view v-if="showMsgMenu" class="menu-mask" @click="closeMsgMenu">
             <view class="menu-content" :style="{ top: menuY + 'px', left: menuX + 'px', opacity: menuOpacity }" @click.stop>
                 <view class="menu-list">
-                    <view class="menu-item-btn" v-for="item in currentMenuItems" :key="item.key" @click="handleMenuAction(item.key)">
+                    <view class="menu-item-btn" v-for="item in currentMenuItems" :key="item.key" hover-class="menu-item-btn-active" @click="handleMenuAction(item.key)">
                         <text class="iconfont menu-item-icon" :class="{ 'menu-danger': item.key === 'delete' }">{{ item.icon }}</text>
                         <text class="menu-item-text" :class="{ 'menu-danger': item.key === 'delete' }">{{ item.labelKey ? t(item.labelKey) : item.label }}</text>
                     </view>
@@ -270,11 +270,11 @@
 
 		<!-- 多选模式底部工具栏 -->
 		<view v-if="multiSelectMode" class="multi-select-toolbar">
-			<view class="toolbar-item" @click="handleMultiForward">
+			<view class="toolbar-item" hover-class="toolbar-item-active" @click="handleMultiForward">
 				<text class="iconfont toolbar-icon">&#xe63d;</text>
 				<text class="toolbar-text">转发</text>
 			</view>
-			<view class="toolbar-item" @click="handleMultiDelete">
+			<view class="toolbar-item" hover-class="toolbar-item-active" @click="handleMultiDelete">
 				<text class="iconfont toolbar-icon">&#xe602;</text>
 				<text class="toolbar-text">删除</text>
 			</view>
@@ -1334,7 +1334,7 @@
 	}
 
 	function getFileNameFromMixedContent(content : any) : string {
-		if (content === null || content === undefined) {
+		if (content === null) {
 			return ''
 		}
 		// REST 历史消息可能直接存字符串：
@@ -1376,7 +1376,7 @@
 	}
 
 	function getFileUrlFromMixedContent(content : any) : string {
-		if (content === null || content === undefined) {
+		if (content === null) {
 			return ''
 		}
 		const raw = String(content).trim()
@@ -1403,7 +1403,7 @@
 		if (rawContent && typeof rawContent === 'object') {
 			fileName = rawContent.fileName || rawContent.name || ''
 			// size 可能是 number 或 string
-			if (rawContent.size !== null && rawContent.size !== undefined) {
+			if (rawContent.size !== null) {
 				const n = Number(rawContent.size)
 				sizeNum = isNaN(n) ? null : n
 			}
@@ -1566,7 +1566,7 @@
 	const avatarText = senderNickname ? getAvatarTextUtil(senderNickname) : '?'
 	let isSelfVal = false
 	try {
-		if ((msg as any).isSelf !== null && (msg as any).isSelf !== undefined) {
+		if ((msg as any).isSelf !== null) {
 			isSelfVal = !!(msg as any).isSelf
 		} else {
 			isSelfVal = senderIdStr === currentUserId.value
@@ -1578,7 +1578,7 @@
 		// 这里保留数值状态，避免把 status=2 误映射为 'sending' 导致气泡旁已读/未读入口不展示
 		let statusVal: any = (msg as any).status
 		try {
-			if (statusVal === null || statusVal === undefined || statusVal === '') {
+			if (statusVal === null || statusVal === '') {
 				statusVal = 0
 			}
 		} catch (e) {
@@ -1810,8 +1810,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function parseRawContent(content : any) : any {
-		// 处理 null/undefined
-		if (content === null || content === undefined) {
+		// 处理 null
+		if (content === null) {
 			return content
 		}
 
@@ -1849,7 +1849,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		try {
 			const parsed = parseRawContent(rawContent)
 			if (parsed && typeof parsed === 'object') {
-				if (parsed.quotedMessageId !== null && parsed.quotedMessageId !== undefined) {
+				if (parsed.quotedMessageId !== null) {
 					target.quoteMessageId = parsed.quotedMessageId.toString()
 					target.quoteContent = parsed.quotedContent || ''
 					target.quoteSenderName = parsed.quotedSenderName || ''
@@ -1897,7 +1897,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function hasQuote(msg : MessageItem) : boolean {
-		return msg.quoteMessageId !== null && msg.quoteMessageId !== undefined
+		return msg.quoteMessageId !== null
 	}
 
 	function isRecallTip(content : string) : boolean {
@@ -1942,7 +1942,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 		while (currentId && depth < maxDepth) {
 			const referenced = messages.value.find(m => m.messageId === currentId)
-			if (referenced !== undefined) {
+			if (referenced !== null) {
 				chain.push({
 					messageId: currentId,
 					senderName: referenced.senderName || currentSender || '未知',
@@ -1950,7 +1950,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					missing: false
 				})
 
-				if (referenced.quoteMessageId === null || referenced.quoteMessageId === undefined) {
+				if (referenced.quoteMessageId === null) {
 					break
 				}
 
@@ -1979,9 +1979,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		const messageMap = new Map<string, MessageItem>()
 		const pickNonEmpty = (a: any, b: any): any => {
 			// prefer b if b is meaningful, else keep a
-			if (b === null || b === undefined) return a
+			if (b === null) return a
 			if (typeof b === 'string') {
-				if (b === '' || b === '0' || b === 'undefined') return a
+				if (b === '' || b === '0' || b === 'null') return a
 			}
 			return b
 		}
@@ -2044,7 +2044,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				finalMsg.time = pickNonEmpty(prev.time, next.time)
 				finalMsg.senderId = pickNonEmpty(prev.senderId, next.senderId)
 				finalMsg.receiverId = pickNonEmpty(prev.receiverId, next.receiverId)
-				finalMsg.isSelf = (next.isSelf !== null && next.isSelf !== undefined) ? next.isSelf : prev.isSelf
+				finalMsg.isSelf = (next.isSelf !== null) ? next.isSelf : prev.isSelf
 				finalMsg.reeditContent = pickNonEmpty(prev.reeditContent, next.reeditContent)
 				finalMsg.reeditDeadlineTs = pickNonEmpty(prev.reeditDeadlineTs, next.reeditDeadlineTs)
 				return finalMsg
@@ -2151,8 +2151,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			receiverId: message.receiverId.toString(),
 			type: getMessageTypeString(message.type),
 			content: getServiceMessageContent(message),
-			sequence: (message as any).sequence != null ? String((message as any).sequence) : undefined,
-			groupId: (message as any).groupId != null ? String((message as any).groupId) : undefined,
+			sequence: (message as any).sequence != null ? String((message as any).sequence) : null,
+			groupId: (message as any).groupId != null ? String((message as any).groupId) : null,
 			isSelf: message.isSelf,
 			time: new Date(message.timestamp).toLocaleString(),
 			timestamp: message.timestamp,
@@ -4141,7 +4141,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		position: relative;
 		height: 0;
 		background-color: #F5F7FA;
-		transition: background-color 0.3s ease;
 	}
 
 	.chat-content-multi-select {
@@ -4160,7 +4159,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		justify-content: space-around;
 		align-content: space-around;
 		opacity: 0.03;
-		pointer-events: none;
 		transform: rotate(-25deg);
 	}
 
@@ -4200,7 +4198,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		margin-bottom: 16px;
 		position: relative;
 		width: 100%;
-		transition: background-color 0.2s ease;
 	}
 
 	.recall-system-tip {
@@ -4243,19 +4240,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		background-color: rgba(255, 193, 7, 0.15);
 		border-radius: 8px;
 		padding: 4px 0;
-		animation: highlight-pulse 0.6s ease-in-out;
-	}
-	
-	@keyframes highlight-pulse {
-		0% {
-			background-color: rgba(255, 193, 7, 0.3);
-		}
-		50% {
-			background-color: rgba(255, 193, 7, 0.15);
-		}
-		100% {
-			background-color: rgba(255, 193, 7, 0.15);
-		}
 	}
 
 	/* 多选复选框 */
@@ -4640,7 +4624,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		background-color: #F5F7FA;
 		border-radius: 0;
 		font-size: 44px;
-		color: inherit;
 	}
 
 	/* 位置消息 */
@@ -4712,7 +4695,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		white-space: pre-wrap;
 		overflow-wrap: break-word;
 		max-width: 100%;
-		display: inline;
+		display: flex;
+		flex-direction: row;
 	}
 
 	.footer {
@@ -4720,8 +4704,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		border-top-width: 1px;
 		border-top-color: #E5E5E5;
 		border-top-style: solid;
-		padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
-		transition: all 0.3s ease;
+		padding-bottom: 8px;
 	}
 
 	.footer-full-expanded {
@@ -4786,14 +4769,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		background-color: #FFFFFF;
 		border-radius: 4px;
 		margin: 0 8px;
-		height: 40px; /* 默认固定高度 */
+		height: 40px;
 		min-height: 40px;
 		max-height: 35vh;
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
 		overflow: hidden;
-		transition: height 0.2s ease;
 	}
 
 	.input-box-multi {
@@ -5086,7 +5068,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		align-items: center;
 	}
 
-	.toolbar-item:active {
+	.toolbar-item-active {
 		background-color: #F5F5F5;
 	}
 
@@ -5117,7 +5099,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         border-radius: 6px;
         overflow: hidden;
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-        transition: opacity 0.15s ease;
     }
 
     .menu-list {
@@ -5140,7 +5121,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         padding: 8px 0;
     }
 
-    .menu-item-btn:active {
+    .menu-item-btn-active {
         background-color: rgba(255, 255, 255, 0.1);
     }
 

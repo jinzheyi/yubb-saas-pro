@@ -347,7 +347,7 @@
 	})
 </script>
 
-<style scoped>
+<style>
 	.slider-captcha {
 		position: fixed;
 		top: 0;
@@ -485,7 +485,6 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		cursor: pointer;
 	}
 	
 	.slider-icon {
@@ -503,6 +502,5 @@
 		text-align: center;
 		color: #999;
 		font-size: 14px;
-		pointer-events: none;
 	}
 </style>

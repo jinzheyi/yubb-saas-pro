@@ -113,19 +113,19 @@ export class MessageSearchService {
 				pageSize: options.pageSize || 20
 			}
 
-			if (options.chatId !== undefined && options.chatId !== null) {
+			if (options.chatId !== null) {
 				params.chatId = options.chatId
 			}
 
-			if (options.messageType !== undefined && options.messageType !== null) {
+			if (options.messageType !== null) {
 				params.messageType = options.messageType
 			}
 
-			if (options.startTime !== undefined && options.startTime !== null) {
+			if (options.startTime !== null) {
 				params.startTime = options.startTime
 			}
 
-			if (options.endTime !== undefined && options.endTime !== null) {
+			if (options.endTime !== null) {
 				params.endTime = options.endTime
 			}
 
@@ -159,19 +159,19 @@ export class MessageSearchService {
         pageSize: options.pageSize || 20
       }
       
-      if (options.chatId !== undefined && options.chatId !== null) {
+      if (options.chatId !== null) {
         params.chatId = options.chatId
       }
       
-      if (options.messageType !== undefined && options.messageType !== null) {
+      if (options.messageType !== null) {
         params.messageType = options.messageType
       }
       
-      if (options.startTime !== undefined && options.startTime !== null) {
+      if (options.startTime !== null) {
         params.startTime = options.startTime
       }
       
-      if (options.endTime !== undefined && options.endTime !== null) {
+      if (options.endTime !== null) {
         params.endTime = options.endTime
       }
       

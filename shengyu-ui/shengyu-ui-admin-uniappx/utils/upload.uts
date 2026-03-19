@@ -119,10 +119,10 @@ export function uploadFile(
 		
 		// 构建请求头
 		const header: UTSJSONObject = {}
-		if (token) {
+		if (token != null) {
 			header['Authorization'] = formatToken(token)
 		}
-		if (tenantId) {
+		if (tenantId != null) {
 			header['tenant-id'] = tenantId
 		}
 		
@@ -339,10 +339,10 @@ export function uploadFileAndReturnId(
 		
 		// 构建请求头
 		const header: UTSJSONObject = {}
-		if (token) {
+		if (token != null) {
 			header['Authorization'] = formatToken(token)
 		}
-		if (tenantId) {
+		if (tenantId != null) {
 			header['tenant-id'] = tenantId
 		}
 		
@@ -619,12 +619,12 @@ export function getUploadHeader(): UTSJSONObject {
 	const header: UTSJSONObject = {}
 	
 	const token = getToken()
-	if (token) {
+	if (token != null) {
 		header['Authorization'] = formatToken(token)
 	}
 	
 	const tenantId = getTenantId()
-	if (tenantId) {
+	if (tenantId != null) {
 		header['tenant-id'] = tenantId
 	}
 	

@@ -1230,7 +1230,7 @@ export class WebSocketManager {
    */
   private dispatchMessage(messageType: MessageType, message: any): void {
     const listeners = this.messageListeners.get(messageType)
-    if (listeners !== null && listeners !== undefined) {
+    if (listeners !== null) {
       listeners.forEach((listener) => {
         try {
           listener(message)
@@ -1396,8 +1396,8 @@ export class WebSocketManager {
    */
   public send(message: any): void {
     try {
-      const mt = message && message.header ? message.header.messageType : undefined
-      const mid = message && message.header ? message.header.messageId : undefined
+      const mt = message && message.header ? message.header.messageType : null
+      const mid = message && message.header ? message.header.messageId : null
       console.log('[WebSocket] send() attempt:', { state: this.state, authenticated: this.authenticated, messageType: mt, messageId: mid })
     } catch (e) {
       console.log('[WebSocket] send() attempt: <unable to inspect message>', e)
@@ -1550,28 +1550,28 @@ export class WebSocketManager {
     }
     
     try {
-      let parsedType: any = undefined
-      let parsedId: any = undefined
-	  let parsedHeader: any = undefined
+      let parsedType: any = null
+      let parsedId: any = null
+	  let parsedHeader: any = null
       try {
         const parsed = JSON.parse(data)
-        parsedType = parsed && parsed.header ? parsed.header.messageType : undefined
-        parsedId = parsed && parsed.header ? parsed.header.messageId : undefined
-		parsedHeader = parsed && parsed.header ? parsed.header : undefined
+        parsedType = parsed && parsed.header ? parsed.header.messageType : null
+        parsedId = parsed && parsed.header ? parsed.header.messageId : null
+		parsedHeader = parsed && parsed.header ? parsed.header : null
       } catch (e) {
         // ignore
       }
 
 	  // 仅对业务消息打印概要（避免图片/文件过大）
-	  if (parsedType !== null && parsedType !== undefined && typeof parsedType === 'number' && parsedType >= 100) {
+	  if (parsedType !== null && typeof parsedType === 'number' && parsedType >= 100) {
 		try {
 			console.log('[WebSocket] sendRaw business header:', {
 				messageType: parsedHeader ? parsedHeader.messageType : parsedType,
 				messageId: parsedHeader ? parsedHeader.messageId : parsedId,
-				senderId: parsedHeader ? parsedHeader.senderId : undefined,
-				receiverId: parsedHeader ? parsedHeader.receiverId : undefined,
-				groupId: parsedHeader ? parsedHeader.groupId : undefined,
-				tenantId: parsedHeader ? parsedHeader.tenantId : undefined
+				senderId: parsedHeader ? parsedHeader.senderId : null,
+				receiverId: parsedHeader ? parsedHeader.receiverId : null,
+				groupId: parsedHeader ? parsedHeader.groupId : null,
+				tenantId: parsedHeader ? parsedHeader.tenantId : null
 			})
 		} catch (e) {
 			console.log('[WebSocket] sendRaw business header log failed:', e)
@@ -1604,7 +1604,7 @@ export class WebSocketManager {
     
     while (this.messageQueue.length > 0) {
       const message = this.messageQueue.shift()
-      if (message !== null && message !== undefined) {
+      if (message !== null) {
         try {
           if (this.isPbEnabled()) {
             this.sendPbFromJsonMessage(message)
@@ -1712,7 +1712,7 @@ export class WebSocketManager {
    */
   public addMessageListener(messageType: MessageType, listener: MessageListener): void {
     let listeners = this.messageListeners.get(messageType)
-    if (listeners === null || listeners === undefined) {
+    if (listeners === null) {
       listeners = []
       this.messageListeners.set(messageType, listeners)
     }
@@ -1724,7 +1724,7 @@ export class WebSocketManager {
    */
   public removeMessageListener(messageType: MessageType, listener: MessageListener): void {
     const listeners = this.messageListeners.get(messageType)
-    if (listeners !== null && listeners !== undefined) {
+    if (listeners !== null) {
       const index = listeners.indexOf(listener)
       if (index !== -1) {
         listeners.splice(index, 1)

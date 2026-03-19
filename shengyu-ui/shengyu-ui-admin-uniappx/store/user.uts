@@ -108,7 +108,7 @@ export function formatToken(token: string): string {
  */
 export function getTenantId(): string | null {
 	const tenantId = uni.getStorageSync(TENANT_ID_KEY)
-	if (tenantId) {
+	if (tenantId != null) {
 		return tenantId as string
 	}
 	return null
@@ -209,7 +209,7 @@ export function getTenantIdStr(): string {
 export function getUserInfo(): UserInfoVO | null {
 	try {
 		const userInfoStr = uni.getStorageSync(USER_INFO_KEY)
-		if (userInfoStr) {
+		if (userInfoStr != null) {
 			return JSON.parse(userInfoStr as string) as UserInfoVO
 		}
 	} catch (e) {
@@ -249,7 +249,7 @@ export function removeUserInfo() {
  */
 export function updateUserAvatar(avatar: string) {
 	const userInfo = getUserInfo()
-	if (userInfo) {
+	if (userInfo !== null) {
 		userInfo.user.avatar = avatar
 		setUserInfo(userInfo)
 	}
@@ -261,7 +261,7 @@ export function updateUserAvatar(avatar: string) {
  */
 export function updateUserNickname(nickname: string) {
 	const userInfo = getUserInfo()
-	if (userInfo) {
+	if (userInfo !== null) {
 		userInfo.user.nickname = nickname
 		setUserInfo(userInfo)
 	}
@@ -275,7 +275,7 @@ export function updateUserNickname(nickname: string) {
 export function getPermissions(): string[] {
 	try {
 		const permissionsStr = uni.getStorageSync(PERMISSIONS_KEY)
-		if (permissionsStr) {
+		if (permissionsStr != null) {
 			return JSON.parse(permissionsStr as string) as string[]
 		}
 	} catch (e) {
@@ -351,7 +351,7 @@ export function hasAllPermissions(permissionList: string[]): boolean {
 export function getRoles(): string[] {
 	try {
 		const rolesStr = uni.getStorageSync(ROLES_KEY)
-		if (rolesStr) {
+		if (rolesStr != null) {
 			return JSON.parse(rolesStr as string) as string[]
 		}
 	} catch (e) {

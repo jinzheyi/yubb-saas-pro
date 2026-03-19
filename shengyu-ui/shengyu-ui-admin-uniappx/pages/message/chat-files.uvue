@@ -525,7 +525,7 @@
 		border-bottom-color: #EFF0F1;
 	}
 
-	.file-item:last-child {
+	.file-item-last {
 		border-bottom-width: 0;
 	}
 

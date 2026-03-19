@@ -47,7 +47,7 @@ const onAddClick = () => {
 }
 </script>
 
-<style scoped>
+<style>
 .reaction-display {
   display: flex;
   flex-direction: row;

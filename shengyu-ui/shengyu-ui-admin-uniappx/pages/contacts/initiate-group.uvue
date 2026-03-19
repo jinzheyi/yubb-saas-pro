@@ -38,7 +38,7 @@
 			<text class="empty-text">暂无联系人</text>
 		</view>
 
-		<view class="footer">
+		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px' }">
 			<text class="selected-text">{{ mode === 'add' ? `已选择 ${selectedCount} 人` : t('initiateGroup.selectedCount', { count: selectedCount.toString() }) }}</text>
 			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
 				<text class="confirm-btn-text">{{ mode === 'add' ? '确定' : t('initiateGroup.confirm', { count: selectedCount.toString(), max: '500' }) }}</text>
@@ -66,6 +66,8 @@
 	import ContactSelector from '../../components/contact-selector/contact-selector.uvue'
 
 	const { t } = useI18n()
+
+	const safeAreaBottom = ref(0)
 
 	const contactList = ref<any[]>([])
 	const loading = ref(false)
@@ -465,6 +467,7 @@
 
 	// 页面加载时初始化选择模式
 	onLoad((options : any) => {
+		safeAreaBottom.value = uni.getWindowInfo().safeAreaInsets?.bottom ?? 0
 		// 获取页面参数
 		if (options['mode']) {
 			mode.value = options['mode'] as string
@@ -586,7 +589,7 @@
 		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
-		padding-bottom: calc(12px + env(safe-area-inset-bottom));
+		padding-bottom: 12px;
 	}
 
 	.selected-text {

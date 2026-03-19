@@ -638,7 +638,7 @@
 		border-bottom-color: #EFF0F1;
 	}
 
-	.action-btn:last-child {
+	.action-btn-last {
 		border-bottom-width: 0;
 	}
 

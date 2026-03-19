@@ -451,7 +451,7 @@
 		border-color: #E5E5E5;
 	}
 	
-	.notice-textarea:focus {
+	.notice-textarea-focus {
 		border-color: #1677FF;
 		background-color: #FFFFFF;
 	}

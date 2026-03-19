@@ -423,7 +423,7 @@
 		border-bottom-color: #EFF0F1;
 	}
 
-	.invite-row:last-child {
+	.invite-row-last {
 		border-bottom-width: 0;
 	}
 

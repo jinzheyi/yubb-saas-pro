@@ -14,7 +14,7 @@
 					<text class="iconfont arrow-icon">{{ isProcessExpanded ? '\ue68d' : '\ue60e' }}</text>
 				</view>
 				<view class="grid" v-if="isProcessExpanded">
-					<view class="grid-item" v-for="(item, index) in processList" :key="index" @click="handleAction(item)">
+					<view class="grid-item" hover-class="grid-item-active" v-for="(item, index) in processList" :key="index" @click="handleAction(item)">
 						<view class="icon-wrap" :style="{ backgroundImage: item.gradient }">
 							<text class="iconfont grid-icon">{{ item.icon }}</text>
 							<view v-if="item.badge > 0" class="badge">
@@ -33,7 +33,7 @@
 					<text class="iconfont arrow-icon">{{ isFeatureExpanded ? '\ue68d' : '\ue60e' }}</text>
 				</view>
 				<view class="grid" v-if="isFeatureExpanded">
-					<view class="grid-item" v-for="(item, index) in featureList" :key="index" @click="handleAction(item)">
+					<view class="grid-item" hover-class="grid-item-active" v-for="(item, index) in featureList" :key="index" @click="handleAction(item)">
 						<view class="icon-wrap" :style="{ backgroundImage: item.gradient }">
 							<text class="iconfont grid-icon">{{ item.icon }}</text>
 						</view>
@@ -222,7 +222,7 @@
 		padding: 12px 0;
 	}
 
-	.grid-item:active {
+	.grid-item-active {
 		background-color: #F5F7FA;
 		border-radius: 8px;
 	}
