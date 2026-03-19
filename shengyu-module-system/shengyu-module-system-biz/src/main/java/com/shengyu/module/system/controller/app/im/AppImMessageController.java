@@ -4,6 +4,7 @@ import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageForwardReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePullReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
@@ -168,6 +169,26 @@ public class AppImMessageController {
         }
         messageService.batchUpdateMessageStatus(userId, filteredIds, ImMessageStatusEnum.READ.getStatus());
         return success(true);
+    }
+
+    @PostMapping("/forward")
+    @Operation(summary = "转发消息（支持逐条转发和合并转发）")
+    public CommonResult<List<Long>> forwardMessages(@Valid @RequestBody AppImMessageForwardReqVO forwardReqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        List<Long> newMessageIds = messageService.forwardMessages(userId, forwardReqVO);
+        return success(newMessageIds);
+    }
+
+    @PostMapping("/forward-single")
+    @Operation(summary = "单条转发消息（简化接口）")
+    @Parameter(name = "messageId", description = "原消息ID", required = true)
+    @Parameter(name = "targetChatId", description = "目标会话ID", required = true)
+    public CommonResult<Long> forwardSingleMessage(
+            @RequestParam("messageId") Long messageId,
+            @RequestParam("targetChatId") Long targetChatId) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        Long newMessageId = messageService.forwardMessage(userId, messageId, targetChatId);
+        return success(newMessageId);
     }
 
 }

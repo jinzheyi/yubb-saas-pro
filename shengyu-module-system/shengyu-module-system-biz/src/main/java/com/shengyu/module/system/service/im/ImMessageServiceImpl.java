@@ -21,6 +21,8 @@ import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.*;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
+import com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum;
+import com.shengyu.module.system.enums.im.ImMessageForwardTypeEnum;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.enums.im.ImMessageTypeEnum;
 import lombok.extern.slf4j.Slf4j;
@@ -89,6 +91,19 @@ public class ImMessageServiceImpl implements ImMessageService {
     @Transactional(rollbackFor = Exception.class)
     public Long sendMessage(Long userId, AppImMessageSendReqVO sendReqVO) {
         Long chatId = sendReqVO.getChatId();
+        
+        // 幂等检查：如果传入了 clientMessageId，检查是否已存在
+        String clientMessageId = sendReqVO.getClientMessageId();
+        if (StrUtil.isNotBlank(clientMessageId)) {
+            ImChatMessageDO existingMessage = chatMessageMapper.selectByClientMessageId(clientMessageId);
+            if (existingMessage != null) {
+                // 幂等返回：同一 clientMessageId 返回已存在的消息ID
+                log.info("[ImMessageService] 幂等重发命中, clientMessageId: {}, existingMessageId: {}", 
+                        clientMessageId, existingMessage.getId());
+                return existingMessage.getId();
+            }
+        }
+        
         ImChatUserDO selfChatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
         if (selfChatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
@@ -102,6 +117,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         ImChatMessageDO message = new ImChatMessageDO();
         message.setChatId(chatId);
         message.setSenderId(userId);
+        message.setClientMessageId(clientMessageId);
         Integer dbMessageType = normalizeDbMessageType(sendReqVO.getMessageType());
         message.setMessageType(dbMessageType);
 
@@ -133,6 +149,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         message.setRev(1L);
         message.setStatus(ImMessageStatusEnum.SENT.getStatus());
         message.setQuoteMessageId(sendReqVO.getQuoteMessageId());
+        message.setMentions(sendReqVO.getMentions());
         chatMessageMapper.insert(message);
 
         String preview = getMessagePreview(dbMessageType, sendReqVO.getContent());
@@ -402,6 +419,9 @@ public class ImMessageServiceImpl implements ImMessageService {
                     pushMessageToUser(memberId, chat.getId(), lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO);
                 }
             }
+            
+            // 处理@提及强提醒：被@用户即使群免打扰也收到推送
+            handleMentionNotifications(chat, lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO, memberIds);
         } else {
             ImChatUserDO sender = ensureChatUser(senderId, chat.getId());
             chatUserMapper.updateLastMessageAndIncrementUnread(
@@ -620,6 +640,88 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
     }
 
+    /**
+     * 处理@提及强提醒
+     * 被提及用户即使群免打扰也会收到推送
+     * 
+     * @param chat 会话
+     * @param messageId 消息ID
+     * @param sequence 序列号
+     * @param rev 版本号
+     * @param senderId 发送者ID
+     * @param sendReqVO 发送请求
+     * @param memberIds 群成员ID列表
+     */
+    private void handleMentionNotifications(ImChatDO chat, Long messageId, Long sequence, Long rev,
+                                             Long senderId, AppImMessageSendReqVO sendReqVO, List<Long> memberIds) {
+        String mentionsJson = sendReqVO.getMentions();
+        if (StrUtil.isBlank(mentionsJson)) {
+            return;
+        }
+        
+        try {
+            // 解析mentions字段
+            List<JSONObject> mentions = JSONUtil.parseArray(mentionsJson).toList(JSONObject.class);
+            if (mentions == null || mentions.isEmpty()) {
+                return;
+            }
+            
+            // 提取被@用户ID
+            List<Long> mentionedUserIds = mentions.stream()
+                    .map(m -> m.getLong("userId"))
+                    .filter(id -> id != null)
+                    .collect(Collectors.toList());
+            
+            if (mentionedUserIds.isEmpty()) {
+                return;
+            }
+            
+            log.info("[ImMessageService] 处理@提及强提醒, chatId: {}, mentionedUserIds: {}", 
+                    chat.getId(), mentionedUserIds);
+            
+            // 对被@用户发送强提醒推送（即使群免打扰）
+            for (Long mentionedUserId : mentionedUserIds) {
+                if (Objects.equals(mentionedUserId, senderId)) {
+                    continue; // 不给自己推送
+                }
+                
+                // 检查是否是群成员
+                if (memberIds != null && !memberIds.contains(mentionedUserId)) {
+                    log.warn("[ImMessageService] 被@用户不在群成员列表中, userId: {}, chatId: {}", 
+                            mentionedUserId, chat.getId());
+                    continue;
+                }
+                
+                // 强提醒推送：即使群免打扰也推送
+                try {
+                    // 构建强提醒消息
+                    JSONObject extraData = new JSONObject();
+                    extraData.set("mentionType", "SINGLE");
+                    extraData.set("forceNotify", true);
+                    
+                    TextMessage notifyBody = TextMessage.newBuilder()
+                            .setContent("[有人@我]")
+                            .build();
+                    
+                    Long tenantId = TenantContextHolder.getTenantId();
+                    messageSender.sendToUserWithExtra(mentionedUserId, MessageType.TEXT, notifyBody,
+                            senderId, null, chat.getGroupId(), tenantId != null ? tenantId : 0L,
+                            messageId, sequence, chat.getId(),
+                            null, null, extraData.toString());
+                    
+                    log.debug("[ImMessageService] @提及强提醒推送成功, mentionedUserId: {}, messageId: {}", 
+                            mentionedUserId, messageId);
+                } catch (Exception e) {
+                    log.warn("[ImMessageService] @提及强提醒推送失败, mentionedUserId: {}, messageId: {}, error: {}", 
+                            mentionedUserId, messageId, e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[ImMessageService] 解析mentions字段失败, mentions: {}, error: {}", 
+                    mentionsJson, e.getMessage());
+        }
+    }
+
     private ImChatUserDO ensureChatUser(Long userId, Long chatId) {
         ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
         if (chatUser != null) {
@@ -666,7 +768,203 @@ public class ImMessageServiceImpl implements ImMessageService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long forwardMessage(Long userId, Long messageId, Long targetChatId) {
-        throw exception(MESSAGE_SEND_FAILED);
+        // 单条转发，复用批量转发逻辑
+        AppImMessageForwardReqVO forwardReqVO = new AppImMessageForwardReqVO();
+        forwardReqVO.setTargetChatId(targetChatId);
+        forwardReqVO.setMessageIds(Collections.singletonList(messageId));
+        forwardReqVO.setForwardType(ImMessageForwardTypeEnum.SINGLE.getType());
+        List<Long> result = forwardMessages(userId, forwardReqVO);
+        return result != null && !result.isEmpty() ? result.get(0) : null;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public List<Long> forwardMessages(Long userId, AppImMessageForwardReqVO forwardReqVO) {
+        Long targetChatId = forwardReqVO.getTargetChatId();
+        List<Long> messageIds = forwardReqVO.getMessageIds();
+        Integer forwardType = forwardReqVO.getForwardType();
+
+        // 1. 校验目标会话
+        ImChatUserDO targetChatUser = chatUserMapper.selectByUserIdAndChatId(userId, targetChatId);
+        if (targetChatUser == null) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+        ImChatDO targetChat = chatMapper.selectById(targetChatId);
+        if (targetChat == null) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+
+        // 2. 查询原消息并校验可见性
+        List<ImChatMessageDO> originalMessages = chatMessageMapper.selectBatchIds(messageIds);
+        if (originalMessages == null || originalMessages.isEmpty()) {
+            throw exception(MESSAGE_NOT_EXISTS);
+        }
+
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+
+        // 过滤不可转发的消息：已撤回、已删除(tombstone)
+        List<ImChatMessageDO> forwardableMessages = new java.util.ArrayList<>();
+        for (ImChatMessageDO msg : originalMessages) {
+            if (msg == null) {
+                continue;
+            }
+            // 已撤回消息不可转发
+            if (Objects.equals(msg.getStatus(), ImMessageStatusEnum.RECALLED.getStatus())) {
+                log.warn("[ImMessageService] 转发跳过已撤回消息, messageId: {}", msg.getId());
+                continue;
+            }
+            // tombstone过滤：对我删除的消息不可转发
+            boolean isDeleted = chatMessageTombstoneMapper.existsByUserIdAndMessageId(userId, msg.getId());
+            if (isDeleted) {
+                log.warn("[ImMessageService] 转发跳过已删除消息, userId: {}, messageId: {}", userId, msg.getId());
+                continue;
+            }
+            forwardableMessages.add(msg);
+        }
+
+        if (forwardableMessages.isEmpty()) {
+            throw exception(MESSAGE_SEND_FAILED, "无可转发的消息");
+        }
+
+        // 3. 获取原发送者信息用于隐私保护展示
+        List<Long> senderIds = forwardableMessages.stream()
+                .map(ImChatMessageDO::getSenderId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, AdminUserDO> senderMap = new java.util.HashMap<>();
+        if (!senderIds.isEmpty()) {
+            List<AdminUserDO> senders = userMapper.selectBatchIds(senderIds);
+            if (senders != null) {
+                for (AdminUserDO sender : senders) {
+                    senderMap.put(sender.getId(), sender);
+                }
+            }
+        }
+
+        List<Long> newMessageIds = new java.util.ArrayList<>();
+        LocalDateTime forwardTime = LocalDateTime.now();
+
+        // 4. 根据转发类型处理
+        if (Objects.equals(forwardType, ImMessageForwardTypeEnum.COMBINE.getType())) {
+            // 合并转发：生成一条 FORWARD_COMBINE 类型消息
+            Long newMessageId = createCombineForwardMessage(userId, targetChat, forwardableMessages, 
+                    senderMap, forwardReqVO.getComment(), forwardTime);
+            newMessageIds.add(newMessageId);
+        } else {
+            // 逐条转发：每条消息生成新消息
+            for (ImChatMessageDO originalMsg : forwardableMessages) {
+                Long newMessageId = createSingleForwardMessage(userId, targetChat, originalMsg, 
+                        senderMap.get(originalMsg.getSenderId()), forwardTime);
+                newMessageIds.add(newMessageId);
+            }
+        }
+
+        log.info("[ImMessageService] 转发消息成功, userId: {}, forwardType: {}, originalCount: {}, newMessageIds: {}",
+                userId, forwardType, forwardableMessages.size(), newMessageIds);
+        return newMessageIds;
+    }
+
+    /**
+     * 创建单条转发消息
+     */
+    private Long createSingleForwardMessage(Long userId, ImChatDO targetChat, ImChatMessageDO originalMsg,
+                                             AdminUserDO originalSender, LocalDateTime forwardTime) {
+        ImChatMessageDO newMessage = new ImChatMessageDO();
+        newMessage.setChatId(targetChat.getId());
+        newMessage.setSenderId(userId);
+        newMessage.setMessageType(originalMsg.getMessageType());
+        newMessage.setContent(originalMsg.getContent());
+        newMessage.setExtra(originalMsg.getExtra());
+
+        Long sequence = chatMapper.nextSequence(targetChat.getId());
+        newMessage.setSequence(sequence);
+        newMessage.setSendTime(forwardTime);
+        newMessage.setRev(1L);
+        newMessage.setStatus(ImMessageStatusEnum.SENT.getStatus());
+
+        // 构建转发来源信息
+        JSONObject forwardedFrom = new JSONObject();
+        forwardedFrom.set("originalMessageId", originalMsg.getId());
+        forwardedFrom.set("originalChatId", originalMsg.getChatId());
+        forwardedFrom.set("originalSenderId", originalMsg.getSenderId());
+        forwardedFrom.set("originalSenderName", originalSender != null ? originalSender.getNickname() : "");
+        forwardedFrom.set("forwardTime", forwardTime.toString());
+        newMessage.setForwardedFrom(forwardedFrom.toString());
+
+        chatMessageMapper.insert(newMessage);
+
+        // 更新会话状态并推送
+        String preview = getMessagePreview(originalMsg.getMessageType(), originalMsg.getContent());
+        AppImMessageSendReqVO sendReqVO = new AppImMessageSendReqVO();
+        sendReqVO.setMessageType(originalMsg.getMessageType());
+        sendReqVO.setExtra(originalMsg.getExtra());
+        updateChatUsersAfterSend(targetChat, newMessage.getId(), sequence, 1L, preview, forwardTime, userId, sendReqVO);
+
+        return newMessage.getId();
+    }
+
+    /**
+     * 创建合并转发消息
+     */
+    private Long createCombineForwardMessage(Long userId, ImChatDO targetChat, List<ImChatMessageDO> originalMessages,
+                                              Map<Long, AdminUserDO> senderMap, String comment, LocalDateTime forwardTime) {
+        ImChatMessageDO newMessage = new ImChatMessageDO();
+        newMessage.setChatId(targetChat.getId());
+        newMessage.setSenderId(userId);
+        // 合并转发使用 CUSTOM 类型，前端按合并消息渲染
+        newMessage.setMessageType(ImMessageTypeEnum.CUSTOM.getType());
+
+        // 构建合并消息内容
+        JSONObject body = new JSONObject();
+        body.set("type", "FORWARD_COMBINE");
+        
+        // 构建消息列表
+        List<JSONObject> messages = new java.util.ArrayList<>();
+        for (ImChatMessageDO msg : originalMessages) {
+            JSONObject msgObj = new JSONObject();
+            msgObj.set("messageId", msg.getId());
+            msgObj.set("messageType", msg.getMessageType());
+            msgObj.set("content", msg.getContent());
+            msgObj.set("extra", msg.getExtra());
+            msgObj.set("senderId", msg.getSenderId());
+            AdminUserDO sender = senderMap.get(msg.getSenderId());
+            msgObj.set("senderName", sender != null ? sender.getNickname() : "");
+            msgObj.set("sendTime", msg.getSendTime() != null ? msg.getSendTime().toString() : "");
+            messages.add(msgObj);
+        }
+        body.set("messages", messages);
+        body.set("count", messages.size());
+        if (StrUtil.isNotBlank(comment)) {
+            body.set("comment", comment);
+        }
+
+        newMessage.setContent(body.toString());
+
+        Long sequence = chatMapper.nextSequence(targetChat.getId());
+        newMessage.setSequence(sequence);
+        newMessage.setSendTime(forwardTime);
+        newMessage.setRev(1L);
+        newMessage.setStatus(ImMessageStatusEnum.SENT.getStatus());
+
+        // 构建转发来源信息（合并转发记录所有原消息）
+        JSONObject forwardedFrom = new JSONObject();
+        forwardedFrom.set("type", "COMBINE");
+        forwardedFrom.set("messageIds", originalMessages.stream().map(ImChatMessageDO::getId).collect(Collectors.toList()));
+        forwardedFrom.set("forwardTime", forwardTime.toString());
+        newMessage.setForwardedFrom(forwardedFrom.toString());
+
+        chatMessageMapper.insert(newMessage);
+
+        // 更新会话状态并推送
+        String preview = "[合并转发] " + originalMessages.size() + "条消息";
+        AppImMessageSendReqVO sendReqVO = new AppImMessageSendReqVO();
+        sendReqVO.setMessageType(ImMessageTypeEnum.CUSTOM.getType());
+        updateChatUsersAfterSend(targetChat, newMessage.getId(), sequence, 1L, preview, forwardTime, userId, sendReqVO);
+
+        return newMessage.getId();
     }
 
     @Override
@@ -676,14 +974,50 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (message == null) {
             throw exception(MESSAGE_NOT_EXISTS);
         }
-        if (!Objects.equals(message.getSenderId(), userId)) {
+        
+        ImChatDO chat = chatMapper.selectById(message.getChatId());
+        if (chat == null) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+        
+        // 权限检查：判断是否可以撤回
+        boolean isSelfMessage = Objects.equals(message.getSenderId(), userId);
+        boolean isGroupChat = ImConversationTypeEnum.isGroup(chat.getChatType());
+        Integer memberRole = null;
+        
+        if (isGroupChat && !isSelfMessage) {
+            // 群聊中撤回他人消息：检查是否是群主或管理员
+            memberRole = imGroupService.getMemberRole(chat.getGroupId(), userId);
+            if (memberRole == null) {
+                throw exception(MESSAGE_RECALL_PERMISSION_DENIED);
+            }
+            // 只有群主(2)和管理员(1)可以撤回他人消息
+            if (!ImGroupMemberRoleEnum.isOwner(memberRole) && !ImGroupMemberRoleEnum.isAdmin(memberRole)) {
+                throw exception(MESSAGE_RECALL_PERMISSION_DENIED);
+            }
+        } else if (!isSelfMessage) {
+            // 单聊只能撤回自己的消息
             throw exception(MESSAGE_RECALL_PERMISSION_DENIED);
         }
-        long windowSec = recallWindowSeconds > 0 ? recallWindowSeconds : 120L;
+        
+        // 时限检查
+        long windowSec;
+        if (isSelfMessage) {
+            // 自己的消息：默认2分钟
+            windowSec = recallWindowSeconds > 0 ? recallWindowSeconds : 120L;
+        } else if (ImGroupMemberRoleEnum.isOwner(memberRole)) {
+            // 群主撤回：不限时
+            windowSec = Long.MAX_VALUE / 1000; // 实际不限
+        } else {
+            // 管理员撤回：默认24小时
+            windowSec = 24 * 60 * 60L; // 可配置化扩展
+        }
+        
         LocalDateTime windowAgo = LocalDateTime.now().minusSeconds(windowSec);
         if (message.getSendTime().isBefore(windowAgo)) {
             throw exception(MESSAGE_RECALL_TIMEOUT);
         }
+        
         LocalDateTime recallTime = LocalDateTime.now();
         Long oldRev = message.getRev() != null && message.getRev() > 0 ? message.getRev() : 1L;
         Long newRev = oldRev + 1L;

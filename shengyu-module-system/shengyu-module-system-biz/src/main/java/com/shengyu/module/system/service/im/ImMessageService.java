@@ -7,6 +7,8 @@ import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
 
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageForwardReqVO;
+
 /**
  * IM 消息 Service 接口
  *
@@ -111,7 +113,7 @@ public interface ImMessageService {
     void batchUpdateMessageStatus(Long userId, java.util.List<Long> messageIds, Integer status);
 
     /**
-     * 转发消息
+     * 转发消息（逐条转发）
      *
      * @param userId 用户ID
      * @param messageId 消息ID
@@ -119,5 +121,20 @@ public interface ImMessageService {
      * @return 新消息ID
      */
     Long forwardMessage(Long userId, Long messageId, Long targetChatId);
+
+    /**
+     * 批量转发消息（支持逐条转发和合并转发）
+     * 
+     * 企业级设计考量：
+     * 1. 权限校验：仅可转发自己可见的消息（tombstone过滤、撤回过滤）
+     * 2. 隐私保护：转发显示原发送者，不暴露原会话成员
+     * 3. 幂等保证：转发生成新messageId，支持重试
+     * 4. 多端同步：转发后分配cursorVersion并广播
+     *
+     * @param userId 用户ID
+     * @param forwardReqVO 转发请求
+     * @return 新消息ID列表（逐条转发返回多条，合并转发返回一条）
+     */
+    java.util.List<Long> forwardMessages(Long userId, AppImMessageForwardReqVO forwardReqVO);
 
 }

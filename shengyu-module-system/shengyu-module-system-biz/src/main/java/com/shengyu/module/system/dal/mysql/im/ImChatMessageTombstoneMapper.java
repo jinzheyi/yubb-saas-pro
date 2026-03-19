@@ -32,4 +32,21 @@ public interface ImChatMessageTombstoneMapper extends BaseMapperX<ImChatMessageT
                                       @Param("chatId") Long chatId,
                                       @Param("messageIds") List<Long> messageIds);
 
+    /**
+     * 检查消息是否已被用户删除（对我删除）
+     */
+    @Select("SELECT COUNT(*) > 0 FROM im_chat_message_tombstone " +
+            "WHERE tenant_id = #{tenantId} AND user_id = #{userId} AND message_id = #{messageId} AND deleted = 0")
+    boolean existsByUserIdAndMessageId(@Param("tenantId") Long tenantId,
+                                       @Param("userId") Long userId,
+                                       @Param("messageId") Long messageId);
+
+    /**
+     * 检查消息是否已被用户删除（对我删除）- 自动获取租户ID
+     */
+    default boolean existsByUserIdAndMessageId(Long userId, Long messageId) {
+        Long tenantId = com.shengyu.framework.tenant.core.context.TenantContextHolder.getTenantId();
+        return existsByUserIdAndMessageId(tenantId != null ? tenantId : 0L, userId, messageId);
+    }
+
 }

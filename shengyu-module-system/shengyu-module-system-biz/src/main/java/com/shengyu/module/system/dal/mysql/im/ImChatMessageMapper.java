@@ -37,4 +37,12 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
                 .last("LIMIT " + limit));
     }
 
+    /**
+     * 根据客户端消息ID查询消息（用于幂等重发）
+     */
+    default ImChatMessageDO selectByClientMessageId(String clientMessageId) {
+        return selectOne(new LambdaQueryWrapperX<ImChatMessageDO>()
+                .eq(ImChatMessageDO::getClientMessageId, clientMessageId));
+    }
+
 }

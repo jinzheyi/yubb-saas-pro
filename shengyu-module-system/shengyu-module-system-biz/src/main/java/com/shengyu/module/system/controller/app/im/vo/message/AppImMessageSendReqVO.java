@@ -33,4 +33,10 @@ public class AppImMessageSendReqVO {
     @Schema(description = "引用消息ID", example = "100")
     private Long quoteMessageId;
 
+    @Schema(description = "客户端消息ID(幂等键，用于重发)", example = "uuid-xxx-xxx")
+    private String clientMessageId;
+
+    @Schema(description = "被@提及用户列表(JSON数组)", example = "[{\"userId\":1,\"nickname\":\"张三\"}]")
+    private String mentions;
+
 }

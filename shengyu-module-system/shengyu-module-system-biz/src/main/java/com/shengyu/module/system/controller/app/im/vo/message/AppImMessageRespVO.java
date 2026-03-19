@@ -70,4 +70,13 @@ public class AppImMessageRespVO {
     @Schema(description = "是否自己发送", requiredMode = Schema.RequiredMode.REQUIRED, example = "true")
     private Boolean isSelf;
 
+    @Schema(description = "转发来源信息(JSON格式)", example = "{\"originalMessageId\":100,\"originalSenderId\":1,\"originalSenderName\":\"张三\"}")
+    private String forwardedFrom;
+
+    @Schema(description = "客户端消息ID(幂等键)", example = "uuid-xxx-xxx")
+    private String clientMessageId;
+
+    @Schema(description = "被@提及用户列表(JSON数组)", example = "[{\"userId\":1,\"nickname\":\"张三\"}]")
+    private String mentions;
+
 }

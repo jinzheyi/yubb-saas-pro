@@ -2,13 +2,16 @@ package com.shengyu.module.system.service.im;
 
 import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.common.util.object.BeanUtils;
+import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.system.controller.app.im.vo.group.*;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
+import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupInviteDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupUserDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
+import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupInviteMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupUserMapper;
@@ -17,6 +20,7 @@ import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import com.shengyu.module.system.enums.im.ImGroupInviteStatusEnum;
 import com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum;
 import com.shengyu.module.system.enums.im.ImGroupStatusEnum;
+import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.mq.message.im.ImGroupConversationRefreshMessage;
 import com.shengyu.module.system.mq.producer.im.ImGroupConversationRefreshProducer;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +59,9 @@ public class ImGroupServiceImpl implements ImGroupService {
 
     @Resource
     private ImChatMapper chatMapper;
+
+    @Resource
+    private ImChatMessageMapper chatMessageMapper;
 
     @Resource
     private ImGroupInviteMapper groupInviteMapper;
@@ -462,8 +469,63 @@ public class ImGroupServiceImpl implements ImGroupService {
         member.setRole(role);
         groupUserMapper.updateById(member);
 
+        // 发送角色变更通知（系统消息）
+        notifyRoleChange(group, userId, memberUserId, role);
+
         log.info("[ImGroupService] 设置群成员角色成功, groupId: {}, memberUserId: {}, role: {}", 
                 groupId, memberUserId, role);
+    }
+
+    /**
+     * 发送角色变更通知
+     */
+    private void notifyRoleChange(ImGroupDO group, Long operatorId, Long targetUserId, Integer newRole) {
+        try {
+            // 获取操作者信息
+            AdminUserDO operator = userMapper.selectById(operatorId);
+            AdminUserDO targetUser = userMapper.selectById(targetUserId);
+            if (operator == null || targetUser == null) {
+                return;
+            }
+            
+            // 获取群的会话
+            ImChatDO chat = chatMapper.selectByGroupId(group.getId());
+            if (chat == null) {
+                return;
+            }
+            
+            // 构建系统消息内容
+            String roleName = ImGroupMemberRoleEnum.isAdmin(newRole) ? "管理员" : "普通成员";
+            String content = String.format("\"%s\" 将 \"%s\" 设置为 %s", 
+                    operator.getNickname(), targetUser.getNickname(), roleName);
+            
+            // 创建系统消息
+            ImChatMessageDO sysMessage = new ImChatMessageDO();
+            sysMessage.setChatId(chat.getId());
+            sysMessage.setSenderId(0L); // 系统消息
+            sysMessage.setMessageType(10); // 系统消息类型
+            sysMessage.setContent(content);
+            sysMessage.setSendTime(LocalDateTime.now());
+            sysMessage.setRev(1L);
+            sysMessage.setStatus(ImMessageStatusEnum.SENT.getStatus());
+            
+            Long tenantId = TenantContextHolder.getTenantId();
+            if (tenantId == null) {
+                tenantId = 0L;
+            }
+            
+            // 分配sequence
+            Long sequence = chatMapper.nextSequence(chat.getId());
+            sysMessage.setSequence(sequence);
+            
+            chatMessageMapper.insert(sysMessage);
+            
+            log.info("[ImGroupService] 角色变更通知已发送, groupId: {}, targetUserId: {}, newRole: {}", 
+                    group.getId(), targetUserId, newRole);
+        } catch (Exception e) {
+            log.warn("[ImGroupService] 发送角色变更通知失败, groupId: {}, targetUserId: {}, error: {}", 
+                    group.getId(), targetUserId, e.getMessage());
+        }
     }
 
     @Override
@@ -982,6 +1044,15 @@ public class ImGroupServiceImpl implements ImGroupService {
         
         log.info("[ImGroupService] 群成员昵称设置成功, groupId: {}, targetUserId: {}, nickname: {}", 
                 groupId, targetUserId, nickname);
+    }
+
+    @Override
+    public Integer getMemberRole(Long groupId, Long userId) {
+        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
+        if (groupUser == null) {
+            return null;
+        }
+        return groupUser.getRole();
     }
 
 }

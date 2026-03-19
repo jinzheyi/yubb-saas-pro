@@ -298,4 +298,13 @@ public interface ImGroupService {
      */
     void setMemberNickname(Long userId, Long groupId, Long memberUserId, String nickname);
 
+    /**
+     * 获取群成员角色
+     *
+     * @param groupId 群组ID
+     * @param userId 用户ID
+     * @return 角色(0-普通成员 1-管理员 2-群主)，如果不是群成员返回null
+     */
+    Integer getMemberRole(Long groupId, Long userId);
+
 }

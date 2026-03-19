@@ -127,6 +127,30 @@ public class AppImGroupController {
         return success(true);
     }
 
+    @PutMapping("/member/set-admin")
+    @Operation(summary = "设置管理员", description = "将群成员设置为管理员，仅群主可操作")
+    @Parameter(name = "groupId", description = "群组ID", required = true)
+    @Parameter(name = "memberUserId", description = "成员用户ID", required = true)
+    public CommonResult<Boolean> setAdmin(
+            @RequestParam("groupId") Long groupId,
+            @RequestParam("memberUserId") Long memberUserId) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        groupService.setAdmin(userId, groupId, memberUserId, true);
+        return success(true);
+    }
+
+    @PutMapping("/member/remove-admin")
+    @Operation(summary = "取消管理员", description = "取消群成员的管理员身份，仅群主可操作")
+    @Parameter(name = "groupId", description = "群组ID", required = true)
+    @Parameter(name = "memberUserId", description = "成员用户ID", required = true)
+    public CommonResult<Boolean> removeAdmin(
+            @RequestParam("groupId") Long groupId,
+            @RequestParam("memberUserId") Long memberUserId) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        groupService.setAdmin(userId, groupId, memberUserId, false);
+        return success(true);
+    }
+
     @PutMapping("/member/set-muted")
     @Operation(summary = "设置群成员禁言")
     @Parameter(name = "groupId", description = "群组ID", required = true)

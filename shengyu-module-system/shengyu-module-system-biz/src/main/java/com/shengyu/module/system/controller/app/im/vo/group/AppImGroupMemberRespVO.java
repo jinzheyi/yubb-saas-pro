@@ -18,7 +18,7 @@ public class AppImGroupMemberRespVO {
     @Schema(description = "在群里的昵称", example = "小明")
     private String nickname;
 
-    @Schema(description = "群成员角色(1-群主 2-管理员 3-普通成员)", requiredMode = Schema.RequiredMode.REQUIRED, example = "3")
+    @Schema(description = "群成员角色(0-普通成员 1-管理员 2-群主)", requiredMode = Schema.RequiredMode.REQUIRED, example = "0")
     private Integer role;
 
     @Schema(description = "加入时间", requiredMode = Schema.RequiredMode.REQUIRED)

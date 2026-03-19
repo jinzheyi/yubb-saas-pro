@@ -48,4 +48,23 @@ public class ImChatMessageDO extends TenantBaseDO {
 
     private Long quoteMessageId;
 
+    /**
+     * 转发来源信息(JSON格式)
+     * 结构: {originalMessageId, originalChatId, originalSenderId, originalSenderName, forwardTime}
+     */
+    private String forwardedFrom;
+
+    /**
+     * 客户端消息ID(幂等键，用于重发)
+     * 端侧生成的唯一标识，同一clientMessageId多次发送返回同一结果
+     */
+    private String clientMessageId;
+
+    /**
+     * 被@提及用户列表(JSON格式)
+     * 结构: [{userId, nickname}]
+     * 被提及用户会收到强提醒推送（即使群免打扰）
+     */
+    private String mentions;
+
 }
