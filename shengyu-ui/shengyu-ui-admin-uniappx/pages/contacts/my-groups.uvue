@@ -59,6 +59,7 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getGroupList } from '../../api/group.uts'
+	import { encodeIdParam } from '../../utils/id-param.uts'
 
 	const { t } = useI18n()
 
@@ -171,16 +172,17 @@
 	}
 
 	function handleGroupClick(group : any) {
+		const groupIdParam = encodeIdParam(group.id != null ? String(group.id) : '')
 		if (isSelectMode.value) {
 			// 选择模式下跳转到群组成员列表
 			uni.navigateTo({
-				url: '/pages/contacts/group-members?groupId=' + group.id + '&groupName=' + encodeURIComponent(group.name)
+				url: '/pages/contacts/group-members?groupId=' + groupIdParam + '&groupName=' + encodeURIComponent(group.name)
 			})
 		} else {
 			// 普通模式下跳转到聊天页面
 			// 注意：不传 chatId，让聊天页面自动创建或获取会话
 			uni.navigateTo({
-				url: '/pages/message/chat?type=group&groupId=' + group.id + '&targetId=' + group.id + '&name=' + encodeURIComponent(group.name) + '&memberCount=' + group.memberCount
+				url: '/pages/message/chat?type=group&groupId=' + groupIdParam + '&targetId=' + groupIdParam + '&name=' + encodeURIComponent(group.name) + '&memberCount=' + group.memberCount
 			})
 		}
 	}

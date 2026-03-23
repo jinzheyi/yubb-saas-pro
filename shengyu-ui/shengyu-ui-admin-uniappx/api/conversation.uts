@@ -98,8 +98,9 @@ export function markReadBySequence(chatId: string, readSequence: string): Promis
  * @param conversationType 会话类型（1-单聊 2-群聊）
  */
 export function getConversationByTarget(targetId: string, conversationType: number): Promise<any> {
+  const target = targetId != null ? String(targetId) : ''
   return request({
-    url: `/system/im/conversation/get-by-target?targetId=${targetId}&conversationType=${conversationType}`,
+    url: `/system/im/conversation/get-by-target?targetId=${encodeURIComponent(target)}&conversationType=${conversationType}`,
     method: 'GET'
   })
 }

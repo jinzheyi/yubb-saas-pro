@@ -93,12 +93,17 @@ public class TextMessageProcessor implements MessageProcessor {
                     // 重新构建消息（使用过滤后的内容）
                     TextMessage filteredTextMessage = TextMessage.newBuilder()
                         .setContent(filteredContent)
+                        .addAllAtUserIds(textMessage.getAtUserIdsList())
+                        .addAllMentions(textMessage.getMentionsList())
                         .build();
                     
                     message = ImMessage.newBuilder()
                         .setHeader(message.getHeader())
                         .setBody(filteredTextMessage.toByteString())
                         .build();
+
+                    // ensure ack/forward use the final body
+                    textMessage = filteredTextMessage;
                 }
             }
 

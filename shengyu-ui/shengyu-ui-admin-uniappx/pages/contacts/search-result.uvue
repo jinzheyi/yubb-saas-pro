@@ -95,6 +95,7 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
+	import { encodeIdParam } from '../../utils/id-param.uts'
 
 	const { t } = useI18n()
 
@@ -169,16 +170,16 @@
 	}
 
 	function handleContactClick(contact : any) {
-		// 跳转到联系人详情页面
-		uni.navigateTo({
-			url: `/pages/contacts/user-detail?userId=${contact.id}&name=${encodeURIComponent(contact.name)}`
-		})
+		const userIdParam = encodeIdParam(contact.id != null ? String(contact.id) : '')
+	uni.navigateTo({
+		url: `/pages/contacts/user-detail?userId=${userIdParam}&name=${encodeURIComponent(contact.name)}`
+	})
 	}
 
 	function handleGroupClick(group : any) {
-		// TODO: 待实现群组详情页面，暂时跳转到聊天页面
+	const groupIdParam = encodeIdParam(group.id != null ? String(group.id) : '')
 		uni.navigateTo({
-			url: `/pages/message/chat?type=group&groupId=${group.id}&targetId=${group.id}&name=${encodeURIComponent(group.name)}&memberCount=${group.memberCount || 0}`
+		url: `/pages/message/chat?type=group&groupId=${groupIdParam}&targetId=${groupIdParam}&name=${encodeURIComponent(group.name)}&memberCount=${group.memberCount || 0}`
 		})
 	}
 </script>

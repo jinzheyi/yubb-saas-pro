@@ -45,6 +45,11 @@ public final class ImMessageProto {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_AckResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_MentionUser_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_MentionUser_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_TextMessage_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -154,58 +159,62 @@ public final class ImMessageProto {
       "\020\n\010sequence\030\003 \001(\003\022\017\n\007ackType\030\004 \001(\t\022\030\n\020cl" +
       "ientReceivedAt\030\005 \001(\003\022\031\n\021originalTimestam" +
       "p\030\006 \001(\003\"=\n\013AckResponse\022\017\n\007success\030\001 \001(\010\022" +
-      "\014\n\004code\030\002 \001(\005\022\017\n\007message\030\003 \001(\t\"1\n\013TextMe" +
-      "ssage\022\017\n\007content\030\001 \001(\t\022\021\n\tatUserIds\030\002 \003(" +
-      "\003\"^\n\014ImageMessage\022\013\n\003url\030\001 \001(\t\022\024\n\014thumbn" +
-      "ailUrl\030\002 \001(\t\022\r\n\005width\030\003 \001(\005\022\016\n\006height\030\004 " +
-      "\001(\005\022\014\n\004size\030\005 \001(\003\";\n\014VoiceMessage\022\013\n\003url" +
-      "\030\001 \001(\t\022\020\n\010duration\030\002 \001(\005\022\014\n\004size\030\003 \001(\003\"l" +
-      "\n\014VideoMessage\022\013\n\003url\030\001 \001(\t\022\020\n\010coverUrl\030" +
-      "\002 \001(\t\022\020\n\010duration\030\003 \001(\005\022\r\n\005width\030\004 \001(\005\022\016" +
-      "\n\006height\030\005 \001(\005\022\014\n\004size\030\006 \001(\003\"L\n\013FileMess" +
-      "age\022\013\n\003url\030\001 \001(\t\022\020\n\010fileName\030\002 \001(\t\022\014\n\004si" +
-      "ze\030\003 \001(\003\022\020\n\010fileType\030\004 \001(\t\"G\n\017LocationMe" +
-      "ssage\022\020\n\010latitude\030\001 \001(\001\022\021\n\tlongitude\030\002 \001" +
-      "(\001\022\017\n\007address\030\003 \001(\t\"(\n\022ReadReceiptMessag" +
-      "e\022\022\n\nmessageIds\030\001 \003(\003\"\"\n\rRecallMessage\022\021" +
-      "\n\tmessageId\030\001 \001(\003\"\232\001\n\021QuoteReplyMessage\022" +
-      "\026\n\016quoteMessageId\030\001 \001(\003\022\024\n\014quoteContent\030" +
-      "\002 \001(\t\022\025\n\rquoteSenderId\030\003 \001(\003\022\027\n\017quoteSen" +
-      "derName\030\004 \001(\t\022\024\n\014replyContent\030\005 \001(\t\022\021\n\ta" +
-      "tUserIds\030\006 \003(\003\"H\n\rTypingMessage\022\024\n\014targe" +
-      "tUserId\030\001 \001(\003\022\017\n\007groupId\030\002 \001(\003\022\020\n\010isTypi" +
-      "ng\030\003 \001(\010\"y\n\022BadgeUpdateMessage\022\023\n\013unread" +
-      "Count\030\001 \001(\005\022.\n\022conversationBadges\030\002 \003(\0132" +
-      "\022.ConversationBadge\022\036\n\nmenuBadges\030\003 \003(\0132" +
-      "\n.MenuBadge\"@\n\021ConversationBadge\022\026\n\016conv" +
-      "ersationId\030\001 \001(\003\022\023\n\013unreadCount\030\002 \001(\005\"/\n" +
-      "\tMenuBadge\022\016\n\006menuId\030\001 \001(\t\022\022\n\nbadgeCount" +
-      "\030\002 \001(\005\"\226\001\n\021CallSignalMessage\022\016\n\006callId\030\001" +
-      " \001(\t\022\020\n\010callType\030\002 \001(\005\022\022\n\nsignalType\030\003 \001" +
-      "(\005\022\020\n\010callerId\030\004 \001(\003\022\020\n\010calleeId\030\005 \001(\003\022\024" +
-      "\n\014rejectReason\030\006 \001(\t\022\021\n\textraData\030\007 \001(\t\"" +
-      "\307\001\n\025WorkflowNotifyMessage\022\031\n\021processInst" +
-      "anceId\030\001 \001(\t\022\023\n\013processName\030\002 \001(\t\022\023\n\013ini" +
-      "tiatorId\030\003 \001(\003\022\025\n\rinitiatorName\030\004 \001(\t\022\017\n" +
-      "\007content\030\005 \001(\t\022 \n\007buttons\030\006 \003(\0132\017.Workfl" +
-      "owButton\022\016\n\006status\030\007 \001(\005\022\017\n\007jumpUrl\030\010 \001(" +
-      "\t\"J\n\016WorkflowButton\022\020\n\010buttonId\030\001 \001(\t\022\022\n" +
-      "\nbuttonText\030\002 \001(\t\022\022\n\nbuttonType\030\003 \001(\005\"\215\001" +
-      "\n\023TodoReminderMessage\022\016\n\006todoId\030\001 \001(\t\022\r\n" +
-      "\005title\030\002 \001(\t\022\017\n\007content\030\003 \001(\t\022\017\n\007dueTime" +
-      "\030\004 \001(\003\022\024\n\014reminderType\030\005 \001(\005\022\017\n\007jumpUrl\030" +
-      "\006 \001(\t\022\016\n\006status\030\007 \001(\005*\361\002\n\013MessageType\022\013\n" +
-      "\007UNKNOWN\020\000\022\021\n\rHEARTBEAT_REQ\020\001\022\022\n\016HEARTBE" +
-      "AT_RESP\020\002\022\014\n\010AUTH_REQ\020\003\022\r\n\tAUTH_RESP\020\004\022\t" +
-      "\n\005CLOSE\020\005\022\007\n\003ACK\020\010\022\014\n\010ACK_RESP\020\t\022\010\n\004TEXT" +
-      "\020d\022\t\n\005IMAGE\020e\022\t\n\005VOICE\020f\022\t\n\005VIDEO\020g\022\010\n\004F" +
-      "ILE\020h\022\014\n\010LOCATION\020i\022\n\n\006CUSTOM\020j\022\022\n\rSYSTE" +
-      "M_NOTIFY\020\310\001\022\021\n\014READ_RECEIPT\020\311\001\022\013\n\006RECALL" +
-      "\020\312\001\022\013\n\006TYPING\020\313\001\022\021\n\014BADGE_UPDATE\020\314\001\022\020\n\013Q" +
-      "UOTE_REPLY\020\315\001\022\020\n\013CALL_SIGNAL\020\316\001\022\024\n\017WORKF" +
-      "LOW_NOTIFY\020\317\001\022\022\n\rTODO_REMINDER\020\320\001BA\n-com" +
-      ".shengyu.framework.websocket.core.protoc" +
-      "olB\016ImMessageProtoP\001b\006proto3"
+      "\014\n\004code\030\002 \001(\005\022\017\n\007message\030\003 \001(\t\"U\n\013Mentio" +
+      "nUser\022\016\n\006userId\030\001 \001(\003\022\020\n\010nickname\030\002 \001(\t\022" +
+      "\022\n\nstartIndex\030\003 \001(\005\022\020\n\010endIndex\030\004 \001(\005\"Q\n" +
+      "\013TextMessage\022\017\n\007content\030\001 \001(\t\022\021\n\tatUserI" +
+      "ds\030\002 \003(\003\022\036\n\010mentions\030\003 \003(\0132\014.MentionUser" +
+      "\"^\n\014ImageMessage\022\013\n\003url\030\001 \001(\t\022\024\n\014thumbna" +
+      "ilUrl\030\002 \001(\t\022\r\n\005width\030\003 \001(\005\022\016\n\006height\030\004 \001" +
+      "(\005\022\014\n\004size\030\005 \001(\003\";\n\014VoiceMessage\022\013\n\003url\030" +
+      "\001 \001(\t\022\020\n\010duration\030\002 \001(\005\022\014\n\004size\030\003 \001(\003\"l\n" +
+      "\014VideoMessage\022\013\n\003url\030\001 \001(\t\022\020\n\010coverUrl\030\002" +
+      " \001(\t\022\020\n\010duration\030\003 \001(\005\022\r\n\005width\030\004 \001(\005\022\016\n" +
+      "\006height\030\005 \001(\005\022\014\n\004size\030\006 \001(\003\"L\n\013FileMessa" +
+      "ge\022\013\n\003url\030\001 \001(\t\022\020\n\010fileName\030\002 \001(\t\022\014\n\004siz" +
+      "e\030\003 \001(\003\022\020\n\010fileType\030\004 \001(\t\"G\n\017LocationMes" +
+      "sage\022\020\n\010latitude\030\001 \001(\001\022\021\n\tlongitude\030\002 \001(" +
+      "\001\022\017\n\007address\030\003 \001(\t\"(\n\022ReadReceiptMessage" +
+      "\022\022\n\nmessageIds\030\001 \003(\003\"\"\n\rRecallMessage\022\021\n" +
+      "\tmessageId\030\001 \001(\003\"\272\001\n\021QuoteReplyMessage\022\026" +
+      "\n\016quoteMessageId\030\001 \001(\003\022\024\n\014quoteContent\030\002" +
+      " \001(\t\022\025\n\rquoteSenderId\030\003 \001(\003\022\027\n\017quoteSend" +
+      "erName\030\004 \001(\t\022\024\n\014replyContent\030\005 \001(\t\022\021\n\tat" +
+      "UserIds\030\006 \003(\003\022\036\n\010mentions\030\007 \003(\0132\014.Mentio" +
+      "nUser\"H\n\rTypingMessage\022\024\n\014targetUserId\030\001" +
+      " \001(\003\022\017\n\007groupId\030\002 \001(\003\022\020\n\010isTyping\030\003 \001(\010\"" +
+      "y\n\022BadgeUpdateMessage\022\023\n\013unreadCount\030\001 \001" +
+      "(\005\022.\n\022conversationBadges\030\002 \003(\0132\022.Convers" +
+      "ationBadge\022\036\n\nmenuBadges\030\003 \003(\0132\n.MenuBad" +
+      "ge\"@\n\021ConversationBadge\022\026\n\016conversationI" +
+      "d\030\001 \001(\003\022\023\n\013unreadCount\030\002 \001(\005\"/\n\tMenuBadg" +
+      "e\022\016\n\006menuId\030\001 \001(\t\022\022\n\nbadgeCount\030\002 \001(\005\"\226\001" +
+      "\n\021CallSignalMessage\022\016\n\006callId\030\001 \001(\t\022\020\n\010c" +
+      "allType\030\002 \001(\005\022\022\n\nsignalType\030\003 \001(\005\022\020\n\010cal" +
+      "lerId\030\004 \001(\003\022\020\n\010calleeId\030\005 \001(\003\022\024\n\014rejectR" +
+      "eason\030\006 \001(\t\022\021\n\textraData\030\007 \001(\t\"\307\001\n\025Workf" +
+      "lowNotifyMessage\022\031\n\021processInstanceId\030\001 " +
+      "\001(\t\022\023\n\013processName\030\002 \001(\t\022\023\n\013initiatorId\030" +
+      "\003 \001(\003\022\025\n\rinitiatorName\030\004 \001(\t\022\017\n\007content\030" +
+      "\005 \001(\t\022 \n\007buttons\030\006 \003(\0132\017.WorkflowButton\022" +
+      "\016\n\006status\030\007 \001(\005\022\017\n\007jumpUrl\030\010 \001(\t\"J\n\016Work" +
+      "flowButton\022\020\n\010buttonId\030\001 \001(\t\022\022\n\nbuttonTe" +
+      "xt\030\002 \001(\t\022\022\n\nbuttonType\030\003 \001(\005\"\215\001\n\023TodoRem" +
+      "inderMessage\022\016\n\006todoId\030\001 \001(\t\022\r\n\005title\030\002 " +
+      "\001(\t\022\017\n\007content\030\003 \001(\t\022\017\n\007dueTime\030\004 \001(\003\022\024\n" +
+      "\014reminderType\030\005 \001(\005\022\017\n\007jumpUrl\030\006 \001(\t\022\016\n\006" +
+      "status\030\007 \001(\005*\361\002\n\013MessageType\022\013\n\007UNKNOWN\020" +
+      "\000\022\021\n\rHEARTBEAT_REQ\020\001\022\022\n\016HEARTBEAT_RESP\020\002" +
+      "\022\014\n\010AUTH_REQ\020\003\022\r\n\tAUTH_RESP\020\004\022\t\n\005CLOSE\020\005" +
+      "\022\007\n\003ACK\020\010\022\014\n\010ACK_RESP\020\t\022\010\n\004TEXT\020d\022\t\n\005IMA" +
+      "GE\020e\022\t\n\005VOICE\020f\022\t\n\005VIDEO\020g\022\010\n\004FILE\020h\022\014\n\010" +
+      "LOCATION\020i\022\n\n\006CUSTOM\020j\022\022\n\rSYSTEM_NOTIFY\020" +
+      "\310\001\022\021\n\014READ_RECEIPT\020\311\001\022\013\n\006RECALL\020\312\001\022\013\n\006TY" +
+      "PING\020\313\001\022\021\n\014BADGE_UPDATE\020\314\001\022\020\n\013QUOTE_REPL" +
+      "Y\020\315\001\022\020\n\013CALL_SIGNAL\020\316\001\022\024\n\017WORKFLOW_NOTIF" +
+      "Y\020\317\001\022\022\n\rTODO_REMINDER\020\320\001BA\n-com.shengyu." +
+      "framework.websocket.core.protocolB\016ImMes" +
+      "sageProtoP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -247,104 +256,110 @@ public final class ImMessageProto {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_AckResponse_descriptor,
         new java.lang.String[] { "Success", "Code", "Message", });
-    internal_static_TextMessage_descriptor =
+    internal_static_MentionUser_descriptor =
       getDescriptor().getMessageTypes().get(6);
+    internal_static_MentionUser_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_MentionUser_descriptor,
+        new java.lang.String[] { "UserId", "Nickname", "StartIndex", "EndIndex", });
+    internal_static_TextMessage_descriptor =
+      getDescriptor().getMessageTypes().get(7);
     internal_static_TextMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_TextMessage_descriptor,
-        new java.lang.String[] { "Content", "AtUserIds", });
+        new java.lang.String[] { "Content", "AtUserIds", "Mentions", });
     internal_static_ImageMessage_descriptor =
-      getDescriptor().getMessageTypes().get(7);
+      getDescriptor().getMessageTypes().get(8);
     internal_static_ImageMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_ImageMessage_descriptor,
         new java.lang.String[] { "Url", "ThumbnailUrl", "Width", "Height", "Size", });
     internal_static_VoiceMessage_descriptor =
-      getDescriptor().getMessageTypes().get(8);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_VoiceMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_VoiceMessage_descriptor,
         new java.lang.String[] { "Url", "Duration", "Size", });
     internal_static_VideoMessage_descriptor =
-      getDescriptor().getMessageTypes().get(9);
+      getDescriptor().getMessageTypes().get(10);
     internal_static_VideoMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_VideoMessage_descriptor,
         new java.lang.String[] { "Url", "CoverUrl", "Duration", "Width", "Height", "Size", });
     internal_static_FileMessage_descriptor =
-      getDescriptor().getMessageTypes().get(10);
+      getDescriptor().getMessageTypes().get(11);
     internal_static_FileMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_FileMessage_descriptor,
         new java.lang.String[] { "Url", "FileName", "Size", "FileType", });
     internal_static_LocationMessage_descriptor =
-      getDescriptor().getMessageTypes().get(11);
+      getDescriptor().getMessageTypes().get(12);
     internal_static_LocationMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_LocationMessage_descriptor,
         new java.lang.String[] { "Latitude", "Longitude", "Address", });
     internal_static_ReadReceiptMessage_descriptor =
-      getDescriptor().getMessageTypes().get(12);
+      getDescriptor().getMessageTypes().get(13);
     internal_static_ReadReceiptMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_ReadReceiptMessage_descriptor,
         new java.lang.String[] { "MessageIds", });
     internal_static_RecallMessage_descriptor =
-      getDescriptor().getMessageTypes().get(13);
+      getDescriptor().getMessageTypes().get(14);
     internal_static_RecallMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_RecallMessage_descriptor,
         new java.lang.String[] { "MessageId", });
     internal_static_QuoteReplyMessage_descriptor =
-      getDescriptor().getMessageTypes().get(14);
+      getDescriptor().getMessageTypes().get(15);
     internal_static_QuoteReplyMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_QuoteReplyMessage_descriptor,
-        new java.lang.String[] { "QuoteMessageId", "QuoteContent", "QuoteSenderId", "QuoteSenderName", "ReplyContent", "AtUserIds", });
+        new java.lang.String[] { "QuoteMessageId", "QuoteContent", "QuoteSenderId", "QuoteSenderName", "ReplyContent", "AtUserIds", "Mentions", });
     internal_static_TypingMessage_descriptor =
-      getDescriptor().getMessageTypes().get(15);
+      getDescriptor().getMessageTypes().get(16);
     internal_static_TypingMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_TypingMessage_descriptor,
         new java.lang.String[] { "TargetUserId", "GroupId", "IsTyping", });
     internal_static_BadgeUpdateMessage_descriptor =
-      getDescriptor().getMessageTypes().get(16);
+      getDescriptor().getMessageTypes().get(17);
     internal_static_BadgeUpdateMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_BadgeUpdateMessage_descriptor,
         new java.lang.String[] { "UnreadCount", "ConversationBadges", "MenuBadges", });
     internal_static_ConversationBadge_descriptor =
-      getDescriptor().getMessageTypes().get(17);
+      getDescriptor().getMessageTypes().get(18);
     internal_static_ConversationBadge_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_ConversationBadge_descriptor,
         new java.lang.String[] { "ConversationId", "UnreadCount", });
     internal_static_MenuBadge_descriptor =
-      getDescriptor().getMessageTypes().get(18);
+      getDescriptor().getMessageTypes().get(19);
     internal_static_MenuBadge_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_MenuBadge_descriptor,
         new java.lang.String[] { "MenuId", "BadgeCount", });
     internal_static_CallSignalMessage_descriptor =
-      getDescriptor().getMessageTypes().get(19);
+      getDescriptor().getMessageTypes().get(20);
     internal_static_CallSignalMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_CallSignalMessage_descriptor,
         new java.lang.String[] { "CallId", "CallType", "SignalType", "CallerId", "CalleeId", "RejectReason", "ExtraData", });
     internal_static_WorkflowNotifyMessage_descriptor =
-      getDescriptor().getMessageTypes().get(20);
+      getDescriptor().getMessageTypes().get(21);
     internal_static_WorkflowNotifyMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_WorkflowNotifyMessage_descriptor,
         new java.lang.String[] { "ProcessInstanceId", "ProcessName", "InitiatorId", "InitiatorName", "Content", "Buttons", "Status", "JumpUrl", });
     internal_static_WorkflowButton_descriptor =
-      getDescriptor().getMessageTypes().get(21);
+      getDescriptor().getMessageTypes().get(22);
     internal_static_WorkflowButton_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_WorkflowButton_descriptor,
         new java.lang.String[] { "ButtonId", "ButtonText", "ButtonType", });
     internal_static_TodoReminderMessage_descriptor =
-      getDescriptor().getMessageTypes().get(22);
+      getDescriptor().getMessageTypes().get(23);
     internal_static_TodoReminderMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_TodoReminderMessage_descriptor,

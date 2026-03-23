@@ -25,6 +25,7 @@ import { badgeService } from '../services/badge-service.uts'
 import { refreshToken as refreshTokenApi } from '../api/login.uts'
 import { onAccessTokenRefreshed } from './request.uts'
 import { generateMessageId as generateLongSafeMessageId } from './message-utils.uts'
+import * as ImProto from './proto/im_message_pb.esm.js'
 
 /**
  * WebSocket 连接状态枚举
@@ -1508,9 +1509,38 @@ export class WebSocketManager {
     }
 
     if (messageType === MessageType.TEXT) {
+      const mentions = Array.isArray(bodyAny.mentions)
+        ? bodyAny.mentions.map((m: any) => ({
+            userId: m != null && m.userId != null ? String(m.userId) : '0',
+            nickname: m != null && m.nickname != null ? String(m.nickname) : '',
+            startIndex: m != null && m.startIndex != null ? Number(m.startIndex) : 0,
+            endIndex: m != null && m.endIndex != null ? Number(m.endIndex) : 0
+          }))
+        : []
       return root.TextMessage.encode({
         content: bodyAny.content != null ? String(bodyAny.content) : '',
-        atUserIds: Array.isArray(bodyAny.atUserIds) ? bodyAny.atUserIds.map((x: any) => x != null ? String(x) : '0') : []
+        atUserIds: Array.isArray(bodyAny.atUserIds) ? bodyAny.atUserIds.map((x: any) => x != null ? String(x) : '0') : [],
+        mentions: mentions
+      }).finish() as Uint8Array
+    }
+
+    if (messageType === MessageType.QUOTE_REPLY) {
+      const mentions = Array.isArray(bodyAny.mentions)
+        ? bodyAny.mentions.map((m: any) => ({
+            userId: m != null && m.userId != null ? String(m.userId) : '0',
+            nickname: m != null && m.nickname != null ? String(m.nickname) : '',
+            startIndex: m != null && m.startIndex != null ? Number(m.startIndex) : 0,
+            endIndex: m != null && m.endIndex != null ? Number(m.endIndex) : 0
+          }))
+        : []
+      return root.QuoteReplyMessage.encode({
+        quoteMessageId: bodyAny.quotedMessageId != null ? String(bodyAny.quotedMessageId) : '0',
+        quoteContent: bodyAny.quotedContent != null ? String(bodyAny.quotedContent) : '',
+        quoteSenderName: bodyAny.quotedSenderName != null ? String(bodyAny.quotedSenderName) : '',
+        quoteSenderId: bodyAny.quotedSenderId != null ? String(bodyAny.quotedSenderId) : '0',
+        replyContent: bodyAny.content != null ? String(bodyAny.content) : '',
+        atUserIds: Array.isArray(bodyAny.atUserIds) ? bodyAny.atUserIds.map((x: any) => x != null ? String(x) : '0') : [],
+        mentions: mentions
       }).finish() as Uint8Array
     }
 

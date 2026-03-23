@@ -44,6 +44,14 @@ export type ImMessage = {
 export type TextMessageBody = {
   content: string
   atUserIds: string[]
+  mentions?: MentionUser[]
+}
+
+export type MentionUser = {
+  userId: string
+  nickname: string
+  startIndex: number
+  endIndex: number
 }
 
 /**
@@ -124,6 +132,7 @@ export type QuoteReplyMessageBody = {
   quotedContent: string
   quotedSenderName: string
   atUserIds: string[]
+  mentions?: MentionUser[]
 }
 
 /**
@@ -282,7 +291,8 @@ export class MessageBuilder {
     groupId: string,
     tenantId: string,
     content: string,
-    atUserIds: string[] = []
+    atUserIds: string[] = [],
+    mentions: MentionUser[] = []
   ): ImMessage {
     const header = MessageBuilder.buildHeader(
       MessageType.TEXT,
@@ -294,7 +304,8 @@ export class MessageBuilder {
     
     const body: TextMessageBody = {
       content: content,
-      atUserIds: atUserIds
+      atUserIds: atUserIds,
+      mentions: mentions
     }
     
     return {
@@ -603,7 +614,8 @@ export class MessageBuilder {
     quotedMessageId: string,
     quotedContent: string,
     quotedSenderName: string,
-    atUserIds: string[] = []
+    atUserIds: string[] = [],
+    mentions: MentionUser[] = []
   ): ImMessage {
     const header = MessageBuilder.buildHeader(
       MessageType.QUOTE_REPLY,
@@ -618,7 +630,8 @@ export class MessageBuilder {
       quotedMessageId: quotedMessageId,
       quotedContent: quotedContent,
       quotedSenderName: quotedSenderName,
-      atUserIds: atUserIds
+      atUserIds: atUserIds,
+      mentions: mentions
     }
     
     return {

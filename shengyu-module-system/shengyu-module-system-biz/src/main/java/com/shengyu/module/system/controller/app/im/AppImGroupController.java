@@ -6,6 +6,7 @@ import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.app.im.vo.group.*;
 import com.shengyu.module.system.service.im.ImGroupService;
+import com.shengyu.module.system.service.im.ImGroupOrchestrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,11 +38,14 @@ public class AppImGroupController {
     @Resource
     private ImGroupService groupService;
 
+    @Resource
+    private ImGroupOrchestrationService groupOrchestrationService;
+
     @PostMapping("/create")
     @Operation(summary = "创建群组")
-    public CommonResult<Long> createGroup(@Valid @RequestBody AppImGroupCreateReqVO createReqVO) {
+    public CommonResult<AppImGroupCreateRespVO> createGroup(@Valid @RequestBody AppImGroupCreateReqVO createReqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(groupService.createGroup(userId, createReqVO));
+        return success(groupOrchestrationService.createGroupWithConversation(userId, createReqVO));
     }
 
     @PutMapping("/update")

@@ -8,6 +8,7 @@ import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearch
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
 
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageForwardReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRecallConfigRespVO;
 
 /**
  * IM 消息 Service 接口
@@ -136,5 +137,7 @@ public interface ImMessageService {
      * @return 新消息ID列表（逐条转发返回多条，合并转发返回一条）
      */
     java.util.List<Long> forwardMessages(Long userId, AppImMessageForwardReqVO forwardReqVO);
+
+    AppImMessageRecallConfigRespVO getRecallConfig(Long userId);
 
 }

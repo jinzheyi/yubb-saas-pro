@@ -32,11 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -51,8 +47,113 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 @Slf4j
 public class ImMessageServiceImpl implements ImMessageService {
 
+    private static class MentionParseResult {
+        private final boolean atAll;
+        private final Set<Long> userIds;
+
+        private MentionParseResult(boolean atAll, Set<Long> userIds) {
+            this.atAll = atAll;
+            this.userIds = userIds;
+        }
+    }
+
+	private List<MentionUser> parseMentionUsers(String mentionsJson) {
+		if (StrUtil.isBlank(mentionsJson)) {
+			return Collections.emptyList();
+		}
+		try {
+			List<JSONObject> mentions = JSONUtil.parseArray(mentionsJson).toList(JSONObject.class);
+			if (mentions == null || mentions.isEmpty()) {
+				return Collections.emptyList();
+			}
+			List<MentionUser> result = new ArrayList<>();
+			for (JSONObject m : mentions) {
+				if (m == null) {
+					continue;
+				}
+				Long userId = m.getLong("userId");
+				if (userId == null) {
+					continue;
+				}
+				String nickname = m.getStr("nickname", "");
+				Integer startIndex = m.getInt("startIndex", 0);
+				Integer endIndex = m.getInt("endIndex", 0);
+				MentionUser mu = MentionUser.newBuilder()
+						.setUserId(userId)
+						.setNickname(nickname != null ? nickname : "")
+						.setStartIndex(startIndex != null ? startIndex : 0)
+						.setEndIndex(endIndex != null ? endIndex : 0)
+						.build();
+				result.add(mu);
+			}
+			return result;
+		} catch (Exception ignore) {
+			return Collections.emptyList();
+		}
+	}
+
+	private List<Long> buildAtUserIdsFromMentions(String mentionsJson) {
+		if (StrUtil.isBlank(mentionsJson)) {
+			return Collections.emptyList();
+		}
+		try {
+			List<JSONObject> mentions = JSONUtil.parseArray(mentionsJson).toList(JSONObject.class);
+			if (mentions == null || mentions.isEmpty()) {
+				return Collections.emptyList();
+			}
+			List<Long> ids = new ArrayList<>();
+			for (JSONObject m : mentions) {
+				if (m == null) {
+					continue;
+				}
+				Long id = m.getLong("userId");
+				if (id == null) {
+					continue;
+				}
+				ids.add(id);
+			}
+			return ids;
+		} catch (Exception ignore) {
+			return Collections.emptyList();
+		}
+	}
+
+    private MentionParseResult parseMentions(String mentionsJson) {
+        if (StrUtil.isBlank(mentionsJson)) {
+            return new MentionParseResult(false, Collections.emptySet());
+        }
+        try {
+            List<JSONObject> mentions = JSONUtil.parseArray(mentionsJson).toList(JSONObject.class);
+            if (mentions == null || mentions.isEmpty()) {
+                return new MentionParseResult(false, Collections.emptySet());
+            }
+            boolean atAll = false;
+            Set<Long> ids = new HashSet<>();
+            for (JSONObject m : mentions) {
+                if (m == null) {
+                    continue;
+                }
+                Long id = m.getLong("userId");
+                if (id == null) {
+                    continue;
+                }
+                if (id == -1L) {
+                    atAll = true;
+                    continue;
+                }
+                ids.add(id);
+            }
+            return new MentionParseResult(atAll, ids);
+        } catch (Exception e) {
+            return new MentionParseResult(false, Collections.emptySet());
+        }
+    }
+
     @Value("${im.recall.window-seconds:120}")
     private long recallWindowSeconds;
+
+    @Value("${im.recall.admin-window-seconds:86400}")
+    private long recallAdminWindowSeconds;
 
     @Resource
     private ImChatMessageMapper chatMessageMapper;
@@ -217,6 +318,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             fillSenderInfo(respVO, message.getSenderId());
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
             fillChatTargetFields(respVO, userId);
+            sanitizeRecalledMessage(respVO);
             return respVO;
         }).collect(Collectors.toList());
     }
@@ -271,6 +373,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             fillSenderInfo(respVO, message.getSenderId());
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
             fillChatTargetFields(respVO, userId);
+            sanitizeRecalledMessage(respVO);
             return respVO;
         }).collect(Collectors.toList());
         return new PageResult<>(respVOList, pageResult.getTotal());
@@ -326,7 +429,22 @@ public class ImMessageServiceImpl implements ImMessageService {
         fillSenderInfo(respVO, message.getSenderId());
         respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
         fillChatTargetFields(respVO, userId);
+        sanitizeRecalledMessage(respVO);
         return respVO;
+    }
+
+    private void sanitizeRecalledMessage(AppImMessageRespVO respVO) {
+        if (respVO == null) {
+            return;
+        }
+        if (!Objects.equals(respVO.getStatus(), ImMessageStatusEnum.RECALLED.getStatus())) {
+            return;
+        }
+        // enterprise security: recalled messages must not leak original content/extra/forward info via pull/page/detail
+        respVO.setContent("[消息已撤回]");
+        respVO.setExtra(null);
+        respVO.setForwardedFrom(null);
+        respVO.setMentions(null);
     }
 
     @Override
@@ -367,6 +485,16 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (tenantId == null) {
             tenantId = 0L;
         }
+
+        try {
+            log.info("[IM][send] updateChatUsersAfterSend chatId={}, chatType={}, lastMessageId={}, seq={}, rev={}, dbMessageType={}, senderId={}",
+                    chat != null ? chat.getId() : null,
+                    chat != null ? chat.getChatType() : null,
+                    lastMessageId, lastMessageSequence, finalRev, dbMessageType, senderId);
+        } catch (Exception ignore) {
+            // ignore
+        }
+        MentionParseResult mentionParsed = parseMentions(sendReqVO != null ? sendReqVO.getMentions() : null);
         if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
             List<Long> memberIds = imGroupService.getGroupMemberIds(chat.getGroupId());
             Map<Long, Long> cursorVerMap;
@@ -404,10 +532,18 @@ public class ImMessageServiceImpl implements ImMessageService {
                     int unreadDelta = isSender ? 0 : 1;
                     Long lastReadSeq = isSender ? lastMessageSequence : null;
                     LocalDateTime lastReadTime = isSender ? lastMessageTime : null;
+                    Boolean lastMessageHasAtMe = Boolean.FALSE;
+                    if (!isSender) {
+                        if (mentionParsed.atAll) {
+                            lastMessageHasAtMe = Boolean.TRUE;
+                        } else if (mentionParsed.userIds != null && mentionParsed.userIds.contains(memberId)) {
+                            lastMessageHasAtMe = Boolean.TRUE;
+                        }
+                    }
                     conversationUserStateMapper.upsertAfterMessage(
                             tenantId, chat.getId(), memberId, cursorVer,
                             unreadDelta, lastReadSeq, lastReadTime,
-                            lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime);
+                            lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageHasAtMe, lastMessageTime);
                 } catch (Exception e) {
                     log.warn("[ImMessageService] 写入会话-用户态失败(群消息), chatId: {}, memberId: {}, error: {}",
                             chat.getId(), memberId, e.getMessage());
@@ -456,7 +592,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                 conversationUserStateMapper.upsertAfterMessage(
                         tenantId, chat.getId(), senderId, senderCursorVer,
                         0, lastMessageSequence, lastMessageTime,
-                        lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime);
+                        lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, false, lastMessageTime);
             } catch (Exception e) {
                 log.warn("[ImMessageService] 写入会话-用户态失败(单聊发送者), chatId: {}, senderId: {}, error: {}",
                         chat.getId(), senderId, e.getMessage());
@@ -477,7 +613,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                 conversationUserStateMapper.upsertAfterMessage(
                         tenantId, chat.getId(), receiverId, receiverCursorVer,
                         1, null, null,
-                        lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime);
+                        lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, false, lastMessageTime);
             } catch (Exception e) {
                 log.warn("[ImMessageService] 写入会话-用户态失败(单聊接收者), chatId: {}, receiverId: {}, error: {}",
                         chat.getId(), receiverId, e.getMessage());
@@ -511,7 +647,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             case 105:
                 return 6;
             case 106:
-                return 8;
+                return ImMessageTypeEnum.CUSTOM.getType();
             case 205:
                 // 引用回复本质上仍然是文本（前端用 quote 渲染），DB 侧按文本存储
                 return 1;
@@ -533,9 +669,16 @@ public class ImMessageServiceImpl implements ImMessageService {
             switch (dbMessageType) {
                 case 1: // 文本消息
                     messageType = MessageType.TEXT;
-                    messageBody = TextMessage.newBuilder()
-                            .setContent(sendReqVO.getContent())
-                            .build();
+					List<Long> atUserIds = buildAtUserIdsFromMentions(sendReqVO.getMentions());
+					List<MentionUser> mentionUsers = parseMentionUsers(sendReqVO.getMentions());
+					TextMessage.Builder textBuilder = TextMessage.newBuilder().setContent(sendReqVO.getContent());
+					if (atUserIds != null && !atUserIds.isEmpty()) {
+						textBuilder.addAllAtUserIds(atUserIds);
+					}
+					if (mentionUsers != null && !mentionUsers.isEmpty()) {
+						textBuilder.addAllMentions(mentionUsers);
+					}
+					messageBody = textBuilder.build();
                     break;
                 case 2: // 图片消息
                     messageType = MessageType.IMAGE;
@@ -666,13 +809,25 @@ public class ImMessageServiceImpl implements ImMessageService {
                 return;
             }
             
-            // 提取被@用户ID
-            List<Long> mentionedUserIds = mentions.stream()
-                    .map(m -> m.getLong("userId"))
-                    .filter(id -> id != null)
-                    .collect(Collectors.toList());
+            // 提取被@用户ID（支持 userId=-1 表示@所有人）
+            boolean atAll = false;
+            List<Long> mentionedUserIds = new ArrayList<>();
+            for (JSONObject m : mentions) {
+                if (m == null) {
+                    continue;
+                }
+                Long id = m.getLong("userId");
+                if (id == null) {
+                    continue;
+                }
+                if (id == -1L) {
+                    atAll = true;
+                    continue;
+                }
+                mentionedUserIds.add(id);
+            }
             
-            if (mentionedUserIds.isEmpty()) {
+            if (!atAll && mentionedUserIds.isEmpty()) {
                 return;
             }
             
@@ -680,7 +835,13 @@ public class ImMessageServiceImpl implements ImMessageService {
                     chat.getId(), mentionedUserIds);
             
             // 对被@用户发送强提醒推送（即使群免打扰）
-            for (Long mentionedUserId : mentionedUserIds) {
+            List<Long> targets;
+            if (atAll) {
+                targets = memberIds != null ? memberIds : Collections.emptyList();
+            } else {
+                targets = mentionedUserIds;
+            }
+            for (Long mentionedUserId : targets) {
                 if (Objects.equals(mentionedUserId, senderId)) {
                     continue; // 不给自己推送
                 }
@@ -784,6 +945,26 @@ public class ImMessageServiceImpl implements ImMessageService {
         List<Long> messageIds = forwardReqVO.getMessageIds();
         Integer forwardType = forwardReqVO.getForwardType();
 
+        if (targetChatId == null || targetChatId <= 0) {
+            throw exception(MESSAGE_SEND_FAILED, "目标会话不能为空");
+        }
+        if (messageIds == null || messageIds.isEmpty()) {
+            throw exception(MESSAGE_SEND_FAILED, "转发消息不能为空");
+        }
+        if (messageIds.size() > 50) {
+            throw exception(MESSAGE_SEND_FAILED, "单次最多转发50条消息");
+        }
+        if (ImMessageForwardTypeEnum.valueOf(forwardType) == null) {
+            throw exception(MESSAGE_SEND_FAILED, "转发类型非法");
+        }
+
+        try {
+            log.info("[IM][forward] start userId={}, targetChatId={}, forwardType={}, messageIds.size={}",
+                    userId, targetChatId, forwardType, messageIds != null ? messageIds.size() : 0);
+        } catch (Exception ignore) {
+            // ignore
+        }
+
         // 1. 校验目标会话
         ImChatUserDO targetChatUser = chatUserMapper.selectByUserIdAndChatId(userId, targetChatId);
         if (targetChatUser == null) {
@@ -794,10 +975,25 @@ public class ImMessageServiceImpl implements ImMessageService {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
 
+        try {
+            log.info("[IM][forward] target chat meta chatId={}, chatType={}, groupId={}, singleUser1={}, singleUser2={}",
+                    targetChat.getId(), targetChat.getChatType(), targetChat.getGroupId(),
+                    targetChat.getSingleUser1(), targetChat.getSingleUser2());
+        } catch (Exception ignore) {
+            // ignore
+        }
+
         // 2. 查询原消息并校验可见性
         List<ImChatMessageDO> originalMessages = chatMessageMapper.selectBatchIds(messageIds);
         if (originalMessages == null || originalMessages.isEmpty()) {
             throw exception(MESSAGE_NOT_EXISTS);
+        }
+
+        try {
+            log.info("[IM][forward] load originalMessages ok requested={}, loaded={}",
+                    messageIds != null ? messageIds.size() : 0, originalMessages.size());
+        } catch (Exception ignore) {
+            // ignore
         }
 
         Long tenantId = TenantContextHolder.getTenantId();
@@ -805,10 +1001,27 @@ public class ImMessageServiceImpl implements ImMessageService {
             tenantId = 0L;
         }
 
-        // 过滤不可转发的消息：已撤回、已删除(tombstone)
+        // 过滤不可转发的消息：已撤回、已删除(tombstone)、不可见（非会话成员）
         List<ImChatMessageDO> forwardableMessages = new java.util.ArrayList<>();
+        java.util.Map<Long, Integer> inputOrder = new java.util.HashMap<>();
+        for (int i = 0; i < messageIds.size(); i++) {
+            Long mid = messageIds.get(i);
+            if (mid != null) {
+                inputOrder.put(mid, i);
+            }
+        }
         for (ImChatMessageDO msg : originalMessages) {
             if (msg == null) {
+                continue;
+            }
+            // 必须是自己可见的消息：只有会话成员才能转发（避免越权通过 messageId 读取他人会话消息）
+            try {
+                ImChatUserDO sourceChatUser = chatUserMapper.selectByUserIdAndChatId(userId, msg.getChatId());
+                if (sourceChatUser == null) {
+                    log.warn("[ImMessageService] 转发跳过不可见消息, userId: {}, messageId: {}, chatId: {}", userId, msg.getId(), msg.getChatId());
+                    continue;
+                }
+            } catch (Exception ignore) {
                 continue;
             }
             // 已撤回消息不可转发
@@ -825,8 +1038,35 @@ public class ImMessageServiceImpl implements ImMessageService {
             forwardableMessages.add(msg);
         }
 
+        // 保持与入参 messageIds 一致的顺序（selectBatchIds 不保证顺序）
+        try {
+            forwardableMessages.sort((a, b) -> {
+                Integer ia = inputOrder.get(a.getId());
+                Integer ib = inputOrder.get(b.getId());
+                if (ia == null && ib == null) {
+                    return 0;
+                }
+                if (ia == null) {
+                    return 1;
+                }
+                if (ib == null) {
+                    return -1;
+                }
+                return ia.compareTo(ib);
+            });
+        } catch (Exception ignore) {
+            // ignore
+        }
+
         if (forwardableMessages.isEmpty()) {
             throw exception(MESSAGE_SEND_FAILED, "无可转发的消息");
+        }
+
+        try {
+            log.info("[IM][forward] filter forwardable done forwardType={}, forwardableCount={} (requested={})",
+                    forwardType, forwardableMessages.size(), messageIds != null ? messageIds.size() : 0);
+        } catch (Exception ignore) {
+            // ignore
         }
 
         // 3. 获取原发送者信息用于隐私保护展示
@@ -853,6 +1093,13 @@ public class ImMessageServiceImpl implements ImMessageService {
             Long newMessageId = createCombineForwardMessage(userId, targetChat, forwardableMessages, 
                     senderMap, forwardReqVO.getComment(), forwardTime);
             newMessageIds.add(newMessageId);
+
+            try {
+                log.info("[IM][forward] combine ok userId={}, targetChatId={}, newMessageId={}, originalCount={}",
+                        userId, targetChat.getId(), newMessageId, forwardableMessages.size());
+            } catch (Exception ignore) {
+                // ignore
+            }
         } else {
             // 逐条转发：每条消息生成新消息
             for (ImChatMessageDO originalMsg : forwardableMessages) {
@@ -860,11 +1107,26 @@ public class ImMessageServiceImpl implements ImMessageService {
                         senderMap.get(originalMsg.getSenderId()), forwardTime);
                 newMessageIds.add(newMessageId);
             }
+
+            try {
+                log.info("[IM][forward] single ok userId={}, targetChatId={}, newMessageIds.size={}, originalCount={}",
+                        userId, targetChat.getId(), newMessageIds.size(), forwardableMessages.size());
+            } catch (Exception ignore) {
+                // ignore
+            }
         }
 
         log.info("[ImMessageService] 转发消息成功, userId: {}, forwardType: {}, originalCount: {}, newMessageIds: {}",
                 userId, forwardType, forwardableMessages.size(), newMessageIds);
         return newMessageIds;
+    }
+
+    @Override
+    public AppImMessageRecallConfigRespVO getRecallConfig(Long userId) {
+        AppImMessageRecallConfigRespVO respVO = new AppImMessageRecallConfigRespVO();
+        respVO.setWindowSeconds((int) recallWindowSeconds);
+        respVO.setAdminWindowSeconds((int) recallAdminWindowSeconds);
+        return respVO;
     }
 
     /**
@@ -887,14 +1149,22 @@ public class ImMessageServiceImpl implements ImMessageService {
 
         // 构建转发来源信息
         JSONObject forwardedFrom = new JSONObject();
-        forwardedFrom.set("originalMessageId", originalMsg.getId());
-        forwardedFrom.set("originalChatId", originalMsg.getChatId());
-        forwardedFrom.set("originalSenderId", originalMsg.getSenderId());
+        forwardedFrom.set("originalMessageId", originalMsg.getId() != null ? originalMsg.getId().toString() : "");
+        forwardedFrom.set("originalChatId", originalMsg.getChatId() != null ? originalMsg.getChatId().toString() : "");
+        forwardedFrom.set("originalSenderId", originalMsg.getSenderId() != null ? originalMsg.getSenderId().toString() : "");
         forwardedFrom.set("originalSenderName", originalSender != null ? originalSender.getNickname() : "");
         forwardedFrom.set("forwardTime", forwardTime.toString());
         newMessage.setForwardedFrom(forwardedFrom.toString());
 
         chatMessageMapper.insert(newMessage);
+
+        try {
+            log.info("[IM][forward] insert single ok newMessageId={}, targetChatId={}, originalMessageId={}, originalChatId={}, originalType={}",
+                    newMessage.getId(), targetChat.getId(),
+                    originalMsg.getId(), originalMsg.getChatId(), originalMsg.getMessageType());
+        } catch (Exception ignore) {
+            // ignore
+        }
 
         // 更新会话状态并推送
         String preview = getMessagePreview(originalMsg.getMessageType(), originalMsg.getContent());
@@ -923,13 +1193,37 @@ public class ImMessageServiceImpl implements ImMessageService {
         
         // 构建消息列表
         List<JSONObject> messages = new java.util.ArrayList<>();
+        int nestedRefCount = 0;
         for (ImChatMessageDO msg : originalMessages) {
             JSONObject msgObj = new JSONObject();
-            msgObj.set("messageId", msg.getId());
-            msgObj.set("messageType", msg.getMessageType());
-            msgObj.set("content", msg.getContent());
-            msgObj.set("extra", msg.getExtra());
-            msgObj.set("senderId", msg.getSenderId());
+            msgObj.set("messageId", msg.getId() != null ? msg.getId().toString() : "");
+
+            // 引用化：如果合并包里又包含“聊天记录(合并转发消息)”，不再嵌套其 messages，避免套娃与消息体膨胀
+            boolean isNestedCombine = false;
+            try {
+                if (Objects.equals(msg.getMessageType(), ImMessageTypeEnum.CUSTOM.getType()) && StrUtil.isNotBlank(msg.getContent())) {
+                    JSONObject nested = JSONUtil.parseObj(msg.getContent());
+                    String t = nested.getStr("type", "");
+                    if (StrUtil.isNotBlank(t) && Objects.equals(t, "FORWARD_COMBINE")) {
+                        isNestedCombine = true;
+                    }
+                }
+            } catch (Exception ignore) {
+                // ignore
+            }
+
+            if (isNestedCombine) {
+                msgObj.set("messageType", ImMessageTypeEnum.TEXT.getType());
+                msgObj.set("content", "[聊天记录]");
+                msgObj.set("refMessageId", msg.getId() != null ? msg.getId().toString() : "");
+                nestedRefCount++;
+            } else {
+                msgObj.set("messageType", msg.getMessageType());
+                msgObj.set("content", msg.getContent());
+                msgObj.set("extra", msg.getExtra());
+            }
+
+            msgObj.set("senderId", msg.getSenderId() != null ? msg.getSenderId().toString() : "");
             AdminUserDO sender = senderMap.get(msg.getSenderId());
             msgObj.set("senderName", sender != null ? sender.getNickname() : "");
             msgObj.set("sendTime", msg.getSendTime() != null ? msg.getSendTime().toString() : "");
@@ -952,11 +1246,18 @@ public class ImMessageServiceImpl implements ImMessageService {
         // 构建转发来源信息（合并转发记录所有原消息）
         JSONObject forwardedFrom = new JSONObject();
         forwardedFrom.set("type", "COMBINE");
-        forwardedFrom.set("messageIds", originalMessages.stream().map(ImChatMessageDO::getId).collect(Collectors.toList()));
+        forwardedFrom.set("messageIds", originalMessages.stream().map(m -> m.getId() != null ? m.getId().toString() : "").collect(Collectors.toList()));
         forwardedFrom.set("forwardTime", forwardTime.toString());
         newMessage.setForwardedFrom(forwardedFrom.toString());
 
         chatMessageMapper.insert(newMessage);
+
+        try {
+            log.info("[IM][forward] insert combine ok newMessageId={}, targetChatId={}, originalCount={}, nestedRefCount={}",
+                    newMessage.getId(), targetChat.getId(), originalMessages != null ? originalMessages.size() : 0, nestedRefCount);
+        } catch (Exception ignore) {
+            // ignore
+        }
 
         // 更新会话状态并推送
         String preview = "[合并转发] " + originalMessages.size() + "条消息";
@@ -973,6 +1274,11 @@ public class ImMessageServiceImpl implements ImMessageService {
         ImChatMessageDO message = chatMessageMapper.selectById(messageId);
         if (message == null) {
             throw exception(MESSAGE_NOT_EXISTS);
+        }
+
+        // 幂等：已撤回消息不重复撤回，避免 rev 无意义递增导致多端最终态抖动
+        if (Objects.equals(message.getStatus(), ImMessageStatusEnum.RECALLED.getStatus())) {
+            return;
         }
         
         ImChatDO chat = chatMapper.selectById(message.getChatId());
@@ -995,6 +1301,17 @@ public class ImMessageServiceImpl implements ImMessageService {
             if (!ImGroupMemberRoleEnum.isOwner(memberRole) && !ImGroupMemberRoleEnum.isAdmin(memberRole)) {
                 throw exception(MESSAGE_RECALL_PERMISSION_DENIED);
             }
+
+            // enterprise: 权限细分 - 管理员仅可撤回普通成员消息，不可撤回群主/管理员消息（避免越权）
+            if (ImGroupMemberRoleEnum.isAdmin(memberRole)) {
+                Integer senderRole = imGroupService.getMemberRole(chat.getGroupId(), message.getSenderId());
+                if (senderRole == null) {
+                    throw exception(MESSAGE_RECALL_PERMISSION_DENIED);
+                }
+                if (ImGroupMemberRoleEnum.isOwner(senderRole) || ImGroupMemberRoleEnum.isAdmin(senderRole)) {
+                    throw exception(MESSAGE_RECALL_PERMISSION_DENIED);
+                }
+            }
         } else if (!isSelfMessage) {
             // 单聊只能撤回自己的消息
             throw exception(MESSAGE_RECALL_PERMISSION_DENIED);
@@ -1002,20 +1319,27 @@ public class ImMessageServiceImpl implements ImMessageService {
         
         // 时限检查
         long windowSec;
+        boolean unlimitedWindow = false;
         if (isSelfMessage) {
             // 自己的消息：默认2分钟
             windowSec = recallWindowSeconds > 0 ? recallWindowSeconds : 120L;
         } else if (ImGroupMemberRoleEnum.isOwner(memberRole)) {
             // 群主撤回：不限时
-            windowSec = Long.MAX_VALUE / 1000; // 实际不限
+            windowSec = 0L;
+            unlimitedWindow = true;
         } else {
             // 管理员撤回：默认24小时
-            windowSec = 24 * 60 * 60L; // 可配置化扩展
+            windowSec = recallAdminWindowSeconds > 0 ? recallAdminWindowSeconds : 24 * 60 * 60L;
         }
-        
-        LocalDateTime windowAgo = LocalDateTime.now().minusSeconds(windowSec);
-        if (message.getSendTime().isBefore(windowAgo)) {
-            throw exception(MESSAGE_RECALL_TIMEOUT);
+
+        if (!unlimitedWindow) {
+            if (message.getSendTime() == null) {
+                throw exception(MESSAGE_RECALL_TIMEOUT);
+            }
+            LocalDateTime windowAgo = LocalDateTime.now().minusSeconds(windowSec);
+            if (message.getSendTime().isBefore(windowAgo)) {
+                throw exception(MESSAGE_RECALL_TIMEOUT);
+            }
         }
         
         LocalDateTime recallTime = LocalDateTime.now();
@@ -1034,8 +1358,8 @@ public class ImMessageServiceImpl implements ImMessageService {
             if (tenantId == null) {
                 tenantId = 0L;
             }
-            ImChatDO chat = chatMapper.selectById(message.getChatId());
-            if (chat != null) {
+            ImChatDO messageChat = chatMapper.selectById(message.getChatId());
+            if (messageChat != null) {
                 List<ImChatUserDO> chatUsers = chatUserMapper.selectList(new LambdaQueryWrapperX<ImChatUserDO>()
                         .eq(ImChatUserDO::getChatId, message.getChatId())
                         .eq(ImChatUserDO::getDeletedByUser, false)
@@ -1071,6 +1395,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                                 message.getSequence() != null ? message.getSequence() : 0L,
                                 10,
                                 "[消息已撤回]",
+                                false,
                                 message.getSendTime() != null ? message.getSendTime() : recallTime
                         );
 
@@ -1094,8 +1419,8 @@ public class ImMessageServiceImpl implements ImMessageService {
 
         // 企业级一致性：撤回必须通过 WS 实时广播到会话参与方（对端/群成员）以及操作者的其他设备
         try {
-            ImChatDO chat = chatMapper.selectById(message.getChatId());
-            if (chat == null) {
+            ImChatDO wsChat = chatMapper.selectById(message.getChatId());
+            if (wsChat == null) {
                 return;
             }
             Long tenantId = TenantContextHolder.getTenantId();
@@ -1113,8 +1438,8 @@ public class ImMessageServiceImpl implements ImMessageService {
                 extra = null;
             }
 
-            if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
-                Long groupId = chat.getGroupId();
+            if (ImConversationTypeEnum.isGroup(wsChat.getChatType())) {
+                Long groupId = wsChat.getGroupId();
                 List<Long> memberIds = imGroupService.getGroupMemberIds(groupId);
                 if (memberIds != null) {
                     for (Long memberId : memberIds) {
@@ -1127,13 +1452,21 @@ public class ImMessageServiceImpl implements ImMessageService {
                                 null, null, extra);
                     }
                 }
-                // 确保操作者本人多端可见（即便不在 memberIds 里）
-                messageSender.sendToUserWithExtra(userId, MessageType.RECALL, body,
-                        userId, 0L, groupId, tenantId,
-                        messageId, message.getSequence(), message.getChatId(),
-                        null, null, extra);
+                // 确保操作者本人多端可见（即便不在 memberIds 里）；避免 memberIds 已包含操作者时重复发送
+                boolean operatorInMembers = false;
+                try {
+                    operatorInMembers = memberIds != null && memberIds.contains(userId);
+                } catch (Exception ignore) {
+                    operatorInMembers = false;
+                }
+                if (!operatorInMembers) {
+                    messageSender.sendToUserWithExtra(userId, MessageType.RECALL, body,
+                            userId, 0L, groupId, tenantId,
+                            messageId, message.getSequence(), message.getChatId(),
+                            null, null, extra);
+                }
             } else {
-                Long otherUserId = Objects.equals(chat.getSingleUser1(), userId) ? chat.getSingleUser2() : chat.getSingleUser1();
+                Long otherUserId = Objects.equals(wsChat.getSingleUser1(), userId) ? wsChat.getSingleUser2() : wsChat.getSingleUser1();
                 // 对端
                 messageSender.sendToUserWithExtra(otherUserId, MessageType.RECALL, body,
                         userId, otherUserId, 0L, tenantId,
@@ -1162,7 +1495,6 @@ public class ImMessageServiceImpl implements ImMessageService {
                         obj.set("recallBy", userId);
                         obj.set("recallTime", recallTime != null ? recallTime.toString() : "");
                         obj.set("deadlineTs", deadlineTs);
-                        obj.set("originalContent", message.getContent() != null ? message.getContent() : "");
                         hintExtra = obj.toString();
                     } catch (Exception ignore) {
                         hintExtra = null;
@@ -1217,13 +1549,13 @@ public class ImMessageServiceImpl implements ImMessageService {
 
             try {
                 TextMessage body = TextMessage.newBuilder().setContent("").build();
-                messageSender.sendToUser(userId, MessageType.SYSTEM_NOTIFY, body,
-                        0L, userId, 0L, tenantId,
-                        null, null, message.getChatId(),
-                        cursorVersion, null);
+                messageSender.sendToUserWithExtra(userId, MessageType.SYSTEM_NOTIFY, body,
+                    0L, userId, 0L, tenantId,
+                    null, null, message.getChatId(),
+                    cursorVersion, null, null);
             } catch (Exception e) {
-                log.warn("[ImMessageService] 推送删除消息增量同步通知失败, userId: {}, messageId: {}, error: {}",
-                        userId, messageId, e.getMessage(), e);
+                log.warn("[IM][send] push failed userId={}, chatId={}, messageId={}, seq={}, rev={}, senderId={}, err={}",
+                    userId, message.getChatId(), messageId, message.getSequence(), message.getRev(), userId, e.getMessage(), e);
             }
 
             try {

@@ -37,6 +37,7 @@ export type ConversationItem = {
   avatarBg: string            // 头像背景色
   lastMessageType: number      // 对应后端 lastMessageType
   lastMessageContent: string  // 对应后端 lastMessageContent
+  lastMessageHasAtMe: boolean // 对应后端 lastMessageHasAtMe
   lastMessageTime: string     // 对应后端 lastMessageTime (格式化后)
   timestamp: number           // 时间戳（用于排序）
   unreadCount: number         // 对应后端 unreadCount
@@ -788,6 +789,20 @@ export class ConversationService {
 	} catch (e) {
 		ts = 0
 	}
+    let hasAtMe = false
+    try {
+      const v: any = (data as any).lastMessageHasAtMe
+      if (v === true) {
+        hasAtMe = true
+      } else if (v === 1 || v === '1') {
+        hasAtMe = true
+      } else {
+        hasAtMe = false
+      }
+    } catch (e) {
+      hasAtMe = false
+    }
+
     return {
       chatId: data.chatId != null ? data.chatId.toString() : '0',
       conversationType: conversationType,
@@ -798,6 +813,7 @@ export class ConversationService {
       avatarBg: data.avatarBg || getConversationAvatarColor(conversationType, targetId),
       lastMessageType: data.lastMessageType != null ? Number(data.lastMessageType) : 0,
       lastMessageContent: data.lastMessageContent || '',
+      lastMessageHasAtMe: hasAtMe,
       lastMessageTime: ts > 0 ? this.formatTime(ts) : '',
       timestamp: ts,
       unreadCount: data.unreadCount || 0,

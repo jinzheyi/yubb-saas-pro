@@ -27,6 +27,13 @@ export function recallMessage(id: string): Promise<any> {
   })
 }
 
+export function getRecallConfig(): Promise<any> {
+  return request({
+    url: '/system/im/message/recall-config',
+    method: 'GET'
+  })
+}
+
 /**
  * 删除消息
  */
@@ -110,5 +117,36 @@ export function markMessageRead(messageIds: string[]): Promise<any> {
   return request({
     url: `/system/im/message/mark-read?${qs}`,
     method: 'PUT'
+  })
+}
+
+export function forwardMessages(targetChatId: string, messageIds: string[], forwardType: number, comment: string | null = null): Promise<any> {
+  const ids = messageIds != null ? messageIds.filter(id => id != null && id !== '' && id !== '0') : []
+  if (targetChatId == null || targetChatId === '' || targetChatId === '0' || ids.length === 0) {
+    return Promise.reject(new Error('invalid forward params'))
+  }
+  const body: any = {
+    targetChatId: targetChatId,
+    messageIds: ids,
+    forwardType: forwardType === 2 ? 2 : 1
+  }
+  if (comment != null && comment !== '') {
+    body.comment = comment
+  }
+  return request({
+    url: '/system/im/message/forward',
+    method: 'POST',
+    data: body
+  })
+}
+
+export function getMessageDetail(messageId: string): Promise<any> {
+  const mid = messageId != null ? String(messageId) : ''
+  if (mid === '' || mid === '0') {
+    return Promise.reject(new Error('invalid messageId'))
+  }
+  return request({
+    url: `/system/im/message/detail?id=${encodeURIComponent(mid)}`,
+    method: 'GET'
   })
 }

@@ -114,6 +114,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { searchMessages } from '../../api/message.uts'
+import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 
 // 页面参数
 const chatId = ref<string>('')
@@ -166,7 +167,7 @@ const getStartTimeMax = (): string => {
 // 页面加载
 onLoad((options: any) => {
   if (options.chatId) {
-    chatId.value = options.chatId
+    chatId.value = decodeIdParam(options.chatId)
   }
   if (options.groupName) {
     groupName.value = options.groupName
@@ -414,9 +415,10 @@ const getHighlightedContent = (content: string): string => {
 
 // 点击消息项 - 跳转到聊天页面并定位到该消息
 const handleMessageClick = (message: any) => {
+  const chatIdParam = encodeIdParam(chatId.value)
   // 跳转到聊天页面，传递消息ID用于定位
   uni.navigateTo({
-    url: `/pages/message/chat?chatId=${chatId.value}&messageId=${message.id}&highlight=true`
+    url: `/pages/message/chat?chatId=${chatIdParam}&messageId=${message.id}&highlight=true`
   })
 }
 </script>

@@ -39,12 +39,12 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
     @Insert("INSERT INTO im_conversation_user_state(" +
             "tenant_id, chat_id, user_id, cursor_version, conversation_version, " +
             "unread_count, last_read_sequence, last_read_time, " +
-            "last_message_id, last_message_sequence, last_message_type, last_message_content, last_message_time, " +
+            "last_message_id, last_message_sequence, last_message_type, last_message_content, last_message_has_at_me, last_message_time, " +
             "is_pinned, no_disturb, draft, deleted_by_user, deleted) " +
             "VALUES(" +
             "#{tenantId}, #{chatId}, #{userId}, #{cursorVersion}, 1, " +
             "#{unreadDelta}, #{lastReadSequence}, #{lastReadTime}, " +
-            "#{lastMessageId}, #{lastMessageSequence}, #{lastMessageType}, #{lastMessageContent}, #{lastMessageTime}, " +
+            "#{lastMessageId}, #{lastMessageSequence}, #{lastMessageType}, #{lastMessageContent}, #{lastMessageHasAtMe}, #{lastMessageTime}, " +
             "0, 0, NULL, 0, 0) " +
             "ON DUPLICATE KEY UPDATE " +
             "cursor_version = VALUES(cursor_version), " +
@@ -57,6 +57,7 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
             "last_message_sequence = VALUES(last_message_sequence), " +
             "last_message_type = VALUES(last_message_type), " +
             "last_message_content = VALUES(last_message_content), " +
+            "last_message_has_at_me = COALESCE(VALUES(last_message_has_at_me), last_message_has_at_me), " +
             "last_message_time = VALUES(last_message_time), " +
             "deleted_by_user = 0, " +
             "deleted = 0")
@@ -71,17 +72,18 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
                           @Param("lastMessageSequence") Long lastMessageSequence,
                           @Param("lastMessageType") Integer lastMessageType,
                           @Param("lastMessageContent") String lastMessageContent,
+                          @Param("lastMessageHasAtMe") Boolean lastMessageHasAtMe,
                           @Param("lastMessageTime") LocalDateTime lastMessageTime);
 
     @Insert("INSERT INTO im_conversation_user_state(" +
             "tenant_id, chat_id, user_id, cursor_version, conversation_version, " +
             "unread_count, last_read_sequence, last_read_time, " +
-            "last_message_id, last_message_sequence, last_message_type, last_message_content, last_message_time, " +
+            "last_message_id, last_message_sequence, last_message_type, last_message_content, last_message_has_at_me, last_message_time, " +
             "is_pinned, no_disturb, draft, deleted_by_user, deleted) " +
             "VALUES(" +
             "#{tenantId}, #{chatId}, #{userId}, #{cursorVersion}, 1, " +
             "#{unreadCount}, #{lastReadSequence}, #{lastReadTime}, " +
-            "#{lastMessageId}, #{lastMessageSequence}, #{lastMessageType}, #{lastMessageContent}, #{lastMessageTime}, " +
+            "#{lastMessageId}, #{lastMessageSequence}, #{lastMessageType}, #{lastMessageContent}, #{lastMessageHasAtMe}, #{lastMessageTime}, " +
             "#{isPinned}, #{noDisturb}, #{draft}, 0, 0) " +
             "ON DUPLICATE KEY UPDATE " +
             "cursor_version = VALUES(cursor_version), " +
@@ -93,6 +95,7 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
             "last_message_sequence = GREATEST(IFNULL(last_message_sequence, 0), IFNULL(VALUES(last_message_sequence), 0)), " +
             "last_message_type = COALESCE(VALUES(last_message_type), last_message_type), " +
             "last_message_content = COALESCE(VALUES(last_message_content), last_message_content), " +
+            "last_message_has_at_me = COALESCE(VALUES(last_message_has_at_me), last_message_has_at_me), " +
             "last_message_time = COALESCE(VALUES(last_message_time), last_message_time), " +
             "is_pinned = COALESCE(VALUES(is_pinned), is_pinned), " +
             "no_disturb = COALESCE(VALUES(no_disturb), no_disturb), " +
@@ -110,6 +113,7 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
                               @Param("lastMessageSequence") Long lastMessageSequence,
                               @Param("lastMessageType") Integer lastMessageType,
                               @Param("lastMessageContent") String lastMessageContent,
+                              @Param("lastMessageHasAtMe") Boolean lastMessageHasAtMe,
                               @Param("lastMessageTime") LocalDateTime lastMessageTime,
                               @Param("isPinned") Boolean isPinned,
                               @Param("noDisturb") Boolean noDisturb,

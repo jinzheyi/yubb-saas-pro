@@ -7,6 +7,7 @@ import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.FileMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.protocol.MentionUser;
 import com.shengyu.framework.websocket.core.service.ConversationSnapshotService;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
@@ -27,6 +28,7 @@ import com.shengyu.framework.websocket.core.netty.handler.WebSocketFrameHandler;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
 
 /**
  * Netty 消息发送器
@@ -600,6 +602,18 @@ public class NettyMessageSender {
                     com.shengyu.framework.websocket.core.protocol.TextMessage m = (com.shengyu.framework.websocket.core.protocol.TextMessage) body;
                     json.put("content", m.getContent());
                     json.put("atUserIds", m.getAtUserIdsList());
+					if (m.getMentionsCount() > 0) {
+						List<Map<String, Object>> mentions = new ArrayList<>();
+						for (MentionUser mu : m.getMentionsList()) {
+							Map<String, Object> item = new HashMap<>();
+							item.put("userId", String.valueOf(mu.getUserId()));
+							item.put("nickname", mu.getNickname());
+							item.put("startIndex", mu.getStartIndex());
+							item.put("endIndex", mu.getEndIndex());
+							mentions.add(item);
+						}
+						json.put("mentions", mentions);
+					}
                 }
                 return json;
             case IMAGE:
@@ -656,6 +670,18 @@ public class NettyMessageSender {
                     json.put("quotedContent", m.getQuoteContent());
                     json.put("quotedSenderName", m.getQuoteSenderName());
                     json.put("atUserIds", m.getAtUserIdsList());
+					if (m.getMentionsCount() > 0) {
+						List<Map<String, Object>> mentions = new ArrayList<>();
+						for (MentionUser mu : m.getMentionsList()) {
+							Map<String, Object> item = new HashMap<>();
+							item.put("userId", String.valueOf(mu.getUserId()));
+							item.put("nickname", mu.getNickname());
+							item.put("startIndex", mu.getStartIndex());
+							item.put("endIndex", mu.getEndIndex());
+							mentions.add(item);
+						}
+						json.put("mentions", mentions);
+					}
                 }
                 return json;
             case READ_RECEIPT:

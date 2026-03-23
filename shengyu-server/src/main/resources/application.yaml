@@ -41,6 +41,7 @@ server:
 im:
   recall:
     window-seconds: 120
+    admin-window-seconds: 86400
 
 --- #################### 接口文档配置 ####################
 

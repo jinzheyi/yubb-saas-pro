@@ -1,5 +1,6 @@
 package com.shengyu.framework.websocket.core.netty.handler;
 
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -10,6 +11,7 @@ import com.shengyu.framework.websocket.core.protocol.FileMessage;
 import com.shengyu.framework.websocket.core.protocol.ImageMessage;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.LocationMessage;
+import com.shengyu.framework.websocket.core.protocol.MentionUser;
 import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
 import com.shengyu.framework.websocket.core.protocol.AckMessage;
@@ -300,6 +302,7 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
             case TEXT: {
                 String content = bodyJson != null ? bodyJson.getStr("content", "") : "";
                 List<Long> atUserIds = new ArrayList<>();
+                List<MentionUser> mentionUsers = new ArrayList<>();
                 if (bodyJson != null) {
                     Object atObj = bodyJson.get("atUserIds");
                     if (atObj instanceof JSONArray) {
@@ -311,11 +314,45 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
                             }
                         }
                     }
+
+					Object mentionsObj = bodyJson.get("mentions");
+					if (mentionsObj instanceof JSONArray) {
+						JSONArray arr = (JSONArray) mentionsObj;
+						for (int i = 0; i < arr.size(); i++) {
+							Object item = arr.get(i);
+							if (item == null) {
+								continue;
+							}
+							JSONObject m;
+							try {
+								m = item instanceof JSONObject ? (JSONObject) item : JSONUtil.parseObj(item);
+							} catch (Exception ignore) {
+								m = null;
+							}
+							if (m == null) {
+								continue;
+							}
+							long userId = readLong(m, "userId", 0L);
+							String nickname = m.getStr("nickname", "");
+							int startIndex = m.getInt("startIndex", 0);
+							int endIndex = m.getInt("endIndex", 0);
+							MentionUser mu = MentionUser.newBuilder()
+									.setUserId(userId)
+									.setNickname(nickname != null ? nickname : "")
+									.setStartIndex(startIndex)
+									.setEndIndex(endIndex)
+									.build();
+							mentionUsers.add(mu);
+						}
+					}
                 }
                 TextMessage.Builder builder = TextMessage.newBuilder().setContent(content);
                 if (!atUserIds.isEmpty()) {
                     builder.addAllAtUserIds(atUserIds);
                 }
+				if (!mentionUsers.isEmpty()) {
+					builder.addAllMentions(mentionUsers);
+				}
                 return builder.build().toByteArray();
             }
             case IMAGE: {
@@ -414,12 +451,29 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
                 if (bodyJson == null) {
                     return QuoteReplyMessage.getDefaultInstance().toByteArray();
                 }
+                long quoteMessageId = readLong(bodyJson, "quoteMessageId", 0L);
+                if (quoteMessageId <= 0L) {
+                    quoteMessageId = readLong(bodyJson, "quotedMessageId", 0L);
+                }
+                String quoteContent = bodyJson.getStr("quoteContent", "");
+                if (StrUtil.isBlank(quoteContent)) {
+                    quoteContent = bodyJson.getStr("quotedContent", "");
+                }
+                long quoteSenderId = readLong(bodyJson, "quoteSenderId", 0L);
+                String quoteSenderName = bodyJson.getStr("quoteSenderName", "");
+                if (StrUtil.isBlank(quoteSenderName)) {
+                    quoteSenderName = bodyJson.getStr("quotedSenderName", "");
+                }
+                String replyContent = bodyJson.getStr("replyContent", "");
+                if (StrUtil.isBlank(replyContent)) {
+                    replyContent = bodyJson.getStr("content", "");
+                }
                 QuoteReplyMessage.Builder builder = QuoteReplyMessage.newBuilder()
-                        .setQuoteMessageId(bodyJson.getLong("quoteMessageId", 0L))
-                        .setQuoteContent(bodyJson.getStr("quoteContent", ""))
-                        .setQuoteSenderId(bodyJson.getLong("quoteSenderId", 0L))
-                        .setQuoteSenderName(bodyJson.getStr("quoteSenderName", ""))
-                        .setReplyContent(bodyJson.getStr("replyContent", ""));
+                        .setQuoteMessageId(quoteMessageId)
+                        .setQuoteContent(quoteContent)
+                        .setQuoteSenderId(quoteSenderId)
+                        .setQuoteSenderName(quoteSenderName)
+                        .setReplyContent(replyContent);
 
                 Object atObj = bodyJson.get("atUserIds");
                 if (atObj instanceof JSONArray) {
@@ -433,6 +487,41 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
                     }
                     builder.addAllAtUserIds(ids);
                 }
+
+				Object mentionsObj = bodyJson.get("mentions");
+				if (mentionsObj instanceof JSONArray) {
+					JSONArray arr = (JSONArray) mentionsObj;
+					List<MentionUser> mentionUsers = new ArrayList<>();
+					for (int i = 0; i < arr.size(); i++) {
+						Object item = arr.get(i);
+						if (item == null) {
+							continue;
+						}
+						JSONObject m;
+						try {
+							m = item instanceof JSONObject ? (JSONObject) item : JSONUtil.parseObj(item);
+						} catch (Exception ignore) {
+							m = null;
+						}
+						if (m == null) {
+							continue;
+						}
+						long userId = readLong(m, "userId", 0L);
+						String nickname = m.getStr("nickname", "");
+						int startIndex = m.getInt("startIndex", 0);
+						int endIndex = m.getInt("endIndex", 0);
+						MentionUser mu = MentionUser.newBuilder()
+								.setUserId(userId)
+								.setNickname(nickname != null ? nickname : "")
+								.setStartIndex(startIndex)
+								.setEndIndex(endIndex)
+								.build();
+						mentionUsers.add(mu);
+					}
+					if (!mentionUsers.isEmpty()) {
+						builder.addAllMentions(mentionUsers);
+					}
+				}
 
                 return builder.build().toByteArray();
             }

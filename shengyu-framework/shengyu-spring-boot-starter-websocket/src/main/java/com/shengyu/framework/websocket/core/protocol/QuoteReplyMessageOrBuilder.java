@@ -115,4 +115,48 @@ public interface QuoteReplyMessageOrBuilder extends
    * @return The atUserIds at the given index.
    */
   long getAtUserIds(int index);
+
+  /**
+   * <pre>
+   * &#64;提及用户映射（精确下标，用于渲染/点击）
+   * </pre>
+   *
+   * <code>repeated .MentionUser mentions = 7;</code>
+   */
+  java.util.List<com.shengyu.framework.websocket.core.protocol.MentionUser> 
+      getMentionsList();
+  /**
+   * <pre>
+   * &#64;提及用户映射（精确下标，用于渲染/点击）
+   * </pre>
+   *
+   * <code>repeated .MentionUser mentions = 7;</code>
+   */
+  com.shengyu.framework.websocket.core.protocol.MentionUser getMentions(int index);
+  /**
+   * <pre>
+   * &#64;提及用户映射（精确下标，用于渲染/点击）
+   * </pre>
+   *
+   * <code>repeated .MentionUser mentions = 7;</code>
+   */
+  int getMentionsCount();
+  /**
+   * <pre>
+   * &#64;提及用户映射（精确下标，用于渲染/点击）
+   * </pre>
+   *
+   * <code>repeated .MentionUser mentions = 7;</code>
+   */
+  java.util.List<? extends com.shengyu.framework.websocket.core.protocol.MentionUserOrBuilder> 
+      getMentionsOrBuilderList();
+  /**
+   * <pre>
+   * &#64;提及用户映射（精确下标，用于渲染/点击）
+   * </pre>
+   *
+   * <code>repeated .MentionUser mentions = 7;</code>
+   */
+  com.shengyu.framework.websocket.core.protocol.MentionUserOrBuilder getMentionsOrBuilder(
+      int index);
 }

@@ -24,6 +24,7 @@ public enum ImMessageTypeEnum implements ArrayValuable<Integer> {
     LOCATION(6, "位置消息"),
     EMOJI(7, "表情包消息"),
     STICKER(8, "自定义贴纸消息"),
+    CUSTOM(9, "自定义消息"),
     SYSTEM(10, "系统消息");
 
     public static final Integer[] ARRAYS = Arrays.stream(values()).map(ImMessageTypeEnum::getType).toArray(Integer[]::new);

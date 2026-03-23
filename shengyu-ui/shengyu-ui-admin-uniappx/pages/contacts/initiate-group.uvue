@@ -40,7 +40,7 @@
 
 		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px' }">
 			<text class="selected-text">{{ mode === 'add' ? `已选择 ${selectedCount} 人` : t('initiateGroup.selectedCount', { count: selectedCount.toString() }) }}</text>
-			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
+			<button class="confirm-btn" :disabled="selectedCount === 0 || submitting" @click="handleConfirm">
 				<text class="confirm-btn-text">{{ mode === 'add' ? '确定' : t('initiateGroup.confirm', { count: selectedCount.toString(), max: '500' }) }}</text>
 			</button>
 		</view>
@@ -61,8 +61,8 @@
 	} from '../../store/group-selection.uts'
 	import { createGroup, addGroupMembers, getGroupMembers } from '../../api/group.uts'
 	import { getContactList, getContactPageByDept } from '../../api/contact.uts'
-	import { createConversation } from '../../api/conversation.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
+	import { encodeIdParam } from '../../utils/id-param.uts'
 	import ContactSelector from '../../components/contact-selector/contact-selector.uvue'
 
 	const { t } = useI18n()
@@ -75,6 +75,7 @@
 	const pageSize = ref(50)
 	const hasMore = ref(true)
 	const loadingMore = ref(false)
+	const submitting = ref(false)
 	const deptId = ref<string>('')
 	const colors = ['#0ea5e9', '#f472b6', '#c084fc', '#fb7185', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#3b82f6', '#8b5cf6']
 	
@@ -310,6 +311,9 @@
 	}
 
 	async function handleConfirm() {
+		if (submitting.value) {
+			return
+		}
 		const selectedMembers = getSelectedMembers()
 		console.log('已选择的联系人:', selectedMembers)
 		
@@ -325,7 +329,7 @@
 			
 			const addData = {
 				groupId: groupId.value,
-				memberIds: selectedMembers.map(m => m.id)
+				memberIds: normalizeMemberIds(selectedMembers)
 			}
 			
 			console.log('[InitiateGroup] 添加成员请求数据:', addData)
@@ -337,6 +341,7 @@
 			})
 			
 			try {
+				submitting.value = true
 				await addGroupMembers(addData)
 				
 				uni.showToast({
@@ -352,18 +357,23 @@
 				
 			} catch (e) {
 				console.error('[InitiateGroup] 添加成员失败:', e)
-				const errorMsg = (e as any).msg || (e as any).message || '添加失败，请重试'
-				uni.showToast({
-					title: errorMsg,
-					icon: 'none',
-					duration: 2000
-				})
+				if ((e as any).code == null && (e as any).msg == null) {
+					const errorMsg = (e as any).message || '添加失败，请重试'
+					uni.showToast({
+						title: errorMsg,
+						icon: 'none',
+						duration: 2000
+					})
+				}
+			} finally {
+				submitting.value = false
 			}
 			return
 		}
 		
 		// 创建群聊模式
-		if (selectedMembers.length < 2) {
+		const memberIds = normalizeMemberIds(selectedMembers)
+		if (memberIds.length < 2) {
 			uni.showToast({
 				title: '至少选择2人才能创建群聊',
 				icon: 'none'
@@ -372,13 +382,13 @@
 		}
 		
 		// 生成群名称
-		const groupName = generateGroupName(selectedMembers)
+		const groupName = trimGroupName(generateGroupName(selectedMembers))
 		
 		// 构建创建群聊请求数据（匹配后端 VO 字段）
 		const createData = {
 			name: groupName,                    // 群名称（必填）
 			groupType: 1,                       // 群类型：1-普通群 2-工作群（必填）
-			memberIds: selectedMembers.map(m => m.id),  // 群成员ID列表（必填，List<Long>）
+			memberIds: memberIds,  // 群成员ID列表（必填，List<Long>）
 			introduction: ''                    // 群简介（可选）
 		}
 		
@@ -394,29 +404,18 @@
 		})
 		
 		try {
+			submitting.value = true
 			// 调用后端创建群聊 API
 			const result = await createGroup(createData)
 			
 			console.log('[InitiateGroup] 创建群聊成功:', result)
 			
-			// 获取返回的群 ID
-			const groupId = result.id || result.data?.id || result
+			const groupId = result != null && result.groupId != null ? result.groupId : result
+			const chatId = result != null && result.chatId != null ? result.chatId : null
 			
 			if (!groupId) {
 				throw new Error('创建群聊失败：未返回群ID')
 			}
-			
-			// 创建或获取会话
-			const conversationData = {
-				targetId: groupId,
-				conversationType: 2  // 2-群聊
-			}
-			
-			const conversationResult = await createConversation(conversationData)
-			console.log('[InitiateGroup] 创建会话成功:', conversationResult)
-			
-			// 获取会话ID (chatId) - 后端返回 AppImConversationRespVO，字段名为 chatId
-			const chatId = conversationResult.data?.chatId || conversationResult.chatId || conversationResult
 			
 			uni.showToast({
 				title: '创建成功',
@@ -426,8 +425,10 @@
 			
 			// 跳转到群聊页面（包含 chatId）
 			setTimeout(() => {
+				const groupIdParam = encodeIdParam(groupId != null ? String(groupId) : '')
+				const chatIdParam = encodeIdParam(chatId != null ? String(chatId) : '')
 				uni.redirectTo({
-					url: `/pages/message/chat?type=group&groupId=${groupId}&chatId=${chatId}&name=${encodeURIComponent(groupName)}&memberCount=${selectedMembers.length}`
+					url: `/pages/message/chat?type=group&groupId=${groupIdParam}&targetId=${groupIdParam}&chatId=${chatIdParam}&name=${encodeURIComponent(groupName)}&memberCount=${selectedMembers.length}`
 				})
 				
 				// 清空选择状态
@@ -436,13 +437,35 @@
 			
 		} catch (e) {
 			console.error('[InitiateGroup] 创建群聊失败:', e)
-			const errorMsg = (e as any).msg || (e as any).message || '创建失败，请重试'
-			uni.showToast({
-				title: errorMsg,
-				icon: 'none',
-				duration: 2000
-			})
+			if ((e as any).code == null && (e as any).msg == null) {
+				const errorMsg = (e as any).message || '创建失败，请重试'
+				uni.showToast({
+					title: errorMsg,
+					icon: 'none',
+					duration: 2000
+				})
+			}
+		} finally {
+			submitting.value = false
 		}
+	}
+
+	function normalizeMemberIds(members : any[]) : string[] {
+		const ids : string[] = []
+		for (let i = 0; i < members.length; i++) {
+			const memberId = members[i] != null && members[i].id != null ? String(members[i].id) : ''
+			if (memberId !== '' && !ids.includes(memberId)) {
+				ids.push(memberId)
+			}
+		}
+		return ids
+	}
+
+	function trimGroupName(name : string) : string {
+		if (name.length <= 50) {
+			return name
+		}
+		return name.substring(0, 50)
 	}
 	
 	/**

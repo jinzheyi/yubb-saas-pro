@@ -6,6 +6,7 @@ import lombok.Data;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.util.List;
 
 @Schema(description = "移动端 - IM 群组创建 Request VO")
@@ -14,6 +15,7 @@ public class AppImGroupCreateReqVO {
 
     @Schema(description = "群名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "技术交流群")
     @NotBlank(message = "群名称不能为空")
+    @Size(max = 50, message = "群名称长度不能超过50个字符")
     private String name;
 
     @Schema(description = "群头像", example = "https://...")

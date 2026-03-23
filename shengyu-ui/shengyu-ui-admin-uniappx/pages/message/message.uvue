@@ -66,6 +66,7 @@
 							<text class="message-time">{{ formatWeChatTime(item.lastMessageTime) }}</text>
 						</view>
 						<view class="message-bottom">
+							<text v-if="item.lastMessageHasAtMe" class="atme-label">[有人@我]</text>
 							<text class="message-desc">{{ item.lastMessageContent }}</text>
 							<text v-if="item.noDisturb" class="iconfont nodisturb-icon">&#xe63a;</text>
 						</view>
@@ -107,6 +108,7 @@
 							<text class="message-time">{{ formatWeChatTime(item.lastMessageTime) }}</text>
 						</view>
 						<view class="message-bottom">
+							<text v-if="item.lastMessageHasAtMe" class="atme-label">[有人@我]</text>
 							<text class="message-desc">{{ item.lastMessageContent }}</text>
 							<text v-if="item.noDisturb" class="iconfont nodisturb-icon">&#xe63a;</text>
 						</view>
@@ -147,6 +149,7 @@
 	import { deleteConversation, pinConversation, setNoDisturb } from '../../api/conversation.uts'
 	import { getConversationAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { wsManager } from '../../utils/websocket.uts'
+	import { encodeIdParam } from '../../utils/id-param.uts'
 
 	const { t } = useI18n()
 
@@ -464,16 +467,18 @@
 	}
 
 	function handleMessageClick(item : any) {
+		const chatIdParam = encodeIdParam(item.chatId != null ? String(item.chatId) : '')
+		const targetIdParam = encodeIdParam(item.targetId != null ? String(item.targetId) : '')
 		// 判断是否是群聊
 		if (item.conversationType === 2) {
 			// 跳转到群聊页面
 			uni.navigateTo({
-				url: `/pages/message/chat?chatId=${item.chatId}&type=group&groupId=${item.targetId}&targetId=${item.targetId}&name=${encodeURIComponent(item.targetName)}&memberCount=${item.groupMemberCount || 0}`
+				url: `/pages/message/chat?chatId=${chatIdParam}&type=group&groupId=${targetIdParam}&targetId=${targetIdParam}&name=${encodeURIComponent(item.targetName)}&memberCount=${item.groupMemberCount || 0}`
 			})
 		} else {
 			// 跳转到单聊页面
 			uni.navigateTo({
-				url: `/pages/message/chat?chatId=${item.chatId}&type=single&targetId=${item.targetId}&name=${encodeURIComponent(item.targetName)}`
+				url: `/pages/message/chat?chatId=${chatIdParam}&type=single&targetId=${targetIdParam}&name=${encodeURIComponent(item.targetName)}`
 			})
 		}
 	}
@@ -895,9 +900,18 @@
 	.message-desc {
 		flex: 1;
 		font-size: 13px;
-		color: #646A73;
-		lines: 1;
+		color: #666;
+		line-height: 18px;
+		white-space: nowrap;
+		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.atme-label {
+		font-size: 13px;
+		color: #F97316;
+		margin-right: 6px;
+		flex-shrink: 0;
 	}
 
 	.nodisturb-icon {

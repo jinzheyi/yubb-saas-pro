@@ -180,8 +180,12 @@
 	// 触摸开始
 	function handleTouchStart(e: any) {
 		if (!isSliding.value) {
-			e.stopPropagation()
-			e.preventDefault()
+			if (e != null && typeof e.stopPropagation === 'function') {
+				e.stopPropagation()
+			}
+			if (e != null && typeof e.preventDefault === 'function') {
+				e.preventDefault()
+			}
 			
 			startX.value = e.touches[0].pageX
 			currentX.value = e.touches[0].pageX
@@ -195,8 +199,12 @@
 	// 触摸移动
 	function handleTouchMove(e: any) {
 		if (isSliding.value) {
-			e.stopPropagation()
-			e.preventDefault()
+			if (e != null && typeof e.stopPropagation === 'function') {
+				e.stopPropagation()
+			}
+			if (e != null && typeof e.preventDefault === 'function') {
+				e.preventDefault()
+			}
 			
 			currentX.value = e.touches[0].pageX
 			
@@ -213,8 +221,12 @@
 	// 触摸结束
 	async function handleTouchEnd(e: any) {
 		if (isSliding.value) {
-			e.stopPropagation()
-			e.preventDefault()
+			if (e != null && typeof e.stopPropagation === 'function') {
+				e.stopPropagation()
+			}
+			if (e != null && typeof e.preventDefault === 'function') {
+				e.preventDefault()
+			}
 			
 			endTime.value = Date.now()
 			isSliding.value = false
@@ -485,6 +497,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		z-index: 2;
 	}
 	
 	.slider-icon {
@@ -502,5 +515,7 @@
 		text-align: center;
 		color: #999;
 		font-size: 14px;
+		pointer-events: none;
+		z-index: 1;
 	}
 </style>

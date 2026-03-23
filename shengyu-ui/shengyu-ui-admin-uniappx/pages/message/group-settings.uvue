@@ -194,6 +194,7 @@
 	import { getConversationByTarget, pinConversation, setNoDisturb } from '../../api/conversation.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { getUserIdStr } from '../../store/user.uts'
+	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 
 	const { t } = useI18n()
 
@@ -322,14 +323,16 @@
 	}
 
 	function handleMemberClick(member : any) {
+		const userIdParam = encodeIdParam(member.id != null ? String(member.id) : '')
 		uni.navigateTo({
-			url: '/pages/contacts/user-detail?id=' + member.id
+			url: '/pages/contacts/user-detail?userId=' + userIdParam
 		})
 	}
 
 	function handleAddMember() {
+		const groupIdParam = encodeIdParam(groupId.value)
 		uni.navigateTo({
-			url: '/pages/contacts/initiate-group?mode=add&groupId=' + groupId.value
+			url: '/pages/contacts/initiate-group?mode=add&groupId=' + groupIdParam
 		})
 	}
 
@@ -421,8 +424,9 @@
 	}
 
 	function handleChatHistory() {
+		const chatIdParam = encodeIdParam(chatId.value)
 		uni.navigateTo({
-			url: `/pages/message/chat-history?chatId=${chatId.value}&groupName=${groupName.value}`
+			url: `/pages/message/chat-history?chatId=${chatIdParam}&groupName=${groupName.value}`
 		})
 	}
 
@@ -637,7 +641,7 @@
 		
 		// 获取群组ID
 		if (options['groupId']) {
-			groupId.value = options['groupId'] as string
+			groupId.value = decodeIdParam(options['groupId'])
 		}
 		
 		// 获取群名称（临时显示）

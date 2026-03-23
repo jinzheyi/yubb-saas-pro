@@ -4,24 +4,26 @@
 
 ## 当前迭代焦点（AI快速定位）
 
-> **更新日期**: 2026-03-19
+> **更新日期**: 2026-03-20
 > **迭代目标**: Milestone L - 消息扩展能力
 
 ### 正在执行
-- 无（等待启动）
+- L3 群@提及（P1）：端到端打通（先做 L3 后做 L2）
 
 ### 本期排期（P1）
 | 任务 | 状态 | 依赖 | 关键文件 |
 |------|------|------|----------|
-| L1 消息转发 | 待开发 | C7, S1 | `ImMessageServiceImpl.java`, `chat.uvue` |
+| L1 消息转发 | 后端已完成 / 前端已完成（验收暂缓） | C7, S1 | `ImMessageServiceImpl.java`, `chat.uvue`, `forward-target.uvue`, `forward-combine-detail.uvue` |
 | L2 消息重发 | 待开发 | C7 | `message-service.uts` |
-| L3 群@提及 | 待开发 | C7, D1-D3 | `ImMessageServiceImpl.java`, `mention-selector.uvue` |
-| L4 管理员撤回 | 待开发 | F1 | `ImMessageServiceImpl.java` |
+| L3 群@提及 | 进行中（先做 L3 后做 L2） | C7, D1-D3 | `ImMessageServiceImpl.java`, `mention-selector.uvue`, `chat.uvue` |
+| L4 管理员撤回 | 后端已完成 / 前端已完成（验收暂缓） | F1 | `ImMessageServiceImpl.java`, `message-service.uts`, `chat.uvue` |
 
 ### 已完成（近两轮）
 - [x] 架构审查：后端消息发送/撤回/删除核心链路验证
 - [x] 架构审查：前端WebSocket/消息服务/会话服务验证
 - [x] 文档更新：补充功能关联性与业界最佳实践对比章节
+- [x] L4 撤回最终态一致性：端侧 merge（rev/撤回终态保护）+ 会话预览一致（验收暂缓）
+- [x] 群管理员入口（端侧）：群主长按成员设/取消管理员（验收暂缓）
 
 ### 关键约束（必读）
 1. **Long精度**: 所有ID字段前端必须用`string`，后端VO用`@JsonSerialize(using = ToStringSerializer.class)`
@@ -1850,7 +1852,27 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 - **验收**：支持逐条转发和合并转发；转发消息生成新 messageId；接收方可查看原消息来源。
 
-- 状态：待开发（本期排期）
+- 状态：后端已完成 / 前端已完成（验收暂缓，本期排期）
+
+- **已落地（后端，commit: f8073318）**：
+  - 新增转发接口：`POST /system/im/message/forward`（支持逐条/合并）与 `POST /system/im/message/forward-single`
+  - 新增消息详情接口：`GET /system/im/message/detail?id={messageId}`（用于合并转发详情页按 messageId 拉取）
+  - 表字段：`im_chat_message.forwarded_from`（JSON）、`client_message_id`（幂等键预留）、`mentions`（@提及预留）
+  - 逐条转发：复制原消息 `messageType/content/extra`，生成新 `messageId/sequence`，并更新会话预览/未读与 WS 推送
+  - 合并转发：生成 `CUSTOM` 类型消息，`content` 存 `FORWARD_COMBINE` 消息体
+
+- **企业级补强（后端，已合入：合并转发“引用化”）**：
+  - 目的：避免“聊天记录嵌套聊天记录”导致消息体膨胀与无限套娃渲染风险
+  - 规则：当合并转发消息体内包含另一条 `FORWARD_COMBINE`（聊天记录）时：
+    - 不再嵌套其 messages
+    - 仅写入轻量条目：`content = "[聊天记录]"` + `refMessageId`（string）
+    - 前端详情页按 `refMessageId` 进入下一层查看（不自动展开）
+  - 约束：开发阶段不考虑旧数据兼容；新数据一律遵循引用化规则
+
+- **企业级补强（后端，已合入）**：
+  - 权限/可见性：仅允许转发“自己可见的会话消息”（必须存在 `im_chat_user` 记录），防止通过 messageId 越权转发
+  - 稳定顺序：按入参 `messageIds` 保序（避免 `selectBatchIds` 返回顺序不稳定导致转发顺序错乱）
+  - Long 精度：`forwarded_from` 与合并转发消息体内涉及 ID 的字段统一按 `string` 写入（避免前端 JSON 解析精度丢失）
 
 - **目标**：实现企业级消息转发能力，对齐企微/钉钉的转发体验。
 - **范围**：
@@ -1864,10 +1886,47 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
     - 合并转发预览与发送
 - **依赖**：C7（消息最终态字段）、S1（消息体 schema 冻结）
 - **验收标准**：
+  - 限制：单次最多转发 50 条消息；仅允许选择 1 个目标会话
   - 逐条转发：生成新消息，body.forwardedFrom 包含原消息来源信息
   - 合并转发：生成 FORWARD_COMBINE 类型消息，body.messages 包含被合并消息列表
+  - 合并转发渲染（端侧）：
+    - 会话内显示“聊天记录卡片”：标题+可选 comment+最多 3 行预览+“点击查看详情”
+    - 点击卡片进入详情页（只读）
+  - 合并转发详情（端侧）：
+    - 详情页必须按 `messageId` 调用 `GET /system/im/message/detail` 拉取内容（禁止依赖 localStorage 传大 JSON）
+    - 时间格式：今天/昨天/MM-DD HH:mm/跨年 YYYY-MM-DD HH:mm
+  - 已合并转发再转发（嵌套）：
+    - 合并包内遇到聊天记录必须显示为 `[聊天记录]`
+    - 允许点击进入下一层详情（使用 `refMessageId`）
   - 权限：已被删除/撤回的消息不可转发
   - 隐私：转发后接收方可看到原发送者信息，但不暴露原会话成员列表
+
+- **回归验证要点（建议用例）**：
+  - 用例 1：选择 3 条文本消息合并转发到另一个会话：目标会话收到 1 条聊天记录卡片，点击详情可看到 3 条条目
+  - 用例 2：将“聊天记录卡片”再次合并转发：新聊天记录详情中对应条目显示为 `[聊天记录]`，点击后可进入被引用的原聊天记录详情
+  - 用例 3：超过 50 条消息尝试转发：端侧必须阻止并提示
+  - 用例 4：尝试选择多个目标会话：端侧必须阻止并提示
+
+- **端到端回归检查点清单（L1 必过）**：
+  - 后端接口：
+    - `POST /system/im/message/forward`：逐条/合并两种模式均可成功；入参 `messageIds` 保序
+    - `GET /system/im/message/detail?id=`：能取到合并转发消息的 `content`（type=FORWARD_COMBINE）
+  - DB 落库：
+    - 合并转发：`im_chat_message.message_type = CUSTOM(9)`；`content` 为 JSON 且包含 `type/messages/count/comment?`
+    - 嵌套引用化：当 messages 中包含聊天记录时，条目包含 `refMessageId`，且 `content = "[聊天记录]"`
+  - WS 推送/一致性：
+    - 转发后发送者与接收者均能收到消息（同会话多端一致）
+    - 会话摘要/未读水位：目标会话 `lastMessageSequence/lastMessageTime/unreadCount` 更新正确；已读推进后不回退
+  - 前端交互：
+    - 长按/多选转发入口可用；最多选择 50 条；仅允许选择 1 个目标会话
+    - 流程：选择会话 -> 发送 -> 进入目标会话（跳转后消息可见）
+  - 前端渲染：
+    - 合并转发在会话内渲染为“聊天记录卡片”（标题/可选 comment/最多 3 行预览/点击详情）
+    - 详情页按 `messageId` 调 `GET /system/im/message/detail` 拉取（不依赖 storage 传大 JSON）
+    - 详情页时间格式：今天/昨天/MM-DD HH:mm/跨年 YYYY-MM-DD HH:mm
+    - 嵌套：详情页遇到 `refMessageId` 可点击进入下一层（不自动展开）
+  - Long 精度：
+    - `chatId/messageId/groupId/userId/targetId/sequence` 在路由/请求/响应/缓存链路均为 string；禁止 Number/parseInt
 - **涉及文件/目录**：
   - `shengyu-module-system/.../AppImMessageController.java`（forward API）
   - `shengyu-module-system/.../im/ImMessageServiceImpl.java`（转发逻辑）
@@ -1878,7 +1937,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 - **验收**：发送失败消息显示重发按钮；重发复用原 messageId；重发成功后更新状态。
 
-- 状态：待开发（本期排期）
+- 状态：待开发（本期排期，先做 L3 后做 L2）
 
 - **目标**：实现消息重发能力，保证弱网下的用户体验。
 - **范围**：
@@ -1903,7 +1962,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 - **验收**：输入@弹出成员列表；被提及用户收到推送（即使群免打扰）；消息中高亮显示@昵称。
 
-- 状态：待开发（本期排期）
+- 状态：已实现（待统一验收）
 
 - **目标**：实现群聊@提及能力，保证通知可达与体验一致。
 - **范围**：
@@ -1914,7 +1973,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - module-system：
     - 解析 mentions 字段
     - 对被提及用户触发强提醒推送
-  - WS：广播消息时携带 mentions 信息
+  - WS：广播消息时携带 mentions 信息；并在存储落库时写入 `im_chat_message.mentions`，保证 REST `page/pull/detail` 可直接返回结构化 mentions 供端侧 @ 点击按 userId 精确跳转
 - **依赖**：C7（消息发送链路）、D1-D3（推送链路）
 - **验收标准**：
   - 输入@：弹出群成员列表，支持搜索
@@ -1922,17 +1981,38 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - @所有人：仅群主/管理员可用，所有成员收到推送
   - 渲染：消息中高亮显示@昵称，点击可跳转用户资料页
   - 会话列表：被提及消息显示 [有人@我] 标记
+    - 口径：仅当最后一条消息 mentions/atUserIds 命中当前用户（或 @all）时为 true；发送者侧永远为 false
+    - 数据来源：后端持久化到 `im_conversation_user_state.last_message_has_at_me` 并在 `/conversation/list` 与 `/conversation/sync` 返回
+    - 覆盖链路：REST 发消息 + WS 入站落库（SystemMessageStorageServiceImpl.updateChatUserAsync）均会更新该字段
+  - 敏感词过滤：WS 收到 TEXT 进行敏感词过滤后，必须保留 `atUserIds/mentions` 原始结构（避免 @ 映射丢失导致无法点击跳转）
 - **涉及文件/目录**：
-  - `shengyu-ui/shengyu-ui-admin-uniappx/components/mention-selector.uvue`（@选择器）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/mention-selector.uvue`（@选择器）
   - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`（@输入处理）
   - `shengyu-module-system/.../im/ImMessageServiceImpl.java`（mentions 解析与推送）
+  - `shengyu-module-system/.../im/spi/SystemMessageStorageServiceImpl.java`（WS 入站会话态更新：lastMessageHasAtMe）
+  - `shengyu-module-system/.../im/ImConversationServiceImpl.java`（会话 list/sync 返回：lastMessageHasAtMe）
   - `sql/mysql/1.0/im/ddl_im_tables.sql`（mentions 字段或表）
 
 ### L4（P1）：群管理员撤回权限扩展
 
 - **验收**：群主/管理员可撤回群内任意消息；撤回时限可配置；撤回通知显示操作者信息。
 
-- 状态：待开发（本期排期，基于 F1 扩展）
+- 状态：后端已完成 / 前端已完成（验收暂缓，本期排期，基于 F1 扩展）
+
+- **已落地（后端，commit: f8073318）**：
+  - 权限模型：
+    - 普通成员：仅可撤回自己消息（默认 2 分钟）
+    - 群管理员：可撤回他人消息（默认 24 小时）
+    - 群主：可撤回任意消息（不限时）
+  - 撤回后的最终态一致：落库 status/recallTime/recallBy/rev++，并通过 cursorVersion 推动会话预览跨端可见
+  - WS 广播：向会话参与方（对端/群成员）以及操作者本人多端广播 `RECALL`
+
+- **关键安全约束（强制）**：
+  - 撤回后不得通过任何通知（WS/SystemNotify/离线补偿）同步撤回前的原文到同账号其他设备或其他用户端。
+  - 如需支持“撤回后重新编辑”，仅允许在端侧本地缓存/输入框恢复实现，不得下发 `originalContent`。
+
+- **企业级补强（后端，已合入）**：
+  - 群主不限时撤回：跳过时限判断，避免极大秒数导致 `LocalDateTime.minusSeconds` 溢出风险
 
 - **目标**：扩展撤回权限模型，支持群管理员撤回群成员消息。
 - **范围**：

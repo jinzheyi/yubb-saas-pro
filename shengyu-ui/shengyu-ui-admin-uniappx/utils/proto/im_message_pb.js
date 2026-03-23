@@ -2,9 +2,15 @@
 "use strict";
 
 var $protobuf = require("protobufjs/minimal");
+var Long = require("long");
 
 // Common aliases
 var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
+
+if ($protobuf.util.Long !== Long) {
+    $protobuf.util.Long = Long;
+    $protobuf.configure();
+}
 
 // Exported root namespace
 var $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});

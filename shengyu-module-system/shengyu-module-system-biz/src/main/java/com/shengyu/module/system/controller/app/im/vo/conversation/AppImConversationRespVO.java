@@ -47,6 +47,9 @@ public class AppImConversationRespVO {
     @Schema(description = "最后一条消息内容", example = "你好")
     private String lastMessageContent;
 
+    @Schema(description = "最后一条消息是否@了我（用于会话列表[有人@我]标记）", example = "false")
+    private Boolean lastMessageHasAtMe;
+
     @Schema(description = "最后一条消息时间", example = "2026-02-11 10:30:00")
     private LocalDateTime lastMessageTime;
 

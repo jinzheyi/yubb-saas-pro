@@ -49,6 +49,7 @@
 	import { onLoad } from '@dcloudio/uni-app'
 	import { messageSearchService, type SearchResultItem } from '../../services/message-search-service.uts'
 	import { navToFilePreview } from '../../utils/nav.uts'
+	import { encodeIdParam } from '../../utils/id-param.uts'
 
 	const keyword = ref('')
 	const searched = ref(false)
@@ -159,7 +160,7 @@
 			return
 		}
 		uni.navigateTo({
-			url: `/pages/message/chat?chatId=${encodeURIComponent(chatId)}&messageId=${encodeURIComponent(mid)}&highlight=true`
+			url: `/pages/message/chat?chatId=${encodeIdParam(chatId)}&messageId=${encodeURIComponent(mid)}&highlight=true`
 		})
 	}
 

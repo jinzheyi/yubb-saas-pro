@@ -39,10 +39,10 @@
 						<text class="time-text">{{ formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0) }}</text>
 					</view>
 					
-					<view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other', multiSelectMode && selectedIds.includes(msg.id) ? 'message-selected' : '', highlightedMessageId === msg.id ? 'message-highlighted' : '']">
+					<view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other', multiSelectMode && selectedIds.includes(getSelectMessageId(msg)) ? 'message-selected' : '', highlightedMessageId === msg.id ? 'message-highlighted' : '']">
 						<!-- 多选模式下的复选框（统一在最左侧） -->
 						<view v-if="multiSelectMode && msg.type !== 'voice' && msg.type !== 'location'" class="multi-select-checkbox" @click.stop="toggleSelect(msg)">
-							<text v-if="selectedIds.includes(msg.id)" class="iconfont checkbox-icon checkbox-checked">&#xe65f;</text>
+							<text v-if="selectedIds.includes(getSelectMessageId(msg))" class="iconfont checkbox-icon checkbox-checked">&#xe65f;</text>
 							<view v-else class="checkbox-icon checkbox-unchecked"></view>
 						</view>
 						
@@ -71,8 +71,9 @@
 										</view>
 									</view>
 									<view class="text-content-wrap">
-										<template v-for="(token, tIdx) in parseMessageText(msg.content)" :key="tIdx">
+										<template v-for="(token, tIdx) in parseMessageTokens(msg)" :key="tIdx">
 											<text v-if="token.type === 'text'" class="message-text">{{ token.content }}</text>
+											<text v-else-if="token.type === 'mention'" class="mention-text" @click.stop="multiSelectMode ? null : handleMentionTokenClick(token)">{{ token.content }}</text>
 											<image v-else class="inline-emoji" :src="token.content" mode="aspectFit" />
 										</template>
 									</view>
@@ -125,6 +126,22 @@
 								<!-- 自定义收藏表情 (无气泡) -->
                                 <view v-else-if="msg.type === 'sticker'" class="sticker-msg-wrap" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
 									<image class="sticker-img" :src="msg.content" mode="widthFix" />
+								</view>
+
+								<!-- 合并转发（企业级：聊天记录卡片） -->
+								<view v-else-if="msg.type === 'custom' && isForwardCombineMsg(msg)" class="message-bubble bubble-forward-combine" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleOpenForwardCombine(msg)">
+									<view class="forward-combine-header">
+										<text class="forward-combine-title">聊天记录</text>
+										<text v-if="getForwardCombineComment(msg) !== ''" class="forward-combine-comment" :numberOfLines="1">{{ getForwardCombineComment(msg) }}</text>
+									</view>
+									<view class="forward-combine-preview">
+										<view v-for="(line, lIdx) in getForwardCombinePreviewLines(msg)" :key="getSelectMessageId(msg) + '-' + lIdx" class="forward-combine-line">
+											<text class="forward-combine-line-text" :numberOfLines="1">{{ line }}</text>
+										</view>
+									</view>
+									<view class="forward-combine-footer">
+										<text class="forward-combine-footer-text">点击查看详情</text>
+									</view>
 								</view>
 								
 								<view v-if="shouldShowReadReceiptEntry(msg)" class="read-receipt-entry" :class="{'read-receipt-entry-self': msg.isSelf}" @click.stop="handleReadReceiptEntryClick(msg)">
@@ -297,7 +314,7 @@
 				<view class="forward-dialog-content">
 					<view class="forward-target">
 						<text class="iconfont target-icon">&#xe624;</text>
-						<text class="target-name">选择联系人/群组</text>
+						<text class="target-name" @click.stop="openForwardTargetSelector">选择联系人/群组</text>
 					</view>
 					<view class="forward-preview">
 						<text class="preview-text">[逐条转发] {{ selectedIds.length }} 条消息</text>
@@ -359,14 +376,15 @@
 	import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { emojiList } from '../../utils/emojiData.uts'
-	import { parseMessageText } from '../../utils/emojiParser.uts'
+	import { parseMessageText as parseEmojiTokens, type MessageToken as EmojiToken } from '../../utils/emojiParser.uts'
 	import { getCustomStickers, StickerItem } from '../../utils/stickerManager.uts'
 	import { messageService, MessageItem as ServiceMessageItem, ConversationItem } from '../../services/message-service.uts'
 	import { badgeService } from '../../services/badge-service.uts'
 	import { MessageType, wsManager } from '../../utils/websocket.uts'
-	import { getMessageList, recallMessage, deleteMessage } from '../../api/message.uts'
+	import { getMessageList, recallMessage, deleteMessage, getRecallConfig } from '../../api/message.uts'
 	import { getConversationByTarget } from '../../api/conversation.uts'
 	import { getUserIdStr, getTenantId, hasRole } from '../../store/user.uts'
+	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 	import { 
 		chooseAndUploadFile,
 		uploadFileAndReturnId,
@@ -380,6 +398,8 @@
 	} from '../../utils/upload.uts'
 	import { getUserAvatarColor, getAvatarText as getAvatarTextUtil } from '../../utils/avatar.uts'
 	import { parseMessageContent } from '../../utils/message-utils.uts'
+	import { extractAtUserIds, parseAtMentions, highlightAtMentions } from '../../utils/at-mention.uts'
+
 	import { uploadGroupFile, getFilePresignedGetUrl } from '../../api/file.uts'
 	import { navToFilePreview } from '../../utils/nav.uts'
 	import { readReceiptService } from '../../services/read-receipt-service.uts'
@@ -409,6 +429,132 @@
 	// 当前用户信息（使用字符串避免精度丢失）
 	const currentUserId = ref<string>('0')
 	const currentTenantId = ref<string>('0')
+
+	const mentionNameToUserId: Map<string, string> = new Map()
+	const recallWindowMs = ref(2 * 60 * 1000)
+	let mentionPicking: boolean = false
+	let lastMentionTriggerAt: number = 0
+
+	type MessageRenderToken = {
+		type: 'text' | 'emoji' | 'mention'
+		content: string
+		userId?: string
+		startIndex?: number
+		endIndex?: number
+	}
+
+	function normalizeTextContent(raw: any): string {
+		try {
+			if (raw == null) return ''
+			if (typeof raw === 'string') return raw
+			if (typeof raw === 'object') {
+				if ((raw as any).content != null) return (raw as any).content.toString()
+				return raw.toString()
+			}
+			return String(raw)
+		} catch (e) {
+			return ''
+		}
+	}
+
+	function parseMessageTokens(msg: any): MessageRenderToken[] {
+		const out: MessageRenderToken[] = []
+		const text = normalizeTextContent(msg != null ? msg.content : null)
+		if (!text) return out
+		let segments: any[] = []
+		try {
+			segments = highlightAtMentions(text) as any[]
+		} catch (e) {
+			segments = []
+		}
+		if (segments == null || segments.length === 0) {
+			segments = [{ type: 'text', content: text }]
+		}
+
+		// structured mentions from WS/REST: [{userId,nickname,startIndex,endIndex}]
+		let structuredMentions: any[] = []
+		try {
+			const c: any = msg != null ? (msg as any).content : null
+			const fromContent = c != null ? (c as any).mentions : null
+			const fromRoot = msg != null ? (msg as any).mentions : null
+			structuredMentions = (fromContent != null ? fromContent : fromRoot) as any[]
+			if (structuredMentions == null) {
+				structuredMentions = []
+			}
+		} catch (e) {
+			structuredMentions = []
+		}
+
+		const resolveMentionUserId = (startIdx: number, endIdx: number): string => {
+			if (structuredMentions == null || structuredMentions.length === 0) {
+				return ''
+			}
+			for (let i = 0; i < structuredMentions.length; i++) {
+				const m: any = structuredMentions[i]
+				if (m == null) continue
+				const s = m.startIndex != null ? Number(m.startIndex) : -1
+				const e = m.endIndex != null ? Number(m.endIndex) : -1
+				if (s === startIdx && e === endIdx) {
+					const uid = m.userId != null ? m.userId.toString() : ''
+					return uid
+				}
+			}
+			return ''
+		}
+
+		for (let i = 0; i < segments.length; i++) {
+			const seg: any = segments[i]
+			const segType = seg != null && seg.type != null ? seg.type.toString() : 'text'
+			const segContent = seg != null && seg.content != null ? seg.content.toString() : ''
+			if (!segContent) {
+				continue
+			}
+			if (segType === 'mention') {
+				const startIdx = seg != null && seg.startIndex != null ? Number(seg.startIndex) : -1
+				const endIdx = seg != null && seg.endIndex != null ? Number(seg.endIndex) : -1
+				const uid = (startIdx >= 0 && endIdx >= 0) ? resolveMentionUserId(startIdx, endIdx) : ''
+				out.push({ type: 'mention', content: segContent, userId: uid, startIndex: startIdx, endIndex: endIdx })
+				continue
+			}
+			let emojiTokens: EmojiToken[] = []
+			try {
+				emojiTokens = parseEmojiTokens(segContent)
+			} catch (e) {
+				emojiTokens = []
+			}
+			if (emojiTokens.length === 0) {
+				out.push({ type: 'text', content: segContent })
+				continue
+			}
+			for (let j = 0; j < emojiTokens.length; j++) {
+				const t = emojiTokens[j]
+				if (t == null) continue
+				const tType = (t as any).type != null ? (t as any).type.toString() : 'text'
+				const tContent = (t as any).content != null ? (t as any).content.toString() : ''
+				if (!tContent) continue
+				out.push({ type: (tType === 'emoji' ? 'emoji' : 'text') as any, content: tContent })
+			}
+		}
+		return out
+	}
+
+	function handleMentionTokenClick(token: any): void {
+		try {
+			if (token == null) {
+				return
+			}
+			const uid = token.userId != null ? token.userId.toString() : ''
+			if (uid === '' || uid === '0') {
+				return
+			}
+			uni.navigateTo({
+				url: `/pages/contacts/user-detail?userId=${encodeURIComponent(uid)}`
+			})
+		} catch (e) {
+			// ignore
+		}
+	}
+
 
 	const PRESIGNED_DEFAULT_SECONDS = 600
 	const PRESIGNED_REFRESH_GUARD_MS = 30 * 1000
@@ -672,7 +818,9 @@
 	const READ_RECEIPT_SUMMARY_CACHE_MAX = 200
     const multiSelectMode = ref(false)
     const selectedIds = ref<string[]>([])
-   	const isDragSelecting = ref(false)
+	const MAX_FORWARD_MESSAGE_COUNT = 50
+	const forwardCombineCache = new Map<string, any>()
+	const isDragSelecting = ref(false)
 	const dragStartIndex = ref(-1)
 	const menuOpacity = ref(0)
     // 引用回复状态
@@ -1692,6 +1840,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			4: 'video',
 			5: 'file',
 			6: 'location',
+			9: 'custom',
 			// WebSocket/Protobuf 格式
 			100: 'text',
 			101: 'image',
@@ -2057,7 +2206,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			merged.status = pickNonEmpty(prev.status, next.status)
 			merged.senderId = pickNonEmpty(prev.senderId, next.senderId)
 			merged.receiverId = pickNonEmpty(prev.receiverId, next.receiverId)
-			merged.isSelf = (next.isSelf !== null && next.isSelf !== undefined) ? next.isSelf : prev.isSelf
+			merged.isSelf = (next.isSelf !== null) ? next.isSelf : prev.isSelf
 			merged.reeditContent = pickNonEmpty(prev.reeditContent, next.reeditContent)
 			merged.reeditDeadlineTs = pickNonEmpty(prev.reeditDeadlineTs, next.reeditDeadlineTs)
 			return merged
@@ -2309,6 +2458,20 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		// e.detail.html 包含富文本
 		const text = e.detail.text
 		const html = e.detail.html
+		try {
+			if (chatType.value === 'group') {
+				const s = text != null ? String(text) : ''
+				const now = Date.now()
+				if (!mentionPicking && s.length > 0 && s.charAt(s.length - 1) === '@') {
+					if (now - lastMentionTriggerAt > 500) {
+						lastMentionTriggerAt = now
+						openMentionSelector()
+					}
+				}
+			}
+		} catch (e) {
+			// ignore
+		}
 		
 		// 启发式判断行数：
 		// 1. 是否有物理换行符
@@ -2325,6 +2488,54 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else {
 			inputText.value = ''
 			isMultiLine.value = false // 清空时恢复单行
+		}
+	}
+
+	function openMentionSelector(): void {
+		try {
+			if (mentionPicking) {
+				return
+			}
+			if (chatType.value !== 'group') {
+				return
+			}
+			const gid = groupId.value != null ? String(groupId.value) : ''
+			if (gid === '' || gid === '0') {
+				return
+			}
+			mentionPicking = true
+			uni.navigateTo({
+				url: `/pages/message/mention-selector?groupId=${encodeURIComponent(gid)}`,
+				events: {
+					select: (payload: any) => {
+						try {
+							const uid = payload != null && payload.userId != null ? String(payload.userId) : ''
+							const uname = payload != null && payload.userName != null ? String(payload.userName) : ''
+							if (!uname || editorCtx == null) {
+								return
+							}
+							if (uid === '-1') {
+								mentionNameToUserId.clear()
+								mentionNameToUserId.set('所有人', '-1')
+							} else if (uid !== '' && uid !== '0') {
+								mentionNameToUserId.set(uname, uid)
+							}
+							try {
+								editorCtx!.insertText({ text: `@${uname} ` })
+							} catch (e) {
+								// ignore
+							}
+						} catch (e) {
+							// ignore
+						}
+					}
+				},
+				complete: () => {
+					mentionPicking = false
+				}
+			})
+		} catch (e) {
+			mentionPicking = false
 		}
 	}
 
@@ -2575,7 +2786,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (chatType.value === 'group') {
 			// 群聊跳转到群聊设置页
 			uni.navigateTo({
-				url: `/pages/message/group-settings?groupId=${groupId.value}&name=${encodeURIComponent(name.value)}`
+				url: `/pages/message/group-settings?groupId=${encodeIdParam(groupId.value)}&name=${encodeURIComponent(name.value)}`
 			})
 		} else {
 			// 单聊跳转到聊天设置页
@@ -2602,6 +2813,31 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				
 				if (!finalContent.trim()) return
 				
+				let atUserIds: string[] = []
+				let mentions: any[] = []
+				try {
+					atUserIds = extractAtUserIds(finalContent, mentionNameToUserId)
+					const parsedMentions = parseAtMentions(finalContent)
+					mentions = parsedMentions.map(m => {
+						const mentionUserName = m != null && m.userName != null ? String(m.userName) : ''
+						let mentionUserId = mentionUserName === '所有人' || mentionUserName === 'all'
+							? '-1'
+							: (mentionNameToUserId.get(mentionUserName) || '')
+						if (mentionUserId === '') {
+							mentionUserId = '0'
+						}
+						return {
+							userId: mentionUserId,
+							nickname: mentionUserName,
+							startIndex: m.startIndex,
+							endIndex: m.endIndex
+						}
+					}).filter(m => m.userId !== '0')
+				} catch (e) {
+					atUserIds = []
+					mentions = []
+				}
+
 				// 检查是否有引用回复
 				const quoteMsg = quoteReplyMsg.value
 				
@@ -2616,7 +2852,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						quoteMsg.messageId,
 						quoteContent,
 						quoteMsg.senderName,
-						[]
+						atUserIds,
+						mentions
 					)
 					// 清除引用回复状态
 					quoteReplyMsg.value = null
@@ -2626,7 +2863,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						getReceiverIdForMessage(),  // 单聊时传 receiverId
 						getGroupIdForMessage(),     // 群聊时传 groupId
 						finalContent,
-						[]  // @用户列表（暂不实现）
+						atUserIds,
+						mentions
 					)
 				}
 				
@@ -2635,6 +2873,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					success: () => {
 						inputText.value = ''
 						isFullExpanded.value = false
+						try {
+							mentionNameToUserId.clear()
+						} catch (e) {
+							// ignore
+						}
 						
 						setTimeout(() => {
 							scrollToBottom()
@@ -3234,7 +3477,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             const isRecalled = statusVal === 6 || statusVal === '6' || statusVal === 'recalled'
             const nowTs = Date.now()
             const msgTs = (msg as any).timestamp != null ? Number((msg as any).timestamp) : 0
-            const withinWindow = msgTs > 0 ? (nowTs - msgTs <= 2 * 60 * 1000) : false
+            const withinWindow = msgTs > 0 ? (nowTs - msgTs <= recallWindowMs.value) : false
             const canRecall = !!msg.isSelf && !isRecalled && withinWindow && !!msg.messageId && msg.messageId !== '0'
             if (canRecall) {
                 const deleteIndex = menuItems.findIndex(item => item.key === 'delete')
@@ -3338,7 +3581,18 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                     uni.showToast({ title: t('chat.menu.copy'), icon: 'none' })
                 }
             } else if (action === 'forward') {
-                uni.showToast({ title: t('chat.menu.forward'), icon: 'none' })
+                try {
+                    const mid = msg && msg.messageId != null ? String(msg.messageId) : ''
+                    if (mid === '' || mid === '0') {
+                        uni.showToast({ title: '参数错误', icon: 'none' })
+                        return
+                    }
+                    uni.navigateTo({
+                        url: `/pages/message/forward-target?messageIds=${encodeURIComponent(mid)}&forwardType=1`
+                    })
+                } catch (e) {
+                    uni.showToast({ title: t('chat.menu.forward'), icon: 'none' })
+                }
             } else if (action === 'recall') {
                 // 撤回消息
                 uni.showModal({
@@ -3419,11 +3673,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                 if (isVoiceMode.value) {
                     isVoiceMode.value = false
                 }
-			} else if (action === 'read_receipt') {
-				if (chatType.value !== 'group' || !msg.isSelf || !msg.messageId || msg.messageId === '0') {
-					return
-				}
-				await openReadReceiptSheet(msg.messageId)
+            } else if (action === 'read_receipt') {
+                if (chatType.value !== 'group' || !msg.isSelf || !msg.messageId || msg.messageId === '0') {
+                    return
+                }
+                await openReadReceiptSheet(msg.messageId)
             }
         } catch (e) {
             console.error('[Chat] 菜单操作失败:', e)
@@ -3734,13 +3988,147 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 
     function toggleSelect(msg : MessageItem) {
-        const idx = selectedIds.value.indexOf(msg.id)
+		const id = getSelectMessageId(msg)
+		if (id === '') {
+			uni.showToast({ title: '参数错误', icon: 'none' })
+			return
+		}
+		const idx = selectedIds.value.indexOf(id)
         if (idx > -1) {
             selectedIds.value.splice(idx, 1)
         } else {
-            selectedIds.value.push(msg.id)
+			if (selectedIds.value.length >= MAX_FORWARD_MESSAGE_COUNT) {
+				uni.showToast({ title: `最多选择 ${MAX_FORWARD_MESSAGE_COUNT} 条消息`, icon: 'none' })
+				return
+			}
+			selectedIds.value.push(id)
         }
     }
+
+	function getSelectMessageId(msg: MessageItem): string {
+		try {
+			const mid = (msg as any) && (msg as any).messageId != null ? String((msg as any).messageId) : ''
+			if (mid !== '' && mid !== '0') {
+				return mid
+			}
+			const id = msg && (msg as any).id != null ? String((msg as any).id) : ''
+			return id !== '0' ? id : ''
+		} catch (e) {
+			return ''
+		}
+	}
+
+	function safeParseJson(raw: any): any | null {
+		try {
+			if (raw == null) {
+				return null
+			}
+			if (typeof raw === 'string') {
+				const s = raw.trim()
+				if (s === '') {
+					return null
+				}
+				return JSON.parse(s)
+			}
+			if (typeof raw === 'object') {
+				return raw
+			}
+			return null
+		} catch (e) {
+			return null
+		}
+	}
+
+	function getForwardCombineBody(msg: MessageItem): any | null {
+		try {
+			const mid = msg && (msg as any).messageId != null ? String((msg as any).messageId) : ''
+			const key = mid !== '' ? mid : (msg && (msg as any).id != null ? String((msg as any).id) : '')
+			if (key !== '' && forwardCombineCache.has(key)) {
+				return forwardCombineCache.get(key) as any
+			}
+			const body = safeParseJson((msg as any).content)
+			if (key !== '') {
+				forwardCombineCache.set(key, body)
+			}
+			return body
+		} catch (e) {
+			return null
+		}
+	}
+
+	function isForwardCombineMsg(msg: MessageItem): boolean {
+		const body = getForwardCombineBody(msg)
+		return body != null && body.type != null && String(body.type) === 'FORWARD_COMBINE'
+	}
+
+	function getForwardCombineComment(msg: MessageItem): string {
+		const body = getForwardCombineBody(msg)
+		const c = body != null && body.comment != null ? String(body.comment) : ''
+		return c
+	}
+
+	function buildForwardCombineLine(item: any): string {
+		try {
+			const senderName = item != null && item.senderName != null ? String(item.senderName) : ''
+			const mt = item != null && item.messageType != null ? Number(item.messageType) : 0
+			const typeStr = getMessageTypeString(mt)
+			let preview = ''
+			if (typeStr === 'text' || typeStr === 'quote') {
+				preview = item != null && item.content != null ? String(item.content) : ''
+			} else if (typeStr === 'custom') {
+				const body = safeParseJson(item != null ? item.content : null)
+				if (body != null && body.type != null && String(body.type) === 'FORWARD_COMBINE') {
+					preview = '[聊天记录]'
+				} else {
+					preview = '[消息]'
+				}
+			} else if (typeStr === 'image') {
+				preview = '[图片]'
+			} else if (typeStr === 'video') {
+				preview = '[视频]'
+			} else if (typeStr === 'voice') {
+				preview = '[语音]'
+			} else if (typeStr === 'file') {
+				preview = '[文件]'
+			} else if (typeStr === 'location') {
+				preview = '[位置]'
+			} else {
+				preview = '[消息]'
+			}
+			if (senderName !== '') {
+				return `${senderName}：${preview}`
+			}
+			return preview
+		} catch (e) {
+			return '[消息]'
+		}
+	}
+
+	function getForwardCombinePreviewLines(msg: MessageItem): string[] {
+		const body = getForwardCombineBody(msg)
+		const arr: any[] = body != null && body.messages != null ? (body.messages as any[]) : []
+		const lines: string[] = []
+		const max = arr.length > 3 ? 3 : arr.length
+		for (let i = 0; i < max; i++) {
+			lines.push(buildForwardCombineLine(arr[i]))
+		}
+		return lines
+	}
+
+	function handleOpenForwardCombine(msg: MessageItem): void {
+		try {
+			const mid = getSelectMessageId(msg)
+			if (mid === '') {
+				uni.showToast({ title: '无法打开', icon: 'none' })
+				return
+			}
+			uni.navigateTo({
+				url: `/pages/message/forward-combine-detail?messageId=${encodeURIComponent(mid)}`
+			})
+		} catch (e) {
+			uni.showToast({ title: '无法打开', icon: 'none' })
+		}
+	}
 
     /**
      * 清除引用回复状态
@@ -3798,11 +4186,30 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
     }
 
     function confirmForward() {
-        uni.showToast({ title: `已转发 ${selectedIds.value.length} 条消息`, icon: 'success' })
-        showForwardConfirm.value = false
-        exitMultiSelectMode()
-        
-        // TODO: 集成实际的 target 选择和 message-forward.uts 调用
+        openForwardTargetSelector()
+    }
+
+    function openForwardTargetSelector() {
+        try {
+            const ids = selectedIds.value != null ? selectedIds.value : []
+            const filtered = ids.filter(id => id != null && id !== '' && id !== '0')
+            if (filtered.length === 0) {
+                uni.showToast({ title: '请选择要转发的消息', icon: 'none' })
+                return
+            }
+			if (filtered.length > MAX_FORWARD_MESSAGE_COUNT) {
+				uni.showToast({ title: `最多选择 ${MAX_FORWARD_MESSAGE_COUNT} 条消息`, icon: 'none' })
+				return
+			}
+            const qs = filtered.map(id => String(id)).join(',')
+            showForwardConfirm.value = false
+            exitMultiSelectMode()
+            uni.navigateTo({
+                url: `/pages/message/forward-target?messageIds=${encodeURIComponent(qs)}&forwardType=1`
+            })
+        } catch (e) {
+            uni.showToast({ title: '打开失败', icon: 'none' })
+        }
     }
 
     function handleMultiDelete() {
@@ -3931,15 +4338,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	/**
 	 * 页面加载时获取参数
 	 */
-	onLoad((options : any) => {
+	onLoad(async (options : any) => {
+		await loadRecallConfig()
 		// 获取 ChatID（字符串，避免精度丢失）
 		if (options['chatId']) {
-			chatId.value = options['chatId'] as string
+			chatId.value = decodeIdParam(options['chatId'])
 		}
 		
 		// 获取目标 ID（字符串，避免精度丢失）
 		if (options['targetId']) {
-			targetId.value = options['targetId'] as string
+			targetId.value = decodeIdParam(options['targetId'])
 		}
 		
 		// 获取聊天类型
@@ -3966,7 +4374,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		
 		// 获取群聊 ID（字符串，避免精度丢失）
 		if (options['groupId']) {
-			groupId.value = options['groupId'] as string
+			groupId.value = decodeIdParam(options['groupId'])
 			targetId.value = groupId.value  // 群聊时 targetId 就是 groupId
 		}
 
@@ -4008,6 +4416,18 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			highlight: shouldHighlight.value
 		})
 	})
+
+	async function loadRecallConfig() {
+		try {
+			const config = await getRecallConfig()
+			const seconds = config != null && config.windowSeconds != null ? Number(config.windowSeconds) : 120
+			if (seconds > 0) {
+				recallWindowMs.value = seconds * 1000
+			}
+		} catch (e) {
+			recallWindowMs.value = 2 * 60 * 1000
+		}
+	}
 
 	onShow(() => {
 		wsManager.setRealtimeBizActive(true)
@@ -4495,6 +4915,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		margin: 0 2px;
 	}
 
+	.mention-text {
+		color: #3370FF;
+		font-weight: 600;
+	}
+
 	.message-self .bubble-text {
 		background-color: #D2E3FC;
 		border-color: #B2CFFB;
@@ -4591,9 +5016,67 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		flex-direction: row;
 		align-items: center;
 		background-color: #FFFFFF;
-		width: 220px;
-		max-width: 100%;
+		min-width: 180px;
+		max-width: 260px;
 		padding: 12px;
+	}
+
+	/* 合并转发（聊天记录卡片） */
+	.bubble-forward-combine {
+		background-color: #FFFFFF;
+		min-width: 200px;
+		max-width: 260px;
+		padding: 12px;
+		border-radius: 10px;
+		box-sizing: border-box;
+	}
+
+	.message-self .bubble-forward-combine {
+		background-color: #D2E3FC;
+	}
+
+	.forward-combine-header {
+		flex-direction: column;
+	}
+
+	.forward-combine-title {
+		font-size: 14px;
+		font-weight: 600;
+		color: #1F2329;
+	}
+
+	.forward-combine-comment {
+		margin-top: 6px;
+		font-size: 12px;
+		color: #4E5969;
+	}
+
+	.forward-combine-preview {
+		margin-top: 10px;
+		padding-top: 10px;
+		border-top-width: 0.5px;
+		border-top-color: #E5E6EB;
+	}
+
+	.forward-combine-line {
+		margin-bottom: 6px;
+	}
+
+	.forward-combine-line-text {
+		font-size: 12px;
+		color: #4E5969;
+	}
+
+	.forward-combine-footer {
+		margin-top: 8px;
+		padding-top: 8px;
+		border-top-width: 0.5px;
+		border-top-color: #E5E6EB;
+	}
+
+	.forward-combine-footer-text {
+		font-size: 12px;
+		color: #1677FF;
 	}
 
 	.file-info {

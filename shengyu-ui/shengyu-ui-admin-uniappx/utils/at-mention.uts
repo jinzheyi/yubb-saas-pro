@@ -131,6 +131,8 @@ export function containsAtMe(text: string, myUserId: string, atUserIds: string[]
 export type TextSegment = {
   type: 'text' | 'mention'
   content: string
+  startIndex?: number
+  endIndex?: number
 }
 
 export function highlightAtMentions(text: string): TextSegment[] {
@@ -156,7 +158,9 @@ export function highlightAtMentions(text: string): TextSegment[] {
     // 添加@提醒文本
     segments.push({
       type: 'mention',
-      content: text.substring(mention.startIndex, mention.endIndex)
+      content: text.substring(mention.startIndex, mention.endIndex),
+      startIndex: mention.startIndex,
+      endIndex: mention.endIndex
     })
     
     lastIndex = mention.endIndex

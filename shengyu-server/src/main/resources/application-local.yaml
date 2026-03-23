@@ -65,11 +65,11 @@ spring:
           #          password: SYSDBA001 # DM 连接的示例
           #          username: root # OpenGauss 连接的示例
           #          password: Yudao@2024 # OpenGauss 连接的示例
-        slave: # 模拟从库，可根据自己需要修改
-          lazy: true # 开启懒加载，保证启动速度
-          url: jdbc:mysql://127.0.0.1:3306/shengyu-saas?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true&nullCatalogMeansCurrent=true
-          username: root
-          password: password
+#        slave: # 模拟从库，可根据自己需要修改
+#          lazy: true # 开启懒加载，保证启动速度
+#          url: jdbc:mysql://127.0.0.1:3306/shengyu-saas?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true&nullCatalogMeansCurrent=true
+#          username: root
+#          password: password
   #        tdengine: # IoT 数据库（需要 IoT 物联网再开启噢！）
   #          url: jdbc:TAOS-RS://127.0.0.1:6041/ruoyi_vue_pro
   #          driver-class-name: com.taosdata.jdbc.rs.RestfulDriver

@@ -1,8 +1,14 @@
 /*eslint-disable block-scoped-var, id-length, no-control-regex, no-magic-numbers, no-prototype-builtins, no-redeclare, no-shadow, no-var, sort-vars*/
 import * as $protobuf from "protobufjs/minimal";
+import Long from "long";
 
 // Common aliases
 const $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
+
+if ($protobuf.util.Long !== Long) {
+    $protobuf.util.Long = Long;
+    $protobuf.configure();
+}
 
 // Exported root namespace
 const $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});
@@ -2169,6 +2175,295 @@ export const AckResponse = $root.AckResponse = (() => {
     return AckResponse;
 })();
 
+export const MentionUser = $root.MentionUser = (() => {
+
+    /**
+     * Properties of a MentionUser.
+     * @exports IMentionUser
+     * @interface IMentionUser
+     * @property {number|Long|null} [userId] MentionUser userId
+     * @property {string|null} [nickname] MentionUser nickname
+     * @property {number|null} [startIndex] MentionUser startIndex
+     * @property {number|null} [endIndex] MentionUser endIndex
+     */
+
+    /**
+     * Constructs a new MentionUser.
+     * @exports MentionUser
+     * @classdesc Represents a MentionUser.
+     * @implements IMentionUser
+     * @constructor
+     * @param {IMentionUser=} [properties] Properties to set
+     */
+    function MentionUser(properties) {
+        if (properties)
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                if (properties[keys[i]] != null)
+                    this[keys[i]] = properties[keys[i]];
+    }
+
+    /**
+     * MentionUser userId.
+     * @member {number|Long} userId
+     * @memberof MentionUser
+     * @instance
+     */
+    MentionUser.prototype.userId = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+    /**
+     * MentionUser nickname.
+     * @member {string} nickname
+     * @memberof MentionUser
+     * @instance
+     */
+    MentionUser.prototype.nickname = "";
+
+    /**
+     * MentionUser startIndex.
+     * @member {number} startIndex
+     * @memberof MentionUser
+     * @instance
+     */
+    MentionUser.prototype.startIndex = 0;
+
+    /**
+     * MentionUser endIndex.
+     * @member {number} endIndex
+     * @memberof MentionUser
+     * @instance
+     */
+    MentionUser.prototype.endIndex = 0;
+
+    /**
+     * Creates a new MentionUser instance using the specified properties.
+     * @function create
+     * @memberof MentionUser
+     * @static
+     * @param {IMentionUser=} [properties] Properties to set
+     * @returns {MentionUser} MentionUser instance
+     */
+    MentionUser.create = function create(properties) {
+        return new MentionUser(properties);
+    };
+
+    /**
+     * Encodes the specified MentionUser message. Does not implicitly {@link MentionUser.verify|verify} messages.
+     * @function encode
+     * @memberof MentionUser
+     * @static
+     * @param {IMentionUser} message MentionUser message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    MentionUser.encode = function encode(message, writer) {
+        if (!writer)
+            writer = $Writer.create();
+        if (message.userId != null && Object.hasOwnProperty.call(message, "userId"))
+            writer.uint32(/* id 1, wireType 0 =*/8).int64(message.userId);
+        if (message.nickname != null && Object.hasOwnProperty.call(message, "nickname"))
+            writer.uint32(/* id 2, wireType 2 =*/18).string(message.nickname);
+        if (message.startIndex != null && Object.hasOwnProperty.call(message, "startIndex"))
+            writer.uint32(/* id 3, wireType 0 =*/24).int32(message.startIndex);
+        if (message.endIndex != null && Object.hasOwnProperty.call(message, "endIndex"))
+            writer.uint32(/* id 4, wireType 0 =*/32).int32(message.endIndex);
+        return writer;
+    };
+
+    /**
+     * Encodes the specified MentionUser message, length delimited. Does not implicitly {@link MentionUser.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof MentionUser
+     * @static
+     * @param {IMentionUser} message MentionUser message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    MentionUser.encodeDelimited = function encodeDelimited(message, writer) {
+        return this.encode(message, writer).ldelim();
+    };
+
+    /**
+     * Decodes a MentionUser message from the specified reader or buffer.
+     * @function decode
+     * @memberof MentionUser
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @param {number} [length] Message length if known beforehand
+     * @returns {MentionUser} MentionUser
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    MentionUser.decode = function decode(reader, length, error) {
+        if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+        let end = length === undefined ? reader.len : reader.pos + length, message = new $root.MentionUser();
+        while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+                break;
+            switch (tag >>> 3) {
+            case 1: {
+                    message.userId = reader.int64();
+                    break;
+                }
+            case 2: {
+                    message.nickname = reader.string();
+                    break;
+                }
+            case 3: {
+                    message.startIndex = reader.int32();
+                    break;
+                }
+            case 4: {
+                    message.endIndex = reader.int32();
+                    break;
+                }
+            default:
+                reader.skipType(tag & 7);
+                break;
+            }
+        }
+        return message;
+    };
+
+    /**
+     * Decodes a MentionUser message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof MentionUser
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @returns {MentionUser} MentionUser
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    MentionUser.decodeDelimited = function decodeDelimited(reader) {
+        if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+        return this.decode(reader, reader.uint32());
+    };
+
+    /**
+     * Verifies a MentionUser message.
+     * @function verify
+     * @memberof MentionUser
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
+     */
+    MentionUser.verify = function verify(message) {
+        if (typeof message !== "object" || message === null)
+            return "object expected";
+        if (message.userId != null && message.hasOwnProperty("userId"))
+            if (!$util.isInteger(message.userId) && !(message.userId && $util.isInteger(message.userId.low) && $util.isInteger(message.userId.high)))
+                return "userId: integer|Long expected";
+        if (message.nickname != null && message.hasOwnProperty("nickname"))
+            if (!$util.isString(message.nickname))
+                return "nickname: string expected";
+        if (message.startIndex != null && message.hasOwnProperty("startIndex"))
+            if (!$util.isInteger(message.startIndex))
+                return "startIndex: integer expected";
+        if (message.endIndex != null && message.hasOwnProperty("endIndex"))
+            if (!$util.isInteger(message.endIndex))
+                return "endIndex: integer expected";
+        return null;
+    };
+
+    /**
+     * Creates a MentionUser message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof MentionUser
+     * @static
+     * @param {Object.<string,*>} object Plain object
+     * @returns {MentionUser} MentionUser
+     */
+    MentionUser.fromObject = function fromObject(object) {
+        if (object instanceof $root.MentionUser)
+            return object;
+        let message = new $root.MentionUser();
+        if (object.userId != null)
+            if ($util.Long)
+                (message.userId = $util.Long.fromValue(object.userId)).unsigned = false;
+            else if (typeof object.userId === "string")
+                message.userId = parseInt(object.userId, 10);
+            else if (typeof object.userId === "number")
+                message.userId = object.userId;
+            else if (typeof object.userId === "object")
+                message.userId = new $util.LongBits(object.userId.low >>> 0, object.userId.high >>> 0).toNumber();
+        if (object.nickname != null)
+            message.nickname = String(object.nickname);
+        if (object.startIndex != null)
+            message.startIndex = object.startIndex | 0;
+        if (object.endIndex != null)
+            message.endIndex = object.endIndex | 0;
+        return message;
+    };
+
+    /**
+     * Creates a plain object from a MentionUser message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof MentionUser
+     * @static
+     * @param {MentionUser} message MentionUser
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
+     * @returns {Object.<string,*>} Plain object
+     */
+    MentionUser.toObject = function toObject(message, options) {
+        if (!options)
+            options = {};
+        let object = {};
+        if (options.defaults) {
+            if ($util.Long) {
+                let long = new $util.Long(0, 0, false);
+                object.userId = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+            } else
+                object.userId = options.longs === String ? "0" : 0;
+            object.nickname = "";
+            object.startIndex = 0;
+            object.endIndex = 0;
+        }
+        if (message.userId != null && message.hasOwnProperty("userId"))
+            if (typeof message.userId === "number")
+                object.userId = options.longs === String ? String(message.userId) : message.userId;
+            else
+                object.userId = options.longs === String ? $util.Long.prototype.toString.call(message.userId) : options.longs === Number ? new $util.LongBits(message.userId.low >>> 0, message.userId.high >>> 0).toNumber() : message.userId;
+        if (message.nickname != null && message.hasOwnProperty("nickname"))
+            object.nickname = message.nickname;
+        if (message.startIndex != null && message.hasOwnProperty("startIndex"))
+            object.startIndex = message.startIndex;
+        if (message.endIndex != null && message.hasOwnProperty("endIndex"))
+            object.endIndex = message.endIndex;
+        return object;
+    };
+
+    /**
+     * Converts this MentionUser to JSON.
+     * @function toJSON
+     * @memberof MentionUser
+     * @instance
+     * @returns {Object.<string,*>} JSON object
+     */
+    MentionUser.prototype.toJSON = function toJSON() {
+        return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+    };
+
+    /**
+     * Gets the default type url for MentionUser
+     * @function getTypeUrl
+     * @memberof MentionUser
+     * @static
+     * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns {string} The default type url
+     */
+    MentionUser.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+        if (typeUrlPrefix === undefined) {
+            typeUrlPrefix = "type.googleapis.com";
+        }
+        return typeUrlPrefix + "/MentionUser";
+    };
+
+    return MentionUser;
+})();
+
 export const TextMessage = $root.TextMessage = (() => {
 
     /**
@@ -2177,6 +2472,7 @@ export const TextMessage = $root.TextMessage = (() => {
      * @interface ITextMessage
      * @property {string|null} [content] TextMessage content
      * @property {Array.<number|Long>|null} [atUserIds] TextMessage atUserIds
+     * @property {Array.<IMentionUser>|null} [mentions] TextMessage mentions
      */
 
     /**
@@ -2189,6 +2485,7 @@ export const TextMessage = $root.TextMessage = (() => {
      */
     function TextMessage(properties) {
         this.atUserIds = [];
+        this.mentions = [];
         if (properties)
             for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
@@ -2210,6 +2507,14 @@ export const TextMessage = $root.TextMessage = (() => {
      * @instance
      */
     TextMessage.prototype.atUserIds = $util.emptyArray;
+
+    /**
+     * TextMessage mentions.
+     * @member {Array.<IMentionUser>} mentions
+     * @memberof TextMessage
+     * @instance
+     */
+    TextMessage.prototype.mentions = $util.emptyArray;
 
     /**
      * Creates a new TextMessage instance using the specified properties.
@@ -2243,6 +2548,9 @@ export const TextMessage = $root.TextMessage = (() => {
                 writer.int64(message.atUserIds[i]);
             writer.ldelim();
         }
+        if (message.mentions != null && message.mentions.length)
+            for (let i = 0; i < message.mentions.length; ++i)
+                $root.MentionUser.encode(message.mentions[i], writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
         return writer;
     };
 
@@ -2294,6 +2602,12 @@ export const TextMessage = $root.TextMessage = (() => {
                         message.atUserIds.push(reader.int64());
                     break;
                 }
+            case 3: {
+                    if (!(message.mentions && message.mentions.length))
+                        message.mentions = [];
+                    message.mentions.push($root.MentionUser.decode(reader, reader.uint32()));
+                    break;
+                }
             default:
                 reader.skipType(tag & 7);
                 break;
@@ -2339,6 +2653,15 @@ export const TextMessage = $root.TextMessage = (() => {
                 if (!$util.isInteger(message.atUserIds[i]) && !(message.atUserIds[i] && $util.isInteger(message.atUserIds[i].low) && $util.isInteger(message.atUserIds[i].high)))
                     return "atUserIds: integer|Long[] expected";
         }
+        if (message.mentions != null && message.hasOwnProperty("mentions")) {
+            if (!Array.isArray(message.mentions))
+                return "mentions: array expected";
+            for (let i = 0; i < message.mentions.length; ++i) {
+                let error = $root.MentionUser.verify(message.mentions[i]);
+                if (error)
+                    return "mentions." + error;
+            }
+        }
         return null;
     };
 
@@ -2370,6 +2693,16 @@ export const TextMessage = $root.TextMessage = (() => {
                 else if (typeof object.atUserIds[i] === "object")
                     message.atUserIds[i] = new $util.LongBits(object.atUserIds[i].low >>> 0, object.atUserIds[i].high >>> 0).toNumber();
         }
+        if (object.mentions) {
+            if (!Array.isArray(object.mentions))
+                throw TypeError(".TextMessage.mentions: array expected");
+            message.mentions = [];
+            for (let i = 0; i < object.mentions.length; ++i) {
+                if (typeof object.mentions[i] !== "object")
+                    throw TypeError(".TextMessage.mentions: object expected");
+                message.mentions[i] = $root.MentionUser.fromObject(object.mentions[i]);
+            }
+        }
         return message;
     };
 
@@ -2386,8 +2719,10 @@ export const TextMessage = $root.TextMessage = (() => {
         if (!options)
             options = {};
         let object = {};
-        if (options.arrays || options.defaults)
+        if (options.arrays || options.defaults) {
             object.atUserIds = [];
+            object.mentions = [];
+        }
         if (options.defaults)
             object.content = "";
         if (message.content != null && message.hasOwnProperty("content"))
@@ -2399,6 +2734,11 @@ export const TextMessage = $root.TextMessage = (() => {
                     object.atUserIds[j] = options.longs === String ? String(message.atUserIds[j]) : message.atUserIds[j];
                 else
                     object.atUserIds[j] = options.longs === String ? $util.Long.prototype.toString.call(message.atUserIds[j]) : options.longs === Number ? new $util.LongBits(message.atUserIds[j].low >>> 0, message.atUserIds[j].high >>> 0).toNumber() : message.atUserIds[j];
+        }
+        if (message.mentions && message.mentions.length) {
+            object.mentions = [];
+            for (let j = 0; j < message.mentions.length; ++j)
+                object.mentions[j] = $root.MentionUser.toObject(message.mentions[j], options);
         }
         return object;
     };
@@ -4356,6 +4696,7 @@ export const QuoteReplyMessage = $root.QuoteReplyMessage = (() => {
      * @property {string|null} [quoteSenderName] QuoteReplyMessage quoteSenderName
      * @property {string|null} [replyContent] QuoteReplyMessage replyContent
      * @property {Array.<number|Long>|null} [atUserIds] QuoteReplyMessage atUserIds
+     * @property {Array.<IMentionUser>|null} [mentions] QuoteReplyMessage mentions
      */
 
     /**
@@ -4368,6 +4709,7 @@ export const QuoteReplyMessage = $root.QuoteReplyMessage = (() => {
      */
     function QuoteReplyMessage(properties) {
         this.atUserIds = [];
+        this.mentions = [];
         if (properties)
             for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
@@ -4423,6 +4765,14 @@ export const QuoteReplyMessage = $root.QuoteReplyMessage = (() => {
     QuoteReplyMessage.prototype.atUserIds = $util.emptyArray;
 
     /**
+     * QuoteReplyMessage mentions.
+     * @member {Array.<IMentionUser>} mentions
+     * @memberof QuoteReplyMessage
+     * @instance
+     */
+    QuoteReplyMessage.prototype.mentions = $util.emptyArray;
+
+    /**
      * Creates a new QuoteReplyMessage instance using the specified properties.
      * @function create
      * @memberof QuoteReplyMessage
@@ -4462,6 +4812,9 @@ export const QuoteReplyMessage = $root.QuoteReplyMessage = (() => {
                 writer.int64(message.atUserIds[i]);
             writer.ldelim();
         }
+        if (message.mentions != null && message.mentions.length)
+            for (let i = 0; i < message.mentions.length; ++i)
+                $root.MentionUser.encode(message.mentions[i], writer.uint32(/* id 7, wireType 2 =*/58).fork()).ldelim();
         return writer;
     };
 
@@ -4529,6 +4882,12 @@ export const QuoteReplyMessage = $root.QuoteReplyMessage = (() => {
                         message.atUserIds.push(reader.int64());
                     break;
                 }
+            case 7: {
+                    if (!(message.mentions && message.mentions.length))
+                        message.mentions = [];
+                    message.mentions.push($root.MentionUser.decode(reader, reader.uint32()));
+                    break;
+                }
             default:
                 reader.skipType(tag & 7);
                 break;
@@ -4586,6 +4945,15 @@ export const QuoteReplyMessage = $root.QuoteReplyMessage = (() => {
                 if (!$util.isInteger(message.atUserIds[i]) && !(message.atUserIds[i] && $util.isInteger(message.atUserIds[i].low) && $util.isInteger(message.atUserIds[i].high)))
                     return "atUserIds: integer|Long[] expected";
         }
+        if (message.mentions != null && message.hasOwnProperty("mentions")) {
+            if (!Array.isArray(message.mentions))
+                return "mentions: array expected";
+            for (let i = 0; i < message.mentions.length; ++i) {
+                let error = $root.MentionUser.verify(message.mentions[i]);
+                if (error)
+                    return "mentions." + error;
+            }
+        }
         return null;
     };
 
@@ -4639,6 +5007,16 @@ export const QuoteReplyMessage = $root.QuoteReplyMessage = (() => {
                 else if (typeof object.atUserIds[i] === "object")
                     message.atUserIds[i] = new $util.LongBits(object.atUserIds[i].low >>> 0, object.atUserIds[i].high >>> 0).toNumber();
         }
+        if (object.mentions) {
+            if (!Array.isArray(object.mentions))
+                throw TypeError(".QuoteReplyMessage.mentions: array expected");
+            message.mentions = [];
+            for (let i = 0; i < object.mentions.length; ++i) {
+                if (typeof object.mentions[i] !== "object")
+                    throw TypeError(".QuoteReplyMessage.mentions: object expected");
+                message.mentions[i] = $root.MentionUser.fromObject(object.mentions[i]);
+            }
+        }
         return message;
     };
 
@@ -4655,8 +5033,10 @@ export const QuoteReplyMessage = $root.QuoteReplyMessage = (() => {
         if (!options)
             options = {};
         let object = {};
-        if (options.arrays || options.defaults)
+        if (options.arrays || options.defaults) {
             object.atUserIds = [];
+            object.mentions = [];
+        }
         if (options.defaults) {
             if ($util.Long) {
                 let long = new $util.Long(0, 0, false);
@@ -4695,6 +5075,11 @@ export const QuoteReplyMessage = $root.QuoteReplyMessage = (() => {
                     object.atUserIds[j] = options.longs === String ? String(message.atUserIds[j]) : message.atUserIds[j];
                 else
                     object.atUserIds[j] = options.longs === String ? $util.Long.prototype.toString.call(message.atUserIds[j]) : options.longs === Number ? new $util.LongBits(message.atUserIds[j].low >>> 0, message.atUserIds[j].high >>> 0).toNumber() : message.atUserIds[j];
+        }
+        if (message.mentions && message.mentions.length) {
+            object.mentions = [];
+            for (let j = 0; j < message.mentions.length; ++j)
+                object.mentions[j] = $root.MentionUser.toObject(message.mentions[j], options);
         }
         return object;
     };

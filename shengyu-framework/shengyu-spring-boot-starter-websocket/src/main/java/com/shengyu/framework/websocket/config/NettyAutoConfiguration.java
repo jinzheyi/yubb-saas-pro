@@ -13,6 +13,7 @@ import com.shengyu.framework.websocket.core.processor.impl.ImageMessageProcessor
 import com.shengyu.framework.websocket.core.processor.impl.LocationMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.ReadReceiptMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.RecallMessageProcessor;
+import com.shengyu.framework.websocket.core.processor.impl.QuoteReplyMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.TextMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.TypingMessageProcessor;
 import com.shengyu.framework.websocket.core.processor.impl.VideoMessageProcessor;
@@ -199,6 +200,21 @@ public class NettyAutoConfiguration {
         log.info("[Netty] 注册文本消息处理器");
         return processor;
     }
+
+	/**
+	 * 引用回复消息处理器
+	 */
+	@Bean
+	public QuoteReplyMessageProcessor quoteReplyMessageProcessor(
+			NettySessionManager sessionManager,
+			MessageStorageService messageStorageService,
+			com.shengyu.framework.websocket.core.sender.NettyMessageSender messageSender,
+			MessageProcessorFactory processorFactory) {
+		QuoteReplyMessageProcessor processor = new QuoteReplyMessageProcessor(sessionManager, messageStorageService, messageSender);
+		processorFactory.registerProcessor(MessageType.QUOTE_REPLY, processor);
+		log.info("[Netty] 注册引用回复消息处理器");
+		return processor;
+	}
 
     /**
      * 图片消息处理器

@@ -46,6 +46,11 @@ public class ImConversationUserStateDO extends TenantBaseDO {
 
     private String lastMessageContent;
 
+    /**
+     * 最后一条消息是否@了我（用于会话列表 [有人@我] 标记）
+     */
+    private Boolean lastMessageHasAtMe;
+
     private LocalDateTime lastMessageTime;
 
     private Boolean isPinned;

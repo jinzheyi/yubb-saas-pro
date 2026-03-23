@@ -31,6 +31,7 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -74,7 +75,7 @@ public class ImGroupServiceImpl implements ImGroupService {
         // 创建群组
         ImGroupDO group = new ImGroupDO();
         group.setOwnerId(userId);
-        group.setName(createReqVO.getName());
+        group.setName(createReqVO.getName().trim());
         group.setAvatar(createReqVO.getAvatar());
         group.setGroupType(createReqVO.getGroupType());
         group.setIntroduction(createReqVO.getIntroduction());
@@ -84,10 +85,16 @@ public class ImGroupServiceImpl implements ImGroupService {
         group.setMuteAll(false); // 默认不禁言
         
         // 确保 memberIds 包含群主
-        List<Long> memberIds = new ArrayList<>(createReqVO.getMemberIds());
+        List<Long> memberIds = createReqVO.getMemberIds().stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toCollection(ArrayList::new));
         if (!memberIds.contains(userId)) {
             memberIds.add(userId);
             log.info("[ImGroupService] 群主不在成员列表中，自动添加: {}", userId);
+        }
+        if (memberIds.size() > 500) {
+            throw exception(GROUP_MEMBER_FULL);
         }
         
         group.setMemberCount(memberIds.size());
@@ -489,7 +496,7 @@ public class ImGroupServiceImpl implements ImGroupService {
             }
             
             // 获取群的会话
-            ImChatDO chat = chatMapper.selectByGroupId(group.getId());
+            ImChatDO chat = chatMapper.selectGroupChat(group.getId(), ImConversationTypeEnum.GROUP.getType());
             if (chat == null) {
                 return;
             }

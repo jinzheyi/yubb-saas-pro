@@ -121,6 +121,7 @@
 	import { getConversationList, searchConversations } from '../../api/conversation.uts'
 	import { getHotSearch } from '../../api/search.uts'
 	import { getJsonObject, setJsonObject, remove } from '../../utils/storage.uts'
+	import { encodeIdParam } from '../../utils/id-param.uts'
 
 	const { t } = useI18n()
 	const SEARCH_HISTORY_KEY = 'IM_SEARCH_HISTORY'
@@ -444,14 +445,17 @@
 	}
 
 	function handleContactClick(contact : any) {
+		const userIdRaw = contact && (contact.userId || contact.id) ? String(contact.userId || contact.id) : ''
+		const userIdParam = encodeIdParam(userIdRaw)
 		uni.navigateTo({
-			url: '/pages/contacts/user-detail?id=' + (contact && (contact.userId || contact.id) ? String(contact.userId || contact.id) : '')
+			url: '/pages/contacts/user-detail?userId=' + userIdParam
 		})
 	}
 
 	function handleGroupClick(group : any) {
+		const chatIdParam = encodeIdParam(group && (group.chatId || group.id) ? String(group.chatId || group.id) : '')
 		uni.navigateTo({
-			url: `/pages/message/chat?chatId=${encodeURIComponent(group && (group.chatId || group.id) ? String(group.chatId || group.id) : '')}&name=${encodeURIComponent(group && group.name ? String(group.name) : '')}`
+			url: `/pages/message/chat?chatId=${chatIdParam}&name=${encodeURIComponent(group && group.name ? String(group.name) : '')}`
 		})
 	}
 
@@ -463,7 +467,7 @@
 			return
 		}
 		uni.navigateTo({
-			url: `/pages/message/chat?chatId=${encodeURIComponent(chatId)}&messageId=${encodeURIComponent(mid)}&highlight=true`
+			url: `/pages/message/chat?chatId=${encodeIdParam(chatId)}&messageId=${encodeURIComponent(mid)}&highlight=true`
 		})
 	}
 

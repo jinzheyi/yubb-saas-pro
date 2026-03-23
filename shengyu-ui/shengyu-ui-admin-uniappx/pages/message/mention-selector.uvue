@@ -1,0 +1,333 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+			</view>
+			<text class="header-title">选择成员</text>
+			<view class="header-right"></view>
+		</view>
+
+		<view class="search-container">
+			<view class="search-bar">
+				<text class="iconfont search-icon">&#xea6e;</text>
+				<input class="search-input" v-model="keyword" placeholder="搜索" placeholder-class="placeholder" />
+			</view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<view class="member-list">
+				<view v-if="canAtAll" class="member-item" hover-class="member-item-active" @click="handleSelectAll">
+					<view class="avatar" :style="{ backgroundColor: '#3370FF' }">
+						<text class="avatar-text">@</text>
+					</view>
+					<view class="body">
+						<text class="name">所有人</text>
+					</view>
+				</view>
+
+				<view
+					v-for="item in filteredMembers"
+					:key="item.userId"
+					class="member-item"
+					hover-class="member-item-active"
+					@click="handleSelect(item)"
+				>
+					<view class="avatar" :style="{ backgroundColor: item.avatarBg }">
+						<image v-if="item.avatar != ''" class="avatar-img" :src="item.avatar" mode="aspectFill" />
+						<text v-else class="avatar-text">{{ item.avatarText }}</text>
+					</view>
+					<view class="body">
+						<text class="name">{{ item.displayName }}</text>
+						<text v-if="item.userName != ''" class="desc">{{ item.userName }}</text>
+					</view>
+				</view>
+
+				<view v-if="filteredMembers.length === 0" class="empty">
+					<text class="empty-text">暂无成员</text>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { onLoad } from '@dcloudio/uni-app'
+import { groupService } from '../../services/group-service.uts'
+import { getUserInfo } from '../../store/user.uts'
+
+type MemberItem = {
+	userId: string
+	userName: string
+	displayName: string
+	avatar: string
+	avatarText: string
+	avatarBg: string
+	role: number
+}
+
+const groupId = ref('')
+const keyword = ref('')
+const members = ref<MemberItem[]>([])
+const canAtAll = ref(false)
+
+const filteredMembers = computed(() => {
+	const kw = keyword.value != null ? keyword.value.trim() : ''
+	if (kw === '') {
+		return members.value
+	}
+	return members.value.filter(m => {
+		const dn = m != null && m.displayName != null ? String(m.displayName) : ''
+		const un = m != null && m.userName != null ? String(m.userName) : ''
+		return dn.indexOf(kw) > -1 || un.indexOf(kw) > -1
+	})
+})
+
+function handleBack(): void {
+	uni.navigateBack()
+}
+
+function safeRole(v: any): number {
+	try {
+		if (v == null) return 0
+		return Number(v)
+	} catch (e) {
+		return 0
+	}
+}
+
+function getDisplayName(m: any): string {
+	try {
+		const nick = m != null && m.nickname != null ? String(m.nickname) : ''
+		if (nick !== '') return nick
+		const name = m != null && m.userName != null ? String(m.userName) : ''
+		return name
+	} catch (e) {
+		return ''
+	}
+}
+
+function handleSelect(item: MemberItem): void {
+	try {
+		const ec = (getCurrentPages() as any).slice(-1)[0].getOpenerEventChannel()
+		ec.emit('select', { userId: item.userId, userName: item.displayName })
+	} catch (e) {
+		// ignore
+	}
+	uni.navigateBack()
+}
+
+function handleSelectAll(): void {
+	try {
+		const ec = (getCurrentPages() as any).slice(-1)[0].getOpenerEventChannel()
+		ec.emit('select', { userId: '-1', userName: '所有人' })
+	} catch (e) {
+		// ignore
+	}
+	uni.navigateBack()
+}
+
+onLoad((options: any) => {
+	try {
+		groupId.value = options != null && options['groupId'] != null ? String(options['groupId']) : ''
+		void loadMembers()
+	} catch (e) {
+		members.value = []
+	}
+})
+
+async function loadMembers(): Promise<void> {
+	try {
+		if (groupId.value === '' || groupId.value === '0') {
+			members.value = []
+			canAtAll.value = false
+			return
+		}
+		uni.showLoading({ title: '加载中...' })
+		const list = await groupService.getGroupMembers(groupId.value)
+		uni.hideLoading()
+
+		const my = getUserInfo()?.user
+		const myId = my != null && (my as any).id != null ? String((my as any).id) : ''
+		let myRole = 0
+
+		const arr: MemberItem[] = []
+		for (let i = 0; i < list.length; i++) {
+			const m: any = list[i]
+			const uid = m != null && m.userId != null ? String(m.userId) : '0'
+			if (uid === '0' || uid === '') continue
+			const role = safeRole(m.role)
+			if (myId !== '' && uid === myId) {
+				myRole = role
+			}
+			arr.push({
+				userId: uid,
+				userName: m != null && m.userName != null ? String(m.userName) : '',
+				displayName: getDisplayName(m),
+				avatar: m != null && m.avatar != null ? String(m.avatar) : '',
+				avatarText: m != null && m.avatarText != null ? String(m.avatarText) : '',
+				avatarBg: m != null && m.avatarBg != null ? String(m.avatarBg) : '#8F959E',
+				role: role
+			})
+		}
+		members.value = arr
+		canAtAll.value = myRole === 2 || myRole === 1
+	} catch (e) {
+		try {
+			uni.hideLoading()
+		} catch (e2) {
+		}
+		members.value = []
+		canAtAll.value = false
+	}
+}
+</script>
+
+<style scoped>
+.page {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	background-color: #F5F7FA;
+}
+
+.status-bar {
+	height: var(--status-bar-height);
+}
+
+.header {
+	height: 44px;
+	display: flex;
+	align-items: center;
+	padding: 0 12px;
+	background-color: #FFFFFF;
+}
+
+.header-left {
+	width: 44px;
+	height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.back-icon {
+	font-size: 20px;
+	color: #1F2329;
+}
+
+.header-title {
+	flex: 1;
+	text-align: center;
+	font-size: 16px;
+	font-weight: 600;
+	color: #1F2329;
+}
+
+.header-right {
+	width: 44px;
+}
+
+.search-container {
+	padding: 10px 12px;
+	background-color: #FFFFFF;
+}
+
+.search-bar {
+	height: 36px;
+	display: flex;
+	align-items: center;
+	padding: 0 12px;
+	border-radius: 18px;
+	background-color: #F0F2F5;
+}
+
+.search-icon {
+	font-size: 16px;
+	color: #8F959E;
+	margin-right: 6px;
+}
+
+.search-input {
+	flex: 1;
+	font-size: 14px;
+	color: #1F2329;
+}
+
+.content {
+	flex: 1;
+	height: 0;
+}
+
+.member-list {
+	padding: 0 0 12px 0;
+}
+
+.member-item {
+	height: 56px;
+	display: flex;
+	align-items: center;
+	padding: 0 12px;
+	background-color: #FFFFFF;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+	border-bottom-color: #F0F2F5;
+}
+
+.member-item-active {
+	background-color: #F0F2F5;
+}
+
+.avatar {
+	width: 40px;
+	height: 40px;
+	border-radius: 20px;
+	overflow: hidden;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.avatar-img {
+	width: 40px;
+	height: 40px;
+}
+
+.avatar-text {
+	font-size: 14px;
+	color: #FFFFFF;
+	font-weight: 600;
+}
+
+.body {
+	flex: 1;
+	margin-left: 10px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.name {
+	font-size: 14px;
+	color: #1F2329;
+}
+
+.desc {
+	margin-top: 2px;
+	font-size: 12px;
+	color: #8F959E;
+}
+
+.empty {
+	padding: 40px 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.empty-text {
+	font-size: 14px;
+	color: #8F959E;
+}
+</style>

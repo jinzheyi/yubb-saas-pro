@@ -1,0 +1,297 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+			</view>
+			<text class="header-title">聊天记录</text>
+			<view class="header-right"></view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<view v-if="comment !== ''" class="comment">
+				<text class="comment-text">{{ comment }}</text>
+			</view>
+
+			<view v-for="(item, idx) in items" :key="idx" class="item" @click="handleItemClick(item)">
+				<view class="item-header">
+					<text class="sender-name">{{ item.senderName }}</text>
+					<text class="send-time">{{ item.sendTime }}</text>
+				</view>
+				<text class="item-content" :numberOfLines="3">{{ item.preview }}</text>
+			</view>
+
+			<view v-if="items.length === 0" class="empty">
+				<text class="empty-text">暂无内容</text>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { onLoad } from '@dcloudio/uni-app'
+import { getMessageDetail } from '../../api/message.uts'
+
+type ForwardCombineItem = {
+	senderName: string
+	sendTime: string
+	preview: string
+	refMessageId: string
+}
+
+const items = ref<ForwardCombineItem[]>([])
+const comment = ref('')
+
+function handleBack(): void {
+	uni.navigateBack()
+}
+
+function handleItemClick(item: ForwardCombineItem): void {
+	try {
+		if (item.refMessageId != null && item.refMessageId !== '' && item.refMessageId !== '0') {
+			uni.navigateTo({
+				url: `/pages/message/forward-combine-detail?messageId=${encodeURIComponent(item.refMessageId)}`
+			})
+		}
+	} catch (e) {
+		// ignore
+	}
+}
+
+function safeParseJson(raw: any): any | null {
+	try {
+		if (raw == null) {
+			return null
+		}
+		if (typeof raw === 'string') {
+			const s = raw.trim()
+			if (s === '') {
+				return null
+			}
+			return JSON.parse(s)
+		}
+		if (typeof raw === 'object') {
+			return raw
+		}
+		return null
+	} catch (e) {
+		return null
+	}
+}
+
+function buildPreview(messageType: number, content: any): string {
+	try {
+		if (messageType === 1 || messageType === 100 || messageType === 205) {
+			return content != null ? String(content) : ''
+		}
+		if (messageType === 9 || messageType === 106) {
+			const body = safeParseJson(content)
+			if (body != null && body.type != null && String(body.type) === 'FORWARD_COMBINE') {
+				return '[聊天记录]'
+			}
+			return '[消息]'
+		}
+		if (messageType === 2 || messageType === 101) return '[图片]'
+		if (messageType === 3 || messageType === 102) return '[语音]'
+		if (messageType === 4 || messageType === 103) return '[视频]'
+		if (messageType === 5 || messageType === 104) return '[文件]'
+		if (messageType === 6 || messageType === 105) return '[位置]'
+		return '[消息]'
+	} catch (e) {
+		return '[消息]'
+	}
+}
+
+function pad2(n: number): string {
+	return n < 10 ? '0' + n.toString() : n.toString()
+}
+
+function formatEnterpriseTime(raw: string): string {
+	try {
+		if (raw == null || raw.trim() === '') {
+			return ''
+		}
+		const d = new Date(raw)
+		const ts = d.getTime()
+		if (isNaN(ts) || ts <= 0) {
+			return raw
+		}
+		const now = new Date()
+		const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+		const thatStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+		const diffDays = Math.floor((todayStart - thatStart) / (24 * 60 * 60 * 1000))
+		const hhmm = pad2(d.getHours()) + ':' + pad2(d.getMinutes())
+		if (diffDays === 0) {
+			return '今天 ' + hhmm
+		}
+		if (diffDays === 1) {
+			return '昨天 ' + hhmm
+		}
+		const y = d.getFullYear()
+		const m = pad2(d.getMonth() + 1)
+		const dd = pad2(d.getDate())
+		if (y === now.getFullYear()) {
+			return `${m}-${dd} ${hhmm}`
+		}
+		return `${y}-${m}-${dd} ${hhmm}`
+	} catch (e) {
+		return raw
+	}
+}
+
+onLoad((options: any) => {
+	try {
+		const mid = options != null ? (options['messageId'] as string | null) : null
+		if (mid == null || mid === '' || mid === '0') {
+			items.value = []
+			return
+		}
+		void loadByMessageId(mid)
+	} catch (e) {
+		items.value = []
+	}
+})
+
+async function loadByMessageId(messageId: string): Promise<void> {
+	try {
+		uni.showLoading({ title: '加载中...' })
+		const resp: any = await getMessageDetail(messageId)
+		uni.hideLoading()
+		const body = resp != null ? safeParseJson(resp.content) : null
+		if (body == null || body.type == null || String(body.type) !== 'FORWARD_COMBINE') {
+			items.value = []
+			return
+		}
+		comment.value = body.comment != null ? String(body.comment) : ''
+		const arr: any[] = body.messages != null ? (body.messages as any[]) : []
+		const list: ForwardCombineItem[] = []
+		for (let i = 0; i < arr.length; i++) {
+			const it = arr[i]
+			const senderName = it != null && it.senderName != null ? String(it.senderName) : ''
+			const sendTimeRaw = it != null && it.sendTime != null ? String(it.sendTime) : ''
+			const sendTime = formatEnterpriseTime(sendTimeRaw)
+			const mt = it != null && it.messageType != null ? Number(it.messageType) : 0
+			const pv = buildPreview(mt, it != null ? it.content : '')
+			const refId = it != null && it.refMessageId != null ? String(it.refMessageId) : ''
+			list.push({ senderName: senderName, sendTime: sendTime, preview: pv, refMessageId: refId })
+		}
+		items.value = list
+	} catch (e) {
+		try {
+			uni.hideLoading()
+		} catch (e2) {
+			// ignore
+		}
+		items.value = []
+		uni.showToast({ title: '加载失败', icon: 'none' })
+	}
+}
+</script>
+
+<style scoped>
+.page {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	background-color: #f7f8fa;
+}
+
+.status-bar {
+	height: 0px;
+}
+
+.header {
+	height: 44px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	background-color: #ffffff;
+	padding-left: 12px;
+	padding-right: 12px;
+}
+
+.header-left {
+	width: 40px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.back-icon {
+	font-size: 18px;
+	color: #333333;
+}
+
+.header-title {
+	flex: 1;
+	text-align: center;
+	font-size: 16px;
+	color: #111111;
+	font-weight: 600;
+}
+
+.header-right {
+	width: 40px;
+}
+
+.content {
+	flex: 1;
+	padding: 12px;
+}
+
+.comment {
+	background-color: #ffffff;
+	border-radius: 10px;
+	padding: 12px;
+	margin-bottom: 10px;
+}
+
+.comment-text {
+	font-size: 14px;
+	color: #333333;
+}
+
+.item {
+	background-color: #ffffff;
+	border-radius: 10px;
+	padding: 12px;
+	margin-bottom: 10px;
+}
+
+.item-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.sender-name {
+	font-size: 14px;
+	font-weight: 600;
+	color: #111111;
+}
+
+.send-time {
+	font-size: 12px;
+	color: #8c8c8c;
+}
+
+.item-content {
+	margin-top: 6px;
+	font-size: 13px;
+	color: #333333;
+	line-height: 18px;
+}
+
+.empty {
+	padding-top: 60px;
+	align-items: center;
+	justify-content: center;
+}
+
+.empty-text {
+	font-size: 13px;
+	color: #8c8c8c;
+}
+</style>

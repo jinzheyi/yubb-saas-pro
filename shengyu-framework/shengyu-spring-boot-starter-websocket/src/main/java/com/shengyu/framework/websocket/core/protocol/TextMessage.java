@@ -22,6 +22,7 @@ private static final long serialVersionUID = 0L;
   private TextMessage() {
     content_ = "";
     atUserIds_ = emptyLongList();
+    mentions_ = java.util.Collections.emptyList();
   }
 
   @java.lang.Override
@@ -135,6 +136,66 @@ private static final long serialVersionUID = 0L;
   }
   private int atUserIdsMemoizedSerializedSize = -1;
 
+  public static final int MENTIONS_FIELD_NUMBER = 3;
+  private java.util.List<com.shengyu.framework.websocket.core.protocol.MentionUser> mentions_;
+  /**
+   * <pre>
+   * &#64;提及用户映射（精确下标，用于渲染/点击）
+   * </pre>
+   *
+   * <code>repeated .MentionUser mentions = 3;</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.shengyu.framework.websocket.core.protocol.MentionUser> getMentionsList() {
+    return mentions_;
+  }
+  /**
+   * <pre>
+   * &#64;提及用户映射（精确下标，用于渲染/点击）
+   * </pre>
+   *
+   * <code>repeated .MentionUser mentions = 3;</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends com.shengyu.framework.websocket.core.protocol.MentionUserOrBuilder> 
+      getMentionsOrBuilderList() {
+    return mentions_;
+  }
+  /**
+   * <pre>
+   * &#64;提及用户映射（精确下标，用于渲染/点击）
+   * </pre>
+   *
+   * <code>repeated .MentionUser mentions = 3;</code>
+   */
+  @java.lang.Override
+  public int getMentionsCount() {
+    return mentions_.size();
+  }
+  /**
+   * <pre>
+   * &#64;提及用户映射（精确下标，用于渲染/点击）
+   * </pre>
+   *
+   * <code>repeated .MentionUser mentions = 3;</code>
+   */
+  @java.lang.Override
+  public com.shengyu.framework.websocket.core.protocol.MentionUser getMentions(int index) {
+    return mentions_.get(index);
+  }
+  /**
+   * <pre>
+   * &#64;提及用户映射（精确下标，用于渲染/点击）
+   * </pre>
+   *
+   * <code>repeated .MentionUser mentions = 3;</code>
+   */
+  @java.lang.Override
+  public com.shengyu.framework.websocket.core.protocol.MentionUserOrBuilder getMentionsOrBuilder(
+      int index) {
+    return mentions_.get(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -159,6 +220,9 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < atUserIds_.size(); i++) {
       output.writeInt64NoTag(atUserIds_.getLong(i));
+    }
+    for (int i = 0; i < mentions_.size(); i++) {
+      output.writeMessage(3, mentions_.get(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -186,6 +250,10 @@ private static final long serialVersionUID = 0L;
       }
       atUserIdsMemoizedSerializedSize = dataSize;
     }
+    for (int i = 0; i < mentions_.size(); i++) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(3, mentions_.get(i));
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -205,6 +273,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getContent())) return false;
     if (!getAtUserIdsList()
         .equals(other.getAtUserIdsList())) return false;
+    if (!getMentionsList()
+        .equals(other.getMentionsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -221,6 +291,10 @@ private static final long serialVersionUID = 0L;
     if (getAtUserIdsCount() > 0) {
       hash = (37 * hash) + ATUSERIDS_FIELD_NUMBER;
       hash = (53 * hash) + getAtUserIdsList().hashCode();
+    }
+    if (getMentionsCount() > 0) {
+      hash = (37 * hash) + MENTIONS_FIELD_NUMBER;
+      hash = (53 * hash) + getMentionsList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -358,6 +432,13 @@ private static final long serialVersionUID = 0L;
 
       atUserIds_ = emptyLongList();
       bitField0_ = (bitField0_ & ~0x00000001);
+      if (mentionsBuilder_ == null) {
+        mentions_ = java.util.Collections.emptyList();
+      } else {
+        mentions_ = null;
+        mentionsBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000002);
       return this;
     }
 
@@ -391,6 +472,15 @@ private static final long serialVersionUID = 0L;
         bitField0_ = (bitField0_ & ~0x00000001);
       }
       result.atUserIds_ = atUserIds_;
+      if (mentionsBuilder_ == null) {
+        if (((bitField0_ & 0x00000002) != 0)) {
+          mentions_ = java.util.Collections.unmodifiableList(mentions_);
+          bitField0_ = (bitField0_ & ~0x00000002);
+        }
+        result.mentions_ = mentions_;
+      } else {
+        result.mentions_ = mentionsBuilder_.build();
+      }
       onBuilt();
       return result;
     }
@@ -453,6 +543,32 @@ private static final long serialVersionUID = 0L;
         }
         onChanged();
       }
+      if (mentionsBuilder_ == null) {
+        if (!other.mentions_.isEmpty()) {
+          if (mentions_.isEmpty()) {
+            mentions_ = other.mentions_;
+            bitField0_ = (bitField0_ & ~0x00000002);
+          } else {
+            ensureMentionsIsMutable();
+            mentions_.addAll(other.mentions_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.mentions_.isEmpty()) {
+          if (mentionsBuilder_.isEmpty()) {
+            mentionsBuilder_.dispose();
+            mentionsBuilder_ = null;
+            mentions_ = other.mentions_;
+            bitField0_ = (bitField0_ & ~0x00000002);
+            mentionsBuilder_ = 
+              com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                 getMentionsFieldBuilder() : null;
+          } else {
+            mentionsBuilder_.addAllMessages(other.mentions_);
+          }
+        }
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -500,6 +616,19 @@ private static final long serialVersionUID = 0L;
               input.popLimit(limit);
               break;
             } // case 18
+            case 26: {
+              com.shengyu.framework.websocket.core.protocol.MentionUser m =
+                  input.readMessage(
+                      com.shengyu.framework.websocket.core.protocol.MentionUser.parser(),
+                      extensionRegistry);
+              if (mentionsBuilder_ == null) {
+                ensureMentionsIsMutable();
+                mentions_.add(m);
+              } else {
+                mentionsBuilder_.addMessage(m);
+              }
+              break;
+            } // case 26
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -718,6 +847,318 @@ private static final long serialVersionUID = 0L;
       bitField0_ = (bitField0_ & ~0x00000001);
       onChanged();
       return this;
+    }
+
+    private java.util.List<com.shengyu.framework.websocket.core.protocol.MentionUser> mentions_ =
+      java.util.Collections.emptyList();
+    private void ensureMentionsIsMutable() {
+      if (!((bitField0_ & 0x00000002) != 0)) {
+        mentions_ = new java.util.ArrayList<com.shengyu.framework.websocket.core.protocol.MentionUser>(mentions_);
+        bitField0_ |= 0x00000002;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilderV3<
+        com.shengyu.framework.websocket.core.protocol.MentionUser, com.shengyu.framework.websocket.core.protocol.MentionUser.Builder, com.shengyu.framework.websocket.core.protocol.MentionUserOrBuilder> mentionsBuilder_;
+
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public java.util.List<com.shengyu.framework.websocket.core.protocol.MentionUser> getMentionsList() {
+      if (mentionsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(mentions_);
+      } else {
+        return mentionsBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public int getMentionsCount() {
+      if (mentionsBuilder_ == null) {
+        return mentions_.size();
+      } else {
+        return mentionsBuilder_.getCount();
+      }
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public com.shengyu.framework.websocket.core.protocol.MentionUser getMentions(int index) {
+      if (mentionsBuilder_ == null) {
+        return mentions_.get(index);
+      } else {
+        return mentionsBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public Builder setMentions(
+        int index, com.shengyu.framework.websocket.core.protocol.MentionUser value) {
+      if (mentionsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureMentionsIsMutable();
+        mentions_.set(index, value);
+        onChanged();
+      } else {
+        mentionsBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public Builder setMentions(
+        int index, com.shengyu.framework.websocket.core.protocol.MentionUser.Builder builderForValue) {
+      if (mentionsBuilder_ == null) {
+        ensureMentionsIsMutable();
+        mentions_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        mentionsBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public Builder addMentions(com.shengyu.framework.websocket.core.protocol.MentionUser value) {
+      if (mentionsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureMentionsIsMutable();
+        mentions_.add(value);
+        onChanged();
+      } else {
+        mentionsBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public Builder addMentions(
+        int index, com.shengyu.framework.websocket.core.protocol.MentionUser value) {
+      if (mentionsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureMentionsIsMutable();
+        mentions_.add(index, value);
+        onChanged();
+      } else {
+        mentionsBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public Builder addMentions(
+        com.shengyu.framework.websocket.core.protocol.MentionUser.Builder builderForValue) {
+      if (mentionsBuilder_ == null) {
+        ensureMentionsIsMutable();
+        mentions_.add(builderForValue.build());
+        onChanged();
+      } else {
+        mentionsBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public Builder addMentions(
+        int index, com.shengyu.framework.websocket.core.protocol.MentionUser.Builder builderForValue) {
+      if (mentionsBuilder_ == null) {
+        ensureMentionsIsMutable();
+        mentions_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        mentionsBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public Builder addAllMentions(
+        java.lang.Iterable<? extends com.shengyu.framework.websocket.core.protocol.MentionUser> values) {
+      if (mentionsBuilder_ == null) {
+        ensureMentionsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, mentions_);
+        onChanged();
+      } else {
+        mentionsBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public Builder clearMentions() {
+      if (mentionsBuilder_ == null) {
+        mentions_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+      } else {
+        mentionsBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public Builder removeMentions(int index) {
+      if (mentionsBuilder_ == null) {
+        ensureMentionsIsMutable();
+        mentions_.remove(index);
+        onChanged();
+      } else {
+        mentionsBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public com.shengyu.framework.websocket.core.protocol.MentionUser.Builder getMentionsBuilder(
+        int index) {
+      return getMentionsFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public com.shengyu.framework.websocket.core.protocol.MentionUserOrBuilder getMentionsOrBuilder(
+        int index) {
+      if (mentionsBuilder_ == null) {
+        return mentions_.get(index);  } else {
+        return mentionsBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public java.util.List<? extends com.shengyu.framework.websocket.core.protocol.MentionUserOrBuilder> 
+         getMentionsOrBuilderList() {
+      if (mentionsBuilder_ != null) {
+        return mentionsBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(mentions_);
+      }
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public com.shengyu.framework.websocket.core.protocol.MentionUser.Builder addMentionsBuilder() {
+      return getMentionsFieldBuilder().addBuilder(
+          com.shengyu.framework.websocket.core.protocol.MentionUser.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public com.shengyu.framework.websocket.core.protocol.MentionUser.Builder addMentionsBuilder(
+        int index) {
+      return getMentionsFieldBuilder().addBuilder(
+          index, com.shengyu.framework.websocket.core.protocol.MentionUser.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * &#64;提及用户映射（精确下标，用于渲染/点击）
+     * </pre>
+     *
+     * <code>repeated .MentionUser mentions = 3;</code>
+     */
+    public java.util.List<com.shengyu.framework.websocket.core.protocol.MentionUser.Builder> 
+         getMentionsBuilderList() {
+      return getMentionsFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilderV3<
+        com.shengyu.framework.websocket.core.protocol.MentionUser, com.shengyu.framework.websocket.core.protocol.MentionUser.Builder, com.shengyu.framework.websocket.core.protocol.MentionUserOrBuilder> 
+        getMentionsFieldBuilder() {
+      if (mentionsBuilder_ == null) {
+        mentionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
+            com.shengyu.framework.websocket.core.protocol.MentionUser, com.shengyu.framework.websocket.core.protocol.MentionUser.Builder, com.shengyu.framework.websocket.core.protocol.MentionUserOrBuilder>(
+                mentions_,
+                ((bitField0_ & 0x00000002) != 0),
+                getParentForChildren(),
+                isClean());
+        mentions_ = null;
+      }
+      return mentionsBuilder_;
     }
     @java.lang.Override
     public final Builder setUnknownFields(

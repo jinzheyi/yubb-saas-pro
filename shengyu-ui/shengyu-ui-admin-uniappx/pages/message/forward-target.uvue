@@ -1,0 +1,410 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">返回</text>
+			</view>
+			<view class="header-title-wrap">
+				<text class="header-title">选择会话</text>
+			</view>
+			<view class="header-right"></view>
+		</view>
+
+		<view class="search-container">
+			<view class="search-bar">
+				<text class="iconfont search-icon">&#xea6e;</text>
+				<input class="search-input" v-model="keyword" placeholder="搜索" placeholder-class="placeholder" />
+			</view>
+		</view>
+
+		<view v-if="messageCountText != ''" class="summary">
+			<text class="summary-text">将转发 {{ messageCountText }} 到</text>
+		</view>
+
+		<view v-if="showForwardType" class="forward-type">
+			<view class="forward-type-item" :class="{ 'forward-type-active': forwardType === 1 }" @click="setForwardTypeSingle">
+				<text class="forward-type-text">逐条转发</text>
+			</view>
+			<view class="forward-type-item" :class="{ 'forward-type-active': forwardType === 2 }" @click="setForwardTypeCombine">
+				<text class="forward-type-text">合并转发</text>
+			</view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<view class="conv-list">
+				<view
+					v-for="item in filteredConversations"
+					:key="item.chatId"
+					class="conv-item"
+					hover-class="conv-item-active"
+					@click="handleSelect(item.chatId)"
+				>
+					<view class="conv-avatar" :style="{ backgroundColor: item.avatarBg }">
+						<text v-if="item.conversationType === 2" class="iconfont conv-avatar-icon">&#xe616;</text>
+						<text v-else class="conv-avatar-text">{{ item.avatarText }}</text>
+					</view>
+					<view class="conv-body">
+						<text class="conv-name">{{ item.targetName }}</text>
+						<text class="conv-desc">{{ item.lastMessageContent }}</text>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { onLoad, onShow } from '@dcloudio/uni-app'
+import { conversationService, ConversationItem } from '../../services/conversation-service.uts'
+import { forwardMessages as forwardMessagesApi } from '../../api/message.uts'
+import { encodeIdParam } from '../../utils/id-param.uts'
+
+const keyword = ref('')
+
+const messageIds = ref<string[]>([])
+const forwardType = ref<number>(1)
+
+const MAX_FORWARD_MESSAGE_COUNT = 50
+
+const conversations = ref<ConversationItem[]>([])
+
+const filteredConversations = computed(() => {
+	const kw = keyword.value != null ? keyword.value.trim() : ''
+	if (kw === '') {
+		return conversations.value
+	}
+	return conversations.value.filter(c => {
+		const name = c != null && c.targetName != null ? String(c.targetName) : ''
+		return name.indexOf(kw) > -1
+	})
+})
+
+const messageCountText = computed(() => {
+	const count = messageIds.value != null ? messageIds.value.length : 0
+	return count > 0 ? count.toString() + ' 条消息' : ''
+})
+
+const showForwardType = computed(() => {
+	const count = messageIds.value != null ? messageIds.value.length : 0
+	return count > 1
+})
+
+function setForwardTypeSingle(): void {
+	forwardType.value = 1
+}
+
+function setForwardTypeCombine(): void {
+	forwardType.value = 2
+}
+
+function handleBack(): void {
+	uni.navigateBack()
+}
+
+function parseMessageIds(value: string | null): string[] {
+	if (value == null) {
+		return []
+	}
+	const s = value.trim()
+	if (s === '') {
+		return []
+	}
+	const parts = s.split(',')
+	const ids: string[] = []
+	for (let i = 0; i < parts.length; i++) {
+		const p = parts[i] != null ? parts[i].trim() : ''
+		if (p !== '' && p !== '0') {
+			ids.push(p)
+		}
+	}
+	return ids
+}
+
+function loadConversationList(): void {
+	try {
+		conversations.value = conversationService.getConversations()
+		if (conversations.value == null || conversations.value.length === 0) {
+			void conversationService.loadConversations().then(() => {
+				conversations.value = conversationService.getConversations()
+			})
+		}
+	} catch (e) {
+		conversations.value = []
+	}
+}
+
+async function handleSelect(targetChatId: string): Promise<void> {
+	const ids = messageIds.value != null ? messageIds.value : []
+	if (targetChatId == null || targetChatId === '' || ids.length === 0) {
+		uni.showToast({ title: '参数错误', icon: 'none' })
+		return
+	}
+	if (ids.length > MAX_FORWARD_MESSAGE_COUNT) {
+		uni.showToast({ title: `最多选择 ${MAX_FORWARD_MESSAGE_COUNT} 条消息`, icon: 'none' })
+		return
+	}
+	try {
+		uni.showLoading({ title: '发送中...' })
+		await forwardMessagesApi(targetChatId, ids, forwardType.value)
+		uni.hideLoading()
+		uni.showToast({ title: '已转发', icon: 'success' })
+		const conv = conversationService.getConversation(targetChatId)
+		if (conv != null) {
+			const name = conv.targetName != null ? String(conv.targetName) : ''
+			const type = conv.conversationType
+			const targetId = conv.targetId != null ? String(conv.targetId) : ''
+			const chatIdParam = encodeIdParam(targetChatId)
+			const targetIdParam = encodeIdParam(targetId)
+			if (type === 2) {
+				const memberCount = (conv as any).groupMemberCount != null ? String((conv as any).groupMemberCount) : '0'
+				uni.redirectTo({
+					url: `/pages/message/chat?chatId=${chatIdParam}&type=group&groupId=${targetIdParam}&targetId=${targetIdParam}&name=${encodeURIComponent(name)}&memberCount=${encodeURIComponent(memberCount)}`
+				})
+			} else {
+				uni.redirectTo({
+					url: `/pages/message/chat?chatId=${chatIdParam}&type=single&targetId=${targetIdParam}&name=${encodeURIComponent(name)}`
+				})
+			}
+			return
+		}
+		const chatIdParam = encodeIdParam(targetChatId)
+		uni.redirectTo({
+			url: `/pages/message/chat?chatId=${chatIdParam}`
+		})
+	} catch (e) {
+		uni.hideLoading()
+		uni.showToast({ title: '转发失败', icon: 'none' })
+	}
+}
+
+onLoad((options: any) => {
+	try {
+		const ids = options != null ? (options['messageIds'] as string | null) : null
+		messageIds.value = parseMessageIds(ids)
+		if (messageIds.value.length > MAX_FORWARD_MESSAGE_COUNT) {
+			uni.showToast({ title: `最多选择 ${MAX_FORWARD_MESSAGE_COUNT} 条消息`, icon: 'none' })
+			messageIds.value = []
+			setTimeout(() => {
+				uni.navigateBack()
+			}, 200)
+			return
+		}
+		const t = options != null ? (options['forwardType'] as string | null) : null
+		if (t != null && t !== '') {
+			const n = Number(t)
+			forwardType.value = n === 2 ? 2 : 1
+		}
+	} catch (e) {
+		messageIds.value = []
+	}
+	loadConversationList()
+})
+
+onShow(() => {
+	loadConversationList()
+})
+</script>
+
+<style scoped>
+.page {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	background-color: #f7f8fa;
+}
+
+.status-bar {
+	height: 0px;
+}
+
+.header {
+	height: 44px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	padding-left: 12px;
+	padding-right: 12px;
+	background-color: #ffffff;
+}
+
+.header-left {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.back-icon {
+	font-size: 18px;
+	color: #333333;
+}
+
+.back-text {
+	margin-left: 6px;
+	font-size: 14px;
+	color: #333333;
+}
+
+.header-title-wrap {
+	flex: 1;
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+}
+
+.header-title {
+	font-size: 16px;
+	color: #111111;
+	font-weight: 600;
+}
+
+.header-right {
+	width: 40px;
+}
+
+.search-container {
+	padding-left: 12px;
+	padding-right: 12px;
+	padding-top: 10px;
+	padding-bottom: 10px;
+	background-color: #ffffff;
+}
+
+.search-bar {
+	height: 36px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	background-color: #f2f3f5;
+	border-radius: 8px;
+	padding-left: 10px;
+	padding-right: 10px;
+}
+
+.search-icon {
+	font-size: 16px;
+	color: #8c8c8c;
+}
+
+.search-input {
+	flex: 1;
+	margin-left: 6px;
+	font-size: 14px;
+	color: #333333;
+}
+
+.summary {
+	padding-left: 12px;
+	padding-right: 12px;
+	padding-top: 8px;
+	padding-bottom: 8px;
+	background-color: #ffffff;
+}
+
+.summary-text {
+	font-size: 12px;
+	color: #666666;
+}
+
+.forward-type {
+	display: flex;
+	flex-direction: row;
+	background-color: #ffffff;
+	padding-left: 12px;
+	padding-right: 12px;
+	padding-bottom: 10px;
+}
+
+.forward-type-item {
+	flex: 1;
+	height: 34px;
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+	background-color: #f2f3f5;
+	border-radius: 8px;
+}
+
+.forward-type-item + .forward-type-item {
+	margin-left: 10px;
+}
+
+.forward-type-active {
+	background-color: #e6f0ff;
+}
+
+.forward-type-text {
+	font-size: 13px;
+	color: #333333;
+}
+
+.content {
+	flex: 1;
+}
+
+.conv-list {
+	padding-left: 12px;
+	padding-right: 12px;
+	padding-top: 10px;
+}
+
+.conv-item {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	background-color: #ffffff;
+	border-radius: 10px;
+	padding-left: 12px;
+	padding-right: 12px;
+	padding-top: 10px;
+	padding-bottom: 10px;
+	margin-bottom: 10px;
+}
+
+.conv-item-active {
+	background-color: #f2f3f5;
+}
+
+.conv-avatar {
+	width: 44px;
+	height: 44px;
+	border-radius: 10px;
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+}
+
+.conv-avatar-icon {
+	font-size: 18px;
+	color: #ffffff;
+}
+
+.conv-avatar-text {
+	font-size: 16px;
+	color: #ffffff;
+	font-weight: 600;
+}
+
+.conv-body {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	margin-left: 10px;
+}
+
+.conv-name {
+	font-size: 14px;
+	color: #111111;
+	font-weight: 600;
+}
+
+.conv-desc {
+	margin-top: 4px;
+	font-size: 12px;
+	color: #666666;
+}
+</style>

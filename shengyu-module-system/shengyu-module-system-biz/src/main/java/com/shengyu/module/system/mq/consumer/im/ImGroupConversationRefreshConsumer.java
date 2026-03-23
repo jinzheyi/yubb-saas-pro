@@ -2,7 +2,6 @@ package com.shengyu.module.system.mq.consumer.im;
 
 import com.shengyu.framework.mq.redis.core.stream.AbstractRedisStreamMessageListener;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
-import com.shengyu.framework.websocket.core.protocol.TextMessage;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
@@ -56,7 +55,7 @@ public class ImGroupConversationRefreshConsumer extends AbstractRedisStreamMessa
                     log.warn("[ImGroupConversationRefreshConsumer] deleteConversation failed, groupId={}, memberId={}, error={}",
                             message.getGroupId(), memberId, e.getMessage());
                 }
-                sendConversationUpsert(message, memberId);
+                sendConversationSyncNotify(message, memberId, null);
             }
             return;
         }
@@ -73,29 +72,30 @@ public class ImGroupConversationRefreshConsumer extends AbstractRedisStreamMessa
                 if (resp != null && resp.getChatId() != null) {
                     message.setChatId(resp.getChatId());
                 }
+                sendConversationSyncNotify(message, memberId, resp != null ? resp.getCursorVersion() : null);
             } catch (Exception e) {
                 log.warn("[ImGroupConversationRefreshConsumer] createOrGetConversation failed, groupId={}, memberId={}, error={}",
                         message.getGroupId(), memberId, e.getMessage(), e);
+                sendConversationSyncNotify(message, memberId, null);
             }
-            sendConversationUpsert(message, memberId);
         }
     }
 
-    private void sendConversationUpsert(ImGroupConversationRefreshMessage message, Long receiverUserId) {
+    private void sendConversationSyncNotify(ImGroupConversationRefreshMessage message, Long receiverUserId, Long cursorVersion) {
         try {
             Long tenantId = TenantContextHolder.getTenantId();
             messageSender.sendToUser(receiverUserId,
                     MessageType.SYSTEM_NOTIFY,
-                    TextMessage.newBuilder().setContent("CONVERSATION_UPSERT").build(),
+                    null,
                     message.getOperatorUserId(),
                     receiverUserId,
                     message.getGroupId(),
                     tenantId,
-                    null,
+                    cursorVersion,
                     null,
                     message.getChatId());
         } catch (Exception e) {
-            log.warn("[ImGroupConversationRefreshConsumer] push CONVERSATION_UPSERT failed, groupId={}, receiverUserId={}, error={}",
+            log.warn("[ImGroupConversationRefreshConsumer] push conversation sync notify failed, groupId={}, receiverUserId={}, error={}",
                     message.getGroupId(), receiverUserId, e.getMessage());
         }
     }

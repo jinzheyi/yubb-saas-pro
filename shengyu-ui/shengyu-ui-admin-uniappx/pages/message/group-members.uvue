@@ -32,7 +32,7 @@
 				<text class="letter-title">{{ group.letter }}</text>
 				
 				<!-- 成员项 -->
-				<view class="member-item" v-for="member in group.members" :key="member.id" @click="handleMemberClick(member)">
+				<view class="member-item" v-for="member in group.members" :key="member.id" @click="handleMemberClick(member)" @longpress="handleMemberLongPress(member)">
 					<!-- 删除模式：显示复选框 -->
 					<view v-if="mode === 'remove'" class="checkbox-wrap">
 						<view class="checkbox" :class="{ checked: member.selected, disabled: member.cannotRemove }">
@@ -64,9 +64,10 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
-	import { getGroupMembers, removeGroupMember } from '../../api/group.uts'
+	import { getGroupMembers, removeGroupMember, setGroupMemberRole } from '../../api/group.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { getUserIdStr } from '../../store/user.uts'
+	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 
 	const { t } = useI18n()
 
@@ -79,6 +80,7 @@
 	const groupName = ref('')
 	const mode = ref('view') // view-查看模式, remove-删除模式
 	const currentUserId = ref<string>('0')
+	const currentUserRole = ref<number>(0)
 	
 	// 成员数据
 	const allMembers = ref<any[]>([])
@@ -109,27 +111,44 @@
 			const members = await getGroupMembers(groupId.value)
 			
 			if (members && Array.isArray(members)) {
+				let myRole = 0
+				try {
+					for (let i = 0; i < (members as any[]).length; i++) {
+						const m: any = (members as any[])[i]
+						const uid = m != null && m.userId != null ? m.userId.toString() : ''
+						if (uid !== '' && uid === currentUserId.value) {
+							myRole = m != null && m.role != null ? Number(m.role) : 0
+							break
+						}
+					}
+				} catch (e) {
+					myRole = 0
+				}
+				currentUserRole.value = myRole
+
 				allMembers.value = members.map(member => {
 					const displayName = member.nickname || member.userNickname || '未知'
 					const pinyinLetter = getPinyinFirstLetter(displayName)
+					const roleNum = member.role != null ? Number(member.role) : 0
 					
 					// 判断角色
-					const isOwner = member.role === 1
-					const isAdmin = member.role === 2
+					const isOwner = roleNum === 2
+					const isAdmin = roleNum === 1
 					
 					// 判断是否可以删除（群主和当前用户自己不能删除）
-					const cannotRemove = isOwner || member.userId === currentUserId.value
+					const uid = member.userId != null ? member.userId.toString() : ''
+					const cannotRemove = isOwner || uid === currentUserId.value
 					
 					return {
-						id: member.userId,
+						id: uid,
 						name: displayName,
 						deptName: member.deptName || '',
 						avatarText: getAvatarText(displayName),
-						avatarBg: getUserAvatarColor(member.userId),
+						avatarBg: getUserAvatarColor(uid),
 						pinyin: pinyinLetter,
 						isOwner: isOwner,
 						isAdmin: isAdmin,
-						role: member.role,
+						role: roleNum,
 						selected: false,
 						cannotRemove: cannotRemove
 					}
@@ -204,9 +223,65 @@
 		}
 		
 		// 查看模式：跳转到用户详情（传递 userId 参数）
+		const userIdParam = encodeIdParam(member.id != null ? String(member.id) : '')
 		uni.navigateTo({
-			url: '/pages/contacts/user-detail?userId=' + member.id + '&name=' + encodeURIComponent(member.name)
+			url: '/pages/contacts/user-detail?userId=' + userIdParam + '&name=' + encodeURIComponent(member.name)
 		})
+	}
+
+	function handleMemberLongPress(member: any) {
+		try {
+			if (mode.value !== 'view') {
+				return
+			}
+			if (groupId.value === '') {
+				return
+			}
+			// 仅群主可操作管理员
+			if (currentUserRole.value !== 2) {
+				return
+			}
+			if (member == null) {
+				return
+			}
+			if (member.id == null || member.id === '' || member.id === '0') {
+				return
+			}
+			// 不允许对群主本人操作
+			if (member.isOwner === true) {
+				return
+			}
+			// 不允许对自己操作
+			if (member.id === currentUserId.value) {
+				return
+			}
+
+			const toAdmin = member.isAdmin !== true
+			const title = toAdmin ? '设为管理员' : '取消管理员'
+			uni.showActionSheet({
+				itemList: [title],
+				success: async (res) => {
+					if (res.tapIndex !== 0) {
+						return
+					}
+					uni.showLoading({ title: '处理中...' })
+					try {
+						await setGroupMemberRole(groupId.value, member.id.toString(), toAdmin ? 1 : 0)
+						uni.hideLoading()
+						uni.showToast({ title: '操作成功', icon: 'success' })
+						await loadMembers()
+					} catch (e) {
+						uni.hideLoading()
+						uni.showToast({ title: '操作失败', icon: 'none' })
+					}
+				},
+				fail: () => {
+					// ignore
+				}
+			})
+		} catch (e) {
+			// ignore
+		}
 	}
 	
 	/**
@@ -281,7 +356,7 @@
 		
 		// 获取页面参数
 		if (options['groupId']) {
-			groupId.value = options['groupId'] as string
+			groupId.value = decodeIdParam(options['groupId'])
 		}
 		if (options['groupName']) {
 			groupName.value = decodeURIComponent(options['groupName'])

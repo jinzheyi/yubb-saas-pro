@@ -80,6 +80,7 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getUserDetail } from '../../api/user.uts'
 	import { getContact, toggleContactStar } from '../../api/contact.uts'
+	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 
 	const { t } = useI18n()
 
@@ -167,9 +168,10 @@
 	}
 
 	function handleMessage() {
+		const targetIdParam = encodeIdParam(userId.value)
 		// 跳转到聊天页面，传递用户ID和会话类型
 		uni.navigateTo({
-			url: `/pages/message/chat?type=single&targetId=${userId.value}&name=${encodeURIComponent(userName.value)}`
+			url: `/pages/message/chat?type=single&targetId=${targetIdParam}&name=${encodeURIComponent(userName.value)}`
 		})
 	}
 
@@ -241,8 +243,12 @@
 		statusBarHeight.value = winInfo.statusBarHeight ?? 0
 		safeAreaBottom.value = winInfo.safeAreaInsets?.bottom ?? 0
 		if (options != null) {
+			const routeUserId = options['userId'] != null ? options['userId'] : options['id']
+			if (routeUserId != null && routeUserId !== '') {
+				userId.value = decodeIdParam(routeUserId)
+			}
 			if (options['userId']) {
-				userId.value = options['userId'] as string
+				userId.value = decodeIdParam(options['userId'])
 			}
 			if (options['name']) {
 				userName.value = decodeURIComponent(options['name'] as string)

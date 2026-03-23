@@ -1,6 +1,8 @@
 package com.shengyu.module.system.service.im;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import cn.hutool.core.util.IdUtil;
+import com.shengyu.framework.common.exception.ServiceException;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.websocket.core.protocol.ConversationBadge;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
@@ -26,7 +28,9 @@ import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
+import com.baomidou.dynamic.datasource.annotation.Master;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -175,6 +179,7 @@ public class ImConversationServiceImpl implements ImConversationService {
                 item.setLastReadSequence(state.getLastReadSequence() != null ? state.getLastReadSequence() : 0L);
                 item.setLastMessageType(state.getLastMessageType());
                 item.setLastMessageContent(buildPreviewByType(state.getLastMessageType(), state.getLastMessageContent()));
+                item.setLastMessageHasAtMe(Boolean.TRUE.equals(state.getLastMessageHasAtMe()));
                 item.setLastMessageTime(state.getLastMessageTime());
                 item.setIsPinned(state.getIsPinned());
                 item.setNoDisturb(state.getNoDisturb());
@@ -300,8 +305,20 @@ public class ImConversationServiceImpl implements ImConversationService {
     }
 
     @Override
+    @Master
     @Transactional(rollbackFor = Exception.class)
     public AppImConversationRespVO createOrGetConversation(Long userId, AppImConversationCreateReqVO createReqVO) {
+        try {
+            return doCreateOrGetConversation(userId, createReqVO);
+        } catch (ServiceException ex) {
+            if (Objects.equals(ex.getCode(), CONVERSATION_CREATE_FAILED.getCode())) {
+                return doCreateOrGetConversation(userId, createReqVO);
+            }
+            throw ex;
+        }
+    }
+
+    private AppImConversationRespVO doCreateOrGetConversation(Long userId, AppImConversationCreateReqVO createReqVO) {
         log.info("[ImConversationService] 创建或获取会话, userId: {}, targetId: {}, type: {}", 
                 userId, createReqVO.getTargetId(), createReqVO.getConversationType());
 
@@ -338,6 +355,11 @@ public class ImConversationServiceImpl implements ImConversationService {
             }
         }
         ImChatDO chat = getOrCreateChat(createReqVO.getConversationType(), userId, createReqVO.getTargetId());
+        if (chat == null || chat.getId() == null) {
+            log.warn("[ImConversationService] 创建或获取会话失败，chat为空, userId: {}, targetId: {}, type: {}",
+                    userId, createReqVO.getTargetId(), createReqVO.getConversationType());
+            throw exception(CONVERSATION_CREATE_FAILED);
+        }
         ImChatUserDO chatUser = ensureChatUser(userId, chat.getId());
 
         // 初始化会话-用户态（无消息也要可 sync 出现，对标企微/钉钉）
@@ -379,6 +401,7 @@ public class ImConversationServiceImpl implements ImConversationService {
                     lastMsgSeq,
                     lastMsgType,
                     lastMsgContent,
+                    false,
                     lastMsgTime,
                     chatUser.getIsPinned(),
                     chatUser.getNoDisturb(),
@@ -752,6 +775,9 @@ public class ImConversationServiceImpl implements ImConversationService {
             if (state != null) {
                 respVO.setCursorVersion(state.getCursorVersion());
                 respVO.setConversationVersion(state.getConversationVersion());
+                respVO.setLastMessageHasAtMe(Boolean.TRUE.equals(state.getLastMessageHasAtMe()));
+            } else {
+                respVO.setLastMessageHasAtMe(false);
             }
 
             Long lastMsgSeq = chatUser.getLastMessageSequence() != null ? chatUser.getLastMessageSequence() : 0L;
@@ -929,32 +955,62 @@ public class ImConversationServiceImpl implements ImConversationService {
     }
 
      private ImChatDO getOrCreateChat(Integer conversationType, Long userId, Long targetId) {
+         Long tenantId = TenantContextHolder.getTenantId();
+         if (tenantId == null) {
+             tenantId = 0L;
+         }
          if (ImConversationTypeEnum.isGroup(conversationType)) {
              ImChatDO chat = chatMapper.selectGroupChat(targetId, conversationType);
-             if (chat != null) {
+             if (chat != null && chat.getId() != null) {
                  return chat;
              }
-             chat = new ImChatDO();
-             chat.setChatType(conversationType);
-             chat.setGroupId(targetId);
-             chat.setStatus(1);
-             chatMapper.insert(chat);
-             return chat;
+            chatMapper.insertGroupChatIfAbsent(tenantId, IdUtil.getSnowflakeNextId(), conversationType, targetId, 1);
+             chat = chatMapper.selectGroupChat(targetId, conversationType);
+             if (chat != null && chat.getId() != null) {
+                 return chat;
+             }
+             ImChatDO newChat = new ImChatDO();
+            newChat.setId(IdUtil.getSnowflakeNextId());
+             newChat.setChatType(conversationType);
+             newChat.setGroupId(targetId);
+             newChat.setStatus(1);
+             newChat.setLastSequence(0L);
+             try {
+                 chatMapper.insert(newChat);
+                 return newChat;
+             } catch (Exception e) {
+                 log.warn("[ImConversationService] 兜底创建群聊会话失败, targetId: {}, tenantId: {}, error: {}",
+                         targetId, tenantId, e.getMessage());
+                 return chatMapper.selectGroupChat(targetId, conversationType);
+             }
          }
 
          Long user1 = Math.min(userId, targetId);
          Long user2 = Math.max(userId, targetId);
          ImChatDO chat = chatMapper.selectSingleChat(user1, user2, conversationType);
-         if (chat != null) {
+         if (chat != null && chat.getId() != null) {
              return chat;
          }
-         chat = new ImChatDO();
-         chat.setChatType(conversationType);
-         chat.setSingleUser1(user1);
-         chat.setSingleUser2(user2);
-         chat.setStatus(1);
-         chatMapper.insert(chat);
-         return chat;
+        chatMapper.insertSingleChatIfAbsent(tenantId, IdUtil.getSnowflakeNextId(), conversationType, user1, user2, 1);
+         chat = chatMapper.selectSingleChat(user1, user2, conversationType);
+         if (chat != null && chat.getId() != null) {
+             return chat;
+         }
+         ImChatDO newChat = new ImChatDO();
+        newChat.setId(IdUtil.getSnowflakeNextId());
+         newChat.setChatType(conversationType);
+         newChat.setSingleUser1(user1);
+         newChat.setSingleUser2(user2);
+         newChat.setStatus(1);
+         newChat.setLastSequence(0L);
+         try {
+             chatMapper.insert(newChat);
+             return newChat;
+         } catch (Exception e) {
+             log.warn("[ImConversationService] 兜底创建单聊会话失败, user1: {}, user2: {}, tenantId: {}, error: {}",
+                     user1, user2, tenantId, e.getMessage());
+             return chatMapper.selectSingleChat(user1, user2, conversationType);
+         }
      }
 
      private ImChatDO findChat(Integer conversationType, Long userId, Long targetId) {
@@ -981,7 +1037,15 @@ public class ImConversationServiceImpl implements ImConversationService {
          chatUser.setIsPinned(false);
          chatUser.setNoDisturb(false);
          chatUser.setDeletedByUser(false);
-         chatUserMapper.insert(chatUser);
+        try {
+            chatUserMapper.insert(chatUser);
+        } catch (DuplicateKeyException e) {
+            ImChatUserDO existing = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+            if (existing != null) {
+                return existing;
+            }
+            throw e;
+        }
          return chatUser;
      }
 

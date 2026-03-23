@@ -16,6 +16,31 @@ const DEVICE_TYPE_KEY = 'DEVICE_TYPE'
 const DEVICE_ID_KEY = 'DEVICE_ID'
 const CLIENT_VERSION_KEY = 'CLIENT_VERSION'
 
+function parseStorageJson<T>(key: string): T | null {
+	try {
+		const raw = uni.getStorageSync(key)
+		if (raw == null) {
+			return null
+		}
+		if (typeof raw === 'string') {
+			const text = (raw as string).trim()
+			if (text === '') {
+				uni.removeStorageSync(key)
+				return null
+			}
+			return JSON.parse(text) as T
+		}
+		if (typeof raw === 'object') {
+			return raw as T
+		}
+		uni.removeStorageSync(key)
+		return null
+	} catch (e) {
+		uni.removeStorageSync(key)
+		return null
+	}
+}
+
 /**
  * 用户信息类型
  */
@@ -207,13 +232,9 @@ export function getTenantIdStr(): string {
  * 获取用户信息
  */
 export function getUserInfo(): UserInfoVO | null {
-	try {
-		const userInfoStr = uni.getStorageSync(USER_INFO_KEY)
-		if (userInfoStr != null) {
-			return JSON.parse(userInfoStr as string) as UserInfoVO
-		}
-	} catch (e) {
-		console.error('获取用户信息失败:', e)
+	const userInfo = parseStorageJson<UserInfoVO>(USER_INFO_KEY)
+	if (userInfo != null && userInfo.user != null) {
+		return userInfo
 	}
 	return null
 }
@@ -273,13 +294,9 @@ export function updateUserNickname(nickname: string) {
  * 获取权限列表
  */
 export function getPermissions(): string[] {
-	try {
-		const permissionsStr = uni.getStorageSync(PERMISSIONS_KEY)
-		if (permissionsStr != null) {
-			return JSON.parse(permissionsStr as string) as string[]
-		}
-	} catch (e) {
-		console.error('获取权限列表失败:', e)
+	const permissions = parseStorageJson<any>(PERMISSIONS_KEY)
+	if (permissions != null && Array.isArray(permissions)) {
+		return permissions as string[]
 	}
 	return []
 }
@@ -349,13 +366,9 @@ export function hasAllPermissions(permissionList: string[]): boolean {
  * 获取角色列表
  */
 export function getRoles(): string[] {
-	try {
-		const rolesStr = uni.getStorageSync(ROLES_KEY)
-		if (rolesStr != null) {
-			return JSON.parse(rolesStr as string) as string[]
-		}
-	} catch (e) {
-		console.error('获取角色列表失败:', e)
+	const roles = parseStorageJson<any>(ROLES_KEY)
+	if (roles != null && Array.isArray(roles)) {
+		return roles as string[]
 	}
 	return []
 }

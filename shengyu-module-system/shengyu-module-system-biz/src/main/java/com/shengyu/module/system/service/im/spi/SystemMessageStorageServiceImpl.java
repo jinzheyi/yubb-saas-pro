@@ -1,14 +1,16 @@
 package com.shengyu.module.system.service.im.spi;
 
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
+import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.websocket.core.protocol.*;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
 import com.shengyu.framework.websocket.core.service.dto.MessageSaveResult;
-import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
@@ -79,6 +81,11 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
     @Resource
     private NettyMessageSender nettyMessageSender;
+
+    private static class MentionParseResult {
+        private boolean atAll;
+        private Set<Long> userIds;
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -167,6 +174,77 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         }
     }
 
+    private Long parseQuoteMessageId(ImMessage message) {
+        if (message == null || message.getHeader() == null) {
+            return null;
+        }
+        if (message.getHeader().getMessageType() != MessageType.QUOTE_REPLY) {
+            return null;
+        }
+        try {
+            QuoteReplyMessage quoteMsg = QuoteReplyMessage.parseFrom(message.getBody());
+            long id = quoteMsg.getQuoteMessageId();
+            return id > 0 ? id : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String buildMentionsForDb(ImMessage message) {
+        if (message == null || message.getHeader() == null) {
+            return null;
+        }
+        MessageType type = message.getHeader().getMessageType();
+        try {
+            List<MentionUser> mentions;
+            List<Long> atUserIds;
+            if (type == MessageType.TEXT) {
+                TextMessage textMsg = TextMessage.parseFrom(message.getBody());
+                mentions = textMsg.getMentionsList();
+                atUserIds = textMsg.getAtUserIdsList();
+            } else if (type == MessageType.QUOTE_REPLY) {
+                QuoteReplyMessage quoteMsg = QuoteReplyMessage.parseFrom(message.getBody());
+                mentions = quoteMsg.getMentionsList();
+                atUserIds = quoteMsg.getAtUserIdsList();
+            } else {
+                return null;
+            }
+
+            List<JSONObject> arr = new ArrayList<>();
+            if (mentions != null && !mentions.isEmpty()) {
+                for (MentionUser mu : mentions) {
+                    if (mu == null) {
+                        continue;
+                    }
+                    JSONObject obj = JSONUtil.createObj();
+                    obj.set("userId", mu.getUserId());
+                    obj.set("nickname", mu.getNickname());
+                    obj.set("startIndex", mu.getStartIndex());
+                    obj.set("endIndex", mu.getEndIndex());
+                    arr.add(obj);
+                }
+            } else if (atUserIds != null && !atUserIds.isEmpty()) {
+                for (Long atUserId : atUserIds) {
+                    if (atUserId == null || atUserId <= 0 && atUserId != -1L) {
+                        continue;
+                    }
+                    JSONObject obj = JSONUtil.createObj();
+                    obj.set("userId", atUserId);
+                    obj.set("nickname", atUserId == -1L ? "所有人" : "");
+                    obj.set("startIndex", 0);
+                    obj.set("endIndex", 0);
+                    arr.add(obj);
+                }
+            }
+            if (arr.isEmpty()) {
+                return null;
+            }
+            return JSONUtil.toJsonStr(arr);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /**
      * 保存消息并返回ID（同步方法）
      * 
@@ -184,6 +262,8 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             // 1. 解析消息内容
             String content = parseMessageContent(message);
             String extra = buildExtraForDb(message);
+            String mentionsJson = buildMentionsForDb(message);
+            Long quoteMessageId = parseQuoteMessageId(message);
             
             // 2. 确定/创建全局 ChatID
             Long chatId = getOrCreateChatId(header);
@@ -203,6 +283,10 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             messageDO.setMessageType(normalizeDbMessageType(header.getMessageType()));
             messageDO.setContent(content);
             messageDO.setExtra(extra);
+            messageDO.setMentions(mentionsJson);
+            if (quoteMessageId != null && quoteMessageId > 0) {
+                messageDO.setQuoteMessageId(quoteMessageId);
+            }
             messageDO.setSendTime(sendTime);
             messageDO.setRev(1L);
             messageDO.setStatus(ImMessageStatusEnum.SENT.getStatus());
@@ -252,7 +336,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             case LOCATION:
                 return 6;
             case CUSTOM:
-                return 8;
+                return 9;
             case QUOTE_REPLY:
                 return 1;
             default:
@@ -261,33 +345,23 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
     }
 
     private Long getOrCreateChatId(MessageHeader header) {
-        Integer chatType;
-        ImChatDO chat;
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
         if (header.getGroupId() > 0) {
-            chatType = ImConversationTypeEnum.GROUP.getType();
-            chat = chatMapper.selectGroupChat(header.getGroupId(), chatType);
-            if (chat == null) {
-                chat = new ImChatDO();
-                chat.setChatType(chatType);
-                chat.setGroupId(header.getGroupId());
-                chat.setStatus(1);
-                chatMapper.insert(chat);
-            }
+            Integer chatType = ImConversationTypeEnum.GROUP.getType();
+            chatMapper.insertGroupChatIfAbsent(tenantId, IdUtil.getSnowflakeNextId(), chatType, header.getGroupId(), 1);
+            ImChatDO chat = chatMapper.selectGroupChat(header.getGroupId(), chatType);
+            return chat != null ? chat.getId() : null;
         } else {
-            chatType = ImConversationTypeEnum.SINGLE.getType();
+            Integer chatType = ImConversationTypeEnum.SINGLE.getType();
             Long user1 = Math.min(header.getSenderId(), header.getReceiverId());
             Long user2 = Math.max(header.getSenderId(), header.getReceiverId());
-            chat = chatMapper.selectSingleChat(user1, user2, chatType);
-            if (chat == null) {
-                chat = new ImChatDO();
-                chat.setChatType(chatType);
-                chat.setSingleUser1(user1);
-                chat.setSingleUser2(user2);
-                chat.setStatus(1);
-                chatMapper.insert(chat);
-            }
+            chatMapper.insertSingleChatIfAbsent(tenantId, IdUtil.getSnowflakeNextId(), chatType, user1, user2, 1);
+            ImChatDO chat = chatMapper.selectSingleChat(user1, user2, chatType);
+            return chat != null ? chat.getId() : null;
         }
-        return chat.getId();
     }
 
     /**
@@ -303,6 +377,10 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                 case TEXT:
                     TextMessage textMsg = TextMessage.parseFrom(message.getBody());
                     return textMsg.getContent();
+
+                case QUOTE_REPLY:
+                    QuoteReplyMessage quoteMsg = QuoteReplyMessage.parseFrom(message.getBody());
+                    return quoteMsg.getReplyContent();
                     
                 case IMAGE:
                     ImageMessage imageMsg = ImageMessage.parseFrom(message.getBody());
@@ -358,6 +436,8 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             Long tenantId = header.getTenantId();
             String basePreview = buildConversationPreview(header, messageDO, rawMessage);
             String lastMessageContent = truncateContent(basePreview);
+
+            MentionParseResult mentionParsed = parseMentions(rawMessage);
 
             // 群聊：摘要需要带发送者（对标企微/钉钉）
             String senderName = "";
@@ -429,6 +509,8 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                             messageDO.getSequence(),
                             messageDO.getMessageType(),
                             finalPreview,
+                            (!isSender && mentionParsed != null && (mentionParsed.atAll
+                                    || (mentionParsed.userIds != null && mentionParsed.userIds.contains(memberId)))),
                             messageDO.getSendTime()
                     );
 
@@ -487,6 +569,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         messageDO.getSequence(),
                         messageDO.getMessageType(),
                         lastMessageContent,
+                        false,
                         messageDO.getSendTime()
                 );
 
@@ -524,6 +607,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         messageDO.getSequence(),
                         messageDO.getMessageType(),
                         lastMessageContent,
+                        false,
                         messageDO.getSendTime()
                 );
                 imBadgeService.pushBadgeUpdate(header.getReceiverId());
@@ -682,22 +766,6 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
     }
 
     /**
-     * 异步更新会话未读数
-     */
-    @Async("imTaskExecutor")
-    public void updateConversationUnreadCountAsync(Long userId) {
-        try {
-            log.debug("[MessageStorage] updateConversationUnreadCountAsync 已废弃, userId: {}", userId);
-        } catch (Exception e) {
-            log.error("[MessageStorage] 更新会话未读数失败, userId: {}", userId, e);
-        }
-    }
-
-    /**
-     * 根据消息ID列表查询发送者ID集合
-     * 
-     * 用于已读回执转发
-     * 
      * @param messageIds 消息ID列表
      * @return 发送者ID集合
      */
@@ -730,7 +798,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
      * @param messageIds 消息ID列表
      */
     public void markMessagesAsRead(Long userId, List<Long> messageIds) {
-        if (messageIds == null || messageIds.isEmpty()) {
+        if (userId == null || userId <= 0 || messageIds == null || messageIds.isEmpty()) {
             return;
         }
 
@@ -748,6 +816,75 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             
         } catch (Exception e) {
             log.error("[MessageStorage] 标记消息已读失败, userId: {}", userId, e);
+        }
+    }
+
+    private MentionParseResult parseMentions(ImMessage rawMessage) {
+        MentionParseResult result = new MentionParseResult();
+        result.atAll = false;
+        result.userIds = new HashSet<>();
+        if (rawMessage == null || rawMessage.getHeader() == null || rawMessage.getHeader().getMessageType() == null) {
+            return result;
+        }
+        try {
+            MessageType messageType = rawMessage.getHeader().getMessageType();
+            if (messageType == MessageType.TEXT) {
+                TextMessage textMessage = TextMessage.parseFrom(rawMessage.getBody());
+                mergeMentions(result, textMessage.getMentionsList(), textMessage.getAtUserIdsList());
+            } else if (messageType == MessageType.QUOTE_REPLY) {
+                QuoteReplyMessage quoteReplyMessage = QuoteReplyMessage.parseFrom(rawMessage.getBody());
+                mergeMentions(result, quoteReplyMessage.getMentionsList(), quoteReplyMessage.getAtUserIdsList());
+            }
+        } catch (Exception e) {
+            log.warn("[MessageStorage] 解析提及失败, messageType: {}", rawMessage.getHeader().getMessageType(), e);
+        }
+        return result;
+    }
+
+    private void mergeMentions(MentionParseResult result, List<MentionUser> mentions, List<Long> atUserIds) {
+        if (result == null) {
+            return;
+        }
+        if (mentions != null && !mentions.isEmpty()) {
+            for (MentionUser mention : mentions) {
+                if (mention == null) {
+                    continue;
+                }
+                long userId = mention.getUserId();
+                if (userId == -1L) {
+                    result.atAll = true;
+                    continue;
+                }
+                if (userId > 0) {
+                    result.userIds.add(userId);
+                }
+            }
+        }
+        if (atUserIds != null && !atUserIds.isEmpty()) {
+            for (Long atUserId : atUserIds) {
+                if (atUserId == null) {
+                    continue;
+                }
+                if (atUserId == -1L) {
+                    result.atAll = true;
+                    continue;
+                }
+                if (atUserId > 0) {
+                    result.userIds.add(atUserId);
+                }
+            }
+        }
+    }
+
+    @Async("imTaskExecutor")
+    public void updateConversationUnreadCountAsync(Long userId) {
+        if (userId == null || userId <= 0) {
+            return;
+        }
+        try {
+            imBadgeService.pushBadgeUpdate(userId);
+        } catch (Exception e) {
+            log.warn("[MessageStorage] 异步推送角标失败, userId: {}", userId, e);
         }
     }
 }

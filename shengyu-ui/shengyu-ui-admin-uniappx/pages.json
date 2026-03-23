@@ -43,6 +43,27 @@
 			}
 		},
 		{
+			"path": "pages/message/forward-target",
+			"style": {
+				"navigationBarTitleText": "选择会话",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/message/forward-combine-detail",
+			"style": {
+				"navigationBarTitleText": "聊天记录",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/message/mention-selector",
+			"style": {
+				"navigationBarTitleText": "选择成员",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/message/chat-settings",
 			"style": {
 				"navigationBarTitleText": "聊天设置",

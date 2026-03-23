@@ -7,6 +7,7 @@ import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageForwardReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePullReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRecallConfigRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
@@ -89,6 +90,13 @@ public class AppImMessageController {
         return success(true);
     }
 
+    @GetMapping("/recall-config")
+    @Operation(summary = "获取撤回窗口配置")
+    public CommonResult<AppImMessageRecallConfigRespVO> getRecallConfig() {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(messageService.getRecallConfig(userId));
+    }
+
     @DeleteMapping("/delete")
     @Operation(summary = "删除消息")
     @Parameter(name = "id", description = "消息ID", required = true)
@@ -136,6 +144,14 @@ public class AppImMessageController {
     public CommonResult<List<AppImMessageRespVO>> pullMessages(@Valid AppImMessagePullReqVO pullReqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return success(messageService.pullMessages(userId, pullReqVO));
+    }
+
+    @GetMapping("/detail")
+    @Operation(summary = "获取消息详情")
+    @Parameter(name = "id", description = "消息ID", required = true)
+    public CommonResult<AppImMessageRespVO> getMessageDetail(@RequestParam("id") Long id) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(messageService.getMessageDetail(userId, id));
     }
 
     @PutMapping("/mark-read")

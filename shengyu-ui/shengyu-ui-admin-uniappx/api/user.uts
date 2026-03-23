@@ -9,7 +9,8 @@ import { get } from '../utils/request.uts'
  * @param id 用户ID（字符串，避免精度丢失）
  */
 export function getUserDetail(id: string): Promise<any> {
-	return get(`/system/user/get?id=${id}`)
+	const userId = id != null ? String(id) : ''
+	return get(`/system/user/get?id=${encodeURIComponent(userId)}`)
 }
 
 /**
