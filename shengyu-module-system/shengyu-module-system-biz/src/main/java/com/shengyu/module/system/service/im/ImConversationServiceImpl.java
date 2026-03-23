@@ -28,7 +28,6 @@ import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
-import com.baomidou.dynamic.datasource.annotation.Master;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -305,7 +304,6 @@ public class ImConversationServiceImpl implements ImConversationService {
     }
 
     @Override
-    @Master
     @Transactional(rollbackFor = Exception.class)
     public AppImConversationRespVO createOrGetConversation(Long userId, AppImConversationCreateReqVO createReqVO) {
         try {

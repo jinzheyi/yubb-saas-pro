@@ -23,7 +23,7 @@
 			</view>
 
 			<view v-if="items.length === 0" class="empty">
-				<text class="empty-text">暂无内容</text>
+				<text class="empty-text">{{ emptyText }}</text>
 			</view>
 		</scroll-view>
 	</view>
@@ -42,6 +42,7 @@ type ForwardCombineItem = {
 
 const items = ref<ForwardCombineItem[]>([])
 const comment = ref('')
+const emptyText = ref('暂无内容')
 
 function handleBack(): void {
 	uni.navigateBack()
@@ -69,6 +70,16 @@ function safeParseJson(raw: any): any | null {
 			if (s === '') {
 				return null
 			}
+			if (s === '[object Object]' || s === '[object UTSJSONObject]' || s === '[object Array]') {
+				return null
+			}
+			const first = s.charAt(0)
+			const last = s.charAt(s.length - 1)
+			const couldBeJsonObject = first === '{' && last === '}'
+			const couldBeJsonArray = first === '[' && last === ']'
+			if (!couldBeJsonObject && !couldBeJsonArray) {
+				return null
+			}
 			return JSON.parse(s)
 		}
 		if (typeof raw === 'object') {
@@ -83,6 +94,16 @@ function safeParseJson(raw: any): any | null {
 function buildPreview(messageType: number, content: any): string {
 	try {
 		if (messageType === 1 || messageType === 100 || messageType === 205) {
+			const parsed = safeParseJson(content)
+			if (parsed != null && typeof parsed === 'object') {
+				if ((parsed as any).replyContent != null && String((parsed as any).replyContent) !== '') {
+					return String((parsed as any).replyContent)
+				}
+				if ((parsed as any).content != null && String((parsed as any).content) !== '') {
+					return String((parsed as any).content)
+				}
+				return '[消息]'
+			}
 			return content != null ? String(content) : ''
 		}
 		if (messageType === 9 || messageType === 106) {
@@ -144,6 +165,7 @@ onLoad((options: any) => {
 	try {
 		const mid = options != null ? (options['messageId'] as string | null) : null
 		if (mid == null || mid === '' || mid === '0') {
+			emptyText.value = '参数错误'
 			items.value = []
 			return
 		}
@@ -160,6 +182,7 @@ async function loadByMessageId(messageId: string): Promise<void> {
 		uni.hideLoading()
 		const body = resp != null ? safeParseJson(resp.content) : null
 		if (body == null || body.type == null || String(body.type) !== 'FORWARD_COMBINE') {
+			emptyText.value = '内容不可查看'
 			items.value = []
 			return
 		}
@@ -177,12 +200,14 @@ async function loadByMessageId(messageId: string): Promise<void> {
 			list.push({ senderName: senderName, sendTime: sendTime, preview: pv, refMessageId: refId })
 		}
 		items.value = list
+		emptyText.value = list.length === 0 ? '暂无内容' : ''
 	} catch (e) {
 		try {
 			uni.hideLoading()
 		} catch (e2) {
 			// ignore
 		}
+		emptyText.value = '加载失败'
 		items.value = []
 		uni.showToast({ title: '加载失败', icon: 'none' })
 	}

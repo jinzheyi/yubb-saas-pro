@@ -143,6 +143,9 @@
 										<text class="forward-combine-footer-text">点击查看详情</text>
 									</view>
 								</view>
+								<view v-else-if="msg.type === 'custom'" class="message-bubble bubble-text" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
+									<text class="message-content">[自定义消息]</text>
+								</view>
 								
 								<view v-if="shouldShowReadReceiptEntry(msg)" class="read-receipt-entry" :class="{'read-receipt-entry-self': msg.isSelf}" @click.stop="handleReadReceiptEntryClick(msg)">
 									<text class="read-receipt-entry-text">{{ buildReadReceiptEntryText(msg) }}</text>
@@ -317,7 +320,7 @@
 						<text class="target-name" @click.stop="openForwardTargetSelector">选择联系人/群组</text>
 					</view>
 					<view class="forward-preview">
-						<text class="preview-text">[逐条转发] {{ selectedIds.length }} 条消息</text>
+						<text class="preview-text">已选择 {{ selectedIds.length }} 条消息</text>
 					</view>
 				</view>
 				<view class="forward-dialog-footer">
@@ -910,10 +913,7 @@
 			}
 		}
 		
-		// 4. 加载历史消息
-		await loadMessages()
-
-		// 4.1 标记当前活跃会话（用于重连补偿只补活跃/未读会话）
+		// 4. 标记当前活跃会话（用于重连补偿只补活跃/未读会话）
 		try {
 			if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
 				messageService.setActiveChatId(chatId.value)
@@ -921,6 +921,9 @@
 		} catch (e) {
 			// ignore
 		}
+
+		// 4.1 加载历史消息
+		await loadMessages()
 		
 		// 5. 监听新消息
 		messageService.addMessageListener(handleNewMessage)
@@ -1594,6 +1597,7 @@
 			const cachedMessages = messageService.getMessages(chatId.value)
 			if (cachedMessages.length > 0) {
 				messages.value = convertServiceMessages(cachedMessages)
+				prefetchVisibleGroupReadReceiptSummary(messages.value)
 				scrollToBottom()
 			}
 			
@@ -1603,8 +1607,13 @@
 			// 注意：request 拦截器已经解包了 data.data，返回的是 PageResult 对象
 			const pageResult = await getMessageList(chatId.value, pageNo, 20)
 			
-			if (pageResult && pageResult.list) {
-				const serverMessages = pageResult.list as any[]
+			const serverMessages = pageResult
+				? (
+					Array.isArray((pageResult as any).list) ? (pageResult as any).list :
+					(Array.isArray((pageResult as any).records) ? (pageResult as any).records : [])
+				)
+				: []
+			if (serverMessages.length > 0) {
 				try {
 					await messageService.ingestRestHistoryPage(chatId.value, serverMessages)
 				} catch (e) {
@@ -1626,6 +1635,7 @@
 				} catch (e) {
 					// ignore
 				}
+				prefetchVisibleGroupReadReceiptSummary(messages.value)
 				
 				// 断线补偿水位初始化：HTTP 拉到的最新消息也需要推进本地 lastPulledSequence
 				try {
@@ -1893,6 +1903,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else if (typeStr === 'location') {
 			// 位置消息
 			return content.address || content
+		} else if (typeStr === 'custom') {
+			if (content && typeof content === 'object') {
+				try {
+					return JSON.stringify(content)
+				} catch (e) {
+					return '[自定义消息]'
+				}
+			}
+			return content != null ? String(content) : ''
 		}
 		return content != null ? String(content) : ''
 	}
@@ -1935,6 +1954,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return content != null ? String(content) : ''
 		} else if (typeStr === 'location') {
 			return content?.address != null ? String(content.address) : (content != null ? String(content) : '')
+		} else if (typeStr === 'custom') {
+			if (content && typeof content === 'object') {
+				try {
+					return JSON.stringify(content)
+				} catch (e) {
+					return '[自定义消息]'
+				}
+			}
+			return content != null ? String(content) : ''
 		}
 		return content?.toString ? content.toString() : ''
 	}
@@ -1998,7 +2026,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		try {
 			const parsed = parseRawContent(rawContent)
 			if (parsed && typeof parsed === 'object') {
-				if (parsed.quotedMessageId !== null) {
+				if (parsed.quotedMessageId != null) {
 					target.quoteMessageId = parsed.quotedMessageId.toString()
 					target.quoteContent = parsed.quotedContent || ''
 					target.quoteSenderName = parsed.quotedSenderName || ''
@@ -2247,16 +2275,23 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	 * 处理新消息
 	 */
 	function handleNewMessage(message : ServiceMessageItem) {
-		// 只处理当前会话的消息
-		const msgChatId = (message.groupId !== '0' && message.groupId !== '')
-			? message.groupId
-			: (message.isSelf ? message.receiverId : message.senderId)
+		// 只处理当前会话的消息（优先按 chatId 精确匹配，兼容旧链路按 target 匹配）
+		const incomingChatId = (message as any).chatId != null ? String((message as any).chatId) : ''
+		const pageChatId = chatId.value != null ? String(chatId.value) : ''
+		let inCurrentConversation = false
+		if (incomingChatId !== '' && incomingChatId !== '0' && pageChatId !== '' && pageChatId !== '0') {
+			inCurrentConversation = incomingChatId === pageChatId
+		} else {
+			const msgTargetId = (message.groupId !== '0' && message.groupId !== '')
+				? message.groupId
+				: (message.isSelf ? message.receiverId : message.senderId)
+			const currentTargetId = chatType.value === 'group'
+				? targetId.value
+				: getReceiverIdForMessage()
+			inCurrentConversation = msgTargetId === currentTargetId
+		}
 		
-		const currentChatId = chatType.value === 'group'
-			? targetId.value
-			: getReceiverIdForMessage()
-		
-		if (msgChatId !== currentChatId) {
+		if (!inCurrentConversation) {
 			return
 		}
 
@@ -2369,14 +2404,29 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				uiMsg.status = 'success'
 				// 补齐 sequence（服务端确认后才会有）
 				try {
+					const candidateChatIds: string[] = []
 					if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
-						const cached = messageService.getMessages(chatId.value) as any[]
-						const hit = cached && cached.length > 0
+						candidateChatIds.push(chatId.value)
+					}
+					if (chatType.value === 'group' && targetId.value && targetId.value !== '' && targetId.value !== '0') {
+						candidateChatIds.push(targetId.value)
+					}
+					const activeChatId = messageService.getActiveChatId()
+					if (activeChatId && activeChatId !== '' && activeChatId !== '0') {
+						candidateChatIds.push(activeChatId)
+					}
+					let hit: any = null
+					for (let i = 0; i < candidateChatIds.length; i++) {
+						const cached = messageService.getMessages(candidateChatIds[i]) as any[]
+						hit = cached && cached.length > 0
 							? cached.find((m: any) => m && m.messageId === messageId)
 							: null
-						if (hit && hit.sequence != null && hit.sequence !== '') {
-							uiMsg.sequence = String(hit.sequence)
+						if (hit != null) {
+							break
 						}
+					}
+					if (hit && hit.sequence != null && hit.sequence !== '') {
+						uiMsg.sequence = String(hit.sequence)
 					}
 				} catch (e) {
 					// ignore
@@ -3837,7 +3887,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	function buildReadReceiptEntryText(msg: any): string {
 		try {
 			const mid = msg && msg.messageId ? String(msg.messageId) : ''
-			if (!mid) return '已读'
+			if (!mid) return '统计中'
 			const cached = getCachedReadReceiptSummary(mid)
 			if (cached && cached.summary) {
 				const s: any = cached.summary
@@ -3847,9 +3897,25 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				}
 				return '已读'
 			}
-			return '已读'
+			ensureReadReceiptSummaryFetched(mid)
+			return '统计中'
 		} catch (e) {
-			return '已读'
+			return '统计中'
+		}
+	}
+
+	function prefetchVisibleGroupReadReceiptSummary(list: MessageItem[]) {
+		try {
+			if (chatType.value !== 'group' || !list || list.length === 0) return
+			const latest = list.slice(Math.max(0, list.length - 20))
+			for (let i = 0; i < latest.length; i++) {
+				const msg: any = latest[i]
+				if (shouldShowReadReceiptEntry(msg)) {
+					ensureReadReceiptSummaryFetched(String(msg.messageId || ''))
+				}
+			}
+		} catch (e) {
+			// ignore
 		}
 	}
 
@@ -4028,6 +4094,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				if (s === '') {
 					return null
 				}
+				if (s === '[object Object]' || s === '[object UTSJSONObject]' || s === '[object Array]') {
+					return null
+				}
+				const first = s.charAt(0)
+				const last = s.charAt(s.length - 1)
+				const couldBeJsonObject = first === '{' && last === '}'
+				const couldBeJsonArray = first === '[' && last === ']'
+				if (!couldBeJsonObject && !couldBeJsonArray) {
+					return null
+				}
 				return JSON.parse(s)
 			}
 			if (typeof raw === 'object') {
@@ -4074,7 +4150,19 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const typeStr = getMessageTypeString(mt)
 			let preview = ''
 			if (typeStr === 'text' || typeStr === 'quote') {
-				preview = item != null && item.content != null ? String(item.content) : ''
+				const raw = item != null ? item.content : null
+				const parsed = safeParseJson(raw)
+				if (parsed != null && typeof parsed === 'object') {
+					if ((parsed as any).replyContent != null && String((parsed as any).replyContent) !== '') {
+						preview = String((parsed as any).replyContent)
+					} else if ((parsed as any).content != null && String((parsed as any).content) !== '') {
+						preview = String((parsed as any).content)
+					} else {
+						preview = '[消息]'
+					}
+				} else {
+					preview = raw != null ? String(raw) : ''
+				}
 			} else if (typeStr === 'custom') {
 				const body = safeParseJson(item != null ? item.content : null)
 				if (body != null && body.type != null && String(body.type) === 'FORWARD_COMBINE') {
@@ -4415,6 +4503,29 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			messageId: targetMessageId.value,
 			highlight: shouldHighlight.value
 		})
+
+		// H5 刷新时 onMounted 可能早于参数可用，确保路由参数就绪后一定触发一次会话初始化与消息加载
+		try {
+			if ((!chatId.value || chatId.value === '' || chatId.value === '0')
+				&& targetId.value && targetId.value !== '') {
+				const conversationType = chatType.value === 'group' ? 2 : 1
+				const conversationResult = await getConversationByTarget(targetId.value, conversationType)
+				const resolvedChatId = conversationResult && (conversationResult.chatId != null ? conversationResult.chatId : conversationResult.id)
+				if (resolvedChatId != null) {
+					chatId.value = resolvedChatId.toString()
+				}
+			}
+		} catch (e) {
+			// ignore
+		}
+		try {
+			if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
+				messageService.setActiveChatId(chatId.value)
+			}
+		} catch (e) {
+			// ignore
+		}
+		await loadMessages()
 	})
 
 	async function loadRecallConfig() {

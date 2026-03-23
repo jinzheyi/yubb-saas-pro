@@ -189,10 +189,16 @@ public class AppImMessageController {
 
     @PostMapping("/forward")
     @Operation(summary = "转发消息（支持逐条转发和合并转发）")
-    public CommonResult<List<Long>> forwardMessages(@Valid @RequestBody AppImMessageForwardReqVO forwardReqVO) {
+    public CommonResult<List<String>> forwardMessages(@Valid @RequestBody AppImMessageForwardReqVO forwardReqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         List<Long> newMessageIds = messageService.forwardMessages(userId, forwardReqVO);
-        return success(newMessageIds);
+        List<String> result = new ArrayList<>();
+        for (Long id : newMessageIds) {
+            if (id != null) {
+                result.add(String.valueOf(id));
+            }
+        }
+        return success(result);
     }
 
     @PostMapping("/forward-single")

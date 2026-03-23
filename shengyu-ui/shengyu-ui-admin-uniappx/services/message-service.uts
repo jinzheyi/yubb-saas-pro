@@ -1252,7 +1252,8 @@ export class MessageService {
         }
         chatId = cachedSingle
       } else {
-        chatId = receiverIdStr
+        const active = this.activeChatId != null ? this.activeChatId.toString() : ''
+        chatId = active !== '' && active !== '0' ? active : receiverIdStr
       }
     }
     this.addMessageToCache(chatId, messageItem)

@@ -113,10 +113,12 @@ function parseMessageIds(value: string | null): string[] {
 		return []
 	}
 	const parts = s.split(',')
+	const dedupe = new Set<string>()
 	const ids: string[] = []
 	for (let i = 0; i < parts.length; i++) {
 		const p = parts[i] != null ? parts[i].trim() : ''
-		if (p !== '' && p !== '0') {
+		if (p !== '' && p !== '0' && !dedupe.has(p)) {
+			dedupe.add(p)
 			ids.push(p)
 		}
 	}
@@ -148,9 +150,23 @@ async function handleSelect(targetChatId: string): Promise<void> {
 	}
 	try {
 		uni.showLoading({ title: '发送中...' })
-		await forwardMessagesApi(targetChatId, ids, forwardType.value)
+		const result: any = await forwardMessagesApi(targetChatId, ids, forwardType.value)
 		uni.hideLoading()
-		uni.showToast({ title: '已转发', icon: 'success' })
+		let successCount = ids.length
+		if (Array.isArray(result)) {
+			successCount = result.length
+		} else if (result != null && Array.isArray((result as any).messageIds)) {
+			successCount = (result as any).messageIds.length
+		}
+		if (successCount <= 0) {
+			uni.showToast({ title: '转发失败', icon: 'none' })
+			return
+		}
+		if (successCount < ids.length) {
+			uni.showToast({ title: `部分成功 ${successCount}/${ids.length}`, icon: 'none' })
+		} else {
+			uni.showToast({ title: '已转发', icon: 'success' })
+		}
 		const conv = conversationService.getConversation(targetChatId)
 		if (conv != null) {
 			const name = conv.targetName != null ? String(conv.targetName) : ''
