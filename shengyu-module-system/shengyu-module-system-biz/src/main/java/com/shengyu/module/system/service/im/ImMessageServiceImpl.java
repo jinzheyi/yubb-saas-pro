@@ -1190,13 +1190,14 @@ public class ImMessageServiceImpl implements ImMessageService {
         // 构建合并消息内容
         JSONObject body = new JSONObject();
         body.set("type", "FORWARD_COMBINE");
-        
+
         // 构建消息列表
         List<JSONObject> messages = new java.util.ArrayList<>();
         int nestedRefCount = 0;
         for (ImChatMessageDO msg : originalMessages) {
             JSONObject msgObj = new JSONObject();
             msgObj.set("messageId", msg.getId() != null ? msg.getId().toString() : "");
+            msgObj.set("sourceChatId", msg.getChatId() != null ? msg.getChatId().toString() : "");
 
             // 引用化：如果合并包里又包含“聊天记录(合并转发消息)”，不再嵌套其 messages，避免套娃与消息体膨胀
             boolean isNestedCombine = false;

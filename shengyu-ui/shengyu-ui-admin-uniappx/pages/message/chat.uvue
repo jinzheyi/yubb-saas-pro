@@ -131,7 +131,10 @@
 								<!-- 合并转发（企业级：聊天记录卡片） -->
 								<view v-else-if="msg.type === 'custom' && isForwardCombineMsg(msg)" class="message-bubble bubble-forward-combine" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleOpenForwardCombine(msg)">
 									<view class="forward-combine-header">
-										<text class="forward-combine-title">聊天记录</text>
+										<view class="forward-combine-header-left">
+											<text class="iconfont forward-combine-icon">&#xe600;</text>
+											<text class="forward-combine-title">聊天记录</text>
+										</view>
 										<text v-if="getForwardCombineComment(msg) !== ''" class="forward-combine-comment" :numberOfLines="1">{{ getForwardCombineComment(msg) }}</text>
 									</view>
 									<view class="forward-combine-preview">
@@ -141,6 +144,7 @@
 									</view>
 									<view class="forward-combine-footer">
 										<text class="forward-combine-footer-text">点击查看详情</text>
+										<text class="iconfont forward-combine-footer-arrow">&#xeb06;</text>
 									</view>
 								</view>
 								<view v-else-if="msg.type === 'custom'" class="message-bubble bubble-text" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
@@ -5135,31 +5139,61 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	/* 合并转发（聊天记录卡片） */
 	.bubble-forward-combine {
 		background-color: #FFFFFF;
-		min-width: 200px;
-		max-width: 260px;
-		padding: 12px;
-		border-radius: 10px;
+		min-width: 180px;
+		max-width: 72vw;
+		padding: 12px 12px;
+		border-radius: 12px;
+		border-width: 0.5px;
+		border-color: rgba(229, 230, 235, 1);
 		box-sizing: border-box;
 	}
 
 	.message-self .bubble-forward-combine {
 		background-color: #D2E3FC;
+		border-color: rgba(151, 185, 243, 1);
 	}
 
 	.forward-combine-header {
-		flex-direction: column;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		min-width: 0;
+	}
+
+	.forward-combine-header-left {
+		flex-direction: row;
+		align-items: center;
+		min-width: 0;
+		flex: 1;
+	}
+
+	.forward-combine-icon {
+		font-size: 18px;
+		color: #646A73;
+		margin-right: 6px;
+	}
+
+	.message-self .forward-combine-icon {
+		color: #3B5CCC;
 	}
 
 	.forward-combine-title {
 		font-size: 14px;
 		font-weight: 600;
 		color: #1F2329;
+		lines: 1;
+		text-overflow: ellipsis;
+		word-break: break-all;
 	}
 
 	.forward-combine-comment {
-		margin-top: 6px;
+		margin-left: 8px;
 		font-size: 12px;
 		color: #4E5969;
+		lines: 1;
+		text-overflow: ellipsis;
+		word-break: break-all;
+		max-width: 45%;
 	}
 
 	.forward-combine-preview {
@@ -5169,13 +5203,25 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		border-top-color: #E5E6EB;
 	}
 
+	.message-self .forward-combine-preview {
+		border-top-color: rgba(151, 185, 243, 1);
+	}
+
 	.forward-combine-line {
 		margin-bottom: 6px;
+		min-width: 0;
+	}
+
+	.forward-combine-line:last-child {
+		margin-bottom: 0;
 	}
 
 	.forward-combine-line-text {
 		font-size: 12px;
 		color: #4E5969;
+		lines: 1;
+		text-overflow: ellipsis;
+		word-break: break-all;
 	}
 
 	.forward-combine-footer {
@@ -5183,11 +5229,24 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		padding-top: 8px;
 		border-top-width: 0.5px;
 		border-top-color: #E5E6EB;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.message-self .forward-combine-footer {
+		border-top-color: rgba(151, 185, 243, 1);
 	}
 
 	.forward-combine-footer-text {
 		font-size: 12px;
 		color: #1677FF;
+	}
+
+	.forward-combine-footer-arrow {
+		font-size: 14px;
+		color: rgba(22, 119, 255, 0.9);
+		margin-left: 8px;
 	}
 
 	.file-info {

@@ -32,8 +32,11 @@
 <script setup lang="uts">
 import { onLoad } from '@dcloudio/uni-app'
 import { getMessageDetail } from '../../api/message.uts'
+import { encodeIdParam } from '../../utils/id-param.uts'
 
 type ForwardCombineItem = {
+	messageId: string
+	sourceChatId: string
 	senderName: string
 	sendTime: string
 	preview: string
@@ -54,6 +57,14 @@ function handleItemClick(item: ForwardCombineItem): void {
 			uni.navigateTo({
 				url: `/pages/message/forward-combine-detail?messageId=${encodeURIComponent(item.refMessageId)}`
 			})
+			return
+		}
+		if (item.sourceChatId != null && item.sourceChatId !== '' && item.sourceChatId !== '0'
+			&& item.messageId != null && item.messageId !== '' && item.messageId !== '0') {
+			uni.navigateTo({
+				url: `/pages/message/chat?chatId=${encodeIdParam(item.sourceChatId)}&messageId=${encodeURIComponent(item.messageId)}&highlight=true`
+			})
+			return
 		}
 	} catch (e) {
 		// ignore
@@ -191,13 +202,15 @@ async function loadByMessageId(messageId: string): Promise<void> {
 		const list: ForwardCombineItem[] = []
 		for (let i = 0; i < arr.length; i++) {
 			const it = arr[i]
+			const messageId = it != null && it.messageId != null ? String(it.messageId) : ''
+			const sourceChatId = it != null && it.sourceChatId != null ? String(it.sourceChatId) : ''
 			const senderName = it != null && it.senderName != null ? String(it.senderName) : ''
 			const sendTimeRaw = it != null && it.sendTime != null ? String(it.sendTime) : ''
 			const sendTime = formatEnterpriseTime(sendTimeRaw)
 			const mt = it != null && it.messageType != null ? Number(it.messageType) : 0
 			const pv = buildPreview(mt, it != null ? it.content : '')
 			const refId = it != null && it.refMessageId != null ? String(it.refMessageId) : ''
-			list.push({ senderName: senderName, sendTime: sendTime, preview: pv, refMessageId: refId })
+			list.push({ messageId: messageId, sourceChatId: sourceChatId, senderName: senderName, sendTime: sendTime, preview: pv, refMessageId: refId })
 		}
 		items.value = list
 		emptyText.value = list.length === 0 ? '暂无内容' : ''
@@ -219,7 +232,7 @@ async function loadByMessageId(messageId: string): Promise<void> {
 	flex: 1;
 	display: flex;
 	flex-direction: column;
-	background-color: #f7f8fa;
+	background-color: #F7F8FA;
 }
 
 .status-bar {
@@ -267,21 +280,26 @@ async function loadByMessageId(messageId: string): Promise<void> {
 
 .comment {
 	background-color: #ffffff;
-	border-radius: 10px;
-	padding: 12px;
+	border-radius: 12px;
+	padding: 12px 12px;
 	margin-bottom: 10px;
+	border-width: 0.5px;
+	border-color: #E5E6EB;
 }
 
 .comment-text {
 	font-size: 14px;
-	color: #333333;
+	color: #1F2329;
+	line-height: 20px;
 }
 
 .item {
 	background-color: #ffffff;
-	border-radius: 10px;
-	padding: 12px;
+	border-radius: 12px;
+	padding: 12px 12px;
 	margin-bottom: 10px;
+	border-width: 0.5px;
+	border-color: #E5E6EB;
 }
 
 .item-header {
@@ -289,23 +307,30 @@ async function loadByMessageId(messageId: string): Promise<void> {
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
+	min-width: 0;
 }
 
 .sender-name {
 	font-size: 14px;
 	font-weight: 600;
-	color: #111111;
+	color: #1F2329;
+	flex: 1;
+	min-width: 0;
+	lines: 1;
+	text-overflow: ellipsis;
 }
 
 .send-time {
 	font-size: 12px;
-	color: #8c8c8c;
+	color: #86909C;
+	margin-left: 10px;
+	flex-shrink: 0;
 }
 
 .item-content {
 	margin-top: 6px;
 	font-size: 13px;
-	color: #333333;
+	color: #4E5969;
 	line-height: 18px;
 }
 
