@@ -182,6 +182,30 @@
   - 服务端仅当 `last_message_id == messageId` 时才更新会话预览（避免竞态回退）
   - 更新后写入 `im_conversation_user_state` 并推进 `cursorVersion`，确保换端/重登/增量 sync 不回滚
 
+### 2.4.8 引用消息一致性（发送态与刷新态）
+
+- 字段分层（强制）：
+  - `quoteMessageId`：引用关系主键（权威字段，必须按 `string` 处理）
+  - `extra.quoteContent/quoteSenderName`：引用预览快照（仅用于刷新恢复与兜底展示）
+- 后端落库（已落地）：
+  - `QUOTE_REPLY` 持久化时，`extra.quoteMessageId` 必须字符串化；并同步写入 `quoteContent/quoteSenderName/quoteSenderId`
+  - 目的：避免 JS Number 精度污染导致刷新后引用错位或点击定位失败
+- 前端渲染（已落地）：
+  - 预览构建：优先使用当前列表内的被引用原消息（对齐发送前 UI）
+  - 仅在原消息不在当前列表时回退到快照字段
+  - 点击引用：本地定位失败后自动分页补拉历史，再执行定位与高亮
+- 解析优先级（强制）：
+  - 顶层 `quoteMessageId` 为最高优先级；raw/content/extra 仅可补全，不得覆盖已存在有效主键
+
+### 2.4.9 消息持久化可靠性护栏（先持久化后投递）
+
+- 存储 SPI fail-fast（已落地）：
+  - 默认禁止 NoOp 存储兜底；未注入业务 `MessageStorageService` 时启动失败
+  - 仅开发联调可显式开启 `shengyu.websocket.allow-no-op-storage=true`
+- 处理器统一门禁（已落地）：
+  - `TEXT/IMAGE/VOICE/VIDEO/FILE/LOCATION/QUOTE_REPLY` 统一要求 `saveResult.messageId/chatId` 有效后才允许回推与 fanout
+  - 不满足门禁时直接中断投递，避免“端侧看起来发送成功但 DB 无记录”
+
 ---
 
 ## 3. 统一鉴权体系（HTTP + IM）
@@ -1891,7 +1915,7 @@ ID 精度约束（企业级必须冻结）：
 | 协议双栈（JSON WebSocket） | 已落地（服务端 JSON 业务适配层） | `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/WebSocketFrameHandler.java`；`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/JsonBusinessMessageHandler.java`；`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/AuthHandler.java` | 已具备：Text frame JSON -> 复用 processor 分发；缺口：连接层协商（SubProtocol/首帧探测）、统一 Envelope 约束与错误码 |
 | 协议双栈（App Protobuf） | 部分落地 | `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/netty/handler/ProtobufMessageHandler.java`（服务端）；`shengyu-ui/shengyu-ui-admin-uniappx/utils/proto/im_message_pb.esm.js`（端侧生成的 pbjs 静态模块，当前在 `utils/websocket.uts` 中引入） | 服务端具备 Protobuf 处理链路；客户端 App 端 Protobuf 编解码、协商与降级待落地 |
 | 消息处理器（TEXT/IMAGE/FILE/READ_RECEIPT/RECALL 等） | 已落地（处理器注册） | `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/config/NettyAutoConfiguration.java`（processor 注册） | 注意：处理器存在≠闭环完成。需要业务模块提供真正的存储/查询/补偿/权限校验，否则无法达成企业级可靠性 |
-| 消息持久化（先存储后 fanout） | 未落地（默认 NoOp） | `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/config/NettyAutoConfiguration.java`：`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/service/impl/NoOpMessageStorageServiceImpl.java` | 当前默认不会持久化消息（企业级不可接受）。验收：存储落库、sequence 分配、ACK、幂等、重投、补偿 |
+| 消息持久化（先存储后 fanout） | 已落地（含 fail-fast 护栏） | `shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/config/NettyAutoConfiguration.java`；`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/config/WebSocketProperties.java`；`shengyu-framework/shengyu-spring-boot-starter-websocket/src/main/java/com/shengyu/framework/websocket/core/processor/impl/*MessageProcessor.java`；`shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/config/ImWebSocketConfiguration.java` | 已具备：默认禁用 NoOp、处理器持久化门禁、跨类型“先落库后回推/转发”一致。验收重点：ACK/回推与 DB 可对账、断线补偿后最终态一致 |
 | 会话同步与未读一致（lastReadSequence/未读水位） | 部分落地（REST 基础接口存在） | `shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/controller/app/im/AppImConversationController.java`；`shengyu-module-system/shengyu-module-system-biz/src/main/java/com/shengyu/module/system/service/im/ImConversationServiceImpl.java` | 已有 list/mark-read/unread-count 等；缺口：基于 sequence 的水位模型、跨端一致、增量 sync（cursor/pull） |
 | 断线补偿/漫游（按 lastSequence 拉取） | 未落地 | 待新增：system 消息同步接口 + 查询 service；客户端 reconnect 流程 | 验收：断网 30s 后恢复不丢/不重/顺序正确，会话未读与角标一致 |
 | 离线推送（通道集成） | 未落地（策略已规划） | `OfflinePushService`（starter 默认实现）；uniappx 推送 SDK 待接 | 闭环：token 绑定 -> 离线触发 -> 点击拉起 sync；推送去重、DND、撤回一致 |

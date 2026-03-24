@@ -319,6 +319,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             fillSenderInfo(respVO, message.getSenderId());
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
             fillChatTargetFields(respVO, userId);
+            applyReeditFieldsForCurrentUser(respVO, message, userId);
             sanitizeRecalledMessage(respVO);
             return respVO;
         }).collect(Collectors.toList());
@@ -374,6 +375,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             fillSenderInfo(respVO, message.getSenderId());
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
             fillChatTargetFields(respVO, userId);
+            applyReeditFieldsForCurrentUser(respVO, message, userId);
             sanitizeRecalledMessage(respVO);
             return respVO;
         }).collect(Collectors.toList());
@@ -430,8 +432,65 @@ public class ImMessageServiceImpl implements ImMessageService {
         fillSenderInfo(respVO, message.getSenderId());
         respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
         fillChatTargetFields(respVO, userId);
+        applyReeditFieldsForCurrentUser(respVO, message, userId);
         sanitizeRecalledMessage(respVO);
         return respVO;
+    }
+
+    private void applyReeditFieldsForCurrentUser(AppImMessageRespVO respVO, ImChatMessageDO message, Long userId) {
+        if (respVO == null || message == null || userId == null) {
+            return;
+        }
+        try {
+            if (!Objects.equals(respVO.getStatus(), ImMessageStatusEnum.RECALLED.getStatus())) {
+                return;
+            }
+            if (!Objects.equals(message.getSenderId(), userId)) {
+                return;
+            }
+            if (!Objects.equals(message.getRecallBy(), userId)) {
+                return;
+            }
+            Integer normalizedType = normalizeDbMessageType(message.getMessageType());
+            if (!Objects.equals(normalizedType, ImMessageTypeEnum.TEXT.getType())) {
+                return;
+            }
+            LocalDateTime recallTime = message.getRecallTime();
+            if (recallTime == null) {
+                return;
+            }
+            long deadlineTs = recallTime.plusSeconds(300L).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+            if (System.currentTimeMillis() > deadlineTs) {
+                return;
+            }
+            String content = message.getContent();
+            if (StrUtil.isBlank(content) || "[消息已撤回]".equals(content)) {
+                try {
+                    String extra = message.getExtra();
+                    if (StrUtil.isNotBlank(extra)) {
+                        JSONObject obj = JSONUtil.parseObj(extra);
+                        String c = obj.getStr("reeditContent");
+                        if (StrUtil.isNotBlank(c) && !"[消息已撤回]".equals(c)) {
+                            content = c;
+                        }
+                        String d = obj.getStr("reeditDeadlineTs");
+                        if (StrUtil.isNotBlank(d)) {
+                            deadlineTs = Long.parseLong(d);
+                            if (System.currentTimeMillis() > deadlineTs) {
+                                return;
+                            }
+                        }
+                    }
+                } catch (Exception ignore) {
+                }
+            }
+            if (StrUtil.isBlank(content) || "[消息已撤回]".equals(content)) {
+                return;
+            }
+            respVO.setReeditContent(content);
+            respVO.setReeditDeadlineTs(String.valueOf(deadlineTs));
+        } catch (Exception ignore) {
+        }
     }
 
     private void sanitizeRecalledMessage(AppImMessageRespVO respVO) {
@@ -1376,12 +1435,31 @@ public class ImMessageServiceImpl implements ImMessageService {
         LocalDateTime recallTime = LocalDateTime.now();
         Long oldRev = message.getRev() != null && message.getRev() > 0 ? message.getRev() : 1L;
         Long newRev = oldRev + 1L;
-        chatMessageMapper.update(null, new LambdaUpdateWrapper<ImChatMessageDO>()
+        String recallExtra = null;
+        try {
+            Integer normalizedType = normalizeDbMessageType(message.getMessageType());
+            if (isSelfMessage && Objects.equals(normalizedType, ImMessageTypeEnum.TEXT.getType()) && StrUtil.isNotBlank(message.getContent())) {
+                JSONObject ex = JSONUtil.createObj();
+                ex.set("reeditContent", message.getContent());
+                long deadlineTs = recallTime.plusSeconds(300L).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+                ex.set("reeditDeadlineTs", String.valueOf(deadlineTs));
+                ex.set("senderId", String.valueOf(userId));
+                ex.set("isSelfRecall", true);
+                recallExtra = ex.toString();
+            }
+        } catch (Exception ignore) {
+            recallExtra = null;
+        }
+        LambdaUpdateWrapper<ImChatMessageDO> recallUpdate = new LambdaUpdateWrapper<ImChatMessageDO>()
                 .eq(ImChatMessageDO::getId, messageId)
                 .set(ImChatMessageDO::getStatus, ImMessageStatusEnum.RECALLED.getStatus())
                 .set(ImChatMessageDO::getRecallTime, recallTime)
                 .set(ImChatMessageDO::getRecallBy, userId)
-                .setSql("rev = IFNULL(rev, 1) + 1"));
+                .setSql("rev = IFNULL(rev, 1) + 1");
+        if (StrUtil.isNotBlank(recallExtra)) {
+            recallUpdate.set(ImChatMessageDO::getExtra, recallExtra);
+        }
+        chatMessageMapper.update(null, recallUpdate);
 
         // 企微/钉钉口径：撤回影响会话列表预览的“最终态一致”，需持久化落库并通过 cursorVersion 增量同步到其它端
         try {
@@ -1420,7 +1498,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                                 targetUserId,
                                 cursorVersion,
                                 0,
-                                null,
+                                0L,
                                 null,
                                 messageId,
                                 message.getSequence() != null ? message.getSequence() : 0L,
@@ -1510,10 +1588,11 @@ public class ImMessageServiceImpl implements ImMessageService {
                         null, null, extra);
             }
 
-            // enterprise: re-edit-after-recall hint (ONLY to sender devices; never broadcast original content)
+            // enterprise: re-edit-after-recall hint
+            // 仅“自撤回 + 文本消息”向发送者本人多端下发 originalContent，绝不广播给会话其它成员
             try {
                 boolean isText = Objects.equals(message.getMessageType(), ImMessageTypeEnum.TEXT.getType());
-                if (isText) {
+                if (isText && isSelfMessage) {
                     long reeditWindowSec = 300L;
                     long deadlineTs = recallTime != null ? recallTime.plusSeconds(reeditWindowSec).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : 0L;
                     String hintExtra = null;
@@ -1522,10 +1601,13 @@ public class ImMessageServiceImpl implements ImMessageService {
                         obj.set("action", "reedit_after_recall");
                         obj.set("chatId", message.getChatId());
                         obj.set("messageId", messageId);
+                        obj.set("senderId", userId);
                         obj.set("rev", newRev);
                         obj.set("recallBy", userId);
+                        obj.set("isSelfRecall", true);
                         obj.set("recallTime", recallTime != null ? recallTime.toString() : "");
                         obj.set("deadlineTs", deadlineTs);
+                        obj.set("originalContent", StrUtil.nullToEmpty(message.getContent()));
                         hintExtra = obj.toString();
                     } catch (Exception ignore) {
                         hintExtra = null;

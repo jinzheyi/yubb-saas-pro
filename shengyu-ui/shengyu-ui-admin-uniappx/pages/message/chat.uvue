@@ -435,6 +435,8 @@
 	const highlightedMessageId = ref<string>('')  // 当前高亮的消息ID
 	const fromMergeDetail = ref(false)
 	const mergeBackDelta = ref(1)
+	const reeditNowTs = ref<number>(Date.now())
+	let reeditTickTimer: any = null
 	
 	// 当前用户信息（使用字符串避免精度丢失）
 	const currentUserId = ref<string>('0')
@@ -1004,12 +1006,14 @@
 		}
 		
 		initVisibleReadObserver()
+		startReeditTicker()
 		scrollToBottom()
 	})
 	
 	onUnmounted(async () => {
 		await flushReadOnLeave()
 		destroyVisibleReadObserver()
+		stopReeditTicker()
 		// 移除消息监听器
 		messageService.removeMessageListener(handleNewMessage)
 		try {
@@ -1787,7 +1791,7 @@
 	const avatarText = senderNickname ? getAvatarTextUtil(senderNickname) : '?'
 	let isSelfVal = false
 	try {
-		if ((msg as any).isSelf !== null) {
+		if ((msg as any).isSelf != null) {
 			isSelfVal = !!(msg as any).isSelf
 		} else {
 			isSelfVal = senderIdStr === currentUserId.value
@@ -1887,6 +1891,28 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			senderName: msg.senderName,
 			status: (msg as any).status
 		} as MessageItem
+		try {
+			const ex: any = msg as any
+			if (ex != null) {
+				if (ex.reeditContent != null && String(ex.reeditContent) !== '') {
+					;(uiMessage as any).reeditContent = String(ex.reeditContent)
+				}
+				if (ex.reeditDeadlineTs != null && String(ex.reeditDeadlineTs) !== '') {
+					;(uiMessage as any).reeditDeadlineTs = String(ex.reeditDeadlineTs)
+				}
+			}
+			if (((uiMessage as any).reeditContent == null || String((uiMessage as any).reeditContent) === '')
+				&& (uiMessage as any).isSelf === true) {
+				const hint = messageService.getReeditHintByCandidates(chatIdStr, [messageIdStr, idStr])
+				if (hint != null && hint.content != null && hint.content !== '') {
+					;(uiMessage as any).reeditContent = hint.content
+					if (hint.deadlineTs != null && hint.deadlineTs !== '') {
+						;(uiMessage as any).reeditDeadlineTs = hint.deadlineTs
+					}
+				}
+			}
+		} catch (e) {
+		}
 
 			const serviceExtra = (msg as any).extra != null
 				? (msg as any).extra
@@ -2530,6 +2556,31 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			senderName: message.senderName,
 			status: message.status
 		} as MessageItem
+		try {
+			const ex: any = message as any
+			if (ex != null) {
+				if (ex.reeditContent != null && String(ex.reeditContent) !== '' && !isRecallTip(String(ex.reeditContent))) {
+					;(uiMessage as any).reeditContent = String(ex.reeditContent)
+				}
+				if (ex.reeditDeadlineTs != null && String(ex.reeditDeadlineTs) !== '') {
+					;(uiMessage as any).reeditDeadlineTs = String(ex.reeditDeadlineTs)
+				}
+			}
+			if ((((uiMessage as any).reeditContent == null || String((uiMessage as any).reeditContent) === '')
+				&& (uiMessage as any).isSelf === true)) {
+				const reeditChatId = (uiMessage as any).chatId != null && String((uiMessage as any).chatId) !== ''
+					? String((uiMessage as any).chatId)
+					: chatId.value
+				const hint = messageService.getReeditHintByCandidates(reeditChatId, [uiMessage.messageId, uiMessage.id])
+				if (hint != null && hint.content != null && hint.content !== '' && !isRecallTip(String(hint.content))) {
+					;(uiMessage as any).reeditContent = String(hint.content)
+					if (hint.deadlineTs != null && hint.deadlineTs !== '') {
+						;(uiMessage as any).reeditDeadlineTs = String(hint.deadlineTs)
+					}
+				}
+			}
+		} catch (e) {
+		}
 
 		applyQuoteFields(uiMessage, message.content, message, (message as any).extra)
 		applyFileFields(uiMessage, message.content)
@@ -2550,6 +2601,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			merged.sequence = prev.sequence != null && prev.sequence !== '' ? prev.sequence : next.sequence
 			merged.groupId = prev.groupId != null && prev.groupId !== '' ? prev.groupId : next.groupId
 			merged.chatId = prev.chatId != null && prev.chatId !== '' ? prev.chatId : next.chatId
+			merged.reeditContent = (next as any).reeditContent != null && String((next as any).reeditContent) !== ''
+				? (next as any).reeditContent
+				: (prev as any).reeditContent
+			merged.reeditDeadlineTs = (next as any).reeditDeadlineTs != null && String((next as any).reeditDeadlineTs) !== ''
+				? (next as any).reeditDeadlineTs
+				: (prev as any).reeditDeadlineTs
 			messages.value[existingIndex] = merged
 		} else if (existingIndex > -1) {
 			const prev: any = messages.value[existingIndex]
@@ -2796,7 +2853,19 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		scrollToBottom()
 	}
 
-	function shouldShowReeditEntry(msg: any): boolean {
+	function getReeditDeadlineTs(msg: any): number {
+		try {
+			if (!msg) return 0
+			const deadlineStr = (msg as any).reeditDeadlineTs != null ? String((msg as any).reeditDeadlineTs) : ''
+			if (!deadlineStr) return 0
+			const deadline = Number(deadlineStr)
+			return !isNaN(deadline) && deadline > 0 ? deadline : 0
+		} catch (e) {
+			return 0
+		}
+	}
+
+	function shouldRenderReeditEntry(msg: any): boolean {
 		try {
 			if (!msg) return false
 			const s: any = (msg as any).status
@@ -2804,33 +2873,106 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			if (!isRecalled) return false
 			if (!(msg as any).isSelf) return false
 			const senderIdStr = (msg as any).senderId != null ? String((msg as any).senderId) : ''
-			if (!senderIdStr || senderIdStr !== currentUserId.value) return false
+			if (senderIdStr !== '' && senderIdStr !== '0' && senderIdStr !== currentUserId.value) return false
 			const content = (msg as any).reeditContent != null ? String((msg as any).reeditContent) : ''
 			if (!content) return false
-			const deadlineStr = (msg as any).reeditDeadlineTs != null ? String((msg as any).reeditDeadlineTs) : ''
-			if (!deadlineStr) return false
-			let deadline = 0
-			try {
-				deadline = Number(deadlineStr)
-			} catch (e) {
-				deadline = 0
-			}
-			if (deadline <= 0) return false
-			return Date.now() <= deadline
+			return getReeditDeadlineTs(msg) > 0
 		} catch (e) {
 			return false
 		}
 	}
 
+	function isReeditExpired(msg: any): boolean {
+		const deadline = getReeditDeadlineTs(msg)
+		if (deadline <= 0) return true
+		return reeditNowTs.value > deadline
+	}
+
+	function getReeditRemainSeconds(msg: any): number {
+		const deadline = getReeditDeadlineTs(msg)
+		if (deadline <= 0) return 0
+		const diff = deadline - reeditNowTs.value
+		if (diff <= 0) return 0
+		return Math.ceil(diff / 1000)
+	}
+
+	function formatReeditRemain(seconds: number): string {
+		const s = seconds > 0 ? seconds : 0
+		const mm = Math.floor(s / 60)
+		const ss = s % 60
+		const mStr = mm < 10 ? '0' + String(mm) : String(mm)
+		const sStr = ss < 10 ? '0' + String(ss) : String(ss)
+		return `${mStr}:${sStr}`
+	}
+
+	function startReeditTicker(): void {
+		try {
+			reeditNowTs.value = Date.now()
+			if (reeditTickTimer != null) {
+				return
+			}
+			reeditTickTimer = setInterval(() => {
+				reeditNowTs.value = Date.now()
+			}, 1000)
+		} catch (e) {
+		}
+	}
+
+	function stopReeditTicker(): void {
+		try {
+			if (reeditTickTimer != null) {
+				clearInterval(reeditTickTimer)
+				reeditTickTimer = null
+			}
+		} catch (e) {
+		}
+	}
+
+	function getReeditActionText(msg: any): string {
+		if (isReeditExpired(msg)) {
+			return '重新编辑(已过期)'
+		}
+		const remain = getReeditRemainSeconds(msg)
+		return `重新编辑(${formatReeditRemain(remain)})`
+	}
+
+	function shouldShowReeditEntry(msg: any): boolean {
+		return shouldRenderReeditEntry(msg) && !isReeditExpired(msg)
+	}
+
 	function handleReeditAfterRecall(msg: any) {
 		try {
+			if (!shouldShowReeditEntry(msg)) {
+				uni.showToast({ title: '重新编辑已过期', icon: 'none' })
+				return
+			}
 			if (editorCtx == null) {
 				uni.showToast({ title: '编辑器未就绪', icon: 'none' })
 				return
 			}
-			const content = (msg as any).reeditContent != null ? String((msg as any).reeditContent) : ''
+			let content = (msg as any).reeditContent != null ? String((msg as any).reeditContent) : ''
+			try {
+				if (content === '' || isRecallTip(content)) {
+					const mid = (msg as any).messageId != null ? String((msg as any).messageId) : ''
+					const mid2 = (msg as any).id != null ? String((msg as any).id) : ''
+					const reeditChatId = (msg as any).chatId != null && String((msg as any).chatId) !== ''
+						? String((msg as any).chatId)
+						: chatId.value
+					if (mid !== '' || mid2 !== '') {
+						const hint = messageService.getReeditHintByCandidates(reeditChatId, [mid, mid2])
+						if (hint != null && hint.content != null && hint.content !== '' && !isRecallTip(String(hint.content))) {
+							content = String(hint.content)
+						}
+					}
+				}
+			} catch (e) {
+			}
 			if (!content) {
 				uni.showToast({ title: '原内容为空', icon: 'none' })
+				return
+			}
+			if (isRecallTip(content)) {
+				uni.showToast({ title: '原内容不可恢复', icon: 'none' })
 				return
 			}
 			// re-edit must send a NEW normal message (not quote-reply)
@@ -4878,6 +5020,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	onShow(() => {
 		wsManager.setRealtimeBizActive(true)
 		initVisibleReadObserver()
+		startReeditTicker()
 		try {
 			if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
 				messageService.setActiveChatId(chatId.value)
@@ -4892,6 +5035,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		wsManager.setRealtimeBizActive(false)
 		void flushReadOnLeave()
 		destroyVisibleReadObserver()
+		stopReeditTicker()
 		try {
 			messageService.setActiveChatAutoReadEnabled(false)
 			messageService.setActiveChatId(null)
@@ -4904,6 +5048,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		wsManager.setRealtimeBizActive(false)
 		void flushReadOnLeave()
 		destroyVisibleReadObserver()
+		stopReeditTicker()
 		try {
 			messageService.setActiveChatAutoReadEnabled(false)
 			messageService.setActiveChatId(null)
@@ -5089,6 +5234,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		margin-left: 8px;
 		font-size: 12px;
 		color: #3370FF;
+	}
+
+	.recall-system-tip-action-disabled {
+		color: #A6A9B0;
 	}
 
 	.message-self {

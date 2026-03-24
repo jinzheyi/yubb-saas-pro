@@ -133,6 +133,60 @@ export class MessageService {
 		return this.loadReeditHint(chatId, messageId)
 	}
 
+	public getReeditHintByCandidates(chatId: string, messageIds: string[]): { content: string, deadlineTs: string } | null {
+		try {
+			if (!chatId || messageIds == null || messageIds.length === 0) {
+				return null
+			}
+			const seen: Map<string, boolean> = new Map()
+			for (let i = 0; i < messageIds.length; i++) {
+				const raw = messageIds[i]
+				const id = raw != null ? String(raw) : ''
+				if (id === '' || id === '0') {
+					continue
+				}
+				if (seen.get(id) === true) {
+					continue
+				}
+				seen.set(id, true)
+				const hint = this.loadReeditHint(chatId, id)
+				if (hint != null && hint.content != null && hint.content !== '') {
+					return hint
+				}
+			}
+			const tenantId = this.currentTenantId != null ? this.currentTenantId : '0'
+			const userId = this.currentUserId != null ? this.currentUserId : '0'
+			const prefix = `im_reedit_hint_${tenantId}_${userId}_`
+			try {
+				const info: any = uni.getStorageInfoSync()
+				const keys: any = info != null ? (info as any).keys : null
+				if (keys != null && keys instanceof Array) {
+					for (let i = 0; i < messageIds.length; i++) {
+						const raw = messageIds[i]
+						const id = raw != null ? String(raw) : ''
+						if (id === '' || id === '0') {
+							continue
+						}
+						const suffix = `_${id}`
+						for (let j = 0; j < keys.length; j++) {
+							const k = keys[j] != null ? String(keys[j]) : ''
+							if (k !== '' && k.indexOf(prefix) === 0 && k.endsWith(suffix)) {
+								const hint = this.loadReeditHintByStorageKey(k)
+								if (hint != null && hint.content != null && hint.content !== '') {
+									return hint
+								}
+							}
+						}
+					}
+				}
+			} catch (e) {
+			}
+			return null
+		} catch (e) {
+			return null
+		}
+	}
+
 	private persistReeditHint(chatId: string, messageId: string, content: string, deadlineTs: string): void {
 		try {
 			if (!chatId || !messageId || !content) {
@@ -154,6 +208,14 @@ export class MessageService {
 				return null
 			}
 			const key = this.getReeditHintStorageKey(chatId, messageId)
+			return this.loadReeditHintByStorageKey(key)
+		} catch (e) {
+			return null
+		}
+	}
+
+	private loadReeditHintByStorageKey(key: string): { content: string, deadlineTs: string } | null {
+		try {
 			const raw: any = uni.getStorageSync(key)
 			if (raw == null || raw === '') {
 				return null
@@ -323,9 +385,10 @@ export class MessageService {
 
   private sendRetryEnabled: boolean = false
 
-  private pendingRetryMap: Map<string, { message: any, retryCount: number, timer: any }> = new Map()
+  private pendingRetryMap: Map<string, { message: any, retryCount: number, timer: any, startedAt: number }> = new Map()
 
   private static readonly SEND_RETRY_BASE_DELAY_MS = 2000
+  private static readonly SEND_RETRY_MAX_WINDOW_MS = 180000
   
   // 是否正在处理队列
   private isProcessingQueue: boolean = false
@@ -554,11 +617,23 @@ export class MessageService {
         // enterprise: re-edit-after-recall rehydration for refresh/re-enter
         try {
           if (isRecalled && isSelf) {
-            const hint = this.loadReeditHint(cid, messageIdStr)
+            const rc = (m as any).reeditContent != null ? String((m as any).reeditContent) : ''
+            const rd = (m as any).reeditDeadlineTs != null ? String((m as any).reeditDeadlineTs) : ''
+            if (rc !== '') {
+              ;(messageItem as any).reeditContent = rc
+            }
+            if (rd !== '') {
+              ;(messageItem as any).reeditDeadlineTs = rd
+            }
+            const hint = this.getReeditHintByCandidates(cid, [messageIdStr, String((m as any).id != null ? (m as any).id : '')])
             if (hint != null && hint.content !== '') {
-              ;(messageItem as any).reeditContent = hint.content
+              if ((messageItem as any).reeditContent == null || String((messageItem as any).reeditContent) === '') {
+                ;(messageItem as any).reeditContent = hint.content
+              }
               if (hint.deadlineTs !== '') {
-                ;(messageItem as any).reeditDeadlineTs = hint.deadlineTs
+                if ((messageItem as any).reeditDeadlineTs == null || String((messageItem as any).reeditDeadlineTs) === '') {
+                  ;(messageItem as any).reeditDeadlineTs = hint.deadlineTs
+                }
               }
             }
           }
@@ -590,6 +665,48 @@ export class MessageService {
       }
     }
     return { content: rawContent, extra: rawExtra, mentions: mentions }
+  }
+
+  private extractReeditContentFromMessage(message: any): string {
+    try {
+      if (message == null) {
+        return ''
+      }
+      const rawType: any = (message as any).type
+      const typeStr = rawType != null ? String(rawType) : ''
+      const isTextType =
+        rawType === MessageType.TEXT ||
+        rawType === 1 ||
+        rawType === '1' ||
+        typeStr === 'text' ||
+        typeStr === String(MessageType.TEXT)
+      if (!isTextType) {
+        return ''
+      }
+      const c: any = (message as any).content
+      if (c == null) {
+        return ''
+      }
+      if (typeof c === 'string') {
+        const s = c.toString()
+        if (s === '' || s.indexOf('撤回') > -1) {
+          return ''
+        }
+        return s
+      }
+      if (typeof c === 'object') {
+        const inner = (c as any).content
+        if (inner != null) {
+          const s = String(inner)
+          if (s !== '' && s.indexOf('撤回') === -1) {
+            return s
+          }
+        }
+      }
+      return ''
+    } catch (e) {
+      return ''
+    }
   }
 
   private applyQuoteMetaFromRest(item: MessageItem, raw: any): void {
@@ -635,6 +752,53 @@ export class MessageService {
         ;(item as any).quoteSenderName = String((extraObj as any).quoteSenderName)
       }
     } catch (e) {
+    }
+  }
+
+  private applyReeditHintFromSystemNotify(extraObj: any): boolean {
+    try {
+      if (extraObj == null) {
+        return false
+      }
+      const isSelfRecall = extraObj.isSelfRecall === true || extraObj.isSelfRecall === 'true' || extraObj.isSelfRecall === 1 || extraObj.isSelfRecall === '1'
+      if (!isSelfRecall) {
+        return false
+      }
+      const currentUid = this.currentUserId != null ? this.currentUserId : ''
+      const recallBy = extraObj.recallBy != null ? extraObj.recallBy.toString() : ''
+      const senderId = extraObj.senderId != null ? extraObj.senderId.toString() : ''
+      if (currentUid === '' || recallBy === '' || senderId === '') {
+        return false
+      }
+      if (recallBy !== currentUid || senderId !== currentUid) {
+        return false
+      }
+      const chatId = extraObj.chatId != null ? extraObj.chatId.toString() : ''
+      const messageId = extraObj.messageId != null ? extraObj.messageId.toString() : ''
+      const originalContent = extraObj.originalContent != null ? extraObj.originalContent.toString() : ''
+      const deadlineTs = extraObj.deadlineTs != null ? extraObj.deadlineTs.toString() : ''
+      if (chatId === '' || messageId === '' || originalContent === '' || deadlineTs === '') {
+        return false
+      }
+      this.persistReeditHint(chatId, messageId, originalContent, deadlineTs)
+      const messages = this.messageCache.get(chatId)
+      if (messages != null && messages.length > 0) {
+        const idx = messages.findIndex(m => m != null && m.messageId === messageId)
+        if (idx !== -1) {
+          const msg: any = messages[idx]
+          if (msg != null && (msg.status === MessageStatus.RECALLED || msg.status === 'recalled' || msg.status === 6 || msg.status === '6')) {
+            ;(msg as any).reeditContent = originalContent
+            ;(msg as any).reeditDeadlineTs = deadlineTs
+            try {
+              this.notifyMessageListeners(msg as MessageItem)
+            } catch (e) {
+            }
+          }
+        }
+      }
+      return true
+    } catch (e) {
+      return false
     }
   }
 
@@ -747,11 +911,23 @@ export class MessageService {
 				// enterprise: re-edit-after-recall rehydration for refresh/re-enter
 				try {
 					if (isRecalled && isSelf) {
-						const hint = this.loadReeditHint(chatId, messageIdStr)
+						const rc = (m as any).reeditContent != null ? String((m as any).reeditContent) : ''
+						const rd = (m as any).reeditDeadlineTs != null ? String((m as any).reeditDeadlineTs) : ''
+						if (rc !== '') {
+							;(messageItem as any).reeditContent = rc
+						}
+						if (rd !== '') {
+							;(messageItem as any).reeditDeadlineTs = rd
+						}
+						const hint = this.getReeditHintByCandidates(chatId, [messageIdStr, String((m as any).id != null ? (m as any).id : '')])
 						if (hint != null && hint.content !== '') {
-							;(messageItem as any).reeditContent = hint.content
+							if ((messageItem as any).reeditContent == null || String((messageItem as any).reeditContent) === '') {
+								;(messageItem as any).reeditContent = hint.content
+							}
 							if (hint.deadlineTs !== '') {
-								;(messageItem as any).reeditDeadlineTs = hint.deadlineTs
+								if ((messageItem as any).reeditDeadlineTs == null || String((messageItem as any).reeditDeadlineTs) === '') {
+									;(messageItem as any).reeditDeadlineTs = hint.deadlineTs
+								}
 							}
 						}
 					}
@@ -912,6 +1088,18 @@ export class MessageService {
 
   private handleSystemNotify(message: any): void {
     try {
+      let handledReeditHint = false
+      try {
+        const extraRaw: any = message != null && (message as any).header != null ? (message as any).header.extra : null
+        if (extraRaw != null && extraRaw !== '') {
+          const extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
+          if (extraObj != null && extraObj.action === 'reedit_after_recall') {
+            handledReeditHint = this.applyReeditHintFromSystemNotify(extraObj)
+          }
+        }
+      } catch (e) {
+      }
+
       const body: any = message != null ? (message as any).body : null
       const content: any = body != null ? (body as any).content : null
       const contentStr = content != null ? content.toString() : ''
@@ -921,17 +1109,8 @@ export class MessageService {
         contentStr === 'CONVERSATION_DELETE' ||
         contentStr === 'BADGE_UPDATE'
       ) {
-        // enterprise: re-edit-after-recall hint (ONLY for sender devices)
-        try {
-          const extraRaw: any = message != null && (message as any).header != null ? (message as any).header.extra : null
-          if (extraRaw != null && extraRaw !== '') {
-            const extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
-            if (extraObj != null && extraObj.action === 'reedit_after_recall') {
-              // security: 撤回后重新编辑仅允许本设备本地恢复，禁止通过 WS/SYSTEM_NOTIFY 同步原文到同账号其他设备
-              return
-            }
-          }
-        } catch (e) {
+        if (handledReeditHint) {
+          return
         }
 
         // enterprise: cursorVersion-only notify, trigger incremental sync for cross-device state (read watermark/preview/etc)
@@ -1445,6 +1624,12 @@ export class MessageService {
 
     const existing = this.pendingRetryMap.get(messageId)
     const retryCount = existing != null ? existing.retryCount : 0
+    const startedAt = existing != null && existing.startedAt != null ? existing.startedAt : Date.now()
+    if (Date.now() - startedAt >= MessageService.SEND_RETRY_MAX_WINDOW_MS) {
+      this.clearSendRetry(messageId)
+      this.setMessageFailed(messageId)
+      return
+    }
     if (retryCount >= MessageService.MAX_RETRY_COUNT) {
       this.clearSendRetry(messageId)
       this.setMessageFailed(messageId)
@@ -1459,8 +1644,19 @@ export class MessageService {
     const timer = setTimeout(() => {
       const latest = this.pendingRetryMap.get(messageId)
       const latestRetry = latest != null ? latest.retryCount : retryCount
+      const latestStartedAt = latest != null && latest.startedAt != null ? latest.startedAt : startedAt
       if (!this.isMessageStillSending(messageId)) {
         this.clearSendRetry(messageId)
+        return
+      }
+      if (Date.now() - latestStartedAt >= MessageService.SEND_RETRY_MAX_WINDOW_MS) {
+        this.clearSendRetry(messageId)
+        this.setMessageFailed(messageId)
+        return
+      }
+      if (!wsManager.isConnected()) {
+        this.pendingRetryMap.set(messageId, { message: message, retryCount: latestRetry, timer: null, startedAt: latestStartedAt })
+        this.scheduleSendRetry(messageId, message)
         return
       }
       if (latestRetry >= MessageService.MAX_RETRY_COUNT) {
@@ -1470,16 +1666,16 @@ export class MessageService {
       }
 
       try {
-        this.pendingRetryMap.set(messageId, { message: message, retryCount: latestRetry + 1, timer: null })
+        this.pendingRetryMap.set(messageId, { message: message, retryCount: latestRetry + 1, timer: null, startedAt: latestStartedAt })
         wsManager.send(message)
       } catch (e) {
-        this.pendingRetryMap.set(messageId, { message: message, retryCount: latestRetry + 1, timer: null })
+        this.pendingRetryMap.set(messageId, { message: message, retryCount: latestRetry + 1, timer: null, startedAt: latestStartedAt })
       }
 
       this.scheduleSendRetry(messageId, message)
     }, delay)
 
-    this.pendingRetryMap.set(messageId, { message: message, retryCount: retryCount, timer: timer })
+    this.pendingRetryMap.set(messageId, { message: message, retryCount: retryCount, timer: timer, startedAt: startedAt })
   }
   
   /**
@@ -1854,7 +2050,7 @@ export class MessageService {
         const recallTip: MessageItem = {
           id: originalMessage.id,
           messageId: originalMessage.messageId,
-          senderId: recallerId,
+          senderId: originalMessage.senderId,
           receiverId: originalMessage.receiverId,
           groupId: originalMessage.groupId,
           type: MessageType.TEXT,  // 使用文本类型显示撤回提示
@@ -1862,7 +2058,7 @@ export class MessageService {
           status: MessageStatus.RECALLED,
           // 撤回提示应保持原消息的时间与位置（不应作为一条“新消息”插入到末尾）
           timestamp: originalTs > 0 ? originalTs : Date.now(),
-          isSelf: recallerId === this.currentUserId,
+          isSelf: (originalMessage as any).isSelf === true || recallerId === this.currentUserId,
           showTime: false,
           avatarText: originalMessage.avatarText,
           avatarBg: originalMessage.avatarBg,
@@ -1879,6 +2075,29 @@ export class MessageService {
             }
             if (ex.reeditDeadlineTs != null && ex.reeditDeadlineTs !== '') {
               ;(recallTip as any).reeditDeadlineTs = ex.reeditDeadlineTs
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+        try {
+          if (((recallTip as any).reeditContent == null || (recallTip as any).reeditContent === '')
+            && ((originalMessage as any).isSelf === true
+              || ((originalMessage as any).senderId != null && String((originalMessage as any).senderId) === this.currentUserId))) {
+            const c = this.extractReeditContentFromMessage(originalMessage)
+            if (c !== '') {
+              ;(recallTip as any).reeditContent = c
+              ;(recallTip as any).reeditDeadlineTs = (Date.now() + 5 * 60 * 1000).toString()
+            }
+          }
+          if (((recallTip as any).reeditContent == null || (recallTip as any).reeditContent === '')
+            && ((originalMessage as any).isSelf === true
+              || ((originalMessage as any).senderId != null && String((originalMessage as any).senderId) === this.currentUserId))) {
+            const altId = (originalMessage as any).id != null ? String((originalMessage as any).id) : ''
+            const hint = this.getReeditHintByCandidates(chatId, [messageId, altId])
+            if (hint != null && hint.content != null && hint.content !== '') {
+              ;(recallTip as any).reeditContent = hint.content
+              ;(recallTip as any).reeditDeadlineTs = hint.deadlineTs
             }
           }
         } catch (e) {
@@ -1980,12 +2199,12 @@ export class MessageService {
       let reeditContent: string = ''
       let reeditDeadlineTs: string = ''
       try {
-        const isText = (originalMessage as any).type === MessageType.TEXT
-        if ((originalMessage as any).isSelf === true && isText) {
-          const c: any = (originalMessage as any).content
-          if (c != null && c !== '') {
-            reeditContent = c.toString()
-          }
+        const isMine = (originalMessage as any).isSelf === true
+          || ((originalMessage as any).senderId != null && String((originalMessage as any).senderId) === this.currentUserId)
+        if (isMine) {
+          reeditContent = this.extractReeditContentFromMessage(originalMessage)
+        }
+        if (isMine && reeditContent !== '') {
           // 截止时间：撤回时刻 + 5 分钟，与 WS 路径保持一致
           reeditDeadlineTs = (Date.now() + 5 * 60 * 1000).toString()
         }
@@ -2020,6 +2239,10 @@ export class MessageService {
           }
           try {
             this.persistReeditHint(chatId, messageId, reeditContent, reeditDeadlineTs)
+            const altId = (originalMessage as any).id != null ? String((originalMessage as any).id) : ''
+            if (altId !== '' && altId !== messageId) {
+              this.persistReeditHint(chatId, altId, reeditContent, reeditDeadlineTs)
+            }
           } catch (e) {
             // ignore
           }

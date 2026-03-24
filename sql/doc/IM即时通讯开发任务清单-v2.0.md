@@ -4,7 +4,7 @@
 
 ## 当前迭代焦点（AI快速定位）
 
-> **更新日期**: 2026-03-20
+> **更新日期**: 2026-03-24
 > **迭代目标**: Milestone L - 消息扩展能力
 
 ### 正在执行
@@ -24,6 +24,9 @@
 - [x] 文档更新：补充功能关联性与业界最佳实践对比章节
 - [x] L4 撤回最终态一致性：端侧 merge（rev/撤回终态保护）+ 会话预览一致（验收暂缓）
 - [x] 群管理员入口（端侧）：群主长按成员设/取消管理员（验收暂缓）
+- [x] 转发/引用联修：合并转发卡片识别、详情跳转定位、点击补拉历史定位
+- [x] 引用一致性联修：刷新前后预览一致、quoteMessageId 精度防护、extra 快照恢复链路
+- [x] 持久化可靠性联修：默认禁用 NoOp、七类消息统一“先落库后回推/转发”门禁
 
 ### 关键约束（必读）
 1. **Long精度**: 所有ID字段前端必须用`string`，后端VO用`@JsonSerialize(using = ToStringSerializer.class)`
@@ -188,7 +191,7 @@
 | JSON 双栈入口 | `WebSocketFrameHandler.java`；`JsonBusinessMessageHandler.java` | WebSocket TextFrame JSON -> processor |
 | Protobuf 链路入口 | `ProtobufMessageHandler.java`；`NettyAutoConfiguration.java` | App 端 Protobuf 编解码待补 |
 | 消息处理器注册 | `NettyAutoConfiguration.java` | 处理器注册存在≠可靠性闭环完成 |
-| 存储 SPI | `MessageStorageService`；`NoOpMessageStorageServiceImpl` | 默认 NoOp，需要由业务模块覆盖 |
+| 存储 SPI | `MessageStorageService`；`NoOpMessageStorageServiceImpl` | 已改为默认 fail-fast（未注入业务存储实现时启动失败）；仅开发联调可显式开启 `shengyu.websocket.allow-no-op-storage=true` |
 | 会话 REST | `AppImConversationController.java`；`ImConversationService` | 已有基础接口，需补 sequence 水位与增量 sync |
 
 ---
@@ -1927,6 +1930,13 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
     - 嵌套：详情页遇到 `refMessageId` 可点击进入下一层（不自动展开）
   - Long 精度：
     - `chatId/messageId/groupId/userId/targetId/sequence` 在路由/请求/响应/缓存链路均为 string；禁止 Number/parseInt
+- **近期联修同步（2026-03-24）**：
+  - 合并转发识别：前端 CUSTOM(9/106) 统一保留原始内容并兼容 `FORWARD_COMBINE` 解析，消除 `[自定义消息]` 误渲染
+  - 详情跳转定位：`messageId/id` 双匹配 + 历史分页补拉后定位，减少“原消息不存在”误报
+  - 导航栈治理：详情→聊天引入 `stateId + backDelta`，返回一次跨层退出，避免来回退栈
+  - 长链接治理：会话入口参数收敛到 `chatId` 主键，减少 query 漂移与地址膨胀
+  - 引用一致性：`quoteMessageId` 作为权威主键，`extra.quoteContent/quoteSenderName` 作为刷新快照；刷新前后预览一致
+  - Long 精度修复：`extra.quoteMessageId` 字符串化；前端禁止 raw 数值 ID 覆盖顶层 string 主键
 - **涉及文件/目录**：
   - `shengyu-module-system/.../AppImMessageController.java`（forward API）
   - `shengyu-module-system/.../im/ImMessageServiceImpl.java`（转发逻辑）
@@ -2008,8 +2018,8 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - WS 广播：向会话参与方（对端/群成员）以及操作者本人多端广播 `RECALL`
 
 - **关键安全约束（强制）**：
-  - 撤回后不得通过任何通知（WS/SystemNotify/离线补偿）同步撤回前的原文到同账号其他设备或其他用户端。
-  - 如需支持“撤回后重新编辑”，仅允许在端侧本地缓存/输入框恢复实现，不得下发 `originalContent`。
+  - 撤回后不得向接收方或群内其它成员泄露撤回前原文。
+  - 若支持“撤回后重新编辑”，仅允许对“发送者本人多端”下发 `originalContent`，且必须绑定时效（默认 5 分钟）并禁止广播。
 
 - **企业级补强（后端，已合入）**：
   - 群主不限时撤回：跳过时限判断，避免极大秒数导致 `LocalDateTime.minusSeconds` 溢出风险
