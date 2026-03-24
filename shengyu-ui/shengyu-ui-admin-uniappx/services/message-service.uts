@@ -51,6 +51,9 @@ export type MessageItem = {
   messageId: string
   sequence?: string
   rev?: string
+  quoteMessageId?: string
+  quoteContent?: string
+  quoteSenderName?: string
   // enterprise: re-edit-after-recall metadata (sender devices only)
   reeditContent?: string
   reeditDeadlineTs?: string
@@ -525,6 +528,7 @@ export class MessageService {
           structuredMentions = []
         }
 
+        const messageTypeNum = m.messageType != null ? Number(m.messageType) : 0
         const messageItem: MessageItem = {
           id: '0',
           messageId: messageIdStr,
@@ -533,10 +537,10 @@ export class MessageService {
           senderId: senderIdStr,
           receiverId: m.receiverId != null ? m.receiverId.toString() : '0',
           groupId: m.groupId != null ? m.groupId.toString() : '0',
-          type: isRecalled ? MessageType.TEXT : m.messageType,
+          type: isRecalled ? MessageType.TEXT : messageTypeNum,
           content: isRecalled
             ? { content: (isSelf ? '你撤回了一条消息' : `${senderName} 撤回了一条消息`) }
-            : { content: m.content, extra: m.extra, mentions: structuredMentions },
+            : this.buildCachedMessageContent(messageTypeNum, m.content, m.extra, structuredMentions),
           status: isRecalled ? MessageStatus.RECALLED : MessageStatus.SENT,
           timestamp: m.sendTime != null ? new Date(m.sendTime as string).getTime() : Date.now(),
           isSelf: isSelf,
@@ -545,6 +549,7 @@ export class MessageService {
           avatarBg: getUserAvatarColor(senderIdStr),
           senderName: senderName
         }
+        this.applyQuoteMetaFromRest(messageItem, m)
 
         // enterprise: re-edit-after-recall rehydration for refresh/re-enter
         try {
@@ -567,6 +572,69 @@ export class MessageService {
       }
     } catch (e) {
       console.error('[MessageService] ingestRestHistoryPage failed:', e)
+    }
+  }
+
+  private buildCachedMessageContent(messageType: number, rawContent: any, rawExtra: any, mentions: any[]): any {
+    if (messageType === 9 || messageType === MessageType.CUSTOM) {
+      if (rawContent == null) {
+        return ''
+      }
+      if (typeof rawContent === 'string') {
+        return rawContent
+      }
+      try {
+        return JSON.stringify(rawContent)
+      } catch (e) {
+        return rawContent.toString()
+      }
+    }
+    return { content: rawContent, extra: rawExtra, mentions: mentions }
+  }
+
+  private applyQuoteMetaFromRest(item: MessageItem, raw: any): void {
+    try {
+      if (raw == null) {
+        return
+      }
+      const topQuoteId = (raw as any).quoteMessageId
+      if (topQuoteId != null && String(topQuoteId) !== '' && String(topQuoteId) !== '0') {
+        ;(item as any).quoteMessageId = String(topQuoteId)
+      }
+      const topQuoteContent = (raw as any).quoteContent
+      if (topQuoteContent != null && String(topQuoteContent) !== '') {
+        ;(item as any).quoteContent = String(topQuoteContent)
+      }
+      const topQuoteSenderName = (raw as any).quoteSenderName
+      if (topQuoteSenderName != null && String(topQuoteSenderName) !== '') {
+        ;(item as any).quoteSenderName = String(topQuoteSenderName)
+      }
+      const extraRaw: any = (raw as any).extra
+      if (extraRaw == null || extraRaw === '') {
+        return
+      }
+      let extraObj: any = null
+      try {
+        extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
+      } catch (e) {
+        extraObj = null
+      }
+      if (extraObj == null || typeof extraObj !== 'object') {
+        return
+      }
+      if ((item as any).quoteMessageId == null || String((item as any).quoteMessageId) === '' || String((item as any).quoteMessageId) === '0') {
+        const id = (extraObj as any).quoteMessageId
+        if (id != null && String(id) !== '' && String(id) !== '0') {
+          ;(item as any).quoteMessageId = String(id)
+        }
+      }
+      if (((item as any).quoteContent == null || String((item as any).quoteContent) === '') && (extraObj as any).quoteContent != null) {
+        ;(item as any).quoteContent = String((extraObj as any).quoteContent)
+      }
+      if (((item as any).quoteSenderName == null || String((item as any).quoteSenderName) === '') && (extraObj as any).quoteSenderName != null) {
+        ;(item as any).quoteSenderName = String((extraObj as any).quoteSenderName)
+      }
+    } catch (e) {
     }
   }
 
@@ -654,6 +722,7 @@ export class MessageService {
             structuredMentions = []
           }
 
+          const messageTypeNum = m.messageType != null ? Number(m.messageType) : 0
           const messageItem: MessageItem = {
             id: '0',
             messageId: messageIdStr,
@@ -662,10 +731,10 @@ export class MessageService {
             senderId: senderIdStr,
             receiverId: m.receiverId != null ? m.receiverId.toString() : '0',
             groupId: m.groupId != null ? m.groupId.toString() : '0',
-            type: isRecalled ? MessageType.TEXT : m.messageType,
+            type: isRecalled ? MessageType.TEXT : messageTypeNum,
             content: isRecalled
               ? { content: (isSelf ? '你撤回了一条消息' : `${senderName} 撤回了一条消息`) }
-              : { content: m.content, extra: m.extra, mentions: structuredMentions },
+              : this.buildCachedMessageContent(messageTypeNum, m.content, m.extra, structuredMentions),
             status: isRecalled ? MessageStatus.RECALLED : MessageStatus.SENT,
             timestamp: m.sendTime != null ? new Date(m.sendTime as string).getTime() : Date.now(),
             isSelf: isSelf,
@@ -674,6 +743,7 @@ export class MessageService {
             avatarBg: getUserAvatarColor(senderIdStr),
             senderName: senderName
           }
+          this.applyQuoteMetaFromRest(messageItem, m)
 				// enterprise: re-edit-after-recall rehydration for refresh/re-enter
 				try {
 					if (isRecalled && isSelf) {
@@ -813,6 +883,14 @@ export class MessageService {
     
     // 监听位置消息
     wsManager.addMessageListener(MessageType.LOCATION, (message) => {
+      void this.handleReceivedMessage(message)
+    })
+
+    wsManager.addMessageListener(MessageType.QUOTE_REPLY, (message) => {
+      void this.handleReceivedMessage(message)
+    })
+
+    wsManager.addMessageListener(MessageType.CUSTOM, (message) => {
       void this.handleReceivedMessage(message)
     })
     

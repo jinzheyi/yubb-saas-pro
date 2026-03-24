@@ -715,6 +715,17 @@ export class MessageParser {
       case MessageType.LOCATION:
         return '[位置]'
       case MessageType.CUSTOM:
+        try {
+          const body: any = message.body as any
+          const raw = body != null ? body.content : null
+          if (raw != null && raw !== '') {
+            const obj = typeof raw === 'string' ? JSON.parse(raw) : raw
+            if (obj != null && obj.type != null && String(obj.type) === 'FORWARD_COMBINE') {
+              return '[聊天记录]'
+            }
+          }
+        } catch (e) {
+        }
         return '[自定义消息]'
       case MessageType.QUOTE_REPLY:
         const quoteBody = message.body as QuoteReplyMessageBody

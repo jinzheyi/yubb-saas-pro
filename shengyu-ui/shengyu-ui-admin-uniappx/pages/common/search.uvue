@@ -455,7 +455,7 @@
 	function handleGroupClick(group : any) {
 		const chatIdParam = encodeIdParam(group && (group.chatId || group.id) ? String(group.chatId || group.id) : '')
 		uni.navigateTo({
-			url: `/pages/message/chat?chatId=${chatIdParam}&name=${encodeURIComponent(group && group.name ? String(group.name) : '')}`
+			url: `/pages/message/chat?chatId=${chatIdParam}`
 		})
 	}
 

@@ -82,8 +82,14 @@ public class NettyAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public MessageStorageService messageStorageService() {
-        log.warn("[Netty] 使用默认的消息存储服务（NoOp），消息不会被持久化。建议业务模块提供自己的实现。");
+    public MessageStorageService messageStorageService(WebSocketProperties webSocketProperties) {
+        boolean allowNoOp = webSocketProperties != null
+                && webSocketProperties.getAllowNoOpStorage() != null
+                && webSocketProperties.getAllowNoOpStorage();
+        if (!allowNoOp) {
+            throw new IllegalStateException("[Netty] 未检测到 MessageStorageService 业务实现，已拒绝使用 NoOp 存储。请注册业务存储实现，或显式设置 shengyu.websocket.allow-no-op-storage=true");
+        }
+        log.warn("[Netty] 使用默认的消息存储服务（NoOp），消息不会被持久化。仅建议开发联调场景开启 allow-no-op-storage。");
         return new NoOpMessageStorageServiceImpl();
     }
 

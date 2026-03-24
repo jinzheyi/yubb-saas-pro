@@ -468,19 +468,9 @@
 
 	function handleMessageClick(item : any) {
 		const chatIdParam = encodeIdParam(item.chatId != null ? String(item.chatId) : '')
-		const targetIdParam = encodeIdParam(item.targetId != null ? String(item.targetId) : '')
-		// 判断是否是群聊
-		if (item.conversationType === 2) {
-			// 跳转到群聊页面
-			uni.navigateTo({
-				url: `/pages/message/chat?chatId=${chatIdParam}&type=group&groupId=${targetIdParam}&targetId=${targetIdParam}&name=${encodeURIComponent(item.targetName)}&memberCount=${item.groupMemberCount || 0}`
-			})
-		} else {
-			// 跳转到单聊页面
-			uni.navigateTo({
-				url: `/pages/message/chat?chatId=${chatIdParam}&type=single&targetId=${targetIdParam}&name=${encodeURIComponent(item.targetName)}`
-			})
-		}
+		uni.navigateTo({
+			url: `/pages/message/chat?chatId=${chatIdParam}`
+		})
 	}
 
 	function handleLongPress(item : any, e : TouchEvent) {

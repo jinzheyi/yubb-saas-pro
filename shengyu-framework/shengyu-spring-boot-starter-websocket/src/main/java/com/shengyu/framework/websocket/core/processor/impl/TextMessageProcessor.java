@@ -117,6 +117,11 @@ public class TextMessageProcessor implements MessageProcessor {
             if (log.isInfoEnabled()) {
                 log.info("[TextMessage] saveMessage done: messageId={}", message.getHeader().getMessageId());
             }
+            if (saveResult == null || saveResult.getMessageId() == null || saveResult.getChatId() == null) {
+                log.error("[TextMessage] 消息未持久化，跳过回推与转发。messageId={}, saveResult={}",
+                        message.getHeader().getMessageId(), saveResult);
+                return;
+            }
 
             // 2.1 回推给发送者（用于端侧把 SENDING -> SENT，避免仅本地乐观渲染）
             MessageHeader ackHeader = message.getHeader();

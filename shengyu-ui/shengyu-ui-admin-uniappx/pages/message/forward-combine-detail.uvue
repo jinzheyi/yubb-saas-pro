@@ -33,6 +33,7 @@
 import { onLoad } from '@dcloudio/uni-app'
 import { getMessageDetail } from '../../api/message.uts'
 import { encodeIdParam } from '../../utils/id-param.uts'
+import { createNavState } from '../../utils/nav-state.uts'
 
 type ForwardCombineItem = {
 	messageId: string
@@ -46,24 +47,83 @@ type ForwardCombineItem = {
 const items = ref<ForwardCombineItem[]>([])
 const comment = ref('')
 const emptyText = ref('暂无内容')
+const MAX_FORWARD_COMBINE_DEPTH = 20
+const currentDepth = ref(0)
+const visitedIds = ref<string[]>([])
 
 function handleBack(): void {
 	uni.navigateBack()
 }
 
-function handleItemClick(item: ForwardCombineItem): void {
+async function handleItemClick(item: ForwardCombineItem): Promise<void> {
 	try {
 		if (item.refMessageId != null && item.refMessageId !== '' && item.refMessageId !== '0') {
+			const nextDepth = currentDepth.value + 1
+			if (nextDepth > MAX_FORWARD_COMBINE_DEPTH) {
+				uni.showToast({ title: '引用层级过深', icon: 'none' })
+				return
+			}
+			const chain = visitedIds.value != null ? visitedIds.value : []
+			if (chain.includes(item.refMessageId)) {
+				uni.showToast({ title: '检测到循环引用', icon: 'none' })
+				return
+			}
+			const nextTrace = chain.concat([item.refMessageId]).join(',')
 			uni.navigateTo({
-				url: `/pages/message/forward-combine-detail?messageId=${encodeURIComponent(item.refMessageId)}`
+				url: `/pages/message/forward-combine-detail?messageId=${encodeURIComponent(item.refMessageId)}&depth=${encodeURIComponent(String(nextDepth))}&trace=${encodeURIComponent(nextTrace)}`
 			})
 			return
 		}
 		if (item.sourceChatId != null && item.sourceChatId !== '' && item.sourceChatId !== '0'
 			&& item.messageId != null && item.messageId !== '' && item.messageId !== '0') {
-			uni.navigateTo({
-				url: `/pages/message/chat?chatId=${encodeIdParam(item.sourceChatId)}&messageId=${encodeURIComponent(item.messageId)}&highlight=true`
-			})
+			const chatIdParam = encodeIdParam(item.sourceChatId)
+			let targetUrl = `/pages/message/chat?chatId=${chatIdParam}&messageId=${encodeURIComponent(item.messageId)}&highlight=true`
+			const payload: any = {
+				chatId: item.sourceChatId,
+				messageId: item.messageId,
+				highlight: 'true',
+				fromMergeDetail: '1',
+				mergeBackDelta: String(currentDepth.value + 2)
+			}
+			try {
+				const convServiceModule = await import('../../services/conversation-service.uts')
+				const cs = (convServiceModule as any).conversationService
+				let conv: any = cs != null ? cs.getConversation(item.sourceChatId) : null
+				if (conv == null && cs != null) {
+					await cs.loadConversations()
+					conv = cs.getConversation(item.sourceChatId)
+				}
+				if (conv != null) {
+					const type = Number((conv as any).conversationType) === 2 ? 'group' : 'single'
+					const targetId = (conv as any).targetId != null ? String((conv as any).targetId) : ''
+					const targetParam = encodeIdParam(targetId)
+					const convName = (conv as any).targetName != null ? String((conv as any).targetName) : ''
+					if (type === 'group') {
+						const count = (conv as any).groupMemberCount != null ? String((conv as any).groupMemberCount) : '0'
+						payload.type = 'group'
+						payload.groupId = targetId
+						payload.targetId = targetId
+						payload.name = convName
+						payload.memberCount = count
+						targetUrl = `/pages/message/chat?chatId=${chatIdParam}&type=group&groupId=${targetParam}&targetId=${targetParam}&name=${encodeURIComponent(convName)}&memberCount=${encodeURIComponent(count)}&messageId=${encodeURIComponent(item.messageId)}&highlight=true`
+					} else {
+						payload.type = 'single'
+						payload.targetId = targetId
+						payload.name = convName
+						targetUrl = `/pages/message/chat?chatId=${chatIdParam}&type=single&targetId=${targetParam}&name=${encodeURIComponent(convName)}&messageId=${encodeURIComponent(item.messageId)}&highlight=true`
+					}
+				}
+			} catch (e) {
+			}
+			try {
+				const stateId = createNavState(payload)
+				if (stateId != null && stateId !== '') {
+					uni.navigateTo({ url: `/pages/message/chat?stateId=${encodeURIComponent(stateId)}` })
+					return
+				}
+			} catch (e) {
+			}
+			uni.navigateTo({ url: targetUrl })
 			return
 		}
 	} catch (e) {
@@ -90,6 +150,18 @@ function safeParseJson(raw: any): any | null {
 			const couldBeJsonArray = first === '[' && last === ']'
 			if (!couldBeJsonObject && !couldBeJsonArray) {
 				return null
+			}
+			if (couldBeJsonArray) {
+				const inner = s.substring(1, s.length - 1).trim()
+				if (inner !== '') {
+					const c0 = inner.charAt(0)
+					const isLikelyJsonArray =
+						c0 === '{' || c0 === '[' || c0 === '"' || c0 === '-' ||
+						(c0 >= '0' && c0 <= '9') || c0 === 't' || c0 === 'f' || c0 === 'n'
+					if (!isLikelyJsonArray) {
+						return null
+					}
+				}
 			}
 			return JSON.parse(s)
 		}
@@ -177,6 +249,36 @@ onLoad((options: any) => {
 		const mid = options != null ? (options['messageId'] as string | null) : null
 		if (mid == null || mid === '' || mid === '0') {
 			emptyText.value = '参数错误'
+			items.value = []
+			return
+		}
+		let depthVal = 0
+		try {
+			const depthRaw = options != null ? (options['depth'] as string | null) : null
+			const parsed = depthRaw != null && depthRaw !== '' ? Number(depthRaw) : 0
+			depthVal = !isNaN(parsed) && parsed > 0 ? parsed : 0
+		} catch (e) {
+			depthVal = 0
+		}
+		currentDepth.value = depthVal
+		let traceList: string[] = [mid]
+		try {
+			const traceRaw = options != null ? (options['trace'] as string | null) : null
+			if (traceRaw != null && traceRaw !== '') {
+				const arr = String(traceRaw).split(',').map(s => s.trim()).filter(s => s !== '' && s !== '0')
+				if (arr.length > 0) {
+					traceList = arr
+				}
+			}
+			if (!traceList.includes(mid)) {
+				traceList.push(mid)
+			}
+		} catch (e) {
+			traceList = [mid]
+		}
+		visitedIds.value = traceList
+		if (currentDepth.value > MAX_FORWARD_COMBINE_DEPTH) {
+			emptyText.value = '引用层级过深'
 			items.value = []
 			return
 		}

@@ -46,6 +46,7 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 @Service
 @Slf4j
 public class ImMessageServiceImpl implements ImMessageService {
+    private static final int MAX_FORWARD_COMBINE_DEPTH = 20;
 
     private static class MentionParseResult {
         private final boolean atAll;
@@ -744,6 +745,12 @@ public class ImMessageServiceImpl implements ImMessageService {
                             .setContent(sendReqVO.getContent())
                             .build();
                     break;
+                case 9: // 自定义消息
+                    messageType = MessageType.CUSTOM;
+                    messageBody = TextMessage.newBuilder()
+                            .setContent(StrUtil.nullToEmpty(sendReqVO.getContent()))
+                            .build();
+                    break;
                 default:
                     // 默认使用系统通知类型
                     messageType = MessageType.SYSTEM_NOTIFY;
@@ -954,6 +961,15 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (messageIds.size() > 50) {
             throw exception(MESSAGE_SEND_FAILED, "单次最多转发50条消息");
         }
+        List<Long> normalizedMessageIds = messageIds.stream()
+                .filter(Objects::nonNull)
+                .filter(id -> id > 0)
+                .distinct()
+                .collect(Collectors.toList());
+        if (normalizedMessageIds.isEmpty()) {
+            throw exception(MESSAGE_SEND_FAILED, "转发消息不能为空");
+        }
+        messageIds = normalizedMessageIds;
         if (ImMessageForwardTypeEnum.valueOf(forwardType) == null) {
             throw exception(MESSAGE_SEND_FAILED, "转发类型非法");
         }
@@ -1194,6 +1210,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         // 构建消息列表
         List<JSONObject> messages = new java.util.ArrayList<>();
         int nestedRefCount = 0;
+        int maxNestedDepth = 0;
         for (ImChatMessageDO msg : originalMessages) {
             JSONObject msgObj = new JSONObject();
             msgObj.set("messageId", msg.getId() != null ? msg.getId().toString() : "");
@@ -1201,12 +1218,17 @@ public class ImMessageServiceImpl implements ImMessageService {
 
             // 引用化：如果合并包里又包含“聊天记录(合并转发消息)”，不再嵌套其 messages，避免套娃与消息体膨胀
             boolean isNestedCombine = false;
+            int nestedDepth = 1;
             try {
                 if (Objects.equals(msg.getMessageType(), ImMessageTypeEnum.CUSTOM.getType()) && StrUtil.isNotBlank(msg.getContent())) {
                     JSONObject nested = JSONUtil.parseObj(msg.getContent());
                     String t = nested.getStr("type", "");
                     if (StrUtil.isNotBlank(t) && Objects.equals(t, "FORWARD_COMBINE")) {
                         isNestedCombine = true;
+                        Integer depth = nested.getInt("depth");
+                        if (depth != null && depth > 0) {
+                            nestedDepth = depth;
+                        }
                     }
                 }
             } catch (Exception ignore) {
@@ -1218,6 +1240,9 @@ public class ImMessageServiceImpl implements ImMessageService {
                 msgObj.set("content", "[聊天记录]");
                 msgObj.set("refMessageId", msg.getId() != null ? msg.getId().toString() : "");
                 nestedRefCount++;
+                if (nestedDepth > maxNestedDepth) {
+                    maxNestedDepth = nestedDepth;
+                }
             } else {
                 msgObj.set("messageType", msg.getMessageType());
                 msgObj.set("content", msg.getContent());
@@ -1232,6 +1257,11 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
         body.set("messages", messages);
         body.set("count", messages.size());
+        int combineDepth = maxNestedDepth > 0 ? (maxNestedDepth + 1) : 1;
+        if (combineDepth > MAX_FORWARD_COMBINE_DEPTH) {
+            throw exception(MESSAGE_SEND_FAILED, "聊天记录引用层级过深");
+        }
+        body.set("depth", combineDepth);
         if (StrUtil.isNotBlank(comment)) {
             body.set("comment", comment);
         }

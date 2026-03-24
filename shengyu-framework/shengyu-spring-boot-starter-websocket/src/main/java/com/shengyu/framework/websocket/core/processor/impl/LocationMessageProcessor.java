@@ -49,6 +49,11 @@ public class LocationMessageProcessor implements MessageProcessor {
 
             // 1. 存储消息到数据库
             MessageSaveResult saveResult = messageStorageService.saveMessageWithResult(message);
+            if (saveResult == null || saveResult.getMessageId() == null || saveResult.getChatId() == null) {
+                log.error("[LocationMessage] 消息未持久化，跳过回推与转发。messageId={}, saveResult={}",
+                        message.getHeader().getMessageId(), saveResult);
+                return;
+            }
 
             // 1.1 回推给发送者（用于端侧把 SENDING -> SENT）
             MessageHeader ackHeader = message.getHeader();

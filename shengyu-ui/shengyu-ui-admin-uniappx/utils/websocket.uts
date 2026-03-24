@@ -878,7 +878,7 @@ export class WebSocketManager {
       if (mt === MessageType.AUTH_REQ) {
         return root.AuthRequest.toObject(root.AuthRequest.decode(bodyBytes), { longs: String, enums: Number, bytes: Uint8Array })
       }
-      if (mt === MessageType.TEXT) {
+      if (mt === MessageType.TEXT || mt === MessageType.CUSTOM) {
         const o: any = root.TextMessage.toObject(root.TextMessage.decode(bodyBytes), { longs: String, enums: Number, bytes: Uint8Array })
         try {
           if (o != null && o.atUserIds != null && o.atUserIds instanceof Array) {
@@ -887,6 +887,28 @@ export class WebSocketManager {
               out.push(String(o.atUserIds[i]))
             }
             o.atUserIds = out
+          }
+        } catch (e) {
+        }
+        return o
+      }
+      if (mt === MessageType.QUOTE_REPLY) {
+        const o: any = root.QuoteReplyMessage.toObject(root.QuoteReplyMessage.decode(bodyBytes), { longs: String, enums: Number, bytes: Uint8Array })
+        try {
+          if (o != null) {
+            if (o.quoteMessageId != null) {
+              o.quoteMessageId = String(o.quoteMessageId)
+            }
+            if (o.quoteSenderId != null) {
+              o.quoteSenderId = String(o.quoteSenderId)
+            }
+            if (o.atUserIds != null && o.atUserIds instanceof Array) {
+              const out: string[] = []
+              for (let i = 0; i < o.atUserIds.length; i++) {
+                out.push(String(o.atUserIds[i]))
+              }
+              o.atUserIds = out
+            }
           }
         } catch (e) {
         }

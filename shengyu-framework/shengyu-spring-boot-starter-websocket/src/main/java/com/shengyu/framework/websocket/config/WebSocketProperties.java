@@ -31,4 +31,12 @@ public class WebSocketProperties {
     @NotNull(message = "WebSocket 的消息发送者不能为空")
     private String senderType = "local";
 
+    /**
+     * 是否允许消息存储使用 NoOp 空实现
+     *
+     * 默认 false：未注入业务存储实现时启动失败，避免消息“看起来发送成功但不入库”
+     */
+    @NotNull(message = "allowNoOpStorage 不能为空")
+    private Boolean allowNoOpStorage = false;
+
 }

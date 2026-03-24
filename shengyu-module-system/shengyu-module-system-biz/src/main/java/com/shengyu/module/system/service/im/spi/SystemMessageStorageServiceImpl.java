@@ -157,6 +157,27 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         if (StrUtil.isNotBlank(extra)) {
             return extra;
         }
+        if (message.getHeader().getMessageType() == MessageType.QUOTE_REPLY) {
+            try {
+                QuoteReplyMessage quoteMsg = QuoteReplyMessage.parseFrom(message.getBody());
+                JSONObject obj = JSONUtil.createObj();
+                if (quoteMsg.getQuoteMessageId() > 0) {
+                    obj.set("quoteMessageId", String.valueOf(quoteMsg.getQuoteMessageId()));
+                }
+                if (StrUtil.isNotBlank(quoteMsg.getQuoteContent())) {
+                    obj.set("quoteContent", quoteMsg.getQuoteContent());
+                }
+                if (StrUtil.isNotBlank(quoteMsg.getQuoteSenderName())) {
+                    obj.set("quoteSenderName", quoteMsg.getQuoteSenderName());
+                }
+                if (quoteMsg.getQuoteSenderId() > 0) {
+                    obj.set("quoteSenderId", quoteMsg.getQuoteSenderId());
+                }
+                return obj.isEmpty() ? null : obj.toString();
+            } catch (Exception e) {
+                return null;
+            }
+        }
         if (message.getHeader().getMessageType() != MessageType.FILE) {
             return extra;
         }
@@ -690,8 +711,21 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                     return "[流程通知]";
                 case TODO_REMINDER:
                     return "[待办提醒]";
-                case CUSTOM:
+                case CUSTOM: {
+                    String customRaw = messageDO != null ? messageDO.getContent() : "";
+                    if (StrUtil.isBlank(customRaw)) {
+                        return "[自定义消息]";
+                    }
+                    try {
+                        JSONObject customObj = JSONUtil.parseObj(customRaw);
+                        String customType = customObj.getStr("type");
+                        if ("FORWARD_COMBINE".equals(customType)) {
+                            return "[聊天记录]";
+                        }
+                    } catch (Exception ignore) {
+                    }
                     return "[自定义消息]";
+                }
                 default:
                     return "[消息]";
             }

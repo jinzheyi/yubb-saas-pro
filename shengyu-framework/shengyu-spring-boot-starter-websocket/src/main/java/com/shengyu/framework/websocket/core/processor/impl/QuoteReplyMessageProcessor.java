@@ -67,6 +67,10 @@ public class QuoteReplyMessageProcessor implements MessageProcessor {
 
             // 存储消息到数据库
             MessageSaveResult saveResult = messageStorageService.saveMessageWithResult(message);
+            if (saveResult == null || saveResult.getMessageId() == null || saveResult.getChatId() == null) {
+                log.error("[QuoteReplyMessage] 消息未持久化，跳过回推。messageId={}, saveResult={}", inHeader.getMessageId(), saveResult);
+                return;
+            }
 
             // 回推给发送者（用于端侧更新状态）
             messageSender.sendToUser(

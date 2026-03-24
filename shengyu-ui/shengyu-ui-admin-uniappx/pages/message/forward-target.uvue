@@ -158,32 +158,22 @@ async function handleSelect(targetChatId: string): Promise<void> {
 		} else if (result != null && Array.isArray((result as any).messageIds)) {
 			successCount = (result as any).messageIds.length
 		}
+		const expectedCount = forwardType.value === 2 ? 1 : ids.length
 		if (successCount <= 0) {
 			uni.showToast({ title: '转发失败', icon: 'none' })
 			return
 		}
-		if (successCount < ids.length) {
-			uni.showToast({ title: `部分成功 ${successCount}/${ids.length}`, icon: 'none' })
+		if (successCount < expectedCount) {
+			uni.showToast({ title: `部分成功 ${successCount}/${expectedCount}`, icon: 'none' })
 		} else {
 			uni.showToast({ title: '已转发', icon: 'success' })
 		}
 		const conv = conversationService.getConversation(targetChatId)
 		if (conv != null) {
-			const name = conv.targetName != null ? String(conv.targetName) : ''
-			const type = conv.conversationType
-			const targetId = conv.targetId != null ? String(conv.targetId) : ''
 			const chatIdParam = encodeIdParam(targetChatId)
-			const targetIdParam = encodeIdParam(targetId)
-			if (type === 2) {
-				const memberCount = (conv as any).groupMemberCount != null ? String((conv as any).groupMemberCount) : '0'
-				uni.redirectTo({
-					url: `/pages/message/chat?chatId=${chatIdParam}&type=group&groupId=${targetIdParam}&targetId=${targetIdParam}&name=${encodeURIComponent(name)}&memberCount=${encodeURIComponent(memberCount)}`
-				})
-			} else {
-				uni.redirectTo({
-					url: `/pages/message/chat?chatId=${chatIdParam}&type=single&targetId=${targetIdParam}&name=${encodeURIComponent(name)}`
-				})
-			}
+			uni.redirectTo({
+				url: `/pages/message/chat?chatId=${chatIdParam}`
+			})
 			return
 		}
 		const chatIdParam = encodeIdParam(targetChatId)

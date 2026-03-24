@@ -23,6 +23,7 @@ export function mapDbTypeToString(dbType: number): string {
     case 4: return 'video'
     case 5: return 'file'
     case 6: return 'location'
+    case 9: return 'custom'
     default: return 'unknown'
   }
 }
@@ -38,6 +39,7 @@ export function mapProtobufTypeToString(protobufType: MessageType): string {
     case MessageType.VIDEO: return 'video'
     case MessageType.FILE: return 'file'
     case MessageType.LOCATION: return 'location'
+    case MessageType.CUSTOM: return 'custom'
     case MessageType.QUOTE_REPLY: return 'quote'
     case MessageType.READ_RECEIPT: return 'receipt'
     case MessageType.RECALL: return 'recall'
@@ -83,8 +85,20 @@ export function parseMessageContent(content: any): any {
     if (trimmed.length === 0) return content
     const firstChar = trimmed.charAt(0)
     const lastChar = trimmed.charAt(trimmed.length - 1)
-    const looksLikeJson = (firstChar === '{' && lastChar === '}') || (firstChar === '[' && lastChar === ']')
+    const isObjectJson = firstChar === '{' && lastChar === '}'
+    const isArrayJson = firstChar === '[' && lastChar === ']'
+    const looksLikeJson = isObjectJson || isArrayJson
     if (!looksLikeJson) return content
+    if (isArrayJson) {
+      const inner = trimmed.substring(1, trimmed.length - 1).trim()
+      if (inner.length > 0) {
+        const c0 = inner.charAt(0)
+        const isLikelyJsonArray =
+          c0 === '{' || c0 === '[' || c0 === '"' || c0 === '-' ||
+          (c0 >= '0' && c0 <= '9') || c0 === 't' || c0 === 'f' || c0 === 'n'
+        if (!isLikelyJsonArray) return content
+      }
+    }
     
     try {
       const parsed = JSON.parse(trimmed)
