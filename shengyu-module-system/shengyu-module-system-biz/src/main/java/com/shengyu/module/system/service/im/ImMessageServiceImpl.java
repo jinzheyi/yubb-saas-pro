@@ -451,8 +451,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             if (!Objects.equals(message.getRecallBy(), userId)) {
                 return;
             }
-            Integer normalizedType = normalizeDbMessageType(message.getMessageType());
-            if (!Objects.equals(normalizedType, ImMessageTypeEnum.TEXT.getType())) {
+            if (!isReeditEligibleTextMessage(message, userId)) {
                 return;
             }
             LocalDateTime recallTime = message.getRecallTime();
@@ -491,6 +490,26 @@ public class ImMessageServiceImpl implements ImMessageService {
             respVO.setReeditDeadlineTs(String.valueOf(deadlineTs));
         } catch (Exception ignore) {
         }
+    }
+
+    private boolean isReeditEligibleTextMessage(ImChatMessageDO message, Long userId) {
+        if (message == null || userId == null) {
+            return false;
+        }
+        if (!Objects.equals(message.getSenderId(), userId)) {
+            return false;
+        }
+        Integer normalizedType = normalizeDbMessageType(message.getMessageType());
+        if (!Objects.equals(normalizedType, ImMessageTypeEnum.TEXT.getType())) {
+            return false;
+        }
+        if (message.getQuoteMessageId() != null) {
+            return false;
+        }
+        if (StrUtil.isNotBlank(message.getForwardedFrom())) {
+            return false;
+        }
+        return StrUtil.isNotBlank(message.getContent());
     }
 
     private void sanitizeRecalledMessage(AppImMessageRespVO respVO) {
@@ -1437,8 +1456,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         Long newRev = oldRev + 1L;
         String recallExtra = null;
         try {
-            Integer normalizedType = normalizeDbMessageType(message.getMessageType());
-            if (isSelfMessage && Objects.equals(normalizedType, ImMessageTypeEnum.TEXT.getType()) && StrUtil.isNotBlank(message.getContent())) {
+            if (isSelfMessage && isReeditEligibleTextMessage(message, userId)) {
                 JSONObject ex = JSONUtil.createObj();
                 ex.set("reeditContent", message.getContent());
                 long deadlineTs = recallTime.plusSeconds(300L).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
@@ -1591,8 +1609,8 @@ public class ImMessageServiceImpl implements ImMessageService {
             // enterprise: re-edit-after-recall hint
             // 仅“自撤回 + 文本消息”向发送者本人多端下发 originalContent，绝不广播给会话其它成员
             try {
-                boolean isText = Objects.equals(message.getMessageType(), ImMessageTypeEnum.TEXT.getType());
-                if (isText && isSelfMessage) {
+                if (isReeditEligibleTextMessage(message, userId)
+                        && isSelfMessage) {
                     long reeditWindowSec = 300L;
                     long deadlineTs = recallTime != null ? recallTime.plusSeconds(reeditWindowSec).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : 0L;
                     String hintExtra = null;

@@ -57,6 +57,12 @@ public class AppImMessageRespVO {
     @Schema(description = "撤回时间")
     private LocalDateTime recallTime;
 
+    @Schema(description = "撤回后可重新编辑原文（仅发送者本人、且在有效期内返回）", example = "你好")
+    private String reeditContent;
+
+    @Schema(description = "撤回后可重新编辑截止时间戳(毫秒)", example = "1774351203000")
+    private String reeditDeadlineTs;
+
     @Schema(description = "引用消息ID", example = "100")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long quoteMessageId;

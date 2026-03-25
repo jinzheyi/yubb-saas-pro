@@ -709,6 +709,54 @@ export class MessageService {
     }
   }
 
+  private canReeditFromOriginalMessage(message: any): boolean {
+    try {
+      if (message == null) {
+        return false
+      }
+      const messageType = (message as any).type != null ? Number((message as any).type) : Number((message as any).messageType)
+      if (messageType !== Number(MessageType.TEXT)) {
+        return false
+      }
+      const quoteId = (message as any).quoteMessageId
+      if (quoteId != null && String(quoteId) !== '' && String(quoteId) !== '0') {
+        return false
+      }
+      try {
+        const contentObj: any = (message as any).content
+        if (contentObj != null && typeof contentObj === 'object') {
+          const quotedMessageId = (contentObj as any).quotedMessageId
+          if (quotedMessageId != null && String(quotedMessageId) !== '' && String(quotedMessageId) !== '0') {
+            return false
+          }
+          const quoteMessageId = (contentObj as any).quoteMessageId
+          if (quoteMessageId != null && String(quoteMessageId) !== '' && String(quoteMessageId) !== '0') {
+            return false
+          }
+        }
+      } catch (e) {
+      }
+      const forwardedFrom = (message as any).forwardedFrom
+      if (forwardedFrom != null && String(forwardedFrom).trim() !== '') {
+        return false
+      }
+      try {
+        const contentObj: any = (message as any).content
+        if (contentObj != null && typeof contentObj === 'object') {
+          const forwardType = (contentObj as any).type != null ? String((contentObj as any).type) : ''
+          if (forwardType === 'FORWARD_COMBINE') {
+            return false
+          }
+        }
+      } catch (e) {
+      }
+      const c = this.extractReeditContentFromMessage(message)
+      return c !== ''
+    } catch (e) {
+      return false
+    }
+  }
+
   private applyQuoteMetaFromRest(item: MessageItem, raw: any): void {
     try {
       if (raw == null) {
@@ -1489,6 +1537,12 @@ export class MessageService {
       avatarBg: avatarBg,
       senderName: userName
     }
+      if (message.header.messageType === MessageType.QUOTE_REPLY) {
+        const b: any = message.body as any
+        if (b != null && b.quotedMessageId != null && String(b.quotedMessageId) !== '') {
+          ;(messageItem as any).quoteMessageId = String(b.quotedMessageId)
+        }
+      }
     
     // 添加到缓存（群聊优先使用真实 chatId，而不是 groupId）
     const isGroup = message.header.groupId !== '0' && message.header.groupId !== ''
@@ -2065,6 +2119,29 @@ export class MessageService {
           senderName: senderName,
           rev: incomingRev !== '' ? incomingRev : ((originalMessage as any).rev != null ? (originalMessage as any).rev.toString() : '')
         }
+      try {
+        const oq = (originalMessage as any).quoteMessageId
+        if (oq != null && String(oq) !== '' && String(oq) !== '0') {
+          ;(recallTip as any).quoteMessageId = String(oq)
+        }
+        if ((recallTip as any).quoteMessageId == null || String((recallTip as any).quoteMessageId) === '' || String((recallTip as any).quoteMessageId) === '0') {
+          const cobj: any = (originalMessage as any).content
+          if (cobj != null && typeof cobj === 'object') {
+            const qid = (cobj as any).quotedMessageId != null ? (cobj as any).quotedMessageId : (cobj as any).quoteMessageId
+            if (qid != null && String(qid) !== '' && String(qid) !== '0') {
+              ;(recallTip as any).quoteMessageId = String(qid)
+            }
+          }
+        }
+      } catch (e) {
+      }
+      try {
+        const of = (originalMessage as any).forwardedFrom
+        if (of != null && String(of).trim() !== '') {
+          ;(recallTip as any).forwardedFrom = String(of)
+        }
+      } catch (e) {
+      }
 
         // enterprise: keep local-only re-edit hint (applyLocalRecall) if already present on this device
         try {
@@ -2081,9 +2158,11 @@ export class MessageService {
           // ignore
         }
         try {
+          const isMine = (originalMessage as any).isSelf === true
+            || ((originalMessage as any).senderId != null && String((originalMessage as any).senderId) === this.currentUserId)
           if (((recallTip as any).reeditContent == null || (recallTip as any).reeditContent === '')
-            && ((originalMessage as any).isSelf === true
-              || ((originalMessage as any).senderId != null && String((originalMessage as any).senderId) === this.currentUserId))) {
+            && isMine
+            && this.canReeditFromOriginalMessage(originalMessage)) {
             const c = this.extractReeditContentFromMessage(originalMessage)
             if (c !== '') {
               ;(recallTip as any).reeditContent = c
@@ -2091,8 +2170,8 @@ export class MessageService {
             }
           }
           if (((recallTip as any).reeditContent == null || (recallTip as any).reeditContent === '')
-            && ((originalMessage as any).isSelf === true
-              || ((originalMessage as any).senderId != null && String((originalMessage as any).senderId) === this.currentUserId))) {
+            && isMine
+            && this.canReeditFromOriginalMessage(originalMessage)) {
             const altId = (originalMessage as any).id != null ? String((originalMessage as any).id) : ''
             const hint = this.getReeditHintByCandidates(chatId, [messageId, altId])
             if (hint != null && hint.content != null && hint.content !== '') {
@@ -2201,7 +2280,7 @@ export class MessageService {
       try {
         const isMine = (originalMessage as any).isSelf === true
           || ((originalMessage as any).senderId != null && String((originalMessage as any).senderId) === this.currentUserId)
-        if (isMine) {
+        if (isMine && this.canReeditFromOriginalMessage(originalMessage)) {
           reeditContent = this.extractReeditContentFromMessage(originalMessage)
         }
         if (isMine && reeditContent !== '') {
@@ -2229,6 +2308,29 @@ export class MessageService {
         avatarBg: originalMessage.avatarBg,
         senderName: senderName,
         rev: (originalMessage as any).rev != null ? (originalMessage as any).rev.toString() : ''
+      }
+      try {
+        const oq = (originalMessage as any).quoteMessageId
+        if (oq != null && String(oq) !== '' && String(oq) !== '0') {
+          ;(recallTip as any).quoteMessageId = String(oq)
+        }
+        if ((recallTip as any).quoteMessageId == null || String((recallTip as any).quoteMessageId) === '' || String((recallTip as any).quoteMessageId) === '0') {
+          const cobj: any = (originalMessage as any).content
+          if (cobj != null && typeof cobj === 'object') {
+            const qid = (cobj as any).quotedMessageId != null ? (cobj as any).quotedMessageId : (cobj as any).quoteMessageId
+            if (qid != null && String(qid) !== '' && String(qid) !== '0') {
+              ;(recallTip as any).quoteMessageId = String(qid)
+            }
+          }
+        }
+      } catch (e) {
+      }
+      try {
+        const of = (originalMessage as any).forwardedFrom
+        if (of != null && String(of).trim() !== '') {
+          ;(recallTip as any).forwardedFrom = String(of)
+        }
+      } catch (e) {
       }
 
       try {

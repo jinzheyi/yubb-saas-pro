@@ -43,7 +43,7 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
             "is_pinned, no_disturb, draft, deleted_by_user, deleted) " +
             "VALUES(" +
             "#{tenantId}, #{chatId}, #{userId}, #{cursorVersion}, 1, " +
-            "#{unreadDelta}, #{lastReadSequence}, #{lastReadTime}, " +
+            "IFNULL(#{unreadDelta}, 0), IFNULL(#{lastReadSequence}, 0), #{lastReadTime}, " +
             "#{lastMessageId}, #{lastMessageSequence}, #{lastMessageType}, #{lastMessageContent}, #{lastMessageHasAtMe}, #{lastMessageTime}, " +
             "0, 0, NULL, 0, 0) " +
             "ON DUPLICATE KEY UPDATE " +

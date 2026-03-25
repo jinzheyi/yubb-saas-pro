@@ -1,5 +1,17 @@
 import App from './App.uvue'
 
+// #ifdef H5
+// @ts-ignore
+import Quill from 'quill'
+try {
+	const g: any = globalThis as any
+	if (g.Quill == null) {
+		g.Quill = Quill
+	}
+} catch (e) {
+}
+// #endif
+
 import { createSSRApp } from 'vue'
 export function createApp() {
 	const app = createSSRApp(App)

@@ -188,15 +188,25 @@
 
 				<!-- 输入框/按住说话按钮 -->
 				<view class="input-box" :class="{ 'input-box-full': isFullExpanded, 'input-box-multi': isMultiLine && !isFullExpanded }" v-if="!isVoiceMode">
-					<editor 
+					<editor
+						v-if="!forcePlainInput"
 						id="editor"
-						class="chat-editor" 
+						class="chat-editor"
 						:class="{ 'chat-editor-full': isFullExpanded, 'chat-editor-multi': isMultiLine && !isFullExpanded }"
 						:placeholder="t('chat.inputPlaceholder')"
 						@ready="onEditorReady"
 						@input="onEditorInput"
 						:show-confirm-bar="false"
 						:adjust-position="!isFullExpanded"
+					/>
+					<textarea
+						v-else
+						class="chat-editor"
+						:class="{ 'chat-editor-full': isFullExpanded, 'chat-editor-multi': isMultiLine && !isFullExpanded }"
+						v-model="plainInputText"
+						:placeholder="t('chat.inputPlaceholder')"
+						:auto-height="true"
+						@input="onPlainInput"
 					/>
 				</view>
 				<view 
@@ -851,6 +861,8 @@
 	
 	// UI 状态
 	const inputText = ref('')
+	const plainInputText = ref('')
+	const forcePlainInput = ref(false)
 	const lastInputText = ref('') // 用于退格逻辑
 	const showEmojiMenu = ref(false)
 	const showPlusMenu = ref(false)
@@ -2762,6 +2774,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function onEditorInput(e : any) {
+		if (forcePlainInput.value) {
+			return
+		}
 		// e.detail.text 包含纯文本
 		// e.detail.html 包含富文本
 		const text = e.detail.text
@@ -2874,6 +2889,19 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			if (!(msg as any).isSelf) return false
 			const senderIdStr = (msg as any).senderId != null ? String((msg as any).senderId) : ''
 			if (senderIdStr !== '' && senderIdStr !== '0' && senderIdStr !== currentUserId.value) return false
+			const quoteId = (msg as any).quoteMessageId != null ? String((msg as any).quoteMessageId) : ''
+			if (quoteId !== '' && quoteId !== '0') return false
+			const forwardedFrom = (msg as any).forwardedFrom != null ? String((msg as any).forwardedFrom) : ''
+			if (forwardedFrom.trim() !== '') return false
+			const rawContent: any = (msg as any).content
+			if (rawContent != null && typeof rawContent === 'object') {
+				const innerQuoteId = (rawContent as any).quotedMessageId != null
+					? String((rawContent as any).quotedMessageId)
+					: ((rawContent as any).quoteMessageId != null ? String((rawContent as any).quoteMessageId) : '')
+				if (innerQuoteId !== '' && innerQuoteId !== '0') return false
+				const innerType = (rawContent as any).type != null ? String((rawContent as any).type) : ''
+				if (innerType === 'FORWARD_COMBINE') return false
+			}
 			const content = (msg as any).reeditContent != null ? String((msg as any).reeditContent) : ''
 			if (!content) return false
 			return getReeditDeadlineTs(msg) > 0
@@ -2940,15 +2968,112 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		return shouldRenderReeditEntry(msg) && !isReeditExpired(msg)
 	}
 
+	function applyReeditContentToEditor(content: string): boolean {
+		if (forcePlainInput.value) {
+			plainInputText.value = content
+			inputText.value = content.trim().length > 0 ? 'has_content' : ''
+			isMultiLine.value = content.indexOf('\n') > -1 || content.trim().length > 22
+			scrollToBottom()
+			return true
+		}
+		if (editorCtx == null) return false
+		try {
+			editorCtx!.clear({
+				success: () => {
+					try {
+						editorCtx!.insertText({ text: content })
+					} catch (e) {
+					}
+					inputText.value = 'has_content'
+					scrollToBottom()
+				}
+			})
+			return true
+		} catch (e) {
+			return false
+		}
+	}
+
+	function onPlainInput(e : any) {
+		try {
+			const v = e != null && e.detail != null && e.detail.value != null ? String(e.detail.value) : ''
+			plainInputText.value = v
+			isMultiLine.value = v.indexOf('\n') > -1 || v.trim().length > 22
+			inputText.value = v.trim().length > 0 ? 'has_content' : ''
+		} catch (e) {
+			inputText.value = plainInputText.value.trim().length > 0 ? 'has_content' : ''
+		}
+	}
+
+	function ensureEditorReadyAndApply(content: string, attempt: number = 0) {
+		if (applyReeditContentToEditor(content)) {
+			return
+		}
+		try {
+			uni.createSelectorQuery().select('#editor').context((res) => {
+				try {
+					const ctx = res != null ? (res as any).context : null
+					if (ctx != null) {
+						editorCtx = ctx as EditorContext
+					}
+				} catch (e) {
+				}
+				if (applyReeditContentToEditor(content)) {
+					return
+				}
+				if (attempt >= 8) {
+					forcePlainInput.value = true
+					plainInputText.value = content
+					inputText.value = content.trim().length > 0 ? 'has_content' : ''
+					isMultiLine.value = content.indexOf('\n') > -1 || content.trim().length > 22
+					uni.showToast({ title: '输入框已切换兼容模式', icon: 'none' })
+					return
+				}
+				setTimeout(() => {
+					ensureEditorReadyAndApply(content, attempt + 1)
+				}, 80)
+			}).exec()
+		} catch (e) {
+			if (attempt >= 8) {
+				forcePlainInput.value = true
+				plainInputText.value = content
+				inputText.value = content.trim().length > 0 ? 'has_content' : ''
+				isMultiLine.value = content.indexOf('\n') > -1 || content.trim().length > 22
+				uni.showToast({ title: '输入框已切换兼容模式', icon: 'none' })
+				return
+			}
+			setTimeout(() => {
+				ensureEditorReadyAndApply(content, attempt + 1)
+			}, 80)
+		}
+	}
+
 	function handleReeditAfterRecall(msg: any) {
 		try {
 			if (!shouldShowReeditEntry(msg)) {
 				uni.showToast({ title: '重新编辑已过期', icon: 'none' })
 				return
 			}
-			if (editorCtx == null) {
-				uni.showToast({ title: '编辑器未就绪', icon: 'none' })
+			const quoteId = (msg as any).quoteMessageId != null ? String((msg as any).quoteMessageId) : ''
+			if (quoteId !== '' && quoteId !== '0') {
+				uni.showToast({ title: '该消息类型不支持重新编辑', icon: 'none' })
 				return
+			}
+			const forwardedFrom = (msg as any).forwardedFrom != null ? String((msg as any).forwardedFrom) : ''
+			if (forwardedFrom.trim() !== '') {
+				uni.showToast({ title: '该消息类型不支持重新编辑', icon: 'none' })
+				return
+			}
+			const rawContent: any = (msg as any).content
+			if (rawContent != null && typeof rawContent === 'object') {
+				const innerQuoteId = (rawContent as any).quotedMessageId != null
+					? String((rawContent as any).quotedMessageId)
+					: ((rawContent as any).quoteMessageId != null ? String((rawContent as any).quoteMessageId) : '')
+				const innerType = (rawContent as any).type != null ? String((rawContent as any).type) : ''
+				if ((innerQuoteId !== '' && innerQuoteId !== '0') || innerType === 'FORWARD_COMBINE') {
+					uni.showToast({ title: '该消息类型不支持重新编辑', icon: 'none' })
+					return
+				}
 			}
 			let content = (msg as any).reeditContent != null ? String((msg as any).reeditContent) : ''
 			try {
@@ -2983,18 +3108,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			showEmojiMenu.value = false
 			showPlusMenu.value = false
 			isVoiceMode.value = false
+			multiSelectMode.value = false
 			isFullExpanded.value = false
-			editorCtx!.clear({
-				success: () => {
-					try {
-						editorCtx!.insertText({ text: content })
-					} catch (e) {
-						// ignore
-					}
-					inputText.value = 'has_content'
-					scrollToBottom()
-				}
-			})
+			ensureEditorReadyAndApply(content)
 		} catch (e) {
 			console.error('[Chat] handleReeditAfterRecall failed:', e)
 			uni.showToast({ title: '操作失败', icon: 'none' })
@@ -3118,6 +3234,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleEmojiClick(item : any) {
+		if (forcePlainInput.value) {
+			const code = item != null && item.code != null ? String(item.code) : ''
+			if (code !== '') {
+				plainInputText.value = plainInputText.value + code
+				inputText.value = 'has_content'
+				isMultiLine.value = plainInputText.value.indexOf('\n') > -1 || plainInputText.value.trim().length > 22
+			}
+			return
+		}
 		if (editorCtx != null) {
 			editorCtx!.insertImage({
 				src: item.path,
@@ -3189,9 +3314,76 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
+	function sendByFinalContent(finalContent: string) {
+		let atUserIds: string[] = []
+		let mentions: any[] = []
+		try {
+			atUserIds = extractAtUserIds(finalContent, mentionNameToUserId)
+			const parsedMentions = parseAtMentions(finalContent)
+			mentions = parsedMentions.map(m => {
+				const mentionUserName = m != null && m.userName != null ? String(m.userName) : ''
+				let mentionUserId = mentionUserName === '所有人' || mentionUserName === 'all'
+					? '-1'
+					: (mentionNameToUserId.get(mentionUserName) || '')
+				if (mentionUserId === '') {
+					mentionUserId = '0'
+				}
+				return {
+					userId: mentionUserId,
+					nickname: mentionUserName,
+					startIndex: m.startIndex,
+					endIndex: m.endIndex
+				}
+			}).filter(m => m.userId !== '0')
+		} catch (e) {
+			atUserIds = []
+			mentions = []
+		}
+		const quoteMsg = quoteReplyMsg.value
+		if (quoteMsg !== null) {
+			const quoteContent = getMessagePreview(quoteMsg)
+			messageService.sendQuoteReplyMessage(
+				getReceiverIdForMessage(),
+				getGroupIdForMessage(),
+				finalContent,
+				quoteMsg.messageId,
+				quoteContent,
+				quoteMsg.senderName,
+				atUserIds,
+				mentions
+			)
+			quoteReplyMsg.value = null
+		} else {
+			messageService.sendTextMessage(
+				getReceiverIdForMessage(),
+				getGroupIdForMessage(),
+				finalContent,
+				atUserIds,
+				mentions
+			)
+		}
+	}
+
 	function handleSend() {
+		if (forcePlainInput.value) {
+			const finalContent = plainInputText.value != null ? plainInputText.value.trim() : ''
+			if (!finalContent) return
+			sendByFinalContent(finalContent)
+			plainInputText.value = ''
+			inputText.value = ''
+			isMultiLine.value = false
+			isFullExpanded.value = false
+			try {
+				mentionNameToUserId.clear()
+			} catch (e) {
+			}
+			setTimeout(() => {
+				scrollToBottom()
+			}, 100)
+			return
+		}
 		if (editorCtx == null) return
-		
+
 		editorCtx!.getContents({
 			success: (res) => {
 				let content = res.html
@@ -3205,66 +3397,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				finalContent = finalContent.replace(/<[^>]+>/g, '')
 				
 				if (!finalContent.trim()) return
-				
-				let atUserIds: string[] = []
-				let mentions: any[] = []
-				try {
-					atUserIds = extractAtUserIds(finalContent, mentionNameToUserId)
-					const parsedMentions = parseAtMentions(finalContent)
-					mentions = parsedMentions.map(m => {
-						const mentionUserName = m != null && m.userName != null ? String(m.userName) : ''
-						let mentionUserId = mentionUserName === '所有人' || mentionUserName === 'all'
-							? '-1'
-							: (mentionNameToUserId.get(mentionUserName) || '')
-						if (mentionUserId === '') {
-							mentionUserId = '0'
-						}
-						return {
-							userId: mentionUserId,
-							nickname: mentionUserName,
-							startIndex: m.startIndex,
-							endIndex: m.endIndex
-						}
-					}).filter(m => m.userId !== '0')
-				} catch (e) {
-					atUserIds = []
-					mentions = []
-				}
-
-				// 检查是否有引用回复
-				const quoteMsg = quoteReplyMsg.value
-				
-				let message: any
-				if (quoteMsg !== null) {
-				// 发送引用回复消息
-				const quoteContent = getMessagePreview(quoteMsg)
-					message = messageService.sendQuoteReplyMessage(
-						getReceiverIdForMessage(),
-						getGroupIdForMessage(),
-						finalContent,
-						quoteMsg.messageId,
-						quoteContent,
-						quoteMsg.senderName,
-						atUserIds,
-						mentions
-					)
-					// 清除引用回复状态
-					quoteReplyMsg.value = null
-				} else {
-					// 发送普通文本消息
-					message = messageService.sendTextMessage(
-						getReceiverIdForMessage(),  // 单聊时传 receiverId
-						getGroupIdForMessage(),     // 群聊时传 groupId
-						finalContent,
-						atUserIds,
-						mentions
-					)
-				}
+				sendByFinalContent(finalContent)
 				
 				// 清空编辑器
 				editorCtx!.clear({
 					success: () => {
 						inputText.value = ''
+						plainInputText.value = ''
+						isMultiLine.value = false
 						isFullExpanded.value = false
 						try {
 							mentionNameToUserId.clear()

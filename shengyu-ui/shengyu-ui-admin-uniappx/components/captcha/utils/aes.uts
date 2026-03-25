@@ -211,9 +211,8 @@ import CryptoJS from 'crypto-js'
 /**
  * Web 平台 AES 加密
  * 使用 crypto-js 库
- * 
- * 注意：需要在 index.html 中引入 crypto-js：
- * <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+ *
+ * 注意：统一通过 npm 依赖加载，不允许再通过 index.html 或 CDN 注入脚本
  */
 function aesEncryptWeb(word: string, keyWord: string): string {
 	try {
