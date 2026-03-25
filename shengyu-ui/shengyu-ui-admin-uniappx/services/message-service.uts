@@ -2443,6 +2443,11 @@ export class MessageService {
           ;(existing as any).content = message.content
         }
 
+        if (this.shouldPreferIncomingContent(existing, message)) {
+          ;(existing as any).type = (message as any).type
+          ;(existing as any).content = (message as any).content
+        }
+
         // 仅做“信息补齐”，避免覆盖已确认的状态
         if ((existing.sequence == null || existing.sequence === '') && message.sequence != null && message.sequence !== '') {
           existing.sequence = message.sequence
@@ -2503,6 +2508,78 @@ export class MessageService {
       }
       return 0
     })
+  }
+
+  private stringifyComparableContent(raw: any): string {
+    try {
+      if (raw == null) {
+        return ''
+      }
+      if (typeof raw === 'string') {
+        return raw
+      }
+      return JSON.stringify(raw)
+    } catch (e) {
+      try {
+        return String(raw)
+      } catch (e2) {
+        return ''
+      }
+    }
+  }
+
+  private isForwardCombineContent(raw: any): boolean {
+    try {
+      if (raw == null) {
+        return false
+      }
+      let body: any = raw
+      if (typeof body === 'string') {
+        const text = body.toString().trim()
+        if (text === '') {
+          return false
+        }
+        body = JSON.parse(text)
+      }
+      if (body != null && body.type != null && String(body.type) === 'FORWARD_COMBINE') {
+        return true
+      }
+      if (body != null && body.content != null) {
+        return this.isForwardCombineContent(body.content)
+      }
+      if (body != null && body.body != null) {
+        return this.isForwardCombineContent(body.body)
+      }
+      return false
+    } catch (e) {
+      return false
+    }
+  }
+
+  private shouldPreferIncomingContent(existing: MessageItem, incoming: MessageItem): boolean {
+    try {
+      const existingType = existing != null ? Number((existing as any).type) : 0
+      const incomingType = incoming != null ? Number((incoming as any).type) : 0
+      if (existingType !== Number(MessageType.CUSTOM) && incomingType !== Number(MessageType.CUSTOM)) {
+        return false
+      }
+      const existingIsForward = this.isForwardCombineContent((existing as any).content)
+      const incomingIsForward = this.isForwardCombineContent((incoming as any).content)
+      if (incomingIsForward && !existingIsForward) {
+        return true
+      }
+      if (!incomingIsForward) {
+        return false
+      }
+      const existingRaw = this.stringifyComparableContent((existing as any).content)
+      const incomingRaw = this.stringifyComparableContent((incoming as any).content)
+      if (existingRaw === '') {
+        return true
+      }
+      return incomingRaw.length > existingRaw.length
+    } catch (e) {
+      return false
+    }
   }
   
   /**

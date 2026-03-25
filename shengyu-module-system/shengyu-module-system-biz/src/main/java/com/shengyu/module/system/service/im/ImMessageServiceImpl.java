@@ -701,9 +701,8 @@ public class ImMessageServiceImpl implements ImMessageService {
 
                 if (!isSender) {
                     imBadgeService.pushBadgeUpdate(memberId);
-                    // 推送消息内容给接收者
-                    pushMessageToUser(memberId, chat.getId(), lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO);
                 }
+                pushMessageToUser(memberId, chat.getId(), lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO);
             }
             
             // 处理@提及强提醒：被@用户即使群免打扰也收到推送
@@ -770,7 +769,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             }
 
             imBadgeService.pushBadgeUpdate(receiverId);
-            // 推送消息内容给接收者
+            pushMessageToUser(senderId, chat.getId(), lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO);
             pushMessageToUser(receiverId, chat.getId(), lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO);
         }
     }
@@ -1335,7 +1334,10 @@ public class ImMessageServiceImpl implements ImMessageService {
         String preview = getMessagePreview(originalMsg.getMessageType(), originalMsg.getContent());
         AppImMessageSendReqVO sendReqVO = new AppImMessageSendReqVO();
         sendReqVO.setMessageType(originalMsg.getMessageType());
+        sendReqVO.setContent(originalMsg.getContent());
         sendReqVO.setExtra(originalMsg.getExtra());
+        sendReqVO.setMentions(originalMsg.getMentions());
+        fillForwardPushRoute(sendReqVO, targetChat, userId);
         updateChatUsersAfterSend(targetChat, newMessage.getId(), sequence, 1L, preview, forwardTime, userId, sendReqVO);
 
         return newMessage.getId();
@@ -1443,9 +1445,28 @@ public class ImMessageServiceImpl implements ImMessageService {
         String preview = "[合并转发] " + originalMessages.size() + "条消息";
         AppImMessageSendReqVO sendReqVO = new AppImMessageSendReqVO();
         sendReqVO.setMessageType(ImMessageTypeEnum.CUSTOM.getType());
+        sendReqVO.setContent(newMessage.getContent());
+        fillForwardPushRoute(sendReqVO, targetChat, userId);
         updateChatUsersAfterSend(targetChat, newMessage.getId(), sequence, 1L, preview, forwardTime, userId, sendReqVO);
 
         return newMessage.getId();
+    }
+
+    private void fillForwardPushRoute(AppImMessageSendReqVO sendReqVO, ImChatDO targetChat, Long senderId) {
+        if (sendReqVO == null || targetChat == null) {
+            return;
+        }
+        sendReqVO.setChatId(targetChat.getId());
+        if (ImConversationTypeEnum.isGroup(targetChat.getChatType())) {
+            sendReqVO.setGroupId(targetChat.getGroupId());
+            sendReqVO.setReceiverId(null);
+            return;
+        }
+        Long receiverId = Objects.equals(targetChat.getSingleUser1(), senderId)
+                ? targetChat.getSingleUser2()
+                : targetChat.getSingleUser1();
+        sendReqVO.setReceiverId(receiverId);
+        sendReqVO.setGroupId(null);
     }
 
     @Override

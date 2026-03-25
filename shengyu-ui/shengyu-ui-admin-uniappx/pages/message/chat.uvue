@@ -4878,7 +4878,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const mid = msg && (msg as any).messageId != null ? String((msg as any).messageId) : ''
 			const key = mid !== '' ? mid : (msg && (msg as any).id != null ? String((msg as any).id) : '')
 			if (key !== '' && forwardCombineCache.has(key)) {
-				return forwardCombineCache.get(key) as any
+				const cached = forwardCombineCache.get(key) as any
+				if (cached != null && cached.type != null && String(cached.type) === 'FORWARD_COMBINE') {
+					return cached
+				}
+				forwardCombineCache.delete(key)
 			}
 			const raw = (msg as any).content
 			let body = safeParseJson(raw)
@@ -4900,8 +4904,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					body = nested
 				}
 			}
-			if (key !== '') {
+			if (key !== '' && body != null && body.type != null && String(body.type) === 'FORWARD_COMBINE') {
 				forwardCombineCache.set(key, body)
+			} else if (key !== '') {
+				forwardCombineCache.delete(key)
 			}
 			return body
 		} catch (e) {
