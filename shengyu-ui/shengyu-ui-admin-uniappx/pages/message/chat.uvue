@@ -34,7 +34,7 @@
 			</view>
 
 			<view class="message-list">
-				<view v-for="(msg, index) in messages" :key="index" :id="'msg-' + index" class="message-group read-observe-item" :data-seq="msg.sequence || ''" :data-self="msg.isSelf ? '1' : '0'">
+				<view v-for="(msg, index) in messages" :key="getMessageRenderKey(msg, index)" :id="'msg-' + index" class="message-group read-observe-item" :data-seq="msg.sequence || ''" :data-self="msg.isSelf ? '1' : '0'">
 					<view v-if="formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0)" class="time-stamp">
 						<text class="time-text">{{ formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0) }}</text>
 					</view>
@@ -2732,10 +2732,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const idx = messages.value.findIndex((m: any) => m && m.messageId === messageId)
 			if (idx < 0) return
 			const uiMsg: any = messages.value[idx]
+			const nextMsg: any = { ...uiMsg }
 
 			// MessageService.MessageStatus: SENDING=0 SENT=1 READ=2 FAILED=3
 			if (status === 1 || status === '1') {
-				uiMsg.status = 'success'
+				nextMsg.status = 'success'
 				// 补齐 sequence（服务端确认后才会有）
 				try {
 					const candidateChatIds: string[] = []
@@ -2760,14 +2761,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						}
 					}
 					if (hit && hit.sequence != null && hit.sequence !== '') {
-						uiMsg.sequence = String(hit.sequence)
+						nextMsg.sequence = String(hit.sequence)
 					}
 				} catch (e) {
 					// ignore
 				}
+				messages.value.splice(idx, 1, nextMsg as MessageItem)
 				// 群聊自发消息确认后，在数据层触发已读回执 summary 拉取（不在模板渲染中发网络请求）
 				try {
-					if (chatType.value === 'group' && uiMsg.isSelf === true) {
+					if (chatType.value === 'group' && nextMsg.isSelf === true) {
 						ensureReadReceiptSummaryFetched(messageId)
 					}
 				} catch (e) {
@@ -2777,11 +2779,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}
 
 			if (status === 0 || status === '0') {
-				uiMsg.status = 'sending'
+				nextMsg.status = 'sending'
+				messages.value.splice(idx, 1, nextMsg as MessageItem)
 				return
 			}
 			if (status === 3 || status === '3') {
-				uiMsg.status = 'failed'
+				nextMsg.status = 'failed'
+				messages.value.splice(idx, 1, nextMsg as MessageItem)
 				return
 			}
 		} catch (e) {
@@ -4802,6 +4806,27 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return id !== '0' ? id : ''
 		} catch (e) {
 			return ''
+		}
+	}
+
+	function getMessageRenderKey(msg: MessageItem, index: number): string {
+		try {
+			const messageId = msg && (msg as any).messageId != null ? String((msg as any).messageId) : ''
+			if (messageId !== '' && messageId !== '0') {
+				return 'mid-' + messageId
+			}
+			const localId = msg && (msg as any).id != null ? String((msg as any).id) : ''
+			if (localId !== '' && localId !== '0') {
+				return 'id-' + localId
+			}
+			const sequence = msg && (msg as any).sequence != null ? String((msg as any).sequence) : ''
+			if (sequence !== '' && sequence !== '0') {
+				return 'seq-' + sequence
+			}
+			const timestamp = msg && (msg as any).timestamp != null ? String((msg as any).timestamp) : '0'
+			return 'idx-' + index + '-' + timestamp
+		} catch (e) {
+			return 'idx-' + index
 		}
 	}
 
