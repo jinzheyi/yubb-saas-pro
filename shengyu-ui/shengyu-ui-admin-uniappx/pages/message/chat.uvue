@@ -235,6 +235,50 @@
 					</view>
 				</view>
 			</view>
+			<view v-if="showMentionPanel && !isVoiceMode" class="mention-panel">
+				<view class="mention-panel-search">
+					<text class="iconfont mention-panel-search-icon">&#xea6e;</text>
+					<input class="mention-panel-search-input" v-model="mentionKeyword" placeholder="搜索群成员" placeholder-class="placeholder" />
+					<text class="mention-panel-close" @click="closeMentionSelector">关闭</text>
+				</view>
+				<scroll-view class="mention-panel-list" scroll-y="true" show-scrollbar="false">
+					<view v-if="mentionLoading" class="mention-panel-empty">
+						<text class="mention-panel-empty-text">成员加载中...</text>
+					</view>
+					<template v-else>
+						<view v-if="canMentionAll" class="mention-member-item" hover-class="mention-member-item-active" @click="handleMentionSelectAll">
+							<view class="mention-member-avatar" :style="{ backgroundColor: '#3370FF' }">
+								<text class="mention-member-avatar-text">@</text>
+							</view>
+							<view class="mention-member-body">
+								<text class="mention-member-name">所有人</text>
+								<text class="mention-member-desc">仅群主或管理员可用</text>
+							</view>
+						</view>
+						<view
+							v-for="item in filteredMentionMembers"
+							:key="item.userId"
+							class="mention-member-item"
+							hover-class="mention-member-item-active"
+							@click="handleMentionSelect(item)"
+						>
+							<view class="mention-member-avatar" :style="{ backgroundColor: item.avatarBg }">
+								<image v-if="item.avatar != ''" class="mention-member-avatar-img" :src="item.avatar" mode="aspectFill" />
+								<text v-else class="mention-member-avatar-text">{{ item.avatarText }}</text>
+							</view>
+							<view class="mention-member-body">
+								<text class="mention-member-name">{{ item.displayName }}</text>
+								<text v-if="item.userName != '' || item.mentionName != item.displayName" class="mention-member-desc">
+									{{ item.userName != '' ? item.userName : item.mentionName }}
+								</text>
+							</view>
+						</view>
+						<view v-if="filteredMentionMembers.length === 0" class="mention-panel-empty">
+							<text class="mention-panel-empty-text">暂无可选择成员</text>
+						</view>
+					</template>
+				</scroll-view>
+			</view>
 			
 			<!-- 表情包菜单 -->
 			<view v-if="showEmojiMenu" class="emoji-menu">
@@ -417,6 +461,7 @@
 	import { getUserAvatarColor, getAvatarText as getAvatarTextUtil } from '../../utils/avatar.uts'
 	import { parseMessageContent } from '../../utils/message-utils.uts'
 	import { extractAtUserIds, parseAtMentions, highlightAtMentions } from '../../utils/at-mention.uts'
+	import { groupService, type GroupMember } from '../../services/group-service.uts'
 
 	import { uploadGroupFile, getFilePresignedGetUrl } from '../../api/file.uts'
 	import { navToFilePreview } from '../../utils/nav.uts'
@@ -456,6 +501,17 @@
 	const recallWindowMs = ref(2 * 60 * 1000)
 	let mentionPicking: boolean = false
 	let lastMentionTriggerAt: number = 0
+
+	type MentionMemberItem = {
+		userId: string
+		userName: string
+		displayName: string
+		mentionName: string
+		avatar: string
+		avatarText: string
+		avatarBg: string
+		role: number
+	}
 
 	type MessageRenderToken = {
 		type: 'text' | 'emoji' | 'mention'
@@ -862,8 +918,15 @@
 	// UI 状态
 	const inputText = ref('')
 	const plainInputText = ref('')
+	const composerText = ref('')
 	const forcePlainInput = ref(false)
 	const lastInputText = ref('') // 用于退格逻辑
+	const showMentionPanel = ref(false)
+	const mentionKeyword = ref('')
+	const mentionLoading = ref(false)
+	const mentionMembers = ref<MentionMemberItem[]>([])
+	const mentionMembersLoaded = ref(false)
+	const canMentionAll = ref(false)
 	const showEmojiMenu = ref(false)
 	const showPlusMenu = ref(false)
 	const isFullExpanded = ref(false)
@@ -913,6 +976,19 @@
 	const hasMore = ref(true)
 
 	const stickerList = ref<StickerItem[]>(getCustomStickers())
+
+	const filteredMentionMembers = computed(() => {
+		const kw = mentionKeyword.value != null ? mentionKeyword.value.trim().toLowerCase() : ''
+		if (kw === '') {
+			return mentionMembers.value
+		}
+		return mentionMembers.value.filter(item => {
+			const displayName = item != null && item.displayName != null ? String(item.displayName).toLowerCase() : ''
+			const mentionName = item != null && item.mentionName != null ? String(item.mentionName).toLowerCase() : ''
+			const userName = item != null && item.userName != null ? String(item.userName).toLowerCase() : ''
+			return displayName.indexOf(kw) > -1 || mentionName.indexOf(kw) > -1 || userName.indexOf(kw) > -1
+		})
+	})
 
 	type QuoteChainItem = {
 		messageId : string;
@@ -2777,29 +2853,29 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (forcePlainInput.value) {
 			return
 		}
-		// e.detail.text 包含纯文本
-		// e.detail.html 包含富文本
 		const text = e.detail.text
 		const html = e.detail.html
+		composerText.value = text != null ? String(text) : ''
 		try {
 			if (chatType.value === 'group') {
-				const s = text != null ? String(text) : ''
+				const s = composerText.value
 				const now = Date.now()
 				if (!mentionPicking && s.length > 0 && s.charAt(s.length - 1) === '@') {
 					if (now - lastMentionTriggerAt > 500) {
 						lastMentionTriggerAt = now
 						openMentionSelector()
 					}
+				} else if (showMentionPanel.value) {
+					const query = resolveMentionTailQuery(s)
+					if (query == null) {
+						closeMentionSelector()
+					} else {
+						mentionKeyword.value = query
+					}
 				}
 			}
 		} catch (e) {
-			// ignore
 		}
-		
-		// 启发式判断行数：
-		// 1. 是否有物理换行符
-		// 2. 文本长度是否超过一行（根据屏幕宽度，通常 22-25 个字符左右换行）
-		// 3. HTML 中是否有多个段落标签
 		const hasNewLine = text.includes('\n')
 		const isLongText = text.trim().length > 22
 		const hasMultipleParagraphs = (html.match(/<p>/g) || []).length > 1 || html.includes('<br>')
@@ -2811,6 +2887,126 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else {
 			inputText.value = ''
 			isMultiLine.value = false // 清空时恢复单行
+		}
+	}
+
+	function resolveMentionTailQuery(text: string): string | null {
+		try {
+			if (text == null || text.length === 0) {
+				return null
+			}
+			let tailStart = text.length - 1
+			while (tailStart >= 0) {
+				const ch = text.charAt(tailStart)
+				if (ch === ' ' || ch === '\n' || ch === '\r' || ch === '\t') {
+					break
+				}
+				tailStart--
+			}
+			const token = text.substring(tailStart + 1)
+			if (token.length === 0 || token.charAt(0) !== '@') {
+				return null
+			}
+			if (token.length === 1) {
+				return ''
+			}
+			return token.substring(1)
+		} catch (e) {
+			return null
+		}
+	}
+
+	function buildMentionDisplayName(member: GroupMember): string {
+		try {
+			const nick = member != null && member.nickname != null ? String(member.nickname) : ''
+			if (nick !== '') {
+				return nick
+			}
+			return member != null && member.userName != null ? String(member.userName) : ''
+		} catch (e) {
+			return ''
+		}
+	}
+
+	function buildMentionAlias(displayName: string, userName: string, userId: string, duplicateCount: number): string {
+		if (displayName === '') {
+			return userName !== '' ? userName : userId
+		}
+		if (duplicateCount <= 1) {
+			return displayName
+		}
+		const suffix = userName !== '' ? userName : userId
+		if (suffix === '') {
+			return displayName
+		}
+		return displayName + '(' + suffix + ')'
+	}
+
+	async function ensureMentionMembersLoaded(): Promise<void> {
+		if (chatType.value !== 'group') {
+			return
+		}
+		const gid = groupId.value != null ? String(groupId.value) : ''
+		if (gid === '' || gid === '0') {
+			return
+		}
+		if (mentionMembersLoaded.value && mentionMembers.value.length > 0) {
+			return
+		}
+		mentionLoading.value = true
+		try {
+			const list = await groupService.getGroupMembers(gid)
+			const nameCounter: Map<string, number> = new Map()
+			for (let i = 0; i < list.length; i++) {
+				const member = list[i]
+				const displayName = buildMentionDisplayName(member)
+				if (displayName === '') {
+					continue
+				}
+				const count = nameCounter.get(displayName)
+				nameCounter.set(displayName, count != null ? count + 1 : 1)
+			}
+			const arr: MentionMemberItem[] = []
+			let myRole = 0
+			for (let i = 0; i < list.length; i++) {
+				const member = list[i]
+				const uid = member != null && member.userId != null ? String(member.userId) : ''
+				if (uid === '') {
+					continue
+				}
+				if (uid === currentUserId.value) {
+					myRole = member != null && member.role != null ? Number(member.role) : 0
+				}
+				const displayName = buildMentionDisplayName(member)
+				if (displayName === '') {
+					continue
+				}
+				const mentionName = buildMentionAlias(
+					displayName,
+					member != null && member.userName != null ? String(member.userName) : '',
+					uid,
+					nameCounter.get(displayName) != null ? Number(nameCounter.get(displayName)) : 1
+				)
+				arr.push({
+					userId: uid,
+					userName: member != null && member.userName != null ? String(member.userName) : '',
+					displayName,
+					mentionName,
+					avatar: member != null && member.avatar != null ? String(member.avatar) : '',
+					avatarText: member != null && member.avatarText != null ? String(member.avatarText) : '',
+					avatarBg: member != null && member.avatarBg != null ? String(member.avatarBg) : '#8F959E',
+					role: member != null && member.role != null ? Number(member.role) : 0
+				})
+			}
+			mentionMembers.value = arr
+			mentionMembersLoaded.value = true
+			canMentionAll.value = myRole === 2 || myRole === 1
+		} catch (e) {
+			mentionMembers.value = []
+			mentionMembersLoaded.value = false
+			canMentionAll.value = false
+		} finally {
+			mentionLoading.value = false
 		}
 	}
 
@@ -2827,44 +3023,100 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				return
 			}
 			mentionPicking = true
-			uni.navigateTo({
-				url: `/pages/message/mention-selector?groupId=${encodeURIComponent(gid)}`,
-				events: {
-					select: (payload: any) => {
-						try {
-							const uid = payload != null && payload.userId != null ? String(payload.userId) : ''
-							const uname = payload != null && payload.userName != null ? String(payload.userName) : ''
-							if (!uname || editorCtx == null) {
-								return
-							}
-							if (uid === '-1') {
-								mentionNameToUserId.clear()
-								mentionNameToUserId.set('所有人', '-1')
-							} else if (uid !== '' && uid !== '0') {
-								mentionNameToUserId.set(uname, uid)
-							}
-							try {
-								editorCtx!.insertText({ text: `@${uname} ` })
-							} catch (e) {
-								// ignore
-							}
-						} catch (e) {
-							// ignore
-						}
-					}
-				},
-				complete: () => {
-					mentionPicking = false
-				}
+			mentionKeyword.value = ''
+			showEmojiMenu.value = false
+			showPlusMenu.value = false
+			showMentionPanel.value = true
+			void ensureMentionMembersLoaded().finally(() => {
+				mentionPicking = false
 			})
 		} catch (e) {
 			mentionPicking = false
 		}
 	}
 
+	function closeMentionSelector(): void {
+		showMentionPanel.value = false
+		mentionKeyword.value = ''
+		mentionPicking = false
+	}
+
+	function replaceTrailingMention(text: string, mentionName: string): string {
+		const query = resolveMentionTailQuery(text)
+		if (query == null) {
+			return text + '@' + mentionName + ' '
+		}
+		const startIndex = text.length - query.length - 1
+		if (startIndex < 0) {
+			return text + '@' + mentionName + ' '
+		}
+		return text.substring(0, startIndex) + '@' + mentionName + ' '
+	}
+
+	function applyMentionSelection(mentionName: string, userId: string): void {
+		if (mentionName === '' || userId === '' || userId === '0') {
+			return
+		}
+		mentionNameToUserId.set(mentionName, userId)
+		if (forcePlainInput.value) {
+			const nextText = replaceTrailingMention(plainInputText.value != null ? plainInputText.value : '', mentionName)
+			plainInputText.value = nextText
+			composerText.value = nextText
+			inputText.value = nextText.trim().length > 0 ? 'has_content' : ''
+			isMultiLine.value = nextText.indexOf('\n') > -1 || nextText.trim().length > 22
+			closeMentionSelector()
+			return
+		}
+		const currentText = composerText.value != null ? composerText.value : ''
+		if (editorCtx != null && currentText.length > 0 && currentText.charAt(currentText.length - 1) === '@') {
+			try {
+				editorCtx!.insertText({ text: mentionName + ' ' })
+				composerText.value = currentText + mentionName + ' '
+				inputText.value = 'has_content'
+				closeMentionSelector()
+				return
+			} catch (e) {
+			}
+		}
+		const nextText = replaceTrailingMention(currentText, mentionName)
+		composerText.value = nextText
+		inputText.value = nextText.trim().length > 0 ? 'has_content' : ''
+		if (editorCtx != null) {
+			try {
+				editorCtx!.clear({
+					success: () => {
+						try {
+							editorCtx!.insertText({ text: nextText })
+						} catch (e) {
+						}
+					}
+				})
+			} catch (e) {
+			}
+		}
+		closeMentionSelector()
+	}
+
+	function handleMentionSelect(item: MentionMemberItem): void {
+		try {
+			const mentionName = item != null && item.mentionName != null ? String(item.mentionName) : ''
+			const userId = item != null && item.userId != null ? String(item.userId) : ''
+			applyMentionSelection(mentionName, userId)
+		} catch (e) {
+			closeMentionSelector()
+		}
+	}
+
+	function handleMentionSelectAll(): void {
+		applyMentionSelection('所有人', '-1')
+	}
+
 	function handleInputFocus() {
 		showEmojiMenu.value = false
 		showPlusMenu.value = false
+		if (chatType.value !== 'group') {
+			closeMentionSelector()
+		}
 		scrollToBottom()
 	}
 
@@ -2998,8 +3250,25 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		try {
 			const v = e != null && e.detail != null && e.detail.value != null ? String(e.detail.value) : ''
 			plainInputText.value = v
+			composerText.value = v
 			isMultiLine.value = v.indexOf('\n') > -1 || v.trim().length > 22
 			inputText.value = v.trim().length > 0 ? 'has_content' : ''
+			if (chatType.value === 'group') {
+				const now = Date.now()
+				if (!mentionPicking && v.length > 0 && v.charAt(v.length - 1) === '@') {
+					if (now - lastMentionTriggerAt > 500) {
+						lastMentionTriggerAt = now
+						openMentionSelector()
+					}
+				} else if (showMentionPanel.value) {
+					const query = resolveMentionTailQuery(v)
+					if (query == null) {
+						closeMentionSelector()
+					} else {
+						mentionKeyword.value = query
+					}
+				}
+			}
 		} catch (e) {
 			inputText.value = plainInputText.value.trim().length > 0 ? 'has_content' : ''
 		}
@@ -3322,9 +3591,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const parsedMentions = parseAtMentions(finalContent)
 			mentions = parsedMentions.map(m => {
 				const mentionUserName = m != null && m.userName != null ? String(m.userName) : ''
-				let mentionUserId = mentionUserName === '所有人' || mentionUserName === 'all'
-					? '-1'
-					: (mentionNameToUserId.get(mentionUserName) || '')
+				let mentionUserId = mentionNameToUserId.get(mentionUserName) || ''
 				if (mentionUserId === '') {
 					mentionUserId = '0'
 				}
@@ -3370,9 +3637,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			if (!finalContent) return
 			sendByFinalContent(finalContent)
 			plainInputText.value = ''
+			composerText.value = ''
 			inputText.value = ''
 			isMultiLine.value = false
 			isFullExpanded.value = false
+			closeMentionSelector()
 			try {
 				mentionNameToUserId.clear()
 			} catch (e) {
@@ -3404,12 +3673,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					success: () => {
 						inputText.value = ''
 						plainInputText.value = ''
+						composerText.value = ''
 						isMultiLine.value = false
 						isFullExpanded.value = false
+						closeMentionSelector()
 						try {
 							mentionNameToUserId.clear()
 						} catch (e) {
-							// ignore
 						}
 						
 						setTimeout(() => {
@@ -5135,6 +5405,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			// ignore
 		}
 		await hydrateConversationMetaByChatId()
+		if (chatType.value === 'group') {
+			void ensureMentionMembersLoaded()
+		}
 		try {
 			if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
 				messageService.setActiveChatId(chatId.value)
@@ -5173,6 +5446,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	onHide(() => {
 		wsManager.setRealtimeBizActive(false)
+		closeMentionSelector()
 		void flushReadOnLeave()
 		destroyVisibleReadObserver()
 		stopReeditTicker()
@@ -5186,6 +5460,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	onUnload(() => {
 		wsManager.setRealtimeBizActive(false)
+		closeMentionSelector()
 		void flushReadOnLeave()
 		destroyVisibleReadObserver()
 		stopReeditTicker()
@@ -6143,6 +6418,108 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		color: #FFFFFF;
 		font-size: 14px;
 		font-weight: 500;
+	}
+
+	.mention-panel {
+		background-color: #FFFFFF;
+		border-top-width: 1px;
+		border-top-color: #F0F2F5;
+		padding: 8px 12px 0;
+		max-height: 280px;
+	}
+
+	.mention-panel-search {
+		flex-direction: row;
+		align-items: center;
+		height: 36px;
+		background-color: #F5F7FA;
+		border-radius: 18px;
+		padding: 0 12px;
+	}
+
+	.mention-panel-search-icon {
+		font-size: 16px;
+		color: #8F959E;
+	}
+
+	.mention-panel-search-input {
+		flex: 1;
+		height: 36px;
+		margin-left: 8px;
+		font-size: 14px;
+		color: #1F2329;
+	}
+
+	.mention-panel-close {
+		font-size: 13px;
+		color: #3370FF;
+		margin-left: 8px;
+	}
+
+	.mention-panel-list {
+		max-height: 236px;
+	}
+
+	.mention-member-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 0;
+		border-bottom-width: 1px;
+		border-bottom-color: #F5F7FA;
+	}
+
+	.mention-member-item-active {
+		background-color: #F5F7FA;
+	}
+
+	.mention-member-avatar {
+		width: 36px;
+		height: 36px;
+		border-radius: 18px;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+	}
+
+	.mention-member-avatar-img {
+		width: 36px;
+		height: 36px;
+		border-radius: 18px;
+	}
+
+	.mention-member-avatar-text {
+		font-size: 14px;
+		color: #FFFFFF;
+		font-weight: 600;
+	}
+
+	.mention-member-body {
+		flex: 1;
+		margin-left: 12px;
+	}
+
+	.mention-member-name {
+		font-size: 15px;
+		color: #1F2329;
+		line-height: 20px;
+	}
+
+	.mention-member-desc {
+		margin-top: 2px;
+		font-size: 12px;
+		color: #8F959E;
+		line-height: 16px;
+	}
+
+	.mention-panel-empty {
+		align-items: center;
+		justify-content: center;
+		padding: 24px 0;
+	}
+
+	.mention-panel-empty-text {
+		font-size: 13px;
+		color: #8F959E;
 	}
 
 	.features-menu {

@@ -18,6 +18,13 @@ export type AtMention = {
   endIndex: number
 }
 
+function isMentionBoundaryChar(charCode: number): boolean {
+  return charCode === 32
+    || charCode === 9
+    || charCode === 10
+    || charCode === 13
+}
+
 /**
  * 解析文本中的@提醒
  * 
@@ -26,20 +33,54 @@ export type AtMention = {
  */
 export function parseAtMentions(text: string): AtMention[] {
   const mentions: AtMention[] = []
-  
-  // 匹配 @用户名 格式（支持中文、英文、数字、下划线）
-  const regex = /@([\u4e00-\u9fa5a-zA-Z0-9_]+)/g
-  let match: RegExpExecArray | null
-  
-  while ((match = regex.exec(text)) !== null) {
-    mentions.push({
-      userId: '0',  // 需要从用户列表中查找
-      userName: match[1],
-      startIndex: match.index,
-      endIndex: match.index + match[0].length
-    })
+
+  if (text == null || text.length === 0) {
+    return mentions
   }
-  
+
+  let index = 0
+  while (index < text.length) {
+    if (text.charAt(index) !== '@') {
+      index++
+      continue
+    }
+
+    const nextIndex = index + 1
+    if (nextIndex >= text.length) {
+      index++
+      continue
+    }
+
+    const nextCharCode = text.charCodeAt(nextIndex)
+    if (isMentionBoundaryChar(nextCharCode) || text.charAt(nextIndex) === '@') {
+      index++
+      continue
+    }
+
+    let endIndex = nextIndex
+    while (endIndex < text.length) {
+      const currentCharCode = text.charCodeAt(endIndex)
+      const currentChar = text.charAt(endIndex)
+      if (isMentionBoundaryChar(currentCharCode) || currentChar === '@') {
+        break
+      }
+      endIndex++
+    }
+
+    if (endIndex > nextIndex) {
+      mentions.push({
+        userId: '0',
+        userName: text.substring(nextIndex, endIndex),
+        startIndex: index,
+        endIndex: endIndex
+      })
+      index = endIndex
+      continue
+    }
+
+    index++
+  }
+
   return mentions
 }
 
@@ -53,15 +94,8 @@ export function parseAtMentions(text: string): AtMention[] {
 export function extractAtUserIds(text: string, userMap: Map<string, string>): string[] {
   const mentions = parseAtMentions(text)
   const userIds: string[] = []
-  
+
   mentions.forEach(mention => {
-    // 检查是否是@所有人
-    if (mention.userName === '所有人' || mention.userName === 'all') {
-      userIds.push('-1')  // -1 表示@所有人
-      return
-    }
-    
-    // 从映射中查找用户ID
     const userId = userMap.get(mention.userName)
     if (userId !== null && !userIds.includes(userId)) {
       userIds.push(userId)

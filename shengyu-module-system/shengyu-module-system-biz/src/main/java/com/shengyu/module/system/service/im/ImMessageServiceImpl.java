@@ -150,6 +150,75 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
     }
 
+    private void validateMentionRange(String content, String nickname, Integer startIndex, Integer endIndex) {
+        if (content == null) {
+            return;
+        }
+        if (startIndex == null && endIndex == null) {
+            return;
+        }
+        if (startIndex == null || endIndex == null) {
+            throw ServiceExceptionUtil.invalidParamException("mentions 索引不完整");
+        }
+        if (startIndex < 0 || endIndex <= startIndex || endIndex > content.length()) {
+            throw ServiceExceptionUtil.invalidParamException("mentions 索引越界");
+        }
+        String expected = "@" + StrUtil.nullToEmpty(nickname);
+        if (StrUtil.isBlank(expected.trim())) {
+            throw ServiceExceptionUtil.invalidParamException("mentions.nickname 不能为空");
+        }
+        String actual = content.substring(startIndex, endIndex);
+        if (!StrUtil.equals(actual, expected)) {
+            throw ServiceExceptionUtil.invalidParamException("mentions 与消息内容不匹配");
+        }
+    }
+
+    private void validateGroupMentions(Long senderId, ImChatDO chat, String content, String mentionsJson) {
+        if (chat == null || !ImConversationTypeEnum.isGroup(chat.getChatType()) || StrUtil.isBlank(mentionsJson)) {
+            return;
+        }
+        List<JSONObject> mentions;
+        try {
+            mentions = JSONUtil.parseArray(mentionsJson).toList(JSONObject.class);
+        } catch (Exception e) {
+            throw ServiceExceptionUtil.invalidParamException("mentions 不是合法 JSON");
+        }
+        if (mentions == null || mentions.isEmpty()) {
+            return;
+        }
+        List<Long> memberIds = imGroupService.getGroupMemberIds(chat.getGroupId());
+        if (memberIds == null || !memberIds.contains(senderId)) {
+            throw exception(NOT_GROUP_MEMBER);
+        }
+        Integer senderRole = imGroupService.getMemberRole(chat.getGroupId(), senderId);
+        boolean atAll = false;
+        for (JSONObject mention : mentions) {
+            if (mention == null) {
+                continue;
+            }
+            Long mentionedUserId = mention.getLong("userId");
+            if (mentionedUserId == null) {
+                throw ServiceExceptionUtil.invalidParamException("mentions.userId 不能为空");
+            }
+            String nickname = mention.getStr("nickname", "");
+            validateMentionRange(content, nickname, mention.getInt("startIndex", null), mention.getInt("endIndex", null));
+            if (mentionedUserId == -1L) {
+                atAll = true;
+                continue;
+            }
+            if (mentionedUserId <= 0) {
+                throw ServiceExceptionUtil.invalidParamException("mentions.userId 非法");
+            }
+            if (!memberIds.contains(mentionedUserId)) {
+                throw ServiceExceptionUtil.invalidParamException("被@用户不在群成员列表中");
+            }
+        }
+        if (atAll && (senderRole == null
+                || (!ImGroupMemberRoleEnum.isOwner(senderRole) && !ImGroupMemberRoleEnum.isAdmin(senderRole)))) {
+            throw exception(GROUP_PERMISSION_DENIED);
+        }
+    }
+
     @Value("${im.recall.window-seconds:120}")
     private long recallWindowSeconds;
 
@@ -215,6 +284,8 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (chat == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
+
+        validateGroupMentions(userId, chat, sendReqVO.getContent(), sendReqVO.getMentions());
 
         ImChatMessageDO message = new ImChatMessageDO();
         message.setChatId(chatId);

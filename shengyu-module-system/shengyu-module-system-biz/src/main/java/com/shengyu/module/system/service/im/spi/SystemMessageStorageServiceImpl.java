@@ -6,6 +6,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.websocket.core.protocol.*;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
@@ -21,6 +22,7 @@ import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
 import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
+import com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.service.im.ImBadgeService;
 import com.shengyu.module.system.service.im.ImCursorVersionService;
@@ -35,6 +37,10 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.GROUP_PERMISSION_DENIED;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.NOT_GROUP_MEMBER;
 
 /**
  * System 模块 - 消息存储服务实现
@@ -85,6 +91,103 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
     private static class MentionParseResult {
         private boolean atAll;
         private Set<Long> userIds;
+    }
+
+    private void validateMentionRange(String content, String nickname, int startIndex, int endIndex) {
+        if (content == null || endIndex <= 0) {
+            return;
+        }
+        if (startIndex < 0 || endIndex <= startIndex || endIndex > content.length()) {
+            throw ServiceExceptionUtil.invalidParamException("mentions 索引越界");
+        }
+        String expected = "@" + StrUtil.nullToEmpty(nickname);
+        if (StrUtil.isBlank(expected.trim())) {
+            throw ServiceExceptionUtil.invalidParamException("mentions.nickname 不能为空");
+        }
+        String actual = content.substring(startIndex, endIndex);
+        if (!StrUtil.equals(actual, expected)) {
+            throw ServiceExceptionUtil.invalidParamException("mentions 与消息内容不匹配");
+        }
+    }
+
+    private void validateMentionUserId(Long mentionedUserId, List<Long> memberIds) {
+        if (mentionedUserId == null) {
+            throw ServiceExceptionUtil.invalidParamException("mentions.userId 不能为空");
+        }
+        if (mentionedUserId == -1L) {
+            return;
+        }
+        if (mentionedUserId <= 0) {
+            throw ServiceExceptionUtil.invalidParamException("mentions.userId 非法");
+        }
+        if (memberIds == null || !memberIds.contains(mentionedUserId)) {
+            throw ServiceExceptionUtil.invalidParamException("被@用户不在群成员列表中");
+        }
+    }
+
+    private void validateGroupMentions(ImMessage message, String content) throws InvalidProtocolBufferException {
+        if (message == null || message.getHeader() == null) {
+            return;
+        }
+        MessageHeader header = message.getHeader();
+        if (header.getGroupId() <= 0) {
+            return;
+        }
+        MessageType messageType = header.getMessageType();
+        if (messageType != MessageType.TEXT && messageType != MessageType.QUOTE_REPLY) {
+            return;
+        }
+        List<MentionUser> mentions = Collections.emptyList();
+        List<Long> atUserIds = Collections.emptyList();
+        if (messageType == MessageType.TEXT) {
+            TextMessage textMessage = TextMessage.parseFrom(message.getBody());
+            mentions = textMessage.getMentionsList();
+            atUserIds = textMessage.getAtUserIdsList();
+        } else if (messageType == MessageType.QUOTE_REPLY) {
+            QuoteReplyMessage quoteReplyMessage = QuoteReplyMessage.parseFrom(message.getBody());
+            mentions = quoteReplyMessage.getMentionsList();
+            atUserIds = quoteReplyMessage.getAtUserIdsList();
+        }
+        if ((mentions == null || mentions.isEmpty()) && (atUserIds == null || atUserIds.isEmpty())) {
+            return;
+        }
+        List<Long> memberIds = imGroupService.getGroupMemberIds(header.getGroupId());
+        if (memberIds == null || !memberIds.contains(header.getSenderId())) {
+            throw exception(NOT_GROUP_MEMBER);
+        }
+        Integer senderRole = imGroupService.getMemberRole(header.getGroupId(), header.getSenderId());
+        boolean atAll = false;
+        Set<Long> mentionedUserIds = new HashSet<>();
+        if (mentions != null) {
+            for (MentionUser mention : mentions) {
+                if (mention == null) {
+                    continue;
+                }
+                validateMentionRange(content, mention.getNickname(), mention.getStartIndex(), mention.getEndIndex());
+                validateMentionUserId(mention.getUserId(), memberIds);
+                if (mention.getUserId() == -1L) {
+                    atAll = true;
+                    continue;
+                }
+                mentionedUserIds.add(mention.getUserId());
+            }
+        }
+        if (atUserIds != null) {
+            for (Long atUserId : atUserIds) {
+                validateMentionUserId(atUserId, memberIds);
+                if (atUserId != null && atUserId == -1L) {
+                    atAll = true;
+                    continue;
+                }
+                if (atUserId != null) {
+                    mentionedUserIds.add(atUserId);
+                }
+            }
+        }
+        if (atAll && (senderRole == null
+                || (!ImGroupMemberRoleEnum.isOwner(senderRole) && !ImGroupMemberRoleEnum.isAdmin(senderRole)))) {
+            throw exception(GROUP_PERMISSION_DENIED);
+        }
     }
 
     @Override
@@ -280,8 +383,8 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         MessageHeader header = message.getHeader();
         
         try {
-            // 1. 解析消息内容
             String content = parseMessageContent(message);
+            validateGroupMentions(message, content);
             String extra = buildExtraForDb(message);
             String mentionsJson = buildMentionsForDb(message);
             Long quoteMessageId = parseQuoteMessageId(message);
@@ -334,7 +437,10 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             
         } catch (Exception e) {
             log.error("[MessageStorage] 消息保存失败, messageId: {}", header.getMessageId(), e);
-            throw e;
+            if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
+            }
+            throw new RuntimeException(e);
         }
     }
 
