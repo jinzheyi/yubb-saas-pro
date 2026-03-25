@@ -250,6 +250,7 @@ export class ConversationService {
       existing.groupMemberCount = conv.groupMemberCount
       existing.isPinned = conv.isPinned
       existing.noDisturb = conv.noDisturb
+      existing.lastMessageHasAtMe = conv.lastMessageHasAtMe
       existing.lastReadSequence = this.maxSeq(existing.lastReadSequence, conv.lastReadSequence)
       existing.lastMessageSequence = this.maxSeq(existing.lastMessageSequence, conv.lastMessageSequence)
       existing.unreadCount = this.computeUnreadCount(existing.lastMessageSequence, existing.lastReadSequence)
@@ -359,6 +360,21 @@ export class ConversationService {
       }
     }
     conversation.unreadCount = unread
+    const readSeq = conversation.lastReadSequence != null ? conversation.lastReadSequence.toString() : '0'
+    const msgSeq = conversation.lastMessageSequence != null ? conversation.lastMessageSequence.toString() : '0'
+    let shouldClearAtMe = false
+    try {
+      shouldClearAtMe = BigInt(readSeq) >= BigInt(msgSeq)
+    } catch (e) {
+      if (readSeq.length !== msgSeq.length) {
+        shouldClearAtMe = readSeq.length > msgSeq.length
+      } else {
+        shouldClearAtMe = readSeq >= msgSeq
+      }
+    }
+    if (shouldClearAtMe) {
+      conversation.lastMessageHasAtMe = false
+    }
     this.sortConversations()
     this.notifyUpdateListeners()
   }
@@ -487,6 +503,7 @@ export class ConversationService {
             existing.groupMemberCount = conv.groupMemberCount
             existing.isPinned = conv.isPinned
             existing.noDisturb = conv.noDisturb
+            existing.lastMessageHasAtMe = conv.lastMessageHasAtMe
             existing.draft = conv.draft
 			existing.lastReadSequence = this.maxSeq(existing.lastReadSequence, conv.lastReadSequence)
 			existing.lastMessageSequence = this.maxSeq(existing.lastMessageSequence, conv.lastMessageSequence)

@@ -9,7 +9,7 @@
  * 5. 群成员禁言
  */
 
-import { getUserAvatarColor } from '@/utils/avatar.uts'
+import { getAvatarText, getUserAvatarColor } from '@/utils/avatar.uts'
 import {
   createGroup as apiCreateGroup,
   getGroup as apiGetGroup,
@@ -196,7 +196,11 @@ export class GroupService {
   public async getGroupMembers(groupId: string): Promise<GroupMember[]> {
     // 先从缓存获取
     const cached = this.memberCache.get(groupId)
-    if (cached !== null) {
+    if (cached !== null && cached.every((item: GroupMember) => {
+      const userName = item != null && item.userName != null ? String(item.userName).trim() : ''
+      const nickname = item != null && item.nickname != null ? String(item.nickname).trim() : ''
+      return userName !== '' || nickname !== ''
+    })) {
       return cached
     }
     
@@ -413,14 +417,18 @@ export class GroupService {
    * 映射服务器数据到群成员信息
    */
   private mapToGroupMember(data: any): GroupMember {
+    const userId = data.userId != null ? data.userId.toString() : '0'
+    const userName = data.userName || data.userNickname || ''
+    const nickname = data.nickname || ''
+    const displayName = nickname || userName
     return {
-      userId: data.userId != null ? data.userId.toString() : '0',
-      userName: data.userName || '',
-      avatar: data.avatar || '',
-      avatarText: data.avatarText || '',
-      avatarBg: data.avatarBg || getUserAvatarColor(data.userId != null ? data.userId.toString() : '0'),
+      userId: userId,
+      userName: userName,
+      avatar: data.avatar || data.userAvatar || '',
+      avatarText: data.avatarText || getAvatarText(displayName),
+      avatarBg: data.avatarBg || getUserAvatarColor(userId),
       role: data.role != null ? Number(data.role) : 0,
-      nickname: data.nickname || '',
+      nickname: nickname,
       joinTime: data.joinTime || 0,
       muteEndTime: data.muteEndTime || 0
     }

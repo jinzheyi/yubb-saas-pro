@@ -135,6 +135,9 @@ public interface ImConversationUserStateMapper extends BaseMapperX<ImConversatio
             "unread_count = 0, " +
             "last_read_sequence = GREATEST(IFNULL(last_read_sequence, 0), IFNULL(VALUES(last_read_sequence), 0)), " +
             "last_read_time = CASE WHEN VALUES(last_read_time) IS NULL THEN last_read_time ELSE VALUES(last_read_time) END, " +
+            "last_message_has_at_me = CASE " +
+            "  WHEN GREATEST(IFNULL(last_read_sequence, 0), IFNULL(VALUES(last_read_sequence), 0)) >= IFNULL(last_message_sequence, 0) THEN b'0' " +
+            "  ELSE last_message_has_at_me END, " +
             "is_pinned = COALESCE(VALUES(is_pinned), is_pinned), " +
             "no_disturb = COALESCE(VALUES(no_disturb), no_disturb), " +
             "draft = VALUES(draft), " +

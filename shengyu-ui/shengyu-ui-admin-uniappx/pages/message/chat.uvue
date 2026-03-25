@@ -189,13 +189,14 @@
 				<!-- 输入框/按住说话按钮 -->
 				<view class="input-box" :class="{ 'input-box-full': isFullExpanded, 'input-box-multi': isMultiLine && !isFullExpanded }" v-if="!isVoiceMode">
 					<editor
-						v-if="!forcePlainInput"
+						v-if="!usePlainTextComposer"
 						id="editor"
 						class="chat-editor"
 						:class="{ 'chat-editor-full': isFullExpanded, 'chat-editor-multi': isMultiLine && !isFullExpanded }"
 						:placeholder="t('chat.inputPlaceholder')"
 						@ready="onEditorReady"
 						@input="onEditorInput"
+						@focus="handleInputFocus"
 						:show-confirm-bar="false"
 						:adjust-position="!isFullExpanded"
 					/>
@@ -206,6 +207,7 @@
 						v-model="plainInputText"
 						:placeholder="t('chat.inputPlaceholder')"
 						:auto-height="true"
+						@focus="handleInputFocus"
 						@input="onPlainInput"
 					/>
 				</view>
@@ -500,7 +502,6 @@
 	const mentionNameToUserId: Map<string, string> = new Map()
 	const recallWindowMs = ref(2 * 60 * 1000)
 	let mentionPicking: boolean = false
-	let lastMentionTriggerAt: number = 0
 
 	type MentionMemberItem = {
 		userId: string
@@ -919,7 +920,6 @@
 	const inputText = ref('')
 	const plainInputText = ref('')
 	const composerText = ref('')
-	const forcePlainInput = ref(false)
 	const lastInputText = ref('') // 用于退格逻辑
 	const showMentionPanel = ref(false)
 	const mentionKeyword = ref('')
@@ -934,6 +934,11 @@
 	const isVoiceMode = ref(false)
 	const isRecording = ref(false)
 	const isCancelReady = ref(false)
+	const usePlainTextComposer = ref(false)
+
+	// #ifdef H5
+	usePlainTextComposer.value = true
+	// #endif
 	const currentEmojiTab = ref('emoji') // 'emoji' | 'sticker'
 	const lastMessageId = ref('')
 	const recordStartY = ref(0)
@@ -2849,44 +2854,60 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}).exec()
 	}
 
-	function onEditorInput(e : any) {
-		if (forcePlainInput.value) {
-			return
-		}
-		const text = e.detail.text
-		const html = e.detail.html
-		composerText.value = text != null ? String(text) : ''
+	function applyComposerState(text: string, hasRichContent: boolean = false): void {
+		composerText.value = text
 		try {
 			if (chatType.value === 'group') {
-				const s = composerText.value
-				const now = Date.now()
-				if (!mentionPicking && s.length > 0 && s.charAt(s.length - 1) === '@') {
-					if (now - lastMentionTriggerAt > 500) {
-						lastMentionTriggerAt = now
-						openMentionSelector()
-					}
-				} else if (showMentionPanel.value) {
-					const query = resolveMentionTailQuery(s)
-					if (query == null) {
-						closeMentionSelector()
-					} else {
-						mentionKeyword.value = query
-					}
-				}
+				syncMentionSelectorState(text)
 			}
 		} catch (e) {
 		}
-		const hasNewLine = text.includes('\n')
-		const isLongText = text.trim().length > 22
-		const hasMultipleParagraphs = (html.match(/<p>/g) || []).length > 1 || html.includes('<br>')
-		
-		isMultiLine.value = hasNewLine || isLongText || hasMultipleParagraphs
-
-		if (text.trim().length > 0 || html.includes('<img')) {
+		const trimmed = text != null ? text.trim() : ''
+		const hasText = trimmed.length > 0
+		isMultiLine.value = text.indexOf('\n') > -1 || trimmed.length > 22 || hasRichContent
+		if (hasText || hasRichContent) {
 			inputText.value = 'has_content'
 		} else {
 			inputText.value = ''
-			isMultiLine.value = false // 清空时恢复单行
+			isMultiLine.value = false
+		}
+		lastInputText.value = text
+	}
+
+	function syncMentionSelectorState(text: string): void {
+		if (chatType.value !== 'group') {
+			closeMentionSelector()
+			return
+		}
+		const query = resolveMentionTailQuery(text)
+		if (query == null) {
+			if (showMentionPanel.value) {
+				closeMentionSelector()
+			}
+			return
+		}
+		mentionKeyword.value = query
+		if (!showMentionPanel.value && !mentionPicking) {
+			openMentionSelector(query)
+		}
+	}
+
+	function onEditorInput(e : any) {
+		const text = e.detail.text
+		const html = e.detail.html
+		const normalizedText = text != null ? String(text) : ''
+		const normalizedHtml = html != null ? String(html) : ''
+		const hasMultipleParagraphs = (normalizedHtml.match(/<p>/g) || []).length > 1 || normalizedHtml.includes('<br>')
+		applyComposerState(normalizedText, hasMultipleParagraphs || normalizedHtml.includes('<img'))
+	}
+
+	function onPlainInput(e : any) {
+		try {
+			const value = e != null && e.detail != null && e.detail.value != null ? String(e.detail.value) : ''
+			plainInputText.value = value
+			applyComposerState(value)
+		} catch (e) {
+			applyComposerState(plainInputText.value != null ? plainInputText.value : '')
 		}
 	}
 
@@ -3010,7 +3031,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
-	function openMentionSelector(): void {
+	function openMentionSelector(initialKeyword: string = ''): void {
 		try {
 			if (mentionPicking) {
 				return
@@ -3023,7 +3044,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				return
 			}
 			mentionPicking = true
-			mentionKeyword.value = ''
+			mentionKeyword.value = initialKeyword
 			showEmojiMenu.value = false
 			showPlusMenu.value = false
 			showMentionPanel.value = true
@@ -3058,12 +3079,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return
 		}
 		mentionNameToUserId.set(mentionName, userId)
-		if (forcePlainInput.value) {
+		if (usePlainTextComposer.value) {
 			const nextText = replaceTrailingMention(plainInputText.value != null ? plainInputText.value : '', mentionName)
 			plainInputText.value = nextText
-			composerText.value = nextText
-			inputText.value = nextText.trim().length > 0 ? 'has_content' : ''
-			isMultiLine.value = nextText.indexOf('\n') > -1 || nextText.trim().length > 22
+			applyComposerState(nextText)
 			closeMentionSelector()
 			return
 		}
@@ -3071,16 +3090,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (editorCtx != null && currentText.length > 0 && currentText.charAt(currentText.length - 1) === '@') {
 			try {
 				editorCtx!.insertText({ text: mentionName + ' ' })
-				composerText.value = currentText + mentionName + ' '
-				inputText.value = 'has_content'
+				applyComposerState(currentText + mentionName + ' ')
 				closeMentionSelector()
 				return
 			} catch (e) {
 			}
 		}
 		const nextText = replaceTrailingMention(currentText, mentionName)
-		composerText.value = nextText
-		inputText.value = nextText.trim().length > 0 ? 'has_content' : ''
+		applyComposerState(nextText)
 		if (editorCtx != null) {
 			try {
 				editorCtx!.clear({
@@ -3221,10 +3238,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function applyReeditContentToEditor(content: string): boolean {
-		if (forcePlainInput.value) {
+		if (usePlainTextComposer.value) {
 			plainInputText.value = content
-			inputText.value = content.trim().length > 0 ? 'has_content' : ''
-			isMultiLine.value = content.indexOf('\n') > -1 || content.trim().length > 22
+			applyComposerState(content)
 			scrollToBottom()
 			return true
 		}
@@ -3236,41 +3252,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						editorCtx!.insertText({ text: content })
 					} catch (e) {
 					}
-					inputText.value = 'has_content'
+					applyComposerState(content)
 					scrollToBottom()
 				}
 			})
 			return true
 		} catch (e) {
 			return false
-		}
-	}
-
-	function onPlainInput(e : any) {
-		try {
-			const v = e != null && e.detail != null && e.detail.value != null ? String(e.detail.value) : ''
-			plainInputText.value = v
-			composerText.value = v
-			isMultiLine.value = v.indexOf('\n') > -1 || v.trim().length > 22
-			inputText.value = v.trim().length > 0 ? 'has_content' : ''
-			if (chatType.value === 'group') {
-				const now = Date.now()
-				if (!mentionPicking && v.length > 0 && v.charAt(v.length - 1) === '@') {
-					if (now - lastMentionTriggerAt > 500) {
-						lastMentionTriggerAt = now
-						openMentionSelector()
-					}
-				} else if (showMentionPanel.value) {
-					const query = resolveMentionTailQuery(v)
-					if (query == null) {
-						closeMentionSelector()
-					} else {
-						mentionKeyword.value = query
-					}
-				}
-			}
-		} catch (e) {
-			inputText.value = plainInputText.value.trim().length > 0 ? 'has_content' : ''
 		}
 	}
 
@@ -3291,11 +3279,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					return
 				}
 				if (attempt >= 8) {
-					forcePlainInput.value = true
-					plainInputText.value = content
-					inputText.value = content.trim().length > 0 ? 'has_content' : ''
-					isMultiLine.value = content.indexOf('\n') > -1 || content.trim().length > 22
-					uni.showToast({ title: '输入框已切换兼容模式', icon: 'none' })
+					uni.showToast({ title: '输入框暂不可用，请稍后重试', icon: 'none' })
 					return
 				}
 				setTimeout(() => {
@@ -3304,11 +3288,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}).exec()
 		} catch (e) {
 			if (attempt >= 8) {
-				forcePlainInput.value = true
-				plainInputText.value = content
-				inputText.value = content.trim().length > 0 ? 'has_content' : ''
-				isMultiLine.value = content.indexOf('\n') > -1 || content.trim().length > 22
-				uni.showToast({ title: '输入框已切换兼容模式', icon: 'none' })
+				uni.showToast({ title: '输入框暂不可用，请稍后重试', icon: 'none' })
 				return
 			}
 			setTimeout(() => {
@@ -3503,12 +3483,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleEmojiClick(item : any) {
-		if (forcePlainInput.value) {
+		if (usePlainTextComposer.value) {
 			const code = item != null && item.code != null ? String(item.code) : ''
 			if (code !== '') {
-				plainInputText.value = plainInputText.value + code
-				inputText.value = 'has_content'
-				isMultiLine.value = plainInputText.value.indexOf('\n') > -1 || plainInputText.value.trim().length > 22
+				const nextText = (plainInputText.value != null ? plainInputText.value : '') + code
+				plainInputText.value = nextText
+				applyComposerState(nextText)
 			}
 			return
 		}
@@ -3631,24 +3611,26 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
+	function resetComposerState(): void {
+		plainInputText.value = ''
+		applyComposerState('')
+		isFullExpanded.value = false
+		closeMentionSelector()
+		try {
+			mentionNameToUserId.clear()
+		} catch (e) {
+		}
+		setTimeout(() => {
+			scrollToBottom()
+		}, 100)
+	}
+
 	function handleSend() {
-		if (forcePlainInput.value) {
+		if (usePlainTextComposer.value) {
 			const finalContent = plainInputText.value != null ? plainInputText.value.trim() : ''
 			if (!finalContent) return
 			sendByFinalContent(finalContent)
-			plainInputText.value = ''
-			composerText.value = ''
-			inputText.value = ''
-			isMultiLine.value = false
-			isFullExpanded.value = false
-			closeMentionSelector()
-			try {
-				mentionNameToUserId.clear()
-			} catch (e) {
-			}
-			setTimeout(() => {
-				scrollToBottom()
-			}, 100)
+			resetComposerState()
 			return
 		}
 		if (editorCtx == null) return
@@ -3671,20 +3653,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				// 清空编辑器
 				editorCtx!.clear({
 					success: () => {
-						inputText.value = ''
-						plainInputText.value = ''
-						composerText.value = ''
-						isMultiLine.value = false
-						isFullExpanded.value = false
-						closeMentionSelector()
-						try {
-							mentionNameToUserId.clear()
-						} catch (e) {
-						}
-						
-						setTimeout(() => {
-							scrollToBottom()
-						}, 100)
+						resetComposerState()
 					}
 				})
 			}
@@ -5312,20 +5281,22 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		
 		// 获取聊天类型
+		let hasExplicitChatType = false
 		if (routeOptions['type']) {
 			chatType.value = routeOptions['type']
+			hasExplicitChatType = true
 		}
 
 		// 兼容：部分入口使用 targetType 标识会话类型（2=群聊，1=单聊）
-		// 若未显式传 type，则按 targetType 推断 chatType，避免群聊被误判为单聊导致 groupId->chatId 映射失败
+		// 若未显式传 type，则按 targetType 推断 chatType，避免群聊被误判为单聊导致 @ 功能无法触发
 		try {
 			const tt = routeOptions['targetType']
-			if (tt != null && tt !== '') {
+			if (!hasExplicitChatType && tt != null && tt !== '') {
 				const ttStr = tt.toString()
-				if (ttStr === '2' && (chatType.value == null || chatType.value === '')) {
+				if (ttStr === '2') {
 					chatType.value = 'group'
 				}
-				if (ttStr === '1' && (chatType.value == null || chatType.value === '')) {
+				if (ttStr === '1') {
 					chatType.value = 'single'
 				}
 			}
@@ -5337,6 +5308,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (routeOptions['groupId']) {
 			groupId.value = decodeIdParam(routeOptions['groupId'])
 			targetId.value = groupId.value  // 群聊时 targetId 就是 groupId
+			if (!hasExplicitChatType) {
+				chatType.value = 'group'
+			}
 		}
 
 		// 兼容：仅传 targetId + targetType=2 的群聊跳转场景

@@ -204,8 +204,9 @@
 	 * 获取分类 ID（根据会话属性自动分类）
 	 */
 	function getCategoryId(conv : any) : string {
-		// 优先级：置顶 > 免打扰 > 群聊 > 单聊
+		// 优先级：置顶 > @我 > 免打扰 > 群聊 > 单聊
 		if (conv.isPinned) return 'latest'
+		if (conv.lastMessageHasAtMe) return 'at'
 		if (conv.noDisturb) return 'nodisturb'
 		if (conv.conversationType === 2) return 'group'
 		return 'user'
@@ -234,6 +235,7 @@
 			unreadCount: serverConv.unreadCount || 0,
 			noDisturb: serverConv.noDisturb || false,
 			isPinned: serverConv.isPinned || false,
+			lastMessageHasAtMe: serverConv.lastMessageHasAtMe === true,
 			pinnedTime: serverConv.isPinned ? lastMessageTime : 0,
 			conversationType: serverConv.conversationType,
 			groupMemberCount: serverConv.groupMemberCount || 0,
@@ -370,6 +372,7 @@
 						unreadCount: conv.unreadCount,
 						noDisturb: conv.noDisturb,
 						isPinned: conv.isPinned,
+						lastMessageHasAtMe: conv.lastMessageHasAtMe,
 						pinnedTime: conv.isPinned ? conv.timestamp : 0,
 						conversationType: conv.conversationType,
 						groupMemberCount: conv.groupMemberCount || 0,
@@ -414,6 +417,7 @@
 				unreadCount: conv.unreadCount,
 				noDisturb: conv.noDisturb,
 				isPinned: conv.isPinned,
+				lastMessageHasAtMe: conv.lastMessageHasAtMe,
 				pinnedTime: conv.isPinned ? conv.timestamp : 0,
 				conversationType: conv.conversationType,
 				groupMemberCount: conv.groupMemberCount || 0,
@@ -430,6 +434,9 @@
 	const filteredBaseList = computed(() : any[] => {
 		if (selectedCategoryId.value === '') {
 			return messageList.value
+		}
+		if (selectedCategoryId.value === 'at') {
+			return messageList.value.filter(item => item.lastMessageHasAtMe)
 		}
 		return messageList.value.filter(item => item.categoryId === selectedCategoryId.value)
 	})
