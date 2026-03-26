@@ -183,17 +183,18 @@
 					<!-- 语音/键盘切换 -->
 					<text class="iconfont footer-icon" @click="toggleInputMode">{{ isVoiceMode ? '\ueac2' : '\ue601' }}</text>
 					<!-- 展开按钮 -->
-					<text v-if="!isVoiceMode && inputText" class="iconfont expand-icon-btn" @click="toggleFullExpand">&#xe7b0;</text>
+					<text v-if="showExpandIcon" class="iconfont expand-icon-btn" @click="toggleFullExpand">&#xe7b0;</text>
 				</view>
 
 				<!-- 输入框/按住说话按钮 -->
-				<view class="input-box" :class="{ 'input-box-full': isFullExpanded, 'input-box-multi': isMultiLine && !isFullExpanded }" v-if="!isVoiceMode">
+				<view class="input-box" :class="{ 'input-box-full': isFullExpanded }" v-if="!isVoiceMode">
 					<editor
 						v-if="!usePlainTextComposer"
 						id="editor"
 						class="chat-editor"
-						:class="{ 'chat-editor-full': isFullExpanded, 'chat-editor-multi': isMultiLine && !isFullExpanded }"
-						:placeholder="t('chat.inputPlaceholder')"
+						:class="{ 'chat-editor-full': isFullExpanded }"
+						:style="composerEditorStyle"
+						placeholder=""
 						@ready="onEditorReady"
 						@input="onEditorInput"
 						@focus="handleInputFocus"
@@ -202,13 +203,16 @@
 					/>
 					<textarea
 						v-else
-						class="chat-editor"
-						:class="{ 'chat-editor-full': isFullExpanded, 'chat-editor-multi': isMultiLine && !isFullExpanded }"
+						class="chat-editor plain-chat-editor"
+						:class="{ 'chat-editor-full': isFullExpanded }"
+						:style="composerEditorStyle"
 						v-model="plainInputText"
-						:placeholder="t('chat.inputPlaceholder')"
-						:auto-height="true"
+						placeholder=""
+						:auto-height="false"
+						:disable-default-padding="true"
 						@focus="handleInputFocus"
 						@input="onPlainInput"
+						@linechange="onPlainLineChange"
 						@blur="handlePlainBlur"
 					/>
 				</view>
@@ -969,7 +973,7 @@
 	const isVoiceMode = ref(false)
 	const isRecording = ref(false)
 	const isCancelReady = ref(false)
-	const usePlainTextComposer = ref(false)
+	const usePlainTextComposer = ref(true)
 	const plainSelectionStart = ref(-1)
 	const plainSelectionEnd = ref(-1)
 	const recentEmojiList = ref<any[]>([])
@@ -978,6 +982,13 @@
 	const EMOJI_RECENT_STORAGE_KEY = 'im_chat_recent_emoji_v1'
 	const EMOJI_RECENT_LIMIT = 7
 	const COMPOSER_EMOJI_SIZE = '18px'
+	const COMPOSER_MIN_HEIGHT = 40
+	const COMPOSER_LINE_HEIGHT = 24
+	const COMPOSER_VERTICAL_PADDING = 16
+	const COMPOSER_EXPAND_TRIGGER_LINE = 3
+	const COMPOSER_MAX_LINES = 9
+	const COMPOSER_MAX_HEIGHT = 232
+	const COMPOSER_WRAP_UNITS_PER_LINE = 13
 	loadRecentEmojiList()
 	const currentEmojiTab = ref('emoji') // 'emoji' | 'sticker'
 	const lastMessageId = ref('')
@@ -1033,6 +1044,21 @@
 			const userName = item != null && item.userName != null ? String(item.userName).toLowerCase() : ''
 			return displayName.indexOf(kw) > -1 || mentionName.indexOf(kw) > -1 || userName.indexOf(kw) > -1
 		})
+	})
+	const composerLineCount = ref(1)
+	const showExpandIcon = computed(() => {
+		return !isVoiceMode.value && inputText.value !== '' && composerLineCount.value >= COMPOSER_EXPAND_TRIGGER_LINE
+	})
+	const composerEditorStyle = computed(() => {
+		if (isFullExpanded.value) {
+			return {}
+		}
+		const nextHeight = getComposerHeightByLineCount(composerLineCount.value)
+		return {
+			height: nextHeight + 'px',
+			minHeight: COMPOSER_MIN_HEIGHT + 'px',
+			maxHeight: COMPOSER_MAX_HEIGHT + 'px'
+		}
 	})
 
 	type QuoteChainItem = {
@@ -3000,9 +3026,75 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	function markComposerHasRichContent(): void {
 		const text = composerText.value != null ? composerText.value : ''
-		const trimmed = text.trim()
-		isMultiLine.value = text.indexOf('\n') > -1 || trimmed.length > 22 || true
+		updateComposerLineCount(estimateComposerLineCount(text, true))
 		inputText.value = 'has_content'
+	}
+
+	function getComposerHeightByLineCount(lineCount: number): number {
+		let normalized = lineCount
+		if (normalized < 1) {
+			normalized = 1
+		}
+		if (normalized > COMPOSER_MAX_LINES) {
+			normalized = COMPOSER_MAX_LINES
+		}
+		const nextHeight = COMPOSER_VERTICAL_PADDING + normalized * COMPOSER_LINE_HEIGHT
+		if (nextHeight < COMPOSER_MIN_HEIGHT) {
+			return COMPOSER_MIN_HEIGHT
+		}
+		if (nextHeight > COMPOSER_MAX_HEIGHT) {
+			return COMPOSER_MAX_HEIGHT
+		}
+		return nextHeight
+	}
+
+	function measureComposerTextUnits(text: string): number {
+		let units = 0
+		for (let i = 0; i < text.length; i++) {
+			const charCode = text.charCodeAt(i)
+			if (charCode <= 0x007f) {
+				units += 0.55
+				continue
+			}
+			if (charCode >= 0xd800 && charCode <= 0xdbff && i + 1 < text.length) {
+				units += 1
+				i += 1
+				continue
+			}
+			units += 1
+		}
+		return units
+	}
+
+	function estimateComposerLineCount(text: string, hasRichContent: boolean = false): number {
+		const normalizedText = text != null ? String(text).replace(/\r\n/g, '\n') : ''
+		if (normalizedText === '') {
+			return hasRichContent ? 1 : 1
+		}
+		const segments = normalizedText.split('\n')
+		let lineCount = 0
+		for (let i = 0; i < segments.length; i++) {
+			const segment = segments[i] != null ? segments[i] : ''
+			const units = measureComposerTextUnits(segment)
+			const wrappedLines = units <= 0 ? 1 : Math.ceil(units / COMPOSER_WRAP_UNITS_PER_LINE)
+			lineCount += wrappedLines
+		}
+		if (hasRichContent && lineCount < 1) {
+			lineCount = 1
+		}
+		if (lineCount < 1) {
+			lineCount = 1
+		}
+		return lineCount
+	}
+
+	function updateComposerLineCount(lineCount: number): void {
+		let nextLineCount = lineCount
+		if (nextLineCount < 1) {
+			nextLineCount = 1
+		}
+		composerLineCount.value = nextLineCount
+		isMultiLine.value = nextLineCount > 1
 	}
 
 	function findFirstDiffIndex(oldText: string, newText: string): number {
@@ -3311,12 +3403,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		const trimmed = text != null ? text.trim() : ''
 		const hasText = trimmed.length > 0
-		isMultiLine.value = text.indexOf('\n') > -1 || trimmed.length > 22 || hasRichContent
+		updateComposerLineCount(estimateComposerLineCount(text, hasRichContent))
 		if (hasText || hasRichContent) {
 			inputText.value = 'has_content'
 		} else {
 			inputText.value = ''
-			isMultiLine.value = false
+			updateComposerLineCount(1)
 		}
 		lastInputText.value = text
 	}
@@ -3359,6 +3451,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} catch (e) {
 			updatePlainSelection(plainInputText.value.length, plainInputText.value.length)
 			applyComposerState(plainInputText.value != null ? plainInputText.value : '')
+		}
+	}
+
+	function onPlainLineChange(e: any): void {
+		try {
+			const detail = e != null && e.detail != null ? e.detail : null
+			const lineCount = detail != null && detail.lineCount != null ? Number(detail.lineCount) : 1
+			updateComposerLineCount(lineCount)
+		} catch (e) {
+			updateComposerLineCount(estimateComposerLineCount(plainInputText.value != null ? plainInputText.value : ''))
 		}
 	}
 
@@ -4030,6 +4132,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	function resetComposerState(): void {
 		plainInputText.value = ''
 		applyComposerState('')
+		updateComposerLineCount(1)
 		isFullExpanded.value = false
 		closeMentionSelector()
 		try {
@@ -6735,17 +6838,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		background-color: #FFFFFF;
 		border-radius: 4px;
 		margin: 0 8px;
-		height: 40px;
 		min-height: 40px;
-		max-height: 35vh;
+		max-height: 232px;
 		display: flex;
 		flex-direction: column;
-		justify-content: center;
+		justify-content: flex-start;
 		overflow: hidden;
-	}
-
-	.input-box-multi {
-		height: 88px; /* 约三行高度 */
 	}
 
 	.input-box-full {
@@ -6764,17 +6862,26 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.chat-editor {
 		width: 100%;
-		height: 40px;
+		box-sizing: border-box;
 		min-height: 40px;
+		max-height: 232px;
 		padding: 8px 12px;
 		font-size: 16px;
 		line-height: 24px;
 		background-color: transparent;
 	}
 
-	.chat-editor-multi {
-		height: 88px;
-		min-height: 88px;
+	.plain-chat-editor {
+		width: calc(100% + 12px);
+		margin-right: -12px;
+		padding-right: 24px;
+		scrollbar-width: none;
+	}
+
+	.plain-chat-editor::-webkit-scrollbar {
+		display: none;
+		width: 0;
+		height: 0;
 	}
 
 	.chat-editor-full {
