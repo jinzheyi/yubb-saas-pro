@@ -209,6 +209,7 @@
 						:auto-height="true"
 						@focus="handleInputFocus"
 						@input="onPlainInput"
+						@blur="handlePlainBlur"
 					/>
 				</view>
 				<view 
@@ -284,16 +285,33 @@
 			
 			<!-- 表情包菜单 -->
 			<view v-if="showEmojiMenu" class="emoji-menu">
-				<scroll-view class="emoji-content" scroll-y="true">
-					<!-- 系统表情页签 -->
-					<view class="emoji-grid" v-if="currentEmojiTab === 'emoji'">
-						<view 
-							class="emoji-item" 
-							v-for="(item, index) in emojiList" 
-							:key="index"
-							@click="handleEmojiClick(item)"
-						>
-							<image class="picker-emoji-img" :src="item.path" mode="aspectFit" />
+				<scroll-view class="emoji-content" scroll-y="true" @scroll="handleEmojiPanelScroll">
+					<view v-if="currentEmojiTab === 'emoji'" class="emoji-panel-body">
+						<view v-if="recentEmojiList.length > 0" class="emoji-section">
+							<text class="emoji-section-title emoji-section-title-recent">最近使用</text>
+							<view class="emoji-grid emoji-grid-recent">
+								<view 
+									class="emoji-item" 
+									v-for="(item, index) in recentEmojiList" 
+									:key="'recent-' + index"
+									@click="handleEmojiPanelItemTap(item)"
+								>
+									<image class="picker-emoji-img" :src="item.path" mode="aspectFit" />
+								</view>
+							</view>
+						</view>
+						<view class="emoji-section" :class="{ 'emoji-section-separate': recentEmojiList.length > 0 }">
+							<text class="emoji-section-title emoji-section-title-all">所有表情</text>
+							<view class="emoji-grid">
+								<view 
+									class="emoji-item" 
+									v-for="(item, index) in emojiList" 
+									:key="'all-' + index"
+									@click="handleEmojiPanelItemTap(item)"
+								>
+									<image class="picker-emoji-img" :src="item.path" mode="aspectFit" />
+								</view>
+							</view>
 						</view>
 					</view>
 					
@@ -308,20 +326,31 @@
 							class="sticker-item" 
 							v-for="(item, index) in stickerList" 
 							:key="item.id"
-							@click="handleStickerClick(item)"
+							@click="handleStickerPanelItemTap(item)"
 						>
 							<image class="picker-sticker-img" :src="item.url" mode="aspectFill" />
 						</view>
 					</view>
 				</scroll-view>
+				<view
+					v-if="currentEmojiTab === 'emoji'"
+					class="emoji-delete-float"
+					:style="{ opacity: emojiDeleteButtonOpacity }"
+					@click="handleEmojiDeleteTap"
+				>
+					<view class="emoji-delete-shape">
+						<view class="emoji-delete-notch"></view>
+						<text class="emoji-delete-cross">×</text>
+					</view>
+				</view>
 				
 				<!-- 表情菜单 Tab 栏 -->
 				<view class="emoji-tabs">
 					<view class="emoji-tab-item" :class="{ 'emoji-tab-active': currentEmojiTab === 'emoji' }" @click="currentEmojiTab = 'emoji'">
-						<text class="iconfont emoji-tab-icon">&#xe604;</text>
+						<text class="iconfont emoji-tab-icon" :class="{ 'emoji-tab-icon-active': currentEmojiTab === 'emoji' }">&#xe604;</text>
 					</view>
 					<view class="emoji-tab-item" :class="{ 'emoji-tab-active': currentEmojiTab === 'sticker' }" @click="currentEmojiTab = 'sticker'">
-						<text class="iconfont emoji-tab-icon">&#xe83f;</text>
+						<text class="iconfont emoji-tab-icon" :class="{ 'emoji-tab-icon-active': currentEmojiTab === 'sticker' }">&#xe83f;</text>
 					</view>
 				</view>
 			</view>
@@ -438,7 +467,7 @@
 	import { getCurrentInstance } from 'vue'
 	import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
-	import { emojiList } from '../../utils/emojiData.uts'
+	import { emojiList, emojiMap } from '../../utils/emojiData.uts'
 	import { parseMessageText as parseEmojiTokens, type MessageToken as EmojiToken } from '../../utils/emojiParser.uts'
 	import { getCustomStickers, StickerItem } from '../../utils/stickerManager.uts'
 	import { messageService, MessageItem as ServiceMessageItem, ConversationItem } from '../../services/message-service.uts'
@@ -472,6 +501,7 @@
 		BASE_URL as CONFIG_BASE_URL,
 		IM_MEDIA_USE_FILE_ID
 	} from '../../config/app.config.uts'
+	import { getString, remove, setJsonObject } from '../../utils/storage.uts'
 
 	const { t } = useI18n()
 	
@@ -520,6 +550,11 @@
 		userId?: string
 		startIndex?: number
 		endIndex?: number
+	}
+
+	type PlainComposerMutation = {
+		text: string
+		cursor: number
 	}
 
 	function normalizeTextContent(raw: any): string {
@@ -935,10 +970,15 @@
 	const isRecording = ref(false)
 	const isCancelReady = ref(false)
 	const usePlainTextComposer = ref(false)
-
-	// #ifdef H5
-	usePlainTextComposer.value = true
-	// #endif
+	const plainSelectionStart = ref(-1)
+	const plainSelectionEnd = ref(-1)
+	const recentEmojiList = ref<any[]>([])
+	const emojiDeleteButtonOpacity = ref(0)
+	const keepEmojiMenuOnNextFocus = ref(false)
+	const EMOJI_RECENT_STORAGE_KEY = 'im_chat_recent_emoji_v1'
+	const EMOJI_RECENT_LIMIT = 7
+	const COMPOSER_EMOJI_SIZE = '18px'
+	loadRecentEmojiList()
 	const currentEmojiTab = ref('emoji') // 'emoji' | 'sticker'
 	const lastMessageId = ref('')
 	const recordStartY = ref(0)
@@ -2833,7 +2873,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function toggleEmojiMenu() {
-		showEmojiMenu.value = !showEmojiMenu.value
+		const nextVisible = !showEmojiMenu.value
+		showEmojiMenu.value = nextVisible
 		showPlusMenu.value = false
 		isVoiceMode.value = false
 	}
@@ -2856,6 +2897,408 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		uni.createSelectorQuery().select('#editor').context((res) => {
 			editorCtx = res.context as EditorContext
 		}).exec()
+	}
+
+	function updatePlainSelection(start: number, end: number): void {
+		const text = plainInputText.value != null ? plainInputText.value : ''
+		let nextStart = start
+		let nextEnd = end
+		if (nextStart < 0) {
+			nextStart = text.length
+		}
+		if (nextEnd < 0) {
+			nextEnd = text.length
+		}
+		if (nextStart > text.length) {
+			nextStart = text.length
+		}
+		if (nextEnd > text.length) {
+			nextEnd = text.length
+		}
+		if (nextStart > nextEnd) {
+			const temp = nextStart
+			nextStart = nextEnd
+			nextEnd = temp
+		}
+		plainSelectionStart.value = nextStart
+		plainSelectionEnd.value = nextEnd
+	}
+
+	function rebuildRecentEmojiList(codes: string[]): void {
+		const nextList: any[] = []
+		for (let i = 0; i < codes.length; i++) {
+			const code = codes[i]
+			const path = emojiMap.get(code)
+			if (path != null) {
+				nextList.push({
+					code,
+					path
+				})
+			}
+		}
+		recentEmojiList.value = nextList
+	}
+
+	function loadRecentEmojiList(): void {
+		try {
+			const raw = getString(EMOJI_RECENT_STORAGE_KEY, '')
+			if (raw === '') {
+				recentEmojiList.value = []
+				return
+			}
+			let stored: string[] = []
+			try {
+				const parsed = JSON.parse(raw)
+				if (parsed != null && Array.isArray(parsed)) {
+					stored = parsed as string[]
+				} else {
+					remove(EMOJI_RECENT_STORAGE_KEY)
+				}
+			} catch (e) {
+				remove(EMOJI_RECENT_STORAGE_KEY)
+				recentEmojiList.value = []
+				return
+			}
+			const codes: string[] = []
+			for (let i = 0; i < stored.length; i++) {
+				const code = stored[i] != null ? String(stored[i]) : ''
+				if (code !== '' && emojiMap.get(code) != null && codes.indexOf(code) === -1) {
+					codes.push(code)
+				}
+				if (codes.length >= EMOJI_RECENT_LIMIT) {
+					break
+				}
+			}
+			rebuildRecentEmojiList(codes)
+		} catch (e) {
+			recentEmojiList.value = []
+		}
+	}
+
+	function recordRecentEmoji(code: string): void {
+		if (code === '') {
+			return
+		}
+		const codes: string[] = []
+		codes.push(code)
+		for (let i = 0; i < recentEmojiList.value.length; i++) {
+			const item = recentEmojiList.value[i]
+			const itemCode = item != null && item.code != null ? String(item.code) : ''
+			if (itemCode !== '' && itemCode !== code && codes.indexOf(itemCode) === -1) {
+				codes.push(itemCode)
+			}
+			if (codes.length >= EMOJI_RECENT_LIMIT) {
+				break
+			}
+		}
+		rebuildRecentEmojiList(codes)
+		try {
+			setJsonObject<string[]>(EMOJI_RECENT_STORAGE_KEY, codes)
+		} catch (e) {
+		}
+	}
+
+	function markComposerHasRichContent(): void {
+		const text = composerText.value != null ? composerText.value : ''
+		const trimmed = text.trim()
+		isMultiLine.value = text.indexOf('\n') > -1 || trimmed.length > 22 || true
+		inputText.value = 'has_content'
+	}
+
+	function findFirstDiffIndex(oldText: string, newText: string): number {
+		const minLength = Math.min(oldText.length, newText.length)
+		for (let i = 0; i < minLength; i++) {
+			if (oldText.charAt(i) !== newText.charAt(i)) {
+				return i
+			}
+		}
+		return minLength
+	}
+
+	function findEmojiTokenRangeAt(text: string, index: number): PlainComposerMutation | null {
+		const regex = /\[[\u4e00-\u9fa5\w]+\]/g
+		let match: RegExpExecArray | null
+		while ((match = regex.exec(text)) !== null) {
+			const token = match[0]
+			const start = match.index
+			const end = start + token.length
+			if (index >= start && index < end && emojiMap.get(token) != null) {
+				return {
+					text: text.substring(0, start) + text.substring(end),
+					cursor: start
+				}
+			}
+		}
+		return null
+	}
+
+	function normalizePlainComposerMutation(nextText: string, cursor: number): PlainComposerMutation {
+		const oldText = lastInputText.value != null ? lastInputText.value : ''
+		if (oldText.length - nextText.length !== 1) {
+			return {
+				text: nextText,
+				cursor: cursor >= 0 ? cursor : nextText.length
+			}
+		}
+		const diffIndex = findFirstDiffIndex(oldText, nextText)
+		const collapsedMutation = findEmojiTokenRangeAt(oldText, diffIndex)
+		if (collapsedMutation != null) {
+			return collapsedMutation
+		}
+		return {
+			text: nextText,
+			cursor: cursor >= 0 ? cursor : nextText.length
+		}
+	}
+
+	function insertTextIntoPlainComposer(insertText: string): void {
+		if (insertText === '') {
+			return
+		}
+		const currentText = plainInputText.value != null ? plainInputText.value : ''
+		let start = plainSelectionStart.value
+		let end = plainSelectionEnd.value
+		if (start < 0 || end < 0) {
+			start = currentText.length
+			end = currentText.length
+		}
+		if (start > end) {
+			const temp = start
+			start = end
+			end = temp
+		}
+		if (start > currentText.length) {
+			start = currentText.length
+		}
+		if (end > currentText.length) {
+			end = currentText.length
+		}
+		const nextText = currentText.substring(0, start) + insertText + currentText.substring(end)
+		const nextCursor = start + insertText.length
+		plainInputText.value = nextText
+		updatePlainSelection(nextCursor, nextCursor)
+		applyComposerState(nextText)
+	}
+
+	function ensurePlainTextComposer(): void {
+		const currentText = composerText.value != null ? composerText.value : ''
+		if (!usePlainTextComposer.value) {
+			usePlainTextComposer.value = true
+		}
+		plainInputText.value = currentText
+		updatePlainSelection(currentText.length, currentText.length)
+		applyComposerState(currentText)
+	}
+
+	function normalizeEditorHtmlToContent(html: string): string {
+		if (!html || html === '<p><br></p>') {
+			return ''
+		}
+		const imgReg = /<img [^>]*alt=['"]([^'"]+)['"][^>]*>/g
+		let finalContent = html.replace(imgReg, '$1')
+		finalContent = finalContent.replace(/<br\s*\/?>/g, '\n')
+		finalContent = finalContent.replace(/<\/p>\s*<p>/g, '\n')
+		finalContent = finalContent.replace(/<[^>]+>/g, '')
+		finalContent = finalContent.replace(/&nbsp;/g, ' ')
+		return finalContent
+	}
+
+	function insertEditorSegments(segments: EmojiToken[]): void {
+		if (editorCtx == null) {
+			return
+		}
+		for (let i = 0; i < segments.length; i++) {
+			const segment = segments[i]
+			if (segment.type === 'emoji') {
+				try {
+					editorCtx!.insertImage({
+						src: segment.content,
+						alt: segment.code != null ? segment.code : '',
+						data: {
+							code: segment.code != null ? segment.code : ''
+						},
+						width: COMPOSER_EMOJI_SIZE,
+						height: COMPOSER_EMOJI_SIZE
+					})
+				} catch (e) {
+				}
+				continue
+			}
+			if (segment.content === '') {
+				continue
+			}
+			try {
+				editorCtx!.insertText({ text: segment.content })
+			} catch (e) {
+			}
+		}
+	}
+
+	function applyContentToEditor(content: string): boolean {
+		if (editorCtx == null) {
+			return false
+		}
+		try {
+			const segments = parseEmojiTokens(content)
+			editorCtx!.clear({
+				success: () => {
+					insertEditorSegments(segments)
+					applyComposerState(content, segments.some((segment: EmojiToken) => segment.type === 'emoji'))
+				}
+			})
+			return true
+		} catch (e) {
+			return false
+		}
+	}
+
+	function insertEmojiIntoComposer(item: any): void {
+		const code = item != null && item.code != null ? String(item.code) : ''
+		if (code === '') {
+			return
+		}
+		recordRecentEmoji(code)
+		if (!usePlainTextComposer.value && editorCtx != null) {
+			try {
+				keepEmojiMenuOnNextFocus.value = true
+				editorCtx!.insertImage({
+					src: item.path,
+					alt: code,
+					data: {
+						code: code
+					},
+					width: COMPOSER_EMOJI_SIZE,
+					height: COMPOSER_EMOJI_SIZE,
+					success: () => {
+						markComposerHasRichContent()
+					}
+				})
+				return
+			} catch (e) {
+				keepEmojiMenuOnNextFocus.value = false
+			}
+		}
+		ensurePlainTextComposer()
+		insertTextIntoPlainComposer(code)
+	}
+
+	function removeLastComposerUnit(text: string): string {
+		if (text === '') {
+			return ''
+		}
+		const regex = /\[[\u4e00-\u9fa5\w]+\]$/
+		const match = text.match(regex)
+		if (match != null && match[0] != null && emojiMap.get(String(match[0])) != null) {
+			return text.substring(0, text.length - String(match[0]).length)
+		}
+		return text.substring(0, text.length - 1)
+	}
+
+	function findEmojiDeleteMutation(): PlainComposerMutation {
+		const currentText = plainInputText.value != null ? plainInputText.value : ''
+		let start = plainSelectionStart.value
+		let end = plainSelectionEnd.value
+		if (start < 0 || end < 0) {
+			start = currentText.length
+			end = currentText.length
+		}
+		if (start > end) {
+			const temp = start
+			start = end
+			end = temp
+		}
+		if (start > currentText.length) {
+			start = currentText.length
+		}
+		if (end > currentText.length) {
+			end = currentText.length
+		}
+		if (start !== end) {
+			return {
+				text: currentText.substring(0, start) + currentText.substring(end),
+				cursor: start
+			}
+		}
+		if (start <= 0) {
+			return {
+				text: currentText,
+				cursor: 0
+			}
+		}
+		const regex = /\[[\u4e00-\u9fa5\w]+\]/g
+		let match: RegExpExecArray | null
+		while ((match = regex.exec(currentText)) !== null) {
+			const token = match[0]
+			const tokenStart = match.index
+			const tokenEnd = tokenStart + token.length
+			if (emojiMap.get(token) != null && start > tokenStart && start <= tokenEnd) {
+				return {
+					text: currentText.substring(0, tokenStart) + currentText.substring(tokenEnd),
+					cursor: tokenStart
+				}
+			}
+		}
+		return {
+			text: currentText.substring(0, start - 1) + currentText.substring(start),
+			cursor: start - 1
+		}
+	}
+
+	function handleEmojiPanelItemTap(item : any): void {
+		insertEmojiIntoComposer(item)
+	}
+
+	function handleStickerPanelItemTap(item : StickerItem): void {
+		messages.value.push(createMessage({
+			type: 'sticker',
+			content: item.url,
+			isSelf: true,
+			isSticker: true
+		}))
+		scrollToBottom()
+		showEmojiMenu.value = false
+	}
+
+	function handleEmojiDeleteTap(): void {
+		if (!usePlainTextComposer.value && editorCtx != null) {
+			try {
+				editorCtx!.getContents({
+					success: (res) => {
+						const content = normalizeEditorHtmlToContent(res != null && (res as any).html != null ? String((res as any).html) : '')
+						const nextContent = removeLastComposerUnit(content)
+						if (!applyContentToEditor(nextContent)) {
+							ensurePlainTextComposer()
+							plainInputText.value = nextContent
+							updatePlainSelection(nextContent.length, nextContent.length)
+							applyComposerState(nextContent)
+						}
+					}
+				})
+				return
+			} catch (e) {
+			}
+		}
+		ensurePlainTextComposer()
+		const mutation = findEmojiDeleteMutation()
+		plainInputText.value = mutation.text
+		updatePlainSelection(mutation.cursor, mutation.cursor)
+		applyComposerState(mutation.text)
+	}
+
+	function handleEmojiPanelScroll(e: any): void {
+		try {
+			const scrollTop = e != null && e.detail != null && e.detail.scrollTop != null ? Number(e.detail.scrollTop) : 0
+			let opacity = scrollTop / 72
+			if (opacity < 0) {
+				opacity = 0
+			}
+			if (opacity > 1) {
+				opacity = 1
+			}
+			emojiDeleteButtonOpacity.value = opacity
+		} catch (e) {
+			emojiDeleteButtonOpacity.value = 0
+		}
 	}
 
 	function applyComposerState(text: string, hasRichContent: boolean = false): void {
@@ -2908,10 +3351,23 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	function onPlainInput(e : any) {
 		try {
 			const value = e != null && e.detail != null && e.detail.value != null ? String(e.detail.value) : ''
-			plainInputText.value = value
-			applyComposerState(value)
+			const cursor = e != null && e.detail != null && e.detail.cursor != null ? Number(e.detail.cursor) : value.length
+			const mutation = normalizePlainComposerMutation(value, cursor)
+			plainInputText.value = mutation.text
+			updatePlainSelection(mutation.cursor, mutation.cursor)
+			applyComposerState(mutation.text)
 		} catch (e) {
+			updatePlainSelection(plainInputText.value.length, plainInputText.value.length)
 			applyComposerState(plainInputText.value != null ? plainInputText.value : '')
+		}
+	}
+
+	function handlePlainBlur(e: any): void {
+		try {
+			const cursor = e != null && e.detail != null && e.detail.cursor != null ? Number(e.detail.cursor) : plainInputText.value.length
+			updatePlainSelection(cursor, cursor)
+		} catch (e) {
+			updatePlainSelection(plainInputText.value.length, plainInputText.value.length)
 		}
 	}
 
@@ -3133,7 +3589,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleInputFocus() {
-		showEmojiMenu.value = false
+		const shouldKeepEmojiMenu = keepEmojiMenuOnNextFocus.value
+		keepEmojiMenuOnNextFocus.value = false
+		if (!shouldKeepEmojiMenu) {
+			showEmojiMenu.value = false
+		}
 		showPlusMenu.value = false
 		if (chatType.value !== 'group') {
 			closeMentionSelector()
@@ -3248,22 +3708,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			scrollToBottom()
 			return true
 		}
-		if (editorCtx == null) return false
-		try {
-			editorCtx!.clear({
-				success: () => {
-					try {
-						editorCtx!.insertText({ text: content })
-					} catch (e) {
-					}
-					applyComposerState(content)
-					scrollToBottom()
-				}
-			})
-			return true
-		} catch (e) {
+		if (!applyContentToEditor(content)) {
 			return false
 		}
+		scrollToBottom()
+		return true
 	}
 
 	function ensureEditorReadyAndApply(content: string, attempt: number = 0) {
@@ -3486,32 +3935,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		isCancelReady.value = false
 	}
 
-	function handleEmojiClick(item : any) {
-		if (usePlainTextComposer.value) {
-			const code = item != null && item.code != null ? String(item.code) : ''
-			if (code !== '') {
-				const nextText = (plainInputText.value != null ? plainInputText.value : '') + code
-				plainInputText.value = nextText
-				applyComposerState(nextText)
-			}
-			return
-		}
-		if (editorCtx != null) {
-			editorCtx!.insertImage({
-				src: item.path,
-				alt: item.code,
-				data: {
-					code: item.code
-				},
-				width: '24px',
-				height: '24px',
-				success: () => {
-					console.log('插入表情成功:', item.code)
-				}
-			})
-		}
-	}
-
 	/**
 	 * 处理输入，实现表情包整体退格
 	 */
@@ -3539,17 +3962,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		
 		lastInputText.value = inputText.value
-	}
-
-	function handleStickerClick(item : StickerItem) {
-		messages.value.push(createMessage({
-			type: 'sticker',
-			content: item.url,
-			isSelf: true,
-			isSticker: true
-		}))
-		scrollToBottom()
-		showEmojiMenu.value = false
 	}
 
 	function handleToSettings() {
@@ -6309,6 +6721,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		flex-direction: row;
 		align-items: center;
 		height: 40px;
+		padding-bottom: 1px;
 	}
 
 	.input-right-actions-full {
@@ -6353,9 +6766,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		width: 100%;
 		height: 40px;
 		min-height: 40px;
-		padding: 8px 10px;
+		padding: 8px 12px;
 		font-size: 16px;
-		line-height: 1.5;
+		line-height: 24px;
 		background-color: transparent;
 	}
 
@@ -6410,13 +6823,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.send-btn {
 		background-color: #07C160;
-		height: 34px;
-		padding: 0 12px;
-		border-radius: 4px;
+		height: 32px;
+		min-width: 56px;
+		padding: 0 14px;
+		border-radius: 6px;
 		justify-content: center;
 		align-items: center;
 		margin-left: 10px;
-		margin-bottom: 4px;
 	}
 
 	.send-btn-text {
@@ -6563,6 +6976,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	/* 表情包菜单 */
 	.emoji-menu {
+		position: relative;
 		background-color: #F7F7F7;
 		height: 260px;
 		border-top-width: 0.5px;
@@ -6571,24 +6985,111 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.emoji-content {
 		flex: 1;
-		padding: 15px;
+		padding: 12px 14px 10px;
+	}
+
+	.emoji-panel-body {
+		padding-bottom: 6px;
 	}
 
 	.emoji-grid {
 		flex-direction: row;
 		flex-wrap: wrap;
+		margin: 0 -2px;
+	}
+
+	.emoji-section {
+		padding-bottom: 10px;
+	}
+
+	.emoji-section-separate {
+		padding-top: 6px;
+		border-top-width: 1px;
+		border-top-style: solid;
+		border-top-color: rgba(31, 35, 41, 0.04);
+	}
+
+	.emoji-section-title {
+		font-size: 13px;
+		color: #A7AFB9;
+		line-height: 18px;
+		padding: 1px 2px 8px;
+	}
+
+	.emoji-section-title-recent {
+		padding-bottom: 8px;
+	}
+
+	.emoji-section-title-all {
+		padding-top: 0;
+		padding-bottom: 8px;
+	}
+
+	.emoji-grid-recent {
+		padding-bottom: 8px;
 	}
 
 	.emoji-item {
 		width: 14.28%; /* 7列 */
-		height: 50px;
+		height: 48px;
 		justify-content: center;
 		align-items: center;
 	}
 
 	.picker-emoji-img {
-		width: 32px;
-		height: 32px;
+		width: 30px;
+		height: 30px;
+	}
+
+	.emoji-delete-float {
+		position: absolute;
+		right: 16px;
+		bottom: 58px;
+		width: 42px;
+		height: 34px;
+		border-radius: 11px;
+		background-color: rgba(255, 255, 255, 0.98);
+		border-width: 1px;
+		border-style: solid;
+		border-color: rgba(31, 35, 41, 0.05);
+		justify-content: center;
+		align-items: center;
+		box-shadow: 0 8px 18px rgba(31, 35, 41, 0.08);
+	}
+
+	.emoji-delete-shape {
+		width: 18px;
+		height: 13px;
+		border-width: 1.5px;
+		border-style: solid;
+		border-color: #A7AFB9;
+		border-radius: 3px;
+		justify-content: center;
+		align-items: center;
+		position: relative;
+	}
+
+	.emoji-delete-notch {
+		position: absolute;
+		left: -6px;
+		width: 0;
+		height: 0;
+		border-top-width: 6px;
+		border-bottom-width: 6px;
+		border-right-width: 6px;
+		border-top-style: solid;
+		border-bottom-style: solid;
+		border-right-style: solid;
+		border-top-color: transparent;
+		border-bottom-color: transparent;
+		border-right-color: #A7AFB9;
+	}
+
+	.emoji-delete-cross {
+		font-size: 11px;
+		line-height: 11px;
+		color: #A7AFB9;
+		font-weight: 600;
 	}
 
 	/* 收藏表情网格 */
@@ -6641,23 +7142,36 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		background-color: #FFFFFF;
 		flex-direction: row;
 		align-items: center;
-		padding: 0 10px;
+		padding: 0 8px;
+		border-top-width: 1px;
+		border-top-style: solid;
+		border-top-color: rgba(31, 35, 41, 0.04);
 	}
 
 	.emoji-tab-item {
-		width: 50px;
-		height: 44px;
+		width: 44px;
+		height: 32px;
+		border-radius: 10px;
 		justify-content: center;
 		align-items: center;
+		margin-right: 6px;
+		border-bottom-width: 2px;
+		border-bottom-style: solid;
+		border-bottom-color: transparent;
 	}
 
 	.emoji-tab-active {
-		background-color: #F7F7F7;
+		background-color: #F1F3F5;
+		border-bottom-color: #07C160;
 	}
 
 	.emoji-tab-icon {
-		font-size: 22px;
-		color: #646A73;
+		font-size: 20px;
+		color: #A7AFB9;
+	}
+
+	.emoji-tab-icon-active {
+		color: #616A74;
 	}
 
 	/* 录音浮层 */
