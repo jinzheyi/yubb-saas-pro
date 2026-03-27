@@ -2082,7 +2082,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 - **验收标准**：
   - 收藏：仅允许收藏当前用户有权查看的图片/GIF/贴纸消息；重复收藏按 `md5` 去重
   - 上传：支持从相册导入图片/GIF，入库后返回 `stickerId/fileId`
-  - 发送：点击表情即发送 `STICKER(8)`；会话摘要显示 `[贴纸]`
+  - 发送：点击表情即发送 `STICKER(8)`；会话摘要显示 `[动画表情]`
   - 多端：同账号在新设备登录后可拉取已有个人表情库；删除/排序可同步
   - 最终态：消息撤回不删除个人表情库；个人表情库删除不影响历史消息展示
   - 兼容：Phase 1 保留 `url` 渲染，Phase 2 收敛到 `fileId + presigned` 拉取
@@ -2097,7 +2097,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - B1：建表 `im_user_sticker`、`im_user_sticker_recent`，补唯一索引（建议 `user_id + md5 + deleted=0`）
   - B2：新增 `AppImStickerController` 与 service，先打通 `list/upload/collect/remove`
   - B3：补 `sort/recent-use`，保证最近使用与收藏排序解耦
-  - B4：发送链路校验 `messageType=8` 的 `extra` 结构，并统一摘要为 `[贴纸]`
+  - B4：发送链路校验 `messageType=8` 的 `extra` 结构，并统一摘要为 `[动画表情]`
   - B5：补充会话页/转发详情/搜索结果中的 `STICKER` 渲染 DTO 口径
 
 - **后端文件落点草案**：

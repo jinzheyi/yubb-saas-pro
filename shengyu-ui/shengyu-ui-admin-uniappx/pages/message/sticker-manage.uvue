@@ -1,0 +1,761 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">返回</text>
+			</view>
+			<text class="header-title">表情管理</text>
+			<view class="header-right" @click="toggleSortMode">
+				<text class="header-action-text">{{ sortMode ? '完成' : '整理' }}</text>
+			</view>
+		</view>
+
+		<view class="summary-card">
+			<text class="summary-title">我的表情</text>
+			<text class="summary-count">{{ stickerList.length }}/150</text>
+			<text class="summary-tip">{{ sortMode ? (savingSort ? '正在保存排序，请稍候' : (selectedStickerId ? '已拿起一个动画表情，安卓和 iOS 可滑动一格，Web 可点选或拖动后松手放下，目标位会高亮且周围项会让位' : '支持长按拿起、滑动移动、点选放下、置顶、左移、右移、置底，右上角可删除')) : '长按表情可移除，点击整理可调整顺序' }}</text>
+			<view v-if="sortMode && selectedStickerId" class="move-bar">
+				<text class="move-bar-text">移动中</text>
+				<view class="move-bar-btn" @click="clearSelectedSticker">
+					<text class="move-bar-btn-text">取消选中</text>
+				</view>
+			</view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" :scroll-top="contentScrollTop" show-scrollbar="false" @scroll="handleContentScroll" v-if="stickerList.length > 0">
+			<view class="sticker-grid">
+				<view
+					class="sticker-item"
+					v-for="item in stickerList"
+					:key="item.id"
+					:class="{ 'sticker-item-active': selectedStickerId === item.stickerId, 'sticker-item-target': dragTargetStickerId === item.stickerId }"
+					:style="getStickerItemStyle(item)"
+					@click="handleStickerTap(item)"
+					@longpress="handleStickerLongPress(item)"
+					@touchstart="handleStickerTouchStart($event, item)"
+					@touchmove="handleStickerTouchMove($event, item)"
+					@touchend="handleStickerTouchEnd($event, item)"
+					@mousedown="handleStickerMouseDown($event, item)"
+					@mousemove="handleStickerMouseMove($event, item)"
+					@mouseup="handleStickerMouseUp($event, item)"
+					@mouseleave="handleStickerMouseLeave($event, item)"
+				>
+					<image class="sticker-image" :src="item.url" mode="aspectFill" />
+					<view v-if="sortMode" class="sticker-sort-mask">
+						<view class="sticker-remove-badge" @click.stop="handleStickerRemoveTap(item)">
+							<text class="sticker-remove-text">×</text>
+						</view>
+						<view v-if="selectedStickerId === item.stickerId" class="sticker-picked-badge">
+							<text class="sticker-picked-text">已拿起</text>
+						</view>
+						<view v-else-if="dragTargetStickerId === item.stickerId" class="sticker-target-badge">
+							<text class="sticker-target-text">目标位置</text>
+						</view>
+						<view v-else-if="selectedStickerId !== ''" class="sticker-drop-hint">
+							<text class="sticker-drop-hint-text">放到这里</text>
+						</view>
+						<view class="sticker-sort-actions">
+							<view class="sticker-sort-btn" :class="{ 'sticker-sort-btn-disabled': isFirstSticker(item) || savingSort }" @click.stop="moveStickerToEdge(item, true)">
+								<text class="sticker-sort-btn-text">置顶</text>
+							</view>
+							<view class="sticker-sort-btn" :class="{ 'sticker-sort-btn-disabled': isFirstSticker(item) || savingSort }" @click.stop="moveSticker(item, -1)">
+								<text class="sticker-sort-btn-text">左移</text>
+							</view>
+							<view class="sticker-sort-btn" :class="{ 'sticker-sort-btn-disabled': isLastSticker(item) || savingSort }" @click.stop="moveSticker(item, 1)">
+								<text class="sticker-sort-btn-text">右移</text>
+							</view>
+							<view class="sticker-sort-btn" :class="{ 'sticker-sort-btn-disabled': isLastSticker(item) || savingSort }" @click.stop="moveStickerToEdge(item, false)">
+								<text class="sticker-sort-btn-text">置底</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+
+		<view class="empty-state" v-else>
+			<text class="iconfont empty-icon">&#xe83f;</text>
+			<text class="empty-title">暂无自定义表情</text>
+			<text class="empty-tip">在聊天页点击 + 或长按图片添加到表情</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { StickerItem, getFavoriteStickers, refreshCustomStickers, removeSticker, updateStickerSort } from '../../utils/stickerManager.uts'
+
+	const stickerList = ref<StickerItem[]>([])
+	const sortMode = ref(false)
+	const savingSort = ref(false)
+	const selectedStickerId = ref('')
+	const dragStartX = ref(0)
+	const dragStartY = ref(0)
+	const dragStartScrollTop = ref(0)
+	const dragOffsetX = ref(0)
+	const dragOffsetY = ref(0)
+	const dragVisualActive = ref(false)
+	const dragTargetStickerId = ref('')
+	const contentScrollTop = ref(0)
+	const DRAG_MOVE_THRESHOLD = 24
+	const GRID_COLUMN_COUNT = 4
+	const GRID_CELL_RPX = 170
+	const EDGE_SCROLL_THRESHOLD = 120
+	const EDGE_SCROLL_STEP = 96
+
+	async function loadStickers(): Promise<void> {
+		try {
+			await refreshCustomStickers()
+			stickerList.value = getFavoriteStickers()
+		} catch (e) {
+			console.warn('[StickerManage] 加载表情失败:', e)
+			stickerList.value = getFavoriteStickers()
+		}
+	}
+
+	function handleBack(): void {
+		uni.navigateBack()
+	}
+
+	function toggleSortMode(): void {
+		sortMode.value = !sortMode.value
+		if (!sortMode.value) {
+			selectedStickerId.value = ''
+		}
+	}
+
+	function clearSelectedSticker(): void {
+		selectedStickerId.value = ''
+		dragOffsetX.value = 0
+		dragOffsetY.value = 0
+		dragVisualActive.value = false
+		dragTargetStickerId.value = ''
+	}
+
+	function handleContentScroll(e: ScrollEvent): void {
+		contentScrollTop.value = e != null && e.detail != null && e.detail.scrollTop != null ? Number(e.detail.scrollTop) : 0
+	}
+
+	function getCellStepPx(): number {
+		const systemInfo = uni.getSystemInfoSync()
+		const screenWidth = systemInfo != null && systemInfo.screenWidth != null ? Number(systemInfo.screenWidth) : 375
+		return GRID_CELL_RPX * screenWidth / 750
+	}
+
+	function getViewportHeightPx(): number {
+		const systemInfo = uni.getSystemInfoSync()
+		return systemInfo != null && systemInfo.windowHeight != null ? Number(systemInfo.windowHeight) : 800
+	}
+
+	function beginDragVisual(startX: number, startY: number, item: StickerItem): void {
+		if (!sortMode.value || selectedStickerId.value !== item.stickerId) {
+			return
+		}
+		dragStartX.value = startX
+		dragStartY.value = startY
+		dragStartScrollTop.value = contentScrollTop.value
+		dragOffsetX.value = 0
+		dragOffsetY.value = 0
+		dragVisualActive.value = true
+	}
+
+	function updateDragVisual(currentX: number, currentY: number, item: StickerItem): void {
+		if (!sortMode.value || selectedStickerId.value !== item.stickerId || !dragVisualActive.value) {
+			return
+		}
+		dragOffsetX.value = currentX - dragStartX.value
+		dragOffsetY.value = currentY - dragStartY.value + (contentScrollTop.value - dragStartScrollTop.value)
+		maybeAutoScroll(currentY)
+		updateDragTargetPreview(currentX, currentY, item)
+	}
+
+	function resetDragVisual(): void {
+		dragOffsetX.value = 0
+		dragOffsetY.value = 0
+		dragVisualActive.value = false
+		dragTargetStickerId.value = ''
+	}
+
+	function maybeAutoScroll(currentY: number): void {
+		const viewportHeight = getViewportHeightPx()
+		if (currentY <= EDGE_SCROLL_THRESHOLD) {
+			contentScrollTop.value = Math.max(0, contentScrollTop.value - EDGE_SCROLL_STEP)
+			return
+		}
+		if (currentY >= viewportHeight - EDGE_SCROLL_THRESHOLD) {
+			contentScrollTop.value = Math.max(0, contentScrollTop.value + EDGE_SCROLL_STEP)
+		}
+	}
+
+	function resolveDirectionalTargetIndex(endX: number, endY: number, item: StickerItem): number {
+		const deltaX = endX - dragStartX.value
+		const deltaY = endY - dragStartY.value + (contentScrollTop.value - dragStartScrollTop.value)
+		const absX = Math.abs(deltaX)
+		const absY = Math.abs(deltaY)
+		if (absX < DRAG_MOVE_THRESHOLD && absY < DRAG_MOVE_THRESHOLD) {
+			return -1
+		}
+		const currentIndex = stickerList.value.findIndex(sticker => sticker.stickerId === item.stickerId)
+		if (currentIndex < 0) {
+			return -1
+		}
+		const cellStepPx = getCellStepPx()
+		const moveColSlots = absX >= DRAG_MOVE_THRESHOLD ? Math.round(deltaX / cellStepPx) : 0
+		const moveRowSlots = absY >= DRAG_MOVE_THRESHOLD ? Math.round(deltaY / cellStepPx) : 0
+		let targetIndex = currentIndex + moveColSlots + moveRowSlots * GRID_COLUMN_COUNT
+		if (targetIndex < 0) {
+			targetIndex = 0
+		}
+		if (targetIndex >= stickerList.value.length) {
+			targetIndex = stickerList.value.length - 1
+		}
+		if (targetIndex === currentIndex) {
+			return -1
+		}
+		return targetIndex
+	}
+
+	function updateDragTargetPreview(currentX: number, currentY: number, item: StickerItem): void {
+		const targetIndex = resolveDirectionalTargetIndex(currentX, currentY, item)
+		if (targetIndex < 0) {
+			dragTargetStickerId.value = ''
+			return
+		}
+		const targetSticker = stickerList.value[targetIndex]
+		dragTargetStickerId.value = targetSticker != null ? targetSticker.stickerId : ''
+	}
+
+	function handleStickerTouchStart(e: TouchEvent, item: StickerItem): void {
+		if (!sortMode.value || selectedStickerId.value !== item.stickerId) {
+			return
+		}
+		if (e.touches.length > 0) {
+			beginDragVisual(e.touches[0].clientX, e.touches[0].clientY, item)
+		}
+	}
+
+	function handleStickerTouchMove(e: TouchEvent, item: StickerItem): void {
+		if (e.touches.length > 0) {
+			updateDragVisual(e.touches[0].clientX, e.touches[0].clientY, item)
+		}
+	}
+
+	async function handleStickerTouchEnd(e: TouchEvent, item: StickerItem): Promise<void> {
+		if (!sortMode.value || savingSort.value || selectedStickerId.value !== item.stickerId) {
+			return
+		}
+		if (e.changedTouches.length === 0) {
+			resetDragVisual()
+			return
+		}
+		const endX = e.changedTouches[0].clientX
+		const endY = e.changedTouches[0].clientY
+		resetDragVisual()
+		await completeDirectionalMove(endX, endY, item)
+	}
+
+	function handleStickerMouseDown(e: MouseEvent, item: StickerItem): void {
+		if (!sortMode.value || selectedStickerId.value !== item.stickerId) {
+			return
+		}
+		beginDragVisual(e.clientX, e.clientY, item)
+	}
+
+	function handleStickerMouseMove(e: MouseEvent, item: StickerItem): void {
+		updateDragVisual(e.clientX, e.clientY, item)
+	}
+
+	async function handleStickerMouseUp(e: MouseEvent, item: StickerItem): Promise<void> {
+		if (!dragVisualActive.value) {
+			return
+		}
+		resetDragVisual()
+		await completeDirectionalMove(e.clientX, e.clientY, item)
+	}
+
+	function handleStickerMouseLeave(_: MouseEvent, item: StickerItem): void {
+		if (selectedStickerId.value === item.stickerId) {
+			resetDragVisual()
+		}
+	}
+
+	async function completeDirectionalMove(endX: number, endY: number, item: StickerItem): Promise<void> {
+		const currentIndex = stickerList.value.findIndex(sticker => sticker.stickerId === item.stickerId)
+		if (currentIndex < 0) {
+			return
+		}
+		const targetIndex = resolveDirectionalTargetIndex(endX, endY, item)
+		if (targetIndex < 0) {
+			return
+		}
+		await moveStickerToIndex(currentIndex, targetIndex)
+	}
+
+	function getStickerItemStyle(item: StickerItem): any {
+		const currentIndex = stickerList.value.findIndex(sticker => sticker.stickerId === item.stickerId)
+		const selectedIndex = stickerList.value.findIndex(sticker => sticker.stickerId === selectedStickerId.value)
+		const targetIndex = stickerList.value.findIndex(sticker => sticker.stickerId === dragTargetStickerId.value)
+		if (selectedStickerId.value !== item.stickerId) {
+			if (selectedIndex < 0 || targetIndex < 0 || currentIndex < 0) {
+				return null
+			}
+			const previewSlotDelta = resolvePreviewSlotDelta(currentIndex, selectedIndex, targetIndex)
+			if (previewSlotDelta === 0) {
+				return null
+			}
+			return buildSlotShiftStyle(currentIndex, currentIndex + previewSlotDelta)
+		}
+		if (!dragVisualActive.value) {
+			return {
+				transform: 'scale(1.04)',
+				boxShadow: '0 12rpx 28rpx rgba(22, 163, 74, 0.18)',
+				transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+				zIndex: 2
+			}
+		}
+		return {
+			transform: `translate(${dragOffsetX.value}px, ${dragOffsetY.value}px) scale(1.06)`,
+			boxShadow: '0 18rpx 36rpx rgba(17, 24, 39, 0.24)',
+			transition: 'transform 0.06s linear, box-shadow 0.12s ease',
+			zIndex: 6
+		}
+	}
+
+	function resolvePreviewSlotDelta(currentIndex: number, selectedIndex: number, targetIndex: number): number {
+		if (selectedIndex < targetIndex) {
+			if (currentIndex > selectedIndex && currentIndex <= targetIndex) {
+				return -1
+			}
+			return 0
+		}
+		if (selectedIndex > targetIndex) {
+			if (currentIndex >= targetIndex && currentIndex < selectedIndex) {
+				return 1
+			}
+			return 0
+		}
+		return 0
+	}
+
+	function buildSlotShiftStyle(fromIndex: number, toIndex: number): any {
+		const cellSize = 170
+		const fromRow = Math.floor(fromIndex / GRID_COLUMN_COUNT)
+		const fromCol = fromIndex % GRID_COLUMN_COUNT
+		const toRow = Math.floor(toIndex / GRID_COLUMN_COUNT)
+		const toCol = toIndex % GRID_COLUMN_COUNT
+		const translateX = (toCol - fromCol) * cellSize
+		const translateY = (toRow - fromRow) * cellSize
+		return {
+			transform: `translate(${translateX}rpx, ${translateY}rpx)`,
+			opacity: 0.96,
+			boxShadow: '0 10rpx 24rpx rgba(59, 130, 246, 0.10)',
+			zIndex: 3
+		}
+	}
+
+	function isFirstSticker(item: StickerItem): boolean {
+		return stickerList.value.findIndex(sticker => sticker.stickerId === item.stickerId) <= 0
+	}
+
+	function isLastSticker(item: StickerItem): boolean {
+		const index = stickerList.value.findIndex(sticker => sticker.stickerId === item.stickerId)
+		return index === -1 || index >= stickerList.value.length - 1
+	}
+
+	function buildSortPayload(list: StickerItem[]): { stickerId: string, sortNo: number }[] {
+		return list.map((item, index) => ({
+			stickerId: item.stickerId,
+			sortNo: index + 1
+		}))
+	}
+
+	async function moveSticker(item: StickerItem, offset: number): Promise<void> {
+		if (savingSort.value) {
+			return
+		}
+		const index = stickerList.value.findIndex(sticker => sticker.stickerId === item.stickerId)
+		const targetIndex = index + offset
+		if (index < 0 || targetIndex < 0 || targetIndex >= stickerList.value.length) {
+			return
+		}
+		await moveStickerToIndex(index, targetIndex)
+	}
+
+	async function moveStickerToEdge(item: StickerItem, toTop: boolean): Promise<void> {
+		if (savingSort.value) {
+			return
+		}
+		const index = stickerList.value.findIndex(sticker => sticker.stickerId === item.stickerId)
+		if (index < 0) {
+			return
+		}
+		const targetIndex = toTop ? 0 : stickerList.value.length - 1
+		if (index === targetIndex) {
+			return
+		}
+		await moveStickerToIndex(index, targetIndex)
+	}
+
+	async function moveStickerToIndex(sourceIndex: number, targetIndex: number): Promise<void> {
+		if (savingSort.value) {
+			return
+		}
+		const nextList = stickerList.value.slice()
+		const current = nextList[sourceIndex]
+		nextList.splice(sourceIndex, 1)
+		nextList.splice(targetIndex, 0, current)
+		const previousList = stickerList.value.slice()
+		stickerList.value = nextList
+		savingSort.value = true
+		selectedStickerId.value = ''
+		try {
+			await updateStickerSort(buildSortPayload(nextList))
+		} catch (e) {
+			stickerList.value = previousList
+			console.error('[StickerManage] 排序失败:', e)
+			uni.showToast({ title: '排序失败', icon: 'none' })
+		} finally {
+			savingSort.value = false
+		}
+	}
+
+	async function handleStickerTap(item: StickerItem): Promise<void> {
+		if (!sortMode.value || savingSort.value) {
+			return
+		}
+		if (selectedStickerId.value === '') {
+			selectedStickerId.value = item.stickerId
+			return
+		}
+		if (selectedStickerId.value === item.stickerId) {
+			selectedStickerId.value = ''
+			return
+		}
+		const sourceIndex = stickerList.value.findIndex(sticker => sticker.stickerId === selectedStickerId.value)
+		const targetIndex = stickerList.value.findIndex(sticker => sticker.stickerId === item.stickerId)
+		if (sourceIndex < 0 || targetIndex < 0) {
+			selectedStickerId.value = ''
+			return
+		}
+		await moveStickerToIndex(sourceIndex, targetIndex)
+	}
+
+	function handleStickerLongPress(item: StickerItem): void {
+		if (sortMode.value) {
+			selectedStickerId.value = item.stickerId
+			return
+		}
+		uni.showActionSheet({
+			itemList: ['移除表情'],
+			success: async (res) => {
+				if (res.tapIndex !== 0) {
+					return
+				}
+				try {
+					await removeSticker(item.stickerId)
+					stickerList.value = getFavoriteStickers()
+					selectedStickerId.value = ''
+					uni.showToast({ title: '已移除', icon: 'success' })
+				} catch (e) {
+					console.error('[StickerManage] 移除表情失败:', e)
+					uni.showToast({ title: '移除失败', icon: 'none' })
+				}
+			}
+		})
+	}
+
+	async function handleStickerRemoveTap(item: StickerItem): Promise<void> {
+		try {
+			await removeSticker(item.stickerId)
+			stickerList.value = getFavoriteStickers()
+			selectedStickerId.value = ''
+			uni.showToast({ title: '已移除', icon: 'success' })
+		} catch (e) {
+			console.error('[StickerManage] 移除表情失败:', e)
+			uni.showToast({ title: '移除失败', icon: 'none' })
+		}
+	}
+
+	onLoad(async () => {
+		await loadStickers()
+	})
+
+	onShow(async () => {
+		await loadStickers()
+	})
+</script>
+
+<style scoped>
+	.page {
+		min-height: 100vh;
+		background-color: #f7f8fa;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #ffffff;
+	}
+
+	.header {
+		height: 88rpx;
+		background-color: #ffffff;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 24rpx;
+		border-bottom: 1rpx solid #f0f0f0;
+	}
+
+	.header-left,
+	.header-right {
+		width: 160rpx;
+		display: flex;
+		align-items: center;
+	}
+
+	.header-right {
+		justify-content: flex-end;
+	}
+
+	.header-action-text {
+		font-size: 28rpx;
+		color: #34c759;
+	}
+
+	.back-icon {
+		font-size: 32rpx;
+		color: #111827;
+	}
+
+	.back-text {
+		margin-left: 8rpx;
+		font-size: 28rpx;
+		color: #111827;
+	}
+
+	.header-title {
+		flex: 1;
+		text-align: center;
+		font-size: 32rpx;
+		font-weight: 600;
+		color: #111827;
+	}
+
+	.summary-card {
+		margin: 24rpx;
+		padding: 28rpx;
+		background-color: #ffffff;
+		border-radius: 24rpx;
+	}
+
+	.summary-title {
+		font-size: 32rpx;
+		font-weight: 600;
+		color: #111827;
+	}
+
+	.summary-count {
+		display: block;
+		margin-top: 12rpx;
+		font-size: 28rpx;
+		color: #34c759;
+	}
+
+	.summary-tip {
+		display: block;
+		margin-top: 12rpx;
+		font-size: 24rpx;
+		color: #6b7280;
+	}
+
+	.move-bar {
+		margin-top: 16rpx;
+		padding: 16rpx 20rpx;
+		border-radius: 18rpx;
+		background-color: #f3fff6;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.move-bar-text {
+		font-size: 24rpx;
+		color: #16a34a;
+	}
+
+	.move-bar-btn {
+		padding: 8rpx 18rpx;
+		border-radius: 999rpx;
+		background-color: #16a34a;
+	}
+
+	.move-bar-btn-text {
+		font-size: 22rpx;
+		color: #ffffff;
+	}
+
+	.content {
+		height: calc(100vh - var(--status-bar-height) - 88rpx - 180rpx);
+	}
+
+	.sticker-grid {
+		padding: 0 24rpx 24rpx;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 20rpx;
+	}
+
+	.sticker-item {
+		width: 150rpx;
+		height: 150rpx;
+		background-color: #ffffff;
+		border-radius: 24rpx;
+		overflow: hidden;
+		position: relative;
+		transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+	}
+
+	.sticker-item-active {
+		border-width: 4rpx;
+		border-style: solid;
+		border-color: #34c759;
+	}
+
+	.sticker-item-target {
+		border-width: 4rpx;
+		border-style: dashed;
+		border-color: #60a5fa;
+		box-shadow: 0 0 0 6rpx rgba(96, 165, 250, 0.12);
+	}
+
+	.sticker-image {
+		width: 100%;
+		height: 100%;
+	}
+
+	.sticker-sort-mask {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		background-color: rgba(17, 24, 39, 0.22);
+	}
+
+	.sticker-picked-badge {
+		position: absolute;
+		left: 12rpx;
+		top: 12rpx;
+		padding: 6rpx 14rpx;
+		border-radius: 999rpx;
+		background-color: rgba(22, 163, 74, 0.92);
+	}
+
+	.sticker-picked-text {
+		font-size: 20rpx;
+		color: #ffffff;
+	}
+
+	.sticker-target-badge {
+		position: absolute;
+		left: 12rpx;
+		top: 12rpx;
+		padding: 6rpx 14rpx;
+		border-radius: 999rpx;
+		background-color: rgba(59, 130, 246, 0.92);
+	}
+
+	.sticker-target-text {
+		font-size: 20rpx;
+		color: #ffffff;
+	}
+
+	.sticker-drop-hint {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
+		padding: 10rpx 18rpx;
+		border-radius: 999rpx;
+		background-color: rgba(255, 255, 255, 0.94);
+	}
+
+	.sticker-drop-hint-text {
+		font-size: 22rpx;
+		color: #111827;
+	}
+
+	.sticker-remove-badge {
+		position: absolute;
+		top: 12rpx;
+		right: 12rpx;
+		width: 40rpx;
+		height: 40rpx;
+		border-radius: 20rpx;
+		background-color: rgba(17, 24, 39, 0.72);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.sticker-remove-text {
+		font-size: 28rpx;
+		color: #ffffff;
+		line-height: 28rpx;
+	}
+
+	.sticker-sort-actions {
+		position: absolute;
+		left: 12rpx;
+		right: 12rpx;
+		bottom: 12rpx;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12rpx;
+	}
+
+	.sticker-sort-btn {
+		width: calc(50% - 6rpx);
+		height: 44rpx;
+		border-radius: 22rpx;
+		background-color: rgba(255, 255, 255, 0.92);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.sticker-sort-btn-disabled {
+		opacity: 0.4;
+	}
+
+	.sticker-sort-btn-text {
+		font-size: 22rpx;
+		color: #111827;
+	}
+
+	.empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding-top: 200rpx;
+	}
+
+	.empty-icon {
+		font-size: 88rpx;
+		color: #cbd5e1;
+	}
+
+	.empty-title {
+		margin-top: 20rpx;
+		font-size: 30rpx;
+		color: #374151;
+	}
+
+	.empty-tip {
+		margin-top: 12rpx;
+		font-size: 24rpx;
+		color: #9ca3af;
+	}
+</style>

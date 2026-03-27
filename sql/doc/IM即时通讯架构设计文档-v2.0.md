@@ -1416,7 +1416,7 @@ WS 增强（后续）：
 - **撤回**：撤回后消息最终态遵循 10.2；消息体不再展示原图，但个人表情库记录不受影响
 - **转发**：
   - 逐条转发：允许转发 `STICKER`，目标会话收到独立新消息
-  - 合并转发：列表摘要统一显示 `[表情]` 或 `[贴纸]`，详情中渲染静态快照，不展开二次编辑能力
+  - 合并转发：列表摘要统一显示 `[表情]` 或 `[动画表情]`，详情中渲染静态快照，不展开二次编辑能力
 - **收藏/删除**：
   - “收藏到表情”是写入个人表情库，不等于消息收藏（Favorite）
   - 删除个人表情只影响后续发送入口，不影响历史消息渲染与审计
@@ -1525,7 +1525,7 @@ CREATE TABLE `im_user_sticker_recent` (
 - IM 发送暂不新增专用发送接口，继续复用现有：
   - `POST /system/im/message/send`
   - `messageType = 8`
-  - `content` 建议写入轻量摘要：`[贴纸]`
+  - `content` 建议写入轻量摘要：`[动画表情]`
   - `extra` 写入 sticker JSON：`{ stickerId,fileId,thumbFileId?,url?,md5?,width?,height?,source }`
 - `GET /system/im/sticker/list` 建议响应：
   - `recent[]`：最近使用（按 `lastUsedAt` 倒序，建议最多 20）
@@ -1597,7 +1597,7 @@ CREATE TABLE `im_user_sticker_recent` (
 1. 端侧从 `sticker` 面板选择 `StickerItem`
 2. 先调用 `POST /system/im/sticker/recent/use`
 3. 再复用消息发送接口 `POST /system/im/message/send`
-4. 服务端落库 `messageType=8`，摘要统一为 `[贴纸]`
+4. 服务端落库 `messageType=8`，摘要统一为 `[动画表情]`
 5. 会话页、会话列表、转发详情页统一按 `extra` 渲染贴纸
 
 #### 10.4.7 开发顺序（推荐）

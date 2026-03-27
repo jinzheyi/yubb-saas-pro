@@ -64,6 +64,14 @@ public class AppImMessageController {
         return success(messageService.getMessagePage(userId, pageReqVO));
     }
 
+    @PostMapping("/send")
+    @Operation(summary = "发送消息（REST兜底）")
+    public CommonResult<String> sendMessage(@Valid @RequestBody AppImMessageSendReqVO sendReqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        Long messageId = messageService.sendMessage(userId, sendReqVO);
+        return success(messageId == null ? "0" : String.valueOf(messageId));
+    }
+
     @GetMapping("/list-by-chat")
     @Operation(summary = "根据 ChatID 查询消息列表")
     @Parameter(name = "chatId", description = "ChatID", required = true)

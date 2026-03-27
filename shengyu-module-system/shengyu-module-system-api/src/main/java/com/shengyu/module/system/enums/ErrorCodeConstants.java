@@ -210,6 +210,9 @@ public interface ErrorCodeConstants {
     ErrorCode MESSAGE_RECALL_TIMEOUT = new ErrorCode(1_002_030_102, "消息撤回超时");
     ErrorCode MESSAGE_RECALL_PERMISSION_DENIED = new ErrorCode(1_002_030_103, "无权撤回该消息");
     ErrorCode MESSAGE_STATUS_INVALID = new ErrorCode(1_002_030_104, "消息状态转换无效");
+    ErrorCode MESSAGE_TYPE_NOT_SUPPORTED = new ErrorCode(1_002_030_105, "暂不支持的消息类型");
+    ErrorCode STICKER_NOT_EXISTS = new ErrorCode(1_002_030_106, "自定义表情不存在");
+    ErrorCode STICKER_COLLECT_NOT_SUPPORTED = new ErrorCode(1_002_030_107, "该消息暂不支持添加到表情");
     
     // 群组相关 1-002-030-200
     ErrorCode GROUP_NOT_EXISTS = new ErrorCode(1_002_030_200, "群组不存在");

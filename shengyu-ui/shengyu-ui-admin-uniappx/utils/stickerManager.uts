@@ -1,34 +1,156 @@
-/**
- * 自定义表情包管理 (Stickers)
- * 后期可对接服务端 API
- */
+import {
+  StickerItem as ApiStickerItem,
+  StickerListResp,
+  collectSticker,
+  getStickerList,
+  recordStickerRecentUse,
+  removeSticker as removeStickerApi,
+  sortSticker,
+  uploadSticker
+} from '@/api/sticker.uts'
 
 export type StickerItem = {
-	id: string;
-	url: string;
-	md5: string;
+  id: string
+  stickerId: string
+  url: string
+  thumbUrl?: string
+  md5: string
+  fileId?: string
+  thumbFileId?: string
+  name?: string
+  width?: number
+  height?: number
+  mimeType?: string
+  sortNo?: number
 }
 
-/**
- * 模拟 30 个自定义表情包数据
- */
-export function getCustomStickers() : StickerItem[] {
-	const list : StickerItem[] = []
-	for (let i = 1; i <= 30; i++) {
-		list.push({
-			id: `sticker_${i}`,
-			// 这里使用统一的占位图，实际开发中替换为 CDN URL
-			url: `https://picsum.photos/200/200?random=${i}`,
-			md5: `md5_hash_${i}`
-		})
-	}
-	return list
+let cachedVersion: number = 0
+let cachedFavorites: StickerItem[] = []
+let cachedRecent: StickerItem[] = []
+
+function normalizeSticker(item: ApiStickerItem | null): StickerItem | null {
+  if (item == null) {
+    return null
+  }
+  const stickerId = item.stickerId != null ? String(item.stickerId) : ''
+  if (stickerId === '') {
+    return null
+  }
+  return {
+    id: stickerId,
+    stickerId: stickerId,
+    url: item.url || item.thumbUrl || '',
+    thumbUrl: item.thumbUrl,
+    md5: item.md5 || '',
+    fileId: item.fileId != null ? String(item.fileId) : '',
+    thumbFileId: item.thumbFileId != null ? String(item.thumbFileId) : '',
+    name: item.name,
+    width: item.width,
+    height: item.height,
+    mimeType: item.mimeType,
+    sortNo: item.sortNo
+  }
 }
 
-/**
- * 收藏表情 (存入本地存储模拟)
- */
-export function addSticker(url : string) {
-	console.log('执行收藏表情逻辑:', url)
-	// TODO: 调用服务端接口或存入本地存储
+function dedupe(list: StickerItem[]): StickerItem[] {
+  const map = new Map<string, StickerItem>()
+  list.forEach(item => {
+    if (item != null && item.stickerId != null && item.stickerId !== '') {
+      map.set(item.stickerId, item)
+    }
+  })
+  return Array.from(map.values())
+}
+
+export async function refreshCustomStickers(): Promise<StickerItem[]> {
+  const resp = await getStickerList()
+  const favorites = (resp != null && Array.isArray((resp as any).favorites) ? (resp as any).favorites : [])
+    .map((item: ApiStickerItem) => normalizeSticker(item))
+    .filter((item: StickerItem | null): item is StickerItem => item != null)
+  const recent = (resp != null && Array.isArray((resp as any).recent) ? (resp as any).recent : [])
+    .map((item: ApiStickerItem) => normalizeSticker(item))
+    .filter((item: StickerItem | null): item is StickerItem => item != null)
+  cachedVersion = resp != null && (resp as StickerListResp).version != null ? Number((resp as StickerListResp).version) : Date.now()
+  cachedFavorites = dedupe(favorites)
+  cachedRecent = dedupe(recent)
+  return getCustomStickers()
+}
+
+export function getCustomStickers(): StickerItem[] {
+  const recentIds = new Set<string>()
+  cachedRecent.forEach(item => {
+    if (item != null && item.stickerId != null) {
+      recentIds.add(item.stickerId)
+    }
+  })
+  const merged = cachedRecent.concat(cachedFavorites.filter(item => !recentIds.has(item.stickerId)))
+  return dedupe(merged)
+}
+
+export function getFavoriteStickers(): StickerItem[] {
+  return cachedFavorites.slice().sort((a, b) => Number(a.sortNo || 0) - Number(b.sortNo || 0))
+}
+
+export async function uploadCustomSticker(payload: any): Promise<StickerItem> {
+  const result = await uploadSticker(payload)
+  const sticker = normalizeSticker(result)
+  if (sticker == null) {
+    throw new Error('invalid sticker upload result')
+  }
+  const existsIndex = cachedFavorites.findIndex(item => item.stickerId === sticker.stickerId)
+  if (existsIndex > -1) {
+    cachedFavorites.splice(existsIndex, 1, sticker)
+  } else {
+    cachedFavorites.unshift(sticker)
+  }
+  cachedVersion = Date.now()
+  return sticker
+}
+
+export async function collectMessageToSticker(messageId: string): Promise<StickerItem> {
+  const result = await collectSticker(messageId)
+  const sticker = normalizeSticker(result)
+  if (sticker == null) {
+    throw new Error('invalid collect sticker result')
+  }
+  const existsIndex = cachedFavorites.findIndex(item => item.stickerId === sticker.stickerId)
+  if (existsIndex > -1) {
+    cachedFavorites.splice(existsIndex, 1, sticker)
+  } else {
+    cachedFavorites.unshift(sticker)
+  }
+  cachedVersion = Date.now()
+  return sticker
+}
+
+export async function removeSticker(stickerId: string): Promise<void> {
+  await removeStickerApi(stickerId)
+  cachedFavorites = cachedFavorites.filter(item => item.stickerId !== stickerId)
+  cachedRecent = cachedRecent.filter(item => item.stickerId !== stickerId)
+  cachedVersion = Date.now()
+}
+
+export async function updateStickerSort(items: { stickerId: string, sortNo: number }[]): Promise<void> {
+  await sortSticker(items)
+  const sortMap = new Map<string, number>()
+  items.forEach(item => sortMap.set(item.stickerId, item.sortNo))
+  cachedFavorites = cachedFavorites.map(item => ({
+    ...item,
+    sortNo: sortMap.has(item.stickerId) ? (sortMap.get(item.stickerId) || item.sortNo) : item.sortNo
+  })).sort((a, b) => Number(a.sortNo || 0) - Number(b.sortNo || 0))
+  cachedVersion = Date.now()
+}
+
+export async function touchStickerRecent(stickerId: string): Promise<void> {
+  await recordStickerRecentUse(stickerId)
+  const target = cachedFavorites.find(item => item.stickerId === stickerId) || cachedRecent.find(item => item.stickerId === stickerId)
+  if (target == null) {
+    return
+  }
+  cachedRecent = [target].concat(cachedRecent.filter(item => item.stickerId !== stickerId)).slice(0, 20)
+  cachedVersion = Date.now()
+}
+
+export function getStickerVersion(): number {
+  return cachedVersion
 }

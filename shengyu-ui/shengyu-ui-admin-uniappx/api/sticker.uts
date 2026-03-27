@@ -1,0 +1,70 @@
+import { request } from '../utils/request.uts'
+
+export type StickerItem = {
+  stickerId: string
+  fileId?: string
+  thumbFileId?: string
+  name?: string
+  url: string
+  thumbUrl?: string
+  md5?: string
+  width?: number
+  height?: number
+  mimeType?: string
+  sourceType?: number
+  sortNo?: number
+  duplicated?: boolean
+}
+
+export type StickerListResp = {
+  version: number
+  recent: StickerItem[]
+  favorites: StickerItem[]
+}
+
+export function getStickerList(): Promise<StickerListResp> {
+  return request({
+    url: '/system/im/sticker/list',
+    method: 'GET'
+  })
+}
+
+export function uploadSticker(data: any): Promise<StickerItem> {
+  return request({
+    url: '/system/im/sticker/upload',
+    method: 'POST',
+    data: data
+  })
+}
+
+export function collectSticker(messageId: string): Promise<StickerItem> {
+  return request({
+    url: '/system/im/sticker/collect',
+    method: 'POST',
+    data: {
+      messageId: messageId
+    }
+  })
+}
+
+export function removeSticker(stickerId: string): Promise<any> {
+  return request({
+    url: `/system/im/sticker/remove?id=${encodeURIComponent(stickerId)}`,
+    method: 'DELETE'
+  })
+}
+
+export function sortSticker(items: { stickerId: string, sortNo: number }[]): Promise<any> {
+  return request({
+    url: '/system/im/sticker/sort',
+    method: 'PUT',
+    data: { items }
+  })
+}
+
+export function recordStickerRecentUse(stickerId: string): Promise<any> {
+  return request({
+    url: `/system/im/sticker/recent/use?stickerId=${encodeURIComponent(stickerId)}`,
+    method: 'POST'
+  })
+}

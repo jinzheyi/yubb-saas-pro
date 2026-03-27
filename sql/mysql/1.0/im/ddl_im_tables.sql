@@ -357,6 +357,58 @@ CREATE TABLE `im_group_file` (
 ) ENGINE=InnoDB CHARACTER SET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='IM群文件关联表' ROW_FORMAT=DYNAMIC;
 
 -- ----------------------------
+-- Table structure for im_user_sticker
+-- 用户自定义表情表
+-- ----------------------------
+DROP TABLE IF EXISTS `im_user_sticker`;
+CREATE TABLE `im_user_sticker` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `file_id` bigint NOT NULL COMMENT '原图文件ID',
+  `thumb_file_id` bigint DEFAULT NULL COMMENT '缩略图文件ID',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '表情名称',
+  `md5` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '文件MD5或幂等键',
+  `width` int DEFAULT NULL COMMENT '宽度',
+  `height` int DEFAULT NULL COMMENT '高度',
+  `mime_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '媒体类型',
+  `source_type` tinyint NOT NULL DEFAULT 1 COMMENT '来源(1-上传 2-聊天收藏 3-商店)',
+  `source_message_id` bigint DEFAULT NULL COMMENT '来源消息ID',
+  `sort_no` int NOT NULL DEFAULT 0 COMMENT '排序号',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态(1-正常 2-已移除)',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_user_md5_deleted` (`tenant_id`, `user_id`, `md5`, `deleted`) USING BTREE,
+  KEY `idx_user_sort_deleted` (`tenant_id`, `user_id`, `sort_no`, `deleted`) USING BTREE
+) ENGINE=InnoDB CHARACTER SET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='IM用户自定义表情表' ROW_FORMAT=DYNAMIC;
+
+-- ----------------------------
+-- Table structure for im_user_sticker_recent
+-- 用户最近使用表情表
+-- ----------------------------
+DROP TABLE IF EXISTS `im_user_sticker_recent`;
+CREATE TABLE `im_user_sticker_recent` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `sticker_id` bigint NOT NULL COMMENT '表情ID',
+  `last_used_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '最近使用时间',
+  `use_count` int NOT NULL DEFAULT 1 COMMENT '使用次数',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_user_sticker_deleted` (`tenant_id`, `user_id`, `sticker_id`, `deleted`) USING BTREE,
+  KEY `idx_user_last_used_deleted` (`tenant_id`, `user_id`, `last_used_at`, `deleted`) USING BTREE
+) ENGINE=InnoDB CHARACTER SET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='IM用户最近使用表情表' ROW_FORMAT=DYNAMIC;
+
+-- ----------------------------
 -- Table structure for im_group_folder
 -- 群文件夹表: 用于文件夹管理（可选功能）
 -- ----------------------------

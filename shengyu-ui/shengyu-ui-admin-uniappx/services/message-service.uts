@@ -14,7 +14,7 @@ import { MessageBuilder, MessageParser, ImMessage, MentionUser } from '../utils/
 import { getAvatarText, getUserAvatarColor } from '@/utils/avatar.uts'
 import { getUserInfo } from '@/store/user.uts'
 import { getUserDetail } from '@/api/user.uts'
-import { pullMessages as pullMessagesApi } from '@/api/message.uts'
+import { pullMessages as pullMessagesApi, sendMessage as sendMessageApi } from '@/api/message.uts'
 import { badgeService, BadgeUpdateMessage } from './badge-service.uts'
 import { conversationService } from './conversation-service.uts'
 
@@ -51,6 +51,7 @@ export type MessageItem = {
   messageId: string
   sequence?: string
   rev?: string
+  extra?: any
   quoteMessageId?: string
   quoteContent?: string
   quoteSenderName?: string
@@ -597,6 +598,7 @@ export class MessageService {
           messageId: messageIdStr,
           sequence: seqStr,
           rev: revStr,
+          extra: m.extra,
           senderId: senderIdStr,
           receiverId: m.receiverId != null ? m.receiverId.toString() : '0',
           groupId: m.groupId != null ? m.groupId.toString() : '0',
@@ -652,6 +654,25 @@ export class MessageService {
 
   private buildCachedMessageContent(messageType: number, rawContent: any, rawExtra: any, mentions: any[]): any {
     if (messageType === 9 || messageType === MessageType.CUSTOM) {
+      let extraObj: any = rawExtra
+      try {
+        if (typeof extraObj === 'string' && extraObj !== '') {
+          extraObj = JSON.parse(extraObj)
+        }
+      } catch (e) {
+      }
+      let contentObj: any = rawContent
+      try {
+        if (typeof contentObj === 'string' && contentObj !== '') {
+          contentObj = JSON.parse(contentObj)
+        }
+      } catch (e) {
+      }
+      const extraType = extraObj != null && extraObj.type != null ? String(extraObj.type) : ''
+      const contentType = contentObj != null && contentObj.type != null ? String(contentObj.type) : ''
+      if (extraType === 'STICKER' || contentType === 'STICKER') {
+        return { content: rawContent, extra: rawExtra, mentions: mentions }
+      }
       if (rawContent == null) {
         return ''
       }
@@ -940,6 +961,7 @@ export class MessageService {
             messageId: messageIdStr,
             sequence: seqStr,
             rev: revStr,
+            extra: m.extra,
             senderId: senderIdStr,
             receiverId: m.receiverId != null ? m.receiverId.toString() : '0',
             groupId: m.groupId != null ? m.groupId.toString() : '0',
@@ -1503,6 +1525,67 @@ export class MessageService {
     
     return this.sendMessage(message)
   }
+
+  public async sendStickerMessageByRest(
+    chatId: string,
+    receiverId: string,
+    groupId: string,
+    stickerPayload: any
+  ): Promise<MessageItem> {
+    const userInfo = getUserInfo()
+    const currentUser = userInfo?.user
+    const clientMessageId = `stk_${Date.now()}_${Math.floor(Math.random() * 100000)}`
+    const userName = currentUser?.nickname || ''
+    const avatarText = getAvatarText(userName)
+    const avatarBg = getUserAvatarColor(this.currentUserId)
+    const timestamp = Date.now()
+    const messageItem: MessageItem = {
+      id: '0',
+      messageId: clientMessageId,
+      senderId: this.currentUserId,
+      receiverId: receiverId,
+      groupId: groupId,
+      type: 'sticker' as any,
+      content: stickerPayload != null && stickerPayload.url != null ? String(stickerPayload.url) : '',
+      extra: stickerPayload,
+      status: MessageStatus.SENDING,
+      timestamp: timestamp,
+      isSelf: true,
+      showTime: true,
+      avatarText: avatarText,
+      avatarBg: avatarBg,
+      senderName: userName
+    }
+    const resolvedChatId = chatId != null && chatId !== '' ? chatId : this.activeChatId
+    this.addMessageToCache(resolvedChatId, messageItem)
+    this.notifyMessageListeners(messageItem)
+    try {
+      const body: any = {
+        chatId: resolvedChatId,
+        receiverId: receiverId !== '' && receiverId !== '0' ? receiverId : null,
+        groupId: groupId !== '' && groupId !== '0' ? groupId : null,
+        messageType: 8,
+        content: '[动画表情]',
+        extra: JSON.stringify(stickerPayload || {}),
+        clientMessageId: clientMessageId
+      }
+      await sendMessageApi(body)
+      const summary = '[动画表情]'
+      const isGroup = groupId !== '' && groupId !== '0'
+      conversationService.updateConversation(
+        resolvedChatId,
+        8 as any,
+        isGroup ? `我: ${summary}` : summary,
+        timestamp,
+        false,
+        null
+      )
+      return messageItem
+    } catch (e) {
+      this.updateMessageStatus(clientMessageId, MessageStatus.FAILED)
+      throw e
+    }
+  }
   
   /**
    * 发送消息（通用方法）
@@ -1751,6 +1834,7 @@ export class MessageService {
 
     // enterprise: parse rev from header.extra (JSON); default 1
     let revStr: string = '1'
+    let clientMessageId: string = ''
     try {
       const extraRaw: any = (message as any).header != null ? (message as any).header.extra : null
       if (extraRaw != null && extraRaw !== '') {
@@ -1758,9 +1842,13 @@ export class MessageService {
         if (extraObj != null && extraObj.rev != null) {
           revStr = extraObj.rev.toString()
         }
+        if (extraObj != null && extraObj.clientMessageId != null) {
+          clientMessageId = extraObj.clientMessageId.toString()
+        }
       }
     } catch (e) {
       revStr = '1'
+      clientMessageId = ''
     }
 
     // 自己发送的消息：服务端回推用于确认投递（SENDING -> SENT），避免重复插入
@@ -1775,7 +1863,10 @@ export class MessageService {
       let resolvedChatId = this.resolveChatIdFromHeader(message.header)
       this.messageCache.forEach((messages) => {
         messages.forEach(msg => {
-          if (msg.messageId === msgId && msg.status === MessageStatus.SENDING) {
+          const cacheMsgId = msg.messageId != null ? String(msg.messageId) : ''
+          const matchedByClientId = clientMessageId !== '' && cacheMsgId === clientMessageId
+          if ((cacheMsgId === msgId || matchedByClientId) && msg.status === MessageStatus.SENDING) {
+            msg.messageId = msgId
             msg.status = MessageStatus.SENT
             updatedMessage = msg
             try {
@@ -1862,6 +1953,7 @@ export class MessageService {
 	  	messageId: this.normalizeInboundMessageId((message as any).header != null ? (message as any).header.messageId : null) || (message.header.messageId != null ? message.header.messageId.toString() : ''),
       sequence: message.header.sequence != null ? message.header.sequence.toString() : null,
       rev: revStr,
+      extra: (message as any).header != null ? (message as any).header.extra : null,
       senderId: senderIdStr,
       receiverId: message.header.receiverId,
       groupId: message.header.groupId,
@@ -2716,10 +2808,15 @@ export class MessageService {
    * 更新会话
    */
   private updateConversation(chatId: string, message: MessageItem): void {
-    let summary = MessageParser.getSummary({
-      header: { messageType: message.type } as any,
-      body: message.content
-    } as any)
+    let summary = ''
+    if ((message.type as any) === 'sticker') {
+      summary = '[动画表情]'
+    } else {
+      summary = MessageParser.getSummary({
+        header: { messageType: message.type } as any,
+        body: message.content
+      } as any)
+    }
     try {
       const s: any = (message as any).status
       const isRecalled = s === MessageStatus.RECALLED || s === 6 || s === '6'

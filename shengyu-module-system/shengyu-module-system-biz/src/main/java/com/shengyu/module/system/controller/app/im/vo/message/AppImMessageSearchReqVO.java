@@ -8,7 +8,6 @@ import lombok.ToString;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 import static com.shengyu.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
@@ -19,13 +18,15 @@ import static com.shengyu.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH
 @ToString(callSuper = true)
 public class AppImMessageSearchReqVO extends PageParam {
 
-    @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "ChatID不能为空")
+    @Schema(description = "ChatID(会话内搜索时传，会话全局搜索可不传)", example = "1")
     private Long chatId;
 
     @Schema(description = "搜索关键词", requiredMode = Schema.RequiredMode.REQUIRED, example = "会议")
     @NotBlank(message = "搜索关键词不能为空")
     private String keyword;
+
+    @Schema(description = "消息类型(可选)", example = "8")
+    private Integer messageType;
 
     @Schema(description = "开始时间", example = "2024-01-01 00:00:00")
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)

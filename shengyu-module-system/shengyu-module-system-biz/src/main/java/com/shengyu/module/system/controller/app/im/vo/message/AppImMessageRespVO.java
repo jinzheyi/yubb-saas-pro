@@ -47,6 +47,12 @@ public class AppImMessageRespVO {
     @Schema(description = "发送时间", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDateTime sendTime;
 
+    @Schema(description = "会话名称", example = "产品群")
+    private String conversationName;
+
+    @Schema(description = "会话头像", example = "https://...")
+    private String conversationAvatar;
+
     @Schema(description = "消息版本号（最终态：撤回/编辑/删除等变更时递增，用于乱序合并）", example = "1")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long rev;

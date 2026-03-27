@@ -723,6 +723,9 @@ export class MessageParser {
             if (obj != null && obj.type != null && String(obj.type) === 'FORWARD_COMBINE') {
               return '[聊天记录]'
             }
+            if (obj != null && obj.type != null && String(obj.type) === 'STICKER') {
+              return '[动画表情]'
+            }
           }
         } catch (e) {
         }

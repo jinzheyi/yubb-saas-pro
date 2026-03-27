@@ -204,6 +204,13 @@
 			}
 		},
 		{
+			"path": "pages/message/sticker-manage",
+			"style": {
+				"navigationBarTitleText": "表情管理",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/profile/favorites",
 			"style": {
 				"navigationBarTitleText": "我的收藏",

@@ -828,6 +828,9 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         if ("FORWARD_COMBINE".equals(customType)) {
                             return "[聊天记录]";
                         }
+                        if ("STICKER".equals(customType)) {
+                            return "[动画表情]";
+                        }
                     } catch (Exception ignore) {
                     }
                     return "[自定义消息]";

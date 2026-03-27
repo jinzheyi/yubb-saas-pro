@@ -23,6 +23,8 @@ export function mapDbTypeToString(dbType: number): string {
     case 4: return 'video'
     case 5: return 'file'
     case 6: return 'location'
+    case 7: return 'emoji'
+    case 8: return 'sticker'
     case 9: return 'custom'
     default: return 'unknown'
   }
@@ -338,7 +340,7 @@ export function isEmptyContent(content: any): boolean {
  * @param maxLength 最大长度
  * @returns 摘要文本
  */
-export function getMessageSummary(type: string, content: any, maxLength: number = 50): string {
+export function getMessageSummary(type: any, content: any, maxLength: number = 50): string {
   switch (type) {
     case 'text':
       const text = typeof content === 'string' ? content : content.content || ''
@@ -352,7 +354,14 @@ export function getMessageSummary(type: string, content: any, maxLength: number 
     case 'file':
       return '[文件]'
     case 'location':
+    case 6:
       return '[位置]'
+    case 'emoji':
+    case 7:
+      return '[表情]'
+    case 'sticker':
+    case 8:
+      return '[动画表情]'
     case 'quote':
       return '[引用回复]'
     default:

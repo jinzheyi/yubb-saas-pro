@@ -310,7 +310,7 @@
 		{ id: 'nodisturb', icon: '\ue63a', color: '#666', nameKey: 'message.categories.noDisturb' }
 	]
 
-	function buildConversationPreview(messageType : number, raw : string) : string {
+	function buildConversationPreview(messageType : any, raw : string) : string {
 		const trimmed = raw != null ? raw.toString().trim().replace(/\r?\n+/g, ' ') : ''
 		if (trimmed !== '') {
 			if (trimmed.length > 100) {
@@ -318,6 +318,8 @@
 			}
 			return trimmed
 		}
+		if (messageType === 'sticker') return '[动画表情]'
+		if (messageType === 'custom') return '[自定义消息]'
 		if (messageType === 1) {
 			return ''
 		}
@@ -327,7 +329,7 @@
 		if (messageType === 5) return '[文件]'
 		if (messageType === 6) return '[位置]'
 		if (messageType === 7) return '[表情]'
-		if (messageType === 8) return '[贴纸]'
+		if (messageType === 8) return '[动画表情]'
 		if (messageType === 10) return '[系统消息]'
 		return ''
 	}

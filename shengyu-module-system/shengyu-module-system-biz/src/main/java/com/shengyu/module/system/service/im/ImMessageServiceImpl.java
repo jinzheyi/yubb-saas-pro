@@ -17,6 +17,7 @@ import com.shengyu.module.system.controller.app.im.vo.message.*;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
+import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.*;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
@@ -247,6 +248,9 @@ public class ImMessageServiceImpl implements ImMessageService {
     private ImGroupService imGroupService;
 
     @Resource
+    private ImGroupMapper groupMapper;
+
+    @Resource
     private AdminUserMapper userMapper;
 
     @Resource
@@ -311,6 +315,23 @@ public class ImMessageServiceImpl implements ImMessageService {
                 throw ex;
             } catch (Exception ex) {
                 throw ServiceExceptionUtil.invalidParamException("FILE 消息 extra 不是合法 JSON：{}", ex.getMessage());
+            }
+        } else if (dbMessageType == 8) {
+            if (StrUtil.isBlank(sendReqVO.getExtra())) {
+                throw ServiceExceptionUtil.invalidParamException("STICKER 消息缺少 extra：必须包含 stickerId/fileId/url 等字段");
+            }
+            try {
+                JSONObject obj = JSONUtil.parseObj(sendReqVO.getExtra());
+                Long stickerId = obj.getLong("stickerId", null);
+                Long fileId = obj.getLong("fileId", null);
+                String url = obj.getStr("url", "");
+                if (stickerId == null || (fileId == null && StrUtil.isBlank(url))) {
+                    throw ServiceExceptionUtil.invalidParamException("STICKER 消息 extra 字段不完整：必须包含 stickerId 和 fileId/url");
+                }
+            } catch (ServiceException ex) {
+                throw ex;
+            } catch (Exception ex) {
+                throw ServiceExceptionUtil.invalidParamException("STICKER 消息 extra 不是合法 JSON：{}", ex.getMessage());
             }
         }
         message.setContent(sendReqVO.getContent());
@@ -899,6 +920,18 @@ public class ImMessageServiceImpl implements ImMessageService {
                             .setContent(StrUtil.nullToEmpty(sendReqVO.getContent()))
                             .build();
                     break;
+                case 8: // 自定义贴纸
+                    messageType = MessageType.CUSTOM;
+                    JSONObject stickerPayload = StrUtil.isNotBlank(sendReqVO.getExtra()) ? JSONUtil.parseObj(sendReqVO.getExtra()) : JSONUtil.createObj();
+                    stickerPayload.set("type", "STICKER");
+                    if (StrUtil.isBlank(stickerPayload.getStr("url", ""))) {
+                        stickerPayload.set("url", StrUtil.nullToEmpty(sendReqVO.getContent()));
+                    }
+                    messageBody = TextMessage.newBuilder()
+                            .setContent(stickerPayload.toString())
+                            .build();
+                    headerExtra = stickerPayload.toString();
+                    break;
                 default:
                     // 默认使用系统通知类型
                     messageType = MessageType.SYSTEM_NOTIFY;
@@ -917,11 +950,17 @@ public class ImMessageServiceImpl implements ImMessageService {
             try {
                 JSONObject obj = StrUtil.isNotBlank(headerExtra) ? JSONUtil.parseObj(headerExtra) : JSONUtil.createObj();
                 obj.set("rev", finalRev);
+                if (StrUtil.isNotBlank(sendReqVO.getClientMessageId())) {
+                    obj.set("clientMessageId", sendReqVO.getClientMessageId());
+                }
                 extraWithRev = obj.toString();
             } catch (Exception e) {
                 try {
                     JSONObject obj = JSONUtil.createObj();
                     obj.set("rev", finalRev);
+                    if (StrUtil.isNotBlank(sendReqVO.getClientMessageId())) {
+                        obj.set("clientMessageId", sendReqVO.getClientMessageId());
+                    }
                     extraWithRev = obj.toString();
                 } catch (Exception ignore) {
                     extraWithRev = null;
@@ -1078,6 +1117,36 @@ public class ImMessageServiceImpl implements ImMessageService {
         } else {
             Long receiverId = Objects.equals(chat.getSingleUser1(), currentUserId) ? chat.getSingleUser2() : chat.getSingleUser1();
             respVO.setReceiverId(receiverId);
+        }
+    }
+
+    private void fillConversationInfo(AppImMessageRespVO respVO, Long currentUserId) {
+        if (respVO.getChatId() == null) {
+            return;
+        }
+        ImChatDO chat = chatMapper.selectById(respVO.getChatId());
+        if (chat == null) {
+            return;
+        }
+        if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
+            if (chat.getGroupId() == null) {
+                return;
+            }
+            ImGroupDO group = groupMapper.selectById(chat.getGroupId());
+            if (group != null) {
+                respVO.setConversationName(group.getName());
+                respVO.setConversationAvatar(group.getAvatar());
+            }
+            return;
+        }
+        Long otherUserId = Objects.equals(chat.getSingleUser1(), currentUserId) ? chat.getSingleUser2() : chat.getSingleUser1();
+        if (otherUserId == null) {
+            return;
+        }
+        AdminUserDO otherUser = userMapper.selectById(otherUserId);
+        if (otherUser != null) {
+            respVO.setConversationName(otherUser.getNickname());
+            respVO.setConversationAvatar(otherUser.getAvatar());
         }
     }
 
@@ -1860,8 +1929,49 @@ public class ImMessageServiceImpl implements ImMessageService {
 
     @Override
     public PageResult<AppImMessageRespVO> searchMessages(Long userId, AppImMessageSearchReqVO searchReqVO) {
-        // Route-A：搜索需要全文索引/ES，暂不支持
-        throw exception(MESSAGE_SEND_FAILED);
+        if (searchReqVO == null) {
+            return new PageResult<>(Collections.emptyList(), 0L);
+        }
+        String keyword = StrUtil.trimToEmpty(searchReqVO.getKeyword());
+        if (StrUtil.isBlank(keyword)) {
+            return new PageResult<>(Collections.emptyList(), 0L);
+        }
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        if (searchReqVO.getChatId() != null) {
+            ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, searchReqVO.getChatId());
+            if (chatUser == null) {
+                return new PageResult<>(Collections.emptyList(), 0L);
+            }
+        }
+        int pageNo = searchReqVO.getPageNo() != null && searchReqVO.getPageNo() > 0 ? searchReqVO.getPageNo() : 1;
+        int pageSize = searchReqVO.getPageSize() != null && searchReqVO.getPageSize() > 0 ? searchReqVO.getPageSize() : 20;
+        long offset = (long) (pageNo - 1) * pageSize;
+        Long total = chatMessageMapper.countSearchPageByUser(tenantId, userId, searchReqVO.getChatId(), keyword,
+                searchReqVO.getMessageType(), searchReqVO.getStartTime(), searchReqVO.getEndTime());
+        if (total == null || total <= 0) {
+            return new PageResult<>(Collections.emptyList(), 0L);
+        }
+        List<ImChatMessageDO> messages = chatMessageMapper.selectSearchPageByUser(tenantId, userId, searchReqVO.getChatId(), keyword,
+                searchReqVO.getMessageType(), searchReqVO.getStartTime(), searchReqVO.getEndTime(), offset, (long) pageSize);
+        List<AppImMessageRespVO> respVOList = messages.stream()
+                .filter(Objects::nonNull)
+                .map(message -> {
+                    AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
+                    respVO.setChatId(message.getChatId());
+                    respVO.setSequence(message.getSequence());
+                    respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
+                    fillSenderInfo(respVO, message.getSenderId());
+                    respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
+                    fillChatTargetFields(respVO, userId);
+                    fillConversationInfo(respVO, userId);
+                    applyReeditFieldsForCurrentUser(respVO, message, userId);
+                    sanitizeRecalledMessage(respVO);
+                    return respVO;
+                }).collect(Collectors.toList());
+        return new PageResult<>(respVOList, total);
     }
 
     /**
@@ -1884,7 +1994,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             case 7: // 表情包
                 return "[表情]";
             case 8: // 自定义贴纸
-                return "[贴纸]";
+                return "[动画表情]";
             case 10: // 系统消息
                 return "[系统消息]";
             default:

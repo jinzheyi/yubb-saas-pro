@@ -944,7 +944,7 @@ public class ImConversationServiceImpl implements ImConversationService {
             case 7:
                 return "[表情]";
             case 8:
-                return "[贴纸]";
+                return "[动画表情]";
             case 10:
                 return "[系统消息]";
             default:

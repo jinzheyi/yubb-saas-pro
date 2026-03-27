@@ -194,6 +194,9 @@ function buildPreview(messageType: number, content: any): string {
 			if (body != null && body.type != null && String(body.type) === 'FORWARD_COMBINE') {
 				return '[聊天记录]'
 			}
+			if (body != null && body.type != null && String(body.type) === 'STICKER') {
+				return '[动画表情]'
+			}
 			return '[消息]'
 		}
 		if (messageType === 2 || messageType === 101) return '[图片]'
@@ -201,6 +204,8 @@ function buildPreview(messageType: number, content: any): string {
 		if (messageType === 4 || messageType === 103) return '[视频]'
 		if (messageType === 5 || messageType === 104) return '[文件]'
 		if (messageType === 6 || messageType === 105) return '[位置]'
+		if (messageType === 7) return '[表情]'
+		if (messageType === 8) return '[动画表情]'
 		return '[消息]'
 	} catch (e) {
 		return '[消息]'

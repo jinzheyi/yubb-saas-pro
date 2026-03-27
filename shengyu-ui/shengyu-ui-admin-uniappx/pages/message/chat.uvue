@@ -322,8 +322,11 @@
 					<!-- 收藏表情页签 -->
 					<view class="sticker-grid" v-else-if="currentEmojiTab === 'sticker'">
 						<!-- 添加按钮 -->
-						<view class="sticker-item-add">
+						<view class="sticker-item-add" @click="handleStickerAddTap">
 							<text class="iconfont sticker-add-icon">&#xe726;</text>
+						</view>
+						<view class="sticker-item-manage" @click="handleStickerManageTap">
+							<text class="sticker-manage-text">管理</text>
 						</view>
 						<!-- 表情列表 -->
 						<view 
@@ -473,7 +476,7 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { emojiList, emojiMap } from '../../utils/emojiData.uts'
 	import { parseMessageText as parseEmojiTokens, type MessageToken as EmojiToken } from '../../utils/emojiParser.uts'
-	import { getCustomStickers, StickerItem } from '../../utils/stickerManager.uts'
+	import { getCustomStickers, StickerItem, refreshCustomStickers, uploadCustomSticker, collectMessageToSticker, touchStickerRecent } from '../../utils/stickerManager.uts'
 	import { messageService, MessageItem as ServiceMessageItem, ConversationItem } from '../../services/message-service.uts'
 	import { badgeService } from '../../services/badge-service.uts'
 	import { MessageType, wsManager } from '../../utils/websocket.uts'
@@ -499,7 +502,7 @@
 	import { groupService, type GroupMember } from '../../services/group-service.uts'
 
 	import { uploadGroupFile, getFilePresignedGetUrl } from '../../api/file.uts'
-	import { navToFilePreview } from '../../utils/nav.uts'
+	import { navToFilePreview, navToStickerManage } from '../../utils/nav.uts'
 	import { readReceiptService } from '../../services/read-receipt-service.uts'
 	import {
 		BASE_URL as CONFIG_BASE_URL,
@@ -508,6 +511,7 @@
 	import { getString, remove, setJsonObject } from '../../utils/storage.uts'
 
 	const { t } = useI18n()
+	const STICKER_LIMIT = 150
 	
 	// 聊天类型：single(单聊) 或 group(群聊)
 	const chatType = ref('single')
@@ -1031,7 +1035,7 @@
 	const loading = ref(false)
 	const hasMore = ref(true)
 
-	const stickerList = ref<StickerItem[]>(getCustomStickers())
+	const stickerList = ref<StickerItem[]>([])
 
 	const filteredMentionMembers = computed(() => {
 		const kw = mentionKeyword.value != null ? mentionKeyword.value.trim().toLowerCase() : ''
@@ -1112,6 +1116,12 @@
 		
 		// 2. 设置消息服务的当前用户
 		messageService.setCurrentUser(currentUserId.value, currentTenantId.value)
+		try {
+			stickerList.value = await refreshCustomStickers()
+		} catch (e) {
+			console.warn('[Chat] 加载自定义表情失败:', e)
+			stickerList.value = getCustomStickers()
+		}
 		
 		// 3. 如果没有 chatId 但有 groupId/targetId，则查询会话
 		if ((!chatId.value || chatId.value === '' || chatId.value === '0') && 
@@ -1984,8 +1994,8 @@
 			sequence: sequenceStr,
 			senderId: senderIdStr,
 			receiverId: receiverIdStr,
-			type: isRecalled ? 'text' : getMessageTypeString(msg.messageType),
-			content: isRecalled ? (isSelfVal ? '你撤回了一条消息' : `${senderNickname} 撤回了一条消息`) : getMessageContent(msg.messageType, content),
+			type: isRecalled ? 'text' : resolveUiMessageType(msg.messageType, content, extraContent),
+			content: isRecalled ? (isSelfVal ? '你撤回了一条消息' : `${senderNickname} 撤回了一条消息`) : (resolveUiMessageType(msg.messageType, content, extraContent) === 'sticker' ? extractStickerUrl(content, extraContent) : getMessageContent(msg.messageType, content)),
 			isSelf: isSelfVal,
 			time: msg.sendTime || msg.createTime || '',
 			timestamp: new Date(msg.sendTime || msg.createTime || Date.now()).getTime(),
@@ -2039,7 +2049,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			sequence: sequenceStr,
 			senderId: senderIdStr,
 			receiverId: receiverIdStr,
-			type: getMessageTypeString(msg.type),
+			type: resolveUiMessageType(msg.type, msg.content, (msg as any).extra),
 			content: getServiceMessageContent(msg),
 			isSelf: msg.isSelf,
 			time: new Date(msg.timestamp).toLocaleString(),
@@ -2083,6 +2093,82 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return uiMessage
 		})
 	}
+
+	function parseStickerPayload(raw : any, extra ?: any) : any {
+		let body : any = raw
+		try {
+			if (typeof body === 'string' && body !== '') {
+				body = JSON.parse(body)
+			}
+		} catch (e) {
+		}
+		if (body != null && typeof body === 'object') {
+			if (body.extra != null) {
+				let nestedExtra : any = body.extra
+				try {
+					if (typeof nestedExtra === 'string' && nestedExtra !== '') {
+						nestedExtra = JSON.parse(nestedExtra)
+					}
+				} catch (e) {
+				}
+				if (nestedExtra != null && typeof nestedExtra === 'object') {
+					if (nestedExtra.type != null && String(nestedExtra.type) === 'STICKER') {
+						return nestedExtra
+					}
+					if (nestedExtra.stickerId != null || nestedExtra.fileId != null) {
+						return nestedExtra
+					}
+				}
+			}
+			if (body.type != null && String(body.type) === 'STICKER') {
+				return body
+			}
+			if (body.stickerId != null || body.fileId != null) {
+				return body
+			}
+		}
+		let extraObj : any = extra
+		try {
+			if (typeof extraObj === 'string' && extraObj !== '') {
+				extraObj = JSON.parse(extraObj)
+			}
+		} catch (e) {
+		}
+		if (extraObj != null && typeof extraObj === 'object') {
+			if (extraObj.type != null && String(extraObj.type) === 'STICKER') {
+				return extraObj
+			}
+			if (extraObj.stickerId != null || extraObj.fileId != null) {
+				return extraObj
+			}
+		}
+		return null
+	}
+
+	function resolveUiMessageType(messageType : any, rawContent : any, extra ?: any) : string {
+		const baseType = getMessageTypeString(messageType)
+		if (baseType === 'custom') {
+			const stickerPayload = parseStickerPayload(rawContent, extra)
+			if (stickerPayload != null) {
+				return 'sticker'
+			}
+		}
+		return baseType
+	}
+
+	function extractStickerUrl(rawContent : any, extra ?: any) : string {
+		const payload = parseStickerPayload(rawContent, extra)
+		if (payload == null) {
+			return ''
+		}
+		if (payload.url != null && String(payload.url) !== '') {
+			return String(payload.url)
+		}
+		if (payload.thumbUrl != null && String(payload.thumbUrl) !== '') {
+			return String(payload.thumbUrl)
+		}
+		return ''
+	}
 	
 	/**
 	 * 获取消息类型字符串
@@ -2101,6 +2187,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			4: 'video',
 			5: 'file',
 			6: 'location',
+			7: 'emoji',
+			8: 'sticker',
 			9: 'custom',
 			// WebSocket/Protobuf 格式
 			100: 'text',
@@ -2123,7 +2211,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		// 先转换为字符串类型
 		const typeStr = getMessageTypeString(messageType)
 		
-		if (typeStr === 'text' || typeStr === 'quote') {
+		if (typeStr === 'text' || typeStr === 'quote' || typeStr === 'emoji') {
 			// 文本消息
 			return content.content || content
 		} else if (typeStr === 'image') {
@@ -2154,6 +2242,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else if (typeStr === 'location') {
 			// 位置消息
 			return content.address || content
+		} else if (typeStr === 'sticker') {
+			return extractStickerUrl(content)
 		} else if (typeStr === 'custom') {
 			// 合并转发等自定义消息：保留原始 JSON 字符串，由 getForwardCombineBody 解析
 			// 避免多次 parse/stringify 导致格式异常或显示为 [自定义消息]
@@ -2174,7 +2264,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	 * 获取服务消息的内容
 	 */
 	function getServiceMessageContent(msg : ServiceMessageItem) : string {
-		const typeStr = getMessageTypeString(msg.type)
+		const typeStr = resolveUiMessageType(msg.type, msg.content, (msg as any).extra)
 		// 安全地解析内容
 		let content : any
 		try {
@@ -2184,7 +2274,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			content = msg.content
 		}
 
-		if (typeStr === 'text' || typeStr === 'quote') {
+		if (typeStr === 'text' || typeStr === 'quote' || typeStr === 'emoji') {
 			return content?.content != null ? String(content.content) : (content != null ? String(content) : '')
 		} else if (typeStr === 'image') {
 			if (content && typeof content === 'object') {
@@ -2208,6 +2298,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return content != null ? String(content) : ''
 		} else if (typeStr === 'location') {
 			return content?.address != null ? String(content.address) : (content != null ? String(content) : '')
+		} else if (typeStr === 'sticker') {
+			return extractStickerUrl(content, (msg as any).extra)
 		} else if (typeStr === 'custom') {
 			// 合并转发等自定义消息：保留原始 JSON 字符串，由 getForwardCombineBody 解析
 			if (content && typeof content === 'object') {
@@ -2465,6 +2557,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return isRecallTip(text) ? '[消息已撤回]' : text
 		}
 		if (msg.type === 'image') return '[图片]'
+		if (msg.type === 'emoji') return '[表情]'
+		if (msg.type === 'sticker') return '[动画表情]'
 		if (msg.type === 'voice') return '[语音]'
 		if (msg.type === 'video') return '[视频]'
 		if (msg.type === 'file') {
@@ -2702,7 +2796,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			rev: (message as any).rev != null ? String((message as any).rev) : '1',
 			senderId: message.senderId.toString(),
 			receiverId: message.receiverId.toString(),
-			type: getMessageTypeString(message.type),
+			type: resolveUiMessageType(message.type, message.content, (message as any).extra),
 			content: getServiceMessageContent(message),
 			sequence: (message as any).sequence != null ? String((message as any).sequence) : null,
 			groupId: (message as any).groupId != null ? String((message as any).groupId) : null,
@@ -3340,15 +3434,71 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		insertEmojiIntoComposer(item)
 	}
 
-	function handleStickerPanelItemTap(item : StickerItem): void {
-		messages.value.push(createMessage({
-			type: 'sticker',
-			content: item.url,
-			isSelf: true,
-			isSticker: true
-		}))
-		scrollToBottom()
-		showEmojiMenu.value = false
+	async function handleStickerAddTap(): Promise<void> {
+		if (stickerList.value.length >= STICKER_LIMIT) {
+			uni.showToast({ title: `最多添加${STICKER_LIMIT}张表情`, icon: 'none' })
+			return
+		}
+		try {
+			const paths = await chooseImage(1)
+			if (paths == null || paths.length === 0) {
+				return
+			}
+			const uploadResult = await uploadFileAndReturnId(paths[0], {
+				directory: `im/sticker/${currentUserId.value}`,
+				showToast: false
+			})
+			const data: any = uploadResult != null ? (uploadResult as any).data : null
+			const uploaded = await uploadCustomSticker({
+				fileId: data != null && data.fileId != null ? String(data.fileId) : '',
+				url: data != null && data.url != null ? String(data.url) : '',
+				name: data != null && data.name != null ? String(data.name) : ''
+			})
+			stickerList.value = getCustomStickers()
+			uni.showToast({ title: '已添加到表情', icon: 'success' })
+			await handleStickerPanelItemTap(uploaded)
+		} catch (e) {
+			console.error('[Chat] 上传自定义表情失败:', e)
+			uni.showToast({ title: '添加失败', icon: 'none' })
+		}
+	}
+
+	function handleStickerManageTap(): void {
+		navToStickerManage()
+	}
+
+	async function handleStickerPanelItemTap(item : StickerItem): Promise<void> {
+		try {
+			await touchStickerRecent(item.stickerId)
+		} catch (e) {
+			console.warn('[Chat] 更新最近使用失败:', e)
+		}
+		try {
+			const payload: any = {
+				type: 'STICKER',
+				stickerId: item.stickerId,
+				fileId: item.fileId || '',
+				thumbFileId: item.thumbFileId || '',
+				url: item.url,
+				thumbUrl: item.thumbUrl || '',
+				md5: item.md5 || '',
+				width: item.width || 0,
+				height: item.height || 0,
+				mimeType: item.mimeType || ''
+			}
+			await (messageService as any).sendStickerMessageByRest(
+				chatId.value,
+				getReceiverIdForMessage(),
+				getGroupIdForMessage(),
+				payload
+			)
+			stickerList.value = getCustomStickers()
+			scrollToBottom()
+			showEmojiMenu.value = false
+		} catch (e) {
+			console.error('[Chat] 发送贴纸失败:', e)
+			uni.showToast({ title: '发送失败', icon: 'none' })
+		}
 	}
 
 	function handleEmojiDeleteTap(): void {
@@ -4740,6 +4890,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         
         // 根据消息类型确定菜单项
         const isRestricted = msg.type === 'voice' || msg.type === 'location'
+        const canCollectSticker = msg.type === 'image' || msg.type === 'sticker' || msg.type === 'emoji'
         
         // 基础菜单项
         let menuItems : any[] = []
@@ -4760,6 +4911,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                 { key: 'multi', labelKey: 'chat.menu.multi', icon: '\ue69d' },
                 { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' }
             ]
+        }
+        if (!canCollectSticker) {
+            menuItems = menuItems.filter(item => item.key !== 'favorite')
+        }
+        if (msg.type !== 'text') {
+            menuItems = menuItems.filter(item => item.key !== 'copy')
         }
         
         // 企业级撤回：仅允许撤回自己发送且在时效窗口内的消息（后端也会兜底校验）
@@ -4947,10 +5104,40 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                     }
                 })
             } else if (action === 'favorite') {
-                if (msg.type !== 'voice' && msg.type !== 'location') {
-                    stickerList.value.unshift({ id: Date.now().toString(), url: msg.content })
+                if (msg.type !== 'emoji' && (msg.messageId == null || msg.messageId === '' || msg.messageId === '0')) {
+                    uni.showToast({ title: '当前消息不可收藏', icon: 'none' })
+                    return
                 }
-                uni.showToast({ title: t('chat.menu.favorite'), icon: 'none' })
+                if (stickerList.value.length >= STICKER_LIMIT) {
+                    uni.showToast({ title: `最多添加${STICKER_LIMIT}张表情`, icon: 'none' })
+                    return
+                }
+                try {
+                    if (msg.type === 'emoji') {
+                        const emojiPath = msg.content != null ? String(msg.content) : ''
+                        if (emojiPath === '') {
+                            uni.showToast({ title: '当前表情不可收藏', icon: 'none' })
+                            return
+                        }
+                        const uploadResult = await uploadFileAndReturnId(emojiPath, {
+                            directory: `im/sticker/${currentUserId.value}`,
+                            showToast: false
+                        })
+                        const data: any = uploadResult != null ? (uploadResult as any).data : null
+                        await uploadCustomSticker({
+                            fileId: data != null && data.fileId != null ? String(data.fileId) : '',
+                            url: data != null && data.url != null ? String(data.url) : emojiPath,
+                            name: 'emoji'
+                        })
+                    } else {
+                        await collectMessageToSticker(String(msg.messageId))
+                    }
+                    stickerList.value = getCustomStickers()
+                    uni.showToast({ title: '已添加到表情', icon: 'success' })
+                } catch (e) {
+                    console.error('[Chat] 收藏到表情失败:', e)
+                    uni.showToast({ title: '添加失败', icon: 'none' })
+                }
             } else if (action === 'multi') {
                 multiSelectMode.value = true
                 // 延迟滚动，等待布局更新
@@ -5954,6 +6141,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		wsManager.setRealtimeBizActive(true)
 		initVisibleReadObserver()
 		startReeditTicker()
+		refreshCustomStickers().then(list => {
+			stickerList.value = list
+		}).catch(() => {
+		})
 		try {
 			if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
 				messageService.setActiveChatId(chatId.value)
@@ -7212,6 +7403,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		align-items: center;
 	}
 
+	.sticker-item-manage {
+		width: 25%;
+		height: 85px;
+		justify-content: center;
+		align-items: center;
+	}
+
 	.sticker-add-icon {
 		font-size: 30px;
 		color: #8F959E;
@@ -7224,6 +7422,20 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		border-width: 1px;
 		border-color: #E5E5E5;
 		border-style: dashed;
+	}
+
+	.sticker-manage-text {
+		font-size: 14px;
+		color: #8F959E;
+		background-color: #FFFFFF;
+		width: 65px;
+		height: 65px;
+		border-radius: 8px;
+		text-align: center;
+		line-height: 65px;
+		border-width: 1px;
+		border-color: #E5E5E5;
+		border-style: solid;
 	}
 
 	.sticker-item {
