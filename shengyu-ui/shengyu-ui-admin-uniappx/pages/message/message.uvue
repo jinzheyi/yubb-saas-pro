@@ -67,7 +67,12 @@
 						</view>
 						<view class="message-bottom">
 							<text v-if="item.lastMessageHasAtMe" class="atme-label">[有人@我]</text>
-							<text class="message-desc">{{ item.lastMessageContent }}</text>
+							<view class="message-desc">
+								<template v-for="(token, tokenIndex) in item.lastMessagePreviewTokens" :key="'pinned-token-' + item.chatId + '-' + tokenIndex">
+									<image v-if="token.type === 'emoji'" class="message-desc-emoji" :src="token.content" mode="aspectFit" />
+									<text v-else class="message-desc-text">{{ token.content }}</text>
+								</template>
+							</view>
 							<text v-if="item.noDisturb" class="iconfont nodisturb-icon">&#xe63a;</text>
 						</view>
 					</view>
@@ -109,7 +114,12 @@
 						</view>
 						<view class="message-bottom">
 							<text v-if="item.lastMessageHasAtMe" class="atme-label">[有人@我]</text>
-							<text class="message-desc">{{ item.lastMessageContent }}</text>
+							<view class="message-desc">
+								<template v-for="(token, tokenIndex) in item.lastMessagePreviewTokens" :key="'normal-token-' + item.chatId + '-' + tokenIndex">
+									<image v-if="token.type === 'emoji'" class="message-desc-emoji" :src="token.content" mode="aspectFit" />
+									<text v-else class="message-desc-text">{{ token.content }}</text>
+								</template>
+							</view>
 							<text v-if="item.noDisturb" class="iconfont nodisturb-icon">&#xe63a;</text>
 						</view>
 					</view>
@@ -150,6 +160,7 @@
 	import { getConversationAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { wsManager } from '../../utils/websocket.uts'
 	import { encodeIdParam } from '../../utils/id-param.uts'
+	import { parseMessageText as parseEmojiTokens, type MessageToken as EmojiToken } from '../../utils/emojiParser.uts'
 
 	const { t } = useI18n()
 
@@ -219,6 +230,7 @@
 		const now = Date.now()
 		const lastMessageTime = serverConv.lastMessageTime ? new Date(serverConv.lastMessageTime).getTime() : now
 		const isGroup = serverConv.conversationType === 2
+		const previewText = buildConversationPreview(serverConv.lastMessageType || 0, serverConv.lastMessageContent || '')
 		
 		return {
 			chatId: serverConv.chatId != null ? serverConv.chatId.toString() : '0',
@@ -227,7 +239,8 @@
 			categoryId: getCategoryId(serverConv),
 			targetName: serverConv.targetName || '未知',
 			lastMessageType: serverConv.lastMessageType || 0,
-			lastMessageContent: buildConversationPreview(serverConv.lastMessageType || 0, serverConv.lastMessageContent || ''),
+			lastMessageContent: previewText,
+			lastMessagePreviewTokens: buildConversationPreviewTokens(previewText),
 			lastMessageTime: lastMessageTime,
 			avatarBg: getConversationAvatarColor(serverConv.conversationType, serverConv.targetId),
 			avatarText: getAvatarText(serverConv.targetName || ''),
@@ -298,7 +311,7 @@
 	]
 
 	function buildConversationPreview(messageType : number, raw : string) : string {
-		const trimmed = raw != null ? raw.toString().trim() : ''
+		const trimmed = raw != null ? raw.toString().trim().replace(/\r?\n+/g, ' ') : ''
 		if (trimmed !== '') {
 			if (trimmed.length > 100) {
 				return trimmed.substring(0, 100) + '...'
@@ -317,6 +330,20 @@
 		if (messageType === 8) return '[贴纸]'
 		if (messageType === 10) return '[系统消息]'
 		return ''
+	}
+
+	function buildConversationPreviewTokens(preview: string): EmojiToken[] {
+		if (preview == null || preview === '') {
+			return [] as EmojiToken[]
+		}
+		try {
+			return parseEmojiTokens(preview)
+		} catch (e) {
+			return [{
+				type: 'text',
+				content: preview
+			} as EmojiToken]
+		}
 	}
 
 	// 消息列表原始数据
@@ -353,6 +380,7 @@
 			const cachedConversations = messageService.getConversations()
 			if (cachedConversations.length > 0) {
 				messageList.value = cachedConversations.map(conv => {
+					const previewText = buildConversationPreview((conv as any).lastMessageType || 0, conv.lastMessageContent)
 					return {
 						chatId: conv.chatId,
 						lastMessageSequence: (conv as any).lastMessageSequence != null ? (conv as any).lastMessageSequence.toString() : '0',
@@ -364,7 +392,8 @@
 						}),
 						targetName: conv.targetName,
 						lastMessageType: (conv as any).lastMessageType || 0,
-						lastMessageContent: buildConversationPreview((conv as any).lastMessageType || 0, conv.lastMessageContent),
+						lastMessageContent: previewText,
+						lastMessagePreviewTokens: buildConversationPreviewTokens(previewText),
 						lastMessageTime: conv.timestamp,
 						avatarBg: conv.avatarBg,
 						avatarText: conv.avatarText,
@@ -398,6 +427,7 @@
 	function handleConversationsUpdate(conversations : ConversationItem[]) {
 		// 全量刷新（来源：ConversationService，服务端权威水位 + 本地实时更新）
 		messageList.value = conversations.map(conv => {
+			const previewText = buildConversationPreview((conv as any).lastMessageType || 0, conv.lastMessageContent)
 			return {
 				chatId: conv.chatId,
 				lastMessageSequence: (conv as any).lastMessageSequence != null ? (conv as any).lastMessageSequence.toString() : '0',
@@ -409,7 +439,8 @@
 				}),
 				targetName: conv.targetName,
 				lastMessageType: (conv as any).lastMessageType || 0,
-				lastMessageContent: buildConversationPreview((conv as any).lastMessageType || 0, conv.lastMessageContent),
+				lastMessageContent: previewText,
+				lastMessagePreviewTokens: buildConversationPreviewTokens(previewText),
 				lastMessageTime: conv.timestamp,
 				avatarBg: conv.avatarBg,
 				avatarText: conv.avatarText,
@@ -896,12 +927,25 @@
 
 	.message-desc {
 		flex: 1;
+		flex-direction: row;
+		align-items: flex-start;
+		min-height: 18px;
+		overflow: hidden;
+		white-space: nowrap;
+	}
+
+	.message-desc-text {
 		font-size: 13px;
 		color: #666;
 		line-height: 18px;
 		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
+	}
+
+	.message-desc-emoji {
+		width: 14px;
+		height: 14px;
+		margin: 2px 1px 0;
+		flex-shrink: 0;
 	}
 
 	.atme-label {

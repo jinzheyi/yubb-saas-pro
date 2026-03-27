@@ -584,6 +584,21 @@
   - `name?: string`（POI 名称）
   - `mapProvider?: string`
 
+- `EMOJI`：
+  - `emojiCode: string`（平台表情编码，跨端权威字段）
+  - `emojiName?: string`
+  - `version?: string`
+
+- `STICKER`（自定义表情包 / 自定义贴纸）：
+  - `stickerId: string`（用户表情库内的唯一 ID）
+  - `fileId: string`（原图文件 ID，服务端权威）
+  - `thumbFileId?: string`
+  - `url?: string`（Phase 1 兼容字段；便于兼容当前 uniappx 直接渲染 URL 的实现）
+  - `md5?: string`（去重与秒传依据）
+  - `width?: number` / `height?: number`
+  - `packageId?: string`（来源于系统表情包/企业表情包时可选）
+  - `source?: string`（`CUSTOM` / `SYSTEM` / `STORE`）
+
 - `CARD`（应用消息卡片/业务卡片）：
   - `cardType: string`
   - `title: string`
@@ -1347,6 +1362,252 @@ WS 增强（后续）：
 - 建议独立路由：`/system/im/reaction/add`、`/system/im/reaction/remove`、`/system/im/reaction/list?messageId=...`
 - 返回建议仅包含聚合结果（`emoji/count/isSelf`），避免返回全量 userId 列表导致大群风暴。
 
+### 10.3 自定义表情包消息模型（Sticker/自定义贴纸，对齐微信）
+
+自定义表情包采用“系统表情与自定义表情分层、用户个人表情库独立管理、发送链路轻量化”的设计，优先对齐微信“聊天输入区直接发送 + 个人收藏复用 + 低门槛添加”的思路，并兼容当前工程已存在的 `EMOJI(7)` / `STICKER(8)` 枚举与 uniappx 贴纸面板。
+
+#### 10.3.1 设计目标
+
+- **低门槛添加**：支持“从聊天中收藏”和“从相册导入”，不要求先创建完整表情专辑
+- **发送轻量**：聊天发送只传 `stickerId/fileId` 等最小字段，避免每次发送重复上传
+- **多端一致**：同账号下自定义表情库、排序、删除、最近使用记录保持一致
+- **兼容现状**：Phase 1 允许继续携带 `url` 作为渲染兜底，逐步收敛到 `fileId + presigned` 体系
+
+#### 10.3.2 类型分层
+
+- `EMOJI(7)`：系统标准表情，强调编码稳定与跨端一致，正文/检索/输入框回填均以 `emojiCode` 为权威
+- `STICKER(8)`：用户收藏或导入的图片/GIF 表情，强调个性化、快速发送与个人表情库管理
+- 企业产品中不建议把两类能力混为同一种消息体：`EMOJI` 以编码为主，`STICKER` 以媒体资产为主
+
+#### 10.3.3 STICKER 消息体
+
+```json
+{
+  "stickerId": "stk_10001",
+  "fileId": "1948392849201",
+  "thumbFileId": "1948392849202",
+  "url": "https://cdn.example.com/im/sticker/1948392849201.png",
+  "md5": "e4d909c290d0fb1ca068ffaddf22cbd0",
+  "width": 160,
+  "height": 160,
+  "source": "CUSTOM"
+}
+```
+
+- `stickerId`：个人表情库主键；发送、删除、排序、最近使用都以此为锚点
+- `fileId`：服务端权威媒体标识；用于鉴权下载、审计留痕、跨端恢复
+- `url`：仅作兼容与缓存命中兜底，服务端不可只信任客户端 URL
+- `md5`：用于防重复收藏、重复上传秒传与本地缓存复用
+- `width/height`：端侧用于网格预览与消息气泡尺寸约束
+
+#### 10.3.4 与当前工程的兼容策略
+
+- 当前工程已具备：
+  - 后端消息类型枚举：`EMOJI(7)`、`STICKER(8)`
+  - 端侧输入区已有“emoji / sticker”双 Tab 结构
+  - 本地贴纸管理仍为占位实现，当前主要以 `url` 直接渲染
+- 因此推荐两阶段演进：
+  - **Phase 1**：保留 `url` 渲染能力；补齐 `stickerId/fileId/md5` 等权威字段与个人表情库接口
+  - **Phase 2**：统一切换为 `fileId -> presigned url` 拉取；最近使用、删除、排序改为服务端同步
+
+#### 10.3.5 生命周期与最终态规则
+
+- **发送**：发送自定义表情包生成新 `messageId/sequence`，原表情资产不复制，仅引用 `stickerId/fileId`
+- **撤回**：撤回后消息最终态遵循 10.2；消息体不再展示原图，但个人表情库记录不受影响
+- **转发**：
+  - 逐条转发：允许转发 `STICKER`，目标会话收到独立新消息
+  - 合并转发：列表摘要统一显示 `[表情]` 或 `[贴纸]`，详情中渲染静态快照，不展开二次编辑能力
+- **收藏/删除**：
+  - “收藏到表情”是写入个人表情库，不等于消息收藏（Favorite）
+  - 删除个人表情只影响后续发送入口，不影响历史消息渲染与审计
+
+### 10.4 自定义表情包管理与 UI 方案（对齐微信）
+
+微信的核心思路不是让用户维护复杂的“专辑后台”，而是围绕聊天输入面板提供“最近可发、随手可加、集中可管”的轻量体验；本项目沿用该方向，并结合现有 uniappx 面板结构落地。
+
+#### 10.4.1 输入面板信息架构
+
+- 底部维持双 Tab：
+  - `emoji`：系统 emoji
+  - `sticker`：自定义表情包
+- `sticker` 面板采用网格布局，首格固定为“添加”入口，其余格子展示最近/已收藏表情
+- 默认优先展示最近使用，其次展示用户手动收藏的稳定表情
+- 单张点击即发送，不再二次确认
+
+#### 10.4.2 添加与管理入口
+
+- **从聊天中添加**：长按图片/GIF/已收到的贴纸消息，显示“添加到表情”
+- **从相册导入**：在 `sticker` 面板首格点击“+”，选择相册图片/GIF 上传
+- **整理入口**：在表情管理页支持删除、排序，能力与微信“添加的单个表情 -> 整理”保持一致
+- **容量限制**：默认建议每用户上限 150 张，可配置；与微信官方自定义表情上限口径保持一致，避免表情面板膨胀
+
+#### 10.4.3 服务端数据模型
+
+- `im_user_sticker`
+  - `id`
+  - `tenant_id`
+  - `user_id`
+  - `file_id`
+  - `thumb_file_id`
+  - `md5`
+  - `sort_no`
+  - `source_type`（`UPLOAD` / `CHAT_COLLECT` / `STORE`）
+  - `status`（`ACTIVE` / `DELETED`）
+  - `created_at` / `updated_at`
+- `im_user_sticker_recent`
+  - `user_id`
+  - `sticker_id`
+  - `last_used_at`
+  - `use_count`
+
+建议 DDL 草案（按当前 IM 表命名规范收口）：
+
+```sql
+CREATE TABLE `im_user_sticker` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `file_id` bigint NOT NULL COMMENT '原图文件ID',
+  `thumb_file_id` bigint NULL DEFAULT NULL COMMENT '缩略图文件ID',
+  `name` varchar(128) NULL DEFAULT NULL COMMENT '表情名称',
+  `md5` varchar(64) NOT NULL COMMENT '文件MD5',
+  `width` int NULL DEFAULT NULL COMMENT '宽度',
+  `height` int NULL DEFAULT NULL COMMENT '高度',
+  `mime_type` varchar(64) NULL DEFAULT NULL COMMENT '媒体类型',
+  `source_type` tinyint NOT NULL DEFAULT 1 COMMENT '来源(1-上传 2-聊天收藏 3-商店)',
+  `source_message_id` bigint NULL DEFAULT NULL COMMENT '来源消息ID',
+  `sort_no` int NOT NULL DEFAULT 0 COMMENT '排序号',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态(1-正常 2-已移除)',
+  `creator` varchar(64) NULL DEFAULT '',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updater` varchar(64) NULL DEFAULT '',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` bit(1) NOT NULL DEFAULT b'0',
+  `tenant_id` bigint NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_md5`(`tenant_id`, `user_id`, `md5`, `deleted`) USING BTREE,
+  INDEX `idx_user_sort`(`tenant_id`, `user_id`, `sort_no`, `deleted`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='IM用户自定义表情表';
+
+CREATE TABLE `im_user_sticker_recent` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `sticker_id` bigint NOT NULL COMMENT '表情ID',
+  `last_used_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '最近使用时间',
+  `use_count` int NOT NULL DEFAULT 1 COMMENT '使用次数',
+  `creator` varchar(64) NULL DEFAULT '',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updater` varchar(64) NULL DEFAULT '',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` bit(1) NOT NULL DEFAULT b'0',
+  `tenant_id` bigint NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_sticker`(`tenant_id`, `user_id`, `sticker_id`, `deleted`) USING BTREE,
+  INDEX `idx_user_last_used`(`tenant_id`, `user_id`, `last_used_at`, `deleted`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='IM用户最近使用表情表';
+```
+
+#### 10.4.4 建议接口
+
+- `POST /system/im/sticker/upload`：上传相册图片/GIF，返回 `stickerId/fileId/thumbFileId`
+- `POST /system/im/sticker/collect`：从消息收藏到个人表情库，body：`{ messageId }`
+- `GET /system/im/sticker/list`：获取个人表情库（含排序、最近使用信息）
+- `PUT /system/im/sticker/sort`：提交排序结果
+- `DELETE /system/im/sticker/remove?id=...`：从个人表情库移除
+- `POST /system/im/sticker/recent/use`：记录最近使用
+
+建议与现有工程契约对齐：
+
+- 上传复用现有 App 文件接口：
+  - `POST /infra/file/upload-and-return-id`
+  - 入参：`multipart/form-data(file, directory)`
+  - 建议目录：`im/sticker/{userId}`
+  - 出参已具备：`fileId/url/name/size/mimeType`
+- IM 发送暂不新增专用发送接口，继续复用现有：
+  - `POST /system/im/message/send`
+  - `messageType = 8`
+  - `content` 建议写入轻量摘要：`[贴纸]`
+  - `extra` 写入 sticker JSON：`{ stickerId,fileId,thumbFileId?,url?,md5?,width?,height?,source }`
+- `GET /system/im/sticker/list` 建议响应：
+  - `recent[]`：最近使用（按 `lastUsedAt` 倒序，建议最多 20）
+  - `favorites[]`：稳定收藏列表（按 `sortNo` 升序）
+  - `version`：个人表情库版本号，便于端侧缓存
+- `PUT /system/im/sticker/sort` 建议 body：
+  - `{ items: [{ stickerId: "stk_1", sortNo: 1 }, ...] }`
+- `POST /system/im/sticker/recent/use` 建议 body：
+  - `{ stickerId: "stk_1" }`
+  - 仅更新最近使用，不改变收藏排序
+
+建议代码组织：
+
+- Controller：
+  - `controller/app/im/AppImStickerController.java`
+- Service：
+  - `service/im/ImStickerService.java`
+  - `service/im/ImStickerServiceImpl.java`
+- VO：
+  - `controller/app/im/vo/sticker/AppImStickerUploadReqVO.java`
+  - `controller/app/im/vo/sticker/AppImStickerCollectReqVO.java`
+  - `controller/app/im/vo/sticker/AppImStickerListRespVO.java`
+  - `controller/app/im/vo/sticker/AppImStickerSortReqVO.java`
+- DO / Mapper：
+  - `dal/dataobject/im/ImUserStickerDO.java`
+  - `dal/dataobject/im/ImUserStickerRecentDO.java`
+  - `dal/mysql/im/ImUserStickerMapper.java`
+  - `dal/mysql/im/ImUserStickerRecentMapper.java`
+- 发送链路复用：
+  - `AppImMessageController` / `ImMessageServiceImpl` 仅补 `messageType=8` 校验与摘要逻辑，不额外分叉发送主链路
+
+#### 10.4.5 体验与安全约束
+
+- 仅允许用户收藏自己有权查看的消息图片/GIF，禁止通过裸 `fileId` 越权入库
+- 上传文件仍走现有 `infra` 文件体系，复用鉴权、缩略图、病毒扫描与审计能力
+- 表情库删除只影响入口，不删除底层文件的审计引用关系
+- 历史消息渲染失败时需显示占位态，不得导致消息列表断裂
+
+补充约束：
+
+- 收藏来源白名单：仅允许 `IMAGE`、`EMOJI`、`STICKER` 三类消息进入“添加到表情”流程；`VOICE/FILE/LOCATION` 禁止展示该入口
+- 上传校验：优先支持 PNG/JPG/GIF；单文件大小、像素边界与动图帧数沿用现有上传策略并可在 IM 侧增加更严格门禁
+- 去重规则：同一用户维度下优先按 `md5` 去重；命中后直接复用已有 `stickerId`
+- 缓存策略：端侧本地可缓存缩略图与最近使用，但权威排序、删除状态以服务端 `version` 为准
+
+#### 10.4.6 端到端链路（推荐）
+
+场景 A：从相册导入
+
+1. 用户点击 `sticker` 面板首格 `+`
+2. 端侧调用 `chooseImage(1)` 选择图片/GIF
+3. 端侧调用 `POST /infra/file/upload-and-return-id`
+4. 端侧拿到 `fileId/url` 后调用 `POST /system/im/sticker/upload`
+5. 服务端完成去重、写入 `im_user_sticker`
+6. 服务端返回 `stickerId/fileId/thumbFileId/url/version`
+7. 端侧刷新 `GET /system/im/sticker/list`，将新表情插入面板首屏
+
+场景 B：从聊天中收藏
+
+1. 用户长按图片/GIF/贴纸消息
+2. 端侧展示“添加到表情”
+3. 调用 `POST /system/im/sticker/collect`，body：`{ messageId }`
+4. 服务端校验消息可见性、类型合法性，并抽取 `fileId/md5/url`
+5. 若已存在同 md5 收藏，则直接返回既有 `stickerId`
+6. 端侧刷新表情面板并提示“已添加”
+
+场景 C：点击表情发送
+
+1. 端侧从 `sticker` 面板选择 `StickerItem`
+2. 先调用 `POST /system/im/sticker/recent/use`
+3. 再复用消息发送接口 `POST /system/im/message/send`
+4. 服务端落库 `messageType=8`，摘要统一为 `[贴纸]`
+5. 会话页、会话列表、转发详情页统一按 `extra` 渲染贴纸
+
+#### 10.4.7 开发顺序（推荐）
+
+- 第一步：后端先落 `im_user_sticker / im_user_sticker_recent` 与 list/upload/collect/remove/sort/recent 六个接口
+- 第二步：前端把 `stickerManager.uts` 从本地 mock 改为服务端数据源，但先保留 `url` 渲染
+- 第三步：聊天页补齐 `+上传`、`添加到表情`、`发送 STICKER(8)` 三个主入口
+- 第四步：打通最近使用、删除、排序与多端刷新
+- 第五步：收敛到 `fileId + presigned`，移除对裸 `url` 的强依赖
+
 ### 10.5 音视频/语音通话（RTC，可选，方案 1：信令复用 IM WS）
 
 目标：对标企微/钉钉的“通话能力”时，优先把最难的部分（鉴权、多端一致、push 拉起、可观测、降级）复用到现有 IM 体系；媒体传输不走 IM，由第三方/WebRTC 承担。
@@ -2089,11 +2350,12 @@ ID 精度约束（企业级必须冻结）：
 | 功能 | 前置依赖 | 并行开发 | 风险点 |
 |------|----------|----------|--------|
 | **消息发送** | WS双栈、统一鉴权 | - | 无 |
-| **消息撤回** | 消息发送、rev机制 | 删除 | 群管理员权限需扩展 |
+| **消息撤回** | 消息发送、rev机制 | 删除 | 需与群管理员撤回和重新编辑规则保持一致 |
 | **对我删除** | tombstone表、cursorVersion | 撤回 | 需与撤回最终态合并 |
 | **消息转发** | 消息发送、权限校验 | 收藏 | 需校验原消息可见性 |
 | **消息重发** | 本地消息状态管理 | - | 幂等处理需完善 |
-| **群@提及** | 消息发送、推送链路 | 输入状态 | mentions字段需落库 |
+| **群@提及** | 消息发送、推送链路 | 输入状态 | 强提醒与敏感词过滤后结构保持一致 |
+| **自定义表情包** | 文件上传、消息发送、个人表情库 | 收藏 | 个人表情库同步与资产去重 |
 | **位置消息** | 地图SDK集成 | - | 新messageType需前后端同步 |
 | **草稿保存** | 本地存储 | - | 可独立开发，后端可选 |
 | **输入状态** | WS广播机制 | 群@提及 | 需频率控制防风暴 |
@@ -2118,9 +2380,8 @@ ID 精度约束（企业级必须冻结）：
 
 | 问题 | 影响 | 建议 |
 |------|------|------|
-| `forwardMessage` 抛异常占位 | 转发功能未实现 | 按 L1 任务实现 |
-| 群撤回权限仅校验 senderId | 管理员撤回未支持 | 按 L4 任务扩展 |
-| mentions 字段未落库 | @提及功能未实现 | 按 L3 任务实现 |
+| 自定义表情包仍以本地 mock 列表为主 | 多端不同步，无法形成个人表情库 | 按 L4.1 任务补齐上传/收藏/排序/list 闭环 |
+| STICKER 渲染仍依赖 `url` 直出 | 文件鉴权、链接过期与审计能力不足 | 按 Phase 1/2 逐步收敛到 `fileId + presigned` |
 | LOCATION 枚举已定义但未处理 | 位置消息未实现 | 按 L5 任务实现 |
 
 ---
@@ -2165,9 +2426,10 @@ ID 精度约束（企业级必须冻结）：
 |------|----------|------|----------|--------|
 | 文本/图片/文件 | ✅ | ✅ | ✅ | - |
 | 消息撤回(2min) | ✅ | ✅ | ✅ | - |
-| 管理员撤回 | ✅ | ✅ | ⚠️ 待开发 | P1 |
-| 消息转发 | ✅ | ✅ | ⚠️ 待开发 | P1 |
-| 群@提及 | ✅ | ✅ | ⚠️ 待开发 | P1 |
+| 管理员撤回 | ✅ | ✅ | ✅ 已落地（待统一验收） | P1 |
+| 消息转发 | ✅ | ✅ | ✅ 已落地（待统一验收） | P1 |
+| 群@提及 | ✅ | ✅ | ✅ 已落地（待统一验收） | P1 |
+| 自定义表情包 | ✅ | ✅ | ⚠️ 方案已冻结，待开发 | P1 |
 | 输入状态 | ✅ | ✅ | ⚠️ 待开发 | P2 |
 | 位置消息 | ✅ | ✅ | ⚠️ 待开发 | P2 |
 | 草稿保存 | ✅ | ✅ | ⚠️ 待开发 | P2 |

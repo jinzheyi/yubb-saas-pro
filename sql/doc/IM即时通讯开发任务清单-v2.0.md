@@ -4,19 +4,20 @@
 
 ## 当前迭代焦点（AI快速定位）
 
-> **更新日期**: 2026-03-24
+> **更新日期**: 2026-03-27
 > **迭代目标**: Milestone L - 消息扩展能力
 
 ### 正在执行
-- L3 群@提及（P1）：端到端打通（先做 L3 后做 L2）
+- L4.1 自定义表情包（P1）：方案已冻结，待进入开发
 
 ### 本期排期（P1）
 | 任务 | 状态 | 依赖 | 关键文件 |
 |------|------|------|----------|
-| L1 消息转发 | 后端已完成 / 前端已完成（验收暂缓） | C7, S1 | `ImMessageServiceImpl.java`, `chat.uvue`, `forward-target.uvue`, `forward-combine-detail.uvue` |
-| L2 消息重发 | 待开发 | C7 | `message-service.uts` |
-| L3 群@提及 | 进行中（先做 L3 后做 L2） | C7, D1-D3 | `ImMessageServiceImpl.java`, `mention-selector.uvue`, `chat.uvue` |
-| L4 管理员撤回 | 后端已完成 / 前端已完成（验收暂缓） | F1 | `ImMessageServiceImpl.java`, `message-service.uts`, `chat.uvue` |
+| L1 消息转发 | 已完成 | C7, S1 | `ImMessageServiceImpl.java`, `chat.uvue`, `forward-target.uvue`, `forward-combine-detail.uvue` |
+| L2 消息重发 | 未开始 | C7 | `message-service.uts` |
+| L3 群@提及 | 已完成 | C7, D1-D3 | `ImMessageServiceImpl.java`, `mention-selector.uvue`, `chat.uvue` |
+| L4 管理员撤回 | 已完成 | F1 | `ImMessageServiceImpl.java`, `message-service.uts`, `chat.uvue` |
+| L4.1 自定义表情包 | 未开始（方案已冻结） | C7, S1, S2 | `chat.uvue`, `stickerManager.uts`, `ImMessageServiceImpl.java`, `infra 文件上传链路` |
 
 ### 已完成（近两轮）
 - [x] 架构审查：后端消息发送/撤回/删除核心链路验证
@@ -27,6 +28,10 @@
 - [x] 转发/引用联修：合并转发卡片识别、详情跳转定位、点击补拉历史定位
 - [x] 引用一致性联修：刷新前后预览一致、quoteMessageId 精度防护、extra 快照恢复链路
 - [x] 持久化可靠性联修：默认禁用 NoOp、七类消息统一“先落库后回推/转发”门禁
+- [x] L1 消息转发：逐条/合并转发、引用化详情、跳转定位链路收口
+- [x] L3 群@提及：选择器、mentions 落库、`[有人@我]` 会话态闭环
+- [x] L4 管理员撤回：权限模型、撤回通知、与重新编辑隔离规则收口
+- [x] 文档更新：补充自定义表情包设计、任务拆解与状态统一
 
 ### 关键约束（必读）
 1. **Long精度**: 所有ID字段前端必须用`string`，后端VO用`@JsonSerialize(using = ToStringSerializer.class)`
@@ -1793,7 +1798,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 已验收证据（口径，按当前工程实现）：
 
 - 接口：`PUT /system/im/message/recall?id=消息ID` 可用，返回成功后消息状态进入 `RECALLED`
-- 权限：仅允许发送者撤回自己消息（无权限返回 `MESSAGE_RECALL_PERMISSION_DENIED`）
+- 权限：基础撤回闭环已完成；发送者本人可撤回自己消息，群管理员/群主扩展能力见 L4
 - 时限：超过 `im.recall.window-seconds`（默认 120s）返回 `MESSAGE_RECALL_TIMEOUT`
 - 幂等：重复撤回同一 messageId 不改变会话内 sequence，端侧以 `rev` 做最终态合并
 - WS：服务端广播 `MessageType.RECALL` 给会话参与方（群成员/对端）与操作者本人多端；header.extra 携带 `rev/recallBy/recallTime`
@@ -1855,7 +1860,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 - **验收**：支持逐条转发和合并转发；转发消息生成新 messageId；接收方可查看原消息来源。
 
-- 状态：后端已完成 / 前端已完成（验收暂缓，本期排期）
+- 状态：已完成
 
 - **已落地（后端，commit: f8073318）**：
   - 新增转发接口：`POST /system/im/message/forward`（支持逐条/合并）与 `POST /system/im/message/forward-single`
@@ -1972,7 +1977,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 - **验收**：输入@弹出成员列表；被提及用户收到推送（即使群免打扰）；消息中高亮显示@昵称。
 
-- 状态：已实现（待统一验收）
+- 状态：已完成
 
 - **目标**：实现群聊@提及能力，保证通知可达与体验一致。
 - **范围**：
@@ -2007,7 +2012,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 - **验收**：群主/管理员可撤回群内任意消息；撤回时限可配置；撤回通知显示操作者信息。
 
-- 状态：后端已完成 / 前端已完成（验收暂缓，本期排期，基于 F1 扩展）
+- 状态：已完成
 
 - **已落地（后端，commit: f8073318）**：
   - 权限模型：
@@ -2044,6 +2049,128 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - `shengyu-module-system/.../im/ImMessageServiceImpl.java`（权限校验扩展）
   - `shengyu-module-system/.../config/ImGroupConfig.java`（配置项）
   - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`（撤回处理）
+
+### L4.1（P1）：自定义表情包（Sticker/自定义贴纸，对齐微信）
+
+- **验收**：支持从聊天收藏和从相册导入；输入区 sticker Tab 网格展示；发送 `STICKER(8)` 消息；同账号多端拉齐个人表情库。
+
+- 状态：未开始（方案已冻结）
+
+- **设计结论（本轮冻结）**：
+  - 采用“系统 emoji 与自定义表情分层”模型：`EMOJI(7)` 负责标准编码表情，`STICKER(8)` 负责图片/GIF 个性化表情
+  - 输入区沿用当前工程已存在的 `emoji / sticker` 双 Tab；`sticker` 面板首格固定为“+”上传入口，其余格子展示最近使用与已收藏表情
+  - 收藏路径对齐微信：长按聊天中的图片/GIF/贴纸消息可“添加到表情”；管理路径支持删除、排序；默认每用户建议上限 150 张
+  - 发送消息体最小字段冻结为 `stickerId/fileId/thumbFileId?/url?/md5?/width?/height?/source`，其中 `url` 仅作为 Phase 1 兼容字段
+
+- **目标**：补齐企业 IM 自定义表情包能力，兼容当前前端贴纸面板与后端 `STICKER(8)` 枚举，形成“上传/收藏/列表/发送/最近使用”闭环。
+- **范围**：
+  - module-system：
+    - `POST /system/im/sticker/upload`
+    - `POST /system/im/sticker/collect`
+    - `GET /system/im/sticker/list`
+    - `PUT /system/im/sticker/sort`
+    - `DELETE /system/im/sticker/remove?id=...`
+    - 个人表情库表：`im_user_sticker`；最近使用表：`im_user_sticker_recent`
+  - uniappx：
+    - 输入区 `sticker` 面板读取个人表情库
+    - 面板首格“+”触发相册上传
+    - 长按消息菜单增加“添加到表情”
+    - 点击表情直接发送 `STICKER(8)` 消息
+  - infra：
+    - 复用现有文件上传/缩略图/鉴权下载链路
+- **依赖**：C7（消息发送链路）、S1（消息体 schema 冻结）、S2（媒体资产上行闭环）
+- **验收标准**：
+  - 收藏：仅允许收藏当前用户有权查看的图片/GIF/贴纸消息；重复收藏按 `md5` 去重
+  - 上传：支持从相册导入图片/GIF，入库后返回 `stickerId/fileId`
+  - 发送：点击表情即发送 `STICKER(8)`；会话摘要显示 `[贴纸]`
+  - 多端：同账号在新设备登录后可拉取已有个人表情库；删除/排序可同步
+  - 最终态：消息撤回不删除个人表情库；个人表情库删除不影响历史消息展示
+  - 兼容：Phase 1 保留 `url` 渲染，Phase 2 收敛到 `fileId + presigned` 拉取
+- **涉及文件/目录**：
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`（输入区 panel / 长按菜单 / sticker 发送）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/utils/stickerManager.uts`（本地占位 -> 服务端表情库）
+  - `shengyu-module-system/.../im/ImMessageServiceImpl.java`（STICKER 消息发送与摘要）
+  - `shengyu-module-system/.../controller/app/im/*Sticker*Controller.java`
+  - `sql/mysql/1.0/im/ddl_im_tables.sql`（`im_user_sticker` / `im_user_sticker_recent`）
+
+- **后端开发清单（建议顺序）**：
+  - B1：建表 `im_user_sticker`、`im_user_sticker_recent`，补唯一索引（建议 `user_id + md5 + deleted=0`）
+  - B2：新增 `AppImStickerController` 与 service，先打通 `list/upload/collect/remove`
+  - B3：补 `sort/recent-use`，保证最近使用与收藏排序解耦
+  - B4：发送链路校验 `messageType=8` 的 `extra` 结构，并统一摘要为 `[贴纸]`
+  - B5：补充会话页/转发详情/搜索结果中的 `STICKER` 渲染 DTO 口径
+
+- **后端文件落点草案**：
+  - `shengyu-module-system/.../controller/app/im/AppImStickerController.java`
+  - `shengyu-module-system/.../controller/app/im/vo/sticker/AppImStickerUploadReqVO.java`
+  - `shengyu-module-system/.../controller/app/im/vo/sticker/AppImStickerCollectReqVO.java`
+  - `shengyu-module-system/.../controller/app/im/vo/sticker/AppImStickerSortReqVO.java`
+  - `shengyu-module-system/.../controller/app/im/vo/sticker/AppImStickerListRespVO.java`
+  - `shengyu-module-system/.../service/im/ImStickerService.java`
+  - `shengyu-module-system/.../service/im/ImStickerServiceImpl.java`
+  - `shengyu-module-system/.../dal/dataobject/im/ImUserStickerDO.java`
+  - `shengyu-module-system/.../dal/dataobject/im/ImUserStickerRecentDO.java`
+  - `shengyu-module-system/.../dal/mysql/im/ImUserStickerMapper.java`
+  - `shengyu-module-system/.../dal/mysql/im/ImUserStickerRecentMapper.java`
+  - `shengyu-module-system/.../controller/app/im/AppImMessageController.java`（复用发送接口）
+  - `shengyu-module-system/.../service/im/ImMessageServiceImpl.java`（补 `messageType=8` 校验与摘要）
+
+- **前端交互清单（建议顺序）**：
+  - F1：`stickerManager.uts` 改为远程数据源，返回 `recent + favorites + version`
+  - F2：聊天页 `sticker` 面板首格接入相册选择与上传，上传成功后刷新面板
+  - F3：长按图片/GIF/贴纸消息时增加“添加到表情”，收藏成功后 toast 提示
+  - F4：点击表情发送 `STICKER(8)` 消息，并同步写最近使用
+  - F5：补表情管理页的删除/排序；若本期不做独立页面，至少预留入口与数据结构
+
+- **前端文件落点草案**：
+  - `shengyu-ui/shengyu-ui-admin-uniappx/utils/stickerManager.uts`（封装 list/upload/collect/remove/sort/recent）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/api/file.uts`（复用上传与 presigned 能力）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/utils/upload.uts`（复用 `upload-and-return-id`）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`（面板渲染、上传入口、发送入口、长按收藏）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`（STICKER 消息结构、回显与缓存）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/sticker-manage.uvue`（如本期做独立管理页）
+
+- **接口草案（请求/响应）**：
+  - `POST /system/im/sticker/upload`
+    - 请求：`{ fileId: string, url?: string, md5?: string, width?: number, height?: number, mimeType?: string }`
+    - 响应：`{ stickerId, fileId, thumbFileId?, url, md5, width, height, source, version }`
+  - `POST /system/im/sticker/collect`
+    - 请求：`{ messageId: string }`
+    - 响应：`{ stickerId, fileId, url, duplicated, version }`
+  - `GET /system/im/sticker/list`
+    - 响应：`{ version, recent: StickerItem[], favorites: StickerItem[] }`
+  - `PUT /system/im/sticker/sort`
+    - 请求：`{ items: [{ stickerId: string, sortNo: number }] }`
+  - `DELETE /system/im/sticker/remove?id=...`
+  - `POST /system/im/sticker/recent/use`
+    - 请求：`{ stickerId: string }`
+
+- **联调顺序（必须按此收口）**：
+  - 第 1 步：先联 `GET /system/im/sticker/list`，确保面板可脱离 mock 渲染
+  - 第 2 步：联 `POST /infra/file/upload-and-return-id` + `POST /system/im/sticker/upload`，验证“相册导入”
+  - 第 3 步：联 `POST /system/im/sticker/collect`，验证“从聊天收藏”
+  - 第 4 步：联 `POST /system/im/message/send` 的 `messageType=8`，验证消息发送/摘要/历史回显
+  - 第 5 步：联 `POST /system/im/sticker/recent/use` 与 `PUT /system/im/sticker/sort`，验证最近使用与排序稳定性
+  - 第 6 步：双端登录回归删除/排序/新增同步，确认多端一致
+
+- **联调检查点**：
+  - 面板首屏不再依赖 `picsum` mock 数据
+  - 会话内发送贴纸后，本端立即可见，刷新页面后仍能正确渲染
+  - 从聊天收藏已有图片两次时，不重复新增收藏记录
+  - 删除个人表情后，历史消息仍正常显示，且不再出现在发送面板
+  - 重新登录另一台设备后，新增/删除/排序结果可见
+
+- **前端改造颗粒度（开工用）**：
+  - `chat.uvue`
+    - `sticker-item-add` 点击事件改为打开相册上传
+    - 长按菜单在 `IMAGE/STICKER/EMOJI` 时显示“添加到表情”
+    - `handleStickerPanelItemTap` 从“本地插假消息”改为走真实发送链路
+  - `stickerManager.uts`
+    - 删除 `picsum` mock 实现
+    - 增加缓存 version、最近使用合并、失败兜底逻辑
+  - `message-service.uts`
+    - 统一 `STICKER` 消息的 `extra` 解析与本地缓存写入
+    - 确保刷新、补偿、转发详情页都能按同一结构回显
 
 ### L5（P2）：位置消息
 
