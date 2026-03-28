@@ -114,8 +114,20 @@
 		}
 	}
 
+	let isNavigating = false
+
 	function handleBack(): void {
-		uni.navigateBack()
+		if (isNavigating) {
+			return
+		}
+		isNavigating = true
+		uni.navigateBack({
+			delta: 1,
+			fail: (err) => {
+				console.error('[StickerManage] navigateBack failed:', err)
+				isNavigating = false
+			}
+		})
 	}
 
 	function toggleSortMode(): void {
@@ -502,20 +514,28 @@
 		background-color: #ffffff;
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
+		justify-content: center;
 		padding: 0 24rpx;
 		border-bottom: 1rpx solid #f0f0f0;
+		position: relative;
 	}
 
-	.header-left,
-	.header-right {
-		width: 160rpx;
+	.header-left {
 		display: flex;
+		flex-direction: row;
 		align-items: center;
+		justify-content: flex-start;
+		position: absolute;
+		left: 24rpx;
 	}
 
 	.header-right {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
 		justify-content: flex-end;
+		position: absolute;
+		right: 24rpx;
 	}
 
 	.header-action-text {
@@ -535,7 +555,6 @@
 	}
 
 	.header-title {
-		flex: 1;
 		text-align: center;
 		font-size: 32rpx;
 		font-weight: 600;
@@ -547,6 +566,7 @@
 		padding: 28rpx;
 		background-color: #ffffff;
 		border-radius: 24rpx;
+		min-height: 120rpx;
 	}
 
 	.summary-title {
@@ -596,7 +616,7 @@
 	}
 
 	.content {
-		height: calc(100vh - var(--status-bar-height) - 88rpx - 180rpx);
+		height: calc(100vh - var(--status-bar-height) - 88rpx - 140rpx);
 	}
 
 	.sticker-grid {
