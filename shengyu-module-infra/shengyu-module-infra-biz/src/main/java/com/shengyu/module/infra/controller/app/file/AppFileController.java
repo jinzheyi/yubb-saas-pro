@@ -1,6 +1,7 @@
 package com.shengyu.module.infra.controller.app.file;
 
 import cn.hutool.core.io.IoUtil;
+import cn.hutool.crypto.digest.DigestUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.module.infra.controller.app.file.vo.AppFileUploadReqVO;
@@ -110,6 +111,7 @@ public class AppFileController {
         respVO.setName(fileDO.getName() != null ? fileDO.getName() : file.getOriginalFilename());
         respVO.setSize(fileDO.getSize() != null ? fileDO.getSize() : (int) file.getSize());
         respVO.setMimeType(fileDO.getType() != null ? fileDO.getType() : file.getContentType());
+        respVO.setMd5(DigestUtil.md5Hex(content));
         return success(respVO);
     }
 

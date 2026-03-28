@@ -159,7 +159,7 @@ export default {
 			forward: 'Forward',
 			recall: 'Recall',
 			delete: 'Delete',
-			favorite: 'Favorite',
+			favorite: 'Add',
 			multi: 'Multi-select',
 			quote: 'Quote'
 		}

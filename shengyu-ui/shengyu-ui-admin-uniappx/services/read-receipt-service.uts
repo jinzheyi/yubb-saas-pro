@@ -144,6 +144,15 @@ export class ReadReceiptService {
         totalCount: data.totalCount != null ? Number(data.totalCount) : 0
       }
     } catch (e) {
+      try {
+        const err: any = e as any
+        const code = err != null && err.code != null ? Number(err.code) : 0
+        const msg = err != null && err.msg != null ? String(err.msg) : ''
+        if (code === 1002030100 || msg === '消息不存在') {
+          return null
+        }
+      } catch (ignore) {
+      }
       console.error('[ReadReceiptService] getSummary failed:', e)
       return null
     }

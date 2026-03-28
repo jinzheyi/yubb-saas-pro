@@ -41,7 +41,15 @@ export type QueuedMessage = {
 /**
  * 消息状态监听器类型
  */
-export type MessageStatusListener = (messageId: string, status: MessageStatus) => void
+export type MessageStatusMeta = {
+  previousMessageId?: string
+  resolvedMessageId?: string
+  chatId?: string
+  sequence?: string
+  rev?: string
+}
+
+export type MessageStatusListener = (messageId: string, status: MessageStatus, meta?: MessageStatusMeta) => void
 
 /**
  * 消息项（用于 UI 显示）
@@ -654,20 +662,8 @@ export class MessageService {
 
   private buildCachedMessageContent(messageType: number, rawContent: any, rawExtra: any, mentions: any[]): any {
     if (messageType === 9 || messageType === MessageType.CUSTOM) {
-      let extraObj: any = rawExtra
-      try {
-        if (typeof extraObj === 'string' && extraObj !== '') {
-          extraObj = JSON.parse(extraObj)
-        }
-      } catch (e) {
-      }
-      let contentObj: any = rawContent
-      try {
-        if (typeof contentObj === 'string' && contentObj !== '') {
-          contentObj = JSON.parse(contentObj)
-        }
-      } catch (e) {
-      }
+      const extraObj: any = this.tryParseJsonLike(rawExtra)
+      const contentObj: any = this.tryParseJsonLike(rawContent)
       const extraType = extraObj != null && extraObj.type != null ? String(extraObj.type) : ''
       const contentType = contentObj != null && contentObj.type != null ? String(contentObj.type) : ''
       if (extraType === 'STICKER' || contentType === 'STICKER') {
@@ -686,6 +682,43 @@ export class MessageService {
       }
     }
     return { content: rawContent, extra: rawExtra, mentions: mentions }
+  }
+
+  private tryParseJsonLike(raw: any): any {
+    try {
+      if (raw == null) {
+        return raw
+      }
+      if (typeof raw !== 'string') {
+        return raw
+      }
+      const text = raw.trim()
+      if (text === '' || text === '[object Object]' || text === '[object UTSJSONObject]' || text === '[object Array]') {
+        return raw
+      }
+      const first = text.charAt(0)
+      const last = text.charAt(text.length - 1)
+      const isObjectJson = first === '{' && last === '}'
+      const isArrayJson = first === '[' && last === ']'
+      if (!isObjectJson && !isArrayJson) {
+        return raw
+      }
+      if (isArrayJson) {
+        const inner = text.substring(1, text.length - 1).trim()
+        if (inner !== '') {
+          const c0 = inner.charAt(0)
+          const isLikelyJsonArray =
+            c0 === '{' || c0 === '[' || c0 === '"' || c0 === '-' ||
+            (c0 >= '0' && c0 <= '9') || c0 === 't' || c0 === 'f' || c0 === 'n'
+          if (!isLikelyJsonArray) {
+            return raw
+          }
+        }
+      }
+      return JSON.parse(text)
+    } catch (e) {
+      return raw
+    }
   }
 
   private extractReeditContentFromMessage(message: any): string {
@@ -1861,11 +1894,16 @@ export class MessageService {
       let updated = false
       let updatedMessage: any = null
       let resolvedChatId = this.resolveChatIdFromHeader(message.header)
+      let previousMessageId = ''
       this.messageCache.forEach((messages) => {
         messages.forEach(msg => {
           const cacheMsgId = msg.messageId != null ? String(msg.messageId) : ''
           const matchedByClientId = clientMessageId !== '' && cacheMsgId === clientMessageId
-          if ((cacheMsgId === msgId || matchedByClientId) && msg.status === MessageStatus.SENDING) {
+          const matchedByMessageId = cacheMsgId === msgId
+          if (matchedByMessageId || matchedByClientId) {
+            if (matchedByClientId && previousMessageId === '' && cacheMsgId !== '') {
+              previousMessageId = cacheMsgId
+            }
             msg.messageId = msgId
             msg.status = MessageStatus.SENT
             updatedMessage = msg
@@ -1889,7 +1927,18 @@ export class MessageService {
         } catch (e) {
           // ignore
         }
-        this.notifyStatusListeners(msgId, MessageStatus.SENT)
+        const statusMeta: MessageStatusMeta = {
+          resolvedMessageId: msgId,
+          chatId: resolvedChatId,
+          rev: revStr
+        }
+        if (previousMessageId !== '' && previousMessageId !== msgId) {
+          statusMeta.previousMessageId = previousMessageId
+        }
+        if (seq != null) {
+          statusMeta.sequence = seq.toString()
+        }
+        this.notifyStatusListeners(msgId, MessageStatus.SENT, statusMeta)
 
 			// 自己的消息也需要更新会话（否则会话水位/红点会错）
 			const seqStr = seq != null ? seq.toString() : null
@@ -2938,10 +2987,10 @@ export class MessageService {
   /**
    * 通知消息状态监听器
    */
-  private notifyStatusListeners(messageId: string, status: MessageStatus): void {
+  private notifyStatusListeners(messageId: string, status: MessageStatus, meta?: MessageStatusMeta): void {
     this.messageStatusListeners.forEach(listener => {
       try {
-        listener(messageId, status)
+        listener(messageId, status, meta)
       } catch (e) {
         console.error('[MessageService] 状态监听器执行失败:', e)
       }

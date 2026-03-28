@@ -719,7 +719,7 @@ export class MessageParser {
           const body: any = message.body as any
           const raw = body != null ? body.content : null
           if (raw != null && raw !== '') {
-            const obj = typeof raw === 'string' ? JSON.parse(raw) : raw
+            const obj = MessageParser.tryParseJsonLike(raw)
             if (obj != null && obj.type != null && String(obj.type) === 'FORWARD_COMBINE') {
               return '[聊天记录]'
             }
@@ -735,6 +735,43 @@ export class MessageParser {
         return quoteBody.content
       default:
         return '[消息]'
+    }
+  }
+
+  private static tryParseJsonLike(raw: any): any {
+    try {
+      if (raw == null) {
+        return raw
+      }
+      if (typeof raw !== 'string') {
+        return raw
+      }
+      const text = raw.trim()
+      if (text === '' || text === '[object Object]' || text === '[object UTSJSONObject]' || text === '[object Array]') {
+        return raw
+      }
+      const first = text.charAt(0)
+      const last = text.charAt(text.length - 1)
+      const isObjectJson = first === '{' && last === '}'
+      const isArrayJson = first === '[' && last === ']'
+      if (!isObjectJson && !isArrayJson) {
+        return raw
+      }
+      if (isArrayJson) {
+        const inner = text.substring(1, text.length - 1).trim()
+        if (inner !== '') {
+          const c0 = inner.charAt(0)
+          const isLikelyJsonArray =
+            c0 === '{' || c0 === '[' || c0 === '"' || c0 === '-' ||
+            (c0 >= '0' && c0 <= '9') || c0 === 't' || c0 === 'f' || c0 === 'n'
+          if (!isLikelyJsonArray) {
+            return raw
+          }
+        }
+      }
+      return JSON.parse(text)
+    } catch (e) {
+      return raw
     }
   }
   

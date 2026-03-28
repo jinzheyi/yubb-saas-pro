@@ -159,7 +159,7 @@ export default {
 			forward: '转发',
 			recall: '撤回',
 			delete: '删除',
-			favorite: '收藏',
+			favorite: '添加',
 			multi: '多选',
 			quote: '引用'
 		}

@@ -2,6 +2,7 @@ package com.shengyu.module.system.service.im;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.shengyu.module.infra.api.file.FileApi;
@@ -282,9 +283,6 @@ public class ImStickerServiceImpl implements ImStickerService {
             if (payload.getLong("fileId", null) == null) {
                 payload.set("fileId", 0L);
             }
-            if (StrUtil.isBlank(payload.getStr("md5"))) {
-                payload.set("md5", payload.getStr("url", message.getContent()));
-            }
             return payload;
         }
         throw exception(STICKER_COLLECT_NOT_SUPPORTED);
@@ -304,12 +302,16 @@ public class ImStickerServiceImpl implements ImStickerService {
 
     private String buildStickerKey(String md5, Long fileId, String url) {
         if (StrUtil.isNotBlank(md5)) {
-            return md5;
+            String normalizedMd5 = md5.trim();
+            return normalizedMd5.length() <= 64 ? normalizedMd5 : "raw:" + DigestUtil.md5Hex(normalizedMd5);
         }
         if (fileId != null && fileId > 0) {
             return "file:" + fileId;
         }
-        return StrUtil.blankToDefault(url, "unknown");
+        if (StrUtil.isNotBlank(url)) {
+            return "url:" + DigestUtil.md5Hex(url.trim());
+        }
+        return "unknown";
     }
 
     private Integer nextSortNo(Long userId) {

@@ -6,6 +6,13 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "154641",
+      "name": "添加表情",
+      "font_class": "tianjiabiaoqing",
+      "unicode": "e607",
+      "unicode_decimal": 58887
+    },
+    {
       "icon_id": "30647692",
       "name": "icon-kfckfc",
       "font_class": "zhuyaolunwenzhuzuo",
