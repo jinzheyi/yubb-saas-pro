@@ -5181,7 +5181,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			readReceiptList.value = []
 			readReceiptPageNo.value = 1
 			readReceiptHasMore.value = true
+			// 等待一小段时间，确保消息已完全落库，避免返回 null
+			await new Promise(resolve => setTimeout(resolve, 200))
 			readReceiptSummary.value = await readReceiptService.getSummary(messageId)
+			if (readReceiptSummary.value == null) {
+				// 如果仍为 null，显示提示并关闭面板
+				uni.showToast({ title: '数据加载中，请稍后再试', icon: 'none' })
+				showReadReceiptSheet.value = false
+				return
+			}
 			try {
 				const next: Record<string, { summary: any | null; fetchedAt: number }> = {}
 				Object.assign(next, readReceiptSummaryCache.value)

@@ -42,7 +42,9 @@ public class ImReadReceiptServiceImpl implements ImReadReceiptService {
     public AppImReadReceiptSummaryRespVO getSummary(Long userId, Long messageId) {
         ImChatMessageDO msg = chatMessageMapper.selectById(messageId);
         if (msg == null) {
-            throw exception(MESSAGE_NOT_EXISTS);
+            // 消息可能刚发送还未完全落库，返回 null 由前端重试，避免抛出"消息不存在"错误提示
+            log.debug("[ImReadReceiptService] 消息暂未落库，返回 null, messageId: {}", messageId);
+            return null;
         }
         ImChatDO chat = chatMapper.selectById(msg.getChatId());
         if (chat == null) {
