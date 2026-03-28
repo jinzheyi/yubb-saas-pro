@@ -327,7 +327,6 @@
 				<view
 					v-if="currentEmojiTab === 'emoji'"
 					class="emoji-delete-float"
-					:style="{ opacity: emojiDeleteButtonOpacity }"
 					@click="handleEmojiDeleteTap"
 				>
 					<view class="emoji-delete-shape">
@@ -966,7 +965,6 @@
 	const plainSelectionStart = ref(-1)
 	const plainSelectionEnd = ref(-1)
 	const recentEmojiList = ref<any[]>([])
-	const emojiDeleteButtonOpacity = ref(0)
 	const keepEmojiMenuOnNextFocus = ref(false)
 	const EMOJI_RECENT_STORAGE_KEY = 'im_chat_recent_emoji_v1'
 	const EMOJI_RECENT_LIMIT = 7
@@ -3492,6 +3490,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleEmojiDeleteTap(): void {
+		// 保持表情面板打开，不因焦点变化而关闭
+		keepEmojiMenuOnNextFocus.value = true
 		if (editorCtx != null) {
 			try {
 				editorCtx!.getContents({
@@ -3512,19 +3512,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleEmojiPanelScroll(e: any): void {
-		try {
-			const scrollTop = e != null && e.detail != null && e.detail.scrollTop != null ? Number(e.detail.scrollTop) : 0
-			let opacity = scrollTop / 72
-			if (opacity < 0) {
-				opacity = 0
-			}
-			if (opacity > 1) {
-				opacity = 1
-			}
-			emojiDeleteButtonOpacity.value = opacity
-		} catch (e) {
-			emojiDeleteButtonOpacity.value = 0
-		}
+		// 不再根据滚动位置控制删除按钮的显示/隐藏
+		// emojiDeleteButtonOpacity 已不再使用，保留函数避免报错
 	}
 
 	function applyComposerState(text: string, hasRichContent: boolean = false): void {
