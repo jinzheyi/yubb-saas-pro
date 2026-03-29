@@ -928,6 +928,308 @@ WS 增强（后续）：
 
 - 在线时由 WS 推送“会话水位变更/新消息”，离线/缺洞由 HTTP sync 补齐
 
+### 8.5.3 对话页加载机制（对齐微信/企业微信）
+
+背景：聊天页的加载目标不是“固定取第一页”，而是“根据进入场景恢复到用户预期的消息窗口”。对标微信/企业微信，聊天页至少要区分“普通进入最近消息窗口”“搜索/引用/未读锚点进入”“继续上滑加载更早历史”“WS/刷新后补齐更新”四种路径。
+
+当前工程问题（已在 `pages/message/chat.uvue` 体现）：
+
+- 聊天页首屏固定调用 `GET /system/im/message/list-by-chat?chatId=&pageNo=1&pageSize=20`
+- H5/页面刷新后再次执行同样逻辑，因此渲染位置会回到固定首屏，而不是“最近阅读窗口”或“最新消息窗口”
+- 搜索/引用定位目前通过 `pageNo=2..10` 逐页穷举补拉，无法稳定覆盖大群、大会话与业务会话
+- 页面仅有“滚到底”检测，没有“向上翻历史”的标准加载闭环
+
+对标产品行为归纳（用于约束本项目，不直接依赖对方内部实现）：
+
+- 企业微信支持“在当前会话内查找聊天记录”，说明聊天页必须支持**会话内锚点定位**，而不是只能固定翻页
+- 企业微信支持多选消息后**合并转发并预览**，说明聊天页入口模型必须能与转发详情、原消息定位联动
+- 企业微信客服 API 公开了 `service_state` 等会话状态字段，说明后续业务会话不应另起一套消息时间线，而应复用聊天页窗口模型，只在头部元信息层区分状态
+
+设计原则（必须冻结）：
+
+- **聊天页首屏禁止再以固定 `pageNo=1` 作为标准入口**
+- **聊天页标准查询主键统一为 `chatId`**；群聊仅允许 `groupId -> chatId` 映射后查询；后续业务会话仅允许 `bizSessionId -> chatId` 映射后查询
+- **首屏/锚点/历史/补偿四条路径分离**：最近窗口、锚点窗口、更早历史、更新补偿分别建模，禁止一个分页接口硬扛全部场景
+- **服务端返回给聊天页的消息列表必须按 `sequence ASC` 供渲染使用**；若内部查询为倒序，必须在服务端或端侧统一翻转后再渲染
+- **分页与补偿统一使用 sequence/cursor 语义，不再依赖 offset pageNo 表达阅读位置**
+
+进入场景与标准行为：
+
+1. **从会话列表普通进入单聊/群聊**
+   - 默认加载“最近消息窗口（latest window）”，而不是最早 20 条
+   - 首屏建议返回最近 `20~50` 条可见消息（按终端性能可配，默认建议 `30`）
+   - 页面初始滚动位置在底部
+   - 若存在未读区间：
+     - 首屏窗口内包含首条未读：展示“以下为新消息”分割线
+     - 首屏窗口未覆盖首条未读：展示“跳转到首条未读”入口，点击后走锚点窗口
+
+2. **从搜索结果/引用回复/@我/推送进入**
+   - 必须按 `anchorSequence`（优先）或 `anchorMessageId` 进入“锚点窗口（anchor window）”
+   - 锚点窗口建议：`beforeLimit=15`、`afterLimit=10`（可按端型调整）
+   - 命中消息定位后允许高亮，并继续支持“向上加载更早历史/向下补齐较新消息”
+   - 禁止再使用 `pageNo=2..10` 穷举翻页定位
+
+3. **页面刷新/重建（尤其 H5）**
+   - 若路由携带显式锚点（搜索/引用/推送）：
+     - 仍按锚点窗口恢复
+   - 若无显式锚点：
+     - 优先恢复本地保存的“阅读视口锚点”（建议持久化 `topVisibleSequence/bottomVisibleSequence/enteredFrom/latestOrAnchor`）
+     - 视口状态过期或不存在时，回退到最近消息窗口
+   - 刷新后**禁止回到最老一页**
+
+4. **后续业务对话（客服/审批/应用消息会话等）进入**
+   - 仍按统一 `chatId` 打开聊天页，加载机制与单聊/群聊一致
+   - 仅会话头部元信息不同：例如 `bizSessionId`、`bizType`、`serviceState`、`assigneeId`、`customerId`、`readOnly`
+   - 若对接企业微信客服类业务会话，建议 `serviceState` 直接复用上游 `service_state` 语义做映射，避免同一状态在 IM 层再次命名漂移
+   - 已结束/只读业务会话仍允许按最近窗口或锚点窗口查看历史，但输入区可按 `readOnly` 控制
+
+推荐接口分层（聊天页标准）：
+
+- **最近窗口（首屏）**
+  - `GET /system/im/message/window?chatId=...&mode=latest&limit=30`
+  - 响应建议：
+    - `items[]`（按 `sequence ASC`）
+    - `hasOlder`
+    - `hasNewer`
+    - `oldestSequence`
+    - `newestSequence`
+    - `firstUnreadSequence?`
+
+- **锚点窗口（搜索/引用/未读定位）**
+  - `GET /system/im/message/window?chatId=...&anchorSequence=...&beforeLimit=15&afterLimit=10`
+  - 兼容：若端侧仅有 `anchorMessageId`，服务端先解析出对应 `sequence` 再返回窗口
+  - 响应建议：
+    - `items[]`（按 `sequence ASC`）
+    - `anchorSequence`
+    - `hasOlder`
+    - `hasNewer`
+    - `oldestSequence`
+    - `newestSequence`
+
+- **更早历史（向上翻页）**
+  - `GET /system/im/message/history?chatId=...&beforeSequence=...&limit=30`
+  - 语义：返回 `sequence < beforeSequence` 的消息窗口，响应按 `sequence ASC` 供端侧 prepend
+
+- **较新消息补偿（保留现有）**
+  - `GET /system/im/message/pull?chatId=...&lastSequence=...&limit=200`
+  - 语义：返回 `sequence > lastSequence` 的增量消息，主要用于断线补偿、刷新校准、WS gap 修复
+
+兼容与废弃策略：
+
+- `GET /system/im/message/list-by-chat?chatId=&pageNo=&pageSize=` 可保留为：
+  - 管理后台分页
+  - 过渡期兼容接口
+- 但 **聊天页首屏、锚点定位、向上翻历史** 不再以该接口作为长期标准
+
+端侧聊天页状态机（必须遵循）：
+
+- `entryMode`：`latest | anchor | restore`
+- `viewportAnchorSequence`：当前视口锚点（建议取首个可见消息或中位可见消息）
+- `oldestLoadedSequence`：当前已加载窗口最老 sequence
+- `newestLoadedSequence`：当前已加载窗口最新 sequence
+- `hasOlder/hasNewer`：是否仍有更老/更新消息可加载
+
+端侧标准流程：
+
+1. 进入聊天页先渲染本地缓存（若有）
+2. 根据 `entryMode` 请求 `window(latest|anchor)`，用服务端结果覆盖/合并本地缓存
+3. 页面滚动到顶部时触发 `history(beforeSequence=oldestLoadedSequence)`，prepend 后保持视口稳定
+4. 页面停留时通过 WS + `pull(lastSequence=newestLoadedSequence)` 追平较新消息
+5. 页面离开时持久化 `viewportAnchorSequence/topVisibleSequence/bottomVisibleSequence`
+
+统一不变式：
+
+- 单聊、群聊、业务会话都共享同一套“时间线窗口”模型，差异只体现在会话元信息与权限
+- 查询消息列表时不得直接使用 `groupId`、`externalUserId`、`businessId` 作为主键代替 `chatId`
+- 聊天页刷新后若无显式锚点，应恢复“最近窗口或上次阅读窗口”，而不是数据库最老页
+- 搜索结果跳转、引用定位、首条未读定位三者统一走锚点窗口，不得各写一套分页逻辑
+- 大群/大会话下，端侧永远只维护“当前窗口 + 必要缓存”，不全量拉取全历史
+
+#### 8.5.3.1 多端兼容规则（Android / iOS / Web）
+
+本节用于把“聊天页加载机制”冻结成跨端统一语义，避免 Android、iOS、Web 各自出现不同的加载与恢复口径。
+
+基础兼容约束（结合当前 uni-app x 能力）：
+
+- 聊天页滚动容器统一使用 `scroll-view` 语义，必须同时具备：
+  - `scroll`
+  - `scrolltoupper`
+  - `scrolltolower`
+  - `scroll-into-view`
+- Android / iOS / Web 的聊天页都必须实现：
+  - 最近窗口进入
+  - 锚点窗口进入
+  - 向上翻历史
+  - 较新消息补偿
+  - 阅读视口恢复
+- 任一端不得因为“平台能力不足”回退为固定 `pageNo=1` 入口
+
+平台差异与统一策略：
+
+- **Web**
+  - 页面刷新频繁，必须优先支持 `restore` 模式
+  - 可使用“可见区域观察”能力（如 Intersection Observer 语义）辅助计算 `topVisibleSequence/bottomVisibleSequence`
+  - 页面切后台/切标签页时，需基于可见性状态收敛自动已读、自动播放、重型预加载
+- **Android**
+  - 文件预览不得依赖系统 Office 是否安装；统一走 `file-preview + WebView/在线预览`
+  - Android System WebView 存在碎片化，聊天页内嵌 WebView 仅用于统一预览入口，不得承载主时间线
+- **iOS**
+  - 文件预览同样统一走 `file-preview + WebView/在线预览`
+  - iOS WebView（WKWebView）对跨域 cookie 与部分嵌入行为有限制，因此文件预览与业务 H5 页面不得依赖“跨域 cookie 才能拿到内容”；优先使用短期 URL 或服务端聚合预览 URL
+
+媒体播放统一规则：
+
+- `VOICE`、`VIDEO` 在 `latest/anchor/restore` 三种进入模式下都**禁止自动播放**
+- Web 端必须假设浏览器可能阻止自动播放，所有音视频播放都以用户手势触发为准
+- 聊天页切后台、路由离开、会话切换时：
+  - 语音播放停止
+  - 视频播放暂停或销毁播放器实例
+- 锚点进入到语音/视频消息时：
+  - 只滚动定位与高亮
+  - 不自动展开播放器
+
+媒体资源加载统一规则：
+
+- `IMAGE/VIDEO/STICKER` 首屏与历史窗口优先使用缩略图、封面图、轻量预览图
+- 原图/原视频地址仅在点击查看时解析，不在聊天页首屏批量解析
+- `FILE` 消息首屏只展示元数据（名称/大小/类型图标），不预取长期 URL
+- `LOCATION` 首屏只展示静态卡片/快照，不在聊天页首屏初始化地图 SDK
+
+端侧实现建议（AI/开发执行口径）：
+
+- 若平台支持可见区域观察：优先用“可见消息序列”维护 `viewportAnchorSequence`
+- 若平台不稳定或观察能力成本高：退化为滚动事件 + DOM/节点测量，但输出语义必须仍是：
+  - `topVisibleSequence`
+  - `bottomVisibleSequence`
+  - `viewportAnchorSequence`
+- 同一套缓存字段名与路由入参必须在 Android / iOS / Web 保持一致，禁止端侧私有命名漂移
+
+#### 8.5.3.2 聊天页入口参数契约（AI 可执行，必须冻结）
+
+聊天页入口路由必须收敛到以下参数集合；业务侧、搜索页、收藏页、转发详情页都只能复用这套契约，不得各自私造跳转参数。
+
+必选参数：
+
+- `chatId: string`
+
+可选参数：
+
+- `entryMode: 'latest' | 'anchor' | 'restore'`
+- `anchorSequence?: string`
+- `anchorMessageId?: string`
+- `highlight?: 'true' | 'false'`
+- `source?: 'conversation-list' | 'search' | 'quote' | 'mention' | 'push' | 'favorite' | 'forward-detail' | 'biz-session'`
+- `conversationBizType?: string`
+- `bizSessionId?: string`
+- `readOnly?: 'true' | 'false'`
+
+入口优先级（强制）：
+
+1. 若存在 `anchorSequence`：走 `entryMode=anchor`
+2. 否则若存在 `anchorMessageId`：先解析 sequence，再走 `entryMode=anchor`
+3. 否则若存在可用的本地阅读视口缓存：走 `entryMode=restore`
+4. 否则：走 `entryMode=latest`
+
+禁止项：
+
+- 禁止仅传 `groupId` 直接进入聊天页后拉消息
+- 禁止仅传 `bizSessionId` 直接查消息
+- 禁止用 `pageNo/pageSize` 作为聊天页路由参数表达阅读位置
+- 禁止让搜索页、收藏页、引用详情页分别定义不同的跳转字段
+
+#### 8.5.3.3 与现有消息能力的融合规则（AI 可执行）
+
+本节是“聊天页入口模型”与现有功能域的融合规范。原则：**所有消息能力都必须能在 `latest / anchor / history / pull` 四条路径下保持一致语义**。
+
+1. `TEXT / QUOTE_REPLY`
+   - 普通进入：参与最近窗口展示
+   - 引用点击：若目标消息不在当前窗口，必须走锚点窗口，不得固定翻页穷举
+   - 刷新恢复：引用链只恢复当前渲染所需快照，不要求一次性补全全链路历史
+
+2. `RECALL / DELETE_FOR_ME / CLEAR_HISTORY`
+   - `latest/history/pull/window` 四类接口都必须返回最终态
+   - 锚点进入到已撤回消息：落到“撤回提示”而非原文
+   - 收藏、搜索、转发详情再打开原消息时，如最终态已变化，仍以最终态渲染
+   - “重新编辑”入口只受消息最终态与权限控制，不受进入模式影响
+
+3. `FORWARD_SINGLE / FORWARD_COMBINE`
+   - 转发消息本身是独立新消息，进入目标会话后按最近窗口处理
+   - 合并转发详情中点击某条原消息：
+     - 若有 `originalChatId + originalSequence`：直接走锚点窗口
+     - 若只有 `originalMessageId`：先解析 sequence，再走锚点窗口
+   - 原消息已撤回/删除时，详情页显示最终态占位，不得静默失败
+
+4. `MENTION`
+   - `@我`、群公告提及、业务提醒进入聊天页时统一走锚点窗口
+   - `mentions[]` 必须在 `latest/history/pull` 三条链路中结构一致
+   - 聊天页首屏不允许因为 mention 渲染而触发额外整页重排；mentions 解析应与消息体解析同批完成
+
+5. `READ_RECEIPT`
+   - 聊天页窗口加载不等于已读详情全量加载
+   - 已读/未读人数明细只对“当前可见且需要展示入口的消息”懒加载
+   - 大群场景禁止因为进入聊天页就批量拉所有消息的已读详情
+
+6. `STICKER / EMOJI / 动画表情`
+   - `latest/history/anchor` 统一按结构化贴纸载荷渲染
+   - 动画表情首屏以轻量预览优先，避免一次性解码整屏 GIF 导致 Web/iOS/低端 Android 卡顿
+   - “收藏到表情”与“消息收藏 Favorite”必须区分：前者写个人表情库，后者写消息收藏
+
+7. `VOICE`
+   - 语音消息进入窗口只渲染气泡、时长、读态，不自动播放
+   - 锚点定位到语音消息时仅高亮，不自动播放
+   - 语音播放实例全页唯一，切换消息或离页时停止
+
+8. `IMAGE / VIDEO`
+   - 窗口加载阶段优先封面/缩略图
+   - 点击后再解析原图/视频播放地址
+   - 视频消息在 Web 端必须假设浏览器会限制自动播放
+
+9. `FILE`
+   - 文件消息在聊天页、搜索页、收藏页、转发详情页的打开入口统一走 `file-preview`
+   - 文件预览失败时必须有“下载/重试”兜底
+   - 不允许在聊天页首屏批量换取所有 `fileId -> presigned-url`
+
+10. `LOCATION`
+   - 聊天页只展示位置快照与标题/地址
+   - 点击后按平台能力打开地图；失败时至少允许复制地址或经纬度
+   - 位置消息锚点进入只需要定位，不需要预初始化地图组件
+
+11. `CARD / 名片 / 应用卡片`
+   - 卡片消息作为不可变快照渲染，进入模式不改变其展示结构
+   - 点击卡片打开详情页时：
+     - 若目标实体仍存在：正常打开
+     - 若目标实体已失效：展示卡片快照或失效占位，不得空白
+
+12. `FAVORITE`
+   - 收藏列表进入聊天页必须优先携带 `chatId + anchorSequence`
+   - 若只有 `messageId`，必须补解析 sequence 后再进入
+   - 原消息撤回/删除后，收藏记录仍存在，但会话内定位后显示最终态占位
+
+13. `草稿 / 输入状态 / 业务会话只读`
+   - `restore` 模式恢复阅读窗口时，不得覆盖当前草稿内容
+   - 业务会话 `readOnly=true` 时：
+     - 允许查看最近窗口/锚点窗口
+     - 禁止展示发送、语音录制、@选择、上传入口
+   - 输入状态同步只与“当前活跃会话 + 输入框焦点”绑定，不随历史窗口翻页重复发送
+
+14. `搜索 / 推送 / 收藏 / 转发详情` 四类外部入口
+   - 统一收敛到聊天页入口契约
+   - 统一优先用 `anchorSequence`
+   - 无法定位时必须给出显式提示，不得无提示落到会话底部
+
+与现有工程的对应改造建议：
+
+- `chat.uvue#loadMessages`：从“固定 `pageNo=1,pageSize=20`”改为“按 `entryMode` 选择 latest/anchor window”
+- `chat.uvue#loadHistoryUntilFound`：移除 `pageNo=2..10` 穷举逻辑，改为基于 `anchorSequence/beforeSequence` 的窗口补拉
+- 聊天滚动容器补充“向上加载更多”入口（建议 `scrolltoupper` 或等价观察器），形成 prepend 闭环
+- `message-service.uts`：缓存不再只作为“已加载消息集合”，还要维护 `oldestLoadedSequence/newestLoadedSequence/viewportAnchorSequence`
+- H5 刷新恢复：本地持久化最近一次阅读视口，默认 TTL 建议 `10~30` 分钟，超时回退到 latest window
+
+对标体验结论（从产品行为抽象，不直接绑定厂商实现细节）：
+
+- 微信/企业微信的聊天页核心体验不是“第一页”，而是“最近消息窗口 + 搜索/引用锚点窗口 + 上滑继续加载”
+- 未来业务对话（客服/应用会话）也必须复用这套窗口模型，否则会在搜索定位、刷新恢复、只读历史查看上重复踩坑
+
 ### 8.6 缺洞（gap）处理标准
 
 客户端必须可处理以下情况：
@@ -2592,3 +2894,318 @@ Backlog 已独立维护于：`sql/doc/IM即时通讯开发任务清单-v2.0.md`�
 
 - 架构文档负责“机制与标准”，Backlog 负责“拆解与执行”
 - 避免同一任务在两处维护，防止漂移
+
+---
+
+## 21. 附录：聊天页入口模型权威实现（AI开工入口）
+
+本附录用于把“聊天页入口模型”冻结到可直接编码的粒度。AI/开发实现时，**本附录优先级高于正文中的“建议/推荐”措辞**；若与正文冲突，以本附录为准。
+
+- 文档状态：已冻结（可作为 AI 开工权威实现附录）
+- 实现状态：未开始（以任务文档 AI 开工附录为执行入口）
+
+### 21.1 本附录范围（冻结）
+
+本附录只覆盖 IM 核心范围：
+
+- 聊天页首屏进入
+- 搜索/引用/转发详情进入聊天页定位
+- 向上翻历史
+- Web/Android/iOS 视口恢复
+- 与现有 IM 消息能力的融合
+
+本附录明确不覆盖：
+
+- 群邀请附带聊天记录
+- 非 IM 页面与后台管理页审计
+- Favorite 收藏列表新页面开发（本期仅冻结未来入口契约，不要求本期实现）
+
+企业级边界（强制）：
+
+- 本附录只允许改动“聊天页 REST 查询模型、前端入口状态机、外部 IM 入口参数、视口恢复算法”，不得改动 WebSocket 底层协议与连接协商流程
+- 不得改变 `App Protobuf + H5 JSON` 双栈策略，不得改变 `PROBE -> AUTH_REQ` 严格协商顺序，不得改变“单连接单 codec”约束
+- 不得改变 `messageType`、`messageId`、`sequence`、`cursorVersion`、`conversationVersion`、`lastReadSequence` 的既有权威语义
+- 不得把聊天页首屏/历史窗口逻辑下沉到 WS 私有协议；聊天页窗口查询仍以 REST 为权威，WS 只承担实时推送与 `pull(sequence)` 补偿
+- Android / iOS / Web 的差异只允许体现在滚动容器、可见区域观测、媒体能力适配层，不得在消息时间线语义、鉴权语义、同步语义上分叉
+- 若本附录任一条与第 3 章统一鉴权、第 6 章协议双栈、第 7 章可靠性/sequence/cursorVersion 机制冲突，必须以前述章节为准；本附录无权覆盖底层核心协议与总体架构
+
+### 21.2 统一入口优先级（冻结）
+
+聊天页进入时，路由/状态恢复的判定优先级必须严格按以下顺序执行：
+
+1. 若存在 `anchorSequence`：进入 `anchor` 模式
+2. 否则若存在 `anchorMessageId`：先解析为 `anchorSequence`，再进入 `anchor` 模式
+3. 否则若存在有效本地视口缓存：进入 `restore` 模式
+4. 否则：进入 `latest` 模式
+
+禁止项：
+
+- 禁止以 `pageNo/pageSize` 作为聊天页入口定位参数
+- 禁止仅以 `groupId` 或 `bizSessionId` 直接拉消息
+- 禁止搜索页、转发详情页、引用定位页分别自定义不同跳转契约
+- 禁止为适配聊天页入口模型而新增或修改任何 WS `messageType`、Envelope 字段、编解码规则、鉴权时序
+
+### 21.3 后端接口契约（冻结）
+
+#### 21.3.1 最近窗口：`GET /system/im/message/window`
+
+用途：
+
+- 从会话列表进入聊天页
+- 聊天页刷新后无显式锚点
+- 已离底部但本地视口状态失效时的兜底
+
+请求参数：
+
+- `chatId: string`，必填
+- `mode: string`，固定为 `latest`
+- `limit: number`，可选，默认 `30`，最大 `50`
+
+成功响应（`code=0`，`request()` 解包后为 `data`）：
+
+```json
+{
+  "mode": "latest",
+  "chatId": "2033741860720664577",
+  "anchorFound": true,
+  "anchorSequence": null,
+  "oldestSequence": "901",
+  "newestSequence": "930",
+  "hasOlder": true,
+  "hasNewer": false,
+  "firstUnreadSequence": "925",
+  "items": [
+    {
+      "id": "2033741860720664701",
+      "messageId": "2033741860720664701",
+      "chatId": "2033741860720664577",
+      "sequence": "901",
+      "messageType": 1,
+      "content": "hello",
+      "extra": "{}",
+      "status": 0,
+      "rev": "1",
+      "senderId": "1001",
+      "receiverId": "1002",
+      "groupId": "0",
+      "sendTime": "2026-03-29 10:00:00",
+      "isSelf": true,
+      "senderNickname": "张三",
+      "mentions": [],
+      "quoteMessageId": null
+    }
+  ]
+}
+```
+
+冻结规则：
+
+- `items` 必须按 `sequence ASC` 返回
+- `oldestSequence/newestSequence` 必须基于返回的**可见消息**计算
+- `firstUnreadSequence` 若当前窗口内无未读首条则返回 `null`
+- 删除墓碑、清空水位、撤回最终态过滤必须先于窗口截取执行
+
+#### 21.3.2 锚点窗口：`GET /system/im/message/window`
+
+用途：
+
+- 搜索结果进入聊天页
+- 引用点击跳转
+- 合并转发详情跳转原消息
+- `@我`、push、未来 Favorite 打开原消息
+
+请求参数：
+
+- `chatId: string`，必填
+- `anchorSequence: string`，可选，优先级最高
+- `anchorMessageId: string`，可选，仅在 `anchorSequence` 为空时生效
+- `beforeLimit: number`，可选，默认 `15`，最大 `30`
+- `afterLimit: number`，可选，默认 `10`，最大 `20`
+
+成功响应：
+
+```json
+{
+  "mode": "anchor",
+  "chatId": "2033741860720664577",
+  "anchorFound": true,
+  "anchorSequence": "880",
+  "oldestSequence": "865",
+  "newestSequence": "890",
+  "hasOlder": true,
+  "hasNewer": true,
+  "firstUnreadSequence": null,
+  "items": []
+}
+```
+
+冻结规则：
+
+- 若同时传入 `anchorSequence` 与 `anchorMessageId`：只使用 `anchorSequence`
+- 若 `anchorMessageId` 能查到消息但消息对当前用户不可见（被 tombstone / clear-watermark 过滤）：`anchorFound=false`
+- 若 `anchorFound=false`：服务端回退返回最近窗口，并把 `mode` 仍标记为 `anchor`
+- 客户端收到 `anchorFound=false` 时，必须提示“原消息已不可定位，已为你打开最近消息”
+
+#### 21.3.3 更早历史：`GET /system/im/message/history`
+
+用途：
+
+- 聊天页上滑加载更早消息
+
+请求参数：
+
+- `chatId: string`，必填
+- `beforeSequence: string`，必填
+- `limit: number`，可选，默认 `30`，最大 `50`
+
+成功响应：
+
+```json
+{
+  "chatId": "2033741860720664577",
+  "oldestSequence": "835",
+  "newestSequence": "864",
+  "hasOlder": true,
+  "items": []
+}
+```
+
+冻结规则：
+
+- 语义必须是：返回 `sequence < beforeSequence` 的最近一段历史
+- `items` 必须按 `sequence ASC` 返回，供前端直接 prepend
+- 同一次 `history` 响应不允许包含 `sequence >= beforeSequence` 的消息
+
+#### 21.3.4 较新补偿：`GET /system/im/message/pull`
+
+冻结规则：
+
+- 继续保留现有接口与能力
+- 只负责 `sequence > lastSequence`
+- 不允许承担聊天页首屏、锚点、历史分页职责
+
+### 21.4 服务端 SQL 口径与索引（冻结）
+
+必需索引：
+
+- `im_chat_message`：新增或确认存在 `(chat_id, sequence)` 复合索引
+- 若按租户分库前仍共表：建议 `(tenant_id, chat_id, sequence)` 复合索引
+
+查询口径（逻辑冻结）：
+
+1. `latest window`
+   - 先过滤：`chatId + 可见性（tombstone/clear/recalled 等）`
+   - 再按 `sequence DESC LIMIT N` 取最近窗口
+   - 最后在服务端翻转为 `sequence ASC` 返回
+
+2. `anchor window`
+   - 先解析锚点 `anchorSequence`
+   - 再取：
+     - `sequence < anchorSequence ORDER BY sequence DESC LIMIT beforeLimit`
+     - `sequence >= anchorSequence ORDER BY sequence ASC LIMIT afterLimit + 1`
+   - 合并后按 `sequence ASC` 返回
+
+3. `history(beforeSequence)`
+   - 取 `sequence < beforeSequence ORDER BY sequence DESC LIMIT N`
+   - 服务端翻转为 `sequence ASC`
+
+强制要求：
+
+- 聊天页相关查询不得再以 `id DESC` 作为时间线权威
+- `sequence` 是唯一时间线权威字段
+- 过滤 tombstone / clear-watermark / 最终态必须发生在窗口计算前，而不是窗口计算后
+
+### 21.5 前端存储与恢复算法（冻结）
+
+本地存储 key：
+
+- `IM_CHAT_VIEWPORT_${tenantId}_${userId}_${chatId}`
+
+存储结构：
+
+```json
+{
+  "entryMode": "latest",
+  "atBottom": true,
+  "viewportAnchorSequence": "880",
+  "topVisibleSequence": "875",
+  "bottomVisibleSequence": "890",
+  "savedAt": 1770000000000
+}
+```
+
+TTL：
+
+- 默认 `15 分钟`
+
+保存时机（冻结）：
+
+- `onHide`
+- `onUnload`
+- H5 `visibilitychange -> hidden`
+- 聊天页滚动过程中允许节流保存，节流时间建议 `500ms`
+
+恢复算法（冻结）：
+
+1. 有显式 `anchorSequence/anchorMessageId`：不读本地视口缓存
+2. 无显式锚点，且缓存未过期：
+   - 若 `atBottom=true`：直接按 `latest` 进入
+   - 若 `atBottom=false` 且 `viewportAnchorSequence` 有值：按 `anchor` 进入，`anchorSequence=viewportAnchorSequence`
+3. 缓存缺失或过期：按 `latest` 进入
+
+prepend 视口稳定规则：
+
+- 调用 `history(beforeSequence)` 前记录当前首个可见消息 `topVisibleSequence`
+- prepend 完成后滚回该消息，使其仍位于 prepend 前的视觉位置
+- 不允许 prepend 后跳到列表最顶或最底
+
+### 21.6 外部入口调用方清单（冻结）
+
+本期必须改造的调用方：
+
+- 会话列表页：`/pages/message/message`
+  - 打开聊天页：只传 `chatId` + `entryMode=latest`
+- 搜索结果页：`/pages/common/search-chat-history`
+  - 打开聊天页：必须优先传 `anchorSequence`
+  - 无 `anchorSequence` 时才传 `anchorMessageId`
+- 合并转发详情页：`/pages/message/forward-combine-detail`
+  - 打开原消息：必须优先传 `sourceSequence`
+  - 无 `sourceSequence` 时才传 `messageId`
+- 聊天页内部引用点击：`chat.uvue`
+  - 必须调用锚点窗口，不得固定翻页穷举
+
+本期预留但不要求开发新页面：
+
+- Favorite 收藏列表
+- 业务会话列表 / 客服会话列表
+
+### 21.7 消息能力回归矩阵（本期必须）
+
+必须回归的 IM 能力：
+
+- 引用回复
+- 撤回 / 管理员撤回 / 撤回后重新编辑
+- `@成员` / `@所有人` / `@我`
+- 单聊已读 / 群聊聚合已读
+- `STICKER / EMOJI`
+- `VOICE / IMAGE / VIDEO / FILE / LOCATION`
+- 合并转发详情跳转原消息
+
+本期不要求新增页面，但要求入口契约预留：
+
+- Favorite 收藏列表
+- 业务会话列表
+
+回归规则（冻结）：
+
+- 任一能力从搜索/转发详情进入聊天页时，优先走 `anchorSequence`
+- 任一能力在聊天页刷新后，不得回到固定第一页
+- 任一能力在 `latest / history / pull` 三条链路下，最终态必须一致
+
+### 21.8 当前代码与本附录的差异（供 AI 开工时直接识别）
+
+- 前端聊天页当前仍固定 `getMessageList(chatId, 1, 20)`
+- 搜索结果与合并转发详情当前仍主要传 `messageId`
+- 搜索服务当前未把 `sequence` 映射为一等字段
+- 后端当前仅有 `list-by-chat(pageNo/pageSize)`，尚无 `window/history`
+- mapper 当前老分页仍以 `id DESC` 为排序口径

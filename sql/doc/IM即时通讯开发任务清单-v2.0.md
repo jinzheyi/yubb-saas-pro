@@ -47,6 +47,179 @@
 
 ---
 
+## AI开工附录（权威）
+
+本附录是“聊天页入口模型”落地时的**执行顺序 + 文件清单 + 完成标准**。AI 开工默认从本附录开始，不再自行推导顺序。
+
+- 文档状态：已完成（权威附录已冻结）
+- 实现状态：未开始（按 A1 顺序开工）
+
+### A0. 范围冻结
+
+本附录仅覆盖 IM 核心改造：
+
+- 聊天页首屏/锚点/历史窗口
+- 外部 IM 入口统一
+- 多端视口恢复
+- 与现有 IM 消息能力的回归
+
+本附录不覆盖：
+
+- 群邀请附带聊天记录
+- 非 IM 页面审计
+- Favorite 收藏列表新页面开发
+
+企业级硬约束：
+
+- 本期改造只允许触达聊天页 REST 查询接口、前端消息窗口状态机、外部 IM 入口参数与视口恢复逻辑
+- 不允许改动 WebSocket 底层协议、`PROBE -> AUTH_REQ` 协商、PB/JSON 双栈、ACK 语义、同连接 reauth 机制
+- 不允许改动 `sequence`、`cursorVersion`、`conversationVersion`、`lastReadSequence` 的权威语义
+- Android / iOS / Web 必须共享同一聊天页入口语义；平台差异只能在滚动/媒体/页面可见性适配层实现
+- 若实现过程中发现必须改动底层协议或总体架构，必须停止并先回写架构文档主章节，不允许在本附录内直接扩 scope
+
+### A1. 开工顺序（必须按顺序）
+
+1. 后端接口与 VO
+2. 后端查询 SQL 与索引
+3. 前端 API 封装
+4. 聊天页入口状态机
+5. 搜索结果页 / 合并转发详情页入口迁移
+6. 顶部翻历史与 Web 恢复
+7. IM 消息能力回归
+
+### A2. 后端改造清单（文件级）
+
+必须修改：
+
+- `shengyu-module-system/.../controller/app/im/AppImMessageController.java`
+  - 新增 `GET /system/im/message/window`
+  - 新增 `GET /system/im/message/history`
+- `shengyu-module-system/.../service/im/ImMessageService.java`
+  - 新增 `getMessageWindow(...)`
+  - 新增 `getMessageHistory(...)`
+- `shengyu-module-system/.../service/im/ImMessageServiceImpl.java`
+  - 实现 latest / anchor / history 三类查询
+  - 实现 `anchorMessageId -> sequence` 解析
+- `shengyu-module-system/.../dal/mysql/im/ImChatMessageMapper.java`
+  - 新增基于 `sequence` 的 latest / anchor / history 查询
+- `sql/mysql/1.0/im/ddl_im_tables.sql`
+  - 补 `im_chat_message(chat_id, sequence)` 索引定义
+
+建议新增 VO：
+
+- `AppImMessageWindowReqVO`
+- `AppImMessageWindowRespVO`
+- `AppImMessageHistoryRespVO`
+
+完成定义：
+
+- 聊天页不再依赖 `list-by-chat(pageNo/pageSize)` 作为首屏标准接口
+- 新接口响应字段与架构文档附录 21 完全一致
+
+### A3. 前端改造清单（文件级）
+
+必须修改：
+
+- `shengyu-ui/shengyu-ui-admin-uniappx/api/message.uts`
+  - 新增 `getMessageWindow`
+  - 新增 `getMessageHistory`
+- `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`
+  - 新增聊天页视口状态存储/读取
+  - 新增 `oldestLoadedSequence/newestLoadedSequence`
+- `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`
+  - 删除固定 `pageNo=1` 首屏逻辑
+  - 删除 `pageNo=2..10` 穷举定位逻辑
+  - 增加 `entryMode=latest|anchor|restore`
+  - 增加顶部翻历史
+  - 增加视口保存/恢复
+
+必须迁移的外部入口：
+
+- `shengyu-ui/shengyu-ui-admin-uniappx/pages/common/search-chat-history.uvue`
+  - 优先传 `anchorSequence`
+- `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/forward-combine-detail.uvue`
+  - 优先传 `sourceSequence/anchorSequence`
+
+本期可不新建页面，但要预留入口契约：
+
+- `pages/common/favorite.uvue`
+- 未来业务会话列表页
+
+### A4. 调用方迁移清单（必须全量核对）
+
+1. 会话列表 -> 聊天页
+- 目标：`latest`
+- 参数：`chatId`
+
+2. 搜索结果 -> 聊天页
+- 目标：`anchor`
+- 参数优先级：`anchorSequence > anchorMessageId`
+
+3. 合并转发详情 -> 聊天页
+- 目标：`anchor`
+- 参数优先级：`sourceSequence > messageId`
+
+4. 聊天页引用点击 -> 聊天页内部定位
+- 目标：`anchor`
+- 禁止固定翻页穷举
+
+### A5. 视口恢复实现清单（必须逐项完成）
+
+必须实现：
+
+- 存储 key：`IM_CHAT_VIEWPORT_${tenantId}_${userId}_${chatId}`
+- 存储字段：
+  - `entryMode`
+  - `atBottom`
+  - `viewportAnchorSequence`
+  - `topVisibleSequence`
+  - `bottomVisibleSequence`
+  - `savedAt`
+- TTL：`15 分钟`
+- 保存时机：
+  - `onHide`
+  - `onUnload`
+  - Web `visibilitychange`
+- 恢复优先级：
+  - `anchorSequence`
+  - `anchorMessageId`
+  - `restore`
+  - `latest`
+
+### A6. IM 回归清单（本期必须）
+
+必须回归：
+
+- 引用回复定位
+- 撤回 / 管理员撤回 / 重新编辑
+- `@我` / `@所有人`
+- 群已读聚合详情懒加载
+- `STICKER / EMOJI`
+- 语音不自动播放
+- 图片/视频缩略图优先
+- 文件统一进入 `file-preview`
+- 位置消息点击打开
+- 合并转发详情跳原消息
+
+不纳入本期新增开发，但保留契约：
+
+- Favorite 收藏列表
+- 业务会话列表
+
+### A7. 本期 DoD（完成定义）
+
+只有同时满足以下条件，聊天页入口模型改造才算完成：
+
+1. 聊天页首屏不再固定走 `pageNo=1`
+2. 搜索结果与合并转发详情都优先传 `anchorSequence`
+3. 后端存在 `window/history` 正式接口
+4. 聊天页支持顶部翻历史
+5. Web 刷新后恢复最近阅读窗口或最近消息窗口
+6. IM 回归清单全部通过
+7. WebSocket 协议双栈、统一鉴权、不断链续期、`pull(sequence)`、会话增量同步等底层核心链路行为无回归
+
+---
+
 ## 前端开发规范（UTS/uvue，强制遵循）
 
 > **说明**：本节固化 Uni-App X 前端开发规范，后续开发新页面时无需重复强调。
@@ -731,6 +904,186 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 - **涉及文件/目录**：
   - `shengyu-module-system/.../controller/app/im/AppImConversationController.java`（提供 groupId->chatId 查询能力，或复用已有 createOrGetConversation）
   - `shengyu-ui/shengyu-ui-admin-uniappx`：端侧统一通过 `chatId` 调用 `list-by-chat`/`pull`
+
+### C2.2（P0）：聊天页首屏/锚点/历史窗口加载机制（对齐微信/企微）
+
+- **背景 / 当前问题**：
+  - `pages/message/chat.uvue#loadMessages` 当前固定调用 `GET /system/im/message/list-by-chat?chatId=&pageNo=1&pageSize=20`
+  - H5/页面刷新后会重复执行同样逻辑，因此聊天页会回到固定分页首屏，而不是“最近消息窗口”或“上次阅读窗口”
+  - 搜索/引用定位目前通过 `pageNo=2..10` 穷举补拉，无法稳定覆盖大群、大会话和后续业务会话
+  - 页面只有“滚到底”逻辑，没有“向上翻历史”的标准加载闭环
+
+- **目标**：
+  - 从会话列表进入聊天页时，默认展示最近消息窗口，而不是最老 20 条/固定第一页
+  - 从搜索结果/引用/@我/推送进入时，按锚点加载上下文窗口并稳定定位
+  - 页面刷新后恢复“最近窗口或上次阅读窗口”，不回退到固定首屏
+  - 单聊/群聊/后续业务会话统一复用一套时间线加载机制
+
+- **范围**：
+  - module-system：新增聊天页窗口接口（latest/anchor/history），保留 pull 做较新补偿
+  - uniappx：聊天页按 `entryMode` 加载；补齐向上翻历史、刷新恢复、锚点定位
+  - 文档：冻结“聊天页禁止固定 `pageNo=1` 作为标准入口”
+
+- **推荐接口**：
+  - `GET /system/im/message/window?chatId=...&mode=latest&limit=30`
+  - `GET /system/im/message/window?chatId=...&anchorSequence=...&beforeLimit=15&afterLimit=10`
+  - `GET /system/im/message/history?chatId=...&beforeSequence=...&limit=30`
+  - `GET /system/im/message/pull?chatId=...&lastSequence=...&limit=200`（保留，用于较新补偿）
+
+- **统一规则**：
+  - 首屏/锚点/历史分页全部以 `chatId + sequence` 表达，不再以 `pageNo` 表达阅读位置
+  - 群聊若仅有 `groupId`：先映射出 `chatId` 再进入聊天页
+  - 业务会话若后续仅有 `bizSessionId`：也必须先映射到 `chatId`
+  - 服务端返回给聊天页的 `items[]` 必须按 `sequence ASC` 渲染
+
+- **前端改造点**：
+  - `pages/message/chat.uvue`
+    - 新增 `entryMode`：`latest | anchor | restore`
+    - 普通进入：调用 `window(mode=latest)`
+    - 搜索/引用跳转：优先用 `anchorSequence`，否则 `anchorMessageId -> sequence -> anchor window`
+    - 页面刷新：恢复 `viewportAnchorSequence/topVisibleSequence/bottomVisibleSequence`
+    - 增加“向上加载更多”入口，禁止只靠 `scrolltolower`
+  - `services/message-service.uts`
+    - 持久化 `oldestLoadedSequence/newestLoadedSequence/viewportAnchorSequence`
+    - `pull` 只负责较新补偿，不再兼任首屏历史分页
+
+- **后端改造点**：
+  - `AppImMessageController.java`
+    - 新增 `window`
+    - 新增 `history`
+    - `list-by-chat` 标注为兼容/后台分页，不再作为聊天页长期标准
+  - `ImMessageServiceImpl.java`
+    - 支持 latest window / anchor window / beforeSequence history 三类查询
+    - `anchorMessageId` 解析为 `anchorSequence` 后再查询
+    - 响应输出 `hasOlder/hasNewer/oldestSequence/newestSequence/anchorSequence`
+
+- **验收标准**：
+  - 场景 1：从会话列表进入单聊/群聊，首屏展示最近窗口，页面初始落底
+  - 场景 2：聊天页刷新后，恢复最近窗口或上次阅读窗口，不回到固定第一页
+  - 场景 3：从搜索结果进入，目标消息 1 次窗口加载即可定位；大群场景不再靠 `pageNo=2..10` 穷举
+  - 场景 4：上滑加载更早历史时，prepend 后视口稳定，不跳屏、不重复
+  - 场景 5：WS 收到新消息或重连补偿后，较新消息通过 `pull` 追平，不影响历史窗口
+  - 场景 6：业务会话（后续）进入聊天页时，仍按 `chatId` 打开并复用相同窗口机制
+
+- **涉及文件/目录**：
+  - `shengyu-module-system/.../controller/app/im/AppImMessageController.java`
+  - `shengyu-module-system/.../service/im/ImMessageServiceImpl.java`
+  - `shengyu-module-system/.../dal/mysql/im/ImChatMessageMapper.java`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/api/message.uts`
+
+#### C2.2.1（P0）：最近消息窗口（latest window）首屏加载
+
+- **目标**：从会话列表进入聊天页时，首屏展示最近 `20~50` 条消息，默认落底。
+- **验收**：
+  - `chatId` 已存在时，聊天页不再调用固定 `pageNo=1`
+  - 首屏响应包含 `hasOlder/oldestSequence/newestSequence`
+  - 首屏内若覆盖首条未读，展示“以下为新消息”分割线
+
+#### C2.2.2（P0）：锚点窗口（anchor window）定位
+
+- **目标**：搜索结果、引用回复、@我、push 跳转统一走锚点窗口。
+- **验收**：
+  - 优先支持 `anchorSequence`
+  - 若仅有 `messageId`，服务端或端侧可稳定解析出 sequence 再定位
+  - 废弃 `pageNo=2..10` 穷举翻页定位
+
+#### C2.2.3（P0）：向上翻历史（beforeSequence）
+
+- **目标**：用户上滑时按 `beforeSequence` 拉更早历史，prepend 后保持滚动位置稳定。
+- **验收**：
+  - 同一页消息不重复
+  - prepend 后不跳到顶部/底部
+  - 大群会话连续翻 10 页以上仍保持顺序正确
+
+#### C2.2.4（P0）：刷新恢复与阅读视口持久化
+
+- **目标**：H5 刷新或页面重建后，优先恢复最近一次阅读窗口。
+- **建议持久化字段**：
+  - `entryMode`
+  - `viewportAnchorSequence`
+  - `topVisibleSequence`
+  - `bottomVisibleSequence`
+  - `savedAt`
+- **验收**：
+  - TTL 内刷新恢复到最近阅读窗口
+  - TTL 超时或状态缺失时回退到 latest window
+  - 无显式锚点时，刷新后禁止回到最老页
+
+#### C2.2.5（P1）：业务会话时间线抽象（为后续客服/应用会话预留）
+
+- **目标**：单聊、群聊、业务会话共用统一 `chatId + sequence` 时间线模型。
+- **建议字段**：
+  - `conversationBizType`
+  - `bizSessionId`
+  - `serviceState`（若对接企业微信客服，直接映射上游 `service_state`）
+  - `readOnly`
+- **验收**：
+  - 聊天页消息查询仍只认 `chatId`
+  - 业务会话关闭后仍可按 latest/anchor 查看历史，但输入区可按 `readOnly` 关闭
+
+#### C2.2.6（P0）：Android / iOS / Web 多端一致加载与恢复
+
+- **目标**：聊天页入口模型在 Android、iOS、Web 三端输出同一语义，不出现某端固定第一页、某端不能恢复、某端不能上翻历史的分裂实现。
+- **范围**：
+  - `scroll-view` 顶部/底部事件统一
+  - 阅读视口状态持久化统一
+  - 音视频自动播放策略统一
+  - 文件预览入口统一
+- **验收**：
+  - Android / iOS / Web 都支持 `latest | anchor | restore`
+  - Web 刷新后能恢复阅读窗口
+  - 三端都不以 `pageNo=1` 作为聊天页标准入口
+  - 音视频进入聊天页后不自动播放
+  - 文件消息点击统一进入 `file-preview`
+
+#### C2.2.7（P0）：聊天页入口契约收敛（route / nav state）
+
+- **目标**：把聊天页所有外部入口统一为一套可回归的路由契约，禁止搜索、收藏、转发详情、业务会话各自发明跳转参数。
+- **标准参数**：
+  - `chatId`
+  - `entryMode`
+  - `anchorSequence?`
+  - `anchorMessageId?`
+  - `source?`
+  - `conversationBizType?`
+  - `bizSessionId?`
+  - `readOnly?`
+- **验收**：
+  - 搜索结果、收藏列表、引用定位、推送点击、转发详情打开聊天页时，都走同一参数契约
+  - 入口优先级固定：`anchorSequence > anchorMessageId > restore > latest`
+  - 禁止 `groupId/pageNo/pageSize` 直接作为聊天页定位参数
+
+#### C2.2.8（P0）：聊天页入口模型与现有功能融合验收
+
+- **目标**：确保聊天页入口机制与既有消息能力兼容，不因改窗口模型引入转发、撤回、@、已读、贴纸、多媒体、收藏等回归。
+- **必测能力域**：
+  - 转发：逐条转发、合并转发、转发详情再定位原消息
+  - 撤回：自撤回、管理员撤回、撤回后重新编辑
+  - @提及：@成员、@所有人、@我跳转
+  - 已读/未读：单聊已读、群聊聚合已读、可见消息懒加载明细
+  - 贴纸/动画表情：普通发送、从收藏入口发送、刷新后回显
+  - 语音/图片/视频：缩略图、播放/预览、刷新恢复
+  - 位置/文件/名片：点击打开、失败兜底、锚点进入
+  - 收藏：从收藏页进入原会话定位
+  - 业务会话：只读场景、客服/应用会话头部元信息
+- **验收标准**：
+  - 任一能力从搜索/收藏/转发详情进入聊天页时都能稳定定位或给出明确失败提示
+  - 任一能力在聊天页刷新后不回到固定第一页
+  - 任一能力在 `latest/history/pull` 三条链路下最终态一致
+
+#### C2.2.9（P1）：Web 性能与可见区域策略
+
+- **目标**：为 Web 端补齐大窗口渲染、可见区域定位、后台切换收敛策略，避免 H5 端滚动抖动和已读误判。
+- **范围**：
+  - 可见区域锚点计算
+  - 页面可见性切换
+  - 懒加载缩略图 / 已读详情 / 贴纸动画
+- **验收**：
+  - Web 端大群会话向上连续翻页时不明显抖动
+  - 切后台再回来不会错误触发自动已读
+  - 可见区域锚点恢复成功率可回归验证
 
 
 ### C3（P0）：会话同步与未读水位模型（对齐企微/钉钉）
