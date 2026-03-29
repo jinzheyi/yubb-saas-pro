@@ -155,12 +155,19 @@
 
 		const chatId = item.chatId
 		const mid = item.messageId || item.id
+		const sequence = item.sequence != null ? String(item.sequence) : '0'
 		if (!chatId || chatId === '0' || !mid || mid === '0') {
 			uni.showToast({ title: '无法定位消息', icon: 'none' })
 			return
 		}
+		if (sequence !== '' && sequence !== '0') {
+			uni.navigateTo({
+				url: `/pages/message/chat?chatId=${encodeIdParam(chatId)}&entryMode=anchor&anchorSequence=${encodeURIComponent(sequence)}&messageId=${encodeURIComponent(mid)}&highlight=true`
+			})
+			return
+		}
 		uni.navigateTo({
-			url: `/pages/message/chat?chatId=${encodeIdParam(chatId)}&messageId=${encodeURIComponent(mid)}&highlight=true`
+			url: `/pages/message/chat?chatId=${encodeIdParam(chatId)}&entryMode=anchor&anchorMessageId=${encodeURIComponent(mid)}&messageId=${encodeURIComponent(mid)}&highlight=true`
 		})
 	}
 

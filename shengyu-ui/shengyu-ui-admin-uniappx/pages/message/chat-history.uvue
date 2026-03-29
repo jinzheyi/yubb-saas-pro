@@ -229,6 +229,7 @@ const loadMessages = async () => {
         ...m,
         id: m && m.id != null ? m.id.toString() : '0',
         messageId: m && m.messageId != null ? m.messageId.toString() : null,
+        sequence: m && m.sequence != null ? m.sequence.toString() : null,
         senderId: m && m.senderId != null ? m.senderId.toString() : null,
         receiverId: m && m.receiverId != null ? m.receiverId.toString() : null,
         groupId: m && m.groupId != null ? m.groupId.toString() : null
@@ -416,9 +417,17 @@ const getHighlightedContent = (content: string): string => {
 // 点击消息项 - 跳转到聊天页面并定位到该消息
 const handleMessageClick = (message: any) => {
   const chatIdParam = encodeIdParam(chatId.value)
-  // 跳转到聊天页面，传递消息ID用于定位
+  const mid = message && message.messageId != null ? String(message.messageId) : (message && message.id != null ? String(message.id) : '')
+  const sequence = message && message.sequence != null ? String(message.sequence) : ''
+  if (mid === '' || mid === '0') {
+    uni.showToast({ title: '无法定位消息', icon: 'none' })
+    return
+  }
+  const url = sequence !== ''
+    ? `/pages/message/chat?chatId=${chatIdParam}&entryMode=anchor&anchorSequence=${encodeURIComponent(sequence)}&messageId=${encodeURIComponent(mid)}&highlight=true`
+    : `/pages/message/chat?chatId=${chatIdParam}&entryMode=anchor&anchorMessageId=${encodeURIComponent(mid)}&messageId=${encodeURIComponent(mid)}&highlight=true`
   uni.navigateTo({
-    url: `/pages/message/chat?chatId=${chatIdParam}&messageId=${message.id}&highlight=true`
+    url: url
   })
 }
 </script>

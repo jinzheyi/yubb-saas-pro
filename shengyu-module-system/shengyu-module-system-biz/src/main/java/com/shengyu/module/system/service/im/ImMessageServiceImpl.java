@@ -48,6 +48,14 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 @Slf4j
 public class ImMessageServiceImpl implements ImMessageService {
     private static final int MAX_FORWARD_COMBINE_DEPTH = 20;
+    private static final int WINDOW_LATEST_LIMIT_DEFAULT = 30;
+    private static final int WINDOW_LATEST_LIMIT_MAX = 50;
+    private static final int WINDOW_BEFORE_LIMIT_DEFAULT = 15;
+    private static final int WINDOW_BEFORE_LIMIT_MAX = 30;
+    private static final int WINDOW_AFTER_LIMIT_DEFAULT = 10;
+    private static final int WINDOW_AFTER_LIMIT_MAX = 20;
+    private static final int HISTORY_LIMIT_DEFAULT = 30;
+    private static final int HISTORY_LIMIT_MAX = 50;
 
     private static class MentionParseResult {
         private final boolean atAll;
@@ -475,6 +483,54 @@ public class ImMessageServiceImpl implements ImMessageService {
     }
 
     @Override
+    public AppImMessageWindowRespVO getMessageWindow(Long userId, AppImMessageWindowReqVO windowReqVO) {
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, windowReqVO.getChatId());
+        if (chatUser == null) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+
+        Long tenantId = getCurrentTenantId();
+        Long anchorSequence = resolveVisibleAnchorSequence(tenantId, userId, windowReqVO);
+        if (anchorSequence != null) {
+            return buildAnchorWindowResponse(userId, tenantId, chatUser, windowReqVO, anchorSequence);
+        }
+        String fallbackMode = hasAnchorHint(windowReqVO) ? "anchor" : "latest";
+        return buildLatestWindowResponse(userId, tenantId, chatUser, windowReqVO,
+                fallbackMode, !hasAnchorHint(windowReqVO), windowReqVO.getAnchorSequence());
+    }
+
+    @Override
+    public AppImMessageHistoryRespVO getMessageHistory(Long userId, AppImMessageHistoryReqVO historyReqVO) {
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, historyReqVO.getChatId());
+        if (chatUser == null) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+        Long beforeSequence = historyReqVO.getBeforeSequence();
+        if (beforeSequence == null || beforeSequence <= 0) {
+            throw ServiceExceptionUtil.invalidParamException("beforeSequence必须大于0");
+        }
+        Integer limit = normalizeLimit(historyReqVO.getLimit(), HISTORY_LIMIT_DEFAULT, HISTORY_LIMIT_MAX);
+        Long tenantId = getCurrentTenantId();
+        List<ImChatMessageDO> historyDesc = chatMessageMapper.selectVisibleBeforeSequenceByUser(
+                tenantId, userId, historyReqVO.getChatId(), beforeSequence, limit);
+        List<AppImMessageRespVO> items = mapChatWindowMessages(userId, reverseBySequence(historyDesc));
+
+        AppImMessageHistoryRespVO respVO = new AppImMessageHistoryRespVO();
+        respVO.setChatId(historyReqVO.getChatId());
+        respVO.setItems(items);
+        if (!items.isEmpty()) {
+            Long oldestSequence = items.get(0).getSequence();
+            Long newestSequence = items.get(items.size() - 1).getSequence();
+            respVO.setOldestSequence(oldestSequence);
+            respVO.setNewestSequence(newestSequence);
+            respVO.setHasOlder(hasOlderMessages(tenantId, userId, historyReqVO.getChatId(), oldestSequence));
+        } else {
+            respVO.setHasOlder(false);
+        }
+        return respVO;
+    }
+
+    @Override
     public List<AppImMessageRespVO> getConversationMessages(Long userId, Long chatId, Long lastMessageId, Integer pageSize) {
         // 旧接口不再支持（线路 A 统一走分页接口）
         throw exception(MESSAGE_SEND_FAILED);
@@ -616,6 +672,201 @@ public class ImMessageServiceImpl implements ImMessageService {
         respVO.setExtra(null);
         respVO.setForwardedFrom(null);
         respVO.setMentions(null);
+    }
+
+    private AppImMessageWindowRespVO buildLatestWindowResponse(Long userId, Long tenantId, ImChatUserDO chatUser,
+                                                               AppImMessageWindowReqVO windowReqVO,
+                                                               String responseMode,
+                                                               boolean anchorFound, Long anchorSequence) {
+        Integer limit = normalizeLimit(windowReqVO.getLimit(), WINDOW_LATEST_LIMIT_DEFAULT, WINDOW_LATEST_LIMIT_MAX);
+        List<ImChatMessageDO> latestDesc = chatMessageMapper.selectVisibleLatestByUser(
+                tenantId, userId, windowReqVO.getChatId(), limit);
+        List<AppImMessageRespVO> items = mapChatWindowMessages(userId, reverseBySequence(latestDesc));
+        return buildWindowResponse(windowReqVO.getChatId(), responseMode, items, chatUser, anchorFound, anchorSequence);
+    }
+
+    private AppImMessageWindowRespVO buildAnchorWindowResponse(Long userId, Long tenantId, ImChatUserDO chatUser,
+                                                               AppImMessageWindowReqVO windowReqVO,
+                                                               Long anchorSequence) {
+        Integer beforeLimit = normalizeLimit(windowReqVO.getBeforeLimit(), WINDOW_BEFORE_LIMIT_DEFAULT, WINDOW_BEFORE_LIMIT_MAX);
+        Integer afterLimit = normalizeLimit(windowReqVO.getAfterLimit(), WINDOW_AFTER_LIMIT_DEFAULT, WINDOW_AFTER_LIMIT_MAX);
+
+        List<ImChatMessageDO> beforeDesc = chatMessageMapper.selectVisibleBeforeSequenceByUser(
+                tenantId, userId, windowReqVO.getChatId(), anchorSequence, beforeLimit);
+        List<ImChatMessageDO> afterAsc = chatMessageMapper.selectVisibleAfterOrEqualSequenceByUser(
+                tenantId, userId, windowReqVO.getChatId(), anchorSequence, afterLimit + 1);
+
+        List<ImChatMessageDO> merged = new ArrayList<>(beforeDesc.size() + afterAsc.size());
+        merged.addAll(reverseBySequence(beforeDesc));
+        merged.addAll(afterAsc);
+
+        List<AppImMessageRespVO> items = mapChatWindowMessages(userId, merged);
+        AppImMessageWindowRespVO respVO = buildWindowResponse(windowReqVO.getChatId(), "anchor", items, chatUser, true, anchorSequence);
+        if (!items.isEmpty()) {
+            Long oldestSequence = items.get(0).getSequence();
+            Long newestSequence = items.get(items.size() - 1).getSequence();
+            respVO.setHasOlder(hasOlderMessages(tenantId, userId, windowReqVO.getChatId(), oldestSequence));
+            respVO.setHasNewer(hasNewerMessages(tenantId, userId, windowReqVO.getChatId(), newestSequence));
+        }
+        return respVO;
+    }
+
+    private AppImMessageWindowRespVO buildWindowResponse(Long chatId, String mode, List<AppImMessageRespVO> items,
+                                                         ImChatUserDO chatUser, boolean anchorFound,
+                                                         Long anchorSequence) {
+        AppImMessageWindowRespVO respVO = new AppImMessageWindowRespVO();
+        respVO.setMode(mode);
+        respVO.setChatId(chatId);
+        respVO.setAnchorFound(anchorFound);
+        respVO.setAnchorSequence(anchorSequence);
+        respVO.setItems(items);
+        if (items.isEmpty()) {
+            respVO.setHasOlder(false);
+            respVO.setHasNewer(false);
+            respVO.setFirstUnreadSequence(null);
+            return respVO;
+        }
+        Long oldestSequence = items.get(0).getSequence();
+        Long newestSequence = items.get(items.size() - 1).getSequence();
+        respVO.setOldestSequence(oldestSequence);
+        respVO.setNewestSequence(newestSequence);
+        respVO.setHasOlder(false);
+        respVO.setHasNewer(false);
+        respVO.setFirstUnreadSequence(findFirstUnreadSequence(items, chatUser != null ? chatUser.getLastReadSequence() : null));
+        return respVO;
+    }
+
+    private Long resolveVisibleAnchorSequence(Long tenantId, Long userId, AppImMessageWindowReqVO windowReqVO) {
+        if (windowReqVO == null || windowReqVO.getChatId() == null) {
+            return null;
+        }
+        if (windowReqVO.getAnchorSequence() != null) {
+            if (windowReqVO.getAnchorSequence() <= 0) {
+                return null;
+            }
+            return chatMessageMapper.selectVisibleSequenceBySequence(
+                    tenantId, userId, windowReqVO.getChatId(), windowReqVO.getAnchorSequence());
+        }
+        if (windowReqVO.getAnchorMessageId() != null) {
+            if (windowReqVO.getAnchorMessageId() <= 0) {
+                return null;
+            }
+            return chatMessageMapper.selectVisibleSequenceByMessageId(
+                    tenantId, userId, windowReqVO.getChatId(), windowReqVO.getAnchorMessageId());
+        }
+        return null;
+    }
+
+    private boolean hasAnchorHint(AppImMessageWindowReqVO windowReqVO) {
+        if (windowReqVO == null) {
+            return false;
+        }
+        return windowReqVO.getAnchorSequence() != null || windowReqVO.getAnchorMessageId() != null;
+    }
+
+    private Long getCurrentTenantId() {
+        Long tenantId = TenantContextHolder.getTenantId();
+        return tenantId != null ? tenantId : 0L;
+    }
+
+    private Integer normalizeLimit(Integer rawLimit, int defaultLimit, int maxLimit) {
+        if (rawLimit == null || rawLimit <= 0) {
+            return defaultLimit;
+        }
+        return Math.min(rawLimit, maxLimit);
+    }
+
+    private List<ImChatMessageDO> reverseBySequence(List<ImChatMessageDO> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<ImChatMessageDO> copy = new ArrayList<>(messages);
+        Collections.reverse(copy);
+        return copy;
+    }
+
+    private boolean hasOlderMessages(Long tenantId, Long userId, Long chatId, Long oldestSequence) {
+        if (oldestSequence == null) {
+            return false;
+        }
+        Long count = chatMessageMapper.countVisibleOlderThanSequence(tenantId, userId, chatId, oldestSequence);
+        return count != null && count > 0;
+    }
+
+    private boolean hasNewerMessages(Long tenantId, Long userId, Long chatId, Long newestSequence) {
+        if (newestSequence == null) {
+            return false;
+        }
+        Long count = chatMessageMapper.countVisibleNewerThanSequence(tenantId, userId, chatId, newestSequence);
+        return count != null && count > 0;
+    }
+
+    private Long findFirstUnreadSequence(List<AppImMessageRespVO> items, Long lastReadSequence) {
+        if (items == null || items.isEmpty()) {
+            return null;
+        }
+        long watermark = lastReadSequence != null ? lastReadSequence : 0L;
+        for (AppImMessageRespVO item : items) {
+            if (item == null || item.getSequence() == null) {
+                continue;
+            }
+            if (item.getSequence() > watermark) {
+                return item.getSequence();
+            }
+        }
+        return null;
+    }
+
+    private List<AppImMessageRespVO> mapChatWindowMessages(Long userId, List<ImChatMessageDO> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Long chatId = messages.get(0).getChatId();
+        ImChatDO chat = chatId != null ? chatMapper.selectById(chatId) : null;
+
+        Set<Long> senderIds = messages.stream()
+                .filter(Objects::nonNull)
+                .map(ImChatMessageDO::getSenderId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<Long, AdminUserDO> senderMap = senderIds.isEmpty() ? Collections.emptyMap()
+                : userMapper.selectBatchIds(senderIds).stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(AdminUserDO::getId, item -> item, (left, right) -> left));
+
+        List<AppImMessageRespVO> result = new ArrayList<>(messages.size());
+        for (ImChatMessageDO message : messages) {
+            if (message == null) {
+                continue;
+            }
+            AppImMessageRespVO respVO = BeanUtils.toBean(message, AppImMessageRespVO.class);
+            respVO.setChatId(message.getChatId());
+            respVO.setSequence(message.getSequence());
+            respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
+            AdminUserDO sender = senderMap.get(message.getSenderId());
+            if (sender != null) {
+                respVO.setSenderNickname(sender.getNickname());
+                respVO.setSenderAvatar(sender.getAvatar());
+            }
+            respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
+            fillChatTargetFields(respVO, userId, chat);
+            applyReeditFieldsForCurrentUser(respVO, message, userId);
+            sanitizeRecalledMessage(respVO);
+            result.add(respVO);
+        }
+        return result;
+    }
+
+    private void fillChatTargetFields(AppImMessageRespVO respVO, Long currentUserId, ImChatDO chat) {
+        if (respVO == null || chat == null) {
+            return;
+        }
+        if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
+            respVO.setGroupId(chat.getGroupId());
+            return;
+        }
+        Long receiverId = Objects.equals(chat.getSingleUser1(), currentUserId) ? chat.getSingleUser2() : chat.getSingleUser1();
+        respVO.setReceiverId(receiverId);
     }
 
     @Override
@@ -1435,6 +1686,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             JSONObject msgObj = new JSONObject();
             msgObj.set("messageId", msg.getId() != null ? msg.getId().toString() : "");
             msgObj.set("sourceChatId", msg.getChatId() != null ? msg.getChatId().toString() : "");
+            msgObj.set("sourceSequence", msg.getSequence() != null ? msg.getSequence().toString() : "");
 
             // 引用化：如果合并包里又包含“聊天记录(合并转发消息)”，不再嵌套其 messages，避免套娃与消息体膨胀
             boolean isNestedCombine = false;

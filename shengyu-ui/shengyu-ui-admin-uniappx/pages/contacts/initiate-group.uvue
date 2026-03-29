@@ -428,7 +428,7 @@
 				const groupIdParam = encodeIdParam(groupId != null ? String(groupId) : '')
 				const chatIdParam = encodeIdParam(chatId != null ? String(chatId) : '')
 				uni.redirectTo({
-					url: `/pages/message/chat?type=group&groupId=${groupIdParam}&targetId=${groupIdParam}&chatId=${chatIdParam}&name=${encodeURIComponent(groupName)}&memberCount=${selectedMembers.length}`
+					url: `/pages/message/chat?type=group&groupId=${groupIdParam}&targetId=${groupIdParam}&chatId=${chatIdParam}&name=${encodeURIComponent(groupName)}&memberCount=${selectedMembers.length}&entryMode=latest`
 				})
 				
 				// 清空选择状态

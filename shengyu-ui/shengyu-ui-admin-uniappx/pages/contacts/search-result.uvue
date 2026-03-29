@@ -177,9 +177,9 @@
 	}
 
 	function handleGroupClick(group : any) {
-	const groupIdParam = encodeIdParam(group.id != null ? String(group.id) : '')
+		const groupIdParam = encodeIdParam(group.id != null ? String(group.id) : '')
 		uni.navigateTo({
-		url: `/pages/message/chat?type=group&groupId=${groupIdParam}&targetId=${groupIdParam}&name=${encodeURIComponent(group.name)}&memberCount=${group.memberCount || 0}`
+			url: `/pages/message/chat?type=group&groupId=${groupIdParam}&targetId=${groupIdParam}&name=${encodeURIComponent(group.name)}&memberCount=${group.memberCount || 0}&entryMode=latest`
 		})
 	}
 </script>

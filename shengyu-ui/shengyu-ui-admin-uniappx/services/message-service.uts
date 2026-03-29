@@ -104,6 +104,20 @@ export type ConversationItem = {
   groupMemberCount: number // 对应后端 groupMemberCount
 }
 
+export type ChatViewportState = {
+  entryMode: string
+  atBottom: boolean
+  viewportAnchorSequence: string
+  topVisibleSequence: string
+  bottomVisibleSequence: string
+  savedAt: number
+}
+
+export type LoadedWindowState = {
+  oldestSequence: string
+  newestSequence: string
+}
+
 /**
  * 消息监听器类型
  */
@@ -270,6 +284,10 @@ export class MessageService {
   // 消息缓存（按会话ID分组）
   private messageCache: Map<string, MessageItem[]> = new Map()
 
+  private oldestLoadedSequence: Map<string, string> = new Map()
+
+  private newestLoadedSequence: Map<string, string> = new Map()
+
   // 每个会话最后拉取/确认的序列号（用于断线补偿水位）
   private lastPulledSequence: Map<string, string> = new Map()
 
@@ -322,6 +340,7 @@ export class MessageService {
       }
       messages.splice(idx, 1)
       this.messageCache.set(cid, messages)
+      this.rebuildLoadedWindowState(cid)
     } catch (e) {
       // ignore
     }
@@ -454,7 +473,101 @@ export class MessageService {
       if (id === '' || id === '0' || s === '' || s === '0') {
         return
       }
+      this.noteLoadedSequence(id, s)
       this.updateLastPulledSequence(id, s)
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  private getViewportStorageKey(chatId: string): string {
+    const tenantId = this.currentTenantId != null ? this.currentTenantId : '0'
+    const userId = this.currentUserId != null ? this.currentUserId : '0'
+    return `IM_CHAT_VIEWPORT_${tenantId}_${userId}_${chatId}`
+  }
+
+  public saveChatViewportState(chatId: string, state: ChatViewportState): void {
+    try {
+      const cid = chatId != null ? chatId.toString() : ''
+      if (cid === '' || cid === '0' || state == null) {
+        return
+      }
+      uni.setStorageSync(this.getViewportStorageKey(cid), JSON.stringify(state))
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  public readChatViewportState(chatId: string, ttlMs: number): ChatViewportState | null {
+    try {
+      const cid = chatId != null ? chatId.toString() : ''
+      if (cid === '' || cid === '0') {
+        return null
+      }
+      const raw: any = uni.getStorageSync(this.getViewportStorageKey(cid))
+      if (raw == null || raw === '') {
+        return null
+      }
+      const text = typeof raw === 'string' ? raw : JSON.stringify(raw)
+      if (text == null || text === '') {
+        return null
+      }
+      const parsed = JSON.parse(text) as ChatViewportState
+      if (parsed == null || parsed.savedAt == null) {
+        return null
+      }
+      const ttl = ttlMs != null && ttlMs > 0 ? Number(ttlMs) : 0
+      if (ttl > 0 && Date.now() - Number(parsed.savedAt) > ttl) {
+        try {
+          uni.removeStorageSync(this.getViewportStorageKey(cid))
+        } catch (e) {
+          // ignore
+        }
+        return null
+      }
+      return parsed
+    } catch (e) {
+      return null
+    }
+  }
+
+  public getLoadedWindowState(chatId: string): LoadedWindowState {
+    try {
+      const cid = chatId != null ? chatId.toString() : ''
+      if (cid === '' || cid === '0') {
+        return { oldestSequence: '', newestSequence: '' }
+      }
+      const oldest = this.oldestLoadedSequence.get(cid)
+      const newest = this.newestLoadedSequence.get(cid)
+      return {
+        oldestSequence: oldest != null ? oldest : '',
+        newestSequence: newest != null ? newest : ''
+      }
+    } catch (e) {
+      return { oldestSequence: '', newestSequence: '' }
+    }
+  }
+
+  public updateLoadedWindowState(chatId: string, oldestSequence: string | null, newestSequence: string | null): void {
+    try {
+      const cid = chatId != null ? chatId.toString() : ''
+      if (cid === '' || cid === '0') {
+        return
+      }
+      const oldest = oldestSequence != null ? oldestSequence.toString() : ''
+      const newest = newestSequence != null ? newestSequence.toString() : ''
+      if (oldest !== '' && oldest !== '0') {
+        const currentOldest = this.oldestLoadedSequence.get(cid)
+        if (currentOldest == null || currentOldest === '' || this.compareSeq(oldest, currentOldest) < 0) {
+          this.oldestLoadedSequence.set(cid, oldest)
+        }
+      }
+      if (newest !== '' && newest !== '0') {
+        const currentNewest = this.newestLoadedSequence.get(cid)
+        if (currentNewest == null || currentNewest === '' || this.compareSeq(newest, currentNewest) > 0) {
+          this.newestLoadedSequence.set(cid, newest)
+        }
+      }
     } catch (e) {
       // ignore
     }
@@ -918,6 +1031,57 @@ export class MessageService {
         return 0
       }
       return as > bs ? 1 : -1
+    }
+  }
+
+  private noteLoadedSequence(chatId: string, seq: string | null): void {
+    try {
+      const cid = chatId != null ? chatId.toString() : ''
+      const s = seq != null ? seq.toString() : ''
+      if (cid === '' || cid === '0' || s === '' || s === '0') {
+        return
+      }
+      this.updateLoadedWindowState(cid, s, s)
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  private rebuildLoadedWindowState(chatId: string): void {
+    try {
+      const cid = chatId != null ? chatId.toString() : ''
+      if (cid === '' || cid === '0') {
+        return
+      }
+      const messages = this.messageCache.get(cid)
+      if (messages == null || messages.length === 0) {
+        this.oldestLoadedSequence.delete(cid)
+        this.newestLoadedSequence.delete(cid)
+        return
+      }
+      let oldest = ''
+      let newest = ''
+      for (let i = 0; i < messages.length; i++) {
+        const seq = messages[i] != null && (messages[i] as any).sequence != null ? String((messages[i] as any).sequence) : ''
+        if (seq === '' || seq === '0') {
+          continue
+        }
+        if (oldest === '' || this.compareSeq(seq, oldest) < 0) {
+          oldest = seq
+        }
+        if (newest === '' || this.compareSeq(seq, newest) > 0) {
+          newest = seq
+        }
+      }
+      if (oldest === '' || newest === '') {
+        this.oldestLoadedSequence.delete(cid)
+        this.newestLoadedSequence.delete(cid)
+        return
+      }
+      this.oldestLoadedSequence.set(cid, oldest)
+      this.newestLoadedSequence.set(cid, newest)
+    } catch (e) {
+      // ignore
     }
   }
 
@@ -2511,6 +2675,7 @@ export class MessageService {
       messages = []
       this.messageCache.set(chatId, messages)
     }
+    this.noteLoadedSequence(chatId, message.sequence != null ? message.sequence.toString() : '')
 
     // 去重/合并：pull 补偿与 WS/ACK 可能重叠；以 messageId 为幂等键
     const incomingId = message.messageId != null ? message.messageId.toString() : ''
@@ -2761,6 +2926,18 @@ export class MessageService {
         }
         this.messageCache.delete(fromKey)
       }
+    } catch (e) {
+      // ignore
+    }
+
+    try {
+      const oldest = this.oldestLoadedSequence.get(fromKey)
+      const newest = this.newestLoadedSequence.get(fromKey)
+      if (oldest != null || newest != null) {
+        this.updateLoadedWindowState(toKey, oldest != null ? oldest : null, newest != null ? newest : null)
+      }
+      this.oldestLoadedSequence.delete(fromKey)
+      this.newestLoadedSequence.delete(fromKey)
     } catch (e) {
       // ignore
     }
@@ -3025,6 +3202,8 @@ export class MessageService {
         return
       }
       this.messageCache.delete(chatId)
+      this.oldestLoadedSequence.delete(chatId)
+      this.newestLoadedSequence.delete(chatId)
       this.lastPulledSequence.delete(chatId)
     } catch (e) {
     }
@@ -3069,6 +3248,8 @@ export class MessageService {
    */
   public clearCache(): void {
     this.messageCache.clear()
+    this.oldestLoadedSequence.clear()
+    this.newestLoadedSequence.clear()
   }
 }
 

@@ -5,12 +5,16 @@ import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageForwardReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageHistoryReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageHistoryRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePullReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRecallConfigRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageWindowReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageWindowRespVO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
@@ -87,6 +91,20 @@ public class AppImMessageController {
         pageReqVO.setPageNo(pageNo);
         pageReqVO.setPageSize(pageSize);
         return success(messageService.getMessagePage(userId, pageReqVO));
+    }
+
+    @GetMapping("/window")
+    @Operation(summary = "查询聊天页消息窗口（latest / anchor）")
+    public CommonResult<AppImMessageWindowRespVO> getMessageWindow(@Valid AppImMessageWindowReqVO windowReqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(messageService.getMessageWindow(userId, windowReqVO));
+    }
+
+    @GetMapping("/history")
+    @Operation(summary = "查询更早历史消息")
+    public CommonResult<AppImMessageHistoryRespVO> getMessageHistory(@Valid AppImMessageHistoryReqVO historyReqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(messageService.getMessageHistory(userId, historyReqVO));
     }
 
     @PutMapping("/recall")

@@ -1,11 +1,15 @@
 package com.shengyu.module.system.service.im;
 
 import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageHistoryReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageHistoryRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePullReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageWindowReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageWindowRespVO;
 
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageForwardReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRecallConfigRespVO;
@@ -36,6 +40,24 @@ public interface ImMessageService {
      * @return 消息分页结果
      */
     PageResult<AppImMessageRespVO> getMessagePage(Long userId, AppImMessagePageReqVO pageReqVO);
+
+    /**
+     * 查询聊天页消息窗口（latest / anchor）
+     *
+     * @param userId 用户ID
+     * @param windowReqVO 窗口请求
+     * @return 消息窗口
+     */
+    AppImMessageWindowRespVO getMessageWindow(Long userId, AppImMessageWindowReqVO windowReqVO);
+
+    /**
+     * 查询更早历史消息
+     *
+     * @param userId 用户ID
+     * @param historyReqVO 历史请求
+     * @return 历史窗口
+     */
+    AppImMessageHistoryRespVO getMessageHistory(Long userId, AppImMessageHistoryReqVO historyReqVO);
 
     /**
      * 撤回消息

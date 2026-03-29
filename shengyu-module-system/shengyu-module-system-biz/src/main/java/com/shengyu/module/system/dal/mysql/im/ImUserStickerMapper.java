@@ -19,6 +19,14 @@ public interface ImUserStickerMapper extends BaseMapperX<ImUserStickerDO> {
                 .last("LIMIT 1"));
     }
 
+    default ImUserStickerDO selectUndeletedByUserIdAndMd5(Long userId, String md5) {
+        return selectOne(new LambdaQueryWrapperX<ImUserStickerDO>()
+                .eq(ImUserStickerDO::getUserId, userId)
+                .eq(ImUserStickerDO::getMd5, md5)
+                .orderByDesc(ImUserStickerDO::getId)
+                .last("LIMIT 1"));
+    }
+
     default List<ImUserStickerDO> selectActiveByUserId(Long userId) {
         return selectList(new LambdaQueryWrapperX<ImUserStickerDO>()
                 .eq(ImUserStickerDO::getUserId, userId)

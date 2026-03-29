@@ -509,7 +509,7 @@
 	function handleMessageClick(item : any) {
 		const chatIdParam = encodeIdParam(item.chatId != null ? String(item.chatId) : '')
 		uni.navigateTo({
-			url: `/pages/message/chat?chatId=${chatIdParam}`
+			url: `/pages/message/chat?chatId=${chatIdParam}&entryMode=latest`
 		})
 	}
 

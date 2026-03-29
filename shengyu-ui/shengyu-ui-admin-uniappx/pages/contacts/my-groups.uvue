@@ -182,7 +182,7 @@
 			// 普通模式下跳转到聊天页面
 			// 注意：不传 chatId，让聊天页面自动创建或获取会话
 			uni.navigateTo({
-				url: '/pages/message/chat?type=group&groupId=' + groupIdParam + '&targetId=' + groupIdParam + '&name=' + encodeURIComponent(group.name) + '&memberCount=' + group.memberCount
+				url: '/pages/message/chat?type=group&groupId=' + groupIdParam + '&targetId=' + groupIdParam + '&name=' + encodeURIComponent(group.name) + '&memberCount=' + group.memberCount + '&entryMode=latest'
 			})
 		}
 	}

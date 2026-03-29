@@ -171,7 +171,7 @@
 		const targetIdParam = encodeIdParam(userId.value)
 		// 跳转到聊天页面，传递用户ID和会话类型
 		uni.navigateTo({
-			url: `/pages/message/chat?type=single&targetId=${targetIdParam}&name=${encodeURIComponent(userName.value)}`
+			url: `/pages/message/chat?type=single&targetId=${targetIdParam}&name=${encodeURIComponent(userName.value)}&entryMode=latest`
 		})
 	}
 

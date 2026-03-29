@@ -18,6 +18,53 @@ export function getMessageList(chatId: string, pageNo: number = 1, pageSize: num
 }
 
 /**
+ * 获取聊天页消息窗口（latest / anchor）
+ */
+export function getMessageWindow(params: {
+  chatId: string
+  mode?: string | null
+  anchorSequence?: string | null
+  anchorMessageId?: string | null
+  limit?: number | null
+  beforeLimit?: number | null
+  afterLimit?: number | null
+}): Promise<any> {
+  const query: string[] = [`chatId=${encodeURIComponent(params.chatId)}`]
+  if (params.mode != null && params.mode !== '') {
+    query.push(`mode=${encodeURIComponent(params.mode)}`)
+  }
+  if (params.anchorSequence != null && params.anchorSequence !== '') {
+    query.push(`anchorSequence=${encodeURIComponent(params.anchorSequence)}`)
+  }
+  if (params.anchorMessageId != null && params.anchorMessageId !== '') {
+    query.push(`anchorMessageId=${encodeURIComponent(params.anchorMessageId)}`)
+  }
+  if (params.limit != null && params.limit > 0) {
+    query.push(`limit=${params.limit}`)
+  }
+  if (params.beforeLimit != null && params.beforeLimit > 0) {
+    query.push(`beforeLimit=${params.beforeLimit}`)
+  }
+  if (params.afterLimit != null && params.afterLimit > 0) {
+    query.push(`afterLimit=${params.afterLimit}`)
+  }
+  return request({
+    url: `/system/im/message/window?${query.join('&')}`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 获取更早历史消息
+ */
+export function getMessageHistory(chatId: string, beforeSequence: string, limit: number = 30): Promise<any> {
+  return request({
+    url: `/system/im/message/history?chatId=${encodeURIComponent(chatId)}&beforeSequence=${encodeURIComponent(beforeSequence)}&limit=${limit}`,
+    method: 'GET'
+  })
+}
+
+/**
  * 撤回消息
  */
 export function recallMessage(id: string): Promise<any> {

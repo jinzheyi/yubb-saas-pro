@@ -198,7 +198,7 @@
 			// 延迟跳转到群聊页面
 			setTimeout(() => {
 				uni.redirectTo({
-					url: `/pages/message/chat?targetId=${encodeIdParam(groupId.value)}&targetType=2`
+					url: `/pages/message/chat?targetId=${encodeIdParam(groupId.value)}&targetType=2&entryMode=latest`
 				})
 			}, 1000)
 		} catch (e : any) {
@@ -231,7 +231,7 @@
 	 */
 	function handleViewGroup() {
 		uni.redirectTo({
-			url: `/pages/message/chat?targetId=${encodeIdParam(groupId.value)}&targetType=2`
+			url: `/pages/message/chat?targetId=${encodeIdParam(groupId.value)}&targetType=2&entryMode=latest`
 		})
 	}
 

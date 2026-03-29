@@ -172,13 +172,13 @@ async function handleSelect(targetChatId: string): Promise<void> {
 		if (conv != null) {
 			const chatIdParam = encodeIdParam(targetChatId)
 			uni.redirectTo({
-				url: `/pages/message/chat?chatId=${chatIdParam}`
+				url: `/pages/message/chat?chatId=${chatIdParam}&entryMode=latest`
 			})
 			return
 		}
 		const chatIdParam = encodeIdParam(targetChatId)
 		uni.redirectTo({
-			url: `/pages/message/chat?chatId=${chatIdParam}`
+			url: `/pages/message/chat?chatId=${chatIdParam}&entryMode=latest`
 		})
 	} catch (e) {
 		uni.hideLoading()

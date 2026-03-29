@@ -18,6 +18,7 @@ export type SearchResultItem = {
   id: string
   messageId: string
   chatId: string
+  sequence: string
   conversationName: string
   conversationAvatar: string
   senderId: string
@@ -282,6 +283,7 @@ export class MessageSearchService {
       id: data.id != null ? data.id.toString() : '0',
       messageId: data.messageId != null ? data.messageId.toString() : (data.id != null ? data.id.toString() : '0'),
       chatId: data.chatId != null ? data.chatId.toString() : '0',
+      sequence: data.sequence != null ? data.sequence.toString() : '0',
       conversationName: conversationName,
       conversationAvatar: conversationAvatar,
       senderId: data.senderId != null ? data.senderId.toString() : '0',

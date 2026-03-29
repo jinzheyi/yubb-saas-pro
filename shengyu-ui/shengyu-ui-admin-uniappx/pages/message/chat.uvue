@@ -25,7 +25,7 @@
 		</view>
 
 		<!-- 聊天内容区域 -->
-		<scroll-view class="chat-content" :class="{ 'chat-content-multi-select': multiSelectMode }" scroll-y="true" :scroll-into-view="lastMessageId" show-scrollbar="false" @scroll="handleChatScroll" @scrolltolower="handleChatScrollToLower" lower-threshold="80">
+		<scroll-view class="chat-content" :class="{ 'chat-content-multi-select': multiSelectMode }" scroll-y="true" direction="vertical" refresher-enabled="true" :refresher-triggered="historyRefresherTriggered" refresher-threshold="60" :scroll-into-view="lastMessageId" show-scrollbar="false" @refresherrefresh="handleHistoryRefresher" @scroll="handleChatScroll" @scrolltoupper="handleChatScrollToUpper" upper-threshold="80" @scrolltolower="handleChatScrollToLower" lower-threshold="80">
 			<!-- 水印层 -->
 			<view class="watermark-layer">
 				<view v-for="i in 12" :key="i" class="watermark-item">
@@ -110,7 +110,7 @@
 								</view>
 								
 								<!-- 位置消息 -->
-                                <view v-else-if="msg.type === 'location'" class="message-bubble bubble-location" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
+                                <view v-else-if="msg.type === 'location'" class="message-bubble bubble-location" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleLocationOpen(msg)">
 									<view class="location-info">
 										<text class="location-name">{{ msg.locationName }}</text>
 										<text class="location-address">{{ msg.address }}</text>
@@ -162,7 +162,7 @@
 		</scroll-view>
 
 		<!-- 底部输入区域 -->
-		<view v-if="!multiSelectMode" class="footer" :class="{ 'footer-full-expanded': isFullExpanded }">
+		<view v-if="!multiSelectMode && !conversationReadOnly" class="footer" :class="{ 'footer-full-expanded': isFullExpanded }">
 			<!-- 全屏模式下的顶部操作栏 -->
 			<view v-if="isFullExpanded" class="full-expand-header">
 				<text class="iconfont collapse-icon" @click="toggleFullExpand">&#xe60e;</text>
@@ -356,6 +356,9 @@
 				</view>
 			</view>
 		</view>
+		<view v-else-if="!multiSelectMode" class="footer footer-readonly">
+			<text class="footer-readonly-text">{{ getReadOnlyHint() }}</text>
+		</view>
 
         <view v-if="showMsgMenu" class="menu-mask" @click="closeMsgMenu">
             <view class="menu-content" :style="{ top: menuY + 'px', left: menuX + 'px', opacity: menuOpacity }" @click.stop>
@@ -460,11 +463,11 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { emojiList, emojiMap } from '../../utils/emojiData.uts'
 	import { parseMessageText as parseEmojiTokens, type MessageToken as EmojiToken } from '../../utils/emojiParser.uts'
-	import { getCustomStickers, StickerItem, refreshCustomStickers, uploadCustomSticker, collectMessageToSticker, touchStickerRecent } from '../../utils/stickerManager.uts'
+	import { getCustomStickers, StickerItem, refreshCustomStickers, uploadCustomSticker, collectMessageToSticker, touchStickerRecent, hasCollectedSticker } from '../../utils/stickerManager.uts'
 	import { messageService, MessageItem as ServiceMessageItem, ConversationItem } from '../../services/message-service.uts'
 	import { badgeService } from '../../services/badge-service.uts'
 	import { MessageType, wsManager } from '../../utils/websocket.uts'
-	import { getMessageList, recallMessage, deleteMessage, getRecallConfig } from '../../api/message.uts'
+	import { getMessageWindow, getMessageHistory, recallMessage, deleteMessage, getRecallConfig } from '../../api/message.uts'
 	import { getConversationByTarget } from '../../api/conversation.uts'
 	import { getUserIdStr, getTenantId, hasRole } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
@@ -509,17 +512,24 @@
 	const watermark = ref('同事A 1234')
 	
 	// 消息定位相关（从搜索页面跳转过来时使用）
+	const entryMode = ref('latest')
+	const targetAnchorSequence = ref<string>('')
 	const targetMessageId = ref<string>('')  // 要定位的消息ID
 	const shouldHighlight = ref(false)  // 是否需要高亮显示
 	const highlightedMessageId = ref<string>('')  // 当前高亮的消息ID
 	const fromMergeDetail = ref(false)
 	const mergeBackDelta = ref(1)
+	const conversationBizType = ref('')
+	const bizSessionId = ref('')
+	const serviceState = ref('')
+	const conversationReadOnly = ref(false)
 	const reeditNowTs = ref<number>(Date.now())
 	let reeditTickTimer: any = null
 	
 	// 当前用户信息（使用字符串避免精度丢失）
 	const currentUserId = ref<string>('0')
 	const currentTenantId = ref<string>('0')
+	const CHAT_VIEWPORT_TTL_MS = 15 * 60 * 1000
 
 	const mentionNameToUserId: Map<string, string> = new Map()
 	const recallWindowMs = ref(2 * 60 * 1000)
@@ -534,6 +544,15 @@
 		avatarText: string
 		avatarBg: string
 		role: number
+	}
+
+	type ChatViewportState = {
+		entryMode: string;
+		atBottom: boolean;
+		viewportAnchorSequence: string;
+		topVisibleSequence: string;
+		bottomVisibleSequence: string;
+		savedAt: number;
 	}
 
 	type MessageRenderToken = {
@@ -666,6 +685,7 @@
 	const PRESIGNED_REFRESH_GUARD_MS = 30 * 1000
 	const presignedUrlCache = new Map<string, { url: string; expiresAt: number }>()
 	let voiceAudioContext: any = null
+	let h5VisibilityChangeHandler: (() => void) | null = null
 
 	function getKkFileViewBaseUrl(): string {
 		try {
@@ -701,6 +721,7 @@
 					applyAutoReadEnabled(false)
 				}
 			}
+			maybeTriggerLoadOlderHistory(top, delta)
 		} catch (err) {
 			// ignore
 		}
@@ -712,6 +733,49 @@
 				isAtBottom.value = true
 				applyAutoReadEnabled(true)
 			}
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	async function handleChatScrollToUpper(): Promise<void> {
+		lastHistoryLoadTriggerAt = Date.now()
+		await loadOlderHistory(true)
+	}
+
+	async function handleHistoryRefresher(): Promise<void> {
+		if (historyRefresherTriggered.value) {
+			return
+		}
+		historyRefresherTriggered.value = true
+		const beforeCount = messages.value.length
+		try {
+			lastHistoryLoadTriggerAt = Date.now()
+			await loadOlderHistory(true)
+			if (beforeCount === messages.value.length && !hasMore.value) {
+				uni.showToast({ title: '没有更多消息', icon: 'none' })
+			}
+		} finally {
+			setTimeout(() => {
+				historyRefresherTriggered.value = false
+			}, 120)
+		}
+	}
+
+	function maybeTriggerLoadOlderHistory(top: number, delta: number): void {
+		try {
+			if (top > 48 || delta > 0) {
+				return
+			}
+			if (historyLoading.value || loading.value || !hasMore.value || messages.value.length === 0) {
+				return
+			}
+			const now = Date.now()
+			if (now - lastHistoryLoadTriggerAt < 500) {
+				return
+			}
+			lastHistoryLoadTriggerAt = now
+			void loadOlderHistory()
 		} catch (e) {
 			// ignore
 		}
@@ -735,6 +799,26 @@
 			return ''
 		} catch (e) {
 			return ''
+		}
+	}
+
+	function ensureConversationWritable(): boolean {
+		if (!conversationReadOnly.value) {
+			return true
+		}
+		uni.showToast({ title: getReadOnlyHint(), icon: 'none' })
+		return false
+	}
+
+	function getReadOnlyHint(): string {
+		try {
+			const state = serviceState.value != null ? String(serviceState.value) : ''
+			if (state === 'closed' || state === 'ended' || state === 'finished') {
+				return '当前会话已关闭，仅可查看历史消息'
+			}
+			return '当前会话为只读模式'
+		} catch (e) {
+			return '当前会话为只读模式'
 		}
 	}
 
@@ -1018,6 +1102,8 @@
 	// 加载状态
 	const loading = ref(false)
 	const hasMore = ref(true)
+	const historyLoading = ref(false)
+	const historyRefresherTriggered = ref(false)
 
 	const stickerList = ref<StickerItem[]>([])
 
@@ -1079,6 +1165,10 @@
 		fileName ?: string;
 		fileSize ?: string;
 		address ?: string;
+		locationName ?: string;
+		latitude ?: number;
+		longitude ?: number;
+		md5 ?: string;
 		isSticker ?: boolean;
 		status ?: any; // legacy string or numeric enum
 		// 引用回复字段
@@ -1094,6 +1184,7 @@
 	 * 初始化页面
 	 */
 	onMounted(async () => {
+		registerH5VisibilityChangeListener()
 		// 1. 获取当前用户信息
 		currentUserId.value = getUserIdStr()
 		currentTenantId.value = getTenantId() || '0'
@@ -1160,10 +1251,13 @@
 		
 		initVisibleReadObserver()
 		startReeditTicker()
-		scrollToBottom()
+		if (entryMode.value === 'latest' && targetAnchorSequence.value === '' && targetMessageId.value === '') {
+			scrollToBottom()
+		}
 	})
 	
 	onUnmounted(async () => {
+		unregisterH5VisibilityChangeListener()
 		await flushReadOnLeave()
 		destroyVisibleReadObserver()
 		stopReeditTicker()
@@ -1183,6 +1277,7 @@
 	const isAtBottom = ref(true)
 	let lastScrollTop = 0
 	let lastScrollAt = 0
+	let lastHistoryLoadTriggerAt = 0
 	let visibleObserver: UniIntersectionObserver | null = null
 	let visibleObserverWatching: boolean = false
 	let visibleReadMaxSeq: string = '0'
@@ -1794,12 +1889,77 @@
 			;(uiMessage as any).mimeType = mimeType
 		}
 	}
+
+	function applyStickerFields(uiMessage : MessageItem, rawContent : any, extra ?: any) : void {
+		if (uiMessage.type !== 'sticker' && uiMessage.type !== 'emoji') {
+			return
+		}
+		const payload = parseStickerPayload(rawContent, extra)
+		if (payload == null || typeof payload !== 'object') {
+			return
+		}
+		if ((payload as any).fileId != null && String((payload as any).fileId) !== '' && String((payload as any).fileId) !== '0') {
+			;(uiMessage as any).fileId = String((payload as any).fileId)
+		}
+		if ((payload as any).md5 != null && String((payload as any).md5) !== '') {
+			uiMessage.md5 = String((payload as any).md5)
+		}
+		if ((payload as any).mimeType != null && String((payload as any).mimeType) !== '') {
+			;(uiMessage as any).mimeType = String((payload as any).mimeType)
+		}
+		if ((payload as any).thumbUrl != null && String((payload as any).thumbUrl) !== '') {
+			;(uiMessage as any).thumbUrl = String((payload as any).thumbUrl)
+		}
+	}
+
+	function applyLocationFields(uiMessage : MessageItem, rawContent : any) : void {
+		if (uiMessage.type !== 'location') {
+			return
+		}
+		const parsed = parseRawContent(rawContent)
+		if (parsed != null && typeof parsed === 'object') {
+			const address = (parsed as any).address != null ? String((parsed as any).address) : ''
+			const locationName = (parsed as any).name != null
+				? String((parsed as any).name)
+				: ((parsed as any).locationName != null ? String((parsed as any).locationName) : address)
+			let latitude : number | null = null
+			let longitude : number | null = null
+			if ((parsed as any).latitude != null) {
+				const latVal = Number((parsed as any).latitude)
+				latitude = isNaN(latVal) ? null : latVal
+			}
+			if ((parsed as any).longitude != null) {
+				const lngVal = Number((parsed as any).longitude)
+				longitude = isNaN(lngVal) ? null : lngVal
+			}
+			if (address !== '') {
+				uiMessage.address = address
+			}
+			if (locationName !== '') {
+				uiMessage.locationName = locationName
+			} else if (address !== '') {
+				uiMessage.locationName = address
+			}
+			if (latitude !== null) {
+				uiMessage.latitude = latitude
+			}
+			if (longitude !== null) {
+				uiMessage.longitude = longitude
+			}
+			return
+		}
+		const text = parsed != null ? String(parsed) : ''
+		if (text !== '') {
+			uiMessage.address = text
+			uiMessage.locationName = text
+		}
+	}
 	
 	/**
 	 * 加载历史消息
 	 */
 	async function loadMessages() {
-		if (loading.value || !hasMore.value) {
+		if (loading.value) {
 			return
 		}
 		
@@ -1818,20 +1978,37 @@
 			if (cachedMessages.length > 0) {
 				messages.value = convertServiceMessages(cachedMessages)
 				prefetchVisibleGroupReadReceiptSummary(messages.value)
-				scrollToBottom()
+				if (entryMode.value === 'latest' && targetAnchorSequence.value === '' && targetMessageId.value === '') {
+					scrollToBottom()
+				}
 			}
 			
-			// 2. 从服务器加载最新消息
-			const pageNo = 1  // 第一页
-			
-			// 注意：request 拦截器已经解包了 data.data，返回的是 PageResult 对象
-			const pageResult = await getMessageList(chatId.value, pageNo, 20)
-			
-			const serverMessages = pageResult
-				? (
-					Array.isArray((pageResult as any).list) ? (pageResult as any).list :
-					(Array.isArray((pageResult as any).records) ? (pageResult as any).records : [])
-				)
+			// 2. 从服务器加载窗口消息
+			let windowResult: any = null
+			if (targetAnchorSequence.value !== '') {
+				windowResult = await getMessageWindow({
+					chatId: chatId.value,
+					anchorSequence: targetAnchorSequence.value,
+					beforeLimit: 15,
+					afterLimit: 10
+				})
+			} else if (targetMessageId.value !== '') {
+				windowResult = await getMessageWindow({
+					chatId: chatId.value,
+					anchorMessageId: targetMessageId.value,
+					beforeLimit: 15,
+					afterLimit: 10
+				})
+			} else {
+				windowResult = await getMessageWindow({
+					chatId: chatId.value,
+					mode: 'latest',
+					limit: 30
+				})
+			}
+
+			const serverMessages = windowResult
+				? (Array.isArray((windowResult as any).items) ? (windowResult as any).items : [])
 				: []
 			if (serverMessages.length > 0) {
 				try {
@@ -1839,58 +2016,37 @@
 				} catch (e) {
 					// ignore
 				}
-				
-				// 转换为 MessageItem 格式
-				const newMessages = serverMessages.map(msg => {
-					return convertServerMessage(msg)
-				})
-				
-				// 合并消息（去重）
-				messages.value = mergeMessages(messages.value, newMessages)
-				try {
-					const cachedNow = messageService.getMessages(chatId.value)
-					if (cachedNow && cachedNow.length > 0) {
-						messages.value = convertServiceMessages(cachedNow)
-					}
-				} catch (e) {
-					// ignore
-				}
+				syncLoadedWindowState(windowResult)
+				replaceVisibleWindowMessages(serverMessages.map(msg => convertServerMessage(msg)))
 				prefetchVisibleGroupReadReceiptSummary(messages.value)
 				
-				// 断线补偿水位初始化：HTTP 拉到的最新消息也需要推进本地 lastPulledSequence
-				try {
-					let maxSeq = '0'
-					for (let i = 0; i < messages.value.length; i++) {
-						const s = (messages.value[i] as any).sequence
-						if (s == null || s === '') {
-							continue
-						}
-						try {
-							if (BigInt(s) > BigInt(maxSeq)) {
-								maxSeq = s
-							}
-						} catch (e) {
-							if (s > maxSeq) {
-								maxSeq = s
-							}
-						}
-					}
-					if (maxSeq !== '0') {
-						messageService.seedLastPulledSequence(chatId.value, maxSeq)
-					}
-				} catch (e) {
-					// ignore
+				seedLastPulledSequenceFromView((windowResult as any).newestSequence)
+				hasMore.value = !!((windowResult as any).hasOlder === true)
+
+				const anchorFound = !windowResult || (windowResult as any).anchorFound !== false
+				if ((windowResult as any).anchorSequence != null && String((windowResult as any).anchorSequence) !== '') {
+					targetAnchorSequence.value = String((windowResult as any).anchorSequence)
 				}
-				
-				// PageResult 可能没有 hasMore 字段，根据 list 长度判断
-				hasMore.value = serverMessages.length >= 20
-				scrollToBottom()
-				
-				// 3. 如果有目标消息ID，定位到该消息
-				if (targetMessageId.value) {
-					setTimeout(() => {
-						void scrollToTargetMessage(targetMessageId.value)
-					}, 300)
+				if (entryMode.value === 'anchor' || entryMode.value === 'restore') {
+					if (!anchorFound) {
+						uni.showToast({ title: '原消息已不可定位，已为你打开最近消息', icon: 'none' })
+						scrollToBottom()
+					} else {
+						setTimeout(() => {
+							if (targetMessageId.value !== '') {
+								void scrollToTargetMessage(targetMessageId.value)
+							} else if (targetAnchorSequence.value !== '') {
+								scrollToSequence(targetAnchorSequence.value)
+							}
+						}, 300)
+					}
+				} else {
+					scrollToBottom()
+				}
+			} else {
+				hasMore.value = !!(windowResult && (windowResult as any).hasOlder === true)
+				if (entryMode.value !== 'anchor' && entryMode.value !== 'restore') {
+					scrollToBottom()
 				}
 			}
 			
@@ -1904,6 +2060,174 @@
 			})
 		} finally {
 			loading.value = false
+		}
+	}
+
+	function replaceVisibleWindowMessages(windowMessages: MessageItem[]): void {
+		const pendingLocal = messages.value.filter(msg => {
+			const seq = msg && (msg as any).sequence != null ? String((msg as any).sequence) : ''
+			const statusRaw: any = msg && (msg as any).status != null ? (msg as any).status : null
+			const statusNum = statusRaw != null ? Number(statusRaw) : null
+			return seq === '' || seq === '0' || statusNum === 1 || statusNum === 5
+		})
+		messages.value = mergeMessages(windowMessages, pendingLocal)
+	}
+
+	function seedLastPulledSequenceFromView(preferredNewest?: any): void {
+		try {
+			let maxSeq = preferredNewest != null && String(preferredNewest) !== '' ? String(preferredNewest) : '0'
+			for (let i = 0; i < messages.value.length; i++) {
+				const s = (messages.value[i] as any).sequence
+				if (s == null || s === '') {
+					continue
+				}
+				try {
+					if (BigInt(String(s)) > BigInt(maxSeq)) {
+						maxSeq = String(s)
+					}
+				} catch (e) {
+					if (String(s) > maxSeq) {
+						maxSeq = String(s)
+					}
+				}
+			}
+			if (maxSeq !== '0') {
+				messageService.seedLastPulledSequence(chatId.value, maxSeq)
+			}
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	function syncLoadedWindowState(resp: any): void {
+		try {
+			if (!chatId.value || chatId.value === '' || chatId.value === '0') {
+				return
+			}
+			const oldest = resp != null && (resp as any).oldestSequence != null ? String((resp as any).oldestSequence) : null
+			const newest = resp != null && (resp as any).newestSequence != null ? String((resp as any).newestSequence) : null
+			messageService.updateLoadedWindowState(chatId.value, oldest, newest)
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	function findMessageIndexBySequence(sequence: string): number {
+		return messages.value.findIndex(msg => {
+			const seq = msg && (msg as any).sequence != null ? String((msg as any).sequence) : ''
+			return seq === sequence
+		})
+	}
+
+	function scrollToSequence(sequence: string): void {
+		const idx = findMessageIndexBySequence(sequence)
+		if (idx === -1) {
+			return
+		}
+		lastMessageId.value = 'msg-' + idx
+		if (shouldHighlight.value) {
+			const targetMsg = messages.value[idx]
+			highlightedMessageId.value = getSelectMessageId(targetMsg)
+			setTimeout(() => {
+				highlightedMessageId.value = ''
+			}, 3000)
+		}
+	}
+
+	async function loadAnchorWindow(anchorSequence: string | null = null, anchorMessageId: string | null = null): Promise<boolean> {
+		if (!chatId.value || chatId.value === '' || chatId.value === '0') {
+			return false
+		}
+		try {
+			const resp: any = await getMessageWindow({
+				chatId: chatId.value,
+				anchorSequence: anchorSequence != null && anchorSequence !== '' ? anchorSequence : null,
+				anchorMessageId: anchorMessageId != null && anchorMessageId !== '' ? anchorMessageId : null,
+				beforeLimit: 15,
+				afterLimit: 10
+			})
+			const items = resp != null && Array.isArray(resp.items) ? resp.items : []
+			if (items.length > 0) {
+				try {
+					await messageService.ingestRestHistoryPage(chatId.value, items)
+				} catch (e) {
+					// ignore
+				}
+				syncLoadedWindowState(resp)
+				replaceVisibleWindowMessages(items.map((msg: any) => convertServerMessage(msg)))
+				prefetchVisibleGroupReadReceiptSummary(messages.value)
+				seedLastPulledSequenceFromView(resp != null ? (resp as any).newestSequence : null)
+			}
+			hasMore.value = !!(resp != null && (resp as any).hasOlder === true)
+			if (resp != null && (resp as any).anchorSequence != null && String((resp as any).anchorSequence) !== '') {
+				targetAnchorSequence.value = String((resp as any).anchorSequence)
+			}
+			if (resp != null && (resp as any).anchorFound === false) {
+				uni.showToast({ title: '原消息已不可定位，已为你打开最近消息', icon: 'none' })
+				return false
+			}
+			return true
+		} catch (e) {
+			console.error('[Chat] 加载锚点窗口失败:', e)
+			return false
+		}
+	}
+
+	async function loadOlderHistory(forceProbe: boolean = false): Promise<void> {
+		if (historyLoading.value || loading.value || (!forceProbe && !hasMore.value)) {
+			return
+		}
+		if (messages.value.length === 0) {
+			return
+		}
+		const firstMsg = messages.value[0]
+		let beforeSequence = firstMsg && (firstMsg as any).sequence != null ? String((firstMsg as any).sequence) : ''
+		if (beforeSequence === '' || beforeSequence === '0') {
+			try {
+				const loaded = messageService.getLoadedWindowState(chatId.value)
+				beforeSequence = loaded != null && loaded.oldestSequence != null ? String(loaded.oldestSequence) : ''
+			} catch (e) {
+				beforeSequence = ''
+			}
+		}
+		if (beforeSequence === '' || beforeSequence === '0') {
+			hasMore.value = false
+			return
+		}
+		const preserveSequence = firstMsg && (firstMsg as any).sequence != null ? String((firstMsg as any).sequence) : ''
+		const preserveMessageId = getSelectMessageId(firstMsg)
+		historyLoading.value = true
+		try {
+			const historyResp: any = await getMessageHistory(chatId.value, beforeSequence, 30)
+			const items = historyResp != null && Array.isArray(historyResp.items) ? historyResp.items : []
+			if (items.length > 0) {
+				try {
+					await messageService.ingestRestHistoryPage(chatId.value, items)
+				} catch (e) {
+					// ignore
+				}
+				syncLoadedWindowState(historyResp)
+				const olderMessages = items.map((msg: any) => convertServerMessage(msg))
+				messages.value = mergeMessages(olderMessages, messages.value)
+				prefetchVisibleGroupReadReceiptSummary(messages.value)
+				setTimeout(() => {
+					let idx = -1
+					if (preserveSequence !== '' && preserveSequence !== '0') {
+						idx = findMessageIndexBySequence(preserveSequence)
+					}
+					if (idx === -1) {
+						idx = findMessageIndexForTargetId(preserveMessageId)
+					}
+					if (idx !== -1) {
+						lastMessageId.value = 'msg-' + idx
+					}
+				}, 60)
+			}
+			hasMore.value = !!(historyResp != null && (historyResp as any).hasOlder === true)
+		} catch (e) {
+			console.error('[Chat] 加载更早历史失败:', e)
+		} finally {
+			historyLoading.value = false
 		}
 	}
 	
@@ -2006,6 +2330,8 @@
 
 		applyQuoteFields(uiMessage, rawContent, msg, extraContent)
 		applyFileFields(uiMessage, extraContent && typeof extraContent === 'object' ? extraContent : content)
+		applyLocationFields(uiMessage, content)
+		applyStickerFields(uiMessage, content, extraContent)
 		applyMediaFileId(uiMessage, extraContent && typeof extraContent === 'object' ? extraContent : content)
 		maybePatchMediaDisplayUrl(uiMessage as any)
 		return uiMessage
@@ -2072,6 +2398,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				: ((msg as any).content != null && typeof (msg as any).content === 'object' ? (msg as any).content.extra : null)
 			applyQuoteFields(uiMessage, msg.content, msg, serviceExtra)
 			applyFileFields(uiMessage, msg.content)
+			applyLocationFields(uiMessage, msg.content)
+			applyStickerFields(uiMessage, msg.content, serviceExtra)
 			applyMediaFileId(uiMessage, msg.content)
 			maybePatchMediaDisplayUrl(uiMessage as any)
 			return uiMessage
@@ -2805,6 +3133,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 		applyQuoteFields(uiMessage, message.content, message, (message as any).extra)
 		applyFileFields(uiMessage, message.content)
+		applyLocationFields(uiMessage, message.content)
+		applyStickerFields(uiMessage, message.content, (message as any).extra)
 		applyMediaFileId(uiMessage, message.content)
 		maybePatchMediaDisplayUrl(uiMessage as any)
 		
@@ -2968,6 +3298,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function toggleInputMode() {
+		if (!ensureConversationWritable()) {
+			return
+		}
 		isVoiceMode.value = !isVoiceMode.value
 		if (isVoiceMode.value) {
 			showEmojiMenu.value = false
@@ -2976,6 +3309,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function toggleEmojiMenu() {
+		if (!ensureConversationWritable()) {
+			return
+		}
 		const nextVisible = !showEmojiMenu.value
 		showEmojiMenu.value = nextVisible
 		showPlusMenu.value = false
@@ -2983,6 +3319,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function togglePlusMenu() {
+		if (!ensureConversationWritable()) {
+			return
+		}
 		showPlusMenu.value = !showPlusMenu.value
 		showEmojiMenu.value = false
 		isVoiceMode.value = false
@@ -3419,10 +3758,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleEmojiPanelItemTap(item : any): void {
+		if (!ensureConversationWritable()) {
+			return
+		}
 		insertEmojiIntoComposer(item)
 	}
 
 	async function handleStickerAddTap(): Promise<void> {
+		if (!ensureConversationWritable()) {
+			return
+		}
 		if (stickerList.value.length >= STICKER_LIMIT) {
 			uni.showToast({ title: `最多添加${STICKER_LIMIT}张表情`, icon: 'none' })
 			return
@@ -3456,6 +3801,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	async function handleStickerPanelItemTap(item : StickerItem): Promise<void> {
+		if (!ensureConversationWritable()) {
+			return
+		}
 		try {
 			await touchStickerRecent(item.stickerId)
 		} catch (e) {
@@ -3490,6 +3838,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleEmojiDeleteTap(): void {
+		if (!ensureConversationWritable()) {
+			return
+		}
 		// 保持表情面板打开，不因焦点变化而关闭
 		keepEmojiMenuOnNextFocus.value = true
 		if (editorCtx != null) {
@@ -3796,6 +4147,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	function handleMentionSelect(item: MentionMemberItem): void {
 		try {
+			if (!ensureConversationWritable()) {
+				closeMentionSelector()
+				return
+			}
 			const mentionName = item != null && item.mentionName != null ? String(item.mentionName) : ''
 			const userId = item != null && item.userId != null ? String(item.userId) : ''
 			applyMentionSelection(mentionName, userId)
@@ -3805,10 +4160,17 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleMentionSelectAll(): void {
+		if (!ensureConversationWritable()) {
+			closeMentionSelector()
+			return
+		}
 		applyMentionSelection('所有人', '-1')
 	}
 
 	function handleInputFocus() {
+		if (!ensureConversationWritable()) {
+			return
+		}
 		const shouldKeepEmojiMenu = keepEmojiMenuOnNextFocus.value
 		keepEmojiMenuOnNextFocus.value = false
 		if (!shouldKeepEmojiMenu) {
@@ -3966,6 +4328,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	function handleReeditAfterRecall(msg: any) {
 		try {
+			if (!ensureConversationWritable()) {
+				return
+			}
 			if (!shouldShowReeditEntry(msg)) {
 				uni.showToast({ title: '重新编辑已过期', icon: 'none' })
 				return
@@ -4034,6 +4399,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleVoiceStart(e : TouchEvent) {
+		if (!ensureConversationWritable()) {
+			return
+		}
 		recordStartY.value = e.touches[0].pageY
 		isRecording.value = true
 		isCancelReady.value = false
@@ -4257,6 +4625,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleSend() {
+		if (!ensureConversationWritable()) {
+			return
+		}
 		if (editorCtx == null) {
 			const finalContent = composerText.value != null ? composerText.value.trim() : ''
 			if (!finalContent) {
@@ -4297,6 +4668,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleFeature(item : any) {
+		if (!ensureConversationWritable()) {
+			return
+		}
 		if (item.nameKey === 'chat.features.album') {
 			// 选择并上传图片
 			if (IM_MEDIA_USE_FILE_ID === 'true') {
@@ -4757,6 +5131,70 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			})
 			return
 		}
+
+		if (item.nameKey === 'chat.features.location') {
+			uni.chooseLocation({
+				success: (res) => {
+					try {
+						const latitude = res && (res as any).latitude != null ? Number((res as any).latitude) : NaN
+						const longitude = res && (res as any).longitude != null ? Number((res as any).longitude) : NaN
+						if (isNaN(latitude) || isNaN(longitude)) {
+							uni.showToast({ title: '位置选择失败', icon: 'none' })
+							return
+						}
+						const address = res && (res as any).address != null && String((res as any).address) !== ''
+							? String((res as any).address)
+							: (res && (res as any).name != null ? String((res as any).name) : '位置消息')
+						const locationName = res && (res as any).name != null && String((res as any).name) !== ''
+							? String((res as any).name)
+							: address
+						const message = messageService.sendLocationMessage(
+							getReceiverIdForMessage(),
+							getGroupIdForMessage(),
+							latitude,
+							longitude,
+							address
+						)
+						const uiMessage = {
+							id: message.id.toString(),
+							messageId: message.messageId,
+							senderId: message.senderId.toString(),
+							receiverId: message.receiverId.toString(),
+							type: 'location',
+							content: address,
+							address: address,
+							locationName: locationName,
+							latitude: latitude,
+							longitude: longitude,
+							isSelf: true,
+							time: new Date(message.timestamp).toLocaleString(),
+							timestamp: message.timestamp,
+							showTime: true,
+							avatarText: message.avatarText,
+							avatarBg: message.avatarBg,
+							status: message.status
+						} as MessageItem
+						messages.value.push(uiMessage)
+						showPlusMenu.value = false
+						setTimeout(() => {
+							scrollToBottom()
+						}, 100)
+					} catch (e) {
+						console.error('[Chat] 发送位置消息失败:', e)
+						uni.showToast({ title: '发送失败', icon: 'none' })
+					}
+				},
+				fail: (err) => {
+					const rawMsg = err != null && (err as any).errMsg != null ? String((err as any).errMsg) : ''
+					if (rawMsg.indexOf('cancel') > -1 || rawMsg.indexOf('fail cancel') > -1) {
+						return
+					}
+					console.error('[Chat] 选择位置失败:', err)
+					uni.showToast({ title: '暂不支持位置选择', icon: 'none' })
+				}
+			})
+			return
+		}
 		
 		uni.showToast({
 			title: t(item.nameKey) + '功能开发中',
@@ -4831,6 +5269,50 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
+	function resolveStickerCollectCandidate(msg : any) : any | null {
+		try {
+			if (msg == null) {
+				return null
+			}
+			const type = msg.type != null ? String(msg.type) : ''
+			if (type === 'sticker' || type === 'emoji') {
+				const fileId = (msg as any).fileId != null ? String((msg as any).fileId) : ''
+				const md5 = (msg as any).md5 != null ? String((msg as any).md5) : ''
+				const url = msg.content != null ? String(msg.content) : ''
+				return {
+					stickerId: '',
+					fileId: fileId,
+					md5: md5,
+					url: url
+				}
+			}
+			if (type === 'image') {
+				const url = extractMediaUrl(msg.content != null ? msg.content : '')
+				return {
+					stickerId: '',
+					fileId: (msg as any).fileId != null ? String((msg as any).fileId) : '',
+					md5: (msg as any).md5 != null ? String((msg as any).md5) : '',
+					url: url
+				}
+			}
+			return null
+		} catch (e) {
+			return null
+		}
+	}
+
+	function isMessageAlreadyCollectedToSticker(msg : any) : boolean {
+		try {
+			const candidate = resolveStickerCollectCandidate(msg)
+			if (candidate == null) {
+				return false
+			}
+			return hasCollectedSticker(candidate)
+		} catch (e) {
+			return false
+		}
+	}
+
 	async function handleVideoPlay(msg : any) {
 		try {
 			let url = msg && msg.content ? String(msg.content) : ''
@@ -4869,6 +5351,28 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
+	function handleLocationOpen(msg : any) {
+		try {
+			const latVal = msg && msg.latitude != null ? Number(msg.latitude) : NaN
+			const lngVal = msg && msg.longitude != null ? Number(msg.longitude) : NaN
+			if (isNaN(latVal) || isNaN(lngVal)) {
+				uni.showToast({ title: '位置信息缺失', icon: 'none' })
+				return
+			}
+			const address = msg && msg.address != null ? String(msg.address) : ''
+			const name = msg && msg.locationName != null ? String(msg.locationName) : address
+			uni.openLocation({
+				latitude: latVal,
+				longitude: lngVal,
+				address: address,
+				name: name
+			})
+		} catch (e) {
+			console.error('[Chat] 打开位置失败:', e)
+			uni.showToast({ title: '打开失败', icon: 'none' })
+		}
+	}
+
     function openMsgMenu(msg : MessageItem, e : TouchEvent) {
         selectedMsg.value = msg
         
@@ -4884,6 +5388,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         // 根据消息类型确定菜单项
         const isRestricted = msg.type === 'voice' || msg.type === 'location'
         const canCollectSticker = canAddMessageToSticker(msg)
+        const alreadyCollectedSticker = canCollectSticker && isMessageAlreadyCollectedToSticker(msg)
         
         // 基础菜单项
         let menuItems : any[] = []
@@ -4905,7 +5410,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                 { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' }
             ]
         }
-        if (!canCollectSticker) {
+        if (!canCollectSticker || alreadyCollectedSticker) {
             menuItems = menuItems.filter(item => item.key !== 'favorite')
         }
         if (msg.type !== 'text') {
@@ -5013,6 +5518,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
     async function handleMenuAction(action : string) {
         if (selectedMsg.value == null) return
         const msg = selectedMsg.value
+        if (action === 'quote' && !ensureConversationWritable()) {
+            closeMsgMenu()
+            return
+        }
         
         try {
             if (action === 'copy') {
@@ -5101,6 +5610,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                     uni.showToast({ title: '当前消息不可添加', icon: 'none' })
                     return
                 }
+                if (isMessageAlreadyCollectedToSticker(msg)) {
+                    uni.showToast({ title: '已添加到表情', icon: 'none' })
+                    return
+                }
                 if (msg.type !== 'emoji' && (msg.messageId == null || msg.messageId === '' || msg.messageId === '0')) {
                     uni.showToast({ title: '当前消息不可添加', icon: 'none' })
                     return
@@ -5121,17 +5634,19 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                             showToast: false
                         })
                         const data: any = uploadResult != null ? (uploadResult as any).data : null
-                        await uploadCustomSticker({
+                        const addedSticker = await uploadCustomSticker({
                             fileId: data != null && data.fileId != null ? String(data.fileId) : '',
                             url: data != null && data.url != null ? String(data.url) : emojiPath,
                             md5: data != null && data.md5 != null ? String(data.md5) : '',
                             name: 'emoji'
                         })
+                        stickerList.value = getCustomStickers()
+                        uni.showToast({ title: addedSticker != null && addedSticker.duplicated ? '已在表情库中' : '已添加到表情', icon: 'success' })
                     } else {
-                        await collectMessageToSticker(String(msg.messageId))
+                        const addedSticker = await collectMessageToSticker(String(msg.messageId))
+                        stickerList.value = getCustomStickers()
+                        uni.showToast({ title: addedSticker != null && addedSticker.duplicated ? '已在表情库中' : '已添加到表情', icon: 'success' })
                     }
-                    stickerList.value = getCustomStickers()
-                    uni.showToast({ title: '已添加到表情', icon: 'success' })
                 } catch (e) {
                     console.error('[Chat] 添加到表情失败:', e)
                     uni.showToast({ title: '添加失败', icon: 'none' })
@@ -5783,10 +6298,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
         let index = findMessageIndexForTargetId(String(quoteMessageId))
 		if (index === -1) {
-			const foundAfterLoad = await loadHistoryUntilFound(String(quoteMessageId))
-			if (foundAfterLoad) {
-				index = findMessageIndexForTargetId(String(quoteMessageId))
+			const foundAfterLoad = await loadAnchorWindow(null, String(quoteMessageId))
+			if (!foundAfterLoad) {
+				return
 			}
+			index = findMessageIndexForTargetId(String(quoteMessageId))
 		}
         if (index !== -1) {
             highlightedMessageId.value = getSelectMessageId(messages.value[index])
@@ -5937,6 +6453,166 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			lastMessageId.value = 'msg-' + (messages.value.length - 1)
 		}, 100)
 	}
+
+	function registerH5VisibilityChangeListener(): void {
+		// #ifdef H5
+		try {
+			if (h5VisibilityChangeHandler != null) {
+				return
+			}
+			if (typeof document === 'undefined') {
+				return
+			}
+			h5VisibilityChangeHandler = () => {
+				try {
+					if (document.visibilityState === 'hidden') {
+						persistViewportState()
+					}
+				} catch (e) {
+					// ignore
+				}
+			}
+			document.addEventListener('visibilitychange', h5VisibilityChangeHandler)
+		} catch (e) {
+			h5VisibilityChangeHandler = null
+		}
+		// #endif
+	}
+
+	function unregisterH5VisibilityChangeListener(): void {
+		// #ifdef H5
+		try {
+			if (h5VisibilityChangeHandler == null) {
+				return
+			}
+			if (typeof document !== 'undefined') {
+				document.removeEventListener('visibilitychange', h5VisibilityChangeHandler)
+			}
+		} catch (e) {
+			// ignore
+		}
+		h5VisibilityChangeHandler = null
+		// #endif
+	}
+
+	function readViewportState(): ChatViewportState | null {
+		try {
+			return messageService.readChatViewportState(chatId.value, CHAT_VIEWPORT_TTL_MS) as ChatViewportState | null
+		} catch (e) {
+			return null
+		}
+	}
+
+	function applyRestoreEntryIfAvailable(): void {
+		if (targetAnchorSequence.value !== '' || targetMessageId.value !== '') {
+			return
+		}
+		const state = readViewportState()
+		if (state == null) {
+			return
+		}
+		if (state.atBottom === true) {
+			entryMode.value = 'latest'
+			return
+		}
+		const anchor = state.viewportAnchorSequence != null ? String(state.viewportAnchorSequence) : ''
+		if (anchor !== '' && anchor !== '0') {
+			entryMode.value = 'restore'
+			targetAnchorSequence.value = anchor
+		}
+	}
+
+	function captureViewportStateAsync(callback: (state: ChatViewportState) => void): void {
+		try {
+			const fallbackTop = messages.value.length > 0 && messages.value[0] && (messages.value[0] as any).sequence != null
+				? String((messages.value[0] as any).sequence)
+				: ''
+			const fallbackBottom = messages.value.length > 0 && messages.value[messages.value.length - 1] && (messages.value[messages.value.length - 1] as any).sequence != null
+				? String((messages.value[messages.value.length - 1] as any).sequence)
+				: ''
+			const fallbackAnchor = isAtBottom.value ? fallbackBottom : fallbackTop
+			const fallbackState: ChatViewportState = {
+				entryMode: entryMode.value,
+				atBottom: isAtBottom.value,
+				viewportAnchorSequence: fallbackAnchor,
+				topVisibleSequence: fallbackTop,
+				bottomVisibleSequence: fallbackBottom,
+				savedAt: Date.now()
+			}
+			const inst = getCurrentInstance()
+			const ctx = inst != null ? (inst as any).proxy : null
+			if (ctx == null || messages.value.length === 0) {
+				callback(fallbackState)
+				return
+			}
+			uni.nextTick(() => {
+				try {
+					const q = uni.createSelectorQuery().in(ctx)
+					q.selectAll('.read-observe-item').boundingClientRect((rects: any) => {
+						try {
+							const arr = rects as any[]
+							if (arr == null || arr.length === 0) {
+								callback(fallbackState)
+								return
+							}
+							const sys = uni.getSystemInfoSync()
+							const viewportBottom = sys != null && (sys as any).windowHeight != null ? Number((sys as any).windowHeight) : 812
+							let topSeq = ''
+							let bottomSeq = ''
+							for (let i = 0; i < arr.length && i < messages.value.length; i++) {
+								const rect = arr[i]
+								if (rect == null) {
+									continue
+								}
+								const top = rect.top != null ? Number(rect.top) : 0
+								const bottom = rect.bottom != null ? Number(rect.bottom) : 0
+								const seq = messages.value[i] && (messages.value[i] as any).sequence != null ? String((messages.value[i] as any).sequence) : ''
+								if (seq === '' || seq === '0') {
+									continue
+								}
+								if (topSeq === '' && bottom > 88) {
+									topSeq = seq
+								}
+								if (top < viewportBottom && bottom > 88) {
+									bottomSeq = seq
+								}
+							}
+							const anchor = isAtBottom.value
+								? (bottomSeq !== '' ? bottomSeq : fallbackBottom)
+								: (topSeq !== '' ? topSeq : fallbackAnchor)
+							callback({
+								entryMode: entryMode.value,
+								atBottom: isAtBottom.value,
+								viewportAnchorSequence: anchor,
+								topVisibleSequence: topSeq !== '' ? topSeq : fallbackTop,
+								bottomVisibleSequence: bottomSeq !== '' ? bottomSeq : fallbackBottom,
+								savedAt: Date.now()
+							})
+						} catch (e) {
+							callback(fallbackState)
+						}
+					}).exec()
+				} catch (e) {
+					callback(fallbackState)
+				}
+			})
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	function persistViewportState(): void {
+		if (!chatId.value || chatId.value === '' || chatId.value === '0') {
+			return
+		}
+		captureViewportStateAsync((state: ChatViewportState) => {
+			try {
+				messageService.saveChatViewportState(chatId.value, state as any)
+			} catch (e) {
+				// ignore
+			}
+		})
+	}
 	
 	/**
 	 * 滚动到目标消息并高亮显示
@@ -5949,61 +6625,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		})
 	}
 
-	async function loadHistoryUntilFound(messageId: string): Promise<boolean> {
-		if (!chatId.value || chatId.value === '' || chatId.value === '0') {
-			return false
-		}
-		const pageSize = 50
-		for (let pageNo = 2; pageNo <= 10; pageNo++) {
-			let pageResult: any = null
-			try {
-				pageResult = await getMessageList(chatId.value, pageNo, pageSize)
-			} catch (e) {
-				return false
-			}
-			const serverMessages = pageResult
-				? (
-					Array.isArray((pageResult as any).list) ? (pageResult as any).list :
-					(Array.isArray((pageResult as any).records) ? (pageResult as any).records : [])
-				)
-				: []
-			if (serverMessages.length === 0) {
-				return false
-			}
-			try {
-				await messageService.ingestRestHistoryPage(chatId.value, serverMessages)
-			} catch (e) {
-			}
-			const newMessages = serverMessages.map(msg => {
-				return convertServerMessage(msg)
-			})
-			messages.value = mergeMessages(messages.value, newMessages)
-			try {
-				const cachedNow = messageService.getMessages(chatId.value)
-				if (cachedNow && cachedNow.length > 0) {
-					messages.value = convertServiceMessages(cachedNow)
-				}
-			} catch (e) {
-			}
-			if (findMessageIndexForTargetId(messageId) !== -1) {
-				return true
-			}
-			if (serverMessages.length < pageSize) {
-				return false
-			}
-		}
-		return false
-	}
-
 	async function scrollToTargetMessage(messageId: string) {
 		console.log('[Chat] 开始定位消息:', messageId)
 		
 		let messageIndex = findMessageIndexForTargetId(messageId)
 		if (messageIndex === -1) {
-			const foundAfterLoad = await loadHistoryUntilFound(messageId)
-			if (foundAfterLoad) {
-				messageIndex = findMessageIndexForTargetId(messageId)
+			const foundAfterLoad = await loadAnchorWindow(targetAnchorSequence.value !== '' ? targetAnchorSequence.value : null, messageId)
+			if (!foundAfterLoad) {
+				return
 			}
+			messageIndex = findMessageIndexForTargetId(messageId)
 		}
 		
 		if (messageIndex === -1) {
@@ -6046,6 +6677,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		currentUserId.value = getUserIdStr()
 		currentTenantId.value = getTenantId() || '0'
 		messageService.setCurrentUser(currentUserId.value, currentTenantId.value)
+		let hasExplicitEntryIntent = false
 		let routeOptions: any = options
 		try {
 			const sid = options != null ? (options['stateId'] as any) : null
@@ -6125,11 +6757,48 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (routeOptions['memberCount']) {
 			memberCount.value = parseInt(routeOptions['memberCount'])
 		}
+
+		if (routeOptions['entryMode']) {
+			const modeStr = String(routeOptions['entryMode'])
+			if (modeStr === 'anchor' || modeStr === 'restore' || modeStr === 'latest') {
+				entryMode.value = modeStr
+				hasExplicitEntryIntent = true
+			}
+		}
+
+		if (routeOptions['conversationBizType']) {
+			conversationBizType.value = String(routeOptions['conversationBizType'])
+		}
+
+		if (routeOptions['bizSessionId']) {
+			bizSessionId.value = String(routeOptions['bizSessionId'])
+		}
+
+		if (routeOptions['serviceState']) {
+			serviceState.value = String(routeOptions['serviceState'])
+		}
+
+		if (routeOptions['readOnly'] != null && routeOptions['readOnly'] !== '') {
+			const readOnlyRaw = String(routeOptions['readOnly'])
+			conversationReadOnly.value = readOnlyRaw === 'true' || readOnlyRaw === '1'
+		}
+
+		if (routeOptions['anchorSequence']) {
+			targetAnchorSequence.value = routeOptions['anchorSequence'] as string
+			entryMode.value = 'anchor'
+			hasExplicitEntryIntent = true
+		}
 		
 		// 获取要定位的消息ID（从搜索页面跳转过来）
 		if (routeOptions['messageId']) {
 			targetMessageId.value = routeOptions['messageId'] as string
+			entryMode.value = 'anchor'
+			hasExplicitEntryIntent = true
 			console.log('[Chat] 需要定位到消息:', targetMessageId.value)
+		} else if (routeOptions['anchorMessageId']) {
+			targetMessageId.value = routeOptions['anchorMessageId'] as string
+			entryMode.value = 'anchor'
+			hasExplicitEntryIntent = true
 		}
 		
 		// 获取是否需要高亮显示
@@ -6156,6 +6825,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			targetId: targetId.value,
 			chatType: chatType.value,
 			name: name.value,
+			conversationBizType: conversationBizType.value,
+			bizSessionId: bizSessionId.value,
+			serviceState: serviceState.value,
+			readOnly: conversationReadOnly.value,
 			messageId: targetMessageId.value,
 			highlight: shouldHighlight.value
 		})
@@ -6173,6 +6846,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}
 		} catch (e) {
 			// ignore
+		}
+		if (!hasExplicitEntryIntent) {
+			applyRestoreEntryIfAvailable()
 		}
 		await hydrateConversationMetaByChatId()
 		if (chatType.value === 'group') {
@@ -6221,6 +6897,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	onHide(() => {
 		wsManager.setRealtimeBizActive(false)
 		closeMentionSelector()
+		persistViewportState()
 		void flushReadOnLeave()
 		destroyVisibleReadObserver()
 		stopReeditTicker()
@@ -6233,8 +6910,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	})
 
 	onUnload(() => {
+		unregisterH5VisibilityChangeListener()
 		wsManager.setRealtimeBizActive(false)
 		closeMentionSelector()
+		persistViewportState()
 		void flushReadOnLeave()
 		destroyVisibleReadObserver()
 		stopReeditTicker()
@@ -7027,6 +7706,17 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		border-top-color: #E5E5E5;
 		border-top-style: solid;
 		padding-bottom: 8px;
+	}
+
+	.footer-readonly {
+		padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+		background-color: #FFFFFF;
+	}
+
+	.footer-readonly-text {
+		font-size: 13px;
+		color: #8F959E;
+		text-align: center;
 	}
 
 	.footer-full-expanded {

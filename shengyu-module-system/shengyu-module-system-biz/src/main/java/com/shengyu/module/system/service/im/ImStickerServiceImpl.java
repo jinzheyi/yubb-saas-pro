@@ -21,6 +21,7 @@ import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
 import com.shengyu.module.system.dal.mysql.im.ImUserStickerMapper;
 import com.shengyu.module.system.dal.mysql.im.ImUserStickerRecentMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -186,11 +187,9 @@ public class ImStickerServiceImpl implements ImStickerService {
                                              Integer width, Integer height, String mimeType, String name,
                                              Integer sourceType, boolean duplicated) {
         String key = buildStickerKey(md5, fileId, url);
-        ImUserStickerDO existing = userStickerMapper.selectByUserIdAndMd5(userId, key);
+        ImUserStickerDO existing = userStickerMapper.selectUndeletedByUserIdAndMd5(userId, key);
         if (existing != null) {
-            AppImStickerRespVO respVO = toRespVO(existing, true);
-            respVO.setDuplicated(true);
-            return respVO;
+            return handleExistingSticker(userId, existing, fileId, thumbFileId, url, width, height, mimeType, name, sourceType, duplicated);
         }
 
         ImUserStickerDO sticker = ImUserStickerDO.builder()
@@ -206,9 +205,65 @@ public class ImStickerServiceImpl implements ImStickerService {
                 .sortNo(nextSortNo(userId))
                 .status(STICKER_STATUS_ACTIVE)
                 .build();
-        userStickerMapper.insert(sticker);
+        try {
+            userStickerMapper.insert(sticker);
+        } catch (DuplicateKeyException ex) {
+            ImUserStickerDO conflict = userStickerMapper.selectUndeletedByUserIdAndMd5(userId, key);
+            if (conflict != null) {
+                log.warn("[ImStickerService] duplicate sticker upsert resolved by query, userId={}, key={}", userId, key);
+                return handleExistingSticker(userId, conflict, fileId, thumbFileId, url, width, height, mimeType, name, sourceType, duplicated);
+            }
+            throw ex;
+        }
 
         AppImStickerRespVO respVO = toRespVO(sticker, duplicated);
+        if (StrUtil.isBlank(respVO.getUrl()) && StrUtil.isNotBlank(url)) {
+            respVO.setUrl(url);
+        }
+        respVO.setDuplicated(duplicated);
+        return respVO;
+    }
+
+    private AppImStickerRespVO handleExistingSticker(Long userId, ImUserStickerDO existing,
+                                                     Long fileId, Long thumbFileId, String url,
+                                                     Integer width, Integer height, String mimeType, String name,
+                                                     Integer sourceType, boolean duplicated) {
+        if (existing == null) {
+            return null;
+        }
+        if (Objects.equals(existing.getStatus(), STICKER_STATUS_ACTIVE)) {
+            AppImStickerRespVO respVO = toRespVO(existing, true);
+            if (StrUtil.isBlank(respVO.getUrl()) && StrUtil.isNotBlank(url)) {
+                respVO.setUrl(url);
+            }
+            respVO.setDuplicated(true);
+            return respVO;
+        }
+
+        existing.setFileId(fileId == null ? 0L : fileId);
+        existing.setThumbFileId(thumbFileId);
+        if (StrUtil.isNotBlank(name)) {
+            existing.setName(name);
+        }
+        if (width != null) {
+            existing.setWidth(width);
+        }
+        if (height != null) {
+            existing.setHeight(height);
+        }
+        if (StrUtil.isNotBlank(mimeType)) {
+            existing.setMimeType(mimeType);
+        }
+        if (sourceType != null) {
+            existing.setSourceType(sourceType);
+        }
+        if (existing.getSortNo() == null || existing.getSortNo() <= 0) {
+            existing.setSortNo(nextSortNo(userId));
+        }
+        existing.setStatus(STICKER_STATUS_ACTIVE);
+        userStickerMapper.updateById(existing);
+
+        AppImStickerRespVO respVO = toRespVO(existing, duplicated);
         if (StrUtil.isBlank(respVO.getUrl()) && StrUtil.isNotBlank(url)) {
             respVO.setUrl(url);
         }

@@ -22,6 +22,7 @@ export type StickerItem = {
   height?: number
   mimeType?: string
   sortNo?: number
+  duplicated?: boolean
 }
 
 let cachedVersion: number = 0
@@ -48,7 +49,8 @@ function normalizeSticker(item: ApiStickerItem | null): StickerItem | null {
     width: item.width,
     height: item.height,
     mimeType: item.mimeType,
-    sortNo: item.sortNo
+    sortNo: item.sortNo,
+    duplicated: item.duplicated
   }
 }
 
@@ -89,6 +91,36 @@ export function getCustomStickers(): StickerItem[] {
 
 export function getFavoriteStickers(): StickerItem[] {
   return cachedFavorites.slice().sort((a, b) => Number(a.sortNo || 0) - Number(b.sortNo || 0))
+}
+
+export function hasCollectedSticker(candidate: {
+  stickerId?: string
+  fileId?: string
+  md5?: string
+  url?: string
+}): boolean {
+  const stickerId = candidate != null && candidate.stickerId != null ? String(candidate.stickerId) : ''
+  const fileId = candidate != null && candidate.fileId != null ? String(candidate.fileId) : ''
+  const md5 = candidate != null && candidate.md5 != null ? String(candidate.md5) : ''
+  const url = candidate != null && candidate.url != null ? String(candidate.url) : ''
+  return cachedFavorites.some(item => {
+    if (item == null) {
+      return false
+    }
+    if (stickerId !== '' && item.stickerId === stickerId) {
+      return true
+    }
+    if (fileId !== '' && item.fileId != null && String(item.fileId) === fileId) {
+      return true
+    }
+    if (md5 !== '' && item.md5 != null && String(item.md5) === md5) {
+      return true
+    }
+    if (url !== '' && item.url != null && String(item.url) === url) {
+      return true
+    }
+    return false
+  })
 }
 
 export async function uploadCustomSticker(payload: any): Promise<StickerItem> {

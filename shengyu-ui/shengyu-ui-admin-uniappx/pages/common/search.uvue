@@ -455,20 +455,22 @@
 	function handleGroupClick(group : any) {
 		const chatIdParam = encodeIdParam(group && (group.chatId || group.id) ? String(group.chatId || group.id) : '')
 		uni.navigateTo({
-			url: `/pages/message/chat?chatId=${chatIdParam}`
+			url: `/pages/message/chat?chatId=${chatIdParam}&entryMode=latest`
 		})
 	}
 
 	function handleMessageClick(message: SearchResultItem) {
 		const chatId = message && message.chatId ? String(message.chatId) : ''
 		const mid = message && message.messageId ? String(message.messageId) : ''
+		const sequence = message && (message as any).sequence ? String((message as any).sequence) : ''
 		if (!chatId || chatId === '0' || !mid || mid === '0') {
 			uni.showToast({ title: '无法定位消息', icon: 'none' })
 			return
 		}
-		uni.navigateTo({
-			url: `/pages/message/chat?chatId=${encodeIdParam(chatId)}&messageId=${encodeURIComponent(mid)}&highlight=true`
-		})
+		const url = sequence !== ''
+			? `/pages/message/chat?chatId=${encodeIdParam(chatId)}&entryMode=anchor&anchorSequence=${encodeURIComponent(sequence)}&messageId=${encodeURIComponent(mid)}&highlight=true`
+			: `/pages/message/chat?chatId=${encodeIdParam(chatId)}&entryMode=anchor&anchorMessageId=${encodeURIComponent(mid)}&messageId=${encodeURIComponent(mid)}&highlight=true`
+		uni.navigateTo({ url })
 	}
 
 	function handleSearchChatHistory() {
