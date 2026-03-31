@@ -1,11 +1,15 @@
 package com.shengyu.framework.websocket.core.netty.handler;
 
+import cn.hutool.json.JSONUtil;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
+import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.protocol.VoiceMessage;
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.framework.websocket.core.session.NettySessionManager;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -39,6 +43,17 @@ public class ProtobufMessageHandler extends SimpleChannelInboundHandler<ImMessag
             // 更新业务活跃时间：任何非系统消息都视为业务活跃
             if (messageType != null && messageType.getNumber() >= MessageType.TEXT_VALUE) {
                 sessionManager.updateLastBizActiveTime(ctx.channel());
+            }
+
+            if (messageType == MessageType.VOICE) {
+                String voiceError = validateVoiceEnvelope(msg);
+                if (voiceError != null) {
+                    log.warn("[Protobuf] reject invalid voice message, messageId={}, error={}",
+                            msg.getHeader() != null ? msg.getHeader().getMessageId() : null, voiceError);
+                    sendPbClose(ctx, "VOICE_INVALID", 400, voiceError);
+                    ctx.close();
+                    return;
+                }
             }
 
             // 获取对应的消息处理器
@@ -118,6 +133,40 @@ public class ProtobufMessageHandler extends SimpleChannelInboundHandler<ImMessag
             
         } catch (Exception e) {
             log.error("[Protobuf] 消息处理异常", e);
+        }
+    }
+
+    private String validateVoiceEnvelope(ImMessage msg) {
+        if (msg == null || msg.getHeader() == null) {
+            return "请求格式错误：缺少 VOICE.header";
+        }
+        try {
+            VoiceMessage voiceMessage = VoiceMessage.parseFrom(msg.getBody());
+            return VoiceMessageValidationSupport.validate(
+                    msg.getHeader().getExtra(),
+                    voiceMessage.getDuration(),
+                    voiceMessage.getSize()
+            );
+        } catch (InvalidProtocolBufferException ex) {
+            return "请求格式错误：VOICE.body 解析失败";
+        }
+    }
+
+    private void sendPbClose(ChannelHandlerContext ctx, String action, int code, String message) {
+        try {
+            MessageHeader header = MessageHeader.newBuilder()
+                    .setMessageId(System.currentTimeMillis())
+                    .setMessageType(MessageType.CLOSE)
+                    .setTimestamp(System.currentTimeMillis())
+                    .setExtra(JSONUtil.createObj()
+                            .set("code", code)
+                            .set("message", message)
+                            .set("action", action)
+                            .toString())
+                    .build();
+            ImMessage close = ImMessage.newBuilder().setHeader(header).build();
+            ctx.writeAndFlush(close);
+        } catch (Exception ignore) {
         }
     }
 

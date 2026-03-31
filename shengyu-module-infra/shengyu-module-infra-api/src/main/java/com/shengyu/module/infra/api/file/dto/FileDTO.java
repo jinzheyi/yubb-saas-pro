@@ -47,4 +47,9 @@ public class FileDTO {
      */
     private LocalDateTime createTime;
 
+    /**
+     * 创建者
+     */
+    private String creator;
+
 }

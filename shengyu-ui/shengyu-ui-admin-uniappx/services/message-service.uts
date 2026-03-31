@@ -60,6 +60,16 @@ export type MessageItem = {
   sequence?: string
   rev?: string
   extra?: any
+  fileId?: string
+  duration?: number
+  durationMs?: number
+  size?: number
+  format?: string
+  md5?: string
+  voicePlayed?: boolean
+  localFilePath?: string
+  uploadProgress?: number
+  uploadStatus?: string
   quoteMessageId?: string
   quoteContent?: string
   quoteSenderName?: string
@@ -414,6 +424,7 @@ export class MessageService {
   private sendRetryEnabled: boolean = false
 
   private pendingRetryMap: Map<string, { message: any, retryCount: number, timer: any, startedAt: number }> = new Map()
+  private outboundMessageMap: Map<string, any> = new Map()
 
   private static readonly SEND_RETRY_BASE_DELAY_MS = 2000
   private static readonly SEND_RETRY_MAX_WINDOW_MS = 180000
@@ -1487,7 +1498,7 @@ export class MessageService {
   }
 
   /**
-   * 发送语音消息（V2：双写 fileId + url）
+   * 发送语音消息（fileId 权威，url 仅作当前链路回放兜底）
    */
   public sendVoiceMessageV2(
     receiverId: string,
@@ -1495,7 +1506,10 @@ export class MessageService {
     fileId: string,
     url: string,
     duration: number,
-    size: number
+    size: number,
+    durationMs: number,
+    format: string,
+    md5: string = ''
   ): MessageItem {
     const message = MessageBuilder.buildVoiceMessageV2(
       this.currentUserId,
@@ -1505,7 +1519,10 @@ export class MessageService {
       fileId,
       url,
       duration,
-      size
+      size,
+      durationMs,
+      format,
+      md5
     )
 
     return this.sendMessage(message)
@@ -1809,6 +1826,7 @@ export class MessageService {
       groupId: message.header.groupId,
       type: message.header.messageType,
       content: message.body,
+      extra: message.header.extra,
       status: MessageStatus.SENDING,
       timestamp: message.header.timestamp,
       isSelf: true,
@@ -1824,6 +1842,12 @@ export class MessageService {
         }
       }
     
+    try {
+      this.outboundMessageMap.set(normalizedMessageId, message)
+    } catch (e) {
+      // ignore
+    }
+
     // 添加到缓存（群聊优先使用真实 chatId，而不是 groupId）
     const isGroup = message.header.groupId !== '0' && message.header.groupId !== ''
     let chatId = '0'
@@ -1945,6 +1969,17 @@ export class MessageService {
       }
     }
     this.pendingRetryMap.delete(messageId)
+  }
+
+  private releaseOutboundMessage(messageId: string): void {
+    if (messageId == null || messageId === '' || messageId === '0') {
+      return
+    }
+    try {
+      this.outboundMessageMap.delete(messageId)
+    } catch (e) {
+      // ignore
+    }
   }
 
   private scheduleSendRetry(messageId: string, message: any): void {
@@ -2070,6 +2105,9 @@ export class MessageService {
             }
             msg.messageId = msgId
             msg.status = MessageStatus.SENT
+            if (extraRaw != null && extraRaw !== '') {
+              ;(msg as any).extra = extraRaw
+            }
             updatedMessage = msg
             try {
               ;(msg as any).rev = revStr
@@ -2090,6 +2128,10 @@ export class MessageService {
           this.clearSendRetry(msgId)
         } catch (e) {
           // ignore
+        }
+        this.releaseOutboundMessage(msgId)
+        if (previousMessageId !== '' && previousMessageId !== msgId) {
+          this.releaseOutboundMessage(previousMessageId)
         }
         const statusMeta: MessageStatusMeta = {
           resolvedMessageId: msgId,
@@ -3190,6 +3232,51 @@ export class MessageService {
     if (updated === true) {
       this.notifyStatusListeners(messageId, status)
     }
+  }
+
+  public retryMessage(messageId: string): boolean {
+    if (messageId == null || messageId === '' || messageId === '0') {
+      return false
+    }
+    const outbound = this.outboundMessageMap.get(messageId)
+    if (outbound == null) {
+      return false
+    }
+
+    let updated = false
+    const retryTimestamp = Date.now()
+    this.messageCache.forEach(messages => {
+      messages.forEach((msg: any) => {
+        if (msg != null && msg.messageId === messageId) {
+          msg.status = MessageStatus.SENDING
+          msg.timestamp = retryTimestamp
+          msg.time = new Date(retryTimestamp).toLocaleString()
+          updated = true
+        }
+      })
+    })
+    if (updated === true) {
+      this.notifyStatusListeners(messageId, MessageStatus.SENDING)
+    }
+
+    try {
+      if (outbound != null && outbound.header != null) {
+        outbound.header.timestamp = retryTimestamp
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    this.clearSendRetry(messageId)
+    wsManager.send(outbound)
+    try {
+      if (this.sendRetryEnabled) {
+        this.scheduleSendRetry(messageId, outbound)
+      }
+    } catch (e) {
+      // ignore
+    }
+    return true
   }
   
   public clearUnreadCount(chatId: string): void {

@@ -12,6 +12,8 @@ import com.shengyu.framework.websocket.core.protocol.*;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.framework.websocket.core.service.MessageStorageService;
 import com.shengyu.framework.websocket.core.service.dto.MessageSaveResult;
+import com.shengyu.module.infra.api.file.FileApi;
+import com.shengyu.module.infra.api.file.dto.FileDTO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
@@ -27,6 +29,7 @@ import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.service.im.ImBadgeService;
 import com.shengyu.module.system.service.im.ImCursorVersionService;
 import com.shengyu.module.system.service.im.ImGroupService;
+import com.shengyu.module.system.service.im.support.VoiceFileOwnershipValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.scheduling.annotation.Async;
@@ -87,6 +90,9 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
     @Resource
     private NettyMessageSender nettyMessageSender;
+
+    @Resource
+    private FileApi fileApi;
 
     private static class MentionParseResult {
         private boolean atAll;
@@ -281,21 +287,30 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                 return null;
             }
         }
-        if (message.getHeader().getMessageType() != MessageType.FILE) {
-            return extra;
-        }
         try {
-            FileMessage fileMsg = FileMessage.parseFrom(message.getBody());
-            JSONObject obj = JSONUtil.createObj();
-            obj.set("url", fileMsg.getUrl());
-            obj.set("fileName", fileMsg.getFileName());
-            obj.set("size", fileMsg.getSize());
-            obj.set("fileType", fileMsg.getFileType());
-            return obj.toString();
+            if (message.getHeader().getMessageType() == MessageType.VOICE) {
+                VoiceMessage voiceMsg = VoiceMessage.parseFrom(message.getBody());
+                JSONObject obj = JSONUtil.createObj();
+                obj.set("duration", voiceMsg.getDuration());
+                obj.set("size", voiceMsg.getSize());
+                if (StrUtil.isNotBlank(voiceMsg.getUrl())) {
+                    obj.set("url", voiceMsg.getUrl());
+                }
+                return obj.isEmpty() ? extra : obj.toString();
+            }
+            if (message.getHeader().getMessageType() == MessageType.FILE) {
+                FileMessage fileMsg = FileMessage.parseFrom(message.getBody());
+                JSONObject obj = JSONUtil.createObj();
+                obj.set("url", fileMsg.getUrl());
+                obj.set("fileName", fileMsg.getFileName());
+                obj.set("size", fileMsg.getSize());
+                obj.set("fileType", fileMsg.getFileType());
+                return obj.toString();
+            }
         } catch (Exception e) {
-            log.warn("[MessageStorage] 构建文件消息 extra 失败, messageId: {}", message.getHeader().getMessageId(), e);
-            return extra;
+            log.warn("[MessageStorage] 构建媒体消息 extra 失败, messageId: {}", message.getHeader().getMessageId(), e);
         }
+        return extra;
     }
 
     private Long parseQuoteMessageId(ImMessage message) {
@@ -383,14 +398,13 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         MessageHeader header = message.getHeader();
         
         try {
+            Long chatId = getOrCreateChatId(header);
+            validateVoiceMessageOwnership(message, chatId);
             String content = parseMessageContent(message);
             validateGroupMentions(message, content);
             String extra = buildExtraForDb(message);
             String mentionsJson = buildMentionsForDb(message);
             Long quoteMessageId = parseQuoteMessageId(message);
-            
-            // 2. 确定/创建全局 ChatID
-            Long chatId = getOrCreateChatId(header);
 
             // 2.1 分配会话内 sequence（单调递增）
             Long sequence = chatMapper.nextSequence(chatId);
@@ -491,6 +505,30 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         }
     }
 
+    private void validateVoiceMessageOwnership(ImMessage message, Long chatId) {
+        if (message == null || message.getHeader() == null || message.getHeader().getMessageType() != MessageType.VOICE) {
+            return;
+        }
+        String extraRaw = message.getHeader().getExtra();
+        if (StrUtil.isBlank(extraRaw)) {
+            throw ServiceExceptionUtil.invalidParamException("VOICE 消息缺少 extra：必须包含 fileId/durationMs/size/format");
+        }
+        try {
+            JSONObject obj = JSONUtil.parseObj(extraRaw);
+            Long fileId = obj.getLong("fileId", null);
+            if (fileId == null || fileId <= 0L) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE 消息 extra.fileId 非法");
+            }
+            FileDTO fileDTO = fileApi.getFile(fileId);
+            Long groupId = message.getHeader().getGroupId() > 0 ? message.getHeader().getGroupId() : null;
+            VoiceFileOwnershipValidator.validate(fileDTO, message.getHeader().getSenderId(), chatId, groupId);
+        } catch (RuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw ServiceExceptionUtil.invalidParamException("VOICE 消息 extra 不是合法 JSON：{}", ex.getMessage());
+        }
+    }
+
     /**
      * 解析消息内容
      * 
@@ -514,8 +552,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                     return imageMsg.getUrl();
                     
                 case VOICE:
-                    VoiceMessage voiceMsg = VoiceMessage.parseFrom(message.getBody());
-                    return voiceMsg.getUrl();
+                    return "[语音]";
                     
                 case VIDEO:
                     VideoMessage videoMsg = VideoMessage.parseFrom(message.getBody());

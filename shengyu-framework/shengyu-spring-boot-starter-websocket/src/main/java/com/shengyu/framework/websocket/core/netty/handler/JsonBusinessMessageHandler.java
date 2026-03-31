@@ -155,6 +155,28 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
                     return;
                 }
             }
+            if (messageTypeValue == MessageType.VOICE_VALUE) {
+                JSONObject bodyJson = null;
+                if (bodyObj instanceof JSONObject) {
+                    bodyJson = (JSONObject) bodyObj;
+                } else if (bodyObj != null) {
+                    try {
+                        bodyJson = JSONUtil.parseObj(bodyObj);
+                    } catch (Exception ignore) {
+                        bodyJson = null;
+                    }
+                }
+                String voiceError = VoiceMessageValidationSupport.validate(
+                        headerJson.getStr("extra", ""),
+                        bodyJson != null ? bodyJson.getInt("duration", 0) : 0,
+                        bodyJson != null ? bodyJson.getLong("size", 0L) : 0L
+                );
+                if (voiceError != null) {
+                    sendJsonClose(ctx, "VOICE_INVALID", 400, voiceError);
+                    ctx.close();
+                    return;
+                }
+            }
 
             ImMessage imMessage = buildImMessageFromJson(ctx, headerJson, bodyObj);
             MessageType messageType = imMessage.getHeader().getMessageType();

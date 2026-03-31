@@ -206,28 +206,23 @@
   - `TEXT/IMAGE/VOICE/VIDEO/FILE/LOCATION/QUOTE_REPLY` 统一要求 `saveResult.messageId/chatId` 有效后才允许回推与 fanout
   - 不满足门禁时直接中断投递，避免“端侧看起来发送成功但 DB 无记录”
 
-### 2.4.10 语音消息发送现状（录音 -> 上传 -> 正式消息）
+### 2.4.10 语音消息发送基线（开发版）
 
 - **前端录音入口**：`shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`
   - `toggleInputMode` 在文字/语音输入之间切换；语音模式下显示“按住说话”按钮
-  - `handleVoiceStart` 当前直接调用 `uni.getRecorderManager().start({ duration: 60000, sampleRate: 16000, numberOfChannels: 1, encodeBitRate: 48000, format: 'mp3' })`
-  - `handleVoiceMove` 以上滑 `60px` 作为取消阈值；`handleVoiceEnd` 根据 `isCancelReady` 决定取消或进入上传
+  - `handleVoiceStart` 使用单例 `recorderManager`，录音参数固定为 `duration=60000 / sampleRate=16000 / numberOfChannels=1 / encodeBitRate=48000 / format='mp3'`
+  - `handleVoiceMove` 以上滑 `60px` 作为取消阈值；`handleVoiceEnd` 只负责停止录音，上传与发消息统一由 `onStop` 后续状态机处理
 - **前端上传与发送**：
-  - 录音完成后先上传到 `directory='im/voice'`
-  - `IM_MEDIA_USE_FILE_ID='true'` 时调用 `uploadFileAndReturnId(...)`，随后 `messageService.sendVoiceMessageV2(receiverId, groupId, fileId, fullVoiceUrl, duration, size)`
-  - `IM_MEDIA_USE_FILE_ID='false'` 时回退 `uploadFile(...) + sendVoiceMessage(url, duration, size)`
-  - 当前仍把 `url` 作为后端主消费字段；`fileId` 仅前端灰度双写
+  - 录音完成后先生成本地占位消息，再上传到 `im/chat/{chatId}/voice` 或 `im/group/{groupId}/voice`
+  - 上传统一使用 `uploadFileAndReturnId(...)`，发送统一使用 `messageService.sendVoiceMessageV2(receiverId, groupId, fileId, url, duration, size, durationMs, format, md5?)`
+  - 语音发送失败只允许复用已上传结果重发，不再重复上传
 - **消息体与协议现状**：
-  - uniappx `VoiceMessageBody = { fileId?: string, url: string, duration: number, size: number }`
+  - uniappx `VoiceMessageBody = { fileId?: string, url: string, duration: number, size: number, durationMs?: number, format?: string, md5?: string }`
   - Protobuf `VoiceMessage` 当前字段为 `url:string + duration:int32(秒) + size:int64`
-  - `VoiceMessageProcessor`、`SystemMessageStorageServiceImpl`、`NettyMessageSender` 当前都按 `url + duration + size` 读写
+  - `header.extra` / DB `extra` 为语音权威元数据：`fileId + duration + durationMs + size + format + md5?`
+  - DB `content` 固定摘要为 `[语音]`，播放时统一按 `fileId -> presigned-get-url`
 - **现状缺口（后续任务必须补齐）**：
-  - 未做录音权限前置检查与拒权引导
-  - `onStop` 监听挂在 `handleVoiceEnd` 内部，存在重复注册/重复回调风险
-  - 未限制最短录音时长，短语音也可能进入上传链路
-  - 没有“上传中”中间态，用户感知只有录音浮层与最终消息
-  - `voice-unread-dot` 当前复用 `msg.isRead`，没有独立的“已播放/未播放”语义
-  - `format`、`durationMs`、`md5` 等基础元数据尚未冻结
+  - 端到端真机回归与弱网回归仍需补跑
 
 ---
 
@@ -638,9 +633,9 @@
   - `durationMs?: number`
   - `endReason: string`（END/BUSY/TIMEOUT/REJECT 等）
 
-#### 6.4.4.2 语音消息发送机制（对齐微信，兼容当前工程）
+#### 6.4.4.2 语音消息发送机制（对齐微信，单一新契约）
 
-说明：本节结合微信用户可感知交互与当前工程现状，冻结“后续 AI 可直接开工”的语音消息方案。目标是做到交互对齐微信、协议兼容当前代码，并把“发送、播放、60 秒控制、失败恢复”这些基础能力做稳。
+说明：本节结合微信用户可感知交互与当前工程现状，冻结语音消息的单一实现方案。当前处于开发阶段，语音链路**不兼容老数据**，目标是把“发送、播放、60 秒控制、失败恢复”这些基础能力做稳，同时避免改动握手、ACK、`sequence/rev` 等公共语义。
 
 ##### 6.4.4.2.1 微信机制提炼（公开资料 + 可观察交互）
 
@@ -648,7 +643,7 @@
 - 语音发送有明确时长边界：短语音直接取消并提示；长语音上限按 `60s` 控制
 - 语音播放强调“进入会话不自动播放、同页单实例播放、未播放红点独立于已读态”
 
-##### 6.4.4.2.2 当前工程兼容约束（冻结）
+##### 6.4.4.2.2 当前工程契约（冻结）
 
 - 当前 `chat.uvue` 录音参数固定为：
   - `duration = 60000`
@@ -660,16 +655,20 @@
   - `url: string`
   - `duration: int32`（秒）
   - `size: int64`
-- 当前 `sendVoiceMessageV2(...)` 虽已双写 `fileId + url`，但后端处理器、存储与回推仍以 `url + duration + size` 为主字段
-- 因此本期冻结如下兼容策略：
+- 本期冻结如下实现约束：
   - **不修改** WebSocket 握手、`MessageType.VOICE`、ACK 语义、`sequence/rev` 不变式
-  - `body` 继续兼容当前链路：`url + duration(秒) + size + fileId?`
-  - 新增企业级元数据先进入 `header.extra` 与 DB `extra`，至少包含：
-    - `fileId?: string`
+  - `body` 继续沿用当前 protobuf 形态：`url + duration(秒) + size`
+  - `fileId` 为权威媒资标识，必须进入 `header.extra` 与 DB `extra`
+  - `header.extra` / DB `extra` 至少包含：
+    - `fileId: string`
+    - `duration: number`
     - `durationMs: number`
+    - `size: number`
     - `format: string`
     - `md5?: string`
-- 后续若要把 `durationMs/format/fileId` 升格为 protobuf/JSON body 的权威字段，必须作为单独协议版本任务推进，不能在本期直接破坏兼容
+  - DB `content` 只存固定摘要 `[语音]`，不持久化长期可访问 URL
+  - 不再保留 `IM_MEDIA_USE_FILE_ID` 之类的语音双轨开关；语音发送统一走单一新契约
+- 后续若要把 `durationMs/format/fileId` 升格为 protobuf/JSON body 的权威字段，必须作为单独协议版本任务推进；本期不做协议版本升级
 
 ##### 6.4.4.2.3 发送状态机（企业级冻结）
 
@@ -724,11 +723,12 @@
 - 上传目录规范：
   - 单聊：`im/chat/{chatId}/voice`
   - 群聊：`im/group/{groupId}/voice`
-  - 兼容期允许继续接受 `im/voice`，但新代码优先按 chat/group 归档
+- 新代码只按 chat/group 维度归档，不再新增 `im/voice` 这种无上下文目录
 - 限制建议：
   - `sizeBytes <= MAX_VOICE_SIZE`（当前工程为 `10MB`）
   - `format` 白名单：`mp3 / aac / m4a / amr / wav`
 - 安全要求：
+  - 服务端必须校验 `fileId` 存在、格式白名单、大小、时长
   - 消息体不持久化长期可访问 URL
   - 播放/下载统一走 `fileId -> presigned-get-url`
   - `im_chat_message.extra` 必须持久化 `fileId / format / durationMs / md5`
@@ -747,8 +747,8 @@
 - 回归门禁：
   - 单聊 / 群聊发送语音
   - 权限拒绝 / 录音失败 / 短语音 / 上传失败 / 发送失败 / 重试
-  - 新端发 `fileId + url + extra` 与旧端仅发 `url + duration + size` 的互通
-  - 语音引用、撤回、转发、刷新恢复、断线补偿、会话预览无回归
+  - 刷新恢复、断线补偿、会话预览、引用 / 撤回对语音无回归
+  - `TEXT/IMAGE/VIDEO/FILE/LOCATION/QUOTE_REPLY/RECALL` 主链路无回归
 
 #### 6.4.2 Protobuf Envelope（现有形态）
 

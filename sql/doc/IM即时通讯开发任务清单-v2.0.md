@@ -8,7 +8,7 @@
 > **迭代目标**: Milestone S / L - 媒体消息治理 + 消息扩展能力
 
 ### 正在执行
-- S2.3.a 语音消息发送企业级闭环（P1）：方案已冻结，待进入开发
+- S2.3.a 语音消息发送企业级闭环（P1）：开发完成，待人工回归
 - L4.1 自定义表情包（P1）：方案已冻结，待进入开发
 
 ### 本期排期（P1）
@@ -18,7 +18,7 @@
 | L2 消息重发 | 未开始 | C7 | `message-service.uts` |
 | L3 群@提及 | 已完成 | C7, D1-D3 | `ImMessageServiceImpl.java`, `mention-selector.uvue`, `chat.uvue` |
 | L4 管理员撤回 | 已完成 | F1 | `ImMessageServiceImpl.java`, `message-service.uts`, `chat.uvue` |
-| S2.3.a 语音消息发送企业级闭环 | 未开始（方案已冻结） | C7, S1, S2, E1 | `chat.uvue`, `message-service.uts`, `message-handler.uts`, `VoiceMessageProcessor.java`, `SystemMessageStorageServiceImpl.java` |
+| S2.3.a 语音消息发送企业级闭环 | 开发完成，待人工回归 | C7, S1, S2, E1 | `chat.uvue`, `message-service.uts`, `message-handler.uts`, `VoiceMessageProcessor.java`, `SystemMessageStorageServiceImpl.java` |
 | L4.1 自定义表情包 | 未开始（方案已冻结） | C7, S1, S2 | `chat.uvue`, `stickerManager.uts`, `ImMessageServiceImpl.java`, `infra 文件上传链路` |
 
 ### 已完成（近两轮）
@@ -1720,19 +1720,20 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - 发送成功后，消息列表可立即本地预览（fileId->url 解析可异步）
   - 断线补偿后仍能正确展示（以 fileId 为权威）
 
-#### S2.3.a（P1）：语音消息发送企业级闭环（对齐微信，可直接开工）
+#### S2.3.a（P1）：语音消息发送企业级闭环（对齐微信，单一新契约）
 
-- 状态：未开始（方案已冻结，AI 可直接开工）
+- 状态：开发完成，待人工回归
 - **目标**：在不破坏当前 WS / Protobuf 主链路的前提下，把语音消息从“录音结束后直接上传并发送”升级为企业级完整闭环：录音、取消、短语音判定、上传占位、发送确认、失败重试、播放红点、60 秒控制全部收口。
-- **开工前必须接受的事实**：
-  - `pages/message/chat.uvue#handleVoiceStart/handleVoiceMove/handleVoiceEnd` 当前使用 `uni.getRecorderManager()`，参数为 `duration=60000 / sampleRate=16000 / numberOfChannels=1 / encodeBitRate=48000 / format='mp3'`
-  - 当前 `sendVoiceMessageV2(...)` 会双写 `fileId + url`，但后端 `VoiceMessageProcessor / SystemMessageStorageServiceImpl / NettyMessageSender` 仍以 `url + duration(秒) + size` 为主字段
-  - 当前 `VoiceMessage` protobuf 没有 `durationMs / format`；本任务不得直接打破兼容
-  - 当前聊天页语音红点复用 `msg.isRead`，必须改为 `voicePlayed` 本地状态
+- **已冻结前提**：
+  - 当前处于开发阶段，语音链路**不兼容老数据**
+  - `pages/message/chat.uvue#handleVoiceStart/handleVoiceMove/handleVoiceEnd` 仍使用 `uni.getRecorderManager()`，参数固定为 `duration=60000 / sampleRate=16000 / numberOfChannels=1 / encodeBitRate=48000 / format='mp3'`
+  - 当前 `VoiceMessage` protobuf 仍为 `url + duration + size`；本任务不升级协议版本
+  - 语音红点必须改为 `voicePlayed` 本地状态，不得继续复用 `msg.isRead`
 - **冻结边界**：
   - 不改 WebSocket 握手、ACK 语义、`MessageType.VOICE` 编号、`sequence/rev` 语义
-  - 本期 body 继续兼容 `url / duration / size / fileId?`
-  - 新增语音元数据统一进入 `header.extra` 与 DB `extra`：`fileId?`、`durationMs`、`format`、`md5?`
+  - `fileId` 为语音权威媒资标识；播放统一走 `fileId -> presigned-get-url`
+  - 本期 body 继续使用 `url / duration / size`，但 `header.extra` 与 DB `extra` 必须强制包含 `fileId / duration / durationMs / size / format / md5?`
+  - DB `content` 固定摘要为 `[语音]`，不持久化长期 URL
   - 最短录音 `1000ms`，最长 `60000ms`，取消阈值 `60px`
   - 上传成功但发送失败时，重试只复用已上传结果，不允许强制用户重新录音
   - 本任务不做转文字、倍速播放、暂停继续、听筒/扬声器切换等附加能力
@@ -1749,9 +1750,10 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
      - `sendVoiceMessageV2` 增加 `extra` 元数据注入（`fileId`、`durationMs`、`format`、`md5`）
      - `MessageItem` / merge 逻辑支持 `voicePlayed`、`uploading`、`uploadProgress`、`localFilePath`
      - 发送失败重试复用同一 `messageId` 与已上传 `fileId / url`
-  4. 后端 VOICE 主链路兼容补齐
+  4. 后端 VOICE 主链路补齐
      - `JsonBusinessMessageHandler` / `VoiceMessageProcessor` / `NettyMessageSender` / `SystemMessageStorageServiceImpl` 统一透传并持久化 voice `extra`
      - REST 历史查询与 WS 回推都要返回一致的 `extra`
+     - WS / REST 入口补充 `fileId/时长/大小/格式` 校验，拒绝坏数据入链路
      - 会话预览继续保持 `[语音]`
   5. 播放态与红点解耦
      - `chat.uvue` 播放成功后写本地 `voicePlayed=true`
@@ -1770,24 +1772,26 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
     - `core/sender/NettyMessageSender.java`
   - module-system：
     - `service/im/spi/SystemMessageStorageServiceImpl.java`
-    - 如需 REST 兼容发送：`service/im/ImMessageServiceImpl.java`
+    - `service/im/ImMessageServiceImpl.java`
 - **验收标准**：
   - `<1s` 录音不落消息；`>=1s` 正常发送
   - 上滑取消不上传、不发 WS、不插入正式消息
   - 上传成功但 WS 失败时可直接重发，不重复上传
-  - 新旧端互通：新端发 `fileId + url + extra`，旧端至少可播放；旧端仅发 `url / duration / size`，新端可正常展示
+  - 服务端拒绝 `fileId` 缺失、时长非法、大小超限、格式不合法的语音消息
   - 语音红点与已读回执解耦；首播成功后红点消失
   - 离页、切消息、切后台均停止当前语音播放
   - 历史消息刷新、断线补偿、会话预览、转发 / 引用 / 撤回对语音无回归
 - **回归清单**：
   - 单聊 / 群聊发送语音
   - 权限拒绝 / 录音失败 / 上传失败 / 发送失败 / 重试
-  - 旧消息只含 `url` 的播放
+  - 播放签名地址刷新失败 / 播放失败
   - 语音消息引用、撤回、搜索结果进入会话后的播放行为
 - **DoD**：
   - 架构文档 `6.4.4.2` 与当前实现一致
+  - 文档与代码都不再保留语音旧链路兼容描述
   - 任务涉及文件均有代码落地或明确注释占位
   - 至少完成 App 端发送/播放链路；H5 降级策略明确且无 crash
+  - 人工回归前置项已完成：WS/REST 校验、上传者与会话目录归属校验、历史/回推 extra 一致
 
 #### S2.4（P1）：下载/预览鉴权（过期 URL / 服务端代理）
 

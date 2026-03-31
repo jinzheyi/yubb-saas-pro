@@ -13,6 +13,8 @@ import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.websocket.core.protocol.*;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
+import com.shengyu.module.infra.api.file.FileApi;
+import com.shengyu.module.infra.api.file.dto.FileDTO;
 import com.shengyu.module.system.controller.app.im.vo.message.*;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
@@ -26,6 +28,7 @@ import com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum;
 import com.shengyu.module.system.enums.im.ImMessageForwardTypeEnum;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.enums.im.ImMessageTypeEnum;
+import com.shengyu.module.system.service.im.support.VoiceFileOwnershipValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -47,6 +50,8 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 @Service
 @Slf4j
 public class ImMessageServiceImpl implements ImMessageService {
+    private static final long MAX_VOICE_SIZE_BYTES = 10L * 1024 * 1024;
+    private static final long MAX_VOICE_DURATION_MS = 60000L;
     private static final int MAX_FORWARD_COMBINE_DEPTH = 20;
     private static final int WINDOW_LATEST_LIMIT_DEFAULT = 30;
     private static final int WINDOW_LATEST_LIMIT_MAX = 50;
@@ -270,6 +275,9 @@ public class ImMessageServiceImpl implements ImMessageService {
     @Resource
     private NettyMessageSender messageSender;
 
+    @Resource
+    private FileApi fileApi;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long sendMessage(Long userId, AppImMessageSendReqVO sendReqVO) {
@@ -304,9 +312,12 @@ public class ImMessageServiceImpl implements ImMessageService {
         message.setSenderId(userId);
         message.setClientMessageId(clientMessageId);
         Integer dbMessageType = normalizeDbMessageType(sendReqVO.getMessageType());
+        JSONObject validatedVoiceExtra = null;
         message.setMessageType(dbMessageType);
 
-        if (dbMessageType == 5) {
+        if (dbMessageType == 3) {
+            validatedVoiceExtra = validateVoiceExtra(sendReqVO.getExtra(), userId, chatId, resolveVoiceGroupId(chat));
+        } else if (dbMessageType == 5) {
             if (StrUtil.isBlank(sendReqVO.getExtra())) {
                 throw ServiceExceptionUtil.invalidParamException("FILE 消息缺少 extra：必须包含 url/fileName/size/fileType(mimeType)");
             }
@@ -342,8 +353,13 @@ public class ImMessageServiceImpl implements ImMessageService {
                 throw ServiceExceptionUtil.invalidParamException("STICKER 消息 extra 不是合法 JSON：{}", ex.getMessage());
             }
         }
-        message.setContent(sendReqVO.getContent());
-        message.setExtra(sendReqVO.getExtra());
+        if (dbMessageType == 3) {
+            message.setContent("[语音]");
+            message.setExtra(validatedVoiceExtra != null ? validatedVoiceExtra.toString() : sendReqVO.getExtra());
+        } else {
+            message.setContent(sendReqVO.getContent());
+            message.setExtra(sendReqVO.getExtra());
+        }
         // 分配会话内 sequence（单调递增），用于会话水位与未读计算
         Long sequence = chatMapper.nextSequence(chatId);
         message.setSequence(sequence);
@@ -974,7 +990,8 @@ public class ImMessageServiceImpl implements ImMessageService {
                 if (!isSender) {
                     imBadgeService.pushBadgeUpdate(memberId);
                 }
-                pushMessageToUser(memberId, chat.getId(), lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO);
+                pushMessageToUser(memberId, chat.getId(), lastMessageId, lastMessageSequence, finalRev,
+                        senderId, sendReqVO, resolveVoiceGroupId(chat));
             }
             
             // 处理@提及强提醒：被@用户即使群免打扰也收到推送
@@ -1041,8 +1058,11 @@ public class ImMessageServiceImpl implements ImMessageService {
             }
 
             imBadgeService.pushBadgeUpdate(receiverId);
-            pushMessageToUser(senderId, chat.getId(), lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO);
-            pushMessageToUser(receiverId, chat.getId(), lastMessageId, lastMessageSequence, finalRev, senderId, sendReqVO);
+            Long effectiveGroupId = resolveVoiceGroupId(chat);
+            pushMessageToUser(senderId, chat.getId(), lastMessageId, lastMessageSequence, finalRev,
+                    senderId, sendReqVO, effectiveGroupId);
+            pushMessageToUser(receiverId, chat.getId(), lastMessageId, lastMessageSequence, finalRev,
+                    senderId, sendReqVO, effectiveGroupId);
         }
     }
 
@@ -1077,7 +1097,93 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
     }
 
-    private void pushMessageToUser(Long userId, Long chatId, Long messageId, Long sequence, Long rev, Long senderId, AppImMessageSendReqVO sendReqVO) {
+    private JSONObject validateVoiceExtra(String extra, Long userId, Long chatId, Long groupId) {
+        if (StrUtil.isBlank(extra)) {
+            throw ServiceExceptionUtil.invalidParamException("VOICE 消息缺少 extra：必须包含 fileId/durationMs/size/format");
+        }
+        try {
+            JSONObject obj = JSONUtil.parseObj(extra);
+            Long fileId = obj.getLong("fileId", null);
+            Long size = obj.getLong("size", null);
+            Integer duration = obj.getInt("duration", null);
+            Long durationMs = obj.getLong("durationMs", null);
+            String format = obj.getStr("format", "");
+            if (fileId == null || fileId <= 0 || size == null || size <= 0 || StrUtil.isBlank(format)) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE 消息 extra 字段不完整：必须包含 fileId/durationMs/size/format");
+            }
+            long effectiveDurationMs = durationMs != null && durationMs > 0
+                    ? durationMs
+                    : (duration != null && duration > 0 ? duration * 1000L : 0L);
+            if (effectiveDurationMs < 1000L || effectiveDurationMs > MAX_VOICE_DURATION_MS) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE 消息时长非法：必须在 1000ms ~ 60000ms 之间");
+            }
+            if (size > MAX_VOICE_SIZE_BYTES) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE 消息大小非法：不能超过 10MB");
+            }
+            if (!isAllowedVoiceFormat(format)) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE 消息格式非法：仅支持 mp3/aac/m4a/amr/wav");
+            }
+
+            FileDTO fileDTO = fileApi.getFile(fileId);
+            if (fileDTO == null) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE 消息 fileId 不存在：{}", fileId);
+            }
+            VoiceFileOwnershipValidator.validate(fileDTO, userId, chatId, groupId);
+            if (fileDTO.getSize() != null && fileDTO.getSize() > 0 && size.longValue() != fileDTO.getSize().longValue()) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE 消息 size 与文件记录不一致");
+            }
+            if (StrUtil.isNotBlank(fileDTO.getType()) && !isAllowedVoiceFormat(fileDTO.getType())) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE 消息文件类型非法：{}", fileDTO.getType());
+            }
+
+            obj.set("durationMs", effectiveDurationMs);
+            if (duration == null || duration <= 0) {
+                obj.set("duration", (int) Math.max(1L, Math.round(effectiveDurationMs / 1000.0d)));
+            }
+            return obj;
+        } catch (ServiceException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw ServiceExceptionUtil.invalidParamException("VOICE 消息 extra 不是合法 JSON：{}", ex.getMessage());
+        }
+    }
+
+    private boolean isAllowedVoiceFormat(String format) {
+        if (StrUtil.isBlank(format)) {
+            return false;
+        }
+        String normalized = format.trim().toLowerCase(Locale.ROOT);
+        return "mp3".equals(normalized)
+                || "aac".equals(normalized)
+                || "m4a".equals(normalized)
+                || "amr".equals(normalized)
+                || "wav".equals(normalized)
+                || "audio/mpeg".equals(normalized)
+                || "audio/mp3".equals(normalized)
+                || "audio/aac".equals(normalized)
+                || "audio/x-aac".equals(normalized)
+                || "audio/mp4".equals(normalized)
+                || "audio/m4a".equals(normalized)
+                || "audio/x-m4a".equals(normalized)
+                || "audio/amr".equals(normalized)
+                || "audio/wav".equals(normalized)
+                || "audio/x-wav".equals(normalized)
+                || "audio/wave".equals(normalized);
+    }
+
+    private Long resolveVoiceGroupId(ImChatDO chat) {
+        if (chat == null) {
+            return null;
+        }
+        if (Objects.equals(chat.getChatType(), ImConversationTypeEnum.GROUP.getType())
+                && chat.getGroupId() != null && chat.getGroupId() > 0L) {
+            return chat.getGroupId();
+        }
+        return null;
+    }
+
+    private void pushMessageToUser(Long userId, Long chatId, Long messageId, Long sequence, Long rev, Long senderId,
+                                   AppImMessageSendReqVO sendReqVO, Long effectiveGroupId) {
         try {
             Long tenantId = TenantContextHolder.getTenantId();
 
@@ -1109,8 +1215,32 @@ public class ImMessageServiceImpl implements ImMessageService {
                     break;
                 case 3: // 语音消息
                     messageType = MessageType.VOICE;
+                    String voiceUrl = sendReqVO.getContent();
+                    int voiceDuration = 0;
+                    long voiceSize = 0L;
+                    if (StrUtil.isNotBlank(sendReqVO.getExtra())) {
+                        try {
+                            JSONObject obj = validateVoiceExtra(sendReqVO.getExtra(), senderId, chatId, effectiveGroupId);
+                            headerExtra = obj.toString();
+                            if (StrUtil.isBlank(voiceUrl)) {
+                                Long fileId = obj.getLong("fileId", null);
+                                if (fileId != null && fileId > 0) {
+                                    FileDTO fileDTO = fileApi.getFile(fileId);
+                                    if (fileDTO != null && StrUtil.isNotBlank(fileDTO.getUrl())) {
+                                        voiceUrl = fileDTO.getUrl();
+                                    }
+                                }
+                            }
+                            voiceDuration = obj.getInt("duration", 0);
+                            voiceSize = obj.getLong("size", 0L);
+                        } catch (Exception ignore) {
+                            // ignore
+                        }
+                    }
                     messageBody = VoiceMessage.newBuilder()
-                            .setUrl(sendReqVO.getContent())
+                            .setUrl(voiceUrl == null ? "" : voiceUrl)
+                            .setDuration(voiceDuration)
+                            .setSize(voiceSize)
                             .build();
                     break;
                 case 4: // 视频消息
@@ -1193,7 +1323,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             }
 
             Long receiverId = sendReqVO.getReceiverId();
-            Long groupId = sendReqVO.getGroupId();
+            Long groupId = effectiveGroupId != null && effectiveGroupId > 0L ? effectiveGroupId : null;
 
             // enterprise: include rev for final-state merge; merge with existing header.extra (e.g. file metadata)
             String extraWithRev = null;

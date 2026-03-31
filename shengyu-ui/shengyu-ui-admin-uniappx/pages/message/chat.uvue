@@ -93,11 +93,14 @@
 								</view>
 								
 								<!-- 语音消息 -->
-                                <view v-else-if="msg.type === 'voice'" class="message-bubble bubble-voice" :style="{ width: getVoiceBubbleWidth(msg.duration || 0) }" @click="handleVoicePlay(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
+                                <view v-else-if="msg.type === 'voice'" class="message-bubble bubble-voice" :class="{ 'bubble-voice-uploading': isVoiceUploading(msg), 'bubble-voice-failed': isVoiceUploadFailed(msg) || isVoiceSendFailed(msg) }" :style="{ width: getVoiceBubbleWidth(msg.duration || 0) }" @click="handleVoiceBubbleClick(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
 									<text class="iconfont voice-icon">{{ msg.isSelf ? '\ue601' : '\ue601' }}</text>
-									<text class="voice-duration">{{ msg.duration }}"</text>
+									<view class="voice-content">
+										<text class="voice-duration">{{ buildVoiceDurationText(msg) }}</text>
+										<text v-if="buildVoiceStatusText(msg) !== ''" class="voice-status">{{ buildVoiceStatusText(msg) }}</text>
+									</view>
 									<!-- 语音未读红点 -->
-									<view v-if="!msg.isSelf && !msg.isRead" class="voice-unread-dot"></view>
+									<view v-if="shouldShowVoiceUnreadDot(msg)" class="voice-unread-dot"></view>
 								</view>
 								
 								<!-- 文件消息 -->
@@ -464,7 +467,7 @@
 	import { emojiList, emojiMap } from '../../utils/emojiData.uts'
 	import { parseMessageText as parseEmojiTokens, type MessageToken as EmojiToken } from '../../utils/emojiParser.uts'
 	import { getCustomStickers, StickerItem, refreshCustomStickers, uploadCustomSticker, collectMessageToSticker, touchStickerRecent, hasCollectedSticker } from '../../utils/stickerManager.uts'
-	import { messageService, MessageItem as ServiceMessageItem, ConversationItem } from '../../services/message-service.uts'
+	import { messageService, MessageItem as ServiceMessageItem, ConversationItem, MessageStatus } from '../../services/message-service.uts'
 	import { badgeService } from '../../services/badge-service.uts'
 	import { MessageType, wsManager } from '../../utils/websocket.uts'
 	import { getMessageWindow, getMessageHistory, recallMessage, deleteMessage, getRecallConfig } from '../../api/message.uts'
@@ -493,9 +496,10 @@
 	import { readReceiptService } from '../../services/read-receipt-service.uts'
 	import {
 		BASE_URL as CONFIG_BASE_URL,
-		IM_MEDIA_USE_FILE_ID
+		IM_MEDIA_USE_FILE_ID,
+		MAX_VOICE_SIZE
 	} from '../../config/app.config.uts'
-	import { getString, remove, setJsonObject } from '../../utils/storage.uts'
+	import { getString, remove, setJsonObject, setString } from '../../utils/storage.uts'
 
 	const { t } = useI18n()
 	const STICKER_LIMIT = 150
@@ -683,9 +687,17 @@
 
 	const PRESIGNED_DEFAULT_SECONDS = 600
 	const PRESIGNED_REFRESH_GUARD_MS = 30 * 1000
+	const MIN_VOICE_DURATION_MS = 1000
+	const MAX_VOICE_DURATION_MS = 60000
+	const VOICE_CANCEL_THRESHOLD_PX = 60
+	const VOICE_RECORD_FORMAT = 'mp3'
 	const presignedUrlCache = new Map<string, { url: string; expiresAt: number }>()
 	let voiceAudioContext: any = null
+	let recorderManager: any = null
+	let recorderListenersBound = false
+	let pendingRecordCancel = false
 	let h5VisibilityChangeHandler: (() => void) | null = null
+	let voiceScopeResolvePromise: Promise<boolean> | null = null
 
 	function getKkFileViewBaseUrl(): string {
 		try {
@@ -1043,6 +1055,7 @@
 	const isFullExpanded = ref(false)
 	const isMultiLine = ref(false)
 	const isVoiceMode = ref(false)
+	const supportsVoiceRecord = ref(true)
 	const isRecording = ref(false)
 	const isCancelReady = ref(false)
 	const usePlainTextComposer = ref(false)
@@ -1064,6 +1077,12 @@
 	const currentEmojiTab = ref('emoji') // 'emoji' | 'sticker'
 	const lastMessageId = ref('')
 	const recordStartY = ref(0)
+	const recordStartAt = ref(0)
+
+	// #ifdef H5
+	supportsVoiceRecord.value = false
+	// #endif
+
 	const touchStartX = ref(0)
 	const touchStartY = ref(0)
 	let editorCtx : EditorContext | null = null
@@ -1161,6 +1180,17 @@
 		avatarBg : string;
 		senderName : string;
 		duration ?: number;
+		durationMs ?: number;
+		fileId ?: string;
+		size ?: number;
+		format ?: string;
+		voiceSize ?: number;
+		voiceFormat ?: string;
+		voicePlayed ?: boolean;
+		localFilePath ?: string;
+		uploadProgress ?: number;
+		uploadStatus ?: string;
+		uploadError ?: string;
 		poster ?: string;
 		fileName ?: string;
 		fileSize ?: string;
@@ -1890,6 +1920,77 @@
 		}
 	}
 
+	function applyVoiceFields(uiMessage : MessageItem, rawContent : any, extra ?: any) {
+		if (uiMessage.type !== 'voice') {
+			return
+		}
+		const parsedBody = parseRawContent(rawContent)
+		const parsedExtra = parseRawContent(extra)
+		const bodyObj = parsedBody != null && typeof parsedBody === 'object' ? parsedBody as any : null
+		const extraObj = parsedExtra != null && typeof parsedExtra === 'object' ? parsedExtra as any : null
+
+		let durationSec = 0
+		let durationMs = 0
+		let sizeNum = 0
+		let formatStr = ''
+		let md5Str = ''
+		let fileIdStr = ''
+
+		if (bodyObj != null) {
+			durationSec = bodyObj.duration != null ? Number(bodyObj.duration) : durationSec
+			sizeNum = bodyObj.size != null ? Number(bodyObj.size) : sizeNum
+			fileIdStr = bodyObj.fileId != null ? String(bodyObj.fileId) : fileIdStr
+		}
+		if (extraObj != null) {
+			if (extraObj.duration != null) {
+				durationSec = Number(extraObj.duration)
+			}
+			if (extraObj.durationMs != null) {
+				durationMs = Number(extraObj.durationMs)
+			}
+			if (extraObj.size != null) {
+				sizeNum = Number(extraObj.size)
+			}
+			if (extraObj.format != null) {
+				formatStr = String(extraObj.format)
+			}
+			if (extraObj.md5 != null) {
+				md5Str = String(extraObj.md5)
+			}
+			if (extraObj.fileId != null) {
+				fileIdStr = String(extraObj.fileId)
+			}
+		}
+
+		if (durationMs <= 0 && durationSec > 0) {
+			durationMs = durationSec * 1000
+		}
+		if (durationSec <= 0 && durationMs > 0) {
+			durationSec = Math.max(1, Math.round(durationMs / 1000))
+		}
+		if (durationSec > 0) {
+			uiMessage.duration = durationSec
+		}
+		if (durationMs > 0) {
+			;(uiMessage as any).durationMs = durationMs
+		}
+		if (sizeNum > 0) {
+			;(uiMessage as any).size = sizeNum
+			;(uiMessage as any).voiceSize = sizeNum
+		}
+		if (formatStr !== '') {
+			;(uiMessage as any).format = formatStr
+			;(uiMessage as any).voiceFormat = formatStr
+		}
+		if (md5Str !== '') {
+			uiMessage.md5 = md5Str
+		}
+		if (fileIdStr !== '' && fileIdStr !== '0') {
+			;(uiMessage as any).fileId = fileIdStr
+		}
+		;(uiMessage as any).voicePlayed = uiMessage.isSelf ? true : hasVoiceBeenPlayed(uiMessage.messageId)
+	}
+
 	function applyStickerFields(uiMessage : MessageItem, rawContent : any, extra ?: any) : void {
 		if (uiMessage.type !== 'sticker' && uiMessage.type !== 'emoji') {
 			return
@@ -2329,6 +2430,7 @@
 		}
 
 		applyQuoteFields(uiMessage, rawContent, msg, extraContent)
+		applyVoiceFields(uiMessage, content, extraContent)
 		applyFileFields(uiMessage, extraContent && typeof extraContent === 'object' ? extraContent : content)
 		applyLocationFields(uiMessage, content)
 		applyStickerFields(uiMessage, content, extraContent)
@@ -2397,6 +2499,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				? (msg as any).extra
 				: ((msg as any).content != null && typeof (msg as any).content === 'object' ? (msg as any).content.extra : null)
 			applyQuoteFields(uiMessage, msg.content, msg, serviceExtra)
+			applyVoiceFields(uiMessage, msg.content, serviceExtra)
 			applyFileFields(uiMessage, msg.content)
 			applyLocationFields(uiMessage, msg.content)
 			applyStickerFields(uiMessage, msg.content, serviceExtra)
@@ -3132,6 +3235,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 
 		applyQuoteFields(uiMessage, message.content, message, (message as any).extra)
+		applyVoiceFields(uiMessage, message.content, (message as any).extra)
 		applyFileFields(uiMessage, message.content)
 		applyLocationFields(uiMessage, message.content)
 		applyStickerFields(uiMessage, message.content, (message as any).extra)
@@ -3182,6 +3286,27 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				messageService.sendReadReceipt(message.senderId, [message.messageId])
 			}
 		}
+	}
+
+	function getVoicePlayedStorageKey(messageId: string): string {
+		const tenant = currentTenantId.value != null ? currentTenantId.value : '0'
+		const user = currentUserId.value != null ? currentUserId.value : '0'
+		const chat = chatId.value != null && chatId.value !== '' ? chatId.value : '0'
+		return `IM_VOICE_PLAYED_${tenant}_${user}_${chat}_${messageId}`
+	}
+
+	function hasVoiceBeenPlayed(messageId: string): boolean {
+		if (messageId == null || messageId === '' || messageId === '0') {
+			return false
+		}
+		return getString(getVoicePlayedStorageKey(messageId), '') === '1'
+	}
+
+	function markVoicePlayed(messageId: string): void {
+		if (messageId == null || messageId === '' || messageId === '0') {
+			return
+		}
+		setString(getVoicePlayedStorageKey(messageId), '1')
 	}
 
 	function handleMessageStatusChange(messageId: string, status: any, meta ?: any) {
@@ -3256,7 +3381,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				messages.value.splice(idx, 1, nextMsg as MessageItem)
 				return
 			}
-			if (status === 3 || status === '3') {
+			if (status === 3 || status === '3' || status === 5 || status === '5') {
 				nextMsg.status = 'failed'
 				messages.value.splice(idx, 1, nextMsg as MessageItem)
 				return
@@ -3299,6 +3424,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	function toggleInputMode() {
 		if (!ensureConversationWritable()) {
+			return
+		}
+		if (!isVoiceMode.value && !supportsVoiceRecord.value) {
+			uni.showToast({ title: '当前平台暂不支持语音发送', icon: 'none' })
 			return
 		}
 		isVoiceMode.value = !isVoiceMode.value
@@ -4398,123 +4527,161 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
-	function handleVoiceStart(e : TouchEvent) {
+	function resetVoiceRecordState(): void {
+		isRecording.value = false
+		isCancelReady.value = false
+		recordStartAt.value = 0
+		pendingRecordCancel = false
+	}
+
+	function promptVoiceRecordUnavailable(message: string): void {
+		uni.showModal({
+			title: '无法录音',
+			content: message,
+			confirmText: '去设置',
+			success: (res) => {
+				if (res.confirm) {
+					try {
+						uni.openSetting({})
+					} catch (e) {
+						uni.showToast({ title: message, icon: 'none' })
+					}
+				}
+			}
+		})
+	}
+
+	function ensureRecorderManagerReady(): any | null {
+		if (!supportsVoiceRecord.value) {
+			return null
+		}
+		if (recorderManager == null) {
+			try {
+				recorderManager = uni.getRecorderManager()
+			} catch (e) {
+				recorderManager = null
+			}
+		}
+		if (recorderManager == null) {
+			return null
+		}
+		if (!recorderListenersBound) {
+			recorderManager.onStop((res: any) => {
+				const tempFilePath = res != null && res.tempFilePath != null ? String(res.tempFilePath) : ''
+				const rawDurationMs = res != null && res.duration != null ? Number(res.duration) : Math.max(0, Date.now() - recordStartAt.value)
+				const durationMs = rawDurationMs > 0 ? rawDurationMs : Math.max(0, Date.now() - recordStartAt.value)
+				const durationSec = Math.max(1, Math.round(durationMs / 1000))
+				const shouldCancel = pendingRecordCancel === true
+				resetVoiceRecordState()
+				if (shouldCancel) {
+					return
+				}
+				if (durationMs < MIN_VOICE_DURATION_MS) {
+					uni.showToast({ title: '说话时间太短', icon: 'none' })
+					return
+				}
+				if (tempFilePath === '') {
+					uni.showToast({ title: '录音文件生成失败', icon: 'none' })
+					return
+				}
+				const draft = createLocalVoiceDraft(tempFilePath, durationSec, durationMs)
+				messages.value.push(draft)
+				scrollToBottom()
+				void uploadVoiceDraft(draft)
+			})
+			recorderManager.onError((err: any) => {
+				console.error('[Chat] 录音失败:', err)
+				resetVoiceRecordState()
+				promptVoiceRecordUnavailable('录音失败，请检查麦克风权限')
+			})
+			recorderListenersBound = true
+		}
+		return recorderManager
+	}
+
+	async function handleVoiceStart(e : TouchEvent) {
 		if (!ensureConversationWritable()) {
 			return
 		}
+		if (!supportsVoiceRecord.value) {
+			uni.showToast({ title: '当前平台暂不支持语音发送', icon: 'none' })
+			return
+		}
+		if (isRecording.value) {
+			return
+		}
+		const scopeReady = await ensureVoiceUploadScopeReady(true)
+		if (!scopeReady) {
+			return
+		}
+		const manager = ensureRecorderManagerReady()
+		if (manager == null) {
+			uni.showToast({ title: '当前平台暂不支持语音发送', icon: 'none' })
+			return
+		}
+		stopCurrentVoicePlayback()
+		currentRecordingRequestId = currentRecordingRequestId + 1
 		recordStartY.value = e.touches[0].pageY
+		recordStartAt.value = Date.now()
+		pendingRecordCancel = false
 		isRecording.value = true
 		isCancelReady.value = false
-		
-		// 开始录音
-		uni.getRecorderManager().start({
-			duration: 60000,  // 最长录音时间 60 秒
+
+		manager.start({
+			duration: MAX_VOICE_DURATION_MS,
 			sampleRate: 16000,
 			numberOfChannels: 1,
 			encodeBitRate: 48000,
-			format: 'mp3',
-			success: () => {
-				console.log('[Chat] 开始录音')
-			},
-			fail: (err) => {
-				console.error('[Chat] 录音失败:', err)
-				uni.showToast({
-					title: '录音失败，请检查麦克风权限',
-					icon: 'none'
-				})
-				isRecording.value = false
+			format: VOICE_RECORD_FORMAT,
+			fail: (err: any) => {
+				console.error('[Chat] 开始录音失败:', err)
+				resetVoiceRecordState()
+				promptVoiceRecordUnavailable('录音失败，请检查麦克风权限')
 			}
 		})
 	}
 
 	function handleVoiceMove(e : TouchEvent) {
-		const currentY = e.touches[0].pageY
-		if (recordStartY.value - currentY > 60) {
-			isCancelReady.value = true
-		} else {
-			isCancelReady.value = false
+		if (!isRecording.value) {
+			return
 		}
-	}
-
-	/**
-			status: 'success'
-		} as MessageItem
+		const currentY = e.touches[0].pageY
+		isCancelReady.value = recordStartY.value - currentY >= VOICE_CANCEL_THRESHOLD_PX
 	}
 
 	function handleVoiceEnd() {
-		if (isCancelReady.value) {
-			console.log('[Chat] 取消录音')
-			// 停止录音
-			uni.getRecorderManager().stop()
-		} else {
-			console.log('[Chat] 录音结束，准备上传')
-			
-			// 停止录音并获取录音文件
-			uni.getRecorderManager().stop()
-			
-			// 监听录音结束事件
-			uni.getRecorderManager().onStop((res) => {
-				const tempFilePath = res.tempFilePath
-				const duration = Math.floor(res.duration / 1000)  // 转换为秒
-				
-				console.log('[Chat] 录音文件:', tempFilePath, '时长:', duration)
-				
-				// 上传语音文件
-			const uploadPromise = IM_MEDIA_USE_FILE_ID === 'true'
-				? uploadFileAndReturnId(tempFilePath, {
-					directory: 'im/voice',
-					onProgress: (progress) => {
-						console.log('[Chat] 上传进度:', progress)
-					}
-				})
-				: uploadFile(tempFilePath, {
-					directory: 'im/voice',
-					onProgress: (progress) => {
-						console.log('[Chat] 上传进度:', progress)
-					}
-				})
-			uploadPromise.then((result: any) => {
-				const voiceUrl = result.data.url || ''
-				const voiceSize = result.data.size || 0
-				const voiceFileId = result.data.fileId?.toString() || '0'
-					
-					// 构建完整URL
-					let fullVoiceUrl = voiceUrl
-					if (voiceUrl.startsWith('/')) {
-						fullVoiceUrl = CONFIG_BASE_URL + voiceUrl
-					}
-					
-					console.log('[Chat] 语音URL:', fullVoiceUrl)
-					
-					// 使用消息服务发送语音消息（灰度：V2 双写 fileId + url）
-				const message = IM_MEDIA_USE_FILE_ID === 'true'
-					? messageService.sendVoiceMessageV2(
-						getReceiverIdForMessage(),
-						getGroupIdForMessage(),
-						voiceFileId,
-						fullVoiceUrl,
-						duration,
-						voiceSize
-					)
-					: messageService.sendVoiceMessage(
-						getReceiverIdForMessage(),
-						getGroupIdForMessage(),
-						fullVoiceUrl,
-						duration,
-						voiceSize
-					)
-					
-					// IM_MEDIA_USE_FILE_ID=true 时，消息入栈统一由 messageService listener 处理，避免重复展示
-					scrollToBottom()
-				}).catch((err) => {
-					console.error('[Chat] 上传语音失败:', err)
-					uni.showToast({ title: '上传失败', icon: 'none' })
-				})
-			})
+		if (!isRecording.value) {
+			return
 		}
-		
-		isRecording.value = false
-		isCancelReady.value = false
+		const manager = ensureRecorderManagerReady()
+		if (manager == null) {
+			resetVoiceRecordState()
+			return
+		}
+		pendingRecordCancel = isCancelReady.value
+		try {
+			manager.stop()
+		} catch (e) {
+			console.error('[Chat] 停止录音失败:', e)
+			resetVoiceRecordState()
+			uni.showToast({ title: '录音结束失败', icon: 'none' })
+		}
+	}
+
+	function cancelActiveVoiceRecording(): void {
+		if (!isRecording.value) {
+			return
+		}
+		const manager = ensureRecorderManagerReady()
+		pendingRecordCancel = true
+		try {
+			if (manager != null) {
+				manager.stop()
+			}
+		} catch (e) {
+			// ignore
+		}
+		resetVoiceRecordState()
 	}
 
 	/**
@@ -6407,13 +6574,303 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		return `${width}px`
 	}
 
-	function handleVoicePlay(msg : any) {
-		if (!msg.isSelf) {
-			msg.isRead = true
+	function patchMessageInList(messageId: string, patch: any): void {
+		if (messageId == null || messageId === '') {
+			return
 		}
+		const idx = messages.value.findIndex((item: any) => item != null && item.messageId === messageId)
+		if (idx < 0) {
+			return
+		}
+		const next: any = {
+			...messages.value[idx],
+			...patch
+		}
+		messages.value.splice(idx, 1, next as MessageItem)
+	}
+
+	function removeMessageFromList(messageId: string): void {
+		if (messageId == null || messageId === '') {
+			return
+		}
+		const idx = messages.value.findIndex((item: any) => item != null && item.messageId === messageId)
+		if (idx >= 0) {
+			messages.value.splice(idx, 1)
+		}
+	}
+
+	async function ensureVoiceUploadScopeReady(showError: boolean = true): Promise<boolean> {
+		if (chatType.value === 'group') {
+			const gid = targetId.value != null && targetId.value !== '' ? targetId.value : groupId.value
+			if (gid != null && gid !== '' && gid !== '0') {
+				return true
+			}
+			if (showError) {
+				uni.showToast({ title: '群会话信息未就绪', icon: 'none' })
+			}
+			return false
+		}
+		if (chatId.value != null && chatId.value !== '' && chatId.value !== '0') {
+			return true
+		}
+		const target = targetId.value != null ? targetId.value : ''
+		if (target === '' || target === '0') {
+			if (showError) {
+				uni.showToast({ title: '会话信息未就绪', icon: 'none' })
+			}
+			return false
+		}
+		if (voiceScopeResolvePromise != null) {
+			return await voiceScopeResolvePromise
+		}
+		voiceScopeResolvePromise = Promise.resolve().then(async () => {
+			try {
+				const conversationResult = await getConversationByTarget(target, 1)
+				const resolvedChatId = conversationResult && (conversationResult.chatId != null ? conversationResult.chatId : conversationResult.id)
+				const normalizedChatId = resolvedChatId != null ? resolvedChatId.toString() : ''
+				if (normalizedChatId === '' || normalizedChatId === '0') {
+					throw new Error('chatId 为空')
+				}
+				chatId.value = normalizedChatId
+				try {
+					messageService.setActiveChatId(normalizedChatId)
+				} catch (e) {
+					// ignore
+				}
+				return true
+			} catch (e) {
+				console.error('[Chat] 初始化语音会话作用域失败:', e)
+				if (showError) {
+					uni.showToast({ title: '会话初始化失败，请稍后重试', icon: 'none' })
+				}
+				return false
+			} finally {
+				voiceScopeResolvePromise = null
+			}
+		})
+		return await voiceScopeResolvePromise
+	}
+
+	function buildVoiceUploadDirectory(): string {
+		if (chatType.value === 'group') {
+			const gid = targetId.value != null && targetId.value !== '' ? targetId.value : groupId.value
+			return `im/group/${gid || '0'}/voice`
+		}
+		const cid = chatId.value != null && chatId.value !== '' ? chatId.value : '0'
+		return `im/chat/${cid || '0'}/voice`
+	}
+
+	function stopCurrentVoicePlayback(): void {
+		if (voiceAudioContext) {
+			try {
+				voiceAudioContext.stop()
+				voiceAudioContext.destroy && voiceAudioContext.destroy()
+			} catch (e) {
+				// ignore
+			}
+			voiceAudioContext = null
+		}
+	}
+
+	function isVoiceUploading(msg: any): boolean {
+		return msg != null && msg.uploadStatus != null && String(msg.uploadStatus) === 'uploading'
+	}
+
+	function isVoiceUploadFailed(msg: any): boolean {
+		return msg != null
+			&& msg.localFilePath != null
+			&& String(msg.localFilePath) !== ''
+			&& msg.uploadStatus != null
+			&& String(msg.uploadStatus) === 'failed'
+	}
+
+	function isVoiceSendFailed(msg: any): boolean {
+		if (isVoiceUploadFailed(msg)) {
+			return false
+		}
+		const statusVal: any = msg != null ? (msg as any).status : null
+		return statusVal === MessageStatus.FAILED || statusVal === 5 || statusVal === '5' || statusVal === 'failed'
+	}
+
+	function shouldShowVoiceUnreadDot(msg: any): boolean {
+		if (msg == null || msg.isSelf === true) {
+			return false
+		}
+		return (msg as any).voicePlayed !== true
+	}
+
+	function buildVoiceDurationText(msg: any): string {
+		const duration = msg != null && msg.duration != null ? Number(msg.duration) : 0
+		return `${duration > 0 ? duration : 1}"`
+	}
+
+	function buildVoiceStatusText(msg: any): string {
+		if (isVoiceUploading(msg)) {
+			const progress = msg != null && msg.uploadProgress != null ? Number(msg.uploadProgress) : 0
+			return progress > 0 ? `上传中 ${progress}%` : '上传中'
+		}
+		if (isVoiceUploadFailed(msg)) {
+			return '点击重试上传'
+		}
+		if (isVoiceSendFailed(msg)) {
+			return '点击重发'
+		}
+		return ''
+	}
+
+	function createLocalVoiceDraft(localFilePath: string, durationSec: number, durationMs: number): MessageItem {
+		const timestamp = Date.now()
+		const mid = `voice-local-${timestamp}-${Math.floor(Math.random() * 1000)}`
+		return {
+			id: mid,
+			messageId: mid,
+			chatId: chatId.value,
+			groupId: chatType.value === 'group' ? targetId.value : '',
+			senderId: currentUserId.value,
+			receiverId: getReceiverIdForMessage(),
+			type: 'voice',
+			content: '',
+			isSelf: true,
+			time: new Date(timestamp).toLocaleString(),
+			timestamp: timestamp,
+			showTime: true,
+			avatarText: getAvatarTextUtil('我'),
+			avatarBg: getUserAvatarColor(currentUserId.value),
+			senderName: '我',
+			duration: durationSec,
+			durationMs: durationMs,
+			voicePlayed: true,
+			localFilePath: localFilePath,
+			uploadProgress: 0,
+			uploadStatus: 'uploading',
+			status: 'uploading'
+		} as MessageItem
+	}
+
+	async function uploadVoiceDraft(draft: MessageItem): Promise<void> {
+		const localFilePath = draft.localFilePath != null ? String(draft.localFilePath) : ''
+		if (localFilePath === '') {
+			patchMessageInList(draft.messageId, {
+				uploadStatus: 'failed',
+				uploadError: '语音文件不存在'
+			})
+			return
+		}
+		const scopeReady = await ensureVoiceUploadScopeReady(false)
+		if (!scopeReady) {
+			patchMessageInList(draft.messageId, {
+				uploadStatus: 'failed',
+				uploadError: '会话初始化失败'
+			})
+			uni.showToast({ title: '会话初始化失败，请重试', icon: 'none' })
+			return
+		}
+		patchMessageInList(draft.messageId, {
+			uploadStatus: 'uploading',
+			uploadError: '',
+			uploadProgress: 0
+		})
+		try {
+			const result: any = await uploadFileAndReturnId(localFilePath, {
+				directory: buildVoiceUploadDirectory(),
+				maxSize: MAX_VOICE_SIZE,
+				onProgress: (progress) => {
+					patchMessageInList(draft.messageId, { uploadProgress: progress })
+				}
+			})
+			const data: any = result != null ? result.data : null
+			const fileId = data != null && data.fileId != null ? String(data.fileId) : ''
+			if (fileId === '' || fileId === '0') {
+				throw new Error('fileId 为空')
+			}
+			const voiceUrl = data != null && data.url != null ? String(data.url) : ''
+			const normalizedUrl = voiceUrl.startsWith('/') ? CONFIG_BASE_URL + voiceUrl : voiceUrl
+			const voiceSize = data != null && data.size != null ? Number(data.size) : 0
+			const voiceFormat = data != null && data.mimeType != null && String(data.mimeType) !== ''
+				? String(data.mimeType)
+				: VOICE_RECORD_FORMAT
+			const voiceMd5 = data != null && data.md5 != null ? String(data.md5) : ''
+			removeMessageFromList(draft.messageId)
+			const sent = messageService.sendVoiceMessageV2(
+				getReceiverIdForMessage(),
+				getGroupIdForMessage(),
+				fileId,
+				normalizedUrl,
+				draft.duration != null ? Number(draft.duration) : 1,
+				voiceSize,
+				draft.durationMs != null ? Number(draft.durationMs) : ((draft.duration != null ? Number(draft.duration) : 1) * 1000),
+				voiceFormat,
+				voiceMd5
+			)
+			;(sent as any).fileId = fileId
+			;(sent as any).duration = draft.duration
+			;(sent as any).durationMs = draft.durationMs
+			;(sent as any).size = voiceSize
+			;(sent as any).format = voiceFormat
+			;(sent as any).voiceSize = voiceSize
+			;(sent as any).voiceFormat = voiceFormat
+			;(sent as any).voicePlayed = true
+			;(sent as any).localFilePath = localFilePath
+			;(sent as any).md5 = voiceMd5
+			scrollToBottom()
+		} catch (e) {
+			console.error('[Chat] 上传语音失败:', e)
+			patchMessageInList(draft.messageId, {
+				uploadStatus: 'failed',
+				uploadError: '语音上传失败'
+			})
+			uni.showToast({ title: '语音上传失败，点击重试', icon: 'none' })
+		}
+	}
+
+	function retryVoiceUpload(msg: any): void {
+		if (msg == null) {
+			return
+		}
+		void uploadVoiceDraft(msg as MessageItem)
+	}
+
+	function retryVoiceSend(msg: any): void {
+		if (msg == null || msg.messageId == null) {
+			return
+		}
+		const ok = messageService.retryMessage(String(msg.messageId))
+		if (!ok) {
+			uni.showToast({ title: '语音发送失败，无法重发', icon: 'none' })
+			return
+		}
+	}
+
+	function handleVoiceBubbleClick(msg: any): void {
+		if (multiSelectMode.value) {
+			handleBubbleClick(msg as MessageItem)
+			return
+		}
+		if (isVoiceUploading(msg)) {
+			return
+		}
+		if (isVoiceUploadFailed(msg)) {
+			retryVoiceUpload(msg)
+			return
+		}
+		if (isVoiceSendFailed(msg)) {
+			retryVoiceSend(msg)
+			return
+		}
+		const statusVal: any = msg != null ? (msg as any).status : null
+		if (statusVal === MessageStatus.SENDING || statusVal === 0 || statusVal === '0' || statusVal === 'sending') {
+			return
+		}
+		handleVoicePlay(msg)
+	}
+
+	function handleVoicePlay(msg : any) {
 		Promise.resolve().then(async () => {
 			let url = msg && msg.content ? String(msg.content) : ''
-			if (IM_MEDIA_USE_FILE_ID === 'true' && msg && msg.fileId) {
+			if (url === '[语音]') {
+				url = ''
+			}
+			if (msg && msg.fileId) {
 				const signed = await resolvePresignedUrl(String(msg.fileId))
 				if (signed) {
 					url = signed
@@ -6424,18 +6881,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				return
 			}
 			try {
-				if (voiceAudioContext) {
-					try {
-						voiceAudioContext.stop()
-						voiceAudioContext.destroy && voiceAudioContext.destroy()
-					} catch (e) {
-						// ignore
-					}
-					voiceAudioContext = null
-				}
+				stopCurrentVoicePlayback()
 				voiceAudioContext = uni.createInnerAudioContext()
 				voiceAudioContext.autoplay = true
 				voiceAudioContext.src = url
+				voiceAudioContext.onPlay(() => {
+					if (msg != null && msg.isSelf !== true) {
+						markVoicePlayed(String(msg.messageId))
+						patchMessageInList(String(msg.messageId), { voicePlayed: true })
+					}
+				})
 				voiceAudioContext.onError((err: any) => {
 					console.error('[Chat] 语音播放失败:', err)
 					uni.showToast({ title: '播放失败', icon: 'none' })
@@ -6467,6 +6922,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				try {
 					if (document.visibilityState === 'hidden') {
 						persistViewportState()
+						cancelActiveVoiceRecording()
+						stopCurrentVoicePlayback()
 					}
 				} catch (e) {
 					// ignore
@@ -6901,6 +7358,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		void flushReadOnLeave()
 		destroyVisibleReadObserver()
 		stopReeditTicker()
+		cancelActiveVoiceRecording()
+		stopCurrentVoicePlayback()
 		try {
 			messageService.setActiveChatAutoReadEnabled(false)
 			messageService.setActiveChatId(null)
@@ -6917,6 +7376,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		void flushReadOnLeave()
 		destroyVisibleReadObserver()
 		stopReeditTicker()
+		cancelActiveVoiceRecording()
 		try {
 			messageService.setActiveChatAutoReadEnabled(false)
 			messageService.setActiveChatId(null)
@@ -7419,15 +7879,35 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		flex-direction: row-reverse;
 	}
 
+	.bubble-voice-uploading {
+		opacity: 0.92;
+	}
+
+	.bubble-voice-failed {
+		border-width: 1px;
+		border-color: rgba(245, 74, 69, 0.35);
+	}
+
 	.voice-icon {
 		font-size: 18px;
 		color: #1F2329;
+	}
+
+	.voice-content {
+		flex-direction: column;
+		min-width: 0;
 	}
 
 	.voice-duration {
 		font-size: 14px;
 		color: #1F2329;
 		margin: 0 8px;
+	}
+
+	.voice-status {
+		margin: 2px 8px 0;
+		font-size: 11px;
+		color: #8F959E;
 	}
 
 	/* 视频消息 */

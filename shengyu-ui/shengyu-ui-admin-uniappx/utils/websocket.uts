@@ -914,6 +914,17 @@ export class WebSocketManager {
         }
         return o
       }
+      if (mt === MessageType.VOICE) {
+        const o: any = root.VoiceMessage.toObject(root.VoiceMessage.decode(bodyBytes), { longs: String, enums: Number, bytes: Uint8Array })
+        try {
+          if (o != null) {
+            o.duration = o.duration != null ? Number(o.duration) : 0
+            o.size = o.size != null ? Number(o.size) : 0
+          }
+        } catch (e) {
+        }
+        return o
+      }
 
       return {
         rawBytes: bodyBytes
@@ -1563,6 +1574,14 @@ export class WebSocketManager {
         replyContent: bodyAny.content != null ? String(bodyAny.content) : '',
         atUserIds: Array.isArray(bodyAny.atUserIds) ? bodyAny.atUserIds.map((x: any) => x != null ? String(x) : '0') : [],
         mentions: mentions
+      }).finish() as Uint8Array
+    }
+
+    if (messageType === MessageType.VOICE) {
+      return root.VoiceMessage.encode({
+        url: bodyAny.url != null ? String(bodyAny.url) : '',
+        duration: bodyAny.duration != null ? Number(bodyAny.duration) : 0,
+        size: bodyAny.size != null ? Number(bodyAny.size) : 0
       }).finish() as Uint8Array
     }
 

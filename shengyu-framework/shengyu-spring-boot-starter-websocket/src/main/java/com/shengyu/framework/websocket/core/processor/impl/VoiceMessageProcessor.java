@@ -57,7 +57,7 @@ public class VoiceMessageProcessor implements MessageProcessor {
 
             // 1.1 回推给发送者（用于端侧把 SENDING -> SENT）
             MessageHeader ackHeader = message.getHeader();
-            messageSender.sendToUser(
+            messageSender.sendToUserWithExtra(
                     ackHeader.getSenderId(),
                     ackHeader.getMessageType(),
                     voiceMessage,
@@ -67,14 +67,17 @@ public class VoiceMessageProcessor implements MessageProcessor {
                     ackHeader.getTenantId(),
                     ackHeader.getMessageId(),
                     saveResult != null ? saveResult.getSequence() : null,
-                    saveResult != null ? saveResult.getChatId() : null
+                    saveResult != null ? saveResult.getChatId() : null,
+                    null,
+                    null,
+                    ackHeader.getExtra()
             );
 
             // 2. 转发给接收者
             Long receiverId = message.getHeader().getReceiverId();
             if (receiverId != null && receiverId > 0) {
                 MessageHeader header = message.getHeader();
-                messageSender.sendToUser(
+                messageSender.sendToUserWithExtra(
                         receiverId,
                         header.getMessageType(),
                         voiceMessage,
@@ -84,7 +87,10 @@ public class VoiceMessageProcessor implements MessageProcessor {
                         header.getTenantId(),
                         header.getMessageId(),
                         saveResult != null ? saveResult.getSequence() : null,
-                        saveResult != null ? saveResult.getChatId() : null
+                        saveResult != null ? saveResult.getChatId() : null,
+                        null,
+                        null,
+                        header.getExtra()
                 );
             }
 

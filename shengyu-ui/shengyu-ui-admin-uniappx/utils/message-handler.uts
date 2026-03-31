@@ -74,6 +74,9 @@ export type VoiceMessageBody = {
   url: string
   duration: number
   size: number
+  durationMs?: number
+  format?: string
+  md5?: string
 }
 
 /**
@@ -226,7 +229,7 @@ export class MessageBuilder {
   }
 
   /**
-   * 构建语音消息（V2：双写 fileId + url，便于灰度迁移）
+   * 构建语音消息（fileId 权威，extra 持久化语音元数据）
    */
   public static buildVoiceMessageV2(
     senderId: string,
@@ -236,7 +239,10 @@ export class MessageBuilder {
     fileId: string,
     url: string,
     duration: number,
-    size: number
+    size: number,
+    durationMs: number,
+    format: string,
+    md5: string = ''
   ): ImMessage {
     const header = MessageBuilder.buildHeader(
       MessageType.VOICE,
@@ -250,7 +256,23 @@ export class MessageBuilder {
       fileId: fileId,
       url: url,
       duration: duration,
-      size: size
+      size: size,
+      durationMs: durationMs,
+      format: format,
+      md5: md5
+    }
+
+    try {
+      header.extra = JSON.stringify({
+        fileId: fileId,
+        duration: duration,
+        durationMs: durationMs,
+        size: size,
+        format: format,
+        md5: md5
+      })
+    } catch (e) {
+      // ignore
     }
 
     return {
