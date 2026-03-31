@@ -28,7 +28,7 @@ public interface ApiAccessLogMapper extends BaseMapperX<ApiAccessLogDO> {
                 .betweenIfPresent(ApiAccessLogDO::getBeginTime, reqVO.getBeginTime())
                 .geIfPresent(ApiAccessLogDO::getDuration, reqVO.getDuration())
                 .eqIfPresent(ApiAccessLogDO::getResultCode, reqVO.getResultCode())
-                .orderByDesc(ApiAccessLogDO::getId)
+                .orderByDesc(ApiAccessLogDO::getCreateTime)
         );
     }
 

@@ -15,7 +15,7 @@ public interface FileConfigMapper extends BaseMapperX<FileConfigDO> {
                 .likeIfPresent(FileConfigDO::getName, reqVO.getName())
                 .eqIfPresent(FileConfigDO::getStorage, reqVO.getStorage())
                 .betweenIfPresent(FileConfigDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(FileConfigDO::getId));
+                .orderByDesc(FileConfigDO::getUpdateTime));
     }
 
     default FileConfigDO selectByMaster() {

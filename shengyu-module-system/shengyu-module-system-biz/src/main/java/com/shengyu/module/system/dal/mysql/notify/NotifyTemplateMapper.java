@@ -20,7 +20,7 @@ public interface NotifyTemplateMapper extends BaseMapperX<NotifyTemplateDO> {
                 .likeIfPresent(NotifyTemplateDO::getName, reqVO.getName())
                 .eqIfPresent(NotifyTemplateDO::getStatus, reqVO.getStatus())
                 .betweenIfPresent(NotifyTemplateDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(NotifyTemplateDO::getId));
+                .orderByDesc(NotifyTemplateDO::getCreateTime));
     }
 
 }

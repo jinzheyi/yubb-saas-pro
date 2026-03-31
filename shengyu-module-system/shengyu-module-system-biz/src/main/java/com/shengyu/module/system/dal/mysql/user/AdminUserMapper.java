@@ -78,7 +78,7 @@ public interface AdminUserMapper extends BaseMapperX<AdminUserDO> {
         if (userIds != null && !userIds.isEmpty()) {
             wrapper.in(AdminUserDO::getId, userIds);
         }
-        wrapper.orderByDesc(AdminUserDO::getId);
+        wrapper.orderByDesc(AdminUserDO::getCreateTime);
         return selectJoinPage(reqVO, UserRespVO.class, wrapper);
     }
 

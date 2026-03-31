@@ -74,7 +74,7 @@ public class FileApiImpl implements FileApi {
     private FileDO getFileByUrlInternal(String url) {
         LambdaQueryWrapper<FileDO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(FileDO::getUrl, url);
-        wrapper.orderByDesc(FileDO::getId);
+        wrapper.orderByDesc(FileDO::getCreateTime);
         wrapper.last("LIMIT 1");
         return fileMapper.selectOne(wrapper);
     }

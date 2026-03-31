@@ -22,7 +22,7 @@ public interface SocialClientMapper extends BaseMapperX<SocialClientDO> {
                 .eqIfPresent(SocialClientDO::getUserType, reqVO.getUserType())
                 .eqIfPresent(SocialClientDO::getClientId, reqVO.getClientId())
                 .eqIfPresent(SocialClientDO::getStatus, reqVO.getStatus())
-                .orderByDesc(SocialClientDO::getId));
+                .orderByDesc(SocialClientDO::getCreateTime));
     }
 
 }

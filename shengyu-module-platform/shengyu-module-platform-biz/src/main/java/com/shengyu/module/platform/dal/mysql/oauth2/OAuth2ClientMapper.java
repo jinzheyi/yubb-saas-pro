@@ -20,7 +20,7 @@ public interface OAuth2ClientMapper extends BaseMapperX<PlatformOAuth2ClientDO> 
         return selectPage(reqVO, new LambdaQueryWrapperX<PlatformOAuth2ClientDO>()
                 .likeIfPresent(PlatformOAuth2ClientDO::getName, reqVO.getName())
                 .eqIfPresent(PlatformOAuth2ClientDO::getStatus, reqVO.getStatus())
-                .orderByDesc(PlatformOAuth2ClientDO::getId));
+                .orderByDesc(PlatformOAuth2ClientDO::getCreateTime));
     }
 
     default PlatformOAuth2ClientDO selectByClientId(String clientId) {

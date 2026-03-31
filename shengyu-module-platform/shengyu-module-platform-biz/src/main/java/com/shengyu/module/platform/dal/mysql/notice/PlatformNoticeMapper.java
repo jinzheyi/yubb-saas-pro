@@ -14,7 +14,7 @@ public interface PlatformNoticeMapper extends BaseMapperX<PlatformNoticeDO> {
         return selectPage(reqVO, new LambdaQueryWrapperX<PlatformNoticeDO>()
                 .likeIfPresent(PlatformNoticeDO::getTitle, reqVO.getTitle())
                 .eqIfPresent(PlatformNoticeDO::getStatus, reqVO.getStatus())
-                .orderByDesc(PlatformNoticeDO::getId));
+                .orderByDesc(PlatformNoticeDO::getCreateTime));
     }
 
 }

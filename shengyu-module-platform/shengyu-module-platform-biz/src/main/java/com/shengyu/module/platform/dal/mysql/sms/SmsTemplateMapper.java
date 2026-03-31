@@ -23,7 +23,7 @@ public interface SmsTemplateMapper extends BaseMapperX<SmsTemplateDO> {
                 .likeIfPresent(SmsTemplateDO::getApiTemplateId, reqVO.getApiTemplateId())
                 .eqIfPresent(SmsTemplateDO::getChannelId, reqVO.getChannelId())
                 .betweenIfPresent(SmsTemplateDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(SmsTemplateDO::getId));
+                .orderByDesc(SmsTemplateDO::getCreateTime));
     }
 
     default Long selectCountByChannelId(Long channelId) {

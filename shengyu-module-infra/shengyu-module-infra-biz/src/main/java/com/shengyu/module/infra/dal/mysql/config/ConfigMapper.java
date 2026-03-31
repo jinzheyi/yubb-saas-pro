@@ -20,7 +20,7 @@ public interface ConfigMapper extends BaseMapperX<ConfigDO> {
                 .likeIfPresent(ConfigDO::getConfigKey, reqVO.getKey())
                 .eqIfPresent(ConfigDO::getType, reqVO.getType())
                 .betweenIfPresent(ConfigDO::getCreateTime, reqVO.getCreateTime())
-            .orderByDesc(ConfigDO::getId));
+            .orderByDesc(ConfigDO::getCreateTime));
     }
 
 }

@@ -30,7 +30,7 @@ public interface SocialUserMapper extends BaseMapperX<SocialUserDO> {
                 .likeIfPresent(SocialUserDO::getNickname, reqVO.getNickname())
                 .likeIfPresent(SocialUserDO::getOpenid, reqVO.getOpenid())
                 .betweenIfPresent(SocialUserDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(SocialUserDO::getId));
+                .orderByDesc(SocialUserDO::getCreateTime));
     }
 
 }

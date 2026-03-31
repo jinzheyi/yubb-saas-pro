@@ -24,7 +24,7 @@ public interface LoginLogMapper extends BaseMapperX<LoginLogDO> {
         } else if (Boolean.FALSE.equals(reqVO.getStatus())) {
             query.gt(LoginLogDO::getResult, LoginResultEnum.SUCCESS.getResult());
         }
-        query.orderByDesc(LoginLogDO::getId); // 降序
+        query.orderByDesc(LoginLogDO::getCreateTime); // 降序
         return selectPage(reqVO, query);
     }
 
@@ -38,7 +38,7 @@ public interface LoginLogMapper extends BaseMapperX<LoginLogDO> {
         } else if (Boolean.FALSE.equals(reqVO.getStatus())) {
             query.gt(LoginLogDO::getResult, LoginResultEnum.SUCCESS.getResult());
         }
-        query.orderByDesc(LoginLogDO::getId); // 降序
+        query.orderByDesc(LoginLogDO::getCreateTime); // 降序
         return selectList(query);
     }
 

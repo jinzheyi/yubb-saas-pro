@@ -26,7 +26,7 @@ public interface OperateLogMapper extends BaseMapperX<OperateLogDO> {
         } else if (Boolean.FALSE.equals(reqVO.getSuccess())) {
             query.gt(OperateLogDO::getResultCode, GlobalErrorCodeConstants.SUCCESS.getCode());
         }
-        query.orderByDesc(OperateLogDO::getId); // 降序
+        query.orderByDesc(OperateLogDO::getCreateTime); // 降序
         return selectPage(reqVO, query);
     }
 
@@ -41,7 +41,7 @@ public interface OperateLogMapper extends BaseMapperX<OperateLogDO> {
         } else if (Boolean.FALSE.equals(reqVO.getSuccess())) {
             query.gt(OperateLogDO::getResultCode, GlobalErrorCodeConstants.SUCCESS.getCode());
         }
-        query.orderByDesc(OperateLogDO::getId); // 降序
+        query.orderByDesc(OperateLogDO::getCreateTime); // 降序
         return selectList(query);
     }
 

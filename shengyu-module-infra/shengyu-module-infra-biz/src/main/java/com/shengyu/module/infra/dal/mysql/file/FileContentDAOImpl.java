@@ -31,7 +31,7 @@ public class FileContentDAOImpl implements DBFileContentFrameworkDAO {
     @Override
     public byte[] selectContent(Long configId, String path) {
         List<FileContentDO> list = fileContentMapper.selectList(
-                buildQuery(configId, path).select(FileContentDO::getContent).orderByDesc(FileContentDO::getId));
+                buildQuery(configId, path).select(FileContentDO::getContent).orderByDesc(FileContentDO::getCreateTime));
         return Optional.ofNullable(CollUtil.getFirst(list))
                 .map(FileContentDO::getContent)
                 .orElse(null);

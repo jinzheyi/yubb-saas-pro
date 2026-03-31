@@ -26,7 +26,7 @@ public interface JobLogMapper extends BaseMapperX<JobLogDO> {
                 .geIfPresent(JobLogDO::getBeginTime, reqVO.getBeginTime())
                 .leIfPresent(JobLogDO::getEndTime, reqVO.getEndTime())
                 .eqIfPresent(JobLogDO::getStatus, reqVO.getStatus())
-                .orderByDesc(JobLogDO::getId) // ID 倒序
+                .orderByDesc(JobLogDO::getCreateTime) // ID 倒序
         );
     }
 

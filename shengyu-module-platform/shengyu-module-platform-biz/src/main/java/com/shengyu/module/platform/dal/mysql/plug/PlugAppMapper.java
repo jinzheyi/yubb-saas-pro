@@ -24,7 +24,7 @@ public interface PlugAppMapper extends BaseMapperX<PlugAppDO> {
                 .eqIfPresent(PlugAppDO::getStatus, reqVO.getStatus())
                 .eqIfPresent(PlugAppDO::getEnable, reqVO.getEnable())
                 .betweenIfPresent(PlugAppDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(PlugAppDO::getId));
+                .orderByDesc(PlugAppDO::getCreateTime));
     }
 
     default List<PlugAppDO> selectList(PlugAppExportReqVO reqVO) {
@@ -35,7 +35,7 @@ public interface PlugAppMapper extends BaseMapperX<PlugAppDO> {
                 .eqIfPresent(PlugAppDO::getEnable, reqVO.getEnable())
                 .betweenIfPresent(PlugAppDO::getCreateTime, reqVO.getCreateTime())
                 .eqIfPresent(PlugAppDO::getMainPic, reqVO.getMainPic())
-                .orderByDesc(PlugAppDO::getId));
+                .orderByDesc(PlugAppDO::getCreateTime));
     }
 
 }

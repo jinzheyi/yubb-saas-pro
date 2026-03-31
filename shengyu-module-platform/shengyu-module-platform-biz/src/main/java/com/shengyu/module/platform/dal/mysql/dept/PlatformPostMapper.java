@@ -25,7 +25,7 @@ public interface PlatformPostMapper extends BaseMapperX<PlatformPostDO> {
                 .likeIfPresent(PlatformPostDO::getCode, reqVO.getCode())
                 .likeIfPresent(PlatformPostDO::getName, reqVO.getName())
                 .eqIfPresent(PlatformPostDO::getStatus, reqVO.getStatus())
-                .orderByDesc(PlatformPostDO::getId));
+                .orderByDesc(PlatformPostDO::getCreateTime));
     }
 
     default List<PlatformPostDO> selectList(PostExportReqVO reqVO) {

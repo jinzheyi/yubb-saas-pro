@@ -22,7 +22,7 @@ public interface DictTypeMapper extends BaseMapperX<DictTypeDO> {
                 .likeIfPresent(DictTypeDO::getType, reqVO.getType())
                 .eqIfPresent(DictTypeDO::getStatus, reqVO.getStatus())
                 .betweenIfPresent(DictTypeDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(DictTypeDO::getId));
+                .orderByDesc(DictTypeDO::getCreateTime));
     }
 
     default List<DictTypeDO> selectList(DictTypeExportReqVO reqVO) {
@@ -31,7 +31,7 @@ public interface DictTypeMapper extends BaseMapperX<DictTypeDO> {
                 .likeIfPresent(DictTypeDO::getType, reqVO.getType())
                 .eqIfPresent(DictTypeDO::getStatus, reqVO.getStatus())
                 .betweenIfPresent(DictTypeDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(DictTypeDO::getId));
+                .orderByDesc(DictTypeDO::getCreateTime));
     }
 
     default DictTypeDO selectByType(String type) {

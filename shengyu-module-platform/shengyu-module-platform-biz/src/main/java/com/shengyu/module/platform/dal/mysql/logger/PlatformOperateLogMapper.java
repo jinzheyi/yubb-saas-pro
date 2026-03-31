@@ -26,7 +26,7 @@ public interface PlatformOperateLogMapper extends BaseMapperX<PlatformOperateLog
         } else if (Boolean.FALSE.equals(reqVO.getSuccess())) {
             query.gt(PlatformOperateLogDO::getResultCode, GlobalErrorCodeConstants.SUCCESS.getCode());
         }
-        query.orderByDesc(PlatformOperateLogDO::getId); // 降序
+        query.orderByDesc(PlatformOperateLogDO::getCreateTime); // 降序
         return selectPage(reqVO, query);
     }
 
@@ -41,7 +41,7 @@ public interface PlatformOperateLogMapper extends BaseMapperX<PlatformOperateLog
         } else if (Boolean.FALSE.equals(reqVO.getSuccess())) {
             query.gt(PlatformOperateLogDO::getResultCode, GlobalErrorCodeConstants.SUCCESS.getCode());
         }
-        query.orderByDesc(PlatformOperateLogDO::getId); // 降序
+        query.orderByDesc(PlatformOperateLogDO::getCreateTime); // 降序
         return selectList(query);
     }
 

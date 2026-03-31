@@ -22,7 +22,7 @@ public interface PlatformRoleMapper extends BaseMapperX<PlatformRoleDO> {
                 .likeIfPresent(PlatformRoleDO::getCode, reqVO.getCode())
                 .eqIfPresent(PlatformRoleDO::getStatus, reqVO.getStatus())
                 .betweenIfPresent(BaseDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(PlatformRoleDO::getId));
+                .orderByDesc(PlatformRoleDO::getCreateTime));
     }
 
     default List<PlatformRoleDO> selectList(RoleExportReqVO reqVO) {

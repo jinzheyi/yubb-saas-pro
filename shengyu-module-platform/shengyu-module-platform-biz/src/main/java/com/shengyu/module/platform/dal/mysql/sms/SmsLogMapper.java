@@ -19,7 +19,7 @@ public interface SmsLogMapper extends BaseMapperX<SmsLogDO> {
                 .betweenIfPresent(SmsLogDO::getSendTime, reqVO.getSendTime())
                 .eqIfPresent(SmsLogDO::getReceiveStatus, reqVO.getReceiveStatus())
                 .betweenIfPresent(SmsLogDO::getReceiveTime, reqVO.getReceiveTime())
-                .orderByDesc(SmsLogDO::getId));
+                .orderByDesc(SmsLogDO::getCreateTime));
     }
 
 }

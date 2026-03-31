@@ -24,7 +24,7 @@ public interface PlugTenantMapper extends BaseMapperX<PlugTenantDO> {
                 .eqIfPresent(PlugTenantDO::getStatus, reqVO.getStatus())
                 .eqIfPresent(PlugTenantDO::getEnable, reqVO.getEnable())
                 .betweenIfPresent(PlugTenantDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(PlugTenantDO::getId));
+                .orderByDesc(PlugTenantDO::getCreateTime));
     }
 
     /**

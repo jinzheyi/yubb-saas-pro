@@ -24,7 +24,7 @@ public interface PlugOrderMapper extends BaseMapperX<PlugOrderDO> {
                 .eqIfPresent(PlugOrderDO::getUserId, reqVO.getUserId())
                 .betweenIfPresent(PlugOrderDO::getSuccessTime, reqVO.getSuccessTime())
                 .betweenIfPresent(PlugOrderDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(PlugOrderDO::getId));
+                .orderByDesc(PlugOrderDO::getCreateTime));
     }
 
     default PageResult<PlugOrderDO> selectPage(PlugOrderPageReqDTO reqDTO) {
@@ -33,7 +33,7 @@ public interface PlugOrderMapper extends BaseMapperX<PlugOrderDO> {
                 .eqIfPresent(PlugOrderDO::getOrderStatus, reqDTO.getOrderStatus())
                 .eqIfPresent(PlugOrderDO::getTenantId, reqDTO.getTenantId())
                 .betweenIfPresent(PlugOrderDO::getCreateTime, reqDTO.getCreateTime())
-                .orderByDesc(PlugOrderDO::getId));
+                .orderByDesc(PlugOrderDO::getCreateTime));
     }
 
 }

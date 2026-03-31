@@ -15,7 +15,7 @@ public interface SmsChannelMapper extends BaseMapperX<SmsChannelDO> {
                 .likeIfPresent(SmsChannelDO::getSignature, reqVO.getSignature())
                 .eqIfPresent(SmsChannelDO::getStatus, reqVO.getStatus())
                 .betweenIfPresent(SmsChannelDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(SmsChannelDO::getId));
+                .orderByDesc(SmsChannelDO::getCreateTime));
     }
 
     default SmsChannelDO selectByCode(String code) {

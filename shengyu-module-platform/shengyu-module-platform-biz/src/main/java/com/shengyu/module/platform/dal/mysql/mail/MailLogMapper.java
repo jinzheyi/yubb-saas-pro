@@ -19,7 +19,7 @@ public interface MailLogMapper extends BaseMapperX<MailLogDO> {
                 .eqIfPresent(MailLogDO::getTemplateId, reqVO.getTemplateId())
                 .eqIfPresent(MailLogDO::getSendStatus, reqVO.getSendStatus())
                 .betweenIfPresent(MailLogDO::getSendTime, reqVO.getSendTime())
-                .orderByDesc(MailLogDO::getId));
+                .orderByDesc(MailLogDO::getCreateTime));
     }
 
 }

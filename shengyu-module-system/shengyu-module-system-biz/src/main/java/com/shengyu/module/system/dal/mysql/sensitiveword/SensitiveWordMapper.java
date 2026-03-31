@@ -24,7 +24,7 @@ public interface SensitiveWordMapper extends BaseMapperX<SensitiveWordDO> {
                 .likeIfPresent(SensitiveWordDO::getTags, reqVO.getTag())
                 .eqIfPresent(SensitiveWordDO::getStatus, reqVO.getStatus())
                 .betweenIfPresent(SensitiveWordDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(SensitiveWordDO::getId));
+                .orderByDesc(SensitiveWordDO::getCreateTime));
     }
     default SensitiveWordDO selectByName(String name) {
         return selectOne(SensitiveWordDO::getName, name);

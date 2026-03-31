@@ -17,7 +17,7 @@ public interface MailTemplateMapper extends BaseMapperX<MailTemplateDO> {
                 .likeIfPresent(MailTemplateDO::getName, pageReqVO.getName())
                 .eqIfPresent(MailTemplateDO::getAccountId, pageReqVO.getAccountId())
                 .betweenIfPresent(MailTemplateDO::getCreateTime, pageReqVO.getCreateTime())
-            .orderByDesc(MailTemplateDO::getId)
+            .orderByDesc(MailTemplateDO::getCreateTime)
         );
     }
 

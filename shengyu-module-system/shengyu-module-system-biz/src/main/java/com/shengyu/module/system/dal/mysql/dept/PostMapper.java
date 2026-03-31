@@ -24,7 +24,7 @@ public interface PostMapper extends BaseMapperX<PostDO> {
             .likeIfPresent(PostDO::getCode, reqVO.getCode())
             .likeIfPresent(PostDO::getName, reqVO.getName())
             .eqIfPresent(PostDO::getStatus, reqVO.getStatus())
-            .orderByDesc(PostDO::getId));
+            .orderByDesc(PostDO::getCreateTime));
     }
 
     default PostDO selectByName(String name) {

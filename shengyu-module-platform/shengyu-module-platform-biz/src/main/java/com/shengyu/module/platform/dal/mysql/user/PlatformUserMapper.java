@@ -33,7 +33,7 @@ public interface PlatformUserMapper extends BaseMapperX<PlatformUserDO> {
                 .eqIfPresent(PlatformUserDO::getStatus, reqVO.getStatus())
                 .betweenIfPresent(PlatformUserDO::getCreateTime, reqVO.getCreateTime())
                 .inIfPresent(PlatformUserDO::getDeptId, deptIds)
-                .orderByDesc(PlatformUserDO::getId));
+                .orderByDesc(PlatformUserDO::getCreateTime));
     }
 
     default List<PlatformUserDO> selectList(UserExportReqVO reqVO, Collection<Long> deptIds) {

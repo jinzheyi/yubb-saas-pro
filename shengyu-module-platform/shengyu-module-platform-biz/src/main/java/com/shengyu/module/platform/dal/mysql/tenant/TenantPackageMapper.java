@@ -23,7 +23,7 @@ public interface TenantPackageMapper extends BaseMapperX<TenantPackageDO> {
                 .eqIfPresent(TenantPackageDO::getStatus, reqVO.getStatus())
                 .likeIfPresent(TenantPackageDO::getRemark, reqVO.getRemark())
                 .betweenIfPresent(TenantPackageDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(TenantPackageDO::getId));
+                .orderByDesc(TenantPackageDO::getCreateTime));
     }
 
     default List<TenantPackageDO> selectListByStatus(Integer status) {

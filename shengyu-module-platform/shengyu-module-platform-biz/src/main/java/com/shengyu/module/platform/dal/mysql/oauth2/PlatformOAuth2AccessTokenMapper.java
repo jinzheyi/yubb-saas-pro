@@ -27,7 +27,7 @@ public interface PlatformOAuth2AccessTokenMapper extends BaseMapperX<PlatformOAu
                 .eqIfPresent(PlatformOAuth2AccessTokenDO::getUserType, reqVO.getUserType())
                 .likeIfPresent(PlatformOAuth2AccessTokenDO::getClientId, reqVO.getClientId())
                 .gt(PlatformOAuth2AccessTokenDO::getExpiresTime, LocalDateTime.now())
-                .orderByDesc(PlatformOAuth2AccessTokenDO::getId));
+                .orderByDesc(PlatformOAuth2AccessTokenDO::getCreateTime));
     }
 
 }

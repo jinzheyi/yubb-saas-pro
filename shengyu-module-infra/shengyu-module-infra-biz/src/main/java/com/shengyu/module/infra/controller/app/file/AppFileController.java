@@ -99,7 +99,7 @@ public class AppFileController {
         }
         FileDO fileDO = fileMapper.selectOne(new LambdaQueryWrapper<FileDO>()
                 .eq(FileDO::getUrl, url)
-                .orderByDesc(FileDO::getId)
+                .orderByDesc(FileDO::getCreateTime)
                 .last("LIMIT 1"));
         if (fileDO == null || fileDO.getId() == null) {
             throw exception(ErrorCodeConstants.FILE_UPLOAD_RECORD_NOT_FOUND);

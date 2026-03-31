@@ -29,7 +29,7 @@ public interface OAuth2AccessTokenMapper extends BaseMapperX<OAuth2AccessTokenDO
                 .eqIfPresent(OAuth2AccessTokenDO::getUserType, reqVO.getUserType())
                 .likeIfPresent(OAuth2AccessTokenDO::getClientId, reqVO.getClientId())
                 .gt(OAuth2AccessTokenDO::getExpiresTime, LocalDateTime.now())
-                .orderByDesc(OAuth2AccessTokenDO::getId));
+                .orderByDesc(OAuth2AccessTokenDO::getCreateTime));
     }
 
     default List<OAuth2AccessTokenDO> selectListByUserIdAndUserType(Long userId, Integer userType) {

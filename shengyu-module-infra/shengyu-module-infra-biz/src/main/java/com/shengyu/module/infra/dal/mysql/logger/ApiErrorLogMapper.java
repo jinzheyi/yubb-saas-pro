@@ -27,7 +27,7 @@ public interface ApiErrorLogMapper extends BaseMapperX<ApiErrorLogDO> {
                 .likeIfPresent(ApiErrorLogDO::getRequestUrl, reqVO.getRequestUrl())
                 .betweenIfPresent(ApiErrorLogDO::getExceptionTime, reqVO.getExceptionTime())
                 .eqIfPresent(ApiErrorLogDO::getProcessStatus, reqVO.getProcessStatus())
-                .orderByDesc(ApiErrorLogDO::getId)
+                .orderByDesc(ApiErrorLogDO::getCreateTime)
         );
     }
 
