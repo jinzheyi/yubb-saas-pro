@@ -206,6 +206,29 @@
   - `TEXT/IMAGE/VOICE/VIDEO/FILE/LOCATION/QUOTE_REPLY` 统一要求 `saveResult.messageId/chatId` 有效后才允许回推与 fanout
   - 不满足门禁时直接中断投递，避免“端侧看起来发送成功但 DB 无记录”
 
+### 2.4.10 语音消息发送现状（录音 -> 上传 -> 正式消息）
+
+- **前端录音入口**：`shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`
+  - `toggleInputMode` 在文字/语音输入之间切换；语音模式下显示“按住说话”按钮
+  - `handleVoiceStart` 当前直接调用 `uni.getRecorderManager().start({ duration: 60000, sampleRate: 16000, numberOfChannels: 1, encodeBitRate: 48000, format: 'mp3' })`
+  - `handleVoiceMove` 以上滑 `60px` 作为取消阈值；`handleVoiceEnd` 根据 `isCancelReady` 决定取消或进入上传
+- **前端上传与发送**：
+  - 录音完成后先上传到 `directory='im/voice'`
+  - `IM_MEDIA_USE_FILE_ID='true'` 时调用 `uploadFileAndReturnId(...)`，随后 `messageService.sendVoiceMessageV2(receiverId, groupId, fileId, fullVoiceUrl, duration, size)`
+  - `IM_MEDIA_USE_FILE_ID='false'` 时回退 `uploadFile(...) + sendVoiceMessage(url, duration, size)`
+  - 当前仍把 `url` 作为后端主消费字段；`fileId` 仅前端灰度双写
+- **消息体与协议现状**：
+  - uniappx `VoiceMessageBody = { fileId?: string, url: string, duration: number, size: number }`
+  - Protobuf `VoiceMessage` 当前字段为 `url:string + duration:int32(秒) + size:int64`
+  - `VoiceMessageProcessor`、`SystemMessageStorageServiceImpl`、`NettyMessageSender` 当前都按 `url + duration + size` 读写
+- **现状缺口（后续任务必须补齐）**：
+  - 未做录音权限前置检查与拒权引导
+  - `onStop` 监听挂在 `handleVoiceEnd` 内部，存在重复注册/重复回调风险
+  - 未限制最短录音时长，短语音也可能进入上传链路
+  - 没有“上传中”中间态，用户感知只有录音浮层与最终消息
+  - `voice-unread-dot` 当前复用 `msg.isRead`，没有独立的“已播放/未播放”语义
+  - `format`、`durationMs`、`md5` 等基础元数据尚未冻结
+
 ---
 
 ## 3. 统一鉴权体系（HTTP + IM）
@@ -559,11 +582,9 @@
   - `md5?: string`
 
 - `VOICE`：
-  - `fileId: string`
-  - `durationMs: number`
-  - `format: string`（amr/aac 等）
-  - `sizeBytes: number`
-  - `asrText?: string`（可选）
+  - **当前工程兼容字段**：`url: string`、`duration: number`（秒）、`size: number`、`fileId?: string`
+  - **目标冻结字段**：`fileId: string`、`durationMs: number`、`format: string`（amr/aac/mp3 等）、`sizeBytes: number`
+  - **兼容期要求**：`header.extra` / REST `extra` 至少补齐 `durationMs`、`format`、`md5?`
 
 - `VIDEO`：
   - `fileId: string`
@@ -616,6 +637,118 @@
   - `callType: string`（AUDIO/VIDEO）
   - `durationMs?: number`
   - `endReason: string`（END/BUSY/TIMEOUT/REJECT 等）
+
+#### 6.4.4.2 语音消息发送机制（对齐微信，兼容当前工程）
+
+说明：本节结合微信用户可感知交互与当前工程现状，冻结“后续 AI 可直接开工”的语音消息方案。目标是做到交互对齐微信、协议兼容当前代码，并把“发送、播放、60 秒控制、失败恢复”这些基础能力做稳。
+
+##### 6.4.4.2.1 微信机制提炼（公开资料 + 可观察交互）
+
+- 发送交互以“**按住说话，松开发送，上滑取消**”为主，用户不需要先进入单独录音页
+- 语音发送有明确时长边界：短语音直接取消并提示；长语音上限按 `60s` 控制
+- 语音播放强调“进入会话不自动播放、同页单实例播放、未播放红点独立于已读态”
+
+##### 6.4.4.2.2 当前工程兼容约束（冻结）
+
+- 当前 `chat.uvue` 录音参数固定为：
+  - `duration = 60000`
+  - `sampleRate = 16000`
+  - `numberOfChannels = 1`
+  - `encodeBitRate = 48000`
+  - `format = 'mp3'`
+- 当前 WS / Protobuf `VoiceMessage` 主体仍是：
+  - `url: string`
+  - `duration: int32`（秒）
+  - `size: int64`
+- 当前 `sendVoiceMessageV2(...)` 虽已双写 `fileId + url`，但后端处理器、存储与回推仍以 `url + duration + size` 为主字段
+- 因此本期冻结如下兼容策略：
+  - **不修改** WebSocket 握手、`MessageType.VOICE`、ACK 语义、`sequence/rev` 不变式
+  - `body` 继续兼容当前链路：`url + duration(秒) + size + fileId?`
+  - 新增企业级元数据先进入 `header.extra` 与 DB `extra`，至少包含：
+    - `fileId?: string`
+    - `durationMs: number`
+    - `format: string`
+    - `md5?: string`
+- 后续若要把 `durationMs/format/fileId` 升格为 protobuf/JSON body 的权威字段，必须作为单独协议版本任务推进，不能在本期直接破坏兼容
+
+##### 6.4.4.2.3 发送状态机（企业级冻结）
+
+- 主状态链：
+  - `IDLE -> RECORDING -> CANCEL_READY -> RECORDED -> UPLOADING -> SENDING -> SENT`
+- 异常分支：
+  - `RECORDING -> CANCELED`：上滑进入取消态后松手
+  - `RECORDING -> TOO_SHORT`：录音 `< 1000ms`，toast“说话时间太短”，不生成正式消息
+  - `UPLOADING -> UPLOAD_FAILED`：允许重试上传，不要求重新录音
+  - `SENDING -> SEND_FAILED`：允许复用已上传 `fileId/url` 重发，不重复上传
+- 状态语义：
+  - `RECORDING`：只显示录音浮层，不插入正式消息
+  - `RECORDED / UPLOADING`：生成本地占位消息，展示“上传中/重试”
+  - `SENDING`：仅表示 WS 已发出、等待服务端回推确认
+  - `SENT`：必须以服务端回推的 `messageId/sequence` 为准
+
+##### 6.4.4.2.4 交互与体验冻结
+
+- 入口：
+  - 输入栏提供语音/键盘切换
+  - 语音模式下仅展示“按住说话”按钮，不与文本输入框并存
+- 录音阈值：
+  - 最短：`1000ms`
+  - 最长：`60000ms`
+  - 取消阈值：上滑 `>= 60px`
+- 权限与平台降级：
+  - 首次录音前先检查麦克风权限；拒绝时给出明确引导
+  - H5 或不支持录音的平台：入口隐藏，或点击时提示“当前平台暂不支持语音发送”
+- 文案冻结：
+  - 录音中：`手指上滑，取消发送`
+  - 取消态：`松开手指，取消发送`
+  - 短语音：`说话时间太短`
+  - 上传失败：`语音上传失败，点击重试`
+  - 发送失败：`语音发送失败，点击重发`
+- 非目标：
+  - 本期不做跨应用重启的录音草稿恢复
+  - 本期不做录音暂停/继续
+  - 本期不做转文字、倍速播放、听筒/扬声器手动切换等附加能力
+
+##### 6.4.4.2.5 播放与读态冻结
+
+- 语音消息默认**不自动播放**
+- 全页只允许一个 `InnerAudioContext`，切换消息、切页、切后台时必须停止
+- 语音红点定义为：`voicePlayed = false && !isSelf`
+  - `voicePlayed` 是端侧本地状态
+  - `voicePlayed` **不得**复用 `isRead/已读回执`
+- 成功开始播放后即可清除本地红点；播放失败不清除
+- 播放统一走当前平台默认音频路由；本期不新增听筒/扬声器切换能力
+
+##### 6.4.4.2.6 上传、安全与合规
+
+- 上传目录规范：
+  - 单聊：`im/chat/{chatId}/voice`
+  - 群聊：`im/group/{groupId}/voice`
+  - 兼容期允许继续接受 `im/voice`，但新代码优先按 chat/group 归档
+- 限制建议：
+  - `sizeBytes <= MAX_VOICE_SIZE`（当前工程为 `10MB`）
+  - `format` 白名单：`mp3 / aac / m4a / amr / wav`
+- 安全要求：
+  - 消息体不持久化长期可访问 URL
+  - 播放/下载统一走 `fileId -> presigned-get-url`
+  - `im_chat_message.extra` 必须持久化 `fileId / format / durationMs / md5`
+- 审计要求：
+  - 记录 `tenantId / chatId / messageId / fileId / uploaderId / durationMs / sizeBytes`
+
+##### 6.4.4.2.7 可观测性与回归
+
+- 指标建议：
+  - `im_voice_record_start_total`
+  - `im_voice_record_cancel_total`
+  - `im_voice_too_short_total`
+  - `im_voice_upload_fail_total`
+  - `im_voice_send_fail_total`
+  - `im_voice_play_fail_total`
+- 回归门禁：
+  - 单聊 / 群聊发送语音
+  - 权限拒绝 / 录音失败 / 短语音 / 上传失败 / 发送失败 / 重试
+  - 新端发 `fileId + url + extra` 与旧端仅发 `url + duration + size` 的互通
+  - 语音引用、撤回、转发、刷新恢复、断线补偿、会话预览无回归
 
 #### 6.4.2 Protobuf Envelope（现有形态）
 
@@ -2685,6 +2818,7 @@ ID 精度约束（企业级必须冻结）：
 | 自定义表情包仍以本地 mock 列表为主 | 多端不同步，无法形成个人表情库 | 按 L4.1 任务补齐上传/收藏/排序/list 闭环 |
 | STICKER 渲染仍依赖 `url` 直出 | 文件鉴权、链接过期与审计能力不足 | 按 Phase 1/2 逐步收敛到 `fileId + presigned` |
 | LOCATION 枚举已定义但未处理 | 位置消息未实现 | 按 L5 任务实现 |
+| VOICE 发送仍是“录完即传”简化链路 | 录音态/上传态/发送态未分层，红点与已读态耦合 | 按 `6.4.4.2` 与 `S2.3.a` 收口 |
 
 ---
 
