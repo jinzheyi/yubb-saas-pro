@@ -223,8 +223,8 @@ public class AppImMessageController {
     }
 
     @PutMapping("/mark-voice-played-batch")
-    @Operation(summary = "鎵归噺鏍囪璇煶娑堟伅宸叉挱鏀撅紙绔晶鑱氬悎涓婃姤锛?")
-    @Parameter(name = "messageIds", description = "璇煶娑堟伅ID鍒楄〃", required = true)
+    @Operation(summary = "批量标记语音消息已播放（端侧聚合上报）")
+    @Parameter(name = "messageIds", description = "语音消息ID列表", required = true)
     public CommonResult<Boolean> markVoicePlayedBatch(@RequestParam("messageIds") List<Long> messageIds) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         messageService.batchMarkVoicePlayed(userId, messageIds);
@@ -232,9 +232,9 @@ public class AppImMessageController {
     }
 
     @GetMapping("/voice-played-status")
-    @Operation(summary = "鏌ヨ璇煶宸叉挱鏀剧姸鎬侊紙鎺ㄩ€佷涪澶辫ˉ鍋匡級")
-    @Parameter(name = "chatId", description = "浼氳瘽ID", required = true)
-    @Parameter(name = "messageIds", description = "璇煶娑堟伅ID鍒楄〃", required = true)
+    @Operation(summary = "查询语音已播放状态（推送丢失补偿）")
+    @Parameter(name = "chatId", description = "会话ID", required = true)
+    @Parameter(name = "messageIds", description = "语音消息ID列表", required = true)
     public CommonResult<List<String>> getVoicePlayedStatus(
             @RequestParam("chatId") Long chatId,
             @RequestParam("messageIds") List<Long> messageIds) {

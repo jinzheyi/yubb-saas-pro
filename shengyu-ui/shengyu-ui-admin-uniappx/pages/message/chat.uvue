@@ -26,7 +26,7 @@
 
 		<!-- 聊天内容区域 -->
 		<scroll-view class="chat-content" :class="{ 'chat-content-multi-select': multiSelectMode }" scroll-y="true" direction="vertical" refresher-enabled="true" :refresher-triggered="historyRefresherTriggered" refresher-threshold="60" :scroll-into-view="lastMessageId" show-scrollbar="false" @refresherrefresh="handleHistoryRefresher" @scroll="handleChatScroll" @scrolltoupper="handleChatScrollToUpper" upper-threshold="80" @scrolltolower="handleChatScrollToLower" lower-threshold="80">
-			<!-- 水印�?-->
+			<!-- 水印层 -->
 			<view class="watermark-layer">
 				<view v-for="i in 12" :key="i" class="watermark-item">
 					<text class="watermark-text">{{ watermark }}</text>
@@ -40,13 +40,13 @@
 					</view>
 					
 					<view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other', multiSelectMode && selectedIds.includes(getSelectMessageId(msg)) ? 'message-selected' : '', highlightedMessageId === getSelectMessageId(msg) ? 'message-highlighted' : '']">
-						<!-- 多选模式下的复选框（统一在最左侧�?-->
+						<!-- 多选模式下的复选框（统一在最左侧） -->
 						<view v-if="multiSelectMode && msg.type !== 'voice' && msg.type !== 'location'" class="multi-select-checkbox" @click.stop="toggleSelect(msg)">
 							<text v-if="selectedIds.includes(getSelectMessageId(msg))" class="iconfont checkbox-icon checkbox-checked">&#xe65f;</text>
 							<view v-else class="checkbox-icon checkbox-unchecked"></view>
 						</view>
 						
-						<!-- 企业级撤回：对齐企微/钉钉，展示为居中系统提示条（不走左右气泡，不显示头像�?-->
+						<!-- 企业级撤回：对齐企微/钉钉，展示为居中系统提示条（不走左右气泡，不显示头像） -->
 						<view v-if="isRecalledFinalMsg(msg)" class="recall-system-tip">
 							<text class="recall-system-tip-text">{{ msg.content }}</text>
 							<text v-if="shouldShowReeditEntry(msg)" class="recall-system-tip-action" @click.stop="handleReeditAfterRecall(msg)">重新编辑</text>
@@ -56,7 +56,7 @@
 								<text class="avatar-text">{{ msg.avatarText }}</text>
 							</view>
 							<view class="message-bubble-wrap">
-								<!-- 发送者名�?(仅在群聊�?仅对他人消息) -->
+								<!-- 发送者名称 (仅在群聊中,仅对他人消息) -->
 								<text v-if="chatType === 'group' && !msg.isSelf" class="sender-name">
 									{{ msg.senderName }}
 								</text>
@@ -139,12 +139,12 @@
 									<image class="location-map" src="/static/images/chat/map-placeholder.png" mode="aspectFill" />
 								</view>
 								
-								<!-- 表情�?动图 -->
+								<!-- 表情包/动图 -->
                                 <view v-else-if="msg.type === 'emoji'" class="bubble-emoji" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
 									<image class="emoji-img" :src="msg.content" mode="aspectFit" />
 								</view>
 								
-								<!-- 自定义收藏表�?(无气�? -->
+								<!-- 自定义收藏表情 (无气泡) -->
                                 <view v-else-if="msg.type === 'sticker'" class="sticker-msg-wrap" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
 									<image class="sticker-img" :src="msg.content" mode="widthFix" />
 								</view>
@@ -184,12 +184,12 @@
 
 		<!-- 底部输入区域 -->
 		<view v-if="!multiSelectMode && !conversationReadOnly" class="footer" :class="{ 'footer-full-expanded': isFullExpanded }">
-			<!-- 全屏模式下的顶部操作�?-->
+			<!-- 全屏模式下的顶部操作栏 -->
 			<view v-if="isFullExpanded" class="full-expand-header">
 				<text class="iconfont collapse-icon" @click="toggleFullExpand">&#xe60e;</text>
 			</view>
 			
-			<!-- 引用回复预览�?-->
+			<!-- 引用回复预览栏 -->
 			<view v-if="quoteReplyMsg !== null" class="quote-reply-bar">
 				<view class="quote-reply-content">
 					<text class="quote-reply-sender">{{ quoteReplyMsg ? quoteReplyMsg.senderName : '' }}</text>
@@ -199,7 +199,7 @@
 			</view>
 
 			<view class="input-row" :class="{ 'input-row-full': isFullExpanded }">
-				<!-- 左侧图标�?(仅在非全屏模式下显示) -->
+				<!-- 左侧图标栏 (仅在非全屏模式下显示) -->
 				<view v-if="!isFullExpanded" class="input-left-actions">
 					<!-- 语音/键盘切换 -->
 					<text class="iconfont footer-icon" @click="toggleInputMode">{{ isVoiceMode ? '\ueac2' : '\ue601' }}</text>
@@ -207,7 +207,7 @@
 					<text v-if="showExpandIcon" class="iconfont expand-icon-btn" @click="toggleFullExpand">&#xe7b0;</text>
 				</view>
 
-				<!-- 输入�?按住说话按钮 -->
+				<!-- 输入框/按住说话按钮 -->
 				<view class="input-box" :class="{ 'input-box-full': isFullExpanded }" v-if="!isVoiceMode">
 					<editor
 						id="editor"
@@ -234,12 +234,12 @@
 					<text class="voice-btn-text">{{ isRecording ? (isCancelReady ? '松开 取消' : '松开 结束') : '按住 说话' }}</text>
 				</view>
 				
-				<!-- 右侧/底部图标�?-->
+				<!-- 右侧/底部图标栏 -->
 				<view class="input-right-actions" :class="{ 'input-right-actions-full': isFullExpanded }">
 					<!-- 表情图标 -->
 					<text class="iconfont footer-icon" @click="toggleEmojiMenu">&#xe604;</text>
 					
-					<!-- 更多/发送按�?-->
+					<!-- 更多/发送按钮 -->
 					<view v-if="!inputText" class="plus-btn" @click="togglePlusMenu">
 						<text class="iconfont footer-icon">&#xe726;</text>
 					</view>
@@ -293,7 +293,7 @@
 				</scroll-view>
 			</view>
 			
-			<!-- 表情包菜�?-->
+			<!-- 表情包菜单 -->
 			<view v-if="showEmojiMenu" class="emoji-menu">
 				<scroll-view class="emoji-content" scroll-y="true" @scroll="handleEmojiPanelScroll">
 					<view v-if="currentEmojiTab === 'emoji'" class="emoji-panel-body">
@@ -356,7 +356,7 @@
 					</view>
 				</view>
 				
-				<!-- 表情菜单 Tab �?-->
+				<!-- 表情菜单 Tab 栏 -->
 				<view class="emoji-tabs">
 					<view class="emoji-tab-item" :class="{ 'emoji-tab-active': currentEmojiTab === 'emoji' }" @click="currentEmojiTab = 'emoji'">
 						<text class="iconfont emoji-tab-icon" :class="{ 'emoji-tab-icon-active': currentEmojiTab === 'emoji' }">&#xe604;</text>
@@ -404,7 +404,7 @@
 			</view>
 		</view>
 
-		<!-- 录音状态浮�?-->
+		<!-- 录音状态浮层 -->
 		<view v-if="isRecording" class="recording-overlay">
 			<view class="recording-card" :class="{ 'recording-card-cancel': isCancelReady }">
 				<text class="iconfont recording-icon">{{ isCancelReady ? '\uea76' : '\ue601' }}</text>
@@ -426,7 +426,7 @@
 			</view>
 		</view>
 
-		<!-- 转发确认对话�?-->
+		<!-- 转发确认对话框 -->
 		<view v-if="showForwardConfirm" class="forward-dialog-overlay" @click="cancelForward">
 			<view class="forward-dialog" @click.stop>
 				<view class="forward-dialog-header">
@@ -540,12 +540,12 @@
 	const { t } = useI18n()
 	const STICKER_LIMIT = 150
 	
-	// 聊天类型：single(单聊) �?group(群聊)
+	// 聊天类型：single(单聊) / group(群聊)
 	const chatType = ref('single')
 	const groupId = ref<string>('')
 	const memberCount = ref(0)
 	
-	// 会话信息（使用字符串避免精度丢失�?
+	// 会话信息（使用字符串避免精度丢失）
 	const chatId = ref<string>('')
 	const targetId = ref<string>('')
 	const name = ref('')
@@ -555,7 +555,7 @@
 	const entryMode = ref('latest')
 	const targetAnchorSequence = ref<string>('')
 	const targetMessageId = ref<string>('')  // 要定位的消息ID
-	const shouldHighlight = ref(false)  // 是否需要高亮显�?
+	const shouldHighlight = ref(false)  // 是否需要高亮显示
 	const highlightedMessageId = ref<string>('')  // 当前高亮的消息ID
 	const fromMergeDetail = ref(false)
 	const mergeBackDelta = ref(1)
@@ -566,7 +566,7 @@
 	const reeditNowTs = ref<number>(Date.now())
 	let reeditTickTimer: any = null
 	
-	// 当前用户信息（使用字符串避免精度丢失�?
+	// 当前用户信息（使用字符串避免精度丢失）
 	const currentUserId = ref<string>('0')
 	const currentTenantId = ref<string>('0')
 	const CHAT_VIEWPORT_TTL_MS = 15 * 60 * 1000
@@ -1103,7 +1103,7 @@
 		await loadMessages()
 	}
 	
-	// UI 状�?
+	// UI 状态
 	const inputText = ref('')
 	const plainInputText = ref('')
 	const composerText = ref('')
@@ -1182,12 +1182,12 @@
 	const isDragSelecting = ref(false)
 	const dragStartIndex = ref(-1)
 	const menuOpacity = ref(0)
-    // 引用回复状�?
+    // 引用回复状态
     const quoteReplyMsg = ref<MessageItem | null>(null)
-    // 转发状�?
+    // 转发状态
     const showForwardConfirm = ref(false)
 	
-	// 加载状�?
+	// 加载状态
 	const loading = ref(false)
 	const hasMore = ref(true)
 	const historyLoading = ref(false)
@@ -1283,7 +1283,7 @@
 	const messages = ref<MessageItem[]>([])
 	
 	/**
-	 * 初始化页�?
+	 * 初始化页面
 	 */
 	onMounted(async () => {
 		registerH5VisibilityChangeListener()
@@ -1291,7 +1291,7 @@
 		currentUserId.value = getUserIdStr()
 		currentTenantId.value = getTenantId() || '0'
 		
-		// 2. 设置消息服务的当前用�?
+		// 2. 设置消息服务的当前用户
 		messageService.setCurrentUser(currentUserId.value, currentTenantId.value)
 		try {
 			stickerList.value = await refreshCustomStickers()
@@ -1324,7 +1324,7 @@
 			}
 		}
 		
-		// 4. 标记当前活跃会话（用于重连补偿只补活�?未读会话�?
+		// 4. 标记当前活跃会话（用于重连补偿只补活跃/未读会话）
 		try {
 			if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
 				messageService.setActiveChatId(chatId.value)
@@ -1336,16 +1336,16 @@
 		await hydrateConversationMetaByChatId()
 		await ensureInitialMessagesLoaded()
 		
-		// 5. 监听新消�?
+		// 5. 监听新消息
 		messageService.addMessageListener(handleNewMessage)
 		messageService.addMessageStatusListener(handleMessageStatusChange)
 		messageService.addVoicePlayedListener(handleVoicePlayedSync)
 		
-		// 6. 清空未读数（本地 + 服务端：�?sequence 水位上报�?
+		// 6. 清空未读数（本地 + 服务端：按 sequence 水位上报）
 		if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
 			const maxSeq = await computeMaxSeqForRead()
 			// 调用 BadgeService 清空会话角标
-			// BadgeService 会自动调用后�?API 并更新本地数�?
+			// BadgeService 会自动调用后端 API 并更新本地数据
 			badgeService.clearConversationBadge(chatId.value, maxSeq)
 			
 			// 同时清空 MessageService 的本地未读数
@@ -1370,7 +1370,7 @@
 		cancelActiveVoiceRecording()
 		stopCurrentVoicePlayback()
 		cleanupH5VoiceRecorderRuntime()
-		// 移除消息监听�?
+		// 移除消息监听器
 		messageService.removeMessageListener(handleNewMessage)
 		messageService.removeMessageStatusListener(handleMessageStatusChange)
 		messageService.removeVoicePlayedListener(handleVoicePlayedSync)
@@ -1598,7 +1598,7 @@
 
 	async function computeMaxSeqForRead(): Promise<string> {
 		let maxSeq = '0'
-		// 优先使用会话服务里的权威 lastMessageSequence（通常来源�?sync/list�?
+		// 优先使用会话服务里的权威 lastMessageSequence（通常来源于 sync/list）
 		try {
 			const convServiceModule = await import('../../services/conversation-service.uts')
 			const cs = (convServiceModule as any).conversationService
@@ -1612,7 +1612,7 @@
 		} catch (e) {
 			// ignore
 		}
-		// 兜底：使用当前页面已加载的消息列表的最�?sequence（比 messageService 缓存更可靠）
+		// 兜底：使用当前页面已加载的消息列表的最大 sequence（比 messageService 缓存更可靠）
 		try {
 			for (let i = 0; i < messages.value.length; i++) {
 				const s = (messages.value[i] as any).sequence
@@ -1632,7 +1632,7 @@
 		} catch (e) {
 			// ignore
 		}
-		// 最后兜底：仍使�?messageService 缓存（可能为空）
+		// 最后兜底：仍使用 messageService 缓存（可能为空）
 		if (maxSeq === '0') {
 			try {
 				const localMsgs = messageService.getMessages(chatId.value)
@@ -1800,7 +1800,7 @@
 	}
 
 	function getFileIconUnicode(msg : MessageItem) : string {
-		// iconfont.json 对应�?unicode�?
+		// iconfont.json 对应的 unicode：
 		// html=e609, sql=e69b, text=e603, excel=e6a4, ppt=e6a5, video=e6a6, image=e6a7,
 		// unknown=e6a8, zip=e6a9, pdf=e6aa, word=e6ab, music=e6ac, folder=e6ad
 		const name = msg.fileName || ''
@@ -1809,7 +1809,7 @@
 
 		// 开发阶段强约束：不再从 URL 推断 ext，FILE 消息必须携带 fileName/mimeType
 
-		// 优先 mimeType 兜底（避�?ext 解析/混合 content 场景误判�?
+		// 优先 mimeType 兜底（避免 ext 解析/混合 content 场景误判）
 		if (mime) {
 			const lowerMime = mime.toLowerCase()
 			if (lowerMime.includes('ms-excel') || lowerMime.includes('spreadsheetml')) {
@@ -1919,9 +1919,9 @@
 		if (content === null) {
 			return ''
 		}
-		// REST 历史消息可能直接存字符串�?
+		// REST 历史消息可能直接存字符串：
 		// 1) "http://.../xxx.pdf"
-		// 2) "http://.../ 何肖肖入职offfer.pdf"（中间有空格�?
+		// 2) "http://.../ 何肖肖入职offfer.pdf"（中间有空格）
 		const raw = String(content)
 		const trimmed = raw.trim()
 		if (!trimmed) {
@@ -1930,15 +1930,15 @@
 		// 如果包含空格，优先取最后一段作为文件名
 		const parts = trimmed.split(' ').filter(p => !!p)
 		const lastPart = parts.length > 1 ? parts[parts.length - 1] : trimmed
-		// 尝试�?URL 截取
+		// 尝试从 URL 截取
 		let urlPart = parts.length > 1 ? parts[0] : trimmed
-		// 如果 lastPart 本身就是一�?URL（极端情况），则直接�?URL 解析
+		// 如果 lastPart 本身就是一个 URL（极端情况），则直接走 URL 解析
 		if (lastPart.startsWith('http://') || lastPart.startsWith('https://')) {
 			urlPart = lastPart
 		}
 		let candidate = lastPart
 		if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
-			// url 里取最�?path segment
+			// url 里取最后 path segment
 			let cleanUrl = candidate
 			const q = cleanUrl.indexOf('?')
 			if (q >= 0) cleanUrl = cleanUrl.substring(0, q)
@@ -1947,7 +1947,7 @@
 			const slash = cleanUrl.lastIndexOf('/')
 			candidate = slash >= 0 ? cleanUrl.substring(slash + 1) : cleanUrl
 		} else if (urlPart.startsWith('http://') || urlPart.startsWith('https://')) {
-			// url + 文件�?混合场景，candidate 就是文件�?
+			// url + 文件名 混合场景，candidate 就是文件名
 		}
 		try {
 			candidate = decodeURIComponent(candidate)
@@ -1965,7 +1965,7 @@
 		if (!raw) {
 			return ''
 		}
-		// url + 文件�?混合场景：取第一�?token 作为 url
+		// url + 文件名 混合场景：取第一个 token 作为 url
 		const parts = raw.split(' ').filter(p => !!p)
 		const candidate = parts.length > 1 ? parts[0] : raw
 		if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
@@ -1978,13 +1978,13 @@
 		if (uiMessage.type !== 'file') {
 			return
 		}
-		// rawContent 可能是对象（ws/body 或后端存 json），也可能是字符�?
+		// rawContent 可能是对象（ws/body 或后端存 json），也可能是字符串
 		let fileName = ''
 		let sizeNum : number | null = null
 		let mimeType = ''
 		if (rawContent && typeof rawContent === 'object') {
 			fileName = rawContent.fileName || rawContent.name || ''
-			// size 可能�?number �?string
+			// size 可能是 number 或 string
 			if (rawContent.size !== null) {
 				const n = Number(rawContent.size)
 				sizeNum = isNaN(n) ? null : n
@@ -2426,7 +2426,7 @@
 			rawContent = msg.content
 			content = msg.content
 		}
-		// extra 通常�?JSON 字符串（尤其是文件消息），用于补�?fileName/size/mimeType
+		// extra 通常为 JSON 字符串（尤其是文件消息），用于补齐 fileName/size/mimeType
 		try {
 			extraContent = parseRawContent(msg.extra)
 		} catch (e) {
@@ -2439,7 +2439,7 @@
 	const chatIdStr = msg && msg.chatId != null ? msg.chatId.toString() : (chatId.value != null ? chatId.value.toString() : '0')
 	const groupIdStr = msg && msg.groupId != null ? msg.groupId.toString() : ''
 	const sequenceStr = msg && msg.sequence != null ? msg.sequence.toString() : '0'
-	// 后端 REST API 历史消息通常只有 id 字段，没�?messageId 字段
+	// 后端 REST API 历史消息通常只有 id 字段，没有 messageId 字段
 	const messageIdStr = msg && msg.messageId != null ? msg.messageId.toString() : idStr
 	
 	// 处理发送者信息缺失的后备方案
@@ -2455,8 +2455,8 @@
 	} catch (e) {
 		isSelfVal = senderIdStr === currentUserId.value
 	}
-		// 后端 status: 0-发送中 1-已发�?2-已读 3-失败 6-已撤�?
-		// 这里保留数值状态，避免�?status=2 误映射为 'sending' 导致气泡旁已�?未读入口不展�?
+		// 后端 status: 0-发送中 1-已发送 2-已读 3-失败 6-已撤回
+		// 这里保留数值状态，避免把 status=2 误映射为 'sending' 导致气泡旁已读/未读入口不展示
 		let statusVal: any = (msg as any).status
 		try {
 			if (statusVal === null || statusVal === '') {
@@ -2663,8 +2663,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 	
 	/**
-	 * 获取消息类型字符�?
-	 * 支持两种格式: REST API (1-6) �?WebSocket (100-105)
+	 * 获取消息类型字符串
+	 * 支持两种格式: REST API (1-6) / WebSocket (100-105)
 	 */
 	function getMessageTypeString(messageType : any) : string {
 		if (typeof messageType === 'string') {
@@ -2672,7 +2672,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 
 		const typeMap = {
-			// REST API 格式 (数据库存�?
+			// REST API 格式 (数据库存储)
 			1: 'text',
 			2: 'image',
 			3: 'voice',
@@ -2697,10 +2697,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	
 	/**
 	 * 获取消息内容
-	 * 使用字符串类型而非数字,统一处理 REST API (1-6) �?WebSocket (100-105) 两种格式
+	 * 使用字符串类型而非数字,统一处理 REST API (1-6) / WebSocket (100-105) 两种格式
 	 */
 	function getMessageContent(messageType : number, content : any) : string {
-		// 先转换为字符串类�?
+		// 先转换为字符串类型
 		const typeStr = getMessageTypeString(messageType)
 		
 		if (typeStr === 'text' || typeStr === 'quote' || typeStr === 'emoji') {
@@ -2720,7 +2720,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else if (typeStr === 'sticker') {
 			return extractStickerUrl(content)
 		} else if (typeStr === 'custom') {
-			// 合并转发等自定义消息：保留原�?JSON 字符串，�?getForwardCombineBody 解析
+			// 合并转发等自定义消息：保留原始 JSON 字符串，供 getForwardCombineBody 解析
 			// 避免多次 parse/stringify 导致格式异常或显示为 [自定义消息]
 			if (content && typeof content === 'object') {
 				try {
@@ -2729,7 +2729,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					return ''
 				}
 			}
-			// 如果已经是字符串（原�?JSON），直接返回
+			// 如果已经是字符串（原始 JSON），直接返回
 			return content != null ? String(content) : ''
 		}
 		return content != null ? String(content) : ''
@@ -2758,11 +2758,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 	
 	/**
-	 * 获取服务消息的内�?
+	 * 获取服务消息的内容
 	 */
 	function getServiceMessageContent(msg : ServiceMessageItem) : string {
 		const typeStr = resolveUiMessageType(msg.type, msg.content, (msg as any).extra)
-		// 安全地解析内�?
+		// 安全地解析内容
 		let content : any
 		try {
 			content = parseMessageContent(msg.content)
@@ -2786,7 +2786,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else if (typeStr === 'sticker') {
 			return extractStickerUrl(content, (msg as any).extra)
 		} else if (typeStr === 'custom') {
-			// 合并转发等自定义消息：保留原�?JSON 字符串，�?getForwardCombineBody 解析
+			// 合并转发等自定义消息：保留原始 JSON 字符串，供 getForwardCombineBody 解析
 			if (content && typeof content === 'object') {
 				try {
 					return JSON.stringify(content)
@@ -2802,9 +2802,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	function isMsgConfirmedSent(msg: any): boolean {
 		try {
 			const s = (msg as any)?.status
-			// 兼容�?
-			// - �?UI �? 'success'
-			// - 新状态枚�? 2=SENT, 3=DELIVERED, 4=READ
+			// 兼容：
+			// - ?UI ? 'success'
+			// - 新状态枚举: 2=SENT, 3=DELIVERED, 4=READ
 			return s === 'success' || s === 1 || s === '1' || s === 2 || s === '2' || s === 3 || s === '3' || s === 4 || s === '4'
 		} catch (e) {
 			return false
@@ -2835,7 +2835,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return content
 		}
 
-		// 检查是否可能是 JSON（以 { �?[ 开头）
+		// 检查是否可能是 JSON（以 { 或 [ 开头）
 		const firstChar = trimmed.charAt(0)
 		const lastChar = trimmed.charAt(trimmed.length - 1)
 		const isObjectJson = firstChar === '{' && lastChar === '}'
@@ -2843,7 +2843,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		const couldBeJson = isObjectJson || isArrayJson
 		
 		if (!couldBeJson) {
-			// 肯定不是 JSON，直接返回原字符�?
+			// 肯定不是 JSON，直接返回原字符串
 			return content
 		}
 		if (isArrayJson) {
@@ -2863,7 +2863,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		try {
 			return JSON.parse(trimmed)
 		} catch (e) {
-			// 解析失败，返回原字符�?
+			// 解析失败，返回原字符串
 			return content
 		}
 	}
@@ -2974,7 +2974,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				}
 			}
 		} catch (e) {
-			// 解析引用字段失败，忽略错�?
+			// 解析引用字段失败，忽略错误
 			console.warn('[Chat] 解析引用字段失败:', e)
 		}
 	}
@@ -3152,7 +3152,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}
 			const prevRecalled = isRecalledFinal(prev)
 			const nextRecalled = isRecalledFinal(next)
-			// 最终态优先：撤回提示一旦成立，不允许被旧原文覆�?
+			// 最终态优先：撤回提示一旦成立，不允许被旧原文覆盖
 			if (prevRecalled || nextRecalled) {
 				const finalMsg: any = nextRecalled ? { ...prev, ...next } : { ...next, ...prev }
 				finalMsg.sequence = pickNonEmpty(prev.sequence, next.sequence)
@@ -3201,7 +3201,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			messageMap.set(key, mergeOne(prev, msg))
 		})
 		
-		// 再添加新消息（补齐字�?+ 覆盖重复的）
+		// 再添加新消息（补齐字段 + 覆盖重复的）
 		newMessages.forEach(msg => {
 			const key = msg && (msg as any).messageId ? String((msg as any).messageId) : (msg && (msg as any).id ? String((msg as any).id) : '')
 			if (!key) {
@@ -3211,7 +3211,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			messageMap.set(key, mergeOne(prev, msg))
 		})
 		
-		// 转换为数组并按时间排�?
+		// 转换为数组并按时间排序
 		const result : MessageItem[] = []
 		messageMap.forEach(msg => {
 			result.push(msg)
@@ -3223,10 +3223,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 	
 	/**
-	 * 处理新消�?
+	 * 处理新消息
 	 */
 	function handleNewMessage(message : ServiceMessageItem) {
-		// 只处理当前会话的消息（优先按 chatId 精确匹配，兼容旧链路�?target 匹配�?
+		// 只处理当前会话的消息（优先按 chatId 精确匹配，兼容旧链路按 target 匹配）
 		const incomingChatId = (message as any).chatId != null ? String((message as any).chatId) : ''
 		const pageChatId = chatId.value != null ? String(chatId.value) : ''
 		let inCurrentConversation = false
@@ -3246,8 +3246,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return
 		}
 
-		// 去重：sendMessage() 会先 notifyMessageListeners，本地发送路径也可能手动 push，导致重复展�?
-		// 但撤回属于“最终态变更”，必须覆盖已有消息（不能被去重丢弃�?
+		// 去重：sendMessage() 会先 notifyMessageListeners，本地发送路径也可能手动 push，导致重复展示
+		// 但撤回属于“最终态变更”，必须覆盖已有消息（不能被去重丢弃）
 		const existingIndex = message.messageId
 			? messages.value.findIndex((m: any) => m && m.messageId === message.messageId)
 			: -1
@@ -3341,7 +3341,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const next: any = uiMessage
 			const merged: any = { ...prev, ...next }
 			merged.status = 6
-			// 撤回提示优先：type/content 以撤回提示为�?
+			// 撤回提示优先：type/content 以撤回提示为准
 			merged.type = next.type
 			merged.content = next.content
 			merged.timestamp = prev.timestamp != null ? prev.timestamp : next.timestamp
@@ -3369,12 +3369,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			messages.value.push(uiMessage)
 		}
 		
-		// 滚动到底�?
+		// 滚动到底部
 		scrollToBottom()
 		
-		// 发送已读回执（如果不是自己发送的�?
+		// 发送已读回执（如果不是自己发送的）
 		if (!message.isSelf) {
-			// 群聊已读以服务端 readSequence 水位为准，禁用逐条回执，避免回执风�?
+			// 群聊已读以服务端 readSequence 水位为准，禁用逐条回执，避免回执风暴
 			if (chatType.value !== 'group') {
 				messageService.sendReadReceipt(message.senderId, [message.messageId])
 			}
@@ -3665,7 +3665,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				if (meta != null && meta.sequence != null && String(meta.sequence) !== '') {
 					nextMsg.sequence = String(meta.sequence)
 				}
-				// 补齐 sequence（服务端确认后才会有�?
+				// 补齐 sequence（服务端确认后才会有）
 				try {
 					const candidateChatIds: string[] = []
 					if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
@@ -4303,7 +4303,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (!ensureConversationWritable()) {
 			return
 		}
-		// 保持表情面板打开，不因焦点变化而关�?
+		// 保持表情面板打开，不因焦点变化而关闭
 		keepEmojiMenuOnNextFocus.value = true
 		if (editorCtx != null) {
 			try {
@@ -4325,7 +4325,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleEmojiPanelScroll(e: any): void {
-		// 不再根据滚动位置控制删除按钮的显�?隐藏
+		// 不再根据滚动位置控制删除按钮的显示/隐藏
 		// emojiDeleteButtonOpacity 已不再使用，保留函数避免报错
 	}
 
@@ -5440,20 +5440,20 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	/**
-	 * 处理输入，实现表情包整体退�?
+	 * 处理输入，实现表情包整体退格
 	 */
 	function handleInput(e : InputEvent) {
 		const newVal = e.detail.value
 		const oldVal = lastInputText.value
 		
-		// 检查是否是退格删除操�?(新长度小于旧长度)
+		// 检查是否是退格删除操作 (新长度小于旧长度)
 		if (newVal.length < oldVal.length) {
 			const diffIndex = newVal.length
 			// 如果删除的是 ']'，尝试向前寻找匹配的 '['
 			if (oldVal[diffIndex] === ']') {
 				const lastLeftBracket = oldVal.lastIndexOf('[', diffIndex)
 				if (lastLeftBracket !== -1) {
-					// 提取可能的表情代�?[xxx]
+					// 提取可能的表情代码 [xxx]
 					const potentialCode = oldVal.substring(lastLeftBracket, diffIndex + 1)
 					// 验证是否是合法的表情代码
 					const regex = /^\[[\u4e00-\u9fa5\w]+\]$/
@@ -5565,7 +5565,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				let content = res.html
 				if (!content || content === '<p><br></p>') return
 				
-				// �?<img src="..." alt="[表情]" ...> 替换�?[表情]
+				// 将 <img src="..." alt="[表情]" ...> 替换回 [表情]
 				const imgReg = /<img [^>]*alt=['"]([^'"]+)['"][^>]*>/g
 				let finalContent = content.replace(imgReg, '$1')
 				
@@ -5575,7 +5575,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				if (!finalContent.trim()) return
 				sendByFinalContent(finalContent)
 				
-				// 清空编辑�?
+				// 清空编辑器
 				editorCtx!.clear({
 					success: () => {
 						resetComposerState()
@@ -5594,7 +5594,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return
 		}
 		if (item.nameKey === 'chat.features.album') {
-			// 选择并上传图�?
+			// 选择并上传图片
 			if (IM_MEDIA_USE_FILE_ID === 'true') {
 				uni.chooseImage({
 					count: 9,
@@ -5653,11 +5653,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}).then((results) => {
 				console.log('[Chat] 上传成功，共', results.length, '张图片')
 				
-				// 上传成功,发送图片消�?
+				// 上传成功,发送图片消息
 				results.forEach((result, index) => {
-					console.log(`[Chat] 处理�?${index + 1} 张图�?`, result)
+					console.log(`[Chat] 处理第 ${index + 1} 张图片:`, result)
 					
-					// 获取图片URL（后端返回的 data 字段直接�?URL 字符串）
+					// 获取图片URL（后端返回的 data 字段直接是 URL 字符串）
 					const imageUrl = typeof result.data === 'string' ? result.data : result.data.url
 					const imageSize = result.data.size || 0
 					
@@ -5681,7 +5681,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						size: imageSize
 					})
 					
-					// 使用消息服务发送图片消息（灰度：V2 双写 fileId + url�?
+					// 使用消息服务发送图片消息（灰度：V2 双写 fileId + url）
 					const message = IM_MEDIA_USE_FILE_ID === 'true'
 						? messageService.sendImageMessageV2(
 							getReceiverIdForMessage(),
@@ -5697,7 +5697,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 							getReceiverIdForMessage(),
 							getGroupIdForMessage(),
 							fullImageUrl,
-							fullImageUrl,  // 缩略图使用同一�?URL
+							fullImageUrl,  // 缩略图使用同一 URL
 							0,  // 宽度(暂不获取)
 							0,  // 高度(暂不获取)
 							imageSize
@@ -5738,7 +5738,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				console.log('[Chat] 当前消息列表长度:', messages.value.length)
 				showPlusMenu.value = false
 				
-				// 延迟滚动，确保DOM已更�?
+				// 延迟滚动，确保DOM已更新
 				setTimeout(() => {
 					scrollToBottom()
 				}, 100)
@@ -5750,7 +5750,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		
 		if (item.nameKey === 'chat.features.camera') {
-			// 拍照并上�?
+			// 拍照并上传
 			uni.chooseImage({
 				count: 1,
 				sourceType: ['camera'],
@@ -5762,7 +5762,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 							console.log('[Chat] 上传进度:', progress)
 						}
 					}).then((result) => {
-						// 后端返回�?data 字段直接�?URL 字符�?
+						// 后端返回的 data 字段直接是 URL 字符串
 						const imageUrl = typeof result.data === 'string' ? result.data : result.data.url
 						const imageSize = result.data.size || 0
 						
@@ -5774,12 +5774,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						
 						console.log('[Chat] 拍照图片URL:', fullImageUrl)
 						
-						// 使用消息服务发送图片消�?
+						// 使用消息服务发送图片消息
 						const message = messageService.sendImageMessage(
 							getReceiverIdForMessage(),
 							getGroupIdForMessage(),
 							fullImageUrl,
-							fullImageUrl,  // 缩略图使用同一�?URL
+							fullImageUrl,  // 缩略图使用同一 URL
 							0,  // 宽度(暂不获取)
 							0,  // 高度(暂不获取)
 							imageSize
@@ -5830,7 +5830,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		
 		if (item.nameKey === 'chat.features.video') {
-			// 选择并上传视�?
+			// 选择并上传视频
 			if (IM_MEDIA_USE_FILE_ID === 'true') {
 				uni.chooseVideo({
 					sourceType: ['album', 'camera'],
@@ -5887,12 +5887,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				
 				console.log('[Chat] 视频URL:', fullVideoUrl)
 				
-				// 使用消息服务发送视频消�?
+				// 使用消息服务发送视频消息
 				const message = messageService.sendVideoMessage(
 					getReceiverIdForMessage(),
 					getGroupIdForMessage(),
 					fullVideoUrl,
-					fullVideoUrl,  // 封面使用同一�?URL(暂不生成)
+					fullVideoUrl,  // 封面使用同一个 URL(暂不生成)
 					0,  // 时长(暂不获取)
 					0,  // 宽度
 					0,  // 高度
@@ -5940,7 +5940,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		
 		if (item.nameKey === 'chat.features.file') {
-			// 选择并上传文件（支持 H5、Android、iOS�?
+			// 选择并上传文件（支持 H5、Android、iOS）
 			if (IM_MEDIA_USE_FILE_ID === 'true') {
 				uni.chooseFile({
 					type: 'all',
@@ -6003,7 +6003,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				
 				console.log('[Chat] 文件URL:', fullFileUrl)
 				
-				// 使用消息服务发送文件消�?
+				// 使用消息服务发送文件消息
 				const message = messageService.sendFileMessage(
 					getReceiverIdForMessage(),
 					getGroupIdForMessage(),
@@ -6125,7 +6125,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 	
 	/**
-	 * 格式化文件大�?
+	 * 格式化文件大小
 	 */
 	function formatFileSize(size : number) : string {
 		if (size < 1024) {
@@ -6298,7 +6298,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
     function openMsgMenu(msg : MessageItem, e : TouchEvent) {
         selectedMsg.value = msg
         
-        // 优先使用 touchstart 记录的坐标，如果没有则使�?longpress 事件的坐�?
+        // 优先使用 touchstart 记录的坐标，如果没有则使用 longpress 事件的坐标
         const x = touchStartX.value || (e.touches.length > 0 ? e.touches[0].clientX : 0)
         const y = touchStartY.value || (e.touches.length > 0 ? e.touches[0].clientY : 0)
         
@@ -6307,16 +6307,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         const screenHeight = systemInfo.screenHeight
         const statusBarHeight = systemInfo.statusBarHeight || 0
         
-        // 根据消息类型确定菜单�?
+        // 根据消息类型确定菜单项
         const isRestricted = msg.type === 'voice' || msg.type === 'location'
         const canCollectSticker = canAddMessageToSticker(msg)
         const alreadyCollectedSticker = canCollectSticker && isMessageAlreadyCollectedToSticker(msg)
         
-        // 基础菜单�?
+        // 基础菜单项
         let menuItems : any[] = []
         
         if (isRestricted) {
-            // 语音和位置消息只显示引用和删�?
+            // 语音和位置消息只显示引用和删除
             menuItems = [
                 { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' },
                 { key: 'delete', labelKey: 'chat.menu.delete', icon: '\ue602' }
@@ -6339,7 +6339,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             menuItems = menuItems.filter(item => item.key !== 'copy')
         }
         
-        // 企业级撤回：仅允许撤回自己发送且在时效窗口内的消息（后端也会兜底校验�?
+        // 企业级撤回：仅允许撤回自己发送且在时效窗口内的消息（后端也会兜底校验）
         try {
             const statusVal: any = (msg as any).status
             const isRecalled = statusVal === 6 || statusVal === '6' || statusVal === 'recalled'
@@ -6363,29 +6363,29 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         
         currentMenuItems.value = menuItems
         
-        // 菜单尺寸（横向排列，支持换行�?
-        const menuItemWidth = 70 // 每个菜单项宽�?
-        const menuItemHeight = 70 // 每个菜单项高度（增加以容纳图�?文字�?
+        // 菜单尺寸（横向排列，支持换行）
+        const menuItemWidth = 70 // 每个菜单项宽度
+        const menuItemHeight = 70 // 每个菜单项高度（增加以容纳图标+文字）
         const maxMenuWidth = screenWidth - 20 // 最大宽度，左右各留10px边距
         const itemsPerRow = Math.floor(maxMenuWidth / menuItemWidth) // 每行最多显示的菜单项数
-        const actualItemsPerRow = Math.min(itemsPerRow, currentMenuItems.value.length) // 实际每行显示�?
+        const actualItemsPerRow = Math.min(itemsPerRow, currentMenuItems.value.length) // 实际每行显示数
         const menuWidth = actualItemsPerRow * menuItemWidth
-        const rows = Math.ceil(currentMenuItems.value.length / actualItemsPerRow) // 总行�?
+        const rows = Math.ceil(currentMenuItems.value.length / actualItemsPerRow) // 总行数
         const menuHeight = rows * menuItemHeight
         
-        // 头部高度：状态栏 + 导航�?44px)
+        // 头部高度：状态栏 + 导航栏(44px)
         const headerHeight = statusBarHeight + 44
         // 底部输入区域高度（估算）
         const footerHeight = 120
         
         // 可用区域
-        const availableTop = headerHeight + 10 // �?0px边距
+        const availableTop = headerHeight + 10 // 10px边距
         const availableBottom = screenHeight - footerHeight - 10
         const availableLeft = 10
         const availableRight = screenWidth - menuWidth - 10
         
         // 水平定位：优先显示在触摸点附近，但不超出屏幕
-        let finalX = x - menuWidth / 2 // 默认居中对齐触摸�?
+        let finalX = x - menuWidth / 2 // 默认居中对齐触摸点
         if (finalX < availableLeft) {
             finalX = availableLeft
         } else if (finalX > availableRight) {
@@ -6393,19 +6393,19 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         }
         
         // 垂直定位：优先显示在触摸点上方，如果上方空间不足则显示在下方
-        let finalY = y - menuHeight - 10 // 默认显示在上方，�?0px间距
+        let finalY = y - menuHeight - 10 // 默认显示在上方，10px间距
         
         if (finalY < availableTop) {
             // 上方空间不足，显示在下方
             finalY = y + 10
             
-            // 如果下方也不够，则尽量显示在可用区域�?
+            // 如果下方也不够，则尽量显示在可用区域内
             if (finalY + menuHeight > availableBottom) {
                 finalY = availableBottom - menuHeight
                 // 如果还是不够，则显示在触摸点居中位置
                 if (finalY < availableTop) {
                     finalY = y - menuHeight / 2
-                    // 最后保底：确保不超出边�?
+                    // 最后保底：确保不超出边界
                     if (finalY < availableTop) finalY = availableTop
                     if (finalY + menuHeight > availableBottom) finalY = availableBottom - menuHeight
                 }
@@ -6477,12 +6477,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                                     await recallMessage(msg.messageId)
                                 }
 
-                                // 乐观更新：与 WS RECALL_NOTIFY 走同一路径（status=6 + reeditContent + 会话更新�?
+                                // 乐观更新：与 WS RECALL_NOTIFY 走同一路径（status=6 + reeditContent + 会话更新）
                                 // handleNewMessage 监听器会自动刷新 messages.value
                                 try {
                                     messageService.applyLocalRecall(chatId.value, msg.messageId)
                                 } catch (e) {
-                                    // ignore，WS push 到达后自�?
+                                    // ignore，WS push 到达后自愈
                                 }
 
                                 uni.showToast({ title: '已撤回', icon: 'success' })
@@ -6580,9 +6580,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                     scrollToBottom()
                 }, 100)
             } else if (action === 'quote') {
-                // 设置引用回复状�?
+                // 设置引用回复状态
                 quoteReplyMsg.value = msg
-                // 如果当前是语音模式，切换到文字输入模�?
+                // 如果当前是语音模式，切换到文字输入模式
                 if (isVoiceMode.value) {
                     isVoiceMode.value = false
                 }
@@ -6610,7 +6610,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			readReceiptList.value = []
 			readReceiptPageNo.value = 1
 			readReceiptHasMore.value = true
-			// 等待一小段时间，确保消息已完全落库，避免返�?null
+			// 等待一小段时间，确保消息已完全落库，避免返回 null
 			await new Promise(resolve => setTimeout(resolve, 200))
 			readReceiptSummary.value = await readReceiptService.getSummary(messageId)
 			if (readReceiptSummary.value == null) {
@@ -7198,7 +7198,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				preview = '[消息]'
 			}
 			if (senderName !== '') {
-				return `${senderName}�?{preview}`
+				return `${senderName}：${preview}`
 			}
 			return preview
 		} catch (e) {
@@ -7233,14 +7233,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
     /**
-     * 清除引用回复状�?
+     * 清除引用回复状态
      */
     function clearQuoteReply() {
         quoteReplyMsg.value = null
     }
 
     /**
-     * 定位到被引用的消�?
+     * 定位到被引用的消息
      */
     async function scrollToQuotedMessage(quoteMessageId: string) {
 		if (quoteMessageId == null || quoteMessageId === '' || quoteMessageId === '0') {
@@ -7286,7 +7286,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             uni.showToast({ title: '请选择要转发的消息', icon: 'none' })
             return
         }
-        // 显示转发确认对话�?
+        // 显示转发确认对话框
         showForwardConfirm.value = true
     }
 
@@ -7328,10 +7328,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         }
         uni.showModal({
             title: '提示',
-            content: `确定删除选中�?${selectedIds.value.length} 条消息吗？`,
+            content: `确定删除选中的 ${selectedIds.value.length} 条消息吗？`,
             success: (res) => {
                 if (res.confirm) {
-                    // 删除选中的消�?
+                    // 删除选中的消息
                     messages.value = messages.value.filter(m => !selectedIds.value.includes(m.id))
                     exitMultiSelectMode()
                     uni.showToast({ title: '删除成功', icon: 'success' })
@@ -8317,10 +8317,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		
 		console.log('[Chat] 找到消息，索引', messageIndex)
 		
-		// 滚动到目标消�?
+		// 滚动到目标消息
 		lastMessageId.value = 'msg-' + messageIndex
 		
-		// 如果需要高亮显�?
+		// 如果需要高亮显示
 		if (shouldHighlight.value) {
 			const targetMsg = messages.value[messageIndex]
 			const highlightId = getSelectMessageId(targetMsg)
@@ -8334,12 +8334,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}, 3000)
 		}
 		
-		// 清空目标消息ID，避免重复定�?
+		// 清空目标消息ID，避免重复定位
 		targetMessageId.value = ''
 	}
 	
 	/**
-	 * 页面加载时获取参�?
+	 * 页面加载时获取参数
 	 */
 	onLoad(async (options : any) => {
 		await loadRecallConfig()
@@ -8384,8 +8384,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			hasExplicitChatType = true
 		}
 
-		// 兼容：部分入口使�?targetType 标识会话类型�?=群聊�?=单聊�?
-		// 若未显式�?type，则�?targetType 推断 chatType，避免群聊被误判为单聊导�?@ 功能无法触发
+		// 兼容：部分入口使用 targetType 标识会话类型（2=群聊，1=单聊）
+		// 若未显式传 type，则按 targetType 推断 chatType，避免群聊被误判为单聊导致 @ 功能无法触发
 		try {
 			const tt = routeOptions['targetType']
 			if (!hasExplicitChatType && tt != null && tt !== '') {
@@ -8404,13 +8404,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		// 获取群聊 ID（字符串，避免精度丢失）
 		if (routeOptions['groupId']) {
 			groupId.value = decodeIdParam(routeOptions['groupId'])
-			targetId.value = groupId.value  // 群聊�?targetId 就是 groupId
+			targetId.value = groupId.value  // 群聊时 targetId 就是 groupId
 			if (!hasExplicitChatType) {
 				chatType.value = 'group'
 			}
 		}
 
-		// 兼容：仅�?targetId + targetType=2 的群聊跳转场�?
+		// 兼容：仅传 targetId + targetType=2 的群聊跳转场景
 		if ((groupId.value == null || groupId.value === '' || groupId.value === '0')
 			&& (chatType.value === 'group')
 			&& targetId.value && targetId.value !== '' && targetId.value !== '0') {
@@ -8458,7 +8458,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			hasExplicitEntryIntent = true
 		}
 		
-		// 获取要定位的消息ID（从搜索页面跳转过来�?
+		// 获取要定位的消息ID（从搜索页面跳转过来）
 		if (routeOptions['messageId']) {
 			targetMessageId.value = routeOptions['messageId'] as string
 			entryMode.value = 'anchor'
@@ -8470,7 +8470,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			hasExplicitEntryIntent = true
 		}
 		
-		// 获取是否需要高亮显�?
+		// 获取是否需要高亮显示
 		if (routeOptions['highlight']) {
 			shouldHighlight.value = routeOptions['highlight'] === 'true'
 			console.log('[Chat] 需要高亮显示消息')
@@ -8502,7 +8502,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			highlight: shouldHighlight.value
 		})
 
-		// H5 刷新�?onMounted 可能早于参数可用，确保路由参数就绪后一定触发一次会话初始化与消息加�?
+		// H5 刷新时 onMounted 可能早于参数可用，确保路由参数就绪后一定触发一次会话初始化与消息加载
 		try {
 			if ((!chatId.value || chatId.value === '' || chatId.value === '0')
 				&& targetId.value && targetId.value !== '') {
@@ -9501,7 +9501,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		background-color: #F5F7FA;
 	}
 
-	/* 表情�?*/
+	/* 表情 */
 	.bubble-emoji {
 		padding: 0;
 		background-color: transparent;
@@ -9513,7 +9513,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		height: 100px;
 	}
 
-	/* 自定义表�?(Sticker) */
+	/* 自定义表情 (Sticker) */
 	.sticker-msg-wrap {
 		padding: 0;
 		background-color: transparent;
@@ -9862,7 +9862,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		color: #646A73;
 	}
 
-	/* 表情包菜�?*/
+	/* 表情包菜单 */
 	.emoji-menu {
 		position: relative;
 		background-color: #F7F7F7;
@@ -9918,7 +9918,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	.emoji-item {
-		width: 14.28%; /* 7�?*/
+		width: 14.28%; /* 7?*/
 		height: 48px;
 		justify-content: center;
 		align-items: center;
@@ -10250,7 +10250,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         color: #FF4D4F;
     }
 
-    /* 转发确认对话�?*/
+    /* 转发确认对话框 */
     .forward-dialog-overlay {
         position: fixed;
         top: 0;

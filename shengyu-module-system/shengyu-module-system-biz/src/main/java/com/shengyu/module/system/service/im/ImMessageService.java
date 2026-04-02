@@ -144,20 +144,20 @@ public interface ImMessageService {
     void markVoicePlayed(Long userId, Long messageId);
 
     /**
-     * 鎵归噺鏍囪璇煶娑堟伅宸叉挱鏀撅紙绔晶鑱氬悎涓婃姤锛?
+     * 批量标记语音消息已播放（端侧聚合上报）
      *
-     * @param userId 鐢ㄦ埛ID
-     * @param messageIds 娑堟伅ID鍒楄〃
+     * @param userId 用户ID
+     * @param messageIds 消息ID列表
      */
     void batchMarkVoicePlayed(Long userId, java.util.List<Long> messageIds);
 
     /**
-     * 鏌ヨ褰撳墠鐢ㄦ埛鍦ㄤ細璇濆唴鐨勮闊虫挱鏀剧姸鎬侊紙鎺ㄩ€佷涪澶辫ˉ鍋匡級
+     * 查询当前用户在会话内的语音播放状态（推送丢失补偿）
      *
-     * @param userId 鐢ㄦ埛ID
-     * @param chatId 浼氳瘽ID
-     * @param messageIds 娑堟伅ID鍒楄〃
-     * @return 宸叉挱鏀剧殑娑堟伅ID鍒楄〃
+     * @param userId 用户ID
+     * @param chatId 会话ID
+     * @param messageIds 消息ID列表
+     * @return 已播放的消息ID列表
      */
     java.util.List<Long> getVoicePlayedMessageIds(Long userId, Long chatId, java.util.List<Long> messageIds);
 
