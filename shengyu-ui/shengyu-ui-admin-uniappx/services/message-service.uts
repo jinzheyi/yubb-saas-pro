@@ -133,6 +133,8 @@ export type LoadedWindowState = {
  */
 export type MessageListener = (message: MessageItem) => void
 
+export type VoicePlayedListener = (chatId: string, messageId: string) => void
+
 /**
  * 会话更新监听器类型
  */
@@ -150,6 +152,9 @@ export class MessageService {
   
   // 消息状态监听器列表
   private messageStatusListeners: MessageStatusListener[] = []
+
+  // 语音已播放同步监听器列表（多端红点同步）
+  private voicePlayedListeners: VoicePlayedListener[] = []
   
   
   // 当前用户信息
@@ -421,7 +426,7 @@ export class MessageService {
   // 最大重试次数
   private static readonly MAX_RETRY_COUNT = 3
 
-  private sendRetryEnabled: boolean = false
+  private sendRetryEnabled: boolean = true
 
   private pendingRetryMap: Map<string, { message: any, retryCount: number, timer: any, startedAt: number }> = new Map()
   private outboundMessageMap: Map<string, any> = new Map()
@@ -726,7 +731,7 @@ export class MessageService {
 
         const messageTypeNum = m.messageType != null ? Number(m.messageType) : 0
         const messageItem: MessageItem = {
-          id: '0',
+          id: messageIdStr,
           messageId: messageIdStr,
           sequence: seqStr,
           rev: revStr,
@@ -741,6 +746,7 @@ export class MessageService {
           status: isRecalled ? MessageStatus.RECALLED : MessageStatus.SENT,
           timestamp: m.sendTime != null ? new Date(m.sendTime as string).getTime() : Date.now(),
           isSelf: isSelf,
+          voicePlayed: isSelf ? true : ((m as any).voicePlayed === true || (m as any).voicePlayed === 1 || (m as any).voicePlayed === '1' || (m as any).voicePlayed === 'true'),
           showTime: true,
           avatarText: senderName ? getAvatarText(senderName) : '?',
           avatarBg: getUserAvatarColor(senderIdStr),
@@ -1028,6 +1034,66 @@ export class MessageService {
     }
   }
 
+  private applyVoicePlayedHintFromSystemNotify(extraObj: any): boolean {
+    try {
+      if (extraObj == null) {
+        return false
+      }
+      const chatId = extraObj.chatId != null ? extraObj.chatId.toString() : ''
+      if (chatId === '' || chatId === '0') {
+        return false
+      }
+      const messageIds: string[] = []
+      const idSet = new Set<string>()
+      const appendMessageId = (rawId: any): void => {
+        const messageId = rawId != null ? rawId.toString() : ''
+        if (messageId === '' || messageId === '0' || idSet.has(messageId)) {
+          return
+        }
+        idSet.add(messageId)
+        messageIds.push(messageId)
+      }
+      appendMessageId(extraObj.messageId)
+      const messageIdsRaw: any = extraObj.messageIds
+      if (Array.isArray(messageIdsRaw)) {
+        messageIdsRaw.forEach((item: any) => {
+          appendMessageId(item)
+        })
+      }
+      if (messageIds.length === 0) {
+        return false
+      }
+
+      messageIds.forEach((messageId: string) => {
+        let changed = false
+        const scoped = this.messageCache.get(chatId)
+        if (scoped != null && scoped.length > 0) {
+          const hit = scoped.find((m: any) => m != null && m.messageId === messageId)
+          if (hit != null && (hit as any).voicePlayed !== true) {
+            ;(hit as any).voicePlayed = true
+            changed = true
+          }
+        }
+        if (!changed) {
+          this.messageCache.forEach((messages) => {
+            if (changed || messages == null || messages.length === 0) {
+              return
+            }
+            const hit = messages.find((m: any) => m != null && m.messageId === messageId)
+            if (hit != null && (hit as any).voicePlayed !== true) {
+              ;(hit as any).voicePlayed = true
+              changed = true
+            }
+          })
+        }
+        this.notifyVoicePlayedListeners(chatId, messageId)
+      })
+      return true
+    } catch (e) {
+      return false
+    }
+  }
+
   private compareSeq(a: string, b: string): number {
     const as = a != null && a !== '' ? a : '0'
     const bs = b != null && b !== '' ? b : '0'
@@ -1165,7 +1231,7 @@ export class MessageService {
 
           const messageTypeNum = m.messageType != null ? Number(m.messageType) : 0
           const messageItem: MessageItem = {
-            id: '0',
+            id: messageIdStr,
             messageId: messageIdStr,
             sequence: seqStr,
             rev: revStr,
@@ -1180,6 +1246,7 @@ export class MessageService {
             status: isRecalled ? MessageStatus.RECALLED : MessageStatus.SENT,
             timestamp: m.sendTime != null ? new Date(m.sendTime as string).getTime() : Date.now(),
             isSelf: isSelf,
+            voicePlayed: isSelf ? true : ((m as any).voicePlayed === true || (m as any).voicePlayed === 1 || (m as any).voicePlayed === '1' || (m as any).voicePlayed === 'true'),
             showTime: true,
             avatarText: senderName ? getAvatarText(senderName) : '?',
             avatarBg: getUserAvatarColor(senderIdStr),
@@ -1367,12 +1434,18 @@ export class MessageService {
   private handleSystemNotify(message: any): void {
     try {
       let handledReeditHint = false
+      let handledVoicePlayed = false
       try {
         const extraRaw: any = message != null && (message as any).header != null ? (message as any).header.extra : null
         if (extraRaw != null && extraRaw !== '') {
           const extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
-          if (extraObj != null && extraObj.action === 'reedit_after_recall') {
-            handledReeditHint = this.applyReeditHintFromSystemNotify(extraObj)
+          if (extraObj != null && extraObj.action != null) {
+            const action = String(extraObj.action)
+            if (action === 'reedit_after_recall') {
+              handledReeditHint = this.applyReeditHintFromSystemNotify(extraObj)
+            } else if (action === 'voice_played') {
+              handledVoicePlayed = this.applyVoicePlayedHintFromSystemNotify(extraObj)
+            }
           }
         }
       } catch (e) {
@@ -1387,7 +1460,7 @@ export class MessageService {
         contentStr === 'CONVERSATION_DELETE' ||
         contentStr === 'BADGE_UPDATE'
       ) {
-        if (handledReeditHint) {
+        if (handledReeditHint || handledVoicePlayed) {
           return
         }
 
@@ -1876,19 +1949,32 @@ export class MessageService {
     // 通知监听器
     this.notifyMessageListeners(messageItem)
     
-    // 通过 WebSocket 发送
-    wsManager.send(message)
+    let sendThrown = false
+    try {
+      wsManager.send(message)
+    } catch (e) {
+      sendThrown = true
+      console.warn('[MessageService] WebSocket send failed, keep formal message for retry/failure flow:', e)
+    }
 
     try {
+      const mid = message != null && message.header != null && message.header.messageId != null ? message.header.messageId.toString() : ''
       if (!this.sendRetryEnabled) {
+        if (sendThrown && mid !== '' && mid !== '0') {
+          this.setMessageFailed(mid)
+        }
         return messageItem
       }
-      const mid = message != null && message.header != null && message.header.messageId != null ? message.header.messageId.toString() : ''
       if (mid !== '' && mid !== '0') {
         this.scheduleSendRetry(mid, message)
       }
     } catch (e) {
-      // ignore
+      if (sendThrown) {
+        const mid = message != null && message.header != null && message.header.messageId != null ? message.header.messageId.toString() : ''
+        if (mid !== '' && mid !== '0') {
+          this.setMessageFailed(mid)
+        }
+      }
     }
     
     // 更新会话（群聊摘要增加发送者前缀）
@@ -2067,8 +2153,9 @@ export class MessageService {
     // enterprise: parse rev from header.extra (JSON); default 1
     let revStr: string = '1'
     let clientMessageId: string = ''
+    let extraRaw: any = null
     try {
-      const extraRaw: any = (message as any).header != null ? (message as any).header.extra : null
+      extraRaw = (message as any).header != null ? (message as any).header.extra : null
       if (extraRaw != null && extraRaw !== '') {
         const extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
         if (extraObj != null && extraObj.rev != null) {
@@ -2102,6 +2189,9 @@ export class MessageService {
           if (matchedByMessageId || matchedByClientId) {
             if (matchedByClientId && previousMessageId === '' && cacheMsgId !== '') {
               previousMessageId = cacheMsgId
+            }
+            if ((msg.id == null || msg.id === '' || msg.id === '0' || msg.id === cacheMsgId) && msgId !== '') {
+              msg.id = msgId
             }
             msg.messageId = msgId
             msg.status = MessageStatus.SENT
@@ -2203,9 +2293,10 @@ export class MessageService {
     }
 
     // 创建消息项
+    const inboundMessageId = this.normalizeInboundMessageId((message as any).header != null ? (message as any).header.messageId : null) || (message.header.messageId != null ? message.header.messageId.toString() : '')
     const messageItem: MessageItem = {
-      id: '0',
-	  	messageId: this.normalizeInboundMessageId((message as any).header != null ? (message as any).header.messageId : null) || (message.header.messageId != null ? message.header.messageId.toString() : ''),
+      id: inboundMessageId !== '' ? inboundMessageId : '0',
+      messageId: inboundMessageId,
       sequence: message.header.sequence != null ? message.header.sequence.toString() : null,
       rev: revStr,
       extra: (message as any).header != null ? (message as any).header.extra : null,
@@ -3268,13 +3359,23 @@ export class MessageService {
     }
 
     this.clearSendRetry(messageId)
-    wsManager.send(outbound)
+    let sendThrown = false
+    try {
+      wsManager.send(outbound)
+    } catch (e) {
+      sendThrown = true
+      console.warn('[MessageService] Retry send failed, keep formal message for retry/failure flow:', e)
+    }
     try {
       if (this.sendRetryEnabled) {
         this.scheduleSendRetry(messageId, outbound)
+      } else if (sendThrown) {
+        this.setMessageFailed(messageId)
       }
     } catch (e) {
-      // ignore
+      if (sendThrown) {
+        this.setMessageFailed(messageId)
+      }
     }
     return true
   }
@@ -3315,6 +3416,37 @@ export class MessageService {
     if (index !== -1) {
       this.messageListeners.splice(index, 1)
     }
+  }
+
+  public addVoicePlayedListener(listener: VoicePlayedListener): void {
+    if (listener == null) {
+      return
+    }
+    const index = this.voicePlayedListeners.indexOf(listener)
+    if (index !== -1) {
+      return
+    }
+    this.voicePlayedListeners.push(listener)
+  }
+
+  public removeVoicePlayedListener(listener: VoicePlayedListener): void {
+    const index = this.voicePlayedListeners.indexOf(listener)
+    if (index !== -1) {
+      this.voicePlayedListeners.splice(index, 1)
+    }
+  }
+
+  private notifyVoicePlayedListeners(chatId: string, messageId: string): void {
+    if (chatId == null || chatId === '' || messageId == null || messageId === '') {
+      return
+    }
+    this.voicePlayedListeners.forEach((listener) => {
+      try {
+        listener(chatId, messageId)
+      } catch (e) {
+        console.error('[MessageService] 语音已播放监听器执行失败:', e)
+      }
+    })
   }
   
   /**

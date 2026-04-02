@@ -136,6 +136,32 @@ public interface ImMessageService {
     void batchUpdateMessageStatus(Long userId, java.util.List<Long> messageIds, Integer status);
 
     /**
+     * 标记语音消息已播放（多端同步未听点）
+     *
+     * @param userId 用户ID
+     * @param messageId 消息ID
+     */
+    void markVoicePlayed(Long userId, Long messageId);
+
+    /**
+     * 鎵归噺鏍囪璇煶娑堟伅宸叉挱鏀撅紙绔晶鑱氬悎涓婃姤锛?
+     *
+     * @param userId 鐢ㄦ埛ID
+     * @param messageIds 娑堟伅ID鍒楄〃
+     */
+    void batchMarkVoicePlayed(Long userId, java.util.List<Long> messageIds);
+
+    /**
+     * 鏌ヨ褰撳墠鐢ㄦ埛鍦ㄤ細璇濆唴鐨勮闊虫挱鏀剧姸鎬侊紙鎺ㄩ€佷涪澶辫ˉ鍋匡級
+     *
+     * @param userId 鐢ㄦ埛ID
+     * @param chatId 浼氳瘽ID
+     * @param messageIds 娑堟伅ID鍒楄〃
+     * @return 宸叉挱鏀剧殑娑堟伅ID鍒楄〃
+     */
+    java.util.List<Long> getVoicePlayedMessageIds(Long userId, Long chatId, java.util.List<Long> messageIds);
+
+    /**
      * 转发消息（逐条转发）
      *
      * @param userId 用户ID

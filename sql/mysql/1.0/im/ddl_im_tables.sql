@@ -292,6 +292,33 @@ CREATE TABLE `im_message_read`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM消息已读表(群聊)' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
+-- Table structure for im_message_voice_play
+-- 语音播放状态表: 存储用户对语音消息的播放状态（用于多端未听点同步）
+-- 说明:
+-- 1. 仅记录“首次播放”事件（幂等）
+-- 2. 与群聊已读口径解耦，不参与 read/unread 统计
+-- ----------------------------
+DROP TABLE IF EXISTS `im_message_voice_play`;
+CREATE TABLE `im_message_voice_play`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `message_id` bigint NOT NULL COMMENT '语音消息ID',
+  `chat_id` bigint NOT NULL COMMENT '会话ID',
+  `user_id` bigint NOT NULL COMMENT '播放用户ID',
+  `played_time` datetime NOT NULL COMMENT '首次播放时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `idx_message_user_deleted`(`message_id` ASC, `user_id` ASC, `tenant_id` ASC, `deleted` ASC) USING BTREE COMMENT '消息+用户+删除状态唯一索引',
+  INDEX `idx_user_chat`(`user_id` ASC, `chat_id` ASC, `tenant_id` ASC, `deleted` ASC) USING BTREE COMMENT '用户会话查询索引',
+  INDEX `idx_played_time`(`played_time` ASC, `tenant_id` ASC, `deleted` ASC) USING BTREE COMMENT '首次播放时间查询索引',
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM语音消息播放状态表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
 -- Table structure for im_group_invite
 -- 群邀请码表: 存储群二维码邀请信息
 -- 说明: 

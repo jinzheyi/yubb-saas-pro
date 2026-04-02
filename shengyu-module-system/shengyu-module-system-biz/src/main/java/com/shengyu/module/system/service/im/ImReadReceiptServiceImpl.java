@@ -87,6 +87,8 @@ public class ImReadReceiptServiceImpl implements ImReadReceiptService {
         respVO.setTotalCount(total);
         respVO.setReadCount(read);
         respVO.setUnreadCount(unread);
+        respVO.setMessageType(msg.getMessageType());
+        respVO.setReadBasis("conversation_read_watermark");
         return respVO;
     }
 

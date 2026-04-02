@@ -175,6 +175,55 @@ export function markMessageRead(messageIds: string[]): Promise<any> {
   })
 }
 
+/**
+ * 标记语音消息已播放（多端同步未听点）
+ * @param messageId 消息ID
+ */
+export function markVoicePlayed(messageId: string): Promise<any> {
+  const mid = messageId != null ? String(messageId) : ''
+  if (mid === '' || mid === '0') {
+    return Promise.resolve(true)
+  }
+  return request({
+    url: `/system/im/message/mark-voice-played?messageId=${encodeURIComponent(mid)}`,
+    method: 'PUT'
+  })
+}
+
+/**
+ * 批量标记语音消息已播放（用于 300ms 聚合上报）
+ * @param messageIds 消息ID列表
+ */
+export function markVoicePlayedBatch(messageIds: string[]): Promise<any> {
+  const ids = messageIds != null ? messageIds.filter(id => id != null && id !== '' && id !== '0') : []
+  if (ids.length === 0) {
+    return Promise.resolve(true)
+  }
+  const qs = ids.map(id => `messageIds=${encodeURIComponent(id)}`).join('&')
+  return request({
+    url: `/system/im/message/mark-voice-played-batch?${qs}`,
+    method: 'PUT'
+  })
+}
+
+/**
+ * 查询语音消息已播放状态（用于推送丢失补偿）
+ * @param chatId 会话ID
+ * @param messageIds 消息ID列表
+ */
+export function getVoicePlayedStatus(chatId: string, messageIds: string[]): Promise<any> {
+  const cid = chatId != null ? String(chatId) : ''
+  const ids = messageIds != null ? messageIds.filter(id => id != null && id !== '' && id !== '0') : []
+  if (cid === '' || cid === '0' || ids.length === 0) {
+    return Promise.resolve([])
+  }
+  const qs = ids.map(id => `messageIds=${encodeURIComponent(id)}`).join('&')
+  return request({
+    url: `/system/im/message/voice-played-status?chatId=${encodeURIComponent(cid)}&${qs}`,
+    method: 'GET'
+  })
+}
+
 export function forwardMessages(targetChatId: string, messageIds: string[], forwardType: number, comment: string | null = null): Promise<any> {
   const ids = messageIds != null ? messageIds.filter(id => id != null && id !== '' && id !== '0') : []
   if (targetChatId == null || targetChatId === '' || targetChatId === '0' || ids.length === 0) {

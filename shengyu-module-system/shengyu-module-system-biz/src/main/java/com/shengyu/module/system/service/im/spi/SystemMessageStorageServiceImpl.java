@@ -63,6 +63,9 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.NOT_GROUP_MEMBE
 @Service
 @Slf4j
 public class SystemMessageStorageServiceImpl implements MessageStorageService {
+    private static final long MAX_VOICE_SIZE_BYTES = 10L * 1024 * 1024;
+    private static final long MAX_VOICE_DURATION_MS = 60000L;
+
 
     @Resource
     private ImChatMessageMapper chatMessageMapper;
@@ -289,14 +292,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         }
         try {
             if (message.getHeader().getMessageType() == MessageType.VOICE) {
-                VoiceMessage voiceMsg = VoiceMessage.parseFrom(message.getBody());
-                JSONObject obj = JSONUtil.createObj();
-                obj.set("duration", voiceMsg.getDuration());
-                obj.set("size", voiceMsg.getSize());
-                if (StrUtil.isNotBlank(voiceMsg.getUrl())) {
-                    obj.set("url", voiceMsg.getUrl());
-                }
-                return obj.isEmpty() ? extra : obj.toString();
+                return extra;
             }
             if (message.getHeader().getMessageType() == MessageType.FILE) {
                 FileMessage fileMsg = FileMessage.parseFrom(message.getBody());
@@ -511,22 +507,84 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         }
         String extraRaw = message.getHeader().getExtra();
         if (StrUtil.isBlank(extraRaw)) {
-            throw ServiceExceptionUtil.invalidParamException("VOICE 消息缺少 extra：必须包含 fileId/durationMs/size/format");
+            throw ServiceExceptionUtil.invalidParamException("VOICE message extra is required: fileId/duration/durationMs/size/format");
         }
         try {
             JSONObject obj = JSONUtil.parseObj(extraRaw);
             Long fileId = obj.getLong("fileId", null);
-            if (fileId == null || fileId <= 0L) {
-                throw ServiceExceptionUtil.invalidParamException("VOICE 消息 extra.fileId 非法");
+            Long size = obj.getLong("size", null);
+            Integer duration = obj.getInt("duration", null);
+            Long durationMs = obj.getLong("durationMs", null);
+            String format = obj.getStr("format", "");
+            if (fileId == null || fileId <= 0L || size == null || size <= 0L
+                    || duration == null || duration <= 0 || durationMs == null || durationMs <= 0L
+                    || StrUtil.isBlank(format)) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE message extra must contain fileId/duration/durationMs/size/format");
             }
+            if (durationMs < 1000L || durationMs > MAX_VOICE_DURATION_MS) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE duration must be between 1000ms and 60000ms");
+            }
+            int normalizedDuration = (int) Math.max(1L, Math.round(durationMs / 1000.0d));
+            if (duration.intValue() != normalizedDuration) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE duration does not match durationMs");
+            }
+            if (size > MAX_VOICE_SIZE_BYTES) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE size cannot exceed 10MB");
+            }
+            if (!isAllowedVoiceFormat(format)) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE format only supports mp3/aac/m4a/amr/wav");
+            }
+
+            VoiceMessage voiceMessage = VoiceMessage.parseFrom(message.getBody());
+            if (voiceMessage.getDuration() != duration.intValue()) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE body duration does not match extra duration");
+            }
+            if (voiceMessage.getSize() != size.longValue()) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE body size does not match extra size");
+            }
+
             FileDTO fileDTO = fileApi.getFile(fileId);
+            if (fileDTO == null) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE fileId does not exist: {}", fileId);
+            }
             Long groupId = message.getHeader().getGroupId() > 0 ? message.getHeader().getGroupId() : null;
             VoiceFileOwnershipValidator.validate(fileDTO, message.getHeader().getSenderId(), chatId, groupId);
+            if (fileDTO.getSize() != null && fileDTO.getSize() > 0 && fileDTO.getSize().longValue() != size.longValue()) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE size does not match uploaded file record");
+            }
+            if (StrUtil.isNotBlank(fileDTO.getType()) && !isAllowedVoiceFormat(fileDTO.getType())) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE file type is invalid: {}", fileDTO.getType());
+            }
         } catch (RuntimeException ex) {
             throw ex;
+        } catch (InvalidProtocolBufferException ex) {
+            throw ServiceExceptionUtil.invalidParamException("VOICE body is invalid: {}", ex.getMessage());
         } catch (Exception ex) {
-            throw ServiceExceptionUtil.invalidParamException("VOICE 消息 extra 不是合法 JSON：{}", ex.getMessage());
+            throw ServiceExceptionUtil.invalidParamException("VOICE extra must be valid JSON: {}", ex.getMessage());
         }
+    }
+
+    private boolean isAllowedVoiceFormat(String format) {
+        if (StrUtil.isBlank(format)) {
+            return false;
+        }
+        String normalized = format.trim().toLowerCase(Locale.ROOT);
+        return "mp3".equals(normalized)
+                || "aac".equals(normalized)
+                || "m4a".equals(normalized)
+                || "amr".equals(normalized)
+                || "wav".equals(normalized)
+                || "audio/mpeg".equals(normalized)
+                || "audio/mp3".equals(normalized)
+                || "audio/aac".equals(normalized)
+                || "audio/x-aac".equals(normalized)
+                || "audio/mp4".equals(normalized)
+                || "audio/m4a".equals(normalized)
+                || "audio/x-m4a".equals(normalized)
+                || "audio/amr".equals(normalized)
+                || "audio/wav".equals(normalized)
+                || "audio/x-wav".equals(normalized)
+                || "audio/wave".equals(normalized);
     }
 
     /**

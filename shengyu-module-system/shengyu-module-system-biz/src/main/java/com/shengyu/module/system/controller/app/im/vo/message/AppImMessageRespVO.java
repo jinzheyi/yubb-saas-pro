@@ -91,4 +91,7 @@ public class AppImMessageRespVO {
     @Schema(description = "被@提及用户列表(JSON数组)", example = "[{\"userId\":1,\"nickname\":\"张三\"}]")
     private String mentions;
 
+    @Schema(description = "语音是否已播放（当前登录用户视角，仅语音消息返回）", example = "false")
+    private Boolean voicePlayed;
+
 }

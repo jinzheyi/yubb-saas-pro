@@ -224,6 +224,20 @@
 - **现状缺口（后续任务必须补齐）**：
   - 端到端真机回归与弱网回归仍需补跑
 
+### 2.4.11 语音未听红点链路优化（2026-04-02）
+
+- **当前已落地能力**：
+  - 后端：`mark-voice-played`（单条）+ `mark-voice-played-batch`（批量）+ `voice-played-status`（补偿查询）
+  - 前端：语音播放后本地立即消点；`300ms` 聚合上报；`onHide/onUnload/onUnmounted` 强制 flush
+  - 多端：`SYSTEM_NOTIFY(action=voice_played)` 实时通知；推送丢失时通过 `voice-played-status` 周期补偿
+- **性能与容量控制**：
+  - 存储增长：`im_message_voice_play` 由 `ImVoicePlayCleanupJob` 按保留期分批清理
+  - 请求频率：连续播放场景采用批量上报替代逐条上报，减少高频小请求
+  - 索引：`idx_played_time(played_time, tenant_id, deleted)` 支撑清理任务与时间维度查询
+- **口径边界（强约束）**：
+  - 群聊“已读/未读xx”继续完全依赖会话阅读水位（`lastReadSequence`）
+  - 语音红点继续完全依赖 `voicePlayed`，两条链路禁止互相反推
+
 ---
 
 ## 3. 统一鉴权体系（HTTP + IM）
@@ -713,9 +727,9 @@
 - 语音消息默认**不自动播放**
 - 全页只允许一个 `InnerAudioContext`，切换消息、切页、切后台时必须停止
 - 语音红点定义为：`voicePlayed = false && !isSelf`
-  - `voicePlayed` 是端侧本地状态
+  - `voicePlayed` 是端侧渲染状态（服务端返回 + 本地缓存合并）
   - `voicePlayed` **不得**复用 `isRead/已读回执`
-- 成功开始播放后即可清除本地红点；播放失败不清除
+- 成功开始播放后先清除本地红点并上报服务端；播放失败不清除
 - 播放统一走当前平台默认音频路由；本期不新增听筒/扬声器切换能力
 
 ##### 6.4.4.2.6 上传、安全与合规
@@ -749,6 +763,113 @@
   - 权限拒绝 / 录音失败 / 短语音 / 上传失败 / 发送失败 / 重试
   - 刷新恢复、断线补偿、会话预览、引用 / 撤回对语音无回归
   - `TEXT/IMAGE/VIDEO/FILE/LOCATION/QUOTE_REPLY/RECALL` 主链路无回归
+
+##### 6.4.4.2.8（2026-04-01）语音 UI 动画、时长一致性与 60s 控制补充冻结
+
+- 目标：在既有 `6.4.4.2` 闭环基础上，补齐“可感知录制反馈 + 播放动效 + 时长准确性 + 平台兼容兜底”的体验约束，避免出现假录音、时长失真、动效缺失。
+- 微信对齐（公开资料与可观察交互，2026-04-01）：
+  - 录制中实时显示时长，便于用户控制内容长度
+  - 接近上限时出现倒计时强化反馈，到达上限自动结束录制
+  - 播放中语音条/振幅存在动态反馈，结束后回到静态态
+- 状态机补充：
+  - 录制阶段扩展为 `IDLE -> RECORDING -> LIMIT_WARNING -> AUTO_STOP_PENDING -> RECORDED`
+  - 当 `elapsedMs >= 60000` 时必须触发 `AUTO_STOP_PENDING` 并在单次回调中收敛到 `RECORDED`，禁止重复 stop
+  - `RECORDING`、`PLAYING` 的动效状态必须与真实引擎状态同源，不允许仅依赖 UI 定时器伪造
+- 数据与一致性约束：
+  - 展示时长统一来源于 `durationMs`（毫秒），`duration` 仅用于兼容展示；严禁双口径并行驱动
+  - 发送前必须校验 `tempFilePath`、`durationMs`、`sizeBytes`、`format`，任一缺失直接失败并提示重录
+  - 回放进度与总时长统一使用毫秒精度，确保“1 秒语音不会播放成 5 秒”
+- UI 约束：
+  - 语音气泡宽度按时长分段线性增长：短语音保底宽度、长语音上限宽度；上限受消息行容器限制
+  - 语音气泡时长文本固定单行，不允许因气泡拉长触发换行错位
+  - 录制中显示 `mm:ss`，达到 `60s` 自动收口并给出明确提示文案
+- 兼容与容错：
+  - `uni.getRecorderManager` 不支持时必须走能力降级：隐藏/禁用录音入口并提示，不得抛运行时异常
+  - 录制上下文请求 ID（如 `currentRecordingRequestId`）必须显式声明并在页面卸载时清理，防止 `ReferenceError`
+  - 页面隐藏、路由切换、会话切换时，必须统一执行 `stopRecord + stopPlay + clearTimer + unbindCallback`
+- 回归口径补充：
+  - 动效回归：录制、取消、自动结束、播放完成四类场景动效状态准确
+  - 时长回归：`displayDuration` 与 `actualPlayDuration` 偏差 `<= ±300ms`
+  - 稳定性回归：连续 `30` 次按住说话/取消/重试，无未定义变量错误、无重复事件监听
+
+##### 6.4.4.2.9（2026-04-01）语音播放进度条与暂停续播机制补充冻结
+
+- 目标：在保持“单实例播放 + 不自动播放”前提下，提升语音播放可控性与可预期性，避免用户无法判断已播放进度。
+- 微信机制对齐（公开资料与可观察交互，2026-04-01）：
+  - 语音消息支持“暂停后继续播放”的基础能力
+  - 语音气泡提供播放态动态反馈；官方公开信息未给出可拖拽 seek 进度条作为标准能力
+  - 本项目采取“显示进度，不支持拖拽”的一致策略
+- 状态机补充：
+  - 播放状态扩展为 `IDLE -> PLAYING -> PAUSED -> PLAYING -> ENDED`
+  - 点击语音气泡本体：统一执行 `RESTART_FROM_ZERO`（从头重播）
+  - 点击“继续播放”按钮：执行 `RESUME_FROM_PAUSED_POSITION`
+  - 开始播放新语音前，必须先执行 `STOP_CURRENT_CONTEXT` 清理旧上下文
+- UI 约束：
+  - 进度条仅在 `PLAYING/PAUSED` 显示，`IDLE/ENDED/FAILED` 隐藏
+  - “暂停”按钮仅在 `PLAYING` 显示；“继续播放”按钮仅在 `PAUSED` 显示且位于语音气泡旁
+  - 气泡内时长文本允许显示 `已播时长 / 总时长`；必须保持单行，不得挤压造成换行错位
+- 数据与同步约束：
+  - 进度计算统一使用 `currentTime(ms)` 与 `durationMs`，禁止秒毫秒混算
+  - `onTimeUpdate` 为主、UI 定时器仅可作为兜底；禁止仅靠定时器伪造播放进度
+  - `onPause/onStop/onEnded/onError` 必须回收对应状态，防止“按钮显示与真实播放态不一致”
+- 回归口径补充：
+  - “播放→暂停→继续→暂停→重播”链路连续执行 `30` 次无异常
+  - 暂停态点击气泡会从 `0ms` 重播；点击“继续播放”从暂停点恢复
+  - 切页面、切会话、退后台后无悬挂播放实例，无残留进度条/按钮
+
+##### 6.4.4.2.10（2026-04-01）语音“已读/已听”双口径解耦冻结（企业微信对齐）
+
+- 目标：消除“已读=已听”的语义混淆，保证发送者与接收者对语音状态理解一致。
+- 口径定义：
+  - `已读/未读xx`（发送者侧群聊统计）：
+    - 基于 `im_conversation_user_state.last_read_sequence` 与消息 `sequence` 比较
+    - 判定条件：`lastReadSequence >= message.sequence` 记为已读
+    - 不依赖语音是否被点击播放
+  - `未听点`（接收者侧语音气泡红点）：
+    - 基于用户维度 `voicePlayed` 状态（端侧缓存 + 服务端返回）
+    - 首次有效播放后置 `voicePlayed=true` 并清除未听点，同时上报服务端
+    - 不参与群聊“已读/未读xx”统计
+- UI 冻结：
+  - 语音消息打开“已读详情”时，必须展示口径提示：`已读按会话阅读水位统计，不代表已听语音`
+  - 不展示“已听xx/未听xx”群聊聚合统计，除非后端新增独立“已听回执”协议
+- 接口契约冻结（`GET /system/im/read-receipt/summary`）：
+  - 响应需包含 `messageType`，用于前端准确识别是否语音消息
+  - 响应需包含 `readBasis`，当前固定为 `conversation_read_watermark`
+  - 前端优先以 `readBasis + messageType` 进行口径提示，不依赖本地消息列表兜底
+- 一致性约束：
+  - 任何代码路径不得用 `msg.status/isRead` 推导 `voicePlayed`
+  - 任何代码路径不得用 `voicePlayed` 反推群聊已读统计
+- 回归口径补充：
+  - 接收者“进入会话未播放语音”场景：发送者侧已读统计可变化，接收侧未听点不应消失
+  - 接收者“播放语音”场景：仅接收侧未听点变化，发送者侧已读统计不因播放动作额外变化
+
+##### 6.4.4.2.11（2026-04-02）语音未听红点多端同步机制冻结
+
+- 目标：把语音未听红点从“单端本地态”升级为“用户维度多端一致态”，在不引入“已听回执统计”前提下实现实时同步。
+- 服务端数据模型：
+  - 新增表 `im_message_voice_play`
+  - 推荐唯一键：`(tenant_id, user_id, message_id)`
+  - 语义：记录“当前用户首次播放该语音”的事实，不记录播放进度
+- 接口与事件：
+  - `PUT /system/im/message/mark-voice-played?messageId=...`
+  - `PUT /system/im/message/mark-voice-played-batch?messageIds=...`（端侧 300ms 聚合上报）
+  - `GET /system/im/message/voice-played-status?chatId=...&messageIds=...`（推送丢失补偿校准）
+  - 幂等写入后推送 `SYSTEM_NOTIFY`，`header.extra.action = voice_played`，并携带 `chatId/messageId` 或 `chatId/messageIds`
+  - 历史/分页/窗口消息查询需返回 `voicePlayed` 字段（当前用户视角）
+- 端侧上报与补偿策略：
+  - 初始渲染：`voicePlayed = serverVoicePlayed || localVoicePlayed`
+  - 播放开始后：先本地消点，再进入 `300ms` 聚合队列上报（单条/批量自动切换）
+  - 页面 `onHide/onUnload/onUnmounted` 必须执行语音已播队列 flush，降低切页丢上报
+  - 收到 `voice_played` 事件：同会话同消息立即消点（跨端实时）
+  - 定时调用 `voice-played-status` 对未听语音做补偿校准（用于推送偶发丢失场景）
+- 数据增长与运维策略：
+  - `im_message_voice_play` 增长由保留期任务控制：`im.voice-play.cleanup.*`（按天保留、分批删除）
+  - 建议索引：`idx_played_time(played_time, tenant_id, deleted)`，保障清理任务与时间范围扫描效率
+- 一致性约束：
+  - 重复上报必须幂等，禁止重复广播导致 UI 抖动
+  - 推送链路按 IM 常见“最终一致”模型：通知丢失由下次 HTTP 补偿拉取修正
+  - 离线端重进后以服务端 `voicePlayed` 为最终态，确保跨端最终一致
+  - 该机制仅作用于“未听红点”，不得改变群聊 `已读/未读xx` 统计口径
 
 #### 6.4.2 Protobuf Envelope（现有形态）
 

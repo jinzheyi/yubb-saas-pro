@@ -33,4 +33,10 @@ public class AppImReadReceiptSummaryRespVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long totalCount;
 
+    @Schema(description = "消息类型(1=text,2=image,3=voice...)", requiredMode = Schema.RequiredMode.REQUIRED, example = "3")
+    private Integer messageType;
+
+    @Schema(description = "已读统计口径：conversation_read_watermark", requiredMode = Schema.RequiredMode.REQUIRED, example = "conversation_read_watermark")
+    private String readBasis;
+
 }

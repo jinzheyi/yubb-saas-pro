@@ -297,6 +297,25 @@ system_users ──> system_dept (用户所属部门)
 - 仅用于群聊消息已读回执
 - 单聊消息已读状态存储在 `im_message` 表的 `status` 字段
 
+### 7. im_message_voice_play (语音播放状态表)
+
+**功能**: 存储用户对语音消息的播放状态（首次播放）
+
+**核心字段**:
+- `message_id`: 语音消息ID
+- `chat_id`: 会话ID
+- `user_id`: 播放用户ID
+- `played_time`: 首次播放时间
+
+**索引**:
+- 唯一索引: `idx_message_user_deleted` (message_id, user_id, tenant_id, deleted)
+- 用户会话索引: `idx_user_chat` (user_id, chat_id, tenant_id, deleted)
+- 租户索引: `idx_tenant` (tenant_id)
+
+**说明**:
+- 仅用于“语音未听点”多端同步
+- 与消息“已读/未读”统计口径解耦
+
 ## 表关系图
 
 ```

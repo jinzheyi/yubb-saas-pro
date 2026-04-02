@@ -438,8 +438,38 @@ CREATE TABLE `im_message_read`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for im_message_voice_play
+-- ----------------------------
+DROP TABLE IF EXISTS `im_message_voice_play`;
+CREATE TABLE `im_message_voice_play`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `message_id` bigint NOT NULL COMMENT '语音消息ID',
+  `chat_id` bigint NOT NULL COMMENT '会话ID',
+  `user_id` bigint NOT NULL COMMENT '播放用户ID',
+  `played_time` datetime NOT NULL COMMENT '首次播放时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `idx_message_user_deleted`(`message_id` ASC, `user_id` ASC, `tenant_id` ASC, `deleted` ASC) USING BTREE COMMENT '消息+用户+删除状态唯一索引',
+  INDEX `idx_user_chat`(`user_id` ASC, `chat_id` ASC, `tenant_id` ASC, `deleted` ASC) USING BTREE COMMENT '用户会话查询索引',
+  INDEX `idx_played_time`(`played_time` ASC, `tenant_id` ASC, `deleted` ASC) USING BTREE COMMENT '首次播放时间查询索引',
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE COMMENT '租户索引'
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM语音消息播放状态表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of im_message_voice_play
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for im_notification
 -- ----------------------------
+ALTER TABLE `im_message_voice_play`
+  ADD INDEX `idx_played_time`(`played_time` ASC, `tenant_id` ASC, `deleted` ASC);
+
 DROP TABLE IF EXISTS `im_notification`;
 CREATE TABLE `im_notification`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '通知ID',
@@ -2635,7 +2665,7 @@ CREATE TABLE `platform_oauth2_client`  (
 -- ----------------------------
 INSERT INTO `platform_oauth2_client` VALUES (1, 'default', 'admin123', '平台使用', 'http://test.shengyu.iocoder.cn/a5e2e244368878a366b516805a4aabf1.png', '我是描述', 0, 1800, 43200, '[\"http://shengyukj.top/\",\"http://shengyukj.top/\"]', '[\"password\",\"authorization_code\",\"implicit\",\"refresh_token\"]', '[\"user.read\",\"user.write\"]', '[]', '[\"user.read\",\"user.write\"]', '[]', '{}', '1', '2022-05-11 21:47:12', '1', '2024-01-21 18:16:13', b'0');
 INSERT INTO `platform_oauth2_client` VALUES (506659178795077, 'tenant', 'admin123', '租户使用', 'http://127.0.0.1:48080/platform-api/infra/file/4/get/c8ba40f1caf77009434aae5130fa3ad54b25d3a649f67fbe63326933f9b6e40b.png', NULL, 0, 1800, 43200, '[\"http://121.43.32.181\"]', '[\"password\",\"authorization_code\",\"implicit\",\"refresh_token\"]', '[\"user.read\",\"user.write\"]', '[]', '[\"user.read\",\"user.write\"]', '[]', NULL, '1', '2024-01-21 18:21:31', '1', '2024-01-21 18:22:26', b'0');
-
+INSERT INTO `platform_oauth2_client` VALUES (506659178795078, 'tenant_im_uniappx', 'admin123', '租户im使用', 'http://127.0.0.1:48080/platform-api/infra/file/4/get/c8ba40f1caf77009434aae5130fa3ad54b25d3a649f67fbe63326933f9b6e40b.png', NULL, 0, 1800, 43200, '[\"http://121.43.32.181\"]', '[\"password\",\"authorization_code\",\"implicit\",\"refresh_token\"]', '[\"user.read\",\"user.write\"]', '[]', '[\"user.read\",\"user.write\"]', '[]', NULL, '1', '2024-01-21 18:21:31', '1', '2024-01-21 18:22:26', b'0');
 -- ----------------------------
 -- Table structure for platform_oauth2_code
 -- ----------------------------

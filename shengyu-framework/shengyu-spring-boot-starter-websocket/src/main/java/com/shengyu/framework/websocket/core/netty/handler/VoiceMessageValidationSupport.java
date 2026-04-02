@@ -7,9 +7,7 @@ import cn.hutool.json.JSONUtil;
 import java.util.Locale;
 
 /**
- * 语音消息入站校验支持。
- *
- * 仅负责 WebSocket 入口的结构校验，避免坏数据继续进入 processor/storage。
+ * Voice message inbound validation support.
  */
 final class VoiceMessageValidationSupport {
 
@@ -21,14 +19,14 @@ final class VoiceMessageValidationSupport {
 
     static String validate(String extraRaw, Integer bodyDurationSec, Long bodySizeBytes) {
         if (StrUtil.isBlank(extraRaw)) {
-            return "请求格式错误：VOICE.header.extra 不能为空";
+            return "VOICE.header.extra cannot be empty";
         }
 
         final JSONObject extra;
         try {
             extra = JSONUtil.parseObj(extraRaw);
         } catch (Exception ex) {
-            return "请求格式错误：VOICE.header.extra 不是合法 JSON";
+            return "VOICE.header.extra must be valid JSON";
         }
 
         Long fileId = readLong(extra.get("fileId"));
@@ -37,39 +35,34 @@ final class VoiceMessageValidationSupport {
         Long sizeBytes = readLong(extra.get("size"));
         String format = extra.getStr("format", "");
 
-        if (fileId == null || fileId <= 0L) {
-            return "请求格式错误：VOICE.header.extra.fileId 非法";
+        if (fileId == null || fileId <= 0L
+                || durationMs == null || durationMs <= 0L
+                || durationSec == null || durationSec <= 0
+                || sizeBytes == null || sizeBytes <= 0L
+                || StrUtil.isBlank(format)) {
+            return "VOICE.header.extra must contain fileId/duration/durationMs/size/format";
         }
-
-        long effectiveDurationMs = durationMs != null && durationMs > 0L
-                ? durationMs
-                : resolveDurationMs(bodyDurationSec, durationSec);
-        if (effectiveDurationMs < 1000L || effectiveDurationMs > MAX_VOICE_DURATION_MS) {
-            return "请求格式错误：VOICE 时长必须在 1000ms ~ 60000ms 之间";
+        if (durationMs < 1000L || durationMs > MAX_VOICE_DURATION_MS) {
+            return "VOICE duration must be between 1000ms and 60000ms";
         }
-
-        long effectiveSizeBytes = sizeBytes != null && sizeBytes > 0L
-                ? sizeBytes
-                : (bodySizeBytes != null ? bodySizeBytes : 0L);
-        if (effectiveSizeBytes <= 0L || effectiveSizeBytes > MAX_VOICE_SIZE_BYTES) {
-            return "请求格式错误：VOICE 大小必须在 0 ~ 10MB 之间";
+        int normalizedDurationSec = (int) Math.max(1L, Math.round(durationMs / 1000.0d));
+        if (!durationSec.equals(normalizedDurationSec)) {
+            return "VOICE.header.extra.duration does not match durationMs";
         }
-
+        if (sizeBytes > MAX_VOICE_SIZE_BYTES) {
+            return "VOICE size must be between 1 byte and 10MB";
+        }
+        if (bodyDurationSec != null && bodyDurationSec > 0 && !durationSec.equals(bodyDurationSec)) {
+            return "VOICE.body.duration does not match header.extra.duration";
+        }
+        if (bodySizeBytes != null && bodySizeBytes > 0L && !sizeBytes.equals(bodySizeBytes)) {
+            return "VOICE.body.size does not match header.extra.size";
+        }
         if (!isAllowedVoiceFormat(format)) {
-            return "请求格式错误：VOICE.format 仅支持 mp3/aac/m4a/amr/wav";
+            return "VOICE.format only supports mp3/aac/m4a/amr/wav";
         }
 
         return null;
-    }
-
-    private static long resolveDurationMs(Integer bodyDurationSec, Integer extraDurationSec) {
-        if (bodyDurationSec != null && bodyDurationSec > 0) {
-            return bodyDurationSec * 1000L;
-        }
-        if (extraDurationSec != null && extraDurationSec > 0) {
-            return extraDurationSec * 1000L;
-        }
-        return 0L;
     }
 
     private static Long readLong(Object raw) {

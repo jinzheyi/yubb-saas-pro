@@ -31,6 +31,8 @@ export type ReadReceiptSummary = {
   readCount: number
   unreadCount: number
   totalCount: number
+  messageType: number
+  readBasis: string
 }
 
 export type ReadReceiptDetailPage = {
@@ -141,7 +143,9 @@ export class ReadReceiptService {
         sequence: data.sequence != null ? data.sequence.toString() : '0',
         readCount: data.readCount != null ? Number(data.readCount) : 0,
         unreadCount: data.unreadCount != null ? Number(data.unreadCount) : 0,
-        totalCount: data.totalCount != null ? Number(data.totalCount) : 0
+        totalCount: data.totalCount != null ? Number(data.totalCount) : 0,
+        messageType: data.messageType != null ? Number(data.messageType) : 0,
+        readBasis: data.readBasis != null ? data.readBasis.toString() : ''
       }
     } catch (e) {
       try {

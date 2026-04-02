@@ -252,6 +252,9 @@ public class ImMessageServiceImpl implements ImMessageService {
     private ImChatMessageTombstoneMapper chatMessageTombstoneMapper;
 
     @Resource
+    private ImMessageVoicePlayMapper messageVoicePlayMapper;
+
+    @Resource
     private ImChatClearWatermarkMapper chatClearWatermarkMapper;
 
     @Resource
@@ -422,7 +425,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
         final List<Long> finalDeletedIds = deletedIds;
 
-        return list.stream()
+        List<AppImMessageRespVO> respList = list.stream()
                 .filter(m -> m != null && m.getId() != null
                         && (finalClearSeq == null || finalClearSeq <= 0 || (m.getSequence() != null && m.getSequence() > finalClearSeq))
                         && (finalDeletedIds == null || !finalDeletedIds.contains(m.getId())))
@@ -439,6 +442,8 @@ public class ImMessageServiceImpl implements ImMessageService {
             sanitizeRecalledMessage(respVO);
             return respVO;
         }).collect(Collectors.toList());
+        fillVoicePlayedFlags(userId, respList, pullReqVO.getChatId());
+        return respList;
     }
 
     @Override
@@ -495,6 +500,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             sanitizeRecalledMessage(respVO);
             return respVO;
         }).collect(Collectors.toList());
+        fillVoicePlayedFlags(userId, respVOList, pageReqVO.getChatId());
         return new PageResult<>(respVOList, pageResult.getTotal());
     }
 
@@ -598,6 +604,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         fillChatTargetFields(respVO, userId);
         applyReeditFieldsForCurrentUser(respVO, message, userId);
         sanitizeRecalledMessage(respVO);
+        fillVoicePlayedFlags(userId, Collections.singletonList(respVO), message.getChatId());
         return respVO;
     }
 
@@ -870,6 +877,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             sanitizeRecalledMessage(respVO);
             result.add(respVO);
         }
+        fillVoicePlayedFlags(userId, result, chatId);
         return result;
     }
 
@@ -912,6 +920,200 @@ public class ImMessageServiceImpl implements ImMessageService {
         int updatedCount = chatMessageMapper.updateStatusByIds(messageIds, status);
         log.debug("[ImMessageService] 批量更新消息状态成功, userId: {}, messageCount: {}, updated: {}, status: {}",
                 userId, messageIds.size(), updatedCount, status);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void markVoicePlayed(Long userId, Long messageId) {
+        if (messageId == null || messageId <= 0) {
+            return;
+        }
+        ImChatMessageDO message = chatMessageMapper.selectById(messageId);
+        if (message == null) {
+            throw exception(MESSAGE_NOT_EXISTS);
+        }
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, message.getChatId());
+        if (chatUser == null) {
+            throw exception(MESSAGE_NOT_EXISTS);
+        }
+
+        Integer normalizedType = normalizeDbMessageType(message.getMessageType());
+        if (!Objects.equals(normalizedType, ImMessageTypeEnum.VOICE.getType())) {
+            return;
+        }
+        // 自己发送的语音默认无未听点，不参与落库
+        if (Objects.equals(message.getSenderId(), userId)) {
+            return;
+        }
+
+        Long tenantId = getCurrentTenantId();
+        int inserted = messageVoicePlayMapper.insertIgnore(tenantId, message.getChatId(), messageId, userId);
+        if (inserted <= 0) {
+            return;
+        }
+
+        try {
+            JSONObject extra = JSONUtil.createObj();
+            extra.set("action", "voice_played");
+            extra.set("chatId", message.getChatId());
+            extra.set("messageId", messageId);
+            TextMessage body = TextMessage.newBuilder().setContent("").build();
+            messageSender.sendToUserWithExtra(userId, MessageType.SYSTEM_NOTIFY, body,
+                    0L, userId, 0L, tenantId,
+                    null, null, message.getChatId(),
+                    null, null, extra.toString());
+        } catch (Exception e) {
+            log.warn("[ImMessageService] 推送语音已播放同步通知失败, userId: {}, messageId: {}, error: {}",
+                    userId, messageId, e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchMarkVoicePlayed(Long userId, List<Long> messageIds) {
+        List<Long> candidateIds = normalizePositiveDistinctIds(messageIds);
+        if (candidateIds.isEmpty()) {
+            return;
+        }
+        List<ImChatMessageDO> messages = chatMessageMapper.selectBatchIds(candidateIds);
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+
+        Long tenantId = getCurrentTenantId();
+        Map<Long, ImChatUserDO> chatUserCache = new HashMap<>();
+        Map<Long, List<Long>> insertedByChatId = new LinkedHashMap<>();
+        for (ImChatMessageDO message : messages) {
+            if (message == null || message.getId() == null || message.getChatId() == null) {
+                continue;
+            }
+            Integer normalizedType = normalizeDbMessageType(message.getMessageType());
+            if (!Objects.equals(normalizedType, ImMessageTypeEnum.VOICE.getType())) {
+                continue;
+            }
+            if (Objects.equals(message.getSenderId(), userId)) {
+                continue;
+            }
+
+            ImChatUserDO chatUser = chatUserCache.computeIfAbsent(message.getChatId(),
+                    chatId -> chatUserMapper.selectByUserIdAndChatId(userId, chatId));
+            if (chatUser == null) {
+                continue;
+            }
+
+            int inserted = messageVoicePlayMapper.insertIgnore(tenantId, message.getChatId(), message.getId(), userId);
+            if (inserted > 0) {
+                insertedByChatId.computeIfAbsent(message.getChatId(), key -> new ArrayList<>()).add(message.getId());
+            }
+        }
+        if (insertedByChatId.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<Long, List<Long>> entry : insertedByChatId.entrySet()) {
+            pushVoicePlayedNotify(userId, tenantId, entry.getKey(), entry.getValue());
+        }
+    }
+
+    @Override
+    public List<Long> getVoicePlayedMessageIds(Long userId, Long chatId, List<Long> messageIds) {
+        if (userId == null || chatId == null || chatId <= 0) {
+            return Collections.emptyList();
+        }
+        List<Long> candidateIds = normalizePositiveDistinctIds(messageIds);
+        if (candidateIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+        if (chatUser == null) {
+            return Collections.emptyList();
+        }
+        List<Long> playedIds = messageVoicePlayMapper.selectPlayedMessageIds(getCurrentTenantId(), userId, chatId, candidateIds);
+        return playedIds != null ? playedIds : Collections.emptyList();
+    }
+
+    private void pushVoicePlayedNotify(Long userId, Long tenantId, Long chatId, List<Long> messageIds) {
+        if (userId == null || chatId == null || messageIds == null || messageIds.isEmpty()) {
+            return;
+        }
+        List<Long> normalizedIds = normalizePositiveDistinctIds(messageIds);
+        if (normalizedIds.isEmpty()) {
+            return;
+        }
+        try {
+            JSONObject extra = JSONUtil.createObj();
+            extra.set("action", "voice_played");
+            extra.set("chatId", chatId);
+            if (normalizedIds.size() == 1) {
+                extra.set("messageId", normalizedIds.get(0));
+            } else {
+                extra.set("messageIds", normalizedIds);
+            }
+            TextMessage body = TextMessage.newBuilder().setContent("").build();
+            messageSender.sendToUserWithExtra(userId, MessageType.SYSTEM_NOTIFY, body,
+                    0L, userId, 0L, tenantId,
+                    null, null, chatId,
+                    null, null, extra.toString());
+        } catch (Exception e) {
+            log.warn("[ImMessageService] push voice-played notify failed, userId: {}, chatId: {}, messageCount: {}, error: {}",
+                    userId, chatId, messageIds.size(), e.getMessage(), e);
+        }
+    }
+
+    private List<Long> normalizePositiveDistinctIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return ids.stream()
+                .filter(Objects::nonNull)
+                .filter(id -> id > 0)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private void fillVoicePlayedFlags(Long userId, List<AppImMessageRespVO> respList, Long preferredChatId) {
+        if (respList == null || respList.isEmpty() || userId == null) {
+            return;
+        }
+        Map<Long, AppImMessageRespVO> voiceMap = new LinkedHashMap<>();
+        for (AppImMessageRespVO resp : respList) {
+            if (resp == null) {
+                continue;
+            }
+            Integer normalizedType = normalizeDbMessageType(resp.getMessageType());
+            if (!Objects.equals(normalizedType, ImMessageTypeEnum.VOICE.getType())) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(resp.getIsSelf())) {
+                resp.setVoicePlayed(true);
+                continue;
+            }
+            if (resp.getId() == null) {
+                resp.setVoicePlayed(false);
+                continue;
+            }
+            voiceMap.put(resp.getId(), resp);
+        }
+        if (voiceMap.isEmpty()) {
+            return;
+        }
+
+        Set<Long> playedSet = Collections.emptySet();
+        try {
+            List<Long> messageIds = new ArrayList<>(voiceMap.keySet());
+            List<Long> playedIds = messageVoicePlayMapper.selectPlayedMessageIds(
+                    getCurrentTenantId(), userId, preferredChatId, messageIds);
+            if (playedIds != null && !playedIds.isEmpty()) {
+                playedSet = new HashSet<>(playedIds);
+            }
+        } catch (Exception e) {
+            log.warn("[ImMessageService] 查询语音播放状态失败, userId: {}, messageCount: {}, error: {}",
+                    userId, voiceMap.size(), e.getMessage(), e);
+        }
+
+        for (Map.Entry<Long, AppImMessageRespVO> entry : voiceMap.entrySet()) {
+            AppImMessageRespVO resp = entry.getValue();
+            resp.setVoicePlayed(playedSet.contains(entry.getKey()));
+        }
     }
 
     private void updateChatUsersAfterSend(ImChatDO chat, Long lastMessageId, Long lastMessageSequence, Long messageRev,
@@ -1099,7 +1301,7 @@ public class ImMessageServiceImpl implements ImMessageService {
 
     private JSONObject validateVoiceExtra(String extra, Long userId, Long chatId, Long groupId) {
         if (StrUtil.isBlank(extra)) {
-            throw ServiceExceptionUtil.invalidParamException("VOICE 消息缺少 extra：必须包含 fileId/durationMs/size/format");
+            throw ServiceExceptionUtil.invalidParamException("VOICE message extra is required: fileId/duration/durationMs/size/format");
         }
         try {
             JSONObject obj = JSONUtil.parseObj(extra);
@@ -1108,45 +1310,49 @@ public class ImMessageServiceImpl implements ImMessageService {
             Integer duration = obj.getInt("duration", null);
             Long durationMs = obj.getLong("durationMs", null);
             String format = obj.getStr("format", "");
-            if (fileId == null || fileId <= 0 || size == null || size <= 0 || StrUtil.isBlank(format)) {
-                throw ServiceExceptionUtil.invalidParamException("VOICE 消息 extra 字段不完整：必须包含 fileId/durationMs/size/format");
+            if (fileId == null || fileId <= 0 || size == null || size <= 0
+                    || duration == null || duration <= 0 || durationMs == null || durationMs <= 0
+                    || StrUtil.isBlank(format)) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE message extra must contain fileId/duration/durationMs/size/format");
             }
-            long effectiveDurationMs = durationMs != null && durationMs > 0
-                    ? durationMs
-                    : (duration != null && duration > 0 ? duration * 1000L : 0L);
-            if (effectiveDurationMs < 1000L || effectiveDurationMs > MAX_VOICE_DURATION_MS) {
-                throw ServiceExceptionUtil.invalidParamException("VOICE 消息时长非法：必须在 1000ms ~ 60000ms 之间");
+            if (durationMs < 1000L || durationMs > MAX_VOICE_DURATION_MS) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE duration must be between 1000ms and 60000ms");
+            }
+            int normalizedDuration = (int) Math.max(1L, Math.round(durationMs / 1000.0d));
+            if (duration.intValue() != normalizedDuration) {
+                throw ServiceExceptionUtil.invalidParamException("VOICE duration does not match durationMs");
             }
             if (size > MAX_VOICE_SIZE_BYTES) {
-                throw ServiceExceptionUtil.invalidParamException("VOICE 消息大小非法：不能超过 10MB");
+                throw ServiceExceptionUtil.invalidParamException("VOICE size cannot exceed 10MB");
             }
             if (!isAllowedVoiceFormat(format)) {
-                throw ServiceExceptionUtil.invalidParamException("VOICE 消息格式非法：仅支持 mp3/aac/m4a/amr/wav");
+                throw ServiceExceptionUtil.invalidParamException("VOICE format only supports mp3/aac/m4a/amr/wav");
             }
 
             FileDTO fileDTO = fileApi.getFile(fileId);
             if (fileDTO == null) {
-                throw ServiceExceptionUtil.invalidParamException("VOICE 消息 fileId 不存在：{}", fileId);
+                throw ServiceExceptionUtil.invalidParamException("VOICE fileId does not exist: {}", fileId);
             }
             VoiceFileOwnershipValidator.validate(fileDTO, userId, chatId, groupId);
             if (fileDTO.getSize() != null && fileDTO.getSize() > 0 && size.longValue() != fileDTO.getSize().longValue()) {
-                throw ServiceExceptionUtil.invalidParamException("VOICE 消息 size 与文件记录不一致");
+                throw ServiceExceptionUtil.invalidParamException("VOICE size does not match uploaded file record");
             }
             if (StrUtil.isNotBlank(fileDTO.getType()) && !isAllowedVoiceFormat(fileDTO.getType())) {
-                throw ServiceExceptionUtil.invalidParamException("VOICE 消息文件类型非法：{}", fileDTO.getType());
+                throw ServiceExceptionUtil.invalidParamException("VOICE file type is invalid: {}", fileDTO.getType());
             }
 
-            obj.set("durationMs", effectiveDurationMs);
-            if (duration == null || duration <= 0) {
-                obj.set("duration", (int) Math.max(1L, Math.round(effectiveDurationMs / 1000.0d)));
-            }
+            obj.set("duration", normalizedDuration);
+            obj.set("durationMs", durationMs);
+            obj.set("size", size);
+            obj.set("format", format.trim());
             return obj;
         } catch (ServiceException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw ServiceExceptionUtil.invalidParamException("VOICE 消息 extra 不是合法 JSON：{}", ex.getMessage());
+            throw ServiceExceptionUtil.invalidParamException("VOICE extra must be valid JSON: {}", ex.getMessage());
         }
     }
+
 
     private boolean isAllowedVoiceFormat(String format) {
         if (StrUtil.isBlank(format)) {
@@ -2353,6 +2559,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                     sanitizeRecalledMessage(respVO);
                     return respVO;
                 }).collect(Collectors.toList());
+        fillVoicePlayedFlags(userId, respVOList, searchReqVO.getChatId());
         return new PageResult<>(respVOList, total);
     }
 

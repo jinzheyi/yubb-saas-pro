@@ -1,75 +1,59 @@
-<script setup lang="uts">
-	import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
+<script lang="uts">
 	import { isLoggedIn, getAccessToken } from './store/user.uts'
 	import { initLocale } from './store/locale.uts'
 
-	async function withWsManager(action: (wsManager: any) => void | Promise<void>) {
-		try {
-			const { wsManager } = await import('@/utils/websocket.uts')
-			await action(wsManager)
-		} catch (e) {
-			console.error('[App] load wsManager failed:', e)
-		}
-	}
-	
-	onLaunch(() => {
-		console.log('App Launch')
-		
-		// 初始化国际化（如果没有设置过语言，则使用系统语言）
-		initLocale()
-		
-		// 检查登录状态
-		checkLoginStatus()
-	})
-	
-	onShow(() => {
-		console.log('App Show')
-		void withWsManager(async (wsManager) => {
-			wsManager.setAppForeground(true)
-			if (isLoggedIn()) {
-				const token = getAccessToken()
-				if (token != null && token != '') {
-					connectWebSocket()
+	export default {
+		onLaunch() {
+			console.log('App Launch')
+
+			// 初始化国际化（如果没有设置过语言，则使用系统语言）
+			initLocale()
+
+			// 检查登录状态
+			this.checkLoginStatus()
+		},
+		onShow() {
+			console.log('App Show')
+			void this.withWsManager(async (wsManager) => {
+				wsManager.setAppForeground(true)
+				if (isLoggedIn()) {
+					const token = getAccessToken()
+					if (token != null && token != '') {
+						wsManager.setProtocols(['im.pb.v1'])
+						wsManager.connect()
+						console.log('[App] WebSocket 自动连接已启动')
+					}
+				}
+			})
+		},
+		onHide() {
+			console.log('App Hide')
+			void this.withWsManager((wsManager) => {
+				wsManager.setAppForeground(false)
+			})
+		},
+		methods: {
+			async withWsManager(action: (wsManager: any) => void | Promise<void>) {
+				try {
+					const { wsManager } = await import('./utils/websocket.uts')
+					await action(wsManager)
+				} catch (e) {
+					console.error('[App] load wsManager failed:', e)
+				}
+			},
+			checkLoginStatus() {
+				const pages = getCurrentPages()
+				if (pages.length > 0) {
+					const currentPage = pages[pages.length - 1]
+					const route = currentPage.route
+					if (route != 'pages/login/login' && !isLoggedIn()) {
+						uni.reLaunch({
+							url: '/pages/login/login'
+						})
+					}
 				}
 			}
-		})
-	})
-	
-	onHide(() => {
-		console.log('App Hide')
-		void withWsManager((wsManager) => {
-			wsManager.setAppForeground(false)
-		})
-	})
-	
-	/**
-	 * 检查登录状态
-	 */
-	function checkLoginStatus() {
-		// 获取当前页面
-		const pages = getCurrentPages()
-		if (pages.length > 0) {
-			const currentPage = pages[pages.length - 1]
-			const route = currentPage.route
-			
-			// 如果不是登录页且未登录，跳转到登录页
-			if (route != 'pages/login/login' && !isLoggedIn()) {
-				uni.reLaunch({
-					url: '/pages/login/login'
-				})
-			}
 		}
-	}
-	
-	/**
-	 * 连接 WebSocket
-	 */
-	async function connectWebSocket() {
-		await withWsManager((wsManager) => {
-			wsManager.setProtocols(['im.pb.v1'])
-			wsManager.connect()
-			console.log('[App] WebSocket 自动连接已启动')
-		})
 	}
 </script>
 
@@ -90,7 +74,7 @@
 	.text-placeholder { color: #8F959E; }
 	.bg-page { background-color: #F5F7FA; }
 	.bg-white { background-color: #FFFFFF; }
-	
+
 	/* 扁平化圆角标准 */
 	.radius-s { border-radius: 4px; }
 	.radius-m { border-radius: 8px; }

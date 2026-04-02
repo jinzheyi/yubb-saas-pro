@@ -13,10 +13,10 @@
 				<text class="cancel-text">取消</text>
 			</view>
 			<view class="header-title-wrap">
-				<text v-if="!multiSelectMode" class="header-title">{{ name }}</text>
-				<text v-else class="header-title">已选择 {{ selectedIds.length }} 条</text>
-				<text v-if="!multiSelectMode && chatType === 'single'" class="header-status">{{ t('chat.online', '手机在线') }}</text>
-				<text v-if="!multiSelectMode && chatType === 'group'" class="header-status">{{ memberCount }}人</text>
+				<text v-if="!multiSelectMode" class="header-title" :numberOfLines="1">{{ name }}</text>
+				<text v-else class="header-title" :numberOfLines="1">已选择 {{ selectedIds.length }} 条</text>
+				<text v-if="!multiSelectMode && chatType === 'single'" class="header-status" :numberOfLines="1">{{ t('chat.online', '手机在线') }}</text>
+				<text v-if="!multiSelectMode && chatType === 'group'" class="header-status" :numberOfLines="1">{{ memberCount }}人</text>
 			</view>
 			<view class="header-right">
 				<text v-if="!multiSelectMode" class="iconfont header-icon">&#xea74;</text>
@@ -26,7 +26,7 @@
 
 		<!-- 聊天内容区域 -->
 		<scroll-view class="chat-content" :class="{ 'chat-content-multi-select': multiSelectMode }" scroll-y="true" direction="vertical" refresher-enabled="true" :refresher-triggered="historyRefresherTriggered" refresher-threshold="60" :scroll-into-view="lastMessageId" show-scrollbar="false" @refresherrefresh="handleHistoryRefresher" @scroll="handleChatScroll" @scrolltoupper="handleChatScrollToUpper" upper-threshold="80" @scrolltolower="handleChatScrollToLower" lower-threshold="80">
-			<!-- 水印层 -->
+			<!-- 水印�?-->
 			<view class="watermark-layer">
 				<view v-for="i in 12" :key="i" class="watermark-item">
 					<text class="watermark-text">{{ watermark }}</text>
@@ -40,13 +40,13 @@
 					</view>
 					
 					<view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other', multiSelectMode && selectedIds.includes(getSelectMessageId(msg)) ? 'message-selected' : '', highlightedMessageId === getSelectMessageId(msg) ? 'message-highlighted' : '']">
-						<!-- 多选模式下的复选框（统一在最左侧） -->
+						<!-- 多选模式下的复选框（统一在最左侧�?-->
 						<view v-if="multiSelectMode && msg.type !== 'voice' && msg.type !== 'location'" class="multi-select-checkbox" @click.stop="toggleSelect(msg)">
 							<text v-if="selectedIds.includes(getSelectMessageId(msg))" class="iconfont checkbox-icon checkbox-checked">&#xe65f;</text>
 							<view v-else class="checkbox-icon checkbox-unchecked"></view>
 						</view>
 						
-						<!-- 企业级撤回：对齐企微/钉钉，展示为居中系统提示条（不走左右气泡，不显示头像） -->
+						<!-- 企业级撤回：对齐企微/钉钉，展示为居中系统提示条（不走左右气泡，不显示头像�?-->
 						<view v-if="isRecalledFinalMsg(msg)" class="recall-system-tip">
 							<text class="recall-system-tip-text">{{ msg.content }}</text>
 							<text v-if="shouldShowReeditEntry(msg)" class="recall-system-tip-action" @click.stop="handleReeditAfterRecall(msg)">重新编辑</text>
@@ -56,7 +56,7 @@
 								<text class="avatar-text">{{ msg.avatarText }}</text>
 							</view>
 							<view class="message-bubble-wrap">
-								<!-- 发送者名称 (仅在群聊中,仅对他人消息) -->
+								<!-- 发送者名�?(仅在群聊�?仅对他人消息) -->
 								<text v-if="chatType === 'group' && !msg.isSelf" class="sender-name">
 									{{ msg.senderName }}
 								</text>
@@ -93,14 +93,32 @@
 								</view>
 								
 								<!-- 语音消息 -->
-                                <view v-else-if="msg.type === 'voice'" class="message-bubble bubble-voice" :class="{ 'bubble-voice-uploading': isVoiceUploading(msg), 'bubble-voice-failed': isVoiceUploadFailed(msg) || isVoiceSendFailed(msg) }" :style="{ width: getVoiceBubbleWidth(msg.duration || 0) }" @click="handleVoiceBubbleClick(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
-									<text class="iconfont voice-icon">{{ msg.isSelf ? '\ue601' : '\ue601' }}</text>
-									<view class="voice-content">
-										<text class="voice-duration">{{ buildVoiceDurationText(msg) }}</text>
-										<text v-if="buildVoiceStatusText(msg) !== ''" class="voice-status">{{ buildVoiceStatusText(msg) }}</text>
+								<view v-else-if="msg.type === 'voice'" class="voice-bubble-row" :class="{ 'voice-bubble-row-self': msg.isSelf }">
+									<view class="message-bubble bubble-voice" :class="{ 'bubble-voice-uploading': isVoiceUploading(msg), 'bubble-voice-failed': isVoiceUploadFailed(msg) || isVoiceSendFailed(msg), 'bubble-voice-playing': isVoicePlaying(msg), 'bubble-voice-paused': isVoicePaused(msg) }" :style="{ width: getVoiceBubbleWidth(resolveVoiceDurationSeconds(msg), buildVoiceStatusText(msg) !== '') }" @click="handleVoiceBubbleClick(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
+										<view class="voice-wave" :class="{ 'voice-wave-playing': isVoicePlaying(msg) }">
+											<view
+												v-for="(barHeight, barIdx) in buildVoiceWaveBarHeights(msg)"
+												:key="getSelectMessageId(msg) + '-voice-wave-' + barIdx"
+												class="voice-wave-bar"
+												:style="{ height: barHeight + 'px' }"
+											></view>
+										</view>
+										<view class="voice-content">
+											<text class="voice-duration">{{ buildVoiceDurationText(msg) }}</text>
+											<view v-if="shouldShowVoiceProgressBar(msg)" class="voice-progress-track">
+												<view class="voice-progress-fill" :style="{ width: buildVoiceProgressPercentText(msg) }"></view>
+											</view>
+											<text v-if="buildVoiceStatusText(msg) !== ''" class="voice-status">{{ buildVoiceStatusText(msg) }}</text>
+										</view>
+										<view v-if="shouldShowVoicePauseButton(msg)" class="voice-pause-action" @click.stop="handleVoicePauseClick(msg)">
+											<text class="voice-pause-action-text">暂停</text>
+										</view>
+										<!-- 语音未读红点 -->
+										<view v-if="shouldShowVoiceUnreadDot(msg)" class="voice-unread-dot"></view>
 									</view>
-									<!-- 语音未读红点 -->
-									<view v-if="shouldShowVoiceUnreadDot(msg)" class="voice-unread-dot"></view>
+									<view v-if="shouldShowVoiceResumeButton(msg)" class="voice-resume-action" @click.stop="handleVoiceResumeClick(msg)">
+										<text class="voice-resume-action-text">继续播放</text>
+									</view>
 								</view>
 								
 								<!-- 文件消息 -->
@@ -121,12 +139,12 @@
 									<image class="location-map" src="/static/images/chat/map-placeholder.png" mode="aspectFill" />
 								</view>
 								
-								<!-- 表情包/动图 -->
+								<!-- 表情�?动图 -->
                                 <view v-else-if="msg.type === 'emoji'" class="bubble-emoji" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
 									<image class="emoji-img" :src="msg.content" mode="aspectFit" />
 								</view>
 								
-								<!-- 自定义收藏表情 (无气泡) -->
+								<!-- 自定义收藏表�?(无气�? -->
                                 <view v-else-if="msg.type === 'sticker'" class="sticker-msg-wrap" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
 									<image class="sticker-img" :src="msg.content" mode="widthFix" />
 								</view>
@@ -166,12 +184,12 @@
 
 		<!-- 底部输入区域 -->
 		<view v-if="!multiSelectMode && !conversationReadOnly" class="footer" :class="{ 'footer-full-expanded': isFullExpanded }">
-			<!-- 全屏模式下的顶部操作栏 -->
+			<!-- 全屏模式下的顶部操作�?-->
 			<view v-if="isFullExpanded" class="full-expand-header">
 				<text class="iconfont collapse-icon" @click="toggleFullExpand">&#xe60e;</text>
 			</view>
 			
-			<!-- 引用回复预览栏 -->
+			<!-- 引用回复预览�?-->
 			<view v-if="quoteReplyMsg !== null" class="quote-reply-bar">
 				<view class="quote-reply-content">
 					<text class="quote-reply-sender">{{ quoteReplyMsg ? quoteReplyMsg.senderName : '' }}</text>
@@ -181,7 +199,7 @@
 			</view>
 
 			<view class="input-row" :class="{ 'input-row-full': isFullExpanded }">
-				<!-- 左侧图标栏 (仅在非全屏模式下显示) -->
+				<!-- 左侧图标�?(仅在非全屏模式下显示) -->
 				<view v-if="!isFullExpanded" class="input-left-actions">
 					<!-- 语音/键盘切换 -->
 					<text class="iconfont footer-icon" @click="toggleInputMode">{{ isVoiceMode ? '\ueac2' : '\ue601' }}</text>
@@ -189,7 +207,7 @@
 					<text v-if="showExpandIcon" class="iconfont expand-icon-btn" @click="toggleFullExpand">&#xe7b0;</text>
 				</view>
 
-				<!-- 输入框/按住说话按钮 -->
+				<!-- 输入�?按住说话按钮 -->
 				<view class="input-box" :class="{ 'input-box-full': isFullExpanded }" v-if="!isVoiceMode">
 					<editor
 						id="editor"
@@ -216,12 +234,12 @@
 					<text class="voice-btn-text">{{ isRecording ? (isCancelReady ? '松开 取消' : '松开 结束') : '按住 说话' }}</text>
 				</view>
 				
-				<!-- 右侧/底部图标栏 -->
+				<!-- 右侧/底部图标�?-->
 				<view class="input-right-actions" :class="{ 'input-right-actions-full': isFullExpanded }">
 					<!-- 表情图标 -->
 					<text class="iconfont footer-icon" @click="toggleEmojiMenu">&#xe604;</text>
 					
-					<!-- 更多/发送按钮 -->
+					<!-- 更多/发送按�?-->
 					<view v-if="!inputText" class="plus-btn" @click="togglePlusMenu">
 						<text class="iconfont footer-icon">&#xe726;</text>
 					</view>
@@ -238,7 +256,7 @@
 				</view>
 				<scroll-view class="mention-panel-list" scroll-y="true" show-scrollbar="false">
 					<view v-if="mentionLoading" class="mention-panel-empty">
-						<text class="mention-panel-empty-text">成员加载中...</text>
+			<text class="mention-panel-empty-text">成员加载中...</text>
 					</view>
 					<template v-else>
 						<view v-if="canMentionAll" class="mention-member-item" hover-class="mention-member-item-active" @click="handleMentionSelectAll">
@@ -275,7 +293,7 @@
 				</scroll-view>
 			</view>
 			
-			<!-- 表情包菜单 -->
+			<!-- 表情包菜�?-->
 			<view v-if="showEmojiMenu" class="emoji-menu">
 				<scroll-view class="emoji-content" scroll-y="true" @scroll="handleEmojiPanelScroll">
 					<view v-if="currentEmojiTab === 'emoji'" class="emoji-panel-body">
@@ -338,7 +356,7 @@
 					</view>
 				</view>
 				
-				<!-- 表情菜单 Tab 栏 -->
+				<!-- 表情菜单 Tab �?-->
 				<view class="emoji-tabs">
 					<view class="emoji-tab-item" :class="{ 'emoji-tab-active': currentEmojiTab === 'emoji' }" @click="currentEmojiTab = 'emoji'">
 						<text class="iconfont emoji-tab-icon" :class="{ 'emoji-tab-icon-active': currentEmojiTab === 'emoji' }">&#xe604;</text>
@@ -386,15 +404,29 @@
 			</view>
 		</view>
 
-		<!-- 录音状态浮层 -->
+		<!-- 录音状态浮�?-->
 		<view v-if="isRecording" class="recording-overlay">
 			<view class="recording-card" :class="{ 'recording-card-cancel': isCancelReady }">
 				<text class="iconfont recording-icon">{{ isCancelReady ? '\uea76' : '\ue601' }}</text>
-				<text class="recording-text">{{ isCancelReady ? '松开手指，取消发送' : '手指上滑，取消发送' }}</text>
+				<text
+					class="recording-duration"
+					:class="{ 'recording-duration-warning': !isCancelReady && isRecordingNearLimit() }"
+				>
+					{{ buildRecordingDurationLabel() }}
+				</text>
+				<view v-if="!isCancelReady" class="recording-wave">
+					<view
+						v-for="(barHeight, barIdx) in buildRecordingWaveHeights()"
+						:key="'recording-wave-' + barIdx"
+						class="recording-wave-bar"
+						:style="{ height: barHeight + 'px' }"
+					></view>
+				</view>
+				<text class="recording-text">{{ isCancelReady ? '松开手指，取消发送' : buildRecordingHintText() }}</text>
 			</view>
 		</view>
 
-		<!-- 转发确认对话框 -->
+		<!-- 转发确认对话�?-->
 		<view v-if="showForwardConfirm" class="forward-dialog-overlay" @click="cancelForward">
 			<view class="forward-dialog" @click.stop>
 				<view class="forward-dialog-header">
@@ -406,7 +438,7 @@
 						<text class="target-name" @click.stop="openForwardTargetSelector">选择联系人/群组</text>
 					</view>
 					<view class="forward-preview">
-						<text class="preview-text">已选择 {{ selectedIds.length }} 条消息</text>
+						<text class="forward-preview-text">将发送给选中的联系人或群组</text>
 					</view>
 				</view>
 				<view class="forward-dialog-footer">
@@ -425,6 +457,9 @@
 				<view class="read-receipt-header">
 					<text class="read-receipt-title">已读详情</text>
 					<text class="read-receipt-close" @click="closeReadReceiptSheet">关闭</text>
+				</view>
+				<view v-if="shouldShowVoiceReadReceiptHint()" class="read-receipt-hint-wrap">
+					<text class="read-receipt-hint-text">语音消息“已读”按会话阅读水位统计，不代表已听语音</text>
 				</view>
 				<view class="read-receipt-summary">
 					<view class="summary-item" @click="switchReadReceiptTab('read')">
@@ -470,7 +505,7 @@
 	import { messageService, MessageItem as ServiceMessageItem, ConversationItem, MessageStatus } from '../../services/message-service.uts'
 	import { badgeService } from '../../services/badge-service.uts'
 	import { MessageType, wsManager } from '../../utils/websocket.uts'
-	import { getMessageWindow, getMessageHistory, recallMessage, deleteMessage, getRecallConfig } from '../../api/message.uts'
+	import { getMessageWindow, getMessageHistory, recallMessage, deleteMessage, getRecallConfig, markVoicePlayed as markVoicePlayedApi, markVoicePlayedBatch, getVoicePlayedStatus } from '../../api/message.uts'
 	import { getConversationByTarget } from '../../api/conversation.uts'
 	import { getUserIdStr, getTenantId, hasRole } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
@@ -478,6 +513,7 @@
 	import { 
 		chooseAndUploadFile,
 		uploadFileAndReturnId,
+		uploadBlobAndReturnId,
 		uploadFile,
 		uploadFileForMulti,
 		chooseImage,
@@ -504,12 +540,12 @@
 	const { t } = useI18n()
 	const STICKER_LIMIT = 150
 	
-	// 聊天类型：single(单聊) 或 group(群聊)
+	// 聊天类型：single(单聊) �?group(群聊)
 	const chatType = ref('single')
 	const groupId = ref<string>('')
 	const memberCount = ref(0)
 	
-	// 会话信息（使用字符串避免精度丢失）
+	// 会话信息（使用字符串避免精度丢失�?
 	const chatId = ref<string>('')
 	const targetId = ref<string>('')
 	const name = ref('')
@@ -519,7 +555,7 @@
 	const entryMode = ref('latest')
 	const targetAnchorSequence = ref<string>('')
 	const targetMessageId = ref<string>('')  // 要定位的消息ID
-	const shouldHighlight = ref(false)  // 是否需要高亮显示
+	const shouldHighlight = ref(false)  // 是否需要高亮显�?
 	const highlightedMessageId = ref<string>('')  // 当前高亮的消息ID
 	const fromMergeDetail = ref(false)
 	const mergeBackDelta = ref(1)
@@ -530,7 +566,7 @@
 	const reeditNowTs = ref<number>(Date.now())
 	let reeditTickTimer: any = null
 	
-	// 当前用户信息（使用字符串避免精度丢失）
+	// 当前用户信息（使用字符串避免精度丢失�?
 	const currentUserId = ref<string>('0')
 	const currentTenantId = ref<string>('0')
 	const CHAT_VIEWPORT_TTL_MS = 15 * 60 * 1000
@@ -691,13 +727,41 @@
 	const MAX_VOICE_DURATION_MS = 60000
 	const VOICE_CANCEL_THRESHOLD_PX = 60
 	const VOICE_RECORD_FORMAT = 'mp3'
+	const RECORD_DURATION_TICK_MS = 100
+	const RECORD_NEAR_LIMIT_MS = 10000
+	const VOICE_PROGRESS_MIN_FILL_PERCENT = 2
+	const VOICE_PLAY_SYNC_DEBOUNCE_MS = 300
+	const VOICE_PLAY_SYNC_BATCH_SIZE = 30
+	const VOICE_PLAY_COMPENSATE_INTERVAL_MS = 12000
+	const VOICE_PLAY_COMPENSATE_MAX_IDS = 80
+	const VOICE_PLAY_COMPENSATE_BATCH_SIZE = 40
 	const presignedUrlCache = new Map<string, { url: string; expiresAt: number }>()
 	let voiceAudioContext: any = null
+	let activeVoiceContextMessageId = ''
 	let recorderManager: any = null
 	let recorderListenersBound = false
 	let pendingRecordCancel = false
 	let h5VisibilityChangeHandler: (() => void) | null = null
 	let voiceScopeResolvePromise: Promise<boolean> | null = null
+	const H5_BROWSER_RECORDER_SENTINEL: any = { source: 'h5-browser-recorder' }
+	let h5MediaStream: any = null
+	let h5AudioContext: any = null
+	let h5SourceNode: any = null
+	let h5ProcessorNode: any = null
+	let h5SilenceNode: any = null
+	let h5RecordedBuffers: any[] = []
+	let h5InputSampleRate = 16000
+	const VOICE_PLAY_WAVE_FRAMES: number[][] = [
+		[4, 8, 12],
+		[8, 12, 6],
+		[12, 7, 4]
+	]
+	const RECORDING_WAVE_BASE_HEIGHTS: number[] = [8, 12, 10, 14, 9]
+	let playbackWaveTimer: any = null
+	let recordingWaveTimer: any = null
+	let recordingDurationTimer: any = null
+	let recordingAutoStopTimer: any = null
+	let recordingAutoStopped: boolean = false
 
 	function getKkFileViewBaseUrl(): string {
 		try {
@@ -1039,7 +1103,7 @@
 		await loadMessages()
 	}
 	
-	// UI 状态
+	// UI 状�?
 	const inputText = ref('')
 	const plainInputText = ref('')
 	const composerText = ref('')
@@ -1058,6 +1122,14 @@
 	const supportsVoiceRecord = ref(true)
 	const isRecording = ref(false)
 	const isCancelReady = ref(false)
+	const recordingElapsedMs = ref(0)
+	const activePlayingVoiceMessageId = ref<string>('')
+	const activePausedVoiceMessageId = ref<string>('')
+	const activeVoicePlaybackProgressMs = ref(0)
+	const activeVoicePlaybackDurationMs = ref(0)
+	const activePlayingWaveFrameIndex = ref(0)
+	const recordingInputLevel = ref(0)
+	const recordingWaveSeed = ref(0)
 	const usePlainTextComposer = ref(false)
 	const plainSelectionStart = ref(-1)
 	const plainSelectionEnd = ref(-1)
@@ -1079,10 +1151,6 @@
 	const recordStartY = ref(0)
 	const recordStartAt = ref(0)
 
-	// #ifdef H5
-	supportsVoiceRecord.value = false
-	// #endif
-
 	const touchStartX = ref(0)
 	const touchStartY = ref(0)
 	let editorCtx : EditorContext | null = null
@@ -1100,6 +1168,7 @@
 	const readReceiptHasMore = ref(true)
 	const readReceiptLoading = ref(false)
 	const readReceiptMessageId = ref<string>('')
+	const readReceiptMessageType = ref<string>('')
 	const readReceiptSummaryCache = ref<Record<string, { summary: any | null; fetchedAt: number }>>({})
 	const readReceiptSummaryInFlight = ref<Record<string, boolean>>({})
 	const readReceiptSummaryRetryCount = ref<Record<string, number>>({})
@@ -1113,12 +1182,12 @@
 	const isDragSelecting = ref(false)
 	const dragStartIndex = ref(-1)
 	const menuOpacity = ref(0)
-    // 引用回复状态
+    // 引用回复状�?
     const quoteReplyMsg = ref<MessageItem | null>(null)
-    // 转发状态
+    // 转发状�?
     const showForwardConfirm = ref(false)
 	
-	// 加载状态
+	// 加载状�?
 	const loading = ref(false)
 	const hasMore = ref(true)
 	const historyLoading = ref(false)
@@ -1188,6 +1257,9 @@
 		voiceFormat ?: string;
 		voicePlayed ?: boolean;
 		localFilePath ?: string;
+		uploadSourceBlob ?: any;
+		uploadFileName ?: string;
+		uploadObjectUrl ?: string;
 		uploadProgress ?: number;
 		uploadStatus ?: string;
 		uploadError ?: string;
@@ -1211,7 +1283,7 @@
 	const messages = ref<MessageItem[]>([])
 	
 	/**
-	 * 初始化页面
+	 * 初始化页�?
 	 */
 	onMounted(async () => {
 		registerH5VisibilityChangeListener()
@@ -1219,12 +1291,12 @@
 		currentUserId.value = getUserIdStr()
 		currentTenantId.value = getTenantId() || '0'
 		
-		// 2. 设置消息服务的当前用户
+		// 2. 设置消息服务的当前用�?
 		messageService.setCurrentUser(currentUserId.value, currentTenantId.value)
 		try {
 			stickerList.value = await refreshCustomStickers()
 		} catch (e) {
-			console.warn('[Chat] 加载自定义表情失败:', e)
+			console.warn('[Chat] 加载自定义表情失败', e)
 			stickerList.value = getCustomStickers()
 		}
 		
@@ -1232,7 +1304,7 @@
 		if ((!chatId.value || chatId.value === '' || chatId.value === '0') && 
 		    targetId.value && targetId.value !== '') {
 			try {
-				console.log('[Chat] 没有 chatId，查询会话, targetId:', targetId.value, 'type:', chatType.value)
+				console.log('[Chat] 没有 chatId，查询会话 targetId:', targetId.value, 'type:', chatType.value)
 				const conversationType = chatType.value === 'group' ? 2 : 1
 				const conversationResult = await getConversationByTarget(targetId.value, conversationType)
 				
@@ -1252,7 +1324,7 @@
 			}
 		}
 		
-		// 4. 标记当前活跃会话（用于重连补偿只补活跃/未读会话）
+		// 4. 标记当前活跃会话（用于重连补偿只补活�?未读会话�?
 		try {
 			if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
 				messageService.setActiveChatId(chatId.value)
@@ -1264,15 +1336,16 @@
 		await hydrateConversationMetaByChatId()
 		await ensureInitialMessagesLoaded()
 		
-		// 5. 监听新消息
+		// 5. 监听新消�?
 		messageService.addMessageListener(handleNewMessage)
 		messageService.addMessageStatusListener(handleMessageStatusChange)
+		messageService.addVoicePlayedListener(handleVoicePlayedSync)
 		
-		// 6. 清空未读数（本地 + 服务端：按 sequence 水位上报）
+		// 6. 清空未读数（本地 + 服务端：�?sequence 水位上报�?
 		if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
 			const maxSeq = await computeMaxSeqForRead()
 			// 调用 BadgeService 清空会话角标
-			// BadgeService 会自动调用后端 API 并更新本地数据
+			// BadgeService 会自动调用后�?API 并更新本地数�?
 			badgeService.clearConversationBadge(chatId.value, maxSeq)
 			
 			// 同时清空 MessageService 的本地未读数
@@ -1281,6 +1354,7 @@
 		
 		initVisibleReadObserver()
 		startReeditTicker()
+		startVoicePlayedCompensation()
 		if (entryMode.value === 'latest' && targetAnchorSequence.value === '' && targetMessageId.value === '') {
 			scrollToBottom()
 		}
@@ -1289,10 +1363,17 @@
 	onUnmounted(async () => {
 		unregisterH5VisibilityChangeListener()
 		await flushReadOnLeave()
+		await flushVoicePlayedSyncQueue(true)
 		destroyVisibleReadObserver()
 		stopReeditTicker()
-		// 移除消息监听器
+		stopVoicePlayedCompensation()
+		cancelActiveVoiceRecording()
+		stopCurrentVoicePlayback()
+		cleanupH5VoiceRecorderRuntime()
+		// 移除消息监听�?
 		messageService.removeMessageListener(handleNewMessage)
+		messageService.removeMessageStatusListener(handleMessageStatusChange)
+		messageService.removeVoicePlayedListener(handleVoicePlayedSync)
 		try {
 			messageService.setActiveChatId(null)
 		} catch (e) {
@@ -1318,6 +1399,11 @@
 	let visibleObserveRetryTimer: any = null
 	let visibleObserveRetryCount: number = 0
 	const VISIBLE_OBSERVE_MAX_RETRY: number = 10
+	let voicePlayedSyncTimer: any = null
+	let voicePlayedSyncInFlight: boolean = false
+	const voicePlayedPendingSync = new Map<string, boolean>()
+	let voicePlayedCompensateTimer: any = null
+	let voicePlayedCompensateInFlight: boolean = false
 
 	function compareSeqLocal(a: string, b: string): number {
 		const as = a != null && a !== '' ? a : '0'
@@ -1512,7 +1598,7 @@
 
 	async function computeMaxSeqForRead(): Promise<string> {
 		let maxSeq = '0'
-		// 优先使用会话服务里的权威 lastMessageSequence（通常来源于 sync/list）
+		// 优先使用会话服务里的权威 lastMessageSequence（通常来源�?sync/list�?
 		try {
 			const convServiceModule = await import('../../services/conversation-service.uts')
 			const cs = (convServiceModule as any).conversationService
@@ -1526,7 +1612,7 @@
 		} catch (e) {
 			// ignore
 		}
-		// 兜底：使用当前页面已加载的消息列表的最大 sequence（比 messageService 缓存更可靠）
+		// 兜底：使用当前页面已加载的消息列表的最�?sequence（比 messageService 缓存更可靠）
 		try {
 			for (let i = 0; i < messages.value.length; i++) {
 				const s = (messages.value[i] as any).sequence
@@ -1546,7 +1632,7 @@
 		} catch (e) {
 			// ignore
 		}
-		// 最后兜底：仍使用 messageService 缓存（可能为空）
+		// 最后兜底：仍使�?messageService 缓存（可能为空）
 		if (maxSeq === '0') {
 			try {
 				const localMsgs = messageService.getMessages(chatId.value)
@@ -1645,9 +1731,9 @@
 		const day = date.getDate().toString().padStart(2, '0')
 		
 		if (year === now.getFullYear()) {
-			return `${month}月${day}日 ${hours}:${minutes}`
+			return `${month}-${day} ${hours}:${minutes}`
 		}
-		return `${year}年${month}月${day}日 ${hours}:${minutes}`
+		return `${year}-${month}-${day} ${hours}:${minutes}`
 	}
 
 	function getFileExt(name : string) : string {
@@ -1714,7 +1800,7 @@
 	}
 
 	function getFileIconUnicode(msg : MessageItem) : string {
-		// iconfont.json 对应的 unicode：
+		// iconfont.json 对应�?unicode�?
 		// html=e609, sql=e69b, text=e603, excel=e6a4, ppt=e6a5, video=e6a6, image=e6a7,
 		// unknown=e6a8, zip=e6a9, pdf=e6aa, word=e6ab, music=e6ac, folder=e6ad
 		const name = msg.fileName || ''
@@ -1723,7 +1809,7 @@
 
 		// 开发阶段强约束：不再从 URL 推断 ext，FILE 消息必须携带 fileName/mimeType
 
-		// 优先 mimeType 兜底（避免 ext 解析/混合 content 场景误判）
+		// 优先 mimeType 兜底（避�?ext 解析/混合 content 场景误判�?
 		if (mime) {
 			const lowerMime = mime.toLowerCase()
 			if (lowerMime.includes('ms-excel') || lowerMime.includes('spreadsheetml')) {
@@ -1833,9 +1919,9 @@
 		if (content === null) {
 			return ''
 		}
-		// REST 历史消息可能直接存字符串：
+		// REST 历史消息可能直接存字符串�?
 		// 1) "http://.../xxx.pdf"
-		// 2) "http://.../ 何肖肖入职offfer.pdf"（中间有空格）
+		// 2) "http://.../ 何肖肖入职offfer.pdf"（中间有空格�?
 		const raw = String(content)
 		const trimmed = raw.trim()
 		if (!trimmed) {
@@ -1844,15 +1930,15 @@
 		// 如果包含空格，优先取最后一段作为文件名
 		const parts = trimmed.split(' ').filter(p => !!p)
 		const lastPart = parts.length > 1 ? parts[parts.length - 1] : trimmed
-		// 尝试从 URL 截取
+		// 尝试�?URL 截取
 		let urlPart = parts.length > 1 ? parts[0] : trimmed
-		// 如果 lastPart 本身就是一个 URL（极端情况），则直接走 URL 解析
+		// 如果 lastPart 本身就是一�?URL（极端情况），则直接�?URL 解析
 		if (lastPart.startsWith('http://') || lastPart.startsWith('https://')) {
 			urlPart = lastPart
 		}
 		let candidate = lastPart
 		if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
-			// url 里取最后 path segment
+			// url 里取最�?path segment
 			let cleanUrl = candidate
 			const q = cleanUrl.indexOf('?')
 			if (q >= 0) cleanUrl = cleanUrl.substring(0, q)
@@ -1861,7 +1947,7 @@
 			const slash = cleanUrl.lastIndexOf('/')
 			candidate = slash >= 0 ? cleanUrl.substring(slash + 1) : cleanUrl
 		} else if (urlPart.startsWith('http://') || urlPart.startsWith('https://')) {
-			// url + 文件名 混合场景，candidate 就是文件名
+			// url + 文件�?混合场景，candidate 就是文件�?
 		}
 		try {
 			candidate = decodeURIComponent(candidate)
@@ -1879,7 +1965,7 @@
 		if (!raw) {
 			return ''
 		}
-		// url + 文件名 混合场景：取第一个 token 作为 url
+		// url + 文件�?混合场景：取第一�?token 作为 url
 		const parts = raw.split(' ').filter(p => !!p)
 		const candidate = parts.length > 1 ? parts[0] : raw
 		if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
@@ -1892,13 +1978,13 @@
 		if (uiMessage.type !== 'file') {
 			return
 		}
-		// rawContent 可能是对象（ws/body 或后端存 json），也可能是字符串
+		// rawContent 可能是对象（ws/body 或后端存 json），也可能是字符�?
 		let fileName = ''
 		let sizeNum : number | null = null
 		let mimeType = ''
 		if (rawContent && typeof rawContent === 'object') {
 			fileName = rawContent.fileName || rawContent.name || ''
-			// size 可能是 number 或 string
+			// size 可能�?number �?string
 			if (rawContent.size !== null) {
 				const n = Number(rawContent.size)
 				sizeNum = isNaN(n) ? null : n
@@ -1924,55 +2010,48 @@
 		if (uiMessage.type !== 'voice') {
 			return
 		}
-		const parsedBody = parseRawContent(rawContent)
 		const parsedExtra = parseRawContent(extra)
-		const bodyObj = parsedBody != null && typeof parsedBody === 'object' ? parsedBody as any : null
+		const parsedBody = parseRawContent(rawContent)
 		const extraObj = parsedExtra != null && typeof parsedExtra === 'object' ? parsedExtra as any : null
-
-		let durationSec = 0
-		let durationMs = 0
-		let sizeNum = 0
-		let formatStr = ''
-		let md5Str = ''
-		let fileIdStr = ''
-
-		if (bodyObj != null) {
-			durationSec = bodyObj.duration != null ? Number(bodyObj.duration) : durationSec
-			sizeNum = bodyObj.size != null ? Number(bodyObj.size) : sizeNum
-			fileIdStr = bodyObj.fileId != null ? String(bodyObj.fileId) : fileIdStr
+		const bodyObj = parsedBody != null && typeof parsedBody === 'object' ? parsedBody as any : null
+		let durationSec = extraObj != null && extraObj.duration != null ? Number(extraObj.duration) : 0
+		let durationMs = extraObj != null && extraObj.durationMs != null ? Number(extraObj.durationMs) : 0
+		let sizeNum = extraObj != null && extraObj.size != null ? Number(extraObj.size) : 0
+		let formatStr = extraObj != null && extraObj.format != null ? String(extraObj.format) : ''
+		const md5Str = extraObj != null && extraObj.md5 != null ? String(extraObj.md5) : ''
+		let fileIdStr = extraObj != null && extraObj.fileId != null ? String(extraObj.fileId) : ''
+		if (durationSec <= 0 && bodyObj != null && bodyObj.duration != null) {
+			durationSec = Number(bodyObj.duration)
 		}
-		if (extraObj != null) {
-			if (extraObj.duration != null) {
-				durationSec = Number(extraObj.duration)
-			}
-			if (extraObj.durationMs != null) {
-				durationMs = Number(extraObj.durationMs)
-			}
-			if (extraObj.size != null) {
-				sizeNum = Number(extraObj.size)
-			}
-			if (extraObj.format != null) {
-				formatStr = String(extraObj.format)
-			}
-			if (extraObj.md5 != null) {
-				md5Str = String(extraObj.md5)
-			}
-			if (extraObj.fileId != null) {
-				fileIdStr = String(extraObj.fileId)
-			}
+		if (durationMs <= 0 && bodyObj != null && bodyObj.durationMs != null) {
+			durationMs = Number(bodyObj.durationMs)
 		}
-
-		if (durationMs <= 0 && durationSec > 0) {
-			durationMs = durationSec * 1000
+		if (sizeNum <= 0 && bodyObj != null && bodyObj.size != null) {
+			sizeNum = Number(bodyObj.size)
+		}
+		if (formatStr === '' && bodyObj != null && bodyObj.format != null) {
+			formatStr = String(bodyObj.format)
+		}
+		if ((fileIdStr === '' || fileIdStr === '0') && bodyObj != null && bodyObj.fileId != null) {
+			fileIdStr = String(bodyObj.fileId)
 		}
 		if (durationSec <= 0 && durationMs > 0) {
 			durationSec = Math.max(1, Math.round(durationMs / 1000))
 		}
+		if (durationMs <= 0 && durationSec > 0) {
+			durationMs = Math.max(1000, Math.round(durationSec * 1000))
+		}
+		const serverVoicePlayed = (uiMessage as any).voicePlayed === true
+			|| (uiMessage as any).voicePlayed === 1
+			|| (uiMessage as any).voicePlayed === '1'
+			|| (uiMessage as any).voicePlayed === 'true'
+		;(uiMessage as any).voicePlayed = uiMessage.isSelf ? true : (serverVoicePlayed || hasVoiceBeenPlayed(uiMessage.messageId))
+		uiMessage.content = ''
 		if (durationSec > 0) {
-			uiMessage.duration = durationSec
+			uiMessage.duration = Math.max(1, Math.round(durationSec))
 		}
 		if (durationMs > 0) {
-			;(uiMessage as any).durationMs = durationMs
+			;(uiMessage as any).durationMs = Math.max(1000, Math.round(durationMs))
 		}
 		if (sizeNum > 0) {
 			;(uiMessage as any).size = sizeNum
@@ -1982,13 +2061,12 @@
 			;(uiMessage as any).format = formatStr
 			;(uiMessage as any).voiceFormat = formatStr
 		}
-		if (md5Str !== '') {
-			uiMessage.md5 = md5Str
-		}
 		if (fileIdStr !== '' && fileIdStr !== '0') {
 			;(uiMessage as any).fileId = fileIdStr
 		}
-		;(uiMessage as any).voicePlayed = uiMessage.isSelf ? true : hasVoiceBeenPlayed(uiMessage.messageId)
+		if (md5Str !== '') {
+			uiMessage.md5 = md5Str
+		}
 	}
 
 	function applyStickerFields(uiMessage : MessageItem, rawContent : any, extra ?: any) : void {
@@ -2154,8 +2232,8 @@
 		} catch (e) {
 			console.error('[Chat] 加载消息失败:', e)
 			// 显示网络错误提示,允许用户重试
-			uni.showToast({ 
-				title: '网络异常，加载消息失败', 
+			uni.showToast({
+				title: '网络异常，加载消息失败',
 				icon: 'none',
 				duration: 2000
 			})
@@ -2348,7 +2426,7 @@
 			rawContent = msg.content
 			content = msg.content
 		}
-		// extra 通常为 JSON 字符串（尤其是文件消息），用于补齐 fileName/size/mimeType
+		// extra 通常�?JSON 字符串（尤其是文件消息），用于补�?fileName/size/mimeType
 		try {
 			extraContent = parseRawContent(msg.extra)
 		} catch (e) {
@@ -2361,7 +2439,7 @@
 	const chatIdStr = msg && msg.chatId != null ? msg.chatId.toString() : (chatId.value != null ? chatId.value.toString() : '0')
 	const groupIdStr = msg && msg.groupId != null ? msg.groupId.toString() : ''
 	const sequenceStr = msg && msg.sequence != null ? msg.sequence.toString() : '0'
-	// 后端 REST API 历史消息通常只有 id 字段，没有 messageId 字段
+	// 后端 REST API 历史消息通常只有 id 字段，没�?messageId 字段
 	const messageIdStr = msg && msg.messageId != null ? msg.messageId.toString() : idStr
 	
 	// 处理发送者信息缺失的后备方案
@@ -2377,8 +2455,8 @@
 	} catch (e) {
 		isSelfVal = senderIdStr === currentUserId.value
 	}
-		// 后端 status: 0-发送中 1-已发送 2-已读 3-失败 6-已撤回
-		// 这里保留数值状态，避免把 status=2 误映射为 'sending' 导致气泡旁已读/未读入口不展示
+		// 后端 status: 0-发送中 1-已发�?2-已读 3-失败 6-已撤�?
+		// 这里保留数值状态，避免�?status=2 误映射为 'sending' 导致气泡旁已�?未读入口不展�?
 		let statusVal: any = (msg as any).status
 		try {
 			if (statusVal === null || statusVal === '') {
@@ -2412,7 +2490,11 @@
 			avatarText: avatarText,
 			avatarBg: getUserAvatarColor(senderIdStr),
 			senderName: senderNickname,
-			status: statusVal
+			status: statusVal,
+			voicePlayed: (msg as any).voicePlayed === true
+				|| (msg as any).voicePlayed === 1
+				|| (msg as any).voicePlayed === '1'
+				|| (msg as any).voicePlayed === 'true'
 		} as MessageItem
 
 		// enterprise: re-edit-after-recall rehydration for refresh/re-enter (REST history lacks original content)
@@ -2470,7 +2552,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			avatarText: msg.avatarText,
 			avatarBg: msg.avatarBg,
 			senderName: msg.senderName,
-			status: (msg as any).status
+			status: (msg as any).status,
+			voicePlayed: (msg as any).voicePlayed === true
+				|| (msg as any).voicePlayed === 1
+				|| (msg as any).voicePlayed === '1'
+				|| (msg as any).voicePlayed === 'true'
 		} as MessageItem
 		try {
 			const ex: any = msg as any
@@ -2577,8 +2663,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 	
 	/**
-	 * 获取消息类型字符串
-	 * 支持两种格式: REST API (1-6) 和 WebSocket (100-105)
+	 * 获取消息类型字符�?
+	 * 支持两种格式: REST API (1-6) �?WebSocket (100-105)
 	 */
 	function getMessageTypeString(messageType : any) : string {
 		if (typeof messageType === 'string') {
@@ -2586,7 +2672,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 
 		const typeMap = {
-			// REST API 格式 (数据库存储)
+			// REST API 格式 (数据库存�?
 			1: 'text',
 			2: 'image',
 			3: 'voice',
@@ -2611,10 +2697,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	
 	/**
 	 * 获取消息内容
-	 * 使用字符串类型而非数字,统一处理 REST API (1-6) 和 WebSocket (100-105) 两种格式
+	 * 使用字符串类型而非数字,统一处理 REST API (1-6) �?WebSocket (100-105) 两种格式
 	 */
 	function getMessageContent(messageType : number, content : any) : string {
-		// 先转换为字符串类型
+		// 先转换为字符串类�?
 		const typeStr = getMessageTypeString(messageType)
 		
 		if (typeStr === 'text' || typeStr === 'quote' || typeStr === 'emoji') {
@@ -2623,7 +2709,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else if (typeStr === 'image') {
 			return extractMediaUrl(content)
 		} else if (typeStr === 'voice') {
-			return extractMediaUrl(content)
+			return ''
 		} else if (typeStr === 'video') {
 			return extractMediaUrl(content)
 		} else if (typeStr === 'file') {
@@ -2634,7 +2720,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else if (typeStr === 'sticker') {
 			return extractStickerUrl(content)
 		} else if (typeStr === 'custom') {
-			// 合并转发等自定义消息：保留原始 JSON 字符串，由 getForwardCombineBody 解析
+			// 合并转发等自定义消息：保留原�?JSON 字符串，�?getForwardCombineBody 解析
 			// 避免多次 parse/stringify 导致格式异常或显示为 [自定义消息]
 			if (content && typeof content === 'object') {
 				try {
@@ -2643,7 +2729,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					return ''
 				}
 			}
-			// 如果已经是字符串（原始 JSON），直接返回
+			// 如果已经是字符串（原�?JSON），直接返回
 			return content != null ? String(content) : ''
 		}
 		return content != null ? String(content) : ''
@@ -2672,11 +2758,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 	
 	/**
-	 * 获取服务消息的内容
+	 * 获取服务消息的内�?
 	 */
 	function getServiceMessageContent(msg : ServiceMessageItem) : string {
 		const typeStr = resolveUiMessageType(msg.type, msg.content, (msg as any).extra)
-		// 安全地解析内容
+		// 安全地解析内�?
 		let content : any
 		try {
 			content = parseMessageContent(msg.content)
@@ -2690,7 +2776,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else if (typeStr === 'image') {
 			return extractMediaUrl(content)
 		} else if (typeStr === 'voice') {
-			return extractMediaUrl(content)
+			return ''
 		} else if (typeStr === 'video') {
 			return extractMediaUrl(content)
 		} else if (typeStr === 'file') {
@@ -2700,7 +2786,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else if (typeStr === 'sticker') {
 			return extractStickerUrl(content, (msg as any).extra)
 		} else if (typeStr === 'custom') {
-			// 合并转发等自定义消息：保留原始 JSON 字符串，由 getForwardCombineBody 解析
+			// 合并转发等自定义消息：保留原�?JSON 字符串，�?getForwardCombineBody 解析
 			if (content && typeof content === 'object') {
 				try {
 					return JSON.stringify(content)
@@ -2716,9 +2802,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	function isMsgConfirmedSent(msg: any): boolean {
 		try {
 			const s = (msg as any)?.status
-			// 兼容：
-			// - 旧 UI 层: 'success'
-			// - 新状态枚举: 2=SENT, 3=DELIVERED, 4=READ
+			// 兼容�?
+			// - �?UI �? 'success'
+			// - 新状态枚�? 2=SENT, 3=DELIVERED, 4=READ
 			return s === 'success' || s === 1 || s === '1' || s === 2 || s === '2' || s === 3 || s === '3' || s === 4 || s === '4'
 		} catch (e) {
 			return false
@@ -2749,7 +2835,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return content
 		}
 
-		// 检查是否可能是 JSON（以 { 或 [ 开头）
+		// 检查是否可能是 JSON（以 { �?[ 开头）
 		const firstChar = trimmed.charAt(0)
 		const lastChar = trimmed.charAt(trimmed.length - 1)
 		const isObjectJson = firstChar === '{' && lastChar === '}'
@@ -2757,7 +2843,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		const couldBeJson = isObjectJson || isArrayJson
 		
 		if (!couldBeJson) {
-			// 肯定不是 JSON，直接返回原字符串
+			// 肯定不是 JSON，直接返回原字符�?
 			return content
 		}
 		if (isArrayJson) {
@@ -2777,7 +2863,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		try {
 			return JSON.parse(trimmed)
 		} catch (e) {
-			// 解析失败，返回原字符串
+			// 解析失败，返回原字符�?
 			return content
 		}
 	}
@@ -2888,12 +2974,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				}
 			}
 		} catch (e) {
-			// 解析引用字段失败，忽略错误
+			// 解析引用字段失败，忽略错�?
 			console.warn('[Chat] 解析引用字段失败:', e)
 		}
 	}
 
 	function applyMediaFileId(target : MessageItem, rawExtraOrBody : any) : void {
+		if (target.type === 'voice') {
+			return
+		}
 		const id = tryExtractFileId(rawExtraOrBody)
 		if (id) {
 			;(target as any).fileId = id
@@ -3063,7 +3152,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}
 			const prevRecalled = isRecalledFinal(prev)
 			const nextRecalled = isRecalledFinal(next)
-			// 最终态优先：撤回提示一旦成立，不允许被旧原文覆盖
+			// 最终态优先：撤回提示一旦成立，不允许被旧原文覆�?
 			if (prevRecalled || nextRecalled) {
 				const finalMsg: any = nextRecalled ? { ...prev, ...next } : { ...next, ...prev }
 				finalMsg.sequence = pickNonEmpty(prev.sequence, next.sequence)
@@ -3112,7 +3201,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			messageMap.set(key, mergeOne(prev, msg))
 		})
 		
-		// 再添加新消息（补齐字段 + 覆盖重复的）
+		// 再添加新消息（补齐字�?+ 覆盖重复的）
 		newMessages.forEach(msg => {
 			const key = msg && (msg as any).messageId ? String((msg as any).messageId) : (msg && (msg as any).id ? String((msg as any).id) : '')
 			if (!key) {
@@ -3122,7 +3211,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			messageMap.set(key, mergeOne(prev, msg))
 		})
 		
-		// 转换为数组并按时间排序
+		// 转换为数组并按时间排�?
 		const result : MessageItem[] = []
 		messageMap.forEach(msg => {
 			result.push(msg)
@@ -3134,10 +3223,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 	
 	/**
-	 * 处理新消息
+	 * 处理新消�?
 	 */
 	function handleNewMessage(message : ServiceMessageItem) {
-		// 只处理当前会话的消息（优先按 chatId 精确匹配，兼容旧链路按 target 匹配）
+		// 只处理当前会话的消息（优先按 chatId 精确匹配，兼容旧链路�?target 匹配�?
 		const incomingChatId = (message as any).chatId != null ? String((message as any).chatId) : ''
 		const pageChatId = chatId.value != null ? String(chatId.value) : ''
 		let inCurrentConversation = false
@@ -3157,8 +3246,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return
 		}
 
-		// 去重：sendMessage() 会先 notifyMessageListeners，本地发送路径也可能手动 push，导致重复展示
-		// 但撤回属于“最终态变更”，必须覆盖已有消息（不能被去重丢弃）
+		// 去重：sendMessage() 会先 notifyMessageListeners，本地发送路径也可能手动 push，导致重复展�?
+		// 但撤回属于“最终态变更”，必须覆盖已有消息（不能被去重丢弃�?
 		const existingIndex = message.messageId
 			? messages.value.findIndex((m: any) => m && m.messageId === message.messageId)
 			: -1
@@ -3206,7 +3295,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			avatarText: message.avatarText,
 			avatarBg: message.avatarBg,
 			senderName: message.senderName,
-			status: message.status
+			status: message.status,
+			voicePlayed: (message as any).voicePlayed === true
+				|| (message as any).voicePlayed === 1
+				|| (message as any).voicePlayed === '1'
+				|| (message as any).voicePlayed === 'true'
 		} as MessageItem
 		try {
 			const ex: any = message as any
@@ -3248,7 +3341,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const next: any = uiMessage
 			const merged: any = { ...prev, ...next }
 			merged.status = 6
-			// 撤回提示优先：type/content 以撤回提示为准
+			// 撤回提示优先：type/content 以撤回提示为�?
 			merged.type = next.type
 			merged.content = next.content
 			merged.timestamp = prev.timestamp != null ? prev.timestamp : next.timestamp
@@ -3276,12 +3369,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			messages.value.push(uiMessage)
 		}
 		
-		// 滚动到底部
+		// 滚动到底�?
 		scrollToBottom()
 		
-		// 发送已读回执（如果不是自己发送的）
+		// 发送已读回执（如果不是自己发送的�?
 		if (!message.isSelf) {
-			// 群聊已读以服务端 readSequence 水位为准，禁用逐条回执，避免回执风暴
+			// 群聊已读以服务端 readSequence 水位为准，禁用逐条回执，避免回执风�?
 			if (chatType.value !== 'group') {
 				messageService.sendReadReceipt(message.senderId, [message.messageId])
 			}
@@ -3302,11 +3395,245 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		return getString(getVoicePlayedStorageKey(messageId), '') === '1'
 	}
 
+	function isVoicePlayedFlag(value: any): boolean {
+		return value === true || value === 1 || value === '1' || value === 'true'
+	}
+
 	function markVoicePlayed(messageId: string): void {
 		if (messageId == null || messageId === '' || messageId === '0') {
 			return
 		}
 		setString(getVoicePlayedStorageKey(messageId), '1')
+	}
+	/*
+
+				console.warn('[Chat] 同步语音已播放状态失败:', e)
+
+	*/
+	function syncVoicePlayedToServer(messageId: string): void {
+		if (messageId == null || messageId === '' || messageId === '0') {
+			return
+		}
+		if (!voicePlayedPendingSync.has(messageId)) {
+			voicePlayedPendingSync.set(messageId, true)
+		}
+		scheduleVoicePlayedSyncFlush()
+	}
+
+	function hasPendingVoicePlayedSync(): boolean {
+		let hasPending = false
+		voicePlayedPendingSync.forEach(() => {
+			hasPending = true
+		})
+		return hasPending
+	}
+
+	function takeVoicePlayedSyncBatch(maxSize: number): string[] {
+		const keys: string[] = []
+		voicePlayedPendingSync.forEach((_value, key) => {
+			if (keys.length < maxSize) {
+				keys.push(key)
+			}
+		})
+		for (let i = 0; i < keys.length; i++) {
+			voicePlayedPendingSync.delete(keys[i])
+		}
+		return keys
+	}
+
+	function scheduleVoicePlayedSyncFlush(): void {
+		if (voicePlayedSyncTimer != null) {
+			return
+		}
+		voicePlayedSyncTimer = setTimeout(() => {
+			voicePlayedSyncTimer = null
+			void flushVoicePlayedSyncQueue(false)
+		}, VOICE_PLAY_SYNC_DEBOUNCE_MS)
+	}
+
+	async function flushVoicePlayedSyncQueue(force: boolean = false): Promise<void> {
+		if (force && voicePlayedSyncTimer != null) {
+			clearTimeout(voicePlayedSyncTimer)
+			voicePlayedSyncTimer = null
+		}
+		if (voicePlayedSyncInFlight) {
+			if (!force && hasPendingVoicePlayedSync()) {
+				scheduleVoicePlayedSyncFlush()
+			}
+			return
+		}
+		if (!hasPendingVoicePlayedSync()) {
+			return
+		}
+		voicePlayedSyncInFlight = true
+		try {
+			while (hasPendingVoicePlayedSync()) {
+				const batchIds = takeVoicePlayedSyncBatch(VOICE_PLAY_SYNC_BATCH_SIZE)
+				if (batchIds.length === 0) {
+					break
+				}
+				try {
+					if (batchIds.length === 1) {
+						await markVoicePlayedApi(batchIds[0])
+					} else {
+						await markVoicePlayedBatch(batchIds)
+					}
+				} catch (e) {
+					for (let i = 0; i < batchIds.length; i++) {
+						const id = batchIds[i]
+						if (!voicePlayedPendingSync.has(id)) {
+							voicePlayedPendingSync.set(id, true)
+						}
+					}
+					console.warn('[Chat] sync voice played failed:', e)
+					break
+				}
+			}
+		} finally {
+			voicePlayedSyncInFlight = false
+		}
+		if (!force && hasPendingVoicePlayedSync()) {
+			scheduleVoicePlayedSyncFlush()
+		}
+	}
+
+	function collectUnplayedVoiceMessageIds(limit: number): string[] {
+		const result: string[] = []
+		const idSet = new Map<string, boolean>()
+		for (let i = messages.value.length - 1; i >= 0; i--) {
+			const item: any = messages.value[i]
+			if (item == null || item.isSelf === true) {
+				continue
+			}
+			const messageType = item.type != null ? String(item.type) : ''
+			if (messageType !== 'voice') {
+				continue
+			}
+			const mid = resolveVoiceMessageId(item)
+			if (mid === '' || mid === '0') {
+				continue
+			}
+			if (isVoicePlayedFlag(item.voicePlayed) || hasVoiceBeenPlayed(mid) || idSet.has(mid)) {
+				continue
+			}
+			idSet.set(mid, true)
+			result.push(mid)
+			if (result.length >= limit) {
+				break
+			}
+		}
+		return result
+	}
+
+	function startVoicePlayedCompensation(): void {
+		if (voicePlayedCompensateTimer != null) {
+			return
+		}
+		void pullVoicePlayedCompensationOnce()
+		voicePlayedCompensateTimer = setInterval(() => {
+			void pullVoicePlayedCompensationOnce()
+		}, VOICE_PLAY_COMPENSATE_INTERVAL_MS)
+	}
+
+	function stopVoicePlayedCompensation(): void {
+		if (voicePlayedCompensateTimer != null) {
+			clearInterval(voicePlayedCompensateTimer)
+			voicePlayedCompensateTimer = null
+		}
+	}
+
+	function normalizePlayedIdsPayload(payload: any): string[] {
+		const result: string[] = []
+		const idSet = new Map<string, boolean>()
+		const append = (raw: any): void => {
+			const id = raw != null ? String(raw) : ''
+			if (id === '' || id === '0' || idSet.has(id)) {
+				return
+			}
+			idSet.set(id, true)
+			result.push(id)
+		}
+		if (Array.isArray(payload)) {
+			for (let i = 0; i < payload.length; i++) {
+				append(payload[i])
+			}
+			return result
+		}
+		if (payload != null && Array.isArray((payload as any).data)) {
+			const list: any[] = (payload as any).data as any[]
+			for (let i = 0; i < list.length; i++) {
+				append(list[i])
+			}
+		}
+		return result
+	}
+
+	async function pullVoicePlayedCompensationOnce(): Promise<void> {
+		const currentChatId = chatId.value != null ? String(chatId.value) : ''
+		if (currentChatId === '' || currentChatId === '0' || voicePlayedCompensateInFlight) {
+			return
+		}
+		const pendingVoiceIds = collectUnplayedVoiceMessageIds(VOICE_PLAY_COMPENSATE_MAX_IDS)
+		if (pendingVoiceIds.length === 0) {
+			return
+		}
+		voicePlayedCompensateInFlight = true
+		try {
+			let offset = 0
+			while (offset < pendingVoiceIds.length) {
+				const batch = pendingVoiceIds.slice(offset, offset + VOICE_PLAY_COMPENSATE_BATCH_SIZE)
+				offset += VOICE_PLAY_COMPENSATE_BATCH_SIZE
+				if (batch.length === 0) {
+					continue
+				}
+				try {
+					const resp = await getVoicePlayedStatus(currentChatId, batch)
+					const playedIds = normalizePlayedIdsPayload(resp)
+					for (let i = 0; i < playedIds.length; i++) {
+						const playedId = playedIds[i]
+						markVoicePlayed(playedId)
+						voicePlayedPendingSync.delete(playedId)
+						patchMessageInList(playedId, { voicePlayed: true })
+					}
+				} catch (e) {
+					console.warn('[Chat] compensate voice played failed:', e)
+					break
+				}
+			}
+		} finally {
+			voicePlayedCompensateInFlight = false
+		}
+	}
+
+	function markVoicePlayedOnClick(msg: any): void {
+		if (msg == null || msg.isSelf === true) {
+			return
+		}
+		const messageId = resolveVoiceMessageId(msg)
+		if (messageId === '') {
+			return
+		}
+		if (isVoicePlayedFlag((msg as any).voicePlayed) || hasVoiceBeenPlayed(messageId)) {
+			return
+		}
+		;(msg as any).voicePlayed = true
+		markVoicePlayed(messageId)
+		patchMessageInList(messageId, { voicePlayed: true })
+		syncVoicePlayedToServer(messageId)
+	}
+
+	function handleVoicePlayedSync(incomingChatId: string, messageId: string): void {
+		if (messageId == null || messageId === '' || messageId === '0') {
+			return
+		}
+		const currentChatId = chatId.value != null ? String(chatId.value) : ''
+		const incoming = incomingChatId != null ? String(incomingChatId) : ''
+		if (incoming !== '' && incoming !== '0' && currentChatId !== '' && currentChatId !== '0' && incoming !== currentChatId) {
+			return
+		}
+		voicePlayedPendingSync.delete(messageId)
+		markVoicePlayed(messageId)
+		patchMessageInList(messageId, { voicePlayed: true })
 	}
 
 	function handleMessageStatusChange(messageId: string, status: any, meta ?: any) {
@@ -3329,13 +3656,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			if (status === 1 || status === '1') {
 				nextMsg.status = 'success'
 				nextMsg.messageId = resolvedMessageId
+				if (nextMsg.id == null || String(nextMsg.id) === '' || String(nextMsg.id) === '0' || String(nextMsg.id) === previousMessageId) {
+					nextMsg.id = resolvedMessageId
+				}
 				if (meta != null && meta.rev != null && String(meta.rev) !== '') {
 					nextMsg.rev = String(meta.rev)
 				}
 				if (meta != null && meta.sequence != null && String(meta.sequence) !== '') {
 					nextMsg.sequence = String(meta.sequence)
 				}
-				// 补齐 sequence（服务端确认后才会有）
+				// 补齐 sequence（服务端确认后才会有�?
 				try {
 					const candidateChatIds: string[] = []
 					if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
@@ -3426,15 +3756,18 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (!ensureConversationWritable()) {
 			return
 		}
-		if (!isVoiceMode.value && !supportsVoiceRecord.value) {
+		if (isVoiceMode.value) {
+			isVoiceMode.value = false
+			return
+		}
+		const manager = ensureRecorderManagerReady(true)
+		if (manager == null) {
 			uni.showToast({ title: '当前平台暂不支持语音发送', icon: 'none' })
 			return
 		}
-		isVoiceMode.value = !isVoiceMode.value
-		if (isVoiceMode.value) {
-			showEmojiMenu.value = false
-			showPlusMenu.value = false
-		}
+		isVoiceMode.value = true
+		showEmojiMenu.value = false
+		showPlusMenu.value = false
 	}
 
 	function toggleEmojiMenu() {
@@ -3920,7 +4253,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			uni.showToast({ title: '已添加到表情', icon: 'success' })
 			await handleStickerPanelItemTap(uploaded)
 		} catch (e) {
-			console.error('[Chat] 上传自定义表情失败:', e)
+			console.error('[Chat] 上传自定义表情失败', e)
 			uni.showToast({ title: '添加失败', icon: 'none' })
 		}
 	}
@@ -3936,7 +4269,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		try {
 			await touchStickerRecent(item.stickerId)
 		} catch (e) {
-			console.warn('[Chat] 更新最近使用失败:', e)
+			console.warn('[Chat] 更新最近使用失败', e)
 		}
 		try {
 			const payload: any = {
@@ -3961,7 +4294,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			scrollToBottom()
 			showEmojiMenu.value = false
 		} catch (e) {
-			console.error('[Chat] 发送贴纸失败:', e)
+			console.error('[Chat] 发送贴纸失败', e)
 			uni.showToast({ title: '发送失败', icon: 'none' })
 		}
 	}
@@ -3970,7 +4303,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (!ensureConversationWritable()) {
 			return
 		}
-		// 保持表情面板打开，不因焦点变化而关闭
+		// 保持表情面板打开，不因焦点变化而关�?
 		keepEmojiMenuOnNextFocus.value = true
 		if (editorCtx != null) {
 			try {
@@ -3992,7 +4325,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleEmojiPanelScroll(e: any): void {
-		// 不再根据滚动位置控制删除按钮的显示/隐藏
+		// 不再根据滚动位置控制删除按钮的显�?隐藏
 		// emojiDeleteButtonOpacity 已不再使用，保留函数避免报错
 	}
 
@@ -4527,10 +4860,127 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
+	function clampRecordingElapsedMs(durationMs: number): number {
+		const raw = Number(durationMs || 0)
+		if (raw <= 0) {
+			return 0
+		}
+		if (raw >= MAX_VOICE_DURATION_MS) {
+			return MAX_VOICE_DURATION_MS
+		}
+		return Math.round(raw)
+	}
+
+	function formatRecordDurationClock(durationMs: number): string {
+		const safeMs = clampRecordingElapsedMs(durationMs)
+		const totalSeconds = Math.floor(safeMs / 1000)
+		const minutes = Math.floor(totalSeconds / 60)
+		const seconds = totalSeconds % 60
+		const mm = minutes < 10 ? `0${minutes}` : `${minutes}`
+		const ss = seconds < 10 ? `0${seconds}` : `${seconds}`
+		return `${mm}:${ss}`
+	}
+
+	function buildRecordingDurationLabel(): string {
+		const elapsed = clampRecordingElapsedMs(recordingElapsedMs.value)
+		return `${formatRecordDurationClock(elapsed)} / ${formatRecordDurationClock(MAX_VOICE_DURATION_MS)}`
+	}
+
+	function buildRecordingHintText(): string {
+		const remainMs = Math.max(0, MAX_VOICE_DURATION_MS - clampRecordingElapsedMs(recordingElapsedMs.value))
+		if (remainMs <= 0) {
+			return '已到最大时长，正在结束录音'
+		}
+		return `剩余 ${formatRecordDurationClock(remainMs)} · 手指上滑，取消发送`
+	}
+
+	function isRecordingNearLimit(): boolean {
+		if (!isRecording.value || isCancelReady.value) {
+			return false
+		}
+		const remainMs = Math.max(0, MAX_VOICE_DURATION_MS - clampRecordingElapsedMs(recordingElapsedMs.value))
+		return remainMs > 0 && remainMs <= RECORD_NEAR_LIMIT_MS
+	}
+
+	function stopRecordingDurationTimers(resetElapsed: boolean = false): void {
+		if (recordingDurationTimer != null) {
+			clearInterval(recordingDurationTimer)
+			recordingDurationTimer = null
+		}
+		if (recordingAutoStopTimer != null) {
+			clearTimeout(recordingAutoStopTimer)
+			recordingAutoStopTimer = null
+		}
+		if (resetElapsed) {
+			recordingElapsedMs.value = 0
+		}
+	}
+
+	function forceStopRecordingByLimit(): void {
+		if (!isRecording.value || recordingAutoStopped) {
+			return
+		}
+		recordingAutoStopped = true
+		pendingRecordCancel = false
+		isCancelReady.value = false
+		recordingElapsedMs.value = MAX_VOICE_DURATION_MS
+		const manager = ensureRecorderManagerReady()
+		if (manager == null) {
+			resetVoiceRecordState()
+			return
+		}
+		try {
+			if (manager === H5_BROWSER_RECORDER_SENTINEL) {
+				stopH5VoiceRecording()
+				return
+			}
+			manager.stop()
+		} catch (e) {
+			console.error('[Chat] 达到录音上限后自动结束失败:', e)
+			resetVoiceRecordState()
+			uni.showToast({ title: '录音已到上限，请重试', icon: 'none' })
+		}
+	}
+
+	function startRecordingDurationTracking(): void {
+		stopRecordingDurationTimers()
+		recordingAutoStopped = false
+		recordingElapsedMs.value = 0
+		recordingDurationTimer = setInterval(() => {
+			if (!isRecording.value) {
+				return
+			}
+			if (recordStartAt.value <= 0) {
+				return
+			}
+			recordingElapsedMs.value = clampRecordingElapsedMs(Date.now() - recordStartAt.value)
+			if (recordingElapsedMs.value >= MAX_VOICE_DURATION_MS) {
+				forceStopRecordingByLimit()
+			}
+		}, RECORD_DURATION_TICK_MS)
+		recordingAutoStopTimer = setTimeout(() => {
+			forceStopRecordingByLimit()
+		}, MAX_VOICE_DURATION_MS + 80)
+	}
+
+	function setVoiceRecordStateCancelling(): void {
+		isRecording.value = false
+		isCancelReady.value = false
+		recordStartAt.value = 0
+		recordingAutoStopped = false
+		recordingInputLevel.value = 0
+		stopRecordingDurationTimers(true)
+		stopRecordingWaveAnimation()
+	}
+
 	function resetVoiceRecordState(): void {
 		isRecording.value = false
 		isCancelReady.value = false
 		recordStartAt.value = 0
+		recordingAutoStopped = false
+		recordingInputLevel.value = 0
+		stopRecordingDurationTimers(true)
+		stopRecordingWaveAnimation()
 		pendingRecordCancel = false
 	}
 
@@ -4551,82 +5001,376 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		})
 	}
 
-	function ensureRecorderManagerReady(): any | null {
-		if (!supportsVoiceRecord.value) {
+	function isBrowserVoiceRecorderAvailable(): boolean {
+		// #ifdef H5
+		try {
+			const nav: any = typeof navigator !== 'undefined' ? navigator : null
+			const win: any = typeof window !== 'undefined' ? window : null
+			return nav != null
+				&& nav.mediaDevices != null
+				&& typeof nav.mediaDevices.getUserMedia === 'function'
+				&& win != null
+				&& (win.AudioContext != null || win.webkitAudioContext != null)
+		} catch (e) {
+			return false
+		}
+		// #endif
+		return false
+	}
+
+	function revokeObjectUrl(url: string): void {
+		if (!url || !url.startsWith('blob:')) {
+			return
+		}
+		// #ifdef H5
+		try {
+			URL.revokeObjectURL(url)
+		} catch (e) {
+			// ignore
+		}
+		// #endif
+	}
+
+	function clearVoiceDraftUploadAssets(msg: any, clearLocalPath: boolean = false): void {
+		try {
+			if (msg == null) {
+				return
+			}
+			const objectUrl = msg.uploadObjectUrl != null ? String(msg.uploadObjectUrl) : ''
+			revokeObjectUrl(objectUrl)
+			;(msg as any).uploadObjectUrl = ''
+			if (clearLocalPath) {
+				;(msg as any).localFilePath = ''
+			}
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	function handleVoiceRecordStopResult(res: any): void {
+		const tempFilePath = res != null && res.tempFilePath != null ? String(res.tempFilePath) : ''
+		const rawDurationMs = res != null && res.duration != null ? Number(res.duration) : Math.max(0, Date.now() - recordStartAt.value)
+		const durationMs = rawDurationMs > 0 ? rawDurationMs : Math.max(0, Date.now() - recordStartAt.value)
+		const durationSec = Math.max(1, Math.round(durationMs / 1000))
+		const shouldCancel = pendingRecordCancel === true
+		const autoStoppedByLimit = recordingAutoStopped === true
+		const sourceBlob: any = res != null ? (res as any).blob : null
+		const sourceFormat = res != null && (res as any).format != null ? String((res as any).format) : VOICE_RECORD_FORMAT
+		const uploadFileName = res != null && (res as any).fileName != null ? String((res as any).fileName) : ''
+		resetVoiceRecordState()
+		if (shouldCancel) {
+			revokeObjectUrl(tempFilePath)
+			return
+		}
+		if (autoStoppedByLimit) {
+			uni.showToast({ title: '已到60秒，自动结束录音', icon: 'none' })
+		}
+		if (durationMs < MIN_VOICE_DURATION_MS) {
+			revokeObjectUrl(tempFilePath)
+			uni.showToast({ title: '说话时间太短', icon: 'none' })
+			return
+		}
+		if (tempFilePath === '' && sourceBlob == null) {
+			uni.showToast({ title: '录音文件生成失败', icon: 'none' })
+			return
+		}
+		const draft = createLocalVoiceDraft(tempFilePath, durationSec, durationMs, sourceBlob, sourceFormat, uploadFileName)
+		messages.value.push(draft)
+		scrollToBottom()
+		void uploadVoiceDraft(draft)
+	}
+
+	function handleVoiceRecordError(err: any): void {
+		console.error('[Chat] 录音失败:', err)
+		resetVoiceRecordState()
+		promptVoiceRecordUnavailable('录音失败，请检查麦克风权限')
+	}
+
+	function cleanupH5VoiceRecorderRuntime(): void {
+		// #ifdef H5
+		try {
+			if (h5ProcessorNode != null) {
+				h5ProcessorNode.onaudioprocess = null
+				try { h5ProcessorNode.disconnect() } catch (e) {}
+			}
+			if (h5SourceNode != null) {
+				try { h5SourceNode.disconnect() } catch (e) {}
+			}
+			if (h5SilenceNode != null) {
+				try { h5SilenceNode.disconnect() } catch (e) {}
+			}
+			if (h5MediaStream != null && h5MediaStream.getTracks != null) {
+				const tracks = h5MediaStream.getTracks()
+				for (let i = 0; i < tracks.length; i++) {
+					try { tracks[i].stop() } catch (e) {}
+				}
+			}
+			if (h5AudioContext != null && h5AudioContext.close != null) {
+				try { void h5AudioContext.close() } catch (e) {}
+			}
+		} catch (e) {
+			// ignore
+		} finally {
+			h5ProcessorNode = null
+			h5SourceNode = null
+			h5SilenceNode = null
+			h5MediaStream = null
+			h5AudioContext = null
+			h5RecordedBuffers = []
+			h5InputSampleRate = 16000
+		}
+		// #endif
+	}
+
+	function mergeH5FloatBuffers(buffers: any[]): any {
+		// #ifdef H5
+		let totalLength = 0
+		for (let i = 0; i < buffers.length; i++) {
+			totalLength += buffers[i] != null ? Number(buffers[i].length || 0) : 0
+		}
+		const merged = new Float32Array(totalLength)
+		let offset = 0
+		for (let i = 0; i < buffers.length; i++) {
+			const chunk = buffers[i]
+			if (chunk == null) { continue }
+			merged.set(chunk, offset)
+			offset += Number(chunk.length || 0)
+		}
+		return merged
+		// #endif
+		return null
+	}
+
+	function resampleH5FloatBuffer(input: any, inputSampleRate: number, outputSampleRate: number): any {
+		// #ifdef H5
+		if (input == null) {
+			return new Float32Array(0)
+		}
+		if (inputSampleRate <= 0 || inputSampleRate === outputSampleRate) {
+			return input
+		}
+		const ratio = inputSampleRate / outputSampleRate
+		const newLength = Math.max(1, Math.round(input.length / ratio))
+		const output = new Float32Array(newLength)
+		let offsetResult = 0
+		let offsetBuffer = 0
+		while (offsetResult < output.length) {
+			const nextOffsetBuffer = Math.min(input.length, Math.round((offsetResult + 1) * ratio))
+			let accum = 0
+			let count = 0
+			for (let i = offsetBuffer; i < nextOffsetBuffer; i++) {
+				accum += input[i]
+				count++
+			}
+			output[offsetResult] = count > 0 ? accum / count : 0
+			offsetResult++
+			offsetBuffer = nextOffsetBuffer
+		}
+		return output
+		// #endif
+		return input
+	}
+
+	function encodeH5WavBlob(samples: any, sampleRate: number): any {
+		// #ifdef H5
+		const buffer = new ArrayBuffer(44 + samples.length * 2)
+		const view = new DataView(buffer)
+		const writeString = (offset: number, text: string) => {
+			for (let i = 0; i < text.length; i++) {
+				view.setUint8(offset + i, text.charCodeAt(i))
+			}
+		}
+		writeString(0, 'RIFF')
+		view.setUint32(4, 36 + samples.length * 2, true)
+		writeString(8, 'WAVE')
+		writeString(12, 'fmt ')
+		view.setUint32(16, 16, true)
+		view.setUint16(20, 1, true)
+		view.setUint16(22, 1, true)
+		view.setUint32(24, sampleRate, true)
+		view.setUint32(28, sampleRate * 2, true)
+		view.setUint16(32, 2, true)
+		view.setUint16(34, 16, true)
+		writeString(36, 'data')
+		view.setUint32(40, samples.length * 2, true)
+		let offset = 44
+		for (let i = 0; i < samples.length; i++, offset += 2) {
+			const value = Math.max(-1, Math.min(1, Number(samples[i] || 0)))
+			view.setInt16(offset, value < 0 ? value * 0x8000 : value * 0x7fff, true)
+		}
+		return new Blob([buffer], { type: 'audio/wav' })
+		// #endif
+		return null
+	}
+
+	async function startH5VoiceRecording(): Promise<boolean> {
+		// #ifdef H5
+		try {
+			const nav: any = typeof navigator !== 'undefined' ? navigator : null
+			const win: any = typeof window !== 'undefined' ? window : null
+			if (nav == null || nav.mediaDevices == null || typeof nav.mediaDevices.getUserMedia !== 'function') {
+				return false
+			}
+			const AudioContextCtor = win != null ? (win.AudioContext || win.webkitAudioContext) : null
+			if (AudioContextCtor == null) {
+				return false
+			}
+			const stream = await nav.mediaDevices.getUserMedia({
+				audio: {
+					echoCancellation: true,
+					noiseSuppression: true,
+					autoGainControl: true,
+					channelCount: 1
+				}
+			})
+			const audioContext = new AudioContextCtor()
+			if (audioContext.resume != null) {
+				await audioContext.resume()
+			}
+			const source = audioContext.createMediaStreamSource(stream)
+			const processor = audioContext.createScriptProcessor(4096, 1, 1)
+			const silence = audioContext.createGain()
+			silence.gain.value = 0
+			h5RecordedBuffers = []
+			h5InputSampleRate = audioContext.sampleRate != null ? Number(audioContext.sampleRate) : 16000
+			processor.onaudioprocess = (event: any) => {
+				try {
+					if (!isRecording.value) { return }
+					const inputBuffer = event != null ? event.inputBuffer : null
+					if (inputBuffer == null || inputBuffer.numberOfChannels <= 0) { return }
+					const channelData = inputBuffer.getChannelData(0)
+					if (channelData == null) { return }
+					let energySum = 0
+					let energyCount = 0
+					for (let i = 0; i < channelData.length; i += 4) {
+						const sample = Number(channelData[i] || 0)
+						energySum += sample * sample
+						energyCount++
+					}
+					if (energyCount > 0) {
+						const rms = Math.sqrt(energySum / energyCount)
+						const normalizedLevel = Math.max(0, Math.min(1, rms * 8))
+						recordingInputLevel.value = recordingInputLevel.value * 0.72 + normalizedLevel * 0.28
+					}
+					const copy = new Float32Array(channelData.length)
+					copy.set(channelData)
+					h5RecordedBuffers.push(copy)
+				} catch (e) {
+					// ignore
+				}
+			}
+			source.connect(processor)
+			processor.connect(silence)
+			silence.connect(audioContext.destination)
+			h5MediaStream = stream
+			h5AudioContext = audioContext
+			h5SourceNode = source
+			h5ProcessorNode = processor
+			h5SilenceNode = silence
+			supportsVoiceRecord.value = true
+			return true
+		} catch (err) {
+			cleanupH5VoiceRecorderRuntime()
+			handleVoiceRecordError(err)
+			return false
+		}
+		// #endif
+		return false
+	}
+
+	function stopH5VoiceRecording(): void {
+		// #ifdef H5
+		try {
+			const recordedBuffers = h5RecordedBuffers.slice()
+			const inputSampleRate = h5InputSampleRate
+			cleanupH5VoiceRecorderRuntime()
+			const merged = mergeH5FloatBuffers(recordedBuffers)
+			const normalizedSampleRate = inputSampleRate > 0 ? inputSampleRate : 16000
+			const totalSamples = merged != null ? Number((merged as any).length || 0) : 0
+			if (totalSamples <= 0) {
+				throw new Error('empty voice samples')
+			}
+			const durationMsFromSamples = Math.round((totalSamples / normalizedSampleRate) * 1000)
+			const blob = encodeH5WavBlob(merged, normalizedSampleRate)
+			if (blob == null || Number((blob as any).size || 0) <= 0) {
+				throw new Error('empty voice blob')
+			}
+			const objectUrl = URL.createObjectURL(blob)
+			handleVoiceRecordStopResult({
+				tempFilePath: objectUrl,
+				duration: Math.max(0, durationMsFromSamples),
+				blob: blob,
+				format: 'audio/wav',
+				fileName: `voice-${Date.now()}.wav`
+			})
+		} catch (err) {
+			cleanupH5VoiceRecorderRuntime()
+			handleVoiceRecordError(err)
+		}
+		// #endif
+	}
+
+	function ensureRecorderManagerReady(forceProbe: boolean = false): any | null {
+		if (!forceProbe && !supportsVoiceRecord.value && recorderManager == null) {
 			return null
 		}
 		if (recorderManager == null) {
+			// #ifndef H5
 			try {
 				recorderManager = uni.getRecorderManager()
 			} catch (e) {
 				recorderManager = null
 			}
+			// #endif
 		}
-		if (recorderManager == null) {
-			return null
+		if (recorderManager != null) {
+			supportsVoiceRecord.value = true
+			if (!recorderListenersBound) {
+				recorderManager.onStop((res: any) => { handleVoiceRecordStopResult(res) })
+				recorderManager.onError((err: any) => { handleVoiceRecordError(err) })
+				recorderListenersBound = true
+			}
+			return recorderManager
 		}
-		if (!recorderListenersBound) {
-			recorderManager.onStop((res: any) => {
-				const tempFilePath = res != null && res.tempFilePath != null ? String(res.tempFilePath) : ''
-				const rawDurationMs = res != null && res.duration != null ? Number(res.duration) : Math.max(0, Date.now() - recordStartAt.value)
-				const durationMs = rawDurationMs > 0 ? rawDurationMs : Math.max(0, Date.now() - recordStartAt.value)
-				const durationSec = Math.max(1, Math.round(durationMs / 1000))
-				const shouldCancel = pendingRecordCancel === true
-				resetVoiceRecordState()
-				if (shouldCancel) {
-					return
-				}
-				if (durationMs < MIN_VOICE_DURATION_MS) {
-					uni.showToast({ title: '说话时间太短', icon: 'none' })
-					return
-				}
-				if (tempFilePath === '') {
-					uni.showToast({ title: '录音文件生成失败', icon: 'none' })
-					return
-				}
-				const draft = createLocalVoiceDraft(tempFilePath, durationSec, durationMs)
-				messages.value.push(draft)
-				scrollToBottom()
-				void uploadVoiceDraft(draft)
-			})
-			recorderManager.onError((err: any) => {
-				console.error('[Chat] 录音失败:', err)
-				resetVoiceRecordState()
-				promptVoiceRecordUnavailable('录音失败，请检查麦克风权限')
-			})
-			recorderListenersBound = true
+		const browserSupported = isBrowserVoiceRecorderAvailable()
+		supportsVoiceRecord.value = browserSupported
+		if (browserSupported) {
+			return H5_BROWSER_RECORDER_SENTINEL
 		}
-		return recorderManager
+		return null
 	}
 
 	async function handleVoiceStart(e : TouchEvent) {
-		if (!ensureConversationWritable()) {
-			return
-		}
-		if (!supportsVoiceRecord.value) {
-			uni.showToast({ title: '当前平台暂不支持语音发送', icon: 'none' })
-			return
-		}
-		if (isRecording.value) {
-			return
-		}
+		if (!ensureConversationWritable()) { return }
+		if (isRecording.value) { return }
 		const scopeReady = await ensureVoiceUploadScopeReady(true)
-		if (!scopeReady) {
-			return
-		}
-		const manager = ensureRecorderManagerReady()
+		if (!scopeReady) { return }
+		const manager = ensureRecorderManagerReady(true)
 		if (manager == null) {
 			uni.showToast({ title: '当前平台暂不支持语音发送', icon: 'none' })
 			return
 		}
 		stopCurrentVoicePlayback()
-		currentRecordingRequestId = currentRecordingRequestId + 1
-		recordStartY.value = e.touches[0].pageY
+		recordingInputLevel.value = 0
+		const firstTouch = e != null && e.touches != null && e.touches.length > 0 ? e.touches[0] : null
+		recordStartY.value = firstTouch != null && firstTouch.pageY != null ? Number(firstTouch.pageY) : 0
 		recordStartAt.value = Date.now()
+		recordingElapsedMs.value = 0
 		pendingRecordCancel = false
 		isRecording.value = true
 		isCancelReady.value = false
-
+		startRecordingWaveAnimation()
+		if (manager === H5_BROWSER_RECORDER_SENTINEL) {
+			const started = await startH5VoiceRecording()
+			if (!started) {
+				resetVoiceRecordState()
+			} else {
+				recordStartAt.value = Date.now()
+				recordingElapsedMs.value = 0
+				startRecordingDurationTracking()
+			}
+			return
+		}
 		manager.start({
 			duration: MAX_VOICE_DURATION_MS,
 			sampleRate: 16000,
@@ -4634,25 +5378,26 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			encodeBitRate: 48000,
 			format: VOICE_RECORD_FORMAT,
 			fail: (err: any) => {
-				console.error('[Chat] 开始录音失败:', err)
+				console.error('[Chat] 开始录音失败', err)
 				resetVoiceRecordState()
 				promptVoiceRecordUnavailable('录音失败，请检查麦克风权限')
 			}
 		})
+		startRecordingDurationTracking()
 	}
 
 	function handleVoiceMove(e : TouchEvent) {
-		if (!isRecording.value) {
+		if (!isRecording.value) { return }
+		const firstTouch = e != null && e.touches != null && e.touches.length > 0 ? e.touches[0] : null
+		if (firstTouch == null || firstTouch.pageY == null) {
 			return
 		}
-		const currentY = e.touches[0].pageY
+		const currentY = Number(firstTouch.pageY)
 		isCancelReady.value = recordStartY.value - currentY >= VOICE_CANCEL_THRESHOLD_PX
 	}
 
 	function handleVoiceEnd() {
-		if (!isRecording.value) {
-			return
-		}
+		if (!isRecording.value) { return }
 		const manager = ensureRecorderManagerReady()
 		if (manager == null) {
 			resetVoiceRecordState()
@@ -4660,6 +5405,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		pendingRecordCancel = isCancelReady.value
 		try {
+			if (manager === H5_BROWSER_RECORDER_SENTINEL) {
+				stopH5VoiceRecording()
+				return
+			}
 			manager.stop()
 		} catch (e) {
 			console.error('[Chat] 停止录音失败:', e)
@@ -4669,14 +5418,20 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function cancelActiveVoiceRecording(): void {
-		if (!isRecording.value) {
-			return
-		}
+		if (!isRecording.value) { return }
 		const manager = ensureRecorderManagerReady()
 		pendingRecordCancel = true
+		recordingAutoStopped = false
 		try {
+			if (manager === H5_BROWSER_RECORDER_SENTINEL) {
+				setVoiceRecordStateCancelling()
+				stopH5VoiceRecording()
+				return
+			}
 			if (manager != null) {
+				setVoiceRecordStateCancelling()
 				manager.stop()
+				return
 			}
 		} catch (e) {
 			// ignore
@@ -4685,20 +5440,20 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	/**
-	 * 处理输入，实现表情包整体退格
+	 * 处理输入，实现表情包整体退�?
 	 */
 	function handleInput(e : InputEvent) {
 		const newVal = e.detail.value
 		const oldVal = lastInputText.value
 		
-		// 检查是否是退格删除操作 (新长度小于旧长度)
+		// 检查是否是退格删除操�?(新长度小于旧长度)
 		if (newVal.length < oldVal.length) {
 			const diffIndex = newVal.length
 			// 如果删除的是 ']'，尝试向前寻找匹配的 '['
 			if (oldVal[diffIndex] === ']') {
 				const lastLeftBracket = oldVal.lastIndexOf('[', diffIndex)
 				if (lastLeftBracket !== -1) {
-					// 提取可能的表情代码 [xxx]
+					// 提取可能的表情代�?[xxx]
 					const potentialCode = oldVal.substring(lastLeftBracket, diffIndex + 1)
 					// 验证是否是合法的表情代码
 					const regex = /^\[[\u4e00-\u9fa5\w]+\]$/
@@ -4810,7 +5565,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				let content = res.html
 				if (!content || content === '<p><br></p>') return
 				
-				// 将 <img src="..." alt="[表情]" ...> 替换回 [表情]
+				// �?<img src="..." alt="[表情]" ...> 替换�?[表情]
 				const imgReg = /<img [^>]*alt=['"]([^'"]+)['"][^>]*>/g
 				let finalContent = content.replace(imgReg, '$1')
 				
@@ -4820,7 +5575,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				if (!finalContent.trim()) return
 				sendByFinalContent(finalContent)
 				
-				// 清空编辑器
+				// 清空编辑�?
 				editorCtx!.clear({
 					success: () => {
 						resetComposerState()
@@ -4839,7 +5594,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return
 		}
 		if (item.nameKey === 'chat.features.album') {
-			// 选择并上传图片
+			// 选择并上传图�?
 			if (IM_MEDIA_USE_FILE_ID === 'true') {
 				uni.chooseImage({
 					count: 9,
@@ -4898,11 +5653,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}).then((results) => {
 				console.log('[Chat] 上传成功，共', results.length, '张图片')
 				
-				// 上传成功,发送图片消息
+				// 上传成功,发送图片消�?
 				results.forEach((result, index) => {
-					console.log(`[Chat] 处理第 ${index + 1} 张图片:`, result)
+					console.log(`[Chat] 处理�?${index + 1} 张图�?`, result)
 					
-					// 获取图片URL（后端返回的 data 字段直接是 URL 字符串）
+					// 获取图片URL（后端返回的 data 字段直接�?URL 字符串）
 					const imageUrl = typeof result.data === 'string' ? result.data : result.data.url
 					const imageSize = result.data.size || 0
 					
@@ -4919,14 +5674,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					}
 					
 					console.log('[Chat] 图片完整URL:', fullImageUrl)
-					console.log('[Chat] 发送消息参数:', {
+					console.log('[Chat] 发送消息参数', {
 						receiverId: getReceiverIdForMessage(),
 						groupId: getGroupIdForMessage(),
 						url: fullImageUrl,
 						size: imageSize
 					})
 					
-					// 使用消息服务发送图片消息（灰度：V2 双写 fileId + url）
+					// 使用消息服务发送图片消息（灰度：V2 双写 fileId + url�?
 					const message = IM_MEDIA_USE_FILE_ID === 'true'
 						? messageService.sendImageMessageV2(
 							getReceiverIdForMessage(),
@@ -4942,7 +5697,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 							getReceiverIdForMessage(),
 							getGroupIdForMessage(),
 							fullImageUrl,
-							fullImageUrl,  // 缩略图使用同一个 URL
+							fullImageUrl,  // 缩略图使用同一�?URL
 							0,  // 宽度(暂不获取)
 							0,  // 高度(暂不获取)
 							imageSize
@@ -4953,7 +5708,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					// 如果是群聊，同时保存到群文件
 					if (chatType.value === 'group' && result.tempFilePath) {
 						uploadGroupFile(targetId.value, result.tempFilePath).then((res : any) => {
-							console.log('[Chat] 图片已保存到群文件:', res)
+							console.log('[Chat] 图片已保存到群文件', res)
 						}).catch((err : any) => {
 							console.error('[Chat] 保存图片到群文件失败:', err)
 						})
@@ -4976,14 +5731,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						status: message.status
 					} as MessageItem
 					
-					console.log('[Chat] 添加消息到列表:', uiMessage)
+					console.log('[Chat] 添加消息到列表', uiMessage)
 					messages.value.push(uiMessage)
 				})
 				
 				console.log('[Chat] 当前消息列表长度:', messages.value.length)
 				showPlusMenu.value = false
 				
-				// 延迟滚动，确保DOM已更新
+				// 延迟滚动，确保DOM已更�?
 				setTimeout(() => {
 					scrollToBottom()
 				}, 100)
@@ -4995,7 +5750,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		
 		if (item.nameKey === 'chat.features.camera') {
-			// 拍照并上传
+			// 拍照并上�?
 			uni.chooseImage({
 				count: 1,
 				sourceType: ['camera'],
@@ -5007,7 +5762,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 							console.log('[Chat] 上传进度:', progress)
 						}
 					}).then((result) => {
-						// 后端返回的 data 字段直接是 URL 字符串
+						// 后端返回�?data 字段直接�?URL 字符�?
 						const imageUrl = typeof result.data === 'string' ? result.data : result.data.url
 						const imageSize = result.data.size || 0
 						
@@ -5019,12 +5774,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						
 						console.log('[Chat] 拍照图片URL:', fullImageUrl)
 						
-						// 使用消息服务发送图片消息
+						// 使用消息服务发送图片消�?
 						const message = messageService.sendImageMessage(
 							getReceiverIdForMessage(),
 							getGroupIdForMessage(),
 							fullImageUrl,
-							fullImageUrl,  // 缩略图使用同一个 URL
+							fullImageUrl,  // 缩略图使用同一�?URL
 							0,  // 宽度(暂不获取)
 							0,  // 高度(暂不获取)
 							imageSize
@@ -5033,7 +5788,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						// 如果是群聊，同时保存到群文件
 						if (chatType.value === 'group') {
 							uploadGroupFile(targetId.value, filePath).then((res : any) => {
-								console.log('[Chat] 图片已保存到群文件:', res)
+								console.log('[Chat] 图片已保存到群文件', res)
 							}).catch((err : any) => {
 								console.error('[Chat] 保存图片到群文件失败:', err)
 							})
@@ -5075,7 +5830,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		
 		if (item.nameKey === 'chat.features.video') {
-			// 选择并上传视频
+			// 选择并上传视�?
 			if (IM_MEDIA_USE_FILE_ID === 'true') {
 				uni.chooseVideo({
 					sourceType: ['album', 'camera'],
@@ -5132,12 +5887,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				
 				console.log('[Chat] 视频URL:', fullVideoUrl)
 				
-				// 使用消息服务发送视频消息
+				// 使用消息服务发送视频消�?
 				const message = messageService.sendVideoMessage(
 					getReceiverIdForMessage(),
 					getGroupIdForMessage(),
 					fullVideoUrl,
-					fullVideoUrl,  // 封面使用同一个 URL(暂不生成)
+					fullVideoUrl,  // 封面使用同一�?URL(暂不生成)
 					0,  // 时长(暂不获取)
 					0,  // 宽度
 					0,  // 高度
@@ -5147,7 +5902,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				// 如果是群聊，同时保存到群文件
 				if (chatType.value === 'group' && result.tempFilePath) {
 					uploadGroupFile(targetId.value, result.tempFilePath).then((res : any) => {
-						console.log('[Chat] 视频已保存到群文件:', res)
+						console.log('[Chat] 视频已保存到群文件', res)
 					}).catch((err : any) => {
 						console.error('[Chat] 保存视频到群文件失败:', err)
 					})
@@ -5185,7 +5940,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		
 		if (item.nameKey === 'chat.features.file') {
-			// 选择并上传文件（支持 H5、Android、iOS）
+			// 选择并上传文件（支持 H5、Android、iOS�?
 			if (IM_MEDIA_USE_FILE_ID === 'true') {
 				uni.chooseFile({
 					type: 'all',
@@ -5248,7 +6003,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				
 				console.log('[Chat] 文件URL:', fullFileUrl)
 				
-				// 使用消息服务发送文件消息
+				// 使用消息服务发送文件消�?
 				const message = messageService.sendFileMessage(
 					getReceiverIdForMessage(),
 					getGroupIdForMessage(),
@@ -5261,7 +6016,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				// 如果是群聊，同时保存到群文件
 				if (chatType.value === 'group' && result.tempFilePath) {
 					uploadGroupFile(targetId.value, result.tempFilePath).then((res : any) => {
-						console.log('[Chat] 文件已保存到群文件:', res)
+						console.log('[Chat] 文件已保存到群文件', res)
 					}).catch((err : any) => {
 						console.error('[Chat] 保存到群文件失败:', err)
 					})
@@ -5347,7 +6102,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 							scrollToBottom()
 						}, 100)
 					} catch (e) {
-						console.error('[Chat] 发送位置消息失败:', e)
+						console.error('[Chat] 发送位置消息失败', e)
 						uni.showToast({ title: '发送失败', icon: 'none' })
 					}
 				},
@@ -5370,7 +6125,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 	
 	/**
-	 * 格式化文件大小
+	 * 格式化文件大�?
 	 */
 	function formatFileSize(size : number) : string {
 		if (size < 1024) {
@@ -5543,7 +6298,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
     function openMsgMenu(msg : MessageItem, e : TouchEvent) {
         selectedMsg.value = msg
         
-        // 优先使用 touchstart 记录的坐标，如果没有则使用 longpress 事件的坐标
+        // 优先使用 touchstart 记录的坐标，如果没有则使�?longpress 事件的坐�?
         const x = touchStartX.value || (e.touches.length > 0 ? e.touches[0].clientX : 0)
         const y = touchStartY.value || (e.touches.length > 0 ? e.touches[0].clientY : 0)
         
@@ -5552,16 +6307,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         const screenHeight = systemInfo.screenHeight
         const statusBarHeight = systemInfo.statusBarHeight || 0
         
-        // 根据消息类型确定菜单项
+        // 根据消息类型确定菜单�?
         const isRestricted = msg.type === 'voice' || msg.type === 'location'
         const canCollectSticker = canAddMessageToSticker(msg)
         const alreadyCollectedSticker = canCollectSticker && isMessageAlreadyCollectedToSticker(msg)
         
-        // 基础菜单项
+        // 基础菜单�?
         let menuItems : any[] = []
         
         if (isRestricted) {
-            // 语音和位置消息只显示引用和删除
+            // 语音和位置消息只显示引用和删�?
             menuItems = [
                 { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' },
                 { key: 'delete', labelKey: 'chat.menu.delete', icon: '\ue602' }
@@ -5584,7 +6339,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             menuItems = menuItems.filter(item => item.key !== 'copy')
         }
         
-        // 企业级撤回：仅允许撤回自己发送且在时效窗口内的消息（后端也会兜底校验）
+        // 企业级撤回：仅允许撤回自己发送且在时效窗口内的消息（后端也会兜底校验�?
         try {
             const statusVal: any = (msg as any).status
             const isRecalled = statusVal === 6 || statusVal === '6' || statusVal === 'recalled'
@@ -5608,29 +6363,29 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         
         currentMenuItems.value = menuItems
         
-        // 菜单尺寸（横向排列，支持换行）
-        const menuItemWidth = 70 // 每个菜单项宽度
-        const menuItemHeight = 70 // 每个菜单项高度（增加以容纳图标+文字）
+        // 菜单尺寸（横向排列，支持换行�?
+        const menuItemWidth = 70 // 每个菜单项宽�?
+        const menuItemHeight = 70 // 每个菜单项高度（增加以容纳图�?文字�?
         const maxMenuWidth = screenWidth - 20 // 最大宽度，左右各留10px边距
         const itemsPerRow = Math.floor(maxMenuWidth / menuItemWidth) // 每行最多显示的菜单项数
-        const actualItemsPerRow = Math.min(itemsPerRow, currentMenuItems.value.length) // 实际每行显示数
+        const actualItemsPerRow = Math.min(itemsPerRow, currentMenuItems.value.length) // 实际每行显示�?
         const menuWidth = actualItemsPerRow * menuItemWidth
-        const rows = Math.ceil(currentMenuItems.value.length / actualItemsPerRow) // 总行数
+        const rows = Math.ceil(currentMenuItems.value.length / actualItemsPerRow) // 总行�?
         const menuHeight = rows * menuItemHeight
         
-        // 头部高度：状态栏 + 导航栏(44px)
+        // 头部高度：状态栏 + 导航�?44px)
         const headerHeight = statusBarHeight + 44
         // 底部输入区域高度（估算）
         const footerHeight = 120
         
         // 可用区域
-        const availableTop = headerHeight + 10 // 留10px边距
+        const availableTop = headerHeight + 10 // �?0px边距
         const availableBottom = screenHeight - footerHeight - 10
         const availableLeft = 10
         const availableRight = screenWidth - menuWidth - 10
         
         // 水平定位：优先显示在触摸点附近，但不超出屏幕
-        let finalX = x - menuWidth / 2 // 默认居中对齐触摸点
+        let finalX = x - menuWidth / 2 // 默认居中对齐触摸�?
         if (finalX < availableLeft) {
             finalX = availableLeft
         } else if (finalX > availableRight) {
@@ -5638,19 +6393,19 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         }
         
         // 垂直定位：优先显示在触摸点上方，如果上方空间不足则显示在下方
-        let finalY = y - menuHeight - 10 // 默认显示在上方，留10px间距
+        let finalY = y - menuHeight - 10 // 默认显示在上方，�?0px间距
         
         if (finalY < availableTop) {
             // 上方空间不足，显示在下方
             finalY = y + 10
             
-            // 如果下方也不够，则尽量显示在可用区域内
+            // 如果下方也不够，则尽量显示在可用区域�?
             if (finalY + menuHeight > availableBottom) {
                 finalY = availableBottom - menuHeight
                 // 如果还是不够，则显示在触摸点居中位置
                 if (finalY < availableTop) {
                     finalY = y - menuHeight / 2
-                    // 最后保底：确保不超出边界
+                    // 最后保底：确保不超出边�?
                     if (finalY < availableTop) finalY = availableTop
                     if (finalY + menuHeight > availableBottom) finalY = availableBottom - menuHeight
                 }
@@ -5722,12 +6477,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                                     await recallMessage(msg.messageId)
                                 }
 
-                                // 乐观更新：与 WS RECALL_NOTIFY 走同一路径（status=6 + reeditContent + 会话更新）
+                                // 乐观更新：与 WS RECALL_NOTIFY 走同一路径（status=6 + reeditContent + 会话更新�?
                                 // handleNewMessage 监听器会自动刷新 messages.value
                                 try {
                                     messageService.applyLocalRecall(chatId.value, msg.messageId)
                                 } catch (e) {
-                                    // ignore，WS push 到达后自愈
+                                    // ignore，WS push 到达后自�?
                                 }
 
                                 uni.showToast({ title: '已撤回', icon: 'success' })
@@ -5815,7 +6570,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                         uni.showToast({ title: addedSticker != null && addedSticker.duplicated ? '已在表情库中' : '已添加到表情', icon: 'success' })
                     }
                 } catch (e) {
-                    console.error('[Chat] 添加到表情失败:', e)
+                    console.error('[Chat] 添加到表情失败', e)
                     uni.showToast({ title: '添加失败', icon: 'none' })
                 }
             } else if (action === 'multi') {
@@ -5825,17 +6580,19 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                     scrollToBottom()
                 }, 100)
             } else if (action === 'quote') {
-                // 设置引用回复状态
+                // 设置引用回复状�?
                 quoteReplyMsg.value = msg
-                // 如果当前是语音模式，切换到文字输入模式
+                // 如果当前是语音模式，切换到文字输入模�?
                 if (isVoiceMode.value) {
                     isVoiceMode.value = false
                 }
             } else if (action === 'read_receipt') {
-                if (chatType.value !== 'group' || !msg.isSelf || !msg.messageId || msg.messageId === '0') {
+                const readReceiptMessageId = resolveReadReceiptTargetMessageId(msg)
+                if (chatType.value !== 'group' || !msg.isSelf || readReceiptMessageId === '') {
                     return
                 }
-                await openReadReceiptSheet(msg.messageId)
+                const messageType = msg != null && (msg as any).type != null ? String((msg as any).type) : ''
+                await openReadReceiptSheet(readReceiptMessageId, messageType)
             }
         } catch (e) {
             console.error('[Chat] 菜单操作失败:', e)
@@ -5844,15 +6601,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         closeMsgMenu()
     }
 
-	async function openReadReceiptSheet(messageId: string) {
+	async function openReadReceiptSheet(messageId: string, messageType: string = '') {
 		try {
 			showReadReceiptSheet.value = true
 			readReceiptMessageId.value = messageId
+			readReceiptMessageType.value = messageType !== '' ? messageType : resolveMessageTypeByMessageId(messageId)
 			readReceiptTab.value = 'read'
 			readReceiptList.value = []
 			readReceiptPageNo.value = 1
 			readReceiptHasMore.value = true
-			// 等待一小段时间，确保消息已完全落库，避免返回 null
+			// 等待一小段时间，确保消息已完全落库，避免返�?null
 			await new Promise(resolve => setTimeout(resolve, 200))
 			readReceiptSummary.value = await readReceiptService.getSummary(messageId)
 			if (readReceiptSummary.value == null) {
@@ -5860,6 +6618,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				uni.showToast({ title: '数据加载中，请稍后再试', icon: 'none' })
 				showReadReceiptSheet.value = false
 				return
+			}
+			if (readReceiptMessageType.value === '') {
+				readReceiptMessageType.value = resolveReadReceiptMessageTypeFromSummary(readReceiptSummary.value)
 			}
 			try {
 				const next: Record<string, { summary: any | null; fetchedAt: number }> = {}
@@ -5920,6 +6681,25 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			readReceiptSummaryCache.value = next
 		} catch (e) {
 			// ignore
+		}
+	}
+
+	function resolveReadReceiptTargetMessageId(msg: any): string {
+		try {
+			const messageId = msg != null && msg.messageId != null ? String(msg.messageId) : ''
+			if (messageId !== '' && messageId !== '0' && /^\d+$/.test(messageId)) {
+				return messageId
+			}
+			const id = msg != null && msg.id != null ? String(msg.id) : ''
+			if (id !== '' && id !== '0' && /^\d+$/.test(id)) {
+				return id
+			}
+			if (messageId !== '' && messageId !== '0') {
+				return messageId
+			}
+			return id !== '0' ? id : ''
+		} catch (e) {
+			return ''
 		}
 	}
 
@@ -6047,8 +6827,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		try {
 			if (chatType.value !== 'group') return false
 			if (!msg || !msg.isSelf) return false
-			if (!msg.messageId || msg.messageId === '0') return false
-			// 仅服务端已确认（回推后）才展示 summary，避免”消息不存在”
+			if (resolveReadReceiptTargetMessageId(msg) === '') return false
+			// Only show after the server has confirmed the message.
 			if (!isMsgConfirmedSent(msg)) return false
 			return true
 		} catch (e) {
@@ -6058,7 +6838,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	function buildReadReceiptEntryText(msg: any): string {
 		try {
-			const mid = msg && msg.messageId ? String(msg.messageId) : ''
+			const mid = resolveReadReceiptTargetMessageId(msg)
 			if (!mid) return '统计中'
 			const cached = getCachedReadReceiptSummary(mid)
 			if (cached && cached.summary) {
@@ -6082,8 +6862,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const latest = list.slice(Math.max(0, list.length - 20))
 			for (let i = 0; i < latest.length; i++) {
 				const msg: any = latest[i]
-				if (shouldShowReadReceiptEntry(msg)) {
-					ensureReadReceiptSummaryFetched(String(msg.messageId || ''))
+				const readReceiptMessageId = resolveReadReceiptTargetMessageId(msg)
+				if (shouldShowReadReceiptEntry(msg) && readReceiptMessageId !== '') {
+					ensureReadReceiptSummaryFetched(readReceiptMessageId)
 				}
 			}
 		} catch (e) {
@@ -6093,12 +6874,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	async function handleReadReceiptEntryClick(msg: any) {
 		try {
-			if (!msg || !msg.messageId) return
+			const readReceiptMessageId = resolveReadReceiptTargetMessageId(msg)
+			if (!msg || readReceiptMessageId === '') return
 			if (!isMsgConfirmedSent(msg)) {
 				uni.showToast({ title: '发送中', icon: 'none' })
 				return
 			}
-			await openReadReceiptSheet(String(msg.messageId))
+			const messageType = msg != null && (msg as any).type != null ? String((msg as any).type) : ''
+			await openReadReceiptSheet(readReceiptMessageId, messageType)
 		} catch (e) {
 			// ignore
 		}
@@ -6111,6 +6894,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		readReceiptHasMore.value = true
 		readReceiptLoading.value = false
 		readReceiptMessageId.value = ''
+		readReceiptMessageType.value = ''
 	}
 
 	async function switchReadReceiptTab(tab: 'read' | 'unread') {
@@ -6414,7 +7198,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				preview = '[消息]'
 			}
 			if (senderName !== '') {
-				return `${senderName}：${preview}`
+				return `${senderName}�?{preview}`
 			}
 			return preview
 		} catch (e) {
@@ -6449,14 +7233,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
     /**
-     * 清除引用回复状态
+     * 清除引用回复状�?
      */
     function clearQuoteReply() {
         quoteReplyMsg.value = null
     }
 
     /**
-     * 定位到被引用的消息
+     * 定位到被引用的消�?
      */
     async function scrollToQuotedMessage(quoteMessageId: string) {
 		if (quoteMessageId == null || quoteMessageId === '' || quoteMessageId === '0') {
@@ -6502,7 +7286,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             uni.showToast({ title: '请选择要转发的消息', icon: 'none' })
             return
         }
-        // 显示转发确认对话框
+        // 显示转发确认对话�?
         showForwardConfirm.value = true
     }
 
@@ -6544,10 +7328,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         }
         uni.showModal({
             title: '提示',
-            content: `确定删除选中的 ${selectedIds.value.length} 条消息吗？`,
+            content: `确定删除选中�?${selectedIds.value.length} 条消息吗？`,
             success: (res) => {
                 if (res.confirm) {
-                    // 删除选中的消息
+                    // 删除选中的消�?
                     messages.value = messages.value.filter(m => !selectedIds.value.includes(m.id))
                     exitMultiSelectMode()
                     uni.showToast({ title: '删除成功', icon: 'success' })
@@ -6557,21 +7341,30 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
     }
 
 	/**
-	 * 计算语音气泡宽度 (仿微信：最短 60px，最长 220px，线性增长)
+	 * 计算语音气泡宽度（对齐微信风格：时长越长越宽，增长曲线逐段放缓）
 	 */
-	function getVoiceBubbleWidth(duration : number) : string {
-		const minWidth = 60
-		const maxWidth = 220
-		const maxDuration = 60 // 假设最长语音为 60 秒
-		
-		// 基础宽度 + (时长比例 * 可增长空间)
-		let width = minWidth + (duration / maxDuration) * (maxWidth - minWidth)
-		
-		// 边界限制
-		if (width > maxWidth) width = maxWidth
-		if (width < minWidth) width = minWidth
-		
-		return `${width}px`
+	function getVoiceBubbleWidth(duration : number, hasStatus: boolean = false) : string {
+		const minWidth = hasStatus ? 108 : 72
+		const maxWidth = 238
+		const safeDuration = Math.max(1, Math.min(60, Math.round(Number(duration) || 1)))
+		let width = minWidth
+		if (safeDuration <= 10) {
+			// 前 10 秒增长更明显，让 1s/5s/10s 有清晰层级
+			width = minWidth + (safeDuration - 1) * 5.4
+		} else if (safeDuration <= 30) {
+			// 10~30 秒线性增长
+			width = minWidth + 9 * 5.4 + (safeDuration - 10) * 2.8
+		} else {
+			// 30~60 秒继续增长但放缓，避免超长气泡挤压布局
+			width = minWidth + 9 * 5.4 + 20 * 2.8 + (safeDuration - 30) * 1.9
+		}
+		if (width < minWidth) {
+			width = minWidth
+		}
+		if (width > maxWidth) {
+			width = maxWidth
+		}
+		return `${Math.round(width)}px`
 	}
 
 	function patchMessageInList(messageId: string, patch: any): void {
@@ -6660,15 +7453,243 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		return `im/chat/${cid || '0'}/voice`
 	}
 
-	function stopCurrentVoicePlayback(): void {
-		if (voiceAudioContext) {
+	function resolveVoiceMessageId(msg: any): string {
+		if (msg == null) {
+			return ''
+		}
+		const messageId = (msg as any).messageId != null ? String((msg as any).messageId) : ''
+		if (messageId !== '' && messageId !== '0') {
+			return messageId
+		}
+		const id = (msg as any).id != null ? String((msg as any).id) : ''
+		return id !== '0' ? id : ''
+	}
+
+	function isVoicePlaying(msg: any): boolean {
+		const messageId = resolveVoiceMessageId(msg)
+		return messageId !== '' && activePlayingVoiceMessageId.value === messageId
+	}
+
+	function isVoicePaused(msg: any): boolean {
+		const messageId = resolveVoiceMessageId(msg)
+		return messageId !== ''
+			&& activePausedVoiceMessageId.value === messageId
+			&& activePlayingVoiceMessageId.value !== messageId
+	}
+
+	function shouldShowVoicePauseButton(msg: any): boolean {
+		if (msg == null || isVoiceUploading(msg) || isVoiceUploadFailed(msg) || isVoiceSendFailed(msg)) {
+			return false
+		}
+		return isVoicePlaying(msg)
+	}
+
+	function shouldShowVoiceResumeButton(msg: any): boolean {
+		if (msg == null || isVoiceUploading(msg) || isVoiceUploadFailed(msg) || isVoiceSendFailed(msg)) {
+			return false
+		}
+		return isVoicePaused(msg)
+	}
+
+	function buildVoiceWaveBarHeights(msg: any): number[] {
+		if (!isVoicePlaying(msg)) {
+			return [5, 9, 6]
+		}
+		const frameIndex = activePlayingWaveFrameIndex.value % VOICE_PLAY_WAVE_FRAMES.length
+		if (frameIndex < 0 || frameIndex >= VOICE_PLAY_WAVE_FRAMES.length) {
+			return [5, 9, 6]
+		}
+		return VOICE_PLAY_WAVE_FRAMES[frameIndex]
+	}
+
+	function buildRecordingWaveHeights(): number[] {
+		const level = Math.max(0, Math.min(1, recordingInputLevel.value))
+		const dynamicHeight = Math.round(level * 20)
+		const pulse = recordingWaveSeed.value % 4
+		const heights: number[] = []
+		for (let i = 0; i < RECORDING_WAVE_BASE_HEIGHTS.length; i++) {
+			const base = RECORDING_WAVE_BASE_HEIGHTS[i]
+			const pulseExtra = pulse === (i % 4) ? 2 : 0
+			const rate = i % 2 === 0 ? 0.55 : 0.85
+			heights.push(base + Math.round(dynamicHeight * rate) + pulseExtra)
+		}
+		return heights
+	}
+
+	function startPlaybackWaveAnimation(): void {
+		if (playbackWaveTimer != null) {
+			return
+		}
+		playbackWaveTimer = setInterval(() => {
+			activePlayingWaveFrameIndex.value = (activePlayingWaveFrameIndex.value + 1) % VOICE_PLAY_WAVE_FRAMES.length
+		}, 180)
+	}
+
+	function stopPlaybackWaveAnimation(): void {
+		if (playbackWaveTimer != null) {
+			clearInterval(playbackWaveTimer)
+			playbackWaveTimer = null
+		}
+		activePlayingWaveFrameIndex.value = 0
+	}
+
+	function startRecordingWaveAnimation(): void {
+		if (recordingWaveTimer != null) {
+			return
+		}
+		recordingWaveTimer = setInterval(() => {
+			recordingWaveSeed.value = (recordingWaveSeed.value + 1) % 1000
+		}, 120)
+	}
+
+	function stopRecordingWaveAnimation(): void {
+		if (recordingWaveTimer != null) {
+			clearInterval(recordingWaveTimer)
+			recordingWaveTimer = null
+		}
+		recordingWaveSeed.value = 0
+	}
+
+	function syncVoiceDurationFromPlayback(msg: any, durationSecFromPlayback: number): void {
+		if (durationSecFromPlayback <= 0 || durationSecFromPlayback > 3600) {
+			return
+		}
+		const messageId = resolveVoiceMessageId(msg)
+		if (messageId === '') {
+			return
+		}
+		const durationMs = Math.max(1000, Math.round(durationSecFromPlayback * 1000))
+		const durationSec = Math.max(1, Math.round(durationMs / 1000))
+		patchMessageInList(messageId, {
+			duration: durationSec,
+			durationMs: durationMs
+		})
+	}
+
+	function refreshVoicePlaybackProgressFromContext(messageId: string): void {
+		if (voiceAudioContext == null || messageId === '') {
+			return
+		}
+		if (activeVoiceContextMessageId !== '' && activeVoiceContextMessageId !== messageId) {
+			return
+		}
+		let currentMs = 0
+		try {
+			const rawCurrentSec = Number((voiceAudioContext as any).currentTime || 0)
+			currentMs = rawCurrentSec > 0 ? Math.round(rawCurrentSec * 1000) : 0
+		} catch (e) {
+			currentMs = 0
+		}
+		try {
+			const rawDurationSec = Number((voiceAudioContext as any).duration || 0)
+			if (rawDurationSec > 0 && rawDurationSec <= 3600) {
+				activeVoicePlaybackDurationMs.value = Math.max(1000, Math.round(rawDurationSec * 1000))
+			}
+		} catch (e) {
+			// ignore
+		}
+		const durationMs = activeVoicePlaybackDurationMs.value > 0 ? Number(activeVoicePlaybackDurationMs.value) : 1000
+		const safeDuration = Math.max(1000, durationMs)
+		const safeProgress = Math.max(0, Math.min(safeDuration, currentMs))
+		activeVoicePlaybackProgressMs.value = safeProgress
+	}
+
+	function clearVoicePlaybackState(): void {
+		activePlayingVoiceMessageId.value = ''
+		activePausedVoiceMessageId.value = ''
+		activeVoicePlaybackProgressMs.value = 0
+		activeVoicePlaybackDurationMs.value = 0
+		activeVoiceContextMessageId = ''
+		stopPlaybackWaveAnimation()
+	}
+
+	function releaseVoicePlaybackContext(): void {
+		clearVoicePlaybackState()
+		const ctx = voiceAudioContext
+		voiceAudioContext = null
+		if (ctx) {
 			try {
-				voiceAudioContext.stop()
-				voiceAudioContext.destroy && voiceAudioContext.destroy()
+				ctx.destroy && ctx.destroy()
 			} catch (e) {
 				// ignore
 			}
-			voiceAudioContext = null
+		}
+	}
+
+	function resolveMessageTypeByMessageId(messageId: string): string {
+		if (messageId == null || messageId === '' || messageId === '0') {
+			return ''
+		}
+		try {
+			const hit = messages.value.find((item: any) => {
+				if (item == null) {
+					return false
+				}
+				const mid = item.messageId != null ? String(item.messageId) : ''
+				const id = item.id != null ? String(item.id) : ''
+				return mid === messageId || id === messageId
+			})
+			if (hit != null && (hit as any).type != null) {
+				return String((hit as any).type)
+			}
+		} catch (e) {
+			// ignore
+		}
+		return ''
+	}
+
+	function shouldShowVoiceReadReceiptHint(): boolean {
+		if (!showReadReceiptSheet.value) {
+			return false
+		}
+		if (readReceiptMessageType.value === 'voice') {
+			return true
+		}
+		return resolveReadReceiptMessageTypeFromSummary(readReceiptSummary.value) === 'voice'
+	}
+
+	function resolveReadReceiptMessageTypeFromSummary(summary: any): string {
+		try {
+			if (summary == null || (summary as any).messageType == null) {
+				return ''
+			}
+			const rawType: any = (summary as any).messageType
+			if (rawType === '' || rawType === 0 || rawType === '0') {
+				return ''
+			}
+			return getMessageTypeString(rawType)
+		} catch (e) {
+			return ''
+		}
+	}
+
+	function stopCurrentVoicePlayback(): void {
+		clearVoicePlaybackState()
+		const ctx = voiceAudioContext
+		voiceAudioContext = null
+		if (ctx) {
+			try {
+				ctx.stop()
+				ctx.destroy && ctx.destroy()
+			} catch (e) {
+				// ignore
+			}
+		}
+	}
+
+	function pauseCurrentVoicePlayback(messageId: string): void {
+		if (voiceAudioContext == null || messageId === '' || activePlayingVoiceMessageId.value !== messageId) {
+			return
+		}
+		try {
+			refreshVoicePlaybackProgressFromContext(messageId)
+			activePlayingVoiceMessageId.value = ''
+			activePausedVoiceMessageId.value = messageId
+			stopPlaybackWaveAnimation()
+			voiceAudioContext.pause()
+		} catch (e) {
+			console.error('[Chat] 暂停语音失败:', e)
+			releaseVoicePlaybackContext()
 		}
 	}
 
@@ -6696,12 +7717,83 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (msg == null || msg.isSelf === true) {
 			return false
 		}
-		return (msg as any).voicePlayed !== true
+		return !isVoicePlayedFlag((msg as any).voicePlayed)
+	}
+
+	function resolveVoiceDurationMs(msg: any): number {
+		let durationMs = msg != null && (msg as any).durationMs != null ? Number((msg as any).durationMs) : 0
+		if (durationMs <= 0) {
+			const durationSec = msg != null && msg.duration != null ? Number(msg.duration) : 0
+			if (durationSec > 0) {
+				durationMs = Math.round(durationSec * 1000)
+			}
+		}
+		if (durationMs <= 0) {
+			durationMs = 1000
+		}
+		return Math.max(1000, Math.round(durationMs))
+	}
+
+	function resolveVoiceDurationSeconds(msg: any): number {
+		const durationMs = resolveVoiceDurationMs(msg)
+		if (durationMs > 0) {
+			return Math.max(1, Math.round(durationMs / 1000))
+		}
+		let durationSec = msg != null && msg.duration != null ? Number(msg.duration) : 0
+		if (durationSec <= 0) {
+			durationSec = 1
+		}
+		return Math.max(1, Math.round(durationSec))
+	}
+
+	function resolveVoicePlaybackProgressMs(msg: any): number {
+		const messageId = resolveVoiceMessageId(msg)
+		if (messageId === '') {
+			return 0
+		}
+		if (activePlayingVoiceMessageId.value !== messageId && activePausedVoiceMessageId.value !== messageId) {
+			return 0
+		}
+		const fallbackDuration = resolveVoiceDurationMs(msg)
+		const totalDuration = activeVoicePlaybackDurationMs.value > 0 ? Number(activeVoicePlaybackDurationMs.value) : fallbackDuration
+		const safeTotal = Math.max(1000, totalDuration)
+		const rawProgress = Math.max(0, Math.round(Number(activeVoicePlaybackProgressMs.value || 0)))
+		return Math.min(safeTotal, rawProgress)
+	}
+
+	function shouldShowVoiceProgressBar(msg: any): boolean {
+		if (msg == null) {
+			return false
+		}
+		return isVoicePlaying(msg) || isVoicePaused(msg)
+	}
+
+	function buildVoiceProgressPercentText(msg: any): string {
+		const totalMs = resolveVoiceDurationMs(msg)
+		if (totalMs <= 0) {
+			return '0%'
+		}
+		const progressMs = resolveVoicePlaybackProgressMs(msg)
+		if (progressMs <= 0) {
+			return '0%'
+		}
+		let percent = Math.round((progressMs * 100) / totalMs)
+		if (percent > 0 && percent < VOICE_PROGRESS_MIN_FILL_PERCENT) {
+			percent = VOICE_PROGRESS_MIN_FILL_PERCENT
+		}
+		if (percent > 100) {
+			percent = 100
+		}
+		return `${percent}%`
 	}
 
 	function buildVoiceDurationText(msg: any): string {
-		const duration = msg != null && msg.duration != null ? Number(msg.duration) : 0
-		return `${duration > 0 ? duration : 1}"`
+		const totalSec = resolveVoiceDurationSeconds(msg)
+		if (!shouldShowVoiceProgressBar(msg)) {
+			return `${totalSec}"`
+		}
+		const playedSec = Math.max(0, Math.min(totalSec, Math.floor(resolveVoicePlaybackProgressMs(msg) / 1000)))
+		return `${playedSec}" / ${totalSec}"`
 	}
 
 	function buildVoiceStatusText(msg: any): string {
@@ -6718,9 +7810,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		return ''
 	}
 
-	function createLocalVoiceDraft(localFilePath: string, durationSec: number, durationMs: number): MessageItem {
+	function createLocalVoiceDraft(localFilePath: string, durationSec: number, durationMs: number, sourceBlob: any = null, sourceFormat: string = VOICE_RECORD_FORMAT, uploadFileName: string = ''): MessageItem {
 		const timestamp = Date.now()
 		const mid = `voice-local-${timestamp}-${Math.floor(Math.random() * 1000)}`
+		const normalizedLocalFilePath = localFilePath != null ? String(localFilePath) : ''
+		const normalizedFormat = sourceFormat && sourceFormat !== '' ? sourceFormat : VOICE_RECORD_FORMAT
+		const defaultExt = normalizedFormat.indexOf('wav') >= 0 ? 'wav' : VOICE_RECORD_FORMAT
+		const normalizedUploadFileName = uploadFileName && uploadFileName !== '' ? uploadFileName : `voice-${timestamp}.${defaultExt}`
 		return {
 			id: mid,
 			messageId: mid,
@@ -6739,8 +7835,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			senderName: '我',
 			duration: durationSec,
 			durationMs: durationMs,
+			format: normalizedFormat,
+			voiceFormat: normalizedFormat,
 			voicePlayed: true,
-			localFilePath: localFilePath,
+			localFilePath: normalizedLocalFilePath,
+			uploadSourceBlob: sourceBlob,
+			uploadFileName: normalizedUploadFileName,
+			uploadObjectUrl: normalizedLocalFilePath.startsWith('blob:') ? normalizedLocalFilePath : '',
 			uploadProgress: 0,
 			uploadStatus: 'uploading',
 			status: 'uploading'
@@ -6749,7 +7850,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	async function uploadVoiceDraft(draft: MessageItem): Promise<void> {
 		const localFilePath = draft.localFilePath != null ? String(draft.localFilePath) : ''
-		if (localFilePath === '') {
+		const sourceBlob: any = (draft as any).uploadSourceBlob != null ? (draft as any).uploadSourceBlob : null
+		const uploadFileName = (draft as any).uploadFileName != null ? String((draft as any).uploadFileName) : `voice-${Date.now()}.wav`
+		if (localFilePath === '' && sourceBlob == null) {
 			patchMessageInList(draft.messageId, {
 				uploadStatus: 'failed',
 				uploadError: '语音文件不存在'
@@ -6771,7 +7874,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			uploadProgress: 0
 		})
 		try {
-			const result: any = await uploadFileAndReturnId(localFilePath, {
+			const result: any = sourceBlob != null ? await uploadBlobAndReturnId(sourceBlob, uploadFileName, {
+				directory: buildVoiceUploadDirectory(),
+				maxSize: MAX_VOICE_SIZE,
+				onProgress: (progress) => {
+					patchMessageInList(draft.messageId, { uploadProgress: progress })
+				}
+			}) : await uploadFileAndReturnId(localFilePath, {
 				directory: buildVoiceUploadDirectory(),
 				maxSize: MAX_VOICE_SIZE,
 				onProgress: (progress) => {
@@ -6786,10 +7895,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const voiceUrl = data != null && data.url != null ? String(data.url) : ''
 			const normalizedUrl = voiceUrl.startsWith('/') ? CONFIG_BASE_URL + voiceUrl : voiceUrl
 			const voiceSize = data != null && data.size != null ? Number(data.size) : 0
-			const voiceFormat = data != null && data.mimeType != null && String(data.mimeType) !== ''
-				? String(data.mimeType)
-				: VOICE_RECORD_FORMAT
+			const fallbackFormat = draft.format != null && String(draft.format) !== '' ? String(draft.format) : VOICE_RECORD_FORMAT
+			const voiceFormat = data != null && data.mimeType != null && String(data.mimeType) !== '' ? String(data.mimeType) : fallbackFormat
 			const voiceMd5 = data != null && data.md5 != null ? String(data.md5) : ''
+			clearVoiceDraftUploadAssets(draft, sourceBlob != null)
+			;(draft as any).uploadSourceBlob = null
 			removeMessageFromList(draft.messageId)
 			const sent = messageService.sendVoiceMessageV2(
 				getReceiverIdForMessage(),
@@ -6810,11 +7920,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			;(sent as any).voiceSize = voiceSize
 			;(sent as any).voiceFormat = voiceFormat
 			;(sent as any).voicePlayed = true
-			;(sent as any).localFilePath = localFilePath
+			;(sent as any).localFilePath = sourceBlob == null ? localFilePath : ''
 			;(sent as any).md5 = voiceMd5
 			scrollToBottom()
 		} catch (e) {
 			console.error('[Chat] 上传语音失败:', e)
+			clearVoiceDraftUploadAssets(draft, sourceBlob != null)
 			patchMessageInList(draft.messageId, {
 				uploadStatus: 'failed',
 				uploadError: '语音上传失败'
@@ -6861,43 +7972,144 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (statusVal === MessageStatus.SENDING || statusVal === 0 || statusVal === '0' || statusVal === 'sending') {
 			return
 		}
+		markVoicePlayedOnClick(msg)
 		handleVoicePlay(msg)
+	}
+
+	function handleVoicePauseClick(msg: any): void {
+		const messageId = resolveVoiceMessageId(msg)
+		if (messageId === '' || !isVoicePlaying(msg)) {
+			return
+		}
+		pauseCurrentVoicePlayback(messageId)
+	}
+
+	function handleVoiceResumeClick(msg: any): void {
+		const messageId = resolveVoiceMessageId(msg)
+		if (messageId === '') {
+			return
+		}
+		if (activePausedVoiceMessageId.value !== messageId || voiceAudioContext == null || activeVoiceContextMessageId !== messageId) {
+			handleVoicePlay(msg)
+			return
+		}
+		try {
+			refreshVoicePlaybackProgressFromContext(messageId)
+			activePlayingVoiceMessageId.value = messageId
+			activePausedVoiceMessageId.value = ''
+			startPlaybackWaveAnimation()
+			voiceAudioContext.play()
+		} catch (e) {
+			console.error('[Chat] 恢复语音播放失败:', e)
+			handleVoicePlay(msg)
+		}
 	}
 
 	function handleVoicePlay(msg : any) {
 		Promise.resolve().then(async () => {
-			let url = msg && msg.content ? String(msg.content) : ''
-			if (url === '[语音]') {
-				url = ''
+			const fileId = msg && msg.fileId ? String(msg.fileId) : ''
+			if (fileId === '' || fileId === '0') {
+				uni.showToast({ title: '语音文件不可用', icon: 'none' })
+				return
 			}
-			if (msg && msg.fileId) {
-				const signed = await resolvePresignedUrl(String(msg.fileId))
-				if (signed) {
-					url = signed
-				}
-			}
+			const url = await resolvePresignedUrl(fileId)
 			if (!url) {
-				uni.showToast({ title: '语音地址为空', icon: 'none' })
+				uni.showToast({ title: '语音播放地址获取失败', icon: 'none' })
 				return
 			}
 			try {
+				const messageId = resolveVoiceMessageId(msg)
+				if (messageId === '') {
+					uni.showToast({ title: '语音消息标识异常', icon: 'none' })
+					return
+				}
 				stopCurrentVoicePlayback()
-				voiceAudioContext = uni.createInnerAudioContext()
-				voiceAudioContext.autoplay = true
-				voiceAudioContext.src = url
-				voiceAudioContext.onPlay(() => {
-					if (msg != null && msg.isSelf !== true) {
-						markVoicePlayed(String(msg.messageId))
-						patchMessageInList(String(msg.messageId), { voicePlayed: true })
+				const audioContext = uni.createInnerAudioContext()
+				voiceAudioContext = audioContext
+				activeVoiceContextMessageId = messageId
+				activeVoicePlaybackProgressMs.value = 0
+				activeVoicePlaybackDurationMs.value = resolveVoiceDurationMs(msg)
+				activePausedVoiceMessageId.value = ''
+				audioContext.autoplay = false
+				audioContext.src = url
+				audioContext.onCanplay(() => {
+					if (voiceAudioContext !== audioContext) {
+						return
+					}
+					try {
+						setTimeout(() => {
+							try {
+								if (voiceAudioContext !== audioContext) {
+									return
+								}
+								const rawDurationSec = Number((audioContext as any).duration || 0)
+								if (rawDurationSec > 0) {
+									syncVoiceDurationFromPlayback(msg, rawDurationSec)
+									activeVoicePlaybackDurationMs.value = Math.max(1000, Math.round(rawDurationSec * 1000))
+								}
+							} catch (e) {
+								// ignore
+							}
+						}, 80)
+					} catch (e) {
+						// ignore
 					}
 				})
-				voiceAudioContext.onError((err: any) => {
+				audioContext.onTimeUpdate(() => {
+					if (voiceAudioContext !== audioContext) {
+						return
+					}
+					refreshVoicePlaybackProgressFromContext(messageId)
+				})
+				audioContext.onPlay(() => {
+					if (voiceAudioContext !== audioContext) {
+						return
+					}
+					if (messageId !== '') {
+						activePlayingVoiceMessageId.value = messageId
+						activePausedVoiceMessageId.value = ''
+						refreshVoicePlaybackProgressFromContext(messageId)
+						startPlaybackWaveAnimation()
+					}
+					if (msg != null && msg.isSelf !== true && messageId !== '' && !hasVoiceBeenPlayed(messageId)) {
+						markVoicePlayed(messageId)
+						patchMessageInList(messageId, { voicePlayed: true })
+						syncVoicePlayedToServer(messageId)
+					}
+				})
+				audioContext.onPause(() => {
+					if (voiceAudioContext !== audioContext) {
+						return
+					}
+					refreshVoicePlaybackProgressFromContext(messageId)
+					activePlayingVoiceMessageId.value = ''
+					activePausedVoiceMessageId.value = messageId
+					stopPlaybackWaveAnimation()
+				})
+				audioContext.onEnded(() => {
+					if (voiceAudioContext !== audioContext) {
+						return
+					}
+					releaseVoicePlaybackContext()
+				})
+				audioContext.onStop(() => {
+					if (voiceAudioContext !== audioContext) {
+						return
+					}
+					releaseVoicePlaybackContext()
+				})
+				audioContext.onError((err: any) => {
+					if (voiceAudioContext !== audioContext) {
+						return
+					}
 					console.error('[Chat] 语音播放失败:', err)
+					releaseVoicePlaybackContext()
 					uni.showToast({ title: '播放失败', icon: 'none' })
 				})
-				voiceAudioContext.play()
+				audioContext.play()
 			} catch (e) {
 				console.error('[Chat] 语音播放异常:', e)
+				stopCurrentVoicePlayback()
 				uni.showToast({ title: '播放失败', icon: 'none' })
 			}
 		})
@@ -7083,7 +8295,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	async function scrollToTargetMessage(messageId: string) {
-		console.log('[Chat] 开始定位消息:', messageId)
+		console.log('[Chat] 开始定位消息', messageId)
 		
 		let messageIndex = findMessageIndexForTargetId(messageId)
 		if (messageIndex === -1) {
@@ -7095,7 +8307,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		
 		if (messageIndex === -1) {
-			console.warn('[Chat] 未找到目标消息:', messageId)
+			console.warn('[Chat] 未找到目标消息', messageId)
 			uni.showToast({
 				title: '消息不在当前页面',
 				icon: 'none'
@@ -7103,12 +8315,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return
 		}
 		
-		console.log('[Chat] 找到消息，索引:', messageIndex)
+		console.log('[Chat] 找到消息，索引', messageIndex)
 		
-		// 滚动到目标消息
+		// 滚动到目标消�?
 		lastMessageId.value = 'msg-' + messageIndex
 		
-		// 如果需要高亮显示
+		// 如果需要高亮显�?
 		if (shouldHighlight.value) {
 			const targetMsg = messages.value[messageIndex]
 			const highlightId = getSelectMessageId(targetMsg)
@@ -7122,12 +8334,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}, 3000)
 		}
 		
-		// 清空目标消息ID，避免重复定位
+		// 清空目标消息ID，避免重复定�?
 		targetMessageId.value = ''
 	}
 	
 	/**
-	 * 页面加载时获取参数
+	 * 页面加载时获取参�?
 	 */
 	onLoad(async (options : any) => {
 		await loadRecallConfig()
@@ -7172,8 +8384,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			hasExplicitChatType = true
 		}
 
-		// 兼容：部分入口使用 targetType 标识会话类型（2=群聊，1=单聊）
-		// 若未显式传 type，则按 targetType 推断 chatType，避免群聊被误判为单聊导致 @ 功能无法触发
+		// 兼容：部分入口使�?targetType 标识会话类型�?=群聊�?=单聊�?
+		// 若未显式�?type，则�?targetType 推断 chatType，避免群聊被误判为单聊导�?@ 功能无法触发
 		try {
 			const tt = routeOptions['targetType']
 			if (!hasExplicitChatType && tt != null && tt !== '') {
@@ -7192,13 +8404,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		// 获取群聊 ID（字符串，避免精度丢失）
 		if (routeOptions['groupId']) {
 			groupId.value = decodeIdParam(routeOptions['groupId'])
-			targetId.value = groupId.value  // 群聊时 targetId 就是 groupId
+			targetId.value = groupId.value  // 群聊�?targetId 就是 groupId
 			if (!hasExplicitChatType) {
 				chatType.value = 'group'
 			}
 		}
 
-		// 兼容：仅传 targetId + targetType=2 的群聊跳转场景
+		// 兼容：仅�?targetId + targetType=2 的群聊跳转场�?
 		if ((groupId.value == null || groupId.value === '' || groupId.value === '0')
 			&& (chatType.value === 'group')
 			&& targetId.value && targetId.value !== '' && targetId.value !== '0') {
@@ -7246,7 +8458,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			hasExplicitEntryIntent = true
 		}
 		
-		// 获取要定位的消息ID（从搜索页面跳转过来）
+		// 获取要定位的消息ID（从搜索页面跳转过来�?
 		if (routeOptions['messageId']) {
 			targetMessageId.value = routeOptions['messageId'] as string
 			entryMode.value = 'anchor'
@@ -7258,7 +8470,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			hasExplicitEntryIntent = true
 		}
 		
-		// 获取是否需要高亮显示
+		// 获取是否需要高亮显�?
 		if (routeOptions['highlight']) {
 			shouldHighlight.value = routeOptions['highlight'] === 'true'
 			console.log('[Chat] 需要高亮显示消息')
@@ -7290,7 +8502,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			highlight: shouldHighlight.value
 		})
 
-		// H5 刷新时 onMounted 可能早于参数可用，确保路由参数就绪后一定触发一次会话初始化与消息加载
+		// H5 刷新�?onMounted 可能早于参数可用，确保路由参数就绪后一定触发一次会话初始化与消息加�?
 		try {
 			if ((!chatId.value || chatId.value === '' || chatId.value === '0')
 				&& targetId.value && targetId.value !== '') {
@@ -7337,6 +8549,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		wsManager.setRealtimeBizActive(true)
 		initVisibleReadObserver()
 		startReeditTicker()
+		startVoicePlayedCompensation()
 		refreshCustomStickers().then(list => {
 			stickerList.value = list
 		}).catch(() => {
@@ -7356,8 +8569,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		closeMentionSelector()
 		persistViewportState()
 		void flushReadOnLeave()
+		void flushVoicePlayedSyncQueue(true)
 		destroyVisibleReadObserver()
 		stopReeditTicker()
+		stopVoicePlayedCompensation()
 		cancelActiveVoiceRecording()
 		stopCurrentVoicePlayback()
 		try {
@@ -7374,23 +8589,21 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		closeMentionSelector()
 		persistViewportState()
 		void flushReadOnLeave()
+		void flushVoicePlayedSyncQueue(true)
 		destroyVisibleReadObserver()
 		stopReeditTicker()
+		stopVoicePlayedCompensation()
 		cancelActiveVoiceRecording()
+		stopCurrentVoicePlayback()
+		cleanupH5VoiceRecorderRuntime()
+		messageService.removeMessageListener(handleNewMessage)
+		messageService.removeMessageStatusListener(handleMessageStatusChange)
+		messageService.removeVoicePlayedListener(handleVoicePlayedSync)
 		try {
 			messageService.setActiveChatAutoReadEnabled(false)
 			messageService.setActiveChatId(null)
 		} catch (e) {
 			// ignore
-		}
-		if (voiceAudioContext) {
-			try {
-				voiceAudioContext.stop()
-				voiceAudioContext.destroy && voiceAudioContext.destroy()
-			} catch (e) {
-				// ignore
-			}
-			voiceAudioContext = null
 		}
 	})
 </script>
@@ -7448,18 +8661,35 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.header-title-wrap {
 		flex: 1;
+		min-width: 0;
+		padding: 0 8px;
 		align-items: center;
+		justify-content: center;
+		overflow: hidden;
 	}
 
 	.header-title {
 		color: #1F2329;
 		font-size: 17px;
 		font-weight: 600;
+		width: 100%;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-align: center;
 	}
 
 	.header-status {
 		color: #8F959E;
 		font-size: 10px;
+		width: 100%;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		margin-top: 2px;
+		text-align: center;
 	}
 
 	.header-right {
@@ -7721,6 +8951,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		color: #8F959E;
 	}
 
+	.read-receipt-hint-wrap {
+		padding: 6px 16px 0;
+	}
+
+	.read-receipt-hint-text {
+		font-size: 11px;
+		color: #8F959E;
+		line-height: 16px;
+	}
+
 	.read-receipt-summary {
 		flex-direction: row;
 		align-items: center;
@@ -7864,12 +9104,23 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	/* 语音消息 */
+	.voice-bubble-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.voice-bubble-row-self {
+		flex-direction: row-reverse;
+	}
+
 	.bubble-voice {
 		flex-direction: row;
 		align-items: center;
 		background-color: #FFFFFF;
-		min-width: 60px;
-		max-width: 220px;
+		flex-wrap: nowrap;
+		padding: 9px 10px;
+		min-width: 72px;
+		max-width: 238px;
 		position: relative;
 		overflow: visible;
 	}
@@ -7888,26 +9139,132 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		border-color: rgba(245, 74, 69, 0.35);
 	}
 
-	.voice-icon {
-		font-size: 18px;
-		color: #1F2329;
+	.bubble-voice-playing {
+		background-color: #EDF4FF;
+	}
+
+	.message-self .bubble-voice-playing {
+		background-color: #C3D9FF;
+	}
+
+	.bubble-voice-paused {
+		background-color: #F4F6FA;
+	}
+
+	.message-self .bubble-voice-paused {
+		background-color: #C8DCF8;
+	}
+
+	.voice-wave {
+		width: 18px;
+		height: 16px;
+		flex-direction: row;
+		align-items: flex-end;
+		justify-content: center;
+		margin: 0 2px;
+	}
+
+	.voice-wave-bar {
+		width: 2px;
+		min-height: 3px;
+		margin: 0 1px;
+		background-color: #606973;
+		border-radius: 2px;
+	}
+
+	.voice-wave-playing .voice-wave-bar {
+		background-color: #1677FF;
+	}
+
+	.message-self .voice-wave-playing .voice-wave-bar {
+		background-color: #0F4AA3;
 	}
 
 	.voice-content {
 		flex-direction: column;
+		flex: 1;
 		min-width: 0;
+		overflow: hidden;
+		justify-content: center;
 	}
 
 	.voice-duration {
 		font-size: 14px;
 		color: #1F2329;
-		margin: 0 8px;
+		margin: 0 6px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.voice-progress-track {
+		height: 3px;
+		margin: 4px 6px 0;
+		border-radius: 3px;
+		background-color: rgba(31, 35, 41, 0.12);
+		overflow: hidden;
+	}
+
+	.voice-progress-fill {
+		height: 3px;
+		border-radius: 3px;
+		background-color: #1677FF;
+	}
+
+	.message-self .voice-progress-fill {
+		background-color: #0F4AA3;
 	}
 
 	.voice-status {
-		margin: 2px 8px 0;
+		margin: 2px 6px 0;
 		font-size: 11px;
 		color: #8F959E;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.voice-pause-action {
+		margin-left: 6px;
+		padding: 2px 6px;
+		border-radius: 9px;
+		background-color: rgba(22, 119, 255, 0.12);
+	}
+
+	.message-self .voice-pause-action {
+		margin-left: 0;
+		margin-right: 6px;
+		background-color: rgba(15, 74, 163, 0.15);
+	}
+
+	.voice-pause-action-text {
+		font-size: 11px;
+		color: #1677FF;
+		white-space: nowrap;
+	}
+
+	.message-self .voice-pause-action-text {
+		color: #0F4AA3;
+	}
+
+	.voice-resume-action {
+		margin-left: 6px;
+		padding: 4px 8px;
+		border-radius: 12px;
+		background-color: #FFFFFF;
+		border-width: 0.5px;
+		border-color: #CED3DC;
+	}
+
+	.voice-bubble-row-self .voice-resume-action {
+		margin-left: 0;
+		margin-right: 6px;
+	}
+
+	.voice-resume-action-text {
+		font-size: 11px;
+		color: #57606A;
+		white-space: nowrap;
 	}
 
 	/* 视频消息 */
@@ -8144,7 +9501,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		background-color: #F5F7FA;
 	}
 
-	/* 表情包 */
+	/* 表情�?*/
 	.bubble-emoji {
 		padding: 0;
 		background-color: transparent;
@@ -8156,7 +9513,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		height: 100px;
 	}
 
-	/* 自定义表情 (Sticker) */
+	/* 自定义表�?(Sticker) */
 	.sticker-msg-wrap {
 		padding: 0;
 		background-color: transparent;
@@ -8505,7 +9862,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		color: #646A73;
 	}
 
-	/* 表情包菜单 */
+	/* 表情包菜�?*/
 	.emoji-menu {
 		position: relative;
 		background-color: #F7F7F7;
@@ -8561,7 +9918,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	.emoji-item {
-		width: 14.28%; /* 7列 */
+		width: 14.28%; /* 7�?*/
 		height: 48px;
 		justify-content: center;
 		align-items: center;
@@ -8739,8 +10096,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	.recording-card {
-		width: 150px;
-		height: 150px;
+		width: 164px;
+		height: 172px;
 		background-color: rgba(0, 0, 0, 0.7);
 		border-radius: 12px;
 		justify-content: center;
@@ -8754,7 +10111,38 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.recording-icon {
 		font-size: 60px;
 		color: #FFFFFF;
-		margin-bottom: 15px;
+		margin-bottom: 6px;
+	}
+
+	.recording-duration {
+		font-size: 16px;
+		font-weight: 600;
+		color: #FFFFFF;
+		margin-bottom: 8px;
+	}
+
+	.recording-duration-warning {
+		color: #FFE58F;
+	}
+
+	.recording-wave {
+		height: 28px;
+		flex-direction: row;
+		align-items: flex-end;
+		justify-content: center;
+		margin-bottom: 10px;
+	}
+
+	.recording-wave-bar {
+		width: 4px;
+		min-height: 6px;
+		margin: 0 2px;
+		background-color: #FFFFFF;
+		border-radius: 2px;
+	}
+
+	.recording-card-cancel .recording-wave-bar {
+		background-color: #FFE9E8;
 	}
 
 	.recording-text {
@@ -8862,7 +10250,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         color: #FF4D4F;
     }
 
-    /* 转发确认对话框 */
+    /* 转发确认对话�?*/
     .forward-dialog-overlay {
         position: fixed;
         top: 0;

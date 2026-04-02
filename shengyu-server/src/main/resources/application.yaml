@@ -42,6 +42,13 @@ im:
   recall:
     window-seconds: 120
     admin-window-seconds: 86400
+  voice-play:
+    cleanup:
+      enabled: true
+      cron: 0 30 4 * * ?
+      retention-days: 90
+      batch-size: 1000
+      max-batches-per-run: 20
 
 --- #################### 接口文档配置 ####################
 

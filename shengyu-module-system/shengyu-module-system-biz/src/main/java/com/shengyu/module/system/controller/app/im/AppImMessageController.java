@@ -213,6 +213,44 @@ public class AppImMessageController {
         return success(true);
     }
 
+    @PutMapping("/mark-voice-played")
+    @Operation(summary = "标记语音消息已播放（多端同步未听点）")
+    @Parameter(name = "messageId", description = "语音消息ID", required = true)
+    public CommonResult<Boolean> markVoicePlayed(@RequestParam("messageId") Long messageId) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        messageService.markVoicePlayed(userId, messageId);
+        return success(true);
+    }
+
+    @PutMapping("/mark-voice-played-batch")
+    @Operation(summary = "鎵归噺鏍囪璇煶娑堟伅宸叉挱鏀撅紙绔晶鑱氬悎涓婃姤锛?")
+    @Parameter(name = "messageIds", description = "璇煶娑堟伅ID鍒楄〃", required = true)
+    public CommonResult<Boolean> markVoicePlayedBatch(@RequestParam("messageIds") List<Long> messageIds) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        messageService.batchMarkVoicePlayed(userId, messageIds);
+        return success(true);
+    }
+
+    @GetMapping("/voice-played-status")
+    @Operation(summary = "鏌ヨ璇煶宸叉挱鏀剧姸鎬侊紙鎺ㄩ€佷涪澶辫ˉ鍋匡級")
+    @Parameter(name = "chatId", description = "浼氳瘽ID", required = true)
+    @Parameter(name = "messageIds", description = "璇煶娑堟伅ID鍒楄〃", required = true)
+    public CommonResult<List<String>> getVoicePlayedStatus(
+            @RequestParam("chatId") Long chatId,
+            @RequestParam("messageIds") List<Long> messageIds) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        List<Long> playedIds = messageService.getVoicePlayedMessageIds(userId, chatId, messageIds);
+        List<String> result = new ArrayList<>();
+        if (playedIds != null) {
+            for (Long id : playedIds) {
+                if (id != null) {
+                    result.add(String.valueOf(id));
+                }
+            }
+        }
+        return success(result);
+    }
+
     @PostMapping("/forward")
     @Operation(summary = "转发消息（支持逐条转发和合并转发）")
     public CommonResult<List<String>> forwardMessages(@Valid @RequestBody AppImMessageForwardReqVO forwardReqVO) {

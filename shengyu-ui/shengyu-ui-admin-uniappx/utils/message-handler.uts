@@ -264,6 +264,7 @@ export class MessageBuilder {
 
     try {
       header.extra = JSON.stringify({
+        clientMessageId: header.messageId,
         fileId: fileId,
         duration: duration,
         durationMs: durationMs,

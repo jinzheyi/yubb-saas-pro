@@ -68,6 +68,32 @@ export type UploadConfig = {
 	onProgress?: UploadProgressCallback  // 进度回调
 }
 
+function buildUploadFormData(config: UploadConfig): UTSJSONObject {
+	const formData: UTSJSONObject = {}
+	if (config.directory) {
+		formData['directory'] = config.directory
+	}
+	if (config.formData) {
+		for (const key in config.formData) {
+			formData[key] = config.formData[key]
+		}
+	}
+	return formData
+}
+
+function buildUploadHeader(): UTSJSONObject {
+	const token = getToken()
+	const tenantId = getTenantId()
+	const header: UTSJSONObject = {}
+	if (token != null) {
+		header['Authorization'] = formatToken(token)
+	}
+	if (tenantId != null) {
+		header['tenant-id'] = tenantId
+	}
+	return header
+}
+
 /**
  * 格式化文件大小
  */
@@ -102,29 +128,8 @@ export function uploadFile(
 		}
 		
 		// 构建表单数据
-		const formData: UTSJSONObject = {}
-		if (uploadConfig.directory) {
-			formData['directory'] = uploadConfig.directory
-		}
-		// 合并额外的表单数据
-		if (uploadConfig.formData) {
-			for (const key in uploadConfig.formData) {
-				formData[key] = uploadConfig.formData[key]
-			}
-		}
-		
-		// 获取 token 和租户 ID
-		const token = getToken()
-		const tenantId = getTenantId()
-		
-		// 构建请求头
-		const header: UTSJSONObject = {}
-		if (token != null) {
-			header['Authorization'] = formatToken(token)
-		}
-		if (tenantId != null) {
-			header['tenant-id'] = tenantId
-		}
+		const formData = buildUploadFormData(uploadConfig)
+		const header = buildUploadHeader()
 		
 		// 创建上传任务
 		const uploadTask = uni.uploadFile({
@@ -322,29 +327,8 @@ export function uploadFileAndReturnId(
 		}
 		
 		// 构建表单数据
-		const formData: UTSJSONObject = {}
-		if (uploadConfig.directory) {
-			formData['directory'] = uploadConfig.directory
-		}
-		// 合并额外的表单数据
-		if (uploadConfig.formData) {
-			for (const key in uploadConfig.formData) {
-				formData[key] = uploadConfig.formData[key]
-			}
-		}
-		
-		// 获取 token 和租户 ID
-		const token = getToken()
-		const tenantId = getTenantId()
-		
-		// 构建请求头
-		const header: UTSJSONObject = {}
-		if (token != null) {
-			header['Authorization'] = formatToken(token)
-		}
-		if (tenantId != null) {
-			header['tenant-id'] = tenantId
-		}
+		const formData = buildUploadFormData(uploadConfig)
+		const header = buildUploadHeader()
 		
 		// 创建上传任务
 		const uploadTask = uni.uploadFile({
@@ -415,6 +399,127 @@ export function uploadFileAndReturnId(
 				uploadConfig.onProgress!(res.progress)
 			})
 		}
+	})
+}
+
+export function uploadBlobAndReturnId(
+	blob: any,
+	fileName: string,
+	config?: UploadConfig
+): Promise<UploadAndReturnIdResult> {
+	return new Promise((resolve, reject) => {
+		const uploadConfig: UploadConfig = {
+			url: UPLOAD_AND_RETURN_ID_URL,
+			showToast: true,
+			...config
+		}
+
+		if (blob == null) {
+			reject(new Error('上传文件为空'))
+			return
+		}
+
+		const size = Number((blob as any).size || 0)
+		const maxSize = uploadConfig.maxSize || MAX_FILE_SIZE
+		if (size > 0 && !validateFileSize(size, maxSize)) {
+			reject(new Error('文件过大'))
+			return
+		}
+
+		// #ifdef H5
+		try {
+			const form = new FormData()
+			const formData = buildUploadFormData(uploadConfig)
+			for (const key in formData) {
+				const raw = formData[key]
+				if (raw != null) {
+					form.append(key, String(raw))
+				}
+			}
+			const normalizedFileName = fileName && fileName !== '' ? fileName : `upload-${Date.now()}`
+			form.append('file', blob as Blob, normalizedFileName)
+
+			const xhr = new XMLHttpRequest()
+			xhr.open('POST', uploadConfig.url || UPLOAD_AND_RETURN_ID_URL, true)
+			const header = buildUploadHeader()
+			for (const key in header) {
+				const value = header[key]
+				if (value != null && value !== '') {
+					xhr.setRequestHeader(key, String(value))
+				}
+			}
+
+			if (xhr.upload != null && uploadConfig.onProgress) {
+				xhr.upload.onprogress = (event: any) => {
+					try {
+						if (event != null && event.lengthComputable === true && event.total > 0) {
+							const progress = Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100)))
+							uploadConfig.onProgress!(progress)
+						}
+					} catch (e) {
+						// ignore
+					}
+				}
+			}
+
+			xhr.onload = () => {
+				try {
+					const status = xhr.status != null ? Number(xhr.status) : 0
+					if (status < 200 || status >= 300) {
+						let msg = '上传失败'
+						try {
+							const errorData = JSON.parse(xhr.responseText || '{}')
+							if (errorData && errorData.msg) {
+								msg = errorData.msg
+							}
+						} catch (e) {
+							// ignore
+						}
+						if (uploadConfig.showToast) {
+							uni.showToast({ title: msg, icon: 'none' })
+						}
+						reject(new Error(msg))
+						return
+					}
+					const data = JSON.parse(xhr.responseText || '{}')
+					if (data.code === 0) {
+						const result = data as UploadAndReturnIdResult
+						result.tempFilePath = ''
+						resolve(result)
+						return
+					}
+					const msg = data.msg || '上传失败'
+					if (uploadConfig.showToast) {
+						uni.showToast({ title: msg, icon: 'none' })
+					}
+					reject(new Error(msg))
+				} catch (e) {
+					if (uploadConfig.showToast) {
+						uni.showToast({ title: '解析响应失败', icon: 'none' })
+					}
+					reject(new Error('解析响应失败'))
+				}
+			}
+
+			xhr.onerror = () => {
+				if (uploadConfig.showToast) {
+					uni.showToast({ title: '上传失败', icon: 'none' })
+				}
+				reject(new Error('上传失败'))
+			}
+
+			xhr.send(form)
+			return
+		} catch (e) {
+			if (uploadConfig.showToast) {
+				uni.showToast({ title: '浏览器上传失败', icon: 'none' })
+			}
+			reject(e)
+			return
+		}
+		// #endif
+
+		reject(new Error('当前平台不支持 Blob 上传'))
 	})
 }
 

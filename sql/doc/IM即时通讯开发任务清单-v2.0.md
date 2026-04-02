@@ -4,11 +4,11 @@
 
 ## 当前迭代焦点（AI快速定位）
 
-> **更新日期**: 2026-03-31
+> **更新日期**: 2026-04-02
 > **迭代目标**: Milestone S / L - 媒体消息治理 + 消息扩展能力
 
 ### 正在执行
-- S2.3.a 语音消息发送企业级闭环（P1）：开发完成，待人工回归
+- S2.3.a 语音消息发送企业级闭环（P1）：二轮体验优化开发完成（含未听红点多端同步、300ms 聚合上报、补偿拉取与保留期清理），待人工回归
 - L4.1 自定义表情包（P1）：方案已冻结，待进入开发
 
 ### 本期排期（P1）
@@ -18,7 +18,7 @@
 | L2 消息重发 | 未开始 | C7 | `message-service.uts` |
 | L3 群@提及 | 已完成 | C7, D1-D3 | `ImMessageServiceImpl.java`, `mention-selector.uvue`, `chat.uvue` |
 | L4 管理员撤回 | 已完成 | F1 | `ImMessageServiceImpl.java`, `message-service.uts`, `chat.uvue` |
-| S2.3.a 语音消息发送企业级闭环 | 开发完成，待人工回归 | C7, S1, S2, E1 | `chat.uvue`, `message-service.uts`, `message-handler.uts`, `VoiceMessageProcessor.java`, `SystemMessageStorageServiceImpl.java` |
+| S2.3.a 语音消息发送企业级闭环 | 二轮体验优化开发完成（含聚合上报/补偿拉取/清理任务，待人工回归） | C7, S1, S2, E1 | `chat.uvue`, `message-service.uts`, `message-handler.uts`, `VoiceMessageProcessor.java`, `SystemMessageStorageServiceImpl.java` |
 | L4.1 自定义表情包 | 未开始（方案已冻结） | C7, S1, S2 | `chat.uvue`, `stickerManager.uts`, `ImMessageServiceImpl.java`, `infra 文件上传链路` |
 
 ### 已完成（近两轮）
@@ -35,6 +35,7 @@
 - [x] L4 管理员撤回：权限模型、撤回通知、与重新编辑隔离规则收口
 - [x] 文档更新：补充自定义表情包设计、任务拆解与状态统一
 - [x] 文档更新：补充语音消息发送企业级设计、冻结约束与 AI 开工清单
+- [x] S2.3.a.e 落地补充：语音红点 300ms 聚合上报、推送丢失补偿拉取、`im_message_voice_play` 保留期清理任务
 
 ### 关键约束（必读）
 1. **Long精度**: 所有ID字段前端必须用`string`，后端VO用`@JsonSerialize(using = ToStringSerializer.class)`
@@ -1722,13 +1723,13 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 #### S2.3.a（P1）：语音消息发送企业级闭环（对齐微信，单一新契约）
 
-- 状态：开发完成，待人工回归
+- 状态：二轮体验优化开发完成（含语音红点多端同步 + 300ms 聚合上报 + 补偿拉取 + 保留期清理，待完整人工回归）
 - **目标**：在不破坏当前 WS / Protobuf 主链路的前提下，把语音消息从“录音结束后直接上传并发送”升级为企业级完整闭环：录音、取消、短语音判定、上传占位、发送确认、失败重试、播放红点、60 秒控制全部收口。
 - **已冻结前提**：
   - 当前处于开发阶段，语音链路**不兼容老数据**
   - `pages/message/chat.uvue#handleVoiceStart/handleVoiceMove/handleVoiceEnd` 仍使用 `uni.getRecorderManager()`，参数固定为 `duration=60000 / sampleRate=16000 / numberOfChannels=1 / encodeBitRate=48000 / format='mp3'`
   - 当前 `VoiceMessage` protobuf 仍为 `url + duration + size`；本任务不升级协议版本
-  - 语音红点必须改为 `voicePlayed` 本地状态，不得继续复用 `msg.isRead`
+  - 语音红点必须改为 `voicePlayed` 独立状态（端侧渲染可合并服务端返回与本地缓存），不得继续复用 `msg.isRead`
 - **冻结边界**：
   - 不改 WebSocket 握手、ACK 语义、`MessageType.VOICE` 编号、`sequence/rev` 语义
   - `fileId` 为语音权威媒资标识；播放统一走 `fileId -> presigned-get-url`
@@ -1792,6 +1793,83 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - 任务涉及文件均有代码落地或明确注释占位
   - 至少完成 App 端发送/播放链路；H5 降级策略明确且无 crash
   - 人工回归前置项已完成：WS/REST 校验、上传者与会话目录归属校验、历史/回推 extra 一致
+
+##### S2.3.a.b（2026-04-01）：语音交互体验与稳定性增补（对齐微信）
+
+- 状态：进行中（播放进度条/暂停续播/气泡重播已落地，待人工回归）
+- **新增需求冻结**：
+  - 按住说话期间显示实时录制时长（`mm:ss`），达到 `60s` 自动结束并触发发送流程
+  - 录制剩余 `10s` 进入“即将达到上限”提示态；剩余 `3s` 提供逐秒强化提示
+  - 录制与播放必须有明确动画状态：录制态波纹/电平动效、播放态振幅条动效；暂停/失败立即收敛到静态
+  - 语音气泡宽度按时长分段增长（短语音不拥挤、长语音不顶格）；最大宽度受容器约束，禁止文本换行导致布局错乱
+  - 强校验“真实录音参与发送”：发送前校验 `tempFilePath`、`durationMs`、`sizeBytes`、音频可解码时长一致性，拦截异常“咚咚咚”噪音文件
+  - 播放时长展示与真实播放时长一致：统一以毫秒精度驱动 UI，禁止 `duration`（秒）与 `durationMs` 混算
+- **交互与控制逻辑（微信对齐）**：
+  - 手势：按下开始录音，上滑进入取消态，松手后按当前态执行“发送/取消”
+  - 生命周期：页面隐藏、路由切换、会话切换时必须停止录音与播放并清理计时器/回调
+  - 平台兼容：`uni.getRecorderManager` 不可用时走降级提示并禁用入口，禁止抛出未定义变量异常
+- **验收补充**：
+  - 录制 `1s` 语音播放时长误差 `<= ±300ms`
+  - 任意时长语音气泡不出现异常换行、抖动、遮挡
+  - 连续录制/取消/重试 `30` 次无 `ReferenceError`、无重复回调、无资源泄漏
+
+##### S2.3.a.c（2026-04-01）：语音播放进度与暂停续播交互增补（微信机制对齐）
+
+- 状态：开发完成（含批量上报/补偿拉取/保留期清理，待人工回归）
+- **需求冻结**：
+  - 播放中在语音气泡内显示进度条（仅展示进度，不支持拖拽 seek）
+  - 播放中支持点击“暂停”；暂停后在语音气泡旁显示“继续播放”按钮
+  - 点击语音气泡本体始终执行“从头重播”（不复用暂停点）
+  - 同页保持语音单实例播放：开始新语音前必须停止并释放当前播放实例
+- **交互规则**：
+  - “暂停”按钮仅在当前语音播放中出现；“继续播放”按钮仅在当前语音暂停中出现
+  - 暂停态保留当前进度；点击“继续播放”从暂停点继续
+  - 暂停态点击语音气泡本体，清空暂停态并重新从 `0ms` 播放
+  - 页面隐藏/卸载、会话切换时，统一停止播放并清理进度状态，避免脏状态残留
+- **验收补充**：
+  - 播放中进度条连续更新，结束时归零并隐藏
+  - 暂停后“继续播放”按钮可见且可恢复播放；恢复后按钮消失
+  - 连续执行“播放→暂停→继续→暂停→重播”不少于 `30` 次，无崩溃、无重复回调、无错乱进度
+
+##### S2.3.a.d（2026-04-01）：语音“已读/未读”口径闭环校验与澄清
+
+- 状态：开发完成（待人工回归）
+- **口径冻结**：
+  - 群聊语音消息“已读/未读xx”统计口径为 `lastReadSequence >= message.sequence`，属于会话阅读水位，不依赖是否点击播放
+  - 语音“未听点”由 `voicePlayed` 控制，表示“当前用户是否已播放过该条语音”（不参与群聊已读统计）
+  - `voicePlayed` 与服务端已读回执解耦：已读不等于已听，已听也不回写为群聊已读统计
+- **实现补齐**：
+  - 语音消息打开“已读详情”面板时，展示口径说明：`已读按会话阅读水位统计，不代表已听语音`
+  - 保持发送者侧入口文案为“已读/未读”，不引入“已听xx”伪统计，避免误导
+  - `GET /system/im/read-receipt/summary` 返回补充 `messageType`、`readBasis` 字段；`readBasis` 固定为 `conversation_read_watermark`
+  - 前端“语音口径提示”优先使用 `summary.messageType` 判定，避免仅依赖本地消息列表命中导致提示缺失
+- **验收补充**：
+  - 对方未播放但进入会话后：发送者侧“未读xx”减少/归零；接收侧语音未听点仍保留
+  - 对方播放后：仅接收侧未听点消失；发送者侧“已读/未读”统计不因播放动作单独变化
+
+##### S2.3.a.e（2026-04-02）：语音未听红点多端同步闭环
+
+- 状态：开发完成（含批量上报/补偿拉取/保留期清理，待人工回归）
+- **需求冻结**：
+  - 接收端语音消息默认显示未听红点；任一端首次点击播放后红点消失
+  - 同账号多端需实时同步红点消失，刷新/重进后保持一致
+- **实现补齐**：
+  - 新增语音播放状态表 `im_message_voice_play`（按 `tenantId + userId + messageId` 幂等落库）
+  - 新增接口 `PUT /system/im/message/mark-voice-played?messageId=...`
+  - 新增接口 `PUT /system/im/message/mark-voice-played-batch?messageIds=...`（端侧 300ms 聚合上报）
+  - 新增接口 `GET /system/im/message/voice-played-status?chatId=...&messageIds=...`（推送丢失补偿校准）
+  - 新增 `SYSTEM_NOTIFY` 扩展动作 `voice_played`，用于在线端实时同步
+  - 历史/分页/窗口消息查询返回 `voicePlayed` 字段，端侧初始化时可直接渲染正确红点状态
+  - `chat.uvue` 在播放开始后执行：本地置 `voicePlayed=true` + 入队上报（300ms flush）+ 监听 `voice_played` 实时消红点
+  - 页面 `onHide/onUnload/onUnmounted` 触发语音已播队列强制 flush，降低切页丢上报概率
+  - 新增定时清理任务 `ImVoicePlayCleanupJob`（`im.voice-play.cleanup.*`），对 `im_message_voice_play` 做保留期分批清理
+  - `im_message_voice_play` 新增 `idx_played_time(played_time, tenant_id, deleted)` 索引，保障清理与时间范围扫描效率
+- **验收补充**：
+  - A 端播放后，B 端（同账号在线）1s 内同步去红点
+  - B 端离线期间 A 端已播放；B 端重进会话后红点保持消失
+  - 高频连续播放场景下，语音已播上报请求显著低于逐条即时上报（300ms 聚合）
+  - 推送偶发丢失时，端侧定时补偿可在下次轮询内修正红点状态（最终一致）
+  - 同一条语音重复上报 `mark-voice-played/mark-voice-played-batch` 幂等，无重复通知风暴
 
 #### S2.4（P1）：下载/预览鉴权（过期 URL / 服务端代理）
 
