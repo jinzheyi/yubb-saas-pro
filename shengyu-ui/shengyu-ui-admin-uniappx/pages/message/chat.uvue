@@ -5044,6 +5044,44 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		})
 	}
 
+	function showVoiceTooShortToast(): void {
+		uni.showToast({
+			title: '说话时间太短',
+			icon: 'none',
+			duration: 2000
+		})
+	}
+
+	function buildVoiceRecordErrorText(err: any): string {
+		try {
+			if (err == null) {
+				return ''
+			}
+			const code = err.code != null ? String(err.code) : ''
+			const name = err.name != null ? String(err.name) : ''
+			const message = err.errMsg != null
+				? String(err.errMsg)
+				: (err.message != null ? String(err.message) : String(err))
+			return `${code}|${name}|${message}`.toLowerCase()
+		} catch (e) {
+			return ''
+		}
+	}
+
+	function isVoiceRecordTooShortError(err: any): boolean {
+		const text = buildVoiceRecordErrorText(err)
+		if (text === '') {
+			return false
+		}
+		return text.indexOf('too short') >= 0
+			|| text.indexOf('recording time too short') >= 0
+			|| text.indexOf('time too short') >= 0
+			|| text.indexOf('empty voice samples') >= 0
+			|| text.indexOf('empty voice blob') >= 0
+			|| text.indexOf('说话时间太短') >= 0
+			|| text.indexOf('录音时间太短') >= 0
+	}
+
 	function isBrowserVoiceRecorderAvailable(): boolean {
 		// #ifdef H5
 		try {
@@ -5110,7 +5148,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		if (durationMs < MIN_VOICE_DURATION_MS) {
 			revokeObjectUrl(tempFilePath)
-			uni.showToast({ title: '说话时间太短', icon: 'none' })
+			showVoiceTooShortToast()
 			return
 		}
 		if (tempFilePath === '' && sourceBlob == null) {
@@ -5126,6 +5164,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	function handleVoiceRecordError(err: any): void {
 		console.error('[Chat] 录音失败:', err)
 		resetVoiceRecordState()
+		if (isVoiceRecordTooShortError(err)) {
+			showVoiceTooShortToast()
+			return
+		}
 		promptVoiceRecordUnavailable('录音失败，请检查麦克风权限')
 	}
 
@@ -5422,8 +5464,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			format: VOICE_RECORD_FORMAT,
 			fail: (err: any) => {
 				console.error('[Chat] 开始录音失败', err)
-				resetVoiceRecordState()
-				promptVoiceRecordUnavailable('录音失败，请检查麦克风权限')
+				handleVoiceRecordError(err)
 			}
 		})
 		startRecordingDurationTracking()
