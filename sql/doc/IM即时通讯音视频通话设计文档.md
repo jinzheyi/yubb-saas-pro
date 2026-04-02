@@ -2,8 +2,8 @@
 description: IM 音视频通话（WebRTC 自研）设计文档
 owner: IM
 status: draft
-version: v1.1
-updated: 2026-04-01
+version: v1.2
+updated: 2026-04-02
 ---
 
 # IM 即时通讯音视频通话设计文档（纯自研 WebRTC 路线）
@@ -837,3 +837,455 @@ const videoConstraints = {
 | `ImCallEndReasonEnum` | **待实现** | `enums/im/ImCallEndReasonEnum.java` |
 | `ImCallSignalTypeEnum` | **待实现** | `enums/im/ImCallSignalTypeEnum.java` |
 | DDL `im_call_event` | **待实现（Phase 2）** | `sql/mysql/1.0/im/` |
+
+---
+
+## 11. 移动端 UI 设计规范（开工参考）
+
+> 本节为 `call.uvue` 实现提供可落地的界面规格，参考微信 iOS/Android 通话 UI 实际行为、FaceTime PiP 交互标准及业界最佳实践整理，覆盖"来电 → 拨出等待 → 通话中 → 结束"完整生命周期。
+
+### 11.1 界面状态清单与路由
+
+`call.uvue` 是单页面，通过 `callUiState` 内部状态切换视图，**不跳转新页面**，避免来电被路由栈打断。
+
+| UI 状态（`callUiState`） | 对应端侧通话状态 | 触发来源 |
+|--------------------------|----------------|---------|
+| `INCOMING` | `IDLE`（收到信令 CALL） | WS CALL_SIGNAL(1) 推送 |
+| `OUTGOING_RINGING` | `OUTGOING_RINGING` | 用户主动发起 |
+| `CONNECTING` | `CONNECTING` | 己方 ANSWER 成功 / 对方 ANSWER 成功 |
+| `CONNECTED_VOICE` | `CONNECTED`（callType=1） | ICE 连通 |
+| `CONNECTED_VIDEO` | `CONNECTED`（callType=2） | ICE 连通 |
+| `ENDED` | `ENDED` | HANGUP/REJECT/TIMEOUT/BUSY 任一 |
+| `MINIMIZED` | 任何通话中状态 | 用户退出页面 / 点击最小化 |
+
+**路由约定**：
+- 来电触发：`call-service.uts` 收到 CALL 信令后，若当前不在 call 页面，`uni.navigateTo({ url: '/pages/message/call' })` 并传入 `callId`
+- 主动拨出：聊天页面或联系人页面按钮触发，携带 `targetUserId` 和 `callType` 跳转
+
+---
+
+### 11.2 来电界面（`callUiState = INCOMING`）
+
+#### 布局结构（ASCII 线框图）
+
+```
+┌────────────────────────────────┐
+│                                │  ← 状态栏（深色字体，全屏背景覆盖）
+│                                │
+│        ┌──────────┐            │
+│        │          │            │  ← 对方头像（圆形，直径 80px，居中偏上 30%）
+│        │  AVATAR  │            │
+│        └──────────┘            │
+│                                │
+│      对方昵称（20px，白色）     │  ← 名字居中
+│   "邀请你进行语音/视频通话"     │  ← 状态副文字（14px，白色 70% 透明度）
+│                                │
+│  （视频来电：本地预览即刻开启）  │
+│                                │
+│                                │  ← 中间留白区（防误触）
+│                                │
+│  ┌──────────┐  ┌──────────┐   │
+│  │  拒绝    │  │  接听    │   │  ← 按钮区（底部安全区上方 48px）
+│  │  红色圆  │  │  绿色圆  │   │
+│  └──────────┘  └──────────┘   │
+│  （可选）发消息   （可选）语音接听 │  ← 按钮下方文字标签（12px）
+│                                │
+└────────────────────────────────┘
+```
+
+#### 设计规范
+
+| 属性 | 语音来电 | 视频来电 |
+|------|----------|----------|
+| 背景 | 深色渐变（`#1C1C1C → #000000`，纵向渐变）| 对方暂无预览时同语音；有预览流时铺满对方画面 + 毛玻璃 |
+| 对方头像 | 圆形，直径 80px，2px 白色边框 | 同左，头像位置可适当上移（画面区域优先） |
+| 接听按钮 | 绿色圆形（直径 64px），电话图标 | 绿色圆形，视频图标 |
+| 拒绝按钮 | 红色圆形（直径 64px），挂断图标 | 同左 |
+| 按钮横间距 | 两按钮左右均分，各距屏幕边缘约 20% | 同左 |
+| 触摸目标 | 最小 44pt(iOS) / 48dp(Android)，按钮之间间距 ≥ 40px | 同左 |
+| 拒接后"发消息"入口 | 拒绝按钮下方显示"发消息"（12px 文字按钮，可选实现） | 同左 |
+
+#### 振铃行为
+
+- 进入 `INCOMING` 状态时立刻调用 `uni.vibrate()` + 播放系统铃声
+- 离开 `INCOMING`（接听 / 拒绝 / 超时）时停止振铃
+
+---
+
+### 11.3 拨出等待界面（`callUiState = OUTGOING_RINGING`）
+
+#### 布局结构
+
+```
+┌────────────────────────────────┐
+│                                │
+│                                │
+│        ┌──────────┐            │
+│        │  AVATAR  │            │  ← 对方头像（圆形，直径 80px）
+│        └──────────┘            │     外圈：脉冲波纹动画（2-3 圈扩散）
+│      ╰──────────────╯          │
+│    ╰──────────────────────╯    │
+│                                │
+│         对方昵称               │
+│    "等待对方接受邀请..."        │  ← 省略号循环动画（...）
+│                                │
+│  （视频通话：己方摄像头预览    │
+│    铺满背景，本人先看到自己）   │
+│                                │
+│                                │
+│         ┌──────────┐           │
+│         │   取消   │           │  ← 红色圆形大按钮，居中
+│         └──────────┘           │
+│                                │
+└────────────────────────────────┘
+```
+
+#### 脉冲波纹动画规范
+
+- 3 圈同心圆，从头像外边缘向外扩散
+- 透明度：外圈 0.1 → 内圈 0.4，逐圈递减
+- 颜色：与接听按钮颜色一致（绿色 `#07C160` 或白色，依背景而定）
+- 周期：1.5s 循环，各圈错开 0.5s 延迟
+- 实现：`uni-app x` 使用 CSS `@keyframes` + `animation-delay`
+
+#### 取消按钮
+
+- 样式：红色圆形，直径 64px，电话挂断图标（话筒斜向下）
+- 位置：垂直居中偏下（约屏幕高度 75% 处），水平居中
+- 文字标签：按钮下方 8px，"取消"（12px，白色 70% 透明）
+
+---
+
+### 11.4 通话中界面
+
+#### 11.4.1 语音通话（`callUiState = CONNECTED_VOICE`）
+
+```
+┌────────────────────────────────┐
+│  [最小化 ↙]         [通话中…]  │  ← 顶部工具栏（状态栏下方）
+│                                │
+│                                │
+│        ┌──────────┐            │
+│        │  AVATAR  │            │  ← 对方头像（直径 64px，居中偏上）
+│        └──────────┘            │
+│         对方昵称               │
+│      ⏱  00:05:23               │  ← 通话计时器（绿色，居中）
+│                                │
+│                                │  ← 大面积空白区（防误触）
+│                                │
+│  ┌──────┐ ┌──────┐ ┌──────┐   │
+│  │ 静音 │ │扬声器│ │ 键盘 │   │  ← 次控制栏（3个灰色圆角方块，可选）
+│  └──────┘ └──────┘ └──────┘   │
+│                                │
+│         ┌──────────┐           │
+│         │   挂断   │           │  ← 红色圆形大按钮，居中
+│         └──────────┘           │
+└────────────────────────────────┘
+```
+
+**次控制栏按钮规范**：
+
+| 按钮 | 图标 | 激活状态视觉 |
+|------|------|------------|
+| 静音 | 麦克风图标 | 激活时图标变白 + 背景变深，图标加斜线 |
+| 扬声器 | 扬声器图标 | 激活时同上 |
+| 键盘 | 九宫格图标 | 点击展开数字键盘浮层 |
+
+#### 11.4.2 视频通话（`callUiState = CONNECTED_VIDEO`）
+
+```
+┌────────────────────────────────┐
+│                                │  ← 对方视频画面铺满全屏（SurfaceView/VideoView）
+│                        ┌────┐  │
+│                        │己方│  │  ← 本地预览小窗（PiP）
+│                        │预览│  │     默认位置：右上角
+│                        └────┘  │     尺寸：宽屏高比 9:16，约 90×120pt
+│                                │     圆角：8pt，阴影深度 4dp
+│       [对方名字  00:05:23]      │  ← 状态叠加文字（仅在控制栏显示时可见）
+│                                │
+│                                │
+│                                │
+│                                │
+├────────────────────────────────┤
+│  [关摄] [静音] [翻转] [ 挂断 ] │  ← 底部控制栏（半透明黑底 #00000080）
+└────────────────────────────────┘
+```
+
+**本地预览小窗（PiP）行为规范**：
+
+| 属性 | 规范 |
+|------|------|
+| 默认位置 | 右上角，距右边缘 12px，距安全区顶部 12px |
+| 可拖拽 | 支持拖拽，松手后**吸附到最近的四角** |
+| 四角安全边距 | 距屏幕边缘 12px，距安全区上下 12px |
+| 拖拽时样式 | 轻微放大至 1.05x + 投影增强（elevation +2dp） |
+| 点击己方小窗 | 主副画面交换（大画面 ↔ 小窗内容互换） |
+| 对方无画面时 | 小窗退化为对方头像占位图 |
+
+**底部控制栏按钮规范**：
+
+| 按钮 | 图标 | 状态说明 |
+|------|------|---------|
+| 关闭摄像头 | 摄像机图标 | 关闭时图标加斜线，己方小窗变黑屏+头像 |
+| 静音麦克风 | 麦克风图标 | 静音时图标加斜线 |
+| 前后摄像头切换 | 摄像机+旋转箭头 | 点击后执行 0.3s 水平翻转过渡动画 |
+| 挂断 | 电话挂断图标 | 常态红色圆形大按钮，不缩小 |
+
+**控制栏自动隐藏**：
+- 无操作 4 秒后控制栏渐隐（透明度 1.0 → 0，动画时长 0.3s）
+- 点击屏幕任意非按钮区域重新显示（反向渐显）
+
+---
+
+### 11.5 通话结束界面（`callUiState = ENDED`）
+
+```
+┌────────────────────────────────┐
+│                                │
+│   （在通话中界面上叠加遮罩层） │
+│                                │
+│          对方头像               │  ← 渐淡，透明度从 1.0 → 0.4
+│                                │
+│       [结束状态文案]            │
+│     通话时长  05:23            │  ← 仅在正常接通时显示
+│                                │
+│                                │
+│                                │
+└────────────────────────────────┘
+```
+
+**结束文案映射**：
+
+| `endReason` / 场景 | 显示文案 | 时长行是否显示 |
+|--------------------|---------|--------------|
+| `HANGUP`（正常挂断） | `通话时长 MM:SS` | 显示 |
+| `REJECT`（对方拒绝） | `对方已拒绝` | 不显示 |
+| `TIMEOUT`（无人接听） | `对方未接听` | 不显示 |
+| `CANCEL`（主叫取消） | `通话已取消` | 不显示 |
+| `BUSY`（对方忙线） | `对方正在通话中` | 不显示 |
+| 网络断开 | `通话已断开` | 不显示 |
+
+**自动消失机制**：
+- 展示 2.5 秒后自动 `uni.navigateBack()` 返回聊天界面
+- 若用户在 2.5 秒内点击"再次通话"，重置状态并立刻发起
+
+---
+
+### 11.6 悬浮窗（`callUiState = MINIMIZED`）
+
+#### 触发时机
+1. 用户在通话中按下 Home 键 / 手势上划退到后台
+2. 用户点击通话界面内"最小化"按钮（顶部左上角 `[↙]`）
+
+#### 平台差异
+
+**iOS（`AVPictureInPictureController`）**：
+- 系统级 PiP 窗口，小圆角矩形浮在所有 App 上方
+- 内容：**仅能显示己方摄像头画面**（系统权限限制，无法显示对方）
+- 语音通话降级：显示头像 + 计时器的自定义视图（非系统 PiP）
+- 点击悬浮窗：拉起 `call.uvue` 页面回到全屏
+
+**Android（`WindowManager` 自绘）**：
+- 自绘悬浮窗（需 `SYSTEM_ALERT_WINDOW` 权限）
+- 内容：对方头像 + 通话计时器（语音）；双方缩略画面（视频，Phase 2）
+- 初始位置：右上角，可全屏拖拽
+- 尺寸：64×64dp 圆形（语音）/ 90×120dp 圆角矩形（视频）
+
+#### 组件落点
+
+悬浮窗逻辑提取到独立组件，避免与 `call.uvue` 主逻辑耦合：
+
+```
+utils/call-float-window.uts   ← 悬浮窗创建/销毁/更新（platform-specific）
+// #ifdef APP-IOS
+  → 调用 Native Plugin: RTCPiPController.startPiP() / stopPiP()
+// #endif
+// #ifdef APP-ANDROID
+  → 调用 Native Plugin: FloatWindowManager.show() / hide() / update()
+// #endif
+```
+
+---
+
+### 11.7 聊天消息列表中的通话气泡
+
+通话结束后服务端产生 `CALL_RECORD(209)` 消息，端侧在聊天消息列表中渲染为通话气泡。
+
+#### 气泡样式规范
+
+```
+┌────────────────────────────────────┐
+│  [📞/📹 图标]  通话类型  时长/状态  │   ← 宽度约 160px，高度 48px
+└────────────────────────────────────┘
+```
+
+**字段映射**：
+
+| `callType` | `status` | 图标 | 图标朝向 | 文案 | 文字颜色 |
+|-----------|---------|------|---------|------|---------|
+| 1（语音） | 2（已接通） | 电话图标 | 右上 45°（拨出方）/ 左下 -45°（来电方） | `语音通话 MM:SS` | 正常 |
+| 2（视频） | 2（已接通） | 摄像机图标 | 同上 | `视频通话 MM:SS` | 正常 |
+| 1/2 | 1（未接听） | 电话图标 | 左下（来电方未接听） | `未接听` | `#FF4444`（红） |
+| 1/2 | 3（已拒绝） | 电话图标 | — | `已拒绝` | 灰色 |
+| 1/2 | 5（已取消） | 电话图标 | — | `已取消` | 灰色 |
+| 1/2 | 4（忙线） | 电话图标 | — | `对方忙线` | 灰色 |
+
+**图标朝向规则**（参考系统电话记录图标惯例）：
+- 拨出方视角（己方 = 呼叫者）：图标斜向右上 45°
+- 接入方视角（己方 = 被呼叫者）：图标斜向左上 45°（来电接通）或斜向左下 -45°（漏接）
+
+**未接听气泡特殊处理**：
+- 气泡背景色添加轻微红色提示（`#FFF0F0` 或在深色模式下 `#3D1F1F`）
+- 文字颜色变红 `#FF4444`
+- 未接听通话应在会话列表预览中显示为 `[未接听]` 红色文字
+
+**点击气泡行为**：点击通话气泡 → 展示通话详情弹窗（时长、时间、呼叫类型）+ "再次呼叫"按钮
+
+#### 气泡实现落点
+
+在聊天消息渲染器中新增 `CALL_RECORD = 209` 分支：
+
+```typescript
+// pages/message/components/message-item.uvue（或同等渲染组件）
+case MessageType.CALL_RECORD:
+  return renderCallRecordBubble(message.body as CallRecordMessage)
+```
+
+---
+
+### 11.8 麦克风 / 摄像头权限请求流程
+
+#### 时机（Just-in-Time，即时请求）
+
+```
+用户点击"发起通话"按钮
+       ↓
+call-service.uts: checkAndRequestPermissions(callType)
+       ↓
+   已授权？
+  ├─ Yes → 直接发起
+  └─ No  → 显示说明弹窗 → 系统权限弹框
+               ↓
+           用户拒绝 → 显示引导弹窗（"去设置"按钮）→ 跳转系统设置
+```
+
+**权限按通话类型申请**：
+
+| 通话类型 | 必需权限 |
+|---------|---------|
+| 语音通话 | 麦克风（`RECORD_AUDIO` / `NSMicrophoneUsageDescription`） |
+| 视频通话 | 麦克风 + 摄像头（`CAMERA` / `NSCameraUsageDescription`） |
+
+**uni-app x 权限 API**：
+
+```typescript
+// call-service.uts 权限检查伪代码
+async function checkAndRequestPermissions(callType: number): Promise<boolean> {
+  const permissions = callType === 2
+    ? ['android.permission.CAMERA', 'android.permission.RECORD_AUDIO']
+    : ['android.permission.RECORD_AUDIO']
+  // #ifdef APP-ANDROID
+  const result = await uni.requestPermissions({ permissions })
+  // #endif
+  // #ifdef APP-IOS
+  // iOS 通过 AVCaptureDevice.requestAccess() Native Plugin 调用
+  // #endif
+  return result.every(r => r.authStatus === 'authorized')
+}
+```
+
+**系统权限 Info.plist / AndroidManifest 字段**（开工时在配置文件补充）：
+
+```xml
+<!-- Android: AndroidManifest.xml -->
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />  <!-- 悬浮窗 -->
+
+<!-- iOS: Info.plist -->
+<key>NSMicrophoneUsageDescription</key>
+<string>需要麦克风权限用于语音/视频通话</string>
+<key>NSCameraUsageDescription</key>
+<string>需要摄像头权限用于视频通话</string>
+```
+
+---
+
+### 11.9 交互动效规范
+
+| 场景 | 动效 | 时长 | 曲线 |
+|------|------|------|------|
+| 来电界面进入 | 从底部滑入（translateY 100% → 0） | 300ms | ease-out |
+| 来电 → 通话中 | 按钮区淡出 + 控制栏淡入 | 200ms | ease |
+| 通话中 → 结束 | 黑色遮罩淡入（opacity 0 → 0.7） | 300ms | ease-in |
+| 结束界面自动消失 | 整个遮罩淡出 | 300ms | ease-out |
+| 摄像头切换 | 水平翻转（scaleX 1 → -1 → 1） | 300ms | ease |
+| 控制栏隐藏/显示 | opacity 渐变 | 300ms | ease |
+| 脉冲波纹（等待） | scale(1) → scale(2)，opacity 0.4 → 0 | 1.5s | ease-out，循环 |
+| 本地预览拖拽吸附 | spring 动效（弹性回弹） | 400ms | spring(damping=0.7) |
+
+---
+
+### 11.10 平台适配说明（uni-app x）
+
+| 特性 | Web 端 | Android | iOS |
+|------|--------|---------|-----|
+| WebRTC | 直接用浏览器 API | Native Plugin（libwebrtc） | Native Plugin（WebRTC.framework） |
+| 悬浮窗 | 不支持（页面内 overlay） | `WindowManager` Native Plugin | `AVPictureInPictureController` |
+| 系统来电界面 | 不适用 | `ConnectionService` API（可选，Phase 2） | `CallKit` 框架（可选，Phase 2） |
+| 振铃 | `HTMLAudioElement` | 系统铃声 / `AudioManager` | `AVAudioSession` |
+| 权限申请 | 浏览器 `getUserMedia` 弹框 | `uni.requestPermissions` | Info.plist + 系统弹框 |
+| PiP 小窗内显示对方画面 | 支持 | 支持（自绘 `WindowManager`） | 不支持（需特殊企业权限） |
+
+**Phase 0 / Phase 1 仅实现**：
+```
+// #ifdef APP-ANDROID
+  → 实现 Android 悬浮窗
+// #endif
+// #ifdef APP-IOS
+  → 实现 iOS PiP（仅己方预览）
+// #endif
+// #ifdef WEB
+  → 页面内 fixed overlay 模拟
+// #endif
+```
+
+---
+
+### 11.11 端侧 UI 文件级实现清单（补充 §6.2）
+
+| 文件 | 职责 | Phase |
+|------|------|-------|
+| `pages/message/call.uvue` | 主通话页面，管理所有 `callUiState` 切换，渲染各状态视图 | Phase 0 |
+| `pages/message/components/call-incoming.uvue` | 来电界面组件（可拆为独立组件） | Phase 0 |
+| `pages/message/components/call-outgoing.uvue` | 拨出等待界面组件 | Phase 0 |
+| `pages/message/components/call-voice-connected.uvue` | 语音通话中组件 | Phase 0 |
+| `pages/message/components/call-video-connected.uvue` | 视频通话中组件 | Phase 1 |
+| `pages/message/components/call-ended.uvue` | 通话结束组件 | Phase 0 |
+| `pages/message/components/call-record-bubble.uvue` | 聊天记录中的通话气泡组件 | Phase 0 |
+| `utils/call-float-window.uts` | 悬浮窗创建/销毁（平台 Native Plugin 调用） | Phase 1 |
+| `utils/call-timer.uts` | 通话计时器（计秒 + 格式化 `MM:SS`） | Phase 0 |
+| `utils/call-permission.uts` | 权限检查与请求封装 | Phase 0 |
+
+**`call.uvue` 关键 Props / 入口**：
+
+```typescript
+// 来电场景（WS 推送触发跳转时传入）
+interface IncomingCallParams {
+  callId: string
+  callType: number          // 1-语音 2-视频
+  callerId: string          // Long → string（精度保护）
+  callerNickname: string
+  callerAvatar: string
+}
+
+// 主动拨出场景
+interface OutgoingCallParams {
+  callType: number
+  targetUserId: string
+  targetNickname: string
+  targetAvatar: string
+}
+```
+

@@ -2445,16 +2445,7 @@
 	// 处理发送者信息缺失的后备方案
 	const senderNickname = msg.senderNickname || ''
 	const avatarText = senderNickname ? getAvatarTextUtil(senderNickname) : '?'
-	let isSelfVal = false
-	try {
-		if ((msg as any).isSelf != null) {
-			isSelfVal = !!(msg as any).isSelf
-		} else {
-			isSelfVal = senderIdStr === currentUserId.value
-		}
-	} catch (e) {
-		isSelfVal = senderIdStr === currentUserId.value
-	}
+	const isSelfVal = resolveMessageIsSelf((msg as any).isSelf, senderIdStr)
 		// 后端 status: 0-发送中 1-已发送 2-已读 3-失败 6-已撤回
 		// 这里保留数值状态，避免把 status=2 误映射为 'sending' 导致气泡旁已读/未读入口不展示
 		let statusVal: any = (msg as any).status
@@ -2545,7 +2536,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			receiverId: receiverIdStr,
 			type: resolveUiMessageType(msg.type, msg.content, (msg as any).extra),
 			content: getServiceMessageContent(msg),
-			isSelf: msg.isSelf,
+			isSelf: resolveMessageIsSelf((msg as any).isSelf, senderIdStr),
 			time: new Date(msg.timestamp).toLocaleString(),
 			timestamp: msg.timestamp,
 			showTime: true,
@@ -2816,6 +2807,57 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return ''
 		}
 		return content?.toString ? content.toString() : ''
+	}
+
+	function parseBooleanLike(value: any): boolean | null {
+		if (value === true) {
+			return true
+		}
+		if (value === false) {
+			return false
+		}
+		if (value === 1 || value === '1') {
+			return true
+		}
+		if (value === 0 || value === '0') {
+			return false
+		}
+		if (value == null) {
+			return null
+		}
+		const text = String(value).trim().toLowerCase()
+		if (text === '') {
+			return null
+		}
+		if (text === 'true' || text === 'yes' || text === 'y') {
+			return true
+		}
+		if (text === 'false' || text === 'no' || text === 'n') {
+			return false
+		}
+		return null
+	}
+
+	function resolveMessageIsSelf(rawIsSelf: any, senderId: any): boolean {
+		const senderIdStr = senderId != null ? String(senderId).trim() : ''
+		const selfIdStr = currentUserId.value != null ? String(currentUserId.value).trim() : ''
+		if (senderIdStr !== '' && senderIdStr !== '0' && selfIdStr !== '' && selfIdStr !== '0') {
+			return senderIdStr === selfIdStr
+		}
+		const parsed = parseBooleanLike(rawIsSelf)
+		return parsed === true
+	}
+
+	function pickMergedIsSelfFlag(prev: any, next: any, senderId: any): boolean {
+		const nextRaw = next != null ? (next as any).isSelf : null
+		if (parseBooleanLike(nextRaw) != null) {
+			return resolveMessageIsSelf(nextRaw, senderId)
+		}
+		const prevRaw = prev != null ? (prev as any).isSelf : null
+		if (parseBooleanLike(prevRaw) != null) {
+			return resolveMessageIsSelf(prevRaw, senderId)
+		}
+		return resolveMessageIsSelf(null, senderId)
 	}
 
 	function parseRawContent(content : any) : any {
@@ -3172,7 +3214,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				finalMsg.time = pickNonEmpty(prev.time, next.time)
 				finalMsg.senderId = pickNonEmpty(prev.senderId, next.senderId)
 				finalMsg.receiverId = pickNonEmpty(prev.receiverId, next.receiverId)
-				finalMsg.isSelf = (next.isSelf !== null) ? next.isSelf : prev.isSelf
+				finalMsg.isSelf = pickMergedIsSelfFlag(prev, next, finalMsg.senderId)
 				finalMsg.reeditContent = pickNonEmpty(prev.reeditContent, next.reeditContent)
 				finalMsg.reeditDeadlineTs = pickNonEmpty(prev.reeditDeadlineTs, next.reeditDeadlineTs)
 				return finalMsg
@@ -3185,7 +3227,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			merged.status = pickNonEmpty(prev.status, next.status)
 			merged.senderId = pickNonEmpty(prev.senderId, next.senderId)
 			merged.receiverId = pickNonEmpty(prev.receiverId, next.receiverId)
-			merged.isSelf = (next.isSelf !== null) ? next.isSelf : prev.isSelf
+			merged.isSelf = pickMergedIsSelfFlag(prev, next, merged.senderId)
 			merged.reeditContent = pickNonEmpty(prev.reeditContent, next.reeditContent)
 			merged.reeditDeadlineTs = pickNonEmpty(prev.reeditDeadlineTs, next.reeditDeadlineTs)
 			return merged
@@ -3226,6 +3268,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	 * 处理新消息
 	 */
 	function handleNewMessage(message : ServiceMessageItem) {
+		const incomingIsSelf = resolveMessageIsSelf((message as any).isSelf, (message as any).senderId)
 		// 只处理当前会话的消息（优先按 chatId 精确匹配，兼容旧链路按 target 匹配）
 		const incomingChatId = (message as any).chatId != null ? String((message as any).chatId) : ''
 		const pageChatId = chatId.value != null ? String(chatId.value) : ''
@@ -3235,7 +3278,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else {
 			const msgTargetId = (message.groupId !== '0' && message.groupId !== '')
 				? message.groupId
-				: (message.isSelf ? message.receiverId : message.senderId)
+				: (incomingIsSelf ? message.receiverId : message.senderId)
 			const currentTargetId = chatType.value === 'group'
 				? targetId.value
 				: getReceiverIdForMessage()
@@ -3288,7 +3331,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			content: getServiceMessageContent(message),
 			sequence: (message as any).sequence != null ? String((message as any).sequence) : null,
 			groupId: (message as any).groupId != null ? String((message as any).groupId) : null,
-			isSelf: message.isSelf,
+			isSelf: incomingIsSelf,
 			time: new Date(message.timestamp).toLocaleString(),
 			timestamp: message.timestamp,
 			showTime: true,
@@ -3373,7 +3416,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		scrollToBottom()
 		
 		// 发送已读回执（如果不是自己发送的）
-		if (!message.isSelf) {
+		if (!incomingIsSelf) {
 			// 群聊已读以服务端 readSequence 水位为准，禁用逐条回执，避免回执风暴
 			if (chatType.value !== 'group') {
 				messageService.sendReadReceipt(message.senderId, [message.messageId])
@@ -3502,7 +3545,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		const idSet = new Map<string, boolean>()
 		for (let i = messages.value.length - 1; i >= 0; i--) {
 			const item: any = messages.value[i]
-			if (item == null || item.isSelf === true) {
+			if (item == null || resolveMessageIsSelf((item as any).isSelf, (item as any).senderId)) {
 				continue
 			}
 			const messageType = item.type != null ? String(item.type) : ''
@@ -3606,7 +3649,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function markVoicePlayedOnClick(msg: any): void {
-		if (msg == null || msg.isSelf === true) {
+		if (msg == null || resolveMessageIsSelf((msg as any).isSelf, (msg as any).senderId)) {
 			return
 		}
 		const messageId = resolveVoiceMessageId(msg)
@@ -7714,7 +7757,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function shouldShowVoiceUnreadDot(msg: any): boolean {
-		if (msg == null || msg.isSelf === true) {
+		if (msg == null || resolveMessageIsSelf((msg as any).isSelf, (msg as any).senderId)) {
 			return false
 		}
 		return !isVoicePlayedFlag((msg as any).voicePlayed)
@@ -8071,7 +8114,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						refreshVoicePlaybackProgressFromContext(messageId)
 						startPlaybackWaveAnimation()
 					}
-					if (msg != null && msg.isSelf !== true && messageId !== '' && !hasVoiceBeenPlayed(messageId)) {
+					if (msg != null && !resolveMessageIsSelf((msg as any).isSelf, (msg as any).senderId) && messageId !== '' && !hasVoiceBeenPlayed(messageId)) {
 						markVoicePlayed(messageId)
 						patchMessageInList(messageId, { voicePlayed: true })
 						syncVoicePlayedToServer(messageId)
@@ -8767,6 +8810,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		margin-bottom: 16px;
 		position: relative;
 		width: 100%;
+		overflow: visible;
 	}
 
 	.recall-system-tip {
@@ -8873,6 +8917,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		align-items: flex-start;
 		max-width: 85%;
 		min-width: 0;
+		overflow: visible;
 	}
 
 	.read-receipt-entry {
@@ -9107,10 +9152,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.voice-bubble-row {
 		flex-direction: row;
 		align-items: center;
+		overflow: visible;
+		padding-right: 8px;
 	}
 
 	.voice-bubble-row-self {
 		flex-direction: row-reverse;
+		padding-right: 0;
+		padding-left: 8px;
 	}
 
 	.bubble-voice {
@@ -9302,13 +9351,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.voice-unread-dot {
 		position: absolute;
-		right: -12px;
+		right: -8px;
 		top: 50%;
 		transform: translateY(-50%);
 		width: 8px;
 		height: 8px;
 		background-color: #F54A45;
 		border-radius: 4px;
+		z-index: 2;
+		border-width: 1px;
+		border-color: #FFFFFF;
 	}
 
 	/* 文件消息 */
