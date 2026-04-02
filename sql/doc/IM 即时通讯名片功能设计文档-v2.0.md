@@ -1,181 +1,152 @@
-# IM 即时通讯 - 名片功能设计补充文档 v2.0
+# IM 即时通讯名片功能设计文档 v2.0
 
-## 一、功能概述
-
-### 1.1 功能描述
-在对话页面中添加"名片"功能，用户可以：
-- 点击名片图标进入联系人选择界面
-- 从联系人列表中选择要分享的用户
-- 发送用户名片消息到当前对话
-- 接收方点击名片卡片可以查看用户详情
-- 接收方可以快速发起与该用户的会话
-
-### 1.2 UI 交互流程
-```
-对话页面 → 点击"+"更多 → 点击"名片"图标 
-→ 进入联系人选择页面
-→ 搜索或选择联系人
-→ 确认发送名片
-→ 对话页面显示名片卡片消息
-→ 点击卡片 → 查看用户详情
-→ 点击"发消息" → 跳转到与该用户的私聊窗口
-```
+> **文档版本**: v2.0.0  
+> **创建日期**: 2026-04-02  
+> **项目**: 圣钰 SaaS Pro - IM 即时通讯系统  
+> **定位**: 企业内部 IM 名片分享功能  
+> **目标体验**: 对齐企业微信/钉钉的名片分享与快速操作体验  
+> **关联文档**: `sql/doc/IM即时通讯架构设计文档-v2.0.md`
 
 ---
 
-## 二、技术方案
+## 1. 功能概述与范围
 
-### 2.1 名片消息类型定义
+### 1.1 功能定义
+在企业 IM 系统中实现**名片消息**功能，支持用户在聊天中分享联系人名片，接收方可快速查看详情并发起对话。
+
+**核心价值**：
+- 快速介绍：避免手动输入用户信息
+- 组织发现：帮助成员快速找到同事并建立联系
+- 业务协同：支持跨部门、跨项目的人员推介
+
+### 1.2 范围边界（In Scope / Out Scope）
+
+#### In Scope
+- ✅ **名片消息发送**：从聊天页"+"入口选择联系人并发送名片
+- ✅ **名片卡片展示**：卡片式 UI 布局，显示头像、姓名、职位、公司
+- ✅ **快速操作**：点击"发消息"直接跳转到私聊窗口
+- ✅ **用户详情**：点击卡片查看完整用户信息（复用现有页面）
+- ✅ **权限控制**：仅限同租户用户，敏感信息脱敏
+- ✅ **多端一致**：App/H5 统一体验
+
+#### Out Scope（本期不实现）
+- ❌ **好友关系**：企业 IM 无好友概念，不涉及添加好友流程
+- ❌ **外部联系人**：不支持分享企业外部人员名片
+- ❌ **名片编辑**：不支持自定义名片信息
+- ❌ **批量分享**：不支持一次分享多个名片
+- ❌ **收藏功能**：不支持收藏名片到收藏夹
+
+---
+
+## 2. 技术方案设计
+
+### 2.1 消息类型定义
 
 #### 后端消息类型枚举
 ```java
 // ImMessageTypeEnum.java 新增
 CONTACT(11, "名片消息")
+
+public static boolean isContact(Integer type) {
+    return ObjUtil.equal(CONTACT.type, type);
+}
 ```
 
 #### 前端消息类型
 ```typescript
+// MessageType 枚举扩展
 enum MessageType {
   CONTACT = 11  // 名片消息
 }
 ```
 
-### 2.2 名片数据结构
-
-#### 名片消息结构（前端发送）
-```typescript
-interface ContactMessage {
-  type: 'contact' | 11      // 消息类型
-  userId: string            // 用户 ID
-  userName: string          // 用户姓名
-  avatar: string            // 头像 URL
-  nickname?: string         // 昵称
-  position?: string         // 职位
-  company?: string          // 公司
-  phone?: string            // 手机号（脱敏）
-  email?: string            // 邮箱
-  gender?: number           // 性别（0-未知 1-男 2-女）
-  userIds?: string[]        // 允许查看完整信息的用户 ID 列表
+#### Protobuf 消息定义
+```protobuf
+// im_message.proto
+message ContactMessage {
+  string user_id = 1;           // 用户 ID（string，避免精度丢失）
+  string user_name = 2;         // 用户姓名
+  string avatar = 3;            // 头像 URL
+  string nickname = 4;          // 昵称（可选）
+  string position = 5;          // 职位（可选）
+  string company = 6;           // 公司名称（可选）
+  string phone = 7;             // 手机号（脱敏，可选）
+  string email = 8;             // 邮箱（脱敏，可选）
+  int32 gender = 9;             // 性别（可选）
+  string tenant_id = 10;        // 租户 ID（权限控制用）
 }
 ```
 
-#### 后端存储结构
+### 2.2 数据存储设计
+
+#### 消息存储结构
 ```sql
--- 消息表 extra 字段存储
+-- im_chat_message 表结构（复用现有）
+-- message_type = 11 表示名片消息
+-- content 字段：固定为 "名片消息"
+-- extra 字段：JSON 格式存储名片详细信息
+
+INSERT INTO im_chat_message (
+  chat_id, sender_id, message_type, content, extra, sequence, rev
+) VALUES (
+  'chat_123', 
+  'user_001', 
+  11, 
+  '名片消息',
+  '{"type":"CONTACT","userId":"user_002","userName":"张三","avatar":"https://.../avatar.jpg","position":"产品经理","company":"圣钰科技","phone":"138****1234","email":"zhang***@example.com","gender":1,"tenantId":"tenant_001"}',
+  1001,
+  1
+);
+```
+
+#### extra 字段 JSON Schema
+```json
 {
   "type": "CONTACT",
-  "userId": "1001",
-  "userName": "张三",
-  "avatar": "https://.../avatar.jpg",
-  "nickname": "张三",
-  "position": "产品经理",
-  "company": "圣钰科技",
-  "phone": "138****1234",
-  "email": "zhangsan@example.com",
-  "gender": 1,
-  "userIds": ["1002", "1003"]  // 隐私控制：允许查看完整信息的用户
+  "userId": "string",           // 用户 ID（必填）
+  "userName": "string",         // 用户姓名（必填）
+  "avatar": "string",           // 头像 URL（必填）
+  "nickname": "string",         // 昵称（可选）
+  "position": "string",         // 职位（可选）
+  "company": "string",          // 公司（可选）
+  "phone": "string",           // 手机号（脱敏，可选）
+  "email": "string",           // 邮箱（脱敏，可选）
+  "gender": 1,                 // 性别（可选）
+  "tenantId": "string"         // 租户 ID（必填，权限控制）
 }
 ```
 
-#### vCard 标准兼容（可选）
-```vcard
-BEGIN:VCARD
-VERSION:3.0
-FN:张三
-N:张;三;;;
-ORG:圣钰科技;产品部;
-TITLE:产品经理
-TEL;TYPE=WORK,VOICE:138****1234
-EMAIL;TYPE=WORK:zhangsan@example.com
-PHOTO;VALUE=URI:https://.../avatar.jpg
-END:VCARD
-```
+### 2.3 权限与隐私控制
 
-### 2.3 权限控制设计（企业 IM 场景）
-
-#### 企业级 IM 设计理念
-- ✅ **联系人 = 企业内部所有用户**（同租户下的系统用户）
-- ❌ **没有"好友"概念**（不需要添加好友）
-- ✅ **权限控制 = 租户隔离 + 组织架构可见性**
+#### 企业 IM 权限模型
+- **租户隔离**：只能分享同租户内的用户名片
+- **组织可见性**：基于组织架构的可见性控制
 
 #### 权限验证逻辑
 ```java
-private void validateContactPrivacy(ContactMessage contactMessage) {
-    Long currentUserId = getCurrentUserId();
-    Long contactUserId = Long.valueOf(contactMessage.getUserId());
+private void validateContactPermission(ContactMessage contactMessage) {
+    Long currentUserId = SecurityFrameworkUtils.getLoginUserId();
+    String currentTenantId = SecurityFrameworkUtils.getLoginTenantId();
+    Long contactUserId = Long.parseLong(contactMessage.getUserId());
+    String contactTenantId = contactMessage.getTenantId();
     
-    // 1. 只能分享自己的名片，或同企业/租户下的用户名片
-    if (!currentUserId.equals(contactUserId)) {
-        boolean isSameTenant = checkSameTenant(currentUserId, contactUserId);
-        if (!isSameTenant) {
-            throw new ServiceException("无权分享该名片");
-        }
+    // 租户隔离检查
+    if (!Objects.equals(currentTenantId, contactTenantId)) {
+        throw new ServiceException("无权分享其他租户的用户名片");
     }
 }
 ```
 
-#### 名片信息展示
-- 用户基本信息：姓名、头像、职位、公司（全部可见）
-- 联系方式：手机、邮箱（同企业用户可见）
+### 2.4 API 接口设计
 
-### 2.4 后端消息存储设计
-
-#### 数据库表结构
-```sql
--- 消息表 (im_chat_message)
--- 已有表结构，支持 message_type=11
-
--- 验证消息类型枚举
-SELECT * FROM im_message_type_enum WHERE type = 11;
-
--- 测试插入名片消息
-INSERT INTO im_chat_message (
-  chat_id, sender_id, message_type, content, extra
-) VALUES (
-  1001, 
-  1001, 
-  11, 
-  '名片消息',
-  '{
-    "type":"CONTACT",
-    "userId":"1002",
-    "userName":"张三",
-    "avatar":"https://.../avatar.jpg",
-    "position":"产品经理",
-    "company":"圣钰科技",
-    "phone":"138****1234",
-    "email":"zhangsan@example.com"
-  }'
-);
-```
-
-#### extra 字段存储规范
-```json
-{
-  "type": "CONTACT",
-  "userId": "1002",
-  "userName": "张三",
-  "avatar": "https://example.com/avatars/1002.jpg",
-  "nickname": "张三",
-  "position": "产品经理",
-  "company": "圣钰科技",
-  "phone": "138****1234",
-  "email": "zhangsan@example.com",
-  "gender": 1,
-  "userIds": ["1001", "1003"],
-  "createdAt": 1712044800000
-}
-```
-
-### 2.5 API 接口设计
-
-#### 获取联系人列表
+#### 联系人搜索接口（复用现有）
 ```typescript
-// GET /im/contact/list
+// GET /system/im/contact/list
 interface ContactListReq {
-  page?: number
+  pageNo?: number
   pageSize?: number
-  keyword?: string  // 搜索关键字
+  keyword?: string
+  deptId?: string     // 按部门筛选
 }
 
 interface ContactListResp {
@@ -190,26 +161,27 @@ interface ContactItem {
   nickname?: string
   position?: string
   company?: string
-  isFriend: boolean  // 是否好友
+  deptId?: string
+  deptName?: string
 }
 ```
 
-#### 发送名片消息
+#### 名片消息发送接口（复用现有）
 ```typescript
-// POST /im/message/send
+// POST /system/im/message/send
 interface SendContactMessageReq {
   chatId: string
   receiverId?: string
   groupId?: string
-  messageType: 11
-  content: string  // "名片消息"
-  extra: string    // JSON 字符串，名片详细信息
+  messageType: 11  // CONTACT
+  content: string   // "名片消息"
+  extra: string     // JSON 字符串，ContactMessage 序列化
 }
 ```
 
-#### 获取用户详情
+#### 用户详情接口（复用现有）
 ```typescript
-// GET /user/profile/{userId}
+// GET /system/user/profile/get?id={userId}
 interface UserProfileResp {
   userId: string
   userName: string
@@ -220,87 +192,313 @@ interface UserProfileResp {
   phone?: string     // 根据权限返回（可能脱敏）
   email?: string     // 根据权限返回（可能脱敏）
   gender?: number
-  isFriend: boolean
+  deptId?: string
+  deptName?: string
 }
 ```
 
 ---
 
-## 三、UI 设计
+## 3. 前端实现方案
 
-### 3.1 联系人选择界面
+### 3.1 页面路由设计
 
-**布局结构**：
+#### 新增页面
 ```
-┌─────────────────────────────────┐
-│ ←返回      选择联系人     确定  │
-├─────────────────────────────────┤
-│ 🔍 搜索联系人姓名或职位...      │
-├─────────────────────────────────┤
-│ 最近分享 (3)                    │
-│ ┌────┐ ┌────┐ ┌────┐          │
-│ │头像│ │头像│ │头像│          │
-│ │张三│ │李四│ │王五│          │
-│ └────┘ └────┘ └────┘          │
-├─────────────────────────────────┤
-│ 全部联系人                      │
-│ ○ 张三  产品经理  圣钰科技      │
-│ ○ 李四  技术总监  圣钰科技      │
-│ ○ 王五  销售主管  圣钰科技      │
-│ ○ 赵六  运营经理  圣钰科技      │
-└─────────────────────────────────┘
+pages/message/contact-picker.uvue     # 联系人选择页面
 ```
 
-**交互说明**：
-1. 顶部搜索框：支持按姓名、职位搜索
-2. 最近分享：展示最近分享过的 3 个联系人
-3. 联系人列表：单选，点击选中联系人
-4. 确定按钮：发送选中联系人的名片
-
-### 3.2 名片卡片消息样式
-
-**对话页面展示**：
+#### 复用页面
 ```
-┌─────────────────────────────┐
-│ [头像]  张三                │
-│        产品经理 · 圣钰科技   │
-│                             │
-│ 📞 138****1234              │
-│ ✉️ zhangsan@example.com    │
-│                             │
-│        [发消息]             │
-└─────────────────────────────┘
+pages/contacts/user-detail.uvue       # 用户详情页面（已存在）
+pages/message/chat.uvue               # 聊天页面（扩展名片功能）
 ```
 
-**点击交互**：
-- 点击卡片 → 打开用户详情页
-- 点击"发消息" → 跳转到与该用户的私聊窗口
+### 3.2 联系人选择页面设计
 
-### 3.3 用户详情页面
-
-**布局结构**：
+#### 页面结构
+```vue
+<template>
+  <view class="contact-picker">
+    <!-- 状态栏 -->
+    <view class="status-bar"></view>
+    
+    <!-- 头部导航 -->
+    <view class="header">
+      <view class="header-left" @click="handleBack">
+        <text class="iconfont">&#xeb04;</text>
+        <text class="back-text">返回</text>
+      </view>
+      <text class="header-title">选择联系人</text>
+      <view class="header-right" @click="handleConfirm" v-if="selectedContact">
+        <text class="confirm-btn">确定</text>
+      </view>
+    </view>
+    
+    <!-- 搜索框 -->
+    <view class="search-container">
+      <view class="search-box">
+        <text class="search-icon">🔍</text>
+        <input 
+          class="search-input" 
+          v-model="keyword" 
+          placeholder="搜索联系人姓名或职位"
+          @input="handleSearchInput"
+        />
+      </view>
+    </view>
+    
+    <!-- 联系人列表 -->
+    <scroll-view class="contact-list" scroll-y="true">
+      <view 
+        v-for="contact in filteredContacts" 
+        :key="contact.userId"
+        class="contact-item"
+        @click="handleContactSelect(contact)"
+      >
+        <image class="contact-avatar" :src="contact.avatar" />
+        <view class="contact-info">
+          <text class="contact-name">{{ contact.userName }}</text>
+          <text class="contact-position">{{ contact.position }} · {{ contact.company }}</text>
+        </view>
+        <view class="contact-selected" v-if="selectedContact?.userId === contact.userId">
+          <text class="selected-icon">✓</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+</template>
 ```
-┌─────────────────────────────────┐
-│ ←返回                           │
-├─────────────────────────────────┤
-│                                 │
-│          [大头像]               │
-│                                 │
-│            张三                 │
-│        产品经理 · 圣钰科技       │
-│                                 │
-├─────────────────────────────────┤
-│ 详细信息                        │
-│ ─────────────────────────────   │
-│ 📱 手机：138****1234            │
-│ ✉️ 邮箱：zhangsan@example.com   │
-│ 💼 职位：产品经理                │
-│ 🏢 公司：圣钰科技               │
-│ 👤 性别：男                     │
-│                                 │
-├─────────────────────────────────┤
-│          [发消息]                │
-└─────────────────────────────────┘
+
+#### UTS 脚本实现
+```typescript
+<script setup lang="uts">
+  // 类型定义
+  type ContactItem = {
+    userId: string
+    userName: string
+    avatar: string
+    nickname?: string
+    position?: string
+    company?: string
+    deptId?: string
+    deptName?: string
+  }
+  
+  // 响应式数据
+  const contactList = ref<ContactItem[]>([])
+  const filteredContacts = ref<ContactItem[]>([])
+  const selectedContact = ref<ContactItem | null>(null)
+  const keyword = ref<string>('')
+  const loading = ref<boolean>(false)
+  
+  // 导入 API
+  import { getContactList } from '../../api/contact.uts'
+  
+  // 加载联系人列表
+  async function loadContacts(): Promise<void> {
+    if (loading.value) return
+    loading.value = true
+    
+    try {
+      const response = await getContactList({
+        pageNo: 1,
+        pageSize: 100,
+        keyword: keyword.value
+      })
+      
+      contactList.value = response.list.map((item: any) => ({
+        userId: item.userId,
+        userName: item.userName,
+        avatar: item.avatar,
+        nickname: item.nickname,
+        position: item.position,
+        company: item.company,
+        deptId: item.deptId,
+        deptName: item.deptName
+      }))
+      
+      filteredContacts.value = contactList.value
+    } catch (error) {
+      console.error('[ContactPicker] 加载联系人失败:', error)
+      uni.showToast({ 
+        title: '加载失败', 
+        icon: 'none' 
+      })
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  // 搜索防抖
+  let searchTimer: number = 0
+  function handleSearchInput(): void {
+    clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => {
+      filterContacts()
+    }, 500)
+  }
+  
+  // 过滤联系人
+  function filterContacts(): void {
+    if (!keyword.value) {
+      filteredContacts.value = contactList.value
+      return
+    }
+    
+    const keywordLower = keyword.value.toLowerCase()
+    filteredContacts.value = contactList.value.filter(contact => 
+      contact.userName.toLowerCase().includes(keywordLower) ||
+      (contact.position && contact.position.toLowerCase().includes(keywordLower)) ||
+      (contact.company && contact.company.toLowerCase().includes(keywordLower))
+    )
+  }
+  
+  // 选择联系人
+  function handleContactSelect(contact: ContactItem): void {
+    selectedContact.value = contact
+  }
+  
+  // 确认选择
+  function handleConfirm(): void {
+    if (!selectedContact.value) return
+    
+    // 通过事件总线返回选中的联系人
+    const eventChannel = getOpenerEventChannel()
+    eventChannel.emit('contactSelected', selectedContact.value)
+    
+    uni.navigateBack({ delta: 1 })
+  }
+  
+  // 返回
+  function handleBack(): void {
+    uni.navigateBack({ delta: 1 })
+  }
+  
+  // 生命周期
+  onMounted(() => {
+    loadContacts()
+  })
+  
+  onUnload(() => {
+    clearTimeout(searchTimer)
+  })
+</script>
+```
+
+### 3.3 聊天页面名片功能集成
+
+#### 功能入口扩展
+```typescript
+// chat.uvue 中的 handleFeature 函数扩展
+function handleFeature(item: any): void {
+  if (item.nameKey === 'chat.features.card') {
+    handleContactFeature()
+  }
+  // ... 其他功能处理
+}
+
+async function handleContactFeature(): Promise<void> {
+  try {
+    // 跳转到联系人选择页面
+    const contact = await new Promise<ContactItem>((resolve, reject) => {
+      uni.navigateTo({
+        url: '/pages/message/contact-picker',
+        events: {
+          contactSelected: (contact: ContactItem) => {
+            resolve(contact)
+          }
+        },
+        fail: (err) => reject(err)
+      })
+    })
+    
+    if (contact) {
+      await sendContactMessage(contact)
+      scrollToBottom()
+    }
+  } catch (error) {
+    console.error('[Chat] 发送名片消息失败:', error)
+    uni.showToast({ 
+      title: '发送失败', 
+      icon: 'none' 
+    })
+  }
+}
+```
+
+#### 名片消息发送
+```typescript
+async function sendContactMessage(contact: ContactItem): Promise<void> {
+  // 构建名片消息
+  const contactMessage = {
+    type: 'CONTACT',
+    userId: contact.userId,
+    userName: contact.userName,
+    avatar: contact.avatar,
+    nickname: contact.nickname,
+    position: contact.position,
+    company: contact.company,
+    tenantId: getTenantId()
+  }
+  
+  const payload = {
+    chatId: chatId.value,
+    receiverId: getReceiverIdForMessage(),
+    groupId: getGroupIdForMessage(),
+    messageType: 11, // CONTACT
+    content: '名片消息',
+    extra: JSON.stringify(contactMessage)
+  }
+  
+  // 发送消息
+  await messageService.sendMessage(payload)
+}
+```
+
+### 3.4 名片消息渲染
+
+#### 卡片渲染模板
+```vue
+<!-- 名片消息类型 -->
+<view v-else-if="msg.messageType === 11" class="message-bubble bubble-contact">
+  <view class="contact-card" @click="handleContactOpen(msg)">
+    <view class="contact-header">
+      <image class="contact-avatar" :src="msg.avatar" />
+      <view class="contact-info">
+        <text class="contact-name">{{ msg.userName }}</text>
+        <text class="contact-position">{{ msg.position }} · {{ msg.company }}</text>
+      </view>
+    </view>
+    
+    <view class="contact-details" v-if="msg.phone || msg.email">
+      <text v-if="msg.phone" class="contact-detail">📞 {{ msg.phone }}</text>
+      <text v-if="msg.email" class="contact-detail">✉️ {{ msg.email }}</text>
+    </view>
+    
+    <view class="contact-actions" v-if="!isSelf(msg.senderId)">
+      <button class="action-btn primary" @click.stop="handleSendMessage(msg)">发消息</button>
+    </view>
+  </view>
+</view>
+```
+
+#### 交互处理
+```typescript
+// 打开用户详情
+function handleContactOpen(msg: MessageItem): void {
+  uni.navigateTo({
+    url: `/pages/contacts/user-detail?id=${msg.userId}`
+  })
+}
+
+// 发消息
+function handleSendMessage(msg: MessageItem): void {
+  const targetIdParam = encodeIdParam(msg.userId)
+  uni.navigateTo({
+    url: `/pages/message/chat?type=single&targetId=${targetIdParam}&name=${encodeURIComponent(msg.userName)}&entryMode=latest`
+  })
+}
 ```
 
 ---
@@ -659,18 +857,38 @@ function handleMessage(msg: MessageItem) {
 
 ---
 
+## 5. 企业级安全与合规
+
+### 5.1 数据安全
+- **租户隔离**：严格的租户级别数据隔离
+- **权限最小化**：只显示用户有权限查看的信息
+
+### 5.2 容错机制
+- **用户不存在处理**：名片中的用户被删除时的优雅降级
+- **网络异常处理**：弱网环境下的重试与降级
+
+### 5.3 多端兼容
+- App 端：使用原生组件渲染
+- H5 端：使用 Web 组件渲染
+- 确保各端样式一致
+
+### 5.4 性能优化
+- 联系人列表分页加载
+
+---
+
 ## 六、注意事项
 
-### 6.1 隐私合规
-- 必须获得用户授权才能分享其名片
-- 敏感信息（手机、邮箱）需要脱敏处理
-- 支持用户设置名片可见性
-- 符合 GDPR 等隐私保护法规
+### 6.1 技术约束
+- **Long 精度**：所有 ID 字段使用 `string` 类型，避免精度丢失
+- **UTS 规范**：遵循 UTS 强类型约束，不使用 undefined、truthy/falsy
+- **组件复用**：最大化复用现有组件和 API，减少重复开发
+- **协议一致性**：遵循现有消息协议和 WebSocket 机制
 
-### 6.2 权限控制
-- 只能分享自己的名片或已授权的名片
-- 非好友只能查看公开信息
-- 群聊中分享名片需群主同意（可选）
+### 6.2 设计原则
+- **用户体验优先**：对齐企业微信/钉钉的交互体验
+- **性能优先**：确保大列表和搜索的流畅性
+- **可维护性**：清晰的代码结构和文档
 
 ### 6.3 多端兼容
 - App 端：使用原生组件渲染
@@ -679,50 +897,50 @@ function handleMessage(msg: MessageItem) {
 
 ### 6.4 性能优化
 - 联系人列表分页加载
-- 头像使用 CDN 加速
-- 搜索结果本地缓存（5 分钟）
 
 ---
 
 ## 七、验收标准
 
 ### 7.1 功能验收
-- [ ] 可以从对话页面进入联系人选择界面
-- [ ] 支持搜索联系人
-- [ ] 选择联系人后能成功发送名片
-- [ ] 名片卡片消息正确展示
-- [ ] 点击卡片能查看用户详情
-- [ ] 支持添加好友和发消息操作
+- [ ] 从聊天页"+"入口可以进入联系人选择页面
+- [ ] 支持按姓名、职位搜索联系人
+- [ ] 选择联系人后可以成功发送名片消息
+- [ ] 名片卡片消息正确展示（头像、姓名、职位、公司）
+- [ ] 点击名片卡片可以查看用户详情
+- [ ] 点击"发消息"可以跳转到私聊窗口
+- [ ] 只能分享同租户内的用户名片
 
-### 7.2 隐私验收
-- [ ] 非好友只能查看脱敏信息
-- [ ] 好友可以查看完整信息
-- [ ] 用户可设置名片可见性
-- [ ] 敏感信息正确脱敏
-
-### 7.3 性能验收
+### 7.2 性能验收
 - [ ] 联系人选择页面打开时间 < 1 秒
 - [ ] 搜索响应时间 < 500ms
 - [ ] 名片消息发送成功率 > 99%
+- [ ] 联系人列表滚动流畅（60fps）
+- [ ] 内存使用合理，无明显内存泄漏
 
-### 7.4 兼容性验收
-- [ ] App 端（Android/iOS）正常工作
-- [ ] H5 端正常工作
-- [ ] 不同网络环境正常工作
+### 7.3 兼容性验收
+- [ ] App 端（Android 10+）正常工作
+- [ ] App 端（iOS 14+）正常工作
+- [ ] H5 端（Chrome/Safari）正常工作
+- [ ] 不同网络环境（WiFi/4G/5G）正常工作
 
----
-
-## 八、参考资料
-
-- [微信名片消息实现](https://developers.weixin.qq.com/doc/)
-- [钉钉数字化名片](https://blog.csdn.net/Z1Y492Vn3ZYD9et3B06/article/details/84948872)
-- [融云 IM 名片消息](https://docs.rongcloud.cn/ios-imkit/features/contact-message)
-- [vCard 标准](https://www.choge-blog.com/programming/vcard-vcf/)
-- [网易云信用户名片](https://doc.yunxin.163.com/messaging/server-apis/TA0NzYzNjk)
+### 7.4 安全验收
+- [ ] 跨租户名片分享被正确拒绝
+- [ ] 权限控制生效
 
 ---
 
-**文档版本**：v2.0  
-**更新日期**：2026-04-02  
+## 8. 参考资料
+
+- [IM即时通讯架构设计文档-v2.0.md](./IM即时通讯架构设计文档-v2.0.md)
+- [IM即时通讯开发任务清单-v2.0.md](./IM即时通讯开发任务清单-v2.0.md)
+- [企业微信名片功能设计](https://work.weixin.qq.com/)
+- [钉钉数字化名片](https://www.dingtalk.com/)
+- [Web 性能最佳实践](https://developer.mozilla.org/zh-CN/docs/Web/Performance)
+---
+
+**文档版本**：v2.0.0  
+**创建日期**：2026-04-02  
 **适用项目**：shengyu-im-saas  
-**责任人**：开发团队
+**责任人**：开发团队  
+**审核人**：架构师、产品经理
