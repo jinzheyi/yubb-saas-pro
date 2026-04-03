@@ -17,6 +17,7 @@ updated: 2026-04-03
 | v1.2 | 2026-04-02 | 新增 CALL_RECORD=209 决策、SPI 分层约束 |
 | v1.3 | 2026-04-03 | 修复8处架构漏洞：离线推送缺口、超时任务分布式锁、REJECT/BUSY 语义、STATE_SYNC 触发时机、STUN/TURN 国内替代、ImCallRecordMapper 缺失方法、附录A补全 CALL_RECORD 待实现、callId 精度约定 |
 | v1.4 | 2026-04-03 | 离线推送方案落地：明确采用 UniPush 2.0（客户端）+ 个推 REST API V2（服务端），详细人工准备清单/数据库设计/Java 代码/免费额度管理/兜底降级策略 |
+| v1.5 | 2026-04-03 | 新增 §14：chat.uvue 通话入口设计，覆盖 +号菜单集成、通话类型选择底部面板（参考微信交互）、完整函数清单、导航协议、群聊禁用策略 |
 
 ---
 
@@ -2185,8 +2186,11 @@ interface OutgoingCallParams {
 | **`AppImCallController`** | **待实现（R0.8）** | `controller/app/im/AppImCallController.java` |
 | **application.yaml rtc 配置节** | **待实现（R0.9）** | `application.yaml` |
 | **AUTH_REQ 成功后 STATE_SYNC 下发** | **待实现（R0.11）** | 认证处理器 |
+| **`chat.uvue` featureList 新增 videoCall 入口** | **待实现（C0.1-C0.8）** | `pages/message/chat.uvue` |
+| **`chat.uvue` 通话类型选择面板（Bottom Sheet）** | **待实现（C0.6-C0.7）** | `pages/message/chat.uvue` |
+| **i18n `chat.features.videoCall`** | **待实现（C0.8）** | `locales/zh.json` |
 | **端侧 `call-service.uts`** | **待实现（R0.12）** | `services/call-service.uts` |
-| **端侧 `call.uvue`** | **待实现（R0.13）** | `pages/message/call.uvue` |
+| **端侧 `call.uvue`** | **待实现（R0.13 + C0.9）** | `pages/message/call.uvue` |
 | **端侧 `api/call.uts`** | **待实现（R0.14）** | `api/call.uts` |
 | **proto `CALL_RECORD=209`** | **待实现（R1.1）** | `im_message.proto` |
 | **proto `CallRecordMessage`** | **待实现（R1.1）** | `im_message.proto` |
@@ -2223,4 +2227,403 @@ R0.10（ErrorCode）── 独立，无依赖
 R0.12（端侧 call-service）依赖 R0.6（Processor 先上线）
 R0.13（端侧 call.uvue）依赖 R0.12
 R0.14（端侧 api/call.uts）依赖 R0.8
+
+C0.1-C0.8（chat.uvue +号菜单 + 底部面板）── 独立，无服务端依赖，可并行开发
+C0.9（call.uvue 接收参数）依赖 R0.12（call-service.uts）
 ```
+
+---
+
+## 14. 通话入口：`chat.uvue` +号菜单集成
+
+> 本节描述用户在聊天页面发起通话的完整前端入口链路，是 Phase 0 端侧开发（R0.12/R0.13）的**先决依赖**，也是用户唯一的主动呼叫触发点。
+
+### 14.1 现有 +号菜单结构（代码现状）
+
+`chat.uvue` 中的输入栏 +号按钮展开后渲染 `featureList`：
+
+```typescript
+// chat.uvue - script（约 line 3769）
+const featureList = [
+    { icon: '\ue608', color: '#3370FF', nameKey: 'chat.features.album' },    // 相册
+    { icon: '\uea87', color: '#3370FF', nameKey: 'chat.features.camera' },   // 拍摄
+    { icon: '\uea72', color: '#FFB347', nameKey: 'chat.features.location' }, // 位置
+    { icon: '\uea96', color: '#62D4A1', nameKey: 'chat.features.file' },     // 文件
+    { icon: '\ue624', color: '#F9C349', nameKey: 'chat.features.card' },     // 名片
+    { icon: '\uea90', color: '#FFB347', nameKey: 'chat.features.fav' }       // 收藏
+]
+```
+
+Template 使用 `v-for` 渲染，统一走 `handleFeature(item)` 分发：
+
+```html
+<!-- chat.uvue - template（约 line 371） -->
+<view v-if="showPlusMenu" class="features-menu">
+    <view class="feature-item" v-for="(item, index) in featureList"
+          :key="index" @click="handleFeature(item)">
+        <view class="feature-icon-wrap">
+            <text class="iconfont feature-icon" :style="{ color: item.color }">{{ item.icon }}</text>
+        </view>
+        <text class="feature-name">{{ t(item.nameKey) }}</text>
+    </view>
+</view>
+```
+
+---
+
+### 14.2 需求：新增"视频通话"入口
+
+**交互逻辑（参考微信）**：
+
+```
+点击 + 按钮
+  → 展开 features-menu（已有）
+  → 用户点击"视频通话"图标
+  → 关闭 features-menu
+  → 弹出通话类型选择面板（底部 action sheet）
+  → 用户选择"视频通话"或"语音通话"
+  → 权限检查 → navigate 到 call.uvue
+```
+
+**群聊处理**：通话仅支持单聊（`chatType === 'single'`），群聊不展示该入口（过滤 featureList）。
+
+---
+
+### 14.3 `featureList` 修改
+
+在 `featureList` 末尾（或位置参考微信：在拍摄之后）新增通话入口项：
+
+```typescript
+// 修改位置：chat.uvue ~line 3769
+// 仅单聊时包含通话入口
+const featureList = computed(() => {
+    const base = [
+        { icon: '\ue608', color: '#3370FF', nameKey: 'chat.features.album' },
+        { icon: '\uea87', color: '#3370FF', nameKey: 'chat.features.camera' },
+        { icon: '\uea72', color: '#FFB347', nameKey: 'chat.features.location' },
+        { icon: '\uea96', color: '#62D4A1', nameKey: 'chat.features.file' },
+        { icon: '\ue624', color: '#F9C349', nameKey: 'chat.features.card' },
+        { icon: '\uea90', color: '#FFB347', nameKey: 'chat.features.fav' },
+    ]
+    // 通话入口：仅单聊 + rtc 功能未全局禁用时展示
+    if (chatType.value === 'single') {
+        base.push({ icon: '\uea74', color: '#07C160', nameKey: 'chat.features.videoCall' })
+    }
+    return base
+})
+```
+
+> **图标 unicode**：`\uea74` 为项目 iconfont 中的电话/通话图标（已在 header-icon 中使用）。若视觉需要区分视频图标，可从 iconfont 库另选，此处以可用图标为准。
+>
+> **颜色**：`#07C160`（微信绿），与接听按钮色系一致，视觉上与通话语境关联。
+>
+> **i18n**：在 `locales/zh.json`（或对应 i18n 文件）中新增：`"chat.features.videoCall": "视频通话"`。
+
+---
+
+### 14.4 新增状态变量
+
+```typescript
+// chat.uvue - script 响应式状态区（与 showPlusMenu 等并列）
+const showCallTypePicker = ref(false)  // 控制通话类型选择面板的显示
+```
+
+---
+
+### 14.5 函数清单（需新增）
+
+#### 14.5.1 `openCallTypePicker()`
+
+由 `handleFeature` 中的 `videoCall` 分支调用，关闭 +号面板、打开通话类型选择器：
+
+```typescript
+function openCallTypePicker() {
+    showPlusMenu.value = false
+    showEmojiMenu.value = false
+    showCallTypePicker.value = true
+}
+```
+
+#### 14.5.2 `closeCallTypePicker()`
+
+用户点击"取消"或点击遮罩层时关闭：
+
+```typescript
+function closeCallTypePicker() {
+    showCallTypePicker.value = false
+}
+```
+
+#### 14.5.3 `handleCallTypeSelect(callType: number)`
+
+用户在选择面板中选择"视频通话（2）"或"语音通话（1）"后的入口，负责先关闭面板再发起通话：
+
+```typescript
+function handleCallTypeSelect(callType: number) {
+    showCallTypePicker.value = false
+    // 短延迟等待面板动画结束，避免页面跳转与动画冲突
+    setTimeout(() => {
+        handleInitiateCall(callType)
+    }, 150)
+}
+```
+
+#### 14.5.4 `handleInitiateCall(callType: number)`
+
+核心发起通话逻辑，负责权限检查和路由跳转：
+
+```typescript
+function handleInitiateCall(callType: number) {
+    // 1. 权限检查（麦克风必须；视频还需摄像头）
+    const permissions: string[] = ['RECORD_AUDIO']
+    if (callType === 2) {
+        permissions.push('CAMERA')
+    }
+
+    // 2. 请求系统权限（uni-app x 跨平台写法）
+    uni.authorize({
+        scope: callType === 2 ? 'scope.camera' : 'scope.record',
+        success: () => {
+            // 3. 跳转至通话页面，参数按 OutgoingCallParams 契约传递
+            uni.navigateTo({
+                url: `/pages/message/call?callType=${callType}&targetUserId=${targetId.value}&targetNickname=${encodeURIComponent(name.value)}&targetAvatar=${encodeURIComponent(targetAvatar.value || '')}`
+            })
+        },
+        fail: () => {
+            uni.showToast({
+                title: callType === 2 ? '需要麦克风和摄像头权限' : '需要麦克风权限',
+                icon: 'none',
+                duration: 2000
+            })
+        }
+    })
+}
+```
+
+> **说明**：
+> - `targetId.value`：当前聊天对象的 userId（已有变量，String 类型，保证 Long 精度）
+> - `name.value`：当前聊天对象的昵称（header 标题，已有变量）
+> - `targetAvatar.value`：对方头像 URL（如当前 chat.uvue 未维护该变量，Phase 0 可先传空串，来电页通过接口补充）
+> - 权限被拒后不做强制跳转，仅 Toast 提示，符合 iOS/Android 系统策略
+> - 生产环境应使用 `call-permission.uts`（见 §13.11）封装权限请求逻辑，避免 chat.uvue 耦合平台代码
+
+#### 14.5.5 `handleFeature` 中新增分支
+
+在 `handleFeature` 函数的 if-else 链末尾追加（`chat.uvue ~line 5741`）：
+
+```typescript
+// 追加到 handleFeature 末尾
+if (item.nameKey === 'chat.features.videoCall') {
+    openCallTypePicker()
+    return
+}
+```
+
+---
+
+### 14.6 通话类型选择面板（Bottom Sheet）
+
+#### 14.6.1 交互设计规范（参考微信）
+
+微信在聊天页发起通话的 UI 行为：
+
+- 点击 + → 展开 more 面板 → 有「视频通话」图标
+- 点击图标 → **无标题的底部 action sheet**弹出，包含：`视频通话 / 语音通话 / 取消`
+- 三项均为独立行，无图标，居中文字
+- 「取消」与前两项之间有**分隔间距**（不是分割线，而是 margin-top 空隙），形成视觉分组
+- 面板从屏幕底部滑入（translateY 动效）
+- 点击遮罩或"取消"均关闭，不执行任何操作
+
+#### 14.6.2 ASCII 线框图
+
+```
+┌────────────────────────────────┐
+│   （半透明黑色遮罩，覆盖全屏）   │
+│                                │
+│                                │
+│                                │
+│  ╔══════════════════════════╗  │
+│  ║    视频通话              ║  │  ← 高度 56px，文字居中，14sp
+│  ╠══════════════════════════╣  │  ← 分割线 1px，#EBEBEB
+│  ║    语音通话              ║  │  ← 高度 56px，文字居中，14sp
+│  ╚══════════════════════════╝  │
+│                                │  ← 间隔 8px（视觉分组，无分割线）
+│  ╔══════════════════════════╗  │
+│  ║        取 消             ║  │  ← 高度 56px，文字居中，14sp，灰色
+│  ╚══════════════════════════╝  │
+│  ════════════ 底部安全区 ════  │
+└────────────────────────────────┘
+```
+
+| 属性 | 值 |
+|------|-----|
+| 面板背景色 | `#FFFFFF` |
+| 遮罩颜色 | `rgba(0,0,0,0.5)` |
+| 圆角（顶部） | `border-top-left-radius: 12px; border-top-right-radius: 12px` |
+| 选项文字色（视频/语音） | `#1C1C1C`（主文字色） |
+| 选项文字色（取消） | `#999999` |
+| 分割线颜色 | `#EBEBEB` |
+| 点击态 | `background-color: #F5F5F5`（hover-class） |
+| 进入动效 | `translateY(100%) → translateY(0)`，250ms，ease-out |
+| 退出动效 | `translateY(0) → translateY(100%)`，200ms，ease-in |
+
+#### 14.6.3 Template 实现
+
+在 `chat.uvue` template 底部（与 `showMsgMenu`、`showForwardConfirm` 等浮层并列）新增：
+
+```html
+<!-- 通话类型选择面板（微信风格 action sheet）-->
+<view v-if="showCallTypePicker" class="call-type-picker-mask" @click="closeCallTypePicker">
+    <view class="call-type-picker-sheet" @click.stop>
+        <!-- 视频通话 -->
+        <view class="call-type-option" hover-class="call-type-option-active"
+              @click="handleCallTypeSelect(2)">
+            <text class="call-type-option-text">视频通话</text>
+        </view>
+        <!-- 分割线 -->
+        <view class="call-type-divider"></view>
+        <!-- 语音通话 -->
+        <view class="call-type-option" hover-class="call-type-option-active"
+              @click="handleCallTypeSelect(1)">
+            <text class="call-type-option-text">语音通话</text>
+        </view>
+        <!-- 取消分组（间隔 8px） -->
+        <view class="call-type-group-gap"></view>
+        <view class="call-type-option call-type-cancel" hover-class="call-type-option-active"
+              @click="closeCallTypePicker">
+            <text class="call-type-cancel-text">取消</text>
+        </view>
+        <!-- 底部安全区占位 -->
+        <view class="call-type-safe-area"></view>
+    </view>
+</view>
+```
+
+#### 14.6.4 CSS 样式
+
+```css
+/* 通话类型选择面板 */
+.call-type-picker-mask {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.call-type-picker-sheet {
+    background-color: #FFFFFF;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    overflow: hidden;
+}
+
+.call-type-option {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.call-type-option-active {
+    background-color: #F5F5F5;
+}
+
+.call-type-option-text {
+    font-size: 14px;
+    color: #1C1C1C;
+    font-weight: 400;
+}
+
+.call-type-divider {
+    height: 1px;
+    background-color: #EBEBEB;
+    margin-left: 0;
+}
+
+.call-type-group-gap {
+    height: 8px;
+    background-color: #F7F7F7;
+}
+
+.call-type-cancel {
+    /* 取消项与前两项视觉分组已通过 group-gap 实现，不需要额外样式 */
+}
+
+.call-type-cancel-text {
+    font-size: 14px;
+    color: #999999;
+    font-weight: 400;
+}
+
+.call-type-safe-area {
+    /* 适配 iOS/Android 底部安全区 */
+    height: 0;
+    /* 使用 padding-bottom 兼容安全区 */
+    padding-bottom: constant(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+```
+
+---
+
+### 14.7 `call.uvue` 接收参数规范
+
+`chat.uvue` 跳转时携带的 query 参数与 `call.uvue` 的 `OutgoingCallParams` 接口对应（见 §13.11）：
+
+| 参数名 | 来源变量 | 类型 | 说明 |
+|--------|---------|------|------|
+| `callType` | `handleInitiateCall(callType)` 的入参 | number | 1=语音，2=视频 |
+| `targetUserId` | `targetId.value` | string | **Long → string 精度保护**，对应 `OutgoingCallParams.targetUserId` |
+| `targetNickname` | `name.value`（encodeURIComponent） | string | 对方昵称，用于 UI 展示 |
+| `targetAvatar` | `targetAvatar.value`（encodeURIComponent） | string | 对方头像 URL，可选 |
+
+`call.uvue` 在 `onLoad` 中解析参数：
+
+```typescript
+// call.uvue - onLoad
+onLoad((options: any) => {
+    const callType = parseInt(options.callType || '1')
+    const targetUserId = options.targetUserId || ''   // 保持 string
+    const targetNickname = decodeURIComponent(options.targetNickname || '')
+    const targetAvatar = decodeURIComponent(options.targetAvatar || '')
+
+    if (targetUserId) {
+        // 主动拨出：发起 CALL 信令
+        callService.initiateCall(targetUserId, callType, targetNickname, targetAvatar)
+    }
+})
+```
+
+---
+
+### 14.8 边界情况与降级处理
+
+| 场景 | 处理策略 |
+|------|---------|
+| 群聊页面 | `featureList` 的 `computed` 根据 `chatType !== 'single'` 不包含该入口，用户不可见 |
+| 已有通话进行中（己方） | Phase 1 在 `handleInitiateCall` 中检查 `callService.hasActiveCall()`，若有则 Toast"通话中，请先挂断" |
+| 麦克风/摄像头权限被拒 | Toast 提示，不强制跳转（尊重用户权限决策） |
+| 对方不在线（B 无 session） | 由服务端返回 CALLEE_OFFLINE 信令，`call.uvue` 展示"对方不在线" ENDED 界面（见 §5.1） |
+| 对方正忙（被叫已在通话中） | 服务端返回 CALL_ALREADY_IN_PROGRESS（ErrorCode 502），`call.uvue` 展示"对方正在通话中"界面 |
+| WS 未连接 | `handleInitiateCall` 先检查 `wsConnected`，若断连则 Toast"网络不稳定，请稍后重试" |
+
+---
+
+### 14.9 实施任务清单（Phase 0 前端）
+
+| # | 任务 | 文件 | 依赖 |
+|---|------|------|------|
+| C0.1 | `featureList` 改为 `computed`，单聊时追加 `videoCall` 入口 | `chat.uvue` | - |
+| C0.2 | 新增 `showCallTypePicker` ref | `chat.uvue` | - |
+| C0.3 | 新增 `openCallTypePicker` / `closeCallTypePicker` 函数 | `chat.uvue` | C0.2 |
+| C0.4 | 新增 `handleCallTypeSelect` / `handleInitiateCall` 函数 | `chat.uvue` | C0.2 |
+| C0.5 | `handleFeature` 新增 `videoCall` 分支，调用 `openCallTypePicker` | `chat.uvue` | C0.3 |
+| C0.6 | template 新增 `call-type-picker-mask` 底部面板 | `chat.uvue` | C0.2, C0.3, C0.4 |
+| C0.7 | 新增底部面板 CSS 样式 | `chat.uvue` | C0.6 |
+| C0.8 | i18n 新增 `chat.features.videoCall` 翻译条目 | `locales/zh.json`（及其他语言文件） | - |
+| C0.9 | `call.uvue` `onLoad` 解析 query 参数，接入 `callService.initiateCall` | `call.uvue` | R0.12（call-service.uts） |
+
+> **C0.1 ~ C0.8 可在 Phase 0 服务端尚未就绪时先完成**（面板交互可独立验证），C0.9 依赖 `call-service.uts`（R0.12）。
