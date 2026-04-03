@@ -729,6 +729,7 @@
 	const VOICE_RECORD_FORMAT = 'mp3'
 	const RECORD_DURATION_TICK_MS = 100
 	const RECORD_NEAR_LIMIT_MS = 10000
+	const VOICE_DURATION_OVERFLOW_TOLERANCE_MS = 1500
 	const VOICE_PROGRESS_MIN_FILL_PERCENT = 2
 	const VOICE_PLAY_SYNC_DEBOUNCE_MS = 300
 	const VOICE_PLAY_SYNC_BATCH_SIZE = 30
@@ -4934,7 +4935,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (remainMs <= 0) {
 			return '已到最大时长，正在结束录音'
 		}
-		return `剩余 ${formatRecordDurationClock(remainMs)} · 手指上滑，取消发送`
+		return `手指上滑，取消发送`
 	}
 
 	function isRecordingNearLimit(): boolean {
@@ -5052,6 +5053,56 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		})
 	}
 
+	function buildVoiceTooLargeHint(sizeBytes: number = 0): string {
+		const limitText = formatFileSize(MAX_VOICE_SIZE)
+		if (sizeBytes > 0) {
+			return `语音过大(${formatFileSize(sizeBytes)})，请控制在${limitText}内`
+		}
+		return `语音文件过大，请控制在${limitText}内`
+	}
+
+	function isVoiceTooLargeError(err: any): boolean {
+		if (err == null) {
+			return false
+		}
+		let text = ''
+		try {
+			text = err.message != null ? String(err.message) : String(err)
+		} catch (e) {
+			text = ''
+		}
+		if (text === '') {
+			return false
+		}
+		const normalized = text.toLowerCase()
+		return normalized.indexOf('文件过大') >= 0
+			|| normalized.indexOf('too large') >= 0
+			|| normalized.indexOf('payload too large') >= 0
+			|| normalized.indexOf('413') >= 0
+	}
+
+	function resolveVoiceSourceSizeBytes(raw: any, blob: any = null): number {
+		const blobSize = blob != null ? Number((blob as any).size || 0) : 0
+		if (blobSize > 0) {
+			return blobSize
+		}
+		if (raw == null) {
+			return 0
+		}
+		const sizeCandidates = [
+			(raw as any).fileSize,
+			(raw as any).size,
+			(raw as any).voiceSize
+		]
+		for (let i = 0; i < sizeCandidates.length; i++) {
+			const candidate = Number(sizeCandidates[i] || 0)
+			if (candidate > 0) {
+				return candidate
+			}
+		}
+		return 0
+	}
+
 	function buildVoiceRecordErrorText(err: any): string {
 		try {
 			if (err == null) {
@@ -5132,10 +5183,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		const tempFilePath = res != null && res.tempFilePath != null ? String(res.tempFilePath) : ''
 		const rawDurationMs = res != null && res.duration != null ? Number(res.duration) : Math.max(0, Date.now() - recordStartAt.value)
 		const durationMs = rawDurationMs > 0 ? rawDurationMs : Math.max(0, Date.now() - recordStartAt.value)
-		const durationSec = Math.max(1, Math.round(durationMs / 1000))
+		const safeDurationMs = Math.max(0, Math.round(durationMs))
+		const boundedDurationMs = clampRecordingElapsedMs(safeDurationMs)
+		const durationSec = Math.max(1, Math.round(boundedDurationMs / 1000))
 		const shouldCancel = pendingRecordCancel === true
 		const autoStoppedByLimit = recordingAutoStopped === true
 		const sourceBlob: any = res != null ? (res as any).blob : null
+		const sourceSizeBytes = resolveVoiceSourceSizeBytes(res, sourceBlob)
 		const sourceFormat = res != null && (res as any).format != null ? String((res as any).format) : VOICE_RECORD_FORMAT
 		const uploadFileName = res != null && (res as any).fileName != null ? String((res as any).fileName) : ''
 		resetVoiceRecordState()
@@ -5143,10 +5197,20 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			revokeObjectUrl(tempFilePath)
 			return
 		}
+		if (safeDurationMs > MAX_VOICE_DURATION_MS + VOICE_DURATION_OVERFLOW_TOLERANCE_MS) {
+			revokeObjectUrl(tempFilePath)
+			uni.showToast({ title: '录音时长异常，请重新录制', icon: 'none' })
+			return
+		}
+		if (sourceSizeBytes > 0 && sourceSizeBytes > MAX_VOICE_SIZE) {
+			revokeObjectUrl(tempFilePath)
+			uni.showToast({ title: buildVoiceTooLargeHint(sourceSizeBytes), icon: 'none' })
+			return
+		}
 		if (autoStoppedByLimit) {
 			uni.showToast({ title: '已到60秒，自动结束录音', icon: 'none' })
 		}
-		if (durationMs < MIN_VOICE_DURATION_MS) {
+		if (safeDurationMs < MIN_VOICE_DURATION_MS) {
 			revokeObjectUrl(tempFilePath)
 			showVoiceTooShortToast()
 			return
@@ -5155,7 +5219,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			uni.showToast({ title: '录音文件生成失败', icon: 'none' })
 			return
 		}
-		const draft = createLocalVoiceDraft(tempFilePath, durationSec, durationMs, sourceBlob, sourceFormat, uploadFileName)
+		const draft = createLocalVoiceDraft(tempFilePath, durationSec, boundedDurationMs, sourceBlob, sourceFormat, uploadFileName)
+		;(draft as any).voiceSize = sourceSizeBytes > 0 ? sourceSizeBytes : 0
 		messages.value.push(draft)
 		scrollToBottom()
 		void uploadVoiceDraft(draft)
@@ -7886,6 +7951,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return progress > 0 ? `上传中 ${progress}%` : '上传中'
 		}
 		if (isVoiceUploadFailed(msg)) {
+			const uploadError = msg != null && msg.uploadError != null ? String(msg.uploadError) : ''
+			if (uploadError !== '') {
+				return uploadError
+			}
 			return '点击重试上传'
 		}
 		if (isVoiceSendFailed(msg)) {
@@ -7935,12 +8004,20 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	async function uploadVoiceDraft(draft: MessageItem): Promise<void> {
 		const localFilePath = draft.localFilePath != null ? String(draft.localFilePath) : ''
 		const sourceBlob: any = (draft as any).uploadSourceBlob != null ? (draft as any).uploadSourceBlob : null
+		const sourceSizeBytes = resolveVoiceSourceSizeBytes(draft, sourceBlob)
 		const uploadFileName = (draft as any).uploadFileName != null ? String((draft as any).uploadFileName) : `voice-${Date.now()}.wav`
 		if (localFilePath === '' && sourceBlob == null) {
 			patchMessageInList(draft.messageId, {
 				uploadStatus: 'failed',
 				uploadError: '语音文件不存在'
 			})
+			return
+		}
+		if (sourceSizeBytes > 0 && sourceSizeBytes > MAX_VOICE_SIZE) {
+			clearVoiceDraftUploadAssets(draft, sourceBlob != null)
+			;(draft as any).uploadSourceBlob = null
+			removeMessageFromList(draft.messageId)
+			uni.showToast({ title: buildVoiceTooLargeHint(sourceSizeBytes), icon: 'none' })
 			return
 		}
 		const scopeReady = await ensureVoiceUploadScopeReady(false)
@@ -8010,6 +8087,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} catch (e) {
 			console.error('[Chat] 上传语音失败:', e)
 			clearVoiceDraftUploadAssets(draft, sourceBlob != null)
+			if (isVoiceTooLargeError(e)) {
+				;(draft as any).uploadSourceBlob = null
+				removeMessageFromList(draft.messageId)
+				uni.showToast({ title: buildVoiceTooLargeHint(), icon: 'none' })
+				return
+			}
 			patchMessageInList(draft.messageId, {
 				uploadStatus: 'failed',
 				uploadError: '语音上传失败'
