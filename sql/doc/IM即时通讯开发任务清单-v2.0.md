@@ -2361,7 +2361,7 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
 
 ---
 
-## Milestone L（P1/P2）：消息扩展能力（转发/重发/@提及/位置/草稿/输入状态/收藏）
+## Milestone L（P1/P2）：消息扩展能力（转发/重发/@提及/位置/名片/草稿/输入状态/收藏）
 
 ### L1（P1）：消息转发（逐条/合并）
 
@@ -2679,31 +2679,232 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
     - 统一 `STICKER` 消息的 `extra` 解析与本地缓存写入
     - 确保刷新、补偿、转发详情页都能按同一结构回显
 
-### L5（P2）：位置消息
+### L5/L5.1/L8 开工前基线调研结论（已核对前后端代码）
 
-- **验收**：支持发送地理位置；消息展示地图缩略图+名称；点击跳转地图应用。
+- 前端现状：
+  - `chat.uvue` 的 `+` 面板已存在“位置/名片/收藏”入口，但仅“位置”有完整发送流程，“名片/收藏”仍是“开发中”
+  - 长按菜单 `favorite` 当前绑定的是“添加到表情”，并非“消息收藏”，存在 action 语义冲突
+  - 位置消息长按菜单被划入 `isRestricted`，默认无转发入口；需在 L5 明确是否开放单条转发
+  - `message-handler.uts` 的 `LocationMessageBody` 当前仅 `latitude/longitude/address`，无 `name`
+- 后端现状：
+  - 枚举与处理器已具备 `LOCATION(6/105)` 链路（`ImMessageTypeEnum`、`LocationMessageProcessor`）
+  - 存储侧存在“位置仅按 address 文本落库”的路径，历史消息可能丢失坐标，影响刷新后导航
+  - `CONTACT_CARD` 尚未形成 `CUSTOM` 子类型的统一摘要与详情预览口径
+  - `/system/im/favorite/*` 在当前工程未落地，需要 L8 从 0 到 1 补齐
+- 结论（本轮冻结）：
+  - L5 必须先修“位置消息可恢复坐标”的存储契约，再做 UI 优化
+  - L5.1 必须同步收口“会话摘要 + 转发详情”对 `CONTACT_CARD` 的识别
+  - L8 必须先拆分“消息收藏”与“添加到表情” action，再接收藏接口
 
-- 状态：待开发（后续迭代）
+### L5（P1）：位置消息（最小闭环，含低成本兜底）
 
-- **目标**：实现位置消息发送与展示能力。
+- **状态**：可直接开工（最小闭环）
+- **验收**：支持“我的位置/搜索位置”发送位置卡片；接收方点击后可选择是否用本机地图导航；地图搜索能力异常或额度耗尽时仍可发送位置。
+
+- **目标**：在不引入重型地图 SDK 成本前提下，交付可上线的位置消息闭环。
 - **范围**：
   - uniappx：
-    - 集成地图 SDK（高德/腾讯）
-    - 选点页面，获取坐标后发送
-    - 位置消息渲染（缩略图+名称/地址）
+    - 输入区 `+` 面板“位置”入口（复用现有入口）
+    - 选点与搜索：优先 `uni.chooseLocation`
+    - 发送位置卡片并在会话内渲染
+    - 点击卡片后 `uni.openLocation`，由用户自行选择导航 App
   - module-system：
-    - 新增 `messageType=LOCATION`
-    - 消息体包含 latitude/longitude/name/address 等
-- **依赖**：S1（消息体 schema）、地图 SDK 集成
-- **验收标准**：
-  - 发送：点击"+"弹出位置选项，调用地图 SDK 选点
-  - 展示：显示静态地图缩略图 + 名称/地址
-  - 点击：跳转到地图应用/组件查看详情
+    - 复用现有发送接口，不新增独立位置发送路由
+    - 统一校验 `LOCATION` 消息体字段（经纬度必填，`name/address` 至少一个非空）
+    - 存储侧保证历史消息可恢复坐标（禁止仅落 address 文本）
+- **依赖**：S1（消息体 schema 冻结）、C7（发送链路）
+
+- **低成本方案（强约束）**：
+  - P0 默认：`uni.chooseLocation + uni.openLocation`，不新增商业 SDK 采购
+  - 可选增强：仅当部分端能力不足时，再接 WebService POI 搜索（服务端代理）
+  - 供应商默认：腾讯优先（`im.location.search.provider=tencent`），但保留可插拔
+
+- **厂商定版（冻结）**：
+  - 本项目固定选型：腾讯位置服务（Tencent LBS）
+  - 原因：当前工程已存在 `shengyu.tencent-lbs-key` 配置，改造成本最低
+  - 注意：本期不做高德/百度并行接入，避免多供应商并发增加复杂度
+
+- **免费额度/配额兜底（必须实现）**：
+  - 开关：`im.location.search.enabled`
+  - 配额异常时自动降级为“仅发送我的位置 + 最近地点”
+  - 允许发送基础经纬度卡片（`name=位置`，`address` 可空）
+  - 移动端统一提示文案：`地图服务额度已用完，请联系管理员`
+  - 提示交互：位置搜索区域显示“额度已用完”状态页（或阻断弹窗），不可只用 toast
+  - 腾讯额度以控制台实时值为准，不在代码固化静态额度数字
+
+- **开工任务（AI 顺序）**：
+  - B1：修正存储层位置消息落库结构，确保历史可恢复 `latitude/longitude/address/name`
+  - B2：统一 `LOCATION` 消息体校验与 DTO（经纬度/address/name/provider）
+  - F1：聊天页位置发送流程收口到一个方法（避免多入口分叉）
+  - F2：位置卡片点击流程改为“先详情，后导航选择”
+  - F3：实现搜索不可用/失败/额度耗尽时的降级 UI 与发送兜底
+  - F4：放开位置消息“单条转发”入口（多选维持现状）
+  - F5：补“额度耗尽状态页/阻断弹窗”交互（含“联系管理员”文案）
+  - T1：补 11 条回归用例（发送、刷新、转发、引用、撤回、配额降级）
+
 - **涉及文件/目录**：
-  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/common/location-picker.uvue`（选点页）
-  - `shengyu-ui/shengyu-ui-admin-uniappx/components/message-location.uvue`（位置消息组件）
-  - `shengyu-framework/.../proto/im_message.proto`（LOCATION 枚举）
-  - `shengyu-module-system/.../im/ImMessageServiceImpl.java`（位置消息处理）
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/utils/message-handler.uts`
+  - `shengyu-module-system/.../im/ImMessageServiceImpl.java`
+  - `shengyu-module-system/.../controller/app/im/AppImMessageController.java`
+  - `shengyu-module-system/.../service/im/spi/SystemMessageStorageServiceImpl.java`
+  - `shengyu-server/src/main/resources/application-dev.yaml`
+  - `shengyu-server/src/main/resources/application-local.yaml`
+
+- **本期不做**：实时共享位置、轨迹、审计类需求。
+
+#### L5-OPS：腾讯位置服务开通与管理员配置清单（必须落文档）
+
+- 管理员登录站点：
+  1. 腾讯位置服务官网：`https://lbs.qq.com/`
+  2. 腾讯位置服务控制台（登录后）：`https://lbs.qq.com/dev/console/`
+  3. 配额管理页：`https://lbs.qq.com/dev/console/quotaImprove`
+- 控制台配置路径（页面改版时按菜单名称）：
+  1. `控制台 -> 应用管理 -> 我的应用`：创建应用并添加 Key
+  2. `Key 设置`：勾选 `WebService API`
+  3. `Key 安全`：配置授权 IP 或 SN 签名
+  4. `控制台 -> Key与配额（或配额管理） -> 账号额度`：查看并分配配额
+- 项目内配置（服务端）：
+  1. 已有：`shengyu.tencent-lbs-key`
+  2. 新增建议：`im.location.search.enabled`、`im.location.search.provider=tencent`、`im.location.search.quota-exhausted-tip`
+  3. 生产环境要求：Key 改为环境变量注入，禁止明文提交仓库
+
+
+#### L5-SEQ：文件粒度开工顺序清单（后端/前端/联调/回归）
+
+- 后端（先收口契约，再放前端联调）：
+  1. `shengyu-module-system/.../service/im/spi/SystemMessageStorageServiceImpl.java`
+     - 修正 `LOCATION` 的入库内容，确保 `content` 可恢复坐标（非纯 address 文本）
+     - 历史兼容：旧数据按“仅地址”渲染，导航入口降级
+  2. `shengyu-module-system/.../service/im/ImMessageServiceImpl.java`
+     - 收口 `LOCATION` 入参校验：`latitude/longitude` 必填，`name/address` 至少一个非空
+     - 统一会话摘要文案 `[位置]`，避免多端文案漂移
+  3. `shengyu-module-system/.../controller/app/im/AppImMessageController.java`
+     - 复用现有发送接口，明确 `LOCATION` body 示例与字段约束注释
+  4. `shengyu-module-system/.../controller/app/im/vo/*`（如已有 VO）
+     - 所有 Long/ID 字段继续 string 化输出，防止前端精度回归
+  5. 配置位（建议）：`im.location.search.enabled`、`im.location.search.provider=tencent`
+     - provider 默认腾讯；开关关闭时走基础模式（仅我的位置/最近地点）
+  6. `shengyu-server/src/main/resources/application-*.yaml`（文档化配置）
+     - 明确 `tencent-lbs-key` 与 `im.location.*` 配置说明
+     - 配额耗尽文案配置：`im.location.search.quota-exhausted-tip=地图服务额度已用完，请联系管理员`
+
+- 前端（复用现有能力，避免重造页面）：
+  1. `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`
+     - 统一“位置”发送入口逻辑（`uni.chooseLocation`）
+     - 搜索不可用/失败/配额异常时，切换基础卡片发送并弹明确提示
+     - 点击位置卡片统一走 `uni.openLocation`，由用户选择导航应用
+     - 位置长按菜单补“转发”入口（单条）
+  2. `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`
+     - `sendLocationMessage` body 结构与后端契约一一对应
+     - 历史回显与 WS 实时回显都走同一字段解析分支
+  3. `shengyu-ui/shengyu-ui-admin-uniappx/utils/message-handler.uts`
+     - `LocationMessageBody` 与摘要解析补齐 `name` 兼容字段
+  4. （可选）`shengyu-ui/.../services/location-service.uts`
+     - 仅当需要接入 POI 搜索时新增；默认不拆服务，优先最小改动
+
+- 联调（按失败优先顺序）：
+  1. 先打通“发送我的位置”全链路（含刷新后仍可导航）
+  2. 再验证“搜索位置发送”与异常降级（mock 限流/配额异常）
+  3. 最后验证接收侧点击查看与导航选择
+  4. 验证配额耗尽提示文案与降级逻辑（移动端提示“地图服务额度已用完，请联系管理员”）
+  5. 验证额度耗尽场景下显示状态页/阻断弹窗，不是弱提示 toast
+
+- 回归（必须通过后再提测）：
+  1. 取消选点不发消息
+  2. 无定位权限/定位失败时可提示且不脏写
+  3. 配额降级后仍可发基础位置卡片
+  4. 会话列表摘要、搜索结果、转发详情对 LOCATION 一致
+  5. 位置消息转发后仍可导航（若有坐标）
+  6. 位置消息撤回/引用后最终态与锚点定位正确
+  7. Android/iOS/Web 至少各 1 条端到端用例
+
+- 质量闸门：
+  - P0 阶段不引入新商业 SDK 采购；腾讯 POI 仅作为可插拔增强
+  - 错误提示文案统一，不出现“静默失败”
+  - 位置相关日志不记录完整精确坐标（仅必要排障字段）
+
+### L5.1（P1）：名片消息（最小闭环，复用通讯录）
+
+- **状态**：可直接开工（最小闭环）
+- **验收**：支持从聊天页发送名片；接收方点击名片进入用户详情页并可快速联系；跨端回显一致。
+
+- **目标**：在不新增复杂权限/审计链路前提下，交付企业通讯录名片发送能力。
+- **范围**：
+  - uniappx：
+    - 输入区 `+` 面板“名片”入口
+    - 复用通讯录选择器选择 1 名用户
+    - 会话渲染名片卡片（头像/姓名/部门或岗位）
+    - 点击卡片进入 `user-detail`，支持“发消息/拨号（有手机号时）”
+  - module-system：
+    - 复用现有消息发送接口
+    - 名片消息采用 `CUSTOM` 子类型（`CONTACT_CARD`），不升级 WS 协议版本
+    - 后端做最小字段校验（`userId/displayName`）
+    - 会话摘要与搜索预览统一输出 `[名片]`
+- **依赖**：C7（发送链路）、H（通讯录能力）
+
+- **开工任务（AI 顺序）**：
+  - B1：`ImMessageServiceImpl` 增加 `CONTACT_CARD` 内容校验与摘要文案 `[名片]`
+  - B2：存储/预览链路补 `CONTACT_CARD` 识别（含合并转发详情）
+  - F1：聊天页新增“名片”选择发送流程（复用现有联系人页/组件）
+  - F2：聊天页新增名片卡片渲染和点击跳转用户详情
+  - F3：名片消息转发/引用入口行为与普通消息一致
+  - T1：补 9 条回归用例（发送、接收、转发、引用、撤回、用户失效、跨端回显）
+
+- **涉及文件/目录**：
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/contacts/*`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/forward-combine-detail.uvue`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/utils/message-handler.uts`
+  - `shengyu-module-system/.../im/ImMessageServiceImpl.java`
+  - `shengyu-module-system/.../service/im/spi/SystemMessageStorageServiceImpl.java`
+
+- **本期不做**：审计类、权限细化、脱敏、外部联系人扩展。
+
+#### L5.1-SEQ：文件粒度开工顺序清单（后端/前端/联调/回归）
+
+- 后端：
+  1. `shengyu-module-system/.../service/im/ImMessageServiceImpl.java`
+     - 增加 `CONTACT_CARD` 子类型校验（`userId/displayName`）
+     - 统一摘要文案 `[名片]`
+  2. `shengyu-module-system/.../service/im/spi/SystemMessageStorageServiceImpl.java`
+     - 预览摘要识别 `CONTACT_CARD`，避免统一落 `[自定义消息]`
+  3. `shengyu-module-system/.../controller/app/im/AppImMessageController.java`
+     - 明确 `CUSTOM.CONTACT_CARD` 示例，避免前端各自拼 JSON
+  4. （若需）`shengyu-module-system/.../service/im/ImConversationServiceImpl.java`
+     - 确认会话预览对名片类型按摘要回显
+
+- 前端：
+  1. `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`
+     - `+` 面板“名片”入口接通
+     - 复用联系人选择页，限制单次仅选 1 人
+     - 新增名片气泡渲染与点击事件
+  2. `shengyu-ui/shengyu-ui-admin-uniappx/services/message-service.uts`
+     - 新增/收口 `sendContactCardMessage`，与后端 body 完整对齐
+  3. `shengyu-ui/shengyu-ui-admin-uniappx/utils/message-handler.uts`
+     - 摘要解析识别 `CONTACT_CARD`，统一输出 `[名片]`
+  4. `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/forward-combine-detail.uvue`
+     - 合并转发详情识别并预览名片条目
+  5. `shengyu-ui/shengyu-ui-admin-uniappx/pages/contacts/user-detail.uvue`
+     - 校验从名片卡片进入时可正常展示并可继续联系
+
+- 联调：
+  1. 单聊发送名片 -> 接收方回显 -> 点击进详情
+  2. 群聊发送名片 -> 多端回显一致
+  3. 名片消息逐条转发/合并转发详情预览一致
+  4. 目标用户失效（离职/不可见）-> 显示状态不可用占位
+
+- 回归：
+  1. 名片撤回后最终态展示正确
+  2. 名片转发后仍可识别为名片卡片
+  3. 名片引用后点击锚点可定位
+  4. 刷新/重登后历史名片可正常回显
+
+- 质量闸门：
+  - 不新增名片专用表，优先复用通讯录现有查询链路
+  - 不做外部联系人与复杂权限扩展，避免 scope 膨胀
 
 ### L6（P2）：草稿保存
 
@@ -2757,36 +2958,115 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - `shengyu-ui/shengyu-ui-admin-uniappx/utils/websocket.uts`（TYPING 发送/接收）
   - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`（状态展示）
 
-### L8（P2）：收藏功能
+### L8（P1）：收藏功能（最小闭环，对齐微信语义）
 
-- **验收**：支持收藏消息；收藏列表分页查询；跨端可见收藏记录。
+- **状态**：可直接开工（最小闭环）
+- **验收**：支持收藏/取消收藏消息；收藏列表分页；点击收藏项可回原会话锚点；跨端可见。
 
-- 状态：待开发（后续迭代）
-
-- **目标**：实现消息收藏能力，便于用户保存重要消息。
+- **目标**：实现“消息收藏”主闭环，保证与现有会话定位模型兼容。
 - **范围**：
   - module-system：
     - `POST /system/im/favorite/add`
     - `DELETE /system/im/favorite/remove`
     - `GET /system/im/favorite/list`
     - `GET /system/im/favorite/check`
-    - 收藏表：im_message_favorite
+    - 表：`im_message_favorite`
   - uniappx：
-    - 长按消息弹出收藏选项
-    - 收藏列表页
-    - 收藏状态标记
-- **依赖**：C7（消息查询）
-- **验收标准**：
-  - 用户维度：收藏属于用户个人，跨端可见
-  - 消息引用：收藏不复制消息内容，仅保存引用
-  - 数量限制：建议上限 1000 条/用户
-  - 最终态：原消息被撤回/删除时，收藏记录保留但展示"原消息已撤回/删除"
+    - 长按消息菜单“收藏/取消收藏”
+    - 收藏列表页（`pages/common/favorite.uvue`）
+    - `+` 面板“收藏”入口直达收藏列表
+    - 从收藏项进入聊天页时传 `chatId + anchorSequence`
+- **依赖**：C7（消息查询/定位）、聊天页入口契约（C4）
+
+- **关键约束（必须满足）**：
+  - “消息收藏”与“添加到表情”必须拆分为两个 action，禁止复用
+  - 当前 `favorite` action 绑定“添加到表情”的现状必须先拆解，再接收藏接口
+  - 收藏是消息引用，不复制正文
+  - 原消息撤回/删除后收藏记录保留，但展示最终态占位
+
+- **开工任务（AI 顺序）**：
+  - B1：建表与唯一约束（`user_id + message_id + deleted`）
+  - B2：完成 add/remove/list/check 四个接口
+  - F1：聊天长按菜单拆分 `favorite_message` 与 `favorite_sticker`
+  - F2：聊天页接入收藏/取消收藏与状态回显
+  - F3：收藏列表页接入分页与回会话定位
+  - F4：`+` 面板“收藏”入口接入收藏列表页
+  - T1：补 12 条回归用例（重复收藏、跨端同步、原消息撤回、定位失败兜底、与转发/引用并轨等）
+
 - **涉及文件/目录**：
   - `shengyu-module-system/.../controller/app/im/AppImFavoriteController.java`
-  - `shengyu-module-system/.../im/ImFavoriteServiceImpl.java`
-  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/common/favorite.uvue`（收藏列表页）
-  - `sql/mysql/1.0/im/ddl_im_tables.sql`（im_message_favorite 表）
+  - `shengyu-module-system/.../service/im/ImFavoriteServiceImpl.java`
+  - `shengyu-module-system/.../dal/mysql/im/*Favorite*Mapper.java`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/api/favorite.uts`
+  - `shengyu-ui/shengyu-ui-admin-uniappx/pages/common/favorite.uvue`
+  - `sql/mysql/1.0/im/ddl_im_tables.sql`
 
+- **本期不做**：收藏分组/标签、审计类需求、复杂权限模型。
+
+#### L8-SEQ：文件粒度开工顺序清单（后端/前端/联调/回归）
+
+- 后端（先表后接口）：
+  1. `sql/mysql/1.0/im/ddl_im_tables.sql`
+     - 新增/确认 `im_message_favorite`
+     - 增加唯一约束：`user_id + message_id + deleted`
+     - 补常用索引：`idx_user_created(user_id, created_at desc)`
+  2. `shengyu-module-system/.../dal/mysql/im/*Favorite*Mapper.java`
+     - add/remove/list/check 的 Mapper 语句与分页查询
+  3. `shengyu-module-system/.../service/im/ImFavoriteServiceImpl.java`
+     - 幂等 add/remove
+     - list 返回 `anchorSequence` 与最终态 `status`
+  4. `shengyu-module-system/.../controller/app/im/AppImFavoriteController.java`
+     - 四个接口入参/出参冻结，补 OpenAPI 注释
+
+- 前端（先动作再页面）：
+  1. `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`
+     - 长按菜单拆分“消息收藏”与“添加到表情”两个 action（`favorite_message/favorite_sticker`）
+     - 收藏/取消收藏状态即时反馈（toast + 菜单态）
+  2. `shengyu-ui/shengyu-ui-admin-uniappx/api/favorite.uts`（若不存在则新增）
+     - 封装 add/remove/list/check，禁止在页面手写 URL
+  3. `shengyu-ui/shengyu-ui-admin-uniappx/pages/common/favorite.uvue`
+     - 收藏列表分页与空态
+     - 点击收藏项按 `chatId + anchorSequence` 进入聊天页
+  4. `shengyu-ui/shengyu-ui-admin-uniappx/pages/message/chat.uvue`（`+` 面板）
+     - “收藏”入口跳收藏列表，不再显示“功能开发中”
+
+- 联调：
+  1. add/remove/check 单消息闭环
+  2. list 分页与跨端一致性
+  3. 原消息撤回/删除后的收藏最终态显示
+  4. 锚点定位失败时回退最近窗口并提示
+
+- 回归：
+  1. 重复收藏不会新增脏数据
+  2. 多端同时操作收藏最终一致
+  3. 收藏页进入聊天页不使用 `pageNo/pageSize` 定位
+  4. 与搜索/转发详情入口契约不冲突
+  5. 消息收藏与添加到表情互不串路
+
+- 质量闸门：
+  - 所有 ID/序列字段严格 string
+  - 任何异常必须可见提示，不可静默失败
+  - 接口层与页面层职责分离：页面不直连后端 URL
+
+#### L5/L5.1/L8-INT：跨功能联调与回归总清单（后端/前端/联调/回归）
+
+- 后端：
+  1. 统一消息预览口径：`[位置]`、`[名片]`、收藏最终态 `NORMAL/RECALLED/DELETED`
+  2. 统一锚点返回：收藏、搜索、转发详情全部优先返回 `anchorSequence`
+  3. 最终态一致：撤回后任何入口拉取都不回流原文
+- 前端：
+  1. 聊天长按菜单能力矩阵按消息类型冻结（转发/撤回/引用/收藏）
+  2. 转发详情、搜索页、收藏页进入聊天页全部走统一路由契约
+  3. 位置/名片/收藏三类消息摘要与详情文案统一
+- 联调：
+  1. 位置 -> 转发 -> 引用 -> 撤回 全链路
+  2. 名片 -> 转发(逐条/合并) -> 点击详情 -> 用户失效占位
+  3. 收藏(普通/位置/名片) -> 回会话锚点 -> 原消息最终态变化
+- 回归：
+  1. 任一能力从“搜索/收藏/转发详情”进入聊天页都优先 `anchorSequence`
+  2. 任一能力遇到锚点缺失都回退最近窗口并提示，不静默失败
+  3. “消息收藏”与“添加到表情”在行为、接口、数据表三层完全隔离
 ---
 
 ## Milestone G（P1/P2）：高可用、降级与灰度开关
@@ -2860,3 +3140,4 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
   - `shengyu-module-system/.../featureflag/*`（建议新增管理与查询接口）
   - `shengyu-framework/.../featureflag/*`（starter 侧读取与缓存）
   - `sql/mysql/1.0/im/ddl_im_tables.sql`（开关表/审计表，如需）
+

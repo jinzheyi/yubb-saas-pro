@@ -2355,38 +2355,164 @@ CREATE TABLE `im_user_sticker_recent` (
 - 原发送者收到撤回通知（WS 推送）
 - 被撤回消息不支持重新编辑（见 10.2.3）
 
-### 10.10 位置消息（Location Message，对齐企微/钉钉）
+### 10.10 位置消息（Location Message，对齐微信最小闭环）
 
-位置消息支持发送地理位置，便于企业协作场景。
+位置消息用于“快速告知地点 + 一键导航”，本期只做最小闭环，不引入实时位置共享、轨迹与审计链路。
 
-#### 10.10.1 消息类型
+#### 10.10.0 地图厂商决策（冻结）
 
-- `messageType = LOCATION`（建议新增枚举值）
+- 决策：默认厂商固定为腾讯位置服务（Tencent LBS）
+- 决策依据（结合当前项目）：
+  - 工程中已存在腾讯地图配置项：`shengyu.tencent-lbs-key`（`application-dev/local`）
+  - 前端位置主链路已基于 `uni.chooseLocation + uni.openLocation`，与腾讯方案并不冲突
+  - 本期仅需“位置卡片发送 + 搜索可选增强”，不需要引入重型地图 SDK
+- 供应商策略：
+  - P0：仅使用系统能力，不消耗第三方检索配额
+  - P1：开启腾讯 WebService POI 搜索（服务端代理）
+  - 若后续切换厂商，必须通过 `provider adapter` 层实现，不允许在页面层写死供应商
 
-#### 10.10.2 消息体结构
+#### 10.10.1 最小闭环范围（本期必做）
+
+- 发送入口：聊天页 `+` 面板点击“位置”
+- 发送能力：支持“我的位置”与“搜索指定位置”后发送位置卡片
+- 会话渲染：卡片展示 `地点名称 + 地址 + 地图缩略占位`
+- 点击行为：接收方点击后查看位置详情，并可自行选择是否使用本机地图应用导航
+- 非目标：实时位置共享、轨迹回放、围栏、审计留痕
+
+#### 10.10.2 微信 UI 对齐要点（基于现网交互与现有原型）
+
+- 入口在聊天输入区 `+` 面板，和图片/文件并列
+- 选点页为“顶部搜索 + 地图 + POI 列表”结构，支持当前定位与关键词检索
+- 发送后在聊天内显示位置卡片；点击后再触发地图查看/导航动作，而不是直接强跳第三方 App
+
+#### 10.10.3 消息体冻结（兼容当前工程）
 
 ```json
 {
-  "latitude": 39.9042,
-  "longitude": 116.4074,
-  "name": "北京市朝阳区xxx",
-  "address": "北京市朝阳区xxx路xxx号",
-  "poiId": "B123456",
-  "mapProvider": "amap"
+  "type": "LOCATION",
+  "latitude": 28.6837,
+  "longitude": 115.8579,
+  "address": "江西省南昌市红谷滩区丰和路",
+  "name": "江西金控集团",
+  "provider": "system",
+  "poiId": ""
 }
 ```
 
-- `latitude/longitude`：经纬度（必须）
-- `name`：地点名称（必须）
-- `address`：详细地址（可选）
-- `poiId`：POI ID（可选，用于地图跳转）
-- `mapProvider`：地图提供商（amap/tencent/baidu，可选）
+字段约束：
 
-#### 10.10.3 端侧实现
+- 必填：`latitude`、`longitude`
+- 条件必填：`name/address` 至少一个非空（兜底场景可 `name=位置`、`address` 为空）
+- 选填：`provider`、`poiId`
+- `name` 为空时，前端展示回退到 `address`
+- `provider` 默认 `system`，可取 `tencent/amap/baidu`
+- Long 规范：ID/序列相关字段继续按 `string` 传输，不改变现有约束
 
-- 发送：调用地图 SDK 选点，获取坐标后发送
-- 展示：显示静态地图缩略图 + 名称/地址
-- 点击：跳转到地图应用/组件查看详情
+#### 10.10.4 工程现状校准与收口点（必须落实）
+
+- 现状已具备：
+  - 前端有位置气泡渲染与 `uni.openLocation` 打开能力
+  - 协议枚举与后端处理器已有 `LOCATION(6/105)` 链路
+- 现状差异：
+  - 前端 `LocationMessageBody` 仅定义 `latitude/longitude/address`
+  - 后端存储侧目前有“只落 `address` 文本”的路径，历史回显可能缺失坐标
+- 本期收口（必须）：
+  - 入库 `content` 必须可恢复 `latitude/longitude/address/name`（JSON 字符串或等价结构）
+  - 禁止仅存纯地址文本，否则刷新后无法稳定导航、转发详情与收藏回跳也会失真
+  - 旧数据兼容：若历史消息缺坐标，允许展示但点击导航需提示“历史位置缺少坐标”
+
+#### 10.10.5 低成本地图方案与配额兜底
+
+- 默认方案（P0）：优先使用 `uni.chooseLocation + uni.openLocation`，不引入新增商业 SDK 成本
+- 增强方案（可选）：仅在 `chooseLocation` 不可用或搜索体验不达标时，增加 WebService POI 搜索（服务端代理调用）
+- 供应商策略：默认优先腾讯（`im.location.search.provider=tencent`），但必须保留可插拔实现
+- 配额治理：第三方检索能力必须挂开关 `im.location.search.enabled`，并配置阈值告警
+- 免费额度/配额耗尽兜底（必须可用）：
+  - 自动关闭远程 POI 搜索，保留“发送我的位置”
+  - 允许发送“经纬度基础卡片”（`name=位置`，`address` 可空）
+  - 保留本地最近选择地点（建议 20 条）供快速复用
+  - 移动端显式提示“地图服务额度已用完，请联系管理员”
+  - 提示形态要求：位置搜索页需展示可见“额度已用完”状态页（或阻断弹窗），禁止仅弱提示 toast
+  - 管理端/日志补充错误码与配额告警，便于运维排查
+- 成本口径约束：
+  - 腾讯位置服务配额以控制台实时值为准，不在文档固化静态数字
+  - 高德公开文档已给出基础搜索月配额与计费口径，作为兜底供应商比较基线
+
+管理员开通与配置路径（腾讯）：
+
+- 腾讯位置服务 WebService API 概述：`https://lbs.qq.com/service/webService/webServiceGuide/webServiceOverview`
+- 腾讯位置服务常见问题（含配额/Key 分类入口）：`https://lbs.qq.com/faq/serverFaq/webServiceKey`
+- 腾讯位置服务官网登录：`https://lbs.qq.com/`
+- 控制台配额页（账号额度/扩容入口）：`https://lbs.qq.com/dev/console/quotaImprove`
+- 控制台内操作路径（页面改版时以菜单为准）：
+  - `控制台 -> 应用管理 -> 我的应用 -> 创建应用/添加 Key`
+  - `控制台 -> Key 与配额（或配额管理） -> 账号额度 -> 分配额度`
+  - `Key 安全设置 -> 授权 IP 或 SN 签名校验`
+- 项目配置项（服务端）：
+  - `shengyu.tencent-lbs-key`（已有）
+  - 建议新增：`im.location.search.enabled`、`im.location.search.provider=tencent`、`im.location.search.quota-exhausted-tip`
+
+参考资料（用于成本口径对齐）：
+
+- 高德 WebService 流量限制说明：`https://lbs.amap.com/api/webservice/guide/tools/flowlevel`
+- 高德开放平台升级与基础服务配额说明：`https://lbs.amap.com/upgrade`
+
+#### 10.10.6 与现有消息能力并轨规则
+
+- 转发：位置消息允许单条转发；合并转发预览统一显示 `[位置]`
+- 撤回：沿用既有 `RECALLED + rev` 最终态规则，任何入口均不回流原文
+- 引用：允许引用位置消息；引用预览优先 `name`，缺失回退 `address`
+- 搜索/收藏回跳：统一走 `chatId + anchorSequence`，定位失败回退最近窗口并提示
+
+### 10.10A 名片消息（Contact Card，对齐微信最小闭环）
+
+名片消息用于“把某个用户快速介绍给当前会话”，本期只做企业内部联系人名片。
+
+#### 10.10A.1 最小闭环范围（本期必做）
+
+- 发送入口：聊天页 `+` 面板点击“名片”
+- 选择对象：从当前租户通讯录中选择 1 名用户发送
+- 消息渲染：会话内显示名片卡片（头像、姓名、部门/岗位摘要）
+- 点击动作：接收方点击进入用户详情页，可继续“发消息/拨号（若有手机号）”
+- 非目标：外部联系人、好友申请、审计、脱敏、复杂权限控制
+
+#### 10.10A.2 协议策略（最小改动优先）
+
+- 不新增 WS 基础协议版本，不新增 messageType 枚举
+- 复用现有 `CUSTOM(9/106)`，约定 `body.type = "CONTACT_CARD"`
+- 消息体建议：
+
+```json
+{
+  "type": "CONTACT_CARD",
+  "userId": "1876543210987654321",
+  "displayName": "张三",
+  "avatar": "",
+  "deptName": "研发中心",
+  "title": "后端工程师",
+  "mobile": ""
+}
+```
+
+#### 10.10A.3 复用与落地边界
+
+- 发送侧复用通讯录检索/详情能力，不新增名片专用数据表
+- 接收侧点击统一走 `pages/contacts/user-detail`
+- 若名片用户已离职或不可见：卡片保留但详情页提示“该用户状态不可用”
+- 与“应用卡片”区分：名片仅表示“人”，不承载业务审批/流程数据
+
+#### 10.10A.4 工程收口点（必须）
+
+- 会话摘要、搜索结果、合并转发详情需统一识别 `CONTACT_CARD` 并显示 `[名片]`
+- `CUSTOM` 解析必须容错：JSON 解析失败时降级 `[自定义消息]`，不得白屏
+- 前后端统一使用“发送时快照”，不依赖实时通讯录字段回填
+
+#### 10.10A.5 与现有消息能力并轨规则
+
+- 转发：支持逐条转发；合并转发明细中显示 `[名片] + displayName`
+- 撤回：沿用既有撤回最终态，不显示名片原始内容
+- 引用：允许引用名片；引用预览使用 `displayName`
+- 搜索：关键字命中名片预览时，跳转仍走锚点窗口契约
 
 ### 10.11 草稿保存机制（Draft，对齐企微/钉钉）
 
@@ -2448,39 +2574,78 @@ CREATE TABLE `im_user_sticker_recent` (
 - 群聊（若开启）：显示 "XXX正在输入..."
 - 超时/停止：清除提示
 
-### 10.13 收藏功能（Favorite/Collect，对齐企微/钉钉）
+### 10.13 收藏功能（Favorite/Collect，对齐微信最小闭环）
 
-收藏功能允许用户保存重要消息，便于后续查找。
+收藏功能用于“保存重要消息并可回到原会话定位”，本期仅做消息收藏最小闭环。
 
-#### 10.13.1 收藏语义
+#### 10.13.1 最小闭环范围（本期必做）
 
-- **用户维度**：收藏属于用户个人，跨端可见
-- **消息引用**：收藏不复制消息内容，仅保存引用
-- **数量限制**：建议上限 1000 条/用户
+- 入口：聊天消息长按菜单“收藏/取消收藏”
+- 列表：收藏页分页查询（按收藏时间倒序）
+- 回跳：点击收藏项可回到原会话并按锚点定位原消息
+- 跨端：同账号跨端可见收藏记录
+- 非目标：收藏分组/标签、全文检索、审计流水
 
-#### 10.13.2 数据模型
+#### 10.13.2 交互规范（对齐微信语义）
 
-收藏表（建议新增）：
-- `im_message_favorite`
-  - `id`：收藏记录 ID
-  - `tenant_id`：租户 ID
-  - `user_id`：用户 ID
-  - `message_id`：原消息 ID
-  - `chat_id`：原会话 ID
-  - `created_at`：收藏时间
-  - `extra`：扩展字段（如备注）
+- 收藏动作是“引用消息”，不是复制消息正文
+- 原消息撤回/删除后：收藏记录保留，但列表与详情展示“原消息已撤回/删除”最终态
+- 聊天菜单中“添加到表情”与“消息收藏”必须区分，禁止复用同一 action
 
-#### 10.13.3 建议接口
+#### 10.13.3 数据模型（最小字段）
 
-- `POST /system/im/favorite/add` body：`{ messageId }`
+- 表：`im_message_favorite`
+- 建议字段：
+  - `id`、`tenant_id`、`user_id`、`message_id`、`chat_id`
+  - `message_type`（收藏时快照类型）
+  - `message_preview`（收藏时预览快照，避免列表页重组装）
+  - `created_at`、`deleted`
+- 唯一约束：`uniq_user_message(user_id, message_id, deleted)`
+
+#### 10.13.4 接口冻结（最小闭环）
+
+- `POST /system/im/favorite/add` body: `{ messageId: string }`
 - `DELETE /system/im/favorite/remove?id=...`
-- `GET /system/im/favorite/list?pageNo=&pageSize=`：分页查询收藏列表
-- `GET /system/im/favorite/check?messageId=...`：检查是否已收藏
+- `GET /system/im/favorite/list?pageNo=&pageSize=`
+- `GET /system/im/favorite/check?messageId=...`
 
-#### 10.13.4 与消息最终态的关系
+列表项最小返回建议：
 
-- 原消息被撤回/删除：收藏记录保留，但展示 "原消息已撤回/删除"
-- 收藏不等于备份：仅保存引用，不保证内容永久可用
+- `favoriteId`、`messageId`、`chatId`
+- `messageType`、`preview`
+- `status`（`NORMAL|RECALLED|DELETED`）
+- `anchorSequence`（用于回会话定位）
+- `createdAt`
+
+#### 10.13.5 与会话定位契约
+
+- 收藏页进入聊天页必须优先带 `chatId + anchorSequence`
+- 找不到锚点时：自动回退最近窗口并提示“原消息未定位到，已跳转到最近消息”
+- 不允许用 `pageNo/pageSize` 表达收藏回跳位置
+
+#### 10.13.6 本期明确不做
+
+- 不做收藏搜索和标签管理
+- 不做收藏内容审计与审批
+- 不做附件离线备份与永久直链
+
+#### 10.13.7 与既有“添加到表情”解耦（工程强约束）
+
+- 聊天长按菜单必须拆分两个 action：
+  - `favorite_message`：消息收藏（进入收藏域）
+  - `favorite_sticker`：添加到表情（进入个人表情库）
+- 禁止复用同一 action key（当前工程存在复用风险，必须在实现阶段消除）
+- `+` 面板“收藏”入口语义统一为“打开消息收藏列表”，不承载“添加到表情”
+
+#### 10.13.8 位置/名片/收藏跨功能交互矩阵（本期冻结）
+
+| 能力 | 位置 | 名片 | 收藏 |
+| --- | --- | --- | --- |
+| 转发（逐条） | 支持，预览 `[位置]` | 支持，预览 `[名片]` | 收藏记录不等于消息转发 |
+| 合并转发详情 | 显示 `[位置]`，有坐标可导航 | 显示 `[名片] + displayName` | 点击收藏项回原会话，不进合并详情 |
+| 撤回 | 显示最终态，不回流原文 | 显示最终态，不回流原文 | 收藏记录保留，状态变为 `RECALLED/DELETED` |
+| 引用 | 可引用，预览 `name/address` | 可引用，预览 `displayName` | 收藏页跳转后仍可执行引用 |
+| 搜索与锚点 | 统一 `anchorSequence` | 统一 `anchorSequence` | 统一 `chatId + anchorSequence` |
 
 ### 10.14 系统通知/机器人/应用消息
 
@@ -3464,3 +3629,4 @@ prepend 视口稳定规则：
 - 搜索服务当前未把 `sequence` 映射为一等字段
 - 后端当前仅有 `list-by-chat(pageNo/pageSize)`，尚无 `window/history`
 - mapper 当前老分页仍以 `id DESC` 为排序口径
+
