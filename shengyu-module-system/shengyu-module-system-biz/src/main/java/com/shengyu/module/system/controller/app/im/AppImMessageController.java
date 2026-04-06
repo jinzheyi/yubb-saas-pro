@@ -7,6 +7,8 @@ import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageForwardReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageHistoryReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageHistoryRespVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImLocationSearchReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImLocationSearchRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePullReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRecallConfigRespVO;
@@ -21,6 +23,7 @@ import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.service.im.ImConversationService;
+import com.shengyu.module.system.service.im.ImLocationService;
 import com.shengyu.module.system.service.im.ImMessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -59,6 +62,9 @@ public class AppImMessageController {
 
     @Resource
     private ImConversationService conversationService;
+
+    @Resource
+    private ImLocationService locationService;
 
     @GetMapping("/page")
     @Operation(summary = "分页查询消息列表")
@@ -163,6 +169,13 @@ public class AppImMessageController {
             @Valid AppImMessageSearchReqVO searchReqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return success(messageService.searchMessages(userId, searchReqVO));
+    }
+
+    @GetMapping("/location-search")
+    @Operation(summary = "位置检索（服务端代理腾讯 WebService）")
+    public CommonResult<AppImLocationSearchRespVO> searchLocation(@Valid AppImLocationSearchReqVO reqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(locationService.searchLocation(userId, reqVO));
     }
 
     @GetMapping("/pull")

@@ -254,3 +254,26 @@ export function getMessageDetail(messageId: string): Promise<any> {
     method: 'GET'
   })
 }
+
+/**
+ * 位置检索（服务端代理，避免前端依赖 uniCloud/地图插件）
+ */
+export function searchLocation(keyword: string, latitude?: number, longitude?: number, pageSize: number = 20): Promise<any> {
+  const kw = keyword != null ? keyword.trim() : ''
+  const query: string[] = [
+    `pageSize=${Math.max(1, Math.min(20, pageSize))}`
+  ]
+  if (kw !== '') {
+    query.push(`keyword=${encodeURIComponent(kw)}`)
+  }
+  if (latitude != null && !isNaN(latitude)) {
+    query.push(`latitude=${encodeURIComponent(String(latitude))}`)
+  }
+  if (longitude != null && !isNaN(longitude)) {
+    query.push(`longitude=${encodeURIComponent(String(longitude))}`)
+  }
+  return request({
+    url: `/system/im/message/location-search?${query.join('&')}`,
+    method: 'GET'
+  })
+}

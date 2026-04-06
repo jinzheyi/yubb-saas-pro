@@ -1798,7 +1798,9 @@ export class MessageService {
     groupId: string,
     latitude: number,
     longitude: number,
-    address: string
+    address: string,
+    locationName: string = '',
+    provider: string = ''
   ): MessageItem {
     const message = MessageBuilder.buildLocationMessage(
       this.currentUserId,
@@ -1807,7 +1809,9 @@ export class MessageService {
       this.currentTenantId,
       latitude,
       longitude,
-      address
+      address,
+      locationName,
+      provider
     )
     
     return this.sendMessage(message)
@@ -1862,6 +1866,69 @@ export class MessageService {
       conversationService.updateConversation(
         resolvedChatId,
         8 as any,
+        isGroup ? `我: ${summary}` : summary,
+        timestamp,
+        false,
+        null
+      )
+      return messageItem
+    } catch (e) {
+      this.updateMessageStatus(clientMessageId, MessageStatus.FAILED)
+      throw e
+    }
+  }
+
+  public async sendContactCardMessageByRest(
+    chatId: string,
+    receiverId: string,
+    groupId: string,
+    cardPayload: any
+  ): Promise<MessageItem> {
+    const userInfo = getUserInfo()
+    const currentUser = userInfo?.user
+    const clientMessageId = `ccard_${Date.now()}_${Math.floor(Math.random() * 100000)}`
+    const userName = currentUser?.nickname || ''
+    const avatarText = getAvatarText(userName)
+    const avatarBg = getUserAvatarColor(this.currentUserId)
+    const timestamp = Date.now()
+    const payload: any = cardPayload != null ? cardPayload : {}
+    const contentRaw = JSON.stringify(payload)
+    const messageItem: MessageItem = {
+      id: '0',
+      messageId: clientMessageId,
+      senderId: this.currentUserId,
+      receiverId: receiverId,
+      groupId: groupId,
+      type: 'custom' as any,
+      content: contentRaw,
+      extra: payload,
+      status: MessageStatus.SENDING,
+      timestamp: timestamp,
+      isSelf: true,
+      showTime: true,
+      avatarText: avatarText,
+      avatarBg: avatarBg,
+      senderName: userName
+    }
+    const resolvedChatId = chatId != null && chatId !== '' ? chatId : this.activeChatId
+    this.addMessageToCache(resolvedChatId, messageItem)
+    this.notifyMessageListeners(messageItem)
+    try {
+      const body: any = {
+        chatId: resolvedChatId,
+        receiverId: receiverId !== '' && receiverId !== '0' ? receiverId : null,
+        groupId: groupId !== '' && groupId !== '0' ? groupId : null,
+        messageType: 9,
+        content: contentRaw,
+        extra: contentRaw,
+        clientMessageId: clientMessageId
+      }
+      await sendMessageApi(body)
+      const summary = '[名片]'
+      const isGroup = groupId !== '' && groupId !== '0'
+      conversationService.updateConversation(
+        resolvedChatId,
+        9 as any,
         isGroup ? `我: ${summary}` : summary,
         timestamp,
         false,

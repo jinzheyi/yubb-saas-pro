@@ -28,6 +28,15 @@
 		"enable": false
 	},
 	"vueVersion": "3",
+	"h5": {
+		"sdkConfigs": {
+			"maps": {
+				"tencent": {
+					"key": ""
+				}
+			}
+		}
+	},
 	"app": {
 		"distribute": {
 			"icons": {
@@ -83,7 +92,18 @@
 				"<uses-permission android:name=\"android.permission.VIBRATE\"/>",
 				"<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>"
 			],
-			"modules": {},
+			"modules": {
+				"uni-location": {
+					"tencent": {
+						"key": ""
+					}
+				},
+				"uni-map": {
+					"tencent": {
+						"key": ""
+					}
+				}
+			},
 			"icons": {
 				"hdpi": "",
 				"xhdpi": "",
@@ -104,7 +124,18 @@
 				"NSPhotoLibraryAddUsageDescription": "我们需要您的相册权限来保存图片和视频",
 				"NSLocationWhenInUseUsageDescription": "我们需要您的位置权限来发送位置消息"
 			},
-			"modules": {},
+			"modules": {
+				"uni-location": {
+					"tencent": {
+						"key": ""
+					}
+				},
+				"uni-map": {
+					"tencent": {
+						"key": ""
+					}
+				}
+			},
 			"icons": {},
 			"splashScreens": {}
 		}

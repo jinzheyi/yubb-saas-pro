@@ -622,7 +622,27 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                     
                 case LOCATION:
                     LocationMessage locationMsg = LocationMessage.parseFrom(message.getBody());
-                    return locationMsg.getAddress();
+                    JSONObject locationObj = JSONUtil.createObj();
+                    locationObj.set("latitude", locationMsg.getLatitude());
+                    locationObj.set("longitude", locationMsg.getLongitude());
+                    locationObj.set("address", locationMsg.getAddress());
+                    try {
+                        String extra = message.getHeader() != null ? message.getHeader().getExtra() : "";
+                        if (StrUtil.isNotBlank(extra)) {
+                            JSONObject extraObj = JSONUtil.parseObj(extra);
+                            String name = extraObj.getStr("name", extraObj.getStr("locationName", ""));
+                            if (StrUtil.isNotBlank(name)) {
+                                locationObj.set("name", name);
+                            }
+                            String provider = extraObj.getStr("provider", "");
+                            if (StrUtil.isNotBlank(provider)) {
+                                locationObj.set("provider", provider);
+                            }
+                        }
+                    } catch (Exception ignore) {
+                        // ignore invalid extra, keep body baseline
+                    }
+                    return locationObj.toString();
                     
                 default:
                     // 其他类型直接返回 Base64 编码的字节
@@ -925,6 +945,9 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                         }
                         if ("STICKER".equals(customType)) {
                             return "[动画表情]";
+                        }
+                        if ("CONTACT_CARD".equals(customType)) {
+                            return "[名片]";
                         }
                     } catch (Exception ignore) {
                     }

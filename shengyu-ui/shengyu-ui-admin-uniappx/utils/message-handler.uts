@@ -110,6 +110,17 @@ export type LocationMessageBody = {
   latitude: number
   longitude: number
   address: string
+  name?: string
+  provider?: string
+}
+
+export type ContactCardMessageBody = {
+  type: string
+  userId: string
+  displayName: string
+  deptName?: string
+  postName?: string
+  avatar?: string
 }
 
 /**
@@ -548,7 +559,9 @@ export class MessageBuilder {
     tenantId: string,
     latitude: number,
     longitude: number,
-    address: string
+    address: string,
+    name: string = '',
+    provider: string = ''
   ): ImMessage {
     const header = MessageBuilder.buildHeader(
       MessageType.LOCATION,
@@ -561,9 +574,61 @@ export class MessageBuilder {
     const body: LocationMessageBody = {
       latitude: latitude,
       longitude: longitude,
-      address: address
+      address: address,
+      name: name,
+      provider: provider
+    }
+    try {
+      header.extra = JSON.stringify({
+        latitude: latitude,
+        longitude: longitude,
+        address: address,
+        name: name,
+        provider: provider
+      })
+    } catch (e) {
+      header.extra = ''
     }
     
+    return {
+      header: header,
+      body: body
+    }
+  }
+
+  public static buildContactCardMessage(
+    senderId: string,
+    receiverId: string,
+    groupId: string,
+    tenantId: string,
+    userId: string,
+    displayName: string,
+    deptName: string = '',
+    postName: string = '',
+    avatar: string = ''
+  ): ImMessage {
+    const header = MessageBuilder.buildHeader(
+      MessageType.CUSTOM,
+      senderId,
+      receiverId,
+      groupId,
+      tenantId
+    )
+
+    const body: ContactCardMessageBody = {
+      type: 'CONTACT_CARD',
+      userId: userId,
+      displayName: displayName,
+      deptName: deptName,
+      postName: postName,
+      avatar: avatar
+    }
+    try {
+      header.extra = JSON.stringify(body)
+    } catch (e) {
+      header.extra = ''
+    }
+
     return {
       header: header,
       body: body
@@ -748,6 +813,9 @@ export class MessageParser {
             }
             if (obj != null && obj.type != null && String(obj.type) === 'STICKER') {
               return '[动画表情]'
+            }
+            if (obj != null && obj.type != null && String(obj.type) === 'CONTACT_CARD') {
+              return '[名片]'
             }
           }
         } catch (e) {

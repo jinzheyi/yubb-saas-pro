@@ -1,0 +1,41 @@
+import { request } from '../utils/request.uts'
+
+export function addFavorite(messageId: string): Promise<any> {
+  return request({
+    url: '/system/im/favorite/add',
+    method: 'POST',
+    data: { messageId: messageId }
+  })
+}
+
+export function removeFavorite(favoriteId: string): Promise<any> {
+  return request({
+    url: '/system/im/favorite/remove?favoriteId=' + encodeURIComponent(favoriteId),
+    method: 'DELETE'
+  })
+}
+
+export function getFavoriteList(pageNo: number = 1, pageSize: number = 20): Promise<any> {
+  return request({
+    url: '/system/im/favorite/list?pageNo=' + pageNo + '&pageSize=' + pageSize,
+    method: 'GET'
+  })
+}
+
+export function getFavoriteDetail(favoriteId: string): Promise<any> {
+  return request({
+    url: '/system/im/favorite/detail?favoriteId=' + encodeURIComponent(favoriteId),
+    method: 'GET'
+  })
+}
+
+export function resendFavorite(favoriteId: string, targetChatId: string): Promise<string> {
+  return request({
+    url: '/system/im/favorite/resend',
+    method: 'POST',
+    data: {
+      favoriteId: favoriteId,
+      targetChatId: targetChatId
+    }
+  })
+}

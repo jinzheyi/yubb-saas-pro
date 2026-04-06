@@ -42,6 +42,13 @@ im:
   recall:
     window-seconds: 120
     admin-window-seconds: 86400
+  location:
+    # 腾讯位置服务 Key（统一放在 im 配置域，建议生产环境使用环境变量注入）QQ 地图的密钥 https://lbs.qq.com/service/staticV2/staticGuide/staticDoc
+    tencent-lbs-key:
+    search:
+      enabled: true
+      provider: tencent
+      quota-exhausted-tip: 地图服务额度已用完，请联系管理员
   voice-play:
     cleanup:
       enabled: true

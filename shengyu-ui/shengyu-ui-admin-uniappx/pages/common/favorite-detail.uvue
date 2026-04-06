@@ -1,0 +1,186 @@
+<template>
+  <view class="page">
+    <view class="status-bar"></view>
+    <view class="header">
+      <view class="header-left" @click="handleBack">
+        <text class="iconfont back-icon">&#xeb04;</text>
+      </view>
+      <text class="header-title">{{ t('favoriteDetail.title') }}</text>
+      <view class="header-right"></view>
+    </view>
+
+    <scroll-view class="content" scroll-y show-scrollbar="false">
+      <view v-if="loading" class="loading-wrap">
+        <text class="loading-text">{{ t('favoriteDetail.loading') }}</text>
+      </view>
+      <view v-else-if="detail == null" class="empty-wrap">
+        <text class="empty-text">{{ t('favoriteDetail.empty') }}</text>
+      </view>
+      <view v-else class="card">
+        <view class="card-head">
+          <text class="type">{{ buildTypeText(detail.messageType) }}</text>
+        </view>
+        <view class="body">
+          <text class="preview">{{ detail.messagePreview || t('favoritePage.preview.default') }}</text>
+          <text class="time">{{ formatTime(detail.favoriteTime || detail.sendTime) }}</text>
+        </view>
+        <view class="raw-block">
+          <text class="raw-title">{{ t('favoriteDetail.rawContent') }}</text>
+          <text class="raw-value">{{ buildRawContent(detail) }}</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view v-if="detail != null" class="footer">
+      <view class="send-btn" @click="handleSendToChat">
+        <text class="send-btn-text">{{ t('favoriteDetail.sendToChat') }}</text>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script setup lang="uts">
+import { onLoad } from '@dcloudio/uni-app'
+import { useI18n } from '../../hooks/useI18n.uts'
+import { getFavoriteDetail } from '../../api/favorite.uts'
+
+type FavoriteDetail = {
+  favoriteId: string
+  messageType: number
+  messagePreview: string
+  messageContent: string
+  messageExtra: string
+  messageSnapshot: string
+  sendTime: string
+  favoriteTime: string
+}
+
+const { t } = useI18n()
+const loading = ref(false)
+const favoriteId = ref('')
+const detail = ref<FavoriteDetail | null>(null)
+
+function handleBack(): void {
+  uni.navigateBack()
+}
+
+function formatTime(raw: string): string {
+  try {
+    if (raw == null || String(raw).trim() === '') {
+      return ''
+    }
+    const d = new Date(raw)
+    if (isNaN(d.getTime())) {
+      return String(raw)
+    }
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mi = String(d.getMinutes()).padStart(2, '0')
+    return mm + '-' + dd + ' ' + hh + ':' + mi
+  } catch (e) {
+    return ''
+  }
+}
+
+function buildTypeText(type: number): string {
+  if (type === 1) return t('favoritePage.type.text')
+  if (type === 2) return t('favoritePage.type.image')
+  if (type === 3) return t('favoritePage.type.voice')
+  if (type === 4) return t('favoritePage.type.video')
+  if (type === 5) return t('favoritePage.type.file')
+  if (type === 6) return t('favoritePage.type.location')
+  if (type === 8) return t('favoritePage.type.sticker')
+  if (type === 9) return t('favoritePage.type.custom')
+  return t('favoritePage.type.default')
+}
+
+function normalizeFavoriteDetail(raw: any): FavoriteDetail {
+  return {
+    favoriteId: raw != null && raw.favoriteId != null ? String(raw.favoriteId) : '0',
+    messageType: raw != null && raw.messageType != null ? Number(raw.messageType) : 0,
+    messagePreview: raw != null && raw.messagePreview != null ? String(raw.messagePreview) : '',
+    messageContent: raw != null && raw.messageContent != null ? String(raw.messageContent) : '',
+    messageExtra: raw != null && raw.messageExtra != null ? String(raw.messageExtra) : '',
+    messageSnapshot: raw != null && raw.messageSnapshot != null ? String(raw.messageSnapshot) : '',
+    sendTime: raw != null && raw.sendTime != null ? String(raw.sendTime) : '',
+    favoriteTime: raw != null && raw.favoriteTime != null ? String(raw.favoriteTime) : ''
+  }
+}
+
+function buildRawContent(item: FavoriteDetail): string {
+  const snapshot = item.messageSnapshot != null ? String(item.messageSnapshot) : ''
+  if (snapshot !== '') {
+    return snapshot
+  }
+  const content = item.messageContent != null ? String(item.messageContent) : ''
+  const extra = item.messageExtra != null ? String(item.messageExtra) : ''
+  if (extra === '') {
+    return content
+  }
+  if (content === '') {
+    return extra
+  }
+  return content + '\n\nextra:\n' + extra
+}
+
+async function loadDetail(): Promise<void> {
+  if (favoriteId.value === '' || favoriteId.value === '0') {
+    uni.showToast({ title: t('favoriteDetail.toast.invalidId'), icon: 'none' })
+    return
+  }
+  loading.value = true
+  try {
+    const resp: any = await getFavoriteDetail(favoriteId.value)
+    detail.value = normalizeFavoriteDetail(resp)
+  } catch (e) {
+    console.error('[FavoriteDetail] load failed:', e)
+    uni.showToast({ title: t('favoriteDetail.toast.loadFailed'), icon: 'none' })
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleSendToChat(): void {
+  if (favoriteId.value === '' || favoriteId.value === '0') {
+    uni.showToast({ title: t('favoriteDetail.toast.invalidId'), icon: 'none' })
+    return
+  }
+  uni.navigateTo({
+    url: '/pages/message/forward-target?favoriteId=' + encodeURIComponent(favoriteId.value)
+  })
+}
+
+onLoad((options: any) => {
+  const fid = options != null && options['favoriteId'] != null ? String(options['favoriteId']) : ''
+  favoriteId.value = fid
+  void loadDetail()
+})
+</script>
+
+<style>
+.page { height: 100%; background-color: #F7F8FA; display: flex; flex-direction: column; }
+.status-bar { height: var(--status-bar-height); background-color: #FFFFFF; }
+.header { height: 44px; padding: 0 12px; background-color: #FFFFFF; flex-direction: row; align-items: center; justify-content: space-between; border-bottom-width: 0.5px; border-bottom-color: #EFF0F1; }
+.header-left { width: 40px; height: 44px; justify-content: center; }
+.header-right { width: 40px; height: 44px; }
+.back-icon { font-size: 18px; color: #1F2329; }
+.header-title { font-size: 16px; color: #1F2329; font-weight: 600; }
+.content { flex: 1; height: 0; }
+.loading-wrap { padding-top: 80px; align-items: center; }
+.loading-text { font-size: 14px; color: #8F959E; }
+.empty-wrap { padding-top: 80px; align-items: center; }
+.empty-text { font-size: 14px; color: #8F959E; }
+.card { margin: 12px; background-color: #FFFFFF; border-radius: 10px; padding: 12px; }
+.card-head { flex-direction: row; align-items: center; justify-content: space-between; }
+.type { font-size: 12px; color: #57606A; }
+.body { margin-top: 8px; }
+.preview { font-size: 15px; color: #1F2329; line-height: 22px; }
+.time { margin-top: 8px; font-size: 12px; color: #8F959E; }
+.raw-block { margin-top: 12px; border-radius: 8px; background-color: #F5F6F7; padding: 10px; }
+.raw-title { font-size: 12px; color: #57606A; }
+.raw-value { margin-top: 6px; font-size: 13px; color: #1F2329; line-height: 20px; }
+.footer { padding: 10px 12px 12px; background-color: #FFFFFF; border-top-width: 0.5px; border-top-color: #EFF0F1; }
+.send-btn { height: 42px; border-radius: 8px; background-color: #1677FF; justify-content: center; align-items: center; }
+.send-btn-text { color: #FFFFFF; font-size: 15px; font-weight: 600; }
+</style>

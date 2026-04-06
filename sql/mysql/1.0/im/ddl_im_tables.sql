@@ -436,6 +436,35 @@ CREATE TABLE `im_user_sticker_recent` (
 ) ENGINE=InnoDB CHARACTER SET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='IM用户最近使用表情表' ROW_FORMAT=DYNAMIC;
 
 -- ----------------------------
+-- Table structure for im_message_favorite
+-- 消息收藏表: 用户收藏消息完整快照（与原消息后续状态解耦）
+-- ----------------------------
+DROP TABLE IF EXISTS `im_message_favorite`;
+CREATE TABLE `im_message_favorite` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '收藏用户ID',
+  `message_id` bigint NOT NULL COMMENT '消息ID',
+  `chat_id` bigint NOT NULL COMMENT '会话ID',
+  `anchor_sequence` bigint NOT NULL DEFAULT 0 COMMENT '收藏时锚点序列号',
+  `message_type` tinyint DEFAULT NULL COMMENT '收藏时消息类型快照',
+  `message_preview` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '收藏时消息预览快照',
+  `message_content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '收藏时消息内容快照',
+  `message_extra` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '收藏时消息扩展快照',
+  `message_snapshot` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '收藏时完整消息快照(JSON)',
+  `source_send_time` datetime DEFAULT NULL COMMENT '收藏时原消息发送时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_user_message_deleted` (`tenant_id`, `user_id`, `message_id`, `deleted`) USING BTREE,
+  KEY `idx_user_created` (`tenant_id`, `user_id`, `create_time`, `deleted`) USING BTREE,
+  KEY `idx_chat_anchor` (`tenant_id`, `chat_id`, `anchor_sequence`, `deleted`) USING BTREE
+) ENGINE=InnoDB CHARACTER SET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='IM消息收藏表' ROW_FORMAT=DYNAMIC;
+
+-- ----------------------------
 -- Table structure for im_group_folder
 -- 群文件夹表: 用于文件夹管理（可选功能）
 -- ----------------------------

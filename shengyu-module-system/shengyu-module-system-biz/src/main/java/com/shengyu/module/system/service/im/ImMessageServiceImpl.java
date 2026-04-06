@@ -316,6 +316,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         message.setClientMessageId(clientMessageId);
         Integer dbMessageType = normalizeDbMessageType(sendReqVO.getMessageType());
         JSONObject validatedVoiceExtra = null;
+        JSONObject validatedCustomPayload = null;
         message.setMessageType(dbMessageType);
 
         if (dbMessageType == 3) {
@@ -355,10 +356,16 @@ public class ImMessageServiceImpl implements ImMessageService {
             } catch (Exception ex) {
                 throw ServiceExceptionUtil.invalidParamException("STICKER 消息 extra 不是合法 JSON：{}", ex.getMessage());
             }
+        } else if (dbMessageType == 9) {
+            validatedCustomPayload = validateAndNormalizeCustomPayload(sendReqVO);
         }
         if (dbMessageType == 3) {
             message.setContent("[语音]");
             message.setExtra(validatedVoiceExtra != null ? validatedVoiceExtra.toString() : sendReqVO.getExtra());
+        } else if (dbMessageType == 9 && validatedCustomPayload != null) {
+            String normalized = validatedCustomPayload.toString();
+            message.setContent(normalized);
+            message.setExtra(normalized);
         } else {
             message.setContent(sendReqVO.getContent());
             message.setExtra(sendReqVO.getExtra());
@@ -1497,15 +1504,21 @@ public class ImMessageServiceImpl implements ImMessageService {
                     break;
                 case 6: // 位置消息
                     messageType = MessageType.LOCATION;
-                    messageBody = TextMessage.newBuilder()
-                            .setContent(sendReqVO.getContent())
+                    JSONObject locationObj = buildAndValidateLocationPayload(sendReqVO);
+                    messageBody = LocationMessage.newBuilder()
+                            .setLatitude(locationObj.getDouble("latitude", 0D))
+                            .setLongitude(locationObj.getDouble("longitude", 0D))
+                            .setAddress(locationObj.getStr("address", ""))
                             .build();
+                    headerExtra = locationObj.toString();
                     break;
                 case 9: // 自定义消息
                     messageType = MessageType.CUSTOM;
+                    JSONObject customPayload = validateAndNormalizeCustomPayload(sendReqVO);
                     messageBody = TextMessage.newBuilder()
-                            .setContent(StrUtil.nullToEmpty(sendReqVO.getContent()))
+                            .setContent(customPayload.toString())
                             .build();
+                    headerExtra = customPayload.toString();
                     break;
                 case 8: // 自定义贴纸
                     messageType = MessageType.CUSTOM;
@@ -2584,11 +2597,144 @@ public class ImMessageServiceImpl implements ImMessageService {
                 return "[表情]";
             case 8: // 自定义贴纸
                 return "[动画表情]";
+            case 9: // 自定义消息
+                String customPreview = getCustomMessagePreview(content);
+                return StrUtil.isNotBlank(customPreview) ? customPreview : "[自定义消息]";
             case 10: // 系统消息
                 return "[系统消息]";
             default:
                 return "[未知消息]";
         }
+    }
+
+    private String getCustomMessagePreview(String content) {
+        if (StrUtil.isBlank(content)) {
+            return "[自定义消息]";
+        }
+        try {
+            JSONObject obj = JSONUtil.parseObj(content);
+            String customType = obj.getStr("type", "");
+            if ("FORWARD_COMBINE".equals(customType)) {
+                return "[聊天记录]";
+            }
+            if ("STICKER".equals(customType)) {
+                return "[动画表情]";
+            }
+            if ("CONTACT_CARD".equals(customType)) {
+                return "[名片]";
+            }
+        } catch (Exception ignore) {
+        }
+        return "[自定义消息]";
+    }
+
+    private JSONObject validateAndNormalizeCustomPayload(AppImMessageSendReqVO sendReqVO) {
+        JSONObject merged = JSONUtil.createObj();
+        if (StrUtil.isNotBlank(sendReqVO.getContent())) {
+            try {
+                Object contentObj = JSONUtil.parse(sendReqVO.getContent());
+                if (contentObj instanceof JSONObject) {
+                    merged.putAll((JSONObject) contentObj);
+                }
+            } catch (Exception ignore) {
+                // ignore non-json content
+            }
+        }
+        if (StrUtil.isNotBlank(sendReqVO.getExtra())) {
+            try {
+                Object extraObj = JSONUtil.parse(sendReqVO.getExtra());
+                if (extraObj instanceof JSONObject) {
+                    merged.putAll((JSONObject) extraObj);
+                }
+            } catch (Exception ex) {
+                throw ServiceExceptionUtil.invalidParamException("CUSTOM extra 不是合法 JSON");
+            }
+        }
+        String customType = merged.getStr("type", "");
+        if (StrUtil.isBlank(customType)) {
+            throw ServiceExceptionUtil.invalidParamException("CUSTOM 消息缺少 type");
+        }
+        if ("CONTACT_CARD".equals(customType)) {
+            String userId = merged.getStr("userId", "");
+            String displayName = merged.getStr("displayName", merged.getStr("name", ""));
+            if (StrUtil.isBlank(userId) || StrUtil.isBlank(displayName)) {
+                throw ServiceExceptionUtil.invalidParamException("CONTACT_CARD 缺少 userId/displayName");
+            }
+            JSONObject normalized = JSONUtil.createObj();
+            normalized.set("type", "CONTACT_CARD");
+            normalized.set("userId", userId);
+            normalized.set("displayName", displayName);
+            String deptName = merged.getStr("deptName", "");
+            if (StrUtil.isNotBlank(deptName)) {
+                normalized.set("deptName", deptName);
+            }
+            String postName = merged.getStr("postName", "");
+            if (StrUtil.isNotBlank(postName)) {
+                normalized.set("postName", postName);
+            }
+            String avatar = merged.getStr("avatar", "");
+            if (StrUtil.isNotBlank(avatar)) {
+                normalized.set("avatar", avatar);
+            }
+            return normalized;
+        }
+        return merged;
+    }
+
+    private JSONObject buildAndValidateLocationPayload(AppImMessageSendReqVO sendReqVO) {
+        JSONObject merged = JSONUtil.createObj();
+        Object rawContent = null;
+        if (StrUtil.isNotBlank(sendReqVO.getContent())) {
+            try {
+                rawContent = JSONUtil.parse(sendReqVO.getContent());
+            } catch (Exception ignore) {
+                rawContent = sendReqVO.getContent();
+            }
+        }
+        if (rawContent instanceof JSONObject) {
+            merged.putAll((JSONObject) rawContent);
+        }
+        if (StrUtil.isNotBlank(sendReqVO.getExtra())) {
+            try {
+                Object extraObj = JSONUtil.parse(sendReqVO.getExtra());
+                if (extraObj instanceof JSONObject) {
+                    merged.putAll((JSONObject) extraObj);
+                }
+            } catch (Exception e) {
+                throw ServiceExceptionUtil.invalidParamException("LOCATION extra 不是合法 JSON");
+            }
+        }
+
+        Double latitude = merged.getDouble("latitude");
+        Double longitude = merged.getDouble("longitude");
+        if (latitude == null || longitude == null) {
+            throw ServiceExceptionUtil.invalidParamException("LOCATION 缺少经纬度");
+        }
+        if (latitude < -90D || latitude > 90D) {
+            throw ServiceExceptionUtil.invalidParamException("LOCATION latitude 超出范围");
+        }
+        if (longitude < -180D || longitude > 180D) {
+            throw ServiceExceptionUtil.invalidParamException("LOCATION longitude 超出范围");
+        }
+
+        String address = merged.getStr("address", "");
+        String name = merged.getStr("name", merged.getStr("locationName", ""));
+        if (StrUtil.isBlank(address) && StrUtil.isBlank(name)) {
+            throw ServiceExceptionUtil.invalidParamException("LOCATION address/name 至少一个非空");
+        }
+
+        JSONObject normalized = JSONUtil.createObj();
+        normalized.set("latitude", latitude);
+        normalized.set("longitude", longitude);
+        normalized.set("address", StrUtil.nullToDefault(address, ""));
+        if (StrUtil.isNotBlank(name)) {
+            normalized.set("name", name);
+        }
+        String provider = merged.getStr("provider", "");
+        if (StrUtil.isNotBlank(provider)) {
+            normalized.set("provider", provider);
+        }
+        return normalized;
     }
 
 }

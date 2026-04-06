@@ -138,6 +138,22 @@
 									</view>
 									<image class="location-map" src="/static/images/chat/map-placeholder.png" mode="aspectFill" />
 								</view>
+
+								<!-- 名片消息 -->
+								<view v-else-if="msg.type === 'contact_card'" class="message-bubble bubble-contact-card" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleContactCardOpen(msg)">
+									<view class="contact-card-left">
+										<image v-if="msg.contactAvatar" class="contact-card-avatar" :src="msg.contactAvatar" mode="aspectFill" />
+										<view v-else class="contact-card-avatar-fallback">
+											<text class="contact-card-avatar-text">{{ getContactCardAvatarText(msg) }}</text>
+										</view>
+									</view>
+									<view class="contact-card-right">
+										<text class="contact-card-name">{{ msg.contactDisplayName || '名片' }}</text>
+										<text v-if="msg.contactPostName" class="contact-card-meta">{{ msg.contactPostName }}</text>
+										<text v-else-if="msg.contactDeptName" class="contact-card-meta">{{ msg.contactDeptName }}</text>
+										<text class="contact-card-tag">个人名片</text>
+									</view>
+								</view>
 								
 								<!-- 表情包/动图 -->
                                 <view v-else-if="msg.type === 'emoji'" class="bubble-emoji" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
@@ -506,6 +522,8 @@
 	import { badgeService } from '../../services/badge-service.uts'
 	import { MessageType, wsManager } from '../../utils/websocket.uts'
 	import { getMessageWindow, getMessageHistory, recallMessage, deleteMessage, getRecallConfig, markVoicePlayed as markVoicePlayedApi, markVoicePlayedBatch, getVoicePlayedStatus } from '../../api/message.uts'
+	import { getContactList } from '../../api/contact.uts'
+	import { addFavorite as addMessageFavoriteApi } from '../../api/favorite.uts'
 	import { getConversationByTarget } from '../../api/conversation.uts'
 	import { getUserIdStr, getTenantId, hasRole } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
@@ -1158,8 +1176,8 @@
     const showMsgMenu = ref(false)
     const menuX = ref(0)
     const menuY = ref(0)
-    const selectedMsg = ref<MessageItem | null>(null)
-    const currentMenuItems = ref<any[]>([])
+	const selectedMsg = ref<MessageItem | null>(null)
+	const currentMenuItems = ref<any[]>([])
 	const showReadReceiptSheet = ref(false)
 	const readReceiptSummary = ref<any | null>(null)
 	const readReceiptTab = ref<'read' | 'unread'>('read')
@@ -1271,6 +1289,11 @@
 		locationName ?: string;
 		latitude ?: number;
 		longitude ?: number;
+		contactUserId ?: string;
+		contactDisplayName ?: string;
+		contactDeptName ?: string;
+		contactPostName ?: string;
+		contactAvatar ?: string;
 		md5 ?: string;
 		isSticker ?: boolean;
 		status ?: any; // legacy string or numeric enum
@@ -2134,6 +2157,35 @@
 			uiMessage.locationName = text
 		}
 	}
+
+	function applyContactCardFields(uiMessage : MessageItem, rawContent : any, extra ?: any) : void {
+		if (uiMessage.type !== 'contact_card') {
+			return
+		}
+		const payload = parseContactCardPayload(rawContent, extra)
+		if (payload == null || typeof payload !== 'object') {
+			return
+		}
+		const userId = (payload as any).userId != null ? String((payload as any).userId) : ''
+		const displayName = (payload as any).displayName != null
+			? String((payload as any).displayName)
+			: ((payload as any).name != null ? String((payload as any).name) : '')
+		const deptName = (payload as any).deptName != null ? String((payload as any).deptName) : ''
+		const postName = (payload as any).postName != null ? String((payload as any).postName) : ''
+		const avatar = (payload as any).avatar != null ? String((payload as any).avatar) : ''
+		uiMessage.contactUserId = userId
+		uiMessage.contactDisplayName = displayName !== '' ? displayName : '名片'
+		if (deptName !== '') {
+			uiMessage.contactDeptName = deptName
+		}
+		if (postName !== '') {
+			uiMessage.contactPostName = postName
+		}
+		if (avatar !== '') {
+			uiMessage.contactAvatar = avatar
+		}
+		uiMessage.content = displayName !== '' ? displayName : '名片'
+	}
 	
 	/**
 	 * 加载历史消息
@@ -2507,6 +2559,7 @@
 		applyVoiceFields(uiMessage, content, extraContent)
 		applyFileFields(uiMessage, extraContent && typeof extraContent === 'object' ? extraContent : content)
 		applyLocationFields(uiMessage, content)
+		applyContactCardFields(uiMessage, content, extraContent)
 		applyStickerFields(uiMessage, content, extraContent)
 		applyMediaFileId(uiMessage, extraContent && typeof extraContent === 'object' ? extraContent : content)
 		maybePatchMediaDisplayUrl(uiMessage as any)
@@ -2580,6 +2633,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			applyVoiceFields(uiMessage, msg.content, serviceExtra)
 			applyFileFields(uiMessage, msg.content)
 			applyLocationFields(uiMessage, msg.content)
+			applyContactCardFields(uiMessage, msg.content, serviceExtra)
 			applyStickerFields(uiMessage, msg.content, serviceExtra)
 			applyMediaFileId(uiMessage, msg.content)
 			maybePatchMediaDisplayUrl(uiMessage as any)
@@ -2629,9 +2683,44 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		return null
 	}
 
+	function parseContactCardPayload(raw : any, extra ?: any) : any {
+		let body : any = safeParseJson(raw)
+		if (body == null) {
+			body = raw
+		}
+		if (body != null && typeof body === 'object') {
+			if (body.type != null && String(body.type) === 'CONTACT_CARD') {
+				return body
+			}
+			if (body.extra != null) {
+				let nestedExtra : any = safeParseJson(body.extra)
+				if (nestedExtra == null) {
+					nestedExtra = body.extra
+				}
+				if (nestedExtra != null && typeof nestedExtra === 'object'
+					&& nestedExtra.type != null && String(nestedExtra.type) === 'CONTACT_CARD') {
+					return nestedExtra
+				}
+			}
+		}
+		let extraObj : any = safeParseJson(extra)
+		if (extraObj == null) {
+			extraObj = extra
+		}
+		if (extraObj != null && typeof extraObj === 'object'
+			&& extraObj.type != null && String(extraObj.type) === 'CONTACT_CARD') {
+			return extraObj
+		}
+		return null
+	}
+
 	function resolveUiMessageType(messageType : any, rawContent : any, extra ?: any) : string {
 		const baseType = getMessageTypeString(messageType)
 		if (baseType === 'custom') {
+			const contactPayload = parseContactCardPayload(rawContent, extra)
+			if (contactPayload != null) {
+				return 'contact_card'
+			}
 			const stickerPayload = parseStickerPayload(rawContent, extra)
 			if (stickerPayload != null) {
 				return 'sticker'
@@ -2709,6 +2798,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else if (typeStr === 'location') {
 			// 位置消息
 			return content.address || content
+		} else if (typeStr === 'contact_card') {
+			if (content && typeof content === 'object') {
+				try {
+					return JSON.stringify(content)
+				} catch (e) {
+					return ''
+				}
+			}
+			return content != null ? String(content) : ''
 		} else if (typeStr === 'sticker') {
 			return extractStickerUrl(content)
 		} else if (typeStr === 'custom') {
@@ -2775,6 +2873,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return extractMediaUrl(content, true)
 		} else if (typeStr === 'location') {
 			return content?.address != null ? String(content.address) : (content != null ? String(content) : '')
+		} else if (typeStr === 'contact_card') {
+			if (content && typeof content === 'object') {
+				try {
+					return JSON.stringify(content)
+				} catch (e) {
+					return ''
+				}
+			}
+			return content != null ? String(content) : ''
 		} else if (typeStr === 'sticker') {
 			return extractStickerUrl(content, (msg as any).extra)
 		} else if (typeStr === 'custom') {
@@ -3096,6 +3203,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return msg.fileName ? `[文件] ${msg.fileName}` : '[文件]'
 		}
 		if (msg.type === 'location') return '[位置]'
+		if (msg.type === 'contact_card') return '[名片]'
 		return '[消息]'
 	}
 
@@ -6204,65 +6312,57 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 
 		if (item.nameKey === 'chat.features.location') {
-			uni.chooseLocation({
-				success: (res) => {
-					try {
-						const latitude = res && (res as any).latitude != null ? Number((res as any).latitude) : NaN
-						const longitude = res && (res as any).longitude != null ? Number((res as any).longitude) : NaN
-						if (isNaN(latitude) || isNaN(longitude)) {
-							uni.showToast({ title: '位置选择失败', icon: 'none' })
-							return
-						}
-						const address = res && (res as any).address != null && String((res as any).address) !== ''
-							? String((res as any).address)
-							: (res && (res as any).name != null ? String((res as any).name) : '位置消息')
-						const locationName = res && (res as any).name != null && String((res as any).name) !== ''
-							? String((res as any).name)
-							: address
-						const message = messageService.sendLocationMessage(
-							getReceiverIdForMessage(),
-							getGroupIdForMessage(),
-							latitude,
-							longitude,
-							address
-						)
-						const uiMessage = {
-							id: message.id.toString(),
-							messageId: message.messageId,
-							senderId: message.senderId.toString(),
-							receiverId: message.receiverId.toString(),
-							type: 'location',
-							content: address,
-							address: address,
-							locationName: locationName,
-							latitude: latitude,
-							longitude: longitude,
-							isSelf: true,
-							time: new Date(message.timestamp).toLocaleString(),
-							timestamp: message.timestamp,
-							showTime: true,
-							avatarText: message.avatarText,
-							avatarBg: message.avatarBg,
-							status: message.status
-						} as MessageItem
-						messages.value.push(uiMessage)
-						showPlusMenu.value = false
-						setTimeout(() => {
-							scrollToBottom()
-						}, 100)
-					} catch (e) {
-						console.error('[Chat] 发送位置消息失败', e)
-						uni.showToast({ title: '发送失败', icon: 'none' })
-					}
-				},
-				fail: (err) => {
-					const rawMsg = err != null && (err as any).errMsg != null ? String((err as any).errMsg) : ''
-					if (rawMsg.indexOf('cancel') > -1 || rawMsg.indexOf('fail cancel') > -1) {
+			showPlusMenu.value = false
+
+			// 注册一次性 eventbus 监听（全平台兼容，H5 端 getOpenerEventChannel 不可用）
+			const onSelectLocation = (payload: any) => {
+				uni.$off('imSelectLocation', onSelectLocation)
+				try {
+					const latitude = payload != null && (payload as any).latitude != null ? Number((payload as any).latitude) : NaN
+					const longitude = payload != null && (payload as any).longitude != null ? Number((payload as any).longitude) : NaN
+					if (isNaN(latitude) || isNaN(longitude)) {
+						uni.showToast({ title: '位置信息无效', icon: 'none' })
 						return
 					}
-					console.error('[Chat] 选择位置失败:', err)
-					uni.showToast({ title: '暂不支持位置选择', icon: 'none' })
+					const address = payload != null && (payload as any).address != null ? String((payload as any).address) : ''
+					const locationName = payload != null && (payload as any).name != null ? String((payload as any).name) : ''
+					const provider = payload != null && (payload as any).provider != null ? String((payload as any).provider) : 'tencent'
+					sendLocationCard(latitude, longitude, address, locationName, provider)
+				} catch (e) {
+					console.error('[Chat] 接收位置选择结果失败:', e)
+					uni.showToast({ title: '发送失败', icon: 'none' })
 				}
+			}
+			uni.$on('imSelectLocation', onSelectLocation)
+
+			uni.navigateTo({
+				url: '/pages/message/location-search',
+				fail: (err) => {
+					uni.$off('imSelectLocation', onSelectLocation)
+					console.error('[Chat] 打开位置搜索页失败:', err)
+					uni.showModal({
+						title: '位置功能异常',
+						content: '无法打开位置搜索页，是否直接发送当前位置？',
+						confirmText: '发送定位',
+						cancelText: '取消',
+						success: (res) => {
+							if (res.confirm === true) {
+								void fallbackSendCurrentLocation('open_location_search_page_failed')
+							}
+						}
+					})
+				}
+			})
+			return
+		}
+		if (item.nameKey === 'chat.features.card') {
+			void chooseContactCardAndSend()
+			return
+		}
+		if (item.nameKey === 'chat.features.fav') {
+			showPlusMenu.value = false
+			uni.navigateTo({
+				url: '/pages/common/favorite'
 			})
 			return
 		}
@@ -6432,17 +6532,252 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}
 			const address = msg && msg.address != null ? String(msg.address) : ''
 			const name = msg && msg.locationName != null ? String(msg.locationName) : address
-			uni.openLocation({
-				latitude: latVal,
-				longitude: lngVal,
-				address: address,
-				name: name
+			uni.showModal({
+				title: name !== '' ? name : '位置信息',
+				content: address !== '' ? address : '经纬度位置',
+				confirmText: '导航',
+				cancelText: '取消',
+				success: (res) => {
+					if (res.confirm !== true) {
+						return
+					}
+					uni.openLocation({
+						latitude: latVal,
+						longitude: lngVal,
+						address: address,
+						name: name
+					})
+				}
 			})
 		} catch (e) {
 			console.error('[Chat] 打开位置失败:', e)
 			uni.showToast({ title: '打开失败', icon: 'none' })
 		}
 	}
+
+	function sendLocationCard(latitude: number, longitude: number, address: string, locationName: string, provider: string): void {
+		const safeAddress = address !== '' ? address : (locationName !== '' ? locationName : '位置')
+		const safeName = locationName !== '' ? locationName : safeAddress
+		const safeProvider = provider !== '' ? provider : 'tencent'
+		const message = messageService.sendLocationMessage(
+			getReceiverIdForMessage(),
+			getGroupIdForMessage(),
+			latitude,
+			longitude,
+			safeAddress,
+			safeName,
+			safeProvider
+		)
+		const uiMessage = {
+			id: message.id.toString(),
+			messageId: message.messageId,
+			senderId: message.senderId.toString(),
+			receiverId: message.receiverId.toString(),
+			type: 'location',
+			content: safeAddress,
+			address: safeAddress,
+			locationName: safeName,
+			latitude: latitude,
+			longitude: longitude,
+			isSelf: true,
+			time: new Date(message.timestamp).toLocaleString(),
+			timestamp: message.timestamp,
+			showTime: true,
+			avatarText: message.avatarText,
+			avatarBg: message.avatarBg,
+			status: message.status
+		} as MessageItem
+		messages.value.push(uiMessage)
+		showPlusMenu.value = false
+		setTimeout(() => {
+			scrollToBottom()
+		}, 100)
+	}
+
+	function getContactCardAvatarText(msg: any): string {
+		try {
+			const name = msg != null && (msg as any).contactDisplayName != null ? String((msg as any).contactDisplayName) : ''
+			if (name !== '') {
+				return getAvatarTextUtil(name)
+			}
+		} catch (e) {
+		}
+		return '名'
+	}
+
+	function handleContactCardOpen(msg : any) {
+		try {
+			const userId = msg && msg.contactUserId != null ? String(msg.contactUserId) : ''
+			if (userId === '' || userId === '0') {
+				uni.showToast({ title: '名片信息缺失', icon: 'none' })
+				return
+			}
+			const displayName = msg && msg.contactDisplayName != null ? String(msg.contactDisplayName) : ''
+			uni.navigateTo({
+				url: `/pages/contacts/user-detail?userId=${encodeURIComponent(userId)}&name=${encodeURIComponent(displayName)}`
+			})
+		} catch (e) {
+			console.error('[Chat] 打开名片失败:', e)
+			uni.showToast({ title: '打开失败', icon: 'none' })
+		}
+	}
+
+	async function chooseContactCardAndSend(): Promise<void> {
+		if (!ensureConversationWritable()) {
+			return
+		}
+		try {
+			const rawResp: any = await getContactList()
+			const rawList: any[] = Array.isArray(rawResp)
+				? rawResp
+				: (rawResp != null && Array.isArray((rawResp as any).data) ? (rawResp as any).data : [])
+			const contacts: any[] = rawList
+				.map((item: any) => {
+					const uid = item != null && item.id != null ? String(item.id) : ''
+					const displayName = item != null
+						? (item.remarkName != null && String(item.remarkName) !== '' ? String(item.remarkName) : (item.nickname != null ? String(item.nickname) : ''))
+						: ''
+					return {
+						userId: uid,
+						displayName: displayName,
+						deptName: item != null && item.deptName != null ? String(item.deptName) : '',
+						postName: item != null && item.postName != null ? String(item.postName) : '',
+						avatar: item != null && item.avatar != null ? String(item.avatar) : ''
+					}
+				})
+				.filter((item: any) => item.userId !== '' && item.userId !== '0' && item.displayName !== '' && item.userId !== currentUserId.value)
+			if (contacts.length === 0) {
+				uni.showToast({ title: '暂无可分享联系人', icon: 'none' })
+				return
+			}
+			const candidates = contacts.slice(0, 6)
+			uni.showActionSheet({
+				itemList: candidates.map(item => item.displayName),
+				success: async (res) => {
+					try {
+						const idx = res != null && (res as any).tapIndex != null ? Number((res as any).tapIndex) : -1
+						if (idx < 0 || idx >= candidates.length) {
+							return
+						}
+						await sendContactCard(candidates[idx])
+					} catch (e) {
+						console.error('[Chat] 发送名片失败:', e)
+						uni.showToast({ title: '发送失败', icon: 'none' })
+					}
+				}
+			})
+		} catch (e) {
+			console.error('[Chat] 获取联系人失败:', e)
+			uni.showToast({ title: '加载联系人失败', icon: 'none' })
+		}
+	}
+
+	async function sendContactCard(contact: any): Promise<void> {
+		const payload: any = {
+			type: 'CONTACT_CARD',
+			userId: contact != null && contact.userId != null ? String(contact.userId) : '',
+			displayName: contact != null && contact.displayName != null ? String(contact.displayName) : '',
+			deptName: contact != null && contact.deptName != null ? String(contact.deptName) : '',
+			postName: contact != null && contact.postName != null ? String(contact.postName) : '',
+			avatar: contact != null && contact.avatar != null ? String(contact.avatar) : ''
+		}
+		if (payload.userId === '' || payload.userId === '0' || payload.displayName === '') {
+			uni.showToast({ title: '名片信息无效', icon: 'none' })
+			return
+		}
+		await (messageService as any).sendContactCardMessageByRest(
+			chatId.value,
+			getReceiverIdForMessage(),
+			getGroupIdForMessage(),
+			payload
+		)
+		showPlusMenu.value = false
+		setTimeout(() => {
+			scrollToBottom()
+		}, 100)
+	}
+
+		function isWebRuntime(): boolean {
+			try {
+				const g: any = globalThis as any
+				return g != null && g.window != null
+			} catch (e) {
+				return false
+			}
+		}
+
+		function getBrowserGeolocation(): Promise<any> {
+			return new Promise((resolve, reject) => {
+				try {
+					const navAny: any = (globalThis as any).navigator
+					if (navAny == null || navAny.geolocation == null) {
+						reject(new Error('navigator.geolocation not available'))
+						return
+					}
+					navAny.geolocation.getCurrentPosition(
+						(position: any) => {
+							resolve({
+								latitude: position != null && position.coords != null ? Number(position.coords.latitude) : NaN,
+								longitude: position != null && position.coords != null ? Number(position.coords.longitude) : NaN
+							})
+						},
+						(error: any) => reject(error),
+						{
+							enableHighAccuracy: true,
+							timeout: 10000,
+							maximumAge: 60000
+						}
+					)
+				} catch (e) {
+					reject(e)
+				}
+			})
+		}
+
+		async function fallbackSendCurrentLocation(reason: string): Promise<void> {
+			try {
+				const loc: any = await new Promise((resolve, reject) => {
+				uni.getLocation({
+					type: 'gcj02',
+					success: (res) => resolve(res),
+					fail: (err) => reject(err)
+				})
+			})
+			const latitude = loc != null && loc.latitude != null ? Number(loc.latitude) : NaN
+			const longitude = loc != null && loc.longitude != null ? Number(loc.longitude) : NaN
+			if (isNaN(latitude) || isNaN(longitude)) {
+				uni.showToast({ title: '当前位置获取失败', icon: 'none' })
+				return
+			}
+			const name = '当前位置'
+				sendLocationCard(latitude, longitude, '', name, 'device')
+				uni.showToast({ title: '已发送当前位置', icon: 'success' })
+				console.log('[Chat] fallbackSendCurrentLocation success:', { reason: reason })
+			} catch (e) {
+				console.warn('[Chat] uni.getLocation failed, fallback to browser geolocation:', { reason: reason, e: e })
+				if (isWebRuntime()) {
+					try {
+						const browserLoc: any = await getBrowserGeolocation()
+						const latitude = browserLoc != null && browserLoc.latitude != null ? Number(browserLoc.latitude) : NaN
+						const longitude = browserLoc != null && browserLoc.longitude != null ? Number(browserLoc.longitude) : NaN
+						if (!isNaN(latitude) && !isNaN(longitude)) {
+							sendLocationCard(latitude, longitude, '', '当前位置', 'browser')
+							uni.showToast({ title: '已发送当前位置', icon: 'success' })
+							console.log('[Chat] browser geolocation fallback success:', { reason: reason })
+							return
+						}
+					} catch (browserErr) {
+						console.error('[Chat] browser geolocation fallback failed:', { reason: reason, browserErr: browserErr })
+					}
+				}
+				uni.showModal({
+					title: '定位失败',
+					content: '无法获取当前位置，请检查定位权限后重试。',
+					confirmText: '我知道了',
+					showCancel: false
+				})
+			}
+		}
 
     function openMsgMenu(msg : MessageItem, e : TouchEvent) {
         selectedMsg.value = msg
@@ -6457,16 +6792,27 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         const statusBarHeight = systemInfo.statusBarHeight || 0
         
         // 根据消息类型确定菜单项
-        const isRestricted = msg.type === 'voice' || msg.type === 'location'
+        const isVoiceRestricted = msg.type === 'voice'
+        const isLocationRestricted = msg.type === 'location'
+        const messageId = msg && msg.messageId != null ? String(msg.messageId) : ''
+        const canFavoriteMessage = messageId !== '' && messageId !== '0'
         const canCollectSticker = canAddMessageToSticker(msg)
         const alreadyCollectedSticker = canCollectSticker && isMessageAlreadyCollectedToSticker(msg)
         
         // 基础菜单项
         let menuItems : any[] = []
         
-        if (isRestricted) {
-            // 语音和位置消息只显示引用和删除
+        if (isVoiceRestricted) {
+            // 语音消息只显示引用和删除
             menuItems = [
+                { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' },
+                { key: 'delete', labelKey: 'chat.menu.delete', icon: '\ue602' }
+            ]
+        } else if (isLocationRestricted) {
+            // 位置消息放开单条转发与消息收藏，其它保持轻量菜单
+            menuItems = [
+                { key: 'forward', labelKey: 'chat.menu.forward', icon: '\ue63d' },
+                { key: 'favorite_message_add', labelKey: 'chat.menu.favoriteMessage', icon: '\ue607' },
                 { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' },
                 { key: 'delete', labelKey: 'chat.menu.delete', icon: '\ue602' }
             ]
@@ -6476,13 +6822,22 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                 { key: 'copy', labelKey: 'chat.menu.copy', icon: '\ue7cb' },
                 { key: 'forward', labelKey: 'chat.menu.forward', icon: '\ue63d' },
                 { key: 'delete', labelKey: 'chat.menu.delete', icon: '\ue602' },
-                { key: 'favorite', labelKey: 'chat.menu.favorite', icon: '\ue607' },
+                { key: 'favorite_message_add', labelKey: 'chat.menu.favoriteMessage', icon: '\ue607' },
                 { key: 'multi', labelKey: 'chat.menu.multi', icon: '\ue69d' },
                 { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' }
             ]
         }
-        if (!canCollectSticker || alreadyCollectedSticker) {
-            menuItems = menuItems.filter(item => item.key !== 'favorite')
+        if (!canFavoriteMessage) {
+            menuItems = menuItems.filter(item => item.key !== 'favorite_message_add')
+        }
+        if (canCollectSticker && !alreadyCollectedSticker) {
+            const insertIndex = menuItems.findIndex(item => item.key === 'quote')
+            const stickerItem = { key: 'favorite_sticker', labelKey: 'chat.menu.favoriteSticker', icon: '\ue607' }
+            if (insertIndex > -1) {
+                menuItems.splice(insertIndex, 0, stickerItem)
+            } else {
+                menuItems.push(stickerItem)
+            }
         }
         if (msg.type !== 'text') {
             menuItems = menuItems.filter(item => item.key !== 'copy')
@@ -6676,7 +7031,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                         }
                     }
                 })
-            } else if (action === 'favorite') {
+            } else if (action === 'favorite_message_add') {
+                const mid = msg && msg.messageId != null ? String(msg.messageId) : ''
+                if (mid === '' || mid === '0') {
+                    uni.showToast({ title: '当前消息不可收藏', icon: 'none' })
+                    return
+                }
+                await addMessageFavoriteApi(mid)
+                uni.showToast({ title: '已收藏', icon: 'success' })
+            } else if (action === 'favorite_sticker') {
                 if (!canAddMessageToSticker(msg)) {
                     uni.showToast({ title: '当前消息不可添加', icon: 'none' })
                     return
@@ -7330,9 +7693,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				const body = safeParseJson(item != null ? item.content : null)
 				if (body != null && body.type != null && String(body.type) === 'FORWARD_COMBINE') {
 					preview = '[聊天记录]'
+				} else if (body != null && body.type != null && String(body.type) === 'STICKER') {
+					preview = '[动画表情]'
+				} else if (body != null && body.type != null && String(body.type) === 'CONTACT_CARD') {
+					preview = '[名片]'
 				} else {
 					preview = '[消息]'
 				}
+			} else if (typeStr === 'contact_card') {
+				preview = '[名片]'
 			} else if (typeStr === 'image') {
 				preview = '[图片]'
 			} else if (typeStr === 'video') {
@@ -9675,6 +10044,68 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		width: 100%;
 		height: 100px;
 		background-color: #F5F7FA;
+	}
+
+	/* 名片消息 */
+	.bubble-contact-card {
+		background-color: #FFFFFF;
+		width: 220px;
+		max-width: 100%;
+		padding: 12px;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.contact-card-left {
+		width: 40px;
+		height: 40px;
+		margin-right: 10px;
+	}
+
+	.contact-card-avatar {
+		width: 40px;
+		height: 40px;
+		border-radius: 20px;
+	}
+
+	.contact-card-avatar-fallback {
+		width: 40px;
+		height: 40px;
+		border-radius: 20px;
+		background-color: #E6F0FF;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.contact-card-avatar-text {
+		font-size: 16px;
+		color: #1677FF;
+		font-weight: 600;
+	}
+
+	.contact-card-right {
+		flex: 1;
+	}
+
+	.contact-card-name {
+		font-size: 15px;
+		color: #1F2329;
+		lines: 1;
+		text-overflow: ellipsis;
+	}
+
+	.contact-card-meta {
+		font-size: 12px;
+		color: #8F959E;
+		margin-top: 2px;
+		lines: 1;
+		text-overflow: ellipsis;
+	}
+
+	.contact-card-tag {
+		font-size: 11px;
+		color: #57606A;
+		margin-top: 4px;
 	}
 
 	/* 表情 */

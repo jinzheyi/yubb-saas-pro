@@ -160,8 +160,58 @@ export default {
 			recall: '撤回',
 			delete: '删除',
 			favorite: '添加',
+			favoriteMessage: '收藏',
+			favoriteCancel: '取消收藏',
+			favoriteSticker: '添加到表情',
 			multi: '多选',
 			quote: '引用'
+		}
+	},
+	favoritePage: {
+		title: '消息收藏',
+		empty: '暂无收藏消息',
+		loading: '加载中...',
+		noMore: '没有更多了',
+		preview: {
+			default: '[消息]'
+		},
+		type: {
+			text: '文本',
+			image: '图片',
+			voice: '语音',
+			video: '视频',
+			file: '文件',
+			location: '位置',
+			sticker: '动画表情',
+			custom: '自定义',
+			default: '消息'
+		},
+		status: {
+			normal: '正常',
+			recalled: '已撤回',
+			deleted: '已删除'
+		},
+		action: {
+			cancelFavorite: '取消收藏'
+		},
+		toast: {
+			loadFailed: '加载失败',
+			locateFailed: '无法定位消息',
+			openFailed: '无法打开收藏详情',
+			invalidItem: '无效收藏项',
+			cancelSuccess: '已取消收藏',
+			actionFailed: '操作失败'
+		}
+	},
+	favoriteDetail: {
+		title: '收藏详情',
+		loading: '加载中...',
+		empty: '收藏内容不存在',
+		rawContent: '消息原始内容',
+		sendToChat: '发送到会话',
+		toast: {
+			invalidId: '收藏ID无效',
+			loadFailed: '加载详情失败'
 		}
 	},
 	chatSettings: {

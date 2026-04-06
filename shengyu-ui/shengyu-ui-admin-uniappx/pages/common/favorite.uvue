@@ -1,0 +1,208 @@
+<template>
+  <view class="page">
+    <view class="status-bar"></view>
+    <view class="header">
+      <view class="header-left" @click="handleBack">
+        <text class="iconfont back-icon">&#xeb04;</text>
+      </view>
+      <text class="header-title">{{ t('favoritePage.title') }}</text>
+      <view class="header-right"></view>
+    </view>
+
+    <scroll-view class="list" scroll-y show-scrollbar="false" @scrolltolower="loadMore">
+      <view v-if="items.length === 0 && !loading" class="empty">
+        <text class="empty-text">{{ t('favoritePage.empty') }}</text>
+      </view>
+
+      <view v-for="item in items" :key="item.favoriteId" class="row" @click="handleItemClick(item)" @longpress="handleItemLongPress(item)">
+        <view class="row-main">
+          <view class="row-head">
+            <text class="row-type">{{ buildTypeText(item.messageType) }}</text>
+          </view>
+          <text class="row-preview" :numberOfLines="2">{{ item.messagePreview || t('favoritePage.preview.default') }}</text>
+          <text class="row-time">{{ formatTime(item.sendTime || item.favoriteTime) }}</text>
+        </view>
+        <text class="iconfont row-arrow">&#xeb06;</text>
+      </view>
+
+      <view v-if="loading" class="loading">
+        <text class="loading-text">{{ t('favoritePage.loading') }}</text>
+      </view>
+      <view v-else-if="!hasMore && items.length > 0" class="loading">
+        <text class="loading-text">{{ t('favoritePage.noMore') }}</text>
+      </view>
+    </scroll-view>
+  </view>
+</template>
+
+<script setup lang="uts">
+import { onLoad } from '@dcloudio/uni-app'
+import { useI18n } from '../../hooks/useI18n.uts'
+import { getFavoriteList, removeFavorite } from '../../api/favorite.uts'
+
+type FavoriteItem = {
+  favoriteId: string
+  messageId: string
+  messageType: number
+  messagePreview: string
+  messageContent: string
+  messageExtra: string
+  messageSnapshot: string
+  sendTime: string
+  favoriteTime: string
+}
+
+const items = ref<FavoriteItem[]>([])
+const pageNo = ref(1)
+const pageSize = ref(20)
+const hasMore = ref(true)
+const loading = ref(false)
+const totalCount = ref(0)
+const { t } = useI18n()
+
+function handleBack(): void {
+  uni.navigateBack()
+}
+
+function formatTime(raw: string): string {
+  try {
+    if (raw == null || String(raw).trim() === '') {
+      return ''
+    }
+    const d = new Date(raw)
+    if (isNaN(d.getTime())) {
+      return String(raw)
+    }
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mi = String(d.getMinutes()).padStart(2, '0')
+    return mm + '-' + dd + ' ' + hh + ':' + mi
+  } catch (e) {
+    return ''
+  }
+}
+
+function buildTypeText(type: number): string {
+  if (type === 1) return t('favoritePage.type.text')
+  if (type === 2) return t('favoritePage.type.image')
+  if (type === 3) return t('favoritePage.type.voice')
+  if (type === 4) return t('favoritePage.type.video')
+  if (type === 5) return t('favoritePage.type.file')
+  if (type === 6) return t('favoritePage.type.location')
+  if (type === 8) return t('favoritePage.type.sticker')
+  if (type === 9) return t('favoritePage.type.custom')
+  return t('favoritePage.type.default')
+}
+
+function normalizeFavoriteItem(raw: any): FavoriteItem {
+  return {
+    favoriteId: raw != null && raw.favoriteId != null ? String(raw.favoriteId) : '0',
+    messageId: raw != null && raw.messageId != null ? String(raw.messageId) : '0',
+    messageType: raw != null && raw.messageType != null ? Number(raw.messageType) : 0,
+    messagePreview: raw != null && raw.messagePreview != null ? String(raw.messagePreview) : '',
+    messageContent: raw != null && raw.messageContent != null ? String(raw.messageContent) : '',
+    messageExtra: raw != null && raw.messageExtra != null ? String(raw.messageExtra) : '',
+    messageSnapshot: raw != null && raw.messageSnapshot != null ? String(raw.messageSnapshot) : '',
+    sendTime: raw != null && raw.sendTime != null ? String(raw.sendTime) : '',
+    favoriteTime: raw != null && raw.favoriteTime != null ? String(raw.favoriteTime) : ''
+  }
+}
+
+async function fetchPage(reset: boolean): Promise<void> {
+  if (loading.value) {
+    return
+  }
+  if (!reset && !hasMore.value) {
+    return
+  }
+  loading.value = true
+  try {
+    const nextPage = reset ? 1 : pageNo.value
+    const resp: any = await getFavoriteList(nextPage, pageSize.value)
+    const listRaw: any[] = resp != null && Array.isArray(resp.list) ? resp.list : []
+    const nextItems = listRaw.map((it: any) => normalizeFavoriteItem(it))
+    if (reset) {
+      items.value = nextItems
+    } else {
+      items.value = items.value.concat(nextItems)
+    }
+    totalCount.value = resp != null && resp.total != null ? Number(resp.total) : items.value.length
+    hasMore.value = items.value.length < totalCount.value
+    pageNo.value = nextPage + 1
+  } catch (e) {
+    console.error('[Favorite] 加载失败:', e)
+    uni.showToast({ title: t('favoritePage.toast.loadFailed'), icon: 'none' })
+  } finally {
+    loading.value = false
+  }
+}
+
+function loadMore(): void {
+  void fetchPage(false)
+}
+
+function handleItemClick(item: FavoriteItem): void {
+  const favoriteId = item.favoriteId
+  if (favoriteId === '' || favoriteId === '0') {
+    uni.showToast({ title: t('favoritePage.toast.openFailed'), icon: 'none' })
+    return
+  }
+  uni.navigateTo({
+    url: '/pages/common/favorite-detail?favoriteId=' + encodeURIComponent(favoriteId)
+  })
+}
+
+function handleItemLongPress(item: FavoriteItem): void {
+  uni.showActionSheet({
+    itemList: [t('favoritePage.action.cancelFavorite')],
+    success: async (res) => {
+      const idx = res != null && (res as any).tapIndex != null ? Number((res as any).tapIndex) : -1
+      if (idx !== 0) {
+        return
+      }
+      try {
+        if (item.favoriteId === '' || item.favoriteId === '0') {
+          uni.showToast({ title: t('favoritePage.toast.invalidItem'), icon: 'none' })
+          return
+        }
+        await removeFavorite(item.favoriteId)
+        items.value = items.value.filter((it) => it.favoriteId !== item.favoriteId)
+        const nextTotal = totalCount.value > 0 ? totalCount.value - 1 : 0
+        totalCount.value = nextTotal
+        hasMore.value = items.value.length < totalCount.value
+        uni.showToast({ title: t('favoritePage.toast.cancelSuccess'), icon: 'success' })
+      } catch (e) {
+        console.error('[Favorite] 取消收藏失败:', e)
+        uni.showToast({ title: t('favoritePage.toast.actionFailed'), icon: 'none' })
+      }
+    }
+  })
+}
+
+onLoad(() => {
+  void fetchPage(true)
+})
+</script>
+
+<style>
+.page { height: 100%; background-color: #FFFFFF; display: flex; flex-direction: column; }
+.status-bar { height: var(--status-bar-height); background-color: #FFFFFF; }
+.header { height: 44px; padding: 0 12px; flex-direction: row; align-items: center; justify-content: space-between; border-bottom-width: 0.5px; border-bottom-color: #EFF0F1; }
+.header-left { width: 40px; height: 44px; justify-content: center; }
+.header-right { width: 40px; height: 44px; }
+.back-icon { font-size: 18px; color: #1F2329; }
+.header-title { font-size: 16px; color: #1F2329; font-weight: 600; }
+.list { flex: 1; height: 0; }
+.row { padding: 12px; flex-direction: row; align-items: center; border-bottom-width: 0.5px; border-bottom-color: #EFF0F1; }
+.row-main { flex: 1; }
+.row-head { flex-direction: row; align-items: center; justify-content: space-between; }
+.row-type { font-size: 12px; color: #57606A; }
+.row-preview { margin-top: 6px; font-size: 14px; color: #1F2329; line-height: 20px; }
+.row-time { margin-top: 6px; font-size: 12px; color: #8F959E; }
+.row-arrow { font-size: 12px; color: #B5BAC3; margin-left: 10px; }
+.loading { padding: 12px; align-items: center; }
+.loading-text { font-size: 13px; color: #8F959E; }
+.empty { padding-top: 80px; align-items: center; }
+.empty-text { color: #8F959E; font-size: 14px; }
+</style>

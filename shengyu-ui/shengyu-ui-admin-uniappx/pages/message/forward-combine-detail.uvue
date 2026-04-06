@@ -211,6 +211,9 @@ function buildPreview(messageType: number, content: any): string {
 			if (body != null && body.type != null && String(body.type) === 'STICKER') {
 				return '[动画表情]'
 			}
+			if (body != null && body.type != null && String(body.type) === 'CONTACT_CARD') {
+				return '[名片]'
+			}
 			return '[消息]'
 		}
 		if (messageType === 2 || messageType === 101) return '[图片]'

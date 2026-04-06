@@ -1403,7 +1403,7 @@ WS 增强（后续）：
 2. `RECALL / DELETE_FOR_ME / CLEAR_HISTORY`
    - `latest/history/pull/window` 四类接口都必须返回最终态
    - 锚点进入到已撤回消息：落到“撤回提示”而非原文
-   - 收藏、搜索、转发详情再打开原消息时，如最终态已变化，仍以最终态渲染
+   - 搜索、转发详情再打开原消息时，如最终态已变化，仍以最终态渲染
    - “重新编辑”入口只受消息最终态与权限控制，不受进入模式影响
 
 3. `FORWARD_SINGLE / FORWARD_COMBINE`
@@ -1455,9 +1455,9 @@ WS 增强（后续）：
      - 若目标实体已失效：展示卡片快照或失效占位，不得空白
 
 12. `FAVORITE`
-   - 收藏列表进入聊天页必须优先携带 `chatId + anchorSequence`
-   - 若只有 `messageId`，必须补解析 sequence 后再进入
-   - 原消息撤回/删除后，收藏记录仍存在，但会话内定位后显示最终态占位
+   - 收藏列表进入收藏详情页，不进入聊天页锚点定位
+   - 收藏详情支持“发送到会话”单条发送能力
+   - 收藏详情只展示收藏时快照；原消息撤回/删除后不改变收藏展示内容
 
 13. `草稿 / 输入状态 / 业务会话只读`
    - `restore` 模式恢复阅读窗口时，不得覆盖当前草稿内容
@@ -2363,9 +2363,9 @@ CREATE TABLE `im_user_sticker_recent` (
 
 - 决策：默认厂商固定为腾讯位置服务（Tencent LBS）
 - 决策依据（结合当前项目）：
-  - 工程中已存在腾讯地图配置项：`shengyu.tencent-lbs-key`（`application-dev/local`）
-  - 前端位置主链路已基于 `uni.chooseLocation + uni.openLocation`，与腾讯方案并不冲突
-  - 本期仅需“位置卡片发送 + 搜索可选增强”，不需要引入重型地图 SDK
+  - 工程中已存在腾讯地图配置项：`im.location.tencent-lbs-key`（统一放在 `application.yaml` 的 `im.location`）
+  - 前端位置主链路已切换为 `location-search 页面 + uni.openLocation`，三端统一且不依赖 uniCloud
+  - 本期仅需“位置卡片发送 + POI 搜索”，不需要引入重型地图 SDK
 - 供应商策略：
   - P0：仅使用系统能力，不消耗第三方检索配额
   - P1：开启腾讯 WebService POI 搜索（服务端代理）
@@ -2382,8 +2382,119 @@ CREATE TABLE `im_user_sticker_recent` (
 #### 10.10.2 微信 UI 对齐要点（基于现网交互与现有原型）
 
 - 入口在聊天输入区 `+` 面板，和图片/文件并列
-- 选点页为“顶部搜索 + 地图 + POI 列表”结构，支持当前定位与关键词检索
+- 选点页为"顶部搜索 + 交互式地图 + POI 列表"结构，支持当前定位、拖拽选点与关键词检索
+- 地图中心点带红色定位标记，拖动地图时实时刷新附近 POI
 - 发送后在聊天内显示位置卡片；点击后再触发地图查看/导航动作，而不是直接强跳第三方 App
+
+#### 10.10.2A 交互式地图组件技术方案（多端适配）
+
+位置搜索页需要嵌入交互式地图，支持拖拽选点、缩放、中心点标记。本节描述多端技术选型与实现方案。
+
+**UI 布局规范（对齐微信）**：
+
+```
+┌─────────────────────────────────────┐
+│  ← 返回          位置           ✓   │ ← Header（44px）
+├─────────────────────────────────────┤
+│  🔍 请输入关键字              搜索  │ ← 搜索栏
+├─────────────────────────────────────┤
+│                                     │
+│           [交互式地图]               │ ← 地图区域（约 40% 屏高）
+│              📍                     │ ← 中心点标记（固定居中）
+│                                     │
+├─────────────────────────────────────┤
+│  📍 发送当前位置                 >  │ ← 当前位置入口
+├─────────────────────────────────────┤
+│  附近位置                           │ ← 列表标题
+├─────────────────────────────────────┤
+│  1  江西金控集团                ✓   │ ← POI 列表（可滚动）
+│     江西省南昌市红谷滩区丰润路       │
+│  2  江西金控大厦                    │
+│     江西省南昌市红谷滩区雅苑路...    │
+│  ...                                │
+└─────────────────────────────────────┘
+```
+
+**技术选型与多端兼容**：
+
+| 平台 | 技术方案 | 说明 |
+| --- | --- | --- |
+| Android | uni-app x `<map>` 组件 | 使用腾讯地图 SDK，需配置 `manifest.json -> app-android.distribute.modules.uni-map.tencent.key` |
+| iOS | uni-app x `<map>` 组件 | 使用腾讯地图 SDK，需配置 `manifest.json -> app-ios.distribute.modules.uni-map.tencent.key` |
+| Web/H5 | uni-app x `<map>` 组件 | 使用腾讯地图 JS API，需配置 `manifest.json -> h5.sdkConfigs.maps.tencent.key` |
+
+**map 组件核心属性**：
+
+```html
+<map
+  :latitude="centerLatitude"
+  :longitude="centerLongitude"
+  :scale="16"
+  :markers="markers"
+  :show-location="true"
+  :enable-scroll="true"
+  :enable-zoom="true"
+  @regionchange="onMapRegionChange"
+/>
+```
+
+- `latitude/longitude`：地图中心点坐标
+- `scale`：缩放级别（1-20，建议默认 16）
+- `markers`：标记点数组（可选，用于标记 POI 或当前位置）
+- `show-location`：显示当前位置点（需授权）
+- `enable-scroll/enable-zoom`：允许拖拽和缩放
+- `@regionchange`：地图视野变化事件，用于获取新的中心点坐标
+
+**中心点标记实现方案**：
+
+由于 `<map>` 组件的 marker 会随地图移动，固定居中的选点标记需要用 CSS 覆盖层实现：
+
+```html
+<view class="map-container">
+  <map class="map" ... />
+  <view class="center-marker">
+    <image src="/static/images/location-pin.png" />
+  </view>
+</view>
+```
+
+```css
+.map-container { position: relative; }
+.center-marker {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  z-index: 100;
+}
+```
+
+**地图拖动与 POI 刷新交互逻辑**：
+
+1. 用户拖动地图 → 触发 `regionchange` 事件
+2. 防抖处理（300ms）→ 获取新的中心点坐标
+3. 调用后端 `/system/im/message/location-search?latitude=&longitude=` 刷新附近 POI
+4. 更新 POI 列表，清除之前的选中状态
+
+**选中 POI 后的行为**：
+
+1. 高亮选中项（显示勾选图标）
+2. 地图中心移动到选中 POI 位置（调用 `mapContext.moveToLocation` 或更新 `latitude/longitude`）
+3. 点击右上角"确认"按钮发送该位置
+
+**降级方案（地图组件不可用时）**：
+
+若 `<map>` 组件因 Key 未配置或 SDK 加载失败：
+- 隐藏地图区域，仅展示"发送当前位置"入口和 POI 列表
+- 显示提示文案："地图组件加载失败，您仍可发送当前位置或搜索位置"
+- 保证核心流程可用，不因地图问题阻断位置发送
+
+**Web/H5 特殊处理**：
+
+- H5 端 `<map>` 组件使用腾讯地图 JS API
+- 需要在 `index.html` 或通过配置引入腾讯地图 JS SDK
+- `regionchange` 事件在 H5 端可能为 `end` 类型时才返回准确坐标
+- 建议监听 `@regionchange` 时判断 `e.type === 'end'` 再刷新 POI
 
 #### 10.10.3 消息体冻结（兼容当前工程）
 
@@ -2418,13 +2529,14 @@ CREATE TABLE `im_user_sticker_recent` (
   - 后端存储侧目前有“只落 `address` 文本”的路径，历史回显可能缺失坐标
 - 本期收口（必须）：
   - 入库 `content` 必须可恢复 `latitude/longitude/address/name`（JSON 字符串或等价结构）
-  - 禁止仅存纯地址文本，否则刷新后无法稳定导航、转发详情与收藏回跳也会失真
+  - 禁止仅存纯地址文本，否则刷新后无法稳定导航、转发详情与收藏详情查看都会失真
   - 旧数据兼容：若历史消息缺坐标，允许展示但点击导航需提示“历史位置缺少坐标”
 
 #### 10.10.5 低成本地图方案与配额兜底
 
-- 默认方案（P0）：优先使用 `uni.chooseLocation + uni.openLocation`，不引入新增商业 SDK 成本
-- 增强方案（可选）：仅在 `chooseLocation` 不可用或搜索体验不达标时，增加 WebService POI 搜索（服务端代理调用）
+- 默认方案（P0）：`uni.getLocation(含 H5 浏览器定位兜底) + 后端 location-search + uni.openLocation`
+- 约束：不接 uniCloud，不使用云函数，不新增额外服务器
+- 腾讯 Static API 边界：静态地图仅返回图片，适合无交互预览；拖拽/缩放/中心点选址必须使用交互地图组件（或 JS SDK）
 - 供应商策略：默认优先腾讯（`im.location.search.provider=tencent`），但必须保留可插拔实现
 - 配额治理：第三方检索能力必须挂开关 `im.location.search.enabled`，并配置阈值告警
 - 免费额度/配额耗尽兜底（必须可用）：
@@ -2449,8 +2561,19 @@ CREATE TABLE `im_user_sticker_recent` (
   - `控制台 -> Key 与配额（或配额管理） -> 账号额度 -> 分配额度`
   - `Key 安全设置 -> 授权 IP 或 SN 签名校验`
 - 项目配置项（服务端）：
-  - `shengyu.tencent-lbs-key`（已有）
-  - 建议新增：`im.location.search.enabled`、`im.location.search.provider=tencent`、`im.location.search.quota-exhausted-tip`
+  - `im.location.tencent-lbs-key`（统一主键，建议生产环境改为环境变量 `IM_LOCATION_TENCENT_LBS_KEY`）
+  - `im.location.search.enabled`
+  - `im.location.search.provider=tencent`
+  - `im.location.search.quota-exhausted-tip`
+  - 检索接口：`GET /system/im/message/location-search`（由 `module-system` 代理腾讯 WebService）
+  - 配置位置说明：以上键统一定义在 `shengyu-server/src/main/resources/application.yaml` 的 `im.location` 下，`application-dev/local` 不再重复定义
+- 项目配置项（前端地图组件）：
+  - `shengyu-ui/shengyu-ui-admin-uniappx/manifest.json -> h5.sdkConfigs.maps.tencent.key`
+  - `manifest.json -> app-android.distribute.modules.uni-location.tencent.key`
+  - `manifest.json -> app-android.distribute.modules.uni-map.tencent.key`
+  - `manifest.json -> app-ios.distribute.modules.uni-location.tencent.key`
+  - `manifest.json -> app-ios.distribute.modules.uni-map.tencent.key`
+  - 说明：前端地图组件 Key 与后端 WebService Key 属同一腾讯控制台，但配置位分离，必须同时配置
 
 参考资料（用于成本口径对齐）：
 
@@ -2462,7 +2585,8 @@ CREATE TABLE `im_user_sticker_recent` (
 - 转发：位置消息允许单条转发；合并转发预览统一显示 `[位置]`
 - 撤回：沿用既有 `RECALLED + rev` 最终态规则，任何入口均不回流原文
 - 引用：允许引用位置消息；引用预览优先 `name`，缺失回退 `address`
-- 搜索/收藏回跳：统一走 `chatId + anchorSequence`，定位失败回退最近窗口并提示
+- 搜索回跳：统一走 `chatId + anchorSequence`，定位失败回退最近窗口并提示
+- 收藏：进入收藏详情页独立查看，按需单条发送到会话
 
 ### 10.10A 名片消息（Contact Card，对齐微信最小闭环）
 
@@ -2574,22 +2698,24 @@ CREATE TABLE `im_user_sticker_recent` (
 - 群聊（若开启）：显示 "XXX正在输入..."
 - 超时/停止：清除提示
 
-### 10.13 收藏功能（Favorite/Collect，对齐微信最小闭环）
+### 10.13 收藏功能（Favorite/Collect，简化独立查看模型）
 
-收藏功能用于“保存重要消息并可回到原会话定位”，本期仅做消息收藏最小闭环。
+收藏功能用于“保存重要消息并独立查看/再次发送”，本期按简化模型实现，不与聊天页锚点跳转链路耦合。
 
 #### 10.13.1 最小闭环范围（本期必做）
 
-- 入口：聊天消息长按菜单“收藏/取消收藏”
+- 入口：聊天消息长按菜单“收藏”（允许重复收藏）
 - 列表：收藏页分页查询（按收藏时间倒序）
-- 回跳：点击收藏项可回到原会话并按锚点定位原消息
+- 详情：点击收藏项进入收藏详情页查看消息内容快照
+- 发送：收藏详情页支持“发送到会话”（单聊/群聊）
 - 跨端：同账号跨端可见收藏记录
 - 非目标：收藏分组/标签、全文检索、审计流水
 
 #### 10.13.2 交互规范（对齐微信语义）
 
-- 收藏动作是“引用消息”，不是复制消息正文
-- 原消息撤回/删除后：收藏记录保留，但列表与详情展示“原消息已撤回/删除”最终态
+- 收藏动作保留消息快照（`message_content/message_extra/message_snapshot`），用于独立查看与再次发送
+- 允许对同一消息重复收藏，不做“已收藏”判断
+- 收藏与原消息后续状态完全解耦：原消息撤回/删除不影响收藏详情展示
 - 聊天菜单中“添加到表情”与“消息收藏”必须区分，禁止复用同一 action
 
 #### 10.13.3 数据模型（最小字段）
@@ -2599,29 +2725,33 @@ CREATE TABLE `im_user_sticker_recent` (
   - `id`、`tenant_id`、`user_id`、`message_id`、`chat_id`
   - `message_type`（收藏时快照类型）
   - `message_preview`（收藏时预览快照，避免列表页重组装）
+  - `message_content`（收藏时消息内容快照）
+  - `message_extra`（收藏时消息扩展快照）
+  - `message_snapshot`（收藏时完整消息快照 JSON）
   - `created_at`、`deleted`
-- 唯一约束：`uniq_user_message(user_id, message_id, deleted)`
+- 不设置 `user_id + message_id` 唯一约束（允许重复收藏）
 
 #### 10.13.4 接口冻结（最小闭环）
 
 - `POST /system/im/favorite/add` body: `{ messageId: string }`
-- `DELETE /system/im/favorite/remove?id=...`
+- `DELETE /system/im/favorite/remove?favoriteId=...`
 - `GET /system/im/favorite/list?pageNo=&pageSize=`
-- `GET /system/im/favorite/check?messageId=...`
+- `GET /system/im/favorite/detail?favoriteId=...`
+- `POST /system/im/favorite/resend` body: `{ favoriteId: string, targetChatId: string }`
 
 列表项最小返回建议：
 
 - `favoriteId`、`messageId`、`chatId`
 - `messageType`、`preview`
-- `status`（`NORMAL|RECALLED|DELETED`）
-- `anchorSequence`（用于回会话定位）
+- `messageContent`、`messageExtra`
+- `messageSnapshot`（完整消息快照 JSON）
 - `createdAt`
 
-#### 10.13.5 与会话定位契约
+#### 10.13.5 收藏详情与发送契约
 
-- 收藏页进入聊天页必须优先带 `chatId + anchorSequence`
-- 找不到锚点时：自动回退最近窗口并提示“原消息未定位到，已跳转到最近消息”
-- 不允许用 `pageNo/pageSize` 表达收藏回跳位置
+- 收藏详情页只展示收藏消息本身，不触发聊天页锚点定位
+- 单条发送时仅选择目标会话并调用 resend 接口，不依赖原消息定位
+- 收藏域与聊天页入口契约解耦，避免跨域参数耦合
 
 #### 10.13.6 本期明确不做
 
@@ -2642,10 +2772,10 @@ CREATE TABLE `im_user_sticker_recent` (
 | 能力 | 位置 | 名片 | 收藏 |
 | --- | --- | --- | --- |
 | 转发（逐条） | 支持，预览 `[位置]` | 支持，预览 `[名片]` | 收藏记录不等于消息转发 |
-| 合并转发详情 | 显示 `[位置]`，有坐标可导航 | 显示 `[名片] + displayName` | 点击收藏项回原会话，不进合并详情 |
-| 撤回 | 显示最终态，不回流原文 | 显示最终态，不回流原文 | 收藏记录保留，状态变为 `RECALLED/DELETED` |
-| 引用 | 可引用，预览 `name/address` | 可引用，预览 `displayName` | 收藏页跳转后仍可执行引用 |
-| 搜索与锚点 | 统一 `anchorSequence` | 统一 `anchorSequence` | 统一 `chatId + anchorSequence` |
+| 合并转发详情 | 显示 `[位置]`，有坐标可导航 | 显示 `[名片] + displayName` | 点击收藏项进入收藏详情，不进合并详情 |
+| 撤回 | 显示最终态，不回流原文 | 显示最终态，不回流原文 | 收藏详情保持收藏时快照，不受影响 |
+| 引用 | 可引用，预览 `name/address` | 可引用，预览 `displayName` | 收藏详情与引用链路解耦 |
+| 搜索与锚点 | 统一 `anchorSequence` | 统一 `anchorSequence` | 收藏域不依赖锚点 |
 
 ### 10.14 系统通知/机器人/应用消息
 
@@ -3080,7 +3210,7 @@ ID 精度约束（企业级必须冻结）：
 | **位置消息** | 地图SDK集成 | - | 新messageType需前后端同步 |
 | **草稿保存** | 本地存储 | - | 可独立开发，后端可选 |
 | **输入状态** | WS广播机制 | 群@提及 | 需频率控制防风暴 |
-| **收藏功能** | 消息查询接口 | 转发 | 需处理原消息撤回/删除场景 |
+| **收藏功能** | 消息查询接口 | 转发 | 仅依赖收藏快照，和原消息后续状态解耦 |
 
 ### 15.3 关键约束与不变式（代码已验证）
 
@@ -3338,7 +3468,7 @@ Backlog 已独立维护于：`sql/doc/IM即时通讯开发任务清单-v2.0.md`�
 
 - 群邀请附带聊天记录
 - 非 IM 页面与后台管理页审计
-- Favorite 收藏列表新页面开发（本期仅冻结未来入口契约，不要求本期实现）
+- 收藏域（列表/详情/resend）已独立落地，本附录不再覆盖其页面实现
 
 企业级边界（强制）：
 
@@ -3432,7 +3562,7 @@ Backlog 已独立维护于：`sql/doc/IM即时通讯开发任务清单-v2.0.md`�
 - 搜索结果进入聊天页
 - 引用点击跳转
 - 合并转发详情跳转原消息
-- `@我`、push、未来 Favorite 打开原消息
+- `@我`、push 打开原消息
 
 请求参数：
 
@@ -3596,7 +3726,6 @@ prepend 视口稳定规则：
 
 本期预留但不要求开发新页面：
 
-- Favorite 收藏列表
 - 业务会话列表 / 客服会话列表
 
 ### 21.7 消息能力回归矩阵（本期必须）
@@ -3613,7 +3742,6 @@ prepend 视口稳定规则：
 
 本期不要求新增页面，但要求入口契约预留：
 
-- Favorite 收藏列表
 - 业务会话列表
 
 回归规则（冻结）：
@@ -3629,4 +3757,3 @@ prepend 视口稳定规则：
 - 搜索服务当前未把 `sequence` 映射为一等字段
 - 后端当前仅有 `list-by-chat(pageNo/pageSize)`，尚无 `window/history`
 - mapper 当前老分页仍以 `id DESC` 为排序口径
-

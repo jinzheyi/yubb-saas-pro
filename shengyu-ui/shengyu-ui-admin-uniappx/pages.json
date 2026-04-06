@@ -176,6 +176,13 @@
 			}
 		},
 		{
+			"path": "pages/message/location-search",
+			"style": {
+				"navigationBarTitleText": "发送位置",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/message/video-player",
 			"style": {
 				"navigationBarTitleText": "视频播放",
@@ -211,9 +218,16 @@
 			}
 		},
 		{
-			"path": "pages/profile/favorites",
+			"path": "pages/common/favorite",
 			"style": {
-				"navigationBarTitleText": "我的收藏",
+				"navigationBarTitleText": "消息收藏",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/common/favorite-detail",
+			"style": {
+				"navigationBarTitleText": "收藏详情",
 				"navigationStyle": "custom"
 			}
 		},

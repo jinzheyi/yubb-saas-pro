@@ -21,7 +21,7 @@
 		</view>
 
 		<view v-if="messageCountText != ''" class="summary">
-			<text class="summary-text">将转发 {{ messageCountText }} 到</text>
+			<text class="summary-text">{{ summaryTextPrefix }} {{ messageCountText }} {{ summaryTextSuffix }}</text>
 		</view>
 
 		<view v-if="showForwardType" class="forward-type">
@@ -60,11 +60,13 @@
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { conversationService, ConversationItem } from '../../services/conversation-service.uts'
 import { forwardMessages as forwardMessagesApi } from '../../api/message.uts'
+import { resendFavorite as resendFavoriteApi } from '../../api/favorite.uts'
 import { encodeIdParam } from '../../utils/id-param.uts'
 
 const keyword = ref('')
 
 const messageIds = ref<string[]>([])
+const favoriteId = ref<string>('')
 const forwardType = ref<number>(1)
 
 const MAX_FORWARD_MESSAGE_COUNT = 50
@@ -83,11 +85,25 @@ const filteredConversations = computed(() => {
 })
 
 const messageCountText = computed(() => {
+	if (favoriteId.value !== '' && favoriteId.value !== '0') {
+		return '1 条消息'
+	}
 	const count = messageIds.value != null ? messageIds.value.length : 0
 	return count > 0 ? count.toString() + ' 条消息' : ''
 })
 
+const summaryTextPrefix = computed(() => {
+	return favoriteId.value !== '' && favoriteId.value !== '0' ? '将发送' : '将转发'
+})
+
+const summaryTextSuffix = computed(() => {
+	return '到'
+})
+
 const showForwardType = computed(() => {
+	if (favoriteId.value !== '' && favoriteId.value !== '0') {
+		return false
+	}
 	const count = messageIds.value != null ? messageIds.value.length : 0
 	return count > 1
 })
@@ -140,16 +156,27 @@ function loadConversationList(): void {
 
 async function handleSelect(targetChatId: string): Promise<void> {
 	const ids = messageIds.value != null ? messageIds.value : []
-	if (targetChatId == null || targetChatId === '' || ids.length === 0) {
+	const isFavoriteMode = favoriteId.value !== '' && favoriteId.value !== '0'
+	if (targetChatId == null || targetChatId === '' || (!isFavoriteMode && ids.length === 0)) {
 		uni.showToast({ title: '参数错误', icon: 'none' })
 		return
 	}
-	if (ids.length > MAX_FORWARD_MESSAGE_COUNT) {
+	if (!isFavoriteMode && ids.length > MAX_FORWARD_MESSAGE_COUNT) {
 		uni.showToast({ title: `最多选择 ${MAX_FORWARD_MESSAGE_COUNT} 条消息`, icon: 'none' })
 		return
 	}
 	try {
 		uni.showLoading({ title: '发送中...' })
+		if (isFavoriteMode) {
+			await resendFavoriteApi(favoriteId.value, targetChatId)
+			uni.hideLoading()
+			uni.showToast({ title: '已发送', icon: 'success' })
+			const chatIdParam = encodeIdParam(targetChatId)
+			uni.redirectTo({
+				url: `/pages/message/chat?chatId=${chatIdParam}&entryMode=latest`
+			})
+			return
+		}
 		const result: any = await forwardMessagesApi(targetChatId, ids, forwardType.value)
 		uni.hideLoading()
 		let successCount = ids.length
@@ -188,9 +215,11 @@ async function handleSelect(targetChatId: string): Promise<void> {
 
 onLoad((options: any) => {
 	try {
+		const fid = options != null ? (options['favoriteId'] as string | null) : null
+		favoriteId.value = fid != null ? String(fid) : ''
 		const ids = options != null ? (options['messageIds'] as string | null) : null
 		messageIds.value = parseMessageIds(ids)
-		if (messageIds.value.length > MAX_FORWARD_MESSAGE_COUNT) {
+		if (favoriteId.value === '' && messageIds.value.length > MAX_FORWARD_MESSAGE_COUNT) {
 			uni.showToast({ title: `最多选择 ${MAX_FORWARD_MESSAGE_COUNT} 条消息`, icon: 'none' })
 			messageIds.value = []
 			setTimeout(() => {
@@ -198,13 +227,16 @@ onLoad((options: any) => {
 			}, 200)
 			return
 		}
-		const t = options != null ? (options['forwardType'] as string | null) : null
-		if (t != null && t !== '') {
-			const n = Number(t)
-			forwardType.value = n === 2 ? 2 : 1
+		if (favoriteId.value === '') {
+			const t = options != null ? (options['forwardType'] as string | null) : null
+			if (t != null && t !== '') {
+				const n = Number(t)
+				forwardType.value = n === 2 ? 2 : 1
+			}
 		}
 	} catch (e) {
 		messageIds.value = []
+		favoriteId.value = ''
 	}
 	loadConversationList()
 })

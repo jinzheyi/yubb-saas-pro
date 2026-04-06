@@ -160,8 +160,58 @@ export default {
 			recall: 'Recall',
 			delete: 'Delete',
 			favorite: 'Add',
+			favoriteMessage: 'Favorite',
+			favoriteCancel: 'Unfavorite',
+			favoriteSticker: 'Add Sticker',
 			multi: 'Multi-select',
 			quote: 'Quote'
+		}
+	},
+	favoritePage: {
+		title: 'Message Favorites',
+		empty: 'No favorite messages',
+		loading: 'Loading...',
+		noMore: 'No more',
+		preview: {
+			default: '[Message]'
+		},
+		type: {
+			text: 'Text',
+			image: 'Image',
+			voice: 'Voice',
+			video: 'Video',
+			file: 'File',
+			location: 'Location',
+			sticker: 'Sticker',
+			custom: 'Custom',
+			default: 'Message'
+		},
+		status: {
+			normal: 'Normal',
+			recalled: 'Recalled',
+			deleted: 'Deleted'
+		},
+		action: {
+			cancelFavorite: 'Unfavorite'
+		},
+		toast: {
+			loadFailed: 'Load failed',
+			locateFailed: 'Unable to locate message',
+			openFailed: 'Unable to open favorite detail',
+			invalidItem: 'Invalid favorite item',
+			cancelSuccess: 'Unfavorited',
+			actionFailed: 'Action failed'
+		}
+	},
+	favoriteDetail: {
+		title: 'Favorite Detail',
+		loading: 'Loading...',
+		empty: 'Favorite content not found',
+		rawContent: 'Raw Message Content',
+		sendToChat: 'Send To Chat',
+		toast: {
+			invalidId: 'Invalid favorite ID',
+			loadFailed: 'Failed to load detail'
 		}
 	},
 	chatSettings: {
