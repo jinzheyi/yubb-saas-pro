@@ -522,7 +522,6 @@
 	import { badgeService } from '../../services/badge-service.uts'
 	import { MessageType, wsManager } from '../../utils/websocket.uts'
 	import { getMessageWindow, getMessageHistory, recallMessage, deleteMessage, getRecallConfig, markVoicePlayed as markVoicePlayedApi, markVoicePlayedBatch, getVoicePlayedStatus } from '../../api/message.uts'
-	import { getContactList } from '../../api/contact.uts'
 	import { addFavorite as addMessageFavoriteApi } from '../../api/favorite.uts'
 	import { getConversationByTarget } from '../../api/conversation.uts'
 	import { getUserIdStr, getTenantId, hasRole } from '../../store/user.uts'
@@ -588,10 +587,12 @@
 	const currentUserId = ref<string>('0')
 	const currentTenantId = ref<string>('0')
 	const CHAT_VIEWPORT_TTL_MS = 15 * 60 * 1000
+	const CONTACT_CARD_SELECT_EVENT = 'imSelectContactCard'
 
 	const mentionNameToUserId: Map<string, string> = new Map()
 	const recallWindowMs = ref(2 * 60 * 1000)
 	let mentionPicking: boolean = false
+	let contactCardSelectHandler: ((payload: any) => void) | null = null
 
 	type MentionMemberItem = {
 		userId: string
@@ -1393,6 +1394,7 @@
 		stopVoicePlayedCompensation()
 		cancelActiveVoiceRecording()
 		stopCurrentVoicePlayback()
+		cleanupContactCardSelectListener()
 		cleanupH5VoiceRecorderRuntime()
 		// 移除消息监听器
 		messageService.removeMessageListener(handleNewMessage)
@@ -6626,50 +6628,37 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (!ensureConversationWritable()) {
 			return
 		}
-		try {
-			const rawResp: any = await getContactList()
-			const rawList: any[] = Array.isArray(rawResp)
-				? rawResp
-				: (rawResp != null && Array.isArray((rawResp as any).data) ? (rawResp as any).data : [])
-			const contacts: any[] = rawList
-				.map((item: any) => {
-					const uid = item != null && item.id != null ? String(item.id) : ''
-					const displayName = item != null
-						? (item.remarkName != null && String(item.remarkName) !== '' ? String(item.remarkName) : (item.nickname != null ? String(item.nickname) : ''))
-						: ''
-					return {
-						userId: uid,
-						displayName: displayName,
-						deptName: item != null && item.deptName != null ? String(item.deptName) : '',
-						postName: item != null && item.postName != null ? String(item.postName) : '',
-						avatar: item != null && item.avatar != null ? String(item.avatar) : ''
-					}
-				})
-				.filter((item: any) => item.userId !== '' && item.userId !== '0' && item.displayName !== '' && item.userId !== currentUserId.value)
-			if (contacts.length === 0) {
-				uni.showToast({ title: '暂无可分享联系人', icon: 'none' })
-				return
+		cleanupContactCardSelectListener()
+		contactCardSelectHandler = async (payload: any) => {
+			cleanupContactCardSelectListener()
+			try {
+				await sendContactCard(payload)
+			} catch (e) {
+				console.error('[Chat] 发送名片失败:', e)
+				uni.showToast({ title: '发送失败', icon: 'none' })
 			}
-			const candidates = contacts.slice(0, 6)
-			uni.showActionSheet({
-				itemList: candidates.map(item => item.displayName),
-				success: async (res) => {
-					try {
-						const idx = res != null && (res as any).tapIndex != null ? Number((res as any).tapIndex) : -1
-						if (idx < 0 || idx >= candidates.length) {
-							return
-						}
-						await sendContactCard(candidates[idx])
-					} catch (e) {
-						console.error('[Chat] 发送名片失败:', e)
-						uni.showToast({ title: '发送失败', icon: 'none' })
-					}
-				}
-			})
-		} catch (e) {
-			console.error('[Chat] 获取联系人失败:', e)
-			uni.showToast({ title: '加载联系人失败', icon: 'none' })
 		}
+		uni.$on(CONTACT_CARD_SELECT_EVENT, contactCardSelectHandler)
+		showPlusMenu.value = false
+		uni.navigateTo({
+			url: '/pages/message/select-contact-card',
+			fail: (err) => {
+				cleanupContactCardSelectListener()
+				console.error('[Chat] 打开名片选择页面失败:', err)
+				uni.showToast({ title: '打开失败', icon: 'none' })
+			}
+		})
+	}
+
+	function cleanupContactCardSelectListener(): void {
+		try {
+			if (contactCardSelectHandler != null) {
+				uni.$off(CONTACT_CARD_SELECT_EVENT, contactCardSelectHandler)
+			}
+		} catch (e) {
+			// ignore
+		}
+		contactCardSelectHandler = null
 	}
 
 	async function sendContactCard(contact: any): Promise<void> {
@@ -9131,6 +9120,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		stopVoicePlayedCompensation()
 		cancelActiveVoiceRecording()
 		stopCurrentVoicePlayback()
+		cleanupContactCardSelectListener()
 		cleanupH5VoiceRecorderRuntime()
 		messageService.removeMessageListener(handleNewMessage)
 		messageService.removeMessageStatusListener(handleMessageStatusChange)

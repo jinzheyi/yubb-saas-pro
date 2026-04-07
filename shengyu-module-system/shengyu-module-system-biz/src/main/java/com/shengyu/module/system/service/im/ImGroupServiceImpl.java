@@ -443,6 +443,17 @@ public class ImGroupServiceImpl implements ImGroupService {
                 }
             }
             
+            // 兼容历史前端：nickname 为空时回填 userNickname，避免展示“未知”
+            if ((respVO.getNickname() == null || respVO.getNickname().trim().isEmpty())
+                    && respVO.getUserNickname() != null && !respVO.getUserNickname().trim().isEmpty()) {
+                respVO.setNickname(respVO.getUserNickname());
+            }
+            // 保证两个字段至少有一个可用
+            if ((respVO.getUserNickname() == null || respVO.getUserNickname().trim().isEmpty())
+                    && respVO.getNickname() != null && !respVO.getNickname().trim().isEmpty()) {
+                respVO.setUserNickname(respVO.getNickname());
+            }
+
             return respVO;
         }).collect(Collectors.toList());
     }

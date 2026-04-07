@@ -39,7 +39,7 @@
 					hover-class="contact-item-active" 
 					@click="handleContactClick(contact)">
 					<!-- 选择模式下显示复选框 -->
-					<view v-if="isSelectMode" :class="['checkbox', contact.selected ? 'checkbox-active' : '']" @click.stop="toggleContactSelect(contact)">
+					<view v-if="isSelectMode" :class="['checkbox', isSingleSelectMode ? 'checkbox-single' : '', contact.selected ? 'checkbox-active' : '', (isSingleSelectMode && contact.selected) ? 'checkbox-single-active' : '']" @click.stop="toggleContactSelect(contact)">
 						<text v-if="contact.selected" class="iconfont check-icon">&#xea73;</text>
 					</view>
 					
@@ -76,7 +76,8 @@
 	import { 
 		isMemberSelected, 
 		toggleMember,
-		getSelectedCount
+		getSelectedCount,
+		getSelectionLimit
 	} from '../../store/group-selection.uts'
 	import { getStarContactList, searchContact } from '../../api/contact.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
@@ -106,6 +107,9 @@
 	// 选中的联系人数量（使用全局状态）
 	const selectedCount = computed(() : number => {
 		return getSelectedCount()
+	})
+	const isSingleSelectMode = computed(() : boolean => {
+		return getSelectionLimit() === 1
 	})
 
 	/**
@@ -244,6 +248,7 @@
 		toggleMember(contact)
 		// 同步本地状态
 		contact.selected = isMemberSelected(String(contact.id))
+		syncSelectionState()
 	}
 
 	/**
@@ -477,6 +482,14 @@
 	.checkbox-active {
 		background-color: #1677FF;
 		border-color: #1677FF;
+		box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.2);
+	}
+
+	.checkbox-single {
+		border-radius: 11px;
+	}
+
+	.checkbox-single-active {
 		box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.2);
 	}
 

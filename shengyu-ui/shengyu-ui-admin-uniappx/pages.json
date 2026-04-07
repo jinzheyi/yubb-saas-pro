@@ -183,6 +183,13 @@
 			}
 		},
 		{
+			"path": "pages/message/select-contact-card",
+			"style": {
+				"navigationBarTitleText": "选择名片",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/message/video-player",
 			"style": {
 				"navigationBarTitleText": "视频播放",

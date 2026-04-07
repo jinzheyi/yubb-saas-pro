@@ -22,8 +22,11 @@ public class AppDeptTreeRespVO {
     @Schema(description = "排序", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer sort;
 
-    @Schema(description = "部门成员数量", example = "10")
+    @Schema(description = "部门成员数量（总量，含当前用户）", example = "10")
     private Integer memberCount;
+
+    @Schema(description = "部门可选成员数量（用于选人场景，默认剔除当前用户）", example = "9")
+    private Integer selectableMemberCount;
 
     @Schema(description = "部门成员列表（仅用户所属部门才有数据）")
     private List<AppUserSimpleRespVO> users;

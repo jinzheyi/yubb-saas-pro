@@ -37,7 +37,7 @@
 					<view v-for="(org, orgIndex) in organizations" :key="org.id" class="org-item">
 						<view class="org-row" hover-class="org-row-active" @click="toggleNode(org.id)">
 							<!-- 选择模式下显示复选框 -->
-							<view v-if="isSelectMode" :class="['checkbox', org.selected ? 'checkbox-active' : '']" @click.stop="toggleOrgSelect(org)">
+							<view v-if="isSelectMode && !isSingleSelectMode" :class="['checkbox', org.selected ? 'checkbox-active' : '']" @click.stop="toggleOrgSelect(org)">
 								<text v-if="org.selected" class="iconfont check-icon">&#xea73;</text>
 							</view>
 							
@@ -57,7 +57,7 @@
 									class="member-item"
 									@click="handleMemberClick(member)">
 									<!-- 选择模式下显示复选框 -->
-									<view v-if="isSelectMode" :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
+									<view v-if="isSelectMode" :class="['checkbox', isSingleSelectMode ? 'checkbox-single' : '', member.selected ? 'checkbox-active' : '', (isSingleSelectMode && member.selected) ? 'checkbox-single-active' : '']" @click.stop="toggleMemberSelect(member)">
 										<text v-if="member.selected" class="iconfont check-icon">&#xea73;</text>
 									</view>
 									
@@ -73,9 +73,9 @@
 							<!-- 子部门 -->
 							<view v-if="org.departments && org.departments.length > 0">
 								<view v-for="(dept, deptIndex) in org.departments" :key="dept.id" class="dept-item">
-									<view class="dept-row" hover-class="dept-row-active" @click="isSelectMode ? null : toggleDept(dept.id)">
+									<view class="dept-row" hover-class="dept-row-active" @click="toggleDept(dept.id)">
 										<!-- 选择模式下显示复选框 -->
-										<view v-if="isSelectMode" :class="['checkbox', dept.selected ? 'checkbox-active' : '']" @click.stop="toggleDeptSelect(org, dept)">
+										<view v-if="isSelectMode && !isSingleSelectMode" :class="['checkbox', dept.selected ? 'checkbox-active' : '']" @click.stop="toggleDeptSelect(org, dept)">
 											<text v-if="dept.selected" class="iconfont check-icon">&#xea73;</text>
 										</view>
 										
@@ -91,7 +91,7 @@
 										hover-class="member-item-active"
 											@click="handleMemberClick(member)">
 											<!-- 选择模式下显示复选框 -->
-											<view v-if="isSelectMode" :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
+											<view v-if="isSelectMode" :class="['checkbox', isSingleSelectMode ? 'checkbox-single' : '', member.selected ? 'checkbox-active' : '', (isSingleSelectMode && member.selected) ? 'checkbox-single-active' : '']" @click.stop="toggleMemberSelect(member)">
 												<text v-if="member.selected" class="iconfont check-icon">&#xea73;</text>
 											</view>
 											
@@ -118,7 +118,7 @@
 						class="member-item"
 						@click="handleMemberClick(member)">
 						<!-- 选择模式下显示复选框 -->
-						<view v-if="isSelectMode" :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
+						<view v-if="isSelectMode" :class="['checkbox', isSingleSelectMode ? 'checkbox-single' : '', member.selected ? 'checkbox-active' : '', (isSingleSelectMode && member.selected) ? 'checkbox-single-active' : '']" @click.stop="toggleMemberSelect(member)">
 							<text v-if="member.selected" class="iconfont check-icon">&#xea73;</text>
 						</view>
 						
@@ -150,7 +150,8 @@
 		toggleMember,
 		addMembers,
 		removeMembers,
-		getSelectedCount
+		getSelectedCount,
+		getSelectionLimit
 	} from '../../store/group-selection.uts'
 	import { getOrgTree } from '../../api/dept.uts'
 	import { getContactPageByDept } from '../../api/contact.uts'
@@ -176,12 +177,12 @@
 	let searchTimer: number = 0
 	
 	// 已加载成员的部门缓存 Map<deptId, members[]>
-	const deptMembersCache = new Map<number, any>()
+	const deptMembersCache = new Map<string, any>()
 	
 	// 原始组织数据（用于搜索后恢复）
 	const originalOrganizations = ref<any[]>([])
 	const originalRootOrg = ref<any>({
-		id: 0,
+		id: '',
 		name: '公司',
 		count: 0,
 		selected: false,
@@ -193,7 +194,7 @@
 
 	// 根组织
 	const rootOrg = ref({
-		id: 0,
+		id: '',
 		name: '公司',
 		count: 0,
 		selected: false,
@@ -213,9 +214,71 @@
 	const selectedCount = computed(() : number => {
 		return getSelectedCount()
 	})
+	const isSingleSelectMode = computed(() : boolean => {
+		return getSelectionLimit() === 1
+	})
 
 	function handleBack() {
 		uni.navigateBack()
+	}
+
+	function normalizeDeptId(value: any): string {
+		if (value == null) {
+			return ''
+		}
+		const id = String(value)
+		return id !== '' ? id : ''
+	}
+
+	function normalizeParentId(value: any): string {
+		if (value == null) {
+			return '0'
+		}
+		const id = String(value)
+		return id !== '' ? id : '0'
+	}
+
+	/**
+	 * 组织结构接口兼容：既支持扁平列表，也支持嵌套 children/departments
+	 */
+	function normalizeDeptList(raw: any[]): any[] {
+		if (!Array.isArray(raw) || raw.length === 0) {
+			return []
+		}
+		const result: any[] = []
+		const visited = new Set<string>()
+
+		function walk(nodes: any[], parentIdOverride?: string) {
+			for (let i = 0; i < nodes.length; i++) {
+				const dept = nodes[i]
+				if (dept == null) {
+					continue
+				}
+				const id = normalizeDeptId(dept.id)
+				if (id === '' || id === '0' || visited.has(id)) {
+					continue
+				}
+				const parentId = parentIdOverride != null
+					? parentIdOverride
+					: normalizeParentId(dept.parentId)
+				result.push({
+					...dept,
+					id: id,
+					parentId: parentId
+				})
+				visited.add(id)
+
+				const children = Array.isArray(dept.children)
+					? dept.children
+					: (Array.isArray(dept.departments) ? dept.departments : [])
+				if (children.length > 0) {
+					walk(children, id)
+				}
+			}
+		}
+
+		walk(raw)
+		return result
 	}
 	
 	/**
@@ -225,26 +288,54 @@
 		try {
 			loading.value = true
 			const data = await getOrgTree()
-			
+			const normalizedData = normalizeDeptList(data)
+
 			if (data && data.length > 0) {
-				// 找到根部门
-				const rootDept = data.find((dept: any) => dept.parentId === null || dept.parentId === 0)
-				
-				if (rootDept) {
-					// 设置根组织信息
-					rootOrg.value.id = rootDept.id
-					rootOrg.value.name = rootDept.name
-					rootOrg.value.count = rootDept.memberCount || 0
+				const idSet: string[] = normalizedData
+					.map((dept: any) => normalizeDeptId(dept != null ? dept.id : null))
+					.filter((id: string) => id !== '' && id !== '0')
+				const rootCandidates = normalizedData.filter((dept: any) => {
+					if (dept == null || dept.id == null) {
+						return false
+					}
+					const pid = normalizeParentId(dept.parentId)
+					return pid === '0' || !idSet.includes(pid)
+				})
+
+				if (rootCandidates.length === 1) {
+					const rootDept = rootCandidates[0]
+					rootOrg.value.id = normalizeDeptId(rootDept.id)
+					rootOrg.value.name = rootDept.name != null ? String(rootDept.name) : '公司'
+					rootOrg.value.count = extractDeptCount(rootDept)
 					rootOrg.value.members = []
 					rootOrg.value.pageNo = 0
 					rootOrg.value.hasMore = false
 					rootOrg.value.loadingMore = false
-					
-					// 保存原始根组织信息
+
 					originalRootOrg.value = {
-						id: rootDept.id,
-						name: rootDept.name,
-						count: rootDept.memberCount || 0,
+						id: rootOrg.value.id,
+						name: rootOrg.value.name,
+						count: rootOrg.value.count,
+						selected: false,
+						members: [],
+						pageNo: 0,
+						hasMore: false,
+						loadingMore: false
+					}
+				} else {
+					const total = rootCandidates.reduce((sum: number, dept: any) => sum + extractDeptCount(dept), 0)
+					rootOrg.value.id = ''
+					rootOrg.value.name = '组织结构'
+					rootOrg.value.count = total
+					rootOrg.value.members = []
+					rootOrg.value.pageNo = 0
+					rootOrg.value.hasMore = false
+					rootOrg.value.loadingMore = false
+
+					originalRootOrg.value = {
+						id: '',
+						name: '组织结构',
+						count: total,
 						selected: false,
 						members: [],
 						pageNo: 0,
@@ -252,25 +343,17 @@
 						loadingMore: false
 					}
 				}
-				
-				// 构建树形结构（不包括根部门）
-				const tree = buildOrgTree(data)
+
+				const tree = buildOrgTree(normalizedData)
 				organizations.value = tree
-				
-				// 保存原始组织数据（深拷贝）
 				originalOrganizations.value = JSON.parse(JSON.stringify(tree))
-				
-				// 清空缓存
 				deptMembersCache.clear()
-				
-				// 根节点默认展开，自动加载根部门成员
-				if (rootOrg.value.id && rootOrg.value.count > 0) {
+
+				if (rootCandidates.length === 1 && rootOrg.value.id !== '' && rootOrg.value.id !== '0' && rootOrg.value.count > 0) {
 					await loadDeptMembers(rootOrg.value.id, rootOrg.value)
-					// 同时保存到原始数据
 					originalRootOrg.value.members = JSON.parse(JSON.stringify(rootOrg.value.members))
 				}
 			} else {
-				// 没有数据时清空
 				organizations.value = []
 				originalOrganizations.value = []
 				rootOrg.value.members = []
@@ -289,7 +372,33 @@
 			loading.value = false
 		}
 	}
-	
+
+	/**
+	 * 提取部门人数，兼容 selectableMemberCount/memberCount/userCount/count
+	 * 选择模式下优先展示可选人数，避免“有人数但不可选”的歧义
+	 */
+	function extractDeptCount(dept: any): number {
+		if (dept == null) {
+			return 0
+		}
+		if (isSelectMode.value) {
+			const selectableCount = dept.selectableMemberCount != null ? Number(dept.selectableMemberCount) : NaN
+			if (!isNaN(selectableCount)) {
+				return selectableCount
+			}
+		}
+		const memberCount = dept.memberCount != null ? Number(dept.memberCount) : NaN
+		if (!isNaN(memberCount)) {
+			return memberCount
+		}
+		const userCount = dept.userCount != null ? Number(dept.userCount) : NaN
+		if (!isNaN(userCount)) {
+			return userCount
+		}
+		const count = dept.count != null ? Number(dept.count) : NaN
+		return !isNaN(count) ? count : 0
+	}
+
 	/**
 	 * 从扁平列表构建组织树
 	 */
@@ -297,66 +406,80 @@
 		if (flatList.length === 0) {
 			return []
 		}
-		
-		// 创建部门映射表
-		const deptMap = new Map<number, any>()
-		
-		// 第一遍：创建所有节点
+
+		const deptMap = new Map<string, any>()
+
 		for (let i = 0; i < flatList.length; i++) {
 			const dept = flatList[i]
+			if (dept == null || dept.id == null) {
+				continue
+			}
+			const id = normalizeDeptId(dept.id)
+			if (id === '' || id === '0') {
+				continue
+			}
+			const parentId = normalizeParentId(dept.parentId)
 			const node = {
-				id: dept.id,
+				id: id,
 				name: dept.name,
-				parentId: dept.parentId,
+				parentId: parentId,
 				sort: dept.sort || 0,
-				count: dept.memberCount || 0, // 使用后端返回的成员数量
+				count: extractDeptCount(dept),
 				expanded: false,
 				selected: false,
 				departments: [] as any[],
-				members: [] as any[], // 初始为空，点击时才加载
+				members: [] as any[],
 				pageNo: 0,
 				hasMore: false,
 				loadingMore: false
 			}
-			deptMap.set(dept.id, node)
+			deptMap.set(id, node)
 		}
-		
-		// 第二遍：建立父子关系
-		const rootNodes: any[] = []
-		let rootDeptId: number | null = null
-		
-		// 找到根部门
+
+		const rootIds: string[] = []
 		for (const [id, node] of deptMap) {
-			if (node.parentId === null || node.parentId === 0) {
-				rootDeptId = node.id
-				break
+			if (node.parentId === '0' || !deptMap.has(node.parentId)) {
+				rootIds.push(id)
 			}
 		}
-		
-		// 如果没有根部门，返回空数组
-		if (rootDeptId === null) {
+		if (rootIds.length === 0) {
 			return []
 		}
-		
-		// 获取根部门的直接子部门作为顶级组织
-		for (const [id, node] of deptMap) {
-			if (node.parentId === rootDeptId) {
-				// 递归构建子部门
-				node.departments = buildSubDepts(node.id, deptMap)
-				rootNodes.push(node)
+
+		const rootNodes: any[] = []
+		if (rootIds.length === 1) {
+			const rootDeptId = rootIds[0]
+			for (const [id, node] of deptMap) {
+				if (node.parentId === rootDeptId) {
+					node.departments = buildSubDepts(node.id, deptMap)
+					rootNodes.push(node)
+				}
+			}
+			if (rootNodes.length === 0) {
+				const selfNode = deptMap.get(rootDeptId)
+				if (selfNode != null) {
+					selfNode.departments = buildSubDepts(selfNode.id, deptMap)
+					rootNodes.push(selfNode)
+				}
+			}
+		} else {
+			for (let i = 0; i < rootIds.length; i++) {
+				const node = deptMap.get(rootIds[i])
+				if (node != null) {
+					node.departments = buildSubDepts(node.id, deptMap)
+					rootNodes.push(node)
+				}
 			}
 		}
-		
-		// 排序
-		rootNodes.sort((a: any, b: any) => a.sort - b.sort)
-		
+
+		rootNodes.sort((a: any, b: any) => (a.sort || 0) - (b.sort || 0))
 		return rootNodes
 	}
-	
+
 	/**
 	 * 递归构建子部门
 	 */
-	function buildSubDepts(parentId: number, deptMap: Map<number, any>): any[] {
+	function buildSubDepts(parentId: string, deptMap: Map<string, any>): any[] {
 		const children: any[] = []
 		
 		for (const [id, node] of deptMap) {
@@ -616,7 +739,7 @@
 	/**
 	 * 加载部门成员
 	 */
-	async function loadDeptMembers(deptId: number, deptNode: any, keyword?: string) {
+	async function loadDeptMembers(deptId: string, deptNode: any, keyword?: string) {
 		// 如果有缓存且没有搜索关键词，直接使用缓存
 		if (!keyword && deptMembersCache.has(deptId)) {
 			const cache = deptMembersCache.get(deptId) as any
@@ -696,7 +819,7 @@
 		}
 	}
 
-	async function loadMoreDeptMembers(deptId: number, deptNode: any) {
+	async function loadMoreDeptMembers(deptId: string, deptNode: any) {
 		if (deptNode.loadingMore) return
 		if (!deptNode.hasMore) return
 		deptNode.loadingMore = true
@@ -811,6 +934,10 @@
 		toggleMember(member)
 		// 同步本地状态
 		member.selected = isMemberSelected(String(member.id))
+		if (isSingleSelectMode.value) {
+			syncSelectionState()
+			return
+		}
 		
 		// 查找成员所属的部门和组织，更新它们的选中状态
 		for (let i = 0; i < organizations.value.length; i++) {
@@ -825,10 +952,10 @@
 	/**
 	 * 在部门树中更新成员状态
 	 */
-	function updateMemberInDepts(depts: any[], memberId: number): boolean {
+	function updateMemberInDepts(depts: any[], memberId: string): boolean {
 		for (let i = 0; i < depts.length; i++) {
 			const dept = depts[i]
-			const member = dept.members.find((m: any) => m.id === memberId)
+			const member = dept.members.find((m: any) => String(m.id) === String(memberId))
 			if (member) {
 				updateDeptSelectState(dept)
 				return true
@@ -890,6 +1017,10 @@
 
 	// 同步本地选中状态与全局状态
 	function syncSelectionState() {
+		for (let i = 0; i < rootOrg.value.members.length; i++) {
+			rootOrg.value.members[i].selected = isMemberSelected(String(rootOrg.value.members[i].id))
+		}
+
 		function syncDepts(depts: any[]) {
 			for (let i = 0; i < depts.length; i++) {
 				const dept = depts[i]
@@ -908,6 +1039,9 @@
 		
 		for (let i = 0; i < organizations.value.length; i++) {
 			const org = organizations.value[i]
+			for (let j = 0; j < org.members.length; j++) {
+				org.members[j].selected = isMemberSelected(String(org.members[j].id))
+			}
 			syncDepts(org.departments)
 			// 更新组织选中状态
 			updateOrgSelectState(org)
@@ -1193,6 +1327,14 @@
 	.checkbox-active {
 		background-color: #1677FF;
 		border-color: #1677FF;
+		box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.2);
+	}
+
+	.checkbox-single {
+		border-radius: 11px;
+	}
+
+	.checkbox-single-active {
 		box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.2);
 	}
 

@@ -22,7 +22,7 @@
 							hover-class="member-item-active"
 					@click="handleMemberClick(member)">
 					<!-- 显示复选框 -->
-					<view :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
+					<view :class="['checkbox', isSingleSelectMode ? 'checkbox-single' : '', member.selected ? 'checkbox-active' : '', (isSingleSelectMode && member.selected) ? 'checkbox-single-active' : '']" @click.stop="toggleMemberSelect(member)">
 						<text v-if="member.selected" class="iconfont check-icon">&#xea73;</text>
 					</view>
 					
@@ -53,10 +53,12 @@
 	import { 
 		isMemberSelected, 
 		toggleMember,
-		getSelectedCount
+		getSelectedCount,
+		getSelectionLimit
 	} from '../../store/group-selection.uts'
 	import { getGroupMembers } from '../../api/group.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
+	import { decodeIdParam } from '../../utils/id-param.uts'
 
 	const { t } = useI18n()
 
@@ -80,11 +82,17 @@
 			if (members && Array.isArray(members)) {
 				memberList.value = members.map((m: any) => {
 					const userIdStr = m.userId != null ? String(m.userId) : '0'
-					const displayName = m.nickname || m.name || '未知'
+					const displayName = m != null
+						? (m.nickname != null && String(m.nickname) !== ''
+							? String(m.nickname)
+							: (m.userNickname != null && String(m.userNickname) !== ''
+								? String(m.userNickname)
+								: (m.name != null && String(m.name) !== '' ? String(m.name) : '未知')))
+						: '未知'
 					return {
 						id: userIdStr,
 						name: displayName,
-						role: m.roleName || '',
+						role: m != null && m.deptName != null && String(m.deptName) !== '' ? String(m.deptName) : (m.roleName != null ? String(m.roleName) : ''),
 						avatarText: getAvatarText(displayName),
 						avatarBg: getUserAvatarColor(userIdStr),
 						selected: isMemberSelected(userIdStr)
@@ -106,6 +114,9 @@
 	const selectedCount = computed(() : number => {
 		return getSelectedCount()
 	})
+	const isSingleSelectMode = computed(() : boolean => {
+		return getSelectionLimit() === 1
+	})
 
 	function handleBack() {
 		uni.navigateBack()
@@ -116,6 +127,7 @@
 		toggleMember(member)
 		// 同步本地状态
 		member.selected = isMemberSelected(String(member.id))
+		syncSelectionState()
 	}
 
 	function handleMemberClick(member : any) {
@@ -139,7 +151,7 @@
 		safeAreaBottom.value = uni.getWindowInfo().safeAreaInsets?.bottom ?? 0
 		if (options != null) {
 			if (options['groupId']) {
-				groupId.value = options['groupId'] as string
+				groupId.value = decodeIdParam(options['groupId'])
 			}
 			if (options['groupName']) {
 				groupName.value = options['groupName']
@@ -307,6 +319,14 @@
 	.checkbox-active {
 		background-color: #1677FF;
 		border-color: #1677FF;
+		box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.2);
+	}
+
+	.checkbox-single {
+		border-radius: 11px;
+	}
+
+	.checkbox-single-active {
 		box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.2);
 	}
 

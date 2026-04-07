@@ -30,7 +30,7 @@
 					class="dept-node-wrapper"
 				>
 					<!-- 一级部门 -->
-					<view class="dept-node" @click="toggleDeptExpand(dept)">
+					<view class="dept-node" @click="handleDeptNodeClick(dept)">
 						<view class="dept-node-content">
 							<text v-if="dept.children && dept.children.length > 0" class="iconfont expand-icon-left">
 								{{ dept.expanded ? '\ueaf5' : '\ueaf3' }}
@@ -49,7 +49,7 @@
 							<view 
 								:class="['dept-child', currentDeptId === child.id ? 'dept-child-active' : '']" 
 								hover-class="dept-child-hover"
-								@click="selectDept(child)"
+								@click="handleDeptNodeClick(child)"
 							>
 								<text v-if="child.children && child.children.length > 0" class="iconfont child-icon">
 									{{ child.expanded ? '\ueaf5' : '\ueaf3' }}
@@ -67,7 +67,7 @@
 									:key="grandchild.id"
 									:class="['dept-child', currentDeptId === grandchild.id ? 'dept-child-active' : '']" 
 									hover-class="dept-child-hover"
-								@click="selectDept(grandchild)"
+								@click="handleDeptNodeClick(grandchild)"
 								>
 									<text v-if="grandchild.children && grandchild.children.length > 0" class="iconfont child-icon">
 										{{ grandchild.expanded ? '\ueaf5' : '\ueaf3' }}
@@ -90,7 +90,7 @@
 						hover-class="member-item-active"
 					@click="handleMemberClick(member)">
 					<!-- 选择模式下显示复选框 -->
-					<view v-if="isSelectMode" :class="['checkbox', member.selected ? 'checkbox-active' : '']" @click.stop="toggleMemberSelect(member)">
+					<view v-if="isSelectMode" :class="['checkbox', isSingleSelectMode ? 'checkbox-single' : '', member.selected ? 'checkbox-active' : '', (isSingleSelectMode && member.selected) ? 'checkbox-single-active' : '']" @click.stop="toggleMemberSelect(member)">
 						<text v-if="member.selected" class="iconfont check-icon">&#xea73;</text>
 					</view>
 					
@@ -126,7 +126,8 @@
 	import { 
 		isMemberSelected, 
 		toggleMember,
-		getSelectedCount
+		getSelectedCount,
+		getSelectionLimit
 	} from '../../store/group-selection.uts'
 	import { getMyDeptTree } from '../../api/dept.uts'
 	import { getContactPageByDept } from '../../api/contact.uts'
@@ -173,6 +174,9 @@
 	// 选中的成员数量（使用全局状态）
 	const selectedCount = computed(() : number => {
 		return getSelectedCount()
+	})
+	const isSingleSelectMode = computed(() : boolean => {
+		return getSelectionLimit() === 1
 	})
 
 	/**
@@ -226,6 +230,24 @@
 		}
 	}
 
+	function extractDeptUserCount(dept: any): number {
+		if (dept == null) {
+			return 0
+		}
+		if (isSelectMode.value) {
+			const selectable = dept.selectableMemberCount != null ? Number(dept.selectableMemberCount) : NaN
+			if (!isNaN(selectable)) {
+				return selectable
+			}
+		}
+		const memberCount = dept.memberCount != null ? Number(dept.memberCount) : NaN
+		if (!isNaN(memberCount)) {
+			return memberCount
+		}
+		const userCount = dept.userCount != null ? Number(dept.userCount) : NaN
+		return !isNaN(userCount) ? userCount : 0
+	}
+
 	/**
 	 * 从扁平列表构建部门树
 	 * 后端返回的是已排序的扁平列表，包含所有相关部门
@@ -247,7 +269,7 @@
 				parentId: dept.parentId,
 				sort: dept.sort || 0,
 				expanded: false, // 默认收起
-				userCount: dept.memberCount || 0, // 使用后端返回的成员数量
+				userCount: extractDeptUserCount(dept), // 名片场景优先使用可选人数口径
 				children: [] as any[]
 			}
 			deptMap.set(dept.id, node)
@@ -298,11 +320,28 @@
 	/**
 	 * 切换部门展开状态
 	 */
-	function toggleDeptExpand(dept: any) {
-		// 如果有子部门，切换展开状态
+	function handleDeptNodeClick(dept: any) {
+		// 有子部门时允许展开/收起
 		if (dept.children && dept.children.length > 0) {
 			dept.expanded = !dept.expanded
 		}
+		// 同时切换当前部门并加载成员
+		selectDept(dept)
+	}
+	function updateDeptCountById(depts: any[], deptId: number, count: number): boolean {
+		for (let i = 0; i < depts.length; i++) {
+			const dept = depts[i]
+			if (Number(dept.id) === deptId) {
+				dept.userCount = count
+				return true
+			}
+			if (dept.children && dept.children.length > 0) {
+				if (updateDeptCountById(dept.children, deptId, count)) {
+					return true
+				}
+			}
+		}
+		return false
 	}
 
 	/**
@@ -325,8 +364,10 @@
 		
 		try {
 			loadingMembers.value = true
-			memberPageNo.value = 1
-			memberHasMore.value = true
+			if (reset) {
+				memberPageNo.value = 1
+				memberHasMore.value = true
+			}
 			lastMemberKeyword.value = keyword != null ? String(keyword) : ''
 			const res = await getContactPageByDept(String(deptId), 1, 20, lastMemberKeyword.value) as any
 			const data = res && Array.isArray(res.list) ? res.list : []
@@ -334,11 +375,12 @@
 			
 			if (data && data.length > 0) {
 				const members = data.map((user: any) => {
+					const displayName = user.remarkName || user.nickname || '未知'
 					return {
 						id: String(user.id),
-						name: user.remarkName || user.nickname || '未知',
+						name: displayName,
 						role: user.deptName || '',
-						avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
+						avatarText: getAvatarText(displayName),
 						avatarBg: getUserAvatarColor(String(user.id)),
 						selected: isMemberSelected(String(user.id))
 					}
@@ -355,6 +397,10 @@
 				memberList.value = []
 				memberHasMore.value = false
 			}
+			if (!keyword) {
+				updateDeptCountById(deptTree.value, deptId, total)
+				updateDeptCountById(originalDeptTree.value, deptId, total)
+			}
 		} catch (e) {
 			console.error('[MyDepartment] 加载部门成员失败:', e)
 			memberList.value = []
@@ -367,7 +413,6 @@
 			loadingMembers.value = false
 		}
 	}
-
 	function handleLoadMoreMembers() {
 		try {
 			if (memberLoadingMore.value) return
@@ -417,10 +462,13 @@
 		
 		// 延迟500ms执行搜索
 		searchTimer = setTimeout(() => {
-			// 执行搜索
-			searchDeptTree(searchKeyword.value)
-			if (currentDeptId.value != null) {
-				loadDeptMembers(currentDeptId.value, true, searchKeyword.value)
+			if (searchKeyword.value && searchKeyword.value.length > 0) {
+				performSearch()
+			} else {
+				restoreOriginalData()
+				if (currentDeptId.value != null) {
+					loadDeptMembers(currentDeptId.value, true, '')
+				}
 			}
 		}, 500)
 	}
@@ -466,16 +514,18 @@
 			const dept = depts[i]
 			
 			// 搜索当前部门的成员
-			const data = await getDeptMembers(String(dept.id), keyword)
+			const res = await getContactPageByDept(String(dept.id), 1, 200, keyword) as any
+			const data = res && Array.isArray(res.list) ? res.list : []
 			let members: any[] = []
 			if (data && data.length > 0) {
 				members = data.map((user: any) => {
+					const displayName = user.remarkName || user.nickname || '未知'
 					return {
 						id: String(user.id),
-						name: user.nickname,
-						role: user.postName || '未设置岗位',
-						avatarText: getAvatarText(user.nickname),
-						avatarBg: getUserAvatarColor(user.id),
+						name: displayName,
+						role: user.deptName || '',
+						avatarText: getAvatarText(displayName),
+						avatarBg: getUserAvatarColor(String(user.id)),
 						selected: isMemberSelected(String(user.id))
 					}
 				})
@@ -504,7 +554,6 @@
 		
 		return result
 	}
-	
 	/**
 	 * 查找第一个有成员的部门
 	 */
@@ -539,12 +588,13 @@
 	/**
 	 * 切换成员选中状态
 	 */
-	function toggleMemberSelect(member: any) {
+	function toggleMemberSelect(member : any) {
 		if (!isSelectMode.value) return
 		// 使用全局状态管理
 		toggleMember(member)
 		// 同步本地状态
 		member.selected = isMemberSelected(String(member.id))
+		syncSelectionState()
 	}
 
 	/**
@@ -868,6 +918,14 @@
 		box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.2);
 	}
 
+	.checkbox-single {
+		border-radius: 11px;
+	}
+
+	.checkbox-single-active {
+		box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.2);
+	}
+
 	.check-icon {
 		color: #ffffff;
 		font-size: 16px;
@@ -904,3 +962,5 @@
 		font-weight: 500;
 	}
 </style>
+
+

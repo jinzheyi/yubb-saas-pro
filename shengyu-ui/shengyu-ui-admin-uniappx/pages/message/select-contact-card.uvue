@@ -1,0 +1,374 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click.stop="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">返回</text>
+			</view>
+			<text class="header-title">选择名片</text>
+			<view class="header-right"></view>
+		</view>
+
+		<contact-selector
+			v-if="!loading"
+			:show-categories="true"
+			:selectable="true"
+			:contacts="contactList"
+			@select="handleSelect"
+			@category-click="handleCategory"
+			@load-more="handleLoadMore"
+		/>
+
+		<view v-if="loading" class="state-wrap">
+			<text class="state-text">加载中...</text>
+		</view>
+		<view v-if="!loading && contactList.length === 0" class="state-wrap">
+			<text class="state-text">暂无可发送的联系人</text>
+		</view>
+
+		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px' }">
+			<text class="selected-text">{{ selectedDisplayText }}</text>
+			<button class="confirm-btn" :disabled="selectedCount === 0 || submitting" @click="handleConfirm">
+				<text class="confirm-btn-text">发送名片</text>
+			</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+	import { getUserInfo, getDeptId } from '../../store/user.uts'
+	import { getContactList, getContactPageByDept } from '../../api/contact.uts'
+	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
+	import ContactSelector from '../../components/contact-selector/contact-selector.uvue'
+	import {
+		startSelection,
+		endSelection,
+		toggleMember,
+		isMemberSelected,
+		getSelectedCount,
+		getSelectedMembers
+	} from '../../store/group-selection.uts'
+
+	const CONTACT_CARD_SELECT_EVENT = 'imSelectContactCard'
+
+	type ContactItem = {
+		id: string
+		name: string
+		role: string
+		avatarText: string
+		avatarBg: string
+		pinyin: string
+		selected: boolean
+		deptName: string
+		postName: string
+		avatar: string
+	}
+
+	const safeAreaBottom = ref(0)
+	const loading = ref(false)
+	const loadingMore = ref(false)
+	const hasMore = ref(true)
+	const submitting = ref(false)
+	const pageNo = ref(1)
+	const pageSize = ref(50)
+	const deptId = ref('')
+	const currentUserId = ref('0')
+	const contactList = ref<ContactItem[]>([])
+
+	const selectedCount = computed(() : number => getSelectedCount())
+	const selectedDisplayText = computed(() : string => {
+		const selected = getSelectedMembers()
+		if (selected == null || selected.length === 0) {
+			return '请选择 1 位联系人'
+		}
+		const first = selected[0]
+		const name = first != null && first.name != null ? String(first.name) : ''
+		return name !== '' ? ('已选择：' + name) : '已选择 1 位联系人'
+	})
+
+	onLoad(() => {
+		safeAreaBottom.value = uni.getWindowInfo().safeAreaInsets?.bottom ?? 0
+		startSelection(1)
+		const userInfo = getUserInfo()
+		currentUserId.value = userInfo && userInfo.user && userInfo.user.id != null ? String(userInfo.user.id) : '0'
+		const dept = getDeptId()
+		deptId.value = dept != null ? String(dept) : ''
+		void loadContacts(true)
+	})
+
+	onShow(() => {
+		syncSelectionState()
+	})
+
+	onUnload(() => {
+		endSelection()
+	})
+
+	function normalizePinyin(name: string, rawPinyin: string): string {
+		let letter = rawPinyin != null ? String(rawPinyin) : ''
+		if (letter.length > 1) {
+			letter = letter.charAt(0)
+		}
+		if (letter === '' && name.length > 0) {
+			const first = name.charAt(0)
+			const code = first.charCodeAt(0)
+			if (code >= 19968 && code <= 40869) {
+				const index = (code - 19968) % 26
+				letter = String.fromCharCode(65 + index)
+			} else {
+				letter = first
+			}
+		}
+		letter = letter.toUpperCase()
+		if (!/^[A-Z]$/.test(letter)) {
+			letter = 'A'
+		}
+		return letter
+	}
+
+	function mapToContactItem(item: any): ContactItem | null {
+		if (item == null || item.id == null) {
+			return null
+		}
+		const userId = String(item.id)
+		if (userId === '' || userId === '0' || userId === currentUserId.value) {
+			return null
+		}
+		const displayName = item.remarkName != null && String(item.remarkName) !== ''
+			? String(item.remarkName)
+			: (item.nickname != null ? String(item.nickname) : '')
+		if (displayName === '') {
+			return null
+		}
+		const pinyin = normalizePinyin(displayName, item.pinyin != null ? String(item.pinyin) : '')
+		return {
+			id: userId,
+			name: displayName,
+			role: item.deptName != null ? String(item.deptName) : '',
+			avatarText: getAvatarText(displayName),
+			avatarBg: getUserAvatarColor(userId),
+			pinyin: pinyin,
+			selected: isMemberSelected(userId),
+			deptName: item.deptName != null ? String(item.deptName) : '',
+			postName: item.postName != null ? String(item.postName) : '',
+			avatar: item.avatar != null ? String(item.avatar) : ''
+		}
+	}
+
+	function syncSelectionState() {
+		for (let i = 0; i < contactList.value.length; i++) {
+			const item = contactList.value[i]
+			item.selected = isMemberSelected(String(item.id))
+		}
+	}
+
+	async function loadContacts(reset: boolean): Promise<void> {
+		if (loading.value && reset) {
+			return
+		}
+		if (reset) {
+			loading.value = true
+			pageNo.value = 1
+			hasMore.value = true
+			contactList.value = []
+		}
+		try {
+			let rows: any[] = []
+			if (deptId.value !== '') {
+				const page = reset ? 1 : (pageNo.value + 1)
+				const res = await getContactPageByDept(deptId.value, page, pageSize.value, '') as any
+				rows = res != null && Array.isArray(res.list) ? res.list : []
+				const total = res != null && res.total != null ? Number(res.total) : (contactList.value.length + rows.length)
+				hasMore.value = (reset ? 0 : contactList.value.length) + rows.length < total
+				pageNo.value = page
+			} else {
+				const raw = await getContactList() as any
+				rows = Array.isArray(raw) ? raw : (raw != null && Array.isArray(raw.data) ? raw.data : [])
+				hasMore.value = false
+			}
+			const mapped: ContactItem[] = []
+			for (let i = 0; i < rows.length; i++) {
+				const item = mapToContactItem(rows[i])
+				if (item != null) {
+					if (!contactList.value.some(c => c.id === item.id) && !mapped.some(c => c.id === item.id)) {
+						mapped.push(item)
+					}
+				}
+			}
+			if (reset) {
+				contactList.value = mapped
+			} else {
+				contactList.value = contactList.value.concat(mapped)
+			}
+			syncSelectionState()
+		} catch (e) {
+			console.error('[SelectContactCard] 加载联系人失败:', e)
+			uni.showToast({ title: '加载联系人失败', icon: 'none' })
+		} finally {
+			loading.value = false
+			loadingMore.value = false
+		}
+	}
+
+	async function handleLoadMore() {
+		if (loadingMore.value || loading.value || !hasMore.value || deptId.value === '') {
+			return
+		}
+		loadingMore.value = true
+		await loadContacts(false)
+	}
+
+	function handleCategory(item : any) {
+		if (item == null || item.nameKey == null) {
+			return
+		}
+		const key = String(item.nameKey)
+		if (key === 'contacts.groups') {
+			uni.navigateTo({ url: '/pages/contacts/my-groups?mode=select' })
+			return
+		}
+		if (key === 'contacts.following') {
+			uni.navigateTo({ url: '/pages/contacts/my-following?mode=select' })
+			return
+		}
+		if (key === 'contacts.org') {
+			uni.navigateTo({ url: '/pages/contacts/organization?mode=select' })
+			return
+		}
+		if (key === 'contacts.dept') {
+			uni.navigateTo({ url: '/pages/contacts/my-department?mode=select' })
+		}
+	}
+
+	function handleSelect(item: any) {
+		if (item == null || item.id == null) {
+			return
+		}
+		toggleMember(item)
+		syncSelectionState()
+	}
+
+	function handleBack() {
+		endSelection()
+		uni.navigateBack()
+	}
+
+	function handleConfirm() {
+		if (selectedCount.value === 0 || submitting.value) {
+			return
+		}
+		const selected = getSelectedMembers()
+		const first = selected != null && selected.length > 0 ? selected[0] : null
+		if (first == null || first.id == null) {
+			uni.showToast({ title: '请选择联系人', icon: 'none' })
+			return
+		}
+		submitting.value = true
+		const payload = {
+			userId: String(first.id),
+			displayName: first.name != null ? String(first.name) : '',
+			deptName: first.deptName != null && String(first.deptName) !== '' ? String(first.deptName) : (first.role != null ? String(first.role) : ''),
+			postName: first.postName != null ? String(first.postName) : '',
+			avatar: first.avatar != null ? String(first.avatar) : ''
+		}
+		uni.$emit(CONTACT_CARD_SELECT_EVENT, payload)
+		uni.navigateBack()
+	}
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F7FA;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		width: 80px;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.back-icon {
+		font-size: 16px;
+		color: #1F2329;
+	}
+
+	.back-text {
+		font-size: 16px;
+		color: #1F2329;
+		margin-left: 2px;
+	}
+
+	.header-title {
+		font-size: 17px;
+		color: #1F2329;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.state-wrap {
+		flex: 1;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.state-text {
+		font-size: 14px;
+		color: #8F959E;
+	}
+
+	.footer {
+		background-color: #FFFFFF;
+		padding: 12px 16px;
+		border-top-width: 0.5px;
+		border-top-color: #EFF0F1;
+	}
+
+	.selected-text {
+		font-size: 13px;
+		color: #8F959E;
+		margin-bottom: 10px;
+	}
+
+	.confirm-btn {
+		height: 44px;
+		border-radius: 22px;
+		background-color: #1677FF;
+		justify-content: center;
+		align-items: center;
+		display: flex;
+	}
+
+	.confirm-btn[disabled] {
+		opacity: 0.5;
+	}
+
+	.confirm-btn-text {
+		font-size: 16px;
+		color: #FFFFFF;
+		font-weight: 600;
+	}
+</style>
