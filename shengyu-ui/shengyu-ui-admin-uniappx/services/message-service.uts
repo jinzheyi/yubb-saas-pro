@@ -1892,6 +1892,9 @@ export class MessageService {
     const avatarBg = getUserAvatarColor(this.currentUserId)
     const timestamp = Date.now()
     const payload: any = cardPayload != null ? cardPayload : {}
+    if (payload.type == null || String(payload.type) === '') {
+      payload.type = 'CONTACT_CARD'
+    }
     const contentRaw = JSON.stringify(payload)
     const messageItem: MessageItem = {
       id: '0',
@@ -1900,7 +1903,7 @@ export class MessageService {
       receiverId: receiverId,
       groupId: groupId,
       type: 'custom' as any,
-      content: contentRaw,
+      content: payload,
       extra: payload,
       status: MessageStatus.SENDING,
       timestamp: timestamp,
@@ -2263,7 +2266,16 @@ export class MessageService {
             msg.messageId = msgId
             msg.status = MessageStatus.SENT
             if (extraRaw != null && extraRaw !== '') {
-              ;(msg as any).extra = extraRaw
+              const existingContactPayload = this.extractContactCardPayload((msg as any).content, (msg as any).extra)
+              const inboundContactPayload = this.extractContactCardPayload((message as any).body, extraRaw)
+              if (inboundContactPayload != null) {
+                ;(msg as any).content = inboundContactPayload
+                ;(msg as any).extra = inboundContactPayload
+              } else if (existingContactPayload != null) {
+                ;(msg as any).extra = existingContactPayload
+              } else {
+                ;(msg as any).extra = extraRaw
+              }
             }
             updatedMessage = msg
             try {
@@ -2361,17 +2373,27 @@ export class MessageService {
 
     // 创建消息项
     const inboundMessageId = this.normalizeInboundMessageId((message as any).header != null ? (message as any).header.messageId : null) || (message.header.messageId != null ? message.header.messageId.toString() : '')
+    const inboundExtraRaw = (message as any).header != null ? (message as any).header.extra : null
+    let inboundContent: any = message.body
+    let inboundExtra: any = inboundExtraRaw
+    if (message.header.messageType === MessageType.CUSTOM) {
+      const inboundContactPayload = this.extractContactCardPayload(message.body, inboundExtraRaw)
+      if (inboundContactPayload != null) {
+        inboundContent = inboundContactPayload
+        inboundExtra = inboundContactPayload
+      }
+    }
     const messageItem: MessageItem = {
       id: inboundMessageId !== '' ? inboundMessageId : '0',
       messageId: inboundMessageId,
       sequence: message.header.sequence != null ? message.header.sequence.toString() : null,
       rev: revStr,
-      extra: (message as any).header != null ? (message as any).header.extra : null,
+      extra: inboundExtra,
       senderId: senderIdStr,
       receiverId: message.header.receiverId,
       groupId: message.header.groupId,
       type: message.header.messageType,
-      content: message.body,
+      content: inboundContent,
       status: MessageStatus.SENT,
       timestamp: message.header.timestamp,
       isSelf: isSelf,
@@ -3034,6 +3056,62 @@ export class MessageService {
     }
   }
 
+  private isLikelyContactCardPayload(raw: any): boolean {
+    try {
+      if (raw == null || typeof raw !== 'object') {
+        return false
+      }
+      const payload: any = raw as any
+      const cardType = payload.type != null ? String(payload.type) : ''
+      if (cardType === 'CONTACT_CARD') {
+        return true
+      }
+      const userId = payload.userId != null ? String(payload.userId) : ''
+      if (userId === '' || userId === '0') {
+        return false
+      }
+      const displayName = payload.displayName != null
+        ? String(payload.displayName)
+        : (payload.name != null
+          ? String(payload.name)
+          : (payload.nickname != null
+            ? String(payload.nickname)
+            : (payload.userNickname != null ? String(payload.userNickname) : '')))
+      return displayName !== ''
+    } catch (e) {
+      return false
+    }
+  }
+
+  private extractContactCardPayload(rawContent: any, rawExtra: any): any | null {
+    const queue: any[] = []
+    const push = (value: any): void => {
+      if (value == null) {
+        return
+      }
+      queue.push(value)
+    }
+    push(rawContent)
+    push(rawExtra)
+
+    for (let i = 0; i < queue.length; i++) {
+      const current = queue[i]
+      const parsed = this.tryParseJsonLike(current)
+      if (parsed == null) {
+        continue
+      }
+      if (this.isLikelyContactCardPayload(parsed)) {
+        return parsed
+      }
+      if (typeof parsed === 'object') {
+        const p: any = parsed as any
+        push(p.extra)
+        push(p.content)
+        push(p.body)
+      }
+    }
+    return null
+  }
   private isForwardCombineContent(raw: any): boolean {
     try {
       if (raw == null) {

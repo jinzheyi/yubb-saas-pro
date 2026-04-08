@@ -2171,7 +2171,15 @@
 		const userId = (payload as any).userId != null ? String((payload as any).userId) : ''
 		const displayName = (payload as any).displayName != null
 			? String((payload as any).displayName)
-			: ((payload as any).name != null ? String((payload as any).name) : '')
+			: (
+				(payload as any).name != null ? String((payload as any).name) : (
+					(payload as any).nickname != null ? String((payload as any).nickname) : (
+						(payload as any).userNickname != null ? String((payload as any).userNickname) : (
+							(payload as any).remarkName != null ? String((payload as any).remarkName) : ''
+						)
+					)
+				)
+			)
 		const deptName = (payload as any).deptName != null ? String((payload as any).deptName) : ''
 		const postName = (payload as any).postName != null ? String((payload as any).postName) : ''
 		const avatar = (payload as any).avatar != null ? String((payload as any).avatar) : ''
@@ -3485,6 +3493,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		applyVoiceFields(uiMessage, message.content, (message as any).extra)
 		applyFileFields(uiMessage, message.content)
 		applyLocationFields(uiMessage, message.content)
+		applyContactCardFields(uiMessage, message.content, (message as any).extra)
 		applyStickerFields(uiMessage, message.content, (message as any).extra)
 		applyMediaFileId(uiMessage, message.content)
 		maybePatchMediaDisplayUrl(uiMessage as any)
