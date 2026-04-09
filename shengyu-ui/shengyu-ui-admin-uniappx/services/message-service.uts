@@ -445,6 +445,37 @@ export class MessageService {
     this.initWebSocketStateListener()
   }
 
+  private normalizeTimestampMs(raw: any): number {
+    try {
+      if (raw == null) {
+        return 0
+      }
+      if (typeof raw === 'number') {
+        if (!isFinite(raw) || raw <= 0) {
+          return 0
+        }
+        const ms = raw < 100000000000 ? raw * 1000 : raw
+        return ms > 0 ? Math.floor(ms) : 0
+      }
+      const text = String(raw).trim()
+      if (text === '') {
+        return 0
+      }
+      if (/^[0-9]+$/.test(text)) {
+        const numVal = Number(text)
+        if (!isFinite(numVal) || numVal <= 0) {
+          return 0
+        }
+        const ms = text.length <= 10 ? numVal * 1000 : numVal
+        return ms > 0 ? Math.floor(ms) : 0
+      }
+      const parsed = new Date(text).getTime()
+      return !isNaN(parsed) && parsed > 0 ? parsed : 0
+    } catch (e) {
+      return 0
+    }
+  }
+
   private initWebSocketStateListener(): void {
     // 认证成功后 websocket.uts 不会向业务层分发 AUTH_RESP，这里通过状态监听 + isConnected() 轮询兜底
     wsManager.addStateListener((state) => {
@@ -1490,17 +1521,7 @@ export class MessageService {
         return
       }
       const lastMessage = snapshot.lastMessageContent != null ? snapshot.lastMessageContent.toString() : ''
-      let ts = Date.now()
-      try {
-        if (snapshot.lastMessageTime != null && snapshot.lastMessageTime !== '') {
-          const parsed = new Date(snapshot.lastMessageTime as string).getTime()
-          if (!isNaN(parsed) && parsed > 0) {
-            ts = parsed
-          }
-        }
-      } catch (e) {
-        // ignore
-      }
+      const ts = this.normalizeTimestampMs(snapshot.lastMessageTime)
 
       conversationService.upsertFromSnapshot(snapshot, lastMessage, ts, false, snapshot.lastMessageSequence != null ? snapshot.lastMessageSequence.toString() : null)
     } catch (e) {

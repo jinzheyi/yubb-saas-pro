@@ -50,7 +50,8 @@
 					@longpress="handleLongPress(item, $event)"
 				>
 					<view class="message-avatar" :style="{ backgroundColor: item.avatarBg }">
-						<text v-if="item.avatarIcon" class="iconfont avatar-icon">{{ item.avatarIcon }}</text>
+						<image v-if="item.targetAvatar" class="avatar-image" :src="item.targetAvatar" mode="aspectFill" @error="handleAvatarError(item)" />
+						<text v-else-if="item.avatarIcon" class="iconfont avatar-icon">{{ item.avatarIcon }}</text>
 						<text v-else class="avatar-text">{{ item.avatarText }}</text>
 						<!-- 未读提醒 -->
 						<view v-if="item.unreadCount > 0" :class="['unread-badge', item.noDisturb ? 'unread-dot-only' : '']">
@@ -97,7 +98,8 @@
 					@longpress="handleLongPress(item, $event)"
 				>
 					<view class="message-avatar" :style="{ backgroundColor: item.avatarBg }">
-						<text v-if="item.avatarIcon" class="iconfont avatar-icon">{{ item.avatarIcon }}</text>
+						<image v-if="item.targetAvatar" class="avatar-image" :src="item.targetAvatar" mode="aspectFill" @error="handleAvatarError(item)" />
+						<text v-else-if="item.avatarIcon" class="iconfont avatar-icon">{{ item.avatarIcon }}</text>
 						<text v-else class="avatar-text">{{ item.avatarText }}</text>
 						<!-- 未读提醒 -->
 						<view v-if="item.unreadCount > 0" :class="['unread-badge', item.noDisturb ? 'unread-dot-only' : '']">
@@ -222,28 +224,82 @@
 		if (conv.conversationType === 2) return 'group'
 		return 'user'
 	}
+
+	function normalizeTimestampMs(raw: any): number {
+		try {
+			if (raw == null) {
+				return 0
+			}
+			if (typeof raw === 'number') {
+				if (!isFinite(raw) || raw <= 0) {
+					return 0
+				}
+				const ms = raw < 100000000000 ? raw * 1000 : raw
+				if (ms < 946684800000) {
+					return 0
+				}
+				return Math.floor(ms)
+			}
+			const text = String(raw).trim()
+			if (text === '') {
+				return 0
+			}
+			if (/^[0-9]+$/.test(text)) {
+				const numVal = Number(text)
+				if (!isFinite(numVal) || numVal <= 0) {
+					return 0
+				}
+				const ms = text.length <= 10 ? numVal * 1000 : numVal
+				if (ms < 946684800000) {
+					return 0
+				}
+				return Math.floor(ms)
+			}
+			const parsed = new Date(text).getTime()
+			if (isNaN(parsed) || parsed <= 0 || parsed < 946684800000) {
+				return 0
+			}
+			return parsed
+		} catch (e) {
+			return 0
+		}
+	}
+
+	function resolveAvatarText(targetName: any, targetId: any): string {
+		const name = targetName != null ? String(targetName).trim() : ''
+		if (name !== '') {
+			return getAvatarText(name)
+		}
+		const idText = targetId != null ? String(targetId).trim() : ''
+		if (idText !== '' && idText !== '0') {
+			return getAvatarText(idText)
+		}
+		return '?'
+	}
 	
 	/**
 	 * 转换后端会话数据为 UI 格式
 	 */
 	function convertServerConversation(serverConv : any) : any {
-		const now = Date.now()
-		const lastMessageTime = serverConv.lastMessageTime ? new Date(serverConv.lastMessageTime).getTime() : now
+		const lastMessageTime = normalizeTimestampMs(serverConv.lastMessageTime)
 		const isGroup = serverConv.conversationType === 2
 		const previewText = buildConversationPreview(serverConv.lastMessageType || 0, serverConv.lastMessageContent || '')
+		const targetName = serverConv.targetName != null ? String(serverConv.targetName).trim() : ''
+		const targetId = serverConv.targetId != null ? String(serverConv.targetId) : '0'
 		
 		return {
 			chatId: serverConv.chatId != null ? serverConv.chatId.toString() : '0',
 			lastMessageSequence: serverConv.lastMessageSequence != null ? serverConv.lastMessageSequence.toString() : '0',
 			lastReadSequence: serverConv.lastReadSequence != null ? serverConv.lastReadSequence.toString() : '0',
 			categoryId: getCategoryId(serverConv),
-			targetName: serverConv.targetName || '未知',
+			targetName: targetName !== '' ? targetName : '未知',
 			lastMessageType: serverConv.lastMessageType || 0,
 			lastMessageContent: previewText,
 			lastMessagePreviewTokens: buildConversationPreviewTokens(previewText),
 			lastMessageTime: lastMessageTime,
-			avatarBg: getConversationAvatarColor(serverConv.conversationType, serverConv.targetId),
-			avatarText: getAvatarText(serverConv.targetName || ''),
+			targetAvatar: serverConv.targetAvatar != null ? String(serverConv.targetAvatar) : '',
+			avatarBg: getConversationAvatarColor(serverConv.conversationType, targetId),
+			avatarText: resolveAvatarText(targetName, targetId),
 			avatarIcon: isGroup ? '\ue616' : '', // 群聊显示群图标
 			unreadCount: serverConv.unreadCount || 0,
 			noDisturb: serverConv.noDisturb || false,
@@ -252,7 +308,7 @@
 			pinnedTime: serverConv.isPinned ? lastMessageTime : 0,
 			conversationType: serverConv.conversationType,
 			groupMemberCount: serverConv.groupMemberCount || 0,
-			targetId: serverConv.targetId != null ? serverConv.targetId.toString() : '0'
+			targetId: targetId
 		}
 	}
 
@@ -260,7 +316,11 @@
 	 * 仿微信时间格式化
 	 */
 	function formatWeChatTime(timestamp : number) : string {
-		const date = new Date(timestamp)
+		const normalizedTs = normalizeTimestampMs(timestamp)
+		if (normalizedTs <= 0) {
+			return ''
+		}
+		const date = new Date(normalizedTs)
 		const now = new Date()
 		
 		const isToday = date.getFullYear() === now.getFullYear() && 
@@ -284,7 +344,7 @@
 		
 		// 判断是否在同一周 (简单判断：7天内且星期几小于等于今天)
 		const oneWeekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000
-		if (timestamp > oneWeekAgo) {
+		if (normalizedTs > oneWeekAgo) {
 			const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 			return weekDays[date.getDay()]
 		}
@@ -298,6 +358,17 @@
 			return `${month}/${day}`
 		}
 		return `${year}/${month}/${day}`
+	}
+
+	function handleAvatarError(item : any): void {
+		try {
+			if (item == null) {
+				return
+			}
+			item.targetAvatar = ''
+		} catch (e) {
+			// ignore
+		}
 	}
 
 	// 分类数据
@@ -396,9 +467,10 @@
 						lastMessageType: (conv as any).lastMessageType || 0,
 						lastMessageContent: previewText,
 						lastMessagePreviewTokens: buildConversationPreviewTokens(previewText),
-						lastMessageTime: conv.timestamp,
+						lastMessageTime: normalizeTimestampMs(conv.timestamp),
+						targetAvatar: conv.targetAvatar,
 						avatarBg: conv.avatarBg,
-						avatarText: conv.avatarText,
+						avatarText: resolveAvatarText(conv.avatarText != null && String(conv.avatarText).trim() !== '' ? conv.avatarText : conv.targetName, conv.targetId),
 						avatarIcon: conv.conversationType === 2 ? '\ue616' : '',
 						unreadCount: conv.unreadCount,
 						noDisturb: conv.noDisturb,
@@ -443,9 +515,10 @@
 				lastMessageType: (conv as any).lastMessageType || 0,
 				lastMessageContent: previewText,
 				lastMessagePreviewTokens: buildConversationPreviewTokens(previewText),
-				lastMessageTime: conv.timestamp,
+				lastMessageTime: normalizeTimestampMs(conv.timestamp),
+				targetAvatar: conv.targetAvatar,
 				avatarBg: conv.avatarBg,
-				avatarText: conv.avatarText,
+				avatarText: resolveAvatarText(conv.avatarText != null && String(conv.avatarText).trim() !== '' ? conv.avatarText : conv.targetName, conv.targetId),
 				avatarIcon: conv.conversationType === 2 ? '\ue616' : '',
 				unreadCount: conv.unreadCount,
 				noDisturb: conv.noDisturb,
@@ -840,6 +913,12 @@
 		position: relative;
 		/* 确保角标不被裁剪 */
 		overflow: visible;
+	}
+
+	.avatar-image {
+		width: 48px;
+		height: 48px;
+		border-radius: 8px;
 	}
 
 	.unread-badge {
