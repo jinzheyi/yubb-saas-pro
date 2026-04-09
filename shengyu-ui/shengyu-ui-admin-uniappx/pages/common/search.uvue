@@ -100,10 +100,10 @@
 </template>
 
 <script setup lang="uts">
-	import { onLoad, onUnmounted } from '@dcloudio/uni-app'
+	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { getAvatarText, getGroupAvatarColor, getUserAvatarColor } from '../../utils/avatar.uts'
 	import { messageSearchService, type SearchResultItem } from '../../services/message-search-service.uts'
-	import { searchContact } from '../../api/contact.uts'
+	import { searchContactPage } from '../../api/contact.uts'
 	import { searchConversations } from '../../api/conversation.uts'
 	import { getHotSearch, searchGlobal } from '../../api/search.uts'
 	import { getJsonObject, setJsonObject, remove } from '../../utils/storage.uts'
@@ -114,6 +114,7 @@
 	const HOT_SEARCH_TTL_MS = 6 * 60 * 60 * 1000
 	const MIN_SEARCH_KEYWORD_LENGTH = 2
 	const SEARCH_DEBOUNCE_MS = 300
+	const SEARCH_SAME_QUERY_DEDUP_MS = 1200
 	const PAGE_SIZE = 20
 
 	type SearchTab = {
@@ -151,6 +152,7 @@
 		total: number
 		hasMore: boolean
 		facets: FacetsState
+		costMs?: number
 	}
 
 	type HotSearchCache = {
@@ -198,6 +200,9 @@
 	let hotSearchSeq = 0
 	let currentPageNo = 1
 	let globalApiAvailable = true
+	let lastFirstPageKey = ''
+	let lastFirstPageAt = 0
+	let lastFirstPageResp: SearchResponse | null = null
 
 	function normalizedKeyword(): string {
 		return keyword.value != null ? String(keyword.value).trim() : ''
@@ -223,6 +228,22 @@
 		if (searchTimer > 0) {
 			clearTimeout(searchTimer)
 			searchTimer = 0
+		}
+	}
+
+	function buildFirstPageKey(kw: string, tab: string): string {
+		return `${tab}|${kw}`
+	}
+
+	function applySearchResponse(response: SearchResponse, pageNo: number, reset: boolean): void {
+		facets.value = response.facets
+		total.value = response.total
+		hasMore.value = response.hasMore
+		currentPageNo = response.hasMore ? pageNo + 1 : pageNo
+		if (reset) {
+			resultList.value = response.list
+		} else {
+			resultList.value = mergeResultItems(resultList.value, response.list)
 		}
 	}
 
@@ -364,6 +385,14 @@
 			return
 		}
 		const pageNo = reset ? 1 : currentPageNo
+		if (reset && pageNo === 1) {
+			const firstPageKey = buildFirstPageKey(kw, activeTab.value)
+			const now = Date.now()
+			if (lastFirstPageResp != null && firstPageKey === lastFirstPageKey && (now - lastFirstPageAt) <= SEARCH_SAME_QUERY_DEDUP_MS) {
+				applySearchResponse(lastFirstPageResp, pageNo, true)
+				return
+			}
+		}
 		const seq = ++requestSeq
 		if (reset) {
 			isLoading.value = true
@@ -387,14 +416,11 @@
 			if (seq !== requestSeq) {
 				return
 			}
-			facets.value = response.facets
-			total.value = response.total
-			hasMore.value = response.hasMore
-			currentPageNo = response.hasMore ? pageNo + 1 : pageNo
-			if (reset) {
-				resultList.value = response.list
-			} else {
-				resultList.value = mergeResultItems(resultList.value, response.list)
+			applySearchResponse(response, pageNo, reset)
+			if (reset && pageNo === 1) {
+				lastFirstPageKey = buildFirstPageKey(kw, activeTab.value)
+				lastFirstPageAt = Date.now()
+				lastFirstPageResp = response
 			}
 		} catch (e) {
 			if (seq !== requestSeq) {
@@ -422,20 +448,20 @@
 			list: mapped,
 			total: data && data.total != null ? Number(data.total) : mapped.length,
 			hasMore: data && data.hasMore === true,
-			facets: fs
+			facets: fs,
+			costMs: data && data.costMs != null ? Number(data.costMs) : 0
 		}
 		return resp
 	}
 
 	async function fetchByFallback(kw: string, tab: string, pageNo: number, pageSize: number): Promise<SearchResponse> {
 		if (tab === 'contact') {
-			const data = await searchContact(kw) as any
+			const data = await searchContactPage(kw, pageNo, pageSize) as any
 			const source = Array.isArray(data) ? data : (data && Array.isArray(data.list) ? data.list : [])
-			const mappedAll = (source as any[]).map(it => mapContactItem(it))
-			const paged = slicePage(mappedAll, pageNo, pageSize)
-			const totalCount = mappedAll.length
+			const mapped = (source as any[]).map(it => mapContactItem(it))
+			const totalCount = data && data.total != null ? Number(data.total) : mapped.length
 			return {
-				list: paged,
+				list: mapped,
 				total: totalCount,
 				hasMore: pageNo * pageSize < totalCount,
 				facets: {
@@ -525,7 +551,7 @@
 		}
 
 		const tuple = await Promise.all([
-			searchContact(kw),
+			searchContactPage(kw, 1, 8),
 			searchConversations(kw, 2, 1, 8),
 			messageSearchService.searchMessagesAsync({ keyword: kw, pageNo: 1, pageSize: 16 })
 		])
@@ -1014,7 +1040,7 @@
 		}
 	})
 
-	onUnmounted(() => {
+	onUnload(() => {
 		clearSearchTimer()
 		requestSeq = requestSeq + 1
 		try {

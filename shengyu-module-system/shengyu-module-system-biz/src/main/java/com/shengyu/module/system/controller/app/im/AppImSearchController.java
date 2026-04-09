@@ -74,7 +74,11 @@ public class AppImSearchController {
                     .header("Retry-After", String.valueOf(checkResult.getRetryAfterSeconds()))
                     .body(CommonResult.error(TOO_MANY_REQUESTS));
         }
-        return ResponseEntity.ok(success(globalSearchService.search(userId, reqVO)));
+        AppImGlobalSearchRespVO respVO = globalSearchService.search(userId, reqVO);
+        long costMs = respVO.getCostMs() != null ? respVO.getCostMs() : 0L;
+        return ResponseEntity.ok()
+                .header("X-Search-Cost-Ms", String.valueOf(Math.max(costMs, 0L)))
+                .body(success(respVO));
     }
 
     private List<String> parseHotKeywords(String value) {

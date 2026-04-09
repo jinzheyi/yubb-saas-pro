@@ -34,6 +34,17 @@ public interface ImContactService {
     List<AppImContactRespVO> searchContacts(Long userId, String keyword);
 
     /**
+     * 分页搜索联系人
+     *
+     * @param userId 用户ID
+     * @param keyword 关键词(姓名/部门)
+     * @param pageNo 页码(从1开始)
+     * @param pageSize 每页数量
+     * @return 分页结果
+     */
+    PageResult<AppImContactRespVO> searchContactsPage(Long userId, String keyword, Integer pageNo, Integer pageSize);
+
+    /**
      * 获取联系人详情
      *
      * @param userId 用户ID

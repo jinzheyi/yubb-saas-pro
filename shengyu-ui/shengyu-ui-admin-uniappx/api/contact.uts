@@ -25,7 +25,18 @@ export function getContactList(): Promise<any> {
 export function searchContact(keyword: string): Promise<any> {
   const kw = keyword != null ? String(keyword) : ''
   return request({
-    url: `/system/im/contact/search?keyword=${encodeURIComponent(kw)}`,
+    url: `/system/im/contact/search?keyword=${encodeURIComponent(kw)}&pageNo=1&pageSize=50`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 分页搜索联系人
+ */
+export function searchContactPage(keyword: string, pageNo: number = 1, pageSize: number = 20): Promise<PageResult<any>> {
+  const kw = keyword != null ? String(keyword) : ''
+  return request({
+    url: `/system/im/contact/search?keyword=${encodeURIComponent(kw)}&pageNo=${pageNo}&pageSize=${pageSize}`,
     method: 'GET'
   })
 }

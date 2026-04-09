@@ -93,6 +93,21 @@ public interface AdminUserMapper extends BaseMapperX<AdminUserDO> {
                 .last("LIMIT " + finalLimit));
     }
 
+    default Long countByNicknameLike(String nickname, Long excludeUserId) {
+        return selectCount(new LambdaQueryWrapperX<AdminUserDO>()
+                .likeIfPresent(AdminUserDO::getNickname, nickname)
+                .ne(excludeUserId != null, AdminUserDO::getId, excludeUserId));
+    }
+
+    default List<AdminUserDO> selectListByNicknameLikePage(String nickname, Long excludeUserId, Long offset, Integer limit) {
+        long safeOffset = offset != null && offset > 0 ? offset : 0L;
+        int finalLimit = limit != null && limit > 0 ? Math.min(limit, 200) : 20;
+        return selectList(new LambdaQueryWrapperX<AdminUserDO>()
+                .likeIfPresent(AdminUserDO::getNickname, nickname)
+                .ne(excludeUserId != null, AdminUserDO::getId, excludeUserId)
+                .last("LIMIT " + safeOffset + "," + finalLimit));
+    }
+
     default List<AdminUserDO> selectListByStatus(Integer status) {
         return selectList(AdminUserDO::getStatus, status);
     }

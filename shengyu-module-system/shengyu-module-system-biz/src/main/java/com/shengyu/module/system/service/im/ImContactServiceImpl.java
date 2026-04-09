@@ -274,22 +274,33 @@ public class ImContactServiceImpl implements ImContactService {
 
     @Override
     public List<AppImContactRespVO> searchContacts(Long userId, String keyword) {
+        return searchContactsPage(userId, keyword, 1, 50).getList();
+    }
+
+    @Override
+    public PageResult<AppImContactRespVO> searchContactsPage(Long userId, String keyword, Integer pageNo, Integer pageSize) {
         String keywordTrimmed = StrUtil.trimToEmpty(keyword);
         if (StrUtil.isBlank(keywordTrimmed)) {
-            return Collections.emptyList();
+            return PageResult.empty();
         }
+        int finalPageNo = pageNo != null && pageNo > 0 ? pageNo : 1;
+        int finalPageSize = pageSize != null && pageSize > 0 ? Math.min(pageSize, 50) : 20;
+        long offset = (long) (finalPageNo - 1) * finalPageSize;
 
-        // DB 侧模糊过滤，避免全量用户加载到内存
-        List<AdminUserDO> users = userMapper.selectListByNicknameLikeLimit(keywordTrimmed, 50);
+        // DB 侧模糊过滤 + 分页，避免全量用户加载到内存
+        Long total = userMapper.countByNicknameLike(keywordTrimmed, userId);
+        if (total == null || total <= 0L) {
+            return PageResult.empty();
+        }
+        List<AdminUserDO> users = userMapper.selectListByNicknameLikePage(keywordTrimmed, userId, offset, finalPageSize);
 
         // 查询当前用户的联系人设置
         List<ImContactSettingDO> settings = contactSettingMapper.selectListByUserId(userId);
         Map<Long, ImContactSettingDO> settingMap = settings.stream()
-                .collect(Collectors.toMap(ImContactSettingDO::getContactId, s -> s));
+                .collect(Collectors.toMap(ImContactSettingDO::getContactId, s -> s, (a, b) -> a));
 
         // 过滤并转换
-        return users.stream()
-                .filter(user -> !user.getId().equals(userId)) // 排除自己
+        List<AppImContactRespVO> list = users.stream()
                 .map(user -> {
                     AppImContactRespVO respVO = buildContactRespVO(user);
                     
@@ -306,6 +317,7 @@ public class ImContactServiceImpl implements ImContactService {
                     return respVO;
                 })
                 .collect(Collectors.toList());
+        return new PageResult<>(list, total);
     }
 
     @Override

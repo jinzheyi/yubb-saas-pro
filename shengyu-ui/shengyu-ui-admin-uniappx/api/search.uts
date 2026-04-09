@@ -36,6 +36,7 @@ export type ImGlobalSearchResp = {
 	pageSize: number
 	hasMore: boolean
 	nextCursor: string
+	costMs?: number
 }
 
 /**

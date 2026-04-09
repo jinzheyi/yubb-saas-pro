@@ -32,6 +32,9 @@ public class AppImGlobalSearchRespVO {
     @Schema(description = "下一游标（预留）", example = "")
     private String nextCursor = "";
 
+    @Schema(description = "服务端搜索耗时（毫秒）", example = "35")
+    private Long costMs = 0L;
+
     @Data
     public static class Facets {
         @Schema(description = "综合命中数")
@@ -72,4 +75,3 @@ public class AppImGlobalSearchRespVO {
         private Map<String, Object> meta;
     }
 }
-

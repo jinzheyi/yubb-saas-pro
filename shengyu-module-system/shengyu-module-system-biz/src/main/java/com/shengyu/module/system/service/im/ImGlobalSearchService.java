@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class ImGlobalSearchService {
 
     private static final int MAX_PAGE_SIZE = 50;
-    private static final int ALL_TAB_SOURCE_LIMIT = 50;
+    private static final int ALL_TAB_SOURCE_LIMIT = 200;
 
     @Resource
     private ImContactService contactService;
@@ -37,12 +37,15 @@ public class ImGlobalSearchService {
     private ImMessageService messageService;
 
     public AppImGlobalSearchRespVO search(Long userId, AppImGlobalSearchReqVO reqVO) {
+        long start = System.currentTimeMillis();
         AppImGlobalSearchRespVO respVO = new AppImGlobalSearchRespVO();
         if (userId == null || reqVO == null) {
+            respVO.setCostMs(System.currentTimeMillis() - start);
             return respVO;
         }
         String keyword = StrUtil.trimToEmpty(reqVO.getKeyword());
         if (StrUtil.isBlank(keyword)) {
+            respVO.setCostMs(System.currentTimeMillis() - start);
             return respVO;
         }
         int pageNo = normalizePageNo(reqVO.getPageNo());
@@ -56,11 +59,12 @@ public class ImGlobalSearchService {
 
         switch (tab) {
             case "contact":
-                List<AppImContactRespVO> contacts = safeSearchContacts(userId, keyword);
-                facets.setContact((long) contacts.size());
-                facets.setAll(facets.getContact());
-                total = contacts.size();
-                pageList = paginateList(contacts, pageNo, pageSize).stream()
+                PageResult<AppImContactRespVO> contactsPage = safeSearchContactsPage(userId, keyword, pageNo, pageSize);
+                long contactTotal = contactsPage.getTotal() != null ? contactsPage.getTotal() : 0L;
+                facets.setContact(contactTotal);
+                facets.setAll(contactTotal);
+                total = contactTotal;
+                pageList = safeList(contactsPage.getList()).stream()
                         .map(contact -> buildContactItem(contact, keyword))
                         .collect(Collectors.toList());
                 break;
@@ -99,28 +103,29 @@ public class ImGlobalSearchService {
                 break;
             case "all":
             default:
-                // 综合：聚合 TopN 后按相关性/时间混排
-                List<AppImContactRespVO> allContacts = safeSearchContacts(userId, keyword);
-                PageResult<AppImConversationRespVO> allGroups = searchGroups(userId, keyword, 1, ALL_TAB_SOURCE_LIMIT);
-                PageResult<AppImMessageRespVO> allMessages = searchMessages(userId, keyword, reqVO.getChatId(), 1, ALL_TAB_SOURCE_LIMIT, false);
-                PageResult<AppImMessageRespVO> allMedia = searchMessages(userId, keyword, reqVO.getChatId(), 1, ALL_TAB_SOURCE_LIMIT, true);
+                // 综合：按目标页动态扩大分源拉取窗口，降低深翻页丢失风险
+                int requiredWindow = Math.min(Math.max(pageNo * pageSize * 2, pageSize), ALL_TAB_SOURCE_LIMIT);
+                WindowResult<AppImContactRespVO> allContactsWindow = collectContactsWindow(userId, keyword, requiredWindow);
+                WindowResult<AppImConversationRespVO> allGroupsWindow = collectGroupsWindow(userId, keyword, requiredWindow);
+                WindowResult<AppImMessageRespVO> allMessagesWindow = collectMessagesWindow(userId, keyword, reqVO.getChatId(), requiredWindow, false);
+                PageResult<AppImMessageRespVO> mediaTotalPage = searchMessages(userId, keyword, reqVO.getChatId(), 1, 1, true);
 
-                long allContactCount = allContacts.size();
-                long allGroupCount = allGroups.getTotal() != null ? allGroups.getTotal() : 0L;
-                long allMessageCount = allMessages.getTotal() != null ? allMessages.getTotal() : 0L;
-                long allMediaCount = allMedia.getTotal() != null ? allMedia.getTotal() : 0L;
+                long allContactCount = allContactsWindow.getTotal();
+                long allGroupCount = allGroupsWindow.getTotal();
+                long allMessageCount = allMessagesWindow.getTotal();
+                long allMediaCount = mediaTotalPage.getTotal() != null ? mediaTotalPage.getTotal() : 0L;
                 facets.setContact(allContactCount);
                 facets.setGroup(allGroupCount);
                 facets.setMessage(allMessageCount);
                 facets.setMedia(allMediaCount);
 
                 List<AppImGlobalSearchRespVO.Item> merged = new ArrayList<>();
-                allContacts.forEach(contact -> merged.add(buildContactItem(contact, keyword)));
-                safeList(allGroups.getList()).forEach(group -> merged.add(buildGroupItem(group, keyword)));
-                safeList(allMessages.getList()).forEach(message -> merged.add(buildMessageItem(message, keyword, false)));
+                safeList(allContactsWindow.getList()).forEach(contact -> merged.add(buildContactItem(contact, keyword)));
+                safeList(allGroupsWindow.getList()).forEach(group -> merged.add(buildGroupItem(group, keyword)));
+                safeList(allMessagesWindow.getList()).forEach(message -> merged.add(buildMessageItem(message, keyword, false)));
 
                 merged.sort(buildComparator(sort));
-                total = merged.size();
+                total = allContactCount + allGroupCount + allMessageCount;
                 facets.setAll(total);
                 pageList = paginateList(merged, pageNo, pageSize);
                 break;
@@ -131,17 +136,22 @@ public class ImGlobalSearchService {
         respVO.setTotal(total);
         respVO.setPageNo(pageNo);
         respVO.setPageSize(pageSize);
-        respVO.setHasMore((long) pageNo * pageSize < total);
+        boolean hasMore = (long) pageNo * pageSize < total;
+        if (hasMore && (pageList == null || pageList.isEmpty())) {
+            hasMore = false;
+        }
+        respVO.setHasMore(hasMore);
         respVO.setNextCursor("");
+        respVO.setCostMs(System.currentTimeMillis() - start);
         return respVO;
     }
 
-    private List<AppImContactRespVO> safeSearchContacts(Long userId, String keyword) {
+    private PageResult<AppImContactRespVO> safeSearchContactsPage(Long userId, String keyword, int pageNo, int pageSize) {
         try {
-            return contactService.searchContacts(userId, keyword);
+            return contactService.searchContactsPage(userId, keyword, pageNo, pageSize);
         } catch (Exception e) {
             log.warn("[ImGlobalSearch] searchContacts failed, userId={}, keyword={}", userId, keyword, e);
-            return Collections.emptyList();
+            return PageResult.empty();
         }
     }
 
@@ -165,6 +175,81 @@ public class ImGlobalSearchService {
             reqVO.setCategory("media");
         }
         return messageService.searchMessages(userId, reqVO);
+    }
+
+    private WindowResult<AppImContactRespVO> collectContactsWindow(Long userId, String keyword, int windowSize) {
+        List<AppImContactRespVO> merged = new ArrayList<>();
+        long total = 0L;
+        int pageNo = 1;
+        while (merged.size() < windowSize) {
+            PageResult<AppImContactRespVO> page = safeSearchContactsPage(userId, keyword, pageNo, MAX_PAGE_SIZE);
+            if (pageNo == 1) {
+                total = page.getTotal() != null ? page.getTotal() : 0L;
+            }
+            List<AppImContactRespVO> batch = safeList(page.getList());
+            if (batch.isEmpty()) {
+                break;
+            }
+            merged.addAll(batch);
+            if ((long) pageNo * MAX_PAGE_SIZE >= total) {
+                break;
+            }
+            pageNo++;
+        }
+        if (merged.size() > windowSize) {
+            merged = merged.subList(0, windowSize);
+        }
+        return new WindowResult<>(merged, total);
+    }
+
+    private WindowResult<AppImConversationRespVO> collectGroupsWindow(Long userId, String keyword, int windowSize) {
+        List<AppImConversationRespVO> merged = new ArrayList<>();
+        long total = 0L;
+        int pageNo = 1;
+        while (merged.size() < windowSize) {
+            PageResult<AppImConversationRespVO> page = searchGroups(userId, keyword, pageNo, MAX_PAGE_SIZE);
+            if (pageNo == 1) {
+                total = page.getTotal() != null ? page.getTotal() : 0L;
+            }
+            List<AppImConversationRespVO> batch = safeList(page.getList());
+            if (batch.isEmpty()) {
+                break;
+            }
+            merged.addAll(batch);
+            if ((long) pageNo * MAX_PAGE_SIZE >= total) {
+                break;
+            }
+            pageNo++;
+        }
+        if (merged.size() > windowSize) {
+            merged = merged.subList(0, windowSize);
+        }
+        return new WindowResult<>(merged, total);
+    }
+
+    private WindowResult<AppImMessageRespVO> collectMessagesWindow(Long userId, String keyword, Long chatId, int windowSize, boolean mediaOnly) {
+        List<AppImMessageRespVO> merged = new ArrayList<>();
+        long total = 0L;
+        int pageNo = 1;
+        while (merged.size() < windowSize) {
+            PageResult<AppImMessageRespVO> page = searchMessages(userId, keyword, chatId, pageNo, MAX_PAGE_SIZE, mediaOnly);
+            if (pageNo == 1) {
+                total = page.getTotal() != null ? page.getTotal() : 0L;
+            }
+            List<AppImMessageRespVO> batch = safeList(page.getList());
+            if (batch.isEmpty()) {
+                break;
+            }
+            merged.addAll(batch);
+            if ((long) pageNo * MAX_PAGE_SIZE >= total) {
+                break;
+            }
+            pageNo++;
+        }
+        if (merged.size() > windowSize) {
+            merged = merged.subList(0, windowSize);
+        }
+        return new WindowResult<>(merged, total);
     }
 
     private AppImGlobalSearchRespVO.Item buildContactItem(AppImContactRespVO contact, String keyword) {
@@ -427,5 +512,23 @@ public class ImGlobalSearchService {
             return Collections.emptyList();
         }
         return list;
+    }
+
+    private static class WindowResult<T> {
+        private final List<T> list;
+        private final long total;
+
+        private WindowResult(List<T> list, long total) {
+            this.list = list != null ? list : Collections.emptyList();
+            this.total = total;
+        }
+
+        private List<T> getList() {
+            return list;
+        }
+
+        private long getTotal() {
+            return total;
+        }
     }
 }

@@ -53,7 +53,7 @@ public class AppImContactController {
 
     @GetMapping("/search")
     @Operation(summary = "搜索联系人")
-    public ResponseEntity<CommonResult<List<AppImContactRespVO>>> searchContact(@Valid AppImContactSearchReqVO searchReqVO) {
+    public ResponseEntity<CommonResult<PageResult<AppImContactRespVO>>> searchContact(@Valid AppImContactSearchReqVO searchReqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         Long tenantId = TenantContextHolder.getTenantId();
         ImSearchRateLimitService.CheckResult checkResult =
@@ -63,7 +63,8 @@ public class AppImContactController {
                     .header("Retry-After", String.valueOf(checkResult.getRetryAfterSeconds()))
                     .body(CommonResult.error(TOO_MANY_REQUESTS));
         }
-        return ResponseEntity.ok(success(contactService.searchContacts(userId, searchReqVO.getKeyword())));
+        return ResponseEntity.ok(success(contactService.searchContactsPage(
+                userId, searchReqVO.getKeyword(), searchReqVO.getPageNo(), searchReqVO.getPageSize())));
     }
 
     @GetMapping("/get")

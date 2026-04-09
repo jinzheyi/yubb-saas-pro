@@ -1,7 +1,9 @@
 package com.shengyu.module.system.controller.app.im.vo.contact;
 
+import com.shengyu.framework.common.pojo.PageParam;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
@@ -13,7 +15,8 @@ import javax.validation.constraints.Size;
  */
 @Schema(description = "移动端 - IM 联系人搜索 Request VO")
 @Data
-public class AppImContactSearchReqVO {
+@EqualsAndHashCode(callSuper = true)
+public class AppImContactSearchReqVO extends PageParam {
 
     @Schema(description = "搜索关键词(用户名/昵称/手机号)", requiredMode = Schema.RequiredMode.REQUIRED, example = "张三")
     @NotBlank(message = "搜索关键词不能为空")
