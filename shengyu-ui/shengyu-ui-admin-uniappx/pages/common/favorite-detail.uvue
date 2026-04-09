@@ -18,15 +18,49 @@
       </view>
       <view v-else class="card">
         <view class="card-head">
-          <text class="type">{{ buildTypeText(detail.messageType) }}</text>
-        </view>
-        <view class="body">
-          <text class="preview">{{ detail.messagePreview || t('favoritePage.preview.default') }}</text>
+          <text class="type">{{ renderData.typeLabel }}</text>
           <text class="time">{{ formatTime(detail.favoriteTime || detail.sendTime) }}</text>
         </view>
-        <view class="raw-block">
-          <text class="raw-title">{{ t('favoriteDetail.rawContent') }}</text>
-          <text class="raw-value">{{ buildRawContent(detail) }}</text>
+
+        <view class="body">
+          <view v-if="renderData.kind === 'text'" class="text-block">
+            <text class="text-content">{{ renderData.text }}</text>
+          </view>
+
+          <view v-else-if="renderData.kind === 'image'" class="image-block">
+            <image class="image-content" :src="renderData.url" mode="widthFix" @click="handlePreviewImage(renderData.url)" />
+          </view>
+
+          <view v-else-if="renderData.kind === 'video'" class="video-block" @click="handleOpenVideo(renderData.url)">
+            <image v-if="renderData.thumb !== ''" class="video-cover" :src="renderData.thumb" mode="aspectFill" />
+            <view v-else class="video-placeholder">
+              <text class="video-placeholder-text">{{ renderData.title }}</text>
+            </view>
+            <view class="video-mask">
+              <text class="iconfont video-play">&#xe602;</text>
+            </view>
+            <text v-if="renderData.url !== ''" class="video-url" :numberOfLines="1">{{ renderData.url }}</text>
+          </view>
+
+          <view v-else-if="renderData.kind === 'file'" class="file-block" @click="handleCopyText(renderData.url, '已复制文件链接')">
+            <view class="file-icon-wrap">
+              <text class="iconfont file-icon">&#xea96;</text>
+            </view>
+            <view class="file-main">
+              <text class="file-name">{{ renderData.fileName }}</text>
+              <text v-if="renderData.fileSize !== ''" class="file-size">{{ renderData.fileSize }}</text>
+              <text v-if="renderData.url !== ''" class="file-url" :numberOfLines="1">{{ renderData.url }}</text>
+            </view>
+          </view>
+
+          <view v-else-if="renderData.kind === 'link'" class="link-block" @click="handleOpenLink(renderData.url)">
+            <text class="link-title">{{ renderData.title }}</text>
+            <text class="link-url">{{ renderData.url }}</text>
+          </view>
+
+          <view v-else class="text-block">
+            <text class="text-content">{{ detail.messagePreview || t('favoritePage.preview.default') }}</text>
+          </view>
         </view>
       </view>
     </scroll-view>
@@ -40,6 +74,7 @@
 </template>
 
 <script setup lang="uts">
+import { computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useI18n } from '../../hooks/useI18n.uts'
 import { getFavoriteDetail } from '../../api/favorite.uts'
@@ -53,6 +88,17 @@ type FavoriteDetail = {
   messageSnapshot: string
   sendTime: string
   favoriteTime: string
+}
+
+type FavoriteRenderData = {
+  kind: string
+  typeLabel: string
+  text: string
+  title: string
+  url: string
+  thumb: string
+  fileName: string
+  fileSize: string
 }
 
 const { t } = useI18n()
@@ -69,15 +115,25 @@ function formatTime(raw: string): string {
     if (raw == null || String(raw).trim() === '') {
       return ''
     }
-    const d = new Date(raw)
+    const rawText = String(raw).trim()
+    let d = new Date(rawText)
+    if (isNaN(d.getTime()) && /^[0-9]+$/.test(rawText)) {
+      const numVal = Number(rawText)
+      if (!isNaN(numVal) && numVal > 0) {
+        d = new Date(rawText.length <= 10 ? (numVal * 1000) : numVal)
+      }
+    }
     if (isNaN(d.getTime())) {
       return String(raw)
     }
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    const hh = String(d.getHours()).padStart(2, '0')
-    const mi = String(d.getMinutes()).padStart(2, '0')
-    return mm + '-' + dd + ' ' + hh + ':' + mi
+    const year = d.getFullYear()
+    const nowYear = new Date().getFullYear()
+    const mm = d.getMonth() + 1
+    const dd = d.getDate()
+    if (year === nowYear) {
+      return mm + '月' + dd + '日'
+    }
+    return year + '年' + mm + '月' + dd + '日'
   } catch (e) {
     return ''
   }
@@ -108,21 +164,252 @@ function normalizeFavoriteDetail(raw: any): FavoriteDetail {
   }
 }
 
-function buildRawContent(item: FavoriteDetail): string {
-  const snapshot = item.messageSnapshot != null ? String(item.messageSnapshot) : ''
-  if (snapshot !== '') {
-    return snapshot
+function safeParseJson(raw: any): any | null {
+  try {
+    if (raw == null) {
+      return null
+    }
+    if (typeof raw === 'object') {
+      return raw
+    }
+    const text = String(raw).trim()
+    if (text === '') {
+      return null
+    }
+    const first = text.charAt(0)
+    const last = text.charAt(text.length - 1)
+    if (!((first === '{' && last === '}') || (first === '[' && last === ']'))) {
+      return null
+    }
+    return JSON.parse(text)
+  } catch (e) {
+    return null
   }
-  const content = item.messageContent != null ? String(item.messageContent) : ''
-  const extra = item.messageExtra != null ? String(item.messageExtra) : ''
-  if (extra === '') {
-    return content
-  }
-  if (content === '') {
-    return extra
-  }
-  return content + '\n\nextra:\n' + extra
 }
+
+function looksLikeLinkContent(raw: string): boolean {
+  if (raw == null) {
+    return false
+  }
+  const value = String(raw).trim()
+  if (value === '') {
+    return false
+  }
+  return /^https?:\/\/\S+$/i.test(value) || /^www\.\S+$/i.test(value)
+}
+
+function ensureLinkScheme(raw: string): string {
+  const url = raw != null ? String(raw).trim() : ''
+  if (url === '') {
+    return ''
+  }
+  if (/^https?:\/\//i.test(url)) {
+    return url
+  }
+  if (/^www\./i.test(url)) {
+    return 'https://' + url
+  }
+  return url
+}
+
+function resolveUrlFromObject(obj: any): string {
+  if (obj == null || typeof obj !== 'object') {
+    return ''
+  }
+  const direct = obj.url != null ? String(obj.url).trim() : ''
+  if (direct !== '') {
+    return direct
+  }
+  const link = obj.link != null ? String(obj.link).trim() : ''
+  if (link !== '') {
+    return link
+  }
+  const href = obj.href != null ? String(obj.href).trim() : ''
+  if (href !== '') {
+    return href
+  }
+  const nested = obj.content
+  if (nested != null) {
+    if (typeof nested === 'string') {
+      const contentText = String(nested).trim()
+      if (looksLikeLinkContent(contentText)) {
+        return contentText
+      }
+    } else if (typeof nested === 'object') {
+      const nestedUrl = resolveUrlFromObject(nested)
+      if (nestedUrl !== '') {
+        return nestedUrl
+      }
+    }
+  }
+  return ''
+}
+
+function extractText(raw: any): string {
+  if (raw == null) {
+    return ''
+  }
+  if (typeof raw === 'string') {
+    return String(raw)
+  }
+  if (typeof raw === 'object') {
+    if (raw.content != null && String(raw.content) !== '') {
+      return String(raw.content)
+    }
+    if (raw.text != null && String(raw.text) !== '') {
+      return String(raw.text)
+    }
+    if (raw.title != null && String(raw.title) !== '') {
+      return String(raw.title)
+    }
+  }
+  return ''
+}
+
+function buildFileSizeText(size: number): string {
+  if (size <= 0) {
+    return ''
+  }
+  if (size < 1024) {
+    return size + 'B'
+  }
+  if (size < 1024 * 1024) {
+    return (size / 1024).toFixed(1) + 'KB'
+  }
+  if (size < 1024 * 1024 * 1024) {
+    return (size / 1024 / 1024).toFixed(1) + 'MB'
+  }
+  return (size / 1024 / 1024 / 1024).toFixed(1) + 'GB'
+}
+
+function buildRenderData(item: FavoriteDetail | null): FavoriteRenderData {
+  const fallback: FavoriteRenderData = {
+    kind: 'text',
+    typeLabel: t('favoritePage.type.default'),
+    text: t('favoritePage.preview.default'),
+    title: t('favoritePage.preview.default'),
+    url: '',
+    thumb: '',
+    fileName: '',
+    fileSize: ''
+  }
+  if (item == null) {
+    return fallback
+  }
+
+  const parsedContent = safeParseJson(item.messageContent)
+  const parsedExtra = safeParseJson(item.messageExtra)
+  const parsedSnapshot = safeParseJson(item.messageSnapshot)
+  const snapshotContent = parsedSnapshot != null && parsedSnapshot.content != null ? safeParseJson((parsedSnapshot as any).content) : null
+  const snapshotExtra = parsedSnapshot != null && parsedSnapshot.extra != null ? safeParseJson((parsedSnapshot as any).extra) : null
+
+  const result: FavoriteRenderData = {
+    kind: 'text',
+    typeLabel: buildTypeText(item.messageType),
+    text: item.messagePreview || t('favoritePage.preview.default'),
+    title: item.messagePreview || t('favoritePage.preview.default'),
+    url: '',
+    thumb: '',
+    fileName: '',
+    fileSize: ''
+  }
+
+  if (item.messageType === 1) {
+    const textContent = extractText(parsedContent != null ? parsedContent : item.messageContent).trim()
+    if (looksLikeLinkContent(textContent)) {
+      result.kind = 'link'
+      result.typeLabel = '链接'
+      result.title = textContent
+      result.url = ensureLinkScheme(textContent)
+    } else {
+      result.kind = 'text'
+      result.typeLabel = '笔记'
+      result.text = textContent !== '' ? textContent : result.text
+      result.title = result.text
+    }
+    return result
+  }
+
+  if (item.messageType === 2) {
+    const imageUrl =
+      resolveUrlFromObject(parsedContent) ||
+      resolveUrlFromObject(parsedExtra) ||
+      resolveUrlFromObject(snapshotContent) ||
+      resolveUrlFromObject(snapshotExtra) ||
+      (item.messageContent != null ? String(item.messageContent).trim() : '')
+    result.kind = 'image'
+    result.typeLabel = '图片'
+    result.url = imageUrl
+    result.title = item.messagePreview || '[图片]'
+    return result
+  }
+
+  if (item.messageType === 4) {
+    const videoUrl =
+      resolveUrlFromObject(parsedContent) ||
+      resolveUrlFromObject(parsedExtra) ||
+      resolveUrlFromObject(snapshotContent) ||
+      resolveUrlFromObject(snapshotExtra) ||
+      (item.messageContent != null ? String(item.messageContent).trim() : '')
+    const cover = parsedExtra != null && typeof parsedExtra === 'object'
+      ? String((parsedExtra as any).cover || (parsedExtra as any).thumbnail || (parsedExtra as any).thumbUrl || '')
+      : ''
+    result.kind = 'video'
+    result.typeLabel = '视频'
+    result.url = videoUrl
+    result.thumb = cover
+    result.title = item.messagePreview || '[视频]'
+    return result
+  }
+
+  if (item.messageType === 5) {
+    const fileObj = parsedExtra != null && typeof parsedExtra === 'object'
+      ? parsedExtra
+      : (snapshotExtra != null && typeof snapshotExtra === 'object' ? snapshotExtra : null)
+    const fileUrl =
+      resolveUrlFromObject(fileObj) ||
+      resolveUrlFromObject(parsedContent) ||
+      resolveUrlFromObject(snapshotContent) ||
+      (item.messageContent != null ? String(item.messageContent).trim() : '')
+    const fileName = fileObj != null && (fileObj as any).fileName != null
+      ? String((fileObj as any).fileName)
+      : (item.messagePreview || '[文件]')
+    const fileSizeVal = fileObj != null && (fileObj as any).size != null ? Number((fileObj as any).size) : 0
+    result.kind = 'file'
+    result.typeLabel = '文件'
+    result.fileName = fileName
+    result.fileSize = buildFileSizeText(fileSizeVal)
+    result.url = fileUrl
+    result.title = fileName
+    return result
+  }
+
+  if (item.messageType === 9) {
+    const customObj = (parsedContent != null && typeof parsedContent === 'object')
+      ? parsedContent
+      : ((parsedExtra != null && typeof parsedExtra === 'object') ? parsedExtra : null)
+    const customType = customObj != null && (customObj as any).type != null ? String((customObj as any).type).toUpperCase() : ''
+    const customUrl =
+      resolveUrlFromObject(customObj) ||
+      resolveUrlFromObject(snapshotContent) ||
+      resolveUrlFromObject(snapshotExtra)
+    if (customType === 'LINK' || customType === 'URL' || customType === 'WEB_LINK' || customUrl !== '') {
+      const customTitle = customObj != null && (customObj as any).title != null ? String((customObj as any).title) : ''
+      result.kind = 'link'
+      result.typeLabel = '链接'
+      result.title = customTitle !== '' ? customTitle : (customUrl !== '' ? customUrl : result.title)
+      result.url = ensureLinkScheme(customUrl)
+      return result
+    }
+  }
+
+  result.kind = 'text'
+  result.text = item.messagePreview || t('favoritePage.preview.default')
+  result.title = result.text
+  return result
+}
+
+const renderData = computed((): FavoriteRenderData => buildRenderData(detail.value))
 
 async function loadDetail(): Promise<void> {
   if (favoriteId.value === '' || favoriteId.value === '0') {
@@ -139,6 +426,54 @@ async function loadDetail(): Promise<void> {
   } finally {
     loading.value = false
   }
+}
+
+function handlePreviewImage(url: string): void {
+  if (url == null || String(url).trim() === '') {
+    return
+  }
+  uni.previewImage({ urls: [String(url)] })
+}
+
+function handleOpenVideo(url: string): void {
+  const finalUrl = url != null ? String(url).trim() : ''
+  if (finalUrl === '') {
+    uni.showToast({ title: '视频地址为空', icon: 'none' })
+    return
+  }
+  uni.navigateTo({
+    url: `/pages/message/video-player?url=${encodeURIComponent(finalUrl)}&title=${encodeURIComponent(renderData.value.title)}`
+  })
+}
+
+function handleCopyText(value: string, successText: string): void {
+  const text = value != null ? String(value).trim() : ''
+  if (text === '') {
+    return
+  }
+  uni.setClipboardData({
+    data: text,
+    success: () => {
+      uni.showToast({ title: successText, icon: 'none' })
+    }
+  })
+}
+
+function handleOpenLink(url: string): void {
+  const finalUrl = ensureLinkScheme(url)
+  if (finalUrl === '') {
+    return
+  }
+  try {
+    const globalAny: any = globalThis as any
+    if (globalAny != null && globalAny.window != null && globalAny.window.open != null) {
+      globalAny.window.open(finalUrl, '_blank')
+      return
+    }
+  } catch (e) {
+    // ignore
+  }
+  handleCopyText(finalUrl, '已复制链接')
 }
 
 function handleSendToChat(): void {
@@ -159,7 +494,7 @@ onLoad((options: any) => {
 </script>
 
 <style>
-.page { height: 100%; background-color: #F7F8FA; display: flex; flex-direction: column; }
+.page { height: 100%; background-color: #F5F6F8; display: flex; flex-direction: column; }
 .status-bar { height: var(--status-bar-height); background-color: #FFFFFF; }
 .header { height: 44px; padding: 0 12px; background-color: #FFFFFF; flex-direction: row; align-items: center; justify-content: space-between; border-bottom-width: 0.5px; border-bottom-color: #EFF0F1; }
 .header-left { width: 40px; height: 44px; justify-content: center; }
@@ -171,15 +506,32 @@ onLoad((options: any) => {
 .loading-text { font-size: 14px; color: #8F959E; }
 .empty-wrap { padding-top: 80px; align-items: center; }
 .empty-text { font-size: 14px; color: #8F959E; }
-.card { margin: 12px; background-color: #FFFFFF; border-radius: 10px; padding: 12px; }
+.card { margin: 12px; background-color: #FFFFFF; border-radius: 12px; padding: 12px; }
 .card-head { flex-direction: row; align-items: center; justify-content: space-between; }
-.type { font-size: 12px; color: #57606A; }
-.body { margin-top: 8px; }
-.preview { font-size: 15px; color: #1F2329; line-height: 22px; }
-.time { margin-top: 8px; font-size: 12px; color: #8F959E; }
-.raw-block { margin-top: 12px; border-radius: 8px; background-color: #F5F6F7; padding: 10px; }
-.raw-title { font-size: 12px; color: #57606A; }
-.raw-value { margin-top: 6px; font-size: 13px; color: #1F2329; line-height: 20px; }
+.type { font-size: 12px; color: #8A93A0; }
+.time { font-size: 12px; color: #9AA3AF; }
+.body { margin-top: 10px; }
+.text-block { background-color: #FFFFFF; }
+.text-content { font-size: 15px; color: #1F2329; line-height: 24px; }
+.image-block { border-radius: 10px; overflow: hidden; background-color: #F3F4F6; }
+.image-content { width: 100%; border-radius: 10px; }
+.video-block { border-radius: 10px; overflow: hidden; position: relative; background-color: #111111; }
+.video-cover { width: 100%; height: 220px; }
+.video-placeholder { height: 180px; justify-content: center; align-items: center; padding: 0 16px; }
+.video-placeholder-text { color: #FFFFFF; font-size: 14px; }
+.video-mask { position: absolute; top: 0; left: 0; right: 0; bottom: 30px; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.2); }
+.video-play { color: #FFFFFF; font-size: 42px; }
+.video-url { padding: 6px 10px 8px; color: #D4D9E1; font-size: 12px; }
+.file-block { flex-direction: row; align-items: flex-start; padding: 12px; border-radius: 10px; background-color: #F6F8FC; }
+.file-icon-wrap { width: 44px; height: 44px; border-radius: 8px; background-color: #E7EEFD; justify-content: center; align-items: center; margin-right: 10px; }
+.file-icon { font-size: 24px; color: #4B70D0; }
+.file-main { flex: 1; min-width: 0; }
+.file-name { font-size: 15px; color: #1F2329; line-height: 22px; }
+.file-size { margin-top: 4px; font-size: 12px; color: #8A93A0; }
+.file-url { margin-top: 4px; font-size: 12px; color: #4B70D0; }
+.link-block { border-radius: 10px; background-color: #F6F8FC; padding: 12px; }
+.link-title { font-size: 15px; color: #1F2329; line-height: 22px; }
+.link-url { margin-top: 6px; font-size: 13px; color: #3765C9; line-height: 20px; }
 .footer { padding: 10px 12px 12px; background-color: #FFFFFF; border-top-width: 0.5px; border-top-color: #EFF0F1; }
 .send-btn { height: 42px; border-radius: 8px; background-color: #1677FF; justify-content: center; align-items: center; }
 .send-btn-text { color: #FFFFFF; font-size: 15px; font-weight: 600; }

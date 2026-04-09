@@ -6451,6 +6451,114 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
+	function looksLikeLinkContent(text: string): boolean {
+		if (text == null) {
+			return false
+		}
+		const value = String(text).trim()
+		if (value === '') {
+			return false
+		}
+		return /^https?:\/\/\S+$/i.test(value) || /^www\.\S+$/i.test(value)
+	}
+
+	function resolveLinkUrlFromObject(obj: any): string {
+		if (obj == null || typeof obj !== 'object') {
+			return ''
+		}
+		const direct = obj.url != null ? String(obj.url).trim() : ''
+		if (direct !== '') {
+			return direct
+		}
+		const link = obj.link != null ? String(obj.link).trim() : ''
+		if (link !== '') {
+			return link
+		}
+		const href = obj.href != null ? String(obj.href).trim() : ''
+		if (href !== '') {
+			return href
+		}
+		const nested = obj.content
+		if (nested != null) {
+			if (typeof nested === 'string') {
+				const val = String(nested).trim()
+				if (looksLikeLinkContent(val)) {
+					return val
+				}
+			} else if (typeof nested === 'object') {
+				const nestedUrl = resolveLinkUrlFromObject(nested)
+				if (nestedUrl !== '') {
+					return nestedUrl
+				}
+			}
+		}
+		return ''
+	}
+
+	function isLinkMessage(msg: any): boolean {
+		try {
+			if (msg == null) {
+				return false
+			}
+			const type = msg.type != null ? String(msg.type) : ''
+			if (type === 'text') {
+				const raw = msg.content != null ? msg.content : ''
+				if (typeof raw === 'string') {
+					return looksLikeLinkContent(raw)
+				}
+				if (raw != null && typeof raw === 'object') {
+					const contentText = raw.content != null ? String(raw.content).trim() : ''
+					if (looksLikeLinkContent(contentText)) {
+						return true
+					}
+					return resolveLinkUrlFromObject(raw) !== ''
+				}
+				return false
+			}
+			if (type !== 'custom') {
+				return false
+			}
+			const parsedContent = parseRawContent(msg.content)
+			if (parsedContent != null && typeof parsedContent === 'object') {
+				const customType = parsedContent.type != null ? String(parsedContent.type).toUpperCase() : ''
+				if (customType === 'LINK' || customType === 'URL' || customType === 'WEB_LINK') {
+					return true
+				}
+				if (resolveLinkUrlFromObject(parsedContent) !== '') {
+					return true
+				}
+			}
+			const parsedExtra = parseRawContent((msg as any).extra)
+			if (parsedExtra != null && typeof parsedExtra === 'object') {
+				const extraType = parsedExtra.type != null ? String(parsedExtra.type).toUpperCase() : ''
+				if (extraType === 'LINK' || extraType === 'URL' || extraType === 'WEB_LINK') {
+					return true
+				}
+				if (resolveLinkUrlFromObject(parsedExtra) !== '') {
+					return true
+				}
+			}
+			return false
+		} catch (e) {
+			return false
+		}
+	}
+
+	function canFavoriteMessageByType(msg: any): boolean {
+		try {
+			if (msg == null) {
+				return false
+			}
+			const type = msg.type != null ? String(msg.type) : ''
+			if (type === 'text' || type === 'image' || type === 'video' || type === 'file') {
+				return true
+			}
+			return isLinkMessage(msg)
+		} catch (e) {
+			return false
+		}
+	}
+
 	function resolveStickerCollectCandidate(msg : any) : any | null {
 		try {
 			if (msg == null) {
@@ -6793,7 +6901,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         const isVoiceRestricted = msg.type === 'voice'
         const isLocationRestricted = msg.type === 'location'
         const messageId = msg && msg.messageId != null ? String(msg.messageId) : ''
-        const canFavoriteMessage = messageId !== '' && messageId !== '0'
+        const canFavoriteMessage = messageId !== '' && messageId !== '0' && canFavoriteMessageByType(msg)
         const canCollectSticker = canAddMessageToSticker(msg)
         const alreadyCollectedSticker = canCollectSticker && isMessageAlreadyCollectedToSticker(msg)
         
@@ -6807,10 +6915,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                 { key: 'delete', labelKey: 'chat.menu.delete', icon: '\ue602' }
             ]
         } else if (isLocationRestricted) {
-            // 位置消息放开单条转发与消息收藏，其它保持轻量菜单
+            // 位置消息保持轻量菜单
             menuItems = [
                 { key: 'forward', labelKey: 'chat.menu.forward', icon: '\ue63d' },
-                { key: 'favorite_message_add', labelKey: 'chat.menu.favoriteMessage', icon: '\ue607' },
                 { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' },
                 { key: 'delete', labelKey: 'chat.menu.delete', icon: '\ue602' }
             ]
@@ -6820,7 +6927,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                 { key: 'copy', labelKey: 'chat.menu.copy', icon: '\ue7cb' },
                 { key: 'forward', labelKey: 'chat.menu.forward', icon: '\ue63d' },
                 { key: 'delete', labelKey: 'chat.menu.delete', icon: '\ue602' },
-                { key: 'favorite_message_add', labelKey: 'chat.menu.favoriteMessage', icon: '\ue607' },
+                { key: 'favorite_message_add', labelKey: 'chat.menu.favoriteMessage', icon: '\ue83f' },
                 { key: 'multi', labelKey: 'chat.menu.multi', icon: '\ue69d' },
                 { key: 'quote', labelKey: 'chat.menu.quote', icon: '\ue6f4' }
             ]
@@ -6857,10 +6964,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             }
         } catch (e) {
             // ignore
-        }
-        
-        if (chatType.value === 'group' && msg.isSelf && msg.messageId && msg.messageId !== '0') {
-            menuItems.push({ key: 'read_receipt', label: '已读', icon: '\ue6cf' })
         }
         
         currentMenuItems.value = menuItems
@@ -7035,6 +7138,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                     uni.showToast({ title: '当前消息不可收藏', icon: 'none' })
                     return
                 }
+                if (!canFavoriteMessageByType(msg)) {
+                    uni.showToast({ title: '仅支持收藏文字、图片、链接、视频、文件消息', icon: 'none' })
+                    return
+                }
                 await addMessageFavoriteApi(mid)
                 uni.showToast({ title: '已收藏', icon: 'success' })
             } else if (action === 'favorite_sticker') {
@@ -7096,13 +7203,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                 if (isVoiceMode.value) {
                     isVoiceMode.value = false
                 }
-            } else if (action === 'read_receipt') {
-                const readReceiptMessageId = resolveReadReceiptTargetMessageId(msg)
-                if (chatType.value !== 'group' || !msg.isSelf || readReceiptMessageId === '') {
-                    return
-                }
-                const messageType = msg != null && (msg as any).type != null ? String((msg as any).type) : ''
-                await openReadReceiptSheet(readReceiptMessageId, messageType)
             }
         } catch (e) {
             console.error('[Chat] 菜单操作失败:', e)
