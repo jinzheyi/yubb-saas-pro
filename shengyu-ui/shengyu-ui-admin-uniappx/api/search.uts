@@ -4,12 +4,74 @@
 
 import { request } from '../utils/request.uts'
 
+export type ImSearchTab = 'all' | 'message' | 'contact' | 'group' | 'media'
+
+export type ImGlobalSearchItem = {
+	id: string
+	type: string
+	title: string
+	subTitle: string
+	snippet: string
+	time: number
+	score: number
+	chatId?: string
+	messageId?: string
+	sequence?: string
+	meta?: any
+}
+
+export type ImGlobalSearchFacets = {
+	all: number
+	message: number
+	contact: number
+	group: number
+	media: number
+}
+
+export type ImGlobalSearchResp = {
+	list: ImGlobalSearchItem[]
+	facets: ImGlobalSearchFacets
+	total: number
+	pageNo: number
+	pageSize: number
+	hasMore: boolean
+	nextCursor: string
+}
+
 /**
  * 获取热门搜索词
  */
 export function getHotSearch(limit: number = 10): Promise<any> {
-  return request({
-    url: `/system/im/search/hot?limit=${limit}`,
-    method: 'GET'
-  })
+	return request({
+		url: `/system/im/search/hot?limit=${limit}`,
+		method: 'GET'
+	})
+}
+
+/**
+ * 全局搜索（单接口聚合）
+ */
+export function searchGlobal(
+	keyword: string,
+	tab: string = 'all',
+	pageNo: number = 1,
+	pageSize: number = 20,
+	sort: string = 'relevance',
+	chatId: string = ''
+): Promise<ImGlobalSearchResp> {
+	const kw = keyword != null ? String(keyword).trim() : ''
+	const query: string[] = [
+		`keyword=${encodeURIComponent(kw)}`,
+		`tab=${encodeURIComponent(tab)}`,
+		`pageNo=${pageNo}`,
+		`pageSize=${pageSize}`,
+		`sort=${encodeURIComponent(sort)}`
+	]
+	if (chatId != null && String(chatId).trim() !== '') {
+		query.push(`chatId=${encodeURIComponent(String(chatId).trim())}`)
+	}
+	return request({
+		url: `/system/im/search/global?${query.join('&')}`,
+		method: 'GET'
+	})
 }

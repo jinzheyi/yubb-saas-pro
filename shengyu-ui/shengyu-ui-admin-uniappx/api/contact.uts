@@ -23,8 +23,9 @@ export function getContactList(): Promise<any> {
  * 搜索联系人
  */
 export function searchContact(keyword: string): Promise<any> {
+  const kw = keyword != null ? String(keyword) : ''
   return request({
-    url: `/system/im/contact/search?keyword=${keyword}`,
+    url: `/system/im/contact/search?keyword=${encodeURIComponent(kw)}`,
     method: 'GET'
   })
 }

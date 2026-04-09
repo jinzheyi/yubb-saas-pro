@@ -289,6 +289,12 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "<if test='messageType != null'>",
             "  AND m.message_type = #{messageType}",
             "</if>",
+            "<if test='messageTypeList != null and messageTypeList.size > 0'>",
+            "  AND m.message_type IN",
+            "  <foreach collection='messageTypeList' item='mt' open='(' separator=',' close=')'>",
+            "    #{mt}",
+            "  </foreach>",
+            "</if>",
             "<if test='startTime != null'>",
             "  AND m.send_time &gt;= #{startTime}",
             "</if>",
@@ -301,6 +307,7 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
                                @Param("chatId") Long chatId,
                                @Param("keyword") String keyword,
                                @Param("messageType") Integer messageType,
+                               @Param("messageTypeList") List<Integer> messageTypeList,
                                @Param("startTime") java.time.LocalDateTime startTime,
                                @Param("endTime") java.time.LocalDateTime endTime);
 
@@ -335,6 +342,12 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "<if test='messageType != null'>",
             "  AND m.message_type = #{messageType}",
             "</if>",
+            "<if test='messageTypeList != null and messageTypeList.size > 0'>",
+            "  AND m.message_type IN",
+            "  <foreach collection='messageTypeList' item='mt' open='(' separator=',' close=')'>",
+            "    #{mt}",
+            "  </foreach>",
+            "</if>",
             "<if test='startTime != null'>",
             "  AND m.send_time &gt;= #{startTime}",
             "</if>",
@@ -346,12 +359,13 @@ public interface ImChatMessageMapper extends BaseMapperX<ImChatMessageDO> {
             "</script>"})
     List<ImChatMessageDO> selectSearchPageByUser(@Param("tenantId") Long tenantId,
                                                  @Param("userId") Long userId,
-                                                 @Param("chatId") Long chatId,
-                                                 @Param("keyword") String keyword,
-                                                 @Param("messageType") Integer messageType,
-                                                 @Param("startTime") java.time.LocalDateTime startTime,
-                                                 @Param("endTime") java.time.LocalDateTime endTime,
-                                                 @Param("offset") Long offset,
+                                                  @Param("chatId") Long chatId,
+                                                  @Param("keyword") String keyword,
+                                                  @Param("messageType") Integer messageType,
+                                                  @Param("messageTypeList") List<Integer> messageTypeList,
+                                                  @Param("startTime") java.time.LocalDateTime startTime,
+                                                  @Param("endTime") java.time.LocalDateTime endTime,
+                                                  @Param("offset") Long offset,
                                                  @Param("limit") Long limit);
 
 }

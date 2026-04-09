@@ -14,9 +14,10 @@
 				</view>
 			</view>
 			<view class="search-container">
-				<view class="search-bar" @click="handleSearch">
-					<text class="iconfont search-icon">&#xea6e;</text>
-					<input class="search-input" :placeholder="t('message.searchPlaceholder', '搜索')" placeholder-class="placeholder" disabled />
+				<view class="search-bar">
+					<text class="iconfont search-icon" @click="handleSearch">&#xea6e;</text>
+					<input class="search-input" v-model="listSearchKeyword" :placeholder="t('message.searchPlaceholder', '搜索')" placeholder-class="placeholder" confirm-type="search" @confirm="handleSearch" />
+					<text v-if="listSearchKeyword !== ''" class="iconfont search-clear" @click="clearConversationFilter">&#xea73;</text>
 				</view>
 			</view>
 		</view>
@@ -177,6 +178,7 @@
 
 	// 当前选中的分类 ID（默认最近更新）
 	const selectedCategoryId = ref('latest')
+	const listSearchKeyword = ref('')
 
 	// 置顶折叠状态
 	const isPinnedFolded = ref(true)
@@ -199,9 +201,11 @@
 	const MANUAL_REFRESH_FRESH_SKIP_MS = 10000
 	const MANUAL_REFRESH_BACKOFF_BASE_MS = 1000
 	const MANUAL_REFRESH_BACKOFF_MAX_MS = 30000
+	const REFRESH_INDICATOR_WATCHDOG_MS = 2200
 	// onShow 刷新节流，避免频繁请求会话列表
 	let lastOnShowRefreshAt = 0
 	let refreshReleaseTimer = 0
+	let refreshWatchdogTimer = 0
 
 	function buildManualUnreadStorageKey(): string {
 		return `IM_MANUAL_UNREAD_${getTenantIdStr()}_${getUserIdStr()}`
@@ -366,10 +370,12 @@
 
 	onHide(() => {
 		wsManager.setRealtimeBizActive(false)
+		forceStopRefreshIndicator()
 	})
 
 	onUnload(() => {
 		wsManager.setRealtimeBizActive(false)
+		forceStopRefreshIndicator()
 	})
 
 	function normalizeConversationType(value: any): number {
@@ -606,10 +612,7 @@
 		// 移除监听器
 		conversationService.removeUpdateListener(handleConversationsUpdate)
 		badgeService.removeListener(badgeListener)
-		if (refreshReleaseTimer !== 0) {
-			clearTimeout(refreshReleaseTimer)
-			refreshReleaseTimer = 0
-		}
+		forceStopRefreshIndicator()
 	})
 	
 	/**
@@ -701,7 +704,17 @@
 	// 过滤后的基础列表
 	const filteredBaseList = computed(() : any[] => {
 		const categoryId = selectedCategoryId.value != null && selectedCategoryId.value !== '' ? selectedCategoryId.value : 'latest'
-		return messageList.value.filter(item => matchCategory(item, categoryId))
+		const keyword = listSearchKeyword.value != null ? String(listSearchKeyword.value).trim().toLowerCase() : ''
+		return messageList.value
+			.filter(item => matchCategory(item, categoryId))
+			.filter(item => {
+				if (keyword === '') {
+					return true
+				}
+				const name = item != null && item.targetName != null ? String(item.targetName).toLowerCase() : ''
+				const preview = item != null && item.lastMessageContent != null ? String(item.lastMessageContent).toLowerCase() : ''
+				return name.indexOf(keyword) >= 0 || preview.indexOf(keyword) >= 0
+			})
 	})
 
 	// 置顶消息列表
@@ -833,29 +846,55 @@
 		closeMenu()
 	}
 
-	function beginRefreshIndicator(): void {
+	function clearRefreshTimers(): void {
 		if (refreshReleaseTimer !== 0) {
 			clearTimeout(refreshReleaseTimer)
 			refreshReleaseTimer = 0
 		}
+		if (refreshWatchdogTimer !== 0) {
+			clearTimeout(refreshWatchdogTimer)
+			refreshWatchdogTimer = 0
+		}
+	}
+
+	function forceStopRefreshIndicator(): void {
+		clearRefreshTimers()
+		refreshing.value = false
+		setTimeout(() => {
+			refreshing.value = false
+		}, 40)
+	}
+
+	function beginRefreshIndicator(): void {
+		clearRefreshTimers()
 		refreshing.value = true
+		refreshWatchdogTimer = setTimeout(() => {
+			refreshWatchdogTimer = 0
+			refreshing.value = false
+		}, REFRESH_INDICATOR_WATCHDOG_MS)
 	}
 
 	function finishRefreshIndicator(): void {
+		if (refreshWatchdogTimer !== 0) {
+			clearTimeout(refreshWatchdogTimer)
+			refreshWatchdogTimer = 0
+		}
 		if (refreshReleaseTimer !== 0) {
 			clearTimeout(refreshReleaseTimer)
 			refreshReleaseTimer = 0
 		}
 		refreshReleaseTimer = setTimeout(() => {
 			refreshing.value = false
+			refreshReleaseTimer = 0
 			setTimeout(() => {
 				refreshing.value = false
-			}, 260)
-		}, 160)
+			}, 80)
+		}, 40)
 	}
 
 	async function handleRefresh() {
 		if (refreshing.value) {
+			finishRefreshIndicator()
 			return
 		}
 		beginRefreshIndicator()
@@ -894,11 +933,11 @@
 	}
 
 	function handleRefreshRestore() {
-		finishRefreshIndicator()
+		forceStopRefreshIndicator()
 	}
 
 	function handleRefreshAbort() {
-		finishRefreshIndicator()
+		forceStopRefreshIndicator()
 	}
 
 	/**
@@ -930,9 +969,15 @@
 	/**
 	 * 搜索
 	 */
+	function clearConversationFilter() {
+		listSearchKeyword.value = ''
+	}
+
 	function handleSearch() {
+		const kw = listSearchKeyword.value != null ? String(listSearchKeyword.value).trim() : ''
+		const query = kw !== '' ? `?keyword=${encodeURIComponent(kw)}` : ''
 		uni.navigateTo({
-			url: '/pages/common/search'
+			url: '/pages/common/search' + query
 		})
 	}
 </script>
@@ -1006,6 +1051,12 @@
 		color: #1F2329;
 		font-size: 14px;
 		margin-left: 8px;
+	}
+
+	.search-clear {
+		font-size: 16px;
+		color: #8F959E;
+		padding-left: 8px;
 	}
 
 	.placeholder {

@@ -3,20 +3,31 @@ package com.shengyu.module.system.controller.app.im;
 import cn.hutool.core.util.StrUtil;
 import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
+import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.framework.tenant.core.context.TenantContextHolder;
+import com.shengyu.module.system.controller.app.im.vo.search.AppImGlobalSearchReqVO;
+import com.shengyu.module.system.controller.app.im.vo.search.AppImGlobalSearchRespVO;
+import com.shengyu.module.system.service.im.ImGlobalSearchService;
+import com.shengyu.module.system.service.im.ImSearchRateLimitService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.Resource;
+import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants.TOO_MANY_REQUESTS;
 import static com.shengyu.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "移动端 - IM 搜索")
@@ -28,6 +39,12 @@ public class AppImSearchController {
 
     @Value("${im.search.hot-keywords:}")
     private String hotKeywords;
+
+    @Resource
+    private ImGlobalSearchService globalSearchService;
+
+    @Resource
+    private ImSearchRateLimitService searchRateLimitService;
 
     @GetMapping("/hot")
     @Operation(summary = "获取热门搜索词")
@@ -45,11 +62,30 @@ public class AppImSearchController {
         return success(new ArrayList<>(list.subList(0, finalLimit)));
     }
 
+    @GetMapping("/global")
+    @Operation(summary = "全局搜索（聚合联系人/群聊/消息/媒体）")
+    public ResponseEntity<CommonResult<AppImGlobalSearchRespVO>> searchGlobal(@Valid AppImGlobalSearchReqVO reqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        Long tenantId = TenantContextHolder.getTenantId();
+        ImSearchRateLimitService.CheckResult checkResult =
+                searchRateLimitService.check(tenantId, userId, ImSearchRateLimitService.SCENE_GLOBAL);
+        if (!checkResult.isAllowed()) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", String.valueOf(checkResult.getRetryAfterSeconds()))
+                    .body(CommonResult.error(TOO_MANY_REQUESTS));
+        }
+        return ResponseEntity.ok(success(globalSearchService.search(userId, reqVO)));
+    }
+
     private List<String> parseHotKeywords(String value) {
         if (StrUtil.isBlank(value)) {
             return new ArrayList<>();
         }
-        String normalized = value.replace('\n', ',').replace('\r', ',').replace('，', ',').replace(';', ',').replace('；', ',');
+        String normalized = value.replace('\n', ',')
+                .replace('\r', ',')
+                .replace('，', ',')
+                .replace(';', ',')
+                .replace('；', ',');
         String[] parts = normalized.split(",");
         List<String> result = new ArrayList<>();
         for (String p : parts) {

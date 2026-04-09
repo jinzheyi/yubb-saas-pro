@@ -274,8 +274,13 @@ public class ImContactServiceImpl implements ImContactService {
 
     @Override
     public List<AppImContactRespVO> searchContacts(Long userId, String keyword) {
-        // 查询同租户下的所有用户
-        List<AdminUserDO> users = userMapper.selectList();
+        String keywordTrimmed = StrUtil.trimToEmpty(keyword);
+        if (StrUtil.isBlank(keywordTrimmed)) {
+            return Collections.emptyList();
+        }
+
+        // DB 侧模糊过滤，避免全量用户加载到内存
+        List<AdminUserDO> users = userMapper.selectListByNicknameLikeLimit(keywordTrimmed, 50);
 
         // 查询当前用户的联系人设置
         List<ImContactSettingDO> settings = contactSettingMapper.selectListByUserId(userId);
@@ -285,7 +290,6 @@ public class ImContactServiceImpl implements ImContactService {
         // 过滤并转换
         return users.stream()
                 .filter(user -> !user.getId().equals(userId)) // 排除自己
-                .filter(user -> StrUtil.contains(user.getNickname(), keyword)) // 按姓名搜索
                 .map(user -> {
                     AppImContactRespVO respVO = buildContactRespVO(user);
                     

@@ -258,8 +258,8 @@ public class ImConversationServiceImpl implements ImConversationService {
         if (pageSize < 1) {
             pageSize = 1;
         }
-        if (pageSize > 200) {
-            pageSize = 200;
+        if (pageSize > 50) {
+            pageSize = 50;
         }
 
         Long tenantId = TenantContextHolder.getTenantId();

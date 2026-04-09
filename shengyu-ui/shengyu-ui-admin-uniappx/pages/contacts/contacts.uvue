@@ -5,9 +5,10 @@
 			<view class="header-top">
 				<text class="header-title">{{ t('contacts.title') }}</text>
 			</view>
-			<view class="search-bar" @click="handleSearch">
-				<text class="iconfont search-icon">&#xea6e;</text>
-				<input class="search-input" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" disabled />
+			<view class="search-bar">
+				<text class="iconfont search-icon" @click="handleSearch">&#xea6e;</text>
+				<input class="search-input" v-model="listSearchKeyword" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" confirm-type="search" @confirm="handleSearch" />
+				<text v-if="listSearchKeyword !== ''" class="iconfont search-clear" @click="clearLocalSearch">&#xea73;</text>
 			</view>
 		</view>
 
@@ -85,6 +86,7 @@
 	const scrollTarget = ref('')
 	const loading = ref(false)
 	const rawContacts = ref<any[]>([])
+	const listSearchKeyword = ref('')
 
 	const categories1 = [
 		{ icon: '\ue616', bg: '#fb923c', nameKey: 'contacts.groups' },
@@ -202,9 +204,17 @@
 	const groupedContacts = computed(() : ContactGroup[] => {
 		const groups : ContactGroup[] = []
 		const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+		const keyword = listSearchKeyword.value != null ? String(listSearchKeyword.value).trim().toLowerCase() : ''
+		const sourceList = keyword === ''
+			? rawContacts.value
+			: rawContacts.value.filter(c => {
+				const name = c != null && c.name != null ? String(c.name).toLowerCase() : ''
+				const role = c != null && c.role != null ? String(c.role).toLowerCase() : ''
+				return name.indexOf(keyword) >= 0 || role.indexOf(keyword) >= 0
+			})
 		
 		letters.forEach(letter => {
-			const filtered = rawContacts.value.filter(c => c.pinyin === letter)
+			const filtered = sourceList.filter(c => c.pinyin === letter)
 			if (filtered.length > 0) {
 				groups.push({
 					letter: letter,
@@ -262,9 +272,15 @@
 	/**
 	 * 搜索
 	 */
+	function clearLocalSearch() {
+		listSearchKeyword.value = ''
+	}
+
 	function handleSearch() {
+		const kw = listSearchKeyword.value != null ? String(listSearchKeyword.value).trim() : ''
+		const query = kw !== '' ? `?keyword=${encodeURIComponent(kw)}` : ''
 		uni.navigateTo({
-			url: '/pages/common/search'
+			url: '/pages/common/search' + query
 		})
 	}
 </script>
@@ -324,6 +340,12 @@
 		font-size: 14px;
 		margin-left: 8px;
 		color: #1F2329;
+	}
+
+	.search-clear {
+		font-size: 16px;
+		color: #8F959E;
+		padding-left: 8px;
 	}
 
 	.placeholder {

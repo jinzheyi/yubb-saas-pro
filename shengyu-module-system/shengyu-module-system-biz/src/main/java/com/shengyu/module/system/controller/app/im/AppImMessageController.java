@@ -4,6 +4,7 @@ import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageForwardReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageHistoryReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageHistoryRespVO;
@@ -25,9 +26,12 @@ import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.service.im.ImConversationService;
 import com.shengyu.module.system.service.im.ImLocationService;
 import com.shengyu.module.system.service.im.ImMessageService;
+import com.shengyu.module.system.service.im.ImSearchRateLimitService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,6 +42,7 @@ import java.util.List;
 import java.util.Objects;
 
 import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants.TOO_MANY_REQUESTS;
 
 /**
  * 移动端 - IM 消息 Controller
@@ -65,6 +70,9 @@ public class AppImMessageController {
 
     @Resource
     private ImLocationService locationService;
+
+    @Resource
+    private ImSearchRateLimitService searchRateLimitService;
 
     @GetMapping("/page")
     @Operation(summary = "分页查询消息列表")
@@ -165,10 +173,18 @@ public class AppImMessageController {
 
     @GetMapping("/search")
     @Operation(summary = "搜索聊天记录")
-    public CommonResult<PageResult<AppImMessageRespVO>> searchMessages(
+    public ResponseEntity<CommonResult<PageResult<AppImMessageRespVO>>> searchMessages(
             @Valid AppImMessageSearchReqVO searchReqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(messageService.searchMessages(userId, searchReqVO));
+        Long tenantId = TenantContextHolder.getTenantId();
+        ImSearchRateLimitService.CheckResult checkResult =
+                searchRateLimitService.check(tenantId, userId, ImSearchRateLimitService.SCENE_MESSAGE);
+        if (!checkResult.isAllowed()) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", String.valueOf(checkResult.getRetryAfterSeconds()))
+                    .body(CommonResult.error(TOO_MANY_REQUESTS));
+        }
+        return ResponseEntity.ok(success(messageService.searchMessages(userId, searchReqVO)));
     }
 
     @GetMapping("/location-search")

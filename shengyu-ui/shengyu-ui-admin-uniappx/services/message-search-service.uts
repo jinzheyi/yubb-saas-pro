@@ -37,6 +37,7 @@ export type SearchOptions = {
   keyword: string
   chatId?: string
   messageType?: string
+  category?: string
   startTime?: number
   endTime?: number
   pageNo?: number
@@ -58,6 +59,60 @@ export class MessageSearchService {
   
   // 最小搜索关键词长度
   private readonly MIN_KEYWORD_LENGTH = 2
+
+  private formatDateTimeParam(value: number): string {
+    if (!isFinite(value) || value <= 0) {
+      return ''
+    }
+    const ms = value < 100000000000 ? value * 1000 : value
+    const date = new Date(ms)
+    if (isNaN(date.getTime())) {
+      return ''
+    }
+    const yyyy = date.getFullYear().toString()
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const dd = String(date.getDate()).padStart(2, '0')
+    const hh = String(date.getHours()).padStart(2, '0')
+    const mi = String(date.getMinutes()).padStart(2, '0')
+    const ss = String(date.getSeconds()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`
+  }
+
+  private buildSearchQuery(options: SearchOptions): string {
+    const query: string[] = []
+    const keyword = options.keyword != null ? String(options.keyword).trim() : ''
+    query.push(`keyword=${encodeURIComponent(keyword)}`)
+    query.push(`pageNo=${options.pageNo || 1}`)
+    query.push(`pageSize=${options.pageSize || 20}`)
+
+    if (options.chatId != null && String(options.chatId) !== '') {
+      query.push(`chatId=${encodeURIComponent(String(options.chatId))}`)
+    }
+
+    if (options.messageType != null && String(options.messageType) !== '') {
+      query.push(`messageType=${encodeURIComponent(String(options.messageType))}`)
+    }
+
+    if (options.category != null && String(options.category) !== '') {
+      query.push(`category=${encodeURIComponent(String(options.category))}`)
+    }
+
+    if (options.startTime != null) {
+      const startText = this.formatDateTimeParam(options.startTime)
+      if (startText !== '') {
+        query.push(`startTime=${encodeURIComponent(startText)}`)
+      }
+    }
+
+    if (options.endTime != null) {
+      const endText = this.formatDateTimeParam(options.endTime)
+      if (endText !== '') {
+        query.push(`endTime=${encodeURIComponent(endText)}`)
+      }
+    }
+
+    return query.join('&')
+  }
   
   /**
    * 私有构造函数（单例模式）
@@ -108,32 +163,10 @@ export class MessageSearchService {
 			return []
 		}
 		try {
-			const params: any = {
-				keyword: options.keyword,
-				pageNo: options.pageNo || 1,
-				pageSize: options.pageSize || 20
-			}
-
-			if (options.chatId !== null) {
-				params.chatId = options.chatId
-			}
-
-			if (options.messageType !== null) {
-				params.messageType = options.messageType
-			}
-
-			if (options.startTime !== null) {
-				params.startTime = options.startTime
-			}
-
-			if (options.endTime !== null) {
-				params.endTime = options.endTime
-			}
-
+      const query = this.buildSearchQuery(options)
 			const data: any = await request({
-				url: '/system/im/message/search',
-				method: 'GET',
-				params: params
+				url: `/system/im/message/search?${query}`,
+				method: 'GET'
 			})
 			if (data == null) {
 				return []
@@ -154,32 +187,10 @@ export class MessageSearchService {
     callback: (results: SearchResultItem[]) => void
   ): Promise<void> {
     try {
-      const params: any = {
-        keyword: options.keyword,
-        pageNo: options.pageNo || 1,
-        pageSize: options.pageSize || 20
-      }
-      
-      if (options.chatId != null && options.chatId !== '') {
-        params.chatId = options.chatId
-      }
-      
-      if (options.messageType != null && options.messageType !== '') {
-        params.messageType = options.messageType
-      }
-      
-      if (options.startTime != null) {
-        params.startTime = options.startTime
-      }
-      
-      if (options.endTime != null) {
-        params.endTime = options.endTime
-      }
-      
+      const query = this.buildSearchQuery(options)
       const data: any = await request({
-        url: '/system/im/message/search',
-        method: 'GET',
-        params: params
+        url: `/system/im/message/search?${query}`,
+        method: 'GET'
       })
 
       if (data == null) {

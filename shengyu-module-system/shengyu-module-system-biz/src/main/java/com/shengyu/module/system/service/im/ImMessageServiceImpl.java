@@ -2549,14 +2549,18 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
         int pageNo = searchReqVO.getPageNo() != null && searchReqVO.getPageNo() > 0 ? searchReqVO.getPageNo() : 1;
         int pageSize = searchReqVO.getPageSize() != null && searchReqVO.getPageSize() > 0 ? searchReqVO.getPageSize() : 20;
+        if (pageSize > 50) {
+            pageSize = 50;
+        }
+        List<Integer> messageTypeList = resolveSearchMessageTypeList(searchReqVO);
         long offset = (long) (pageNo - 1) * pageSize;
         Long total = chatMessageMapper.countSearchPageByUser(tenantId, userId, searchReqVO.getChatId(), keyword,
-                searchReqVO.getMessageType(), searchReqVO.getStartTime(), searchReqVO.getEndTime());
+                searchReqVO.getMessageType(), messageTypeList, searchReqVO.getStartTime(), searchReqVO.getEndTime());
         if (total == null || total <= 0) {
             return new PageResult<>(Collections.emptyList(), 0L);
         }
         List<ImChatMessageDO> messages = chatMessageMapper.selectSearchPageByUser(tenantId, userId, searchReqVO.getChatId(), keyword,
-                searchReqVO.getMessageType(), searchReqVO.getStartTime(), searchReqVO.getEndTime(), offset, (long) pageSize);
+                searchReqVO.getMessageType(), messageTypeList, searchReqVO.getStartTime(), searchReqVO.getEndTime(), offset, (long) pageSize);
         List<AppImMessageRespVO> respVOList = messages.stream()
                 .filter(Objects::nonNull)
                 .map(message -> {
@@ -2574,6 +2578,24 @@ public class ImMessageServiceImpl implements ImMessageService {
                 }).collect(Collectors.toList());
         fillVoicePlayedFlags(userId, respVOList, searchReqVO.getChatId());
         return new PageResult<>(respVOList, total);
+    }
+
+    private List<Integer> resolveSearchMessageTypeList(AppImMessageSearchReqVO searchReqVO) {
+        if (searchReqVO == null) {
+            return null;
+        }
+        // messageType 精确过滤优先于分类过滤
+        if (searchReqVO.getMessageType() != null) {
+            return null;
+        }
+        String category = StrUtil.trimToEmpty(searchReqVO.getCategory()).toLowerCase();
+        if ("media".equals(category)) {
+            return Arrays.asList(
+                    ImMessageTypeEnum.IMAGE.getType(),
+                    ImMessageTypeEnum.VIDEO.getType(),
+                    ImMessageTypeEnum.FILE.getType());
+        }
+        return null;
     }
 
     /**

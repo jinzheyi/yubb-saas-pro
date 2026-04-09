@@ -13,6 +13,7 @@ import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversa
 import com.shengyu.module.system.service.im.ImBadgeService;
 import com.shengyu.module.system.service.im.ImConversationService;
 import com.shengyu.module.system.service.im.ImConversationSyncRateLimitService;
+import com.shengyu.module.system.service.im.ImSearchRateLimitService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -49,6 +50,9 @@ public class AppImConversationController {
     @Resource
     private ImConversationSyncRateLimitService conversationSyncRateLimitService;
 
+    @Resource
+    private ImSearchRateLimitService searchRateLimitService;
+
     @GetMapping("/list")
     @Operation(summary = "获取会话列表")
     public CommonResult<List<AppImConversationRespVO>> getConversationList() {
@@ -58,10 +62,18 @@ public class AppImConversationController {
 
     @GetMapping("/search")
     @Operation(summary = "搜索会话（群聊/单聊）")
-    public CommonResult<PageResult<AppImConversationRespVO>> searchConversations(
+    public ResponseEntity<CommonResult<PageResult<AppImConversationRespVO>>> searchConversations(
             @Valid AppImConversationSearchReqVO searchReqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        return success(conversationService.searchConversations(userId, searchReqVO));
+        Long tenantId = TenantContextHolder.getTenantId();
+        ImSearchRateLimitService.CheckResult checkResult =
+                searchRateLimitService.check(tenantId, userId, ImSearchRateLimitService.SCENE_CONVERSATION);
+        if (!checkResult.isAllowed()) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", String.valueOf(checkResult.getRetryAfterSeconds()))
+                    .body(CommonResult.error(TOO_MANY_REQUESTS));
+        }
+        return ResponseEntity.ok(success(conversationService.searchConversations(userId, searchReqVO)));
     }
 
     @GetMapping("/sync")

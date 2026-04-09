@@ -86,6 +86,13 @@ public interface AdminUserMapper extends BaseMapperX<AdminUserDO> {
         return selectList(new LambdaQueryWrapperX<AdminUserDO>().like(AdminUserDO::getNickname, nickname));
     }
 
+    default List<AdminUserDO> selectListByNicknameLikeLimit(String nickname, Integer limit) {
+        int finalLimit = limit != null && limit > 0 ? Math.min(limit, 200) : 50;
+        return selectList(new LambdaQueryWrapperX<AdminUserDO>()
+                .likeIfPresent(AdminUserDO::getNickname, nickname)
+                .last("LIMIT " + finalLimit));
+    }
+
     default List<AdminUserDO> selectListByStatus(Integer status) {
         return selectList(AdminUserDO::getStatus, status);
     }
