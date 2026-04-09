@@ -710,15 +710,13 @@ export class ConversationService {
    */
   public async deleteConversation(chatId: string): Promise<boolean> {
     try {
+      const chatIdStr = chatId != null ? (chatId as any).toString() : ''
       await request({
-        url: '/system/im/conversation/delete',
-        method: 'DELETE',
-        params: {
-          chatId: chatId
-        }
+        url: `/system/im/conversation/delete?chatId=${chatIdStr}`,
+        method: 'DELETE'
       })
 
-      const index = this.conversations.findIndex(c => c.chatId === chatId || ((c as any).id === chatId))
+      const index = this.conversations.findIndex(c => c.chatId === chatIdStr || ((c as any).id === chatIdStr))
       if (index !== -1) {
         this.conversations.splice(index, 1)
         this.notifyUpdateListeners()

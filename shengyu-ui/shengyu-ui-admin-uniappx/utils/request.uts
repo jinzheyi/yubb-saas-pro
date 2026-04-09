@@ -260,6 +260,9 @@ function responseInterceptor(response: any): any {
 	}
 	// 其他 HTTP 错误
 	else {
+		if (response.statusCode == 429) {
+			return Promise.reject(response)
+		}
 		uni.showToast({
 			title: '网络请求失败',
 			icon: 'none'
