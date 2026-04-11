@@ -86,7 +86,7 @@ public class ImGlobalSearchService {
                 facets.setAll(messageTotal);
                 total = messageTotal;
                 pageList = safeList(messagePage.getList()).stream()
-                        .map(message -> buildMessageItem(message, keyword, false))
+                        .map(message -> buildMessageItem(message, keyword, false, userId))
                         .collect(Collectors.toList());
                 pageList.sort(buildComparator(sort));
                 break;
@@ -97,7 +97,7 @@ public class ImGlobalSearchService {
                 facets.setAll(mediaTotal);
                 total = mediaTotal;
                 pageList = safeList(mediaPage.getList()).stream()
-                        .map(message -> buildMessageItem(message, keyword, true))
+                        .map(message -> buildMessageItem(message, keyword, true, userId))
                         .collect(Collectors.toList());
                 pageList.sort(buildComparator(sort));
                 break;
@@ -122,7 +122,7 @@ public class ImGlobalSearchService {
                 List<AppImGlobalSearchRespVO.Item> merged = new ArrayList<>();
                 safeList(allContactsWindow.getList()).forEach(contact -> merged.add(buildContactItem(contact, keyword)));
                 safeList(allGroupsWindow.getList()).forEach(group -> merged.add(buildGroupItem(group, keyword)));
-                safeList(allMessagesWindow.getList()).forEach(message -> merged.add(buildMessageItem(message, keyword, false)));
+                safeList(allMessagesWindow.getList()).forEach(message -> merged.add(buildMessageItem(message, keyword, false, userId)));
 
                 merged.sort(buildComparator(sort));
                 total = allContactCount + allGroupCount + allMessageCount;
@@ -307,7 +307,7 @@ public class ImGlobalSearchService {
         return item;
     }
 
-    private AppImGlobalSearchRespVO.Item buildMessageItem(AppImMessageRespVO message, String keyword, boolean forceMediaType) {
+    private AppImGlobalSearchRespVO.Item buildMessageItem(AppImMessageRespVO message, String keyword, boolean forceMediaType, Long currentUserId) {
         AppImGlobalSearchRespVO.Item item = new AppImGlobalSearchRespVO.Item();
         String messageId = message != null && message.getId() != null ? String.valueOf(message.getId()) : "0";
         String chatId = message != null && message.getChatId() != null ? String.valueOf(message.getChatId()) : "0";
@@ -336,11 +336,29 @@ public class ImGlobalSearchService {
         item.setMessageId(messageId);
         item.setSequence(sequence);
 
+        Integer conversationType = (message != null && message.getGroupId() != null) ? 2 : 1;
+        Long targetId;
+        if (conversationType == 2) {
+            targetId = message != null ? message.getGroupId() : null;
+        } else {
+            Long senderId = message != null ? message.getSenderId() : null;
+            Long receiverId = message != null ? message.getReceiverId() : null;
+            if (currentUserId != null && senderId != null && senderId.equals(currentUserId)) {
+                targetId = receiverId != null ? receiverId : senderId;
+            } else {
+                targetId = senderId != null ? senderId : receiverId;
+            }
+        }
+
         Map<String, Object> meta = new HashMap<>();
         meta.put("messageType", messageType);
         meta.put("senderId", message != null ? message.getSenderId() : null);
         meta.put("senderName", message != null ? message.getSenderNickname() : null);
         meta.put("senderAvatar", message != null ? message.getSenderAvatar() : null);
+        meta.put("conversationType", conversationType);
+        meta.put("targetId", targetId);
+        meta.put("conversationAvatar", message != null ? message.getConversationAvatar() : null);
+        meta.put("targetAvatar", message != null ? message.getConversationAvatar() : null);
         item.setMeta(meta);
         return item;
     }

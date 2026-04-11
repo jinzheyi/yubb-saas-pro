@@ -64,7 +64,8 @@
 				<view class="result-list" v-if="resultList.length > 0">
 					<view class="result-item" v-for="item in resultList" :key="item.uniqueId" @click="handleResultClick(item)">
 						<view class="result-avatar" :style="{ backgroundColor: item.avatarBg }">
-							<text v-if="item.avatarIcon" class="iconfont avatar-icon">{{ item.avatarIcon }}</text>
+							<image v-if="item.avatarUrl" class="avatar-image" :src="item.avatarUrl" mode="aspectFill" @error="handleResultAvatarError(item)" />
+							<text v-else-if="item.avatarIcon" class="iconfont avatar-icon">{{ item.avatarIcon }}</text>
 							<text v-else class="avatar-text">{{ item.avatarText }}</text>
 						</view>
 						<view class="result-main">
@@ -101,7 +102,7 @@
 
 <script setup lang="uts">
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
-	import { getAvatarText, getGroupAvatarColor, getUserAvatarColor } from '../../utils/avatar.uts'
+	import { getAvatarText, getConversationAvatarColor, getGroupAvatarColor, getUserAvatarColor } from '../../utils/avatar.uts'
 	import { messageSearchService, type SearchResultItem } from '../../services/message-search-service.uts'
 	import { searchContactPage } from '../../api/contact.uts'
 	import { searchConversations } from '../../api/conversation.uts'
@@ -141,6 +142,7 @@
 		chatId: string
 		messageId: string
 		sequence: string
+		avatarUrl: string
 		avatarText: string
 		avatarBg: string
 		avatarIcon: string
@@ -683,7 +685,7 @@
 		const subTitle = safeString(raw && raw.subTitle)
 		const snippet = normalizeSnippet(type, safeString(raw && raw.snippet), raw && raw.meta)
 		const time = parseTimeMs(raw && raw.time)
-		const avatar = buildAvatar(type, id, title)
+		const avatar = buildAvatar(type, chatId !== '' ? chatId : id, title, raw && raw.meta, raw)
 		return {
 			uniqueId: `${type}:${id}:${chatId}:${messageId}`,
 			id: id,
@@ -695,6 +697,7 @@
 			chatId: chatId,
 			messageId: messageId,
 			sequence: sequence,
+			avatarUrl: avatar.url,
 			avatarText: avatar.text,
 			avatarBg: avatar.bg,
 			avatarIcon: avatar.icon,
@@ -706,7 +709,7 @@
 		const userId = raw && raw.id != null ? String(raw.id) : (raw && raw.userId != null ? String(raw.userId) : '0')
 		const title = raw && (raw.remarkName || raw.nickname) ? String(raw.remarkName || raw.nickname) : '未知用户'
 		const sub = raw && raw.deptName ? String(raw.deptName) : (raw && raw.postName ? String(raw.postName) : '')
-		const avatar = buildAvatar('contact', userId, title)
+		const avatar = buildAvatar('contact', userId, title, raw, raw)
 		return {
 			uniqueId: `contact:${userId}`,
 			id: userId,
@@ -718,6 +721,7 @@
 			chatId: '',
 			messageId: '',
 			sequence: '',
+			avatarUrl: avatar.url,
 			avatarText: avatar.text,
 			avatarBg: avatar.bg,
 			avatarIcon: avatar.icon,
@@ -731,7 +735,7 @@
 		const members = raw && raw.groupMemberCount != null ? Number(raw.groupMemberCount) : 0
 		const snippet = raw && raw.lastMessageContent ? String(raw.lastMessageContent) : `${members}人`
 		const time = parseTimeMs(raw && raw.lastMessageTime)
-		const avatar = buildAvatar('group', chatId, title)
+		const avatar = buildAvatar('group', chatId, title, raw, raw)
 		return {
 			uniqueId: `group:${chatId}`,
 			id: chatId,
@@ -743,6 +747,7 @@
 			chatId: chatId,
 			messageId: '',
 			sequence: '',
+			avatarUrl: avatar.url,
 			avatarText: avatar.text,
 			avatarBg: avatar.bg,
 			avatarIcon: avatar.icon,
@@ -760,7 +765,7 @@
 		const chatId = safeString(raw && raw.chatId)
 		const messageId = safeString(raw && raw.messageId)
 		const sequence = safeString(raw && raw.sequence)
-		const avatar = buildAvatar(type, chatId, title)
+		const avatar = buildAvatar(type, chatId, title, raw && raw.raw ? raw.raw : null, raw && raw.raw ? raw.raw : null)
 		return {
 			uniqueId: `${type}:${messageId}:${chatId}`,
 			id: messageId,
@@ -772,6 +777,7 @@
 			chatId: chatId,
 			messageId: messageId,
 			sequence: sequence,
+			avatarUrl: avatar.url,
 			avatarText: avatar.text,
 			avatarBg: avatar.bg,
 			avatarIcon: avatar.icon,
@@ -813,34 +819,89 @@
 		return text
 	}
 
-	type AvatarState = { text: string, bg: string, icon: string }
+	type AvatarState = { url: string, text: string, bg: string, icon: string }
 
-	function buildAvatar(type: string, id: string, title: string): AvatarState {
+	function normalizeAvatarUrl(value: any): string {
+		if (value == null) {
+			return ''
+		}
+		const text = String(value).trim()
+		if (text === '' || text === 'null' || text === 'undefined') {
+			return ''
+		}
+		return text
+	}
+
+	function resolveMetaInt(meta: any, key: string): number {
+		if (meta == null || key === '') {
+			return 0
+		}
+		const raw = meta[key]
+		if (raw == null) {
+			return 0
+		}
+		const n = Number(raw)
+		if (isNaN(n)) {
+			return 0
+		}
+		return Math.floor(n)
+	}
+
+	function resolveConversationType(meta: any, raw: any): number {
+		const typeFromMeta = resolveMetaInt(meta, 'conversationType')
+		if (typeFromMeta === 1 || typeFromMeta === 2) {
+			return typeFromMeta
+		}
+		const groupIdRaw = raw && raw.groupId != null ? String(raw.groupId).trim() : ''
+		if (groupIdRaw !== '' && groupIdRaw !== '0' && groupIdRaw !== 'null' && groupIdRaw !== 'undefined') {
+			return 2
+		}
+		return 1
+	}
+
+	function resolveAvatarUrlByType(type: string, meta: any, raw: any): string {
+		if (type === 'contact') {
+			return normalizeAvatarUrl(raw && (raw.avatar || raw.userAvatar)) || normalizeAvatarUrl(meta && meta.avatar)
+		}
+		if (type === 'group') {
+			return normalizeAvatarUrl(raw && (raw.targetAvatar || raw.avatar)) || normalizeAvatarUrl(meta && meta.targetAvatar)
+		}
+		const conversationAvatar =
+			normalizeAvatarUrl(raw && (raw.conversationAvatar || raw.targetAvatar)) ||
+			normalizeAvatarUrl(meta && (meta.conversationAvatar || meta.targetAvatar))
+		if (conversationAvatar !== '') {
+			return conversationAvatar
+		}
+		return normalizeAvatarUrl(raw && raw.senderAvatar) || normalizeAvatarUrl(meta && meta.senderAvatar)
+	}
+
+	function buildAvatar(type: string, id: string, title: string, meta: any, raw: any): AvatarState {
+		const avatarUrl = resolveAvatarUrlByType(type, meta, raw)
+		const conversationType = resolveConversationType(meta, raw)
+		const targetId = safeString(meta && meta.targetId) || safeString(raw && raw.groupId)
+		const avatarId = targetId !== '' && targetId !== '0' ? targetId : (id !== '' ? id : title)
 		if (type === 'contact') {
 			return {
+				url: avatarUrl,
 				text: getAvatarText(title),
-				bg: getUserAvatarColor(id),
+				bg: getUserAvatarColor(avatarId),
 				icon: ''
 			}
 		}
-		if (type === 'group') {
+		if (type === 'group' || conversationType === 2) {
+			const groupText = getAvatarText(title !== '' ? title : (avatarId !== '' ? avatarId : '群'))
 			return {
-				text: '',
-				bg: getGroupAvatarColor(id),
-				icon: '\ue616'
-			}
-		}
-		if (type === 'media') {
-			return {
-				text: '',
-				bg: '#2f9e44',
-				icon: '\uea8f'
+				url: avatarUrl,
+				text: groupText,
+				bg: getGroupAvatarColor(avatarId),
+				icon: ''
 			}
 		}
 		return {
-			text: '',
-			bg: '#1677FF',
-			icon: '\ue616'
+			url: avatarUrl,
+			text: getAvatarText(title !== '' ? title : avatarId),
+			bg: getConversationAvatarColor(1, avatarId),
+			icon: ''
 		}
 	}
 
@@ -1013,6 +1074,17 @@
 				: `/pages/message/chat?chatId=${encodeIdParam(chatId)}&entryMode=anchor&anchorMessageId=${encodeURIComponent(messageId)}&messageId=${encodeURIComponent(messageId)}&highlight=true`
 			uni.navigateTo({ url: url })
 			return
+		}
+	}
+
+	function handleResultAvatarError(item: ResultUiItem): void {
+		try {
+			if (item == null) {
+				return
+			}
+			item.avatarUrl = ''
+		} catch (e) {
+			// ignore
 		}
 	}
 
@@ -1256,6 +1328,12 @@
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
+	}
+
+	.avatar-image {
+		width: 44px;
+		height: 44px;
+		border-radius: 8px;
 	}
 
 	.avatar-icon {
