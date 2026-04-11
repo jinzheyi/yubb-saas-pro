@@ -580,6 +580,7 @@ export class MessageBuilder {
     }
     try {
       header.extra = JSON.stringify({
+        clientMessageId: header.messageId,
         latitude: latitude,
         longitude: longitude,
         address: address,

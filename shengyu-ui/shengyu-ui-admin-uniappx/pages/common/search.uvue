@@ -104,9 +104,7 @@
 <script setup lang="uts">
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { getAvatarText, getConversationAvatarColor, getGroupAvatarColor, getUserAvatarColor } from '../../utils/avatar.uts'
-	import { messageSearchService, type SearchResultItem } from '../../services/message-search-service.uts'
-	import { searchContactPage } from '../../api/contact.uts'
-	import { searchConversations } from '../../api/conversation.uts'
+	import { messageSearchService } from '../../services/message-search-service.uts'
 	import { getHotSearch, searchGlobal } from '../../api/search.uts'
 	import { getJsonObject, setJsonObject, remove } from '../../utils/storage.uts'
 	import { encodeIdParam } from '../../utils/id-param.uts'
@@ -203,7 +201,6 @@
 	let searchTimer = 0
 	let hotSearchSeq = 0
 	let currentPageNo = 1
-	let globalApiAvailable = true
 	let lastFirstPageKey = ''
 	let lastFirstPageAt = 0
 	let lastFirstPageResp: SearchResponse | null = null
@@ -404,19 +401,7 @@
 			isLoadingMore.value = true
 		}
 		try {
-			let response: SearchResponse
-			if (globalApiAvailable) {
-				try {
-					response = await fetchByGlobalApi(kw, activeTab.value, pageNo, PAGE_SIZE)
-				} catch (e) {
-					if (shouldDisableGlobalApi(e)) {
-						globalApiAvailable = false
-					}
-					response = await fetchByFallback(kw, activeTab.value, pageNo, PAGE_SIZE)
-				}
-			} else {
-				response = await fetchByFallback(kw, activeTab.value, pageNo, PAGE_SIZE)
-			}
+			const response = await fetchByGlobalApi(kw, activeTab.value, pageNo, PAGE_SIZE)
 			if (seq !== requestSeq) {
 				return
 			}
@@ -458,139 +443,6 @@
 		return resp
 	}
 
-	async function fetchByFallback(kw: string, tab: string, pageNo: number, pageSize: number): Promise<SearchResponse> {
-		if (tab === 'contact') {
-			const data = await searchContactPage(kw, pageNo, pageSize) as any
-			const source = Array.isArray(data) ? data : (data && Array.isArray(data.list) ? data.list : [])
-			const mapped = (source as any[]).map(it => mapContactItem(it))
-			const totalCount = data && data.total != null ? Number(data.total) : mapped.length
-			return {
-				list: mapped,
-				total: totalCount,
-				hasMore: pageNo * pageSize < totalCount,
-				facets: {
-					all: totalCount,
-					message: 0,
-					contact: totalCount,
-					group: 0,
-					media: 0
-				}
-			}
-		}
-
-		if (tab === 'group') {
-			const data = await searchConversations(kw, 2, pageNo, pageSize) as any
-			const source = data && Array.isArray(data.list) ? data.list : (Array.isArray(data) ? data : [])
-			const mapped = (source as any[]).map(it => mapGroupItem(it))
-			const totalCount = data && data.total != null ? Number(data.total) : (pageNo === 1 ? mapped.length : pageNo * pageSize)
-			const more = data && data.total != null ? pageNo * pageSize < Number(data.total) : mapped.length >= pageSize
-			return {
-				list: mapped,
-				total: totalCount,
-				hasMore: more,
-				facets: {
-					all: totalCount,
-					message: 0,
-					contact: 0,
-					group: totalCount,
-					media: 0
-				}
-			}
-		}
-
-		if (tab === 'message') {
-			const rows = await messageSearchService.searchMessagesAsync({
-				keyword: kw,
-				pageNo: pageNo,
-				pageSize: pageSize
-			})
-			const mapped = rows.map(it => mapSearchMessageItem(it, false))
-			const more = mapped.length >= pageSize
-			const totalCount = pageNo === 1 ? mapped.length : pageNo * pageSize
-			return {
-				list: mapped,
-				total: totalCount,
-				hasMore: more,
-				facets: {
-					all: totalCount,
-					message: totalCount,
-					contact: 0,
-					group: 0,
-					media: 0
-				}
-			}
-		}
-
-		if (tab === 'media') {
-			const rows = await messageSearchService.searchMessagesAsync({
-				keyword: kw,
-				category: 'media',
-				pageNo: pageNo,
-				pageSize: pageSize
-			})
-			const mapped = rows.map(it => mapSearchMessageItem(it, true))
-			const more = mapped.length >= pageSize
-			const totalCount = pageNo === 1 ? mapped.length : pageNo * pageSize
-			return {
-				list: mapped,
-				total: totalCount,
-				hasMore: more,
-				facets: {
-					all: totalCount,
-					message: 0,
-					contact: 0,
-					group: 0,
-					media: totalCount
-				}
-			}
-		}
-
-		if (pageNo > 1) {
-			return {
-				list: [],
-				total: resultList.value.length,
-				hasMore: false,
-				facets: facets.value
-			}
-		}
-
-		const tuple = await Promise.all([
-			searchContactPage(kw, 1, 8),
-			searchConversations(kw, 2, 1, 8),
-			messageSearchService.searchMessagesAsync({ keyword: kw, pageNo: 1, pageSize: 16 })
-		])
-		const contactRows = Array.isArray(tuple[0]) ? tuple[0] : (tuple[0] && Array.isArray(tuple[0].list) ? tuple[0].list : [])
-		const groupRows = tuple[1] && Array.isArray(tuple[1].list) ? tuple[1].list : (Array.isArray(tuple[1]) ? tuple[1] : [])
-		const messageRows = Array.isArray(tuple[2]) ? tuple[2] : []
-
-		let merged: ResultUiItem[] = []
-		merged = merged.concat((contactRows as any[]).slice(0, 6).map(it => mapContactItem(it)))
-		merged = merged.concat((groupRows as any[]).slice(0, 6).map(it => mapGroupItem(it)))
-		merged = merged.concat((messageRows as SearchResultItem[]).slice(0, 12).map(it => mapSearchMessageItem(it, false)))
-		merged.sort((a, b) => {
-			if (a.time !== b.time) {
-				return b.time - a.time
-			}
-			return a.uniqueId < b.uniqueId ? 1 : -1
-		})
-
-		const contactCount = (contactRows as any[]).length
-		const groupCount = tuple[1] && tuple[1].total != null ? Number(tuple[1].total) : (groupRows as any[]).length
-		const messageCount = (messageRows as any[]).length
-		return {
-			list: merged,
-			total: merged.length,
-			hasMore: false,
-			facets: {
-				all: merged.length,
-				message: messageCount,
-				contact: contactCount,
-				group: groupCount,
-				media: 0
-			}
-		}
-	}
-
 	function normalizeFacets(raw: any): FacetsState {
 		return {
 			all: raw && raw.all != null ? Number(raw.all) : 0,
@@ -599,26 +451,6 @@
 			group: raw && raw.group != null ? Number(raw.group) : 0,
 			media: raw && raw.media != null ? Number(raw.media) : 0
 		}
-	}
-
-	function shouldDisableGlobalApi(error: any): boolean {
-		try {
-			const statusCode = error && error.statusCode != null ? Number(error.statusCode) : 0
-			if (statusCode === 404 || statusCode === 405 || statusCode === 501) {
-				return true
-			}
-			const code = error && error.code != null ? Number(error.code) : 0
-			if (code === 404 || code === 405 || code === 501) {
-				return true
-			}
-			const msg = error && error.msg != null ? String(error.msg) : (error && error.message != null ? String(error.message) : '')
-			if (msg.indexOf('404') >= 0 && msg.indexOf('/system/im/search/global') >= 0) {
-				return true
-			}
-		} catch (e) {
-			// ignore
-		}
-		return false
 	}
 
 	function mergeResultItems(existing: ResultUiItem[], next: ResultUiItem[]): ResultUiItem[] {
@@ -638,18 +470,6 @@
 			out.push(item)
 		}
 		return out
-	}
-
-	function slicePage<T>(list: T[], pageNo: number, pageSize: number): T[] {
-		if (list.length === 0) {
-			return []
-		}
-		const from = (pageNo - 1) * pageSize
-		if (from >= list.length) {
-			return []
-		}
-		const to = Math.min(from + pageSize, list.length)
-		return list.slice(from, to)
 	}
 
 	function safeString(value: any): string {
@@ -706,90 +526,6 @@
 			avatarBg: avatar.bg,
 			avatarIcon: avatar.icon,
 			meta: raw && raw.meta ? raw.meta : null
-		}
-	}
-
-	function mapContactItem(raw: any): ResultUiItem {
-		const userId = raw && raw.id != null ? String(raw.id) : (raw && raw.userId != null ? String(raw.userId) : '0')
-		const title = raw && (raw.remarkName || raw.nickname) ? String(raw.remarkName || raw.nickname) : '未知用户'
-		const sub = raw && raw.deptName ? String(raw.deptName) : (raw && raw.postName ? String(raw.postName) : '')
-		const avatar = buildAvatar('contact', userId, title, raw, raw)
-		return {
-			uniqueId: `contact:${userId}`,
-			id: userId,
-			type: 'contact',
-			typeLabel: '联系人',
-			title: title,
-			subTitle: sub,
-			snippet: sub,
-			time: 0,
-			chatId: '',
-			messageId: '',
-			sequence: '',
-			avatarUrl: avatar.url,
-			avatarText: avatar.text,
-			avatarBg: avatar.bg,
-			avatarIcon: avatar.icon,
-			meta: raw
-		}
-	}
-
-	function mapGroupItem(raw: any): ResultUiItem {
-		const chatId = raw && raw.chatId != null ? String(raw.chatId) : '0'
-		const title = raw && raw.targetName ? String(raw.targetName) : '群聊'
-		const members = raw && raw.groupMemberCount != null ? Number(raw.groupMemberCount) : 0
-		const snippet = raw && raw.lastMessageContent ? String(raw.lastMessageContent) : `${members}人`
-		const time = parseTimeMs(raw && raw.lastMessageTime)
-		const avatar = buildAvatar('group', chatId, title, raw, raw)
-		return {
-			uniqueId: `group:${chatId}`,
-			id: chatId,
-			type: 'group',
-			typeLabel: '群聊',
-			title: title,
-			subTitle: members > 0 ? `${members}人` : '群聊',
-			snippet: snippet,
-			time: time,
-			chatId: chatId,
-			messageId: '',
-			sequence: '',
-			avatarUrl: avatar.url,
-			avatarText: avatar.text,
-			avatarBg: avatar.bg,
-			avatarIcon: avatar.icon,
-			meta: raw
-		}
-	}
-
-	function mapSearchMessageItem(raw: SearchResultItem, mediaOnly: boolean): ResultUiItem {
-		const messageType = safeString(raw && raw.type)
-		const isMedia = messageType === '2' || messageType === '4' || messageType === '5'
-		const type = mediaOnly || isMedia ? 'media' : 'message'
-		const title = safeString(raw && raw.conversationName)
-		const sub = safeString(raw && raw.senderName)
-		const snippet = normalizeSnippet(type, safeString(raw && raw.content), raw && raw.raw)
-		const typeLabel = buildTypeLabel(type, raw && raw.raw ? raw.raw : null)
-		const chatId = safeString(raw && raw.chatId)
-		const messageId = safeString(raw && raw.messageId)
-		const sequence = safeString(raw && raw.sequence)
-		const avatar = buildAvatar(type, chatId, title, raw && raw.raw ? raw.raw : null, raw && raw.raw ? raw.raw : null)
-		return {
-			uniqueId: `${type}:${messageId}:${chatId}`,
-			id: messageId,
-			type: type,
-			typeLabel: typeLabel,
-			title: title,
-			subTitle: sub,
-			snippet: snippet,
-			time: raw && raw.timestamp != null ? Number(raw.timestamp) : 0,
-			chatId: chatId,
-			messageId: messageId,
-			sequence: sequence,
-			avatarUrl: avatar.url,
-			avatarText: avatar.text,
-			avatarBg: avatar.bg,
-			avatarIcon: avatar.icon,
-			meta: raw && raw.raw ? raw.raw : null
 		}
 	}
 

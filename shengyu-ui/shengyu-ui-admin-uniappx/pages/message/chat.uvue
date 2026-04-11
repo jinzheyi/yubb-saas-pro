@@ -25,7 +25,7 @@
 		</view>
 
 		<!-- 聊天内容区域 -->
-		<scroll-view class="chat-content" :class="{ 'chat-content-multi-select': multiSelectMode }" scroll-y="true" direction="vertical" refresher-enabled="true" :refresher-triggered="historyRefresherTriggered" refresher-threshold="60" :scroll-into-view="lastMessageId" show-scrollbar="false" @refresherrefresh="handleHistoryRefresher" @scroll="handleChatScroll" @scrolltoupper="handleChatScrollToUpper" upper-threshold="80" @scrolltolower="handleChatScrollToLower" lower-threshold="80">
+		<scroll-view class="chat-content" :class="{ 'chat-content-multi-select': multiSelectMode }" scroll-y="true" direction="vertical" refresher-enabled="true" :refresher-triggered="historyRefresherTriggered" :refresher-threshold="60" :scroll-into-view="lastMessageId" show-scrollbar="false" @refresherrefresh="handleHistoryRefresher" @scroll="handleChatScroll" @scrolltoupper="handleChatScrollToUpper" :upper-threshold="80" @scrolltolower="handleChatScrollToLower" :lower-threshold="80">
 			<!-- 水印层 -->
 			<view class="watermark-layer">
 				<view v-for="i in 12" :key="i" class="watermark-item">
@@ -136,7 +136,7 @@
 										<text class="location-name">{{ msg.locationName }}</text>
 										<text class="location-address">{{ msg.address }}</text>
 									</view>
-									<image class="location-map" src="/static/images/chat/map-placeholder.png" mode="aspectFill" />
+									<image v-if="msg.locationMapUrl" class="location-map" :src="msg.locationMapUrl" mode="aspectFill" />
 								</view>
 
 								<!-- 名片消息 -->
@@ -1332,6 +1332,7 @@
 		locationName ?: string;
 		latitude ?: number;
 		longitude ?: number;
+		locationMapUrl ?: string;
 		contactUserId ?: string;
 		contactDisplayName ?: string;
 		contactDeptName ?: string;
@@ -2172,6 +2173,10 @@
 			if (longitude !== null) {
 				uiMessage.longitude = longitude
 			}
+			const mapUrl = resolveLocationMapUrl(parsed)
+			if (mapUrl !== '') {
+				uiMessage.locationMapUrl = mapUrl
+			}
 			return
 		}
 		const text = parsed != null ? String(parsed) : ''
@@ -2179,6 +2184,44 @@
 			uiMessage.address = text
 			uiMessage.locationName = text
 		}
+	}
+
+	function resolveLocationMapUrl(raw: any): string {
+		try {
+			if (raw == null || typeof raw !== 'object') {
+				return ''
+			}
+			const candidates = [
+				(raw as any).mapUrl,
+				(raw as any).staticMapUrl,
+				(raw as any).snapshot,
+				(raw as any).cover,
+				(raw as any).thumbnail,
+				(raw as any).thumbUrl,
+				(raw as any).imageUrl,
+				(raw as any).image
+			]
+			for (let i = 0; i < candidates.length; i++) {
+				const val = candidates[i]
+				if (val == null) {
+					continue
+				}
+				const text = String(val).trim()
+				if (text !== '' && text !== 'null' && text !== 'undefined') {
+					return text
+				}
+			}
+			const nested = (raw as any).map
+			if (nested != null && typeof nested === 'object') {
+				const nestedUrl = resolveLocationMapUrl(nested)
+				if (nestedUrl !== '') {
+					return nestedUrl
+				}
+			}
+		} catch (e) {
+			// ignore
+		}
+		return ''
 	}
 
 	function applyContactCardFields(uiMessage : MessageItem, rawContent : any, extra ?: any) : void {
@@ -3862,22 +3905,26 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					if (activeChatId && activeChatId !== '' && activeChatId !== '0') {
 						candidateChatIds.push(activeChatId)
 					}
-					let hit: any = null
-					for (let i = 0; i < candidateChatIds.length; i++) {
-						const cached = messageService.getMessages(candidateChatIds[i]) as any[]
-						hit = cached && cached.length > 0
-							? cached.find((m: any) => m && (m.messageId === resolvedMessageId || (previousMessageId !== '' && m.messageId === previousMessageId)))
-							: null
-						if (hit != null) {
-							break
+						let hit: any = null
+						for (let i = 0; i < candidateChatIds.length; i++) {
+							const cached = messageService.getMessages(candidateChatIds[i]) as any[]
+							hit = cached && cached.length > 0
+								? cached.find((m: any) => m && (m.messageId === resolvedMessageId || (previousMessageId !== '' && m.messageId === previousMessageId)))
+								: null
+							if (hit != null) {
+								break
+							}
 						}
+						if (hit && hit.sequence != null && hit.sequence !== '') {
+							nextMsg.sequence = String(hit.sequence)
+						}
+						if (hit) {
+							applyLocationFields(nextMsg as MessageItem, (hit as any).content)
+							applyLocationFields(nextMsg as MessageItem, (hit as any).extra)
+						}
+					} catch (e) {
+						// ignore
 					}
-					if (hit && hit.sequence != null && hit.sequence !== '') {
-						nextMsg.sequence = String(hit.sequence)
-					}
-				} catch (e) {
-					// ignore
-				}
 				messages.value.splice(idx, 1, nextMsg as MessageItem)
 				// 群聊自发消息确认后，在数据层触发已读回执 summary 拉取（不在模板渲染中发网络请求）
 				try {
@@ -6705,7 +6752,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		const safeAddress = address !== '' ? address : (locationName !== '' ? locationName : '位置')
 		const safeName = locationName !== '' ? locationName : safeAddress
 		const safeProvider = provider !== '' ? provider : 'tencent'
-		const message = messageService.sendLocationMessage(
+		void messageService.sendLocationMessage(
 			getReceiverIdForMessage(),
 			getGroupIdForMessage(),
 			latitude,
@@ -6714,26 +6761,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			safeName,
 			safeProvider
 		)
-		const uiMessage = {
-			id: message.id.toString(),
-			messageId: message.messageId,
-			senderId: message.senderId.toString(),
-			receiverId: message.receiverId.toString(),
-			type: 'location',
-			content: safeAddress,
-			address: safeAddress,
-			locationName: safeName,
-			latitude: latitude,
-			longitude: longitude,
-			isSelf: true,
-			time: new Date(message.timestamp).toLocaleString(),
-			timestamp: message.timestamp,
-			showTime: true,
-			avatarText: message.avatarText,
-			avatarBg: message.avatarBg,
-			status: message.status
-		} as MessageItem
-		messages.value.push(uiMessage)
 		showPlusMenu.value = false
 		setTimeout(() => {
 			scrollToBottom()

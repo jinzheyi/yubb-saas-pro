@@ -33,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
@@ -61,6 +62,11 @@ public class ImMessageServiceImpl implements ImMessageService {
     private static final int WINDOW_AFTER_LIMIT_MAX = 20;
     private static final int HISTORY_LIMIT_DEFAULT = 30;
     private static final int HISTORY_LIMIT_MAX = 50;
+    private static final int LOCATION_MAP_DEFAULT_ZOOM = 16;
+    private static final String LOCATION_MAP_DEFAULT_SIZE = "640*320";
+    private static final String LOCATION_MAP_DEFAULT_SCALE = "2";
+    private static final String LOCATION_MAP_DEFAULT_MARKER_COLOR = "0x2F88FF";
+    private static final String LOCATION_MAP_DEFAULT_MARKER_SIZE = "large";
 
     private static class MentionParseResult {
         private final boolean atAll;
@@ -238,6 +244,12 @@ public class ImMessageServiceImpl implements ImMessageService {
 
     @Value("${im.recall.admin-window-seconds:86400}")
     private long recallAdminWindowSeconds;
+
+    @Value("${im.location.tencent-lbs-key:}")
+    private String tencentLbsKey;
+
+    @Value("${im.location.static-map-url:https://apis.map.qq.com/ws/staticmap/v2/}")
+    private String locationStaticMapUrl;
 
     @Resource
     private ImChatMessageMapper chatMessageMapper;
@@ -2756,7 +2768,33 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (StrUtil.isNotBlank(provider)) {
             normalized.set("provider", provider);
         }
+        String mapUrl = merged.getStr("mapUrl", "");
+        if (StrUtil.isBlank(mapUrl)) {
+            mapUrl = buildTencentStaticMapUrl(latitude, longitude);
+        }
+        if (StrUtil.isNotBlank(mapUrl)) {
+            normalized.set("mapUrl", mapUrl);
+        }
         return normalized;
+    }
+
+    private String buildTencentStaticMapUrl(Double latitude, Double longitude) {
+        if (latitude == null || longitude == null || StrUtil.isBlank(tencentLbsKey)) {
+            return "";
+        }
+        String marker = "size:" + LOCATION_MAP_DEFAULT_MARKER_SIZE
+                + "|color:" + LOCATION_MAP_DEFAULT_MARKER_COLOR
+                + "|" + latitude + "," + longitude;
+        return UriComponentsBuilder.fromHttpUrl(locationStaticMapUrl)
+                .queryParam("center", latitude + "," + longitude)
+                .queryParam("zoom", LOCATION_MAP_DEFAULT_ZOOM)
+                .queryParam("size", LOCATION_MAP_DEFAULT_SIZE)
+                .queryParam("scale", LOCATION_MAP_DEFAULT_SCALE)
+                .queryParam("markers", marker)
+                .queryParam("key", tencentLbsKey)
+                .build()
+                .encode()
+                .toUriString();
     }
 
 }

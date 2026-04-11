@@ -638,6 +638,10 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                             if (StrUtil.isNotBlank(provider)) {
                                 locationObj.set("provider", provider);
                             }
+                            String mapUrl = extraObj.getStr("mapUrl", "");
+                            if (StrUtil.isNotBlank(mapUrl)) {
+                                locationObj.set("mapUrl", mapUrl);
+                            }
                         }
                     } catch (Exception ignore) {
                         // ignore invalid extra, keep body baseline
