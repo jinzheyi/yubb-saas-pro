@@ -32,7 +32,7 @@
 		"sdkConfigs": {
 			"maps": {
 				"tencent": {
-					"key": ""
+					"key": "AU3BZ-QTLHT-GGJXH-VT5Q3-WLGEZ-JRBTA"
 				}
 			}
 		}
@@ -95,12 +95,12 @@
 			"modules": {
 				"uni-location": {
 					"tencent": {
-						"key": ""
+						"key": "AU3BZ-QTLHT-GGJXH-VT5Q3-WLGEZ-JRBTA"
 					}
 				},
 				"uni-map": {
 					"tencent": {
-						"key": ""
+						"key": "AU3BZ-QTLHT-GGJXH-VT5Q3-WLGEZ-JRBTA"
 					}
 				}
 			},
@@ -127,12 +127,12 @@
 			"modules": {
 				"uni-location": {
 					"tencent": {
-						"key": ""
+						"key": "AU3BZ-QTLHT-GGJXH-VT5Q3-WLGEZ-JRBTA"
 					}
 				},
 				"uni-map": {
 					"tencent": {
-						"key": ""
+						"key": "AU3BZ-QTLHT-GGJXH-VT5Q3-WLGEZ-JRBTA"
 					}
 				}
 			},

@@ -170,7 +170,11 @@ onLoad((options: any) => {
     chatId.value = decodeIdParam(options.chatId)
   }
   if (options.groupName) {
-    groupName.value = options.groupName
+    try {
+      groupName.value = decodeURIComponent(String(options.groupName))
+    } catch (e) {
+      groupName.value = String(options.groupName)
+    }
   }
 })
 

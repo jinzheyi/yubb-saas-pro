@@ -74,6 +74,7 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getGroupFileList, deleteGroupFile, downloadGroupFile } from '../../api/file.uts'
 	import { navToFilePreview } from '../../utils/nav.uts'
+	import { decodeIdParam } from '../../utils/id-param.uts'
 
 	const { t } = useI18n()
 
@@ -408,7 +409,7 @@
 
 	onLoad((options: any) => {
 		if (options['groupId']) {
-			groupId.value = options['groupId']
+			groupId.value = decodeIdParam(options['groupId'])
 			console.log('[ChatFiles] 页面参数:', { groupId: groupId.value })
 		}
 	})

@@ -338,14 +338,16 @@
 
 	function handleRemoveMember() {
 		// 跳转到成员列表页面，选择要删除的成员
+		const groupIdParam = encodeIdParam(groupId.value)
 		uni.navigateTo({
-			url: '/pages/message/group-members?groupId=' + groupId.value + '&groupName=' + encodeURIComponent(groupName.value) + '&mode=remove'
+			url: '/pages/message/group-members?groupId=' + groupIdParam + '&groupName=' + encodeURIComponent(groupName.value) + '&mode=remove'
 		})
 	}
 
 	function handleViewAllMembers() {
+		const groupIdParam = encodeIdParam(groupId.value)
 		uni.navigateTo({
-			url: '/pages/message/group-members?groupId=' + groupId.value + '&groupName=' + encodeURIComponent(groupName.value)
+			url: '/pages/message/group-members?groupId=' + groupIdParam + '&groupName=' + encodeURIComponent(groupName.value)
 		})
 	}
 
@@ -406,27 +408,30 @@
 	}
 
 	function handleGroupQRCode() {
+		const groupIdParam = encodeIdParam(groupId.value)
 		uni.navigateTo({
-			url: '/pages/message/group-qrcode?groupId=' + groupId.value + '&groupName=' + encodeURIComponent(groupName.value)
+			url: '/pages/message/group-qrcode?groupId=' + groupIdParam + '&groupName=' + encodeURIComponent(groupName.value)
 		})
 	}
 
 	function handleGroupNotice() {
+		const groupIdParam = encodeIdParam(groupId.value)
 		uni.navigateTo({
-			url: '/pages/message/group-notice?groupId=' + groupId.value + '&groupName=' + encodeURIComponent(groupName.value)
+			url: '/pages/message/group-notice?groupId=' + groupIdParam + '&groupName=' + encodeURIComponent(groupName.value)
 		})
 	}
 
 	function handleGroupFiles() {
+		const groupIdParam = encodeIdParam(groupId.value)
 		uni.navigateTo({
-			url: '/pages/message/chat-files?groupId=' + groupId.value
+			url: '/pages/message/chat-files?groupId=' + groupIdParam
 		})
 	}
 
 	function handleChatHistory() {
 		const chatIdParam = encodeIdParam(chatId.value)
 		uni.navigateTo({
-			url: `/pages/message/chat-history?chatId=${chatIdParam}&groupName=${groupName.value}`
+			url: `/pages/message/chat-history?chatId=${chatIdParam}&groupName=${encodeURIComponent(groupName.value)}`
 		})
 	}
 

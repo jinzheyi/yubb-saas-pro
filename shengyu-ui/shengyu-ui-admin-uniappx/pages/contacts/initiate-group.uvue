@@ -62,7 +62,7 @@
 	import { createGroup, addGroupMembers, getGroupMembers } from '../../api/group.uts'
 	import { getContactList, getContactPageByDept } from '../../api/contact.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
-	import { encodeIdParam } from '../../utils/id-param.uts'
+	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 	import ContactSelector from '../../components/contact-selector/contact-selector.uvue'
 
 	const { t } = useI18n()
@@ -496,7 +496,7 @@
 			mode.value = options['mode'] as string
 		}
 		if (options['groupId']) {
-			groupId.value = options['groupId'] as string
+			groupId.value = decodeIdParam(options['groupId'])
 		}
 		
 		console.log('[InitiateGroup] 页面参数:', { mode: mode.value, groupId: groupId.value })

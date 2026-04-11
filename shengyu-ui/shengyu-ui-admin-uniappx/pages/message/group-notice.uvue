@@ -90,6 +90,7 @@
 	import { getGroup, updateGroupNotice } from '../../api/group.uts'
 	import { getUserIdStr } from '../../store/user.uts'
 	import { formatDateTime } from '../../utils/date.uts'
+	import { decodeIdParam } from '../../utils/id-param.uts'
 
 	// 页面参数
 	const groupId = ref('')
@@ -300,7 +301,7 @@
 		
 		// 获取群组ID
 		if (options['groupId']) {
-			groupId.value = options['groupId'] as string
+			groupId.value = decodeIdParam(options['groupId'])
 		}
 		
 		// 获取群名称

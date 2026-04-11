@@ -44,7 +44,9 @@ im:
     admin-window-seconds: 86400
   location:
     # 腾讯位置服务 Key（统一放在 im 配置域，建议生产环境使用环境变量注入）QQ 地图的密钥 https://lbs.qq.com/service/staticV2/staticGuide/staticDoc
-    tencent-lbs-key:
+    tencent-lbs-key: AU3BZ-QTLHT-GGJXH-VT5Q3-WLGEZ-JRBTA
+    # 腾讯静态地图服务地址（用于位置消息预览图）
+    static-map-url: https://apis.map.qq.com/ws/staticmap/v2/
     search:
       enabled: true
       provider: tencent

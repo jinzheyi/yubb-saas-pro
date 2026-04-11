@@ -88,6 +88,7 @@
 	import { saveImageToAlbum } from '../../utils/qrcode.uts'
 	import { BASE_URL, ADMIN_APP_DOMAIN } from '../../config/app.config.uts'
 	import { getGroupAvatarColor } from '../../utils/avatar.uts'
+	import { decodeIdParam } from '../../utils/id-param.uts'
 
 	// 页面参数
 	const groupId = ref('')
@@ -432,7 +433,7 @@
 	onLoad((options : any) => {
 		// 获取群组ID
 		if (options['groupId']) {
-			groupId.value = options['groupId'] as string
+			groupId.value = decodeIdParam(options['groupId'])
 		}
 
 		// 获取群名称
