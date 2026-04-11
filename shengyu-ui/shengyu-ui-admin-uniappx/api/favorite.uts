@@ -22,6 +22,23 @@ export function getFavoriteList(pageNo: number = 1, pageSize: number = 20): Prom
   })
 }
 
+export function searchFavoriteList(
+  keyword: string,
+  tab: string = 'default',
+  pageNo: number = 1,
+  pageSize: number = 20
+): Promise<any> {
+  const kw = keyword != null ? String(keyword).trim() : ''
+  const tabVal = tab != null && String(tab).trim() !== '' ? String(tab).trim() : 'default'
+  return request({
+    url: '/system/im/favorite/search?keyword=' + encodeURIComponent(kw)
+      + '&tab=' + encodeURIComponent(tabVal)
+      + '&pageNo=' + pageNo
+      + '&pageSize=' + pageSize,
+    method: 'GET'
+  })
+}
+
 export function getFavoriteDetail(favoriteId: string): Promise<any> {
   return request({
     url: '/system/im/favorite/detail?favoriteId=' + encodeURIComponent(favoriteId),

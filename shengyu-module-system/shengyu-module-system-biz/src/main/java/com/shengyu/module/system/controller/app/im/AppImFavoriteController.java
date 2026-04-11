@@ -4,14 +4,20 @@ import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.system.controller.app.im.vo.favorite.AppImFavoriteAddReqVO;
 import com.shengyu.module.system.controller.app.im.vo.favorite.AppImFavoritePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.favorite.AppImFavoriteResendReqVO;
 import com.shengyu.module.system.controller.app.im.vo.favorite.AppImFavoriteRespVO;
+import com.shengyu.module.system.controller.app.im.vo.favorite.AppImFavoriteSearchReqVO;
+import com.shengyu.module.system.controller.app.im.vo.favorite.AppImFavoriteSearchRespVO;
 import com.shengyu.module.system.service.im.ImFavoriteService;
+import com.shengyu.module.system.service.im.ImSearchRateLimitService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +31,7 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 
 import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants.TOO_MANY_REQUESTS;
 
 @Tag(name = "移动端 - IM 消息收藏")
 @RestController
@@ -35,6 +42,9 @@ public class AppImFavoriteController {
 
     @Resource
     private ImFavoriteService favoriteService;
+
+    @Resource
+    private ImSearchRateLimitService searchRateLimitService;
 
     @PostMapping("/add")
     @Operation(summary = "收藏消息")
@@ -58,6 +68,25 @@ public class AppImFavoriteController {
     public CommonResult<PageResult<AppImFavoriteRespVO>> getFavoritePage(@Valid AppImFavoritePageReqVO reqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return success(favoriteService.getFavoritePage(userId, reqVO));
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "分页搜索收藏列表")
+    public ResponseEntity<CommonResult<AppImFavoriteSearchRespVO>> searchFavoritePage(@Valid AppImFavoriteSearchReqVO reqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        Long tenantId = TenantContextHolder.getTenantId();
+        ImSearchRateLimitService.CheckResult checkResult =
+                searchRateLimitService.check(tenantId, userId, ImSearchRateLimitService.SCENE_FAVORITE);
+        if (!checkResult.isAllowed()) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", String.valueOf(checkResult.getRetryAfterSeconds()))
+                    .body(CommonResult.error(TOO_MANY_REQUESTS));
+        }
+        AppImFavoriteSearchRespVO respVO = favoriteService.searchFavoritePage(userId, reqVO);
+        long costMs = respVO.getCostMs() != null ? respVO.getCostMs() : 0L;
+        return ResponseEntity.ok()
+                .header("X-Search-Cost-Ms", String.valueOf(Math.max(costMs, 0L)))
+                .body(success(respVO));
     }
 
     @GetMapping("/detail")

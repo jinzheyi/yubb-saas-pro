@@ -25,6 +25,7 @@ public class ImSearchRateLimitService {
     public static final String SCENE_CONTACT = "contact";
     public static final String SCENE_CONVERSATION = "conversation";
     public static final String SCENE_GLOBAL = "global";
+    public static final String SCENE_FAVORITE = "favorite";
 
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
@@ -37,6 +38,7 @@ public class ImSearchRateLimitService {
     private static final long CONTACT_MAX_REQUESTS = 30L;
     private static final long CONVERSATION_MAX_REQUESTS = 30L;
     private static final long GLOBAL_MAX_REQUESTS = 20L;
+    private static final long FAVORITE_MAX_REQUESTS = 20L;
 
     public CheckResult check(Long tenantId, Long userId, String scene) {
         if (userId == null) {
@@ -88,6 +90,9 @@ public class ImSearchRateLimitService {
         }
         if (SCENE_GLOBAL.equals(scene)) {
             return GLOBAL_MAX_REQUESTS;
+        }
+        if (SCENE_FAVORITE.equals(scene)) {
+            return FAVORITE_MAX_REQUESTS;
         }
         return DEFAULT_MAX_REQUESTS;
     }

@@ -8,6 +8,8 @@ import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.system.controller.app.im.vo.favorite.AppImFavoritePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.favorite.AppImFavoriteRespVO;
+import com.shengyu.module.system.controller.app.im.vo.favorite.AppImFavoriteSearchReqVO;
+import com.shengyu.module.system.controller.app.im.vo.favorite.AppImFavoriteSearchRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageSendReqVO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.MESSAGE_NOT_EXISTS;
@@ -115,6 +118,82 @@ public class ImFavoriteServiceImpl implements ImFavoriteService {
     }
 
     @Override
+    public AppImFavoriteSearchRespVO searchFavoritePage(Long userId, AppImFavoriteSearchReqVO reqVO) {
+        long startMs = System.currentTimeMillis();
+        AppImFavoriteSearchRespVO resp = new AppImFavoriteSearchRespVO();
+        Integer pageNo = reqVO != null && reqVO.getPageNo() != null && reqVO.getPageNo() > 0 ? reqVO.getPageNo() : 1;
+        Integer pageSize = reqVO != null && reqVO.getPageSize() != null && reqVO.getPageSize() > 0 ? reqVO.getPageSize() : 20;
+        if (pageSize > 50) {
+            pageSize = 50;
+        }
+        int offset = (pageNo - 1) * pageSize;
+        String keyword = reqVO != null ? StrUtil.trim(reqVO.getKeyword()) : "";
+        if (keyword.length() < 2) {
+            resp.setPageNo(pageNo);
+            resp.setPageSize(pageSize);
+            resp.setHasMore(false);
+            resp.setCostMs(Math.max(0L, System.currentTimeMillis() - startMs));
+            return resp;
+        }
+        String tab = normalizeSearchTab(reqVO != null ? reqVO.getTab() : null);
+
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+
+        List<Map<String, Object>> groupedTypeCounts = favoriteMapper.selectSearchTypeCountsByUser(tenantId, userId, keyword);
+        long allCount = 0L;
+        long mediaCount = 0L;
+        long fileCount = 0L;
+        if (groupedTypeCounts != null && !groupedTypeCounts.isEmpty()) {
+            for (Map<String, Object> row : groupedTypeCounts) {
+                if (row == null) {
+                    continue;
+                }
+                int type = parseInt(row.get("messageType"));
+                long cnt = parseLong(row.get("cnt"));
+                allCount += cnt;
+                if (type == 2 || type == 4) {
+                    mediaCount += cnt;
+                }
+                if (type == 5) {
+                    fileCount += cnt;
+                }
+            }
+        }
+        long normalCount = Math.max(0L, allCount - mediaCount - fileCount);
+        long total = resolveTotalByTab(tab, allCount, normalCount, mediaCount, fileCount);
+        AppImFavoriteSearchRespVO.Facets facets = new AppImFavoriteSearchRespVO.Facets();
+        facets.setNormal(normalCount);
+        facets.setMedia(mediaCount);
+        facets.setFile(fileCount);
+        facets.setAll(allCount);
+        resp.setFacets(facets);
+        resp.setTotal(total);
+        resp.setPageNo(pageNo);
+        resp.setPageSize(pageSize);
+        resp.setHasMore((long) pageNo * pageSize < total);
+
+        if (total <= 0L) {
+            resp.setList(new ArrayList<>());
+            resp.setCostMs(Math.max(0L, System.currentTimeMillis() - startMs));
+            return resp;
+        }
+
+        List<ImMessageFavoriteDO> favorites = favoriteMapper.selectSearchPageByUserId(tenantId, userId, keyword, tab, offset, pageSize);
+        List<AppImFavoriteRespVO> list = new ArrayList<>();
+        if (favorites != null && !favorites.isEmpty()) {
+            for (ImMessageFavoriteDO favorite : favorites) {
+                list.add(buildFavoriteResp(favorite));
+            }
+        }
+        resp.setList(list);
+        resp.setCostMs(Math.max(0L, System.currentTimeMillis() - startMs));
+        return resp;
+    }
+
+    @Override
     public AppImFavoriteRespVO getFavoriteDetail(Long userId, Long favoriteId) {
         Long tenantId = TenantContextHolder.getTenantId();
         if (tenantId == null) {
@@ -187,6 +266,52 @@ public class ImFavoriteServiceImpl implements ImFavoriteService {
 
     private String buildMessageSnapshot(ImChatMessageDO message) {
         return JSONUtil.toJsonStr(message);
+    }
+
+    private String normalizeSearchTab(String tab) {
+        if (StrUtil.isBlank(tab)) {
+            return "default";
+        }
+        String normalized = StrUtil.trim(tab).toLowerCase();
+        if ("normal".equals(normalized) || "media".equals(normalized) || "file".equals(normalized)) {
+            return normalized;
+        }
+        return "default";
+    }
+
+    private long resolveTotalByTab(String tab, long all, long normal, long media, long file) {
+        if ("normal".equals(tab)) {
+            return normal;
+        }
+        if ("media".equals(tab)) {
+            return media;
+        }
+        if ("file".equals(tab)) {
+            return file;
+        }
+        return all;
+    }
+
+    private int parseInt(Object value) {
+        if (value == null) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private long parseLong(Object value) {
+        if (value == null) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (Exception e) {
+            return 0L;
+        }
     }
 
     private String buildMessagePreview(Integer messageType, String content, String fallback) {

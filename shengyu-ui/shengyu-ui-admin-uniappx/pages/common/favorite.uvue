@@ -79,9 +79,9 @@
 
 <script setup lang="uts">
 import { computed } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { useI18n } from '../../hooks/useI18n.uts'
-import { getFavoriteList, removeFavorite } from '../../api/favorite.uts'
+import { getFavoriteList, removeFavorite, searchFavoriteList } from '../../api/favorite.uts'
 
 type FavoriteItem = {
   favoriteId: string
@@ -114,6 +114,12 @@ const totalCount = ref(0)
 const searchKeyword = ref('')
 const currentTab = ref('default')
 const { t } = useI18n()
+const SEARCH_DEBOUNCE_MS = 300
+const SAME_QUERY_DEDUPE_MS = 1200
+let searchDebounceTimer: any = null
+let latestRequestToken = 0
+let pendingResetFetch = false
+const recentQueryResultCache = new Map<string, { at: number, data: any }>()
 
 const tabs = [
   { key: 'default', label: '默认' },
@@ -129,10 +135,76 @@ function handleBack(): void {
 function handleSearchInput(e: any): void {
   const next = e != null && e.detail != null && e.detail.value != null ? String(e.detail.value) : ''
   searchKeyword.value = next
+  scheduleSearch()
 }
 
 function switchTab(tabKey: string): void {
   currentTab.value = tabKey
+  scheduleSearch()
+}
+
+function normalizeKeyword(raw: any): string {
+  return raw != null ? String(raw).trim() : ''
+}
+
+function buildQueryCacheKey(keyword: string, tab: string, pageNoVal: number, pageSizeVal: number): string {
+  return keyword + '|' + tab + '|' + pageNoVal + '|' + pageSizeVal
+}
+
+function canUseServerSearchByKeyword(keyword: string): boolean {
+  const len = keyword.length
+  return len >= 2 && len <= 64
+}
+
+function normalizePageResponse(resp: any): { listRaw: any[], total: number, hasMore: boolean | null } {
+  const listRaw: any[] = resp != null && Array.isArray(resp.list) ? resp.list : []
+  const totalVal = resp != null && resp.total != null ? Number(resp.total) : listRaw.length
+  const hasMoreRaw = resp != null ? (resp as any).hasMore : null
+  const hasMoreVal = typeof hasMoreRaw === 'boolean' ? hasMoreRaw : null
+  return {
+    listRaw: listRaw,
+    total: isNaN(totalVal) ? listRaw.length : totalVal,
+    hasMore: hasMoreVal
+  }
+}
+
+function scheduleSearch(): void {
+  if (searchDebounceTimer != null) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
+  }
+  searchDebounceTimer = setTimeout(() => {
+    void fetchPage(true)
+  }, SEARCH_DEBOUNCE_MS)
+}
+
+function pruneRecentQueryResultCache(now: number): void {
+  if (recentQueryResultCache.size <= 80) {
+    return
+  }
+  const keys: string[] = []
+  recentQueryResultCache.forEach((_, k) => {
+    keys.push(k)
+  })
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]
+    const item = recentQueryResultCache.get(key)
+    if (item == null || now - item.at > SAME_QUERY_DEDUPE_MS) {
+      recentQueryResultCache.delete(key)
+    }
+  }
+  if (recentQueryResultCache.size <= 100) {
+    return
+  }
+  let trimCount = recentQueryResultCache.size - 100
+  const keyList: string[] = []
+  recentQueryResultCache.forEach((_, k) => {
+    keyList.push(k)
+  })
+  for (let i = 0; i < keyList.length && trimCount > 0; i++) {
+    recentQueryResultCache.delete(keyList[i])
+    trimCount--
+  }
 }
 
 function formatTime(raw: string): string {
@@ -370,17 +442,11 @@ function buildDisplayItem(item: FavoriteItem): FavoriteDisplayItem {
     typeLabel = '图片'
   } else if (item.messageType === 4) {
     kind = 'video'
-    const videoUrl =
-      resolveUrlFromObject(parsedContent) ||
-      resolveUrlFromObject(parsedExtra) ||
-      resolveUrlFromObject(snapshotContent) ||
-      resolveUrlFromObject(snapshotExtra) ||
-      (item.messageContent != null ? String(item.messageContent).trim() : '')
     const coverFromExtra = parsedExtra != null && typeof parsedExtra === 'object'
       ? (String((parsedExtra as any).cover || (parsedExtra as any).thumbnail || (parsedExtra as any).thumbUrl || ''))
       : ''
     thumb = coverFromExtra
-    subTitle = videoUrl
+    subTitle = ''
     title = item.messagePreview || '[视频]'
     typeLabel = '视频'
   } else if (item.messageType === 5) {
@@ -390,16 +456,8 @@ function buildDisplayItem(item: FavoriteItem): FavoriteDisplayItem {
       : (snapshotExtra != null && typeof snapshotExtra === 'object' ? snapshotExtra : null)
     const fileName = fileObj != null && (fileObj as any).fileName != null ? String((fileObj as any).fileName) : ''
     const fileSizeRaw = fileObj != null && (fileObj as any).size != null ? Number((fileObj as any).size) : 0
-    const fileUrl =
-      resolveUrlFromObject(fileObj) ||
-      resolveUrlFromObject(parsedContent) ||
-      resolveUrlFromObject(snapshotContent) ||
-      (item.messageContent != null ? String(item.messageContent).trim() : '')
     title = fileName !== '' ? fileName : (item.messagePreview || '[文件]')
     subTitle = buildFileSizeText(fileSizeRaw)
-    if (subTitle === '' && fileUrl !== '') {
-      subTitle = fileUrl
-    }
     typeLabel = '文件'
   } else if (item.messageType === 9) {
     const customObj = (parsedContent != null && typeof parsedContent === 'object')
@@ -456,45 +514,80 @@ function isTabMatch(item: FavoriteDisplayItem): boolean {
 }
 
 const displayItems = computed((): FavoriteDisplayItem[] => {
-  const keyword = searchKeyword.value != null ? String(searchKeyword.value).trim().toLowerCase() : ''
   const mapped = items.value.map((it: FavoriteItem) => buildDisplayItem(it))
   return mapped.filter((it: FavoriteDisplayItem) => {
     if (!isTabMatch(it)) {
       return false
     }
-    if (keyword === '') {
-      return true
-    }
-    return it.searchText.indexOf(keyword) > -1
+    return true
   })
 })
 
 async function fetchPage(reset: boolean): Promise<void> {
   if (loading.value) {
+    if (reset) {
+      pendingResetFetch = true
+    }
     return
   }
   if (!reset && !hasMore.value) {
     return
   }
   loading.value = true
+  const requestToken = ++latestRequestToken
   try {
     const nextPage = reset ? 1 : pageNo.value
-    const resp: any = await getFavoriteList(nextPage, pageSize.value)
-    const listRaw: any[] = resp != null && Array.isArray(resp.list) ? resp.list : []
-    const nextItems = listRaw.map((it: any) => normalizeFavoriteItem(it))
+    const tab = currentTab.value != null && String(currentTab.value).trim() !== '' ? String(currentTab.value).trim() : 'default'
+    const keyword = normalizeKeyword(searchKeyword.value)
+    if (keyword !== '' && !canUseServerSearchByKeyword(keyword)) {
+      if (reset) {
+        items.value = []
+        totalCount.value = 0
+        hasMore.value = false
+        pageNo.value = 1
+      }
+      return
+    }
+    const useServerSearch = keyword !== ''
+    let resp: any = null
+    if (useServerSearch) {
+      const cacheKey = buildQueryCacheKey(keyword, tab, nextPage, pageSize.value)
+      const now = Date.now()
+      pruneRecentQueryResultCache(now)
+      const cached = recentQueryResultCache.get(cacheKey)
+      if (cached != null && now - cached.at <= SAME_QUERY_DEDUPE_MS) {
+        resp = cached.data
+      } else {
+        resp = await searchFavoriteList(keyword, tab, nextPage, pageSize.value)
+        recentQueryResultCache.set(cacheKey, { at: now, data: resp })
+      }
+    } else {
+      resp = await getFavoriteList(nextPage, pageSize.value)
+    }
+    if (requestToken !== latestRequestToken) {
+      return
+    }
+    const pageData = normalizePageResponse(resp)
+    const nextItems = pageData.listRaw.map((it: any) => normalizeFavoriteItem(it))
     if (reset) {
       items.value = nextItems
     } else {
       items.value = items.value.concat(nextItems)
     }
-    totalCount.value = resp != null && resp.total != null ? Number(resp.total) : items.value.length
-    hasMore.value = items.value.length < totalCount.value
+    totalCount.value = pageData.total
+    hasMore.value = pageData.hasMore != null ? pageData.hasMore : (items.value.length < totalCount.value)
     pageNo.value = nextPage + 1
   } catch (e) {
     console.error('[Favorite] 加载失败:', e)
     uni.showToast({ title: t('favoritePage.toast.loadFailed'), icon: 'none' })
   } finally {
-    loading.value = false
+    if (requestToken === latestRequestToken) {
+      loading.value = false
+      if (pendingResetFetch) {
+        pendingResetFetch = false
+        void fetchPage(true)
+      }
+    }
   }
 }
 
@@ -552,6 +645,15 @@ function handleItemLongPress(item: FavoriteDisplayItem): void {
 
 onLoad(() => {
   void fetchPage(true)
+})
+
+onUnload(() => {
+  if (searchDebounceTimer != null) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
+  }
+  pendingResetFetch = false
+  recentQueryResultCache.clear()
 })
 </script>
 
