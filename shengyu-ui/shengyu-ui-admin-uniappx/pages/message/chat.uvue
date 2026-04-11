@@ -1112,6 +1112,48 @@
 		}
 	}
 
+	let resolveChatIdTask : Promise<void> | null = null
+
+	async function ensureChatIdByTargetIfNeeded(showErrorToast: boolean = false): Promise<void> {
+		if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
+			return
+		}
+		if (!targetId.value || targetId.value === '') {
+			return
+		}
+		if (resolveChatIdTask != null) {
+			await resolveChatIdTask
+			return
+		}
+		resolveChatIdTask = (async () => {
+			try {
+				console.log('[Chat] 没有 chatId，查询会话 targetId:', targetId.value, 'type:', chatType.value)
+				const conversationType = chatType.value === 'group' ? 2 : 1
+				const conversationResult = await getConversationByTarget(targetId.value, conversationType)
+				const resolvedChatId = conversationResult && (conversationResult.chatId != null ? conversationResult.chatId : conversationResult.id)
+				if (resolvedChatId != null) {
+					chatId.value = resolvedChatId.toString()
+					console.log('[Chat] 查询会话成功, chatId:', chatId.value)
+				} else {
+					console.error('[Chat] 查询会话失败：返回数据无效', conversationResult)
+				}
+			} catch (e) {
+				console.error('[Chat] 查询会话失败:', e)
+				if (showErrorToast) {
+					uni.showToast({
+						title: '获取会话失败',
+						icon: 'none'
+					})
+				}
+			}
+		})()
+		try {
+			await resolveChatIdTask
+		} finally {
+			resolveChatIdTask = null
+		}
+	}
+
 	async function ensureInitialMessagesLoaded(): Promise<void> {
 		if (initialMessagesLoaded) {
 			return
@@ -1325,29 +1367,8 @@
 			stickerList.value = getCustomStickers()
 		}
 		
-		// 3. 如果没有 chatId 但有 groupId/targetId，则查询会话
-		if ((!chatId.value || chatId.value === '' || chatId.value === '0') && 
-		    targetId.value && targetId.value !== '') {
-			try {
-				console.log('[Chat] 没有 chatId，查询会话 targetId:', targetId.value, 'type:', chatType.value)
-				const conversationType = chatType.value === 'group' ? 2 : 1
-				const conversationResult = await getConversationByTarget(targetId.value, conversationType)
-				
-				const resolvedChatId = conversationResult && (conversationResult.chatId != null ? conversationResult.chatId : conversationResult.id)
-				if (resolvedChatId != null) {
-					chatId.value = resolvedChatId.toString()
-					console.log('[Chat] 查询会话成功, chatId:', chatId.value)
-				} else {
-					console.error('[Chat] 查询会话失败：返回数据无效', conversationResult)
-				}
-			} catch (e) {
-				console.error('[Chat] 查询会话失败:', e)
-				uni.showToast({
-					title: '获取会话失败',
-					icon: 'none'
-				})
-			}
-		}
+		// 3. 如果没有 chatId 但有 targetId，则查询会话（与 onLoad 共用同一并发锁）
+		await ensureChatIdByTargetIfNeeded(false)
 		
 		// 4. 标记当前活跃会话（用于重连补偿只补活跃/未读会话）
 		try {
@@ -9137,19 +9158,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		})
 
 		// H5 刷新时 onMounted 可能早于参数可用，确保路由参数就绪后一定触发一次会话初始化与消息加载
-		try {
-			if ((!chatId.value || chatId.value === '' || chatId.value === '0')
-				&& targetId.value && targetId.value !== '') {
-				const conversationType = chatType.value === 'group' ? 2 : 1
-				const conversationResult = await getConversationByTarget(targetId.value, conversationType)
-				const resolvedChatId = conversationResult && (conversationResult.chatId != null ? conversationResult.chatId : conversationResult.id)
-				if (resolvedChatId != null) {
-					chatId.value = resolvedChatId.toString()
-				}
-			}
-		} catch (e) {
-			// ignore
-		}
+		await ensureChatIdByTargetIfNeeded(false)
 		if (!hasExplicitEntryIntent) {
 			applyRestoreEntryIfAvailable()
 		}

@@ -356,3 +356,133 @@
   https://support.google.com/chat/answer/14179758
 - Matrix Client-Server Search 规范（排序、上下文、分页、限流、权限）  
   https://spec.matrix.org/legacy/client_server/r0.2.0.html#post-matrix-client-r0-search
+
+---
+
+## 12. 收藏搜索企业级改造（2026-04-11 开工补充）
+
+### 12.1 触发背景（来自当前联调问题）
+
+- 收藏页搜索当前为前端本地过滤，只在已加载分页内生效，导致“可见即能搜，不可见即搜不到”。
+- 媒体类（图片/视频）可检索字段弱，图片常回退为“图片”占位文案，命中率不稳定。
+- 收藏详情页文件曾暴露直链文案，体验与企业级安全感知不一致。
+
+### 12.2 目标与原则（对齐微信/企微常见体验）
+
+- 目标：收藏搜索“全量可搜、类型清晰、结果稳定、可审计、可演进”。
+- 原则 1：搜索能力以后端为权威，前端只做展示与轻量交互。
+- 原则 2：媒体检索优先结构化字段（文件名/标题），禁止以 URL 作为主检索词。
+- 原则 3：分页、排序、过滤在同一契约内完成，避免前端二次重排造成体验漂移。
+- 原则 4：检索链路必须可观测（耗时、命中率、降级原因）。
+
+### 12.3 范围定义
+
+In Scope：
+
+- 收藏列表页 `/pages/common/favorite` 的关键词检索与类型过滤（默认/普通/图片与视频/文件）。
+- 收藏详情页 `/pages/common/favorite-detail` 的文件预览体验统一（复用 `file-preview` 及 open-strategy/KKFile 链路）。
+- 后端收藏搜索接口、索引字段、分页排序、限流与审计。
+
+Out of Scope（本阶段不做）：
+
+- 图像 OCR / 视频 ASR 全量离线抽取（可作为 P2 增强）。
+- 向量语义搜索、跨租户搜索。
+
+### 12.4 现状与差距（代码口径）
+
+- 现状：
+  - 收藏列表使用 `getFavoriteList` 拉分页后本地 `searchText` 过滤。
+  - “图片与视频”Tab 先按 kind 过滤，再做关键词匹配。
+- 差距：
+  - 非全量检索：未加载页无法命中。
+  - 媒体弱检索：命中依赖 `messagePreview/title`，结构化字段未统一沉淀。
+  - 企业治理不足：缺少收藏搜索的耗时指标与审计闭环。
+
+### 12.5 目标方案（分阶段）
+
+#### Phase A（快速收口，1~2 天）
+
+- FE：保留当前 UI，但改为“关键词触发服务端搜索接口”。
+- FE：当关键词为空时走普通列表接口；关键词非空时走搜索接口并分页。
+- FE：收藏列表禁止 URL 作为图片/视频展示副文案（已开始落地）。
+- FE：收藏详情文件点击统一走 `navToFilePreview`（已开始落地）。
+
+#### Phase B（企业级主链路，3~5 天）
+
+- BE：新增 `GET /system/im/favorite/search`
+  - 参数：`keyword`、`tab`(`default|normal|media|file`)、`pageNo`、`pageSize`、可选 `startTime/endTime`。
+  - 返回：`list/total/pageNo/pageSize/costMs/facets`。
+- BE：统一排序
+  - 默认按 `favorite_time DESC`。
+  - 关键词命中同分时按 `send_time DESC`。
+- BE：统一索引字段
+  - `message_preview`、`file_name`、`media_title`、`sender_name`、`chat_name`、`message_type`、`favorite_time`。
+- BE：限流与校验
+  - 关键词长度 `2~64`，`pageSize <= 50`，空关键词不走搜索 SQL。
+
+#### Phase C（增强与治理，按容量触发）
+
+- 增加收藏搜索索引表或复用现有搜索索引侧表（异步构建、增量更新）。
+- 增加搜索审计日志（用户、关键词、过滤条件、耗时、命中条数、是否降级）。
+- 增加可观测指标看板（P95、超时率、空结果率、top keyword）。
+
+### 12.6 接口契约（建议稿）
+
+`GET /system/im/favorite/search`
+
+- Request
+  - `keyword: string` 必填，长度 2~64
+  - `tab: string` 可选，默认 `default`
+  - `pageNo: number` 默认 1
+  - `pageSize: number` 默认 20，最大 50
+  - `startTime/endTime: string` 可选（ISO 或时间戳）
+- Response
+  - `list[]`：`favoriteId/messageId/messageType/messagePreview/messageContent/messageExtra/messageSnapshot/sendTime/favoriteTime`
+  - `total/pageNo/pageSize`
+  - `facets: { normal, media, file }`
+  - `costMs: number`
+
+兼容策略：
+
+- 若后端暂未提供 `facets/costMs`，前端可容错为可选字段，不阻塞上线。
+
+### 12.7 前端实施标准（SOP）
+
+- 统一请求入口：收藏搜索请求由 `api/favorite.uts` 维护，不在页面拼 URL。
+- 请求时序控制：
+  - 输入防抖 300ms
+  - 同词请求去重（1200ms 窗口）
+  - 过期响应丢弃（request token）
+- 渲染规则：
+  - 禁止按本地时间再次排序，严格按后端返回顺序展示。
+  - 图片显示：`fileName/name/title > messagePreview(非链接) > "图片"`。
+  - 文件显示：名称 + 大小，不展示直链文本。
+- 预览规则：
+  - 文件点击统一 `navToFilePreview({fileId,url,name})`，优先 `fileId`。
+
+### 12.8 验收标准（DoD）
+
+- 功能：
+  - 关键词可跨分页命中（不依赖先滚动加载）。
+  - `default/normal/media/file` 四个 tab 搜索结果一致、可解释。
+  - 文件详情不展示链接文本，点击进入统一预览页。
+- 质量：
+  - 搜索接口 P95 < 800ms（常规数据量）。
+  - 高频输入不出现结果乱序覆盖。
+  - 无权限数据零泄漏（租户与会话权限校验通过）。
+- 观测：
+  - 每次搜索可追踪 `requestId/costMs/resultCount/tab`。
+
+### 12.9 测试用例基线（新增）
+
+- 关键词：空、1 字、2 字、超长、特殊字符、Emoji。
+- Tab：`default/normal/media/file` 各自关键词命中与空结果。
+- 数据：仅第一页命中、仅第二页命中、跨页多命中。
+- 媒体：图片有名称/无名称、视频有封面/无封面、文件有 fileId/仅 url。
+- 安全：无权限会话收藏不可检索、不可预览。
+
+### 12.10 里程碑与责任
+
+- M1（本周）：完成 FE 接口切换与 UI 规则收口（Owner: FE）。
+- M2（下周）：完成 BE 搜索接口与 SQL 优化、联调通过（Owner: BE）。
+- M3（次周）：完成压测、监控、灰度与复盘（Owner: QA + FE + BE）。

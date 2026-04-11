@@ -278,6 +278,36 @@ function extractText(raw: any): string {
   return ''
 }
 
+function resolveNameFromObject(obj: any): string {
+  if (obj == null || typeof obj !== 'object') {
+    return ''
+  }
+  const fileName = obj.fileName != null ? String(obj.fileName).trim() : ''
+  if (fileName !== '') {
+    return fileName
+  }
+  const name = obj.name != null ? String(obj.name).trim() : ''
+  if (name !== '') {
+    return name
+  }
+  const filename = obj.filename != null ? String(obj.filename).trim() : ''
+  if (filename !== '') {
+    return filename
+  }
+  const title = obj.title != null ? String(obj.title).trim() : ''
+  if (title !== '') {
+    return title
+  }
+  const nested = obj.content
+  if (nested != null && typeof nested === 'object') {
+    const nestedName = resolveNameFromObject(nested)
+    if (nestedName !== '') {
+      return nestedName
+    }
+  }
+  return ''
+}
+
 function buildFileSizeText(size: number): string {
   if (size <= 0) {
     return ''
@@ -327,9 +357,16 @@ function buildDisplayItem(item: FavoriteItem): FavoriteDisplayItem {
       resolveUrlFromObject(snapshotContent) ||
       resolveUrlFromObject(snapshotExtra) ||
       (item.messageContent != null ? String(item.messageContent).trim() : '')
+    const imageName =
+      resolveNameFromObject(parsedContent) ||
+      resolveNameFromObject(parsedExtra) ||
+      resolveNameFromObject(snapshotContent) ||
+      resolveNameFromObject(snapshotExtra)
+    const previewText = item.messagePreview != null ? String(item.messagePreview).trim() : ''
+    const safePreviewText = looksLikeLinkContent(previewText) ? '' : previewText
     thumb = imageUrl
-    subTitle = imageUrl
-    title = item.messagePreview || '[图片]'
+    subTitle = ''
+    title = imageName !== '' ? imageName : (safePreviewText !== '' ? safePreviewText : '图片')
     typeLabel = '图片'
   } else if (item.messageType === 4) {
     kind = 'video'
@@ -402,25 +439,6 @@ function buildDisplayItem(item: FavoriteItem): FavoriteDisplayItem {
   }
 }
 
-function parseTimeMs(raw: string): number {
-  try {
-    if (raw == null || String(raw).trim() === '') {
-      return 0
-    }
-    const rawText = String(raw).trim()
-    let d = new Date(rawText)
-    if (isNaN(d.getTime()) && /^[0-9]+$/.test(rawText)) {
-      const numVal = Number(rawText)
-      if (!isNaN(numVal) && numVal > 0) {
-        d = new Date(rawText.length <= 10 ? (numVal * 1000) : numVal)
-      }
-    }
-    return isNaN(d.getTime()) ? 0 : d.getTime()
-  } catch (e) {
-    return 0
-  }
-}
-
 function isTabMatch(item: FavoriteDisplayItem): boolean {
   if (currentTab.value === 'default') {
     return true
@@ -439,11 +457,7 @@ function isTabMatch(item: FavoriteDisplayItem): boolean {
 
 const displayItems = computed((): FavoriteDisplayItem[] => {
   const keyword = searchKeyword.value != null ? String(searchKeyword.value).trim().toLowerCase() : ''
-  const mapped = items.value.map((it: FavoriteItem) => buildDisplayItem(it)).sort((a: FavoriteDisplayItem, b: FavoriteDisplayItem) => {
-    const ta = parseTimeMs(a.sendTime !== '' ? a.sendTime : a.favoriteTime)
-    const tb = parseTimeMs(b.sendTime !== '' ? b.sendTime : b.favoriteTime)
-    return tb - ta
-  })
+  const mapped = items.value.map((it: FavoriteItem) => buildDisplayItem(it))
   return mapped.filter((it: FavoriteDisplayItem) => {
     if (!isTabMatch(it)) {
       return false
