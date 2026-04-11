@@ -59,25 +59,40 @@ public class ImGlobalSearchService {
 
         switch (tab) {
             case "contact":
-                PageResult<AppImContactRespVO> contactsPage = safeSearchContactsPage(userId, keyword, pageNo, pageSize);
-                long contactTotal = contactsPage.getTotal() != null ? contactsPage.getTotal() : 0L;
-                facets.setContact(contactTotal);
-                facets.setAll(contactTotal);
-                total = contactTotal;
-                pageList = safeList(contactsPage.getList()).stream()
-                        .map(contact -> buildContactItem(contact, keyword))
-                        .collect(Collectors.toList());
+                int contactWindowSize = Math.min(Math.max(pageNo * pageSize * 2, pageSize), ALL_TAB_SOURCE_LIMIT);
+                WindowResult<AppImContactRespVO> contactsWindow = collectContactsWindow(userId, keyword, contactWindowSize);
+                WindowResult<AppImMessageRespVO> contactMessagesWindow = collectMessagesWindow(userId, keyword, reqVO.getChatId(), contactWindowSize, false);
+                List<AppImGlobalSearchRespVO.Item> mergedContacts = new ArrayList<>();
+                safeList(contactsWindow.getList()).forEach(contact -> mergedContacts.add(buildContactItem(contact, keyword)));
+                safeList(contactMessagesWindow.getList()).forEach(message -> {
+                    AppImGlobalSearchRespVO.Item item = buildContactItemFromMessage(message, keyword, userId);
+                    if (item != null) {
+                        mergedContacts.add(item);
+                    }
+                });
+                List<AppImGlobalSearchRespVO.Item> mergedContactDeduped = dedupeAndSortByItemType(mergedContacts, "contact", sort);
+                total = mergedContactDeduped.size();
+                facets.setContact(total);
+                facets.setAll(total);
+                pageList = paginateList(mergedContactDeduped, pageNo, pageSize);
                 break;
             case "group":
-                PageResult<AppImConversationRespVO> groupPage = searchGroups(userId, keyword, pageNo, pageSize);
-                long groupTotal = groupPage.getTotal() != null ? groupPage.getTotal() : 0L;
-                facets.setGroup(groupTotal);
-                facets.setAll(groupTotal);
-                total = groupTotal;
-                pageList = safeList(groupPage.getList()).stream()
-                        .map(group -> buildGroupItem(group, keyword))
-                        .collect(Collectors.toList());
-                pageList.sort(buildComparator(sort));
+                int groupWindowSize = Math.min(Math.max(pageNo * pageSize * 2, pageSize), ALL_TAB_SOURCE_LIMIT);
+                WindowResult<AppImConversationRespVO> groupsWindow = collectGroupsWindow(userId, keyword, groupWindowSize);
+                WindowResult<AppImMessageRespVO> groupMessagesWindow = collectMessagesWindow(userId, keyword, reqVO.getChatId(), groupWindowSize, false);
+                List<AppImGlobalSearchRespVO.Item> mergedGroups = new ArrayList<>();
+                safeList(groupsWindow.getList()).forEach(group -> mergedGroups.add(buildGroupItem(group, keyword)));
+                safeList(groupMessagesWindow.getList()).forEach(message -> {
+                    AppImGlobalSearchRespVO.Item item = buildGroupItemFromMessage(message, keyword);
+                    if (item != null) {
+                        mergedGroups.add(item);
+                    }
+                });
+                List<AppImGlobalSearchRespVO.Item> mergedGroupDeduped = dedupeAndSortByItemType(mergedGroups, "group", sort);
+                total = mergedGroupDeduped.size();
+                facets.setGroup(total);
+                facets.setAll(total);
+                pageList = paginateList(mergedGroupDeduped, pageNo, pageSize);
                 break;
             case "message":
                 PageResult<AppImMessageRespVO> messagePage = searchMessages(userId, keyword, reqVO.getChatId(), pageNo, pageSize, false);
@@ -307,6 +322,91 @@ public class ImGlobalSearchService {
         return item;
     }
 
+    private AppImGlobalSearchRespVO.Item buildGroupItemFromMessage(AppImMessageRespVO message, String keyword) {
+        if (message == null || message.getGroupId() == null) {
+            return null;
+        }
+        String chatId = message.getChatId() != null ? String.valueOf(message.getChatId()) : "0";
+        if ("0".equals(chatId)) {
+            return null;
+        }
+        String title = StrUtil.nullToEmpty(message.getConversationName());
+        if (StrUtil.isBlank(title)) {
+            title = "群聊";
+        }
+        String snippet = buildMessageSnippet(message);
+        long time = toEpochMillis(message.getSendTime());
+
+        int score = calculateKeywordScore(title, keyword)
+                + calculateKeywordScore(snippet, keyword)
+                + calculateRecentBonus(time)
+                + 8;
+
+        AppImGlobalSearchRespVO.Item item = new AppImGlobalSearchRespVO.Item();
+        item.setId(chatId);
+        item.setType("group");
+        item.setTitle(title);
+        item.setSubTitle("群聊");
+        item.setSnippet(clip(snippet, 120));
+        item.setTime(time);
+        item.setScore(score);
+        item.setChatId(chatId);
+
+        Map<String, Object> meta = new HashMap<>();
+        meta.put("conversationType", 2);
+        meta.put("targetId", message.getGroupId());
+        meta.put("targetAvatar", message.getConversationAvatar());
+        meta.put("conversationAvatar", message.getConversationAvatar());
+        meta.put("fromMessage", true);
+        item.setMeta(meta);
+        return item;
+    }
+
+    private AppImGlobalSearchRespVO.Item buildContactItemFromMessage(AppImMessageRespVO message, String keyword, Long currentUserId) {
+        if (message == null || message.getGroupId() != null) {
+            return null;
+        }
+        Long senderId = message.getSenderId();
+        Long receiverId = message.getReceiverId();
+        Long targetUserId;
+        if (currentUserId != null && senderId != null && senderId.equals(currentUserId)) {
+            targetUserId = receiverId != null ? receiverId : senderId;
+        } else {
+            targetUserId = senderId != null ? senderId : receiverId;
+        }
+        if (targetUserId == null || targetUserId <= 0) {
+            return null;
+        }
+
+        String title = StrUtil.nullToEmpty(message.getConversationName());
+        if (StrUtil.isBlank(title)) {
+            title = "联系人";
+        }
+        String snippet = buildMessageSnippet(message);
+        long time = toEpochMillis(message.getSendTime());
+        int score = calculateKeywordScore(title, keyword)
+                + calculateKeywordScore(snippet, keyword)
+                + calculateRecentBonus(time)
+                + 6;
+
+        AppImGlobalSearchRespVO.Item item = new AppImGlobalSearchRespVO.Item();
+        item.setId(String.valueOf(targetUserId));
+        item.setType("contact");
+        item.setTitle(title);
+        item.setSubTitle("");
+        item.setSnippet(clip(snippet, 120));
+        item.setTime(time);
+        item.setScore(score);
+
+        Map<String, Object> meta = new HashMap<>();
+        meta.put("userId", targetUserId);
+        meta.put("avatar", message.getConversationAvatar());
+        meta.put("conversationAvatar", message.getConversationAvatar());
+        meta.put("fromMessage", true);
+        item.setMeta(meta);
+        return item;
+    }
+
     private AppImGlobalSearchRespVO.Item buildMessageItem(AppImMessageRespVO message, String keyword, boolean forceMediaType, Long currentUserId) {
         AppImGlobalSearchRespVO.Item item = new AppImGlobalSearchRespVO.Item();
         String messageId = message != null && message.getId() != null ? String.valueOf(message.getId()) : "0";
@@ -376,6 +476,56 @@ public class ImGlobalSearchService {
             return byTimeDesc.thenComparing(byScoreDesc).thenComparing(byIdDesc);
         }
         return byScoreDesc.thenComparing(byTimeDesc).thenComparing(byIdDesc);
+    }
+
+    private List<AppImGlobalSearchRespVO.Item> dedupeAndSortByItemType(List<AppImGlobalSearchRespVO.Item> source,
+                                                                        String type, String sort) {
+        if (source == null || source.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<String, AppImGlobalSearchRespVO.Item> merged = new LinkedHashMap<>();
+        for (AppImGlobalSearchRespVO.Item item : source) {
+            if (item == null) {
+                continue;
+            }
+            if (!type.equals(StrUtil.nullToEmpty(item.getType()))) {
+                continue;
+            }
+            String key = StrUtil.nullToEmpty(item.getId());
+            if (StrUtil.isBlank(key)) {
+                continue;
+            }
+            AppImGlobalSearchRespVO.Item exists = merged.get(key);
+            if (exists == null) {
+                merged.put(key, item);
+            } else {
+                merged.put(key, pickBetterItem(exists, item));
+            }
+        }
+        List<AppImGlobalSearchRespVO.Item> list = new ArrayList<>(merged.values());
+        list.sort(buildComparator(sort));
+        return list;
+    }
+
+    private AppImGlobalSearchRespVO.Item pickBetterItem(AppImGlobalSearchRespVO.Item left,
+                                                        AppImGlobalSearchRespVO.Item right) {
+        if (left == null) {
+            return right;
+        }
+        if (right == null) {
+            return left;
+        }
+        long lt = left.getTime() != null ? left.getTime() : 0L;
+        long rt = right.getTime() != null ? right.getTime() : 0L;
+        if (rt > lt) {
+            return right;
+        }
+        int ls = left.getScore() != null ? left.getScore() : 0;
+        int rs = right.getScore() != null ? right.getScore() : 0;
+        if (rs > ls) {
+            return right;
+        }
+        return left;
     }
 
     private int calculateKeywordScore(String text, String keyword) {

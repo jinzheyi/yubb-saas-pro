@@ -70,6 +70,7 @@
 						</view>
 						<view class="result-main">
 							<view class="result-top">
+								<text class="result-type-tag">{{ item.typeLabel }}</text>
 								<rich-text class="result-title" :nodes="highlightKeyword(item.title)"></rich-text>
 								<text class="result-time">{{ formatResultTime(item.time) }}</text>
 							</view>
@@ -135,6 +136,7 @@
 		uniqueId: string
 		id: string
 		type: string
+		typeLabel: string
 		title: string
 		subTitle: string
 		snippet: string
@@ -684,12 +686,14 @@
 		const title = safeString(raw && raw.title)
 		const subTitle = safeString(raw && raw.subTitle)
 		const snippet = normalizeSnippet(type, safeString(raw && raw.snippet), raw && raw.meta)
+		const typeLabel = buildTypeLabel(type, raw && raw.meta)
 		const time = parseTimeMs(raw && raw.time)
 		const avatar = buildAvatar(type, chatId !== '' ? chatId : id, title, raw && raw.meta, raw)
 		return {
 			uniqueId: `${type}:${id}:${chatId}:${messageId}`,
 			id: id,
 			type: type,
+			typeLabel: typeLabel,
 			title: title,
 			subTitle: subTitle,
 			snippet: snippet,
@@ -714,6 +718,7 @@
 			uniqueId: `contact:${userId}`,
 			id: userId,
 			type: 'contact',
+			typeLabel: '联系人',
 			title: title,
 			subTitle: sub,
 			snippet: sub,
@@ -740,6 +745,7 @@
 			uniqueId: `group:${chatId}`,
 			id: chatId,
 			type: 'group',
+			typeLabel: '群聊',
 			title: title,
 			subTitle: members > 0 ? `${members}人` : '群聊',
 			snippet: snippet,
@@ -762,6 +768,7 @@
 		const title = safeString(raw && raw.conversationName)
 		const sub = safeString(raw && raw.senderName)
 		const snippet = normalizeSnippet(type, safeString(raw && raw.content), raw && raw.raw)
+		const typeLabel = buildTypeLabel(type, raw && raw.raw ? raw.raw : null)
 		const chatId = safeString(raw && raw.chatId)
 		const messageId = safeString(raw && raw.messageId)
 		const sequence = safeString(raw && raw.sequence)
@@ -770,6 +777,7 @@
 			uniqueId: `${type}:${messageId}:${chatId}`,
 			id: messageId,
 			type: type,
+			typeLabel: typeLabel,
 			title: title,
 			subTitle: sub,
 			snippet: snippet,
@@ -817,6 +825,20 @@
 			return '[消息]'
 		}
 		return text
+	}
+
+	function buildTypeLabel(type: string, meta: any): string {
+		if (type === 'contact') {
+			return '联系人'
+		}
+		if (type === 'group') {
+			return '群聊'
+		}
+		if (type === 'media') {
+			return '文件与媒体'
+		}
+		const conversationType = resolveConversationType(meta, meta)
+		return conversationType === 2 ? '群消息' : '单聊消息'
 	}
 
 	type AvatarState = { url: string, text: string, bg: string, icon: string }
@@ -1354,6 +1376,18 @@
 	.result-top {
 		flex-direction: row;
 		align-items: center;
+	}
+
+	.result-type-tag {
+		margin-right: 6px;
+		padding: 0 6px;
+		height: 18px;
+		line-height: 18px;
+		border-radius: 9px;
+		background-color: #f2f3f5;
+		color: #646a73;
+		font-size: 11px;
+		flex-shrink: 0;
 	}
 
 	.result-title {
