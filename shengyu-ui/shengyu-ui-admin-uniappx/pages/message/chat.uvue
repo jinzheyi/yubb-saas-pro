@@ -19,7 +19,7 @@
 				<text v-if="!multiSelectMode && chatType === 'group'" class="header-status" :numberOfLines="1">{{ memberCount }}人</text>
 			</view>
 			<view class="header-right">
-				<text v-if="!multiSelectMode" class="iconfont header-icon">&#xea74;</text>
+				<text v-if="!multiSelectMode" class="iconfont header-icon" @click="handleInitiateGroup">&#xea74;</text>
 				<text v-if="!multiSelectMode" class="iconfont header-icon" @click="handleToSettings">&#xea8d;</text>
 			</view>
 		</view>
@@ -5770,6 +5770,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				url: '/pages/message/chat-settings'
 			})
 		}
+	}
+
+	function handleInitiateGroup() {
+		uni.navigateTo({
+			url: '/pages/contacts/initiate-group'
+		})
 	}
 
 	function sendByFinalContent(finalContent: string) {
