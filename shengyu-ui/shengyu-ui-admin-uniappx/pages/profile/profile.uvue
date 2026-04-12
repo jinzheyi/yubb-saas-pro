@@ -125,18 +125,23 @@
 		}
 	}
 
-		function handleAction(type : string) {
-			if (type === 'fav') {
-				// 跳转到统一消息收藏页（真实接口链路）
-				uni.navigateTo({
-					url: '/pages/common/favorite'
-				})
-			} else {
-			uni.showToast({
-				title: type + ' 功能开发中',
-				icon: 'none'
+	function handleAction(type : string) {
+		if (type === 'fav') {
+			uni.navigateTo({
+				url: '/pages/common/favorite'
 			})
+			return
 		}
+		if (type === 'settings') {
+			uni.navigateTo({
+				url: '/pages/profile/settings'
+			})
+			return
+		}
+		uni.showToast({
+			title: type + ' 功能开发中',
+			icon: 'none'
+		})
 	}
 
 	function handleLogout() {

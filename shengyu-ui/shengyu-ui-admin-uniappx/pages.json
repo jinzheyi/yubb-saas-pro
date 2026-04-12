@@ -36,6 +36,13 @@
 			}
 		},
 		{
+			"path": "pages/profile/settings",
+			"style": {
+				"navigationBarTitleText": "设置",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/message/chat",
 			"style": {
 				"navigationBarTitleText": "聊天",

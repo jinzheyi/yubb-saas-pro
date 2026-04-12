@@ -94,10 +94,6 @@
 					<text class="setting-label">置顶聊天</text>
 					<switch class="setting-switch" :checked="isPinned" @change="handlePinnedChange" />
 				</view>
-				<view class="setting-item" @click="handleChatBubble">
-					<text class="setting-label">聊天气泡</text>
-					<text class="iconfont arrow-icon">&#xeb03;</text>
-				</view>
 			</view>
 
 			<!-- 群管理 -->
@@ -423,8 +419,9 @@
 
 	function handleGroupFiles() {
 		const groupIdParam = encodeIdParam(groupId.value)
+		const chatIdParam = encodeIdParam(chatId.value)
 		uni.navigateTo({
-			url: '/pages/message/chat-files?groupId=' + groupIdParam
+			url: '/pages/message/chat-files?groupId=' + groupIdParam + '&chatId=' + chatIdParam + '&scene=group'
 		})
 	}
 
@@ -487,12 +484,6 @@
 				icon: 'none'
 			})
 		}
-	}
-
-	function handleChatBubble() {
-		uni.navigateTo({
-			url: '/pages/message/chat-bubble'
-		})
 	}
 
 	function handleApprovalChange(e : any) {

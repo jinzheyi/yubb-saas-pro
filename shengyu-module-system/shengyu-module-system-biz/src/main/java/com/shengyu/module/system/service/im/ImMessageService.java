@@ -1,6 +1,8 @@
 package com.shengyu.module.system.service.im;
 
 import com.shengyu.framework.common.pojo.PageResult;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImChatMediaPageReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImChatMediaRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageHistoryReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageHistoryRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
@@ -91,6 +93,15 @@ public interface ImMessageService {
      * @return 消息分页结果
      */
     PageResult<AppImMessageRespVO> searchMessages(Long userId, AppImMessageSearchReqVO searchReqVO);
+
+    /**
+     * 分页查询会话媒体文件
+     *
+     * @param userId 用户ID
+     * @param pageReqVO 媒体分页请求
+     * @return 媒体文件分页结果
+     */
+    PageResult<AppImChatMediaRespVO> getChatMediaPage(Long userId, AppImChatMediaPageReqVO pageReqVO);
 
     /**
      * 增量拉取消息（断线补偿）：按 sequence 水位拉取 sequence > lastSequence 的消息

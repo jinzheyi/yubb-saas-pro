@@ -63,6 +63,26 @@ export function getGroupFileList(params: any) {
 }
 
 /**
+ * 获取会话媒体文件列表
+ */
+export function getChatMediaList(params: any) {
+  const chatId = params.chatId || ''
+  const pageNo = params.pageNo || 1
+  const pageSize = params.pageSize || 20
+  const fileType = params.fileType || ''
+
+  let url = `/system/im/message/media?chatId=${chatId}&pageNo=${pageNo}&pageSize=${pageSize}`
+  if (fileType) {
+    url += `&fileType=${fileType}`
+  }
+
+  return request({
+    url: url,
+    method: 'GET'
+  })
+}
+
+/**
  * 删除群文件
  */
 export function deleteGroupFile(id: string) {

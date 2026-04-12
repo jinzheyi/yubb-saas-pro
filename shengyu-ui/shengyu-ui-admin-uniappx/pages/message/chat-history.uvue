@@ -84,11 +84,16 @@
         @click="handleMessageClick(message)"
       >
         <view class="message-header">
-          <image
-            class="sender-avatar"
-            :src="message.senderAvatar || '/static/avatar.jpg'"
-            mode="aspectFill"
-          />
+          <view class="sender-avatar" :style="{ backgroundColor: message.avatarBg }">
+            <image
+              v-if="showAvatarImage(message)"
+              class="sender-avatar-image"
+              :src="message.senderAvatar"
+              mode="aspectFill"
+              @error="handleAvatarError(message)"
+            />
+            <text v-else class="sender-avatar-text">{{ message.avatarText }}</text>
+          </view>
           <view class="message-info">
             <text class="sender-name">{{ message.senderNickname }}</text>
             <text class="send-time">{{ formatTime(message.sendTime) }}</text>
@@ -115,6 +120,7 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { searchMessages } from '../../api/message.uts'
 import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
+import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 
 // 页面参数
 const chatId = ref<string>('')
@@ -178,8 +184,68 @@ onLoad((options: any) => {
   }
 })
 
+const resolveSenderName = (message: any): string => {
+  const nickname = message && message.senderNickname != null ? String(message.senderNickname).trim() : ''
+  if (nickname !== '') {
+    return nickname
+  }
+  const senderId = message && message.senderId != null ? String(message.senderId).trim() : ''
+  if (senderId !== '') {
+    return senderId
+  }
+  return '未知用户'
+}
+
+const normalizeAvatarUrl = (value: any): string => {
+  const text = value != null ? String(value).trim() : ''
+  if (text === '' || text === 'null' || text === 'undefined') {
+    return ''
+  }
+  return text
+}
+
+const normalizeMessageItem = (m: any): any => {
+  const senderId = m && m.senderId != null ? m.senderId.toString() : null
+  const senderName = resolveSenderName(m)
+  const senderAvatar = normalizeAvatarUrl(m != null ? m.senderAvatar : '')
+  return {
+    ...m,
+    id: m && m.id != null ? m.id.toString() : '0',
+    messageId: m && m.messageId != null ? m.messageId.toString() : null,
+    sequence: m && m.sequence != null ? m.sequence.toString() : null,
+    senderId: senderId,
+    receiverId: m && m.receiverId != null ? m.receiverId.toString() : null,
+    groupId: m && m.groupId != null ? m.groupId.toString() : null,
+    senderNickname: senderName,
+    senderAvatar: senderAvatar,
+    avatarText: getAvatarText(senderName),
+    avatarBg: getUserAvatarColor(senderId != null && senderId !== '' ? senderId : senderName),
+    avatarError: false
+  }
+}
+
+const showAvatarImage = (message: any): boolean => {
+  const senderAvatar = normalizeAvatarUrl(message != null ? message.senderAvatar : '')
+  const avatarError = !!(message && message.avatarError)
+  return senderAvatar !== '' && !avatarError
+}
+
+const handleAvatarError = (message: any) => {
+  if (message != null) {
+    message.avatarError = true
+  }
+}
+
 // 执行搜索
 const handleSearch = () => {
+  if (!chatId.value) {
+    uni.showToast({
+      title: '会话信息未加载',
+      icon: 'none',
+      duration: 2000
+    })
+    return
+  }
   if (!searchKeyword.value.trim()) {
     uni.showToast({
       title: '请输入搜索关键词',
@@ -190,9 +256,7 @@ const handleSearch = () => {
   }
 
   // 重置列表
-  pageNo.value = 1
-  messageList.value = []
-  hasMore.value = true
+  resetSearchState()
   searched.value = true
 
   loadMessages()
@@ -228,17 +292,7 @@ const loadMessages = async () => {
     console.log('[ChatHistory] 搜索返回数据:', res)
     
     // 处理返回数据（ID 统一为 string，避免 H5 大整数精度丢失）
-    const newMessages = (res.list || []).map((m: any) => {
-      return {
-        ...m,
-        id: m && m.id != null ? m.id.toString() : '0',
-        messageId: m && m.messageId != null ? m.messageId.toString() : null,
-        sequence: m && m.sequence != null ? m.sequence.toString() : null,
-        senderId: m && m.senderId != null ? m.senderId.toString() : null,
-        receiverId: m && m.receiverId != null ? m.receiverId.toString() : null,
-        groupId: m && m.groupId != null ? m.groupId.toString() : null
-      }
-    })
+    const newMessages = (res.list || []).map((m: any) => normalizeMessageItem(m))
     messageList.value = [...messageList.value, ...newMessages]
     
     // 判断是否还有更多数据
@@ -289,13 +343,23 @@ const loadMore = () => {
   loadMessages()
 }
 
+const resetSearchState = () => {
+  pageNo.value = 1
+  messageList.value = []
+  hasMore.value = true
+}
+
 // 重置筛选
 const resetFilter = () => {
   startTime.value = ''
   endTime.value = ''
-  if (searched.value) {
-    handleSearch()
+  resetSearchState()
+  if (searchKeyword.value.trim()) {
+    searched.value = true
+    loadMessages()
+    return
   }
+  searched.value = false
 }
 
 // 开始时间选择
@@ -420,6 +484,10 @@ const getHighlightedContent = (content: string): string => {
 
 // 点击消息项 - 跳转到聊天页面并定位到该消息
 const handleMessageClick = (message: any) => {
+  if (!chatId.value) {
+    uni.showToast({ title: '会话信息未加载', icon: 'none' })
+    return
+  }
   const chatIdParam = encodeIdParam(chatId.value)
   const mid = message && message.messageId != null ? String(message.messageId) : (message && message.id != null ? String(message.id) : '')
   const sequence = message && message.sequence != null ? String(message.sequence) : ''
@@ -629,6 +697,21 @@ const handleMessageClick = (message: any) => {
   height: 40px;
   border-radius: 20px;
   margin-right: 12px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.sender-avatar-image {
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+}
+
+.sender-avatar-text {
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .message-info {

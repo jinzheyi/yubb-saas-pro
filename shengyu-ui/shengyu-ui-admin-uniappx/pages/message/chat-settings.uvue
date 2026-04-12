@@ -22,51 +22,9 @@
 				<text class="name">张三</text>
 				<text class="role">职员</text>
 				
-				<!-- 快捷功能 -->
-				<view class="quick-actions">
-					<view class="action-item">
-						<view class="action-icon-wrap">
-							<text class="iconfont action-icon">&#xea95;</text>
-						</view>
-						<text class="action-text">图片</text>
-					</view>
-					<view class="action-item">
-						<view class="action-icon-wrap">
-							<text class="iconfont action-icon">&#xea96;</text>
-						</view>
-						<text class="action-text">文件</text>
-					</view>
-					<view class="action-item">
-						<view class="action-icon-wrap">
-							<text class="iconfont action-icon">&#xea7d;</text>
-						</view>
-						<text class="action-text">链接</text>
-					</view>
-					<view class="action-item">
-						<view class="action-icon-wrap">
-							<text class="iconfont action-icon">&#xea6e;</text>
-						</view>
-						<text class="action-text">搜索</text>
-					</view>
-				</view>
-			</view>
-
-			<!-- 设置列表 -->
-			<view class="settings-group">
-				<view class="list-item" hover-class="list-item-active" @click="handleAction('add')">
-					<text class="item-label">{{ t('chatSettings.addMember') }}</text>
-					<text class="iconfont arrow-icon">&#xeb03;</text>
-				</view>
 			</view>
 
 			<view class="settings-group">
-				<view class="list-item">
-					<text class="item-label">{{ t('chatSettings.bubble') }}</text>
-					<view class="item-right">
-						<view class="bubble-preview"></view>
-						<text class="iconfont arrow-icon">&#xeb03;</text>
-					</view>
-				</view>
 				<view class="list-item">
 					<text class="item-label">{{ t('chatSettings.top') }}</text>
 					<switch color="#4cd964" :checked="isTop" @change="onTopChange" />
@@ -78,6 +36,14 @@
 			</view>
 
 			<view class="settings-group">
+				<view class="list-item" hover-class="list-item-active" @click="handleAction('file')">
+					<text class="item-label">文件</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
+				</view>
+				<view class="list-item" hover-class="list-item-active" @click="handleAction('history')">
+					<text class="item-label">聊天记录</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
+				</view>
 				<view class="list-item" hover-class="list-item-active" @click="handleAction('clear')">
 					<text class="item-label">{{ t('chatSettings.clearHistory') }}</text>
 				</view>
@@ -93,6 +59,7 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { messageService } from '../../services/message-service.uts'
+	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 
 	const { t } = useI18n()
 	const isTop = ref(false)
@@ -102,7 +69,7 @@
 	onLoad((options : any) => {
 		try {
 			if (options && options.chatId) {
-				chatId.value = options.chatId.toString()
+				chatId.value = decodeIdParam(options.chatId)
 			}
 		} catch (e) {
 		}
@@ -121,6 +88,22 @@
 	}
 
 	function handleAction(type : string) {
+		if (type === 'file' || type === 'history') {
+			if (!chatId.value) {
+				uni.showToast({
+					title: '会话信息未加载',
+					icon: 'none'
+				})
+				return
+			}
+			const chatIdParam = encodeIdParam(chatId.value)
+			uni.navigateTo({
+				url: type === 'file'
+					? '/pages/message/chat-files?chatId=' + chatIdParam + '&scene=single'
+					: '/pages/message/chat-history?chatId=' + chatIdParam
+			})
+			return
+		}
 		if (type === 'clear') {
 			uni.showModal({
 				title: t('chatSettings.clearHistory'),
@@ -250,41 +233,6 @@
 		margin-bottom: 24px;
 	}
 
-	.quick-actions {
-		flex-direction: row;
-		width: 100%;
-		justify-content: space-around;
-	}
-
-	.action-item {
-		align-items: center;
-	}
-
-	.action-icon-wrap {
-		width: 44px;
-		height: 44px;
-		background-color: #F5F7FA;
-		border-radius: 10px;
-		justify-content: center;
-		align-items: center;
-		margin-bottom: 8px;
-	}
-
-	.action-icon {
-		font-size: 22px;
-		color: #3370FF;
-	}
-
-	.action-text {
-		font-size: 11px;
-		color: #646A73;
-	}
-
-	.section-divider {
-		height: 8px;
-		background-color: #F5F7FA;
-	}
-
 	.settings-group {
 		background-color: #FFFFFF;
 	}
@@ -315,19 +263,6 @@
 	.item-label {
 		font-size: 16px;
 		color: #1F2329;
-	}
-
-	.item-right {
-		flex-direction: row;
-		align-items: center;
-	}
-
-	.bubble-preview {
-		width: 20px;
-		height: 20px;
-		background-color: #D2E3FC;
-		border-radius: 4px;
-		margin-right: 8px;
 	}
 
 	.arrow-icon {

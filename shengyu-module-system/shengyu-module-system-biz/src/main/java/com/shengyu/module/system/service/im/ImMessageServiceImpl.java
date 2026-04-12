@@ -2592,6 +2592,41 @@ public class ImMessageServiceImpl implements ImMessageService {
         return new PageResult<>(respVOList, total);
     }
 
+    @Override
+    public PageResult<AppImChatMediaRespVO> getChatMediaPage(Long userId, AppImChatMediaPageReqVO pageReqVO) {
+        if (pageReqVO == null || pageReqVO.getChatId() == null) {
+            return new PageResult<>(Collections.emptyList(), 0L);
+        }
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, pageReqVO.getChatId());
+        if (chatUser == null) {
+            return new PageResult<>(Collections.emptyList(), 0L);
+        }
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        int pageNo = pageReqVO.getPageNo() != null && pageReqVO.getPageNo() > 0 ? pageReqVO.getPageNo() : 1;
+        int pageSize = pageReqVO.getPageSize() != null && pageReqVO.getPageSize() > 0 ? pageReqVO.getPageSize() : 20;
+        if (pageSize > 50) {
+            pageSize = 50;
+        }
+        List<Integer> messageTypeList = resolveMediaMessageTypeList(pageReqVO.getFileType());
+        long offset = (long) (pageNo - 1) * pageSize;
+        Long total = chatMessageMapper.countSearchPageByUser(
+                tenantId, userId, pageReqVO.getChatId(), null, null, messageTypeList, null, null);
+        if (total == null || total <= 0) {
+            return new PageResult<>(Collections.emptyList(), 0L);
+        }
+        List<ImChatMessageDO> messages = chatMessageMapper.selectSearchPageByUser(
+                tenantId, userId, pageReqVO.getChatId(), null, null, messageTypeList, null, null, offset, (long) pageSize);
+        List<AppImChatMediaRespVO> list = messages.stream()
+                .filter(Objects::nonNull)
+                .map(this::buildChatMediaRespVO)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        return new PageResult<>(list, total);
+    }
+
     private List<Integer> resolveSearchMessageTypeList(AppImMessageSearchReqVO searchReqVO) {
         if (searchReqVO == null) {
             return null;
@@ -2608,6 +2643,183 @@ public class ImMessageServiceImpl implements ImMessageService {
                     ImMessageTypeEnum.FILE.getType());
         }
         return null;
+    }
+
+    private List<Integer> resolveMediaMessageTypeList(String fileType) {
+        String normalized = StrUtil.blankToDefault(StrUtil.trim(fileType), "all").toLowerCase();
+        switch (normalized) {
+            case "image":
+                return Collections.singletonList(ImMessageTypeEnum.IMAGE.getType());
+            case "video":
+                return Collections.singletonList(ImMessageTypeEnum.VIDEO.getType());
+            case "file":
+                return Collections.singletonList(ImMessageTypeEnum.FILE.getType());
+            default:
+                return Arrays.asList(
+                        ImMessageTypeEnum.IMAGE.getType(),
+                        ImMessageTypeEnum.VIDEO.getType(),
+                        ImMessageTypeEnum.FILE.getType());
+        }
+    }
+
+    private AppImChatMediaRespVO buildChatMediaRespVO(ImChatMessageDO message) {
+        Integer messageType = normalizeDbMessageType(message.getMessageType());
+        if (messageType == null) {
+            return null;
+        }
+        AppImChatMediaRespVO respVO = new AppImChatMediaRespVO();
+        respVO.setMessageId(message.getId());
+        respVO.setChatId(message.getChatId());
+        respVO.setSenderId(message.getSenderId());
+        respVO.setSendTime(message.getSendTime());
+        fillChatMediaChatTarget(respVO, message.getChatId());
+        fillChatMediaSender(respVO, message.getSenderId());
+
+        JSONObject extraObj = parseChatMediaExtra(message.getExtra());
+        String url = StrUtil.blankToDefault(resolveChatMediaUrl(message.getContent(), extraObj), "");
+        respVO.setFileUrl(url);
+        respVO.setFileName(resolveChatMediaFileName(messageType, url, extraObj));
+        respVO.setFileSize(resolveChatMediaFileSize(extraObj));
+        respVO.setFileMimeType(resolveChatMediaMimeType(messageType, extraObj, url));
+        respVO.setFileId(resolveChatMediaFileId(extraObj));
+
+        if (Objects.equals(messageType, ImMessageTypeEnum.IMAGE.getType())) {
+            respVO.setMediaType("image");
+        } else if (Objects.equals(messageType, ImMessageTypeEnum.VIDEO.getType())) {
+            respVO.setMediaType("video");
+        } else if (Objects.equals(messageType, ImMessageTypeEnum.FILE.getType())) {
+            respVO.setMediaType("file");
+        } else {
+            return null;
+        }
+        return respVO;
+    }
+
+    private void fillChatMediaChatTarget(AppImChatMediaRespVO respVO, Long chatId) {
+        if (respVO == null || chatId == null) {
+            return;
+        }
+        ImChatDO chat = chatMapper.selectById(chatId);
+        if (chat != null) {
+            respVO.setGroupId(chat.getGroupId());
+        }
+    }
+
+    private void fillChatMediaSender(AppImChatMediaRespVO respVO, Long senderId) {
+        if (respVO == null || senderId == null) {
+            return;
+        }
+        AdminUserDO sender = userMapper.selectById(senderId);
+        if (sender != null) {
+            respVO.setSenderNickname(sender.getNickname());
+        }
+    }
+
+    private JSONObject parseChatMediaExtra(String extra) {
+        if (StrUtil.isBlank(extra)) {
+            return null;
+        }
+        try {
+            return JSONUtil.parseObj(extra);
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private String resolveChatMediaUrl(String content, JSONObject extraObj) {
+        if (extraObj != null) {
+            String extraUrl = extraObj.getStr("url", "");
+            if (StrUtil.isNotBlank(extraUrl)) {
+                return extraUrl;
+            }
+        }
+        return content;
+    }
+
+    private String resolveChatMediaFileName(Integer messageType, String url, JSONObject extraObj) {
+        if (extraObj != null) {
+            String extraName = extraObj.getStr("fileName", extraObj.getStr("name", ""));
+            if (StrUtil.isNotBlank(extraName)) {
+                return extraName;
+            }
+        }
+        String nameFromUrl = extractChatMediaFileNameFromUrl(url);
+        if (StrUtil.isNotBlank(nameFromUrl)) {
+            return nameFromUrl;
+        }
+        if (Objects.equals(messageType, ImMessageTypeEnum.IMAGE.getType())) {
+            return "图片";
+        }
+        if (Objects.equals(messageType, ImMessageTypeEnum.VIDEO.getType())) {
+            return "视频";
+        }
+        return "文件";
+    }
+
+    private Long resolveChatMediaFileSize(JSONObject extraObj) {
+        if (extraObj == null) {
+            return 0L;
+        }
+        return extraObj.getLong("size", 0L);
+    }
+
+    private String resolveChatMediaMimeType(Integer messageType, JSONObject extraObj, String url) {
+        if (extraObj != null) {
+            String mimeType = extraObj.getStr("fileType", extraObj.getStr("mimeType", ""));
+            if (StrUtil.isNotBlank(mimeType)) {
+                return mimeType;
+            }
+        }
+        String ext = extractChatMediaExtension(url);
+        if (StrUtil.isBlank(ext)) {
+            if (Objects.equals(messageType, ImMessageTypeEnum.IMAGE.getType())) {
+                return "image/*";
+            }
+            if (Objects.equals(messageType, ImMessageTypeEnum.VIDEO.getType())) {
+                return "video/*";
+            }
+            return "";
+        }
+        if (Objects.equals(messageType, ImMessageTypeEnum.IMAGE.getType())) {
+            return "image/" + ext;
+        }
+        if (Objects.equals(messageType, ImMessageTypeEnum.VIDEO.getType())) {
+            return "video/" + ext;
+        }
+        return "";
+    }
+
+    private Long resolveChatMediaFileId(JSONObject extraObj) {
+        if (extraObj == null) {
+            return null;
+        }
+        Long fileId = extraObj.getLong("fileId", null);
+        return fileId != null && fileId > 0 ? fileId : null;
+    }
+
+    private String extractChatMediaFileNameFromUrl(String url) {
+        if (StrUtil.isBlank(url)) {
+            return "";
+        }
+        try {
+            String path = UriComponentsBuilder.fromUriString(url).build().getPath();
+            if (StrUtil.isBlank(path)) {
+                path = url;
+            }
+            int idx = path.lastIndexOf('/');
+            return idx >= 0 ? path.substring(idx + 1) : path;
+        } catch (Exception ignore) {
+            int idx = url.lastIndexOf('/');
+            return idx >= 0 ? url.substring(idx + 1) : url;
+        }
+    }
+
+    private String extractChatMediaExtension(String url) {
+        String fileName = extractChatMediaFileNameFromUrl(url);
+        if (StrUtil.isBlank(fileName) || !fileName.contains(".")) {
+            return "";
+        }
+        return StrUtil.subAfter(fileName, ".", true).toLowerCase();
     }
 
     /**

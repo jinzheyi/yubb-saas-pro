@@ -10,6 +10,8 @@ import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageHistor
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageHistoryRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImLocationSearchReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImLocationSearchRespVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImChatMediaPageReqVO;
+import com.shengyu.module.system.controller.app.im.vo.message.AppImChatMediaRespVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePageReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessagePullReqVO;
 import com.shengyu.module.system.controller.app.im.vo.message.AppImMessageRecallConfigRespVO;
@@ -185,6 +187,14 @@ public class AppImMessageController {
                     .body(CommonResult.error(TOO_MANY_REQUESTS));
         }
         return ResponseEntity.ok(success(messageService.searchMessages(userId, searchReqVO)));
+    }
+
+    @GetMapping("/media")
+    @Operation(summary = "分页查询会话媒体文件")
+    public CommonResult<PageResult<AppImChatMediaRespVO>> getChatMediaPage(
+            @Valid AppImChatMediaPageReqVO pageReqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(messageService.getChatMediaPage(userId, pageReqVO));
     }
 
     @GetMapping("/location-search")

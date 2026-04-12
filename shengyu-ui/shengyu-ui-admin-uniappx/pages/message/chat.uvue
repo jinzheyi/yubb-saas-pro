@@ -4176,9 +4176,18 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	function onEditorReady() {
 		uni.createSelectorQuery().select('#editor').context((res) => {
-			editorCtx = res.context as EditorContext
-			if (editorCtx != null && composerText.value !== '') {
-				applyContentToEditor(composerText.value)
+			try {
+				const ctx = res != null ? (res as any).context : null
+				if (ctx == null) {
+					editorCtx = null
+					return
+				}
+				editorCtx = ctx as EditorContext
+				if (composerText.value !== '') {
+					applyContentToEditor(composerText.value)
+				}
+			} catch (e) {
+				editorCtx = null
 			}
 		}).exec()
 	}
@@ -5960,7 +5969,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} else {
 			// 单聊跳转到聊天设置页
 			uni.navigateTo({
-				url: '/pages/message/chat-settings'
+				url: `/pages/message/chat-settings?chatId=${encodeIdParam(chatId.value)}`
 			})
 		}
 	}

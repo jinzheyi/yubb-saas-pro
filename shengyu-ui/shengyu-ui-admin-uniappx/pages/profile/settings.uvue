@@ -1,0 +1,129 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click.stop="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">返回</text>
+			</view>
+			<text class="header-title">设置</text>
+			<view class="header-right"></view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<view class="settings-group">
+				<view class="list-item" hover-class="list-item-active" @click="handleAction('chatBubble')">
+					<text class="item-label">聊天气泡</text>
+					<text class="item-desc">全局生效</text>
+					<text class="iconfont arrow-icon">&#xeb03;</text>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function handleAction(type : string) {
+		if (type === 'chatBubble') {
+			uni.navigateTo({
+				url: '/pages/message/chat-bubble'
+			})
+			return
+		}
+	}
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F7FA;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		color: #1F2329;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #1F2329;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 17px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+	}
+
+	.settings-group {
+		background-color: #FFFFFF;
+		margin-top: 12px;
+	}
+
+	.list-item {
+		height: 56px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 16px;
+		background-color: #FFFFFF;
+	}
+
+	.list-item-active {
+		background-color: #F2F3F5;
+	}
+
+	.item-label {
+		flex: 1;
+		font-size: 16px;
+		color: #1F2329;
+	}
+
+	.item-desc {
+		font-size: 13px;
+		color: #8F959E;
+		margin-right: 8px;
+	}
+
+	.arrow-icon {
+		font-size: 14px;
+		color: #8F959E;
+	}
+</style>
