@@ -16,6 +16,9 @@
 			<!-- 查看模式 -->
 			<view v-if="!isEditing" class="view-mode">
 				<view v-if="notice" class="notice-content">
+					<view v-if="noticePinned" class="pinned-tag">
+						<text class="pinned-tag-text">置顶</text>
+					</view>
 					<text class="notice-text">{{ notice }}</text>
 				</view>
 				<view v-else class="empty-notice">
@@ -110,6 +113,7 @@
 	// 发布选项
 	const notifyMembers = ref(true) // 是否推送通知，默认true
 	const pinNotice = ref(false) // 是否置顶公告，默认false
+	const noticePinned = ref(false) // 当前已生效的置顶状态
 	
 	// 发布信息
 	const publishInfo = ref<any>(null)
@@ -129,6 +133,7 @@
 			
 			if (result) {
 				notice.value = result.notice || ''
+				noticePinned.value = result.noticePinned === true
 				
 				// 判断是否有编辑权限（群主或管理员）
 				// TODO: 需要后端返回当前用户在群中的角色
@@ -162,7 +167,9 @@
 	function handleBack() {
 		if (isEditing.value) {
 			// 编辑模式下，提示是否放弃编辑
-			if (editingNotice.value !== notice.value) {
+			const noticeChanged = editingNotice.value.trim() !== notice.value
+			const pinChanged = pinNotice.value !== noticePinned.value
+			if (noticeChanged || pinChanged) {
 				uni.showModal({
 					title: '提示',
 					content: '是否放弃编辑？',
@@ -190,9 +197,9 @@
 		} else {
 			// 进入编辑模式
 			editingNotice.value = notice.value
-			// 重置选项为默认值
+			// 推送通知默认开启；置顶状态沿用当前生效值
 			notifyMembers.value = true
-			pinNotice.value = false
+			pinNotice.value = noticePinned.value
 			isEditing.value = true
 		}
 	}
@@ -215,7 +222,9 @@
 	 * 取消编辑
 	 */
 	function handleCancelEdit() {
-		if (editingNotice.value !== notice.value) {
+		const noticeChanged = editingNotice.value.trim() !== notice.value
+		const pinChanged = pinNotice.value !== noticePinned.value
+		if (noticeChanged || pinChanged) {
 			uni.showModal({
 				title: '提示',
 				content: '是否放弃编辑？',
@@ -223,7 +232,7 @@
 					if (res.confirm) {
 						editingNotice.value = notice.value
 						notifyMembers.value = true
-						pinNotice.value = false
+						pinNotice.value = noticePinned.value
 						isEditing.value = false
 					}
 				}
@@ -238,6 +247,7 @@
 	 */
 	async function handlePublish() {
 		const newNotice = editingNotice.value.trim()
+		const newPinNotice = pinNotice.value
 		
 		// 验证
 		if (newNotice.length > 500) {
@@ -248,8 +258,8 @@
 			return
 		}
 		
-		// 如果内容没有变化，直接退出编辑模式
-		if (newNotice === notice.value) {
+		// 内容和置顶都没有变化，直接退出编辑模式
+		if (newNotice === notice.value && newPinNotice === noticePinned.value) {
 			isEditing.value = false
 			return
 		}
@@ -261,10 +271,11 @@
 				groupId: groupId.value,
 				notice: newNotice,
 				notifyMembers: notifyMembers.value,
-				pinNotice: pinNotice.value
+				pinNotice: newPinNotice
 			})
 			
 			notice.value = newNotice
+			noticePinned.value = newPinNotice
 			isEditing.value = false
 			
 			// 更新发布信息
@@ -387,6 +398,23 @@
 	
 	.notice-content {
 		margin-bottom: 20px;
+	}
+
+	.pinned-tag {
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		align-self: flex-start;
+		padding: 2px 8px;
+		border-radius: 10px;
+		background-color: #e8f3ff;
+		margin-bottom: 8px;
+	}
+
+	.pinned-tag-text {
+		font-size: 11px;
+		color: #1677FF;
+		font-weight: 600;
 	}
 	
 	.notice-text {

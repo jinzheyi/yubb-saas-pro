@@ -3,15 +3,21 @@ package com.shengyu.module.system.service.im;
 import cn.hutool.core.collection.CollUtil;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
+import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.protocol.TextMessage;
+import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
 import com.shengyu.module.system.controller.app.im.vo.group.*;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
+import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupInviteDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupUserDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
+import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
+import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupInviteMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupUserMapper;
@@ -26,11 +32,15 @@ import com.shengyu.module.system.mq.producer.im.ImGroupConversationRefreshProduc
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -66,6 +76,21 @@ public class ImGroupServiceImpl implements ImGroupService {
 
     @Resource
     private ImGroupInviteMapper groupInviteMapper;
+
+    @Resource
+    private ImChatUserMapper chatUserMapper;
+
+    @Resource
+    private ImConversationUserStateMapper conversationUserStateMapper;
+
+    @Resource
+    private ImCursorVersionService cursorVersionService;
+
+    @Resource
+    private ImBadgeService imBadgeService;
+
+    @Resource
+    private NettyMessageSender messageSender;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -517,25 +542,10 @@ public class ImGroupServiceImpl implements ImGroupService {
             String content = String.format("\"%s\" 将 \"%s\" 设置为 %s", 
                     operator.getNickname(), targetUser.getNickname(), roleName);
             
-            // 创建系统消息
-            ImChatMessageDO sysMessage = new ImChatMessageDO();
-            sysMessage.setChatId(chat.getId());
-            sysMessage.setSenderId(0L); // 系统消息
-            sysMessage.setMessageType(10); // 系统消息类型
-            sysMessage.setContent(content);
-            sysMessage.setSendTime(LocalDateTime.now());
-            sysMessage.setRev(1L);
-            sysMessage.setStatus(ImMessageStatusEnum.SENT.getStatus());
-            
-            Long tenantId = TenantContextHolder.getTenantId();
-            if (tenantId == null) {
-                tenantId = 0L;
-            }
-            
+            LocalDateTime now = LocalDateTime.now();
             // 分配sequence
             Long sequence = chatMapper.nextSequence(chat.getId());
-            sysMessage.setSequence(sequence);
-            
+            ImChatMessageDO sysMessage = buildSystemTipMessage(chat.getId(), sequence, content, now);
             chatMessageMapper.insert(sysMessage);
             
             log.info("[ImGroupService] 角色变更通知已发送, groupId: {}, targetUserId: {}, newRole: {}", 
@@ -981,23 +991,139 @@ public class ImGroupServiceImpl implements ImGroupService {
                 reqVO.getPinNotice(),
                 reqVO.getNotifyMembers());
         
-        // 6. 如果需要推送通知，发送系统消息给所有群成员
+        // 6. 如果需要推送通知：更新会话预览/未读，并推送角标与会话刷新
         if (Boolean.TRUE.equals(reqVO.getNotifyMembers()) && reqVO.getNotice() != null && !reqVO.getNotice().isEmpty()) {
-            // 获取群成员ID列表
-            List<Long> memberIds = getGroupMemberIds(reqVO.getGroupId());
-            
-            // 构建通知内容
-            String noticePreview = reqVO.getNotice().length() > 30 
-                    ? reqVO.getNotice().substring(0, 30) + "..." 
-                    : reqVO.getNotice();
-            String notificationContent = String.format("群主发布了新公告：%s", noticePreview);
-            
-            log.info("[ImGroupService] 准备推送群公告通知, groupId: {}, memberCount: {}", 
-                    reqVO.getGroupId(), memberIds.size());
-            
-            // TODO: 调用消息服务发送系统通知
-            // messageService.sendSystemNotification(memberIds, notificationContent, reqVO.getGroupId());
+            pushGroupNoticeConversationUpdate(userId, reqVO.getGroupId());
         }
+    }
+
+    private void pushGroupNoticeConversationUpdate(Long operatorUserId, Long groupId) {
+        List<Long> memberIds = getGroupMemberIds(groupId);
+        if (CollUtil.isEmpty(memberIds)) {
+            return;
+        }
+
+        ImChatDO chat = chatMapper.selectGroupChat(groupId, ImConversationTypeEnum.GROUP.getType());
+        if (chat == null) {
+            log.warn("[ImGroupService] 群公告通知失败，群会话不存在, groupId: {}", groupId);
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        Long sequence = chatMapper.nextSequence(chat.getId());
+        String preview = "[群公告有更新]";
+        String tipContent = "群公告有更新";
+
+        ImChatMessageDO tipMessage = buildSystemTipMessage(chat.getId(), sequence, tipContent, now);
+        chatMessageMapper.insert(tipMessage);
+
+        List<Long> targetMemberIds = memberIds.stream()
+                .filter(memberId -> !Objects.equals(memberId, operatorUserId))
+                .collect(Collectors.toList());
+        if (CollUtil.isEmpty(targetMemberIds)) {
+            return;
+        }
+
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        Map<Long, Long> userCursorVersionMap = new LinkedHashMap<>();
+        for (Long targetUserId : targetMemberIds) {
+            try {
+                ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(targetUserId, chat.getId());
+                if (chatUser != null) {
+                    chatUserMapper.updateLastMessageAndIncrementUnread(
+                            chatUser.getId(),
+                            tipMessage.getId(),
+                            sequence,
+                            10,
+                            preview,
+                            now,
+                            1,
+                            Boolean.TRUE.equals(chatUser.getNoDisturb())
+                    );
+                }
+
+                Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, targetUserId);
+                conversationUserStateMapper.upsertAfterMessage(
+                        tenantId,
+                        chat.getId(),
+                        targetUserId,
+                        cursorVersion,
+                        1,
+                        null,
+                        null,
+                        tipMessage.getId(),
+                        sequence,
+                        10,
+                        preview,
+                        Boolean.FALSE,
+                        now
+                );
+
+                userCursorVersionMap.put(targetUserId, cursorVersion);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送群公告会话更新失败, groupId: {}, targetUserId: {}, error: {}",
+                        groupId, targetUserId, e.getMessage(), e);
+            }
+        }
+
+        if (CollUtil.isNotEmpty(userCursorVersionMap)) {
+            final Long tenantIdFinal = tenantId;
+            final Long chatIdFinal = chat.getId();
+            runAfterCommit(() -> pushGroupNoticeNotifyAfterCommit(groupId, tenantIdFinal, chatIdFinal, userCursorVersionMap));
+        }
+    }
+
+    private void pushGroupNoticeNotifyAfterCommit(Long groupId, Long tenantId, Long chatId, Map<Long, Long> userCursorVersionMap) {
+        TextMessage body = TextMessage.newBuilder().setContent("").build();
+        for (Map.Entry<Long, Long> entry : userCursorVersionMap.entrySet()) {
+            Long targetUserId = entry.getKey();
+            Long cursorVersion = entry.getValue();
+            try {
+                messageSender.sendToUser(targetUserId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, targetUserId, 0L, tenantId,
+                        null, null, chatId,
+                        cursorVersion, null);
+                imBadgeService.pushBadgeUpdate(targetUserId);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 群公告提交后通知失败, groupId: {}, targetUserId: {}, error: {}",
+                        groupId, targetUserId, e.getMessage(), e);
+            }
+        }
+    }
+
+    private void runAfterCommit(Runnable task) {
+        if (task == null) {
+            return;
+        }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    task.run();
+                }
+            });
+            return;
+        }
+        task.run();
+    }
+
+    /**
+     * 统一构造群系统提示消息，避免字段漂移（仅使用 ImChatMessageDO 已定义字段）
+     */
+    private ImChatMessageDO buildSystemTipMessage(Long chatId, Long sequence, String content, LocalDateTime sendTime) {
+        ImChatMessageDO message = new ImChatMessageDO();
+        message.setChatId(chatId);
+        message.setSequence(sequence);
+        message.setSenderId(0L);
+        message.setMessageType(10);
+        message.setContent(content);
+        message.setSendTime(sendTime);
+        message.setRev(1L);
+        message.setStatus(ImMessageStatusEnum.SENT.getStatus());
+        return message;
     }
 
     @Override

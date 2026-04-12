@@ -1495,13 +1495,7 @@ export class MessageService {
           return
         }
 
-        // enterprise: cursorVersion-only notify, trigger incremental sync for cross-device state (read watermark/preview/etc)
-        try {
-          const cv: any = (message as any).cursorVersion
-          if (cv != null && cv !== '') {
-            conversationService.handleRealtimeCursorVersion(cv)
-          }
-        } catch (e) { /* ignore */ }
+        // cursor-only notify：直接拉增量，避免先推进本地 cursor 导致本次变更被跳过
         try {
           void conversationService.syncConversationsIncrementally(false)
         } catch (e) { /* ignore */ }
@@ -1509,12 +1503,6 @@ export class MessageService {
       }
       const snapshot: any = body != null ? (body as any).conversationSnapshot : null
       if (snapshot == null) {
-        try {
-          const cv: any = (message as any).cursorVersion
-          if (cv != null && cv !== '') {
-            conversationService.handleRealtimeCursorVersion(cv)
-          }
-        } catch (e) { /* ignore */ }
         try {
           void conversationService.syncConversationsIncrementally(false)
         } catch (e) { /* ignore */ }

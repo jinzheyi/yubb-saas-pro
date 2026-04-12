@@ -24,6 +24,17 @@
 			</view>
 		</view>
 
+		<view
+			v-if="!multiSelectMode && shouldShowGroupNoticeBanner"
+			class="group-notice-banner"
+			@click="handleOpenPinnedNotice"
+		>
+			<text class="group-notice-banner-tag">群公告</text>
+			<text class="group-notice-banner-text" :numberOfLines="1">{{ groupNoticeText }}</text>
+			<text class="iconfont group-notice-banner-close" @click.stop="handleDismissPinnedNotice">&#xeb08;</text>
+			<text class="iconfont group-notice-banner-arrow">&#xea8f;</text>
+		</view>
+
 		<!-- 聊天内容区域 -->
 		<scroll-view class="chat-content" :class="{ 'chat-content-multi-select': multiSelectMode }" scroll-y="true" direction="vertical" refresher-enabled="true" :refresher-triggered="historyRefresherTriggered" :refresher-threshold="60" :scroll-into-view="lastMessageId" show-scrollbar="false" @refresherrefresh="handleHistoryRefresher" @scroll="handleChatScroll" @scrolltoupper="handleChatScrollToUpper" :upper-threshold="80" @scrolltolower="handleChatScrollToLower" :lower-threshold="80">
 			<!-- 水印层 -->
@@ -47,9 +58,9 @@
 						</view>
 						
 						<!-- 企业级撤回：对齐企微/钉钉，展示为居中系统提示条（不走左右气泡，不显示头像） -->
-						<view v-if="isRecalledFinalMsg(msg)" class="recall-system-tip">
+						<view v-if="isCenterSystemTipMsg(msg)" class="recall-system-tip">
 							<text class="recall-system-tip-text">{{ msg.content }}</text>
-							<text v-if="shouldShowReeditEntry(msg)" class="recall-system-tip-action" @click.stop="handleReeditAfterRecall(msg)">重新编辑</text>
+							<text v-if="isRecalledFinalMsg(msg) && shouldShowReeditEntry(msg)" class="recall-system-tip-action" @click.stop="handleReeditAfterRecall(msg)">重新编辑</text>
 						</view>
 						<template v-else>
 							<view class="avatar" :style="{ backgroundColor: msg.avatarBg }">
@@ -522,6 +533,7 @@
 	import { badgeService } from '../../services/badge-service.uts'
 	import { MessageType, wsManager } from '../../utils/websocket.uts'
 	import { getMessageWindow, getMessageHistory, recallMessage, deleteMessage, getRecallConfig, markVoicePlayed as markVoicePlayedApi, markVoicePlayedBatch, getVoicePlayedStatus } from '../../api/message.uts'
+	import { getGroup } from '../../api/group.uts'
 	import { addFavorite as addMessageFavoriteApi } from '../../api/favorite.uts'
 	import { getConversationByTarget } from '../../api/conversation.uts'
 	import { getUserIdStr, getTenantId, hasRole } from '../../store/user.uts'
@@ -561,6 +573,18 @@
 	const chatType = ref('single')
 	const groupId = ref<string>('')
 	const memberCount = ref(0)
+	const groupNoticePinned = ref(false)
+	const groupNoticeText = ref('')
+	const groupNoticeSignature = ref('')
+	const groupNoticeDismissed = ref(false)
+	const GROUP_NOTICE_DISMISS_KEY_PREFIX = 'IM_GROUP_NOTICE_DISMISS'
+	const GROUP_NOTICE_UPDATE_TIP_TEXT = '群公告有更新'
+	const shouldShowGroupNoticeBanner = computed(() : boolean => {
+		return chatType.value === 'group'
+			&& groupNoticePinned.value
+			&& groupNoticeText.value !== ''
+			&& !groupNoticeDismissed.value
+	})
 	
 	// 会话信息（使用字符串避免精度丢失）
 	const chatId = ref<string>('')
@@ -586,6 +610,108 @@
 	// 当前用户信息（使用字符串避免精度丢失）
 	const currentUserId = ref<string>('0')
 	const currentTenantId = ref<string>('0')
+
+	function buildGroupNoticeDismissStorageKey(gid: string): string {
+		const tenantId = currentTenantId.value != null && currentTenantId.value !== '' ? currentTenantId.value : '0'
+		const userId = currentUserId.value != null && currentUserId.value !== '' ? currentUserId.value : '0'
+		return `${GROUP_NOTICE_DISMISS_KEY_PREFIX}_${tenantId}_${userId}_${gid}`
+	}
+
+	function buildGroupNoticeSignature(group: any, gid: string): string {
+		const notice = group != null && group.notice != null ? String(group.notice).trim() : ''
+		const pinned = group != null && group.noticePinned === true ? '1' : '0'
+		let updatedAt = ''
+		try {
+			if (group != null) {
+				if ((group as any).noticeUpdateTime != null && String((group as any).noticeUpdateTime) !== '') {
+					updatedAt = String((group as any).noticeUpdateTime)
+				} else if ((group as any).updateTime != null && String((group as any).updateTime) !== '') {
+					updatedAt = String((group as any).updateTime)
+				}
+			}
+		} catch (e) {
+			updatedAt = ''
+		}
+		return `${gid}|${pinned}|${notice}|${updatedAt}`
+	}
+
+	function loadGroupNoticeDismissed(gid: string, signature: string): boolean {
+		try {
+			if (gid === '' || signature === '') {
+				return false
+			}
+			const stored = getString(buildGroupNoticeDismissStorageKey(gid), '')
+			return stored !== '' && stored === signature
+		} catch (e) {
+			return false
+		}
+	}
+
+	function persistGroupNoticeDismissed(gid: string, signature: string): void {
+		try {
+			if (gid === '' || signature === '') {
+				return
+			}
+			setString(buildGroupNoticeDismissStorageKey(gid), signature)
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	async function loadGroupNoticeBanner() {
+		if (chatType.value !== 'group') {
+			groupNoticePinned.value = false
+			groupNoticeText.value = ''
+			groupNoticeSignature.value = ''
+			groupNoticeDismissed.value = false
+			return
+		}
+		const gid = targetId.value != null && targetId.value !== '' ? targetId.value : groupId.value
+		if (!gid || gid === '' || gid === '0') {
+			groupNoticePinned.value = false
+			groupNoticeText.value = ''
+			groupNoticeSignature.value = ''
+			groupNoticeDismissed.value = false
+			return
+		}
+		try {
+			const group : any = await getGroup(gid)
+			groupNoticePinned.value = group != null && group.noticePinned === true
+			groupNoticeText.value = group != null && group.notice != null ? String(group.notice).trim() : ''
+			groupNoticeSignature.value = buildGroupNoticeSignature(group, gid)
+			groupNoticeDismissed.value = loadGroupNoticeDismissed(gid, groupNoticeSignature.value)
+		} catch (e) {
+			groupNoticePinned.value = false
+			groupNoticeText.value = ''
+			groupNoticeSignature.value = ''
+			groupNoticeDismissed.value = false
+		}
+	}
+
+	function handleOpenPinnedNotice() {
+		if (chatType.value !== 'group') {
+			return
+		}
+		const gid = groupId.value != null && groupId.value !== '' ? groupId.value : targetId.value
+		if (!gid || gid === '' || gid === '0') {
+			return
+		}
+		uni.navigateTo({
+			url: `/pages/message/group-notice?groupId=${encodeIdParam(gid)}&groupName=${encodeURIComponent(name.value)}`
+		})
+	}
+
+	function handleDismissPinnedNotice() {
+		if (chatType.value !== 'group') {
+			return
+		}
+		const gid = groupId.value != null && groupId.value !== '' ? groupId.value : targetId.value
+		if (!gid || gid === '' || gid === '0' || groupNoticeSignature.value === '') {
+			return
+		}
+		persistGroupNoticeDismissed(gid, groupNoticeSignature.value)
+		groupNoticeDismissed.value = true
+	}
 	const CHAT_VIEWPORT_TTL_MS = 15 * 60 * 1000
 	const CONTACT_CARD_SELECT_EVENT = 'imSelectContactCard'
 
@@ -3261,6 +3387,26 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} catch (e) {
 			return false
 		}
+	}
+
+	function isGroupNoticeUpdateTipMsg(m: any): boolean {
+		try {
+			if (m == null || isRecalledFinalMsg(m)) {
+				return false
+			}
+			const senderId = (m as any).senderId != null ? String((m as any).senderId) : ''
+			if (senderId !== '0') {
+				return false
+			}
+			const content = (m as any).content != null ? String((m as any).content).trim() : ''
+			return content === GROUP_NOTICE_UPDATE_TIP_TEXT
+		} catch (e) {
+			return false
+		}
+	}
+
+	function isCenterSystemTipMsg(m: any): boolean {
+		return isRecalledFinalMsg(m) || isGroupNoticeUpdateTipMsg(m)
 	}
 
 	function getMessagePreview(msg : MessageItem) : string {
@@ -9198,6 +9344,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		await hydrateConversationMetaByChatId()
 		if (chatType.value === 'group') {
 			void ensureMentionMembersLoaded()
+			void loadGroupNoticeBanner()
 		}
 		try {
 			if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
@@ -9237,6 +9384,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}
 		} catch (e) {
 			// ignore
+		}
+		if (chatType.value === 'group') {
+			void loadGroupNoticeBanner()
 		}
 	})
 
@@ -9380,6 +9530,42 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		color: #1F2329;
 		font-size: 22px;
 		margin-left: 16px;
+	}
+
+	.group-notice-banner {
+		flex-direction: row;
+		align-items: center;
+		padding: 8px 12px;
+		background-color: #fff8e6;
+		border-bottom-width: 1px;
+		border-bottom-color: #f5e1ad;
+	}
+
+	.group-notice-banner-tag {
+		font-size: 11px;
+		color: #8a5a00;
+		background-color: #ffe9b3;
+		padding: 2px 6px;
+		border-radius: 8px;
+		margin-right: 8px;
+	}
+
+	.group-notice-banner-text {
+		flex: 1;
+		font-size: 13px;
+		color: #7a4b00;
+	}
+
+	.group-notice-banner-close {
+		font-size: 12px;
+		color: #b08a3c;
+		padding: 4px 6px;
+	}
+
+	.group-notice-banner-arrow {
+		font-size: 14px;
+		color: #ad7a1f;
+		margin-left: 2px;
 	}
 
 	.chat-content {

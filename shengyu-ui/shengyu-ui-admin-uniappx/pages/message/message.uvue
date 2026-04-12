@@ -81,7 +81,7 @@
 							<view class="message-desc">
 								<template v-for="(token, tokenIndex) in item.lastMessagePreviewTokens" :key="'pinned-token-' + item.chatId + '-' + tokenIndex">
 									<image v-if="token.type === 'emoji'" class="message-desc-emoji" :src="token.content" mode="aspectFit" />
-									<text v-else class="message-desc-text">{{ token.content }}</text>
+									<text v-else :class="['message-desc-text', isNoticeUpdatePreviewToken(token.content) ? 'message-desc-text-alert' : '']">{{ token.content }}</text>
 								</template>
 							</view>
 							<text v-if="item.noDisturb" class="iconfont nodisturb-icon">&#xe63a;</text>
@@ -129,7 +129,7 @@
 							<view class="message-desc">
 								<template v-for="(token, tokenIndex) in item.lastMessagePreviewTokens" :key="'normal-token-' + item.chatId + '-' + tokenIndex">
 									<image v-if="token.type === 'emoji'" class="message-desc-emoji" :src="token.content" mode="aspectFit" />
-									<text v-else class="message-desc-text">{{ token.content }}</text>
+									<text v-else :class="['message-desc-text', isNoticeUpdatePreviewToken(token.content) ? 'message-desc-text-alert' : '']">{{ token.content }}</text>
 								</template>
 							</view>
 							<text v-if="item.noDisturb" class="iconfont nodisturb-icon">&#xe63a;</text>
@@ -587,6 +587,14 @@
 				type: 'text',
 				content: preview
 			} as EmojiToken]
+		}
+	}
+
+	function isNoticeUpdatePreviewToken(content: string): boolean {
+		try {
+			return content != null && String(content).trim() === '[群公告有更新]'
+		} catch (e) {
+			return false
 		}
 	}
 
@@ -1281,6 +1289,10 @@
 		color: #666;
 		line-height: 18px;
 		white-space: nowrap;
+	}
+
+	.message-desc-text-alert {
+		color: #F54A45;
 	}
 
 	.message-desc-emoji {

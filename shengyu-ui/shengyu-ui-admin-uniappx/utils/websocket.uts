@@ -462,7 +462,7 @@ export class WebSocketManager {
     this.setState(WebSocketState.CONNECTING)
     
     try {
-      this.ws = uni.connectSocket({
+      const socketTask = uni.connectSocket({
         url: this.wsUrl,
         protocols: this.wsProtocols,
         success: () => {
@@ -474,25 +474,26 @@ export class WebSocketManager {
           this.setState(WebSocketState.CLOSED)
         }
       })
+      this.ws = socketTask
       
       // 监听连接打开
-      this.ws.onOpen(() => {
-        this.handleOpen()
+      socketTask.onOpen(() => {
+        this.handleOpen(socketTask)
       })
       
       // 监听消息接收
-      this.ws.onMessage((res) => {
-        this.handleMessage(res)
+      socketTask.onMessage((res) => {
+        this.handleMessage(res, socketTask)
       })
       
       // 监听连接关闭
-      this.ws.onClose(() => {
-        this.handleClose()
+      socketTask.onClose(() => {
+        this.handleClose(socketTask)
       })
       
       // 监听连接错误
-      this.ws.onError((err) => {
-        this.handleError(err)
+      socketTask.onError((err) => {
+        this.handleError(err, socketTask)
       })
       
     } catch (e) {
@@ -505,7 +506,10 @@ export class WebSocketManager {
   /**
    * 处理连接打开
    */
-  private handleOpen(): void {
+  private handleOpen(source?: SocketTask): void {
+    if (source != null && this.ws != null && source !== this.ws) {
+      return
+    }
     console.log('[WebSocket] 连接已建立')
     this.connectInFlight = false
     this.setState(WebSocketState.OPEN)
@@ -627,7 +631,10 @@ export class WebSocketManager {
   /**
    * 处理消息接收
    */
-  private handleMessage(res: any): void {
+  private handleMessage(res: any, source?: SocketTask): void {
+    if (source != null && this.ws != null && source !== this.ws) {
+      return
+    }
     try {
       // B4：二进制帧（pb stack）：BinaryFrame = varint32 length-prefix + ImMessage bytes
       try {
@@ -1278,7 +1285,10 @@ export class WebSocketManager {
   /**
    * 处理连接关闭
    */
-  private handleClose(): void {
+  private handleClose(source?: SocketTask): void {
+    if (source != null && this.ws != null && source !== this.ws) {
+      return
+    }
     console.log('[WebSocket] 连接已关闭')
     this.connectInFlight = false
     this.setState(WebSocketState.CLOSED)
@@ -1297,7 +1307,10 @@ export class WebSocketManager {
   /**
    * 处理连接错误
    */
-  private handleError(err: any): void {
+  private handleError(err: any, source?: SocketTask): void {
+    if (source != null && this.ws != null && source !== this.ws) {
+      return
+    }
     console.error('[WebSocket] 连接错误:', err)
     this.setState(WebSocketState.CLOSED)
     this.authenticated = false
@@ -1316,13 +1329,13 @@ export class WebSocketManager {
    * 重连
    */
   private reconnect(): void {
-    if (!this.allowReconnect) {
-      return
-    }
-
     if (this.reconnectTimer !== 0) {
       clearTimeout(this.reconnectTimer)
       this.reconnectTimer = 0
+    }
+
+    if (!this.allowReconnect) {
+      return
     }
 
     if (this.reconnectCount >= this.maxReconnectCount) {
@@ -1435,6 +1448,11 @@ export class WebSocketManager {
       console.log('[WebSocket] send() attempt:', { state: this.state, authenticated: this.authenticated, messageType: mt, messageId: mid })
     } catch (e) {
       console.log('[WebSocket] send() attempt: <unable to inspect message>', e)
+    }
+
+    if (this.sessionInvalidated || !this.allowReconnect) {
+      console.warn('[WebSocket] 会话已失效，丢弃发送请求')
+      return
     }
 
     if (!this.authenticated) {
