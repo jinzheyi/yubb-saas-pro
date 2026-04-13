@@ -715,16 +715,20 @@ export class ConversationService {
    */
   public async pinConversation(chatId: string, isPinned: boolean): Promise<boolean> {
     try {
+      const chatIdStr = chatId != null ? (chatId as any).toString() : ''
+      const conversation = this.conversations.find(c => c.chatId === chatIdStr || ((c as any).id === chatIdStr))
+      if (conversation != null && conversation.isPinned === isPinned) {
+        return true
+      }
       await request({
         url: '/system/im/conversation/update',
         method: 'PUT',
         data: {
-          chatId: chatId,
+          chatId: chatIdStr,
           isPinned: isPinned
         }
       })
 
-      const conversation = this.conversations.find(c => c.chatId === chatId || ((c as any).id === chatId))
       if (conversation != null) {
         conversation.isPinned = isPinned
         this.sortConversations()
@@ -765,16 +769,20 @@ export class ConversationService {
    */
   public async setMute(chatId: string, noDisturb: boolean): Promise<boolean> {
     try {
+      const chatIdStr = chatId != null ? (chatId as any).toString() : ''
+      const conversation = this.conversations.find(c => c.chatId === chatIdStr || ((c as any).id === chatIdStr))
+      if (conversation != null && conversation.noDisturb === noDisturb) {
+        return true
+      }
       await request({
         url: '/system/im/conversation/update',
         method: 'PUT',
         data: {
-          chatId: chatId,
+          chatId: chatIdStr,
           noDisturb: noDisturb
         }
       })
 
-      const conversation = this.conversations.find(c => c.chatId === chatId)
       if (conversation != null) {
         conversation.noDisturb = noDisturb
         this.notifyUpdateListeners()

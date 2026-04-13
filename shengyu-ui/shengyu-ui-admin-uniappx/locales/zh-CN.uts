@@ -218,8 +218,8 @@ export default {
 		title: '聊天设置',
 		addMember: '添加新成员',
 		bubble: '气泡设置',
-		top: '置顶',
-		notify: '新消息通知',
+		top: '置顶聊天',
+		notify: '消息免打扰',
 		clearHistory: '清空聊天记录',
 		subordinateTip: '该联系人是您的直接下属'
 	},

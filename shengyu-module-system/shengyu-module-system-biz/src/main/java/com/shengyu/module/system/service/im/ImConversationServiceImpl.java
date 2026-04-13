@@ -415,20 +415,24 @@ public class ImConversationServiceImpl implements ImConversationService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateConversation(Long userId, AppImConversationUpdateReqVO updateReqVO) {
+        if (updateReqVO == null || updateReqVO.getChatId() == null) {
+            return;
+        }
         ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, updateReqVO.getChatId());
         if (chatUser == null) {
             throw exception(CONVERSATION_NOT_EXISTS);
+        }
+        Boolean newPinned = updateReqVO.getIsPinned() != null ? updateReqVO.getIsPinned() : chatUser.getIsPinned();
+        Boolean newNoDisturb = updateReqVO.getNoDisturb() != null ? updateReqVO.getNoDisturb() : chatUser.getNoDisturb();
+        if (Objects.equals(chatUser.getIsPinned(), newPinned)
+                && Objects.equals(chatUser.getNoDisturb(), newNoDisturb)) {
+            return;
         }
         chatUserMapper.updateSettings(userId, updateReqVO.getChatId(), updateReqVO.getIsPinned(), updateReqVO.getNoDisturb());
 
         // 同步写入会话-用户态 + 分配 cursorVersion（跨端设置一致）
         try {
-            Long tenantId = TenantContextHolder.getTenantId();
-            if (tenantId == null) {
-                tenantId = 0L;
-            }
-            Boolean newPinned = updateReqVO.getIsPinned() != null ? updateReqVO.getIsPinned() : chatUser.getIsPinned();
-            Boolean newNoDisturb = updateReqVO.getNoDisturb() != null ? updateReqVO.getNoDisturb() : chatUser.getNoDisturb();
+            Long tenantId = resolveTenantId();
             Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
             conversationUserStateMapper.upsertAfterSettings(
                     tenantId,
@@ -439,6 +443,8 @@ public class ImConversationServiceImpl implements ImConversationService {
                     newNoDisturb,
                     chatUser.getDraft()
             );
+            pushConversationStateNotify(userId, tenantId, updateReqVO.getChatId(), cursorVersion,
+                    "设置变更", "[ImConversationService] 推送会话设置变更事件失败");
         } catch (Exception e) {
             log.warn("[ImConversationService] 写入会话-用户态设置变更失败, userId: {}, chatId: {}, error: {}",
                     userId, updateReqVO.getChatId(), e.getMessage(), e);
@@ -456,10 +462,7 @@ public class ImConversationServiceImpl implements ImConversationService {
 
         // 同步写入会话-用户态 + 分配 cursorVersion（跨端删除一致）
         try {
-            Long tenantId = TenantContextHolder.getTenantId();
-            if (tenantId == null) {
-                tenantId = 0L;
-            }
+            Long tenantId = resolveTenantId();
             Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
             conversationUserStateMapper.upsertAfterDelete(
                     tenantId,
@@ -468,6 +471,9 @@ public class ImConversationServiceImpl implements ImConversationService {
                     cursorVersion,
                     true
             );
+            pushConversationStateNotify(userId, tenantId, conversationId, cursorVersion,
+                    "删除会话", "[ImConversationService] 推送会话删除事件失败");
+            pushBadgeUpdateSafely(userId, conversationId, "删除会话");
         } catch (Exception e) {
             log.warn("[ImConversationService] 写入会话-用户态删除失败, userId: {}, chatId: {}, error: {}",
                     userId, conversationId, e.getMessage(), e);
@@ -497,10 +503,7 @@ public class ImConversationServiceImpl implements ImConversationService {
 
         // 同步写入会话-用户态 + 分配 cursorVersion（跨端已读一致）
         try {
-            Long tenantId = TenantContextHolder.getTenantId();
-            if (tenantId == null) {
-                tenantId = 0L;
-            }
+            Long tenantId = resolveTenantId();
             Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
             conversationUserStateMapper.upsertAfterRead(
                     tenantId,
@@ -518,26 +521,9 @@ public class ImConversationServiceImpl implements ImConversationService {
                     chatUser.getNoDisturb(),
                     chatUser.getDraft()
             );
-
-            // 多端已读一致：推送 cursorVersion 触发端侧增量 sync（对标企微/钉钉跨端清未读）
-            try {
-                TextMessage body = TextMessage.newBuilder().setContent("").build();
-                messageSender.sendToUser(userId, MessageType.SYSTEM_NOTIFY, body,
-                        0L, userId, 0L, tenantId,
-                        null, null, chatId,
-                        cursorVersion, null);
-            } catch (Exception e) {
-                log.warn("[ImConversationService] 推送已读水位变更事件失败, userId: {}, chatId: {}, error: {}",
-                        userId, chatId, e.getMessage(), e);
-            }
-
-            // 角标即时刷新：跨端推进已读水位后，推送 BADGE_UPDATE 让其它端立刻清红点（最终态仍以 sync 为准）
-            try {
-                imBadgeService.pushBadgeUpdate(userId);
-            } catch (Exception e) {
-                log.warn("[ImConversationService] 推送角标更新失败, userId: {}, chatId: {}, error: {}",
-                        userId, chatId, e.getMessage(), e);
-            }
+            pushConversationStateNotify(userId, tenantId, chatId, cursorVersion,
+                    "已读水位变更", "[ImConversationService] 推送已读水位变更事件失败");
+            pushBadgeUpdateSafely(userId, chatId, "已读水位变更");
         } catch (Exception e) {
             log.warn("[ImConversationService] 写入会话-用户态已读水位失败, userId: {}, chatId: {}, error: {}",
                     userId, chatId, e.getMessage(), e);
@@ -593,10 +579,7 @@ public class ImConversationServiceImpl implements ImConversationService {
 
         // 同步写入会话-用户态 + 分配 cursorVersion（跨端删除一致）
         try {
-            Long tenantId = TenantContextHolder.getTenantId();
-            if (tenantId == null) {
-                tenantId = 0L;
-            }
+            Long tenantId = resolveTenantId();
             Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
             conversationUserStateMapper.upsertAfterDelete(
                     tenantId,
@@ -605,6 +588,9 @@ public class ImConversationServiceImpl implements ImConversationService {
                     cursorVersion,
                     true
             );
+            pushConversationStateNotify(userId, tenantId, chat.getId(), cursorVersion,
+                    "按 target 删除会话", "[ImConversationService] 推送按 target 删除会话事件失败");
+            pushBadgeUpdateSafely(userId, chat.getId(), "按 target 删除会话");
         } catch (Exception e) {
             log.warn("[ImConversationService] 写入会话-用户态按 target 删除失败, userId: {}, chatId: {}, error: {}",
                     userId, chat.getId(), e.getMessage(), e);
@@ -1068,13 +1054,19 @@ public class ImConversationServiceImpl implements ImConversationService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void pinConversation(Long userId, Long conversationId, Boolean isPinned) {
-        chatUserMapper.updateSettings(userId, conversationId, isPinned, null);
+        AppImConversationUpdateReqVO reqVO = new AppImConversationUpdateReqVO();
+        reqVO.setChatId(conversationId);
+        reqVO.setIsPinned(isPinned);
+        updateConversation(userId, reqVO);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void setMute(Long userId, Long conversationId, Boolean noDisturb) {
-        chatUserMapper.updateSettings(userId, conversationId, null, noDisturb);
+        AppImConversationUpdateReqVO reqVO = new AppImConversationUpdateReqVO();
+        reqVO.setChatId(conversationId);
+        reqVO.setNoDisturb(noDisturb);
+        updateConversation(userId, reqVO);
     }
 
     @Override
@@ -1093,6 +1085,34 @@ public class ImConversationServiceImpl implements ImConversationService {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
         return chatUser.getDraft();
+    }
+
+    private Long resolveTenantId() {
+        Long tenantId = TenantContextHolder.getTenantId();
+        return tenantId != null ? tenantId : 0L;
+    }
+
+    private void pushConversationStateNotify(Long userId, Long tenantId, Long chatId, Long cursorVersion,
+                                             String scene, String logPrefix) {
+        try {
+            TextMessage body = TextMessage.newBuilder().setContent("").build();
+            messageSender.sendToUser(userId, MessageType.SYSTEM_NOTIFY, body,
+                    0L, userId, 0L, tenantId,
+                    null, null, chatId,
+                    cursorVersion, null);
+        } catch (Exception e) {
+            log.warn("{}, scene: {}, userId: {}, chatId: {}, error: {}",
+                    logPrefix, scene, userId, chatId, e.getMessage(), e);
+        }
+    }
+
+    private void pushBadgeUpdateSafely(Long userId, Long chatId, String scene) {
+        try {
+            imBadgeService.pushBadgeUpdate(userId);
+        } catch (Exception e) {
+            log.warn("[ImConversationService] 推送角标更新失败, scene: {}, userId: {}, chatId: {}, error: {}",
+                    scene, userId, chatId, e.getMessage(), e);
+        }
     }
 
     @Override

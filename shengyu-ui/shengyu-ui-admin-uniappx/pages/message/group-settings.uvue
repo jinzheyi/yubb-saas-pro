@@ -187,7 +187,8 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getGroup, getGroupMembers, updateGroup, quitGroup } from '../../api/group.uts'
-	import { getConversationByTarget, pinConversation, setNoDisturb } from '../../api/conversation.uts'
+	import { getConversationByTarget } from '../../api/conversation.uts'
+	import { conversationService } from '../../services/conversation-service.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { getUserIdStr } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
@@ -299,13 +300,24 @@
 		if (!groupId.value) return
 		
 		try {
-			// 通过 groupId 查询会话
-			const conversation = await getConversationByTarget(groupId.value, 2)
-			
+			let conversation = chatId.value ? conversationService.getConversation(chatId.value) : null
+			if (conversation == null) {
+				await conversationService.loadConversations()
+				conversation = chatId.value ? conversationService.getConversation(chatId.value) : null
+			}
 			if (conversation && conversation.chatId) {
 				chatId.value = conversation.chatId.toString()
-				noDisturb.value = conversation.noDisturb || false
-				isPinned.value = conversation.isPinned || false
+				noDisturb.value = conversation.noDisturb === true
+				isPinned.value = conversation.isPinned === true
+				return
+			}
+			// 通过 groupId 查询会话
+			const remoteConversation = await getConversationByTarget(groupId.value, 2)
+
+			if (remoteConversation && remoteConversation.chatId) {
+				chatId.value = remoteConversation.chatId.toString()
+				noDisturb.value = remoteConversation.noDisturb === true
+				isPinned.value = remoteConversation.isPinned === true
 				
 				console.log('[GroupSettings] 加载会话设置成功, chatId:', chatId.value)
 			}
@@ -444,7 +456,10 @@
 		}
 		
 		try {
-			await setNoDisturb(chatId.value, newValue)
+			const success = await conversationService.setMute(chatId.value, newValue)
+			if (!success) {
+				throw new Error('set mute failed')
+			}
 			noDisturb.value = newValue
 			uni.showToast({
 				title: newValue ? '已开启免打扰' : '已关闭免打扰',
@@ -471,7 +486,10 @@
 		}
 		
 		try {
-			await pinConversation(chatId.value, newValue)
+			const success = await conversationService.pinConversation(chatId.value, newValue)
+			if (!success) {
+				throw new Error('pin failed')
+			}
 			isPinned.value = newValue
 			uni.showToast({
 				title: newValue ? '已置顶' : '已取消置顶',
@@ -661,6 +679,7 @@
 			console.log('[GroupSettings] 页面显示，刷新数据')
 			await loadGroupInfo()
 			await loadGroupMembers()
+			await loadConversationSettings()
 		}
 	})
 </script>

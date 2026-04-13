@@ -219,7 +219,7 @@ export default {
 		addMember: 'Add Member',
 		bubble: 'Bubble Settings',
 		top: 'Pin Chat',
-		notify: 'Notifications',
+		notify: 'Mute Notifications',
 		clearHistory: 'Clear Chat History',
 		subordinateTip: 'This contact is your direct subordinate'
 	},

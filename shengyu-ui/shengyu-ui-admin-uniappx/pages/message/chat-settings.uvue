@@ -16,22 +16,22 @@
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<!-- 个人信息卡片 -->
 			<view class="profile-card">
-				<view class="avatar">
-					<text class="avatar-text">三</text>
+				<view class="avatar" :style="{ backgroundColor: profileAvatarBg }">
+					<text class="avatar-text">{{ profileAvatarText }}</text>
 				</view>
-				<text class="name">张三</text>
-				<text class="role">职员</text>
+				<text class="name">{{ profileName }}</text>
+				<text class="role">{{ profileRole }}</text>
 				
 			</view>
 
 			<view class="settings-group">
 				<view class="list-item">
 					<text class="item-label">{{ t('chatSettings.top') }}</text>
-					<switch color="#4cd964" :checked="isTop" @change="onTopChange" />
+					<switch color="#4cd964" :checked="isTop" @change="onTopChange" :disabled="toggleLoading" />
 				</view>
 				<view class="list-item">
 					<text class="item-label">{{ t('chatSettings.notify') }}</text>
-					<switch color="#4cd964" :checked="isNotify" @change="onNotifyChange" />
+					<switch color="#4cd964" :checked="isNotify" @change="onNotifyChange" :disabled="toggleLoading" />
 				</view>
 			</view>
 
@@ -58,13 +58,82 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getUserDetail } from '../../api/user.uts'
+	import { conversationService } from '../../services/conversation-service.uts'
 	import { messageService } from '../../services/message-service.uts'
+	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 
 	const { t } = useI18n()
 	const isTop = ref(false)
 	const isNotify = ref(true)
 	const chatId = ref('')
+	const targetId = ref('')
+	const profileName = ref('聊天设置')
+	const profileRole = ref('暂无岗位信息')
+	const profileAvatarText = ref('?')
+	const profileAvatarBg = ref('#5B8FF9')
+	const toggleLoading = ref(false)
+
+	function syncConversationSettings() {
+		if (!chatId.value) {
+			return
+		}
+		const conversation = conversationService.getConversation(chatId.value)
+		if (conversation == null) {
+			return
+		}
+		isTop.value = conversation.isPinned === true
+		isNotify.value = conversation.noDisturb !== true
+		if (!targetId.value && conversation.targetId) {
+			targetId.value = String(conversation.targetId)
+		}
+		const targetName = conversation.targetName != null && String(conversation.targetName).trim() !== ''
+			? String(conversation.targetName).trim()
+			: profileName.value
+		profileName.value = targetName
+		profileAvatarText.value = conversation.avatarText != null && String(conversation.avatarText).trim() !== ''
+			? String(conversation.avatarText)
+			: getAvatarText(targetName)
+		if (targetId.value) {
+			profileAvatarBg.value = getUserAvatarColor(targetId.value)
+		}
+	}
+
+	async function loadProfile() {
+		if (!targetId.value || targetId.value === '0') {
+			return
+		}
+		try {
+			const data = await getUserDetail(targetId.value)
+			if (!data) {
+				return
+			}
+			const nickname = data.nickname != null && String(data.nickname).trim() !== ''
+				? String(data.nickname).trim()
+				: profileName.value
+			profileName.value = nickname
+			profileRole.value = data.postName != null && String(data.postName).trim() !== ''
+				? String(data.postName).trim()
+				: (data.deptName != null && String(data.deptName).trim() !== '' ? String(data.deptName).trim() : '暂无岗位信息')
+			profileAvatarText.value = getAvatarText(profileName.value)
+			profileAvatarBg.value = getUserAvatarColor(targetId.value)
+		} catch (e) {
+			console.error('[ChatSettings] 加载用户详情失败:', e)
+		}
+	}
+
+	async function hydrateConversation() {
+		if (!chatId.value) {
+			return
+		}
+		syncConversationSettings()
+		if (conversationService.getConversation(chatId.value) == null) {
+			await conversationService.loadConversations()
+			syncConversationSettings()
+		}
+		await loadProfile()
+	}
 
 	onLoad((options : any) => {
 		try {
@@ -73,18 +142,79 @@
 			}
 		} catch (e) {
 		}
+		void hydrateConversation()
+	})
+
+	onShow(() => {
+		void hydrateConversation()
 	})
 
 	function handleBack() {
 		uni.navigateBack()
 	}
 
-	function onTopChange(e : UniSwitchChangeEvent) {
-		isTop.value = e.detail.value
+	async function onTopChange(e : UniSwitchChangeEvent) {
+		const newValue = e.detail.value === true
+		if (!chatId.value || toggleLoading.value) {
+			uni.showToast({
+				title: '会话信息未加载',
+				icon: 'none'
+			})
+			return
+		}
+		try {
+			toggleLoading.value = true
+			const success = await conversationService.pinConversation(chatId.value, newValue)
+			if (!success) {
+				throw new Error('pin failed')
+			}
+			isTop.value = newValue
+			uni.showToast({
+				title: newValue ? '已置顶' : '已取消置顶',
+				icon: 'success'
+			})
+		} catch (e) {
+			console.error('[ChatSettings] 设置置顶失败:', e)
+			isTop.value = !newValue
+			uni.showToast({
+				title: '设置失败',
+				icon: 'none'
+			})
+		} finally {
+			toggleLoading.value = false
+		}
 	}
 
-	function onNotifyChange(e : UniSwitchChangeEvent) {
-		isNotify.value = e.detail.value
+	async function onNotifyChange(e : UniSwitchChangeEvent) {
+		const newNotifyValue = e.detail.value === true
+		if (!chatId.value || toggleLoading.value) {
+			uni.showToast({
+				title: '会话信息未加载',
+				icon: 'none'
+			})
+			return
+		}
+		try {
+			toggleLoading.value = true
+			const success = await conversationService.setMute(chatId.value, !newNotifyValue)
+			if (!success) {
+				throw new Error('mute failed')
+			}
+			isNotify.value = newNotifyValue
+			uni.showToast({
+				title: newNotifyValue ? '已关闭免打扰' : '已开启免打扰',
+				icon: 'success'
+			})
+		} catch (e) {
+			console.error('[ChatSettings] 设置免打扰失败:', e)
+			isNotify.value = !newNotifyValue
+			uni.showToast({
+				title: '设置失败',
+				icon: 'none'
+			})
+		} finally {
+			toggleLoading.value = false
+		}
 	}
 
 	function handleAction(type : string) {
