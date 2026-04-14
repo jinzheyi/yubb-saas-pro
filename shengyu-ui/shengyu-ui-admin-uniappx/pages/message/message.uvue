@@ -165,7 +165,6 @@
 <script setup lang="uts">
 	import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
-	import { messageService } from '../../services/message-service.uts'
 	import { conversationService, ConversationItem } from '../../services/conversation-service.uts'
 	import { badgeService, BadgeData } from '../../services/badge-service.uts'
 	import { getConversationAvatarColor, getAvatarText } from '../../utils/avatar.uts'
@@ -204,8 +203,13 @@
 	const REFRESH_INDICATOR_WATCHDOG_MS = 2200
 	// onShow 刷新节流，避免频繁请求会话列表
 	let lastOnShowRefreshAt = 0
+	let lastPageHideAt = 0
 	let refreshReleaseTimer = 0
 	let refreshWatchdogTimer = 0
+
+	const FOREGROUND_SYNC_COOLDOWN_MS = 1500
+	const FOREGROUND_SYNC_STALE_MS = 5000
+	const FOREGROUND_SYNC_AFTER_HIDE_MS = 1200
 
 	function buildManualUnreadStorageKey(): string {
 		return `IM_MANUAL_UNREAD_${getTenantIdStr()}_${getUserIdStr()}`
@@ -354,27 +358,96 @@
 		return (now - lastConversationSyncAt.value) < MANUAL_REFRESH_FRESH_SKIP_MS
 	}
 
+	function mapConversationToView(conv: ConversationItem): any {
+		const chatId = conv != null && conv.chatId != null ? conv.chatId.toString() : '0'
+		const targetName = conv != null && conv.targetName != null ? String(conv.targetName).trim() : ''
+		const targetId = conv != null && conv.targetId != null ? String(conv.targetId) : '0'
+		const timestamp = conv != null && conv.timestamp != null ? normalizeTimestampMs(conv.timestamp) : 0
+		const previewText = buildConversationPreview((conv as any).lastMessageType || 0, conv != null ? conv.lastMessageContent : '')
+		const isGroup = conv != null && conv.conversationType === 2
+		return {
+			chatId: chatId,
+			lastMessageSequence: conv != null && (conv as any).lastMessageSequence != null ? (conv as any).lastMessageSequence.toString() : '0',
+			lastReadSequence: conv != null && (conv as any).lastReadSequence != null ? (conv as any).lastReadSequence.toString() : '0',
+			targetName: targetName !== '' ? targetName : '未知',
+			lastMessageType: (conv as any).lastMessageType || 0,
+			lastMessageContent: previewText,
+			lastMessagePreviewTokens: buildConversationPreviewTokens(previewText),
+			lastMessageTime: timestamp,
+			targetAvatar: conv != null && conv.targetAvatar != null ? String(conv.targetAvatar) : '',
+			avatarBg: conv != null && conv.avatarBg != null && String(conv.avatarBg).trim() !== ''
+				? String(conv.avatarBg)
+				: getConversationAvatarColor(conv != null ? conv.conversationType : 1, targetId),
+			avatarText: resolveAvatarText(
+				conv != null && conv.avatarText != null && String(conv.avatarText).trim() !== '' ? conv.avatarText : targetName,
+				targetId
+			),
+			avatarIcon: isGroup ? '\ue616' : '',
+			unreadCount: applyManualUnread(conv != null ? conv.unreadCount : 0, chatId),
+			noDisturb: conv != null && conv.noDisturb === true,
+			isPinned: conv != null && conv.isPinned === true,
+			lastMessageHasAtMe: conv != null && conv.lastMessageHasAtMe === true,
+			pinnedTime: conv != null && conv.isPinned === true ? timestamp : 0,
+			conversationType: conv != null ? conv.conversationType : 1,
+			groupMemberCount: conv != null && conv.groupMemberCount != null ? conv.groupMemberCount : 0,
+			targetId: targetId
+		}
+	}
+
+	function applyConversationList(conversations: ConversationItem[]): void {
+		const list = conversations != null ? conversations : []
+		messageList.value = list.map((conv: ConversationItem) => mapConversationToView(conv)).sort((a, b) => {
+			if (a.isPinned && !b.isPinned) return -1
+			if (!a.isPinned && b.isPinned) return 1
+			return b.lastMessageTime - a.lastMessageTime
+		})
+	}
+
+	function syncFromConversationCache(): void {
+		applyConversationList(conversationService.getConversations())
+	}
+
+	function shouldSyncOnForeground(now: number): boolean {
+		const hiddenDuration = lastPageHideAt > 0 ? now - lastPageHideAt : Number.MAX_SAFE_INTEGER
+		if (messageList.value.length === 0) {
+			return true
+		}
+		if (!wsManager.isConnected()) {
+			return true
+		}
+		if (lastConversationSyncAt.value <= 0) {
+			return true
+		}
+		if ((now - lastConversationSyncAt.value) >= FOREGROUND_SYNC_STALE_MS) {
+			return true
+		}
+		if (hiddenDuration >= FOREGROUND_SYNC_AFTER_HIDE_MS) {
+			return true
+		}
+		return false
+	}
+	
 	onShow(() => {
 		wsManager.setRealtimeBizActive(true)
-		// 返回到会话列表时刷新一次，确保新创建的群聊/会话能立刻展示（不依赖推送时机）
-		// 同时做节流，避免频繁触发 /conversation/list
+		syncFromConversationCache()
 		const now = Date.now()
-		if (now - lastOnShowRefreshAt > 1500) {
+		if (now - lastOnShowRefreshAt > FOREGROUND_SYNC_COOLDOWN_MS) {
 			lastOnShowRefreshAt = now
-			if (shouldSkipManualRefreshBecauseFresh(now)) {
-				return
+			if (shouldSyncOnForeground(now)) {
+				void syncConversationList(false)
 			}
-			void loadConversations()
 		}
 	})
 
 	onHide(() => {
 		wsManager.setRealtimeBizActive(false)
+		lastPageHideAt = Date.now()
 		forceStopRefreshIndicator()
 	})
 
 	onUnload(() => {
 		wsManager.setRealtimeBizActive(false)
+		lastPageHideAt = Date.now()
 		forceStopRefreshIndicator()
 	})
 
@@ -450,40 +523,6 @@
 		return '?'
 	}
 	
-	/**
-	 * 转换后端会话数据为 UI 格式
-	 */
-	function convertServerConversation(serverConv : any) : any {
-		const lastMessageTime = normalizeTimestampMs(serverConv.lastMessageTime)
-		const isGroup = serverConv.conversationType === 2
-		const previewText = buildConversationPreview(serverConv.lastMessageType || 0, serverConv.lastMessageContent || '')
-		const targetName = serverConv.targetName != null ? String(serverConv.targetName).trim() : ''
-		const targetId = serverConv.targetId != null ? String(serverConv.targetId) : '0'
-		
-		return {
-			chatId: serverConv.chatId != null ? serverConv.chatId.toString() : '0',
-			lastMessageSequence: serverConv.lastMessageSequence != null ? serverConv.lastMessageSequence.toString() : '0',
-			lastReadSequence: serverConv.lastReadSequence != null ? serverConv.lastReadSequence.toString() : '0',
-			targetName: targetName !== '' ? targetName : '未知',
-			lastMessageType: serverConv.lastMessageType || 0,
-			lastMessageContent: previewText,
-			lastMessagePreviewTokens: buildConversationPreviewTokens(previewText),
-			lastMessageTime: lastMessageTime,
-			targetAvatar: serverConv.targetAvatar != null ? String(serverConv.targetAvatar) : '',
-			avatarBg: getConversationAvatarColor(serverConv.conversationType, targetId),
-			avatarText: resolveAvatarText(targetName, targetId),
-			avatarIcon: isGroup ? '\ue616' : '', // 群聊显示群图标
-			unreadCount: applyManualUnread(serverConv.unreadCount || 0, serverConv.chatId != null ? serverConv.chatId.toString() : '0'),
-			noDisturb: serverConv.noDisturb || false,
-			isPinned: serverConv.isPinned || false,
-			lastMessageHasAtMe: serverConv.lastMessageHasAtMe === true,
-			pinnedTime: serverConv.isPinned ? lastMessageTime : 0,
-			conversationType: serverConv.conversationType,
-			groupMemberCount: serverConv.groupMemberCount || 0,
-			targetId: targetId
-		}
-	}
-
 	/**
 	 * 仿微信时间格式化
 	 */
@@ -609,8 +648,9 @@
 		// 1. 监听会话更新
 		conversationService.addUpdateListener(handleConversationsUpdate)
 		
-		// 2. 加载会话列表
-		loadConversations()
+		// 2. 首屏优先吃会话服务缓存，再做增量对齐
+		syncFromConversationCache()
+		void loadConversations()
 		
 		// 3. 监听角标更新
 		badgeService.addListener(badgeListener)
@@ -630,37 +670,8 @@
 		loading.value = true
 		
 		try {
-			// 1. 先从缓存加载（立即显示）
-			const cachedConversations = messageService.getConversations()
-			if (cachedConversations.length > 0) {
-				messageList.value = cachedConversations.map(conv => {
-					const previewText = buildConversationPreview((conv as any).lastMessageType || 0, conv.lastMessageContent)
-					return {
-						chatId: conv.chatId,
-						lastMessageSequence: (conv as any).lastMessageSequence != null ? (conv as any).lastMessageSequence.toString() : '0',
-						lastReadSequence: (conv as any).lastReadSequence != null ? (conv as any).lastReadSequence.toString() : '0',
-						targetName: conv.targetName,
-						lastMessageType: (conv as any).lastMessageType || 0,
-						lastMessageContent: previewText,
-						lastMessagePreviewTokens: buildConversationPreviewTokens(previewText),
-						lastMessageTime: normalizeTimestampMs(conv.timestamp),
-						targetAvatar: conv.targetAvatar,
-						avatarBg: conv.avatarBg,
-						avatarText: resolveAvatarText(conv.avatarText != null && String(conv.avatarText).trim() !== '' ? conv.avatarText : conv.targetName, conv.targetId),
-						avatarIcon: conv.conversationType === 2 ? '\ue616' : '',
-						unreadCount: applyManualUnread(conv.unreadCount, conv.chatId),
-						noDisturb: conv.noDisturb,
-						isPinned: conv.isPinned,
-						lastMessageHasAtMe: conv.lastMessageHasAtMe,
-						pinnedTime: conv.isPinned ? conv.timestamp : 0,
-						conversationType: conv.conversationType,
-						groupMemberCount: conv.groupMemberCount || 0,
-						targetId: conv.targetId
-					}
-				})
-			}
-			
-			// 2. 加载会话列表（内部根据本地 cursor + 内存缓存决定是否 reset）
+			syncFromConversationCache()
+			// 加载会话列表（内部根据本地 cursor + 内存缓存决定是否 reset）
 			await conversationService.loadConversations()
 			lastConversationSyncAt.value = Date.now()
 			
@@ -677,36 +688,25 @@
 	 */
 	function handleConversationsUpdate(conversations : ConversationItem[]) {
 		// 全量刷新（来源：ConversationService，服务端权威水位 + 本地实时更新）
-		messageList.value = conversations.map(conv => {
-			const previewText = buildConversationPreview((conv as any).lastMessageType || 0, conv.lastMessageContent)
-			return {
-				chatId: conv.chatId,
-				lastMessageSequence: (conv as any).lastMessageSequence != null ? (conv as any).lastMessageSequence.toString() : '0',
-				lastReadSequence: (conv as any).lastReadSequence != null ? (conv as any).lastReadSequence.toString() : '0',
-				targetName: conv.targetName,
-				lastMessageType: (conv as any).lastMessageType || 0,
-				lastMessageContent: previewText,
-				lastMessagePreviewTokens: buildConversationPreviewTokens(previewText),
-				lastMessageTime: normalizeTimestampMs(conv.timestamp),
-				targetAvatar: conv.targetAvatar,
-				avatarBg: conv.avatarBg,
-				avatarText: resolveAvatarText(conv.avatarText != null && String(conv.avatarText).trim() !== '' ? conv.avatarText : conv.targetName, conv.targetId),
-				avatarIcon: conv.conversationType === 2 ? '\ue616' : '',
-				unreadCount: applyManualUnread(conv.unreadCount, conv.chatId),
-				noDisturb: conv.noDisturb,
-				isPinned: conv.isPinned,
-				lastMessageHasAtMe: conv.lastMessageHasAtMe,
-				pinnedTime: conv.isPinned ? conv.timestamp : 0,
-				conversationType: conv.conversationType,
-				groupMemberCount: conv.groupMemberCount || 0,
-				targetId: conv.targetId
-			}
-		}).sort((a, b) => {
-			if (a.isPinned && !b.isPinned) return -1
-			if (!a.isPinned && b.isPinned) return 1
-			return b.lastMessageTime - a.lastMessageTime
-		})
+		applyConversationList(conversations)
 		lastConversationSyncAt.value = Date.now()
+	}
+
+	async function syncConversationList(showLoading: boolean = true): Promise<void> {
+		if (showLoading) {
+			loading.value = true
+		}
+		try {
+			await conversationService.syncConversationsIncrementally(false)
+			lastConversationSyncAt.value = Date.now()
+		} catch (e) {
+			console.error('[Message] 增量同步会话失败:', e)
+			throw e
+		} finally {
+			if (showLoading) {
+				loading.value = false
+			}
+		}
 	}
 	
 	// 过滤后的基础列表
@@ -918,8 +918,7 @@
 			if (shouldSkipManualRefreshBecauseFresh(now)) {
 				return
 			}
-			await conversationService.syncConversationsIncrementally(false)
-			lastConversationSyncAt.value = Date.now()
+			await syncConversationList(false)
 			refreshFailureCount.value = 0
 			manualRefreshBlockedUntil.value = 0
 		} catch (e) {

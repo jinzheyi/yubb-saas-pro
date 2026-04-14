@@ -27,11 +27,11 @@
 			<view class="settings-group">
 				<view class="list-item">
 					<text class="item-label">{{ t('chatSettings.top') }}</text>
-					<switch color="#4cd964" :checked="isTop" @change="onTopChange" :disabled="toggleLoading" />
+					<switch color="#4cd964" :checked="isPinned" @change="onPinnedChange" :disabled="toggleLoading" />
 				</view>
 				<view class="list-item">
 					<text class="item-label">{{ t('chatSettings.notify') }}</text>
-					<switch color="#4cd964" :checked="isNotify" @change="onNotifyChange" :disabled="toggleLoading" />
+					<switch color="#4cd964" :checked="noDisturb" @change="onNoDisturbChange" :disabled="toggleLoading" />
 				</view>
 			</view>
 
@@ -65,8 +65,8 @@
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 
 	const { t } = useI18n()
-	const isTop = ref(false)
-	const isNotify = ref(true)
+	const isPinned = ref(false)
+	const noDisturb = ref(false)
 	const chatId = ref('')
 	const targetId = ref('')
 	const profileName = ref('聊天设置')
@@ -83,8 +83,8 @@
 		if (conversation == null) {
 			return
 		}
-		isTop.value = conversation.isPinned === true
-		isNotify.value = conversation.noDisturb !== true
+		isPinned.value = conversation.isPinned === true
+		noDisturb.value = conversation.noDisturb === true
 		if (!targetId.value && conversation.targetId) {
 			targetId.value = String(conversation.targetId)
 		}
@@ -149,11 +149,19 @@
 		void hydrateConversation()
 	})
 
+	onMounted(() => {
+		conversationService.addUpdateListener(syncConversationSettings)
+	})
+
+	onUnload(() => {
+		conversationService.removeUpdateListener(syncConversationSettings)
+	})
+
 	function handleBack() {
 		uni.navigateBack()
 	}
 
-	async function onTopChange(e : UniSwitchChangeEvent) {
+	async function onPinnedChange(e : UniSwitchChangeEvent) {
 		const newValue = e.detail.value === true
 		if (!chatId.value || toggleLoading.value) {
 			uni.showToast({
@@ -168,14 +176,14 @@
 			if (!success) {
 				throw new Error('pin failed')
 			}
-			isTop.value = newValue
+			isPinned.value = newValue
 			uni.showToast({
 				title: newValue ? '已置顶' : '已取消置顶',
 				icon: 'success'
 			})
 		} catch (e) {
 			console.error('[ChatSettings] 设置置顶失败:', e)
-			isTop.value = !newValue
+			isPinned.value = !newValue
 			uni.showToast({
 				title: '设置失败',
 				icon: 'none'
@@ -185,8 +193,8 @@
 		}
 	}
 
-	async function onNotifyChange(e : UniSwitchChangeEvent) {
-		const newNotifyValue = e.detail.value === true
+	async function onNoDisturbChange(e : UniSwitchChangeEvent) {
+		const newValue = e.detail.value === true
 		if (!chatId.value || toggleLoading.value) {
 			uni.showToast({
 				title: '会话信息未加载',
@@ -196,18 +204,18 @@
 		}
 		try {
 			toggleLoading.value = true
-			const success = await conversationService.setMute(chatId.value, !newNotifyValue)
+			const success = await conversationService.setMute(chatId.value, newValue)
 			if (!success) {
 				throw new Error('mute failed')
 			}
-			isNotify.value = newNotifyValue
+			noDisturb.value = newValue
 			uni.showToast({
-				title: newNotifyValue ? '已关闭免打扰' : '已开启免打扰',
+				title: newValue ? '已开启免打扰' : '已关闭免打扰',
 				icon: 'success'
 			})
 		} catch (e) {
 			console.error('[ChatSettings] 设置免打扰失败:', e)
-			isNotify.value = !newNotifyValue
+			noDisturb.value = !newValue
 			uni.showToast({
 				title: '设置失败',
 				icon: 'none'
