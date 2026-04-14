@@ -17,6 +17,7 @@ import { getUserDetail } from '@/api/user.uts'
 import { pullMessages as pullMessagesApi, sendMessage as sendMessageApi } from '@/api/message.uts'
 import { badgeService, BadgeUpdateMessage } from './badge-service.uts'
 import { conversationService } from './conversation-service.uts'
+import { groupService } from './group-service.uts'
 
 /**
  * 消息状态枚举
@@ -295,6 +296,8 @@ export class MessageService {
   // 用户信息缓存（用于补齐实时消息的 senderName/avatarText）
   private userNicknameCache: Map<string, string> = new Map()
   private userNicknameLoading: Map<string, Promise<string>> = new Map()
+  private groupMemberNameCache: Map<string, string> = new Map()
+  private groupMemberNameLoading: Map<string, Promise<string>> = new Map()
   
   // 消息缓存（按会话ID分组）
   private messageCache: Map<string, MessageItem[]> = new Map()
@@ -732,9 +735,10 @@ export class MessageService {
         }
         const senderIdStr = m.senderId != null ? m.senderId.toString() : '0'
         const isSelf = senderIdStr === this.currentUserId
+        const groupIdStr = m.groupId != null ? m.groupId.toString() : '0'
         const senderName = (m.senderNickname != null && m.senderNickname !== '')
           ? m.senderNickname
-          : (isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr))
+          : await this.resolveSenderDisplayName(senderIdStr, groupIdStr)
 
         const messageIdStr = m.id != null ? m.id.toString() : '0'
         if (messageIdStr === '' || messageIdStr === '0') {
@@ -1235,9 +1239,10 @@ export class MessageService {
           fetched += 1
           const senderIdStr = m.senderId != null ? m.senderId.toString() : '0'
           const isSelf = senderIdStr === this.currentUserId
+          const groupIdStr = m.groupId != null ? m.groupId.toString() : '0'
           const senderName = (m.senderNickname != null && m.senderNickname !== '')
             ? m.senderNickname
-            : (isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr))
+            : await this.resolveSenderDisplayName(senderIdStr, groupIdStr)
 
           const seqStr = m.sequence != null ? m.sequence.toString() : null
           const revStr = (m as any).rev != null && (m as any).rev !== '' ? (m as any).rev.toString() : '1'
@@ -1393,6 +1398,77 @@ export class MessageService {
     this.userNicknameLoading.set(userId, task)
     return await task
   }
+
+  private async resolveSenderDisplayName(userId: string, groupId: string): Promise<string> {
+    const gid = groupId != null ? String(groupId) : ''
+    if (gid !== '' && gid !== '0') {
+      const groupDisplayName = await this.resolveGroupMemberDisplayName(gid, userId)
+      if (groupDisplayName !== '') {
+        return groupDisplayName
+      }
+    }
+    return await this.resolveUserNickname(userId)
+  }
+
+  private async resolveGroupMemberDisplayName(groupId: string, userId: string): Promise<string> {
+    if (groupId === '' || groupId === '0' || userId === '' || userId === '0') {
+      return ''
+    }
+    const cacheKey = groupId + '_' + userId
+    const cached = this.groupMemberNameCache.get(cacheKey)
+    if (cached != null) {
+      return cached
+    }
+    const loading = this.groupMemberNameLoading.get(cacheKey)
+    if (loading != null) {
+      return await loading
+    }
+    const task = (async (): Promise<string> => {
+      try {
+        const members = await groupService.getGroupMembers(groupId)
+        const member = members.find((item: any) => item != null && String(item.userId) === userId)
+        if (member == null) {
+          return ''
+        }
+        const nickname = member.nickname != null ? String(member.nickname).trim() : ''
+        const userName = member.userName != null ? String(member.userName).trim() : ''
+        const displayName = nickname !== '' ? nickname : userName
+        if (displayName !== '') {
+          this.groupMemberNameCache.set(cacheKey, displayName)
+        }
+        return displayName
+      } catch (e) {
+        console.error('[MessageService] resolveGroupMemberDisplayName failed:', groupId, userId, e)
+        return ''
+      } finally {
+        this.groupMemberNameLoading.delete(cacheKey)
+      }
+    })()
+    this.groupMemberNameLoading.set(cacheKey, task)
+    return await task
+  }
+
+  public invalidateGroupMemberDisplayNameCache(groupId: string): void {
+    const gid = groupId != null ? String(groupId) : ''
+    if (gid === '') {
+      return
+    }
+    const prefix = gid + '_'
+    const cacheKeys = Array.from(this.groupMemberNameCache.keys())
+    for (let i = 0; i < cacheKeys.length; i++) {
+      const key = cacheKeys[i]
+      if (key.indexOf(prefix) === 0) {
+        this.groupMemberNameCache.delete(key)
+      }
+    }
+    const loadingKeys = Array.from(this.groupMemberNameLoading.keys())
+    for (let i = 0; i < loadingKeys.length; i++) {
+      const key = loadingKeys[i]
+      if (key.indexOf(prefix) === 0) {
+        this.groupMemberNameLoading.delete(key)
+      }
+    }
+  }
   
   /**
    * 获取单例实例
@@ -1407,7 +1483,7 @@ export class MessageService {
   /**
    * 初始化 WebSocket 监听器
    */
-  private initWebSocketListeners(): void {
+	  private initWebSocketListeners(): void {
     // 监听文本消息
     wsManager.addMessageListener(MessageType.TEXT, (message) => {
       void this.handleReceivedMessage(message)
@@ -1456,44 +1532,58 @@ export class MessageService {
       this.handleRecall(message)
     })
 
-    // 监听系统通知（用于会话快照推送等轻量事件）
-    wsManager.addMessageListener(MessageType.SYSTEM_NOTIFY, (message) => {
-      this.handleSystemNotify(message)
-    })
-  }
+	    // 监听系统通知（用于会话快照推送等轻量事件）
+	    wsManager.addMessageListener(MessageType.SYSTEM_NOTIFY, (message) => {
+	      this.handleSystemNotify(message)
+	    })
+	  }
 
-  private handleSystemNotify(message: any): void {
-    try {
-      let handledReeditHint = false
-      let handledVoicePlayed = false
-      try {
-        const extraRaw: any = message != null && (message as any).header != null ? (message as any).header.extra : null
-        if (extraRaw != null && extraRaw !== '') {
-          const extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
-          if (extraObj != null && extraObj.action != null) {
-            const action = String(extraObj.action)
-            if (action === 'reedit_after_recall') {
-              handledReeditHint = this.applyReeditHintFromSystemNotify(extraObj)
-            } else if (action === 'voice_played') {
-              handledVoicePlayed = this.applyVoicePlayedHintFromSystemNotify(extraObj)
-            }
-          }
-        }
-      } catch (e) {
-      }
+	  public static readonly GROUP_JOIN_REQUEST_CREATED_EVENT = 'imGroupJoinRequestCreated'
+	  public static readonly GROUP_JOIN_REQUEST_ADMIN_REFRESH_EVENT = 'imGroupJoinRequestAdminRefresh'
+	  public static readonly GROUP_JOIN_REQUEST_PROCESSED_EVENT = 'imGroupJoinRequestProcessed'
+
+	  private handleSystemNotify(message: any): void {
+	    try {
+	      let handledReeditHint = false
+	      let handledVoicePlayed = false
+	      let handledJoinRequestNotify = false
+	      try {
+	        const extraRaw: any = message != null && (message as any).header != null ? (message as any).header.extra : null
+	        if (extraRaw != null && extraRaw !== '') {
+	          const extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
+	          if (extraObj != null && extraObj.action != null) {
+	            const action = String(extraObj.action)
+	            if (action === 'reedit_after_recall') {
+	              handledReeditHint = this.applyReeditHintFromSystemNotify(extraObj)
+	            } else if (action === 'voice_played') {
+	              handledVoicePlayed = this.applyVoicePlayedHintFromSystemNotify(extraObj)
+	            } else if (action === 'group_join_request_created') {
+	              handledJoinRequestNotify = true
+	              this.handleGroupJoinRequestCreatedNotify(extraObj)
+	            } else if (action === 'group_join_request_admin_refresh') {
+	              handledJoinRequestNotify = true
+	              this.handleGroupJoinRequestAdminRefreshNotify(extraObj)
+	            } else if (action === 'group_join_request_processed') {
+	              handledJoinRequestNotify = true
+	              this.handleGroupJoinRequestProcessedNotify(extraObj)
+	            }
+	          }
+	        }
+	      } catch (e) {
+	      }
 
       const body: any = message != null ? (message as any).body : null
       const content: any = body != null ? (body as any).content : null
-      const contentStr = content != null ? content.toString() : ''
-      if (
-        contentStr === '' ||
-        contentStr === 'CONVERSATION_UPSERT' ||
-        contentStr === 'CONVERSATION_DELETE' ||
-        contentStr === 'BADGE_UPDATE'
-      ) {
-        if (handledReeditHint || handledVoicePlayed) {
-          return
-        }
+	      const contentStr = content != null ? content.toString() : ''
+	      if (
+	        contentStr === '' ||
+	        contentStr === 'CONVERSATION_UPSERT' ||
+	        contentStr === 'CONVERSATION_DELETE' ||
+	        contentStr === 'BADGE_UPDATE'
+	      ) {
+	        if (handledReeditHint || handledVoicePlayed || handledJoinRequestNotify) {
+	          return
+	        }
 
         // cursor-only notify：直接拉增量，避免先推进本地 cursor 导致本次变更被跳过
         try {
@@ -1511,11 +1601,56 @@ export class MessageService {
       const lastMessage = snapshot.lastMessageContent != null ? snapshot.lastMessageContent.toString() : ''
       const ts = this.normalizeTimestampMs(snapshot.lastMessageTime)
 
-      conversationService.upsertFromSnapshot(snapshot, lastMessage, ts, false, snapshot.lastMessageSequence != null ? snapshot.lastMessageSequence.toString() : null)
-    } catch (e) {
-      console.error('[MessageService] handleSystemNotify failed:', e)
-    }
-  }
+	      conversationService.upsertFromSnapshot(snapshot, lastMessage, ts, false, snapshot.lastMessageSequence != null ? snapshot.lastMessageSequence.toString() : null)
+	    } catch (e) {
+	      console.error('[MessageService] handleSystemNotify failed:', e)
+	    }
+	  }
+
+	  private handleGroupJoinRequestCreatedNotify(payload: any): void {
+	    try {
+	      uni.$emit(MessageService.GROUP_JOIN_REQUEST_CREATED_EVENT, payload)
+	    } catch (e) {
+	    }
+	    try {
+	      const applicantNickname = payload != null && payload.applicantNickname != null ? String(payload.applicantNickname) : '新申请人'
+	      const groupName = payload != null && payload.groupName != null ? String(payload.groupName) : '群聊'
+	      uni.showToast({
+	        title: `${applicantNickname}申请加入${groupName}`,
+	        icon: 'none',
+	        duration: 2000
+	      })
+	    } catch (e) {
+	    }
+	  }
+
+	  private handleGroupJoinRequestAdminRefreshNotify(payload: any): void {
+	    try {
+	      uni.$emit(MessageService.GROUP_JOIN_REQUEST_ADMIN_REFRESH_EVENT, payload)
+	    } catch (e) {
+	    }
+	  }
+
+	  private handleGroupJoinRequestProcessedNotify(payload: any): void {
+	    try {
+	      uni.$emit(MessageService.GROUP_JOIN_REQUEST_PROCESSED_EVENT, payload)
+	    } catch (e) {
+	    }
+	    try {
+	      const status = payload != null && payload.status != null ? String(payload.status) : ''
+	      const groupName = payload != null && payload.groupName != null ? String(payload.groupName) : '群聊'
+	      const rejectReason = payload != null && payload.rejectReason != null ? String(payload.rejectReason) : ''
+	      const title = status === 'approved'
+	        ? `已通过加入${groupName}`
+	        : (rejectReason !== '' ? rejectReason : `加入${groupName}未通过`)
+	      uni.showToast({
+	        title: title,
+	        icon: 'none',
+	        duration: 2500
+	      })
+	    } catch (e) {
+	    }
+	  }
   
   /**
    * 设置当前用户信息
@@ -2226,7 +2361,8 @@ export class MessageService {
 
     const senderIdStr = message.header.senderId != null ? message.header.senderId.toString() : '0'
     const isSelf = senderIdStr === this.currentUserId
-    const senderName = isSelf ? (getUserInfo()?.user?.nickname || '') : await this.resolveUserNickname(senderIdStr)
+    const groupIdStr = message.header.groupId != null ? message.header.groupId.toString() : '0'
+    const senderName = await this.resolveSenderDisplayName(senderIdStr, groupIdStr)
     const avatarText = senderName ? getAvatarText(senderName) : '?'
 
     // enterprise: parse rev from header.extra (JSON); default 1

@@ -1,6 +1,8 @@
 package com.shengyu.module.system.service.im;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
@@ -12,6 +14,7 @@ import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupInviteDO;
+import com.shengyu.module.system.dal.dataobject.im.ImGroupJoinRequestDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupUserDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
@@ -19,11 +22,13 @@ import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
 import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupInviteMapper;
+import com.shengyu.module.system.dal.mysql.im.ImGroupJoinRequestMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupUserMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import com.shengyu.module.system.enums.im.ImGroupInviteStatusEnum;
+import com.shengyu.module.system.enums.im.ImGroupJoinRequestStatusEnum;
 import com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum;
 import com.shengyu.module.system.enums.im.ImGroupStatusEnum;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
@@ -78,6 +83,9 @@ public class ImGroupServiceImpl implements ImGroupService {
     private ImGroupInviteMapper groupInviteMapper;
 
     @Resource
+    private ImGroupJoinRequestMapper groupJoinRequestMapper;
+
+    @Resource
     private ImChatUserMapper chatUserMapper;
 
     @Resource
@@ -91,6 +99,9 @@ public class ImGroupServiceImpl implements ImGroupService {
 
     @Resource
     private NettyMessageSender messageSender;
+
+    @Resource
+    private ImNotifyService imNotifyService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -188,6 +199,12 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
         if (updateReqVO.getIntroduction() != null) {
             group.setIntroduction(updateReqVO.getIntroduction());
+        }
+        if (updateReqVO.getNeedApproval() != null) {
+            group.setNeedApproval(updateReqVO.getNeedApproval());
+        }
+        if (updateReqVO.getAllowMemberInvite() != null) {
+            group.setAllowMemberInvite(updateReqVO.getAllowMemberInvite());
         }
         groupMapper.updateById(group);
 
@@ -291,9 +308,7 @@ public class ImGroupServiceImpl implements ImGroupService {
 
         // 转换为VO
         AppImGroupRespVO respVO = BeanUtils.toBean(group, AppImGroupRespVO.class);
-        
-        // 不需要填充群主名称，前端可以通过 ownerId 查询
-        
+        respVO.setMyRole(groupUser.getRole());
         return respVO;
     }
 
@@ -315,9 +330,13 @@ public class ImGroupServiceImpl implements ImGroupService {
             ImGroupDO group = groupMapper.selectById(groupId);
             if (group != null) {
                 AppImGroupRespVO respVO = BeanUtils.toBean(group, AppImGroupRespVO.class);
-                
-                // 不需要填充群主名称，前端可以通过 ownerId 查询
-                
+                ImGroupUserDO currentMember = groupUsers.stream()
+                        .filter(item -> Objects.equals(item.getGroupId(), groupId))
+                        .findFirst()
+                        .orElse(null);
+                if (currentMember != null) {
+                    respVO.setMyRole(currentMember.getRole());
+                }
                 result.add(respVO);
             }
         }
@@ -363,6 +382,15 @@ public class ImGroupServiceImpl implements ImGroupService {
             newMember.setRole(ImGroupMemberRoleEnum.MEMBER.getRole());
             newMember.setJoinTime(LocalDateTime.now());
             groupUserMapper.insert(newMember);
+
+            ImGroupJoinRequestDO pendingRequest = groupJoinRequestMapper.selectPendingByGroupIdAndApplicantUserId(addReqVO.getGroupId(), memberId);
+            if (pendingRequest != null) {
+                pendingRequest.setStatus(ImGroupJoinRequestStatusEnum.APPROVED.getStatus());
+                pendingRequest.setHandledBy(userId);
+                pendingRequest.setHandledTime(LocalDateTime.now());
+                pendingRequest.setRejectReason(null);
+                groupJoinRequestMapper.updateById(pendingRequest);
+            }
 
             addedCount++;
             addedMemberIds.add(memberId);
@@ -771,7 +799,7 @@ public class ImGroupServiceImpl implements ImGroupService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void joinGroupByInviteCode(Long userId, String inviteCode) {
+    public AppImGroupInviteJoinRespVO joinGroupByInviteCode(Long userId, String inviteCode) {
         // 1. 验证邀请码
         AppImGroupInviteVerifyRespVO verifyResult = verifyInviteCode(inviteCode);
         if (!verifyResult.getValid()) {
@@ -792,39 +820,43 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_MEMBER_FULL);
         }
 
-        // 4. 如果需要审批，创建加群申请（暂不实现，直接加入）
+        AppImGroupInviteJoinRespVO respVO = new AppImGroupInviteJoinRespVO();
+        respVO.setGroupId(groupId);
+
+        // 4. 如果需要审批，创建加群申请
         if (verifyResult.getNeedApproval()) {
-            // TODO: 创建加群申请，等待审批
-            throw exception(GROUP_JOIN_NEED_APPROVAL);
+            ImGroupJoinRequestDO pendingRequest = groupJoinRequestMapper.selectPendingByGroupIdAndApplicantUserId(groupId, userId);
+            if (pendingRequest == null) {
+                pendingRequest = ImGroupJoinRequestDO.builder()
+                        .groupId(groupId)
+                        .applicantUserId(userId)
+                        .inviteCode(inviteCode)
+                        .status(ImGroupJoinRequestStatusEnum.PENDING.getStatus())
+                        .build();
+                groupJoinRequestMapper.insert(pendingRequest);
+                ImGroupDO finalGroup = group;
+                ImGroupJoinRequestDO finalPendingRequest = pendingRequest;
+                runAfterCommit(() -> notifyJoinRequestCreated(finalGroup, finalPendingRequest));
+            }
+            respVO.setResultType(2);
+            respVO.setMessage("已提交入群申请，请等待管理员审批");
+            respVO.setRequestId(pendingRequest.getId());
+            return respVO;
         }
 
-        // 5. 添加群成员
-        ImGroupUserDO groupUser = new ImGroupUserDO();
-        groupUser.setGroupId(groupId);
-        groupUser.setUserId(userId);
-        groupUser.setRole(ImGroupMemberRoleEnum.MEMBER.getRole());
-        groupUser.setJoinTime(LocalDateTime.now());
-        groupUserMapper.insert(groupUser);
+        // 5. 直接加入群
+        addApprovedMemberToGroup(group, userId, userId);
 
-        // 6. 更新群成员数量
-        group.setMemberCount(group.getMemberCount() + 1);
-        groupMapper.updateById(group);
-
-        ImGroupConversationRefreshMessage refreshMessage = new ImGroupConversationRefreshMessage();
-        refreshMessage.setAction("UPSERT");
-        refreshMessage.setOperatorUserId(userId);
-        refreshMessage.setGroupId(groupId);
-        refreshMessage.setMemberIds(java.util.Collections.singletonList(userId));
-        refreshMessage.setConversationType(ImConversationTypeEnum.GROUP.getType());
-        groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
-
-        // 7. 更新邀请码使用次数
+        // 6. 更新邀请码使用次数
         ImGroupInviteDO invite = groupInviteMapper.selectByInviteCode(inviteCode);
         invite.setUsedCount(invite.getUsedCount() + 1);
         groupInviteMapper.updateById(invite);
 
         log.info("[ImGroupService] 通过邀请码加入群成功, userId: {}, groupId: {}, inviteCode: {}", 
                 userId, groupId, inviteCode);
+        respVO.setResultType(1);
+        respVO.setMessage("加入成功");
+        return respVO;
     }
 
     @Override
@@ -928,6 +960,8 @@ public class ImGroupServiceImpl implements ImGroupService {
         respVO.setExpireTime(invite.getExpireTime());
         respVO.setUsedCount(invite.getUsedCount());
         respVO.setMaxUseCount(invite.getMaxUseCount());
+        ImGroupDO group = groupMapper.selectById(groupId);
+        respVO.setNeedApproval(group != null && Boolean.TRUE.equals(group.getNeedApproval()));
         return respVO;
     }
 
@@ -1188,6 +1222,275 @@ public class ImGroupServiceImpl implements ImGroupService {
         
         log.info("[ImGroupService] 群成员昵称设置成功, groupId: {}, targetUserId: {}, nickname: {}", 
                 groupId, targetUserId, nickname);
+    }
+
+    @Override
+    public List<AppImGroupJoinRequestRespVO> getJoinRequests(Long userId, Long groupId, Integer status) {
+        assertCanManageJoinRequests(userId, groupId);
+        List<ImGroupJoinRequestDO> requests = groupJoinRequestMapper.selectListByGroupIdAndStatus(groupId, status);
+        return requests.stream().map(this::buildJoinRequestRespVO).collect(Collectors.toList());
+    }
+
+    @Override
+    public Long getPendingJoinRequestCount(Long userId, Long groupId) {
+        assertCanManageJoinRequests(userId, groupId);
+        return groupJoinRequestMapper.selectPendingCountByGroupId(groupId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void approveJoinRequest(Long userId, Long requestId) {
+        ImGroupJoinRequestDO request = groupJoinRequestMapper.selectById(requestId);
+        if (request == null) {
+            throw exception(GROUP_JOIN_REQUEST_NOT_EXISTS);
+        }
+        assertCanManageJoinRequests(userId, request.getGroupId());
+        if (!ImGroupJoinRequestStatusEnum.isPending(request.getStatus())) {
+            throw exception(GROUP_JOIN_REQUEST_STATUS_INVALID);
+        }
+
+        ImGroupDO group = groupMapper.selectById(request.getGroupId());
+        if (group == null) {
+            throw exception(GROUP_NOT_EXISTS);
+        }
+
+        ImGroupUserDO existingMember = groupUserMapper.selectByGroupIdAndUserId(request.getGroupId(), request.getApplicantUserId());
+        if (existingMember == null) {
+            if (group.getMemberCount() >= group.getMaxMemberCount()) {
+                throw exception(GROUP_MEMBER_FULL);
+            }
+            addApprovedMemberToGroup(group, request.getApplicantUserId(), userId);
+        }
+
+        request.setStatus(ImGroupJoinRequestStatusEnum.APPROVED.getStatus());
+        request.setHandledBy(userId);
+        request.setHandledTime(LocalDateTime.now());
+        request.setRejectReason(null);
+        groupJoinRequestMapper.updateById(request);
+
+        ImGroupJoinRequestDO finalRequest = request;
+        runAfterCommit(() -> {
+            notifyJoinRequestProcessed(group, finalRequest, true);
+            notifyJoinRequestAdminRefresh(group, finalRequest, "approved");
+        });
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void rejectJoinRequest(Long userId, Long requestId, String rejectReason) {
+        ImGroupJoinRequestDO request = groupJoinRequestMapper.selectById(requestId);
+        if (request == null) {
+            throw exception(GROUP_JOIN_REQUEST_NOT_EXISTS);
+        }
+        assertCanManageJoinRequests(userId, request.getGroupId());
+        if (!ImGroupJoinRequestStatusEnum.isPending(request.getStatus())) {
+            throw exception(GROUP_JOIN_REQUEST_STATUS_INVALID);
+        }
+        request.setStatus(ImGroupJoinRequestStatusEnum.REJECTED.getStatus());
+        request.setHandledBy(userId);
+        request.setHandledTime(LocalDateTime.now());
+        request.setRejectReason(rejectReason != null && !rejectReason.trim().isEmpty() ? rejectReason.trim() : "管理员已拒绝");
+        groupJoinRequestMapper.updateById(request);
+
+        ImGroupDO group = groupMapper.selectById(request.getGroupId());
+        if (group != null) {
+            ImGroupJoinRequestDO finalRequest = request;
+            runAfterCommit(() -> {
+                notifyJoinRequestProcessed(group, finalRequest, false);
+                notifyJoinRequestAdminRefresh(group, finalRequest, "rejected");
+            });
+        }
+    }
+
+    private void assertCanManageJoinRequests(Long userId, Long groupId) {
+        ImGroupDO group = groupMapper.selectById(groupId);
+        if (group == null) {
+            throw exception(GROUP_NOT_EXISTS);
+        }
+        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(groupId, userId);
+        if (groupUser == null ||
+                (!ImGroupMemberRoleEnum.isOwner(groupUser.getRole()) &&
+                        !ImGroupMemberRoleEnum.isAdmin(groupUser.getRole()))) {
+            throw exception(GROUP_PERMISSION_DENIED);
+        }
+    }
+
+    private AppImGroupJoinRequestRespVO buildJoinRequestRespVO(ImGroupJoinRequestDO request) {
+        AppImGroupJoinRequestRespVO respVO = BeanUtils.toBean(request, AppImGroupJoinRequestRespVO.class);
+        AdminUserDO applicant = userMapper.selectById(request.getApplicantUserId());
+        if (applicant != null) {
+            respVO.setApplicantNickname(applicant.getNickname());
+            respVO.setApplicantAvatar(applicant.getAvatar());
+        }
+        if (request.getHandledBy() != null && request.getHandledBy() > 0) {
+            AdminUserDO handler = userMapper.selectById(request.getHandledBy());
+            if (handler != null) {
+                respVO.setHandledByNickname(handler.getNickname());
+            }
+        }
+        return respVO;
+    }
+
+    private void notifyJoinRequestCreated(ImGroupDO group, ImGroupJoinRequestDO request) {
+        if (group == null || request == null) {
+            return;
+        }
+        AdminUserDO applicant = userMapper.selectById(request.getApplicantUserId());
+        String applicantName = applicant != null && applicant.getNickname() != null && !applicant.getNickname().trim().isEmpty()
+                ? applicant.getNickname().trim() : "新申请人";
+        List<Long> managerIds = getJoinRequestManagerIds(group.getId());
+        if (CollUtil.isEmpty(managerIds)) {
+            return;
+        }
+
+        String title = "新的入群申请";
+        String content = applicantName + " 申请加入群聊「" + group.getName() + "」";
+        String extra = buildJoinRequestNotifyExtra("group_join_request_created", group, request, "pending");
+        Long tenantId = resolveTenantId();
+        TextMessage body = TextMessage.newBuilder().setContent("").build();
+        for (Long managerId : managerIds) {
+            if (managerId == null) {
+                continue;
+            }
+            try {
+                imNotifyService.sendCustomNotify(managerId, title, content, null, extra);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 保存入群申请管理员通知失败, groupId: {}, managerId: {}, error: {}",
+                        group.getId(), managerId, e.getMessage(), e);
+            }
+            try {
+                messageSender.sendToUserWithExtra(managerId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, managerId, group.getId(), tenantId,
+                        null, null, null,
+                        null, null, extra);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送入群申请管理员实时通知失败, groupId: {}, managerId: {}, error: {}",
+                        group.getId(), managerId, e.getMessage(), e);
+            }
+        }
+    }
+
+    private void notifyJoinRequestProcessed(ImGroupDO group, ImGroupJoinRequestDO request, boolean approved) {
+        if (group == null || request == null || request.getApplicantUserId() == null) {
+            return;
+        }
+        AdminUserDO handler = request.getHandledBy() != null ? userMapper.selectById(request.getHandledBy()) : null;
+        String handlerName = handler != null && handler.getNickname() != null && !handler.getNickname().trim().isEmpty()
+                ? handler.getNickname().trim() : "管理员";
+        String title = approved ? "入群申请已通过" : "入群申请未通过";
+        String content = approved
+                ? handlerName + " 已通过你加入群聊「" + group.getName() + "」的申请"
+                : handlerName + " 已拒绝你加入群聊「" + group.getName() + "」的申请";
+        String status = approved ? "approved" : "rejected";
+        String extra = buildJoinRequestNotifyExtra("group_join_request_processed", group, request, status);
+        Long tenantId = resolveTenantId();
+        TextMessage body = TextMessage.newBuilder().setContent("").build();
+        try {
+            imNotifyService.sendCustomNotify(request.getApplicantUserId(), title, content, null, extra);
+        } catch (Exception e) {
+            log.warn("[ImGroupService] 保存入群申请结果通知失败, groupId: {}, applicantUserId: {}, error: {}",
+                    group.getId(), request.getApplicantUserId(), e.getMessage(), e);
+        }
+        try {
+            messageSender.sendToUserWithExtra(request.getApplicantUserId(), MessageType.SYSTEM_NOTIFY, body,
+                    0L, request.getApplicantUserId(), group.getId(), tenantId,
+                    null, null, null,
+                    null, null, extra);
+        } catch (Exception e) {
+            log.warn("[ImGroupService] 推送入群申请结果实时通知失败, groupId: {}, applicantUserId: {}, error: {}",
+                    group.getId(), request.getApplicantUserId(), e.getMessage(), e);
+        }
+    }
+
+    private void notifyJoinRequestAdminRefresh(ImGroupDO group, ImGroupJoinRequestDO request, String status) {
+        if (group == null || request == null) {
+            return;
+        }
+        List<Long> managerIds = getJoinRequestManagerIds(group.getId());
+        if (CollUtil.isEmpty(managerIds)) {
+            return;
+        }
+        String extra = buildJoinRequestNotifyExtra("group_join_request_admin_refresh", group, request, status);
+        Long tenantId = resolveTenantId();
+        TextMessage body = TextMessage.newBuilder().setContent("").build();
+        for (Long managerId : managerIds) {
+            if (managerId == null) {
+                continue;
+            }
+            try {
+                messageSender.sendToUserWithExtra(managerId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, managerId, group.getId(), tenantId,
+                        null, null, null,
+                        null, null, extra);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送管理员审批刷新通知失败, groupId: {}, managerId: {}, error: {}",
+                        group.getId(), managerId, e.getMessage(), e);
+            }
+        }
+    }
+
+    private List<Long> getJoinRequestManagerIds(Long groupId) {
+        List<ImGroupUserDO> groupUsers = groupUserMapper.selectListByGroupId(groupId);
+        if (CollUtil.isEmpty(groupUsers)) {
+            return new ArrayList<>();
+        }
+        return groupUsers.stream()
+                .filter(groupUser -> groupUser != null && groupUser.getUserId() != null)
+                .filter(groupUser -> ImGroupMemberRoleEnum.isOwner(groupUser.getRole())
+                        || ImGroupMemberRoleEnum.isAdmin(groupUser.getRole()))
+                .map(ImGroupUserDO::getUserId)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private String buildJoinRequestNotifyExtra(String action, ImGroupDO group, ImGroupJoinRequestDO request, String status) {
+        JSONObject extra = JSONUtil.createObj();
+        extra.set("action", action);
+        extra.set("requestId", request.getId());
+        extra.set("groupId", request.getGroupId());
+        extra.set("groupName", group != null && group.getName() != null ? group.getName() : "");
+        extra.set("applicantUserId", request.getApplicantUserId());
+        extra.set("status", status);
+        if (request.getHandledBy() != null) {
+            extra.set("handledBy", request.getHandledBy());
+            AdminUserDO handler = userMapper.selectById(request.getHandledBy());
+            if (handler != null && handler.getNickname() != null) {
+                extra.set("handledByName", handler.getNickname());
+            }
+        }
+        if (request.getRejectReason() != null) {
+            extra.set("rejectReason", request.getRejectReason());
+        }
+        AdminUserDO applicant = request.getApplicantUserId() != null ? userMapper.selectById(request.getApplicantUserId()) : null;
+        if (applicant != null) {
+            extra.set("applicantNickname", applicant.getNickname());
+        }
+        return extra.toString();
+    }
+
+    private Long resolveTenantId() {
+        Long tenantId = TenantContextHolder.getTenantId();
+        return tenantId != null ? tenantId : 0L;
+    }
+
+    private void addApprovedMemberToGroup(ImGroupDO group, Long memberUserId, Long operatorUserId) {
+        ImGroupUserDO groupUser = new ImGroupUserDO();
+        groupUser.setGroupId(group.getId());
+        groupUser.setUserId(memberUserId);
+        groupUser.setRole(ImGroupMemberRoleEnum.MEMBER.getRole());
+        groupUser.setJoinTime(LocalDateTime.now());
+        groupUserMapper.insert(groupUser);
+
+        group.setMemberCount(group.getMemberCount() + 1);
+        groupMapper.updateById(group);
+
+        ImGroupConversationRefreshMessage refreshMessage = new ImGroupConversationRefreshMessage();
+        refreshMessage.setAction("UPSERT");
+        refreshMessage.setOperatorUserId(operatorUserId);
+        refreshMessage.setGroupId(group.getId());
+        refreshMessage.setMemberIds(java.util.Collections.singletonList(memberUserId));
+        refreshMessage.setConversationType(ImConversationTypeEnum.GROUP.getType());
+        groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
     }
 
     @Override

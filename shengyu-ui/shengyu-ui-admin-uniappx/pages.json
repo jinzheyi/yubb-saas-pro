@@ -141,6 +141,13 @@
 			}
 		},
 		{
+			"path": "pages/message/group-join-requests",
+			"style": {
+				"navigationBarTitleText": "入群申请",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/message/group-members",
 			"style": {
 				"navigationBarTitleText": "群成员",

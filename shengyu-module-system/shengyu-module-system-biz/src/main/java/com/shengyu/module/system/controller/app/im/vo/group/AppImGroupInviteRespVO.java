@@ -24,4 +24,7 @@ public class AppImGroupInviteRespVO {
     @Schema(description = "最大使用次数(0表示不限制)", example = "0")
     private Integer maxUseCount;
 
+    @Schema(description = "是否需要审批", example = "false")
+    private Boolean needApproval;
+
 }

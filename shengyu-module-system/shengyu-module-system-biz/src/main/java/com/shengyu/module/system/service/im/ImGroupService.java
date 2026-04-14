@@ -240,7 +240,7 @@ public interface ImGroupService {
      * @param userId 用户ID
      * @param inviteCode 邀请码
      */
-    void joinGroupByInviteCode(Long userId, String inviteCode);
+    AppImGroupInviteJoinRespVO joinGroupByInviteCode(Long userId, String inviteCode);
 
     /**
      * 获取群的有效邀请码
@@ -297,6 +297,42 @@ public interface ImGroupService {
      * @param nickname 昵称
      */
     void setMemberNickname(Long userId, Long groupId, Long memberUserId, String nickname);
+
+    /**
+     * 获取群加群申请列表
+     *
+     * @param userId 用户ID
+     * @param groupId 群组ID
+     * @param status 状态(可空)
+     * @return 申请列表
+     */
+    List<AppImGroupJoinRequestRespVO> getJoinRequests(Long userId, Long groupId, Integer status);
+
+    /**
+     * 获取群待审批申请数量
+     *
+     * @param userId 用户ID
+     * @param groupId 群组ID
+     * @return 数量
+     */
+    Long getPendingJoinRequestCount(Long userId, Long groupId);
+
+    /**
+     * 通过加群申请
+     *
+     * @param userId 操作者ID
+     * @param requestId 申请单ID
+     */
+    void approveJoinRequest(Long userId, Long requestId);
+
+    /**
+     * 拒绝加群申请
+     *
+     * @param userId 操作者ID
+     * @param requestId 申请单ID
+     * @param rejectReason 拒绝原因
+     */
+    void rejectJoinRequest(Long userId, Long requestId, String rejectReason);
 
     /**
      * 获取群成员角色

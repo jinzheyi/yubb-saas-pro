@@ -5,6 +5,7 @@ import com.shengyu.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupUserDO;
 import org.apache.ibatis.annotations.Mapper;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -23,6 +24,22 @@ public interface ImGroupUserMapper extends BaseMapperX<ImGroupUserDO> {
      */
     default List<ImGroupUserDO> selectListByGroupId(Long groupId) {
         return selectList(ImGroupUserDO::getGroupId, groupId);
+    }
+
+    /**
+     * 根据群ID和用户ID列表查询群成员
+     *
+     * @param groupId 群ID
+     * @param userIds 用户ID列表
+     * @return 群成员列表
+     */
+    default List<ImGroupUserDO> selectListByGroupIdAndUserIds(Long groupId, List<Long> userIds) {
+        if (groupId == null || userIds == null || userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return selectList(new LambdaQueryWrapperX<ImGroupUserDO>()
+                .eq(ImGroupUserDO::getGroupId, groupId)
+                .in(ImGroupUserDO::getUserId, userIds));
     }
 
     /**

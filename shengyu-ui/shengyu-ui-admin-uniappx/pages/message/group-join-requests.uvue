@@ -1,0 +1,473 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click.stop="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">返回</text>
+			</view>
+			<text class="header-title">入群申请</text>
+			<view class="header-right"></view>
+		</view>
+
+		<view class="tab-bar">
+			<view :class="['tab-item', activeTab === 'pending' ? 'tab-item-active' : '']" @click="switchTab('pending')">
+				<text :class="['tab-text', activeTab === 'pending' ? 'tab-text-active' : '']">待处理</text>
+			</view>
+			<view :class="['tab-item', activeTab === 'processed' ? 'tab-item-active' : '']" @click="switchTab('processed')">
+				<text :class="['tab-text', activeTab === 'processed' ? 'tab-text-active' : '']">已处理</text>
+			</view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<view v-if="loading" class="placeholder-wrap">
+				<text class="placeholder-text">加载中...</text>
+			</view>
+
+			<view v-else-if="requestList.length === 0" class="placeholder-wrap">
+				<text class="placeholder-title">{{ activeTab === 'pending' ? '暂无待处理申请' : '暂无处理记录' }}</text>
+				<text class="placeholder-text">{{ groupName }}</text>
+			</view>
+
+			<view v-else class="request-list">
+				<view v-for="item in requestList" :key="item.id" class="request-card">
+					<view class="request-main">
+						<view class="avatar" :style="{ backgroundColor: item.avatarBg }">
+							<image v-if="item.applicantAvatar" class="avatar-image" :src="item.applicantAvatar" mode="aspectFill" />
+							<text v-else class="avatar-text">{{ item.avatarText }}</text>
+						</view>
+						<view class="request-info">
+							<view class="request-top">
+								<text class="applicant-name">{{ item.applicantNickname }}</text>
+								<text :class="['status-tag', item.status === 1 ? 'status-pending' : (item.status === 2 ? 'status-approved' : 'status-rejected')]">
+									{{ item.statusText }}
+								</text>
+							</view>
+							<text class="time-text">申请时间：{{ item.createTimeText }}</text>
+							<text v-if="item.handledTimeText !== ''" class="time-text">处理时间：{{ item.handledTimeText }}</text>
+							<text v-if="item.rejectReason !== ''" class="reason-text">处理结果：{{ item.rejectReason }}</text>
+						</view>
+					</view>
+					<view v-if="activeTab === 'pending'" class="action-row">
+						<view class="action-btn action-btn-reject" @click="handleReject(item)">
+							<text class="action-btn-text">拒绝</text>
+						</view>
+						<view class="action-btn action-btn-approve" @click="handleApprove(item)">
+							<text class="action-btn-text action-btn-text-primary">通过</text>
+						</view>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { approveGroupJoinRequest, getGroupJoinRequests, rejectGroupJoinRequest } from '../../api/group.uts'
+	import { MessageService } from '../../services/message-service.uts'
+	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
+	import { decodeIdParam } from '../../utils/id-param.uts'
+
+	const groupId = ref('')
+	const groupName = ref('群聊')
+	const activeTab = ref('pending')
+	const loading = ref(false)
+	const requestList = ref<any[]>([])
+	const processingRequestId = ref('')
+	let joinRequestCreatedHandler : ((payload : any) => void) | null = null
+	let joinRequestAdminRefreshHandler : ((payload : any) => void) | null = null
+
+	function formatTime(raw : any) : string {
+		if (raw == null || raw === '') {
+			return ''
+		}
+		try {
+			const ts = new Date(String(raw).replace(' ', 'T')).getTime()
+			if (isNaN(ts) || ts <= 0) {
+				return String(raw)
+			}
+			const date = new Date(ts)
+			const month = String(date.getMonth() + 1).padStart(2, '0')
+			const day = String(date.getDate()).padStart(2, '0')
+			const hour = String(date.getHours()).padStart(2, '0')
+			const minute = String(date.getMinutes()).padStart(2, '0')
+			return `${month}-${day} ${hour}:${minute}`
+		} catch (e) {
+			return String(raw)
+		}
+	}
+
+	function mapRequestItem(item : any) : any {
+		const applicantUserId = item != null && item.applicantUserId != null ? String(item.applicantUserId) : '0'
+		const applicantNickname = item != null && item.applicantNickname != null && String(item.applicantNickname).trim() !== ''
+			? String(item.applicantNickname).trim()
+			: '未知成员'
+		const status = item != null && item.status != null ? Number(item.status) : 1
+		return {
+			id: item != null && item.id != null ? String(item.id) : '',
+			applicantUserId,
+			applicantNickname,
+			applicantAvatar: item != null && item.applicantAvatar != null ? String(item.applicantAvatar) : '',
+			avatarText: getAvatarText(applicantNickname),
+			avatarBg: getUserAvatarColor(applicantUserId),
+			status,
+			statusText: status === 2 ? '已通过' : (status === 3 ? '已拒绝' : '待处理'),
+			createTimeText: formatTime(item != null ? item.createTime : ''),
+			handledTimeText: formatTime(item != null ? item.handledTime : ''),
+			rejectReason: item != null && item.rejectReason != null ? String(item.rejectReason) : ''
+		}
+	}
+
+	async function loadRequests() {
+		if (!groupId.value) {
+			return
+		}
+		try {
+			loading.value = true
+			const status = activeTab.value === 'pending' ? 1 : null
+			const result = await getGroupJoinRequests(groupId.value, status as any)
+			const mapped = Array.isArray(result) ? result.map((item : any) => mapRequestItem(item)) : []
+			requestList.value = activeTab.value === 'pending' ? mapped : mapped.filter((item : any) => item.status !== 1)
+		} catch (e) {
+			console.error('[GroupJoinRequests] 加载申请列表失败:', e)
+			requestList.value = []
+			uni.showToast({
+				title: '加载失败',
+				icon: 'none'
+			})
+		} finally {
+			loading.value = false
+		}
+	}
+
+	function switchTab(tab : string) {
+		if (activeTab.value === tab) {
+			return
+		}
+		activeTab.value = tab
+		void loadRequests()
+	}
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	async function handleApprove(item : any) {
+		if (!item || !item.id || processingRequestId.value !== '') {
+			return
+		}
+		try {
+			processingRequestId.value = item.id
+			await approveGroupJoinRequest(item.id)
+			uni.showToast({
+				title: '已通过',
+				icon: 'success'
+			})
+			await loadRequests()
+		} catch (e) {
+			console.error('[GroupJoinRequests] 通过申请失败:', e)
+			uni.showToast({
+				title: '操作失败',
+				icon: 'none'
+			})
+		} finally {
+			processingRequestId.value = ''
+		}
+	}
+
+	function handleReject(item : any) {
+		if (!item || !item.id || processingRequestId.value !== '') {
+			return
+		}
+		uni.showModal({
+			title: '拒绝申请',
+			content: `确认拒绝 ${item.applicantNickname} 的入群申请吗？`,
+			success: async (res) => {
+				if (!res.confirm) {
+					return
+				}
+				try {
+					processingRequestId.value = item.id
+					await rejectGroupJoinRequest(item.id, '管理员已拒绝')
+					uni.showToast({
+						title: '已拒绝',
+						icon: 'success'
+					})
+					await loadRequests()
+				} catch (e) {
+					console.error('[GroupJoinRequests] 拒绝申请失败:', e)
+					uni.showToast({
+						title: '操作失败',
+						icon: 'none'
+					})
+				} finally {
+					processingRequestId.value = ''
+				}
+			}
+		})
+	}
+
+	onLoad((options : any) => {
+		if (options && options.groupId) {
+			groupId.value = decodeIdParam(options.groupId)
+		}
+		if (options && options.groupName) {
+			groupName.value = decodeURIComponent(options.groupName)
+		}
+	})
+
+	onShow(() => {
+		void loadRequests()
+	})
+
+	onMounted(() => {
+		joinRequestCreatedHandler = (payload : any) => {
+			if (payload != null && payload.groupId != null && String(payload.groupId) === groupId.value) {
+				void loadRequests()
+			}
+		}
+		joinRequestAdminRefreshHandler = (payload : any) => {
+			if (payload != null && payload.groupId != null && String(payload.groupId) === groupId.value) {
+				void loadRequests()
+			}
+		}
+		uni.$on(MessageService.GROUP_JOIN_REQUEST_CREATED_EVENT, joinRequestCreatedHandler)
+		uni.$on(MessageService.GROUP_JOIN_REQUEST_ADMIN_REFRESH_EVENT, joinRequestAdminRefreshHandler)
+	})
+
+	onUnmounted(() => {
+		if (joinRequestCreatedHandler != null) {
+			uni.$off(MessageService.GROUP_JOIN_REQUEST_CREATED_EVENT, joinRequestCreatedHandler)
+			joinRequestCreatedHandler = null
+		}
+		if (joinRequestAdminRefreshHandler != null) {
+			uni.$off(MessageService.GROUP_JOIN_REQUEST_ADMIN_REFRESH_EVENT, joinRequestAdminRefreshHandler)
+			joinRequestAdminRefreshHandler = null
+		}
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #F5F7FA;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		height: 44px;
+		background-color: #FFFFFF;
+		padding: 0 12px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		width: 80px;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.back-icon {
+		color: #1F2329;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #1F2329;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 17px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.tab-bar {
+		background-color: #FFFFFF;
+		padding: 0 16px;
+		height: 48px;
+		flex-direction: row;
+		align-items: center;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.tab-item {
+		height: 48px;
+		margin-right: 24px;
+		justify-content: center;
+	}
+
+	.tab-item-active {
+		border-bottom-width: 2px;
+		border-bottom-color: #3370FF;
+	}
+
+	.tab-text {
+		font-size: 15px;
+		color: #8F959E;
+	}
+
+	.tab-text-active {
+		color: #1F2329;
+		font-weight: 600;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+	}
+
+	.placeholder-wrap {
+		padding: 80px 24px;
+		align-items: center;
+	}
+
+	.placeholder-title {
+		color: #1F2329;
+		font-size: 16px;
+		font-weight: 600;
+		margin-bottom: 8px;
+	}
+
+	.placeholder-text {
+		color: #8F959E;
+		font-size: 13px;
+	}
+
+	.request-list {
+		padding: 12px;
+	}
+
+	.request-card {
+		background-color: #FFFFFF;
+		border-radius: 12px;
+		padding: 16px;
+		margin-bottom: 12px;
+	}
+
+	.request-main {
+		flex-direction: row;
+	}
+
+	.avatar {
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
+		justify-content: center;
+		align-items: center;
+		overflow: hidden;
+	}
+
+	.avatar-image {
+		width: 44px;
+		height: 44px;
+	}
+
+	.avatar-text {
+		color: #FFFFFF;
+		font-size: 16px;
+		font-weight: 600;
+	}
+
+	.request-info {
+		flex: 1;
+		margin-left: 12px;
+	}
+
+	.request-top {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 8px;
+	}
+
+	.applicant-name {
+		color: #1F2329;
+		font-size: 16px;
+		font-weight: 600;
+	}
+
+	.status-tag {
+		font-size: 12px;
+		padding: 2px 8px;
+		border-radius: 10px;
+	}
+
+	.status-pending {
+		color: #B26A00;
+		background-color: #FFF3D6;
+	}
+
+	.status-approved {
+		color: #117A37;
+		background-color: #E8F7ED;
+	}
+
+	.status-rejected {
+		color: #B42318;
+		background-color: #FEECEC;
+	}
+
+	.time-text {
+		color: #8F959E;
+		font-size: 12px;
+		line-height: 18px;
+	}
+
+	.reason-text {
+		color: #5A616A;
+		font-size: 12px;
+		line-height: 18px;
+		margin-top: 4px;
+	}
+
+	.action-row {
+		margin-top: 14px;
+		flex-direction: row;
+		justify-content: flex-end;
+	}
+
+	.action-btn {
+		height: 32px;
+		padding: 0 14px;
+		border-radius: 16px;
+		justify-content: center;
+		align-items: center;
+		margin-left: 10px;
+	}
+
+	.action-btn-reject {
+		background-color: #F2F3F5;
+	}
+
+	.action-btn-approve {
+		background-color: #E8F0FF;
+	}
+
+	.action-btn-text {
+		font-size: 13px;
+		color: #5A616A;
+	}
+
+	.action-btn-text-primary {
+		color: #3370FF;
+		font-weight: 600;
+	}
+</style>

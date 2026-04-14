@@ -25,4 +25,10 @@ public class AppImGroupUpdateReqVO {
     @Schema(description = "群简介", example = "这是一个技术交流群")
     private String introduction;
 
+    @Schema(description = "加群是否需要审批", example = "false")
+    private Boolean needApproval;
+
+    @Schema(description = "是否允许普通成员邀请他人入群", example = "true")
+    private Boolean allowMemberInvite;
+
 }

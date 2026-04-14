@@ -24,7 +24,7 @@
 						<text class="iconfont group-icon">&#xe616;</text>
 					</view>
 					<text class="group-name">{{ groupName }}</text>
-					<text class="group-desc">扫一扫加入群聊</text>
+					<text class="group-desc">{{ groupJoinHint }}</text>
 				</view>
 
 				<!-- 二维码 -->
@@ -51,6 +51,9 @@
 					<view class="invite-expire-row">
 						<text class="invite-expire">{{ expireText }}</text>
 					</view>
+					<view v-if="needApproval" class="invite-expire-row">
+						<text class="invite-expire approval-text">开启邀请确认，扫码后需管理员审批</text>
+					</view>
 				</view>
 			</view>
 
@@ -62,7 +65,7 @@
 				</view>
 				<view class="action-btn" @click="handleShare">
 					<text class="iconfont action-icon">&#xe60e;</text>
-					<text class="action-text">分享给好友</text>
+					<text class="action-text">{{ shareActionText }}</text>
 				</view>
 				<view class="action-btn" @click="handleRefresh">
 					<text class="iconfont action-icon">&#xe60f;</text>
@@ -74,7 +77,8 @@
 			<view v-if="!loading" class="tips-section">
 				<text class="tips-title">使用说明</text>
 				<text class="tips-item">• 二维码有效期为24小时</text>
-				<text class="tips-item">• 扫码后可直接加入群聊</text>
+				<text class="tips-item">• {{ joinFlowTip }}</text>
+				<text class="tips-item">• 当前可通过二维码图片或分享链接进入加群页</text>
 				<text class="tips-item">• 可保存图片分享给好友</text>
 			</view>
 
@@ -88,7 +92,7 @@
 	import { saveImageToAlbum } from '../../utils/qrcode.uts'
 	import { BASE_URL, ADMIN_APP_DOMAIN } from '../../config/app.config.uts'
 	import { getGroupAvatarColor } from '../../utils/avatar.uts'
-	import { decodeIdParam } from '../../utils/id-param.uts'
+	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 
 	// 页面参数
 	const groupId = ref('')
@@ -104,6 +108,7 @@
 	const expireTime = ref(0) // 改为数字类型，存储时间戳
 	const usedCount = ref(0)
 	const maxUseCount = ref(0)
+	const needApproval = ref(false)
 
 	// 加载状态
 	const loading = ref(true)
@@ -145,6 +150,26 @@
 		}
 	})
 
+	const groupJoinHint = computed(() : string => {
+		return needApproval.value ? '扫码后提交申请，等待管理员审批' : '扫码后可加入群聊'
+	})
+
+	const joinFlowTip = computed(() : string => {
+		return needApproval.value ? '扫码后不会直接入群，而是进入申请审批流程' : '扫码后验证邀请码，可直接加入群聊'
+	})
+
+	const shareActionText = computed(() : string => {
+		const platform = uni.getSystemInfoSync().platform
+		return platform === 'web' ? '复制邀请链接' : '分享邀请'
+	})
+
+	const inviteLandingUrl = computed(() : string => {
+		if (!inviteCode.value || !groupId.value) {
+			return ''
+		}
+		return `${ADMIN_APP_DOMAIN}/pages/message/join-group?code=${encodeURIComponent(inviteCode.value)}&groupId=${encodeIdParam(groupId.value)}`
+	})
+
 	/**
 	 * 加载群邀请码
 	 */
@@ -164,11 +189,13 @@
 				expireTime.value = result.expireTime || 0
 				usedCount.value = result.usedCount || 0
 				maxUseCount.value = result.maxUseCount || 0
+				needApproval.value = result.needApproval === true
 
 				console.log('[GroupQRCode] 加载邀请码成功:', {
 					inviteCode: inviteCode.value,
 					qrCodeUrl: qrCodeUrl.value,
-					expireTime: expireTime.value
+					expireTime: expireTime.value,
+					needApproval: needApproval.value
 				})
 
 				// 生成二维码
@@ -215,12 +242,14 @@
 				
 				usedCount.value = result.usedCount || 0
 				maxUseCount.value = result.maxUseCount || 0
+				needApproval.value = result.needApproval === true
 
 				console.log('[GroupQRCode] 生成邀请码成功:', {
 					inviteCode: inviteCode.value,
 					qrCodeUrl: qrCodeUrl.value,
 					expireTime: expireTime.value,
-					expireTimeType: typeof expireTime.value
+					expireTimeType: typeof expireTime.value,
+					needApproval: needApproval.value
 				})
 
 				// 生成二维码
@@ -329,15 +358,29 @@
 	 * 分享给好友
 	 */
 	async function handleShare() {
-		if (!qrCodeImageUrl.value) {
+		if (!qrCodeImageUrl.value && !inviteLandingUrl.value) {
 			uni.showToast({
-				title: '二维码未生成',
+				title: '邀请信息未生成',
 				icon: 'none'
 			})
 			return
 		}
 
 		try {
+			const platform = uni.getSystemInfoSync().platform
+			if (platform === 'web') {
+				uni.setClipboardData({
+					data: inviteLandingUrl.value,
+					success: () => {
+						uni.showToast({
+							title: '邀请链接已复制',
+							icon: 'success'
+						})
+					}
+				})
+				return
+			}
+
 			// 先下载图片到本地
 			uni.showLoading({
 				title: '准备中...'
@@ -370,7 +413,18 @@
 		} catch (e) {
 			console.error('[GroupQRCode] 分享失败:', e)
 			
-			// 分享功能可能不支持，提供备选方案
+			if (inviteLandingUrl.value) {
+				uni.setClipboardData({
+					data: inviteLandingUrl.value,
+					success: () => {
+						uni.showToast({
+							title: '分享失败，已复制邀请链接',
+							icon: 'none'
+						})
+					}
+				})
+				return
+			}
 			uni.showModal({
 				title: '提示',
 				content: '当前平台暂不支持直接分享，您可以保存图片后手动分享',

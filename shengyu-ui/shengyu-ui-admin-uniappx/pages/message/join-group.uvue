@@ -11,23 +11,43 @@
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<view class="manual-entry-card">
+				<text class="manual-entry-title">输入邀请码或群邀请链接</text>
+				<input
+					v-model="inviteInput"
+					class="manual-entry-input"
+					placeholder="请输入邀请码，或粘贴群邀请链接"
+					confirm-type="done"
+					@confirm="handleManualVerify"
+				/>
+				<view class="manual-entry-actions">
+					<view class="manual-action-btn manual-action-btn-secondary" @click="handlePasteInvite">
+						<text class="manual-action-btn-text secondary-text">粘贴</text>
+					</view>
+					<view class="manual-action-btn" @click="handleManualVerify">
+						<text class="manual-action-btn-text">{{ loading ? '验证中...' : '验证' }}</text>
+					</view>
+				</view>
+				<text class="manual-entry-hint">支持直接输入邀请码，或粘贴群二维码/分享链接</text>
+			</view>
+
 			<!-- 加载中 -->
 			<view v-if="loading" class="loading-container">
 				<text class="loading-text">验证中...</text>
 			</view>
 
 			<!-- 验证失败 -->
-			<view v-else-if="!isValid" class="error-container">
+			<view v-else-if="hasVerifyAttempted && !isValid" class="error-container">
 				<text class="iconfont error-icon">&#xe60a;</text>
 				<text class="error-title">{{ errorMessage }}</text>
 				<text class="error-desc">请检查邀请码是否正确或已过期</text>
-				<view class="error-btn" @click="handleBack">
-					<text class="error-btn-text">返回</text>
+				<view class="error-btn" @click="handleResetManual">
+					<text class="error-btn-text">重新输入</text>
 				</view>
 			</view>
 
 			<!-- 群信息预览 -->
-			<view v-else class="group-preview">
+			<view v-else-if="isValid" class="group-preview">
 				<!-- 群头像 -->
 				<view class="group-avatar-large" :style="{ backgroundColor: groupAvatarBg }">
 					<text class="iconfont group-icon-large">&#xe616;</text>
@@ -64,7 +84,7 @@
 				<!-- 加入按钮 -->
 				<view v-if="!alreadyInGroup" class="action-container">
 					<view class="join-btn" @click="handleJoinGroup">
-						<text class="join-btn-text">{{ joining ? '加入中...' : '加入群聊' }}</text>
+						<text class="join-btn-text">{{ joining ? '提交中...' : joinActionText }}</text>
 					</view>
 				</view>
 
@@ -76,6 +96,11 @@
 				</view>
 			</view>
 
+			<view v-else class="empty-container">
+				<text class="empty-title">等待验证邀请码</text>
+				<text class="empty-desc">可输入邀请码，或粘贴群二维码/邀请链接后验证</text>
+			</view>
+
 			<view class="bottom-space"></view>
 		</scroll-view>
 	</view>
@@ -83,15 +108,19 @@
 
 <script setup lang="uts">
 	import { verifyInviteCode, joinGroupByInvite } from '../../api/group.uts'
+	import { getGroupAvatarColor } from '../../utils/avatar.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
+	import { parseGroupInvitePayload } from '../../utils/group-invite.uts'
 
 	// 页面参数
 	const inviteCode = ref('')
 	const groupId = ref('')
+	const inviteInput = ref('')
 
 	// 验证状态
 	const loading = ref(true)
 	const isValid = ref(false)
+	const hasVerifyAttempted = ref(false)
 	const errorMessage = ref('邀请码无效')
 
 	// 群信息
@@ -107,6 +136,11 @@
 	// 加入状态
 	const joining = ref(false)
 	const alreadyInGroup = ref(false)
+
+	const groupAvatarBg = computed(() : string => {
+		const currentGroupId = groupInfo.value.groupId || groupId.value
+		return currentGroupId ? getGroupAvatarColor(currentGroupId) : getGroupAvatarColor('0')
+	})
 
 	// 过期时间文本
 	const expireText = computed(() : string => {
@@ -130,18 +164,23 @@
 		}
 	})
 
+	const joinActionText = computed(() : string => {
+		return groupInfo.value.needApproval ? '提交入群申请' : '加入群聊'
+	})
+
 	/**
 	 * 验证邀请码
 	 */
 	async function verifyCode() {
 		if (!inviteCode.value) {
+			hasVerifyAttempted.value = true
 			isValid.value = false
-			errorMessage.value = '邀请码不能为空'
-			loading.value = false
+			errorMessage.value = '请输入邀请码'
 			return
 		}
 
 		try {
+			hasVerifyAttempted.value = true
 			loading.value = true
 			const result = await verifyInviteCode(inviteCode.value)
 
@@ -177,6 +216,61 @@
 		}
 	}
 
+	function resetVerifyState() {
+		isValid.value = false
+		hasVerifyAttempted.value = false
+		alreadyInGroup.value = false
+		errorMessage.value = '邀请码无效'
+		groupInfo.value = {
+			groupId: '',
+			groupName: '',
+			groupAvatar: '',
+			memberCount: 0,
+			needApproval: false,
+			expireTime: ''
+		}
+	}
+
+	async function handleManualVerify() {
+		if (loading.value) return
+		hasVerifyAttempted.value = true
+		const payload = parseGroupInvitePayload(inviteInput.value)
+		if (payload == null) {
+			isValid.value = false
+			alreadyInGroup.value = false
+			errorMessage.value = '请输入正确的邀请码或邀请链接'
+			return
+		}
+		inviteCode.value = payload.inviteCode
+		groupId.value = payload.groupId
+		inviteInput.value = payload.rawText
+		await verifyCode()
+	}
+
+	function handlePasteInvite() {
+		uni.getClipboardData({
+			success: (res : any) => {
+				const text = res != null && res.data != null ? String(res.data) : ''
+				if (text === '') {
+					uni.showToast({
+						title: '剪贴板暂无内容',
+						icon: 'none'
+					})
+					return
+				}
+				inviteInput.value = text
+				void handleManualVerify()
+			},
+			fail: (err : any) => {
+				console.error('[JoinGroup] 读取剪贴板失败:', err)
+				uni.showToast({
+					title: '读取剪贴板失败',
+					icon: 'none'
+				})
+			}
+		})
+	}
+
 	/**
 	 * 加入群聊
 	 */
@@ -186,19 +280,36 @@
 		try {
 			joining.value = true
 
-			await joinGroupByInvite(inviteCode.value)
+			const result = await joinGroupByInvite(inviteCode.value)
 
-			console.log('[JoinGroup] 加入群聊成功')
+			console.log('[JoinGroup] 加入群聊结果:', result)
+
+			const resultType = result && result.resultType != null ? Number(result.resultType) : 1
+			const resultGroupId = result && result.groupId != null ? String(result.groupId) : groupId.value
+			const message = result && result.message ? String(result.message) : (resultType === 2 ? '已提交申请，请等待管理员审批' : '加入成功')
 
 			uni.showToast({
-				title: '加入成功',
-				icon: 'success'
+				title: message,
+				icon: resultType === 2 ? 'none' : 'success'
 			})
 
-			// 延迟跳转到群聊页面
+			if (resultType === 2) {
+				setTimeout(() => {
+					const pages = getCurrentPages()
+					if (pages.length > 1) {
+						uni.navigateBack()
+					} else {
+						uni.switchTab({
+							url: '/pages/message/message'
+						})
+					}
+				}, 1000)
+				return
+			}
+
 			setTimeout(() => {
 				uni.redirectTo({
-					url: `/pages/message/chat?targetId=${encodeIdParam(groupId.value)}&targetType=2&entryMode=latest`
+					url: `/pages/message/chat?targetId=${encodeIdParam(resultGroupId)}&targetType=2&entryMode=latest`
 				})
 			}, 1000)
 		} catch (e : any) {
@@ -235,6 +346,11 @@
 		})
 	}
 
+	function handleResetManual() {
+		resetVerifyState()
+		loading.value = false
+	}
+
 	function handleBack() {
 		uni.navigateBack()
 	}
@@ -243,6 +359,7 @@
 		// 获取邀请码
 		if (options['code']) {
 			inviteCode.value = options['code'] as string
+			inviteInput.value = inviteCode.value
 		}
 
 		// 获取群组ID（可选）
@@ -254,8 +371,13 @@
 	})
 
 	onMounted(async () => {
-		// 验证邀请码
-		await verifyCode()
+		if (inviteCode.value) {
+			await verifyCode()
+			return
+		}
+		loading.value = false
+		isValid.value = false
+		hasVerifyAttempted.value = false
 	})
 </script>
 
@@ -315,6 +437,65 @@
 		height: 0;
 	}
 
+	.manual-entry-card {
+		background-color: #FFFFFF;
+		border-radius: 12px;
+		padding: 16px;
+		margin: 16px 16px 0 16px;
+	}
+
+	.manual-entry-title {
+		font-size: 16px;
+		font-weight: 600;
+		color: #1F2329;
+		margin-bottom: 12px;
+	}
+
+	.manual-entry-input {
+		height: 44px;
+		border-radius: 10px;
+		background-color: #F5F7FA;
+		padding: 0 12px;
+		font-size: 14px;
+		color: #1F2329;
+	}
+
+	.manual-entry-actions {
+		flex-direction: row;
+		margin-top: 12px;
+		column-gap: 10px;
+	}
+
+	.manual-action-btn {
+		flex: 1;
+		height: 40px;
+		border-radius: 10px;
+		background-color: #1677FF;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.manual-action-btn-secondary {
+		background-color: #EEF3FF;
+	}
+
+	.manual-action-btn-text {
+		font-size: 14px;
+		color: #FFFFFF;
+		font-weight: 500;
+	}
+
+	.secondary-text {
+		color: #1677FF;
+	}
+
+	.manual-entry-hint {
+		margin-top: 10px;
+		font-size: 12px;
+		color: #8F959E;
+		line-height: 18px;
+	}
+
 	/* 加载状态 */
 	.loading-container {
 		padding: 80px 0;
@@ -325,6 +506,25 @@
 	.loading-text {
 		font-size: 14px;
 		color: #8F959E;
+	}
+
+	.empty-container {
+		padding: 56px 32px 40px;
+		align-items: center;
+	}
+
+	.empty-title {
+		font-size: 18px;
+		color: #1F2329;
+		font-weight: 600;
+		margin-bottom: 8px;
+	}
+
+	.empty-desc {
+		font-size: 14px;
+		color: #8F959E;
+		text-align: center;
+		line-height: 22px;
 	}
 
 	/* 错误状态 */

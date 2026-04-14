@@ -383,6 +383,35 @@ CREATE TABLE `im_group_invite`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM群邀请码表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
+-- Table structure for im_group_join_request
+-- ----------------------------
+DROP TABLE IF EXISTS `im_group_join_request`;
+CREATE TABLE `im_group_join_request`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '申请单ID',
+  `group_id` bigint NOT NULL COMMENT '群ID',
+  `applicant_user_id` bigint NOT NULL COMMENT '申请人用户ID',
+  `invite_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '触发申请的邀请码',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态(1-待审批 2-已通过 3-已拒绝)',
+  `reject_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '拒绝原因',
+  `handled_by` bigint NULL DEFAULT NULL COMMENT '处理人用户ID',
+  `handled_time` datetime NULL DEFAULT NULL COMMENT '处理时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_group_status`(`group_id` ASC, `status` ASC) USING BTREE,
+  INDEX `idx_group_applicant_status`(`group_id` ASC, `applicant_user_id` ASC, `status` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'IM群加群申请表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of im_group_join_request
+-- ----------------------------
+
+-- ----------------------------
 -- Records of im_group_invite
 -- ----------------------------
 

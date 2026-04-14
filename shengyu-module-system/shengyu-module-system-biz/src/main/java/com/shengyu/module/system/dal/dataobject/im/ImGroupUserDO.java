@@ -49,7 +49,7 @@ public class ImGroupUserDO extends TenantBaseDO {
      * 群成员角色
      * 
      * 枚举: {@link com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum}
-     * 1-群主, 2-管理员, 3-普通成员
+     * 0-普通成员, 1-管理员, 2-群主
      */
     private Integer role;
 

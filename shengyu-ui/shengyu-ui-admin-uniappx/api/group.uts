@@ -118,6 +118,17 @@ export function setGroupMemberMuted(groupId: string, memberUserId: string, muted
 }
 
 /**
+ * 设置群成员昵称
+ */
+export function setGroupMemberNickname(data: any): Promise<any> {
+  return request({
+    url: '/system/im/group/member/set-nickname',
+    method: 'PUT',
+    data: data
+  })
+}
+
+/**
  * 转让群主
  */
 export function transferGroupOwner(groupId: string, newOwnerId: string): Promise<any> {
@@ -161,6 +172,37 @@ export function joinGroupByInvite(code: string): Promise<any> {
     url: '/system/im/group/invite/join',
     method: 'POST',
     data: { inviteCode: code }
+  })
+}
+
+export function getGroupJoinRequests(groupId: string, status?: number): Promise<any> {
+  const statusQuery = status != null ? `&status=${status}` : ''
+  return request({
+    url: `/system/im/group/join-request/list?groupId=${groupId}${statusQuery}`,
+    method: 'GET'
+  })
+}
+
+export function getGroupJoinRequestPendingCount(groupId: string): Promise<any> {
+  return request({
+    url: `/system/im/group/join-request/pending-count?groupId=${groupId}`,
+    method: 'GET'
+  })
+}
+
+export function approveGroupJoinRequest(requestId: string): Promise<any> {
+  return request({
+    url: '/system/im/group/join-request/approve',
+    method: 'PUT',
+    data: { requestId: requestId }
+  })
+}
+
+export function rejectGroupJoinRequest(requestId: string, rejectReason: string = ''): Promise<any> {
+  return request({
+    url: '/system/im/group/join-request/reject',
+    method: 'PUT',
+    data: { requestId: requestId, rejectReason: rejectReason }
   })
 }
 

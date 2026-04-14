@@ -33,14 +33,14 @@
 						<text class="member-name">{{ member.name }}</text>
 					</view>
 					<!-- 添加成员按钮 -->
-					<view class="member-item" @click="handleAddMember">
+					<view v-if="canAddMembers" class="member-item" @click="handleAddMember">
 						<view class="member-avatar add-btn">
 							<text class="iconfont add-icon">&#xe726;</text>
 						</view>
 						<text class="member-name">添加</text>
 					</view>
 					<!-- 删除成员按钮 -->
-					<view class="member-item" @click="handleRemoveMember">
+					<view v-if="canRemoveMembers" class="member-item" @click="handleRemoveMember">
 						<view class="member-avatar remove-btn">
 							<text class="iconfont remove-icon">&#xe602;</text>
 						</view>
@@ -98,9 +98,20 @@
 
 			<!-- 群管理 -->
 			<view class="setting-section">
-				<view class="setting-item">
+				<view v-if="canManageJoinRequests" class="setting-item">
+					<text class="setting-label">允许成员邀请</text>
+					<switch class="setting-switch" :checked="allowMemberInvite" :disabled="memberInviteUpdating" @change="handleMemberInviteChange" />
+				</view>
+				<view v-if="canManageJoinRequests" class="setting-item">
 					<text class="setting-label">群聊邀请确认</text>
-					<switch class="setting-switch" :checked="needApproval" @change="handleApprovalChange" />
+					<switch class="setting-switch" :checked="needApproval" :disabled="approvalUpdating" @change="handleApprovalChange" />
+				</view>
+				<view v-if="canManageJoinRequests" class="setting-item" @click="handleJoinRequests">
+					<text class="setting-label">入群申请</text>
+					<view class="setting-value-wrap">
+						<text :class="['setting-value', pendingJoinRequestCount > 0 ? 'danger-text' : '']">{{ pendingJoinRequestCount > 0 ? pendingJoinRequestCount + '条待处理' : '暂无待处理' }}</text>
+						<text class="iconfont arrow-icon">&#xeb03;</text>
+					</view>
 				</view>
 				<view class="setting-item" @click="handleMyNickname">
 					<text class="setting-label">我在本群的昵称</text>
@@ -108,10 +119,6 @@
 						<text class="setting-value">{{ myNickname }}</text>
 						<text class="iconfont arrow-icon">&#xeb03;</text>
 					</view>
-				</view>
-				<view class="setting-item" @click="handleShowMemberNickname">
-					<text class="setting-label">显示群成员昵称</text>
-					<switch class="setting-switch" :checked="showMemberNickname" @change="handleShowNicknameChange" />
 				</view>
 			</view>
 
@@ -186,9 +193,11 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
-	import { getGroup, getGroupMembers, updateGroup, quitGroup } from '../../api/group.uts'
+	import { getGroup, getGroupMembers, updateGroup, quitGroup, getGroupJoinRequestPendingCount, setGroupMemberNickname } from '../../api/group.uts'
 	import { getConversationByTarget } from '../../api/conversation.uts'
 	import { conversationService } from '../../services/conversation-service.uts'
+	import { MessageService, messageService } from '../../services/message-service.uts'
+	import { groupService } from '../../services/group-service.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { getUserIdStr } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
@@ -210,6 +219,8 @@
 	
 	// 加载状态
 	const loading = ref(false)
+	const approvalUpdating = ref(false)
+	const memberInviteUpdating = ref(false)
 	
 	// 编辑群名称弹窗
 	const showEditNameDialog = ref(false)
@@ -223,7 +234,8 @@
 	const noDisturb = ref(false)
 	const isPinned = ref(false)
 	const needApproval = ref(false)
-	const showMemberNickname = ref(true)
+	const allowMemberInvite = ref(true)
+	const pendingJoinRequestCount = ref(0)
 
 	// 群成员数据
 	const allMembers = ref<any[]>([])
@@ -231,6 +243,28 @@
 	const displayMembers = computed(() : any[] => {
 		return allMembers.value.slice(0, 8)
 	})
+
+	const canManageJoinRequests = computed(() : boolean => {
+		const role = groupInfo.value != null && groupInfo.value.myRole != null ? Number(groupInfo.value.myRole) : 0
+		return role === 1 || role === 2
+	})
+
+	const canAddMembers = computed(() : boolean => {
+		if (groupInfo.value == null) {
+			return false
+		}
+		if (canManageJoinRequests.value) {
+			return true
+		}
+		return allowMemberInvite.value === true
+	})
+
+	const canRemoveMembers = computed(() : boolean => {
+		return canManageJoinRequests.value
+	})
+
+	let joinRequestCreatedHandler : ((payload : any) => void) | null = null
+	let joinRequestAdminRefreshHandler : ((payload : any) => void) | null = null
 	
 	/**
 	 * 加载群组信息
@@ -241,13 +275,14 @@
 		try {
 			loading.value = true
 			const result = await getGroup(groupId.value)
-			
 			if (result) {
 				groupInfo.value = result
 				groupName.value = result.name || ''
 				memberCount.value = result.memberCount || 0
 				needApproval.value = result.needApproval || false
-				
+				allowMemberInvite.value = result.allowMemberInvite !== false
+				await loadPendingJoinRequestCount()
+
 				console.log('[GroupSettings] 加载群组信息成功:', result)
 			}
 		} catch (e) {
@@ -338,6 +373,13 @@
 	}
 
 	function handleAddMember() {
+		if (!canAddMembers.value) {
+			uni.showToast({
+				title: '当前群不允许普通成员邀请',
+				icon: 'none'
+			})
+			return
+		}
 		const groupIdParam = encodeIdParam(groupId.value)
 		uni.navigateTo({
 			url: '/pages/contacts/initiate-group?mode=add&groupId=' + groupIdParam
@@ -345,6 +387,13 @@
 	}
 
 	function handleRemoveMember() {
+		if (!canRemoveMembers.value) {
+			uni.showToast({
+				title: '仅群主或管理员可删除成员',
+				icon: 'none'
+			})
+			return
+		}
 		// 跳转到成员列表页面，选择要删除的成员
 		const groupIdParam = encodeIdParam(groupId.value)
 		uni.navigateTo({
@@ -444,6 +493,66 @@
 		})
 	}
 
+	async function loadPendingJoinRequestCount() {
+		if (!groupId.value || !canManageJoinRequests.value) {
+			pendingJoinRequestCount.value = 0
+			return
+		}
+		try {
+			const count = await getGroupJoinRequestPendingCount(groupId.value)
+			pendingJoinRequestCount.value = count != null ? Number(count) : 0
+		} catch (e) {
+			console.error('[GroupSettings] 加载待处理入群申请失败:', e)
+			pendingJoinRequestCount.value = 0
+		}
+	}
+
+	function handleJoinRequests() {
+		const groupIdParam = encodeIdParam(groupId.value)
+		uni.navigateTo({
+			url: '/pages/message/group-join-requests?groupId=' + groupIdParam + '&groupName=' + encodeURIComponent(groupName.value)
+		})
+	}
+
+	async function handleMemberInviteChange(e : any) {
+		const newValue = e.detail.value as boolean
+		if (!groupId.value || memberInviteUpdating.value) {
+			uni.showToast({
+				title: '群信息未加载',
+				icon: 'none'
+			})
+			return
+		}
+		if (newValue === allowMemberInvite.value) {
+			return
+		}
+		const oldValue = allowMemberInvite.value
+		allowMemberInvite.value = newValue
+		try {
+			memberInviteUpdating.value = true
+			await updateGroup({
+				id: groupId.value,
+				allowMemberInvite: newValue
+			})
+			if (groupInfo.value != null) {
+				groupInfo.value.allowMemberInvite = newValue
+			}
+			uni.showToast({
+				title: newValue ? '已允许成员邀请' : '已关闭成员邀请',
+				icon: 'success'
+			})
+		} catch (e) {
+			allowMemberInvite.value = oldValue
+			console.error('[GroupSettings] 更新成员邀请权限失败:', e)
+			uni.showToast({
+				title: '更新失败',
+				icon: 'none'
+			})
+		} finally {
+			memberInviteUpdating.value = false
+		}
+	}
+
 	async function handleNoDisturbChange(e : any) {
 		const newValue = e.detail.value as boolean
 		
@@ -504,13 +613,45 @@
 		}
 	}
 
-	function handleApprovalChange(e : any) {
-		needApproval.value = e.detail.value
-		// TODO: 调用后端 API 更新群设置
-		uni.showToast({
-			title: '群设置更新功能开发中',
-			icon: 'none'
-		})
+	async function handleApprovalChange(e : any) {
+		const newValue = e.detail.value as boolean
+		if (!groupId.value || approvalUpdating.value) {
+			uni.showToast({
+				title: '群信息未加载',
+				icon: 'none'
+			})
+			return
+		}
+
+		if (newValue === needApproval.value) {
+			return
+		}
+
+		const oldValue = needApproval.value
+		needApproval.value = newValue
+		try {
+			approvalUpdating.value = true
+			await updateGroup({
+				id: groupId.value,
+				needApproval: newValue
+			})
+			if (groupInfo.value != null) {
+				groupInfo.value.needApproval = newValue
+			}
+			uni.showToast({
+				title: newValue ? '已开启邀请确认' : '已关闭邀请确认',
+				icon: 'success'
+			})
+		} catch (e) {
+			needApproval.value = oldValue
+			console.error('[GroupSettings] 更新邀请确认失败:', e)
+			uni.showToast({
+				title: '更新失败',
+				icon: 'none'
+			})
+		} finally {
+			approvalUpdating.value = false
+		}
 	}
 
 	function handleMyNickname() {
@@ -548,37 +689,28 @@
 			showEditNicknameDialog.value = false
 			return
 		}
-		
-		// TODO: 需要后端添加更新群成员昵称的 API
-		showEditNicknameDialog.value = false
-		uni.showToast({
-			title: '该功能需要后端支持',
-			icon: 'none'
-		})
-		
-		// 后端 API 实现后的代码：
-		// try {
-		// 	await updateGroupMemberNickname({
-		// 		groupId: groupId.value,
-		// 		nickname: newNickname
-		// 	})
-		// 	myNickname.value = newNickname
-		// 	showEditNicknameDialog.value = false
-		// 	uni.showToast({
-		// 		title: '修改成功',
-		// 		icon: 'success'
-		// 	})
-		// } catch (e) {
-		// 	console.error('[GroupSettings] 修改昵称失败:', e)
-		// 	uni.showToast({
-		// 		title: '修改失败',
-		// 		icon: 'none'
-		// 	})
-		// }
-	}
 
-	function handleShowNicknameChange(e : any) {
-		showMemberNickname.value = e.detail.value
+		try {
+			await setGroupMemberNickname({
+				groupId: groupId.value,
+				nickname: newNickname
+			})
+			groupService.invalidateGroupMembers(groupId.value)
+			messageService.invalidateGroupMemberDisplayNameCache(groupId.value)
+			myNickname.value = newNickname
+			showEditNicknameDialog.value = false
+			await loadGroupMembers()
+			uni.showToast({
+				title: '修改成功',
+				icon: 'success'
+			})
+		} catch (e) {
+			console.error('[GroupSettings] 修改昵称失败:', e)
+			uni.showToast({
+				title: '修改失败',
+				icon: 'none'
+			})
+		}
 	}
 
 	function handleClearHistory() {
@@ -659,7 +791,9 @@
 		}
 		
 		// 获取群名称（临时显示）
-		if (options['name']) {
+		if (options['groupName']) {
+			groupName.value = decodeURIComponent(options['groupName'])
+		} else if (options['name']) {
 			groupName.value = decodeURIComponent(options['name'])
 		}
 		
@@ -667,10 +801,34 @@
 	})
 	
 	onMounted(async () => {
+		joinRequestCreatedHandler = (payload : any) => {
+			if (payload != null && payload.groupId != null && String(payload.groupId) === groupId.value) {
+				void loadPendingJoinRequestCount()
+			}
+		}
+		joinRequestAdminRefreshHandler = (payload : any) => {
+			if (payload != null && payload.groupId != null && String(payload.groupId) === groupId.value) {
+				void loadPendingJoinRequestCount()
+			}
+		}
+		uni.$on(MessageService.GROUP_JOIN_REQUEST_CREATED_EVENT, joinRequestCreatedHandler)
+		uni.$on(MessageService.GROUP_JOIN_REQUEST_ADMIN_REFRESH_EVENT, joinRequestAdminRefreshHandler)
+
 		// 加载数据
 		await loadGroupInfo()
 		await loadGroupMembers()
 		await loadConversationSettings()
+	})
+
+	onUnmounted(() => {
+		if (joinRequestCreatedHandler != null) {
+			uni.$off(MessageService.GROUP_JOIN_REQUEST_CREATED_EVENT, joinRequestCreatedHandler)
+			joinRequestCreatedHandler = null
+		}
+		if (joinRequestAdminRefreshHandler != null) {
+			uni.$off(MessageService.GROUP_JOIN_REQUEST_ADMIN_REFRESH_EVENT, joinRequestAdminRefreshHandler)
+			joinRequestAdminRefreshHandler = null
+		}
 	})
 	
 	onShow(async () => {

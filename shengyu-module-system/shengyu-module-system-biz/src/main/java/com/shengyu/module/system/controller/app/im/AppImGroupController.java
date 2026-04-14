@@ -169,6 +169,15 @@ public class AppImGroupController {
         return success(true);
     }
 
+    @PutMapping("/member/set-nickname")
+    @Operation(summary = "设置群成员昵称", description = "memberUserId 为空时表示设置自己在本群的昵称")
+    public CommonResult<Boolean> setGroupMemberNickname(
+            @Valid @RequestBody AppImGroupMemberNicknameUpdateReqVO reqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        groupService.setMemberNickname(userId, reqVO.getGroupId(), reqVO.getMemberUserId(), reqVO.getNickname());
+        return success(true);
+    }
+
     @PutMapping("/transfer-owner")
     @Operation(summary = "转让群主")
     @Parameter(name = "groupId", description = "群组ID", required = true)
@@ -201,10 +210,44 @@ public class AppImGroupController {
 
     @PostMapping("/invite/join")
     @Operation(summary = "通过邀请码加入群", description = "扫描群二维码后，通过邀请码加入群聊")
-    public CommonResult<Boolean> joinByInviteCode(
+    public CommonResult<AppImGroupInviteJoinRespVO> joinByInviteCode(
             @Valid @RequestBody AppImGroupInviteJoinReqVO reqVO) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        groupService.joinGroupByInviteCode(userId, reqVO.getInviteCode());
+        return success(groupService.joinGroupByInviteCode(userId, reqVO.getInviteCode()));
+    }
+
+    @GetMapping("/join-request/list")
+    @Operation(summary = "获取群加群申请列表", description = "群主或管理员查看待审批/已处理的加群申请")
+    @Parameter(name = "groupId", description = "群组ID", required = true)
+    @Parameter(name = "status", description = "状态(1-待审批 2-已通过 3-已拒绝)", required = false)
+    public CommonResult<List<AppImGroupJoinRequestRespVO>> getJoinRequests(
+            @RequestParam("groupId") Long groupId,
+            @RequestParam(value = "status", required = false) Integer status) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(groupService.getJoinRequests(userId, groupId, status));
+    }
+
+    @GetMapping("/join-request/pending-count")
+    @Operation(summary = "获取群待审批申请数量", description = "群主或管理员查看当前群待审批的加群申请数量")
+    @Parameter(name = "groupId", description = "群组ID", required = true)
+    public CommonResult<Long> getPendingJoinRequestCount(@RequestParam("groupId") Long groupId) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(groupService.getPendingJoinRequestCount(userId, groupId));
+    }
+
+    @PutMapping("/join-request/approve")
+    @Operation(summary = "通过加群申请", description = "群主或管理员审批通过加群申请")
+    public CommonResult<Boolean> approveJoinRequest(@Valid @RequestBody AppImGroupJoinRequestProcessReqVO reqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        groupService.approveJoinRequest(userId, reqVO.getRequestId());
+        return success(true);
+    }
+
+    @PutMapping("/join-request/reject")
+    @Operation(summary = "拒绝加群申请", description = "群主或管理员拒绝加群申请")
+    public CommonResult<Boolean> rejectJoinRequest(@Valid @RequestBody AppImGroupJoinRequestProcessReqVO reqVO) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        groupService.rejectJoinRequest(userId, reqVO.getRequestId(), reqVO.getRejectReason());
         return success(true);
     }
 

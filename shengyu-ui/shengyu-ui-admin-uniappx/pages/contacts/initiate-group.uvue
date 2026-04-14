@@ -59,7 +59,7 @@
 		toggleMember,
 		isMemberSelected
 	} from '../../store/group-selection.uts'
-	import { createGroup, addGroupMembers, getGroupMembers } from '../../api/group.uts'
+	import { createGroup, addGroupMembers, getGroup, getGroupMembers } from '../../api/group.uts'
 	import { getContactList, getContactPageByDept } from '../../api/contact.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
@@ -83,6 +83,7 @@
 	const mode = ref('create')
 	const groupId = ref('')
 	const existingMemberIds = ref<string[]>([])
+	const canAddMembers = ref(true)
 	
 	/**
 	 * 获取拼音首字母
@@ -500,8 +501,39 @@
 		}
 		
 		console.log('[InitiateGroup] 页面参数:', { mode: mode.value, groupId: groupId.value })
-		
+
 		startSelection()
+		if (mode.value === 'add' && groupId.value) {
+			getGroup(groupId.value).then((group : any) => {
+				const role = group != null && group.myRole != null ? Number(group.myRole) : 0
+				const allowInvite = group != null ? group.allowMemberInvite !== false : true
+				canAddMembers.value = role === 1 || role === 2 || allowInvite
+				if (!canAddMembers.value) {
+					uni.showToast({
+						title: '当前群不允许普通成员邀请',
+						icon: 'none'
+					})
+					setTimeout(() => {
+						uni.navigateBack()
+					}, 800)
+					return
+				}
+				loadContacts().then(() => {
+					syncSelectionState()
+				})
+			}).catch((e) => {
+				console.error('[InitiateGroup] 校验添加成员权限失败:', e)
+				uni.showToast({
+					title: '加载群信息失败',
+					icon: 'none'
+				})
+				setTimeout(() => {
+					uni.navigateBack()
+				}, 800)
+			})
+			return
+		}
+
 		// 加载联系人列表
 		loadContacts().then(() => {
 			// 创建模式：默认添加当前用户

@@ -226,6 +226,9 @@ public interface ErrorCodeConstants {
     ErrorCode GROUP_MEMBER_FULL = new ErrorCode(1_002_030_208, "群人数已达上限");
     ErrorCode GROUP_JOIN_NEED_APPROVAL = new ErrorCode(1_002_030_209, "加入该群需要审批");
     ErrorCode GROUP_INVITE_CODE_NOT_EXISTS = new ErrorCode(1_002_030_210, "邀请码不存在");
+    ErrorCode GROUP_JOIN_REQUEST_NOT_EXISTS = new ErrorCode(1_002_030_211, "加群申请不存在");
+    ErrorCode GROUP_JOIN_REQUEST_STATUS_INVALID = new ErrorCode(1_002_030_212, "加群申请状态已变更");
+    ErrorCode GROUP_JOIN_REQUEST_ALREADY_PENDING = new ErrorCode(1_002_030_213, "您已提交过加群申请，请等待管理员处理");
     
     // 群文件相关 1-002-030-250
     ErrorCode GROUP_FILE_NOT_EXISTS = new ErrorCode(1_002_030_250, "群文件不存在");

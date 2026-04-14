@@ -20,6 +20,7 @@ import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
+import com.shengyu.module.system.dal.dataobject.im.ImGroupUserDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.*;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
@@ -279,6 +280,9 @@ public class ImMessageServiceImpl implements ImMessageService {
     private ImGroupMapper groupMapper;
 
     @Resource
+    private ImGroupUserMapper groupUserMapper;
+
+    @Resource
     private AdminUserMapper userMapper;
 
     @Resource
@@ -454,7 +458,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             respVO.setSequence(message.getSequence());
             // 兼容历史数据：如果 messageType 被存成了 Protobuf 的 100+，则转换回 REST/DB 的 1-10
             respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
-            fillSenderInfo(respVO, message.getSenderId());
+            fillSenderInfo(respVO, message.getSenderId(), message.getChatId());
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
             fillChatTargetFields(respVO, userId);
             applyReeditFieldsForCurrentUser(respVO, message, userId);
@@ -512,7 +516,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             respVO.setSequence(message.getSequence());
             // 兼容历史数据：如果 messageType 被存成了 Protobuf 的 100+，则转换回 REST/DB 的 1-10
             respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
-            fillSenderInfo(respVO, message.getSenderId());
+            fillSenderInfo(respVO, message.getSenderId(), message.getChatId());
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
             fillChatTargetFields(respVO, userId);
             applyReeditFieldsForCurrentUser(respVO, message, userId);
@@ -618,7 +622,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         respVO.setChatId(message.getChatId());
         respVO.setSequence(message.getSequence());
         respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
-        fillSenderInfo(respVO, message.getSenderId());
+        fillSenderInfo(respVO, message.getSenderId(), message.getChatId());
         respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
         fillChatTargetFields(respVO, userId);
         applyReeditFieldsForCurrentUser(respVO, message, userId);
@@ -875,6 +879,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                 : userMapper.selectBatchIds(senderIds).stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(AdminUserDO::getId, item -> item, (left, right) -> left));
+        Map<Long, String> groupNicknameMap = buildGroupNicknameMap(chat, senderIds);
 
         List<AppImMessageRespVO> result = new ArrayList<>(messages.size());
         for (ImChatMessageDO message : messages) {
@@ -885,11 +890,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             respVO.setChatId(message.getChatId());
             respVO.setSequence(message.getSequence());
             respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
-            AdminUserDO sender = senderMap.get(message.getSenderId());
-            if (sender != null) {
-                respVO.setSenderNickname(sender.getNickname());
-                respVO.setSenderAvatar(sender.getAvatar());
-            }
+            fillSenderInfo(respVO, message.getSenderId(), chat, senderMap, groupNicknameMap);
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
             fillChatTargetFields(respVO, userId, chat);
             applyReeditFieldsForCurrentUser(respVO, message, userId);
@@ -1705,15 +1706,66 @@ public class ImMessageServiceImpl implements ImMessageService {
         return chatUser;
     }
 
-    private void fillSenderInfo(AppImMessageRespVO respVO, Long senderId) {
-        if (senderId == null) {
+    private void fillSenderInfo(AppImMessageRespVO respVO, Long senderId, Long chatId) {
+        if (respVO == null || senderId == null) {
             return;
         }
-        AdminUserDO sender = userMapper.selectById(senderId);
-        if (sender != null) {
+        ImChatDO chat = chatId != null ? chatMapper.selectById(chatId) : null;
+        fillSenderInfo(respVO, senderId, chat, null, null);
+    }
+
+    private void fillSenderInfo(AppImMessageRespVO respVO, Long senderId, ImChatDO chat,
+                                Map<Long, AdminUserDO> senderMap, Map<Long, String> groupNicknameMap) {
+        if (respVO == null || senderId == null) {
+            return;
+        }
+        String groupNickname = resolveGroupMemberNickname(chat, senderId, groupNicknameMap);
+        AdminUserDO sender = senderMap != null ? senderMap.get(senderId) : userMapper.selectById(senderId);
+        if (StrUtil.isNotBlank(groupNickname)) {
+            respVO.setSenderNickname(groupNickname);
+        } else if (sender != null) {
             respVO.setSenderNickname(sender.getNickname());
+        }
+        if (sender != null) {
             respVO.setSenderAvatar(sender.getAvatar());
         }
+    }
+
+    private Map<Long, String> buildGroupNicknameMap(ImChatDO chat, Collection<Long> senderIds) {
+        if (chat == null || chat.getGroupId() == null || !ImConversationTypeEnum.isGroup(chat.getChatType())
+                || senderIds == null || senderIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Long> userIds = senderIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return groupUserMapper.selectListByGroupIdAndUserIds(chat.getGroupId(), userIds).stream()
+                .filter(Objects::nonNull)
+                .filter(item -> item.getUserId() != null && StrUtil.isNotBlank(item.getNickname()))
+                .collect(Collectors.toMap(ImGroupUserDO::getUserId,
+                        item -> StrUtil.trim(item.getNickname()),
+                        (left, right) -> left));
+    }
+
+    private String resolveGroupMemberNickname(ImChatDO chat, Long senderId, Map<Long, String> groupNicknameMap) {
+        if (chat == null || senderId == null || chat.getGroupId() == null || !ImConversationTypeEnum.isGroup(chat.getChatType())) {
+            return null;
+        }
+        if (groupNicknameMap != null) {
+            String nickname = groupNicknameMap.get(senderId);
+            if (StrUtil.isNotBlank(nickname)) {
+                return nickname;
+            }
+        }
+        ImGroupUserDO groupUser = groupUserMapper.selectByGroupIdAndUserId(chat.getGroupId(), senderId);
+        if (groupUser == null || StrUtil.isBlank(groupUser.getNickname())) {
+            return null;
+        }
+        return StrUtil.trim(groupUser.getNickname());
     }
 
     private void fillChatTargetFields(AppImMessageRespVO respVO, Long currentUserId) {
@@ -2580,7 +2632,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                     respVO.setChatId(message.getChatId());
                     respVO.setSequence(message.getSequence());
                     respVO.setMessageType(normalizeDbMessageType(respVO.getMessageType()));
-                    fillSenderInfo(respVO, message.getSenderId());
+                    fillSenderInfo(respVO, message.getSenderId(), message.getChatId());
                     respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
                     fillChatTargetFields(respVO, userId);
                     fillConversationInfo(respVO, userId);

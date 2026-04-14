@@ -170,6 +170,7 @@
 	import { getConversationAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { wsManager } from '../../utils/websocket.uts'
 	import { encodeIdParam } from '../../utils/id-param.uts'
+	import { parseGroupInvitePayload, openJoinGroupByPayload } from '../../utils/group-invite.uts'
 	import { parseMessageText as parseEmojiTokens, type MessageToken as EmojiToken } from '../../utils/emojiParser.uts'
 	import { getTenantIdStr, getUserIdStr } from '../../store/user.uts'
 
@@ -951,10 +952,40 @@
 	 * 扫一扫
 	 */
 	function handleScan() {
-		uni.showToast({
-			title: '扫一扫功能开发中',
-			icon: 'none'
-		})
+		const platform = uni.getSystemInfoSync().platform
+		if (platform === 'web') {
+			uni.navigateTo({
+				url: '/pages/message/join-group?manual=1'
+			})
+			return
+		}
+		uni.scanCode({
+			onlyFromCamera: true,
+			scanType: ['qrCode'],
+			success: (res: any) => {
+				const resultText = res != null && res.result != null ? String(res.result) : ''
+				const payload = parseGroupInvitePayload(resultText)
+				if (payload == null) {
+					uni.showToast({
+						title: '未识别到群邀请二维码',
+						icon: 'none'
+					})
+					return
+				}
+				openJoinGroupByPayload(payload)
+			},
+			fail: (err: any) => {
+				const errMsg = err != null && err.errMsg != null ? String(err.errMsg) : ''
+				if (errMsg.indexOf('cancel') > -1) {
+					return
+				}
+				console.error('[Message] 扫码失败:', err)
+				uni.showToast({
+					title: '扫码失败，请重试',
+					icon: 'none'
+				})
+			}
+		} as any)
 	}
 
 	/**

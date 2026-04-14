@@ -21,6 +21,7 @@ import {
   getGroupMembers as apiGetGroupMembers,
   setGroupMemberRole as apiSetGroupMemberRole,
   setGroupMemberMuted as apiSetGroupMemberMuted,
+  setGroupMemberNickname as apiSetGroupMemberNickname,
   transferGroupOwner as apiTransferGroupOwner
 } from '@/api/group.uts'
 
@@ -49,7 +50,7 @@ export type GroupMember = {
   avatar: string
   avatarText: string
   avatarBg: string
-  role: number  // 1-群主 2-管理员 3-普通成员
+  role: number  // 0-普通成员 1-管理员 2-群主
   nickname: string  // 群名片
   joinTime: number
   muteEndTime: number  // 禁言结束时间，0表示未禁言
@@ -357,8 +358,13 @@ export class GroupService {
    */
   public async setMemberNickname(groupId: string, userId: string, nickname: string): Promise<boolean> {
     try {
-      console.error('[GroupService] 设置群名片接口未实现, groupId:', groupId, 'userId:', userId)
-      return false
+      await apiSetGroupMemberNickname({
+        groupId: groupId,
+        memberUserId: userId,
+        nickname: nickname
+      })
+      this.memberCache.delete(groupId)
+      return true
     } catch (e) {
       console.error('[GroupService] 设置群名片失败:', e)
       return false
@@ -440,6 +446,13 @@ export class GroupService {
   public clearCache(): void {
     this.groupCache.clear()
     this.memberCache.clear()
+  }
+
+  public invalidateGroupMembers(groupId: string): void {
+    if (groupId == null || groupId === '') {
+      return
+    }
+    this.memberCache.delete(groupId)
   }
 }
 
