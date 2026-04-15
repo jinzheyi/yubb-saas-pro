@@ -167,6 +167,7 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { conversationService, ConversationItem } from '../../services/conversation-service.uts'
 	import { badgeService, BadgeData } from '../../services/badge-service.uts'
+	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
 	import { getConversationAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { wsManager } from '../../utils/websocket.uts'
 	import { encodeIdParam } from '../../utils/id-param.uts'
@@ -358,6 +359,7 @@
 	
 	onShow(() => {
 		wsManager.setRealtimeBizActive(true)
+		tabBarBadgeService.refresh()
 		syncFromConversationCache()
 		const now = Date.now()
 		if (now - lastOnShowRefreshAt > FOREGROUND_SYNC_COOLDOWN_MS) {

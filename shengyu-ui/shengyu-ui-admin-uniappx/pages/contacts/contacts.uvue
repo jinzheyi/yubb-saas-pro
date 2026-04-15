@@ -24,6 +24,7 @@
 				<view class="category-item" hover-class="category-item-active" v-for="(item, index) in categories1" :key="index" @click="handleCategory(item)">
 					<view class="category-icon-wrap" :style="{ backgroundColor: item.bg }">
 						<text class="iconfont category-icon">{{ item.icon }}</text>
+						<view v-if="item.badgeCount > 0" class="category-dot"></view>
 					</view>
 					<text class="category-name">{{ t(item.nameKey) }}</text>
 					<view v-if="index < categories1.length - 1" class="category-item-border"></view>
@@ -79,7 +80,11 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getContactList } from '../../api/contact.uts'
+	import { badgeService, type BadgeData, type BadgeListener } from '../../services/badge-service.uts'
+	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
+
+	const CONTACTS_GROUP_JOIN_REQUEST_MENU_ID = 'contactsGroupJoinRequest'
 
 	const { t } = useI18n()
 
@@ -87,11 +92,14 @@
 	const loading = ref(false)
 	const rawContacts = ref<any[]>([])
 	const listSearchKeyword = ref('')
+	const contactsPendingCount = ref(0)
 
-	const categories1 = [
-		{ icon: '\ue616', bg: '#fb923c', nameKey: 'contacts.groups' },
-		{ icon: '\uea90', bg: '#facc15', nameKey: 'contacts.following' }
-	]
+	const categories1 = computed(() : any[] => {
+		return [
+			{ icon: '\ue616', bg: '#fb923c', nameKey: 'contacts.groups', badgeCount: contactsPendingCount.value },
+			{ icon: '\uea90', bg: '#facc15', nameKey: 'contacts.following', badgeCount: 0 }
+		]
+	})
 
 	const categories2 = [
 		{ icon: '\ue62b', bg: '#84cc16', nameKey: 'contacts.org' },
@@ -99,6 +107,16 @@
 	]
 
 	const colors = ['#0ea5e9', '#f472b6', '#c084fc', '#fb7185', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#3b82f6', '#8b5cf6']
+
+	let badgeListener: BadgeListener | null = null
+
+	function applyBadgeData(badgeData: BadgeData | null): void {
+		if (badgeData == null) {
+			contactsPendingCount.value = 0
+			return
+		}
+		contactsPendingCount.value = badgeData.menuBadges.get(CONTACTS_GROUP_JOIN_REQUEST_MENU_ID) || 0
+	}
 	
 	/**
 	 * 获取拼音首字母
@@ -192,7 +210,27 @@
 	 * 页面加载时获取联系人列表
 	 */
 	onMounted(() => {
+		contactsPendingCount.value = badgeService.getMenuBadge(CONTACTS_GROUP_JOIN_REQUEST_MENU_ID)
+		badgeListener = {
+			onBadgeUpdate: (badgeData: BadgeData): void => {
+				applyBadgeData(badgeData)
+			}
+		}
+		badgeService.addListener(badgeListener)
 		loadContacts()
+	})
+
+	onShow(() => {
+		tabBarBadgeService.refresh()
+		badgeService.ensureFresh(2000)
+		contactsPendingCount.value = badgeService.getMenuBadge(CONTACTS_GROUP_JOIN_REQUEST_MENU_ID)
+	})
+
+	onUnmounted(() => {
+		if (badgeListener != null) {
+			badgeService.removeListener(badgeListener)
+			badgeListener = null
+		}
 	})
 
 	// 按字母分组
@@ -391,6 +429,19 @@
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
+		position: relative;
+	}
+
+	.category-dot {
+		position: absolute;
+		top: -2px;
+		right: -2px;
+		width: 10px;
+		height: 10px;
+		border-radius: 999px;
+		background-color: #F04438;
+		border-width: 1.5px;
+		border-color: #FFFFFF;
 	}
 
 	.category-icon {

@@ -16,10 +16,19 @@ export function decodeIdParam(raw: any): string {
 		return ''
 	}
 	let decoded = text
-	try {
-		decoded = decodeURIComponent(text)
-	} catch (e) {
-		decoded = text
+	for (let i = 0; i < 3; i++) {
+		try {
+			const next = decodeURIComponent(decoded)
+			if (next === decoded) {
+				break
+			}
+			decoded = next
+		} catch (e) {
+			break
+		}
+		if (decoded.startsWith(ID_PARAM_PREFIX)) {
+			break
+		}
 	}
 	if (decoded.startsWith(ID_PARAM_PREFIX)) {
 		return decoded.substring(ID_PARAM_PREFIX.length)

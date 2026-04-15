@@ -1,6 +1,8 @@
 <script lang="uts">
 	import { isLoggedIn, getAccessToken } from './store/user.uts'
 	import { initLocale } from './store/locale.uts'
+	import { badgeService } from './services/badge-service.uts'
+	import { tabBarBadgeService } from './services/tab-bar-badge-service.uts'
 
 	export default {
 		onLaunch() {
@@ -9,11 +11,17 @@
 			// 初始化国际化（如果没有设置过语言，则使用系统语言）
 			initLocale()
 
+			this.bootstrapBadgeServices()
+
 			// 检查登录状态
 			this.checkLoginStatus()
 		},
 		onShow() {
 			console.log('App Show')
+			this.bootstrapBadgeServices()
+			if (isLoggedIn()) {
+				badgeService.ensureFresh(3000)
+			}
 			void this.withWsManager(async (wsManager) => {
 				wsManager.setAppForeground(true)
 				if (isLoggedIn()) {
@@ -40,6 +48,14 @@
 				} catch (e) {
 					console.error('[App] load wsManager failed:', e)
 				}
+			},
+			bootstrapBadgeServices() {
+				if (!isLoggedIn()) {
+					tabBarBadgeService.clear()
+					return
+				}
+				badgeService.init()
+				tabBarBadgeService.init()
 			},
 			checkLoginStatus() {
 				const pages = getCurrentPages()

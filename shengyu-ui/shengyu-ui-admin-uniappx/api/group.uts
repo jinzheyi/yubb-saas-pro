@@ -190,6 +190,13 @@ export function getGroupJoinRequestPendingCount(groupId: string): Promise<any> {
   })
 }
 
+export function getManagedGroupJoinRequestPendingCount(): Promise<any> {
+  return request({
+    url: '/system/im/group/join-request/managed-pending-count',
+    method: 'GET'
+  })
+}
+
 export function approveGroupJoinRequest(requestId: string): Promise<any> {
   return request({
     url: '/system/im/group/join-request/approve',

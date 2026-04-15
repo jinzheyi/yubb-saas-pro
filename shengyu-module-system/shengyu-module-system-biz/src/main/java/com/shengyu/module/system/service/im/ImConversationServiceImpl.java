@@ -57,6 +57,16 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 @Slf4j
 public class ImConversationServiceImpl implements ImConversationService {
 
+    private boolean shouldKeepConversationItem(Integer conversationType, Long targetId, String targetName) {
+        if (conversationType == null || targetId == null || targetId <= 0L) {
+            return false;
+        }
+        if (ImConversationTypeEnum.isGroup(conversationType)) {
+            return true;
+        }
+        return targetName != null && !targetName.trim().isEmpty();
+    }
+
     @Resource
     private ImChatMapper chatMapper;
 
@@ -210,6 +220,10 @@ public class ImConversationServiceImpl implements ImConversationService {
                             item.setTargetAvatar(targetUser.getAvatar());
                         }
                     }
+                }
+
+                if (!shouldKeepConversationItem(item.getConversationType(), item.getTargetId(), item.getTargetName())) {
+                    continue;
                 }
 
                 items.add(item);
@@ -814,6 +828,9 @@ public class ImConversationServiceImpl implements ImConversationService {
                     respVO.setTargetAvatar(targetUser.getAvatar());
                 }
             }
+            if (!shouldKeepConversationItem(respVO.getConversationType(), respVO.getTargetId(), respVO.getTargetName())) {
+                continue;
+            }
             list.add(respVO);
         }
         return list;
@@ -895,6 +912,9 @@ public class ImConversationServiceImpl implements ImConversationService {
                  respVO.setTargetName(targetUser.getNickname());
                  respVO.setTargetAvatar(targetUser.getAvatar());
              }
+         }
+         if (!shouldKeepConversationItem(respVO.getConversationType(), respVO.getTargetId(), respVO.getTargetName())) {
+             throw exception(CONVERSATION_NOT_EXISTS);
          }
          return respVO;
     }

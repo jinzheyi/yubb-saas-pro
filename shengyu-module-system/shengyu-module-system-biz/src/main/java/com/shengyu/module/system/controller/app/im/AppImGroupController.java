@@ -235,6 +235,13 @@ public class AppImGroupController {
         return success(groupService.getPendingJoinRequestCount(userId, groupId));
     }
 
+    @GetMapping("/join-request/managed-pending-count")
+    @Operation(summary = "获取我管理的全部群待审批申请总数", description = "统计当前用户作为群主或管理员时，全部群的待审批入群申请总数")
+    public CommonResult<Long> getManagedPendingJoinRequestCount() {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return success(groupService.getManagedPendingJoinRequestCount(userId));
+    }
+
     @PutMapping("/join-request/approve")
     @Operation(summary = "通过加群申请", description = "群主或管理员审批通过加群申请")
     public CommonResult<Boolean> approveJoinRequest(@Valid @RequestBody AppImGroupJoinRequestProcessReqVO reqVO) {

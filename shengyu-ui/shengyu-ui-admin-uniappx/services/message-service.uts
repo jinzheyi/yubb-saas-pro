@@ -2639,9 +2639,12 @@ export class MessageService {
     }
 
     // 添加到缓存
-    this.addMessageToCache(chatId, messageItem)
+    const isNewInboundMessage = this.addMessageToCache(chatId, messageItem)
     if (messageItem.sequence != null) {
       this.updateLastPulledSequence(chatId, messageItem.sequence)
+    }
+    if (!isNewInboundMessage) {
+      return
     }
     
     // 通知监听器
@@ -2657,24 +2660,36 @@ export class MessageService {
       seq
     )
     
-    // 如果不是自己发送的消息，增加未读数和角标
-    if (!messageItem.isSelf) {
-      try {
-        const active = this.getActiveChatId()
-        if (active != null && active !== '' && active === chatId && this.activeChatAutoReadEnabled) {
+	    // 如果不是自己发送的消息，增加未读数和角标
+	    if (!messageItem.isSelf) {
+	      try {
+	        const active = this.getActiveChatId()
+	        if (active != null && active !== '' && active === chatId && this.activeChatAutoReadEnabled) {
           if (seq != null && seq !== '') {
             conversationService.applyReadWatermark(chatId, seq)
           }
           badgeService.clearConversationBadgeLocal(chatId)
           return
         }
-      } catch (e) {
-        // ignore
-      }
-      // 自动增加对应会话的角标未读数
-      badgeService.incrementConversationBadge(chatId)
-    }
-  }
+	      } catch (e) {
+	        // ignore
+	      }
+	      // 不直接盲增 1，而是按会话层权威未读与当前 badge 差值补齐。
+	      // 这样可以避免刷新后的首条消息与 /badge/get、恢复同步并发时重复累计。
+	      try {
+	        const conversation = conversationService.getConversation(chatId)
+	        const expectedUnread = conversation != null && conversation.unreadCount != null ? Number(conversation.unreadCount) : 0
+	        const currentBadgeUnread = badgeService.getConversationBadge(chatId)
+	        const delta = expectedUnread - currentBadgeUnread
+	        if (delta > 0) {
+	          badgeService.incrementConversationBadge(chatId, delta)
+	        }
+	      } catch (e) {
+	        // 兜底：会话状态异常时仍保持原有自增能力
+	        badgeService.incrementConversationBadge(chatId)
+	      }
+	    }
+	  }
   
   /**
    * 处理已读回执
@@ -3054,7 +3069,7 @@ export class MessageService {
   /**
    * 添加消息到缓存
    */
-  private addMessageToCache(chatId: string, message: MessageItem): void {
+  private addMessageToCache(chatId: string, message: MessageItem): boolean {
     let messages = this.messageCache.get(chatId)
     if (messages === null) {
       messages = []
@@ -3113,7 +3128,7 @@ export class MessageService {
           if ((existing.timestamp == null || existing.timestamp <= 0) && message.timestamp != null) {
             existing.timestamp = message.timestamp
           }
-          return
+          return false
         }
 
         // 最终态保护：撤回优先，禁止被 pull/缓存里的“未撤回原文”覆盖
@@ -3124,7 +3139,7 @@ export class MessageService {
           if ((existing.timestamp == null || existing.timestamp <= 0) && message.timestamp != null) {
             existing.timestamp = message.timestamp
           }
-          return
+          return false
         }
 
         // 当新数据为撤回最终态：允许覆盖内容与状态
@@ -3164,7 +3179,8 @@ export class MessageService {
 				}
 			} catch (e) {
 			}
-        // 合并后仍需要排序
+        // 合并后仍需要排序，但不应重复累计未读
+        return false
       } else {
         messages.push(message)
       }
@@ -3199,6 +3215,7 @@ export class MessageService {
       }
       return 0
     })
+    return true
   }
 
   private stringifyComparableContent(raw: any): string {

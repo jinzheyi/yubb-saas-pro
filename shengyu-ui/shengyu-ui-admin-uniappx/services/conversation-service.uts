@@ -133,6 +133,42 @@ export class ConversationService {
     return '?'
   }
 
+  private isInvalidSingleTargetId(targetId: string): boolean {
+    const tid = targetId != null ? String(targetId).trim() : ''
+    if (tid === '' || tid === '0') {
+      return true
+    }
+    if (tid.indexOf('sid:') === 0 || tid.indexOf('sid%3A') === 0 || tid.indexOf('sid%253A') === 0) {
+      return true
+    }
+    return false
+  }
+
+  private shouldKeepConversation(conv: ConversationItem | null): boolean {
+    if (conv == null) {
+      return false
+    }
+    const chatId = conv.chatId != null ? String(conv.chatId).trim() : ''
+    if (chatId === '' || chatId === '0') {
+      return false
+    }
+    const conversationType = Number(conv.conversationType)
+    const targetId = conv.targetId != null ? String(conv.targetId).trim() : ''
+    const targetName = conv.targetName != null ? String(conv.targetName).trim() : ''
+    if (conversationType === ConversationType.SINGLE) {
+      if (this.isInvalidSingleTargetId(targetId)) {
+        return false
+      }
+      if (targetName === '') {
+        return false
+      }
+    }
+    if (conversationType === ConversationType.GROUP && (targetId === '' || targetId === '0')) {
+      return false
+    }
+    return true
+  }
+
   private normalizeCursorVersion(v: string | number | null): string {
     if (v == null) {
       return '0'
@@ -363,6 +399,9 @@ export class ConversationService {
     if (conv.chatId == null || conv.chatId === '' || conv.chatId === '0') {
       return null
     }
+    if (!this.shouldKeepConversation(conv)) {
+      return null
+    }
 
     if (conv.targetId != null && conv.targetId !== '' && conv.conversationType != null) {
       this.cacheTargetChatId(conv.targetId, conv.conversationType, conv.chatId)
@@ -455,6 +494,9 @@ export class ConversationService {
         return null
       }
       const conv = this.mapToConversationItem(data as any)
+      if (!this.shouldKeepConversation(conv)) {
+        return null
+      }
       if (conv.chatId != null && conv.chatId !== '') {
         this.cacheTargetChatId(targetIdStr, conversationType, conv.chatId)
       }
@@ -558,7 +600,7 @@ export class ConversationService {
             const conv = this.mapToConversationItem(item)
             this.applyManualUnreadOverlay(conv)
             return conv
-          })
+          }).filter((conv: ConversationItem) => this.shouldKeepConversation(conv))
         } else {
           this.conversations = []
         }
@@ -636,6 +678,9 @@ export class ConversationService {
               }
 
               const conv = this.mapToConversationItem(it)
+              if (!this.shouldKeepConversation(conv)) {
+                return
+              }
               if (conv != null && conv.targetId != null && conv.targetId !== '' && conv.chatId != null && conv.chatId !== '') {
                 this.cacheTargetChatId(conv.targetId, conv.conversationType, conv.chatId)
               }

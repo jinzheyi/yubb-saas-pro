@@ -74,6 +74,7 @@
 	import { clearUserCache } from '../../store/user.uts'
 	import { logout } from '../../api/login.uts'
 	import { getCurrentUserDetail } from '../../api/user.uts'
+	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 
 	const { t } = useI18n()
@@ -179,6 +180,7 @@
 	})
 
 	onShow(async () => {
+		tabBarBadgeService.refresh()
 		await loadProfile()
 	})
 </script>

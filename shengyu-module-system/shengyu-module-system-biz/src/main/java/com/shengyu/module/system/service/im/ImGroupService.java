@@ -318,6 +318,14 @@ public interface ImGroupService {
     Long getPendingJoinRequestCount(Long userId, Long groupId);
 
     /**
+     * 获取当前用户管理的全部群待审批申请总数
+     *
+     * @param userId 用户ID
+     * @return 数量
+     */
+    Long getManagedPendingJoinRequestCount(Long userId);
+
+    /**
      * 通过加群申请
      *
      * @param userId 操作者ID

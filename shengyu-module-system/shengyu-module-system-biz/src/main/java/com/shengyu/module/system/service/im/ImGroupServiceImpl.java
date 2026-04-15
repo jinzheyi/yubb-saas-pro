@@ -336,6 +336,11 @@ public class ImGroupServiceImpl implements ImGroupService {
                         .orElse(null);
                 if (currentMember != null) {
                     respVO.setMyRole(currentMember.getRole());
+                    if (ImGroupMemberRoleEnum.isOwner(currentMember.getRole()) || ImGroupMemberRoleEnum.isAdmin(currentMember.getRole())) {
+                        respVO.setPendingJoinRequestCount(groupJoinRequestMapper.selectPendingCountByGroupId(groupId));
+                    } else {
+                        respVO.setPendingJoinRequestCount(0L);
+                    }
                 }
                 result.add(respVO);
             }
@@ -1246,6 +1251,15 @@ public class ImGroupServiceImpl implements ImGroupService {
     }
 
     @Override
+    public Long getManagedPendingJoinRequestCount(Long userId) {
+        List<Long> managedGroupIds = getManagedGroupIds(userId);
+        if (CollUtil.isEmpty(managedGroupIds)) {
+            return 0L;
+        }
+        return groupJoinRequestMapper.selectPendingCountByGroupIds(managedGroupIds);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void approveJoinRequest(Long userId, Long requestId) {
         ImGroupJoinRequestDO request = groupJoinRequestMapper.selectById(requestId);
@@ -1375,6 +1389,12 @@ public class ImGroupServiceImpl implements ImGroupService {
                 log.warn("[ImGroupService] 推送入群申请管理员实时通知失败, groupId: {}, managerId: {}, error: {}",
                         group.getId(), managerId, e.getMessage(), e);
             }
+            try {
+                imBadgeService.pushBadgeUpdate(managerId);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送入群申请管理员 badge 刷新失败, groupId: {}, managerId: {}, error: {}",
+                        group.getId(), managerId, e.getMessage(), e);
+            }
         }
     }
 
@@ -1434,6 +1454,12 @@ public class ImGroupServiceImpl implements ImGroupService {
                 log.warn("[ImGroupService] 推送管理员审批刷新通知失败, groupId: {}, managerId: {}, error: {}",
                         group.getId(), managerId, e.getMessage(), e);
             }
+            try {
+                imBadgeService.pushBadgeUpdate(managerId);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送管理员审批 badge 刷新失败, groupId: {}, managerId: {}, error: {}",
+                        group.getId(), managerId, e.getMessage(), e);
+            }
         }
     }
 
@@ -1447,6 +1473,20 @@ public class ImGroupServiceImpl implements ImGroupService {
                 .filter(groupUser -> ImGroupMemberRoleEnum.isOwner(groupUser.getRole())
                         || ImGroupMemberRoleEnum.isAdmin(groupUser.getRole()))
                 .map(ImGroupUserDO::getUserId)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private List<Long> getManagedGroupIds(Long userId) {
+        List<ImGroupUserDO> groupUsers = groupUserMapper.selectListByUserId(userId);
+        if (CollUtil.isEmpty(groupUsers)) {
+            return new ArrayList<>();
+        }
+        return groupUsers.stream()
+                .filter(groupUser -> groupUser != null && groupUser.getGroupId() != null)
+                .filter(groupUser -> ImGroupMemberRoleEnum.isOwner(groupUser.getRole())
+                        || ImGroupMemberRoleEnum.isAdmin(groupUser.getRole()))
+                .map(ImGroupUserDO::getGroupId)
                 .distinct()
                 .collect(Collectors.toList());
     }

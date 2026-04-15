@@ -468,6 +468,34 @@ export function clearUserCache() {
 		console.error('[user] clearUserCache conversation cleanup failed:', e)
 	}
 
+	try {
+		void import('@/services/badge-service.uts').then((m) => {
+			try {
+				m.badgeService.reset()
+			} catch (e) {
+				console.error('[user] clearUserCache badge cleanup failed:', e)
+			}
+		}).catch((e) => {
+			console.error('[user] load badgeService failed:', e)
+		})
+	} catch (e) {
+		console.error('[user] clearUserCache badge cleanup failed:', e)
+	}
+
+	try {
+		void import('@/services/tab-bar-badge-service.uts').then((m) => {
+			try {
+				m.tabBarBadgeService.clear()
+			} catch (e) {
+				console.error('[user] clearUserCache tabBar badge cleanup failed:', e)
+			}
+		}).catch((e) => {
+			console.error('[user] load tabBarBadgeService failed:', e)
+		})
+	} catch (e) {
+		console.error('[user] clearUserCache tabBar badge cleanup failed:', e)
+	}
+
 	removeToken()
 	removeUserInfo()
 	removePermissions()

@@ -1,0 +1,151 @@
+import { badgeService, type BadgeData, type BadgeListener } from './badge-service.uts'
+
+const MESSAGE_TAB_INDEX = 0
+const CONTACTS_TAB_INDEX = 1
+const WORKBENCH_TAB_INDEX = 2
+const PROFILE_TAB_INDEX = 3
+const CONTACTS_GROUP_JOIN_REQUEST_MENU_ID = 'contactsGroupJoinRequest'
+const TAB_BAR_PAGE_ROUTES = [
+	'pages/message/message',
+	'pages/contacts/contacts',
+	'pages/workbench/workbench',
+	'pages/profile/profile'
+]
+
+function formatBadgeText(count: number): string {
+	return count > 99 ? '99+' : count.toString()
+}
+
+export class TabBarBadgeService {
+	private static instance: TabBarBadgeService | null = null
+	private initialized: boolean = false
+	private badgeListener: BadgeListener | null = null
+
+	public static getInstance(): TabBarBadgeService {
+		if (TabBarBadgeService.instance == null) {
+			TabBarBadgeService.instance = new TabBarBadgeService()
+		}
+		return TabBarBadgeService.instance
+	}
+
+	public init(): void {
+		if (this.initialized) {
+			this.refresh()
+			return
+		}
+
+		this.badgeListener = {
+			onBadgeUpdate: (badgeData: BadgeData): void => {
+				this.applyBadgeData(badgeData)
+			}
+		}
+		badgeService.addListener(this.badgeListener)
+		this.initialized = true
+		this.refresh()
+	}
+
+	public refresh(): void {
+		if (!this.canOperateTabBar()) {
+			return
+		}
+		this.applyCurrentState()
+	}
+
+	public clear(): void {
+		this.removeNumericBadge(MESSAGE_TAB_INDEX)
+		this.removeNumericBadge(WORKBENCH_TAB_INDEX)
+		this.hideRedDot(CONTACTS_TAB_INDEX)
+		this.hideRedDot(PROFILE_TAB_INDEX)
+	}
+
+	private applyCurrentState(): void {
+		const badgeData: BadgeData = {
+			totalUnread: badgeService.getTotalUnread(),
+			conversationBadges: new Map<string, number>(),
+			menuBadges: new Map<string, number>(),
+			lastUpdateTime: 0
+		}
+		this.applyBadgeData(badgeData)
+	}
+
+	private applyBadgeData(badgeData: BadgeData): void {
+		if (!this.canOperateTabBar()) {
+			return
+		}
+		this.applyNumericBadge(MESSAGE_TAB_INDEX, badgeData.totalUnread)
+		this.applyDotBadge(CONTACTS_TAB_INDEX, (badgeData.menuBadges.get(CONTACTS_GROUP_JOIN_REQUEST_MENU_ID) || 0) > 0)
+		this.removeNumericBadge(WORKBENCH_TAB_INDEX)
+		this.hideRedDot(PROFILE_TAB_INDEX)
+	}
+
+	private canOperateTabBar(): boolean {
+		try {
+			const pages = getCurrentPages()
+			if (pages == null || pages.length === 0) {
+				return false
+			}
+			const currentPage = pages[pages.length - 1]
+			if (currentPage == null || (currentPage as any).route == null) {
+				return false
+			}
+			const route = String((currentPage as any).route)
+			return TAB_BAR_PAGE_ROUTES.indexOf(route) >= 0
+		} catch (e) {
+			return false
+		}
+	}
+
+	private applyNumericBadge(index: number, count: number): void {
+		if (count > 0) {
+			uni.setTabBarBadge({
+				index,
+				text: formatBadgeText(count),
+				fail: (err: any) => {
+					try {
+						const message = err != null && err.errMsg != null ? String(err.errMsg) : ''
+						if (message.indexOf('not TabBar page') >= 0) {
+							return
+						}
+					} catch (e) {
+					}
+					console.error('[TabBarBadgeService] 设置角标失败:', index, err)
+				}
+			})
+			return
+		}
+		this.removeNumericBadge(index)
+	}
+
+	private removeNumericBadge(index: number): void {
+		uni.removeTabBarBadge({
+			index,
+			fail: (_err: any) => {
+				// ignore: 角标不存在时可能返回失败
+			}
+		})
+	}
+
+	private hideRedDot(index: number): void {
+		uni.hideTabBarRedDot({
+			index,
+			fail: (_err: any) => {
+				// ignore: 红点不存在时可能返回失败
+			}
+		})
+	}
+
+	private applyDotBadge(index: number, show: boolean): void {
+		if (show) {
+			uni.showTabBarRedDot({
+				index,
+				fail: (_err: any) => {
+					// ignore
+				}
+			})
+			return
+		}
+		this.hideRedDot(index)
+	}
+}
+
+export const tabBarBadgeService = TabBarBadgeService.getInstance()

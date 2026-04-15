@@ -44,6 +44,12 @@
 						<text class="group-name">{{ group.name }}</text>
 						<text class="group-count">{{ group.memberCount }} 人</text>
 					</view>
+					<view v-if="group.canManageJoinRequests" class="group-right">
+						<view v-if="group.pendingJoinRequestCount > 0" class="pending-entry" @click.stop="handleJoinRequests(group)">
+							<text class="pending-entry-text">{{ group.pendingJoinRequestCount > 99 ? '99+' : group.pendingJoinRequestCount }} 待处理</text>
+						</view>
+						<text v-else class="group-role-tag">{{ group.roleText }}</text>
+					</view>
 					<view v-if="index < groupList.length - 1" class="group-item-border"></view>
 				</view>
 			</view>
@@ -105,7 +111,11 @@
 						id: group.id,
 						name: name,
 						memberCount: group.memberCount || 0,
-						avatars: avatars
+						avatars: avatars,
+						myRole: group.myRole != null ? Number(group.myRole) : 0,
+						canManageJoinRequests: (group.myRole != null ? Number(group.myRole) : 0) > 0,
+						pendingJoinRequestCount: group.pendingJoinRequestCount != null ? Number(group.pendingJoinRequestCount) : 0,
+						roleText: (group.myRole != null ? Number(group.myRole) : 0) >= 2 ? '群主' : ((group.myRole != null ? Number(group.myRole) : 0) === 1 ? '管理员' : '成员')
 					}
 				})
 				
@@ -187,6 +197,13 @@
 		}
 	}
 
+	function handleJoinRequests(group : any) {
+		const groupIdParam = encodeIdParam(group.id != null ? String(group.id) : '')
+		uni.navigateTo({
+			url: '/pages/message/group-join-requests?groupId=' + groupIdParam + '&groupName=' + encodeURIComponent(group.name)
+		})
+	}
+
 	// 页面加载时检查是否为选择模式
 	onLoad((options : any) => {
 		if (options != null && options['mode'] === 'select') {
@@ -195,6 +212,19 @@
 		
 		// 加载群组列表
 		loadGroups()
+	})
+
+	onShow(() => {
+		if (!loading.value) {
+			loadGroups()
+		}
+	})
+
+	onUnmounted(() => {
+		if (searchTimer !== 0) {
+			clearTimeout(searchTimer)
+			searchTimer = 0
+		}
 	})
 </script>
 
@@ -358,6 +388,12 @@
 		flex: 1;
 	}
 
+	.group-right {
+		flex-direction: row;
+		align-items: center;
+		margin-left: 12px;
+	}
+
 	.group-name {
 		font-size: 16px;
 		color: #1F2329;
@@ -368,6 +404,31 @@
 	.group-count {
 		font-size: 12px;
 		color: #8F959E;
+	}
+
+	.group-role-tag {
+		font-size: 12px;
+		color: #646A73;
+		background-color: #F2F3F5;
+		border-radius: 999px;
+		padding: 4px 10px;
+	}
+
+	.pending-entry {
+		height: 28px;
+		padding: 0 10px;
+		border-radius: 999px;
+		background-color: #FFF1F3;
+		justify-content: center;
+		align-items: center;
+		border-width: 0.5px;
+		border-color: #FEC5D0;
+	}
+
+	.pending-entry-text {
+		font-size: 12px;
+		color: #E11D48;
+		font-weight: 500;
 	}
 
 	.footer {

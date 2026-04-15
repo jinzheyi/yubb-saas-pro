@@ -27,6 +27,9 @@ public class ImBadgeServiceImpl implements ImBadgeService {
     @Resource
     private ImConversationService conversationService;
 
+    @Resource
+    private ImGroupService imGroupService;
+
     @Override
     public BadgeUpdateMessage getBadgeData(Long userId) {
         log.debug("[ImBadgeService] 获取用户角标数据, userId: {}", userId);
@@ -78,31 +81,15 @@ public class ImBadgeServiceImpl implements ImBadgeService {
     public List<MenuBadge> getMenuBadges(Long userId) {
         List<MenuBadge> badges = new ArrayList<>();
 
-        // TODO: 集成待办事项服务
-        // 说明: 需要等待工作流服务提供待办事项数量查询接口
-        // 预期接口: workflowService.getTodoCount(userId) 或 flowTaskService.getPendingTaskCount(userId)
-        // 
-        // 示例实现:
-        // int todoCount = workflowService.getTodoCount(userId);
-        // if (todoCount > 0) {
-        //     badges.add(MenuBadge.newBuilder()
-        //             .setMenuId("todo")
-        //             .setBadgeCount(todoCount)
-        //             .build());
-        // }
+        Long contactsPendingCount = imGroupService.getManagedPendingJoinRequestCount(userId);
+        if (contactsPendingCount != null && contactsPendingCount > 0) {
+            badges.add(MenuBadge.newBuilder()
+                    .setMenuId("contactsGroupJoinRequest")
+                    .setBadgeCount(Math.toIntExact(contactsPendingCount))
+                    .build());
+        }
 
-        // 可以在这里添加其他菜单角标类型
-        // 例如: 审批待办、通知待读等
-        // 
-        // 示例: 通知未读数
-        // int notifyUnreadCount = imNotifyService.getUnreadCount(userId);
-        // if (notifyUnreadCount > 0) {
-        //     badges.add(MenuBadge.newBuilder()
-        //             .setMenuId("notification")
-        //             .setBadgeCount(notifyUnreadCount)
-        //             .build());
-        // }
-
+        // 工作台等业务角标继续预留扩展位，当前不返回伪数据。
         return badges;
     }
 

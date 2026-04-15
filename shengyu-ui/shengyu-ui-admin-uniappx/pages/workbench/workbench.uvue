@@ -48,6 +48,7 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { badgeService, type BadgeData, type BadgeListener } from '../../services/badge-service.uts'
+	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
 
 	const { t } = useI18n()
 	const isProcessExpanded = ref(true)
@@ -127,6 +128,10 @@
 		})
 		
 		updateMenuBadges(currentBadgeData)
+	})
+
+	onShow(() => {
+		tabBarBadgeService.refresh()
 	})
 
 	onUnmounted(() => {

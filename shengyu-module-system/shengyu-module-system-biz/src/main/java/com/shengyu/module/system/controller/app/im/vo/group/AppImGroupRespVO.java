@@ -58,6 +58,9 @@ public class AppImGroupRespVO {
     @Schema(description = "当前用户在群里的角色(0-普通成员 1-管理员 2-群主)", example = "0")
     private Integer myRole;
 
+    @Schema(description = "当前群待审批入群申请数量", example = "0")
+    private Long pendingJoinRequestCount;
+
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDateTime createTime;
 

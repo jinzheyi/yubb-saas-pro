@@ -5,6 +5,7 @@ import com.shengyu.framework.mybatis.core.mapper.BaseMapperX;
 import com.shengyu.module.system.dal.dataobject.im.ImGroupJoinRequestDO;
 import org.apache.ibatis.annotations.Mapper;
 
+import java.util.Collections;
 import java.util.List;
 
 @Mapper
@@ -33,6 +34,15 @@ public interface ImGroupJoinRequestMapper extends BaseMapperX<ImGroupJoinRequest
     default Long selectPendingCountByGroupId(Long groupId) {
         return selectCount(new LambdaQueryWrapper<ImGroupJoinRequestDO>()
                 .eq(ImGroupJoinRequestDO::getGroupId, groupId)
+                .eq(ImGroupJoinRequestDO::getStatus, 1));
+    }
+
+    default Long selectPendingCountByGroupIds(List<Long> groupIds) {
+        if (groupIds == null || groupIds.isEmpty()) {
+            return 0L;
+        }
+        return selectCount(new LambdaQueryWrapper<ImGroupJoinRequestDO>()
+                .in(ImGroupJoinRequestDO::getGroupId, groupIds)
                 .eq(ImGroupJoinRequestDO::getStatus, 1));
     }
 }
