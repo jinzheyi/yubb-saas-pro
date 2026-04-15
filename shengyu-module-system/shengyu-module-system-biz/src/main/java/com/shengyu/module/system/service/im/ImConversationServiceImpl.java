@@ -67,6 +67,31 @@ public class ImConversationServiceImpl implements ImConversationService {
         return targetName != null && !targetName.trim().isEmpty();
     }
 
+    private void logInvalidConversationItem(Long userId, String source, Long chatId,
+                                            Integer conversationType, Long targetId, String targetName) {
+        log.warn("[ImConversationService] skip invalid conversation, source: {}, userId: {}, chatId: {}, type: {}, targetId: {}, targetName: {}",
+                source, userId, chatId, conversationType, targetId, targetName);
+    }
+
+    private void cleanupInvalidConversationState(Long tenantId, Long userId, Long chatId, String source) {
+        if (userId == null || chatId == null || chatId <= 0L) {
+            return;
+        }
+        try {
+            chatUserMapper.softDelete(userId, chatId);
+        } catch (Exception e) {
+            log.warn("[ImConversationService] soft delete invalid chat_user failed, source: {}, userId: {}, chatId: {}, error: {}",
+                    source, userId, chatId, e.getMessage());
+        }
+        try {
+            Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, userId);
+            conversationUserStateMapper.upsertAfterDelete(tenantId, chatId, userId, cursorVersion, true);
+        } catch (Exception e) {
+            log.warn("[ImConversationService] cleanup invalid conversation state failed, source: {}, userId: {}, chatId: {}, error: {}",
+                    source, userId, chatId, e.getMessage());
+        }
+    }
+
     @Resource
     private ImChatMapper chatMapper;
 
@@ -223,6 +248,9 @@ public class ImConversationServiceImpl implements ImConversationService {
                 }
 
                 if (!shouldKeepConversationItem(item.getConversationType(), item.getTargetId(), item.getTargetName())) {
+                    logInvalidConversationItem(userId, "sync", item.getChatId(),
+                            item.getConversationType(), item.getTargetId(), item.getTargetName());
+                    cleanupInvalidConversationState(tenantId, userId, item.getChatId(), "sync");
                     continue;
                 }
 
@@ -829,6 +857,9 @@ public class ImConversationServiceImpl implements ImConversationService {
                 }
             }
             if (!shouldKeepConversationItem(respVO.getConversationType(), respVO.getTargetId(), respVO.getTargetName())) {
+                logInvalidConversationItem(userId, "list", respVO.getChatId(),
+                        respVO.getConversationType(), respVO.getTargetId(), respVO.getTargetName());
+                cleanupInvalidConversationState(tenantId, userId, respVO.getChatId(), "list");
                 continue;
             }
             list.add(respVO);
@@ -914,6 +945,13 @@ public class ImConversationServiceImpl implements ImConversationService {
              }
          }
          if (!shouldKeepConversationItem(respVO.getConversationType(), respVO.getTargetId(), respVO.getTargetName())) {
+             logInvalidConversationItem(userId, "detail", respVO.getChatId(),
+                     respVO.getConversationType(), respVO.getTargetId(), respVO.getTargetName());
+             Long tenantId = TenantContextHolder.getTenantId();
+             if (tenantId == null) {
+                 tenantId = 0L;
+             }
+             cleanupInvalidConversationState(tenantId, userId, respVO.getChatId(), "detail");
              throw exception(CONVERSATION_NOT_EXISTS);
          }
          return respVO;

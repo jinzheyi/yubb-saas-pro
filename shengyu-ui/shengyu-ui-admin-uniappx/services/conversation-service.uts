@@ -169,6 +169,20 @@ export class ConversationService {
     return true
   }
 
+  private logInvalidConversation(source: string, conv: ConversationItem | null): void {
+    try {
+      console.warn('[ConversationService] skip invalid conversation:', {
+        source: source,
+        chatId: conv != null ? conv.chatId : '',
+        conversationType: conv != null ? conv.conversationType : 0,
+        targetId: conv != null ? conv.targetId : '',
+        targetName: conv != null ? conv.targetName : ''
+      })
+    } catch (e) {
+      // ignore
+    }
+  }
+
   private normalizeCursorVersion(v: string | number | null): string {
     if (v == null) {
       return '0'
@@ -400,6 +414,7 @@ export class ConversationService {
       return null
     }
     if (!this.shouldKeepConversation(conv)) {
+      this.logInvalidConversation('snapshot', conv)
       return null
     }
 
@@ -495,6 +510,7 @@ export class ConversationService {
       }
       const conv = this.mapToConversationItem(data as any)
       if (!this.shouldKeepConversation(conv)) {
+        this.logInvalidConversation('ensure-by-target', conv)
         return null
       }
       if (conv.chatId != null && conv.chatId !== '') {
@@ -600,7 +616,13 @@ export class ConversationService {
             const conv = this.mapToConversationItem(item)
             this.applyManualUnreadOverlay(conv)
             return conv
-          }).filter((conv: ConversationItem) => this.shouldKeepConversation(conv))
+          }).filter((conv: ConversationItem) => {
+            const keep = this.shouldKeepConversation(conv)
+            if (!keep) {
+              this.logInvalidConversation('list', conv)
+            }
+            return keep
+          })
         } else {
           this.conversations = []
         }
@@ -679,6 +701,7 @@ export class ConversationService {
 
               const conv = this.mapToConversationItem(it)
               if (!this.shouldKeepConversation(conv)) {
+                this.logInvalidConversation('sync', conv)
                 return
               }
               if (conv != null && conv.targetId != null && conv.targetId !== '' && conv.chatId != null && conv.chatId !== '') {
