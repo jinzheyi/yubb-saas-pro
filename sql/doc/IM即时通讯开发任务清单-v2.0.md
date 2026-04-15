@@ -465,12 +465,16 @@ WS(JSON) envelope 字段（服务端 -> 客户端）：
 - 收到业务消息时，优先使用 `header.chatId` 作为会话主键，禁止使用 `groupId/receiverId` 作为会话主键写缓存。
 - 若携带 `conversationSnapshot`：端侧必须先 upsert 会话列表缓存（创建或更新），再落消息与角标更新，保证“首条推送即出现会话”。
 - 若缺失 `conversationSnapshot` 或会话不存在：端侧允许调用 `GET /system/im/conversation/get-by-target` 做兜底补齐（只作为安全网）。
+- 会话页右键菜单的 `标记未读` 若当前没有后端接口，必须收敛到 `conversationService` 内部统一管理；禁止页面自己维护独立 `storage/ref` 状态。
 
 验收标准（Push-Driven 新会话创建）：
 
 - 单聊/群聊：接收端本地无会话时，收到首条 WS 消息后，会话列表必须自动出现新会话。
 - 新会话出现不得依赖用户手动刷新或定时轮询。
 - 端侧会话未读展示必须使用服务端水位模型（`lastMessageSequence/lastReadSequence/unreadCount`），本地仅允许做“水位推进后的立即一致性更新”。
+- 当前补充约束：
+  - `取消置顶/置顶`、`标记已读/未读`、`从会话列表移除` 仍保留在会话页右键菜单
+  - 其中 `标记未读` 为“前端权威显示态”，不扩展新的后端接口
 
 #### 0.4.4 已知缺口（代码级 TODO，需补齐到闭环）
 

@@ -69,6 +69,8 @@ export class ConversationService {
   private loaded: boolean = false
 
   private targetChatIdCache: Map<string, string> = new Map()
+  private manualUnreadChatIds: Set<string> = new Set()
+  private manualUnreadLoaded: boolean = false
   
   // 会话更新监听器列表
   private updateListeners: ConversationUpdateListener[] = []
@@ -209,6 +211,93 @@ export class ConversationService {
     return `IM_CONV_CURSOR_${tenantId}_${userId}`
   }
 
+  private buildManualUnreadStorageKey(): string {
+    const tenantId = getTenantIdStr()
+    const userId = getUserIdStr()
+    return `IM_MANUAL_UNREAD_${tenantId}_${userId}`
+  }
+
+  private ensureManualUnreadLoaded(): void {
+    if (this.manualUnreadLoaded) {
+      return
+    }
+    try {
+      const raw = uni.getStorageSync(this.buildManualUnreadStorageKey())
+      if (raw != null && raw !== '') {
+        const parsed = JSON.parse(String(raw))
+        if (Array.isArray(parsed)) {
+          this.manualUnreadChatIds = new Set(parsed.map((id: any) => String(id)))
+        }
+      }
+    } catch (e) {
+      this.manualUnreadChatIds = new Set()
+    } finally {
+      this.manualUnreadLoaded = true
+    }
+  }
+
+  private persistManualUnreadChatIds(): void {
+    this.ensureManualUnreadLoaded()
+    try {
+      uni.setStorageSync(this.buildManualUnreadStorageKey(), JSON.stringify(Array.from(this.manualUnreadChatIds)))
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  private hasManualUnread(chatId: string): boolean {
+    this.ensureManualUnreadLoaded()
+    const chatIdStr = chatId != null ? (chatId as any).toString() : ''
+    if (chatIdStr === '') {
+      return false
+    }
+    return this.manualUnreadChatIds.has(chatIdStr)
+  }
+
+  private setManualUnreadState(chatId: string, unread: boolean): void {
+    this.ensureManualUnreadLoaded()
+    const chatIdStr = chatId != null ? (chatId as any).toString() : ''
+    if (chatIdStr === '') {
+      return
+    }
+    const had = this.manualUnreadChatIds.has(chatIdStr)
+    if (unread) {
+      if (!had) {
+        this.manualUnreadChatIds.add(chatIdStr)
+        this.persistManualUnreadChatIds()
+      }
+      return
+    }
+    if (had) {
+      this.manualUnreadChatIds.delete(chatIdStr)
+      this.persistManualUnreadChatIds()
+    }
+  }
+
+  private applyManualUnreadOverlay(conversation: ConversationItem | null): void {
+    if (conversation == null) {
+      return
+    }
+    const chatIdStr = conversation.chatId != null ? conversation.chatId.toString() : ''
+    if (chatIdStr === '') {
+      return
+    }
+    const serverUnread = this.computeUnreadCount(
+      conversation.lastMessageSequence != null ? conversation.lastMessageSequence.toString() : '0',
+      conversation.lastReadSequence != null ? conversation.lastReadSequence.toString() : '0'
+    )
+    if (serverUnread > 0) {
+      conversation.unreadCount = serverUnread
+      this.setManualUnreadState(chatIdStr, false)
+      return
+    }
+    if (this.hasManualUnread(chatIdStr)) {
+      conversation.unreadCount = 1
+      return
+    }
+    conversation.unreadCount = 0
+  }
+
   public handleRealtimeCursorVersion(cursorVersion: string | number | null): void {
     const incoming = this.normalizeCursorVersion(cursorVersion)
     if (incoming === '0') {
@@ -282,6 +371,7 @@ export class ConversationService {
     const existing = this.getConversation(conv.chatId)
     if (existing == null) {
       this.conversations.unshift(conv)
+      this.applyManualUnreadOverlay(conv)
     } else {
 	  // P2：幂等/乱序保护（旧 snapshot 不覆盖新状态）
 	  const incomingVer = (snapshot as any).conversationVersion != null ? (snapshot as any).conversationVersion.toString() : ''
@@ -308,13 +398,14 @@ export class ConversationService {
       existing.noDisturb = conv.noDisturb
       existing.lastMessageHasAtMe = conv.lastMessageHasAtMe
       existing.lastReadSequence = this.maxSeq(existing.lastReadSequence, conv.lastReadSequence)
-      existing.lastMessageSequence = this.maxSeq(existing.lastMessageSequence, conv.lastMessageSequence)
-      existing.unreadCount = this.computeUnreadCount(existing.lastMessageSequence, existing.lastReadSequence)
-      existing.lastMessageType = conv.lastMessageType
-      existing.lastMessageContent = conv.lastMessageContent
-      existing.lastMessageTime = conv.lastMessageTime
-      existing.timestamp = conv.timestamp
-    }
+	      existing.lastMessageSequence = this.maxSeq(existing.lastMessageSequence, conv.lastMessageSequence)
+	      existing.unreadCount = this.computeUnreadCount(existing.lastMessageSequence, existing.lastReadSequence)
+	      existing.lastMessageType = conv.lastMessageType
+	      existing.lastMessageContent = conv.lastMessageContent
+	      existing.lastMessageTime = conv.lastMessageTime
+	      existing.timestamp = conv.timestamp
+        this.applyManualUnreadOverlay(existing)
+	    }
 
     const preview = conv.lastMessageContent != null && conv.lastMessageContent !== '' ? conv.lastMessageContent : lastMessage
     const ts = timestamp != null && timestamp > 0 ? timestamp : conv.timestamp
@@ -371,6 +462,7 @@ export class ConversationService {
       const existing = this.getConversation(conv.chatId)
       if (existing == null) {
         this.conversations.unshift(conv)
+        this.applyManualUnreadOverlay(conv)
       }
 
       const preview = conv.lastMessageContent != null && conv.lastMessageContent !== '' ? conv.lastMessageContent : lastMessage
@@ -416,6 +508,7 @@ export class ConversationService {
       }
     }
     conversation.unreadCount = unread
+    this.setManualUnreadState(chatIdStr, false)
     const readSeq = conversation.lastReadSequence != null ? conversation.lastReadSequence.toString() : '0'
     const msgSeq = conversation.lastMessageSequence != null ? conversation.lastMessageSequence.toString() : '0'
     let shouldClearAtMe = false
@@ -461,7 +554,11 @@ export class ConversationService {
         })
 
         if (data != null) {
-          this.conversations = (data as any[]).map((item: any) => this.mapToConversationItem(item))
+          this.conversations = (data as any[]).map((item: any) => {
+            const conv = this.mapToConversationItem(item)
+            this.applyManualUnreadOverlay(conv)
+            return conv
+          })
         } else {
           this.conversations = []
         }
@@ -543,10 +640,11 @@ export class ConversationService {
                 this.cacheTargetChatId(conv.targetId, conv.conversationType, conv.chatId)
               }
 
-              const existing = this.getConversation(chatId)
-              if (existing == null) {
-                this.conversations.unshift(conv)
-              } else {
+	              const existing = this.getConversation(chatId)
+	              if (existing == null) {
+	                this.conversations.unshift(conv)
+                  this.applyManualUnreadOverlay(conv)
+	              } else {
 			  // 幂等/乱序保护（旧数据不覆盖新状态）
 			  const incomingVer = (it as any).conversationVersion != null ? (it as any).conversationVersion.toString() : ''
 			  const currentVer = (existing as any).conversationVersion != null ? (existing as any).conversationVersion.toString() : ''
@@ -575,13 +673,14 @@ export class ConversationService {
                 existing.draft = conv.draft
 			  existing.lastReadSequence = this.maxSeq(existing.lastReadSequence, conv.lastReadSequence)
 			  existing.lastMessageSequence = this.maxSeq(existing.lastMessageSequence, conv.lastMessageSequence)
-			  existing.unreadCount = this.computeUnreadCount(existing.lastMessageSequence, existing.lastReadSequence)
-                existing.lastMessageType = conv.lastMessageType
-                existing.lastMessageContent = conv.lastMessageContent
-                existing.lastMessageTime = conv.lastMessageTime
-                existing.timestamp = conv.timestamp
-              }
-            })
+				  existing.unreadCount = this.computeUnreadCount(existing.lastMessageSequence, existing.lastReadSequence)
+	                existing.lastMessageType = conv.lastMessageType
+	                existing.lastMessageContent = conv.lastMessageContent
+	                existing.lastMessageTime = conv.lastMessageTime
+	                existing.timestamp = conv.timestamp
+                  this.applyManualUnreadOverlay(existing)
+	              }
+	            })
           }
 
           cursor = nextCursorVersion
@@ -656,7 +755,7 @@ export class ConversationService {
       conversation = this.conversations.find(c => c.targetId === chatIdStr)
     }
     
-    if (conversation != null) {
+	    if (conversation != null) {
       // 更新现有会话
       conversation.lastMessageType = lastMessageType
       conversation.lastMessageContent = lastMessage
@@ -682,7 +781,7 @@ export class ConversationService {
         }
       }
       
-      if (incrementUnread) {
+	      if (incrementUnread) {
         const lastMsgSeq = conversation.lastMessageSequence != null ? conversation.lastMessageSequence.toString() : '0'
         const lastReadSeq = conversation.lastReadSequence != null ? conversation.lastReadSequence.toString() : '0'
         let unread = 0
@@ -698,13 +797,18 @@ export class ConversationService {
             unread = lastMsgSeq > lastReadSeq ? 1 : 0
           }
         }
-        conversation.unreadCount = unread
-      }
-    } else {
-      // 创建新会话（实际应该从服务器获取完整信息）
-      console.warn('[ConversationService] 会话不存在，需要从服务器获取:', chatIdStr)
-      // TODO: 从服务器获取会话详情
-    }
+	        conversation.unreadCount = unread
+	      }
+        this.applyManualUnreadOverlay(conversation)
+	    } else {
+	      console.warn('[ConversationService] 会话不存在，触发增量同步兜底:', chatIdStr)
+        if (this.loaded) {
+          void this.syncConversationsIncrementally(false)
+        } else {
+          void this.loadConversations()
+        }
+	      return
+	    }
     
     this.sortConversations()
     this.notifyUpdateListeners()
@@ -768,6 +872,7 @@ export class ConversationService {
     if (index === -1) {
       return
     }
+    this.setManualUnreadState(chatIdStr, false)
     const removed = this.conversations[index]
     try {
       if (removed != null && removed.targetId != null && removed.targetId !== '') {
@@ -823,9 +928,10 @@ export class ConversationService {
 
       badgeService.clearConversationBadge(chatId, seq)
 
-      if (conversation != null) {
-        conversation.unreadCount = 0
-        this.notifyUpdateListeners()
+	      if (conversation != null) {
+	        conversation.unreadCount = 0
+          this.setManualUnreadState(chatId, false)
+	        this.notifyUpdateListeners()
 
         // 同步清空角标
         // badgeService 已在上面触发服务端水位推进
@@ -847,9 +953,63 @@ export class ConversationService {
       return
     }
     conversation.unreadCount = 0
+    this.setManualUnreadState(chatIdStr, false)
     const lastMessageSequence = conversation.lastMessageSequence != null ? conversation.lastMessageSequence.toString() : '0'
     conversation.lastReadSequence = lastMessageSequence
     this.notifyUpdateListeners()
+  }
+
+  public markConversationUnread(chatId: string, unread: boolean): void {
+    const chatIdStr = chatId != null ? (chatId as any).toString() : ''
+    if (chatIdStr === '') {
+      return
+    }
+    const conversation = this.conversations.find(c => c.chatId === chatIdStr || ((c as any).id === chatIdStr))
+    this.setManualUnreadState(chatIdStr, unread)
+    if (conversation != null) {
+      const serverUnread = this.computeUnreadCount(
+        conversation.lastMessageSequence != null ? conversation.lastMessageSequence.toString() : '0',
+        conversation.lastReadSequence != null ? conversation.lastReadSequence.toString() : '0'
+      )
+      conversation.unreadCount = unread && serverUnread <= 0 ? 1 : serverUnread
+      this.applyManualUnreadOverlay(conversation)
+    }
+    this.notifyUpdateListeners()
+  }
+
+  public applyBadgeSnapshot(conversationBadges: Map<string, number>): void {
+    if (conversationBadges == null || this.conversations.length === 0) {
+      return
+    }
+    let changed = false
+    this.conversations.forEach((conversation) => {
+      if (conversation == null || conversation.chatId == null || conversation.chatId === '') {
+        return
+      }
+      const chatId = conversation.chatId.toString()
+      const serverUnread = conversationBadges.get(chatId) || 0
+      if (serverUnread > 0) {
+        this.setManualUnreadState(chatId, false)
+        if (conversation.unreadCount !== serverUnread) {
+          conversation.unreadCount = serverUnread
+          changed = true
+        }
+        return
+      }
+      const lastMessageSequence = conversation.lastMessageSequence != null ? conversation.lastMessageSequence.toString() : '0'
+      if (conversation.lastReadSequence !== lastMessageSequence) {
+        conversation.lastReadSequence = lastMessageSequence
+        changed = true
+      }
+      const nextUnread = this.hasManualUnread(chatId) ? 1 : 0
+      if (conversation.unreadCount !== nextUnread) {
+        conversation.unreadCount = nextUnread
+        changed = true
+      }
+    })
+    if (changed) {
+      this.notifyUpdateListeners()
+    }
   }
   
   /**
@@ -1004,12 +1164,19 @@ export class ConversationService {
     }
     this.conversations = []
     this.targetChatIdCache.clear()
+    this.manualUnreadChatIds.clear()
+    this.manualUnreadLoaded = false
     this.loaded = false
     this.lastGapSyncAt = 0
     this.incrementalSyncInFlight = false
     this.incrementalSyncPending = false
     this.incrementalSyncPendingReset = false
     this.incrementalSyncPendingLimit = 200
+    try {
+      uni.removeStorageSync(this.buildManualUnreadStorageKey())
+    } catch (e) {
+      // ignore
+    }
   }
 }
 

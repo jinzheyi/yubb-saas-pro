@@ -2492,15 +2492,33 @@ export class MessageService {
 						resolvedChatId = snapChatId
 					}
 				} catch (e) { /* ignore */ }
-			} else {
-				try {
-					const cv = (message as any).cursorVersion
-					conversationService.handleRealtimeCursorVersion(cv)
-				} catch (e) { /* ignore */ }
-			}
+				} else {
+					try {
+						const cv = (message as any).cursorVersion
+						conversationService.handleRealtimeCursorVersion(cv)
+					} catch (e) { /* ignore */ }
+				}
 
-			conversationService.updateConversation(
-				resolvedChatId,
+				if (conversationService.getConversation(resolvedChatId) == null) {
+					const targetId = isGroupSelf
+						? (message.header.groupId != null ? message.header.groupId.toString() : '0')
+						: (message.header.receiverId != null ? message.header.receiverId.toString() : '0')
+					const conversationType = isGroupSelf ? 2 : 1
+					const ensuredChatId = await conversationService.ensureConversationByTarget(
+						targetId,
+						conversationType,
+						preview,
+						message.header.timestamp,
+						false,
+						seqStr
+					)
+					if (ensuredChatId != null && ensuredChatId !== '') {
+						resolvedChatId = ensuredChatId
+					}
+				}
+
+				conversationService.updateConversation(
+					resolvedChatId,
 				message.header.messageType,
 				preview,
 				message.header.timestamp,

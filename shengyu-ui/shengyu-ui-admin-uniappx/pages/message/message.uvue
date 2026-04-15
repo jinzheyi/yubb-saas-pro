@@ -171,7 +171,6 @@
 	import { wsManager } from '../../utils/websocket.uts'
 	import { encodeIdParam } from '../../utils/id-param.uts'
 	import { parseMessageText as parseEmojiTokens, type MessageToken as EmojiToken } from '../../utils/emojiParser.uts'
-	import { getTenantIdStr, getUserIdStr } from '../../store/user.uts'
 
 	const { t } = useI18n()
 
@@ -191,7 +190,6 @@
 	// 加载状态
 	const loading = ref(false)
 	const refreshing = ref(false)
-	const manualUnreadChatIds = ref<string[]>([])
 	const lastConversationSyncAt = ref(0)
 	const lastManualRefreshAt = ref(0)
 	const manualRefreshBlockedUntil = ref(0)
@@ -211,79 +209,10 @@
 	const FOREGROUND_SYNC_STALE_MS = 5000
 	const FOREGROUND_SYNC_AFTER_HIDE_MS = 1200
 
-	function buildManualUnreadStorageKey(): string {
-		return `IM_MANUAL_UNREAD_${getTenantIdStr()}_${getUserIdStr()}`
-	}
-
-	function loadManualUnreadChatIds(): void {
-		try {
-			const raw = uni.getStorageSync(buildManualUnreadStorageKey())
-			if (raw == null || raw === '') {
-				manualUnreadChatIds.value = []
-				return
-			}
-			const arr = JSON.parse(String(raw))
-			if (Array.isArray(arr)) {
-				manualUnreadChatIds.value = arr.map((id: any) => String(id))
-				return
-			}
-			manualUnreadChatIds.value = []
-		} catch (e) {
-			manualUnreadChatIds.value = []
-		}
-	}
-
-	function persistManualUnreadChatIds(): void {
-		try {
-			uni.setStorageSync(buildManualUnreadStorageKey(), JSON.stringify(manualUnreadChatIds.value))
-		} catch (e) {
-			// ignore
-		}
-	}
-
-	function hasManualUnread(chatId: string): boolean {
-		return manualUnreadChatIds.value.indexOf(chatId) !== -1
-	}
-
-	function setManualUnread(chatId: string, unread: boolean): void {
-		const chatIdStr = chatId != null ? String(chatId) : ''
-		if (chatIdStr === '') {
-			return
-		}
-		const next = manualUnreadChatIds.value.slice()
-		const index = next.indexOf(chatIdStr)
-		if (unread) {
-			if (index === -1) {
-				next.push(chatIdStr)
-				manualUnreadChatIds.value = next
-				persistManualUnreadChatIds()
-			}
-			return
-		}
-		if (index !== -1) {
-			next.splice(index, 1)
-			manualUnreadChatIds.value = next
-			persistManualUnreadChatIds()
-		}
-	}
-
-	function applyManualUnread(unreadCount: number, chatId: string): number {
-		const count = unreadCount != null ? Number(unreadCount) : 0
-		if (count > 0) {
-			setManualUnread(chatId, false)
-			return count
-		}
-		return hasManualUnread(chatId) ? 1 : 0
-	}
-	
 	// 角标监听器
 	const badgeListener = {
 		onBadgeUpdate: (badgeData: BadgeData) => {
-			// 更新会话列表的未读数
-			messageList.value.forEach(conv => {
-				const serverUnread = badgeData.conversationBadges.get(conv.chatId) || 0
-				conv.unreadCount = applyManualUnread(serverUnread, conv.chatId)
-			})
+			conversationService.applyBadgeSnapshot(badgeData.conversationBadges)
 		}
 	}
 
@@ -383,7 +312,7 @@
 				targetId
 			),
 			avatarIcon: isGroup ? '\ue616' : '',
-			unreadCount: applyManualUnread(conv != null ? conv.unreadCount : 0, chatId),
+			unreadCount: conv != null ? conv.unreadCount : 0,
 			noDisturb: conv != null && conv.noDisturb === true,
 			isPinned: conv != null && conv.isPinned === true,
 			lastMessageHasAtMe: conv != null && conv.lastMessageHasAtMe === true,
@@ -644,7 +573,6 @@
 	 * 初始化页面
 	 */
 	onMounted(() => {
-		loadManualUnreadChatIds()
 		// 1. 监听会话更新
 		conversationService.addUpdateListener(handleConversationsUpdate)
 		
@@ -753,7 +681,7 @@
 	}
 
 	function handleMessageClick(item : any) {
-		setManualUnread(item.chatId, false)
+		conversationService.markConversationUnread(item.chatId, false)
 		const chatIdParam = encodeIdParam(item.chatId != null ? String(item.chatId) : '')
 		uni.navigateTo({
 			url: `/pages/message/chat?chatId=${chatIdParam}&entryMode=latest`
@@ -807,41 +735,37 @@
 					})
 					break
 					
-				case 'unread':
-					if (targetItem.unreadCount > 0) {
-						const seq = (targetItem as any).lastMessageSequence != null ? (targetItem as any).lastMessageSequence.toString() : '0'
-						badgeService.clearConversationBadge(targetItem.chatId, seq)
-						targetItem.unreadCount = 0
-						setManualUnread(targetItem.chatId, false)
-						uni.showToast({
-							title: '已标记为已读',
-							icon: 'success'
-						})
-					} else {
-						targetItem.unreadCount = 1
-						setManualUnread(targetItem.chatId, true)
-						uni.showToast({
-							title: '已标记为未读',
-							icon: 'success'
-						})
-					}
-					break
-					
-				case 'remove':
-					const confirmed = await showConfirmModal('删除会话', '确定要删除该会话吗？')
-					if (!confirmed) {
+					case 'unread':
+						if (targetItem.unreadCount > 0) {
+							const seq = (targetItem as any).lastMessageSequence != null ? (targetItem as any).lastMessageSequence.toString() : '0'
+							badgeService.clearConversationBadge(targetItem.chatId, seq)
+							uni.showToast({
+								title: '已标记为已读',
+								icon: 'success'
+							})
+						} else {
+							conversationService.markConversationUnread(targetItem.chatId, true)
+							uni.showToast({
+								title: '已标记为未读',
+								icon: 'success'
+							})
+						}
 						break
-					}
-					const removeSuccess = await conversationService.deleteConversation(targetItem.chatId)
-					if (!removeSuccess) {
-						throw new Error('remove failed')
-					}
-					setManualUnread(targetItem.chatId, false)
-					uni.showToast({
-						title: '已删除',
-						icon: 'success'
-					})
-					break
+						
+					case 'remove':
+						const confirmed = await showConfirmModal('删除会话', '确定要删除该会话吗？')
+						if (!confirmed) {
+							break
+						}
+						const removeSuccess = await conversationService.deleteConversation(targetItem.chatId)
+						if (!removeSuccess) {
+							throw new Error('remove failed')
+						}
+						uni.showToast({
+							title: '已删除',
+							icon: 'success'
+						})
+						break
 			}
 		} catch (e) {
 			console.error('[Message] 操作失败:', e)
