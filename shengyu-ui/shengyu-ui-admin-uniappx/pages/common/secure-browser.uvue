@@ -1,0 +1,244 @@
+<template>
+	<view class="page">
+		<view class="status-bar"></view>
+		<view class="header">
+			<view class="header-left" @click.stop="handleBack">
+				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="back-text">返回</text>
+			</view>
+			<text class="header-title" :numberOfLines="1">{{ pageTitle }}</text>
+			<view class="header-right"></view>
+		</view>
+
+		<view class="address-bar">
+			<text class="address-tag">{{ sourceTag }}</text>
+			<text class="address-text" :numberOfLines="1">{{ addressText }}</text>
+		</view>
+
+		<view class="content">
+			<web-view v-if="webUrl !== ''" :src="webUrl" class="webview"></web-view>
+
+			<view v-else class="blocked-wrap">
+				<text class="blocked-title">已拦截非受控内容</text>
+				<text class="blocked-desc">仅允许在 IM 内部容器中打开 http/https 链接，其他二维码或文本不会直接影响系统。</text>
+				<view class="blocked-card">
+					<text class="blocked-label">扫码/打开内容</text>
+					<text class="blocked-raw">{{ rawContent || '无可展示内容' }}</text>
+				</view>
+				<view class="blocked-btn" @click="handleCopy">
+					<text class="blocked-btn-text">复制内容</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { normalizeWebUrl, readSecureBrowserTitle } from '../../utils/secure-browser.uts'
+
+	const pageTitle = ref('安全浏览')
+	const webUrl = ref('')
+	const rawContent = ref('')
+	const source = ref('external')
+
+	const sourceTag = computed(() : string => {
+		if (source.value === 'scan') {
+			return '扫码结果'
+		}
+		if (source.value === 'message') {
+			return '消息外链'
+		}
+		if (source.value === 'file') {
+			return '文件访问'
+		}
+		return '外部内容'
+	})
+
+	const addressText = computed(() : string => {
+		if (webUrl.value !== '') {
+			return webUrl.value
+		}
+		return rawContent.value !== '' ? rawContent.value : '未识别到可安全打开的链接'
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function safeDecode(value : any) : string {
+		if (value == null) {
+			return ''
+		}
+		try {
+			return decodeURIComponent(String(value))
+		} catch (e) {
+			return String(value)
+		}
+	}
+
+	function handleCopy() {
+		if (addressText.value === '') {
+			uni.showToast({
+				title: '暂无可复制内容',
+				icon: 'none'
+			})
+			return
+		}
+		uni.setClipboardData({
+			data: addressText.value,
+			success: () => {
+				uni.showToast({
+					title: '已复制',
+					icon: 'success'
+				})
+			}
+		})
+	}
+
+	onLoad((options : any) => {
+		pageTitle.value = readSecureBrowserTitle(options != null ? options['title'] : '', '安全浏览')
+		source.value = options != null && options['source'] != null ? String(options['source']) : 'external'
+		rawContent.value = options != null && options['raw'] != null ? safeDecode(options['raw']) : ''
+		const rawUrl = options != null && options['url'] != null ? safeDecode(options['url']) : ''
+		webUrl.value = normalizeWebUrl(rawUrl)
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		background-color: #FFFFFF;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+		background-color: #FFFFFF;
+	}
+
+	.header {
+		background-color: #FFFFFF;
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 84px;
+	}
+
+	.back-icon {
+		color: #1F2329;
+		font-size: 20px;
+	}
+
+	.back-text {
+		color: #1F2329;
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		color: #1F2329;
+		font-size: 16px;
+		font-weight: 600;
+		max-width: 180px;
+	}
+
+	.header-right {
+		width: 84px;
+	}
+
+	.address-bar {
+		background-color: #F5F7FA;
+		padding: 10px 12px;
+		border-bottom-width: 0.5px;
+		border-bottom-color: #EFF0F1;
+	}
+
+	.address-tag {
+		font-size: 11px;
+		color: #1677FF;
+		background-color: #E8F2FF;
+		padding: 2px 8px;
+		border-radius: 10px;
+		align-self: flex-start;
+	}
+
+	.address-text {
+		margin-top: 6px;
+		font-size: 12px;
+		color: #646A73;
+	}
+
+	.content {
+		flex: 1;
+	}
+
+	.webview {
+		flex: 1;
+	}
+
+	.blocked-wrap {
+		flex: 1;
+		padding: 32px 20px;
+		align-items: center;
+	}
+
+	.blocked-title {
+		font-size: 20px;
+		color: #1F2329;
+		font-weight: 600;
+	}
+
+	.blocked-desc {
+		margin-top: 10px;
+		font-size: 14px;
+		color: #646A73;
+		text-align: center;
+		line-height: 22px;
+	}
+
+	.blocked-card {
+		width: 100%;
+		margin-top: 22px;
+		padding: 16px;
+		background-color: #F8FAFD;
+		border-radius: 14px;
+	}
+
+	.blocked-label {
+		font-size: 13px;
+		color: #8F959E;
+	}
+
+	.blocked-raw {
+		margin-top: 10px;
+		font-size: 14px;
+		color: #1F2329;
+		line-height: 22px;
+	}
+
+	.blocked-btn {
+		margin-top: 22px;
+		width: 100%;
+		height: 46px;
+		background-color: #1677FF;
+		border-radius: 23px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.blocked-btn-text {
+		font-size: 16px;
+		color: #FFFFFF;
+		font-weight: 500;
+	}
+</style>

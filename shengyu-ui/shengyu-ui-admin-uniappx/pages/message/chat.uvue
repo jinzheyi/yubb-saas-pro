@@ -558,6 +558,7 @@
 
 	import { uploadGroupFile, getFilePresignedGetUrl } from '../../api/file.uts'
 	import { navToFilePreview, navToStickerManage } from '../../utils/nav.uts'
+	import { navToSecureBrowser } from '../../utils/secure-browser.uts'
 	import { readReceiptService } from '../../services/read-receipt-service.uts'
 	import {
 		BASE_URL as CONFIG_BASE_URL,
@@ -1123,30 +1124,7 @@
 
 	function openUrlInWebViewOrBrowser(url: string): void {
 		if (!url) return
-		// #ifdef H5
-		try {
-			window.open(url, '_blank')
-			return
-		} catch (e) {
-			return
-		}
-		// #endif
-
-		// #ifdef APP-ANDROID || APP-IOS
-		try {
-			;(plus as any).runtime.openURL(url)
-			return
-		} catch (e) {
-			// ignore
-		}
-		// #endif
-
-		try {
-			uni.setClipboardData({ data: url })
-			uni.showToast({ title: '已复制预览链接', icon: 'none' })
-		} catch (e) {
-			// ignore
-		}
+		navToSecureBrowser(url, '文件预览', 'file')
 	}
 
 	async function resolvePresignedUrl(fileId: string): Promise<string> {
@@ -6773,6 +6751,43 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
+	function resolveLinkUrlFromMessage(msg: any): string {
+		try {
+			if (msg == null) {
+				return ''
+			}
+			const type = msg.type != null ? String(msg.type) : ''
+			if (type === 'text' || type === 'quote') {
+				const raw = msg.content != null ? msg.content : ''
+				if (typeof raw === 'string') {
+					return String(raw).trim()
+				}
+				if (raw != null && typeof raw === 'object') {
+					const contentText = raw.content != null ? String(raw.content).trim() : ''
+					if (looksLikeLinkContent(contentText)) {
+						return contentText
+					}
+					return resolveLinkUrlFromObject(raw)
+				}
+				return ''
+			}
+			const parsedContent = parseRawContent(msg.content)
+			if (parsedContent != null && typeof parsedContent === 'object') {
+				const resolvedFromContent = resolveLinkUrlFromObject(parsedContent)
+				if (resolvedFromContent !== '') {
+					return resolvedFromContent
+				}
+			}
+			const parsedExtra = parseRawContent((msg as any).extra)
+			if (parsedExtra != null && typeof parsedExtra === 'object') {
+				return resolveLinkUrlFromObject(parsedExtra)
+			}
+		} catch (e) {
+			return ''
+		}
+		return ''
+	}
+
 	function canFavoriteMessageByType(msg: any): boolean {
 		try {
 			if (msg == null) {
@@ -8091,11 +8106,19 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
         }
     }
 
-    function handleBubbleClick(msg : MessageItem) {
-        if (multiSelectMode.value) {
-            toggleSelect(msg)
-        }
-    }
+	function handleBubbleClick(msg : MessageItem) {
+		if (multiSelectMode.value) {
+			toggleSelect(msg)
+			return
+		}
+		if (isLinkMessage(msg)) {
+			const url = resolveLinkUrlFromMessage(msg)
+			if (url !== '') {
+				navToSecureBrowser(url, '消息详情', 'message')
+				return
+			}
+		}
+	}
 
     function exitMultiSelectMode() {
         multiSelectMode.value = false

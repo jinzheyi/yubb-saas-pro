@@ -785,6 +785,14 @@ public class ImGroupServiceImpl implements ImGroupService {
             return respVO;
         }
 
+        Long currentTenantId = resolveTenantId();
+        Long groupTenantId = group.getTenantId() != null ? group.getTenantId() : 0L;
+        if (!Objects.equals(currentTenantId, groupTenantId)) {
+            respVO.setValid(false);
+            respVO.setErrorMessage("当前邀请码不属于本租户");
+            return respVO;
+        }
+
         // 6. 返回验证成功信息
         respVO.setValid(true);
         respVO.setGroupId(group.getId());

@@ -1,0 +1,80 @@
+export type SecureBrowserSource = 'scan' | 'message' | 'file' | 'external'
+
+function safeEncode(value: string): string {
+	try {
+		return encodeURIComponent(value)
+	} catch (e) {
+		return value
+	}
+}
+
+function safeDecode(value: string): string {
+	try {
+		return decodeURIComponent(value)
+	} catch (e) {
+		return value
+	}
+}
+
+export function normalizeWebUrl(raw: any): string {
+	const text = raw != null ? String(raw).trim() : ''
+	if (text === '') {
+		return ''
+	}
+	if (/^https?:\/\//i.test(text)) {
+		return text
+	}
+	if (/^www\./i.test(text)) {
+		return 'https://' + text
+	}
+	return ''
+}
+
+export function isSafeWebUrl(raw: any): boolean {
+	return normalizeWebUrl(raw) !== ''
+}
+
+export function navToSecureBrowser(rawUrl: any, title: string = '', source: SecureBrowserSource = 'external', redirect: boolean = false): void {
+	const normalizedUrl = normalizeWebUrl(rawUrl)
+	const query: string[] = []
+	if (normalizedUrl !== '') {
+		query.push('url=' + safeEncode(normalizedUrl))
+	}
+	if (title !== '') {
+		query.push('title=' + safeEncode(title))
+	}
+	if (source !== '') {
+		query.push('source=' + safeEncode(source))
+	}
+	const url = '/pages/common/secure-browser' + (query.length > 0 ? '?' + query.join('&') : '')
+	if (redirect) {
+		uni.redirectTo({ url })
+		return
+	}
+	uni.navigateTo({ url })
+}
+
+export function navToBlockedContent(rawContent: any, title: string = '', source: SecureBrowserSource = 'external', redirect: boolean = false): void {
+	const text = rawContent != null ? String(rawContent).trim() : ''
+	const query: string[] = []
+	if (text !== '') {
+		query.push('raw=' + safeEncode(text))
+	}
+	if (title !== '') {
+		query.push('title=' + safeEncode(title))
+	}
+	if (source !== '') {
+		query.push('source=' + safeEncode(source))
+	}
+	const url = '/pages/common/secure-browser' + (query.length > 0 ? '?' + query.join('&') : '')
+	if (redirect) {
+		uni.redirectTo({ url })
+		return
+	}
+	uni.navigateTo({ url })
+}
+
+export function readSecureBrowserTitle(rawTitle: any, fallback: string): string {
+	const title = rawTitle != null ? safeDecode(String(rawTitle).trim()) : ''
+	return title !== '' ? title : fallback
+}

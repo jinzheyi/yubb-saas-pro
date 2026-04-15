@@ -75,7 +75,6 @@
 	import { logout } from '../../api/login.uts'
 	import { getCurrentUserDetail } from '../../api/user.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
-	import { parseGroupInvitePayload, openJoinGroupByPayload } from '../../utils/group-invite.uts'
 
 	const { t } = useI18n()
 
@@ -141,33 +140,9 @@
 				})
 				return
 			}
-			uni.scanCode({
-				onlyFromCamera: true,
-				scanType: ['qrCode'],
-				success: (res : any) => {
-					const resultText = res != null && res.result != null ? String(res.result) : ''
-					const payload = parseGroupInvitePayload(resultText)
-					if (payload == null) {
-						uni.showToast({
-							title: '未识别到群邀请二维码',
-							icon: 'none'
-						})
-						return
-					}
-					openJoinGroupByPayload(payload)
-				},
-				fail: (err : any) => {
-					const errMsg = err != null && err.errMsg != null ? String(err.errMsg) : ''
-					if (errMsg.indexOf('cancel') > -1) {
-						return
-					}
-					console.error('[Profile] 扫码失败:', err)
-					uni.showToast({
-						title: '扫码失败，请重试',
-						icon: 'none'
-					})
-				}
-			} as any)
+			uni.navigateTo({
+				url: '/pages/common/scan'
+			})
 			return
 		}
 		if (type === 'settings') {
