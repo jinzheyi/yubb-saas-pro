@@ -1,0 +1,67 @@
+import { clearConversationMessages } from '../api/message.uts'
+import { conversationService } from '../services/conversation-service.uts'
+import { groupService } from '../services/group-service.uts'
+import { messageService } from '../services/message-service.uts'
+
+function normalizeId(raw: any): string {
+	return raw != null ? String(raw).trim() : ''
+}
+
+export function cleanupConversationRuntime(chatId: string): void {
+	const normalizedChatId = normalizeId(chatId)
+	if (normalizedChatId === '') {
+		return
+	}
+	try {
+		conversationService.clearUnreadLocal(normalizedChatId)
+		messageService.clearUnreadCount(normalizedChatId)
+		messageService.clearChatCache(normalizedChatId)
+	} catch (e) {
+		console.error('[ChatSettingActions] 清理会话运行态失败:', e)
+	}
+}
+
+export async function clearConversationHistory(chatId: string): Promise<void> {
+	const normalizedChatId = normalizeId(chatId)
+	if (normalizedChatId === '') {
+		throw new Error('chatId is empty')
+	}
+	await clearConversationMessages(normalizedChatId)
+	cleanupConversationRuntime(normalizedChatId)
+}
+
+export async function deleteConversationForCurrentUser(chatId: string): Promise<boolean> {
+	const normalizedChatId = normalizeId(chatId)
+	if (normalizedChatId === '') {
+		return true
+	}
+	const success = await conversationService.deleteConversation(normalizedChatId)
+	if (success) {
+		cleanupConversationRuntime(normalizedChatId)
+		return true
+	}
+	conversationService.removeConversationLocal(normalizedChatId)
+	cleanupConversationRuntime(normalizedChatId)
+	return false
+}
+
+export async function quitGroupAndDeleteConversation(groupId: string, chatId: string): Promise<void> {
+	const normalizedGroupId = normalizeId(groupId)
+	if (normalizedGroupId === '') {
+		throw new Error('groupId is empty')
+	}
+	const quitSuccess = await groupService.quitGroup(normalizedGroupId)
+	if (!quitSuccess) {
+		throw new Error('quit group failed')
+	}
+	const normalizedChatId = normalizeId(chatId)
+	if (normalizedChatId !== '') {
+		try {
+			await conversationService.deleteConversation(normalizedChatId)
+		} catch (e) {
+			console.error('[ChatSettingActions] 删除会话失败，转本地移除:', e)
+		}
+		conversationService.removeConversationLocal(normalizedChatId)
+		cleanupConversationRuntime(normalizedChatId)
+	}
+}

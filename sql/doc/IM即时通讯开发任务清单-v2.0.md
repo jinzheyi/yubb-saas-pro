@@ -1448,7 +1448,9 @@ ACK（JSON TextFrame）字段约定（所有 Long/ID 均按 string）：
     - `sql/mysql/1.0/im/ddl_im_tables.sql`（tombstone/clear-watermark 表）
   - uniappx：
     - `api/message.uts`（新增 `clearConversationMessages`）
-    - `pages/message/group-settings.uvue`（清空聊天记录调用后端）
+    - `utils/chat-setting-actions.uts`（清空聊天记录/退群删除会话共享动作）
+    - `pages/message/chat-settings.uvue`（清空聊天记录调用后端并清理本地运行态）
+    - `pages/message/group-settings.uvue`（清空聊天记录调用后端；删除并退出收口到共享动作）
 
 ### C7.1（P2，可选）：消息表情回应（Reaction）能力（受控开关 + 最终态一致性）
 

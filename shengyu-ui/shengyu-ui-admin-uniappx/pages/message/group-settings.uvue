@@ -193,7 +193,7 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
-	import { getGroup, getGroupMembers, updateGroup, quitGroup, getGroupJoinRequestPendingCount, setGroupMemberNickname } from '../../api/group.uts'
+	import { getGroup, getGroupMembers, updateGroup, getGroupJoinRequestPendingCount, setGroupMemberNickname } from '../../api/group.uts'
 	import { getConversationByTarget } from '../../api/conversation.uts'
 	import { conversationService } from '../../services/conversation-service.uts'
 	import { MessageService, messageService } from '../../services/message-service.uts'
@@ -201,6 +201,7 @@
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { getUserIdStr } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
+	import { clearConversationHistory, quitGroupAndDeleteConversation } from '../../utils/chat-setting-actions.uts'
 
 	const { t } = useI18n()
 
@@ -719,32 +720,18 @@
 			content: '确定要清空聊天记录吗？此操作不可恢复',
 			success: (res) => {
 				if (res.confirm) {
-					try {
-						import('@/api/message.uts').then(async (api: any) => {
-							if (api && api.clearConversationMessages && chatId.value) {
-								await api.clearConversationMessages(chatId.value)
-							}
-							try {
-								messageService.clearUnreadCount(chatId.value)
-								messageService.clearChatCache(chatId.value)
-							} catch (e) {
-							}
+					clearConversationHistory(chatId.value).then(() => {
 							uni.showToast({
 								title: '已清空',
 								icon: 'success'
 							})
-						}).catch(() => {
-							uni.showToast({
-								title: '清空失败',
-								icon: 'none'
-							})
-						})
-					} catch (e) {
+					}).catch((e) => {
+						console.error('[GroupSettings] 清空聊天记录失败:', e)
 						uni.showToast({
 							title: '清空失败',
 							icon: 'none'
 						})
-					}
+					})
 				}
 			}
 		})
@@ -757,7 +744,7 @@
 			success: async (res) => {
 				if (res.confirm) {
 					try {
-						await quitGroup(groupId.value)
+						await quitGroupAndDeleteConversation(groupId.value, chatId.value)
 						uni.showToast({
 							title: '已退出群聊',
 							icon: 'success'

@@ -60,9 +60,9 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getUserDetail } from '../../api/user.uts'
 	import { conversationService } from '../../services/conversation-service.uts'
-	import { messageService } from '../../services/message-service.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
+	import { clearConversationHistory } from '../../utils/chat-setting-actions.uts'
 
 	const { t } = useI18n()
 	const isPinned = ref(false)
@@ -247,27 +247,20 @@
 				title: t('chatSettings.clearHistory'),
 				content: '确定要清空聊天记录吗？此操作不可恢复',
 				success: (res) => {
-					if (res.confirm) {
-						import('@/api/message.uts').then(async (api: any) => {
-							if (api && api.clearConversationMessages && chatId.value) {
-								await api.clearConversationMessages(chatId.value)
-							}
-							try {
-								messageService.clearUnreadCount(chatId.value)
-								messageService.clearChatCache(chatId.value)
-							} catch (e) {
-							}
-							uni.showToast({
-								title: '已清空',
-								icon: 'success'
+						if (res.confirm) {
+							clearConversationHistory(chatId.value).then(() => {
+								uni.showToast({
+									title: '已清空',
+									icon: 'success'
+								})
+							}).catch((e) => {
+								console.error('[ChatSettings] 清空聊天记录失败:', e)
+								uni.showToast({
+									title: '清空失败',
+									icon: 'none'
+								})
 							})
-						}).catch(() => {
-							uni.showToast({
-								title: '清空失败',
-								icon: 'none'
-							})
-						})
-					}
+						}
 				}
 			})
 			return

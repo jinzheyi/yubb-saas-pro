@@ -751,17 +751,34 @@ export class ConversationService {
         url: `/system/im/conversation/delete?chatId=${chatIdStr}`,
         method: 'DELETE'
       })
-
-      const index = this.conversations.findIndex(c => c.chatId === chatIdStr || ((c as any).id === chatIdStr))
-      if (index !== -1) {
-        this.conversations.splice(index, 1)
-        this.notifyUpdateListeners()
-      }
+      this.removeConversationLocal(chatIdStr)
       return true
     } catch (e) {
       console.error('[ConversationService] 删除会话失败:', e)
       return false
     }
+  }
+
+  public removeConversationLocal(chatId: string): void {
+    const chatIdStr = chatId != null ? (chatId as any).toString() : ''
+    if (chatIdStr === '') {
+      return
+    }
+    const index = this.conversations.findIndex(c => c.chatId === chatIdStr || ((c as any).id === chatIdStr))
+    if (index === -1) {
+      return
+    }
+    const removed = this.conversations[index]
+    try {
+      if (removed != null && removed.targetId != null && removed.targetId !== '') {
+        const key = this.buildTargetKey(removed.targetId, removed.conversationType)
+        this.targetChatIdCache.delete(key)
+      }
+    } catch (e) {
+      // ignore
+    }
+    this.conversations.splice(index, 1)
+    this.notifyUpdateListeners()
   }
   
   /**
@@ -818,6 +835,21 @@ export class ConversationService {
       console.error('[ConversationService] 清空未读数失败:', e)
       return false
     }
+  }
+
+  public clearUnreadLocal(chatId: string): void {
+    const chatIdStr = chatId != null ? (chatId as any).toString() : ''
+    if (chatIdStr === '') {
+      return
+    }
+    const conversation = this.conversations.find(c => c.chatId === chatIdStr || ((c as any).id === chatIdStr))
+    if (conversation == null) {
+      return
+    }
+    conversation.unreadCount = 0
+    const lastMessageSequence = conversation.lastMessageSequence != null ? conversation.lastMessageSequence.toString() : '0'
+    conversation.lastReadSequence = lastMessageSequence
+    this.notifyUpdateListeners()
   }
   
   /**
