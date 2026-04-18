@@ -44,7 +44,14 @@
 					</view>
 					
 					<view class="contact-avatar" :style="{ backgroundColor: contact.avatarBg }">
-						<text class="avatar-text">{{ contact.avatarText }}</text>
+						<image
+							v-if="shouldShowAvatar(contact)"
+							class="contact-avatar-image"
+							:src="contact.avatar"
+							mode="aspectFill"
+							@error="handleAvatarError(contact)"
+						/>
+						<text v-else class="avatar-text">{{ contact.avatarText }}</text>
 					</view>
 					<view class="contact-info">
 						<text class="contact-name">{{ contact.displayName }}</text>
@@ -135,6 +142,8 @@
 						displayName: contact.nickname, // 直接使用昵称
 						role: contact.postName || '未设置岗位',
 						deptName: contact.deptName || '',
+						avatar: contact.avatar != null ? String(contact.avatar) : '',
+						avatarError: false,
 						avatarText: getAvatarText(contact.nickname),
 						avatarBg: getUserAvatarColor(contact.id),
 						star: contact.star,
@@ -203,6 +212,8 @@
 						displayName: contact.nickname, // 直接使用昵称
 						role: contact.postName || '未设置岗位',
 						deptName: contact.deptName || '',
+						avatar: contact.avatar != null ? String(contact.avatar) : '',
+						avatarError: false,
 						avatarText: getAvatarText(contact.nickname),
 						avatarBg: getUserAvatarColor(contact.id),
 						star: contact.star,
@@ -282,6 +293,25 @@
 		for (let i = 0; i < followingList.value.length; i++) {
 			followingList.value[i].selected = isMemberSelected(String(followingList.value[i].id))
 		}
+	}
+
+	function normalizeAvatarUrl(raw: any): string {
+		if (raw == null) {
+			return ''
+		}
+		const text = String(raw).trim()
+		return (text !== '' && text !== 'null' && text !== 'undefined') ? text : ''
+	}
+
+	function shouldShowAvatar(item: any): boolean {
+		return normalizeAvatarUrl(item != null ? item.avatar : '') !== '' && item.avatarError !== true
+	}
+
+	function handleAvatarError(item: any): void {
+		if (item == null) {
+			return
+		}
+		item.avatarError = true
 	}
 
 	// 页面加载时检查是否为选择模式
@@ -438,6 +468,13 @@
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
+		overflow: hidden;
+	}
+
+	.contact-avatar-image {
+		width: 42px;
+		height: 42px;
+		border-radius: 8px;
 	}
 
 	.avatar-text {

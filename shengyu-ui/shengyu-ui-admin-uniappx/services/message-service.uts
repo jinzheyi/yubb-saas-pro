@@ -86,6 +86,8 @@ export type MessageItem = {
   timestamp: number
   isSelf: boolean
   showTime: boolean
+  senderAvatar?: string
+  avatarError?: boolean
   avatarText: string
   avatarBg: string
   senderName: string
@@ -295,6 +297,7 @@ export class MessageService {
 
   // 用户信息缓存（用于补齐实时消息的 senderName/avatarText）
   private userNicknameCache: Map<string, string> = new Map()
+  private userAvatarCache: Map<string, string> = new Map()
   private userNicknameLoading: Map<string, Promise<string>> = new Map()
   private groupMemberNameCache: Map<string, string> = new Map()
   private groupMemberNameLoading: Map<string, Promise<string>> = new Map()
@@ -476,6 +479,72 @@ export class MessageService {
       return !isNaN(parsed) && parsed > 0 ? parsed : 0
     } catch (e) {
       return 0
+    }
+  }
+
+  private normalizeAvatarUrl(raw: any): string {
+    try {
+      if (raw == null) {
+        return ''
+      }
+      const text = String(raw).trim()
+      if (text === '' || text === 'null' || text === 'undefined') {
+        return ''
+      }
+      return text
+    } catch (e) {
+      return ''
+    }
+  }
+
+  private getCurrentUserAvatar(): string {
+    try {
+      const userInfo = getUserInfo()
+      const currentUser = userInfo?.user
+      return this.normalizeAvatarUrl(currentUser?.avatar)
+    } catch (e) {
+      return ''
+    }
+  }
+
+  public refreshCurrentUserAvatar(avatar: string): void {
+    const normalizedAvatar = this.normalizeAvatarUrl(avatar)
+    if (this.currentUserId == null || this.currentUserId === '' || this.currentUserId === '0') {
+      return
+    }
+    try {
+      this.userAvatarCache.set(this.currentUserId, normalizedAvatar)
+    } catch (e) {
+      // ignore
+    }
+    try {
+      this.messageCache.forEach((items, cid) => {
+        if (items == null || items.length === 0) {
+          return
+        }
+        let changed = false
+        const changedItems: MessageItem[] = []
+        for (let i = 0; i < items.length; i++) {
+          const item: any = items[i]
+          if (item == null || String(item.senderId || '') !== this.currentUserId) {
+            continue
+          }
+          item.senderAvatar = normalizedAvatar
+          item.avatarError = false
+          changed = true
+          changedItems.push(item as MessageItem)
+        }
+        if (changed) {
+          this.messageCache.set(cid, items)
+          if (this.activeChatId != null && this.activeChatId !== '' && cid === this.activeChatId) {
+            for (let i = 0; i < changedItems.length; i++) {
+              this.notifyMessageListeners(changedItems[i])
+            }
+          }
+        }
+      })
+    } catch (e) {
+      console.warn('[MessageService] refreshCurrentUserAvatar failed:', e)
     }
   }
 
@@ -739,6 +808,11 @@ export class MessageService {
         const senderName = (m.senderNickname != null && m.senderNickname !== '')
           ? m.senderNickname
           : await this.resolveSenderDisplayName(senderIdStr, groupIdStr)
+        const senderAvatar = this.normalizeAvatarUrl(
+          (m as any).senderAvatar != null && (m as any).senderAvatar !== ''
+            ? (m as any).senderAvatar
+            : await this.resolveUserAvatar(senderIdStr)
+        )
 
         const messageIdStr = m.id != null ? m.id.toString() : '0'
         if (messageIdStr === '' || messageIdStr === '0') {
@@ -783,6 +857,8 @@ export class MessageService {
           isSelf: isSelf,
           voicePlayed: isSelf ? true : ((m as any).voicePlayed === true || (m as any).voicePlayed === 1 || (m as any).voicePlayed === '1' || (m as any).voicePlayed === 'true'),
           showTime: true,
+          senderAvatar: senderAvatar,
+          avatarError: false,
           avatarText: senderName ? getAvatarText(senderName) : '?',
           avatarBg: getUserAvatarColor(senderIdStr),
           senderName: senderName
@@ -1243,6 +1319,11 @@ export class MessageService {
           const senderName = (m.senderNickname != null && m.senderNickname !== '')
             ? m.senderNickname
             : await this.resolveSenderDisplayName(senderIdStr, groupIdStr)
+          const senderAvatar = this.normalizeAvatarUrl(
+            (m as any).senderAvatar != null && (m as any).senderAvatar !== ''
+              ? (m as any).senderAvatar
+              : await this.resolveUserAvatar(senderIdStr)
+          )
 
           const seqStr = m.sequence != null ? m.sequence.toString() : null
           const revStr = (m as any).rev != null && (m as any).rev !== '' ? (m as any).rev.toString() : '1'
@@ -1284,6 +1365,8 @@ export class MessageService {
             isSelf: isSelf,
             voicePlayed: isSelf ? true : ((m as any).voicePlayed === true || (m as any).voicePlayed === 1 || (m as any).voicePlayed === '1' || (m as any).voicePlayed === 'true'),
             showTime: true,
+            senderAvatar: senderAvatar,
+            avatarError: false,
             avatarText: senderName ? getAvatarText(senderName) : '?',
             avatarBg: getUserAvatarColor(senderIdStr),
             senderName: senderName
@@ -1362,7 +1445,13 @@ export class MessageService {
 
     if (userId === this.currentUserId) {
       const userInfo = getUserInfo()
-      return userInfo?.user?.nickname || ''
+      const nickname = userInfo?.user?.nickname || ''
+      const avatar = this.normalizeAvatarUrl(userInfo?.user?.avatar)
+      if (nickname !== '') {
+        this.userNicknameCache.set(userId, nickname)
+      }
+      this.userAvatarCache.set(userId, avatar)
+      return nickname
     }
 
     const cached = this.userNicknameCache.get(userId)
@@ -1383,9 +1472,11 @@ export class MessageService {
           : resp
 
         const nickname = userObj ? (userObj.nickname || userObj.name || '') : ''
+        const avatar = this.normalizeAvatarUrl(userObj ? userObj.avatar : '')
         if (nickname !== '') {
           this.userNicknameCache.set(userId, nickname)
         }
+        this.userAvatarCache.set(userId, avatar)
         return nickname
       } catch (e) {
         console.error('[MessageService] resolveUserNickname failed:', userId, e)
@@ -1397,6 +1488,24 @@ export class MessageService {
 
     this.userNicknameLoading.set(userId, task)
     return await task
+  }
+
+  private async resolveUserAvatar(userId: string): Promise<string> {
+    if (userId === '0' || userId === '') {
+      return ''
+    }
+    if (userId === this.currentUserId) {
+      const avatar = this.getCurrentUserAvatar()
+      this.userAvatarCache.set(userId, avatar)
+      return avatar
+    }
+    const cached = this.userAvatarCache.get(userId)
+    if (cached != null) {
+      return this.normalizeAvatarUrl(cached)
+    }
+    await this.resolveUserNickname(userId)
+    const loaded = this.userAvatarCache.get(userId)
+    return this.normalizeAvatarUrl(loaded)
   }
 
   private async resolveSenderDisplayName(userId: string, groupId: string): Promise<string> {
@@ -1658,6 +1767,15 @@ export class MessageService {
   public setCurrentUser(userId: string, tenantId: string): void {
     this.currentUserId = userId
     this.currentTenantId = tenantId
+    if (userId != null && userId !== '' && userId !== '0') {
+      const userInfo = getUserInfo()
+      const currentUser = userInfo?.user
+      const nickname = currentUser?.nickname || ''
+      if (nickname !== '') {
+        this.userNicknameCache.set(userId, nickname)
+      }
+      this.userAvatarCache.set(userId, this.normalizeAvatarUrl(currentUser?.avatar))
+    }
   }
   
   /**
@@ -1971,6 +2089,7 @@ export class MessageService {
     const currentUser = userInfo?.user
     const clientMessageId = `stk_${Date.now()}_${Math.floor(Math.random() * 100000)}`
     const userName = currentUser?.nickname || ''
+    const senderAvatar = this.normalizeAvatarUrl(currentUser?.avatar)
     const avatarText = getAvatarText(userName)
     const avatarBg = getUserAvatarColor(this.currentUserId)
     const timestamp = Date.now()
@@ -1987,6 +2106,8 @@ export class MessageService {
       timestamp: timestamp,
       isSelf: true,
       showTime: true,
+      senderAvatar: senderAvatar,
+      avatarError: false,
       avatarText: avatarText,
       avatarBg: avatarBg,
       senderName: userName
@@ -2032,6 +2153,7 @@ export class MessageService {
     const currentUser = userInfo?.user
     const clientMessageId = `ccard_${Date.now()}_${Math.floor(Math.random() * 100000)}`
     const userName = currentUser?.nickname || ''
+    const senderAvatar = this.normalizeAvatarUrl(currentUser?.avatar)
     const avatarText = getAvatarText(userName)
     const avatarBg = getUserAvatarColor(this.currentUserId)
     const timestamp = Date.now()
@@ -2053,6 +2175,8 @@ export class MessageService {
       timestamp: timestamp,
       isSelf: true,
       showTime: true,
+      senderAvatar: senderAvatar,
+      avatarError: false,
       avatarText: avatarText,
       avatarBg: avatarBg,
       senderName: userName
@@ -2100,6 +2224,7 @@ export class MessageService {
 
     // 生成头像信息
     const userName = currentUser?.nickname || ''
+    const senderAvatar = this.normalizeAvatarUrl(currentUser?.avatar)
     const avatarText = getAvatarText(userName)
     const avatarBg = getUserAvatarColor(this.currentUserId)
     
@@ -2118,6 +2243,8 @@ export class MessageService {
       timestamp: message.header.timestamp,
       isSelf: true,
       showTime: true,
+      senderAvatar: senderAvatar,
+      avatarError: false,
       avatarText: avatarText,
       avatarBg: avatarBg,
       senderName: userName
@@ -2363,6 +2490,7 @@ export class MessageService {
     const isSelf = senderIdStr === this.currentUserId
     const groupIdStr = message.header.groupId != null ? message.header.groupId.toString() : '0'
     const senderName = await this.resolveSenderDisplayName(senderIdStr, groupIdStr)
+    const senderAvatar = await this.resolveUserAvatar(senderIdStr)
     const avatarText = senderName ? getAvatarText(senderName) : '?'
 
     // enterprise: parse rev from header.extra (JSON); default 1
@@ -2410,6 +2538,8 @@ export class MessageService {
             }
             msg.messageId = msgId
             msg.status = MessageStatus.SENT
+            msg.senderAvatar = senderAvatar
+            msg.avatarError = false
             if (extraRaw != null && extraRaw !== '') {
               const existingContactPayload = this.extractContactCardPayload((msg as any).content, (msg as any).extra)
               const inboundContactPayload = this.extractContactCardPayload((message as any).body, extraRaw)
@@ -2561,6 +2691,8 @@ export class MessageService {
       timestamp: message.header.timestamp,
       isSelf: isSelf,
       showTime: true,
+      senderAvatar: senderAvatar,
+      avatarError: false,
       avatarText: avatarText,
       avatarBg: getUserAvatarColor(senderIdStr),
       senderName: senderName

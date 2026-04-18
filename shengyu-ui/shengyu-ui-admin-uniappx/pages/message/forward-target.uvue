@@ -43,7 +43,14 @@
 					@click="handleSelect(item.chatId)"
 				>
 					<view class="conv-avatar" :style="{ backgroundColor: item.avatarBg }">
-						<text v-if="item.conversationType === 2" class="iconfont conv-avatar-icon">&#xe616;</text>
+						<image
+							v-if="shouldShowConversationAvatar(item)"
+							class="conv-avatar-image"
+							:src="item.targetAvatar"
+							mode="aspectFill"
+							@error="handleConversationAvatarError(item)"
+						/>
+						<text v-else-if="item.conversationType === 2" class="iconfont conv-avatar-icon">&#xe616;</text>
 						<text v-else class="conv-avatar-text">{{ item.avatarText }}</text>
 					</view>
 					<view class="conv-body">
@@ -152,6 +159,25 @@ function loadConversationList(): void {
 	} catch (e) {
 		conversations.value = []
 	}
+}
+
+function normalizeAvatarUrl(raw: any): string {
+	if (raw == null) {
+		return ''
+	}
+	const text = String(raw).trim()
+	return (text !== '' && text !== 'null' && text !== 'undefined') ? text : ''
+}
+
+function shouldShowConversationAvatar(item: any): boolean {
+	return normalizeAvatarUrl(item != null ? item.targetAvatar : '') !== '' && item.avatarError !== true
+}
+
+function handleConversationAvatarError(item: any): void {
+	if (item == null) {
+		return
+	}
+	item.avatarError = true
 }
 
 async function handleSelect(targetChatId: string): Promise<void> {
@@ -414,6 +440,13 @@ onShow(() => {
 	flex-direction: row;
 	justify-content: center;
 	align-items: center;
+	overflow: hidden;
+}
+
+.conv-avatar-image {
+	width: 44px;
+	height: 44px;
+	border-radius: 10px;
 }
 
 .conv-avatar-icon {

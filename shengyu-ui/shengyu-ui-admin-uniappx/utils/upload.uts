@@ -61,6 +61,7 @@ export type UploadAndReturnIdResult = {
  */
 export type UploadConfig = {
 	url?: string           // 上传地址（可选，默认使用 UPLOAD_URL）
+	name?: string          // 文件字段名（默认 file）
 	directory?: string     // 文件目录
 	formData?: UTSJSONObject  // 额外的表单数据
 	maxSize?: number       // 最大文件大小（字节）
@@ -119,12 +120,24 @@ export function uploadFile(
 	filePath: string,
 	config?: UploadConfig
 ): Promise<UploadResult> {
-	return new Promise((resolve, reject) => {
+	return new Promise(async (resolve, reject) => {
 		// 默认配置
 		const uploadConfig: UploadConfig = {
 			url: UPLOAD_URL,
 			showToast: true,
 			...config
+		}
+
+		if (uploadConfig.maxSize != null && uploadConfig.maxSize > 0) {
+			try {
+				const localFileSize = await getLocalFileSize(filePath)
+				if (!validateFileSize(localFileSize, uploadConfig.maxSize)) {
+					reject(new Error('文件过大'))
+					return
+				}
+			} catch (e) {
+				// ignore: 文件大小无法探测时，继续由服务端兜底
+			}
 		}
 		
 		// 构建表单数据
@@ -135,7 +148,7 @@ export function uploadFile(
 		const uploadTask = uni.uploadFile({
 			url: uploadConfig.url!,
 			filePath: filePath,
-			name: 'file',
+			name: uploadConfig.name != null && uploadConfig.name !== '' ? uploadConfig.name : 'file',
 			formData: formData,
 			header: header,
 			success: (res) => {
@@ -536,6 +549,20 @@ function validateFileSize(size: number, maxSize: number): boolean {
 		return false
 	}
 	return true
+}
+
+function getLocalFileSize(filePath: string): Promise<number> {
+	return new Promise((resolve, reject) => {
+		uni.getFileInfo({
+			filePath: filePath,
+			success: (res) => {
+				resolve(res.size != null ? Number(res.size) : 0)
+			},
+			fail: (err) => {
+				reject(err)
+			}
+		})
+	})
 }
 
 /**

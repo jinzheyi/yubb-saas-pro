@@ -5,15 +5,25 @@
 		<!-- 个人信息头部 -->
 		<view class="user-header">
 			<view class="user-info-row">
-				<image v-if="userInfo.avatar" class="avatar" :src="userInfo.avatar"></image>
-				<view v-else class="avatar" :style="{ backgroundColor: userAvatarBg }">
-					<text class="avatar-text">{{ userAvatarText }}</text>
+				<view class="avatar-editor" hover-class="avatar-editor-active" @click="handleAvatarEdit">
+					<image v-if="userInfo.avatar" class="avatar" :src="userInfo.avatar" mode="aspectFill"></image>
+					<view v-else class="avatar avatar-fallback" :style="{ backgroundColor: userAvatarBg }">
+						<text class="avatar-text">{{ userAvatarText }}</text>
+					</view>
+					<view class="avatar-edit-badge">
+						<text class="iconfont avatar-edit-icon">&#xea8d;</text>
+					</view>
+					<view v-if="avatarUploading" class="avatar-upload-mask">
+						<text class="avatar-upload-percent">{{ avatarUploadProgress }}%</text>
+						<text class="avatar-upload-label">上传中</text>
+					</view>
 				</view>
 				<view class="user-detail">
 					<view class="name-row">
 						<text class="name">{{ userInfo.nickname || '-' }}</text>
 						<text class="iconfont qr-icon">&#xeaf1;</text>
 					</view>
+					<text class="avatar-hint">{{ avatarHintText }}</text>
 				</view>
 			</view>
 			<view class="dept-row">
@@ -71,15 +81,19 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
-	import { clearUserCache } from '../../store/user.uts'
+	import { clearUserCache, updateUserAvatar } from '../../store/user.uts'
 	import { logout } from '../../api/login.uts'
-	import { getCurrentUserDetail } from '../../api/user.uts'
+	import { clearCurrentUserAvatar, getCurrentUserDetail, updateCurrentUserAvatar } from '../../api/user.uts'
 	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
+	import { messageService } from '../../services/message-service.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
+	import { chooseImage } from '../../utils/upload.uts'
 
 	const { t } = useI18n()
 
 	const loading = ref(false)
+	const avatarUploading = ref(false)
+	const avatarUploadProgress = ref(0)
 	const userInfo = ref({
 		id: '' as string,
 		nickname: '' as string,
@@ -102,9 +116,15 @@
 		if (post) return post
 		return '-'
 	})
+	const avatarHintText = computed(() : string => {
+		if (avatarUploading.value) {
+			return '头像上传中 ' + avatarUploadProgress.value + '%'
+		}
+		return userInfo.value.avatar ? '点击更换或删除头像' : '点击上传头像'
+	})
 
 	async function loadProfile() {
-		if (loading.value) return
+		if (loading.value || avatarUploading.value) return
 		try {
 			loading.value = true
 			const data = await getCurrentUserDetail()
@@ -115,6 +135,7 @@
 				deptName: data && data.deptName ? data.deptName : '',
 				postName: data && data.postName ? data.postName : ''
 			}
+			messageService.refreshCurrentUserAvatar(userInfo.value.avatar)
 		} catch (e) {
 			console.error('[Profile] 加载当前用户信息失败:', e)
 			uni.showToast({
@@ -123,6 +144,85 @@
 			})
 		} finally {
 			loading.value = false
+		}
+	}
+
+	function isCancelError(err : any) : boolean {
+		if (err == null) return false
+		const msg = String((err as any).errMsg || (err as any).message || err).toLowerCase()
+		return msg.indexOf('cancel') !== -1 || msg.indexOf('canceled') !== -1
+	}
+
+	async function handleAvatarEdit() {
+		if (avatarUploading.value) {
+			return
+		}
+		const itemList = userInfo.value.avatar !== '' ? ['重新上传头像', '删除自定义头像'] : ['上传头像']
+		uni.showActionSheet({
+			itemList: itemList,
+			itemColor: '#3370FF',
+			success: async (res) => {
+				if (res.tapIndex === 0) {
+					await handleAvatarUpload()
+					return
+				}
+				if (userInfo.value.avatar !== '' && res.tapIndex === 1) {
+					await handleAvatarClear()
+				}
+			}
+		})
+	}
+
+	async function handleAvatarUpload() {
+		try {
+			const paths = await chooseImage(1)
+			if (!paths || paths.length === 0) {
+				return
+			}
+			const filePath = paths[0]
+			avatarUploading.value = true
+			avatarUploadProgress.value = 0
+			const avatar = await updateCurrentUserAvatar(filePath, (progress : number) => {
+				avatarUploadProgress.value = progress
+			})
+			userInfo.value.avatar = avatar
+			updateUserAvatar(avatar)
+			messageService.refreshCurrentUserAvatar(avatar)
+			avatarUploadProgress.value = 100
+			uni.showToast({
+				title: '头像更新成功',
+				icon: 'success'
+			})
+		} catch (e) {
+			if (!isCancelError(e)) {
+				console.error('[Profile] 更新头像失败:', e)
+			}
+		} finally {
+			avatarUploading.value = false
+			avatarUploadProgress.value = 0
+		}
+	}
+
+	async function handleAvatarClear() {
+		if (avatarUploading.value) {
+			return
+		}
+		try {
+			avatarUploading.value = true
+			avatarUploadProgress.value = 0
+			await clearCurrentUserAvatar()
+			userInfo.value.avatar = ''
+			updateUserAvatar('')
+			messageService.refreshCurrentUserAvatar('')
+			uni.showToast({
+				title: '已恢复默认头像',
+				icon: 'success'
+			})
+		} catch (e) {
+			console.error('[Profile] 清除头像失败:', e)
+		} finally {
+			avatarUploading.value = false
+			avatarUploadProgress.value = 0
 		}
 	}
 
@@ -220,6 +320,63 @@
 		align-items: center;
 	}
 
+	.avatar-editor {
+		position: relative;
+		width: 60px;
+		height: 60px;
+	}
+
+	.avatar-editor-active {
+		opacity: 0.9;
+	}
+
+	.avatar-fallback {
+		overflow: hidden;
+	}
+
+	.avatar-edit-badge {
+		position: absolute;
+		right: -4px;
+		bottom: -4px;
+		width: 24px;
+		height: 24px;
+		border-radius: 12px;
+		background-color: #FFFFFF;
+		border-width: 1px;
+		border-color: rgba(51, 112, 255, 0.18);
+		justify-content: center;
+		align-items: center;
+	}
+
+	.avatar-edit-icon {
+		color: #3370FF;
+		font-size: 13px;
+	}
+
+	.avatar-upload-mask {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		border-radius: 12px;
+		background-color: rgba(15, 23, 42, 0.62);
+		justify-content: center;
+		align-items: center;
+	}
+
+	.avatar-upload-percent {
+		color: #FFFFFF;
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.avatar-upload-label {
+		color: rgba(255, 255, 255, 0.88);
+		font-size: 11px;
+		margin-top: 2px;
+	}
+
 	.avatar-text {
 		color: #FFFFFF;
 		font-size: 18px;
@@ -246,6 +403,12 @@
 		color: rgba(255, 255, 255, 0.7);
 		font-size: 18px;
 		margin-left: 8px;
+	}
+
+	.avatar-hint {
+		margin-top: 6px;
+		color: rgba(255, 255, 255, 0.76);
+		font-size: 12px;
 	}
 
 	.dept-row {

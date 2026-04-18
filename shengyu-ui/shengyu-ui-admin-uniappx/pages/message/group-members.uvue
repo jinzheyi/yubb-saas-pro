@@ -41,7 +41,14 @@
 					</view>
 					
 					<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
-						<text class="member-avatar-text">{{ member.avatarText }}</text>
+						<image
+							v-if="shouldShowAvatar(member)"
+							class="member-avatar-image"
+							:src="member.avatar"
+							mode="aspectFill"
+							@error="handleAvatarError(member)"
+						/>
+						<text v-else class="member-avatar-text">{{ member.avatarText }}</text>
 					</view>
 					<view class="member-info">
 						<text class="member-name">{{ member.name }}</text>
@@ -143,6 +150,8 @@
 						id: uid,
 						name: displayName,
 						deptName: member.deptName || '',
+						avatar: member.avatar != null ? String(member.avatar) : '',
+						avatarError: false,
 						avatarText: getAvatarText(displayName),
 						avatarBg: getUserAvatarColor(uid),
 						pinyin: pinyinLetter,
@@ -349,6 +358,25 @@
 	function scrollToLetter(letter : string) {
 		scrollIntoView.value = 'letter-' + letter
 	}
+
+	function normalizeAvatarUrl(raw: any): string {
+		if (raw == null) {
+			return ''
+		}
+		const text = String(raw).trim()
+		return (text !== '' && text !== 'null' && text !== 'undefined') ? text : ''
+	}
+
+	function shouldShowAvatar(member: any): boolean {
+		return normalizeAvatarUrl(member != null ? member.avatar : '') !== '' && member.avatarError !== true
+	}
+
+	function handleAvatarError(member: any): void {
+		if (member == null) {
+			return
+		}
+		member.avatarError = true
+	}
 	
 	onLoad((options : any) => {
 		// 获取当前用户ID
@@ -533,6 +561,13 @@
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
+		overflow: hidden;
+	}
+
+	.member-avatar-image {
+		width: 44px;
+		height: 44px;
+		border-radius: 8px;
 	}
 
 	.member-avatar-text {

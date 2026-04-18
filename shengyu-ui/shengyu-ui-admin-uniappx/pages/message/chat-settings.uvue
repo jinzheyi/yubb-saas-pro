@@ -17,7 +17,14 @@
 			<!-- 个人信息卡片 -->
 			<view class="profile-card">
 				<view class="avatar" :style="{ backgroundColor: profileAvatarBg }">
-					<text class="avatar-text">{{ profileAvatarText }}</text>
+					<image
+						v-if="shouldShowProfileAvatar()"
+						class="avatar-image"
+						:src="profileAvatarUrl"
+						mode="aspectFill"
+						@error="handleProfileAvatarError"
+					/>
+					<text v-else class="avatar-text">{{ profileAvatarText }}</text>
 				</view>
 				<text class="name">{{ profileName }}</text>
 				<text class="role">{{ profileRole }}</text>
@@ -72,6 +79,8 @@
 	const profileName = ref('聊天设置')
 	const profileRole = ref('暂无岗位信息')
 	const profileAvatarText = ref('?')
+	const profileAvatarUrl = ref('')
+	const profileAvatarError = ref(false)
 	const profileAvatarBg = ref('#5B8FF9')
 	const toggleLoading = ref(false)
 
@@ -95,6 +104,8 @@
 		profileAvatarText.value = conversation.avatarText != null && String(conversation.avatarText).trim() !== ''
 			? String(conversation.avatarText)
 			: getAvatarText(targetName)
+		profileAvatarUrl.value = normalizeAvatarUrl(conversation.targetAvatar)
+		profileAvatarError.value = false
 		if (targetId.value) {
 			profileAvatarBg.value = getUserAvatarColor(targetId.value)
 		}
@@ -117,6 +128,8 @@
 				? String(data.postName).trim()
 				: (data.deptName != null && String(data.deptName).trim() !== '' ? String(data.deptName).trim() : '暂无岗位信息')
 			profileAvatarText.value = getAvatarText(profileName.value)
+			profileAvatarUrl.value = normalizeAvatarUrl(data.avatar)
+			profileAvatarError.value = false
 			profileAvatarBg.value = getUserAvatarColor(targetId.value)
 		} catch (e) {
 			console.error('[ChatSettings] 加载用户详情失败:', e)
@@ -156,6 +169,22 @@
 	onUnload(() => {
 		conversationService.removeUpdateListener(syncConversationSettings)
 	})
+
+	function normalizeAvatarUrl(raw: any): string {
+		if (raw == null) {
+			return ''
+		}
+		const text = String(raw).trim()
+		return (text !== '' && text !== 'null' && text !== 'undefined') ? text : ''
+	}
+
+	function shouldShowProfileAvatar(): boolean {
+		return profileAvatarUrl.value !== '' && profileAvatarError.value !== true
+	}
+
+	function handleProfileAvatarError(): void {
+		profileAvatarError.value = true
+	}
 
 	function handleBack() {
 		uni.navigateBack()
@@ -343,6 +372,13 @@
 		justify-content: center;
 		align-items: center;
 		margin-bottom: 12px;
+		overflow: hidden;
+	}
+
+	.avatar-image {
+		width: 64px;
+		height: 64px;
+		border-radius: 12px;
 	}
 
 	.avatar-text {

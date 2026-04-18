@@ -35,7 +35,14 @@
 					</view>
 					
 					<view class="conversation-avatar" :style="{ backgroundColor: conversation.avatarBg }">
-						<text class="avatar-text">{{ conversation.avatarText }}</text>
+						<image
+							v-if="shouldShowAvatar(conversation)"
+							class="conversation-avatar-image"
+							:src="conversation.targetAvatar"
+							mode="aspectFill"
+							@error="handleAvatarError(conversation)"
+						/>
+						<text v-else class="avatar-text">{{ conversation.avatarText }}</text>
 					</view>
 					
 					<view class="conversation-info">
@@ -158,6 +165,25 @@
 		emit('confirm', selectedIds.value)
 		handleClose()
 	}
+
+	function normalizeAvatarUrl(raw: any): string {
+		if (raw == null) {
+			return ''
+		}
+		const text = String(raw).trim()
+		return (text !== '' && text !== 'null' && text !== 'undefined') ? text : ''
+	}
+
+	function shouldShowAvatar(conversation: any): boolean {
+		return normalizeAvatarUrl(conversation != null ? conversation.targetAvatar : '') !== '' && conversation.avatarError !== true
+	}
+
+	function handleAvatarError(conversation: any): void {
+		if (conversation == null) {
+			return
+		}
+		conversation.avatarError = true
+	}
 </script>
 
 <style>
@@ -273,6 +299,13 @@
 		align-items: center;
 		justify-content: center;
 		margin-right: 12px;
+		overflow: hidden;
+	}
+
+	.conversation-avatar-image {
+		width: 40px;
+		height: 40px;
+		border-radius: 4px;
 	}
 	
 	.avatar-text {

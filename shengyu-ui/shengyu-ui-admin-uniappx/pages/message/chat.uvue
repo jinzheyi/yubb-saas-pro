@@ -64,7 +64,14 @@
 						</view>
 						<template v-else>
 							<view class="avatar" :style="{ backgroundColor: msg.avatarBg }">
-								<text class="avatar-text">{{ msg.avatarText }}</text>
+								<image
+									v-if="shouldShowMessageAvatarImage(msg)"
+									class="avatar-image"
+									:src="msg.senderAvatar"
+									mode="aspectFill"
+									@error="handleMessageAvatarError(msg)"
+								/>
+								<text v-else class="avatar-text">{{ msg.avatarText }}</text>
 							</view>
 							<view class="message-bubble-wrap">
 								<!-- 发送者名称 (仅在群聊中,仅对他人消息) -->
@@ -536,7 +543,7 @@
 	import { getGroup } from '../../api/group.uts'
 	import { addFavorite as addMessageFavoriteApi } from '../../api/favorite.uts'
 	import { getConversationByTarget } from '../../api/conversation.uts'
-	import { getUserIdStr, getTenantId, hasRole } from '../../store/user.uts'
+	import { getUserIdStr, getTenantId, getUserInfo, hasRole } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 	import { consumeNavState } from '../../utils/nav-state.uts'
 	import { 
@@ -1411,6 +1418,8 @@
 		time : string;
 		timestamp : number;
 		showTime : boolean;
+		senderAvatar ?: string;
+		avatarError ?: boolean;
 		avatarText : string;
 		avatarBg : string;
 		senderName : string;
@@ -2675,8 +2684,10 @@
 	
 	// 处理发送者信息缺失的后备方案
 	const senderNickname = msg.senderNickname || ''
+	const senderAvatar = normalizeAvatarUrl(msg.senderAvatar)
 	const avatarText = senderNickname ? getAvatarTextUtil(senderNickname) : '?'
 	const isSelfVal = resolveMessageIsSelf((msg as any).isSelf, senderIdStr)
+	const resolvedSenderAvatar = senderAvatar !== '' ? senderAvatar : (isSelfVal ? getCurrentUserAvatarUrl() : '')
 		// 后端 status: 0-发送中 1-已发送 2-已读 3-失败 6-已撤回
 		// 这里保留数值状态，避免把 status=2 误映射为 'sending' 导致气泡旁已读/未读入口不展示
 		let statusVal: any = (msg as any).status
@@ -2709,6 +2720,8 @@
 			time: msg.sendTime || msg.createTime || '',
 			timestamp: new Date(msg.sendTime || msg.createTime || Date.now()).getTime(),
 			showTime: true,
+			senderAvatar: resolvedSenderAvatar,
+			avatarError: false,
 			avatarText: avatarText,
 			avatarBg: getUserAvatarColor(senderIdStr),
 			senderName: senderNickname,
@@ -2772,6 +2785,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			time: new Date(msg.timestamp).toLocaleString(),
 			timestamp: msg.timestamp,
 			showTime: true,
+			senderAvatar: normalizeAvatarUrl((msg as any).senderAvatar) !== '' ? normalizeAvatarUrl((msg as any).senderAvatar) : (resolveMessageIsSelf((msg as any).isSelf, senderIdStr) ? getCurrentUserAvatarUrl() : ''),
+			avatarError: (msg as any).avatarError === true,
 			avatarText: msg.avatarText,
 			avatarBg: msg.avatarBg,
 			senderName: msg.senderName,
@@ -3642,6 +3657,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			time: new Date(message.timestamp).toLocaleString(),
 			timestamp: message.timestamp,
 			showTime: true,
+			senderAvatar: normalizeAvatarUrl((message as any).senderAvatar) !== '' ? normalizeAvatarUrl((message as any).senderAvatar) : (incomingIsSelf ? getCurrentUserAvatarUrl() : ''),
+			avatarError: (message as any).avatarError === true,
 			avatarText: message.avatarText,
 			avatarBg: message.avatarBg,
 			senderName: message.senderName,
@@ -6201,6 +6218,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						time: new Date(message.timestamp).toLocaleString(),
 						timestamp: message.timestamp,
 						showTime: true,
+						senderAvatar: normalizeAvatarUrl((message as any).senderAvatar),
+						avatarError: false,
 						avatarText: message.avatarText,
 						avatarBg: message.avatarBg,
 						status: message.status
@@ -6281,6 +6300,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 							time: new Date(message.timestamp).toLocaleString(),
 							timestamp: message.timestamp,
 							showTime: true,
+							senderAvatar: normalizeAvatarUrl((message as any).senderAvatar),
+							avatarError: false,
 							avatarText: message.avatarText,
 							avatarBg: message.avatarBg,
 							status: message.status
@@ -6396,6 +6417,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					time: new Date(message.timestamp).toLocaleString(),
 					timestamp: message.timestamp,
 					showTime: true,
+					senderAvatar: normalizeAvatarUrl((message as any).senderAvatar),
+					avatarError: false,
 					avatarText: message.avatarText,
 					avatarBg: message.avatarBg,
 					status: message.status
@@ -6511,6 +6534,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					time: new Date(message.timestamp).toLocaleString(),
 					timestamp: message.timestamp,
 					showTime: true,
+					senderAvatar: normalizeAvatarUrl((message as any).senderAvatar),
+					avatarError: false,
 					avatarText: message.avatarText,
 					avatarBg: message.avatarBg,
 					status: message.status
@@ -7842,6 +7867,52 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
+	function normalizeAvatarUrl(raw: any): string {
+		try {
+			if (raw == null) {
+				return ''
+			}
+			const text = String(raw).trim()
+			if (text === '' || text === 'null' || text === 'undefined') {
+				return ''
+			}
+			return text
+		} catch (e) {
+			return ''
+		}
+	}
+
+	function getCurrentUserAvatarUrl(): string {
+		try {
+			const userInfo = getUserInfo()
+			return normalizeAvatarUrl(userInfo != null && userInfo.user != null ? userInfo.user.avatar : '')
+		} catch (e) {
+			return ''
+		}
+	}
+
+	function shouldShowMessageAvatarImage(msg: any): boolean {
+		if (msg == null) {
+			return false
+		}
+		const avatar = normalizeAvatarUrl((msg as any).senderAvatar)
+		return avatar !== '' && (msg as any).avatarError !== true
+	}
+
+	function handleMessageAvatarError(msg: any): void {
+		try {
+			const messageId = msg != null && (msg as any).messageId != null ? String((msg as any).messageId) : ''
+			if (messageId === '') {
+				return
+			}
+			patchMessageInList(messageId, {
+				avatarError: true
+			})
+		} catch (e) {
+			// ignore
+		}
+	}
+
 
     function toggleSelect(msg : MessageItem) {
 		const id = getSelectMessageId(msg)
@@ -8682,6 +8753,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			time: new Date(timestamp).toLocaleString(),
 			timestamp: timestamp,
 			showTime: true,
+			senderAvatar: getCurrentUserAvatarUrl(),
+			avatarError: false,
 			avatarText: getAvatarTextUtil('我'),
 			avatarBg: getUserAvatarColor(currentUserId.value),
 			senderName: '我',
@@ -9752,9 +9825,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		width: 40px;
 		height: 40px;
 		border-radius: 8px;
+		overflow: hidden;
 		justify-content: center;
 		align-items: center;
 		flex-shrink: 0;
+	}
+
+	.avatar-image {
+		width: 40px;
+		height: 40px;
+		border-radius: 8px;
 	}
 
 	.avatar-text {

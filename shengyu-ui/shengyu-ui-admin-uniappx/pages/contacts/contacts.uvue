@@ -51,7 +51,14 @@
 				<view class="contact-list">
 					<view class="contact-item" hover-class="contact-item-active" v-for="(item, index) in group.contacts" :key="index" @click="handleContact(item)">
 						<view class="contact-avatar" :style="{ backgroundColor: item.avatarBg }">
-							<text class="avatar-text">{{ item.avatarText }}</text>
+							<image
+								v-if="shouldShowAvatar(item)"
+								class="contact-avatar-image"
+								:src="item.avatar"
+								mode="aspectFill"
+								@error="handleAvatarError(item)"
+							/>
+							<text v-else class="avatar-text">{{ item.avatarText }}</text>
 						</view>
 						<view class="contact-info">
 							<text class="contact-name">{{ item.name }}</text>
@@ -180,6 +187,8 @@
 					userId: userIdStr,
 					name: displayName,
 					role: contact.deptName || '',
+					avatar: contact.avatar != null ? String(contact.avatar) : '',
+					avatarError: false,
 					avatarText: getAvatarText(displayName),
 					avatarBg: getUserAvatarColor(userIdStr),
 					pinyin: pinyinLetter
@@ -320,6 +329,25 @@
 		uni.navigateTo({
 			url: '/pages/common/search' + query
 		})
+	}
+
+	function normalizeAvatarUrl(raw: any): string {
+		if (raw == null) {
+			return ''
+		}
+		const text = String(raw).trim()
+		return (text !== '' && text !== 'null' && text !== 'undefined') ? text : ''
+	}
+
+	function shouldShowAvatar(item: any): boolean {
+		return normalizeAvatarUrl(item != null ? item.avatar : '') !== '' && item.avatarError !== true
+	}
+
+	function handleAvatarError(item: any): void {
+		if (item == null) {
+			return
+		}
+		item.avatarError = true
 	}
 </script>
 
@@ -508,6 +536,13 @@
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
+		overflow: hidden;
+	}
+
+	.contact-avatar-image {
+		width: 40px;
+		height: 40px;
+		border-radius: 8px;
 	}
 
 	.avatar-text {

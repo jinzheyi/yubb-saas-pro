@@ -493,6 +493,17 @@ export function post(url: string, data?: UTSJSONObject): Promise<any> {
 	})
 }
 
+/**
+ * DELETE 请求
+ */
+export function del(url: string, data?: UTSJSONObject): Promise<any> {
+	return request({
+		url: url,
+		method: 'DELETE',
+		data: data
+	})
+}
+
 export function rawRequest(options: UTSJSONObject): Promise<any> {
 	return new Promise((resolve, reject) => {
 		const config = requestInterceptor(options)

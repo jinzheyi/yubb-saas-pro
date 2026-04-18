@@ -2,7 +2,9 @@
  * 用户管理 API
  */
 
-import { get } from '../utils/request.uts'
+import { del, get } from '../utils/request.uts'
+import { API_BASE_URL, MAX_IMAGE_SIZE } from '../config/app.config.uts'
+import { uploadFile } from '../utils/upload.uts'
 
 /**
  * 获取用户详情
@@ -18,6 +20,46 @@ export function getUserDetail(id: string): Promise<any> {
  */
 export function getCurrentUserDetail(): Promise<any> {
 	return get('/system/user/get-profile')
+}
+
+/**
+ * 更新当前用户头像
+ * @param filePath 本地文件路径
+ * @param onProgress 上传进度回调
+ */
+export function updateCurrentUserAvatar(
+	filePath: string,
+	onProgress?: (progress: number) => void
+): Promise<string> {
+	return new Promise((resolve, reject) => {
+		uploadFile(filePath, {
+			url: API_BASE_URL + '/system/user/avatar',
+			name: 'avatarFile',
+			maxSize: MAX_IMAGE_SIZE,
+			showToast: true,
+			onProgress: onProgress
+		}).then((result) => {
+			const data = result.data as any
+			if (typeof data === 'string') {
+				resolve(data)
+				return
+			}
+			if (data && data.url) {
+				resolve(data.url)
+				return
+			}
+			reject(new Error('头像上传返回数据无效'))
+		}).catch((err) => {
+			reject(err)
+		})
+	})
+}
+
+/**
+ * 删除当前用户自定义头像
+ */
+export function clearCurrentUserAvatar(): Promise<boolean> {
+	return del('/system/user/avatar')
 }
 
 /**

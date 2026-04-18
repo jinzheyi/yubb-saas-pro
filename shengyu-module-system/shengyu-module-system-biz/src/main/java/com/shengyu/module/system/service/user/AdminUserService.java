@@ -79,6 +79,13 @@ public interface AdminUserService {
     String updateUserAvatar(Long id, InputStream avatarFile) throws Exception;
 
     /**
+     * 清除用户自定义头像
+     *
+     * @param id 用户 id
+     */
+    void clearUserAvatar(Long id);
+
+    /**
      * 修改密码
      *
      * @param id       用户编号

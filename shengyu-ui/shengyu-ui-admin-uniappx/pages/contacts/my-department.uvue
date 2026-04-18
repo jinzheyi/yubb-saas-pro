@@ -95,7 +95,14 @@
 					</view>
 					
 					<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
-						<text class="avatar-text">{{ member.avatarText }}</text>
+						<image
+							v-if="shouldShowAvatar(member)"
+							class="member-avatar-image"
+							:src="member.avatar"
+							mode="aspectFill"
+							@error="handleAvatarError(member)"
+						/>
+						<text v-else class="avatar-text">{{ member.avatarText }}</text>
 					</view>
 					<view class="member-info">
 						<text class="member-name">{{ member.name }}</text>
@@ -380,6 +387,8 @@
 						id: String(user.id),
 						name: displayName,
 						role: user.deptName || '',
+						avatar: user.avatar != null ? String(user.avatar) : '',
+						avatarError: false,
 						avatarText: getAvatarText(displayName),
 						avatarBg: getUserAvatarColor(String(user.id)),
 						selected: isMemberSelected(String(user.id))
@@ -431,6 +440,8 @@
 								id: String(user.id),
 								name: user.remarkName || user.nickname || '未知',
 								role: user.deptName || '',
+								avatar: user.avatar != null ? String(user.avatar) : '',
+								avatarError: false,
 								avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
 								avatarBg: getUserAvatarColor(String(user.id)),
 								selected: isMemberSelected(String(user.id))
@@ -524,6 +535,8 @@
 						id: String(user.id),
 						name: displayName,
 						role: user.deptName || '',
+						avatar: user.avatar != null ? String(user.avatar) : '',
+						avatarError: false,
 						avatarText: getAvatarText(displayName),
 						avatarBg: getUserAvatarColor(String(user.id)),
 						selected: isMemberSelected(String(user.id))
@@ -627,6 +640,25 @@
 		for (let i = 0; i < memberList.value.length; i++) {
 			memberList.value[i].selected = isMemberSelected(String(memberList.value[i].id))
 		}
+	}
+
+	function normalizeAvatarUrl(raw: any): string {
+		if (raw == null) {
+			return ''
+		}
+		const text = String(raw).trim()
+		return (text !== '' && text !== 'null' && text !== 'undefined') ? text : ''
+	}
+
+	function shouldShowAvatar(member: any): boolean {
+		return normalizeAvatarUrl(member != null ? member.avatar : '') !== '' && member.avatarError !== true
+	}
+
+	function handleAvatarError(member: any): void {
+		if (member == null) {
+			return
+		}
+		member.avatarError = true
 	}
 
 	// 页面加载时检查是否为选择模式
@@ -873,6 +905,13 @@
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
+		overflow: hidden;
+	}
+
+	.member-avatar-image {
+		width: 42px;
+		height: 42px;
+		border-radius: 8px;
 	}
 
 	.avatar-text {
@@ -962,5 +1001,4 @@
 		font-weight: 500;
 	}
 </style>
-
 

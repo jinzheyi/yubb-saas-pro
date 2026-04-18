@@ -23,12 +23,15 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.shengyu.framework.common.pojo.CommonResult.success;
+import static com.shengyu.module.infra.enums.ErrorCodeConstants.FILE_IS_EMPTY;
 
 /**
  * 移动端 - 用户 Controller
@@ -105,6 +108,23 @@ public class AppUserController {
     public CommonResult<AppUserDetailRespVO> getCurrentUserDetail() {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return getUserDetail(userId);
+    }
+
+    @RequestMapping(value = "/avatar", method = {RequestMethod.POST, RequestMethod.PUT})
+    @Operation(summary = "更新当前用户头像")
+    public CommonResult<String> updateCurrentUserAvatar(@RequestParam("avatarFile") MultipartFile file) throws Exception {
+        if (file.isEmpty()) {
+            throw exception(FILE_IS_EMPTY);
+        }
+        String avatar = userService.updateUserAvatar(SecurityFrameworkUtils.getLoginUserId(), file.getInputStream());
+        return success(avatar);
+    }
+
+    @DeleteMapping("/avatar")
+    @Operation(summary = "清除当前用户自定义头像")
+    public CommonResult<Boolean> clearCurrentUserAvatar() {
+        userService.clearUserAvatar(SecurityFrameworkUtils.getLoginUserId());
+        return success(true);
     }
 
     @GetMapping("/list")

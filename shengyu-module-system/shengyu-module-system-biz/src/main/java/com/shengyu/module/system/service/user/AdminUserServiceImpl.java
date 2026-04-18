@@ -370,6 +370,15 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
+    public void clearUserAvatar(Long id) {
+        validateAdminUserExists(id);
+        AdminUserDO sysUserDO = new AdminUserDO();
+        sysUserDO.setId(id);
+        sysUserDO.setAvatar("");
+        userMapper.updateById(sysUserDO);
+    }
+
+    @Override
     public void updateUserPassword(Long id, String password) {
         // 校验用户存在
         validateUserExists(id);
