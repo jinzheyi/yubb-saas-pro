@@ -21,16 +21,12 @@
 				<view class="user-detail">
 					<view class="name-row">
 						<text class="name">{{ userInfo.nickname || '-' }}</text>
-						<text class="iconfont qr-icon">&#xeaf1;</text>
 					</view>
 					<text class="avatar-hint">{{ avatarHintText }}</text>
 				</view>
 			</view>
 			<view class="dept-row">
 				<text class="dept-text">{{ deptPostText }}</text>
-			</view>
-			<view class="status-row" @click="handleAction('status')">
-				<text class="status-text">{{ t('profile.user.status') }}</text>
 			</view>
 		</view>
 
@@ -399,12 +395,6 @@
 		font-weight: 600;
 	}
 
-	.qr-icon {
-		color: rgba(255, 255, 255, 0.7);
-		font-size: 18px;
-		margin-left: 8px;
-	}
-
 	.avatar-hint {
 		margin-top: 6px;
 		color: rgba(255, 255, 255, 0.76);
@@ -418,19 +408,6 @@
 	.dept-text {
 		color: rgba(255, 255, 255, 0.8);
 		font-size: 13px;
-	}
-
-	.status-row {
-		margin-top: 16px;
-		background-color: rgba(255, 255, 255, 0.15);
-		padding: 6px 12px;
-		border-radius: 6px;
-		align-self: flex-start;
-	}
-
-	.status-text {
-		color: #FFFFFF;
-		font-size: 12px;
 	}
 
 	.content {
