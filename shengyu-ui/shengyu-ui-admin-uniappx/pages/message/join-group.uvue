@@ -71,13 +71,13 @@
 						<text class="invite-value" :style="{ color: theme.textPrimary }">{{ expireText }}</text>
 					</view>
 					<view v-if="groupInfo.needApproval" class="invite-row">
-						<text class="invite-label">加群方式</text>
+						<text class="invite-label" :style="{ color: theme.textTertiary }">加群方式</text>
 						<text class="invite-value approval-text">需要群主或管理员审核</text>
 					</view>
 				</view>
 
 				<!-- 已在群中提示 -->
-				<view v-if="alreadyInGroup" class="already-in-group">
+				<view v-if="alreadyInGroup" class="already-in-group" :style="{ backgroundColor: theme.brandPrimarySoft }">
 					<text class="iconfont check-icon">&#xe60b;</text>
 					<text class="already-text">您已经是群成员</text>
 				</view>
@@ -92,7 +92,7 @@
 				<!-- 查看群聊按钮（已在群中） -->
 				<view v-else class="action-container">
 					<view class="view-btn" :style="{ backgroundColor: theme.cardBgMuted }" @click="handleViewGroup">
-						<text class="view-btn-text">查看群聊</text>
+						<text class="view-btn-text" :style="{ color: theme.textPrimary }">查看群聊</text>
 					</view>
 				</view>
 			</view>
@@ -462,10 +462,8 @@
 	.manual-entry-input {
 		height: 44px;
 		border-radius: 10px;
-		background-color: #202934;
 		padding: 0 12px;
 		font-size: 14px;
-		color: #F3F6FA;
 	}
 
 	.manual-entry-actions {
@@ -500,7 +498,6 @@
 	.manual-entry-hint {
 		margin-top: 10px;
 		font-size: 12px;
-		color: #8893A2;
 		line-height: 18px;
 	}
 
@@ -513,7 +510,6 @@
 
 	.loading-text {
 		font-size: 14px;
-		color: #8893A2;
 	}
 
 	.empty-container {
@@ -523,14 +519,12 @@
 
 	.empty-title {
 		font-size: 18px;
-		color: #F3F6FA;
 		font-weight: 600;
 		margin-bottom: 8px;
 	}
 
 	.empty-desc {
 		font-size: 14px;
-		color: #8893A2;
 		text-align: center;
 		line-height: 22px;
 	}
@@ -549,14 +543,12 @@
 
 	.error-title {
 		font-size: 18px;
-		color: #F3F6FA;
 		font-weight: 600;
 		margin-bottom: 8px;
 	}
 
 	.error-desc {
 		font-size: 14px;
-		color: #8893A2;
 		text-align: center;
 		margin-bottom: 32px;
 	}
@@ -604,7 +596,6 @@
 
 	.group-name {
 		font-size: 22px;
-		color: #F3F6FA;
 		font-weight: 600;
 		margin-bottom: 8px;
 	}
@@ -692,7 +683,6 @@
 	.view-btn {
 		width: 100%;
 		height: 48px;
-		background-color: #10b981;
 		border-radius: 24px;
 		justify-content: center;
 		align-items: center;
@@ -700,7 +690,6 @@
 
 	.view-btn-text {
 		font-size: 16px;
-		color: #FFFFFF;
 		font-weight: 500;
 	}
 

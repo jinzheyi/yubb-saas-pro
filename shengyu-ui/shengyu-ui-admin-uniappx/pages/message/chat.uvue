@@ -76,7 +76,7 @@
 							</view>
 							<view class="message-bubble-wrap">
 								<!-- 发送者名称 (仅在群聊中,仅对他人消息) -->
-								<text v-if="chatType === 'group' && !msg.isSelf" class="sender-name">
+								<text v-if="chatType === 'group' && !msg.isSelf" class="sender-name" :style="{ color: theme.textTertiary }">
 									{{ msg.senderName }}
 								</text>
 								
@@ -124,7 +124,7 @@
 										</view>
 										<view class="voice-content">
 											<text class="voice-duration" :style="getVoicePrimaryTextStyle(msg)">{{ buildVoiceDurationText(msg) }}</text>
-											<view v-if="shouldShowVoiceProgressBar(msg)" class="voice-progress-track">
+											<view v-if="shouldShowVoiceProgressBar(msg)" class="voice-progress-track" :style="{ backgroundColor: msg.isSelf ? 'rgba(15, 74, 163, 0.16)' : theme.borderColor }">
 												<view class="voice-progress-fill" :style="getVoiceProgressStyle(msg)"></view>
 											</view>
 											<text v-if="buildVoiceStatusText(msg) !== ''" class="voice-status" :style="getVoiceStatusTextStyle(msg)">{{ buildVoiceStatusText(msg) }}</text>
@@ -141,36 +141,36 @@
 								</view>
 								
 								<!-- 文件消息 -->
-                                <view v-else-if="msg.type === 'file'" class="message-bubble bubble-file" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleFileOpen(msg)">
+                                <view v-else-if="msg.type === 'file'" class="message-bubble bubble-file" :style="getFileBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleFileOpen(msg)">
 									<view class="file-info">
-										<text class="file-name">{{ msg.fileName }}</text>
-										<text class="file-size">{{ msg.fileSize }}</text>
+										<text class="file-name" :style="getFileNameStyle(msg)">{{ msg.fileName }}</text>
+										<text class="file-size" :style="getFileMetaStyle(msg)">{{ msg.fileSize }}</text>
 									</view>
-									<text class="iconfont file-icon" :style="{ color: getFileIconColor(msg) }">{{ getFileIconUnicode(msg) }}</text>
+									<text class="iconfont file-icon" :style="getFileIconWrapStyle(msg, getFileIconColor(msg))">{{ getFileIconUnicode(msg) }}</text>
 								</view>
 								
 								<!-- 位置消息 -->
-                                <view v-else-if="msg.type === 'location'" class="message-bubble bubble-location" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleLocationOpen(msg)">
+                                <view v-else-if="msg.type === 'location'" class="message-bubble bubble-location" :style="getLocationBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleLocationOpen(msg)">
 									<view class="location-info">
-										<text class="location-name">{{ msg.locationName }}</text>
-										<text class="location-address">{{ msg.address }}</text>
+										<text class="location-name" :style="getLocationNameStyle(msg)">{{ msg.locationName }}</text>
+										<text class="location-address" :style="getLocationAddressStyle(msg)">{{ msg.address }}</text>
 									</view>
-									<image v-if="msg.locationMapUrl" class="location-map" :src="msg.locationMapUrl" mode="aspectFill" />
+									<image v-if="msg.locationMapUrl" class="location-map" :style="getLocationMapStyle(msg)" :src="msg.locationMapUrl" mode="aspectFill" />
 								</view>
 
 								<!-- 名片消息 -->
-								<view v-else-if="msg.type === 'contact_card'" class="message-bubble bubble-contact-card" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleContactCardOpen(msg)">
+								<view v-else-if="msg.type === 'contact_card'" class="message-bubble bubble-contact-card" :style="getContactCardBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleContactCardOpen(msg)">
 									<view class="contact-card-left">
 										<image v-if="msg.contactAvatar" class="contact-card-avatar" :src="msg.contactAvatar" mode="aspectFill" />
-										<view v-else class="contact-card-avatar-fallback">
-											<text class="contact-card-avatar-text">{{ getContactCardAvatarText(msg) }}</text>
+										<view v-else class="contact-card-avatar-fallback" :style="getContactCardAvatarFallbackStyle(msg)">
+											<text class="contact-card-avatar-text" :style="getContactCardAvatarTextStyle(msg)">{{ getContactCardAvatarText(msg) }}</text>
 										</view>
 									</view>
 									<view class="contact-card-right">
-										<text class="contact-card-name">{{ msg.contactDisplayName || '名片' }}</text>
-										<text v-if="msg.contactPostName" class="contact-card-meta">{{ msg.contactPostName }}</text>
-										<text v-else-if="msg.contactDeptName" class="contact-card-meta">{{ msg.contactDeptName }}</text>
-										<text class="contact-card-tag">个人名片</text>
+										<text class="contact-card-name" :style="getContactCardNameStyle(msg)">{{ msg.contactDisplayName || '名片' }}</text>
+										<text v-if="msg.contactPostName" class="contact-card-meta" :style="getContactCardMetaStyle(msg)">{{ msg.contactPostName }}</text>
+										<text v-else-if="msg.contactDeptName" class="contact-card-meta" :style="getContactCardMetaStyle(msg)">{{ msg.contactDeptName }}</text>
+										<text class="contact-card-tag" :style="getContactCardTagStyle(msg)">个人名片</text>
 									</view>
 								</view>
 								
@@ -203,12 +203,12 @@
 										<text class="iconfont forward-combine-footer-arrow">&#xeb06;</text>
 									</view>
 								</view>
-								<view v-else-if="msg.type === 'custom'" class="message-bubble bubble-text" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
-									<text class="message-content">[自定义消息]</text>
+								<view v-else-if="msg.type === 'custom'" class="message-bubble bubble-text" :style="getTextBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
+									<text class="message-content" :style="getBubbleTextStyle(msg)">[自定义消息]</text>
 								</view>
 								
 								<view v-if="shouldShowReadReceiptEntry(msg)" class="read-receipt-entry" :class="{'read-receipt-entry-self': msg.isSelf}" @click.stop="handleReadReceiptEntryClick(msg)">
-									<text class="read-receipt-entry-text">{{ buildReadReceiptEntryText(msg) }}</text>
+									<text class="read-receipt-entry-text" :style="{ color: theme.textTertiary }">{{ buildReadReceiptEntryText(msg) }}</text>
 								</view>
 							</view>
 						</template>
@@ -390,21 +390,22 @@
 				<view
 					v-if="currentEmojiTab === 'emoji'"
 					class="emoji-delete-float"
+					:style="{ backgroundColor: theme.cardBg, borderColor: theme.borderColor }"
 					@click="handleEmojiDeleteTap"
 				>
-					<view class="emoji-delete-shape">
-						<view class="emoji-delete-notch"></view>
-						<text class="emoji-delete-cross">×</text>
+					<view class="emoji-delete-shape" :style="{ borderColor: theme.textTertiary }">
+						<view class="emoji-delete-notch" :style="{ borderRightColor: theme.textTertiary }"></view>
+						<text class="emoji-delete-cross" :style="{ color: theme.textTertiary }">×</text>
 					</view>
 				</view>
 				
 				<!-- 表情菜单 Tab 栏 -->
 				<view class="emoji-tabs" :style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
-					<view class="emoji-tab-item" :class="{ 'emoji-tab-active': currentEmojiTab === 'emoji' }" @click="currentEmojiTab = 'emoji'">
-						<text class="iconfont emoji-tab-icon" :class="{ 'emoji-tab-icon-active': currentEmojiTab === 'emoji' }">&#xe604;</text>
+					<view class="emoji-tab-item" :class="{ 'emoji-tab-active': currentEmojiTab === 'emoji' }" :style="getEmojiTabItemStyle(currentEmojiTab === 'emoji')" @click="currentEmojiTab = 'emoji'">
+						<text class="iconfont emoji-tab-icon" :class="{ 'emoji-tab-icon-active': currentEmojiTab === 'emoji' }" :style="getEmojiTabIconStyle(currentEmojiTab === 'emoji')">&#xe604;</text>
 					</view>
-					<view class="emoji-tab-item" :class="{ 'emoji-tab-active': currentEmojiTab === 'sticker' }" @click="currentEmojiTab = 'sticker'">
-						<text class="iconfont emoji-tab-icon" :class="{ 'emoji-tab-icon-active': currentEmojiTab === 'sticker' }">&#xe83f;</text>
+					<view class="emoji-tab-item" :class="{ 'emoji-tab-active': currentEmojiTab === 'sticker' }" :style="getEmojiTabItemStyle(currentEmojiTab === 'sticker')" @click="currentEmojiTab = 'sticker'">
+						<text class="iconfont emoji-tab-icon" :class="{ 'emoji-tab-icon-active': currentEmojiTab === 'sticker' }" :style="getEmojiTabIconStyle(currentEmojiTab === 'sticker')">&#xe83f;</text>
 					</view>
 				</view>
 			</view>
@@ -424,25 +425,25 @@
 		</view>
 
         <view v-if="showMsgMenu" class="menu-mask" @click="closeMsgMenu">
-            <view class="menu-content" :style="{ top: menuY + 'px', left: menuX + 'px', opacity: menuOpacity }" @click.stop>
+            <view class="menu-content" :style="{ top: menuY + 'px', left: menuX + 'px', opacity: menuOpacity, backgroundColor: theme.cardBg, borderColor: theme.borderColor }" @click.stop>
                 <view class="menu-list">
-                    <view class="menu-item-btn" v-for="item in currentMenuItems" :key="item.key" hover-class="menu-item-btn-active" @click="handleMenuAction(item.key)">
-                        <text class="iconfont menu-item-icon" :class="{ 'menu-danger': item.key === 'delete' }">{{ item.icon }}</text>
-                        <text class="menu-item-text" :class="{ 'menu-danger': item.key === 'delete' }">{{ item.labelKey ? t(item.labelKey) : item.label }}</text>
+                    <view class="menu-item-btn" :style="{ borderRightColor: theme.borderColor, borderBottomColor: theme.borderColor }" v-for="item in currentMenuItems" :key="item.key" hover-class="menu-item-btn-active" @click="handleMenuAction(item.key)">
+                        <text class="iconfont menu-item-icon" :style="{ color: item.key === 'delete' ? '#FF4D4F' : theme.textPrimary }">{{ item.icon }}</text>
+                        <text class="menu-item-text" :style="{ color: item.key === 'delete' ? '#FF4D4F' : theme.textPrimary }">{{ item.labelKey ? t(item.labelKey) : item.label }}</text>
                     </view>
                 </view>
             </view>
         </view>
 
 		<!-- 多选模式底部工具栏 -->
-		<view v-if="multiSelectMode" class="multi-select-toolbar">
+		<view v-if="multiSelectMode" class="multi-select-toolbar" :style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
 			<view class="toolbar-item" hover-class="toolbar-item-active" @click="handleMultiForward">
-				<text class="iconfont toolbar-icon">&#xe63d;</text>
-				<text class="toolbar-text">转发</text>
+				<text class="iconfont toolbar-icon" :style="{ color: theme.textPrimary }">&#xe63d;</text>
+				<text class="toolbar-text" :style="{ color: theme.textSecondary }">转发</text>
 			</view>
 			<view class="toolbar-item" hover-class="toolbar-item-active" @click="handleMultiDelete">
-				<text class="iconfont toolbar-icon">&#xe602;</text>
-				<text class="toolbar-text">删除</text>
+				<text class="iconfont toolbar-icon" :style="{ color: theme.textPrimary }">&#xe602;</text>
+				<text class="toolbar-text" :style="{ color: theme.textSecondary }">删除</text>
 			</view>
 		</view>
 
@@ -495,23 +496,23 @@
 		</view>
 
 		<view v-if="showReadReceiptSheet" class="read-receipt-mask" @click="closeReadReceiptSheet">
-			<view class="read-receipt-sheet" @click.stop>
-				<view class="read-receipt-header">
-					<text class="read-receipt-title">已读详情</text>
-					<text class="read-receipt-close" @click="closeReadReceiptSheet">关闭</text>
+			<view class="read-receipt-sheet" :style="{ backgroundColor: theme.cardBg }" @click.stop>
+				<view class="read-receipt-header" :style="{ borderBottomColor: theme.borderColor }">
+					<text class="read-receipt-title" :style="{ color: theme.textPrimary }">已读详情</text>
+					<text class="read-receipt-close" :style="{ color: theme.textTertiary }" @click="closeReadReceiptSheet">关闭</text>
 				</view>
 				<view v-if="shouldShowVoiceReadReceiptHint()" class="read-receipt-hint-wrap">
-					<text class="read-receipt-hint-text">语音消息“已读”按会话阅读水位统计，不代表已听语音</text>
+					<text class="read-receipt-hint-text" :style="{ color: theme.textTertiary }">语音消息“已读”按会话阅读水位统计，不代表已听语音</text>
 				</view>
 				<view class="read-receipt-summary">
 					<view class="summary-item" @click="switchReadReceiptTab('read')">
-						<text class="summary-num">{{ readReceiptSummary ? readReceiptSummary.readCount : 0 }}</text>
-						<text class="summary-label" :class="{ 'summary-label-active': readReceiptTab === 'read' }">已读</text>
+						<text class="summary-num" :style="{ color: theme.textPrimary }">{{ readReceiptSummary ? readReceiptSummary.readCount : 0 }}</text>
+						<text class="summary-label" :class="{ 'summary-label-active': readReceiptTab === 'read' }" :style="{ color: readReceiptTab === 'read' ? theme.brandPrimary : theme.textTertiary }">已读</text>
 					</view>
-					<view class="summary-divider"></view>
+					<view class="summary-divider" :style="{ backgroundColor: theme.borderColor }"></view>
 					<view class="summary-item" @click="switchReadReceiptTab('unread')">
-						<text class="summary-num">{{ readReceiptSummary ? readReceiptSummary.unreadCount : 0 }}</text>
-						<text class="summary-label" :class="{ 'summary-label-active': readReceiptTab === 'unread' }">未读</text>
+						<text class="summary-num" :style="{ color: theme.textPrimary }">{{ readReceiptSummary ? readReceiptSummary.unreadCount : 0 }}</text>
+						<text class="summary-label" :class="{ 'summary-label-active': readReceiptTab === 'unread' }" :style="{ color: readReceiptTab === 'unread' ? theme.brandPrimary : theme.textTertiary }">未读</text>
 					</view>
 				</view>
 				<scroll-view class="read-receipt-list" scroll-y="true" @scrolltolower="loadMoreReadReceipt">
@@ -521,15 +522,15 @@
 							<text class="read-receipt-avatar-text">{{ getReadReceiptAvatarText(item) }}</text>
 						</view>
 						<view class="read-receipt-info">
-							<text class="read-receipt-name">{{ item.userName }}</text>
-							<text v-if="readReceiptTab === 'read' && item.readTime" class="read-receipt-time">{{ formatReadReceiptTime(item.readTime) }}</text>
+							<text class="read-receipt-name" :style="{ color: theme.textPrimary }">{{ item.userName }}</text>
+							<text v-if="readReceiptTab === 'read' && item.readTime" class="read-receipt-time" :style="{ color: theme.textTertiary }">{{ formatReadReceiptTime(item.readTime) }}</text>
 						</view>
 					</view>
 					<view v-if="readReceiptLoading" class="read-receipt-loading">
-						<text class="read-receipt-loading-text">加载中...</text>
+						<text class="read-receipt-loading-text" :style="{ color: theme.textTertiary }">加载中...</text>
 					</view>
 					<view v-else-if="!readReceiptHasMore" class="read-receipt-loading">
-						<text class="read-receipt-loading-text">没有更多了</text>
+						<text class="read-receipt-loading-text" :style="{ color: theme.textTertiary }">没有更多了</text>
 					</view>
 				</scroll-view>
 			</view>
@@ -643,56 +644,63 @@
 	}
 
 	function getTextBubbleStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
-		return {
+		return msg.isSelf === true ? {
 			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
 			borderColor: chatBubbleTokens.value.selfBubbleBorder
+		} : {
+			backgroundColor: theme.value.cardBg,
+			borderColor: theme.value.borderColor
 		}
 	}
 
 	function getBubbleTextStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
 		return {
-			color: chatBubbleTokens.value.selfBubbleText
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
 		}
 	}
 
 	function getMentionTextStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
-			return {}
-		}
 		return {
-			color: chatBubbleTokens.value.selfBubbleWaveColor
+			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleWaveColor : theme.value.brandPrimary
 		}
 	}
 
 	function getQuoteSenderStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
 		return {
-			color: chatBubbleTokens.value.selfBubbleText
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
 		}
 	}
 
 	function getQuoteContentStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
 		return {
-			color: chatBubbleTokens.value.selfBubbleSubText
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleSubText : theme.value.textSecondary
 		}
 	}
 
 	function getVoiceBubbleStyle(msg: any): any {
 		const width = getVoiceBubbleWidth(resolveVoiceDurationSeconds(msg), buildVoiceStatusText(msg) !== '')
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {
 				width: width
+			}
+		}
+		if (msg.isSelf !== true) {
+			return {
+				width: width,
+				backgroundColor: theme.value.cardBg,
+				borderColor: theme.value.borderColor
 			}
 		}
 		let backgroundColor = chatBubbleTokens.value.selfBubbleBg
@@ -711,96 +719,212 @@
 	function getVoiceWaveBarStyle(msg: any, barHeight: number): any {
 		return {
 			height: barHeight + 'px',
-			backgroundColor: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleWaveColor : ''
+			backgroundColor: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleWaveColor : theme.value.textSecondary
 		}
 	}
 
 	function getVoicePrimaryTextStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
 		return {
-			color: chatBubbleTokens.value.selfBubbleText
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
 		}
 	}
 
 	function getVoiceProgressStyle(msg: any): any {
 		return {
 			width: buildVoiceProgressPercentText(msg),
-			backgroundColor: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleProgressColor : ''
+			backgroundColor: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleProgressColor : theme.value.brandPrimary
 		}
 	}
 
 	function getVoiceStatusTextStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
 		return {
-			color: chatBubbleTokens.value.selfBubbleSubText
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleSubText : theme.value.textTertiary
 		}
 	}
 
 	function getVoicePauseActionStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
 		return {
-			backgroundColor: chatBubbleTokens.value.selfBubbleVoicePausedBg
+			backgroundColor: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleVoicePausedBg : theme.value.brandPrimarySoft
 		}
 	}
 
 	function getVoicePauseActionTextStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
 		return {
-			color: chatBubbleTokens.value.selfBubbleWaveColor
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleWaveColor : theme.value.brandPrimary
 		}
 	}
 
 	function getVoiceResumeActionStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
-		return {
+		return msg.isSelf === true ? {
 			borderColor: chatBubbleTokens.value.selfBubbleBorder
+		} : {
+			backgroundColor: theme.value.pageBg,
+			borderColor: theme.value.borderColor
 		}
 	}
 
 	function getVoiceResumeActionTextStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
 		return {
-			color: chatBubbleTokens.value.selfBubbleWaveColor
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleWaveColor : theme.value.brandPrimary
 		}
 	}
 
 	function getForwardCombineBubbleStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
-		return {
+		return msg.isSelf === true ? {
 			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
 			borderColor: chatBubbleTokens.value.selfBubbleBorder
+		} : {
+			backgroundColor: theme.value.cardBg,
+			borderColor: theme.value.borderColor
 		}
 	}
 
 	function getForwardCombineTitleStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
 		return {
-			color: chatBubbleTokens.value.selfBubbleText
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
 		}
 	}
 
 	function getForwardCombineSubTextStyle(msg: any): any {
-		if (msg == null || msg.isSelf !== true) {
+		if (msg == null) {
 			return {}
 		}
 		return {
-			color: chatBubbleTokens.value.selfBubbleSubText
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleSubText : theme.value.textSecondary
+		}
+	}
+
+	function getFileBubbleStyle(msg: any): any {
+		return msg != null && msg.isSelf === true ? {
+			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
+			borderColor: chatBubbleTokens.value.selfBubbleBorder
+		} : {
+			backgroundColor: theme.value.cardBg,
+			borderColor: theme.value.borderColor
+		}
+	}
+
+	function getFileNameStyle(msg: any): any {
+		return {
+			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
+		}
+	}
+
+	function getFileMetaStyle(msg: any): any {
+		return {
+			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleSubText : theme.value.textTertiary
+		}
+	}
+
+	function getFileIconWrapStyle(msg: any, iconColor: string): any {
+		return {
+			color: iconColor,
+			backgroundColor: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleVoicePausedBg : theme.value.pageBg
+		}
+	}
+
+	function getLocationBubbleStyle(msg: any): any {
+		return msg != null && msg.isSelf === true ? {
+			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
+			borderColor: chatBubbleTokens.value.selfBubbleBorder
+		} : {
+			backgroundColor: theme.value.cardBg,
+			borderColor: theme.value.borderColor
+		}
+	}
+
+	function getLocationNameStyle(msg: any): any {
+		return {
+			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
+		}
+	}
+
+	function getLocationAddressStyle(msg: any): any {
+		return {
+			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleSubText : theme.value.textTertiary
+		}
+	}
+
+	function getLocationMapStyle(msg: any): any {
+		return {
+			backgroundColor: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleVoicePausedBg : theme.value.pageBg
+		}
+	}
+
+	function getContactCardBubbleStyle(msg: any): any {
+		return msg != null && msg.isSelf === true ? {
+			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
+			borderColor: chatBubbleTokens.value.selfBubbleBorder
+		} : {
+			backgroundColor: theme.value.cardBg,
+			borderColor: theme.value.borderColor
+		}
+	}
+
+	function getContactCardAvatarFallbackStyle(msg: any): any {
+		return {
+			backgroundColor: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleVoicePausedBg : theme.value.brandPrimarySoft
+		}
+	}
+
+	function getContactCardAvatarTextStyle(msg: any): any {
+		return {
+			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleWaveColor : theme.value.brandPrimary
+		}
+	}
+
+	function getContactCardNameStyle(msg: any): any {
+		return {
+			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
+		}
+	}
+
+	function getContactCardMetaStyle(msg: any): any {
+		return {
+			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleSubText : theme.value.textTertiary
+		}
+	}
+
+	function getContactCardTagStyle(msg: any): any {
+		return {
+			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleSubText : theme.value.textSecondary
+		}
+	}
+
+	function getEmojiTabItemStyle(active: boolean): any {
+		return active ? {
+			backgroundColor: theme.value.cardBgMuted,
+			borderBottomColor: theme.value.brandPrimary
+		} : {}
+	}
+
+	function getEmojiTabIconStyle(active: boolean): any {
+		return {
+			color: active ? theme.value.textPrimary : theme.value.textTertiary
 		}
 	}
 
@@ -9912,7 +10036,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.time-text {
 		font-size: 11px;
-		color: #8893A2;
 		background-color: rgba(31, 35, 41, 0.05);
 		padding: 2px 8px;
 		border-radius: 4px;
@@ -9936,7 +10059,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.recall-system-tip-text {
 		font-size: 12px;
-		color: #8893A2;
 		background-color: rgba(31, 35, 41, 0.06);
 		padding: 3px 10px;
 		border-radius: 10px;
@@ -9998,8 +10120,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.checkbox-unchecked {
 		border-width: 1.5px;
-		border-color: #8893A2;
-		background-color: #1A212A;
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	}
 
@@ -10052,7 +10172,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.read-receipt-entry-text {
 		font-size: 10px;
-		color: #8893A2;
 	}
 
 	.message-self .message-bubble-wrap {
@@ -10061,7 +10180,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.sender-name {
 		font-size: 12px;
-		color: #8893A2;
 		margin-bottom: 4px;
 	}
 
@@ -10089,7 +10207,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	.read-receipt-sheet {
-		background-color: #1A212A;
 		border-top-left-radius: 14px;
 		border-top-right-radius: 14px;
 		padding-bottom: 12px;
@@ -10102,18 +10219,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		justify-content: space-between;
 		padding: 12px 16px;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 	}
 
 	.read-receipt-title {
 		font-size: 16px;
 		font-weight: 600;
-		color: #F3F6FA;
 	}
 
 	.read-receipt-close {
 		font-size: 14px;
-		color: #8893A2;
 	}
 
 	.read-receipt-hint-wrap {
@@ -10122,7 +10236,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.read-receipt-hint-text {
 		font-size: 11px;
-		color: #8893A2;
 		line-height: 16px;
 	}
 
@@ -10142,12 +10255,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.summary-num {
 		font-size: 22px;
 		font-weight: 600;
-		color: #F3F6FA;
 	}
 
 	.summary-label {
 		font-size: 12px;
-		color: #8893A2;
 		margin-top: 2px;
 	}
 
@@ -10158,7 +10269,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.summary-divider {
 		width: 1px;
 		height: 28px;
-		background-color: #EFF0F1;
 	}
 
 	.read-receipt-list {
@@ -10176,7 +10286,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		width: 34px;
 		height: 34px;
 		border-radius: 8px;
-		background-color: #242D38;
 	}
 
 	.read-receipt-avatar-fallback {
@@ -10200,13 +10309,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.read-receipt-name {
 		font-size: 14px;
-		color: #F3F6FA;
 	}
 
 	.read-receipt-time {
 		margin-top: 2px;
 		font-size: 11px;
-		color: #8893A2;
 	}
 
 	.read-receipt-loading {
@@ -10217,11 +10324,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.read-receipt-loading-text {
 		font-size: 12px;
-		color: #8893A2;
 	}
 
 	.bubble-text {
-		background-color: #202934;
 		min-width: 40px;
 		box-sizing: border-box;
 		display: flex;
@@ -10285,7 +10390,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.bubble-voice {
 		flex-direction: row;
 		align-items: center;
-		background-color: #202934;
 		flex-wrap: nowrap;
 		padding: 9px 10px;
 		min-width: 72px;
@@ -10295,7 +10399,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	.message-self .bubble-voice {
-		background-color: #D2E3FC;
 		flex-direction: row-reverse;
 	}
 
@@ -10359,7 +10462,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.voice-duration {
 		font-size: 14px;
-		color: #F3F6FA;
 		margin: 0 6px;
 		white-space: nowrap;
 		overflow: hidden;
@@ -10387,7 +10489,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.voice-status {
 		margin: 2px 6px 0;
 		font-size: 11px;
-		color: #8893A2;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -10420,9 +10521,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		margin-left: 6px;
 		padding: 4px 8px;
 		border-radius: 12px;
-		background-color: #1A212A;
 		border-width: 0.5px;
-		border-color: #CED3DC;
 	}
 
 	.voice-bubble-row-self .voice-resume-action {
@@ -10432,7 +10531,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.voice-resume-action-text {
 		font-size: 11px;
-		color: #B7C0CC;
 		white-space: nowrap;
 	}
 
@@ -10487,7 +10585,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.bubble-file {
 		flex-direction: row;
 		align-items: center;
-		background-color: #202934;
 		min-width: 180px;
 		max-width: 260px;
 		padding: 12px;
@@ -10495,7 +10592,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	/* 合并转发（聊天记录卡片） */
 	.bubble-forward-combine {
-		background-color: #202934;
 		min-width: 180px;
 		max-width: 72vw;
 		padding: 12px 12px;
@@ -10537,7 +10633,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.forward-combine-title {
 		font-size: 14px;
 		font-weight: 600;
-		color: #F3F6FA;
 		lines: 1;
 		text-overflow: ellipsis;
 		word-break: break-all;
@@ -10614,7 +10709,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.file-name {
 		font-size: 15px;
-		color: #F3F6FA;
 		lines: 2;
 		text-overflow: ellipsis;
 		word-break: break-all;
@@ -10622,7 +10716,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.file-size {
 		font-size: 12px;
-		color: #8893A2;
 		margin-top: 4px;
 	}
 
@@ -10631,7 +10724,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		height: 44px;
 		line-height: 44px;
 		text-align: center;
-		background-color: #242D38;
 		border-radius: 0;
 		font-size: 44px;
 	}
@@ -10640,7 +10732,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.bubble-location {
 		padding: 0;
 		overflow: hidden;
-		background-color: #202934;
 		width: 220px;
 		max-width: 100%;
 	}
@@ -10652,7 +10743,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.location-name {
 		font-size: 15px;
-		color: #F3F6FA;
 		lines: 1;
 		text-overflow: ellipsis;
 		word-break: break-all;
@@ -10660,7 +10750,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.location-address {
 		font-size: 12px;
-		color: #8893A2;
 		margin-top: 2px;
 		lines: 1;
 		text-overflow: ellipsis;
@@ -10670,12 +10759,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.location-map {
 		width: 100%;
 		height: 100px;
-		background-color: #242D38;
 	}
 
 	/* 名片消息 */
 	.bubble-contact-card {
-		background-color: #202934;
 		width: 220px;
 		max-width: 100%;
 		padding: 12px;
@@ -10699,7 +10786,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		width: 40px;
 		height: 40px;
 		border-radius: 20px;
-		background-color: #E6F0FF;
 		justify-content: center;
 		align-items: center;
 	}
@@ -10716,14 +10802,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.contact-card-name {
 		font-size: 15px;
-		color: #F3F6FA;
 		lines: 1;
 		text-overflow: ellipsis;
 	}
 
 	.contact-card-meta {
 		font-size: 12px;
-		color: #8893A2;
 		margin-top: 2px;
 		lines: 1;
 		text-overflow: ellipsis;
@@ -10731,7 +10815,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.contact-card-tag {
 		font-size: 11px;
-		color: #B7C0CC;
 		margin-top: 4px;
 	}
 
@@ -10761,7 +10844,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.message-text {
 		font-size: 15px;
-		color: #F3F6FA;
 		line-height: 1.5;
 		word-break: break-word;
 		white-space: pre-wrap;
@@ -10772,21 +10854,17 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	.footer {
-		background-color: #1A212A;
 		border-top-width: 1px;
-		border-top-color: #2B3541;
 		border-top-style: solid;
 		padding-bottom: 8px;
 	}
 
 	.footer-readonly {
 		padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-		background-color: #1A212A;
 	}
 
 	.footer-readonly-text {
 		font-size: 13px;
-		color: #8893A2;
 		text-align: center;
 	}
 
@@ -10798,7 +10876,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		bottom: 0;
 		height: 100%;
 		z-index: 1000;
-		background-color: #1A212A;
 		padding-bottom: env(safe-area-inset-bottom);
 		border-top-width: 0;
 	}
@@ -10807,12 +10884,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		height: 44px;
 		padding: 0 16px;
 		justify-content: center;
-		background-color: #151B22;
 	}
 
 	.collapse-icon {
 		font-size: 24px;
-		color: #F3F6FA;
 	}
 
 	.input-row {
@@ -10826,7 +10901,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		flex-direction: column;
 		align-items: stretch;
 		padding: 0 16px 16px;
-		background-color: #1A212A;
 	}
 
 	.input-left-actions {
@@ -10850,7 +10924,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.input-box {
 		flex: 1;
-		background-color: #202934;
 		border-radius: 4px;
 		margin: 0 8px;
 		min-height: 40px;
@@ -10907,13 +10980,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.chat-input {
 		font-size: 16px;
-		color: #F3F6FA;
 		line-height: 1.2;
 	}
 
 	.voice-btn {
 		flex: 1;
-		background-color: #202934;
 		border-radius: 4px;
 		margin: 0 10px;
 		height: 38px;
@@ -10927,13 +10998,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.voice-btn-text {
 		font-size: 16px;
-		color: #F3F6FA;
 		font-weight: 600;
 	}
 
 	.footer-icon {
 		font-size: 28px;
-		color: #F3F6FA;
 		margin-bottom: 4px;
 	}
 
@@ -10961,9 +11030,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	.mention-panel {
-		background-color: #1A212A;
 		border-top-width: 1px;
-		border-top-color: #2B3541;
 		padding: 8px 12px 0;
 		max-height: 280px;
 	}
@@ -10972,14 +11039,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		flex-direction: row;
 		align-items: center;
 		height: 36px;
-		background-color: #202934;
 		border-radius: 18px;
 		padding: 0 12px;
 	}
 
 	.mention-panel-search-icon {
 		font-size: 16px;
-		color: #8893A2;
 	}
 
 	.mention-panel-search-input {
@@ -10987,7 +11052,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		height: 36px;
 		margin-left: 8px;
 		font-size: 14px;
-		color: #F3F6FA;
 	}
 
 	.mention-panel-close {
@@ -11005,11 +11069,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		align-items: center;
 		padding: 12px 0;
 		border-bottom-width: 1px;
-		border-bottom-color: #2B3541;
 	}
 
 	.mention-member-item-active {
-		background-color: #242D38;
 	}
 
 	.mention-member-avatar {
@@ -11040,14 +11102,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.mention-member-name {
 		font-size: 15px;
-		color: #F3F6FA;
 		line-height: 20px;
 	}
 
 	.mention-member-desc {
 		margin-top: 2px;
 		font-size: 12px;
-		color: #8893A2;
 		line-height: 16px;
 	}
 
@@ -11059,16 +11119,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.mention-panel-empty-text {
 		font-size: 13px;
-		color: #8893A2;
 	}
 
 	.features-menu {
-		background-color: #1A212A;
 		padding: 20px 10px;
 		flex-direction: row;
 		flex-wrap: wrap;
 		border-top-width: 0.5px;
-		border-top-color: #2B3541;
 	}
 
 	.feature-item {
@@ -11080,7 +11137,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.feature-icon-wrap {
 		width: 56px;
 		height: 56px;
-		background-color: #202934;
 		border-radius: 12px;
 		justify-content: center;
 		align-items: center;
@@ -11093,16 +11149,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.feature-name {
 		font-size: 12px;
-		color: #B7C0CC;
 	}
 
 	/* 表情包菜单 */
 	.emoji-menu {
 		position: relative;
-		background-color: #1A212A;
 		height: 260px;
 		border-top-width: 0.5px;
-		border-top-color: #2B3541;
 	}
 
 	.emoji-content {
@@ -11133,7 +11186,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.emoji-section-title {
 		font-size: 13px;
-		color: #A7AFB9;
 		line-height: 18px;
 		padding: 1px 2px 8px;
 	}
@@ -11184,7 +11236,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		height: 13px;
 		border-width: 1.5px;
 		border-style: solid;
-		border-color: #A7AFB9;
 		border-radius: 3px;
 		justify-content: center;
 		align-items: center;
@@ -11204,13 +11255,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		border-right-style: solid;
 		border-top-color: transparent;
 		border-bottom-color: transparent;
-		border-right-color: #A7AFB9;
 	}
 
 	.emoji-delete-cross {
 		font-size: 11px;
 		line-height: 11px;
-		color: #A7AFB9;
 		font-weight: 600;
 	}
 
@@ -11236,29 +11285,23 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.sticker-add-icon {
 		font-size: 30px;
-		color: #8893A2;
-		background-color: #202934;
 		width: 65px;
 		height: 65px;
 		border-radius: 8px;
 		text-align: center;
 		line-height: 65px;
 		border-width: 1px;
-		border-color: #E5E5E5;
 		border-style: dashed;
 	}
 
 	.sticker-manage-text {
 		font-size: 14px;
-		color: #8893A2;
-		background-color: #202934;
 		width: 65px;
 		height: 65px;
 		border-radius: 8px;
 		text-align: center;
 		line-height: 65px;
 		border-width: 1px;
-		border-color: #E5E5E5;
 		border-style: solid;
 	}
 
@@ -11273,7 +11316,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		width: 65px;
 		height: 65px;
 		border-radius: 8px;
-		background-color: #202934;
 	}
 
 	.emoji-icon {
@@ -11282,7 +11324,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.emoji-tabs {
 		height: 44px;
-		background-color: #1A212A;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 8px;
@@ -11304,17 +11345,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	.emoji-tab-active {
-		background-color: #242D38;
-		border-bottom-color: #07C160;
 	}
 
 	.emoji-tab-icon {
 		font-size: 20px;
-		color: #A7AFB9;
 	}
 
 	.emoji-tab-icon-active {
-		color: #616A74;
 	}
 
 	/* 录音浮层 */
@@ -11393,9 +11430,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		left: 0;
 		right: 0;
 		height: 60px;
-		background-color: #1A212A;
 		border-top-width: 1px;
-		border-top-color: #2B3541;
 		box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
 		flex-direction: row;
 		align-items: center;
@@ -11412,18 +11447,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	.toolbar-item-active {
-		background-color: #242D38;
 	}
 
 	.toolbar-icon {
 		font-size: 24px;
-		color: #F3F6FA;
 		margin-bottom: 4px;
 	}
 
 	.toolbar-text {
 		font-size: 12px;
-		color: #B7C0CC;
 	}
 
     .menu-mask {
@@ -11438,10 +11470,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
     .menu-content {
         position: absolute;
-        background-color: #4C4C4C;
         border-radius: 6px;
         overflow: hidden;
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        border-width: 0.5px;
     }
 
     .menu-list {
@@ -11470,13 +11502,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
     .menu-item-icon {
         font-size: 22px;
-        color: #FFFFFF;
         margin-bottom: 4px;
     }
 
     .menu-item-text {
         font-size: 12px;
-        color: #FFFFFF;
         text-align: center;
     }
 
@@ -11606,13 +11636,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
     .quote-sender {
         font-size: 12px;
-        color: #B7C0CC;
         margin-bottom: 2px;
     }
 
     .quote-content {
         font-size: 13px;
-        color: #8893A2;
         line-height: 1.4;
     }
     
@@ -11639,13 +11667,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
     
     .quote-reply-sender {
         font-size: 12px;
-        color: #B7C0CC;
         margin-right: 6px;
     }
     
     .quote-reply-text {
         font-size: 13px;
-        color: #8893A2;
         flex: 1;
         lines: 1;
         text-overflow: ellipsis;
@@ -11653,7 +11679,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
     
     .quote-reply-close {
         font-size: 20px;
-        color: #8893A2;
         padding: 4px;
     }
 </style>

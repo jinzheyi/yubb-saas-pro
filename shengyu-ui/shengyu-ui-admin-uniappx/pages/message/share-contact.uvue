@@ -18,13 +18,13 @@
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<!-- 最近聊天 -->
-			<view class="section" v-if="!searchKeyword && recentChats.length > 0">
-				<text class="section-title" :style="{ color: theme.textPrimary }">最近聊天</text>
+			<view class="section" :style="{ backgroundColor: theme.cardBg }" v-if="!searchKeyword && recentChats.length > 0">
+				<text class="section-title" :style="{ color: theme.textSecondary, backgroundColor: theme.pageBg }">最近聊天</text>
 				<view class="chat-list">
 					<view class="chat-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" v-for="chat in recentChats" :key="chat.id" @click="toggleSelect(chat)">
 						<view class="chat-checkbox">
 							<text v-if="isSelected(chat.id)" class="iconfont checkbox-checked">&#xe65f;</text>
-							<view v-else class="checkbox-unchecked"></view>
+							<view v-else class="checkbox-unchecked" :style="{ borderColor: theme.borderColor, backgroundColor: theme.pageBg }"></view>
 						</view>
 						<view class="chat-avatar" :style="{ backgroundColor: chat.avatarBg }">
 							<text v-if="chat.isGroup" class="iconfont group-icon">&#xe616;</text>
@@ -39,13 +39,13 @@
 			</view>
 
 			<!-- 联系人列表 -->
-			<view class="section">
-				<text class="section-title" :style="{ color: theme.textPrimary }">{{ searchKeyword ? '搜索结果' : '联系人' }}</text>
+			<view class="section" :style="{ backgroundColor: theme.cardBg }">
+				<text class="section-title" :style="{ color: theme.textSecondary, backgroundColor: theme.pageBg }">{{ searchKeyword ? '搜索结果' : '联系人' }}</text>
 				<view class="contact-list">
 					<view class="contact-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" v-for="contact in displayContacts" :key="contact.id" @click="toggleSelect(contact)">
 						<view class="contact-checkbox">
 							<text v-if="isSelected(contact.id)" class="iconfont checkbox-checked">&#xe65f;</text>
-							<view v-else class="checkbox-unchecked"></view>
+							<view v-else class="checkbox-unchecked" :style="{ borderColor: theme.borderColor, backgroundColor: theme.pageBg }"></view>
 						</view>
 						<view class="contact-avatar" :style="{ backgroundColor: contact.avatarBg }">
 							<text class="contact-avatar-text">{{ contact.avatarText }}</text>
@@ -68,7 +68,7 @@
 		<!-- 底部确认按钮 -->
 		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px', backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
 			<text class="selected-text" :style="{ color: theme.textSecondary }">已选择 {{ selectedItems.length }} 个</text>
-			<button class="confirm-btn" :disabled="selectedItems.length === 0" @click="handleConfirm">
+			<button class="confirm-btn" :style="{ backgroundColor: selectedItems.length === 0 ? theme.fillDisabled : theme.brandPrimary }" :disabled="selectedItems.length === 0" @click="handleConfirm">
 				<text class="confirm-btn-text">分享</text>
 			</button>
 		</view>
@@ -217,7 +217,6 @@
 	}
 
 	.search-bar {
-		background-color: #202934;
 		border-radius: 8px;
 		height: 36px;
 		flex-direction: row;
@@ -227,18 +226,15 @@
 
 	.search-icon {
 		font-size: 16px;
-		color: #8893A2;
 	}
 
 	.search-input {
 		flex: 1;
 		font-size: 14px;
 		margin-left: 8px;
-		color: #F3F6FA;
 	}
 
 	.placeholder {
-		color: #8893A2;
 	}
 
 	.content {
@@ -247,15 +243,12 @@
 	}
 
 	.section {
-		background-color: #1A212A;
 		margin-bottom: 10px;
 	}
 
 	.section-title {
 		font-size: 13px;
-		color: #8893A2;
 		padding: 12px 16px 8px;
-		background-color: #151B22;
 	}
 
 	/* 聊天列表 */
@@ -292,8 +285,6 @@
 		height: 20px;
 		border-radius: 10px;
 		border-width: 1.5px;
-		border-color: #C1C4C9;
-		background-color: #1A212A;
 	}
 
 	.chat-avatar {
@@ -322,13 +313,11 @@
 
 	.chat-name {
 		font-size: 15px;
-		color: #F3F6FA;
 		margin-bottom: 4px;
 	}
 
 	.chat-desc {
 		font-size: 13px;
-		color: #8893A2;
 	}
 
 	/* 联系人列表 */
@@ -391,7 +380,6 @@
 
 	.empty-icon {
 		font-size: 64px;
-		color: #E5E5E5;
 		margin-bottom: 16px;
 	}
 

@@ -1004,7 +1004,6 @@
 	}
 
 	.placeholder {
-		color: #A7AFB9;
 	}
 
 	/* 滚动内容区域 */
@@ -1252,24 +1251,19 @@
 	.menu-content {
 		position: absolute;
 		width: 160px;
-		background-color: #1A212A;
 		border-radius: 12px;
 		box-shadow: 0 4px 16px rgba(0,0,0,0.15);
 		overflow: hidden;
 		border-width: 0.5px;
-		border-color: #2B3541;
 	}
 
 	.menu-header {
 		padding: 12px 16px;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #2B3541;
-		background-color: #242D38;
 	}
 
 	.menu-title {
 		font-size: 13px;
-		color: #8893A2;
 		font-weight: 500;
 	}
 
@@ -1282,12 +1276,10 @@
 	}
 
 	.menu-item-btn-active {
-		background-color: #242D38;
 	}
 
 	.menu-item-text {
 		font-size: 15px;
-		color: #F3F6FA;
 	}
 
 	.menu-danger {

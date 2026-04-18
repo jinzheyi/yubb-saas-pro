@@ -714,7 +714,6 @@
 
 	.sticker-drop-hint-text {
 		font-size: 22rpx;
-		color: #F3F6FA;
 	}
 
 	.sticker-remove-badge {
@@ -761,7 +760,6 @@
 
 	.sticker-sort-btn-text {
 		font-size: 22rpx;
-		color: #F3F6FA;
 	}
 
 	.empty-state {

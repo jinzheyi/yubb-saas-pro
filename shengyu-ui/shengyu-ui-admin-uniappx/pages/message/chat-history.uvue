@@ -718,13 +718,11 @@ onUnload(() => {
 .sender-name {
   font-size: 15px;
   font-weight: 500;
-  color: #F3F6FA;
   margin-bottom: 4px;
 }
 
 .send-time {
   font-size: 12px;
-  color: #8893A2;
 }
 
 .message-content {
@@ -747,6 +745,5 @@ onUnload(() => {
 .loading-text,
 .no-more-text {
   font-size: 13px;
-  color: #8893A2;
 }
 </style>

@@ -45,7 +45,7 @@
 							</view>
 							<text class="time-text" :style="{ color: theme.textTertiary }">申请时间：{{ item.createTimeText }}</text>
 							<text v-if="item.handledTimeText !== ''" class="time-text" :style="{ color: theme.textTertiary }">处理时间：{{ item.handledTimeText }}</text>
-							<text v-if="item.rejectReason !== ''" class="reason-text">处理结果：{{ item.rejectReason }}</text>
+							<text v-if="item.rejectReason !== ''" class="reason-text" :style="{ color: theme.textSecondary }">处理结果：{{ item.rejectReason }}</text>
 						</view>
 					</view>
 					<view v-if="activeTab === 'pending'" class="action-row">
@@ -313,13 +313,11 @@
 	}
 
 	.tab-bar {
-		background-color: #1A212A;
 		padding: 0 16px;
 		height: 48px;
 		flex-direction: row;
 		align-items: center;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #2B3541;
 	}
 
 	.tab-item {
@@ -335,11 +333,9 @@
 
 	.tab-text {
 		font-size: 15px;
-		color: #8893A2;
 	}
 
 	.tab-text-active {
-		color: #F3F6FA;
 		font-weight: 600;
 	}
 
@@ -354,14 +350,12 @@
 	}
 
 	.placeholder-title {
-		color: #F3F6FA;
 		font-size: 16px;
 		font-weight: 600;
 		margin-bottom: 8px;
 	}
 
 	.placeholder-text {
-		color: #8893A2;
 		font-size: 13px;
 	}
 
@@ -370,7 +364,6 @@
 	}
 
 	.request-card {
-		background-color: #1A212A;
 		border-radius: 12px;
 		padding: 16px;
 		margin-bottom: 12px;
@@ -413,7 +406,6 @@
 	}
 
 	.applicant-name {
-		color: #F3F6FA;
 		font-size: 16px;
 		font-weight: 600;
 	}
@@ -440,13 +432,11 @@
 	}
 
 	.time-text {
-		color: #8893A2;
 		font-size: 12px;
 		line-height: 18px;
 	}
 
 	.reason-text {
-		color: #5A616A;
 		font-size: 12px;
 		line-height: 18px;
 		margin-top: 4px;
@@ -468,7 +458,6 @@
 	}
 
 	.action-btn-reject {
-		background-color: #242D38;
 	}
 
 	.action-btn-approve {
@@ -477,7 +466,6 @@
 
 	.action-btn-text {
 		font-size: 13px;
-		color: #B7C0CC;
 	}
 
 	.action-btn-text-primary {

@@ -492,7 +492,6 @@
 	}
 
 	.placeholder {
-		color: #A7AFB9;
 	}
 
 	.member-list {

@@ -403,7 +403,6 @@
 	
 	/* 查看模式 */
 	.view-mode {
-		background-color: #1A212A;
 		padding: 20px 16px;
 	}
 	
@@ -430,7 +429,6 @@
 	
 	.notice-text {
 		font-size: 15px;
-		color: #F3F6FA;
 		line-height: 24px;
 	}
 	
@@ -447,13 +445,11 @@
 	
 	.empty-text {
 		font-size: 15px;
-		color: #8893A2;
 		margin-bottom: 8px;
 	}
-	
+
 	.empty-hint {
 		font-size: 13px;
-		color: #C9CDD4;
 	}
 	
 	.publish-info {
@@ -464,17 +460,14 @@
 	
 	.publish-label {
 		font-size: 13px;
-		color: #8893A2;
 	}
 
 	.publish-value {
 		font-size: 13px;
-		color: #B7C0CC;
 	}
 	
 	/* 编辑模式 */
 	.edit-mode {
-		background-color: #1A212A;
 		padding: 16px;
 	}
 	
@@ -482,18 +475,14 @@
 		width: 100%;
 		min-height: 200px;
 		font-size: 15px;
-		color: #F3F6FA;
 		line-height: 24px;
 		padding: 12px;
-		background-color: #202934;
 		border-radius: 8px;
 		border-width: 1px;
-		border-color: #E5E5E5;
 	}
 	
 	.notice-textarea-focus {
 		border-color: #1677FF;
-		background-color: #1A212A;
 	}
 	
 	.char-count {
@@ -503,7 +492,6 @@
 	
 	.char-count-text {
 		font-size: 12px;
-		color: #8893A2;
 	}
 	
 	/* 选项项 */
@@ -512,7 +500,6 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 14px 12px;
-		background-color: #242D38;
 		border-radius: 8px;
 		margin-top: 16px;
 	}
@@ -531,7 +518,6 @@
 	
 	.option-label {
 		font-size: 15px;
-		color: #F3F6FA;
 		font-weight: 500;
 	}
 	
