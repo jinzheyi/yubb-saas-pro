@@ -2,9 +2,11 @@
  * 用户管理 API
  */
 
-import { del, get } from '../utils/request.uts'
+import { del, get, put } from '../utils/request.uts'
 import { API_BASE_URL, MAX_IMAGE_SIZE } from '../config/app.config.uts'
 import { uploadFile } from '../utils/upload.uts'
+import type { ThemeMode } from '../config/theme.uts'
+import type { ChatBubbleConfig } from '../store/chat-bubble.uts'
 
 /**
  * 获取用户详情
@@ -60,6 +62,25 @@ export function updateCurrentUserAvatar(
  */
 export function clearCurrentUserAvatar(): Promise<boolean> {
 	return del('/system/user/avatar')
+}
+
+/**
+ * 更新当前用户主题偏好
+ */
+export function updateCurrentUserThemePreference(themeMode: ThemeMode): Promise<boolean> {
+	return put('/system/user/theme', {
+		themeMode: themeMode
+	} as UTSJSONObject)
+}
+
+/**
+ * 更新当前用户聊天气泡偏好
+ */
+export function updateCurrentUserChatBubblePreference(config: ChatBubbleConfig): Promise<boolean> {
+	return put('/system/user/chat-bubble', {
+		chatBubbleColor: config.color,
+		chatBubbleMode: config.mode
+	} as UTSJSONObject)
 }
 
 /**

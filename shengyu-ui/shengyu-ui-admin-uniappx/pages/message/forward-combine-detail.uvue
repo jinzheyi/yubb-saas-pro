@@ -1,39 +1,41 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg }">
 			<view class="header-left" @click="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 			</view>
-			<text class="header-title">聊天记录</text>
+			<text class="header-title" :style="{ color: theme.headerText }">聊天记录</text>
 			<view class="header-right"></view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
-			<view v-if="comment !== ''" class="comment">
-				<text class="comment-text">{{ comment }}</text>
+			<view v-if="comment !== ''" class="comment" :style="{ backgroundColor: theme.cardBg, borderColor: theme.borderColor }">
+				<text class="comment-text" :style="{ color: theme.textPrimary }">{{ comment }}</text>
 			</view>
 
-			<view v-for="(item, idx) in items" :key="idx" class="item" @click="handleItemClick(item)">
+			<view v-for="(item, idx) in items" :key="idx" class="item" :style="{ backgroundColor: theme.cardBg, borderColor: theme.borderColor }" @click="handleItemClick(item)">
 				<view class="item-header">
-					<text class="sender-name">{{ item.senderName }}</text>
-					<text class="send-time">{{ item.sendTime }}</text>
+					<text class="sender-name" :style="{ color: theme.textPrimary }">{{ item.senderName }}</text>
+					<text class="send-time" :style="{ color: theme.textTertiary }">{{ item.sendTime }}</text>
 				</view>
-				<text class="item-content" :numberOfLines="3">{{ item.preview }}</text>
+				<text class="item-content" :style="{ color: theme.textSecondary }" :numberOfLines="3">{{ item.preview }}</text>
 			</view>
 
 			<view v-if="items.length === 0" class="empty">
-				<text class="empty-text">{{ emptyText }}</text>
+				<text class="empty-text" :style="{ color: theme.textTertiary }">{{ emptyText }}</text>
 			</view>
 		</scroll-view>
 	</view>
 </template>
 
 <script setup lang="uts">
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { getMessageDetail } from '../../api/message.uts'
 import { encodeIdParam } from '../../utils/id-param.uts'
 import { createNavState } from '../../utils/nav-state.uts'
+import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+import type { ThemeTokens } from '../../config/theme.uts'
 
 type ForwardCombineItem = {
 	messageId: string
@@ -51,6 +53,12 @@ const emptyText = ref('暂无内容')
 const MAX_FORWARD_COMBINE_DEPTH = 20
 const currentDepth = ref(0)
 const visitedIds = ref<string[]>([])
+const theme = ref<ThemeTokens>(getThemeTokens())
+let unsubscribeTheme: (() => void) | null = null
+
+unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+	theme.value = tokens
+})
 
 function handleBack(): void {
 	uni.navigateBack()
@@ -350,6 +358,13 @@ async function loadByMessageId(messageId: string): Promise<void> {
 		uni.showToast({ title: '加载失败', icon: 'none' })
 	}
 }
+
+onUnload(() => {
+	if (unsubscribeTheme != null) {
+		unsubscribeTheme()
+		unsubscribeTheme = null
+	}
+})
 </script>
 
 <style scoped>
@@ -369,7 +384,6 @@ async function loadByMessageId(messageId: string): Promise<void> {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	background-color: #ffffff;
 	padding-left: 12px;
 	padding-right: 12px;
 }
@@ -383,14 +397,12 @@ async function loadByMessageId(messageId: string): Promise<void> {
 
 .back-icon {
 	font-size: 18px;
-	color: #333333;
 }
 
 .header-title {
 	flex: 1;
 	text-align: center;
 	font-size: 16px;
-	color: #111111;
 	font-weight: 600;
 }
 
@@ -404,7 +416,6 @@ async function loadByMessageId(messageId: string): Promise<void> {
 }
 
 .comment {
-	background-color: #ffffff;
 	border-radius: 12px;
 	padding: 12px 12px;
 	margin-bottom: 10px;
@@ -414,12 +425,10 @@ async function loadByMessageId(messageId: string): Promise<void> {
 
 .comment-text {
 	font-size: 14px;
-	color: #1F2329;
 	line-height: 20px;
 }
 
 .item {
-	background-color: #ffffff;
 	border-radius: 12px;
 	padding: 12px 12px;
 	margin-bottom: 10px;
@@ -438,7 +447,6 @@ async function loadByMessageId(messageId: string): Promise<void> {
 .sender-name {
 	font-size: 14px;
 	font-weight: 600;
-	color: #1F2329;
 	flex: 1;
 	min-width: 0;
 	lines: 1;
@@ -447,7 +455,6 @@ async function loadByMessageId(messageId: string): Promise<void> {
 
 .send-time {
 	font-size: 12px;
-	color: #86909C;
 	margin-left: 10px;
 	flex-shrink: 0;
 }

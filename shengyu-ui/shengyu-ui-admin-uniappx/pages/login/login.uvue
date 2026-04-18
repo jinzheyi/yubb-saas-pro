@@ -150,6 +150,7 @@
 	import type { LocaleType } from '../../store/locale.uts'
 	import { badgeService } from '../../services/badge-service.uts'
 	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
+	import { syncUserPreferencesFromServer } from '../../services/user-preference-service.uts'
 	import SliderCaptcha from '../../components/captcha/slider-captcha.uvue'
 	import { CAPTCHA_ENABLE, DEFAULT_TENANT_NAME, SMS_CODE_COUNTDOWN } from '../../config/app.config.uts'
 	
@@ -259,6 +260,7 @@
 			// 获取用户权限信息
 			const userInfo = await getPermissionInfo()
 			if (userInfo) setUserInfo(userInfo)
+			void syncUserPreferencesFromServer(true)
 
 			// 登录成功后立即初始化角标服务，确保首个 tab 页直接拿到统一角标
 			badgeService.init()

@@ -1,8 +1,13 @@
 <script lang="uts">
 	import { isLoggedIn, getAccessToken } from './store/user.uts'
 	import { initLocale } from './store/locale.uts'
+	import { initTheme } from './store/theme.uts'
 	import { badgeService } from './services/badge-service.uts'
 	import { tabBarBadgeService } from './services/tab-bar-badge-service.uts'
+	import { syncUserPreferencesFromServer } from './services/user-preference-service.uts'
+	import { onAccessTokenRefreshed } from './utils/request.uts'
+
+	let unsubscribeAccessTokenRefreshed: (() => void) | null = null
 
 	export default {
 		onLaunch() {
@@ -10,8 +15,19 @@
 
 			// 初始化国际化（如果没有设置过语言，则使用系统语言）
 			initLocale()
+			initTheme()
 
 			this.bootstrapBadgeServices()
+			if (isLoggedIn()) {
+				void syncUserPreferencesFromServer(true)
+			}
+			if (unsubscribeAccessTokenRefreshed == null) {
+				unsubscribeAccessTokenRefreshed = onAccessTokenRefreshed((_tokenData) => {
+					if (isLoggedIn()) {
+						void syncUserPreferencesFromServer(true)
+					}
+				})
+			}
 
 			// 检查登录状态
 			this.checkLoginStatus()
@@ -21,6 +37,7 @@
 			this.bootstrapBadgeServices()
 			if (isLoggedIn()) {
 				badgeService.ensureFresh(3000)
+				void syncUserPreferencesFromServer(false)
 			}
 			void this.withWsManager(async (wsManager) => {
 				wsManager.setAppForeground(true)
@@ -79,18 +96,10 @@
 
 	/* 全局样式 */
 	page {
-		background-color: #F5F7FA;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 	}
 
 	/* 定义全局颜色变量（模拟） */
-	.text-primary { color: #3370FF; }
-	.text-main { color: #1F2329; }
-	.text-desc { color: #646A73; }
-	.text-placeholder { color: #8F959E; }
-	.bg-page { background-color: #F5F7FA; }
-	.bg-white { background-color: #FFFFFF; }
-
 	/* 扁平化圆角标准 */
 	.radius-s { border-radius: 4px; }
 	.radius-m { border-radius: 8px; }

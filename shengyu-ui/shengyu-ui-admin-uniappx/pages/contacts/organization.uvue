@@ -1,18 +1,19 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg }">
 			<view class="header-top">
 				<view class="header-left" @click.stop="handleBack">
-					<text class="iconfont back-icon">&#xeb04;</text>
+					<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 				</view>
-				<text class="header-title">组织结构</text>
+				<text class="header-title" :style="{ color: theme.headerText }">组织结构</text>
 				<view class="header-right"></view>
 			</view>
-			<view class="search-bar">
-				<text class="iconfont search-icon">&#xea6e;</text>
+			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
+				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
 				<input 
 					class="search-input" 
+					:style="{ color: theme.inputText }"
 					v-model="searchKeyword"
 					placeholder="搜索" 
 					placeholder-class="placeholder"
@@ -24,8 +25,8 @@
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<!-- 根节点 -->
 			<view class="root-node">
-				<view class="node-header" @click="toggleNode('root')">
-					<text class="node-title">{{ rootOrg.name }}({{ rootOrg.count }})</text>
+				<view class="node-header" :style="{ backgroundColor: theme.cardBg }" @click="toggleNode('root')">
+					<text class="node-title" :style="{ color: theme.textPrimary }">{{ rootOrg.name }}({{ rootOrg.count }})</text>
 					<text class="iconfont expand-icon">{{ expandedNodes.includes('root') ? '\ueaf5' : '\ueaf3' }}</text>
 				</view>
 			</view>
@@ -35,7 +36,7 @@
 				<!-- 子组织列表 -->
 				<view class="org-list">
 					<view v-for="(org, orgIndex) in organizations" :key="org.id" class="org-item">
-						<view class="org-row" hover-class="org-row-active" @click="toggleNode(org.id)">
+						<view class="org-row" :style="{ backgroundColor: theme.cardBg }" hover-class="org-row-active" @click="toggleNode(org.id)">
 							<!-- 选择模式下显示复选框 -->
 							<view v-if="isSelectMode && !isSingleSelectMode" :class="['checkbox', org.selected ? 'checkbox-active' : '']" @click.stop="toggleOrgSelect(org)">
 								<text v-if="org.selected" class="iconfont check-icon">&#xea73;</text>
@@ -45,9 +46,9 @@
 							<text class="iconfont node-icon" :style="{ color: '#0ea5e9' }">
 								{{ org.expanded ? '\ueaf5' : '\ueaf3' }}
 							</text>
-							<text class="org-name" :class="{ 'org-name-bold': org.expanded }">{{ org.name }}({{ org.count }})</text>
+							<text class="org-name" :class="{ 'org-name-bold': org.expanded }" :style="{ color: theme.textPrimary }">{{ org.name }}({{ org.count }})</text>
 						</view>
-						<view v-if="orgIndex < organizations.length - 1" class="org-item-border"></view>
+						<view v-if="orgIndex < organizations.length - 1" class="org-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 
 						<!-- 部门列表 -->
 						<view v-if="org.expanded" class="dept-list">
@@ -55,6 +56,7 @@
 							<view v-if="org.members && org.members.length > 0" class="member-list">
 								<view v-for="(member, mIndex) in org.members" :key="member.id" 
 									class="member-item"
+									:style="{ backgroundColor: theme.cardBg }"
 									@click="handleMemberClick(member)">
 									<!-- 选择模式下显示复选框 -->
 									<view v-if="isSelectMode" :class="['checkbox', isSingleSelectMode ? 'checkbox-single' : '', member.selected ? 'checkbox-active' : '', (isSingleSelectMode && member.selected) ? 'checkbox-single-active' : '']" @click.stop="toggleMemberSelect(member)">
@@ -71,16 +73,16 @@
 										/>
 										<text v-else class="avatar-text">{{ member.avatarText }}</text>
 									</view>
-									<text class="member-name">{{ member.name }}</text>
-									<text class="member-role">{{ member.role }}</text>
-									<view v-if="mIndex < org.members.length - 1" class="member-item-border"></view>
+									<text class="member-name" :style="{ color: theme.textPrimary }">{{ member.name }}</text>
+									<text class="member-role" :style="{ color: theme.textSecondary }">{{ member.role }}</text>
+									<view v-if="mIndex < org.members.length - 1" class="member-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 								</view>
 							</view>
 							
 							<!-- 子部门 -->
 							<view v-if="org.departments && org.departments.length > 0">
 								<view v-for="(dept, deptIndex) in org.departments" :key="dept.id" class="dept-item">
-									<view class="dept-row" hover-class="dept-row-active" @click="toggleDept(dept.id)">
+									<view class="dept-row" :style="{ backgroundColor: theme.cardBg }" hover-class="dept-row-active" @click="toggleDept(dept.id)">
 										<!-- 选择模式下显示复选框 -->
 										<view v-if="isSelectMode && !isSingleSelectMode" :class="['checkbox', dept.selected ? 'checkbox-active' : '']" @click.stop="toggleDeptSelect(org, dept)">
 											<text v-if="dept.selected" class="iconfont check-icon">&#xea73;</text>
@@ -88,13 +90,14 @@
 										
 										<!-- 展开/收起图标（选择模式和非选择模式都显示） -->
 										<text class="iconfont dept-icon" @click.stop="toggleDept(dept.id)">{{ dept.expanded ? '\ueaf5' : '\ueaf3' }}</text>
-										<text class="dept-name" :class="{ 'dept-name-bold': dept.expanded }">{{ dept.name }}({{ dept.count }})</text>
+										<text class="dept-name" :class="{ 'dept-name-bold': dept.expanded }" :style="{ color: theme.textPrimary }">{{ dept.name }}({{ dept.count }})</text>
 									</view>
 
 									<!-- 成员列表 -->
 									<view v-if="dept.expanded" class="member-list">
 										<view v-for="(member, mIndex) in dept.members" :key="member.id" 
 											class="member-item"
+											:style="{ backgroundColor: theme.cardBg }"
 										hover-class="member-item-active"
 											@click="handleMemberClick(member)">
 											<!-- 选择模式下显示复选框 -->
@@ -112,12 +115,12 @@
 												/>
 												<text v-else class="avatar-text">{{ member.avatarText }}</text>
 											</view>
-											<text class="member-name">{{ member.name }}</text>
-											<text class="member-role">{{ member.role }}</text>
-											<view v-if="mIndex < dept.members.length - 1" class="member-item-border"></view>
+											<text class="member-name" :style="{ color: theme.textPrimary }">{{ member.name }}</text>
+											<text class="member-role" :style="{ color: theme.textSecondary }">{{ member.role }}</text>
+											<view v-if="mIndex < dept.members.length - 1" class="member-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 										</view>
 										<view v-if="dept.hasMore" class="load-more" @click.stop="loadMoreDeptMembers(dept.id, dept)">
-											<text class="load-more-text">加载更多</text>
+											<text class="load-more-text" :style="{ color: theme.brandPrimary }">加载更多</text>
 										</view>
 									</view>
 								</view>
@@ -130,6 +133,7 @@
 				<view v-if="rootOrg.members && rootOrg.members.length > 0" class="root-members">
 					<view v-for="(member, mIndex) in rootOrg.members" :key="member.id" 
 						class="member-item"
+						:style="{ backgroundColor: theme.cardBg }"
 						@click="handleMemberClick(member)">
 						<!-- 选择模式下显示复选框 -->
 						<view v-if="isSelectMode" :class="['checkbox', isSingleSelectMode ? 'checkbox-single' : '', member.selected ? 'checkbox-active' : '', (isSingleSelectMode && member.selected) ? 'checkbox-single-active' : '']" @click.stop="toggleMemberSelect(member)">
@@ -146,18 +150,18 @@
 							/>
 							<text v-else class="avatar-text">{{ member.avatarText }}</text>
 						</view>
-						<text class="member-name">{{ member.name }}</text>
-						<text class="member-role">{{ member.role }}</text>
-						<view v-if="mIndex < rootOrg.members.length - 1" class="member-item-border"></view>
+						<text class="member-name" :style="{ color: theme.textPrimary }">{{ member.name }}</text>
+						<text class="member-role" :style="{ color: theme.textSecondary }">{{ member.role }}</text>
+						<view v-if="mIndex < rootOrg.members.length - 1" class="member-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 					</view>
 				</view>
 			</view>
 		</scroll-view>
 
 		<!-- 选择模式下显示底部操作栏 -->
-		<view v-if="isSelectMode" class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px' }">
-			<text class="selected-text">已选择 {{ selectedCount }} 人</text>
-			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
+		<view v-if="isSelectMode" class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px', backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
+			<text class="selected-text" :style="{ color: theme.textPrimary }">已选择 {{ selectedCount }} 人</text>
+			<button class="confirm-btn" :style="{ backgroundColor: selectedCount === 0 ? theme.cardBgMuted : theme.brandPrimary }" :disabled="selectedCount === 0" @click="handleConfirm">
 				<text class="confirm-btn-text">确定</text>
 			</button>
 		</view>
@@ -165,6 +169,7 @@
 </template>
 
 <script setup lang="uts">
+	import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { 
 		isMemberSelected, 
@@ -177,8 +182,15 @@
 	import { getOrgTree } from '../../api/dept.uts'
 	import { getContactPageByDept } from '../../api/contact.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	const safeAreaBottom = ref(0)
 
@@ -237,6 +249,13 @@
 	})
 	const isSingleSelectMode = computed(() : boolean => {
 		return getSelectionLimit() === 1
+	})
+
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
 	})
 
 	function handleBack() {
@@ -1118,18 +1137,15 @@
 <style>
 	.page {
 		height: 100%;
-		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		padding: 8px 16px 12px 16px;
 	}
 
@@ -1147,12 +1163,10 @@
 	}
 
 	.back-icon {
-		color: #1F2329;
 		font-size: 24px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 20px;
 		font-weight: 600;
 	}
@@ -1162,7 +1176,6 @@
 	}
 
 	.search-bar {
-		background-color: #F2F3F5;
 		border-radius: 6px;
 		height: 36px;
 		flex-direction: row;
@@ -1173,18 +1186,16 @@
 
 	.search-icon {
 		font-size: 16px;
-		color: #8F959E;
 	}
 
 	.search-input {
 		flex: 1;
 		font-size: 14px;
 		margin-left: 8px;
-		color: #1F2329;
 	}
 
 	.placeholder {
-		color: #8F959E;
+		color: #A7AFB9;
 	}
 
 	.content {
@@ -1193,14 +1204,11 @@
 	}
 
 	.root-node {
-		background-color: #FFFFFF;
 		padding: 12px 16px;
 		border-bottom-width: 8px;
-		border-bottom-color: #F5F7FA;
 	}
 	
 	.root-members {
-		background-color: #FFFFFF;
 		padding: 0 16px;
 		padding-top: 8px;
 	}
@@ -1214,17 +1222,14 @@
 	.node-title {
 		font-size: 16px;
 		font-weight: 600;
-		color: #1F2329;
 	}
 
 	.expand-icon {
 		font-size: 16px;
-		color: #8F959E;
 	}
 
 	.org-list {
 		padding: 0 16px;
-		background-color: #FFFFFF;
 	}
 
 	.org-item {
@@ -1237,7 +1242,6 @@
 		left: 0;
 		right: 0;
 		height: 1px;
-		background-color: #F0F0F0;
 	}
 
 	.org-row {
@@ -1263,7 +1267,7 @@
 
 	.org-name-bold {
 		font-weight: 500;
-		color: #1F2329;
+		color: #F3F6FA;
 	}
 
 	.dept-list {
@@ -1303,7 +1307,7 @@
 
 	.dept-name-bold {
 		font-weight: 500;
-		color: #1F2329;
+		color: #F3F6FA;
 	}
 
 	.member-list {
@@ -1358,12 +1362,10 @@
 		flex: 1;
 		font-size: 16px;
 		font-weight: 400;
-		color: #1F2329;
 	}
 
 	.member-role {
 		font-size: 12px;
-		color: #8F959E;
 	}
 
 	.checkbox {
@@ -1371,8 +1373,7 @@
 		height: 22px;
 		border-radius: 4px;
 		border-width: 2px;
-		border-color: #8F959E;
-		background-color: #FFFFFF;
+		border-color: #8893A2;
 		margin-right: 12px;
 		justify-content: center;
 		align-items: center;
@@ -1399,9 +1400,7 @@
 	}
 
 	.footer {
-		background-color: #ffffff;
 		border-top-width: 0.5px;
-		border-top-color: #EFF0F1;
 		padding: 12px 16px;
 		flex-direction: row;
 		justify-content: space-between;
@@ -1411,7 +1410,6 @@
 
 	.selected-text {
 		font-size: 15px;
-		color: #1F2329;
 	}
 
 	.confirm-btn {

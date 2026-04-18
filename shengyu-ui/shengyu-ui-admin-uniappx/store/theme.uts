@@ -1,0 +1,268 @@
+import { darkThemeTokens, lightThemeTokens, type ResolvedTheme, type ThemeMode, type ThemeTokens } from '../config/theme.uts'
+
+const THEME_MODE_KEY = 'APP_THEME_MODE'
+const TAB_BAR_PAGE_PATHS: string[] = [
+	'pages/message/message',
+	'pages/contacts/contacts',
+	'pages/workbench/workbench',
+	'pages/profile/profile'
+]
+
+type ThemeListener = (resolvedTheme: ResolvedTheme, mode: ThemeMode, tokens: ThemeTokens) => void
+
+const listeners: ThemeListener[] = []
+let currentSystemTheme: ResolvedTheme = 'light'
+let initialized = false
+let osThemeListenerId: number | null = null
+let hostThemeListenerId: number | null = null
+
+function normalizeThemeMode(raw: any): ThemeMode {
+	if (raw === 'light' || raw === 'dark' || raw === 'system') {
+		return raw
+	}
+	return 'system'
+}
+
+function normalizeResolvedTheme(raw: any): ResolvedTheme {
+	return raw === 'dark' ? 'dark' : 'light'
+}
+
+function readThemeFromObject(source: any, keys: string[]): ResolvedTheme | null {
+	if (source == null) {
+		return null
+	}
+	for (let i = 0; i < keys.length; i++) {
+		const raw = (source as any)[keys[i]]
+		if (raw === 'light' || raw === 'dark') {
+			return normalizeResolvedTheme(raw)
+		}
+	}
+	return null
+}
+
+function detectSystemTheme(): ResolvedTheme {
+	try {
+		const anyUni = uni as any
+		const deviceInfo = typeof anyUni.getDeviceInfo === 'function' ? anyUni.getDeviceInfo() : null
+		const deviceTheme = readThemeFromObject(deviceInfo, ['osTheme'])
+		if (deviceTheme != null) {
+			return deviceTheme
+		}
+		const appBaseInfo = typeof anyUni.getAppBaseInfo === 'function' ? anyUni.getAppBaseInfo() : null
+		const hostTheme = readThemeFromObject(appBaseInfo, ['hostTheme'])
+		if (hostTheme != null) {
+			return hostTheme
+		}
+		const systemInfo = uni.getSystemInfoSync() as any
+		const fallbackTheme = readThemeFromObject(systemInfo, ['osTheme', 'hostTheme', 'theme'])
+		if (fallbackTheme != null) {
+			return fallbackTheme
+		}
+		return 'light'
+	} catch (e) {
+		return 'light'
+	}
+}
+
+function notifyThemeListeners(): void {
+	const mode = getThemeMode()
+	const resolvedTheme = resolveActiveTheme(mode)
+	const tokens = getThemeTokens()
+	for (let i = 0; i < listeners.length; i++) {
+		try {
+			listeners[i](resolvedTheme, mode, tokens)
+		} catch (e) {
+			console.error('[theme] notify listener failed:', e)
+		}
+	}
+}
+
+function isTabBarPageActive(): boolean {
+	try {
+		const pages = getCurrentPages()
+		if (pages == null || pages.length === 0) {
+			return false
+		}
+		const currentPage: any = pages[pages.length - 1]
+		const route = currentPage != null && currentPage.route != null ? String(currentPage.route) : ''
+		if (route === '') {
+			return false
+		}
+		return TAB_BAR_PAGE_PATHS.indexOf(route) !== -1
+	} catch (e) {
+		return false
+	}
+}
+
+function applyTabBarTheme(tokens: ThemeTokens): void {
+	if (!isTabBarPageActive()) {
+		return
+	}
+	try {
+		const result = uni.setTabBarStyle({
+			color: tokens.tabBarText,
+			selectedColor: tokens.tabBarActiveText,
+			backgroundColor: tokens.tabBarBg,
+			borderStyle: tokens.borderColor.toLowerCase() === '#eff0f1' ? 'black' : 'white'
+		})
+		const maybePromise: any = result as any
+		if (maybePromise != null && typeof maybePromise.catch === 'function') {
+			maybePromise.catch((_err: any) => {
+				// ignore non-tabbar pages / transient H5 timing failures
+			})
+		}
+	} catch (e) {
+		// ignore
+	}
+}
+
+function applyH5ThemeMeta(tokens: ThemeTokens): void {
+	try {
+		const globalAny: any = globalThis as any
+		if (globalAny == null || globalAny.document == null) {
+			return
+		}
+		const doc = globalAny.document
+		const head = doc.head
+		if (head == null) {
+			return
+		}
+		let meta = doc.querySelector != null ? doc.querySelector('meta[name="theme-color"]') : null
+		if (meta == null && doc.createElement != null && head.appendChild != null) {
+			meta = doc.createElement('meta')
+			if (meta != null && meta.setAttribute != null) {
+				meta.setAttribute('name', 'theme-color')
+				head.appendChild(meta)
+			}
+		}
+		if (meta != null && meta.setAttribute != null) {
+			meta.setAttribute('content', tokens.headerBg)
+		}
+	} catch (e) {
+		// ignore
+	}
+}
+
+function applyNativeTheme(mode: ThemeMode): void {
+	try {
+		const anyUni = uni as any
+		if (anyUni == null || typeof anyUni.setAppTheme !== 'function') {
+			return
+		}
+		const nextTheme = mode === 'system' ? 'auto' : resolveActiveTheme(mode)
+		try {
+			anyUni.setAppTheme(nextTheme)
+			return
+		} catch (e) {
+			anyUni.setAppTheme({
+				theme: nextTheme
+			})
+		}
+	} catch (e) {
+		// ignore
+	}
+}
+
+function normalizeListenerId(raw: any): number | null {
+	if (typeof raw === 'number' && isFinite(raw)) {
+		return raw
+	}
+	const text = raw != null ? String(raw).trim() : ''
+	if (text === '') {
+		return null
+	}
+	const value = Number(text)
+	return isFinite(value) ? value : null
+}
+
+export function getThemeMode(): ThemeMode {
+	try {
+		return normalizeThemeMode(uni.getStorageSync(THEME_MODE_KEY))
+	} catch (e) {
+		return 'system'
+	}
+}
+
+export function setThemeMode(mode: ThemeMode): void {
+	const normalized = normalizeThemeMode(mode)
+	uni.setStorageSync(THEME_MODE_KEY, normalized)
+	applyTheme()
+}
+
+export function resolveActiveTheme(mode?: ThemeMode): ResolvedTheme {
+	const currentMode = mode != null ? normalizeThemeMode(mode) : getThemeMode()
+	if (currentMode === 'system') {
+		return currentSystemTheme
+	}
+	return normalizeResolvedTheme(currentMode)
+}
+
+export function getThemeTokens(mode?: ThemeMode): ThemeTokens {
+	return resolveActiveTheme(mode) === 'dark' ? darkThemeTokens : lightThemeTokens
+}
+
+export function applyTheme(): void {
+	applyNativeTheme(getThemeMode())
+	const tokens = getThemeTokens()
+	applyTabBarTheme(tokens)
+	applyH5ThemeMeta(tokens)
+	notifyThemeListeners()
+}
+
+function registerSystemThemeListeners(): void {
+	try {
+		const anyUni = uni as any
+		if (osThemeListenerId == null && typeof anyUni.onOsThemeChange === 'function') {
+			const listenerId = anyUni.onOsThemeChange((res: any) => {
+				currentSystemTheme = normalizeResolvedTheme(res != null ? ((res as any).osTheme ?? res) : '')
+				if (getThemeMode() === 'system') {
+					applyTheme()
+				}
+			})
+			osThemeListenerId = normalizeListenerId(listenerId)
+		}
+		if (hostThemeListenerId == null && typeof anyUni.onHostThemeChange === 'function') {
+			const listenerId = anyUni.onHostThemeChange((res: any) => {
+				currentSystemTheme = normalizeResolvedTheme(res != null ? ((res as any).hostTheme ?? res) : '')
+				if (getThemeMode() === 'system') {
+					applyTheme()
+				}
+			})
+			hostThemeListenerId = normalizeListenerId(listenerId)
+		}
+		if (osThemeListenerId == null && hostThemeListenerId == null && typeof anyUni.onThemeChange === 'function') {
+			anyUni.onThemeChange((res: any) => {
+				currentSystemTheme = normalizeResolvedTheme(res != null ? ((res as any).theme ?? res) : '')
+				if (getThemeMode() === 'system') {
+					applyTheme()
+				}
+			})
+		}
+	} catch (e) {
+		// ignore
+	}
+}
+
+export function initTheme(): void {
+	currentSystemTheme = detectSystemTheme()
+	if (!initialized) {
+		initialized = true
+		registerSystemThemeListeners()
+	}
+	applyTheme()
+}
+
+export function subscribeThemeChange(listener: ThemeListener): () => void {
+	listeners.push(listener)
+	try {
+		listener(resolveActiveTheme(), getThemeMode(), getThemeTokens())
+	} catch (e) {
+		// ignore
+	}
+	return () => {
+		const index = listeners.indexOf(listener)
+		if (index >= 0) {
+			listeners.splice(index, 1)
+		}
+	}
+}

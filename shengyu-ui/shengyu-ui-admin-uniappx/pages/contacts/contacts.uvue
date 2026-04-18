@@ -1,55 +1,56 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-top">
-				<text class="header-title">{{ t('contacts.title') }}</text>
+				<text class="header-title" :style="{ color: theme.headerText }">{{ t('contacts.title') }}</text>
 			</view>
-			<view class="search-bar">
-				<text class="iconfont search-icon" @click="handleSearch">&#xea6e;</text>
-				<input class="search-input" v-model="listSearchKeyword" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" confirm-type="search" @confirm="handleSearch" />
-				<text v-if="listSearchKeyword !== ''" class="iconfont search-clear" @click="clearLocalSearch">&#xea73;</text>
+			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
+				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }" @click="handleSearch">&#xea6e;</text>
+				<input class="search-input" :style="{ color: theme.inputText }" v-model="listSearchKeyword" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" confirm-type="search" @confirm="handleSearch" />
+				<text v-if="listSearchKeyword !== ''" class="iconfont search-clear" :style="{ color: theme.textTertiary }" @click="clearLocalSearch">&#xea73;</text>
 			</view>
 		</view>
 
 		<scroll-view 
-			class="content" 
+			class="content"
+			:style="{ backgroundColor: theme.pageBg }"
 			scroll-y="true" 
 			show-scrollbar="false"
 			:scroll-into-view="scrollTarget"
 			scroll-with-animation="true"
 		>
 			<!-- 分类列表 -->
-			<view class="category-group">
-				<view class="category-item" hover-class="category-item-active" v-for="(item, index) in categories1" :key="index" @click="handleCategory(item)">
+			<view class="category-group" :style="{ backgroundColor: theme.cardBg }">
+				<view class="category-item" :style="{ backgroundColor: theme.cardBg }" hover-class="category-item-active" v-for="(item, index) in categories1" :key="index" @click="handleCategory(item)">
 					<view class="category-icon-wrap" :style="{ backgroundColor: item.bg }">
 						<text class="iconfont category-icon">{{ item.icon }}</text>
 						<view v-if="item.badgeCount > 0" class="category-dot"></view>
 					</view>
-					<text class="category-name">{{ t(item.nameKey) }}</text>
-					<view v-if="index < categories1.length - 1" class="category-item-border"></view>
+					<text class="category-name" :style="{ color: theme.textPrimary }">{{ t(item.nameKey) }}</text>
+					<view v-if="index < categories1.length - 1" class="category-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 				</view>
 			</view>
 
-			<view class="section-divider"></view>
+			<view class="section-divider" :style="{ backgroundColor: theme.pageBg }"></view>
 
-			<view class="category-group">
-				<view class="category-item" hover-class="category-item-active" v-for="(item, index) in categories2" :key="index" @click="handleCategory(item)">
+			<view class="category-group" :style="{ backgroundColor: theme.cardBg }">
+				<view class="category-item" :style="{ backgroundColor: theme.cardBg }" hover-class="category-item-active" v-for="(item, index) in categories2" :key="index" @click="handleCategory(item)">
 					<view class="category-icon-wrap" :style="{ backgroundColor: item.bg }">
 						<text class="iconfont category-icon">{{ item.icon }}</text>
 					</view>
-					<text class="category-name">{{ t(item.nameKey) }}</text>
-					<view v-if="index < categories2.length - 1" class="category-item-border"></view>
+					<text class="category-name" :style="{ color: theme.textPrimary }">{{ t(item.nameKey) }}</text>
+					<view v-if="index < categories2.length - 1" class="category-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 				</view>
 			</view>
 
 			<!-- 联系人列表 -->
 			<view v-for="(group, groupIndex) in groupedContacts" :key="groupIndex">
-				<view class="section-header" :id="'group-' + group.letter">
-					<text class="section-title">{{ group.letter }}</text>
+				<view class="section-header" :id="'group-' + group.letter" :style="{ backgroundColor: theme.pageBg }">
+					<text class="section-title" :style="{ color: theme.textTertiary }">{{ group.letter }}</text>
 				</view>
-				<view class="contact-list">
-					<view class="contact-item" hover-class="contact-item-active" v-for="(item, index) in group.contacts" :key="index" @click="handleContact(item)">
+				<view class="contact-list" :style="{ backgroundColor: theme.cardBg }">
+					<view class="contact-item" :style="{ backgroundColor: theme.cardBg }" hover-class="contact-item-active" v-for="(item, index) in group.contacts" :key="index" @click="handleContact(item)">
 						<view class="contact-avatar" :style="{ backgroundColor: item.avatarBg }">
 							<image
 								v-if="shouldShowAvatar(item)"
@@ -61,10 +62,10 @@
 							<text v-else class="avatar-text">{{ item.avatarText }}</text>
 						</view>
 						<view class="contact-info">
-							<text class="contact-name">{{ item.name }}</text>
-							<text class="contact-role">{{ item.role }}</text>
+							<text class="contact-name" :style="{ color: theme.textPrimary }">{{ item.name }}</text>
+							<text class="contact-role" :style="{ color: theme.textSecondary }">{{ item.role }}</text>
 						</view>
-						<view v-if="index < group.contacts.length - 1" class="contact-item-border"></view>
+						<view v-if="index < group.contacts.length - 1" class="contact-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 					</view>
 				</view>
 			</view>
@@ -76,6 +77,7 @@
 				v-for="letter in indexList" 
 				:key="letter" 
 				class="index-item"
+				:style="{ color: theme.textPrimary }"
 				@click="scrollToGroup(letter)"
 			>
 				{{ letter }}
@@ -90,6 +92,8 @@
 	import { badgeService, type BadgeData, type BadgeListener } from '../../services/badge-service.uts'
 	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const CONTACTS_GROUP_JOIN_REQUEST_MENU_ID = 'contactsGroupJoinRequest'
 
@@ -100,6 +104,7 @@
 	const rawContacts = ref<any[]>([])
 	const listSearchKeyword = ref('')
 	const contactsPendingCount = ref(0)
+	const theme = ref<ThemeTokens>(getThemeTokens())
 
 	const categories1 = computed(() : any[] => {
 		return [
@@ -116,6 +121,11 @@
 	const colors = ['#0ea5e9', '#f472b6', '#c084fc', '#fb7185', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#3b82f6', '#8b5cf6']
 
 	let badgeListener: BadgeListener | null = null
+	let unsubscribeTheme: (() => void) | null = null
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	function applyBadgeData(badgeData: BadgeData | null): void {
 		if (badgeData == null) {
@@ -236,6 +246,10 @@
 	})
 
 	onUnmounted(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
 		if (badgeListener != null) {
 			badgeService.removeListener(badgeListener)
 			badgeListener = null
@@ -355,7 +369,6 @@
 	/* 页面基础样式 */
 	.page {
 		height: 100%;
-		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 		position: relative;
@@ -363,12 +376,10 @@
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	/* 头部区域 - 扁平化风格 */
 	.header {
-		background-color: #FFFFFF;
 		padding: 8px 16px 12px 16px;
 	}
 
@@ -380,14 +391,12 @@
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 20px;
 		font-weight: 600;
 	}
 
 	/* 搜索栏 - 浅灰色扁平风格 */
 	.search-bar {
-		background-color: #F2F3F5;
 		border-radius: 6px;
 		height: 36px;
 		flex-direction: row;
@@ -398,34 +407,29 @@
 
 	.search-icon {
 		font-size: 16px;
-		color: #8F959E;
 	}
 
 	.search-input {
 		flex: 1;
 		font-size: 14px;
 		margin-left: 8px;
-		color: #1F2329;
 	}
 
 	.search-clear {
 		font-size: 16px;
-		color: #8F959E;
 		padding-left: 8px;
 	}
 
 	.placeholder {
-		color: #8F959E;
+		color: #A7AFB9;
 	}
 
 	.content {
 		flex: 1;
 		height: 0;
-		background-color: #FFFFFF;
 	}
 
 	.category-group {
-		background-color: #FFFFFF;
 		padding-top: 4px;
 	}
 
@@ -433,12 +437,11 @@
 		flex-direction: row;
 		align-items: center;
 		padding: 12px 16px;
-		background-color: #FFFFFF;
 		position: relative;
 	}
 
 	.category-item-active {
-		background-color: #F2F3F5;
+		background-color: rgba(143, 149, 158, 0.12);
 	}
 
 	.category-item-border {
@@ -479,7 +482,6 @@
 
 	.category-name {
 		font-size: 16px;
-		color: #1F2329;
 		font-weight: 400;
 	}
 
@@ -489,35 +491,27 @@
 
 	.section-divider {
 		height: 8px;
-		background-color: #F5F7FA;
 	}
 
 	/* 分组标题 */
 	.section-header {
 		padding: 8px 16px;
-		background-color: #F5F7FA;
 	}
 
 	.section-title {
 		font-size: 12px;
-		color: #8F959E;
 		font-weight: 600;
-	}
-
-	.contact-list {
-		background-color: #FFFFFF;
 	}
 
 	.contact-item {
 		flex-direction: row;
 		align-items: center;
 		padding: 10px 16px;
-		background-color: #FFFFFF;
 		position: relative;
 	}
 
 	.contact-item-active {
-		background-color: #F2F3F5;
+		background-color: rgba(143, 149, 158, 0.12);
 	}
 
 	.contact-item-border {
@@ -557,14 +551,12 @@
 
 	.contact-name {
 		font-size: 16px;
-		color: #1F2329;
 		font-weight: 400;
 		margin-bottom: 2px;
 	}
 
 	.contact-role {
 		font-size: 12px;
-		color: #8F959E;
 	}
 
 	/* 右侧索引栏 */
@@ -579,7 +571,7 @@
 
 	.index-item {
 		font-size: 10px;
-		color: #1F2329;
+		color: #F3F6FA;
 		padding: 2px 4px;
 		font-weight: 600;
 	}

@@ -1,130 +1,130 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">{{ t('common.back') }}</text>
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title">群聊设置</text>
+			<text class="header-title" :style="{ color: theme.headerText }">群聊设置</text>
 			<view class="header-right"></view>
 		</view>
 
-		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+		<scroll-view class="content" :style="{ backgroundColor: theme.pageBg }" scroll-y="true" show-scrollbar="false">
 			<!-- 群信息卡片 -->
-			<view class="group-info-card">
+			<view class="group-info-card" :style="{ backgroundColor: theme.cardBg }">
 				<view class="group-avatar">
 					<text class="iconfont group-icon">&#xe616;</text>
 				</view>
 				<view class="group-details">
-					<text class="group-name">{{ groupName }}</text>
-					<text class="group-member-count">{{ memberCount }}人</text>
+					<text class="group-name" :style="{ color: theme.textPrimary }">{{ groupName }}</text>
+					<text class="group-member-count" :style="{ color: theme.textTertiary }">{{ memberCount }}人</text>
 				</view>
 			</view>
 
 			<!-- 群成员列表 -->
-			<view class="section">
-				<view class="section-title">群成员</view>
+			<view class="section" :style="{ backgroundColor: theme.cardBg }">
+				<view class="section-title" :style="{ color: theme.textPrimary }">群成员</view>
 				<view class="member-grid">
 					<view class="member-item" v-for="(member, index) in displayMembers" :key="member.id" @click="handleMemberClick(member)">
 						<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
 							<text class="member-avatar-text">{{ member.avatarText }}</text>
 						</view>
-						<text class="member-name">{{ member.name }}</text>
+						<text class="member-name" :style="{ color: theme.textSecondary }">{{ member.name }}</text>
 					</view>
 					<!-- 添加成员按钮 -->
 					<view v-if="canAddMembers" class="member-item" @click="handleAddMember">
 						<view class="member-avatar add-btn">
 							<text class="iconfont add-icon">&#xe726;</text>
 						</view>
-						<text class="member-name">添加</text>
+						<text class="member-name" :style="{ color: theme.textSecondary }">添加</text>
 					</view>
 					<!-- 删除成员按钮 -->
 					<view v-if="canRemoveMembers" class="member-item" @click="handleRemoveMember">
 						<view class="member-avatar remove-btn">
 							<text class="iconfont remove-icon">&#xe602;</text>
 						</view>
-						<text class="member-name">删除</text>
+						<text class="member-name" :style="{ color: theme.textSecondary }">删除</text>
 					</view>
 				</view>
-				<view class="view-all-btn" @click="handleViewAllMembers">
-					<text class="view-all-text">查看全部群成员</text>
-					<text class="iconfont arrow-icon">&#xeb03;</text>
+				<view class="view-all-btn" :style="{ borderTopColor: theme.borderColor }" @click="handleViewAllMembers">
+					<text class="view-all-text" :style="{ color: theme.brandPrimary }">查看全部群成员</text>
+					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 			</view>
 
 			<!-- 群聊名称 -->
-			<view class="setting-section">
-				<view class="setting-item" @click="handleEditGroupName">
-					<text class="setting-label">群聊名称</text>
+			<view class="setting-section" :style="{ backgroundColor: theme.cardBg }">
+				<view class="setting-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleEditGroupName">
+					<text class="setting-label" :style="{ color: theme.textPrimary }">群聊名称</text>
 					<view class="setting-value-wrap">
-						<text class="setting-value">{{ groupName }}</text>
-						<text class="iconfont arrow-icon">&#xeb03;</text>
+						<text class="setting-value" :style="{ color: theme.textSecondary }">{{ groupName }}</text>
+						<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 					</view>
 				</view>
 			</view>
 
 			<!-- 群聊设置 -->
-			<view class="setting-section">
-				<view class="setting-item" @click="handleGroupQRCode">
-					<text class="setting-label">群二维码</text>
-					<text class="iconfont arrow-icon">&#xeb03;</text>
+			<view class="setting-section" :style="{ backgroundColor: theme.cardBg }">
+				<view class="setting-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleGroupQRCode">
+					<text class="setting-label" :style="{ color: theme.textPrimary }">群二维码</text>
+					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
-				<view class="setting-item" @click="handleGroupNotice">
-					<text class="setting-label">群公告</text>
-					<text class="iconfont arrow-icon">&#xeb03;</text>
+				<view class="setting-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleGroupNotice">
+					<text class="setting-label" :style="{ color: theme.textPrimary }">群公告</text>
+					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
-				<view class="setting-item" @click="handleGroupFiles">
-					<text class="setting-label">群文件</text>
-					<text class="iconfont arrow-icon">&#xeb03;</text>
+				<view class="setting-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleGroupFiles">
+					<text class="setting-label" :style="{ color: theme.textPrimary }">群文件</text>
+					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 				<view class="setting-item" @click="handleChatHistory">
-					<text class="setting-label">聊天记录</text>
-					<text class="iconfont arrow-icon">&#xeb03;</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">聊天记录</text>
+					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 			</view>
 
 			<!-- 消息设置 -->
-			<view class="setting-section">
-				<view class="setting-item">
-					<text class="setting-label">消息免打扰</text>
+			<view class="setting-section" :style="{ backgroundColor: theme.cardBg }">
+				<view class="setting-item" :style="{ borderBottomColor: theme.borderColor }">
+					<text class="setting-label" :style="{ color: theme.textPrimary }">消息免打扰</text>
 					<switch class="setting-switch" :checked="noDisturb" @change="handleNoDisturbChange" />
 				</view>
 				<view class="setting-item">
-					<text class="setting-label">置顶聊天</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">置顶聊天</text>
 					<switch class="setting-switch" :checked="isPinned" @change="handlePinnedChange" />
 				</view>
 			</view>
 
 			<!-- 群管理 -->
-			<view class="setting-section">
-				<view v-if="canManageJoinRequests" class="setting-item">
-					<text class="setting-label">允许成员邀请</text>
+			<view class="setting-section" :style="{ backgroundColor: theme.cardBg }">
+				<view v-if="canManageJoinRequests" class="setting-item" :style="{ borderBottomColor: theme.borderColor }">
+					<text class="setting-label" :style="{ color: theme.textPrimary }">允许成员邀请</text>
 					<switch class="setting-switch" :checked="allowMemberInvite" :disabled="memberInviteUpdating" @change="handleMemberInviteChange" />
 				</view>
-				<view v-if="canManageJoinRequests" class="setting-item">
-					<text class="setting-label">群聊邀请确认</text>
+				<view v-if="canManageJoinRequests" class="setting-item" :style="{ borderBottomColor: theme.borderColor }">
+					<text class="setting-label" :style="{ color: theme.textPrimary }">群聊邀请确认</text>
 					<switch class="setting-switch" :checked="needApproval" :disabled="approvalUpdating" @change="handleApprovalChange" />
 				</view>
-				<view v-if="canManageJoinRequests" class="setting-item" @click="handleJoinRequests">
-					<text class="setting-label">入群申请</text>
+				<view v-if="canManageJoinRequests" class="setting-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleJoinRequests">
+					<text class="setting-label" :style="{ color: theme.textPrimary }">入群申请</text>
 					<view class="setting-value-wrap">
 						<text :class="['setting-value', pendingJoinRequestCount > 0 ? 'danger-text' : '']">{{ pendingJoinRequestCount > 0 ? pendingJoinRequestCount + '条待处理' : '暂无待处理' }}</text>
-						<text class="iconfont arrow-icon">&#xeb03;</text>
+						<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 					</view>
 				</view>
 				<view class="setting-item" @click="handleMyNickname">
-					<text class="setting-label">我在本群的昵称</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">我在本群的昵称</text>
 					<view class="setting-value-wrap">
-						<text class="setting-value">{{ myNickname }}</text>
-						<text class="iconfont arrow-icon">&#xeb03;</text>
+						<text class="setting-value" :style="{ color: theme.textSecondary }">{{ myNickname }}</text>
+						<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 					</view>
 				</view>
 			</view>
 
 			<!-- 危险操作 -->
-			<view class="setting-section">
-				<view class="setting-item danger-item" @click="handleClearHistory">
+			<view class="setting-section" :style="{ backgroundColor: theme.cardBg }">
+				<view class="setting-item danger-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleClearHistory">
 					<text class="setting-label danger-text">清空聊天记录</text>
 				</view>
 				<view class="setting-item danger-item" @click="handleDeleteAndExit">
@@ -136,24 +136,25 @@
 		</scroll-view>
 		
 		<!-- 修改群名称弹窗 -->
-		<view v-if="showEditNameDialog" class="dialog-mask" @click.stop="handleCancelEditName">
-			<view class="dialog-container" @click.stop="">
-				<view class="dialog-header">
-					<text class="dialog-title">修改群名称</text>
+		<view v-if="showEditNameDialog" class="dialog-mask" :style="{ backgroundColor: theme.overlayMask }" @click.stop="handleCancelEditName">
+			<view class="dialog-container" :style="{ backgroundColor: theme.cardBg }" @click.stop="">
+				<view class="dialog-header" :style="{ borderBottomColor: theme.borderColor }">
+					<text class="dialog-title" :style="{ color: theme.textPrimary }">修改群名称</text>
 				</view>
 				<view class="dialog-content">
 					<input 
 						class="dialog-input" 
+						:style="{ color: theme.inputText, backgroundColor: theme.inputBg, borderColor: theme.borderColor }"
 						v-model="editingGroupName" 
 						placeholder="请输入群名称（最多30字）"
 						maxlength="30"
 						:focus="showEditNameDialog"
 					/>
-					<text class="dialog-hint">{{ editingGroupName.length }}/30</text>
+					<text class="dialog-hint" :style="{ color: theme.textTertiary }">{{ editingGroupName.length }}/30</text>
 				</view>
-				<view class="dialog-footer">
+				<view class="dialog-footer" :style="{ borderTopColor: theme.borderColor }">
 					<view class="dialog-btn dialog-btn-cancel" @click.stop="handleCancelEditName">
-						<text class="dialog-btn-text">取消</text>
+						<text class="dialog-btn-text" :style="{ color: theme.textSecondary }">取消</text>
 					</view>
 					<view class="dialog-btn dialog-btn-confirm" @click.stop="handleConfirmEditName">
 						<text class="dialog-btn-text dialog-btn-text-primary">确定</text>
@@ -163,24 +164,25 @@
 		</view>
 		
 		<!-- 修改昵称弹窗 -->
-		<view v-if="showEditNicknameDialog" class="dialog-mask" @click.stop="handleCancelEditNickname">
-			<view class="dialog-container" @click.stop="">
-				<view class="dialog-header">
-					<text class="dialog-title">修改我的群昵称</text>
+		<view v-if="showEditNicknameDialog" class="dialog-mask" :style="{ backgroundColor: theme.overlayMask }" @click.stop="handleCancelEditNickname">
+			<view class="dialog-container" :style="{ backgroundColor: theme.cardBg }" @click.stop="">
+				<view class="dialog-header" :style="{ borderBottomColor: theme.borderColor }">
+					<text class="dialog-title" :style="{ color: theme.textPrimary }">修改我的群昵称</text>
 				</view>
 				<view class="dialog-content">
 					<input 
 						class="dialog-input" 
+						:style="{ color: theme.inputText, backgroundColor: theme.inputBg, borderColor: theme.borderColor }"
 						v-model="editingNickname" 
 						placeholder="请输入昵称（最多15字）"
 						maxlength="15"
 						:focus="showEditNicknameDialog"
 					/>
-					<text class="dialog-hint">{{ editingNickname.length }}/15</text>
+					<text class="dialog-hint" :style="{ color: theme.textTertiary }">{{ editingNickname.length }}/15</text>
 				</view>
-				<view class="dialog-footer">
+				<view class="dialog-footer" :style="{ borderTopColor: theme.borderColor }">
 					<view class="dialog-btn dialog-btn-cancel" @click.stop="handleCancelEditNickname">
-						<text class="dialog-btn-text">取消</text>
+						<text class="dialog-btn-text" :style="{ color: theme.textSecondary }">取消</text>
 					</view>
 					<view class="dialog-btn dialog-btn-confirm" @click.stop="handleConfirmEditNickname">
 						<text class="dialog-btn-text dialog-btn-text-primary">确定</text>
@@ -192,6 +194,8 @@
 </template>
 
 <script setup lang="uts">
+	import { onMounted } from 'vue'
+	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getGroup, getGroupMembers, updateGroup, getGroupJoinRequestPendingCount, setGroupMemberNickname } from '../../api/group.uts'
 	import { getConversationByTarget } from '../../api/conversation.uts'
@@ -202,6 +206,8 @@
 	import { getUserIdStr } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 	import { clearConversationHistory, quitGroupAndDeleteConversation } from '../../utils/chat-setting-actions.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
 
@@ -222,6 +228,12 @@
 	const loading = ref(false)
 	const approvalUpdating = ref(false)
 	const memberInviteUpdating = ref(false)
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 	
 	// 编辑群名称弹窗
 	const showEditNameDialog = ref(false)
@@ -655,6 +667,13 @@
 		}
 	}
 
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
+	})
+
 	function handleMyNickname() {
 		editingNickname.value = myNickname.value
 		showEditNicknameDialog.value = true
@@ -832,25 +851,21 @@
 <style>
 	.page {
 		height: 100%;
-		background-color: #F5F7FA;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		height: 44px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
 		justify-content: space-between;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 	}
 
 	.header-left {
@@ -860,18 +875,15 @@
 	}
 
 	.back-icon {
-		color: #1F2329;
 		font-size: 20px;
 	}
 
 	.back-text {
-		color: #1F2329;
 		font-size: 16px;
 		margin-left: 4px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 17px;
 		font-weight: 600;
 	}
@@ -887,7 +899,6 @@
 
 	/* 群信息卡片 */
 	.group-info-card {
-		background-color: #FFFFFF;
 		padding: 20px 16px;
 		flex-direction: row;
 		align-items: center;
@@ -915,26 +926,22 @@
 
 	.group-name {
 		font-size: 18px;
-		color: #1F2329;
 		font-weight: 600;
 		margin-bottom: 6px;
 	}
 
 	.group-member-count {
 		font-size: 14px;
-		color: #8F959E;
 	}
 
 	/* 群成员区域 */
 	.section {
-		background-color: #FFFFFF;
 		padding: 16px;
 		margin-bottom: 10px;
 	}
 
 	.section-title {
 		font-size: 14px;
-		color: #8F959E;
 		margin-bottom: 12px;
 	}
 
@@ -965,7 +972,7 @@
 	}
 
 	.add-btn {
-		background-color: #F5F7FA;
+		background-color: #242D38;
 		border-width: 1px;
 		border-color: #E5E5E5;
 		border-style: dashed;
@@ -973,11 +980,11 @@
 
 	.add-icon {
 		font-size: 24px;
-		color: #8F959E;
+		color: #8893A2;
 	}
 
 	.remove-btn {
-		background-color: #F5F7FA;
+		background-color: #242D38;
 		border-width: 1px;
 		border-color: #E5E5E5;
 		border-style: dashed;
@@ -985,12 +992,12 @@
 
 	.remove-icon {
 		font-size: 24px;
-		color: #8F959E;
+		color: #8893A2;
 	}
 
 	.member-name {
 		font-size: 12px;
-		color: #1F2329;
+		color: #F3F6FA;
 		text-align: center;
 		lines: 1;
 		text-overflow: ellipsis;
@@ -1008,18 +1015,18 @@
 
 	.view-all-text {
 		font-size: 14px;
-		color: #646A73;
+		color: #B7C0CC;
 		margin-right: 4px;
 	}
 
 	.arrow-icon {
 		font-size: 14px;
-		color: #8F959E;
+		color: #8893A2;
 	}
 
 	/* 设置项 */
 	.setting-section {
-		background-color: #FFFFFF;
+		background-color: #1A212A;
 		margin-bottom: 10px;
 	}
 
@@ -1038,7 +1045,7 @@
 
 	.setting-label {
 		font-size: 15px;
-		color: #1F2329;
+		color: #F3F6FA;
 	}
 
 	.setting-value-wrap {
@@ -1048,7 +1055,7 @@
 
 	.setting-value {
 		font-size: 14px;
-		color: #8F959E;
+		color: #8893A2;
 		margin-right: 8px;
 	}
 
@@ -1083,7 +1090,7 @@
 	
 	.dialog-container {
 		width: 280px;
-		background-color: #FFFFFF;
+		background-color: #1A212A;
 		border-radius: 12px;
 		overflow: hidden;
 	}
@@ -1096,7 +1103,7 @@
 	
 	.dialog-title {
 		font-size: 17px;
-		color: #1F2329;
+		color: #F3F6FA;
 		font-weight: 600;
 		text-align: center;
 	}
@@ -1108,23 +1115,23 @@
 	.dialog-input {
 		width: 100%;
 		height: 40px;
-		background-color: #F5F7FA;
+		background-color: #202934;
 		border-radius: 6px;
 		padding: 0 12px;
 		font-size: 15px;
-		color: #1F2329;
+		color: #F3F6FA;
 		border-width: 1px;
-		border-color: #E5E5E5;
+		border-color: #2B3541;
 	}
 	
 	.dialog-input-focus {
 		border-color: #1677FF;
-		background-color: #FFFFFF;
+		background-color: #1A212A;
 	}
 	
 	.dialog-hint {
 		font-size: 12px;
-		color: #8F959E;
+		color: #8893A2;
 		margin-top: 8px;
 		text-align: right;
 	}
@@ -1149,7 +1156,7 @@
 	
 	.dialog-btn-text {
 		font-size: 16px;
-		color: #646A73;
+		color: #B7C0CC;
 	}
 	
 	.dialog-btn-text-primary {

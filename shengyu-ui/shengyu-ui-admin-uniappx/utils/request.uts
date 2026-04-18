@@ -494,6 +494,20 @@ export function post(url: string, data?: UTSJSONObject): Promise<any> {
 }
 
 /**
+ * PUT 请求
+ */
+export function put(url: string, data?: UTSJSONObject): Promise<any> {
+	return request({
+		url: url,
+		method: 'PUT',
+		data: data,
+		header: {
+			'Content-Type': 'application/json'
+		}
+	})
+}
+
+/**
  * DELETE 请求
  */
 export function del(url: string, data?: UTSJSONObject): Promise<any> {

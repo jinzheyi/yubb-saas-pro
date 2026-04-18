@@ -1,0 +1,247 @@
+<template>
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
+			<view class="header-left" @click.stop="handleBack">
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+			</view>
+			<text class="header-title" :style="{ color: theme.headerText }">切换主题</text>
+			<view class="header-right"></view>
+		</view>
+
+		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+			<view class="settings-group" :style="{ backgroundColor: theme.cardBg }">
+				<view
+					v-for="item in themeOptions"
+					:key="item.value"
+					class="list-item"
+					hover-class="list-item-active"
+					@click="handleSelectTheme(item.value)"
+					:style="{ borderBottomColor: theme.borderColor }"
+				>
+					<view class="option-main">
+						<text class="item-label" :style="{ color: theme.textPrimary }">{{ item.label }}</text>
+						<text class="item-desc" :style="{ color: theme.textSecondary }">{{ item.desc }}</text>
+					</view>
+					<view class="option-right">
+						<text
+							v-if="selectedMode === item.value"
+							class="iconfont check-icon"
+							:style="{ color: theme.brandPrimary }"
+						>&#xea73;</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="preview-card" :style="{ backgroundColor: theme.cardBg }">
+				<text class="preview-title" :style="{ color: theme.textPrimary }">当前生效</text>
+				<text class="preview-value" :style="{ color: theme.brandPrimary }">{{ resolvedThemeLabel }}</text>
+				<view class="preview-shell" :style="{ backgroundColor: theme.pageBg, borderColor: theme.borderColor }">
+					<view class="preview-header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
+						<text class="preview-header-text" :style="{ color: theme.headerText }">预览</text>
+					</view>
+					<view class="preview-body">
+						<view class="preview-card-item" :style="{ backgroundColor: theme.cardBgMuted }"></view>
+						<view class="preview-card-item short" :style="{ backgroundColor: theme.cardBgMuted }"></view>
+						<view class="preview-input" :style="{ backgroundColor: theme.inputBg }"></view>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { onUnload } from '@dcloudio/uni-app'
+	import { getThemeMode, getThemeTokens, resolveActiveTheme, setThemeMode, subscribeThemeChange } from '../../store/theme.uts'
+	import { persistThemePreference } from '../../services/user-preference-service.uts'
+	import type { ThemeMode, ThemeTokens } from '../../config/theme.uts'
+
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	const selectedMode = ref<ThemeMode>(getThemeMode())
+	const resolvedTheme = ref(resolveActiveTheme())
+	let unsubscribeTheme: (() => void) | null = null
+
+	const themeOptions = [
+		{ value: 'system' as ThemeMode, label: '跟随系统', desc: '自动匹配系统浅色或深色外观' },
+		{ value: 'light' as ThemeMode, label: '浅色模式', desc: '适合明亮环境，界面更通透' },
+		{ value: 'dark' as ThemeMode, label: '深色模式', desc: '适合夜间场景，减轻视觉刺激' }
+	]
+
+	const resolvedThemeLabel = computed((): string => {
+		return resolvedTheme.value === 'dark' ? '深色模式' : '浅色模式'
+	})
+
+	function handleBack() {
+		uni.navigateBack()
+	}
+
+	function handleSelectTheme(mode: ThemeMode) {
+		selectedMode.value = mode
+		setThemeMode(mode)
+		void persistThemePreference(mode)
+	}
+
+	unsubscribeTheme = subscribeThemeChange((nextResolvedTheme, nextMode, nextTokens) => {
+		resolvedTheme.value = nextResolvedTheme
+		selectedMode.value = nextMode
+		theme.value = nextTokens
+	})
+
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
+	})
+</script>
+
+<style>
+	.page {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.status-bar {
+		height: var(--status-bar-height);
+	}
+
+	.header {
+		height: 44px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 12px;
+		justify-content: space-between;
+		border-bottom-width: 0.5px;
+	}
+
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+		width: 80px;
+	}
+
+	.back-icon {
+		font-size: 20px;
+	}
+
+	.back-text {
+		font-size: 16px;
+		margin-left: 4px;
+	}
+
+	.header-title {
+		font-size: 17px;
+		font-weight: 600;
+	}
+
+	.header-right {
+		width: 80px;
+	}
+
+	.content {
+		flex: 1;
+		height: 0;
+	}
+
+	.settings-group {
+		margin: 12px 16px 0;
+		border-radius: 12px;
+		overflow: hidden;
+	}
+
+	.list-item {
+		min-height: 68px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 14px 16px;
+		border-bottom-width: 0.5px;
+	}
+
+	.list-item-active {
+		opacity: 0.92;
+	}
+
+	.option-main {
+		flex: 1;
+		padding-right: 12px;
+	}
+
+	.item-label {
+		font-size: 16px;
+		font-weight: 500;
+	}
+
+	.item-desc {
+		margin-top: 4px;
+		font-size: 12px;
+		line-height: 18px;
+	}
+
+	.option-right {
+		width: 24px;
+		align-items: flex-end;
+	}
+
+	.check-icon {
+		font-size: 18px;
+	}
+
+	.preview-card {
+		margin: 12px 16px 16px;
+		border-radius: 12px;
+		padding: 16px;
+	}
+
+	.preview-title {
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.preview-value {
+		margin-top: 4px;
+		font-size: 13px;
+	}
+
+	.preview-shell {
+		margin-top: 16px;
+		border-radius: 12px;
+		border-width: 1px;
+		overflow: hidden;
+	}
+
+	.preview-header {
+		height: 40px;
+		justify-content: center;
+		align-items: center;
+		border-bottom-width: 0.5px;
+	}
+
+	.preview-header-text {
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.preview-body {
+		padding: 16px;
+	}
+
+	.preview-card-item {
+		height: 44px;
+		border-radius: 10px;
+	}
+
+	.preview-card-item.short {
+		width: 70%;
+		margin-top: 10px;
+	}
+
+	.preview-input {
+		height: 40px;
+		border-radius: 10px;
+		margin-top: 16px;
+	}
+</style>

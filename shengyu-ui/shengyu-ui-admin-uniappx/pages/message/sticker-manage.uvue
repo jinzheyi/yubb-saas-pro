@@ -1,24 +1,24 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">返回</text>
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
 			</view>
-			<text class="header-title">表情管理</text>
+			<text class="header-title" :style="{ color: theme.headerText }">表情管理</text>
 			<view class="header-right" @click="toggleSortMode">
-				<text class="header-action-text">{{ sortMode ? '完成' : '整理' }}</text>
+				<text class="header-action-text" :style="{ color: theme.brandPrimary }">{{ sortMode ? '完成' : '整理' }}</text>
 			</view>
 		</view>
 
-		<view class="summary-card">
-			<text class="summary-title">我的表情</text>
-			<text class="summary-count">{{ stickerList.length }}/150</text>
-			<text class="summary-tip">{{ sortMode ? (savingSort ? '正在保存排序，请稍候' : (selectedStickerId ? '已拿起一个动画表情，安卓和 iOS 可滑动一格，Web 可点选或拖动后松手放下，目标位会高亮且周围项会让位' : '支持长按拿起、滑动移动、点选放下、置顶、左移、右移、置底，右上角可删除')) : '长按表情可移除，点击整理可调整顺序' }}</text>
-			<view v-if="sortMode && selectedStickerId" class="move-bar">
-				<text class="move-bar-text">移动中</text>
-				<view class="move-bar-btn" @click="clearSelectedSticker">
+		<view class="summary-card" :style="{ backgroundColor: theme.cardBg }">
+			<text class="summary-title" :style="{ color: theme.textPrimary }">我的表情</text>
+			<text class="summary-count" :style="{ color: theme.brandPrimary }">{{ stickerList.length }}/150</text>
+			<text class="summary-tip" :style="{ color: theme.textTertiary }">{{ sortMode ? (savingSort ? '正在保存排序，请稍候' : (selectedStickerId ? '已拿起一个动画表情，安卓和 iOS 可滑动一格，Web 可点选或拖动后松手放下，目标位会高亮且周围项会让位' : '支持长按拿起、滑动移动、点选放下、置顶、左移、右移、置底，右上角可删除')) : '长按表情可移除，点击整理可调整顺序' }}</text>
+			<view v-if="sortMode && selectedStickerId" class="move-bar" :style="{ backgroundColor: theme.brandPrimarySoft }">
+				<text class="move-bar-text" :style="{ color: theme.brandPrimary }">移动中</text>
+				<view class="move-bar-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="clearSelectedSticker">
 					<text class="move-bar-btn-text">取消选中</text>
 				</view>
 			</view>
@@ -44,7 +44,7 @@
 				>
 					<image class="sticker-image" :src="item.url" mode="aspectFill" />
 					<view v-if="sortMode" class="sticker-sort-mask">
-						<view class="sticker-remove-badge" @click.stop="handleStickerRemoveTap(item)">
+						<view class="sticker-remove-badge" :style="{ backgroundColor: theme.overlayMask }" @click.stop="handleStickerRemoveTap(item)">
 							<text class="sticker-remove-text">×</text>
 						</view>
 						<view v-if="selectedStickerId === item.stickerId" class="sticker-picked-badge">
@@ -57,17 +57,17 @@
 							<text class="sticker-drop-hint-text">放到这里</text>
 						</view>
 						<view class="sticker-sort-actions">
-							<view class="sticker-sort-btn" :class="{ 'sticker-sort-btn-disabled': isFirstSticker(item) || savingSort }" @click.stop="moveStickerToEdge(item, true)">
-								<text class="sticker-sort-btn-text">置顶</text>
+							<view class="sticker-sort-btn" :style="{ backgroundColor: theme.cardBg }" :class="{ 'sticker-sort-btn-disabled': isFirstSticker(item) || savingSort }" @click.stop="moveStickerToEdge(item, true)">
+								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">置顶</text>
 							</view>
-							<view class="sticker-sort-btn" :class="{ 'sticker-sort-btn-disabled': isFirstSticker(item) || savingSort }" @click.stop="moveSticker(item, -1)">
-								<text class="sticker-sort-btn-text">左移</text>
+							<view class="sticker-sort-btn" :style="{ backgroundColor: theme.cardBg }" :class="{ 'sticker-sort-btn-disabled': isFirstSticker(item) || savingSort }" @click.stop="moveSticker(item, -1)">
+								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">左移</text>
 							</view>
-							<view class="sticker-sort-btn" :class="{ 'sticker-sort-btn-disabled': isLastSticker(item) || savingSort }" @click.stop="moveSticker(item, 1)">
-								<text class="sticker-sort-btn-text">右移</text>
+							<view class="sticker-sort-btn" :style="{ backgroundColor: theme.cardBg }" :class="{ 'sticker-sort-btn-disabled': isLastSticker(item) || savingSort }" @click.stop="moveSticker(item, 1)">
+								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">右移</text>
 							</view>
-							<view class="sticker-sort-btn" :class="{ 'sticker-sort-btn-disabled': isLastSticker(item) || savingSort }" @click.stop="moveStickerToEdge(item, false)">
-								<text class="sticker-sort-btn-text">置底</text>
+							<view class="sticker-sort-btn" :style="{ backgroundColor: theme.cardBg }" :class="{ 'sticker-sort-btn-disabled': isLastSticker(item) || savingSort }" @click.stop="moveStickerToEdge(item, false)">
+								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">置底</text>
 							</view>
 						</view>
 					</view>
@@ -76,15 +76,18 @@
 		</scroll-view>
 
 		<view class="empty-state" v-else>
-			<text class="iconfont empty-icon">&#xe83f;</text>
-			<text class="empty-title">暂无自定义表情</text>
-			<text class="empty-tip">在聊天页点击 + 或长按图片添加到表情</text>
+			<text class="iconfont empty-icon" :style="{ color: theme.textTertiary }">&#xe83f;</text>
+			<text class="empty-title" :style="{ color: theme.textPrimary }">暂无自定义表情</text>
+			<text class="empty-tip" :style="{ color: theme.textSecondary }">在聊天页点击 + 或长按图片添加到表情</text>
 		</view>
 	</view>
 </template>
 
 <script setup lang="uts">
+	import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 	import { StickerItem, getFavoriteStickers, refreshCustomStickers, removeSticker, updateStickerSort } from '../../utils/stickerManager.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const stickerList = ref<StickerItem[]>([])
 	const sortMode = ref(false)
@@ -98,11 +101,17 @@
 	const dragVisualActive = ref(false)
 	const dragTargetStickerId = ref('')
 	const contentScrollTop = ref(0)
+	const theme = ref<ThemeTokens>(getThemeTokens())
 	const DRAG_MOVE_THRESHOLD = 24
 	const GRID_COLUMN_COUNT = 4
 	const GRID_CELL_RPX = 170
 	const EDGE_SCROLL_THRESHOLD = 120
 	const EDGE_SCROLL_STEP = 96
+	let unsubscribeTheme: (() => void) | null = null
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	async function loadStickers(): Promise<void> {
 		try {
@@ -305,21 +314,28 @@
 	}
 
 	function getStickerItemStyle(item: StickerItem): any {
+		const baseStyle: any = {
+			backgroundColor: theme.value.cardBg
+		}
 		const currentIndex = stickerList.value.findIndex(sticker => sticker.stickerId === item.stickerId)
 		const selectedIndex = stickerList.value.findIndex(sticker => sticker.stickerId === selectedStickerId.value)
 		const targetIndex = stickerList.value.findIndex(sticker => sticker.stickerId === dragTargetStickerId.value)
 		if (selectedStickerId.value !== item.stickerId) {
 			if (selectedIndex < 0 || targetIndex < 0 || currentIndex < 0) {
-				return null
+				return baseStyle
 			}
 			const previewSlotDelta = resolvePreviewSlotDelta(currentIndex, selectedIndex, targetIndex)
 			if (previewSlotDelta === 0) {
-				return null
+				return baseStyle
 			}
-			return buildSlotShiftStyle(currentIndex, currentIndex + previewSlotDelta)
+			return {
+				...baseStyle,
+				...buildSlotShiftStyle(currentIndex, currentIndex + previewSlotDelta)
+			}
 		}
 		if (!dragVisualActive.value) {
 			return {
+				...baseStyle,
 				transform: 'scale(1.04)',
 				boxShadow: '0 12rpx 28rpx rgba(22, 163, 74, 0.18)',
 				transition: 'transform 0.18s ease, box-shadow 0.18s ease',
@@ -327,6 +343,7 @@
 			}
 		}
 		return {
+			...baseStyle,
 			transform: `translate(${dragOffsetX.value}px, ${dragOffsetY.value}px) scale(1.06)`,
 			boxShadow: '0 18rpx 36rpx rgba(17, 24, 39, 0.24)',
 			transition: 'transform 0.06s linear, box-shadow 0.12s ease',
@@ -459,6 +476,7 @@
 			return
 		}
 		uni.showActionSheet({
+			itemColor: theme.value.brandPrimary,
 			itemList: ['移除表情'],
 			success: async (res) => {
 				if (res.tapIndex !== 0) {
@@ -496,27 +514,32 @@
 	onShow(async () => {
 		await loadStickers()
 	})
+
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
+	})
 </script>
 
 <style scoped>
 	.page {
 		min-height: 100vh;
-		background-color: #f7f8fa;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #ffffff;
 	}
 
 	.header {
 		height: 88rpx;
-		background-color: #ffffff;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		padding: 0 24rpx;
-		border-bottom: 1rpx solid #f0f0f0;
+		border-bottom-width: 1rpx;
+		border-bottom-style: solid;
 		position: relative;
 	}
 
@@ -540,31 +563,26 @@
 
 	.header-action-text {
 		font-size: 28rpx;
-		color: #34c759;
 	}
 
 	.back-icon {
 		font-size: 32rpx;
-		color: #111827;
 	}
 
 	.back-text {
 		margin-left: 8rpx;
 		font-size: 28rpx;
-		color: #111827;
 	}
 
 	.header-title {
 		text-align: center;
 		font-size: 32rpx;
 		font-weight: 600;
-		color: #111827;
 	}
 
 	.summary-card {
 		margin: 24rpx;
 		padding: 28rpx;
-		background-color: #ffffff;
 		border-radius: 24rpx;
 		min-height: 120rpx;
 	}
@@ -572,28 +590,24 @@
 	.summary-title {
 		font-size: 32rpx;
 		font-weight: 600;
-		color: #111827;
 	}
 
 	.summary-count {
 		display: block;
 		margin-top: 12rpx;
 		font-size: 28rpx;
-		color: #34c759;
 	}
 
 	.summary-tip {
 		display: block;
 		margin-top: 12rpx;
 		font-size: 24rpx;
-		color: #6b7280;
 	}
 
 	.move-bar {
 		margin-top: 16rpx;
 		padding: 16rpx 20rpx;
 		border-radius: 18rpx;
-		background-color: #f3fff6;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -601,13 +615,11 @@
 
 	.move-bar-text {
 		font-size: 24rpx;
-		color: #16a34a;
 	}
 
 	.move-bar-btn {
 		padding: 8rpx 18rpx;
 		border-radius: 999rpx;
-		background-color: #16a34a;
 	}
 
 	.move-bar-btn-text {
@@ -629,7 +641,6 @@
 	.sticker-item {
 		width: 150rpx;
 		height: 150rpx;
-		background-color: #ffffff;
 		border-radius: 24rpx;
 		overflow: hidden;
 		position: relative;
@@ -639,7 +650,7 @@
 	.sticker-item-active {
 		border-width: 4rpx;
 		border-style: solid;
-		border-color: #34c759;
+		border-color: #3370FF;
 	}
 
 	.sticker-item-target {
@@ -660,7 +671,7 @@
 		right: 0;
 		top: 0;
 		bottom: 0;
-		background-color: rgba(17, 24, 39, 0.22);
+		background-color: rgba(17, 24, 39, 0.28);
 	}
 
 	.sticker-picked-badge {
@@ -698,12 +709,12 @@
 		transform: translate(-50%, -50%);
 		padding: 10rpx 18rpx;
 		border-radius: 999rpx;
-		background-color: rgba(255, 255, 255, 0.94);
+		background-color: rgba(26, 33, 42, 0.92);
 	}
 
 	.sticker-drop-hint-text {
 		font-size: 22rpx;
-		color: #111827;
+		color: #F3F6FA;
 	}
 
 	.sticker-remove-badge {
@@ -713,7 +724,6 @@
 		width: 40rpx;
 		height: 40rpx;
 		border-radius: 20rpx;
-		background-color: rgba(17, 24, 39, 0.72);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -739,7 +749,7 @@
 		width: calc(50% - 6rpx);
 		height: 44rpx;
 		border-radius: 22rpx;
-		background-color: rgba(255, 255, 255, 0.92);
+		background-color: rgba(26, 33, 42, 0.92);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -751,7 +761,7 @@
 
 	.sticker-sort-btn-text {
 		font-size: 22rpx;
-		color: #111827;
+		color: #F3F6FA;
 	}
 
 	.empty-state {
@@ -764,18 +774,15 @@
 
 	.empty-icon {
 		font-size: 88rpx;
-		color: #cbd5e1;
 	}
 
 	.empty-title {
 		margin-top: 20rpx;
 		font-size: 30rpx;
-		color: #374151;
 	}
 
 	.empty-tip {
 		margin-top: 12rpx;
 		font-size: 24rpx;
-		color: #9ca3af;
 	}
 </style>

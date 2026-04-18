@@ -1,19 +1,19 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">{{ t('common.back') }}</text>
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title">{{ pageTitle }}</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ pageTitle }}</text>
 			<view class="header-right"></view>
 		</view>
 
 		<!-- 分类标签 -->
-		<view class="file-tabs">
-			<view class="tab-item" v-for="tab in tabs" :key="tab.type" :class="{ 'tab-active': currentTab === tab.type }" @click="switchTab(tab.type)">
-				<text class="tab-text" :class="{ 'tab-text-active': currentTab === tab.type }">{{ tab.name }}</text>
+		<view class="file-tabs" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }">
+			<view class="tab-item" :style="{ backgroundColor: currentTab === tab.type ? theme.brandPrimarySoft : theme.cardBgMuted }" v-for="tab in tabs" :key="tab.type" :class="{ 'tab-active': currentTab === tab.type }" @click="switchTab(tab.type)">
+				<text class="tab-text" :class="{ 'tab-text-active': currentTab === tab.type }" :style="{ color: currentTab === tab.type ? theme.brandPrimary : theme.textSecondary }">{{ tab.name }}</text>
 			</view>
 		</view>
 
@@ -25,17 +25,17 @@
 			@refresherrefresh="handleRefresh">
 			<!-- 按日期分组 -->
 			<view class="date-group" v-for="group in displayFileGroups" :key="group.date">
-				<text class="date-title">{{ group.date }}</text>
+				<text class="date-title" :style="{ color: theme.textTertiary }">{{ group.date }}</text>
 
 				<!-- 文件项 -->
-				<view class="file-item" v-for="file in group.files" :key="file.id" @click="handleFileClick(file)" @longpress="handleFileLongPress(file)">
+				<view class="file-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" v-for="file in group.files" :key="file.id" @click="handleFileClick(file)" @longpress="handleFileLongPress(file)">
 					<!-- 图片类型 -->
-					<view v-if="file.type === 'image'" class="file-preview image-preview">
+					<view v-if="file.type === 'image'" class="file-preview image-preview" :style="{ backgroundColor: theme.cardBgMuted }">
 						<image class="preview-image" :src="file.url" mode="aspectFill" />
 					</view>
 
 					<!-- 视频类型 -->
-					<view v-else-if="file.type === 'video'" class="file-preview video-preview">
+					<view v-else-if="file.type === 'video'" class="file-preview video-preview" :style="{ backgroundColor: theme.cardBgMuted }">
 						<image class="preview-image" :src="file.thumbnail" mode="aspectFill" />
 						<view class="video-play-icon-wrap">
 							<text class="iconfont video-play-icon">&#xe602;</text>
@@ -46,37 +46,41 @@
 					<text v-else class="iconfont file-icon" :style="{ color: getFileColor(file.name) }">{{ getFileIcon(file.name) }}</text>
 
 					<view class="file-info">
-						<text class="file-name">{{ file.name }}</text>
-						<text class="file-meta">{{ file.size }} · {{ file.sender }}</text>
+						<text class="file-name" :style="{ color: theme.textPrimary }">{{ file.name }}</text>
+						<text class="file-meta" :style="{ color: theme.textSecondary }">{{ file.size }} · {{ file.sender }}</text>
 					</view>
 
-					<text class="iconfont more-icon" @click.stop="handleFileMenu(file)">&#xea8d;</text>
+					<text class="iconfont more-icon" :style="{ color: theme.textTertiary }" @click.stop="handleFileMenu(file)">&#xea8d;</text>
 				</view>
 			</view>
 
 			<!-- 空状态 -->
 			<view class="empty-state" v-if="displayFileGroups.length === 0 && !loading">
-				<text class="iconfont empty-icon">&#xea96;</text>
-				<text class="empty-text">{{ emptyText }}</text>
+				<text class="iconfont empty-icon" :style="{ color: theme.borderColor }">&#xea96;</text>
+				<text class="empty-text" :style="{ color: theme.textTertiary }">{{ emptyText }}</text>
 			</view>
 
 			<!-- 加载更多提示 -->
 			<view class="load-more" v-if="displayFileGroups.length > 0">
-				<text class="load-more-text" v-if="loadingMore">加载中...</text>
-				<text class="load-more-text" v-else-if="noMore">没有更多了</text>
-				<text class="load-more-text" v-else>上拉加载更多</text>
+				<text class="load-more-text" :style="{ color: theme.textTertiary }" v-if="loadingMore">加载中...</text>
+				<text class="load-more-text" :style="{ color: theme.textTertiary }" v-else-if="noMore">没有更多了</text>
+				<text class="load-more-text" :style="{ color: theme.textTertiary }" v-else>上拉加载更多</text>
 			</view>
 		</scroll-view>
 	</view>
 </template>
 
 <script setup lang="uts">
+	import { onMounted } from 'vue'
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { getChatMediaList, getFileOpenStrategy } from '../../api/file.uts'
 	import { navToFilePreview } from '../../utils/nav.uts'
 	import { decodeIdParam } from '../../utils/id-param.uts'
 	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
 	import { saveImageToAlbum } from '../../utils/qrcode.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
 
@@ -93,6 +97,12 @@
 	const currentTab = ref('all')
 	const currentPage = ref(1)
 	const pageSize = 20
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	const tabs = [
 		{ type: 'all', name: '全部' },
@@ -536,6 +546,7 @@
 	 */
 	function handleFileMenu(file : any) {
 		uni.showActionSheet({
+			itemColor: theme.value.brandPrimary,
 			itemList: ['下载', '转发'],
 			success: async (res) => {
 				if (res.tapIndex === 0) {
@@ -571,30 +582,33 @@
 		}
 		await loadFiles()
 	})
+
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
+	})
 </script>
 
 <style>
 	.page {
 		height: 100%;
-		background-color: #F5F7FA;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		height: 44px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
 		justify-content: space-between;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 	}
 
 	.header-left {
@@ -604,18 +618,15 @@
 	}
 
 	.back-icon {
-		color: #1F2329;
 		font-size: 20px;
 	}
 
 	.back-text {
-		color: #1F2329;
 		font-size: 16px;
 		margin-left: 4px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 17px;
 		font-weight: 600;
 	}
@@ -626,11 +637,9 @@
 
 	/* 分类标签 */
 	.file-tabs {
-		background-color: #FFFFFF;
 		flex-direction: row;
 		padding: 0 16px;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 	}
 
 	.tab-item {
@@ -641,7 +650,6 @@
 
 	.tab-text {
 		font-size: 15px;
-		color: #646A73;
 	}
 
 	.tab-active {
@@ -661,15 +669,12 @@
 	}
 
 	.date-group {
-		background-color: #FFFFFF;
 		margin-bottom: 10px;
 	}
 
 	.date-title {
 		font-size: 13px;
-		color: #8F959E;
 		padding: 12px 16px 8px;
-		background-color: #F5F7FA;
 	}
 
 	.file-item {
@@ -695,7 +700,6 @@
 	}
 
 	.image-preview {
-		background-color: #F5F7FA;
 	}
 
 	.video-preview {
@@ -730,7 +734,6 @@
 		height: 50px;
 		line-height: 50px;
 		text-align: center;
-		background-color: #F5F7FA;
 		border-radius: 0;
 		margin-right: 12px;
 		flex-shrink: 0;
@@ -744,7 +747,6 @@
 
 	.file-name {
 		font-size: 15px;
-		color: #1F2329;
 		margin-bottom: 4px;
 		lines: 1;
 		text-overflow: ellipsis;
@@ -752,12 +754,10 @@
 
 	.file-meta {
 		font-size: 12px;
-		color: #8F959E;
 	}
 
 	.more-icon {
 		font-size: 18px;
-		color: #8F959E;
 		padding: 8px;
 		margin-right: -8px;
 	}
@@ -776,7 +776,6 @@
 
 	.empty-text {
 		font-size: 15px;
-		color: #8F959E;
 	}
 
 	/* 加载更多 */
@@ -788,6 +787,5 @@
 
 	.load-more-text {
 		font-size: 13px;
-		color: #8F959E;
 	}
 </style>

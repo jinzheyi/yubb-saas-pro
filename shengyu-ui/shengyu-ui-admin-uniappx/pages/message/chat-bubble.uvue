@@ -1,34 +1,63 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">{{ t('common.back') }}</text>
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title">聊天气泡</text>
+			<text class="header-title" :style="{ color: theme.headerText }">聊天气泡</text>
 			<view class="header-right"></view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
-			<!-- 预览区域 -->
-			<view class="preview-section">
-				<text class="preview-title">预览效果</text>
-				<view class="preview-chat">
-					<!-- 对方消息 -->
+			<view class="preview-section" :style="{ backgroundColor: theme.cardBg }">
+				<text class="preview-title" :style="{ color: theme.textPrimary }">预览效果</text>
+				<view class="preview-chat" :style="{ backgroundColor: theme.pageBg }">
 					<view class="message-item message-other">
 						<view class="message-avatar other-avatar">
 							<text class="avatar-text">对方</text>
 						</view>
-						<view class="message-bubble other-bubble">
-							<text class="message-text">这是对方的消息</text>
+						<view
+							class="message-bubble other-bubble"
+							:style="{ backgroundColor: theme.bubbleOtherBg, borderColor: theme.bubbleOtherBorder }"
+						>
+							<text class="message-text" :style="{ color: theme.bubbleOtherText }">这是对方的消息</text>
 						</view>
 					</view>
 
-					<!-- 我的消息 -->
 					<view class="message-item message-self">
-						<view class="message-bubble self-bubble" :style="{ backgroundColor: selectedColor }">
-							<text class="message-text" :style="{ color: getTextColor(selectedColor) }">这是我的消息</text>
+						<view class="message-bubble self-bubble" :style="selfBubbleStyle">
+							<text class="message-text" :style="{ color: bubbleTokens.selfBubbleText }">这是我的消息</text>
+						</view>
+						<view class="message-avatar self-avatar">
+							<text class="avatar-text">我</text>
+						</view>
+					</view>
+
+					<view class="message-item message-self">
+						<view class="message-bubble self-bubble voice-preview" :style="voiceBubbleStyle">
+							<view class="voice-wave">
+								<view v-for="(barHeight, idx) in voiceBars" :key="'voice-' + idx" class="voice-wave-bar" :style="{ height: barHeight + 'px', backgroundColor: bubbleTokens.selfBubbleWaveColor }"></view>
+							</view>
+							<view class="voice-content">
+								<text class="voice-duration" :style="{ color: bubbleTokens.selfBubbleText }">12"</text>
+								<view class="voice-progress-track">
+									<view class="voice-progress-fill" :style="{ width: '42%', backgroundColor: bubbleTokens.selfBubbleProgressColor }"></view>
+								</view>
+								<text class="voice-status" :style="{ color: bubbleTokens.selfBubbleSubText }">正在播放</text>
+							</view>
+						</view>
+						<view class="message-avatar self-avatar">
+							<text class="avatar-text">我</text>
+						</view>
+					</view>
+
+					<view class="message-item message-self">
+						<view class="message-bubble forward-preview" :style="forwardBubbleStyle">
+							<text class="forward-title" :style="{ color: bubbleTokens.selfBubbleText }">聊天记录</text>
+							<text class="forward-line" :style="{ color: bubbleTokens.selfBubbleSubText }">张三：本周排期确认一下</text>
+							<text class="forward-line" :style="{ color: bubbleTokens.selfBubbleSubText }">我：好的，晚点同步你</text>
 						</view>
 						<view class="message-avatar self-avatar">
 							<text class="avatar-text">我</text>
@@ -37,39 +66,36 @@
 				</view>
 			</view>
 
-			<!-- 颜色选择 -->
-			<view class="color-section">
-				<text class="section-title">选择颜色</text>
+			<view class="color-section" :style="{ backgroundColor: theme.cardBg }">
+				<text class="section-title" :style="{ color: theme.textPrimary }">选择颜色</text>
 				<view class="color-grid">
-					<view class="color-item" v-for="color in colorList" :key="color.value" @click="selectColor(color.value)">
-						<view class="color-block" :style="{ backgroundColor: color.value }">
+					<view class="color-item" v-for="color in colorList" :key="color.value" @click="selectColor(color.value, 'preset')">
+						<view class="color-block" :style="{ backgroundColor: color.value, borderColor: selectedColor === color.value ? theme.brandPrimary : theme.borderColor }">
 							<text v-if="selectedColor === color.value" class="iconfont check-icon">&#xe65f;</text>
 						</view>
-						<text class="color-name">{{ color.name }}</text>
+						<text class="color-name" :style="{ color: theme.textSecondary }">{{ color.name }}</text>
 					</view>
 				</view>
 			</view>
 
-			<!-- 自定义颜色 -->
-			<view class="custom-section">
-				<text class="section-title">自定义颜色</text>
+			<view class="custom-section" :style="{ backgroundColor: theme.cardBg }">
+				<text class="section-title" :style="{ color: theme.textPrimary }">自定义颜色</text>
 				<view class="custom-color-row">
-					<view class="custom-color-preview" :style="{ backgroundColor: customColor }"></view>
-					<input class="custom-color-input" v-model="customColor" placeholder="#1677FF" />
-					<button class="apply-btn" @click="applyCustomColor">
+					<view class="custom-color-preview" :style="{ backgroundColor: previewCustomColor, borderColor: theme.borderColor }"></view>
+					<input class="custom-color-input" v-model="customColor" :style="{ backgroundColor: theme.inputBg, color: theme.inputText }" placeholder="#1677FF" />
+					<button class="apply-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="applyCustomColor">
 						<text class="apply-btn-text">应用</text>
 					</button>
 				</view>
-				<text class="custom-tip">输入十六进制颜色代码，如：#1677FF</text>
+				<text class="custom-tip" :style="{ color: theme.textTertiary }">输入十六进制颜色代码，如：#1677FF</text>
 			</view>
 		</scroll-view>
 
-		<!-- 底部按钮 -->
-		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px' }">
-			<button class="reset-btn" @click="resetColor">
-				<text class="reset-btn-text">恢复默认</text>
+		<view class="footer" :style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor, paddingBottom: (12 + safeAreaBottom) + 'px' }">
+			<button class="reset-btn" :style="{ backgroundColor: theme.cardBgMuted }" @click="resetColor">
+				<text class="reset-btn-text" :style="{ color: theme.textPrimary }">恢复默认</text>
 			</button>
-			<button class="confirm-btn" @click="confirmColor">
+			<button class="confirm-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="confirmColor">
 				<text class="confirm-btn-text">确定</text>
 			</button>
 		</view>
@@ -77,31 +103,68 @@
 </template>
 
 <script setup lang="uts">
+	import { onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import { getChatBubbleConfig, resetChatBubbleConfig, setChatBubbleConfig, type ChatBubbleConfig, type ChatBubbleMode } from '../../store/chat-bubble.uts'
+	import { persistChatBubblePreference } from '../../services/user-preference-service.uts'
+	import { CHAT_BUBBLE_PRESETS, getChatBubbleTokens, isValidChatBubbleColor, normalizeChatBubbleColor } from '../../utils/chat-bubble.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
 
 	const safeAreaBottom = ref(0)
-	const selectedColor = ref('#D2E3FC')
-	const customColor = ref('')
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	const selectedColor = ref(normalizeChatBubbleColor(getChatBubbleConfig().color))
+	const selectedMode = ref<ChatBubbleMode>(getChatBubbleConfig().mode)
+	const customColor = ref(selectedMode.value === 'custom' ? selectedColor.value : '')
+	let unsubscribeTheme: (() => void) | null = null
 
-	const colorList = [
-		{ name: '默认蓝', value: '#D2E3FC' },
-		{ name: '清新绿', value: '#C8E6C9' },
-		{ name: '温暖橙', value: '#FFE0B2' },
-		{ name: '浪漫粉', value: '#F8BBD0' },
-		{ name: '优雅紫', value: '#E1BEE7' },
-		{ name: '天空蓝', value: '#B3E5FC' },
-		{ name: '柠檬黄', value: '#FFF9C4' },
-		{ name: '薄荷绿', value: '#B2DFDB' }
-	]
+	const colorList = CHAT_BUBBLE_PRESETS
+	const voiceBars = [6, 10, 14, 8]
+
+	const bubbleTokens = computed(() => {
+		return getChatBubbleTokens({
+			color: selectedColor.value,
+			mode: selectedMode.value
+		})
+	})
+
+	const selfBubbleStyle = computed((): any => {
+		return {
+			backgroundColor: bubbleTokens.value.selfBubbleBg,
+			borderColor: bubbleTokens.value.selfBubbleBorder
+		}
+	})
+
+	const voiceBubbleStyle = computed((): any => {
+		return {
+			backgroundColor: bubbleTokens.value.selfBubbleVoicePlayingBg,
+			borderColor: bubbleTokens.value.selfBubbleBorder
+		}
+	})
+
+	const forwardBubbleStyle = computed((): any => {
+		return {
+			backgroundColor: bubbleTokens.value.selfBubbleBg,
+			borderColor: bubbleTokens.value.selfBubbleBorder
+		}
+	})
+
+	const previewCustomColor = computed((): string => {
+		return isValidChatBubbleColor(customColor.value) ? normalizeChatBubbleColor(customColor.value) : theme.value.cardBgMuted
+	})
 
 	function handleBack() {
 		uni.navigateBack()
 	}
 
-	function selectColor(color : string) {
-		selectedColor.value = color
+	function selectColor(color: string, mode: ChatBubbleMode) {
+		selectedColor.value = normalizeChatBubbleColor(color)
+		selectedMode.value = mode
+		if (mode === 'preset') {
+			customColor.value = ''
+		}
 	}
 
 	function applyCustomColor() {
@@ -112,18 +175,14 @@
 			})
 			return
 		}
-
-		// 验证颜色代码格式
-		const colorRegex = /^#[0-9A-Fa-f]{6}$/
-		if (!colorRegex.test(customColor.value)) {
+		if (!isValidChatBubbleColor(customColor.value)) {
 			uni.showToast({
 				title: '颜色代码格式错误',
 				icon: 'none'
 			})
 			return
 		}
-
-		selectedColor.value = customColor.value
+		selectColor(customColor.value, 'custom')
 		uni.showToast({
 			title: '已应用自定义颜色',
 			icon: 'success'
@@ -131,67 +190,67 @@
 	}
 
 	function resetColor() {
-		selectedColor.value = '#D2E3FC'
+		const defaults = getChatBubbleConfig()
+		resetChatBubbleConfig()
+		const next = getChatBubbleConfig()
+		selectedColor.value = next.color
+		selectedMode.value = next.mode
 		customColor.value = ''
-		uni.showToast({
-			title: '已恢复默认颜色',
-			icon: 'success'
-		})
+		if (defaults.color !== next.color || defaults.mode !== next.mode) {
+			uni.showToast({
+				title: '已恢复默认颜色',
+				icon: 'success'
+			})
+		}
 	}
 
 	function confirmColor() {
-		// 保存颜色设置到本地存储
-		// uni.setStorageSync('chatBubbleColor', selectedColor.value)
-		
+		const nextConfig: ChatBubbleConfig = {
+			color: selectedColor.value,
+			mode: selectedMode.value
+		}
+		setChatBubbleConfig(nextConfig)
+		void persistChatBubblePreference(nextConfig)
 		uni.showToast({
 			title: '设置成功',
 			icon: 'success'
 		})
-
 		setTimeout(() => {
 			uni.navigateBack()
-		}, 1500)
+		}, 500)
 	}
 
-	function getTextColor(bgColor : string) : string {
-		// 简单判断：浅色背景用深色文字，深色背景用浅色文字
-		// 实际项目中可以使用更精确的算法
-		const lightColors = ['#FFE0B2', '#FFF9C4', '#B3E5FC', '#C8E6C9', '#B2DFDB']
-		return lightColors.includes(bgColor) ? '#1F2329' : '#1F2329'
-	}
+	safeAreaBottom.value = uni.getWindowInfo().safeAreaInsets?.bottom ?? 0
+	unsubscribeTheme = subscribeThemeChange((_, __, tokens) => {
+		theme.value = tokens
+	})
 
-	onLoad(() => {
-		safeAreaBottom.value = uni.getWindowInfo().safeAreaInsets?.bottom ?? 0
-		// 从本地存储加载颜色设置
-		// const savedColor = uni.getStorageSync('chatBubbleColor')
-		// if (savedColor) {
-		//   selectedColor.value = savedColor
-		// }
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
 	})
 </script>
 
 <style>
 	.page {
 		height: 100%;
-		background-color: #F5F7FA;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		height: 44px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
 		justify-content: space-between;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 	}
 
 	.header-left {
@@ -201,18 +260,15 @@
 	}
 
 	.back-icon {
-		color: #1F2329;
 		font-size: 20px;
 	}
 
 	.back-text {
-		color: #1F2329;
 		font-size: 16px;
 		margin-left: 4px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 17px;
 		font-weight: 600;
 	}
@@ -226,38 +282,30 @@
 		height: 0;
 	}
 
-	/* 预览区域 */
-	.preview-section {
-		background-color: #FFFFFF;
+	.preview-section,
+	.color-section,
+	.custom-section {
+		margin: 12px 16px 0;
 		padding: 20px 16px;
-		margin-bottom: 10px;
+		border-radius: 12px;
 	}
 
-	.preview-title {
+	.preview-title,
+	.section-title {
 		font-size: 15px;
-		color: #1F2329;
 		font-weight: 600;
 		margin-bottom: 16px;
 	}
 
 	.preview-chat {
-		background-color: #F5F7FA;
-		border-radius: 8px;
+		border-radius: 10px;
 		padding: 16px;
 	}
 
 	.message-item {
 		flex-direction: row;
-		margin-bottom: 12px;
 		align-items: flex-end;
-	}
-
-	.message-item-last {
-		margin-bottom: 0;
-	}
-
-	.message-other {
-		flex-direction: row;
+		margin-bottom: 12px;
 	}
 
 	.message-self {
@@ -291,35 +339,74 @@
 	.message-bubble {
 		padding: 10px 14px;
 		border-radius: 10px;
-		max-width: 60%;
-	}
-
-	.other-bubble {
-		background-color: #FFFFFF;
-	}
-
-	.self-bubble {
-		/* 背景色由 selectedColor 控制 */
+		max-width: 72%;
+		border-width: 1px;
 	}
 
 	.message-text {
 		font-size: 14px;
-		color: #1F2329;
 		line-height: 1.5;
 	}
 
-	/* 颜色选择 */
-	.color-section {
-		background-color: #FFFFFF;
-		padding: 20px 16px;
-		margin-bottom: 10px;
+	.voice-preview {
+		flex-direction: row;
+		align-items: center;
+		min-width: 168px;
 	}
 
-	.section-title {
-		font-size: 15px;
-		color: #1F2329;
+	.voice-wave {
+		width: 18px;
+		height: 16px;
+		flex-direction: row;
+		align-items: flex-end;
+		justify-content: center;
+	}
+
+	.voice-wave-bar {
+		width: 2px;
+		margin: 0 1px;
+		border-radius: 2px;
+	}
+
+	.voice-content {
+		flex: 1;
+		margin-left: 8px;
+	}
+
+	.voice-duration {
+		font-size: 14px;
+	}
+
+	.voice-progress-track {
+		height: 3px;
+		margin-top: 4px;
+		background-color: rgba(31, 35, 41, 0.1);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+
+	.voice-progress-fill {
+		height: 3px;
+		border-radius: 3px;
+	}
+
+	.voice-status {
+		margin-top: 4px;
+		font-size: 11px;
+	}
+
+	.forward-preview {
+		min-width: 180px;
+	}
+
+	.forward-title {
+		font-size: 14px;
 		font-weight: 600;
-		margin-bottom: 16px;
+	}
+
+	.forward-line {
+		margin-top: 6px;
+		font-size: 12px;
 	}
 
 	.color-grid {
@@ -341,7 +428,6 @@
 		align-items: center;
 		margin-bottom: 8px;
 		border-width: 2px;
-		border-color: #E5E5E5;
 	}
 
 	.check-icon {
@@ -351,15 +437,7 @@
 
 	.color-name {
 		font-size: 12px;
-		color: #646A73;
 		text-align: center;
-	}
-
-	/* 自定义颜色 */
-	.custom-section {
-		background-color: #FFFFFF;
-		padding: 20px 16px;
-		margin-bottom: 10px;
 	}
 
 	.custom-color-row {
@@ -373,23 +451,19 @@
 		height: 40px;
 		border-radius: 8px;
 		border-width: 1px;
-		border-color: #E5E5E5;
 		margin-right: 12px;
 	}
 
 	.custom-color-input {
 		flex: 1;
 		height: 40px;
-		background-color: #F5F7FA;
 		border-radius: 8px;
 		padding: 0 12px;
 		font-size: 14px;
-		color: #1F2329;
 		margin-right: 12px;
 	}
 
 	.apply-btn {
-		background-color: #1677FF;
 		height: 40px;
 		padding: 0 16px;
 		border-radius: 8px;
@@ -405,47 +479,36 @@
 
 	.custom-tip {
 		font-size: 12px;
-		color: #8F959E;
 	}
 
-	/* 底部按钮 */
 	.footer {
-		background-color: #FFFFFF;
 		border-top-width: 0.5px;
-		border-top-color: #EFF0F1;
 		padding: 12px 16px;
 		flex-direction: row;
 		padding-bottom: 12px;
 	}
 
-	.reset-btn {
-		flex: 1;
-		height: 44px;
-		background-color: #F5F7FA;
-		border-radius: 8px;
-		justify-content: center;
-		margin-right: 12px;
-		border-width: 0;
-	}
-
-	.reset-btn-text {
-		color: #646A73;
-		font-size: 15px;
-		font-weight: 500;
-	}
-
+	.reset-btn,
 	.confirm-btn {
 		flex: 1;
 		height: 44px;
-		background-color: #1677FF;
-		border-radius: 8px;
+		border-radius: 10px;
 		justify-content: center;
 		border-width: 0;
+	}
+
+	.reset-btn {
+		margin-right: 12px;
+	}
+
+	.reset-btn-text {
+		font-size: 15px;
+		font-weight: 500;
 	}
 
 	.confirm-btn-text {
 		color: #FFFFFF;
 		font-size: 15px;
-		font-weight: 500;
+		font-weight: 600;
 	}
 </style>

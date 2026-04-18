@@ -1,35 +1,35 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
 
-		<view class="header">
+		<view class="header" :style="{ backgroundColor: theme.headerBg }">
 			<view class="header-left" @click="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">返回</text>
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
 			</view>
 			<view class="header-title-wrap">
-				<text class="header-title">选择会话</text>
+				<text class="header-title" :style="{ color: theme.headerText }">选择会话</text>
 			</view>
 			<view class="header-right"></view>
 		</view>
 
-		<view class="search-container">
-			<view class="search-bar">
-				<text class="iconfont search-icon">&#xea6e;</text>
-				<input class="search-input" v-model="keyword" placeholder="搜索" placeholder-class="placeholder" />
+		<view class="search-container" :style="{ backgroundColor: theme.cardBg }">
+			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
+				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
+				<input class="search-input" :style="{ color: theme.inputText }" v-model="keyword" placeholder="搜索" placeholder-class="placeholder" />
 			</view>
 		</view>
 
-		<view v-if="messageCountText != ''" class="summary">
-			<text class="summary-text">{{ summaryTextPrefix }} {{ messageCountText }} {{ summaryTextSuffix }}</text>
+		<view v-if="messageCountText != ''" class="summary" :style="{ backgroundColor: theme.cardBg }">
+			<text class="summary-text" :style="{ color: theme.textSecondary }">{{ summaryTextPrefix }} {{ messageCountText }} {{ summaryTextSuffix }}</text>
 		</view>
 
-		<view v-if="showForwardType" class="forward-type">
-			<view class="forward-type-item" :class="{ 'forward-type-active': forwardType === 1 }" @click="setForwardTypeSingle">
-				<text class="forward-type-text">逐条转发</text>
+		<view v-if="showForwardType" class="forward-type" :style="{ backgroundColor: theme.cardBg }">
+			<view class="forward-type-item" :style="{ backgroundColor: forwardType === 1 ? theme.brandPrimarySoft : theme.cardBgMuted }" :class="{ 'forward-type-active': forwardType === 1 }" @click="setForwardTypeSingle">
+				<text class="forward-type-text" :style="{ color: forwardType === 1 ? theme.brandPrimary : theme.textSecondary }">逐条转发</text>
 			</view>
-			<view class="forward-type-item" :class="{ 'forward-type-active': forwardType === 2 }" @click="setForwardTypeCombine">
-				<text class="forward-type-text">合并转发</text>
+			<view class="forward-type-item" :style="{ backgroundColor: forwardType === 2 ? theme.brandPrimarySoft : theme.cardBgMuted }" :class="{ 'forward-type-active': forwardType === 2 }" @click="setForwardTypeCombine">
+				<text class="forward-type-text" :style="{ color: forwardType === 2 ? theme.brandPrimary : theme.textSecondary }">合并转发</text>
 			</view>
 		</view>
 
@@ -39,6 +39,7 @@
 					v-for="item in filteredConversations"
 					:key="item.chatId"
 					class="conv-item"
+					:style="{ backgroundColor: theme.cardBg }"
 					hover-class="conv-item-active"
 					@click="handleSelect(item.chatId)"
 				>
@@ -54,8 +55,8 @@
 						<text v-else class="conv-avatar-text">{{ item.avatarText }}</text>
 					</view>
 					<view class="conv-body">
-						<text class="conv-name">{{ item.targetName }}</text>
-						<text class="conv-desc">{{ item.lastMessageContent }}</text>
+						<text class="conv-name" :style="{ color: theme.textPrimary }">{{ item.targetName }}</text>
+						<text class="conv-desc" :style="{ color: theme.textSecondary }">{{ item.lastMessageContent }}</text>
 					</view>
 				</view>
 			</view>
@@ -64,11 +65,13 @@
 </template>
 
 <script setup lang="uts">
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { conversationService, ConversationItem } from '../../services/conversation-service.uts'
 import { forwardMessages as forwardMessagesApi } from '../../api/message.uts'
 import { resendFavorite as resendFavoriteApi } from '../../api/favorite.uts'
 import { encodeIdParam } from '../../utils/id-param.uts'
+import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+import type { ThemeTokens } from '../../config/theme.uts'
 
 const keyword = ref('')
 
@@ -79,6 +82,12 @@ const forwardType = ref<number>(1)
 const MAX_FORWARD_MESSAGE_COUNT = 50
 
 const conversations = ref<ConversationItem[]>([])
+const theme = ref<ThemeTokens>(getThemeTokens())
+let unsubscribeTheme: (() => void) | null = null
+
+unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+	theme.value = tokens
+})
 
 const filteredConversations = computed(() => {
 	const kw = keyword.value != null ? keyword.value.trim() : ''
@@ -270,6 +279,13 @@ onLoad((options: any) => {
 onShow(() => {
 	loadConversationList()
 })
+
+onUnload(() => {
+	if (unsubscribeTheme != null) {
+		unsubscribeTheme()
+		unsubscribeTheme = null
+	}
+})
 </script>
 
 <style scoped>
@@ -291,7 +307,6 @@ onShow(() => {
 	align-items: center;
 	padding-left: 12px;
 	padding-right: 12px;
-	background-color: #ffffff;
 }
 
 .header-left {
@@ -302,13 +317,11 @@ onShow(() => {
 
 .back-icon {
 	font-size: 18px;
-	color: #333333;
 }
 
 .back-text {
 	margin-left: 6px;
 	font-size: 14px;
-	color: #333333;
 }
 
 .header-title-wrap {
@@ -320,7 +333,6 @@ onShow(() => {
 
 .header-title {
 	font-size: 16px;
-	color: #111111;
 	font-weight: 600;
 }
 
@@ -333,7 +345,6 @@ onShow(() => {
 	padding-right: 12px;
 	padding-top: 10px;
 	padding-bottom: 10px;
-	background-color: #ffffff;
 }
 
 .search-bar {
@@ -341,7 +352,6 @@ onShow(() => {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	background-color: #f2f3f5;
 	border-radius: 8px;
 	padding-left: 10px;
 	padding-right: 10px;
@@ -349,14 +359,12 @@ onShow(() => {
 
 .search-icon {
 	font-size: 16px;
-	color: #8c8c8c;
 }
 
 .search-input {
 	flex: 1;
 	margin-left: 6px;
 	font-size: 14px;
-	color: #333333;
 }
 
 .summary {
@@ -364,18 +372,15 @@ onShow(() => {
 	padding-right: 12px;
 	padding-top: 8px;
 	padding-bottom: 8px;
-	background-color: #ffffff;
 }
 
 .summary-text {
 	font-size: 12px;
-	color: #666666;
 }
 
 .forward-type {
 	display: flex;
 	flex-direction: row;
-	background-color: #ffffff;
 	padding-left: 12px;
 	padding-right: 12px;
 	padding-bottom: 10px;
@@ -388,7 +393,6 @@ onShow(() => {
 	flex-direction: row;
 	justify-content: center;
 	align-items: center;
-	background-color: #f2f3f5;
 	border-radius: 8px;
 }
 
@@ -397,12 +401,11 @@ onShow(() => {
 }
 
 .forward-type-active {
-	background-color: #e6f0ff;
+	background-color: rgba(51, 112, 255, 0.14);
 }
 
 .forward-type-text {
 	font-size: 13px;
-	color: #333333;
 }
 
 .content {
@@ -419,7 +422,6 @@ onShow(() => {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	background-color: #ffffff;
 	border-radius: 10px;
 	padding-left: 12px;
 	padding-right: 12px;
@@ -429,7 +431,7 @@ onShow(() => {
 }
 
 .conv-item-active {
-	background-color: #f2f3f5;
+	background-color: rgba(143, 149, 158, 0.12);
 }
 
 .conv-avatar {

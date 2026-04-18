@@ -1,47 +1,48 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">返回</text>
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
 			</view>
-			<text class="header-title">群公告</text>
+			<text class="header-title" :style="{ color: theme.headerText }">群公告</text>
 			<view class="header-right">
-				<text v-if="canEdit" class="edit-btn" @click="handleEdit">{{ isEditing ? '完成' : '编辑' }}</text>
+				<text v-if="canEdit" class="edit-btn" :style="{ color: theme.brandPrimary }" @click="handleEdit">{{ isEditing ? '完成' : '编辑' }}</text>
 			</view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<!-- 查看模式 -->
-			<view v-if="!isEditing" class="view-mode">
+			<view v-if="!isEditing" class="view-mode" :style="{ backgroundColor: theme.cardBg }">
 				<view v-if="notice" class="notice-content">
-					<view v-if="noticePinned" class="pinned-tag">
+					<view v-if="noticePinned" class="pinned-tag" :style="{ backgroundColor: theme.brandPrimarySoft }">
 						<text class="pinned-tag-text">置顶</text>
 					</view>
-					<text class="notice-text">{{ notice }}</text>
+					<text class="notice-text" :style="{ color: theme.textPrimary }">{{ notice }}</text>
 				</view>
 				<view v-else class="empty-notice">
-					<text class="iconfont empty-icon">&#xe60e;</text>
-					<text class="empty-text">暂无群公告</text>
-					<text v-if="canEdit" class="empty-hint">点击右上角"编辑"可以发布群公告</text>
+					<text class="iconfont empty-icon" :style="{ color: theme.borderColor }">&#xe60e;</text>
+					<text class="empty-text" :style="{ color: theme.textTertiary }">暂无群公告</text>
+					<text v-if="canEdit" class="empty-hint" :style="{ color: theme.textTertiary }">点击右上角"编辑"可以发布群公告</text>
 				</view>
 				
 				<!-- 发布信息 -->
 				<view v-if="notice && publishInfo" class="publish-info">
-					<text class="publish-label">发布人：</text>
-					<text class="publish-value">{{ publishInfo.publisherName }}</text>
+					<text class="publish-label" :style="{ color: theme.textTertiary }">发布人：</text>
+					<text class="publish-value" :style="{ color: theme.textSecondary }">{{ publishInfo.publisherName }}</text>
 				</view>
 				<view v-if="notice && publishInfo" class="publish-info">
-					<text class="publish-label">发布时间：</text>
-					<text class="publish-value">{{ publishInfo.publishTime }}</text>
+					<text class="publish-label" :style="{ color: theme.textTertiary }">发布时间：</text>
+					<text class="publish-value" :style="{ color: theme.textSecondary }">{{ publishInfo.publishTime }}</text>
 				</view>
 			</view>
 			
 			<!-- 编辑模式 -->
-			<view v-else class="edit-mode">
+			<view v-else class="edit-mode" :style="{ backgroundColor: theme.cardBg }">
 				<textarea 
 					class="notice-textarea" 
+					:style="{ color: theme.inputText, backgroundColor: theme.inputBg, borderColor: theme.borderColor }"
 					v-model="editingNotice" 
 					placeholder="请输入群公告内容（最多500字）"
 					maxlength="500"
@@ -49,38 +50,38 @@
 					:auto-height="true"
 				/>
 				<view class="char-count">
-					<text class="char-count-text">{{ editingNotice.length }}/500</text>
+					<text class="char-count-text" :style="{ color: theme.textTertiary }">{{ editingNotice.length }}/500</text>
 				</view>
 				
 				<!-- 推送通知选项 -->
-				<view class="option-item">
+				<view class="option-item" :style="{ backgroundColor: theme.cardBgMuted }">
 					<view class="option-left">
-						<text class="iconfont option-icon">&#xe60a;</text>
-						<text class="option-label">推送通知</text>
+						<text class="iconfont option-icon" :style="{ color: theme.brandPrimary }">&#xe60a;</text>
+						<text class="option-label" :style="{ color: theme.textPrimary }">推送通知</text>
 					</view>
 					<switch class="option-switch" :checked="notifyMembers" @change="handleNotifyChange" />
 				</view>
 				<view v-if="notifyMembers" class="option-hint">
-					<text class="hint-text">发布后将通知所有群成员</text>
+					<text class="hint-text" :style="{ color: theme.textTertiary }">发布后将通知所有群成员</text>
 				</view>
 				
 				<!-- 置顶公告选项 -->
-				<view class="option-item">
+				<view class="option-item" :style="{ backgroundColor: theme.cardBgMuted }">
 					<view class="option-left">
-						<text class="iconfont option-icon">&#xe726;</text>
-						<text class="option-label">置顶公告</text>
+						<text class="iconfont option-icon" :style="{ color: theme.brandPrimary }">&#xe726;</text>
+						<text class="option-label" :style="{ color: theme.textPrimary }">置顶公告</text>
 					</view>
 					<switch class="option-switch" :checked="pinNotice" @change="handlePinChange" />
 				</view>
 				<view v-if="pinNotice" class="option-hint">
-					<text class="hint-text">公告将在聊天页面顶部显示</text>
+					<text class="hint-text" :style="{ color: theme.textTertiary }">公告将在聊天页面顶部显示</text>
 				</view>
 				
 				<view class="btn-group">
-					<view class="btn btn-cancel" @click="handleCancelEdit">
-						<text class="btn-text">取消</text>
+					<view class="btn btn-cancel" :style="{ backgroundColor: theme.cardBgMuted }" @click="handleCancelEdit">
+						<text class="btn-text" :style="{ color: theme.textSecondary }">取消</text>
 					</view>
-					<view class="btn btn-publish" @click="handlePublish">
+					<view class="btn btn-publish" :style="{ backgroundColor: theme.brandPrimary }" @click="handlePublish">
 						<text class="btn-text btn-text-primary">发布</text>
 					</view>
 				</view>
@@ -90,10 +91,14 @@
 </template>
 
 <script setup lang="uts">
+	import { onMounted } from 'vue'
+	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { getGroup, updateGroupNotice } from '../../api/group.uts'
 	import { getUserIdStr } from '../../store/user.uts'
 	import { formatDateTime } from '../../utils/date.uts'
 	import { decodeIdParam } from '../../utils/id-param.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	// 页面参数
 	const groupId = ref('')
@@ -120,6 +125,12 @@
 	
 	// 加载状态
 	const loading = ref(false)
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 	
 	/**
 	 * 加载群组信息
@@ -326,30 +337,33 @@
 	onMounted(async () => {
 		await loadGroupInfo()
 	})
+
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
+	})
 </script>
 
 <style>
 	.page {
 		height: 100%;
-		background-color: #F5F7FA;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		height: 44px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
 		justify-content: space-between;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 	}
 
 	.header-left {
@@ -359,18 +373,15 @@
 	}
 
 	.back-icon {
-		color: #1F2329;
 		font-size: 20px;
 	}
 
 	.back-text {
-		color: #1F2329;
 		font-size: 16px;
 		margin-left: 4px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 17px;
 		font-weight: 600;
 	}
@@ -392,7 +403,7 @@
 	
 	/* 查看模式 */
 	.view-mode {
-		background-color: #FFFFFF;
+		background-color: #1A212A;
 		padding: 20px 16px;
 	}
 	
@@ -419,7 +430,7 @@
 	
 	.notice-text {
 		font-size: 15px;
-		color: #1F2329;
+		color: #F3F6FA;
 		line-height: 24px;
 	}
 	
@@ -436,7 +447,7 @@
 	
 	.empty-text {
 		font-size: 15px;
-		color: #8F959E;
+		color: #8893A2;
 		margin-bottom: 8px;
 	}
 	
@@ -453,17 +464,17 @@
 	
 	.publish-label {
 		font-size: 13px;
-		color: #8F959E;
+		color: #8893A2;
 	}
-	
+
 	.publish-value {
 		font-size: 13px;
-		color: #646A73;
+		color: #B7C0CC;
 	}
 	
 	/* 编辑模式 */
 	.edit-mode {
-		background-color: #FFFFFF;
+		background-color: #1A212A;
 		padding: 16px;
 	}
 	
@@ -471,10 +482,10 @@
 		width: 100%;
 		min-height: 200px;
 		font-size: 15px;
-		color: #1F2329;
+		color: #F3F6FA;
 		line-height: 24px;
 		padding: 12px;
-		background-color: #F5F7FA;
+		background-color: #202934;
 		border-radius: 8px;
 		border-width: 1px;
 		border-color: #E5E5E5;
@@ -482,7 +493,7 @@
 	
 	.notice-textarea-focus {
 		border-color: #1677FF;
-		background-color: #FFFFFF;
+		background-color: #1A212A;
 	}
 	
 	.char-count {
@@ -492,7 +503,7 @@
 	
 	.char-count-text {
 		font-size: 12px;
-		color: #8F959E;
+		color: #8893A2;
 	}
 	
 	/* 选项项 */
@@ -501,7 +512,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 14px 12px;
-		background-color: #F5F7FA;
+		background-color: #242D38;
 		border-radius: 8px;
 		margin-top: 16px;
 	}
@@ -520,7 +531,7 @@
 	
 	.option-label {
 		font-size: 15px;
-		color: #1F2329;
+		color: #F3F6FA;
 		font-weight: 500;
 	}
 	
@@ -535,7 +546,6 @@
 	
 	.hint-text {
 		font-size: 12px;
-		color: #8F959E;
 		line-height: 18px;
 	}
 	
@@ -575,7 +585,7 @@
 	}
 	
 	.btn-cancel {
-		background-color: #F5F7FA;
+		background-color: rgba(143, 149, 158, 0.12);
 	}
 	
 	.btn-publish {
@@ -584,7 +594,6 @@
 	
 	.btn-text {
 		font-size: 15px;
-		color: #646A73;
 	}
 	
 	.btn-text-primary {

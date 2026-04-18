@@ -1,25 +1,25 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">返回</text>
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
 			</view>
-			<text class="header-title">文件预览</text>
+			<text class="header-title" :style="{ color: theme.headerText }">文件预览</text>
 			<view class="header-right"></view>
 		</view>
 
 		<view class="content">
 			<view v-if="loading" class="loading">
-				<text class="loading-text">加载中...</text>
+				<text class="loading-text" :style="{ color: theme.textSecondary }">加载中...</text>
 			</view>
 
 			<view v-else-if="errorMsg" class="error">
-				<text class="error-text">{{ errorMsg }}</text>
+				<text class="error-text" :style="{ color: theme.textSecondary }">{{ errorMsg }}</text>
 				<view class="btn-row">
-					<view class="btn" @click="loadStrategy"><text class="btn-text">重试</text></view>
-					<view class="btn" v-if="downloadUrl" @click="handleDownload"><text class="btn-text">下载打开</text></view>
+					<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" @click="loadStrategy"><text class="btn-text">重试</text></view>
+					<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" v-if="downloadUrl" @click="handleDownload"><text class="btn-text">下载打开</text></view>
 				</view>
 			</view>
 
@@ -27,10 +27,10 @@
 				<web-view v-if="previewUrl" :src="previewUrl" class="webview"></web-view>
 
 				<view v-else class="fallback">
-					<text class="fallback-title">暂不支持在线预览</text>
-					<text class="fallback-sub" v-if="tip">{{ tip }}</text>
+					<text class="fallback-title" :style="{ color: theme.textPrimary }">暂不支持在线预览</text>
+					<text class="fallback-sub" :style="{ color: theme.textSecondary }" v-if="tip">{{ tip }}</text>
 					<view class="btn-row">
-						<view class="btn" @click="handleDownload"><text class="btn-text">下载打开</text></view>
+						<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleDownload"><text class="btn-text">下载打开</text></view>
 					</view>
 				</view>
 			</view>
@@ -40,9 +40,11 @@
 
 <script setup lang="uts">
 	import { ref } from 'vue'
-	import { onLoad } from '@dcloudio/uni-app'
+	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { getFileOpenStrategy } from '../../api/file.uts'
 	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const fileId = ref<string>('')
 	const rawUrl = ref<string>('')
@@ -54,6 +56,12 @@
 
 	const previewUrl = ref<string>('')
 	const downloadUrl = ref<string>('')
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	function handleBack() {
 		uni.navigateBack()
@@ -132,30 +140,33 @@
 		}
 		loadStrategy()
 	})
+
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
+	})
 </script>
 
 <style>
 	.page {
 		height: 100%;
-		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		height: 44px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
 		justify-content: space-between;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 	}
 
 	.header-left {
@@ -165,18 +176,15 @@
 	}
 
 	.back-icon {
-		color: #1F2329;
 		font-size: 20px;
 	}
 
 	.back-text {
-		color: #1F2329;
 		font-size: 16px;
 		margin-left: 4px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 16px;
 		font-weight: 500;
 	}
@@ -200,7 +208,6 @@
 	}
 
 	.loading-text {
-		color: #646A73;
 		font-size: 14px;
 	}
 
@@ -212,7 +219,6 @@
 	}
 
 	.error-text {
-		color: #646A73;
 		font-size: 14px;
 		text-align: center;
 	}
@@ -225,13 +231,11 @@
 	}
 
 	.fallback-title {
-		color: #1F2329;
 		font-size: 15px;
 		font-weight: 500;
 	}
 
 	.fallback-sub {
-		color: #646A73;
 		font-size: 13px;
 		margin-top: 8px;
 		text-align: center;

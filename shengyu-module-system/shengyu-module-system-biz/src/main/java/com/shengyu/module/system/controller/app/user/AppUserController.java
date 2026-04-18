@@ -9,12 +9,12 @@ import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserPageReqVO;
 import com.shengyu.module.system.controller.admin.user.vo.user.UserRespVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserDetailRespVO;
+import com.shengyu.module.system.controller.app.user.vo.AppUserThemeUpdateReqVO;
+import com.shengyu.module.system.controller.app.user.vo.AppUserChatBubbleUpdateReqVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserListReqVO;
 import com.shengyu.module.system.controller.app.user.vo.AppUserSimpleRespVO;
 import com.shengyu.module.system.controller.admin.dept.vo.dept.UserDeptRespVO;
 import com.shengyu.module.system.controller.admin.dept.vo.post.UserPostRespVO;
-import com.shengyu.module.system.convert.user.UserConvert;
-import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.service.dept.DeptService;
 import com.shengyu.module.system.service.dept.PostService;
 import com.shengyu.module.system.service.user.AdminUserService;
@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import javax.validation.Valid;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -83,6 +84,9 @@ public class AppUserController {
         respVO.setSex(user.getSex());
         respVO.setDeptId(user.getDeptId());
         respVO.setRemark(user.getRemark());
+        respVO.setThemeMode(user.getThemeMode());
+        respVO.setChatBubbleColor(user.getChatBubbleColor());
+        respVO.setChatBubbleMode(user.getChatBubbleMode());
 
         // 5. 构建部门层级路径（使用 > 分隔）
         if (CollUtil.isNotEmpty(userDeptList)) {
@@ -124,6 +128,21 @@ public class AppUserController {
     @Operation(summary = "清除当前用户自定义头像")
     public CommonResult<Boolean> clearCurrentUserAvatar() {
         userService.clearUserAvatar(SecurityFrameworkUtils.getLoginUserId());
+        return success(true);
+    }
+
+    @PutMapping("/theme")
+    @Operation(summary = "更新当前用户主题偏好")
+    public CommonResult<Boolean> updateCurrentUserTheme(@Valid @RequestBody AppUserThemeUpdateReqVO reqVO) {
+        userService.updateUserThemePreference(SecurityFrameworkUtils.getLoginUserId(), reqVO.getThemeMode());
+        return success(true);
+    }
+
+    @PutMapping("/chat-bubble")
+    @Operation(summary = "更新当前用户聊天气泡偏好")
+    public CommonResult<Boolean> updateCurrentUserChatBubble(@Valid @RequestBody AppUserChatBubbleUpdateReqVO reqVO) {
+        userService.updateUserChatBubblePreference(SecurityFrameworkUtils.getLoginUserId(),
+                reqVO.getChatBubbleColor(), reqVO.getChatBubbleMode());
         return success(true);
     }
 

@@ -1,21 +1,21 @@
 <template>
-	<view class="page">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
 		<!-- 状态栏占位 -->
-		<view class="status-bar"></view>
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
 		
 		<!-- 头部导航 -->
-		<view class="header">
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">{{ t('common.back') }}</text>
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title">{{ t('chatSettings.title') }}</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('chatSettings.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
-		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+		<scroll-view class="content" :style="{ backgroundColor: theme.pageBg }" scroll-y="true" show-scrollbar="false">
 			<!-- 个人信息卡片 -->
-			<view class="profile-card">
+			<view class="profile-card" :style="{ backgroundColor: theme.cardBg }">
 				<view class="avatar" :style="{ backgroundColor: profileAvatarBg }">
 					<image
 						v-if="shouldShowProfileAvatar()"
@@ -26,38 +26,38 @@
 					/>
 					<text v-else class="avatar-text">{{ profileAvatarText }}</text>
 				</view>
-				<text class="name">{{ profileName }}</text>
-				<text class="role">{{ profileRole }}</text>
+				<text class="name" :style="{ color: theme.textPrimary }">{{ profileName }}</text>
+				<text class="role" :style="{ color: theme.textTertiary }">{{ profileRole }}</text>
 				
 			</view>
 
-			<view class="settings-group">
-				<view class="list-item">
-					<text class="item-label">{{ t('chatSettings.top') }}</text>
+			<view class="settings-group" :style="{ backgroundColor: theme.cardBg }">
+				<view class="list-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }">
+					<text class="item-label" :style="{ color: theme.textPrimary }">{{ t('chatSettings.top') }}</text>
 					<switch color="#4cd964" :checked="isPinned" @change="onPinnedChange" :disabled="toggleLoading" />
 				</view>
-				<view class="list-item">
-					<text class="item-label">{{ t('chatSettings.notify') }}</text>
+				<view class="list-item" :style="{ backgroundColor: theme.cardBg }">
+					<text class="item-label" :style="{ color: theme.textPrimary }">{{ t('chatSettings.notify') }}</text>
 					<switch color="#4cd964" :checked="noDisturb" @change="onNoDisturbChange" :disabled="toggleLoading" />
 				</view>
 			</view>
 
-			<view class="settings-group">
-				<view class="list-item" hover-class="list-item-active" @click="handleAction('file')">
-					<text class="item-label">文件</text>
-					<text class="iconfont arrow-icon">&#xeb03;</text>
+			<view class="settings-group" :style="{ backgroundColor: theme.cardBg }">
+				<view class="list-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" hover-class="list-item-active" @click="handleAction('file')">
+					<text class="item-label" :style="{ color: theme.textPrimary }">文件</text>
+					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
-				<view class="list-item" hover-class="list-item-active" @click="handleAction('history')">
-					<text class="item-label">聊天记录</text>
-					<text class="iconfont arrow-icon">&#xeb03;</text>
+				<view class="list-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" hover-class="list-item-active" @click="handleAction('history')">
+					<text class="item-label" :style="{ color: theme.textPrimary }">聊天记录</text>
+					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
-				<view class="list-item" hover-class="list-item-active" @click="handleAction('clear')">
-					<text class="item-label">{{ t('chatSettings.clearHistory') }}</text>
+				<view class="list-item" :style="{ backgroundColor: theme.cardBg }" hover-class="list-item-active" @click="handleAction('clear')">
+					<text class="item-label" :style="{ color: theme.textPrimary }">{{ t('chatSettings.clearHistory') }}</text>
 				</view>
 			</view>
 
 			<view class="tip-area">
-				<text class="tip-text">{{ t('chatSettings.subordinateTip') }}</text>
+				<text class="tip-text" :style="{ color: theme.textTertiary }">{{ t('chatSettings.subordinateTip') }}</text>
 			</view>
 		</scroll-view>
 	</view>
@@ -70,6 +70,8 @@
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 	import { clearConversationHistory } from '../../utils/chat-setting-actions.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
 	const isPinned = ref(false)
@@ -83,6 +85,12 @@
 	const profileAvatarError = ref(false)
 	const profileAvatarBg = ref('#5B8FF9')
 	const toggleLoading = ref(false)
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	function syncConversationSettings() {
 		if (!chatId.value) {
@@ -168,6 +176,10 @@
 
 	onUnload(() => {
 		conversationService.removeUpdateListener(syncConversationSettings)
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
 	})
 
 	function normalizeAvatarUrl(raw: any): string {
@@ -304,25 +316,21 @@
 <style>
 	.page {
 		height: 100%;
-		background-color: #ffffff;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		height: 44px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
 		justify-content: space-between;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 	}
 
 	.header-left {
@@ -332,18 +340,15 @@
 	}
 
 	.back-icon {
-		color: #1F2329;
 		font-size: 20px;
 	}
 
 	.back-text {
-		color: #1F2329;
 		font-size: 16px;
 		margin-left: 4px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 17px;
 		font-weight: 600;
 	}
@@ -355,11 +360,9 @@
 	.content {
 		flex: 1;
 		height: 0;
-		background-color: #FFFFFF;
 	}
 
 	.profile-card {
-		background-color: #FFFFFF;
 		padding: 24px 20px;
 		align-items: center;
 	}
@@ -389,19 +392,13 @@
 
 	.name {
 		font-size: 18px;
-		color: #1F2329;
 		font-weight: 600;
 		margin-bottom: 4px;
 	}
 
 	.role {
 		font-size: 13px;
-		color: #8F959E;
 		margin-bottom: 24px;
-	}
-
-	.settings-group {
-		background-color: #FFFFFF;
 	}
 
 	.list-item {
@@ -410,12 +407,13 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 0 16px;
-		background-color: #FFFFFF;
 		position: relative;
+		border-bottom-width: 0.5px;
+		border-bottom-color: transparent;
 	}
 
 	.list-item-active {
-		background-color: #F2F3F5;
+		background-color: rgba(143, 149, 158, 0.12);
 	}
 
 	.list-item-border {
@@ -424,16 +422,13 @@
 		left: 16px;
 		right: 0;
 		height: 0.5px;
-		background-color: #EFF0F1;
 	}
 
 	.item-label {
 		font-size: 16px;
-		color: #1F2329;
 	}
 
 	.arrow-icon {
-		color: #8F959E;
 		font-size: 14px;
 	}
 
@@ -444,6 +439,5 @@
 
 	.tip-text {
 		font-size: 12px;
-		color: #8F959E;
 	}
 </style>

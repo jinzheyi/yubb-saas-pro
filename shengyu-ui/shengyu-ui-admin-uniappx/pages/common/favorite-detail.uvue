@@ -1,30 +1,30 @@
 <template>
-  <view class="page">
-    <view class="status-bar"></view>
-    <view class="header">
+  <view class="page" :style="{ backgroundColor: theme.pageBg }">
+    <view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+    <view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
       <view class="header-left" @click="handleBack">
-        <text class="iconfont back-icon">&#xeb04;</text>
+        <text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
       </view>
-      <text class="header-title">{{ t('favoriteDetail.title') }}</text>
+      <text class="header-title" :style="{ color: theme.headerText }">{{ t('favoriteDetail.title') }}</text>
       <view class="header-right"></view>
     </view>
 
     <scroll-view class="content" scroll-y show-scrollbar="false">
       <view v-if="loading" class="loading-wrap">
-        <text class="loading-text">{{ t('favoriteDetail.loading') }}</text>
+        <text class="loading-text" :style="{ color: theme.textTertiary }">{{ t('favoriteDetail.loading') }}</text>
       </view>
       <view v-else-if="detail == null" class="empty-wrap">
-        <text class="empty-text">{{ t('favoriteDetail.empty') }}</text>
+        <text class="empty-text" :style="{ color: theme.textTertiary }">{{ t('favoriteDetail.empty') }}</text>
       </view>
-      <view v-else class="card">
+      <view v-else class="card" :style="{ backgroundColor: theme.cardBg }">
         <view class="card-head">
-          <text class="type">{{ renderData.typeLabel }}</text>
-          <text class="time">{{ formatTime(detail.favoriteTime || detail.sendTime) }}</text>
+          <text class="type" :style="{ color: theme.textTertiary }">{{ renderData.typeLabel }}</text>
+          <text class="time" :style="{ color: theme.textTertiary }">{{ formatTime(detail.favoriteTime || detail.sendTime) }}</text>
         </view>
 
         <view class="body">
           <view v-if="renderData.kind === 'text'" class="text-block">
-            <text class="text-content">{{ renderData.text }}</text>
+            <text class="text-content" :style="{ color: theme.textPrimary }">{{ renderData.text }}</text>
           </view>
 
           <view v-else-if="renderData.kind === 'image'" class="image-block">
@@ -39,33 +39,33 @@
             <view class="video-mask">
               <text class="iconfont video-play">&#xe602;</text>
             </view>
-            <text v-if="renderData.url !== ''" class="video-url" :numberOfLines="1">{{ renderData.url }}</text>
+            <text v-if="renderData.url !== ''" class="video-url" :style="{ color: theme.textSecondary }" :numberOfLines="1">{{ renderData.url }}</text>
           </view>
 
-          <view v-else-if="renderData.kind === 'file'" class="file-block" @click="handleOpenFile(renderData)">
-            <view class="file-icon-wrap">
+          <view v-else-if="renderData.kind === 'file'" class="file-block" :style="{ backgroundColor: theme.cardBgMuted }" @click="handleOpenFile(renderData)">
+            <view class="file-icon-wrap" :style="{ backgroundColor: theme.brandPrimarySoft }">
               <text class="iconfont file-icon">&#xea96;</text>
             </view>
             <view class="file-main">
-              <text class="file-name">{{ renderData.fileName }}</text>
-              <text v-if="renderData.fileSize !== ''" class="file-size">{{ renderData.fileSize }}</text>
+              <text class="file-name" :style="{ color: theme.textPrimary }">{{ renderData.fileName }}</text>
+              <text v-if="renderData.fileSize !== ''" class="file-size" :style="{ color: theme.textTertiary }">{{ renderData.fileSize }}</text>
             </view>
           </view>
 
-          <view v-else-if="renderData.kind === 'link'" class="link-block" @click="handleOpenLink(renderData.url)">
-            <text class="link-title">{{ renderData.title }}</text>
-            <text class="link-url">{{ renderData.url }}</text>
+          <view v-else-if="renderData.kind === 'link'" class="link-block" :style="{ backgroundColor: theme.cardBgMuted }" @click="handleOpenLink(renderData.url)">
+            <text class="link-title" :style="{ color: theme.textPrimary }">{{ renderData.title }}</text>
+            <text class="link-url" :style="{ color: theme.brandPrimary }">{{ renderData.url }}</text>
           </view>
 
           <view v-else class="text-block">
-            <text class="text-content">{{ detail.messagePreview || t('favoritePage.preview.default') }}</text>
+            <text class="text-content" :style="{ color: theme.textPrimary }">{{ detail.messagePreview || t('favoritePage.preview.default') }}</text>
           </view>
         </view>
       </view>
     </scroll-view>
 
-    <view v-if="detail != null" class="footer">
-      <view class="send-btn" @click="handleSendToChat">
+    <view v-if="detail != null" class="footer" :style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
+      <view class="send-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleSendToChat">
         <text class="send-btn-text">{{ t('favoriteDetail.sendToChat') }}</text>
       </view>
     </view>
@@ -74,10 +74,12 @@
 
 <script setup lang="uts">
 import { computed } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { useI18n } from '../../hooks/useI18n.uts'
 import { getFavoriteDetail } from '../../api/favorite.uts'
 import { navToFilePreview } from '../../utils/nav.uts'
+import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+import type { ThemeTokens } from '../../config/theme.uts'
 
 type FavoriteDetail = {
   favoriteId: string
@@ -106,6 +108,12 @@ const { t } = useI18n()
 const loading = ref(false)
 const favoriteId = ref('')
 const detail = ref<FavoriteDetail | null>(null)
+const theme = ref<ThemeTokens>(getThemeTokens())
+let unsubscribeTheme: (() => void) | null = null
+
+unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+  theme.value = tokens
+})
 
 function handleBack(): void {
   uni.navigateBack()
@@ -539,28 +547,34 @@ onLoad((options: any) => {
   favoriteId.value = fid
   void loadDetail()
 })
+
+onUnload(() => {
+  if (unsubscribeTheme != null) {
+    unsubscribeTheme()
+    unsubscribeTheme = null
+  }
+})
 </script>
 
 <style>
-.page { height: 100%; background-color: #F5F6F8; display: flex; flex-direction: column; }
-.status-bar { height: var(--status-bar-height); background-color: #FFFFFF; }
-.header { height: 44px; padding: 0 12px; background-color: #FFFFFF; flex-direction: row; align-items: center; justify-content: space-between; border-bottom-width: 0.5px; border-bottom-color: #EFF0F1; }
+.page { height: 100%; display: flex; flex-direction: column; }
+.status-bar { height: var(--status-bar-height); }
+.header { height: 44px; padding: 0 12px; flex-direction: row; align-items: center; justify-content: space-between; border-bottom-width: 0.5px; }
 .header-left { width: 40px; height: 44px; justify-content: center; }
 .header-right { width: 40px; height: 44px; }
-.back-icon { font-size: 18px; color: #1F2329; }
-.header-title { font-size: 16px; color: #1F2329; font-weight: 600; }
+.back-icon { font-size: 18px; }
+.header-title { font-size: 16px; font-weight: 600; }
 .content { flex: 1; height: 0; }
 .loading-wrap { padding-top: 80px; align-items: center; }
-.loading-text { font-size: 14px; color: #8F959E; }
+.loading-text { font-size: 14px; }
 .empty-wrap { padding-top: 80px; align-items: center; }
-.empty-text { font-size: 14px; color: #8F959E; }
-.card { margin: 12px; background-color: #FFFFFF; border-radius: 12px; padding: 12px; }
+.empty-text { font-size: 14px; }
+.card { margin: 12px; border-radius: 12px; padding: 12px; }
 .card-head { flex-direction: row; align-items: center; justify-content: space-between; }
 .type { font-size: 12px; color: #8A93A0; }
 .time { font-size: 12px; color: #9AA3AF; }
 .body { margin-top: 10px; }
-.text-block { background-color: #FFFFFF; }
-.text-content { font-size: 15px; color: #1F2329; line-height: 24px; }
+.text-content { font-size: 15px; line-height: 24px; }
 .image-block { border-radius: 10px; overflow: hidden; background-color: #F3F4F6; }
 .image-content { width: 100%; border-radius: 10px; }
 .video-block { border-radius: 10px; overflow: hidden; position: relative; background-color: #111111; }
@@ -570,16 +584,16 @@ onLoad((options: any) => {
 .video-mask { position: absolute; top: 0; left: 0; right: 0; bottom: 30px; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.2); }
 .video-play { color: #FFFFFF; font-size: 42px; }
 .video-url { padding: 6px 10px 8px; color: #D4D9E1; font-size: 12px; }
-.file-block { flex-direction: row; align-items: flex-start; padding: 12px; border-radius: 10px; background-color: #F6F8FC; }
+.file-block { flex-direction: row; align-items: flex-start; padding: 12px; border-radius: 10px; }
 .file-icon-wrap { width: 44px; height: 44px; border-radius: 8px; background-color: #E7EEFD; justify-content: center; align-items: center; margin-right: 10px; }
 .file-icon { font-size: 24px; color: #4B70D0; }
 .file-main { flex: 1; min-width: 0; }
-.file-name { font-size: 15px; color: #1F2329; line-height: 22px; }
+.file-name { font-size: 15px; line-height: 22px; }
 .file-size { margin-top: 4px; font-size: 12px; color: #8A93A0; }
-.link-block { border-radius: 10px; background-color: #F6F8FC; padding: 12px; }
-.link-title { font-size: 15px; color: #1F2329; line-height: 22px; }
+.link-block { border-radius: 10px; padding: 12px; }
+.link-title { font-size: 15px; line-height: 22px; }
 .link-url { margin-top: 6px; font-size: 13px; color: #3765C9; line-height: 20px; }
-.footer { padding: 10px 12px 12px; background-color: #FFFFFF; border-top-width: 0.5px; border-top-color: #EFF0F1; }
-.send-btn { height: 42px; border-radius: 8px; background-color: #1677FF; justify-content: center; align-items: center; }
+.footer { padding: 10px 12px 12px; border-top-width: 0.5px; }
+.send-btn { height: 42px; border-radius: 8px; justify-content: center; align-items: center; }
 .send-btn-text { color: #FFFFFF; font-size: 15px; font-weight: 600; }
 </style>

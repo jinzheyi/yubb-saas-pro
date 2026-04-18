@@ -43,6 +43,13 @@
 			}
 		},
 		{
+			"path": "pages/profile/theme-settings",
+			"style": {
+				"navigationBarTitleText": "切换主题",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/message/chat",
 			"style": {
 				"navigationBarTitleText": "聊天",
@@ -288,10 +295,10 @@
 		}
 	],
 	"tabBar": {
-		"color": "#999999",
-		"selectedColor": "#1677FF",
-		"backgroundColor": "#ffffff",
-		"borderStyle": "black",
+		"color": "@tabFontColor",
+		"selectedColor": "@tabSelectedColor",
+		"backgroundColor": "@tabBgColor",
+		"borderStyle": "@tabBorderStyle",
 		"iconfontSrc": "static/iconfont/iconfont.ttf",
 		"list": [
 			{
@@ -301,8 +308,8 @@
 					"text": "\uea98",
 					"selectedText": "\uea98",
 					"fontSize": "22px",
-					"color": "#999999",
-					"selectedColor": "#1677FF"
+					"color": "@tabFontColor",
+					"selectedColor": "@tabSelectedColor"
 				}
 			},
 			{
@@ -312,8 +319,8 @@
 					"text": "\uea94",
 					"selectedText": "\uea94",
 					"fontSize": "22px",
-					"color": "#999999",
-					"selectedColor": "#1677FF"
+					"color": "@tabFontColor",
+					"selectedColor": "@tabSelectedColor"
 				}
 			},
 			{
@@ -323,8 +330,8 @@
 					"text": "\uea80",
 					"selectedText": "\uea80",
 					"fontSize": "22px",
-					"color": "#999999",
-					"selectedColor": "#1677FF"
+					"color": "@tabFontColor",
+					"selectedColor": "@tabSelectedColor"
 				}
 			},
 			{
@@ -334,17 +341,18 @@
 					"text": "\uea97",
 					"selectedText": "\uea97",
 					"fontSize": "22px",
-					"color": "#999999",
-					"selectedColor": "#1677FF"
+					"color": "@tabFontColor",
+					"selectedColor": "@tabSelectedColor"
 				}
 			}
 		]
 	},
 	"globalStyle": {
-		"navigationBarTextStyle": "black",
+		"navigationBarTextStyle": "@navTxtStyle",
 		"navigationBarTitleText": "圣钰管理系统",
-		"navigationBarBackgroundColor": "#ffffff",
-		"backgroundColor": "#f5f5f5"
+		"navigationBarBackgroundColor": "@navBgColor",
+		"backgroundColor": "@bgColor",
+		"backgroundTextStyle": "@bgTxtStyle"
 	},
 	"uniIdRouter": {}
 }

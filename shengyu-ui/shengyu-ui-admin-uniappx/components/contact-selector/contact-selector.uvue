@@ -1,7 +1,8 @@
 <template>
 	<view class="contact-selector">
 		<scroll-view 
-			class="content" 
+			class="content"
+			:style="{ backgroundColor: theme.pageBg }"
 			scroll-y="true" 
 			show-scrollbar="false"
 			@scrolltolower="handleScrollToLower"
@@ -9,29 +10,30 @@
 			scroll-with-animation="true"
 		>
 			<!-- 快捷分类（可选） -->
-			<view v-if="showCategories" class="category-section">
+			<view v-if="showCategories" class="category-section" :style="{ backgroundColor: theme.cardBg }">
 				<view class="section-label">
-					<text class="section-text">{{ t('initiateGroup.selectExisting') }}</text>
+					<text class="section-text" :style="{ color: theme.textTertiary }">{{ t('initiateGroup.selectExisting') }}</text>
 				</view>
-				<view class="category-group">
-					<view class="category-item" hover-class="category-item-active" v-for="(item, index) in categories" :key="index" @click="handleCategory(item)">
+				<view class="category-group" :style="{ backgroundColor: theme.cardBg }">
+					<view class="category-item" :style="{ backgroundColor: theme.cardBg }" hover-class="category-item-active" v-for="(item, index) in categories" :key="index" @click="handleCategory(item)">
 						<view class="category-icon-wrap" :style="{ backgroundColor: item.bg }">
 							<text class="iconfont category-icon">{{ item.icon }}</text>
 						</view>
-						<text class="category-name">{{ t(item.nameKey) }}</text>
-						<view v-if="index < categories.length - 1" class="category-item-border"></view>
+						<text class="category-name" :style="{ color: theme.textPrimary }">{{ t(item.nameKey) }}</text>
+						<view v-if="index < categories.length - 1" class="category-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 					</view>
 				</view>
 			</view>
 
 			<!-- 联系人列表 -->
 			<view v-for="(group, groupIndex) in groupedContacts" :key="groupIndex">
-				<view class="section-header" :id="'group-' + group.letter">
-					<text class="section-title">{{ group.letter }}</text>
+				<view class="section-header" :id="'group-' + group.letter" :style="{ backgroundColor: theme.pageBg }">
+					<text class="section-title" :style="{ color: theme.textTertiary }">{{ group.letter }}</text>
 				</view>
-				<view class="contact-list">
+				<view class="contact-list" :style="{ backgroundColor: theme.cardBg }">
 					<view 
 						class="contact-item" 
+						:style="{ backgroundColor: theme.cardBg }"
 						hover-class="contact-item-active"
 						v-for="(item, index) in group.contacts" 
 						:key="index" 
@@ -48,13 +50,13 @@
 							<text v-else class="avatar-text">{{ item.avatarText }}</text>
 						</view>
 						<view class="contact-info">
-							<text class="contact-name">{{ item.name }}</text>
-							<text class="contact-role">{{ item.role }}</text>
+							<text class="contact-name" :style="{ color: theme.textPrimary }">{{ item.name }}</text>
+							<text class="contact-role" :style="{ color: theme.textSecondary }">{{ item.role }}</text>
 						</view>
-						<view v-if="selectable" :class="['checkbox', item.selected ? 'checkbox-active' : '']">
+						<view v-if="selectable" :class="['checkbox', item.selected ? 'checkbox-active' : '']" :style="{ borderColor: item.selected ? theme.brandPrimary : theme.textTertiary, backgroundColor: item.selected ? theme.brandPrimary : theme.cardBg }">
 							<text v-if="item.selected" class="iconfont check-icon">&#xea73;</text>
 						</view>
-						<view v-if="index < group.contacts.length - 1" class="contact-item-border"></view>
+						<view v-if="index < group.contacts.length - 1" class="contact-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 					</view>
 				</view>
 			</view>
@@ -66,6 +68,7 @@
 				v-for="letter in indexList" 
 				:key="letter" 
 				class="index-item"
+				:style="{ color: theme.textPrimary }"
 				@click="scrollToGroup(letter)"
 			>
 				{{ letter }}
@@ -75,10 +78,19 @@
 </template>
 
 <script setup lang="uts">
+	import { onUnmounted } from 'vue'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	// Props
 	const props = defineProps({
@@ -218,6 +230,13 @@
 		}
 		item.avatarError = true
 	}
+
+	onUnmounted(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
+	})
 </script>
 
 <style>
@@ -230,12 +249,10 @@
 	.content {
 		flex: 1;
 		height: 100%;
-		background-color: #FFFFFF;
 	}
 
 	/* 分类区域 */
 	.category-section {
-		background-color: #FFFFFF;
 	}
 
 	.section-label {
@@ -244,23 +261,20 @@
 
 	.section-text {
 		font-size: 13px;
-		color: #999999;
 	}
 
 	.category-group {
-		background-color: #FFFFFF;
 	}
 
 	.category-item {
 		flex-direction: row;
 		align-items: center;
 		padding: 12px 16px;
-		background-color: #FFFFFF;
 		position: relative;
 	}
 
 	.category-item-active {
-		background-color: #F2F3F5;
+		background-color: rgba(143, 149, 158, 0.08);
 	}
 
 	.category-item-border {
@@ -288,36 +302,31 @@
 
 	.category-name {
 		font-size: 15px;
-		color: #333333;
 	}
 
 	/* 分组标题 */
 	.section-header {
 		padding: 8px 16px;
-		background-color: #F5F7FA;
 	}
 
 	.section-title {
 		font-size: 12px;
-		color: #8F959E;
 		font-weight: 600;
 	}
 
 	/* 联系人列表 */
 	.contact-list {
-		background-color: #FFFFFF;
 	}
 
 	.contact-item {
 		flex-direction: row;
 		align-items: center;
 		padding: 10px 16px;
-		background-color: #FFFFFF;
 		position: relative;
 	}
 
 	.contact-item-active {
-		background-color: #F2F3F5;
+		background-color: rgba(143, 149, 158, 0.08);
 	}
 
 	.contact-item-border {
@@ -357,13 +366,11 @@
 
 	.contact-name {
 		font-size: 15px;
-		color: #333333;
 		font-weight: 500;
 	}
 
 	.contact-role {
 		font-size: 12px;
-		color: #999999;
 	}
 
 	/* 复选框 */
@@ -371,15 +378,12 @@
 		width: 20px;
 		height: 20px;
 		border-width: 1px;
-		border-color: #d1d5db;
 		border-radius: 10px;
 		justify-content: center;
 		align-items: center;
 	}
 
 	.checkbox-active {
-		background-color: #1677FF;
-		border-color: #1677FF;
 	}
 
 	.check-icon {
@@ -399,7 +403,6 @@
 
 	.index-item {
 		font-size: 10px;
-		color: #1F2329;
 		padding: 2px 4px;
 		font-weight: 600;
 	}

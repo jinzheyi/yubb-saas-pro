@@ -1,41 +1,41 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">{{ mode === 'remove' ? '取消' : t('common.back') }}</text>
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ mode === 'remove' ? '取消' : t('common.back') }}</text>
 			</view>
-			<text class="header-title">{{ mode === 'remove' ? '删除群成员' : '群成员(' + filteredMembers.length + ')' }}</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ mode === 'remove' ? '删除群成员' : '群成员(' + filteredMembers.length + ')' }}</text>
 			<view class="header-right">
-				<text v-if="mode === 'remove' && selectedMembers.length > 0" class="confirm-text" @click="handleConfirmRemove">
+				<text v-if="mode === 'remove' && selectedMembers.length > 0" class="confirm-text" :style="{ color: theme.brandPrimary }" @click="handleConfirmRemove">
 					确定({{ selectedMembers.length }})
 				</text>
 			</view>
 		</view>
 
-		<view class="search-wrap">
-			<view class="search-bar">
-				<text class="iconfont search-icon">&#xea6e;</text>
-				<input class="search-input" v-model="searchKeyword" placeholder="搜索群成员" placeholder-class="placeholder" @input="handleSearch" />
+		<view class="search-wrap" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }">
+			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
+				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
+				<input class="search-input" :style="{ color: theme.inputText }" v-model="searchKeyword" placeholder="搜索群成员" placeholder-class="placeholder" @input="handleSearch" />
 			</view>
 		</view>
 
 		<scroll-view class="member-list" scroll-y="true" show-scrollbar="false" :scroll-into-view="scrollIntoView">
 			<!-- 加载状态 -->
 			<view v-if="loading" class="loading-wrap">
-				<text class="loading-text">加载中...</text>
+				<text class="loading-text" :style="{ color: theme.textTertiary }">加载中...</text>
 			</view>
 			
 			<!-- 按字母分组 -->
 			<view v-else class="letter-group" v-for="group in memberGroups" :key="group.letter" :id="'letter-' + group.letter">
-				<text class="letter-title">{{ group.letter }}</text>
+				<text class="letter-title" :style="{ color: theme.textTertiary, backgroundColor: theme.pageBg }">{{ group.letter }}</text>
 				
 				<!-- 成员项 -->
-				<view class="member-item" v-for="member in group.members" :key="member.id" @click="handleMemberClick(member)" @longpress="handleMemberLongPress(member)">
+				<view class="member-item" :style="{ borderBottomColor: theme.borderColor }" v-for="member in group.members" :key="member.id" @click="handleMemberClick(member)" @longpress="handleMemberLongPress(member)">
 					<!-- 删除模式：显示复选框 -->
 					<view v-if="mode === 'remove'" class="checkbox-wrap">
-						<view class="checkbox" :class="{ checked: member.selected, disabled: member.cannotRemove }">
+						<view class="checkbox" :style="{ backgroundColor: member.selected ? theme.brandPrimary : theme.cardBg, borderColor: member.selected ? theme.brandPrimary : theme.borderColor }" :class="{ checked: member.selected, disabled: member.cannotRemove }">
 							<text v-if="member.selected" class="iconfont check-icon">&#xe60c;</text>
 						</view>
 					</view>
@@ -51,8 +51,8 @@
 						<text v-else class="member-avatar-text">{{ member.avatarText }}</text>
 					</view>
 					<view class="member-info">
-						<text class="member-name">{{ member.name }}</text>
-						<text class="member-role" v-if="member.deptName">{{ member.deptName }}</text>
+						<text class="member-name" :style="{ color: theme.textPrimary }">{{ member.name }}</text>
+						<text class="member-role" :style="{ color: theme.textTertiary }" v-if="member.deptName">{{ member.deptName }}</text>
 					</view>
 					<text v-if="member.isOwner" class="member-badge owner-badge">群主</text>
 					<text v-else-if="member.isAdmin" class="member-badge admin-badge">管理员</text>
@@ -71,10 +71,13 @@
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { getGroupMembers, removeGroupMember, setGroupMemberRole } from '../../api/group.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { getUserIdStr } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
 
@@ -88,6 +91,12 @@
 	const mode = ref('view') // view-查看模式, remove-删除模式
 	const currentUserId = ref<string>('0')
 	const currentUserRole = ref<number>(0)
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 	
 	// 成员数据
 	const allMembers = ref<any[]>([])
@@ -269,6 +278,7 @@
 			const title = toAdmin ? '设为管理员' : '取消管理员'
 			uni.showActionSheet({
 				itemList: [title],
+				itemColor: theme.value.brandPrimary,
 				success: async (res) => {
 					if (res.tapIndex !== 0) {
 						return
@@ -398,30 +408,33 @@
 		// 加载成员列表
 		loadMembers()
 	})
+
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
+	})
 </script>
 
 <style>
 	.page {
 		height: 100%;
-		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		height: 44px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
 		justify-content: space-between;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 	}
 
 	.header-left {
@@ -431,18 +444,15 @@
 	}
 
 	.back-icon {
-		color: #1F2329;
 		font-size: 20px;
 	}
 
 	.back-text {
-		color: #1F2329;
 		font-size: 16px;
 		margin-left: 4px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 17px;
 		font-weight: 600;
 	}
@@ -459,14 +469,11 @@
 	}
 
 	.search-wrap {
-		background-color: #FFFFFF;
 		padding: 10px 16px;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 	}
 
 	.search-bar {
-		background-color: #F3F4F6;
 		border-radius: 8px;
 		height: 36px;
 		flex-direction: row;
@@ -476,18 +483,16 @@
 
 	.search-icon {
 		font-size: 16px;
-		color: #999999;
 	}
 
 	.search-input {
 		flex: 1;
 		font-size: 14px;
 		margin-left: 8px;
-		color: #333333;
 	}
 
 	.placeholder {
-		color: #999999;
+		color: #A7AFB9;
 	}
 
 	.member-list {
@@ -502,10 +507,8 @@
 
 	.letter-title {
 		font-size: 14px;
-		color: #8F959E;
 		font-weight: 600;
 		padding: 8px 0;
-		background-color: #F5F7FA;
 		margin: 0 -16px;
 		padding-left: 16px;
 	}
@@ -535,7 +538,6 @@
 		border-style: solid;
 		justify-content: center;
 		align-items: center;
-		background-color: #FFFFFF;
 	}
 	
 	.checkbox.checked {
@@ -544,7 +546,6 @@
 	}
 	
 	.checkbox.disabled {
-		background-color: #F5F7FA;
 		border-color: #E5E7EB;
 		opacity: 0.6;
 	}
@@ -582,13 +583,11 @@
 
 	.member-name {
 		font-size: 15px;
-		color: #1F2329;
 		margin-bottom: 4px;
 	}
 
 	.member-role {
 		font-size: 12px;
-		color: #8F959E;
 	}
 
 	.member-badge {
@@ -634,6 +633,5 @@
 	
 	.loading-text {
 		font-size: 14px;
-		color: #8F959E;
 	}
 </style>

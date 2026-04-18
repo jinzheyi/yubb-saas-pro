@@ -1,0 +1,114 @@
+import { getChatBubbleConfig, getDefaultChatBubbleConfig, type ChatBubbleConfig } from '../store/chat-bubble.uts'
+
+export type ChatBubblePreset = {
+	name: string
+	value: string
+}
+
+export type ChatBubbleTokens = {
+	selfBubbleBg: string
+	selfBubbleText: string
+	selfBubbleBorder: string
+	selfBubbleVoicePlayingBg: string
+	selfBubbleVoicePausedBg: string
+	selfBubbleWaveColor: string
+	selfBubbleProgressColor: string
+	selfBubbleSubText: string
+}
+
+export const CHAT_BUBBLE_PRESETS: ChatBubblePreset[] = [
+	{ name: '默认蓝', value: '#D2E3FC' },
+	{ name: '清新绿', value: '#C8E6C9' },
+	{ name: '温暖橙', value: '#FFE0B2' },
+	{ name: '浪漫粉', value: '#F8BBD0' },
+	{ name: '优雅紫', value: '#E1BEE7' },
+	{ name: '天空蓝', value: '#B3E5FC' },
+	{ name: '柠檬黄', value: '#FFF9C4' },
+	{ name: '薄荷绿', value: '#B2DFDB' }
+]
+
+export function normalizeChatBubbleColor(raw: any): string {
+	const text = raw != null ? String(raw).trim().toUpperCase() : ''
+	return /^#[0-9A-F]{6}$/.test(text) ? text : getDefaultChatBubbleConfig().color
+}
+
+export function isValidChatBubbleColor(raw: string): boolean {
+	return /^#[0-9A-Fa-f]{6}$/.test(raw != null ? raw.trim() : '')
+}
+
+function clampColor(value: number): number {
+	if (value < 0) {
+		return 0
+	}
+	if (value > 255) {
+		return 255
+	}
+	return Math.round(value)
+}
+
+function hexToRgb(hex: string): number[] {
+	const normalized = normalizeChatBubbleColor(hex)
+	return [
+		parseInt(normalized.substring(1, 3), 16),
+		parseInt(normalized.substring(3, 5), 16),
+		parseInt(normalized.substring(5, 7), 16)
+	]
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+	const toHex = (value: number): string => {
+		const text = clampColor(value).toString(16).toUpperCase()
+		return text.length === 1 ? '0' + text : text
+	}
+	return '#' + toHex(r) + toHex(g) + toHex(b)
+}
+
+function mixColor(hex: string, targetHex: string, ratio: number): string {
+	const source = hexToRgb(hex)
+	const target = hexToRgb(targetHex)
+	const safeRatio = ratio < 0 ? 0 : (ratio > 1 ? 1 : ratio)
+	return rgbToHex(
+		source[0] + (target[0] - source[0]) * safeRatio,
+		source[1] + (target[1] - source[1]) * safeRatio,
+		source[2] + (target[2] - source[2]) * safeRatio
+	)
+}
+
+export function lightenColor(hex: string, ratio: number): string {
+	return mixColor(hex, '#FFFFFF', ratio)
+}
+
+export function darkenColor(hex: string, ratio: number): string {
+	return mixColor(hex, '#000000', ratio)
+}
+
+export function isLightColor(hex: string): boolean {
+	const rgb = hexToRgb(hex)
+	const brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000
+	return brightness >= 170
+}
+
+export function getChatBubbleTextColor(hex: string): string {
+	return isLightColor(hex) ? '#1F2329' : '#FFFFFF'
+}
+
+export function getChatBubbleConfigSafe(): ChatBubbleConfig {
+	return getChatBubbleConfig()
+}
+
+export function getChatBubbleTokens(config?: ChatBubbleConfig | null): ChatBubbleTokens {
+	const effectiveConfig = config != null ? config : getChatBubbleConfigSafe()
+	const base = normalizeChatBubbleColor(effectiveConfig.color)
+	const text = getChatBubbleTextColor(base)
+	const isLight = isLightColor(base)
+	return {
+		selfBubbleBg: base,
+		selfBubbleText: text,
+		selfBubbleBorder: isLight ? darkenColor(base, 0.12) : lightenColor(base, 0.18),
+		selfBubbleVoicePlayingBg: isLight ? darkenColor(base, 0.06) : lightenColor(base, 0.1),
+		selfBubbleVoicePausedBg: isLight ? lightenColor(base, 0.08) : darkenColor(base, 0.1),
+		selfBubbleWaveColor: isLight ? darkenColor(base, 0.42) : lightenColor(base, 0.35),
+		selfBubbleProgressColor: isLight ? darkenColor(base, 0.28) : lightenColor(base, 0.28),
+		selfBubbleSubText: isLight ? darkenColor(base, 0.45) : lightenColor(base, 0.38)
+	}
+}

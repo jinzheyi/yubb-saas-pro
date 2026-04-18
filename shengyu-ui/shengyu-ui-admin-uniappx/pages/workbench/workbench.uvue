@@ -1,17 +1,17 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
-			<text class="header-title">{{ t('workbench.title') }}</text>
-			<text class="edit-btn">{{ t('workbench.edit') }}</text>
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('workbench.title') }}</text>
+			<text class="edit-btn" :style="{ color: theme.brandPrimary }">{{ t('workbench.edit') }}</text>
 		</view>
 
-		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
+		<scroll-view class="content" :style="{ backgroundColor: theme.pageBg }" scroll-y="true" show-scrollbar="false">
 			<!-- 办公流程 -->
-			<view class="section">
+			<view class="section" :style="{ backgroundColor: theme.cardBg }">
 				<view class="section-header" @click="isProcessExpanded = !isProcessExpanded">
-					<text class="section-title">{{ t('workbench.officeProcess') }}</text>
-					<text class="iconfont arrow-icon">{{ isProcessExpanded ? '\ue68d' : '\ue60e' }}</text>
+					<text class="section-title" :style="{ color: theme.textPrimary }">{{ t('workbench.officeProcess') }}</text>
+					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">{{ isProcessExpanded ? '\ue68d' : '\ue60e' }}</text>
 				</view>
 				<view class="grid" v-if="isProcessExpanded">
 					<view class="grid-item" hover-class="grid-item-active" v-for="(item, index) in processList" :key="index" @click="handleAction(item)">
@@ -21,23 +21,23 @@
 								<text class="badge-text">{{ item.badge > 99 ? '99+' : item.badge }}</text>
 							</view>
 						</view>
-						<text class="grid-label">{{ t(item.nameKey) }}</text>
+						<text class="grid-label" :style="{ color: theme.textPrimary }">{{ t(item.nameKey) }}</text>
 					</view>
 				</view>
 			</view>
 
 			<!-- 常用功能 -->
-			<view class="section mt-2">
+			<view class="section mt-2" :style="{ backgroundColor: theme.cardBg }">
 				<view class="section-header" @click="isFeatureExpanded = !isFeatureExpanded">
-					<text class="section-title">{{ t('workbench.commonFeatures') }}</text>
-					<text class="iconfont arrow-icon">{{ isFeatureExpanded ? '\ue68d' : '\ue60e' }}</text>
+					<text class="section-title" :style="{ color: theme.textPrimary }">{{ t('workbench.commonFeatures') }}</text>
+					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">{{ isFeatureExpanded ? '\ue68d' : '\ue60e' }}</text>
 				</view>
 				<view class="grid" v-if="isFeatureExpanded">
 					<view class="grid-item" hover-class="grid-item-active" v-for="(item, index) in featureList" :key="index" @click="handleAction(item)">
 						<view class="icon-wrap" :style="{ backgroundImage: item.gradient }">
 							<text class="iconfont grid-icon">{{ item.icon }}</text>
 						</view>
-						<text class="grid-label">{{ t(item.nameKey) }}</text>
+						<text class="grid-label" :style="{ color: theme.textPrimary }">{{ t(item.nameKey) }}</text>
 					</view>
 				</view>
 			</view>
@@ -49,10 +49,13 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { badgeService, type BadgeData, type BadgeListener } from '../../services/badge-service.uts'
 	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
 	const isProcessExpanded = ref(true)
 	const isFeatureExpanded = ref(true)
+	const theme = ref<ThemeTokens>(getThemeTokens())
 
 	const processList = ref([
 		{ nameKey: 'workbench.todo', icon: '\uea83', gradient: 'linear-gradient(135deg, #fb923c, #f97316)', badge: 0 },
@@ -76,6 +79,11 @@
 
 	// 角标监听器
 	let badgeListener: BadgeListener | null = null
+	let unsubscribeTheme: (() => void) | null = null
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	/**
 	 * 将 nameKey 转换为 menuId
@@ -136,6 +144,11 @@
 
 	onUnmounted(() => {
 		console.log('[Workbench] 页面卸载，移除角标监听器')
+
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
 		
 		// 移除监听器
 		if (badgeListener !== null) {
@@ -156,26 +169,23 @@
 	/* 页面基础样式 */
 	.page {
 		height: 100%;
-		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		padding: 8px 16px 12px 16px;
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
+		border-bottom-width: 0.5px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 20px;
 		font-weight: 600;
 		height: 44px;
@@ -183,18 +193,18 @@
 	}
 
 	.edit-btn {
-		color: #1677FF;
 		font-size: 16px;
 	}
 
 	.content {
 		flex: 1;
 		height: 0;
-		background-color: #FFFFFF;
 	}
 
 	.section {
 		padding: 12px 16px;
+		margin: 12px 16px 0;
+		border-radius: 12px;
 	}
 
 	.section-header {
@@ -206,13 +216,11 @@
 
 	.section-title {
 		font-size: 14px;
-		color: #1F2329;
 		font-weight: 600;
 	}
 
 	.arrow-icon {
 		font-size: 14px;
-		color: #8F959E;
 	}
 
 	.grid {
@@ -228,7 +236,7 @@
 	}
 
 	.grid-item-active {
-		background-color: #F5F7FA;
+		background-color: rgba(143, 149, 158, 0.12);
 		border-radius: 8px;
 	}
 
@@ -249,7 +257,6 @@
 
 	.grid-label {
 		font-size: 12px;
-		color: #1F2329;
 		font-weight: 400;
 	}
 

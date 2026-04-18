@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
 		<!-- #ifdef APP-PLUS -->
 		<view class="scan-overlay">
 			<view class="status-spacer"></view>
@@ -39,20 +39,20 @@
 		<!-- #endif -->
 
 		<!-- #ifndef APP-PLUS -->
-		<view class="fallback-page">
-			<view class="status-bar"></view>
-			<view class="header">
+		<view class="fallback-page" :style="{ backgroundColor: theme.pageBg }">
+			<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+			<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 				<view class="header-left" @click.stop="handleBack">
-					<text class="iconfont back-icon">&#xeb04;</text>
-					<text class="back-text">返回</text>
+					<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+					<text class="back-text" :style="{ color: theme.headerText }">返回</text>
 				</view>
-				<text class="header-title">扫一扫</text>
+				<text class="header-title" :style="{ color: theme.headerText }">扫一扫</text>
 				<view class="header-right"></view>
 			</view>
 			<view class="fallback-content">
-				<text class="fallback-title">当前端不支持原生扫码</text>
-				<text class="fallback-desc">请改用手工输入邀请码或邀请链接。</text>
-				<view class="fallback-btn" @click="openManualJoin">
+				<text class="fallback-title" :style="{ color: theme.textPrimary }">当前端不支持原生扫码</text>
+				<text class="fallback-desc" :style="{ color: theme.textSecondary }">请改用手工输入邀请码或邀请链接。</text>
+				<view class="fallback-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="openManualJoin">
 					<text class="fallback-btn-text">前往输入邀请码</text>
 				</view>
 			</view>
@@ -64,11 +64,19 @@
 <script setup lang="uts">
 	import { onLoad, onReady, onUnload } from '@dcloudio/uni-app'
 	import { routeScanResult } from '../../utils/scan-router.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	let barcodeView : any = null
 	const flashlightEnabled = ref(false)
 	const scanHandled = ref(false)
 	const frameSize = ref(275)
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	const frameSizePx = computed(() : string => {
 		return frameSize.value + 'px'
@@ -201,6 +209,10 @@
 
 	onUnload(() => {
 		stopScanner()
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
 	})
 </script>
 
@@ -352,25 +364,21 @@
 
 	.fallback-page {
 		height: 100%;
-		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		height: 44px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
 		justify-content: space-between;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 	}
 
 	.header-left {
@@ -380,18 +388,15 @@
 	}
 
 	.back-icon {
-		color: #1F2329;
 		font-size: 20px;
 	}
 
 	.back-text {
-		color: #1F2329;
 		font-size: 16px;
 		margin-left: 4px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 17px;
 		font-weight: 600;
 	}
@@ -409,7 +414,6 @@
 
 	.fallback-title {
 		font-size: 20px;
-		color: #1F2329;
 		font-weight: 600;
 	}
 

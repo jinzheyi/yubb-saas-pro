@@ -37,7 +37,18 @@
 			}
 		}
 	},
+	"web": {
+		"darkmode": true
+	},
 	"app": {
+		"defaultAppTheme": "auto",
+		"safearea": {
+			"background": "#FFFFFF",
+			"backgroundDark": "#11161C",
+			"bottom": {
+				"offset": "auto"
+			}
+		},
 		"distribute": {
 			"icons": {
 				"android": {

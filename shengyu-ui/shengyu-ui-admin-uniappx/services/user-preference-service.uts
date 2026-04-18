@@ -1,0 +1,102 @@
+import { getCurrentUserDetail, updateCurrentUserChatBubblePreference, updateCurrentUserThemePreference } from '../api/user.uts'
+import { getChatBubbleConfig, setChatBubbleConfig, type ChatBubbleConfig } from '../store/chat-bubble.uts'
+import { getThemeMode, setThemeMode } from '../store/theme.uts'
+import { isLoggedIn } from '../store/user.uts'
+import type { ThemeMode } from '../config/theme.uts'
+
+const SYNC_COOLDOWN_MS = 2500
+let syncing = false
+let pendingResync = false
+let lastSyncAt = 0
+
+function normalizeThemeMode(raw: any): ThemeMode | null {
+	if (raw === 'light' || raw === 'dark' || raw === 'system') {
+		return raw
+	}
+	return null
+}
+
+function normalizeChatBubbleConfig(rawColor: any, rawMode: any): ChatBubbleConfig | null {
+	const color = rawColor != null ? String(rawColor).trim().toUpperCase() : ''
+	const mode = rawMode === 'custom' ? 'custom' : (rawMode === 'preset' ? 'preset' : '')
+	if (!/^#[0-9A-F]{6}$/.test(color) || (mode !== 'custom' && mode !== 'preset')) {
+		return null
+	}
+	return {
+		color: color,
+		mode: mode
+	}
+}
+
+function shouldUpdateChatBubble(nextConfig: ChatBubbleConfig): boolean {
+	const current = getChatBubbleConfig()
+	return current.color !== nextConfig.color || current.mode !== nextConfig.mode
+}
+
+export async function syncUserPreferencesFromServer(force: boolean = false): Promise<void> {
+	if (!isLoggedIn()) {
+		return
+	}
+	const now = Date.now()
+	if (!force && (now - lastSyncAt) < SYNC_COOLDOWN_MS) {
+		return
+	}
+	if (syncing) {
+		pendingResync = true
+		return
+	}
+	syncing = true
+	try {
+		const profile = await getCurrentUserDetail()
+		const nextThemeMode = normalizeThemeMode(profile != null ? (profile as any).themeMode : '')
+		if (nextThemeMode != null && nextThemeMode !== getThemeMode()) {
+			setThemeMode(nextThemeMode)
+		}
+		const nextChatBubbleConfig = normalizeChatBubbleConfig(
+			profile != null ? (profile as any).chatBubbleColor : '',
+			profile != null ? (profile as any).chatBubbleMode : ''
+		)
+		if (nextChatBubbleConfig != null && shouldUpdateChatBubble(nextChatBubbleConfig)) {
+			setChatBubbleConfig(nextChatBubbleConfig)
+		}
+		lastSyncAt = Date.now()
+	} catch (e) {
+		console.warn('[user-preference] sync from server failed:', e)
+	} finally {
+		syncing = false
+		if (pendingResync) {
+			pendingResync = false
+			void syncUserPreferencesFromServer(true)
+		}
+	}
+}
+
+export async function persistThemePreference(mode: ThemeMode): Promise<void> {
+	if (!isLoggedIn()) {
+		return
+	}
+	try {
+		await updateCurrentUserThemePreference(mode)
+	} catch (e) {
+		console.warn('[user-preference] persist theme failed:', e)
+		uni.showToast({
+			title: '主题偏好同步失败',
+			icon: 'none'
+		})
+	}
+}
+
+export async function persistChatBubblePreference(config: ChatBubbleConfig): Promise<void> {
+	if (!isLoggedIn()) {
+		return
+	}
+	try {
+		await updateCurrentUserChatBubblePreference(config)
+	} catch (e) {
+		console.warn('[user-preference] persist chat bubble failed:', e)
+		uni.showToast({
+			title: '聊天气泡同步失败',
+			icon: 'none'
+		})
+	}
+}

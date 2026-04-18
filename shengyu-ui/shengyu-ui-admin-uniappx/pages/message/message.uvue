@@ -1,43 +1,43 @@
 <template>
-	<view class="page">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
 		<!-- 顶部状态栏占位 -->
-		<view class="status-bar"></view>
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
 		
 		<!-- 头部搜索区域 -->
-		<view class="header">
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-top">
-				<text class="header-title">{{ t('message.title', '消息') }}</text>
+				<text class="header-title" :style="{ color: theme.headerText }">{{ t('message.title', '消息') }}</text>
 				<view class="header-icons">
-					<text class="iconfont header-icon" @click="handleSyncBadge">&#xea5f;</text>
-					<text class="iconfont header-icon" @click="handleScan">&#xea8b;</text>
-					<text class="iconfont header-icon" @click="handleInitiateGroup">&#xea74;</text>
+					<text class="iconfont header-icon" :style="{ color: theme.headerText }" @click="handleSyncBadge">&#xea5f;</text>
+					<text class="iconfont header-icon" :style="{ color: theme.headerText }" @click="handleScan">&#xea8b;</text>
+					<text class="iconfont header-icon" :style="{ color: theme.headerText }" @click="handleInitiateGroup">&#xea74;</text>
 				</view>
 			</view>
 			<view class="search-container">
-				<view class="search-bar">
-					<text class="iconfont search-icon" @click="handleSearch">&#xea6e;</text>
-					<input class="search-input" v-model="listSearchKeyword" :placeholder="t('message.searchPlaceholder', '搜索')" placeholder-class="placeholder" confirm-type="search" @confirm="handleSearch" />
-					<text v-if="listSearchKeyword !== ''" class="iconfont search-clear" @click="clearConversationFilter">&#xea73;</text>
+				<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
+					<text class="iconfont search-icon" :style="{ color: theme.textTertiary }" @click="handleSearch">&#xea6e;</text>
+					<input class="search-input" :style="{ color: theme.inputText }" v-model="listSearchKeyword" :placeholder="t('message.searchPlaceholder', '搜索')" placeholder-class="placeholder" confirm-type="search" @confirm="handleSearch" />
+					<text v-if="listSearchKeyword !== ''" class="iconfont search-clear" :style="{ color: theme.textTertiary }" @click="clearConversationFilter">&#xea73;</text>
 				</view>
 			</view>
 		</view>
 		
 		<!-- 分类图标栏 (置顶) -->
-		<view class="category-bar">
+		<view class="category-bar" :style="{ backgroundColor: theme.cardBg }">
 			<view 
 				class="category-item" 
 				v-for="(item, index) in categories" 
 				:key="index"
 				@click="handleCategoryClick(item)"
 			>
-				<view class="category-icon-wrap" :class="{ 'category-active': selectedCategoryId === item.id }">
+				<view class="category-icon-wrap" :class="{ 'category-active': selectedCategoryId === item.id }" :style="{ backgroundColor: selectedCategoryId === item.id ? theme.brandPrimarySoft : theme.cardBgMuted }">
 					<text class="iconfont category-icon" :style="{ color: selectedCategoryId === item.id ? '#3370FF' : item.color }">{{ item.icon }}</text>
 				</view>
-				<text class="category-text" :class="{ 'category-text-active': selectedCategoryId === item.id }">{{ t(item.nameKey) }}</text>
+				<text class="category-text" :class="{ 'category-text-active': selectedCategoryId === item.id }" :style="{ color: selectedCategoryId === item.id ? theme.brandPrimary : theme.textSecondary }">{{ t(item.nameKey) }}</text>
 			</view>
 		</view>
 
-		<view class="section-divider"></view>
+		<view class="section-divider" :style="{ backgroundColor: theme.pageBg }"></view>
 
 		<scroll-view
 			class="content-scroll"
@@ -53,6 +53,7 @@
 			<view class="message-list" v-if="displayPinnedList.length > 0">
 				<view 
 					class="message-item pinned-item" 
+					:style="{ backgroundColor: theme.cardBgMuted }"
 					hover-class="pinned-item-active"
 					v-for="(item, index) in displayPinnedList" 
 					:key="'pinned-' + item.chatId" 
@@ -71,29 +72,29 @@
 					<view class="message-content">
 						<view class="message-top">
 							<view class="message-name-wrap">
-								<text class="message-name">{{ item.targetName }}</text>
-								<text v-if="item.conversationType === 2 && item.groupMemberCount" class="member-count">({{ item.groupMemberCount }})</text>
+								<text class="message-name" :style="{ color: theme.textPrimary }">{{ item.targetName }}</text>
+								<text v-if="item.conversationType === 2 && item.groupMemberCount" class="member-count" :style="{ color: theme.textTertiary }">({{ item.groupMemberCount }})</text>
 							</view>
-							<text class="message-time">{{ formatWeChatTime(item.lastMessageTime) }}</text>
+							<text class="message-time" :style="{ color: theme.textTertiary }">{{ formatWeChatTime(item.lastMessageTime) }}</text>
 						</view>
 						<view class="message-bottom">
 							<text v-if="item.lastMessageHasAtMe" class="atme-label">[有人@我]</text>
 							<view class="message-desc">
 								<template v-for="(token, tokenIndex) in item.lastMessagePreviewTokens" :key="'pinned-token-' + item.chatId + '-' + tokenIndex">
 									<image v-if="token.type === 'emoji'" class="message-desc-emoji" :src="token.content" mode="aspectFit" />
-									<text v-else :class="['message-desc-text', isNoticeUpdatePreviewToken(token.content) ? 'message-desc-text-alert' : '']">{{ token.content }}</text>
+									<text v-else :class="['message-desc-text', isNoticeUpdatePreviewToken(token.content) ? 'message-desc-text-alert' : '']" :style="{ color: isNoticeUpdatePreviewToken(token.content) ? '#F54A45' : theme.textSecondary }">{{ token.content }}</text>
 								</template>
 							</view>
 							<text v-if="item.noDisturb" class="iconfont nodisturb-icon">&#xe63a;</text>
 						</view>
 					</view>
-					<view v-if="index < displayPinnedList.length - 1 || showFoldToggle" class="message-item-border"></view>
+					<view v-if="index < displayPinnedList.length - 1 || showFoldToggle" class="message-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 				</view>
 				
 				<!-- 折叠/展开按钮 -->
-				<view v-if="showFoldToggle" class="fold-toggle" @click="isPinnedFolded = !isPinnedFolded">
-					<text class="fold-text">{{ isPinnedFolded ? t('message.fold.showMore', '展开置顶聊天') : t('message.fold.hideMore', '收起置顶聊天') }}</text>
-					<text class="iconfont fold-icon">{{ isPinnedFolded ? '\ue60e' : '\ue68d' }}</text>
+				<view v-if="showFoldToggle" class="fold-toggle" :style="{ backgroundColor: theme.cardBgMuted }" @click="isPinnedFolded = !isPinnedFolded">
+					<text class="fold-text" :style="{ color: theme.textSecondary }">{{ isPinnedFolded ? t('message.fold.showMore', '展开置顶聊天') : t('message.fold.hideMore', '收起置顶聊天') }}</text>
+					<text class="iconfont fold-icon" :style="{ color: theme.textTertiary }">{{ isPinnedFolded ? '\ue60e' : '\ue68d' }}</text>
 				</view>
 			</view>
 
@@ -101,6 +102,7 @@
 			<view class="message-list">
 				<view 
 					class="message-item" 
+					:style="{ backgroundColor: theme.cardBg }"
 					hover-class="message-item-active"
 					v-for="(item, index) in displayNormalList" 
 					:key="'normal-' + item.chatId" 
@@ -119,39 +121,39 @@
 					<view class="message-content">
 						<view class="message-top">
 							<view class="message-name-wrap">
-								<text class="message-name">{{ item.targetName }}</text>
-								<text v-if="item.conversationType === 2 && item.groupMemberCount" class="member-count">({{ item.groupMemberCount }})</text>
+								<text class="message-name" :style="{ color: theme.textPrimary }">{{ item.targetName }}</text>
+								<text v-if="item.conversationType === 2 && item.groupMemberCount" class="member-count" :style="{ color: theme.textTertiary }">({{ item.groupMemberCount }})</text>
 							</view>
-							<text class="message-time">{{ formatWeChatTime(item.lastMessageTime) }}</text>
+							<text class="message-time" :style="{ color: theme.textTertiary }">{{ formatWeChatTime(item.lastMessageTime) }}</text>
 						</view>
 						<view class="message-bottom">
 							<text v-if="item.lastMessageHasAtMe" class="atme-label">[有人@我]</text>
 							<view class="message-desc">
 								<template v-for="(token, tokenIndex) in item.lastMessagePreviewTokens" :key="'normal-token-' + item.chatId + '-' + tokenIndex">
 									<image v-if="token.type === 'emoji'" class="message-desc-emoji" :src="token.content" mode="aspectFit" />
-									<text v-else :class="['message-desc-text', isNoticeUpdatePreviewToken(token.content) ? 'message-desc-text-alert' : '']">{{ token.content }}</text>
+									<text v-else :class="['message-desc-text', isNoticeUpdatePreviewToken(token.content) ? 'message-desc-text-alert' : '']" :style="{ color: isNoticeUpdatePreviewToken(token.content) ? '#F54A45' : theme.textSecondary }">{{ token.content }}</text>
 								</template>
 							</view>
 							<text v-if="item.noDisturb" class="iconfont nodisturb-icon">&#xe63a;</text>
 						</view>
 					</view>
-					<view v-if="index < displayNormalList.length - 1" class="message-item-border"></view>
+					<view v-if="index < displayNormalList.length - 1" class="message-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 				</view>
 			</view>
 		</scroll-view>
 
 		<!-- 长按右键菜单弹窗 -->
 		<view v-if="showContextMenu" class="menu-mask" @click="closeMenu">
-			<view class="menu-content" :style="{ top: menuY + 'px', left: menuX + 'px' }" @click.stop>
-				<view class="menu-header">
-					<text class="menu-title">{{ selectedItem?.targetName ?? '' }}</text>
+			<view class="menu-content" :style="{ top: menuY + 'px', left: menuX + 'px', backgroundColor: theme.cardBg, borderColor: theme.borderColor }" @click.stop>
+				<view class="menu-header" :style="{ backgroundColor: theme.cardBgMuted, borderBottomColor: theme.borderColor }">
+					<text class="menu-title" :style="{ color: theme.textSecondary }">{{ selectedItem?.targetName ?? '' }}</text>
 				</view>
 				<view class="menu-list">
 					<view class="menu-item-btn" hover-class="menu-item-btn-active" @click="handleMenuAction('pin')">
-						<text class="menu-item-text">{{ selectedItem?.isPinned ? t('message.menu.unpin') : t('message.menu.pin') }}</text>
+						<text class="menu-item-text" :style="{ color: theme.textPrimary }">{{ selectedItem?.isPinned ? t('message.menu.unpin') : t('message.menu.pin') }}</text>
 					</view>
 					<view class="menu-item-btn" hover-class="menu-item-btn-active" @click="handleMenuAction('unread')">
-						<text class="menu-item-text">{{ (selectedItem?.unreadCount || 0) > 0 ? t('message.menu.read') : t('message.menu.unread') }}</text>
+						<text class="menu-item-text" :style="{ color: theme.textPrimary }">{{ (selectedItem?.unreadCount || 0) > 0 ? t('message.menu.read') : t('message.menu.unread') }}</text>
 					</view>
 					<view class="menu-item-btn" hover-class="menu-item-btn-active" @click="handleMenuAction('remove')">
 						<text class="menu-item-text menu-danger">{{ t('message.menu.remove') }}</text>
@@ -172,6 +174,8 @@
 	import { wsManager } from '../../utils/websocket.uts'
 	import { encodeIdParam } from '../../utils/id-param.uts'
 	import { parseMessageText as parseEmojiTokens, type MessageToken as EmojiToken } from '../../utils/emojiParser.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
 
@@ -187,6 +191,7 @@
 	const menuX = ref(0)
 	const menuY = ref(0)
 	const selectedItem = ref<any>(null)
+	const theme = ref<ThemeTokens>(getThemeTokens())
 	
 	// 加载状态
 	const loading = ref(false)
@@ -205,6 +210,7 @@
 	let lastPageHideAt = 0
 	let refreshReleaseTimer = 0
 	let refreshWatchdogTimer = 0
+	let unsubscribeTheme: (() => void) | null = null
 
 	const FOREGROUND_SYNC_COOLDOWN_MS = 1500
 	const FOREGROUND_SYNC_STALE_MS = 5000
@@ -216,6 +222,10 @@
 			conversationService.applyBadgeSnapshot(badgeData.conversationBadges)
 		}
 	}
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	function getRetryAfterMsFromHeaders(headers: any): number {
 		try {
@@ -377,6 +387,10 @@
 	})
 
 	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
 		wsManager.setRealtimeBizActive(false)
 		lastPageHideAt = Date.now()
 		forceStopRefreshIndicator()
@@ -925,19 +939,16 @@
 	/* 页面基础样式 */
 	.page {
 		height: 100%;
-		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	/* 头部区域 - 扁平化风格 */
 	.header {
-		background-color: #FFFFFF;
 		padding: 8px 16px 12px 16px;
 	}
 
@@ -949,7 +960,6 @@
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 20px;
 		font-weight: 600;
 	}
@@ -960,7 +970,6 @@
 	}
 
 	.header-icon {
-		color: #1F2329;
 		font-size: 22px;
 		margin-left: 20px;
 	}
@@ -972,7 +981,6 @@
 	}
 
 	.search-bar {
-		background-color: #F2F3F5;
 		border-radius: 6px;
 		height: 36px;
 		flex-direction: row;
@@ -982,31 +990,27 @@
 
 	.search-icon {
 		font-size: 16px;
-		color: #8F959E;
 	}
 
 	.search-input {
 		flex: 1;
-		color: #1F2329;
 		font-size: 14px;
 		margin-left: 8px;
 	}
 
 	.search-clear {
 		font-size: 16px;
-		color: #8F959E;
 		padding-left: 8px;
 	}
 
 	.placeholder {
-		color: #8F959E;
+		color: #A7AFB9;
 	}
 
 	/* 滚动内容区域 */
 	.content-scroll {
 		flex: 1;
 		height: 0;
-		background-color: #FFFFFF;
 	}
 
 	/* 分类图标栏 - 更加简洁 */
@@ -1025,14 +1029,12 @@
 		width: 40px;
 		height: 40px;
 		border-radius: 10px;
-		background-color: #F5F7FA;
 		justify-content: center;
 		align-items: center;
 		margin-bottom: 6px;
 	}
 
 	.category-active {
-		background-color: #E8EFFF;
 		transform: scale(1.05);
 	}
 
@@ -1042,11 +1044,9 @@
 
 	.category-text {
 		font-size: 11px;
-		color: #646A73;
 	}
 
 	.category-text-active {
-		color: #3370FF;
 		font-weight: 600;
 	}
 
@@ -1058,21 +1058,19 @@
 	.message-item {
 		flex-direction: row;
 		padding: 14px 16px;
-		background-color: #FFFFFF;
 		align-items: center;
 		position: relative;
 	}
 
 	.pinned-item {
-		background-color: #F5F7FA;
 	}
 
 	.message-item-active {
-		background-color: #F2F3F5;
+		background-color: rgba(143, 149, 158, 0.12);
 	}
 
 	.pinned-item-active {
-		background-color: #EBEDF0;
+		background-color: rgba(143, 149, 158, 0.16);
 	}
 
 	.fold-toggle {
@@ -1080,18 +1078,15 @@
 		justify-content: center;
 		align-items: center;
 		padding: 12px 0;
-		background-color: #F5F7FA;
 	}
 
 	.fold-text {
 		font-size: 13px;
-		color: #646A73;
 		margin-right: 4px;
 	}
 
 	.fold-icon {
 		font-size: 12px;
-		color: #8F959E;
 	}
 
 	.message-item-border {
@@ -1185,19 +1180,16 @@
 
 	.message-name {
 		font-size: 16px;
-		color: #1F2329;
 		font-weight: 500;
 	}
 
 	.member-count {
 		font-size: 13px;
-		color: #8F959E;
 		margin-left: 4px;
 	}
 
 	.message-time {
 		font-size: 12px;
-		color: #8F959E;
 	}
 
 	.message-bottom {
@@ -1260,24 +1252,24 @@
 	.menu-content {
 		position: absolute;
 		width: 160px;
-		background-color: #ffffff;
+		background-color: #1A212A;
 		border-radius: 12px;
 		box-shadow: 0 4px 16px rgba(0,0,0,0.15);
 		overflow: hidden;
 		border-width: 0.5px;
-		border-color: #f0f0f0;
+		border-color: #2B3541;
 	}
 
 	.menu-header {
 		padding: 12px 16px;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #f0f0f0;
-		background-color: #fafafa;
+		border-bottom-color: #2B3541;
+		background-color: #242D38;
 	}
 
 	.menu-title {
 		font-size: 13px;
-		color: #999999;
+		color: #8893A2;
 		font-weight: 500;
 	}
 
@@ -1290,12 +1282,12 @@
 	}
 
 	.menu-item-btn-active {
-		background-color: #f5f5f5;
+		background-color: #242D38;
 	}
 
 	.menu-item-text {
 		font-size: 15px;
-		color: #333333;
+		color: #F3F6FA;
 	}
 
 	.menu-danger {

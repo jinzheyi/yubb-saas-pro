@@ -1,32 +1,32 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">{{ t('common.back') }}</text>
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title">我的收藏</text>
+			<text class="header-title" :style="{ color: theme.headerText }">我的收藏</text>
 			<view class="header-right"></view>
 		</view>
 
 		<!-- 分类标签 -->
-		<view class="category-tabs">
-			<view class="tab-item" v-for="tab in tabs" :key="tab.type" :class="{ 'tab-active': currentTab === tab.type }" @click="switchTab(tab.type)">
+		<view class="category-tabs" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }">
+			<view class="tab-item" :style="{ backgroundColor: currentTab === tab.type ? theme.brandPrimarySoft : theme.cardBgMuted }" v-for="tab in tabs" :key="tab.type" :class="{ 'tab-active': currentTab === tab.type }" @click="switchTab(tab.type)">
 				<text class="iconfont tab-icon">{{ tab.icon }}</text>
-				<text class="tab-text" :class="{ 'tab-text-active': currentTab === tab.type }">{{ tab.name }}</text>
+				<text class="tab-text" :class="{ 'tab-text-active': currentTab === tab.type }" :style="{ color: currentTab === tab.type ? theme.brandPrimary : theme.textSecondary }">{{ tab.name }}</text>
 			</view>
 		</view>
 
 		<!-- 收藏列表 -->
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false" v-if="displayFavorites.length > 0">
-			<view class="favorite-item" v-for="item in displayFavorites" :key="item.id" @click="handleItemClick(item)" @longpress="handleItemLongPress(item)">
+			<view class="favorite-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" v-for="item in displayFavorites" :key="item.id" @click="handleItemClick(item)" @longpress="handleItemLongPress(item)">
 				<!-- 文字类型 -->
 				<view v-if="item.type === 'text'" class="favorite-text-item">
-					<text class="favorite-text-content">{{ item.content }}</text>
+					<text class="favorite-text-content" :style="{ color: theme.textPrimary }">{{ item.content }}</text>
 					<view class="favorite-meta">
-						<text class="favorite-from">来自: {{ item.fromChat }}</text>
-						<text class="favorite-time">{{ formatTime(item.createTime) }}</text>
+						<text class="favorite-from" :style="{ color: theme.textSecondary }">来自: {{ item.fromChat }}</text>
+						<text class="favorite-time" :style="{ color: theme.textTertiary }">{{ formatTime(item.createTime) }}</text>
 					</view>
 				</view>
 
@@ -34,8 +34,8 @@
 				<view v-else-if="item.type === 'image'" class="favorite-image-item">
 					<image class="favorite-image" :src="item.content" mode="aspectFill" />
 					<view class="favorite-meta">
-						<text class="favorite-from">来自: {{ item.fromChat }}</text>
-						<text class="favorite-time">{{ formatTime(item.createTime) }}</text>
+						<text class="favorite-from" :style="{ color: theme.textSecondary }">来自: {{ item.fromChat }}</text>
+						<text class="favorite-time" :style="{ color: theme.textTertiary }">{{ formatTime(item.createTime) }}</text>
 					</view>
 				</view>
 
@@ -48,36 +48,36 @@
 						</view>
 					</view>
 					<view class="favorite-meta">
-						<text class="favorite-from">来自: {{ item.fromChat }}</text>
-						<text class="favorite-time">{{ formatTime(item.createTime) }}</text>
+						<text class="favorite-from" :style="{ color: theme.textSecondary }">来自: {{ item.fromChat }}</text>
+						<text class="favorite-time" :style="{ color: theme.textTertiary }">{{ formatTime(item.createTime) }}</text>
 					</view>
 				</view>
 
 				<!-- 文件类型 -->
 				<view v-else-if="item.type === 'file'" class="favorite-file-item">
-					<view class="file-icon-wrap">
+					<view class="file-icon-wrap" :style="{ backgroundColor: theme.brandPrimarySoft }">
 						<text class="iconfont file-icon">&#xea96;</text>
 					</view>
 					<view class="file-info">
-						<text class="file-name">{{ item.fileName }}</text>
-						<text class="file-size">{{ item.fileSize }}</text>
+						<text class="file-name" :style="{ color: theme.textPrimary }">{{ item.fileName }}</text>
+						<text class="file-size" :style="{ color: theme.textTertiary }">{{ item.fileSize }}</text>
 					</view>
 					<view class="favorite-meta">
-						<text class="favorite-from">来自: {{ item.fromChat }}</text>
-						<text class="favorite-time">{{ formatTime(item.createTime) }}</text>
+						<text class="favorite-from" :style="{ color: theme.textSecondary }">来自: {{ item.fromChat }}</text>
+						<text class="favorite-time" :style="{ color: theme.textTertiary }">{{ formatTime(item.createTime) }}</text>
 					</view>
 				</view>
 
 				<!-- 链接类型 -->
 				<view v-else-if="item.type === 'link'" class="favorite-link-item">
 					<view class="link-content">
-						<text class="link-title">{{ item.title }}</text>
-						<text class="link-url">{{ item.content }}</text>
+						<text class="link-title" :style="{ color: theme.textPrimary }">{{ item.title }}</text>
+						<text class="link-url" :style="{ color: theme.brandPrimary }">{{ item.content }}</text>
 					</view>
 					<image v-if="item.thumbnail" class="link-thumbnail" :src="item.thumbnail" mode="aspectFill" />
 					<view class="favorite-meta">
-						<text class="favorite-from">来自: {{ item.fromChat }}</text>
-						<text class="favorite-time">{{ formatTime(item.createTime) }}</text>
+						<text class="favorite-from" :style="{ color: theme.textSecondary }">来自: {{ item.fromChat }}</text>
+						<text class="favorite-time" :style="{ color: theme.textTertiary }">{{ formatTime(item.createTime) }}</text>
 					</view>
 				</view>
 			</view>
@@ -85,19 +85,28 @@
 
 		<!-- 空状态 -->
 		<view class="empty-state" v-else>
-			<text class="iconfont empty-icon">&#xe83f;</text>
-			<text class="empty-text">暂无{{ currentTabName }}收藏</text>
-			<text class="empty-tip">长按消息可以收藏</text>
+			<text class="iconfont empty-icon" :style="{ color: theme.borderColor }">&#xe83f;</text>
+			<text class="empty-text" :style="{ color: theme.textTertiary }">暂无{{ currentTabName }}收藏</text>
+			<text class="empty-tip" :style="{ color: theme.textTertiary }">长按消息可以收藏</text>
 		</view>
 	</view>
 </template>
 
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { onUnload } from '@dcloudio/uni-app'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
 
 	const currentTab = ref('all')
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	const tabs = [
 		{ type: 'all', name: '全部', icon: '\ue616' },
@@ -221,6 +230,13 @@
 		}
 	}
 
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
+	})
+
 	function handleItemLongPress(item : any) {
 		uni.showActionSheet({
 			itemList: ['转发', '取消收藏', '删除'],
@@ -259,25 +275,21 @@
 <style>
 	.page {
 		height: 100%;
-		background-color: #F5F7FA;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		height: 44px;
 		flex-direction: row;
 		align-items: center;
 		padding: 0 12px;
 		justify-content: space-between;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 	}
 
 	.header-left {
@@ -287,18 +299,15 @@
 	}
 
 	.back-icon {
-		color: #1F2329;
 		font-size: 20px;
 	}
 
 	.back-text {
-		color: #1F2329;
 		font-size: 16px;
 		margin-left: 4px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 17px;
 		font-weight: 600;
 	}
@@ -309,11 +318,9 @@
 
 	/* 分类标签 */
 	.category-tabs {
-		background-color: #FFFFFF;
 		flex-direction: row;
 		padding: 12px 16px;
 		border-bottom-width: 0.5px;
-		border-bottom-color: #EFF0F1;
 		overflow: scroll;
 	}
 
@@ -323,23 +330,20 @@
 		padding: 6px 12px;
 		border-radius: 16px;
 		margin-right: 8px;
-		background-color: #F5F7FA;
 		flex-shrink: 0;
 	}
 
 	.tab-active {
-		background-color: #E8EFFF;
+		background-color: rgba(51, 112, 255, 0.14);
 	}
 
 	.tab-icon {
 		font-size: 16px;
-		color: #646A73;
 		margin-right: 4px;
 	}
 
 	.tab-text {
 		font-size: 13px;
-		color: #646A73;
 	}
 
 	.tab-text-active {
@@ -358,7 +362,6 @@
 	}
 
 	.favorite-item {
-		background-color: #FFFFFF;
 		margin-bottom: 10px;
 		padding: 16px;
 	}
@@ -369,7 +372,6 @@
 
 	.favorite-text-content {
 		font-size: 15px;
-		color: #1F2329;
 		line-height: 1.6;
 		margin-bottom: 12px;
 	}
@@ -427,7 +429,6 @@
 	.file-icon-wrap {
 		width: 50px;
 		height: 50px;
-		background-color: #F5F7FA;
 		border-radius: 8px;
 		justify-content: center;
 		align-items: center;
@@ -445,13 +446,11 @@
 
 	.file-name {
 		font-size: 15px;
-		color: #1F2329;
 		margin-bottom: 4px;
 	}
 
 	.file-size {
 		font-size: 13px;
-		color: #8F959E;
 	}
 
 	/* 链接收藏 */
@@ -471,7 +470,6 @@
 
 	.link-title {
 		font-size: 15px;
-		color: #1F2329;
 		margin-bottom: 4px;
 	}
 
@@ -497,12 +495,10 @@
 
 	.favorite-from {
 		font-size: 12px;
-		color: #8F959E;
 	}
 
 	.favorite-time {
 		font-size: 12px;
-		color: #8F959E;
 	}
 
 	/* 空状态 */
@@ -527,6 +523,5 @@
 
 	.empty-tip {
 		font-size: 13px;
-		color: #8F959E;
 	}
 </style>

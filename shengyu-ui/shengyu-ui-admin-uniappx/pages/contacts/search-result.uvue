@@ -1,39 +1,41 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
-				<text class="iconfont back-icon">&#xeb04;</text>
-				<text class="back-text">{{ t('common.back') }}</text>
+				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title">搜索</text>
+			<text class="header-title" :style="{ color: theme.headerText }">搜索</text>
 			<view class="header-right"></view>
 		</view>
 
-		<view class="search-wrap">
-			<view class="search-bar">
-				<text class="iconfont search-icon">&#xea6e;</text>
+		<view class="search-wrap" :style="{ backgroundColor: theme.headerBg }">
+			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
+				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
 				<input class="search-input" 
+					:style="{ color: theme.inputText }"
 					v-model="searchKeyword"
 					placeholder="搜索联系人、部门、群组" 
 					placeholder-class="placeholder"
 					@input="handleSearch" />
-				<text v-if="searchKeyword" class="iconfont clear-icon" @click="clearSearch">&#xea73;</text>
+				<text v-if="searchKeyword" class="iconfont clear-icon" :style="{ color: theme.textTertiary }" @click="clearSearch">&#xea73;</text>
 			</view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<!-- 最近搜索 -->
-			<view v-if="!searchKeyword && recentSearches.length > 0" class="recent-section">
-				<view class="section-header">
-					<text class="section-title">最近搜索</text>
-					<text class="iconfont delete-icon" @click="clearRecentSearches">&#xea76;</text>
+			<view v-if="!searchKeyword && recentSearches.length > 0" class="recent-section" :style="{ backgroundColor: theme.cardBg }">
+				<view class="section-header" :style="{ borderBottomColor: theme.borderColor }">
+					<text class="section-title" :style="{ color: theme.textPrimary }">最近搜索</text>
+					<text class="iconfont delete-icon" :style="{ color: theme.textTertiary }" @click="clearRecentSearches">&#xea76;</text>
 				</view>
 				<view class="tag-list">
 					<view v-for="(tag, index) in recentSearches" :key="index" 
-						class="tag-item" 
+						class="tag-item"
+						:style="{ backgroundColor: theme.cardBgMuted }"
 						@click="searchKeyword = tag">
-						<text class="tag-text">{{ tag }}</text>
+						<text class="tag-text" :style="{ color: theme.textSecondary }">{{ tag }}</text>
 					</view>
 				</view>
 			</view>
@@ -42,12 +44,13 @@
 			<view v-if="searchKeyword">
 				<!-- 联系人结果 -->
 				<view v-if="contactResults.length > 0" class="result-section">
-					<view class="result-header">
-						<text class="result-title">联系人</text>
+					<view class="result-header" :style="{ backgroundColor: theme.pageBg }">
+						<text class="result-title" :style="{ color: theme.textPrimary }">联系人</text>
 					</view>
-					<view class="result-list">
+					<view class="result-list" :style="{ backgroundColor: theme.cardBg }">
 						<view v-for="contact in contactResults" :key="contact.id" 
 							class="result-item" 
+							:style="{ borderBottomColor: theme.borderColor }"
 									hover-class="result-item-active"
 							@click="handleContactClick(contact)">
 							<view class="result-avatar" :style="{ backgroundColor: contact.avatarBg }">
@@ -58,7 +61,7 @@
 									<text v-for="(part, index) in highlightText(contact.name)" :key="index" 
 										:class="{ 'highlight': part.highlight }">{{ part.text }}</text>
 								</text>
-								<text class="result-desc">{{ contact.role }}</text>
+								<text class="result-desc" :style="{ color: theme.textSecondary }">{{ contact.role }}</text>
 							</view>
 						</view>
 					</view>
@@ -66,12 +69,13 @@
 
 				<!-- 群组结果 -->
 				<view v-if="groupResults.length > 0" class="result-section">
-					<view class="result-header">
-						<text class="result-title">相关群组</text>
+					<view class="result-header" :style="{ backgroundColor: theme.pageBg }">
+						<text class="result-title" :style="{ color: theme.textPrimary }">相关群组</text>
 					</view>
-					<view class="result-list">
+					<view class="result-list" :style="{ backgroundColor: theme.cardBg }">
 						<view v-for="group in groupResults" :key="group.id" 
 							class="result-item" 
+							:style="{ borderBottomColor: theme.borderColor }"
 							hover-class="result-item-active"
 							@click="handleGroupClick(group)">
 							<view class="group-icon-wrap">
@@ -82,7 +86,7 @@
 									<text v-for="(part, index) in highlightText(group.name)" :key="index" 
 										:class="{ 'highlight': part.highlight }">{{ part.text }}</text>
 								</text>
-								<text class="result-desc">{{ group.memberCount }}位成员</text>
+								<text class="result-desc" :style="{ color: theme.textSecondary }">{{ group.memberCount }}位成员</text>
 							</view>
 						</view>
 					</view>
@@ -93,11 +97,19 @@
 </template>
 
 <script setup lang="uts">
+	import { onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 	import { encodeIdParam } from '../../utils/id-param.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	const searchKeyword = ref('')
 	const recentSearches = ref(['产品部', '市场推广群', '张三', '架构设计'])
@@ -182,6 +194,13 @@
 			url: `/pages/message/chat?type=group&groupId=${groupIdParam}&targetId=${groupIdParam}&name=${encodeURIComponent(group.name)}&memberCount=${group.memberCount || 0}&entryMode=latest`
 		})
 	}
+
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
+	})
 </script>
 
 <style>
@@ -234,12 +253,10 @@
 	}
 
 	.search-wrap {
-		background-color: #ffffff;
 		padding: 12px 16px;
 	}
 
 	.search-bar {
-		background-color: #F2F3F5;
 		border-radius: 12px;
 		height: 36px;
 		flex-direction: row;
@@ -256,7 +273,6 @@
 	.search-input {
 		flex: 1;
 		font-size: 14px;
-		color: #333333;
 	}
 
 	.clear-icon {
@@ -330,7 +346,6 @@
 	}
 
 	.result-list {
-		background-color: #ffffff;
 	}
 
 	.result-item {

@@ -1,17 +1,17 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg }">
 			<view class="header-top">
 				<view class="header-left" @click.stop="handleBack">
-					<text class="iconfont back-icon">&#xeb04;</text>
+					<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 				</view>
-				<text class="header-title">{{ groupName }}</text>
+				<text class="header-title" :style="{ color: theme.headerText }">{{ groupName }}</text>
 				<view class="header-right"></view>
 			</view>
-			<view class="search-bar">
-				<text class="iconfont search-icon">&#xea6e;</text>
-				<input class="search-input" placeholder="搜索成员" placeholder-class="placeholder" />
+			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
+				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
+				<input class="search-input" :style="{ color: theme.inputText }" placeholder="搜索成员" placeholder-class="placeholder" />
 			</view>
 		</view>
 
@@ -19,6 +19,7 @@
 			<view class="member-list">
 				<view v-for="(member, index) in memberList" :key="member.id" 
 					class="member-item"
+					:style="{ backgroundColor: theme.cardBg }"
 							hover-class="member-item-active"
 					@click="handleMemberClick(member)">
 					<!-- 显示复选框 -->
@@ -30,18 +31,18 @@
 						<text class="avatar-text">{{ member.avatarText }}</text>
 					</view>
 					<view class="member-info">
-						<text class="member-name">{{ member.name }}</text>
-						<text class="member-role">{{ member.role }}</text>
+						<text class="member-name" :style="{ color: theme.textPrimary }">{{ member.name }}</text>
+						<text class="member-role" :style="{ color: theme.textSecondary }">{{ member.role }}</text>
 					</view>
-					<view v-if="index < memberList.length - 1" class="member-item-border"></view>
+					<view v-if="index < memberList.length - 1" class="member-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 				</view>
 			</view>
 		</scroll-view>
 
 		<!-- 底部操作栏 -->
-		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px' }">
-			<text class="selected-text">已选择 {{ selectedCount }} 人</text>
-			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
+		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px', backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
+			<text class="selected-text" :style="{ color: theme.textPrimary }">已选择 {{ selectedCount }} 人</text>
+			<button class="confirm-btn" :style="{ backgroundColor: selectedCount === 0 ? theme.cardBgMuted : theme.brandPrimary }" :disabled="selectedCount === 0" @click="handleConfirm">
 				<text class="confirm-btn-text">确定</text>
 			</button>
 		</view>
@@ -49,6 +50,7 @@
 </template>
 
 <script setup lang="uts">
+	import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { 
 		isMemberSelected, 
@@ -59,8 +61,15 @@
 	import { getGroupMembers } from '../../api/group.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 	import { decodeIdParam } from '../../utils/id-param.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	const safeAreaBottom = ref(0)
 	const groupName = ref('数字科技工作群')
@@ -167,23 +176,27 @@
 	onShow(() => {
 		syncSelectionState()
 	})
+
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
+	})
 </script>
 
 <style>
 	.page {
 		height: 100%;
-		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		padding: 8px 16px 12px 16px;
 	}
 
@@ -201,12 +214,10 @@
 	}
 
 	.back-icon {
-		color: #1F2329;
 		font-size: 24px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 20px;
 		font-weight: 600;
 	}
@@ -216,7 +227,6 @@
 	}
 
 	.search-bar {
-		background-color: #F2F3F5;
 		border-radius: 6px;
 		height: 36px;
 		flex-direction: row;
@@ -227,40 +237,32 @@
 
 	.search-icon {
 		font-size: 16px;
-		color: #8F959E;
 	}
 
 	.search-input {
 		flex: 1;
 		font-size: 14px;
 		margin-left: 8px;
-		color: #1F2329;
 	}
 
 	.placeholder {
-		color: #8F959E;
+		color: #A7AFB9;
 	}
 
 	.content {
 		flex: 1;
 		height: 0;
-		background-color: #FFFFFF;
-	}
-
-	.member-list {
-		background-color: #FFFFFF;
 	}
 
 	.member-item {
 		flex-direction: row;
 		align-items: center;
 		padding: 10px 16px;
-		background-color: #FFFFFF;
 		position: relative;
 	}
 
 	.member-item-active {
-		background-color: #F2F3F5;
+		background-color: rgba(143, 149, 158, 0.12);
 	}
 
 	.member-item-border {
@@ -294,13 +296,11 @@
 	.member-name {
 		font-size: 16px;
 		font-weight: 400;
-		color: #1F2329;
 		margin-bottom: 2px;
 	}
 
 	.member-role {
 		font-size: 12px;
-		color: #8F959E;
 	}
 
 	.checkbox {
@@ -308,8 +308,8 @@
 		height: 22px;
 		border-radius: 4px;
 		border-width: 2px;
-		border-color: #8F959E;
-		background-color: #FFFFFF;
+		border-color: #8893A2;
+		background-color: #1A212A;
 		margin-right: 12px;
 		justify-content: center;
 		align-items: center;
@@ -336,9 +336,7 @@
 	}
 
 	.footer {
-		background-color: #ffffff;
 		border-top-width: 0.5px;
-		border-top-color: #EFF0F1;
 		padding: 12px 16px;
 		flex-direction: row;
 		justify-content: space-between;
@@ -348,7 +346,6 @@
 
 	.selected-text {
 		font-size: 15px;
-		color: #1F2329;
 	}
 
 	.confirm-btn {

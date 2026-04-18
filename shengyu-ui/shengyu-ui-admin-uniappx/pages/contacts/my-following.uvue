@@ -1,18 +1,19 @@
 <template>
-	<view class="page">
-		<view class="status-bar"></view>
-		<view class="header">
+	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-top">
 				<view class="header-left" @click.stop="handleBack">
-					<text class="iconfont back-icon">&#xeb04;</text>
+					<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 				</view>
-				<text class="header-title">我的关注</text>
+				<text class="header-title" :style="{ color: theme.headerText }">我的关注</text>
 				<view class="header-right"></view>
 			</view>
-			<view class="search-bar">
-				<text class="iconfont search-icon">&#xea6e;</text>
+			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
+				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
 				<input 
 					class="search-input" 
+					:style="{ color: theme.inputText }"
 					v-model="searchKeyword"
 					placeholder="搜索" 
 					placeholder-class="placeholder"
@@ -29,13 +30,14 @@
 		>
 			<!-- 加载状态 -->
 			<view v-if="loading && followingList.length === 0" class="loading-state">
-				<text class="loading-text">加载中...</text>
+				<text class="loading-text" :style="{ color: theme.textTertiary }">加载中...</text>
 			</view>
 			
 			<!-- 联系人列表 -->
 			<view v-else-if="followingList.length > 0" class="contact-list">
 				<view v-for="(contact, index) in followingList" :key="contact.id" 
 					class="contact-item"
+					:style="{ backgroundColor: theme.cardBg }"
 					hover-class="contact-item-active" 
 					@click="handleContactClick(contact)">
 					<!-- 选择模式下显示复选框 -->
@@ -54,24 +56,24 @@
 						<text v-else class="avatar-text">{{ contact.avatarText }}</text>
 					</view>
 					<view class="contact-info">
-						<text class="contact-name">{{ contact.displayName }}</text>
-						<text class="contact-role">{{ contact.role }}</text>
+						<text class="contact-name" :style="{ color: theme.textPrimary }">{{ contact.displayName }}</text>
+						<text class="contact-role" :style="{ color: theme.textSecondary }">{{ contact.role }}</text>
 					</view>
-					<text v-if="!isSelectMode" class="iconfont star-icon">&#xea90;</text>
-					<view v-if="index < followingList.length - 1" class="contact-item-border"></view>
+					<text v-if="!isSelectMode" class="iconfont star-icon" :style="{ color: theme.brandPrimary }">&#xea90;</text>
+					<view v-if="index < followingList.length - 1" class="contact-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 				</view>
 			</view>
 			
 			<!-- 空状态 -->
 			<view v-else-if="!loading" class="empty-state">
-				<text class="empty-text">暂无关注的联系人</text>
+				<text class="empty-text" :style="{ color: theme.textTertiary }">暂无关注的联系人</text>
 			</view>
 		</scroll-view>
 
 		<!-- 选择模式下显示底部操作栏 -->
-		<view v-if="isSelectMode" class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px' }">
-			<text class="selected-text">已选择 {{ selectedCount }} 人</text>
-			<button class="confirm-btn" :disabled="selectedCount === 0" @click="handleConfirm">
+		<view v-if="isSelectMode" class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px', backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
+			<text class="selected-text" :style="{ color: theme.textPrimary }">已选择 {{ selectedCount }} 人</text>
+			<button class="confirm-btn" :style="{ backgroundColor: selectedCount === 0 ? theme.cardBgMuted : theme.brandPrimary }" :disabled="selectedCount === 0" @click="handleConfirm">
 				<text class="confirm-btn-text">确定</text>
 			</button>
 		</view>
@@ -79,6 +81,7 @@
 </template>
 
 <script setup lang="uts">
+	import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { 
 		isMemberSelected, 
@@ -88,8 +91,15 @@
 	} from '../../store/group-selection.uts'
 	import { getStarContactList, searchContact } from '../../api/contact.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
+	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
+	const theme = ref<ThemeTokens>(getThemeTokens())
+	let unsubscribeTheme: (() => void) | null = null
+	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
+		theme.value = tokens
+	})
 
 	const safeAreaBottom = ref(0)
 
@@ -117,6 +127,13 @@
 	})
 	const isSingleSelectMode = computed(() : boolean => {
 		return getSelectionLimit() === 1
+	})
+
+	onUnload(() => {
+		if (unsubscribeTheme != null) {
+			unsubscribeTheme()
+			unsubscribeTheme = null
+		}
 	})
 
 	/**
@@ -339,18 +356,15 @@
 <style>
 	.page {
 		height: 100%;
-		background-color: #FFFFFF;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.status-bar {
 		height: var(--status-bar-height);
-		background-color: #FFFFFF;
 	}
 
 	.header {
-		background-color: #FFFFFF;
 		padding: 8px 16px 12px 16px;
 	}
 
@@ -368,12 +382,10 @@
 	}
 
 	.back-icon {
-		color: #1F2329;
 		font-size: 24px;
 	}
 
 	.header-title {
-		color: #1F2329;
 		font-size: 20px;
 		font-weight: 600;
 	}
@@ -383,7 +395,6 @@
 	}
 
 	.search-bar {
-		background-color: #F2F3F5;
 		border-radius: 6px;
 		height: 36px;
 		flex-direction: row;
@@ -394,30 +405,23 @@
 
 	.search-icon {
 		font-size: 16px;
-		color: #8F959E;
 	}
 
 	.search-input {
 		flex: 1;
 		font-size: 14px;
 		margin-left: 8px;
-		color: #1F2329;
 	}
 
 	.placeholder {
-		color: #8F959E;
+		color: #A7AFB9;
 	}
 
 	.content {
 		flex: 1;
 		height: 0;
-		background-color: #FFFFFF;
 	}
 
-	.contact-list {
-		background-color: #FFFFFF;
-	}
-	
 	.loading-state {
 		padding: 60px 0;
 		justify-content: center;
@@ -426,7 +430,6 @@
 	
 	.loading-text {
 		font-size: 14px;
-		color: #8F959E;
 	}
 	
 	.empty-state {
@@ -437,19 +440,17 @@
 	
 	.empty-text {
 		font-size: 14px;
-		color: #8F959E;
 	}
 
 	.contact-item {
 		flex-direction: row;
 		align-items: center;
 		padding: 10px 16px;
-		background-color: #FFFFFF;
 		position: relative;
 	}
 
 	.contact-item-active {
-		background-color: #F2F3F5;
+		background-color: rgba(143, 149, 158, 0.12);
 	}
 
 	.contact-item-border {
@@ -458,7 +459,6 @@
 		left: 70px;
 		right: 0;
 		height: 1px;
-		background-color: #F0F0F0;
 	}
 
 	.contact-avatar {
@@ -490,13 +490,11 @@
 	.contact-name {
 		font-size: 16px;
 		font-weight: 400;
-		color: #1F2329;
 		margin-bottom: 2px;
 	}
 
 	.contact-role {
 		font-size: 12px;
-		color: #8F959E;
 	}
 
 	.star-icon {
@@ -509,8 +507,7 @@
 		height: 22px;
 		border-radius: 4px;
 		border-width: 2px;
-		border-color: #8F959E;
-		background-color: #FFFFFF;
+		border-color: #8893A2;
 		margin-right: 12px;
 		justify-content: center;
 		align-items: center;
@@ -537,9 +534,7 @@
 	}
 
 	.footer {
-		background-color: #ffffff;
 		border-top-width: 0.5px;
-		border-top-color: #EFF0F1;
 		padding: 12px 16px;
 		flex-direction: row;
 		justify-content: space-between;
@@ -549,7 +544,6 @@
 
 	.selected-text {
 		font-size: 15px;
-		color: #1F2329;
 	}
 
 	.confirm-btn {
