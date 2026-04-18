@@ -27,13 +27,13 @@
 		<view
 			v-if="!multiSelectMode && shouldShowGroupNoticeBanner"
 			class="group-notice-banner"
-			:style="{ backgroundColor: theme.brandPrimarySoft }"
+			:style="getGroupNoticeBannerStyle()"
 			@click="handleOpenPinnedNotice"
 		>
-			<text class="group-notice-banner-tag" :style="{ color: theme.brandPrimary }">群公告</text>
-			<text class="group-notice-banner-text" :style="{ color: theme.textPrimary }" :numberOfLines="1">{{ groupNoticeText }}</text>
-			<text class="iconfont group-notice-banner-close" :style="{ color: theme.textSecondary }" @click.stop="handleDismissPinnedNotice">&#xeb08;</text>
-			<text class="iconfont group-notice-banner-arrow" :style="{ color: theme.textSecondary }">&#xea8f;</text>
+			<text class="group-notice-banner-tag" :style="getGroupNoticeBannerTagStyle()">群公告</text>
+			<text class="group-notice-banner-text" :style="getGroupNoticeBannerTextStyle()" :numberOfLines="1">{{ groupNoticeText }}</text>
+			<text class="iconfont group-notice-banner-close" :style="getGroupNoticeBannerIconStyle()" @click.stop="handleDismissPinnedNotice">&#xeb08;</text>
+			<text class="iconfont group-notice-banner-arrow" :style="getGroupNoticeBannerIconStyle()">&#xea8f;</text>
 		</view>
 
 		<!-- 聊天内容区域 -->
@@ -48,7 +48,7 @@
 			<view class="message-list">
 				<view v-for="(msg, index) in messages" :key="getMessageRenderKey(msg, index)" :id="'msg-' + index" class="message-group read-observe-item" :data-seq="msg.sequence || ''" :data-self="msg.isSelf ? '1' : '0'">
 					<view v-if="formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0)" class="time-stamp">
-						<text class="time-text">{{ formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0) }}</text>
+						<text class="time-text" :style="getTimeTextStyle()">{{ formatChatTime(msg.timestamp, index > 0 ? messages[index-1].timestamp : 0) }}</text>
 					</view>
 					
 					<view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other', multiSelectMode && selectedIds.includes(getSelectMessageId(msg)) ? 'message-selected' : '', highlightedMessageId === getSelectMessageId(msg) ? 'message-highlighted' : '']">
@@ -60,7 +60,7 @@
 						
 						<!-- 企业级撤回：对齐企微/钉钉，展示为居中系统提示条（不走左右气泡，不显示头像） -->
 						<view v-if="isCenterSystemTipMsg(msg)" class="recall-system-tip">
-							<text class="recall-system-tip-text">{{ msg.content }}</text>
+							<text class="recall-system-tip-text" :style="getRecallSystemTipStyle()">{{ msg.content }}</text>
 							<text v-if="isRecalledFinalMsg(msg) && shouldShowReeditEntry(msg)" class="recall-system-tip-action" @click.stop="handleReeditAfterRecall(msg)">重新编辑</text>
 						</view>
 						<template v-else>
@@ -248,7 +248,7 @@
 				</view>
 
 				<!-- 输入框/按住说话按钮 -->
-				<view class="input-box" :class="{ 'input-box-full': isFullExpanded }" :style="{ backgroundColor: theme.inputBg }" v-if="!isVoiceMode">
+				<view class="input-box" :class="{ 'input-box-full': isFullExpanded }" :style="getComposerInputBoxStyle()" v-if="!isVoiceMode">
 					<editor
 						id="editor"
 						class="chat-editor"
@@ -651,8 +651,8 @@
 			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
 			borderColor: chatBubbleTokens.value.selfBubbleBorder
 		} : {
-			backgroundColor: theme.value.cardBg,
-			borderColor: theme.value.borderColor
+			backgroundColor: theme.value.bubbleOtherBg,
+			borderColor: theme.value.bubbleOtherBorder
 		}
 	}
 
@@ -661,7 +661,7 @@
 			return {}
 		}
 		return {
-			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.bubbleOtherText
 		}
 	}
 
@@ -676,7 +676,7 @@
 			return {}
 		}
 		return {
-			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.bubbleOtherText
 		}
 	}
 
@@ -699,8 +699,8 @@
 		if (msg.isSelf !== true) {
 			return {
 				width: width,
-				backgroundColor: theme.value.cardBg,
-				borderColor: theme.value.borderColor
+				backgroundColor: theme.value.bubbleOtherBg,
+				borderColor: theme.value.bubbleOtherBorder
 			}
 		}
 		let backgroundColor = chatBubbleTokens.value.selfBubbleBg
@@ -728,7 +728,7 @@
 			return {}
 		}
 		return {
-			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.bubbleOtherText
 		}
 	}
 
@@ -795,8 +795,8 @@
 			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
 			borderColor: chatBubbleTokens.value.selfBubbleBorder
 		} : {
-			backgroundColor: theme.value.cardBg,
-			borderColor: theme.value.borderColor
+			backgroundColor: theme.value.bubbleOtherBg,
+			borderColor: theme.value.bubbleOtherBorder
 		}
 	}
 
@@ -805,7 +805,7 @@
 			return {}
 		}
 		return {
-			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.bubbleOtherText
 		}
 	}
 
@@ -823,14 +823,14 @@
 			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
 			borderColor: chatBubbleTokens.value.selfBubbleBorder
 		} : {
-			backgroundColor: theme.value.cardBg,
-			borderColor: theme.value.borderColor
+			backgroundColor: theme.value.bubbleOtherBg,
+			borderColor: theme.value.bubbleOtherBorder
 		}
 	}
 
 	function getFileNameStyle(msg: any): any {
 		return {
-			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
+			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.bubbleOtherText
 		}
 	}
 
@@ -852,14 +852,14 @@
 			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
 			borderColor: chatBubbleTokens.value.selfBubbleBorder
 		} : {
-			backgroundColor: theme.value.cardBg,
-			borderColor: theme.value.borderColor
+			backgroundColor: theme.value.bubbleOtherBg,
+			borderColor: theme.value.bubbleOtherBorder
 		}
 	}
 
 	function getLocationNameStyle(msg: any): any {
 		return {
-			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
+			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.bubbleOtherText
 		}
 	}
 
@@ -880,8 +880,8 @@
 			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
 			borderColor: chatBubbleTokens.value.selfBubbleBorder
 		} : {
-			backgroundColor: theme.value.cardBg,
-			borderColor: theme.value.borderColor
+			backgroundColor: theme.value.bubbleOtherBg,
+			borderColor: theme.value.bubbleOtherBorder
 		}
 	}
 
@@ -899,7 +899,7 @@
 
 	function getContactCardNameStyle(msg: any): any {
 		return {
-			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.textPrimary
+			color: msg != null && msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.bubbleOtherText
 		}
 	}
 
@@ -925,6 +925,53 @@
 	function getEmojiTabIconStyle(active: boolean): any {
 		return {
 			color: active ? theme.value.textPrimary : theme.value.textTertiary
+		}
+	}
+
+	function getTimeTextStyle(): any {
+		return {
+			color: theme.value.textSecondary,
+			backgroundColor: theme.value.cardBgMuted
+		}
+	}
+
+	function getRecallSystemTipStyle(): any {
+		return {
+			color: theme.value.textSecondary,
+			backgroundColor: theme.value.cardBgMuted
+		}
+	}
+
+	function getGroupNoticeBannerStyle(): any {
+		return {
+			backgroundColor: theme.value.brandPrimarySoft,
+			borderBottomColor: theme.value.borderColor
+		}
+	}
+
+	function getGroupNoticeBannerTagStyle(): any {
+		return {
+			color: theme.value.brandPrimary,
+			backgroundColor: theme.value.cardBg
+		}
+	}
+
+	function getGroupNoticeBannerTextStyle(): any {
+		return {
+			color: theme.value.textPrimary
+		}
+	}
+
+	function getGroupNoticeBannerIconStyle(): any {
+		return {
+			color: theme.value.textSecondary
+		}
+	}
+
+	function getComposerInputBoxStyle(): any {
+		return {
+			backgroundColor: theme.value.inputBg,
+			borderColor: theme.value.borderColor
 		}
 	}
 
@@ -1702,11 +1749,10 @@
 		return !isVoiceMode.value && inputText.value !== '' && composerLineCount.value >= COMPOSER_EXPAND_TRIGGER_LINE
 	})
 	const composerEditorStyle = computed(() => {
-		if (isFullExpanded.value) {
-			return {}
-		}
 		const nextHeight = getComposerHeightByLineCount(composerLineCount.value)
 		return {
+			color: theme.value.inputText,
+			backgroundColor: 'transparent',
 			height: nextHeight + 'px',
 			minHeight: COMPOSER_MIN_HEIGHT + 'px',
 			maxHeight: COMPOSER_MAX_HEIGHT + 'px'
@@ -9955,15 +10001,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		flex-direction: row;
 		align-items: center;
 		padding: 8px 12px;
-		background-color: #fff8e6;
 		border-bottom-width: 1px;
-		border-bottom-color: #f5e1ad;
 	}
 
 	.group-notice-banner-tag {
 		font-size: 11px;
-		color: #8a5a00;
-		background-color: #ffe9b3;
 		padding: 2px 6px;
 		border-radius: 8px;
 		margin-right: 8px;
@@ -9972,12 +10014,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.group-notice-banner-text {
 		flex: 1;
 		font-size: 13px;
-		color: #7a4b00;
 	}
 
 	.group-notice-banner-close {
 		font-size: 12px;
-		color: #b08a3c;
 		padding: 4px 6px;
 	}
 
@@ -10924,6 +10964,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.input-box {
 		flex: 1;
+		border-width: 1px;
 		border-radius: 4px;
 		margin: 0 8px;
 		min-height: 40px;
@@ -10944,7 +10985,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	.expand-icon-btn {
 		font-size: 20px;
-		color: #646A73;
 		margin-left: 8px;
 	}
 
