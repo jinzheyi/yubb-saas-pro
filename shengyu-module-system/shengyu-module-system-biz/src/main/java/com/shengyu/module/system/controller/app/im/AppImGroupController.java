@@ -169,6 +169,18 @@ public class AppImGroupController {
         return success(true);
     }
 
+    @PutMapping("/mute-all")
+    @Operation(summary = "设置全员禁言")
+    @Parameter(name = "groupId", description = "群组ID", required = true)
+    @Parameter(name = "muted", description = "是否全员禁言", required = true)
+    public CommonResult<Boolean> muteAll(
+            @RequestParam("groupId") Long groupId,
+            @RequestParam("muted") Boolean muted) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        groupService.muteAll(userId, groupId, muted);
+        return success(true);
+    }
+
     @PutMapping("/member/set-nickname")
     @Operation(summary = "设置群成员昵称", description = "memberUserId 为空时表示设置自己在本群的昵称")
     public CommonResult<Boolean> setGroupMemberNickname(

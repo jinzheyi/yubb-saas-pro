@@ -21,8 +21,10 @@ import {
   getGroupMembers as apiGetGroupMembers,
   setGroupMemberRole as apiSetGroupMemberRole,
   setGroupMemberMuted as apiSetGroupMemberMuted,
+  setGroupMuteAll as apiSetGroupMuteAll,
   setGroupMemberNickname as apiSetGroupMemberNickname,
-  transferGroupOwner as apiTransferGroupOwner
+  transferGroupOwner as apiTransferGroupOwner,
+  updateGroupNotice as apiUpdateGroupNotice
 } from '@/api/group.uts'
 
 /**
@@ -36,9 +38,11 @@ export type GroupInfo = {
   ownerName: string
   memberCount: number
   maxMembers: number
-  announcement: string
+  notice: string
+  noticePinned: boolean
   createTime: number
   muteAll: boolean
+  myRole: number
 }
 
 /**
@@ -345,8 +349,9 @@ export class GroupService {
    */
   public async muteAll(groupId: string, mute: boolean): Promise<boolean> {
     try {
-      console.error('[GroupService] 全员禁言接口未实现, groupId:', groupId, 'mute:', mute)
-      return false
+      await apiSetGroupMuteAll(groupId, mute)
+      this.groupCache.delete(groupId)
+      return true
     } catch (e) {
       console.error('[GroupService] 全员禁言失败:', e)
       return false
@@ -380,8 +385,15 @@ export class GroupService {
     mustRead: boolean
   ): Promise<boolean> {
     try {
-      console.error('[GroupService] 发布群公告接口未实现, groupId:', groupId, 'mustRead:', mustRead)
-      return false
+      const currentGroupInfo = await this.getGroupInfo(groupId)
+      await apiUpdateGroupNotice({
+        groupId: groupId,
+        notice: content,
+        notifyMembers: mustRead,
+        pinNotice: currentGroupInfo != null ? currentGroupInfo.noticePinned === true : false
+      })
+      this.groupCache.delete(groupId)
+      return true
     } catch (e) {
       console.error('[GroupService] 发布群公告失败:', e)
       return false
@@ -393,8 +405,23 @@ export class GroupService {
    */
   public async getAnnouncements(groupId: string): Promise<GroupAnnouncement[]> {
     try {
-      console.error('[GroupService] 获取群公告列表接口未实现, groupId:', groupId)
-      return []
+      const groupInfo = await this.getGroupInfo(groupId)
+      if (groupInfo == null) {
+        return []
+      }
+      const content = groupInfo.notice != null ? String(groupInfo.notice).trim() : ''
+      if (content === '') {
+        return []
+      }
+      return [{
+        id: `${groupId}-notice`,
+        groupId: groupId,
+        content: content,
+        publisherId: groupInfo.ownerId,
+        publisherName: groupInfo.ownerName,
+        publishTime: groupInfo.createTime,
+        mustRead: false
+      }]
     } catch (e) {
       console.error('[GroupService] 获取群公告列表失败:', e)
       return []
@@ -405,6 +432,7 @@ export class GroupService {
    * 映射服务器数据到群组信息
    */
   private mapToGroupInfo(data: any): GroupInfo {
+    const createTime = data.createTime != null ? new Date(data.createTime as string).getTime() : 0
     return {
       id: data.id != null ? data.id.toString() : '0',
       name: data.name || '',
@@ -412,10 +440,12 @@ export class GroupService {
       ownerId: data.ownerId != null ? data.ownerId.toString() : '0',
       ownerName: data.ownerName || '',
       memberCount: data.memberCount || 0,
-      maxMembers: data.maxMembers || 500,
-      announcement: data.announcement || '',
-      createTime: data.createTime || 0,
-      muteAll: data.muteAll || false
+      maxMembers: data.maxMemberCount || data.maxMembers || 500,
+      notice: data.notice || '',
+      noticePinned: data.noticePinned === true,
+      createTime: Number.isNaN(createTime) ? 0 : createTime,
+      muteAll: data.muteAll === true,
+      myRole: data.myRole != null ? Number(data.myRole) : 0
     }
   }
   

@@ -145,20 +145,21 @@
 			if (result) {
 				notice.value = result.notice || ''
 				noticePinned.value = result.noticePinned === true
-				
-				// 判断是否有编辑权限（群主或管理员）
-				// TODO: 需要后端返回当前用户在群中的角色
-				// 临时方案：假设群主可以编辑
-				canEdit.value = result.ownerId === currentUserId.value
-				
+
+				// 后端已返回当前用户在群中的角色：1-管理员 2-群主
+				const myRole = result.myRole != null ? Number(result.myRole) : 0
+				canEdit.value = myRole === 1 || myRole === 2 || result.ownerId === currentUserId.value
+
 				// 发布信息
 				if (result.notice) {
 					publishInfo.value = {
 						publisherName: result.ownerName || '群主',
 						publishTime: result.updateTime ? formatDateTime(result.updateTime) : ''
 					}
+				} else {
+					publishInfo.value = null
 				}
-				
+
 				console.log('[GroupNotice] 加载群组信息成功:', result)
 			}
 		} catch (e) {

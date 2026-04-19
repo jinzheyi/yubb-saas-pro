@@ -106,7 +106,8 @@
 		mobile: '',
 		email: '',
 		postName: '',
-		department: ''
+		department: '',
+		avatar: ''
 	})
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
@@ -127,12 +128,27 @@
 				await handleFollowToggle()
 				break
 			case 'share':
-				uni.showToast({
-					title: '分享名片功能开发中',
-					icon: 'none'
-				})
+				handleShareContactCard()
 				break
 		}
+	}
+
+	function handleShareContactCard(): void {
+		const targetUserId = userId.value != null ? String(userId.value) : ''
+		const displayName = userName.value != null ? String(userName.value) : ''
+		if (targetUserId === '' || targetUserId === '0' || displayName === '') {
+			uni.showToast({
+				title: '名片信息无效',
+				icon: 'none'
+			})
+			return
+		}
+		const avatar = userInfo.value.avatar != null ? encodeURIComponent(String(userInfo.value.avatar)) : ''
+		const deptName = userInfo.value.department != null ? encodeURIComponent(String(userInfo.value.department)) : ''
+		const postName = userInfo.value.postName != null ? encodeURIComponent(String(userInfo.value.postName)) : ''
+		uni.navigateTo({
+			url: `/pages/message/share-contact?userId=${encodeURIComponent(targetUserId)}&name=${encodeURIComponent(displayName)}&avatar=${avatar}&deptName=${deptName}&postName=${postName}`
+		})
 	}
 	
 	/**
@@ -211,7 +227,8 @@
 					mobile: data.mobile || '',
 					email: data.email || '',
 					postName: data.postName || '',
-					department: data.deptName || ''
+					department: data.deptName || '',
+					avatar: data.avatar || ''
 				}
 			}
 			

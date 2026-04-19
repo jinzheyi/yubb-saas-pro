@@ -22,12 +22,13 @@
 				<text class="section-title" :style="{ color: theme.textSecondary, backgroundColor: theme.pageBg }">最近聊天</text>
 				<view class="chat-list">
 					<view class="chat-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" v-for="chat in recentChats" :key="chat.id" @click="toggleSelect(chat)">
-						<view class="chat-checkbox">
+					<view class="chat-checkbox">
 							<text v-if="isSelected(chat.id)" class="iconfont checkbox-checked">&#xe65f;</text>
 							<view v-else class="checkbox-unchecked" :style="{ borderColor: theme.borderColor, backgroundColor: theme.pageBg }"></view>
 						</view>
 						<view class="chat-avatar" :style="{ backgroundColor: chat.avatarBg }">
-							<text v-if="chat.isGroup" class="iconfont group-icon">&#xe616;</text>
+							<image v-if="chat.avatar" class="avatar-image" :src="chat.avatar" mode="aspectFill" />
+							<text v-else-if="chat.isGroup" class="iconfont group-icon">&#xe616;</text>
 							<text v-else class="chat-avatar-text">{{ chat.avatarText }}</text>
 						</view>
 						<view class="chat-info">
@@ -43,12 +44,13 @@
 				<text class="section-title" :style="{ color: theme.textSecondary, backgroundColor: theme.pageBg }">{{ searchKeyword ? '搜索结果' : '联系人' }}</text>
 				<view class="contact-list">
 					<view class="contact-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" v-for="contact in displayContacts" :key="contact.id" @click="toggleSelect(contact)">
-						<view class="contact-checkbox">
+					<view class="contact-checkbox">
 							<text v-if="isSelected(contact.id)" class="iconfont checkbox-checked">&#xe65f;</text>
 							<view v-else class="checkbox-unchecked" :style="{ borderColor: theme.borderColor, backgroundColor: theme.pageBg }"></view>
 						</view>
 						<view class="contact-avatar" :style="{ backgroundColor: contact.avatarBg }">
-							<text class="contact-avatar-text">{{ contact.avatarText }}</text>
+							<image v-if="contact.avatar" class="avatar-image" :src="contact.avatar" mode="aspectFill" />
+							<text v-else class="contact-avatar-text">{{ contact.avatarText }}</text>
 						</view>
 						<view class="contact-info">
 							<text class="contact-name" :style="{ color: theme.textPrimary }">{{ contact.name }}</text>
@@ -79,6 +81,10 @@
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getAvatarText, getGroupAvatarColor, getUserAvatarColor } from '../../utils/avatar.uts'
+	import { getContactList } from '../../api/contact.uts'
+	import { getConversationByTarget } from '../../api/conversation.uts'
+	import { conversationService } from '../../services/conversation-service.uts'
+	import { messageService } from '../../services/message-service.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -86,38 +92,50 @@
 
 	const safeAreaBottom = ref(0)
 
+	type ShareTargetItem = {
+		id: string
+		name: string
+		role: string
+		avatar: string
+		avatarText: string
+		avatarBg: string
+		isGroup: boolean
+		memberCount: number
+		chatId: string
+		targetId: string
+		conversationType: number
+		sourceType: string
+	}
+
 	const searchKeyword = ref('')
-	const selectedItems = ref<any[]>([])
+	const selectedItems = ref<ShareTargetItem[]>([])
+	const loading = ref(false)
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	let unsubscribeTheme: (() => void) | null = null
+	const sourceUserId = ref('')
+	const sourceDisplayName = ref('')
+	const sourceAvatar = ref('')
+	const sourceDeptName = ref('')
+	const sourcePostName = ref('')
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 		theme.value = tokens
 	})
 
-	// 最近聊天
-	const recentChats = ref([
-		{ id: 'chat1', name: '张敏', avatarText: getAvatarText('张敏'), avatarBg: getUserAvatarColor('chat1'), isGroup: false },
-		{ id: 'chat2', name: '产品研发团队', avatarBg: getGroupAvatarColor('chat2'), isGroup: true, memberCount: 12 },
-		{ id: 'chat3', name: '李强', avatarText: getAvatarText('李强'), avatarBg: getUserAvatarColor('chat3'), isGroup: false }
-	])
-
-	// 联系人列表
-	const allContacts = ref([
-		{ id: '1', name: '张敏', role: '产品经理', avatarText: getAvatarText('张敏'), avatarBg: getUserAvatarColor('1') },
-		{ id: '2', name: '李强', role: '开发工程师', avatarText: getAvatarText('李强'), avatarBg: getUserAvatarColor('2') },
-		{ id: '3', name: '王静', role: '设计师', avatarText: getAvatarText('王静'), avatarBg: getUserAvatarColor('3') },
-		{ id: '4', name: '刘洋', role: '测试工程师', avatarText: getAvatarText('刘洋'), avatarBg: getUserAvatarColor('4') },
-		{ id: '5', name: '赵敏', role: '产品经理', avatarText: getAvatarText('赵敏'), avatarBg: getUserAvatarColor('5') },
-		{ id: '6', name: '孙伟', role: '开发工程师', avatarText: getAvatarText('孙伟'), avatarBg: getUserAvatarColor('6') }
-	])
+	const recentChats = ref<ShareTargetItem[]>([])
+	const allContacts = ref<ShareTargetItem[]>([])
 
 	// 过滤后的联系人
-	const displayContacts = computed(() : any[] => {
-		if (!searchKeyword.value) {
+	const displayContacts = computed(() : ShareTargetItem[] => {
+		const keyword = searchKeyword.value != null ? searchKeyword.value.trim().toLowerCase() : ''
+		if (!keyword) {
 			return allContacts.value
 		}
-		return allContacts.value.filter(contact => contact.name.includes(searchKeyword.value))
+		return allContacts.value.filter(contact => {
+			const name = contact.name != null ? contact.name.toLowerCase() : ''
+			const role = contact.role != null ? contact.role.toLowerCase() : ''
+			return name.indexOf(keyword) >= 0 || role.indexOf(keyword) >= 0
+		})
 	})
 
 	function handleBack() {
@@ -132,7 +150,7 @@
 		return selectedItems.value.some(item => item.id === id)
 	}
 
-	function toggleSelect(item : any) {
+	function toggleSelect(item : ShareTargetItem) {
 		const index = selectedItems.value.findIndex(i => i.id === item.id)
 		if (index > -1) {
 			selectedItems.value.splice(index, 1)
@@ -141,7 +159,145 @@
 		}
 	}
 
-	function handleConfirm() {
+	function normalizeAvatarUrl(raw: any): string {
+		if (raw == null) {
+			return ''
+		}
+		const text = String(raw).trim()
+		return text !== '' && text !== 'null' && text !== 'undefined' ? text : ''
+	}
+
+	function mapConversationToShareItem(conv: any): ShareTargetItem | null {
+		try {
+			if (conv == null) {
+				return null
+			}
+			const chatId = conv.chatId != null ? String(conv.chatId) : ''
+			const targetId = conv.targetId != null ? String(conv.targetId) : ''
+			const conversationType = conv.conversationType != null ? Number(conv.conversationType) : 1
+			const isGroup = conversationType === 2
+			if (chatId === '' || targetId === '') {
+				return null
+			}
+			const name = conv.targetName != null && String(conv.targetName).trim() !== '' ? String(conv.targetName).trim() : '未命名会话'
+			return {
+				id: 'chat_' + chatId,
+				name: name,
+				role: isGroup ? '群聊' : '最近聊天',
+				avatar: normalizeAvatarUrl(conv.targetAvatar),
+				avatarText: conv.avatarText != null && String(conv.avatarText).trim() !== '' ? String(conv.avatarText) : getAvatarText(name),
+				avatarBg: isGroup ? getGroupAvatarColor(targetId) : getUserAvatarColor(targetId),
+				isGroup: isGroup,
+				memberCount: conv.groupMemberCount != null ? Number(conv.groupMemberCount) : 0,
+				chatId: chatId,
+				targetId: targetId,
+				conversationType: conversationType,
+				sourceType: 'conversation'
+			}
+		} catch (e) {
+			return null
+		}
+	}
+
+	function mapContactToShareItem(contact: any): ShareTargetItem | null {
+		try {
+			if (contact == null || contact.id == null) {
+				return null
+			}
+			const userId = String(contact.id)
+			const displayName = contact.remarkName || contact.nickname || '未知联系人'
+			return {
+				id: 'user_' + userId,
+				name: displayName,
+				role: contact.postName || contact.deptName || '',
+				avatar: normalizeAvatarUrl(contact.avatar),
+				avatarText: getAvatarText(displayName),
+				avatarBg: getUserAvatarColor(userId),
+				isGroup: false,
+				memberCount: 0,
+				chatId: '',
+				targetId: userId,
+				conversationType: 1,
+				sourceType: 'contact'
+			}
+		} catch (e) {
+			return null
+		}
+	}
+
+	async function loadShareTargets(): Promise<void> {
+		try {
+			loading.value = true
+			await conversationService.loadConversations()
+			const cachedConversations: any[] = conversationService.getConversations() as any[]
+			const nextChats: ShareTargetItem[] = []
+			const seenChatIds: string[] = []
+			for (let i = 0; i < cachedConversations.length; i++) {
+				const mapped = mapConversationToShareItem(cachedConversations[i])
+				if (mapped == null) {
+					continue
+				}
+				if (seenChatIds.indexOf(mapped.chatId) >= 0) {
+					continue
+				}
+				seenChatIds.push(mapped.chatId)
+				nextChats.push(mapped)
+				if (nextChats.length >= 12) {
+					break
+				}
+			}
+			recentChats.value = nextChats
+
+			const contacts = await getContactList() as any[]
+			const nextContacts: ShareTargetItem[] = []
+			for (let i = 0; i < contacts.length; i++) {
+				const mapped = mapContactToShareItem(contacts[i])
+				if (mapped == null) {
+					continue
+				}
+				if (mapped.targetId === sourceUserId.value) {
+					continue
+				}
+				nextContacts.push(mapped)
+			}
+			allContacts.value = nextContacts
+		} catch (e) {
+			console.error('[ShareContact] loadShareTargets failed:', e)
+			uni.showToast({
+				title: '加载分享对象失败',
+				icon: 'none'
+			})
+		} finally {
+			loading.value = false
+		}
+	}
+
+	async function resolveConversationForTarget(target: ShareTargetItem): Promise<{ chatId: string, receiverId: string, groupId: string } | null> {
+		try {
+			if (target.sourceType === 'conversation' && target.chatId !== '') {
+				return {
+					chatId: target.chatId,
+					receiverId: target.conversationType === 1 ? target.targetId : '',
+					groupId: target.conversationType === 2 ? target.targetId : ''
+				}
+			}
+			const conversation: any = await getConversationByTarget(target.targetId, 1)
+			const chatId = conversation != null && conversation.chatId != null ? String(conversation.chatId) : ''
+			if (chatId === '') {
+				return null
+			}
+			return {
+				chatId: chatId,
+				receiverId: target.targetId,
+				groupId: ''
+			}
+		} catch (e) {
+			console.error('[ShareContact] resolveConversationForTarget failed:', e)
+			return null
+		}
+	}
+
+	async function handleConfirm() {
 		if (selectedItems.value.length === 0) {
 			uni.showToast({
 				title: '请选择分享对象',
@@ -149,20 +305,69 @@
 			})
 			return
 		}
+		if (sourceUserId.value === '' || sourceDisplayName.value === '') {
+			uni.showToast({
+				title: '名片信息无效',
+				icon: 'none'
+			})
+			return
+		}
+
+		const payload: any = {
+			type: 'CONTACT_CARD',
+			userId: sourceUserId.value,
+			displayName: sourceDisplayName.value,
+			deptName: sourceDeptName.value,
+			postName: sourcePostName.value,
+			avatar: sourceAvatar.value
+		}
+
+		let successCount = 0
+		for (let i = 0; i < selectedItems.value.length; i++) {
+			const target = selectedItems.value[i]
+			const resolved = await resolveConversationForTarget(target)
+			if (resolved == null) {
+				continue
+			}
+			try {
+				await (messageService as any).sendContactCardMessageByRest(
+					resolved.chatId,
+					resolved.receiverId,
+					resolved.groupId,
+					payload
+				)
+				successCount++
+			} catch (e) {
+				console.error('[ShareContact] send contact card failed:', e)
+			}
+		}
+
+		if (successCount <= 0) {
+			uni.showToast({
+				title: '分享失败',
+				icon: 'none'
+			})
+			return
+		}
 
 		uni.showToast({
-			title: `已分享给 ${selectedItems.value.length} 个联系人`,
+			title: `已分享给 ${successCount} 个对象`,
 			icon: 'success'
 		})
 
 		setTimeout(() => {
 			uni.navigateBack()
-		}, 1500)
+		}, 1200)
 	}
 
 	onLoad((options : any) => {
 		safeAreaBottom.value = uni.getWindowInfo().safeAreaInsets?.bottom ?? 0
-		// 可以接收要分享的内容参数
+		sourceUserId.value = options != null && options['userId'] != null ? String(options['userId']) : ''
+		sourceDisplayName.value = options != null && options['name'] != null ? decodeURIComponent(String(options['name'])) : ''
+		sourceAvatar.value = options != null && options['avatar'] != null ? decodeURIComponent(String(options['avatar'])) : ''
+		sourceDeptName.value = options != null && options['deptName'] != null ? decodeURIComponent(String(options['deptName'])) : ''
+		sourcePostName.value = options != null && options['postName'] != null ? decodeURIComponent(String(options['postName'])) : ''
+		void loadShareTargets()
 	})
 
 	onUnload(() => {
@@ -294,6 +499,13 @@
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
+		overflow: hidden;
+	}
+
+	.avatar-image {
+		width: 44px;
+		height: 44px;
+		border-radius: 8px;
 	}
 
 	.group-icon {
@@ -351,6 +563,7 @@
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
+		overflow: hidden;
 	}
 
 	.contact-avatar-text {

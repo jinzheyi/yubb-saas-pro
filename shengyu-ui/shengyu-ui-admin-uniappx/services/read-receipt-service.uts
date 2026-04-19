@@ -240,8 +240,28 @@ export class ReadReceiptService {
    */
   public async getUnreadMessages(chatId: string): Promise<string[]> {
     try {
-      console.error('[ReadReceiptService] 获取未读消息列表接口未实现, chatId:', chatId)
-      return []
+      const normalizedChatId = chatId != null ? String(chatId).trim() : ''
+      if (normalizedChatId === '' || normalizedChatId === '0') {
+        return []
+      }
+      const list = messageService.getMessages(normalizedChatId)
+      const unreadMessageIds: string[] = []
+      for (let i = 0; i < list.length; i++) {
+        const item = list[i]
+        if (item == null || item.isSelf === true) {
+          continue
+        }
+        const messageId = item.messageId != null ? String(item.messageId) : ''
+        if (messageId === '' || messageId === '0') {
+          continue
+        }
+        const status: any = item.status
+        if (status === 'read' || status === 4) {
+          continue
+        }
+        unreadMessageIds.push(messageId)
+      }
+      return unreadMessageIds
     } catch (e) {
       console.error('[ReadReceiptService] 获取未读消息列表失败:', e)
       return []

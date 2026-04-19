@@ -118,6 +118,16 @@ export function setGroupMemberMuted(groupId: string, memberUserId: string, muted
 }
 
 /**
+ * 设置全员禁言
+ */
+export function setGroupMuteAll(groupId: string, muted: boolean): Promise<any> {
+  return request({
+    url: `/system/im/group/mute-all?groupId=${groupId}&muted=${muted}`,
+    method: 'PUT'
+  })
+}
+
+/**
  * 设置群成员昵称
  */
 export function setGroupMemberNickname(data: any): Promise<any> {
