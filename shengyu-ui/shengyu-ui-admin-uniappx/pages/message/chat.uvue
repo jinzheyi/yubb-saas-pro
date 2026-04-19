@@ -265,29 +265,32 @@
 				<view 
 					v-show="isVoiceMode"
 					class="voice-btn" 
-					:class="{ 'voice-btn-active': isRecording }"
-					:style="{ backgroundColor: isRecording ? theme.cardBgMuted : theme.inputBg }"
+					:class="{ 'voice-btn-active': isRecording, 'voice-btn-disabled': groupSendBlocked }"
+					:style="{ backgroundColor: groupSendBlocked ? theme.cardBgMuted : (isRecording ? theme.cardBgMuted : theme.inputBg) }"
 					@touchstart="handleVoiceStart"
 					@touchmove="handleVoiceMove"
 					@touchend="handleVoiceEnd"
 					@touchcancel="handleVoiceEnd"
 				>
-					<text class="voice-btn-text" :style="{ color: theme.textPrimary }">{{ isRecording ? (isCancelReady ? '松开 取消' : '松开 结束') : '按住 说话' }}</text>
+					<text class="voice-btn-text" :style="{ color: groupSendBlocked ? theme.textTertiary : theme.textPrimary }">{{ isRecording ? (isCancelReady ? '松开 取消' : '松开 结束') : '按住 说话' }}</text>
 				</view>
 				
 				<!-- 右侧/底部图标栏 -->
 				<view class="input-right-actions" :class="{ 'input-right-actions-full': isFullExpanded }">
 					<!-- 表情图标 -->
-					<text class="iconfont footer-icon" :style="{ color: theme.textPrimary }" @click="toggleEmojiMenu">&#xe604;</text>
+					<text class="iconfont footer-icon" :style="{ color: groupSendBlocked ? theme.textTertiary : theme.textPrimary }" @click="toggleEmojiMenu">&#xe604;</text>
 					
 					<!-- 更多/发送按钮 -->
-					<view v-if="!inputText" class="plus-btn" @click="togglePlusMenu">
-						<text class="iconfont footer-icon" :style="{ color: theme.textPrimary }">&#xe726;</text>
+					<view v-if="!inputText" class="plus-btn" :class="{ 'plus-btn-disabled': groupSendBlocked }" @click="togglePlusMenu">
+						<text class="iconfont footer-icon" :style="{ color: groupSendBlocked ? theme.textTertiary : theme.textPrimary }">&#xe726;</text>
 					</view>
-					<view v-else class="send-btn" @click="handleSend">
-						<text class="send-btn-text">发送</text>
+					<view v-else class="send-btn" :class="{ 'send-btn-disabled': groupSendBlocked }" @click="handleSend">
+						<text class="send-btn-text" :style="{ color: groupSendBlocked ? theme.textTertiary : '#FFFFFF' }">发送</text>
 					</view>
 				</view>
+			</view>
+			<view v-if="showGroupRestrictionBanner" class="group-send-restriction-bar" :style="{ backgroundColor: theme.cardBgMuted, borderTopColor: theme.borderColor }">
+				<text class="group-send-restriction-text" :style="{ color: theme.textSecondary }">{{ groupSendRestrictionHint }}</text>
 			</view>
 			<view v-if="showMentionPanel && !isVoiceMode" class="mention-panel" :style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
 				<view class="mention-panel-search" :style="{ backgroundColor: theme.inputBg }">
@@ -594,6 +597,10 @@
 	const chatType = ref('single')
 	const groupId = ref<string>('')
 	const memberCount = ref(0)
+	const groupMuteAll = ref(false)
+	const groupMyRole = ref(0)
+	const selfMuteEndTime = ref(0)
+	const groupMuteStateLoading = ref(false)
 	const singleChatOnline = ref(false)
 	const singleChatOnlineDeviceTypes = ref<number[]>([])
 	const singleChatLastActiveTime = ref(0)
@@ -653,6 +660,45 @@
 	let unsubscribeChatBubble: (() => void) | null = null
 	let singlePresenceRefreshTask : Promise<void> | null = null
 	let singlePresenceRefreshDebounceTimer : any = null
+	let groupMuteRefreshTask : Promise<void> | null = null
+	let groupMuteRefreshQueued = false
+	const muteStateNowTs = ref<number>(Date.now())
+	let muteStateNowTimer: any = null
+
+	const canBypassGroupMuteAll = computed(() : boolean => {
+		return groupMyRole.value === 2 || groupMyRole.value === 1
+	})
+
+	const selfMutedInGroup = computed(() : boolean => {
+		return selfMuteEndTime.value > 0 && selfMuteEndTime.value > muteStateNowTs.value
+	})
+
+	const groupSendBlocked = computed(() : boolean => {
+		if (chatType.value !== 'group') {
+			return false
+		}
+		if (selfMutedInGroup.value) {
+			return true
+		}
+		return groupMuteAll.value && !canBypassGroupMuteAll.value
+	})
+
+	const groupSendRestrictionHint = computed(() : string => {
+		if (chatType.value !== 'group') {
+			return ''
+		}
+		if (selfMutedInGroup.value) {
+			return buildMuteUntilHint(selfMuteEndTime.value)
+		}
+		if (groupMuteAll.value && !canBypassGroupMuteAll.value) {
+			return '当前群已开启全员禁言'
+		}
+		return ''
+	})
+
+	const showGroupRestrictionBanner = computed(() : boolean => {
+		return groupSendRestrictionHint.value !== ''
+	})
 
 	function refreshBubbleTokens(config?: ChatBubbleConfig | null): void {
 		const nextConfig = config != null ? config : getChatBubbleConfig()
@@ -987,8 +1033,122 @@
 
 	function getComposerInputBoxStyle(): any {
 		return {
-			backgroundColor: theme.value.inputBg,
-			borderColor: theme.value.borderColor
+			backgroundColor: groupSendBlocked.value ? theme.value.cardBgMuted : theme.value.inputBg,
+			borderColor: groupSendBlocked.value ? theme.value.cardBgMuted : theme.value.borderColor,
+			opacity: groupSendBlocked.value ? 0.72 : 1
+		}
+	}
+
+	function normalizeNotifyTimeMs(raw: any): number {
+		if (raw == null || raw === '') {
+			return 0
+		}
+		try {
+			const numVal = Number(raw)
+			if (!isNaN(numVal) && numVal > 0) {
+				return Math.round(numVal)
+			}
+			const parsed = new Date(String(raw)).getTime()
+			return isNaN(parsed) || parsed <= 0 ? 0 : parsed
+		} catch (e) {
+			return 0
+		}
+	}
+
+	function buildMuteUntilHint(muteEndTimeMs: number): string {
+		if (muteEndTimeMs <= 0) {
+			return '你已被禁言，暂时无法发送消息'
+		}
+		try {
+			const date = new Date(muteEndTimeMs)
+			const year = date.getFullYear()
+			const month = `${date.getMonth() + 1}`.padStart(2, '0')
+			const day = `${date.getDate()}`.padStart(2, '0')
+			const hour = `${date.getHours()}`.padStart(2, '0')
+			const minute = `${date.getMinutes()}`.padStart(2, '0')
+			return `你已被禁言，至 ${year}-${month}-${day} ${hour}:${minute} 后可发言`
+		} catch (e) {
+			return '你已被禁言，暂时无法发送消息'
+		}
+	}
+
+	async function refreshGroupInteractionState(forceRefresh: boolean = false): Promise<void> {
+		if (chatType.value !== 'group') {
+			groupMuteAll.value = false
+			groupMyRole.value = 0
+			selfMuteEndTime.value = 0
+			return
+		}
+		const gid = groupId.value != null ? String(groupId.value) : ''
+		if (gid === '' || gid === '0') {
+			return
+		}
+		if (forceRefresh) {
+			groupService.invalidateGroup(gid)
+			mentionMembersLoaded.value = false
+		}
+		if (groupMuteRefreshTask != null) {
+			groupMuteRefreshQueued = groupMuteRefreshQueued || forceRefresh
+			await groupMuteRefreshTask
+			return
+		}
+		groupMuteStateLoading.value = true
+		groupMuteRefreshTask = (async () : Promise<void> => {
+			try {
+				const groupInfo = await groupService.getGroupInfo(gid)
+				const members = await groupService.getGroupMembers(gid)
+				if (groupInfo != null) {
+					groupMuteAll.value = groupInfo.muteAll === true
+					groupMyRole.value = groupInfo.myRole != null ? Number(groupInfo.myRole) : 0
+					if (memberCount.value <= 0 && groupInfo.memberCount != null) {
+						memberCount.value = Number(groupInfo.memberCount)
+					}
+				} else {
+					groupMuteAll.value = false
+				}
+				let nextMuteEndTime = 0
+				for (let i = 0; i < members.length; i++) {
+					const member = members[i]
+					const uid = member != null && member.userId != null ? String(member.userId) : ''
+					if (uid !== currentUserId.value) {
+						continue
+					}
+					if (member.role != null) {
+						groupMyRole.value = Number(member.role)
+					}
+					nextMuteEndTime = member.muteEndTime != null ? Number(member.muteEndTime) : 0
+					break
+				}
+				selfMuteEndTime.value = nextMuteEndTime > 0 ? nextMuteEndTime : 0
+			} catch (e) {
+				console.warn('[Chat] refreshGroupInteractionState failed:', e)
+			} finally {
+				groupMuteStateLoading.value = false
+			}
+		})()
+		try {
+			await groupMuteRefreshTask
+		} finally {
+			groupMuteRefreshTask = null
+		}
+		if (groupMuteRefreshQueued) {
+			groupMuteRefreshQueued = false
+			await refreshGroupInteractionState(true)
+		}
+	}
+
+	function startMuteStateNowTicker(): void {
+		stopMuteStateNowTicker()
+		muteStateNowTs.value = Date.now()
+		muteStateNowTimer = setInterval(() => {
+			muteStateNowTs.value = Date.now()
+		}, 30000)
+	}
+
+	function stopMuteStateNowTicker(): void {
+		if (muteStateNowTimer != null) {
+			clearInterval(muteStateNowTimer)
+			muteStateNowTimer = null
 		}
 	}
 
@@ -1414,10 +1574,11 @@
 	}
 
 	function ensureConversationWritable(): boolean {
-		if (!conversationReadOnly.value) {
+		if (!conversationReadOnly.value && !groupSendBlocked.value) {
 			return true
 		}
-		uni.showToast({ title: getReadOnlyHint(), icon: 'none' })
+		const hint = conversationReadOnly.value ? getReadOnlyHint() : groupSendRestrictionHint.value
+		uni.showToast({ title: hint !== '' ? hint : '当前不可发送消息', icon: 'none' })
 		return false
 	}
 
@@ -1771,11 +1932,58 @@
 		}
 	}
 
+	function handleGroupMuteSystemNotify(message: any): void {
+		try {
+			if (chatType.value !== 'group') {
+				return
+			}
+			const extraRaw: any = message != null && (message as any).header != null ? (message as any).header.extra : null
+			if (extraRaw == null || extraRaw === '') {
+				return
+			}
+			const extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
+			if (extraObj == null) {
+				return
+			}
+			const action = extraObj.action != null ? String(extraObj.action) : ''
+			if (action !== 'group_member_mute_changed' && action !== 'group_mute_all_changed') {
+				return
+			}
+			const notifyGroupId = extraObj.groupId != null ? String(extraObj.groupId) : ''
+			const currentGroupId = groupId.value != null ? String(groupId.value) : ''
+			if (notifyGroupId === '' || notifyGroupId !== currentGroupId) {
+				return
+			}
+			groupService.invalidateGroup(notifyGroupId)
+			if (action === 'group_mute_all_changed') {
+				groupMuteAll.value = extraObj.muted === true || extraObj.muted === 1 || extraObj.muted === '1'
+			}
+			if (action === 'group_member_mute_changed') {
+				const memberUserId = extraObj.memberUserId != null ? String(extraObj.memberUserId) : ''
+				if (memberUserId === currentUserId.value) {
+					const muted = extraObj.muted === true || extraObj.muted === 1 || extraObj.muted === '1'
+					selfMuteEndTime.value = muted ? normalizeNotifyTimeMs(extraObj.muteEndTime) : 0
+					uni.showToast({
+						title: muted ? buildMuteUntilHint(selfMuteEndTime.value) : '你已被解除禁言',
+						icon: 'none',
+						duration: 2200
+					})
+				}
+			}
+			void refreshGroupInteractionState(true)
+		} catch (e) {
+			console.warn('[Chat] handle group mute notify failed:', e)
+		}
+	}
+
 	function handleWsStateChange(state: WebSocketState): void {
 		if (state !== WebSocketState.OPEN) {
 			return
 		}
 		scheduleSingleChatPresenceRefresh(120)
+		if (chatType.value === 'group') {
+			void refreshGroupInteractionState(true)
+		}
 	}
 
 	async function hydrateConversationMetaByChatId(): Promise<void> {
@@ -2069,6 +2277,7 @@
 
 		await hydrateConversationMetaByChatId()
 		await refreshSingleChatPresence()
+		await refreshGroupInteractionState(false)
 		await ensureInitialMessagesLoaded()
 		
 		// 5. 监听新消息
@@ -2076,6 +2285,7 @@
 		messageService.addMessageStatusListener(handleMessageStatusChange)
 		messageService.addVoicePlayedListener(handleVoicePlayedSync)
 		wsManager.addMessageListener(MessageType.SYSTEM_NOTIFY, applyPresenceSystemNotify)
+		wsManager.addMessageListener(MessageType.SYSTEM_NOTIFY, handleGroupMuteSystemNotify)
 		
 		// 6. 清空未读数（本地 + 服务端：按 sequence 水位上报）
 		if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
@@ -2090,6 +2300,7 @@
 		
 		initVisibleReadObserver()
 		startReeditTicker()
+		startMuteStateNowTicker()
 		startVoicePlayedCompensation()
 		if (entryMode.value === 'latest' && targetAnchorSequence.value === '' && targetMessageId.value === '') {
 			scrollToBottom()
@@ -2104,6 +2315,7 @@
 		await flushVoicePlayedSyncQueue(true)
 		destroyVisibleReadObserver()
 		stopReeditTicker()
+		stopMuteStateNowTicker()
 		stopVoicePlayedCompensation()
 		cancelActiveVoiceRecording()
 		stopCurrentVoicePlayback()
@@ -2114,6 +2326,7 @@
 		messageService.removeMessageStatusListener(handleMessageStatusChange)
 		messageService.removeVoicePlayedListener(handleVoicePlayedSync)
 		wsManager.removeMessageListener(MessageType.SYSTEM_NOTIFY, applyPresenceSystemNotify)
+		wsManager.removeMessageListener(MessageType.SYSTEM_NOTIFY, handleGroupMuteSystemNotify)
 		try {
 			messageService.setActiveChatId(null)
 		} catch (e) {
@@ -4674,6 +4887,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			if (status === 3 || status === '3' || status === 5 || status === '5') {
 				nextMsg.status = 'failed'
 				messages.value.splice(idx, 1, nextMsg as MessageItem)
+				if (meta != null && meta.denyMessage != null && String(meta.denyMessage) !== '') {
+					uni.showToast({
+						title: String(meta.denyMessage),
+						icon: 'none',
+						duration: 2200
+					})
+					if (chatType.value === 'group') {
+						void refreshGroupInteractionState(true)
+					}
+				}
 				return
 			}
 		} catch (e) {
@@ -10039,6 +10262,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		await hydrateConversationMetaByChatId()
 		await refreshSingleChatPresence()
 		if (chatType.value === 'group') {
+			await refreshGroupInteractionState(false)
 			void ensureMentionMembersLoaded()
 			void loadGroupNoticeBanner()
 		}
@@ -10072,6 +10296,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		initVisibleReadObserver()
 		startReeditTicker()
+		startMuteStateNowTicker()
 		startVoicePlayedCompensation()
 		startSingleChatPresenceRefresh()
 		refreshCustomStickers().then(list => {
@@ -10087,6 +10312,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			// ignore
 		}
 		if (chatType.value === 'group') {
+			void refreshGroupInteractionState(false)
 			void loadGroupNoticeBanner()
 		}
 	})
@@ -10100,6 +10326,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		void flushVoicePlayedSyncQueue(true)
 		destroyVisibleReadObserver()
 		stopReeditTicker()
+		stopMuteStateNowTicker()
 		stopVoicePlayedCompensation()
 		cancelActiveVoiceRecording()
 		stopCurrentVoicePlayback()
@@ -10129,6 +10356,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		void flushVoicePlayedSyncQueue(true)
 		destroyVisibleReadObserver()
 		stopReeditTicker()
+		stopMuteStateNowTicker()
 		stopVoicePlayedCompensation()
 		cancelActiveVoiceRecording()
 		stopCurrentVoicePlayback()
@@ -10138,6 +10366,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		messageService.removeMessageStatusListener(handleMessageStatusChange)
 		messageService.removeVoicePlayedListener(handleVoicePlayedSync)
 		wsManager.removeMessageListener(MessageType.SYSTEM_NOTIFY, applyPresenceSystemNotify)
+		wsManager.removeMessageListener(MessageType.SYSTEM_NOTIFY, handleGroupMuteSystemNotify)
 		try {
 			messageService.setActiveChatAutoReadEnabled(false)
 			messageService.setActiveChatId(null)
@@ -11272,6 +11501,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		background-color: #2B3541;
 	}
 
+	.voice-btn-disabled {
+		opacity: 0.68;
+	}
+
 	.voice-btn-text {
 		font-size: 16px;
 		font-weight: 600;
@@ -11288,6 +11521,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		margin-left: 10px;
 	}
 
+	.plus-btn-disabled {
+		opacity: 0.68;
+	}
+
 	.send-btn {
 		background-color: #07C160;
 		height: 32px;
@@ -11299,10 +11536,24 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		margin-left: 10px;
 	}
 
+	.send-btn-disabled {
+		background-color: #D8DEE6;
+	}
+
 	.send-btn-text {
 		color: #FFFFFF;
 		font-size: 14px;
 		font-weight: 500;
+	}
+
+	.group-send-restriction-bar {
+		border-top-width: 1px;
+		padding: 8px 14px 10px;
+	}
+
+	.group-send-restriction-text {
+		font-size: 12px;
+		line-height: 18px;
 	}
 
 	.mention-panel {

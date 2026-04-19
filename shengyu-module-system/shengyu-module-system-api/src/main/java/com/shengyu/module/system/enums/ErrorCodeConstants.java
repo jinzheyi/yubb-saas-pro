@@ -229,6 +229,8 @@ public interface ErrorCodeConstants {
     ErrorCode GROUP_JOIN_REQUEST_NOT_EXISTS = new ErrorCode(1_002_030_211, "加群申请不存在");
     ErrorCode GROUP_JOIN_REQUEST_STATUS_INVALID = new ErrorCode(1_002_030_212, "加群申请状态已变更");
     ErrorCode GROUP_JOIN_REQUEST_ALREADY_PENDING = new ErrorCode(1_002_030_213, "您已提交过加群申请，请等待管理员处理");
+    ErrorCode GROUP_MUTED_ALL = new ErrorCode(1_002_030_214, "当前群已开启全员禁言");
+    ErrorCode GROUP_MEMBER_MUTED = new ErrorCode(1_002_030_215, "您已被禁言，暂时无法发送消息");
     
     // 群文件相关 1-002-030-250
     ErrorCode GROUP_FILE_NOT_EXISTS = new ErrorCode(1_002_030_250, "群文件不存在");

@@ -48,6 +48,8 @@ export type MessageStatusMeta = {
   chatId?: string
   sequence?: string
   rev?: string
+  denyCode?: string
+  denyMessage?: string
 }
 
 export type MessageStatusListener = (messageId: string, status: MessageStatus, meta?: MessageStatusMeta) => void
@@ -147,6 +149,8 @@ export type ConversationUpdateListener = (conversation: ConversationItem) => voi
  * 消息服务类（单例模式）
  */
 export class MessageService {
+  public static readonly MESSAGE_SEND_DENIED_EVENT = 'imMessageSendDenied'
+  public static readonly GROUP_MUTE_STATUS_CHANGED_EVENT = 'imGroupMuteStatusChanged'
   
   private static instance: MessageService | null = null
   
@@ -1656,6 +1660,8 @@ export class MessageService {
 	      let handledReeditHint = false
 	      let handledVoicePlayed = false
 	      let handledJoinRequestNotify = false
+        let handledSendDenied = false
+        let handledGroupMuteStatus = false
 	      try {
 	        const extraRaw: any = message != null && (message as any).header != null ? (message as any).header.extra : null
 	        if (extraRaw != null && extraRaw !== '') {
@@ -1666,6 +1672,10 @@ export class MessageService {
 	              handledReeditHint = this.applyReeditHintFromSystemNotify(extraObj)
 	            } else if (action === 'voice_played') {
 	              handledVoicePlayed = this.applyVoicePlayedHintFromSystemNotify(extraObj)
+              } else if (action === 'message_send_denied' || action === 'message_send_failed') {
+                handledSendDenied = this.applySendDeniedFromSystemNotify(extraObj)
+              } else if (action === 'group_member_mute_changed' || action === 'group_mute_all_changed') {
+                handledGroupMuteStatus = this.applyGroupMuteStatusFromSystemNotify(extraObj)
 	            } else if (action === 'group_join_request_created') {
 	              handledJoinRequestNotify = true
 	              this.handleGroupJoinRequestCreatedNotify(extraObj)
@@ -1688,9 +1698,12 @@ export class MessageService {
 	        contentStr === '' ||
 	        contentStr === 'CONVERSATION_UPSERT' ||
 	        contentStr === 'CONVERSATION_DELETE' ||
-	        contentStr === 'BADGE_UPDATE'
+	        contentStr === 'BADGE_UPDATE' ||
+          contentStr === 'MESSAGE_SEND_DENIED' ||
+          contentStr === 'GROUP_MEMBER_MUTE_CHANGED' ||
+          contentStr === 'GROUP_MUTE_ALL_CHANGED'
 	      ) {
-	        if (handledReeditHint || handledVoicePlayed || handledJoinRequestNotify) {
+	        if (handledReeditHint || handledVoicePlayed || handledJoinRequestNotify || handledSendDenied || handledGroupMuteStatus) {
 	          return
 	        }
 
@@ -1715,6 +1728,55 @@ export class MessageService {
 	      console.error('[MessageService] handleSystemNotify failed:', e)
 	    }
 	  }
+
+  private applySendDeniedFromSystemNotify(payload: any): boolean {
+    try {
+      const messageId = payload != null && payload.messageId != null ? String(payload.messageId) : ''
+      if (messageId === '' || messageId === '0') {
+        return false
+      }
+      const denyCode = payload != null && payload.code != null ? String(payload.code) : ''
+      const denyMessage = payload != null && payload.message != null ? String(payload.message) : '消息发送失败'
+      this.clearSendRetry(messageId)
+      this.releaseOutboundMessage(messageId)
+      this.setMessageFailed(messageId, {
+        resolvedMessageId: messageId,
+        denyCode: denyCode,
+        denyMessage: denyMessage
+      })
+      try {
+        uni.$emit(MessageService.MESSAGE_SEND_DENIED_EVENT, {
+          messageId: messageId,
+          code: denyCode,
+          message: denyMessage
+        })
+      } catch (e) {
+      }
+      return true
+    } catch (e) {
+      return false
+    }
+  }
+
+  private applyGroupMuteStatusFromSystemNotify(payload: any): boolean {
+    try {
+      if (payload == null || payload.groupId == null) {
+        return false
+      }
+      const groupId = String(payload.groupId)
+      if (groupId === '' || groupId === '0') {
+        return false
+      }
+      groupService.invalidateGroup(groupId)
+      try {
+        uni.$emit(MessageService.GROUP_MUTE_STATUS_CHANGED_EVENT, payload)
+      } catch (e) {
+      }
+      return true
+    } catch (e) {
+      return false
+    }
+  }
 
 	  private handleGroupJoinRequestCreatedNotify(payload: any): void {
 	    try {
@@ -2361,7 +2423,7 @@ export class MessageService {
     return still
   }
 
-  private setMessageFailed(messageId: string): void {
+  private setMessageFailed(messageId: string, meta?: MessageStatusMeta): void {
     if (messageId == null || messageId === '' || messageId === '0') {
       return
     }
@@ -2377,7 +2439,7 @@ export class MessageService {
       // ignore
     }
     try {
-      this.notifyStatusListeners(messageId, MessageStatus.FAILED)
+      this.notifyStatusListeners(messageId, MessageStatus.FAILED, meta)
     } catch (e) {
       // ignore
     }

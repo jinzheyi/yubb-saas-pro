@@ -32,7 +32,7 @@
 				<text class="letter-title" :style="{ color: theme.textTertiary, backgroundColor: theme.pageBg }">{{ group.letter }}</text>
 				
 				<!-- 成员项 -->
-				<view class="member-item" :style="{ borderBottomColor: theme.borderColor }" v-for="member in group.members" :key="member.id" @click="handleMemberClick(member)" @longpress="handleMemberLongPress(member)">
+				<view class="member-item" :style="{ borderBottomColor: theme.borderColor }" v-for="member in group.members" :key="member.id" @click="handleMemberClick(member)" @longpress="handleMemberLongPress(member)" @touchstart="handleMemberTouchStart(member)" @touchend="handleMemberTouchEnd" @touchcancel="handleMemberTouchEnd">
 					<!-- 删除模式：显示复选框 -->
 					<view v-if="mode === 'remove'" class="checkbox-wrap">
 						<view class="checkbox" :style="{ backgroundColor: member.selected ? theme.brandPrimary : theme.cardBg, borderColor: member.selected ? theme.brandPrimary : theme.borderColor }" :class="{ checked: member.selected, disabled: member.cannotRemove }">
@@ -58,6 +58,9 @@
 					<text v-if="member.isOwner" class="member-badge owner-badge">群主</text>
 					<text v-else-if="member.isAdmin" class="member-badge admin-badge">管理员</text>
 					<text v-if="isMemberMuted(member)" class="member-badge mute-badge">已禁言</text>
+					<view v-if="canManageMember(member)" class="member-manage-trigger" @click.stop="handleMemberManageTap(member)">
+						<text class="iconfont member-manage-trigger-icon" :style="{ color: theme.textTertiary }">&#xea8d;</text>
+					</view>
 				</view>
 			</view>
 		</scroll-view>
@@ -74,7 +77,7 @@
 <script setup lang="uts">
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
-	import { getGroupMembers, removeGroupMember, setGroupMemberRole } from '../../api/group.uts'
+	import { getGroup, getGroupMembers, removeGroupMember, setGroupMemberRole } from '../../api/group.uts'
 	import { groupService } from '../../services/group-service.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { getUserIdStr } from '../../store/user.uts'
@@ -96,6 +99,12 @@
 	const currentUserRole = ref<number>(0)
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	let unsubscribeTheme: (() => void) | null = null
+	let longPressTimer: any = null
+	let activeLongPressMemberId = ''
+	let suppressNextClickMemberId = ''
+	let memberActionSheetOpening = false
+	let lastActionSheetMemberId = ''
+	let lastActionSheetAt = 0
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 		theme.value = tokens
@@ -143,6 +152,20 @@
 			return '已禁言'
 		}
 	}
+
+	function applyMemberMuteState(memberId: string, muted: boolean): void {
+		if (memberId === '') {
+			return
+		}
+		const muteEndTime = muted ? Date.now() + 24 * 60 * 60 * 1000 : 0
+		for (let i = 0; i < allMembers.value.length; i++) {
+			const current = allMembers.value[i]
+			if (current != null && current.id != null && String(current.id) === memberId) {
+				current.muteEndTime = muteEndTime
+				break
+			}
+		}
+	}
 	
 	/**
 	 * 获取拼音首字母
@@ -164,6 +187,14 @@
 		
 		loading.value = true
 		try {
+			try {
+				const groupInfo = await getGroup(groupId.value)
+				if (groupInfo != null && groupInfo.myRole != null) {
+					currentUserRole.value = Number(groupInfo.myRole)
+				}
+			} catch (e) {
+				// ignore
+			}
 			const members = await getGroupMembers(groupId.value)
 			
 			if (members && Array.isArray(members)) {
@@ -180,7 +211,9 @@
 				} catch (e) {
 					myRole = 0
 				}
-				currentUserRole.value = myRole
+				if (myRole > 0 || currentUserRole.value <= 0) {
+					currentUserRole.value = myRole
+				}
 
 				allMembers.value = members.map(member => {
 					const displayName = member.nickname || member.userNickname || '未知'
@@ -267,6 +300,10 @@
 	}
 
 	function handleMemberClick(member : any) {
+		if (member != null && member.id != null && String(member.id) === suppressNextClickMemberId) {
+			suppressNextClickMemberId = ''
+			return
+		}
 		// 删除模式：切换选中状态
 		if (mode.value === 'remove') {
 			// 不能删除群主和自己
@@ -288,32 +325,86 @@
 		})
 	}
 
-	function handleMemberLongPress(member: any) {
+	function clearLongPressTimer(): void {
+		if (longPressTimer != null) {
+			clearTimeout(longPressTimer)
+			longPressTimer = null
+		}
+	}
+
+	function handleMemberTouchStart(member: any): void {
 		try {
-			if (mode.value !== 'view') {
+			clearLongPressTimer()
+			activeLongPressMemberId = member != null && member.id != null ? String(member.id) : ''
+			if (activeLongPressMemberId === '') {
 				return
 			}
-			if (groupId.value === '') {
+			longPressTimer = setTimeout(() => {
+				longPressTimer = null
+				if (activeLongPressMemberId !== '') {
+					suppressNextClickMemberId = activeLongPressMemberId
+				}
+				handleMemberLongPress(member)
+			}, 450)
+		} catch (e) {
+			clearLongPressTimer()
+		}
+	}
+
+	function handleMemberTouchEnd(): void {
+		activeLongPressMemberId = ''
+		clearLongPressTimer()
+	}
+
+	function handleMemberLongPress(member: any) {
+		openMemberManageActions(member)
+	}
+
+	function canManageMember(member: any): boolean {
+		if (mode.value !== 'view') {
+			return false
+		}
+		if (groupId.value === '') {
+			return false
+		}
+		if (currentUserRole.value !== 1 && currentUserRole.value !== 2) {
+			return false
+		}
+		if (member == null) {
+			return false
+		}
+		if (member.id == null || member.id === '' || member.id === '0') {
+			return false
+		}
+		if (member.isOwner === true) {
+			return false
+		}
+		if (member.id === currentUserId.value) {
+			return false
+		}
+		return true
+	}
+
+	function handleMemberManageTap(member: any): void {
+		openMemberManageActions(member)
+	}
+
+	function openMemberManageActions(member: any): void {
+		try {
+			if (!canManageMember(member)) {
 				return
 			}
-			// 仅群主/管理员可进行成员管理
-			if (currentUserRole.value !== 1 && currentUserRole.value !== 2) {
+			const memberId = member != null && member.id != null ? String(member.id) : ''
+			const now = Date.now()
+			if (memberActionSheetOpening) {
 				return
 			}
-			if (member == null) {
+			if (memberId !== '' && memberId === lastActionSheetMemberId && now - lastActionSheetAt < 800) {
 				return
 			}
-			if (member.id == null || member.id === '' || member.id === '0') {
-				return
-			}
-			// 不允许对群主本人操作
-			if (member.isOwner === true) {
-				return
-			}
-			// 不允许对自己操作
-			if (member.id === currentUserId.value) {
-				return
-			}
+			memberActionSheetOpening = true
+			lastActionSheetMemberId = memberId
+			lastActionSheetAt = now
 
 			const itemList: string[] = []
 			const actionKeys: string[] = []
@@ -336,6 +427,7 @@
 				itemList: itemList,
 				itemColor: theme.value.brandPrimary,
 				success: async (res) => {
+					memberActionSheetOpening = false
 					if (res.tapIndex < 0 || res.tapIndex >= actionKeys.length) {
 						return
 					}
@@ -351,11 +443,13 @@
 							if (!success) {
 								throw new Error('mute member failed')
 							}
+							applyMemberMuteState(member.id.toString(), true)
 						} else if (actionKey === 'unmute') {
 							const success = await groupService.unmuteMember(groupId.value, member.id.toString())
 							if (!success) {
 								throw new Error('unmute member failed')
 							}
+							applyMemberMuteState(member.id.toString(), false)
 						}
 						uni.hideLoading()
 						uni.showToast({ title: '操作成功', icon: 'success' })
@@ -366,11 +460,11 @@
 					}
 				},
 				fail: () => {
-					// ignore
+					memberActionSheetOpening = false
 				}
 			})
 		} catch (e) {
-			// ignore
+			memberActionSheetOpening = false
 		}
 	}
 	
@@ -481,6 +575,7 @@
 	})
 
 	onUnload(() => {
+		clearLongPressTimer()
 		if (unsubscribeTheme != null) {
 			unsubscribeTheme()
 			unsubscribeTheme = null
@@ -680,6 +775,18 @@
 	.mute-badge {
 		background-color: #FDECEC;
 		color: #D14343;
+	}
+
+	.member-manage-trigger {
+		width: 32px;
+		height: 32px;
+		margin-left: 8px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.member-manage-trigger-icon {
+		font-size: 18px;
 	}
 
 	.letter-index {

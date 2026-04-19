@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.shengyu.framework.common.exception.ServiceException;
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
@@ -210,6 +211,46 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
             TenantUtils.execute(tenantId, () -> processor.process(ctx, imMessage));
         } catch (Exception e) {
             log.error("[JsonBusiness] 处理业务 JSON 消息异常, payload: {}", text, e);
+            sendJsonBusinessError(ctx, headerJson, e);
+        }
+    }
+
+    private void sendJsonBusinessError(ChannelHandlerContext ctx, JSONObject headerJson, Exception e) {
+        try {
+            long senderId = AuthHandler.getUserId(ctx) != null ? AuthHandler.getUserId(ctx) : readLong(headerJson, "senderId", 0L);
+            long receiverId = readLong(headerJson, "receiverId", 0L);
+            long groupId = readLong(headerJson, "groupId", 0L);
+            long tenantId = AuthHandler.getTenantId(ctx) != null ? AuthHandler.getTenantId(ctx) : readLong(headerJson, "tenantId", 0L);
+            long messageId = readLong(headerJson, "messageId", System.currentTimeMillis());
+            String reasonType = "message_send_failed";
+            String reasonMessage = "消息发送失败";
+            Integer reasonCode = null;
+            if (e instanceof ServiceException) {
+                ServiceException se = (ServiceException) e;
+                reasonCode = se.getCode();
+                reasonMessage = StrUtil.blankToDefault(se.getMessage(), reasonMessage);
+                reasonType = "message_send_denied";
+            }
+            JSONObject extra = JSONUtil.createObj()
+                    .set("action", reasonType)
+                    .set("messageId", String.valueOf(messageId))
+                    .set("code", reasonCode)
+                    .set("message", reasonMessage);
+            JSONObject payload = JSONUtil.createObj()
+                    .set("header", JSONUtil.createObj()
+                            .set("messageId", System.currentTimeMillis())
+                            .set("messageType", MessageType.SYSTEM_NOTIFY_VALUE)
+                            .set("senderId", 0L)
+                            .set("receiverId", senderId)
+                            .set("groupId", groupId)
+                            .set("tenantId", tenantId)
+                            .set("timestamp", System.currentTimeMillis())
+                            .set("sequence", 0L)
+                            .set("extra", extra.toString()))
+                    .set("body", JSONUtil.createObj().set("content", "MESSAGE_SEND_DENIED"));
+            ctx.writeAndFlush(new TextWebSocketFrame(payload.toString()));
+        } catch (Exception notifyEx) {
+            log.warn("[JsonBusiness] send business error notify failed", notifyEx);
         }
     }
 

@@ -113,6 +113,7 @@ public class QuoteReplyMessageProcessor implements MessageProcessor {
             log.error("[QuoteReplyMessage] 解析消息失败", e);
         } catch (Exception e) {
             log.error("[QuoteReplyMessage] 处理消息异常", e);
+            throw new RuntimeException(e);
         }
     }
 }

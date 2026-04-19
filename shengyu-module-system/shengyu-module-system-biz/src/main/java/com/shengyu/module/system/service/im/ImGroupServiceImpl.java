@@ -3,6 +3,7 @@ package com.shengyu.module.system.service.im;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.shengyu.framework.common.util.object.BeanUtils;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
@@ -617,14 +618,20 @@ public class ImGroupServiceImpl implements ImGroupService {
             throw exception(GROUP_PERMISSION_DENIED);
         }
 
-        // 更新禁言状态
-        // 如果禁言，设置禁言结束时间为24小时后；如果取消禁言，设置为null
-        if (muted) {
-            member.setMuteEndTime(LocalDateTime.now().plusHours(24));
-        } else {
-            member.setMuteEndTime(null);
+        // 显式更新 muteEndTime，避免 updateById 在空值场景下无法把禁言时间清空。
+        LocalDateTime targetMuteEndTime = Boolean.TRUE.equals(muted) ? LocalDateTime.now().plusHours(24) : null;
+        int updatedRows = groupUserMapper.update(null, new LambdaUpdateWrapper<ImGroupUserDO>()
+                .eq(ImGroupUserDO::getId, member.getId())
+                .eq(ImGroupUserDO::getGroupId, groupId)
+                .eq(ImGroupUserDO::getUserId, memberUserId)
+                .set(ImGroupUserDO::getMuteEndTime, targetMuteEndTime));
+        if (updatedRows <= 0) {
+            throw exception(GROUP_MEMBER_NOT_EXISTS);
         }
-        groupUserMapper.updateById(member);
+        member.setMuteEndTime(targetMuteEndTime);
+
+        final LocalDateTime finalMuteEndTime = targetMuteEndTime;
+        runAfterCommit(() -> pushGroupMemberMuteChangedNotify(groupId, memberUserId, muted, finalMuteEndTime, userId));
 
         log.info("[ImGroupService] 设置群成员禁言成功, groupId: {}, memberUserId: {}, muted: {}", 
                 groupId, memberUserId, muted);
@@ -651,7 +658,70 @@ public class ImGroupServiceImpl implements ImGroupService {
         group.setMuteAll(muted);
         groupMapper.updateById(group);
 
+        runAfterCommit(() -> pushGroupMuteAllChangedNotify(groupId, muted, userId));
+
         log.info("[ImGroupService] 设置全员禁言成功, groupId: {}, muted: {}", groupId, muted);
+    }
+
+    private void pushGroupMemberMuteChangedNotify(Long groupId, Long memberUserId, Boolean muted,
+                                                  LocalDateTime muteEndTime, Long operatorUserId) {
+        List<Long> memberIds = getGroupMemberIds(groupId);
+        if (CollUtil.isEmpty(memberIds)) {
+            return;
+        }
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        String extra = JSONUtil.createObj()
+                .set("action", "group_member_mute_changed")
+                .set("groupId", String.valueOf(groupId))
+                .set("memberUserId", String.valueOf(memberUserId))
+                .set("muted", Boolean.TRUE.equals(muted))
+                .set("muteEndTime", muteEndTime != null ? muteEndTime.toString() : "")
+                .set("operatorUserId", operatorUserId != null ? String.valueOf(operatorUserId) : "")
+                .toString();
+        TextMessage body = TextMessage.newBuilder().setContent("GROUP_MEMBER_MUTE_CHANGED").build();
+        for (Long targetUserId : memberIds) {
+            try {
+                messageSender.sendToUserWithExtra(targetUserId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, targetUserId, groupId, tenantId,
+                        null, null, null,
+                        null, null, extra);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送群成员禁言状态失败, groupId: {}, targetUserId: {}, error: {}",
+                        groupId, targetUserId, e.getMessage(), e);
+            }
+        }
+    }
+
+    private void pushGroupMuteAllChangedNotify(Long groupId, Boolean muted, Long operatorUserId) {
+        List<Long> memberIds = getGroupMemberIds(groupId);
+        if (CollUtil.isEmpty(memberIds)) {
+            return;
+        }
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        String extra = JSONUtil.createObj()
+                .set("action", "group_mute_all_changed")
+                .set("groupId", String.valueOf(groupId))
+                .set("muted", Boolean.TRUE.equals(muted))
+                .set("operatorUserId", operatorUserId != null ? String.valueOf(operatorUserId) : "")
+                .toString();
+        TextMessage body = TextMessage.newBuilder().setContent("GROUP_MUTE_ALL_CHANGED").build();
+        for (Long targetUserId : memberIds) {
+            try {
+                messageSender.sendToUserWithExtra(targetUserId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, targetUserId, groupId, tenantId,
+                        null, null, null,
+                        null, null, extra);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送全员禁言状态失败, groupId: {}, targetUserId: {}, error: {}",
+                        groupId, targetUserId, e.getMessage(), e);
+            }
+        }
     }
 
     @Override

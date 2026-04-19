@@ -1,9 +1,11 @@
 package com.shengyu.framework.websocket.core.netty.handler;
 
 import cn.hutool.json.JSONUtil;
+import com.shengyu.framework.common.exception.ServiceException;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
+import com.shengyu.framework.websocket.core.protocol.TextMessage;
 import com.shengyu.framework.websocket.core.protocol.VoiceMessage;
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
@@ -133,6 +135,56 @@ public class ProtobufMessageHandler extends SimpleChannelInboundHandler<ImMessag
             
         } catch (Exception e) {
             log.error("[Protobuf] 消息处理异常", e);
+            sendPbBusinessError(ctx, msg, e);
+        }
+    }
+
+    private void sendPbBusinessError(ChannelHandlerContext ctx, ImMessage inbound, Exception e) {
+        try {
+            MessageHeader inboundHeader = inbound != null ? inbound.getHeader() : null;
+            long senderId = AuthHandler.getUserId(ctx) != null
+                    ? AuthHandler.getUserId(ctx)
+                    : (inboundHeader != null ? inboundHeader.getSenderId() : 0L);
+            long receiverId = inboundHeader != null ? inboundHeader.getReceiverId() : 0L;
+            long groupId = inboundHeader != null ? inboundHeader.getGroupId() : 0L;
+            long tenantId = AuthHandler.getTenantId(ctx) != null
+                    ? AuthHandler.getTenantId(ctx)
+                    : (inboundHeader != null ? inboundHeader.getTenantId() : 0L);
+            long messageId = inboundHeader != null ? inboundHeader.getMessageId() : System.currentTimeMillis();
+
+            String action = "message_send_failed";
+            String reasonMessage = "消息发送失败";
+            Integer reasonCode = null;
+            if (e instanceof ServiceException) {
+                ServiceException se = (ServiceException) e;
+                action = "message_send_denied";
+                reasonCode = se.getCode();
+                reasonMessage = se.getMessage();
+            }
+
+            MessageHeader header = MessageHeader.newBuilder()
+                    .setMessageId(System.currentTimeMillis())
+                    .setMessageType(MessageType.SYSTEM_NOTIFY)
+                    .setSenderId(0L)
+                    .setReceiverId(senderId)
+                    .setGroupId(groupId)
+                    .setTenantId(tenantId)
+                    .setTimestamp(System.currentTimeMillis())
+                    .setExtra(JSONUtil.createObj()
+                            .set("action", action)
+                            .set("messageId", String.valueOf(messageId))
+                            .set("code", reasonCode)
+                            .set("message", reasonMessage)
+                            .toString())
+                    .build();
+            TextMessage body = TextMessage.newBuilder().setContent("MESSAGE_SEND_DENIED").build();
+            ImMessage notify = ImMessage.newBuilder()
+                    .setHeader(header)
+                    .setBody(body.toByteString())
+                    .build();
+            ctx.writeAndFlush(notify);
+        } catch (Exception notifyEx) {
+            log.warn("[Protobuf] send business error notify failed", notifyEx);
         }
     }
 

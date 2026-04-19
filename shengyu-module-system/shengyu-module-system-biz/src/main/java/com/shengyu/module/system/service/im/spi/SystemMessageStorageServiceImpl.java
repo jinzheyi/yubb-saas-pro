@@ -17,11 +17,15 @@ import com.shengyu.module.infra.api.file.dto.FileDTO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatMessageDO;
 import com.shengyu.module.system.dal.dataobject.im.ImChatUserDO;
+import com.shengyu.module.system.dal.dataobject.im.ImGroupDO;
+import com.shengyu.module.system.dal.dataobject.im.ImGroupUserDO;
 import com.shengyu.module.system.dal.dataobject.user.AdminUserDO;
 import com.shengyu.module.system.dal.mysql.im.ImChatMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatMessageMapper;
 import com.shengyu.module.system.dal.mysql.im.ImChatUserMapper;
 import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
+import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
+import com.shengyu.module.system.dal.mysql.im.ImGroupUserMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum;
@@ -42,6 +46,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.GROUP_MEMBER_MUTED;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.GROUP_MUTED_ALL;
+import static com.shengyu.module.system.enums.ErrorCodeConstants.GROUP_NOT_EXISTS;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.GROUP_PERMISSION_DENIED;
 import static com.shengyu.module.system.enums.ErrorCodeConstants.NOT_GROUP_MEMBER;
 
@@ -84,6 +91,12 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
 
     @Resource
     private ImGroupService imGroupService;
+
+    @Resource
+    private ImGroupMapper groupMapper;
+
+    @Resource
+    private ImGroupUserMapper groupUserMapper;
 
     @Resource
     private AdminUserMapper userMapper;
@@ -196,6 +209,33 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         if (atAll && (senderRole == null
                 || (!ImGroupMemberRoleEnum.isOwner(senderRole) && !ImGroupMemberRoleEnum.isAdmin(senderRole)))) {
             throw exception(GROUP_PERMISSION_DENIED);
+        }
+    }
+
+    private void validateGroupSendPermission(MessageHeader header) {
+        if (header == null || header.getGroupId() <= 0 || header.getSenderId() <= 0) {
+            return;
+        }
+
+        ImGroupDO group = groupMapper.selectById(header.getGroupId());
+        if (group == null) {
+            throw exception(GROUP_NOT_EXISTS);
+        }
+
+        ImGroupUserDO groupMember = groupUserMapper.selectByGroupIdAndUserId(header.getGroupId(), header.getSenderId());
+        if (groupMember == null) {
+            throw exception(NOT_GROUP_MEMBER);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (groupMember.getMuteEndTime() != null && groupMember.getMuteEndTime().isAfter(now)) {
+            throw exception(GROUP_MEMBER_MUTED);
+        }
+
+        if (Boolean.TRUE.equals(group.getMuteAll())
+                && !ImGroupMemberRoleEnum.isOwner(groupMember.getRole())
+                && !ImGroupMemberRoleEnum.isAdmin(groupMember.getRole())) {
+            throw exception(GROUP_MUTED_ALL);
         }
     }
 
@@ -396,6 +436,7 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         try {
             Long chatId = getOrCreateChatId(header);
             validateVoiceMessageOwnership(message, chatId);
+            validateGroupSendPermission(header);
             String content = parseMessageContent(message);
             validateGroupMentions(message, content);
             String extra = buildExtraForDb(message);

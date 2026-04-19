@@ -240,6 +240,37 @@ public class ImMessageServiceImpl implements ImMessageService {
         }
     }
 
+    private void validateGroupSendPermission(Long senderId, ImChatDO chat) {
+        if (senderId == null || chat == null || !ImConversationTypeEnum.isGroup(chat.getChatType())) {
+            return;
+        }
+        Long groupId = chat.getGroupId();
+        if (groupId == null) {
+            throw exception(CONVERSATION_NOT_EXISTS);
+        }
+
+        ImGroupDO group = groupMapper.selectById(groupId);
+        if (group == null) {
+            throw exception(GROUP_NOT_EXISTS);
+        }
+
+        ImGroupUserDO groupMember = groupUserMapper.selectByGroupIdAndUserId(groupId, senderId);
+        if (groupMember == null) {
+            throw exception(NOT_GROUP_MEMBER);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (groupMember.getMuteEndTime() != null && groupMember.getMuteEndTime().isAfter(now)) {
+            throw exception(GROUP_MEMBER_MUTED);
+        }
+
+        if (Boolean.TRUE.equals(group.getMuteAll())
+                && !ImGroupMemberRoleEnum.isOwner(groupMember.getRole())
+                && !ImGroupMemberRoleEnum.isAdmin(groupMember.getRole())) {
+            throw exception(GROUP_MUTED_ALL);
+        }
+    }
+
     @Value("${im.recall.window-seconds:120}")
     private long recallWindowSeconds;
 
@@ -324,6 +355,7 @@ public class ImMessageServiceImpl implements ImMessageService {
             throw exception(CONVERSATION_NOT_EXISTS);
         }
 
+        validateGroupSendPermission(userId, chat);
         validateGroupMentions(userId, chat, sendReqVO.getContent(), sendReqVO.getMentions());
 
         ImChatMessageDO message = new ImChatMessageDO();

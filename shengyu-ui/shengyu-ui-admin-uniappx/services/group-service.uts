@@ -432,7 +432,7 @@ export class GroupService {
    * 映射服务器数据到群组信息
    */
   private mapToGroupInfo(data: any): GroupInfo {
-    const createTime = data.createTime != null ? new Date(data.createTime as string).getTime() : 0
+    const createTime = this.normalizeTimeMs(data != null ? data.createTime : null)
     return {
       id: data.id != null ? data.id.toString() : '0',
       name: data.name || '',
@@ -443,7 +443,7 @@ export class GroupService {
       maxMembers: data.maxMemberCount || data.maxMembers || 500,
       notice: data.notice || '',
       noticePinned: data.noticePinned === true,
-      createTime: Number.isNaN(createTime) ? 0 : createTime,
+      createTime: createTime,
       muteAll: data.muteAll === true,
       myRole: data.myRole != null ? Number(data.myRole) : 0
     }
@@ -465,8 +465,27 @@ export class GroupService {
       avatarBg: data.avatarBg || getUserAvatarColor(userId),
       role: data.role != null ? Number(data.role) : 0,
       nickname: nickname,
-      joinTime: data.joinTime || 0,
-      muteEndTime: data.muteEndTime || 0
+      joinTime: this.normalizeTimeMs(data != null ? data.joinTime : null),
+      muteEndTime: this.normalizeTimeMs(data != null ? data.muteEndTime : null)
+    }
+  }
+
+  private normalizeTimeMs(raw: any): number {
+    if (raw == null || raw === '') {
+      return 0
+    }
+    try {
+      if (typeof raw === 'number') {
+        return Number.isFinite(raw) && raw > 0 ? Math.round(raw) : 0
+      }
+      const asNumber = Number(raw)
+      if (!Number.isNaN(asNumber) && asNumber > 0) {
+        return Math.round(asNumber)
+      }
+      const parsed = new Date(String(raw)).getTime()
+      return Number.isNaN(parsed) || parsed <= 0 ? 0 : parsed
+    } catch (e) {
+      return 0
     }
   }
   
@@ -482,6 +501,21 @@ export class GroupService {
     if (groupId == null || groupId === '') {
       return
     }
+    this.memberCache.delete(groupId)
+  }
+
+  public invalidateGroupInfo(groupId: string): void {
+    if (groupId == null || groupId === '') {
+      return
+    }
+    this.groupCache.delete(groupId)
+  }
+
+  public invalidateGroup(groupId: string): void {
+    if (groupId == null || groupId === '') {
+      return
+    }
+    this.groupCache.delete(groupId)
     this.memberCache.delete(groupId)
   }
 }
