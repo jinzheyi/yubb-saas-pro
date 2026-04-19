@@ -52,10 +52,12 @@
 					</view>
 					<view class="member-info">
 						<text class="member-name" :style="{ color: theme.textPrimary }">{{ member.name }}</text>
-						<text class="member-role" :style="{ color: theme.textTertiary }" v-if="member.deptName">{{ member.deptName }}</text>
+						<text class="member-role" :style="{ color: theme.textTertiary }" v-if="isMemberMuted(member)">{{ formatMuteEndTime(member.muteEndTime) }}</text>
+						<text class="member-role" :style="{ color: theme.textTertiary }" v-else-if="member.deptName">{{ member.deptName }}</text>
 					</view>
 					<text v-if="member.isOwner" class="member-badge owner-badge">群主</text>
 					<text v-else-if="member.isAdmin" class="member-badge admin-badge">管理员</text>
+					<text v-if="isMemberMuted(member)" class="member-badge mute-badge">已禁言</text>
 				</view>
 			</view>
 		</scroll-view>
@@ -73,6 +75,7 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { getGroupMembers, removeGroupMember, setGroupMemberRole } from '../../api/group.uts'
+	import { groupService } from '../../services/group-service.uts'
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { getUserIdStr } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
@@ -103,6 +106,43 @@
 	const selectedMembers = computed(() : any[] => {
 		return allMembers.value.filter(m => m.selected)
 	})
+
+	function normalizeMuteEndTime(raw: any): number {
+		if (raw == null || raw === '') {
+			return 0
+		}
+		try {
+			const ts = new Date(String(raw)).getTime()
+			if (!isNaN(ts) && ts > 0) {
+				return ts
+			}
+		} catch (e) {
+			// ignore
+		}
+		const numVal = Number(raw)
+		return !isNaN(numVal) && numVal > 0 ? numVal : 0
+	}
+
+	function isMemberMuted(member: any): boolean {
+		const muteEndTime = member != null && member.muteEndTime != null ? Number(member.muteEndTime) : 0
+		return muteEndTime > Date.now()
+	}
+
+	function formatMuteEndTime(muteEndTime: number): string {
+		if (muteEndTime <= 0) {
+			return ''
+		}
+		try {
+			const d = new Date(muteEndTime)
+			const month = (d.getMonth() + 1).toString().padStart(2, '0')
+			const day = d.getDate().toString().padStart(2, '0')
+			const hour = d.getHours().toString().padStart(2, '0')
+			const minute = d.getMinutes().toString().padStart(2, '0')
+			return `禁言至 ${month}-${day} ${hour}:${minute}`
+		} catch (e) {
+			return '已禁言'
+		}
+	}
 	
 	/**
 	 * 获取拼音首字母
@@ -167,6 +207,7 @@
 						isOwner: isOwner,
 						isAdmin: isAdmin,
 						role: roleNum,
+						muteEndTime: normalizeMuteEndTime(member.muteEndTime),
 						selected: false,
 						cannotRemove: cannotRemove
 					}
@@ -255,8 +296,8 @@
 			if (groupId.value === '') {
 				return
 			}
-			// 仅群主可操作管理员
-			if (currentUserRole.value !== 2) {
+			// 仅群主/管理员可进行成员管理
+			if (currentUserRole.value !== 1 && currentUserRole.value !== 2) {
 				return
 			}
 			if (member == null) {
@@ -274,18 +315,48 @@
 				return
 			}
 
-			const toAdmin = member.isAdmin !== true
-			const title = toAdmin ? '设为管理员' : '取消管理员'
+			const itemList: string[] = []
+			const actionKeys: string[] = []
+			if (currentUserRole.value === 2) {
+				const toAdmin = member.isAdmin !== true
+				itemList.push(toAdmin ? '设为管理员' : '取消管理员')
+				actionKeys.push(toAdmin ? 'set_admin' : 'remove_admin')
+			}
+			if (isMemberMuted(member)) {
+				itemList.push('解除禁言')
+				actionKeys.push('unmute')
+			} else {
+				itemList.push('禁言24小时')
+				actionKeys.push('mute')
+			}
+			if (itemList.length === 0) {
+				return
+			}
 			uni.showActionSheet({
-				itemList: [title],
+				itemList: itemList,
 				itemColor: theme.value.brandPrimary,
 				success: async (res) => {
-					if (res.tapIndex !== 0) {
+					if (res.tapIndex < 0 || res.tapIndex >= actionKeys.length) {
 						return
 					}
+					const actionKey = actionKeys[res.tapIndex]
 					uni.showLoading({ title: '处理中...' })
 					try {
-						await setGroupMemberRole(groupId.value, member.id.toString(), toAdmin ? 1 : 0)
+						if (actionKey === 'set_admin') {
+							await setGroupMemberRole(groupId.value, member.id.toString(), 1)
+						} else if (actionKey === 'remove_admin') {
+							await setGroupMemberRole(groupId.value, member.id.toString(), 0)
+						} else if (actionKey === 'mute') {
+							const success = await groupService.muteMember(groupId.value, member.id.toString(), 24)
+							if (!success) {
+								throw new Error('mute member failed')
+							}
+						} else if (actionKey === 'unmute') {
+							const success = await groupService.unmuteMember(groupId.value, member.id.toString())
+							if (!success) {
+								throw new Error('unmute member failed')
+							}
+						}
 						uni.hideLoading()
 						uni.showToast({ title: '操作成功', icon: 'success' })
 						await loadMembers()
@@ -604,6 +675,11 @@
 	.admin-badge {
 		background-color: #E3F2FD;
 		color: #1976D2;
+	}
+
+	.mute-badge {
+		background-color: #FDECEC;
+		color: #D14343;
 	}
 
 	.letter-index {

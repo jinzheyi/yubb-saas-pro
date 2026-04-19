@@ -4,6 +4,7 @@ import com.shengyu.framework.common.pojo.CommonResult;
 import com.shengyu.framework.common.util.qrcode.QRCodeUtil;
 import com.shengyu.framework.datapermission.core.annotation.DataPermission;
 import com.shengyu.framework.security.core.util.SecurityFrameworkUtils;
+import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.module.system.controller.app.im.vo.group.*;
 import com.shengyu.module.system.service.im.ImGroupService;
 import com.shengyu.module.system.service.im.ImGroupOrchestrationService;
@@ -284,13 +285,36 @@ public class AppImGroupController {
     @Parameter(name = "code", description = "邀请码", required = true, example = "GRP1A2B3C4D5E6F7G8H")
     @Parameter(name = "groupId", description = "群组ID", required = false, example = "123456")
     @Parameter(name = "baseUrl", description = "前端应用基础URL", required = true, example = "http://localhost:48080")
+    @Parameter(name = "tenantId", description = "租户ID，图片标签等无法携带 tenant-id 请求头时显式传入", required = false, example = "1")
     @PermitAll
     public void getInviteQRCodeImage(
             @RequestParam("code") String code,
             @RequestParam(value = "groupId", required = false) Long groupId,
             @RequestParam("baseUrl") String baseUrl,
+            @RequestParam(value = "tenantId", required = false) Long tenantId,
             HttpServletResponse response) throws IOException {
-        
+        if (tenantId != null) {
+            try {
+                TenantUtils.execute(tenantId, () -> {
+                    try {
+                        writeInviteQRCodeImage(code, groupId, baseUrl, response);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+                return;
+            } catch (RuntimeException e) {
+                if (e.getCause() instanceof IOException) {
+                    throw (IOException) e.getCause();
+                }
+                throw e;
+            }
+        }
+        writeInviteQRCodeImage(code, groupId, baseUrl, response);
+    }
+
+    private void writeInviteQRCodeImage(String code, Long groupId, String baseUrl,
+                                        HttpServletResponse response) throws IOException {
         // 1. 验证邀请码
         AppImGroupInviteVerifyRespVO verifyResult = groupService.verifyInviteCode(code);
         if (!verifyResult.getValid()) {

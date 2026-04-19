@@ -92,9 +92,10 @@
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { getGroupInviteCode, generateGroupInvite } from '../../api/group.uts'
 	import { saveImageToAlbum } from '../../utils/qrcode.uts'
-	import { BASE_URL, ADMIN_APP_DOMAIN } from '../../config/app.config.uts'
+	import { BASE_URL, API_BASE_URL, ADMIN_APP_DOMAIN } from '../../config/app.config.uts'
 	import { getGroupAvatarColor } from '../../utils/avatar.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
+	import { getTenantId } from '../../store/user.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -113,6 +114,7 @@
 	const usedCount = ref(0)
 	const maxUseCount = ref(0)
 	const needApproval = ref(false)
+	const currentTenantId = ref('')
 
 	// 加载状态
 	const loading = ref(true)
@@ -292,13 +294,15 @@
 
 		// 使用后端生成的二维码图片 URL
 		// 传递 ADMIN_APP_DOMAIN 参数，让后端生成包含移动端域名的完整 URL
-		qrCodeImageUrl.value = `${BASE_URL}/app-api/system/im/group/invite/qrcode-image?code=${inviteCode.value}&groupId=${groupId.value}&baseUrl=${encodeURIComponent(ADMIN_APP_DOMAIN)}`
+		const tenantQuery = currentTenantId.value !== '' ? `&tenantId=${encodeURIComponent(currentTenantId.value)}` : ''
+		qrCodeImageUrl.value = `${API_BASE_URL}/system/im/group/invite/qrcode-image?code=${encodeURIComponent(inviteCode.value)}&groupId=${encodeURIComponent(groupId.value)}&baseUrl=${encodeURIComponent(ADMIN_APP_DOMAIN)}${tenantQuery}`
 		
 		console.log('[GroupQRCode] 二维码图片 URL:', qrCodeImageUrl.value)
 		console.log('[GroupQRCode] inviteCode:', inviteCode.value)
 		console.log('[GroupQRCode] groupId:', groupId.value)
-		console.log('[GroupQRCode] BASE_URL:', BASE_URL)
+		console.log('[GroupQRCode] API_BASE_URL:', API_BASE_URL)
 		console.log('[GroupQRCode] ADMIN_APP_DOMAIN:', ADMIN_APP_DOMAIN)
+		console.log('[GroupQRCode] tenantId:', currentTenantId.value)
 	}
 
 	/**
@@ -502,6 +506,8 @@
 	}
 
 	onLoad((options : any) => {
+		currentTenantId.value = getTenantId() || ''
+
 		// 获取群组ID
 		if (options['groupId']) {
 			groupId.value = decodeIdParam(options['groupId'])
