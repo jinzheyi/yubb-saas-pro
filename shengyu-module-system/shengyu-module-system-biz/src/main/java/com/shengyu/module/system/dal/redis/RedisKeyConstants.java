@@ -84,6 +84,14 @@ public interface RedisKeyConstants {
     String ONLINE_STATUS = "online_%s";
 
     /**
+     * IM 用户在线状态聚合缓存
+     * <p>
+     * KEY 格式：im_presence_user_${userId}
+     * VALUE 数据类型：Hash，field=设备类型，value=presence json
+     */
+    String IM_PRESENCE_USER = "im_presence_user_%s";
+
+    /**
      * 用户离线消息缓存
      * <p>
      * KEY 格式：getmessage_${userId}

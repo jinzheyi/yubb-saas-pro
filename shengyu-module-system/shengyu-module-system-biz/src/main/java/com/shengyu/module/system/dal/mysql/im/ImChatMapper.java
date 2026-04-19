@@ -11,6 +11,8 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import org.apache.ibatis.annotations.Mapper;
 
+import java.util.List;
+
 @Mapper
 @DS(DataSourceEnum.MASTER)
 public interface ImChatMapper extends BaseMapperX<ImChatDO> {
@@ -54,6 +56,14 @@ public interface ImChatMapper extends BaseMapperX<ImChatDO> {
 
     @Select("SELECT LAST_INSERT_ID()")
     Long selectLastInsertId();
+
+    @Select("SELECT DISTINCT CASE " +
+            "WHEN single_user1 = #{userId} THEN single_user2 " +
+            "WHEN single_user2 = #{userId} THEN single_user1 " +
+            "END AS peerUserId " +
+            "FROM im_chat " +
+            "WHERE deleted = 0 AND chat_type = 1 AND (single_user1 = #{userId} OR single_user2 = #{userId})")
+    List<Long> selectSingleChatPeerUserIds(@Param("userId") Long userId);
 
     default Long nextSequence(Long chatId) {
         bumpLastSequence(chatId);

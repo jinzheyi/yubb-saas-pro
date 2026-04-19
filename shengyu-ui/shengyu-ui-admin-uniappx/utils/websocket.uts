@@ -1397,6 +1397,9 @@ export class WebSocketManager {
     
     if (this.isPbEnabled()) {
       try {
+        const extraObj: any = {
+          presence: presence
+        }
         const header: any = {
           messageId: generateLongSafeMessageId(),
           messageType: MessageType.HEARTBEAT_REQ,
@@ -1406,7 +1409,7 @@ export class WebSocketManager {
           tenantId: '0',
           timestamp: Date.now().toString(),
           sequence: '0',
-          extra: ''
+          extra: JSON.stringify(extraObj)
         }
         // 当前 proto 未定义 HeartbeatRequest，按 bytes 空体发送（服务端仅用 messageType 即可）
         console.log('[WebSocket] 发送心跳(pb)')

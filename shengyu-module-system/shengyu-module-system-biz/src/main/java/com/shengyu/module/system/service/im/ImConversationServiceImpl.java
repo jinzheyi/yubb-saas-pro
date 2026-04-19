@@ -8,6 +8,8 @@ import com.shengyu.framework.websocket.core.protocol.ConversationBadge;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
 import com.shengyu.framework.websocket.core.protocol.TextMessage;
 import com.shengyu.framework.websocket.core.sender.NettyMessageSender;
+import com.shengyu.framework.websocket.core.session.NettySession;
+import com.shengyu.framework.websocket.core.session.NettySessionManager;
 import com.shengyu.framework.tenant.core.context.TenantContextHolder;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationCreateReqVO;
 import com.shengyu.module.system.controller.app.im.vo.conversation.AppImConversationRespVO;
@@ -29,6 +31,7 @@ import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -119,10 +122,62 @@ public class ImConversationServiceImpl implements ImConversationService {
     @Resource
     private NettyMessageSender messageSender;
 
+    @Resource
+    private NettySessionManager nettySessionManager;
+
+    @Autowired(required = false)
+    private ImPresenceService imPresenceService;
+
     @Override
     public List<AppImConversationRespVO> getConversationList(Long userId) {
         List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserId(userId);
         return toConversationRespVOList(userId, chatUsers);
+    }
+
+    private void fillConversationPresence(AppImConversationRespVO respVO) {
+        if (respVO == null || !ImConversationTypeEnum.isSingle(respVO.getConversationType())) {
+            return;
+        }
+        Long targetUserId = respVO.getTargetId();
+        if (targetUserId == null || targetUserId <= 0L) {
+            respVO.setOnline(false);
+            respVO.setOnlineDeviceTypes(Collections.emptyList());
+            respVO.setLastActiveTime(null);
+            return;
+        }
+
+        if (imPresenceService != null) {
+            ImPresenceSnapshot snapshot = imPresenceService.getUserPresence(targetUserId);
+            if (snapshot != null) {
+                respVO.setOnline(Boolean.TRUE.equals(snapshot.getOnline()));
+                respVO.setOnlineDeviceTypes(snapshot.getOnlineDeviceTypes() != null
+                        ? snapshot.getOnlineDeviceTypes() : Collections.emptyList());
+                respVO.setLastActiveTime(snapshot.getLastActiveTime());
+                return;
+            }
+        }
+
+        List<NettySession> sessions = nettySessionManager.getSessionsByUserId(targetUserId);
+        if (sessions == null || sessions.isEmpty()) {
+            respVO.setOnline(false);
+            respVO.setOnlineDeviceTypes(Collections.emptyList());
+            respVO.setLastActiveTime(null);
+            return;
+        }
+
+        respVO.setOnline(true);
+        respVO.setOnlineDeviceTypes(sessions.stream()
+                .map(NettySession::getDeviceType)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList()));
+        Long latestActiveTime = sessions.stream()
+                .map(session -> session.getLastBizActiveTime() != null ? session.getLastBizActiveTime()
+                        : (session.getLastActiveTime() != null ? session.getLastActiveTime() : session.getConnectTime()))
+                .filter(Objects::nonNull)
+                .max(Long::compareTo)
+                .orElse(null);
+        respVO.setLastActiveTime(latestActiveTime);
     }
 
     @Override
@@ -862,6 +917,7 @@ public class ImConversationServiceImpl implements ImConversationService {
                 cleanupInvalidConversationState(tenantId, userId, respVO.getChatId(), "list");
                 continue;
             }
+            fillConversationPresence(respVO);
             list.add(respVO);
         }
         return list;
@@ -954,6 +1010,7 @@ public class ImConversationServiceImpl implements ImConversationService {
              cleanupInvalidConversationState(tenantId, userId, respVO.getChatId(), "detail");
              throw exception(CONVERSATION_NOT_EXISTS);
          }
+         fillConversationPresence(respVO);
          return respVO;
     }
 

@@ -49,6 +49,9 @@ export type ConversationItem = {
   groupMemberCount: number    // 对应后端 groupMemberCount
 
   conversationVersion?: string // 端侧幂等/乱序保护用（服务端单会话版本）
+  online?: boolean
+  onlineDeviceTypes?: number[]
+  lastActiveTime?: number
 }
 
 /**
@@ -1186,7 +1189,10 @@ export class ConversationService {
       noDisturb: data.noDisturb || false,
       draft: data.draft || '',
       groupMemberCount: data.groupMemberCount || 0,
-	  conversationVersion: data.conversationVersion != null ? data.conversationVersion.toString() : null
+	  conversationVersion: data.conversationVersion != null ? data.conversationVersion.toString() : null,
+      online: data.online === true,
+      onlineDeviceTypes: Array.isArray(data.onlineDeviceTypes) ? (data.onlineDeviceTypes as number[]) : [],
+      lastActiveTime: data.lastActiveTime != null ? Number(data.lastActiveTime) : 0
     }
   }
   

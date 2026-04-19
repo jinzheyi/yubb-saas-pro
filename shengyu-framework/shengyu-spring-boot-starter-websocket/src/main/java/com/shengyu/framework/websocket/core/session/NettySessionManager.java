@@ -9,6 +9,7 @@ import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -75,6 +76,52 @@ public class NettySessionManager {
      */
     private final Map<Long, Set<String>> tenantChannelMap = new ConcurrentHashMap<>();
 
+    private List<NettySessionLifecycleListener> lifecycleListeners = Collections.emptyList();
+
+    @Autowired(required = false)
+    public void setLifecycleListeners(List<NettySessionLifecycleListener> lifecycleListeners) {
+        this.lifecycleListeners = lifecycleListeners != null ? lifecycleListeners : Collections.emptyList();
+    }
+
+    private void notifySessionAdded(NettySession session) {
+        for (NettySessionLifecycleListener listener : lifecycleListeners) {
+            try {
+                listener.onSessionAdded(session);
+            } catch (Exception e) {
+                log.warn("[SessionManager] lifecycle onSessionAdded failed, userId: {}, deviceType: {}, error: {}",
+                        session != null ? session.getUserId() : null,
+                        session != null ? session.getDeviceType() : null,
+                        e.getMessage());
+            }
+        }
+    }
+
+    private void notifySessionRemoved(NettySession session) {
+        for (NettySessionLifecycleListener listener : lifecycleListeners) {
+            try {
+                listener.onSessionRemoved(session);
+            } catch (Exception e) {
+                log.warn("[SessionManager] lifecycle onSessionRemoved failed, userId: {}, deviceType: {}, error: {}",
+                        session != null ? session.getUserId() : null,
+                        session != null ? session.getDeviceType() : null,
+                        e.getMessage());
+            }
+        }
+    }
+
+    private void notifySessionBizActive(NettySession session) {
+        for (NettySessionLifecycleListener listener : lifecycleListeners) {
+            try {
+                listener.onSessionBizActive(session);
+            } catch (Exception e) {
+                log.warn("[SessionManager] lifecycle onSessionBizActive failed, userId: {}, deviceType: {}, error: {}",
+                        session != null ? session.getUserId() : null,
+                        session != null ? session.getDeviceType() : null,
+                        e.getMessage());
+            }
+        }
+    }
+
     /**
      * 添加会话（支持多端登录互踢策略）
      */
@@ -137,6 +184,7 @@ public class NettySessionManager {
 
         log.info("[SessionManager] 添加会话, userId: {}, tenantId: {}, deviceType: {}, channelId: {}, 当前在线: {}", 
             userId, tenantId, deviceType, channelId, channelSessionMap.size());
+        notifySessionAdded(session);
     }
 
     /**
@@ -195,6 +243,7 @@ public class NettySessionManager {
 
             log.info("[SessionManager] 移除会话, userId: {}, tenantId: {}, deviceType: {}, channelId: {}, 当前在线: {}", 
                 userId, tenantId, deviceType, channelId, channelSessionMap.size());
+            notifySessionRemoved(session);
         }
     }
 
@@ -465,6 +514,7 @@ public class NettySessionManager {
         NettySession session = getSession(channel);
         if (session != null) {
             session.updateLastBizActiveTime();
+            notifySessionBizActive(session);
         }
     }
 }

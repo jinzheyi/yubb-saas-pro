@@ -68,4 +68,13 @@ public class AppImConversationRespVO {
     @Schema(description = "群成员数量(群聊时有值)", example = "10")
     private Integer groupMemberCount;
 
+    @Schema(description = "单聊目标用户是否在线", example = "true")
+    private Boolean online;
+
+    @Schema(description = "单聊目标用户当前在线设备类型(1-Web 2-iOS 3-Android 4-小程序)")
+    private java.util.List<Integer> onlineDeviceTypes;
+
+    @Schema(description = "单聊目标用户最近一次在线会话活跃时间戳（毫秒）", example = "1776466200000")
+    private Long lastActiveTime;
+
 }

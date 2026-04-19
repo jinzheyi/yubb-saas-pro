@@ -15,7 +15,7 @@
 			<view class="header-title-wrap">
 				<text v-if="!multiSelectMode" class="header-title" :style="{ color: theme.headerText }" :numberOfLines="1">{{ name }}</text>
 				<text v-else class="header-title" :style="{ color: theme.headerText }" :numberOfLines="1">已选择 {{ selectedIds.length }} 条</text>
-				<text v-if="!multiSelectMode && chatType === 'single'" class="header-status" :style="{ color: theme.headerSubText }" :numberOfLines="1">{{ t('chat.online', '手机在线') }}</text>
+				<text v-if="!multiSelectMode && chatType === 'single'" class="header-status" :style="{ color: theme.headerSubText }" :numberOfLines="1">{{ headerStatusText }}</text>
 				<text v-if="!multiSelectMode && chatType === 'group'" class="header-status" :style="{ color: theme.headerSubText }" :numberOfLines="1">{{ memberCount }}人</text>
 			</view>
 			<view class="header-right">
@@ -248,7 +248,7 @@
 				</view>
 
 				<!-- 输入框/按住说话按钮 -->
-				<view class="input-box" :class="{ 'input-box-full': isFullExpanded }" :style="getComposerInputBoxStyle()" v-if="!isVoiceMode">
+				<view v-show="!isVoiceMode" class="input-box" :class="{ 'input-box-full': isFullExpanded }" :style="getComposerInputBoxStyle()">
 					<editor
 						id="editor"
 						class="chat-editor"
@@ -263,7 +263,7 @@
 					/>
 				</view>
 				<view 
-					v-else 
+					v-show="isVoiceMode"
 					class="voice-btn" 
 					:class="{ 'voice-btn-active': isRecording }"
 					:style="{ backgroundColor: isRecording ? theme.cardBgMuted : theme.inputBg }"
@@ -594,6 +594,9 @@
 	const chatType = ref('single')
 	const groupId = ref<string>('')
 	const memberCount = ref(0)
+	const singleChatOnline = ref(false)
+	const singleChatOnlineDeviceTypes = ref<number[]>([])
+	const singleChatLastActiveTime = ref(0)
 	const groupNoticePinned = ref(false)
 	const groupNoticeText = ref('')
 	const groupNoticeSignature = ref('')
@@ -605,6 +608,18 @@
 			&& groupNoticePinned.value
 			&& groupNoticeText.value !== ''
 			&& !groupNoticeDismissed.value
+	})
+	const headerStatusText = computed(() : string => {
+		if (chatType.value === 'group') {
+			return `${memberCount.value}人`
+		}
+		if (singleChatOnline.value) {
+			return buildPresenceOnlineText(singleChatOnlineDeviceTypes.value)
+		}
+		if (singleChatLastActiveTime.value > 0) {
+			return buildPresenceLastActiveText(singleChatLastActiveTime.value)
+		}
+		return '离线'
 	})
 	
 	// 会话信息（使用字符串避免精度丢失）
@@ -636,6 +651,8 @@
 	const chatBubbleTokens = ref<ChatBubbleTokens>(getChatBubbleTokens(chatBubbleConfig.value))
 	let unsubscribeTheme: (() => void) | null = null
 	let unsubscribeChatBubble: (() => void) | null = null
+	let singlePresenceRefreshTask : Promise<void> | null = null
+	let singlePresenceRefreshDebounceTimer : any = null
 
 	function refreshBubbleTokens(config?: ChatBubbleConfig | null): void {
 		const nextConfig = config != null ? config : getChatBubbleConfig()
@@ -1543,6 +1560,98 @@
 		return chatType.value === 'group' ? (targetId.value || '0') : '0'
 	}
 
+	function normalizeOnlineDeviceTypes(raw: any): number[] {
+		const result: number[] = []
+		if (!Array.isArray(raw)) {
+			return result
+		}
+		for (let i = 0; i < raw.length; i++) {
+			const next = Number(raw[i])
+			if (isNaN(next) || result.includes(next)) {
+				continue
+			}
+			result.push(next)
+		}
+		return result
+	}
+
+	function hasMobileOnlineDevice(deviceTypes: number[]): boolean {
+		return deviceTypes.includes(2) || deviceTypes.includes(3) || deviceTypes.includes(4)
+	}
+
+	function hasWebOnlineDevice(deviceTypes: number[]): boolean {
+		return deviceTypes.includes(1)
+	}
+
+	function buildPresenceOnlineText(deviceTypes: number[]): string {
+		const hasMobile = hasMobileOnlineDevice(deviceTypes)
+		const hasWeb = hasWebOnlineDevice(deviceTypes)
+		if (hasMobile && hasWeb) {
+			return '多端在线'
+		}
+		if (hasMobile) {
+			return t('chat.online', '手机在线')
+		}
+		if (hasWeb) {
+			return '电脑在线'
+		}
+		return '在线'
+	}
+
+	function buildPresenceLastActiveText(timestamp: number): string {
+		if (!timestamp || timestamp <= 0) {
+			return '离线'
+		}
+		const diff = Date.now() - timestamp
+		if (diff < 2 * 60 * 1000) {
+			return '刚刚活跃'
+		}
+		if (diff < 60 * 60 * 1000) {
+			return `${Math.max(1, Math.floor(diff / (60 * 1000)))}分钟前活跃`
+		}
+		const dt = new Date(timestamp)
+		const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+		const hh = String(dt.getHours()).padStart(2, '0')
+		const mm = String(dt.getMinutes()).padStart(2, '0')
+		if (diff < 24 * 60 * 60 * 1000) {
+			return `今天 ${hh}:${mm} 活跃`
+		}
+		if (diff < 48 * 60 * 60 * 1000) {
+			return `昨天 ${hh}:${mm} 活跃`
+		}
+		if (diff < 7 * 24 * 60 * 60 * 1000) {
+			return `${weekdays[dt.getDay()]} ${hh}:${mm} 活跃`
+		}
+		return '最近活跃'
+	}
+
+	function resetSingleChatPresence(): void {
+		singleChatOnline.value = false
+		singleChatOnlineDeviceTypes.value = []
+		singleChatLastActiveTime.value = 0
+	}
+
+	function markSingleChatPresenceOnlineNow(): void {
+		singleChatOnline.value = true
+		singleChatLastActiveTime.value = Date.now()
+	}
+
+	function applySingleChatPresence(conv: any): void {
+		try {
+			if (conv == null || Number((conv as any).conversationType) !== 1) {
+				resetSingleChatPresence()
+				return
+			}
+			singleChatOnline.value = (conv as any).online === true
+			singleChatOnlineDeviceTypes.value = normalizeOnlineDeviceTypes((conv as any).onlineDeviceTypes)
+			const lastActiveRaw = (conv as any).lastActiveTime
+			const lastActive = lastActiveRaw != null ? Number(lastActiveRaw) : 0
+			singleChatLastActiveTime.value = !isNaN(lastActive) && lastActive > 0 ? lastActive : 0
+		} catch (e) {
+			resetSingleChatPresence()
+		}
+	}
+
 	function applyConversationMeta(conv: any): void {
 		try {
 			if (conv == null) {
@@ -1565,8 +1674,100 @@
 			if (isGroup) {
 				const count = (conv as any).groupMemberCount != null ? Number((conv as any).groupMemberCount) : 0
 				memberCount.value = !isNaN(count) && count > 0 ? count : memberCount.value
+				resetSingleChatPresence()
+			} else {
+				applySingleChatPresence(conv)
 			}
 		} catch (e) {
+		}
+	}
+
+	async function refreshSingleChatPresence(): Promise<void> {
+		if (chatType.value !== 'single') {
+			resetSingleChatPresence()
+			return
+		}
+		const target = targetId.value != null ? String(targetId.value) : ''
+		if (target === '' || target === '0') {
+			resetSingleChatPresence()
+			return
+		}
+		if (singlePresenceRefreshTask != null) {
+			await singlePresenceRefreshTask
+			return
+		}
+		singlePresenceRefreshTask = (async () => {
+			try {
+				const conversationResult = await getConversationByTarget(target, 1)
+				if (conversationResult != null) {
+					const resolvedChatId = conversationResult.chatId != null ? String(conversationResult.chatId) : ''
+					if (resolvedChatId !== '' && resolvedChatId !== '0' && (!chatId.value || chatId.value === '' || chatId.value === '0')) {
+						chatId.value = resolvedChatId
+					}
+					applyConversationMeta(conversationResult)
+				}
+			} catch (e) {
+				console.warn('[Chat] 刷新单聊在线状态失败:', e)
+			}
+		})()
+		try {
+			await singlePresenceRefreshTask
+		} finally {
+			singlePresenceRefreshTask = null
+		}
+	}
+
+	function scheduleSingleChatPresenceRefresh(delayMs: number = 300): void {
+		if (singlePresenceRefreshDebounceTimer != null) {
+			clearTimeout(singlePresenceRefreshDebounceTimer)
+			singlePresenceRefreshDebounceTimer = null
+		}
+		singlePresenceRefreshDebounceTimer = setTimeout(() => {
+			singlePresenceRefreshDebounceTimer = null
+			void refreshSingleChatPresence()
+		}, delayMs)
+	}
+
+	function startSingleChatPresenceRefresh(): void {
+		if (chatType.value !== 'single') {
+			stopSingleChatPresenceRefresh()
+			resetSingleChatPresence()
+			return
+		}
+		scheduleSingleChatPresenceRefresh(0)
+	}
+
+	function stopSingleChatPresenceRefresh(): void {
+		if (singlePresenceRefreshDebounceTimer != null) {
+			clearTimeout(singlePresenceRefreshDebounceTimer)
+			singlePresenceRefreshDebounceTimer = null
+		}
+	}
+
+	function applyPresenceSystemNotify(message: any): void {
+		try {
+			if (chatType.value !== 'single') {
+				return
+			}
+			const extraRaw: any = message != null && (message as any).header != null ? (message as any).header.extra : null
+			if (extraRaw == null || extraRaw === '') {
+				return
+			}
+			const extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
+			if (extraObj == null || String(extraObj.action || '') !== 'presence_update') {
+				return
+			}
+			const notifyTargetUserId = extraObj.targetUserId != null ? String(extraObj.targetUserId) : ''
+			const currentTargetUserId = targetId.value != null ? String(targetId.value) : ''
+			if (notifyTargetUserId === '' || currentTargetUserId === '' || notifyTargetUserId !== currentTargetUserId) {
+				return
+			}
+			singleChatOnline.value = extraObj.online === true || extraObj.online === 1 || extraObj.online === '1'
+			singleChatOnlineDeviceTypes.value = normalizeOnlineDeviceTypes(extraObj.onlineDeviceTypes)
+			const nextLastActiveTime = extraObj.lastActiveTime != null ? Number(extraObj.lastActiveTime) : 0
+			singleChatLastActiveTime.value = !isNaN(nextLastActiveTime) && nextLastActiveTime > 0 ? nextLastActiveTime : 0
+		} catch (e) {
+			console.warn('[Chat] apply presence notify failed:', e)
 		}
 	}
 
@@ -1857,12 +2058,14 @@
 		}
 
 		await hydrateConversationMetaByChatId()
+		await refreshSingleChatPresence()
 		await ensureInitialMessagesLoaded()
 		
 		// 5. 监听新消息
 		messageService.addMessageListener(handleNewMessage)
 		messageService.addMessageStatusListener(handleMessageStatusChange)
 		messageService.addVoicePlayedListener(handleVoicePlayedSync)
+		wsManager.addMessageListener(MessageType.SYSTEM_NOTIFY, applyPresenceSystemNotify)
 		
 		// 6. 清空未读数（本地 + 服务端：按 sequence 水位上报）
 		if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
@@ -1885,6 +2088,7 @@
 	
 	onUnmounted(async () => {
 		unregisterH5VisibilityChangeListener()
+		stopSingleChatPresenceRefresh()
 		await flushReadOnLeave()
 		await flushVoicePlayedSyncQueue(true)
 		destroyVisibleReadObserver()
@@ -1898,6 +2102,7 @@
 		messageService.removeMessageListener(handleNewMessage)
 		messageService.removeMessageStatusListener(handleMessageStatusChange)
 		messageService.removeVoicePlayedListener(handleVoicePlayedSync)
+		wsManager.removeMessageListener(MessageType.SYSTEM_NOTIFY, applyPresenceSystemNotify)
 		try {
 			messageService.setActiveChatId(null)
 		} catch (e) {
@@ -3973,6 +4178,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (!inCurrentConversation) {
 			return
 		}
+		if (chatType.value === 'single') {
+			if (!incomingIsSelf) {
+				markSingleChatPresenceOnlineNow()
+			}
+			scheduleSingleChatPresenceRefresh(incomingIsSelf ? 800 : 200)
+		}
 
 		// 去重：sendMessage() 会先 notifyMessageListeners，本地发送路径也可能手动 push，导致重复展示
 		// 但撤回属于“最终态变更”，必须覆盖已有消息（不能被去重丢弃）
@@ -4387,6 +4598,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			if (status === 1 || status === '1') {
 				nextMsg.status = 'success'
 				nextMsg.messageId = resolvedMessageId
+				if (chatType.value === 'single') {
+					scheduleSingleChatPresenceRefresh(500)
+				}
 				if (nextMsg.id == null || String(nextMsg.id) === '' || String(nextMsg.id) === '0' || String(nextMsg.id) === previousMessageId) {
 					nextMsg.id = resolvedMessageId
 				}
@@ -9438,6 +9652,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						persistViewportState()
 						cancelActiveVoiceRecording()
 						stopCurrentVoicePlayback()
+					} else {
+						void refreshSingleChatPresence()
 					}
 				} catch (e) {
 					// ignore
@@ -9810,6 +10026,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			applyRestoreEntryIfAvailable()
 		}
 		await hydrateConversationMetaByChatId()
+		await refreshSingleChatPresence()
 		if (chatType.value === 'group') {
 			void ensureMentionMembersLoaded()
 			void loadGroupNoticeBanner()
@@ -9841,6 +10058,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		initVisibleReadObserver()
 		startReeditTicker()
 		startVoicePlayedCompensation()
+		startSingleChatPresenceRefresh()
 		refreshCustomStickers().then(list => {
 			stickerList.value = list
 		}).catch(() => {
@@ -9860,6 +10078,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	onHide(() => {
 		wsManager.setRealtimeBizActive(false)
+		stopSingleChatPresenceRefresh()
 		closeMentionSelector()
 		persistViewportState()
 		void flushReadOnLeave()
@@ -9888,6 +10107,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		unregisterH5VisibilityChangeListener()
 		wsManager.setRealtimeBizActive(false)
+		stopSingleChatPresenceRefresh()
 		closeMentionSelector()
 		persistViewportState()
 		void flushReadOnLeave()
@@ -9902,6 +10122,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		messageService.removeMessageListener(handleNewMessage)
 		messageService.removeMessageStatusListener(handleMessageStatusChange)
 		messageService.removeVoicePlayedListener(handleVoicePlayedSync)
+		wsManager.removeMessageListener(MessageType.SYSTEM_NOTIFY, applyPresenceSystemNotify)
 		try {
 			messageService.setActiveChatAutoReadEnabled(false)
 			messageService.setActiveChatId(null)
