@@ -42,6 +42,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import javax.annotation.Resource;
+import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -61,6 +62,8 @@ import static com.shengyu.module.system.enums.ErrorCodeConstants.*;
 @Service
 @Slf4j
 public class ImGroupServiceImpl implements ImGroupService {
+
+    private static final DateTimeFormatter GROUP_MUTE_TIP_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     @Resource
     private ImGroupMapper groupMapper;
@@ -631,7 +634,11 @@ public class ImGroupServiceImpl implements ImGroupService {
         member.setMuteEndTime(targetMuteEndTime);
 
         final LocalDateTime finalMuteEndTime = targetMuteEndTime;
-        runAfterCommit(() -> pushGroupMemberMuteChangedNotify(groupId, memberUserId, muted, finalMuteEndTime, userId));
+        final String tipContent = buildGroupMemberMuteTipContent(member, memberUserId, muted, finalMuteEndTime);
+        runAfterCommit(() -> {
+            persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent);
+            pushGroupMemberMuteChangedNotify(groupId, memberUserId, muted, finalMuteEndTime, userId, tipContent);
+        });
 
         log.info("[ImGroupService] 设置群成员禁言成功, groupId: {}, memberUserId: {}, muted: {}", 
                 groupId, memberUserId, muted);
@@ -658,13 +665,19 @@ public class ImGroupServiceImpl implements ImGroupService {
         group.setMuteAll(muted);
         groupMapper.updateById(group);
 
-        runAfterCommit(() -> pushGroupMuteAllChangedNotify(groupId, muted, userId));
+        final String tipContent = Boolean.TRUE.equals(muted)
+                ? "已开启全员禁言，只有群主和管理员可以发言"
+                : "已解除全员禁言";
+        runAfterCommit(() -> {
+            persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent);
+            pushGroupMuteAllChangedNotify(groupId, muted, userId, tipContent);
+        });
 
         log.info("[ImGroupService] 设置全员禁言成功, groupId: {}, muted: {}", groupId, muted);
     }
 
     private void pushGroupMemberMuteChangedNotify(Long groupId, Long memberUserId, Boolean muted,
-                                                  LocalDateTime muteEndTime, Long operatorUserId) {
+                                                  LocalDateTime muteEndTime, Long operatorUserId, String tipContent) {
         List<Long> memberIds = getGroupMemberIds(groupId);
         if (CollUtil.isEmpty(memberIds)) {
             return;
@@ -680,6 +693,7 @@ public class ImGroupServiceImpl implements ImGroupService {
                 .set("muted", Boolean.TRUE.equals(muted))
                 .set("muteEndTime", muteEndTime != null ? muteEndTime.toString() : "")
                 .set("operatorUserId", operatorUserId != null ? String.valueOf(operatorUserId) : "")
+                .set("tipContent", tipContent != null ? tipContent : "")
                 .toString();
         TextMessage body = TextMessage.newBuilder().setContent("GROUP_MEMBER_MUTE_CHANGED").build();
         for (Long targetUserId : memberIds) {
@@ -695,7 +709,7 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
     }
 
-    private void pushGroupMuteAllChangedNotify(Long groupId, Boolean muted, Long operatorUserId) {
+    private void pushGroupMuteAllChangedNotify(Long groupId, Boolean muted, Long operatorUserId, String tipContent) {
         List<Long> memberIds = getGroupMemberIds(groupId);
         if (CollUtil.isEmpty(memberIds)) {
             return;
@@ -709,6 +723,7 @@ public class ImGroupServiceImpl implements ImGroupService {
                 .set("groupId", String.valueOf(groupId))
                 .set("muted", Boolean.TRUE.equals(muted))
                 .set("operatorUserId", operatorUserId != null ? String.valueOf(operatorUserId) : "")
+                .set("tipContent", tipContent != null ? tipContent : "")
                 .toString();
         TextMessage body = TextMessage.newBuilder().setContent("GROUP_MUTE_ALL_CHANGED").build();
         for (Long targetUserId : memberIds) {
@@ -1115,85 +1130,13 @@ public class ImGroupServiceImpl implements ImGroupService {
     }
 
     private void pushGroupNoticeConversationUpdate(Long operatorUserId, Long groupId) {
-        List<Long> memberIds = getGroupMemberIds(groupId);
-        if (CollUtil.isEmpty(memberIds)) {
-            return;
-        }
-
-        ImChatDO chat = chatMapper.selectGroupChat(groupId, ImConversationTypeEnum.GROUP.getType());
-        if (chat == null) {
-            log.warn("[ImGroupService] 群公告通知失败，群会话不存在, groupId: {}", groupId);
-            return;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        Long sequence = chatMapper.nextSequence(chat.getId());
         String preview = "[群公告有更新]";
         String tipContent = "群公告有更新";
-
-        ImChatMessageDO tipMessage = buildSystemTipMessage(chat.getId(), sequence, tipContent, now);
-        chatMessageMapper.insert(tipMessage);
-
-        List<Long> targetMemberIds = memberIds.stream()
-                .filter(memberId -> !Objects.equals(memberId, operatorUserId))
-                .collect(Collectors.toList());
-        if (CollUtil.isEmpty(targetMemberIds)) {
-            return;
-        }
-
-        Long tenantId = TenantContextHolder.getTenantId();
-        if (tenantId == null) {
-            tenantId = 0L;
-        }
-        Map<Long, Long> userCursorVersionMap = new LinkedHashMap<>();
-        for (Long targetUserId : targetMemberIds) {
-            try {
-                ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(targetUserId, chat.getId());
-                if (chatUser != null) {
-                    chatUserMapper.updateLastMessageAndIncrementUnread(
-                            chatUser.getId(),
-                            tipMessage.getId(),
-                            sequence,
-                            10,
-                            preview,
-                            now,
-                            1,
-                            Boolean.TRUE.equals(chatUser.getNoDisturb())
-                    );
-                }
-
-                Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, targetUserId);
-                conversationUserStateMapper.upsertAfterMessage(
-                        tenantId,
-                        chat.getId(),
-                        targetUserId,
-                        cursorVersion,
-                        1,
-                        null,
-                        null,
-                        tipMessage.getId(),
-                        sequence,
-                        10,
-                        preview,
-                        Boolean.FALSE,
-                        now
-                );
-
-                userCursorVersionMap.put(targetUserId, cursorVersion);
-            } catch (Exception e) {
-                log.warn("[ImGroupService] 推送群公告会话更新失败, groupId: {}, targetUserId: {}, error: {}",
-                        groupId, targetUserId, e.getMessage(), e);
-            }
-        }
-
-        if (CollUtil.isNotEmpty(userCursorVersionMap)) {
-            final Long tenantIdFinal = tenantId;
-            final Long chatIdFinal = chat.getId();
-            runAfterCommit(() -> pushGroupNoticeNotifyAfterCommit(groupId, tenantIdFinal, chatIdFinal, userCursorVersionMap));
-        }
+        persistGroupSystemTipConversationUpdate(groupId, operatorUserId, preview, tipContent);
     }
 
-    private void pushGroupNoticeNotifyAfterCommit(Long groupId, Long tenantId, Long chatId, Map<Long, Long> userCursorVersionMap) {
+    private void pushGroupConversationRefreshNotifyAfterCommit(Long groupId, Long tenantId, Long chatId,
+                                                               Map<Long, Long> userCursorVersionMap, String logPrefix) {
         TextMessage body = TextMessage.newBuilder().setContent("").build();
         for (Map.Entry<Long, Long> entry : userCursorVersionMap.entrySet()) {
             Long targetUserId = entry.getKey();
@@ -1205,10 +1148,103 @@ public class ImGroupServiceImpl implements ImGroupService {
                         cursorVersion, null);
                 imBadgeService.pushBadgeUpdate(targetUserId);
             } catch (Exception e) {
-                log.warn("[ImGroupService] 群公告提交后通知失败, groupId: {}, targetUserId: {}, error: {}",
+                log.warn("[ImGroupService] {}提交后通知失败, groupId: {}, targetUserId: {}, error: {}",
+                        logPrefix, groupId, targetUserId, e.getMessage(), e);
+            }
+        }
+    }
+
+    private void persistGroupSystemTipConversationUpdate(Long groupId, Long operatorUserId, String preview, String tipContent) {
+        List<Long> memberIds = getGroupMemberIds(groupId);
+        if (CollUtil.isEmpty(memberIds)) {
+            return;
+        }
+
+        ImChatDO chat = chatMapper.selectGroupChat(groupId, ImConversationTypeEnum.GROUP.getType());
+        if (chat == null) {
+            log.warn("[ImGroupService] 群系统提示通知失败，群会话不存在, groupId: {}", groupId);
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        Long sequence = chatMapper.nextSequence(chat.getId());
+        ImChatMessageDO tipMessage = buildSystemTipMessage(chat.getId(), sequence, tipContent, now);
+        chatMessageMapper.insert(tipMessage);
+
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        Map<Long, Long> userCursorVersionMap = new LinkedHashMap<>();
+        for (Long targetUserId : memberIds) {
+            try {
+                int unreadDelta = Objects.equals(targetUserId, operatorUserId) ? 0 : 1;
+                ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(targetUserId, chat.getId());
+                if (chatUser != null) {
+                    chatUserMapper.updateLastMessageAndIncrementUnread(
+                            chatUser.getId(),
+                            tipMessage.getId(),
+                            sequence,
+                            10,
+                            preview,
+                            now,
+                            unreadDelta,
+                            Boolean.TRUE.equals(chatUser.getNoDisturb())
+                    );
+                }
+
+                Long cursorVersion = cursorVersionService.allocateNextCursorVersion(tenantId, targetUserId);
+                conversationUserStateMapper.upsertAfterMessage(
+                        tenantId,
+                        chat.getId(),
+                        targetUserId,
+                        cursorVersion,
+                        unreadDelta,
+                        null,
+                        null,
+                        tipMessage.getId(),
+                        sequence,
+                        10,
+                        preview,
+                        Boolean.FALSE,
+                        now
+                );
+                userCursorVersionMap.put(targetUserId, cursorVersion);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送群系统提示会话更新失败, groupId: {}, targetUserId: {}, error: {}",
                         groupId, targetUserId, e.getMessage(), e);
             }
         }
+
+        if (CollUtil.isNotEmpty(userCursorVersionMap)) {
+            final Long tenantIdFinal = tenantId;
+            final Long chatIdFinal = chat.getId();
+            runAfterCommit(() -> pushGroupConversationRefreshNotifyAfterCommit(
+                    groupId, tenantIdFinal, chatIdFinal, userCursorVersionMap, "群系统提示"));
+        }
+    }
+
+    private String buildGroupMemberMuteTipContent(ImGroupUserDO member, Long memberUserId, Boolean muted, LocalDateTime muteEndTime) {
+        String memberName = "";
+        if (member != null && member.getNickname() != null) {
+            memberName = member.getNickname().trim();
+        }
+        if (memberName.isEmpty() && memberUserId != null) {
+            AdminUserDO targetUser = userMapper.selectById(memberUserId);
+            if (targetUser != null && targetUser.getNickname() != null) {
+                memberName = targetUser.getNickname().trim();
+            }
+        }
+        if (memberName.isEmpty()) {
+            memberName = "该成员";
+        }
+        if (Boolean.TRUE.equals(muted)) {
+            if (muteEndTime != null) {
+                return String.format("\"%s\" 已被禁言至 %s", memberName, muteEndTime.format(GROUP_MUTE_TIP_TIME_FORMATTER));
+            }
+            return String.format("\"%s\" 已被禁言", memberName);
+        }
+        return String.format("\"%s\" 已被解除禁言", memberName);
     }
 
     private void runAfterCommit(Runnable task) {

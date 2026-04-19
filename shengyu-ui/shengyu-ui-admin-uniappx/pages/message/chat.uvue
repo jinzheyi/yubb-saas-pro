@@ -664,6 +664,8 @@
 	let groupMuteRefreshQueued = false
 	const muteStateNowTs = ref<number>(Date.now())
 	let muteStateNowTimer: any = null
+	let lastGroupMuteTipSignature = ''
+	let lastGroupMuteTipAt = 0
 
 	const canBypassGroupMuteAll = computed(() : boolean => {
 		return groupMyRole.value === 2 || groupMyRole.value === 1
@@ -1069,6 +1071,47 @@
 			return `你已被禁言，至 ${year}-${month}-${day} ${hour}:${minute} 后可发言`
 		} catch (e) {
 			return '你已被禁言，暂时无法发送消息'
+		}
+	}
+
+	function appendGroupMuteStatusTip(content: string, signature: string): void {
+		try {
+			const text = content != null ? String(content).trim() : ''
+			if (text === '') {
+				return
+			}
+			const now = Date.now()
+			if (signature !== '' && signature === lastGroupMuteTipSignature && now - lastGroupMuteTipAt < 1500) {
+				return
+			}
+			lastGroupMuteTipSignature = signature
+			lastGroupMuteTipAt = now
+			const randomSuffix = `${Math.floor(Math.random() * 100000)}`
+			const tipMessage: MessageItem = {
+				id: `group_mute_tip_${now}_${randomSuffix}`,
+				messageId: `group_mute_tip_${now}_${randomSuffix}`,
+				chatId: chatId.value,
+				groupId: groupId.value,
+				senderId: '0',
+				receiverId: '0',
+				type: 'text',
+				content: text,
+				isSelf: false,
+				time: '',
+				timestamp: now,
+				showTime: false,
+				avatarText: '',
+				avatarBg: '',
+				senderName: '系统'
+			}
+			messages.value.push(tipMessage)
+			if (isAtBottom.value) {
+				setTimeout(() => {
+					scrollToBottom()
+				}, 60)
+			}
+		} catch (e) {
+			console.warn('[Chat] append group mute tip failed:', e)
 		}
 	}
 
@@ -1574,6 +1617,14 @@
 	}
 
 	function ensureConversationWritable(): boolean {
+		if (!hasConversationRouteMetaReady()) {
+			triggerConversationMetaRecovery()
+			uni.showToast({
+				title: chatType.value === 'group' ? '群会话信息加载中，请稍后重试' : '会话信息加载中，请稍后重试',
+				icon: 'none'
+			})
+			return false
+		}
 		if (!conversationReadOnly.value && !groupSendBlocked.value) {
 			return true
 		}
@@ -1719,6 +1770,17 @@
 	
 	function getGroupIdForMessage(): string {
 		return chatType.value === 'group' ? (targetId.value || '0') : '0'
+	}
+
+	function hasConversationRouteMetaReady(): boolean {
+		if (chatType.value === 'group') {
+			const gid = targetId.value != null && targetId.value !== '' && targetId.value !== '0'
+				? targetId.value
+				: groupId.value
+			return gid != null && gid !== '' && gid !== '0'
+		}
+		const rid = targetId.value != null ? targetId.value : ''
+		return rid !== '' && rid !== '0'
 	}
 
 	function normalizeOnlineDeviceTypes(raw: any): number[] {
@@ -1955,20 +2017,27 @@
 				return
 			}
 			groupService.invalidateGroup(notifyGroupId)
+			const tipContent = extraObj.tipContent != null ? String(extraObj.tipContent).trim() : ''
 			if (action === 'group_mute_all_changed') {
-				groupMuteAll.value = extraObj.muted === true || extraObj.muted === 1 || extraObj.muted === '1'
+				const muted = extraObj.muted === true || extraObj.muted === 1 || extraObj.muted === '1'
+				groupMuteAll.value = muted
+				appendGroupMuteStatusTip(
+					tipContent !== '' ? tipContent : (muted ? '已开启全员禁言，只有群主和管理员可以发言' : '已解除全员禁言'),
+					`${action}_${notifyGroupId}_${muted ? '1' : '0'}_${tipContent}`
+				)
 			}
 			if (action === 'group_member_mute_changed') {
 				const memberUserId = extraObj.memberUserId != null ? String(extraObj.memberUserId) : ''
+				const muted = extraObj.muted === true || extraObj.muted === 1 || extraObj.muted === '1'
 				if (memberUserId === currentUserId.value) {
-					const muted = extraObj.muted === true || extraObj.muted === 1 || extraObj.muted === '1'
 					selfMuteEndTime.value = muted ? normalizeNotifyTimeMs(extraObj.muteEndTime) : 0
-					uni.showToast({
-						title: muted ? buildMuteUntilHint(selfMuteEndTime.value) : '你已被解除禁言',
-						icon: 'none',
-						duration: 2200
-					})
 				}
+				appendGroupMuteStatusTip(
+					tipContent !== '' ? tipContent : (memberUserId === currentUserId.value
+						? (muted ? buildMuteUntilHint(selfMuteEndTime.value) : '你已被解除禁言')
+						: (muted ? '有群成员被禁言' : '有群成员被解除禁言')),
+					`${action}_${notifyGroupId}_${memberUserId}_${muted ? '1' : '0'}_${selfMuteEndTime.value}_${tipContent}`
+				)
 			}
 			void refreshGroupInteractionState(true)
 		} catch (e) {
@@ -2001,6 +2070,30 @@
 			applyConversationMeta(conv)
 		} catch (e) {
 		}
+	}
+
+	let conversationMetaRecoveryTask : Promise<void> | null = null
+
+	function triggerConversationMetaRecovery(): void {
+		if (conversationMetaRecoveryTask != null) {
+			return
+		}
+		conversationMetaRecoveryTask = (async () => {
+			try {
+				if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
+					await hydrateConversationMetaByChatId()
+				}
+				if ((!chatId.value || chatId.value === '' || chatId.value === '0')
+					&& targetId.value && targetId.value !== '' && targetId.value !== '0') {
+					await ensureChatIdByTargetIfNeeded(false)
+					await hydrateConversationMetaByChatId()
+				}
+			} catch (e) {
+				console.warn('[Chat] recover conversation meta failed:', e)
+			} finally {
+				conversationMetaRecoveryTask = null
+			}
+		})()
 	}
 
 	let resolveChatIdTask : Promise<void> | null = null
@@ -4190,8 +4283,29 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
+	function isGroupMuteStatusTipMsg(m: any): boolean {
+		try {
+			if (m == null || isRecalledFinalMsg(m)) {
+				return false
+			}
+			const senderId = (m as any).senderId != null ? String((m as any).senderId) : ''
+			if (senderId !== '0') {
+				return false
+			}
+			const content = (m as any).content != null ? String((m as any).content).trim() : ''
+			return content === '你已被解除禁言'
+				|| content === '已解除全员禁言'
+				|| content.indexOf('你已被禁言') === 0
+				|| content.indexOf('已开启全员禁言') === 0
+				|| content.indexOf('已被禁言') > -1
+				|| content.indexOf('已被解除禁言') > -1
+		} catch (e) {
+			return false
+		}
+	}
+
 	function isCenterSystemTipMsg(m: any): boolean {
-		return isRecalledFinalMsg(m) || isGroupNoticeUpdateTipMsg(m)
+		return isRecalledFinalMsg(m) || isGroupNoticeUpdateTipMsg(m) || isGroupMuteStatusTipMsg(m)
 	}
 
 	function getMessagePreview(msg : MessageItem) : string {
