@@ -1875,6 +1875,86 @@ export class WebSocketManager {
   public isConnected(): boolean {
     return this.state === WebSocketState.OPEN && this.authenticated
   }
+
+  public async ensureConnected(timeoutMs: number = 4000): Promise<boolean> {
+    if (this.isConnected()) {
+      return true
+    }
+
+    const token = getAccessToken()
+    if (token == null || token == '') {
+      return false
+    }
+
+    try {
+      if (this.state === WebSocketState.CLOSED || this.ws == null) {
+        this.connect()
+      } else if (this.state === WebSocketState.OPEN && !this.authenticated) {
+        if (this.isPbEnabled()) {
+          this.sendAuthRequestPb()
+        } else {
+          this.sendAuthRequest()
+        }
+      }
+    } catch (e) {
+      console.error('[WebSocket] ensureConnected start failed:', e)
+    }
+
+    return await new Promise<boolean>((resolve) => {
+      let settled = false
+      let pollTimer: number = 0
+      let timeoutTimer: number = 0
+
+      const cleanup = (): void => {
+        try {
+          this.removeStateListener(stateListener)
+        } catch (e) {
+        }
+        if (pollTimer !== 0) {
+          clearInterval(pollTimer)
+          pollTimer = 0
+        }
+        if (timeoutTimer !== 0) {
+          clearTimeout(timeoutTimer)
+          timeoutTimer = 0
+        }
+      }
+
+      const finish = (ok: boolean): void => {
+        if (settled) {
+          return
+        }
+        settled = true
+        cleanup()
+        resolve(ok)
+      }
+
+      const stateListener = (_state: WebSocketState): void => {
+        if (this.isConnected()) {
+          finish(true)
+        }
+      }
+
+      try {
+        this.addStateListener(stateListener)
+      } catch (e) {
+      }
+
+      pollTimer = setInterval(() => {
+        if (this.isConnected()) {
+          finish(true)
+        }
+      }, 100)
+
+      timeoutTimer = setTimeout(() => {
+        finish(this.isConnected())
+      }, timeoutMs > 0 ? timeoutMs : 4000)
+
+      if (this.isConnected()) {
+        finish(true)
+      }
+    })
+  }
 }
 
 /**

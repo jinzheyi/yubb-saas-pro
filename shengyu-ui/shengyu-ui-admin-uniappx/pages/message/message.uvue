@@ -369,6 +369,10 @@
 	
 	onShow(() => {
 		wsManager.setRealtimeBizActive(true)
+		if (!wsManager.isConnected()) {
+			wsManager.setProtocols(['im.pb.v1'])
+			void wsManager.ensureConnected(4000)
+		}
 		tabBarBadgeService.refresh()
 		syncFromConversationCache()
 		const now = Date.now()
