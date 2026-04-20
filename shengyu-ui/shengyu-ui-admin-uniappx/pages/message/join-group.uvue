@@ -178,6 +178,23 @@
 		return groupInfo.value.needApproval ? '提交入群申请' : '加入群聊'
 	})
 
+	function resolveInviteErrorMessage(error: any, fallback: string): string {
+		const rawMsg = error && error.data && error.data.msg
+			? String(error.data.msg)
+			: (error && error.msg ? String(error.msg) : (error && error.message ? String(error.message) : ''))
+		const msg = rawMsg.trim()
+		if (msg === '') {
+			return fallback
+		}
+		if (msg === '群组不存在') {
+			return '该邀请对应的群聊已不可用'
+		}
+		if (msg.indexOf('邀请') !== -1 && (msg.indexOf('失效') !== -1 || msg.indexOf('过期') !== -1)) {
+			return msg
+		}
+		return msg
+	}
+
 	/**
 	 * 验证邀请码
 	 */
@@ -214,13 +231,7 @@
 		} catch (e : any) {
 			console.error('[JoinGroup] 验证邀请码失败:', e)
 			isValid.value = false
-			
-			// 解析错误信息
-			if (e && e.data && e.data.msg) {
-				errorMessage.value = e.data.msg
-			} else {
-				errorMessage.value = '验证失败，请稍后重试'
-			}
+			errorMessage.value = resolveInviteErrorMessage(e, '验证失败，请稍后重试')
 		} finally {
 			loading.value = false
 		}
@@ -326,22 +337,23 @@
 
 			setTimeout(() => {
 				uni.redirectTo({
-					url: `/pages/message/chat?targetId=${encodeIdParam(resultGroupId)}&targetType=2&entryMode=latest`
+					url: `/pages/message/chat?groupId=${encodeIdParam(resultGroupId)}&targetId=${encodeIdParam(resultGroupId)}&targetType=2&type=group&entryMode=latest`
 				})
 			}, 1000)
 		} catch (e : any) {
 			console.error('[JoinGroup] 加入群聊失败:', e)
 
 			// 解析错误信息
-			let errorMsg = '加入失败，请稍后重试'
-			if (e && e.data && e.data.msg) {
-				errorMsg = e.data.msg
-				
-				// 检查是否已在群中
-				if (errorMsg.includes('已经是群成员') || errorMsg.includes('已在群中')) {
-					alreadyInGroup.value = true
-					return
-				}
+			let errorMsg = resolveInviteErrorMessage(e, '加入失败，请稍后重试')
+			if (errorMsg.includes('已经是群成员') || errorMsg.includes('已在群中')) {
+				alreadyInGroup.value = true
+				return
+			}
+			if (errorMsg === '该邀请对应的群聊已不可用') {
+				hasVerifyAttempted.value = true
+				isValid.value = false
+				errorMessage.value = errorMsg
+				return
 			}
 
 			uni.showToast({
@@ -359,7 +371,7 @@
 	 */
 	function handleViewGroup() {
 		uni.redirectTo({
-			url: `/pages/message/chat?targetId=${encodeIdParam(groupId.value)}&targetType=2&entryMode=latest`
+			url: `/pages/message/chat?groupId=${encodeIdParam(groupId.value)}&targetId=${encodeIdParam(groupId.value)}&targetType=2&type=group&entryMode=latest`
 		})
 	}
 

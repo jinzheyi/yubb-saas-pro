@@ -145,20 +145,12 @@ public class ImGroupServiceImpl implements ImGroupService {
 
         // 添加群成员
         for (Long memberId : memberIds) {
-            // 添加群成员
-            ImGroupUserDO groupUser = new ImGroupUserDO();
-            groupUser.setGroupId(group.getId());
-            groupUser.setUserId(memberId);
-            groupUser.setJoinTime(LocalDateTime.now());
-            // 群主角色
-            if (memberId.equals(userId)) {
-                groupUser.setRole(ImGroupMemberRoleEnum.OWNER.getRole());
-            } else {
-                groupUser.setRole(ImGroupMemberRoleEnum.MEMBER.getRole());
-            }
-            groupUserMapper.insert(groupUser);
+            Integer role = memberId.equals(userId)
+                    ? ImGroupMemberRoleEnum.OWNER.getRole()
+                    : ImGroupMemberRoleEnum.MEMBER.getRole();
+            upsertGroupMember(group.getId(), memberId, role);
             log.info("[ImGroupService] 添加群成员成功, groupId: {}, memberId: {}, role: {}", 
-                    group.getId(), memberId, groupUser.getRole());
+                    group.getId(), memberId, role);
         }
 
         ImGroupConversationRefreshMessage refreshMessage = new ImGroupConversationRefreshMessage();
@@ -240,7 +232,7 @@ public class ImGroupServiceImpl implements ImGroupService {
         List<ImGroupUserDO> members = groupUserMapper.selectListByGroupId(groupId);
         List<Long> memberIds = members.stream().map(ImGroupUserDO::getUserId).collect(Collectors.toList());
         for (ImGroupUserDO member : members) {
-            groupUserMapper.deleteById(member.getId());
+            deleteGroupMemberRelation(groupId, member.getUserId(), member.getId());
         }
 
         ImGroupConversationRefreshMessage refreshMessage = new ImGroupConversationRefreshMessage();
@@ -276,7 +268,7 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
 
         // 删除群成员
-        groupUserMapper.deleteById(groupUser.getId());
+        deleteGroupMemberRelation(groupId, userId, groupUser.getId());
 
         // 更新群成员数量
         group.setMemberCount(group.getMemberCount() - 1);
@@ -385,12 +377,7 @@ public class ImGroupServiceImpl implements ImGroupService {
             }
 
             // 添加成员
-            ImGroupUserDO newMember = new ImGroupUserDO();
-            newMember.setGroupId(addReqVO.getGroupId());
-            newMember.setUserId(memberId);
-            newMember.setRole(ImGroupMemberRoleEnum.MEMBER.getRole());
-            newMember.setJoinTime(LocalDateTime.now());
-            groupUserMapper.insert(newMember);
+            upsertGroupMember(addReqVO.getGroupId(), memberId, ImGroupMemberRoleEnum.MEMBER.getRole());
 
             ImGroupJoinRequestDO pendingRequest = groupJoinRequestMapper.selectPendingByGroupIdAndApplicantUserId(addReqVO.getGroupId(), memberId);
             if (pendingRequest != null) {
@@ -417,6 +404,12 @@ public class ImGroupServiceImpl implements ImGroupService {
             refreshMessage.setMemberIds(addedMemberIds);
             refreshMessage.setConversationType(ImConversationTypeEnum.GROUP.getType());
             groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
+
+            final String tipContent = buildGroupMembersAddedTipContent(addedMemberIds);
+            runAfterCommit(() -> {
+                persistGroupSystemTipConversationUpdate(addReqVO.getGroupId(), userId, tipContent, tipContent);
+                pushGroupMemberAddedNotify(addReqVO.getGroupId(), addedMemberIds, userId, tipContent);
+            });
         }
 
         log.info("[ImGroupService] 添加群成员成功, groupId: {}, addedCount: {}", addReqVO.getGroupId(), addedCount);
@@ -451,7 +444,7 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
 
         // 删除群成员
-        groupUserMapper.deleteById(memberToRemove.getId());
+        deleteGroupMemberRelation(groupId, memberUserId, memberToRemove.getId());
 
         // 更新群成员数量
         group.setMemberCount(group.getMemberCount() - 1);
@@ -467,6 +460,12 @@ public class ImGroupServiceImpl implements ImGroupService {
         refreshMessage.setMemberIds(java.util.Collections.singletonList(memberUserId));
         refreshMessage.setConversationType(ImConversationTypeEnum.GROUP.getType());
         groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
+
+        final String tipContent = buildGroupMemberRemovedTipContent(memberToRemove, memberUserId);
+        runAfterCommit(() -> {
+            persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent);
+            pushGroupMemberRemovedNotify(groupId, memberUserId, userId, tipContent);
+        });
 
         log.info("[ImGroupService] 移除群成员成功, groupId: {}, memberUserId: {}, 剩余成员数: {}",
                 groupId, memberUserId, group.getMemberCount());
@@ -734,6 +733,69 @@ public class ImGroupServiceImpl implements ImGroupService {
                         null, null, extra);
             } catch (Exception e) {
                 log.warn("[ImGroupService] 推送全员禁言状态失败, groupId: {}, targetUserId: {}, error: {}",
+                        groupId, targetUserId, e.getMessage(), e);
+            }
+        }
+    }
+
+    private void pushGroupMemberAddedNotify(Long groupId, List<Long> addedMemberIds, Long operatorUserId, String tipContent) {
+        List<Long> memberIds = getGroupMemberIds(groupId);
+        if (CollUtil.isEmpty(memberIds)) {
+            return;
+        }
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        String extra = JSONUtil.createObj()
+                .set("action", "group_member_added")
+                .set("groupId", String.valueOf(groupId))
+                .set("memberUserIds", addedMemberIds != null ? addedMemberIds.stream().map(String::valueOf).collect(Collectors.toList()) : new ArrayList<>())
+                .set("operatorUserId", operatorUserId != null ? String.valueOf(operatorUserId) : "")
+                .set("tipContent", tipContent != null ? tipContent : "")
+                .toString();
+        TextMessage body = TextMessage.newBuilder().setContent("GROUP_MEMBER_ADDED").build();
+        for (Long targetUserId : memberIds) {
+            try {
+                messageSender.sendToUserWithExtra(targetUserId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, targetUserId, groupId, tenantId,
+                        null, null, null,
+                        null, null, extra);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送群成员新增状态失败, groupId: {}, targetUserId: {}, error: {}",
+                        groupId, targetUserId, e.getMessage(), e);
+            }
+        }
+    }
+
+    private void pushGroupMemberRemovedNotify(Long groupId, Long memberUserId, Long operatorUserId, String tipContent) {
+        List<Long> memberIds = new ArrayList<>(getGroupMemberIds(groupId));
+        if (memberUserId != null && !memberIds.contains(memberUserId)) {
+            memberIds.add(memberUserId);
+        }
+        if (CollUtil.isEmpty(memberIds)) {
+            return;
+        }
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        String extra = JSONUtil.createObj()
+                .set("action", "group_member_removed")
+                .set("groupId", String.valueOf(groupId))
+                .set("memberUserId", memberUserId != null ? String.valueOf(memberUserId) : "")
+                .set("operatorUserId", operatorUserId != null ? String.valueOf(operatorUserId) : "")
+                .set("tipContent", tipContent != null ? tipContent : "")
+                .toString();
+        TextMessage body = TextMessage.newBuilder().setContent("GROUP_MEMBER_REMOVED").build();
+        for (Long targetUserId : memberIds) {
+            try {
+                messageSender.sendToUserWithExtra(targetUserId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, targetUserId, groupId, tenantId,
+                        null, null, null,
+                        null, null, extra);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送群成员移除状态失败, groupId: {}, targetUserId: {}, error: {}",
                         groupId, targetUserId, e.getMessage(), e);
             }
         }
@@ -1247,6 +1309,49 @@ public class ImGroupServiceImpl implements ImGroupService {
         return String.format("\"%s\" 已被解除禁言", memberName);
     }
 
+    private String buildGroupMembersAddedTipContent(List<Long> addedMemberIds) {
+        List<String> names = new ArrayList<>();
+        if (CollUtil.isNotEmpty(addedMemberIds)) {
+            for (Long memberUserId : addedMemberIds) {
+                if (memberUserId == null) {
+                    continue;
+                }
+                AdminUserDO user = userMapper.selectById(memberUserId);
+                String nickname = user != null && user.getNickname() != null ? user.getNickname().trim() : "";
+                if (!nickname.isEmpty()) {
+                    names.add(nickname);
+                }
+            }
+        }
+        if (names.isEmpty()) {
+            return "有新成员加入了群聊";
+        }
+        if (names.size() == 1) {
+            return String.format("\"%s\" 加入了群聊", names.get(0));
+        }
+        if (names.size() == 2) {
+            return String.format("\"%s\"、\"%s\" 加入了群聊", names.get(0), names.get(1));
+        }
+        return String.format("\"%s\"、\"%s\" 等%d人加入了群聊", names.get(0), names.get(1), names.size());
+    }
+
+    private String buildGroupMemberRemovedTipContent(ImGroupUserDO member, Long memberUserId) {
+        String memberName = "";
+        if (member != null && member.getNickname() != null) {
+            memberName = member.getNickname().trim();
+        }
+        if (memberName.isEmpty() && memberUserId != null) {
+            AdminUserDO user = userMapper.selectById(memberUserId);
+            if (user != null && user.getNickname() != null) {
+                memberName = user.getNickname().trim();
+            }
+        }
+        if (memberName.isEmpty()) {
+            memberName = "该成员";
+        }
+        return String.format("\"%s\" 已被移出群聊", memberName);
+    }
+
     private void runAfterCommit(Runnable task) {
         if (task == null) {
             return;
@@ -1627,13 +1732,27 @@ public class ImGroupServiceImpl implements ImGroupService {
         return tenantId != null ? tenantId : 0L;
     }
 
-    private void addApprovedMemberToGroup(ImGroupDO group, Long memberUserId, Long operatorUserId) {
+    private void upsertGroupMember(Long groupId, Long memberUserId, Integer role) {
+        ImGroupUserDO deletedMember = groupUserMapper.selectDeletedByGroupIdAndUserId(groupId, memberUserId);
+        if (deletedMember != null) {
+            groupUserMapper.reviveSoftDeleted(deletedMember.getId(), role, deletedMember.getNickname(), LocalDateTime.now(), null);
+            return;
+        }
         ImGroupUserDO groupUser = new ImGroupUserDO();
-        groupUser.setGroupId(group.getId());
+        groupUser.setGroupId(groupId);
         groupUser.setUserId(memberUserId);
-        groupUser.setRole(ImGroupMemberRoleEnum.MEMBER.getRole());
+        groupUser.setRole(role);
         groupUser.setJoinTime(LocalDateTime.now());
         groupUserMapper.insert(groupUser);
+    }
+
+    private void deleteGroupMemberRelation(Long groupId, Long memberUserId, Long relationId) {
+        groupUserMapper.hardDeleteSoftDeletedByGroupIdAndUserId(groupId, memberUserId);
+        groupUserMapper.deleteById(relationId);
+    }
+
+    private void addApprovedMemberToGroup(ImGroupDO group, Long memberUserId, Long operatorUserId) {
+        upsertGroupMember(group.getId(), memberUserId, ImGroupMemberRoleEnum.MEMBER.getRole());
 
         group.setMemberCount(group.getMemberCount() + 1);
         groupMapper.updateById(group);

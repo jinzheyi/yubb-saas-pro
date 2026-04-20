@@ -22,6 +22,12 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
                 .eq(ImChatUserDO::getDeletedByUser, false));
     }
 
+    default ImChatUserDO selectAnyByUserIdAndChatId(Long userId, Long chatId) {
+        return selectOne(new LambdaQueryWrapperX<ImChatUserDO>()
+                .eq(ImChatUserDO::getUserId, userId)
+                .eq(ImChatUserDO::getChatId, chatId));
+    }
+
     default List<ImChatUserDO> selectListByUserId(Long userId) {
         return selectList(new LambdaQueryWrapperX<ImChatUserDO>()
                 .eq(ImChatUserDO::getUserId, userId)
@@ -122,6 +128,12 @@ public interface ImChatUserMapper extends BaseMapperX<ImChatUserDO> {
                 .eq(ImChatUserDO::getUserId, userId)
                 .eq(ImChatUserDO::getChatId, chatId)
                 .set(ImChatUserDO::getDeletedByUser, true));
+    }
+
+    default int reviveSoftDeleted(Long id) {
+        return update(null, new LambdaUpdateWrapper<ImChatUserDO>()
+                .eq(ImChatUserDO::getId, id)
+                .set(ImChatUserDO::getDeletedByUser, false));
     }
 
     default int updateLastMessageAndIncrementUnread(Long id, Long lastMessageId, String lastMessageContent, LocalDateTime lastMessageTime,

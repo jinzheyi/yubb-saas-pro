@@ -1124,29 +1124,41 @@ public class ImConversationServiceImpl implements ImConversationService {
          return chatMapper.selectSingleChat(user1, user2, conversationType);
      }
 
-     private ImChatUserDO ensureChatUser(Long userId, Long chatId) {
-         ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
-         if (chatUser != null) {
-             return chatUser;
-         }
-         chatUser = new ImChatUserDO();
-         chatUser.setUserId(userId);
-         chatUser.setChatId(chatId);
-         chatUser.setUnreadCount(0);
-         chatUser.setIsPinned(false);
+    private ImChatUserDO ensureChatUser(Long userId, Long chatId) {
+        ImChatUserDO chatUser = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+        if (chatUser != null) {
+            return chatUser;
+        }
+        ImChatUserDO deletedChatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, chatId);
+        if (deletedChatUser != null) {
+            if (Boolean.TRUE.equals(deletedChatUser.getDeletedByUser())) {
+                chatUserMapper.reviveSoftDeleted(deletedChatUser.getId());
+                deletedChatUser.setDeletedByUser(false);
+            }
+            return deletedChatUser;
+        }
+        chatUser = new ImChatUserDO();
+        chatUser.setUserId(userId);
+        chatUser.setChatId(chatId);
+        chatUser.setUnreadCount(0);
+        chatUser.setIsPinned(false);
          chatUser.setNoDisturb(false);
          chatUser.setDeletedByUser(false);
         try {
             chatUserMapper.insert(chatUser);
         } catch (DuplicateKeyException e) {
-            ImChatUserDO existing = chatUserMapper.selectByUserIdAndChatId(userId, chatId);
+            ImChatUserDO existing = chatUserMapper.selectAnyByUserIdAndChatId(userId, chatId);
             if (existing != null) {
+                if (Boolean.TRUE.equals(existing.getDeletedByUser())) {
+                    chatUserMapper.reviveSoftDeleted(existing.getId());
+                    existing.setDeletedByUser(false);
+                }
                 return existing;
             }
             throw e;
         }
-         return chatUser;
-     }
+        return chatUser;
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)

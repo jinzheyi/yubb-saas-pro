@@ -1,5 +1,6 @@
 package com.shengyu.module.system.service.im;
 
+import com.shengyu.framework.tenant.core.util.TenantUtils;
 import com.shengyu.framework.websocket.core.session.NettySession;
 import com.shengyu.framework.websocket.core.session.NettySessionLifecycleListener;
 import org.springframework.stereotype.Component;
@@ -44,26 +45,42 @@ public class ImPresenceSessionLifecycleListener implements NettySessionLifecycle
 
     @Override
     public void onSessionAdded(NettySession session) {
-        ImPresenceSnapshot before = imPresenceService.getUserPresence(session != null ? session.getUserId() : null);
-        imPresenceService.markSessionOnline(session);
-        ImPresenceSnapshot after = imPresenceService.getUserPresence(session != null ? session.getUserId() : null);
-        if (session != null && hasMeaningfulPresenceChange(before, after)) {
-            imPresencePushService.pushPresenceUpdate(session.getUserId(), after);
-        }
+        runWithSessionTenant(session, () -> {
+            ImPresenceSnapshot before = imPresenceService.getUserPresence(session.getUserId());
+            imPresenceService.markSessionOnline(session);
+            ImPresenceSnapshot after = imPresenceService.getUserPresence(session.getUserId());
+            if (hasMeaningfulPresenceChange(before, after)) {
+                imPresencePushService.pushPresenceUpdate(session.getUserId(), after);
+            }
+        });
     }
 
     @Override
     public void onSessionRemoved(NettySession session) {
-        ImPresenceSnapshot before = imPresenceService.getUserPresence(session != null ? session.getUserId() : null);
-        imPresenceService.markSessionOffline(session);
-        ImPresenceSnapshot after = imPresenceService.getUserPresence(session != null ? session.getUserId() : null);
-        if (session != null && hasMeaningfulPresenceChange(before, after)) {
-            imPresencePushService.pushPresenceUpdate(session.getUserId(), after);
-        }
+        runWithSessionTenant(session, () -> {
+            ImPresenceSnapshot before = imPresenceService.getUserPresence(session.getUserId());
+            imPresenceService.markSessionOffline(session);
+            ImPresenceSnapshot after = imPresenceService.getUserPresence(session.getUserId());
+            if (hasMeaningfulPresenceChange(before, after)) {
+                imPresencePushService.pushPresenceUpdate(session.getUserId(), after);
+            }
+        });
     }
 
     @Override
     public void onSessionBizActive(NettySession session) {
-        imPresenceService.refreshSessionBizActive(session);
+        runWithSessionTenant(session, () -> imPresenceService.refreshSessionBizActive(session));
+    }
+
+    private void runWithSessionTenant(NettySession session, Runnable runnable) {
+        if (session == null || runnable == null) {
+            return;
+        }
+        Long tenantId = session.getTenantId();
+        if (tenantId != null) {
+            TenantUtils.execute(tenantId, runnable);
+            return;
+        }
+        runnable.run();
     }
 }

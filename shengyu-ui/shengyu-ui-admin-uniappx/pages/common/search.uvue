@@ -814,6 +814,55 @@
 		handleSearchConfirm()
 	}
 
+	function buildGroupChatUrl(groupId: string, chatId: string, name: string): string {
+		const params: string[] = []
+		const normalizedGroupId = groupId != null ? String(groupId).trim() : ''
+		const normalizedChatId = chatId != null ? String(chatId).trim() : ''
+		if (normalizedChatId !== '' && normalizedChatId !== '0') {
+			params.push(`chatId=${encodeIdParam(normalizedChatId)}`)
+		}
+		if (normalizedGroupId !== '' && normalizedGroupId !== '0') {
+			const encodedGroupId = encodeIdParam(normalizedGroupId)
+			params.push(`groupId=${encodedGroupId}`)
+			params.push(`targetId=${encodedGroupId}`)
+			params.push('targetType=2')
+			params.push('type=group')
+		}
+		if (name != null && String(name).trim() !== '') {
+			params.push(`name=${encodeURIComponent(String(name))}`)
+		}
+		params.push('entryMode=latest')
+		return `/pages/message/chat?${params.join('&')}`
+	}
+
+	function buildMessageChatUrl(item: ResultUiItem): string {
+		const params: string[] = []
+		const chatId = item.chatId != null ? String(item.chatId).trim() : ''
+		if (chatId !== '' && chatId !== '0') {
+			params.push(`chatId=${encodeIdParam(chatId)}`)
+		}
+		const conversationType = resolveConversationType(item.meta, item.meta)
+		const groupId = safeString(item.meta && (item.meta.groupId != null ? item.meta.groupId : item.meta.targetId))
+		if (conversationType === 2 && groupId !== '' && groupId !== '0') {
+			const encodedGroupId = encodeIdParam(groupId)
+			params.push(`groupId=${encodedGroupId}`)
+			params.push(`targetId=${encodedGroupId}`)
+			params.push('targetType=2')
+			params.push('type=group')
+		}
+		params.push('entryMode=anchor')
+		const messageId = item.messageId || item.id
+		const seq = item.sequence
+		if (seq != null && String(seq) !== '' && String(seq) !== '0') {
+			params.push(`anchorSequence=${encodeURIComponent(String(seq))}`)
+		} else {
+			params.push(`anchorMessageId=${encodeURIComponent(messageId)}`)
+		}
+		params.push(`messageId=${encodeURIComponent(messageId)}`)
+		params.push('highlight=true')
+		return `/pages/message/chat?${params.join('&')}`
+	}
+
 	function handleResultClick(item: ResultUiItem): void {
 		if (item.type === 'contact') {
 			const userIdParam = encodeIdParam(item.id)
@@ -825,7 +874,7 @@
 
 		if (item.type === 'group') {
 			uni.navigateTo({
-				url: `/pages/message/chat?chatId=${encodeIdParam(item.chatId)}&entryMode=latest`
+				url: buildGroupChatUrl(item.id, item.chatId, item.title)
 			})
 			return
 		}
@@ -837,10 +886,7 @@
 			if (!chatId || chatId === '0' || !messageId || messageId === '0') {
 				return
 			}
-			const url = seq != null && String(seq) !== '' && String(seq) !== '0'
-				? `/pages/message/chat?chatId=${encodeIdParam(chatId)}&entryMode=anchor&anchorSequence=${encodeURIComponent(seq)}&messageId=${encodeURIComponent(messageId)}&highlight=true`
-				: `/pages/message/chat?chatId=${encodeIdParam(chatId)}&entryMode=anchor&anchorMessageId=${encodeURIComponent(messageId)}&messageId=${encodeURIComponent(messageId)}&highlight=true`
-			uni.navigateTo({ url: url })
+			uni.navigateTo({ url: buildMessageChatUrl(item) })
 			return
 		}
 	}

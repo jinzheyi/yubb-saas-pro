@@ -70,6 +70,7 @@
 	import { MessageService } from '../../services/message-service.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 	import { decodeIdParam } from '../../utils/id-param.uts'
+	import { armGroupLifecycleErrorToastSuppression, finalizeGroupLifecycleExit, resolveGroupLifecycleErrorNotice } from '../../utils/chat-setting-actions.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -83,6 +84,7 @@
 	let unsubscribeTheme: (() => void) | null = null
 	let joinRequestCreatedHandler : ((payload : any) => void) | null = null
 	let joinRequestAdminRefreshHandler : ((payload : any) => void) | null = null
+	let lifecycleRedirecting = false
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 		theme.value = tokens
@@ -130,18 +132,25 @@
 	}
 
 	async function loadRequests() {
-		if (!groupId.value) {
+		if (!groupId.value || lifecycleRedirecting) {
 			return
 		}
 		try {
 			loading.value = true
 			const status = activeTab.value === 'pending' ? 1 : null
+			armGroupLifecycleErrorToastSuppression(3000)
 			const result = await getGroupJoinRequests(groupId.value, status as any)
 			const mapped = Array.isArray(result) ? result.map((item : any) => mapRequestItem(item)) : []
 			requestList.value = activeTab.value === 'pending' ? mapped : mapped.filter((item : any) => item.status !== 1)
 		} catch (e) {
 			console.error('[GroupJoinRequests] 加载申请列表失败:', e)
 			requestList.value = []
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+			if (lifecycleNotice !== '') {
+				lifecycleRedirecting = true
+				finalizeGroupLifecycleExit(groupId.value, '', lifecycleNotice)
+				return
+			}
 			uni.showToast({
 				title: '加载失败',
 				icon: 'none'
@@ -169,6 +178,7 @@
 		}
 		try {
 			processingRequestId.value = item.id
+			armGroupLifecycleErrorToastSuppression(3000)
 			await approveGroupJoinRequest(item.id)
 			badgeService.ensureFresh(0)
 			uni.showToast({
@@ -178,6 +188,12 @@
 			await loadRequests()
 		} catch (e) {
 			console.error('[GroupJoinRequests] 通过申请失败:', e)
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+			if (lifecycleNotice !== '') {
+				lifecycleRedirecting = true
+				finalizeGroupLifecycleExit(groupId.value, '', lifecycleNotice)
+				return
+			}
 			uni.showToast({
 				title: '操作失败',
 				icon: 'none'
@@ -200,6 +216,7 @@
 				}
 				try {
 					processingRequestId.value = item.id
+					armGroupLifecycleErrorToastSuppression(3000)
 					await rejectGroupJoinRequest(item.id, '管理员已拒绝')
 					badgeService.ensureFresh(0)
 					uni.showToast({
@@ -209,6 +226,12 @@
 					await loadRequests()
 				} catch (e) {
 					console.error('[GroupJoinRequests] 拒绝申请失败:', e)
+					const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+					if (lifecycleNotice !== '') {
+						lifecycleRedirecting = true
+						finalizeGroupLifecycleExit(groupId.value, '', lifecycleNotice)
+						return
+					}
 					uni.showToast({
 						title: '操作失败',
 						icon: 'none'

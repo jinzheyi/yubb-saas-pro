@@ -549,6 +549,7 @@
 	import { parseMessageText as parseEmojiTokens, type MessageToken as EmojiToken } from '../../utils/emojiParser.uts'
 	import { getCustomStickers, StickerItem, refreshCustomStickers, uploadCustomSticker, collectMessageToSticker, touchStickerRecent, hasCollectedSticker } from '../../utils/stickerManager.uts'
 	import { messageService, MessageItem as ServiceMessageItem, ConversationItem, MessageStatus } from '../../services/message-service.uts'
+	import { conversationService } from '../../services/conversation-service.uts'
 	import { badgeService } from '../../services/badge-service.uts'
 	import { MessageType, WebSocketState, wsManager } from '../../utils/websocket.uts'
 	import { getMessageWindow, getMessageHistory, recallMessage, deleteMessage, getRecallConfig, markVoicePlayed as markVoicePlayedApi, markVoicePlayedBatch, getVoicePlayedStatus } from '../../api/message.uts'
@@ -578,6 +579,7 @@
 	import { uploadGroupFile, getFilePresignedGetUrl } from '../../api/file.uts'
 	import { navToFilePreview, navToStickerManage } from '../../utils/nav.uts'
 	import { navToSecureBrowser } from '../../utils/secure-browser.uts'
+	import { armGroupLifecycleErrorToastSuppression, finalizeGroupLifecycleExit, GROUP_LIFECYCLE_NOTICE_KEY, resolveGroupLifecycleErrorNotice, SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL_KEY } from '../../utils/chat-setting-actions.uts'
 	import { readReceiptService } from '../../services/read-receipt-service.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import { getChatBubbleConfig, subscribeChatBubbleChange, type ChatBubbleConfig } from '../../store/chat-bubble.uts'
@@ -600,6 +602,7 @@
 	const groupMuteAll = ref(false)
 	const groupMyRole = ref(0)
 	const selfMuteEndTime = ref(0)
+	const groupMembershipBlocked = ref(false)
 	const groupMuteStateLoading = ref(false)
 	const singleChatOnline = ref(false)
 	const singleChatOnlineDeviceTypes = ref<number[]>([])
@@ -662,10 +665,13 @@
 	let singlePresenceRefreshDebounceTimer : any = null
 	let groupMuteRefreshTask : Promise<void> | null = null
 	let groupMuteRefreshQueued = false
+	let groupRemovalRedirecting = false
 	const muteStateNowTs = ref<number>(Date.now())
 	let muteStateNowTimer: any = null
 	let lastGroupMuteTipSignature = ''
 	let lastGroupMuteTipAt = 0
+	const GROUP_REMOVAL_NOTICE_KEY = GROUP_LIFECYCLE_NOTICE_KEY
+	const SUPPRESS_CONVERSATION_NOT_FOUND_TOAST_UNTIL_KEY = SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL_KEY
 
 	const canBypassGroupMuteAll = computed(() : boolean => {
 		return groupMyRole.value === 2 || groupMyRole.value === 1
@@ -679,6 +685,9 @@
 		if (chatType.value !== 'group') {
 			return false
 		}
+		if (groupMembershipBlocked.value) {
+			return true
+		}
 		if (selfMutedInGroup.value) {
 			return true
 		}
@@ -688,6 +697,9 @@
 	const groupSendRestrictionHint = computed(() : string => {
 		if (chatType.value !== 'group') {
 			return ''
+		}
+		if (groupMembershipBlocked.value) {
+			return '你已被移出群聊，无法发送消息'
 		}
 		if (selfMutedInGroup.value) {
 			return buildMuteUntilHint(selfMuteEndTime.value)
@@ -1120,6 +1132,7 @@
 			groupMuteAll.value = false
 			groupMyRole.value = 0
 			selfMuteEndTime.value = 0
+			groupMembershipBlocked.value = false
 			return
 		}
 		const gid = groupId.value != null ? String(groupId.value) : ''
@@ -1138,6 +1151,7 @@
 		groupMuteStateLoading.value = true
 		groupMuteRefreshTask = (async () : Promise<void> => {
 			try {
+				armGroupLifecycleErrorToastSuppression(3000)
 				const groupInfo = await groupService.getGroupInfo(gid)
 				const members = await groupService.getGroupMembers(gid)
 				if (groupInfo != null) {
@@ -1150,20 +1164,28 @@
 					groupMuteAll.value = false
 				}
 				let nextMuteEndTime = 0
+				let selfFound = false
 				for (let i = 0; i < members.length; i++) {
 					const member = members[i]
 					const uid = member != null && member.userId != null ? String(member.userId) : ''
 					if (uid !== currentUserId.value) {
 						continue
 					}
+					selfFound = true
 					if (member.role != null) {
 						groupMyRole.value = Number(member.role)
 					}
 					nextMuteEndTime = member.muteEndTime != null ? Number(member.muteEndTime) : 0
 					break
 				}
+				if (members.length > 0) {
+					groupMembershipBlocked.value = !selfFound
+				}
 				selfMuteEndTime.value = nextMuteEndTime > 0 ? nextMuteEndTime : 0
 			} catch (e) {
+				if (handleGroupLifecycleRequestError(e, '你已不在该群聊')) {
+					return
+				}
 				console.warn('[Chat] refreshGroupInteractionState failed:', e)
 			} finally {
 				groupMuteStateLoading.value = false
@@ -2008,7 +2030,10 @@
 				return
 			}
 			const action = extraObj.action != null ? String(extraObj.action) : ''
-			if (action !== 'group_member_mute_changed' && action !== 'group_mute_all_changed') {
+			if (action !== 'group_member_mute_changed'
+				&& action !== 'group_mute_all_changed'
+				&& action !== 'group_member_added'
+				&& action !== 'group_member_removed') {
 				return
 			}
 			const notifyGroupId = extraObj.groupId != null ? String(extraObj.groupId) : ''
@@ -2037,6 +2062,42 @@
 						? (muted ? buildMuteUntilHint(selfMuteEndTime.value) : '你已被解除禁言')
 						: (muted ? '有群成员被禁言' : '有群成员被解除禁言')),
 					`${action}_${notifyGroupId}_${memberUserId}_${muted ? '1' : '0'}_${selfMuteEndTime.value}_${tipContent}`
+				)
+			}
+			if (action === 'group_member_added') {
+				let currentUserAdded = false
+				try {
+					const memberUserIds = extraObj.memberUserIds
+					if (Array.isArray(memberUserIds)) {
+						for (let i = 0; i < memberUserIds.length; i++) {
+							const nextId = memberUserIds[i] != null ? String(memberUserIds[i]) : ''
+							if (nextId !== '' && nextId === currentUserId.value) {
+								currentUserAdded = true
+								break
+							}
+						}
+					}
+				} catch (e) {
+					currentUserAdded = false
+				}
+				if (currentUserAdded) {
+					groupMembershipBlocked.value = false
+					void recoverGroupConversationAfterMembershipRestore()
+				}
+				appendGroupMuteStatusTip(
+					tipContent !== '' ? tipContent : '有新成员加入了群聊',
+					`${action}_${notifyGroupId}_${tipContent}`
+				)
+			}
+			if (action === 'group_member_removed') {
+				const memberUserId = extraObj.memberUserId != null ? String(extraObj.memberUserId) : ''
+				if (memberUserId === currentUserId.value) {
+					redirectAfterRemovedFromGroup(tipContent !== '' ? tipContent : '你已被移出群聊')
+					return
+				}
+				appendGroupMuteStatusTip(
+					tipContent !== '' ? tipContent : '有群成员被移出群聊',
+					`${action}_${notifyGroupId}_${memberUserId}_${tipContent}`
 				)
 			}
 			void refreshGroupInteractionState(true)
@@ -2096,6 +2157,33 @@
 		})()
 	}
 
+	async function recoverGroupConversationAfterMembershipRestore(): Promise<void> {
+		try {
+			const convServiceModule = await import('../../services/conversation-service.uts')
+			const cs = (convServiceModule as any).conversationService
+			if (cs != null) {
+				await cs.syncConversationsIncrementally(false)
+				if ((!chatId.value || chatId.value === '' || chatId.value === '0') && targetId.value && targetId.value !== '' && targetId.value !== '0') {
+					const cachedChatId = cs.getCachedChatIdByTarget(targetId.value, 2)
+					if (cachedChatId != null && cachedChatId !== '' && cachedChatId !== '0') {
+						chatId.value = String(cachedChatId)
+					}
+				}
+			}
+			await hydrateConversationMetaByChatId()
+			await refreshGroupInteractionState(true)
+			try {
+				if (chatId.value && chatId.value !== '' && chatId.value !== '0') {
+					messageService.setActiveChatId(chatId.value)
+				}
+			} catch (e) {
+				// ignore
+			}
+		} catch (e) {
+			console.warn('[Chat] recover group conversation after membership restore failed:', e)
+		}
+	}
+
 	let resolveChatIdTask : Promise<void> | null = null
 
 	async function ensureChatIdByTargetIfNeeded(showErrorToast: boolean = false): Promise<void> {
@@ -2113,6 +2201,9 @@
 			try {
 				console.log('[Chat] 没有 chatId，查询会话 targetId:', targetId.value, 'type:', chatType.value)
 				const conversationType = chatType.value === 'group' ? 2 : 1
+				if (conversationType === 2) {
+					armGroupLifecycleErrorToastSuppression(3000)
+				}
 				const conversationResult = await getConversationByTarget(targetId.value, conversationType)
 				const resolvedChatId = conversationResult && (conversationResult.chatId != null ? conversationResult.chatId : conversationResult.id)
 				if (resolvedChatId != null) {
@@ -2122,6 +2213,9 @@
 					console.error('[Chat] 查询会话失败：返回数据无效', conversationResult)
 				}
 			} catch (e) {
+				if (handleGroupLifecycleRequestError(e, '你已不在该群聊')) {
+					return
+				}
 				console.error('[Chat] 查询会话失败:', e)
 				if (showErrorToast) {
 					uni.showToast({
@@ -3277,6 +3371,9 @@
 		loading.value = true
 		
 		try {
+			if (chatType.value === 'group') {
+				armGroupLifecycleErrorToastSuppression(3000)
+			}
 			// 1. 先从缓存加载（立即显示）
 			const cachedMessages = messageService.getMessages(chatId.value)
 			if (cachedMessages.length > 0) {
@@ -3355,6 +3452,9 @@
 			}
 			
 		} catch (e) {
+			if (handleGroupLifecycleRequestError(e, '你已不在该群聊')) {
+				return
+			}
 			console.error('[Chat] 加载消息失败:', e)
 			// 显示网络错误提示,允许用户重试
 			uni.showToast({
@@ -4304,8 +4404,28 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
+	function isGroupMemberChangeTipMsg(m: any): boolean {
+		try {
+			if (m == null || isRecalledFinalMsg(m)) {
+				return false
+			}
+			const senderId = (m as any).senderId != null ? String((m as any).senderId) : ''
+			if (senderId !== '0') {
+				return false
+			}
+			const content = (m as any).content != null ? String((m as any).content).trim() : ''
+			return content.indexOf('加入了群聊') > -1
+				|| content.indexOf('已被移出群聊') > -1
+		} catch (e) {
+			return false
+		}
+	}
+
 	function isCenterSystemTipMsg(m: any): boolean {
-		return isRecalledFinalMsg(m) || isGroupNoticeUpdateTipMsg(m) || isGroupMuteStatusTipMsg(m)
+		return isRecalledFinalMsg(m)
+			|| isGroupNoticeUpdateTipMsg(m)
+			|| isGroupMuteStatusTipMsg(m)
+			|| isGroupMemberChangeTipMsg(m)
 	}
 
 	function getMessagePreview(msg : MessageItem) : string {
@@ -5001,6 +5121,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			if (status === 3 || status === '3' || status === 5 || status === '5') {
 				nextMsg.status = 'failed'
 				messages.value.splice(idx, 1, nextMsg as MessageItem)
+				if (chatType.value === 'group' && meta != null && meta.denyCode != null) {
+					const denyCode = String(meta.denyCode)
+					if (denyCode === 'NOT_GROUP_MEMBER' || denyCode === 'GROUP_MEMBER_NOT_EXISTS') {
+						redirectAfterRemovedFromGroup(meta != null && meta.denyMessage != null && String(meta.denyMessage) !== ''
+							? String(meta.denyMessage)
+							: '你已被移出群聊')
+						return
+					}
+				}
 				if (meta != null && meta.denyMessage != null && String(meta.denyMessage) !== '') {
 					uni.showToast({
 						title: String(meta.denyMessage),
@@ -5047,6 +5176,46 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				uni.switchTab({ url: '/pages/message/message' })
 			}
 		})
+	}
+
+	function redirectAfterRemovedFromGroup(tipContent: string = ''): void {
+		if (groupRemovalRedirecting) {
+			return
+		}
+		groupRemovalRedirecting = true
+		groupMembershipBlocked.value = true
+		groupMuteAll.value = false
+		groupMyRole.value = 0
+		selfMuteEndTime.value = 0
+		const notice = tipContent !== '' ? tipContent : '你已被移出群聊'
+		try {
+			finalizeGroupLifecycleExit(groupId.value, chatId.value, notice)
+		} catch (e) {
+			setString(GROUP_REMOVAL_NOTICE_KEY, notice)
+			setString(SUPPRESS_CONVERSATION_NOT_FOUND_TOAST_UNTIL_KEY, String(Date.now() + 8000))
+			uni.switchTab({
+				url: '/pages/message/message',
+				fail: () => {
+					uni.navigateBack({
+						fail: () => {
+							groupRemovalRedirecting = false
+						}
+					})
+				}
+			})
+		}
+	}
+
+	function handleGroupLifecycleRequestError(error: any, fallbackNotice: string): boolean {
+		if (chatType.value !== 'group') {
+			return false
+		}
+		const notice = resolveGroupLifecycleErrorNotice(error, fallbackNotice)
+		if (notice === '') {
+			return false
+		}
+		redirectAfterRemovedFromGroup(notice)
+		return true
 	}
 
 	function toggleInputMode() {
@@ -9262,6 +9431,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		voiceScopeResolvePromise = Promise.resolve().then(async () => {
 			try {
+				if (chatType.value === 'group') {
+					armGroupLifecycleErrorToastSuppression(3000)
+				}
 				const conversationResult = await getConversationByTarget(target, 1)
 				const resolvedChatId = conversationResult && (conversationResult.chatId != null ? conversationResult.chatId : conversationResult.id)
 				const normalizedChatId = resolvedChatId != null ? resolvedChatId.toString() : ''
@@ -9276,6 +9448,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				}
 				return true
 			} catch (e) {
+				if (handleGroupLifecycleRequestError(e, '你已不在该群聊')) {
+					return false
+				}
 				console.error('[Chat] 初始化语音会话作用域失败:', e)
 				if (showError) {
 					uni.showToast({ title: '会话初始化失败，请稍后重试', icon: 'none' })
@@ -9723,7 +9898,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				uploadStatus: 'failed',
 				uploadError: '会话初始化失败'
 			})
-			uni.showToast({ title: '会话初始化失败，请重试', icon: 'none' })
+			if (!groupRemovalRedirecting) {
+				uni.showToast({ title: '会话初始化失败，请重试', icon: 'none' })
+			}
 			return
 		}
 		patchMessageInList(draft.messageId, {

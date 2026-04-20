@@ -97,6 +97,7 @@
 	import { getUserIdStr } from '../../store/user.uts'
 	import { formatDateTime } from '../../utils/date.uts'
 	import { decodeIdParam } from '../../utils/id-param.uts'
+	import { armGroupLifecycleErrorToastSuppression, finalizeGroupLifecycleExit, resolveGroupLifecycleErrorNotice } from '../../utils/chat-setting-actions.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -127,6 +128,7 @@
 	const loading = ref(false)
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	let unsubscribeTheme: (() => void) | null = null
+	let lifecycleRedirecting = false
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 		theme.value = tokens
@@ -136,9 +138,10 @@
 	 * 加载群组信息
 	 */
 	async function loadGroupInfo() {
-		if (!groupId.value) return
+		if (!groupId.value || lifecycleRedirecting) return
 		
 		try {
+			armGroupLifecycleErrorToastSuppression(3000)
 			loading.value = true
 			const result = await getGroup(groupId.value)
 			
@@ -164,6 +167,12 @@
 			}
 		} catch (e) {
 			console.error('[GroupNotice] 加载群组信息失败:', e)
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+			if (lifecycleNotice !== '') {
+				lifecycleRedirecting = true
+				finalizeGroupLifecycleExit(groupId.value, '', lifecycleNotice)
+				return
+			}
 			uni.showToast({
 				title: '加载失败',
 				icon: 'none'
@@ -278,7 +287,7 @@
 		
 		try {
 			loading.value = true
-			
+			armGroupLifecycleErrorToastSuppression(3000)
 			await updateGroupNotice({
 				groupId: groupId.value,
 				notice: newNotice,
@@ -309,6 +318,12 @@
 			})
 		} catch (e) {
 			console.error('[GroupNotice] 发布群公告失败:', e)
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+			if (lifecycleNotice !== '') {
+				lifecycleRedirecting = true
+				finalizeGroupLifecycleExit(groupId.value, '', lifecycleNotice)
+				return
+			}
 			uni.showToast({
 				title: '发布失败',
 				icon: 'none'

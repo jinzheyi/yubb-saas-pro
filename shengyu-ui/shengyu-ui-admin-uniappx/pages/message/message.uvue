@@ -39,6 +39,15 @@
 
 		<view class="section-divider" :style="{ backgroundColor: theme.pageBg }"></view>
 
+		<view
+			v-if="inlineNoticeVisible"
+			class="inline-notice"
+			:style="{ backgroundColor: theme.brandPrimarySoft, borderBottomColor: theme.borderColor }"
+		>
+			<text class="inline-notice-text" :style="{ color: theme.brandPrimary }">{{ inlineNoticeText }}</text>
+			<text class="iconfont inline-notice-close" :style="{ color: theme.textTertiary }" @click="hideInlineNotice">&#xeb08;</text>
+		</view>
+
 		<scroll-view
 			class="content-scroll"
 			scroll-y="true"
@@ -175,6 +184,7 @@
 	import { encodeIdParam } from '../../utils/id-param.uts'
 	import { parseMessageText as parseEmojiTokens, type MessageToken as EmojiToken } from '../../utils/emojiParser.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import { getString, remove } from '../../utils/storage.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
@@ -211,10 +221,14 @@
 	let refreshReleaseTimer = 0
 	let refreshWatchdogTimer = 0
 	let unsubscribeTheme: (() => void) | null = null
+	const inlineNoticeVisible = ref(false)
+	const inlineNoticeText = ref('')
+	let inlineNoticeTimer = 0
 
 	const FOREGROUND_SYNC_COOLDOWN_MS = 1500
 	const FOREGROUND_SYNC_STALE_MS = 5000
 	const FOREGROUND_SYNC_AFTER_HIDE_MS = 1200
+	const GROUP_REMOVAL_NOTICE_KEY = 'IM_GROUP_REMOVAL_NOTICE'
 
 	// 角标监听器
 	const badgeListener = {
@@ -373,6 +387,12 @@
 			wsManager.setProtocols(['im.pb.v1'])
 			void wsManager.ensureConnected(4000)
 		}
+		const groupRemovalNotice = getString(GROUP_REMOVAL_NOTICE_KEY, '')
+		if (groupRemovalNotice !== '') {
+			remove(GROUP_REMOVAL_NOTICE_KEY)
+			showInlineNotice(groupRemovalNotice)
+			void conversationService.syncConversationsIncrementally(false)
+		}
 		tabBarBadgeService.refresh()
 		syncFromConversationCache()
 		const now = Date.now()
@@ -388,6 +408,7 @@
 		wsManager.setRealtimeBizActive(false)
 		lastPageHideAt = Date.now()
 		forceStopRefreshIndicator()
+		clearInlineNoticeTimer()
 	})
 
 	onUnload(() => {
@@ -398,7 +419,35 @@
 		wsManager.setRealtimeBizActive(false)
 		lastPageHideAt = Date.now()
 		forceStopRefreshIndicator()
+		clearInlineNoticeTimer()
 	})
+
+	function clearInlineNoticeTimer(): void {
+		if (inlineNoticeTimer !== 0) {
+			clearTimeout(inlineNoticeTimer)
+			inlineNoticeTimer = 0
+		}
+	}
+
+	function hideInlineNotice(): void {
+		clearInlineNoticeTimer()
+		inlineNoticeVisible.value = false
+	}
+
+	function showInlineNotice(text: string): void {
+		const nextText = text != null ? String(text).trim() : ''
+		if (nextText === '') {
+			hideInlineNotice()
+			return
+		}
+		clearInlineNoticeTimer()
+		inlineNoticeText.value = nextText
+		inlineNoticeVisible.value = true
+		inlineNoticeTimer = setTimeout(() => {
+			inlineNoticeVisible.value = false
+			inlineNoticeTimer = 0
+		}, 5000)
+	}
 
 	function normalizeConversationType(value: any): number {
 		return Number(value) === 2 ? 2 : 1
@@ -1014,6 +1063,27 @@
 	.content-scroll {
 		flex: 1;
 		height: 0;
+	}
+
+	.inline-notice {
+		min-height: 40px;
+		padding: 10px 16px;
+		flex-direction: row;
+		align-items: center;
+		border-bottom-width: 1px;
+	}
+
+	.inline-notice-text {
+		flex: 1;
+		font-size: 13px;
+		line-height: 18px;
+		font-weight: 500;
+	}
+
+	.inline-notice-close {
+		font-size: 14px;
+		margin-left: 12px;
+		padding: 4px;
 	}
 
 	/* 分类图标栏 - 更加简洁 */

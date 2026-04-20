@@ -82,6 +82,7 @@
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { getUserIdStr } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
+	import { armGroupLifecycleErrorToastSuppression, finalizeGroupLifecycleExit, resolveGroupLifecycleErrorNotice } from '../../utils/chat-setting-actions.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -105,6 +106,7 @@
 	let memberActionSheetOpening = false
 	let lastActionSheetMemberId = ''
 	let lastActionSheetAt = 0
+	let lifecycleRedirecting = false
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 		theme.value = tokens
@@ -183,18 +185,26 @@
 	 * 加载群成员列表
 	 */
 	async function loadMembers() {
-		if (!groupId.value) return
+		if (!groupId.value || lifecycleRedirecting) return
 		
 		loading.value = true
 		try {
 			try {
+				armGroupLifecycleErrorToastSuppression(3000)
 				const groupInfo = await getGroup(groupId.value)
 				if (groupInfo != null && groupInfo.myRole != null) {
 					currentUserRole.value = Number(groupInfo.myRole)
 				}
 			} catch (e) {
+				const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+				if (lifecycleNotice !== '') {
+					lifecycleRedirecting = true
+					finalizeGroupLifecycleExit(groupId.value, '', lifecycleNotice)
+					return
+				}
 				// ignore
 			}
+			armGroupLifecycleErrorToastSuppression(3000)
 			const members = await getGroupMembers(groupId.value)
 			
 			if (members && Array.isArray(members)) {
@@ -250,6 +260,12 @@
 			}
 		} catch (e) {
 			console.error('[GroupMembers] 加载成员失败:', e)
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+			if (lifecycleNotice !== '') {
+				lifecycleRedirecting = true
+				finalizeGroupLifecycleExit(groupId.value, '', lifecycleNotice)
+				return
+			}
 			uni.showToast({
 				title: '加载失败',
 				icon: 'none'
@@ -505,6 +521,7 @@
 			// 逐个删除成员
 			for (let i = 0; i < members.length; i++) {
 				const member = members[i]
+				armGroupLifecycleErrorToastSuppression(3000)
 				await removeGroupMember(groupId.value, member.id.toString())
 				console.log('[GroupMembers] 删除成员成功:', member.name)
 			}
@@ -523,6 +540,12 @@
 		} catch (e) {
 			uni.hideLoading()
 			console.error('[GroupMembers] 删除成员失败:', e)
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '你已不在该群聊')
+			if (lifecycleNotice !== '') {
+				lifecycleRedirecting = true
+				finalizeGroupLifecycleExit(groupId.value, '', lifecycleNotice)
+				return
+			}
 			uni.showToast({
 				title: '删除失败',
 				icon: 'none'

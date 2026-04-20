@@ -128,6 +128,7 @@ import type { ThemeTokens } from '../../config/theme.uts'
 
 // 页面参数
 const chatId = ref<string>('')
+const groupId = ref<string>('')
 const groupName = ref<string>('')
 
 // 搜索相关
@@ -184,6 +185,9 @@ const getStartTimeMax = (): string => {
 onLoad((options: any) => {
   if (options.chatId) {
     chatId.value = decodeIdParam(options.chatId)
+  }
+  if (options.groupId) {
+    groupId.value = decodeIdParam(options.groupId)
   }
   if (options.groupName) {
     try {
@@ -506,8 +510,8 @@ const handleMessageClick = (message: any) => {
     return
   }
   const url = sequence !== ''
-    ? `/pages/message/chat?chatId=${chatIdParam}&entryMode=anchor&anchorSequence=${encodeURIComponent(sequence)}&messageId=${encodeURIComponent(mid)}&highlight=true`
-    : `/pages/message/chat?chatId=${chatIdParam}&entryMode=anchor&anchorMessageId=${encodeURIComponent(mid)}&messageId=${encodeURIComponent(mid)}&highlight=true`
+    ? `/pages/message/chat?chatId=${chatIdParam}${groupId.value ? `&type=group&groupId=${encodeIdParam(groupId.value)}&targetId=${encodeIdParam(groupId.value)}&targetType=2` : ''}&entryMode=anchor&anchorSequence=${encodeURIComponent(sequence)}&messageId=${encodeURIComponent(mid)}&highlight=true`
+    : `/pages/message/chat?chatId=${chatIdParam}${groupId.value ? `&type=group&groupId=${encodeIdParam(groupId.value)}&targetId=${encodeIdParam(groupId.value)}&targetType=2` : ''}&entryMode=anchor&anchorMessageId=${encodeURIComponent(mid)}&messageId=${encodeURIComponent(mid)}&highlight=true`
   uni.navigateTo({
     url: url
   })

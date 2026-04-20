@@ -32,6 +32,7 @@ import com.shengyu.module.system.enums.im.ImMessageTypeEnum;
 import com.shengyu.module.system.service.im.support.VoiceFileOwnershipValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -1727,6 +1728,14 @@ public class ImMessageServiceImpl implements ImMessageService {
         if (chatUser != null) {
             return chatUser;
         }
+        ImChatUserDO deletedChatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, chatId);
+        if (deletedChatUser != null) {
+            if (Boolean.TRUE.equals(deletedChatUser.getDeletedByUser())) {
+                chatUserMapper.reviveSoftDeleted(deletedChatUser.getId());
+                deletedChatUser.setDeletedByUser(false);
+            }
+            return deletedChatUser;
+        }
         chatUser = new ImChatUserDO();
         chatUser.setUserId(userId);
         chatUser.setChatId(chatId);
@@ -1734,7 +1743,19 @@ public class ImMessageServiceImpl implements ImMessageService {
         chatUser.setIsPinned(false);
         chatUser.setNoDisturb(false);
         chatUser.setDeletedByUser(false);
-        chatUserMapper.insert(chatUser);
+        try {
+            chatUserMapper.insert(chatUser);
+        } catch (DuplicateKeyException e) {
+            ImChatUserDO existing = chatUserMapper.selectAnyByUserIdAndChatId(userId, chatId);
+            if (existing != null) {
+                if (Boolean.TRUE.equals(existing.getDeletedByUser())) {
+                    chatUserMapper.reviveSoftDeleted(existing.getId());
+                    existing.setDeletedByUser(false);
+                }
+                return existing;
+            }
+            throw e;
+        }
         return chatUser;
     }
 

@@ -3,8 +3,31 @@ import { conversationService } from '../services/conversation-service.uts'
 import { groupService } from '../services/group-service.uts'
 import { messageService } from '../services/message-service.uts'
 
+export const GROUP_LIFECYCLE_NOTICE_KEY = 'IM_GROUP_REMOVAL_NOTICE'
+export const SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL_KEY = 'IM_SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL'
+
 function normalizeId(raw: any): string {
 	return raw != null ? String(raw).trim() : ''
+}
+
+function rememberGroupLifecycleNotice(notice: string): void {
+	const normalizedNotice = notice != null ? String(notice).trim() : ''
+	if (normalizedNotice !== '') {
+		try {
+			uni.setStorageSync(GROUP_LIFECYCLE_NOTICE_KEY, normalizedNotice)
+		} catch (e) {
+			// ignore
+		}
+	}
+	armGroupLifecycleErrorToastSuppression()
+}
+
+export function armGroupLifecycleErrorToastSuppression(durationMs: number = 8000): void {
+	try {
+		uni.setStorageSync(SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL_KEY, String(Date.now() + durationMs))
+	} catch (e) {
+		// ignore
+	}
 }
 
 export function cleanupConversationRuntime(chatId: string): void {
@@ -45,11 +68,50 @@ export async function deleteConversationForCurrentUser(chatId: string): Promise<
 	return false
 }
 
+export function finalizeGroupLifecycleExit(groupId: string, chatId: string, notice: string): void {
+	const normalizedGroupId = normalizeId(groupId)
+	const normalizedChatId = normalizeId(chatId)
+	rememberGroupLifecycleNotice(notice)
+	if (normalizedGroupId !== '') {
+		groupService.invalidateGroup(normalizedGroupId)
+		groupService.invalidateGroupMembers(normalizedGroupId)
+	}
+	if (normalizedChatId !== '') {
+		conversationService.removeConversationLocal(normalizedChatId)
+		cleanupConversationRuntime(normalizedChatId)
+	}
+	try {
+		messageService.setActiveChatAutoReadEnabled(false)
+		messageService.setActiveChatId(null)
+	} catch (e) {
+		// ignore
+	}
+	uni.switchTab({
+		url: '/pages/message/message'
+	})
+}
+
+export function resolveGroupLifecycleErrorNotice(error: any, fallbackNotice: string = ''): string {
+	const msg = error != null && error.msg != null ? String(error.msg).trim()
+		: (error != null && error.message != null ? String(error.message).trim() : '')
+	if (msg === '会话不存在') {
+		return fallbackNotice !== '' ? fallbackNotice : '该群聊已不可用'
+	}
+	if (msg === '群成员不存在') {
+		return fallbackNotice !== '' ? fallbackNotice : '你已不在该群聊'
+	}
+	if (msg === '群组不存在') {
+		return fallbackNotice !== '' ? fallbackNotice : '该群聊已被解散'
+	}
+	return ''
+}
+
 export async function quitGroupAndDeleteConversation(groupId: string, chatId: string): Promise<void> {
 	const normalizedGroupId = normalizeId(groupId)
 	if (normalizedGroupId === '') {
 		throw new Error('groupId is empty')
 	}
+	armGroupLifecycleErrorToastSuppression()
 	const quitSuccess = await groupService.quitGroup(normalizedGroupId)
 	if (!quitSuccess) {
 		throw new Error('quit group failed')
@@ -64,4 +126,23 @@ export async function quitGroupAndDeleteConversation(groupId: string, chatId: st
 		conversationService.removeConversationLocal(normalizedChatId)
 		cleanupConversationRuntime(normalizedChatId)
 	}
+	finalizeGroupLifecycleExit(normalizedGroupId, normalizedChatId, '已退出群聊')
+}
+
+export async function dissolveGroupAndDeleteConversation(groupId: string, chatId: string): Promise<void> {
+	const normalizedGroupId = normalizeId(groupId)
+	if (normalizedGroupId === '') {
+		throw new Error('groupId is empty')
+	}
+	armGroupLifecycleErrorToastSuppression()
+	const dismissSuccess = await groupService.dismissGroup(normalizedGroupId)
+	if (!dismissSuccess) {
+		throw new Error('dismiss group failed')
+	}
+	const normalizedChatId = normalizeId(chatId)
+	if (normalizedChatId !== '') {
+		conversationService.removeConversationLocal(normalizedChatId)
+		cleanupConversationRuntime(normalizedChatId)
+	}
+	finalizeGroupLifecycleExit(normalizedGroupId, normalizedChatId, '群聊已解散')
 }

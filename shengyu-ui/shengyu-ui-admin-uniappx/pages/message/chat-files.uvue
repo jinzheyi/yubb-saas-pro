@@ -79,6 +79,7 @@
 	import { decodeIdParam } from '../../utils/id-param.uts'
 	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
 	import { saveImageToAlbum } from '../../utils/qrcode.uts'
+	import { armGroupLifecycleErrorToastSuppression, finalizeGroupLifecycleExit, resolveGroupLifecycleErrorNotice } from '../../utils/chat-setting-actions.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -99,6 +100,7 @@
 	const pageSize = 20
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	let unsubscribeTheme: (() => void) | null = null
+	let lifecycleRedirecting = false
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 		theme.value = tokens
@@ -134,6 +136,9 @@
 	 * 加载文件列表
 	 */
 	async function loadFiles(isLoadMore: boolean = false) {
+		if (lifecycleRedirecting) {
+			return
+		}
 		if (!chatId.value) {
 			loadError.value = '会话信息未加载'
 			return
@@ -164,7 +169,9 @@
 			if (currentTab.value !== 'all') {
 				params.fileType = currentTab.value
 			}
-			
+			if (scene.value === 'group' && groupId.value) {
+				armGroupLifecycleErrorToastSuppression(3000)
+			}
 			const result = await getChatMediaList(params)
 			
 			if (result && result.list) {
@@ -205,6 +212,14 @@
 			}
 		} catch (e) {
 			console.error('[ChatFiles] 加载文件列表失败:', e)
+			if (scene.value === 'group' && groupId.value) {
+				const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+				if (lifecycleNotice !== '') {
+					lifecycleRedirecting = true
+					finalizeGroupLifecycleExit(groupId.value, chatId.value, lifecycleNotice)
+					return
+				}
+			}
 			loadError.value = '加载失败'
 			if (!isLoadMore) {
 				uni.showToast({

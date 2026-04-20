@@ -148,6 +148,29 @@
 		}
 	}
 
+	function buildAnchorChatUrl(item: SearchResultItem): string {
+		const chatId = item.chatId
+		const mid = item.messageId || item.id
+		const sequence = item.sequence != null ? String(item.sequence) : '0'
+		const params: string[] = [`chatId=${encodeIdParam(chatId)}`, 'entryMode=anchor', `messageId=${encodeURIComponent(mid)}`, 'highlight=true']
+		const raw = item.raw
+		const groupId = pickFromRaw(raw, ['groupId', 'group_id', 'targetId', 'target_id'])
+		const conversationType = pickFromRaw(raw, ['conversationType', 'conversation_type'])
+		if ((conversationType === '2' || groupId !== '') && groupId !== '0') {
+			const encodedGroupId = encodeIdParam(groupId)
+			params.push('type=group')
+			params.push(`groupId=${encodedGroupId}`)
+			params.push(`targetId=${encodedGroupId}`)
+			params.push('targetType=2')
+		}
+		if (sequence !== '' && sequence !== '0') {
+			params.push(`anchorSequence=${encodeURIComponent(sequence)}`)
+		} else {
+			params.push(`anchorMessageId=${encodeURIComponent(mid)}`)
+		}
+		return `/pages/message/chat?${params.join('&')}`
+	}
+
 	function handleItemClick(item: SearchResultItem) {
 		const raw = item.raw
 		const t = (item.type || '').toLowerCase()
@@ -163,19 +186,12 @@
 
 		const chatId = item.chatId
 		const mid = item.messageId || item.id
-		const sequence = item.sequence != null ? String(item.sequence) : '0'
 		if (!chatId || chatId === '0' || !mid || mid === '0') {
 			uni.showToast({ title: '无法定位消息', icon: 'none' })
 			return
 		}
-		if (sequence !== '' && sequence !== '0') {
-			uni.navigateTo({
-				url: `/pages/message/chat?chatId=${encodeIdParam(chatId)}&entryMode=anchor&anchorSequence=${encodeURIComponent(sequence)}&messageId=${encodeURIComponent(mid)}&highlight=true`
-			})
-			return
-		}
 		uni.navigateTo({
-			url: `/pages/message/chat?chatId=${encodeIdParam(chatId)}&entryMode=anchor&anchorMessageId=${encodeURIComponent(mid)}&messageId=${encodeURIComponent(mid)}&highlight=true`
+			url: buildAnchorChatUrl(item)
 		})
 	}
 

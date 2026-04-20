@@ -132,7 +132,7 @@
 					<text class="setting-label danger-text">清空聊天记录</text>
 				</view>
 				<view class="setting-item danger-item" @click="handleDeleteAndExit">
-					<text class="setting-label danger-text">删除并退出</text>
+					<text class="setting-label danger-text">{{ isOwner ? '解散群聊' : '退出群聊' }}</text>
 				</view>
 			</view>
 
@@ -209,7 +209,7 @@
 	import { getUserAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { getUserIdStr } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
-	import { clearConversationHistory, quitGroupAndDeleteConversation } from '../../utils/chat-setting-actions.uts'
+	import { armGroupLifecycleErrorToastSuppression, clearConversationHistory, dissolveGroupAndDeleteConversation, finalizeGroupLifecycleExit, quitGroupAndDeleteConversation, resolveGroupLifecycleErrorNotice } from '../../utils/chat-setting-actions.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -235,6 +235,7 @@
 	const muteAllUpdating = ref(false)
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	let unsubscribeTheme: (() => void) | null = null
+	let lifecycleRedirecting = false
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 		theme.value = tokens
@@ -286,6 +287,11 @@
 		return canManageJoinRequests.value
 	})
 
+	const isOwner = computed(() : boolean => {
+		const role = groupInfo.value != null && groupInfo.value.myRole != null ? Number(groupInfo.value.myRole) : 0
+		return role === 2
+	})
+
 	let joinRequestCreatedHandler : ((payload : any) => void) | null = null
 	let joinRequestAdminRefreshHandler : ((payload : any) => void) | null = null
 	
@@ -293,9 +299,10 @@
 	 * 加载群组信息
 	 */
 	async function loadGroupInfo() {
-		if (!groupId.value) return
+		if (!groupId.value || lifecycleRedirecting) return
 		
 		try {
+			armGroupLifecycleErrorToastSuppression(3000)
 			loading.value = true
 			const result = await getGroup(groupId.value)
 			if (result) {
@@ -311,6 +318,12 @@
 			}
 		} catch (e) {
 			console.error('[GroupSettings] 加载群组信息失败:', e)
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+			if (lifecycleNotice !== '') {
+				lifecycleRedirecting = true
+				finalizeGroupLifecycleExit(groupId.value, chatId.value, lifecycleNotice)
+				return
+			}
 			uni.showToast({
 				title: '加载群组信息失败',
 				icon: 'none'
@@ -324,9 +337,10 @@
 	 * 加载群成员列表
 	 */
 	async function loadGroupMembers() {
-		if (!groupId.value) return
+		if (!groupId.value || lifecycleRedirecting) return
 		
 		try {
+			armGroupLifecycleErrorToastSuppression(3000)
 			const members = await getGroupMembers(groupId.value)
 			
 			if (members && Array.isArray(members)) {
@@ -349,6 +363,11 @@
 			}
 		} catch (e) {
 			console.error('[GroupSettings] 加载群成员失败:', e)
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+			if (lifecycleNotice !== '') {
+				lifecycleRedirecting = true
+				finalizeGroupLifecycleExit(groupId.value, chatId.value, lifecycleNotice)
+			}
 		}
 	}
 	
@@ -356,9 +375,10 @@
 	 * 加载会话设置
 	 */
 	async function loadConversationSettings() {
-		if (!groupId.value) return
+		if (!groupId.value || lifecycleRedirecting) return
 		
 		try {
+			armGroupLifecycleErrorToastSuppression(3000)
 			let conversation = chatId.value ? conversationService.getConversation(chatId.value) : null
 			if (conversation == null) {
 				await conversationService.loadConversations()
@@ -382,6 +402,11 @@
 			}
 		} catch (e) {
 			console.error('[GroupSettings] 加载会话设置失败:', e)
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+			if (lifecycleNotice !== '') {
+				lifecycleRedirecting = true
+				finalizeGroupLifecycleExit(groupId.value, chatId.value, lifecycleNotice)
+			}
 		}
 	}
 
@@ -511,9 +536,10 @@
 	}
 
 	function handleChatHistory() {
+		const groupIdParam = encodeIdParam(groupId.value)
 		const chatIdParam = encodeIdParam(chatId.value)
 		uni.navigateTo({
-			url: `/pages/message/chat-history?chatId=${chatIdParam}&groupName=${encodeURIComponent(groupName.value)}`
+			url: `/pages/message/chat-history?chatId=${chatIdParam}&groupId=${groupIdParam}&groupName=${encodeURIComponent(groupName.value)}`
 		})
 	}
 
@@ -809,27 +835,26 @@
 
 	function handleDeleteAndExit() {
 		uni.showModal({
-			title: '退出群聊',
-			content: '退出后将不再接收此群消息，确定要退出吗？',
+			title: isOwner.value ? '解散群聊' : '退出群聊',
+			content: isOwner.value ? '解散后所有成员都将无法继续查看此群，确定要解散吗？' : '退出后将不再接收此群消息，确定要退出吗？',
 			success: async (res) => {
 				if (res.confirm) {
 					try {
-						await quitGroupAndDeleteConversation(groupId.value, chatId.value)
-						uni.showToast({
-							title: '已退出群聊',
-							icon: 'success'
-						})
-						
-						// 延迟返回，让用户看到提示
-						setTimeout(() => {
-							uni.navigateBack({
-								delta: 2 // 返回到消息列表页
-							})
-						}, 1000)
+						if (isOwner.value) {
+							await dissolveGroupAndDeleteConversation(groupId.value, chatId.value)
+						} else {
+							await quitGroupAndDeleteConversation(groupId.value, chatId.value)
+						}
 					} catch (e) {
 						console.error('[GroupSettings] 退出群聊失败:', e)
+						const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, isOwner.value ? '群聊已解散' : '你已不在该群聊')
+						if (lifecycleNotice !== '') {
+							lifecycleRedirecting = true
+							finalizeGroupLifecycleExit(groupId.value, chatId.value, lifecycleNotice)
+							return
+						}
 						uni.showToast({
-							title: '退出失败',
+							title: isOwner.value ? '解散失败' : '退出失败',
 							icon: 'none'
 						})
 					}
@@ -873,7 +898,13 @@
 
 		// 加载数据
 		await loadGroupInfo()
+		if (lifecycleRedirecting) {
+			return
+		}
 		await loadGroupMembers()
+		if (lifecycleRedirecting) {
+			return
+		}
 		await loadConversationSettings()
 	})
 
@@ -890,10 +921,16 @@
 	
 	onShow(async () => {
 		// 页面显示时刷新数据（从添加成员页面返回时）
-		if (groupId.value) {
+		if (groupId.value && !lifecycleRedirecting) {
 			console.log('[GroupSettings] 页面显示，刷新数据')
 			await loadGroupInfo()
+			if (lifecycleRedirecting) {
+				return
+			}
 			await loadGroupMembers()
+			if (lifecycleRedirecting) {
+				return
+			}
 			await loadConversationSettings()
 		}
 	})

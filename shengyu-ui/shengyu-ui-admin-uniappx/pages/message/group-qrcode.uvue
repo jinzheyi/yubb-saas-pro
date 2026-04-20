@@ -95,6 +95,7 @@
 	import { BASE_URL, API_BASE_URL, ADMIN_APP_DOMAIN } from '../../config/app.config.uts'
 	import { getGroupAvatarColor } from '../../utils/avatar.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
+	import { armGroupLifecycleErrorToastSuppression, finalizeGroupLifecycleExit, resolveGroupLifecycleErrorNotice } from '../../utils/chat-setting-actions.uts'
 	import { getTenantId } from '../../store/user.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
@@ -120,6 +121,7 @@
 	const loading = ref(true)
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	let unsubscribeTheme: (() => void) | null = null
+	let lifecycleRedirecting = false
 	
 	// 二维码图片 URL（后端生成）
 	const qrCodeImageUrl = ref('')
@@ -186,10 +188,11 @@
 	 * 加载群邀请码
 	 */
 	async function loadInviteCode() {
-		if (!groupId.value) return
+		if (!groupId.value || lifecycleRedirecting) return
 
 		try {
 			loading.value = true
+			armGroupLifecycleErrorToastSuppression(3000)
 			const result = await getGroupInviteCode(groupId.value)
 
 			console.log('[GroupQRCode] API 返回结果:', JSON.stringify(result))
@@ -219,6 +222,12 @@
 			}
 		} catch (e) {
 			console.error('[GroupQRCode] 加载邀请码失败:', e)
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+			if (lifecycleNotice !== '') {
+				lifecycleRedirecting = true
+				finalizeGroupLifecycleExit(groupId.value, '', lifecycleNotice)
+				return
+			}
 			
 			// 如果没有有效邀请码，尝试生成新的
 			await generateNewInviteCode()
@@ -238,9 +247,10 @@
 	 * 生成新的邀请码
 	 */
 	async function generateNewInviteCode() {
-		if (!groupId.value) return
+		if (!groupId.value || lifecycleRedirecting) return
 
 		try {
+			armGroupLifecycleErrorToastSuppression(3000)
 			const result = await generateGroupInvite({
 				groupId: groupId.value,
 				expireHours: 24,
@@ -276,6 +286,12 @@
 			}
 		} catch (e) {
 			console.error('[GroupQRCode] 生成邀请码失败:', e)
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '')
+			if (lifecycleNotice !== '') {
+				lifecycleRedirecting = true
+				finalizeGroupLifecycleExit(groupId.value, '', lifecycleNotice)
+				return
+			}
 			uni.showToast({
 				title: '生成邀请码失败',
 				icon: 'none'
@@ -465,6 +481,9 @@
 		try {
 			console.log('[GroupQRCode] 刷新前 expireTime:', expireTime.value)
 			await generateNewInviteCode()
+			if (lifecycleRedirecting) {
+				return
+			}
 			console.log('[GroupQRCode] 刷新后 expireTime:', expireTime.value)
 			console.log('[GroupQRCode] 刷新后 expireText:', expireText.value)
 			

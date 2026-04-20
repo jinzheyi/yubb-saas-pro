@@ -243,8 +243,7 @@ function responseInterceptor(response: any): any {
 			const msg = data.msg || '请求失败'
 			
 			// 忽略的错误消息（不显示 Toast）
-			const ignoreMsgs = ['无效的刷新令牌', '刷新令牌已过期']
-			if (ignoreMsgs.indexOf(msg) === -1) {
+			if (!shouldIgnoreBusinessErrorToast(msg)) {
 				uni.showToast({
 					title: msg,
 					icon: 'none'
@@ -269,6 +268,28 @@ function responseInterceptor(response: any): any {
 		})
 		return Promise.reject(response)
 	}
+}
+
+function shouldIgnoreBusinessErrorToast(msg: string): boolean {
+	const ignoreMsgs = ['无效的刷新令牌', '刷新令牌已过期']
+	if (ignoreMsgs.indexOf(msg) !== -1) {
+		return true
+	}
+	if (msg === '会话不存在' || msg === '群成员不存在' || msg === '群组不存在') {
+		try {
+			const raw: any = uni.getStorageSync('IM_SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL')
+			const until = raw != null ? Number(raw) : 0
+			if (!isNaN(until) && until > Date.now()) {
+				return true
+			}
+			if (!isNaN(until) && until > 0) {
+				uni.removeStorageSync('IM_SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL')
+			}
+		} catch (e) {
+			// ignore
+		}
+	}
+	return false
 }
 
 /**

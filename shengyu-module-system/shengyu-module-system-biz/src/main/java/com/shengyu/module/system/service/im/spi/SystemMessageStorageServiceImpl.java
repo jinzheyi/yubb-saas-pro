@@ -1041,6 +1041,14 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         if (chatUser != null) {
             return chatUser;
         }
+        ImChatUserDO deletedChatUser = chatUserMapper.selectAnyByUserIdAndChatId(userId, chatId);
+        if (deletedChatUser != null) {
+            if (Boolean.TRUE.equals(deletedChatUser.getDeletedByUser())) {
+                chatUserMapper.reviveSoftDeleted(deletedChatUser.getId());
+                deletedChatUser.setDeletedByUser(false);
+            }
+            return deletedChatUser;
+        }
         chatUser = new ImChatUserDO();
         chatUser.setUserId(userId);
         chatUser.setChatId(chatId);
@@ -1048,7 +1056,19 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
         chatUser.setIsPinned(false);
         chatUser.setNoDisturb(false);
         chatUser.setDeletedByUser(false);
-        chatUserMapper.insert(chatUser);
+        try {
+            chatUserMapper.insert(chatUser);
+        } catch (DuplicateKeyException e) {
+            ImChatUserDO existing = chatUserMapper.selectAnyByUserIdAndChatId(userId, chatId);
+            if (existing != null) {
+                if (Boolean.TRUE.equals(existing.getDeletedByUser())) {
+                    chatUserMapper.reviveSoftDeleted(existing.getId());
+                    existing.setDeletedByUser(false);
+                }
+                return existing;
+            }
+            throw e;
+        }
         return chatUser;
     }
 
