@@ -28,7 +28,14 @@
 					</view>
 					
 					<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
-						<text class="avatar-text">{{ member.avatarText }}</text>
+						<image
+							v-if="shouldShowAvatar(member)"
+							class="member-avatar-image"
+							:src="member.avatar"
+							mode="aspectFill"
+							@error="handleAvatarError(member)"
+						/>
+						<text v-else class="avatar-text">{{ member.avatarText }}</text>
 					</view>
 					<view class="member-info">
 						<text class="member-name" :style="{ color: theme.textPrimary }">{{ member.name }}</text>
@@ -102,6 +109,8 @@
 						id: userIdStr,
 						name: displayName,
 						role: m != null && m.deptName != null && String(m.deptName) !== '' ? String(m.deptName) : (m.roleName != null ? String(m.roleName) : ''),
+						avatar: normalizeAvatarUrl(m != null ? (m.avatar || m.userAvatar) : ''),
+						avatarError: false,
 						avatarText: getAvatarText(displayName),
 						avatarBg: getUserAvatarColor(userIdStr),
 						selected: isMemberSelected(userIdStr)
@@ -153,6 +162,25 @@
 		for (let i = 0; i < memberList.value.length; i++) {
 			memberList.value[i].selected = isMemberSelected(String(memberList.value[i].id))
 		}
+	}
+
+	function normalizeAvatarUrl(raw: any): string {
+		if (raw == null) {
+			return ''
+		}
+		const text = String(raw).trim()
+		return (text !== '' && text !== 'null' && text !== 'undefined') ? text : ''
+	}
+
+	function shouldShowAvatar(member: any): boolean {
+		return normalizeAvatarUrl(member != null ? member.avatar : '') !== '' && member.avatarError !== true
+	}
+
+	function handleAvatarError(member: any): void {
+		if (member == null) {
+			return
+		}
+		member.avatarError = true
 	}
 
 	// 页面加载时获取群组信息
@@ -281,6 +309,12 @@
 		justify-content: center;
 		align-items: center;
 		margin-right: 12px;
+	}
+
+	.member-avatar-image {
+		width: 42px;
+		height: 42px;
+		border-radius: 8px;
 	}
 
 	.avatar-text {

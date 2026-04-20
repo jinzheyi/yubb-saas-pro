@@ -292,7 +292,7 @@
 						id: uid,
 						name: displayName,
 						deptName: member.deptName || '',
-						avatar: member.avatar != null ? String(member.avatar) : '',
+						avatar: normalizeAvatarUrl(member.avatar || member.userAvatar),
 						avatarError: false,
 						avatarText: getAvatarText(displayName),
 						avatarBg: getUserAvatarColor(uid),

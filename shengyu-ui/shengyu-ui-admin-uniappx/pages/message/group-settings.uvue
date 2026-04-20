@@ -31,7 +31,14 @@
 				<view class="member-grid">
 					<view class="member-item" v-for="(member, index) in displayMembers" :key="member.id" @click="handleMemberClick(member)">
 						<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
-							<text class="member-avatar-text">{{ member.avatarText }}</text>
+							<image
+								v-if="shouldShowMemberAvatar(member)"
+								class="member-avatar-image"
+								:src="member.avatar"
+								mode="aspectFill"
+								@error="handleMemberAvatarError(member)"
+							/>
+							<text v-else class="member-avatar-text">{{ member.avatarText }}</text>
 						</view>
 						<text class="member-name" :style="{ color: theme.textSecondary }">{{ member.name }}</text>
 					</view>
@@ -438,6 +445,8 @@
 					return {
 						id: String(member.userId),
 						name: member.nickname || member.userNickname || '未知',
+						avatar: normalizeAvatarUrl(member.avatar || member.userAvatar),
+						avatarError: false,
 						avatarText: getAvatarText(member.nickname || member.userNickname || ''),
 						avatarBg: getUserAvatarColor(String(member.userId)),
 						role: member.role
@@ -497,6 +506,25 @@
 
 	function handleBack() {
 		uni.navigateBack()
+	}
+
+	function normalizeAvatarUrl(raw: any): string {
+		if (raw == null) {
+			return ''
+		}
+		const text = String(raw).trim()
+		return (text !== '' && text !== 'null' && text !== 'undefined') ? text : ''
+	}
+
+	function shouldShowMemberAvatar(member: any): boolean {
+		return normalizeAvatarUrl(member != null ? member.avatar : '') !== '' && member.avatarError !== true
+	}
+
+	function handleMemberAvatarError(member: any): void {
+		if (member == null) {
+			return
+		}
+		member.avatarError = true
 	}
 
 	function handleMemberClick(member : any) {
@@ -1206,6 +1234,12 @@
 		justify-content: center;
 		align-items: center;
 		margin-bottom: 6px;
+	}
+
+	.member-avatar-image {
+		width: 50px;
+		height: 50px;
+		border-radius: 8px;
 	}
 
 	.member-avatar-text {
