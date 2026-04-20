@@ -18,7 +18,10 @@
 				</view>
 				<view class="group-details">
 					<text class="group-name" :style="{ color: theme.textPrimary }">{{ groupName }}</text>
-					<text class="group-member-count" :style="{ color: theme.textTertiary }">{{ memberCount }}人</text>
+					<view class="group-meta-row">
+						<text class="group-member-count" :style="{ color: theme.textTertiary }">{{ memberCount }}人</text>
+						<text class="role-badge" :class="roleBadgeClass">{{ roleLabel }}</text>
+					</view>
 				</view>
 			</view>
 
@@ -131,6 +134,9 @@
 				<view class="setting-item danger-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleClearHistory">
 					<text class="setting-label danger-text">清空聊天记录</text>
 				</view>
+				<view v-if="isOwner" class="setting-item danger-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleTransferOwner">
+					<text class="setting-label danger-text">转让群主</text>
+				</view>
 				<view class="setting-item danger-item" @click="handleDeleteAndExit">
 					<text class="setting-label danger-text">{{ isOwner ? '解散群聊' : '退出群聊' }}</text>
 				</view>
@@ -210,6 +216,7 @@
 	import { getUserIdStr } from '../../store/user.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 	import { armGroupLifecycleErrorToastSuppression, clearConversationHistory, dissolveGroupAndDeleteConversation, finalizeGroupLifecycleExit, quitGroupAndDeleteConversation, resolveGroupLifecycleErrorNotice } from '../../utils/chat-setting-actions.uts'
+	import { MessageType, wsManager } from '../../utils/websocket.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -236,6 +243,9 @@
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	let unsubscribeTheme: (() => void) | null = null
 	let lifecycleRedirecting = false
+	let groupOwnerTransferredNotifyHandler: ((message : any) => void) | null = null
+	let realtimeRefreshTask : Promise<void> | null = null
+	let lastOwnerTransferToastAt = 0
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 		theme.value = tokens
@@ -291,6 +301,81 @@
 		const role = groupInfo.value != null && groupInfo.value.myRole != null ? Number(groupInfo.value.myRole) : 0
 		return role === 2
 	})
+
+	const roleLabel = computed(() : string => {
+		const role = groupInfo.value != null && groupInfo.value.myRole != null ? Number(groupInfo.value.myRole) : 0
+		if (role === 2) {
+			return '群主'
+		}
+		if (role === 1) {
+			return '管理员'
+		}
+		return '成员'
+	})
+
+	const roleBadgeClass = computed(() : string => {
+		const role = groupInfo.value != null && groupInfo.value.myRole != null ? Number(groupInfo.value.myRole) : 0
+		if (role === 2) {
+			return 'role-badge-owner'
+		}
+		if (role === 1) {
+			return 'role-badge-admin'
+		}
+		return 'role-badge-member'
+	})
+
+	async function refreshGroupSettingsRealtime(showOwnerToast: boolean = false, oldOwnerId: string = '', newOwnerId: string = ''): Promise<void> {
+		if (!groupId.value || lifecycleRedirecting) {
+			return
+		}
+		if (realtimeRefreshTask != null) {
+			await realtimeRefreshTask
+			return
+		}
+		realtimeRefreshTask = Promise.resolve().then(async () => {
+			await loadGroupInfo()
+			if (lifecycleRedirecting) {
+				return
+			}
+			await loadGroupMembers()
+			if (lifecycleRedirecting) {
+				return
+			}
+			await loadConversationSettings()
+			if (!showOwnerToast) {
+				return
+			}
+			const now = Date.now()
+			if (now - lastOwnerTransferToastAt < 1500) {
+				return
+			}
+			lastOwnerTransferToastAt = now
+			if (newOwnerId !== '' && newOwnerId === currentUserId.value) {
+				uni.showToast({
+					title: '你已成为新群主',
+					icon: 'none',
+					duration: 2200
+				})
+				return
+			}
+			if (oldOwnerId !== '' && oldOwnerId === currentUserId.value) {
+				uni.showToast({
+					title: '你已转让群主身份',
+					icon: 'none',
+					duration: 2200
+				})
+				return
+			}
+			uni.showToast({
+				title: '群主已更新',
+				icon: 'none',
+				duration: 1800
+			})
+		}).finally(() => {
+			realtimeRefreshTask = null
+		})
+		await realtimeRefreshTask
+	}
 
 	let joinRequestCreatedHandler : ((payload : any) => void) | null = null
 	let joinRequestAdminRefreshHandler : ((payload : any) => void) | null = null
@@ -561,6 +646,20 @@
 		const groupIdParam = encodeIdParam(groupId.value)
 		uni.navigateTo({
 			url: '/pages/message/group-join-requests?groupId=' + groupIdParam + '&groupName=' + encodeURIComponent(groupName.value)
+		})
+	}
+
+	function handleTransferOwner() {
+		if (!isOwner.value) {
+			uni.showToast({
+				title: '仅群主可转让群主身份',
+				icon: 'none'
+			})
+			return
+		}
+		const groupIdParam = encodeIdParam(groupId.value)
+		uni.navigateTo({
+			url: '/pages/message/group-members?groupId=' + groupIdParam + '&groupName=' + encodeURIComponent(groupName.value) + '&mode=transfer'
 		})
 	}
 
@@ -895,6 +994,30 @@
 		}
 		uni.$on(MessageService.GROUP_JOIN_REQUEST_CREATED_EVENT, joinRequestCreatedHandler)
 		uni.$on(MessageService.GROUP_JOIN_REQUEST_ADMIN_REFRESH_EVENT, joinRequestAdminRefreshHandler)
+		groupOwnerTransferredNotifyHandler = (message : any) => {
+			try {
+				const extraRaw: any = message != null && (message as any).header != null ? (message as any).header.extra : null
+				if (extraRaw == null || extraRaw === '') {
+					return
+				}
+				const extraObj = typeof extraRaw === 'string' ? JSON.parse(extraRaw) : extraRaw
+				if (extraObj == null || String(extraObj.action || '') !== 'group_owner_transferred') {
+					return
+				}
+				const notifyGroupId = extraObj.groupId != null ? String(extraObj.groupId) : ''
+				if (notifyGroupId === '' || notifyGroupId !== groupId.value) {
+					return
+				}
+				groupService.invalidateGroup(notifyGroupId)
+				groupService.invalidateGroupMembers(notifyGroupId)
+				const oldOwnerId = extraObj.oldOwnerId != null ? String(extraObj.oldOwnerId) : ''
+				const newOwnerId = extraObj.newOwnerId != null ? String(extraObj.newOwnerId) : ''
+				void refreshGroupSettingsRealtime(true, oldOwnerId, newOwnerId)
+			} catch (e) {
+				console.warn('[GroupSettings] 处理群主转让实时通知失败:', e)
+			}
+		}
+		wsManager.addMessageListener(MessageType.SYSTEM_NOTIFY, groupOwnerTransferredNotifyHandler)
 
 		// 加载数据
 		await loadGroupInfo()
@@ -916,6 +1039,10 @@
 		if (joinRequestAdminRefreshHandler != null) {
 			uni.$off(MessageService.GROUP_JOIN_REQUEST_ADMIN_REFRESH_EVENT, joinRequestAdminRefreshHandler)
 			joinRequestAdminRefreshHandler = null
+		}
+		if (groupOwnerTransferredNotifyHandler != null) {
+			wsManager.removeMessageListener(MessageType.SYSTEM_NOTIFY, groupOwnerTransferredNotifyHandler)
+			groupOwnerTransferredNotifyHandler = null
 		}
 	})
 	
@@ -1012,6 +1139,11 @@
 		flex: 1;
 	}
 
+	.group-meta-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
 	.group-name {
 		font-size: 18px;
 		font-weight: 600;
@@ -1020,6 +1152,29 @@
 
 	.group-member-count {
 		font-size: 14px;
+	}
+
+	.role-badge {
+		margin-left: 8px;
+		padding: 2px 8px;
+		border-radius: 999px;
+		font-size: 11px;
+		font-weight: 600;
+	}
+
+	.role-badge-owner {
+		background-color: #FFF3E0;
+		color: #F57C00;
+	}
+
+	.role-badge-admin {
+		background-color: #E3F2FD;
+		color: #1976D2;
+	}
+
+	.role-badge-member {
+		background-color: #EEF1F5;
+		color: #5B6472;
 	}
 
 	/* 群成员区域 */

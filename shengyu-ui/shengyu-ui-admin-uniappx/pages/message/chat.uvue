@@ -2033,7 +2033,8 @@
 			if (action !== 'group_member_mute_changed'
 				&& action !== 'group_mute_all_changed'
 				&& action !== 'group_member_added'
-				&& action !== 'group_member_removed') {
+				&& action !== 'group_member_removed'
+				&& action !== 'group_owner_transferred') {
 				return
 			}
 			const notifyGroupId = extraObj.groupId != null ? String(extraObj.groupId) : ''
@@ -2099,6 +2100,27 @@
 					tipContent !== '' ? tipContent : '有群成员被移出群聊',
 					`${action}_${notifyGroupId}_${memberUserId}_${tipContent}`
 				)
+			}
+			if (action === 'group_owner_transferred') {
+				const oldOwnerId = extraObj.oldOwnerId != null ? String(extraObj.oldOwnerId) : ''
+				const newOwnerId = extraObj.newOwnerId != null ? String(extraObj.newOwnerId) : ''
+				appendGroupMuteStatusTip(
+					tipContent !== '' ? tipContent : '群主已完成转让',
+					`${action}_${notifyGroupId}_${newOwnerId}_${tipContent}`
+				)
+				if (newOwnerId !== '' && newOwnerId === currentUserId.value) {
+					uni.showToast({
+						title: '你已成为新群主',
+						icon: 'none',
+						duration: 2200
+					})
+				} else if (oldOwnerId !== '' && oldOwnerId === currentUserId.value) {
+					uni.showToast({
+						title: '你已转让群主身份',
+						icon: 'none',
+						duration: 2200
+					})
+				}
 			}
 			void refreshGroupInteractionState(true)
 		} catch (e) {
@@ -4416,6 +4438,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const content = (m as any).content != null ? String((m as any).content).trim() : ''
 			return content.indexOf('加入了群聊') > -1
 				|| content.indexOf('已被移出群聊') > -1
+				|| content.indexOf('群主已转让给') > -1
 		} catch (e) {
 			return false
 		}

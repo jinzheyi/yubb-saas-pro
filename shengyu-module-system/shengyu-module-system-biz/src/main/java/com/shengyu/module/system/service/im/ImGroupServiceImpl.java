@@ -838,6 +838,10 @@ public class ImGroupServiceImpl implements ImGroupService {
             groupUserMapper.updateById(oldOwner);
         }
 
+        String tipContent = buildGroupOwnerTransferredTipContent(newOwnerId, newOwner);
+        persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent);
+        pushGroupOwnerTransferredNotify(groupId, userId, newOwnerId, tipContent);
+
         log.info("[ImGroupService] 转让群主成功, groupId: {}, oldOwnerId: {}, newOwnerId: {}", 
                 groupId, userId, newOwnerId);
     }
@@ -1350,6 +1354,53 @@ public class ImGroupServiceImpl implements ImGroupService {
             memberName = "该成员";
         }
         return String.format("\"%s\" 已被移出群聊", memberName);
+    }
+
+    private String buildGroupOwnerTransferredTipContent(Long newOwnerId, ImGroupUserDO newOwner) {
+        String memberName = "";
+        if (newOwner != null && newOwner.getNickname() != null) {
+            memberName = newOwner.getNickname().trim();
+        }
+        if (memberName.isEmpty() && newOwnerId != null) {
+            AdminUserDO user = userMapper.selectById(newOwnerId);
+            if (user != null && user.getNickname() != null) {
+                memberName = user.getNickname().trim();
+            }
+        }
+        if (memberName.isEmpty()) {
+            memberName = "该成员";
+        }
+        return String.format("群主已转让给“%s”", memberName);
+    }
+
+    private void pushGroupOwnerTransferredNotify(Long groupId, Long oldOwnerId, Long newOwnerId, String tipContent) {
+        List<Long> memberIds = getGroupMemberIds(groupId);
+        if (CollUtil.isEmpty(memberIds)) {
+            return;
+        }
+        Long tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            tenantId = 0L;
+        }
+        String extra = JSONUtil.createObj()
+                .set("action", "group_owner_transferred")
+                .set("groupId", String.valueOf(groupId))
+                .set("oldOwnerId", oldOwnerId != null ? String.valueOf(oldOwnerId) : "")
+                .set("newOwnerId", newOwnerId != null ? String.valueOf(newOwnerId) : "")
+                .set("tipContent", tipContent != null ? tipContent : "")
+                .toString();
+        TextMessage body = TextMessage.newBuilder().setContent("GROUP_OWNER_TRANSFERRED").build();
+        for (Long targetUserId : memberIds) {
+            try {
+                messageSender.sendToUserWithExtra(targetUserId, MessageType.SYSTEM_NOTIFY, body,
+                        0L, targetUserId, groupId, tenantId,
+                        null, null, null,
+                        null, null, extra);
+            } catch (Exception e) {
+                log.warn("[ImGroupService] 推送群主转让状态失败, groupId: {}, targetUserId: {}, error: {}",
+                        groupId, targetUserId, e.getMessage(), e);
+            }
+        }
     }
 
     private void runAfterCommit(Runnable task) {
