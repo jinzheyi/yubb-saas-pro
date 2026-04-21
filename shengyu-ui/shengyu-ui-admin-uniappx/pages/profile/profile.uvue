@@ -84,6 +84,7 @@
 	import { clearCurrentUserAvatar, getCurrentUserDetail, updateCurrentUserAvatar } from '../../api/user.uts'
 	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
 	import { messageService } from '../../services/message-service.uts'
+	import { runtimeTabBarService } from '../../services/runtime-tab-bar-service.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 	import { chooseImage } from '../../utils/upload.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
@@ -290,6 +291,7 @@
 	})
 
 	onShow(async () => {
+		runtimeTabBarService.refresh()
 		tabBarBadgeService.refresh()
 		await loadProfile()
 	})

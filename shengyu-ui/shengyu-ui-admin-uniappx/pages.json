@@ -310,7 +310,7 @@
 		"list": [
 			{
 				"pagePath": "pages/message/message",
-				"text": "消息",
+				"text": "%tabBar.message%",
 				"iconfont": {
 					"text": "\uea98",
 					"selectedText": "\uea98",
@@ -321,7 +321,7 @@
 			},
 			{
 				"pagePath": "pages/contacts/contacts",
-				"text": "通讯录",
+				"text": "%tabBar.contacts%",
 				"iconfont": {
 					"text": "\uea94",
 					"selectedText": "\uea94",
@@ -332,7 +332,7 @@
 			},
 			{
 				"pagePath": "pages/workbench/workbench",
-				"text": "工作台",
+				"text": "%tabBar.workbench%",
 				"iconfont": {
 					"text": "\uea80",
 					"selectedText": "\uea80",
@@ -343,7 +343,7 @@
 			},
 			{
 				"pagePath": "pages/profile/profile",
-				"text": "我",
+				"text": "%tabBar.mine%",
 				"iconfont": {
 					"text": "\uea97",
 					"selectedText": "\uea97",

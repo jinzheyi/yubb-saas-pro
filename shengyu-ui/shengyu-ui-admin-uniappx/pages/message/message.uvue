@@ -179,6 +179,7 @@
 	import { conversationService, ConversationItem } from '../../services/conversation-service.uts'
 	import { badgeService, BadgeData } from '../../services/badge-service.uts'
 	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
+	import { runtimeTabBarService } from '../../services/runtime-tab-bar-service.uts'
 	import { getConversationAvatarColor, getAvatarText } from '../../utils/avatar.uts'
 	import { wsManager } from '../../utils/websocket.uts'
 	import { encodeIdParam } from '../../utils/id-param.uts'
@@ -382,6 +383,7 @@
 	}
 	
 	onShow(() => {
+		runtimeTabBarService.refresh()
 		wsManager.setRealtimeBizActive(true)
 		if (!wsManager.isConnected()) {
 			wsManager.setProtocols(['im.pb.v1'])

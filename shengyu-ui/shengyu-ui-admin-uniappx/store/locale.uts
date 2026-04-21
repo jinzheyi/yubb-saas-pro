@@ -11,6 +11,8 @@ import en from '../locales/en.uts'
 // 存储 Key
 const LOCALE_KEY = 'LOCALE'
 const LANGUAGE_MODE_KEY = 'LANGUAGE_MODE'
+const FRAMEWORK_LOCALE_ZH_HANS = 'zh-Hans'
+const FRAMEWORK_LOCALE_EN = 'en'
 
 /**
  * 语言类型
@@ -84,6 +86,7 @@ export function setLanguageMode(languageMode: LanguageMode) {
 	uni.setStorageSync(LANGUAGE_MODE_KEY, languageMode)
 	const resolvedLocale = resolveLocale(languageMode)
 	uni.setStorageSync(LOCALE_KEY, resolvedLocale)
+	applyFrameworkLocale(resolvedLocale)
 	emitLocaleChange(resolvedLocale, languageMode)
 }
 
@@ -96,6 +99,26 @@ export function resolveLocale(languageMode: LanguageMode): LocaleType {
 
 export function getResolvedLocale(): LocaleType {
 	return getCurrentLocale()
+}
+
+function toFrameworkLocale(locale: LocaleType): string {
+	return locale === 'en' ? FRAMEWORK_LOCALE_EN : FRAMEWORK_LOCALE_ZH_HANS
+}
+
+function applyFrameworkLocale(resolvedLocale: LocaleType): void {
+	try {
+		const nextLocale = toFrameworkLocale(resolvedLocale)
+		const anyUni = uni as any
+		const currentLocale = typeof anyUni.getLocale === 'function' ? String(anyUni.getLocale() || '') : ''
+		if (currentLocale === nextLocale) {
+			return
+		}
+		if (typeof anyUni.setLocale === 'function') {
+			anyUni.setLocale(nextLocale)
+		}
+	} catch (e) {
+		console.warn('[locale] apply framework locale failed:', e)
+	}
 }
 
 function emitLocaleChange(resolvedLocale: LocaleType, languageMode: LanguageMode) {
@@ -247,5 +270,6 @@ export function initLocale() {
 		setLanguageMode('system')
 		return
 	}
+	applyFrameworkLocale(getCurrentLocale())
 	emitLocaleChange(getCurrentLocale(), getLanguageMode())
 }

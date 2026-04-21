@@ -49,6 +49,7 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { badgeService, type BadgeData, type BadgeListener } from '../../services/badge-service.uts'
 	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
+	import { runtimeTabBarService } from '../../services/runtime-tab-bar-service.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -139,6 +140,7 @@
 	})
 
 	onShow(() => {
+		runtimeTabBarService.refresh()
 		tabBarBadgeService.refresh()
 	})
 

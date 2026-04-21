@@ -60,6 +60,7 @@ class RuntimeTabBarService {
 	private unsubscribeLocale: UnsubscribeFn = null
 	private unsubscribeTheme: UnsubscribeFn = null
 	private initialized: boolean = false
+	private refreshTimerIds: number[] = []
 
 	static getInstance(): RuntimeTabBarService {
 		if (RuntimeTabBarService.instance == null) {
@@ -75,21 +76,40 @@ class RuntimeTabBarService {
 		}
 		this.initialized = true
 		this.unsubscribeLocale = subscribeLocaleChange((_resolvedLocale, _languageMode) => {
-			this.refreshLabels()
+			this.scheduleRefresh()
 		})
 		this.unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
-			applyTabBarTheme(tokens)
+			this.scheduleRefresh()
 		})
-		this.refresh()
+		this.scheduleRefresh()
 	}
 
 	refresh(): void {
-		this.refreshLabels()
+		this.scheduleRefresh()
+	}
+
+	private clearRefreshTimers(): void {
+		for (let i = 0; i < this.refreshTimerIds.length; i++) {
+			clearTimeout(this.refreshTimerIds[i])
+		}
+		this.refreshTimerIds.length = 0
+	}
+
+	private applyNow(): void {
+		applyTabBarLabels()
 		applyTabBarTheme(getThemeTokens())
 	}
 
-	private refreshLabels(): void {
-		applyTabBarLabels()
+	private scheduleRefresh(): void {
+		this.clearRefreshTimers()
+		this.applyNow()
+		const retryDelays: number[] = [60, 180, 360]
+		for (let i = 0; i < retryDelays.length; i++) {
+			const timerId = setTimeout(() => {
+				this.applyNow()
+			}, retryDelays[i])
+			this.refreshTimerIds.push(timerId)
+		}
 	}
 }
 
