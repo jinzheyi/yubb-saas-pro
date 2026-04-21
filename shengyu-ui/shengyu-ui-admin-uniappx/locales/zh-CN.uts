@@ -54,7 +54,7 @@ export default {
 	},
 	login: {
 		welcome: '欢迎使用本系统',
-		subtitle: 'Yubb SaaS Pro 数字化管理平台',
+		subtitle: 'Yubb SaaS Pro 数智化管理平台',
 		message: '开箱即用的中后台管理系统',
 		tenantname: '租户名称',
 		username: '邮箱账号',

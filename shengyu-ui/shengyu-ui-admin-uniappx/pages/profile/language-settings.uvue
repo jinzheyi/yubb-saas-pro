@@ -10,93 +10,33 @@
 			<view class="header-right"></view>
 		</view>
 
-		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
-			<view class="settings-group" :style="{ backgroundColor: theme.cardBg }">
-				<view
-					v-for="item in languageOptions"
-					:key="item.value"
-					class="list-item"
-					hover-class="list-item-active"
-					@click="handleSelectLanguage(item.value)"
-					:style="{ borderBottomColor: theme.borderColor }"
-				>
-					<view class="option-main">
-						<text class="item-label" :style="{ color: theme.textPrimary }">{{ t(item.label) }}</text>
-						<text class="item-desc" :style="{ color: theme.textSecondary }">{{ t(item.desc) }}</text>
-					</view>
-					<view class="option-right">
-						<text
-							v-if="selectedMode === item.value"
-							class="iconfont check-icon"
-							:style="{ color: theme.brandPrimary }"
-						>&#xea73;</text>
-					</view>
-				</view>
-			</view>
-
-			<view class="preview-card" :style="{ backgroundColor: theme.cardBg }">
-				<text class="preview-title" :style="{ color: theme.textPrimary }">{{ t('profile.languageSettings.currentApplied') }}</text>
-				<text class="preview-value" :style="{ color: theme.brandPrimary }">{{ resolvedLocaleLabel }}</text>
-			</view>
-		</scroll-view>
+		<language-settings-panel />
 	</view>
 </template>
 
 <script setup lang="uts">
 	import { onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
-	import { getLanguageMode, getResolvedLocale, setLanguageMode, subscribeLocaleChange, type LanguageMode, type LocaleType } from '../../store/locale.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
+	import LanguageSettingsPanel from '../../components/settings/language-settings-panel.uvue'
 
 	const { t } = useI18n()
 	const theme = ref<ThemeTokens>(getThemeTokens())
-	const selectedMode = ref<LanguageMode>(getLanguageMode())
-	const resolvedLocale = ref<LocaleType>(getResolvedLocale())
 	let unsubscribeTheme: (() => void) | null = null
-	let unsubscribeLocale: (() => void) | null = null
-
-	const languageOptions = [
-		{ value: 'system' as LanguageMode, label: 'profile.languageSettings.optionSystem', desc: 'profile.languageSettings.optionSystemDesc' },
-		{ value: 'zh-CN' as LanguageMode, label: 'profile.languageSettings.optionZhCn', desc: 'profile.languageSettings.optionZhCnDesc' },
-		{ value: 'en' as LanguageMode, label: 'profile.languageSettings.optionEn', desc: 'profile.languageSettings.optionEnDesc' }
-	]
-
-	const resolvedLocaleLabel = computed((): string => {
-		if (resolvedLocale.value === 'en') {
-			return t('profile.languageSettings.resolvedEn')
-		}
-		return t('profile.languageSettings.resolvedZhCn')
-	})
 
 	function handleBack() {
 		uni.navigateBack()
 	}
 
-	function handleSelectLanguage(languageMode: LanguageMode) {
-		if (selectedMode.value === languageMode) {
-			return
-		}
-		selectedMode.value = languageMode
-		setLanguageMode(languageMode)
-	}
-
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 		theme.value = tokens
-	})
-	unsubscribeLocale = subscribeLocaleChange((nextResolvedLocale, nextLanguageMode) => {
-		resolvedLocale.value = nextResolvedLocale
-		selectedMode.value = nextLanguageMode
 	})
 
 	onUnload(() => {
 		if (unsubscribeTheme != null) {
 			unsubscribeTheme()
 			unsubscribeTheme = null
-		}
-		if (unsubscribeLocale != null) {
-			unsubscribeLocale()
-			unsubscribeLocale = null
 		}
 	})
 </script>
@@ -145,68 +85,4 @@
 		width: 80px;
 	}
 
-	.content {
-		flex: 1;
-		height: 0;
-	}
-
-	.settings-group {
-		margin: 12px 16px 0;
-		border-radius: 12px;
-		overflow: hidden;
-	}
-
-	.list-item {
-		min-height: 68px;
-		flex-direction: row;
-		align-items: center;
-		justify-content: space-between;
-		padding: 14px 16px;
-		border-bottom-width: 0.5px;
-	}
-
-	.list-item-active {
-		opacity: 0.92;
-	}
-
-	.option-main {
-		flex: 1;
-		padding-right: 12px;
-	}
-
-	.item-label {
-		font-size: 16px;
-		font-weight: 500;
-	}
-
-	.item-desc {
-		margin-top: 4px;
-		font-size: 12px;
-		line-height: 18px;
-	}
-
-	.option-right {
-		width: 24px;
-		align-items: flex-end;
-	}
-
-	.check-icon {
-		font-size: 18px;
-	}
-
-	.preview-card {
-		margin: 12px 16px 16px;
-		border-radius: 12px;
-		padding: 16px;
-	}
-
-	.preview-title {
-		font-size: 14px;
-		font-weight: 600;
-	}
-
-	.preview-value {
-		margin-top: 4px;
-		font-size: 13px;
-	}
 </style>

@@ -54,7 +54,7 @@ export default {
 	},
 	login: {
 		welcome: 'Welcome to the system',
-		subtitle: 'Yubb SaaS Pro Digital Management Platform',
+		subtitle: 'Yubb SaaS Pro Intelligent Digital Management Platform',
 		message: 'Backstage management system',
 		tenantname: 'TenantName',
 		username: 'Email account',

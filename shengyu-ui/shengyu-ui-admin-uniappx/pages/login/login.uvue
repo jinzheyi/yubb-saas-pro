@@ -6,6 +6,14 @@
 			<view class="circle circle-2"></view>
 		</view>
 
+		<view class="top-actions">
+			<view class="locale-entry" hover-class="locale-entry-active" @click="showLanguagePanel = true">
+				<text class="iconfont locale-entry-icon">&#xe998;</text>
+				<text class="locale-entry-text">{{ currentLanguageLabel }}</text>
+				<text class="iconfont locale-entry-arrow">&#xeb03;</text>
+			</view>
+		</view>
+
 		<!-- 头部区域 -->
 		<view class="header">
 			<view class="logo-wrap">
@@ -115,20 +123,20 @@
 			</view>
 		</view>
 
-		<!-- 底部辅助 -->
 		<view class="footer">
-			<view class="locale-switch">
-				<text 
-					v-for="item in availableLocales" 
-					:key="item.lang"
-					@click="handleSwitchLocale(item.lang)"
-					:class="['locale-item', { active: locale === item.lang }]"
-				>
-					{{ item.name }}
-				</text>
-			</view>
 			<view class="copyright">
 				<text class="copyright-text">Copyright © 2026 Shengyu Tech. All Rights Reserved.</text>
+			</view>
+		</view>
+
+		<view v-if="showLanguagePanel" class="panel-mask" @click="showLanguagePanel = false">
+			<view class="panel-sheet" @click.stop>
+				<view class="panel-handle"></view>
+				<view class="panel-header">
+					<text class="panel-title">{{ t('profile.languageSettings.title') }}</text>
+					<text class="iconfont panel-close" @click="showLanguagePanel = false">&#xeb08;</text>
+				</view>
+				<language-settings-panel @change="handleLanguageChanged" />
 			</view>
 		</view>
 		
@@ -147,16 +155,28 @@
 	import { setToken, setUserInfo, setDeviceInfo, isLoggedIn } from '../../store/user.uts'
 	import { getDeviceInfo } from '../../utils/device.uts'
 	import { useI18n } from '../../hooks/useI18n.uts'
-	import type { LocaleType } from '../../store/locale.uts'
+	import { getLanguageMode, type LanguageMode } from '../../store/locale.uts'
 	import { badgeService } from '../../services/badge-service.uts'
 	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
 	import { syncUserPreferencesFromServer } from '../../services/user-preference-service.uts'
 	import { wsManager } from '../../utils/websocket.uts'
 	import SliderCaptcha from '../../components/captcha/slider-captcha.uvue'
-	import { CAPTCHA_ENABLE, DEFAULT_TENANT_NAME, SMS_CODE_COUNTDOWN } from '../../config/app.config.uts'
+	import LanguageSettingsPanel from '../../components/settings/language-settings-panel.uvue'
+	import { CAPTCHA_ENABLE, SMS_CODE_COUNTDOWN } from '../../config/app.config.uts'
 	
 	// 国际化
-	const { t, locale, availableLocales, switchLocale } = useI18n()
+	const { t } = useI18n()
+	const currentLanguageMode = ref<LanguageMode>(getLanguageMode())
+
+	const currentLanguageLabel = computed((): string => {
+		if (currentLanguageMode.value === 'zh-CN') {
+			return t('profile.settingsPage.languageZhCn')
+		}
+		if (currentLanguageMode.value === 'en') {
+			return t('profile.settingsPage.languageEn')
+		}
+		return t('profile.settingsPage.languageFollowSystem')
+	})
 	
 	// 登录类型
 	const loginType = ref<string>('account')
@@ -170,6 +190,7 @@
 	
 	// 状态
 	const loading = ref<boolean>(false)
+	const showLanguagePanel = ref<boolean>(false)
 	const codeCountdown = ref<number>(0)
 	const captchaVerification = ref<string>('') 
 	const captchaRef = ref<any>(null)
@@ -228,8 +249,13 @@
 		uni.showToast({ title: t('captcha.fail'), icon: 'none' })
 	}
 	
-	function handleSwitchLocale(newLocale: LocaleType) {
-		switchLocale(newLocale)
+	function handleLanguageChanged(languageMode: LanguageMode) {
+		currentLanguageMode.value = languageMode
+		showLanguagePanel.value = false
+		uni.showToast({
+			title: t('common.switchSuccess'),
+			icon: 'success'
+		})
 	}
 	
 	async function doLogin(verification: string) {
@@ -292,6 +318,7 @@
 	}
 	
 	onMounted(() => {
+		currentLanguageMode.value = getLanguageMode()
 		// 检查是否已登录，如果已登录则跳转到消息列表
 		if (isLoggedIn()) {
 			console.log('[Login] 用户已登录，跳转到消息列表')
@@ -328,6 +355,46 @@
 		right: 0;
 		height: 240px;
 		background-color: #3370FF;
+	}
+
+	.top-actions {
+		position: absolute;
+		top: 18px;
+		right: 16px;
+		z-index: 2;
+	}
+
+	.locale-entry {
+		height: 34px;
+		padding: 0 12px;
+		border-radius: 17px;
+		background-color: rgba(255, 255, 255, 0.18);
+		border-width: 0.5px;
+		border-color: rgba(255, 255, 255, 0.28);
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.locale-entry-active {
+		opacity: 0.9;
+	}
+
+	.locale-entry-icon {
+		font-size: 14px;
+		color: #FFFFFF;
+	}
+
+	.locale-entry-text {
+		margin-left: 6px;
+		font-size: 13px;
+		font-weight: 500;
+		color: #FFFFFF;
+	}
+
+	.locale-entry-arrow {
+		margin-left: 6px;
+		font-size: 12px;
+		color: rgba(255, 255, 255, 0.92);
 	}
 
 	.circle {
@@ -506,6 +573,7 @@
 		align-items: center;
 		margin-top: 8px;
 		border-width: 0;
+		flex-direction: row;
 	}
 
 	.login-btn-active {
@@ -516,6 +584,8 @@
 		color: #FFFFFF;
 		font-size: 16px;
 		font-weight: 600;
+		width: 100%;
+		text-align: center;
 	}
 
 	.footer {
@@ -524,20 +594,55 @@
 		align-items: center;
 	}
 
-	.locale-switch {
+	.panel-mask {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		background-color: rgba(15, 23, 42, 0.38);
+		justify-content: flex-end;
+		z-index: 20;
+	}
+
+	.panel-sheet {
+		height: 68%;
+		min-height: 420px;
+		max-height: 560px;
+		background-color: #F5F7FA;
+		border-top-left-radius: 20px;
+		border-top-right-radius: 20px;
+		padding-bottom: 16px;
+	}
+
+	.panel-handle {
+		width: 40px;
+		height: 4px;
+		border-radius: 2px;
+		background-color: #D0D5DD;
+		margin-top: 10px;
+		margin-bottom: 10px;
+		align-self: center;
+	}
+
+	.panel-header {
+		height: 44px;
+		padding: 0 16px;
 		flex-direction: row;
-		margin-bottom: 12px;
+		align-items: center;
+		justify-content: space-between;
 	}
 
-	.locale-item {
-		font-size: 12px;
-		color: #8F959E;
-		padding: 4px 10px;
-	}
-
-	.locale-item.active {
-		color: #3370FF;
+	.panel-title {
+		font-size: 17px;
 		font-weight: 600;
+		color: #1F2329;
+	}
+
+	.panel-close {
+		font-size: 18px;
+		color: #8F959E;
+		padding: 8px;
 	}
 
 	.copyright {
