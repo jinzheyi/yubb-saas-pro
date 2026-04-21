@@ -23,6 +23,7 @@ private static final long serialVersionUID = 0L;
     accessToken_ = "";
     deviceId_ = "";
     clientVersion_ = "";
+    locale_ = "";
   }
 
   @java.lang.Override
@@ -66,7 +67,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       accessToken_ = s;
@@ -86,7 +87,7 @@ private static final long serialVersionUID = 0L;
       getAccessTokenBytes() {
     java.lang.Object ref = accessToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       accessToken_ = b;
@@ -127,7 +128,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       deviceId_ = s;
@@ -147,7 +148,7 @@ private static final long serialVersionUID = 0L;
       getDeviceIdBytes() {
     java.lang.Object ref = deviceId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       deviceId_ = b;
@@ -173,8 +174,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
+      com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       clientVersion_ = s;
       return s;
@@ -193,10 +193,54 @@ private static final long serialVersionUID = 0L;
       getClientVersionBytes() {
     java.lang.Object ref = clientVersion_;
     if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = com.google.protobuf.ByteString.copyFromUtf8(
+          (java.lang.String) ref);
+      clientVersion_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int LOCALE_FIELD_NUMBER = 5;
+  private volatile java.lang.Object locale_;
+  /**
+   * <pre>
+   * 客户端语言（如 zh-CN / en）
+   * </pre>
+   *
+   * <code>string locale = 5;</code>
+   * @return The locale.
+   */
+  @java.lang.Override
+  public java.lang.String getLocale() {
+    java.lang.Object ref = locale_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      locale_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * 客户端语言（如 zh-CN / en）
+   * </pre>
+   *
+   * <code>string locale = 5;</code>
+   * @return The bytes for locale.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getLocaleBytes() {
+    java.lang.Object ref = locale_;
+    if (ref instanceof java.lang.String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
-      clientVersion_ = b;
+      locale_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
@@ -229,6 +273,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(clientVersion_)) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 4, clientVersion_);
     }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(locale_)) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 5, locale_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -250,6 +297,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(clientVersion_)) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, clientVersion_);
+    }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(locale_)) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, locale_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -274,6 +324,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getDeviceId())) return false;
     if (!getClientVersion()
         .equals(other.getClientVersion())) return false;
+    if (!getLocale()
+        .equals(other.getLocale())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -293,6 +345,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getDeviceId().hashCode();
     hash = (37 * hash) + CLIENTVERSION_FIELD_NUMBER;
     hash = (53 * hash) + getClientVersion().hashCode();
+    hash = (37 * hash) + LOCALE_FIELD_NUMBER;
+    hash = (53 * hash) + getLocale().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -433,6 +487,8 @@ private static final long serialVersionUID = 0L;
 
       clientVersion_ = "";
 
+      locale_ = "";
+
       return this;
     }
 
@@ -463,6 +519,7 @@ private static final long serialVersionUID = 0L;
       result.deviceType_ = deviceType_;
       result.deviceId_ = deviceId_;
       result.clientVersion_ = clientVersion_;
+      result.locale_ = locale_;
       onBuilt();
       return result;
     }
@@ -526,6 +583,10 @@ private static final long serialVersionUID = 0L;
         clientVersion_ = other.clientVersion_;
         onChanged();
       }
+      if (!other.getLocale().isEmpty()) {
+        locale_ = other.locale_;
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -572,6 +633,11 @@ private static final long serialVersionUID = 0L;
 
               break;
             } // case 34
+            case 42: {
+              locale_ = input.readStringRequireUtf8();
+
+              break;
+            } // case 42
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -621,7 +687,7 @@ private static final long serialVersionUID = 0L;
         getAccessTokenBytes() {
       java.lang.Object ref = accessToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         accessToken_ = b;
@@ -644,7 +710,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) {
     throw new NullPointerException();
   }
-  
+
       accessToken_ = value;
       onChanged();
       return this;
@@ -658,7 +724,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearAccessToken() {
-      
+
       accessToken_ = getDefaultInstance().getAccessToken();
       onChanged();
       return this;
@@ -678,7 +744,7 @@ private static final long serialVersionUID = 0L;
     throw new NullPointerException();
   }
   checkByteStringIsUtf8(value);
-      
+
       accessToken_ = value;
       onChanged();
       return this;
@@ -760,7 +826,7 @@ private static final long serialVersionUID = 0L;
         getDeviceIdBytes() {
       java.lang.Object ref = deviceId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         deviceId_ = b;
@@ -783,7 +849,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) {
     throw new NullPointerException();
   }
-  
+
       deviceId_ = value;
       onChanged();
       return this;
@@ -797,7 +863,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearDeviceId() {
-      
+
       deviceId_ = getDefaultInstance().getDeviceId();
       onChanged();
       return this;
@@ -817,7 +883,7 @@ private static final long serialVersionUID = 0L;
     throw new NullPointerException();
   }
   checkByteStringIsUtf8(value);
-      
+
       deviceId_ = value;
       onChanged();
       return this;
@@ -856,9 +922,8 @@ private static final long serialVersionUID = 0L;
         getClientVersionBytes() {
       java.lang.Object ref = clientVersion_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+        com.google.protobuf.ByteString b = com.google.protobuf.ByteString.copyFromUtf8(
+            (java.lang.String) ref);
         clientVersion_ = b;
         return b;
       } else {
@@ -879,7 +944,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) {
     throw new NullPointerException();
   }
-  
+
       clientVersion_ = value;
       onChanged();
       return this;
@@ -893,7 +958,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearClientVersion() {
-      
+
       clientVersion_ = getDefaultInstance().getClientVersion();
       onChanged();
       return this;
@@ -913,8 +978,103 @@ private static final long serialVersionUID = 0L;
     throw new NullPointerException();
   }
   checkByteStringIsUtf8(value);
-      
+
       clientVersion_ = value;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object locale_ = "";
+    /**
+     * <pre>
+     * 客户端语言（如 zh-CN / en）
+     * </pre>
+     *
+     * <code>string locale = 5;</code>
+     * @return The locale.
+     */
+    public java.lang.String getLocale() {
+      java.lang.Object ref = locale_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        locale_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * 客户端语言（如 zh-CN / en）
+     * </pre>
+     *
+     * <code>string locale = 5;</code>
+     * @return The bytes for locale.
+     */
+    public com.google.protobuf.ByteString
+        getLocaleBytes() {
+      java.lang.Object ref = locale_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = com.google.protobuf.ByteString.copyFromUtf8(
+            (java.lang.String) ref);
+        locale_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * 客户端语言（如 zh-CN / en）
+     * </pre>
+     *
+     * <code>string locale = 5;</code>
+     * @param value The locale to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLocale(
+        java.lang.String value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+
+      locale_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 客户端语言（如 zh-CN / en）
+     * </pre>
+     *
+     * <code>string locale = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearLocale() {
+
+      locale_ = getDefaultInstance().getLocale();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * 客户端语言（如 zh-CN / en）
+     * </pre>
+     *
+     * <code>string locale = 5;</code>
+     * @param value The bytes for locale to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLocaleBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+
+      locale_ = value;
       onChanged();
       return this;
     }
@@ -981,4 +1141,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

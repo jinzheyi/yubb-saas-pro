@@ -4,22 +4,22 @@
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">文件预览</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('runtime.filePreview.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
 		<view class="content">
 			<view v-if="loading" class="loading">
-				<text class="loading-text" :style="{ color: theme.textSecondary }">加载中...</text>
+				<text class="loading-text" :style="{ color: theme.textSecondary }">{{ t('runtime.filePreview.loading') }}</text>
 			</view>
 
 			<view v-else-if="errorMsg" class="error">
 				<text class="error-text" :style="{ color: theme.textSecondary }">{{ errorMsg }}</text>
 				<view class="btn-row">
-					<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" @click="loadStrategy"><text class="btn-text">重试</text></view>
-					<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" v-if="downloadUrl" @click="handleDownload"><text class="btn-text">下载打开</text></view>
+					<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" @click="loadStrategy"><text class="btn-text">{{ t('runtime.filePreview.retry') }}</text></view>
+					<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" v-if="downloadUrl" @click="handleDownload"><text class="btn-text">{{ t('runtime.filePreview.downloadOpen') }}</text></view>
 				</view>
 			</view>
 
@@ -27,10 +27,10 @@
 				<web-view v-if="previewUrl" :src="previewUrl" class="webview"></web-view>
 
 				<view v-else class="fallback">
-					<text class="fallback-title" :style="{ color: theme.textPrimary }">暂不支持在线预览</text>
+					<text class="fallback-title" :style="{ color: theme.textPrimary }">{{ t('runtime.filePreview.unsupportedOnlinePreview') }}</text>
 					<text class="fallback-sub" :style="{ color: theme.textSecondary }" v-if="tip">{{ tip }}</text>
 					<view class="btn-row">
-						<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleDownload"><text class="btn-text">下载打开</text></view>
+						<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleDownload"><text class="btn-text">{{ t('runtime.filePreview.downloadOpen') }}</text></view>
 					</view>
 				</view>
 			</view>
@@ -41,10 +41,13 @@
 <script setup lang="uts">
 	import { ref } from 'vue'
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getFileOpenStrategy } from '../../api/file.uts'
 	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
+
+	const { t } = useI18n()
 
 	const fileId = ref<string>('')
 	const rawUrl = ref<string>('')
@@ -100,12 +103,12 @@
 
 			const u = (rawUrl.value || '').trim()
 			if (!u) {
-				errorMsg.value = '文件地址为空'
+				errorMsg.value = t('runtime.filePreview.fileUrlEmpty')
 				return
 			}
 			downloadUrl.value = u
 		} catch (e) {
-			errorMsg.value = '加载失败，请稍后重试'
+			errorMsg.value = t('runtime.filePreview.loadFailedRetry')
 		} finally {
 			loading.value = false
 		}
@@ -115,12 +118,12 @@
 		try {
 			const url = (downloadUrl.value || '').trim()
 			if (!url) {
-				uni.showToast({ title: '下载地址为空', icon: 'none' })
+				uni.showToast({ title: t('runtime.filePreview.downloadUrlEmpty'), icon: 'none' })
 				return
 			}
-			await downloadAndOpenDocumentWithRetry(url, '正在下载')
+			await downloadAndOpenDocumentWithRetry(url, t('runtime.file.downloadLoading'))
 		} catch (e) {
-			uni.showToast({ title: '打开失败', icon: 'none' })
+			uni.showToast({ title: t('runtime.filePreview.openFailed'), icon: 'none' })
 		}
 	}
 

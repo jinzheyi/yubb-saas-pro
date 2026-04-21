@@ -11,13 +11,13 @@ import javax.validation.constraints.Pattern;
 public class AppUserChatBubbleUpdateReqVO {
 
     @Schema(description = "聊天气泡颜色", requiredMode = Schema.RequiredMode.REQUIRED, example = "#D2E3FC")
-    @NotBlank(message = "聊天气泡颜色不能为空")
-    @Pattern(regexp = "#[0-9A-Fa-f]{6}", message = "聊天气泡颜色格式不合法")
+    @NotBlank(message = "{validation.preference.chat_bubble_color.required}")
+    @Pattern(regexp = "#[0-9A-Fa-f]{6}", message = "{validation.preference.chat_bubble_color.invalid}")
     private String chatBubbleColor;
 
     @Schema(description = "聊天气泡模式", requiredMode = Schema.RequiredMode.REQUIRED, example = "preset")
-    @NotBlank(message = "聊天气泡模式不能为空")
-    @Pattern(regexp = "preset|custom", message = "聊天气泡模式不合法")
+    @NotBlank(message = "{validation.preference.chat_bubble_mode.required}")
+    @Pattern(regexp = "preset|custom", message = "{validation.preference.chat_bubble_mode.invalid}")
     private String chatBubbleMode;
 
 }

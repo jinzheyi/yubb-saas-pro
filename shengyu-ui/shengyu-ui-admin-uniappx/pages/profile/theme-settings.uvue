@@ -4,9 +4,9 @@
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">切换主题</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('profile.themeSettings.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
@@ -21,8 +21,8 @@
 					:style="{ borderBottomColor: theme.borderColor }"
 				>
 					<view class="option-main">
-						<text class="item-label" :style="{ color: theme.textPrimary }">{{ item.label }}</text>
-						<text class="item-desc" :style="{ color: theme.textSecondary }">{{ item.desc }}</text>
+						<text class="item-label" :style="{ color: theme.textPrimary }">{{ t(item.label) }}</text>
+						<text class="item-desc" :style="{ color: theme.textSecondary }">{{ t(item.desc) }}</text>
 					</view>
 					<view class="option-right">
 						<text
@@ -35,11 +35,11 @@
 			</view>
 
 			<view class="preview-card" :style="{ backgroundColor: theme.cardBg }">
-				<text class="preview-title" :style="{ color: theme.textPrimary }">当前生效</text>
+				<text class="preview-title" :style="{ color: theme.textPrimary }">{{ t('profile.themeSettings.currentApplied') }}</text>
 				<text class="preview-value" :style="{ color: theme.brandPrimary }">{{ resolvedThemeLabel }}</text>
 				<view class="preview-shell" :style="{ backgroundColor: theme.pageBg, borderColor: theme.borderColor }">
 					<view class="preview-header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
-						<text class="preview-header-text" :style="{ color: theme.headerText }">预览</text>
+						<text class="preview-header-text" :style="{ color: theme.headerText }">{{ t('profile.themeSettings.preview') }}</text>
 					</view>
 					<view class="preview-body">
 						<view class="preview-card-item" :style="{ backgroundColor: theme.cardBgMuted }"></view>
@@ -54,6 +54,7 @@
 
 <script setup lang="uts">
 	import { onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getThemeMode, getThemeTokens, resolveActiveTheme, setThemeMode, subscribeThemeChange } from '../../store/theme.uts'
 	import { persistThemePreference } from '../../services/user-preference-service.uts'
 	import type { ThemeMode, ThemeTokens } from '../../config/theme.uts'
@@ -61,16 +62,17 @@
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	const selectedMode = ref<ThemeMode>(getThemeMode())
 	const resolvedTheme = ref(resolveActiveTheme())
+	const { t } = useI18n()
 	let unsubscribeTheme: (() => void) | null = null
 
 	const themeOptions = [
-		{ value: 'system' as ThemeMode, label: '跟随系统', desc: '自动匹配系统浅色或深色外观' },
-		{ value: 'light' as ThemeMode, label: '浅色模式', desc: '适合明亮环境，界面更通透' },
-		{ value: 'dark' as ThemeMode, label: '深色模式', desc: '适合夜间场景，减轻视觉刺激' }
+		{ value: 'system' as ThemeMode, label: 'profile.themeSettings.optionSystem', desc: 'profile.themeSettings.optionSystemDesc' },
+		{ value: 'light' as ThemeMode, label: 'profile.themeSettings.optionLight', desc: 'profile.themeSettings.optionLightDesc' },
+		{ value: 'dark' as ThemeMode, label: 'profile.themeSettings.optionDark', desc: 'profile.themeSettings.optionDarkDesc' }
 	]
 
 	const resolvedThemeLabel = computed((): string => {
-		return resolvedTheme.value === 'dark' ? '深色模式' : '浅色模式'
+		return resolvedTheme.value === 'dark' ? t('profile.themeSettings.resolvedDark') : t('profile.themeSettings.resolvedLight')
 	})
 
 	function handleBack() {

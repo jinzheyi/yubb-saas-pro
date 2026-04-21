@@ -10,13 +10,13 @@
 				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back', '返回') }}</text>
 			</view>
 			<view v-else class="header-left" @click="exitMultiSelectMode">
-				<text class="cancel-text" :style="{ color: theme.headerText }">取消</text>
+				<text class="cancel-text" :style="{ color: theme.headerText }">{{ t('chat.header.cancel') }}</text>
 			</view>
 			<view class="header-title-wrap">
 				<text v-if="!multiSelectMode" class="header-title" :style="{ color: theme.headerText }" :numberOfLines="1">{{ name }}</text>
-				<text v-else class="header-title" :style="{ color: theme.headerText }" :numberOfLines="1">已选择 {{ selectedIds.length }} 条</text>
+				<text v-else class="header-title" :style="{ color: theme.headerText }" :numberOfLines="1">{{ t('chat.header.selectedCount', { count: selectedIds.length }) }}</text>
 				<text v-if="!multiSelectMode && chatType === 'single'" class="header-status" :style="{ color: theme.headerSubText }" :numberOfLines="1">{{ headerStatusText }}</text>
-				<text v-if="!multiSelectMode && chatType === 'group'" class="header-status" :style="{ color: theme.headerSubText }" :numberOfLines="1">{{ memberCount }}人</text>
+				<text v-if="!multiSelectMode && chatType === 'group'" class="header-status" :style="{ color: theme.headerSubText }" :numberOfLines="1">{{ t('chat.header.memberCount', { count: memberCount }) }}</text>
 			</view>
 			<view class="header-right">
 				<text v-if="!multiSelectMode" class="iconfont header-icon" :style="{ color: theme.headerText }" @click="handleInitiateGroup">&#xea74;</text>
@@ -30,7 +30,7 @@
 			:style="getGroupNoticeBannerStyle()"
 			@click="handleOpenPinnedNotice"
 		>
-			<text class="group-notice-banner-tag" :style="getGroupNoticeBannerTagStyle()">群公告</text>
+			<text class="group-notice-banner-tag" :style="getGroupNoticeBannerTagStyle()">{{ t('chat.header.groupNotice') }}</text>
 			<text class="group-notice-banner-text" :style="getGroupNoticeBannerTextStyle()" :numberOfLines="1">{{ groupNoticeText }}</text>
 			<text class="iconfont group-notice-banner-close" :style="getGroupNoticeBannerIconStyle()" @click.stop="handleDismissPinnedNotice">&#xeb08;</text>
 			<text class="iconfont group-notice-banner-arrow" :style="getGroupNoticeBannerIconStyle()">&#xea8f;</text>
@@ -61,7 +61,7 @@
 						<!-- 企业级撤回：对齐企微/钉钉，展示为居中系统提示条（不走左右气泡，不显示头像） -->
 						<view v-if="isCenterSystemTipMsg(msg)" class="recall-system-tip">
 							<text class="recall-system-tip-text" :style="getRecallSystemTipStyle()">{{ msg.content }}</text>
-							<text v-if="isRecalledFinalMsg(msg) && shouldShowReeditEntry(msg)" class="recall-system-tip-action" @click.stop="handleReeditAfterRecall(msg)">重新编辑</text>
+							<text v-if="isRecalledFinalMsg(msg) && shouldShowReeditEntry(msg)" class="recall-system-tip-action" @click.stop="handleReeditAfterRecall(msg)">{{ t('chat.recording.reedit') }}</text>
 						</view>
 						<template v-else>
 							<view class="avatar" :style="{ backgroundColor: msg.avatarBg }">
@@ -130,13 +130,13 @@
 											<text v-if="buildVoiceStatusText(msg) !== ''" class="voice-status" :style="getVoiceStatusTextStyle(msg)">{{ buildVoiceStatusText(msg) }}</text>
 										</view>
 										<view v-if="shouldShowVoicePauseButton(msg)" class="voice-pause-action" :style="getVoicePauseActionStyle(msg)" @click.stop="handleVoicePauseClick(msg)">
-											<text class="voice-pause-action-text" :style="getVoicePauseActionTextStyle(msg)">暂停</text>
+											<text class="voice-pause-action-text" :style="getVoicePauseActionTextStyle(msg)">{{ t('common.pause', '暂停') }}</text>
 										</view>
 										<!-- 语音未读红点 -->
 										<view v-if="shouldShowVoiceUnreadDot(msg)" class="voice-unread-dot"></view>
 									</view>
 									<view v-if="shouldShowVoiceResumeButton(msg)" class="voice-resume-action" :style="getVoiceResumeActionStyle(msg)" @click.stop="handleVoiceResumeClick(msg)">
-										<text class="voice-resume-action-text" :style="getVoiceResumeActionTextStyle(msg)">继续播放</text>
+										<text class="voice-resume-action-text" :style="getVoiceResumeActionTextStyle(msg)">{{ t('common.continue', '继续播放') }}</text>
 									</view>
 								</view>
 								
@@ -170,7 +170,7 @@
 										<text class="contact-card-name" :style="getContactCardNameStyle(msg)">{{ msg.contactDisplayName || '名片' }}</text>
 										<text v-if="msg.contactPostName" class="contact-card-meta" :style="getContactCardMetaStyle(msg)">{{ msg.contactPostName }}</text>
 										<text v-else-if="msg.contactDeptName" class="contact-card-meta" :style="getContactCardMetaStyle(msg)">{{ msg.contactDeptName }}</text>
-										<text class="contact-card-tag" :style="getContactCardTagStyle(msg)">个人名片</text>
+										<text class="contact-card-tag" :style="getContactCardTagStyle(msg)">{{ t('chat.label.personalCard') }}</text>
 									</view>
 								</view>
 								
@@ -189,7 +189,7 @@
 									<view class="forward-combine-header">
 										<view class="forward-combine-header-left">
 											<text class="iconfont forward-combine-icon">&#xe600;</text>
-											<text class="forward-combine-title" :style="getForwardCombineTitleStyle(msg)">聊天记录</text>
+											<text class="forward-combine-title" :style="getForwardCombineTitleStyle(msg)">{{ t('chat.label.forwardCombine') }}</text>
 										</view>
 										<text v-if="getForwardCombineComment(msg) !== ''" class="forward-combine-comment" :style="getForwardCombineSubTextStyle(msg)" :numberOfLines="1">{{ getForwardCombineComment(msg) }}</text>
 									</view>
@@ -199,12 +199,12 @@
 										</view>
 									</view>
 									<view class="forward-combine-footer">
-										<text class="forward-combine-footer-text" :style="getForwardCombineSubTextStyle(msg)">点击查看详情</text>
+										<text class="forward-combine-footer-text" :style="getForwardCombineSubTextStyle(msg)">{{ t('chat.label.clickToViewDetail') }}</text>
 										<text class="iconfont forward-combine-footer-arrow">&#xeb06;</text>
 									</view>
 								</view>
 								<view v-else-if="msg.type === 'custom'" class="message-bubble bubble-text" :style="getTextBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
-									<text class="message-content" :style="getBubbleTextStyle(msg)">[自定义消息]</text>
+									<text class="message-content" :style="getBubbleTextStyle(msg)">{{ t('chat.label.customMessage') }}</text>
 								</view>
 								
 								<view v-if="shouldShowReadReceiptEntry(msg)" class="read-receipt-entry" :class="{'read-receipt-entry-self': msg.isSelf}" @click.stop="handleReadReceiptEntryClick(msg)">
@@ -272,7 +272,7 @@
 					@touchend="handleVoiceEnd"
 					@touchcancel="handleVoiceEnd"
 				>
-					<text class="voice-btn-text" :style="{ color: groupSendBlocked ? theme.textTertiary : theme.textPrimary }">{{ isRecording ? (isCancelReady ? '松开 取消' : '松开 结束') : '按住 说话' }}</text>
+					<text class="voice-btn-text" :style="{ color: groupSendBlocked ? theme.textTertiary : theme.textPrimary }">{{ isRecording ? (isCancelReady ? t('chat.recording.releaseToCancelShort') : t('chat.recording.releaseToEnd')) : t('chat.recording.holdToTalk') }}</text>
 				</view>
 				
 				<!-- 右侧/底部图标栏 -->
@@ -285,7 +285,7 @@
 						<text class="iconfont footer-icon" :style="{ color: groupSendBlocked ? theme.textTertiary : theme.textPrimary }">&#xe726;</text>
 					</view>
 					<view v-else class="send-btn" :class="{ 'send-btn-disabled': groupSendBlocked }" @click="handleSend">
-						<text class="send-btn-text" :style="{ color: groupSendBlocked ? theme.textTertiary : '#FFFFFF' }">发送</text>
+						<text class="send-btn-text" :style="{ color: groupSendBlocked ? theme.textTertiary : '#FFFFFF' }">{{ t('chat.forward.dialogSend') }}</text>
 					</view>
 				</view>
 			</view>
@@ -295,12 +295,12 @@
 			<view v-if="showMentionPanel && !isVoiceMode" class="mention-panel" :style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
 				<view class="mention-panel-search" :style="{ backgroundColor: theme.inputBg }">
 					<text class="iconfont mention-panel-search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
-					<input class="mention-panel-search-input" :style="{ color: theme.inputText }" v-model="mentionKeyword" placeholder="搜索群成员" placeholder-class="placeholder" />
-					<text class="mention-panel-close" :style="{ color: theme.brandPrimary }" @click="closeMentionSelector">关闭</text>
+					<input class="mention-panel-search-input" :style="{ color: theme.inputText }" v-model="mentionKeyword" :placeholder="t('chat.mention.searchPlaceholder')" placeholder-class="placeholder" />
+					<text class="mention-panel-close" :style="{ color: theme.brandPrimary }" @click="closeMentionSelector">{{ t('chat.mention.close') }}</text>
 				</view>
 				<scroll-view class="mention-panel-list" scroll-y="true" show-scrollbar="false">
 					<view v-if="mentionLoading" class="mention-panel-empty">
-			<text class="mention-panel-empty-text" :style="{ color: theme.textTertiary }">成员加载中...</text>
+			<text class="mention-panel-empty-text" :style="{ color: theme.textTertiary }">{{ t('chat.mention.loading') }}</text>
 					</view>
 					<template v-else>
 						<view v-if="canMentionAll" class="mention-member-item" :style="{ borderBottomColor: theme.borderColor }" hover-class="mention-member-item-active" @click="handleMentionSelectAll">
@@ -308,8 +308,8 @@
 								<text class="mention-member-avatar-text">@</text>
 							</view>
 							<view class="mention-member-body">
-								<text class="mention-member-name" :style="{ color: theme.textPrimary }">所有人</text>
-								<text class="mention-member-desc" :style="{ color: theme.textTertiary }">仅群主或管理员可用</text>
+								<text class="mention-member-name" :style="{ color: theme.textPrimary }">{{ t('chat.mention.allMembers') }}</text>
+								<text class="mention-member-desc" :style="{ color: theme.textTertiary }">{{ t('chat.mention.allMembersHint') }}</text>
 							</view>
 						</view>
 						<view
@@ -332,7 +332,7 @@
 							</view>
 						</view>
 						<view v-if="filteredMentionMembers.length === 0" class="mention-panel-empty">
-							<text class="mention-panel-empty-text" :style="{ color: theme.textTertiary }">暂无可选择成员</text>
+							<text class="mention-panel-empty-text" :style="{ color: theme.textTertiary }">{{ t('chat.mention.empty') }}</text>
 						</view>
 					</template>
 				</scroll-view>
@@ -343,7 +343,7 @@
 				<scroll-view class="emoji-content" scroll-y="true" @scroll="handleEmojiPanelScroll">
 					<view v-if="currentEmojiTab === 'emoji'" class="emoji-panel-body">
 						<view v-if="recentEmojiList.length > 0" class="emoji-section">
-							<text class="emoji-section-title emoji-section-title-recent" :style="{ color: theme.textTertiary }">最近使用</text>
+							<text class="emoji-section-title emoji-section-title-recent" :style="{ color: theme.textTertiary }">{{ t('chat.emoji.recent') }}</text>
 							<view class="emoji-grid emoji-grid-recent">
 								<view 
 									class="emoji-item" 
@@ -356,7 +356,7 @@
 							</view>
 						</view>
 						<view class="emoji-section" :class="{ 'emoji-section-separate': recentEmojiList.length > 0 }">
-							<text class="emoji-section-title emoji-section-title-all" :style="{ color: theme.textTertiary }">所有表情</text>
+							<text class="emoji-section-title emoji-section-title-all" :style="{ color: theme.textTertiary }">{{ t('chat.emoji.all') }}</text>
 							<view class="emoji-grid">
 								<view 
 									class="emoji-item" 
@@ -377,7 +377,7 @@
 							<text class="iconfont sticker-add-icon" :style="{ color: theme.textTertiary, backgroundColor: theme.cardBg, borderColor: theme.borderColor }">&#xe726;</text>
 						</view>
 						<view class="sticker-item-manage" @click="handleStickerManageTap">
-							<text class="sticker-manage-text" :style="{ color: theme.textTertiary, backgroundColor: theme.cardBg, borderColor: theme.borderColor }">管理</text>
+							<text class="sticker-manage-text" :style="{ color: theme.textTertiary, backgroundColor: theme.cardBg, borderColor: theme.borderColor }">{{ t('chat.emoji.manage') }}</text>
 						</view>
 						<!-- 表情列表 -->
 						<view 
@@ -442,11 +442,11 @@
 		<view v-if="multiSelectMode" class="multi-select-toolbar" :style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
 			<view class="toolbar-item" hover-class="toolbar-item-active" @click="handleMultiForward">
 				<text class="iconfont toolbar-icon" :style="{ color: theme.textPrimary }">&#xe63d;</text>
-				<text class="toolbar-text" :style="{ color: theme.textSecondary }">转发</text>
+				<text class="toolbar-text" :style="{ color: theme.textSecondary }">{{ t('chat.forward.action') }}</text>
 			</view>
 			<view class="toolbar-item" hover-class="toolbar-item-active" @click="handleMultiDelete">
 				<text class="iconfont toolbar-icon" :style="{ color: theme.textPrimary }">&#xe602;</text>
-				<text class="toolbar-text" :style="{ color: theme.textSecondary }">删除</text>
+				<text class="toolbar-text" :style="{ color: theme.textSecondary }">{{ t('action.delete') }}</text>
 			</view>
 		</view>
 
@@ -468,7 +468,7 @@
 						:style="{ height: barHeight + 'px' }"
 					></view>
 				</view>
-				<text class="recording-text">{{ isCancelReady ? '松开手指，取消发送' : buildRecordingHintText() }}</text>
+				<text class="recording-text">{{ isCancelReady ? t('chat.recording.releaseToCancel') : buildRecordingHintText() }}</text>
 			</view>
 		</view>
 
@@ -476,23 +476,23 @@
 		<view v-if="showForwardConfirm" class="forward-dialog-overlay" @click="cancelForward">
 			<view class="forward-dialog" :style="{ backgroundColor: theme.cardBg }" @click.stop>
 				<view class="forward-dialog-header">
-					<text class="forward-dialog-title" :style="{ color: theme.textPrimary }">发送给</text>
+					<text class="forward-dialog-title" :style="{ color: theme.textPrimary }">{{ t('chat.forward.title') }}</text>
 				</view>
 				<view class="forward-dialog-content">
 					<view class="forward-target" :style="{ borderBottomColor: theme.borderColor }">
 						<text class="iconfont target-icon" :style="{ color: theme.textTertiary, backgroundColor: theme.cardBgMuted }">&#xe624;</text>
-						<text class="target-name" :style="{ color: theme.textPrimary }" @click.stop="openForwardTargetSelector">选择联系人/群组</text>
+						<text class="target-name" :style="{ color: theme.textPrimary }" @click.stop="openForwardTargetSelector">{{ t('chat.forward.selectTarget') }}</text>
 					</view>
 					<view class="forward-preview" :style="{ backgroundColor: theme.cardBgMuted }">
-						<text class="forward-preview-text" :style="{ color: theme.textSecondary }">将发送给选中的联系人或群组</text>
+						<text class="forward-preview-text" :style="{ color: theme.textSecondary }">{{ t('chat.forward.preview') }}</text>
 					</view>
 				</view>
 				<view class="forward-dialog-footer" :style="{ borderTopColor: theme.borderColor }">
 					<view class="dialog-btn cancel-btn" :style="{ borderRightColor: theme.borderColor }" @click="cancelForward">
-						<text class="btn-text" :style="{ color: theme.textPrimary }">取消</text>
+						<text class="btn-text" :style="{ color: theme.textPrimary }">{{ t('common.cancel') }}</text>
 					</view>
 					<view class="dialog-btn confirm-btn" @click="confirmForward">
-						<text class="btn-text highlight">发送</text>
+						<text class="btn-text highlight">{{ t('chat.forward.dialogSend') }}</text>
 					</view>
 				</view>
 			</view>
@@ -501,21 +501,21 @@
 		<view v-if="showReadReceiptSheet" class="read-receipt-mask" @click="closeReadReceiptSheet">
 			<view class="read-receipt-sheet" :style="{ backgroundColor: theme.cardBg }" @click.stop>
 				<view class="read-receipt-header" :style="{ borderBottomColor: theme.borderColor }">
-					<text class="read-receipt-title" :style="{ color: theme.textPrimary }">已读详情</text>
-					<text class="read-receipt-close" :style="{ color: theme.textTertiary }" @click="closeReadReceiptSheet">关闭</text>
+					<text class="read-receipt-title" :style="{ color: theme.textPrimary }">{{ t('chat.readReceipt.title') }}</text>
+					<text class="read-receipt-close" :style="{ color: theme.textTertiary }" @click="closeReadReceiptSheet">{{ t('chat.readReceipt.close') }}</text>
 				</view>
 				<view v-if="shouldShowVoiceReadReceiptHint()" class="read-receipt-hint-wrap">
-					<text class="read-receipt-hint-text" :style="{ color: theme.textTertiary }">语音消息“已读”按会话阅读水位统计，不代表已听语音</text>
+					<text class="read-receipt-hint-text" :style="{ color: theme.textTertiary }">{{ t('chat.readReceipt.voiceHint') }}</text>
 				</view>
 				<view class="read-receipt-summary">
 					<view class="summary-item" @click="switchReadReceiptTab('read')">
 						<text class="summary-num" :style="{ color: theme.textPrimary }">{{ readReceiptSummary ? readReceiptSummary.readCount : 0 }}</text>
-						<text class="summary-label" :class="{ 'summary-label-active': readReceiptTab === 'read' }" :style="{ color: readReceiptTab === 'read' ? theme.brandPrimary : theme.textTertiary }">已读</text>
+						<text class="summary-label" :class="{ 'summary-label-active': readReceiptTab === 'read' }" :style="{ color: readReceiptTab === 'read' ? theme.brandPrimary : theme.textTertiary }">{{ t('chat.readReceipt.read') }}</text>
 					</view>
 					<view class="summary-divider" :style="{ backgroundColor: theme.borderColor }"></view>
 					<view class="summary-item" @click="switchReadReceiptTab('unread')">
 						<text class="summary-num" :style="{ color: theme.textPrimary }">{{ readReceiptSummary ? readReceiptSummary.unreadCount : 0 }}</text>
-						<text class="summary-label" :class="{ 'summary-label-active': readReceiptTab === 'unread' }" :style="{ color: readReceiptTab === 'unread' ? theme.brandPrimary : theme.textTertiary }">未读</text>
+						<text class="summary-label" :class="{ 'summary-label-active': readReceiptTab === 'unread' }" :style="{ color: readReceiptTab === 'unread' ? theme.brandPrimary : theme.textTertiary }">{{ t('chat.readReceipt.unread') }}</text>
 					</view>
 				</view>
 				<scroll-view class="read-receipt-list" scroll-y="true" @scrolltolower="loadMoreReadReceipt">
@@ -530,10 +530,10 @@
 						</view>
 					</view>
 					<view v-if="readReceiptLoading" class="read-receipt-loading">
-						<text class="read-receipt-loading-text" :style="{ color: theme.textTertiary }">加载中...</text>
+						<text class="read-receipt-loading-text" :style="{ color: theme.textTertiary }">{{ t('chat.readReceipt.loading') }}</text>
 					</view>
 					<view v-else-if="!readReceiptHasMore" class="read-receipt-loading">
-						<text class="read-receipt-loading-text" :style="{ color: theme.textTertiary }">没有更多了</text>
+						<text class="read-receipt-loading-text" :style="{ color: theme.textTertiary }">{{ t('chat.readReceipt.noMore') }}</text>
 					</view>
 				</scroll-view>
 			</view>
@@ -612,7 +612,6 @@
 	const groupNoticeSignature = ref('')
 	const groupNoticeDismissed = ref(false)
 	const GROUP_NOTICE_DISMISS_KEY_PREFIX = 'IM_GROUP_NOTICE_DISMISS'
-	const GROUP_NOTICE_UPDATE_TIP_TEXT = '群公告有更新'
 	const shouldShowGroupNoticeBanner = computed(() : boolean => {
 		return chatType.value === 'group'
 			&& groupNoticePinned.value
@@ -621,7 +620,7 @@
 	})
 	const headerStatusText = computed(() : string => {
 		if (chatType.value === 'group') {
-			return `${memberCount.value}人`
+			return t('chat.group.memberCount', { count: memberCount.value })
 		}
 		if (singleChatOnline.value) {
 			return buildPresenceOnlineText(singleChatOnlineDeviceTypes.value)
@@ -629,7 +628,7 @@
 		if (singleChatLastActiveTime.value > 0) {
 			return buildPresenceLastActiveText(singleChatLastActiveTime.value)
 		}
-		return '离线'
+		return t('chat.presence.offline')
 	})
 	
 	// 会话信息（使用字符串避免精度丢失）
@@ -699,13 +698,13 @@
 			return ''
 		}
 		if (groupMembershipBlocked.value) {
-			return '你已被移出群聊，无法发送消息'
+			return t('chat.group.removedCannotSend')
 		}
 		if (selfMutedInGroup.value) {
 			return buildMuteUntilHint(selfMuteEndTime.value)
 		}
 		if (groupMuteAll.value && !canBypassGroupMuteAll.value) {
-			return '当前群已开启全员禁言'
+			return t('chat.group.muteAllEnabled')
 		}
 		return ''
 	})
@@ -1071,7 +1070,7 @@
 
 	function buildMuteUntilHint(muteEndTimeMs: number): string {
 		if (muteEndTimeMs <= 0) {
-			return '你已被禁言，暂时无法发送消息'
+			return t('chat.group.mutedNoSend')
 		}
 		try {
 			const date = new Date(muteEndTimeMs)
@@ -1080,13 +1079,13 @@
 			const day = `${date.getDate()}`.padStart(2, '0')
 			const hour = `${date.getHours()}`.padStart(2, '0')
 			const minute = `${date.getMinutes()}`.padStart(2, '0')
-			return `你已被禁言，至 ${year}-${month}-${day} ${hour}:${minute} 后可发言`
+			return t('chat.group.mutedUntil', { time: `${year}-${month}-${day} ${hour}:${minute}` })
 		} catch (e) {
-			return '你已被禁言，暂时无法发送消息'
+			return t('chat.group.mutedNoSend')
 		}
 	}
 
-	function appendGroupMuteStatusTip(content: string, signature: string): void {
+	function appendGroupMuteStatusTip(content: string, signature: string, systemEventKey: string = ''): void {
 		try {
 			const text = content != null ? String(content).trim() : ''
 			if (text === '') {
@@ -1114,8 +1113,9 @@
 				showTime: false,
 				avatarText: '',
 				avatarBg: '',
-				senderName: '系统'
+				senderName: t('chat.group.systemSender')
 			}
+			;(tipMessage as any).systemEventKey = systemEventKey
 			messages.value.push(tipMessage)
 			if (isAtBottom.value) {
 				setTimeout(() => {
@@ -1124,6 +1124,49 @@
 			}
 		} catch (e) {
 			console.warn('[Chat] append group mute tip failed:', e)
+		}
+	}
+
+	function getSystemNotifyEventKey(extraObj: any): string {
+		try {
+			if (extraObj == null || extraObj.i18n == null) {
+				return ''
+			}
+			return extraObj.i18n.eventKey != null ? String(extraObj.i18n.eventKey) : ''
+		} catch (e) {
+			return ''
+		}
+	}
+
+	function renderSystemNotifyTip(extraObj: any, fallback: string): string {
+		try {
+			const eventKey = getSystemNotifyEventKey(extraObj)
+			if (eventKey === '') {
+				return fallback
+			}
+			const params = extraObj != null && extraObj.i18n != null ? extraObj.i18n.params : null
+			return t(eventKey, params != null ? params : fallback)
+		} catch (e) {
+			return fallback
+		}
+	}
+
+	function getMessageSystemEventKey(m: any): string {
+		try {
+			if (m == null) {
+				return ''
+			}
+			if ((m as any).systemEventKey != null && String((m as any).systemEventKey) !== '') {
+				return String((m as any).systemEventKey)
+			}
+			const rawExtra: any = (m as any).extra
+			if (rawExtra == null || rawExtra === '') {
+				return ''
+			}
+			const extraObj = typeof rawExtra === 'string' ? JSON.parse(rawExtra) : rawExtra
+			return getSystemNotifyEventKey(extraObj)
+		} catch (e) {
+			return ''
 		}
 	}
 
@@ -1183,7 +1226,7 @@
 				}
 				selfMuteEndTime.value = nextMuteEndTime > 0 ? nextMuteEndTime : 0
 			} catch (e) {
-				if (handleGroupLifecycleRequestError(e, '你已不在该群聊')) {
+				if (handleGroupLifecycleRequestError(e, t('chat.group.removedCannotSend'))) {
 					return
 				}
 				console.warn('[Chat] refreshGroupInteractionState failed:', e)
@@ -1589,7 +1632,7 @@
 			lastHistoryLoadTriggerAt = Date.now()
 			await loadOlderHistory(true)
 			if (beforeCount === messages.value.length && !hasMore.value) {
-				uni.showToast({ title: '没有更多消息', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.noMoreMessages'), icon: 'none' })
 			}
 		} finally {
 			setTimeout(() => {
@@ -1642,7 +1685,7 @@
 		if (!hasConversationRouteMetaReady()) {
 			triggerConversationMetaRecovery()
 			uni.showToast({
-				title: chatType.value === 'group' ? '群会话信息加载中，请稍后重试' : '会话信息加载中，请稍后重试',
+				title: chatType.value === 'group' ? t('chat.toast.groupConversationLoading') : t('chat.toast.conversationLoading'),
 				icon: 'none'
 			})
 			return false
@@ -1651,7 +1694,7 @@
 			return true
 		}
 		const hint = conversationReadOnly.value ? getReadOnlyHint() : groupSendRestrictionHint.value
-		uni.showToast({ title: hint !== '' ? hint : '当前不可发送消息', icon: 'none' })
+		uni.showToast({ title: hint !== '' ? hint : t('chat.toast.cannotSend'), icon: 'none' })
 		return false
 	}
 
@@ -1659,11 +1702,11 @@
 		try {
 			const state = serviceState.value != null ? String(serviceState.value) : ''
 			if (state === 'closed' || state === 'ended' || state === 'finished') {
-				return '当前会话已关闭，仅可查看历史消息'
+				return t('chat.toast.readOnlyClosed')
 			}
-			return '当前会话为只读模式'
+			return t('chat.toast.readOnly')
 		} catch (e) {
-			return '当前会话为只读模式'
+			return t('chat.toast.readOnly')
 		}
 	}
 
@@ -1832,42 +1875,50 @@
 		const hasMobile = hasMobileOnlineDevice(deviceTypes)
 		const hasWeb = hasWebOnlineDevice(deviceTypes)
 		if (hasMobile && hasWeb) {
-			return '多端在线'
+			return t('chat.presence.multiDeviceOnline')
 		}
 		if (hasMobile) {
 			return t('chat.online', '手机在线')
 		}
 		if (hasWeb) {
-			return '电脑在线'
+			return t('chat.presence.webOnline')
 		}
-		return '在线'
+		return t('chat.presence.online')
 	}
 
 	function buildPresenceLastActiveText(timestamp: number): string {
 		if (!timestamp || timestamp <= 0) {
-			return '离线'
+			return t('chat.presence.offline')
 		}
 		const diff = Date.now() - timestamp
 		if (diff < 2 * 60 * 1000) {
-			return '刚刚活跃'
+			return t('chat.presence.justNowActive')
 		}
 		if (diff < 60 * 60 * 1000) {
-			return `${Math.max(1, Math.floor(diff / (60 * 1000)))}分钟前活跃`
+			return t('chat.presence.minutesAgoActive', { count: Math.max(1, Math.floor(diff / (60 * 1000))) })
 		}
 		const dt = new Date(timestamp)
-		const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+		const weekdays = [
+			t('chat.presence.sunday'),
+			t('chat.presence.monday'),
+			t('chat.presence.tuesday'),
+			t('chat.presence.wednesday'),
+			t('chat.presence.thursday'),
+			t('chat.presence.friday'),
+			t('chat.presence.saturday')
+		]
 		const hh = String(dt.getHours()).padStart(2, '0')
 		const mm = String(dt.getMinutes()).padStart(2, '0')
 		if (diff < 24 * 60 * 60 * 1000) {
-			return `今天 ${hh}:${mm} 活跃`
+			return t('chat.presence.todayActiveAt', { time: `${hh}:${mm}` })
 		}
 		if (diff < 48 * 60 * 60 * 1000) {
-			return `昨天 ${hh}:${mm} 活跃`
+			return t('chat.presence.yesterdayActiveAt', { time: `${hh}:${mm}` })
 		}
 		if (diff < 7 * 24 * 60 * 60 * 1000) {
-			return `${weekdays[dt.getDay()]} ${hh}:${mm} 活跃`
+			return t('chat.presence.weekdayActiveAt', { weekday: weekdays[dt.getDay()], time: `${hh}:${mm}` })
 		}
-		return '最近活跃'
+		return t('chat.presence.recentlyActive')
 	}
 
 	function resetSingleChatPresence(): void {
@@ -2044,12 +2095,14 @@
 			}
 			groupService.invalidateGroup(notifyGroupId)
 			const tipContent = extraObj.tipContent != null ? String(extraObj.tipContent).trim() : ''
+			const systemEventKey = getSystemNotifyEventKey(extraObj)
 			if (action === 'group_mute_all_changed') {
 				const muted = extraObj.muted === true || extraObj.muted === 1 || extraObj.muted === '1'
 				groupMuteAll.value = muted
 				appendGroupMuteStatusTip(
-					tipContent !== '' ? tipContent : (muted ? '已开启全员禁言，只有群主和管理员可以发言' : '已解除全员禁言'),
-					`${action}_${notifyGroupId}_${muted ? '1' : '0'}_${tipContent}`
+					renderSystemNotifyTip(extraObj, tipContent !== '' ? tipContent : (muted ? t('im.system.group_mute_all_enabled') : t('im.system.group_mute_all_disabled'))),
+					`${action}_${notifyGroupId}_${muted ? '1' : '0'}_${tipContent}`,
+					systemEventKey
 				)
 			}
 			if (action === 'group_member_mute_changed') {
@@ -2059,10 +2112,11 @@
 					selfMuteEndTime.value = muted ? normalizeNotifyTimeMs(extraObj.muteEndTime) : 0
 				}
 				appendGroupMuteStatusTip(
-					tipContent !== '' ? tipContent : (memberUserId === currentUserId.value
-						? (muted ? buildMuteUntilHint(selfMuteEndTime.value) : '你已被解除禁言')
-						: (muted ? '有群成员被禁言' : '有群成员被解除禁言')),
-					`${action}_${notifyGroupId}_${memberUserId}_${muted ? '1' : '0'}_${selfMuteEndTime.value}_${tipContent}`
+					renderSystemNotifyTip(extraObj, tipContent !== '' ? tipContent : (memberUserId === currentUserId.value
+						? (muted ? buildMuteUntilHint(selfMuteEndTime.value) : t('im.notify.you_unmuted'))
+						: (muted ? t('im.notify.group_member_muted_generic') : t('im.notify.group_member_unmuted_generic')))),
+					`${action}_${notifyGroupId}_${memberUserId}_${muted ? '1' : '0'}_${selfMuteEndTime.value}_${tipContent}`,
+					systemEventKey
 				)
 			}
 			if (action === 'group_member_added') {
@@ -2086,37 +2140,40 @@
 					void recoverGroupConversationAfterMembershipRestore()
 				}
 				appendGroupMuteStatusTip(
-					tipContent !== '' ? tipContent : '有新成员加入了群聊',
-					`${action}_${notifyGroupId}_${tipContent}`
+					renderSystemNotifyTip(extraObj, tipContent !== '' ? tipContent : t('im.notify.group_member_added')),
+					`${action}_${notifyGroupId}_${tipContent}`,
+					systemEventKey
 				)
 			}
 			if (action === 'group_member_removed') {
 				const memberUserId = extraObj.memberUserId != null ? String(extraObj.memberUserId) : ''
 				if (memberUserId === currentUserId.value) {
-					redirectAfterRemovedFromGroup(tipContent !== '' ? tipContent : '你已被移出群聊')
+					redirectAfterRemovedFromGroup(t('im.notify.removed_from_group'))
 					return
 				}
 				appendGroupMuteStatusTip(
-					tipContent !== '' ? tipContent : '有群成员被移出群聊',
-					`${action}_${notifyGroupId}_${memberUserId}_${tipContent}`
+					renderSystemNotifyTip(extraObj, tipContent !== '' ? tipContent : t('im.notify.group_member_removed')),
+					`${action}_${notifyGroupId}_${memberUserId}_${tipContent}`,
+					systemEventKey
 				)
 			}
 			if (action === 'group_owner_transferred') {
 				const oldOwnerId = extraObj.oldOwnerId != null ? String(extraObj.oldOwnerId) : ''
 				const newOwnerId = extraObj.newOwnerId != null ? String(extraObj.newOwnerId) : ''
 				appendGroupMuteStatusTip(
-					tipContent !== '' ? tipContent : '群主已完成转让',
-					`${action}_${notifyGroupId}_${newOwnerId}_${tipContent}`
+					renderSystemNotifyTip(extraObj, tipContent !== '' ? tipContent : t('im.notify.group_owner_transfer_done')),
+					`${action}_${notifyGroupId}_${newOwnerId}_${tipContent}`,
+					systemEventKey
 				)
 				if (newOwnerId !== '' && newOwnerId === currentUserId.value) {
 					uni.showToast({
-						title: '你已成为新群主',
+						title: t('im.notify.you_are_new_owner'),
 						icon: 'none',
 						duration: 2200
 					})
 				} else if (oldOwnerId !== '' && oldOwnerId === currentUserId.value) {
 					uni.showToast({
-						title: '你已转让群主身份',
+						title: t('im.notify.you_transferred_owner'),
 						icon: 'none',
 						duration: 2200
 					})
@@ -2235,13 +2292,13 @@
 					console.error('[Chat] 查询会话失败：返回数据无效', conversationResult)
 				}
 			} catch (e) {
-				if (handleGroupLifecycleRequestError(e, '你已不在该群聊')) {
+				if (handleGroupLifecycleRequestError(e, t('chat.group.removedCannotSend'))) {
 					return
 				}
 				console.error('[Chat] 查询会话失败:', e)
 				if (showErrorToast) {
 					uni.showToast({
-						title: '获取会话失败',
+						title: t('chat.toast.conversationLoadFailed'),
 						icon: 'none'
 					})
 				}
@@ -2879,12 +2936,20 @@
 							date.getDate() === yesterday.getDate()
 		
 		if (isYesterday) {
-			return `昨天 ${hours}:${minutes}`
+			return `${t('message.time.yesterday')} ${hours}:${minutes}`
 		}
 		
 		const oneWeekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000
 		if (timestamp > oneWeekAgo) {
-			const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+			const weekDays = [
+				t('message.weekdays.sunday'),
+				t('message.weekdays.monday'),
+				t('message.weekdays.tuesday'),
+				t('message.weekdays.wednesday'),
+				t('message.weekdays.thursday'),
+				t('message.weekdays.friday'),
+				t('message.weekdays.saturday')
+			]
 			return `${weekDays[date.getDay()]} ${hours}:${minutes}`
 		}
 		
@@ -3362,7 +3427,7 @@
 		const postName = (payload as any).postName != null ? String((payload as any).postName) : ''
 		const avatar = (payload as any).avatar != null ? String((payload as any).avatar) : ''
 		uiMessage.contactUserId = userId
-		uiMessage.contactDisplayName = displayName !== '' ? displayName : '名片'
+		uiMessage.contactDisplayName = displayName !== '' ? displayName : t('chat.preview.contactCard')
 		if (deptName !== '') {
 			uiMessage.contactDeptName = deptName
 		}
@@ -3372,7 +3437,7 @@
 		if (avatar !== '') {
 			uiMessage.contactAvatar = avatar
 		}
-		uiMessage.content = displayName !== '' ? displayName : '名片'
+		uiMessage.content = displayName !== '' ? displayName : t('chat.preview.contactCard')
 	}
 	
 	/**
@@ -3452,7 +3517,7 @@
 				}
 				if (entryMode.value === 'anchor' || entryMode.value === 'restore') {
 					if (!anchorFound) {
-						uni.showToast({ title: '原消息已不可定位，已为你打开最近消息', icon: 'none' })
+						uni.showToast({ title: t('chat.toast.anchorFallback'), icon: 'none' })
 						scrollToBottom()
 					} else {
 						setTimeout(() => {
@@ -3474,13 +3539,13 @@
 			}
 			
 		} catch (e) {
-			if (handleGroupLifecycleRequestError(e, '你已不在该群聊')) {
+			if (handleGroupLifecycleRequestError(e, t('chat.group.removedCannotSend'))) {
 				return
 			}
 			console.error('[Chat] 加载消息失败:', e)
 			// 显示网络错误提示,允许用户重试
 			uni.showToast({
-				title: '网络异常，加载消息失败',
+				title: t('chat.toast.loadMessageFailed'),
 				icon: 'none',
 				duration: 2000
 			})
@@ -3589,7 +3654,7 @@
 				targetAnchorSequence.value = String((resp as any).anchorSequence)
 			}
 			if (resp != null && (resp as any).anchorFound === false) {
-				uni.showToast({ title: '原消息已不可定位，已为你打开最近消息', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.anchorFallback'), icon: 'none' })
 				return false
 			}
 			return true
@@ -3711,6 +3776,7 @@
 		} catch (e) {
 			isRecalled = false
 		}
+		const systemMeta = !isRecalled ? tryGetSystemEventMeta(msg.extra) : null
 	
 		const uiMessage = {
 			id: idStr,
@@ -3722,7 +3788,13 @@
 			senderId: senderIdStr,
 			receiverId: receiverIdStr,
 			type: isRecalled ? 'text' : resolveUiMessageType(msg.messageType, content, extraContent),
-			content: isRecalled ? (isSelfVal ? '你撤回了一条消息' : `${senderNickname} 撤回了一条消息`) : (resolveUiMessageType(msg.messageType, content, extraContent) === 'sticker' ? extractStickerUrl(content, extraContent) : getMessageContent(msg.messageType, content)),
+			content: isRecalled
+				? ((content != null && String(content).trim() !== '')
+					? String(content)
+					: (isSelfVal
+						? t('im.recall.self')
+						: t('im.recall.other', { operatorName: senderNickname !== '' ? senderNickname : '对方' })))
+				: (resolveUiMessageType(msg.messageType, content, extraContent) === 'sticker' ? extractStickerUrl(content, extraContent) : getMessageContent(msg.messageType, content)),
 			isSelf: isSelfVal,
 			time: msg.sendTime || msg.createTime || '',
 			timestamp: new Date(msg.sendTime || msg.createTime || Date.now()).getTime(),
@@ -3738,6 +3810,7 @@
 				|| (msg as any).voicePlayed === '1'
 				|| (msg as any).voicePlayed === 'true'
 		} as MessageItem
+		applySystemTipUiShape(uiMessage as any, systemMeta)
 
 		// enterprise: re-edit-after-recall rehydration for refresh/re-enter (REST history lacks original content)
 		try {
@@ -3803,6 +3876,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				|| (msg as any).voicePlayed === '1'
 				|| (msg as any).voicePlayed === 'true'
 		} as MessageItem
+		const serviceSystemMeta = (((msg as any).status === 6 || (msg as any).status === '6')
+			? null
+			: tryGetSystemEventMeta((msg as any).extra))
+		applySystemTipUiShape(uiMessage as any, serviceSystemMeta)
 		try {
 			const ex: any = msg as any
 			if (ex != null) {
@@ -4023,6 +4100,54 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return content != null ? String(content) : ''
 		}
 		return content != null ? String(content) : ''
+	}
+
+	function tryGetSystemEventMeta(rawExtra : any) : { eventKey: string, text: string } | null {
+		try {
+			if (rawExtra == null || rawExtra === '') {
+				return null
+			}
+			const extraObj : any = safeParseJson(rawExtra)
+			if (extraObj == null || typeof extraObj !== 'object') {
+				return null
+			}
+			const i18nObj : any = extraObj.i18n
+			if (i18nObj == null || typeof i18nObj !== 'object') {
+				return null
+			}
+			const eventKey = i18nObj.eventKey != null ? String(i18nObj.eventKey) : ''
+			if (eventKey === '' || eventKey.indexOf('im.system.') !== 0) {
+				return null
+			}
+			const params = i18nObj.params != null && typeof i18nObj.params === 'object' ? i18nObj.params : {}
+			return {
+				eventKey: eventKey,
+				text: t(eventKey, params)
+			}
+		} catch (e) {
+			return null
+		}
+	}
+
+	function applySystemTipUiShape(uiMessage : any, systemMeta : { eventKey: string, text: string } | null) : void {
+		try {
+			if (uiMessage == null || systemMeta == null) {
+				return
+			}
+			uiMessage.type = 'text'
+			uiMessage.content = systemMeta.text
+			uiMessage.isSelf = false
+			uiMessage.senderId = '0'
+			uiMessage.receiverId = '0'
+			uiMessage.senderAvatar = ''
+			uiMessage.avatarError = false
+			uiMessage.avatarText = ''
+			uiMessage.avatarBg = ''
+			uiMessage.senderName = t('chat.group.systemSender')
+			;(uiMessage as any).systemEventKey = systemMeta.eventKey
+		} catch (e) {
+			// ignore
+		}
 	}
 
 	function extractMediaUrl(content : any, fallbackMixedContent : boolean = false) : string {
@@ -4317,10 +4442,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}
 			if (target.quoteMessageId != null && String(target.quoteMessageId) !== '' && String(target.quoteMessageId) !== '0') {
 				if (target.quoteContent == null || String(target.quoteContent).trim() === '') {
-					target.quoteContent = '[消息]'
+					target.quoteContent = t('chat.preview.message')
 				}
 				if (target.quoteSenderName == null || String(target.quoteSenderName).trim() === '') {
-					target.quoteSenderName = '未知'
+					target.quoteSenderName = t('chat.preview.unknownSender')
 				}
 			}
 		} catch (e) {
@@ -4376,8 +4501,38 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 	}
 
+	function getRecallPreviewText(): string {
+		return t('im.recall.preview')
+	}
+
 	function isRecallTip(content : string) : boolean {
-		return content.indexOf('撤回') > -1 && content.indexOf('消息') > -1
+		try {
+			const text = content != null ? String(content).trim() : ''
+			if (text === '') {
+				return false
+			}
+			return text === t('im.recall.self')
+				|| text === getRecallPreviewText()
+		} catch (e) {
+			return false
+		}
+	}
+
+	function hasMessageSystemEventKey(m: any, eventKeys: string[]): boolean {
+		try {
+			const systemEventKey = getMessageSystemEventKey(m)
+			if (systemEventKey === '' || eventKeys.length === 0) {
+				return false
+			}
+			for (let i = 0; i < eventKeys.length; i++) {
+				if (systemEventKey === eventKeys[i]) {
+					return true
+				}
+			}
+			return false
+		} catch (e) {
+			return false
+		}
 	}
 
 	function isRecalledFinalMsg(m: any): boolean {
@@ -4398,8 +4553,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			if (senderId !== '0') {
 				return false
 			}
+			if (hasMessageSystemEventKey(m, ['im.system.group_notice_updated'])) {
+				return true
+			}
 			const content = (m as any).content != null ? String((m as any).content).trim() : ''
-			return content === GROUP_NOTICE_UPDATE_TIP_TEXT
+			return content === t('im.system.group_notice_updated')
 		} catch (e) {
 			return false
 		}
@@ -4414,13 +4572,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			if (senderId !== '0') {
 				return false
 			}
-			const content = (m as any).content != null ? String((m as any).content).trim() : ''
-			return content === '你已被解除禁言'
-				|| content === '已解除全员禁言'
-				|| content.indexOf('你已被禁言') === 0
-				|| content.indexOf('已开启全员禁言') === 0
-				|| content.indexOf('已被禁言') > -1
-				|| content.indexOf('已被解除禁言') > -1
+			return hasMessageSystemEventKey(m, [
+				'im.system.group_member_muted',
+				'im.system.group_member_muted_until',
+				'im.system.group_member_unmuted',
+				'im.system.group_mute_all_enabled',
+				'im.system.group_mute_all_disabled'
+			])
 		} catch (e) {
 			return false
 		}
@@ -4435,10 +4593,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			if (senderId !== '0') {
 				return false
 			}
-			const content = (m as any).content != null ? String((m as any).content).trim() : ''
-			return content.indexOf('加入了群聊') > -1
-				|| content.indexOf('已被移出群聊') > -1
-				|| content.indexOf('群主已转让给') > -1
+			return hasMessageSystemEventKey(m, [
+				'im.system.group_owner_transferred',
+				'im.system.group_member_added_one',
+				'im.system.group_member_added_two',
+				'im.system.group_member_added_many',
+				'im.system.group_member_removed',
+				'im.system.group_member_role_set_admin',
+				'im.system.group_member_role_set_member'
+			])
 		} catch (e) {
 			return false
 		}
@@ -4452,21 +4615,24 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function getMessagePreview(msg : MessageItem) : string {
+		if (isRecalledFinalMsg(msg)) {
+			return getRecallPreviewText()
+		}
 		if (msg.type === 'text' || msg.type === 'quote') {
 			const text = msg.content || ''
-			return isRecallTip(text) ? '[消息已撤回]' : text
+			return isRecallTip(text) ? getRecallPreviewText() : text
 		}
-		if (msg.type === 'image') return '[图片]'
-		if (msg.type === 'emoji') return '[表情]'
-		if (msg.type === 'sticker') return '[动画表情]'
-		if (msg.type === 'voice') return '[语音]'
-		if (msg.type === 'video') return '[视频]'
+		if (msg.type === 'image') return t('chat.preview.image')
+		if (msg.type === 'emoji') return t('chat.preview.emoji')
+		if (msg.type === 'sticker') return t('chat.preview.sticker')
+		if (msg.type === 'voice') return t('chat.preview.voice')
+		if (msg.type === 'video') return t('chat.preview.video')
 		if (msg.type === 'file') {
-			return msg.fileName ? `[文件] ${msg.fileName}` : '[文件]'
+			return msg.fileName ? t('chat.preview.fileWithName', { name: msg.fileName }) : t('chat.preview.file')
 		}
-		if (msg.type === 'location') return '[位置]'
-		if (msg.type === 'contact_card') return '[名片]'
-		return '[消息]'
+		if (msg.type === 'location') return t('chat.preview.location')
+		if (msg.type === 'contact_card') return t('chat.preview.contactCard')
+		return t('chat.preview.message')
 	}
 
 	function buildQuoteChain(msg : MessageItem) : QuoteChainItem[] {
@@ -4502,7 +4668,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				chain.push({
 					messageId: currentId,
 					senderName: currentSender || '未知',
-					content: currentContent || '原消息已删除',
+					content: currentContent || t('chat.label.messageDeleted'),
 					missing: true
 				})
 				break
@@ -4723,6 +4889,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				|| (message as any).voicePlayed === '1'
 				|| (message as any).voicePlayed === 'true'
 		} as MessageItem
+		const incomingSystemMeta = (incomingIsRecalled ? null : tryGetSystemEventMeta((message as any).extra))
+		applySystemTipUiShape(uiMessage as any, incomingSystemMeta)
 		try {
 			const ex: any = message as any
 			if (ex != null) {
@@ -5149,7 +5317,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					if (denyCode === 'NOT_GROUP_MEMBER' || denyCode === 'GROUP_MEMBER_NOT_EXISTS') {
 						redirectAfterRemovedFromGroup(meta != null && meta.denyMessage != null && String(meta.denyMessage) !== ''
 							? String(meta.denyMessage)
-							: '你已被移出群聊')
+							: t('im.notify.removed_from_group'))
 						return
 					}
 				}
@@ -5210,7 +5378,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		groupMuteAll.value = false
 		groupMyRole.value = 0
 		selfMuteEndTime.value = 0
-		const notice = tipContent !== '' ? tipContent : '你已被移出群聊'
+		const notice = tipContent !== '' ? tipContent : t('im.notify.removed_from_group')
 		try {
 			finalizeGroupLifecycleExit(groupId.value, chatId.value, notice)
 		} catch (e) {
@@ -5251,7 +5419,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		const manager = ensureRecorderManagerReady(true)
 		if (manager == null) {
-			uni.showToast({ title: '当前平台暂不支持语音发送', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.voiceNotSupported'), icon: 'none' })
 			return
 		}
 		isVoiceMode.value = true
@@ -5729,7 +5897,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return
 		}
 		if (stickerList.value.length >= STICKER_LIMIT) {
-			uni.showToast({ title: `最多添加${STICKER_LIMIT}张表情`, icon: 'none' })
+			uni.showToast({ title: t('chat.toast.maxStickerReached', { count: STICKER_LIMIT }), icon: 'none' })
 			return
 		}
 		try {
@@ -5748,11 +5916,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				name: data != null && data.name != null ? String(data.name) : ''
 			})
 			stickerList.value = getCustomStickers()
-			uni.showToast({ title: '已添加到表情', icon: 'success' })
+			uni.showToast({ title: t('chat.toast.stickerAdded'), icon: 'success' })
 			await handleStickerPanelItemTap(uploaded)
 		} catch (e) {
 			console.error('[Chat] 上传自定义表情失败', e)
-			uni.showToast({ title: '添加失败', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.addFailed'), icon: 'none' })
 		}
 	}
 
@@ -5793,7 +5961,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			showEmojiMenu.value = false
 		} catch (e) {
 			console.error('[Chat] 发送贴纸失败', e)
-			uni.showToast({ title: '发送失败', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.sendFailed'), icon: 'none' })
 		}
 	}
 
@@ -6124,7 +6292,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			closeMentionSelector()
 			return
 		}
-		applyMentionSelection('所有人', '-1')
+		applyMentionSelection(t('chat.mention.allMembers'), '-1')
 	}
 
 	function handleInputFocus() {
@@ -6233,10 +6401,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	function getReeditActionText(msg: any): string {
 		if (isReeditExpired(msg)) {
-			return '重新编辑(已过期)'
+			return t('chat.voice.reeditExpired')
 		}
 		const remain = getReeditRemainSeconds(msg)
-		return `重新编辑(${formatReeditRemain(remain)})`
+		return t('chat.voice.reeditRemaining', { time: formatReeditRemain(remain) })
 	}
 
 	function shouldShowReeditEntry(msg: any): boolean {
@@ -6268,7 +6436,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					return
 				}
 				if (attempt >= 8) {
-					uni.showToast({ title: '输入框暂不可用，请稍后重试', icon: 'none' })
+					uni.showToast({ title: t('chat.toast.editorUnavailable'), icon: 'none' })
 					return
 				}
 				setTimeout(() => {
@@ -6277,7 +6445,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}).exec()
 		} catch (e) {
 			if (attempt >= 8) {
-				uni.showToast({ title: '输入框暂不可用，请稍后重试', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.editorUnavailable'), icon: 'none' })
 				return
 			}
 			setTimeout(() => {
@@ -6292,17 +6460,17 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				return
 			}
 			if (!shouldShowReeditEntry(msg)) {
-				uni.showToast({ title: '重新编辑已过期', icon: 'none' })
+				uni.showToast({ title: t('im.recall.reeditExpired'), icon: 'none' })
 				return
 			}
 			const quoteId = (msg as any).quoteMessageId != null ? String((msg as any).quoteMessageId) : ''
 			if (quoteId !== '' && quoteId !== '0') {
-				uni.showToast({ title: '该消息类型不支持重新编辑', icon: 'none' })
+				uni.showToast({ title: t('im.recall.reeditUnsupported'), icon: 'none' })
 				return
 			}
 			const forwardedFrom = (msg as any).forwardedFrom != null ? String((msg as any).forwardedFrom) : ''
 			if (forwardedFrom.trim() !== '') {
-				uni.showToast({ title: '该消息类型不支持重新编辑', icon: 'none' })
+				uni.showToast({ title: t('im.recall.reeditUnsupported'), icon: 'none' })
 				return
 			}
 			const rawContent: any = (msg as any).content
@@ -6312,7 +6480,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					: ((rawContent as any).quoteMessageId != null ? String((rawContent as any).quoteMessageId) : '')
 				const innerType = (rawContent as any).type != null ? String((rawContent as any).type) : ''
 				if ((innerQuoteId !== '' && innerQuoteId !== '0') || innerType === 'FORWARD_COMBINE') {
-					uni.showToast({ title: '该消息类型不支持重新编辑', icon: 'none' })
+					uni.showToast({ title: t('im.recall.reeditUnsupported'), icon: 'none' })
 					return
 				}
 			}
@@ -6334,11 +6502,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			} catch (e) {
 			}
 			if (!content) {
-				uni.showToast({ title: '原内容为空', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.originalEmpty'), icon: 'none' })
 				return
 			}
 			if (isRecallTip(content)) {
-				uni.showToast({ title: '原内容不可恢复', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.originalUnrecoverable'), icon: 'none' })
 				return
 			}
 			// re-edit must send a NEW normal message (not quote-reply)
@@ -6354,7 +6522,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			ensureEditorReadyAndApply(content)
 		} catch (e) {
 			console.error('[Chat] handleReeditAfterRecall failed:', e)
-			uni.showToast({ title: '操作失败', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.actionFailed'), icon: 'none' })
 		}
 	}
 
@@ -6387,9 +6555,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	function buildRecordingHintText(): string {
 		const remainMs = Math.max(0, MAX_VOICE_DURATION_MS - clampRecordingElapsedMs(recordingElapsedMs.value))
 		if (remainMs <= 0) {
-			return '已到最大时长，正在结束录音'
+			return t('chat.recording.endingByLimit')
 		}
-		return `手指上滑，取消发送`
+		return t('chat.recording.slideToCancel')
 	}
 
 	function isRecordingNearLimit(): boolean {
@@ -6436,7 +6604,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} catch (e) {
 			console.error('[Chat] 达到录音上限后自动结束失败:', e)
 			resetVoiceRecordState()
-			uni.showToast({ title: '录音已到上限，请重试', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.recordingLimitReached'), icon: 'none' })
 		}
 	}
 
@@ -6484,9 +6652,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	function promptVoiceRecordUnavailable(message: string): void {
 		uni.showModal({
-			title: '无法录音',
+			title: t('chat.toast.recordUnavailableTitle'),
 			content: message,
-			confirmText: '去设置',
+			cancelText: t('common.cancel'),
+			confirmText: t('chat.recording.goSetting'),
 			success: (res) => {
 				if (res.confirm) {
 					try {
@@ -6501,7 +6670,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
 	function showVoiceTooShortToast(): void {
 		uni.showToast({
-			title: '说话时间太短',
+			title: t('chat.toast.recordTooShort'),
 			icon: 'none',
 			duration: 2000
 		})
@@ -6510,9 +6679,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	function buildVoiceTooLargeHint(sizeBytes: number = 0): string {
 		const limitText = formatFileSize(MAX_VOICE_SIZE)
 		if (sizeBytes > 0) {
-			return `语音过大(${formatFileSize(sizeBytes)})，请控制在${limitText}内`
+			return t('chat.voice.tooLargeWithSize', { size: formatFileSize(sizeBytes), limit: limitText })
 		}
-		return `语音文件过大，请控制在${limitText}内`
+		return t('chat.voice.tooLarge', { limit: limitText })
 	}
 
 	function isVoiceTooLargeError(err: any): boolean {
@@ -6653,7 +6822,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		if (safeDurationMs > MAX_VOICE_DURATION_MS + VOICE_DURATION_OVERFLOW_TOLERANCE_MS) {
 			revokeObjectUrl(tempFilePath)
-			uni.showToast({ title: '录音时长异常，请重新录制', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.recordDurationInvalid'), icon: 'none' })
 			return
 		}
 		if (sourceSizeBytes > 0 && sourceSizeBytes > MAX_VOICE_SIZE) {
@@ -6662,7 +6831,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return
 		}
 		if (autoStoppedByLimit) {
-			uni.showToast({ title: '已到60秒，自动结束录音', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.recordAutoStopped'), icon: 'none' })
 		}
 		if (safeDurationMs < MIN_VOICE_DURATION_MS) {
 			revokeObjectUrl(tempFilePath)
@@ -6670,7 +6839,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			return
 		}
 		if (tempFilePath === '' && sourceBlob == null) {
-			uni.showToast({ title: '录音文件生成失败', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.recordFileCreateFailed'), icon: 'none' })
 			return
 		}
 		const draft = createLocalVoiceDraft(tempFilePath, durationSec, boundedDurationMs, sourceBlob, sourceFormat, uploadFileName)
@@ -6687,7 +6856,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			showVoiceTooShortToast()
 			return
 		}
-		promptVoiceRecordUnavailable('录音失败，请检查麦克风权限')
+		promptVoiceRecordUnavailable(t('chat.toast.recordPermissionDenied'))
 	}
 
 	function cleanupH5VoiceRecorderRuntime(): void {
@@ -6951,7 +7120,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (!scopeReady) { return }
 		const manager = ensureRecorderManagerReady(true)
 		if (manager == null) {
-			uni.showToast({ title: '当前平台暂不支持语音发送', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.voiceNotSupported'), icon: 'none' })
 			return
 		}
 		stopCurrentVoicePlayback()
@@ -7016,7 +7185,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		} catch (e) {
 			console.error('[Chat] 停止录音失败:', e)
 			resetVoiceRecordState()
-			uni.showToast({ title: '录音结束失败', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.recordStopFailed'), icon: 'none' })
 		}
 	}
 
@@ -7248,7 +7417,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 							}, 100)
 						} catch (err) {
 							console.error('[Chat] upload-and-return-id 上传图片失败:', err)
-							uni.showToast({ title: '上传失败', icon: 'none' })
+							uni.showToast({ title: t('chat.toast.uploadFailed'), icon: 'none' })
 						}
 					}
 				})
@@ -7272,7 +7441,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					
 					if (!imageUrl) {
 						console.error('[Chat] 图片URL为空:', result)
-						uni.showToast({ title: '图片URL获取失败', icon: 'none' })
+						uni.showToast({ title: t('chat.toast.imageUrlLoadFailed'), icon: 'none' })
 						return
 					}
 					
@@ -7355,7 +7524,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				}, 100)
 			}).catch((err) => {
 				console.error('[Chat] 上传图片失败:', err)
-				uni.showToast({ title: '上传失败', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.uploadFailed'), icon: 'none' })
 			})
 			return
 		}
@@ -7432,7 +7601,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						}, 100)
 					}).catch((err) => {
 						console.error('[Chat] 上传图片失败:', err)
-						uni.showToast({ title: '上传失败', icon: 'none' })
+						uni.showToast({ title: t('chat.toast.uploadFailed'), icon: 'none' })
 					})
 				},
 				fail: (err) => {
@@ -7477,7 +7646,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 							}, 100)
 						} catch (err) {
 							console.error('[Chat] upload-and-return-id 上传视频失败:', err)
-							uni.showToast({ title: '上传失败', icon: 'none' })
+							uni.showToast({ title: t('chat.toast.uploadFailed'), icon: 'none' })
 						}
 					}
 				})
@@ -7549,7 +7718,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				}, 100)
 			}).catch((err) => {
 				console.error('[Chat] 上传视频失败:', err)
-				uni.showToast({ title: '上传失败', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.uploadFailed'), icon: 'none' })
 			})
 			return
 		}
@@ -7592,7 +7761,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 							}, 100)
 						} catch (err) {
 							console.error('[Chat] upload-and-return-id 上传文件失败:', err)
-							const msg = (err as any)?.message || '上传失败'
+							const msg = (err as any)?.message || t('chat.toast.uploadFailed')
 							uni.showToast({ title: msg, icon: 'none' })
 						}
 					}
@@ -7666,7 +7835,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				}, 100)
 			}).catch((err) => {
 				console.error('[Chat] 上传文件失败:', err)
-				uni.showToast({ title: '上传失败', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.uploadFailed'), icon: 'none' })
 			})
 			return
 		}
@@ -7681,7 +7850,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					const latitude = payload != null && (payload as any).latitude != null ? Number((payload as any).latitude) : NaN
 					const longitude = payload != null && (payload as any).longitude != null ? Number((payload as any).longitude) : NaN
 					if (isNaN(latitude) || isNaN(longitude)) {
-						uni.showToast({ title: '位置信息无效', icon: 'none' })
+						uni.showToast({ title: t('chat.toast.locationInvalid'), icon: 'none' })
 						return
 					}
 					const address = payload != null && (payload as any).address != null ? String((payload as any).address) : ''
@@ -7690,7 +7859,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					sendLocationCard(latitude, longitude, address, locationName, provider)
 				} catch (e) {
 					console.error('[Chat] 接收位置选择结果失败:', e)
-					uni.showToast({ title: '发送失败', icon: 'none' })
+					uni.showToast({ title: t('chat.toast.sendFailed'), icon: 'none' })
 				}
 			}
 			uni.$on('imSelectLocation', onSelectLocation)
@@ -7701,10 +7870,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					uni.$off('imSelectLocation', onSelectLocation)
 					console.error('[Chat] 打开位置搜索页失败:', err)
 					uni.showModal({
-						title: '位置功能异常',
-						content: '无法打开位置搜索页，是否直接发送当前位置？',
-						confirmText: '发送定位',
-						cancelText: '取消',
+						title: t('chat.confirm.locationFallbackTitle'),
+						content: t('chat.confirm.locationFallbackContent'),
+						confirmText: t('chat.confirm.locationFallbackConfirm'),
+						cancelText: t('common.cancel'),
 						success: (res) => {
 							if (res.confirm === true) {
 								void fallbackSendCurrentLocation('open_location_search_page_failed')
@@ -7728,7 +7897,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		
 		uni.showToast({
-			title: t(item.nameKey) + '功能开发中',
+			title: t(item.nameKey) + ' ' + t('common.inDevelopment'),
 			icon: 'none'
 		})
 	}
@@ -7758,7 +7927,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				}
 			}
 			if (!url) {
-				uni.showToast({ title: '图片地址为空', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.imageUrlEmpty'), icon: 'none' })
 				return
 			}
 			uni.previewImage({
@@ -7766,7 +7935,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			})
 		} catch (e) {
 			console.error('[Chat] 图片预览失败:', e)
-			uni.showToast({ title: '预览失败', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.previewFailed'), icon: 'none' })
 		}
 	}
 
@@ -7992,7 +8161,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	async function handleVideoPlay(msg : any) {
 		try {
 			let url = msg && msg.content ? String(msg.content) : ''
-			const title = msg && msg.fileName ? String(msg.fileName) : '视频播放'
+			const title = msg && msg.fileName ? String(msg.fileName) : t('chat.label.videoPlay')
 			if (IM_MEDIA_USE_FILE_ID === 'true' && msg && msg.fileId) {
 				const signed = await resolvePresignedUrl(String(msg.fileId))
 				if (signed) {
@@ -8000,7 +8169,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				}
 			}
 			if (!url) {
-				uni.showToast({ title: '视频地址为空', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.videoUrlEmpty'), icon: 'none' })
 				return
 			}
 			uni.navigateTo({
@@ -8008,7 +8177,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			})
 		} catch (e) {
 			console.error('[Chat] 视频播放失败:', e)
-			uni.showToast({ title: '播放失败', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.playFailed'), icon: 'none' })
 		}
 	}
 
@@ -8023,7 +8192,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				name: fileName != '' ? fileName : null
 			})
 		} catch (e) {
-			uni.showToast({ title: '打开失败', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.openFailed'), icon: 'none' })
 		}
 	}
 
@@ -8032,16 +8201,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const latVal = msg && msg.latitude != null ? Number(msg.latitude) : NaN
 			const lngVal = msg && msg.longitude != null ? Number(msg.longitude) : NaN
 			if (isNaN(latVal) || isNaN(lngVal)) {
-				uni.showToast({ title: '位置信息缺失', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.locationMissing'), icon: 'none' })
 				return
 			}
 			const address = msg && msg.address != null ? String(msg.address) : ''
 			const name = msg && msg.locationName != null ? String(msg.locationName) : address
 			uni.showModal({
-				title: name !== '' ? name : '位置信息',
-				content: address !== '' ? address : '经纬度位置',
-				confirmText: '导航',
-				cancelText: '取消',
+				title: name !== '' ? name : t('chat.label.locationDefault'),
+				content: address !== '' ? address : t('chat.label.locationCoordinate'),
+				confirmText: t('chat.label.navigate'),
+				cancelText: t('common.cancel'),
 				success: (res) => {
 					if (res.confirm !== true) {
 						return
@@ -8056,12 +8225,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			})
 		} catch (e) {
 			console.error('[Chat] 打开位置失败:', e)
-			uni.showToast({ title: '打开失败', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.openFailed'), icon: 'none' })
 		}
 	}
 
 	function sendLocationCard(latitude: number, longitude: number, address: string, locationName: string, provider: string): void {
-		const safeAddress = address !== '' ? address : (locationName !== '' ? locationName : '位置')
+		const safeAddress = address !== '' ? address : (locationName !== '' ? locationName : t('chat.label.location'))
 		const safeName = locationName !== '' ? locationName : safeAddress
 		const safeProvider = provider !== '' ? provider : 'tencent'
 		void messageService.sendLocationMessage(
@@ -8087,14 +8256,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}
 		} catch (e) {
 		}
-		return '名'
+		return t('message.contactCardAvatarFallback')
 	}
 
 	function handleContactCardOpen(msg : any) {
 		try {
 			const userId = msg && msg.contactUserId != null ? String(msg.contactUserId) : ''
 			if (userId === '' || userId === '0') {
-				uni.showToast({ title: '名片信息缺失', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.contactMissing'), icon: 'none' })
 				return
 			}
 			const displayName = msg && msg.contactDisplayName != null ? String(msg.contactDisplayName) : ''
@@ -8103,7 +8272,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			})
 		} catch (e) {
 			console.error('[Chat] 打开名片失败:', e)
-			uni.showToast({ title: '打开失败', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.openFailed'), icon: 'none' })
 		}
 	}
 
@@ -8118,7 +8287,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				await sendContactCard(payload)
 			} catch (e) {
 				console.error('[Chat] 发送名片失败:', e)
-				uni.showToast({ title: '发送失败', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.sendFailed'), icon: 'none' })
 			}
 		}
 		uni.$on(CONTACT_CARD_SELECT_EVENT, contactCardSelectHandler)
@@ -8128,7 +8297,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			fail: (err) => {
 				cleanupContactCardSelectListener()
 				console.error('[Chat] 打开名片选择页面失败:', err)
-				uni.showToast({ title: '打开失败', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.openFailed'), icon: 'none' })
 			}
 		})
 	}
@@ -8154,7 +8323,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			avatar: contact != null && contact.avatar != null ? String(contact.avatar) : ''
 		}
 		if (payload.userId === '' || payload.userId === '0' || payload.displayName === '') {
-			uni.showToast({ title: '名片信息无效', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.contactInvalid'), icon: 'none' })
 			return
 		}
 		await (messageService as any).sendContactCardMessageByRest(
@@ -8218,12 +8387,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const latitude = loc != null && loc.latitude != null ? Number(loc.latitude) : NaN
 			const longitude = loc != null && loc.longitude != null ? Number(loc.longitude) : NaN
 			if (isNaN(latitude) || isNaN(longitude)) {
-				uni.showToast({ title: '当前位置获取失败', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.currentLocationFailed'), icon: 'none' })
 				return
 			}
-			const name = '当前位置'
+			const name = t('chat.toast.currentLocationName')
 				sendLocationCard(latitude, longitude, '', name, 'device')
-				uni.showToast({ title: '已发送当前位置', icon: 'success' })
+				uni.showToast({ title: t('chat.toast.currentLocationSent'), icon: 'success' })
 				console.log('[Chat] fallbackSendCurrentLocation success:', { reason: reason })
 			} catch (e) {
 				console.warn('[Chat] uni.getLocation failed, fallback to browser geolocation:', { reason: reason, e: e })
@@ -8233,8 +8402,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						const latitude = browserLoc != null && browserLoc.latitude != null ? Number(browserLoc.latitude) : NaN
 						const longitude = browserLoc != null && browserLoc.longitude != null ? Number(browserLoc.longitude) : NaN
 						if (!isNaN(latitude) && !isNaN(longitude)) {
-							sendLocationCard(latitude, longitude, '', '当前位置', 'browser')
-							uni.showToast({ title: '已发送当前位置', icon: 'success' })
+							sendLocationCard(latitude, longitude, '', t('chat.toast.currentLocationName'), 'browser')
+							uni.showToast({ title: t('chat.toast.currentLocationSent'), icon: 'success' })
 							console.log('[Chat] browser geolocation fallback success:', { reason: reason })
 							return
 						}
@@ -8243,9 +8412,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					}
 				}
 				uni.showModal({
-					title: '定位失败',
-					content: '无法获取当前位置，请检查定位权限后重试。',
-					confirmText: '我知道了',
+					title: t('chat.toast.currentLocationFailed'),
+					content: t('chat.confirm.locationPermissionContent'),
+					confirmText: t('common.ok'),
 					showCancel: false
 				})
 			}
@@ -8427,7 +8596,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                 try {
                     const mid = msg && msg.messageId != null ? String(msg.messageId) : ''
                     if (mid === '' || mid === '0') {
-                        uni.showToast({ title: '参数错误', icon: 'none' })
+                        uni.showToast({ title: t('chat.toast.invalidParams'), icon: 'none' })
                         return
                     }
                     uni.navigateTo({
@@ -8439,8 +8608,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             } else if (action === 'recall') {
                 // 撤回消息
                 uni.showModal({
-                    title: '提示',
-                    content: '确定要撤回这条消息吗？',
+                    title: t('im.recall.confirmTitle'),
+                    content: t('im.recall.confirmContent'),
+                    cancelText: t('common.cancel'),
+                    confirmText: t('common.ok'),
                     success: async (res) => {
                         if (res.confirm) {
                             try {
@@ -8456,10 +8627,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                                     // ignore，WS push 到达后自愈
                                 }
 
-                                uni.showToast({ title: '已撤回', icon: 'success' })
+                                uni.showToast({ title: t('im.recall.success'), icon: 'success' })
                             } catch (e) {
                                 console.error('[Chat] 撤回消息失败:', e)
-                                uni.showToast({ title: '撤回失败', icon: 'none' })
+                                uni.showToast({ title: t('im.recall.failed'), icon: 'none' })
                             }
                         }
                     }
@@ -8467,8 +8638,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             } else if (action === 'delete') {
                 // 删除消息
                 uni.showModal({
-                    title: '提示',
-                    content: '确定要删除这条消息吗？',
+                    title: t('chat.confirm.deleteTitle'),
+                    content: t('chat.confirm.deleteContent'),
+                    cancelText: t('common.cancel'),
+                    confirmText: t('common.ok'),
                     success: async (res) => {
                         if (res.confirm) {
                             try {
@@ -8490,10 +8663,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                                     messages.value.splice(idx, 1)
                                 }
                                 
-                                uni.showToast({ title: '已删除', icon: 'success' })
+                                uni.showToast({ title: t('chat.toast.deleteSuccess'), icon: 'success' })
                             } catch (e) {
                                 console.error('[Chat] 删除消息失败:', e)
-                                uni.showToast({ title: '删除失败', icon: 'none' })
+                                uni.showToast({ title: t('chat.toast.deleteFailed'), icon: 'none' })
                             }
                         }
                     }
@@ -8501,37 +8674,37 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             } else if (action === 'favorite_message_add') {
                 const mid = msg && msg.messageId != null ? String(msg.messageId) : ''
                 if (mid === '' || mid === '0') {
-                    uni.showToast({ title: '当前消息不可收藏', icon: 'none' })
+                    uni.showToast({ title: t('chat.toast.cannotFavorite'), icon: 'none' })
                     return
                 }
                 if (!canFavoriteMessageByType(msg)) {
-                    uni.showToast({ title: '仅支持收藏文字、图片、链接、视频、文件消息', icon: 'none' })
+                    uni.showToast({ title: t('chat.toast.favoriteTypeUnsupported'), icon: 'none' })
                     return
                 }
                 await addMessageFavoriteApi(mid)
-                uni.showToast({ title: '已收藏', icon: 'success' })
+                uni.showToast({ title: t('chat.toast.favoriteSuccess'), icon: 'success' })
             } else if (action === 'favorite_sticker') {
                 if (!canAddMessageToSticker(msg)) {
-                    uni.showToast({ title: '当前消息不可添加', icon: 'none' })
+                    uni.showToast({ title: t('chat.toast.cannotAddSticker'), icon: 'none' })
                     return
                 }
                 if (isMessageAlreadyCollectedToSticker(msg)) {
-                    uni.showToast({ title: '已添加到表情', icon: 'none' })
+                    uni.showToast({ title: t('chat.toast.stickerAdded'), icon: 'none' })
                     return
                 }
                 if (msg.type !== 'emoji' && (msg.messageId == null || msg.messageId === '' || msg.messageId === '0')) {
-                    uni.showToast({ title: '当前消息不可添加', icon: 'none' })
+                    uni.showToast({ title: t('chat.toast.cannotAddSticker'), icon: 'none' })
                     return
                 }
                 if (stickerList.value.length >= STICKER_LIMIT) {
-                    uni.showToast({ title: `最多添加${STICKER_LIMIT}张表情`, icon: 'none' })
+                    uni.showToast({ title: t('chat.toast.maxStickerReached', { count: STICKER_LIMIT }), icon: 'none' })
                     return
                 }
                 try {
                     if (msg.type === 'emoji') {
                         const emojiPath = msg.content != null ? String(msg.content) : ''
                         if (emojiPath === '') {
-                            uni.showToast({ title: '当前表情不可收藏', icon: 'none' })
+                            uni.showToast({ title: t('chat.toast.cannotAddSticker'), icon: 'none' })
                             return
                         }
                         const uploadResult = await uploadFileAndReturnId(emojiPath, {
@@ -8546,15 +8719,15 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                             name: 'emoji'
                         })
                         stickerList.value = getCustomStickers()
-                        uni.showToast({ title: addedSticker != null && addedSticker.duplicated ? '已在表情库中' : '已添加到表情', icon: 'success' })
+                        uni.showToast({ title: addedSticker != null && addedSticker.duplicated ? t('chat.toast.stickerExists') : t('chat.toast.stickerAdded'), icon: 'success' })
                     } else {
                         const addedSticker = await collectMessageToSticker(String(msg.messageId))
                         stickerList.value = getCustomStickers()
-                        uni.showToast({ title: addedSticker != null && addedSticker.duplicated ? '已在表情库中' : '已添加到表情', icon: 'success' })
+                        uni.showToast({ title: addedSticker != null && addedSticker.duplicated ? t('chat.toast.stickerExists') : t('chat.toast.stickerAdded'), icon: 'success' })
                     }
                 } catch (e) {
                     console.error('[Chat] 添加到表情失败', e)
-                    uni.showToast({ title: '添加失败', icon: 'none' })
+                    uni.showToast({ title: t('chat.toast.addFailed'), icon: 'none' })
                 }
             } else if (action === 'multi') {
                 multiSelectMode.value = true
@@ -8591,7 +8764,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			readReceiptSummary.value = await readReceiptService.getSummary(messageId)
 			if (readReceiptSummary.value == null) {
 				// 如果仍为 null，显示提示并关闭面板
-				uni.showToast({ title: '数据加载中，请稍后再试', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.readReceiptDataLoading'), icon: 'none' })
 				showReadReceiptSheet.value = false
 				return
 			}
@@ -8610,7 +8783,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			await reloadReadReceiptList()
 		} catch (e) {
 			console.error('[Chat] openReadReceiptSheet failed:', e)
-			uni.showToast({ title: '加载失败', icon: 'none' })
+			uni.showToast({ title: t('message.toast.loadFailed'), icon: 'none' })
 		}
 	}
 
@@ -8815,20 +8988,20 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	function buildReadReceiptEntryText(msg: any): string {
 		try {
 			const mid = resolveReadReceiptTargetMessageId(msg)
-			if (!mid) return '统计中'
+			if (!mid) return t('chat.readReceipt.pending')
 			const cached = getCachedReadReceiptSummary(mid)
 			if (cached && cached.summary) {
 				const s: any = cached.summary
 				const unread = s.unreadCount != null ? Number(s.unreadCount) : 0
 				if (unread > 0) {
-					return `未读${unread}`
+					return t('chat.readReceipt.unreadCount', { count: unread })
 				}
-				return '已读'
+				return t('chat.readReceipt.read')
 			}
 			ensureReadReceiptSummaryFetched(mid)
-			return '统计中'
+			return t('chat.readReceipt.pending')
 		} catch (e) {
-			return '统计中'
+			return t('chat.readReceipt.pending')
 		}
 	}
 
@@ -8853,7 +9026,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const readReceiptMessageId = resolveReadReceiptTargetMessageId(msg)
 			if (!msg || readReceiptMessageId === '') return
 			if (!isMsgConfirmedSent(msg)) {
-				uni.showToast({ title: '发送中', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.sending'), icon: 'none' })
 				return
 			}
 			const messageType = msg != null && (msg as any).type != null ? String((msg as any).type) : ''
@@ -8928,14 +9101,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const now = new Date()
 			const diff = now.getTime() - d.getTime()
 			if (diff >= 0 && diff < 60 * 1000) {
-				return '刚刚'
+				return t('chat.readReceipt.justNow')
 			}
 			if (isSameDay(d, now)) {
-				return '今天 ' + formatHHmm(d)
+				return t('chat.readReceipt.todayAt', { time: formatHHmm(d) })
 			}
 			const y = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 			if (isSameDay(d, y)) {
-				return '昨天 ' + formatHHmm(d)
+				return t('chat.readReceipt.yesterdayAt', { time: formatHHmm(d) })
 			}
 			return formatYYYYMMDDHHmm(d)
 		} catch (e) {
@@ -9034,7 +9207,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
     function toggleSelect(msg : MessageItem) {
 		const id = getSelectMessageId(msg)
 		if (id === '') {
-			uni.showToast({ title: '参数错误', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.invalidParams'), icon: 'none' })
 			return
 		}
 		const idx = selectedIds.value.indexOf(id)
@@ -9042,7 +9215,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             selectedIds.value.splice(idx, 1)
         } else {
 			if (selectedIds.value.length >= MAX_FORWARD_MESSAGE_COUNT) {
-				uni.showToast({ title: `最多选择 ${MAX_FORWARD_MESSAGE_COUNT} 条消息`, icon: 'none' })
+				uni.showToast({ title: t('chat.toast.maxSelectReached', { count: MAX_FORWARD_MESSAGE_COUNT }), icon: 'none' })
 				return
 			}
 			selectedIds.value.push(id)
@@ -9194,7 +9367,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					} else if ((parsed as any).content != null && String((parsed as any).content) !== '') {
 						preview = String((parsed as any).content)
 					} else {
-						preview = '[消息]'
+						preview = t('favoritePage.preview.default')
 					}
 				} else {
 					preview = raw != null ? String(raw) : ''
@@ -9202,35 +9375,35 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			} else if (typeStr === 'custom') {
 				const body = safeParseJson(item != null ? item.content : null)
 				if (body != null && body.type != null && String(body.type) === 'FORWARD_COMBINE') {
-					preview = '[聊天记录]'
+					preview = t('chat.label.forwardCombine')
 				} else if (body != null && body.type != null && String(body.type) === 'STICKER') {
-					preview = '[动画表情]'
+					preview = `[${t('favoritePage.type.sticker')}]`
 				} else if (body != null && body.type != null && String(body.type) === 'CONTACT_CARD') {
-					preview = '[名片]'
+					preview = `[${t('chat.label.personalCard')}]`
 				} else {
-					preview = '[消息]'
+					preview = t('favoritePage.preview.default')
 				}
 			} else if (typeStr === 'contact_card') {
-				preview = '[名片]'
+				preview = `[${t('chat.label.personalCard')}]`
 			} else if (typeStr === 'image') {
-				preview = '[图片]'
+				preview = `[${t('favoritePage.type.image')}]`
 			} else if (typeStr === 'video') {
-				preview = '[视频]'
+				preview = `[${t('favoritePage.type.video')}]`
 			} else if (typeStr === 'voice') {
-				preview = '[语音]'
+				preview = `[${t('favoritePage.type.voice')}]`
 			} else if (typeStr === 'file') {
-				preview = '[文件]'
+				preview = `[${t('favoritePage.type.file')}]`
 			} else if (typeStr === 'location') {
-				preview = '[位置]'
+				preview = `[${t('favoritePage.type.location')}]`
 			} else {
-				preview = '[消息]'
+				preview = t('favoritePage.preview.default')
 			}
 			if (senderName !== '') {
 				return `${senderName}：${preview}`
 			}
 			return preview
 		} catch (e) {
-			return '[消息]'
+			return t('favoritePage.preview.default')
 		}
 	}
 
@@ -9249,14 +9422,14 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		try {
 			const mid = getSelectMessageId(msg)
 			if (mid === '') {
-				uni.showToast({ title: '无法打开', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.openFailed'), icon: 'none' })
 				return
 			}
 			uni.navigateTo({
 				url: `/pages/message/forward-combine-detail?messageId=${encodeURIComponent(mid)}`
 			})
 		} catch (e) {
-			uni.showToast({ title: '无法打开', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.openFailed'), icon: 'none' })
 		}
 	}
 
@@ -9270,9 +9443,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
     /**
      * 定位到被引用的消息
      */
-    async function scrollToQuotedMessage(quoteMessageId: string) {
+	async function scrollToQuotedMessage(quoteMessageId: string) {
 		if (quoteMessageId == null || quoteMessageId === '' || quoteMessageId === '0') {
-			uni.showToast({ title: '原消息已不存在', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.quoteMessageMissing'), icon: 'none' })
 			return
 		}
         let index = findMessageIndexForTargetId(String(quoteMessageId))
@@ -9290,7 +9463,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                 highlightedMessageId.value = ''
             }, 3000)
         } else {
-            uni.showToast({ title: '原消息已不存在', icon: 'none' })
+            uni.showToast({ title: t('chat.toast.quoteMessageMissing'), icon: 'none' })
         }
     }
 
@@ -9302,7 +9475,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (isLinkMessage(msg)) {
 			const url = resolveLinkUrlFromMessage(msg)
 			if (url !== '') {
-				navToSecureBrowser(url, '消息详情', 'message')
+				navToSecureBrowser(url, t('chat.label.messageDetail'), 'message')
 				return
 			}
 		}
@@ -9319,7 +9492,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 
     function handleMultiForward() {
         if (selectedIds.value.length === 0) {
-            uni.showToast({ title: '请选择要转发的消息', icon: 'none' })
+            uni.showToast({ title: t('chat.toast.chooseForwardMessage'), icon: 'none' })
             return
         }
         // 显示转发确认对话框
@@ -9339,11 +9512,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
             const ids = selectedIds.value != null ? selectedIds.value : []
             const filtered = ids.filter(id => id != null && id !== '' && id !== '0')
             if (filtered.length === 0) {
-                uni.showToast({ title: '请选择要转发的消息', icon: 'none' })
+                uni.showToast({ title: t('chat.toast.chooseForwardMessage'), icon: 'none' })
                 return
             }
 			if (filtered.length > MAX_FORWARD_MESSAGE_COUNT) {
-				uni.showToast({ title: `最多选择 ${MAX_FORWARD_MESSAGE_COUNT} 条消息`, icon: 'none' })
+				uni.showToast({ title: t('chat.toast.maxSelectReached', { count: MAX_FORWARD_MESSAGE_COUNT }), icon: 'none' })
 				return
 			}
             const qs = filtered.map(id => String(id)).join(',')
@@ -9353,24 +9526,26 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
                 url: `/pages/message/forward-target?messageIds=${encodeURIComponent(qs)}&forwardType=1`
             })
         } catch (e) {
-            uni.showToast({ title: '打开失败', icon: 'none' })
+            uni.showToast({ title: t('chat.toast.openFailed'), icon: 'none' })
         }
     }
 
     function handleMultiDelete() {
         if (selectedIds.value.length === 0) {
-            uni.showToast({ title: '请选择要删除的消息', icon: 'none' })
+            uni.showToast({ title: t('chat.toast.chooseDeleteMessage'), icon: 'none' })
             return
         }
         uni.showModal({
-            title: '提示',
-            content: `确定删除选中的 ${selectedIds.value.length} 条消息吗？`,
+            title: t('chat.confirm.multiDeleteTitle'),
+            content: t('chat.confirm.multiDeleteContent', { count: selectedIds.value.length }),
+            cancelText: t('common.cancel'),
+            confirmText: t('common.ok'),
             success: (res) => {
                 if (res.confirm) {
                     // 删除选中的消息
                     messages.value = messages.value.filter(m => !selectedIds.value.includes(m.id))
                     exitMultiSelectMode()
-                    uni.showToast({ title: '删除成功', icon: 'success' })
+                    uni.showToast({ title: t('chat.toast.deleteSuccess'), icon: 'success' })
                 }
             }
         })
@@ -9435,7 +9610,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				return true
 			}
 			if (showError) {
-				uni.showToast({ title: '群会话信息未就绪', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.groupConversationLoading'), icon: 'none' })
 			}
 			return false
 		}
@@ -9445,7 +9620,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		const target = targetId.value != null ? targetId.value : ''
 		if (target === '' || target === '0') {
 			if (showError) {
-				uni.showToast({ title: '会话信息未就绪', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.conversationLoading'), icon: 'none' })
 			}
 			return false
 		}
@@ -9461,7 +9636,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				const resolvedChatId = conversationResult && (conversationResult.chatId != null ? conversationResult.chatId : conversationResult.id)
 				const normalizedChatId = resolvedChatId != null ? resolvedChatId.toString() : ''
 				if (normalizedChatId === '' || normalizedChatId === '0') {
-					throw new Error('chatId 为空')
+					throw new Error('chatId is empty')
 				}
 				chatId.value = normalizedChatId
 				try {
@@ -9471,12 +9646,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				}
 				return true
 			} catch (e) {
-				if (handleGroupLifecycleRequestError(e, '你已不在该群聊')) {
+				if (handleGroupLifecycleRequestError(e, t('chat.group.removedCannotSend'))) {
 					return false
 				}
 				console.error('[Chat] 初始化语音会话作用域失败:', e)
 				if (showError) {
-					uni.showToast({ title: '会话初始化失败，请稍后重试', icon: 'none' })
+					uni.showToast({ title: t('chat.toast.conversationInitFailed'), icon: 'none' })
 				}
 				return false
 			} finally {
@@ -9841,17 +10016,19 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	function buildVoiceStatusText(msg: any): string {
 		if (isVoiceUploading(msg)) {
 			const progress = msg != null && msg.uploadProgress != null ? Number(msg.uploadProgress) : 0
-			return progress > 0 ? `上传中 ${progress}%` : '上传中'
+			return progress > 0
+				? t('chat.voice.uploadingProgress', { progress: progress })
+				: t('chat.voice.uploading')
 		}
 		if (isVoiceUploadFailed(msg)) {
 			const uploadError = msg != null && msg.uploadError != null ? String(msg.uploadError) : ''
 			if (uploadError !== '') {
 				return uploadError
 			}
-			return '点击重试上传'
+			return t('chat.voice.tapRetryUpload')
 		}
 		if (isVoiceSendFailed(msg)) {
-			return '点击重发'
+			return t('chat.voice.tapRetrySend')
 		}
 		return ''
 	}
@@ -9878,9 +10055,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			showTime: true,
 			senderAvatar: getCurrentUserAvatarUrl(),
 			avatarError: false,
-			avatarText: getAvatarTextUtil('我'),
+			avatarText: getAvatarTextUtil(t('message.selfUser')),
 			avatarBg: getUserAvatarColor(currentUserId.value),
-			senderName: '我',
+			senderName: t('message.selfUser'),
 			duration: durationSec,
 			durationMs: durationMs,
 			format: normalizedFormat,
@@ -9904,7 +10081,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (localFilePath === '' && sourceBlob == null) {
 			patchMessageInList(draft.messageId, {
 				uploadStatus: 'failed',
-				uploadError: '语音文件不存在'
+				uploadError: t('chat.toast.voiceFileUnavailable')
 			})
 			return
 		}
@@ -9919,10 +10096,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (!scopeReady) {
 			patchMessageInList(draft.messageId, {
 				uploadStatus: 'failed',
-				uploadError: '会话初始化失败'
+				uploadError: t('chat.toast.conversationInitFailed')
 			})
 			if (!groupRemovalRedirecting) {
-				uni.showToast({ title: '会话初始化失败，请重试', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.conversationInitFailed'), icon: 'none' })
 			}
 			return
 		}
@@ -9948,7 +10125,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			const data: any = result != null ? result.data : null
 			const fileId = data != null && data.fileId != null ? String(data.fileId) : ''
 			if (fileId === '' || fileId === '0') {
-				throw new Error('fileId 为空')
+				throw new Error('fileId is empty')
 			}
 			const voiceUrl = data != null && data.url != null ? String(data.url) : ''
 			const normalizedUrl = voiceUrl.startsWith('/') ? CONFIG_BASE_URL + voiceUrl : voiceUrl
@@ -9992,9 +10169,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			}
 			patchMessageInList(draft.messageId, {
 				uploadStatus: 'failed',
-				uploadError: '语音上传失败'
+				uploadError: t('chat.toast.voiceUploadRetry')
 			})
-			uni.showToast({ title: '语音上传失败，点击重试', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.voiceUploadRetry'), icon: 'none' })
 		}
 	}
 
@@ -10011,7 +10188,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		const ok = messageService.retryMessage(String(msg.messageId))
 		if (!ok) {
-			uni.showToast({ title: '语音发送失败，无法重发', icon: 'none' })
+			uni.showToast({ title: t('chat.toast.voiceSendRetry'), icon: 'none' })
 			return
 		}
 	}
@@ -10073,18 +10250,18 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		Promise.resolve().then(async () => {
 			const fileId = msg && msg.fileId ? String(msg.fileId) : ''
 			if (fileId === '' || fileId === '0') {
-				uni.showToast({ title: '语音文件不可用', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.voiceFileUnavailable'), icon: 'none' })
 				return
 			}
 			const url = await resolvePresignedUrl(fileId)
 			if (!url) {
-				uni.showToast({ title: '语音播放地址获取失败', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.voicePlayUrlFailed'), icon: 'none' })
 				return
 			}
 			try {
 				const messageId = resolveVoiceMessageId(msg)
 				if (messageId === '') {
-					uni.showToast({ title: '语音消息标识异常', icon: 'none' })
+					uni.showToast({ title: t('chat.toast.voiceMessageInvalid'), icon: 'none' })
 					return
 				}
 				stopCurrentVoicePlayback()
@@ -10168,13 +10345,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					}
 					console.error('[Chat] 语音播放失败:', err)
 					releaseVoicePlaybackContext()
-					uni.showToast({ title: '播放失败', icon: 'none' })
+					uni.showToast({ title: t('chat.toast.playFailed'), icon: 'none' })
 				})
 				audioContext.play()
 			} catch (e) {
 				console.error('[Chat] 语音播放异常:', e)
 				stopCurrentVoicePlayback()
-				uni.showToast({ title: '播放失败', icon: 'none' })
+				uni.showToast({ title: t('chat.toast.playFailed'), icon: 'none' })
 			}
 		})
 	}
@@ -10375,7 +10552,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (messageIndex === -1) {
 			console.warn('[Chat] 未找到目标消息', messageId)
 			uni.showToast({
-				title: '消息不在当前页面',
+				title: t('chat.toast.messageNotInPage'),
 				icon: 'none'
 			})
 			return

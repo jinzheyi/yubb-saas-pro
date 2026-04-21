@@ -6,32 +6,32 @@
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">聊天气泡</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('chat.chatBubble.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<view class="preview-section" :style="{ backgroundColor: theme.cardBg }">
-				<text class="preview-title" :style="{ color: theme.textPrimary }">预览效果</text>
+				<text class="preview-title" :style="{ color: theme.textPrimary }">{{ t('chat.chatBubble.previewTitle') }}</text>
 				<view class="preview-chat" :style="{ backgroundColor: theme.pageBg }">
 					<view class="message-item message-other">
 						<view class="message-avatar other-avatar">
-							<text class="avatar-text">对方</text>
+							<text class="avatar-text">{{ t('chat.chatBubble.otherUser') }}</text>
 						</view>
 						<view
 							class="message-bubble other-bubble"
 							:style="{ backgroundColor: theme.bubbleOtherBg, borderColor: theme.bubbleOtherBorder }"
 						>
-							<text class="message-text" :style="{ color: theme.bubbleOtherText }">这是对方的消息</text>
+							<text class="message-text" :style="{ color: theme.bubbleOtherText }">{{ t('chat.chatBubble.otherMessage') }}</text>
 						</view>
 					</view>
 
 					<view class="message-item message-self">
 						<view class="message-bubble self-bubble" :style="selfBubbleStyle">
-							<text class="message-text" :style="{ color: bubbleTokens.selfBubbleText }">这是我的消息</text>
+							<text class="message-text" :style="{ color: bubbleTokens.selfBubbleText }">{{ t('chat.chatBubble.selfMessage') }}</text>
 						</view>
 						<view class="message-avatar self-avatar">
-							<text class="avatar-text">我</text>
+							<text class="avatar-text">{{ t('chat.chatBubble.selfUser') }}</text>
 						</view>
 					</view>
 
@@ -45,58 +45,58 @@
 								<view class="voice-progress-track">
 									<view class="voice-progress-fill" :style="{ width: '42%', backgroundColor: bubbleTokens.selfBubbleProgressColor }"></view>
 								</view>
-								<text class="voice-status" :style="{ color: bubbleTokens.selfBubbleSubText }">正在播放</text>
+								<text class="voice-status" :style="{ color: bubbleTokens.selfBubbleSubText }">{{ t('chat.chatBubble.playing') }}</text>
 							</view>
 						</view>
 						<view class="message-avatar self-avatar">
-							<text class="avatar-text">我</text>
+							<text class="avatar-text">{{ t('chat.chatBubble.selfUser') }}</text>
 						</view>
 					</view>
 
 					<view class="message-item message-self">
 						<view class="message-bubble forward-preview" :style="forwardBubbleStyle">
-							<text class="forward-title" :style="{ color: bubbleTokens.selfBubbleText }">聊天记录</text>
-							<text class="forward-line" :style="{ color: bubbleTokens.selfBubbleSubText }">张三：本周排期确认一下</text>
-							<text class="forward-line" :style="{ color: bubbleTokens.selfBubbleSubText }">我：好的，晚点同步你</text>
+							<text class="forward-title" :style="{ color: bubbleTokens.selfBubbleText }">{{ t('chat.chatBubble.forwardTitle') }}</text>
+							<text class="forward-line" :style="{ color: bubbleTokens.selfBubbleSubText }">{{ t('chat.chatBubble.forwardLineOther') }}</text>
+							<text class="forward-line" :style="{ color: bubbleTokens.selfBubbleSubText }">{{ t('chat.chatBubble.forwardLineSelf') }}</text>
 						</view>
 						<view class="message-avatar self-avatar">
-							<text class="avatar-text">我</text>
+							<text class="avatar-text">{{ t('chat.chatBubble.selfUser') }}</text>
 						</view>
 					</view>
 				</view>
 			</view>
 
 			<view class="color-section" :style="{ backgroundColor: theme.cardBg }">
-				<text class="section-title" :style="{ color: theme.textPrimary }">选择颜色</text>
+				<text class="section-title" :style="{ color: theme.textPrimary }">{{ t('chat.chatBubble.pickColor') }}</text>
 				<view class="color-grid">
 					<view class="color-item" v-for="color in colorList" :key="color.value" @click="selectColor(color.value, 'preset')">
 						<view class="color-block" :style="{ backgroundColor: color.value, borderColor: selectedColor === color.value ? theme.brandPrimary : theme.borderColor }">
 							<text v-if="selectedColor === color.value" class="iconfont check-icon">&#xe65f;</text>
 						</view>
-						<text class="color-name" :style="{ color: theme.textSecondary }">{{ color.name }}</text>
+						<text class="color-name" :style="{ color: theme.textSecondary }">{{ color.label }}</text>
 					</view>
 				</view>
 			</view>
 
 			<view class="custom-section" :style="{ backgroundColor: theme.cardBg }">
-				<text class="section-title" :style="{ color: theme.textPrimary }">自定义颜色</text>
+				<text class="section-title" :style="{ color: theme.textPrimary }">{{ t('chat.chatBubble.customColor') }}</text>
 				<view class="custom-color-row">
 					<view class="custom-color-preview" :style="{ backgroundColor: previewCustomColor, borderColor: theme.borderColor }"></view>
 					<input class="custom-color-input" v-model="customColor" :style="{ backgroundColor: theme.inputBg, color: theme.inputText }" placeholder="#1677FF" />
 					<button class="apply-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="applyCustomColor">
-						<text class="apply-btn-text">应用</text>
+						<text class="apply-btn-text">{{ t('chat.chatBubble.apply') }}</text>
 					</button>
 				</view>
-				<text class="custom-tip" :style="{ color: theme.textTertiary }">输入十六进制颜色代码，如：#1677FF</text>
+				<text class="custom-tip" :style="{ color: theme.textTertiary }">{{ t('chat.chatBubble.customColorHint') }}</text>
 			</view>
 		</scroll-view>
 
 		<view class="footer" :style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor, paddingBottom: (12 + safeAreaBottom) + 'px' }">
 			<button class="reset-btn" :style="{ backgroundColor: theme.cardBgMuted }" @click="resetColor">
-				<text class="reset-btn-text" :style="{ color: theme.textPrimary }">恢复默认</text>
+				<text class="reset-btn-text" :style="{ color: theme.textPrimary }">{{ t('chat.chatBubble.reset') }}</text>
 			</button>
 			<button class="confirm-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="confirmColor">
-				<text class="confirm-btn-text">确定</text>
+				<text class="confirm-btn-text">{{ t('common.ok') }}</text>
 			</button>
 		</view>
 	</view>
@@ -120,7 +120,10 @@
 	const customColor = ref(selectedMode.value === 'custom' ? selectedColor.value : '')
 	let unsubscribeTheme: (() => void) | null = null
 
-	const colorList = CHAT_BUBBLE_PRESETS
+	const colorList = computed(() => CHAT_BUBBLE_PRESETS.map(color => ({
+		...color,
+		label: t(`chat.chatBubble.colors.${color.name}`)
+	})))
 	const voiceBars = [6, 10, 14, 8]
 
 	const bubbleTokens = computed(() => {
@@ -170,21 +173,21 @@
 	function applyCustomColor() {
 		if (!customColor.value) {
 			uni.showToast({
-				title: '请输入颜色代码',
+				title: t('chat.chatBubble.toast.enterColor'),
 				icon: 'none'
 			})
 			return
 		}
 		if (!isValidChatBubbleColor(customColor.value)) {
 			uni.showToast({
-				title: '颜色代码格式错误',
+				title: t('chat.chatBubble.toast.invalidColor'),
 				icon: 'none'
 			})
 			return
 		}
 		selectColor(customColor.value, 'custom')
 		uni.showToast({
-			title: '已应用自定义颜色',
+			title: t('chat.chatBubble.toast.customApplied'),
 			icon: 'success'
 		})
 	}
@@ -198,7 +201,7 @@
 		customColor.value = ''
 		if (defaults.color !== next.color || defaults.mode !== next.mode) {
 			uni.showToast({
-				title: '已恢复默认颜色',
+				title: t('chat.chatBubble.toast.resetSuccess'),
 				icon: 'success'
 			})
 		}
@@ -212,7 +215,7 @@
 		setChatBubbleConfig(nextConfig)
 		void persistChatBubblePreference(nextConfig)
 		uni.showToast({
-			title: '设置成功',
+			title: t('chat.chatBubble.toast.saveSuccess'),
 			icon: 'success'
 		})
 		setTimeout(() => {

@@ -159,7 +159,7 @@
 
 	function handleAction(item : any) {
 		uni.showToast({
-			title: t(item.nameKey) + '功能开发中',
+			title: t('workbench.inDevelopment', { name: t(item.nameKey) }),
 			icon: 'none'
 		})
 	}

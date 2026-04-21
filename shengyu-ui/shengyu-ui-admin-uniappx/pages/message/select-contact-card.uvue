@@ -4,9 +4,9 @@
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">选择名片</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('chat.contactCardSelect.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
@@ -21,16 +21,16 @@
 		/>
 
 		<view v-if="loading" class="state-wrap">
-			<text class="state-text" :style="{ color: theme.textTertiary }">加载中...</text>
+			<text class="state-text" :style="{ color: theme.textTertiary }">{{ t('chat.contactCardSelect.loading') }}</text>
 		</view>
 		<view v-if="!loading && contactList.length === 0" class="state-wrap">
-			<text class="state-text" :style="{ color: theme.textTertiary }">暂无可发送的联系人</text>
+			<text class="state-text" :style="{ color: theme.textTertiary }">{{ t('chat.contactCardSelect.empty') }}</text>
 		</view>
 
 		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px', backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
 			<text class="selected-text" :style="{ color: theme.textSecondary }">{{ selectedDisplayText }}</text>
 			<button class="confirm-btn" :disabled="selectedCount === 0 || submitting" @click="handleConfirm">
-				<text class="confirm-btn-text">发送名片</text>
+				<text class="confirm-btn-text">{{ t('chat.contactCardSelect.confirm') }}</text>
 			</button>
 		</view>
 	</view>
@@ -38,6 +38,7 @@
 
 <script setup lang="uts">
 	import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getUserInfo, getDeptId } from '../../store/user.uts'
 	import { getContactList, getContactPageByDept } from '../../api/contact.uts'
 	import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
@@ -53,6 +54,7 @@
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
+	const { t } = useI18n()
 	const CONTACT_CARD_SELECT_EVENT = 'imSelectContactCard'
 
 	type ContactItem = {
@@ -85,11 +87,11 @@
 	const selectedDisplayText = computed(() : string => {
 		const selected = getSelectedMembers()
 		if (selected == null || selected.length === 0) {
-			return '请选择 1 位联系人'
+			return t('chat.contactCardSelect.placeholder')
 		}
 		const first = selected[0]
 		const name = first != null && first.name != null ? String(first.name) : ''
-		return name !== '' ? ('已选择：' + name) : '已选择 1 位联系人'
+		return name !== '' ? (t('chat.contactCardSelect.selectedPrefix') + name) : t('chat.contactCardSelect.selectedOne')
 	})
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
@@ -217,7 +219,7 @@
 			syncSelectionState()
 		} catch (e) {
 			console.error('[SelectContactCard] 加载联系人失败:', e)
-			uni.showToast({ title: '加载联系人失败', icon: 'none' })
+			uni.showToast({ title: t('chat.contactCardSelect.loadFailed'), icon: 'none' })
 		} finally {
 			loading.value = false
 			loadingMore.value = false
@@ -274,7 +276,7 @@
 		const selected = getSelectedMembers()
 		const first = selected != null && selected.length > 0 ? selected[0] : null
 		if (first == null || first.id == null) {
-			uni.showToast({ title: '请选择联系人', icon: 'none' })
+			uni.showToast({ title: t('chat.contactCardSelect.chooseContact'), icon: 'none' })
 			return
 		}
 		submitting.value = true

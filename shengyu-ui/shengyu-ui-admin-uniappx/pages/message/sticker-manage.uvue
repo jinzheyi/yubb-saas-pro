@@ -4,22 +4,22 @@
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">表情管理</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('chat.stickerManage.title') }}</text>
 			<view class="header-right" @click="toggleSortMode">
-				<text class="header-action-text" :style="{ color: theme.brandPrimary }">{{ sortMode ? '完成' : '整理' }}</text>
+				<text class="header-action-text" :style="{ color: theme.brandPrimary }">{{ sortMode ? t('chat.stickerManage.done') : t('chat.stickerManage.organize') }}</text>
 			</view>
 		</view>
 
 		<view class="summary-card" :style="{ backgroundColor: theme.cardBg }">
-			<text class="summary-title" :style="{ color: theme.textPrimary }">我的表情</text>
+			<text class="summary-title" :style="{ color: theme.textPrimary }">{{ t('chat.stickerManage.myStickers') }}</text>
 			<text class="summary-count" :style="{ color: theme.brandPrimary }">{{ stickerList.length }}/150</text>
-			<text class="summary-tip" :style="{ color: theme.textTertiary }">{{ sortMode ? (savingSort ? '正在保存排序，请稍候' : (selectedStickerId ? '已拿起一个动画表情，安卓和 iOS 可滑动一格，Web 可点选或拖动后松手放下，目标位会高亮且周围项会让位' : '支持长按拿起、滑动移动、点选放下、置顶、左移、右移、置底，右上角可删除')) : '长按表情可移除，点击整理可调整顺序' }}</text>
+			<text class="summary-tip" :style="{ color: theme.textTertiary }">{{ summaryTip }}</text>
 			<view v-if="sortMode && selectedStickerId" class="move-bar" :style="{ backgroundColor: theme.brandPrimarySoft }">
-				<text class="move-bar-text" :style="{ color: theme.brandPrimary }">移动中</text>
+				<text class="move-bar-text" :style="{ color: theme.brandPrimary }">{{ t('chat.stickerManage.moving') }}</text>
 				<view class="move-bar-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="clearSelectedSticker">
-					<text class="move-bar-btn-text">取消选中</text>
+					<text class="move-bar-btn-text">{{ t('chat.stickerManage.cancelSelection') }}</text>
 				</view>
 			</view>
 		</view>
@@ -48,26 +48,26 @@
 							<text class="sticker-remove-text">×</text>
 						</view>
 						<view v-if="selectedStickerId === item.stickerId" class="sticker-picked-badge">
-							<text class="sticker-picked-text">已拿起</text>
+							<text class="sticker-picked-text">{{ t('chat.stickerManage.picked') }}</text>
 						</view>
 						<view v-else-if="dragTargetStickerId === item.stickerId" class="sticker-target-badge">
-							<text class="sticker-target-text">目标位置</text>
+							<text class="sticker-target-text">{{ t('chat.stickerManage.targetPosition') }}</text>
 						</view>
 						<view v-else-if="selectedStickerId !== ''" class="sticker-drop-hint">
-							<text class="sticker-drop-hint-text">放到这里</text>
+							<text class="sticker-drop-hint-text">{{ t('chat.stickerManage.dropHere') }}</text>
 						</view>
 						<view class="sticker-sort-actions">
 							<view class="sticker-sort-btn" :style="{ backgroundColor: theme.cardBg }" :class="{ 'sticker-sort-btn-disabled': isFirstSticker(item) || savingSort }" @click.stop="moveStickerToEdge(item, true)">
-								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">置顶</text>
+								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">{{ t('chat.stickerManage.moveTop') }}</text>
 							</view>
 							<view class="sticker-sort-btn" :style="{ backgroundColor: theme.cardBg }" :class="{ 'sticker-sort-btn-disabled': isFirstSticker(item) || savingSort }" @click.stop="moveSticker(item, -1)">
-								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">左移</text>
+								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">{{ t('chat.stickerManage.moveLeft') }}</text>
 							</view>
 							<view class="sticker-sort-btn" :style="{ backgroundColor: theme.cardBg }" :class="{ 'sticker-sort-btn-disabled': isLastSticker(item) || savingSort }" @click.stop="moveSticker(item, 1)">
-								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">右移</text>
+								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">{{ t('chat.stickerManage.moveRight') }}</text>
 							</view>
 							<view class="sticker-sort-btn" :style="{ backgroundColor: theme.cardBg }" :class="{ 'sticker-sort-btn-disabled': isLastSticker(item) || savingSort }" @click.stop="moveStickerToEdge(item, false)">
-								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">置底</text>
+								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">{{ t('chat.stickerManage.moveBottom') }}</text>
 							</view>
 						</view>
 					</view>
@@ -77,17 +77,20 @@
 
 		<view class="empty-state" v-else>
 			<text class="iconfont empty-icon" :style="{ color: theme.textTertiary }">&#xe83f;</text>
-			<text class="empty-title" :style="{ color: theme.textPrimary }">暂无自定义表情</text>
-			<text class="empty-tip" :style="{ color: theme.textSecondary }">在聊天页点击 + 或长按图片添加到表情</text>
+			<text class="empty-title" :style="{ color: theme.textPrimary }">{{ t('chat.stickerManage.emptyTitle') }}</text>
+			<text class="empty-tip" :style="{ color: theme.textSecondary }">{{ t('chat.stickerManage.emptyTip') }}</text>
 		</view>
 	</view>
 </template>
 
 <script setup lang="uts">
 	import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { StickerItem, getFavoriteStickers, refreshCustomStickers, removeSticker, updateStickerSort } from '../../utils/stickerManager.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
+
+	const { t } = useI18n()
 
 	const stickerList = ref<StickerItem[]>([])
 	const sortMode = ref(false)
@@ -111,6 +114,19 @@
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 		theme.value = tokens
+	})
+
+	const summaryTip = computed((): string => {
+		if (!sortMode.value) {
+			return t('chat.stickerManage.tipNormal')
+		}
+		if (savingSort.value) {
+			return t('chat.stickerManage.tipSaving')
+		}
+		if (selectedStickerId.value !== '') {
+			return t('chat.stickerManage.tipSelected')
+		}
+		return t('chat.stickerManage.tipSort')
 	})
 
 	async function loadStickers(): Promise<void> {
@@ -443,7 +459,7 @@
 		} catch (e) {
 			stickerList.value = previousList
 			console.error('[StickerManage] 排序失败:', e)
-			uni.showToast({ title: '排序失败', icon: 'none' })
+			uni.showToast({ title: t('chat.stickerManage.toast.sortFailed'), icon: 'none' })
 		} finally {
 			savingSort.value = false
 		}
@@ -477,7 +493,7 @@
 		}
 		uni.showActionSheet({
 			itemColor: theme.value.brandPrimary,
-			itemList: ['移除表情'],
+			itemList: [t('chat.stickerManage.actionRemove')],
 			success: async (res) => {
 				if (res.tapIndex !== 0) {
 					return
@@ -486,10 +502,10 @@
 					await removeSticker(item.stickerId)
 					stickerList.value = getFavoriteStickers()
 					selectedStickerId.value = ''
-					uni.showToast({ title: '已移除', icon: 'success' })
+					uni.showToast({ title: t('chat.stickerManage.toast.removed'), icon: 'success' })
 				} catch (e) {
 					console.error('[StickerManage] 移除表情失败:', e)
-					uni.showToast({ title: '移除失败', icon: 'none' })
+					uni.showToast({ title: t('chat.stickerManage.toast.removeFailed'), icon: 'none' })
 				}
 			}
 		})
@@ -500,10 +516,10 @@
 			await removeSticker(item.stickerId)
 			stickerList.value = getFavoriteStickers()
 			selectedStickerId.value = ''
-			uni.showToast({ title: '已移除', icon: 'success' })
+			uni.showToast({ title: t('chat.stickerManage.toast.removed'), icon: 'success' })
 		} catch (e) {
 			console.error('[StickerManage] 移除表情失败:', e)
-			uni.showToast({ title: '移除失败', icon: 'none' })
+			uni.showToast({ title: t('chat.stickerManage.toast.removeFailed'), icon: 'none' })
 		}
 	}
 

@@ -3,7 +3,7 @@
 		<view class="captcha-modal">
 			<!-- 标题栏 -->
 			<view class="captcha-header">
-				<text class="captcha-title">请完成安全验证</text>
+				<text class="captcha-title">{{ t('captcha.verification') }}</text>
 				<text class="captcha-close" @click="handleClose">✕</text>
 			</view>
 			
@@ -70,6 +70,7 @@
 	import { ref, computed } from 'vue'
 	import { getCaptcha, checkCaptcha } from '../../api/login.uts'
 	import { aesEncrypt } from './utils/aes.uts'  // ✅ 直接导入，不使用 require
+	import { t } from '../../store/locale.uts'
 	
 	// Props
 	const props = defineProps({
@@ -116,7 +117,7 @@
 	
 	const buttonColor = ref<string>('#fff')
 	const sliderIcon = ref<string>('→')
-	const sliderText = ref<string>('向右滑动完成验证')
+	const sliderText = ref<string>(t('captcha.slide'))
 	
 	// 生成 UUID
 	function generateUUID(): string {
@@ -164,14 +165,14 @@
 			} else {
 				console.error('获取验证码失败:', result)
 				uni.showToast({
-					title: result?.repMsg || '获取验证码失败',
+					title: result?.repMsg || t('captcha.loadFailed'),
 					icon: 'none'
 				})
 			}
 		} catch (e) {
 			console.error('获取验证码异常:', e)
 			uni.showToast({
-				title: '获取验证码失败',
+				title: t('captcha.loadFailed'),
 				icon: 'none'
 			})
 		}
@@ -293,9 +294,11 @@
 	function handleSuccess() {
 		buttonColor.value = '#5cb85c'
 		sliderIcon.value = '✓'
-		sliderText.value = '验证成功'
+		sliderText.value = t('captcha.success')
 		tipSuccess.value = true
-		tipText.value = `${((endTime.value - startTime.value) / 1000).toFixed(2)}s验证成功`
+		tipText.value = t('captcha.successWithDuration', {
+			duration: ((endTime.value - startTime.value) / 1000).toFixed(2)
+		})
 		
 		setTimeout(() => {
 			const captchaVerification = secretKey.value ? 
@@ -313,7 +316,7 @@
 		buttonColor.value = '#d9534f'
 		sliderIcon.value = '✕'
 		tipSuccess.value = false
-		tipText.value = '验证失败'
+		tipText.value = t('captcha.fail')
 		
 		emit('fail')
 		
@@ -335,7 +338,7 @@
 		isSliding.value = false
 		buttonColor.value = '#fff'
 		sliderIcon.value = '→'
-		sliderText.value = '向右滑动完成验证'
+		sliderText.value = t('captcha.slide')
 		tipText.value = ''
 		tipSuccess.value = false
 	}

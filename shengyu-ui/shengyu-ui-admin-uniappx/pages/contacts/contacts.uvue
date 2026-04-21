@@ -165,7 +165,7 @@
 			
 			if (contacts.length === 0) {
 				console.warn('[Contacts] 联系人列表为空')
-				uni.showToast({ title: '暂无联系人', icon: 'none' })
+				uni.showToast({ title: t('contactsHome.empty'), icon: 'none' })
 				return
 			}
 			
@@ -183,7 +183,7 @@
 			// 转换为 UI 格式
 			rawContacts.value = contacts.map((contact, index) => {
 				// 优先使用 remarkName（备注名），其次使用 nickname（昵称）
-				const displayName = contact.remarkName || contact.nickname || '未知'
+				const displayName = contact.remarkName || contact.nickname || t('contactsHome.unknownUser')
 				const userIdStr = contact.id != null ? contact.id.toString() : '0'
 				// 使用后端返回的拼音首字母（取第一个字符）
 				let pinyinLetter = contact.pinyin || getPinyinFirstLetter(displayName)
@@ -217,7 +217,7 @@
 		} catch (e) {
 			console.error('[Contacts] 加载联系人列表异常:', e)
 			// e 可能是包含 msg 的错误对象
-			const errorMsg = (e as any).msg || '加载失败'
+			const errorMsg = (e as any).msg || t('contactsHome.loadFailed')
 			uni.showToast({ title: errorMsg, icon: 'none' })
 		} finally {
 			loading.value = false
@@ -317,7 +317,7 @@
 			})
 		} else {
 			uni.showToast({
-				title: t(item.nameKey) + '功能开发中',
+				title: t('contactsHome.inDevelopment', { name: t(item.nameKey) }),
 				icon: 'none'
 			})
 		}

@@ -2,6 +2,7 @@ package com.shengyu.framework.websocket.core.netty.handler;
 
 import cn.hutool.json.JSONUtil;
 import com.shengyu.framework.common.exception.ServiceException;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageHeader;
 import com.shengyu.framework.websocket.core.protocol.MessageType;
@@ -190,7 +191,7 @@ public class ProtobufMessageHandler extends SimpleChannelInboundHandler<ImMessag
 
     private String validateVoiceEnvelope(ImMessage msg) {
         if (msg == null || msg.getHeader() == null) {
-            return "请求格式错误：缺少 VOICE.header";
+            return i18n("ws.biz.voice_header_missing", "Invalid request format: missing VOICE.header");
         }
         try {
             VoiceMessage voiceMessage = VoiceMessage.parseFrom(msg.getBody());
@@ -200,7 +201,7 @@ public class ProtobufMessageHandler extends SimpleChannelInboundHandler<ImMessag
                     voiceMessage.getSize()
             );
         } catch (InvalidProtocolBufferException ex) {
-            return "请求格式错误：VOICE.body 解析失败";
+            return i18n("ws.biz.voice_body_invalid", "Invalid request format: failed to parse VOICE.body");
         }
     }
 
@@ -226,5 +227,9 @@ public class ProtobufMessageHandler extends SimpleChannelInboundHandler<ImMessag
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("[Protobuf] 异常: {}", ctx.channel().id().asShortText(), cause);
         ctx.close();
+    }
+
+    private String i18n(String key, String defaultMessage, Object... args) {
+        return ServiceExceptionUtil.getOrDefault(key, defaultMessage, args);
     }
 }

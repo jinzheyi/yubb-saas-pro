@@ -71,6 +71,11 @@ export async function syncUserPreferencesFromServer(force: boolean = false): Pro
 	}
 }
 
+export async function persistLanguagePreference(): Promise<void> {
+	// 移动 IM 语言按设备本地保存，不再写回用户级偏好。
+	return Promise.resolve()
+}
+
 export async function persistThemePreference(mode: ThemeMode): Promise<void> {
 	if (!isLoggedIn()) {
 		return

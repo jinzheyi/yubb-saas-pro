@@ -6,7 +6,7 @@
 				<view class="header-left" @click.stop="handleBack">
 					<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 				</view>
-				<text class="header-title" :style="{ color: theme.headerText }">组织结构</text>
+				<text class="header-title" :style="{ color: theme.headerText }">{{ t('contactsOrg.title') }}</text>
 				<view class="header-right"></view>
 			</view>
 			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
@@ -15,7 +15,7 @@
 					class="search-input" 
 					:style="{ color: theme.inputText }"
 					v-model="searchKeyword"
-					placeholder="搜索" 
+					:placeholder="t('contactsOrg.searchPlaceholder')"
 					placeholder-class="placeholder"
 					@input="handleSearch"
 				/>
@@ -120,7 +120,7 @@
 											<view v-if="mIndex < dept.members.length - 1" class="member-item-border" :style="{ backgroundColor: theme.borderColor }"></view>
 										</view>
 										<view v-if="dept.hasMore" class="load-more" @click.stop="loadMoreDeptMembers(dept.id, dept)">
-											<text class="load-more-text" :style="{ color: theme.brandPrimary }">加载更多</text>
+											<text class="load-more-text" :style="{ color: theme.brandPrimary }">{{ t('contactsOrg.loadMore') }}</text>
 										</view>
 									</view>
 								</view>
@@ -160,9 +160,9 @@
 
 		<!-- 选择模式下显示底部操作栏 -->
 		<view v-if="isSelectMode" class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px', backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
-			<text class="selected-text" :style="{ color: theme.textPrimary }">已选择 {{ selectedCount }} 人</text>
+			<text class="selected-text" :style="{ color: theme.textPrimary }">{{ t('contactsOrg.selectedCount', { count: selectedCount }) }}</text>
 			<button class="confirm-btn" :style="{ backgroundColor: selectedCount === 0 ? theme.cardBgMuted : theme.brandPrimary }" :disabled="selectedCount === 0" @click="handleConfirm">
-				<text class="confirm-btn-text">确定</text>
+				<text class="confirm-btn-text">{{ t('contactsOrg.confirm') }}</text>
 			</button>
 		</view>
 	</view>
@@ -216,7 +216,7 @@
 	const originalOrganizations = ref<any[]>([])
 	const originalRootOrg = ref<any>({
 		id: '',
-		name: '公司',
+		name: t('contactsOrg.defaultCompany'),
 		count: 0,
 		selected: false,
 		members: [] as any[],
@@ -228,7 +228,7 @@
 	// 根组织
 	const rootOrg = ref({
 		id: '',
-		name: '公司',
+		name: t('contactsOrg.defaultCompany'),
 		count: 0,
 		selected: false,
 		members: [] as any[],
@@ -345,7 +345,7 @@
 				if (rootCandidates.length === 1) {
 					const rootDept = rootCandidates[0]
 					rootOrg.value.id = normalizeDeptId(rootDept.id)
-					rootOrg.value.name = rootDept.name != null ? String(rootDept.name) : '公司'
+					rootOrg.value.name = rootDept.name != null ? String(rootDept.name) : t('contactsOrg.defaultCompany')
 					rootOrg.value.count = extractDeptCount(rootDept)
 					rootOrg.value.members = []
 					rootOrg.value.pageNo = 0
@@ -365,7 +365,7 @@
 				} else {
 					const total = rootCandidates.reduce((sum: number, dept: any) => sum + extractDeptCount(dept), 0)
 					rootOrg.value.id = ''
-					rootOrg.value.name = '组织结构'
+					rootOrg.value.name = t('contactsOrg.defaultOrgTitle')
 					rootOrg.value.count = total
 					rootOrg.value.members = []
 					rootOrg.value.pageNo = 0
@@ -374,7 +374,7 @@
 
 					originalRootOrg.value = {
 						id: '',
-						name: '组织结构',
+						name: t('contactsOrg.defaultOrgTitle'),
 						count: total,
 						selected: false,
 						members: [],
@@ -405,7 +405,7 @@
 		} catch (e) {
 			console.error('[Organization] 加载组织结构失败:', e)
 			uni.showToast({
-				title: '加载失败',
+				title: t('contactsOrg.loadFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -589,13 +589,14 @@
 				const data = res && Array.isArray(res.list) ? res.list : []
 				if (data && data.length > 0) {
 					rootMembers = data.map((user: any) => {
+						const displayName = user.remarkName || user.nickname || t('contactsOrg.unknownUser')
 						return {
 							id: String(user.id),
-							name: user.remarkName || user.nickname || '未知',
+							name: displayName,
 							role: user.deptName || '',
 							avatar: user.avatar != null ? String(user.avatar) : '',
 							avatarError: false,
-							avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
+							avatarText: getAvatarText(displayName),
 							avatarBg: getUserAvatarColor(String(user.id)),
 							selected: isMemberSelected(String(user.id))
 						}
@@ -638,13 +639,14 @@
 			let members: any[] = []
 			if (data && data.length > 0) {
 				members = data.map((user: any) => {
+					const displayName = user.remarkName || user.nickname || t('contactsOrg.unknownUser')
 					return {
 						id: String(user.id),
-						name: user.remarkName || user.nickname || '未知',
+						name: displayName,
 						role: user.deptName || '',
 						avatar: user.avatar != null ? String(user.avatar) : '',
 						avatarError: false,
-						avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
+						avatarText: getAvatarText(displayName),
 						avatarBg: getUserAvatarColor(String(user.id)),
 						selected: isMemberSelected(String(user.id))
 					}
@@ -808,13 +810,14 @@
 			
 			if (data && data.length > 0) {
 				const members = data.map((user: any) => {
+					const displayName = user.remarkName || user.nickname || t('contactsOrg.unknownUser')
 					return {
 						id: String(user.id),
-						name: user.remarkName || user.nickname || '未知',
+						name: displayName,
 						role: user.deptName || '',
 						avatar: user.avatar != null ? String(user.avatar) : '',
 						avatarError: false,
-						avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
+						avatarText: getAvatarText(displayName),
 						avatarBg: getUserAvatarColor(String(user.id)),
 						selected: isMemberSelected(String(user.id))
 					}
@@ -851,7 +854,7 @@
 			// 搜索时不显示错误提示，避免频繁弹窗
 			if (!keyword) {
 				uni.showToast({
-					title: '加载成员失败',
+					title: t('contactsOrg.loadMembersFailed'),
 					icon: 'none'
 				})
 			}
@@ -876,13 +879,14 @@
 			const total = res && res.total != null ? Number(res.total) : (deptNode.members.length + data.length)
 			if (data && data.length > 0) {
 				const appended = data.map((user: any) => {
+					const displayName = user.remarkName || user.nickname || t('contactsOrg.unknownUser')
 					return {
 						id: String(user.id),
-						name: user.remarkName || user.nickname || '未知',
+						name: displayName,
 						role: user.deptName || '',
 						avatar: user.avatar != null ? String(user.avatar) : '',
 						avatarError: false,
-						avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
+						avatarText: getAvatarText(displayName),
 						avatarBg: getUserAvatarColor(String(user.id)),
 						selected: isMemberSelected(String(user.id))
 					}

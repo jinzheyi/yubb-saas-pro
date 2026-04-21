@@ -5,6 +5,7 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.shengyu.framework.common.exception.ServiceException;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.websocket.core.processor.MessageProcessor;
 import com.shengyu.framework.websocket.core.processor.MessageProcessorFactory;
 import com.shengyu.framework.tenant.core.util.TenantUtils;
@@ -64,21 +65,23 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
         try {
             json = JSONUtil.parseObj(text);
         } catch (Exception e) {
-            sendJsonClose(ctx, "JSON_PARSE_ERROR", 400, "请求格式错误：无法解析为 JSON");
+            sendJsonClose(ctx, "JSON_PARSE_ERROR", 400,
+                i18n("ws.biz.json_parse_error", "Invalid request format: unable to parse JSON"));
             ctx.close();
             return;
         }
 
         JSONObject headerJson = json.getJSONObject("header");
         if (headerJson == null) {
-            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：缺少 header");
+            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, i18n("ws.biz.header_missing", "Invalid request format: missing header"));
             ctx.close();
             return;
         }
 
         Integer messageTypeValue = headerJson.getInt("messageType");
         if (messageTypeValue == null) {
-            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：缺少 header.messageType");
+            sendJsonClose(ctx, "ENVELOPE_INVALID", 400,
+                i18n("ws.biz.header_message_type_missing", "Invalid request format: missing header.messageType"));
             ctx.close();
             return;
         }
@@ -111,25 +114,29 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
         }
 
         if (headerJson.get("messageId") == null) {
-            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：缺少 header.messageId");
+            sendJsonClose(ctx, "ENVELOPE_INVALID", 400,
+                i18n("ws.biz.header_message_id_missing", "Invalid request format: missing header.messageId"));
             ctx.close();
             return;
         }
         long messageIdParsed = readLong(headerJson, "messageId", -1L);
         if (messageIdParsed <= 0L) {
-            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：header.messageId 非法");
+            sendJsonClose(ctx, "ENVELOPE_INVALID", 400,
+                i18n("ws.biz.header_message_id_invalid", "Invalid request format: header.messageId is invalid"));
             ctx.close();
             return;
         }
 
         if (headerJson.get("timestamp") == null) {
-            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：缺少 header.timestamp");
+            sendJsonClose(ctx, "ENVELOPE_INVALID", 400,
+                i18n("ws.biz.header_timestamp_missing", "Invalid request format: missing header.timestamp"));
             ctx.close();
             return;
         }
         long ts = readLong(headerJson, "timestamp", -1L);
         if (ts <= 0L) {
-            sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：header.timestamp 非法");
+            sendJsonClose(ctx, "ENVELOPE_INVALID", 400,
+                i18n("ws.biz.header_timestamp_invalid", "Invalid request format: header.timestamp is invalid"));
             ctx.close();
             return;
         }
@@ -151,7 +158,8 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
                 }
                 String content = bodyJson != null ? bodyJson.getStr("content", "") : "";
                 if (content == null || content.trim().isEmpty()) {
-                    sendJsonClose(ctx, "ENVELOPE_INVALID", 400, "请求格式错误：TEXT.content 不能为空");
+                    sendJsonClose(ctx, "ENVELOPE_INVALID", 400,
+                        i18n("ws.biz.text_content_required", "Invalid request format: TEXT.content must not be empty"));
                     ctx.close();
                     return;
                 }
@@ -183,7 +191,8 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
             MessageType messageType = imMessage.getHeader().getMessageType();
 
             if (messageType == null || messageType == MessageType.UNKNOWN) {
-                sendJsonClose(ctx, "UNSUPPORTED_MESSAGE_TYPE", 400, "不支持的 messageType: " + messageTypeValue);
+                sendJsonClose(ctx, "UNSUPPORTED_MESSAGE_TYPE", 400,
+                    i18n("ws.biz.unsupported_message_type", "Unsupported messageType: {0}", messageTypeValue));
                 ctx.close();
                 return;
             }
@@ -223,7 +232,7 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
             long tenantId = AuthHandler.getTenantId(ctx) != null ? AuthHandler.getTenantId(ctx) : readLong(headerJson, "tenantId", 0L);
             long messageId = readLong(headerJson, "messageId", System.currentTimeMillis());
             String reasonType = "message_send_failed";
-            String reasonMessage = "消息发送失败";
+            String reasonMessage = i18n("error.code.1002030101", "Message send failed");
             Integer reasonCode = null;
             if (e instanceof ServiceException) {
                 ServiceException se = (ServiceException) e;
@@ -268,6 +277,10 @@ public class JsonBusinessMessageHandler extends ChannelInboundHandlerAdapter {
             ctx.writeAndFlush(new TextWebSocketFrame(payload.toString()));
         } catch (Exception ignore) {
         }
+    }
+
+    private String i18n(String key, String defaultMessage, Object... args) {
+        return ServiceExceptionUtil.getOrDefault(key, defaultMessage, args);
     }
 
     private ImMessage buildImMessageFromJson(ChannelHandlerContext ctx, JSONObject headerJson, Object bodyObj) {

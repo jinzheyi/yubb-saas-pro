@@ -20,8 +20,8 @@ public class AppImLocationSearchReqVO {
     private Double longitude;
 
     @Schema(description = "返回条数（1-20）", example = "20")
-    @Min(value = 1, message = "pageSize 不能小于 1")
-    @Max(value = 20, message = "pageSize 不能大于 20")
+    @Min(value = 1, message = "{validation.im.location_page_size.min}")
+    @Max(value = 20, message = "{validation.im.location_page_size.max}")
     private Integer pageSize = 20;
 
 }

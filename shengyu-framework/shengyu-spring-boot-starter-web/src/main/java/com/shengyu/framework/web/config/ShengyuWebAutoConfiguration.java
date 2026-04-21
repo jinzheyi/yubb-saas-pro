@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.google.common.collect.Maps;
 import com.shengyu.framework.apilog.core.service.ApiErrorLogFrameworkService;
 import com.shengyu.framework.common.enums.WebFilterOrderEnum;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.web.core.filter.CacheRequestBodyFilter;
 import com.shengyu.framework.web.core.filter.DemoFilter;
 import com.shengyu.framework.web.core.handler.GlobalExceptionHandler;
@@ -14,10 +15,12 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.client.RestTemplateAutoConfiguration;
+import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
 import org.springframework.util.AntPathMatcher;
@@ -26,13 +29,15 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
+import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import java.util.Locale;
 import javax.servlet.Filter;
 import java.util.Map;
 import java.util.function.Predicate;
 
-@AutoConfiguration
+@AutoConfiguration(before = WebMvcAutoConfiguration.class)
 @EnableConfigurationProperties(WebProperties.class)
 public class ShengyuWebAutoConfiguration {
 
@@ -90,6 +95,18 @@ public class ShengyuWebAutoConfiguration {
     @Bean
     public GlobalResponseBodyHandler globalResponseBodyHandler() {
         return new GlobalResponseBodyHandler();
+    }
+
+    @Bean
+    public LocaleResolver localeResolver() {
+        Locale.setDefault(Locale.SIMPLIFIED_CHINESE);
+        return new ShengyuLocaleResolver();
+    }
+
+    @Bean
+    public MessageSource serviceExceptionI18nInitializer(MessageSource messageSource) {
+        ServiceExceptionUtil.setMessageSource(messageSource);
+        return messageSource;
     }
 
     @Bean

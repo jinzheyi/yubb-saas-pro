@@ -4,16 +4,16 @@
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">群二维码</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('chat.groupQrcode.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<!-- 加载中 -->
 			<view v-if="loading" class="loading-container">
-				<text class="loading-text" :style="{ color: theme.textTertiary }">加载中...</text>
+				<text class="loading-text" :style="{ color: theme.textTertiary }">{{ t('chat.groupQrcode.qrcodeLoading') }}</text>
 			</view>
 
 			<!-- 二维码卡片 -->
@@ -38,21 +38,21 @@
 						@error="handleImageError"
 					></image>
 					<view v-else class="qrcode-placeholder" :style="{ backgroundColor: theme.cardBgMuted }">
-						<text class="placeholder-text" :style="{ color: theme.textTertiary }">二维码加载中...</text>
+						<text class="placeholder-text" :style="{ color: theme.textTertiary }">{{ t('chat.groupQrcode.qrcodeLoading') }}</text>
 					</view>
 				</view>
 
 				<!-- 邀请码信息 -->
 				<view class="invite-info">
 					<view class="invite-code-row">
-						<text class="invite-label" :style="{ color: theme.textTertiary }">邀请码：</text>
+						<text class="invite-label" :style="{ color: theme.textTertiary }">{{ t('chat.groupQrcode.inviteCodeLabel') }}</text>
 						<text class="invite-code" :style="{ color: theme.textPrimary }">{{ inviteCode }}</text>
 					</view>
 					<view class="invite-expire-row">
 						<text class="invite-expire" :style="{ color: theme.textSecondary }">{{ expireText }}</text>
 					</view>
 					<view v-if="needApproval" class="invite-expire-row">
-						<text class="invite-expire approval-text">开启邀请确认，扫码后需管理员审批</text>
+						<text class="invite-expire approval-text">{{ t('chat.groupQrcode.approvalEnabled') }}</text>
 					</view>
 				</view>
 			</view>
@@ -61,7 +61,7 @@
 			<view v-if="!loading" class="action-section">
 				<view class="action-btn" :style="{ backgroundColor: theme.cardBg }" @click="handleSaveImage">
 					<text class="iconfont action-icon">&#xe60d;</text>
-					<text class="action-text" :style="{ color: theme.textPrimary }">保存到相册</text>
+					<text class="action-text" :style="{ color: theme.textPrimary }">{{ t('chat.groupQrcode.saveToAlbum') }}</text>
 				</view>
 				<view class="action-btn" :style="{ backgroundColor: theme.cardBg }" @click="handleShare">
 					<text class="iconfont action-icon">&#xe60e;</text>
@@ -69,17 +69,17 @@
 				</view>
 				<view class="action-btn" :style="{ backgroundColor: theme.cardBg }" @click="handleRefresh">
 					<text class="iconfont action-icon">&#xe60f;</text>
-					<text class="action-text" :style="{ color: theme.textPrimary }">刷新二维码</text>
+					<text class="action-text" :style="{ color: theme.textPrimary }">{{ t('chat.groupQrcode.refreshQrcode') }}</text>
 				</view>
 			</view>
 
 			<!-- 说明文字 -->
 			<view v-if="!loading" class="tips-section" :style="{ backgroundColor: theme.cardBg }">
-				<text class="tips-title" :style="{ color: theme.textPrimary }">使用说明</text>
-				<text class="tips-item" :style="{ color: theme.textSecondary }">• 二维码有效期为24小时</text>
+				<text class="tips-title" :style="{ color: theme.textPrimary }">{{ t('chat.groupQrcode.usageTitle') }}</text>
+				<text class="tips-item" :style="{ color: theme.textSecondary }">{{ t('chat.groupQrcode.usageExpire') }}</text>
 				<text class="tips-item" :style="{ color: theme.textSecondary }">• {{ joinFlowTip }}</text>
-				<text class="tips-item" :style="{ color: theme.textSecondary }">• 当前可通过二维码图片或分享链接进入加群页</text>
-				<text class="tips-item" :style="{ color: theme.textSecondary }">• 可保存图片分享给好友</text>
+				<text class="tips-item" :style="{ color: theme.textSecondary }">{{ t('chat.groupQrcode.usageJoinPage') }}</text>
+				<text class="tips-item" :style="{ color: theme.textSecondary }">{{ t('chat.groupQrcode.usageShare') }}</text>
 			</view>
 
 			<view class="bottom-space"></view>
@@ -90,6 +90,7 @@
 <script setup lang="uts">
 	import { onMounted } from 'vue'
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getGroupInviteCode, generateGroupInvite } from '../../api/group.uts'
 	import { saveImageToAlbum } from '../../utils/qrcode.uts'
 	import { BASE_URL, API_BASE_URL, ADMIN_APP_DOMAIN } from '../../config/app.config.uts'
@@ -99,6 +100,7 @@
 	import { getTenantId } from '../../store/user.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
+	const { t } = useI18n()
 
 	// 页面参数
 	const groupId = ref('')
@@ -151,30 +153,30 @@
 		})
 		
 		if (diff <= 0) {
-			return '已过期'
+			return t('chat.groupQrcode.expired')
 		}
 		
 		const hours = Math.floor(diff / (1000 * 60 * 60))
 		const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
 		
 		if (hours > 0) {
-			return `有效期：${hours}小时${minutes}分钟`
+			return t('chat.groupQrcode.expireHoursMinutes', { hours: hours, minutes: minutes })
 		} else {
-			return `有效期：${minutes}分钟`
+			return t('chat.groupQrcode.expireMinutes', { minutes: minutes })
 		}
 	})
 
 	const groupJoinHint = computed(() : string => {
-		return needApproval.value ? '扫码后提交申请，等待管理员审批' : '扫码后可加入群聊'
+		return needApproval.value ? t('chat.groupQrcode.joinNeedApproval') : t('chat.groupQrcode.joinDirect')
 	})
 
 	const joinFlowTip = computed(() : string => {
-		return needApproval.value ? '扫码后不会直接入群，而是进入申请审批流程' : '扫码后验证邀请码，可直接加入群聊'
+		return needApproval.value ? t('chat.groupQrcode.joinFlowNeedApproval') : t('chat.groupQrcode.joinFlowDirect')
 	})
 
 	const shareActionText = computed(() : string => {
 		const platform = uni.getSystemInfoSync().platform
-		return platform === 'web' ? '复制邀请链接' : '分享邀请'
+		return platform === 'web' ? t('chat.groupQrcode.copyInviteLink') : t('chat.groupQrcode.shareInvite')
 	})
 
 	const inviteLandingUrl = computed(() : string => {
@@ -293,7 +295,7 @@
 				return
 			}
 			uni.showToast({
-				title: '生成邀请码失败',
+				title: t('chat.groupQrcode.generateInviteFailed'),
 				icon: 'none'
 			})
 		}
@@ -327,7 +329,7 @@
 	async function handleSaveImage() {
 		if (!qrCodeImageUrl.value) {
 			uni.showToast({
-				title: '二维码未生成',
+				title: t('chat.groupQrcode.qrcodeNotReady'),
 				icon: 'none'
 			})
 			return
@@ -340,10 +342,10 @@
 		// H5 环境：提示用户右键保存或长按保存
 		if (platform === 'web') {
 			uni.showModal({
-				title: '保存二维码',
-				content: 'PC端：请右键点击二维码图片选择"图片另存为"\n移动端：请长按二维码图片保存',
+				title: t('chat.groupQrcode.saveQrcodeTitle'),
+				content: t('chat.groupQrcode.saveQrcodeContent'),
 				showCancel: false,
-				confirmText: '知道了'
+				confirmText: t('chat.groupQrcode.known')
 			})
 			return
 		}
@@ -351,7 +353,7 @@
 		// App 环境：保存到相册
 		try {
 			uni.showLoading({
-				title: '保存中...'
+				title: t('chat.groupQrcode.saving')
 			})
 			
 			const downloadRes = await uni.downloadFile({
@@ -367,7 +369,7 @@
 			
 			uni.hideLoading()
 			uni.showToast({
-				title: '保存成功',
+				title: t('chat.groupQrcode.saveSuccess'),
 				icon: 'success'
 			})
 		} catch (e) {
@@ -376,8 +378,8 @@
 			
 			// 如果是权限问题，引导用户去设置
 			uni.showModal({
-				title: '提示',
-				content: '保存图片需要相册权限，是否前往设置？',
+				title: t('common.confirmTitle'),
+				content: t('chat.groupQrcode.albumPermissionContent'),
 				success: (res) => {
 					if (res.confirm) {
 						uni.openSetting({
@@ -397,7 +399,7 @@
 	async function handleShare() {
 		if (!qrCodeImageUrl.value && !inviteLandingUrl.value) {
 			uni.showToast({
-				title: '邀请信息未生成',
+				title: t('chat.groupQrcode.inviteNotReady'),
 				icon: 'none'
 			})
 			return
@@ -410,7 +412,7 @@
 					data: inviteLandingUrl.value,
 					success: () => {
 						uni.showToast({
-							title: '邀请链接已复制',
+							title: t('chat.groupQrcode.inviteLinkCopied'),
 							icon: 'success'
 						})
 					}
@@ -420,7 +422,7 @@
 
 			// 先下载图片到本地
 			uni.showLoading({
-				title: '准备中...'
+				title: t('chat.groupQrcode.preparing')
 			})
 			
 			const downloadRes = await uni.downloadFile({
@@ -438,7 +440,7 @@
 				provider: 'weixin',
 				type: 0, // 图片
 				imageUrl: downloadRes.tempFilePath,
-				title: `邀请你加入群聊：${groupName.value}`,
+				title: t('chat.groupQrcode.shareTitle', { groupName: groupName.value }),
 				success: () => {
 					console.log('[GroupQRCode] 分享成功')
 				},
@@ -455,7 +457,7 @@
 					data: inviteLandingUrl.value,
 					success: () => {
 						uni.showToast({
-							title: '分享失败，已复制邀请链接',
+							title: t('chat.groupQrcode.shareFallbackCopied'),
 							icon: 'none'
 						})
 					}
@@ -463,8 +465,8 @@
 				return
 			}
 			uni.showModal({
-				title: '提示',
-				content: '当前平台暂不支持直接分享，您可以保存图片后手动分享',
+				title: t('common.confirmTitle'),
+				content: t('chat.groupQrcode.shareUnsupportedContent'),
 				showCancel: false
 			})
 		}
@@ -475,7 +477,7 @@
 	 */
 	async function handleRefresh() {
 		uni.showLoading({
-			title: '刷新中...'
+			title: t('chat.groupQrcode.refreshing')
 		})
 
 		try {
@@ -488,13 +490,13 @@
 			console.log('[GroupQRCode] 刷新后 expireText:', expireText.value)
 			
 			uni.showToast({
-				title: '刷新成功',
+				title: t('chat.groupQrcode.refreshSuccess'),
 				icon: 'success'
 			})
 		} catch (e) {
 			console.error('[GroupQRCode] 刷新失败:', e)
 			uni.showToast({
-				title: '刷新失败',
+				title: t('chat.groupQrcode.refreshFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -519,7 +521,7 @@
 	function handleImageError(e: any) {
 		console.error('[GroupQRCode] 二维码图片加载失败:', e)
 		uni.showToast({
-			title: '二维码加载失败',
+			title: t('chat.groupQrcode.qrcodeLoadFailed'),
 			icon: 'none'
 		})
 	}

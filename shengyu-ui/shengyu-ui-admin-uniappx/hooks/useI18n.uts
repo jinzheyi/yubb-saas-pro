@@ -7,13 +7,16 @@
 import { 
 	getCurrentLocale, 
 	setCurrentLocale, 
+	getLanguageMode,
 	getAvailableLocales,
 	getCurrentMessages,
+	subscribeLocaleChange,
 	t as translate,
 	switchLocale as switchLang,
 	type LocaleType,
 	type LocaleConfig
 } from '../store/locale.uts'
+import { onUnmounted } from 'vue'
 
 /**
  * 国际化组合式函数
@@ -31,6 +34,9 @@ export function useI18n() {
 	 * @returns 语言配置列表
 	 */
 	const availableLocales = ref<LocaleConfig[]>(getAvailableLocales())
+	let unsubscribeLocale: (() => void) | null = subscribeLocaleChange((nextLocale, _languageMode) => {
+		locale.value = nextLocale
+	})
 	
 	/**
 	 * 获取当前语言包（响应式）
@@ -64,7 +70,7 @@ export function useI18n() {
 		
 		// 提示用户
 		uni.showToast({
-			title: newLocale === 'zh-CN' ? '切换成功' : 'Switch Success',
+			title: translate('common.switchSuccess'),
 			icon: 'success'
 		})
 	}
@@ -77,10 +83,18 @@ export function useI18n() {
 		setCurrentLocale(newLocale)
 		locale.value = newLocale
 	}
+
+	onUnmounted(() => {
+		if (unsubscribeLocale != null) {
+			unsubscribeLocale()
+			unsubscribeLocale = null
+		}
+	})
 	
 	return {
 		t,
 		locale,
+		languageMode: computed(() => getLanguageMode()),
 		availableLocales,
 		messages,
 		switchLocale,

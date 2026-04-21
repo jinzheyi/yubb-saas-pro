@@ -6,7 +6,7 @@
 				<view class="header-left" @click.stop="handleBack">
 					<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 				</view>
-				<text class="header-title" :style="{ color: theme.headerText }">我的关注</text>
+				<text class="header-title" :style="{ color: theme.headerText }">{{ t('contactsMyFollowing.title') }}</text>
 				<view class="header-right"></view>
 			</view>
 			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
@@ -15,7 +15,7 @@
 					class="search-input" 
 					:style="{ color: theme.inputText }"
 					v-model="searchKeyword"
-					placeholder="搜索" 
+					:placeholder="t('contactsMyFollowing.searchPlaceholder')"
 					placeholder-class="placeholder"
 					@input="handleSearch"
 				/>
@@ -30,7 +30,7 @@
 		>
 			<!-- 加载状态 -->
 			<view v-if="loading && followingList.length === 0" class="loading-state">
-				<text class="loading-text" :style="{ color: theme.textTertiary }">加载中...</text>
+				<text class="loading-text" :style="{ color: theme.textTertiary }">{{ t('contactsMyFollowing.loading') }}</text>
 			</view>
 			
 			<!-- 联系人列表 -->
@@ -66,15 +66,15 @@
 			
 			<!-- 空状态 -->
 			<view v-else-if="!loading" class="empty-state">
-				<text class="empty-text" :style="{ color: theme.textTertiary }">暂无关注的联系人</text>
+				<text class="empty-text" :style="{ color: theme.textTertiary }">{{ t('contactsMyFollowing.empty') }}</text>
 			</view>
 		</scroll-view>
 
 		<!-- 选择模式下显示底部操作栏 -->
 		<view v-if="isSelectMode" class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px', backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
-			<text class="selected-text" :style="{ color: theme.textPrimary }">已选择 {{ selectedCount }} 人</text>
+			<text class="selected-text" :style="{ color: theme.textPrimary }">{{ t('contactsMyFollowing.selectedCount', { count: selectedCount }) }}</text>
 			<button class="confirm-btn" :style="{ backgroundColor: selectedCount === 0 ? theme.cardBgMuted : theme.brandPrimary }" :disabled="selectedCount === 0" @click="handleConfirm">
-				<text class="confirm-btn-text">确定</text>
+				<text class="confirm-btn-text">{{ t('contactsMyFollowing.confirm') }}</text>
 			</button>
 		</view>
 	</view>
@@ -157,7 +157,7 @@
 						id: contact.id,
 						nickname: contact.nickname,
 						displayName: contact.nickname, // 直接使用昵称
-						role: contact.postName || '未设置岗位',
+						role: contact.postName || t('contactsMyFollowing.roleUnset'),
 						deptName: contact.deptName || '',
 						avatar: contact.avatar != null ? String(contact.avatar) : '',
 						avatarError: false,
@@ -178,7 +178,7 @@
 		} catch (e) {
 			console.error('[MyFollowing] 加载关注列表失败:', e)
 			uni.showToast({
-				title: '加载失败',
+				title: t('contactsMyFollowing.loadFailed'),
 				icon: 'none'
 			})
 			followingList.value = []
@@ -227,7 +227,7 @@
 						id: contact.id,
 						nickname: contact.nickname,
 						displayName: contact.nickname, // 直接使用昵称
-						role: contact.postName || '未设置岗位',
+						role: contact.postName || t('contactsMyFollowing.roleUnset'),
 						deptName: contact.deptName || '',
 						avatar: contact.avatar != null ? String(contact.avatar) : '',
 						avatarError: false,
@@ -245,7 +245,7 @@
 		} catch (e) {
 			console.error('[MyFollowing] 搜索失败:', e)
 			uni.showToast({
-				title: '搜索失败',
+				title: t('contactsMyFollowing.searchFailed'),
 				icon: 'none'
 			})
 			followingList.value = []

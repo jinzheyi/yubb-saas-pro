@@ -5,14 +5,14 @@
 			<view class="header-left" @click="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">选择成员</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('chat.mentionSelect.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
 		<view class="search-container" :style="{ backgroundColor: theme.cardBg }">
 			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
 				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
-				<input class="search-input" :style="{ color: theme.inputText }" v-model="keyword" placeholder="搜索" placeholder-class="placeholder" />
+				<input class="search-input" :style="{ color: theme.inputText }" v-model="keyword" :placeholder="t('chat.mentionSelect.searchPlaceholder')" placeholder-class="placeholder" />
 			</view>
 		</view>
 
@@ -23,7 +23,7 @@
 						<text class="avatar-text">@</text>
 					</view>
 					<view class="body">
-						<text class="name" :style="{ color: theme.textPrimary }">所有人</text>
+						<text class="name" :style="{ color: theme.textPrimary }">{{ t('chat.mentionSelect.allMembers') }}</text>
 					</view>
 				</view>
 
@@ -46,7 +46,7 @@
 				</view>
 
 				<view v-if="filteredMembers.length === 0" class="empty">
-					<text class="empty-text" :style="{ color: theme.textTertiary }">暂无成员</text>
+					<text class="empty-text" :style="{ color: theme.textTertiary }">{{ t('chat.mentionSelect.empty') }}</text>
 				</view>
 			</view>
 		</scroll-view>
@@ -55,10 +55,13 @@
 
 <script setup lang="uts">
 import { onLoad, onUnload } from '@dcloudio/uni-app'
+import { useI18n } from '../../hooks/useI18n.uts'
 import { groupService } from '../../services/group-service.uts'
 import { getUserInfo } from '../../store/user.uts'
 import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 import type { ThemeTokens } from '../../config/theme.uts'
+
+const { t } = useI18n()
 
 type MemberItem = {
 	userId: string
@@ -130,7 +133,7 @@ function handleSelect(item: MemberItem): void {
 function handleSelectAll(): void {
 	try {
 		const ec = (getCurrentPages() as any).slice(-1)[0].getOpenerEventChannel()
-		ec.emit('select', { userId: '-1', userName: '所有人' })
+		ec.emit('select', { userId: '-1', userName: t('chat.mentionSelect.allMembers') })
 	} catch (e) {
 		// ignore
 	}
@@ -153,7 +156,7 @@ async function loadMembers(): Promise<void> {
 			canAtAll.value = false
 			return
 		}
-		uni.showLoading({ title: '加载中...' })
+		uni.showLoading({ title: t('chat.mentionSelect.loading') })
 		const list = await groupService.getGroupMembers(groupId.value)
 		uni.hideLoading()
 

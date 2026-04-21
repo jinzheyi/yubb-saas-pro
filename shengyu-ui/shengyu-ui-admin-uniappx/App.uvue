@@ -4,6 +4,7 @@
 	import { initTheme } from './store/theme.uts'
 	import { badgeService } from './services/badge-service.uts'
 	import { tabBarBadgeService } from './services/tab-bar-badge-service.uts'
+	import { runtimeTabBarService } from './services/runtime-tab-bar-service.uts'
 	import { syncUserPreferencesFromServer } from './services/user-preference-service.uts'
 	import { onAccessTokenRefreshed } from './utils/request.uts'
 
@@ -16,6 +17,7 @@
 			// 初始化国际化（如果没有设置过语言，则使用系统语言）
 			initLocale()
 			initTheme()
+			runtimeTabBarService.init()
 
 			this.bootstrapBadgeServices()
 			if (isLoggedIn()) {
@@ -34,6 +36,7 @@
 		},
 		onShow() {
 			console.log('App Show')
+			runtimeTabBarService.refresh()
 			this.bootstrapBadgeServices()
 			if (isLoggedIn()) {
 				badgeService.ensureFresh(3000)

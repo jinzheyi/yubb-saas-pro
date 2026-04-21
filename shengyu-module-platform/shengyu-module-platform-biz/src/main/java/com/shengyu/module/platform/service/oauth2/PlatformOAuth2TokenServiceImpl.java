@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.common.pojo.PageResult;
 import com.shengyu.framework.common.util.date.DateUtils;
 import com.shengyu.module.platform.controller.platform.oauth2.vo.token.OAuth2AccessTokenPageReqVO;
@@ -57,13 +58,15 @@ public class PlatformOAuth2TokenServiceImpl implements PlatformOAuth2TokenServic
         // 查询访问令牌
         PlatformOAuth2RefreshTokenDO refreshTokenDO = oauth2RefreshTokenMapperPlatform.selectByRefreshToken(refreshToken);
         if (refreshTokenDO == null) {
-            throw exception0(GlobalErrorCodeConstants.BAD_REQUEST.getCode(), "无效的刷新令牌");
+            throw exception0(GlobalErrorCodeConstants.BAD_REQUEST.getCode(),
+                ServiceExceptionUtil.getOrDefault("oauth.refresh_token.invalid", "Invalid refresh token"));
         }
 
         // 校验 Client 匹配
         PlatformOAuth2ClientDO clientDO = oauth2ClientServicePlatform.validOAuthClientFromCache(clientId);
         if (ObjectUtil.notEqual(clientId, refreshTokenDO.getClientId())) {
-            throw exception0(GlobalErrorCodeConstants.BAD_REQUEST.getCode(), "刷新令牌的客户端编号不正确");
+            throw exception0(GlobalErrorCodeConstants.BAD_REQUEST.getCode(),
+                ServiceExceptionUtil.getOrDefault("oauth.refresh_token.client_mismatch", "Refresh token client ID is invalid"));
         }
 
         // 移除相关的访问令牌
@@ -76,7 +79,8 @@ public class PlatformOAuth2TokenServiceImpl implements PlatformOAuth2TokenServic
         // 已过期的情况下，删除刷新令牌
         if (DateUtils.isExpired(refreshTokenDO.getExpiresTime())) {
             oauth2RefreshTokenMapperPlatform.deleteById(refreshTokenDO.getId());
-            throw exception0(GlobalErrorCodeConstants.UNAUTHORIZED.getCode(), "刷新令牌已过期");
+            throw exception0(GlobalErrorCodeConstants.UNAUTHORIZED.getCode(),
+                ServiceExceptionUtil.getOrDefault("oauth.refresh_token.expired", "Refresh token expired"));
         }
 
         // 创建访问令牌
@@ -104,10 +108,12 @@ public class PlatformOAuth2TokenServiceImpl implements PlatformOAuth2TokenServic
     public PlatformOAuth2AccessTokenDO checkAccessToken(String accessToken) {
         PlatformOAuth2AccessTokenDO accessTokenDO = getAccessToken(accessToken);
         if (accessTokenDO == null) {
-            throw exception0(GlobalErrorCodeConstants.UNAUTHORIZED.getCode(), "访问令牌不存在");
+            throw exception0(GlobalErrorCodeConstants.UNAUTHORIZED.getCode(),
+                ServiceExceptionUtil.getOrDefault("oauth.access_token.not_found", "Access token not found"));
         }
         if (DateUtils.isExpired(accessTokenDO.getExpiresTime())) {
-            throw exception0(GlobalErrorCodeConstants.UNAUTHORIZED.getCode(), "访问令牌已过期");
+            throw exception0(GlobalErrorCodeConstants.UNAUTHORIZED.getCode(),
+                ServiceExceptionUtil.getOrDefault("oauth.access_token.expired", "Access token expired"));
         }
         return accessTokenDO;
     }

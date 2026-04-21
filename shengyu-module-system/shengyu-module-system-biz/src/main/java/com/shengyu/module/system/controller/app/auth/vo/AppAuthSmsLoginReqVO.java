@@ -27,26 +27,26 @@ import javax.validation.constraints.Pattern;
 public class AppAuthSmsLoginReqVO {
 
     @Schema(description = "手机号", requiredMode = Schema.RequiredMode.REQUIRED, example = "yudaoyuanma")
-    @NotEmpty(message = "手机号不能为空")
-    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
+    @NotEmpty(message = "{validation.auth.mobile.required}")
+    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "{validation.auth.mobile.invalid}")
     private String mobile;
 
     @Schema(description = "短信验证码", requiredMode = Schema.RequiredMode.REQUIRED, example = "1024")
-    @NotEmpty(message = "验证码不能为空")
+    @NotEmpty(message = "{validation.auth.sms_code.required}")
     private String code;
 
     // ========== 设备信息相关（移动端特有） ==========
 
     @Schema(description = "设备类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "3")
-    @NotNull(message = "设备类型不能为空")
+    @NotNull(message = "{validation.auth.device_type.required}")
     private Integer deviceType;
 
     @Schema(description = "设备ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1234567890-abcdef")
-    @NotEmpty(message = "设备ID不能为空")
+    @NotEmpty(message = "{validation.auth.device_id.required}")
     private String deviceId;
 
     @Schema(description = "客户端版本", requiredMode = Schema.RequiredMode.REQUIRED, example = "1.0.0")
-    @NotEmpty(message = "客户端版本不能为空")
+    @NotEmpty(message = "{validation.auth.client_version.required}")
     private String clientVersion;
 
 }

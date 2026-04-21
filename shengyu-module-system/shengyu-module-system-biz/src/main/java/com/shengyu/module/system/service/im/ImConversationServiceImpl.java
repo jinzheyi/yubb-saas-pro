@@ -30,6 +30,8 @@ import com.shengyu.module.system.dal.mysql.im.ImConversationUserStateMapper;
 import com.shengyu.module.system.dal.mysql.im.ImGroupMapper;
 import com.shengyu.module.system.dal.mysql.user.AdminUserMapper;
 import com.shengyu.module.system.enums.im.ImConversationTypeEnum;
+import com.shengyu.module.system.enums.im.ImMessageTypeEnum;
+import com.shengyu.module.system.service.im.support.ImSystemMessageI18nSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -128,6 +130,9 @@ public class ImConversationServiceImpl implements ImConversationService {
     @Autowired(required = false)
     private ImPresenceService imPresenceService;
 
+    @Resource
+    private ImSystemMessageI18nSupport imSystemMessageI18nSupport;
+
     @Override
     public List<AppImConversationRespVO> getConversationList(Long userId) {
         List<ImChatUserDO> chatUsers = chatUserMapper.selectListByUserId(userId);
@@ -196,6 +201,7 @@ public class ImConversationServiceImpl implements ImConversationService {
         Map<Long, ImChatDO> chatMap = new HashMap<>();
         Map<Long, ImGroupDO> groupMap = new HashMap<>();
         Map<Long, AdminUserDO> userMap = new HashMap<>();
+        Map<Long, ImChatMessageDO> lastMessageMap = new HashMap<>();
 
         if (states != null && !states.isEmpty()) {
             List<Long> chatIds = states.stream()
@@ -251,6 +257,23 @@ public class ImConversationServiceImpl implements ImConversationService {
                         }
                     }
                 }
+                List<Long> lastMessageIds = states.stream()
+                        .filter(s -> s != null && s.getLastMessageId() != null
+                                && (s.getLastMessageType() == null
+                                || Objects.equals(s.getLastMessageType(), ImMessageTypeEnum.SYSTEM.getType())))
+                        .map(ImConversationUserStateDO::getLastMessageId)
+                        .distinct()
+                        .collect(Collectors.toList());
+                if (!lastMessageIds.isEmpty()) {
+                    List<ImChatMessageDO> messages = chatMessageMapper.selectBatchIds(lastMessageIds);
+                    if (messages != null) {
+                        for (ImChatMessageDO message : messages) {
+                            if (message != null && message.getId() != null) {
+                                lastMessageMap.put(message.getId(), message);
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -266,8 +289,14 @@ public class ImConversationServiceImpl implements ImConversationService {
                 item.setUnreadCount(state.getUnreadCount() != null ? Math.max(state.getUnreadCount(), 0) : 0);
                 item.setLastMessageSequence(state.getLastMessageSequence() != null ? state.getLastMessageSequence() : 0L);
                 item.setLastReadSequence(state.getLastReadSequence() != null ? state.getLastReadSequence() : 0L);
-                item.setLastMessageType(state.getLastMessageType());
-                item.setLastMessageContent(buildPreviewByType(state.getLastMessageType(), state.getLastMessageContent()));
+                Integer lastMessageType = state.getLastMessageType();
+                ImChatMessageDO lastMessage = state.getLastMessageId() != null ? lastMessageMap.get(state.getLastMessageId()) : null;
+                if (lastMessageType == null && lastMessage != null) {
+                    lastMessageType = lastMessage.getMessageType();
+                }
+                item.setLastMessageType(lastMessageType);
+                item.setLastMessageContent(buildPreviewByType(lastMessageType, state.getLastMessageContent(),
+                        lastMessage != null ? lastMessage.getExtra() : null));
                 item.setLastMessageHasAtMe(Boolean.TRUE.equals(state.getLastMessageHasAtMe()));
                 item.setLastMessageTime(state.getLastMessageTime());
                 item.setIsPinned(state.getIsPinned());
@@ -820,9 +849,11 @@ public class ImConversationServiceImpl implements ImConversationService {
             }
         }
 
-        Map<Long, Integer> lastMessageTypeMap = new HashMap<>();
+        Map<Long, ImChatMessageDO> lastMessageMap = new HashMap<>();
         List<Long> needLastMsgIds = chatUsers.stream()
-                .filter(cu -> cu != null && cu.getLastMessageId() != null && cu.getLastMessageType() == null)
+                .filter(cu -> cu != null && cu.getLastMessageId() != null
+                        && (cu.getLastMessageType() == null
+                        || Objects.equals(cu.getLastMessageType(), ImMessageTypeEnum.SYSTEM.getType())))
                 .map(ImChatUserDO::getLastMessageId)
                 .distinct()
                 .collect(Collectors.toList());
@@ -831,7 +862,7 @@ public class ImConversationServiceImpl implements ImConversationService {
             if (msgs != null) {
                 for (ImChatMessageDO m : msgs) {
                     if (m != null && m.getId() != null) {
-                        lastMessageTypeMap.put(m.getId(), m.getMessageType());
+                        lastMessageMap.put(m.getId(), m);
                     }
                 }
             }
@@ -874,14 +905,17 @@ public class ImConversationServiceImpl implements ImConversationService {
             respVO.setUnreadCount(unread);
 
             Integer lastType = chatUser.getLastMessageType();
-            if (lastType == null && chatUser.getLastMessageId() != null) {
-                Integer t = lastMessageTypeMap.get(chatUser.getLastMessageId());
+            ImChatMessageDO lastMessage = chatUser.getLastMessageId() != null
+                    ? lastMessageMap.get(chatUser.getLastMessageId()) : null;
+            if (lastType == null && lastMessage != null) {
+                Integer t = lastMessage.getMessageType();
                 if (t != null) {
                     lastType = t;
                 }
             }
             respVO.setLastMessageType(lastType);
-            respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent()));
+            respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent(),
+                    lastMessage != null ? lastMessage.getExtra() : null));
             // 无消息时：群聊会话时间取群创建时间；有消息时取最后一条消息时间
             respVO.setLastMessageTime(chatUser.getLastMessageTime());
             respVO.setIsPinned(chatUser.getIsPinned());
@@ -963,14 +997,16 @@ public class ImConversationServiceImpl implements ImConversationService {
         respVO.setUnreadCount(unread);
 
         Integer lastType = chatUser.getLastMessageType();
-        if (lastType == null && chatUser.getLastMessageId() != null) {
-            ImChatMessageDO lastMsg = chatMessageMapper.selectById(chatUser.getLastMessageId());
-            if (lastMsg != null) {
+        ImChatMessageDO lastMsg = null;
+        if (chatUser.getLastMessageId() != null) {
+            lastMsg = chatMessageMapper.selectById(chatUser.getLastMessageId());
+            if (lastType == null && lastMsg != null) {
                 lastType = lastMsg.getMessageType();
             }
         }
         respVO.setLastMessageType(lastType);
-        respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent()));
+        respVO.setLastMessageContent(buildPreviewByType(lastType, chatUser.getLastMessageContent(),
+                lastMsg != null ? lastMsg.getExtra() : null));
         // 无消息时：群聊会话时间取群创建时间（体验对标企微/钉钉）；有消息时取最后一条消息时间
         respVO.setLastMessageTime(chatUser.getLastMessageTime());
         respVO.setIsPinned(chatUser.getIsPinned());
@@ -1014,7 +1050,22 @@ public class ImConversationServiceImpl implements ImConversationService {
          return respVO;
     }
 
-    private String buildPreviewByType(Integer messageType, String raw) {
+    private String buildPreviewByType(Integer messageType, String raw, String extra) {
+        if (imSystemMessageI18nSupport.isRecallPreviewFallback(raw)) {
+            return imSystemMessageI18nSupport.renderRecallPreview(raw);
+        }
+        if (Objects.equals(messageType, ImMessageTypeEnum.SYSTEM.getType())) {
+            String localized = imSystemMessageI18nSupport.render(raw, extra);
+            if (localized != null) {
+                String trimmedLocalized = localized.trim();
+                if (!trimmedLocalized.isEmpty()) {
+                    if (trimmedLocalized.length() > 100) {
+                        return trimmedLocalized.substring(0, 100) + "...";
+                    }
+                    return trimmedLocalized;
+                }
+            }
+        }
         // raw 里可能已经包含群聊发送者前缀（例如："张三: [图片]"）。
         // 为保证推送与刷新一致：raw 非空则优先使用 raw（并做截断），避免被类型默认文案覆盖。
         if (raw != null) {

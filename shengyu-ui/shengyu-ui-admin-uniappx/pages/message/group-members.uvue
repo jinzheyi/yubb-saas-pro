@@ -4,12 +4,12 @@
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-				<text class="back-text" :style="{ color: theme.headerText }">{{ mode === 'remove' || mode === 'transfer' ? '取消' : t('common.back') }}</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ mode === 'remove' || mode === 'transfer' ? t('common.cancel') : t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">{{ mode === 'remove' ? '删除群成员' : (mode === 'transfer' ? '选择新群主' : '群成员(' + filteredMembers.length + ')') }}</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ mode === 'remove' ? t('chat.groupMembers.removeTitle') : (mode === 'transfer' ? t('chat.groupMembers.transferTitle') : t('chat.groupMembers.title', { count: filteredMembers.length })) }}</text>
 			<view class="header-right">
 				<text v-if="mode === 'remove' && selectedMembers.length > 0" class="confirm-text" :style="{ color: theme.brandPrimary }" @click="handleConfirmRemove">
-					确定({{ selectedMembers.length }})
+					{{ t('chat.groupMembers.confirmSelected', { count: selectedMembers.length }) }}
 				</text>
 			</view>
 		</view>
@@ -17,14 +17,14 @@
 		<view class="search-wrap" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }">
 			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
 				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
-				<input class="search-input" :style="{ color: theme.inputText }" v-model="searchKeyword" placeholder="搜索群成员" placeholder-class="placeholder" @input="handleSearch" />
+				<input class="search-input" :style="{ color: theme.inputText }" v-model="searchKeyword" :placeholder="t('chat.groupMembers.searchPlaceholder')" placeholder-class="placeholder" @input="handleSearch" />
 			</view>
 		</view>
 
 		<scroll-view class="member-list" scroll-y="true" show-scrollbar="false" :scroll-into-view="scrollIntoView">
 			<!-- 加载状态 -->
 			<view v-if="loading" class="loading-wrap">
-				<text class="loading-text" :style="{ color: theme.textTertiary }">加载中...</text>
+				<text class="loading-text" :style="{ color: theme.textTertiary }">{{ t('chat.groupJoinRequests.loading') }}</text>
 			</view>
 			
 			<!-- 按字母分组 -->
@@ -55,9 +55,9 @@
 						<text class="member-role" :style="{ color: theme.textTertiary }" v-if="isMemberMuted(member)">{{ formatMuteEndTime(member.muteEndTime) }}</text>
 						<text class="member-role" :style="{ color: theme.textTertiary }" v-else-if="member.deptName">{{ member.deptName }}</text>
 					</view>
-					<text v-if="member.isOwner" class="member-badge owner-badge">群主</text>
-					<text v-else-if="member.isAdmin" class="member-badge admin-badge">管理员</text>
-					<text v-if="isMemberMuted(member)" class="member-badge mute-badge">已禁言</text>
+					<text v-if="member.isOwner" class="member-badge owner-badge">{{ t('chat.groupNotice.owner') }}</text>
+					<text v-else-if="member.isAdmin" class="member-badge admin-badge">{{ t('chat.groupSettings.admin') }}</text>
+					<text v-if="isMemberMuted(member)" class="member-badge mute-badge">{{ t('chat.groupMembers.muted') }}</text>
 					<view v-if="canManageMember(member)" class="member-manage-trigger" @click.stop="handleMemberManageTap(member)">
 						<text class="iconfont member-manage-trigger-icon" :style="{ color: theme.textTertiary }">&#xea8d;</text>
 					</view>
@@ -143,7 +143,7 @@
 			lastOwnerTransferToastAt = now
 			if (newOwnerId !== '' && newOwnerId === currentUserId.value) {
 				uni.showToast({
-					title: '你已成为新群主',
+					title: t('im.notify.you_are_new_owner'),
 					icon: 'none',
 					duration: 2200
 				})
@@ -151,14 +151,14 @@
 			}
 			if (oldOwnerId !== '' && oldOwnerId === currentUserId.value) {
 				uni.showToast({
-					title: '你已转让群主身份',
+					title: t('im.notify.you_transferred_owner'),
 					icon: 'none',
 					duration: 2200
 				})
 				return
 			}
 			uni.showToast({
-				title: '群主已更新',
+				title: t('im.notify.group_owner_updated'),
 				icon: 'none',
 				duration: 1800
 			})
@@ -199,9 +199,9 @@
 			const day = d.getDate().toString().padStart(2, '0')
 			const hour = d.getHours().toString().padStart(2, '0')
 			const minute = d.getMinutes().toString().padStart(2, '0')
-			return `禁言至 ${month}-${day} ${hour}:${minute}`
+			return t('chat.groupMembers.mutedUntil', { month, day, hour, minute })
 		} catch (e) {
-			return '已禁言'
+			return t('chat.groupMembers.muted')
 		}
 	}
 
@@ -276,7 +276,7 @@
 				}
 
 				allMembers.value = members.map(member => {
-					const displayName = member.nickname || member.userNickname || '未知'
+					const displayName = member.nickname || member.userNickname || t('chat.preview.unknownSender')
 					const pinyinLetter = getPinyinFirstLetter(displayName)
 					const roleNum = member.role != null ? Number(member.role) : 0
 					
@@ -317,7 +317,7 @@
 				return
 			}
 			uni.showToast({
-				title: '加载失败',
+				title: t('message.toast.loadFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -379,7 +379,7 @@
 			// 不能删除群主和自己
 			if (member.cannotRemove) {
 				uni.showToast({
-					title: member.isOwner ? '不能删除群主' : '不能删除自己',
+					title: member.isOwner ? t('chat.groupMembers.cannotRemoveOwner') : t('chat.groupMembers.cannotRemoveSelf'),
 					icon: 'none'
 				})
 				return
@@ -421,16 +421,17 @@
 	function handleTransferOwnerSelect(member: any): void {
 		if (!canTransferOwnerTo(member)) {
 			uni.showToast({
-				title: member != null && member.isOwner === true ? '当前成员已是群主' : '请选择其他群成员',
+				title: member != null && member.isOwner === true ? t('chat.groupMembers.alreadyOwner') : t('chat.groupMembers.selectOtherMember'),
 				icon: 'none'
 			})
 			return
 		}
-		const memberName = member != null && member.name != null ? String(member.name) : '该成员'
+		const memberName = member != null && member.name != null ? String(member.name) : t('chat.groupMembers.thisMember')
 		uni.showModal({
-			title: '转让群主',
-			content: `确认将群主转让给${memberName}吗？转让后你将变为普通成员。`,
-			confirmText: '确认转让',
+			title: t('chat.groupMembers.transferOwner'),
+			content: t('chat.groupMembers.transferConfirm', { name: memberName }),
+			cancelText: t('common.cancel'),
+			confirmText: t('chat.groupMembers.transferConfirmText'),
 			success: async (res) => {
 				if (!res.confirm) {
 					return
@@ -525,14 +526,14 @@
 			const actionKeys: string[] = []
 			if (currentUserRole.value === 2) {
 				const toAdmin = member.isAdmin !== true
-				itemList.push(toAdmin ? '设为管理员' : '取消管理员')
+				itemList.push(toAdmin ? t('chat.groupMembers.setAdmin') : t('chat.groupMembers.removeAdmin'))
 				actionKeys.push(toAdmin ? 'set_admin' : 'remove_admin')
 			}
 			if (isMemberMuted(member)) {
-				itemList.push('解除禁言')
+				itemList.push(t('chat.groupMembers.unmute'))
 				actionKeys.push('unmute')
 			} else {
-				itemList.push('禁言24小时')
+				itemList.push(t('chat.groupMembers.mute24h'))
 				actionKeys.push('mute')
 			}
 			if (itemList.length === 0) {
@@ -547,7 +548,7 @@
 						return
 					}
 					const actionKey = actionKeys[res.tapIndex]
-					uni.showLoading({ title: '处理中...' })
+					uni.showLoading({ title: t('chat.groupMembers.processing') })
 					try {
 						if (actionKey === 'set_admin') {
 							await setGroupMemberRole(groupId.value, member.id.toString(), 1)
@@ -567,11 +568,11 @@
 							applyMemberMuteState(member.id.toString(), false)
 						}
 						uni.hideLoading()
-						uni.showToast({ title: '操作成功', icon: 'success' })
+						uni.showToast({ title: t('chat.groupMembers.actionSuccess'), icon: 'success' })
 						await loadMembers()
 					} catch (e) {
 						uni.hideLoading()
-						uni.showToast({ title: '操作失败', icon: 'none' })
+						uni.showToast({ title: t('message.toast.actionFailed'), icon: 'none' })
 					}
 				},
 				fail: () => {
@@ -590,7 +591,7 @@
 		const selected = selectedMembers.value
 		if (selected.length === 0) {
 			uni.showToast({
-				title: '请选择要删除的成员',
+				title: t('chat.groupMembers.selectMembersToRemove'),
 				icon: 'none'
 			})
 			return
@@ -598,8 +599,10 @@
 		
 		const memberNames = selected.map(m => m.name).join('、')
 		uni.showModal({
-			title: '删除群成员',
-			content: `确定要删除 ${memberNames} 吗？`,
+			title: t('chat.groupMembers.removeTitle'),
+			content: t('chat.groupMembers.removeConfirm', { names: memberNames }),
+			cancelText: t('common.cancel'),
+			confirmText: t('common.ok'),
 			success: async (res) => {
 				if (res.confirm) {
 					await performRemoveMembers(selected)
@@ -613,7 +616,7 @@
 	 */
 	async function performRemoveMembers(members : any[]) {
 		uni.showLoading({
-			title: '删除中...'
+			title: t('chat.groupMembers.removing')
 		})
 		
 		try {
@@ -627,7 +630,7 @@
 			
 			uni.hideLoading()
 			uni.showToast({
-				title: '删除成功',
+				title: t('common.delSuccess'),
 				icon: 'success'
 			})
 			
@@ -639,14 +642,14 @@
 		} catch (e) {
 			uni.hideLoading()
 			console.error('[GroupMembers] 删除成员失败:', e)
-			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '你已不在该群聊')
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, t('im.notify.removed_from_group'))
 			if (lifecycleNotice !== '') {
 				lifecycleRedirecting = true
 				finalizeGroupLifecycleExit(groupId.value, '', lifecycleNotice)
 				return
 			}
 			uni.showToast({
-				title: '删除失败',
+				title: t('chat.toast.deleteFailed'),
 				icon: 'none'
 			})
 		}
@@ -654,16 +657,16 @@
 
 	async function performTransferOwner(member: any): Promise<void> {
 		const memberId = member != null && member.id != null ? String(member.id) : ''
-		const memberName = member != null && member.name != null ? String(member.name) : '该成员'
+		const memberName = member != null && member.name != null ? String(member.name) : t('chat.groupMembers.thisMember')
 		if (memberId === '') {
 			uni.showToast({
-				title: '成员信息异常',
+				title: t('chat.groupMembers.memberInvalid'),
 				icon: 'none'
 			})
 			return
 		}
 		uni.showLoading({
-			title: '转让中...'
+			title: t('chat.groupMembers.transferring')
 		})
 		try {
 			armGroupLifecycleErrorToastSuppression(3000)
@@ -672,7 +675,7 @@
 			groupService.invalidateGroupMembers(groupId.value)
 			uni.hideLoading()
 			uni.showToast({
-				title: `已转让给${memberName}`,
+				title: t('chat.groupMembers.transferredTo', { name: memberName }),
 				icon: 'success'
 			})
 			setTimeout(() => {
@@ -681,14 +684,14 @@
 		} catch (e) {
 			uni.hideLoading()
 			console.error('[GroupMembers] 转让群主失败:', e)
-			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, '该群聊已不可用')
+			const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, t('chat.joinGroup.groupUnavailable'))
 			if (lifecycleNotice !== '') {
 				lifecycleRedirecting = true
 				finalizeGroupLifecycleExit(groupId.value, '', lifecycleNotice)
 				return
 			}
 			uni.showToast({
-				title: '转让失败',
+				title: t('chat.groupMembers.transferFailed'),
 				icon: 'none'
 			})
 		}

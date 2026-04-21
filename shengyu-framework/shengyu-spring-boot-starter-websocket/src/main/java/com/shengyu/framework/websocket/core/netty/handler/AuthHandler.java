@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.security.core.util.LoginBase;
 import com.shengyu.framework.websocket.config.NettyProperties;
 import com.shengyu.framework.websocket.core.protocol.*;
@@ -18,6 +19,9 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.i18n.LocaleContextHolder;
+
+import java.util.Locale;
 
 /**
  * 认证处理器
@@ -40,6 +44,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
     private static final AttributeKey<Boolean> AUTH_KEY = AttributeKey.valueOf("AUTH");
     private static final AttributeKey<Long> USER_ID_KEY = AttributeKey.valueOf("USER_ID");
     private static final AttributeKey<Long> TENANT_ID_KEY = AttributeKey.valueOf("TENANT_ID");
+    private static final AttributeKey<String> LOCALE_KEY = AttributeKey.valueOf("LOCALE");
 
     private final NettySessionManager sessionManager;
     private final AuthService authService;
@@ -76,7 +81,8 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                     }
                     // 严格模式：未完成 PROBE 不允许 AUTH_REQ
                     if (mt == MessageType.AUTH_REQ_VALUE && !isProbeDone(ctx)) {
-                        sendJsonClose(ctx, "PROBE_REQUIRED", 426, "协议不兼容：请先发送 PROBE");
+                        sendJsonClose(ctx, "PROBE_REQUIRED", 426,
+                            i18n("ws.auth.probe_required", "Protocol incompatible: send PROBE first"));
                         ctx.close();
                         return;
                     }
@@ -95,7 +101,8 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 }
                 // 严格模式：未完成 PROBE 不允许 AUTH_REQ（Protobuf）
                 if (im.getHeader() != null && im.getHeader().getMessageType() == MessageType.AUTH_REQ && !isProbeDone(ctx)) {
-                    sendProtobufClose(ctx, "PROBE_REQUIRED", 426, "协议不兼容：请先发送 PROBE");
+                    sendProtobufClose(ctx, "PROBE_REQUIRED", 426,
+                        i18n("ws.auth.probe_required", "Protocol incompatible: send PROBE first"));
                     ctx.close();
                     return;
                 }
@@ -118,7 +125,8 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             NettySession session = sessionManager.getSession(ctx.channel());
             if (session != null && session.isLeaseExpired()) {
                 // TODO: 使用独立的 REAUTH_REQUIRED 协议消息替代 CLOSE reason
-                sendReAuthRequired(ctx, 401, "登录已过期，请重新登录");
+                sendReAuthRequired(ctx, 401,
+                    localizeFor(session.getLocale(), "ws.auth.reauth_required", "Login expired. Please sign in again"));
                 sessionManager.removeSession(ctx.channel());
                 ctx.close();
                 return;
@@ -130,9 +138,11 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
         // 未认证且不是认证消息，拒绝处理
         log.warn("[Auth] 未找到认证请求: {}, msgType: {}", ctx.channel().id().asShortText(), msg.getClass().getSimpleName());
         if (msg instanceof String) {
-            sendJsonAuthResponse(ctx, false, 401, "未认证，请先发送认证请求", 0L, 0L);
+            sendJsonAuthResponse(ctx, false, 401,
+                i18n("ws.auth.unauthorized", "Unauthorized. Send auth request first"), 0L, 0L);
         } else {
-            sendProtobufAuthResponse(ctx, false, 401, "未认证，请先发送认证请求", 0L, 0L);
+            sendProtobufAuthResponse(ctx, false, 401,
+                i18n("ws.auth.unauthorized", "Unauthorized. Send auth request first"), 0L, 0L);
         }
         ctx.close();
     }
@@ -318,9 +328,11 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             String deviceId = body.getStr("deviceId", "");
             String deviceName = body.getStr("deviceName", "");
             String clientVersion = body.getStr("clientVersion", "");
+            String locale = normalizeLocaleTag(body.getStr("locale", ""));
 
             if (StrUtil.isBlank(accessToken)) {
-                sendJsonAuthResponse(ctx, false, 400, "Token 不能为空", 0L, 0L);
+                sendJsonAuthResponse(ctx, false, 400,
+                    localizeFor(locale, "ws.auth.token_required", "Token must not be empty"), 0L, 0L);
                 ctx.close();
                 return;
             }
@@ -328,7 +340,8 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             // 验证 Token（集成项目鉴权）
             LoginBase loginUser = authService.validateToken(accessToken);
             if (loginUser == null) {
-                sendJsonAuthResponse(ctx, false, 401, "Token 无效或已过期", 0L, 0L);
+                sendJsonAuthResponse(ctx, false, 401,
+                    localizeFor(locale, "ws.auth.token_invalid", "Token is invalid or expired"), 0L, 0L);
                 ctx.close();
                 return;
             }
@@ -342,6 +355,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             if (tenantId != null) {
                 ctx.channel().attr(TENANT_ID_KEY).set(tenantId);
             }
+            ctx.channel().attr(LOCALE_KEY).set(locale);
 
             String codec = "";
             String sp = "";
@@ -375,6 +389,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 .deviceId(deviceId)
                 .deviceName(deviceName)
                 .clientVersion(clientVersion)
+                .locale(locale)
                 .accessToken(accessToken)
                 .codec(codec)
                 .negotiatedSubprotocol(sp)
@@ -389,13 +404,14 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             sessionManager.addSession(session);
 
             // 发送认证成功响应
-            sendJsonAuthResponse(ctx, true, 0, "认证成功", loginUser.getId(), tenantId);
-            log.info("[Auth] JSON 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}, codec: {}, subprotocol: {}, negotiationMode: {}",
-                loginUser.getId(), tenantId, loginUser.getUserType(), ctx.channel().id().asShortText(), codec, sp, mode);
+            sendJsonAuthResponse(ctx, true, 0,
+                localizeFor(locale, "ws.auth.success", "Authenticated successfully"), loginUser.getId(), tenantId);
+            log.info("[Auth] JSON 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}, codec: {}, subprotocol: {}, negotiationMode: {}, locale: {}",
+                loginUser.getId(), tenantId, loginUser.getUserType(), ctx.channel().id().asShortText(), codec, sp, mode, locale);
 
         } catch (Exception e) {
             log.error("[Auth] JSON 认证处理异常", e);
-            sendJsonAuthResponse(ctx, false, 500, "服务器内部错误", 0L, 0L);
+            sendJsonAuthResponse(ctx, false, 500, i18n("ws.auth.server_error", "Internal server error"), 0L, 0L);
             ctx.close();
         }
     }
@@ -408,9 +424,11 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             // 解析认证请求
             AuthRequest authRequest = AuthRequest.parseFrom(message.getBody());
             String accessToken = authRequest.getAccessToken();
+            String locale = normalizeLocaleTag(authRequest.getLocale());
 
             if (StrUtil.isBlank(accessToken)) {
-                sendProtobufAuthResponse(ctx, false, 400, "Token 不能为空", 0L, 0L);
+                sendProtobufAuthResponse(ctx, false, 400,
+                    localizeFor(locale, "ws.auth.token_required", "Token must not be empty"), 0L, 0L);
                 ctx.close();
                 return;
             }
@@ -418,7 +436,8 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             // 验证 Token（集成项目鉴权）
             LoginBase loginUser = authService.validateToken(accessToken);
             if (loginUser == null) {
-                sendProtobufAuthResponse(ctx, false, 401, "Token 无效或已过期", 0L, 0L);
+                sendProtobufAuthResponse(ctx, false, 401,
+                    localizeFor(locale, "ws.auth.token_invalid", "Token is invalid or expired"), 0L, 0L);
                 ctx.close();
                 return;
             }
@@ -432,6 +451,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             if (tenantId != null) {
                 ctx.channel().attr(TENANT_ID_KEY).set(tenantId);
             }
+            ctx.channel().attr(LOCALE_KEY).set(locale);
 
             String codec = "";
             String sp = "";
@@ -464,6 +484,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 .deviceType(authRequest.getDeviceType())
                 .deviceId(authRequest.getDeviceId())
                 .clientVersion(authRequest.getClientVersion())
+                .locale(locale)
                 .accessToken(accessToken)
                 .codec(codec)
                 .negotiatedSubprotocol(sp)
@@ -478,17 +499,18 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             sessionManager.addSession(session);
 
             // 发送认证成功响应
-            sendProtobufAuthResponse(ctx, true, 0, "认证成功", loginUser.getId(), tenantId);
-            log.info("[Auth] Protobuf 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}, codec: {}, subprotocol: {}, negotiationMode: {}",
-                loginUser.getId(), tenantId, loginUser.getUserType(), ctx.channel().id().asShortText(), codec, sp, mode);
+            sendProtobufAuthResponse(ctx, true, 0,
+                localizeFor(locale, "ws.auth.success", "Authenticated successfully"), loginUser.getId(), tenantId);
+            log.info("[Auth] Protobuf 认证成功, userId: {}, tenantId: {}, userType: {}, channel: {}, codec: {}, subprotocol: {}, negotiationMode: {}, locale: {}",
+                loginUser.getId(), tenantId, loginUser.getUserType(), ctx.channel().id().asShortText(), codec, sp, mode, locale);
 
         } catch (InvalidProtocolBufferException e) {
             log.error("[Auth] 解析 Protobuf 认证请求失败", e);
-            sendProtobufAuthResponse(ctx, false, 400, "请求格式错误", 0L, 0L);
+            sendProtobufAuthResponse(ctx, false, 400, i18n("ws.auth.bad_message", "Invalid request format"), 0L, 0L);
             ctx.close();
         } catch (Exception e) {
             log.error("[Auth] Protobuf 认证处理异常", e);
-            sendProtobufAuthResponse(ctx, false, 500, "服务器内部错误", 0L, 0L);
+            sendProtobufAuthResponse(ctx, false, 500, i18n("ws.auth.server_error", "Internal server error"), 0L, 0L);
             ctx.close();
         }
     }
@@ -610,6 +632,39 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
      */
     public static Long getTenantId(ChannelHandlerContext ctx) {
         return ctx.channel().attr(TENANT_ID_KEY).get();
+    }
+
+    private String i18n(String key, String defaultMessage, Object... args) {
+        return ServiceExceptionUtil.getOrDefault(key, defaultMessage, args);
+    }
+
+    private String localizeFor(String localeTag, String key, String defaultMessage, Object... args) {
+        Locale previous = LocaleContextHolder.getLocale();
+        try {
+            LocaleContextHolder.setLocale(resolveLocale(localeTag));
+            return i18n(key, defaultMessage, args);
+        } finally {
+            LocaleContextHolder.setLocale(previous);
+        }
+    }
+
+    private String normalizeLocaleTag(String localeTag) {
+        if (StrUtil.isBlank(localeTag)) {
+            return "zh-CN";
+        }
+        String normalized = localeTag.trim().replace('_', '-');
+        String lower = normalized.toLowerCase();
+        if ("zh".equals(lower) || lower.startsWith("zh")) {
+            return "zh-CN";
+        }
+        if ("en".equals(lower) || lower.startsWith("en")) {
+            return "en";
+        }
+        return "zh-CN";
+    }
+
+    private Locale resolveLocale(String localeTag) {
+        return Locale.forLanguageTag(normalizeLocaleTag(localeTag));
     }
 
     @Override

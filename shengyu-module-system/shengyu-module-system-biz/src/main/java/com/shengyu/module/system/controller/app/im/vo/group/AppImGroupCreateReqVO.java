@@ -14,19 +14,19 @@ import java.util.List;
 public class AppImGroupCreateReqVO {
 
     @Schema(description = "群名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "技术交流群")
-    @NotBlank(message = "群名称不能为空")
-    @Size(max = 50, message = "群名称长度不能超过50个字符")
+    @NotBlank(message = "{validation.im.group_name.required}")
+    @Size(max = 50, message = "{validation.im.group_name.max}")
     private String name;
 
     @Schema(description = "群头像", example = "https://...")
     private String avatar;
 
     @Schema(description = "群类型(1-普通群 2-工作群)", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "群类型不能为空")
+    @NotNull(message = "{validation.im.group_type.required}")
     private Integer groupType;
 
     @Schema(description = "群成员ID列表", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotEmpty(message = "群成员列表不能为空")
+    @NotEmpty(message = "{validation.im.group_member_ids.required}")
     private List<Long> memberIds;
 
     @Schema(description = "群简介", example = "这是一个技术交流群")

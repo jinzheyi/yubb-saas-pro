@@ -4,28 +4,28 @@
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">入群申请</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('chat.groupJoinRequests.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
 		<view class="tab-bar" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }">
 			<view :class="['tab-item', activeTab === 'pending' ? 'tab-item-active' : '']" :style="{ backgroundColor: activeTab === 'pending' ? theme.brandPrimarySoft : theme.cardBgMuted }" @click="switchTab('pending')">
-				<text :class="['tab-text', activeTab === 'pending' ? 'tab-text-active' : '']" :style="{ color: activeTab === 'pending' ? theme.brandPrimary : theme.textSecondary }">待处理</text>
+				<text :class="['tab-text', activeTab === 'pending' ? 'tab-text-active' : '']" :style="{ color: activeTab === 'pending' ? theme.brandPrimary : theme.textSecondary }">{{ t('chat.groupJoinRequests.tabPending') }}</text>
 			</view>
 			<view :class="['tab-item', activeTab === 'processed' ? 'tab-item-active' : '']" :style="{ backgroundColor: activeTab === 'processed' ? theme.brandPrimarySoft : theme.cardBgMuted }" @click="switchTab('processed')">
-				<text :class="['tab-text', activeTab === 'processed' ? 'tab-text-active' : '']" :style="{ color: activeTab === 'processed' ? theme.brandPrimary : theme.textSecondary }">已处理</text>
+				<text :class="['tab-text', activeTab === 'processed' ? 'tab-text-active' : '']" :style="{ color: activeTab === 'processed' ? theme.brandPrimary : theme.textSecondary }">{{ t('chat.groupJoinRequests.tabProcessed') }}</text>
 			</view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<view v-if="loading" class="placeholder-wrap">
-				<text class="placeholder-text" :style="{ color: theme.textTertiary }">加载中...</text>
+				<text class="placeholder-text" :style="{ color: theme.textTertiary }">{{ t('chat.groupJoinRequests.loading') }}</text>
 			</view>
 
 			<view v-else-if="requestList.length === 0" class="placeholder-wrap">
-				<text class="placeholder-title" :style="{ color: theme.textPrimary }">{{ activeTab === 'pending' ? '暂无待处理申请' : '暂无处理记录' }}</text>
+				<text class="placeholder-title" :style="{ color: theme.textPrimary }">{{ activeTab === 'pending' ? t('chat.groupJoinRequests.emptyPending') : t('chat.groupJoinRequests.emptyProcessed') }}</text>
 				<text class="placeholder-text" :style="{ color: theme.textTertiary }">{{ groupName }}</text>
 			</view>
 
@@ -43,17 +43,17 @@
 									{{ item.statusText }}
 								</text>
 							</view>
-							<text class="time-text" :style="{ color: theme.textTertiary }">申请时间：{{ item.createTimeText }}</text>
-							<text v-if="item.handledTimeText !== ''" class="time-text" :style="{ color: theme.textTertiary }">处理时间：{{ item.handledTimeText }}</text>
-							<text v-if="item.rejectReason !== ''" class="reason-text" :style="{ color: theme.textSecondary }">处理结果：{{ item.rejectReason }}</text>
+							<text class="time-text" :style="{ color: theme.textTertiary }">{{ t('chat.groupJoinRequests.applyTime', { time: item.createTimeText }) }}</text>
+							<text v-if="item.handledTimeText !== ''" class="time-text" :style="{ color: theme.textTertiary }">{{ t('chat.groupJoinRequests.handleTime', { time: item.handledTimeText }) }}</text>
+							<text v-if="item.rejectReason !== ''" class="reason-text" :style="{ color: theme.textSecondary }">{{ t('chat.groupJoinRequests.handleResult', { result: item.rejectReason }) }}</text>
 						</view>
 					</view>
 					<view v-if="activeTab === 'pending'" class="action-row">
 						<view class="action-btn action-btn-reject" :style="{ backgroundColor: theme.cardBgMuted }" @click="handleReject(item)">
-							<text class="action-btn-text" :style="{ color: theme.textSecondary }">拒绝</text>
+							<text class="action-btn-text" :style="{ color: theme.textSecondary }">{{ t('chat.groupJoinRequests.reject') }}</text>
 						</view>
 						<view class="action-btn action-btn-approve" :style="{ backgroundColor: theme.brandPrimary }" @click="handleApprove(item)">
-							<text class="action-btn-text action-btn-text-primary">通过</text>
+							<text class="action-btn-text action-btn-text-primary">{{ t('chat.groupJoinRequests.approve') }}</text>
 						</view>
 					</view>
 				</view>
@@ -65,6 +65,7 @@
 <script setup lang="uts">
 	import { onMounted } from 'vue'
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { approveGroupJoinRequest, getGroupJoinRequests, rejectGroupJoinRequest } from '../../api/group.uts'
 	import { badgeService } from '../../services/badge-service.uts'
 	import { MessageService } from '../../services/message-service.uts'
@@ -74,8 +75,10 @@
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
+	const { t } = useI18n()
+
 	const groupId = ref('')
-	const groupName = ref('群聊')
+	const groupName = ref('')
 	const activeTab = ref('pending')
 	const loading = ref(false)
 	const requestList = ref<any[]>([])
@@ -114,7 +117,7 @@
 		const applicantUserId = item != null && item.applicantUserId != null ? String(item.applicantUserId) : '0'
 		const applicantNickname = item != null && item.applicantNickname != null && String(item.applicantNickname).trim() !== ''
 			? String(item.applicantNickname).trim()
-			: '未知成员'
+			: t('chat.groupJoinRequests.unknownMember')
 		const status = item != null && item.status != null ? Number(item.status) : 1
 		return {
 			id: item != null && item.id != null ? String(item.id) : '',
@@ -124,7 +127,7 @@
 			avatarText: getAvatarText(applicantNickname),
 			avatarBg: getUserAvatarColor(applicantUserId),
 			status,
-			statusText: status === 2 ? '已通过' : (status === 3 ? '已拒绝' : '待处理'),
+			statusText: status === 2 ? t('chat.groupJoinRequests.statusApproved') : (status === 3 ? t('chat.groupJoinRequests.statusRejected') : t('chat.groupJoinRequests.statusPending')),
 			createTimeText: formatTime(item != null ? item.createTime : ''),
 			handledTimeText: formatTime(item != null ? item.handledTime : ''),
 			rejectReason: item != null && item.rejectReason != null ? String(item.rejectReason) : ''
@@ -152,7 +155,7 @@
 				return
 			}
 			uni.showToast({
-				title: '加载失败',
+				title: t('chat.groupJoinRequests.loadFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -182,7 +185,7 @@
 			await approveGroupJoinRequest(item.id)
 			badgeService.ensureFresh(0)
 			uni.showToast({
-				title: '已通过',
+				title: t('chat.groupJoinRequests.approved'),
 				icon: 'success'
 			})
 			await loadRequests()
@@ -195,7 +198,7 @@
 				return
 			}
 			uni.showToast({
-				title: '操作失败',
+				title: t('chat.groupJoinRequests.actionFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -208,8 +211,10 @@
 			return
 		}
 		uni.showModal({
-			title: '拒绝申请',
-			content: `确认拒绝 ${item.applicantNickname} 的入群申请吗？`,
+			title: t('chat.groupJoinRequests.rejectTitle'),
+			content: t('chat.groupJoinRequests.rejectConfirm', { name: item.applicantNickname }),
+			cancelText: t('common.cancel'),
+			confirmText: t('common.ok'),
 			success: async (res) => {
 				if (!res.confirm) {
 					return
@@ -217,10 +222,10 @@
 				try {
 					processingRequestId.value = item.id
 					armGroupLifecycleErrorToastSuppression(3000)
-					await rejectGroupJoinRequest(item.id, '管理员已拒绝')
+					await rejectGroupJoinRequest(item.id, t('chat.groupJoinRequests.rejectedByAdmin'))
 					badgeService.ensureFresh(0)
 					uni.showToast({
-						title: '已拒绝',
+						title: t('chat.groupJoinRequests.rejected'),
 						icon: 'success'
 					})
 					await loadRequests()
@@ -233,7 +238,7 @@
 						return
 					}
 					uni.showToast({
-						title: '操作失败',
+						title: t('chat.groupJoinRequests.actionFailed'),
 						icon: 'none'
 					})
 				} finally {
@@ -249,6 +254,9 @@
 		}
 		if (options && options.groupName) {
 			groupName.value = decodeURIComponent(options.groupName)
+		}
+		if (groupName.value === '') {
+			groupName.value = t('chat.joinGroup.title')
 		}
 	})
 

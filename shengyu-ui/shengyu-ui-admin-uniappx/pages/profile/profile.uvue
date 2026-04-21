@@ -15,7 +15,7 @@
 					</view>
 					<view v-if="avatarUploading" class="avatar-upload-mask">
 						<text class="avatar-upload-percent">{{ avatarUploadProgress }}%</text>
-						<text class="avatar-upload-label">上传中</text>
+						<text class="avatar-upload-label">{{ t('profile.page.uploading') }}</text>
 					</view>
 				</view>
 				<view class="user-detail">
@@ -68,7 +68,7 @@
 			<!-- 退出登录 -->
 			<view class="logout-wrap">
 				<button class="logout-btn" :style="{ backgroundColor: theme.cardBg, borderColor: theme.borderColor }" hover-class="logout-btn-active" @click="handleLogout">
-					<text class="logout-btn-text">退出登录</text>
+					<text class="logout-btn-text">{{ t('profile.page.logout') }}</text>
 				</button>
 			</view>
 		</scroll-view>
@@ -119,9 +119,9 @@
 	})
 	const avatarHintText = computed(() : string => {
 		if (avatarUploading.value) {
-			return '头像上传中 ' + avatarUploadProgress.value + '%'
+			return t('profile.page.avatarUploadingProgress', { progress: avatarUploadProgress.value })
 		}
-		return userInfo.value.avatar ? '点击更换或删除头像' : '点击上传头像'
+		return userInfo.value.avatar ? t('profile.page.avatarChangeHint') : t('profile.page.avatarUploadHint')
 	})
 
 	async function loadProfile() {
@@ -140,7 +140,7 @@
 		} catch (e) {
 			console.error('[Profile] 加载当前用户信息失败:', e)
 			uni.showToast({
-				title: '加载失败',
+				title: t('profile.page.loadFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -158,7 +158,7 @@
 		if (avatarUploading.value) {
 			return
 		}
-		const itemList = userInfo.value.avatar !== '' ? ['重新上传头像', '删除自定义头像'] : ['上传头像']
+		const itemList = userInfo.value.avatar !== '' ? [t('profile.page.reuploadAvatar'), t('profile.page.removeCustomAvatar')] : [t('profile.page.uploadAvatar')]
 		uni.showActionSheet({
 			itemList: itemList,
 			itemColor: theme.value.brandPrimary,
@@ -191,7 +191,7 @@
 			messageService.refreshCurrentUserAvatar(avatar)
 			avatarUploadProgress.value = 100
 			uni.showToast({
-				title: '头像更新成功',
+				title: t('profile.page.avatarUpdated'),
 				icon: 'success'
 			})
 		} catch (e) {
@@ -216,7 +216,7 @@
 			updateUserAvatar('')
 			messageService.refreshCurrentUserAvatar('')
 			uni.showToast({
-				title: '已恢复默认头像',
+				title: t('profile.page.avatarReset'),
 				icon: 'success'
 			})
 		} catch (e) {
@@ -260,17 +260,20 @@
 			return
 		}
 		uni.showToast({
-			title: type + ' 功能开发中',
+			title: t('profile.page.inDevelopment', { type }),
 			icon: 'none'
 		})
 	}
 
 	function handleLogout() {
-		uni.showActionSheet({
-			itemList: ['退出登录'],
-			itemColor: '#F54A45',
+		uni.showModal({
+			title: t('common.confirmTitle'),
+			content: t('sys.app.logoutMessage'),
+			cancelText: t('common.cancel'),
+			confirmText: t('profile.page.logout'),
+			confirmColor: '#F54A45',
 			success: async (res) => {
-				if (res.tapIndex === 0) {
+				if (res.confirm) {
 					try {
 						await logout()
 					} catch (e) {

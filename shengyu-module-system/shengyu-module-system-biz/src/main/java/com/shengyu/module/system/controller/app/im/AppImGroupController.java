@@ -318,7 +318,8 @@ public class AppImGroupController {
         // 1. 验证邀请码
         AppImGroupInviteVerifyRespVO verifyResult = groupService.verifyInviteCode(code);
         if (!verifyResult.getValid()) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "邀请码无效或已过期");
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST,
+                    verifyResult.getErrorMessage() != null ? verifyResult.getErrorMessage() : "Invalid invite code");
             return;
         }
         

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.lang.Nullable;
 
 import java.util.Map;
 import java.util.Objects;
@@ -30,10 +31,16 @@ import java.util.concurrent.ConcurrentMap;
 @Slf4j
 public class ServiceExceptionUtil {
 
+    private static volatile MessageSource messageSource;
+
     /**
      * 错误码提示模板
      */
     private static final ConcurrentMap<Integer, String> MESSAGES = new ConcurrentHashMap<>();
+
+    public static void setMessageSource(@Nullable MessageSource source) {
+        ServiceExceptionUtil.messageSource = source;
+    }
 
     public static void putAll(Map<Integer, String> messages) {
         ServiceExceptionUtil.MESSAGES.putAll(messages);
@@ -50,12 +57,12 @@ public class ServiceExceptionUtil {
     // ========== 和 ServiceException 的集成 ==========
 
     public static ServiceException exception(ErrorCode errorCode) {
-        String messagePattern = MESSAGES.getOrDefault(errorCode.getCode(), errorCode.getMsg());
+        String messagePattern = resolveMessagePattern(errorCode.getCode(), errorCode.getMsg());
         return exception0(errorCode.getCode(), messagePattern);
     }
 
     public static ServiceException exception(ErrorCode errorCode, Object... params) {
-        String messagePattern = MESSAGES.getOrDefault(errorCode.getCode(), errorCode.getMsg());
+        String messagePattern = resolveMessagePattern(errorCode.getCode(), errorCode.getMsg());
         return exception0(errorCode.getCode(), messagePattern, params);
     }
 
@@ -66,7 +73,7 @@ public class ServiceExceptionUtil {
     }
 
     public static void fail(ErrorCode errorCode, Object... params) {
-        String messagePattern = MESSAGES.getOrDefault(errorCode.getCode(), errorCode.getMsg());
+        String messagePattern = resolveMessagePattern(errorCode.getCode(), errorCode.getMsg());
         throw exception0(errorCode.getCode(), messagePattern, params);
     }
 
@@ -93,7 +100,7 @@ public class ServiceExceptionUtil {
      * @return 异常
      */
     public static ServiceException exception(Integer code) {
-        return exception0(code, MESSAGES.get(code));
+        return exception0(code, resolveMessagePattern(code, MESSAGES.get(code)));
     }
 
     /**
@@ -104,7 +111,7 @@ public class ServiceExceptionUtil {
      * @return 异常
      */
     public static ServiceException exception(Integer code, Object... params) {
-        return exception0(code, MESSAGES.get(code), params);
+        return exception0(code, resolveMessagePattern(code, MESSAGES.get(code)), params);
     }
 
     public static ServiceException exception0(Integer code, String messagePattern, Object... params) {
@@ -114,6 +121,25 @@ public class ServiceExceptionUtil {
 
     public static ServiceException invalidParamException(String messagePattern, Object... params) {
         return exception0(GlobalErrorCodeConstants.BAD_REQUEST.getCode(), messagePattern, params);
+    }
+
+    public static String getOrDefault(String key, String defaultMessage, Object... args) {
+        try {
+            if (messageSource == null) {
+                return defaultMessage;
+            }
+            return messageSource.getMessage(key, args, defaultMessage, LocaleContextHolder.getLocale());
+        } catch (Exception e) {
+            return defaultMessage;
+        }
+    }
+
+    private static String resolveMessagePattern(Integer code, String defaultMessage) {
+        String messagePattern = MESSAGES.get(code);
+        if (messagePattern == null || messagePattern.trim().isEmpty()) {
+            messagePattern = defaultMessage;
+        }
+        return getOrDefault("error.code." + code, messagePattern);
     }
 
     // ========== 格式化方法 ==========

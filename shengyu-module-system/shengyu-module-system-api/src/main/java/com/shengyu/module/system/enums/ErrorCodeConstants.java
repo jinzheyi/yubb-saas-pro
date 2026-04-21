@@ -231,6 +231,10 @@ public interface ErrorCodeConstants {
     ErrorCode GROUP_JOIN_REQUEST_ALREADY_PENDING = new ErrorCode(1_002_030_213, "您已提交过加群申请，请等待管理员处理");
     ErrorCode GROUP_MUTED_ALL = new ErrorCode(1_002_030_214, "当前群已开启全员禁言");
     ErrorCode GROUP_MEMBER_MUTED = new ErrorCode(1_002_030_215, "您已被禁言，暂时无法发送消息");
+    ErrorCode GROUP_INVITE_CODE_DISABLED = new ErrorCode(1_002_030_216, "邀请码已失效");
+    ErrorCode GROUP_INVITE_CODE_EXPIRED = new ErrorCode(1_002_030_217, "邀请码已过期");
+    ErrorCode GROUP_INVITE_CODE_USAGE_LIMIT_REACHED = new ErrorCode(1_002_030_218, "邀请码使用次数已达上限");
+    ErrorCode GROUP_INVITE_CODE_TENANT_MISMATCH = new ErrorCode(1_002_030_219, "当前邀请码不属于本租户");
     
     // 群文件相关 1-002-030-250
     ErrorCode GROUP_FILE_NOT_EXISTS = new ErrorCode(1_002_030_250, "群文件不存在");

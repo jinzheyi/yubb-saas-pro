@@ -16,8 +16,8 @@ import javax.validation.constraints.Size;
 public class AppImConversationSearchReqVO extends PageParam {
 
     @Schema(description = "搜索关键词", requiredMode = Schema.RequiredMode.REQUIRED, example = "项目")
-    @NotBlank(message = "搜索关键词不能为空")
-    @Size(min = 2, max = 64, message = "搜索关键词长度需在2到64个字符之间")
+    @NotBlank(message = "{validation.im.search_keyword.required}")
+    @Size(min = 2, max = 64, message = "{validation.im.search_keyword.length}")
     private String keyword;
 
     @Schema(description = "会话类型(1-单聊 2-群聊)，不传则全量", example = "2")

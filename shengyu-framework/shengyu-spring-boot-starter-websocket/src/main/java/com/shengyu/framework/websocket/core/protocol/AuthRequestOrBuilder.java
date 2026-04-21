@@ -76,4 +76,24 @@ public interface AuthRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getClientVersionBytes();
+
+  /**
+   * <pre>
+   * 客户端语言（如 zh-CN / en）
+   * </pre>
+   *
+   * <code>string locale = 5;</code>
+   * @return The locale.
+   */
+  java.lang.String getLocale();
+  /**
+   * <pre>
+   * 客户端语言（如 zh-CN / en）
+   * </pre>
+   *
+   * <code>string locale = 5;</code>
+   * @return The bytes for locale.
+   */
+  com.google.protobuf.ByteString
+      getLocaleBytes();
 }

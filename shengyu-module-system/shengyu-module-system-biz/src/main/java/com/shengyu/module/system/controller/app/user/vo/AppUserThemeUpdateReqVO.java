@@ -11,8 +11,8 @@ import javax.validation.constraints.Pattern;
 public class AppUserThemeUpdateReqVO {
 
     @Schema(description = "主题模式", requiredMode = Schema.RequiredMode.REQUIRED, example = "dark")
-    @NotBlank(message = "主题模式不能为空")
-    @Pattern(regexp = "light|dark|system", message = "主题模式不合法")
+    @NotBlank(message = "{validation.preference.theme_mode.required}")
+    @Pattern(regexp = "light|dark|system", message = "{validation.preference.theme_mode.invalid}")
     private String themeMode;
 
 }

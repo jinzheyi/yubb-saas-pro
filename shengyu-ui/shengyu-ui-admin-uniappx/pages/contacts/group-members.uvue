@@ -11,7 +11,7 @@
 			</view>
 			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
 				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
-				<input class="search-input" :style="{ color: theme.inputText }" placeholder="搜索成员" placeholder-class="placeholder" />
+				<input class="search-input" :style="{ color: theme.inputText }" :placeholder="t('contactGroupMembers.searchPlaceholder')" placeholder-class="placeholder" />
 			</view>
 		</view>
 
@@ -48,9 +48,9 @@
 
 		<!-- 底部操作栏 -->
 		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px', backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
-			<text class="selected-text" :style="{ color: theme.textPrimary }">已选择 {{ selectedCount }} 人</text>
+			<text class="selected-text" :style="{ color: theme.textPrimary }">{{ t('contactGroupMembers.selectedCount', { count: selectedCount }) }}</text>
 			<button class="confirm-btn" :style="{ backgroundColor: selectedCount === 0 ? theme.cardBgMuted : theme.brandPrimary }" :disabled="selectedCount === 0" @click="handleConfirm">
-				<text class="confirm-btn-text">确定</text>
+				<text class="confirm-btn-text">{{ t('contactGroupMembers.confirm') }}</text>
 			</button>
 		</view>
 	</view>
@@ -79,7 +79,7 @@
 	})
 
 	const safeAreaBottom = ref(0)
-	const groupName = ref('数字科技工作群')
+	const groupName = ref(t('contactGroupMembers.defaultGroupName'))
 	const groupId = ref<string>('')
 
 	// 成员列表数据（从后端加载）
@@ -103,8 +103,8 @@
 							? String(m.nickname)
 							: (m.userNickname != null && String(m.userNickname) !== ''
 								? String(m.userNickname)
-								: (m.name != null && String(m.name) !== '' ? String(m.name) : '未知')))
-						: '未知'
+								: (m.name != null && String(m.name) !== '' ? String(m.name) : t('contactGroupMembers.unknownUser'))))
+						: t('contactGroupMembers.unknownUser')
 					return {
 						id: userIdStr,
 						name: displayName,
@@ -121,7 +121,7 @@
 			}
 		} catch (e) {
 			console.error('[GroupMembers] 加载群成员失败:', e)
-			uni.showToast({ title: '加载失败', icon: 'none' })
+			uni.showToast({ title: t('contactGroupMembers.loadFailed'), icon: 'none' })
 			memberList.value = []
 		} finally {
 			loading.value = false

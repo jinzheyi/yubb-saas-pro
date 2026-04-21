@@ -21,34 +21,37 @@
 - 平台级资源与租户级资源分表处理，不能混用。
 - 错误码国际化属于平台级资源，不带 `tenant_id`。
 - 通知模板国际化属于租户级资源，必须带 `tenant_id`。
-- 用户语言偏好按用户主体分别落库：
-  - `system_users`
-  - `platform_users`
+- 三端语言均按设备/浏览器本地缓存，不设计用户级语言字段。
+- 后端仅消费当前请求 `Accept-Language` / WebSocket `locale`，不持久化用户语言偏好。
 
-## 2. 用户偏好字段草案
+## 1.1 当前落地进度说明
 
-### 2.1 `system_users`
+- 已完成：
+  - 后端 locale 解析基座
+  - 三端 `Accept-Language` 透传
+- 本轮已落地：
+  - 已明确废弃用户级 `language_mode` 方案
+  - `ddl_user_preferences.sql` 已改为回收 `system_users` / `platform_users.language_mode`
+  - 基于 `messages*.properties` 的第一批高频校验国际化资源
+  - 覆盖账号/资料/移动 IM 主链路的 Bean Validation key 化
+  - IM 群系统消息第一批 `extra.i18n.eventKey + params` 持久化实践，当前复用 `im_chat_message.extra`
+  - IM 会话列表 / 增量同步预览已开始消费 `im_chat_message.extra.i18n`
+- 尚未落地：
+  - 错误码国际化表
+  - 通知模板国际化表
 
-```sql
-ALTER TABLE system_users
-    ADD COLUMN language_mode VARCHAR(16) NOT NULL DEFAULT 'system' COMMENT '语言模式(system/zh-CN/en)';
-```
+## 2. 语言存储策略
 
-### 2.2 `platform_users`
-
-```sql
-ALTER TABLE platform_users
-    ADD COLUMN language_mode VARCHAR(16) NOT NULL DEFAULT 'system' COMMENT '语言模式(system/zh-CN/en)';
-```
-
-### 2.3 字段约束建议
-
-- 合法值：
-  - `system`
-  - `zh-CN`
-  - `en`
-- 首期默认值：
-  - `system`
+- `shengyu-ui-admin-uniappx`：
+  - 使用本地存储记录 `languageMode = system | zh-CN | en`
+  - 实际发请求时下沉为当前设备解析后的 `Accept-Language`
+- `shengyu-ui-admin-vue3` / `shengyu-ui-platform-vue3`：
+  - 使用浏览器本地缓存记录当前选中的语言
+  - 首次未设置时按浏览器语言初始化
+- 后端：
+  - 不新增用户级语言字段
+  - 不提供“更新当前用户语言偏好”接口
+  - 仅根据当前请求语言返回系统文案
 
 ## 3. 平台错误码国际化表草案
 
@@ -137,6 +140,6 @@ CREATE TABLE system_notify_template_i18n (
 ## 6. 落库前检查清单
 
 - 是否已与 `多语言国际化设计任务文档.md` 口径一致
-- 是否已明确平台级 / 租户级 / 用户级归属
+- 是否已明确平台级 / 租户级 / 设备级归属
 - 是否已确认当前数据库方言和索引命名规范
-- 是否已确认 `language_mode` 默认值和历史数据回填策略
+- 是否已确认旧 `language_mode` 字段回收策略

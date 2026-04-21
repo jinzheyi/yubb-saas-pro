@@ -10,7 +10,7 @@ import javax.validation.constraints.NotNull;
 public class AppImMessagePullReqVO {
 
     @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "ChatID不能为空")
+    @NotNull(message = "{validation.im.chat_id.required}")
     private Long chatId;
 
     @Schema(description = "最后拉取的 sequence（水位），拉取 sequence > lastSequence 的消息", requiredMode = Schema.RequiredMode.REQUIRED, example = "0")

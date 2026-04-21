@@ -140,9 +140,9 @@ function formatTime(raw: string): string {
     const mm = d.getMonth() + 1
     const dd = d.getDate()
     if (year === nowYear) {
-      return mm + '月' + dd + '日'
+      return t('favoriteDetail.dateSameYear', { month: mm, day: dd })
     }
-    return year + '年' + mm + '月' + dd + '日'
+    return t('favoriteDetail.dateWithYear', { year, month: mm, day: dd })
   } catch (e) {
     return ''
   }
@@ -351,12 +351,12 @@ function buildRenderData(item: FavoriteDetail | null): FavoriteRenderData {
     const textContent = extractText(parsedContent != null ? parsedContent : item.messageContent).trim()
     if (looksLikeLinkContent(textContent)) {
       result.kind = 'link'
-      result.typeLabel = '链接'
+      result.typeLabel = t('favoriteDetail.type.link')
       result.title = textContent
       result.url = ensureLinkScheme(textContent)
     } else {
       result.kind = 'text'
-      result.typeLabel = '笔记'
+      result.typeLabel = t('favoriteDetail.type.note')
       result.text = textContent !== '' ? textContent : result.text
       result.title = result.text
     }
@@ -371,9 +371,9 @@ function buildRenderData(item: FavoriteDetail | null): FavoriteRenderData {
       resolveUrlFromObject(snapshotExtra) ||
       (item.messageContent != null ? String(item.messageContent).trim() : '')
     result.kind = 'image'
-    result.typeLabel = '图片'
+    result.typeLabel = t('favoriteDetail.type.image')
     result.url = imageUrl
-    result.title = item.messagePreview || '[图片]'
+    result.title = item.messagePreview || t('message.preview.image')
     return result
   }
 
@@ -388,10 +388,10 @@ function buildRenderData(item: FavoriteDetail | null): FavoriteRenderData {
       ? String((parsedExtra as any).cover || (parsedExtra as any).thumbnail || (parsedExtra as any).thumbUrl || '')
       : ''
     result.kind = 'video'
-    result.typeLabel = '视频'
+    result.typeLabel = t('favoriteDetail.type.video')
     result.url = videoUrl
     result.thumb = cover
-    result.title = item.messagePreview || '[视频]'
+    result.title = item.messagePreview || t('message.preview.video')
     return result
   }
 
@@ -411,10 +411,10 @@ function buildRenderData(item: FavoriteDetail | null): FavoriteRenderData {
       resolveFileIdFromObject(snapshotExtra)
     const fileName = fileObj != null && (fileObj as any).fileName != null
       ? String((fileObj as any).fileName)
-      : (item.messagePreview || '[文件]')
+      : (item.messagePreview || t('message.preview.file'))
     const fileSizeVal = fileObj != null && (fileObj as any).size != null ? Number((fileObj as any).size) : 0
     result.kind = 'file'
-    result.typeLabel = '文件'
+    result.typeLabel = t('favoriteDetail.type.file')
     result.fileName = fileName
     result.fileSize = buildFileSizeText(fileSizeVal)
     result.url = fileUrl
@@ -435,7 +435,7 @@ function buildRenderData(item: FavoriteDetail | null): FavoriteRenderData {
     if (customType === 'LINK' || customType === 'URL' || customType === 'WEB_LINK' || customUrl !== '') {
       const customTitle = customObj != null && (customObj as any).title != null ? String((customObj as any).title) : ''
       result.kind = 'link'
-      result.typeLabel = '链接'
+      result.typeLabel = t('favoriteDetail.type.link')
       result.title = customTitle !== '' ? customTitle : (customUrl !== '' ? customUrl : result.title)
       result.url = ensureLinkScheme(customUrl)
       return result
@@ -477,7 +477,7 @@ function handlePreviewImage(url: string): void {
 function handleOpenVideo(url: string): void {
   const finalUrl = url != null ? String(url).trim() : ''
   if (finalUrl === '') {
-    uni.showToast({ title: '视频地址为空', icon: 'none' })
+    uni.showToast({ title: t('favoriteDetail.toast.videoUrlEmpty'), icon: 'none' })
     return
   }
   uni.navigateTo({
@@ -492,7 +492,7 @@ function handleOpenFile(data: FavoriteRenderData): void {
     ? String(data.fileName)
     : (data != null && data.title != null ? String(data.title) : '')
   if (fid === '' && url === '') {
-    uni.showToast({ title: '文件地址为空', icon: 'none' })
+    uni.showToast({ title: t('favoriteDetail.toast.fileUrlEmpty'), icon: 'none' })
     return
   }
   navToFilePreview({
@@ -529,7 +529,7 @@ function handleOpenLink(url: string): void {
   } catch (e) {
     // ignore
   }
-  handleCopyText(finalUrl, '已复制链接')
+  handleCopyText(finalUrl, t('favoriteDetail.toast.linkCopied'))
 }
 
 function handleSendToChat(): void {

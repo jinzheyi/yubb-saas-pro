@@ -324,7 +324,9 @@ export default {
       errMsg503: '服务不可用，服务器暂时过载或维护!',
       errMsg504: '网络超时!',
       errMsg505: 'http版本不支持该请求!',
-      errMsg901: '演示模式，无法进行写操作!'
+      errMsg901: '演示模式，无法进行写操作!',
+      demoGuideUrl: '参考 http://shengyukj.top/ 教程',
+      demoGuideSetup: '5 分钟搭建本地环境'
     },
     app: {
       logoutTip: '温馨提醒',
@@ -393,6 +395,10 @@ export default {
       dept: '所属部门',
       posts: '所属岗位',
       roles: '所属角色',
+      language: '界面语言',
+      languageSystem: '跟随系统',
+      languageZhCN: '简体中文',
+      languageEn: 'English',
       sex: '性别',
       man: '男',
       woman: '女',

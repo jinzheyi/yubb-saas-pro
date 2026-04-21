@@ -20,12 +20,12 @@ import javax.validation.constraints.NotNull;
 public class AuthSmsSendReqVO {
 
     @Schema(description = "手机号", requiredMode = Schema.RequiredMode.REQUIRED, example = "shengyuyuanma")
-    @NotEmpty(message = "手机号不能为空")
+    @NotEmpty(message = "{validation.auth.mobile.required}")
     @Mobile
     private String mobile;
 
     @Schema(description = "短信场景", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "发送场景不能为空")
+    @NotNull(message = "{validation.auth.sms_scene.required}")
     @InEnum(SmsSceneEnum.class)
     private Integer scene;
 

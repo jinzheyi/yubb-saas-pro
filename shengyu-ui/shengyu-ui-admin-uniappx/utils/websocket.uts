@@ -25,6 +25,7 @@ import { badgeService } from '../services/badge-service.uts'
 import { refreshToken as refreshTokenApi } from '../api/login.uts'
 import { onAccessTokenRefreshed } from './request.uts'
 import { generateMessageId as generateLongSafeMessageId } from './message-utils.uts'
+import { getCurrentLocale, t } from '../store/locale.uts'
 import * as ImProto from './proto/im_message_pb.esm.js'
 
 /**
@@ -580,7 +581,8 @@ export class WebSocketManager {
         deviceType: getCurrentDeviceType(),
         deviceId: getDeviceId(),
         deviceName: getDeviceName(),
-        clientVersion: getAppVersion()
+        clientVersion: getAppVersion(),
+        locale: getCurrentLocale()
       }
     }
     
@@ -605,7 +607,8 @@ export class WebSocketManager {
         accessToken: accessToken,
         deviceType: getCurrentDeviceType(),
         deviceId: getDeviceId(),
-        clientVersion: getAppVersion()
+        clientVersion: getAppVersion(),
+        locale: getCurrentLocale()
       }).finish() as Uint8Array
 
       const header: any = {
@@ -1050,8 +1053,8 @@ export class WebSocketManager {
         this.allowReconnect = false
         removeToken()
         uni.showModal({
-          title: '登录已过期',
-          content: reason || '登录已过期，请重新登录',
+          title: t('runtime.websocket.loginExpiredTitle'),
+          content: reason || t('runtime.websocket.loginExpiredContent'),
           showCancel: false,
           success: () => {
             uni.reLaunch({ url: '/pages/login/login' })
@@ -1065,8 +1068,8 @@ export class WebSocketManager {
         this.allowReconnect = false
         removeToken()
         uni.showModal({
-          title: '认证失败',
-          content: reason || '认证失败，请重新登录',
+          title: t('runtime.websocket.authFailedTitle'),
+          content: reason || t('runtime.websocket.authFailedContent'),
           showCancel: false,
           success: () => {
             uni.reLaunch({ url: '/pages/login/login' })
@@ -1078,7 +1081,7 @@ export class WebSocketManager {
 
       if (code >= 500) {
         uni.showToast({
-          title: reason || '认证失败，正在重试',
+          title: reason || t('runtime.websocket.authFailedRetrying'),
           icon: 'none'
         })
         this.close()
@@ -1163,8 +1166,8 @@ export class WebSocketManager {
     if (action === 'REAUTH_REQUIRED') {
       removeToken()
       uni.showModal({
-        title: '登录已过期',
-        content: reason || '登录已过期，请重新登录',
+        title: t('runtime.websocket.loginExpiredTitle'),
+        content: reason || t('runtime.websocket.loginExpiredContent'),
         showCancel: false,
         success: () => {
           setTimeout(() => {
@@ -1178,19 +1181,22 @@ export class WebSocketManager {
     if (action === 'LOGOUT' || action === 'KICKED' || action === 'REVOKED') {
       removeToken()
 
-      let content = reason || '您的账号已下线'
+      let content = reason || t('runtime.websocket.logoutNoticeContent')
       if (action === 'KICKED' && kickedAt > 0 && byDevice != null && byDevice != '') {
         try {
           const dt = new Date(kickedAt)
           const pad2 = (n: number): string => (n < 10 ? '0' + n : '' + n)
           const kickedAtText = `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())} ${pad2(dt.getHours())}:${pad2(dt.getMinutes())}:${pad2(dt.getSeconds())}`
-          content = `当前账号于${kickedAtText}在${byDevice}设备上登录。此客户端已退出登录。`
+          content = t('runtime.websocket.kickedNoticeContent', {
+            kickedAt: kickedAtText,
+            device: byDevice
+          })
         } catch (e) {
-          content = reason || '您的账号已下线'
+          content = reason || t('runtime.websocket.logoutNoticeContent')
         }
       }
       uni.showModal({
-        title: '下线通知',
+        title: t('runtime.websocket.logoutNoticeTitle'),
         content: content,
         showCancel: false,
         success: () => {
@@ -1204,7 +1210,7 @@ export class WebSocketManager {
 
     // 未知 CLOSE：保持原有行为（提示后自动重连由 allowReconnect 控制）
     uni.showToast({
-      title: reason || '连接已关闭',
+      title: reason || t('runtime.websocket.connectionClosed'),
       icon: 'none'
     })
   }

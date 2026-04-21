@@ -4,6 +4,8 @@
  * 兼容 Android、iOS、Web 三端
  */
 
+import { t } from './locale.uts'
+
 // 存储 Key
 const ACCESS_TOKEN_KEY = 'ACCESS_TOKEN'
 const REFRESH_TOKEN_KEY = 'REFRESH_TOKEN'
@@ -505,7 +507,7 @@ export function clearUserCache() {
 	// 跳转到登录页
 	// 增加延迟并添加 loading 效果，确保之前的 modal 完全关闭，防止 H5 端 $pageLayoutInstance 报错
 	uni.showLoading({
-		title: '正在退出...',
+		title: t('common.loggingOut'),
 		mask: true
 	})
 	

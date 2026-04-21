@@ -6,14 +6,14 @@
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">{{ mode === 'add' ? '添加群成员' : t('initiateGroup.title') }}</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ mode === 'add' ? t('initiateGroup.addMembersTitle') : t('initiateGroup.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
 		<view class="search-wrap" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
 				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
-				<input class="search-input" :style="{ color: theme.inputText }" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" />
+				<input class="search-input" :style="{ color: theme.inputText }" :placeholder="t('initiateGroup.searchMemberPlaceholder')" placeholder-class="placeholder" />
 			</view>
 		</view>
 
@@ -30,18 +30,18 @@
 		
 		<!-- 加载状态 -->
 		<view v-if="loading" class="loading-wrap">
-			<text class="loading-text" :style="{ color: theme.textTertiary }">加载中...</text>
+			<text class="loading-text" :style="{ color: theme.textTertiary }">{{ t('initiateGroup.loading') }}</text>
 		</view>
 		
 		<!-- 空状态 -->
 		<view v-if="!loading && contactList.length === 0" class="empty-wrap">
-			<text class="empty-text" :style="{ color: theme.textTertiary }">暂无联系人</text>
+			<text class="empty-text" :style="{ color: theme.textTertiary }">{{ t('initiateGroup.empty') }}</text>
 		</view>
 
 		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px', backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
-			<text class="selected-text" :style="{ color: theme.textPrimary }">{{ mode === 'add' ? `已选择 ${selectedCount} 人` : t('initiateGroup.selectedCount', { count: selectedCount.toString() }) }}</text>
+			<text class="selected-text" :style="{ color: theme.textPrimary }">{{ t('initiateGroup.selectedCount', { count: selectedCount.toString() }) }}</text>
 			<button class="confirm-btn" :style="{ backgroundColor: selectedCount === 0 || submitting ? theme.cardBgMuted : theme.brandPrimary }" :disabled="selectedCount === 0 || submitting" @click="handleConfirm">
-				<text class="confirm-btn-text">{{ mode === 'add' ? '确定' : t('initiateGroup.confirm', { count: selectedCount.toString(), max: '500' }) }}</text>
+				<text class="confirm-btn-text">{{ mode === 'add' ? t('initiateGroup.confirmSimple') : t('initiateGroup.confirm', { count: selectedCount.toString(), max: '500' }) }}</text>
 			</button>
 		</view>
 	</view>
@@ -120,7 +120,7 @@
 			// 获取当前登录用户信息
 			const userInfo = getUserInfo()
 			const currentUserId = userInfo?.user?.id ?? 0
-			const currentUserName = userInfo?.user?.nickname ?? '我'
+			const currentUserName = userInfo?.user?.nickname ?? t('initiateGroup.currentUserName')
 			
 			// 如果是添加成员模式，先加载现有成员
 			if (mode.value === 'add' && groupId.value) {
@@ -149,7 +149,7 @@
 			
 			if (contacts.length === 0) {
 				console.warn('[InitiateGroup] 联系人列表为空')
-				uni.showToast({ title: '暂无联系人', icon: 'none' })
+				uni.showToast({ title: t('initiateGroup.empty'), icon: 'none' })
 				return
 			}
 			
@@ -161,7 +161,7 @@
 				list.push({
 					id: currentUserId.toString(),
 					name: currentUserName,
-					role: '当前用户',
+					role: t('initiateGroup.currentUserRole'),
 					avatarText: getAvatarText(currentUserName),
 					avatarBg: getUserAvatarColor(String(currentUserId)),
 					pinyin: 'W',
@@ -184,7 +184,7 @@
 				}
 				
 				// 优先使用 remarkName（备注名），其次使用 nickname（昵称）
-				const displayName = contact.remarkName || contact.nickname || '未知'
+				const displayName = contact.remarkName || contact.nickname || t('initiateGroup.unknownUser')
 				const pinyinLetter = contact.pinyin || getPinyinFirstLetter(displayName)
 				// 使用后端返回的拼音首字母（取第一个字符）
 				let pinyin = pinyinLetter
@@ -210,7 +210,7 @@
 			
 		} catch (e) {
 			console.error('[InitiateGroup] 加载联系人列表异常:', e)
-			const errorMsg = (e as any).msg || '加载失败'
+			const errorMsg = (e as any).msg || t('initiateGroup.loadFailed')
 			uni.showToast({ title: errorMsg, icon: 'none' })
 		} finally {
 			loading.value = false
@@ -241,7 +241,7 @@
 					if (contactList.value.some(c => String(c.id) === userIdStr)) {
 						return
 					}
-					const displayName = contact.remarkName || contact.nickname || '未知'
+					const displayName = contact.remarkName || contact.nickname || t('initiateGroup.unknownUser')
 					let pinyin = contact.pinyin || getPinyinFirstLetter(displayName)
 					if (pinyin.length > 1) {
 						pinyin = pinyin.charAt(0)
@@ -304,7 +304,7 @@
 		// 当前用户不能取消选中
 		if (item.isCurrentUser && !item.selected) {
 			uni.showToast({
-				title: '不能取消选择自己',
+				title: t('initiateGroup.selfRequired'),
 				icon: 'none'
 			})
 			// 强制保持选中状态
@@ -331,7 +331,7 @@
 		if (mode.value === 'add') {
 			if (selectedMembers.length === 0) {
 				uni.showToast({
-					title: '请至少选择1人',
+					title: t('initiateGroup.selectAtLeastOne'),
 					icon: 'none'
 				})
 				return
@@ -345,7 +345,7 @@
 			console.log('[InitiateGroup] 添加成员请求数据:', addData)
 			
 			uni.showToast({
-				title: '添加成员中...',
+				title: t('initiateGroup.addingMembers'),
 				icon: 'loading',
 				duration: 2000
 			})
@@ -355,7 +355,7 @@
 				await addGroupMembers(addData)
 				
 				uni.showToast({
-					title: '添加成功',
+					title: t('initiateGroup.addSuccess'),
 					icon: 'success',
 					duration: 1000
 				})
@@ -368,7 +368,7 @@
 			} catch (e) {
 				console.error('[InitiateGroup] 添加成员失败:', e)
 				if ((e as any).code == null && (e as any).msg == null) {
-					const errorMsg = (e as any).message || '添加失败，请重试'
+					const errorMsg = (e as any).message || t('initiateGroup.addFailedRetry')
 					uni.showToast({
 						title: errorMsg,
 						icon: 'none',
@@ -385,7 +385,7 @@
 		const memberIds = normalizeMemberIds(selectedMembers)
 		if (memberIds.length < 2) {
 			uni.showToast({
-				title: '至少选择2人才能创建群聊',
+				title: t('initiateGroup.selectAtLeastTwo'),
 				icon: 'none'
 			})
 			return
@@ -408,7 +408,7 @@
 		console.log('[InitiateGroup] memberIds 长度:', createData.memberIds.length)
 		
 		uni.showToast({
-			title: '创建群聊中...',
+			title: t('initiateGroup.creatingGroup'),
 			icon: 'loading',
 			duration: 2000
 		})
@@ -424,11 +424,11 @@
 			const chatId = result != null && result.chatId != null ? result.chatId : null
 			
 			if (!groupId) {
-				throw new Error('创建群聊失败：未返回群ID')
+				throw new Error(t('initiateGroup.createFailedNoGroupId'))
 			}
 			
 			uni.showToast({
-				title: '创建成功',
+				title: t('initiateGroup.createSuccess'),
 				icon: 'success',
 				duration: 1000
 			})
@@ -448,7 +448,7 @@
 		} catch (e) {
 			console.error('[InitiateGroup] 创建群聊失败:', e)
 			if ((e as any).code == null && (e as any).msg == null) {
-				const errorMsg = (e as any).message || '创建失败，请重试'
+				const errorMsg = (e as any).message || t('initiateGroup.createFailedRetry')
 				uni.showToast({
 					title: errorMsg,
 					icon: 'none',
@@ -483,12 +483,12 @@
 	 * 规则：取前3个成员名字，用逗号分隔，超过3个显示"等N人"
 	 */
 	function generateGroupName(members : any[]) : string {
-		if (members.length === 0) return '群聊'
+		if (members.length === 0) return t('initiateGroup.defaultGroupName')
 		if (members.length <= 3) {
 			return members.map(m => m.name).join('、')
 		}
 		const firstThree = members.slice(0, 3).map(m => m.name).join('、')
-		return `${firstThree}等${members.length}人`
+		return `${firstThree}${t('initiateGroup.groupNameSuffix', { count: members.length })}`
 	}
 
 	// 同步本地选中状态与全局状态
@@ -519,7 +519,7 @@
 				canAddMembers.value = role === 1 || role === 2 || allowInvite
 				if (!canAddMembers.value) {
 					uni.showToast({
-						title: '当前群不允许普通成员邀请',
+						title: t('initiateGroup.inviteNotAllowed'),
 						icon: 'none'
 					})
 					setTimeout(() => {
@@ -533,7 +533,7 @@
 			}).catch((e) => {
 				console.error('[InitiateGroup] 校验添加成员权限失败:', e)
 				uni.showToast({
-					title: '加载群信息失败',
+					title: t('initiateGroup.loadGroupFailed'),
 					icon: 'none'
 				})
 				setTimeout(() => {

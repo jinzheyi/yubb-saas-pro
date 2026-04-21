@@ -16,12 +16,23 @@ interface LocaleState {
   localeMap: LocaleDropdownType[]
 }
 
+const resolveBrowserLocale = (): LocaleType => {
+  if (typeof window !== 'undefined') {
+    const language = window.navigator.language || 'zh-CN'
+    if (language.toLowerCase().startsWith('en')) {
+      return 'en'
+    }
+  }
+  return 'zh-CN'
+}
+
 export const useLocaleStore = defineStore('locales', {
   state: (): LocaleState => {
+    const cachedLang = wsCache.get(CACHE_KEY.LANG) || resolveBrowserLocale()
     return {
       currentLocale: {
-        lang: wsCache.get(CACHE_KEY.LANG) || 'zh-CN',
-        elLocale: elLocaleMap[wsCache.get(CACHE_KEY.LANG) || 'zh-CN']
+        lang: cachedLang,
+        elLocale: elLocaleMap[cachedLang]
       },
       // 多语言
       localeMap: [
@@ -50,6 +61,11 @@ export const useLocaleStore = defineStore('locales', {
       this.currentLocale.lang = localeMap?.lang
       this.currentLocale.elLocale = elLocaleMap[localeMap?.lang]
       wsCache.set(CACHE_KEY.LANG, localeMap?.lang)
+    },
+    setCurrentLang(lang: LocaleType) {
+      this.currentLocale.lang = lang
+      this.currentLocale.elLocale = elLocaleMap[lang]
+      wsCache.set(CACHE_KEY.LANG, lang)
     }
   }
 })

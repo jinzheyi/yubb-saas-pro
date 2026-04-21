@@ -103,6 +103,8 @@ message AuthRequest {
   string deviceId = 3;
   // 客户端版本
   string clientVersion = 4;
+  // 客户端语言（如 zh-CN / en）
+  string locale = 5;
 }
 
 // 认证响应

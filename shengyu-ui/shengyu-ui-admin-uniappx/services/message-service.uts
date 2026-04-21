@@ -18,6 +18,7 @@ import { pullMessages as pullMessagesApi, sendMessage as sendMessageApi } from '
 import { badgeService, BadgeUpdateMessage } from './badge-service.uts'
 import { conversationService } from './conversation-service.uts'
 import { groupService } from './group-service.uts'
+import { t } from '@/store/locale.uts'
 
 /**
  * 消息状态枚举
@@ -167,6 +168,47 @@ export class MessageService {
   // 当前用户信息
   private currentUserId: string = '0'
   private currentTenantId: string = '0'
+
+  private getRecallPreviewText(): string {
+    return t('im.recall.preview', '[消息已撤回]')
+  }
+
+  private buildRecallTipText(isSelfRecall: boolean, senderName: string, recallerName: string = ''): string {
+    if (isSelfRecall) {
+      return t('im.recall.self', '你撤回了一条消息')
+    }
+    const operatorName = recallerName != null && recallerName !== '' ? recallerName : senderName
+    if (operatorName !== '' && senderName !== '' && operatorName !== senderName) {
+      return t('im.recall.otherByOperator', {
+        operatorName: operatorName,
+        senderName: senderName
+      })
+    }
+    return t('im.recall.other', {
+      operatorName: operatorName !== '' ? operatorName : '对方'
+    })
+  }
+
+  private renderSystemEventText(rawExtra: any, fallback: string = ''): string {
+    try {
+      if (rawExtra == null || rawExtra === '') {
+        return fallback
+      }
+      const extraObj: any = typeof rawExtra === 'string' ? JSON.parse(rawExtra) : rawExtra
+      if (extraObj == null || typeof extraObj !== 'object' || extraObj.i18n == null) {
+        return fallback
+      }
+      const i18nObj: any = extraObj.i18n
+      const eventKey = i18nObj != null && i18nObj.eventKey != null ? String(i18nObj.eventKey) : ''
+      if (eventKey === '' || eventKey.indexOf('im.system.') !== 0) {
+        return fallback
+      }
+      const params = i18nObj.params != null && typeof i18nObj.params === 'object' ? i18nObj.params : {}
+      return t(eventKey, params)
+    } catch (e) {
+      return fallback
+    }
+  }
 
 	private getReeditHintStorageKey(chatId: string, messageId: string): string {
 		const tenantId = this.currentTenantId != null ? this.currentTenantId : '0'
@@ -854,7 +896,9 @@ export class MessageService {
           groupId: m.groupId != null ? m.groupId.toString() : '0',
           type: isRecalled ? MessageType.TEXT : messageTypeNum,
           content: isRecalled
-            ? { content: (isSelf ? '你撤回了一条消息' : `${senderName} 撤回了一条消息`) }
+            ? { content: (m.content != null && String(m.content) !== ''
+                ? String(m.content)
+                : this.buildRecallTipText(isSelf, senderName, '')) }
             : this.buildCachedMessageContent(messageTypeNum, m.content, m.extra, structuredMentions),
           status: isRecalled ? MessageStatus.RECALLED : MessageStatus.SENT,
           timestamp: m.sendTime != null ? new Date(m.sendTime as string).getTime() : Date.now(),
@@ -1362,7 +1406,9 @@ export class MessageService {
             groupId: m.groupId != null ? m.groupId.toString() : '0',
             type: isRecalled ? MessageType.TEXT : messageTypeNum,
             content: isRecalled
-              ? { content: (isSelf ? '你撤回了一条消息' : `${senderName} 撤回了一条消息`) }
+              ? { content: (m.content != null && String(m.content) !== ''
+                  ? String(m.content)
+                  : this.buildRecallTipText(isSelf, senderName, '')) }
               : this.buildCachedMessageContent(messageTypeNum, m.content, m.extra, structuredMentions),
             status: isRecalled ? MessageStatus.RECALLED : MessageStatus.SENT,
             timestamp: m.sendTime != null ? new Date(m.sendTime as string).getTime() : Date.now(),
@@ -2934,6 +2980,7 @@ export class MessageService {
     let incomingRev: string = ''
     let incomingRecallBy: string = ''
     let incomingRecallTime: string = ''
+    let incomingRecallerName: string = ''
     try {
       const extraRaw: any = (message as any).header != null ? (message as any).header.extra : null
       if (extraRaw != null && extraRaw !== '') {
@@ -2942,12 +2989,14 @@ export class MessageService {
           if (extraObj.rev != null) incomingRev = extraObj.rev.toString()
           if (extraObj.recallBy != null) incomingRecallBy = extraObj.recallBy.toString()
           if (extraObj.recallTime != null) incomingRecallTime = extraObj.recallTime.toString()
+          if (extraObj.recallerName != null) incomingRecallerName = extraObj.recallerName.toString()
         }
       }
     } catch (e) {
       incomingRev = ''
       incomingRecallBy = ''
       incomingRecallTime = ''
+      incomingRecallerName = ''
     }
 
     const getRev = (m: any): string => {
@@ -2997,6 +3046,7 @@ export class MessageService {
           : ((originalMessage as any).senderNickname != null && (originalMessage as any).senderNickname !== ''
             ? (originalMessage as any).senderNickname
             : '对方')
+        const recallerName = incomingRecallerName
         const originalTs = (originalMessage as any).timestamp != null ? Number((originalMessage as any).timestamp) : 0
         
         // 创建撤回提示消息
@@ -3007,7 +3057,7 @@ export class MessageService {
           receiverId: originalMessage.receiverId,
           groupId: originalMessage.groupId,
           type: MessageType.TEXT,  // 使用文本类型显示撤回提示
-          content: recallerId === this.currentUserId ? '你撤回了一条消息' : `${senderName} 撤回了一条消息`,
+          content: this.buildRecallTipText(recallerId === this.currentUserId, senderName, recallerName),
           status: MessageStatus.RECALLED,
           // 撤回提示应保持原消息的时间与位置（不应作为一条“新消息”插入到末尾）
           timestamp: originalTs > 0 ? originalTs : Date.now(),
@@ -3198,7 +3248,7 @@ export class MessageService {
         receiverId: originalMessage.receiverId,
         groupId: originalMessage.groupId,
         type: MessageType.TEXT,
-        content: '你撤回了一条消息',
+        content: this.buildRecallTipText(true, senderName, ''),
         status: MessageStatus.RECALLED,
         timestamp: originalTs > 0 ? originalTs : Date.now(),
         isSelf: true,
@@ -3699,11 +3749,12 @@ export class MessageService {
       const s: any = (message as any).status
       const isRecalled = s === MessageStatus.RECALLED || s === 6 || s === '6'
       if (isRecalled) {
-        summary = '[消息已撤回]'
+        summary = this.getRecallPreviewText()
       }
     } catch (e) {
       // ignore
     }
+    summary = this.renderSystemEventText((message as any).extra, summary)
     const seq = message.sequence != null ? message.sequence.toString() : null
     conversationService.updateConversation(
       chatId,

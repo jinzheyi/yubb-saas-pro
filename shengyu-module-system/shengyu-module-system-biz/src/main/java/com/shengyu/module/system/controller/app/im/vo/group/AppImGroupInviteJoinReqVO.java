@@ -10,7 +10,7 @@ import javax.validation.constraints.NotBlank;
 public class AppImGroupInviteJoinReqVO {
 
     @Schema(description = "邀请码", requiredMode = Schema.RequiredMode.REQUIRED, example = "GRP1A2B3C4D5E6F7G8H")
-    @NotBlank(message = "邀请码不能为空")
+    @NotBlank(message = "{validation.im.invite_code.required}")
     private String inviteCode;
 
 }

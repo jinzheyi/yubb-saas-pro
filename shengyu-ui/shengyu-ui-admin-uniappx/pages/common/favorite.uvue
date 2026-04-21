@@ -11,7 +11,7 @@
 
     <view class="filter-wrap" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }">
       <view class="search-box" :style="{ backgroundColor: theme.inputBg }">
-        <input class="search-input" :style="{ color: theme.inputText }" :value="searchKeyword" placeholder="搜索" placeholder-class="search-placeholder" @input="handleSearchInput" />
+        <input class="search-input" :style="{ color: theme.inputText }" :value="searchKeyword" :placeholder="t('favoritePage.searchPlaceholder')" placeholder-class="search-placeholder" @input="handleSearchInput" />
       </view>
       <scroll-view class="tab-scroll" scroll-x show-scrollbar="false">
         <view class="tab-list">
@@ -23,7 +23,7 @@
             :class="{ 'tab-item-active': currentTab === tab.key }"
             @click="switchTab(tab.key)"
           >
-            <text class="tab-text" :class="{ 'tab-text-active': currentTab === tab.key }" :style="{ color: currentTab === tab.key ? theme.brandPrimary : theme.textTertiary }">{{ tab.label }}</text>
+            <text class="tab-text" :class="{ 'tab-text-active': currentTab === tab.key }" :style="{ color: currentTab === tab.key ? theme.brandPrimary : theme.textTertiary }">{{ t(tab.label) }}</text>
           </view>
         </view>
       </scroll-view>
@@ -73,7 +73,7 @@
         <text class="loading-text" :style="{ color: theme.textTertiary }">{{ t('favoritePage.noMore') }}</text>
       </view>
       <view v-else-if="displayItems.length > 0" class="loading">
-        <text class="loading-text" :style="{ color: theme.textTertiary }">上拉加载更多</text>
+        <text class="loading-text" :style="{ color: theme.textTertiary }">{{ t('favoritePage.loadMore') }}</text>
       </view>
     </scroll-view>
   </view>
@@ -132,10 +132,10 @@ unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 })
 
 const tabs = [
-  { key: 'default', label: '默认' },
-  { key: 'normal', label: '普通消息' },
-  { key: 'media', label: '图片与视频' },
-  { key: 'file', label: '文件' }
+  { key: 'default', label: 'favoritePage.tab.default' },
+  { key: 'normal', label: 'favoritePage.tab.normal' },
+  { key: 'media', label: 'favoritePage.tab.media' },
+  { key: 'file', label: 'favoritePage.tab.file' }
 ]
 
 function handleBack(): void {
@@ -238,9 +238,9 @@ function formatTime(raw: string): string {
     const mm = d.getMonth() + 1
     const dd = d.getDate()
     if (year === nowYear) {
-      return mm + '月' + dd + '日'
+      return t('favoritePage.dateSameYear', { month: mm, day: dd })
     }
-    return year + '年' + mm + '月' + dd + '日'
+    return t('favoritePage.dateWithYear', { year, month: mm, day: dd })
   } catch (e) {
     return ''
   }
@@ -425,11 +425,11 @@ function buildDisplayItem(item: FavoriteItem): FavoriteDisplayItem {
       kind = 'link'
       title = textContent
       subTitle = textContent
-      typeLabel = '普通消息'
+      typeLabel = t('favoritePage.type.normalMessage')
     } else {
       kind = 'text'
       title = textContent !== '' ? textContent : title
-      typeLabel = '普通消息'
+      typeLabel = t('favoritePage.type.normalMessage')
     }
   } else if (item.messageType === 2) {
     kind = 'image'
@@ -448,8 +448,8 @@ function buildDisplayItem(item: FavoriteItem): FavoriteDisplayItem {
     const safePreviewText = looksLikeLinkContent(previewText) ? '' : previewText
     thumb = imageUrl
     subTitle = ''
-    title = imageName !== '' ? imageName : (safePreviewText !== '' ? safePreviewText : '图片')
-    typeLabel = '图片'
+    title = imageName !== '' ? imageName : (safePreviewText !== '' ? safePreviewText : t('favoritePage.type.image'))
+    typeLabel = t('favoritePage.type.image')
   } else if (item.messageType === 4) {
     kind = 'video'
     const coverFromExtra = parsedExtra != null && typeof parsedExtra === 'object'
@@ -457,8 +457,8 @@ function buildDisplayItem(item: FavoriteItem): FavoriteDisplayItem {
       : ''
     thumb = coverFromExtra
     subTitle = ''
-    title = item.messagePreview || '[视频]'
-    typeLabel = '视频'
+    title = item.messagePreview || t('message.preview.video')
+    typeLabel = t('favoritePage.type.video')
   } else if (item.messageType === 5) {
     kind = 'file'
     const fileObj = parsedExtra != null && typeof parsedExtra === 'object'
@@ -466,9 +466,9 @@ function buildDisplayItem(item: FavoriteItem): FavoriteDisplayItem {
       : (snapshotExtra != null && typeof snapshotExtra === 'object' ? snapshotExtra : null)
     const fileName = fileObj != null && (fileObj as any).fileName != null ? String((fileObj as any).fileName) : ''
     const fileSizeRaw = fileObj != null && (fileObj as any).size != null ? Number((fileObj as any).size) : 0
-    title = fileName !== '' ? fileName : (item.messagePreview || '[文件]')
+    title = fileName !== '' ? fileName : (item.messagePreview || t('message.preview.file'))
     subTitle = buildFileSizeText(fileSizeRaw)
-    typeLabel = '文件'
+    typeLabel = t('favoritePage.type.file')
   } else if (item.messageType === 9) {
     const customObj = (parsedContent != null && typeof parsedContent === 'object')
       ? parsedContent
@@ -483,16 +483,16 @@ function buildDisplayItem(item: FavoriteItem): FavoriteDisplayItem {
       const customTitle = customObj != null && (customObj as any).title != null ? String((customObj as any).title) : ''
       title = customTitle !== '' ? customTitle : (customUrl !== '' ? customUrl : title)
       subTitle = customUrl
-      typeLabel = '普通消息'
+      typeLabel = t('favoritePage.type.normalMessage')
     } else {
       kind = 'text'
       title = item.messagePreview || t('favoritePage.preview.default')
-      typeLabel = '普通消息'
+      typeLabel = t('favoritePage.type.normalMessage')
     }
   } else {
     kind = 'text'
     title = item.messagePreview || t('favoritePage.preview.default')
-    typeLabel = '普通消息'
+    typeLabel = t('favoritePage.type.normalMessage')
   }
 
   const searchText = (title + ' ' + subTitle + ' ' + typeLabel).toLowerCase()

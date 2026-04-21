@@ -6,7 +6,7 @@
 				<view class="header-left" @click.stop="handleBack">
 					<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 				</view>
-				<text class="header-title" :style="{ color: theme.headerText }">我的部门</text>
+				<text class="header-title" :style="{ color: theme.headerText }">{{ t('contactsMyDepartment.title') }}</text>
 				<view class="header-right"></view>
 			</view>
 			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
@@ -15,7 +15,7 @@
 					class="search-input" 
 					:style="{ color: theme.inputText }"
 					v-model="searchKeyword"
-					placeholder="搜索" 
+					:placeholder="t('contactsMyDepartment.searchPlaceholder')"
 					placeholder-class="placeholder"
 					@input="handleSearch"
 				/>
@@ -118,15 +118,15 @@
 			
 			<!-- 空状态 -->
 			<view v-if="!loading && memberList.length === 0 && currentDeptId !== null" class="empty-state">
-				<text class="empty-text" :style="{ color: theme.textTertiary }">暂无成员</text>
+				<text class="empty-text" :style="{ color: theme.textTertiary }">{{ t('contactsMyDepartment.emptyMembers') }}</text>
 			</view>
 		</scroll-view>
 
 		<!-- 选择模式下显示底部操作栏 -->
 		<view v-if="isSelectMode" class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px', backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
-			<text class="selected-text" :style="{ color: theme.textPrimary }">已选择 {{ selectedCount }} 人</text>
+			<text class="selected-text" :style="{ color: theme.textPrimary }">{{ t('contactsMyDepartment.selectedCount', { count: selectedCount }) }}</text>
 			<button class="confirm-btn" :style="{ backgroundColor: selectedCount === 0 ? theme.cardBgMuted : theme.brandPrimary }" :disabled="selectedCount === 0" @click="handleConfirm">
-				<text class="confirm-btn-text">确定</text>
+				<text class="confirm-btn-text">{{ t('contactsMyDepartment.confirm') }}</text>
 			</button>
 		</view>
 	</view>
@@ -248,7 +248,7 @@
 		} catch (e) {
 			console.error('[MyDepartment] 加载部门列表失败:', e)
 			uni.showToast({
-				title: '加载失败',
+				title: t('contactsMyDepartment.loadFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -401,7 +401,7 @@
 			
 			if (data && data.length > 0) {
 				const members = data.map((user: any) => {
-					const displayName = user.remarkName || user.nickname || '未知'
+					const displayName = user.remarkName || user.nickname || t('contactsMyDepartment.unknownUser')
 					return {
 						id: String(user.id),
 						name: displayName,
@@ -434,7 +434,7 @@
 			memberList.value = []
 			memberHasMore.value = false
 			uni.showToast({
-				title: '加载成员失败',
+				title: t('contactsMyDepartment.loadMembersFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -457,11 +457,11 @@
 						const appended = data.map((user: any) => {
 							return {
 								id: String(user.id),
-								name: user.remarkName || user.nickname || '未知',
+								name: user.remarkName || user.nickname || t('contactsMyDepartment.unknownUser'),
 								role: user.deptName || '',
 								avatar: user.avatar != null ? String(user.avatar) : '',
 								avatarError: false,
-								avatarText: getAvatarText(user.remarkName || user.nickname || '未知'),
+								avatarText: getAvatarText(user.remarkName || user.nickname || t('contactsMyDepartment.unknownUser')),
 								avatarBg: getUserAvatarColor(String(user.id)),
 								selected: isMemberSelected(String(user.id))
 							}
@@ -549,7 +549,7 @@
 			let members: any[] = []
 			if (data && data.length > 0) {
 				members = data.map((user: any) => {
-					const displayName = user.remarkName || user.nickname || '未知'
+					const displayName = user.remarkName || user.nickname || t('contactsMyDepartment.unknownUser')
 					return {
 						id: String(user.id),
 						name: displayName,

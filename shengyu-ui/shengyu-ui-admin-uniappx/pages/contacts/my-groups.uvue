@@ -6,7 +6,7 @@
 				<view class="header-left" @click.stop="handleBack">
 					<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 				</view>
-				<text class="header-title" :style="{ color: theme.headerText }">我的群组</text>
+				<text class="header-title" :style="{ color: theme.headerText }">{{ t('contactsMyGroups.title') }}</text>
 				<view class="header-right"></view>
 			</view>
 			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
@@ -15,7 +15,7 @@
 					class="search-input" 
 					:style="{ color: theme.inputText }"
 					v-model="searchKeyword"
-					placeholder="搜索群组" 
+					:placeholder="t('contactsMyGroups.searchPlaceholder')"
 					placeholder-class="placeholder"
 					@input="handleSearch"
 				/>
@@ -25,7 +25,7 @@
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<!-- 加载状态 -->
 			<view v-if="loading && groupList.length === 0" class="loading-state">
-				<text class="loading-text" :style="{ color: theme.textTertiary }">加载中...</text>
+				<text class="loading-text" :style="{ color: theme.textTertiary }">{{ t('contactsMyGroups.loading') }}</text>
 			</view>
 			
 			<!-- 群组列表 -->
@@ -44,11 +44,11 @@
 					</view>
 					<view class="group-info">
 						<text class="group-name" :style="{ color: theme.textPrimary }">{{ group.name }}</text>
-						<text class="group-count" :style="{ color: theme.textTertiary }">{{ group.memberCount }} 人</text>
+						<text class="group-count" :style="{ color: theme.textTertiary }">{{ t('contactsMyGroups.memberCount', { count: group.memberCount }) }}</text>
 					</view>
 					<view v-if="group.canManageJoinRequests" class="group-right">
 						<view v-if="group.pendingJoinRequestCount > 0" class="pending-entry" @click.stop="handleJoinRequests(group)">
-							<text class="pending-entry-text">{{ group.pendingJoinRequestCount > 99 ? '99+' : group.pendingJoinRequestCount }} 待处理</text>
+							<text class="pending-entry-text">{{ t('contactsMyGroups.pendingCount', { count: group.pendingJoinRequestCount > 99 ? '99+' : group.pendingJoinRequestCount }) }}</text>
 						</view>
 						<text v-else class="group-role-tag" :style="{ color: theme.textSecondary }">{{ group.roleText }}</text>
 					</view>
@@ -58,7 +58,7 @@
 			
 			<!-- 空状态 -->
 			<view v-else-if="!loading" class="empty-state">
-				<text class="empty-text" :style="{ color: theme.textTertiary }">{{ searchKeyword ? '未找到相关群组' : '暂无群组' }}</text>
+				<text class="empty-text" :style="{ color: theme.textTertiary }">{{ searchKeyword ? t('contactsMyGroups.emptySearch') : t('contactsMyGroups.empty') }}</text>
 			</view>
 		</scroll-view>
 	</view>
@@ -107,7 +107,7 @@
 				// 转换为 UI 格式
 				const formattedGroups = groups.map(group => {
 					// 生成头像网格（取群名前4个字）
-					const name = group.name || '未命名群组'
+					const name = group.name || t('contactsMyGroups.unnamedGroup')
 					const avatars : string[] = []
 					for (let i = 0; i < Math.min(4, name.length); i++) {
 						avatars.push(name.charAt(i))
@@ -125,7 +125,7 @@
 						myRole: group.myRole != null ? Number(group.myRole) : 0,
 						canManageJoinRequests: (group.myRole != null ? Number(group.myRole) : 0) > 0,
 						pendingJoinRequestCount: group.pendingJoinRequestCount != null ? Number(group.pendingJoinRequestCount) : 0,
-						roleText: (group.myRole != null ? Number(group.myRole) : 0) >= 2 ? '群主' : ((group.myRole != null ? Number(group.myRole) : 0) === 1 ? '管理员' : '成员')
+						roleText: (group.myRole != null ? Number(group.myRole) : 0) >= 2 ? t('contactsMyGroups.roleOwner') : ((group.myRole != null ? Number(group.myRole) : 0) === 1 ? t('contactsMyGroups.roleAdmin') : t('contactsMyGroups.roleMember'))
 					}
 				})
 				
@@ -139,7 +139,7 @@
 		} catch (e) {
 			console.error('[MyGroups] 加载群组列表失败:', e)
 			uni.showToast({
-				title: '加载失败',
+				title: t('contactsMyGroups.loadFailed'),
 				icon: 'none'
 			})
 			groupList.value = []

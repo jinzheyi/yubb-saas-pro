@@ -6,14 +6,14 @@
 			<view class="scan-header">
 				<view class="scan-back" @click="handleBack">
 					<text class="iconfont scan-back-icon">&#xeb04;</text>
-					<text class="scan-back-text">返回</text>
+					<text class="scan-back-text">{{ t('common.back') }}</text>
 				</view>
-				<text class="scan-title">扫一扫</text>
+				<text class="scan-title">{{ t('runtime.scanPage.title') }}</text>
 				<view class="scan-header-right"></view>
 			</view>
 
 			<view class="scan-guide">
-				<text class="scan-guide-text">优先识别企业 IM 群二维码，第三方链接会进入受控浏览页</text>
+				<text class="scan-guide-text">{{ t('runtime.scanPage.guide') }}</text>
 			</view>
 
 			<view class="scan-frame-wrap">
@@ -28,11 +28,11 @@
 				<view class="scan-actions">
 					<view class="scan-action-btn" @click="toggleFlashlight">
 					<text class="iconfont scan-action-icon">{{ flashlightEnabled ? '\ue86e' : '\uea88' }}</text>
-						<text class="scan-action-text">{{ flashlightEnabled ? '关闭手电筒' : '打开手电筒' }}</text>
+						<text class="scan-action-text">{{ flashlightEnabled ? t('runtime.scanPage.flashOff') : t('runtime.scanPage.flashOn') }}</text>
 					</view>
 				<view class="scan-action-btn scan-action-btn-secondary" @click="openManualJoin">
 					<text class="iconfont scan-action-icon">&#xea8b;</text>
-					<text class="scan-action-text">手动输入邀请码</text>
+					<text class="scan-action-text">{{ t('runtime.scanPage.manualJoin') }}</text>
 				</view>
 			</view>
 		</view>
@@ -44,16 +44,16 @@
 			<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 				<view class="header-left" @click.stop="handleBack">
 					<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-					<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+					<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 				</view>
-				<text class="header-title" :style="{ color: theme.headerText }">扫一扫</text>
+				<text class="header-title" :style="{ color: theme.headerText }">{{ t('runtime.scanPage.title') }}</text>
 				<view class="header-right"></view>
 			</view>
 			<view class="fallback-content">
-				<text class="fallback-title" :style="{ color: theme.textPrimary }">当前端不支持原生扫码</text>
-				<text class="fallback-desc" :style="{ color: theme.textSecondary }">请改用手工输入邀请码或邀请链接。</text>
+				<text class="fallback-title" :style="{ color: theme.textPrimary }">{{ t('runtime.scanPage.unsupportedTitle') }}</text>
+				<text class="fallback-desc" :style="{ color: theme.textSecondary }">{{ t('runtime.scanPage.unsupportedDesc') }}</text>
 				<view class="fallback-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="openManualJoin">
-					<text class="fallback-btn-text">前往输入邀请码</text>
+					<text class="fallback-btn-text">{{ t('runtime.scanPage.gotoManualJoin') }}</text>
 				</view>
 			</view>
 		</view>
@@ -63,9 +63,12 @@
 
 <script setup lang="uts">
 	import { onLoad, onReady, onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { routeScanResult } from '../../utils/scan-router.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
+
+	const { t } = useI18n()
 
 	let barcodeView : any = null
 	const flashlightEnabled = ref(false)
@@ -119,7 +122,7 @@
 			const currentWebview = getCurrentAppWebview()
 			if (currentWebview == null) {
 				uni.showToast({
-					title: '扫码环境初始化失败',
+					title: t('runtime.scanPage.initFailed'),
 					icon: 'none'
 				})
 				return
@@ -156,7 +159,7 @@
 		} catch (e) {
 			console.error('[ScanPage] 启动扫码失败:', e)
 			uni.showToast({
-				title: '启动扫码失败',
+				title: t('runtime.scanPage.startFailed'),
 				icon: 'none'
 			})
 		}
@@ -168,7 +171,7 @@
 		try {
 			if (barcodeView == null || barcodeView.setFlash == null) {
 				uni.showToast({
-					title: '当前设备不支持手电筒控制',
+					title: t('runtime.scanPage.flashUnsupported'),
 					icon: 'none'
 				})
 				return
@@ -179,7 +182,7 @@
 		} catch (e) {
 			console.error('[ScanPage] 切换手电筒失败:', e)
 			uni.showToast({
-				title: '手电筒切换失败',
+				title: t('runtime.scanPage.flashToggleFailed'),
 				icon: 'none'
 			})
 		}

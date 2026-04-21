@@ -14,7 +14,7 @@ import javax.validation.constraints.Size;
 public class UserProfileUpdateReqVO {
 
     @Schema(description = "用户昵称", requiredMode = Schema.RequiredMode.REQUIRED, example = "圣钰")
-    @Size(max = 30, message = "用户昵称长度不能超过 30 个字符")
+    @Size(max = 30, message = "{validation.user.nickname.max}")
     private String nickname;
 
 //    @Schema(description = "用户账号邮箱", example = "jin_zheyicn@qq.com")

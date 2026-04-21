@@ -12,11 +12,11 @@ import java.util.List;
 public class AppImGroupMemberAddReqVO {
 
     @Schema(description = "群ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "群ID不能为空")
+    @NotNull(message = "{validation.im.group_id.required}")
     private Long groupId;
 
     @Schema(description = "成员ID列表", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotEmpty(message = "成员列表不能为空")
+    @NotEmpty(message = "{validation.im.member_ids.required}")
     private List<Long> memberIds;
 
 }

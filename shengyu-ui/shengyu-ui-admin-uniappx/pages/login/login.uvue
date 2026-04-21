@@ -12,7 +12,7 @@
 				<image class="logo" src="/static/logo.jpg" mode="aspectFit"></image>
 			</view>
 			<text class="title">{{ t('login.welcome') }}</text>
-			<text class="subtitle">Yubb SaaS Pro 数字化管理平台</text>
+			<text class="subtitle">{{ t('login.subtitle') }}</text>
 		</view>
 		
 		<!-- 登录卡片 -->
@@ -68,7 +68,7 @@
 								<text class="remember-text">{{ t('login.remember') }}</text>
 							</label>
 						</checkbox-group>
-						<text class="forgot-text">忘记密码?</text>
+						<text class="forgot-text">{{ t('login.forgetPassword') }}</text>
 					</view>
 				</view>
 				
@@ -203,7 +203,7 @@
 	async function handleLogin() {
 		if (loginType.value === 'account') {
 			if (!username.value || !password.value) {
-				uni.showToast({ title: '请输入账号和密码', icon: 'none' })
+				uni.showToast({ title: t('login.toastAccountRequired'), icon: 'none' })
 				return
 			}
 			if (captchaEnable.value === 'false') {
@@ -213,7 +213,7 @@
 			}
 		} else {
 			if (!mobile.value || !smsCode.value) {
-				uni.showToast({ title: '请输入手机号和验证码', icon: 'none' })
+				uni.showToast({ title: t('login.toastMobileRequired'), icon: 'none' })
 				return
 			}
 			await doLogin('')

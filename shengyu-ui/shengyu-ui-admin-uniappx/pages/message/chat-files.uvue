@@ -62,9 +62,9 @@
 
 			<!-- 加载更多提示 -->
 			<view class="load-more" v-if="displayFileGroups.length > 0">
-				<text class="load-more-text" :style="{ color: theme.textTertiary }" v-if="loadingMore">加载中...</text>
-				<text class="load-more-text" :style="{ color: theme.textTertiary }" v-else-if="noMore">没有更多了</text>
-				<text class="load-more-text" :style="{ color: theme.textTertiary }" v-else>上拉加载更多</text>
+				<text class="load-more-text" :style="{ color: theme.textTertiary }" v-if="loadingMore">{{ t('chat.chatFiles.loadingMore') }}</text>
+				<text class="load-more-text" :style="{ color: theme.textTertiary }" v-else-if="noMore">{{ t('chat.chatFiles.noMore') }}</text>
+				<text class="load-more-text" :style="{ color: theme.textTertiary }" v-else>{{ t('chat.chatFiles.pullMore') }}</text>
 			</view>
 		</scroll-view>
 	</view>
@@ -106,19 +106,19 @@
 		theme.value = tokens
 	})
 
-	const tabs = [
-		{ type: 'all', name: '全部' },
-		{ type: 'image', name: '图片' },
-		{ type: 'video', name: '视频' },
-		{ type: 'file', name: '文件' }
-	]
+	const tabs = computed(() => [
+		{ type: 'all', name: t('chat.chatFiles.tabAll') },
+		{ type: 'image', name: t('chat.chatFiles.tabImage') },
+		{ type: 'video', name: t('chat.chatFiles.tabVideo') },
+		{ type: 'file', name: t('chat.chatFiles.tabFile') }
+	])
 
 	const pageTitle = computed(() : string => {
-		return scene.value === 'single' ? '文件' : '群文件'
+		return scene.value === 'single' ? t('chat.chatFiles.titleSingle') : t('chat.chatFiles.titleGroup')
 	})
 
 	const currentTabName = computed(() : string => {
-		const tab = tabs.find(t => t.type === currentTab.value)
+		const tab = tabs.value.find(t => t.type === currentTab.value)
 		return tab ? tab.name : ''
 	})
 
@@ -126,7 +126,7 @@
 		if (loadError.value !== '') {
 			return loadError.value
 		}
-		return '暂无' + currentTabName.value + '文件'
+		return t('chat.chatFiles.emptyPrefix') + currentTabName.value + t('chat.chatFiles.emptySuffix')
 	})
 
 	// 文件数据
@@ -140,7 +140,7 @@
 			return
 		}
 		if (!chatId.value) {
-			loadError.value = '会话信息未加载'
+			loadError.value = t('chat.chatFiles.conversationNotLoaded')
 			return
 		}
 		
@@ -182,12 +182,12 @@
 						id: item.messageId != null ? item.messageId.toString() : '0',
 						messageId: item.messageId != null ? item.messageId.toString() : '0',
 						type: item.mediaType || getFileTypeFromName(item.fileName || ''),
-						name: item.fileName || '文件',
+						name: item.fileName || t('chat.chatFiles.titleSingle'),
 						size: formatFileSize(item.fileSize || 0),
 						url: item.fileUrl,
 						thumbnail: item.fileUrl,  // 视频缩略图可以后续优化
 						createTime: sendTime,
-						sender: item.senderNickname || '未知',
+						sender: item.senderNickname || t('chat.chatFiles.unknownSender'),
 						uploaderId: item.senderId != null ? item.senderId.toString() : '0',
 						fileId: item.fileId != null ? item.fileId.toString() : ''
 					}
@@ -220,10 +220,10 @@
 					return
 				}
 			}
-			loadError.value = '加载失败'
+			loadError.value = t('chat.chatFiles.loadFailed')
 			if (!isLoadMore) {
 				uni.showToast({
-					title: '加载失败',
+					title: t('chat.chatFiles.loadFailed'),
 					icon: 'none'
 				})
 			}
@@ -277,13 +277,13 @@
 
 			let dateKey = ''
 			if (date.toDateString() === today.toDateString()) {
-				dateKey = '今天'
+				dateKey = t('chat.chatFiles.today')
 			} else if (date.toDateString() === yesterday.toDateString()) {
-				dateKey = '昨天'
+				dateKey = t('chat.chatFiles.yesterday')
 			} else {
 				const month = (date.getMonth() + 1).toString().padStart(2, '0')
 				const day = date.getDate().toString().padStart(2, '0')
-				dateKey = `${month}月${day}日`
+				dateKey = t('chat.chatFiles.monthDay', { month, day })
 			}
 
 			if (!groups[dateKey]) {
@@ -481,10 +481,10 @@
 
 	async function handleDownloadFile(file : any) {
 		const url = file && file.url != null ? String(file.url).trim() : ''
-		const fileName = file && file.name != null ? String(file.name) : '文件'
+		const fileName = file && file.name != null ? String(file.name) : t('chat.chatFiles.titleSingle')
 		if (url === '') {
 			uni.showToast({
-				title: '下载地址为空',
+				title: t('chat.chatFiles.downloadAddressEmpty'),
 				icon: 'none'
 			})
 			return
@@ -495,12 +495,12 @@
 				if (triggerBrowserDownload(url, fileName) || openUrlInBrowser(url)) {
 					return
 				}
-				uni.showLoading({ title: '正在下载' })
+				uni.showLoading({ title: t('chat.chatFiles.downloading') })
 				const tempFilePath = await downloadRemoteFile(url)
 				await saveImageToAlbum(tempFilePath)
-				uni.showToast({ title: '已保存到相册', icon: 'success' })
+				uni.showToast({ title: t('chat.chatFiles.savedToAlbum'), icon: 'success' })
 			} catch (e) {
-				uni.showToast({ title: '保存失败', icon: 'none' })
+				uni.showToast({ title: t('chat.chatFiles.saveFailed'), icon: 'none' })
 			} finally {
 				uni.hideLoading()
 			}
@@ -512,12 +512,12 @@
 				if (triggerBrowserDownload(url, fileName) || openUrlInBrowser(url)) {
 					return
 				}
-				uni.showLoading({ title: '正在下载' })
+				uni.showLoading({ title: t('chat.chatFiles.downloading') })
 				const tempFilePath = await downloadRemoteFile(url)
 				await saveVideoToAlbum(tempFilePath)
-				uni.showToast({ title: '已保存到相册', icon: 'success' })
+				uni.showToast({ title: t('chat.chatFiles.savedToAlbum'), icon: 'success' })
 			} catch (e) {
-				uni.showToast({ title: '保存失败', icon: 'none' })
+				uni.showToast({ title: t('chat.chatFiles.saveFailed'), icon: 'none' })
 			} finally {
 				uni.hideLoading()
 			}
@@ -536,9 +536,9 @@
 			if (triggerBrowserDownload(downloadUrl, fileName)) {
 				return
 			}
-			await downloadAndOpenDocumentWithRetry(downloadUrl, '正在下载')
+			await downloadAndOpenDocumentWithRetry(downloadUrl, t('chat.chatFiles.downloading'))
 		} catch (e) {
-			uni.showToast({ title: '下载失败', icon: 'none' })
+			uni.showToast({ title: t('chat.chatFiles.downloadFailed'), icon: 'none' })
 		}
 	}
 
@@ -546,7 +546,7 @@
 		const messageId = file && file.messageId != null ? String(file.messageId) : ''
 		if (messageId === '' || messageId === '0') {
 			uni.showToast({
-				title: '当前文件暂不支持转发',
+				title: t('chat.chatFiles.forwardUnsupported'),
 				icon: 'none'
 			})
 			return
@@ -562,7 +562,7 @@
 	function handleFileMenu(file : any) {
 		uni.showActionSheet({
 			itemColor: theme.value.brandPrimary,
-			itemList: ['下载', '转发'],
+			itemList: [t('chat.chatFiles.actionDownload'), t('chat.chatFiles.actionForward')],
 			success: async (res) => {
 				if (res.tapIndex === 0) {
 					await handleDownloadFile(file)
@@ -588,9 +588,9 @@
 
 	onMounted(async () => {
 		if (!chatId.value) {
-			loadError.value = '会话信息未加载'
+			loadError.value = t('chat.chatFiles.conversationNotLoaded')
 			uni.showToast({
-				title: '会话信息未加载',
+				title: t('chat.chatFiles.conversationNotLoaded'),
 				icon: 'none'
 			})
 			return

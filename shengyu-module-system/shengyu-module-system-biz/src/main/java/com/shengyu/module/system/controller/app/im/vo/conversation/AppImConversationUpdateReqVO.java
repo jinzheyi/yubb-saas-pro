@@ -11,7 +11,7 @@ import javax.validation.constraints.NotNull;
 public class AppImConversationUpdateReqVO {
 
     @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "ChatID不能为空")
+    @NotNull(message = "{validation.im.chat_id.required}")
     private Long chatId;
 
     @Schema(description = "是否置顶", example = "true")
@@ -20,7 +20,7 @@ public class AppImConversationUpdateReqVO {
     @Schema(description = "是否免打扰", example = "true")
     private Boolean noDisturb;
 
-    @AssertTrue(message = "至少更新一个设置项")
+    @AssertTrue(message = "{validation.im.conversation_update.required}")
     public boolean isAnySettingPresent() {
         return isPinned != null || noDisturb != null;
     }

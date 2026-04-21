@@ -35,7 +35,10 @@ import com.shengyu.module.system.enums.im.ImGroupStatusEnum;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.mq.message.im.ImGroupConversationRefreshMessage;
 import com.shengyu.module.system.mq.producer.im.ImGroupConversationRefreshProducer;
+import com.shengyu.module.system.service.im.support.ImSystemMessageI18nSupport;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -45,6 +48,7 @@ import javax.annotation.Resource;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,6 +110,12 @@ public class ImGroupServiceImpl implements ImGroupService {
 
     @Resource
     private ImNotifyService imNotifyService;
+
+    @Resource
+    private ImSystemMessageI18nSupport imSystemMessageI18nSupport;
+
+    @Resource
+    private MessageSource messageSource;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -406,9 +416,10 @@ public class ImGroupServiceImpl implements ImGroupService {
             groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
 
             final String tipContent = buildGroupMembersAddedTipContent(addedMemberIds);
+            final String tipExtra = buildGroupMembersAddedTipExtra(addedMemberIds);
             runAfterCommit(() -> {
-                persistGroupSystemTipConversationUpdate(addReqVO.getGroupId(), userId, tipContent, tipContent);
-                pushGroupMemberAddedNotify(addReqVO.getGroupId(), addedMemberIds, userId, tipContent);
+                persistGroupSystemTipConversationUpdate(addReqVO.getGroupId(), userId, tipContent, tipContent, tipExtra);
+                pushGroupMemberAddedNotify(addReqVO.getGroupId(), addedMemberIds, userId, tipContent, tipExtra);
             });
         }
 
@@ -462,9 +473,10 @@ public class ImGroupServiceImpl implements ImGroupService {
         groupConversationRefreshProducer.sendAfterCommit(refreshMessage);
 
         final String tipContent = buildGroupMemberRemovedTipContent(memberToRemove, memberUserId);
+        final String tipExtra = buildGroupMemberRemovedTipExtra(memberToRemove, memberUserId);
         runAfterCommit(() -> {
-            persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent);
-            pushGroupMemberRemovedNotify(groupId, memberUserId, userId, tipContent);
+            persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent, tipExtra);
+            pushGroupMemberRemovedNotify(groupId, memberUserId, userId, tipContent, tipExtra);
         });
 
         log.info("[ImGroupService] 移除群成员成功, groupId: {}, memberUserId: {}, 剩余成员数: {}",
@@ -575,13 +587,20 @@ public class ImGroupServiceImpl implements ImGroupService {
             
             // 构建系统消息内容
             String roleName = ImGroupMemberRoleEnum.isAdmin(newRole) ? "管理员" : "普通成员";
-            String content = String.format("\"%s\" 将 \"%s\" 设置为 %s", 
+            String content = String.format("\"%s\" 将 \"%s\" 设置为 %s",
                     operator.getNickname(), targetUser.getNickname(), roleName);
+            String eventKey = ImGroupMemberRoleEnum.isAdmin(newRole)
+                    ? ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ROLE_SET_ADMIN
+                    : ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ROLE_SET_MEMBER;
+            Map<String, Object> params = new LinkedHashMap<>();
+            params.put("operatorName", operator.getNickname());
+            params.put("targetName", targetUser.getNickname());
+            String extra = imSystemMessageI18nSupport.attachI18n(null, eventKey, params);
             
             LocalDateTime now = LocalDateTime.now();
             // 分配sequence
             Long sequence = chatMapper.nextSequence(chat.getId());
-            ImChatMessageDO sysMessage = buildSystemTipMessage(chat.getId(), sequence, content, now);
+            ImChatMessageDO sysMessage = buildSystemTipMessage(chat.getId(), sequence, content, extra, now);
             chatMessageMapper.insert(sysMessage);
             
             log.info("[ImGroupService] 角色变更通知已发送, groupId: {}, targetUserId: {}, newRole: {}", 
@@ -634,9 +653,10 @@ public class ImGroupServiceImpl implements ImGroupService {
 
         final LocalDateTime finalMuteEndTime = targetMuteEndTime;
         final String tipContent = buildGroupMemberMuteTipContent(member, memberUserId, muted, finalMuteEndTime);
+        final String tipExtra = buildGroupMemberMuteTipExtra(member, memberUserId, muted, finalMuteEndTime);
         runAfterCommit(() -> {
-            persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent);
-            pushGroupMemberMuteChangedNotify(groupId, memberUserId, muted, finalMuteEndTime, userId, tipContent);
+            persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent, tipExtra);
+            pushGroupMemberMuteChangedNotify(groupId, memberUserId, muted, finalMuteEndTime, userId, tipContent, tipExtra);
         });
 
         log.info("[ImGroupService] 设置群成员禁言成功, groupId: {}, memberUserId: {}, muted: {}", 
@@ -667,16 +687,22 @@ public class ImGroupServiceImpl implements ImGroupService {
         final String tipContent = Boolean.TRUE.equals(muted)
                 ? "已开启全员禁言，只有群主和管理员可以发言"
                 : "已解除全员禁言";
+        final String tipExtra = imSystemMessageI18nSupport.attachI18n(null,
+                Boolean.TRUE.equals(muted)
+                        ? ImSystemMessageI18nSupport.EVENT_GROUP_MUTE_ALL_ENABLED
+                        : ImSystemMessageI18nSupport.EVENT_GROUP_MUTE_ALL_DISABLED,
+                Collections.emptyMap());
         runAfterCommit(() -> {
-            persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent);
-            pushGroupMuteAllChangedNotify(groupId, muted, userId, tipContent);
+            persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent, tipExtra);
+            pushGroupMuteAllChangedNotify(groupId, muted, userId, tipContent, tipExtra);
         });
 
         log.info("[ImGroupService] 设置全员禁言成功, groupId: {}, muted: {}", groupId, muted);
     }
 
     private void pushGroupMemberMuteChangedNotify(Long groupId, Long memberUserId, Boolean muted,
-                                                  LocalDateTime muteEndTime, Long operatorUserId, String tipContent) {
+                                                  LocalDateTime muteEndTime, Long operatorUserId,
+                                                  String tipContent, String tipExtra) {
         List<Long> memberIds = getGroupMemberIds(groupId);
         if (CollUtil.isEmpty(memberIds)) {
             return;
@@ -694,6 +720,7 @@ public class ImGroupServiceImpl implements ImGroupService {
                 .set("operatorUserId", operatorUserId != null ? String.valueOf(operatorUserId) : "")
                 .set("tipContent", tipContent != null ? tipContent : "")
                 .toString();
+        extra = mergeSystemNotifyI18n(extra, tipExtra);
         TextMessage body = TextMessage.newBuilder().setContent("GROUP_MEMBER_MUTE_CHANGED").build();
         for (Long targetUserId : memberIds) {
             try {
@@ -708,7 +735,8 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
     }
 
-    private void pushGroupMuteAllChangedNotify(Long groupId, Boolean muted, Long operatorUserId, String tipContent) {
+    private void pushGroupMuteAllChangedNotify(Long groupId, Boolean muted, Long operatorUserId,
+                                               String tipContent, String tipExtra) {
         List<Long> memberIds = getGroupMemberIds(groupId);
         if (CollUtil.isEmpty(memberIds)) {
             return;
@@ -724,6 +752,7 @@ public class ImGroupServiceImpl implements ImGroupService {
                 .set("operatorUserId", operatorUserId != null ? String.valueOf(operatorUserId) : "")
                 .set("tipContent", tipContent != null ? tipContent : "")
                 .toString();
+        extra = mergeSystemNotifyI18n(extra, tipExtra);
         TextMessage body = TextMessage.newBuilder().setContent("GROUP_MUTE_ALL_CHANGED").build();
         for (Long targetUserId : memberIds) {
             try {
@@ -738,7 +767,8 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
     }
 
-    private void pushGroupMemberAddedNotify(Long groupId, List<Long> addedMemberIds, Long operatorUserId, String tipContent) {
+    private void pushGroupMemberAddedNotify(Long groupId, List<Long> addedMemberIds, Long operatorUserId,
+                                            String tipContent, String tipExtra) {
         List<Long> memberIds = getGroupMemberIds(groupId);
         if (CollUtil.isEmpty(memberIds)) {
             return;
@@ -754,6 +784,7 @@ public class ImGroupServiceImpl implements ImGroupService {
                 .set("operatorUserId", operatorUserId != null ? String.valueOf(operatorUserId) : "")
                 .set("tipContent", tipContent != null ? tipContent : "")
                 .toString();
+        extra = mergeSystemNotifyI18n(extra, tipExtra);
         TextMessage body = TextMessage.newBuilder().setContent("GROUP_MEMBER_ADDED").build();
         for (Long targetUserId : memberIds) {
             try {
@@ -768,7 +799,8 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
     }
 
-    private void pushGroupMemberRemovedNotify(Long groupId, Long memberUserId, Long operatorUserId, String tipContent) {
+    private void pushGroupMemberRemovedNotify(Long groupId, Long memberUserId, Long operatorUserId,
+                                              String tipContent, String tipExtra) {
         List<Long> memberIds = new ArrayList<>(getGroupMemberIds(groupId));
         if (memberUserId != null && !memberIds.contains(memberUserId)) {
             memberIds.add(memberUserId);
@@ -787,6 +819,7 @@ public class ImGroupServiceImpl implements ImGroupService {
                 .set("operatorUserId", operatorUserId != null ? String.valueOf(operatorUserId) : "")
                 .set("tipContent", tipContent != null ? tipContent : "")
                 .toString();
+        extra = mergeSystemNotifyI18n(extra, tipExtra);
         TextMessage body = TextMessage.newBuilder().setContent("GROUP_MEMBER_REMOVED").build();
         for (Long targetUserId : memberIds) {
             try {
@@ -839,8 +872,9 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
 
         String tipContent = buildGroupOwnerTransferredTipContent(newOwnerId, newOwner);
-        persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent);
-        pushGroupOwnerTransferredNotify(groupId, userId, newOwnerId, tipContent);
+        String tipExtra = buildGroupOwnerTransferredTipExtra(newOwnerId, newOwner);
+        persistGroupSystemTipConversationUpdate(groupId, userId, tipContent, tipContent, tipExtra);
+        pushGroupOwnerTransferredNotify(groupId, userId, newOwnerId, tipContent, tipExtra);
 
         log.info("[ImGroupService] 转让群主成功, groupId: {}, oldOwnerId: {}, newOwnerId: {}", 
                 groupId, userId, newOwnerId);
@@ -907,46 +941,37 @@ public class ImGroupServiceImpl implements ImGroupService {
         // 1. 查询邀请码
         ImGroupInviteDO invite = groupInviteMapper.selectByInviteCode(inviteCode);
         if (invite == null) {
-            respVO.setValid(false);
-            respVO.setErrorMessage("邀请码不存在");
-            return respVO;
+            return buildInviteVerifyFailure(respVO, GROUP_INVITE_CODE_NOT_EXISTS);
         }
 
         // 2. 验证状态
         if (!ImGroupInviteStatusEnum.isValid(invite.getStatus())) {
-            respVO.setValid(false);
-            respVO.setErrorMessage("邀请码已失效");
-            return respVO;
+            return buildInviteVerifyFailure(respVO, GROUP_INVITE_CODE_DISABLED);
         }
 
         // 3. 验证过期时间
         if (invite.getExpireTime().isBefore(LocalDateTime.now())) {
-            respVO.setValid(false);
-            respVO.setErrorMessage("邀请码已过期");
-            return respVO;
+            return buildInviteVerifyFailure(respVO, GROUP_INVITE_CODE_EXPIRED);
         }
 
         // 4. 验证使用次数
         if (invite.getMaxUseCount() > 0 && invite.getUsedCount() >= invite.getMaxUseCount()) {
-            respVO.setValid(false);
-            respVO.setErrorMessage("邀请码使用次数已达上限");
-            return respVO;
+            return buildInviteVerifyFailure(respVO, GROUP_INVITE_CODE_USAGE_LIMIT_REACHED);
         }
 
         // 5. 查询群组信息
         ImGroupDO group = groupMapper.selectById(invite.getGroupId());
-        if (group == null || !ImGroupStatusEnum.isNormal(group.getStatus())) {
-            respVO.setValid(false);
-            respVO.setErrorMessage("群组不存在或已解散");
-            return respVO;
+        if (group == null) {
+            return buildInviteVerifyFailure(respVO, GROUP_NOT_EXISTS);
+        }
+        if (!ImGroupStatusEnum.isNormal(group.getStatus())) {
+            return buildInviteVerifyFailure(respVO, GROUP_DISSOLVED);
         }
 
         Long currentTenantId = resolveTenantId();
         Long groupTenantId = group.getTenantId() != null ? group.getTenantId() : 0L;
         if (!Objects.equals(currentTenantId, groupTenantId)) {
-            respVO.setValid(false);
-            respVO.setErrorMessage("当前邀请码不属于本租户");
-            return respVO;
+            return buildInviteVerifyFailure(respVO, GROUP_INVITE_CODE_TENANT_MISMATCH);
         }
 
         // 6. 返回验证成功信息
@@ -967,7 +992,7 @@ public class ImGroupServiceImpl implements ImGroupService {
         // 1. 验证邀请码
         AppImGroupInviteVerifyRespVO verifyResult = verifyInviteCode(inviteCode);
         if (!verifyResult.getValid()) {
-            throw exception(GROUP_INVITE_CODE_INVALID, verifyResult.getErrorMessage());
+            throwInviteVerifyFailure(verifyResult);
         }
 
         Long groupId = verifyResult.getGroupId();
@@ -1003,7 +1028,8 @@ public class ImGroupServiceImpl implements ImGroupService {
                 runAfterCommit(() -> notifyJoinRequestCreated(finalGroup, finalPendingRequest));
             }
             respVO.setResultType(2);
-            respVO.setMessage("已提交入群申请，请等待管理员审批");
+            respVO.setMessage(getI18nMessage("im.group.invite.join.pending",
+                    "已提交入群申请，请等待管理员审批"));
             respVO.setRequestId(pendingRequest.getId());
             return respVO;
         }
@@ -1019,8 +1045,49 @@ public class ImGroupServiceImpl implements ImGroupService {
         log.info("[ImGroupService] 通过邀请码加入群成功, userId: {}, groupId: {}, inviteCode: {}", 
                 userId, groupId, inviteCode);
         respVO.setResultType(1);
-        respVO.setMessage("加入成功");
+        respVO.setMessage(getI18nMessage("im.group.invite.join.success", "加入成功"));
         return respVO;
+    }
+
+    private AppImGroupInviteVerifyRespVO buildInviteVerifyFailure(AppImGroupInviteVerifyRespVO respVO,
+                                                                  com.shengyu.framework.common.exception.ErrorCode errorCode) {
+        respVO.setValid(false);
+        respVO.setErrorCode(errorCode.getCode());
+        respVO.setErrorMessage(exception(errorCode).getMessage());
+        return respVO;
+    }
+
+    private void throwInviteVerifyFailure(AppImGroupInviteVerifyRespVO verifyResult) {
+        Integer errorCode = verifyResult.getErrorCode();
+        if (errorCode == null) {
+            throw exception(GROUP_INVITE_CODE_INVALID);
+        }
+        if (Objects.equals(errorCode, GROUP_INVITE_CODE_NOT_EXISTS.getCode())) {
+            throw exception(GROUP_INVITE_CODE_NOT_EXISTS);
+        }
+        if (Objects.equals(errorCode, GROUP_INVITE_CODE_DISABLED.getCode())) {
+            throw exception(GROUP_INVITE_CODE_DISABLED);
+        }
+        if (Objects.equals(errorCode, GROUP_INVITE_CODE_EXPIRED.getCode())) {
+            throw exception(GROUP_INVITE_CODE_EXPIRED);
+        }
+        if (Objects.equals(errorCode, GROUP_INVITE_CODE_USAGE_LIMIT_REACHED.getCode())) {
+            throw exception(GROUP_INVITE_CODE_USAGE_LIMIT_REACHED);
+        }
+        if (Objects.equals(errorCode, GROUP_NOT_EXISTS.getCode())) {
+            throw exception(GROUP_NOT_EXISTS);
+        }
+        if (Objects.equals(errorCode, GROUP_DISSOLVED.getCode())) {
+            throw exception(GROUP_DISSOLVED);
+        }
+        if (Objects.equals(errorCode, GROUP_INVITE_CODE_TENANT_MISMATCH.getCode())) {
+            throw exception(GROUP_INVITE_CODE_TENANT_MISMATCH);
+        }
+        throw exception(GROUP_INVITE_CODE_INVALID);
+    }
+
+    private String getI18nMessage(String key, String defaultMessage) {
+        return messageSource.getMessage(key, null, defaultMessage, LocaleContextHolder.getLocale());
     }
 
     @Override
@@ -1198,7 +1265,10 @@ public class ImGroupServiceImpl implements ImGroupService {
     private void pushGroupNoticeConversationUpdate(Long operatorUserId, Long groupId) {
         String preview = "[群公告有更新]";
         String tipContent = "群公告有更新";
-        persistGroupSystemTipConversationUpdate(groupId, operatorUserId, preview, tipContent);
+        String tipExtra = imSystemMessageI18nSupport.attachI18n(null,
+                ImSystemMessageI18nSupport.EVENT_GROUP_NOTICE_UPDATED,
+                Collections.emptyMap());
+        persistGroupSystemTipConversationUpdate(groupId, operatorUserId, preview, tipContent, tipExtra);
     }
 
     private void pushGroupConversationRefreshNotifyAfterCommit(Long groupId, Long tenantId, Long chatId,
@@ -1220,7 +1290,8 @@ public class ImGroupServiceImpl implements ImGroupService {
         }
     }
 
-    private void persistGroupSystemTipConversationUpdate(Long groupId, Long operatorUserId, String preview, String tipContent) {
+    private void persistGroupSystemTipConversationUpdate(Long groupId, Long operatorUserId,
+                                                         String preview, String tipContent, String tipExtra) {
         List<Long> memberIds = getGroupMemberIds(groupId);
         if (CollUtil.isEmpty(memberIds)) {
             return;
@@ -1234,7 +1305,7 @@ public class ImGroupServiceImpl implements ImGroupService {
 
         LocalDateTime now = LocalDateTime.now();
         Long sequence = chatMapper.nextSequence(chat.getId());
-        ImChatMessageDO tipMessage = buildSystemTipMessage(chat.getId(), sequence, tipContent, now);
+        ImChatMessageDO tipMessage = buildSystemTipMessage(chat.getId(), sequence, tipContent, tipExtra, now);
         chatMessageMapper.insert(tipMessage);
 
         Long tenantId = TenantContextHolder.getTenantId();
@@ -1339,6 +1410,41 @@ public class ImGroupServiceImpl implements ImGroupService {
         return String.format("\"%s\"、\"%s\" 等%d人加入了群聊", names.get(0), names.get(1), names.size());
     }
 
+    private String buildGroupMembersAddedTipExtra(List<Long> addedMemberIds) {
+        List<String> names = new ArrayList<>();
+        if (CollUtil.isNotEmpty(addedMemberIds)) {
+            for (Long memberUserId : addedMemberIds) {
+                if (memberUserId == null) {
+                    continue;
+                }
+                AdminUserDO user = userMapper.selectById(memberUserId);
+                String nickname = user != null && user.getNickname() != null ? user.getNickname().trim() : "";
+                if (!nickname.isEmpty()) {
+                    names.add(nickname);
+                }
+            }
+        }
+        Map<String, Object> params = new LinkedHashMap<>();
+        String eventKey;
+        if (names.isEmpty()) {
+            params.put("firstName", "新成员");
+            eventKey = ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ADDED_ONE;
+        } else if (names.size() == 1) {
+            params.put("firstName", names.get(0));
+            eventKey = ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ADDED_ONE;
+        } else if (names.size() == 2) {
+            params.put("firstName", names.get(0));
+            params.put("secondName", names.get(1));
+            eventKey = ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ADDED_TWO;
+        } else {
+            params.put("firstName", names.get(0));
+            params.put("secondName", names.get(1));
+            params.put("otherCount", String.valueOf(names.size() - 2));
+            eventKey = ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_ADDED_MANY;
+        }
+        return imSystemMessageI18nSupport.attachI18n(null, eventKey, params);
+    }
+
     private String buildGroupMemberRemovedTipContent(ImGroupUserDO member, Long memberUserId) {
         String memberName = "";
         if (member != null && member.getNickname() != null) {
@@ -1354,6 +1460,26 @@ public class ImGroupServiceImpl implements ImGroupService {
             memberName = "该成员";
         }
         return String.format("\"%s\" 已被移出群聊", memberName);
+    }
+
+    private String buildGroupMemberRemovedTipExtra(ImGroupUserDO member, Long memberUserId) {
+        String memberName = "";
+        if (member != null && member.getNickname() != null) {
+            memberName = member.getNickname().trim();
+        }
+        if (memberName.isEmpty() && memberUserId != null) {
+            AdminUserDO user = userMapper.selectById(memberUserId);
+            if (user != null && user.getNickname() != null) {
+                memberName = user.getNickname().trim();
+            }
+        }
+        if (memberName.isEmpty()) {
+            memberName = "该成员";
+        }
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("memberName", memberName);
+        return imSystemMessageI18nSupport.attachI18n(null,
+                ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_REMOVED, params);
     }
 
     private String buildGroupOwnerTransferredTipContent(Long newOwnerId, ImGroupUserDO newOwner) {
@@ -1373,7 +1499,60 @@ public class ImGroupServiceImpl implements ImGroupService {
         return String.format("群主已转让给“%s”", memberName);
     }
 
-    private void pushGroupOwnerTransferredNotify(Long groupId, Long oldOwnerId, Long newOwnerId, String tipContent) {
+    private String buildGroupOwnerTransferredTipExtra(Long newOwnerId, ImGroupUserDO newOwner) {
+        String memberName = "";
+        if (newOwner != null && newOwner.getNickname() != null) {
+            memberName = newOwner.getNickname().trim();
+        }
+        if (memberName.isEmpty() && newOwnerId != null) {
+            AdminUserDO user = userMapper.selectById(newOwnerId);
+            if (user != null && user.getNickname() != null) {
+                memberName = user.getNickname().trim();
+            }
+        }
+        if (memberName.isEmpty()) {
+            memberName = "该成员";
+        }
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("newOwnerName", memberName);
+        params.put("newOwnerId", newOwnerId != null ? String.valueOf(newOwnerId) : "");
+        return imSystemMessageI18nSupport.attachI18n(null,
+                ImSystemMessageI18nSupport.EVENT_GROUP_OWNER_TRANSFERRED, params);
+    }
+
+    private String buildGroupMemberMuteTipExtra(ImGroupUserDO member, Long memberUserId,
+                                                Boolean muted, LocalDateTime muteEndTime) {
+        String memberName = "";
+        if (member != null && member.getNickname() != null) {
+            memberName = member.getNickname().trim();
+        }
+        if (memberName.isEmpty() && memberUserId != null) {
+            AdminUserDO user = userMapper.selectById(memberUserId);
+            if (user != null && user.getNickname() != null) {
+                memberName = user.getNickname().trim();
+            }
+        }
+        if (memberName.isEmpty()) {
+            memberName = "该成员";
+        }
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("memberName", memberName);
+        if (muteEndTime != null) {
+            params.put("muteEndTime", muteEndTime.format(GROUP_MUTE_TIP_TIME_FORMATTER));
+        }
+        String eventKey;
+        if (Boolean.TRUE.equals(muted)) {
+            eventKey = muteEndTime != null
+                    ? ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_MUTED_UNTIL
+                    : ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_MUTED;
+        } else {
+            eventKey = ImSystemMessageI18nSupport.EVENT_GROUP_MEMBER_UNMUTED;
+        }
+        return imSystemMessageI18nSupport.attachI18n(null, eventKey, params);
+    }
+
+    private void pushGroupOwnerTransferredNotify(Long groupId, Long oldOwnerId, Long newOwnerId,
+                                                 String tipContent, String tipExtra) {
         List<Long> memberIds = getGroupMemberIds(groupId);
         if (CollUtil.isEmpty(memberIds)) {
             return;
@@ -1389,6 +1568,7 @@ public class ImGroupServiceImpl implements ImGroupService {
                 .set("newOwnerId", newOwnerId != null ? String.valueOf(newOwnerId) : "")
                 .set("tipContent", tipContent != null ? tipContent : "")
                 .toString();
+        extra = mergeSystemNotifyI18n(extra, tipExtra);
         TextMessage body = TextMessage.newBuilder().setContent("GROUP_OWNER_TRANSFERRED").build();
         for (Long targetUserId : memberIds) {
             try {
@@ -1422,17 +1602,38 @@ public class ImGroupServiceImpl implements ImGroupService {
     /**
      * 统一构造群系统提示消息，避免字段漂移（仅使用 ImChatMessageDO 已定义字段）
      */
-    private ImChatMessageDO buildSystemTipMessage(Long chatId, Long sequence, String content, LocalDateTime sendTime) {
+    private ImChatMessageDO buildSystemTipMessage(Long chatId, Long sequence, String content,
+                                                  String extra, LocalDateTime sendTime) {
         ImChatMessageDO message = new ImChatMessageDO();
         message.setChatId(chatId);
         message.setSequence(sequence);
         message.setSenderId(0L);
         message.setMessageType(10);
         message.setContent(content);
+        message.setExtra(extra);
         message.setSendTime(sendTime);
         message.setRev(1L);
         message.setStatus(ImMessageStatusEnum.SENT.getStatus());
         return message;
+    }
+
+    private String mergeSystemNotifyI18n(String notifyExtra, String tipExtra) {
+        if (tipExtra == null || tipExtra.isEmpty()) {
+            return notifyExtra;
+        }
+        try {
+            JSONObject tipRoot = JSONUtil.parseObj(tipExtra);
+            JSONObject tipI18n = tipRoot.getJSONObject("i18n");
+            if (tipI18n == null) {
+                return notifyExtra;
+            }
+            JSONObject notifyRoot = notifyExtra != null && !notifyExtra.isEmpty()
+                    ? JSONUtil.parseObj(notifyExtra) : JSONUtil.createObj();
+            notifyRoot.set("i18n", tipI18n);
+            return notifyRoot.toString();
+        } catch (Exception ignore) {
+            return notifyExtra;
+        }
     }
 
     @Override

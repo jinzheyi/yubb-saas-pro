@@ -12,6 +12,7 @@
 
 import { MessageType } from './websocket.uts'
 import { generateMessageId as generateLongSafeMessageId } from './message-utils.uts'
+import { t } from '../store/locale.uts'
 
 /**
  * 消息头
@@ -876,13 +877,13 @@ export class MessageParser {
     
     // 1分钟内
     if (diff < 60000) {
-      return '刚刚'
+      return t('common.relativeTime.justNow')
     }
     
     // 1小时内
     if (diff < 3600000) {
       const minutes = Math.floor(diff / 60000)
-      return minutes + '分钟前'
+      return t('common.relativeTime.minutesAgo', { count: minutes })
     }
     
     const date = new Date(timestamp)
@@ -899,7 +900,7 @@ export class MessageParser {
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
     if (date.toDateString() === yesterday.toDateString()) {
-      return '昨天'
+      return t('common.relativeTime.yesterday')
     }
     
     // 今年

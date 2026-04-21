@@ -1,6 +1,7 @@
 package com.shengyu.framework.websocket.core.session;
 
 import cn.hutool.json.JSONUtil;
+import com.shengyu.framework.common.exception.util.ServiceExceptionUtil;
 import com.shengyu.framework.websocket.config.NettyProperties;
 import com.shengyu.framework.websocket.core.protocol.ImMessage;
 import com.shengyu.framework.websocket.core.protocol.MessageHeader;
@@ -9,10 +10,12 @@ import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.i18n.LocaleContextHolder;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -85,7 +88,8 @@ public class NettyAuthLeaseMonitor {
 
                 // 1) Lease 过期：强制重登
                 if (session.isLeaseExpired()) {
-                    sendReauthRequired(ch, 401, "登录已过期，请重新登录");
+                    sendReauthRequired(ch, 401,
+                        localizeFor(session.getLocale(), "ws.auth.reauth_required", "Login expired. Please sign in again"));
                     session.setAuthState(NettySessionAuthState.EXPIRED);
                     sessionManager.removeSession(ch);
                     ch.close();
@@ -116,6 +120,9 @@ public class NettyAuthLeaseMonitor {
     }
 
     private void sendRenewSuggest(Channel channel, int remainingSeconds) {
+        NettySession session = sessionManager.getSession(channel);
+        String message = localizeFor(session != null ? session.getLocale() : null,
+            "ws.auth.renew_suggest", "Login will expire soon. Refresh your session.");
         if (isWebSocketChannel(channel)) {
             String payload = JSONUtil.createObj()
                 .set("header", JSONUtil.createObj()
@@ -125,7 +132,7 @@ public class NettyAuthLeaseMonitor {
                 .set("body", JSONUtil.createObj()
                     .set("action", "RENEW_SUGGEST")
                     .set("remainingSeconds", remainingSeconds)
-                    .set("message", "登录即将过期，建议刷新登录状态"))
+                    .set("message", message))
                 .toString();
             channel.writeAndFlush(new TextWebSocketFrame(payload));
             return;
@@ -139,7 +146,7 @@ public class NettyAuthLeaseMonitor {
             .setExtra(JSONUtil.createObj()
                 .set("action", "RENEW_SUGGEST")
                 .set("remainingSeconds", remainingSeconds)
-                .set("message", "登录即将过期，建议刷新登录状态")
+                .set("message", message)
                 .toString())
             .build();
         channel.writeAndFlush(ImMessage.newBuilder().setHeader(header).build());
@@ -180,5 +187,26 @@ public class NettyAuthLeaseMonitor {
         } catch (Exception ignore) {
             return false;
         }
+    }
+
+    private String localizeFor(String localeTag, String key, String defaultMessage, Object... args) {
+        Locale previous = LocaleContextHolder.getLocale();
+        try {
+            LocaleContextHolder.setLocale(resolveLocale(localeTag));
+            return ServiceExceptionUtil.getOrDefault(key, defaultMessage, args);
+        } finally {
+            LocaleContextHolder.setLocale(previous);
+        }
+    }
+
+    private Locale resolveLocale(String localeTag) {
+        if (localeTag == null || localeTag.trim().isEmpty()) {
+            return Locale.forLanguageTag("zh-CN");
+        }
+        String normalized = localeTag.trim().replace('_', '-').toLowerCase();
+        if (normalized.startsWith("en")) {
+            return Locale.forLanguageTag("en");
+        }
+        return Locale.forLanguageTag("zh-CN");
     }
 }

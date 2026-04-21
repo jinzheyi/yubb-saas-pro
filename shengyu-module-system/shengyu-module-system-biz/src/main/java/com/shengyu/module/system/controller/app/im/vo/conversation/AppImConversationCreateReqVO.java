@@ -10,11 +10,11 @@ import javax.validation.constraints.NotNull;
 public class AppImConversationCreateReqVO {
 
     @Schema(description = "目标ID(单聊为对方用户ID,群聊为群ID)", requiredMode = Schema.RequiredMode.REQUIRED, example = "100")
-    @NotNull(message = "目标ID不能为空")
+    @NotNull(message = "{validation.im.target_id.required}")
     private Long targetId;
 
     @Schema(description = "会话类型(1-单聊 2-群聊)", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "会话类型不能为空")
+    @NotNull(message = "{validation.im.conversation_type.required}")
     private Integer conversationType;
 
 }

@@ -10,7 +10,7 @@ import javax.validation.constraints.NotNull;
 public class AppImGroupUpdateReqVO {
 
     @Schema(description = "群ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "群ID不能为空")
+    @NotNull(message = "{validation.im.group_id.required}")
     private Long id;
 
     @Schema(description = "群名称", example = "技术交流群")

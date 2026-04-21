@@ -16,11 +16,7 @@
 import type { FormRules } from 'element-plus'
 import { FormSchema } from '@/types/form'
 import type { FormExpose } from '@/components/Form'
-import {
-  getUserProfile,
-  updateUserProfile,
-  UserProfileUpdateReqVO
-} from '@/api/system/user/profile'
+import { getUserProfile, updateUserProfile, UserProfileUpdateReqVO } from '@/api/system/user/profile'
 import { useUserStore } from '@/store/modules/user'
 
   defineOptions({ name: 'BasicInfo' })
@@ -72,8 +68,8 @@ import { useUserStore } from '@/store/modules/user'
     if (!elForm) return
     elForm.validate(async (valid) => {
       if (valid) {
-        const data = unref(formRef)?.formModel as UserProfileUpdateReqVO
-        await updateUserProfile(data)
+        const formModel = unref(formRef)?.formModel as UserProfileUpdateReqVO
+        await updateUserProfile(formModel)
         message.success(t('common.updateSuccess'))
         const profile = await init()
         await userStore.setUserNicknameAction(profile.nickname)

@@ -6,7 +6,7 @@
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">群聊设置</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('chat.groupSettings.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
@@ -19,7 +19,7 @@
 				<view class="group-details">
 					<text class="group-name" :style="{ color: theme.textPrimary }">{{ groupName }}</text>
 					<view class="group-meta-row">
-						<text class="group-member-count" :style="{ color: theme.textTertiary }">{{ memberCount }}人</text>
+						<text class="group-member-count" :style="{ color: theme.textTertiary }">{{ t('chat.group.memberCount', { count: memberCount }) }}</text>
 						<text class="role-badge" :class="roleBadgeClass">{{ roleLabel }}</text>
 					</view>
 				</view>
@@ -27,7 +27,7 @@
 
 			<!-- 群成员列表 -->
 			<view class="section" :style="{ backgroundColor: theme.cardBg }">
-				<view class="section-title" :style="{ color: theme.textPrimary }">群成员</view>
+				<view class="section-title" :style="{ color: theme.textPrimary }">{{ t('chat.groupSettings.members') }}</view>
 				<view class="member-grid">
 					<view class="member-item" v-for="(member, index) in displayMembers" :key="member.id" @click="handleMemberClick(member)">
 						<view class="member-avatar" :style="{ backgroundColor: member.avatarBg }">
@@ -47,18 +47,18 @@
 						<view class="member-avatar add-btn" :style="{ backgroundColor: theme.cardBgMuted, borderColor: theme.borderColor }">
 							<text class="iconfont add-icon" :style="{ color: theme.textTertiary }">&#xe726;</text>
 						</view>
-						<text class="member-name" :style="{ color: theme.textSecondary }">添加</text>
+						<text class="member-name" :style="{ color: theme.textSecondary }">{{ t('chat.groupSettings.add') }}</text>
 					</view>
 					<!-- 删除成员按钮 -->
 					<view v-if="canRemoveMembers" class="member-item" @click="handleRemoveMember">
 						<view class="member-avatar remove-btn" :style="{ backgroundColor: theme.cardBgMuted, borderColor: theme.borderColor }">
 							<text class="iconfont remove-icon" :style="{ color: theme.textTertiary }">&#xe602;</text>
 						</view>
-						<text class="member-name" :style="{ color: theme.textSecondary }">删除</text>
+						<text class="member-name" :style="{ color: theme.textSecondary }">{{ t('chat.groupSettings.remove') }}</text>
 					</view>
 				</view>
 				<view class="view-all-btn" :style="{ borderTopColor: theme.borderColor }" @click="handleViewAllMembers">
-					<text class="view-all-text" :style="{ color: theme.brandPrimary }">查看全部群成员</text>
+					<text class="view-all-text" :style="{ color: theme.brandPrimary }">{{ t('chat.groupSettings.viewAllMembers') }}</text>
 					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 			</view>
@@ -66,7 +66,7 @@
 			<!-- 群聊名称 -->
 			<view class="setting-section" :style="{ backgroundColor: theme.cardBg }">
 				<view class="setting-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleEditGroupName">
-					<text class="setting-label" :style="{ color: theme.textPrimary }">群聊名称</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">{{ t('chat.groupSettings.groupName') }}</text>
 					<view class="setting-value-wrap">
 						<text class="setting-value" :style="{ color: theme.textSecondary }">{{ groupName }}</text>
 						<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
@@ -77,19 +77,19 @@
 			<!-- 群聊设置 -->
 			<view class="setting-section" :style="{ backgroundColor: theme.cardBg }">
 				<view class="setting-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleGroupQRCode">
-					<text class="setting-label" :style="{ color: theme.textPrimary }">群二维码</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">{{ t('chat.groupSettings.groupQrcode') }}</text>
 					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 				<view class="setting-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleGroupNotice">
-					<text class="setting-label" :style="{ color: theme.textPrimary }">群公告</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">{{ t('chat.groupSettings.groupNotice') }}</text>
 					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 				<view class="setting-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleGroupFiles">
-					<text class="setting-label" :style="{ color: theme.textPrimary }">群文件</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">{{ t('chat.chatFiles.titleGroup') }}</text>
 					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 				<view class="setting-item" @click="handleChatHistory">
-					<text class="setting-label" :style="{ color: theme.textPrimary }">聊天记录</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">{{ t('chat.chatHistory.title') }}</text>
 					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 			</view>
@@ -97,11 +97,11 @@
 			<!-- 消息设置 -->
 			<view class="setting-section" :style="{ backgroundColor: theme.cardBg }">
 				<view class="setting-item" :style="{ borderBottomColor: theme.borderColor }">
-					<text class="setting-label" :style="{ color: theme.textPrimary }">消息免打扰</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">{{ t('chatSettings.notify') }}</text>
 					<switch class="setting-switch" :checked="noDisturb" @change="handleNoDisturbChange" />
 				</view>
 				<view class="setting-item">
-					<text class="setting-label" :style="{ color: theme.textPrimary }">置顶聊天</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">{{ t('chatSettings.top') }}</text>
 					<switch class="setting-switch" :checked="isPinned" @change="handlePinnedChange" />
 				</view>
 			</view>
@@ -109,26 +109,26 @@
 			<!-- 群管理 -->
 			<view class="setting-section" :style="{ backgroundColor: theme.cardBg }">
 				<view v-if="canManageGroupMute" class="setting-item" :style="{ borderBottomColor: theme.borderColor }">
-					<text class="setting-label" :style="{ color: theme.textPrimary }">全员禁言</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">{{ t('chat.groupSettings.muteAll') }}</text>
 					<switch class="setting-switch" :checked="muteAllEnabled" :disabled="muteAllUpdating" @change="handleMuteAllChange" />
 				</view>
 				<view v-if="canManageJoinRequests" class="setting-item" :style="{ borderBottomColor: theme.borderColor }">
-					<text class="setting-label" :style="{ color: theme.textPrimary }">允许成员邀请</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">{{ t('chat.groupSettings.allowMemberInvite') }}</text>
 					<switch class="setting-switch" :checked="allowMemberInvite" :disabled="memberInviteUpdating" @change="handleMemberInviteChange" />
 				</view>
 				<view v-if="canManageJoinRequests" class="setting-item" :style="{ borderBottomColor: theme.borderColor }">
-					<text class="setting-label" :style="{ color: theme.textPrimary }">群聊邀请确认</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">{{ t('chat.groupSettings.inviteConfirm') }}</text>
 					<switch class="setting-switch" :checked="needApproval" :disabled="approvalUpdating" @change="handleApprovalChange" />
 				</view>
 				<view v-if="canManageJoinRequests" class="setting-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleJoinRequests">
-					<text class="setting-label" :style="{ color: theme.textPrimary }">入群申请</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">{{ t('chat.groupJoinRequests.title') }}</text>
 					<view class="setting-value-wrap">
-						<text class="setting-value" :style="{ color: pendingJoinRequestCount > 0 ? '#F54A45' : theme.textSecondary }">{{ pendingJoinRequestCount > 0 ? pendingJoinRequestCount + '条待处理' : '暂无待处理' }}</text>
+						<text class="setting-value" :style="{ color: pendingJoinRequestCount > 0 ? '#F54A45' : theme.textSecondary }">{{ pendingJoinRequestCount > 0 ? t('chat.groupSettings.pendingCount', { count: pendingJoinRequestCount }) : t('chat.groupSettings.noPending') }}</text>
 						<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 					</view>
 				</view>
 				<view class="setting-item" @click="handleMyNickname">
-					<text class="setting-label" :style="{ color: theme.textPrimary }">我在本群的昵称</text>
+					<text class="setting-label" :style="{ color: theme.textPrimary }">{{ t('chat.groupSettings.myNickname') }}</text>
 					<view class="setting-value-wrap">
 						<text class="setting-value" :style="{ color: theme.textSecondary }">{{ myNickname }}</text>
 						<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
@@ -139,13 +139,13 @@
 			<!-- 危险操作 -->
 			<view class="setting-section" :style="{ backgroundColor: theme.cardBg }">
 				<view class="setting-item danger-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleClearHistory">
-					<text class="setting-label danger-text">清空聊天记录</text>
+					<text class="setting-label danger-text">{{ t('chatSettings.clearHistory') }}</text>
 				</view>
 				<view v-if="isOwner" class="setting-item danger-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleTransferOwner">
-					<text class="setting-label danger-text">转让群主</text>
+					<text class="setting-label danger-text">{{ t('chat.groupSettings.transferOwner') }}</text>
 				</view>
 				<view class="setting-item danger-item" @click="handleDeleteAndExit">
-					<text class="setting-label danger-text">{{ isOwner ? '解散群聊' : '退出群聊' }}</text>
+					<text class="setting-label danger-text">{{ isOwner ? t('chat.groupSettings.dissolveGroup') : t('chat.groupSettings.quitGroup') }}</text>
 				</view>
 			</view>
 
@@ -156,14 +156,14 @@
 		<view v-if="showEditNameDialog" class="dialog-mask" :style="{ backgroundColor: theme.overlayMask }" @click.stop="handleCancelEditName">
 			<view class="dialog-container" :style="{ backgroundColor: theme.cardBg }" @click.stop="">
 				<view class="dialog-header" :style="{ borderBottomColor: theme.borderColor }">
-					<text class="dialog-title" :style="{ color: theme.textPrimary }">修改群名称</text>
+					<text class="dialog-title" :style="{ color: theme.textPrimary }">{{ t('chat.groupSettings.editGroupName') }}</text>
 				</view>
 				<view class="dialog-content">
 					<input 
 						class="dialog-input" 
 						:style="{ color: theme.inputText, backgroundColor: theme.inputBg, borderColor: theme.borderColor }"
 						v-model="editingGroupName" 
-						placeholder="请输入群名称（最多30字）"
+						:placeholder="t('chat.groupSettings.groupNamePlaceholder')"
 						maxlength="30"
 						:focus="showEditNameDialog"
 					/>
@@ -171,10 +171,10 @@
 				</view>
 				<view class="dialog-footer" :style="{ borderTopColor: theme.borderColor }">
 					<view class="dialog-btn dialog-btn-cancel" @click.stop="handleCancelEditName">
-						<text class="dialog-btn-text" :style="{ color: theme.textSecondary }">取消</text>
+						<text class="dialog-btn-text" :style="{ color: theme.textSecondary }">{{ t('common.cancel') }}</text>
 					</view>
 					<view class="dialog-btn dialog-btn-confirm" @click.stop="handleConfirmEditName">
-						<text class="dialog-btn-text dialog-btn-text-primary" :style="{ color: theme.brandPrimary }">确定</text>
+						<text class="dialog-btn-text dialog-btn-text-primary" :style="{ color: theme.brandPrimary }">{{ t('common.ok') }}</text>
 					</view>
 				</view>
 			</view>
@@ -184,14 +184,14 @@
 		<view v-if="showEditNicknameDialog" class="dialog-mask" :style="{ backgroundColor: theme.overlayMask }" @click.stop="handleCancelEditNickname">
 			<view class="dialog-container" :style="{ backgroundColor: theme.cardBg }" @click.stop="">
 				<view class="dialog-header" :style="{ borderBottomColor: theme.borderColor }">
-					<text class="dialog-title" :style="{ color: theme.textPrimary }">修改我的群昵称</text>
+					<text class="dialog-title" :style="{ color: theme.textPrimary }">{{ t('chat.groupSettings.editMyNickname') }}</text>
 				</view>
 				<view class="dialog-content">
 					<input 
 						class="dialog-input" 
 						:style="{ color: theme.inputText, backgroundColor: theme.inputBg, borderColor: theme.borderColor }"
 						v-model="editingNickname" 
-						placeholder="请输入昵称（最多15字）"
+						:placeholder="t('chat.groupSettings.nicknamePlaceholder')"
 						maxlength="15"
 						:focus="showEditNicknameDialog"
 					/>
@@ -199,10 +199,10 @@
 				</view>
 				<view class="dialog-footer" :style="{ borderTopColor: theme.borderColor }">
 					<view class="dialog-btn dialog-btn-cancel" @click.stop="handleCancelEditNickname">
-						<text class="dialog-btn-text" :style="{ color: theme.textSecondary }">取消</text>
+						<text class="dialog-btn-text" :style="{ color: theme.textSecondary }">{{ t('common.cancel') }}</text>
 					</view>
 					<view class="dialog-btn dialog-btn-confirm" @click.stop="handleConfirmEditNickname">
-						<text class="dialog-btn-text dialog-btn-text-primary" :style="{ color: theme.brandPrimary }">确定</text>
+						<text class="dialog-btn-text dialog-btn-text-primary" :style="{ color: theme.brandPrimary }">{{ t('common.ok') }}</text>
 					</view>
 				</view>
 			</view>
@@ -312,12 +312,12 @@
 	const roleLabel = computed(() : string => {
 		const role = groupInfo.value != null && groupInfo.value.myRole != null ? Number(groupInfo.value.myRole) : 0
 		if (role === 2) {
-			return '群主'
+			return t('chat.groupNotice.owner')
 		}
 		if (role === 1) {
-			return '管理员'
+			return t('chat.groupSettings.admin')
 		}
-		return '成员'
+		return t('chat.groupSettings.member')
 	})
 
 	const roleBadgeClass = computed(() : string => {
@@ -359,7 +359,7 @@
 			lastOwnerTransferToastAt = now
 			if (newOwnerId !== '' && newOwnerId === currentUserId.value) {
 				uni.showToast({
-					title: '你已成为新群主',
+					title: t('im.notify.you_are_new_owner'),
 					icon: 'none',
 					duration: 2200
 				})
@@ -367,14 +367,14 @@
 			}
 			if (oldOwnerId !== '' && oldOwnerId === currentUserId.value) {
 				uni.showToast({
-					title: '你已转让群主身份',
+					title: t('im.notify.you_transferred_owner'),
 					icon: 'none',
 					duration: 2200
 				})
 				return
 			}
 			uni.showToast({
-				title: '群主已更新',
+				title: t('im.notify.group_owner_updated'),
 				icon: 'none',
 				duration: 1800
 			})
@@ -417,7 +417,7 @@
 				return
 			}
 			uni.showToast({
-				title: '加载群组信息失败',
+				title: t('chat.groupSettings.toast.loadGroupFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -444,7 +444,7 @@
 					
 					return {
 						id: String(member.userId),
-						name: member.nickname || member.userNickname || '未知',
+						name: member.nickname || member.userNickname || t('chat.preview.unknownSender'),
 						avatar: normalizeAvatarUrl(member.avatar || member.userAvatar),
 						avatarError: false,
 						avatarText: getAvatarText(member.nickname || member.userNickname || ''),
@@ -537,7 +537,7 @@
 	function handleAddMember() {
 		if (!canAddMembers.value) {
 			uni.showToast({
-				title: '当前群不允许普通成员邀请',
+				title: t('chat.groupSettings.toast.inviteNotAllowed'),
 				icon: 'none'
 			})
 			return
@@ -551,7 +551,7 @@
 	function handleRemoveMember() {
 		if (!canRemoveMembers.value) {
 			uni.showToast({
-				title: '仅群主或管理员可删除成员',
+				title: t('chat.groupSettings.toast.removeMemberForbidden'),
 				icon: 'none'
 			})
 			return
@@ -586,7 +586,7 @@
 		// 验证群名称
 		if (!newName) {
 			uni.showToast({
-				title: '群名称不能为空',
+				title: t('chat.groupSettings.toast.groupNameEmpty'),
 				icon: 'none'
 			})
 			return
@@ -594,7 +594,7 @@
 		
 		if (newName.length > 30) {
 			uni.showToast({
-				title: '群名称不能超过30个字',
+				title: t('chat.groupSettings.toast.groupNameTooLong'),
 				icon: 'none'
 			})
 			return
@@ -614,13 +614,13 @@
 			groupName.value = newName
 			showEditNameDialog.value = false
 			uni.showToast({
-				title: '修改成功',
+				title: t('chat.groupSettings.toast.updateSuccess'),
 				icon: 'success'
 			})
 		} catch (e) {
 			console.error('[GroupSettings] 修改群名称失败:', e)
 			uni.showToast({
-				title: '修改失败',
+				title: t('chat.groupSettings.toast.updateFailed'),
 				icon: 'none'
 			})
 		}
@@ -680,7 +680,7 @@
 	function handleTransferOwner() {
 		if (!isOwner.value) {
 			uni.showToast({
-				title: '仅群主可转让群主身份',
+				title: t('chat.groupSettings.toast.transferOwnerForbidden'),
 				icon: 'none'
 			})
 			return
@@ -695,7 +695,7 @@
 		const newValue = e.detail.value as boolean
 		if (!groupId.value || memberInviteUpdating.value) {
 			uni.showToast({
-				title: '群信息未加载',
+				title: t('chat.groupSettings.toast.groupInfoNotLoaded'),
 				icon: 'none'
 			})
 			return
@@ -715,14 +715,14 @@
 				groupInfo.value.allowMemberInvite = newValue
 			}
 			uni.showToast({
-				title: newValue ? '已允许成员邀请' : '已关闭成员邀请',
+				title: newValue ? t('chat.groupSettings.toast.memberInviteEnabled') : t('chat.groupSettings.toast.memberInviteDisabled'),
 				icon: 'success'
 			})
 		} catch (e) {
 			allowMemberInvite.value = oldValue
 			console.error('[GroupSettings] 更新成员邀请权限失败:', e)
 			uni.showToast({
-				title: '更新失败',
+				title: t('chat.groupSettings.toast.updateFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -734,7 +734,7 @@
 		const newValue = e.detail.value as boolean
 		if (!groupId.value || muteAllUpdating.value) {
 			uni.showToast({
-				title: '群信息未加载',
+				title: t('chat.groupSettings.toast.groupInfoNotLoaded'),
 				icon: 'none'
 			})
 			return
@@ -755,14 +755,14 @@
 				groupInfo.value.muteAll = newValue
 			}
 			uni.showToast({
-				title: newValue ? '已开启全员禁言' : '已关闭全员禁言',
+				title: newValue ? t('chat.groupSettings.toast.muteAllEnabled') : t('chat.groupSettings.toast.muteAllDisabled'),
 				icon: 'success'
 			})
 		} catch (e) {
 			muteAllEnabled.value = oldValue
 			console.error('[GroupSettings] 设置全员禁言失败:', e)
 			uni.showToast({
-				title: '设置失败',
+				title: t('chat.groupSettings.toast.settingFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -775,7 +775,7 @@
 		
 		if (!chatId.value) {
 			uni.showToast({
-				title: '会话信息未加载',
+				title: t('chat.chatFiles.conversationNotLoaded'),
 				icon: 'none'
 			})
 			return
@@ -788,13 +788,13 @@
 			}
 			noDisturb.value = newValue
 			uni.showToast({
-				title: newValue ? '已开启免打扰' : '已关闭免打扰',
+				title: newValue ? t('chatSettings.toast.notifyEnabled') : t('chatSettings.toast.notifyDisabled'),
 				icon: 'success'
 			})
 		} catch (e) {
 			console.error('[GroupSettings] 设置免打扰失败:', e)
 			uni.showToast({
-				title: '设置失败',
+				title: t('chat.groupSettings.toast.settingFailed'),
 				icon: 'none'
 			})
 		}
@@ -805,7 +805,7 @@
 		
 		if (!chatId.value) {
 			uni.showToast({
-				title: '会话信息未加载',
+				title: t('chat.chatFiles.conversationNotLoaded'),
 				icon: 'none'
 			})
 			return
@@ -818,13 +818,13 @@
 			}
 			isPinned.value = newValue
 			uni.showToast({
-				title: newValue ? '已置顶' : '已取消置顶',
+				title: newValue ? t('message.toast.pinned') : t('message.toast.unpinned'),
 				icon: 'success'
 			})
 		} catch (e) {
 			console.error('[GroupSettings] 设置置顶失败:', e)
 			uni.showToast({
-				title: '设置失败',
+				title: t('chat.groupSettings.toast.settingFailed'),
 				icon: 'none'
 			})
 		}
@@ -834,7 +834,7 @@
 		const newValue = e.detail.value as boolean
 		if (!groupId.value || approvalUpdating.value) {
 			uni.showToast({
-				title: '群信息未加载',
+				title: t('chat.groupSettings.toast.groupInfoNotLoaded'),
 				icon: 'none'
 			})
 			return
@@ -856,14 +856,14 @@
 				groupInfo.value.needApproval = newValue
 			}
 			uni.showToast({
-				title: newValue ? '已开启邀请确认' : '已关闭邀请确认',
+				title: newValue ? t('chat.groupSettings.toast.inviteConfirmEnabled') : t('chat.groupSettings.toast.inviteConfirmDisabled'),
 				icon: 'success'
 			})
 		} catch (e) {
 			needApproval.value = oldValue
 			console.error('[GroupSettings] 更新邀请确认失败:', e)
 			uni.showToast({
-				title: '更新失败',
+				title: t('chat.groupSettings.toast.updateFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -894,7 +894,7 @@
 		// 验证昵称
 		if (!newNickname) {
 			uni.showToast({
-				title: '昵称不能为空',
+				title: t('chat.groupSettings.toast.nicknameEmpty'),
 				icon: 'none'
 			})
 			return
@@ -902,7 +902,7 @@
 		
 		if (newNickname.length > 15) {
 			uni.showToast({
-				title: '昵称不能超过15个字',
+				title: t('chat.groupSettings.toast.nicknameTooLong'),
 				icon: 'none'
 			})
 			return
@@ -925,13 +925,13 @@
 			showEditNicknameDialog.value = false
 			await loadGroupMembers()
 			uni.showToast({
-				title: '修改成功',
+				title: t('chat.groupSettings.toast.updateSuccess'),
 				icon: 'success'
 			})
 		} catch (e) {
 			console.error('[GroupSettings] 修改昵称失败:', e)
 			uni.showToast({
-				title: '修改失败',
+				title: t('chat.groupSettings.toast.updateFailed'),
 				icon: 'none'
 			})
 		}
@@ -939,19 +939,21 @@
 
 	function handleClearHistory() {
 		uni.showModal({
-			title: '清空聊天记录',
-			content: '确定要清空聊天记录吗？此操作不可恢复',
+			title: t('chatSettings.clearHistory'),
+			content: t('chatSettings.clearHistoryConfirm'),
+			cancelText: t('common.cancel'),
+			confirmText: t('common.ok'),
 			success: (res) => {
 				if (res.confirm) {
 					clearConversationHistory(chatId.value).then(() => {
 							uni.showToast({
-								title: '已清空',
+								title: t('chatSettings.toast.cleared'),
 								icon: 'success'
 							})
 					}).catch((e) => {
 						console.error('[GroupSettings] 清空聊天记录失败:', e)
 						uni.showToast({
-							title: '清空失败',
+							title: t('chatSettings.toast.clearFailed'),
 							icon: 'none'
 						})
 					})
@@ -962,8 +964,10 @@
 
 	function handleDeleteAndExit() {
 		uni.showModal({
-			title: isOwner.value ? '解散群聊' : '退出群聊',
-			content: isOwner.value ? '解散后所有成员都将无法继续查看此群，确定要解散吗？' : '退出后将不再接收此群消息，确定要退出吗？',
+			title: isOwner.value ? t('chat.groupSettings.dissolveGroup') : t('chat.groupSettings.quitGroup'),
+			content: isOwner.value ? t('chat.groupSettings.confirmDissolve') : t('chat.groupSettings.confirmQuit'),
+			cancelText: t('common.cancel'),
+			confirmText: t('common.ok'),
 			success: async (res) => {
 				if (res.confirm) {
 					try {
@@ -974,14 +978,14 @@
 						}
 					} catch (e) {
 						console.error('[GroupSettings] 退出群聊失败:', e)
-						const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, isOwner.value ? '群聊已解散' : '你已不在该群聊')
+						const lifecycleNotice = resolveGroupLifecycleErrorNotice(e, isOwner.value ? t('chat.groupSettings.groupDissolved') : t('im.notify.removed_from_group'))
 						if (lifecycleNotice !== '') {
 							lifecycleRedirecting = true
 							finalizeGroupLifecycleExit(groupId.value, chatId.value, lifecycleNotice)
 							return
 						}
 						uni.showToast({
-							title: isOwner.value ? '解散失败' : '退出失败',
+							title: isOwner.value ? t('chat.groupSettings.toast.dissolveFailed') : t('chat.groupSettings.toast.quitFailed'),
 							icon: 'none'
 						})
 					}

@@ -4,7 +4,7 @@
  * 
  * 说明：文件上传统一走移动端代理接口（/app-api），由后端统一处理
  */
-import { 
+import {
 	API_BASE_URL,
 	MAX_FILE_SIZE,
 	MAX_IMAGE_SIZE,
@@ -12,6 +12,7 @@ import {
 } from '../config/app.config.uts'
 import { getToken, getTenantId } from './request.uts'
 import { formatToken } from '../store/user.uts'
+import { t } from '../store/locale.uts'
 
 // 上传配置 - 使用统一的 API 配置
 const UPLOAD_URL = API_BASE_URL + '/infra/file/upload'
@@ -132,7 +133,7 @@ export function uploadFile(
 			try {
 				const localFileSize = await getLocalFileSize(filePath)
 				if (!validateFileSize(localFileSize, uploadConfig.maxSize)) {
-					reject(new Error('文件过大'))
+					reject(new Error(t('runtime.upload.fileTooLarge', { size: formatFileSize(uploadConfig.maxSize) })))
 					return
 				}
 			} catch (e) {
@@ -162,35 +163,35 @@ export function uploadFile(
 						} else {
 							if (uploadConfig.showToast) {
 								uni.showToast({
-									title: data.msg || '上传失败',
+									title: data.msg || t('runtime.upload.uploadFailed'),
 									icon: 'none'
 								})
 							}
-							reject(new Error(data.msg || '上传失败'))
+							reject(new Error(data.msg || t('runtime.upload.uploadFailed')))
 						}
 					} catch (e) {
 						if (uploadConfig.showToast) {
 							uni.showToast({
-								title: '解析响应失败',
+								title: t('runtime.upload.parseResponseFailed'),
 								icon: 'none'
 							})
 						}
-						reject(new Error('解析响应失败'))
+						reject(new Error(t('runtime.upload.parseResponseFailed')))
 					}
 				} else {
 					if (uploadConfig.showToast) {
 						uni.showToast({
-							title: '上传失败，状态码：' + res.statusCode,
+							title: t('runtime.upload.uploadFailedWithStatus', { statusCode: res.statusCode }),
 							icon: 'none'
 						})
 					}
-					reject(new Error('上传失败，状态码：' + res.statusCode))
+					reject(new Error(t('runtime.upload.uploadFailedWithStatus', { statusCode: res.statusCode })))
 				}
 			},
 			fail: (err) => {
 				if (uploadConfig.showToast) {
 					uni.showToast({
-						title: '上传失败',
+						title: t('runtime.upload.uploadFailed'),
 						icon: 'none'
 					})
 				}
@@ -362,23 +363,23 @@ export function uploadFileAndReturnId(
 						}
 						if (uploadConfig.showToast) {
 							uni.showToast({
-								title: data.msg || '上传失败',
+								title: data.msg || t('runtime.upload.uploadFailed'),
 								icon: 'none'
 							})
 						}
-						reject(new Error(data.msg || '上传失败'))
+						reject(new Error(data.msg || t('runtime.upload.uploadFailed')))
 					} catch (e) {
 						if (uploadConfig.showToast) {
 							uni.showToast({
-								title: '解析响应失败',
+								title: t('runtime.upload.parseResponseFailed'),
 								icon: 'none'
 							})
 						}
-						reject(new Error('解析响应失败'))
+						reject(new Error(t('runtime.upload.parseResponseFailed')))
 					}
 					return
 				}
-				let msg = '上传失败，状态码：' + res.statusCode
+				let msg = t('runtime.upload.uploadFailedWithStatus', { statusCode: res.statusCode })
 				try {
 					const data = JSON.parse(res.data)
 					if (data && data.msg) {
@@ -398,7 +399,7 @@ export function uploadFileAndReturnId(
 			fail: (err) => {
 				if (uploadConfig.showToast) {
 					uni.showToast({
-						title: '上传失败',
+						title: t('runtime.upload.uploadFailed'),
 						icon: 'none'
 					})
 				}
@@ -428,14 +429,14 @@ export function uploadBlobAndReturnId(
 		}
 
 		if (blob == null) {
-			reject(new Error('上传文件为空'))
+			reject(new Error(t('runtime.upload.emptyFile')))
 			return
 		}
 
 		const size = Number((blob as any).size || 0)
 		const maxSize = uploadConfig.maxSize || MAX_FILE_SIZE
 		if (size > 0 && !validateFileSize(size, maxSize)) {
-			reject(new Error('文件过大'))
+			reject(new Error(t('runtime.upload.fileTooLarge', { size: formatFileSize(maxSize) })))
 			return
 		}
 
@@ -479,7 +480,7 @@ export function uploadBlobAndReturnId(
 				try {
 					const status = xhr.status != null ? Number(xhr.status) : 0
 					if (status < 200 || status >= 300) {
-						let msg = '上传失败'
+						let msg = t('runtime.upload.uploadFailed')
 						try {
 							const errorData = JSON.parse(xhr.responseText || '{}')
 							if (errorData && errorData.msg) {
@@ -501,38 +502,38 @@ export function uploadBlobAndReturnId(
 						resolve(result)
 						return
 					}
-					const msg = data.msg || '上传失败'
+					const msg = data.msg || t('runtime.upload.uploadFailed')
 					if (uploadConfig.showToast) {
 						uni.showToast({ title: msg, icon: 'none' })
 					}
 					reject(new Error(msg))
 				} catch (e) {
 					if (uploadConfig.showToast) {
-						uni.showToast({ title: '解析响应失败', icon: 'none' })
+						uni.showToast({ title: t('runtime.upload.parseResponseFailed'), icon: 'none' })
 					}
-					reject(new Error('解析响应失败'))
+					reject(new Error(t('runtime.upload.parseResponseFailed')))
 				}
 			}
 
 			xhr.onerror = () => {
 				if (uploadConfig.showToast) {
-					uni.showToast({ title: '上传失败', icon: 'none' })
+					uni.showToast({ title: t('runtime.upload.uploadFailed'), icon: 'none' })
 				}
-				reject(new Error('上传失败'))
+				reject(new Error(t('runtime.upload.uploadFailed')))
 			}
 
 			xhr.send(form)
 			return
 		} catch (e) {
 			if (uploadConfig.showToast) {
-				uni.showToast({ title: '浏览器上传失败', icon: 'none' })
+				uni.showToast({ title: t('runtime.upload.browserUploadFailed'), icon: 'none' })
 			}
 			reject(e)
 			return
 		}
 		// #endif
 
-		reject(new Error('当前平台不支持 Blob 上传'))
+		reject(new Error(t('runtime.upload.blobUploadUnsupported')))
 	})
 }
 
@@ -542,7 +543,7 @@ export function uploadBlobAndReturnId(
 function validateFileSize(size: number, maxSize: number): boolean {
 	if (size > maxSize) {
 		uni.showToast({
-			title: `文件大小不能超过 ${formatFileSize(maxSize)}`,
+			title: t('runtime.upload.fileTooLarge', { size: formatFileSize(maxSize) }),
 			icon: 'none',
 			duration: 2000
 		})

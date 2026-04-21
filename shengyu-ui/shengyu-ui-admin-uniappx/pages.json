@@ -50,6 +50,13 @@
 			}
 		},
 		{
+			"path": "pages/profile/language-settings",
+			"style": {
+				"navigationBarTitleText": "多语言",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/message/chat",
 			"style": {
 				"navigationBarTitleText": "聊天",

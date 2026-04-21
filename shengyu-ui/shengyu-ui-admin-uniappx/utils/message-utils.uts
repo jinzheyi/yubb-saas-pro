@@ -11,6 +11,7 @@
 
 import { MessageType } from './websocket.uts'
 import { getAvatarText as getAvatarTextFromAvatar, getUserAvatarColor as getUserAvatarColorFromAvatar } from './avatar.uts'
+import { t } from '../store/locale.uts'
 
 /**
  * 数据库消息类型映射到字符串
@@ -133,13 +134,13 @@ export function formatMessageTime(timestamp: number): string {
   
   // 1分钟内
   if (diff < oneMinute) {
-    return '刚刚'
+    return t('common.relativeTime.justNow')
   }
   
   // 1小时内
   if (diff < oneHour) {
     const minutes = Math.floor(diff / oneMinute)
-    return minutes + '分钟前'
+    return t('common.relativeTime.minutesAgo', { count: minutes })
   }
   
   const date = new Date(timestamp)
@@ -158,12 +159,20 @@ export function formatMessageTime(timestamp: number): string {
   if (date.toDateString() === yesterday.toDateString()) {
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
-    return '昨天 ' + hours + ':' + minutes
+    return t('common.relativeTime.yesterdayAt', { time: hours + ':' + minutes })
   }
   
   // 本周内
   if (diff < 7 * oneDay) {
-    const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+    const weekDays = [
+      t('common.relativeTime.weekdays.sunday'),
+      t('common.relativeTime.weekdays.monday'),
+      t('common.relativeTime.weekdays.tuesday'),
+      t('common.relativeTime.weekdays.wednesday'),
+      t('common.relativeTime.weekdays.thursday'),
+      t('common.relativeTime.weekdays.friday'),
+      t('common.relativeTime.weekdays.saturday')
+    ]
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
     return weekDays[date.getDay()] + ' ' + hours + ':' + minutes
@@ -175,7 +184,7 @@ export function formatMessageTime(timestamp: number): string {
     const day = date.getDate()
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
-    return month + '月' + day + '日 ' + hours + ':' + minutes
+    return t('common.relativeTime.thisYearAt', { month: month, day: day, time: hours + ':' + minutes })
   }
   
   // 跨年
@@ -184,7 +193,7 @@ export function formatMessageTime(timestamp: number): string {
   const day = date.getDate()
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
-  return year + '年' + month + '月' + day + '日 ' + hours + ':' + minutes
+  return t('common.relativeTime.fullDateTime', { year: year, month: month, day: day, time: hours + ':' + minutes })
 }
 
 /**
@@ -346,25 +355,25 @@ export function getMessageSummary(type: any, content: any, maxLength: number = 5
       const text = typeof content === 'string' ? content : content.content || ''
       return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
     case 'image':
-      return '[图片]'
+      return t('chat.preview.image')
     case 'voice':
-      return '[语音]'
+      return t('chat.preview.voice')
     case 'video':
-      return '[视频]'
+      return t('chat.preview.video')
     case 'file':
-      return '[文件]'
+      return t('chat.preview.file')
     case 'location':
     case 6:
-      return '[位置]'
+      return t('chat.preview.location')
     case 'emoji':
     case 7:
-      return '[表情]'
+      return t('chat.preview.emoji')
     case 'sticker':
     case 8:
-      return '[动画表情]'
+      return t('chat.preview.sticker')
     case 'quote':
-      return '[引用回复]'
+      return t('chat.preview.quote')
     default:
-      return '[消息]'
+      return t('chat.preview.message')
   }
 }

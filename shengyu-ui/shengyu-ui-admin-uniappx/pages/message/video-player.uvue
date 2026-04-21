@@ -36,11 +36,13 @@
 
 <script setup lang="uts">
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
+	const { t } = useI18n()
 	const videoUrl = ref('')
-	const videoTitle = ref('视频播放')
+	const videoTitle = ref('')
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	let unsubscribeTheme: (() => void) | null = null
 
@@ -55,7 +57,7 @@
 	function handleVideoError(e: any) {
 		console.error('[VideoPlayer] 视频播放错误:', e)
 		uni.showToast({
-			title: '视频加载失败',
+			title: t('chat.videoPlayer.loadFailed'),
 			icon: 'none'
 		})
 	}
@@ -74,6 +76,9 @@
 		}
 		if (options['title']) {
 			videoTitle.value = decodeURIComponent(options['title'])
+		}
+		if (videoTitle.value === '') {
+			videoTitle.value = t('chat.label.videoPlay')
 		}
 		
 		console.log('[VideoPlayer] 页面参数:', { 

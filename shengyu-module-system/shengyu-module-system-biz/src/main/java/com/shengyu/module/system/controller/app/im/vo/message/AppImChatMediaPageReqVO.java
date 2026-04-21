@@ -15,7 +15,7 @@ import javax.validation.constraints.NotNull;
 public class AppImChatMediaPageReqVO extends PageParam {
 
     @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "ChatID不能为空")
+    @NotNull(message = "{validation.im.chat_id.required}")
     private Long chatId;
 
     @Schema(description = "文件类型过滤(all|image|video|file)", example = "all")

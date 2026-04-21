@@ -1,11 +1,12 @@
 import { parseGroupInvitePayload, openJoinGroupByPayload } from './group-invite.uts'
 import { navToBlockedContent, navToSecureBrowser } from './secure-browser.uts'
+import { t } from '../store/locale.uts'
 
 export function routeScanResult(rawResult: any, redirect: boolean = false): boolean {
 	const rawText = rawResult != null ? String(rawResult).trim() : ''
 	if (rawText === '') {
 		uni.showToast({
-			title: '未识别到有效内容',
+			title: t('runtime.scan.noValidContent'),
 			icon: 'none'
 		})
 		return false
@@ -18,10 +19,10 @@ export function routeScanResult(rawResult: any, redirect: boolean = false): bool
 	}
 
 	if (/^https?:\/\//i.test(rawText) || /^www\./i.test(rawText)) {
-		navToSecureBrowser(rawText, '扫码结果', 'scan', redirect)
+		navToSecureBrowser(rawText, t('runtime.scan.resultTitle'), 'scan', redirect)
 		return true
 	}
 
-	navToBlockedContent(rawText, '扫码结果', 'scan', redirect)
+	navToBlockedContent(rawText, t('runtime.scan.resultTitle'), 'scan', redirect)
 	return true
 }

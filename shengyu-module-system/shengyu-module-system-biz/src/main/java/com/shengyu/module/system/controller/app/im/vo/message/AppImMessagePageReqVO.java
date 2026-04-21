@@ -13,7 +13,7 @@ import javax.validation.constraints.NotNull;
 public class AppImMessagePageReqVO extends PageParam {
 
     @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "ChatID不能为空")
+    @NotNull(message = "{validation.im.chat_id.required}")
     private Long chatId;
 
     @Schema(description = "消息类型(1-文本 2-图片 3-语音 4-视频 5-文件 6-位置 7-表情包 8-自定义贴纸 10-系统消息)", example = "1")

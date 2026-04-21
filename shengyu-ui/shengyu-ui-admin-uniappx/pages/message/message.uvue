@@ -6,7 +6,7 @@
 		<!-- 头部搜索区域 -->
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-top">
-				<text class="header-title" :style="{ color: theme.headerText }">{{ t('message.title', '消息') }}</text>
+				<text class="header-title" :style="{ color: theme.headerText }">{{ t('message.title') }}</text>
 				<view class="header-icons">
 					<text class="iconfont header-icon" :style="{ color: theme.headerText }" @click="handleSyncBadge">&#xea5f;</text>
 					<text class="iconfont header-icon" :style="{ color: theme.headerText }" @click="handleScan">&#xea8b;</text>
@@ -16,7 +16,7 @@
 			<view class="search-container">
 				<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
 					<text class="iconfont search-icon" :style="{ color: theme.textTertiary }" @click="handleSearch">&#xea6e;</text>
-					<input class="search-input" :style="{ color: theme.inputText }" v-model="listSearchKeyword" :placeholder="t('message.searchPlaceholder', '搜索')" placeholder-class="placeholder" confirm-type="search" @confirm="handleSearch" />
+					<input class="search-input" :style="{ color: theme.inputText }" v-model="listSearchKeyword" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" confirm-type="search" @confirm="handleSearch" />
 					<text v-if="listSearchKeyword !== ''" class="iconfont search-clear" :style="{ color: theme.textTertiary }" @click="clearConversationFilter">&#xea73;</text>
 				</view>
 			</view>
@@ -82,12 +82,12 @@
 						<view class="message-top">
 							<view class="message-name-wrap">
 								<text class="message-name" :style="{ color: theme.textPrimary }">{{ item.targetName }}</text>
-								<text v-if="item.conversationType === 2 && item.groupMemberCount" class="member-count" :style="{ color: theme.textTertiary }">({{ item.groupMemberCount }})</text>
+								<text v-if="item.conversationType === 2 && item.groupMemberCount" class="member-count" :style="{ color: theme.textTertiary }">{{ t('message.memberCount', { count: item.groupMemberCount }) }}</text>
 							</view>
 							<text class="message-time" :style="{ color: theme.textTertiary }">{{ formatWeChatTime(item.lastMessageTime) }}</text>
 						</view>
 						<view class="message-bottom">
-							<text v-if="item.lastMessageHasAtMe" class="atme-label">[有人@我]</text>
+							<text v-if="item.lastMessageHasAtMe" class="atme-label">{{ t('message.atMe') }}</text>
 							<view class="message-desc">
 								<template v-for="(token, tokenIndex) in item.lastMessagePreviewTokens" :key="'pinned-token-' + item.chatId + '-' + tokenIndex">
 									<image v-if="token.type === 'emoji'" class="message-desc-emoji" :src="token.content" mode="aspectFit" />
@@ -102,7 +102,7 @@
 				
 				<!-- 折叠/展开按钮 -->
 				<view v-if="showFoldToggle" class="fold-toggle" :style="{ backgroundColor: theme.cardBgMuted }" @click="isPinnedFolded = !isPinnedFolded">
-					<text class="fold-text" :style="{ color: theme.textSecondary }">{{ isPinnedFolded ? t('message.fold.showMore', '展开置顶聊天') : t('message.fold.hideMore', '收起置顶聊天') }}</text>
+					<text class="fold-text" :style="{ color: theme.textSecondary }">{{ isPinnedFolded ? t('message.fold.showMore') : t('message.fold.hideMore') }}</text>
 					<text class="iconfont fold-icon" :style="{ color: theme.textTertiary }">{{ isPinnedFolded ? '\ue60e' : '\ue68d' }}</text>
 				</view>
 			</view>
@@ -131,12 +131,12 @@
 						<view class="message-top">
 							<view class="message-name-wrap">
 								<text class="message-name" :style="{ color: theme.textPrimary }">{{ item.targetName }}</text>
-								<text v-if="item.conversationType === 2 && item.groupMemberCount" class="member-count" :style="{ color: theme.textTertiary }">({{ item.groupMemberCount }})</text>
+								<text v-if="item.conversationType === 2 && item.groupMemberCount" class="member-count" :style="{ color: theme.textTertiary }">{{ t('message.memberCount', { count: item.groupMemberCount }) }}</text>
 							</view>
 							<text class="message-time" :style="{ color: theme.textTertiary }">{{ formatWeChatTime(item.lastMessageTime) }}</text>
 						</view>
 						<view class="message-bottom">
-							<text v-if="item.lastMessageHasAtMe" class="atme-label">[有人@我]</text>
+							<text v-if="item.lastMessageHasAtMe" class="atme-label">{{ t('message.atMe') }}</text>
 							<view class="message-desc">
 								<template v-for="(token, tokenIndex) in item.lastMessagePreviewTokens" :key="'normal-token-' + item.chatId + '-' + tokenIndex">
 									<image v-if="token.type === 'emoji'" class="message-desc-emoji" :src="token.content" mode="aspectFit" />
@@ -323,7 +323,7 @@
 			chatId: chatId,
 			lastMessageSequence: conv != null && (conv as any).lastMessageSequence != null ? (conv as any).lastMessageSequence.toString() : '0',
 			lastReadSequence: conv != null && (conv as any).lastReadSequence != null ? (conv as any).lastReadSequence.toString() : '0',
-			targetName: targetName !== '' ? targetName : '未知',
+			targetName: targetName !== '' ? targetName : t('chat.preview.unknownSender'),
 			lastMessageType: (conv as any).lastMessageType || 0,
 			lastMessageContent: previewText,
 			lastMessagePreviewTokens: buildConversationPreviewTokens(previewText),
@@ -548,13 +548,21 @@
 							date.getDate() === yesterday.getDate()
 		
 		if (isYesterday) {
-			return '昨天'
+			return t('message.time.yesterday')
 		}
 		
 		// 判断是否在同一周 (简单判断：7天内且星期几小于等于今天)
 		const oneWeekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000
 		if (normalizedTs > oneWeekAgo) {
-			const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+			const weekDays = [
+				t('message.weekdays.sunday'),
+				t('message.weekdays.monday'),
+				t('message.weekdays.tuesday'),
+				t('message.weekdays.wednesday'),
+				t('message.weekdays.thursday'),
+				t('message.weekdays.friday'),
+				t('message.weekdays.saturday')
+			]
 			return weekDays[date.getDay()]
 		}
 		
@@ -597,19 +605,19 @@
 			}
 			return trimmed
 		}
-		if (messageType === 'sticker') return '[动画表情]'
-		if (messageType === 'custom') return '[自定义消息]'
+		if (messageType === 'sticker') return t('message.preview.sticker')
+		if (messageType === 'custom') return t('message.preview.custom')
 		if (messageType === 1) {
 			return ''
 		}
-		if (messageType === 2) return '[图片]'
-		if (messageType === 3) return '[语音]'
-		if (messageType === 4) return '[视频]'
-		if (messageType === 5) return '[文件]'
-		if (messageType === 6) return '[位置]'
-		if (messageType === 7) return '[表情]'
-		if (messageType === 8) return '[动画表情]'
-		if (messageType === 10) return '[系统消息]'
+		if (messageType === 2) return t('message.preview.image')
+		if (messageType === 3) return t('message.preview.voice')
+		if (messageType === 4) return t('message.preview.video')
+		if (messageType === 5) return t('message.preview.file')
+		if (messageType === 6) return t('message.preview.location')
+		if (messageType === 7) return t('message.preview.emoji')
+		if (messageType === 8) return t('message.preview.sticker')
+		if (messageType === 10) return t('message.preview.system')
 		return ''
 	}
 
@@ -629,7 +637,7 @@
 
 	function isNoticeUpdatePreviewToken(content: string): boolean {
 		try {
-			return content != null && String(content).trim() === '[群公告有更新]'
+			return content != null && String(content).trim() === t('message.preview.noticeUpdated')
 		} catch (e) {
 			return false
 		}
@@ -674,7 +682,7 @@
 			
 		} catch (e) {
 			console.error('[Message] 加载会话列表失败:', e)
-			uni.showToast({ title: '加载失败', icon: 'none' })
+			uni.showToast({ title: t('message.toast.loadFailed'), icon: 'none' })
 		} finally {
 			loading.value = false
 		}
@@ -775,6 +783,8 @@
 			uni.showModal({
 				title,
 				content,
+				cancelText: t('common.cancel'),
+				confirmText: t('common.ok'),
 				success: (res) => {
 					resolve(res.confirm === true)
 				},
@@ -799,7 +809,7 @@
 						throw new Error('pin failed')
 					}
 					uni.showToast({
-						title: newPinnedState ? '已置顶' : '已取消置顶',
+						title: newPinnedState ? t('message.toast.pinned') : t('message.toast.unpinned'),
 						icon: 'success'
 					})
 					break
@@ -809,20 +819,20 @@
 							const seq = (targetItem as any).lastMessageSequence != null ? (targetItem as any).lastMessageSequence.toString() : '0'
 							badgeService.clearConversationBadge(targetItem.chatId, seq)
 							uni.showToast({
-								title: '已标记为已读',
+								title: t('message.toast.markedRead'),
 								icon: 'success'
 							})
 						} else {
 							conversationService.markConversationUnread(targetItem.chatId, true)
 							uni.showToast({
-								title: '已标记为未读',
+								title: t('message.toast.markedUnread'),
 								icon: 'success'
 							})
 						}
 						break
 						
 					case 'remove':
-						const confirmed = await showConfirmModal('删除会话', '确定要删除该会话吗？')
+						const confirmed = await showConfirmModal(t('message.confirm.removeTitle'), t('message.confirm.removeContent'))
 						if (!confirmed) {
 							break
 						}
@@ -831,7 +841,7 @@
 							throw new Error('remove failed')
 						}
 						uni.showToast({
-							title: '已删除',
+							title: t('message.toast.removed'),
 							icon: 'success'
 						})
 						break
@@ -839,7 +849,7 @@
 		} catch (e) {
 			console.error('[Message] 操作失败:', e)
 			uni.showToast({
-				title: '操作失败',
+				title: t('message.toast.actionFailed'),
 				icon: 'none'
 			})
 		}

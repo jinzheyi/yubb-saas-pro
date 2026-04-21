@@ -6,7 +6,7 @@
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">搜索</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('contactsSearchResult.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
@@ -16,7 +16,7 @@
 				<input class="search-input" 
 					:style="{ color: theme.inputText }"
 					v-model="searchKeyword"
-					placeholder="搜索联系人、部门、群组" 
+					:placeholder="t('contactsSearchResult.searchPlaceholder')"
 					placeholder-class="placeholder"
 					@input="handleSearch" />
 				<text v-if="searchKeyword" class="iconfont clear-icon" :style="{ color: theme.textTertiary }" @click="clearSearch">&#xea73;</text>
@@ -27,7 +27,7 @@
 			<!-- 最近搜索 -->
 			<view v-if="!searchKeyword && recentSearches.length > 0" class="recent-section" :style="{ backgroundColor: theme.cardBg }">
 				<view class="section-header" :style="{ borderBottomColor: theme.borderColor }">
-					<text class="section-title" :style="{ color: theme.textPrimary }">最近搜索</text>
+					<text class="section-title" :style="{ color: theme.textPrimary }">{{ t('contactsSearchResult.recentSearches') }}</text>
 					<text class="iconfont delete-icon" :style="{ color: theme.textTertiary }" @click="clearRecentSearches">&#xea76;</text>
 				</view>
 				<view class="tag-list">
@@ -45,7 +45,7 @@
 				<!-- 联系人结果 -->
 				<view v-if="contactResults.length > 0" class="result-section">
 					<view class="result-header" :style="{ backgroundColor: theme.pageBg }">
-						<text class="result-title" :style="{ color: theme.textPrimary }">联系人</text>
+						<text class="result-title" :style="{ color: theme.textPrimary }">{{ t('contactsSearchResult.contacts') }}</text>
 					</view>
 					<view class="result-list" :style="{ backgroundColor: theme.cardBg }">
 						<view v-for="contact in contactResults" :key="contact.id" 
@@ -70,7 +70,7 @@
 				<!-- 群组结果 -->
 				<view v-if="groupResults.length > 0" class="result-section">
 					<view class="result-header" :style="{ backgroundColor: theme.pageBg }">
-						<text class="result-title" :style="{ color: theme.textPrimary }">相关群组</text>
+						<text class="result-title" :style="{ color: theme.textPrimary }">{{ t('contactsSearchResult.relatedGroups') }}</text>
 					</view>
 					<view class="result-list" :style="{ backgroundColor: theme.cardBg }">
 						<view v-for="group in groupResults" :key="group.id" 
@@ -86,7 +86,7 @@
 									<text v-for="(part, index) in highlightText(group.name)" :key="index" 
 										:class="{ 'highlight': part.highlight }">{{ part.text }}</text>
 								</text>
-								<text class="result-desc" :style="{ color: theme.textSecondary }">{{ group.memberCount }}位成员</text>
+								<text class="result-desc" :style="{ color: theme.textSecondary }">{{ t('contactsSearchResult.groupMemberCount', { count: group.memberCount }) }}</text>
 							</view>
 						</view>
 					</view>

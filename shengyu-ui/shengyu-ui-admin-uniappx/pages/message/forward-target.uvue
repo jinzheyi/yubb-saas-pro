@@ -5,10 +5,10 @@
 		<view class="header" :style="{ backgroundColor: theme.headerBg }">
 			<view class="header-left" @click="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
 			<view class="header-title-wrap">
-				<text class="header-title" :style="{ color: theme.headerText }">选择会话</text>
+				<text class="header-title" :style="{ color: theme.headerText }">{{ t('chat.forwardTarget.title') }}</text>
 			</view>
 			<view class="header-right"></view>
 		</view>
@@ -16,7 +16,7 @@
 		<view class="search-container" :style="{ backgroundColor: theme.cardBg }">
 			<view class="search-bar" :style="{ backgroundColor: theme.inputBg }">
 				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
-				<input class="search-input" :style="{ color: theme.inputText }" v-model="keyword" placeholder="搜索" placeholder-class="placeholder" />
+				<input class="search-input" :style="{ color: theme.inputText }" v-model="keyword" :placeholder="t('message.searchPlaceholder')" placeholder-class="placeholder" />
 			</view>
 		</view>
 
@@ -26,10 +26,10 @@
 
 		<view v-if="showForwardType" class="forward-type" :style="{ backgroundColor: theme.cardBg }">
 			<view class="forward-type-item" :style="{ backgroundColor: forwardType === 1 ? theme.brandPrimarySoft : theme.cardBgMuted }" :class="{ 'forward-type-active': forwardType === 1 }" @click="setForwardTypeSingle">
-				<text class="forward-type-text" :style="{ color: forwardType === 1 ? theme.brandPrimary : theme.textSecondary }">逐条转发</text>
+				<text class="forward-type-text" :style="{ color: forwardType === 1 ? theme.brandPrimary : theme.textSecondary }">{{ t('chat.forwardTarget.singleForward') }}</text>
 			</view>
 			<view class="forward-type-item" :style="{ backgroundColor: forwardType === 2 ? theme.brandPrimarySoft : theme.cardBgMuted }" :class="{ 'forward-type-active': forwardType === 2 }" @click="setForwardTypeCombine">
-				<text class="forward-type-text" :style="{ color: forwardType === 2 ? theme.brandPrimary : theme.textSecondary }">合并转发</text>
+				<text class="forward-type-text" :style="{ color: forwardType === 2 ? theme.brandPrimary : theme.textSecondary }">{{ t('chat.forwardTarget.combineForward') }}</text>
 			</view>
 		</view>
 
@@ -66,12 +66,15 @@
 
 <script setup lang="uts">
 import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+import { useI18n } from '../../hooks/useI18n.uts'
 import { conversationService, ConversationItem } from '../../services/conversation-service.uts'
 import { forwardMessages as forwardMessagesApi } from '../../api/message.uts'
 import { resendFavorite as resendFavoriteApi } from '../../api/favorite.uts'
 import { encodeIdParam } from '../../utils/id-param.uts'
 import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 import type { ThemeTokens } from '../../config/theme.uts'
+
+const { t } = useI18n()
 
 const keyword = ref('')
 
@@ -102,18 +105,18 @@ const filteredConversations = computed(() => {
 
 const messageCountText = computed(() => {
 	if (favoriteId.value !== '' && favoriteId.value !== '0') {
-		return '1 条消息'
+		return t('chat.forwardTarget.messageCount', { count: 1 })
 	}
 	const count = messageIds.value != null ? messageIds.value.length : 0
-	return count > 0 ? count.toString() + ' 条消息' : ''
+	return count > 0 ? t('chat.forwardTarget.messageCount', { count }) : ''
 })
 
 const summaryTextPrefix = computed(() => {
-	return favoriteId.value !== '' && favoriteId.value !== '0' ? '将发送' : '将转发'
+	return favoriteId.value !== '' && favoriteId.value !== '0' ? t('chat.forwardTarget.summarySend') : t('chat.forwardTarget.summaryForward')
 })
 
 const summaryTextSuffix = computed(() => {
-	return '到'
+	return t('chat.forwardTarget.summaryTo')
 })
 
 const showForwardType = computed(() => {
@@ -193,19 +196,19 @@ async function handleSelect(targetChatId: string): Promise<void> {
 	const ids = messageIds.value != null ? messageIds.value : []
 	const isFavoriteMode = favoriteId.value !== '' && favoriteId.value !== '0'
 	if (targetChatId == null || targetChatId === '' || (!isFavoriteMode && ids.length === 0)) {
-		uni.showToast({ title: '参数错误', icon: 'none' })
+		uni.showToast({ title: t('chat.toast.invalidParams'), icon: 'none' })
 		return
 	}
 	if (!isFavoriteMode && ids.length > MAX_FORWARD_MESSAGE_COUNT) {
-		uni.showToast({ title: `最多选择 ${MAX_FORWARD_MESSAGE_COUNT} 条消息`, icon: 'none' })
+		uni.showToast({ title: t('chat.forwardTarget.maxSelect', { count: MAX_FORWARD_MESSAGE_COUNT }), icon: 'none' })
 		return
 	}
 	try {
-		uni.showLoading({ title: '发送中...' })
+		uni.showLoading({ title: t('chat.forwardTarget.sending') })
 		if (isFavoriteMode) {
 			await resendFavoriteApi(favoriteId.value, targetChatId)
 			uni.hideLoading()
-			uni.showToast({ title: '已发送', icon: 'success' })
+			uni.showToast({ title: t('chat.forwardTarget.sent'), icon: 'success' })
 			const chatIdParam = encodeIdParam(targetChatId)
 			uni.redirectTo({
 				url: `/pages/message/chat?chatId=${chatIdParam}&entryMode=latest`
@@ -222,13 +225,13 @@ async function handleSelect(targetChatId: string): Promise<void> {
 		}
 		const expectedCount = forwardType.value === 2 ? 1 : ids.length
 		if (successCount <= 0) {
-			uni.showToast({ title: '转发失败', icon: 'none' })
+			uni.showToast({ title: t('chat.forwardTarget.forwardFailed'), icon: 'none' })
 			return
 		}
 		if (successCount < expectedCount) {
-			uni.showToast({ title: `部分成功 ${successCount}/${expectedCount}`, icon: 'none' })
+			uni.showToast({ title: t('chat.forwardTarget.partialSuccess', { successCount, expectedCount }), icon: 'none' })
 		} else {
-			uni.showToast({ title: '已转发', icon: 'success' })
+			uni.showToast({ title: t('chat.forwardTarget.forwarded'), icon: 'success' })
 		}
 		const conv = conversationService.getConversation(targetChatId)
 		if (conv != null) {
@@ -244,7 +247,7 @@ async function handleSelect(targetChatId: string): Promise<void> {
 		})
 	} catch (e) {
 		uni.hideLoading()
-		uni.showToast({ title: '转发失败', icon: 'none' })
+		uni.showToast({ title: t('chat.forwardTarget.forwardFailed'), icon: 'none' })
 	}
 }
 
@@ -255,7 +258,7 @@ onLoad((options: any) => {
 		const ids = options != null ? (options['messageIds'] as string | null) : null
 		messageIds.value = parseMessageIds(ids)
 		if (favoriteId.value === '' && messageIds.value.length > MAX_FORWARD_MESSAGE_COUNT) {
-			uni.showToast({ title: `最多选择 ${MAX_FORWARD_MESSAGE_COUNT} 条消息`, icon: 'none' })
+			uni.showToast({ title: t('chat.forwardTarget.maxSelect', { count: MAX_FORWARD_MESSAGE_COUNT }), icon: 'none' })
 			messageIds.value = []
 			setTimeout(() => {
 				uni.navigateBack()

@@ -6,12 +6,12 @@
 				v-if="canAtAll"
 				class="member-item"
 				hover-class="member-item-active"
-				@click="handleSelectMember({ userId: -1, userName: '所有人', avatar: '' })"
+				@click="handleSelectMember({ userId: -1, userName: t('chat.mentionSelect.allMembers'), avatar: '' })"
 			>
 				<view class="member-avatar" :style="{ backgroundColor: getBusinessAvatarColor('mention_all', '-1') }">
 					<text class="avatar-text">@</text>
 				</view>
-				<text class="member-name">所有人</text>
+				<text class="member-name">{{ t('chat.mentionSelect.allMembers') }}</text>
 			</view>
 			
 			<!-- 群成员列表 -->
@@ -33,6 +33,7 @@
 
 <script setup lang="ts">
 	import { getBusinessAvatarColor } from '@/utils/avatar.uts'
+	import { useI18n } from '@/hooks/useI18n.uts'
 	/**
 	 * 群成员选择器组件
 	 * 
@@ -60,6 +61,7 @@
 	
 	// Emits
 	const emit = defineEmits(['select', 'close'])
+	const { t } = useI18n()
 	
 	// 选择成员
 	const handleSelectMember = (member: any) => {

@@ -22,21 +22,21 @@ import org.hibernate.validator.constraints.Length;
 public class AuthLoginReqVO {
 
     @Schema(description = "邮箱账号", requiredMode = Schema.RequiredMode.REQUIRED, example = "jin_zheyicn@qq.com")
-    @NotEmpty(message = "邮箱账号不能为空")
-    @Email(message = "邮箱账号格式不正确")
-    @Size(max = 50, message = "邮箱账号长度不能超过 50 个字符")
+    @NotEmpty(message = "{validation.auth.username.required}")
+    @Email(message = "{validation.auth.username.email}")
+    @Size(max = 50, message = "{validation.auth.username.max}")
     private String username;
 
     @Schema(description = "密码", requiredMode = Schema.RequiredMode.REQUIRED, example = "buzhidao")
-    @NotEmpty(message = "密码不能为空")
-    @Length(min = 4, max = 50, message = "密码长度为 4-50 位")
+    @NotEmpty(message = "{validation.auth.password.required}")
+    @Length(min = 4, max = 50, message = "{validation.auth.password.length}")
     private String password;
 
     // ========== 图片验证码相关 ==========
 
     @Schema(description = "验证码，验证码开启时，需要传递", requiredMode = Schema.RequiredMode.REQUIRED,
             example = "PfcH6mgr8tpXuMWFjvW6YVaqrswIuwmWI5dsVZSg7sGpWtDCUbHuDEXl3cFB1+VvCC/rAkSwK8Fad52FSuncVg==")
-    @NotEmpty(message = "验证码不能为空", groups = CodeEnableGroup.class)
+    @NotEmpty(message = "{validation.auth.captcha.required}", groups = CodeEnableGroup.class)
     private String captchaVerification;
 
     // ========== 绑定社交登录时，需要传递如下参数 ==========
@@ -56,12 +56,12 @@ public class AuthLoginReqVO {
      */
     public interface CodeEnableGroup {}
 
-    @AssertTrue(message = "授权码不能为空")
+    @AssertTrue(message = "{validation.auth.social_code.required}")
     public boolean isSocialCodeValid() {
         return socialType == null || StrUtil.isNotEmpty(socialCode);
     }
 
-    @AssertTrue(message = "授权 state 不能为空")
+    @AssertTrue(message = "{validation.auth.social_state.required}")
     public boolean isSocialState() {
         return socialType == null || StrUtil.isNotEmpty(socialState);
     }

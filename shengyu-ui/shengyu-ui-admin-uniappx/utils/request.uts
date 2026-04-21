@@ -20,6 +20,8 @@ import {
 	clearUserCache,
 	formatToken
 } from '../store/user.uts'
+import { getCurrentLocale, t } from '../store/locale.uts'
+import { SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL_KEY } from './chat-setting-actions.uts'
 
 // 请求配置 - 使用统一的 API 配置
 const BASE_URL = API_BASE_URL // 移动端使用 app-api 前缀
@@ -28,22 +30,36 @@ const TIMEOUT = CONFIG_TIMEOUT
 // Token 刷新相关
 let isRefreshing = false // 是否正在刷新 Token
 let requestQueue: any[] = [] // 请求队列
+const CONVERSATION_NOT_EXISTS_CODE = 1002030000
+const GROUP_NOT_EXISTS_CODE = 1002030200
+const GROUP_MEMBER_NOT_EXISTS_CODE = 1002030201
+const GROUP_DISSOLVED_CODE = 1002030204
 
-let accessTokenRefreshedListeners: any[] = []
+function getAccessTokenRefreshedListeners(): any[] {
+	const key = '__IM_ACCESS_TOKEN_REFRESHED_LISTENERS__'
+	const globalObject = globalThis as UTSJSONObject
+	let listeners = globalObject[key] as any[] | null
+	if (listeners == null) {
+		listeners = []
+		globalObject[key] = listeners
+	}
+	return listeners
+}
 
 export function onAccessTokenRefreshed(listener: (tokenData: any) => void): () => void {
-	accessTokenRefreshedListeners.push(listener)
+	const listeners = getAccessTokenRefreshedListeners()
+	listeners.push(listener)
 	return () => {
-		const idx = accessTokenRefreshedListeners.indexOf(listener)
+		const idx = listeners.indexOf(listener)
 		if (idx !== -1) {
-			accessTokenRefreshedListeners.splice(idx, 1)
+			listeners.splice(idx, 1)
 		}
 	}
 }
 
 function notifyAccessTokenRefreshed(tokenData: any) {
 	try {
-		accessTokenRefreshedListeners.forEach((listener) => {
+		getAccessTokenRefreshedListeners().forEach((listener) => {
 			try {
 				listener(tokenData)
 			} catch (e) {
@@ -158,18 +174,19 @@ function requestInterceptor(config: UTSJSONObject): UTSJSONObject {
 	// 设置租户 ID（严格参考 PC 端逻辑）
 	// PC 端代码：if (tenantEnable && tenantEnable === 'true')
 	applyTenantHeaderIfNeeded(config)
+
+	const header = ensureHeader(config)
+	header['Accept-Language'] = getCurrentLocale()
 	
 	// 防止 GET 请求缓存（参考 PC 端）
 	const method = config['method'] as string
 	if (method && method.toUpperCase() === 'GET') {
-		const header = ensureHeader(config)
 		header['Cache-Control'] = 'no-cache'
 		header['Pragma'] = 'no-cache'
 	}
 	
 	// POST 请求设置 Content-Type
 	if (method && method.toUpperCase() === 'POST') {
-		const header = ensureHeader(config)
 		// 如果没有设置 Content-Type，默认使用 application/json
 		if (!header['Content-Type'] && !header['content-type']) {
 			header['Content-Type'] = 'application/json'
@@ -224,26 +241,26 @@ function responseInterceptor(response: any): any {
 		// 500 服务器错误
 		else if (code === 500) {
 			uni.showToast({
-				title: '服务器错误',
+				title: t('runtime.request.serverError'),
 				icon: 'none'
 			})
-			return Promise.reject(new Error(data.msg || '服务器错误'))
+			return Promise.reject(new Error(data.msg || t('runtime.request.serverError')))
 		}
 		// 901 演示模式
 		else if (code === 901) {
 			uni.showToast({
-				title: '演示模式，无法操作',
+				title: t('runtime.request.demoModeDenied'),
 				icon: 'none',
 				duration: 3000
 			})
-			return Promise.reject(new Error(data.msg || '演示模式'))
+			return Promise.reject(new Error(data.msg || t('runtime.request.demoModeDenied')))
 		}
 		// 其他业务错误
 		else {
-			const msg = data.msg || '请求失败'
+			const msg = data.msg || t('runtime.request.requestFailed')
 			
 			// 忽略的错误消息（不显示 Toast）
-			if (!shouldIgnoreBusinessErrorToast(msg)) {
+			if (!shouldIgnoreBusinessErrorToast(data)) {
 				uni.showToast({
 					title: msg,
 					icon: 'none'
@@ -263,33 +280,47 @@ function responseInterceptor(response: any): any {
 			return Promise.reject(response)
 		}
 		uni.showToast({
-			title: '网络请求失败',
+			title: t('runtime.request.networkRequestFailed'),
 			icon: 'none'
 		})
 		return Promise.reject(response)
 	}
 }
 
-function shouldIgnoreBusinessErrorToast(msg: string): boolean {
-	const ignoreMsgs = ['无效的刷新令牌', '刷新令牌已过期']
-	if (ignoreMsgs.indexOf(msg) !== -1) {
-		return true
-	}
-	if (msg === '会话不存在' || msg === '群成员不存在' || msg === '群组不存在') {
+function shouldIgnoreBusinessErrorToast(error: any): boolean {
+	const code = extractBusinessErrorCode(error)
+	if (code === CONVERSATION_NOT_EXISTS_CODE
+		|| code === GROUP_NOT_EXISTS_CODE
+		|| code === GROUP_MEMBER_NOT_EXISTS_CODE
+		|| code === GROUP_DISSOLVED_CODE) {
 		try {
-			const raw: any = uni.getStorageSync('IM_SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL')
+			const raw: any = uni.getStorageSync(SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL_KEY)
 			const until = raw != null ? Number(raw) : 0
 			if (!isNaN(until) && until > Date.now()) {
 				return true
 			}
 			if (!isNaN(until) && until > 0) {
-				uni.removeStorageSync('IM_SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL')
+				uni.removeStorageSync(SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL_KEY)
 			}
 		} catch (e) {
 			// ignore
 		}
 	}
 	return false
+}
+
+function extractBusinessErrorCode(error: any): number {
+	try {
+		if (error != null && error.code != null) {
+			return Number(error.code)
+		}
+		if (error != null && error.data != null && error.data.code != null) {
+			return Number(error.data.code)
+		}
+	} catch (e) {
+		// ignore
+	}
+	return 0
 }
 
 /**
@@ -439,8 +470,8 @@ function handleTokenExpired() {
 	
 	// 不在登录页，显示提示框
 	uni.showModal({
-		title: '提示',
-		content: '登录已过期，请重新登录',
+		title: t('runtime.request.sessionExpiredTitle'),
+		content: t('runtime.request.sessionExpiredContent'),
 		showCancel: false,
 		success: (res) => {
 			if (res.confirm) {
@@ -480,7 +511,7 @@ export function request(options: UTSJSONObject): Promise<any> {
 			},
 			fail: (err) => {
 				uni.showToast({
-					title: '网络连接失败',
+					title: t('runtime.request.networkConnectFailed'),
 					icon: 'none'
 				})
 				reject(err)
@@ -555,7 +586,7 @@ export function rawRequest(options: UTSJSONObject): Promise<any> {
 			},
 			fail: (err) => {
 				uni.showToast({
-					title: '网络连接失败',
+					title: t('runtime.request.networkConnectFailed'),
 					icon: 'none'
 				})
 				reject(err)

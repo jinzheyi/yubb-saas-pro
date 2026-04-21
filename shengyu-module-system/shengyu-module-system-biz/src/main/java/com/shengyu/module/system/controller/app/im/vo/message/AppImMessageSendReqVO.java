@@ -10,7 +10,7 @@ import javax.validation.constraints.NotNull;
 public class AppImMessageSendReqVO {
 
     @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "ChatID不能为空")
+    @NotNull(message = "{validation.im.chat_id.required}")
     private Long chatId;
 
     @Schema(description = "接收者ID(单聊有值,群聊为NULL)", example = "100")
@@ -20,11 +20,11 @@ public class AppImMessageSendReqVO {
     private Long groupId;
 
     @Schema(description = "消息类型(1-文本 2-图片 3-语音 4-视频 5-文件 6-位置 7-表情包 8-自定义贴纸)", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "消息类型不能为空")
+    @NotNull(message = "{validation.im.message_type.required}")
     private Integer messageType;
 
     @Schema(description = "消息内容", requiredMode = Schema.RequiredMode.REQUIRED, example = "你好")
-    @NotNull(message = "消息内容不能为空")
+    @NotNull(message = "{validation.im.message_content.required}")
     private String content;
 
     @Schema(description = "扩展信息(JSON格式)", example = "{\"url\":\"https://...\"}")

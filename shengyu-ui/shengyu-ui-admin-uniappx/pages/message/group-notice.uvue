@@ -4,11 +4,11 @@
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">群公告</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('chat.groupNotice.title') }}</text>
 			<view class="header-right">
-				<text v-if="canEdit" class="edit-btn" :style="{ color: theme.brandPrimary }" @click="handleEdit">{{ isEditing ? '完成' : '编辑' }}</text>
+				<text v-if="canEdit" class="edit-btn" :style="{ color: theme.brandPrimary }" @click="handleEdit">{{ isEditing ? t('chat.groupNotice.done') : t('chat.groupNotice.edit') }}</text>
 			</view>
 		</view>
 
@@ -17,23 +17,23 @@
 			<view v-if="!isEditing" class="view-mode" :style="{ backgroundColor: theme.cardBg }">
 				<view v-if="notice" class="notice-content">
 					<view v-if="noticePinned" class="pinned-tag" :style="{ backgroundColor: theme.brandPrimarySoft }">
-						<text class="pinned-tag-text">置顶</text>
+						<text class="pinned-tag-text">{{ t('chat.groupNotice.pinned') }}</text>
 					</view>
 					<text class="notice-text" :style="{ color: theme.textPrimary }">{{ notice }}</text>
 				</view>
 				<view v-else class="empty-notice">
 					<text class="iconfont empty-icon" :style="{ color: theme.borderColor }">&#xe60e;</text>
-					<text class="empty-text" :style="{ color: theme.textTertiary }">暂无群公告</text>
-					<text v-if="canEdit" class="empty-hint" :style="{ color: theme.textTertiary }">点击右上角"编辑"可以发布群公告</text>
+					<text class="empty-text" :style="{ color: theme.textTertiary }">{{ t('chat.groupNotice.empty') }}</text>
+					<text v-if="canEdit" class="empty-hint" :style="{ color: theme.textTertiary }">{{ t('chat.groupNotice.emptyHint') }}</text>
 				</view>
 				
 				<!-- 发布信息 -->
 				<view v-if="notice && publishInfo" class="publish-info">
-					<text class="publish-label" :style="{ color: theme.textTertiary }">发布人：</text>
+					<text class="publish-label" :style="{ color: theme.textTertiary }">{{ t('chat.groupNotice.publisher') }}</text>
 					<text class="publish-value" :style="{ color: theme.textSecondary }">{{ publishInfo.publisherName }}</text>
 				</view>
 				<view v-if="notice && publishInfo" class="publish-info">
-					<text class="publish-label" :style="{ color: theme.textTertiary }">发布时间：</text>
+					<text class="publish-label" :style="{ color: theme.textTertiary }">{{ t('chat.groupNotice.publishTime') }}</text>
 					<text class="publish-value" :style="{ color: theme.textSecondary }">{{ publishInfo.publishTime }}</text>
 				</view>
 			</view>
@@ -44,7 +44,7 @@
 					class="notice-textarea" 
 					:style="{ color: theme.inputText, backgroundColor: theme.inputBg, borderColor: theme.borderColor }"
 					v-model="editingNotice" 
-					placeholder="请输入群公告内容（最多500字）"
+					:placeholder="t('chat.groupNotice.placeholder')"
 					maxlength="500"
 					:focus="isEditing"
 					:auto-height="true"
@@ -57,32 +57,32 @@
 				<view class="option-item" :style="{ backgroundColor: theme.cardBgMuted }">
 					<view class="option-left">
 						<text class="iconfont option-icon" :style="{ color: theme.brandPrimary }">&#xe60a;</text>
-						<text class="option-label" :style="{ color: theme.textPrimary }">推送通知</text>
+						<text class="option-label" :style="{ color: theme.textPrimary }">{{ t('chat.groupNotice.notifyMembers') }}</text>
 					</view>
 					<switch class="option-switch" :checked="notifyMembers" @change="handleNotifyChange" />
 				</view>
 				<view v-if="notifyMembers" class="option-hint">
-					<text class="hint-text" :style="{ color: theme.textTertiary }">发布后将通知所有群成员</text>
+					<text class="hint-text" :style="{ color: theme.textTertiary }">{{ t('chat.groupNotice.notifyMembersHint') }}</text>
 				</view>
 				
 				<!-- 置顶公告选项 -->
 				<view class="option-item" :style="{ backgroundColor: theme.cardBgMuted }">
 					<view class="option-left">
 						<text class="iconfont option-icon" :style="{ color: theme.brandPrimary }">&#xe726;</text>
-						<text class="option-label" :style="{ color: theme.textPrimary }">置顶公告</text>
+						<text class="option-label" :style="{ color: theme.textPrimary }">{{ t('chat.groupNotice.pinNotice') }}</text>
 					</view>
 					<switch class="option-switch" :checked="pinNotice" @change="handlePinChange" />
 				</view>
 				<view v-if="pinNotice" class="option-hint">
-					<text class="hint-text" :style="{ color: theme.textTertiary }">公告将在聊天页面顶部显示</text>
+					<text class="hint-text" :style="{ color: theme.textTertiary }">{{ t('chat.groupNotice.pinNoticeHint') }}</text>
 				</view>
 				
 				<view class="btn-group">
 					<view class="btn btn-cancel" :style="{ backgroundColor: theme.cardBgMuted }" @click="handleCancelEdit">
-						<text class="btn-text" :style="{ color: theme.textSecondary }">取消</text>
+						<text class="btn-text" :style="{ color: theme.textSecondary }">{{ t('chat.groupNotice.cancel') }}</text>
 					</view>
 					<view class="btn btn-publish" :style="{ backgroundColor: theme.brandPrimary }" @click="handlePublish">
-						<text class="btn-text btn-text-primary">发布</text>
+						<text class="btn-text btn-text-primary">{{ t('chat.groupNotice.publish') }}</text>
 					</view>
 				</view>
 			</view>
@@ -93,6 +93,7 @@
 <script setup lang="uts">
 	import { onMounted } from 'vue'
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getGroup, updateGroupNotice } from '../../api/group.uts'
 	import { getUserIdStr } from '../../store/user.uts'
 	import { formatDateTime } from '../../utils/date.uts'
@@ -100,6 +101,7 @@
 	import { armGroupLifecycleErrorToastSuppression, finalizeGroupLifecycleExit, resolveGroupLifecycleErrorNotice } from '../../utils/chat-setting-actions.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
+	const { t } = useI18n()
 
 	// 页面参数
 	const groupId = ref('')
@@ -156,7 +158,7 @@
 				// 发布信息
 				if (result.notice) {
 					publishInfo.value = {
-						publisherName: result.ownerName || '群主',
+						publisherName: result.ownerName || t('chat.groupNotice.owner'),
 						publishTime: result.updateTime ? formatDateTime(result.updateTime) : ''
 					}
 				} else {
@@ -174,7 +176,7 @@
 				return
 			}
 			uni.showToast({
-				title: '加载失败',
+				title: t('message.toast.loadFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -192,8 +194,10 @@
 			const pinChanged = pinNotice.value !== noticePinned.value
 			if (noticeChanged || pinChanged) {
 				uni.showModal({
-					title: '提示',
-					content: '是否放弃编辑？',
+					title: t('chat.groupNotice.confirmDiscardTitle'),
+					content: t('chat.groupNotice.confirmDiscardContent'),
+					cancelText: t('common.cancel'),
+					confirmText: t('common.ok'),
 					success: (res) => {
 						if (res.confirm) {
 							uni.navigateBack()
@@ -247,8 +251,10 @@
 		const pinChanged = pinNotice.value !== noticePinned.value
 		if (noticeChanged || pinChanged) {
 			uni.showModal({
-				title: '提示',
-				content: '是否放弃编辑？',
+				title: t('chat.groupNotice.confirmDiscardTitle'),
+				content: t('chat.groupNotice.confirmDiscardContent'),
+				cancelText: t('common.cancel'),
+				confirmText: t('common.ok'),
 				success: (res) => {
 					if (res.confirm) {
 						editingNotice.value = notice.value
@@ -273,7 +279,7 @@
 		// 验证
 		if (newNotice.length > 500) {
 			uni.showToast({
-				title: '群公告不能超过500字',
+				title: t('chat.groupNotice.tooLong'),
 				icon: 'none'
 			})
 			return
@@ -301,14 +307,14 @@
 			
 			// 更新发布信息
 			publishInfo.value = {
-				publisherName: '我',
+				publisherName: t('chat.groupNotice.selfPublisher'),
 				publishTime: formatDateTime(new Date())
 			}
 			
 			// 根据选项显示不同的提示
-			let toastTitle = newNotice ? '发布成功' : '已清空群公告'
+			let toastTitle = newNotice ? t('chat.groupNotice.publishSuccess') : t('chat.groupNotice.cleared')
 			if (newNotice && notifyMembers.value) {
-				toastTitle += '，已通知所有成员'
+				toastTitle += t('chat.groupNotice.notifiedMembersSuffix')
 			}
 			
 			uni.showToast({
@@ -325,7 +331,7 @@
 				return
 			}
 			uni.showToast({
-				title: '发布失败',
+				title: t('chat.groupNotice.publishFailed'),
 				icon: 'none'
 			})
 		} finally {

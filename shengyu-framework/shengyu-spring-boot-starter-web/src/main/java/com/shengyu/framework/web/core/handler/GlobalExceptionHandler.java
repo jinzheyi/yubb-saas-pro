@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants.*;
+import static com.shengyu.framework.common.exception.util.ServiceExceptionUtil.getOrDefault;
 
 /**
  * 全局异常处理器，将 Exception 翻译成 CommonResult + 对应的异常编号
@@ -54,7 +55,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = MaxUploadSizeExceededException.class)
     public CommonResult<?> maxUploadSizeExceededExceptionHandler(MaxUploadSizeExceededException ex) {
         log.warn("[maxUploadSizeExceededExceptionHandler]", ex);
-        return CommonResult.error(413, "文件过大，最大支持 200MB");
+        return CommonResult.error(413, getOrDefault("web.request.file_too_large", "文件过大，最大支持 200MB", "200MB"));
     }
 
     /**
@@ -107,7 +108,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = MissingServletRequestParameterException.class)
     public CommonResult<?> missingServletRequestParameterExceptionHandler(MissingServletRequestParameterException ex) {
         log.warn("[missingServletRequestParameterExceptionHandler]", ex);
-        return CommonResult.error(BAD_REQUEST.getCode(), String.format("请求参数缺失:%s", ex.getParameterName()));
+        return CommonResult.error(BAD_REQUEST.getCode(),
+                getOrDefault("web.request.param.missing", "请求参数缺失:{0}", ex.getParameterName()));
     }
 
     /**
@@ -118,7 +120,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public CommonResult<?> methodArgumentTypeMismatchExceptionHandler(MethodArgumentTypeMismatchException ex) {
         log.warn("[missingServletRequestParameterExceptionHandler]", ex);
-        return CommonResult.error(BAD_REQUEST.getCode(), String.format("请求参数类型错误:%s", ex.getMessage()));
+        return CommonResult.error(BAD_REQUEST.getCode(),
+                getOrDefault("web.request.param.type_invalid", "请求参数类型错误:{0}", ex.getMessage()));
     }
 
     /**
@@ -129,7 +132,8 @@ public class GlobalExceptionHandler {
         log.warn("[methodArgumentNotValidExceptionExceptionHandler]", ex);
         FieldError fieldError = ex.getBindingResult().getFieldError();
         assert fieldError != null; // 断言，避免告警
-        return CommonResult.error(BAD_REQUEST.getCode(), String.format("请求参数不正确:%s", fieldError.getDefaultMessage()));
+        return CommonResult.error(BAD_REQUEST.getCode(),
+                getOrDefault("web.request.param.invalid", "请求参数不正确:{0}", fieldError.getDefaultMessage()));
     }
 
     /**
@@ -140,7 +144,8 @@ public class GlobalExceptionHandler {
         log.warn("[handleBindException]", ex);
         FieldError fieldError = ex.getFieldError();
         assert fieldError != null; // 断言，避免告警
-        return CommonResult.error(BAD_REQUEST.getCode(), String.format("请求参数不正确:%s", fieldError.getDefaultMessage()));
+        return CommonResult.error(BAD_REQUEST.getCode(),
+                getOrDefault("web.request.param.invalid", "请求参数不正确:{0}", fieldError.getDefaultMessage()));
     }
 
     /**
@@ -150,7 +155,8 @@ public class GlobalExceptionHandler {
     public CommonResult<?> constraintViolationExceptionHandler(ConstraintViolationException ex) {
         log.warn("[constraintViolationExceptionHandler]", ex);
         ConstraintViolation<?> constraintViolation = ex.getConstraintViolations().iterator().next();
-        return CommonResult.error(BAD_REQUEST.getCode(), String.format("请求参数不正确:%s", constraintViolation.getMessage()));
+        return CommonResult.error(BAD_REQUEST.getCode(),
+                getOrDefault("web.request.param.invalid", "请求参数不正确:{0}", constraintViolation.getMessage()));
     }
 
     /**
@@ -173,7 +179,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoHandlerFoundException.class)
     public CommonResult<?> noHandlerFoundExceptionHandler(HttpServletRequest req, NoHandlerFoundException ex) {
         log.warn("[noHandlerFoundExceptionHandler]", ex);
-        return CommonResult.error(NOT_FOUND.getCode(), String.format("请求地址不存在:%s", ex.getRequestURL()));
+        return CommonResult.error(NOT_FOUND.getCode(),
+                getOrDefault("web.request.not_found", "请求地址不存在:{0}", ex.getRequestURL()));
     }
 
     /**
@@ -184,7 +191,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public CommonResult<?> httpRequestMethodNotSupportedExceptionHandler(HttpRequestMethodNotSupportedException ex) {
         log.warn("[httpRequestMethodNotSupportedExceptionHandler]", ex);
-        return CommonResult.error(METHOD_NOT_ALLOWED.getCode(), String.format("请求方法不正确:%s", ex.getMessage()));
+        return CommonResult.error(METHOD_NOT_ALLOWED.getCode(),
+                getOrDefault("web.request.method_not_allowed", "请求方法不正确:{0}", ex.getMessage()));
     }
 
     /**
@@ -228,7 +236,8 @@ public class GlobalExceptionHandler {
         if (root != null && "com.mysql.cj.jdbc.exceptions.PacketTooBigException".equals(root.getClass().getName())) {
             log.warn("[defaultExceptionHandler][PacketTooBig] {}", ExceptionUtil.getMessage(ex));
             return CommonResult.error(413,
-                    "文件过大，当前存储为数据库模式(DB)且 MySQL max_allowed_packet 限制无法写入，请切换 OSS/MinIO/本地存储 或降低文件大小");
+                    getOrDefault("web.request.file_too_large_db",
+                            "文件过大，当前存储为数据库模式(DB)且 MySQL max_allowed_packet 限制无法写入，请切换 OSS/MinIO/本地存储 或降低文件大小"));
         }
 
         // 情况一：处理表不存在的异常
@@ -247,7 +256,8 @@ public class GlobalExceptionHandler {
         // 插入异常日志
         this.createExceptionLog(req, ex);
         // 返回 ERROR CommonResult
-        return CommonResult.error(INTERNAL_SERVER_ERROR.getCode(), INTERNAL_SERVER_ERROR.getMsg());
+        return CommonResult.error(INTERNAL_SERVER_ERROR.getCode(),
+                getOrDefault("error.code." + INTERNAL_SERVER_ERROR.getCode(), INTERNAL_SERVER_ERROR.getMsg()));
     }
 
     private void createExceptionLog(HttpServletRequest req, Throwable e) {

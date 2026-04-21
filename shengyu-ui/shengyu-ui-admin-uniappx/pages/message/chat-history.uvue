@@ -7,7 +7,7 @@
       <view class="header-left" @click="handleBack">
         <text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
       </view>
-      <text class="header-title" :style="{ color: theme.headerText }">聊天记录</text>
+      <text class="header-title" :style="{ color: theme.headerText }">{{ t('chat.chatHistory.title') }}</text>
       <view class="header-right"></view>
     </view>
 
@@ -19,13 +19,13 @@
           class="search-input"
           :style="{ color: theme.inputText }"
           v-model="searchKeyword"
-          placeholder="搜索聊天记录"
+          :placeholder="t('chat.chatHistory.searchPlaceholder')"
           confirm-type="search"
           @confirm="handleSearch"
         />
       </view>
       <view class="search-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleSearch">
-        <text class="search-btn-text">搜索</text>
+        <text class="search-btn-text">{{ t('message.searchPlaceholder') }}</text>
       </view>
     </view>
 
@@ -39,8 +39,8 @@
           @change="handleStartTimeChange"
         >
           <view class="picker-content" :style="{ backgroundColor: theme.inputBg }">
-            <text class="filter-label" :style="{ color: theme.textSecondary }">开始时间</text>
-            <text class="filter-value" :style="{ color: theme.textPrimary }">{{ startTimeText || '不限' }}</text>
+            <text class="filter-label" :style="{ color: theme.textSecondary }">{{ t('chat.chatHistory.startTime') }}</text>
+            <text class="filter-value" :style="{ color: theme.textPrimary }">{{ startTimeText || t('chat.chatHistory.unlimited') }}</text>
             <text class="iconfont filter-arrow" :style="{ color: theme.textTertiary }">&#xeb09;</text>
           </view>
         </picker>
@@ -55,14 +55,14 @@
           @change="handleEndTimeChange"
         >
           <view class="picker-content" :style="{ backgroundColor: theme.inputBg }">
-            <text class="filter-label" :style="{ color: theme.textSecondary }">结束时间</text>
-            <text class="filter-value" :style="{ color: theme.textPrimary }">{{ endTimeText || '不限' }}</text>
+            <text class="filter-label" :style="{ color: theme.textSecondary }">{{ t('chat.chatHistory.endTime') }}</text>
+            <text class="filter-value" :style="{ color: theme.textPrimary }">{{ endTimeText || t('chat.chatHistory.unlimited') }}</text>
             <text class="iconfont filter-arrow" :style="{ color: theme.textTertiary }">&#xeb09;</text>
           </view>
         </picker>
       </view>
       <view class="reset-btn" :style="{ backgroundColor: theme.cardBgMuted }" @click="resetFilter">
-        <text class="reset-btn-text" :style="{ color: theme.textSecondary }">重置</text>
+        <text class="reset-btn-text" :style="{ color: theme.textSecondary }">{{ t('common.reset') }}</text>
       </view>
     </view>
 
@@ -75,7 +75,7 @@
     >
       <view v-if="messageList.length === 0 && !loading" class="empty-state">
         <text class="iconfont empty-icon" :style="{ color: theme.borderColor }">&#xea96;</text>
-        <text class="empty-text" :style="{ color: theme.textTertiary }">{{ searched ? '未找到相关聊天记录' : '请输入关键词搜索' }}</text>
+        <text class="empty-text" :style="{ color: theme.textTertiary }">{{ searched ? t('chat.chatHistory.emptySearched') : t('chat.chatHistory.emptyIdle') }}</text>
       </view>
 
       <view
@@ -107,11 +107,11 @@
       </view>
 
       <view v-if="loading" class="loading-more">
-        <text class="loading-text" :style="{ color: theme.textTertiary }">加载中...</text>
+        <text class="loading-text" :style="{ color: theme.textTertiary }">{{ t('chat.chatHistory.loading') }}</text>
       </view>
 
       <view v-if="!hasMore && messageList.length > 0" class="no-more">
-        <text class="no-more-text" :style="{ color: theme.textTertiary }">没有更多了</text>
+        <text class="no-more-text" :style="{ color: theme.textTertiary }">{{ t('chat.chatHistory.noMore') }}</text>
       </view>
     </scroll-view>
   </view>
@@ -120,11 +120,14 @@
 <script setup lang="uts">
 import { ref, computed } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
+import { useI18n } from '../../hooks/useI18n.uts'
 import { searchMessages } from '../../api/message.uts'
 import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 import { getAvatarText, getUserAvatarColor } from '../../utils/avatar.uts'
 import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 import type { ThemeTokens } from '../../config/theme.uts'
+
+const { t } = useI18n()
 
 // 页面参数
 const chatId = ref<string>('')
@@ -207,7 +210,7 @@ const resolveSenderName = (message: any): string => {
   if (senderId !== '') {
     return senderId
   }
-  return '未知用户'
+  return t('chat.chatHistory.unknownUser')
 }
 
 const normalizeAvatarUrl = (value: any): string => {
@@ -254,7 +257,7 @@ const handleAvatarError = (message: any) => {
 const handleSearch = () => {
   if (!chatId.value) {
     uni.showToast({
-      title: '会话信息未加载',
+      title: t('chat.chatFiles.conversationNotLoaded'),
       icon: 'none',
       duration: 2000
     })
@@ -262,7 +265,7 @@ const handleSearch = () => {
   }
   if (!searchKeyword.value.trim()) {
     uni.showToast({
-      title: '请输入搜索关键词',
+      title: t('chat.chatHistory.enterKeyword'),
       icon: 'none',
       duration: 2000
     })
@@ -322,7 +325,7 @@ const loadMessages = async () => {
     console.error('[ChatHistory] 搜索聊天记录失败:', error)
     
     // 根据错误类型显示不同的提示
-    let errorMsg = '搜索失败，请稍后重试'
+    let errorMsg = t('chat.chatHistory.searchFailed')
     
     if (error && error.msg) {
       errorMsg = error.msg
@@ -384,7 +387,7 @@ const handleStartTimeChange = (e: any) => {
   // 验证：开始时间不能大于今天
   if (selectedDate > today) {
     uni.showToast({
-      title: '开始时间不能大于当前日期',
+      title: t('chat.chatHistory.startAfterToday'),
       icon: 'none'
     })
     return
@@ -393,7 +396,7 @@ const handleStartTimeChange = (e: any) => {
   // 验证：开始时间不能大于结束时间
   if (endTime.value && selectedDate > endTime.value) {
     uni.showToast({
-      title: '开始时间不能大于结束时间',
+      title: t('chat.chatHistory.startAfterEnd'),
       icon: 'none'
     })
     return
@@ -413,7 +416,7 @@ const handleEndTimeChange = (e: any) => {
   // 验证：结束时间不能大于今天
   if (selectedDate > today) {
     uni.showToast({
-      title: '结束时间不能大于当前日期',
+      title: t('chat.chatHistory.endAfterToday'),
       icon: 'none'
     })
     return
@@ -422,7 +425,7 @@ const handleEndTimeChange = (e: any) => {
   // 验证：结束时间不能小于开始时间
   if (startTime.value && selectedDate < startTime.value) {
     uni.showToast({
-      title: '结束时间不能小于开始时间',
+      title: t('chat.chatHistory.endBeforeStart'),
       icon: 'none'
     })
     return
@@ -448,13 +451,13 @@ const formatTime = (timeStr: string): string => {
   const timeFormat = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
   
   if (diffDays === 0) {
-    return `今天 ${timeFormat}`
+    return t('chat.chatHistory.todayAt', { time: timeFormat })
   } else if (diffDays === 1) {
-    return `昨天 ${timeFormat}`
+    return t('chat.chatHistory.yesterdayAt', { time: timeFormat })
   } else if (diffDays < 7) {
-    return `${diffDays}天前 ${timeFormat}`
+    return t('chat.chatHistory.daysAgoAt', { count: diffDays, time: timeFormat })
   } else {
-    return `${date.getMonth() + 1}月${date.getDate()}日 ${timeFormat}`
+    return t('chat.chatHistory.monthDayAt', { month: date.getMonth() + 1, day: date.getDate(), time: timeFormat })
   }
 }
 
@@ -499,14 +502,14 @@ const getHighlightedContent = (content: string): string => {
 // 点击消息项 - 跳转到聊天页面并定位到该消息
 const handleMessageClick = (message: any) => {
   if (!chatId.value) {
-    uni.showToast({ title: '会话信息未加载', icon: 'none' })
+    uni.showToast({ title: t('chat.chatFiles.conversationNotLoaded'), icon: 'none' })
     return
   }
   const chatIdParam = encodeIdParam(chatId.value)
   const mid = message && message.messageId != null ? String(message.messageId) : (message && message.id != null ? String(message.id) : '')
   const sequence = message && message.sequence != null ? String(message.sequence) : ''
   if (mid === '' || mid === '0') {
-    uni.showToast({ title: '无法定位消息', icon: 'none' })
+    uni.showToast({ title: t('chat.chatHistory.locateMessageFailed'), icon: 'none' })
     return
   }
   const url = sequence !== ''

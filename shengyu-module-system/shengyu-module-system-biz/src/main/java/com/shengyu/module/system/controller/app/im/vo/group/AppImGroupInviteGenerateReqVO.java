@@ -10,7 +10,7 @@ import javax.validation.constraints.NotNull;
 public class AppImGroupInviteGenerateReqVO {
 
     @Schema(description = "群组ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "123456")
-    @NotNull(message = "群组ID不能为空")
+    @NotNull(message = "{validation.im.group_id.required}")
     private Long groupId;
 
     @Schema(description = "有效期(小时)", example = "24")

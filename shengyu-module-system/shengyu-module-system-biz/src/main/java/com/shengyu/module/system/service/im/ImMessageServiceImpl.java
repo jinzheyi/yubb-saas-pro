@@ -29,6 +29,7 @@ import com.shengyu.module.system.enums.im.ImGroupMemberRoleEnum;
 import com.shengyu.module.system.enums.im.ImMessageForwardTypeEnum;
 import com.shengyu.module.system.enums.im.ImMessageStatusEnum;
 import com.shengyu.module.system.enums.im.ImMessageTypeEnum;
+import com.shengyu.module.system.service.im.support.ImSystemMessageI18nSupport;
 import com.shengyu.module.system.service.im.support.VoiceFileOwnershipValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -329,6 +330,9 @@ public class ImMessageServiceImpl implements ImMessageService {
     @Resource
     private FileApi fileApi;
 
+    @Resource
+    private ImSystemMessageI18nSupport imSystemMessageI18nSupport;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long sendMessage(Long userId, AppImMessageSendReqVO sendReqVO) {
@@ -494,8 +498,9 @@ public class ImMessageServiceImpl implements ImMessageService {
             fillSenderInfo(respVO, message.getSenderId(), message.getChatId());
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
             fillChatTargetFields(respVO, userId);
+            applyLocalizedSystemMessageContent(respVO, message);
             applyReeditFieldsForCurrentUser(respVO, message, userId);
-            sanitizeRecalledMessage(respVO);
+            sanitizeRecalledMessage(respVO, message, userId);
             return respVO;
         }).collect(Collectors.toList());
         fillVoicePlayedFlags(userId, respList, pullReqVO.getChatId());
@@ -552,8 +557,9 @@ public class ImMessageServiceImpl implements ImMessageService {
             fillSenderInfo(respVO, message.getSenderId(), message.getChatId());
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
             fillChatTargetFields(respVO, userId);
+            applyLocalizedSystemMessageContent(respVO, message);
             applyReeditFieldsForCurrentUser(respVO, message, userId);
-            sanitizeRecalledMessage(respVO);
+            sanitizeRecalledMessage(respVO, message, userId);
             return respVO;
         }).collect(Collectors.toList());
         fillVoicePlayedFlags(userId, respVOList, pageReqVO.getChatId());
@@ -658,8 +664,9 @@ public class ImMessageServiceImpl implements ImMessageService {
         fillSenderInfo(respVO, message.getSenderId(), message.getChatId());
         respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
         fillChatTargetFields(respVO, userId);
+        applyLocalizedSystemMessageContent(respVO, message);
         applyReeditFieldsForCurrentUser(respVO, message, userId);
-        sanitizeRecalledMessage(respVO);
+        sanitizeRecalledMessage(respVO, message, userId);
         fillVoicePlayedFlags(userId, Collections.singletonList(respVO), message.getChatId());
         return respVO;
     }
@@ -739,18 +746,60 @@ public class ImMessageServiceImpl implements ImMessageService {
         return StrUtil.isNotBlank(message.getContent());
     }
 
-    private void sanitizeRecalledMessage(AppImMessageRespVO respVO) {
-        if (respVO == null) {
+    private void applyLocalizedSystemMessageContent(AppImMessageRespVO respVO, ImChatMessageDO message) {
+        if (respVO == null || message == null) {
+            return;
+        }
+        if (!Objects.equals(respVO.getMessageType(), ImMessageTypeEnum.SYSTEM.getType())) {
+            return;
+        }
+        respVO.setContent(imSystemMessageI18nSupport.render(message.getContent(), message.getExtra()));
+    }
+
+    private void sanitizeRecalledMessage(AppImMessageRespVO respVO, ImChatMessageDO message, Long currentUserId) {
+        if (respVO == null || message == null) {
             return;
         }
         if (!Objects.equals(respVO.getStatus(), ImMessageStatusEnum.RECALLED.getStatus())) {
             return;
         }
+        String recallTipContent = buildRecallTipContent(message, respVO, currentUserId);
         // enterprise security: recalled messages must not leak original content/extra/forward info via pull/page/detail
-        respVO.setContent("[消息已撤回]");
+        respVO.setContent(recallTipContent);
         respVO.setExtra(null);
         respVO.setForwardedFrom(null);
         respVO.setMentions(null);
+    }
+
+    private String buildRecallTipContent(ImChatMessageDO message, AppImMessageRespVO respVO, Long currentUserId) {
+        String senderName = respVO != null ? respVO.getSenderNickname() : "";
+        String recallerName = "";
+        try {
+            String extra = message.getExtra();
+            if (StrUtil.isNotBlank(extra)) {
+                JSONObject obj = JSONUtil.parseObj(extra);
+                recallerName = obj.getStr("recallerName");
+                if (StrUtil.isBlank(senderName)) {
+                    senderName = obj.getStr("senderName");
+                }
+            }
+        } catch (Exception ignore) {
+            recallerName = "";
+        }
+        if (StrUtil.isBlank(senderName) && message.getSenderId() != null && message.getSenderId() > 0L) {
+            AdminUserDO sender = userMapper.selectById(message.getSenderId());
+            if (sender != null) {
+                senderName = sender.getNickname();
+            }
+        }
+        if (StrUtil.isBlank(recallerName) && message.getRecallBy() != null && message.getRecallBy() > 0L) {
+            AdminUserDO recaller = userMapper.selectById(message.getRecallBy());
+            if (recaller != null) {
+                recallerName = recaller.getNickname();
+            }
+        }
+        return imSystemMessageI18nSupport.renderRecallMessage(currentUserId, message.getRecallBy(),
+                message.getSenderId(), senderName, recallerName, "[消息已撤回]");
     }
 
     private AppImMessageWindowRespVO buildLatestWindowResponse(Long userId, Long tenantId, ImChatUserDO chatUser,
@@ -926,8 +975,9 @@ public class ImMessageServiceImpl implements ImMessageService {
             fillSenderInfo(respVO, message.getSenderId(), chat, senderMap, groupNicknameMap);
             respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
             fillChatTargetFields(respVO, userId, chat);
+            applyLocalizedSystemMessageContent(respVO, message);
             applyReeditFieldsForCurrentUser(respVO, message, userId);
-            sanitizeRecalledMessage(respVO);
+            sanitizeRecalledMessage(respVO, message, userId);
             result.add(respVO);
         }
         fillVoicePlayedFlags(userId, result, chatId);
@@ -2334,16 +2384,35 @@ public class ImMessageServiceImpl implements ImMessageService {
         Long oldRev = message.getRev() != null && message.getRev() > 0 ? message.getRev() : 1L;
         Long newRev = oldRev + 1L;
         String recallExtra = null;
+        String recallerName = "";
+        String senderName = "";
         try {
+            AdminUserDO recaller = userMapper.selectById(userId);
+            if (recaller != null && StrUtil.isNotBlank(recaller.getNickname())) {
+                recallerName = recaller.getNickname().trim();
+            }
+            if (message.getSenderId() != null && message.getSenderId() > 0L) {
+                if (Objects.equals(message.getSenderId(), userId) && StrUtil.isNotBlank(recallerName)) {
+                    senderName = recallerName;
+                } else {
+                    AdminUserDO sender = userMapper.selectById(message.getSenderId());
+                    if (sender != null && StrUtil.isNotBlank(sender.getNickname())) {
+                        senderName = sender.getNickname().trim();
+                    }
+                }
+            }
+            JSONObject ex = JSONUtil.createObj();
+            ex.set("senderName", senderName);
+            ex.set("recallerName", recallerName);
             if (isSelfMessage && isReeditEligibleTextMessage(message, userId)) {
-                JSONObject ex = JSONUtil.createObj();
                 ex.set("reeditContent", message.getContent());
                 long deadlineTs = recallTime.plusSeconds(300L).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
                 ex.set("reeditDeadlineTs", String.valueOf(deadlineTs));
                 ex.set("senderId", String.valueOf(userId));
                 ex.set("isSelfRecall", true);
-                recallExtra = ex.toString();
             }
+            recallExtra = imSystemMessageI18nSupport.attachI18n(ex.toString(),
+                    ImSystemMessageI18nSupport.EVENT_RECALL_PREVIEW, Collections.emptyMap());
         } catch (Exception ignore) {
             recallExtra = null;
         }
@@ -2439,6 +2508,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                 obj.set("rev", newRev);
                 obj.set("recallBy", userId);
                 obj.set("recallTime", recallTime != null ? recallTime.toString() : "");
+                obj.set("recallerName", recallerName);
                 extra = obj.toString();
             } catch (Exception ignore) {
                 extra = null;
@@ -2689,8 +2759,9 @@ public class ImMessageServiceImpl implements ImMessageService {
                     respVO.setIsSelf(Objects.equals(message.getSenderId(), userId));
                     fillChatTargetFields(respVO, userId);
                     fillConversationInfo(respVO, userId);
+                    applyLocalizedSystemMessageContent(respVO, message);
                     applyReeditFieldsForCurrentUser(respVO, message, userId);
-                    sanitizeRecalledMessage(respVO);
+                    sanitizeRecalledMessage(respVO, message, userId);
                     return respVO;
                 }).collect(Collectors.toList());
         fillVoicePlayedFlags(userId, respVOList, searchReqVO.getChatId());

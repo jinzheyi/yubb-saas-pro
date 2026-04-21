@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 public class ToDeptReqVO {
 
     @Schema(description = "部门id", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")
-    @NotNull(message = "目标部门id不能为空")
+    @NotNull(message = "{validation.auth.target_dept_id.required}")
     private Long id;
 
 }

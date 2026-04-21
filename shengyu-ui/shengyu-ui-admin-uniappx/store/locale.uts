@@ -10,11 +10,13 @@ import en from '../locales/en.uts'
 
 // 存储 Key
 const LOCALE_KEY = 'LOCALE'
+const LANGUAGE_MODE_KEY = 'LANGUAGE_MODE'
 
 /**
  * 语言类型
  */
 export type LocaleType = 'zh-CN' | 'en'
+export type LanguageMode = 'system' | LocaleType
 
 /**
  * 语言配置
@@ -23,6 +25,8 @@ export type LocaleConfig = {
 	lang: LocaleType
 	name: string
 }
+
+type LocaleListener = (resolvedLocale: LocaleType, languageMode: LanguageMode) => void
 
 /**
  * 语言包映射
@@ -46,17 +50,14 @@ const availableLocales: LocaleConfig[] = [
 	}
 ]
 
+const localeListeners: LocaleListener[] = []
+
 /**
  * 获取当前语言
  * @returns 当前语言类型
  */
 export function getCurrentLocale(): LocaleType {
-	const locale = uni.getStorageSync(LOCALE_KEY)
-	if (locale && (locale === 'zh-CN' || locale === 'en')) {
-		return locale as LocaleType
-	}
-	// 默认返回中文
-	return 'zh-CN'
+	return resolveLocale(getLanguageMode())
 }
 
 /**
@@ -64,7 +65,57 @@ export function getCurrentLocale(): LocaleType {
  * @param locale 语言类型
  */
 export function setCurrentLocale(locale: LocaleType) {
-	uni.setStorageSync(LOCALE_KEY, locale)
+	setLanguageMode(locale)
+}
+
+export function getLanguageMode(): LanguageMode {
+	const languageMode = uni.getStorageSync(LANGUAGE_MODE_KEY)
+	if (languageMode === 'system' || languageMode === 'zh-CN' || languageMode === 'en') {
+		return languageMode as LanguageMode
+	}
+	const legacyLocale = uni.getStorageSync(LOCALE_KEY)
+	if (legacyLocale === 'zh-CN' || legacyLocale === 'en') {
+		return legacyLocale as LanguageMode
+	}
+	return 'system'
+}
+
+export function setLanguageMode(languageMode: LanguageMode) {
+	uni.setStorageSync(LANGUAGE_MODE_KEY, languageMode)
+	const resolvedLocale = resolveLocale(languageMode)
+	uni.setStorageSync(LOCALE_KEY, resolvedLocale)
+	emitLocaleChange(resolvedLocale, languageMode)
+}
+
+export function resolveLocale(languageMode: LanguageMode): LocaleType {
+	if (languageMode === 'zh-CN' || languageMode === 'en') {
+		return languageMode
+	}
+	return getSystemLocale()
+}
+
+export function getResolvedLocale(): LocaleType {
+	return getCurrentLocale()
+}
+
+function emitLocaleChange(resolvedLocale: LocaleType, languageMode: LanguageMode) {
+	localeListeners.forEach((listener) => {
+		try {
+			listener(resolvedLocale, languageMode)
+		} catch (e) {
+			console.warn('[locale] locale listener failed:', e)
+		}
+	})
+}
+
+export function subscribeLocaleChange(listener: LocaleListener): () => void {
+	localeListeners.push(listener)
+	return () => {
+		const index = localeListeners.indexOf(listener)
+		if (index >= 0) {
+			localeListeners.splice(index, 1)
+		}
+	}
 }
 
 /**
@@ -144,11 +195,11 @@ export function t(key: string, params?: any): string {
  * @param locale 语言类型
  */
 export function switchLocale(locale: LocaleType) {
-	setCurrentLocale(locale)
+	setLanguageMode(locale)
 	
 	// 提示用户
 	uni.showToast({
-		title: locale === 'zh-CN' ? '切换成功' : 'Switch Success',
+		title: t('common.switchSuccess'),
 		icon: 'success'
 	})
 }
@@ -190,9 +241,11 @@ export function getSystemLocale(): LocaleType {
  * 如果没有设置过语言，则使用系统语言
  */
 export function initLocale() {
+	const languageMode = uni.getStorageSync(LANGUAGE_MODE_KEY)
 	const locale = uni.getStorageSync(LOCALE_KEY)
-	if (!locale) {
-		const systemLocale = getSystemLocale()
-		setCurrentLocale(systemLocale)
+	if (!languageMode && !locale) {
+		setLanguageMode('system')
+		return
 	}
+	emitLocaleChange(getCurrentLocale(), getLanguageMode())
 }

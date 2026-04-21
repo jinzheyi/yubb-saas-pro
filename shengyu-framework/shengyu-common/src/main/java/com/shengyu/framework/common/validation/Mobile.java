@@ -19,7 +19,7 @@ import java.lang.annotation.*;
 )
 public @interface Mobile {
 
-    String message() default "手机号格式不正确";
+    String message() default "{validation.auth.mobile.invalid}";
 
     Class<?>[] groups() default {};
 

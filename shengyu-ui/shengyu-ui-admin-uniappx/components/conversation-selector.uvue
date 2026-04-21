@@ -3,7 +3,7 @@
 		<view class="conversation-selector">
 			<!-- 头部 -->
 			<view class="selector-header">
-				<text class="header-title">选择会话</text>
+				<text class="header-title">{{ t('message.conversationSelector.title') }}</text>
 				<text class="header-close iconfont" @click="handleClose">&#xe60e;</text>
 			</view>
 			
@@ -14,7 +14,7 @@
 					<input 
 						class="search-input" 
 						v-model="searchKeyword" 
-						placeholder="搜索会话"
+						:placeholder="t('message.conversationSelector.searchPlaceholder')"
 						@input="handleSearch"
 					/>
 				</view>
@@ -51,19 +51,19 @@
 				</view>
 				
 				<view v-if="filteredConversations.length === 0" class="empty-tip">
-					<text class="empty-text">暂无会话</text>
+					<text class="empty-text">{{ t('message.conversationSelector.empty') }}</text>
 				</view>
 			</scroll-view>
 			
 			<!-- 底部操作栏 -->
 			<view class="selector-footer">
-				<text class="footer-count">已选择 {{ selectedIds.length }} 个会话</text>
+				<text class="footer-count">{{ t('message.conversationSelector.selectedCount', { count: selectedIds.length }) }}</text>
 				<view class="footer-actions">
 					<view class="footer-btn footer-btn-cancel" @click="handleClose">
-						<text class="footer-btn-text">取消</text>
+						<text class="footer-btn-text">{{ t('common.cancel') }}</text>
 					</view>
 					<view class="footer-btn footer-btn-confirm" @click="handleConfirm">
-						<text class="footer-btn-text">确定</text>
+						<text class="footer-btn-text">{{ t('common.ok') }}</text>
 					</view>
 				</view>
 			</view>
@@ -74,6 +74,7 @@
 <script setup lang="ts">
 	import { ref, computed } from 'vue'
 	import { conversationService } from '@/services/conversation-service.uts'
+	import { useI18n } from '@/hooks/useI18n.uts'
 	
 	/**
 	 * 会话选择器组件
@@ -99,6 +100,7 @@
 	
 	// Emits
 	const emit = defineEmits(['close', 'confirm'])
+	const { t } = useI18n()
 	
 	// 数据
 	const searchKeyword = ref('')
@@ -156,7 +158,7 @@
 	const handleConfirm = () => {
 		if (selectedIds.value.length === 0) {
 			uni.showToast({
-				title: '请选择会话',
+				title: t('message.conversationSelector.selectRequired'),
 				icon: 'none'
 			})
 			return

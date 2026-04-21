@@ -18,21 +18,21 @@ import javax.validation.constraints.Pattern;
 public class AuthLoginReqVO {
 
     @Schema(description = "账号", requiredMode = Schema.RequiredMode.REQUIRED, example = "shengyuyuanma")
-    @NotEmpty(message = "登录账号不能为空")
-    @Length(min = 4, max = 16, message = "账号长度为 4-16 位")
-    @Pattern(regexp = "^[A-Za-z0-9]+$", message = "账号格式为数字以及字母")
+    @NotEmpty(message = "{validation.auth.account.required}")
+    @Length(min = 4, max = 16, message = "{validation.auth.account.length}")
+    @Pattern(regexp = "^[A-Za-z0-9]+$", message = "{validation.auth.account.invalid}")
     private String username;
 
     @Schema(description = "密码", requiredMode = Schema.RequiredMode.REQUIRED, example = "buzhidao")
-    @NotEmpty(message = "密码不能为空")
-    @Length(min = 4, max = 50, message = "密码长度为 4-50 位")
+    @NotEmpty(message = "{validation.auth.password.required}")
+    @Length(min = 4, max = 50, message = "{validation.auth.password.length}")
     private String password;
 
     // ========== 图片验证码相关 ==========
 
     @Schema(description = "验证码，验证码开启时，需要传递", requiredMode = Schema.RequiredMode.REQUIRED,
             example = "PfcH6mgr8tpXuMWFjvW6YVaqrswIuwmWI5dsVZSg7sGpWtDCUbHuDEXl3cFB1+VvCC/rAkSwK8Fad52FSuncVg==")
-    @NotEmpty(message = "验证码不能为空", groups = CodeEnableGroup.class)
+    @NotEmpty(message = "{validation.auth.captcha.required}", groups = CodeEnableGroup.class)
     private String captchaVerification;
 
     /**

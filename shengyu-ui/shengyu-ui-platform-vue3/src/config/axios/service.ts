@@ -13,15 +13,11 @@ import { getAccessToken, getRefreshToken, removeToken, setToken } from '@/utils/
 import errorCode from './errorCode'
 
 import { resetRouter } from '@/router'
-import { useCache } from '@/hooks/web/useCache'
+import { CACHE_KEY, useCache } from '@/hooks/web/useCache'
 
 const { result_code, base_url, request_timeout } = config
+const { wsCache } = useCache()
 
-// 需要忽略的提示。忽略后，自动 Promise.reject('error')
-const ignoreMsgs = [
-  '无效的刷新令牌', // 刷新令牌被删除时，不用提示
-  '刷新令牌已过期' // 使用刷新令牌，刷新获取新的访问令牌时，结果因为过期失败，此时需要忽略。否则，会导致继续 401，无法跳转到登出界面
-]
 // 是否显示重新登录
 export const isRelogin = { show: false }
 // Axios 无感知刷新令牌，参考 https://www.dashingdog.cn/article/11 与 https://segmentfault.com/a/1190000020210980 实现
@@ -53,6 +49,7 @@ service.interceptors.request.use(
     if (getAccessToken() && !isToken) {
       ;(config as Recordable).headers.Authorization = 'Bearer ' + getAccessToken() // 让每个请求携带自定义token
     }
+    ;(config as Recordable).headers['Accept-Language'] = wsCache.get(CACHE_KEY.LANG) || 'zh-CN'
     const params = config.params || {}
     const data = config.data || false
     if (
@@ -171,15 +168,18 @@ service.interceptors.response.use(
           t('sys.api.errMsg901') +
           '</div>' +
           '<div> &nbsp; </div>' +
-          '<div>参考 http://shengyukj.top/ 教程</div>' +
+          '<div>' +
+          t('sys.api.demoGuideUrl') +
+          '</div>' +
           '<div> &nbsp; </div>' +
-          '<div>5 分钟搭建本地环境</div>'
+          '<div>' +
+          t('sys.api.demoGuideSetup') +
+          '</div>'
       })
       return Promise.reject(new Error(msg))
     } else if (code !== 200) {
-      if (msg === '无效的刷新令牌') {
-        // hard coding：忽略这个提示，直接登出
-        console.log(msg)
+      if (code === 401) {
+        return handleAuthorized()
       } else {
         ElNotification.error({ title: msg })
       }

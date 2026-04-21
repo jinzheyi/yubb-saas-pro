@@ -3,6 +3,8 @@
  * 兼容 Android、iOS、Web 三端
  */
 
+import { t } from '../store/locale.uts'
+
 /**
  * 从 URL 中提取文件名
  * @param url 文件 URL
@@ -291,17 +293,17 @@ function showRetryModal(title: string, content: string): Promise<boolean> {
 		uni.showModal({
 			title,
 			content,
-			confirmText: '重试',
-			cancelText: '取消',
+			confirmText: t('runtime.file.retry'),
+			cancelText: t('common.cancel'),
 			success: (res) => resolve(!!res.confirm),
 			fail: () => resolve(false)
 		})
 	})
 }
 
-export async function downloadAndOpenDocumentWithRetry(url: string, loadingTitle: string = '正在下载'): Promise<void> {
+export async function downloadAndOpenDocumentWithRetry(url: string, loadingTitle: string = ''): Promise<void> {
 	if (!url) {
-		await showRetryModal('打开失败', '文件地址为空，请稍后重试')
+		await showRetryModal(t('runtime.file.openFailedTitle'), t('runtime.file.fileUrlEmptyRetry'))
 		return
 	}
 	url = normalizeUrlForH5(url)
@@ -318,15 +320,15 @@ export async function downloadAndOpenDocumentWithRetry(url: string, loadingTitle
 	while (true) {
 		try {
 			attempt++
-			uni.showLoading({ title: loadingTitle })
+			uni.showLoading({ title: loadingTitle !== '' ? loadingTitle : t('runtime.file.downloadLoading') })
 			const res = await downloadFileAsync(url)
 			await openDocumentAsync(res.tempFilePath)
 			return
 		} catch (e) {
 			const tip = attempt <= 1
-				? '网络异常或连接中断，是否重试？'
-				: `网络异常或连接中断（已重试 ${attempt - 1} 次），是否继续重试？`
-			const retry = await showRetryModal('打开失败', tip)
+				? t('runtime.file.networkRetryFirst')
+				: t('runtime.file.networkRetryNext', { count: attempt - 1 })
+			const retry = await showRetryModal(t('runtime.file.openFailedTitle'), tip)
 			if (!retry) {
 				return
 			}

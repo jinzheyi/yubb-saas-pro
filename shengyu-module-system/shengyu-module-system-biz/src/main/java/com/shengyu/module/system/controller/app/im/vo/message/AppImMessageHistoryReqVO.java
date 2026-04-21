@@ -10,11 +10,11 @@ import javax.validation.constraints.NotNull;
 public class AppImMessageHistoryReqVO {
 
     @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "ChatID不能为空")
+    @NotNull(message = "{validation.im.chat_id.required}")
     private Long chatId;
 
     @Schema(description = "向上翻历史的起始序列号，返回 sequence < beforeSequence 的最近一段消息", requiredMode = Schema.RequiredMode.REQUIRED, example = "880")
-    @NotNull(message = "beforeSequence不能为空")
+    @NotNull(message = "{validation.im.before_sequence.required}")
     private Long beforeSequence;
 
     @Schema(description = "拉取条数（默认30，最大50）", example = "30")

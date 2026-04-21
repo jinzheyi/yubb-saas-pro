@@ -4,27 +4,32 @@
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">设置</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('profile.settingsPage.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<view class="settings-group" :style="{ backgroundColor: theme.cardBg }">
 				<view class="list-item" hover-class="list-item-active" @click="handleAction('theme')">
-					<text class="item-label" :style="{ color: theme.textPrimary }">切换主题</text>
-					<text class="item-desc" :style="{ color: theme.textTertiary }">浅色 / 深色 / 跟随系统</text>
+					<text class="item-label" :style="{ color: theme.textPrimary }">{{ t('profile.settingsPage.themeTitle') }}</text>
+					<text class="item-desc" :style="{ color: theme.textTertiary }">{{ t('profile.settingsPage.themeDesc') }}</text>
 					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 				<view class="list-item item-border" hover-class="list-item-active" @click="handleAction('chatBubble')" :style="{ borderTopColor: theme.borderColor }">
-					<text class="item-label" :style="{ color: theme.textPrimary }">聊天气泡</text>
-					<text class="item-desc" :style="{ color: theme.textTertiary }">全局生效</text>
+					<text class="item-label" :style="{ color: theme.textPrimary }">{{ t('profile.settingsPage.chatBubbleTitle') }}</text>
+					<text class="item-desc" :style="{ color: theme.textTertiary }">{{ t('profile.settingsPage.chatBubbleDesc') }}</text>
+					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
+				</view>
+				<view class="list-item item-border" hover-class="list-item-active" @click="handleAction('language')" :style="{ borderTopColor: theme.borderColor }">
+					<text class="item-label" :style="{ color: theme.textPrimary }">{{ t('profile.settingsPage.languageTitle') }}</text>
+					<text class="item-desc" :style="{ color: theme.textTertiary }">{{ languageDesc }}</text>
 					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 				<view class="list-item item-border" hover-class="list-item-active" @click="handleAction('checkUpdate')" :style="{ borderTopColor: theme.borderColor }">
-					<text class="item-label" :style="{ color: theme.textPrimary }">检查更新</text>
-					<text class="item-desc" :style="{ color: theme.textTertiary }">当前版本 {{ appVersion }}</text>
+					<text class="item-label" :style="{ color: theme.textPrimary }">{{ t('profile.settingsPage.checkUpdateTitle') }}</text>
+					<text class="item-desc" :style="{ color: theme.textTertiary }">{{ t('profile.settingsPage.versionDesc', { version: appVersion }) }}</text>
 					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 			</view>
@@ -34,13 +39,26 @@
 
 <script setup lang="uts">
 	import { onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getAppVersion } from '../../utils/device.uts'
+	import { getLanguageMode, getResolvedLocale, subscribeLocaleChange, type LanguageMode } from '../../store/locale.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const appVersion = ref(getAppVersion())
 	const theme = ref<ThemeTokens>(getThemeTokens())
+	const { t } = useI18n()
+	const currentLanguageMode = ref<LanguageMode>(getLanguageMode())
+	const currentResolvedLocale = ref(getResolvedLocale())
 	let unsubscribeTheme: (() => void) | null = null
+	let unsubscribeLocale: (() => void) | null = null
+
+	const languageDesc = computed((): string => {
+		if (currentLanguageMode.value === 'system') {
+			return currentResolvedLocale.value === 'en' ? t('profile.settingsPage.languageFollowSystemEn') : t('profile.settingsPage.languageFollowSystem')
+		}
+		return currentLanguageMode.value === 'en' ? t('profile.settingsPage.languageEn') : t('profile.settingsPage.languageZhCn')
+	})
 
 	function handleBack() {
 		uni.navigateBack()
@@ -59,9 +77,15 @@
 			})
 			return
 		}
+		if (type === 'language') {
+			uni.navigateTo({
+				url: '/pages/profile/language-settings'
+			})
+			return
+		}
 		if (type === 'checkUpdate') {
 			uni.showToast({
-				title: `当前版本 ${appVersion.value}`,
+				title: t('profile.settingsPage.versionDesc', { version: appVersion.value }),
 				icon: 'none'
 			})
 			return
@@ -71,11 +95,19 @@
 	unsubscribeTheme = subscribeThemeChange((_, __, tokens) => {
 		theme.value = tokens
 	})
+	unsubscribeLocale = subscribeLocaleChange((resolvedLocale, languageMode) => {
+		currentResolvedLocale.value = resolvedLocale
+		currentLanguageMode.value = languageMode
+	})
 
 	onUnload(() => {
 		if (unsubscribeTheme != null) {
 			unsubscribeTheme()
 			unsubscribeTheme = null
+		}
+		if (unsubscribeLocale != null) {
+			unsubscribeLocale()
+			unsubscribeLocale = null
 		}
 	})
 </script>

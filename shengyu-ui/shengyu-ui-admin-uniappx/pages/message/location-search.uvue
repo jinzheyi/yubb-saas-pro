@@ -6,7 +6,7 @@
 			<view class="header-left" @click="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">位置</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('chat.locationSearch.title') }}</text>
 			<view class="header-right" @click="confirmSend">
 				<text class="iconfont confirm-icon" :style="{ color: theme.brandPrimary }">&#xe65f;</text>
 			</view>
@@ -19,7 +19,7 @@
 					class="search-input"
 					:style="{ color: theme.inputText }"
 					v-model="keyword"
-					placeholder="请输入关键字"
+					:placeholder="t('chat.locationSearch.searchPlaceholder')"
 					confirm-type="search"
 					@confirm="handleSearch"
 				/>
@@ -50,15 +50,15 @@
 			</view>
 			<!-- 地图加载中 -->
 			<view v-if="mapLoading" class="map-loading-overlay" :style="{ backgroundColor: theme.overlayMask }">
-				<text class="map-loading-text" :style="{ color: theme.textPrimary }">地图加载中...</text>
+				<text class="map-loading-text" :style="{ color: theme.textPrimary }">{{ t('chat.locationSearch.mapLoading') }}</text>
 			</view>
 		</view>
 
 		<!-- 地图加载失败提示 -->
 		<view v-else class="map-error-wrap" :style="{ backgroundColor: theme.cardBg }">
 			<text class="iconfont map-error-icon">&#xe671;</text>
-			<text class="map-error-text" :style="{ color: theme.textPrimary }">地图组件加载失败</text>
-			<text class="map-error-tip" :style="{ color: theme.textTertiary }">您仍可发送当前位置或搜索位置</text>
+			<text class="map-error-text" :style="{ color: theme.textPrimary }">{{ t('chat.locationSearch.mapLoadFailed') }}</text>
+			<text class="map-error-tip" :style="{ color: theme.textTertiary }">{{ t('chat.locationSearch.mapLoadFailedTip') }}</text>
 		</view>
 
 		<!-- 当前位置发送区域 -->
@@ -68,17 +68,17 @@
 					<text class="iconfont current-location-icon" :style="{ color: theme.brandPrimary }">&#xea72;</text>
 				</view>
 				<view class="current-location-info">
-					<text class="current-location-title" :style="{ color: theme.textPrimary }">发送当前位置</text>
+					<text class="current-location-title" :style="{ color: theme.textPrimary }">{{ t('chat.locationSearch.sendCurrentLocation') }}</text>
 					<text class="current-location-desc" :style="{ color: theme.textTertiary }" v-if="currentAddress !== ''">{{ currentAddress }}</text>
-					<text class="current-location-desc" :style="{ color: theme.textTertiary }" v-else-if="locationLoading">定位中...</text>
+					<text class="current-location-desc" :style="{ color: theme.textTertiary }" v-else-if="locationLoading">{{ t('chat.locationSearch.locating') }}</text>
 					<text class="current-location-desc" :style="{ color: theme.textTertiary }" v-else-if="locationError !== ''">{{ locationError }}</text>
-					<text class="current-location-desc" :style="{ color: theme.textTertiary }" v-else>点击获取当前位置</text>
+					<text class="current-location-desc" :style="{ color: theme.textTertiary }" v-else>{{ t('chat.locationSearch.tapToLocate') }}</text>
 				</view>
 			</view>
 			<!-- #ifdef WEB -->
 			<view class="web-accuracy-tip" :style="{ backgroundColor: theme.brandPrimarySoft, borderTopColor: theme.borderColor }">
 				<text class="iconfont web-tip-icon" :style="{ color: theme.brandPrimary }">&#xe671;</text>
-				<text class="web-tip-text" :style="{ color: theme.textSecondary }">网页端定位精度有限，可拖动地图或在列表选择精确位置</text>
+				<text class="web-tip-text" :style="{ color: theme.textSecondary }">{{ t('chat.locationSearch.webAccuracyTip') }}</text>
 			</view>
 			<!-- #endif -->
 		</view>
@@ -91,27 +91,27 @@
 		<scroll-view class="content" :style="{ backgroundColor: theme.cardBg }" scroll-y="true" show-scrollbar="false">
 			<!-- 加载中 -->
 			<view v-if="poiLoading" class="state-wrap">
-				<text class="state-text" :style="{ color: theme.textTertiary }">加载中...</text>
+				<text class="state-text" :style="{ color: theme.textTertiary }">{{ t('chat.locationSearch.locating') }}</text>
 			</view>
 
 			<!-- 额度耗尽状态 -->
 			<view v-else-if="quotaExhausted" class="quota-exhausted">
 				<text class="iconfont quota-icon">&#xe671;</text>
-				<text class="quota-title" :style="{ color: theme.textPrimary }">地图服务额度已用完</text>
-				<text class="quota-desc" :style="{ color: theme.textTertiary }">请联系管理员处理</text>
-				<text class="quota-tip" :style="{ color: theme.brandPrimary }">您仍可发送当前位置</text>
+				<text class="quota-title" :style="{ color: theme.textPrimary }">{{ t('chat.locationSearch.quotaTitle') }}</text>
+				<text class="quota-desc" :style="{ color: theme.textTertiary }">{{ t('chat.locationSearch.quotaDesc') }}</text>
+				<text class="quota-tip" :style="{ color: theme.brandPrimary }">{{ t('chat.locationSearch.quotaTip') }}</text>
 			</view>
 
 			<!-- 服务未开启 -->
 			<view v-else-if="serviceDisabled" class="service-disabled">
 				<text class="iconfont disabled-icon">&#xe671;</text>
-				<text class="disabled-title" :style="{ color: theme.textPrimary }">位置检索服务未开启</text>
-				<text class="disabled-desc" :style="{ color: theme.textTertiary }">您仍可发送当前位置</text>
+				<text class="disabled-title" :style="{ color: theme.textPrimary }">{{ t('chat.locationSearch.serviceDisabledTitle') }}</text>
+				<text class="disabled-desc" :style="{ color: theme.textTertiary }">{{ t('chat.locationSearch.serviceDisabledDesc') }}</text>
 			</view>
 
 			<!-- 空列表 -->
 			<view v-else-if="list.length === 0 && !poiLoading" class="state-wrap">
-				<text class="state-text" :style="{ color: theme.textTertiary }">{{ keyword !== '' ? '未找到相关位置' : '暂无附近地点' }}</text>
+				<text class="state-text" :style="{ color: theme.textTertiary }">{{ keyword !== '' ? t('chat.locationSearch.noSearchResult') : t('chat.locationSearch.noNearbyResult') }}</text>
 			</view>
 
 			<!-- POI 列表 -->
@@ -137,9 +137,11 @@
 
 <script setup lang="uts">
 import { onLoad, onUnload, onReady } from '@dcloudio/uni-app'
+import { useI18n } from '../../hooks/useI18n.uts'
 import { searchLocation } from '../../api/message.uts'
 import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 import type { ThemeTokens } from '../../config/theme.uts'
+const { t } = useI18n()
 
 type PoiItem = {
 	poiId: string
@@ -153,7 +155,7 @@ type PoiItem = {
 const keyword = ref('')
 const poiLoading = ref(false)
 const list = ref<PoiItem[]>([])
-const listTitle = ref('附近位置')
+const listTitle = ref(t('chat.locationSearch.nearbyTitle'))
 const quotaExhausted = ref(false)
 const serviceDisabled = ref(false)
 const theme = ref<ThemeTokens>(getThemeTokens())
@@ -241,7 +243,7 @@ function handleBack(): void {
 
 function clearKeyword(): void {
 	keyword.value = ''
-	listTitle.value = '附近位置'
+	listTitle.value = t('chat.locationSearch.nearbyTitle')
 	selectedPoiId.value = ''
 	selectedPoi.value = null
 	void loadNearbyPoi(mapCenterLat.value, mapCenterLng.value)
@@ -265,13 +267,13 @@ async function initLocation(): Promise<void> {
 			console.log('[LocationSearch] Location obtained:', currentLatitude.value, currentLongitude.value)
 			await loadNearbyPoi(loc.latitude, loc.longitude)
 		} else {
-			locationError.value = '无法获取定位'
+			locationError.value = t('chat.locationSearch.locationUnavailable')
 			console.warn('[LocationSearch] Failed to get location')
 			// 使用默认位置加载附近 POI
 			await loadNearbyPoi(mapCenterLat.value, mapCenterLng.value)
 		}
 	} catch (e) {
-		locationError.value = '定位失败'
+		locationError.value = t('chat.locationSearch.locationFailed')
 		console.error('[LocationSearch] initLocation error:', e)
 	} finally {
 		locationLoading.value = false
@@ -398,7 +400,7 @@ async function handleMapCenterChange(): Promise<void> {
 
 					// 刷新附近 POI
 					if (keyword.value.trim() === '') {
-						listTitle.value = '附近位置'
+						listTitle.value = t('chat.locationSearch.nearbyTitle')
 						void loadNearbyPoi(lat, lng)
 					} else {
 						void loadSearchPoi(keyword.value.trim(), lat, lng)
@@ -426,11 +428,11 @@ async function handleSearch(): Promise<void> {
 	selectedPoi.value = null
 
 	if (kw === '') {
-		listTitle.value = '附近位置'
+		listTitle.value = t('chat.locationSearch.nearbyTitle')
 		await loadNearbyPoi(mapCenterLat.value, mapCenterLng.value)
 		return
 	}
-	listTitle.value = '搜索结果'
+	listTitle.value = t('chat.locationSearch.searchResultTitle')
 	await loadSearchPoi(kw, mapCenterLat.value, mapCenterLng.value)
 }
 
@@ -451,7 +453,7 @@ async function loadNearbyPoi(lat: number, lng: number): Promise<void> {
 	} catch (e: any) {
 		poiLoading.value = false
 		console.error('[LocationSearch] loadNearbyPoi error:', e)
-		uni.showToast({ title: '附近地点加载失败', icon: 'none' })
+		uni.showToast({ title: t('chat.locationSearch.nearbyLoadFailed'), icon: 'none' })
 	}
 }
 
@@ -467,7 +469,7 @@ async function loadSearchPoi(kw: string, lat: number, lng: number): Promise<void
 	} catch (e: any) {
 		poiLoading.value = false
 		console.error('[LocationSearch] loadSearchPoi error:', e)
-		uni.showToast({ title: '位置检索失败', icon: 'none' })
+		uni.showToast({ title: t('chat.locationSearch.searchFailed'), icon: 'none' })
 	}
 }
 
@@ -512,7 +514,7 @@ function applyResult(resp: any): void {
 		selectedPoiId.value = firstPoi.poiId
 		selectedPoi.value = firstPoi
 		// 如果当前位置地址未获取到，用第一个 POI 的地址补充
-		if (currentAddress.value === '' && listTitle.value === '附近位置') {
+		if (currentAddress.value === '' && listTitle.value === t('chat.locationSearch.nearbyTitle')) {
 			currentAddress.value = firstPoi.name !== '' ? firstPoi.name : firstPoi.address
 		}
 	}
@@ -535,16 +537,16 @@ function selectPoi(item: PoiItem): void {
 
 function sendCurrentLocation(): void {
 	if (locationLoading.value) {
-		uni.showToast({ title: '正在获取位置，请稍候', icon: 'none' })
+		uni.showToast({ title: t('chat.locationSearch.locatingWait'), icon: 'none' })
 		return
 	}
 
 	if (currentLatitude.value === 0 && currentLongitude.value === 0) {
 		uni.showModal({
-			title: '定位失败',
-			content: '无法获取当前位置，是否重新定位？',
-			confirmText: '重新定位',
-			cancelText: '取消',
+			title: t('chat.locationSearch.locateFailedTitle'),
+			content: t('chat.locationSearch.locateFailedContent'),
+			confirmText: t('chat.locationSearch.relocate'),
+			cancelText: t('common.cancel'),
 			success: (res: UniNamespace.ShowModalRes) => {
 				if (res.confirm === true) {
 					void initLocation()
@@ -558,7 +560,7 @@ function sendCurrentLocation(): void {
 		latitude: currentLatitude.value,
 		longitude: currentLongitude.value,
 		address: currentAddress.value,
-		name: currentAddress.value !== '' ? currentAddress.value : '当前位置',
+		name: currentAddress.value !== '' ? currentAddress.value : t('chat.toast.currentLocationName'),
 		provider: 'device',
 		poiId: ''
 	})
@@ -585,14 +587,14 @@ function confirmSend(): void {
 			latitude: mapCenterLat.value,
 			longitude: mapCenterLng.value,
 			address: '',
-			name: '地图选点',
+			name: t('chat.locationSearch.mapPickName'),
 			provider: 'tencent',
 			poiId: ''
 		})
 		return
 	}
 
-	uni.showToast({ title: '请选择一个位置', icon: 'none' })
+	uni.showToast({ title: t('chat.locationSearch.chooseLocation'), icon: 'none' })
 }
 
 function emitSelection(payload: any): void {

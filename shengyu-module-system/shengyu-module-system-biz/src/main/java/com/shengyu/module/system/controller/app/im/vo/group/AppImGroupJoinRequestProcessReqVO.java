@@ -10,7 +10,7 @@ import javax.validation.constraints.NotNull;
 public class AppImGroupJoinRequestProcessReqVO {
 
     @Schema(description = "申请单ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "10001")
-    @NotNull(message = "申请单ID不能为空")
+    @NotNull(message = "{validation.im.join_request_id.required}")
     private Long requestId;
 
     @Schema(description = "拒绝原因", example = "请联系群主确认身份")

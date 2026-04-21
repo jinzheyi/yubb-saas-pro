@@ -33,6 +33,9 @@ public class AppImGroupInviteVerifyRespVO {
     @Schema(description = "过期时间")
     private LocalDateTime expireTime;
 
+    @Schema(description = "错误码(验证失败时)", example = "1002030217")
+    private Integer errorCode;
+
     @Schema(description = "错误信息(验证失败时)", example = "邀请码已过期")
     private String errorMessage;
 

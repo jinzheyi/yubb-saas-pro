@@ -13,7 +13,7 @@ import java.util.List;
 public class AppImStickerSortReqVO {
 
     @Schema(description = "排序项")
-    @NotEmpty(message = "排序项不能为空")
+    @NotEmpty(message = "{validation.im.sort_items.required}")
     @Valid
     private List<Item> items;
 
@@ -22,11 +22,11 @@ public class AppImStickerSortReqVO {
     public static class Item {
 
         @Schema(description = "表情ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1001")
-        @NotNull(message = "表情ID不能为空")
+        @NotNull(message = "{validation.im.sticker_id.required}")
         private Long stickerId;
 
         @Schema(description = "排序号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-        @NotNull(message = "排序号不能为空")
+        @NotNull(message = "{validation.im.sort_no.required}")
         private Integer sortNo;
     }
 }

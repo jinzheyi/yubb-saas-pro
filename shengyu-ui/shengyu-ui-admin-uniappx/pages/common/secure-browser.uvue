@@ -4,7 +4,7 @@
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
 			<text class="header-title" :style="{ color: theme.headerText }" :numberOfLines="1">{{ pageTitle }}</text>
 			<view class="header-right"></view>
@@ -19,14 +19,14 @@
 			<web-view v-if="webUrl !== ''" :src="webUrl" class="webview"></web-view>
 
 			<view v-else class="blocked-wrap">
-				<text class="blocked-title" :style="{ color: theme.textPrimary }">已拦截非受控内容</text>
-				<text class="blocked-desc" :style="{ color: theme.textSecondary }">仅允许在 IM 内部容器中打开 http/https 链接，其他二维码或文本不会直接影响系统。</text>
+				<text class="blocked-title" :style="{ color: theme.textPrimary }">{{ t('runtime.secureBrowser.blockedTitle') }}</text>
+				<text class="blocked-desc" :style="{ color: theme.textSecondary }">{{ t('runtime.secureBrowser.blockedDesc') }}</text>
 				<view class="blocked-card" :style="{ backgroundColor: theme.cardBg, borderColor: theme.borderColor }">
-					<text class="blocked-label" :style="{ color: theme.textTertiary }">扫码/打开内容</text>
-					<text class="blocked-raw" :style="{ color: theme.textPrimary }">{{ rawContent || '无可展示内容' }}</text>
+					<text class="blocked-label" :style="{ color: theme.textTertiary }">{{ t('runtime.secureBrowser.blockedLabel') }}</text>
+					<text class="blocked-raw" :style="{ color: theme.textPrimary }">{{ rawContent || t('runtime.secureBrowser.emptyContent') }}</text>
 				</view>
 				<view class="blocked-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleCopy">
-					<text class="blocked-btn-text">复制内容</text>
+					<text class="blocked-btn-text">{{ t('runtime.secureBrowser.copyContent') }}</text>
 				</view>
 			</view>
 		</view>
@@ -35,11 +35,14 @@
 
 <script setup lang="uts">
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { normalizeWebUrl, readSecureBrowserTitle } from '../../utils/secure-browser.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
-	const pageTitle = ref('安全浏览')
+	const { t } = useI18n()
+
+	const pageTitle = ref('')
 	const webUrl = ref('')
 	const rawContent = ref('')
 	const source = ref('external')
@@ -52,22 +55,22 @@
 
 	const sourceTag = computed(() : string => {
 		if (source.value === 'scan') {
-			return '扫码结果'
+			return t('runtime.secureBrowser.tagScan')
 		}
 		if (source.value === 'message') {
-			return '消息外链'
+			return t('runtime.secureBrowser.tagMessage')
 		}
 		if (source.value === 'file') {
-			return '文件访问'
+			return t('runtime.secureBrowser.tagFile')
 		}
-		return '外部内容'
+		return t('runtime.secureBrowser.tagExternal')
 	})
 
 	const addressText = computed(() : string => {
 		if (webUrl.value !== '') {
 			return webUrl.value
 		}
-		return rawContent.value !== '' ? rawContent.value : '未识别到可安全打开的链接'
+		return rawContent.value !== '' ? rawContent.value : t('runtime.secureBrowser.unknownSafeLink')
 	})
 
 	function handleBack() {
@@ -88,7 +91,7 @@
 	function handleCopy() {
 		if (addressText.value === '') {
 			uni.showToast({
-				title: '暂无可复制内容',
+				title: t('runtime.secureBrowser.nothingToCopy'),
 				icon: 'none'
 			})
 			return
@@ -97,7 +100,7 @@
 			data: addressText.value,
 			success: () => {
 				uni.showToast({
-					title: '已复制',
+					title: t('runtime.secureBrowser.copySuccess'),
 					icon: 'success'
 				})
 			}
@@ -105,7 +108,7 @@
 	}
 
 	onLoad((options : any) => {
-		pageTitle.value = readSecureBrowserTitle(options != null ? options['title'] : '', '安全浏览')
+		pageTitle.value = readSecureBrowserTitle(options != null ? options['title'] : '', t('runtime.secureBrowser.title'))
 		source.value = options != null && options['source'] != null ? String(options['source']) : 'external'
 		rawContent.value = options != null && options['raw'] != null ? safeDecode(options['raw']) : ''
 		const rawUrl = options != null && options['url'] != null ? safeDecode(options['url']) : ''

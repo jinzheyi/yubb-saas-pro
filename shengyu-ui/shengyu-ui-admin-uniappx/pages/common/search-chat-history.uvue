@@ -6,23 +6,23 @@
 			<view class="header-left" @click="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">搜聊天记录:{{ keyword }}</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('commonSearch.chatHistoryTitle', { keyword }) }}</text>
 			<view class="header-right"></view>
 		</view>
 
 		<view class="search-bar" :style="{ borderBottomColor: theme.pageBg }">
 			<view class="search-input-wrapper" :style="{ backgroundColor: theme.inputBg }">
 				<text class="iconfont search-icon" :style="{ color: theme.textTertiary }">&#xea6e;</text>
-				<input class="search-input" :style="{ color: theme.inputText }" v-model="keyword" placeholder="搜索聊天记录" confirm-type="search" @confirm="handleSearch" />
+				<input class="search-input" :style="{ color: theme.inputText }" v-model="keyword" :placeholder="t('commonSearch.searchChatHistoryPlaceholder')" confirm-type="search" @confirm="handleSearch" />
 			</view>
 			<view class="search-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleSearch">
-				<text class="search-btn-text">搜索</text>
+				<text class="search-btn-text">{{ t('commonSearch.search') }}</text>
 			</view>
 		</view>
 
 		<scroll-view class="list" scroll-y show-scrollbar="false" @scrolltolower="loadMore">
 			<view v-if="items.length === 0 && !loading" class="empty">
-				<text class="empty-text" :style="{ color: theme.textTertiary }">{{ searched ? '暂时没有数据' : '请输入关键词搜索' }}</text>
+				<text class="empty-text" :style="{ color: theme.textTertiary }">{{ searched ? t('commonSearch.emptyNoData') : t('commonSearch.enterKeywordToSearch') }}</text>
 			</view>
 
 			<view v-for="item in items" :key="item.id" class="row" :style="{ borderBottomColor: theme.borderColor }" @click="handleItemClick(item)">
@@ -34,11 +34,11 @@
 			</view>
 
 			<view v-if="loading" class="loading">
-				<text class="loading-text" :style="{ color: theme.textTertiary }">加载中...</text>
+				<text class="loading-text" :style="{ color: theme.textTertiary }">{{ t('commonSearch.searching') }}</text>
 			</view>
 
 			<view v-if="!hasMore && items.length > 0" class="no-more">
-				<text class="no-more-text" :style="{ color: theme.textTertiary }">没有更多了</text>
+				<text class="no-more-text" :style="{ color: theme.textTertiary }">{{ t('commonSearch.noMore') }}</text>
 			</view>
 		</scroll-view>
 	</view>
@@ -47,6 +47,7 @@
 <script setup lang="uts">
 	import { ref } from 'vue'
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { messageSearchService, type SearchResultItem } from '../../services/message-search-service.uts'
 	import { navToFilePreview } from '../../utils/nav.uts'
 	import { encodeIdParam } from '../../utils/id-param.uts'
@@ -61,6 +62,7 @@
 	const pageSize = ref(20)
 	const items = ref<SearchResultItem[]>([])
 	const theme = ref<ThemeTokens>(getThemeTokens())
+	const { t } = useI18n()
 	let unsubscribeTheme: (() => void) | null = null
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
@@ -94,7 +96,7 @@
 			return
 		}
 		if (kw.length < 2) {
-			uni.showToast({ title: '至少输入2个字', icon: 'none' })
+			uni.showToast({ title: t('commonSearch.atLeastTwoChars'), icon: 'none' })
 			return
 		}
 		if (!hasMore.value && !reset) return
@@ -119,7 +121,7 @@
 			}
 		} catch (e) {
 			console.error('[SearchChatHistory] 搜索失败:', e)
-			uni.showToast({ title: '搜索失败', icon: 'none' })
+			uni.showToast({ title: t('commonSearch.searchFailed'), icon: 'none' })
 		} finally {
 			loading.value = false
 		}
@@ -187,7 +189,7 @@
 		const chatId = item.chatId
 		const mid = item.messageId || item.id
 		if (!chatId || chatId === '0' || !mid || mid === '0') {
-			uni.showToast({ title: '无法定位消息', icon: 'none' })
+			uni.showToast({ title: t('commonSearch.locateFailed'), icon: 'none' })
 			return
 		}
 		uni.navigateTo({

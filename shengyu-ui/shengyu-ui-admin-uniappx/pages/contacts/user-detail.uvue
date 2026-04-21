@@ -7,7 +7,7 @@
 				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
 			<text class="header-title" :style="{ color: theme.headerText }">{{ userName }}</text>
-			<text class="header-more" :style="{ color: theme.headerText }" @click.stop="showMoreMenu = !showMoreMenu">更多</text>
+			<text class="header-more" :style="{ color: theme.headerText }" @click.stop="showMoreMenu = !showMoreMenu">{{ t('contactsUserDetail.more') }}</text>
 		</view>
 
 		<!-- 更多菜单 -->
@@ -15,11 +15,11 @@
 			<view class="more-menu" :style="{ top: (statusBarHeight + 48) + 'px', backgroundColor: theme.cardBg }" @click.stop>
 				<view class="menu-item" :style="{ borderBottomColor: theme.borderColor }" @click="handleMenuAction('follow')">
 					<text :class="['iconfont', 'menu-icon', isFollowing ? 'menu-icon-active' : '']">&#xea90;</text>
-					<text class="menu-text" :style="{ color: theme.textPrimary }">{{ isFollowing ? '取消关注' : '关注' }}</text>
+					<text class="menu-text" :style="{ color: theme.textPrimary }" :numberOfLines="2">{{ isFollowing ? t('contactsUserDetail.unfollow') : t('contactsUserDetail.follow') }}</text>
 				</view>
 				<view class="menu-item" @click="handleMenuAction('share')">
 					<text class="iconfont menu-icon" :style="{ color: theme.textPrimary }">&#xe63d;</text>
-					<text class="menu-text" :style="{ color: theme.textPrimary }">分享名片</text>
+					<text class="menu-text" :style="{ color: theme.textPrimary }" :numberOfLines="2">{{ t('contactsUserDetail.shareCard') }}</text>
 				</view>
 			</view>
 		</view>
@@ -36,23 +36,23 @@
 			<!-- 详细信息 -->
 			<view class="info-section">
 				<view class="info-item" :style="{ borderBottomColor: theme.borderColor }">
-					<text class="info-label" :style="{ color: theme.textTertiary }">姓名</text>
+					<text class="info-label" :style="{ color: theme.textTertiary }">{{ t('contactsUserDetail.name') }}</text>
 					<text class="info-value" :style="{ color: theme.textPrimary }">{{ userName }}</text>
 				</view>
 				<view class="info-item" :style="{ borderBottomColor: theme.borderColor }">
-					<text class="info-label" :style="{ color: theme.textTertiary }">手机</text>
+					<text class="info-label" :style="{ color: theme.textTertiary }">{{ t('contactsUserDetail.mobile') }}</text>
 					<text class="info-value" :style="{ color: theme.textPrimary }">{{ userInfo.mobile }}</text>
 				</view>
 				<view class="info-item" :style="{ borderBottomColor: theme.borderColor }">
-					<text class="info-label" :style="{ color: theme.textTertiary }">邮箱</text>
-					<text class="info-value" :style="{ color: userInfo.email ? theme.textPrimary : theme.textSecondary }">{{ userInfo.email || '未设置' }}</text>
+					<text class="info-label" :style="{ color: theme.textTertiary }">{{ t('contactsUserDetail.email') }}</text>
+					<text class="info-value" :style="{ color: userInfo.email ? theme.textPrimary : theme.textSecondary }">{{ userInfo.email || t('contactsUserDetail.unset') }}</text>
 				</view>
 				<view class="info-item" :style="{ borderBottomColor: theme.borderColor }">
-					<text class="info-label" :style="{ color: theme.textTertiary }">岗位</text>
-					<text class="info-value" :style="{ color: userInfo.postName ? theme.textPrimary : theme.textSecondary }">{{ userInfo.postName || '未设置' }}</text>
+					<text class="info-label" :style="{ color: theme.textTertiary }">{{ t('contactsUserDetail.post') }}</text>
+					<text class="info-value" :style="{ color: userInfo.postName ? theme.textPrimary : theme.textSecondary }">{{ userInfo.postName || t('contactsUserDetail.unset') }}</text>
 				</view>
 				<view class="info-item info-item-last">
-					<text class="info-label" :style="{ color: theme.textTertiary }">部门</text>
+					<text class="info-label" :style="{ color: theme.textTertiary }">{{ t('contactsUserDetail.department') }}</text>
 					<text class="info-value" :style="{ color: theme.textPrimary }">{{ userInfo.department }}</text>
 				</view>
 			</view>
@@ -64,13 +64,13 @@
 				<view class="action-icon-wrap" :style="{ backgroundColor: theme.brandPrimary }">
 					<text class="iconfont action-icon">&#xea98;</text>
 				</view>
-				<text class="action-text" :style="{ color: theme.brandPrimary }">消息</text>
+				<text class="action-text" :style="{ color: theme.brandPrimary }">{{ t('contactsUserDetail.message') }}</text>
 			</view>
 			<view class="action-btn" @click="handleCall">
 				<view class="action-icon-wrap" :style="{ backgroundColor: theme.brandPrimary }">
 					<text class="iconfont action-icon">&#xea8c;</text>
 				</view>
-				<text class="action-text" :style="{ color: theme.brandPrimary }">通话</text>
+				<text class="action-text" :style="{ color: theme.brandPrimary }">{{ t('contactsUserDetail.call') }}</text>
 			</view>
 		</view>
 	</view>
@@ -138,7 +138,7 @@
 		const displayName = userName.value != null ? String(userName.value) : ''
 		if (targetUserId === '' || targetUserId === '0' || displayName === '') {
 			uni.showToast({
-				title: '名片信息无效',
+				title: t('contactsUserDetail.invalidCard'),
 				icon: 'none'
 			})
 			return
@@ -161,7 +161,7 @@
 		
 		if (!userId.value) {
 			uni.showToast({
-				title: '用户信息错误',
+				title: t('contactsUserDetail.invalidUser'),
 				icon: 'none'
 			})
 			return
@@ -178,13 +178,13 @@
 			isFollowing.value = newStarStatus
 			
 			uni.showToast({
-				title: newStarStatus ? '关注成功' : '已取消关注',
+				title: newStarStatus ? t('contactsUserDetail.followSuccess') : t('contactsUserDetail.unfollowSuccess'),
 				icon: 'success'
 			})
 		} catch (e) {
 			console.error('[UserDetail] 更新关注状态失败:', e)
 			uni.showToast({
-				title: '操作失败，请重试',
+				title: t('contactsUserDetail.actionFailedRetry'),
 				icon: 'none'
 			})
 		} finally {
@@ -202,7 +202,7 @@
 
 	function handleCall() {
 		uni.showToast({
-			title: '通话功能开发中',
+			title: t('contactsUserDetail.callInDevelopment'),
 			icon: 'none'
 		})
 	}
@@ -219,7 +219,7 @@
 			
 			if (data) {
 				// 更新用户名（优先真实姓名）
-				userName.value = data.nickname || '未知用户'
+				userName.value = data.nickname || t('contactsUserDetail.unknownUser')
 				
 				// 更新用户信息
 				userInfo.value = {
@@ -237,7 +237,7 @@
 		} catch (e) {
 			console.error('[UserDetail] 加载用户详情失败:', e)
 			uni.showToast({
-				title: '加载失败',
+				title: t('contactsUserDetail.loadFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -356,7 +356,7 @@
 		top: 0;
 		right: 12px;
 		border-radius: 8px;
-		width: 160px;
+		width: 188px;
 		overflow: hidden;
 		box-shadow: 0 4px 16px rgba(0,0,0,0.2);
 	}
@@ -386,6 +386,8 @@
 	.menu-text {
 		color: #ffffff;
 		font-size: 14px;
+		flex: 1;
+		line-height: 20px;
 	}
 
 	.content {

@@ -44,11 +44,11 @@
 
 			<view class="settings-group" :style="{ backgroundColor: theme.cardBg }">
 				<view class="list-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" hover-class="list-item-active" @click="handleAction('file')">
-					<text class="item-label" :style="{ color: theme.textPrimary }">文件</text>
+					<text class="item-label" :style="{ color: theme.textPrimary }">{{ t('chat.chatFiles.titleSingle') }}</text>
 					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 				<view class="list-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" hover-class="list-item-active" @click="handleAction('history')">
-					<text class="item-label" :style="{ color: theme.textPrimary }">聊天记录</text>
+					<text class="item-label" :style="{ color: theme.textPrimary }">{{ t('chat.chatHistory.title') }}</text>
 					<text class="iconfont arrow-icon" :style="{ color: theme.textTertiary }">&#xeb03;</text>
 				</view>
 				<view class="list-item" :style="{ backgroundColor: theme.cardBg }" hover-class="list-item-active" @click="handleAction('clear')">
@@ -78,8 +78,8 @@
 	const noDisturb = ref(false)
 	const chatId = ref('')
 	const targetId = ref('')
-	const profileName = ref('聊天设置')
-	const profileRole = ref('暂无岗位信息')
+	const profileName = ref('')
+	const profileRole = ref('')
 	const profileAvatarText = ref('?')
 	const profileAvatarUrl = ref('')
 	const profileAvatarError = ref(false)
@@ -134,7 +134,7 @@
 			profileName.value = nickname
 			profileRole.value = data.postName != null && String(data.postName).trim() !== ''
 				? String(data.postName).trim()
-				: (data.deptName != null && String(data.deptName).trim() !== '' ? String(data.deptName).trim() : '暂无岗位信息')
+				: (data.deptName != null && String(data.deptName).trim() !== '' ? String(data.deptName).trim() : t('chatSettings.noRoleInfo'))
 			profileAvatarText.value = getAvatarText(profileName.value)
 			profileAvatarUrl.value = normalizeAvatarUrl(data.avatar)
 			profileAvatarError.value = false
@@ -206,7 +206,7 @@
 		const newValue = e.detail.value === true
 		if (!chatId.value || toggleLoading.value) {
 			uni.showToast({
-				title: '会话信息未加载',
+				title: t('chat.chatFiles.conversationNotLoaded'),
 				icon: 'none'
 			})
 			return
@@ -219,14 +219,14 @@
 			}
 			isPinned.value = newValue
 			uni.showToast({
-				title: newValue ? '已置顶' : '已取消置顶',
+				title: newValue ? t('message.toast.pinned') : t('message.toast.unpinned'),
 				icon: 'success'
 			})
 		} catch (e) {
 			console.error('[ChatSettings] 设置置顶失败:', e)
 			isPinned.value = !newValue
 			uni.showToast({
-				title: '设置失败',
+				title: t('message.toast.actionFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -238,7 +238,7 @@
 		const newValue = e.detail.value === true
 		if (!chatId.value || toggleLoading.value) {
 			uni.showToast({
-				title: '会话信息未加载',
+				title: t('chat.chatFiles.conversationNotLoaded'),
 				icon: 'none'
 			})
 			return
@@ -251,14 +251,14 @@
 			}
 			noDisturb.value = newValue
 			uni.showToast({
-				title: newValue ? '已开启免打扰' : '已关闭免打扰',
+				title: newValue ? t('chatSettings.toast.notifyEnabled') : t('chatSettings.toast.notifyDisabled'),
 				icon: 'success'
 			})
 		} catch (e) {
 			console.error('[ChatSettings] 设置免打扰失败:', e)
 			noDisturb.value = !newValue
 			uni.showToast({
-				title: '设置失败',
+				title: t('message.toast.actionFailed'),
 				icon: 'none'
 			})
 		} finally {
@@ -270,7 +270,7 @@
 		if (type === 'file' || type === 'history') {
 			if (!chatId.value) {
 				uni.showToast({
-					title: '会话信息未加载',
+					title: t('chat.chatFiles.conversationNotLoaded'),
 					icon: 'none'
 				})
 				return
@@ -286,18 +286,20 @@
 		if (type === 'clear') {
 			uni.showModal({
 				title: t('chatSettings.clearHistory'),
-				content: '确定要清空聊天记录吗？此操作不可恢复',
+				content: t('chatSettings.clearHistoryConfirm'),
+				cancelText: t('common.cancel'),
+				confirmText: t('common.ok'),
 				success: (res) => {
 						if (res.confirm) {
 							clearConversationHistory(chatId.value).then(() => {
 								uni.showToast({
-									title: '已清空',
+									title: t('chatSettings.toast.cleared'),
 									icon: 'success'
 								})
 							}).catch((e) => {
 								console.error('[ChatSettings] 清空聊天记录失败:', e)
 								uni.showToast({
-									title: '清空失败',
+									title: t('chatSettings.toast.clearFailed'),
 									icon: 'none'
 								})
 							})
@@ -307,7 +309,7 @@
 			return
 		}
 		uni.showToast({
-			title: type + ' 功能开发中',
+			title: t('chatSettings.inDevelopment', { type }),
 			icon: 'none'
 		})
 	}

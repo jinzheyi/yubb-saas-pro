@@ -2,6 +2,8 @@
  * 日期时间工具函数
  */
 
+import { t } from '../store/locale.uts'
+
 /**
  * 格式化日期时间
  * @param date 日期对象、时间戳或日期字符串
@@ -82,13 +84,13 @@ export function getRelativeTime(date : any) : string {
 	
 	// 1分钟内
 	if (diff < 60 * 1000) {
-		return '刚刚'
+		return t('common.relativeTime.justNow')
 	}
 	
 	// 1小时内
 	if (diff < 60 * 60 * 1000) {
 		const minutes = Math.floor(diff / (60 * 1000))
-		return minutes + '分钟前'
+		return t('common.relativeTime.minutesAgo', { count: minutes })
 	}
 	
 	// 今天
@@ -100,7 +102,7 @@ export function getRelativeTime(date : any) : string {
 	// 昨天
 	const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
 	if (d >= yesterday) {
-		return '昨天 ' + formatTime(d)
+		return t('common.relativeTime.yesterdayAt', { time: formatTime(d) })
 	}
 	
 	// 今年

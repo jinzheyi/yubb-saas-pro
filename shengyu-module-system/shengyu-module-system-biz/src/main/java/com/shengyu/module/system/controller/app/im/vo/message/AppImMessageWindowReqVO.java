@@ -10,7 +10,7 @@ import javax.validation.constraints.NotNull;
 public class AppImMessageWindowReqVO {
 
     @Schema(description = "ChatID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "ChatID不能为空")
+    @NotNull(message = "{validation.im.chat_id.required}")
     private Long chatId;
 
     @Schema(description = "窗口模式（latest）", example = "latest")

@@ -22,12 +22,12 @@ import javax.validation.constraints.Pattern;
 public class AppAuthSmsSendReqVO {
 
     @Schema(description = "手机号", requiredMode = Schema.RequiredMode.REQUIRED, example = "15601691300")
-    @NotEmpty(message = "手机号不能为空")
-    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
+    @NotEmpty(message = "{validation.auth.mobile.required}")
+    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "{validation.auth.mobile.invalid}")
     private String mobile;
 
     @Schema(description = "短信场景", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotEmpty(message = "短信场景不能为空")
+    @NotEmpty(message = "{validation.auth.sms_scene.required}")
     private String scene;
 
 }

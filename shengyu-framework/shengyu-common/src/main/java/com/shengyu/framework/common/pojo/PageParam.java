@@ -23,14 +23,14 @@ public class PageParam implements Serializable {
     public static final Integer PAGE_SIZE_NONE = -1;
 
     @Schema(description = "页码，从 1 开始", requiredMode = Schema.RequiredMode.REQUIRED,example = "1")
-    @NotNull(message = "页码不能为空")
-    @Min(value = 1, message = "页码最小值为 1")
+    @NotNull(message = "{validation.page.page_no.required}")
+    @Min(value = 1, message = "{validation.page.page_no.min}")
     private Integer pageNo = PAGE_NO;
 
     @Schema(description = "每页条数，最大值为 200", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")
-    @NotNull(message = "每页条数不能为空")
-    @Min(value = 1, message = "每页条数最小值为 1")
-    @Max(value = 200, message = "每页条数最大值为 200")
+    @NotNull(message = "{validation.page.page_size.required}")
+    @Min(value = 1, message = "{validation.page.page_size.min}")
+    @Max(value = 200, message = "{validation.page.page_size.max}")
     private Integer pageSize = PAGE_SIZE;
 
 }

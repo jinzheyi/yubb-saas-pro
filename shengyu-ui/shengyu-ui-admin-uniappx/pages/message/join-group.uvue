@@ -4,46 +4,46 @@
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click.stop="handleBack">
 				<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
-				<text class="back-text" :style="{ color: theme.headerText }">返回</text>
+				<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
 			</view>
-			<text class="header-title" :style="{ color: theme.headerText }">加入群聊</text>
+			<text class="header-title" :style="{ color: theme.headerText }">{{ t('chat.joinGroup.title') }}</text>
 			<view class="header-right"></view>
 		</view>
 
 		<scroll-view class="content" scroll-y="true" show-scrollbar="false">
 			<view class="manual-entry-card" :style="{ backgroundColor: theme.cardBg }">
-				<text class="manual-entry-title" :style="{ color: theme.textPrimary }">输入邀请码或群邀请链接</text>
+				<text class="manual-entry-title" :style="{ color: theme.textPrimary }">{{ t('chat.joinGroup.manualTitle') }}</text>
 				<input
 					v-model="inviteInput"
 					class="manual-entry-input"
 					:style="{ color: theme.inputText, backgroundColor: theme.inputBg, borderColor: theme.borderColor }"
-					placeholder="请输入邀请码，或粘贴群邀请链接"
+					:placeholder="t('chat.joinGroup.manualPlaceholder')"
 					confirm-type="done"
 					@confirm="handleManualVerify"
 				/>
 				<view class="manual-entry-actions">
 					<view class="manual-action-btn manual-action-btn-secondary" :style="{ backgroundColor: theme.cardBgMuted }" @click="handlePasteInvite">
-						<text class="manual-action-btn-text secondary-text" :style="{ color: theme.textSecondary }">粘贴</text>
+						<text class="manual-action-btn-text secondary-text" :style="{ color: theme.textSecondary }">{{ t('chat.joinGroup.paste') }}</text>
 					</view>
 					<view class="manual-action-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleManualVerify">
-						<text class="manual-action-btn-text">{{ loading ? '验证中...' : '验证' }}</text>
+						<text class="manual-action-btn-text">{{ loading ? t('chat.joinGroup.verifying') : t('chat.joinGroup.verify') }}</text>
 					</view>
 				</view>
-				<text class="manual-entry-hint" :style="{ color: theme.textTertiary }">支持直接输入邀请码，或粘贴群二维码/分享链接</text>
+				<text class="manual-entry-hint" :style="{ color: theme.textTertiary }">{{ t('chat.joinGroup.manualHint') }}</text>
 			</view>
 
 			<!-- 加载中 -->
 			<view v-if="loading" class="loading-container">
-				<text class="loading-text" :style="{ color: theme.textTertiary }">验证中...</text>
+				<text class="loading-text" :style="{ color: theme.textTertiary }">{{ t('chat.joinGroup.verifying') }}</text>
 			</view>
 
 			<!-- 验证失败 -->
 			<view v-else-if="hasVerifyAttempted && !isValid" class="error-container">
 				<text class="iconfont error-icon">&#xe60a;</text>
 				<text class="error-title" :style="{ color: theme.textPrimary }">{{ errorMessage }}</text>
-				<text class="error-desc" :style="{ color: theme.textSecondary }">请检查邀请码是否正确或已过期</text>
+				<text class="error-desc" :style="{ color: theme.textSecondary }">{{ t('chat.joinGroup.errorDesc') }}</text>
 				<view class="error-btn" :style="{ backgroundColor: theme.cardBgMuted }" @click="handleResetManual">
-					<text class="error-btn-text">重新输入</text>
+					<text class="error-btn-text">{{ t('chat.joinGroup.reenter') }}</text>
 				</view>
 			</view>
 
@@ -57,49 +57,49 @@
 				<!-- 群信息 -->
 				<view class="group-info">
 					<text class="group-name" :style="{ color: theme.textPrimary }">{{ groupInfo.groupName }}</text>
-					<text class="group-member-count" :style="{ color: theme.textTertiary }">{{ groupInfo.memberCount }}人</text>
+					<text class="group-member-count" :style="{ color: theme.textTertiary }">{{ t('chat.group.memberCount', { count: groupInfo.memberCount }) }}</text>
 				</view>
 
 				<!-- 邀请码信息 -->
 				<view class="invite-info-card" :style="{ backgroundColor: theme.cardBg, borderColor: theme.borderColor }">
 					<view class="invite-row">
-						<text class="invite-label" :style="{ color: theme.textTertiary }">邀请码</text>
+						<text class="invite-label" :style="{ color: theme.textTertiary }">{{ t('chat.joinGroup.inviteCode') }}</text>
 						<text class="invite-value" :style="{ color: theme.textPrimary }">{{ inviteCode }}</text>
 					</view>
 					<view class="invite-row">
-						<text class="invite-label" :style="{ color: theme.textTertiary }">有效期</text>
+						<text class="invite-label" :style="{ color: theme.textTertiary }">{{ t('chat.joinGroup.expireTime') }}</text>
 						<text class="invite-value" :style="{ color: theme.textPrimary }">{{ expireText }}</text>
 					</view>
 					<view v-if="groupInfo.needApproval" class="invite-row">
-						<text class="invite-label" :style="{ color: theme.textTertiary }">加群方式</text>
-						<text class="invite-value approval-text">需要群主或管理员审核</text>
+						<text class="invite-label" :style="{ color: theme.textTertiary }">{{ t('chat.joinGroup.joinMethod') }}</text>
+						<text class="invite-value approval-text">{{ t('chat.joinGroup.needApproval') }}</text>
 					</view>
 				</view>
 
 				<!-- 已在群中提示 -->
 				<view v-if="alreadyInGroup" class="already-in-group" :style="{ backgroundColor: theme.brandPrimarySoft }">
 					<text class="iconfont check-icon">&#xe60b;</text>
-					<text class="already-text">您已经是群成员</text>
+					<text class="already-text">{{ t('chat.joinGroup.alreadyInGroup') }}</text>
 				</view>
 
 				<!-- 加入按钮 -->
 				<view v-if="!alreadyInGroup" class="action-container">
 					<view class="join-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleJoinGroup">
-						<text class="join-btn-text">{{ joining ? '提交中...' : joinActionText }}</text>
+						<text class="join-btn-text">{{ joining ? t('chat.joinGroup.submitting') : joinActionText }}</text>
 					</view>
 				</view>
 
 				<!-- 查看群聊按钮（已在群中） -->
 				<view v-else class="action-container">
 					<view class="view-btn" :style="{ backgroundColor: theme.cardBgMuted }" @click="handleViewGroup">
-						<text class="view-btn-text" :style="{ color: theme.textPrimary }">查看群聊</text>
+						<text class="view-btn-text" :style="{ color: theme.textPrimary }">{{ t('chat.joinGroup.viewGroup') }}</text>
 					</view>
 				</view>
 			</view>
 
 			<view v-else class="empty-container">
-				<text class="empty-title" :style="{ color: theme.textPrimary }">等待验证邀请码</text>
-				<text class="empty-desc" :style="{ color: theme.textSecondary }">可输入邀请码，或粘贴群二维码/邀请链接后验证</text>
+				<text class="empty-title" :style="{ color: theme.textPrimary }">{{ t('chat.joinGroup.waitingTitle') }}</text>
+				<text class="empty-desc" :style="{ color: theme.textSecondary }">{{ t('chat.joinGroup.waitingDesc') }}</text>
 			</view>
 
 			<view class="bottom-space"></view>
@@ -109,12 +109,15 @@
 
 <script setup lang="uts">
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
+	import { useI18n } from '../../hooks/useI18n.uts'
 	import { verifyInviteCode, joinGroupByInvite } from '../../api/group.uts'
 	import { getGroupAvatarColor } from '../../utils/avatar.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 	import { parseGroupInvitePayload } from '../../utils/group-invite.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
+
+	const { t } = useI18n()
 
 	// 页面参数
 	const inviteCode = ref('')
@@ -125,7 +128,7 @@
 	const loading = ref(true)
 	const isValid = ref(false)
 	const hasVerifyAttempted = ref(false)
-	const errorMessage = ref('邀请码无效')
+	const errorMessage = ref('')
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	let unsubscribeTheme: (() => void) | null = null
 
@@ -161,21 +164,20 @@
 		const diff = expire.getTime() - now.getTime()
 
 		if (diff <= 0) {
-			return '已过期'
+			return t('chat.joinGroup.expired')
 		}
 
 		const hours = Math.floor(diff / (1000 * 60 * 60))
 		const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
 
 		if (hours > 0) {
-			return `${hours}小时${minutes}分钟`
-		} else {
-			return `${minutes}分钟`
+			return t('chat.joinGroup.expireInHoursMinutes', { hours, minutes })
 		}
+		return t('chat.joinGroup.expireInMinutes', { minutes })
 	})
 
 	const joinActionText = computed(() : string => {
-		return groupInfo.value.needApproval ? '提交入群申请' : '加入群聊'
+		return groupInfo.value.needApproval ? t('chat.joinGroup.submitApply') : t('chat.joinGroup.title')
 	})
 
 	function resolveInviteErrorMessage(error: any, fallback: string): string {
@@ -183,16 +185,7 @@
 			? String(error.data.msg)
 			: (error && error.msg ? String(error.msg) : (error && error.message ? String(error.message) : ''))
 		const msg = rawMsg.trim()
-		if (msg === '') {
-			return fallback
-		}
-		if (msg === '群组不存在') {
-			return '该邀请对应的群聊已不可用'
-		}
-		if (msg.indexOf('邀请') !== -1 && (msg.indexOf('失效') !== -1 || msg.indexOf('过期') !== -1)) {
-			return msg
-		}
-		return msg
+		return msg !== '' ? msg : fallback
 	}
 
 	/**
@@ -202,7 +195,7 @@
 		if (!inviteCode.value) {
 			hasVerifyAttempted.value = true
 			isValid.value = false
-			errorMessage.value = '请输入邀请码'
+			errorMessage.value = t('chat.joinGroup.enterCode')
 			return
 		}
 
@@ -226,12 +219,12 @@
 				groupId.value = result.groupId != null ? result.groupId.toString() : ''
 			} else {
 				isValid.value = false
-				errorMessage.value = '邀请码无效或已过期'
+				errorMessage.value = t('chat.joinGroup.invalidOrExpired')
 			}
 		} catch (e : any) {
 			console.error('[JoinGroup] 验证邀请码失败:', e)
 			isValid.value = false
-			errorMessage.value = resolveInviteErrorMessage(e, '验证失败，请稍后重试')
+			errorMessage.value = resolveInviteErrorMessage(e, t('chat.joinGroup.verifyFailed'))
 		} finally {
 			loading.value = false
 		}
@@ -241,7 +234,7 @@
 		isValid.value = false
 		hasVerifyAttempted.value = false
 		alreadyInGroup.value = false
-		errorMessage.value = '邀请码无效'
+		errorMessage.value = t('chat.joinGroup.invalidCode')
 		groupInfo.value = {
 			groupId: '',
 			groupName: '',
@@ -266,7 +259,7 @@
 		if (payload == null) {
 			isValid.value = false
 			alreadyInGroup.value = false
-			errorMessage.value = '请输入正确的邀请码或邀请链接'
+			errorMessage.value = t('chat.joinGroup.invalidPayload')
 			return
 		}
 		inviteCode.value = payload.inviteCode
@@ -281,7 +274,7 @@
 				const text = res != null && res.data != null ? String(res.data) : ''
 				if (text === '') {
 					uni.showToast({
-						title: '剪贴板暂无内容',
+						title: t('chat.joinGroup.clipboardEmpty'),
 						icon: 'none'
 					})
 					return
@@ -292,7 +285,7 @@
 			fail: (err : any) => {
 				console.error('[JoinGroup] 读取剪贴板失败:', err)
 				uni.showToast({
-					title: '读取剪贴板失败',
+					title: t('chat.joinGroup.clipboardReadFailed'),
 					icon: 'none'
 				})
 			}
@@ -314,7 +307,7 @@
 
 			const resultType = result && result.resultType != null ? Number(result.resultType) : 1
 			const resultGroupId = result && result.groupId != null ? String(result.groupId) : groupId.value
-			const message = result && result.message ? String(result.message) : (resultType === 2 ? '已提交申请，请等待管理员审批' : '加入成功')
+			const message = result && result.message ? String(result.message) : (resultType === 2 ? t('chat.joinGroup.applySubmitted') : t('chat.joinGroup.joinSuccess'))
 
 			uni.showToast({
 				title: message,
@@ -344,12 +337,12 @@
 			console.error('[JoinGroup] 加入群聊失败:', e)
 
 			// 解析错误信息
-			let errorMsg = resolveInviteErrorMessage(e, '加入失败，请稍后重试')
-			if (errorMsg.includes('已经是群成员') || errorMsg.includes('已在群中')) {
+			let errorMsg = resolveInviteErrorMessage(e, t('chat.joinGroup.joinFailed'))
+			if (errorMsg === t('chat.joinGroup.alreadyInGroup')) {
 				alreadyInGroup.value = true
 				return
 			}
-			if (errorMsg === '该邀请对应的群聊已不可用') {
+			if (errorMsg === t('chat.joinGroup.groupUnavailable')) {
 				hasVerifyAttempted.value = true
 				isValid.value = false
 				errorMessage.value = errorMsg

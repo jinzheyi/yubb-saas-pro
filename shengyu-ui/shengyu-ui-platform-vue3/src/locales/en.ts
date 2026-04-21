@@ -326,7 +326,9 @@ export default {
       errMsg503: 'The service is unavailable, the server is temporarily overloaded or maintained!',
       errMsg504: 'Network timeout!',
       errMsg505: 'The http version does not support the request!',
-      errMsg901: 'Demo mode, no write operations are possible!'
+      errMsg901: 'Demo mode, no write operations are possible!',
+      demoGuideUrl: 'See the guide at http://shengyukj.top/',
+      demoGuideSetup: 'Set up your local environment in 5 minutes'
     },
     app: {
       logoutTip: 'Reminder',
@@ -400,6 +402,10 @@ export default {
       dept: 'Department',
       posts: 'Position',
       roles: 'Own Role',
+      language: 'Interface Language',
+      languageSystem: 'Follow System',
+      languageZhCN: 'Simplified Chinese',
+      languageEn: 'English',
       sex: 'Sex',
       man: 'Man',
       woman: 'Woman',
