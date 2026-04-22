@@ -1,0 +1,38 @@
+import { t } from '../store/locale.uts'
+
+export function canOpenAppSettings(): boolean {
+	const anyUni: any = uni as any
+	return anyUni != null && typeof anyUni.openSetting === 'function'
+}
+
+export function openAppSettings(): boolean {
+	if (!canOpenAppSettings()) {
+		return false
+	}
+	uni.openSetting({})
+	return true
+}
+
+export function promptOpenAppSettings(message: string, title: string = t('common.confirmTitle'), confirmText: string = t('common.goSetting')): void {
+	uni.showModal({
+		title,
+		content: message,
+		cancelText: t('common.cancel'),
+		confirmText,
+		success: (res) => {
+			if (!res.confirm) {
+				return
+			}
+			try {
+				if (!openAppSettings()) {
+					throw new Error('openSetting unavailable')
+				}
+			} catch (e) {
+				uni.showToast({
+					title: message,
+					icon: 'none'
+				})
+			}
+		}
+	})
+}

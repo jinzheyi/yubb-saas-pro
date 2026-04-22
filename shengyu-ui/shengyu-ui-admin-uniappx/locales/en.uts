@@ -13,6 +13,7 @@ export default {
 		save: 'Save',
 		cancel: 'Cancel',
 		close: 'Close',
+		goSetting: 'Settings',
 		pause: 'Pause',
 		continue: 'Resume',
 		success: 'Success',
@@ -78,7 +79,9 @@ export default {
 		SmsSendMsg: 'Code has been sent',
 		invalidTenantName: 'Invalid Tenant Name',
 		toastAccountRequired: 'Please enter your account and password',
-		toastMobileRequired: 'Please enter your mobile number and code'
+		toastMobileRequired: 'Please enter your mobile number and code',
+		harmonyCapabilityTitle: 'HarmonyOS security capability is pending',
+		harmonyCapabilityDesc: 'The native AES runtime has not been injected on this device yet, so the slider captcha required for account login is unavailable. Complete the HarmonyOS native integration first.'
 	},
 	captcha: {
 		verify: 'Verify',
@@ -87,7 +90,8 @@ export default {
 		success: 'Verification succeeded',
 		fail: 'Verification failed',
 		loadFailed: 'Failed to load captcha',
-		successWithDuration: 'Verified in {duration}s'
+		successWithDuration: 'Verified in {duration}s',
+		harmonyAesRequired: 'HarmonyOS secure encryption is not ready, so slider verification is unavailable'
 	},
 	sys: {
 		api: {
@@ -140,7 +144,10 @@ export default {
 			uploadFailedWithStatus: 'Upload failed. Status code: {statusCode}',
 			parseResponseFailed: 'Failed to parse response',
 			browserUploadFailed: 'Browser upload failed',
-			blobUploadUnsupported: 'Blob upload is not supported on this platform'
+			blobUploadUnsupported: 'Blob upload is not supported on this platform',
+			cameraPermissionDenied: 'Enable camera permission before taking photos or videos',
+			albumPermissionDenied: 'Enable album permission before accessing the system album',
+			cameraOrAlbumPermissionDenied: 'Enable camera or album permission before choosing media'
 		},
 		scan: {
 			noValidContent: 'No valid content recognized',
@@ -148,6 +155,8 @@ export default {
 		},
 		file: {
 			openFailedTitle: 'Open failed',
+			openUnsupported: 'The current client did not detect a document-open capability',
+			fileTypeUnsupported: 'This system does not support opening the current file type',
 			retry: 'Retry',
 			fileUrlEmptyRetry: 'File URL is empty. Please try again later',
 			downloadLoading: 'Downloading',
@@ -157,6 +166,9 @@ export default {
 		scanPage: {
 			title: 'Scan',
 			guide: 'Enterprise IM group QR codes are recognized first. Third-party links open in a controlled browser page',
+			harmonyTitle: 'Use the system scanner to continue',
+			harmonyDesc: 'HarmonyOS currently uses the system scanning capability, and the result is still routed through the IM secure flow.',
+			startScan: 'Start scanning',
 			flashOn: 'Turn on flashlight',
 			flashOff: 'Turn off flashlight',
 			manualJoin: 'Enter invite code manually',
@@ -165,6 +177,7 @@ export default {
 			gotoManualJoin: 'Go to manual entry',
 			initFailed: 'Failed to initialize scan environment',
 			startFailed: 'Failed to start scanning',
+			cameraPermissionDenied: 'Enable camera permission before scanning',
 			flashUnsupported: 'Flashlight control is not supported on this device',
 			flashToggleFailed: 'Failed to toggle flashlight'
 		},
@@ -173,6 +186,8 @@ export default {
 			loading: 'Loading...',
 			retry: 'Retry',
 			downloadOpen: 'Download and open',
+			openExternally: 'Open externally',
+			openExternalFailed: 'Failed to open externally',
 			unsupportedOnlinePreview: 'Online preview is not supported yet',
 			fileUrlEmpty: 'File URL is empty',
 			loadFailedRetry: 'Loading failed. Please try again later',
@@ -191,6 +206,9 @@ export default {
 			blockedLabel: 'Scanned/opened content',
 			emptyContent: 'No content to display',
 			copyContent: 'Copy content',
+			copyLink: 'Copy link',
+			openExternally: 'Open externally',
+			openExternalFailed: 'Failed to open externally',
 			nothingToCopy: 'Nothing to copy',
 			copySuccess: 'Copied'
 		},
@@ -243,6 +261,63 @@ export default {
 			languageTitle: 'Language',
 			checkUpdateTitle: 'Check for Updates',
 			versionDesc: 'Current version {version}',
+			checkingUpdate: 'Checking...',
+			latestVersionToast: 'You already have the latest version',
+			checkUpdateFailed: 'Failed to check for updates',
+			updateFoundTitle: 'New version {version} available',
+			updateFoundContent: 'A newer version is available. Review the release notes and continue to upgrade.',
+			updateNow: 'Update now',
+			goToAppGallery: 'Open AppGallery',
+			openUpgradeFailed: 'Failed to open upgrade entry',
+			harmonyStatusTitle: 'HarmonyOS Readiness',
+			harmonyStatusReady: 'Ready',
+			harmonyStatusPending: 'Pending',
+			harmonyPlatformLabel: 'OS Version',
+			harmonyApiLabel: 'API Level',
+			harmonyApiUnknown: 'Unknown',
+			harmonyAesLabel: 'Native AES',
+			harmonyAesReady: 'Injected',
+			harmonyAesPending: 'Not injected',
+			harmonyAesSourceLabel: 'AES Source',
+			harmonyAesSourcePlugin: 'Harmony UTS Plugin',
+			harmonyAesSourceExternal: 'External runtime injection',
+			harmonyAesSourcePending: 'Pending integration',
+			harmonyAesImplLabel: 'AES Implementation',
+			harmonyAesImplUnknown: 'Unknown',
+			harmonyUpgradeLabel: 'Upgrade Entry',
+			harmonyUpgradeAppGallery: 'AppGallery / Market',
+			harmonyUpgradePending: 'Pending official verification',
+			harmonyScanLabel: 'System Scan',
+			harmonyCameraBridgeLabel: 'Scan Permission Bridge',
+			harmonyCameraPermissionLabel: 'Camera Permission',
+			harmonyMicrophonePermissionLabel: 'Microphone Permission',
+			harmonyMicrophoneBridgeLabel: 'Record Permission Bridge',
+			harmonyVoiceRecordLabel: 'Voice Record',
+			harmonyVoicePlaybackLabel: 'Voice Playback',
+			harmonyShareLabel: 'System Share',
+			harmonyImagePreviewLabel: 'Image Preview',
+			harmonyDocumentOpenLabel: 'Document Open',
+			harmonyShareReady: 'Available',
+			harmonyShareFallback: 'Link copy fallback',
+			harmonyLocationLabel: 'Location View',
+			harmonyLocationReady: 'Integrated',
+			harmonyLocationPending: 'Pending uni-openlocation or official equivalent',
+			harmonyLocationBridgeLabel: 'Location Permission Bridge',
+			harmonyLocationBridgeReady: 'Loaded',
+			harmonyLocationBridgePending: 'Pending check',
+			harmonyLocationPermissionLabel: 'Location Permission',
+			harmonyLocationPermissionReady: 'Authorized',
+			harmonyLocationPermissionDenied: 'Not authorized',
+			harmonyLocationPermissionUnknown: 'Pending check',
+			harmonyLocationSwitchLabel: 'System Location',
+			harmonyLocationSwitchOn: 'Enabled',
+			harmonyLocationSwitchOff: 'Disabled',
+			harmonyLocationSwitchUnknown: 'Unknown',
+			harmonyAlbumLabel: 'System Album',
+			harmonyAlbumPermissionLabel: 'Album Permission',
+			harmonyAlbumReady: 'Image and video save available',
+			harmonyAlbumPending: 'Detected at runtime',
+			harmonyStatusHint: 'This section shows the HarmonyOS capabilities currently detected by the client. If native AES is not injected, the slider captcha required for account login is blocked for safety. If scan, voice, location, or album flows are not authorized or not ready, the corresponding official plugin, permission declaration, or system authorization still needs to be completed.',
 			languageFollowSystem: 'Follow System',
 			languageFollowSystemEn: 'Follow System · English',
 			languageZhCn: 'Simplified Chinese',
@@ -410,6 +485,7 @@ export default {
 			anchorFallback: 'The original message could not be located. Latest messages are shown instead',
 			loadMessageFailed: 'Network error, failed to load messages',
 			voiceNotSupported: 'Voice sending is not supported on this platform',
+			voicePlayUnsupported: 'Voice playback is not supported on this platform',
 			sendFailed: 'Send failed',
 			editorUnavailable: 'The input box is unavailable, please try again later',
 			originalEmpty: 'Original content is empty',
@@ -432,6 +508,7 @@ export default {
 			playFailed: 'Playback failed',
 			openFailed: 'Open failed',
 			locationMissing: 'Location info is missing',
+			locationOpenUnsupported: 'This client has not integrated map opening yet. You can copy the location name, address, and coordinates first.',
 			contactMissing: 'Contact card info is missing',
 			contactInvalid: 'Invalid contact card info',
 			currentLocationName: 'Current Location',
@@ -538,7 +615,10 @@ export default {
 			mapPickName: 'Selected on Map',
 			chooseLocation: 'Please select a location',
 			locationUnavailable: 'Unable to get location',
-			locationFailed: 'Location failed'
+			locationFailed: 'Location failed',
+			harmonyBridgePending: 'The HarmonyOS location permission bridge is not ready. Rebuild and reinstall the client first.',
+			harmonyLocationSwitchOff: 'System location is disabled. Turn on system location first.',
+			harmonyPermissionDenied: 'Location permission is not authorized. Enable location permission first.'
 		},
 		groupQrcode: {
 			title: 'Group QR Code',
@@ -624,6 +704,9 @@ export default {
 			downloading: 'Downloading',
 			savedToAlbum: 'Saved to album',
 			saveFailed: 'Save failed',
+			albumPermissionContent: 'Saving images or videos requires album permission. Go to settings?',
+			imageSaveUnsupported: 'The current client did not detect a system image-save capability. Continue integrating the HarmonyOS runtime or plugin capability.',
+			videoSaveUnsupported: 'The current client did not detect a system video-save capability. Continue integrating the HarmonyOS runtime or plugin capability.',
 			downloadFailed: 'Download failed',
 			forwardUnsupported: 'This file cannot be forwarded yet',
 			actionDownload: 'Download',
@@ -632,7 +715,7 @@ export default {
 			noMore: 'No more',
 			pullMore: 'Pull up to load more'
 		},
-		chatBubble: {
+	chatBubble: {
 			title: 'Chat Bubble',
 			previewTitle: 'Preview',
 			otherUser: 'Other',
@@ -664,9 +747,15 @@ export default {
 				customApplied: 'Custom color applied',
 				resetSuccess: 'Default color restored',
 				saveSuccess: 'Saved successfully'
-			}
-		},
-		stickerManage: {
+		}
+	},
+	locationViewer: {
+		title: 'Location',
+		copy: 'Copy',
+		copySuccess: 'Location copied',
+		systemMap: 'System Map'
+	},
+	stickerManage: {
 			title: 'Sticker Management',
 			done: 'Done',
 			organize: 'Organize',
@@ -901,7 +990,10 @@ export default {
 			transferFailed: 'Transfer failed'
 		},
 		videoPlayer: {
-			loadFailed: 'Failed to load video'
+			loadFailed: 'Failed to load video',
+			fallbackHint: 'This video cannot be played directly. Try again or open it with system capabilities.',
+			openExternally: 'Open externally',
+			openExternalFailed: 'Failed to open externally'
 		},
 		readReceipt: {
 			title: 'Read Receipt',
@@ -978,6 +1070,7 @@ export default {
 			locationDefault: 'Location',
 			locationCoordinate: 'Coordinate Location',
 			navigate: 'Navigate',
+			copyLocation: 'Copy Location',
 			location: 'Location'
 		}
 	},

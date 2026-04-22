@@ -1,0 +1,7 @@
+{
+	"id": "uni-im-harmony-aes",
+	"displayName": "uni-im Harmony AES",
+	"version": "0.0.1",
+	"description": "HarmonyOS AES bridge for uni-app x IM captcha runtime",
+	"uni_modules": {}
+}

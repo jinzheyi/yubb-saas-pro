@@ -1,0 +1,20 @@
+{
+	"module": {
+		"type": "har",
+		"name": "uni_im_harmony_camera_bridge",
+		"deviceTypes": [
+			"default",
+			"tablet",
+			"2in1"
+		],
+		"requestPermissions": [
+			{
+				"name": "ohos.permission.CAMERA",
+				"usedScene": {
+					"when": "inuse"
+				},
+				"reason": "$string:permission_camera_reason"
+			}
+		]
+	}
+}

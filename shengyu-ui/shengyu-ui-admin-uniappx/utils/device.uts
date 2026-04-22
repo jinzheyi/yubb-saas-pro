@@ -18,22 +18,66 @@ export enum DeviceType {
 }
 
 /**
+ * 客户端平台编码
+ * 用于升级中心、多端发布、平台差异化能力判断
+ */
+export enum ClientPlatformCode {
+	WEB = 'WEB',
+	IOS = 'IOS',
+	ANDROID = 'ANDROID',
+	HARMONY = 'HARMONY',
+	MINI_PROGRAM = 'MINI_PROGRAM'
+}
+
+export type ClientPlatformInfo = {
+	platformCode: string
+	osName: string
+	osVersion: string
+	harmonyApiVersion: number | null
+	harmonyDisplayVersion: string
+	deviceBrand: string
+	deviceModel: string
+}
+
+function getDeviceRuntimeInfo(): any {
+	try {
+		const anyUni = uni as any
+		if (typeof anyUni.getDeviceInfo === 'function') {
+			return anyUni.getDeviceInfo()
+		}
+		return uni.getSystemInfoSync()
+	} catch (e) {
+		return null
+	}
+}
+
+function isHarmonyRuntime(info: any): boolean {
+	if (info == null) {
+		return false
+	}
+	const platform = String(info.platform || '').toLowerCase()
+	const osName = String(info.osName || '').toLowerCase()
+	return platform === 'harmonyos' || osName === 'harmonyos'
+}
+
+/**
  * 获取当前设备类型
  * 根据运行平台返回对应的设备类型
  */
 export function getCurrentDeviceType(): number {
-	// #ifdef APP-PLUS
-	const systemInfo = uni.getSystemInfoSync()
-	const platform = systemInfo.platform
+	// #ifdef APP-PLUS || APP-HARMONY
+	const systemInfo = getDeviceRuntimeInfo()
+	const platform = String(systemInfo?.platform || '').toLowerCase()
 	
 	if (platform === 'ios') {
 		// 判断是否为 iPad
-		const model = systemInfo.model
+		const model = systemInfo?.model || systemInfo?.deviceModel
 		if (model != null && model.indexOf('iPad') > -1) {
 			return DeviceType.IPAD
 		}
 		return DeviceType.IOS
-	} else if (platform === 'android') {
+	} else if (platform === 'android' || platform === 'harmonyos' || isHarmonyRuntime(systemInfo)) {
+		// 当前后端 DeviceTypeEnum 尚未拆出 Harmony 终端枚举，客户端先按移动端归为 Android 类别。
 		return DeviceType.ANDROID
 	}
 	// #endif
@@ -74,6 +118,49 @@ export function getDeviceTypeName(deviceType: number): string {
 	}
 }
 
+export function getCurrentClientPlatform(): string {
+	// #ifdef APP-PLUS || APP-HARMONY
+	const systemInfo = getDeviceRuntimeInfo()
+	if (isHarmonyRuntime(systemInfo)) {
+		return ClientPlatformCode.HARMONY
+	}
+	const platform = String(systemInfo?.platform || '').toLowerCase()
+	if (platform === 'ios') {
+		return ClientPlatformCode.IOS
+	}
+	if (platform === 'android') {
+		return ClientPlatformCode.ANDROID
+	}
+	// #endif
+
+	// #ifdef H5
+	return ClientPlatformCode.WEB
+	// #endif
+
+	// #ifdef MP-WEIXIN
+	return ClientPlatformCode.MINI_PROGRAM
+	// #endif
+
+	return ClientPlatformCode.WEB
+}
+
+export function isHarmonyOS(): boolean {
+	return getCurrentClientPlatform() === ClientPlatformCode.HARMONY
+}
+
+export function getClientPlatformInfo(): ClientPlatformInfo {
+	const deviceInfo = getDeviceRuntimeInfo()
+	return {
+		platformCode: getCurrentClientPlatform(),
+		osName: String(deviceInfo?.osName || deviceInfo?.platform || ''),
+		osVersion: String(deviceInfo?.osVersion || deviceInfo?.system || ''),
+		harmonyApiVersion: typeof deviceInfo?.osHarmonySDKAPIVersion === 'number' ? deviceInfo.osHarmonySDKAPIVersion as number : null,
+		harmonyDisplayVersion: String(deviceInfo?.osHarmonyDisplayVersion || ''),
+		deviceBrand: String(deviceInfo?.deviceBrand || deviceInfo?.brand || ''),
+		deviceModel: String(deviceInfo?.deviceModel || deviceInfo?.model || '')
+	}
+}
+
 /**
  * 获取设备唯一标识
  * 优先从本地存储获取，如果不存在则生成新的设备ID
@@ -105,9 +192,9 @@ function generateDeviceId(): string {
  * 获取应用版本号
  */
 export function getAppVersion(): string {
-	// #ifdef APP-PLUS
-	const systemInfo = uni.getSystemInfoSync()
-	const appVersion = systemInfo.appVersion
+	// #ifdef APP-PLUS || APP-HARMONY
+	const systemInfo = getDeviceRuntimeInfo()
+	const appVersion = systemInfo?.appVersion
 	if (appVersion != null && appVersion != '') {
 		return appVersion as string
 	}
@@ -128,12 +215,45 @@ export function getAppVersion(): string {
 	return '1.0.0'
 }
 
+export function getAppVersionCode(): number {
+	// #ifdef APP-PLUS || APP-HARMONY
+	const systemInfo = getDeviceRuntimeInfo()
+	const rawVersionCode = systemInfo?.appVersionCode || systemInfo?.versionCode
+	if (rawVersionCode != null && rawVersionCode !== '') {
+		const parsed = Number(rawVersionCode)
+		if (!isNaN(parsed) && parsed > 0) {
+			return parsed
+		}
+	}
+	// #endif
+
+	const version = getAppVersion()
+	if (!version) {
+		return 1
+	}
+	const parts = version.split('.')
+	let major = 0
+	let minor = 0
+	let patch = 0
+	if (parts.length > 0) {
+		major = Number(parts[0]) || 0
+	}
+	if (parts.length > 1) {
+		minor = Number(parts[1]) || 0
+	}
+	if (parts.length > 2) {
+		patch = Number(parts[2]) || 0
+	}
+	const code = major * 10000 + minor * 100 + patch
+	return code > 0 ? code : 1
+}
+
 export function getDeviceName(): string {
-	// #ifdef APP-PLUS
+	// #ifdef APP-PLUS || APP-HARMONY
 	try {
-		const systemInfo = uni.getSystemInfoSync()
-		const brand = (systemInfo as any).brand
-		const model = (systemInfo as any).model
+		const systemInfo = getDeviceRuntimeInfo()
+		const brand = (systemInfo as any).deviceBrand || (systemInfo as any).brand
+		const model = (systemInfo as any).deviceModel || (systemInfo as any).model
 		if (brand != null && brand !== '' && model != null && model !== '') {
 			return `${brand} ${model}`
 		}
@@ -199,8 +319,10 @@ export function getDeviceInfo(): DeviceInfo {
  * 判断是否为移动端
  */
 export function isMobile(): boolean {
-	const deviceType = getCurrentDeviceType()
-	return deviceType === DeviceType.IOS || deviceType === DeviceType.ANDROID
+	const platform = getCurrentClientPlatform()
+	return platform === ClientPlatformCode.IOS
+		|| platform === ClientPlatformCode.ANDROID
+		|| platform === ClientPlatformCode.HARMONY
 }
 
 /**

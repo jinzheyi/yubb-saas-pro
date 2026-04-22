@@ -13,6 +13,7 @@ export default {
 		save: '保存',
 		cancel: '取消',
 		close: '关闭',
+		goSetting: '去设置',
 		pause: '暂停',
 		continue: '继续播放',
 		success: '成功',
@@ -78,7 +79,9 @@ export default {
 		SmsSendMsg: '验证码已发送',
 		invalidTenantName: '无效的租户名称',
 		toastAccountRequired: '请输入账号和密码',
-		toastMobileRequired: '请输入手机号和验证码'
+		toastMobileRequired: '请输入手机号和验证码',
+		harmonyCapabilityTitle: '鸿蒙安全能力待补齐',
+		harmonyCapabilityDesc: '当前设备的原生 AES 运行时尚未注入，账号登录所需的滑块验证码暂不可用。请先完成鸿蒙原生能力接入后再试。'
 	},
 	captcha: {
 		verify: '验证',
@@ -87,7 +90,8 @@ export default {
 		success: '验证成功',
 		fail: '验证失败',
 		loadFailed: '获取验证码失败',
-		successWithDuration: '{duration}s验证成功'
+		successWithDuration: '{duration}s验证成功',
+		harmonyAesRequired: '鸿蒙端安全加密未就绪，暂无法完成滑块验证'
 	},
 	sys: {
 		api: {
@@ -140,7 +144,10 @@ export default {
 			uploadFailedWithStatus: '上传失败，状态码：{statusCode}',
 			parseResponseFailed: '解析响应失败',
 			browserUploadFailed: '浏览器上传失败',
-			blobUploadUnsupported: '当前平台不支持 Blob 上传'
+			blobUploadUnsupported: '当前平台不支持 Blob 上传',
+			cameraPermissionDenied: '使用拍照或拍视频前请先开启相机权限',
+			albumPermissionDenied: '访问系统相册前请先开启相册权限',
+			cameraOrAlbumPermissionDenied: '使用媒体选择前请先开启相机或相册权限'
 		},
 		scan: {
 			noValidContent: '未识别到有效内容',
@@ -148,6 +155,8 @@ export default {
 		},
 		file: {
 			openFailedTitle: '打开失败',
+			openUnsupported: '当前客户端未检测到文件打开能力',
+			fileTypeUnsupported: '当前系统暂不支持打开该文件类型',
 			retry: '重试',
 			fileUrlEmptyRetry: '文件地址为空，请稍后重试',
 			downloadLoading: '正在下载',
@@ -157,6 +166,9 @@ export default {
 		scanPage: {
 			title: '扫一扫',
 			guide: '优先识别企业 IM 群二维码，第三方链接会进入受控浏览页',
+			harmonyTitle: '使用系统扫码继续',
+			harmonyDesc: '鸿蒙端暂使用系统扫码能力，识别结果仍会进入 IM 内部安全路由处理。',
+			startScan: '开始扫码',
 			flashOn: '打开手电筒',
 			flashOff: '关闭手电筒',
 			manualJoin: '手动输入邀请码',
@@ -165,6 +177,7 @@ export default {
 			gotoManualJoin: '前往输入邀请码',
 			initFailed: '扫码环境初始化失败',
 			startFailed: '启动扫码失败',
+			cameraPermissionDenied: '扫码前请先开启相机权限',
 			flashUnsupported: '当前设备不支持手电筒控制',
 			flashToggleFailed: '手电筒切换失败'
 		},
@@ -173,6 +186,8 @@ export default {
 			loading: '加载中...',
 			retry: '重试',
 			downloadOpen: '下载打开',
+			openExternally: '外部打开',
+			openExternalFailed: '外部打开失败',
 			unsupportedOnlinePreview: '暂不支持在线预览',
 			fileUrlEmpty: '文件地址为空',
 			loadFailedRetry: '加载失败，请稍后重试',
@@ -191,6 +206,9 @@ export default {
 			blockedLabel: '扫码/打开内容',
 			emptyContent: '无可展示内容',
 			copyContent: '复制内容',
+			copyLink: '复制链接',
+			openExternally: '外部打开',
+			openExternalFailed: '外部打开失败',
 			nothingToCopy: '暂无可复制内容',
 			copySuccess: '已复制'
 		},
@@ -243,6 +261,63 @@ export default {
 			languageTitle: '多语言',
 			checkUpdateTitle: '检查更新',
 			versionDesc: '当前版本 {version}',
+			checkingUpdate: '检查中...',
+			latestVersionToast: '当前已是最新版本',
+			checkUpdateFailed: '检查更新失败',
+			updateFoundTitle: '发现新版本 {version}',
+			updateFoundContent: '检测到可用新版本，请查看更新说明并继续升级。',
+			updateNow: '立即更新',
+			goToAppGallery: '前往应用市场',
+			openUpgradeFailed: '打开升级入口失败',
+			harmonyStatusTitle: '鸿蒙支持状态',
+			harmonyStatusReady: '已就绪',
+			harmonyStatusPending: '待补齐',
+			harmonyPlatformLabel: '系统版本',
+			harmonyApiLabel: 'API 等级',
+			harmonyApiUnknown: '未识别',
+			harmonyAesLabel: '原生 AES',
+			harmonyAesReady: '已注入',
+			harmonyAesPending: '未注入',
+			harmonyAesSourceLabel: 'AES 来源',
+			harmonyAesSourcePlugin: 'Harmony UTS 插件',
+			harmonyAesSourceExternal: '外部运行时注入',
+			harmonyAesSourcePending: '待接入',
+			harmonyAesImplLabel: 'AES 实现名',
+			harmonyAesImplUnknown: '未识别',
+			harmonyUpgradeLabel: '升级入口',
+			harmonyUpgradeAppGallery: '应用市场 / AppGallery',
+			harmonyUpgradePending: '待按官方能力验证',
+			harmonyScanLabel: '系统扫码',
+			harmonyCameraBridgeLabel: '扫码权限桥接',
+			harmonyCameraPermissionLabel: '相机权限',
+			harmonyMicrophonePermissionLabel: '麦克风权限',
+			harmonyMicrophoneBridgeLabel: '录音权限桥接',
+			harmonyVoiceRecordLabel: '语音录制能力',
+			harmonyVoicePlaybackLabel: '语音播放能力',
+			harmonyShareLabel: '系统分享',
+			harmonyImagePreviewLabel: '图片预览',
+			harmonyDocumentOpenLabel: '文件打开',
+			harmonyShareReady: '可用',
+			harmonyShareFallback: '将回退到链接复制',
+			harmonyLocationLabel: '位置查看',
+			harmonyLocationReady: '已接入',
+			harmonyLocationPending: '待接入 uni-openlocation/官方等效能力',
+			harmonyLocationBridgeLabel: '位置权限桥接',
+			harmonyLocationBridgeReady: '已加载',
+			harmonyLocationBridgePending: '待确认',
+			harmonyLocationPermissionLabel: '定位权限',
+			harmonyLocationPermissionReady: '已授权',
+			harmonyLocationPermissionDenied: '未授权',
+			harmonyLocationPermissionUnknown: '待确认',
+			harmonyLocationSwitchLabel: '系统定位',
+			harmonyLocationSwitchOn: '已开启',
+			harmonyLocationSwitchOff: '已关闭',
+			harmonyLocationSwitchUnknown: '未识别',
+			harmonyAlbumLabel: '系统相册',
+			harmonyAlbumPermissionLabel: '相册权限',
+			harmonyAlbumReady: '图片/视频保存可用',
+			harmonyAlbumPending: '以当前运行时能力检测为准',
+			harmonyStatusHint: '当前仅展示客户端已识别的鸿蒙关键能力状态。若原生 AES 未注入，账号登录所需的滑块验证码会被安全阻断；若扫码、语音、位置或系统相册存在权限未授权或能力未就绪，则需继续补齐对应官方插件、权限声明或系统授权。',
 			languageFollowSystem: '跟随系统',
 			languageFollowSystemEn: '跟随系统 · English',
 			languageZhCn: '简体中文',
@@ -410,6 +485,7 @@ export default {
 			anchorFallback: '原消息已不可定位，已为你打开最近消息',
 			loadMessageFailed: '网络异常，加载消息失败',
 			voiceNotSupported: '当前平台暂不支持语音发送',
+			voicePlayUnsupported: '当前平台暂不支持语音播放',
 			sendFailed: '发送失败',
 			editorUnavailable: '输入框暂不可用，请稍后重试',
 			originalEmpty: '原内容为空',
@@ -432,6 +508,7 @@ export default {
 			playFailed: '播放失败',
 			openFailed: '打开失败',
 			locationMissing: '位置信息缺失',
+			locationOpenUnsupported: '当前客户端还未接入地图打开能力，你可以先复制位置名称、地址和坐标继续处理',
 			contactMissing: '名片信息缺失',
 			contactInvalid: '名片信息无效',
 			currentLocationName: '当前位置',
@@ -538,7 +615,10 @@ export default {
 			mapPickName: '地图选点',
 			chooseLocation: '请选择一个位置',
 			locationUnavailable: '无法获取定位',
-			locationFailed: '定位失败'
+			locationFailed: '定位失败',
+			harmonyBridgePending: '鸿蒙定位权限桥接未就绪，请确认客户端已重新编译安装',
+			harmonyLocationSwitchOff: '系统定位未开启，请先打开系统定位开关',
+			harmonyPermissionDenied: '定位权限未授权，请先开启定位权限'
 		},
 		groupQrcode: {
 			title: '群二维码',
@@ -624,6 +704,9 @@ export default {
 			downloading: '正在下载',
 			savedToAlbum: '已保存到相册',
 			saveFailed: '保存失败',
+			albumPermissionContent: '保存图片或视频需要相册权限，是否前往设置？',
+			imageSaveUnsupported: '当前客户端未检测到系统图片保存能力，请继续补齐鸿蒙运行时或插件能力',
+			videoSaveUnsupported: '当前客户端未检测到系统视频保存能力，请继续补齐鸿蒙运行时或插件能力',
 			downloadFailed: '下载失败',
 			forwardUnsupported: '当前文件暂不支持转发',
 			actionDownload: '下载',
@@ -632,7 +715,7 @@ export default {
 			noMore: '没有更多了',
 			pullMore: '上拉加载更多'
 		},
-		chatBubble: {
+	chatBubble: {
 			title: '聊天气泡',
 			previewTitle: '预览效果',
 			otherUser: '对方',
@@ -664,9 +747,15 @@ export default {
 				customApplied: '已应用自定义颜色',
 				resetSuccess: '已恢复默认颜色',
 				saveSuccess: '设置成功'
-			}
-		},
-		stickerManage: {
+		}
+	},
+	locationViewer: {
+		title: '查看位置',
+		copy: '复制位置',
+		copySuccess: '位置信息已复制',
+		systemMap: '系统地图'
+	},
+	stickerManage: {
 			title: '表情管理',
 			done: '完成',
 			organize: '整理',
@@ -901,7 +990,10 @@ export default {
 			transferFailed: '转让失败'
 		},
 		videoPlayer: {
-			loadFailed: '视频加载失败'
+			loadFailed: '视频加载失败',
+			fallbackHint: '当前视频无法直接播放，可尝试重试或使用系统能力打开。',
+			openExternally: '外部打开',
+			openExternalFailed: '外部打开失败'
 		},
 		readReceipt: {
 			title: '已读详情',
@@ -978,6 +1070,7 @@ export default {
 			locationDefault: '位置信息',
 			locationCoordinate: '经纬度位置',
 			navigate: '导航',
+			copyLocation: '复制位置',
 			location: '位置'
 		}
 	},

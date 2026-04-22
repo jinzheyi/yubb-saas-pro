@@ -1,0 +1,210 @@
+import { registerHarmonyAESProvider } from './aes.uts'
+// #ifdef APP-HARMONY
+import { harmonyAesApi } from '../../../uni_modules/uni-im-harmony-aes/utssdk/app-harmony/index.uts'
+// #endif
+
+type HarmonyAESRuntime = {
+	encrypt?: (word: string, keyWord: string) => string
+	decrypt?: (word: string, keyWord: string) => string
+}
+
+export enum HarmonyAESRuntimeSource {
+	NONE = 'NONE',
+	EXTERNAL_RUNTIME = 'EXTERNAL_RUNTIME',
+	NATIVE_UTS_PLUGIN = 'NATIVE_UTS_PLUGIN'
+}
+
+const HARMONY_AES_SELF_TEST_KEY = '1234567890123456'
+const HARMONY_AES_SELF_TEST_PLAIN = 'harmony-aes-check'
+const HARMONY_AES_SELF_TEST_CIPHER = 'UMsLNjb3U5VSqIKGzCBpGjTaoS8G0hyyeuKeGzhh+Es='
+
+function createHarmonyAesRuntimeError(message: string): Error {
+	const error: any = new Error(message)
+	error.code = 'HARMONY_AES_RUNTIME_UNAVAILABLE'
+	return error as Error
+}
+
+function getHarmonyAESRuntime(): HarmonyAESRuntime | null {
+	try {
+		const globalAny: any = globalThis as any
+		const runtime = globalAny.__HARMONY_AES_RUNTIME__
+		if (runtime != null) {
+			return runtime as HarmonyAESRuntime
+		}
+	} catch (e) {
+		// ignore
+	}
+	return null
+}
+
+export function setHarmonyAESRuntime(runtime: HarmonyAESRuntime | null): void {
+	setHarmonyAESRuntimeWithSource(runtime, runtime == null ? HarmonyAESRuntimeSource.NONE : HarmonyAESRuntimeSource.EXTERNAL_RUNTIME)
+}
+
+function setHarmonyAESRuntimeWithSource(runtime: HarmonyAESRuntime | null, source: string): void {
+	try {
+		const globalAny: any = globalThis as any
+		if (runtime == null) {
+			delete globalAny.__HARMONY_AES_RUNTIME__
+			delete globalAny.__HARMONY_AES_RUNTIME_SOURCE__
+			return
+		}
+		globalAny.__HARMONY_AES_RUNTIME__ = runtime
+		globalAny.__HARMONY_AES_RUNTIME_SOURCE__ = source
+	} catch (e) {
+		console.warn('[HarmonyAES] set runtime failed:', e)
+	}
+}
+
+export function isHarmonyAESRuntimeReady(): boolean {
+	const runtime = getHarmonyAESRuntime()
+	return runtime != null
+		&& typeof runtime.encrypt === 'function'
+		&& typeof runtime.decrypt === 'function'
+}
+
+export function getHarmonyAESRuntimeSource(): string {
+	try {
+		const globalAny: any = globalThis as any
+		const source = globalAny.__HARMONY_AES_RUNTIME_SOURCE__
+		if (source != null && String(source) !== '') {
+			return String(source)
+		}
+	} catch (e) {
+		// ignore
+	}
+	return HarmonyAESRuntimeSource.NONE
+}
+
+export function isHarmonyNativeAesPluginReady(): boolean {
+	// #ifdef APP-HARMONY
+	try {
+		return harmonyAesApi != null
+			&& typeof harmonyAesApi.isReady === 'function'
+			&& harmonyAesApi.isReady()
+			&& isHarmonyNativeAesPluginSelfTestPassed()
+	} catch (e) {
+		return false
+	}
+	// #endif
+	return false
+}
+
+export function getHarmonyNativeAesPluginImplementationName(): string {
+	// #ifdef APP-HARMONY
+	try {
+		if (harmonyAesApi != null && typeof harmonyAesApi.getImplementationName === 'function') {
+			return String(harmonyAesApi.getImplementationName() || '')
+		}
+	} catch (e) {
+		// ignore
+	}
+	// #endif
+	return ''
+}
+
+function isHarmonyNativeAesPluginSelfTestPassed(): boolean {
+	// #ifdef APP-HARMONY
+	try {
+		if (harmonyAesApi == null) {
+			return false
+		}
+		if (typeof harmonyAesApi.selfTest === 'function') {
+			return harmonyAesApi.selfTest()
+		}
+		if (typeof harmonyAesApi.encrypt !== 'function' || typeof harmonyAesApi.decrypt !== 'function') {
+			return false
+		}
+		const encrypted = harmonyAesApi.encrypt(HARMONY_AES_SELF_TEST_PLAIN, HARMONY_AES_SELF_TEST_KEY)
+		if (encrypted !== HARMONY_AES_SELF_TEST_CIPHER) {
+			console.error('[HarmonyAES] native plugin self test encrypt mismatch:', encrypted)
+			return false
+		}
+		const decrypted = harmonyAesApi.decrypt(HARMONY_AES_SELF_TEST_CIPHER, HARMONY_AES_SELF_TEST_KEY)
+		if (decrypted !== HARMONY_AES_SELF_TEST_PLAIN) {
+			console.error('[HarmonyAES] native plugin self test decrypt mismatch:', decrypted)
+			return false
+		}
+		return true
+	} catch (e) {
+		console.error('[HarmonyAES] native plugin self test failed:', e)
+		return false
+	}
+	// #endif
+	return false
+}
+
+export function bootstrapHarmonyAESProvider(): void {
+	tryInstallHarmonyNativeAesRuntime()
+	registerHarmonyAESProvider({
+		encrypt: (word: string, keyWord: string): string => {
+			const runtime = getHarmonyAESRuntime()
+			if (runtime != null && typeof runtime.encrypt === 'function') {
+				return runtime.encrypt(word, keyWord)
+			}
+			throw createHarmonyAesRuntimeError('[HarmonyAES] runtime.encrypt 未注册，禁止继续使用明文降级')
+		},
+		decrypt: (word: string, keyWord: string): string => {
+			const runtime = getHarmonyAESRuntime()
+			if (runtime != null && typeof runtime.decrypt === 'function') {
+				return runtime.decrypt(word, keyWord)
+			}
+			throw createHarmonyAesRuntimeError('[HarmonyAES] runtime.decrypt 未注册，禁止继续使用明文降级')
+		}
+	})
+}
+
+function tryInstallHarmonyNativeAesRuntime(): void {
+	// #ifdef APP-HARMONY
+	try {
+		if (isHarmonyNativeAesPluginReady()) {
+			const currentSource = getHarmonyAESRuntimeSource()
+			const currentRuntime = getHarmonyAESRuntime()
+			if (currentSource === HarmonyAESRuntimeSource.NATIVE_UTS_PLUGIN
+				&& currentRuntime != null
+				&& typeof currentRuntime.encrypt === 'function'
+				&& typeof currentRuntime.decrypt === 'function') {
+				return
+			}
+			setHarmonyAESRuntimeWithSource(null, HarmonyAESRuntimeSource.NONE)
+			setHarmonyAESRuntimeWithSource({
+				encrypt: (word: string, keyWord: string): string => {
+					return harmonyAesApi.encrypt(word, keyWord)
+				},
+				decrypt: (word: string, keyWord: string): string => {
+					return harmonyAesApi.decrypt(word, keyWord)
+				}
+			}, HarmonyAESRuntimeSource.NATIVE_UTS_PLUGIN)
+			console.log('[HarmonyAES] native UTS plugin runtime installed:', getHarmonyNativeAesPluginImplementationName())
+			return
+		}
+		if (isHarmonyAESRuntimeReady()) {
+			if (getHarmonyAESRuntimeSource() === HarmonyAESRuntimeSource.NATIVE_UTS_PLUGIN) {
+				setHarmonyAESRuntimeWithSource(null, HarmonyAESRuntimeSource.NONE)
+			} else {
+				return
+			}
+		}
+		if (harmonyAesApi != null && typeof harmonyAesApi.isReady === 'function' && harmonyAesApi.isReady()) {
+			if (!isHarmonyNativeAesPluginSelfTestPassed()) {
+				console.error('[HarmonyAES] native UTS plugin declared ready but failed self test')
+				setHarmonyAESRuntimeWithSource(null, HarmonyAESRuntimeSource.NONE)
+				return
+			}
+			setHarmonyAESRuntimeWithSource({
+				encrypt: (word: string, keyWord: string): string => {
+					return harmonyAesApi.encrypt(word, keyWord)
+				},
+				decrypt: (word: string, keyWord: string): string => {
+					return harmonyAesApi.decrypt(word, keyWord)
+				}
+			}, HarmonyAESRuntimeSource.NATIVE_UTS_PLUGIN)
+			console.log('[HarmonyAES] native UTS plugin runtime installed:', getHarmonyNativeAesPluginImplementationName())
+			return
+		}
+		console.warn('[HarmonyAES] native UTS plugin not ready, keep waiting for ArkTS implementation')
+	} catch (e) {
+		console.warn('[HarmonyAES] install native UTS plugin runtime failed:', e)
+	}
+	// #endif
+}

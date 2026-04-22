@@ -40,7 +40,16 @@
 - 从属开工清单文档
 - 用于 DBA、后端、移动端、租户 Web、平台 Web 开工前对齐
 
-### 4. 升级专题文档
+### 4. 鸿蒙兼容专题文档
+**[uni-app-x鸿蒙支持差距与优化方案.md](./鸿蒙兼容/uni-app-x鸿蒙支持差距与优化方案.md)**
+- 面向 `shengyu-ui-admin-uniappx` 的鸿蒙专项调研与整改文档
+- 聚焦当前工程差距、`uni-app x` 官方能力、优先级整改项与验收清单
+
+**[HarmonyAES原生接入示例草案.md](./鸿蒙兼容/HarmonyAES原生接入示例草案.md)**
+- 面向鸿蒙原生/ArkTS 接入的 AES runtime 挂载说明
+- 聚焦 `setHarmonyAESRuntime(...)` 的接入方式与验收要点
+
+### 5. 升级专题文档
 **[多端升级设计任务文档.md](./多端升级/多端升级设计任务文档.md)**
 - 面向平台端统一管理的企业级 IM Android、iOS、HarmonyOS、Web 多端升级方案
 - 结合 `shengyu-module-platform`、`shengyu-ui-platform-vue3`、`uni-app x`、`infra/file` 与 AppGallery Connect 现状给出落地设计
@@ -52,6 +61,14 @@
 **[多端升级AI开工任务清单.md](./多端升级/多端升级AI开工任务清单.md)**
 - 多端升级应用发布中心的 AI 执行清单
 - 按平台后端、平台前端、uni-app x 客户端拆分到文件级与接口级
+
+**[uni-app-x客户端升级接口契约草案.md](./多端升级/uni-app-x客户端升级接口契约草案.md)**
+- 面向 `shengyu-ui-admin-uniappx` 与平台升级中心的接口契约草案
+- 聚焦 `/app-upgrade/check`、`/report-event` 字段口径、结果码与动作模型
+
+**[平台端升级接口与VO落地草案.md](./多端升级/平台端升级接口与VO落地草案.md)**
+- 面向 `shengyu-module-platform` 与 `shengyu-ui-platform-vue3` 的升级中心实现草案
+- 聚焦 Controller、VO、枚举、日志字段和平台前端 API 落点
 
 ---
 

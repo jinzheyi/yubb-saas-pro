@@ -150,5 +150,19 @@
 			"icons": {},
 			"splashScreens": {}
 		}
+	},
+	"app-harmony": {
+		"distribute": {
+			"modules": {
+				"uni-location": {
+					"system": {}
+				},
+				"uni-map": {
+					"tencent": {
+						"key": "AU3BZ-QTLHT-GGJXH-VT5Q3-WLGEZ-JRBTA"
+					}
+				}
+			}
+		}
 	}
 }

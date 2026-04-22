@@ -32,7 +32,7 @@
 				<text class="letter-title" :style="{ color: theme.textTertiary, backgroundColor: theme.pageBg }">{{ group.letter }}</text>
 				
 				<!-- 成员项 -->
-				<view class="member-item" :style="{ borderBottomColor: theme.borderColor }" v-for="member in group.members" :key="member.id" @click="handleMemberClick(member)" @longpress="handleMemberLongPress(member)" @touchstart="handleMemberTouchStart(member)" @touchend="handleMemberTouchEnd" @touchcancel="handleMemberTouchEnd">
+				<view class="member-item" :style="{ borderBottomColor: theme.borderColor }" v-for="member in group.members" :key="member.id" @click="handleMemberClick(member)" @longpress="handleMemberLongPress(member)" @touchstart="handleMemberTouchStart(member)" @touchend="handleMemberTouchEnd" @touchcancel="handleMemberTouchEnd" @mousedown="handleMemberMouseDown(member)" @mouseup="handleMemberMouseEnd" @mouseleave="handleMemberMouseEnd">
 					<!-- 删除模式：显示复选框 -->
 					<view v-if="mode === 'remove'" class="checkbox-wrap">
 						<view class="checkbox" :style="{ backgroundColor: member.selected ? theme.brandPrimary : theme.cardBg, borderColor: member.selected ? theme.brandPrimary : theme.borderColor }" :class="{ checked: member.selected, disabled: member.cannotRemove }">
@@ -468,6 +468,30 @@
 	}
 
 	function handleMemberTouchEnd(): void {
+		activeLongPressMemberId = ''
+		clearLongPressTimer()
+	}
+
+	function handleMemberMouseDown(member: any): void {
+		try {
+			clearLongPressTimer()
+			activeLongPressMemberId = member != null && member.id != null ? String(member.id) : ''
+			if (activeLongPressMemberId === '') {
+				return
+			}
+			longPressTimer = setTimeout(() => {
+				longPressTimer = null
+				if (activeLongPressMemberId !== '') {
+					suppressNextClickMemberId = activeLongPressMemberId
+				}
+				handleMemberLongPress(member)
+			}, 450)
+		} catch (e) {
+			clearLongPressTimer()
+		}
+	}
+
+	function handleMemberMouseEnd(): void {
 		activeLongPressMemberId = ''
 		clearLongPressTimer()
 	}

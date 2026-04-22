@@ -20,6 +20,7 @@
 				<view class="btn-row">
 					<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" @click="loadStrategy"><text class="btn-text">{{ t('runtime.filePreview.retry') }}</text></view>
 					<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" v-if="downloadUrl" @click="handleDownload"><text class="btn-text">{{ t('runtime.filePreview.downloadOpen') }}</text></view>
+					<view class="btn btn-secondary" :style="{ borderColor: theme.borderColor }" v-if="canOpenExternal" @click="handleOpenExternal"><text class="btn-text btn-text-secondary" :style="{ color: theme.textPrimary }">{{ t('runtime.filePreview.openExternally') }}</text></view>
 				</view>
 			</view>
 
@@ -31,7 +32,12 @@
 					<text class="fallback-sub" :style="{ color: theme.textSecondary }" v-if="tip">{{ tip }}</text>
 					<view class="btn-row">
 						<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleDownload"><text class="btn-text">{{ t('runtime.filePreview.downloadOpen') }}</text></view>
+						<view class="btn btn-secondary" :style="{ borderColor: theme.borderColor }" v-if="canOpenExternal" @click="handleOpenExternal"><text class="btn-text btn-text-secondary" :style="{ color: theme.textPrimary }">{{ t('runtime.filePreview.openExternally') }}</text></view>
 					</view>
+				</view>
+				<view v-if="previewUrl !== ''" class="preview-actions" :style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
+					<view class="btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleDownload"><text class="btn-text">{{ t('runtime.filePreview.downloadOpen') }}</text></view>
+					<view class="btn btn-secondary" :style="{ borderColor: theme.borderColor }" v-if="canOpenExternal" @click="handleOpenExternal"><text class="btn-text btn-text-secondary" :style="{ color: theme.textPrimary }">{{ t('runtime.filePreview.openExternally') }}</text></view>
 				</view>
 			</view>
 		</view>
@@ -43,6 +49,7 @@
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getFileOpenStrategy } from '../../api/file.uts'
+	import { canOpenExternalUrl, openExternalUrl } from '../../utils/external-url.uts'
 	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
@@ -69,6 +76,11 @@
 	function handleBack() {
 		uni.navigateBack()
 	}
+
+	const canOpenExternal = computed((): boolean => {
+		const finalUrl = previewUrl.value !== '' ? previewUrl.value : downloadUrl.value
+		return finalUrl !== '' && canOpenExternalUrl()
+	})
 
 	function safeDecode(s : string) : string {
 		try {
@@ -124,6 +136,19 @@
 			await downloadAndOpenDocumentWithRetry(url, t('runtime.file.downloadLoading'))
 		} catch (e) {
 			uni.showToast({ title: t('runtime.filePreview.openFailed'), icon: 'none' })
+		}
+	}
+
+	async function handleOpenExternal() {
+		try {
+			const finalUrl = previewUrl.value !== '' ? previewUrl.value : downloadUrl.value
+			if (!finalUrl) {
+				uni.showToast({ title: t('runtime.filePreview.downloadUrlEmpty'), icon: 'none' })
+				return
+			}
+			await openExternalUrl(finalUrl)
+		} catch (e) {
+			uni.showToast({ title: t('runtime.filePreview.openExternalFailed'), icon: 'none' })
 		}
 	}
 
@@ -198,6 +223,7 @@
 
 	.content {
 		flex: 1;
+		flex-direction: column;
 	}
 
 	.webview {
@@ -256,8 +282,24 @@
 		margin: 0 6px;
 	}
 
+	.btn-secondary {
+		background-color: transparent;
+		border-width: 0.5px;
+	}
+
 	.btn-text {
 		color: #FFFFFF;
 		font-size: 14px;
+	}
+
+	.btn-text-secondary {
+		color: #111111;
+	}
+
+	.preview-actions {
+		flex-direction: row;
+		justify-content: center;
+		padding: 12px 16px 16px 16px;
+		border-top-width: 0.5px;
 	}
 </style>

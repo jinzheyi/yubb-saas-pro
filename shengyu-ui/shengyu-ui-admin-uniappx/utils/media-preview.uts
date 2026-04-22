@@ -1,0 +1,29 @@
+export function canPreviewImage(): boolean {
+	const anyUni: any = uni as any
+	return anyUni != null && typeof anyUni.previewImage === 'function'
+}
+
+export function previewImages(urls: string[], current: string = ''): Promise<void> {
+	return new Promise((resolve, reject) => {
+		if (!canPreviewImage()) {
+			reject(new Error('previewImage unavailable'))
+			return
+		}
+		const validUrls = urls.filter((item) => item != null && item.trim() !== '')
+		if (validUrls.length === 0) {
+			reject(new Error('preview urls empty'))
+			return
+		}
+		const options: UTSJSONObject = {
+			urls: validUrls
+		}
+		if (current.trim() !== '') {
+			options['current'] = current
+		}
+		;(uni as any).previewImage({
+			...options,
+			success: () => resolve(),
+			fail: (err: any) => reject(err)
+		})
+	})
+}

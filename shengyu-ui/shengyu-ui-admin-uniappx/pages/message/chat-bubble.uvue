@@ -20,7 +20,7 @@
 						</view>
 						<view
 							class="message-bubble other-bubble"
-							:style="{ backgroundColor: theme.bubbleOtherBg, borderColor: theme.bubbleOtherBorder }"
+							:style="otherBubbleStyle"
 						>
 							<text class="message-text" :style="{ color: theme.bubbleOtherText }">{{ t('chat.chatBubble.otherMessage') }}</text>
 						</view>
@@ -108,6 +108,7 @@
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import { getChatBubbleConfig, resetChatBubbleConfig, setChatBubbleConfig, type ChatBubbleConfig, type ChatBubbleMode } from '../../store/chat-bubble.uts'
 	import { persistChatBubblePreference } from '../../services/user-preference-service.uts'
+	import { getHarmonyReadinessSnapshot } from '../../services/harmony-readiness-service.uts'
 	import { CHAT_BUBBLE_PRESETS, getChatBubbleTokens, isValidChatBubbleColor, normalizeChatBubbleColor } from '../../utils/chat-bubble.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -125,6 +126,16 @@
 		label: t(`chat.chatBubble.colors.${color.name}`)
 	})))
 	const voiceBars = [6, 10, 14, 8]
+	const isHarmonyClient = computed((): boolean => {
+		return getHarmonyReadinessSnapshot().isHarmony
+	})
+	const previewBubbleLayoutStyle = computed((): any => {
+		return isHarmonyClient.value ? {
+			width: '72%'
+		} : {
+			maxWidth: '72%'
+		}
+	})
 
 	const bubbleTokens = computed(() => {
 		return getChatBubbleTokens({
@@ -136,21 +147,32 @@
 	const selfBubbleStyle = computed((): any => {
 		return {
 			backgroundColor: bubbleTokens.value.selfBubbleBg,
-			borderColor: bubbleTokens.value.selfBubbleBorder
+			borderColor: bubbleTokens.value.selfBubbleBorder,
+			...previewBubbleLayoutStyle.value
+		}
+	})
+
+	const otherBubbleStyle = computed((): any => {
+		return {
+			backgroundColor: theme.value.bubbleOtherBg,
+			borderColor: theme.value.bubbleOtherBorder,
+			...previewBubbleLayoutStyle.value
 		}
 	})
 
 	const voiceBubbleStyle = computed((): any => {
 		return {
 			backgroundColor: bubbleTokens.value.selfBubbleVoicePlayingBg,
-			borderColor: bubbleTokens.value.selfBubbleBorder
+			borderColor: bubbleTokens.value.selfBubbleBorder,
+			...previewBubbleLayoutStyle.value
 		}
 	})
 
 	const forwardBubbleStyle = computed((): any => {
 		return {
 			backgroundColor: bubbleTokens.value.selfBubbleBg,
-			borderColor: bubbleTokens.value.selfBubbleBorder
+			borderColor: bubbleTokens.value.selfBubbleBorder,
+			...previewBubbleLayoutStyle.value
 		}
 	})
 
@@ -342,7 +364,6 @@
 	.message-bubble {
 		padding: 10px 14px;
 		border-radius: 10px;
-		max-width: 72%;
 		border-width: 1px;
 	}
 

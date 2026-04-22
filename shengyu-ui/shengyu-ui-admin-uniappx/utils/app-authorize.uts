@@ -1,0 +1,88 @@
+export type AppAuthorizeSnapshot = {
+	locationAuthorized: string
+	locationAccuracy: string
+	cameraAuthorized: string
+	albumAuthorized: string
+	microphoneAuthorized: string
+}
+
+export function getAppAuthorizeSnapshot(): AppAuthorizeSnapshot {
+	const result = getRawAppAuthorizeSetting()
+	return {
+		locationAuthorized: readAuthorizeField(result, 'locationAuthorized'),
+		locationAccuracy: readAuthorizeField(result, 'locationAccuracy'),
+		cameraAuthorized: readAuthorizeField(result, 'cameraAuthorized'),
+		albumAuthorized: readAuthorizeField(result, 'albumAuthorized'),
+		microphoneAuthorized: readAuthorizeField(result, 'microphoneAuthorized')
+	}
+}
+
+export function readLocationAuthorized(): string {
+	return getAppAuthorizeSnapshot().locationAuthorized
+}
+
+export function readLocationAccuracy(): string {
+	return getAppAuthorizeSnapshot().locationAccuracy
+}
+
+export function readCameraAuthorized(): string {
+	return getAppAuthorizeSnapshot().cameraAuthorized
+}
+
+export function readAlbumAuthorized(): string {
+	return getAppAuthorizeSnapshot().albumAuthorized
+}
+
+export function readMicrophoneAuthorized(): string {
+	return getAppAuthorizeSnapshot().microphoneAuthorized
+}
+
+export function isAuthorizeSettingGranted(status: string): boolean {
+	return normalizeAuthorizeStatus(status) === 'authorized'
+}
+
+export function isAuthorizeSettingDenied(status: string): boolean {
+	return normalizeAuthorizeStatus(status) === 'denied'
+}
+
+function getRawAppAuthorizeSetting(): any | null {
+	try {
+		const anyUni = uni as any
+		if (anyUni == null || typeof anyUni.getAppAuthorizeSetting !== 'function') {
+			return null
+		}
+		return anyUni.getAppAuthorizeSetting()
+	} catch (e) {
+		console.warn('[AppAuthorize] 读取应用授权状态失败:', e)
+	}
+	return null
+}
+
+function readAuthorizeField(result: any | null, key: string): string {
+	if (result == null) {
+		return 'unknown'
+	}
+	try {
+		const value = (result as any)[key]
+		if (value == null) {
+			return 'unknown'
+		}
+		return normalizeAuthorizeStatus(String(value))
+	} catch (e) {
+		return 'unknown'
+	}
+}
+
+function normalizeAuthorizeStatus(status: string): string {
+	const normalized = status.trim().toLowerCase()
+	if (normalized === 'authorized') {
+		return 'authorized'
+	}
+	if (normalized === 'denied') {
+		return 'denied'
+	}
+	if (normalized === 'not determined') {
+		return 'not determined'
+	}
+	return normalized !== '' ? normalized : 'unknown'
+}

@@ -68,6 +68,9 @@
 					:key="'pinned-' + item.chatId" 
 					@click="handleMessageClick(item)"
 					@longpress="handleLongPress(item, $event)"
+					@mousedown="handleMouseLongPressStart(item, $event)"
+					@mouseup="handleMouseLongPressEnd"
+					@mouseleave="handleMouseLongPressEnd"
 				>
 					<view class="message-avatar" :style="{ backgroundColor: item.avatarBg }">
 						<image v-if="item.targetAvatar" class="avatar-image" :src="item.targetAvatar" mode="aspectFill" @error="handleAvatarError(item)" />
@@ -117,6 +120,9 @@
 					:key="'normal-' + item.chatId" 
 					@click="handleMessageClick(item)"
 					@longpress="handleLongPress(item, $event)"
+					@mousedown="handleMouseLongPressStart(item, $event)"
+					@mouseup="handleMouseLongPressEnd"
+					@mouseleave="handleMouseLongPressEnd"
 				>
 					<view class="message-avatar" :style="{ backgroundColor: item.avatarBg }">
 						<image v-if="item.targetAvatar" class="avatar-image" :src="item.targetAvatar" mode="aspectFill" @error="handleAvatarError(item)" />
@@ -225,6 +231,8 @@
 	const inlineNoticeVisible = ref(false)
 	const inlineNoticeText = ref('')
 	let inlineNoticeTimer = 0
+	let mouseLongPressTimer = 0
+	let suppressNextClickChatId = ''
 
 	const FOREGROUND_SYNC_COOLDOWN_MS = 1500
 	const FOREGROUND_SYNC_STALE_MS = 5000
@@ -422,6 +430,7 @@
 		lastPageHideAt = Date.now()
 		forceStopRefreshIndicator()
 		clearInlineNoticeTimer()
+		clearMouseLongPressTimer()
 	})
 
 	function clearInlineNoticeTimer(): void {
@@ -760,6 +769,11 @@
 	}
 
 	function handleMessageClick(item : any) {
+		const chatId = item != null && item.chatId != null ? String(item.chatId) : ''
+		if (chatId !== '' && chatId === suppressNextClickChatId) {
+			suppressNextClickChatId = ''
+			return
+		}
 		conversationService.markConversationUnread(item.chatId, false)
 		const chatIdParam = encodeIdParam(item.chatId != null ? String(item.chatId) : '')
 		uni.navigateTo({
@@ -767,17 +781,63 @@
 		})
 	}
 
-	function handleLongPress(item : any, e : TouchEvent) {
+	function extractMenuPointerPosition(e : any): { x: number, y: number } {
+		if (e != null && e.touches != null && e.touches.length > 0) {
+			return {
+				x: Number(e.touches[0].clientX),
+				y: Number(e.touches[0].clientY)
+			}
+		}
+		if (e != null && e.changedTouches != null && e.changedTouches.length > 0) {
+			return {
+				x: Number(e.changedTouches[0].clientX),
+				y: Number(e.changedTouches[0].clientY)
+			}
+		}
+		return {
+			x: e != null && e.clientX != null ? Number(e.clientX) : 0,
+			y: e != null && e.clientY != null ? Number(e.clientY) : 0
+		}
+	}
+
+	function openConversationContextMenu(item : any, e : any, suppressClick: boolean = false) {
 		selectedItem.value = item
-		// 获取点击位置，简单处理弹窗位置
-		const touch = e.touches[0]
-		menuX.value = Math.min(touch.clientX, uni.getSystemInfoSync().screenWidth - 160)
-		menuY.value = touch.clientY
+		const pointer = extractMenuPointerPosition(e)
+		const chatId = item != null && item.chatId != null ? String(item.chatId) : ''
+		if (suppressClick && chatId !== '') {
+			suppressNextClickChatId = chatId
+		}
+		menuX.value = Math.min(pointer.x, uni.getSystemInfoSync().screenWidth - 160)
+		menuY.value = pointer.y
 		showContextMenu.value = true
+	}
+
+	function handleLongPress(item : any, e : any) {
+		openConversationContextMenu(item, e)
+	}
+
+	function clearMouseLongPressTimer(): void {
+		if (mouseLongPressTimer !== 0) {
+			clearTimeout(mouseLongPressTimer)
+			mouseLongPressTimer = 0
+		}
+	}
+
+	function handleMouseLongPressStart(item : any, e : any) {
+		clearMouseLongPressTimer()
+		mouseLongPressTimer = setTimeout(() => {
+			mouseLongPressTimer = 0
+			openConversationContextMenu(item, e, true)
+		}, 450)
+	}
+
+	function handleMouseLongPressEnd() {
+		clearMouseLongPressTimer()
 	}
 
 	function closeMenu() {
 		showContextMenu.value = false
+		clearMouseLongPressTimer()
 	}
 
 	function showConfirmModal(title: string, content: string): Promise<boolean> {

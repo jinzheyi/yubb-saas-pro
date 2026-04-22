@@ -1,5 +1,5 @@
 <template>
-	<view class="page" :style="{ backgroundColor: theme.pageBg }">
+	<view class="page" :style="getPageStyle()">
 		<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
 		<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
 			<view class="header-left" @click="handleBack">
@@ -14,8 +14,8 @@
 
 		<view class="summary-card" :style="{ backgroundColor: theme.cardBg }">
 			<text class="summary-title" :style="{ color: theme.textPrimary }">{{ t('chat.stickerManage.myStickers') }}</text>
-			<text class="summary-count" :style="{ color: theme.brandPrimary }">{{ stickerList.length }}/150</text>
-			<text class="summary-tip" :style="{ color: theme.textTertiary }">{{ summaryTip }}</text>
+			<text class="summary-count" :style="getSummaryCountStyle()">{{ stickerList.length }}/150</text>
+			<text class="summary-tip" :style="getSummaryTipStyle()">{{ summaryTip }}</text>
 			<view v-if="sortMode && selectedStickerId" class="move-bar" :style="{ backgroundColor: theme.brandPrimarySoft }">
 				<text class="move-bar-text" :style="{ color: theme.brandPrimary }">{{ t('chat.stickerManage.moving') }}</text>
 				<view class="move-bar-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="clearSelectedSticker">
@@ -24,7 +24,7 @@
 			</view>
 		</view>
 
-		<scroll-view class="content" scroll-y="true" :scroll-top="contentScrollTop" show-scrollbar="false" @scroll="handleContentScroll" v-if="stickerList.length > 0">
+		<scroll-view class="content" :style="getContentStyle()" scroll-y="true" :scroll-top="contentScrollTop" show-scrollbar="false" @scroll="handleContentScroll" v-if="stickerList.length > 0">
 			<view class="sticker-grid">
 				<view
 					class="sticker-item"
@@ -57,16 +57,16 @@
 							<text class="sticker-drop-hint-text">{{ t('chat.stickerManage.dropHere') }}</text>
 						</view>
 						<view class="sticker-sort-actions">
-							<view class="sticker-sort-btn" :style="{ backgroundColor: theme.cardBg }" :class="{ 'sticker-sort-btn-disabled': isFirstSticker(item) || savingSort }" @click.stop="moveStickerToEdge(item, true)">
+							<view class="sticker-sort-btn" :style="getStickerSortButtonStyle()" :class="{ 'sticker-sort-btn-disabled': isFirstSticker(item) || savingSort }" @click.stop="moveStickerToEdge(item, true)">
 								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">{{ t('chat.stickerManage.moveTop') }}</text>
 							</view>
-							<view class="sticker-sort-btn" :style="{ backgroundColor: theme.cardBg }" :class="{ 'sticker-sort-btn-disabled': isFirstSticker(item) || savingSort }" @click.stop="moveSticker(item, -1)">
+							<view class="sticker-sort-btn" :style="getStickerSortButtonStyle()" :class="{ 'sticker-sort-btn-disabled': isFirstSticker(item) || savingSort }" @click.stop="moveSticker(item, -1)">
 								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">{{ t('chat.stickerManage.moveLeft') }}</text>
 							</view>
-							<view class="sticker-sort-btn" :style="{ backgroundColor: theme.cardBg }" :class="{ 'sticker-sort-btn-disabled': isLastSticker(item) || savingSort }" @click.stop="moveSticker(item, 1)">
+							<view class="sticker-sort-btn" :style="getStickerSortButtonStyle()" :class="{ 'sticker-sort-btn-disabled': isLastSticker(item) || savingSort }" @click.stop="moveSticker(item, 1)">
 								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">{{ t('chat.stickerManage.moveRight') }}</text>
 							</view>
-							<view class="sticker-sort-btn" :style="{ backgroundColor: theme.cardBg }" :class="{ 'sticker-sort-btn-disabled': isLastSticker(item) || savingSort }" @click.stop="moveStickerToEdge(item, false)">
+							<view class="sticker-sort-btn" :style="getStickerSortButtonStyle()" :class="{ 'sticker-sort-btn-disabled': isLastSticker(item) || savingSort }" @click.stop="moveStickerToEdge(item, false)">
 								<text class="sticker-sort-btn-text" :style="{ color: theme.textPrimary }">{{ t('chat.stickerManage.moveBottom') }}</text>
 							</view>
 						</view>
@@ -87,6 +87,7 @@
 	import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { StickerItem, getFavoriteStickers, refreshCustomStickers, removeSticker, updateStickerSort } from '../../utils/stickerManager.uts'
+	import { getHarmonyReadinessSnapshot } from '../../services/harmony-readiness-service.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -105,12 +106,16 @@
 	const dragTargetStickerId = ref('')
 	const contentScrollTop = ref(0)
 	const theme = ref<ThemeTokens>(getThemeTokens())
+	const isHarmonyClient = computed((): boolean => {
+		return getHarmonyReadinessSnapshot().isHarmony
+	})
 	const DRAG_MOVE_THRESHOLD = 24
 	const GRID_COLUMN_COUNT = 4
 	const GRID_CELL_RPX = 170
 	const EDGE_SCROLL_THRESHOLD = 120
 	const EDGE_SCROLL_STEP = 96
 	let unsubscribeTheme: (() => void) | null = null
+	let stickerLongPressTimer: any = null
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 		theme.value = tokens
@@ -128,6 +133,48 @@
 		}
 		return t('chat.stickerManage.tipSort')
 	})
+
+	function getPageStyle(): any {
+		return isHarmonyClient.value ? {
+			backgroundColor: theme.value.pageBg,
+			flex: 1
+		} : {
+			backgroundColor: theme.value.pageBg,
+			minHeight: '100vh'
+		}
+	}
+
+	function getSummaryCountStyle(): any {
+		return {
+			color: theme.value.brandPrimary,
+			display: 'block'
+		}
+	}
+
+	function getSummaryTipStyle(): any {
+		return {
+			color: theme.value.textTertiary,
+			display: 'block'
+		}
+	}
+
+	function getContentStyle(): any {
+		return isHarmonyClient.value ? {
+			flex: 1
+		} : {
+			height: 'calc(100vh - var(--status-bar-height) - 88rpx - 140rpx)'
+		}
+	}
+
+	function getStickerSortButtonStyle(): any {
+		return isHarmonyClient.value ? {
+			backgroundColor: theme.value.cardBg,
+			width: '48%'
+		} : {
+			backgroundColor: theme.value.cardBg,
+			width: 'calc(50% - 6rpx)'
+		}
+	}
 
 	async function loadStickers(): Promise<void> {
 		try {
@@ -293,6 +340,18 @@
 	}
 
 	function handleStickerMouseDown(e: MouseEvent, item: StickerItem): void {
+		if (!sortMode.value) {
+			try {
+				clearStickerLongPressTimer()
+				stickerLongPressTimer = setTimeout(() => {
+					stickerLongPressTimer = null
+					handleStickerLongPress(item)
+				}, 450)
+			} catch (err) {
+				clearStickerLongPressTimer()
+			}
+			return
+		}
 		if (!sortMode.value || selectedStickerId.value !== item.stickerId) {
 			return
 		}
@@ -304,6 +363,7 @@
 	}
 
 	async function handleStickerMouseUp(e: MouseEvent, item: StickerItem): Promise<void> {
+		clearStickerLongPressTimer()
 		if (!dragVisualActive.value) {
 			return
 		}
@@ -312,8 +372,16 @@
 	}
 
 	function handleStickerMouseLeave(_: MouseEvent, item: StickerItem): void {
+		clearStickerLongPressTimer()
 		if (selectedStickerId.value === item.stickerId) {
 			resetDragVisual()
+		}
+	}
+
+	function clearStickerLongPressTimer(): void {
+		if (stickerLongPressTimer != null) {
+			clearTimeout(stickerLongPressTimer)
+			stickerLongPressTimer = null
 		}
 	}
 
@@ -532,6 +600,7 @@
 	})
 
 	onUnload(() => {
+		clearStickerLongPressTimer()
 		if (unsubscribeTheme != null) {
 			unsubscribeTheme()
 			unsubscribeTheme = null
@@ -541,7 +610,6 @@
 
 <style scoped>
 	.page {
-		min-height: 100vh;
 	}
 
 	.status-bar {
@@ -609,13 +677,11 @@
 	}
 
 	.summary-count {
-		display: block;
 		margin-top: 12rpx;
 		font-size: 28rpx;
 	}
 
 	.summary-tip {
-		display: block;
 		margin-top: 12rpx;
 		font-size: 24rpx;
 	}
@@ -644,19 +710,20 @@
 	}
 
 	.content {
-		height: calc(100vh - var(--status-bar-height) - 88rpx - 140rpx);
 	}
 
 	.sticker-grid {
 		padding: 0 24rpx 24rpx;
 		display: flex;
 		flex-wrap: wrap;
-		gap: 20rpx;
+		margin-right: -20rpx;
 	}
 
 	.sticker-item {
 		width: 150rpx;
 		height: 150rpx;
+		margin-right: 20rpx;
+		margin-bottom: 20rpx;
 		border-radius: 24rpx;
 		overflow: hidden;
 		position: relative;
@@ -757,12 +824,12 @@
 		bottom: 12rpx;
 		display: flex;
 		flex-wrap: wrap;
-		gap: 12rpx;
+		justify-content: space-between;
 	}
 
 	.sticker-sort-btn {
-		width: calc(50% - 6rpx);
 		height: 44rpx;
+		margin-bottom: 12rpx;
 		border-radius: 22rpx;
 		background-color: rgba(26, 33, 42, 0.92);
 		display: flex;

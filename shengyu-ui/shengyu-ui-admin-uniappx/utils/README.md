@@ -1,6 +1,6 @@
 # UniApp X 工具类使用指南
 
-本目录包含了从 Web 端迁移并适配三端（Android、iOS、Web）的工具类。
+本目录包含了从 Web 端迁移并适配多端（Android、iOS、HarmonyOS、Web）的工具类。
 
 ## 文件列表
 
@@ -175,14 +175,14 @@ const uploadHeader = getUploadHeader()
 
 ## 平台兼容性
 
-所有工具类都经过三端适配：
+所有工具类都应按多端适配标准维护：
 
-| 工具类 | Android | iOS | Web |
-|--------|---------|-----|-----|
-| dict.uts | ✅ | ✅ | ✅ |
-| file.uts | ✅ | ✅ | ✅ |
-| request.uts | ✅ | ✅ | ✅ |
-| upload.uts | ✅ | ✅ | ✅ |
+| 工具类 | Android | iOS | HarmonyOS | Web |
+|--------|---------|-----|-----------|-----|
+| dict.uts | ✅ | ✅ | ✅ | ✅ |
+| file.uts | ✅ | ✅ | 待专项验证 | ✅ |
+| request.uts | ✅ | ✅ | ✅ | ✅ |
+| upload.uts | ✅ | ✅ | ✅ | ✅ |
 
 ## 注意事项
 
@@ -210,7 +210,7 @@ Token 会自动添加到请求头中，无需手动处理。Token 过期时会�
 
 ### 3. 文件上传
 
-- Android/iOS：使用 `uni.chooseImage`、`uni.chooseVideo`
+- Android/iOS/HarmonyOS：优先使用 `uni.chooseImage`、`uni.chooseVideo`、`uni.chooseFile`
 - Web：使用 `uni.chooseFile`（需要条件编译）
 
 ### 4. 条件编译

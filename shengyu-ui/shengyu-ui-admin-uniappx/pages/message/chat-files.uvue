@@ -28,7 +28,7 @@
 				<text class="date-title" :style="{ color: theme.textTertiary }">{{ group.date }}</text>
 
 				<!-- 文件项 -->
-				<view class="file-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" v-for="file in group.files" :key="file.id" @click="handleFileClick(file)" @longpress="handleFileLongPress(file)">
+				<view class="file-item" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" v-for="file in group.files" :key="file.id" @click="handleFileClick(file)" @longpress="handleFileLongPress(file)" @mousedown="handleFileMouseDown(file)" @mouseup="handleFileMouseEnd" @mouseleave="handleFileMouseEnd">
 					<!-- 图片类型 -->
 					<view v-if="file.type === 'image'" class="file-preview image-preview" :style="{ backgroundColor: theme.cardBgMuted }">
 						<image class="preview-image" :src="file.url" mode="aspectFill" />
@@ -75,12 +75,17 @@
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { getChatMediaList, getFileOpenStrategy } from '../../api/file.uts'
+	import { isAuthorizeSettingDenied, readAlbumAuthorized } from '../../utils/app-authorize.uts'
+	import { promptOpenAppSettings } from '../../utils/app-settings.uts'
 	import { navToFilePreview } from '../../utils/nav.uts'
 	import { decodeIdParam } from '../../utils/id-param.uts'
-	import { downloadAndOpenDocumentWithRetry } from '../../utils/file.uts'
+	import { downloadAndOpenDocumentWithRetry, downloadRemoteTempFile } from '../../utils/file.uts'
+	import { previewImages } from '../../utils/media-preview.uts'
 	import { saveImageToAlbum } from '../../utils/qrcode.uts'
+	import { saveVideoFileToAlbum } from '../../utils/album.uts'
 	import { armGroupLifecycleErrorToastSuppression, finalizeGroupLifecycleExit, resolveGroupLifecycleErrorNotice } from '../../utils/chat-setting-actions.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+	import { getHarmonyReadinessSnapshot } from '../../services/harmony-readiness-service.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
@@ -101,6 +106,8 @@
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	let unsubscribeTheme: (() => void) | null = null
 	let lifecycleRedirecting = false
+	let fileLongPressTimer: any = null
+	let suppressNextClickFileId = ''
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
 		theme.value = tokens
@@ -380,13 +387,17 @@
 	 * 点击文件
 	 */
 	async function handleFileClick(file : any) {
+		const fileId = file != null && file.id != null ? String(file.id) : ''
+		if (fileId !== '' && fileId === suppressNextClickFileId) {
+			suppressNextClickFileId = ''
+			return
+		}
 		if (file.type === 'image') {
 			const imageUrls = filteredFiles.value
 				.filter((item : any) => item.type === 'image' && item.url)
 				.map((item : any) => item.url)
-			uni.previewImage({
-				urls: imageUrls.length > 0 ? imageUrls : [file.url],
-				current: file.url
+			void previewImages(imageUrls.length > 0 ? imageUrls : [file.url], file.url).catch((_err) => {
+				uni.showToast({ title: t('runtime.filePreview.openFailed'), icon: 'none' })
 			})
 		} else if (file.type === 'video') {
 			// 播放视频
@@ -403,6 +414,34 @@
 
 	function handleFileLongPress(file : any) {
 		handleFileMenu(file)
+	}
+
+	function clearFileLongPressTimer(): void {
+		if (fileLongPressTimer != null) {
+			clearTimeout(fileLongPressTimer)
+			fileLongPressTimer = null
+		}
+	}
+
+	function handleFileMouseDown(file : any): void {
+		try {
+			clearFileLongPressTimer()
+			const fileId = file != null && file.id != null ? String(file.id) : ''
+			if (fileId === '') {
+				return
+			}
+			fileLongPressTimer = setTimeout(() => {
+				fileLongPressTimer = null
+				suppressNextClickFileId = fileId
+				handleFileLongPress(file)
+			}, 450)
+		} catch (e) {
+			clearFileLongPressTimer()
+		}
+	}
+
+	function handleFileMouseEnd(): void {
+		clearFileLongPressTimer()
 	}
 
 	function openUrlInBrowser(url : string) : boolean {
@@ -448,40 +487,15 @@
 		return false
 	}
 
-	function downloadRemoteFile(url : string) : Promise<string> {
-		return new Promise((resolve, reject) => {
-			uni.downloadFile({
-				url: url,
-				success: (res) => {
-					if (res.statusCode === 200) {
-						resolve(res.tempFilePath)
-						return
-					}
-					reject(res)
-				},
-				fail: (err) => reject(err)
-			})
-		})
-	}
-
-	function saveVideoToAlbum(tempFilePath : string) : Promise<void> {
-		return new Promise((resolve, reject) => {
-			const uniAny : any = uni as any
-			if (uniAny == null || uniAny.saveVideoToPhotosAlbum == null) {
-				reject(new Error('saveVideoToPhotosAlbum unavailable'))
-				return
-			}
-			uniAny.saveVideoToPhotosAlbum({
-				filePath: tempFilePath,
-				success: () => resolve(),
-				fail: (err : any) => reject(err)
-			})
-		})
+	function promptAlbumPermissionDenied(): void {
+		const message = t('chat.chatFiles.albumPermissionContent')
+		promptOpenAppSettings(message, t('common.confirmTitle'), t('chat.recording.goSetting'))
 	}
 
 	async function handleDownloadFile(file : any) {
 		const url = file && file.url != null ? String(file.url).trim() : ''
 		const fileName = file && file.name != null ? String(file.name) : t('chat.chatFiles.titleSingle')
+		const harmonySnapshot = getHarmonyReadinessSnapshot()
 		if (url === '') {
 			uni.showToast({
 				title: t('chat.chatFiles.downloadAddressEmpty'),
@@ -491,12 +505,20 @@
 		}
 
 		if (file.type === 'image') {
+			if (harmonySnapshot.isHarmony && !harmonySnapshot.saveImageToAlbumReady) {
+				uni.showToast({ title: t('chat.chatFiles.imageSaveUnsupported'), icon: 'none' })
+				return
+			}
+			if (harmonySnapshot.isHarmony && isAuthorizeSettingDenied(readAlbumAuthorized())) {
+				promptAlbumPermissionDenied()
+				return
+			}
 			try {
 				if (triggerBrowserDownload(url, fileName) || openUrlInBrowser(url)) {
 					return
 				}
 				uni.showLoading({ title: t('chat.chatFiles.downloading') })
-				const tempFilePath = await downloadRemoteFile(url)
+				const tempFilePath = await downloadRemoteTempFile(url)
 				await saveImageToAlbum(tempFilePath)
 				uni.showToast({ title: t('chat.chatFiles.savedToAlbum'), icon: 'success' })
 			} catch (e) {
@@ -508,16 +530,29 @@
 		}
 
 		if (file.type === 'video') {
+			if (harmonySnapshot.isHarmony && !harmonySnapshot.saveVideoToAlbumReady) {
+				uni.showToast({ title: t('chat.chatFiles.videoSaveUnsupported'), icon: 'none' })
+				return
+			}
+			if (harmonySnapshot.isHarmony && isAuthorizeSettingDenied(readAlbumAuthorized())) {
+				promptAlbumPermissionDenied()
+				return
+			}
 			try {
 				if (triggerBrowserDownload(url, fileName) || openUrlInBrowser(url)) {
 					return
 				}
 				uni.showLoading({ title: t('chat.chatFiles.downloading') })
-				const tempFilePath = await downloadRemoteFile(url)
-				await saveVideoToAlbum(tempFilePath)
+				const tempFilePath = await downloadRemoteTempFile(url)
+				await saveVideoFileToAlbum(tempFilePath)
 				uni.showToast({ title: t('chat.chatFiles.savedToAlbum'), icon: 'success' })
 			} catch (e) {
-				uni.showToast({ title: t('chat.chatFiles.saveFailed'), icon: 'none' })
+				const errMsg = e != null && (e as any).message != null ? String((e as any).message) : ''
+				if (harmonySnapshot.isHarmony && errMsg.indexOf('saveVideoToPhotosAlbum unavailable') > -1) {
+					uni.showToast({ title: t('chat.chatFiles.videoSaveUnsupported'), icon: 'none' })
+				} else {
+					uni.showToast({ title: t('chat.chatFiles.saveFailed'), icon: 'none' })
+				}
 			} finally {
 				uni.hideLoading()
 			}
@@ -599,6 +634,7 @@
 	})
 
 	onUnload(() => {
+		clearFileLongPressTimer()
 		if (unsubscribeTheme != null) {
 			unsubscribeTheme()
 			unsubscribeTheme = null

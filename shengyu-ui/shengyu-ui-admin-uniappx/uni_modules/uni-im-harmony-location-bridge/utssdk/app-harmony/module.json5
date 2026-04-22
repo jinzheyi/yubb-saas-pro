@@ -1,0 +1,27 @@
+{
+	"module": {
+		"type": "har",
+		"name": "uni_im_harmony_location_bridge",
+		"deviceTypes": [
+			"default",
+			"tablet",
+			"2in1"
+		],
+		"requestPermissions": [
+			{
+				"name": "ohos.permission.LOCATION",
+				"usedScene": {
+					"when": "inuse"
+				},
+				"reason": "$string:permission_location_reason"
+			},
+			{
+				"name": "ohos.permission.APPROXIMATELY_LOCATION",
+				"usedScene": {
+					"when": "inuse"
+				},
+				"reason": "$string:permission_location_reason"
+			}
+		]
+	}
+}

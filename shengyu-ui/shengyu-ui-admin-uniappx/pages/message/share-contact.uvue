@@ -70,7 +70,7 @@
 		<!-- 底部确认按钮 -->
 		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px', backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
 			<text class="selected-text" :style="{ color: theme.textSecondary }">{{ t('chat.shareContact.selectedCount', { count: selectedItems.length }) }}</text>
-			<button class="confirm-btn" :style="{ backgroundColor: selectedItems.length === 0 ? theme.fillDisabled : theme.brandPrimary }" :disabled="selectedItems.length === 0" @click="handleConfirm">
+			<button class="confirm-btn" :class="{ 'confirm-btn-disabled': selectedItems.length === 0 }" :style="{ backgroundColor: selectedItems.length === 0 ? theme.fillDisabled : theme.brandPrimary }" :disabled="selectedItems.length === 0" @click="handleConfirm">
 				<text class="confirm-btn-text">{{ t('chat.shareContact.share') }}</text>
 			</button>
 		</view>
@@ -623,7 +623,7 @@
 		border-width: 0;
 	}
 
-	.confirm-btn[disabled] {
+	.confirm-btn-disabled {
 		background-color: #C1C4C9;
 	}
 

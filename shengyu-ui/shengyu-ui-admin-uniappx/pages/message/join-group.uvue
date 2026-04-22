@@ -474,7 +474,6 @@
 	.manual-entry-actions {
 		flex-direction: row;
 		margin-top: 12px;
-		column-gap: 10px;
 	}
 
 	.manual-action-btn {
@@ -487,6 +486,7 @@
 	}
 
 	.manual-action-btn-secondary {
+		margin-right: 10px;
 		background-color: rgba(51, 112, 255, 0.14);
 	}
 

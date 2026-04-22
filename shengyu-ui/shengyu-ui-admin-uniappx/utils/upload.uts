@@ -10,6 +10,9 @@ import {
 	MAX_IMAGE_SIZE,
 	MAX_VIDEO_SIZE
 } from '../config/app.config.uts'
+import { readAlbumAuthorized, readCameraAuthorized } from './app-authorize.uts'
+import { promptOpenAppSettings } from './app-settings.uts'
+import { isHarmonyOS } from './device.uts'
 import { getToken, getTenantId } from './request.uts'
 import { formatToken } from '../store/user.uts'
 import { t } from '../store/locale.uts'
@@ -68,6 +71,20 @@ export type UploadConfig = {
 	maxSize?: number       // 最大文件大小（字节）
 	showToast?: boolean    // 是否显示错误提示（默认 true）
 	onProgress?: UploadProgressCallback  // 进度回调
+}
+
+export type ChooseImageOptions = {
+	sourceType?: string[]
+	sizeType?: string[]
+}
+
+export type ChooseVideoOptions = {
+	sourceType?: string[]
+}
+
+export type ChooseFileOptions = {
+	type?: string
+	count?: number
 }
 
 function buildUploadFormData(config: UploadConfig): UTSJSONObject {
@@ -212,16 +229,23 @@ export function uploadFile(
  * 选择图片（不上传）
  * @param count 最多可选择的图片数量（默认 9）
  */
-export function chooseImage(count: number = 9): Promise<string[]> {
+export function chooseImage(count: number = 9, options?: ChooseImageOptions): Promise<string[]> {
 	return new Promise((resolve, reject) => {
+		const sourceType = options?.sourceType != null && options.sourceType.length > 0 ? options.sourceType : ['album', 'camera']
+		const sizeType = options?.sizeType != null && options.sizeType.length > 0 ? options.sizeType : ['original', 'compressed']
+		if (!ensureHarmonyMediaSourcePermission(sourceType)) {
+			reject(new Error('permission denied'))
+			return
+		}
 		uni.chooseImage({
 			count: count,
-			sizeType: ['original', 'compressed'],
-			sourceType: ['album', 'camera'],
+			sizeType: sizeType,
+			sourceType: sourceType,
 			success: (res) => {
 				resolve(res.tempFilePaths)
 			},
 			fail: (err) => {
+				handleHarmonyChoosePermissionError(err, sourceType)
 				reject(err)
 			}
 		})
@@ -231,14 +255,20 @@ export function chooseImage(count: number = 9): Promise<string[]> {
 /**
  * 选择视频（不上传）
  */
-export function chooseVideo(): Promise<any> {
+export function chooseVideo(options?: ChooseVideoOptions): Promise<any> {
 	return new Promise((resolve, reject) => {
+		const sourceType = options?.sourceType != null && options.sourceType.length > 0 ? options.sourceType : ['album', 'camera']
+		if (!ensureHarmonyMediaSourcePermission(sourceType)) {
+			reject(new Error('permission denied'))
+			return
+		}
 		uni.chooseVideo({
-			sourceType: ['album', 'camera'],
+			sourceType: sourceType,
 			success: (res) => {
 				resolve(res)
 			},
 			fail: (err) => {
+				handleHarmonyChoosePermissionError(err, sourceType)
 				reject(err)
 			}
 		})
@@ -280,31 +310,35 @@ export function uploadAudio(filePath: string, config?: UploadConfig): Promise<Up
 }
 
 /**
- * 选择文件（不上传，支持 H5 / App / 小程序）
+ * 选择文件（不上传，支持 H5 / Android / iOS / HarmonyOS / 小程序）
  */
 export function chooseFile(accept: string = '*/*', count: number = 1): Promise<any> {
 	return new Promise((resolve, reject) => {
+		const chooseType = resolveChooseFileType(accept)
 		// #ifdef H5
 		uni.chooseFile({
 			count: count,
-			extension: [accept],
+			type: chooseType,
+			extension: accept !== '*/*' ? [accept] : [],
 			success: (res) => {
 				resolve(res)
 			},
 			fail: (err) => {
+				handleHarmonyChoosePermissionError(err, ['album'])
 				reject(err)
 			}
 		})
 		// #endif
 
-		// #ifdef APP-PLUS
-		uni.chooseMessageFile({
+		// #ifdef APP-ANDROID || APP-IOS || APP-HARMONY
+		uni.chooseFile({
 			count: count,
-			type: 'all',
+			type: chooseType,
 			success: (res) => {
 				resolve(res)
 			},
 			fail: (err) => {
+				handleHarmonyChoosePermissionError(err, ['album'])
 				reject(err)
 			}
 		})
@@ -576,41 +610,28 @@ export function chooseAndUploadImage(
 	count: number = 1,
 	config?: UploadConfig
 ): Promise<UploadResult[]> {
-	return new Promise((resolve, reject) => {
-		uni.chooseImage({
-			count: count,
-			sizeType: ['original', 'compressed'],
-			sourceType: ['album', 'camera'],
-			success: async (res) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const tempFilePaths = await chooseImage(count)
+			const uploadPromises: Promise<UploadResult>[] = []
+			for (let i = 0; i < tempFilePaths.length; i++) {
+				const filePath = tempFilePaths[i]
+				const maxSize = config?.maxSize || MAX_IMAGE_SIZE
 				try {
-					const uploadPromises: Promise<UploadResult>[] = []
-					
-					for (let i = 0; i < res.tempFilePaths.length; i++) {
-						const filePath = res.tempFilePaths[i]
-						
-						// 验证文件大小（如果有 tempFiles 信息）
-						if (res.tempFiles && res.tempFiles[i]) {
-							const fileSize = res.tempFiles[i].size
-							const maxSize = config?.maxSize || MAX_IMAGE_SIZE
-							if (!validateFileSize(fileSize, maxSize)) {
-								continue
-							}
-						}
-						
-						const uploadPromise = uploadFile(filePath, config)
-						uploadPromises.push(uploadPromise)
+					const localFileSize = await getLocalFileSize(filePath)
+					if (!validateFileSize(localFileSize, maxSize)) {
+						continue
 					}
-					
-					const results = await Promise.all(uploadPromises)
-					resolve(results)
 				} catch (e) {
-					reject(e)
+					// ignore
 				}
-			},
-			fail: (err) => {
-				reject(err)
+				uploadPromises.push(uploadFile(filePath, config))
 			}
-		})
+			const results = await Promise.all(uploadPromises)
+			resolve(results)
+		} catch (e) {
+			reject(e)
+		}
 	})
 }
 
@@ -622,35 +643,26 @@ export function chooseAndUploadImage(
 export function chooseAndUploadVideo(
 	config?: UploadConfig
 ): Promise<UploadResult> {
-	return new Promise((resolve, reject) => {
-		uni.chooseVideo({
-			sourceType: ['album', 'camera'],
-			success: async (res) => {
-				try {
-					// 验证文件大小
-					if (res.size) {
-						const maxSize = config?.maxSize || MAX_VIDEO_SIZE
-						if (!validateFileSize(res.size, maxSize)) {
-							reject(new Error('视频文件过大'))
-							return
-						}
-					}
-					
-					const result = await uploadFile(res.tempFilePath, config)
-					resolve(result)
-				} catch (e) {
-					reject(e)
+	return new Promise(async (resolve, reject) => {
+		try {
+			const res = await chooseVideo()
+			if (res.size) {
+				const maxSize = config?.maxSize || MAX_VIDEO_SIZE
+				if (!validateFileSize(res.size, maxSize)) {
+					reject(new Error('视频文件过大'))
+					return
 				}
-			},
-			fail: (err) => {
-				reject(err)
 			}
-		})
+			const result = await uploadFile(res.tempFilePath, config)
+			resolve(result)
+		} catch (e) {
+			reject(e)
+		}
 	})
 }
 
 /**
- * 选择并上传文件（支持 H5、Android、iOS）
+ * 选择并上传文件（支持 H5、Android、iOS、HarmonyOS）
  * @param accept 接受的文件类型（如 'image/*', '.pdf'）
  * @param config 上传配置（可选）
  * @returns Promise<UploadResult>
@@ -659,81 +671,100 @@ export function chooseAndUploadFile(
 	accept: string = '*/*',
 	config?: UploadConfig
 ): Promise<UploadResult> {
-	return new Promise((resolve, reject) => {
-		// #ifdef H5
-		uni.chooseFile({
-			count: 1,
-			extension: [accept],
-			success: async (res) => {
-				try {
-					const result = await uploadFile(res.tempFilePaths[0], config)
-					resolve(result)
-				} catch (e) {
-					reject(e)
+	return new Promise(async (resolve, reject) => {
+		try {
+			const res = await chooseFile(accept, 1)
+			if (res.tempFiles && res.tempFiles.length > 0 && res.tempFiles[0].size) {
+				const maxSize = config?.maxSize || MAX_FILE_SIZE
+				if (!validateFileSize(res.tempFiles[0].size, maxSize)) {
+					reject(new Error('文件过大'))
+					return
 				}
-			},
-			fail: (err) => {
-				reject(err)
 			}
-		})
-		// #endif
-		
-		// #ifdef APP-PLUS
-		// App 平台使用 chooseMessageFile 选择文件
-		uni.chooseMessageFile({
-			count: 1,
-			type: 'all',  // 'all' | 'video' | 'image' | 'file'
-			success: async (res) => {
-				try {
-					// 验证文件大小
-					if (res.tempFiles[0].size) {
-						const maxSize = config?.maxSize || MAX_FILE_SIZE
-						if (!validateFileSize(res.tempFiles[0].size, maxSize)) {
-							reject(new Error('文件过大'))
-							return
-						}
-					}
-					
-					const result = await uploadFile(res.tempFiles[0].path, config)
-					resolve(result)
-				} catch (e) {
-					reject(e)
-				}
-			},
-			fail: (err) => {
-				reject(err)
+			const path = (res.tempFiles && res.tempFiles.length > 0)
+				? res.tempFiles[0].path
+				: ((res.tempFilePaths && res.tempFilePaths.length > 0) ? res.tempFilePaths[0] : '')
+			if (!path) {
+				reject(new Error('未获取到文件路径'))
+				return
 			}
-		})
-		// #endif
-		
-		// #ifdef MP-WEIXIN
-		// 微信小程序使用 chooseMessageFile
-		uni.chooseMessageFile({
-			count: 1,
-			type: 'all',
-			success: async (res) => {
-				try {
-					// 验证文件大小
-					if (res.tempFiles[0].size) {
-						const maxSize = config?.maxSize || MAX_FILE_SIZE
-						if (!validateFileSize(res.tempFiles[0].size, maxSize)) {
-							reject(new Error('文件过大'))
-							return
-						}
-					}
-					
-					const result = await uploadFile(res.tempFiles[0].path, config)
-					resolve(result)
-				} catch (e) {
-					reject(e)
-				}
-			},
-			fail: (err) => {
-				reject(err)
-			}
-		})
-		// #endif
+			const result = await uploadFile(path, config)
+			resolve(result)
+		} catch (e) {
+			reject(e)
+		}
 	})
+}
+
+function ensureHarmonyMediaSourcePermission(sourceType: string[]): boolean {
+	if (!isHarmonyOS()) {
+		return true
+	}
+	const needCamera = sourceType.indexOf('camera') > -1
+	const needAlbum = sourceType.indexOf('album') > -1
+	const cameraDenied = needCamera && readCameraAuthorized() === 'denied'
+	const albumDenied = needAlbum && readAlbumAuthorized() === 'denied'
+	if (!cameraDenied && !albumDenied) {
+		return true
+	}
+	if (cameraDenied && albumDenied) {
+		promptHarmonyMediaPermissionDenied(t('runtime.upload.cameraOrAlbumPermissionDenied'))
+		return false
+	}
+	if (cameraDenied) {
+		promptHarmonyMediaPermissionDenied(t('runtime.upload.cameraPermissionDenied'))
+		return false
+	}
+	promptHarmonyMediaPermissionDenied(t('runtime.upload.albumPermissionDenied'))
+	return false
+}
+
+function handleHarmonyChoosePermissionError(err: any, sourceType: string[]): void {
+	if (!isHarmonyOS() || !isHarmonyChoosePermissionDeniedError(err)) {
+		return
+	}
+	const needCamera = sourceType.indexOf('camera') > -1
+	const needAlbum = sourceType.indexOf('album') > -1
+	if (needCamera && needAlbum) {
+		promptHarmonyMediaPermissionDenied(t('runtime.upload.cameraOrAlbumPermissionDenied'))
+		return
+	}
+	if (needCamera) {
+		promptHarmonyMediaPermissionDenied(t('runtime.upload.cameraPermissionDenied'))
+		return
+	}
+	promptHarmonyMediaPermissionDenied(t('runtime.upload.albumPermissionDenied'))
+}
+
+function isHarmonyChoosePermissionDeniedError(err: any): boolean {
+	try {
+		const errCode = Number((err as any)?.errCode || (err as any)?.code || 0)
+		if (errCode === 1101005) {
+			return true
+		}
+		const text = String((err as any)?.errMsg || (err as any)?.message || err || '').toLowerCase()
+		return text.indexOf('permission') > -1 || text.indexOf('authorize') > -1 || text.indexOf('auth deny') > -1
+	} catch (e) {
+		return false
+	}
+}
+
+function promptHarmonyMediaPermissionDenied(message: string): void {
+	promptOpenAppSettings(message, t('common.confirmTitle'), t('common.goSetting'))
+}
+
+function resolveChooseFileType(accept: string): string {
+	const normalized = accept.trim().toLowerCase()
+	if (normalized.startsWith('image/')) {
+		return 'image'
+	}
+	if (normalized.startsWith('video/')) {
+		return 'video'
+	}
+	if (normalized.startsWith('audio/')) {
+		return 'audio'
+	}
+	return 'all'
 }
 
 /**

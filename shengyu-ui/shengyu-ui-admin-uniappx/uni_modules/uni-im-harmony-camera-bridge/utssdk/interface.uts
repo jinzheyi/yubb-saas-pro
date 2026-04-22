@@ -1,0 +1,3 @@
+export interface HarmonyCameraBridgeApi {
+	ensureLoaded(): boolean
+}

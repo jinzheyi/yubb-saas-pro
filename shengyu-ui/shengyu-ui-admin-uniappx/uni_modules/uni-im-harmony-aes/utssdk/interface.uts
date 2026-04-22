@@ -1,0 +1,34 @@
+export interface HarmonyAesApi {
+	/**
+	 * 返回当前 Harmony AES 实现是否已经具备生产可用能力。
+	 * 只有返回 true，业务层才会自动安装该 runtime。
+	 */
+	isReady(): boolean
+
+	/**
+	 * 返回实现标识，便于真机联调时确认当前使用的是哪套 AES 实现。
+	 */
+	getImplementationName(): string
+
+	/**
+	 * 插件实现必须通过固定向量自检后，业务层才允许安装 runtime。
+	 */
+	selfTest(): boolean
+
+	/**
+	 * 约束：
+	 * - AES
+	 * - ECB
+	 * - PKCS7
+	 * - UTF-8 输入
+	 * - Base64 输出
+	 */
+	encrypt(word: string, keyWord: string): string
+
+	/**
+	 * 约束：
+	 * - 输入为 Base64 密文
+	 * - 输出为 UTF-8 明文
+	 */
+	decrypt(word: string, keyWord: string): string
+}

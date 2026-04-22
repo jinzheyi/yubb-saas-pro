@@ -56,6 +56,12 @@
 							placeholder-class="placeholder"
 						/>
 					</view>
+					<picker class="debug-account-picker" mode="selector" :range="debugAccountOptions" @change="handleDebugAccountSelect">
+						<view class="debug-account-picker-inner">
+							<text class="debug-account-picker-label">调试账号快速选择（临时）</text>
+							<text class="debug-account-picker-value">{{ currentDebugAccountLabel }}</text>
+						</view>
+					</picker>
 					
 					<view class="input-item">
 						<text class="iconfont input-icon">&#xea8d;</text>
@@ -129,6 +135,11 @@
 			</view>
 		</view>
 
+		<view v-if="showHarmonyCapabilityHint" class="harmony-hint">
+			<text class="harmony-hint-title">{{ t('login.harmonyCapabilityTitle') }}</text>
+			<text class="harmony-hint-text">{{ t('login.harmonyCapabilityDesc') }}</text>
+		</view>
+
 		<view v-if="showLanguagePanel" class="panel-mask" @click="showLanguagePanel = false">
 			<view class="panel-sheet" @click.stop>
 				<view class="panel-handle"></view>
@@ -158,6 +169,7 @@
 	import { getLanguageMode, type LanguageMode } from '../../store/locale.uts'
 	import { badgeService } from '../../services/badge-service.uts'
 	import { tabBarBadgeService } from '../../services/tab-bar-badge-service.uts'
+	import { canUseHarmonySliderCaptcha, getHarmonyReadinessSnapshot } from '../../services/harmony-readiness-service.uts'
 	import { syncUserPreferencesFromServer } from '../../services/user-preference-service.uts'
 	import { wsManager } from '../../utils/websocket.uts'
 	import SliderCaptcha from '../../components/captcha/slider-captcha.uvue'
@@ -180,6 +192,7 @@
 	
 	// 登录类型
 	const loginType = ref<string>('account')
+	const debugAccountOptions = ['jin_zheyicn@qq.com', '136870475@qq.com']
 	
 	// 表单数据
 	const username = ref<string>('jin_zheyicn@qq.com')
@@ -192,9 +205,28 @@
 	const loading = ref<boolean>(false)
 	const showLanguagePanel = ref<boolean>(false)
 	const codeCountdown = ref<number>(0)
-	const captchaVerification = ref<string>('') 
 	const captchaRef = ref<any>(null)
 	const captchaEnable = ref<string>(CAPTCHA_ENABLE) 
+
+	const showHarmonyCapabilityHint = computed((): boolean => {
+		const snapshot = getHarmonyReadinessSnapshot()
+		return snapshot.isHarmony && !snapshot.sliderCaptchaReady
+	})
+
+	const currentDebugAccountLabel = computed((): string => {
+		if (username.value == null || String(username.value).trim() === '') {
+			return '请选择'
+		}
+		return String(username.value)
+	})
+
+	function handleDebugAccountSelect(e: any): void {
+		const idx = e != null && e.detail != null && e.detail.value != null ? Number(e.detail.value) : -1
+		if (isNaN(idx) || idx < 0 || idx >= debugAccountOptions.length) {
+			return
+		}
+		username.value = debugAccountOptions[idx]
+	}
 	
 	// 记住我
 	function handleRememberChange(e: any) {
@@ -230,6 +262,15 @@
 			if (captchaEnable.value === 'false') {
 				await doLogin('')
 			} else {
+				if (!canUseHarmonySliderCaptcha()) {
+					uni.showModal({
+						title: t('login.harmonyCapabilityTitle'),
+						content: t('login.harmonyCapabilityDesc'),
+						showCancel: false,
+						confirmText: t('common.ok')
+					})
+					return
+				}
 				captchaRef.value?.show()
 			}
 		} else {
@@ -245,8 +286,13 @@
 		doLogin(data.captchaVerification)
 	}
 	
-	function handleCaptchaFail() {
-		uni.showToast({ title: t('captcha.fail'), icon: 'none' })
+	function handleCaptchaFail(payload: any = null) {
+		if (payload != null && payload.code === 'HARMONY_AES_REQUIRED') {
+			uni.showToast({ title: String(payload.message || t('captcha.harmonyAesRequired')), icon: 'none' })
+			return
+		}
+		const msg = payload != null && payload.message ? String(payload.message) : t('captcha.fail')
+		uni.showToast({ title: msg, icon: 'none' })
 	}
 	
 	function handleLanguageChanged(languageMode: LanguageMode) {
@@ -521,6 +567,32 @@
 		color: #1F2329;
 	}
 
+	.debug-account-picker {
+		margin-top: -6px;
+		margin-bottom: 16px;
+	}
+
+	.debug-account-picker-inner {
+		min-height: 30px;
+		padding: 6px 10px;
+		border-radius: 6px;
+		background-color: #F0F5FF;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.debug-account-picker-label {
+		font-size: 12px;
+		color: #646A73;
+	}
+
+	.debug-account-picker-value {
+		font-size: 12px;
+		color: #3370FF;
+		margin-left: 10px;
+	}
+
 	.placeholder {
 		color: #8F959E;
 	}
@@ -592,6 +664,29 @@
 		margin-top: auto;
 		padding-bottom: 24px;
 		align-items: center;
+	}
+
+	.harmony-hint {
+		margin: 0 20px 12px 20px;
+		padding: 12px 14px;
+		border-radius: 10px;
+		background-color: #FFF4E8;
+		border-width: 0.5px;
+		border-color: #FFD8B2;
+		z-index: 1;
+	}
+
+	.harmony-hint-title {
+		font-size: 13px;
+		font-weight: 600;
+		color: #AD4E00;
+	}
+
+	.harmony-hint-text {
+		margin-top: 4px;
+		font-size: 12px;
+		line-height: 18px;
+		color: #AD6800;
 	}
 
 	.panel-mask {

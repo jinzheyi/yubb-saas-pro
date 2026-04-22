@@ -1,0 +1,7 @@
+import { HarmonyCameraBridgeApi } from '../interface.uts'
+
+export const harmonyCameraBridgeApi: HarmonyCameraBridgeApi = {
+	ensureLoaded(): boolean {
+		return true
+	}
+}

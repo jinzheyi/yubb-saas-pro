@@ -49,6 +49,9 @@
         :style="{ backgroundColor: theme.cardBg }"
         @click="handleItemClick(item)"
         @longpress="handleItemLongPress(item)"
+        @mousedown="handleItemMouseDown(item)"
+        @mouseup="handleItemMouseEnd"
+        @mouseleave="handleItemMouseEnd"
       >
         <view class="card-head">
           <text class="card-type" :style="{ color: theme.textTertiary }">{{ item.typeLabel }}</text>
@@ -125,6 +128,8 @@ let searchDebounceTimer: any = null
 let latestRequestToken = 0
 let pendingResetFetch = false
 let unsubscribeTheme: (() => void) | null = null
+let itemLongPressTimer: any = null
+let suppressNextClickFavoriteId = ''
 const recentQueryResultCache = new Map<string, { at: number, data: any }>()
 
 unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
@@ -617,6 +622,10 @@ function handleRefresh(): void {
 
 function handleItemClick(item: FavoriteDisplayItem): void {
   const favoriteId = item.favoriteId
+  if (favoriteId !== '' && favoriteId === suppressNextClickFavoriteId) {
+    suppressNextClickFavoriteId = ''
+    return
+  }
   if (favoriteId === '' || favoriteId === '0') {
     uni.showToast({ title: t('favoritePage.toast.openFailed'), icon: 'none' })
     return
@@ -653,6 +662,34 @@ function handleItemLongPress(item: FavoriteDisplayItem): void {
   })
 }
 
+function clearItemLongPressTimer(): void {
+  if (itemLongPressTimer != null) {
+    clearTimeout(itemLongPressTimer)
+    itemLongPressTimer = null
+  }
+}
+
+function handleItemMouseDown(item: FavoriteDisplayItem): void {
+  try {
+    clearItemLongPressTimer()
+    const favoriteId = item != null && item.favoriteId != null ? String(item.favoriteId) : ''
+    if (favoriteId === '' || favoriteId === '0') {
+      return
+    }
+    itemLongPressTimer = setTimeout(() => {
+      itemLongPressTimer = null
+      suppressNextClickFavoriteId = favoriteId
+      handleItemLongPress(item)
+    }, 450)
+  } catch (e) {
+    clearItemLongPressTimer()
+  }
+}
+
+function handleItemMouseEnd(): void {
+  clearItemLongPressTimer()
+}
+
 onLoad(() => {
   void fetchPage(true)
 })
@@ -662,6 +699,8 @@ onUnload(() => {
     clearTimeout(searchDebounceTimer)
     searchDebounceTimer = null
   }
+  clearItemLongPressTimer()
+  suppressNextClickFavoriteId = ''
   if (unsubscribeTheme != null) {
     unsubscribeTheme()
     unsubscribeTheme = null

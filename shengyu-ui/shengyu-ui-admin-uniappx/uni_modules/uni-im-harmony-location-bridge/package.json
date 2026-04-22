@@ -1,0 +1,7 @@
+{
+	"id": "uni-im-harmony-location-bridge",
+	"displayName": "uni-im Harmony Location Bridge",
+	"version": "0.0.1",
+	"description": "HarmonyOS location permission bridge for uni-app x IM",
+	"uni_modules": {}
+}

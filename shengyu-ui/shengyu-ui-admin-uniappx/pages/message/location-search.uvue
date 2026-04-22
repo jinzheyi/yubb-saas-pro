@@ -140,6 +140,7 @@ import { onLoad, onUnload, onReady } from '@dcloudio/uni-app'
 import { useI18n } from '../../hooks/useI18n.uts'
 import { searchLocation } from '../../api/message.uts'
 import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
+import { getHarmonyReadinessSnapshot } from '../../services/harmony-readiness-service.uts'
 import type { ThemeTokens } from '../../config/theme.uts'
 const { t } = useI18n()
 
@@ -254,6 +255,12 @@ async function initLocation(): Promise<void> {
 	locationError.value = ''
 
 	try {
+		const readinessNotice = resolveHarmonyLocationNotice()
+		if (readinessNotice !== '') {
+			locationError.value = readinessNotice
+			await loadNearbyPoi(mapCenterLat.value, mapCenterLng.value)
+			return
+		}
 		const loc = await getDeviceLocation()
 		if (loc != null) {
 			currentLatitude.value = loc.latitude
@@ -278,6 +285,23 @@ async function initLocation(): Promise<void> {
 	} finally {
 		locationLoading.value = false
 	}
+}
+
+function resolveHarmonyLocationNotice(): string {
+	const snapshot = getHarmonyReadinessSnapshot()
+	if (!snapshot.isHarmony) {
+		return ''
+	}
+	if (!snapshot.locationPermissionBridgeReady) {
+		return t('chat.locationSearch.harmonyBridgePending')
+	}
+	if (snapshot.locationEnabled === false) {
+		return t('chat.locationSearch.harmonyLocationSwitchOff')
+	}
+	if (snapshot.locationAuthorized === 'denied') {
+		return t('chat.locationSearch.harmonyPermissionDenied')
+	}
+	return ''
 }
 
 function getDeviceLocation(): Promise<{ latitude: number; longitude: number; address: string | null } | null> {
@@ -538,6 +562,12 @@ function selectPoi(item: PoiItem): void {
 function sendCurrentLocation(): void {
 	if (locationLoading.value) {
 		uni.showToast({ title: t('chat.locationSearch.locatingWait'), icon: 'none' })
+		return
+	}
+
+	const readinessNotice = resolveHarmonyLocationNotice()
+	if (readinessNotice !== '') {
+		uni.showToast({ title: readinessNotice, icon: 'none' })
 		return
 	}
 

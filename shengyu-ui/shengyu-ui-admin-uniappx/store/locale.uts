@@ -232,7 +232,7 @@ export function switchLocale(locale: LocaleType) {
  * @returns 系统语言类型
  */
 export function getSystemLocale(): LocaleType {
-	// #ifdef APP-ANDROID || APP-IOS
+	// #ifdef APP-ANDROID || APP-IOS || APP-HARMONY
 	// 获取系统语言
 	const systemInfo = uni.getSystemInfoSync()
 	const language = systemInfo.language

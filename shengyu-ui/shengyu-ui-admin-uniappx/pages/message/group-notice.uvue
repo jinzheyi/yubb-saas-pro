@@ -581,7 +581,6 @@
 	.btn-group {
 		flex-direction: row;
 		margin-top: 24px;
-		gap: 12px;
 	}
 	
 	.btn {
@@ -593,6 +592,7 @@
 	}
 	
 	.btn-cancel {
+		margin-right: 12px;
 		background-color: rgba(143, 149, 158, 0.12);
 	}
 	

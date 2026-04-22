@@ -56,6 +56,7 @@
 						@touchstart="handleTouchStart"
 						@touchmove="handleTouchMove"
 						@touchend="handleTouchEnd"
+						@mousedown="handleMouseDown"
 					>
 						<text class="slider-icon">{{ sliderIcon }}</text>
 					</view>
@@ -67,10 +68,12 @@
 </template>
 
 <script setup lang="uts">
-	import { ref, computed } from 'vue'
+	import { ref, computed, onUnmounted } from 'vue'
 	import { getCaptcha, checkCaptcha } from '../../api/login.uts'
-	import { aesEncrypt } from './utils/aes.uts'  // ✅ 直接导入，不使用 require
+	import { aesEncrypt } from './utils/aes.uts'
+	import { isHarmonyAESRuntimeReady } from './utils/harmony-aes-provider.uts'
 	import { t } from '../../store/locale.uts'
+	import { isHarmonyOS } from '../../utils/device.uts'
 	
 	// Props
 	const props = defineProps({
@@ -79,6 +82,9 @@
 			default: 'blockPuzzle'
 		}
 	})
+
+	const CAPTCHA_FAIL_CODE_VERIFY_FAILED = 'VERIFY_FAILED'
+	const CAPTCHA_FAIL_CODE_HARMONY_AES_REQUIRED = 'HARMONY_AES_REQUIRED'
 	
 	// Emits
 	const emit = defineEmits(['success', 'fail'])
@@ -118,6 +124,37 @@
 	const buttonColor = ref<string>('#fff')
 	const sliderIcon = ref<string>('→')
 	const sliderText = ref<string>(t('captcha.slide'))
+
+	function handleHarmonyAESUnavailable(): void {
+		tipSuccess.value = false
+		tipText.value = t('captcha.harmonyAesRequired')
+		sliderText.value = t('captcha.slide')
+		buttonColor.value = '#d9534f'
+		sliderIcon.value = '✕'
+		uni.showToast({
+			title: t('captcha.harmonyAesRequired'),
+			icon: 'none'
+		})
+		emit('fail', {
+			code: CAPTCHA_FAIL_CODE_HARMONY_AES_REQUIRED,
+			message: t('captcha.harmonyAesRequired')
+		})
+		setTimeout(() => {
+			refresh()
+		}, 1200)
+	}
+
+	function ensureHarmonyCaptchaRuntime(): boolean {
+		if (!isHarmonyOS()) {
+			return true
+		}
+		if (isHarmonyAESRuntimeReady()) {
+			return true
+		}
+		console.error('HarmonyOS 滑块验证码缺少 AES runtime，已中止校验请求')
+		handleHarmonyAESUnavailable()
+		return false
+	}
 	
 	// 生成 UUID
 	function generateUUID(): string {
@@ -181,77 +218,148 @@
 	// 触摸开始
 	function handleTouchStart(e: any) {
 		if (!isSliding.value) {
-			if (e != null && typeof e.stopPropagation === 'function') {
-				e.stopPropagation()
+			const pageX = extractPointerPageX(e, true)
+			if (pageX < 0) {
+				return
 			}
-			if (e != null && typeof e.preventDefault === 'function') {
-				e.preventDefault()
+			beginSliding(pageX, e)
+		}
+	}
+
+	function handleMouseDown(e: any) {
+		if (!isSliding.value) {
+			const pageX = extractPointerPageX(e, false)
+			if (pageX < 0) {
+				return
 			}
-			
-			startX.value = e.touches[0].pageX
-			currentX.value = e.touches[0].pageX
-			isSliding.value = true
-			startTime.value = Date.now()
-			sliderText.value = ''
-			buttonColor.value = '#337ab7'
+			beginSliding(pageX, e)
+			bindMouseDragListeners()
 		}
 	}
 	
 	// 触摸移动
 	function handleTouchMove(e: any) {
 		if (isSliding.value) {
-			if (e != null && typeof e.stopPropagation === 'function') {
-				e.stopPropagation()
+			const pageX = extractPointerPageX(e, true)
+			if (pageX < 0) {
+				return
 			}
-			if (e != null && typeof e.preventDefault === 'function') {
-				e.preventDefault()
-			}
-			
-			currentX.value = e.touches[0].pageX
-			
-			// 限制滑动范围
-			const moveDistance = currentX.value - startX.value
-			if (moveDistance < 0) {
-				currentX.value = startX.value
-			} else if (moveDistance > 260) {
-				currentX.value = startX.value + 260
-			}
+			updateSliding(pageX, e)
 		}
 	}
 	
 	// 触摸结束
 	async function handleTouchEnd(e: any) {
 		if (isSliding.value) {
-			if (e != null && typeof e.stopPropagation === 'function') {
-				e.stopPropagation()
-			}
-			if (e != null && typeof e.preventDefault === 'function') {
-				e.preventDefault()
-			}
-			
-			endTime.value = Date.now()
-			isSliding.value = false
-			
-			// 计算移动距离（需要按比例转换）
-			const moveDistance = currentX.value - startX.value
-			
-			// 如果滑动距离太小，不进行验证
-			if (moveDistance < 10) {
-				reset()
-				return
-			}
-			
-			// 按比例转换为标准坐标（310px）
-			const realDistance = Math.round(moveDistance * 310 / 310)
-			
-			// 校验验证码
-			await verifyCaptcha(realDistance)
+			await finishSliding(e)
 		}
+	}
+
+	async function handleMouseMove(e: any) {
+		if (!isSliding.value) {
+			return
+		}
+		const pageX = extractPointerPageX(e, false)
+		if (pageX < 0) {
+			return
+		}
+		updateSliding(pageX, e)
+	}
+
+	async function handleMouseUp(e: any) {
+		if (!isSliding.value) {
+			unbindMouseDragListeners()
+			return
+		}
+		await finishSliding(e)
+		unbindMouseDragListeners()
+	}
+
+	function extractPointerPageX(e: any, preferTouch: boolean): number {
+		if (preferTouch && e != null && e.touches != null && e.touches.length > 0) {
+			return Number(e.touches[0].pageX)
+		}
+		if (e != null && e.changedTouches != null && e.changedTouches.length > 0) {
+			return Number(e.changedTouches[0].pageX)
+		}
+		if (e != null && e.pageX != null) {
+			return Number(e.pageX)
+		}
+		if (e != null && e.clientX != null) {
+			return Number(e.clientX)
+		}
+		return -1
+	}
+
+	function stopPointerEvent(e: any): void {
+		if (e != null && typeof e.stopPropagation === 'function') {
+			e.stopPropagation()
+		}
+		if (e != null && typeof e.preventDefault === 'function') {
+			e.preventDefault()
+		}
+	}
+
+	function beginSliding(pageX: number, e: any): void {
+		stopPointerEvent(e)
+		startX.value = pageX
+		currentX.value = pageX
+		isSliding.value = true
+		startTime.value = Date.now()
+		sliderText.value = ''
+		buttonColor.value = '#337ab7'
+	}
+
+	function updateSliding(pageX: number, e: any): void {
+		stopPointerEvent(e)
+		currentX.value = pageX
+		const moveDistance = currentX.value - startX.value
+		if (moveDistance < 0) {
+			currentX.value = startX.value
+		} else if (moveDistance > 260) {
+			currentX.value = startX.value + 260
+		}
+	}
+
+	async function finishSliding(e: any): Promise<void> {
+		stopPointerEvent(e)
+		endTime.value = Date.now()
+		isSliding.value = false
+		const moveDistance = currentX.value - startX.value
+		if (moveDistance < 10) {
+			reset()
+			return
+		}
+		const realDistance = Math.round(moveDistance * 310 / 310)
+		await verifyCaptcha(realDistance)
+	}
+
+	function bindMouseDragListeners(): void {
+		// #ifdef H5
+		const uniWindow = (globalThis as any).window
+		if (uniWindow != null) {
+			uniWindow.addEventListener('mousemove', handleMouseMove)
+			uniWindow.addEventListener('mouseup', handleMouseUp)
+		}
+		// #endif
+	}
+
+	function unbindMouseDragListeners(): void {
+		// #ifdef H5
+		const uniWindow = (globalThis as any).window
+		if (uniWindow != null) {
+			uniWindow.removeEventListener('mousemove', handleMouseMove)
+			uniWindow.removeEventListener('mouseup', handleMouseUp)
+		}
+		// #endif
 	}
 	
 	// 校验验证码
 	async function verifyCaptcha(distance: number) {
 		try {
+			if (!ensureHarmonyCaptchaRuntime()) {
+				return
+			}
 			const pointJson = JSON.stringify({ x: distance, y: 5.0 })
 			
 			// 使用 AES 加密
@@ -260,11 +368,19 @@
 				try {
 					encryptedPoint = aesEncrypt(pointJson, secretKey.value)
 				} catch (e) {
-					console.error('❌ AES 加密失败，使用明文:', e)
+					console.error('❌ AES 加密失败:', e)
+					if (isHarmonyOS()) {
+						handleHarmonyAESUnavailable()
+						return
+					}
 					encryptedPoint = pointJson
 				}
 			} else {
-				console.warn('⚠️ secretKey 为空，发送明文')
+				console.warn('⚠️ secretKey 为空')
+				if (isHarmonyOS()) {
+					handleHarmonyAESUnavailable()
+					return
+				}
 			}
 			
 			const data = {
@@ -301,10 +417,25 @@
 		})
 		
 		setTimeout(() => {
-			const captchaVerification = secretKey.value ? 
-				aesEncrypt(token.value + '---' + JSON.stringify({ x: currentX.value - startX.value, y: 5.0 }), secretKey.value) :
-				token.value + '---' + JSON.stringify({ x: currentX.value - startX.value, y: 5.0 })
-			
+			if (!ensureHarmonyCaptchaRuntime()) {
+				return
+			}
+			const verificationPayload = token.value + '---' + JSON.stringify({ x: currentX.value - startX.value, y: 5.0 })
+			let captchaVerification = verificationPayload
+			if (secretKey.value) {
+				try {
+					captchaVerification = aesEncrypt(verificationPayload, secretKey.value)
+				} catch (e) {
+					console.error('❌ captchaVerification AES 加密失败:', e)
+					if (isHarmonyOS()) {
+						handleHarmonyAESUnavailable()
+						return
+					}
+				}
+			} else if (isHarmonyOS()) {
+				handleHarmonyAESUnavailable()
+				return
+			}
 			emit('success', { captchaVerification })
 			visible.value = false
 			reset()
@@ -318,7 +449,10 @@
 		tipSuccess.value = false
 		tipText.value = t('captcha.fail')
 		
-		emit('fail')
+		emit('fail', {
+			code: CAPTCHA_FAIL_CODE_VERIFY_FAILED,
+			message: t('captcha.fail')
+		})
 		
 		setTimeout(() => {
 			refresh()
@@ -346,6 +480,7 @@
 	// 关闭
 	function handleClose() {
 		visible.value = false
+		unbindMouseDragListeners()
 		reset()
 	}
 	
@@ -359,6 +494,10 @@
 	defineExpose({
 		show,
 		refresh
+	})
+
+	onUnmounted(() => {
+		unbindMouseDragListeners()
 	})
 </script>
 

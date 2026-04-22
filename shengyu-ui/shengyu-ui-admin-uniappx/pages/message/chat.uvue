@@ -53,7 +53,7 @@
 					
 					<view :class="['message-item', msg.isSelf ? 'message-self' : 'message-other', multiSelectMode && selectedIds.includes(getSelectMessageId(msg)) ? 'message-selected' : '', highlightedMessageId === getSelectMessageId(msg) ? 'message-highlighted' : '']">
 						<!-- 多选模式下的复选框（统一在最左侧） -->
-						<view v-if="multiSelectMode && msg.type !== 'voice' && msg.type !== 'location'" class="multi-select-checkbox" @click.stop="toggleSelect(msg)">
+						<view v-if="multiSelectMode && !msg.isSelf && msg.type !== 'voice' && msg.type !== 'location'" class="multi-select-checkbox" @click.stop="toggleSelect(msg)">
 							<text v-if="selectedIds.includes(getSelectMessageId(msg))" class="iconfont checkbox-icon checkbox-checked">&#xe65f;</text>
 							<view v-else class="checkbox-icon checkbox-unchecked"></view>
 						</view>
@@ -74,14 +74,14 @@
 								/>
 								<text v-else class="avatar-text">{{ msg.avatarText }}</text>
 							</view>
-							<view class="message-bubble-wrap">
+							<view class="message-bubble-wrap" :style="getMessageBubbleWrapStyle()">
 								<!-- 发送者名称 (仅在群聊中,仅对他人消息) -->
 								<text v-if="chatType === 'group' && !msg.isSelf" class="sender-name" :style="{ color: theme.textTertiary }">
 									{{ msg.senderName }}
 								</text>
 								
 								<!-- 文字消息 -->
-								<view v-if="msg.type === 'text' || msg.type === 'quote'" class="message-bubble bubble-text" :style="getTextBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
+								<view v-if="msg.type === 'text' || msg.type === 'quote'" class="message-bubble bubble-text" :style="getTextBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @mousedown="handleBubbleMouseDown(msg, $event)" @mouseup="handleBubbleMouseEnd" @mouseleave="handleBubbleMouseEnd" @click="handleBubbleClick(msg)">
 									<!-- 引用内容预览 -->
 									<view v-if="hasQuote(msg)" class="quote-preview" @click.stop="scrollToQuotedMessage(msg.quoteMessageId)">
 										<view v-for="(quote, qIdx) in buildQuoteChain(msg)" :key="quote.messageId + '-' + qIdx" class="quote-chain-item" :class="{ 'quote-chain-sub': qIdx > 0 }">
@@ -89,7 +89,7 @@
 											<text class="quote-content" :style="getQuoteContentStyle(msg)" :numberOfLines="1">{{ quote.content }}</text>
 										</view>
 									</view>
-									<view class="text-content-wrap">
+									<view class="text-content-wrap" :style="getTextContentWrapStyle()">
 										<template v-for="(token, tIdx) in parseMessageTokens(msg)" :key="tIdx">
 											<text v-if="token.type === 'text'" class="message-text" :style="getBubbleTextStyle(msg)">{{ token.content }}</text>
 											<text v-else-if="token.type === 'mention'" class="mention-text" :style="getMentionTextStyle(msg)" @click.stop="multiSelectMode ? null : handleMentionTokenClick(token)">{{ token.content }}</text>
@@ -99,12 +99,12 @@
 								</view>
 								
 								<!-- 图片消息 -->
-								<view v-else-if="msg.type === 'image'" class="message-bubble bubble-image" @click="multiSelectMode ? handleBubbleClick(msg) : handleImagePreview(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
-									<image class="chat-image" :src="msg.content" mode="widthFix" />
+								<view v-else-if="msg.type === 'image'" class="message-bubble bubble-image" :style="getImageBubbleStyle()" @click="multiSelectMode ? handleBubbleClick(msg) : handleImagePreview(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @mousedown="handleBubbleMouseDown(msg, $event)" @mouseup="handleBubbleMouseEnd" @mouseleave="handleBubbleMouseEnd">
+									<image class="chat-image" :style="getChatImageStyle()" :src="msg.content" mode="widthFix" />
 								</view>
 								
 								<!-- 视频消息 -->
-								<view v-else-if="msg.type === 'video'" class="message-bubble bubble-video" @click="multiSelectMode ? handleBubbleClick(msg) : handleVideoPlay(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
+								<view v-else-if="msg.type === 'video'" class="message-bubble bubble-video" @click="multiSelectMode ? handleBubbleClick(msg) : handleVideoPlay(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @mousedown="handleBubbleMouseDown(msg, $event)" @mouseup="handleBubbleMouseEnd" @mouseleave="handleBubbleMouseEnd">
 									<image class="chat-video" :src="msg.poster || msg.content" mode="aspectFill" />
 									<view class="video-play-overlay">
 										<text class="iconfont video-play-icon">&#xe602;</text>
@@ -113,7 +113,7 @@
 								
 								<!-- 语音消息 -->
 								<view v-else-if="msg.type === 'voice'" class="voice-bubble-row" :class="{ 'voice-bubble-row-self': msg.isSelf }">
-									<view class="message-bubble bubble-voice" :class="{ 'bubble-voice-uploading': isVoiceUploading(msg), 'bubble-voice-failed': isVoiceUploadFailed(msg) || isVoiceSendFailed(msg), 'bubble-voice-playing': isVoicePlaying(msg), 'bubble-voice-paused': isVoicePaused(msg) }" :style="getVoiceBubbleStyle(msg)" @click="handleVoiceBubbleClick(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)">
+									<view class="message-bubble bubble-voice" :class="{ 'bubble-voice-uploading': isVoiceUploading(msg), 'bubble-voice-failed': isVoiceUploadFailed(msg) || isVoiceSendFailed(msg), 'bubble-voice-playing': isVoicePlaying(msg), 'bubble-voice-paused': isVoicePaused(msg) }" :style="getVoiceBubbleStyle(msg)" @click="handleVoiceBubbleClick(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @mousedown="handleBubbleMouseDown(msg, $event)" @mouseup="handleBubbleMouseEnd" @mouseleave="handleBubbleMouseEnd">
 										<view class="voice-wave" :class="{ 'voice-wave-playing': isVoicePlaying(msg) }">
 											<view
 												v-for="(barHeight, barIdx) in buildVoiceWaveBarHeights(msg)"
@@ -141,7 +141,7 @@
 								</view>
 								
 								<!-- 文件消息 -->
-                                <view v-else-if="msg.type === 'file'" class="message-bubble bubble-file" :style="getFileBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleFileOpen(msg)">
+                                <view v-else-if="msg.type === 'file'" class="message-bubble bubble-file" :style="getFileBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @mousedown="handleBubbleMouseDown(msg, $event)" @mouseup="handleBubbleMouseEnd" @mouseleave="handleBubbleMouseEnd" @click="multiSelectMode ? handleBubbleClick(msg) : handleFileOpen(msg)">
 									<view class="file-info">
 										<text class="file-name" :style="getFileNameStyle(msg)">{{ msg.fileName }}</text>
 										<text class="file-size" :style="getFileMetaStyle(msg)">{{ msg.fileSize }}</text>
@@ -150,7 +150,7 @@
 								</view>
 								
 								<!-- 位置消息 -->
-                                <view v-else-if="msg.type === 'location'" class="message-bubble bubble-location" :style="getLocationBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleLocationOpen(msg)">
+                                <view v-else-if="msg.type === 'location'" class="message-bubble bubble-location" :style="getLocationBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @mousedown="handleBubbleMouseDown(msg, $event)" @mouseup="handleBubbleMouseEnd" @mouseleave="handleBubbleMouseEnd" @click="multiSelectMode ? handleBubbleClick(msg) : handleLocationOpen(msg)">
 									<view class="location-info">
 										<text class="location-name" :style="getLocationNameStyle(msg)">{{ msg.locationName }}</text>
 										<text class="location-address" :style="getLocationAddressStyle(msg)">{{ msg.address }}</text>
@@ -159,7 +159,7 @@
 								</view>
 
 								<!-- 名片消息 -->
-								<view v-else-if="msg.type === 'contact_card'" class="message-bubble bubble-contact-card" :style="getContactCardBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="multiSelectMode ? handleBubbleClick(msg) : handleContactCardOpen(msg)">
+								<view v-else-if="msg.type === 'contact_card'" class="message-bubble bubble-contact-card" :style="getContactCardBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @mousedown="handleBubbleMouseDown(msg, $event)" @mouseup="handleBubbleMouseEnd" @mouseleave="handleBubbleMouseEnd" @click="multiSelectMode ? handleBubbleClick(msg) : handleContactCardOpen(msg)">
 									<view class="contact-card-left">
 										<image v-if="msg.contactAvatar" class="contact-card-avatar" :src="msg.contactAvatar" mode="aspectFill" />
 										<view v-else class="contact-card-avatar-fallback" :style="getContactCardAvatarFallbackStyle(msg)">
@@ -175,23 +175,23 @@
 								</view>
 								
 								<!-- 表情包/动图 -->
-                                <view v-else-if="msg.type === 'emoji'" class="bubble-emoji" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
+                                <view v-else-if="msg.type === 'emoji'" class="bubble-emoji" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @mousedown="handleBubbleMouseDown(msg, $event)" @mouseup="handleBubbleMouseEnd" @mouseleave="handleBubbleMouseEnd" @click="handleBubbleClick(msg)">
 									<image class="emoji-img" :src="msg.content" mode="aspectFit" />
 								</view>
 								
 								<!-- 自定义收藏表情 (无气泡) -->
-                                <view v-else-if="msg.type === 'sticker'" class="sticker-msg-wrap" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
+                                <view v-else-if="msg.type === 'sticker'" class="sticker-msg-wrap" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @mousedown="handleBubbleMouseDown(msg, $event)" @mouseup="handleBubbleMouseEnd" @mouseleave="handleBubbleMouseEnd" @click="handleBubbleClick(msg)">
 									<image class="sticker-img" :src="msg.content" mode="widthFix" />
 								</view>
 
 								<!-- 合并转发（企业级：聊天记录卡片） -->
-								<view v-else-if="msg.type === 'custom' && isForwardCombineMsg(msg)" class="message-bubble bubble-forward-combine" :style="getForwardCombineBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleOpenForwardCombine(msg)">
+								<view v-else-if="msg.type === 'custom' && isForwardCombineMsg(msg)" class="message-bubble bubble-forward-combine" :style="getForwardCombineBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @mousedown="handleBubbleMouseDown(msg, $event)" @mouseup="handleBubbleMouseEnd" @mouseleave="handleBubbleMouseEnd" @click="handleOpenForwardCombine(msg)">
 									<view class="forward-combine-header">
 										<view class="forward-combine-header-left">
 											<text class="iconfont forward-combine-icon">&#xe600;</text>
 											<text class="forward-combine-title" :style="getForwardCombineTitleStyle(msg)">{{ t('chat.label.forwardCombine') }}</text>
 										</view>
-										<text v-if="getForwardCombineComment(msg) !== ''" class="forward-combine-comment" :style="getForwardCombineSubTextStyle(msg)" :numberOfLines="1">{{ getForwardCombineComment(msg) }}</text>
+										<text v-if="getForwardCombineComment(msg) !== ''" class="forward-combine-comment" :style="getForwardCombineCommentStyle(msg)" :numberOfLines="1">{{ getForwardCombineComment(msg) }}</text>
 									</view>
 									<view class="forward-combine-preview">
 										<view v-for="(line, lIdx) in getForwardCombinePreviewLines(msg)" :key="getSelectMessageId(msg) + '-' + lIdx" class="forward-combine-line">
@@ -203,13 +203,17 @@
 										<text class="iconfont forward-combine-footer-arrow">&#xeb06;</text>
 									</view>
 								</view>
-								<view v-else-if="msg.type === 'custom'" class="message-bubble bubble-text" :style="getTextBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @click="handleBubbleClick(msg)">
+								<view v-else-if="msg.type === 'custom'" class="message-bubble bubble-text" :style="getTextBubbleStyle(msg)" @longpress="openMsgMenu(msg, $event)" @touchstart="recordTouchStart($event)" @mousedown="handleBubbleMouseDown(msg, $event)" @mouseup="handleBubbleMouseEnd" @mouseleave="handleBubbleMouseEnd" @click="handleBubbleClick(msg)">
 									<text class="message-content" :style="getBubbleTextStyle(msg)">{{ t('chat.label.customMessage') }}</text>
 								</view>
 								
 								<view v-if="shouldShowReadReceiptEntry(msg)" class="read-receipt-entry" :class="{'read-receipt-entry-self': msg.isSelf}" @click.stop="handleReadReceiptEntryClick(msg)">
 									<text class="read-receipt-entry-text" :style="{ color: theme.textTertiary }">{{ buildReadReceiptEntryText(msg) }}</text>
 								</view>
+							</view>
+							<view v-if="multiSelectMode && msg.isSelf && msg.type !== 'voice' && msg.type !== 'location'" class="multi-select-checkbox multi-select-checkbox-self-tail" @click.stop="toggleSelect(msg)">
+								<text v-if="selectedIds.includes(getSelectMessageId(msg))" class="iconfont checkbox-icon checkbox-checked">&#xe65f;</text>
+								<view v-else class="checkbox-icon checkbox-unchecked"></view>
 							</view>
 						</template>
 					</view>
@@ -222,7 +226,7 @@
 			v-if="!multiSelectMode && !conversationReadOnly"
 			class="footer"
 			:class="{ 'footer-full-expanded': isFullExpanded }"
-			:style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }"
+			:style="getFooterStyle()"
 		>
 			<!-- 全屏模式下的顶部操作栏 -->
 			<view v-if="isFullExpanded" class="full-expand-header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
@@ -423,7 +427,7 @@
 				</view>
 			</view>
 		</view>
-		<view v-else-if="!multiSelectMode" class="footer footer-readonly" :style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
+		<view v-else-if="!multiSelectMode" class="footer footer-readonly" :style="getReadonlyFooterStyle()">
 			<text class="footer-readonly-text" :style="{ color: theme.textTertiary }">{{ getReadOnlyHint() }}</text>
 		</view>
 
@@ -439,7 +443,7 @@
         </view>
 
 		<!-- 多选模式底部工具栏 -->
-		<view v-if="multiSelectMode" class="multi-select-toolbar" :style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
+		<view v-if="multiSelectMode" class="multi-select-toolbar" :style="getMultiSelectToolbarStyle()">
 			<view class="toolbar-item" hover-class="toolbar-item-active" @click="handleMultiForward">
 				<text class="iconfont toolbar-icon" :style="{ color: theme.textPrimary }">&#xe63d;</text>
 				<text class="toolbar-text" :style="{ color: theme.textSecondary }">{{ t('chat.forward.action') }}</text>
@@ -499,7 +503,7 @@
 		</view>
 
 		<view v-if="showReadReceiptSheet" class="read-receipt-mask" @click="closeReadReceiptSheet">
-			<view class="read-receipt-sheet" :style="{ backgroundColor: theme.cardBg }" @click.stop>
+			<view class="read-receipt-sheet" :style="getReadReceiptSheetStyle()" @click.stop>
 				<view class="read-receipt-header" :style="{ borderBottomColor: theme.borderColor }">
 					<text class="read-receipt-title" :style="{ color: theme.textPrimary }">{{ t('chat.readReceipt.title') }}</text>
 					<text class="read-receipt-close" :style="{ color: theme.textTertiary }" @click="closeReadReceiptSheet">{{ t('chat.readReceipt.close') }}</text>
@@ -545,6 +549,9 @@
 	import { getCurrentInstance } from 'vue'
 	import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { canCreateInnerAudioContext, canUseRecorderManager } from '../../utils/audio-capability.uts'
+	import { isAuthorizeSettingDenied, readMicrophoneAuthorized } from '../../utils/app-authorize.uts'
+	import { promptOpenAppSettings } from '../../utils/app-settings.uts'
 	import { emojiList, emojiMap } from '../../utils/emojiData.uts'
 	import { parseMessageText as parseEmojiTokens, type MessageToken as EmojiToken } from '../../utils/emojiParser.uts'
 	import { getCustomStickers, StickerItem, refreshCustomStickers, uploadCustomSticker, collectMessageToSticker, touchStickerRecent, hasCollectedSticker } from '../../utils/stickerManager.uts'
@@ -578,9 +585,12 @@
 
 	import { uploadGroupFile, getFilePresignedGetUrl } from '../../api/file.uts'
 	import { navToFilePreview, navToStickerManage } from '../../utils/nav.uts'
+	import { buildLocationClipboardPayload, openLocationWithFallback } from '../../utils/location.uts'
+	import { previewImages } from '../../utils/media-preview.uts'
 	import { navToSecureBrowser } from '../../utils/secure-browser.uts'
 	import { armGroupLifecycleErrorToastSuppression, finalizeGroupLifecycleExit, GROUP_LIFECYCLE_NOTICE_KEY, resolveGroupLifecycleErrorNotice, SUPPRESS_GROUP_LIFECYCLE_ERROR_TOAST_UNTIL_KEY } from '../../utils/chat-setting-actions.uts'
 	import { readReceiptService } from '../../services/read-receipt-service.uts'
+	import { getHarmonyReadinessSnapshot } from '../../services/harmony-readiness-service.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import { getChatBubbleConfig, subscribeChatBubbleChange, type ChatBubbleConfig } from '../../store/chat-bubble.uts'
 	import { getChatBubbleTokens, type ChatBubbleTokens } from '../../utils/chat-bubble.uts'
@@ -712,6 +722,9 @@
 	const showGroupRestrictionBanner = computed(() : boolean => {
 		return groupSendRestrictionHint.value !== ''
 	})
+	const isHarmonyClient = computed(() : boolean => {
+		return getHarmonyReadinessSnapshot().isHarmony
+	})
 
 	function refreshBubbleTokens(config?: ChatBubbleConfig | null): void {
 		const nextConfig = config != null ? config : getChatBubbleConfig()
@@ -737,7 +750,23 @@
 			return {}
 		}
 		return {
-			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.bubbleOtherText
+			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleText : theme.value.bubbleOtherText,
+			whiteSpace: isHarmonyClient.value ? 'normal' : 'pre-wrap'
+		}
+	}
+
+	function getMessageBubbleWrapStyle(): any {
+		return isHarmonyClient.value ? {
+			width: '85%'
+		} : {
+			maxWidth: '85%'
+		}
+	}
+
+	function getTextContentWrapStyle(): any {
+		return {
+			width: '100%',
+			whiteSpace: isHarmonyClient.value ? 'normal' : 'pre-wrap'
 		}
 	}
 
@@ -865,14 +894,25 @@
 
 	function getForwardCombineBubbleStyle(msg: any): any {
 		if (msg == null) {
-			return {}
+			return isHarmonyClient.value ? {
+				width: '72%'
+			} : {
+				maxWidth: '72vw'
+			}
+		}
+		const layoutStyle = isHarmonyClient.value ? {
+			width: '72%'
+		} : {
+			maxWidth: '72vw'
 		}
 		return msg.isSelf === true ? {
 			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
-			borderColor: chatBubbleTokens.value.selfBubbleBorder
+			borderColor: chatBubbleTokens.value.selfBubbleBorder,
+			...layoutStyle
 		} : {
 			backgroundColor: theme.value.bubbleOtherBg,
-			borderColor: theme.value.bubbleOtherBorder
+			borderColor: theme.value.bubbleOtherBorder,
+			...layoutStyle
 		}
 	}
 
@@ -891,6 +931,17 @@
 		}
 		return {
 			color: msg.isSelf === true ? chatBubbleTokens.value.selfBubbleSubText : theme.value.textSecondary
+		}
+	}
+
+	function getForwardCombineCommentStyle(msg: any): any {
+		const baseStyle = getForwardCombineSubTextStyle(msg)
+		return isHarmonyClient.value ? {
+			...baseStyle,
+			width: '45%'
+		} : {
+			...baseStyle,
+			maxWidth: '45%'
 		}
 	}
 
@@ -924,12 +975,19 @@
 	}
 
 	function getLocationBubbleStyle(msg: any): any {
-		return msg != null && msg.isSelf === true ? {
+		const baseStyle = msg != null && msg.isSelf === true ? {
 			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
 			borderColor: chatBubbleTokens.value.selfBubbleBorder
 		} : {
 			backgroundColor: theme.value.bubbleOtherBg,
 			borderColor: theme.value.bubbleOtherBorder
+		}
+		if (isHarmonyClient.value) {
+			return baseStyle
+		}
+		return {
+			...baseStyle,
+			maxWidth: '100%'
 		}
 	}
 
@@ -952,12 +1010,37 @@
 	}
 
 	function getContactCardBubbleStyle(msg: any): any {
-		return msg != null && msg.isSelf === true ? {
+		const baseStyle = msg != null && msg.isSelf === true ? {
 			backgroundColor: chatBubbleTokens.value.selfBubbleBg,
 			borderColor: chatBubbleTokens.value.selfBubbleBorder
 		} : {
 			backgroundColor: theme.value.bubbleOtherBg,
 			borderColor: theme.value.bubbleOtherBorder
+		}
+		if (isHarmonyClient.value) {
+			return baseStyle
+		}
+		return {
+			...baseStyle,
+			maxWidth: '100%'
+		}
+	}
+
+	function getImageBubbleStyle(): any {
+		if (isHarmonyClient.value) {
+			return {}
+		}
+		return {
+			maxWidth: '100%'
+		}
+	}
+
+	function getChatImageStyle(): any {
+		if (isHarmonyClient.value) {
+			return {}
+		}
+		return {
+			maxWidth: '100%'
 		}
 	}
 
@@ -1014,7 +1097,41 @@
 	function getRecallSystemTipStyle(): any {
 		return {
 			color: theme.value.textSecondary,
-			backgroundColor: theme.value.cardBgMuted
+			backgroundColor: theme.value.cardBgMuted,
+			...(isHarmonyClient.value ? { width: '80%' } : { maxWidth: '80%' })
+		}
+	}
+
+	function getReadonlyFooterStyle(): any {
+		return {
+			backgroundColor: theme.value.cardBg,
+			borderTopColor: theme.value.borderColor,
+			padding: isHarmonyClient.value ? '12px 16px 24px' : '12px 16px calc(12px + env(safe-area-inset-bottom))'
+		}
+	}
+
+	function getFooterStyle(): any {
+		return {
+			backgroundColor: theme.value.cardBg,
+			borderTopColor: theme.value.borderColor,
+			...(isFullExpanded.value ? {
+				paddingBottom: isHarmonyClient.value ? '24px' : 'env(safe-area-inset-bottom)'
+			} : {})
+		}
+	}
+
+	function getMultiSelectToolbarStyle(): any {
+		return {
+			backgroundColor: theme.value.cardBg,
+			borderTopColor: theme.value.borderColor,
+			paddingBottom: isHarmonyClient.value ? '0px' : 'env(safe-area-inset-bottom)'
+		}
+	}
+
+	function getReadReceiptSheetStyle(): any {
+		return {
+			backgroundColor: theme.value.cardBg,
+			maxHeight: isHarmonyClient.value ? '520px' : '70%'
 		}
 	}
 
@@ -2372,6 +2489,8 @@
 
 	const touchStartX = ref(0)
 	const touchStartY = ref(0)
+	let mouseLongPressTimer: any = null
+	let suppressNextClickMessageId = ''
 	let editorCtx : EditorContext | null = null
     const showMsgMenu = ref(false)
     const menuX = ref(0)
@@ -6651,21 +6770,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function promptVoiceRecordUnavailable(message: string): void {
-		uni.showModal({
-			title: t('chat.toast.recordUnavailableTitle'),
-			content: message,
-			cancelText: t('common.cancel'),
-			confirmText: t('chat.recording.goSetting'),
-			success: (res) => {
-				if (res.confirm) {
-					try {
-						uni.openSetting({})
-					} catch (e) {
-						uni.showToast({ title: message, icon: 'none' })
-					}
-				}
-			}
-		})
+		promptOpenAppSettings(message, t('chat.toast.recordUnavailableTitle'), t('chat.recording.goSetting'))
+	}
+
+	function ensureHarmonyMicrophonePermissionReady(): boolean {
+		const status = readMicrophoneAuthorized()
+		if (!isAuthorizeSettingDenied(status)) {
+			return true
+		}
+		promptVoiceRecordUnavailable(t('chat.toast.recordPermissionDenied'))
+		return false
 	}
 
 	function showVoiceTooShortToast(): void {
@@ -7087,6 +7201,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (!forceProbe && !supportsVoiceRecord.value && recorderManager == null) {
 			return null
 		}
+		if (!canUseRecorderManager()) {
+			supportsVoiceRecord.value = false
+			return null
+		}
 		if (recorderManager == null) {
 			// #ifndef H5
 			try {
@@ -7116,6 +7234,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	async function handleVoiceStart(e : TouchEvent) {
 		if (!ensureConversationWritable()) { return }
 		if (isRecording.value) { return }
+		// #ifdef APP-HARMONY
+		if (!ensureHarmonyMicrophonePermissionReady()) { return }
+		// #endif
 		const scopeReady = await ensureVoiceUploadScopeReady(true)
 		if (!scopeReady) { return }
 		const manager = ensureRecorderManagerReady(true)
@@ -7371,18 +7492,17 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (!ensureConversationWritable()) {
 			return
 		}
-		if (item.nameKey === 'chat.features.album') {
-			// 选择并上传图片
-			if (IM_MEDIA_USE_FILE_ID === 'true') {
-				uni.chooseImage({
-					count: 9,
-					sizeType: ['original', 'compressed'],
-					sourceType: ['album', 'camera'],
-					success: async (res) => {
+			if (item.nameKey === 'chat.features.album') {
+				// 选择并上传图片
+				if (IM_MEDIA_USE_FILE_ID === 'true') {
+					void chooseImage(9, {
+						sourceType: ['album', 'camera'],
+						sizeType: ['original', 'compressed']
+					}).then(async (tempFilePaths) => {
 						try {
 							const uploadPromises: Promise<any>[] = []
-							for (let i = 0; i < res.tempFilePaths.length; i++) {
-								uploadPromises.push(uploadFileAndReturnId(res.tempFilePaths[i], {
+							for (let i = 0; i < tempFilePaths.length; i++) {
+								uploadPromises.push(uploadFileAndReturnId(tempFilePaths[i], {
 									directory: 'im/image'
 								}))
 							}
@@ -7419,10 +7539,13 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 							console.error('[Chat] upload-and-return-id 上传图片失败:', err)
 							uni.showToast({ title: t('chat.toast.uploadFailed'), icon: 'none' })
 						}
-					}
-				})
-				return
-			}
+					}).catch((err: any) => {
+						if (err != null) {
+							console.warn('[Chat] chooseImage cancelled or failed:', err)
+						}
+					})
+					return
+				}
 			chooseAndUploadImage(9, {
 				directory: 'im/image',
 				onProgress: (progress) => {
@@ -7531,17 +7654,19 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		
 		if (item.nameKey === 'chat.features.camera') {
 			// 拍照并上传
-			uni.chooseImage({
-				count: 1,
-				sourceType: ['camera'],
-				success: (res) => {
-					const filePath = res.tempFilePaths[0]
-					uploadFile(filePath, {
-						directory: 'im/image',
-						onProgress: (progress) => {
-							console.log('[Chat] 上传进度:', progress)
-						}
-					}).then((result) => {
+			void chooseImage(1, {
+				sourceType: ['camera']
+			}).then((paths) => {
+				const filePath = paths.length > 0 ? paths[0] : ''
+				if (!filePath) {
+					return
+				}
+				uploadFile(filePath, {
+					directory: 'im/image',
+					onProgress: (progress) => {
+						console.log('[Chat] 上传进度:', progress)
+					}
+				}).then((result) => {
 						// 后端返回的 data 字段直接是 URL 字符串
 						const imageUrl = typeof result.data === 'string' ? result.data : result.data.url
 						const imageSize = result.data.size || 0
@@ -7599,14 +7724,12 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 						setTimeout(() => {
 							scrollToBottom()
 						}, 100)
-					}).catch((err) => {
-						console.error('[Chat] 上传图片失败:', err)
-						uni.showToast({ title: t('chat.toast.uploadFailed'), icon: 'none' })
-					})
-				},
-				fail: (err) => {
-					console.error('[Chat] 拍照失败:', err)
-				}
+				}).catch((err) => {
+					console.error('[Chat] 上传图片失败:', err)
+					uni.showToast({ title: t('chat.toast.uploadFailed'), icon: 'none' })
+				})
+			}).catch((err) => {
+				console.error('[Chat] 拍照失败:', err)
 			})
 			return
 		}
@@ -7614,40 +7737,43 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		if (item.nameKey === 'chat.features.video') {
 			// 选择并上传视频
 			if (IM_MEDIA_USE_FILE_ID === 'true') {
-				uni.chooseVideo({
-					sourceType: ['album', 'camera'],
-					success: async (res) => {
-						try {
-							const uploadRes: any = await uploadFileAndReturnId(res.tempFilePath, {
-								directory: 'im/video'
-							})
-							const fileId = uploadRes.data.fileId?.toString() || '0'
-							const videoUrl = uploadRes.data.url || ''
-							const videoSize = uploadRes.data.size || 0
-							let fullVideoUrl = videoUrl
-							if (videoUrl.startsWith('/')) {
-								fullVideoUrl = CONFIG_BASE_URL + videoUrl
-							}
-							const message = messageService.sendVideoMessageV2(
-								getReceiverIdForMessage(),
-								getGroupIdForMessage(),
-								fileId,
-								fullVideoUrl,
-								fullVideoUrl,
-								0,
-								0,
-								0,
-								videoSize
-							)
-							void message
-							showPlusMenu.value = false
-							setTimeout(() => {
-								scrollToBottom()
-							}, 100)
-						} catch (err) {
-							console.error('[Chat] upload-and-return-id 上传视频失败:', err)
-							uni.showToast({ title: t('chat.toast.uploadFailed'), icon: 'none' })
+				void chooseVideo({
+					sourceType: ['album', 'camera']
+				}).then(async (res) => {
+					try {
+						const uploadRes: any = await uploadFileAndReturnId(res.tempFilePath, {
+							directory: 'im/video'
+						})
+						const fileId = uploadRes.data.fileId?.toString() || '0'
+						const videoUrl = uploadRes.data.url || ''
+						const videoSize = uploadRes.data.size || 0
+						let fullVideoUrl = videoUrl
+						if (videoUrl.startsWith('/')) {
+							fullVideoUrl = CONFIG_BASE_URL + videoUrl
 						}
+						const message = messageService.sendVideoMessageV2(
+							getReceiverIdForMessage(),
+							getGroupIdForMessage(),
+							fileId,
+							fullVideoUrl,
+							fullVideoUrl,
+							0,
+							0,
+							0,
+							videoSize
+						)
+						void message
+						showPlusMenu.value = false
+						setTimeout(() => {
+							scrollToBottom()
+						}, 100)
+					} catch (err) {
+						console.error('[Chat] upload-and-return-id 上传视频失败:', err)
+						uni.showToast({ title: t('chat.toast.uploadFailed'), icon: 'none' })
+					}
+				}).catch((err: any) => {
+					if (err != null) {
+						console.warn('[Chat] chooseVideo cancelled or failed:', err)
 					}
 				})
 				return
@@ -7724,46 +7850,48 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		}
 		
 		if (item.nameKey === 'chat.features.file') {
-			// 选择并上传文件（支持 H5、Android、iOS）
+			// 选择并上传文件（统一走 upload 工具，兼容 H5、Android、iOS、HarmonyOS）
 			if (IM_MEDIA_USE_FILE_ID === 'true') {
-				uni.chooseFile({
-					type: 'all',
-					count: 1,
-					success: async (res) => {
-						try {
-							const path = (res.tempFilePaths && res.tempFilePaths.length > 0) ? res.tempFilePaths[0] : ''
-							if (!path) {
-								return
-							}
-							const uploadRes: any = await uploadFileAndReturnId(path, { directory: 'im/file' })
-							const fileId = uploadRes.data.fileId?.toString() || '0'
-							const fileUrl = uploadRes.data.url || ''
-							const fileName = uploadRes.data.name || '文件'
-							const fileSize = uploadRes.data.size || 0
-							const fileType = uploadRes.data.mimeType || '*/*'
-							let fullFileUrl = fileUrl
-							if (fileUrl.startsWith('/')) {
-								fullFileUrl = CONFIG_BASE_URL + fileUrl
-							}
-							const message = messageService.sendFileMessageV2(
-								getReceiverIdForMessage(),
-								getGroupIdForMessage(),
-								fileId,
-								fullFileUrl,
-								fileName,
-								fileSize,
-								fileType
-							)
-							void message
-							showPlusMenu.value = false
-							setTimeout(() => {
-								scrollToBottom()
-							}, 100)
-						} catch (err) {
-							console.error('[Chat] upload-and-return-id 上传文件失败:', err)
-							const msg = (err as any)?.message || t('chat.toast.uploadFailed')
-							uni.showToast({ title: msg, icon: 'none' })
+				void chooseFile('*/*', 1).then(async (res: any) => {
+					try {
+						const path = (res.tempFiles && res.tempFiles.length > 0 && res.tempFiles[0].path)
+							? String(res.tempFiles[0].path)
+							: ((res.tempFilePaths && res.tempFilePaths.length > 0) ? String(res.tempFilePaths[0]) : '')
+						if (!path) {
+							return
 						}
+						const uploadRes: any = await uploadFileAndReturnId(path, { directory: 'im/file' })
+						const fileId = uploadRes.data.fileId?.toString() || '0'
+						const fileUrl = uploadRes.data.url || ''
+						const fileName = uploadRes.data.name || '文件'
+						const fileSize = uploadRes.data.size || 0
+						const fileType = uploadRes.data.mimeType || '*/*'
+						let fullFileUrl = fileUrl
+						if (fileUrl.startsWith('/')) {
+							fullFileUrl = CONFIG_BASE_URL + fileUrl
+						}
+						const message = messageService.sendFileMessageV2(
+							getReceiverIdForMessage(),
+							getGroupIdForMessage(),
+							fileId,
+							fullFileUrl,
+							fileName,
+							fileSize,
+							fileType
+						)
+						void message
+						showPlusMenu.value = false
+						setTimeout(() => {
+							scrollToBottom()
+						}, 100)
+					} catch (err) {
+						console.error('[Chat] upload-and-return-id 上传文件失败:', err)
+						const msg = (err as any)?.message || t('chat.toast.uploadFailed')
+						uni.showToast({ title: msg, icon: 'none' })
+					}
+				}).catch((err: any) => {
+					if (err != null) {
+						console.warn('[Chat] chooseFile cancelled or failed:', err)
 					}
 				})
 				return
@@ -7918,6 +8046,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	async function handleImagePreview(msg : any) {
+		if (shouldSuppressMessageClick(msg)) {
+			return
+		}
 		try {
 			let url = msg && msg.content ? String(msg.content) : ''
 			if (IM_MEDIA_USE_FILE_ID === 'true' && msg && msg.fileId) {
@@ -7930,9 +8061,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				uni.showToast({ title: t('chat.toast.imageUrlEmpty'), icon: 'none' })
 				return
 			}
-			uni.previewImage({
-				urls: [url]
-			})
+			await previewImages([url])
 		} catch (e) {
 			console.error('[Chat] 图片预览失败:', e)
 			uni.showToast({ title: t('chat.toast.previewFailed'), icon: 'none' })
@@ -8159,6 +8288,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	async function handleVideoPlay(msg : any) {
+		if (shouldSuppressMessageClick(msg)) {
+			return
+		}
 		try {
 			let url = msg && msg.content ? String(msg.content) : ''
 			const title = msg && msg.fileName ? String(msg.fileName) : t('chat.label.videoPlay')
@@ -8182,6 +8314,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	async function handleFileOpen(msg : any) {
+		if (shouldSuppressMessageClick(msg)) {
+			return
+		}
 		try {
 			const fileName = msg && msg.fileName ? String(msg.fileName) : ''
 			const fileId = msg && msg.fileId != null ? String(msg.fileId) : ''
@@ -8197,6 +8332,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleLocationOpen(msg : any) {
+		if (shouldSuppressMessageClick(msg)) {
+			return
+		}
 		try {
 			const latVal = msg && msg.latitude != null ? Number(msg.latitude) : NaN
 			const lngVal = msg && msg.longitude != null ? Number(msg.longitude) : NaN
@@ -8215,7 +8353,37 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 					if (res.confirm !== true) {
 						return
 					}
-					uni.openLocation({
+					const uniAny: any = uni as any
+					if (uniAny == null || typeof uniAny.openLocation !== 'function') {
+						const opened = openLocationWithFallback({
+							latitude: latVal,
+							longitude: lngVal,
+							address: address,
+							name: name
+						})
+						if (!opened) {
+							const locationPayload = buildLocationClipboardPayload(name, address, latVal, lngVal)
+							uni.showModal({
+								title: t('profile.settingsPage.harmonyLocationPending'),
+								content: t('chat.toast.locationOpenUnsupported'),
+								confirmText: t('chat.label.copyLocation'),
+								cancelText: t('common.cancel'),
+								success: (copyRes) => {
+									if (copyRes.confirm !== true) {
+										return
+									}
+									uni.setClipboardData({
+										data: locationPayload,
+										fail: () => {
+											uni.showToast({ title: t('chat.toast.openFailed'), icon: 'none' })
+										}
+									})
+								}
+							})
+						}
+						return
+					}
+					openLocationWithFallback({
 						latitude: latVal,
 						longitude: lngVal,
 						address: address,
@@ -8260,6 +8428,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleContactCardOpen(msg : any) {
+		if (shouldSuppressMessageClick(msg)) {
+			return
+		}
 		try {
 			const userId = msg && msg.contactUserId != null ? String(msg.contactUserId) : ''
 			if (userId === '' || userId === '0') {
@@ -8375,7 +8546,35 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 			})
 		}
 
+		function resolveHarmonyLocationFailureMessage(): string {
+			const snapshot = getHarmonyReadinessSnapshot()
+			if (!snapshot.isHarmony) {
+				return t('chat.confirm.locationPermissionContent')
+			}
+			if (!snapshot.locationPermissionBridgeReady) {
+				return t('chat.locationSearch.harmonyBridgePending')
+			}
+			if (snapshot.locationEnabled === false) {
+				return t('chat.locationSearch.harmonyLocationSwitchOff')
+			}
+			if (snapshot.locationAuthorized === 'denied') {
+				return t('chat.locationSearch.harmonyPermissionDenied')
+			}
+			return t('chat.confirm.locationPermissionContent')
+		}
+
 		async function fallbackSendCurrentLocation(reason: string): Promise<void> {
+			const harmonyLocationFailureMessage = resolveHarmonyLocationFailureMessage()
+			const snapshot = getHarmonyReadinessSnapshot()
+			if (snapshot.isHarmony && harmonyLocationFailureMessage !== t('chat.confirm.locationPermissionContent')) {
+				uni.showModal({
+					title: t('chat.toast.currentLocationFailed'),
+					content: harmonyLocationFailureMessage,
+					confirmText: t('common.ok'),
+					showCancel: false
+				})
+				return
+			}
 			try {
 				const loc: any = await new Promise((resolve, reject) => {
 				uni.getLocation({
@@ -8413,19 +8612,83 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				}
 				uni.showModal({
 					title: t('chat.toast.currentLocationFailed'),
-					content: t('chat.confirm.locationPermissionContent'),
+					content: harmonyLocationFailureMessage,
 					confirmText: t('common.ok'),
 					showCancel: false
 				})
 			}
 		}
 
-    function openMsgMenu(msg : MessageItem, e : TouchEvent) {
+	function extractMenuPointerPosition(e: any): { x: number, y: number } {
+		if (touchStartX.value > 0 || touchStartY.value > 0) {
+			return {
+				x: touchStartX.value,
+				y: touchStartY.value
+			}
+		}
+		if (e != null && e.touches != null && e.touches.length > 0) {
+			return {
+				x: Number(e.touches[0].clientX),
+				y: Number(e.touches[0].clientY)
+			}
+		}
+		if (e != null && e.changedTouches != null && e.changedTouches.length > 0) {
+			return {
+				x: Number(e.changedTouches[0].clientX),
+				y: Number(e.changedTouches[0].clientY)
+			}
+		}
+		return {
+			x: e != null && e.clientX != null ? Number(e.clientX) : 0,
+			y: e != null && e.clientY != null ? Number(e.clientY) : 0
+		}
+	}
+
+	function clearBubbleMouseLongPressTimer(): void {
+		if (mouseLongPressTimer != null) {
+			clearTimeout(mouseLongPressTimer)
+			mouseLongPressTimer = null
+		}
+	}
+
+	function shouldSuppressMessageClick(msg: any): boolean {
+		const messageId = msg != null ? getSelectMessageId(msg as MessageItem) : ''
+		if (messageId !== '' && messageId === suppressNextClickMessageId) {
+			suppressNextClickMessageId = ''
+			return true
+		}
+		return false
+	}
+
+	function handleBubbleMouseDown(msg: MessageItem, e: MouseEvent): void {
+		try {
+			clearBubbleMouseLongPressTimer()
+			const messageId = getSelectMessageId(msg)
+			if (messageId === '') {
+				return
+			}
+			touchStartX.value = e.clientX
+			touchStartY.value = e.clientY
+			mouseLongPressTimer = setTimeout(() => {
+				mouseLongPressTimer = null
+				suppressNextClickMessageId = messageId
+				openMsgMenu(msg, e)
+			}, 450)
+		} catch (err) {
+			clearBubbleMouseLongPressTimer()
+		}
+	}
+
+	function handleBubbleMouseEnd(): void {
+		clearBubbleMouseLongPressTimer()
+	}
+
+    function openMsgMenu(msg : MessageItem, e : any) {
         selectedMsg.value = msg
         
-        // 优先使用 touchstart 记录的坐标，如果没有则使用 longpress 事件的坐标
-        const x = touchStartX.value || (e.touches.length > 0 ? e.touches[0].clientX : 0)
-        const y = touchStartY.value || (e.touches.length > 0 ? e.touches[0].clientY : 0)
+        const pointer = extractMenuPointerPosition(e)
+        const x = pointer.x
+        const y = pointer.y
         
         const systemInfo = uni.getSystemInfoSync()
         const screenWidth = systemInfo.screenWidth
@@ -8571,6 +8834,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
     }
 
     function closeMsgMenu() {
+        clearBubbleMouseLongPressTimer()
         menuOpacity.value = 0
         setTimeout(() => {
             showMsgMenu.value = false
@@ -9419,6 +9683,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleOpenForwardCombine(msg: MessageItem): void {
+		if (shouldSuppressMessageClick(msg)) {
+			return
+		}
 		try {
 			const mid = getSelectMessageId(msg)
 			if (mid === '') {
@@ -9468,6 +9735,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
     }
 
 	function handleBubbleClick(msg : MessageItem) {
+		if (shouldSuppressMessageClick(msg)) {
+			return
+		}
 		if (multiSelectMode.value) {
 			toggleSelect(msg)
 			return
@@ -10194,6 +10464,9 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	}
 
 	function handleVoiceBubbleClick(msg: any): void {
+		if (shouldSuppressMessageClick(msg)) {
+			return
+		}
 		if (multiSelectMode.value) {
 			handleBubbleClick(msg as MessageItem)
 			return
@@ -10262,6 +10535,10 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 				const messageId = resolveVoiceMessageId(msg)
 				if (messageId === '') {
 					uni.showToast({ title: t('chat.toast.voiceMessageInvalid'), icon: 'none' })
+					return
+				}
+				if (!canCreateInnerAudioContext()) {
+					uni.showToast({ title: t('chat.toast.voicePlayUnsupported'), icon: 'none' })
 					return
 				}
 				stopCurrentVoicePlayback()
@@ -10809,6 +11086,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	})
 
 	onHide(() => {
+		clearBubbleMouseLongPressTimer()
+		suppressNextClickMessageId = ''
 		wsManager.setRealtimeBizActive(false)
 		stopSingleChatPresenceRefresh()
 		closeMentionSelector()
@@ -10830,6 +11109,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	})
 
 	onUnload(() => {
+		clearBubbleMouseLongPressTimer()
+		suppressNextClickMessageId = ''
 		if (unsubscribeTheme != null) {
 			unsubscribeTheme()
 			unsubscribeTheme = null
@@ -10923,7 +11204,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		font-size: 17px;
 		font-weight: 600;
 		width: 100%;
-		max-width: 100%;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -10933,7 +11213,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.header-status {
 		font-size: 10px;
 		width: 100%;
-		max-width: 100%;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -11058,7 +11337,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		background-color: rgba(31, 35, 41, 0.06);
 		padding: 3px 10px;
 		border-radius: 10px;
-		max-width: 80%;
 		text-align: center;
 		line-height: 18px;
 	}
@@ -11103,7 +11381,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.message-self .multi-select-checkbox {
 		margin-right: 0;
 		margin-left: 4px;
-		order: 3;
+	}
+
+	.multi-select-checkbox-self-tail {
+		margin-right: 0;
+		margin-left: 4px;
 	}
 
 	.checkbox-icon {
@@ -11151,7 +11433,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		flex: 1;
 		margin: 0 12px;
 		align-items: flex-start;
-		max-width: 85%;
 		min-width: 0;
 		overflow: visible;
 	}
@@ -11182,12 +11463,8 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.message-bubble {
 		padding: 10px 14px;
 		border-radius: 10px;
-		max-width: 100%;
 		border-width: 0.5px;
 		border-color: #EFF0F1;
-		word-wrap: break-word;
-		word-break: break-all;
-		overflow-wrap: break-word;
 		white-space: normal;
 	}
 
@@ -11206,7 +11483,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		border-top-left-radius: 14px;
 		border-top-right-radius: 14px;
 		padding-bottom: 12px;
-		max-height: 70%;
 	}
 
 	.read-receipt-header {
@@ -11333,9 +11609,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		flex-direction: row;
 		flex-wrap: wrap;
 		align-items: center;
-		word-break: break-word;
-		white-space: pre-wrap;
-		width: 100%;
 	}
 
 	.inline-emoji {
@@ -11360,13 +11633,11 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		overflow: hidden;
 		background-color: transparent;
 		border-width: 0;
-		max-width: 100%;
 	}
 
 	.chat-image {
 		width: 150px;
 		border-radius: 8px;
-		max-width: 100%;
 	}
 
 	/* 语音消息 */
@@ -11589,7 +11860,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	/* 合并转发（聊天记录卡片） */
 	.bubble-forward-combine {
 		min-width: 180px;
-		max-width: 72vw;
 		padding: 12px 12px;
 		border-radius: 12px;
 		border-width: 0.5px;
@@ -11631,7 +11901,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		font-weight: 600;
 		lines: 1;
 		text-overflow: ellipsis;
-		word-break: break-all;
 	}
 
 	.forward-combine-comment {
@@ -11640,8 +11909,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		color: #4E5969;
 		lines: 1;
 		text-overflow: ellipsis;
-		word-break: break-all;
-		max-width: 45%;
 	}
 
 	.forward-combine-preview {
@@ -11669,7 +11936,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		color: #4E5969;
 		lines: 1;
 		text-overflow: ellipsis;
-		word-break: break-all;
 	}
 
 	.forward-combine-footer {
@@ -11707,7 +11973,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		font-size: 15px;
 		lines: 2;
 		text-overflow: ellipsis;
-		word-break: break-all;
 	}
 
 	.file-size {
@@ -11729,19 +11994,16 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		padding: 0;
 		overflow: hidden;
 		width: 220px;
-		max-width: 100%;
 	}
 
 	.location-info {
 		padding: 10px 12px;
-		word-break: break-all;
 	}
 
 	.location-name {
 		font-size: 15px;
 		lines: 1;
 		text-overflow: ellipsis;
-		word-break: break-all;
 	}
 
 	.location-address {
@@ -11749,7 +12011,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		margin-top: 2px;
 		lines: 1;
 		text-overflow: ellipsis;
-		word-break: break-all;
 	}
 
 	.location-map {
@@ -11760,7 +12021,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	/* 名片消息 */
 	.bubble-contact-card {
 		width: 220px;
-		max-width: 100%;
 		padding: 12px;
 		flex-direction: row;
 		align-items: center;
@@ -11841,10 +12101,7 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.message-text {
 		font-size: 15px;
 		line-height: 1.5;
-		word-break: break-word;
-		white-space: pre-wrap;
-		overflow-wrap: break-word;
-		max-width: 100%;
+		white-space: normal;
 		display: flex;
 		flex-direction: row;
 	}
@@ -11853,10 +12110,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		border-top-width: 1px;
 		border-top-style: solid;
 		padding-bottom: 8px;
-	}
-
-	.footer-readonly {
-		padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
 	}
 
 	.footer-readonly-text {
@@ -11872,7 +12125,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		bottom: 0;
 		height: 100%;
 		z-index: 1000;
-		padding-bottom: env(safe-area-inset-bottom);
 		border-top-width: 0;
 	}
 
@@ -11934,7 +12186,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 	.input-box-full {
 		flex: 1;
 		height: 100%;
-		max-height: 100%;
 		margin: 0;
 		justify-content: flex-start;
 	}
@@ -11953,19 +12204,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		font-size: 16px;
 		line-height: 24px;
 		background-color: transparent;
-	}
-
-	.plain-chat-editor {
-		width: calc(100% + 12px);
-		margin-right: -12px;
-		padding-right: 24px;
-		scrollbar-width: none;
-	}
-
-	.plain-chat-editor::-webkit-scrollbar {
-		display: none;
-		width: 0;
-		height: 0;
 	}
 
 	.chat-editor-full {
@@ -12453,7 +12691,6 @@ function convertServiceMessages(serviceMessages : ServiceMessageItem[]) : Messag
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-around;
-		padding-bottom: env(safe-area-inset-bottom);
 		z-index: 100;
 	}
 

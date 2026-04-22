@@ -14,6 +14,7 @@
 		<!-- 视频播放器 -->
 		<view class="video-container" :style="{ backgroundColor: theme.pageBg }">
 			<video
+				v-if="!playbackFailed"
 				:src="videoUrl"
 				:controls="true"
 				:autoplay="true"
@@ -25,6 +26,18 @@
 				@play="handleVideoPlay"
 				@pause="handleVideoPause"
 			></video>
+			<view v-else class="video-error">
+				<text class="video-error-title" :style="{ color: theme.textPrimary }">{{ t('chat.videoPlayer.loadFailed') }}</text>
+				<text class="video-error-desc" :style="{ color: theme.textSecondary }">{{ t('chat.videoPlayer.fallbackHint') }}</text>
+				<view class="video-error-actions">
+					<view class="video-action-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="retryPlayback">
+						<text class="video-action-btn-text">{{ t('runtime.filePreview.retry') }}</text>
+					</view>
+					<view v-if="canOpenExternal" class="video-action-btn video-action-btn-secondary" :style="{ borderColor: theme.borderColor }" @click="openExternally">
+						<text class="video-action-btn-text video-action-btn-text-secondary" :style="{ color: theme.textPrimary }">{{ t('chat.videoPlayer.openExternally') }}</text>
+					</view>
+				</view>
+			</view>
 		</view>
 
 		<!-- 视频信息 -->
@@ -37,12 +50,14 @@
 <script setup lang="uts">
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { canOpenExternalUrl, openExternalUrl } from '../../utils/external-url.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
 	const { t } = useI18n()
 	const videoUrl = ref('')
 	const videoTitle = ref('')
+	const playbackFailed = ref(false)
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	let unsubscribeTheme: (() => void) | null = null
 
@@ -56,10 +71,7 @@
 
 	function handleVideoError(e: any) {
 		console.error('[VideoPlayer] 视频播放错误:', e)
-		uni.showToast({
-			title: t('chat.videoPlayer.loadFailed'),
-			icon: 'none'
-		})
+		playbackFailed.value = true
 	}
 
 	function handleVideoPlay() {
@@ -68,6 +80,31 @@
 
 	function handleVideoPause() {
 		console.log('[VideoPlayer] 视频暂停')
+	}
+
+	function retryPlayback() {
+		if (videoUrl.value.trim() === '') {
+			return
+		}
+		playbackFailed.value = false
+	}
+
+	const canOpenExternal = computed((): boolean => {
+		return canOpenExternalUrl() && videoUrl.value.trim() !== ''
+	})
+
+	async function openExternally() {
+		try {
+			if (videoUrl.value.trim() === '') {
+				return
+			}
+			await openExternalUrl(videoUrl.value)
+		} catch (e) {
+			uni.showToast({
+				title: t('chat.videoPlayer.openExternalFailed'),
+				icon: 'none'
+			})
+		}
 	}
 
 	onLoad((options: any) => {
@@ -80,6 +117,7 @@
 		if (videoTitle.value === '') {
 			videoTitle.value = t('chat.label.videoPlay')
 		}
+		playbackFailed.value = false
 		
 		console.log('[VideoPlayer] 页面参数:', { 
 			url: videoUrl.value, 
@@ -147,6 +185,49 @@
 	.video-player {
 		width: 100%;
 		height: 100%;
+	}
+
+	.video-error {
+		flex: 1;
+		align-items: center;
+		justify-content: center;
+		padding: 24px;
+	}
+
+	.video-error-title {
+		font-size: 16px;
+		font-weight: 600;
+	}
+
+	.video-error-desc {
+		font-size: 13px;
+		margin-top: 8px;
+		text-align: center;
+	}
+
+	.video-error-actions {
+		flex-direction: row;
+		margin-top: 16px;
+	}
+
+	.video-action-btn {
+		padding: 10px 16px;
+		border-radius: 8px;
+		margin: 0 6px;
+	}
+
+	.video-action-btn-secondary {
+		background-color: transparent;
+		border-width: 0.5px;
+	}
+
+	.video-action-btn-text {
+		color: #FFFFFF;
+		font-size: 14px;
+	}
+
+	.video-action-btn-text-secondary {
+		color: #111111;
 	}
 
 	.video-info {

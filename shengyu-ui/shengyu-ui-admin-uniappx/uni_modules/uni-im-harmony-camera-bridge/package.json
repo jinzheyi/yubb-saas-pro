@@ -1,0 +1,6 @@
+{
+	"id": "uni-im-harmony-camera-bridge",
+	"displayName": "uni-im Harmony Camera Bridge",
+	"version": "1.0.0",
+	"description": "HarmonyOS camera permission bridge for uni-app x IM scanning capability"
+}

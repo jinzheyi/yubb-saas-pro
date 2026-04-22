@@ -29,7 +29,7 @@
 
 		<view class="footer" :style="{ paddingBottom: (12 + safeAreaBottom) + 'px', backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
 			<text class="selected-text" :style="{ color: theme.textSecondary }">{{ selectedDisplayText }}</text>
-			<button class="confirm-btn" :disabled="selectedCount === 0 || submitting" @click="handleConfirm">
+			<button class="confirm-btn" :class="{ 'confirm-btn-disabled': selectedCount === 0 || submitting }" :disabled="selectedCount === 0 || submitting" @click="handleConfirm">
 				<text class="confirm-btn-text">{{ t('chat.contactCardSelect.confirm') }}</text>
 			</button>
 		</view>
@@ -365,7 +365,7 @@
 		display: flex;
 	}
 
-	.confirm-btn[disabled] {
+	.confirm-btn-disabled {
 		opacity: 0.5;
 	}
 

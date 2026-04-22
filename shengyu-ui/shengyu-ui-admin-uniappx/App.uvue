@@ -1,5 +1,8 @@
 <script lang="uts">
 	import { isLoggedIn, getAccessToken } from './store/user.uts'
+	import { bootstrapHarmonyAESProvider } from './components/captcha/utils/harmony-aes-provider.uts'
+	import { appUpgradeService } from './services/app-upgrade-service.uts'
+	import { logHarmonyReadiness } from './services/harmony-readiness-service.uts'
 	import { initLocale } from './store/locale.uts'
 	import { initTheme } from './store/theme.uts'
 	import { badgeService } from './services/badge-service.uts'
@@ -7,6 +10,11 @@
 	import { runtimeTabBarService } from './services/runtime-tab-bar-service.uts'
 	import { syncUserPreferencesFromServer } from './services/user-preference-service.uts'
 	import { onAccessTokenRefreshed } from './utils/request.uts'
+	// #ifdef APP-HARMONY
+	import { harmonyCameraBridgeApi } from './uni_modules/uni-im-harmony-camera-bridge/utssdk/app-harmony/index.uts'
+	import { harmonyLocationBridgeApi } from './uni_modules/uni-im-harmony-location-bridge/utssdk/app-harmony/index.uts'
+	import { harmonyMicrophoneBridgeApi } from './uni_modules/uni-im-harmony-microphone-bridge/utssdk/app-harmony/index.uts'
+	// #endif
 
 	let unsubscribeAccessTokenRefreshed: (() => void) | null = null
 
@@ -17,6 +25,11 @@
 			// 初始化国际化（如果没有设置过语言，则使用系统语言）
 			initLocale()
 			initTheme()
+			this.installHarmonyCameraBridge()
+			this.installHarmonyLocationBridge()
+			this.installHarmonyMicrophoneBridge()
+			bootstrapHarmonyAESProvider()
+			logHarmonyReadiness('launch')
 			runtimeTabBarService.init()
 
 			this.bootstrapBadgeServices()
@@ -36,11 +49,17 @@
 		},
 		onShow() {
 			console.log('App Show')
+			this.installHarmonyCameraBridge()
+			this.installHarmonyLocationBridge()
+			this.installHarmonyMicrophoneBridge()
+			bootstrapHarmonyAESProvider()
+			logHarmonyReadiness('show')
 			runtimeTabBarService.refresh()
 			this.bootstrapBadgeServices()
 			if (isLoggedIn()) {
 				badgeService.ensureFresh(3000)
 				void syncUserPreferencesFromServer(false)
+				void appUpgradeService.checkSilentlyIfNeeded()
 			}
 			void this.withWsManager(async (wsManager) => {
 				wsManager.setAppForeground(true)
@@ -77,6 +96,39 @@
 				badgeService.init()
 				tabBarBadgeService.init()
 			},
+			installHarmonyCameraBridge() {
+				// #ifdef APP-HARMONY
+				try {
+					if (harmonyCameraBridgeApi != null && harmonyCameraBridgeApi.ensureLoaded()) {
+						console.log('[HarmonyCamera] permission bridge loaded')
+					}
+				} catch (e) {
+					console.warn('[HarmonyCamera] permission bridge load failed:', e)
+				}
+				// #endif
+			},
+			installHarmonyLocationBridge() {
+				// #ifdef APP-HARMONY
+				try {
+					if (harmonyLocationBridgeApi != null && harmonyLocationBridgeApi.ensureLoaded()) {
+						console.log('[HarmonyLocation] permission bridge loaded')
+					}
+				} catch (e) {
+					console.warn('[HarmonyLocation] permission bridge load failed:', e)
+				}
+				// #endif
+			},
+			installHarmonyMicrophoneBridge() {
+				// #ifdef APP-HARMONY
+				try {
+					if (harmonyMicrophoneBridgeApi != null && harmonyMicrophoneBridgeApi.ensureLoaded()) {
+						console.log('[HarmonyMicrophone] permission bridge loaded')
+					}
+				} catch (e) {
+					console.warn('[HarmonyMicrophone] permission bridge load failed:', e)
+				}
+				// #endif
+			},
 			checkLoginStatus() {
 				const pages = getCurrentPages()
 				if (pages.length > 0) {
@@ -96,11 +148,6 @@
 <style>
 	/* 引入阿里 iconfont */
 	@import "@/static/iconfont/iconfont.css";
-
-	/* 全局样式 */
-	page {
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-	}
 
 	/* 定义全局颜色变量（模拟） */
 	/* 扁平化圆角标准 */

@@ -1,0 +1,104 @@
+import { HarmonyAesApi } from '../interface.uts'
+import cryptoFramework from '@ohos.security.cryptoFramework'
+import util from '@ohos.util'
+
+const IMPLEMENTATION_NAME = 'ArkTS.cryptoFramework.AES128.ECB.PKCS7'
+const SELF_TEST_KEY = '1234567890123456'
+const SELF_TEST_PLAIN = 'harmony-aes-check'
+const SELF_TEST_CIPHER = 'UMsLNjb3U5VSqIKGzCBpGjTaoS8G0hyyeuKeGzhh+Es='
+
+let readyState: boolean | null = null
+
+function toDataBlob(bytes: Uint8Array): cryptoFramework.DataBlob {
+	return {
+		data: bytes
+	} as cryptoFramework.DataBlob
+}
+
+function utf8Encode(value: string): Uint8Array {
+	const encoder = new util.TextEncoder()
+	return encoder.encodeInto(value)
+}
+
+function utf8Decode(bytes: Uint8Array): string {
+	const decoder = new util.TextDecoder('utf-8', { ignoreBOM: true })
+	return decoder.decodeWithStream(bytes, { stream: false })
+}
+
+function buildSymKey(keyWord: string): cryptoFramework.SymKey {
+	if (keyWord.length !== 16) {
+		throw new Error('[uni-im-harmony-aes] AES-128 key length must be 16 chars, got ' + String(keyWord.length))
+	}
+	const generator = cryptoFramework.createSymKeyGenerator('AES128')
+	return generator.convertKeySync(toDataBlob(utf8Encode(keyWord)))
+}
+
+function encryptByHarmonyNative(word: string, keyWord: string): string {
+	const cipher = cryptoFramework.createCipher('AES128|ECB|PKCS7')
+	const symKey = buildSymKey(keyWord)
+	cipher.initSync(cryptoFramework.CryptoMode.ENCRYPT_MODE, symKey, null)
+	const encrypted = cipher.doFinalSync(toDataBlob(utf8Encode(word)))
+	return new util.Base64Helper().encodeToStringSync(encrypted.data)
+}
+
+function decryptByHarmonyNative(word: string, keyWord: string): string {
+	const cipher = cryptoFramework.createCipher('AES128|ECB|PKCS7')
+	const symKey = buildSymKey(keyWord)
+	cipher.initSync(cryptoFramework.CryptoMode.DECRYPT_MODE, symKey, null)
+	const encryptedBytes = new util.Base64Helper().decodeSync(word)
+	const decrypted = cipher.doFinalSync(toDataBlob(encryptedBytes))
+	return utf8Decode(decrypted.data)
+}
+
+function runSelfTest(): boolean {
+	try {
+		const encrypted = encryptByHarmonyNative(SELF_TEST_PLAIN, SELF_TEST_KEY)
+		if (encrypted !== SELF_TEST_CIPHER) {
+			console.error('[uni-im-harmony-aes] self test encrypt mismatch:', encrypted)
+			return false
+		}
+		const decrypted = decryptByHarmonyNative(SELF_TEST_CIPHER, SELF_TEST_KEY)
+		if (decrypted !== SELF_TEST_PLAIN) {
+			console.error('[uni-im-harmony-aes] self test decrypt mismatch:', decrypted)
+			return false
+		}
+		return true
+	} catch (e) {
+		console.error('[uni-im-harmony-aes] self test failed:', e)
+		return false
+	}
+}
+
+function ensureReady(): boolean {
+	if (readyState != null) {
+		return readyState === true
+	}
+	readyState = runSelfTest()
+	return readyState === true
+}
+
+function ensureRuntimeAvailable(method: string): void {
+	if (!ensureReady()) {
+		throw new Error('[uni-im-harmony-aes] ' + method + ' unavailable because cryptoFramework self test did not pass')
+	}
+}
+
+export const harmonyAesApi: HarmonyAesApi = {
+	isReady(): boolean {
+		return ensureReady()
+	},
+	getImplementationName(): string {
+		return IMPLEMENTATION_NAME
+	},
+	selfTest(): boolean {
+		return ensureReady()
+	},
+	encrypt(word: string, keyWord: string): string {
+		ensureRuntimeAvailable('encrypt')
+		return encryptByHarmonyNative(word, keyWord)
+	},
+	decrypt(word: string, keyWord: string): string {
+		ensureRuntimeAvailable('decrypt')
+		return decryptByHarmonyNative(word, keyWord)
+	}
+}

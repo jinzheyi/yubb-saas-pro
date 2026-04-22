@@ -28,7 +28,7 @@
 				</text>
 			</view>
 			<view class="history-tags">
-				<view class="history-tag" :style="{ backgroundColor: theme.cardBgMuted }" v-for="(item, index) in historyList" :key="index" @click="searchHistory(item)" @longpress="handleHistoryLongPress(item)">
+				<view class="history-tag" :style="{ backgroundColor: theme.cardBgMuted }" v-for="(item, index) in historyList" :key="index" @click="searchHistory(item)" @longpress="handleHistoryLongPress(item)" @mousedown="handleHistoryMouseDown(item)" @mouseup="handleHistoryMouseEnd" @mouseleave="handleHistoryMouseEnd">
 					<text class="history-text" :style="{ color: theme.textSecondary }">{{ item }}</text>
 				</view>
 			</view>
@@ -49,7 +49,7 @@
 
 		<view class="result-panel" v-if="showResultPanel">
 			<scroll-view class="tab-scroll" :style="{ backgroundColor: theme.cardBg, borderBottomColor: theme.borderColor }" scroll-x="true" show-scrollbar="false">
-				<view class="tab-list">
+				<view class="tab-list" :style="getTabListStyle()">
 					<view
 						v-for="tab in tabs"
 						:key="tab.key"
@@ -109,6 +109,7 @@
 	import { getAvatarText, getConversationAvatarColor, getGroupAvatarColor, getUserAvatarColor } from '../../utils/avatar.uts'
 	import { messageSearchService } from '../../services/message-search-service.uts'
 	import { getHotSearch, searchGlobal } from '../../api/search.uts'
+	import { getHarmonyReadinessSnapshot } from '../../services/harmony-readiness-service.uts'
 	import { getJsonObject, setJsonObject, remove } from '../../utils/storage.uts'
 	import { encodeIdParam } from '../../utils/id-param.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
@@ -123,6 +124,9 @@
 	const PAGE_SIZE = 20
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	const { t } = useI18n()
+	const isHarmonyClient = computed((): boolean => {
+		return getHarmonyReadinessSnapshot().isHarmony
+	})
 
 	type SearchTab = {
 		key: string
@@ -204,6 +208,14 @@
 		return len > 0 && len < MIN_SEARCH_KEYWORD_LENGTH
 	})
 
+	function getTabListStyle(): any {
+		return isHarmonyClient.value ? {
+			width: '100%'
+		} : {
+			minWidth: '100%'
+		}
+	}
+
 	let requestSeq = 0
 	let searchTimer = 0
 	let hotSearchSeq = 0
@@ -211,6 +223,8 @@
 	let lastFirstPageKey = ''
 	let lastFirstPageAt = 0
 	let lastFirstPageResp: SearchResponse | null = null
+	let historyLongPressTimer: any = null
+	let suppressNextHistoryClickKeyword = ''
 	let unsubscribeTheme: (() => void) | null = null
 
 	unsubscribeTheme = subscribeThemeChange((_resolvedTheme, _mode, tokens) => {
@@ -793,6 +807,11 @@
 	}
 
 	function searchHistory(item: string) {
+		const kw = item != null ? String(item).trim() : ''
+		if (kw !== '' && kw === suppressNextHistoryClickKeyword) {
+			suppressNextHistoryClickKeyword = ''
+			return
+		}
 		keyword.value = item
 		handleSearchConfirm()
 	}
@@ -814,6 +833,34 @@
 				}
 			}
 		})
+	}
+
+	function clearHistoryLongPressTimer(): void {
+		if (historyLongPressTimer != null) {
+			clearTimeout(historyLongPressTimer)
+			historyLongPressTimer = null
+		}
+	}
+
+	function handleHistoryMouseDown(item: string): void {
+		try {
+			clearHistoryLongPressTimer()
+			const kw = item != null ? String(item).trim() : ''
+			if (kw === '') {
+				return
+			}
+			historyLongPressTimer = setTimeout(() => {
+				historyLongPressTimer = null
+				suppressNextHistoryClickKeyword = kw
+				handleHistoryLongPress(item)
+			}, 450)
+		} catch (e) {
+			clearHistoryLongPressTimer()
+		}
+	}
+
+	function handleHistoryMouseEnd(): void {
+		clearHistoryLongPressTimer()
 	}
 
 	function searchHot(item: string) {
@@ -938,6 +985,8 @@
 			unsubscribeTheme()
 			unsubscribeTheme = null
 		}
+		clearHistoryLongPressTimer()
+		suppressNextHistoryClickKeyword = ''
 		clearSearchTimer()
 		requestSeq = requestSeq + 1
 		try {
@@ -1088,7 +1137,6 @@
 	}
 
 	.tab-list {
-		min-width: 100%;
 		padding: 0 12px;
 		height: 46px;
 		flex-direction: row;

@@ -9,6 +9,9 @@
  * 3. 使用原生插件
  */
 
+import { shareSingleImage } from './system-share.uts'
+import { saveImageFileToAlbum } from './album.uts'
+
 /**
  * 二维码配置
  */
@@ -142,16 +145,12 @@ function drawPositionPattern(ctx: any, x: number, y: number, size: number) {
  */
 export function saveImageToAlbum(tempFilePath: string): Promise<boolean> {
 	return new Promise((resolve, reject) => {
-		uni.saveImageToPhotosAlbum({
-			filePath: tempFilePath,
-			success: () => {
+		saveImageFileToAlbum(tempFilePath).then(() => {
 				console.log('[QRCode] 保存到相册成功')
 				resolve(true)
-			},
-			fail: (err: any) => {
-				console.error('[QRCode] 保存到相册失败:', err)
-				reject(err)
-			}
+			}).catch((err: any) => {
+			console.error('[QRCode] 保存到相册失败:', err)
+			reject(err)
 		})
 	})
 }
@@ -165,23 +164,17 @@ export function saveImageToAlbum(tempFilePath: string): Promise<boolean> {
  */
 export function shareImage(tempFilePath: string, title: string = '分享图片'): Promise<boolean> {
 	return new Promise((resolve, reject) => {
-		// uniappx 的分享功能可能需要根据平台调整
-		// 这里提供一个通用实现
 		try {
-			uni.share({
-				provider: 'weixin',
-				type: 0, // 图片
-				imageUrl: tempFilePath,
-				title: title,
-				success: () => {
-					console.log('[QRCode] 分享成功')
-					resolve(true)
-				},
-				fail: (err: any) => {
-					console.error('[QRCode] 分享失败:', err)
-					reject(err)
-				}
-			} as any)
+			shareSingleImage({
+				imagePath: tempFilePath,
+				title: title
+			}).then(() => {
+				console.log('[QRCode] 分享成功')
+				resolve(true)
+			}).catch((err: any) => {
+				console.error('[QRCode] 分享失败:', err)
+				reject(err)
+			})
 		} catch (e) {
 			console.error('[QRCode] 分享异常:', e)
 			reject(e)

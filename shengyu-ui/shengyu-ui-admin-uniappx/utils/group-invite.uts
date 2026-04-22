@@ -1,4 +1,4 @@
-import { encodeIdParam } from './id-param.uts'
+import { decodeIdParam, encodeIdParam } from './id-param.uts'
 
 export type GroupInvitePayload = {
   inviteCode: string
@@ -53,7 +53,7 @@ export function parseGroupInvitePayload(raw: any): GroupInvitePayload | null {
   }
   return {
     inviteCode: inviteCode,
-    groupId: groupIdFromQuery !== '' ? groupIdFromQuery : '',
+    groupId: groupIdFromQuery !== '' ? decodeIdParam(groupIdFromQuery) : '',
     rawText: rawText
   }
 }

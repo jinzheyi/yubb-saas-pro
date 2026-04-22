@@ -1,0 +1,6 @@
+{
+	"id": "uni-im-harmony-microphone-bridge",
+	"displayName": "uni-im Harmony Microphone Bridge",
+	"version": "1.0.0",
+	"description": "HarmonyOS microphone permission bridge for uni-app x IM voice recording capability"
+}

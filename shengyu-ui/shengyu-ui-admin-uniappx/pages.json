@@ -267,6 +267,13 @@
 			}
 		},
 		{
+			"path": "pages/common/location-view",
+			"style": {
+				"navigationBarTitleText": "查看位置",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/common/search",
 			"style": {
 				"navigationBarTitleText": "搜索",

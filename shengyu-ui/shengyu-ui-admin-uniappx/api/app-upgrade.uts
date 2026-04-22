@@ -1,0 +1,51 @@
+import { post } from '../utils/request.uts'
+
+export type AppUpgradeCheckReq = {
+	appCode: string
+	platform: string
+	channel: string
+	clientVersion: string
+	clientVersionCode: number
+	deviceId: string
+	deviceType: number
+	osName: string
+	osVersion: string
+	manufacturer?: string
+	model?: string
+	harmonyApiVersion?: number | null
+	harmonyDisplayVersion?: string
+}
+
+export type AppUpgradeCheckResp = {
+	resultCode?: string
+	title?: string
+	content?: string
+	releaseNotes?: string
+	latestVersion?: string
+	latestVersionCode?: number
+	forceUpdate?: boolean
+	action?: string
+	downloadUrl?: string
+	storeUrl?: string
+	marketUrl?: string
+	webUrl?: string
+	publishTime?: string
+}
+
+export type AppUpgradeReportEventReq = {
+	appCode: string
+	platform: string
+	eventType: string
+	clientVersion: string
+	clientVersionCode: number
+	deviceId: string
+	payload?: UTSJSONObject | null
+}
+
+export function checkAppUpgrade(data: AppUpgradeCheckReq): Promise<AppUpgradeCheckResp> {
+	return post('/system/app-upgrade/check', data as any)
+}
+
+export function reportAppUpgradeEvent(data: AppUpgradeReportEventReq): Promise<any> {
+	return post('/system/app-upgrade/report-event', data as any)
+}

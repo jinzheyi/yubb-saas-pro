@@ -57,6 +57,16 @@
             <text class="link-url" :style="{ color: theme.brandPrimary }">{{ renderData.url }}</text>
           </view>
 
+          <view v-else-if="renderData.kind === 'location'" class="file-block" :style="{ backgroundColor: theme.cardBgMuted }" @click="handleOpenLocation(renderData)">
+            <view class="file-icon-wrap" :style="{ backgroundColor: theme.brandPrimarySoft }">
+              <text class="iconfont file-icon">&#xea72;</text>
+            </view>
+            <view class="file-main">
+              <text class="file-name" :style="{ color: theme.textPrimary }">{{ renderData.title }}</text>
+              <text class="file-size" :style="{ color: theme.textTertiary }">{{ renderData.text }}</text>
+            </view>
+          </view>
+
           <view v-else class="text-block">
             <text class="text-content" :style="{ color: theme.textPrimary }">{{ detail.messagePreview || t('favoritePage.preview.default') }}</text>
           </view>
@@ -76,8 +86,11 @@
 import { computed } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { useI18n } from '../../hooks/useI18n.uts'
+import { previewImages } from '../../utils/media-preview.uts'
 import { getFavoriteDetail } from '../../api/favorite.uts'
+import { buildLocationClipboardPayload, openLocationWithFallback } from '../../utils/location.uts'
 import { navToFilePreview } from '../../utils/nav.uts'
+import { navToSecureBrowser } from '../../utils/secure-browser.uts'
 import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -102,6 +115,8 @@ type FavoriteRenderData = {
   thumb: string
   fileName: string
   fileSize: string
+  latitude: number
+  longitude: number
 }
 
 const { t } = useI18n()
@@ -323,7 +338,9 @@ function buildRenderData(item: FavoriteDetail | null): FavoriteRenderData {
     fileId: '',
     thumb: '',
     fileName: '',
-    fileSize: ''
+    fileSize: '',
+    latitude: NaN,
+    longitude: NaN
   }
   if (item == null) {
     return fallback
@@ -344,7 +361,9 @@ function buildRenderData(item: FavoriteDetail | null): FavoriteRenderData {
     fileId: '',
     thumb: '',
     fileName: '',
-    fileSize: ''
+    fileSize: '',
+    latitude: NaN,
+    longitude: NaN
   }
 
   if (item.messageType === 1) {
@@ -423,6 +442,25 @@ function buildRenderData(item: FavoriteDetail | null): FavoriteRenderData {
     return result
   }
 
+  if (item.messageType === 6) {
+    const locationObj = parsedContent != null && typeof parsedContent === 'object'
+      ? parsedContent
+      : (snapshotContent != null && typeof snapshotContent === 'object' ? snapshotContent : null)
+    const latitude = locationObj != null && (locationObj as any).latitude != null ? Number((locationObj as any).latitude) : NaN
+    const longitude = locationObj != null && (locationObj as any).longitude != null ? Number((locationObj as any).longitude) : NaN
+    const address = locationObj != null && (locationObj as any).address != null ? String((locationObj as any).address) : ''
+    const locationName = locationObj != null && (locationObj as any).name != null
+      ? String((locationObj as any).name)
+      : (locationObj != null && (locationObj as any).locationName != null ? String((locationObj as any).locationName) : address)
+    result.kind = 'location'
+    result.typeLabel = t('favoritePage.type.location')
+    result.title = locationName !== '' ? locationName : t('chat.label.locationDefault')
+    result.text = address !== '' ? address : t('chat.label.locationCoordinate')
+    result.latitude = latitude
+    result.longitude = longitude
+    return result
+  }
+
   if (item.messageType === 9) {
     const customObj = (parsedContent != null && typeof parsedContent === 'object')
       ? parsedContent
@@ -471,7 +509,9 @@ function handlePreviewImage(url: string): void {
   if (url == null || String(url).trim() === '') {
     return
   }
-  uni.previewImage({ urls: [String(url)] })
+  void previewImages([String(url)]).catch((_err) => {
+    uni.showToast({ title: t('favoriteDetail.toast.loadFailed'), icon: 'none' })
+  })
 }
 
 function handleOpenVideo(url: string): void {
@@ -529,7 +569,32 @@ function handleOpenLink(url: string): void {
   } catch (e) {
     // ignore
   }
-  handleCopyText(finalUrl, t('favoriteDetail.toast.linkCopied'))
+  navToSecureBrowser(finalUrl, renderData.value.title, 'external')
+}
+
+function handleOpenLocation(data: FavoriteRenderData): void {
+  const latitude = data != null ? Number(data.latitude) : NaN
+  const longitude = data != null ? Number(data.longitude) : NaN
+  if (isNaN(latitude) || isNaN(longitude)) {
+    uni.showToast({ title: t('chat.toast.locationMissing'), icon: 'none' })
+    return
+  }
+  const opened = openLocationWithFallback({
+    latitude: latitude,
+    longitude: longitude,
+    name: data.title != null ? String(data.title) : '',
+    address: data.text != null ? String(data.text) : ''
+  })
+  if (!opened) {
+    uni.setClipboardData({
+      data: buildLocationClipboardPayload(
+        data.title != null ? String(data.title) : '',
+        data.text != null ? String(data.text) : '',
+        latitude,
+        longitude
+      )
+    })
+  }
 }
 
 function handleSendToChat(): void {

@@ -3,7 +3,7 @@ import { navToBlockedContent, navToSecureBrowser } from './secure-browser.uts'
 import { t } from '../store/locale.uts'
 
 export function routeScanResult(rawResult: any, redirect: boolean = false): boolean {
-	const rawText = rawResult != null ? String(rawResult).trim() : ''
+	const rawText = normalizeScanText(rawResult)
 	if (rawText === '') {
 		uni.showToast({
 			title: t('runtime.scan.noValidContent'),
@@ -25,4 +25,14 @@ export function routeScanResult(rawResult: any, redirect: boolean = false): bool
 
 	navToBlockedContent(rawText, t('runtime.scan.resultTitle'), 'scan', redirect)
 	return true
+}
+
+function normalizeScanText(rawResult: any): string {
+	if (rawResult == null) {
+		return ''
+	}
+	return String(rawResult)
+		.replace(/[\u200B-\u200D\uFEFF]/g, '')
+		.replace(/\r\n/g, '\n')
+		.trim()
 }

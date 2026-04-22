@@ -17,6 +17,14 @@
 
 		<view class="content">
 			<web-view v-if="webUrl !== ''" :src="webUrl" class="webview"></web-view>
+			<view v-if="webUrl !== ''" class="web-actions" :style="{ backgroundColor: theme.cardBg, borderTopColor: theme.borderColor }">
+				<view class="action-btn action-btn-secondary" :style="{ borderColor: theme.borderColor }" @click="handleCopy">
+					<text class="action-btn-text action-btn-text-secondary" :style="{ color: theme.textPrimary }">{{ t('runtime.secureBrowser.copyLink') }}</text>
+				</view>
+				<view v-if="canOpenExternal" class="action-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleOpenExternal">
+					<text class="action-btn-text">{{ t('runtime.secureBrowser.openExternally') }}</text>
+				</view>
+			</view>
 
 			<view v-else class="blocked-wrap">
 				<text class="blocked-title" :style="{ color: theme.textPrimary }">{{ t('runtime.secureBrowser.blockedTitle') }}</text>
@@ -25,8 +33,13 @@
 					<text class="blocked-label" :style="{ color: theme.textTertiary }">{{ t('runtime.secureBrowser.blockedLabel') }}</text>
 					<text class="blocked-raw" :style="{ color: theme.textPrimary }">{{ rawContent || t('runtime.secureBrowser.emptyContent') }}</text>
 				</view>
-				<view class="blocked-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleCopy">
-					<text class="blocked-btn-text">{{ t('runtime.secureBrowser.copyContent') }}</text>
+				<view class="blocked-actions">
+					<view class="blocked-btn blocked-btn-secondary" :style="{ borderColor: theme.borderColor }" @click="handleCopy">
+						<text class="blocked-btn-text blocked-btn-text-secondary" :style="{ color: theme.textPrimary }">{{ t('runtime.secureBrowser.copyContent') }}</text>
+					</view>
+					<view v-if="canOpenExternal" class="blocked-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="handleOpenExternal">
+						<text class="blocked-btn-text">{{ t('runtime.secureBrowser.openExternally') }}</text>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -36,6 +49,7 @@
 <script setup lang="uts">
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { canOpenExternalUrl, openExternalUrl } from '../../utils/external-url.uts'
 	import { normalizeWebUrl, readSecureBrowserTitle } from '../../utils/secure-browser.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
@@ -73,6 +87,10 @@
 		return rawContent.value !== '' ? rawContent.value : t('runtime.secureBrowser.unknownSafeLink')
 	})
 
+	const canOpenExternal = computed(() : boolean => {
+		return canOpenExternalUrl() && addressText.value.trim() !== ''
+	})
+
 	function handleBack() {
 		uni.navigateBack()
 	}
@@ -105,6 +123,20 @@
 				})
 			}
 		})
+	}
+
+	async function handleOpenExternal() {
+		try {
+			if (addressText.value.trim() === '') {
+				return
+			}
+			await openExternalUrl(addressText.value)
+		} catch (e) {
+			uni.showToast({
+				title: t('runtime.secureBrowser.openExternalFailed'),
+				icon: 'none'
+			})
+		}
 	}
 
 	onLoad((options : any) => {
@@ -189,6 +221,7 @@
 
 	.content {
 		flex: 1;
+		flex-direction: column;
 	}
 
 	.webview {
@@ -233,10 +266,8 @@
 	}
 
 	.blocked-btn {
-		margin-top: 22px;
 		width: 100%;
 		height: 46px;
-		background-color: #1677FF;
 		border-radius: 23px;
 		justify-content: center;
 		align-items: center;
@@ -246,5 +277,46 @@
 		font-size: 16px;
 		color: #FFFFFF;
 		font-weight: 500;
+	}
+
+	.blocked-btn-secondary {
+		background-color: transparent;
+		border-width: 0.5px;
+	}
+
+	.blocked-btn-text-secondary {
+		color: #111111;
+	}
+
+	.blocked-actions {
+		margin-top: 22px;
+		width: 100%;
+	}
+
+	.web-actions {
+		flex-direction: row;
+		justify-content: center;
+		padding: 12px 16px 16px 16px;
+		border-top-width: 0.5px;
+	}
+
+	.action-btn {
+		padding: 10px 16px;
+		border-radius: 8px;
+		margin: 0 6px;
+	}
+
+	.action-btn-secondary {
+		background-color: transparent;
+		border-width: 0.5px;
+	}
+
+	.action-btn-text {
+		color: #FFFFFF;
+		font-size: 14px;
+	}
+
+	.action-btn-text-secondary {
+		color: #111111;
 	}
 </style>

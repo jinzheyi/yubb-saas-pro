@@ -1,6 +1,6 @@
 <template>
 	<view class="page" :style="{ backgroundColor: theme.pageBg }">
-		<!-- #ifdef APP-PLUS -->
+		<!-- #ifdef APP-ANDROID || APP-IOS -->
 		<view class="scan-overlay">
 			<view class="status-spacer"></view>
 			<view class="scan-header">
@@ -38,7 +38,31 @@
 		</view>
 		<!-- #endif -->
 
-		<!-- #ifndef APP-PLUS -->
+		<!-- #ifdef APP-HARMONY -->
+		<view class="fallback-page" :style="{ backgroundColor: theme.pageBg }">
+			<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
+			<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
+				<view class="header-left" @click.stop="handleBack">
+					<text class="iconfont back-icon" :style="{ color: theme.headerText }">&#xeb04;</text>
+					<text class="back-text" :style="{ color: theme.headerText }">{{ t('common.back') }}</text>
+				</view>
+				<text class="header-title" :style="{ color: theme.headerText }">{{ t('runtime.scanPage.title') }}</text>
+				<view class="header-right"></view>
+			</view>
+			<view class="fallback-content">
+				<text class="fallback-title" :style="{ color: theme.textPrimary }">{{ t('runtime.scanPage.harmonyTitle') }}</text>
+				<text class="fallback-desc" :style="{ color: theme.textSecondary }">{{ t('runtime.scanPage.harmonyDesc') }}</text>
+				<view class="fallback-btn" :style="{ backgroundColor: theme.brandPrimary }" @click="startScanner">
+					<text class="fallback-btn-text">{{ t('runtime.scanPage.startScan') }}</text>
+				</view>
+				<view class="fallback-btn fallback-btn-secondary" :style="{ borderColor: theme.borderColor }" @click="openManualJoin">
+					<text class="fallback-btn-text fallback-btn-text-secondary" :style="{ color: theme.textPrimary }">{{ t('runtime.scanPage.manualJoin') }}</text>
+				</view>
+			</view>
+		</view>
+		<!-- #endif -->
+
+		<!-- #ifndef APP-ANDROID || APP-IOS || APP-HARMONY -->
 		<view class="fallback-page" :style="{ backgroundColor: theme.pageBg }">
 			<view class="status-bar" :style="{ backgroundColor: theme.headerBg }"></view>
 			<view class="header" :style="{ backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }">
@@ -64,7 +88,10 @@
 <script setup lang="uts">
 	import { onLoad, onReady, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
+	import { isAuthorizeSettingDenied, readCameraAuthorized } from '../../utils/app-authorize.uts'
+	import { promptOpenAppSettings } from '../../utils/app-settings.uts'
 	import { routeScanResult } from '../../utils/scan-router.uts'
+	import { canUseSystemScanner, isSystemScanCanceled } from '../../utils/scan-capability.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
 
@@ -73,6 +100,7 @@
 	let barcodeView : any = null
 	const flashlightEnabled = ref(false)
 	const scanHandled = ref(false)
+	const harmonyScanning = ref(false)
 	const frameSize = ref(275)
 	const theme = ref<ThemeTokens>(getThemeTokens())
 	let unsubscribeTheme: (() => void) | null = null
@@ -102,7 +130,7 @@
 	}
 
 	function stopScanner() {
-		// #ifdef APP-PLUS
+		// #ifdef APP-ANDROID || APP-IOS
 		try {
 			if (barcodeView != null) {
 				barcodeView.cancel()
@@ -115,8 +143,8 @@
 		// #endif
 	}
 
-	function startScanner() {
-		// #ifdef APP-PLUS
+	function startNativeScanner() {
+		// #ifdef APP-ANDROID || APP-IOS
 		try {
 			stopScanner()
 			const currentWebview = getCurrentAppWebview()
@@ -166,8 +194,67 @@
 		// #endif
 	}
 
+	function startHarmonyScanner() {
+		// #ifdef APP-HARMONY
+		if (scanHandled.value || harmonyScanning.value) {
+			return
+		}
+		const cameraAuthorized = readCameraAuthorized()
+		if (isAuthorizeSettingDenied(cameraAuthorized)) {
+			promptHarmonyCameraPermission()
+			return
+		}
+		if (!canUseSystemScanner()) {
+			uni.showToast({
+				title: t('runtime.scanPage.unsupportedTitle'),
+				icon: 'none'
+			})
+			return
+		}
+		harmonyScanning.value = true
+		uni.scanCode({
+			success: (res : any) => {
+				if (scanHandled.value) {
+					return
+				}
+				scanHandled.value = true
+				const scanText = res != null && (res as any).result != null ? String((res as any).result) : ''
+				routeScanResult(scanText, true)
+			},
+			fail: (err : any) => {
+				if (!isSystemScanCanceled(err)) {
+					console.error('[ScanPage] 鸿蒙扫码失败:', err)
+					uni.showToast({
+						title: t('runtime.scanPage.startFailed'),
+						icon: 'none'
+					})
+				}
+			},
+			complete: () => {
+				harmonyScanning.value = false
+			}
+		})
+		// #endif
+	}
+
+	function promptHarmonyCameraPermission() {
+		// #ifdef APP-HARMONY
+		const message = t('runtime.scanPage.cameraPermissionDenied')
+		promptOpenAppSettings(message, t('runtime.scanPage.title'), t('chat.recording.goSetting'))
+		// #endif
+	}
+
+	function startScanner() {
+		// #ifdef APP-ANDROID || APP-IOS
+		startNativeScanner()
+		// #endif
+		// #ifdef APP-HARMONY
+		startHarmonyScanner()
+		// #endif
+	}
+
 	function toggleFlashlight() {
-		// #ifdef APP-PLUS
+		// #ifdef APP-ANDROID || APP-IOS
 		try {
 			if (barcodeView == null || barcodeView.setFlash == null) {
 				uni.showToast({
@@ -204,6 +291,7 @@
 	onLoad(() => {
 		scanHandled.value = false
 		flashlightEnabled.value = false
+		harmonyScanning.value = false
 	})
 
 	onReady(() => {
@@ -437,9 +525,18 @@
 		align-items: center;
 	}
 
+	.fallback-btn-secondary {
+		background-color: transparent;
+		border-width: 1px;
+	}
+
 	.fallback-btn-text {
 		font-size: 16px;
 		color: #FFFFFF;
 		font-weight: 500;
+	}
+
+	.fallback-btn-text-secondary {
+		color: #1F2329;
 	}
 </style>

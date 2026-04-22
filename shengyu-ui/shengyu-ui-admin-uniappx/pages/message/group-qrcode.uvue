@@ -92,11 +92,16 @@
 	import { onLoad, onUnload } from '@dcloudio/uni-app'
 	import { useI18n } from '../../hooks/useI18n.uts'
 	import { getGroupInviteCode, generateGroupInvite } from '../../api/group.uts'
-	import { saveImageToAlbum } from '../../utils/qrcode.uts'
+	import { isAuthorizeSettingDenied, readAlbumAuthorized } from '../../utils/app-authorize.uts'
+	import { promptOpenAppSettings } from '../../utils/app-settings.uts'
+	import { downloadRemoteFile } from '../../utils/file.uts'
+	import { saveImageToAlbum, shareImage } from '../../utils/qrcode.uts'
 	import { BASE_URL, API_BASE_URL, ADMIN_APP_DOMAIN } from '../../config/app.config.uts'
 	import { getGroupAvatarColor } from '../../utils/avatar.uts'
+	import { ClientPlatformCode, getCurrentClientPlatform } from '../../utils/device.uts'
 	import { encodeIdParam, decodeIdParam } from '../../utils/id-param.uts'
 	import { armGroupLifecycleErrorToastSuppression, finalizeGroupLifecycleExit, resolveGroupLifecycleErrorNotice } from '../../utils/chat-setting-actions.uts'
+	import { getHarmonyReadinessSnapshot } from '../../services/harmony-readiness-service.uts'
 	import { getTenantId } from '../../store/user.uts'
 	import { getThemeTokens, subscribeThemeChange } from '../../store/theme.uts'
 	import type { ThemeTokens } from '../../config/theme.uts'
@@ -175,8 +180,9 @@
 	})
 
 	const shareActionText = computed(() : string => {
-		const platform = uni.getSystemInfoSync().platform
-		return platform === 'web' ? t('chat.groupQrcode.copyInviteLink') : t('chat.groupQrcode.shareInvite')
+		return getCurrentClientPlatform() === ClientPlatformCode.WEB
+			? t('chat.groupQrcode.copyInviteLink')
+			: t('chat.groupQrcode.shareInvite')
 	})
 
 	const inviteLandingUrl = computed(() : string => {
@@ -336,11 +342,11 @@
 		}
 
 		// 判断当前平台
-		const platform = uni.getSystemInfoSync().platform
+		const platform = getCurrentClientPlatform()
 		console.log('[GroupQRCode] 当前平台:', platform)
 		
 		// H5 环境：提示用户右键保存或长按保存
-		if (platform === 'web') {
+		if (platform === ClientPlatformCode.WEB) {
 			uni.showModal({
 				title: t('chat.groupQrcode.saveQrcodeTitle'),
 				content: t('chat.groupQrcode.saveQrcodeContent'),
@@ -352,13 +358,24 @@
 
 		// App 环境：保存到相册
 		try {
+			const harmonySnapshot = getHarmonyReadinessSnapshot()
+			if (harmonySnapshot.isHarmony && !harmonySnapshot.saveImageToAlbumReady) {
+				uni.showToast({
+					title: t('chat.chatFiles.imageSaveUnsupported'),
+					icon: 'none'
+				})
+				return
+			}
+			if (harmonySnapshot.isHarmony && isAuthorizeSettingDenied(readAlbumAuthorized())) {
+				promptAlbumPermissionDenied()
+				return
+			}
+
 			uni.showLoading({
 				title: t('chat.groupQrcode.saving')
 			})
 			
-			const downloadRes = await uni.downloadFile({
-				url: qrCodeImageUrl.value
-			})
+			const downloadRes = await downloadRemoteFile(qrCodeImageUrl.value)
 			
 			if (downloadRes.statusCode !== 200) {
 				throw new Error('下载图片失败')
@@ -375,22 +392,23 @@
 		} catch (e) {
 			console.error('[GroupQRCode] 保存图片失败:', e)
 			uni.hideLoading()
+			const harmonySnapshot = getHarmonyReadinessSnapshot()
+			if (harmonySnapshot.isHarmony) {
+				uni.showToast({
+					title: t('chat.chatFiles.imageSaveUnsupported'),
+					icon: 'none'
+				})
+				return
+			}
 			
 			// 如果是权限问题，引导用户去设置
-			uni.showModal({
-				title: t('common.confirmTitle'),
-				content: t('chat.groupQrcode.albumPermissionContent'),
-				success: (res) => {
-					if (res.confirm) {
-						uni.openSetting({
-							success: (settingRes) => {
-								console.log('打开设置页面', settingRes)
-							}
-						})
-					}
-				}
-			})
+			promptAlbumPermissionDenied()
 		}
+	}
+
+	function promptAlbumPermissionDenied(): void {
+		const message = t('chat.groupQrcode.albumPermissionContent')
+		promptOpenAppSettings(message, t('common.confirmTitle'), t('chat.recording.goSetting'))
 	}
 
 	/**
@@ -406,8 +424,9 @@
 		}
 
 		try {
-			const platform = uni.getSystemInfoSync().platform
-			if (platform === 'web') {
+			const platform = getCurrentClientPlatform()
+			const harmonySnapshot = getHarmonyReadinessSnapshot()
+			if (platform === ClientPlatformCode.WEB) {
 				uni.setClipboardData({
 					data: inviteLandingUrl.value,
 					success: () => {
@@ -419,15 +438,33 @@
 				})
 				return
 			}
+			if (harmonySnapshot.isHarmony && !harmonySnapshot.systemShareReady) {
+				if (inviteLandingUrl.value) {
+					uni.setClipboardData({
+						data: inviteLandingUrl.value,
+						success: () => {
+							uni.showToast({
+								title: t('chat.groupQrcode.shareFallbackCopied'),
+								icon: 'none'
+							})
+						}
+					})
+					return
+				}
+				uni.showModal({
+					title: t('common.confirmTitle'),
+					content: t('chat.groupQrcode.shareUnsupportedContent'),
+					showCancel: false
+				})
+				return
+			}
 
 			// 先下载图片到本地
 			uni.showLoading({
 				title: t('chat.groupQrcode.preparing')
 			})
 			
-			const downloadRes = await uni.downloadFile({
-				url: qrCodeImageUrl.value
-			})
+			const downloadRes = await downloadRemoteFile(qrCodeImageUrl.value)
 			
 			uni.hideLoading()
 			
@@ -435,22 +472,11 @@
 				throw new Error('下载图片失败')
 			}
 
-			// 分享图片
-			uni.share({
-				provider: 'weixin',
-				type: 0, // 图片
-				imageUrl: downloadRes.tempFilePath,
-				title: t('chat.groupQrcode.shareTitle', { groupName: groupName.value }),
-				success: () => {
-					console.log('[GroupQRCode] 分享成功')
-				},
-				fail: (err: any) => {
-					console.error('[GroupQRCode] 分享失败:', err)
-					throw err
-				}
-			} as any)
+			await shareImage(downloadRes.tempFilePath, t('chat.groupQrcode.shareTitle', { groupName: groupName.value }))
+			console.log('[GroupQRCode] 分享成功')
 		} catch (e) {
 			console.error('[GroupQRCode] 分享失败:', e)
+			uni.hideLoading()
 			
 			if (inviteLandingUrl.value) {
 				uni.setClipboardData({
@@ -767,6 +793,5 @@
 	.debug-text {
 		font-size: 11px;
 		color: #856404;
-		word-break: break-all;
 	}
 </style>

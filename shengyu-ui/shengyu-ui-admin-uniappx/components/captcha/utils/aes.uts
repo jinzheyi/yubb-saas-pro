@@ -8,6 +8,7 @@
  * 支持平台：
  * - Android: 使用 javax.crypto.Cipher
  * - iOS: 使用 CommonCrypto (需要 Swift 桥接)
+ * - HarmonyOS: 通过全局 provider 接入 ArkTS/原生插件
  * - Web: 使用 crypto-js 库
  */
 
@@ -31,12 +32,16 @@ export function aesEncrypt(word: string, keyWord: string): string {
 	// #ifdef APP-IOS
 	return aesEncryptIOS(word, keyWord)
 	// #endif
+
+	// #ifdef APP-HARMONY
+	return aesEncryptHarmony(word, keyWord)
+	// #endif
 	
 	// #ifdef H5
 	return aesEncryptWeb(word, keyWord)
 	// #endif
 	
-	// #ifndef APP-ANDROID || APP-IOS || H5
+	// #ifndef APP-ANDROID || APP-IOS || APP-HARMONY || H5
 	// 其他平台暂不支持
 	console.warn('当前平台暂不支持 AES 加密')
 	return word
@@ -57,14 +62,87 @@ export function aesDecrypt(word: string, keyWord: string): string {
 	// #ifdef APP-IOS
 	return aesDecryptIOS(word, keyWord)
 	// #endif
+
+	// #ifdef APP-HARMONY
+	return aesDecryptHarmony(word, keyWord)
+	// #endif
 	
 	// #ifdef H5
 	return aesDecryptWeb(word, keyWord)
 	// #endif
 	
-	// #ifndef APP-ANDROID || APP-IOS || H5
+	// #ifndef APP-ANDROID || APP-IOS || APP-HARMONY || H5
 	return word
 	// #endif
+}
+
+type HarmonyAESProvider = {
+	encrypt?: (word: string, keyWord: string) => string
+	decrypt?: (word: string, keyWord: string) => string
+}
+
+function getHarmonyAESProvider(): HarmonyAESProvider | null {
+	try {
+		const globalAny: any = globalThis as any
+		const provider = globalAny.__HARMONY_AES_PROVIDER__
+		if (provider != null) {
+			return provider as HarmonyAESProvider
+		}
+	} catch (e) {
+		// ignore
+	}
+	return null
+}
+
+export function registerHarmonyAESProvider(provider: HarmonyAESProvider): void {
+	try {
+		const globalAny: any = globalThis as any
+		globalAny.__HARMONY_AES_PROVIDER__ = provider
+	} catch (e) {
+		console.warn('注册 Harmony AES provider 失败:', e)
+	}
+}
+
+function createHarmonyAesError(code: string, message: string): Error {
+	const error: any = new Error(message)
+	error.code = code
+	return error as Error
+}
+
+function aesEncryptHarmony(word: string, keyWord: string): string {
+	const provider = getHarmonyAESProvider()
+	if (provider == null || typeof provider.encrypt !== 'function') {
+		const err = createHarmonyAesError(
+			'HARMONY_AES_PROVIDER_UNAVAILABLE',
+			'HarmonyOS AES 加密 provider 未注册，请实现 __HARMONY_AES_PROVIDER__.encrypt'
+		)
+		console.error(err.message)
+		throw err
+	}
+	try {
+		return provider.encrypt(word, keyWord)
+	} catch (e) {
+		console.error('AES 加密失败 (HarmonyOS):', e)
+		throw e
+	}
+}
+
+function aesDecryptHarmony(word: string, keyWord: string): string {
+	const provider = getHarmonyAESProvider()
+	if (provider == null || typeof provider.decrypt !== 'function') {
+		const err = createHarmonyAesError(
+			'HARMONY_AES_PROVIDER_UNAVAILABLE',
+			'HarmonyOS AES 解密 provider 未注册，请实现 __HARMONY_AES_PROVIDER__.decrypt'
+		)
+		console.error(err.message)
+		throw err
+	}
+	try {
+		return provider.decrypt(word, keyWord)
+	} catch (e) {
+		console.error('AES 解密失败 (HarmonyOS):', e)
+		throw e
+	}
 }
 
 // #ifdef APP-ANDROID

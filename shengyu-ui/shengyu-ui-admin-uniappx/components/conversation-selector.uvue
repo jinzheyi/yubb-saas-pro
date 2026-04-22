@@ -354,7 +354,6 @@
 	.footer-actions {
 		display: flex;
 		flex-direction: row;
-		gap: 12px;
 	}
 	
 	.footer-btn {
@@ -363,6 +362,7 @@
 	}
 	
 	.footer-btn-cancel {
+		margin-right: 12px;
 		background-color: #f5f5f5;
 	}
 	
