@@ -16,6 +16,7 @@ class MessageDto {
     required this.chatId,
     required this.senderId,
     required this.senderName,
+    this.senderAvatar,
     required this.type,
     required this.status,
     required this.content,
@@ -64,6 +65,7 @@ class MessageDto {
   final String chatId;
   final String senderId;
   final String senderName;
+  final String? senderAvatar;
   final MessageType type;
   final MessageStatus status;
   final String content;
@@ -166,6 +168,11 @@ class MessageDto {
           '',
       senderId: isSystemTip ? _systemSenderId : resolvedSenderId,
       senderName: isSystemTip ? _systemSenderName : resolvedSenderName,
+      senderAvatar: isSystemTip
+          ? null
+          : (json['senderAvatar']?.toString() ??
+                json['avatarUrl']?.toString() ??
+                json['avatar']?.toString()),
       type: resolvedType,
       status: status,
       content: resolvedContent,

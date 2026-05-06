@@ -125,6 +125,19 @@ abstract final class MessageBubbleFactory {
           outgoingFooterLabel: outgoingFooterLabel,
         );
       case MessageType.custom:
+        if ((message.extra.customType?.trim().toUpperCase() ?? '') ==
+            'CONTACT_CARD') {
+          return ContactCardMessageBubble(
+            message: message,
+            onRetryMessage: onRetryMessage,
+            onOpenMessage: onOpenMessage,
+            onLongPressMessage: onLongPressMessage,
+            onOpenReadReceipt: onOpenReadReceipt,
+            enableReadReceiptEntry: enableReadReceiptEntry,
+            showOutgoingStatusFooter: showOutgoingStatusFooter,
+            outgoingFooterLabel: outgoingFooterLabel,
+          );
+        }
         return CustomMessageBubble(
           message: message,
           onRetryMessage: onRetryMessage,

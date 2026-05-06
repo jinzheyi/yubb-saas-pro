@@ -13,6 +13,7 @@ abstract final class MessageDtoMapper {
       chatId: dto.chatId,
       senderId: dto.senderId,
       senderName: dto.senderName,
+      senderAvatar: dto.senderAvatar,
       type: dto.type,
       status: dto.status,
       content: dto.content,

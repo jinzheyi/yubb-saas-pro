@@ -22,9 +22,11 @@ class ChatComposer extends StatelessWidget {
     required this.onVoicePressEnd,
     required this.onVoicePressCancel,
     required this.onTapEmoji,
+    required this.focusNode,
     this.onChanged,
     this.fullExpanded = false,
     this.showExpandAction = false,
+    this.composerHeight = 40,
     this.onToggleExpand,
     this.quoteInfo,
     this.onClearQuote,
@@ -45,9 +47,11 @@ class ChatComposer extends StatelessWidget {
   final VoidCallback onVoicePressEnd;
   final VoidCallback onVoicePressCancel;
   final VoidCallback onTapEmoji;
+  final FocusNode focusNode;
   final ValueChanged<String>? onChanged;
   final bool fullExpanded;
   final bool showExpandAction;
+  final double composerHeight;
   final VoidCallback? onToggleExpand;
   final QuoteInfo? quoteInfo;
   final VoidCallback? onClearQuote;
@@ -98,6 +102,7 @@ class ChatComposer extends StatelessWidget {
                           padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                           child: TextField(
                             controller: controller,
+                            focusNode: focusNode,
                             expands: true,
                             maxLines: null,
                             minLines: null,
@@ -198,9 +203,9 @@ class ChatComposer extends StatelessWidget {
       child: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE8ECF3))),
+          border: Border(top: BorderSide(color: Color(0xFFE8ECF3), width: 1)),
         ),
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.only(bottom: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -208,9 +213,9 @@ class ChatComposer extends StatelessWidget {
               _QuoteReplyBar(quoteInfo: quoteInfo!, onClear: onClearQuote),
             ],
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _PlainToolButton(
                     icon: voiceMode ? AppIconKind.keyboard : AppIconKind.mic,
@@ -236,20 +241,21 @@ class ChatComposer extends StatelessWidget {
                             onPressCancel: onVoicePressCancel,
                           )
                         : Container(
-                            constraints: const BoxConstraints(minHeight: 40),
+                            height: composerHeight,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF1F3F7),
+                              color: const Color(0xFFF5F5F5),
                               border: Border.all(
-                                color: const Color(0xFFE1E6EF),
-                                width: 1,
+                                color: const Color(0xFFEAECEF),
+                                width: 0.8,
                               ),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                            padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
                             child: TextField(
                               controller: controller,
+                              focusNode: focusNode,
                               minLines: 1,
-                              maxLines: 4,
+                              maxLines: null,
                               textInputAction: TextInputAction.send,
                               textAlignVertical: TextAlignVertical.center,
                               onTap: onTapInput,
@@ -260,13 +266,13 @@ class ChatComposer extends StatelessWidget {
                                 border: InputBorder.none,
                                 hintStyle: const TextStyle(
                                   color: Color(0xFF98A1B2),
-                                  fontSize: 16,
-                                  height: 24 / 16,
+                                  fontSize: 15,
+                                  height: 22 / 15,
                                 ),
                               ),
                               style: const TextStyle(
-                                fontSize: 16,
-                                height: 24 / 16,
+                                fontSize: 15,
+                                height: 22 / 15,
                                 color: Color(0xFF202531),
                               ),
                               inputFormatters: composer.inputFormatters,
@@ -275,7 +281,7 @@ class ChatComposer extends StatelessWidget {
                             ),
                           ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   _PlainToolButton(
                     icon: AppIconKind.smile,
                     onTap: isSending ? null : onTapEmoji,
@@ -299,7 +305,7 @@ class ChatComposer extends StatelessWidget {
                             onPressed: () => onSend(value.text),
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFF07C160),
-                              minimumSize: const Size(56, 32),
+                              minimumSize: const Size(58, 32),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                               ),
@@ -367,23 +373,27 @@ class _HoldToTalkButton extends StatelessWidget {
       onPointerUp: enabled ? (_) => onPressEnd() : null,
       onPointerCancel: enabled ? (_) => onPressCancel() : null,
       child: Container(
-        height: 38,
+        height: 36,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: enabled ? const Color(0xFFF1F3F7) : const Color(0xFFF7F8FB),
+          color: isRecording
+              ? const Color(0xFF2B3541)
+              : const Color(0xFFF5F5F5),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
             color: isCancelReady
                 ? const Color(0xFFFFC6C6)
-                : const Color(0xFFE1E6EF),
+                : const Color(0xFFEAECEF),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: enabled ? const Color(0xFF202531) : const Color(0xFF98A1B2),
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: !enabled
+                ? const Color(0xFF98A1B2)
+                : (isRecording ? Colors.white : const Color(0xFF202531)),
           ),
         ),
       ),
@@ -404,7 +414,7 @@ class _QuoteReplyBar extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF6F8FC),
         border: const Border(
           top: BorderSide(color: Color(0xFFE5E6EB), width: 0.5),
         ),
@@ -416,7 +426,7 @@ class _QuoteReplyBar extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFF6F8FC),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(4),
                 border: const Border(
                   left: BorderSide(color: Color(0xFF1677FF), width: 3),
@@ -491,11 +501,15 @@ class _PlainToolButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: SizedBox(
-        width: 28,
-        height: 40,
+        width: 32,
+        height: 36,
         child: icon is AppIconKind
-            ? AppIcon(icon as AppIconKind, size: 28, color: iconColor)
-            : Icon(icon as IconData, size: 28, color: iconColor),
+            ? Center(
+                child: AppIcon(icon as AppIconKind, size: 26, color: iconColor),
+              )
+            : Center(
+                child: Icon(icon as IconData, size: 26, color: iconColor),
+              ),
       ),
     );
   }

@@ -327,7 +327,10 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
         groupId: entryArgs.targetId ?? entryArgs.chatId,
         chatId: entryArgs.chatId,
       ),
-      _ => UploadScope.directChat(chatId: entryArgs.chatId),
+      _ => UploadScope.directChat(
+        chatId: entryArgs.chatId,
+        targetUserId: entryArgs.targetId ?? '',
+      ),
     };
   }
 
@@ -530,6 +533,7 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       preview: _messagePreviewFormatter.formatConversationPreview(
         type: message.type,
         content: message.content,
+        customType: message.extra.customType,
         fileName: message.extra.fileName,
         systemEventKey: message.extra.systemEventKey,
         conversationType: entryArgs.conversationType,

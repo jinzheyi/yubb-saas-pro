@@ -3,11 +3,18 @@ class UploadScope {
     required this.kind,
     this.chatId,
     this.groupId,
+    this.targetUserId,
     this.userId,
   });
 
-  const UploadScope.directChat({required String chatId})
-    : this._(kind: UploadScopeKind.directChat, chatId: chatId);
+  const UploadScope.directChat({
+    required String chatId,
+    required String targetUserId,
+  }) : this._(
+         kind: UploadScopeKind.directChat,
+         chatId: chatId,
+         targetUserId: targetUserId,
+       );
 
   const UploadScope.groupChat({required String groupId, required String chatId})
     : this._(kind: UploadScopeKind.groupChat, groupId: groupId, chatId: chatId);
@@ -21,12 +28,21 @@ class UploadScope {
   final UploadScopeKind kind;
   final String? chatId;
   final String? groupId;
+  final String? targetUserId;
   final String? userId;
 
   String requireChatId() {
     final value = chatId;
     if (value == null || value.isEmpty) {
       throw StateError('upload scope has no chatId');
+    }
+    return value;
+  }
+
+  String requireTargetUserId() {
+    final value = targetUserId;
+    if (value == null || value.isEmpty) {
+      throw StateError('upload scope has no targetUserId');
     }
     return value;
   }

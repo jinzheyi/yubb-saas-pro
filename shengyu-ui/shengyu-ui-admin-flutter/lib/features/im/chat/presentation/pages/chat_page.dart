@@ -130,6 +130,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Timer? _recordingTimer;
   Timer? _reeditTicker;
   late final TextEditingController _mentionSearchController;
+  late final FocusNode _composerFocusNode;
   final Map<String, bool> _voicePlayedPendingSync = <String, bool>{};
   String? _activePlayingVoiceMessageId;
   String? _activePausedVoiceMessageId;
@@ -161,6 +162,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _timelineScrollController = ScrollController()
       ..addListener(_handleTimelineScroll);
     _mentionSearchController = TextEditingController();
+    _composerFocusNode = FocusNode();
     _activeHighlightedMessageId =
         widget.args.highlightedMessageId ?? widget.args.anchorMessageId;
     _timelineSubscription = ref.listenManual<ChatTimelineState>(
@@ -198,6 +200,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     unawaited(_flushVoicePlayedSyncQueue(force: true));
     _timelineScrollController.dispose();
     _mentionSearchController.dispose();
+    _composerFocusNode.dispose();
     super.dispose();
   }
 
@@ -310,6 +313,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ? const AsyncValue<List<GroupMember>>.data(<GroupMember>[])
         : ref.watch(groupMembersFutureProvider(groupId));
     final currentUserId = ref.watch(authSessionProvider).userId;
+    final currentUserAvatarUrl =
+        ref.watch(currentUserProfileProvider).valueOrNull?.avatarUrl ?? '';
     final groupMembers = groupMembersAsync.valueOrNull ?? const <GroupMember>[];
     final groupRestrictionHint = _resolveGroupSendRestrictionHint(
       groupSettingsState: groupSettingsState,
@@ -338,6 +343,129 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       conversation: conversation,
       groupSettingsState: groupSettingsState,
     );
+    final shouldShowEditableComposer =
+        !_isSelectionMode &&
+        !pageState.isReadOnly &&
+        groupRestrictionHint == null;
+    final fullExpandedComposerOnly =
+        shouldShowEditableComposer && _isFullExpanded;
+    final composerWidget = ChatComposer(
+      composer: composer,
+      focusNode: _composerFocusNode,
+      isSending: isBusy,
+      hintText: strings.inputMessage,
+      quoteInfo: _quoteInfo,
+      onClearQuote: _clearQuoteReply,
+      onTapInput: () {
+        if (_isMorePanelVisible || _isEmojiPanelVisible) {
+          setState(() {
+            _isMorePanelVisible = false;
+            _isEmojiPanelVisible = false;
+          });
+        }
+      },
+      onChanged: (value) {
+        _updateComposerLineCount(value);
+        _handleComposerChanged(
+          value,
+          isGroupChat: isGroupChat,
+          groupId: groupId,
+          isReadOnly: pageState.isReadOnly,
+        );
+      },
+      onTapVoice: () {
+        if (_isMorePanelVisible || _isEmojiPanelVisible) {
+          setState(() {
+            _isMorePanelVisible = false;
+            _isEmojiPanelVisible = false;
+          });
+        }
+        if (_isMentionPanelVisible) {
+          _closeMentionPanel();
+        }
+        setState(() {
+          _isVoiceMode = !_isVoiceMode;
+        });
+      },
+      fullExpanded: _isFullExpanded,
+      showExpandAction: _showExpandIcon(composer.textController.text),
+      composerHeight: _composerHeight(),
+      onToggleExpand: _toggleFullExpand,
+      voiceMode: _isVoiceMode,
+      isRecording: _isRecording,
+      isCancelReady: _isCancelReady,
+      onVoicePressStart: _startVoiceRecording,
+      onVoicePressMove: _updateVoiceRecordingGesture,
+      onVoicePressEnd: _finishVoiceRecording,
+      onVoicePressCancel: _cancelVoiceRecording,
+      onTapEmoji: () {
+        setState(() {
+          _isEmojiPanelVisible = !_isEmojiPanelVisible;
+          if (_isEmojiPanelVisible) {
+            _isMorePanelVisible = false;
+          }
+        });
+        if (_isEmojiPanelVisible && _isMentionPanelVisible) {
+          _closeMentionPanel();
+        }
+      },
+      onSend: (value) async {
+        if (!_ensureConversationWritable(context)) {
+          return;
+        }
+        final mentionPayload = _buildMentionPayload(value);
+        final sent = await ref
+            .read(chatControllerProvider.notifier)
+            .sendText(
+              value,
+              quoteInfo: _quoteInfo,
+              atUserIds: mentionPayload.atUserIds,
+              mentions: mentionPayload.mentions,
+            );
+        if (!sent) {
+          if (!context.mounted) {
+            return;
+          }
+          final error = ref.read(chatControllerProvider).error;
+          if (_handleGroupLifecycleRequestError(
+            context,
+            error,
+            fallbackNotice: strings.chatGroupRemovedCannotSend,
+          )) {
+            return;
+          }
+          final errorMessage = error?.message.trim() ?? '';
+          _showAttachmentError(
+            context,
+            errorMessage.isNotEmpty ? errorMessage : strings.messageFailed,
+          );
+          return;
+        }
+        composer.clear();
+        _updateComposerLineCount('');
+        _clearQuoteReply();
+        _resetMentionState();
+        if (_isMorePanelVisible || _isEmojiPanelVisible || _isFullExpanded) {
+          setState(() {
+            _isMorePanelVisible = false;
+            _isEmojiPanelVisible = false;
+            _isFullExpanded = false;
+          });
+        }
+      },
+      onOpenAttachmentMenu: () {
+        setState(() {
+          _isMorePanelVisible = !_isMorePanelVisible;
+          if (_isMorePanelVisible) {
+            _isEmojiPanelVisible = false;
+          }
+        });
+        if ((_isMorePanelVisible || _isEmojiPanelVisible) &&
+            _isMentionPanelVisible) {
+          _closeMentionPanel();
+        }
+      },
+    );
     final body = switch (pageState.pageStatus) {
       ChatPageStatus.initial ||
       ChatPageStatus.initializing => const AppLoadingView(),
@@ -347,7 +475,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           unawaited(_initializeChatPage());
         },
       ),
-      ChatPageStatus.ready => Column(
+      ChatPageStatus.ready => fullExpandedComposerOnly
+          ? composerWidget
+          : Column(
         children: [
           if (!_isSelectionMode && groupNoticeText.isNotEmpty)
             ChatGroupNoticeBanner(
@@ -482,6 +612,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   onOpenQuotedMessage: _openQuotedMessage,
                   onReeditRecalledMessage: _handleReeditAfterRecall,
                   reeditNowTs: _reeditNowTs,
+                  showSenderNamesForIncoming: isGroupChat,
+                  watermarkText: currentUserId.trim().isEmpty
+                      ? '同事A 1234'
+                      : currentUserId.trim(),
+                  currentUserAvatarUrl: currentUserAvatarUrl,
                   outgoingFooterLabelBuilder: isGroupChat
                       ? (message) =>
                             _buildReadReceiptEntryText(message, strings)
@@ -502,131 +637,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   : groupRestrictionHint!,
             )
           else ...[
-            ChatComposer(
-              composer: composer,
-              isSending: isBusy,
-              hintText: strings.inputMessage,
-              quoteInfo: _quoteInfo,
-              onClearQuote: _clearQuoteReply,
-              onTapInput: () {
-                if (_isMorePanelVisible || _isEmojiPanelVisible) {
-                  setState(() {
-                    _isMorePanelVisible = false;
-                    _isEmojiPanelVisible = false;
-                  });
-                }
-              },
-              onChanged: (value) {
-                _updateComposerLineCount(value);
-                _handleComposerChanged(
-                  value,
-                  isGroupChat: isGroupChat,
-                  groupId: groupId,
-                  isReadOnly: pageState.isReadOnly,
-                );
-              },
-              onTapVoice: () {
-                if (_isMorePanelVisible || _isEmojiPanelVisible) {
-                  setState(() {
-                    _isMorePanelVisible = false;
-                    _isEmojiPanelVisible = false;
-                  });
-                }
-                if (_isMentionPanelVisible) {
-                  _closeMentionPanel();
-                }
-                FocusScope.of(context).unfocus();
-                setState(() {
-                  _isFullExpanded = false;
-                  _isVoiceMode = !_isVoiceMode;
-                });
-              },
-              fullExpanded: _isFullExpanded,
-              showExpandAction: _showExpandIcon(composer.textController.text),
-              onToggleExpand: _toggleFullExpand,
-              voiceMode: _isVoiceMode,
-              isRecording: _isRecording,
-              isCancelReady: _isCancelReady,
-              onVoicePressStart: _startVoiceRecording,
-              onVoicePressMove: _updateVoiceRecordingGesture,
-              onVoicePressEnd: _finishVoiceRecording,
-              onVoicePressCancel: _cancelVoiceRecording,
-              onTapEmoji: () {
-                FocusScope.of(context).unfocus();
-                setState(() {
-                  _isEmojiPanelVisible = !_isEmojiPanelVisible;
-                  if (_isEmojiPanelVisible) {
-                    _isMorePanelVisible = false;
-                    _isFullExpanded = false;
-                  }
-                });
-                if (_isEmojiPanelVisible && _isMentionPanelVisible) {
-                  _closeMentionPanel();
-                }
-              },
-              onSend: (value) async {
-                if (!_ensureConversationWritable(context)) {
-                  return;
-                }
-                final mentionPayload = _buildMentionPayload(value);
-                final sent = await ref
-                    .read(chatControllerProvider.notifier)
-                    .sendText(
-                      value,
-                      quoteInfo: _quoteInfo,
-                      atUserIds: mentionPayload.atUserIds,
-                      mentions: mentionPayload.mentions,
-                    );
-                if (!sent) {
-                  if (!context.mounted) {
-                    return;
-                  }
-                  final error = ref.read(chatControllerProvider).error;
-                  if (_handleGroupLifecycleRequestError(
-                    context,
-                    error,
-                    fallbackNotice: strings.chatGroupRemovedCannotSend,
-                  )) {
-                    return;
-                  }
-                  final errorMessage = error?.message.trim() ?? '';
-                  _showAttachmentError(
-                    context,
-                    errorMessage.isNotEmpty
-                        ? errorMessage
-                        : strings.messageFailed,
-                  );
-                  return;
-                }
-                composer.clear();
-                _updateComposerLineCount('');
-                _clearQuoteReply();
-                _resetMentionState();
-                if (_isMorePanelVisible ||
-                    _isEmojiPanelVisible ||
-                    _isFullExpanded) {
-                  setState(() {
-                    _isMorePanelVisible = false;
-                    _isEmojiPanelVisible = false;
-                    _isFullExpanded = false;
-                  });
-                }
-              },
-              onOpenAttachmentMenu: () {
-                FocusScope.of(context).unfocus();
-                setState(() {
-                  _isMorePanelVisible = !_isMorePanelVisible;
-                  if (_isMorePanelVisible) {
-                    _isFullExpanded = false;
-                    _isEmojiPanelVisible = false;
-                  }
-                });
-                if ((_isMorePanelVisible || _isEmojiPanelVisible) &&
-                    _isMentionPanelVisible) {
-                  _closeMentionPanel();
-                }
-              },
-            ),
+            composerWidget,
             if (_isMentionPanelVisible && !_isVoiceMode)
               ChatMentionPanel(
                 searchController: _mentionSearchController,
@@ -1472,12 +1483,29 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   static const int _composerExpandTriggerLine = 3;
   static const int _composerMaxLines = 9;
+  static const double _composerMinHeight = 40;
+  static const double _composerLineHeight = 24;
+  static const double _composerVerticalPadding = 16;
+  static const double _composerMaxHeight = 232;
   static const double _composerWrapUnitsPerLine = 13;
 
   bool _showExpandIcon(String text) {
     return !_isVoiceMode &&
         text.trim().isNotEmpty &&
         _composerLineCount >= _composerExpandTriggerLine;
+  }
+
+  double _composerHeight() {
+    final normalizedLineCount = _composerLineCount.clamp(1, _composerMaxLines);
+    final height =
+        _composerVerticalPadding + normalizedLineCount * _composerLineHeight;
+    if (height < _composerMinHeight) {
+      return _composerMinHeight;
+    }
+    if (height > _composerMaxHeight) {
+      return _composerMaxHeight;
+    }
+    return height;
   }
 
   void _updateComposerLineCount(String text) {
@@ -1535,13 +1563,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _toggleFullExpand() {
-    FocusScope.of(context).unfocus();
     setState(() {
       _isFullExpanded = !_isFullExpanded;
       if (_isFullExpanded) {
         _isMorePanelVisible = false;
         _isEmojiPanelVisible = false;
       }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _composerFocusNode.requestFocus();
     });
   }
 
@@ -1952,7 +1985,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       unawaited(_toggleVoicePlayback(message));
       return;
     }
-    if (message.type == MessageType.contactCard) {
+    if (_isContactCardMessage(message)) {
       final userId = message.extra.contactUserId;
       if (userId == null || userId.isEmpty) {
         _showAttachmentError(
@@ -1980,6 +2013,25 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       return;
     }
     if (message.type == MessageType.custom) {
+      if (_isContactCardMessage(message)) {
+        final userId = message.extra.contactUserId;
+        if (userId == null || userId.isEmpty) {
+          _showAttachmentError(
+            context,
+            ref.read(appStringsProvider).chatContactMissing,
+          );
+          return;
+        }
+        context.pushNamed(
+          RouteNames.contactsProfile,
+          extra: <String, String>{
+            'userId': userId,
+            'name': message.extra.contactDisplayName ?? message.senderName,
+            'departmentName': message.extra.contactDepartmentName ?? '',
+          },
+        );
+        return;
+      }
       if (message.extra.customType?.toUpperCase() == 'FORWARD_COMBINE') {
         final messageId = message.messageId.trim();
         if (messageId.isNotEmpty && messageId != '0') {
@@ -3189,7 +3241,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     const itemHeight = 70.0;
     const edgePadding = 10.0;
     final maxMenuWidth = mediaQuery.size.width - edgePadding * 2;
-    final itemsPerRow = (maxMenuWidth / itemWidth).floor().clamp(1, 5);
+    final itemsPerRow = (maxMenuWidth / itemWidth).floor().clamp(1, actions.length);
     final actualItemsPerRow = actions.length < itemsPerRow
         ? actions.length
         : itemsPerRow;
@@ -3197,11 +3249,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final rowCount = (actions.length / actualItemsPerRow).ceil();
     final menuHeight = rowCount * itemHeight;
     final headerTop = mediaQuery.padding.top + kToolbarHeight + 10;
-    final footerBottom = mediaQuery.padding.bottom + 120;
-    final maxLeft = mediaQuery.size.width - menuWidth - edgePadding;
+    const footerHeight = 120.0;
     final minLeft = edgePadding;
-    final maxTop = mediaQuery.size.height - footerBottom - menuHeight;
+    final maxLeft = mediaQuery.size.width - menuWidth - edgePadding;
     final minTop = headerTop;
+    final availableBottom =
+        mediaQuery.size.height - mediaQuery.padding.bottom - footerHeight - 10;
     var left = globalPosition.dx - menuWidth / 2;
     if (left < minLeft) {
       left = minLeft;
@@ -3211,11 +3264,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     var top = globalPosition.dy - menuHeight - 10;
     if (top < minTop) {
       top = globalPosition.dy + 10;
-      if (top > maxTop) {
-        top = maxTop;
-      }
-      if (top < minTop) {
-        top = minTop;
+      if (top + menuHeight > availableBottom) {
+        top = availableBottom - menuHeight;
+        if (top < minTop) {
+          top = globalPosition.dy - menuHeight / 2;
+          if (top < minTop) {
+            top = minTop;
+          }
+          if (top + menuHeight > availableBottom) {
+            top = availableBottom - menuHeight;
+          }
+        }
       }
     }
 
@@ -3224,6 +3283,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       barrierDismissible: true,
       barrierLabel: 'message-actions',
       barrierColor: const Color(0x1A000000),
+      transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
       pageBuilder: (dialogContext, animation, secondaryAnimation) {
         return Material(
           color: Colors.transparent,
@@ -3383,10 +3445,22 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       case MessageType.file:
         return true;
       case MessageType.custom:
+        if (_isContactCardMessage(message)) {
+          return false;
+        }
         return _isLinkMessage(message);
       default:
         return false;
     }
+  }
+
+  bool _isContactCardMessage(Message message) {
+    if (message.type == MessageType.contactCard) {
+      return true;
+    }
+    return message.type == MessageType.custom &&
+        (message.extra.customType?.trim().toUpperCase() ?? '') ==
+            'CONTACT_CARD';
   }
 
   bool _isLinkMessage(Message message) {
@@ -3814,6 +3888,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 .formatConversationPreview(
                   type: recalled.type,
                   content: recalled.content,
+                  customType: recalled.extra.customType,
                   fileName: recalled.extra.fileName,
                   systemEventKey: recalled.extra.systemEventKey,
                   conversationType: pageState.entryArgs.conversationType,
@@ -4081,7 +4156,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   String _buildQuotePreview(Message message) {
     return ref
         .read(messagePreviewFormatterProvider)
-        .format(type: message.type, content: message.content);
+        .format(
+          type: message.type,
+          content: message.content,
+          customType: message.extra.customType,
+        );
   }
 
   void _clearQuoteReply() {
@@ -4933,6 +5012,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               .formatConversationPreview(
                 type: localMessage.type,
                 content: localMessage.content,
+                customType: localMessage.extra.customType,
                 fileName: localMessage.extra.fileName,
                 systemEventKey: localMessage.extra.systemEventKey,
                 conversationType: widget.args.conversationType,
@@ -5002,6 +5082,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 .formatConversationPreview(
                   type: effectiveMessage.type,
                   content: effectiveMessage.content,
+                  customType: effectiveMessage.extra.customType,
                   fileName: effectiveMessage.extra.fileName,
                   systemEventKey: effectiveMessage.extra.systemEventKey,
                   conversationType: widget.args.conversationType,
@@ -5048,7 +5129,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         groupId: widget.args.targetId ?? widget.args.chatId,
         chatId: widget.args.chatId,
       ),
-      _ => UploadScope.directChat(chatId: widget.args.chatId),
+      _ => UploadScope.directChat(
+        chatId: widget.args.chatId,
+        targetUserId: widget.args.targetId ?? '',
+      ),
     };
   }
 
@@ -5263,71 +5347,41 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     String emojiCode,
   ) {
     final controller = composer.textController;
-    final value = controller.value;
-    final text = value.text;
-    final selection = value.selection;
-    final start = selection.isValid ? selection.start : text.length;
-    final end = selection.isValid ? selection.end : text.length;
-    final safeStart = start.clamp(0, text.length);
-    final safeEnd = end.clamp(0, text.length);
-    final nextText =
-        text.substring(0, safeStart) + emojiCode + text.substring(safeEnd);
-    final nextOffset = safeStart + emojiCode.length;
+    final text = controller.text;
+    final nextText = '$text$emojiCode';
     controller.value = TextEditingValue(
       text: nextText,
-      selection: TextSelection.collapsed(offset: nextOffset),
+      selection: TextSelection.collapsed(offset: nextText.length),
     );
     _updateComposerLineCount(nextText);
   }
 
   void _deleteEmojiFromComposer(ChatComposerController composer) {
     final controller = composer.textController;
-    final value = controller.value;
-    final text = value.text;
+    final text = controller.text;
     if (text.isEmpty) {
       return;
     }
-    final selection = value.selection;
-    final start = selection.isValid ? selection.start : text.length;
-    final end = selection.isValid ? selection.end : text.length;
-    final safeStart = start.clamp(0, text.length);
-    final safeEnd = end.clamp(0, text.length);
-    if (safeStart != safeEnd) {
-      final nextText = text.substring(0, safeStart) + text.substring(safeEnd);
-      controller.value = TextEditingValue(
-        text: nextText,
-        selection: TextSelection.collapsed(offset: safeStart),
-      );
-      _updateComposerLineCount(nextText);
-      return;
-    }
-    if (safeStart <= 0) {
-      return;
-    }
-    final tokenRegex = RegExp(r'\[[\u4e00-\u9fa5\w]+\]');
-    RegExpMatch? tokenMatch;
-    for (final match in tokenRegex.allMatches(text)) {
-      if (safeStart > match.start && safeStart <= match.end) {
-        tokenMatch = match;
-      }
-    }
-    if (tokenMatch != null) {
-      final nextText =
-          text.substring(0, tokenMatch.start) + text.substring(tokenMatch.end);
-      controller.value = TextEditingValue(
-        text: nextText,
-        selection: TextSelection.collapsed(offset: tokenMatch.start),
-      );
-      _updateComposerLineCount(nextText);
-      return;
-    }
-    final nextText =
-        text.substring(0, safeStart - 1) + text.substring(safeStart);
+    final nextText = _removeLastComposerUnit(text);
     controller.value = TextEditingValue(
       text: nextText,
-      selection: TextSelection.collapsed(offset: safeStart - 1),
+      selection: TextSelection.collapsed(offset: nextText.length),
     );
     _updateComposerLineCount(nextText);
+  }
+
+  String _removeLastComposerUnit(String text) {
+    if (text.isEmpty) {
+      return '';
+    }
+    final matches = ChatEmojiCatalog.tokenRegExp.allMatches(text).toList();
+    if (matches.isNotEmpty) {
+      final lastMatch = matches.last;
+      if (lastMatch.end == text.length) {
+        return text.substring(0, lastMatch.start);
+      }
+    }
+    return text.substring(0, text.length - 1);
   }
 }
 
@@ -6086,55 +6140,17 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
     return SafeArea(
       top: false,
       child: Container(
-        height: MediaQuery.of(context).size.height * 0.52,
+        height: 252,
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+          border: Border(top: BorderSide(color: Color(0xFFE8ECF3), width: 1)),
         ),
         child: Column(
           children: [
-            const SizedBox(height: 10),
-            Container(
-              width: 42,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFD8DEE9),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Row(
-                children: [
-                  _PickerTab(
-                    label: strings.chatEmojiTab,
-                    active: _tab == 'emoji',
-                    onTap: () => setState(() => _tab = 'emoji'),
-                  ),
-                  const SizedBox(width: 10),
-                  _PickerTab(
-                    label: strings.chatStickerTab,
-                    active: _tab == 'sticker',
-                    onTap: () => setState(() => _tab = 'sticker'),
-                  ),
-                  const Spacer(),
-                  if (_tab == 'emoji')
-                    IconButton(
-                      tooltip: strings.chatEmojiDelete,
-                      onPressed: widget.onDeleteEmoji,
-                      icon: const AppIcon(
-                        AppIconKind.backspace,
-                        size: 22,
-                        color: Color(0xFF202531),
-                      ),
-                    ),
-                ],
-              ),
-            ),
             Expanded(
               child: _tab == 'emoji'
                   ? ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
                       children: [
                         if (_recentEmojis.isNotEmpty) ...[
                           Text(
@@ -6144,7 +6160,7 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                               color: Color(0xFF98A1B2),
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           _EmojiGrid(
                             items: _recentEmojis,
                             onTap: (emojiCode) async {
@@ -6152,7 +6168,7 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                               widget.onInsertEmoji(emojiCode);
                             },
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 16),
                         ],
                         Text(
                           strings.chatEmojiAll,
@@ -6161,7 +6177,7 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                             color: Color(0xFF98A1B2),
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         _EmojiGrid(
                           items: _emojiItems,
                           onTap: (emojiCode) async {
@@ -6174,7 +6190,7 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                   : Column(
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
                           child: Row(
                             children: [
                               OutlinedButton.icon(
@@ -6239,10 +6255,10 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                               }
                               return GridView.builder(
                                 padding: const EdgeInsets.fromLTRB(
-                                  16,
-                                  8,
-                                  16,
-                                  16,
+                                  12,
+                                  2,
+                                  12,
+                                  10,
                                 ),
                                 gridDelegate:
                                     const SliverGridDelegateWithFixedCrossAxisCount(
@@ -6288,6 +6304,59 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
                       ],
                     ),
             ),
+            Container(
+              height: 44,
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Color(0xFFE8ECF3))),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _PickerIconTab(
+                      icon: AppIconKind.smile,
+                      active: _tab == 'emoji',
+                      onTap: () => setState(() => _tab = 'emoji'),
+                    ),
+                  ),
+                  Expanded(
+                    child: _PickerIconTab(
+                      icon: AppIconKind.starOutline,
+                      active: _tab == 'sticker',
+                      onTap: () => setState(() => _tab = 'sticker'),
+                    ),
+                  ),
+                  if (_tab == 'emoji')
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: InkWell(
+                        onTap: widget.onDeleteEmoji,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: 28,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFFE1E6EF),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: const Center(
+                            child: AppIcon(
+                              AppIconKind.backspace,
+                              size: 15,
+                              color: Color(0xFF6B7380),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 40),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -6321,9 +6390,9 @@ class _EmojiGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 5,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 1.7,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 1.42,
       ),
       itemCount: items.length,
       itemBuilder: (context, index) {
@@ -6334,8 +6403,8 @@ class _EmojiGrid extends StatelessWidget {
           onTap: () => onTap(item),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: const Color(0xFFF6F8FC),
-              borderRadius: BorderRadius.circular(10),
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
               child: assets.isEmpty
@@ -6360,14 +6429,14 @@ class _EmojiGrid extends StatelessWidget {
   }
 }
 
-class _PickerTab extends StatelessWidget {
-  const _PickerTab({
-    required this.label,
+class _PickerIconTab extends StatelessWidget {
+  const _PickerIconTab({
+    required this.icon,
     required this.active,
     required this.onTap,
   });
 
-  final String label;
+  final AppIconKind icon;
   final bool active;
   final VoidCallback onTap;
 
@@ -6375,19 +6444,21 @@ class _PickerTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: active ? const Color(0xFFEEF3FF) : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
+          border: active
+              ? const Border(
+                  top: BorderSide(color: Color(0xFF2F6BFF), width: 2),
+                )
+              : null,
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-            color: active ? const Color(0xFF246BFD) : const Color(0xFF6B7380),
+        child: Center(
+          child: AppIcon(
+            icon,
+            size: 22,
+            color: active
+                ? const Color(0xFF2F6BFF)
+                : const Color(0xFF98A1B2),
           ),
         ),
       ),

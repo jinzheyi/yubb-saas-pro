@@ -1,5 +1,6 @@
 import 'package:shengyu_ui_admin_im/features/im/chat/application/results/send_message_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_result.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_scope.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/repositories/message_repository.dart';
 
 class SendUploadedMessageUseCase {
@@ -22,6 +23,12 @@ class SendUploadedMessageUseCase {
       height: height,
       size: upload.file.size,
       clientMessageId: clientMessageId,
+      receiverId: upload.scope.kind == UploadScopeKind.directChat
+          ? upload.scope.requireTargetUserId()
+          : null,
+      groupId: upload.scope.kind == UploadScopeKind.groupChat
+          ? upload.scope.groupId
+          : null,
     );
   }
 
@@ -42,6 +49,12 @@ class SendUploadedMessageUseCase {
       height: height,
       size: upload.file.size,
       clientMessageId: clientMessageId,
+      receiverId: upload.scope.kind == UploadScopeKind.directChat
+          ? upload.scope.requireTargetUserId()
+          : null,
+      groupId: upload.scope.kind == UploadScopeKind.groupChat
+          ? upload.scope.groupId
+          : null,
     );
   }
 
@@ -57,6 +70,12 @@ class SendUploadedMessageUseCase {
       size: upload.file.size,
       fileType: upload.file.mimeType,
       clientMessageId: clientMessageId,
+      receiverId: upload.scope.kind == UploadScopeKind.directChat
+          ? upload.scope.requireTargetUserId()
+          : null,
+      groupId: upload.scope.kind == UploadScopeKind.groupChat
+          ? upload.scope.groupId
+          : null,
     );
   }
 }

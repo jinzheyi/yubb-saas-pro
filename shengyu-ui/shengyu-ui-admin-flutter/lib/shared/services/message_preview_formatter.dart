@@ -19,6 +19,7 @@ class MessagePreviewFormatter {
   String format({
     required MessageType type,
     required String content,
+    String? customType,
     String? fileName,
     String? systemEventKey,
   }) {
@@ -42,6 +43,13 @@ class MessagePreviewFormatter {
       case MessageType.sticker:
         return _isZh ? '[动画表情]' : '[Sticker]';
       case MessageType.custom:
+        final normalizedCustomType = (customType ?? '').trim().toUpperCase();
+        if (normalizedCustomType == 'CONTACT_CARD') {
+          return _isZh ? '[名片]' : '[Contact Card]';
+        }
+        if (normalizedCustomType == 'FORWARD_COMBINE') {
+          return _isZh ? '[聊天记录]' : '[Chat History]';
+        }
         return _isZh ? '[聊天记录]' : '[Chat History]';
       case MessageType.contactCard:
         return _isZh ? '[名片]' : '[Contact Card]';
@@ -58,6 +66,7 @@ class MessagePreviewFormatter {
   String formatConversationPreview({
     required MessageType type,
     required String content,
+    String? customType,
     required ConversationType conversationType,
     required bool isSelf,
     String? senderName,
@@ -67,6 +76,7 @@ class MessagePreviewFormatter {
     final summary = format(
       type: type,
       content: content,
+      customType: customType,
       fileName: fileName,
       systemEventKey: systemEventKey,
     );

@@ -97,7 +97,7 @@ class ChatController extends StateNotifier<ChatPageState> {
       return false;
     }
 
-    if (failedMessage.type == MessageType.contactCard) {
+    if (_isContactCardMessage(failedMessage)) {
       final payload = _restoreContactCardPayload(failedMessage);
       if (payload == null) {
         return false;
@@ -216,10 +216,13 @@ class ChatController extends StateNotifier<ChatPageState> {
     );
 
     try {
+      final target = _resolveLegacySendTarget();
       final result = await _sendMessageUseCase(
         chatId: localMessage.chatId,
         text: localMessage.content,
         clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
+        receiverId: target.receiverId,
+        groupId: target.groupId,
         quoteInfo: localMessage.quoteInfo,
         atUserIds: localMessage.extra.atUserIds,
         mentions: localMessage.extra.mentions,
@@ -267,6 +270,15 @@ class ChatController extends StateNotifier<ChatPageState> {
       postName: message.extra.contactPostName ?? '',
       avatar: message.extra.contactAvatar ?? '',
     );
+  }
+
+  bool _isContactCardMessage(Message message) {
+    if (message.type == MessageType.contactCard) {
+      return true;
+    }
+    return message.type == MessageType.custom &&
+        (message.extra.customType?.trim().toUpperCase() ?? '') ==
+            'CONTACT_CARD';
   }
 
   LocationSharePayload? _restoreLocationPayload(Message message) {
@@ -326,10 +338,13 @@ class ChatController extends StateNotifier<ChatPageState> {
       error: null,
     );
     try {
+      final target = _resolveLegacySendTarget();
       final result = await _sendMessageUseCase.sendContactCard(
         chatId: localMessage.chatId,
         payload: payload,
         clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
+        receiverId: target.receiverId,
+        groupId: target.groupId,
       );
       _timelineController.replaceSingleMessage(
         clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
@@ -382,10 +397,13 @@ class ChatController extends StateNotifier<ChatPageState> {
       error: null,
     );
     try {
+      final target = _resolveLegacySendTarget();
       final result = await _sendMessageUseCase.sendLocation(
         chatId: localMessage.chatId,
         payload: payload,
         clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
+        receiverId: target.receiverId,
+        groupId: target.groupId,
       );
       _timelineController.replaceSingleMessage(
         clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
@@ -438,10 +456,13 @@ class ChatController extends StateNotifier<ChatPageState> {
       error: null,
     );
     try {
+      final target = _resolveLegacySendTarget();
       final result = await _sendMessageUseCase.sendSticker(
         chatId: localMessage.chatId,
         payload: payload,
         clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
+        receiverId: target.receiverId,
+        groupId: target.groupId,
       );
       _timelineController.replaceSingleMessage(
         clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
@@ -491,6 +512,21 @@ class ChatController extends StateNotifier<ChatPageState> {
     );
   }
 
+  ({String? receiverId, String? groupId}) _resolveLegacySendTarget() {
+    if (state.entryArgs.conversationType == ConversationType.group) {
+      final groupId = (state.entryArgs.targetId ?? state.entryArgs.chatId).trim();
+      return (
+        receiverId: null,
+        groupId: groupId.isEmpty || groupId == '0' ? null : groupId,
+      );
+    }
+    final receiverId = (state.entryArgs.targetId ?? '').trim();
+    return (
+      receiverId: receiverId.isEmpty || receiverId == '0' ? null : receiverId,
+      groupId: null,
+    );
+  }
+
   void _patchConversationForDeliveredMessage({
     required String clientMessageId,
     required Message fallback,
@@ -505,6 +541,7 @@ class ChatController extends StateNotifier<ChatPageState> {
     return _messagePreviewFormatter.formatConversationPreview(
       type: message.type,
       content: message.content,
+      customType: message.extra.customType,
       fileName: message.extra.fileName,
       systemEventKey: message.extra.systemEventKey,
       conversationType: state.entryArgs.conversationType,

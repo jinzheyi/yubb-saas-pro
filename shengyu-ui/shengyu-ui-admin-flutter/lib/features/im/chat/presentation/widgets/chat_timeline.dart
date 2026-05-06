@@ -34,6 +34,9 @@ class ChatTimeline extends StatelessWidget {
     this.activeVoicePlaybackProgressMs = 0,
     this.activeVoicePlaybackDurationMs = 0,
     this.outgoingFooterLabelBuilder,
+    this.showSenderNamesForIncoming = false,
+    this.watermarkText,
+    this.currentUserAvatarUrl,
   });
 
   final List<Message> messages;
@@ -58,95 +61,109 @@ class ChatTimeline extends StatelessWidget {
   final int activeVoicePlaybackProgressMs;
   final int activeVoicePlaybackDurationMs;
   final String Function(Message message)? outgoingFooterLabelBuilder;
+  final bool showSenderNamesForIncoming;
+  final String? watermarkText;
+  final String? currentUserAvatarUrl;
 
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    return RefreshIndicator(
-      onRefresh: () async {
-        await onLoadOlder?.call();
-      },
-      child: ListView.builder(
-        controller: controller,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-        itemCount: messages.length + 1,
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return _LoadOlderBar(
-              isLoading: isLoadingOlder,
-              onTap: onLoadOlder == null
-                  ? null
-                  : () {
-                      unawaited(onLoadOlder!.call());
-                    },
-            );
-          }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        IgnorePointer(
+          child: _ChatWatermarkLayer(text: watermarkText ?? ''),
+        ),
+        RefreshIndicator(
+          onRefresh: () async {
+            await onLoadOlder?.call();
+          },
+          child: ListView.builder(
+            controller: controller,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+            itemCount: messages.length + 1,
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return _LoadOlderBar(
+                  isLoading: isLoadingOlder,
+                  onTap: onLoadOlder == null
+                      ? null
+                      : () {
+                          unawaited(onLoadOlder!.call());
+                        },
+                );
+              }
 
-          final messageIndex = index - 1;
-          final message = messages[messageIndex];
-          final isSelected = selectedMessageIds.contains(
-            _messageSelectionKey(message),
-          );
-          final isHighlighted =
-              highlightedMessageId != null &&
-              highlightedMessageId!.isNotEmpty &&
-              highlightedMessageId == message.messageId;
-          final shouldShowTime =
-              messageIndex == 0 ||
-              message.sentAt
-                      .difference(messages[messageIndex - 1].sentAt)
-                      .inMinutes
-                      .abs() >=
-                  5;
+              final messageIndex = index - 1;
+              final message = messages[messageIndex];
+              final isSelected = selectedMessageIds.contains(
+                _messageSelectionKey(message),
+              );
+              final isHighlighted =
+                  highlightedMessageId != null &&
+                  highlightedMessageId!.isNotEmpty &&
+                  highlightedMessageId == message.messageId;
+              final shouldShowTime =
+                  messageIndex == 0 ||
+                  message.sentAt
+                          .difference(messages[messageIndex - 1].sentAt)
+                          .inMinutes
+                          .abs() >=
+                      5;
 
-          return Column(
-            key:
-                messageItemKeys[_messageSelectionKey(message)] ??
-                messageItemKeys[message.messageId] ??
-                (message.clientMessageId == null
-                    ? null
-                    : messageItemKeys[message.clientMessageId!]),
-            children: [
-              if (shouldShowTime)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _TimeDivider(
-                    label: _formatTime(context, message.sentAt),
+              return Column(
+                key:
+                    messageItemKeys[_messageSelectionKey(message)] ??
+                    messageItemKeys[message.messageId] ??
+                    (message.clientMessageId == null
+                        ? null
+                        : messageItemKeys[message.clientMessageId!]),
+                children: [
+                  if (shouldShowTime)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _TimeDivider(
+                        label: _formatTime(context, message.sentAt),
+                      ),
+                    ),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      bottom: messageIndex == messages.length - 1 ? 0 : 16,
+                    ),
+                    child: _MessageRow(
+                      messages: messages,
+                      message: message,
+                      strings: strings,
+                      isSelected: isSelected,
+                      isHighlighted: isHighlighted,
+                      selectionMode: selectionMode,
+                      onRetryMessage: onRetryMessage,
+                      onOpenMessage: onOpenMessage,
+                      onOpenMentionUser: onOpenMentionUser,
+                      onOpenQuotedMessage: onOpenQuotedMessage,
+                      onReeditRecalledMessage: onReeditRecalledMessage,
+                      reeditNowTs: reeditNowTs,
+                      onOpenReadReceipt: onOpenReadReceipt,
+                      onLongPressMessage: onLongPressMessage,
+                      onToggleSelection: onToggleSelection,
+                      activePlayingVoiceMessageId: activePlayingVoiceMessageId,
+                      activePausedVoiceMessageId: activePausedVoiceMessageId,
+                      activeVoicePlaybackProgressMs:
+                          activeVoicePlaybackProgressMs,
+                      activeVoicePlaybackDurationMs:
+                          activeVoicePlaybackDurationMs,
+                      outgoingFooterLabelBuilder: outgoingFooterLabelBuilder,
+                      showSenderNamesForIncoming: showSenderNamesForIncoming,
+                      currentUserAvatarUrl: currentUserAvatarUrl,
+                    ),
                   ),
-                ),
-              Padding(
-                padding: EdgeInsets.only(
-                  bottom: messageIndex == messages.length - 1 ? 0 : 16,
-                ),
-                child: _MessageRow(
-                  messages: messages,
-                  message: message,
-                  strings: strings,
-                  isSelected: isSelected,
-                  isHighlighted: isHighlighted,
-                  selectionMode: selectionMode,
-                  onRetryMessage: onRetryMessage,
-                  onOpenMessage: onOpenMessage,
-                  onOpenMentionUser: onOpenMentionUser,
-                  onOpenQuotedMessage: onOpenQuotedMessage,
-                  onReeditRecalledMessage: onReeditRecalledMessage,
-                  reeditNowTs: reeditNowTs,
-                  onOpenReadReceipt: onOpenReadReceipt,
-                  onLongPressMessage: onLongPressMessage,
-                  onToggleSelection: onToggleSelection,
-                  activePlayingVoiceMessageId: activePlayingVoiceMessageId,
-                  activePausedVoiceMessageId: activePausedVoiceMessageId,
-                  activeVoicePlaybackProgressMs: activeVoicePlaybackProgressMs,
-                  activeVoicePlaybackDurationMs:
-                      activeVoicePlaybackDurationMs,
-                  outgoingFooterLabelBuilder: outgoingFooterLabelBuilder,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -194,6 +211,8 @@ class _MessageRow extends StatelessWidget {
     required this.activeVoicePlaybackProgressMs,
     required this.activeVoicePlaybackDurationMs,
     required this.outgoingFooterLabelBuilder,
+    required this.showSenderNamesForIncoming,
+    required this.currentUserAvatarUrl,
   });
 
   final List<Message> messages;
@@ -216,6 +235,8 @@ class _MessageRow extends StatelessWidget {
   final int activeVoicePlaybackProgressMs;
   final int activeVoicePlaybackDurationMs;
   final String Function(Message message)? outgoingFooterLabelBuilder;
+  final bool showSenderNamesForIncoming;
+  final String? currentUserAvatarUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -312,33 +333,45 @@ class _MessageRow extends StatelessWidget {
           )
         : bubble;
 
+    final senderDisplayName = _senderDisplayName(message);
+
     if (message.isOutgoing) {
-      return Align(
-        alignment: Alignment.centerRight,
-        child: messageBody,
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [messageBody],
+            ),
+          ),
+          const SizedBox(width: 12),
+          _Avatar(seed: senderDisplayName, imageUrl: currentUserAvatarUrl),
+        ],
       );
     }
 
-    final senderDisplayName = _senderDisplayName(message);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Avatar(seed: senderDisplayName),
+        _Avatar(seed: senderDisplayName, imageUrl: message.senderAvatar),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  senderDisplayName,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8F96A3),
+              if (showSenderNamesForIncoming)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    senderDisplayName,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF8F96A3),
+                    ),
                   ),
                 ),
-              ),
               messageBody,
             ],
           ),
@@ -437,6 +470,9 @@ String _messagePreview(Message message, AppLocalizations strings) {
     case MessageType.contactCard:
       return strings.chatPreviewContactCard;
     case MessageType.custom:
+      if (message.extra.customType?.toUpperCase() == 'CONTACT_CARD') {
+        return strings.chatPreviewContactCard;
+      }
       return message.extra.customType?.toUpperCase() == 'FORWARD_COMBINE'
           ? strings.chatForwardCombine
           : strings.chatCustomMessage;
@@ -716,13 +752,15 @@ class _LoadOlderBar extends StatelessWidget {
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.seed});
+  const _Avatar({required this.seed, this.imageUrl});
 
   final String seed;
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
     final initials = seed.isEmpty ? '?' : seed.substring(0, 1);
+    final resolvedImage = imageUrl?.trim() ?? '';
     return Container(
       width: 40,
       height: 40,
@@ -731,14 +769,16 @@ class _Avatar extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       alignment: Alignment.center,
-      child: Text(
-        initials,
-        style: const TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          color: Colors.white,
-        ),
-      ),
+      clipBehavior: Clip.antiAlias,
+      child: resolvedImage.isNotEmpty
+          ? Image.network(
+              resolvedImage,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return _AvatarFallback(initials: initials);
+              },
+            )
+          : _AvatarFallback(initials: initials),
     );
   }
 
@@ -750,5 +790,67 @@ class _Avatar extends StatelessWidget {
       Color(0xFF8FB8F7),
     ];
     return colors[seed.isEmpty ? 0 : seed.codeUnitAt(0) % colors.length];
+  }
+}
+
+class _AvatarFallback extends StatelessWidget {
+  const _AvatarFallback({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        initials,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatWatermarkLayer extends StatelessWidget {
+  const _ChatWatermarkLayer({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    if (text.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Opacity(
+      opacity: 0.03,
+      child: Transform.rotate(
+        angle: -25 * 3.1415926 / 180,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Wrap(
+            alignment: WrapAlignment.spaceAround,
+            runAlignment: WrapAlignment.spaceAround,
+            spacing: 8,
+            runSpacing: 24,
+            children: List<Widget>.generate(
+              12,
+              (index) => Padding(
+                padding: const EdgeInsets.all(40),
+                child: Text(
+                  text,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

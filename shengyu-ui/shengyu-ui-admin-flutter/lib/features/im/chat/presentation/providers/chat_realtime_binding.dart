@@ -85,6 +85,7 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
                 .formatConversationPreview(
                   type: effectiveMessage.type,
                   content: effectiveMessage.content,
+                  customType: effectiveMessage.extra.customType,
                   fileName: effectiveMessage.extra.fileName,
                   systemEventKey: effectiveMessage.extra.systemEventKey,
                   conversationType: pageState.entryArgs.conversationType,
@@ -208,6 +209,7 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
                 .formatConversationPreview(
                   type: effectiveRecalled.type,
                   content: effectiveRecalled.content,
+                  customType: effectiveRecalled.extra.customType,
                   fileName: effectiveRecalled.extra.fileName,
                   systemEventKey: effectiveRecalled.extra.systemEventKey,
                   conversationType: pageState.entryArgs.conversationType,

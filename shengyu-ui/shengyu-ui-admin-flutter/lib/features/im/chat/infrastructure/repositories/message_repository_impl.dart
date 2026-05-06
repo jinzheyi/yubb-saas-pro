@@ -329,6 +329,8 @@ class MessageRepositoryImpl implements MessageRepository {
     required String chatId,
     required String text,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
     QuoteInfo? quoteInfo,
     List<String> atUserIds = const <String>[],
     List<MentionSegment> mentions = const <MentionSegment>[],
@@ -337,7 +339,10 @@ class MessageRepositoryImpl implements MessageRepository {
       chatId: chatId,
       text: text,
       clientMessageId: clientMessageId,
+      receiverId: receiverId,
+      groupId: groupId,
       quoteInfo: quoteInfo,
+      atUserIds: atUserIds,
       mentions: mentions,
     );
     return SendMessageResult(message: MessageDtoMapper.toEntity(dto));
@@ -353,6 +358,8 @@ class MessageRepositoryImpl implements MessageRepository {
     required int height,
     required int size,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final dto = await _remoteDataSource.sendImageMessage(
       chatId: chatId,
@@ -363,6 +370,8 @@ class MessageRepositoryImpl implements MessageRepository {
       height: height,
       size: size,
       clientMessageId: clientMessageId,
+      receiverId: receiverId,
+      groupId: groupId,
     );
     return SendMessageResult(message: MessageDtoMapper.toEntity(dto));
   }
@@ -378,6 +387,8 @@ class MessageRepositoryImpl implements MessageRepository {
     required int height,
     required int size,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final dto = await _remoteDataSource.sendVideoMessage(
       chatId: chatId,
@@ -389,6 +400,8 @@ class MessageRepositoryImpl implements MessageRepository {
       height: height,
       size: size,
       clientMessageId: clientMessageId,
+      receiverId: receiverId,
+      groupId: groupId,
     );
     return SendMessageResult(message: MessageDtoMapper.toEntity(dto));
   }
@@ -404,6 +417,8 @@ class MessageRepositoryImpl implements MessageRepository {
     required String format,
     required String md5,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final dto = await _remoteDataSource.sendVoiceMessage(
       chatId: chatId,
@@ -415,6 +430,8 @@ class MessageRepositoryImpl implements MessageRepository {
       format: format,
       md5: md5,
       clientMessageId: clientMessageId,
+      receiverId: receiverId,
+      groupId: groupId,
     );
     return SendMessageResult(message: MessageDtoMapper.toEntity(dto));
   }
@@ -428,6 +445,8 @@ class MessageRepositoryImpl implements MessageRepository {
     required int size,
     required String fileType,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final dto = await _remoteDataSource.sendFileMessage(
       chatId: chatId,
@@ -437,6 +456,8 @@ class MessageRepositoryImpl implements MessageRepository {
       size: size,
       fileType: fileType,
       clientMessageId: clientMessageId,
+      receiverId: receiverId,
+      groupId: groupId,
     );
     return SendMessageResult(message: MessageDtoMapper.toEntity(dto));
   }
@@ -446,11 +467,15 @@ class MessageRepositoryImpl implements MessageRepository {
     required String chatId,
     required LocationSharePayload payload,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final dto = await _remoteDataSource.sendLocationMessage(
       chatId: chatId,
       payload: payload,
       clientMessageId: clientMessageId,
+      receiverId: receiverId,
+      groupId: groupId,
     );
     return SendMessageResult(message: MessageDtoMapper.toEntity(dto));
   }
@@ -460,11 +485,15 @@ class MessageRepositoryImpl implements MessageRepository {
     required String chatId,
     required StickerPayload payload,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final dto = await _remoteDataSource.sendStickerMessage(
       chatId: chatId,
       payload: payload,
       clientMessageId: clientMessageId,
+      receiverId: receiverId,
+      groupId: groupId,
     );
     return SendMessageResult(message: MessageDtoMapper.toEntity(dto));
   }
@@ -474,11 +503,15 @@ class MessageRepositoryImpl implements MessageRepository {
     required String chatId,
     required ContactCardSharePayload payload,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final dto = await _remoteDataSource.sendContactCardMessage(
       chatId: chatId,
       payload: payload,
       clientMessageId: clientMessageId,
+      receiverId: receiverId,
+      groupId: groupId,
     );
     return SendMessageResult(message: MessageDtoMapper.toEntity(dto));
   }

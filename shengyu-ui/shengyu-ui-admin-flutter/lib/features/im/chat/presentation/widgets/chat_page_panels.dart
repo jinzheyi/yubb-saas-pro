@@ -38,19 +38,19 @@ class ChatPageHeader extends StatelessWidget {
       shape: const Border(
         bottom: BorderSide(color: Color(0xFFE8ECF3), width: 0.5),
       ),
-      leadingWidth: 80,
+      leadingWidth: 74,
       leading: InkWell(
         onTap: () => Navigator.of(context).maybePop(),
         child: Padding(
-          padding: const EdgeInsets.only(left: 12),
+          padding: const EdgeInsets.only(left: 8),
           child: Row(
             children: [
               const AppIcon(
                 AppIconKind.chevronLeft,
-                size: 20,
+                size: 18,
                 color: Color(0xFF202531),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 2),
               Text(
                 AppLocalizations.of(context).backAction,
                 style: const TextStyle(
@@ -93,11 +93,11 @@ class ChatPageHeader extends StatelessWidget {
       actions: [
         IconButton(
           visualDensity: VisualDensity.compact,
-          splashRadius: 18,
+          splashRadius: 17,
           onPressed: onInitiateGroup,
           icon: const AppIcon(
             AppIconKind.groupAdd,
-            size: 22,
+            size: 21,
             color: Color(0xFF202531),
           ),
         ),
@@ -106,16 +106,16 @@ class ChatPageHeader extends StatelessWidget {
             padding: const EdgeInsets.only(left: 4),
             child: IconButton(
               visualDensity: VisualDensity.compact,
-              splashRadius: 18,
+              splashRadius: 17,
               onPressed: onOpenSettings,
               icon: const AppIcon(
                 AppIconKind.more,
-                size: 22,
+                size: 21,
                 color: Color(0xFF202531),
               ),
             ),
           ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
       ],
     );
   }
@@ -253,11 +253,11 @@ class ChatMorePanel extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      color: const Color(0xFFF6F8FC),
-      padding: const EdgeInsets.fromLTRB(10, 20, 10, 20),
+      color: const Color(0xFFF5F5F5),
+      padding: const EdgeInsets.fromLTRB(12, 18, 12, 12),
       child: Wrap(
         spacing: 0,
-        runSpacing: 20,
+        runSpacing: 18,
         children: [
           for (final item in items)
             _AttachmentActionButton(
@@ -290,8 +290,6 @@ class ChatMessageActionSheet extends StatelessWidget {
 
     const itemWidth = 70.0;
     const itemHeight = 70.0;
-    final columns = actions.length < 5 ? actions.length : 5;
-    final rows = (actions.length / columns).ceil();
 
     return SafeArea(
       child: Container(
@@ -314,22 +312,7 @@ class ChatMessageActionSheet extends StatelessWidget {
                 width: itemWidth,
                 height: itemHeight,
                 child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border(
-                      right: BorderSide(
-                        color: index % columns == columns - 1
-                            ? Colors.transparent
-                            : const Color(0xFFE8ECF3),
-                        width: 0.5,
-                      ),
-                      bottom: BorderSide(
-                        color: index ~/ columns >= rows - 1
-                            ? Colors.transparent
-                            : const Color(0xFFE8ECF3),
-                        width: 0.5,
-                      ),
-                    ),
-                  ),
+                  decoration: const BoxDecoration(),
                   child: InkWell(
                     onTap: () => onSelectAction(actions[index].action),
                     hoverColor: const Color(0x0F1F2329),
@@ -346,7 +329,7 @@ class ChatMessageActionSheet extends StatelessWidget {
                               ? const Color(0xFFFF4D4F)
                               : const Color(0xFF202531),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Text(
                           actions[index].label,
                           textAlign: TextAlign.center,
@@ -1317,15 +1300,15 @@ class _AttachmentActionButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: SizedBox(
-        width: 56,
+        width: 82,
         child: Column(
           children: [
             Container(
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: action.color,
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
               ),
               alignment: Alignment.center,
               child: _chatPanelIconWidget(

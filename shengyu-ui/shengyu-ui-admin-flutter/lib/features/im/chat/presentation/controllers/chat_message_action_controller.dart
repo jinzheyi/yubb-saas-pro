@@ -42,8 +42,14 @@ class ChatMessageActionController {
       case ChatMessageAction.recall:
         return const ChatMessageActionResult(noticeMessage: '');
       case ChatMessageAction.delete:
-        await _messageRepository.deleteMessage(messageId: message.messageId);
-        _chatTimelineController.removeByAnyMessageId(message.messageId);
+        final messageId = message.messageId.trim();
+        final clientMessageId = message.clientMessageId?.trim() ?? '';
+        if (messageId.isNotEmpty && messageId != '0') {
+          await _messageRepository.deleteMessage(messageId: messageId);
+        }
+        _chatTimelineController.removeByAnyMessageId(
+          messageId.isNotEmpty ? messageId : clientMessageId,
+        );
         return ChatMessageActionResult(noticeMessage: deletedNotice);
       case ChatMessageAction.multi:
         return const ChatMessageActionResult(noticeMessage: '');

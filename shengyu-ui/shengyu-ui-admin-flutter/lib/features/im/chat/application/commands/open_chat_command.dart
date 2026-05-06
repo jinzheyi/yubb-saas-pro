@@ -18,6 +18,34 @@ class OpenChatCommand {
   final String? anchorSequence;
   final String? anchorMessageId;
 
+  String? get windowMode {
+    return switch (entryMode) {
+      ChatEntryMode.latest => 'latest',
+      ChatEntryMode.anchor || ChatEntryMode.restore => null,
+    };
+  }
+
+  int? get windowLimit {
+    return switch (entryMode) {
+      ChatEntryMode.latest => 30,
+      ChatEntryMode.anchor || ChatEntryMode.restore => null,
+    };
+  }
+
+  int? get beforeLimit {
+    return switch (entryMode) {
+      ChatEntryMode.latest => null,
+      ChatEntryMode.anchor || ChatEntryMode.restore => 15,
+    };
+  }
+
+  int? get afterLimit {
+    return switch (entryMode) {
+      ChatEntryMode.latest => null,
+      ChatEntryMode.anchor || ChatEntryMode.restore => 10,
+    };
+  }
+
   factory OpenChatCommand.fromArgs(ChatEntryArgs args) {
     return OpenChatCommand(
       chatId: args.chatId,

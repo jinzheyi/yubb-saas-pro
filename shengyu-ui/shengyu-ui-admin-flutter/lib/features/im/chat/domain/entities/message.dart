@@ -9,6 +9,7 @@ class Message {
     required this.chatId,
     required this.senderId,
     required this.senderName,
+    this.senderAvatar,
     required this.type,
     required this.status,
     required this.content,
@@ -24,6 +25,7 @@ class Message {
   final String chatId;
   final String senderId;
   final String senderName;
+  final String? senderAvatar;
   final MessageType type;
   final MessageStatus status;
   final String content;
@@ -39,6 +41,7 @@ class Message {
     String? chatId,
     String? senderId,
     String? senderName,
+    String? senderAvatar,
     MessageType? type,
     MessageStatus? status,
     String? content,
@@ -54,6 +57,7 @@ class Message {
       chatId: chatId ?? this.chatId,
       senderId: senderId ?? this.senderId,
       senderName: senderName ?? this.senderName,
+      senderAvatar: senderAvatar ?? this.senderAvatar,
       type: type ?? this.type,
       status: status ?? this.status,
       content: content ?? this.content,

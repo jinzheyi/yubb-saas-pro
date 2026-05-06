@@ -30,8 +30,12 @@ class MessageWindowResponseDto {
           .whereType<Map<String, dynamic>>()
           .map(MessageDto.fromJson)
           .toList(),
-      hasMoreBefore: _parseBool(json['hasMoreBefore'] ?? json['beforeHasMore']),
-      hasMoreAfter: _parseBool(json['hasMoreAfter'] ?? json['afterHasMore']),
+      hasMoreBefore: _parseBool(
+        json['hasMoreBefore'] ?? json['beforeHasMore'] ?? json['hasOlder'],
+      ),
+      hasMoreAfter: _parseBool(
+        json['hasMoreAfter'] ?? json['afterHasMore'] ?? json['hasNewer'],
+      ),
       anchorFound: !_parseExplicitFalse(json['anchorFound']),
       anchorMessageId:
           json['anchorMessageId']?.toString() ?? json['anchorId']?.toString(),

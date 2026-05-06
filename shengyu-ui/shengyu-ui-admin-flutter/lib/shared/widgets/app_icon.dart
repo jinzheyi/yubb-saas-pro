@@ -104,6 +104,14 @@ class AppIcon extends StatelessWidget {
 
 IconData? _resolveLegacyIconData(AppIconKind kind) {
   switch (kind) {
+    case AppIconKind.groupAdd:
+      return ShengyuIconFont.duihua;
+    case AppIconKind.more:
+      return ShengyuIconFont.shezhi;
+    case AppIconKind.chevronLeft:
+      return ShengyuIconFont.jiantouLiebiaoxiangzuo;
+    case AppIconKind.chevronRight:
+      return ShengyuIconFont.jiantouLiebiaoxiangyou;
     case AppIconKind.qr:
       return ShengyuIconFont.erweima;
     case AppIconKind.muteOff:
@@ -114,10 +122,22 @@ IconData? _resolveLegacyIconData(AppIconKind kind) {
       return ShengyuIconFont.tupian1;
     case AppIconKind.camera:
       return ShengyuIconFont.paishe;
+    case AppIconKind.location:
+      return ShengyuIconFont.dingwei;
+    case AppIconKind.folder:
+      return ShengyuIconFont.wenjian;
+    case AppIconKind.badge:
+      return ShengyuIconFont.yonghu;
+    case AppIconKind.starOutline:
+      return ShengyuIconFont.shoucang;
     case AppIconKind.redo:
       return ShengyuIconFont.zhuanfa;
     case AppIconKind.delete:
       return ShengyuIconFont.shanchu;
+    case AppIconKind.add:
+      return ShengyuIconFont.jiahao;
+    case AppIconKind.backspace:
+      return ShengyuIconFont.jianhao;
     case AppIconKind.smile:
       return ShengyuIconFont.biaoqingbao;
     case AppIconKind.collections:

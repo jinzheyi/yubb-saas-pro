@@ -15,6 +15,8 @@ class SendMessageUseCase {
     required String chatId,
     required String text,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
     QuoteInfo? quoteInfo,
     List<String> atUserIds = const <String>[],
     List<MentionSegment> mentions = const <MentionSegment>[],
@@ -23,6 +25,8 @@ class SendMessageUseCase {
       chatId: chatId,
       text: text,
       clientMessageId: clientMessageId,
+      receiverId: receiverId,
+      groupId: groupId,
       quoteInfo: quoteInfo,
       atUserIds: atUserIds,
       mentions: mentions,
@@ -33,11 +37,15 @@ class SendMessageUseCase {
     required String chatId,
     required ContactCardSharePayload payload,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) {
     return _repository.sendContactCardMessage(
       chatId: chatId,
       payload: payload,
       clientMessageId: clientMessageId,
+      receiverId: receiverId,
+      groupId: groupId,
     );
   }
 
@@ -45,11 +53,15 @@ class SendMessageUseCase {
     required String chatId,
     required LocationSharePayload payload,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) {
     return _repository.sendLocationMessage(
       chatId: chatId,
       payload: payload,
       clientMessageId: clientMessageId,
+      receiverId: receiverId,
+      groupId: groupId,
     );
   }
 
@@ -57,11 +69,15 @@ class SendMessageUseCase {
     required String chatId,
     required StickerPayload payload,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) {
     return _repository.sendStickerMessage(
       chatId: chatId,
       payload: payload,
       clientMessageId: clientMessageId,
+      receiverId: receiverId,
+      groupId: groupId,
     );
   }
 }

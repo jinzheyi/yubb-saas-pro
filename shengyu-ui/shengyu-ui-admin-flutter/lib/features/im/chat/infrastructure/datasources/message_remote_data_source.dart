@@ -25,13 +25,24 @@ class MessageRemoteDataSource {
   Future<MessageWindowResponseDto> fetchLatestWindow(
     OpenChatCommand command,
   ) async {
+    final queryParameters = <String, dynamic>{
+      'chatId': command.chatId,
+      if (command.windowMode != null && command.windowMode!.isNotEmpty)
+        'mode': command.windowMode,
+      if (command.anchorSequence != null && command.anchorSequence!.isNotEmpty)
+        'anchorSequence': command.anchorSequence,
+      if (command.anchorMessageId != null && command.anchorMessageId!.isNotEmpty)
+        'anchorMessageId': command.anchorMessageId,
+      if (command.windowLimit != null && command.windowLimit! > 0)
+        'limit': command.windowLimit,
+      if (command.beforeLimit != null && command.beforeLimit! > 0)
+        'beforeLimit': command.beforeLimit,
+      if (command.afterLimit != null && command.afterLimit! > 0)
+        'afterLimit': command.afterLimit,
+    };
     final response = await dio.get(
       '/system/im/message/window',
-      queryParameters: {
-        'chatId': command.chatId,
-        'anchorSequence': command.anchorSequence,
-        'anchorMessageId': command.anchorMessageId,
-      },
+      queryParameters: queryParameters,
     );
     final result = ApiResult.fromJson<MessageWindowResponseDto>(
       response.data as Map<String, dynamic>,
@@ -50,7 +61,11 @@ class MessageRemoteDataSource {
   }) async {
     final response = await dio.get(
       '/system/im/message/history',
-      queryParameters: {'chatId': chatId, 'beforeSequence': beforeSequence},
+      queryParameters: {
+        'chatId': chatId,
+        'beforeSequence': beforeSequence,
+        'limit': 30,
+      },
     );
     final result = ApiResult.fromJson<MessageWindowResponseDto>(
       response.data as Map<String, dynamic>,
@@ -81,9 +96,16 @@ class MessageRemoteDataSource {
     required String chatId,
     required String text,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
     QuoteInfo? quoteInfo,
+    List<String> atUserIds = const <String>[],
     List<MentionSegment> mentions = const <MentionSegment>[],
   }) async {
+    final normalizedAtUserIds = atUserIds
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty && item != '0')
+        .toList(growable: false);
     final mentionsJson = mentions.isEmpty
         ? null
         : jsonEncode(mentions.map((item) => item.toJson()).toList());
@@ -91,9 +113,14 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
+        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+          'receiverId': receiverId.trim(),
+        if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
+          'groupId': groupId.trim(),
         'type': 'text',
         'content': text.trim(),
         'clientMessageId': clientMessageId,
+        if (normalizedAtUserIds.isNotEmpty) 'atUserIds': normalizedAtUserIds,
         'mentions': mentionsJson,
         if (quoteInfo != null) 'quoteMessageId': quoteInfo.messageId,
       },
@@ -116,6 +143,8 @@ class MessageRemoteDataSource {
     required int height,
     required int size,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final extra = jsonEncode({
       'fileId': fileId,
@@ -129,6 +158,10 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
+        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+          'receiverId': receiverId.trim(),
+        if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
+          'groupId': groupId.trim(),
         'messageType': 2,
         'content': url,
         'clientMessageId': clientMessageId,
@@ -154,6 +187,8 @@ class MessageRemoteDataSource {
     required int height,
     required int size,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final extra = jsonEncode({
       'fileId': fileId,
@@ -168,6 +203,10 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
+        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+          'receiverId': receiverId.trim(),
+        if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
+          'groupId': groupId.trim(),
         'messageType': 4,
         'content': url,
         'clientMessageId': clientMessageId,
@@ -193,6 +232,8 @@ class MessageRemoteDataSource {
     required String format,
     required String md5,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final extra = jsonEncode({
       'fileId': fileId,
@@ -207,6 +248,10 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
+        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+          'receiverId': receiverId.trim(),
+        if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
+          'groupId': groupId.trim(),
         'messageType': 3,
         'content': url,
         'clientMessageId': clientMessageId,
@@ -230,6 +275,8 @@ class MessageRemoteDataSource {
     required int size,
     required String fileType,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final extra = jsonEncode({
       'fileId': fileId,
@@ -242,6 +289,10 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
+        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+          'receiverId': receiverId.trim(),
+        if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
+          'groupId': groupId.trim(),
         'messageType': 5,
         'content': fileName,
         'clientMessageId': clientMessageId,
@@ -261,6 +312,8 @@ class MessageRemoteDataSource {
     required String chatId,
     required ContactCardSharePayload payload,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final contentRaw = jsonEncode({
       'type': 'CONTACT_CARD',
@@ -274,6 +327,10 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
+        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+          'receiverId': receiverId.trim(),
+        if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
+          'groupId': groupId.trim(),
         'messageType': 9,
         'content': contentRaw,
         'extra': contentRaw,
@@ -293,6 +350,8 @@ class MessageRemoteDataSource {
     required String chatId,
     required LocationSharePayload payload,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final contentRaw = jsonEncode({
       'latitude': payload.latitude,
@@ -306,6 +365,10 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
+        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+          'receiverId': receiverId.trim(),
+        if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
+          'groupId': groupId.trim(),
         'messageType': 6,
         'content': contentRaw,
         'extra': contentRaw,
@@ -325,6 +388,8 @@ class MessageRemoteDataSource {
     required String chatId,
     required StickerPayload payload,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   }) async {
     final contentRaw = jsonEncode({
       'type': 'STICKER',
@@ -342,8 +407,12 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
+        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+          'receiverId': receiverId.trim(),
+        if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
+          'groupId': groupId.trim(),
         'messageType': 8,
-        'content': payload.url,
+        'content': '[动画表情]',
         'extra': contentRaw,
         'clientMessageId': clientMessageId,
       },
@@ -639,9 +708,10 @@ class MessageRemoteDataSource {
     double? longitude,
     int pageSize = 20,
   }) async {
+    final clampedPageSize = pageSize < 1 ? 1 : (pageSize > 20 ? 20 : pageSize);
     final queryParameters = <String, dynamic>{
       'keyword': keyword.trim(),
-      'pageSize': pageSize,
+      'pageSize': clampedPageSize,
     };
     if (latitude != null) {
       queryParameters['latitude'] = latitude;
@@ -683,11 +753,19 @@ class MessageRemoteDataSource {
     int forwardType = 1,
     String? comment,
   }) async {
+    final normalizedTargetChatId = targetChatId.trim();
+    final normalizedMessageIds = messageIds
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty && item != '0')
+        .toList(growable: false);
+    if (normalizedTargetChatId.isEmpty || normalizedMessageIds.isEmpty) {
+      throw ArgumentError('invalid forward params');
+    }
     final response = await dio.post(
       '/system/im/message/forward',
       data: {
-        'targetChatId': targetChatId,
-        'messageIds': messageIds,
+        'targetChatId': normalizedTargetChatId,
+        'messageIds': normalizedMessageIds,
         'forwardType': forwardType == 2 ? 2 : 1,
         if (comment != null && comment.isNotEmpty) 'comment': comment,
       },

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/contact_card_share_payload.dart';
@@ -22,6 +24,12 @@ class OptimisticMessageFactory {
 
   final Ref _ref;
   final Uuid _uuid;
+
+  String _legacyPrefixedId(String prefix) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = 100000 + (_uuid.v4().hashCode.abs() % 900000);
+    return '${prefix}_${timestamp}_$random';
+  }
 
   Message createText({
     required String chatId,
@@ -80,14 +88,16 @@ class OptimisticMessageFactory {
       senderName: '',
       type: MessageType.image,
       status: MessageStatus.sending,
-      content: resolvedName,
+      content: localPath,
       sentAt: DateTime.now(),
       isOutgoing: true,
       extra: MessageExtra(
         localPath: localPath,
+        fileUrl: localPath,
         fileName: resolvedName,
         fileType: resolvedMimeType,
         fileSize: fileSize,
+        thumbnailUrl: localPath,
       ),
     );
   }
@@ -118,11 +128,12 @@ class OptimisticMessageFactory {
       senderName: '',
       type: MessageType.video,
       status: MessageStatus.sending,
-      content: resolvedName,
+      content: localPath,
       sentAt: DateTime.now(),
       isOutgoing: true,
       extra: MessageExtra(
         localPath: localPath,
+        fileUrl: localPath,
         fileName: resolvedName,
         fileType: resolvedMimeType,
         fileSize: fileSize,
@@ -189,11 +200,12 @@ class OptimisticMessageFactory {
       senderName: '',
       type: MessageType.file,
       status: MessageStatus.sending,
-      content: resolvedName,
+      content: localPath,
       sentAt: DateTime.now(),
       isOutgoing: true,
       extra: MessageExtra(
         localPath: localPath,
+        fileUrl: localPath,
         fileName: resolvedName,
         fileType: resolvedMimeType,
         fileSize: fileSize,
@@ -206,20 +218,29 @@ class OptimisticMessageFactory {
     required ContactCardSharePayload payload,
   }) {
     final session = _ref.read(authSessionProvider);
-    final clientMessageId = _uuid.v4();
+    final clientMessageId = _legacyPrefixedId('ccard');
     final displayName = payload.displayName.trim();
+    final contentRaw = jsonEncode(<String, Object?>{
+      'type': 'CONTACT_CARD',
+      'userId': payload.userId,
+      'displayName': displayName,
+      'deptName': payload.departmentName,
+      'postName': payload.postName,
+      'avatar': payload.avatar,
+    });
     return Message(
       messageId: clientMessageId,
       clientMessageId: clientMessageId,
       chatId: chatId,
       senderId: session.userId,
       senderName: '',
-      type: MessageType.contactCard,
+      type: MessageType.custom,
       status: MessageStatus.sending,
-      content: displayName,
+      content: contentRaw,
       sentAt: DateTime.now(),
       isOutgoing: true,
       extra: MessageExtra(
+        customType: 'CONTACT_CARD',
         contactUserId: payload.userId,
         contactDisplayName: displayName,
         contactDepartmentName: payload.departmentName,
@@ -265,7 +286,7 @@ class OptimisticMessageFactory {
     required StickerPayload payload,
   }) {
     final session = _ref.read(authSessionProvider);
-    final clientMessageId = _uuid.v4();
+    final clientMessageId = _legacyPrefixedId('stk');
     final stickerUrl = payload.url.trim();
     return Message(
       messageId: clientMessageId,

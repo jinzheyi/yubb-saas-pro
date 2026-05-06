@@ -29,6 +29,8 @@ abstract class MessageRepository {
     required String chatId,
     required String text,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
     QuoteInfo? quoteInfo,
     List<String> atUserIds = const <String>[],
     List<MentionSegment> mentions = const <MentionSegment>[],
@@ -43,6 +45,8 @@ abstract class MessageRepository {
     required int height,
     required int size,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   });
 
   Future<SendMessageResult> sendVideoMessage({
@@ -55,6 +59,8 @@ abstract class MessageRepository {
     required int height,
     required int size,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   });
 
   Future<SendMessageResult> sendVoiceMessage({
@@ -67,6 +73,8 @@ abstract class MessageRepository {
     required String format,
     required String md5,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   });
 
   Future<SendMessageResult> sendFileMessage({
@@ -77,24 +85,32 @@ abstract class MessageRepository {
     required int size,
     required String fileType,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   });
 
   Future<SendMessageResult> sendContactCardMessage({
     required String chatId,
     required ContactCardSharePayload payload,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   });
 
   Future<SendMessageResult> sendLocationMessage({
     required String chatId,
     required LocationSharePayload payload,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   });
 
   Future<SendMessageResult> sendStickerMessage({
     required String chatId,
     required StickerPayload payload,
     required String clientMessageId,
+    String? receiverId,
+    String? groupId,
   });
 
   Future<void> markConversationRead({required String chatId});
