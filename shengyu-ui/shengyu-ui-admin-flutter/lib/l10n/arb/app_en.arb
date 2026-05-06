@@ -1,0 +1,938 @@
+{
+  "@@locale": "en",
+  "appName": "Shengyu IM",
+  "loginIntro": "Enterprise IM and collaboration entry",
+  "enterConversation": "Enter Conversations",
+  "conversationTitle": "Conversations",
+  "contactsTitle": "Contacts",
+  "workbenchTitle": "Workbench",
+  "profileTitle": "Me",
+  "chatTitle": "Chat",
+  "emptyConversation": "No conversations",
+  "inputMessage": "Type a message",
+  "searchHint": "Search",
+  "usernameLabel": "Username",
+  "passwordLabel": "Password",
+  "usernamePasswordLogin": "Account Login",
+  "phoneLogin": "Phone Login",
+  "loginAction": "Sign In",
+  "tabConversations": "Messages",
+  "tabContacts": "Contacts",
+  "tabWorkbench": "Workbench",
+  "tabProfile": "Me",
+  "conversationShortcutRecent": "Recent",
+  "conversationShortcutUsers": "Users",
+  "conversationShortcutGroups": "Groups",
+  "conversationShortcutMention": "Mentions",
+  "conversationShortcutMute": "Muted",
+  "contactsMyGroups": "My Groups",
+  "contactsFavorites": "Favorites",
+  "contactsOrganization": "Organization",
+  "contactsDepartments": "Departments",
+  "contactsDepartmentDataConnected": "This page is now wired to the formal department and member endpoints.",
+  "contactsOrganizationDataConnected": "This page is now wired to the formal organization tree endpoint.",
+  "contactsCountPeople": "{count} people",
+  "@contactsCountPeople": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "contactsProfileTitle": "User Details",
+  "contactsPhoneLabel": "Phone",
+  "contactsEmailLabel": "Email",
+  "contactsPostLabel": "Position",
+  "chatSettingsTitle": "Chat Settings",
+  "chatSettingsNoRoleInfo": "No role information",
+  "chatSettingsTop": "Pin Chat",
+  "chatSettingsNotify": "Mute Notifications",
+  "chatSettingsChatFilesSingle": "Chat Files",
+  "chatSettingsClearHistory": "Clear Chat History",
+  "chatSettingsClearHistoryConfirm": "Clear the current chat history?",
+  "chatSettingsSubordinateTip": "Note: manage subordinate relationships from the matching contact detail page.",
+  "chatSettingsPinned": "Chat pinned",
+  "chatSettingsUnpinned": "Chat unpinned",
+  "chatSettingsNotifyEnabled": "Notifications enabled",
+  "chatSettingsNotifyDisabled": "Mute enabled",
+  "chatSettingsCleared": "Chat history cleared",
+  "chatSettingsClearHistoryFailed": "Failed to clear chat history",
+  "chatMediaTitle": "Chat Media",
+  "chatMediaEmpty": "No media records",
+  "chatMediaToday": "Today",
+  "chatMediaYesterday": "Yesterday",
+  "chatMediaMonthDay": "{month}-{day}",
+  "@chatMediaMonthDay": {
+    "placeholders": {
+      "month": {},
+      "day": {}
+    }
+  },
+  "chatMediaLoadingMore": "Loading more...",
+  "chatMediaNoMore": "No more items",
+  "chatMediaPullMore": "Pull up to load more",
+  "chatMediaFilterVideo": "Videos",
+  "chatMediaImageFallback": "Image",
+  "chatImagePlaceholder": "Image",
+  "chatMediaFileFallback": "File",
+  "chatHistoryTitle": "Chat History",
+  "chatHistoryEmpty": "No chat history",
+  "chatHistorySearchPlaceholder": "Search chat history",
+  "chatHistoryStartTime": "Start",
+  "chatHistoryEndTime": "End",
+  "chatHistoryUnlimited": "Unlimited",
+  "chatHistoryEnterKeyword": "Enter a search keyword",
+  "chatHistoryEmptySearched": "No matching chat history",
+  "chatHistoryEmptyIdle": "Enter a keyword to search chat history",
+  "chatHistorySearchFailed": "Failed to search chat history",
+  "chatHistoryNoMore": "No more items",
+  "chatHistoryLoading": "Loading...",
+  "chatHistoryLocateFailed": "Unable to locate this message",
+  "chatHistoryUnknownUser": "Unknown User",
+  "chatHistoryStartAfterEnd": "Start time cannot be later than end time",
+  "chatHistoryEndBeforeStart": "End time cannot be earlier than start time",
+  "chatHistoryTodayAt": "Today {time}",
+  "@chatHistoryTodayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "chatHistoryYesterdayAt": "Yesterday {time}",
+  "@chatHistoryYesterdayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "chatHistoryDaysAgoAt": "{count} days ago {time}",
+  "@chatHistoryDaysAgoAt": {
+    "placeholders": {
+      "count": {},
+      "time": {}
+    }
+  },
+  "chatHistoryMonthDayAt": "{month}-{day} {time}",
+  "@chatHistoryMonthDayAt": {
+    "placeholders": {
+      "month": {},
+      "day": {},
+      "time": {}
+    }
+  },
+  "chatHistoryPreviewImage": "[Image]",
+  "chatHistoryPreviewVoice": "[Voice]",
+  "chatHistoryPreviewVideo": "[Video]",
+  "chatHistoryPreviewFile": "[File]",
+  "chatHistoryPreviewLocation": "[Location]",
+  "chatHistoryPreviewEmoji": "[Emoji]",
+  "chatHistoryPreviewSticker": "[Animated Sticker]",
+  "chatHistoryPreviewSystem": "[System Message]",
+  "chatHistoryPreviewMessage": "[Message]",
+  "globalChatSearchTitle": "Search Chat History",
+  "globalChatSearchPlaceholder": "Search chat history",
+  "globalChatSearchHint": "Enter at least 2 characters to search",
+  "globalChatSearchEmpty": "No matching chat history",
+  "globalChatSearchLoading": "Searching...",
+  "globalChatSearchLoadMore": "Pull up to load more",
+  "searchAction": "Search",
+  "resetAction": "Reset",
+  "searchMinLength": "Enter at least 2 characters",
+  "chatTimeToday": "Today {time}",
+  "@chatTimeToday": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "chatTimeYesterday": "Yesterday {time}",
+  "@chatTimeYesterday": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "chatLoadOlder": "Load older messages",
+  "contactsSearchResultTitle": "Search Results",
+  "contactsSearchKeyword": "Keyword: {keyword}",
+  "@contactsSearchKeyword": {
+    "placeholders": {
+      "keyword": {}
+    }
+  },
+  "contactsSearchInputHint": "Search contacts or departments",
+  "contactsPeopleSectionTitle": "Contacts",
+  "contactsDepartmentSectionTitle": "Departments",
+  "contactsSearchEmpty": "No results",
+  "contactsFavoritesEmpty": "No favorite contacts yet",
+  "contactsListEmpty": "No contacts yet",
+  "contactsMyGroupsEmpty": "No groups yet",
+  "contactsDepartmentsEmpty": "No department members yet",
+  "contactsOrganizationEmpty": "No organization data yet",
+  "contactsSectionRecent": "Recent Contacts",
+  "workbenchIntro": "Common collaboration and business entries live here.",
+  "workbenchApproval": "Approvals",
+  "workbenchTodo": "To-do",
+  "workbenchCalendar": "Calendar",
+  "workbenchFiles": "Files",
+  "workbenchMeeting": "Meetings",
+  "workbenchAnnouncements": "Announcements",
+  "workbenchEdit": "Edit",
+  "workbenchOfficeFlow": "Office Flow",
+  "workbenchCommonFeatures": "Common Features",
+  "workbenchMail": "Mail",
+  "workbenchDelegation": "Delegation",
+  "workbenchAccountSwitch": "Switch Account",
+  "workbenchAttendance": "Attendance",
+  "workbenchFieldWork": "Field Work",
+  "workbenchMetricPlaceholder": "--",
+  "profileUnknownUser": "Unknown User",
+  "profileCompanyLabel": "Shengyu Tech",
+  "profileSectionSettings": "Settings",
+  "profileSectionAbout": "About",
+  "profileNotifications": "Notifications",
+  "profilePrivacy": "Privacy & Security",
+  "profileVersionLabel": "Current Version",
+  "profileThemeSwitch": "Theme",
+  "profileFavorites": "Favorites",
+  "profileScan": "Scan",
+  "profileLogout": "Sign Out",
+  "profileAvatarHint": "Tap to change or remove avatar",
+  "profileDepartmentFallback": "No department assigned",
+  "profilePostFallback": "No position set",
+  "settingsTitle": "Settings",
+  "settingsThemeMode": "Theme",
+  "settingsThemeModeSummary": "System / Light / Dark",
+  "settingsLanguage": "Language",
+  "settingsLanguageSummary": "System / Simplified Chinese / English",
+  "settingsAboutApp": "About Shengyu IM",
+  "settingsVersionValue": "Version 1.0.0",
+  "themeSettingsTitle": "Theme",
+  "themeModeLightTitle": "Light mode",
+  "themeModeLightDescription": "Always use light pages and chat backgrounds",
+  "themeModeDarkTitle": "Dark mode",
+  "themeModeDarkDescription": "Always use dark pages and chat backgrounds",
+  "themePreviewTitle": "Preview",
+  "themePreviewMessage": "Primary flow preview close to the legacy product style",
+  "retry": "Retry",
+  "languageSettingsTitle": "Language",
+  "languageModeSystemTitle": "Follow system",
+  "languageModeSystemDescription": "Use the device language",
+  "languageModeZhCnTitle": "Simplified Chinese",
+  "languageModeZhCnDescription": "Force Chinese (zh-CN)",
+  "languageModeEnTitle": "English",
+  "languageModeEnDescription": "Force English",
+  "languageEffectiveLabel": "Current language",
+  "retrySend": "Retry sending",
+  "messageSending": "Sending",
+  "messageSent": "Sent",
+  "messageDelivered": "Delivered",
+  "messageRead": "Read",
+  "messageFailed": "Failed",
+  "attachImageAction": "Send image",
+  "attachFileAction": "Send file",
+  "attachmentCapabilityPending": "Attachment picker is being wired",
+  "unknownError": "Something went wrong",
+  "groupSettingsTitle": "Group Settings",
+  "groupMembersTitle": "Group Members",
+  "groupMembersTitleWithCount": "Group Members ({count})",
+  "@groupMembersTitleWithCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "groupMembersRemoveTitle": "Remove Members",
+  "groupMembersTransferTitle": "Transfer Owner",
+  "groupMembersConfirmSelected": "Confirm ({count})",
+  "@groupMembersConfirmSelected": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "groupMembersCannotRemoveOwner": "The owner cannot be removed",
+  "groupMembersCannotRemoveSelf": "You cannot remove yourself",
+  "groupMembersSelectMembersToRemove": "Select members to remove",
+  "groupMembersRemoveConfirm": "Remove the following members: {names}?",
+  "@groupMembersRemoveConfirm": {
+    "placeholders": {
+      "names": {}
+    }
+  },
+  "groupMembersAlreadyOwner": "This member is already the owner",
+  "groupMembersSelectOtherMember": "Select another group member",
+  "groupMembersThisMember": "this member",
+  "groupMembersTransferConfirm": "Transfer group owner to {name}?",
+  "@groupMembersTransferConfirm": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "groupMembersTransferredTo": "Transferred to {name}",
+  "@groupMembersTransferredTo": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "groupMembersTransferFailed": "Failed to transfer group owner",
+  "groupMembersActionSuccess": "Action completed",
+  "groupMembersMute24h": "Mute for 24 hours",
+  "groupMembersMutedUntil": "Muted until {month}-{day} {hour}:{minute}",
+  "@groupMembersMutedUntil": {
+    "placeholders": {
+      "month": {},
+      "day": {},
+      "hour": {},
+      "minute": {}
+    }
+  },
+  "groupSettingsViewAllMembers": "View All Members",
+  "groupSettingsAdd": "Add",
+  "groupSettingsRemove": "Remove",
+  "groupSettingsGroupName": "Group Name",
+  "groupSettingsGroupQrCode": "Group QR Code",
+  "groupSettingsGroupNotice": "Group Notice",
+  "groupSettingsGroupFiles": "Group Files",
+  "groupSettingsChatHistory": "Chat History",
+  "groupSettingsMute": "Mute Notifications",
+  "groupSettingsPin": "Pin Chat",
+  "groupSettingsMuteAll": "Mute All Members",
+  "groupSettingsAllowInvite": "Allow Member Invites",
+  "groupSettingsInviteConfirm": "Invite Confirmation",
+  "groupSettingsJoinRequests": "Join Requests",
+  "groupSettingsNickname": "My Group Nickname",
+  "groupSettingsTransferOwner": "Transfer Owner",
+  "groupSettingsDissolve": "Dissolve Group",
+  "groupSettingsQuitGroup": "Leave Group",
+  "groupSettingsClearHistory": "Clear Chat History",
+  "groupSettingsOwner": "Owner",
+  "groupSettingsAdmin": "Admin",
+  "groupSettingsMember": "Member",
+  "groupSettingsSetAdmin": "Set as Admin",
+  "groupSettingsRemoveAdmin": "Remove Admin",
+  "groupSettingsMuteMember": "Mute Member",
+  "groupSettingsUnmuteMember": "Unmute Member",
+  "groupSettingsMutedMember": "Muted",
+  "groupSettingsEditGroupName": "Edit Group Name",
+  "groupSettingsEditNickname": "Edit My Nickname",
+  "groupSettingsInputHint": "Enter content",
+  "groupSettingsConfirmAction": "Confirm Action",
+  "groupSettingsConfirmClearHistory": "Clear current chat history?",
+  "groupSettingsClearHistorySuccess": "Chat history cleared",
+  "groupSettingsConfirmTransferOwner": "Enter transfer owner flow?",
+  "groupSettingsTransferOwnerSuccess": "Owner transferred",
+  "groupSettingsConfirmSetAdmin": "Set {name} as admin?",
+  "@groupSettingsConfirmSetAdmin": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "groupSettingsConfirmRemoveAdmin": "Remove admin role from {name}?",
+  "@groupSettingsConfirmRemoveAdmin": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "groupSettingsConfirmMuteMember": "Mute {name}?",
+  "@groupSettingsConfirmMuteMember": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "groupSettingsConfirmUnmuteMember": "Unmute {name}?",
+  "@groupSettingsConfirmUnmuteMember": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "groupSettingsSetAdminSuccess": "Admin assigned",
+  "groupSettingsRemoveAdminSuccess": "Admin removed",
+  "groupSettingsMuteMemberSuccess": "Member muted",
+  "groupSettingsUnmuteMemberSuccess": "Member unmuted",
+  "groupSettingsConfirmDissolve": "Dissolve this group?",
+  "groupSettingsDissolveSuccess": "Group dissolved",
+  "groupSettingsConfirmQuitGroup": "Leave this group?",
+  "groupSettingsQuitGroupSuccess": "Left the group",
+  "groupSettingsRemoveMember": "Remove Member",
+  "groupSettingsRemoveMemberSuccess": "Member removed",
+  "groupSettingsConfirmRemoveMember": "Remove {name} from the group?",
+  "@groupSettingsConfirmRemoveMember": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "groupSettingsPendingEmpty": "No pending requests",
+  "groupSettingsPendingCount": "{count} pending",
+  "@groupSettingsPendingCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "groupJoinRequestsTabPending": "Pending",
+  "groupJoinRequestsTabProcessed": "Processed",
+  "groupJoinRequestsEmptyPending": "No pending requests",
+  "groupJoinRequestsEmptyProcessed": "No processed requests",
+  "groupJoinRequestsStatusPending": "Pending",
+  "groupJoinRequestsStatusApproved": "Approved",
+  "groupJoinRequestsStatusRejected": "Rejected",
+  "groupJoinRequestsApplyTime": "Applied at: {time}",
+  "@groupJoinRequestsApplyTime": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "groupJoinRequestsHandleTime": "Handled at: {time}",
+  "@groupJoinRequestsHandleTime": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "groupJoinRequestsHandleResult": "Result: {result}",
+  "@groupJoinRequestsHandleResult": {
+    "placeholders": {
+      "result": {}
+    }
+  },
+  "groupJoinRequestsReject": "Reject",
+  "groupJoinRequestsApprove": "Approve",
+  "groupJoinRequestsApproved": "Request approved",
+  "groupJoinRequestsRejected": "Request rejected",
+  "groupJoinRequestsRejectTitle": "Reject Request",
+  "groupJoinRequestsRejectConfirm": "Reject {name}'s request to join the group?",
+  "@groupJoinRequestsRejectConfirm": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "groupJoinRequestsRejectedByAdmin": "Rejected by admin",
+  "groupJoinRequestsUnknownMember": "Unknown Member",
+  "groupJoinRequestsTimeUnknown": "No processing time yet",
+  "groupSettingsSave": "Save",
+  "groupSettingsDone": "Done",
+  "groupSettingsManage": "Manage",
+  "groupSettingsRemoveSelected": "Remove Selected ({count})",
+  "@groupSettingsRemoveSelected": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "groupSettingsSearchMembers": "Search Members",
+  "groupSettingsMembersCount": "{count} members",
+  "@groupSettingsMembersCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "groupSettingsMemberDetail": "Member Details",
+  "groupSettingsJoinTime": "Joined At",
+  "groupSettingsJoinTimeUnknown": "No join time yet",
+  "groupSettingsMuteUntil": "Muted Until",
+  "groupSettingsMuteUntilUnknown": "No mute end time yet",
+  "groupSettingsSendMessage": "Send Message",
+  "groupSettingsViewProfile": "View Profile",
+  "groupSettingsSetRole": "Set Role",
+  "groupQrCodeSave": "Save QR Code",
+  "groupQrCodeShare": "Share",
+  "groupQrCodeHint": "Scan to preview group info and join the group. Actual join rules and expiry follow server configuration.",
+  "groupQrCodeNeedApproval": "Approval required",
+  "groupQrCodeCopySuccess": "Invite code copied",
+  "groupQrCodeUnavailable": "Invite code is unavailable",
+  "groupAnnouncementEdit": "Edit",
+  "groupAnnouncementContent": "Notice Content",
+  "groupAnnouncementEditTitle": "Edit Group Notice",
+  "groupAnnouncementPlaceholder": "Enter group notice",
+  "groupAnnouncementEmpty": "No group notice yet",
+  "groupAnnouncementEmptyHint": "After editing, it can be shown as a pinned announcement to members",
+  "groupAnnouncementPinned": "Pinned Notice",
+  "groupAnnouncementPublisher": "Publisher",
+  "groupAnnouncementPublishTime": "Published At",
+  "groupAnnouncementOwnerFallback": "Group Owner",
+  "groupAnnouncementNotifyMembers": "Notify Members",
+  "groupAnnouncementNotifyMembersHint": "Publishing will send a notice update to group members",
+  "groupAnnouncementPinNotice": "Pin Notice",
+  "groupAnnouncementPinNoticeHint": "When pinned, it will appear in the chat page top banner",
+  "groupAnnouncementPublish": "Publish",
+  "groupAnnouncementTooLong": "The group notice cannot exceed 500 characters",
+  "groupAnnouncementPublishSuccess": "Group notice published",
+  "groupAnnouncementPublishNotifySuccess": "Group notice published and members notified",
+  "groupAnnouncementCleared": "Group notice cleared",
+  "groupAnnouncementPublishFailed": "Failed to publish group notice",
+  "groupAnnouncementDiscardTitle": "Discard this edit?",
+  "groupAnnouncementDiscardContent": "Your current changes are not saved. Leave editing anyway?",
+  "groupFilesSearch": "Search Group Files",
+  "groupFilesEmpty": "No group files yet",
+  "groupFilesActionDownload": "Download",
+  "groupFilesActionForward": "Forward",
+  "groupFilesDownloadStarted": "Download started",
+  "groupFilesDownloadFailed": "Download failed",
+  "groupFilesForwardUnsupported": "This file cannot be forwarded right now",
+  "groupHistorySearch": "Search Chat History",
+  "groupHistoryEmpty": "No related chat history",
+  "groupHistoryTimeUnknown": "No sent time yet",
+  "groupHistorySenderUnknown": "Unknown member",
+  "groupHistoryFilterAll": "All",
+  "groupHistoryFilterFile": "Files",
+  "groupHistoryFilterImage": "Images",
+  "groupHistoryFilterLink": "Links",
+  "favoritePageTitle": "Message Favorites",
+  "favoritePageEmpty": "No favorite messages",
+  "favoriteSearchPlaceholder": "Search favorites",
+  "favoriteDetailTitle": "Favorite Detail",
+  "favoriteDetailLoading": "Loading...",
+  "favoriteDetailEmpty": "No detail available",
+  "favoriteDetailSendToChat": "Send to Chat",
+  "favoriteDetailTypeLink": "Link",
+  "favoriteDetailTypeNote": "Note",
+  "favoriteDetailTypeImage": "Image",
+  "favoriteDetailTypeVideo": "Video",
+  "favoriteDetailTypeFile": "File",
+  "favoriteDetailTypeDefault": "Message",
+  "favoriteDetailInvalidId": "Invalid favorite id",
+  "favoriteDetailLoadFailed": "Failed to load detail",
+  "favoriteDetailVideoUrlEmpty": "Video URL is empty",
+  "favoriteDetailFileUrlEmpty": "File URL is empty",
+  "favoriteTabDefault": "Default",
+  "favoriteTabNormal": "Messages",
+  "favoriteTabMedia": "Images & Videos",
+  "favoriteTabFile": "Files",
+  "favoriteCancelAction": "Unfavorite",
+  "favoriteCancelSuccess": "Removed from favorites",
+  "favoriteOpenFailed": "Unable to open favorite detail",
+  "chatOpenFailed": "Open failed",
+  "chatMessageDetailTitle": "Message Detail",
+  "browserTitle": "Secure Browser",
+  "browserSourceScan": "Scan",
+  "browserSourceMessage": "Message",
+  "browserSourceFile": "File",
+  "browserSourceExternal": "External",
+  "browserUnknownSafeLink": "Unknown safe link",
+  "browserBlockedTitle": "This content cannot be opened directly",
+  "browserBlockedDesc": "This content is not a safe web link that can be opened directly. You can still copy it and handle it yourself.",
+  "browserBlockedLabel": "Raw Content",
+  "browserEmptyContent": "No content",
+  "browserCopyLink": "Copy Link",
+  "browserCopyContent": "Copy Content",
+  "browserOpenExternally": "Open Externally",
+  "browserNothingToCopy": "Nothing to copy",
+  "browserCopySuccess": "Copied",
+  "browserOpenExternalFailed": "Failed to open externally",
+  "favoriteStatusDeleted": "Original message deleted",
+  "favoriteStatusRecalled": "Original message recalled",
+  "favoriteStatusUnavailable": "Original message unavailable",
+  "chatReadOnlyClosed": "This conversation has been closed",
+  "chatGroupRemovedCannotSend": "You were removed from the group and cannot send messages",
+  "chatGroupMuteAllEnabled": "This group has muted all members",
+  "chatGroupMuteAllDisabled": "This group has turned off mute-all",
+  "chatGroupMutedUntil": "Muted until {time}",
+  "@chatGroupMutedUntil": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "chatGroupMutedNoSend": "You are muted and cannot send messages",
+  "chatGroupYouUnmuted": "You have been unmuted",
+  "chatGroupMemberMutedGeneric": "A group member has been muted",
+  "chatGroupMemberUnmutedGeneric": "A group member has been unmuted",
+  "chatGroupMemberAdded": "A new member joined the group",
+  "chatGroupMemberRemoved": "A member was removed from the group",
+  "chatGroupOwnerTransferred": "Group ownership has been transferred",
+  "chatGroupOwnerTransferredTo": "Group ownership has been transferred to \"{name}\"",
+  "@chatGroupOwnerTransferredTo": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "chatGroupMemberAddedOne": "\"{firstName}\" joined the group",
+  "@chatGroupMemberAddedOne": {
+    "placeholders": {
+      "firstName": {}
+    }
+  },
+  "chatGroupMemberAddedTwo": "\"{firstName}\" and \"{secondName}\" joined the group",
+  "@chatGroupMemberAddedTwo": {
+    "placeholders": {
+      "firstName": {},
+      "secondName": {}
+    }
+  },
+  "chatGroupMemberAddedMany": "\"{firstName}\", \"{secondName}\" and {otherCount} others joined the group",
+  "@chatGroupMemberAddedMany": {
+    "placeholders": {
+      "firstName": {},
+      "secondName": {},
+      "otherCount": {}
+    }
+  },
+  "chatGroupMemberRemovedNamed": "\"{name}\" was removed from the group",
+  "@chatGroupMemberRemovedNamed": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "chatGroupMemberRoleSetAdmin": "A group member was set as admin",
+  "chatGroupMemberRoleSetAdminNamed": "\"{operatorName}\" set \"{targetName}\" as admin",
+  "@chatGroupMemberRoleSetAdminNamed": {
+    "placeholders": {
+      "operatorName": {},
+      "targetName": {}
+    }
+  },
+  "chatGroupMemberRoleSetMember": "A group member was set as member",
+  "chatGroupMemberRoleSetMemberNamed": "\"{operatorName}\" set \"{targetName}\" as member",
+  "@chatGroupMemberRoleSetMemberNamed": {
+    "placeholders": {
+      "operatorName": {},
+      "targetName": {}
+    }
+  },
+  "chatGroupMemberMutedNamed": "\"{name}\" has been muted",
+  "@chatGroupMemberMutedNamed": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "chatGroupMemberMutedUntil": "\"{name}\" has been muted until {time}",
+  "@chatGroupMemberMutedUntil": {
+    "placeholders": {
+      "name": {},
+      "time": {}
+    }
+  },
+  "chatGroupMemberUnmutedNamed": "\"{name}\" has been unmuted",
+  "@chatGroupMemberUnmutedNamed": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "chatGroupYouAreNewOwner": "You are now the group owner",
+  "chatGroupYouTransferredOwner": "You transferred the group owner role",
+  "chatGroupSystemSender": "System",
+  "chatGroupNoticeUpdated": "The group notice has been updated",
+  "chatForwardEmptyTarget": "No conversation available for forwarding",
+  "chatForwardTargetTitle": "Choose Conversation",
+  "chatForwardTargetSummarySend": "Send",
+  "chatForwardTargetSummaryForward": "Forward",
+  "chatForwardTargetSummaryTo": "to",
+  "chatForwardTargetMessageCount": "{count} message(s)",
+  "@chatForwardTargetMessageCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "chatForwardTargetSingleForward": "Forward Individually",
+  "chatForwardTargetCombineForward": "Forward as Merge",
+  "chatForwardTargetSending": "Sending...",
+  "chatForwardTargetSent": "Sent",
+  "chatForwardTargetForwarded": "Forwarded",
+  "chatVideoPlayerTitle": "Video",
+  "chatVideoPlayerLoadFailed": "Failed to load video",
+  "chatVideoPlayerFallbackHint": "Try again, or open this video in an external app.",
+  "chatVideoPlayerOpenExternally": "Open Externally",
+  "chatVideoPlayerOpenExternalFailed": "Failed to open externally",
+  "chatForwardTargetForwardFailed": "Forward failed",
+  "chatForwardTargetPartialSuccess": "Partially succeeded {successCount}/{expectedCount}",
+  "@chatForwardTargetPartialSuccess": {
+    "placeholders": {
+      "successCount": {},
+      "expectedCount": {}
+    }
+  },
+  "chatForwardSingle": "Forward Individually",
+  "chatForwardCombine": "Forward as Merge",
+  "chatForwardMenu": "Forward",
+  "chatForwardSelectTarget": "Choose Conversation",
+  "chatForwardDialogSend": "Send",
+  "chatChooseForwardMessage": "Choose messages to forward",
+  "chatMaxSelectReached": "You can select up to {count} messages",
+  "@chatMaxSelectReached": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "chatChooseDeleteMessage": "Please select messages to delete",
+  "chatVoiceUploadRetry": "Voice upload failed. Tap to retry",
+  "chatMaxStickerReached": "You can add up to {count} stickers",
+  "@chatMaxStickerReached": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "chatSelectedCount": "{count} selected",
+  "@chatSelectedCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "chatForwardUnsupported": "This file does not support forwarding yet",
+  "chatForwardSuccess": "Forwarded to {title}",
+  "chatForwardCombineDetailTitle": "Forward Merge Detail",
+  "chatForwardCombineDetailInvalidParams": "Invalid parameters",
+  "chatForwardCombineDetailLoading": "Loading...",
+  "chatForwardCombineDetailContentUnavailable": "Content unavailable",
+  "chatForwardCombineDetailQuoteTooDeep": "Quote depth exceeded",
+  "chatForwardCombineDetailCircularReference": "Circular reference detected",
+  "chatForwardCombineDetailTodayAt": "Today {time}",
+  "@chatForwardCombineDetailTodayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "chatForwardCombineDetailYesterdayAt": "Yesterday {time}",
+  "@chatForwardCombineDetailYesterdayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "chatForwardCombineDetailEmpty": "No content",
+  "chatForwardCombineDetailLoadFailed": "Load failed",
+  "chatRecallSuccess": "Recalled",
+  "chatRecallConfirmTitle": "Notice",
+  "chatRecallConfirmContent": "Recall this message?",
+  "chatRecallFailed": "Recall failed",
+  "chatRecallSelfTip": "You recalled a message",
+  "chatRecallOtherTip": "{operatorName} recalled a message",
+  "@chatRecallOtherTip": {
+    "placeholders": {
+      "operatorName": {}
+    }
+  },
+  "chatCopySuccess": "Message copied",
+  "chatFavoriteSuccess": "Message favorited",
+  "chatDeleteSuccess": "Deleted",
+  "chatDeleteFailed": "Delete failed",
+  "chatDeleteConfirmTitle": "Delete Message",
+  "chatDeleteConfirmContent": "Delete this message?",
+  "chatRetryingMessage": "Retrying message",
+  "chatHeaderGroupNotice": "Group Notice",
+  "chatReadOnly": "This conversation is read-only",
+  "chatMultiDeleteTitle": "Reminder",
+  "chatMultiDeleteContent": "Are you sure you want to delete {count} selected messages?",
+  "@chatMultiDeleteContent": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "chatMentionSearchPlaceholder": "Search group members",
+  "chatMentionClose": "Close",
+  "chatMentionLoading": "Loading members...",
+  "chatMentionEmpty": "No members available",
+  "chatMentionAllMembers": "All Members",
+  "chatMentionAllMembersHint": "Only the owner or admins can use this",
+  "chatPresenceOffline": "Offline",
+  "chatPresenceOnline": "Online",
+  "chatPresenceMobileOnline": "Mobile Online",
+  "chatPresenceWebOnline": "Web Online",
+  "chatPresenceMultiDeviceOnline": "Multi-device Online",
+  "chatPresenceJustNowActive": "Just active",
+  "chatPresenceMinutesAgoActive": "Active {count} minutes ago",
+  "@chatPresenceMinutesAgoActive": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "chatPresenceTodayActiveAt": "Active today at {time}",
+  "@chatPresenceTodayActiveAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "chatPresenceYesterdayActiveAt": "Active yesterday at {time}",
+  "@chatPresenceYesterdayActiveAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "chatPresenceWeekdayActiveAt": "Active on {weekday} at {time}",
+  "@chatPresenceWeekdayActiveAt": {
+    "placeholders": {
+      "weekday": {},
+      "time": {}
+    }
+  },
+  "chatPresenceRecentlyActive": "Recently active",
+  "chatPresenceSunday": "Sunday",
+  "chatPresenceMonday": "Monday",
+  "chatPresenceTuesday": "Tuesday",
+  "chatPresenceWednesday": "Wednesday",
+  "chatPresenceThursday": "Thursday",
+  "chatPresenceFriday": "Friday",
+  "chatPresenceSaturday": "Saturday",
+  "chatTypingDirect": "Typing...",
+  "chatTypingNamed": "{name} is typing...",
+  "@chatTypingNamed": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "chatTypingNamedMany": "{names} and others are typing...",
+  "@chatTypingNamedMany": {
+    "placeholders": {
+      "names": {}
+    }
+  },
+  "chatRecordingSlideToCancel": "Slide up to cancel",
+  "chatRecordingReleaseToCancelShort": "Release to cancel",
+  "chatQuoteMessageMissing": "The original message no longer exists",
+  "chatAnchorFallback": "The original message could not be located. Latest messages are shown instead",
+  "chatNoMoreMessages": "No more messages",
+  "chatPreviewUnknownSender": "Unknown",
+  "chatPreviewMessage": "Message",
+  "chatPreviewMessageDeleted": "Original message deleted",
+  "chatPreviewImage": "[Image]",
+  "chatPreviewEmoji": "[Emoji]",
+  "chatPreviewSticker": "[Sticker]",
+  "chatPreviewVoice": "[Voice]",
+  "chatPreviewVideo": "[Video]",
+  "chatPreviewFile": "[File]",
+  "chatPreviewFileWithName": "[File] {name}",
+  "@chatPreviewFileWithName": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "chatPreviewLocation": "[Location]",
+  "chatPreviewContactCard": "[Contact Card]",
+  "chatPreviewChatHistory": "[Chat History]",
+  "chatPreviewRecalled": "[Message recalled]",
+  "chatCustomMessage": "[Custom Message]",
+  "chatClickToViewDetail": "Tap to view details",
+  "chatActionFavoriteSticker": "Add to Stickers",
+  "chatActionCopy": "Copy",
+  "chatActionQuote": "Quote Reply",
+  "chatActionFavorite": "Favorite",
+  "chatActionRecall": "Recall",
+  "chatActionDelete": "Delete",
+  "chatActionMultiSelect": "Multi-select",
+  "chatMoreActionCamera": "Camera",
+  "chatMoreActionLocation": "Location",
+  "chatMoreActionContactCard": "Contact Card",
+  "chatMoreActionCall": "Audio & Video",
+  "chatSelectLocationTitle": "Select Location",
+  "chatSelectLocationSearchHint": "Search location",
+  "chatSelectLocationSearchEmptyHint": "Search by place name to pick a location",
+  "chatSelectLocationSendCurrent": "Send current location",
+  "chatSelectLocationTapToLocate": "Tap to send current location",
+  "chatSelectLocationNearbyTitle": "Nearby places",
+  "chatSelectLocationSearchResultTitle": "Search results",
+  "chatSelectLocationNoNearbyResult": "No nearby places",
+  "chatSelectLocationNoSearchResult": "No search results",
+  "chatSelectLocationQuotaTitle": "Location search quota exhausted",
+  "chatSelectLocationQuotaDesc": "Location lookup is temporarily unavailable, please try again later",
+  "chatSelectLocationQuotaTip": "You can switch to another way to send a location first",
+  "chatSelectLocationServiceDisabledTitle": "Location service disabled",
+  "chatSelectLocationServiceDisabledDesc": "Location lookup service is not enabled in the current environment",
+  "chatSelectLocationChoose": "Please choose a location",
+  "chatSelectLocationCurrentUnavailable": "Current location is unavailable",
+  "chatCurrentLocationName": "Current Location",
+  "chatLocationUnknownName": "Unknown Location",
+  "chatLocationSendSuccess": "Location sent",
+  "chatLocationMissing": "Location coordinates are missing",
+  "chatLocationOpenFailed": "Unable to open this location right now",
+  "chatLocationNavigateAction": "Navigate",
+  "chatLocationCopyAction": "Copy Location",
+  "chatLocationOpenUnsupported": "This device cannot open maps directly right now. Copy the location details instead.",
+  "chatLocationDefaultTitle": "Location",
+  "chatLocationCoordinateFallback": "Coordinates: {lat}, {lng}",
+  "@chatLocationCoordinateFallback": {
+    "placeholders": {
+      "lat": {},
+      "lng": {}
+    }
+  },
+  "chatLocationCopied": "Location details copied",
+  "chatSelectContactCardTitle": "Select Contact",
+  "chatSelectContactCardSearchHint": "Search contact",
+  "chatSelectContactCardLoading": "Loading...",
+  "chatSelectContactCardEmpty": "No contacts available",
+  "chatSelectContactCardLoadFailed": "Failed to load contacts",
+  "chatSelectContactCardPlaceholder": "Select 1 contact",
+  "chatSelectContactCardSelected": "Selected: {name}",
+  "@chatSelectContactCardSelected": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "chatContactCardLabel": "Contact Card",
+  "chatContactCardUnknownName": "Unknown Contact",
+  "chatContactCardSendSuccess": "Contact card sent",
+  "chatContactMissing": "The contact card target is missing",
+  "filePreviewTitle": "File Preview",
+  "filePreviewDownload": "Download",
+  "filePreviewModePdf": "PDF Preview",
+  "filePreviewModeImage": "Image Preview",
+  "filePreviewModeVideo": "Video Preview",
+  "filePreviewModeAudio": "Audio Preview",
+  "filePreviewModeText": "Text Preview",
+  "filePreviewModeMarkdown": "Markdown Preview",
+  "filePreviewModeServerPdf": "Server PDF Preview",
+  "filePreviewModeServerHtml": "Server HTML Preview",
+  "filePreviewModeOffice": "Office Preview",
+  "filePreviewModeDownloadOnly": "Download Only",
+  "filePreviewModeUnknown": "File Preview",
+  "@chatForwardSuccess": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "chatReadReceiptTitle": "Read Receipt",
+  "chatReadReceiptClose": "Close",
+  "chatReadReceiptReadLabel": "Read",
+  "chatReadReceiptUnreadTab": "Unread",
+  "chatReadReceiptRead": "Read {count}",
+  "@chatReadReceiptRead": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "chatReadReceiptUnread": "Unread {count}",
+  "@chatReadReceiptUnread": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "chatReadReceiptVoiceHint": "For voice messages, \"read\" is based on conversation read sequence and does not mean the audio was played",
+  "chatReadReceiptTotal": "Total recipients {count}",
+  "@chatReadReceiptTotal": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "chatReadReceiptEmptyRead": "No read records yet",
+  "chatReadReceiptEmptyUnread": "No unread records",
+  "chatReadReceiptLoading": "Loading...",
+  "chatReadReceiptNoMore": "No more",
+  "chatReadReceiptUnreadLabel": "Not read yet",
+  "chatReadReceiptUnknownUser": "Unknown user",
+  "chatReadReceiptReadAtUnknown": "Read time unavailable",
+  "chatReadReceiptPending": "Processing",
+  "chatReadReceiptDataLoading": "Read receipt data is still loading, please try again later",
+  "chatReadReceiptJustNow": "Just now",
+  "chatReadReceiptTodayAt": "Today {time}",
+  "@chatReadReceiptTodayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "chatReadReceiptYesterdayAt": "Yesterday {time}",
+  "@chatReadReceiptYesterdayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "chatVoiceFileUnavailable": "Voice file is unavailable",
+  "chatVoicePlayUrlFailed": "Failed to get voice playback URL",
+  "chatStickerCannotAdd": "This message cannot be added",
+  "chatStickerAdded": "Added to stickers",
+  "chatStickerExists": "Already in stickers",
+  "chatOtherUser": "Other",
+  "chatReeditExpired": "Re-edit has expired",
+  "chatReeditUnsupported": "This message type does not support re-edit",
+  "chatReeditAction": "Re-edit",
+  "chatRecordPermissionDenied": "Recording failed. Please check microphone permission",
+  "chatRecordTooShort": "Speaking time is too short",
+  "chatRecordFileCreateFailed": "Failed to generate the recording file",
+  "chatUploading": "Uploading",
+  "chatStickerAdd": "Add",
+  "chatEmojiManage": "Manage",
+  "chatEmojiTab": "Emoji",
+  "chatStickerTab": "Sticker",
+  "chatEmojiDelete": "Delete",
+  "chatEmojiRecent": "Recent",
+  "chatEmojiAll": "All Emojis",
+  "backAction": "Back",
+  "cancelAction": "Cancel",
+  "confirmAction": "Confirm"
+}

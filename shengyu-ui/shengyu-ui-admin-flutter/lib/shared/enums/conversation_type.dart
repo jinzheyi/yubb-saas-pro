@@ -1,0 +1,1 @@
+enum ConversationType { direct, group }

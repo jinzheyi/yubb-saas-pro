@@ -1,0 +1,3 @@
+class SelectContactCardRouteArgs {
+  const SelectContactCardRouteArgs();
+}

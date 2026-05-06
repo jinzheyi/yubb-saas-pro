@@ -65,7 +65,6 @@ public class ErrorCodeLoaderImpl implements ErrorCodeLoader {
             if (CollUtil.isEmpty(errorCodeRespDTOs)) {
                 return;
             }
-            log.info("[loadErrorCodes0][加载到 ({}) 个错误码]", errorCodeRespDTOs.size());
 
             // 刷新错误码的缓存
             errorCodeRespDTOs.forEach(errorCodeRespDTO -> {
