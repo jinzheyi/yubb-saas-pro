@@ -10,6 +10,8 @@ class Conversation {
     this.conversationVersion,
     this.targetId,
     this.targetAvatar,
+    this.avatarText,
+    this.avatarBg,
     required this.lastMessageId,
     this.lastMessageSequence,
     this.lastReadSequence,
@@ -22,6 +24,7 @@ class Conversation {
     required this.unreadCount,
     required this.isPinned,
     required this.isMuted,
+    this.deletedByUser = false,
     this.online = false,
     this.onlineDeviceTypes = const <int>[],
     this.lastActiveTime,
@@ -33,6 +36,8 @@ class Conversation {
   final String? conversationVersion;
   final String? targetId;
   final String? targetAvatar;
+  final String? avatarText;
+  final String? avatarBg;
   final String? lastMessageId;
   final String? lastMessageSequence;
   final String? lastReadSequence;
@@ -45,6 +50,7 @@ class Conversation {
   final int unreadCount;
   final bool isPinned;
   final bool isMuted;
+  final bool deletedByUser;
   final bool online;
   final List<int> onlineDeviceTypes;
   final int? lastActiveTime;
@@ -56,6 +62,8 @@ class Conversation {
     String? conversationVersion,
     String? targetId,
     String? targetAvatar,
+    String? avatarText,
+    String? avatarBg,
     String? lastMessageId,
     String? lastMessageSequence,
     String? lastReadSequence,
@@ -68,6 +76,7 @@ class Conversation {
     int? unreadCount,
     bool? isPinned,
     bool? isMuted,
+    bool? deletedByUser,
     bool? online,
     List<int>? onlineDeviceTypes,
     int? lastActiveTime,
@@ -79,6 +88,8 @@ class Conversation {
       conversationVersion: conversationVersion ?? this.conversationVersion,
       targetId: targetId ?? this.targetId,
       targetAvatar: targetAvatar ?? this.targetAvatar,
+      avatarText: avatarText ?? this.avatarText,
+      avatarBg: avatarBg ?? this.avatarBg,
       lastMessageId: lastMessageId ?? this.lastMessageId,
       lastMessageSequence: lastMessageSequence ?? this.lastMessageSequence,
       lastReadSequence: lastReadSequence ?? this.lastReadSequence,
@@ -91,6 +102,7 @@ class Conversation {
       unreadCount: unreadCount ?? this.unreadCount,
       isPinned: isPinned ?? this.isPinned,
       isMuted: isMuted ?? this.isMuted,
+      deletedByUser: deletedByUser ?? this.deletedByUser,
       online: online ?? this.online,
       onlineDeviceTypes: onlineDeviceTypes ?? this.onlineDeviceTypes,
       lastActiveTime: lastActiveTime ?? this.lastActiveTime,

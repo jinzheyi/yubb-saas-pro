@@ -60,7 +60,7 @@ import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/page
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_members_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_qr_code_page.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/pages/group_settings_page.dart';
-import 'package:shengyu_ui_admin_im/features/im/search/presentation/pages/search_chat_history_page.dart';
+import 'package:shengyu_ui_admin_im/features/im/search/presentation/pages/common_global_search_page.dart';
 import 'package:shengyu_ui_admin_im/features/login/presentation/pages/login_page.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/language_settings_page.dart';
 import 'package:shengyu_ui_admin_im/features/profile/presentation/pages/profile_page.dart';
@@ -259,8 +259,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final keyword = state.extra is String
                   ? state.extra! as String
-                  : '';
-              return SearchChatHistoryPage(initialKeyword: keyword);
+                  : state.uri.queryParameters['keyword'] ?? '';
+              return CommonGlobalSearchPage(initialKeyword: keyword);
             },
           ),
           GoRoute(
@@ -471,10 +471,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final args = state.extra is GroupSettingDetailArgs
               ? state.extra! as GroupSettingDetailArgs
-              : const GroupSettingDetailArgs(
-                  groupId: '',
-                  groupName: '群聊设置',
-                );
+              : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
           return GroupQrCodePage(args: args);
         },
       ),
@@ -484,10 +481,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final args = state.extra is GroupSettingDetailArgs
               ? state.extra! as GroupSettingDetailArgs
-              : const GroupSettingDetailArgs(
-                  groupId: '',
-                  groupName: '群聊设置',
-                );
+              : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
           return GroupAnnouncementPage(args: args);
         },
       ),
@@ -497,10 +491,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final args = state.extra is GroupSettingDetailArgs
               ? state.extra! as GroupSettingDetailArgs
-              : const GroupSettingDetailArgs(
-                  groupId: '',
-                  groupName: '群聊设置',
-                );
+              : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
           return GroupFilesPage(args: args);
         },
       ),
@@ -510,10 +501,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final args = state.extra is GroupSettingDetailArgs
               ? state.extra! as GroupSettingDetailArgs
-              : const GroupSettingDetailArgs(
-                  groupId: '',
-                  groupName: '群聊设置',
-                );
+              : const GroupSettingDetailArgs(groupId: '', groupName: '群聊设置');
           return GroupChatHistoryPage(args: args);
         },
       ),

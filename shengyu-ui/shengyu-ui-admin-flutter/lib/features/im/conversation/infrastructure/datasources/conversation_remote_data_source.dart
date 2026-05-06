@@ -19,10 +19,11 @@ class ConversationRemoteDataSource {
 
   Future<ConversationSyncResponseDto> syncConversationList({
     required String cursorVersion,
+    int limit = 200,
   }) async {
     final response = await dio.get(
       '/system/im/conversation/sync',
-      queryParameters: {'cursorVersion': cursorVersion},
+      queryParameters: {'cursorVersion': cursorVersion, 'limit': limit},
     );
     final result = ApiResult.fromJson<ConversationSyncResponseDto>(
       response.data as Map<String, dynamic>,

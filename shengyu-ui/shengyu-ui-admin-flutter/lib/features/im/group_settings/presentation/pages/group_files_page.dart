@@ -12,6 +12,7 @@ import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/provid
 import 'package:shengyu_ui_admin_im/features/im/group_settings/domain/entities/group_file_item.dart';
 import 'package:shengyu_ui_admin_im/features/im/group_settings/presentation/providers/group_settings_providers.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 
 class GroupFilesPage extends ConsumerStatefulWidget {
   const GroupFilesPage({super.key, required this.args});
@@ -120,59 +121,7 @@ class _GroupFilesPageState extends ConsumerState<GroupFilesPage> {
               child: Column(
                 children: [
                   for (var index = 0; index < _files.length; index++) ...[
-                    ListTile(
-                      onTap: () => _openFilePreview(_files[index]),
-                      onLongPress: () => _showFileMenu(_files[index]),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 6,
-                      ),
-                      leading: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: _fileIconBackground(_files[index].mimeType),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          _fileIconData(_files[index].mimeType),
-                          color: _fileIconColor(_files[index].mimeType),
-                        ),
-                      ),
-                      title: Text(
-                        _files[index].fileName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF202531),
-                        ),
-                      ),
-                      subtitle: Text(
-                        _buildSubtitle(_files[index]),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF8F96A3),
-                        ),
-                      ),
-                      trailing: _deletingId == _files[index].id
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : IconButton(
-                              onPressed: () => _showFileMenu(_files[index]),
-                              icon: const Icon(
-                                Icons.more_horiz_rounded,
-                                color: Color(0xFFB8C0CC),
-                              ),
-                            ),
-                    ),
+                    _buildFileTile(_files[index]),
                     if (index != _files.length - 1)
                       const Divider(
                         height: 1,
@@ -463,93 +412,55 @@ class _GroupFilesPageState extends ConsumerState<GroupFilesPage> {
     return '$text ${units[index]}';
   }
 
-  IconData _fileIconData(String mimeType) {
-    final normalized = mimeType.toLowerCase();
-    if (normalized.startsWith('image/')) {
-      return Icons.image_rounded;
-    }
-    if (normalized.startsWith('video/')) {
-      return Icons.videocam_rounded;
-    }
-    if (normalized.startsWith('audio/')) {
-      return Icons.audiotrack_rounded;
-    }
-    if (normalized.contains('pdf')) {
-      return Icons.picture_as_pdf_rounded;
-    }
-    if (normalized.contains('word') ||
-        normalized.contains('document') ||
-        normalized.contains('officedocument.wordprocessingml')) {
-      return Icons.description_rounded;
-    }
-    if (normalized.contains('sheet') ||
-        normalized.contains('excel') ||
-        normalized.contains('spreadsheet')) {
-      return Icons.table_chart_rounded;
-    }
-    if (normalized.contains('presentation') ||
-        normalized.contains('powerpoint')) {
-      return Icons.slideshow_rounded;
-    }
-    if (normalized.contains('zip') ||
-        normalized.contains('rar') ||
-        normalized.contains('7z') ||
-        normalized.contains('tar')) {
-      return Icons.folder_zip_rounded;
-    }
-    return Icons.insert_drive_file_rounded;
-  }
-
-  Color _fileIconColor(String mimeType) {
-    final normalized = mimeType.toLowerCase();
-    if (normalized.startsWith('image/')) {
-      return const Color(0xFF8F4CFF);
-    }
-    if (normalized.startsWith('video/')) {
-      return const Color(0xFFE85D75);
-    }
-    if (normalized.startsWith('audio/')) {
-      return const Color(0xFF00A870);
-    }
-    if (normalized.contains('pdf')) {
-      return const Color(0xFFE34D59);
-    }
-    if (normalized.contains('sheet') ||
-        normalized.contains('excel') ||
-        normalized.contains('spreadsheet')) {
-      return const Color(0xFF2BA471);
-    }
-    if (normalized.contains('presentation') ||
-        normalized.contains('powerpoint')) {
-      return const Color(0xFFFF8A00);
-    }
-    return const Color(0xFF246BFD);
-  }
-
-  Color _fileIconBackground(String mimeType) {
-    final normalized = mimeType.toLowerCase();
-    if (normalized.startsWith('image/')) {
-      return const Color(0xFFF3EDFF);
-    }
-    if (normalized.startsWith('video/')) {
-      return const Color(0xFFFFEDF1);
-    }
-    if (normalized.startsWith('audio/')) {
-      return const Color(0xFFEAFBF5);
-    }
-    if (normalized.contains('pdf')) {
-      return const Color(0xFFFFEEF0);
-    }
-    if (normalized.contains('sheet') ||
-        normalized.contains('excel') ||
-        normalized.contains('spreadsheet')) {
-      return const Color(0xFFEAF8F1);
-    }
-    if (normalized.contains('presentation') ||
-        normalized.contains('powerpoint')) {
-      return const Color(0xFFFFF4E8);
-    }
-    return const Color(0xFFEEF3FF);
+  Widget _buildFileTile(GroupFileItem item) {
+    final iconSpec = resolveShengyuFileIcon(
+      item.mimeType,
+      fileName: item.fileName,
+    );
+    return ListTile(
+      onTap: () => _openFilePreview(item),
+      onLongPress: () => _showFileMenu(item),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: iconSpec.backgroundColor,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        alignment: Alignment.center,
+        child: Icon(iconSpec.icon, color: iconSpec.color, size: 20),
+      ),
+      title: Text(
+        item.fileName,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF202531),
+        ),
+      ),
+      subtitle: Text(
+        _buildSubtitle(item),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 13, color: Color(0xFF8F96A3)),
+      ),
+      trailing: _deletingId == item.id
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : IconButton(
+              onPressed: () => _showFileMenu(item),
+              icon: const Icon(
+                Icons.more_horiz_rounded,
+                color: Color(0xFFB8C0CC),
+              ),
+            ),
+    );
   }
 }
 

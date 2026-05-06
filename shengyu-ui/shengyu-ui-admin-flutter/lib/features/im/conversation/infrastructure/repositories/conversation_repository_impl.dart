@@ -46,13 +46,25 @@ class ConversationRepositoryImpl implements ConversationRepository {
   Future<ConversationSyncResult> syncConversationsIncrementally({
     required String cursorVersion,
   }) async {
-    final response = await _remoteDataSource.syncConversationList(
-      cursorVersion: cursorVersion,
-    );
+    var nextCursor = cursorVersion.trim().isEmpty ? '0' : cursorVersion.trim();
+    var hasMore = true;
+    final items = <Conversation>[];
+    while (hasMore) {
+      final response = await _remoteDataSource.syncConversationList(
+        cursorVersion: nextCursor,
+        limit: 200,
+      );
+      items.addAll(response.items.map(ConversationDtoMapper.toEntity));
+      nextCursor = response.cursorVersion;
+      hasMore = response.hasMore;
+      if (response.cursorVersion.trim().isEmpty) {
+        hasMore = false;
+      }
+    }
     return ConversationSyncResult(
-      cursorVersion: response.cursorVersion,
-      items: response.items.map(ConversationDtoMapper.toEntity).toList(),
-      hasMore: response.hasMore,
+      cursorVersion: nextCursor,
+      items: items,
+      hasMore: false,
     );
   }
 

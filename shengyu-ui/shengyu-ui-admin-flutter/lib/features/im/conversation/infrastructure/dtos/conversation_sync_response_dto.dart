@@ -19,6 +19,7 @@ class ConversationSyncResponseDto {
         const [];
     return ConversationSyncResponseDto(
       cursorVersion:
+          json['nextCursorVersion']?.toString() ??
           json['cursorVersion']?.toString() ??
           json['version']?.toString() ??
           '0',

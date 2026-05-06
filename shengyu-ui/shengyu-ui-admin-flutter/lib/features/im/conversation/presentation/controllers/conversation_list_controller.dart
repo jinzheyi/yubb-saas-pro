@@ -35,7 +35,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       );
       state = state.copyWith(
         status: ConversationListStatus.ready,
-        conversations: result.items,
+        conversations: _replaceSyncedConversations(result.items),
         cursorVersion: result.cursorVersion,
       );
       return null;
@@ -56,7 +56,10 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       );
       state = state.copyWith(
         status: ConversationListStatus.ready,
-        conversations: result.items,
+        conversations: _mergeSyncedConversations(
+          current: state.conversations,
+          incoming: result.items,
+        ),
         cursorVersion: result.cursorVersion,
       );
       return null;
@@ -104,10 +107,9 @@ class ConversationListController extends StateNotifier<ConversationListState> {
             conversationType: conversationType,
             targetId: targetId ?? items[index].targetId,
             lastMessageId: messageId,
-            lastMessageSequence:
-                messageSequence?.trim().isNotEmpty == true
-                    ? messageSequence!.trim()
-                    : items[index].lastMessageSequence,
+            lastMessageSequence: messageSequence?.trim().isNotEmpty == true
+                ? messageSequence!.trim()
+                : items[index].lastMessageSequence,
             lastMessagePreview: preview,
             lastMessageType: messageType,
             lastMessageStatus: messageStatus,
@@ -121,11 +123,12 @@ class ConversationListController extends StateNotifier<ConversationListState> {
             conversationVersion: null,
             targetId: targetId,
             targetAvatar: null,
+            avatarText: null,
+            avatarBg: null,
             lastMessageId: messageId,
-            lastMessageSequence:
-                messageSequence?.trim().isNotEmpty == true
-                    ? messageSequence!.trim()
-                    : null,
+            lastMessageSequence: messageSequence?.trim().isNotEmpty == true
+                ? messageSequence!.trim()
+                : null,
             lastReadSequence: null,
             lastMessagePreview: preview,
             lastMessageType: messageType,
@@ -194,27 +197,32 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       return;
     }
     items[index] = existing.copyWith(
-      title: appliedIncoming.title.isEmpty ? existing.title : appliedIncoming.title,
+      title: appliedIncoming.title.isEmpty
+          ? existing.title
+          : appliedIncoming.title,
       conversationType: appliedIncoming.conversationType,
       conversationVersion:
           appliedIncoming.conversationVersion ?? existing.conversationVersion,
       targetId: appliedIncoming.targetId ?? existing.targetId,
       targetAvatar: appliedIncoming.targetAvatar ?? existing.targetAvatar,
+      avatarText: appliedIncoming.avatarText ?? existing.avatarText,
+      avatarBg: appliedIncoming.avatarBg ?? existing.avatarBg,
       lastMessageId: appliedIncoming.lastMessageId ?? existing.lastMessageId,
       lastMessageSequence:
           appliedIncoming.lastMessageSequence ?? existing.lastMessageSequence,
-      lastReadSequence:
-          _maxSeq(appliedIncoming.lastReadSequence, existing.lastReadSequence),
+      lastReadSequence: _maxSeq(
+        appliedIncoming.lastReadSequence,
+        existing.lastReadSequence,
+      ),
       lastMessagePreview: preview,
       lastMessageType: appliedIncoming.lastMessageType,
       lastMessageStatus: appliedIncoming.lastMessageStatus,
       lastMessageHasAtMe: appliedIncoming.lastMessageHasAtMe,
       groupMemberCount: appliedIncoming.groupMemberCount,
       updatedAt: updatedAt,
-      unreadCount:
-          incrementUnread
-              ? math.max(appliedIncoming.unreadCount, existing.unreadCount + 1)
-              : appliedIncoming.unreadCount,
+      unreadCount: incrementUnread
+          ? math.max(appliedIncoming.unreadCount, existing.unreadCount + 1)
+          : appliedIncoming.unreadCount,
       isPinned: appliedIncoming.isPinned,
       isMuted: appliedIncoming.isMuted,
       online: appliedIncoming.online,
@@ -375,6 +383,43 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     );
   }
 
+  void applyBadgeSnapshot(Map<String, int> conversationBadges) {
+    if (conversationBadges.isEmpty || state.conversations.isEmpty) {
+      return;
+    }
+    var changed = false;
+    final items = [...state.conversations];
+    for (var index = 0; index < items.length; index++) {
+      final item = items[index];
+      final serverUnread = conversationBadges[item.chatId] ?? 0;
+      if (serverUnread > 0) {
+        if (item.unreadCount != serverUnread) {
+          items[index] = item.copyWith(unreadCount: serverUnread);
+          changed = true;
+        }
+        continue;
+      }
+      final lastSequence = item.lastMessageSequence?.trim() ?? '';
+      final nextReadSequence = lastSequence.isNotEmpty
+          ? lastSequence
+          : item.lastReadSequence;
+      if (item.unreadCount != 0 || nextReadSequence != item.lastReadSequence) {
+        items[index] = item.copyWith(
+          unreadCount: 0,
+          lastReadSequence: nextReadSequence,
+        );
+        changed = true;
+      }
+    }
+    if (!changed) {
+      return;
+    }
+    state = state.copyWith(
+      status: ConversationListStatus.ready,
+      conversations: items,
+    );
+  }
+
   List<Conversation> _sortConversations(List<Conversation> items) {
     items.sort((left, right) {
       if (left.isPinned != right.isPinned) {
@@ -383,6 +428,73 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       return right.updatedAt.compareTo(left.updatedAt);
     });
     return items;
+  }
+
+  List<Conversation> _replaceSyncedConversations(List<Conversation> incoming) {
+    final items = incoming
+        .where((item) => !item.deletedByUser)
+        .toList(growable: true);
+    return _sortConversations(items);
+  }
+
+  List<Conversation> _mergeSyncedConversations({
+    required List<Conversation> current,
+    required List<Conversation> incoming,
+  }) {
+    if (incoming.isEmpty) {
+      return current;
+    }
+    final items = [...current];
+    for (final conversation in incoming) {
+      final index = items.indexWhere(
+        (item) => item.chatId == conversation.chatId,
+      );
+      if (conversation.deletedByUser) {
+        if (index >= 0) {
+          items.removeAt(index);
+        }
+        continue;
+      }
+      if (index < 0) {
+        items.add(conversation);
+        continue;
+      }
+      final existing = items[index];
+      if (!_shouldApplySnapshot(existing, conversation)) {
+        continue;
+      }
+      items[index] = existing.copyWith(
+        title: conversation.title.isEmpty ? existing.title : conversation.title,
+        conversationType: conversation.conversationType,
+        conversationVersion:
+            conversation.conversationVersion ?? existing.conversationVersion,
+        targetId: conversation.targetId ?? existing.targetId,
+        targetAvatar: conversation.targetAvatar ?? existing.targetAvatar,
+        avatarText: conversation.avatarText ?? existing.avatarText,
+        avatarBg: conversation.avatarBg ?? existing.avatarBg,
+        lastMessageId: conversation.lastMessageId ?? existing.lastMessageId,
+        lastMessageSequence:
+            conversation.lastMessageSequence ?? existing.lastMessageSequence,
+        lastReadSequence: _maxSeq(
+          conversation.lastReadSequence,
+          existing.lastReadSequence,
+        ),
+        lastMessagePreview: conversation.lastMessagePreview,
+        lastMessageType: conversation.lastMessageType,
+        lastMessageStatus: conversation.lastMessageStatus,
+        lastMessageHasAtMe: conversation.lastMessageHasAtMe,
+        groupMemberCount: conversation.groupMemberCount,
+        updatedAt: conversation.updatedAt,
+        unreadCount: conversation.unreadCount,
+        isPinned: conversation.isPinned,
+        isMuted: conversation.isMuted,
+        deletedByUser: false,
+        online: conversation.online,
+        onlineDeviceTypes: conversation.onlineDeviceTypes,
+        lastActiveTime: conversation.lastActiveTime ?? existing.lastActiveTime,
+      );
+    }
+    return _sortConversations(items);
   }
 
   bool _shouldApplySnapshot(Conversation existing, Conversation incoming) {

@@ -10,6 +10,8 @@ class ConversationDto {
     required this.conversationVersion,
     required this.targetId,
     required this.targetAvatar,
+    required this.avatarText,
+    required this.avatarBg,
     required this.lastMessageId,
     required this.lastMessageSequence,
     required this.lastReadSequence,
@@ -22,6 +24,7 @@ class ConversationDto {
     required this.unreadCount,
     required this.isPinned,
     required this.isMuted,
+    required this.deletedByUser,
     required this.online,
     required this.onlineDeviceTypes,
     required this.lastActiveTime,
@@ -33,6 +36,8 @@ class ConversationDto {
   final String conversationVersion;
   final String targetId;
   final String targetAvatar;
+  final String avatarText;
+  final String avatarBg;
   final String lastMessageId;
   final String lastMessageSequence;
   final String lastReadSequence;
@@ -45,6 +50,7 @@ class ConversationDto {
   final int unreadCount;
   final bool isPinned;
   final bool isMuted;
+  final bool deletedByUser;
   final bool online;
   final List<int> onlineDeviceTypes;
   final int lastActiveTime;
@@ -77,6 +83,14 @@ class ConversationDto {
           json['targetAvatar']?.toString() ??
           json['avatarUrl']?.toString() ??
           json['avatar']?.toString() ??
+          '',
+      avatarText:
+          json['avatarText']?.toString() ??
+          json['avatarLabel']?.toString() ??
+          '',
+      avatarBg:
+          json['avatarBg']?.toString() ??
+          json['avatarBackground']?.toString() ??
           '',
       lastMessageId:
           json['lastMessageId']?.toString() ??
@@ -123,6 +137,7 @@ class ConversationDto {
           _parseBool(json['isMuted']) ||
           _parseBool(json['noDisturb']) ||
           _parseBool(json['muteStatus']),
+      deletedByUser: _parseBool(json['deletedByUser']),
       online: _parseBool(json['online']),
       onlineDeviceTypes: _parseIntList(json['onlineDeviceTypes']),
       lastActiveTime: _parseInt(json['lastActiveTime']) ?? 0,
@@ -149,19 +164,34 @@ class ConversationDto {
       case 'image':
       case '2':
         return MessageType.image;
-      case 'file':
+      case 'voice':
+      case '3':
+        return MessageType.voice;
+      case 'video':
       case '4':
+        return MessageType.video;
+      case 'file':
       case '5':
         return MessageType.file;
       case 'location':
       case '6':
       case '105':
         return MessageType.location;
+      case 'emoji':
+      case '7':
+        return MessageType.emoji;
+      case 'sticker':
+      case '8':
+        return MessageType.sticker;
       case 'custom':
-      case 'contact_card':
       case '9':
+        return MessageType.custom;
+      case 'contact_card':
+      case 'contactcard':
+      case 'business_card':
         return MessageType.contactCard;
       case 'system':
+      case '10':
         return MessageType.system;
       default:
         return MessageType.text;
@@ -228,9 +258,12 @@ class ConversationDto {
   }
 
   static DateTime? _parseDateTime(Object? raw) {
-    final millis = _parseInt(raw);
-    if (millis != null && millis > 0) {
-      return DateTime.fromMillisecondsSinceEpoch(millis);
+    final numeric = _parseInt(raw);
+    if (numeric != null && numeric > 0) {
+      final millis = numeric < 100000000000 ? numeric * 1000 : numeric;
+      if (millis >= 946684800000) {
+        return DateTime.fromMillisecondsSinceEpoch(millis);
+      }
     }
     final text = raw?.toString().trim() ?? '';
     if (text.isEmpty) {

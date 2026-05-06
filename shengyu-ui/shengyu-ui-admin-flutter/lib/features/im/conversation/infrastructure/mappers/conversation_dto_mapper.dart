@@ -7,10 +7,13 @@ abstract final class ConversationDtoMapper {
       chatId: dto.chatId,
       title: dto.title,
       conversationType: dto.conversationType,
-      conversationVersion:
-          dto.conversationVersion.isEmpty ? null : dto.conversationVersion,
+      conversationVersion: dto.conversationVersion.isEmpty
+          ? null
+          : dto.conversationVersion,
       targetId: dto.targetId.isEmpty ? null : dto.targetId,
       targetAvatar: dto.targetAvatar.isEmpty ? null : dto.targetAvatar,
+      avatarText: dto.avatarText.isEmpty ? null : dto.avatarText,
+      avatarBg: dto.avatarBg.isEmpty ? null : dto.avatarBg,
       lastMessageId: dto.lastMessageId.isEmpty ? null : dto.lastMessageId,
       lastMessageSequence: dto.lastMessageSequence.isEmpty
           ? null
@@ -27,6 +30,7 @@ abstract final class ConversationDtoMapper {
       unreadCount: dto.unreadCount,
       isPinned: dto.isPinned,
       isMuted: dto.isMuted,
+      deletedByUser: dto.deletedByUser,
       online: dto.online,
       onlineDeviceTypes: dto.onlineDeviceTypes,
       lastActiveTime: dto.lastActiveTime > 0 ? dto.lastActiveTime : null,

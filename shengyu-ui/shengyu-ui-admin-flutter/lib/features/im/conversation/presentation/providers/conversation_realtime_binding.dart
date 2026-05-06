@@ -24,6 +24,9 @@ void _handleConversationSocketEvent(Ref ref, ImSocketEvent event) {
     case SocketEventTypes.authSucceeded:
       ref.read(conversationListControllerProvider.notifier).syncIncrementally();
       break;
+    case SocketEventTypes.badgeUpdated:
+      _handleBadgeUpdated(ref, event);
+      break;
     case SocketEventTypes.systemNotify:
       _handleConversationSystemNotify(ref, event);
       break;
@@ -32,19 +35,44 @@ void _handleConversationSocketEvent(Ref ref, ImSocketEvent event) {
   }
 }
 
+void _handleBadgeUpdated(Ref ref, ImSocketEvent event) {
+  final payload = event.payload;
+  final rawBadges = payload['conversationBadges'];
+  if (rawBadges is! List) {
+    ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+    return;
+  }
+  final badges = <String, int>{};
+  for (final item in rawBadges) {
+    if (item is! Map) {
+      continue;
+    }
+    final chatId = item['chatId']?.toString().trim() ?? '';
+    if (chatId.isEmpty || chatId == '0') {
+      continue;
+    }
+    final unreadCount = int.tryParse('${item['unreadCount'] ?? 0}') ?? 0;
+    badges[chatId] = unreadCount < 0 ? 0 : unreadCount;
+  }
+  ref
+      .read(conversationListControllerProvider.notifier)
+      .applyBadgeSnapshot(badges);
+}
+
 void _handleConversationSystemNotify(Ref ref, ImSocketEvent event) {
   final payload = event.payload;
   final action = payload['action']?.toString().trim() ?? '';
   if (_isJoinRequestAction(action)) {
     final groupId = payload['groupId']?.toString().trim() ?? '';
     if (groupId.isNotEmpty && groupId != '0') {
-      ref.read(groupJoinRequestSignalProvider.notifier).state =
-          GroupJoinRequestSignal(
-            groupId: groupId,
-            action: action,
-            payload: payload,
-            token: DateTime.now().microsecondsSinceEpoch,
-          );
+      ref
+          .read(groupJoinRequestSignalProvider.notifier)
+          .state = GroupJoinRequestSignal(
+        groupId: groupId,
+        action: action,
+        payload: payload,
+        token: DateTime.now().microsecondsSinceEpoch,
+      );
     }
   }
   if (_isConversationIrrelevantAction(action)) {

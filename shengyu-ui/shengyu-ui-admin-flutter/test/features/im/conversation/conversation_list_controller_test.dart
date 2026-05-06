@@ -97,6 +97,86 @@ void main() {
 
     expect(controller.state.conversations.single.unreadCount, 0);
   });
+
+  test('load falls back to list when initial sync is empty', () async {
+    repository.syncResult = const ConversationSyncResult(
+      items: <Conversation>[],
+      cursorVersion: '0',
+      hasMore: false,
+    );
+    repository.listResult = <Conversation>[
+      _buildConversation(chatId: 'chat-1'),
+    ];
+
+    await controller.load();
+
+    expect(controller.state.conversations, hasLength(1));
+    expect(controller.state.conversations.single.chatId, 'chat-1');
+  });
+
+  test(
+    'incremental sync keeps current conversations when response is empty',
+    () async {
+      controller = ConversationListController(
+        ConversationSyncCoordinator(
+          _FakeLoadConversationListUseCase(repository),
+          _FakeSyncConversationsIncrementallyUseCase(repository),
+        ),
+        _FakeSyncConversationsIncrementallyUseCase(repository),
+        repository,
+      );
+      repository.syncResult = ConversationSyncResult(
+        items: <Conversation>[_buildConversation(chatId: 'chat-1')],
+        cursorVersion: '40',
+        hasMore: false,
+      );
+      await controller.load();
+
+      repository.syncResult = const ConversationSyncResult(
+        items: <Conversation>[],
+        cursorVersion: '40',
+        hasMore: false,
+      );
+      await controller.syncIncrementally();
+
+      expect(controller.state.conversations, hasLength(1));
+      expect(controller.state.conversations.single.chatId, 'chat-1');
+    },
+  );
+
+  test(
+    'incremental sync preserves avatar fields when delta omits them',
+    () async {
+      repository.syncResult = ConversationSyncResult(
+        items: <Conversation>[
+          _buildConversation(
+            chatId: 'chat-1',
+            avatarText: '张三',
+            avatarBg: '#abcdef',
+          ),
+        ],
+        cursorVersion: '40',
+        hasMore: false,
+      );
+      await controller.load();
+
+      repository.syncResult = ConversationSyncResult(
+        items: <Conversation>[
+          _buildConversation(
+            chatId: 'chat-1',
+            avatarText: null,
+            avatarBg: null,
+          ),
+        ],
+        cursorVersion: '41',
+        hasMore: false,
+      );
+      await controller.syncIncrementally();
+
+      expect(controller.state.conversations.single.avatarText, '张三');
+      expect(controller.state.conversations.single.avatarBg, '#abcdef');
+    },
+  );
 }
 
 class _FakeLoadConversationListUseCase extends LoadConversationListUseCase {
@@ -109,18 +189,20 @@ class _FakeSyncConversationsIncrementallyUseCase
 }
 
 class _FakeConversationRepository implements ConversationRepository {
+  List<Conversation> listResult = const <Conversation>[];
+  ConversationSyncResult syncResult = const ConversationSyncResult(
+    items: <Conversation>[],
+    cursorVersion: '0',
+    hasMore: false,
+  );
+
   @override
-  Future<List<Conversation>> getConversationList() async =>
-      const <Conversation>[];
+  Future<List<Conversation>> getConversationList() async => listResult;
 
   Future<ConversationSyncResult> _syncIncrementally({
     required String cursorVersion,
   }) async {
-    return const ConversationSyncResult(
-      items: <Conversation>[],
-      cursorVersion: '0',
-      hasMore: false,
-    );
+    return syncResult;
   }
 
   @override
@@ -150,4 +232,26 @@ class _FakeConversationRepository implements ConversationRepository {
 
   @override
   Future<void> deleteConversation({required String chatId}) async {}
+}
+
+Conversation _buildConversation({
+  required String chatId,
+  String? avatarText,
+  String? avatarBg,
+}) {
+  return Conversation(
+    chatId: chatId,
+    title: 'Test',
+    conversationType: ConversationType.direct,
+    avatarText: avatarText,
+    avatarBg: avatarBg,
+    lastMessageId: 'm-1',
+    lastMessagePreview: 'hello',
+    lastMessageType: MessageType.text,
+    lastMessageStatus: MessageStatus.sent,
+    updatedAt: DateTime.parse('2026-04-30T10:00:00Z'),
+    unreadCount: 0,
+    isPinned: false,
+    isMuted: false,
+  );
 }

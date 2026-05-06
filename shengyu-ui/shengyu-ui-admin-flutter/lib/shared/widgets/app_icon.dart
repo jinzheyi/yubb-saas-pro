@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 
 enum AppIconKind {
   chatOutline,
@@ -83,6 +84,10 @@ class AppIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final legacyIconData = _resolveLegacyIconData(kind);
+    if (legacyIconData != null) {
+      return Icon(legacyIconData, size: size, color: color);
+    }
     return SizedBox(
       width: size,
       height: size,
@@ -94,6 +99,43 @@ class AppIcon extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+IconData? _resolveLegacyIconData(AppIconKind kind) {
+  switch (kind) {
+    case AppIconKind.qr:
+      return ShengyuIconFont.erweima;
+    case AppIconKind.muteOff:
+      return ShengyuIconFont.miandarao;
+    case AppIconKind.at:
+      return ShengyuIconFont.aite;
+    case AppIconKind.photo:
+      return ShengyuIconFont.tupian1;
+    case AppIconKind.camera:
+      return ShengyuIconFont.paishe;
+    case AppIconKind.redo:
+      return ShengyuIconFont.zhuanfa;
+    case AppIconKind.delete:
+      return ShengyuIconFont.shanchu;
+    case AppIconKind.smile:
+      return ShengyuIconFont.biaoqingbao;
+    case AppIconKind.collections:
+      return ShengyuIconFont.tianjiatupian;
+    case AppIconKind.keyboard:
+      return ShengyuIconFont.jianpan;
+    case AppIconKind.mic:
+      return ShengyuIconFont.yuyin;
+    case AppIconKind.openInFull:
+      return ShengyuIconFont.zhankaiquanpingkuozhan;
+    case AppIconKind.quote:
+      return ShengyuIconFont.yinyong;
+    case AppIconKind.copy:
+      return ShengyuIconFont.fuzhi;
+    case AppIconKind.checklist:
+      return ShengyuIconFont.messageMultiSelect;
+    default:
+      return null;
   }
 }
 

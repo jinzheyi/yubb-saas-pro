@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_names.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error.dart';
+import 'package:shengyu_ui_admin_im/core/network/dio_client.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/im_socket_client.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_state.dart';
@@ -17,10 +19,10 @@ import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/provid
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/states/conversation_list_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/widgets/conversation_tile.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_empty_view.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_error_view.dart';
-import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_loading_view.dart';
 
 class ConversationListPage extends ConsumerStatefulWidget {
@@ -50,6 +52,10 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
   bool _inlineNoticeVisible = false;
   String _inlineNoticeText = '';
   String _suppressNextClickChatId = '';
+  bool _showContextMenu = false;
+  double _menuX = 0;
+  double _menuY = 0;
+  Conversation? _selectedConversation;
   Timer? _inlineNoticeTimer;
 
   int _lastConversationSyncAt = 0;
@@ -62,27 +68,27 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
   static const _categories = <_ConversationCategoryItem>[
     _ConversationCategoryItem(
       category: _ConversationCategory.latest,
-      icon: AppIconKind.history,
+      icon: ShengyuIconFont.zuixingengxin,
       color: Color(0xFF666666),
     ),
     _ConversationCategoryItem(
       category: _ConversationCategory.direct,
-      icon: AppIconKind.personOutline,
+      icon: ShengyuIconFont.yonghu,
       color: Color(0xFF666666),
     ),
     _ConversationCategoryItem(
       category: _ConversationCategory.group,
-      icon: AppIconKind.groupsOutline,
+      icon: ShengyuIconFont.yonghu1,
       color: Color(0xFF666666),
     ),
     _ConversationCategoryItem(
       category: _ConversationCategory.atMe,
-      icon: AppIconKind.at,
+      icon: ShengyuIconFont.aite,
       color: Color(0xFF666666),
     ),
     _ConversationCategoryItem(
       category: _ConversationCategory.muted,
-      icon: AppIconKind.muteOff,
+      icon: ShengyuIconFont.miandarao,
       color: Color(0xFF666666),
     ),
   ];
@@ -145,180 +151,209 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Column(
-                children: [
-                  Row(
+      body: Stack(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: Text(
-                          strings.conversationTitle,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF202531),
-                          ),
-                        ),
-                      ),
-                      _HeaderIconButton(
-                        icon: AppIconKind.sync,
-                        onTap: _handleSyncBadge,
-                      ),
-                      const SizedBox(width: 16),
-                      _HeaderIconButton(
-                        icon: AppIconKind.qr,
-                        onTap: _handleScan,
-                      ),
-                      const SizedBox(width: 16),
-                      _HeaderIconButton(
-                        icon: AppIconKind.groupAdd,
-                        onTap: _handleInitiateGroup,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F8),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        InkWell(
-                          onTap: _handleSearch,
-                          child: const AppIcon(
-                            AppIconKind.search,
-                            size: 16,
-                            color: Color(0xFF98A1B2),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            focusNode: _searchFocusNode,
-                            textInputAction: TextInputAction.search,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF202531),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              strings.conversationTitle,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF202531),
+                              ),
                             ),
-                            decoration: InputDecoration(
-                              hintText: strings.searchHint,
-                              border: InputBorder.none,
-                              isCollapsed: true,
-                              hintStyle: const TextStyle(
-                                fontSize: 14,
+                          ),
+                          _HeaderGlyphButton(
+                            icon: ShengyuIconFont.tongbujiaobiao,
+                            onTap: _handleSyncBadge,
+                          ),
+                          const SizedBox(width: 20),
+                          _HeaderGlyphButton(
+                            icon: ShengyuIconFont.saomiao,
+                            onTap: _handleScan,
+                          ),
+                          const SizedBox(width: 20),
+                          _HeaderGlyphButton(
+                            icon: ShengyuIconFont.duihua,
+                            onTap: _handleInitiateGroup,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F4F8),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          children: [
+                            InkWell(
+                              onTap: _handleSearch,
+                              child: const Icon(
+                                ShengyuIconFont.chaxun,
+                                size: 16,
                                 color: Color(0xFF98A1B2),
                               ),
                             ),
-                            onChanged: (_) => setState(() {}),
-                            onSubmitted: (_) => _handleSearch(),
-                          ),
-                        ),
-                        if (_searchController.text.trim().isNotEmpty)
-                          InkWell(
-                            onTap: _clearConversationFilter,
-                            child: const AppIcon(
-                              AppIconKind.close,
-                              size: 16,
-                              color: Color(0xFF98A1B2),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                focusNode: _searchFocusNode,
+                                textInputAction: TextInputAction.search,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF202531),
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: strings.searchHint,
+                                  border: InputBorder.none,
+                                  isCollapsed: true,
+                                  hintStyle: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF98A1B2),
+                                  ),
+                                ),
+                                onChanged: (_) => setState(() {}),
+                                onSubmitted: (_) => _handleSearch(),
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  for (final item in _categories)
-                    _CategoryButton(
-                      item: item,
-                      active: _activeCategory == item.category,
-                      label: item.category.label(strings),
-                      onTap: () {
-                        setState(() {
-                          _activeCategory = item.category;
-                        });
-                      },
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (_inlineNoticeVisible)
-              Container(
-                color: const Color(0xFFEAF2FF),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _inlineNoticeText,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF246BFD),
-                        ),
-                      ),
-                    ),
-                    InkWell(
-                      onTap: _hideInlineNotice,
-                      child: const AppIcon(
-                        AppIconKind.close,
-                        size: 16,
-                        color: Color(0xFF98A1B2),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _handleRefresh,
-                child: switch (state.status) {
-                  ConversationListStatus.initial ||
-                  ConversationListStatus.loading => const AppLoadingView(),
-                  ConversationListStatus.failed => ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      SizedBox(
-                        height: MediaQuery.sizeOf(context).height * 0.5,
-                        child: AppErrorView(
-                          error: state.error,
-                          onRetry: _reloadConversations,
+                            if (_searchController.text.trim().isNotEmpty)
+                              InkWell(
+                                onTap: _clearConversationFilter,
+                                child: const Icon(
+                                  ShengyuIconFont.fasong,
+                                  size: 16,
+                                  color: Color(0xFF98A1B2),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  ConversationListStatus.ready => _buildConversationBody(
-                    context: context,
-                    strings: strings,
-                    pinnedConversations: displayedPinned,
-                    allPinnedCount: pinnedConversations.length,
-                    normalConversations: normalConversations,
+                ),
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      for (final item in _categories)
+                        _CategoryButton(
+                          item: item,
+                          active: _activeCategory == item.category,
+                          label: item.category.label(strings),
+                          onTap: () {
+                            setState(() {
+                              _activeCategory = item.category;
+                            });
+                          },
+                        ),
+                    ],
                   ),
-                },
+                ),
+                const SizedBox(height: 8),
+                if (_inlineNoticeVisible)
+                  Container(
+                    color: const Color(0xFFEAF2FF),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _inlineNoticeText,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF246BFD),
+                            ),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: _hideInlineNotice,
+                          child: const Icon(
+                            Icons.close,
+                            size: 14,
+                            color: Color(0xFF98A1B2),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _handleRefresh,
+                    child: switch (state.status) {
+                      ConversationListStatus.initial ||
+                      ConversationListStatus.loading => const AppLoadingView(),
+                      ConversationListStatus.failed => ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          SizedBox(
+                            height: MediaQuery.sizeOf(context).height * 0.5,
+                            child: AppErrorView(
+                              error: state.error,
+                              onRetry: _reloadConversations,
+                            ),
+                          ),
+                        ],
+                      ),
+                      ConversationListStatus.ready => _buildConversationBody(
+                        context: context,
+                        strings: strings,
+                        pinnedConversations: displayedPinned,
+                        allPinnedCount: pinnedConversations.length,
+                        normalConversations: normalConversations,
+                      ),
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_showContextMenu) ...[
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _closeMenu,
+                child: const SizedBox.expand(),
+              ),
+            ),
+            Positioned(
+              left: _menuX,
+              top: _menuY,
+              child: _ConversationContextMenu(
+                title: (_selectedConversation?.title.trim().isNotEmpty ?? false)
+                    ? _selectedConversation!.title.trim()
+                    : _selectedConversation?.chatId ?? '',
+                pinned: _selectedConversation?.isPinned ?? false,
+                unread: (_selectedConversation?.unreadCount ?? 0) > 0,
+                onPinTap: () => _handleMenuAction(_ConversationMenuAction.pin),
+                onUnreadTap: () =>
+                    _handleMenuAction(_ConversationMenuAction.unread),
+                onDeleteTap: () =>
+                    _handleMenuAction(_ConversationMenuAction.delete),
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -369,19 +404,22 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                       highlightPinned: true,
                       onTap: () =>
                           _handleConversationTap(pinnedConversations[index]),
-                      onLongPressStart: (details) => _showConversationMenuAt(
-                        pinnedConversations[index],
-                        details.globalPosition,
-                      ),
-                      onSecondaryTapDown: (details) => _showConversationMenuAt(
-                        pinnedConversations[index],
-                        details.globalPosition,
-                      ),
-                      onMouseLongPress: (position) => _showConversationMenuAt(
-                        pinnedConversations[index],
-                        position,
-                        suppressNextTap: true,
-                      ),
+                      onLongPressStart: (details) =>
+                          _openConversationContextMenu(
+                            pinnedConversations[index],
+                            details.globalPosition,
+                          ),
+                      onSecondaryTapDown: (details) =>
+                          _openConversationContextMenu(
+                            pinnedConversations[index],
+                            details.globalPosition,
+                          ),
+                      onMouseLongPress: (position) =>
+                          _openConversationContextMenu(
+                            pinnedConversations[index],
+                            position,
+                            suppressNextTap: true,
+                          ),
                     ),
                   ),
                 if (allPinnedCount > 5)
@@ -404,11 +442,11 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                             ),
                           ),
                           const SizedBox(width: 4),
-                          AppIcon(
+                          Icon(
                             _isPinnedFolded
-                                ? AppIconKind.chevronDown
-                                : AppIconKind.chevronUp,
-                            size: 14,
+                                ? ShengyuIconFont.zhankaishouqiZhankai
+                                : ShengyuIconFont.shouqi,
+                            size: 12,
                             color: const Color(0xFF98A1B2),
                           ),
                         ],
@@ -449,17 +487,17 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
                             normalConversations[index],
                           ),
                           onLongPressStart: (details) =>
-                              _showConversationMenuAt(
+                              _openConversationContextMenu(
                                 normalConversations[index],
                                 details.globalPosition,
                               ),
                           onSecondaryTapDown: (details) =>
-                              _showConversationMenuAt(
+                              _openConversationContextMenu(
                                 normalConversations[index],
                                 details.globalPosition,
                               ),
                           onMouseLongPress: (position) =>
-                              _showConversationMenuAt(
+                              _openConversationContextMenu(
                                 normalConversations[index],
                                 position,
                                 suppressNextTap: true,
@@ -553,19 +591,47 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
     );
   }
 
-  void _handleSyncBadge() {
-    unawaited(() async {
-      final error = await ref
-          .read(conversationListControllerProvider.notifier)
-          .syncIncrementally();
-      if (error == null) {
-        _markConversationSynced();
-      }
-    }());
+  void _handleScan() {
+    if (kIsWeb) {
+      context.pushNamed(RouteNames.joinGroup);
+      return;
+    }
+    context.pushNamed(RouteNames.scan);
   }
 
-  void _handleScan() {
-    context.pushNamed(RouteNames.scan);
+  void _handleSyncBadge() {
+    unawaited(_syncBadgeSnapshot());
+  }
+
+  Future<void> _syncBadgeSnapshot() async {
+    try {
+      final response = await ref.read(dioProvider).get('/system/im/badge/get');
+      final result = response.data as Map<String, dynamic>? ?? const {};
+      final payload =
+          result['data'] as Map<String, dynamic>? ??
+          result['result'] as Map<String, dynamic>? ??
+          const {};
+      final rawBadges = payload['conversationBadges'];
+      final badges = <String, int>{};
+      if (rawBadges is List) {
+        for (final item in rawBadges) {
+          if (item is! Map) {
+            continue;
+          }
+          final chatId = item['chatId']?.toString().trim() ?? '';
+          if (chatId.isEmpty || chatId == '0') {
+            continue;
+          }
+          final unreadCount = int.tryParse('${item['unreadCount'] ?? 0}') ?? 0;
+          badges[chatId] = unreadCount < 0 ? 0 : unreadCount;
+        }
+      }
+      ref
+          .read(conversationListControllerProvider.notifier)
+          .applyBadgeSnapshot(badges);
+    } on DioException {
+      ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+    }
   }
 
   void _handleInitiateGroup() {
@@ -623,52 +689,39 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
     );
   }
 
-  Future<void> _showConversationMenuAt(
+  void _openConversationContextMenu(
     Conversation conversation,
     Offset globalPosition, {
     bool suppressNextTap = false,
-  }) async {
+  }) {
     if (suppressNextTap) {
       _suppressNextClickChatId = conversation.chatId;
     }
-    final strings = AppLocalizations.of(context);
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final action = await showMenu<_ConversationMenuAction>(
-      context: context,
-      position: RelativeRect.fromRect(
-        Rect.fromLTWH(globalPosition.dx, globalPosition.dy, 1, 1),
-        Offset.zero & overlay.size,
-      ),
-      items: [
-        PopupMenuItem<_ConversationMenuAction>(
-          enabled: false,
-          height: 36,
-          child: Text(
-            conversation.title.trim().isEmpty
-                ? conversation.chatId
-                : conversation.title.trim(),
-            style: const TextStyle(fontSize: 13, color: Color(0xFF697386)),
-          ),
-        ),
-        PopupMenuItem<_ConversationMenuAction>(
-          value: _ConversationMenuAction.pin,
-          child: Text(
-            conversation.isPinned ? '取消置顶' : strings.groupSettingsPin,
-          ),
-        ),
-        PopupMenuItem<_ConversationMenuAction>(
-          value: _ConversationMenuAction.unread,
-          child: Text(conversation.unreadCount > 0 ? '标为已读' : '标为未读'),
-        ),
-        const PopupMenuItem<_ConversationMenuAction>(
-          value: _ConversationMenuAction.delete,
-          child: Text('删除会话', style: TextStyle(color: Color(0xFFFF4B4B))),
-        ),
-      ],
-    );
-    if (action == null || !mounted) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    setState(() {
+      _selectedConversation = conversation;
+      _menuX = globalPosition.dx.clamp(0, screenWidth - 160);
+      _menuY = globalPosition.dy;
+      _showContextMenu = true;
+    });
+  }
+
+  void _closeMenu() {
+    if (!mounted) {
       return;
     }
+    setState(() {
+      _showContextMenu = false;
+      _selectedConversation = null;
+    });
+  }
+
+  Future<void> _handleMenuAction(_ConversationMenuAction action) async {
+    final conversation = _selectedConversation;
+    if (conversation == null) {
+      return;
+    }
+    _closeMenu();
     final controller = ref.read(conversationListControllerProvider.notifier);
     try {
       switch (action) {
@@ -750,6 +803,10 @@ class _ConversationListPageState extends ConsumerState<ConversationListPage>
 
   Future<void> _syncOnForegroundIfNeeded() async {
     final now = DateTime.now().millisecondsSinceEpoch;
+    if (_lastConversationSyncAt > 0 &&
+        now - _lastConversationSyncAt <= _foregroundSyncCooldownMs) {
+      return;
+    }
     if (now - _lastOnShowRefreshAt <= _foregroundSyncCooldownMs) {
       return;
     }
@@ -865,14 +922,14 @@ class _ConversationCategoryItem {
   });
 
   final _ConversationCategory category;
-  final AppIconKind icon;
+  final IconData icon;
   final Color color;
 }
 
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({required this.icon, required this.onTap});
+class _HeaderGlyphButton extends StatelessWidget {
+  const _HeaderGlyphButton({required this.icon, required this.onTap});
 
-  final AppIconKind icon;
+  final IconData icon;
   final VoidCallback onTap;
 
   @override
@@ -880,7 +937,7 @@ class _HeaderIconButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
-      child: AppIcon(icon, size: 22, color: const Color(0xFF202531)),
+      child: Icon(icon, size: 22, color: const Color(0xFF202531)),
     );
   }
 }
@@ -917,7 +974,7 @@ class _CategoryButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               alignment: Alignment.center,
-              child: AppIcon(
+              child: Icon(
                 item.icon,
                 size: 22,
                 color: active ? const Color(0xFF3370FF) : item.color,
@@ -938,6 +995,100 @@ class _CategoryButton extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ConversationContextMenu extends StatelessWidget {
+  const _ConversationContextMenu({
+    required this.title,
+    required this.pinned,
+    required this.unread,
+    required this.onPinTap,
+    required this.onUnreadTap,
+    required this.onDeleteTap,
+  });
+
+  final String title;
+  final bool pinned;
+  final bool unread;
+  final VoidCallback onPinTap;
+  final VoidCallback onUnreadTap;
+  final VoidCallback onDeleteTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 160,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFF0F2F6), width: 0.5),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 16,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              color: const Color(0xFFF7F8FB),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF697386),
+                ),
+              ),
+            ),
+            _MenuTextButton(label: pinned ? '取消置顶' : '置顶会话', onTap: onPinTap),
+            _MenuTextButton(
+              label: unread ? '标为已读' : '标为未读',
+              onTap: onUnreadTap,
+            ),
+            _MenuTextButton(
+              label: '删除会话',
+              color: const Color(0xFFFF4D4F),
+              onTap: onDeleteTap,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuTextButton extends StatelessWidget {
+  const _MenuTextButton({
+    required this.label,
+    required this.onTap,
+    this.color = const Color(0xFF202531),
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Text(label, style: TextStyle(fontSize: 15, color: color)),
       ),
     );
   }

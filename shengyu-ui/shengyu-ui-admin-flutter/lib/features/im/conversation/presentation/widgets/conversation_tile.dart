@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/domain/entities/conversation.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
+import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
@@ -103,9 +104,7 @@ class _ConversationTileState extends State<ConversationTile> {
                                   if (showGroupCount) ...[
                                     const SizedBox(width: 4),
                                     Text(
-                                      strings.contactsCountPeople(
-                                        conversation.groupMemberCount,
-                                      ),
+                                      '(${conversation.groupMemberCount})',
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
                                             fontSize: 13,
@@ -150,11 +149,12 @@ class _ConversationTileState extends State<ConversationTile> {
                                         textStyle: theme.textTheme.bodyMedium!
                                             .copyWith(
                                               fontSize: 13,
+                                              height: 18 / 13,
                                               color: token.isNotice
                                                   ? const Color(0xFFF54A45)
                                                   : const Color(0xFF697386),
                                             ),
-                                        emojiSize: 16,
+                                        emojiSize: 14,
                                         emojiPadding:
                                             const EdgeInsets.symmetric(
                                               horizontal: 1,
@@ -289,7 +289,7 @@ String _previewText(AppLocalizations strings, Conversation conversation) {
 }
 
 String _formatUpdatedAt(BuildContext context, DateTime value) {
-  final locale = AppLocalizations.of(context).localeName;
+  final locale = AppLocalizations.of(context).localeName.toLowerCase();
   final now = DateTime.now();
   final localValue = value.toLocal();
   if (localValue.millisecondsSinceEpoch <= 0) {
@@ -306,18 +306,41 @@ String _formatUpdatedAt(BuildContext context, DateTime value) {
   if (yesterday.year == localValue.year &&
       yesterday.month == localValue.month &&
       yesterday.day == localValue.day) {
-    return '昨天';
+    return locale.startsWith('zh') ? '昨天' : 'Yesterday';
   }
   final difference = DateTime(now.year, now.month, now.day)
       .difference(DateTime(localValue.year, localValue.month, localValue.day))
       .inDays;
   if (difference > 0 && difference < 7) {
-    return DateFormat.E(locale).format(localValue);
+    if (locale.startsWith('zh')) {
+      const weekdays = <String>[
+        '星期日',
+        '星期一',
+        '星期二',
+        '星期三',
+        '星期四',
+        '星期五',
+        '星期六',
+      ];
+      return weekdays[localValue.weekday % 7];
+    }
+    const weekdays = <String>[
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+    return weekdays[localValue.weekday % 7];
   }
+  final month = localValue.month.toString().padLeft(2, '0');
+  final day = localValue.day.toString().padLeft(2, '0');
   if (now.year == localValue.year) {
-    return DateFormat('MM/dd', locale).format(localValue);
+    return '$month/$day';
   }
-  return DateFormat('yyyy/MM/dd', locale).format(localValue);
+  return '${localValue.year}/$month/$day';
 }
 
 class _PreviewToken {
@@ -396,19 +419,24 @@ class _ConversationAvatar extends StatelessWidget {
 
   Widget _buildFallback() {
     final isGroup = conversation.conversationType == ConversationType.group;
-    final backgroundColor = _fallbackColor();
+    final backgroundColor = resolveConversationAvatarBg(
+      avatarBg: conversation.avatarBg,
+      conversationType: conversation.conversationType,
+      targetId: conversation.targetId,
+      chatId: conversation.chatId,
+    );
     return Container(
       width: 48,
       height: 48,
       color: backgroundColor,
       alignment: Alignment.center,
       child: isGroup
-          ? const AppIcon(AppIconKind.groupsFill, color: Colors.white, size: 24)
+          ? const Icon(ShengyuIconFont.yonghu1, color: Colors.white, size: 24)
           : Text(
               _fallbackText(),
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -416,25 +444,10 @@ class _ConversationAvatar extends StatelessWidget {
   }
 
   String _fallbackText() {
-    final trimmed = displayTitle.trim();
-    if (trimmed.isEmpty) {
-      return '?';
-    }
-    return trimmed.characters.first.toUpperCase();
-  }
-
-  Color _fallbackColor() {
-    final palette = <Color>[
-      const Color(0xFF5B8FF9),
-      const Color(0xFF61DDAA),
-      const Color(0xFF65789B),
-      const Color(0xFFF6BD16),
-      const Color(0xFF7262FD),
-      const Color(0xFF78D3F8),
-      const Color(0xFF9661BC),
-    ];
-    final seed = (conversation.targetId ?? conversation.chatId).trim();
-    final hash = seed.isEmpty ? conversation.chatId.hashCode : seed.hashCode;
-    return palette[hash.abs() % palette.length];
+    return resolveConversationAvatarText(
+      avatarText: conversation.avatarText,
+      title: displayTitle,
+      targetId: conversation.targetId,
+    );
   }
 }
