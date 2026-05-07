@@ -143,36 +143,10 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
 
     state = state.copyWith(isPicking: true, error: null);
     try {
-      final result = await _uploadExistingMessage(
+      await _uploadExistingMessage(
         message: failedMessage,
         entryArgs: entryArgs,
         purpose: purpose,
-      );
-      final merged = result.message.copyWith(
-        clientMessageId: retryKey,
-        extra: result.message.extra.copyWith(
-          localPath: failedMessage.extra.localPath,
-          fileUrl: result.message.extra.fileUrl ?? failedMessage.extra.fileUrl,
-          thumbnailUrl:
-              result.message.extra.thumbnailUrl ??
-              failedMessage.extra.thumbnailUrl,
-          fileName:
-              result.message.extra.fileName ?? failedMessage.extra.fileName,
-          fileType:
-              result.message.extra.fileType ?? failedMessage.extra.fileType,
-          fileSize:
-              result.message.extra.fileSize ?? failedMessage.extra.fileSize,
-        ),
-      );
-      _timelineController.replaceSingleMessage(
-        clientMessageId: retryKey,
-        message: merged,
-      );
-      _patchConversationForDeliveredMessage(
-        clientMessageId: retryKey,
-        fallback: merged,
-        chatTitle: chatTitle,
-        entryArgs: entryArgs,
       );
       state = state.copyWith(isPicking: false, error: null);
       return true;
@@ -226,7 +200,7 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
         entryArgs: entryArgs,
       );
 
-      final result = await _uploadByPurpose(
+      await _uploadByPurpose(
         purpose: resolvedPurpose,
         _buildUploadInput(
           purpose: resolvedPurpose,
@@ -239,37 +213,6 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
         (_) {},
       );
       await _saveGroupFileIfNeeded(entryArgs: entryArgs, picked: picked);
-
-      final merged = result.message.copyWith(
-        clientMessageId:
-            optimisticMessage.clientMessageId ?? optimisticMessage.messageId,
-        extra: result.message.extra.copyWith(
-          fileId: result.message.extra.fileId,
-          fileUrl:
-              result.message.extra.fileUrl ?? optimisticMessage.extra.fileUrl,
-          thumbnailUrl:
-              result.message.extra.thumbnailUrl ??
-              optimisticMessage.extra.thumbnailUrl,
-          fileName:
-              result.message.extra.fileName ?? optimisticMessage.extra.fileName,
-          fileType:
-              result.message.extra.fileType ?? optimisticMessage.extra.fileType,
-          fileSize:
-              result.message.extra.fileSize ?? optimisticMessage.extra.fileSize,
-        ),
-      );
-      _timelineController.replaceSingleMessage(
-        clientMessageId:
-            optimisticMessage.clientMessageId ?? optimisticMessage.messageId,
-        message: merged,
-      );
-      _patchConversationForDeliveredMessage(
-        clientMessageId:
-            optimisticMessage.clientMessageId ?? optimisticMessage.messageId,
-        fallback: merged,
-        chatTitle: chatTitle,
-        entryArgs: entryArgs,
-      );
       state = state.copyWith(isPicking: false, error: null);
     } catch (error, stackTrace) {
       if (optimisticMessage != null) {
@@ -547,18 +490,4 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
     );
   }
 
-  void _patchConversationForDeliveredMessage({
-    required String clientMessageId,
-    required Message fallback,
-    required String chatTitle,
-    required ChatEntryArgs entryArgs,
-  }) {
-    final effective =
-        _timelineController.findByAnyMessageId(clientMessageId) ?? fallback;
-    _patchConversation(
-      message: effective,
-      chatTitle: chatTitle,
-      entryArgs: entryArgs,
-    );
-  }
 }

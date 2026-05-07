@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'dart:convert';
+import 'package:shengyu_ui_admin_im/core/network/api_exception.dart';
 import 'package:shengyu_ui_admin_im/core/network/api_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/commands/open_chat_command.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/contact_card_share_payload.dart';
@@ -22,6 +23,64 @@ class MessageRemoteDataSource {
 
   final Dio dio;
 
+  Future<MessageDto> _resolveSendMessageDto(Object? responseBody) async {
+    final result = ApiResult.fromJson<Object?>(
+      responseBody as Map<String, dynamic>,
+      dataParser: (raw) => raw,
+    );
+    if (!result.isSuccess) {
+      throw ApiException(
+        code: result.code,
+        message: result.message.isEmpty ? 'API request failed' : result.message,
+        details: result.data,
+      );
+    }
+    final raw = result.data;
+    if (raw is Map<String, dynamic>) {
+      return MessageDto.fromJson(raw);
+    }
+    if (raw is Map) {
+      return MessageDto.fromJson(
+        raw.map((key, value) => MapEntry(key.toString(), value)),
+      );
+    }
+    final messageId = _extractSentMessageId(raw);
+    return _buildAcceptedSendAckDto(messageId);
+  }
+
+  String? _extractSentMessageId(Object? raw) {
+    if (raw == null) {
+      return null;
+    }
+    if (raw is num) {
+      final value = raw.toInt().toString();
+      return value.isEmpty || value == '0' ? null : value;
+    }
+    final text = raw.toString().trim();
+    if (text.isEmpty || text == '0' || text == 'null') {
+      return null;
+    }
+    return text;
+  }
+
+  MessageDto _buildAcceptedSendAckDto(String? messageId) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return MessageDto.fromJson(<String, dynamic>{
+      'id': messageId ?? '',
+      'messageId': messageId ?? '',
+      'status': 'sending',
+      'type': 'text',
+      'content': '',
+      'createdAt': now,
+      'sentAt': now,
+      'chatId': '',
+      'senderId': '',
+      'senderName': '',
+      'isOutgoing': true,
+      'clientMessageId': '',
+    });
+  }
+
   Future<MessageWindowResponseDto> fetchLatestWindow(
     OpenChatCommand command,
   ) async {
@@ -31,7 +90,8 @@ class MessageRemoteDataSource {
         'mode': command.windowMode,
       if (command.anchorSequence != null && command.anchorSequence!.isNotEmpty)
         'anchorSequence': command.anchorSequence,
-      if (command.anchorMessageId != null && command.anchorMessageId!.isNotEmpty)
+      if (command.anchorMessageId != null &&
+          command.anchorMessageId!.isNotEmpty)
         'anchorMessageId': command.anchorMessageId,
       if (command.windowLimit != null && command.windowLimit! > 0)
         'limit': command.windowLimit,
@@ -106,32 +166,51 @@ class MessageRemoteDataSource {
         .map((item) => item.trim())
         .where((item) => item.isNotEmpty && item != '0')
         .toList(growable: false);
-    final mentionsJson = mentions.isEmpty
-        ? null
-        : jsonEncode(mentions.map((item) => item.toJson()).toList());
+    final mentionsPayload = mentions
+        .map((item) => item.toJson())
+        .toList(growable: false);
+    final trimmedText = text.trim();
+    final isQuoteReply = quoteInfo != null;
+    final contentPayload = isQuoteReply
+        ? jsonEncode(<String, Object?>{
+            'content': trimmedText,
+            'quotedMessageId': quoteInfo.messageId,
+            'quotedContent': quoteInfo.preview,
+            'quotedSenderName': quoteInfo.senderName,
+            'atUserIds': normalizedAtUserIds,
+            'mentions': mentionsPayload,
+          })
+        : trimmedText;
+    final extraPayload = isQuoteReply
+        ? contentPayload
+        : (normalizedAtUserIds.isEmpty && mentionsPayload.isEmpty
+              ? null
+              : jsonEncode(<String, Object?>{
+                  'atUserIds': normalizedAtUserIds,
+                  'mentions': mentionsPayload,
+                }));
     final response = await dio.post(
       '/system/im/message/send',
       data: {
         'chatId': chatId,
-        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+        if (receiverId != null &&
+            receiverId.trim().isNotEmpty &&
+            receiverId != '0')
           'receiverId': receiverId.trim(),
         if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
           'groupId': groupId.trim(),
-        'type': 'text',
-        'content': text.trim(),
+        'messageType': isQuoteReply ? 205 : 1,
+        'content': contentPayload,
         'clientMessageId': clientMessageId,
         if (normalizedAtUserIds.isNotEmpty) 'atUserIds': normalizedAtUserIds,
-        'mentions': mentionsJson,
+        if (mentionsPayload.isNotEmpty) 'mentions': mentionsPayload,
+        ...?extraPayload == null
+            ? null
+            : <String, Object?>{'extra': extraPayload},
         if (quoteInfo != null) 'quoteMessageId': quoteInfo.messageId,
       },
     );
-    final result = ApiResult.fromJson<MessageDto>(
-      response.data as Map<String, dynamic>,
-      dataParser: (raw) {
-        return MessageDto.fromJson(raw as Map<String, dynamic>? ?? const {});
-      },
-    );
-    return result.requireData();
+    return _resolveSendMessageDto(response.data);
   }
 
   Future<MessageDto> sendImageMessage({
@@ -158,7 +237,9 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
-        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+        if (receiverId != null &&
+            receiverId.trim().isNotEmpty &&
+            receiverId != '0')
           'receiverId': receiverId.trim(),
         if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
           'groupId': groupId.trim(),
@@ -168,13 +249,7 @@ class MessageRemoteDataSource {
         'extra': extra,
       },
     );
-    final result = ApiResult.fromJson<MessageDto>(
-      response.data as Map<String, dynamic>,
-      dataParser: (raw) {
-        return MessageDto.fromJson(raw as Map<String, dynamic>? ?? const {});
-      },
-    );
-    return result.requireData();
+    return _resolveSendMessageDto(response.data);
   }
 
   Future<MessageDto> sendVideoMessage({
@@ -193,6 +268,7 @@ class MessageRemoteDataSource {
     final extra = jsonEncode({
       'fileId': fileId,
       'url': url,
+      'coverUrl': thumbnailUrl,
       'thumbnailUrl': thumbnailUrl,
       'duration': duration,
       'width': width,
@@ -203,7 +279,9 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
-        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+        if (receiverId != null &&
+            receiverId.trim().isNotEmpty &&
+            receiverId != '0')
           'receiverId': receiverId.trim(),
         if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
           'groupId': groupId.trim(),
@@ -213,13 +291,7 @@ class MessageRemoteDataSource {
         'extra': extra,
       },
     );
-    final result = ApiResult.fromJson<MessageDto>(
-      response.data as Map<String, dynamic>,
-      dataParser: (raw) {
-        return MessageDto.fromJson(raw as Map<String, dynamic>? ?? const {});
-      },
-    );
-    return result.requireData();
+    return _resolveSendMessageDto(response.data);
   }
 
   Future<MessageDto> sendVoiceMessage({
@@ -248,7 +320,9 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
-        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+        if (receiverId != null &&
+            receiverId.trim().isNotEmpty &&
+            receiverId != '0')
           'receiverId': receiverId.trim(),
         if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
           'groupId': groupId.trim(),
@@ -258,13 +332,7 @@ class MessageRemoteDataSource {
         'extra': extra,
       },
     );
-    final result = ApiResult.fromJson<MessageDto>(
-      response.data as Map<String, dynamic>,
-      dataParser: (raw) {
-        return MessageDto.fromJson(raw as Map<String, dynamic>? ?? const {});
-      },
-    );
-    return result.requireData();
+    return _resolveSendMessageDto(response.data);
   }
 
   Future<MessageDto> sendFileMessage({
@@ -289,23 +357,19 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
-        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+        if (receiverId != null &&
+            receiverId.trim().isNotEmpty &&
+            receiverId != '0')
           'receiverId': receiverId.trim(),
         if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
           'groupId': groupId.trim(),
         'messageType': 5,
-        'content': fileName,
+        'content': url,
         'clientMessageId': clientMessageId,
         'extra': extra,
       },
     );
-    final result = ApiResult.fromJson<MessageDto>(
-      response.data as Map<String, dynamic>,
-      dataParser: (raw) {
-        return MessageDto.fromJson(raw as Map<String, dynamic>? ?? const {});
-      },
-    );
-    return result.requireData();
+    return _resolveSendMessageDto(response.data);
   }
 
   Future<MessageDto> sendContactCardMessage({
@@ -327,7 +391,9 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
-        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+        if (receiverId != null &&
+            receiverId.trim().isNotEmpty &&
+            receiverId != '0')
           'receiverId': receiverId.trim(),
         if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
           'groupId': groupId.trim(),
@@ -337,13 +403,7 @@ class MessageRemoteDataSource {
         'clientMessageId': clientMessageId,
       },
     );
-    final result = ApiResult.fromJson<MessageDto>(
-      response.data as Map<String, dynamic>,
-      dataParser: (raw) {
-        return MessageDto.fromJson(raw as Map<String, dynamic>? ?? const {});
-      },
-    );
-    return result.requireData();
+    return _resolveSendMessageDto(response.data);
   }
 
   Future<MessageDto> sendLocationMessage({
@@ -353,7 +413,11 @@ class MessageRemoteDataSource {
     String? receiverId,
     String? groupId,
   }) async {
-    final contentRaw = jsonEncode({
+    final preview = payload.address.trim().isNotEmpty
+        ? payload.address.trim()
+        : payload.name.trim();
+    final extraRaw = jsonEncode({
+      'clientMessageId': clientMessageId,
       'latitude': payload.latitude,
       'longitude': payload.longitude,
       'address': payload.address,
@@ -365,23 +429,19 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
-        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+        if (receiverId != null &&
+            receiverId.trim().isNotEmpty &&
+            receiverId != '0')
           'receiverId': receiverId.trim(),
         if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
           'groupId': groupId.trim(),
         'messageType': 6,
-        'content': contentRaw,
-        'extra': contentRaw,
+        'content': preview,
+        'extra': extraRaw,
         'clientMessageId': clientMessageId,
       },
     );
-    final result = ApiResult.fromJson<MessageDto>(
-      response.data as Map<String, dynamic>,
-      dataParser: (raw) {
-        return MessageDto.fromJson(raw as Map<String, dynamic>? ?? const {});
-      },
-    );
-    return result.requireData();
+    return _resolveSendMessageDto(response.data);
   }
 
   Future<MessageDto> sendStickerMessage({
@@ -407,7 +467,9 @@ class MessageRemoteDataSource {
       '/system/im/message/send',
       data: {
         'chatId': chatId,
-        if (receiverId != null && receiverId.trim().isNotEmpty && receiverId != '0')
+        if (receiverId != null &&
+            receiverId.trim().isNotEmpty &&
+            receiverId != '0')
           'receiverId': receiverId.trim(),
         if (groupId != null && groupId.trim().isNotEmpty && groupId != '0')
           'groupId': groupId.trim(),
@@ -417,13 +479,7 @@ class MessageRemoteDataSource {
         'clientMessageId': clientMessageId,
       },
     );
-    final result = ApiResult.fromJson<MessageDto>(
-      response.data as Map<String, dynamic>,
-      dataParser: (raw) {
-        return MessageDto.fromJson(raw as Map<String, dynamic>? ?? const {});
-      },
-    );
-    return result.requireData();
+    return _resolveSendMessageDto(response.data);
   }
 
   Future<void> markConversationRead({required String chatId}) async {

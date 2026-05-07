@@ -217,7 +217,7 @@ class ChatController extends StateNotifier<ChatPageState> {
 
     try {
       final target = _resolveLegacySendTarget();
-      final result = await _sendMessageUseCase(
+      await _sendMessageUseCase(
         chatId: localMessage.chatId,
         text: localMessage.content,
         clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
@@ -226,17 +226,6 @@ class ChatController extends StateNotifier<ChatPageState> {
         quoteInfo: localMessage.quoteInfo,
         atUserIds: localMessage.extra.atUserIds,
         mentions: localMessage.extra.mentions,
-      );
-      _timelineController.replaceSingleMessage(
-        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
-        message: result.message.copyWith(
-          clientMessageId:
-              localMessage.clientMessageId ?? localMessage.messageId,
-        ),
-      );
-      _patchConversationForDeliveredMessage(
-        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
-        fallback: result.message,
       );
       state = state.copyWith(pendingAction: ChatPendingAction.none);
       return true;
@@ -339,23 +328,12 @@ class ChatController extends StateNotifier<ChatPageState> {
     );
     try {
       final target = _resolveLegacySendTarget();
-      final result = await _sendMessageUseCase.sendContactCard(
+      await _sendMessageUseCase.sendContactCard(
         chatId: localMessage.chatId,
         payload: payload,
         clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
         receiverId: target.receiverId,
         groupId: target.groupId,
-      );
-      _timelineController.replaceSingleMessage(
-        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
-        message: result.message.copyWith(
-          clientMessageId:
-              localMessage.clientMessageId ?? localMessage.messageId,
-        ),
-      );
-      _patchConversationForDeliveredMessage(
-        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
-        fallback: result.message,
       );
       state = state.copyWith(pendingAction: ChatPendingAction.none);
       return true;
@@ -398,23 +376,12 @@ class ChatController extends StateNotifier<ChatPageState> {
     );
     try {
       final target = _resolveLegacySendTarget();
-      final result = await _sendMessageUseCase.sendLocation(
+      await _sendMessageUseCase.sendLocation(
         chatId: localMessage.chatId,
         payload: payload,
         clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
         receiverId: target.receiverId,
         groupId: target.groupId,
-      );
-      _timelineController.replaceSingleMessage(
-        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
-        message: result.message.copyWith(
-          clientMessageId:
-              localMessage.clientMessageId ?? localMessage.messageId,
-        ),
-      );
-      _patchConversationForDeliveredMessage(
-        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
-        fallback: result.message,
       );
       state = state.copyWith(pendingAction: ChatPendingAction.none);
       return true;
@@ -457,23 +424,12 @@ class ChatController extends StateNotifier<ChatPageState> {
     );
     try {
       final target = _resolveLegacySendTarget();
-      final result = await _sendMessageUseCase.sendSticker(
+      await _sendMessageUseCase.sendSticker(
         chatId: localMessage.chatId,
         payload: payload,
         clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
         receiverId: target.receiverId,
         groupId: target.groupId,
-      );
-      _timelineController.replaceSingleMessage(
-        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
-        message: result.message.copyWith(
-          clientMessageId:
-              localMessage.clientMessageId ?? localMessage.messageId,
-        ),
-      );
-      _patchConversationForDeliveredMessage(
-        clientMessageId: localMessage.clientMessageId ?? localMessage.messageId,
-        fallback: result.message,
       );
       state = state.copyWith(pendingAction: ChatPendingAction.none);
       return true;
@@ -527,16 +483,6 @@ class ChatController extends StateNotifier<ChatPageState> {
     );
   }
 
-  void _patchConversationForDeliveredMessage({
-    required String clientMessageId,
-    required Message fallback,
-  }) {
-    final effective =
-        _timelineController.findByAnyMessageId(clientMessageId) ?? fallback;
-    _patchConversationForMessage(effective, resetUnread: true);
-    _scheduleDirectPresenceRefreshAfterSend();
-  }
-
   String _conversationPreview(Message message) {
     return _messagePreviewFormatter.formatConversationPreview(
       type: message.type,
@@ -550,16 +496,4 @@ class ChatController extends StateNotifier<ChatPageState> {
     );
   }
 
-  void _scheduleDirectPresenceRefreshAfterSend() {
-    if (state.entryArgs.conversationType != ConversationType.direct) {
-      return;
-    }
-    Future<void>.delayed(const Duration(milliseconds: 500), () async {
-      try {
-        await _conversationListController.syncIncrementally();
-      } catch (_) {
-        // Keep silent to match old page post-send presence compensation.
-      }
-    });
-  }
 }

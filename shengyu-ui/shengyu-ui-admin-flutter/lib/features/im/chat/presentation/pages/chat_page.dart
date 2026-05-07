@@ -84,7 +84,8 @@ class ChatPage extends ConsumerStatefulWidget {
   ConsumerState<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends ConsumerState<ChatPage> {
+class _ChatPageState extends ConsumerState<ChatPage>
+    with WidgetsBindingObserver {
   static const int _maxStickerCount = 150;
   static const int _maxForwardSelectionCount = 50;
   static const int _minVoiceDurationMs = 1000;
@@ -144,6 +145,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   ProviderSubscription<ChatTimelineState>? _timelineSubscription;
   bool _voicePlayedSyncInFlight = false;
   bool _voicePlayedCompensateInFlight = false;
+  bool _isTimelineAtBottom = true;
+  double _lastViewInsetsBottom = 0;
   late final ScrollController _timelineScrollController;
   final Map<String, _ReadReceiptSummaryCacheEntry> _readReceiptSummaryCache =
       <String, _ReadReceiptSummaryCacheEntry>{};
@@ -159,6 +162,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _timelineScrollController = ScrollController()
       ..addListener(_handleTimelineScroll);
     _mentionSearchController = TextEditingController();
@@ -185,6 +189,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _highlightClearTimer?.cancel();
     _recordingTimer?.cancel();
     _reeditTicker?.cancel();
@@ -238,7 +243,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (!mounted) {
         return;
       }
-      _scrollTimelineToBottom();
+      if (_isTimelineAtBottom) {
+        _scrollTimelineToBottom();
+      }
     });
   }
 
@@ -252,6 +259,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final viewInsetsBottom = MediaQuery.of(context).viewInsets.bottom;
+    if (viewInsetsBottom != _lastViewInsetsBottom) {
+      _lastViewInsetsBottom = viewInsetsBottom;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_isTimelineAtBottom) {
+          return;
+        }
+        _scrollTimelineToBottom();
+      });
+    }
     ref.watch(chatRealtimeBindingProvider(widget.args.chatId));
     ref.listen<ChatRuntimeNotice?>(chatRuntimeNoticeProvider, (prev, next) {
       if (next == null || next.chatId != widget.args.chatId || !mounted) {
@@ -4709,6 +4726,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       return;
     }
     final position = _timelineScrollController.position;
+    if ((position.maxScrollExtent - position.pixels).abs() <= 1) {
+      return;
+    }
     _timelineScrollController.animateTo(
       position.maxScrollExtent,
       duration: const Duration(milliseconds: 180),
@@ -4720,7 +4740,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (!_timelineScrollController.hasClients) {
       return;
     }
-    final top = _timelineScrollController.position.pixels;
+    final position = _timelineScrollController.position;
+    final top = position.pixels;
+    final distanceToBottom = position.maxScrollExtent - top;
+    final nextAtBottom = distanceToBottom <= 72;
+    if (nextAtBottom != _isTimelineAtBottom) {
+      _isTimelineAtBottom = nextAtBottom;
+    }
     final delta = top - _lastTimelineScrollTop;
     _lastTimelineScrollTop = top;
     if (top > 48 || delta > 0) {
@@ -5037,7 +5063,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             displayName: 'voice.m4a',
             mimeType: 'audio/mp4',
           );
-      final sent = await ref
+      await ref
           .read(messageRepositoryProvider)
           .sendVoiceMessage(
             chatId: widget.args.chatId,
@@ -5051,50 +5077,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             format: 'm4a',
             md5: upload.file.md5 ?? '',
             clientMessageId: retryKey,
-          );
-      ref
-          .read(chatTimelineControllerProvider.notifier)
-          .replaceSingleMessage(
-            clientMessageId: retryKey,
-            message: sent.message.copyWith(
-              clientMessageId: retryKey,
-              extra: sent.message.extra.copyWith(
-                localPath: localPath,
-                duration: durationSeconds,
-                durationMs: durationMs,
-                voicePlayed: true,
-              ),
-            ),
-          );
-      final effectiveMessage =
-          ref
-              .read(chatTimelineControllerProvider.notifier)
-              .findByAnyMessageId(retryKey) ??
-          sent.message;
-      ref
-          .read(conversationListControllerProvider.notifier)
-          .upsertLocalMessage(
-            chatId: effectiveMessage.chatId,
-            title: ref.read(chatControllerProvider).chatTitle ?? '',
-            conversationType: widget.args.conversationType,
-            messageId: effectiveMessage.messageId,
-            messageSequence: effectiveMessage.sequence,
-            preview: ref
-                .read(messagePreviewFormatterProvider)
-                .formatConversationPreview(
-                  type: effectiveMessage.type,
-                  content: effectiveMessage.content,
-                  customType: effectiveMessage.extra.customType,
-                  fileName: effectiveMessage.extra.fileName,
-                  systemEventKey: effectiveMessage.extra.systemEventKey,
-                  conversationType: widget.args.conversationType,
-                  isSelf: effectiveMessage.isOutgoing,
-                  senderName: effectiveMessage.senderName,
-                ),
-            messageType: effectiveMessage.type,
-            messageStatus: effectiveMessage.status,
-            updatedAt: effectiveMessage.sentAt,
-            resetUnread: true,
           );
       return true;
     } catch (error) {
