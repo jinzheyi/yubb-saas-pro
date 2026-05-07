@@ -56,6 +56,28 @@ class ChatComposer extends StatelessWidget {
   final QuoteInfo? quoteInfo;
   final VoidCallback? onClearQuote;
 
+  static const TextStyle _composerTextStyle = TextStyle(
+    fontSize: 15,
+    height: 22 / 15,
+    color: Color(0xFF202531),
+  );
+  static const StrutStyle _composerStrutStyle = StrutStyle(
+    fontSize: 15,
+    height: 22 / 15,
+    leading: 0,
+    forceStrutHeight: true,
+  );
+  static const Color _composerFillColor = Color(0xFFF1F3F7);
+  static const Color _composerBorderColor = Color(0xFFE1E6EF);
+  static const OutlineInputBorder _composerEnabledBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(4)),
+    borderSide: BorderSide(color: _composerBorderColor, width: 1),
+  );
+  static const OutlineInputBorder _composerFocusedBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(4)),
+    borderSide: BorderSide(color: Color(0xFF246BFD), width: 1.2),
+  );
+
   @override
   Widget build(BuildContext context) {
     final controller = composer.textController;
@@ -92,14 +114,8 @@ class ChatComposer extends StatelessWidget {
                   child: Column(
                     children: [
                       Expanded(
-                        child: Container(
+                        child: SizedBox(
                           width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F3F7),
-                            border: Border.all(color: const Color(0xFFE1E6EF)),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                           child: TextField(
                             controller: controller,
                             focusNode: focusNode,
@@ -107,16 +123,28 @@ class ChatComposer extends StatelessWidget {
                             maxLines: null,
                             minLines: null,
                             textAlignVertical: TextAlignVertical.top,
-                            onTap: onTapInput,
-                            decoration: InputDecoration(
-                              hintText: hintText,
-                              isCollapsed: true,
-                              fillColor: Colors.transparent,
-                              border: InputBorder.none,
-                              hintStyle: const TextStyle(
-                                color: Color(0xFF98A1B2),
-                              ),
+                            strutStyle: const StrutStyle(
+                              fontSize: 16,
+                              height: 24 / 16,
+                              leading: 0,
+                              forceStrutHeight: true,
                             ),
+                            onTap: onTapInput,
+                            decoration: const InputDecoration(
+                              filled: true,
+                              fillColor: _composerFillColor,
+                              hintText: '',
+                              contentPadding: EdgeInsets.fromLTRB(
+                                12,
+                                12,
+                                12,
+                                12,
+                              ),
+                              enabledBorder: _composerEnabledBorder,
+                              focusedBorder: _composerFocusedBorder,
+                              border: _composerEnabledBorder,
+                              hintStyle: TextStyle(color: Color(0xFF98A1B2)),
+                            ).copyWith(hintText: hintText),
                             style: const TextStyle(
                               fontSize: 16,
                               height: 24 / 16,
@@ -205,7 +233,7 @@ class ChatComposer extends StatelessWidget {
           color: Colors.white,
           border: Border(top: BorderSide(color: Color(0xFFE8ECF3), width: 1)),
         ),
-        padding: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.only(bottom: 2),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -213,9 +241,9 @@ class ChatComposer extends StatelessWidget {
               _QuoteReplyBar(quoteInfo: quoteInfo!, onClear: onClearQuote),
             ],
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+              padding: const EdgeInsets.fromLTRB(12, 7, 12, 5),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   _PlainToolButton(
                     icon: voiceMode ? AppIconKind.keyboard : AppIconKind.mic,
@@ -240,53 +268,48 @@ class ChatComposer extends StatelessWidget {
                             onPressEnd: onVoicePressEnd,
                             onPressCancel: onVoicePressCancel,
                           )
-                        : Container(
+                        : SizedBox(
                             height: composerHeight,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF5F5F5),
-                              border: Border.all(
-                                color: const Color(0xFFEAECEF),
-                                width: 0.8,
-                              ),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
                             child: TextField(
                               controller: controller,
                               focusNode: focusNode,
                               minLines: 1,
                               maxLines: null,
                               textInputAction: TextInputAction.send,
-                              textAlignVertical: TextAlignVertical.center,
+                              textAlignVertical: TextAlignVertical.top,
+                              strutStyle: _composerStrutStyle,
                               onTap: onTapInput,
-                              decoration: InputDecoration(
-                                hintText: hintText,
-                                isCollapsed: true,
-                                fillColor: Colors.transparent,
-                                border: InputBorder.none,
-                                hintStyle: const TextStyle(
+                              decoration: const InputDecoration(
+                                filled: true,
+                                fillColor: _composerFillColor,
+                                contentPadding: EdgeInsets.fromLTRB(
+                                  12,
+                                  8,
+                                  12,
+                                  8,
+                                ),
+                                enabledBorder: _composerEnabledBorder,
+                                focusedBorder: _composerFocusedBorder,
+                                border: _composerEnabledBorder,
+                                hintStyle: TextStyle(
                                   color: Color(0xFF98A1B2),
                                   fontSize: 15,
                                   height: 22 / 15,
                                 ),
-                              ),
-                              style: const TextStyle(
-                                fontSize: 15,
-                                height: 22 / 15,
-                                color: Color(0xFF202531),
-                              ),
+                              ).copyWith(hintText: hintText),
+                              style: _composerTextStyle,
                               inputFormatters: composer.inputFormatters,
                               onChanged: onChanged,
                               onSubmitted: isSending ? null : onSend,
                             ),
                           ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   _PlainToolButton(
                     icon: AppIconKind.smile,
                     onTap: isSending ? null : onTapEmoji,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   if (!voiceMode)
                     ValueListenableBuilder<TextEditingValue>(
                       valueListenable: controller,
@@ -305,7 +328,7 @@ class ChatComposer extends StatelessWidget {
                             onPressed: () => onSend(value.text),
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFF07C160),
-                              minimumSize: const Size(58, 32),
+                              minimumSize: const Size(56, 32),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                               ),
@@ -373,17 +396,17 @@ class _HoldToTalkButton extends StatelessWidget {
       onPointerUp: enabled ? (_) => onPressEnd() : null,
       onPointerCancel: enabled ? (_) => onPressCancel() : null,
       child: Container(
-        height: 36,
+        height: 38,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isRecording
               ? const Color(0xFF2B3541)
-              : const Color(0xFFF5F5F5),
+              : const Color(0xFFF1F3F7),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
             color: isCancelReady
                 ? const Color(0xFFFFC6C6)
-                : const Color(0xFFEAECEF),
+                : const Color(0xFFE1E6EF),
           ),
         ),
         child: Text(
@@ -491,25 +514,22 @@ class _PlainToolButton extends StatelessWidget {
 
   final Object icon;
   final VoidCallback? onTap;
+  static const Color _actionColor = Color(0xFF1F2329);
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = onTap == null
-        ? const Color(0xFFC4C9D4)
-        : const Color(0xFF202531);
+    final iconColor = onTap == null ? const Color(0xFFC4C9D4) : _actionColor;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: SizedBox(
-        width: 32,
-        height: 36,
+        width: 30,
+        height: 40,
         child: icon is AppIconKind
             ? Center(
-                child: AppIcon(icon as AppIconKind, size: 26, color: iconColor),
+                child: AppIcon(icon as AppIconKind, size: 24, color: iconColor),
               )
-            : Center(
-                child: Icon(icon as IconData, size: 26, color: iconColor),
-              ),
+            : Center(child: Icon(icon as IconData, size: 24, color: iconColor)),
       ),
     );
   }

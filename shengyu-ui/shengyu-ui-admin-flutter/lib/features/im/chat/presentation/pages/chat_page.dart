@@ -356,14 +356,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       hintText: strings.inputMessage,
       quoteInfo: _quoteInfo,
       onClearQuote: _clearQuoteReply,
-      onTapInput: () {
-        if (_isMorePanelVisible || _isEmojiPanelVisible) {
-          setState(() {
-            _isMorePanelVisible = false;
-            _isEmojiPanelVisible = false;
-          });
-        }
-      },
+      onTapInput: () {},
       onChanged: (value) {
         _updateComposerLineCount(value);
         _handleComposerChanged(
@@ -407,6 +400,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         });
         if (_isEmojiPanelVisible && _isMentionPanelVisible) {
           _closeMentionPanel();
+        }
+        if (_isEmojiPanelVisible) {
+          _composerFocusNode.unfocus();
         }
       },
       onSend: (value) async {
@@ -466,6 +462,88 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         }
       },
     );
+    final composerPanel = !_isVoiceMode && _isMentionPanelVisible
+        ? ChatMentionPanel(
+            searchController: _mentionSearchController,
+            items: filteredMentionMembers,
+            loading: groupMembersAsync.isLoading,
+            canMentionAll: canMentionAll,
+            onKeywordChanged: (value) {
+              setState(() {
+                _mentionKeyword = value;
+              });
+            },
+            onClose: _closeMentionPanel,
+            onSelectAll: () => _applyMentionSelection(
+              mentionName: ref.read(appStringsProvider).chatMentionAllMembers,
+              userId: '-1',
+            ),
+            onSelectItem: _applyMentionMemberSelection,
+          )
+        : !_isVoiceMode && _isEmojiPanelVisible
+        ? ChatEmojiStickerPanel(
+            stickerRepository: ref.read(stickerRepositoryProvider),
+            fileRepository: ref.read(fileRepositoryProvider),
+            mediaPickerService: ref.read(mediaPickerServiceProvider),
+            currentUserId: ref.read(authSessionProvider).userId,
+            maxStickerCount: _maxStickerCount,
+            onManage: () => context.pushNamed(RouteNames.chatStickerManage),
+            onInsertEmoji: (emojiCode) {
+              _insertEmojiIntoComposer(composer, emojiCode);
+            },
+            onDeleteEmoji: () {
+              _deleteEmojiFromComposer(composer);
+            },
+            onSendSticker: (payload) async {
+              if (!_ensureConversationWritable(context)) {
+                return false;
+              }
+              final sent = await ref
+                  .read(chatControllerProvider.notifier)
+                  .sendSticker(payload);
+              if (!sent && context.mounted) {
+                final error = ref.read(chatControllerProvider).error;
+                if (_handleGroupLifecycleRequestError(
+                  context,
+                  error,
+                  fallbackNotice: strings.chatGroupRemovedCannotSend,
+                )) {
+                  return false;
+                }
+                final errorMessage = error?.message.trim() ?? '';
+                _showAttachmentError(
+                  context,
+                  errorMessage.isNotEmpty
+                      ? errorMessage
+                      : strings.messageFailed,
+                );
+              }
+              return sent;
+            },
+            onShowNotice: (text) => _showAttachmentError(context, text),
+            onShowSuccessNotice: (text) =>
+                _showAttachmentSuccess(context, text),
+          )
+        : _isMorePanelVisible
+        ? ChatMorePanel(
+            strings: strings,
+            onExecuteAction: (action) async {
+              setState(() {
+                _isMorePanelVisible = false;
+              });
+              await _handleMorePanelAction(
+                ref: ref,
+                action: action,
+                pageState: pageState,
+                chatTitle: chatTitle,
+                morePanelController: morePanelController,
+              );
+            },
+          )
+        : null;
+    final composerPanels = composerPanel == null
+        ? const <Widget>[]
+        : <Widget>[composerPanel];
     final body = switch (pageState.pageStatus) {
       ChatPageStatus.initial ||
       ChatPageStatus.initializing => const AppLoadingView(),
@@ -475,252 +553,190 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           unawaited(_initializeChatPage());
         },
       ),
-      ChatPageStatus.ready => fullExpandedComposerOnly
-          ? composerWidget
-          : Column(
-        children: [
-          if (!_isSelectionMode && groupNoticeText.isNotEmpty)
-            ChatGroupNoticeBanner(
-              notice: groupNoticeText,
-              onTap: () => _openGroupAnnouncement(
-                context,
-                groupId: groupId,
-                groupName: chatTitle,
-              ),
-              onDismiss: () {
-                setState(() {
-                  _dismissedGroupNoticeSignature = _groupNoticeSignature(
-                    groupNoticeText,
-                  );
-                });
-              },
-            ),
-          Expanded(
-            child: DecoratedBox(
-              decoration: const BoxDecoration(color: Color(0xFFF2F5FA)),
-              child: switch (timelineState.status) {
-                ChatTimelineStatus.failed => AppErrorView(
-                  error: timelineState.error,
-                  onRetry: () {
-                    unawaited(_initializeChatPage());
-                  },
-                ),
-                _ => ChatTimeline(
-                  messages: timelineState.messages,
-                  messageItemKeys: timelineMessageKeys,
-                  controller: _timelineScrollController,
-                  highlightedMessageId: _activeHighlightedMessageId,
-                  selectionMode: _isSelectionMode,
-                  selectedMessageIds: _selectedMessageIds,
-                  isLoadingOlder:
-                      timelineState.status == ChatTimelineStatus.loading,
-                  onLoadOlder: () async {
-                    final notice = strings.chatNoMoreMessages;
-                    final beforeCount = timelineState.messages.length;
-                    await ref
-                        .read(chatTimelineControllerProvider.notifier)
-                        .loadOlder(chatId: pageState.entryArgs.chatId);
-                    if (!mounted || !context.mounted) {
-                      return;
-                    }
-                    final nextTimeline = ref.read(
-                      chatTimelineControllerProvider,
-                    );
-                    if (beforeCount == nextTimeline.messages.length &&
-                        nextTimeline.viewportState?.hasMoreBefore == false) {
-                      _showAttachmentError(context, notice);
-                    }
-                  },
-                  onRetryMessage: (message) async {
-                    if (message.type == MessageType.text) {
-                      final retried = await ref
-                          .read(chatControllerProvider.notifier)
-                          .retryFailedMessage(
-                            message.clientMessageId ?? message.messageId,
-                          );
-                      if (retried && context.mounted) {
-                        _showAttachmentError(
-                          context,
-                          strings.chatRetryingMessage,
-                        );
-                      }
-                      return;
-                    }
-                    if (message.type == MessageType.voice) {
-                      final retried = await _retryVoiceMessage(message);
-                      if (!retried && context.mounted) {
-                        _showAttachmentError(
-                          context,
-                          strings.chatVoiceUploadRetry,
-                        );
-                      }
-                      return;
-                    }
-                    final handled = await ref
-                        .read(chatMediaControllerProvider.notifier)
-                        .retryFailedMessage(
-                          failedMessage: message,
-                          entryArgs: pageState.entryArgs,
-                          chatTitle: chatTitle,
-                        );
-                    if (!handled) {
-                      final error = ref.read(chatMediaControllerProvider).error;
-                      if (error != null && context.mounted) {
-                        if (_handleGroupLifecycleRequestError(
-                          context,
-                          error,
-                          fallbackNotice: strings.chatGroupRemovedCannotSend,
-                        )) {
-                          return;
-                        }
-                        _showAttachmentError(context, error.message);
-                      }
-                    }
-                  },
-                  onOpenMessage: (message) {
-                    if (_isSelectionMode) {
-                      _toggleSelection(message);
-                      return;
-                    }
-                    _openMessagePreview(context, message);
-                  },
-                  onLongPressMessage: (message, globalPosition) {
-                    if (_isSelectionMode) {
-                      _toggleSelection(message);
-                      return;
-                    }
-                    _suppressNextOpenMessageId = _messageSelectionKey(message);
-                    _showMessageActions(
-                      context,
-                      message,
-                      globalPosition: globalPosition,
-                    );
-                  },
-                  activePlayingVoiceMessageId: _activePlayingVoiceMessageId,
-                  activePausedVoiceMessageId: _activePausedVoiceMessageId,
-                  activeVoicePlaybackProgressMs: _activeVoicePlaybackProgressMs,
-                  activeVoicePlaybackDurationMs: _activeVoicePlaybackDurationMs,
-                  onOpenReadReceipt: isGroupChat
-                      ? (message) => _showReadReceiptSheet(
-                          context,
-                          chatTitle: chatTitle,
-                          message: message,
-                        )
-                      : null,
-                  onToggleSelection: _toggleSelection,
-                  onOpenMentionUser: _openMentionUserProfile,
-                  onOpenQuotedMessage: _openQuotedMessage,
-                  onReeditRecalledMessage: _handleReeditAfterRecall,
-                  reeditNowTs: _reeditNowTs,
-                  showSenderNamesForIncoming: isGroupChat,
-                  watermarkText: currentUserId.trim().isEmpty
-                      ? '同事A 1234'
-                      : currentUserId.trim(),
-                  currentUserAvatarUrl: currentUserAvatarUrl,
-                  outgoingFooterLabelBuilder: isGroupChat
-                      ? (message) =>
-                            _buildReadReceiptEntryText(message, strings)
-                      : null,
-                ),
-              },
-            ),
-          ),
-          if (_isSelectionMode)
-            ChatMultiSelectToolbar(
-              onForward: () => _confirmSelectionForward(context),
-              onDelete: () => _deleteSelectedMessages(context),
-            )
-          else if (pageState.isReadOnly || groupRestrictionHint != null)
-            ChatReadonlyFooter(
-              hintText: pageState.isReadOnly
-                  ? _resolveReadOnlyHint()
-                  : groupRestrictionHint!,
-            )
-          else ...[
-            composerWidget,
-            if (_isMentionPanelVisible && !_isVoiceMode)
-              ChatMentionPanel(
-                searchController: _mentionSearchController,
-                items: filteredMentionMembers,
-                loading: groupMembersAsync.isLoading,
-                canMentionAll: canMentionAll,
-                onKeywordChanged: (value) {
-                  setState(() {
-                    _mentionKeyword = value;
-                  });
-                },
-                onClose: _closeMentionPanel,
-                onSelectAll: () => _applyMentionSelection(
-                  mentionName: ref
-                      .read(appStringsProvider)
-                      .chatMentionAllMembers,
-                  userId: '-1',
-                ),
-                onSelectItem: _applyMentionMemberSelection,
+      ChatPageStatus.ready =>
+        fullExpandedComposerOnly
+            ? Column(
+                children: [
+                  Expanded(child: composerWidget),
+                  ...composerPanels,
+                ],
               )
-            else if (_isEmojiPanelVisible && !_isVoiceMode)
-              ChatEmojiStickerPanel(
-                stickerRepository: ref.read(stickerRepositoryProvider),
-                fileRepository: ref.read(fileRepositoryProvider),
-                mediaPickerService: ref.read(mediaPickerServiceProvider),
-                currentUserId: ref.read(authSessionProvider).userId,
-                maxStickerCount: _maxStickerCount,
-                onManage: () => context.pushNamed(RouteNames.chatStickerManage),
-                onInsertEmoji: (emojiCode) {
-                  _insertEmojiIntoComposer(composer, emojiCode);
-                },
-                onDeleteEmoji: () {
-                  _deleteEmojiFromComposer(composer);
-                },
-                onSendSticker: (payload) async {
-                  if (!_ensureConversationWritable(context)) {
-                    return false;
-                  }
-                  final sent = await ref
-                      .read(chatControllerProvider.notifier)
-                      .sendSticker(payload);
-                  if (!sent && context.mounted) {
-                    final error = ref.read(chatControllerProvider).error;
-                    if (_handleGroupLifecycleRequestError(
-                      context,
-                      error,
-                      fallbackNotice: strings.chatGroupRemovedCannotSend,
-                    )) {
-                      return false;
-                    }
-                    final errorMessage = error?.message.trim() ?? '';
-                    _showAttachmentError(
-                      context,
-                      errorMessage.isNotEmpty
-                          ? errorMessage
-                          : strings.messageFailed,
-                    );
-                  }
-                  return sent;
-                },
-                onShowNotice: (text) => _showAttachmentError(context, text),
-                onShowSuccessNotice: (text) =>
-                    _showAttachmentSuccess(context, text),
-              )
-            else if (_isMorePanelVisible)
-              ChatMorePanel(
-                strings: strings,
-                onExecuteAction: (action) async {
-                  setState(() {
-                    _isMorePanelVisible = false;
-                  });
-                  await _handleMorePanelAction(
-                    ref: ref,
-                    action: action,
-                    pageState: pageState,
-                    chatTitle: chatTitle,
-                    morePanelController: morePanelController,
-                  );
-                },
+            : Column(
+                children: [
+                  if (!_isSelectionMode && groupNoticeText.isNotEmpty)
+                    ChatGroupNoticeBanner(
+                      notice: groupNoticeText,
+                      onTap: () => _openGroupAnnouncement(
+                        context,
+                        groupId: groupId,
+                        groupName: chatTitle,
+                      ),
+                      onDismiss: () {
+                        setState(() {
+                          _dismissedGroupNoticeSignature =
+                              _groupNoticeSignature(groupNoticeText);
+                        });
+                      },
+                    ),
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: const BoxDecoration(color: Color(0xFFF2F5FA)),
+                      child: switch (timelineState.status) {
+                        ChatTimelineStatus.failed => AppErrorView(
+                          error: timelineState.error,
+                          onRetry: () {
+                            unawaited(_initializeChatPage());
+                          },
+                        ),
+                        _ => ChatTimeline(
+                          messages: timelineState.messages,
+                          messageItemKeys: timelineMessageKeys,
+                          controller: _timelineScrollController,
+                          highlightedMessageId: _activeHighlightedMessageId,
+                          selectionMode: _isSelectionMode,
+                          selectedMessageIds: _selectedMessageIds,
+                          isLoadingOlder:
+                              timelineState.status ==
+                              ChatTimelineStatus.loading,
+                          onLoadOlder: () async {
+                            final notice = strings.chatNoMoreMessages;
+                            final beforeCount = timelineState.messages.length;
+                            await ref
+                                .read(chatTimelineControllerProvider.notifier)
+                                .loadOlder(chatId: pageState.entryArgs.chatId);
+                            if (!mounted || !context.mounted) {
+                              return;
+                            }
+                            final nextTimeline = ref.read(
+                              chatTimelineControllerProvider,
+                            );
+                            if (beforeCount == nextTimeline.messages.length &&
+                                nextTimeline.viewportState?.hasMoreBefore ==
+                                    false) {
+                              _showAttachmentError(context, notice);
+                            }
+                          },
+                          onRetryMessage: (message) async {
+                            if (message.type == MessageType.text) {
+                              final retried = await ref
+                                  .read(chatControllerProvider.notifier)
+                                  .retryFailedMessage(
+                                    message.clientMessageId ??
+                                        message.messageId,
+                                  );
+                              if (retried && context.mounted) {
+                                _showAttachmentError(
+                                  context,
+                                  strings.chatRetryingMessage,
+                                );
+                              }
+                              return;
+                            }
+                            if (message.type == MessageType.voice) {
+                              final retried = await _retryVoiceMessage(message);
+                              if (!retried && context.mounted) {
+                                _showAttachmentError(
+                                  context,
+                                  strings.chatVoiceUploadRetry,
+                                );
+                              }
+                              return;
+                            }
+                            final handled = await ref
+                                .read(chatMediaControllerProvider.notifier)
+                                .retryFailedMessage(
+                                  failedMessage: message,
+                                  entryArgs: pageState.entryArgs,
+                                  chatTitle: chatTitle,
+                                );
+                            if (!handled) {
+                              final error = ref
+                                  .read(chatMediaControllerProvider)
+                                  .error;
+                              if (error != null && context.mounted) {
+                                if (_handleGroupLifecycleRequestError(
+                                  context,
+                                  error,
+                                  fallbackNotice:
+                                      strings.chatGroupRemovedCannotSend,
+                                )) {
+                                  return;
+                                }
+                                _showAttachmentError(context, error.message);
+                              }
+                            }
+                          },
+                          onOpenMessage: (message) {
+                            if (_isSelectionMode) {
+                              _toggleSelection(message);
+                              return;
+                            }
+                            _openMessagePreview(context, message);
+                          },
+                          onLongPressMessage: (message, globalPosition) {
+                            if (_isSelectionMode) {
+                              _toggleSelection(message);
+                              return;
+                            }
+                            _suppressNextOpenMessageId = _messageSelectionKey(
+                              message,
+                            );
+                            _showMessageActions(
+                              context,
+                              message,
+                              globalPosition: globalPosition,
+                            );
+                          },
+                          activePlayingVoiceMessageId:
+                              _activePlayingVoiceMessageId,
+                          activePausedVoiceMessageId:
+                              _activePausedVoiceMessageId,
+                          activeVoicePlaybackProgressMs:
+                              _activeVoicePlaybackProgressMs,
+                          activeVoicePlaybackDurationMs:
+                              _activeVoicePlaybackDurationMs,
+                          onOpenReadReceipt: isGroupChat
+                              ? (message) => _showReadReceiptSheet(
+                                  context,
+                                  chatTitle: chatTitle,
+                                  message: message,
+                                )
+                              : null,
+                          onToggleSelection: _toggleSelection,
+                          onOpenMentionUser: _openMentionUserProfile,
+                          onOpenQuotedMessage: _openQuotedMessage,
+                          onReeditRecalledMessage: _handleReeditAfterRecall,
+                          reeditNowTs: _reeditNowTs,
+                          showSenderNamesForIncoming: isGroupChat,
+                          watermarkText: currentUserId.trim().isEmpty
+                              ? '同事A 1234'
+                              : currentUserId.trim(),
+                          currentUserAvatarUrl: currentUserAvatarUrl,
+                          outgoingFooterLabelBuilder: isGroupChat
+                              ? (message) =>
+                                    _buildReadReceiptEntryText(message, strings)
+                              : null,
+                        ),
+                      },
+                    ),
+                  ),
+                  if (_isSelectionMode)
+                    ChatMultiSelectToolbar(
+                      onForward: () => _confirmSelectionForward(context),
+                      onDelete: () => _deleteSelectedMessages(context),
+                    )
+                  else if (pageState.isReadOnly || groupRestrictionHint != null)
+                    ChatReadonlyFooter(
+                      hintText: pageState.isReadOnly
+                          ? _resolveReadOnlyHint()
+                          : groupRestrictionHint!,
+                    )
+                  else ...[
+                    composerWidget,
+                    ...composerPanels,
+                  ],
+                ],
               ),
-          ],
-        ],
-      ),
     };
 
     return Scaffold(
@@ -1542,24 +1558,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   double _measureComposerTextUnits(String text) {
-    var units = 0.0;
-    var index = 0;
-    while (index < text.length) {
-      final charCode = text.codeUnitAt(index);
-      if (charCode <= 0x007f) {
-        units += 0.55;
-        index++;
-        continue;
-      }
-      if (charCode >= 0xd800 && charCode <= 0xdbff && index + 1 < text.length) {
-        units += 1;
-        index += 2;
-        continue;
-      }
-      units += 1;
-      index++;
-    }
-    return units;
+    return EmojiComposerTextEditingController.measureVisualWidthUnits(text);
   }
 
   void _toggleFullExpand() {
@@ -3241,7 +3240,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     const itemHeight = 70.0;
     const edgePadding = 10.0;
     final maxMenuWidth = mediaQuery.size.width - edgePadding * 2;
-    final itemsPerRow = (maxMenuWidth / itemWidth).floor().clamp(1, actions.length);
+    final itemsPerRow = (maxMenuWidth / itemWidth).floor().clamp(
+      1,
+      actions.length,
+    );
     final actualItemsPerRow = actions.length < itemsPerRow
         ? actions.length
         : itemsPerRow;
@@ -5347,41 +5349,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     String emojiCode,
   ) {
     final controller = composer.textController;
-    final text = controller.text;
-    final nextText = '$text$emojiCode';
-    controller.value = TextEditingValue(
-      text: nextText,
-      selection: TextSelection.collapsed(offset: nextText.length),
-    );
-    _updateComposerLineCount(nextText);
+    controller.insertToken(emojiCode);
+    _updateComposerLineCount(controller.text);
   }
 
   void _deleteEmojiFromComposer(ChatComposerController composer) {
     final controller = composer.textController;
-    final text = controller.text;
-    if (text.isEmpty) {
-      return;
-    }
-    final nextText = _removeLastComposerUnit(text);
-    controller.value = TextEditingValue(
-      text: nextText,
-      selection: TextSelection.collapsed(offset: nextText.length),
-    );
-    _updateComposerLineCount(nextText);
-  }
-
-  String _removeLastComposerUnit(String text) {
-    if (text.isEmpty) {
-      return '';
-    }
-    final matches = ChatEmojiCatalog.tokenRegExp.allMatches(text).toList();
-    if (matches.isNotEmpty) {
-      final lastMatch = matches.last;
-      if (lastMatch.end == text.length) {
-        return text.substring(0, lastMatch.start);
-      }
-    }
-    return text.substring(0, text.length - 1);
+    controller.deletePreviousUnit();
+    _updateComposerLineCount(controller.text);
   }
 }
 
@@ -6456,9 +6431,7 @@ class _PickerIconTab extends StatelessWidget {
           child: AppIcon(
             icon,
             size: 22,
-            color: active
-                ? const Color(0xFF2F6BFF)
-                : const Color(0xFF98A1B2),
+            color: active ? const Color(0xFF2F6BFF) : const Color(0xFF98A1B2),
           ),
         ),
       ),

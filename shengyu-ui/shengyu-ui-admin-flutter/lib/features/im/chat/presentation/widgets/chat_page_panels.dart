@@ -812,7 +812,7 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
                               Text(
                                 strings.chatEmojiRecent,
                                 style: const TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   color: Color(0xFF98A1B2),
                                 ),
                               ),
@@ -829,7 +829,7 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
                             Text(
                               strings.chatEmojiAll,
                               style: const TextStyle(
-                                fontSize: 12,
+                                fontSize: 13,
                                 color: Color(0xFF98A1B2),
                               ),
                             ),
@@ -964,14 +964,21 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
                   width: 42,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE8ECF3)),
+                    color: const Color(0xFF1A212A),
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(color: const Color(0x14000000)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x14000000),
+                        blurRadius: 18,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
                   ),
                   child: const AppIcon(
                     AppIconKind.backspace,
-                    size: 20,
-                    color: Color(0xFF98A1B2),
+                    size: 18,
+                    color: Color(0xFFB8BFCC),
                   ),
                 ),
               ),
@@ -1113,11 +1120,17 @@ class _EmojiGrid extends StatelessWidget {
         return InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: () => onTap(item),
-          child: Center(
-            child: SizedBox(
-              width: 30,
-              height: 30,
-              child: Image.asset(asset, fit: BoxFit.contain),
+          child: SizedBox.expand(
+            child: Center(
+              child: SizedBox(
+                width: 30,
+                height: 30,
+                child: Image.asset(
+                  asset,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.medium,
+                ),
+              ),
             ),
           ),
         );
