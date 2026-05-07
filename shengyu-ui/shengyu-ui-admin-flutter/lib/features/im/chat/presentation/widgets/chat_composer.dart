@@ -1,7 +1,9 @@
+import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/quote_info.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_composer_controller.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_special_text_span_builder.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class ChatComposer extends StatelessWidget {
@@ -76,6 +78,16 @@ class ChatComposer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = composer.textController;
+    final fullExpandedEmojiBuilder = ChatEmojiSpecialTextSpanBuilder(
+      fontSize: 16,
+      emojiSize: 20,
+      horizontalMargin: 0.5,
+    );
+    final composerEmojiBuilder = ChatEmojiSpecialTextSpanBuilder(
+      fontSize: 15,
+      emojiSize: 18,
+      horizontalMargin: 0.5,
+    );
     if (fullExpanded) {
       return SafeArea(
         top: false,
@@ -111,9 +123,10 @@ class ChatComposer extends StatelessWidget {
                       Expanded(
                         child: SizedBox(
                           width: double.infinity,
-                          child: TextField(
+                          child: ExtendedTextField(
                             controller: controller,
                             focusNode: focusNode,
+                            specialTextSpanBuilder: fullExpandedEmojiBuilder,
                             expands: true,
                             maxLines: null,
                             minLines: null,
@@ -265,9 +278,10 @@ class ChatComposer extends StatelessWidget {
                           )
                         : SizedBox(
                             height: composerHeight,
-                            child: TextField(
+                            child: ExtendedTextField(
                               controller: controller,
                               focusNode: focusNode,
+                              specialTextSpanBuilder: composerEmojiBuilder,
                               minLines: 1,
                               maxLines: null,
                               textInputAction: TextInputAction.send,

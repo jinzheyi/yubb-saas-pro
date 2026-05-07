@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
 
 class ChatComposerController {
@@ -27,48 +27,6 @@ class EmojiComposerTextEditingController extends TextEditingController {
   static const double commonWidthUnit = 1;
   static const double emojiWidthUnit = 1.55;
   static final RegExp _tokenRegExp = ChatEmojiCatalog.tokenRegExp;
-
-  @override
-  TextSpan buildTextSpan({
-    required BuildContext context,
-    TextStyle? style,
-    required bool withComposing,
-  }) {
-    final text = value.text;
-    if (text.isEmpty) {
-      return TextSpan(style: style, text: '');
-    }
-    final spans = <InlineSpan>[];
-    var cursor = 0;
-    for (final match in ChatEmojiCatalog.tokenRegExp.allMatches(text)) {
-      if (match.start > cursor) {
-        spans.add(
-          TextSpan(text: text.substring(cursor, match.start), style: style),
-        );
-      }
-      final token = match.group(0) ?? '';
-      final assets = ChatEmojiCatalog.candidateAssetsFor(token);
-      if (assets.isNotEmpty) {
-        spans.add(
-          WidgetSpan(
-            alignment: PlaceholderAlignment.aboveBaseline,
-            baseline: TextBaseline.alphabetic,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 0.5),
-              child: _ComposerEmojiImage(assets: assets),
-            ),
-          ),
-        );
-      } else {
-        spans.add(TextSpan(text: token, style: style));
-      }
-      cursor = match.end;
-    }
-    if (cursor < text.length) {
-      spans.add(TextSpan(text: text.substring(cursor), style: style));
-    }
-    return TextSpan(style: style, children: spans);
-  }
 
   void insertToken(String insertedText) {
     if (insertedText.isEmpty) {
@@ -187,48 +145,6 @@ class EmojiComposerTextEditingController extends TextEditingController {
       }
     }
     return null;
-  }
-}
-
-class _ComposerEmojiImage extends StatefulWidget {
-  const _ComposerEmojiImage({required this.assets});
-
-  final List<String> assets;
-
-  @override
-  State<_ComposerEmojiImage> createState() => _ComposerEmojiImageState();
-}
-
-class _ComposerEmojiImageState extends State<_ComposerEmojiImage> {
-  int _assetIndex = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.assets.isEmpty) {
-      return const SizedBox(width: 20, height: 20);
-    }
-    return Image.asset(
-      widget.assets[_assetIndex],
-      width: 20,
-      height: 20,
-      fit: BoxFit.contain,
-      gaplessPlayback: true,
-      filterQuality: FilterQuality.medium,
-      errorBuilder: (context, error, stackTrace) {
-        if (_assetIndex + 1 >= widget.assets.length) {
-          return const SizedBox(width: 20, height: 20);
-        }
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) {
-            return;
-          }
-          setState(() {
-            _assetIndex++;
-          });
-        });
-        return const SizedBox(width: 20, height: 20);
-      },
-    );
   }
 }
 

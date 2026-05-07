@@ -50,6 +50,7 @@ dependencies:
   just_audio: ^0.10.5
   video_player: ^2.9.2
   webview_flutter: ^4.10.0
+  extended_text_field: ^16.0.2
 
 dev_dependencies:
   flutter_test:
