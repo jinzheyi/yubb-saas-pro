@@ -73,11 +73,6 @@ class ChatComposer extends StatelessWidget {
     borderRadius: BorderRadius.all(Radius.circular(4)),
     borderSide: BorderSide(color: _composerBorderColor, width: 1),
   );
-  static const OutlineInputBorder _composerFocusedBorder = OutlineInputBorder(
-    borderRadius: BorderRadius.all(Radius.circular(4)),
-    borderSide: BorderSide(color: Color(0xFF246BFD), width: 1.2),
-  );
-
   @override
   Widget build(BuildContext context) {
     final controller = composer.textController;
@@ -141,7 +136,7 @@ class ChatComposer extends StatelessWidget {
                                 12,
                               ),
                               enabledBorder: _composerEnabledBorder,
-                              focusedBorder: _composerFocusedBorder,
+                              focusedBorder: _composerEnabledBorder,
                               border: _composerEnabledBorder,
                               hintStyle: TextStyle(color: Color(0xFF98A1B2)),
                             ).copyWith(hintText: hintText),
@@ -289,7 +284,7 @@ class ChatComposer extends StatelessWidget {
                                   8,
                                 ),
                                 enabledBorder: _composerEnabledBorder,
-                                focusedBorder: _composerFocusedBorder,
+                                focusedBorder: _composerEnabledBorder,
                                 border: _composerEnabledBorder,
                                 hintStyle: TextStyle(
                                   color: Color(0xFF98A1B2),

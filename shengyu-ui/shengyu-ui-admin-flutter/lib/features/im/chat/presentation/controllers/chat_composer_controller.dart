@@ -34,15 +34,6 @@ class EmojiComposerTextEditingController extends TextEditingController {
     TextStyle? style,
     required bool withComposing,
   }) {
-    if (withComposing &&
-        value.composing.isValid &&
-        !value.composing.isCollapsed) {
-      return super.buildTextSpan(
-        context: context,
-        style: style,
-        withComposing: withComposing,
-      );
-    }
     final text = value.text;
     if (text.isEmpty) {
       return TextSpan(style: style, text: '');
