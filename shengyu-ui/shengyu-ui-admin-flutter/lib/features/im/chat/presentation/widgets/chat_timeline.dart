@@ -17,6 +17,8 @@ class ChatTimeline extends StatelessWidget {
     this.controller,
     required this.onRetryMessage,
     required this.onOpenMessage,
+    this.onPauseVoiceMessage,
+    this.onResumeVoiceMessage,
     this.onOpenMentionUser,
     this.onOpenQuotedMessage,
     this.onReeditRecalledMessage,
@@ -44,6 +46,8 @@ class ChatTimeline extends StatelessWidget {
   final ScrollController? controller;
   final ValueChanged<Message> onRetryMessage;
   final ValueChanged<Message> onOpenMessage;
+  final ValueChanged<Message>? onPauseVoiceMessage;
+  final ValueChanged<Message>? onResumeVoiceMessage;
   final void Function(String userId, String displayName)? onOpenMentionUser;
   final ValueChanged<String>? onOpenQuotedMessage;
   final ValueChanged<Message>? onReeditRecalledMessage;
@@ -71,9 +75,7 @@ class ChatTimeline extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        IgnorePointer(
-          child: _ChatWatermarkLayer(text: watermarkText ?? ''),
-        ),
+        IgnorePointer(child: _ChatWatermarkLayer(text: watermarkText ?? '')),
         RefreshIndicator(
           onRefresh: () async {
             await onLoadOlder?.call();
@@ -140,6 +142,8 @@ class ChatTimeline extends StatelessWidget {
                       selectionMode: selectionMode,
                       onRetryMessage: onRetryMessage,
                       onOpenMessage: onOpenMessage,
+                      onPauseVoiceMessage: onPauseVoiceMessage,
+                      onResumeVoiceMessage: onResumeVoiceMessage,
                       onOpenMentionUser: onOpenMentionUser,
                       onOpenQuotedMessage: onOpenQuotedMessage,
                       onReeditRecalledMessage: onReeditRecalledMessage,
@@ -199,6 +203,8 @@ class _MessageRow extends StatelessWidget {
     required this.selectionMode,
     required this.onRetryMessage,
     required this.onOpenMessage,
+    required this.onPauseVoiceMessage,
+    required this.onResumeVoiceMessage,
     required this.onOpenMentionUser,
     required this.onOpenQuotedMessage,
     required this.onReeditRecalledMessage,
@@ -223,6 +229,8 @@ class _MessageRow extends StatelessWidget {
   final bool selectionMode;
   final ValueChanged<Message> onRetryMessage;
   final ValueChanged<Message> onOpenMessage;
+  final ValueChanged<Message>? onPauseVoiceMessage;
+  final ValueChanged<Message>? onResumeVoiceMessage;
   final void Function(String userId, String displayName)? onOpenMentionUser;
   final ValueChanged<String>? onOpenQuotedMessage;
   final ValueChanged<Message>? onReeditRecalledMessage;
@@ -272,6 +280,8 @@ class _MessageRow extends StatelessWidget {
           message,
           onRetryMessage: onRetryMessage,
           onOpenMessage: onOpenMessage,
+          onPauseMessage: onPauseVoiceMessage,
+          onResumeMessage: onResumeVoiceMessage,
           onOpenMentionUser: onOpenMentionUser,
           onOpenQuotedMessage: onOpenQuotedMessage,
           quotePreviewChain: quotePreviewChain,
@@ -379,7 +389,6 @@ class _MessageRow extends StatelessWidget {
       ],
     );
   }
-
 }
 
 List<QuotePreviewEntry> _buildQuotePreviewChain(
@@ -602,10 +611,7 @@ class _TimeDivider extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 11,
-          color: Color(0xFF98A1B2),
-        ),
+        style: const TextStyle(fontSize: 11, color: Color(0xFF98A1B2)),
       ),
     );
   }

@@ -125,6 +125,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   List<StickerItem> _cachedFavoriteStickers = const <StickerItem>[];
   int _composerLineCount = 1;
   int _voicePressSession = 0;
+  int _voicePlaybackSession = 0;
   int _recordingElapsedMs = 0;
   int _reeditNowTs = DateTime.now().millisecondsSinceEpoch;
   double _recordingAmplitude = -160;
@@ -706,6 +707,12 @@ class _ChatPageState extends ConsumerState<ChatPage>
                               return;
                             }
                             _openMessagePreview(context, message);
+                          },
+                          onPauseVoiceMessage: (message) {
+                            unawaited(_pauseVoicePlayback(message));
+                          },
+                          onResumeVoiceMessage: (message) {
+                            unawaited(_resumeVoicePlayback(message));
                           },
                           onLongPressMessage: (message, globalPosition) {
                             if (_isSelectionMode) {
@@ -2014,8 +2021,12 @@ class _ChatPageState extends ConsumerState<ChatPage>
       unawaited(_retryVoiceMessage(message));
       return;
     }
+    if (message.type == MessageType.voice &&
+        message.status == MessageStatus.sending) {
+      return;
+    }
     if (message.type == MessageType.voice) {
-      unawaited(_toggleVoicePlayback(message));
+      unawaited(_playVoicePlayback(message));
       return;
     }
     if (_isContactCardMessage(message)) {
@@ -2187,53 +2198,30 @@ class _ChatPageState extends ConsumerState<ChatPage>
     );
   }
 
-  Future<void> _toggleVoicePlayback(Message message) async {
+  Future<void> _playVoicePlayback(Message message) async {
     final strings = ref.read(appStringsProvider);
-    final playingId = _activePlayingVoiceMessageId;
-    final pausedId = _activePausedVoiceMessageId;
     final messageKey = message.clientMessageId ?? message.messageId;
-    final playback = ref.read(audioPlaybackServiceProvider);
-    if (playingId != null && messageKey == playingId) {
-      await playback.pause();
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _activePausedVoiceMessageId = messageKey;
-        _activePlayingVoiceMessageId = null;
-      });
+    if (messageKey.isEmpty) {
       return;
     }
-    if (pausedId != null && messageKey == pausedId) {
-      await playback.play();
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _activePlayingVoiceMessageId = messageKey;
-        _activePausedVoiceMessageId = null;
-      });
+    if (_activePlayingVoiceMessageId == messageKey) {
       return;
     }
-
-    final fileId = message.extra.fileId?.trim() ?? '';
-    if (fileId.isEmpty) {
+    final playbackUrl = await _resolveVoicePlaybackUrl(message);
+    if (playbackUrl == null) {
       if (mounted) {
         _showAttachmentError(context, strings.chatVoiceFileUnavailable);
       }
       return;
     }
+    final playback = ref.read(audioPlaybackServiceProvider);
+    final session = ++_voicePlaybackSession;
     try {
-      final url = await ref
-          .read(fileRepositoryProvider)
-          .getPresignedGetUrl(fileId: fileId);
-      await _bindVoicePlayback(messageKey);
       await playback.stop();
-      await playback.setUrl(url.toString());
+      await _bindVoicePlayback(messageKey, session);
+      await playback.setUrl(playbackUrl);
       await playback.seek(Duration.zero);
-      await playback.play();
-      _markVoicePlayedOnOpen(message);
-      if (!mounted) {
+      if (!mounted || session != _voicePlaybackSession) {
         return;
       }
       setState(() {
@@ -2244,6 +2232,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
             message.extra.durationMs ??
             ((message.extra.duration ?? 1).clamp(1, 60) * 1000);
       });
+      await playback.play();
+      _markVoicePlayedOnOpen(message);
     } catch (error) {
       if (!mounted) {
         return;
@@ -2252,13 +2242,50 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
   }
 
-  Future<void> _bindVoicePlayback(String messageKey) async {
+  Future<void> _pauseVoicePlayback(Message message) async {
+    final messageKey = message.clientMessageId ?? message.messageId;
+    if (messageKey.isEmpty || _activePlayingVoiceMessageId != messageKey) {
+      return;
+    }
+    final playback = ref.read(audioPlaybackServiceProvider);
+    await playback.pause();
+  }
+
+  Future<void> _resumeVoicePlayback(Message message) async {
+    final messageKey = message.clientMessageId ?? message.messageId;
+    if (messageKey.isEmpty) {
+      return;
+    }
+    if (_activePausedVoiceMessageId != messageKey) {
+      await _playVoicePlayback(message);
+      return;
+    }
+    final playback = ref.read(audioPlaybackServiceProvider);
+    await playback.play();
+  }
+
+  Future<String?> _resolveVoicePlaybackUrl(Message message) async {
+    final fileId = message.extra.fileId?.trim() ?? '';
+    if (fileId.isNotEmpty && fileId != '0') {
+      final url = await ref
+          .read(fileRepositoryProvider)
+          .getPresignedGetUrl(fileId: fileId);
+      return url.toString();
+    }
+    final directUrl = message.extra.fileUrl?.trim() ?? '';
+    if (directUrl.isEmpty) {
+      return null;
+    }
+    return directUrl;
+  }
+
+  Future<void> _bindVoicePlayback(String messageKey, int session) async {
     final playback = ref.read(audioPlaybackServiceProvider);
     await _voicePositionSubscription?.cancel();
     await _voiceDurationSubscription?.cancel();
     await _voicePlayerStateSubscription?.cancel();
     _voicePositionSubscription = playback.positionStream.listen((position) {
-      if (!mounted) {
+      if (!mounted || session != _voicePlaybackSession) {
         return;
       }
       setState(() {
@@ -2269,7 +2296,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       });
     });
     _voiceDurationSubscription = playback.durationStream.listen((duration) {
-      if (!mounted || duration == null) {
+      if (!mounted || duration == null || session != _voicePlaybackSession) {
         return;
       }
       setState(() {
@@ -2280,7 +2307,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       });
     });
     _voicePlayerStateSubscription = playback.playerStateStream.listen((state) {
-      if (!mounted) {
+      if (!mounted || session != _voicePlaybackSession) {
         return;
       }
       if (state.processingState == ProcessingState.completed) {
@@ -2290,12 +2317,19 @@ class _ChatPageState extends ConsumerState<ChatPage>
             _activePlayingVoiceMessageId = null;
             _activePausedVoiceMessageId = null;
             _activeVoicePlaybackProgressMs = 0;
+            _activeVoicePlaybackDurationMs = 0;
           }
         });
         return;
       }
-      if (!state.playing &&
-          state.processingState != ProcessingState.completed &&
+      if (state.playing) {
+        setState(() {
+          _activePlayingVoiceMessageId = messageKey;
+          _activePausedVoiceMessageId = null;
+        });
+        return;
+      }
+      if (state.processingState == ProcessingState.ready &&
           _activePlayingVoiceMessageId == messageKey) {
         setState(() {
           _activePausedVoiceMessageId = messageKey;

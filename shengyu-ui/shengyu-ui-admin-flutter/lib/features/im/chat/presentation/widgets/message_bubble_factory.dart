@@ -16,6 +16,8 @@ abstract final class MessageBubbleFactory {
     Message message, {
     required ValueChanged<Message> onRetryMessage,
     required ValueChanged<Message> onOpenMessage,
+    ValueChanged<Message>? onPauseMessage,
+    ValueChanged<Message>? onResumeMessage,
     bool voiceIsPlaying = false,
     bool voiceIsPaused = false,
     int voicePlaybackProgressMs = 0,
@@ -60,6 +62,8 @@ abstract final class MessageBubbleFactory {
           message: message,
           onRetryMessage: onRetryMessage,
           onOpenMessage: onOpenMessage,
+          onPauseMessage: onPauseMessage,
+          onResumeMessage: onResumeMessage,
           isPlaying: voiceIsPlaying,
           isPaused: voiceIsPaused,
           playbackProgressMs: voicePlaybackProgressMs,

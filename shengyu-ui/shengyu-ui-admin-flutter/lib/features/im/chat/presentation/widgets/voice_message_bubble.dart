@@ -12,6 +12,8 @@ class VoiceMessageBubble extends ConsumerWidget {
     required this.message,
     required this.onRetryMessage,
     required this.onOpenMessage,
+    this.onPauseMessage,
+    this.onResumeMessage,
     this.onLongPressMessage,
     this.onOpenReadReceipt,
     this.enableReadReceiptEntry = false,
@@ -26,6 +28,8 @@ class VoiceMessageBubble extends ConsumerWidget {
   final Message message;
   final ValueChanged<Message> onRetryMessage;
   final ValueChanged<Message> onOpenMessage;
+  final ValueChanged<Message>? onPauseMessage;
+  final ValueChanged<Message>? onResumeMessage;
   final void Function(Message, Offset globalPosition)? onLongPressMessage;
   final ValueChanged<Message>? onOpenReadReceipt;
   final bool enableReadReceiptEntry;
@@ -65,6 +69,9 @@ class VoiceMessageBubble extends ConsumerWidget {
         ? const Color(0x290F4AA3)
         : const Color(0x1F1F2329);
     final bars = _waveHeights();
+    final bubbleWidth = _bubbleWidth(durationMs);
+    final showPauseAction = isPlaying && !_hasSendErrorOrLoading();
+    final showResumeAction = isPaused && !_hasSendErrorOrLoading();
 
     return Column(
       crossAxisAlignment: message.isOutgoing
@@ -87,10 +94,7 @@ class VoiceMessageBubble extends ConsumerWidget {
                 onTap: () => onOpenMessage(message),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  constraints: const BoxConstraints(
-                    minWidth: 72,
-                    maxWidth: 238,
-                  ),
+                  width: bubbleWidth,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
                     vertical: 9,
@@ -108,15 +112,15 @@ class VoiceMessageBubble extends ConsumerWidget {
                     ),
                   ),
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisSize: MainAxisSize.max,
                     textDirection: message.isOutgoing
                         ? TextDirection.rtl
                         : TextDirection.ltr,
                     children: [
                       SizedBox(
-                        width: 22,
                         height: 16,
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
@@ -125,7 +129,7 @@ class VoiceMessageBubble extends ConsumerWidget {
                                 width: 2,
                                 height: height.toDouble(),
                                 margin: const EdgeInsets.symmetric(
-                                  horizontal: 1,
+                                  horizontal: 0.5,
                                 ),
                                 decoration: BoxDecoration(
                                   color: waveColor,
@@ -177,10 +181,12 @@ class VoiceMessageBubble extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      if (isPaused) ...[
+                      if (showPauseAction) ...[
                         const SizedBox(width: 6),
                         GestureDetector(
-                          onTap: () => onOpenMessage(message),
+                          onTap: onPauseMessage == null
+                              ? null
+                              : () => onPauseMessage!(message),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 6,
@@ -193,7 +199,7 @@ class VoiceMessageBubble extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(9),
                             ),
                             child: Text(
-                              '继续',
+                              '暂停',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: message.isOutgoing
@@ -209,6 +215,40 @@ class VoiceMessageBubble extends ConsumerWidget {
                 ),
               ),
             ),
+            if (showResumeAction) ...[
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onResumeMessage == null
+                    ? null
+                    : () => onResumeMessage!(message),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: message.isOutgoing
+                        ? Colors.white
+                        : const Color(0xFFF7F9FC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: message.isOutgoing
+                          ? const Color(0xFFB2CFFB)
+                          : const Color(0xFFE2E7EF),
+                    ),
+                  ),
+                  child: Text(
+                    '继续播放',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: message.isOutgoing
+                          ? const Color(0xFF0F4AA3)
+                          : const Color(0xFF1677FF),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (!message.isOutgoing && unread) ...[
               const SizedBox(width: 8),
               Container(
@@ -269,6 +309,20 @@ class VoiceMessageBubble extends ConsumerWidget {
 
   List<int> _waveHeights() => const [6, 10, 14, 10, 6];
 
+  double _bubbleWidth(int durationMs) {
+    final durationSeconds = (durationMs / 1000).round().clamp(1, 60);
+    const minWidth = 92.0;
+    double width;
+    if (durationSeconds <= 10) {
+      width = minWidth + (durationSeconds - 1) * 5.4;
+    } else if (durationSeconds <= 30) {
+      width = minWidth + 9 * 5.4 + (durationSeconds - 10) * 2.8;
+    } else {
+      width = minWidth + 9 * 5.4 + 20 * 2.8 + (durationSeconds - 30) * 1.9;
+    }
+    return width.clamp(minWidth, 236.0);
+  }
+
   int _resolveDurationMs() {
     final fromExtra = message.extra.durationMs ?? 0;
     if (fromExtra > 0) {
@@ -289,6 +343,11 @@ class VoiceMessageBubble extends ConsumerWidget {
       return '发送失败';
     }
     return null;
+  }
+
+  bool _hasSendErrorOrLoading() {
+    return message.status == MessageStatus.sending ||
+        message.status == MessageStatus.failed;
   }
 
   Color _bubbleBackground() {
