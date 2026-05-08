@@ -714,6 +714,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
                           onResumeVoiceMessage: (message) {
                             unawaited(_resumeVoicePlayback(message));
                           },
+                          onReplayVoiceMessage: (message) {
+                            unawaited(_replayVoicePlayback(message));
+                          },
                           onLongPressMessage: (message, globalPosition) {
                             if (_isSelectionMode) {
                               _toggleSelection(message);
@@ -2026,7 +2029,15 @@ class _ChatPageState extends ConsumerState<ChatPage>
       return;
     }
     if (message.type == MessageType.voice) {
-      unawaited(_playVoicePlayback(message));
+      final messageKey = message.clientMessageId ?? message.messageId;
+      if (messageKey.isNotEmpty && _activePlayingVoiceMessageId == messageKey) {
+        unawaited(_pauseVoicePlayback(message));
+      } else if (messageKey.isNotEmpty &&
+          _activePausedVoiceMessageId == messageKey) {
+        unawaited(_resumeVoicePlayback(message));
+      } else {
+        unawaited(_playVoicePlayback(message));
+      }
       return;
     }
     if (_isContactCardMessage(message)) {
@@ -2262,6 +2273,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
     final playback = ref.read(audioPlaybackServiceProvider);
     await playback.play();
+  }
+
+  Future<void> _replayVoicePlayback(Message message) async {
+    await _playVoicePlayback(message);
   }
 
   Future<String?> _resolveVoicePlaybackUrl(Message message) async {
@@ -4903,6 +4918,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       }
       return;
     }
+    await service.prepareProfile();
     final path = await _buildVoiceRecordingPath(service.fileExtension);
     try {
       await service.start(path: path);
@@ -5311,6 +5327,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
       case 'pcm':
       case 'pcm16bits':
         return 'audio/pcm';
+      case 'webm':
+      case 'opus':
+        return 'audio/webm';
       case 'm4a':
       case 'aac':
       default:

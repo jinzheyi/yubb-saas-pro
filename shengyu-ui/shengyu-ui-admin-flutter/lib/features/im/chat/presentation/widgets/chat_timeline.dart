@@ -19,6 +19,7 @@ class ChatTimeline extends StatelessWidget {
     required this.onOpenMessage,
     this.onPauseVoiceMessage,
     this.onResumeVoiceMessage,
+    this.onReplayVoiceMessage,
     this.onOpenMentionUser,
     this.onOpenQuotedMessage,
     this.onReeditRecalledMessage,
@@ -48,6 +49,7 @@ class ChatTimeline extends StatelessWidget {
   final ValueChanged<Message> onOpenMessage;
   final ValueChanged<Message>? onPauseVoiceMessage;
   final ValueChanged<Message>? onResumeVoiceMessage;
+  final ValueChanged<Message>? onReplayVoiceMessage;
   final void Function(String userId, String displayName)? onOpenMentionUser;
   final ValueChanged<String>? onOpenQuotedMessage;
   final ValueChanged<Message>? onReeditRecalledMessage;
@@ -144,6 +146,7 @@ class ChatTimeline extends StatelessWidget {
                       onOpenMessage: onOpenMessage,
                       onPauseVoiceMessage: onPauseVoiceMessage,
                       onResumeVoiceMessage: onResumeVoiceMessage,
+                      onReplayVoiceMessage: onReplayVoiceMessage,
                       onOpenMentionUser: onOpenMentionUser,
                       onOpenQuotedMessage: onOpenQuotedMessage,
                       onReeditRecalledMessage: onReeditRecalledMessage,
@@ -205,6 +208,7 @@ class _MessageRow extends StatelessWidget {
     required this.onOpenMessage,
     required this.onPauseVoiceMessage,
     required this.onResumeVoiceMessage,
+    required this.onReplayVoiceMessage,
     required this.onOpenMentionUser,
     required this.onOpenQuotedMessage,
     required this.onReeditRecalledMessage,
@@ -231,6 +235,7 @@ class _MessageRow extends StatelessWidget {
   final ValueChanged<Message> onOpenMessage;
   final ValueChanged<Message>? onPauseVoiceMessage;
   final ValueChanged<Message>? onResumeVoiceMessage;
+  final ValueChanged<Message>? onReplayVoiceMessage;
   final void Function(String userId, String displayName)? onOpenMentionUser;
   final ValueChanged<String>? onOpenQuotedMessage;
   final ValueChanged<Message>? onReeditRecalledMessage;
@@ -282,6 +287,7 @@ class _MessageRow extends StatelessWidget {
           onOpenMessage: onOpenMessage,
           onPauseMessage: onPauseVoiceMessage,
           onResumeMessage: onResumeVoiceMessage,
+          onReplayMessage: onReplayVoiceMessage,
           onOpenMentionUser: onOpenMentionUser,
           onOpenQuotedMessage: onOpenQuotedMessage,
           quotePreviewChain: quotePreviewChain,

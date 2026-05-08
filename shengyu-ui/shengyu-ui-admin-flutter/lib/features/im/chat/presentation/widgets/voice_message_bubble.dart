@@ -14,6 +14,7 @@ class VoiceMessageBubble extends ConsumerWidget {
     required this.onOpenMessage,
     this.onPauseMessage,
     this.onResumeMessage,
+    this.onReplayMessage,
     this.onLongPressMessage,
     this.onOpenReadReceipt,
     this.enableReadReceiptEntry = false,
@@ -30,6 +31,7 @@ class VoiceMessageBubble extends ConsumerWidget {
   final ValueChanged<Message> onOpenMessage;
   final ValueChanged<Message>? onPauseMessage;
   final ValueChanged<Message>? onResumeMessage;
+  final ValueChanged<Message>? onReplayMessage;
   final void Function(Message, Offset globalPosition)? onLongPressMessage;
   final ValueChanged<Message>? onOpenReadReceipt;
   final bool enableReadReceiptEntry;
@@ -70,8 +72,10 @@ class VoiceMessageBubble extends ConsumerWidget {
         : const Color(0x1F1F2329);
     final bars = _waveHeights();
     final bubbleWidth = _bubbleWidth(durationMs);
-    final showPauseAction = isPlaying && !_hasSendErrorOrLoading();
-    final showResumeAction = isPaused && !_hasSendErrorOrLoading();
+    final showInlinePausedActions = isPaused && !_hasSendErrorOrLoading();
+    final showTapControlIcon =
+        (isPlaying || isPaused) && !_hasSendErrorOrLoading();
+    final unreadDot = !message.isOutgoing && unread;
 
     return Column(
       crossAxisAlignment: message.isOutgoing
@@ -85,171 +89,155 @@ class VoiceMessageBubble extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            GestureDetector(
-              onLongPressStart: onLongPressMessage == null
-                  ? null
-                  : (details) =>
-                        onLongPressMessage!(message, details.globalPosition),
-              child: InkWell(
-                onTap: () => onOpenMessage(message),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: bubbleWidth,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 9,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bubbleBackground,
-                    border: borderColor == null
-                        ? null
-                        : Border.all(color: borderColor),
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(12),
-                      topRight: const Radius.circular(12),
-                      bottomLeft: Radius.circular(message.isOutgoing ? 12 : 5),
-                      bottomRight: Radius.circular(message.isOutgoing ? 5 : 12),
+            Flexible(
+              child: GestureDetector(
+                onLongPressStart: onLongPressMessage == null
+                    ? null
+                    : (details) =>
+                          onLongPressMessage!(message, details.globalPosition),
+                child: InkWell(
+                  onTap: () => onOpenMessage(message),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: bubbleWidth,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 9,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.max,
-                    textDirection: message.isOutgoing
-                        ? TextDirection.rtl
-                        : TextDirection.ltr,
-                    children: [
-                      SizedBox(
-                        height: 16,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            for (final height in bars)
-                              Container(
-                                width: 2,
-                                height: height.toDouble(),
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 0.5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: waveColor,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                          ],
+                    decoration: BoxDecoration(
+                      color: bubbleBackground,
+                      border: borderColor == null
+                          ? null
+                          : Border.all(color: borderColor),
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(12),
+                        topRight: const Radius.circular(12),
+                        bottomLeft: Radius.circular(
+                          message.isOutgoing ? 12 : 5,
+                        ),
+                        bottomRight: Radius.circular(
+                          message.isOutgoing ? 5 : 12,
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              durationLabel,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: primaryTextColor,
-                              ),
-                            ),
-                            if (isPlaying || isPaused) ...[
-                              const SizedBox(height: 4),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(3),
-                                child: LinearProgressIndicator(
-                                  minHeight: 3,
-                                  value: _progressValue(durationMs),
-                                  backgroundColor: progressTrackColor,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    progressColor,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.max,
+                      textDirection: message.isOutgoing
+                          ? TextDirection.rtl
+                          : TextDirection.ltr,
+                      children: [
+                        SizedBox(
+                          height: 16,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              for (final height in bars)
+                                Container(
+                                  width: 2,
+                                  height: height.toDouble(),
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 0.5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: waveColor,
+                                    borderRadius: BorderRadius.circular(2),
                                   ),
                                 ),
-                              ),
                             ],
-                            if ((_statusLabelText() ?? '').isNotEmpty) ...[
-                              const SizedBox(height: 2),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                               Text(
-                                _statusLabelText()!,
+                                durationLabel,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 11,
-                                  color: statusTextColor,
+                                  fontSize: 14,
+                                  color: primaryTextColor,
                                 ),
                               ),
+                              if (isPlaying || isPaused) ...[
+                                const SizedBox(height: 4),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(3),
+                                  child: LinearProgressIndicator(
+                                    minHeight: 3,
+                                    value: _progressValue(durationMs),
+                                    backgroundColor: progressTrackColor,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      progressColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (showInlinePausedActions) ...[
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  children: [
+                                    GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: onResumeMessage == null
+                                          ? null
+                                          : () => onResumeMessage!(message),
+                                      child: _buildActionChip(
+                                        label: '继续播放',
+                                        outlined: true,
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: onReplayMessage == null
+                                          ? null
+                                          : () => onReplayMessage!(message),
+                                      child: _buildActionChip(
+                                        label: '重播',
+                                        outlined: false,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              if ((_statusLabelText() ?? '').isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  _statusLabelText()!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: statusTextColor,
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
-                        ),
-                      ),
-                      if (showPauseAction) ...[
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: onPauseMessage == null
-                              ? null
-                              : () => onPauseMessage!(message),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: message.isOutgoing
-                                  ? const Color(0x260F4AA3)
-                                  : const Color(0x1F1677FF),
-                              borderRadius: BorderRadius.circular(9),
-                            ),
-                            child: Text(
-                              '暂停',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: message.isOutgoing
-                                    ? const Color(0xFF0F4AA3)
-                                    : const Color(0xFF1677FF),
-                              ),
-                            ),
                           ),
                         ),
+                        if (showTapControlIcon) ...[
+                          const SizedBox(width: 8),
+                          AppIcon(
+                            isPlaying ? AppIconKind.pause : AppIconKind.play,
+                            size: 16,
+                            color: message.isOutgoing
+                                ? const Color(0xFF0F4AA3)
+                                : const Color(0xFF1677FF),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
-            if (showResumeAction) ...[
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onResumeMessage == null
-                    ? null
-                    : () => onResumeMessage!(message),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: message.isOutgoing
-                        ? Colors.white
-                        : const Color(0xFFF7F9FC),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: message.isOutgoing
-                          ? const Color(0xFFB2CFFB)
-                          : const Color(0xFFE2E7EF),
-                    ),
-                  ),
-                  child: Text(
-                    '继续播放',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: message.isOutgoing
-                          ? const Color(0xFF0F4AA3)
-                          : const Color(0xFF1677FF),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            if (!message.isOutgoing && unread) ...[
+            if (unreadDot) ...[
               const SizedBox(width: 8),
               Container(
                 width: 8,
@@ -307,7 +295,52 @@ class VoiceMessageBubble extends ConsumerWidget {
     return currentMs / totalMs;
   }
 
-  List<int> _waveHeights() => const [6, 10, 14, 10, 6];
+  List<int> _waveHeights() {
+    if (!isPlaying) {
+      return const [6, 10, 14, 10, 6];
+    }
+    const frames = <List<int>>[
+      [6, 10, 14, 10, 6],
+      [9, 13, 8, 12, 7],
+      [12, 8, 14, 9, 11],
+      [7, 14, 10, 13, 8],
+    ];
+    final frameIndex = ((playbackProgressMs ~/ 180) % frames.length).clamp(
+      0,
+      frames.length - 1,
+    );
+    return frames[frameIndex];
+  }
+
+  Widget _buildActionChip({required String label, required bool outlined}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: outlined
+            ? (message.isOutgoing ? Colors.white : const Color(0xFFF7F9FC))
+            : (message.isOutgoing
+                  ? const Color(0x260F4AA3)
+                  : const Color(0x1F1677FF)),
+        borderRadius: BorderRadius.circular(14),
+        border: outlined
+            ? Border.all(
+                color: message.isOutgoing
+                    ? const Color(0xFFB2CFFB)
+                    : const Color(0xFFE2E7EF),
+              )
+            : null,
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          color: message.isOutgoing
+              ? const Color(0xFF0F4AA3)
+              : const Color(0xFF1677FF),
+        ),
+      ),
+    );
+  }
 
   double _bubbleWidth(int durationMs) {
     final durationSeconds = (durationMs / 1000).round().clamp(1, 60);
