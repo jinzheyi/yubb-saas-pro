@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
+import 'package:shengyu_ui_admin_im/core/platform/local_file_size_loader.dart';
 import 'package:shengyu_ui_admin_im/core/network/api_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/dtos/upload_and_create_file_response_dto.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/infrastructure/dtos/upload_request_dto.dart';
@@ -13,12 +14,16 @@ class FileHttpDataSource {
   Future<UploadAndCreateFileResponseDto> uploadAndCreateFile({
     required UploadRequestDto request,
   }) async {
+    await _validateMaxSize(request);
+    final multipart = request.bytes != null
+        ? MultipartFile.fromBytes(request.bytes!, filename: request.fileName)
+        : await MultipartFile.fromFile(
+            request.localUri,
+            filename: request.fileName,
+          );
     final formData = FormData.fromMap({
       'directory': request.directory,
-      request.fieldName: await MultipartFile.fromFile(
-        request.localUri,
-        filename: request.fileName,
-      ),
+      request.fieldName: multipart,
     });
 
     final response = await dio.post<Map<String, dynamic>>(
@@ -35,6 +40,24 @@ class FileHttpDataSource {
       },
     );
     return result.requireData();
+  }
+
+  Future<void> _validateMaxSize(UploadRequestDto request) async {
+    final maxSize = request.maxSize;
+    if (maxSize == null || maxSize <= 0) {
+      return;
+    }
+    final bytes = request.bytes;
+    if (bytes != null) {
+      if (bytes.lengthInBytes > maxSize) {
+        throw StateError('file_too_large:$maxSize:${bytes.lengthInBytes}');
+      }
+      return;
+    }
+    final size = await loadLocalFileSize(request.localUri);
+    if (size != null && size > maxSize) {
+      throw StateError('file_too_large:$maxSize:$size');
+    }
   }
 
   Future<FileOpenStrategyResponseDto> getFileOpenStrategy({

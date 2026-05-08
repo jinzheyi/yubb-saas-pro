@@ -400,6 +400,7 @@ class _HoldToTalkButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = isRecording ? (isCancelReady ? '松开取消' : '松开发送') : '按住说话';
     return Listener(
+      behavior: HitTestBehavior.opaque,
       onPointerDown: enabled ? (event) => onPressStart(event.position) : null,
       onPointerMove: enabled ? (event) => onPressMove(event.position) : null,
       onPointerUp: enabled ? (_) => onPressEnd() : null,

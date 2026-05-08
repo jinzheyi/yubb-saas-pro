@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:shengyu_ui_admin_im/app/config/app_config.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_purpose.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_result.dart';
@@ -25,6 +27,8 @@ class FileRepositoryImpl implements FileRepository {
     required String localUri,
     required String displayName,
     required String mimeType,
+    Uint8List? bytes,
+    int? maxSize,
   }) async {
     final directory = UploadDirectoryResolver.resolve(
       purpose: purpose,
@@ -37,6 +41,8 @@ class FileRepositoryImpl implements FileRepository {
         directory: directory.value,
         fieldName: AppConfig.fileUploadFieldName,
         mimeType: mimeType,
+        bytes: bytes,
+        maxSize: maxSize,
       ),
     );
     return UploadResultMapper.toEntity(

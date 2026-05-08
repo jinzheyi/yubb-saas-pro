@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_purpose.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_result.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_scope.dart';
@@ -12,6 +14,8 @@ abstract class FileRepository {
     required String localUri,
     required String displayName,
     required String mimeType,
+    Uint8List? bytes,
+    int? maxSize,
   });
 
   Future<FilePreviewDescriptor> getFilePreviewDescriptor(FilePreviewArgs args);

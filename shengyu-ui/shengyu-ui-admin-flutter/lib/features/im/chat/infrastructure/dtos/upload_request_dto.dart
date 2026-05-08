@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 class UploadRequestDto {
   const UploadRequestDto({
     required this.localUri,
@@ -5,6 +7,8 @@ class UploadRequestDto {
     required this.directory,
     required this.fieldName,
     required this.mimeType,
+    this.bytes,
+    this.maxSize,
   });
 
   final String localUri;
@@ -12,4 +16,6 @@ class UploadRequestDto {
   final String directory;
   final String fieldName;
   final String mimeType;
+  final Uint8List? bytes;
+  final int? maxSize;
 }

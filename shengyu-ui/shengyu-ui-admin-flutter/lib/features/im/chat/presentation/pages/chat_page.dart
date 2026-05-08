@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shengyu_ui_admin_im/core/auth/auth_session_provider.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error.dart';
 import 'package:shengyu_ui_admin_im/core/network/api_exception.dart';
+import 'package:shengyu_ui_admin_im/core/platform/local_file_size_loader.dart';
+import 'package:shengyu_ui_admin_im/core/platform/local_uri_bytes_loader.dart';
 import 'package:shengyu_ui_admin_im/core/platform/media_picker_service.dart';
 import 'package:shengyu_ui_admin_im/core/websocket/socket_outbound_sender.dart';
 import 'package:shengyu_ui_admin_im/core/storage/storage_key_registry.dart';
@@ -91,6 +94,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   static const int _minVoiceDurationMs = 1000;
   static const int _maxVoiceDurationMs = 60000;
   static const int _maxVoiceSize = 10 * 1024 * 1024;
+  static const int _voiceDurationOverflowToleranceMs = 1500;
   static const double _voiceCancelThreshold = 60;
   static const Duration _voicePlayedSyncDebounce = Duration(milliseconds: 300);
   static const Duration _voicePlayedCompensateInterval = Duration(seconds: 12);
@@ -109,6 +113,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   bool _isFullExpanded = false;
   bool _isRecording = false;
   bool _isCancelReady = false;
+  bool _isVoicePressActive = false;
   final Set<String> _selectedMessageIds = <String>{};
   final Map<String, String> _mentionNameToUserId = <String, String>{};
   QuoteInfo? _quoteInfo;
@@ -119,6 +124,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   Duration _recallWindow = const Duration(minutes: 2);
   List<StickerItem> _cachedFavoriteStickers = const <StickerItem>[];
   int _composerLineCount = 1;
+  int _voicePressSession = 0;
   int _recordingElapsedMs = 0;
   int _reeditNowTs = DateTime.now().millisecondsSinceEpoch;
   double _recordingAmplitude = -160;
@@ -373,7 +379,14 @@ class _ChatPageState extends ConsumerState<ChatPage>
       hintText: strings.inputMessage,
       quoteInfo: _quoteInfo,
       onClearQuote: _clearQuoteReply,
-      onTapInput: () {},
+      onTapInput: () {
+        if (_isMorePanelVisible || _isEmojiPanelVisible) {
+          setState(() {
+            _isMorePanelVisible = false;
+            _isEmojiPanelVisible = false;
+          });
+        }
+      },
       onChanged: (value) {
         _updateComposerLineCount(value);
         _handleComposerChanged(
@@ -384,6 +397,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
         );
       },
       onTapVoice: () {
+        if (!_ensureConversationWritable(context)) {
+          return;
+        }
         if (_isMorePanelVisible || _isEmojiPanelVisible) {
           setState(() {
             _isMorePanelVisible = false;
@@ -411,6 +427,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
       onTapEmoji: () {
         setState(() {
           _isEmojiPanelVisible = !_isEmojiPanelVisible;
+          _isVoiceMode = false;
           if (_isEmojiPanelVisible) {
             _isMorePanelVisible = false;
           }
@@ -4835,9 +4852,15 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (!_ensureConversationWritable(context)) {
       return;
     }
+    _isVoicePressActive = true;
+    final session = ++_voicePressSession;
     final service = ref.read(audioRecordingServiceProvider);
     final hasPermission = await service.ensurePermission();
+    if (!_isVoicePressCurrent(session)) {
+      return;
+    }
     if (!hasPermission) {
+      _isVoicePressActive = false;
       if (mounted) {
         _showAttachmentError(
           context,
@@ -4846,11 +4869,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
       }
       return;
     }
-    final tempDir = await getTemporaryDirectory();
-    final path =
-        '${tempDir.path}/voice_${DateTime.now().microsecondsSinceEpoch}.m4a';
+    final path = await _buildVoiceRecordingPath(service.fileExtension);
     try {
       await service.start(path: path);
+      if (!_isVoicePressCurrent(session)) {
+        await service.cancel();
+        return;
+      }
       _recordAmplitudeSubscription?.cancel();
       _recordAmplitudeSubscription = service
           .onAmplitudeChanged(const Duration(milliseconds: 120))
@@ -4907,6 +4932,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   Future<void> _finishVoiceRecording() async {
+    _isVoicePressActive = false;
     if (!_isRecording) {
       return;
     }
@@ -4940,7 +4966,30 @@ class _ChatPageState extends ConsumerState<ChatPage>
         );
         return;
       }
-      await _uploadVoiceMessage(path.trim(), durationMs);
+      if (durationMs >
+          _maxVoiceDurationMs + _voiceDurationOverflowToleranceMs) {
+        _showAttachmentError(context, _buildVoiceDurationInvalidHint());
+        return;
+      }
+      final localPath = path.trim();
+      final uploadBytes = await _resolveVoiceUploadBytes(localPath);
+      final sourceSize = await _resolveVoiceSourceSize(
+        localPath,
+        uploadBytes: uploadBytes,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (sourceSize != null && sourceSize > _maxVoiceSize) {
+        _showAttachmentError(context, _buildVoiceTooLargeHint(sourceSize));
+        return;
+      }
+      await _uploadVoiceMessage(
+        localPath,
+        durationMs,
+        uploadBytes: uploadBytes,
+        sourceSize: sourceSize,
+      );
     } catch (error) {
       _resetVoiceRecordingUi();
       if (mounted) {
@@ -4950,6 +4999,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   Future<void> _cancelVoiceRecording() async {
+    _isVoicePressActive = false;
     if (!_isRecording) {
       return;
     }
@@ -4978,8 +5028,18 @@ class _ChatPageState extends ConsumerState<ChatPage>
     });
   }
 
-  Future<void> _uploadVoiceMessage(String localPath, int durationMs) async {
-    await _performVoiceUpload(localPath: localPath, durationMs: durationMs);
+  Future<void> _uploadVoiceMessage(
+    String localPath,
+    int durationMs, {
+    Uint8List? uploadBytes,
+    int? sourceSize,
+  }) async {
+    await _performVoiceUpload(
+      localPath: localPath,
+      durationMs: durationMs,
+      uploadBytes: uploadBytes,
+      sourceSize: sourceSize,
+    );
   }
 
   Future<bool> _retryVoiceMessage(Message message) async {
@@ -4996,6 +5056,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
           message.extra.durationMs ??
           ((message.extra.duration ?? 1).clamp(1, 60) * 1000),
       retryMessage: message,
+      sourceSize: message.extra.fileSize,
     );
   }
 
@@ -5003,8 +5064,48 @@ class _ChatPageState extends ConsumerState<ChatPage>
     required String localPath,
     required int durationMs,
     Message? retryMessage,
+    Uint8List? uploadBytes,
+    int? sourceSize,
   }) async {
+    if (durationMs < _minVoiceDurationMs) {
+      if (mounted) {
+        _showAttachmentError(
+          context,
+          ref.read(appStringsProvider).chatRecordTooShort,
+        );
+      }
+      return false;
+    }
+    if (durationMs > _maxVoiceDurationMs + _voiceDurationOverflowToleranceMs) {
+      if (mounted) {
+        _showAttachmentError(context, _buildVoiceDurationInvalidHint());
+      }
+      return false;
+    }
+    final resolvedUploadBytes =
+        uploadBytes ?? await _resolveVoiceUploadBytes(localPath);
+    final resolvedSourceSize =
+        sourceSize ??
+        await _resolveVoiceSourceSize(
+          localPath,
+          uploadBytes: resolvedUploadBytes,
+        );
+    if (resolvedSourceSize != null && resolvedSourceSize > _maxVoiceSize) {
+      if (mounted) {
+        _showAttachmentError(
+          context,
+          _buildVoiceTooLargeHint(resolvedSourceSize),
+        );
+      }
+      return false;
+    }
     final durationSeconds = (durationMs / 1000).round().clamp(1, 60);
+    final recordingService = ref.read(audioRecordingServiceProvider);
+    final format = retryMessage?.extra.fileType?.trim().isNotEmpty == true
+        ? retryMessage!.extra.fileType!.trim()
+        : recordingService.formatLabel;
+    final mimeType = _voiceMimeTypeForFormat(format);
+    final displayName = 'voice.$format';
     final localMessage =
         retryMessage ??
         ref
@@ -5014,8 +5115,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
               localPath: localPath,
               duration: durationSeconds,
               durationMs: durationMs,
-              fileSize: 0,
-              format: 'm4a',
+              fileSize: resolvedSourceSize ?? 0,
+              format: format,
             );
     final retryKey = localMessage.clientMessageId ?? localMessage.messageId;
     if (retryMessage == null) {
@@ -5060,10 +5161,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
             purpose: UploadPurpose.chatVoice,
             scope: _resolveUploadScope(),
             localUri: localPath,
-            displayName: 'voice.m4a',
-            mimeType: 'audio/mp4',
+            displayName: displayName,
+            mimeType: mimeType,
+            bytes: resolvedUploadBytes,
+            maxSize: _maxVoiceSize,
           );
-      await ref
+      final target = _resolveLegacySendTarget();
+      final sent = await ref
           .read(messageRepositoryProvider)
           .sendVoiceMessage(
             chatId: widget.args.chatId,
@@ -5074,9 +5178,42 @@ class _ChatPageState extends ConsumerState<ChatPage>
                 ? _maxVoiceSize
                 : upload.file.size,
             durationMs: durationMs,
-            format: 'm4a',
+            format: format,
             md5: upload.file.md5 ?? '',
             clientMessageId: retryKey,
+            receiverId: target.receiverId,
+            groupId: target.groupId,
+          );
+      ref
+          .read(chatTimelineControllerProvider.notifier)
+          .replaceSingleMessage(
+            clientMessageId: retryKey,
+            message: sent.message,
+          );
+      ref
+          .read(conversationListControllerProvider.notifier)
+          .upsertLocalMessage(
+            chatId: sent.message.chatId,
+            title: ref.read(chatControllerProvider).chatTitle ?? '',
+            conversationType: widget.args.conversationType,
+            messageId: sent.message.messageId,
+            messageSequence: sent.message.sequence,
+            preview: ref
+                .read(messagePreviewFormatterProvider)
+                .formatConversationPreview(
+                  type: sent.message.type,
+                  content: sent.message.content,
+                  customType: sent.message.extra.customType,
+                  fileName: sent.message.extra.fileName,
+                  systemEventKey: sent.message.extra.systemEventKey,
+                  conversationType: widget.args.conversationType,
+                  isSelf: sent.message.isOutgoing,
+                  senderName: sent.message.senderName,
+                ),
+            messageType: sent.message.type,
+            messageStatus: sent.message.status,
+            updatedAt: sent.message.sentAt,
+            resetUnread: true,
           );
       return true;
     } catch (error) {
@@ -5105,6 +5242,95 @@ class _ChatPageState extends ConsumerState<ChatPage>
       }
       return false;
     }
+  }
+
+  bool _isVoicePressCurrent(int session) {
+    return mounted && _isVoicePressActive && _voicePressSession == session;
+  }
+
+  Future<String> _buildVoiceRecordingPath(String extension) async {
+    final fileName =
+        'voice_${DateTime.now().microsecondsSinceEpoch}.$extension';
+    if (kIsWeb) {
+      return fileName;
+    }
+    final tempDir = await getTemporaryDirectory();
+    return '${tempDir.path}/$fileName';
+  }
+
+  String _voiceMimeTypeForFormat(String format) {
+    switch (format.toLowerCase()) {
+      case 'wav':
+        return 'audio/wav';
+      case 'pcm':
+      case 'pcm16bits':
+        return 'audio/pcm';
+      case 'm4a':
+      case 'aac':
+      default:
+        return 'audio/mp4';
+    }
+  }
+
+  Future<int?> _resolveVoiceSourceSize(
+    String localPath, {
+    Uint8List? uploadBytes,
+  }) async {
+    if (uploadBytes != null) {
+      return uploadBytes.lengthInBytes;
+    }
+    return loadLocalFileSize(localPath);
+  }
+
+  Future<Uint8List?> _resolveVoiceUploadBytes(String localPath) async {
+    if (!kIsWeb) {
+      return null;
+    }
+    final normalized = localPath.trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    if (normalized.startsWith('blob:') || normalized.startsWith('data:')) {
+      return loadLocalUriBytes(normalized);
+    }
+    return null;
+  }
+
+  String _buildVoiceDurationInvalidHint() {
+    return '录音时长异常，请重新录制';
+  }
+
+  String _buildVoiceTooLargeHint([int? sizeBytes]) {
+    final limitText = _formatBytes(_maxVoiceSize);
+    if (sizeBytes != null && sizeBytes > 0) {
+      return '语音大小超出限制（${_formatBytes(sizeBytes)} / $limitText）';
+    }
+    return '语音大小超出限制，最多支持 $limitText';
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) {
+      return '$bytes B';
+    }
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  ({String? receiverId, String? groupId}) _resolveLegacySendTarget() {
+    if (widget.args.conversationType == ConversationType.group) {
+      final groupId = (widget.args.targetId ?? widget.args.chatId).trim();
+      return (
+        receiverId: null,
+        groupId: groupId.isEmpty || groupId == '0' ? null : groupId,
+      );
+    }
+    final receiverId = (widget.args.targetId ?? '').trim();
+    return (
+      receiverId: receiverId.isEmpty || receiverId == '0' ? null : receiverId,
+      groupId: null,
+    );
   }
 
   UploadScope _resolveUploadScope() {

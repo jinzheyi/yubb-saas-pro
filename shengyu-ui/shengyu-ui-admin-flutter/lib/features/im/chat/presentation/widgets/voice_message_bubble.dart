@@ -114,7 +114,7 @@ class VoiceMessageBubble extends ConsumerWidget {
                         : TextDirection.ltr,
                     children: [
                       SizedBox(
-                        width: 18,
+                        width: 22,
                         height: 16,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -124,7 +124,9 @@ class VoiceMessageBubble extends ConsumerWidget {
                               Container(
                                 width: 2,
                                 height: height.toDouble(),
-                                margin: const EdgeInsets.symmetric(horizontal: 1),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 1,
+                                ),
                                 decoration: BoxDecoration(
                                   color: waveColor,
                                   borderRadius: BorderRadius.circular(2),
