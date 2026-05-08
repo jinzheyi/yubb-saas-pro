@@ -111,6 +111,7 @@ class MessageDto {
   factory MessageDto.fromJson(Map<String, dynamic> json) {
     final extra = _readExtra(json['extra']);
     final contentMap = _readExtra(json['content']);
+    final structuredFields = <String, dynamic>{...extra, ...contentMap};
     final quoteInfo = _parseQuoteInfo(json, extra, contentMap);
     final rawType =
         json['type']?.toString() ?? json['messageType']?.toString() ?? '';
@@ -139,23 +140,22 @@ class MessageDto {
         json['nickname']?.toString() ??
         json['userName']?.toString() ??
         '';
-    final resolvedContent =
-        isSystemTip
-            ? (_parseSystemTipContent(extra) ??
-                _parseContent(
-                  json['content'],
-                  contentMap,
-                  resolvedType,
-                  customType,
-                  isRecalled,
-                ))
-            : _parseContent(
+    final resolvedContent = isSystemTip
+        ? (_parseSystemTipContent(extra) ??
+              _parseContent(
                 json['content'],
                 contentMap,
                 resolvedType,
                 customType,
                 isRecalled,
-              );
+              ))
+        : _parseContent(
+            json['content'],
+            contentMap,
+            resolvedType,
+            customType,
+            isRecalled,
+          );
     return MessageDto(
       messageId: json['messageId']?.toString() ?? json['id']?.toString() ?? '',
       clientMessageId:
@@ -185,68 +185,88 @@ class MessageDto {
                 json['timestamp'],
           ) ??
           DateTime.fromMillisecondsSinceEpoch(0),
-      isOutgoing:
-          isSystemTip ? false : json['isOutgoing'] == true || json['isSelf'] == true,
+      isOutgoing: isSystemTip
+          ? false
+          : json['isOutgoing'] == true || json['isSelf'] == true,
       sequence:
           json['sequence']?.toString() ?? json['sortKey']?.toString() ?? '',
       revision: json['rev']?.toString(),
-      fileId: _pickString(json, extra, ['fileId']),
-      fileUrl: _pickString(json, extra, [
+      fileId: _pickString(json, structuredFields, ['fileId']),
+      fileUrl: _pickString(json, structuredFields, [
         'url',
         'fileUrl',
         'downloadUrl',
         'filePath',
       ]),
-      thumbFileId: _pickString(json, extra, ['thumbFileId']),
-      thumbnailUrl: _pickString(json, extra, [
+      thumbFileId: _pickString(json, structuredFields, ['thumbFileId']),
+      thumbnailUrl: _pickString(json, structuredFields, [
         'thumbnailUrl',
         'coverUrl',
         'thumbUrl',
         'previewUrl',
         'poster',
       ]),
-      mimeType: _pickString(json, extra, ['mimeType', 'contentType']),
-      fileName: _pickString(json, extra, ['fileName', 'name', 'originName']),
-      fileType: _pickString(json, extra, [
+      mimeType: _pickString(json, structuredFields, [
+        'mimeType',
+        'contentType',
+      ]),
+      fileName: _pickString(json, structuredFields, [
+        'fileName',
+        'name',
+        'originName',
+      ]),
+      fileType: _pickString(json, structuredFields, [
         'fileType',
         'mimeType',
         'contentType',
       ]),
-      fileSize: _pickInt(json, extra, ['size', 'fileSize']),
-      width: _pickInt(json, extra, ['width']),
-      height: _pickInt(json, extra, ['height']),
-      duration: _pickDurationSeconds(extra, contentMap),
-      durationMs: _pickInt(json, extra, ['durationMs']),
-      voicePlayed: _pickBool(json, extra, ['voicePlayed']),
-      md5: _pickString(json, extra, ['md5']),
-      stickerId: _pickString(json, extra, ['stickerId']),
+      fileSize: _pickInt(json, structuredFields, ['size', 'fileSize']),
+      width: _pickInt(json, structuredFields, ['width']),
+      height: _pickInt(json, structuredFields, ['height']),
+      duration: _pickDurationSeconds(structuredFields, contentMap),
+      durationMs: _pickInt(json, structuredFields, ['durationMs']),
+      voicePlayed: _pickBool(json, structuredFields, ['voicePlayed']),
+      md5: _pickString(json, structuredFields, ['md5']),
+      stickerId: _pickString(json, structuredFields, ['stickerId']),
       customType: customType,
-      contactUserId: _pickString(json, extra, ['userId', 'contactUserId']),
-      contactDisplayName: _pickString(json, extra, [
+      contactUserId: _pickString(json, structuredFields, [
+        'userId',
+        'contactUserId',
+      ]),
+      contactDisplayName: _pickString(json, structuredFields, [
         'displayName',
         'contactDisplayName',
       ]),
-      contactDepartmentName: _pickString(json, extra, [
+      contactDepartmentName: _pickString(json, structuredFields, [
         'deptName',
         'contactDepartmentName',
       ]),
-      contactPostName: _pickString(json, extra, [
+      contactPostName: _pickString(json, structuredFields, [
         'postName',
         'contactPostName',
       ]),
-      contactAvatar: _pickString(json, extra, ['avatar', 'contactAvatar']),
-      locationName: _pickString(json, extra, ['name', 'locationName']),
-      locationAddress: _pickString(json, extra, ['address', 'locationAddress']),
-      locationLatitude: _pickDouble(json, extra, ['latitude']),
-      locationLongitude: _pickDouble(json, extra, ['longitude']),
-      locationProvider: _pickString(json, extra, ['provider']),
-      locationPoiId: _pickString(json, extra, ['poiId']),
+      contactAvatar: _pickString(json, structuredFields, [
+        'avatar',
+        'contactAvatar',
+      ]),
+      locationName: _pickString(json, structuredFields, [
+        'name',
+        'locationName',
+      ]),
+      locationAddress: _pickString(json, structuredFields, [
+        'address',
+        'locationAddress',
+      ]),
+      locationLatitude: _pickDouble(json, structuredFields, ['latitude']),
+      locationLongitude: _pickDouble(json, structuredFields, ['longitude']),
+      locationProvider: _pickString(json, structuredFields, ['provider']),
+      locationPoiId: _pickString(json, structuredFields, ['poiId']),
       quoteInfo: quoteInfo,
-      forwardedFrom: _pickString(json, extra, ['forwardedFrom']),
+      forwardedFrom: _pickString(json, structuredFields, ['forwardedFrom']),
       atUserIds: _parseAtUserIds(json, extra),
       mentions: _parseMentions(json, extra),
-      reeditContent: _pickString(json, extra, ['reeditContent']),
-      reeditDeadlineTs: _pickInt(json, extra, ['reeditDeadlineTs']),
+      reeditContent: _pickString(json, structuredFields, ['reeditContent']),
+      reeditDeadlineTs: _pickInt(json, structuredFields, ['reeditDeadlineTs']),
       systemEventKey: systemEventKey,
     );
   }

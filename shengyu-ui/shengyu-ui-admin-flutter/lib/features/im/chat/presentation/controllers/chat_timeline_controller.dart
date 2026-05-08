@@ -412,6 +412,9 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
   }
 
   Message _mergeMessage(Message previous, Message next) {
+    final resolvedType = _resolveMergedType(previous, next);
+    final resolvedStatus = _resolveMergedStatus(previous, next, resolvedType);
+    final resolvedContent = _resolveMergedContent(previous, next, resolvedType);
     if (_isRecalledFinal(previous) || _isRecalledFinal(next)) {
       final finalMessage = _isRecalledFinal(next) ? next : previous;
       final other = identical(finalMessage, next) ? previous : next;
@@ -433,6 +436,9 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
             : (finalMessage.sentAt.millisecondsSinceEpoch > 0
                   ? finalMessage.sentAt
                   : other.sentAt),
+        type: resolvedType,
+        status: resolvedStatus,
+        content: resolvedContent,
         isOutgoing: finalMessage.isOutgoing || other.isOutgoing,
         clientMessageId: finalMessage.clientMessageId ?? other.clientMessageId,
         sequence: _pickNonEmpty(finalMessage.sequence, other.sequence),
@@ -451,11 +457,59 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
       sentAt: next.sentAt.millisecondsSinceEpoch > 0
           ? next.sentAt
           : previous.sentAt,
+      type: resolvedType,
+      status: resolvedStatus,
+      content: resolvedContent,
       isOutgoing: next.isOutgoing || previous.isOutgoing,
       clientMessageId: next.clientMessageId ?? previous.clientMessageId,
       sequence: _pickNonEmpty(next.sequence, previous.sequence),
       extra: _mergeExtra(previous, next),
     );
+  }
+
+  MessageType _resolveMergedType(Message previous, Message next) {
+    if (next.type == MessageType.text &&
+        previous.type != MessageType.text &&
+        next.content.trim().isEmpty &&
+        _hasMediaIdentity(previous)) {
+      return previous.type;
+    }
+    return next.type;
+  }
+
+  MessageStatus _resolveMergedStatus(
+    Message previous,
+    Message next,
+    MessageType resolvedType,
+  ) {
+    if (resolvedType == MessageType.voice &&
+        previous.status == MessageStatus.sending &&
+        next.status == MessageStatus.sending &&
+        _hasMediaIdentity(previous)) {
+      return MessageStatus.sent;
+    }
+    return next.status;
+  }
+
+  String _resolveMergedContent(
+    Message previous,
+    Message next,
+    MessageType resolvedType,
+  ) {
+    if (resolvedType == MessageType.voice) {
+      return '';
+    }
+    if (next.content.trim().isEmpty && previous.content.trim().isNotEmpty) {
+      return previous.content;
+    }
+    return next.content;
+  }
+
+  bool _hasMediaIdentity(Message message) {
+    return (message.extra.fileId?.trim().isNotEmpty ?? false) ||
+        (message.extra.localPath?.trim().isNotEmpty ?? false) ||
+        (message.extra.durationMs ?? 0) > 0 ||
+        (message.extra.duration ?? 0) > 0;
   }
 
   bool _shouldMergeIncoming(Message previous, Message next) {

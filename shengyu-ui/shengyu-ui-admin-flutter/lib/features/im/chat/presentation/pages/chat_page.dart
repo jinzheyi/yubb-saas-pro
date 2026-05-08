@@ -5184,35 +5184,47 @@ class _ChatPageState extends ConsumerState<ChatPage>
             receiverId: target.receiverId,
             groupId: target.groupId,
           );
+      final normalizedSent = _normalizeSentVoiceMessage(
+        fallback: localMessage,
+        message: sent.message,
+        durationSeconds: durationSeconds,
+        durationMs: durationMs,
+        fileSize: upload.file.size,
+        format: format,
+        mimeType: mimeType,
+        fileId: upload.file.fileId,
+        fileUrl: upload.file.url,
+        md5: upload.file.md5 ?? '',
+      );
       ref
           .read(chatTimelineControllerProvider.notifier)
           .replaceSingleMessage(
             clientMessageId: retryKey,
-            message: sent.message,
+            message: normalizedSent,
           );
       ref
           .read(conversationListControllerProvider.notifier)
           .upsertLocalMessage(
-            chatId: sent.message.chatId,
+            chatId: normalizedSent.chatId,
             title: ref.read(chatControllerProvider).chatTitle ?? '',
             conversationType: widget.args.conversationType,
-            messageId: sent.message.messageId,
-            messageSequence: sent.message.sequence,
+            messageId: normalizedSent.messageId,
+            messageSequence: normalizedSent.sequence,
             preview: ref
                 .read(messagePreviewFormatterProvider)
                 .formatConversationPreview(
-                  type: sent.message.type,
-                  content: sent.message.content,
-                  customType: sent.message.extra.customType,
-                  fileName: sent.message.extra.fileName,
-                  systemEventKey: sent.message.extra.systemEventKey,
+                  type: normalizedSent.type,
+                  content: normalizedSent.content,
+                  customType: normalizedSent.extra.customType,
+                  fileName: normalizedSent.extra.fileName,
+                  systemEventKey: normalizedSent.extra.systemEventKey,
                   conversationType: widget.args.conversationType,
-                  isSelf: sent.message.isOutgoing,
-                  senderName: sent.message.senderName,
+                  isSelf: normalizedSent.isOutgoing,
+                  senderName: normalizedSent.senderName,
                 ),
-            messageType: sent.message.type,
-            messageStatus: sent.message.status,
-            updatedAt: sent.message.sentAt,
+            messageType: normalizedSent.type,
+            messageStatus: normalizedSent.status,
+            updatedAt: normalizedSent.sentAt,
             resetUnread: true,
           );
       return true;
@@ -5270,6 +5282,44 @@ class _ChatPageState extends ConsumerState<ChatPage>
       default:
         return 'audio/mp4';
     }
+  }
+
+  Message _normalizeSentVoiceMessage({
+    required Message fallback,
+    required Message message,
+    required int durationSeconds,
+    required int durationMs,
+    required int fileSize,
+    required String format,
+    required String mimeType,
+    required String fileId,
+    required String fileUrl,
+    required String md5,
+  }) {
+    final base = message.copyWith(
+      type: MessageType.voice,
+      status: message.status == MessageStatus.sending
+          ? MessageStatus.sent
+          : message.status,
+      content: '',
+      isOutgoing: true,
+      clientMessageId: message.clientMessageId ?? fallback.clientMessageId,
+    );
+    return base.copyWith(
+      extra: base.extra.copyWith(
+        localPath: fallback.extra.localPath,
+        fileId: fileId,
+        fileUrl: fileUrl,
+        mimeType: mimeType,
+        fileType: format,
+        fileName: 'voice.$format',
+        fileSize: fileSize,
+        duration: durationSeconds,
+        durationMs: durationMs,
+        voicePlayed: true,
+        md5: md5,
+      ),
+    );
   }
 
   Future<int?> _resolveVoiceSourceSize(

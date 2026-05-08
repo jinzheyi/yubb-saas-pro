@@ -40,8 +40,8 @@ class VoiceMessageBubble extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final strings = ref.watch(appStringsProvider);
-    final duration = message.extra.duration ?? 0;
-    final durationLabel = _durationLabel(duration);
+    final durationMs = _resolveDurationMs();
+    final durationLabel = _durationLabel(durationMs);
     final unread = message.isOutgoing
         ? false
         : !(message.extra.voicePlayed ?? false);
@@ -154,7 +154,7 @@ class VoiceMessageBubble extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(3),
                                 child: LinearProgressIndicator(
                                   minHeight: 3,
-                                  value: _progressValue(duration),
+                                  value: _progressValue(durationMs),
                                   backgroundColor: progressTrackColor,
                                   valueColor: AlwaysStoppedAnimation<Color>(
                                     progressColor,
@@ -179,24 +179,27 @@ class VoiceMessageBubble extends ConsumerWidget {
                       ),
                       if (isPaused) ...[
                         const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: message.isOutgoing
-                                ? const Color(0x260F4AA3)
-                                : const Color(0x1F1677FF),
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          child: Text(
-                            '暂停',
-                            style: TextStyle(
-                              fontSize: 11,
+                        GestureDetector(
+                          onTap: () => onOpenMessage(message),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
                               color: message.isOutgoing
-                                  ? const Color(0xFF0F4AA3)
-                                  : const Color(0xFF1677FF),
+                                  ? const Color(0x260F4AA3)
+                                  : const Color(0x1F1677FF),
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: Text(
+                              '继续',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: message.isOutgoing
+                                    ? const Color(0xFF0F4AA3)
+                                    : const Color(0xFF1677FF),
+                              ),
                             ),
                           ),
                         ),
@@ -244,14 +247,19 @@ class VoiceMessageBubble extends ConsumerWidget {
     );
   }
 
-  String _durationLabel(int duration) {
-    return '${duration <= 0 ? 1 : duration}s';
+  String _durationLabel(int durationMs) {
+    final totalMs = durationMs <= 0 ? 1000 : durationMs;
+    final totalSeconds = (totalMs / 1000).round().clamp(1, 3600);
+    if (!isPlaying && !isPaused) {
+      return '${totalSeconds}s';
+    }
+    final playedMs = playbackProgressMs.clamp(0, totalMs);
+    final playedSeconds = (playedMs / 1000).floor().clamp(0, totalSeconds);
+    return '${playedSeconds}s / ${totalSeconds}s';
   }
 
-  double? _progressValue(int duration) {
-    final totalMs = playbackDurationMs > 0
-        ? playbackDurationMs
-        : (duration <= 0 ? 1 : duration) * 1000;
+  double? _progressValue(int durationMs) {
+    final totalMs = playbackDurationMs > 0 ? playbackDurationMs : durationMs;
     if (totalMs <= 0) {
       return null;
     }
@@ -261,13 +269,19 @@ class VoiceMessageBubble extends ConsumerWidget {
 
   List<int> _waveHeights() => const [6, 10, 14, 10, 6];
 
+  int _resolveDurationMs() {
+    final fromExtra = message.extra.durationMs ?? 0;
+    if (fromExtra > 0) {
+      return fromExtra;
+    }
+    final fromSeconds = (message.extra.duration ?? 0) * 1000;
+    if (fromSeconds > 0) {
+      return fromSeconds;
+    }
+    return 1000;
+  }
+
   String? _statusLabelText() {
-    if (isPaused) {
-      return '继续播放';
-    }
-    if (isPlaying) {
-      return '播放中';
-    }
     if (message.status == MessageStatus.sending) {
       return '发送中';
     }
