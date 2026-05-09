@@ -97,7 +97,6 @@ class OptimisticMessageFactory {
         fileName: resolvedName,
         fileType: resolvedMimeType,
         fileSize: fileSize,
-        thumbnailUrl: localPath,
       ),
     );
   }

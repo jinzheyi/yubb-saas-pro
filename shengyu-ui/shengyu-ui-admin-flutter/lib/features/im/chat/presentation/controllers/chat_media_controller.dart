@@ -544,6 +544,9 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
         : (uploadedUrl?.trim().isNotEmpty == true
               ? uploadedUrl!.trim()
               : base.content);
+    final fallbackThumbnailUrl = base.type == MessageType.video
+        ? base.extra.thumbnailUrl
+        : uploadedUrl;
     return incoming.copyWith(
       chatId: incoming.chatId.isNotEmpty ? incoming.chatId : base.chatId,
       senderId: incoming.senderId.isNotEmpty
@@ -568,7 +571,7 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
             : uploadedUrl,
         thumbnailUrl: incoming.extra.thumbnailUrl?.trim().isNotEmpty == true
             ? incoming.extra.thumbnailUrl
-            : uploadedUrl,
+            : fallbackThumbnailUrl,
         md5: incoming.extra.md5?.trim().isNotEmpty == true
             ? incoming.extra.md5
             : checksum,
@@ -613,6 +616,9 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
         uploadedUrl.isNotEmpty && currentContent.startsWith('blob:')
         ? uploadedUrl
         : current.content;
+    final nextThumbnailUrl = current.type == MessageType.video
+        ? current.extra.thumbnailUrl
+        : (uploadedUrl.isNotEmpty ? uploadedUrl : current.extra.thumbnailUrl);
     _timelineController.replaceSingleMessage(
       clientMessageId: clientMessageId,
       message: current.copyWith(
@@ -622,9 +628,7 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
               ? uploadedFileId
               : current.extra.fileId,
           fileUrl: uploadedUrl.isNotEmpty ? uploadedUrl : current.extra.fileUrl,
-          thumbnailUrl: uploadedUrl.isNotEmpty
-              ? uploadedUrl
-              : current.extra.thumbnailUrl,
+          thumbnailUrl: nextThumbnailUrl,
           md5: checksum.isNotEmpty ? checksum : current.extra.md5,
         ),
       ),

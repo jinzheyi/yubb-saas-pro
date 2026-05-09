@@ -43,7 +43,7 @@ class SendUploadedMessageUseCase {
       chatId: upload.scope.requireChatId(),
       fileId: upload.file.fileId,
       url: upload.file.url,
-      thumbnailUrl: upload.file.url,
+      thumbnailUrl: '',
       duration: duration,
       width: width,
       height: height,

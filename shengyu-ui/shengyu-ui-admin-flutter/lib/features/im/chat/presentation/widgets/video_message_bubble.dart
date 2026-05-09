@@ -34,15 +34,7 @@ class VideoMessageBubble extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final strings = ref.watch(appStringsProvider);
-    final previewUrl = message.extra.thumbnailUrl?.trim().isNotEmpty == true
-        ? message.extra.thumbnailUrl!.trim()
-        : (message.extra.fileUrl?.trim().isNotEmpty == true
-              ? message.extra.fileUrl!.trim()
-              : extractMediaUrlFromRawContent(message.content));
-    final imageProvider = resolveChatImageProvider(
-      localPath: message.extra.localPath,
-      remoteUrl: previewUrl,
-    );
+    final imageProvider = _resolveVideoPreviewImageProvider();
 
     return Column(
       crossAxisAlignment: message.isOutgoing
@@ -154,6 +146,30 @@ class VideoMessageBubble extends ConsumerWidget {
       MessageStatus.recalled => const Color(0xFF98A1B2),
       _ => const Color(0xFF98A1B2),
     };
+  }
+
+  ImageProvider? _resolveVideoPreviewImageProvider() {
+    final thumbnailUrl = message.extra.thumbnailUrl?.trim() ?? '';
+    if (thumbnailUrl.isEmpty) {
+      return null;
+    }
+    final videoUrl = _resolveVideoSourceUrl();
+    if (videoUrl.isNotEmpty && thumbnailUrl == videoUrl) {
+      return null;
+    }
+    return resolveChatImageProvider(remoteUrl: thumbnailUrl);
+  }
+
+  String _resolveVideoSourceUrl() {
+    final localPath = message.extra.localPath?.trim() ?? '';
+    if (localPath.isNotEmpty) {
+      return localPath;
+    }
+    final fileUrl = message.extra.fileUrl?.trim() ?? '';
+    if (fileUrl.isNotEmpty) {
+      return fileUrl;
+    }
+    return extractMediaUrlFromRawContent(message.content);
   }
 }
 
