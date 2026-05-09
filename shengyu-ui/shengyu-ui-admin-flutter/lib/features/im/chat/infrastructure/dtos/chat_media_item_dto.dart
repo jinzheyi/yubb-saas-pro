@@ -35,7 +35,7 @@ class ChatMediaItemDto {
     final fileUrl =
         '${json['fileUrl'] ?? json['url'] ?? json['content'] ?? ''}';
     final thumbnailUrl =
-        '${json['thumbnailUrl'] ?? json['coverUrl'] ?? json['thumbUrl'] ?? fileUrl}';
+        '${json['thumbnailUrl'] ?? json['coverUrl'] ?? json['thumbUrl'] ?? ''}';
     return ChatMediaItemDto(
       messageId: '${json['messageId'] ?? json['id'] ?? ''}',
       chatId: '${json['chatId'] ?? json['conversationId'] ?? ''}',
@@ -70,13 +70,13 @@ class ChatMediaItemDto {
         return MessageType.image;
       case 'video':
       case 'VIDEO':
-      case '3':
-      case '6':
-        return MessageType.file;
+      case '4':
+        return MessageType.video;
       case 'file':
       case 'FILE':
-      case '4':
       case '5':
+      case '3':
+      case '6':
         return MessageType.file;
       default:
         return MessageType.file;

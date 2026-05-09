@@ -7,6 +7,7 @@ class UploadedFile {
     required this.mimeType,
     this.md5,
     this.thumbFileId,
+    this.thumbUrl,
   });
 
   final String fileId;
@@ -16,4 +17,5 @@ class UploadedFile {
   final String mimeType;
   final String? md5;
   final String? thumbFileId;
+  final String? thumbUrl;
 }

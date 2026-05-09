@@ -43,6 +43,13 @@ public class AppImChatMediaRespVO {
     @Schema(description = "文件地址", example = "https://example.com/file.docx")
     private String fileUrl;
 
+    @Schema(description = "缩略图文件ID(视频/图片可返回)", example = "101")
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long thumbFileId;
+
+    @Schema(description = "缩略图地址", example = "https://example.com/file_thumb.jpg")
+    private String thumbnailUrl;
+
     @Schema(description = "文件 MIME 类型", example = "application/pdf")
     private String fileMimeType;
 

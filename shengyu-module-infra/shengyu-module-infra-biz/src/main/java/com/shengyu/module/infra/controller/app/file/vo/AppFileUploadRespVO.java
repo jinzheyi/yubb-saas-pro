@@ -28,4 +28,7 @@ public class AppFileUploadRespVO {
     @Schema(description = "缩略图文件ID（可选）", example = "124")
     private Long thumbFileId;
 
+    @Schema(description = "缩略图地址（可选）", example = "https://example.com/xxx_thumb.jpg")
+    private String thumbUrl;
+
 }

@@ -657,9 +657,9 @@ class _MediaLeading extends StatelessWidget {
   Widget build(BuildContext context) {
     final isImage = item.messageType == MessageType.image;
     final isVideo = _isVideoItem(item);
-    final imageUrl = item.thumbnailUrl.isNotEmpty
+    final imageUrl = isVideo
         ? item.thumbnailUrl
-        : item.fileUrl;
+        : (item.thumbnailUrl.isNotEmpty ? item.thumbnailUrl : item.fileUrl);
     if (isImage && imageUrl.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(10),
@@ -706,9 +706,7 @@ class _MediaLeading extends StatelessWidget {
         ],
       );
     }
-    return _FileIconBox(
-      icon: isVideo ? AppIconKind.video : AppIconKind.file,
-    );
+    return _FileIconBox(icon: isVideo ? AppIconKind.video : AppIconKind.file);
   }
 
   bool _isVideoItem(ChatMediaItem item) {

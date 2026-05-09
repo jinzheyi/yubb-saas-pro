@@ -292,6 +292,7 @@ class MessageRemoteDataSource {
     required String chatId,
     required String fileId,
     required String url,
+    String? thumbFileId,
     required String thumbnailUrl,
     required int duration,
     required int width,
@@ -303,9 +304,10 @@ class MessageRemoteDataSource {
   }) async {
     final extra = jsonEncode({
       'fileId': fileId,
+      if (thumbFileId?.trim().isNotEmpty == true) 'thumbFileId': thumbFileId,
       'url': url,
-      'coverUrl': thumbnailUrl,
-      'thumbnailUrl': thumbnailUrl,
+      if (thumbnailUrl.trim().isNotEmpty) 'coverUrl': thumbnailUrl,
+      if (thumbnailUrl.trim().isNotEmpty) 'thumbnailUrl': thumbnailUrl,
       'duration': duration,
       'width': width,
       'height': height,

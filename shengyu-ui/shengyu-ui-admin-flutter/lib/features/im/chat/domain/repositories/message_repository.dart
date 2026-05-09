@@ -53,6 +53,7 @@ abstract class MessageRepository {
     required String chatId,
     required String fileId,
     required String url,
+    String? thumbFileId,
     required String thumbnailUrl,
     required int duration,
     required int width,

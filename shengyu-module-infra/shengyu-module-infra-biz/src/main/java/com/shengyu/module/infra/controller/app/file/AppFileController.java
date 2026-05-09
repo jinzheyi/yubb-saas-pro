@@ -1,5 +1,6 @@
 package com.shengyu.module.infra.controller.app.file;
 
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -14,6 +15,7 @@ import com.shengyu.module.infra.dal.dataobject.file.FileDO;
 import com.shengyu.module.infra.dal.mysql.file.FileMapper;
 import com.shengyu.module.infra.enums.ErrorCodeConstants;
 import com.shengyu.module.infra.service.file.FileService;
+import com.shengyu.module.infra.service.file.VideoThumbnailService;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -70,6 +72,9 @@ public class AppFileController {
     @Resource
     private FileMapper fileMapper;
 
+    @Resource
+    private VideoThumbnailService videoThumbnailService;
+
     @org.springframework.beans.factory.annotation.Value("${kkfileview.base-url:http://127.0.0.1:48090}")
     private String kkFileViewBaseUrl;
 
@@ -112,7 +117,58 @@ public class AppFileController {
         respVO.setSize(fileDO.getSize() != null ? fileDO.getSize() : (int) file.getSize());
         respVO.setMimeType(fileDO.getType() != null ? fileDO.getType() : file.getContentType());
         respVO.setMd5(DigestUtil.md5Hex(content));
+        enrichVideoThumbnail(uploadReqVO, file, content, respVO);
         return success(respVO);
+    }
+
+    private void enrichVideoThumbnail(
+            AppFileUploadReqVO uploadReqVO,
+            MultipartFile file,
+            byte[] content,
+            AppFileUploadRespVO respVO
+    ) {
+        String mimeType = StrUtil.blankToDefault(respVO.getMimeType(), file.getContentType());
+        if (!StrUtil.startWithIgnoreCase(mimeType, "video/")) {
+            return;
+        }
+        VideoThumbnailService.GeneratedThumbnail thumbnail = videoThumbnailService.generate(
+                content,
+                file.getOriginalFilename()
+        );
+        if (thumbnail == null || thumbnail.getContent() == null || thumbnail.getContent().length == 0) {
+            return;
+        }
+        String thumbDirectory = buildThumbnailDirectory(uploadReqVO.getDirectory());
+        String thumbUrl = fileService.createFile(
+                thumbnail.getContent(),
+                thumbnail.getFileName(),
+                thumbDirectory,
+                thumbnail.getMimeType()
+        );
+        if (StrUtil.isBlank(thumbUrl)) {
+            return;
+        }
+        FileDO thumbFileDO = findLatestFileByUrl(thumbUrl);
+        if (thumbFileDO == null || thumbFileDO.getId() == null) {
+            return;
+        }
+        respVO.setThumbFileId(thumbFileDO.getId());
+        respVO.setThumbUrl(thumbFileDO.getUrl());
+    }
+
+    private String buildThumbnailDirectory(String directory) {
+        String normalized = StrUtil.blankToDefault(directory, "").trim();
+        if (normalized.isEmpty()) {
+            return "thumb";
+        }
+        return normalized + "/thumb";
+    }
+
+    private FileDO findLatestFileByUrl(String url) {
+        return fileMapper.selectOne(new LambdaQueryWrapper<FileDO>()
+                .eq(FileDO::getUrl, url)
+                .orderByDesc(FileDO::getCreateTime)
+                .last("LIMIT 1"));
     }
 
     @GetMapping("/open-strategy")

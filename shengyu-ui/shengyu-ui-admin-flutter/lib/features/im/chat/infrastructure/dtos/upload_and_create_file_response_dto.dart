@@ -7,6 +7,7 @@ class UploadAndCreateFileResponseDto {
     required this.mimeType,
     this.md5,
     this.thumbFileId,
+    this.thumbUrl,
   });
 
   final String fileId;
@@ -16,6 +17,7 @@ class UploadAndCreateFileResponseDto {
   final String mimeType;
   final String? md5;
   final String? thumbFileId;
+  final String? thumbUrl;
 
   factory UploadAndCreateFileResponseDto.fromJson(Map<String, dynamic> json) {
     return UploadAndCreateFileResponseDto(
@@ -47,6 +49,10 @@ class UploadAndCreateFileResponseDto {
           json['thumbFileId']?.toString() ??
           json['thumbnailFileId']?.toString() ??
           json['coverFileId']?.toString(),
+      thumbUrl:
+          json['thumbUrl']?.toString() ??
+          json['thumbnailUrl']?.toString() ??
+          json['coverUrl']?.toString(),
     );
   }
 

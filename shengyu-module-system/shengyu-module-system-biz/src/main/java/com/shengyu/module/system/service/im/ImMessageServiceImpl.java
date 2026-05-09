@@ -2886,6 +2886,10 @@ public class ImMessageServiceImpl implements ImMessageService {
         JSONObject extraObj = parseChatMediaExtra(message.getExtra());
         String url = StrUtil.blankToDefault(resolveChatMediaUrl(message.getContent(), extraObj), "");
         respVO.setFileUrl(url);
+        respVO.setThumbFileId(extraObj.getLong("thumbFileId", null));
+        respVO.setThumbnailUrl(StrUtil.blankToDefault(
+                extraObj.getStr("thumbnailUrl", extraObj.getStr("coverUrl", extraObj.getStr("thumbUrl", ""))),
+                ""));
         respVO.setFileName(resolveChatMediaFileName(messageType, url, extraObj));
         respVO.setFileSize(resolveChatMediaFileSize(extraObj));
         respVO.setFileMimeType(resolveChatMediaMimeType(messageType, extraObj, url));

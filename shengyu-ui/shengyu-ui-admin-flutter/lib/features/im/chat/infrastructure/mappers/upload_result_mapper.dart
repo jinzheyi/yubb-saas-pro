@@ -23,6 +23,7 @@ abstract final class UploadResultMapper {
         mimeType: dto.mimeType,
         md5: dto.md5,
         thumbFileId: dto.thumbFileId,
+        thumbUrl: dto.thumbUrl,
       ),
     );
   }

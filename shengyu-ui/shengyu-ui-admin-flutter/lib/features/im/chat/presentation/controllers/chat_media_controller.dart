@@ -569,6 +569,9 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
         fileUrl: incoming.extra.fileUrl?.trim().isNotEmpty == true
             ? incoming.extra.fileUrl
             : uploadedUrl,
+        thumbFileId: incoming.extra.thumbFileId?.trim().isNotEmpty == true
+            ? incoming.extra.thumbFileId
+            : base.extra.thumbFileId,
         thumbnailUrl: incoming.extra.thumbnailUrl?.trim().isNotEmpty == true
             ? incoming.extra.thumbnailUrl
             : fallbackThumbnailUrl,
@@ -628,6 +631,7 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
               ? uploadedFileId
               : current.extra.fileId,
           fileUrl: uploadedUrl.isNotEmpty ? uploadedUrl : current.extra.fileUrl,
+          thumbFileId: current.extra.thumbFileId,
           thumbnailUrl: nextThumbnailUrl,
           md5: checksum.isNotEmpty ? checksum : current.extra.md5,
         ),

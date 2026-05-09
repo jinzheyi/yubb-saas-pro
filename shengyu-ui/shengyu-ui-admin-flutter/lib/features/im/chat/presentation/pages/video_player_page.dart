@@ -22,6 +22,13 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
   bool _playbackFailed = false;
   String _resolvedUrl = '';
 
+  void _handleControllerUpdated() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -30,6 +37,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
 
   @override
   void dispose() {
+    _controller?.removeListener(_handleControllerUpdated);
     _controller?.dispose();
     super.dispose();
   }
@@ -52,11 +60,14 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
         Uri.parse(resolvedUrl),
       );
       await controller.initialize();
+      controller.addListener(_handleControllerUpdated);
       await controller.play();
       if (!mounted) {
+        controller.removeListener(_handleControllerUpdated);
         await controller.dispose();
         return;
       }
+      _controller?.removeListener(_handleControllerUpdated);
       await _controller?.dispose();
       setState(() {
         _controller = controller;
@@ -68,6 +79,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
       if (!mounted) {
         return;
       }
+      _controller?.removeListener(_handleControllerUpdated);
       await _controller?.dispose();
       setState(() {
         _controller = null;
@@ -204,33 +216,79 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
               : controller.value.aspectRatio,
           child: VideoPlayer(controller),
         ),
-        const SizedBox(height: 14),
-        IconButton.filled(
-          onPressed: () async {
-            if (controller.value.isPlaying) {
-              await controller.pause();
-            } else {
-              await controller.play();
-            }
-            if (!mounted) {
-              return;
-            }
-            setState(() {});
-          },
-          iconSize: 30,
-          style: IconButton.styleFrom(
-            backgroundColor: const Color(0xFF246BFD),
-            foregroundColor: Colors.white,
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: VideoProgressIndicator(
+            controller,
+            allowScrubbing: true,
+            padding: EdgeInsets.zero,
+            colors: const VideoProgressColors(
+              playedColor: Color(0xFF246BFD),
+              bufferedColor: Color(0x665B6475),
+              backgroundColor: Color(0xFF2D3648),
+            ),
           ),
-          icon: AppIcon(
-            controller.value.isPlaying
-                ? AppIconKind.pause
-                : AppIconKind.play,
-            size: 30,
-            color: Colors.white,
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              IconButton.filled(
+                onPressed: () async {
+                  final value = controller.value;
+                  if (value.position >= value.duration &&
+                      value.duration > Duration.zero) {
+                    await controller.seekTo(Duration.zero);
+                  }
+                  if (controller.value.isPlaying) {
+                    await controller.pause();
+                  } else {
+                    await controller.play();
+                  }
+                },
+                iconSize: 24,
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFF246BFD),
+                  foregroundColor: Colors.white,
+                ),
+                icon: AppIcon(
+                  controller.value.isPlaying
+                      ? AppIconKind.pause
+                      : AppIconKind.play,
+                  size: 24,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '${_formatDuration(controller.value.position)} / ${_formatDuration(controller.value.duration)}',
+                  style: const TextStyle(
+                    color: Color(0xFFB9C0CC),
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
+  }
+
+  String _formatDuration(Duration duration) {
+    if (duration.isNegative) {
+      duration = Duration.zero;
+    }
+    final totalSeconds = duration.inSeconds;
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+    if (hours > 0) {
+      return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }
