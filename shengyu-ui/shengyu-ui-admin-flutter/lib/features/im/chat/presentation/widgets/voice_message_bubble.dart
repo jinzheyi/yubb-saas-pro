@@ -56,9 +56,6 @@ class VoiceMessageBubble extends ConsumerWidget {
     final primaryTextColor = message.isOutgoing
         ? const Color(0xFF0F4AA3)
         : const Color(0xFF202531);
-    final statusTextColor = message.isOutgoing
-        ? const Color(0xFF0F4AA3)
-        : const Color(0xFF606973);
     final waveColor = isPlaying
         ? (message.isOutgoing
               ? const Color(0xFF0F4AA3)
@@ -72,10 +69,17 @@ class VoiceMessageBubble extends ConsumerWidget {
         : const Color(0x1F1F2329);
     final bars = _waveHeights();
     final bubbleWidth = _bubbleWidth(durationMs);
-    final showInlinePausedActions = isPaused && !_hasSendErrorOrLoading();
-    final showTapControlIcon =
-        (isPlaying || isPaused) && !_hasSendErrorOrLoading();
     final unreadDot = !message.isOutgoing && unread;
+    final canControlPlayback = !_hasSendErrorOrLoading();
+    final controlIcon = isPlaying ? AppIconKind.pause : AppIconKind.play;
+    final controlColor = message.isOutgoing
+        ? const Color(0xFF0F4AA3)
+        : const Color(0xFF1677FF);
+    final canReplay =
+        canControlPlayback &&
+        (message.extra.fileUrl?.trim().isNotEmpty == true ||
+            message.extra.fileId?.trim().isNotEmpty == true ||
+            message.extra.localPath?.trim().isNotEmpty == true);
 
     return Column(
       crossAxisAlignment: message.isOutgoing
@@ -126,6 +130,24 @@ class VoiceMessageBubble extends ConsumerWidget {
                           ? TextDirection.rtl
                           : TextDirection.ltr,
                       children: [
+                        if (canControlPlayback) ...[
+                          _buildIconButton(
+                            icon: controlIcon,
+                            color: controlColor,
+                            onTap: () {
+                              if (isPlaying) {
+                                onPauseMessage?.call(message);
+                                return;
+                              }
+                              if (isPaused) {
+                                onResumeMessage?.call(message);
+                                return;
+                              }
+                              onOpenMessage(message);
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         SizedBox(
                           height: 16,
                           child: Row(
@@ -150,85 +172,47 @@ class VoiceMessageBubble extends ConsumerWidget {
                         ),
                         const SizedBox(width: 6),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.max,
                             children: [
-                              Text(
-                                durationLabel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: primaryTextColor,
-                                ),
-                              ),
-                              if (isPlaying || isPaused) ...[
-                                const SizedBox(height: 4),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(3),
-                                  child: LinearProgressIndicator(
-                                    minHeight: 3,
-                                    value: _progressValue(durationMs),
-                                    backgroundColor: progressTrackColor,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      progressColor,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                              if (showInlinePausedActions) ...[
-                                const SizedBox(height: 6),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 4,
-                                  children: [
-                                    GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: onResumeMessage == null
-                                          ? null
-                                          : () => onResumeMessage!(message),
-                                      child: _buildActionChip(
-                                        label: '继续播放',
-                                        outlined: true,
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: onReplayMessage == null
-                                          ? null
-                                          : () => onReplayMessage!(message),
-                                      child: _buildActionChip(
-                                        label: '重播',
-                                        outlined: false,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                              if ((_statusLabelText() ?? '').isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  _statusLabelText()!,
+                              Flexible(
+                                flex: 0,
+                                child: Text(
+                                  durationLabel,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    color: statusTextColor,
+                                    fontSize: 14,
+                                    color: primaryTextColor,
                                   ),
                                 ),
-                              ],
+                              ),
+                              if (isPlaying || isPaused) ...[
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(3),
+                                    child: LinearProgressIndicator(
+                                      minHeight: 3,
+                                      value: _progressValue(durationMs),
+                                      backgroundColor: progressTrackColor,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        progressColor,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ] else
+                                const Spacer(),
                             ],
                           ),
                         ),
-                        if (showTapControlIcon) ...[
+                        if (canReplay) ...[
                           const SizedBox(width: 8),
-                          AppIcon(
-                            isPlaying ? AppIconKind.pause : AppIconKind.play,
-                            size: 16,
-                            color: message.isOutgoing
-                                ? const Color(0xFF0F4AA3)
-                                : const Color(0xFF1677FF),
+                          _buildIconButton(
+                            icon: AppIconKind.refresh,
+                            color: controlColor,
+                            onTap: () => onReplayMessage?.call(message),
                           ),
                         ],
                       ],
@@ -312,48 +296,41 @@ class VoiceMessageBubble extends ConsumerWidget {
     return frames[frameIndex];
   }
 
-  Widget _buildActionChip({required String label, required bool outlined}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: outlined
-            ? (message.isOutgoing ? Colors.white : const Color(0xFFF7F9FC))
-            : (message.isOutgoing
-                  ? const Color(0x260F4AA3)
-                  : const Color(0x1F1677FF)),
-        borderRadius: BorderRadius.circular(14),
-        border: outlined
-            ? Border.all(
-                color: message.isOutgoing
-                    ? const Color(0xFFB2CFFB)
-                    : const Color(0xFFE2E7EF),
-              )
-            : null,
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
+  Widget _buildIconButton({
+    required AppIconKind icon,
+    required Color color,
+    required VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 24,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
           color: message.isOutgoing
-              ? const Color(0xFF0F4AA3)
-              : const Color(0xFF1677FF),
+              ? const Color(0x26FFFFFF)
+              : const Color(0xFFF4F7FB),
+          borderRadius: BorderRadius.circular(12),
         ),
+        child: AppIcon(icon, size: 14, color: color),
       ),
     );
   }
 
   double _bubbleWidth(int durationMs) {
     final durationSeconds = (durationMs / 1000).round().clamp(1, 60);
-    const minWidth = 92.0;
+    const minWidth = 148.0;
     double width;
     if (durationSeconds <= 10) {
-      width = minWidth + (durationSeconds - 1) * 5.4;
+      width = minWidth + (durationSeconds - 1) * 6.4;
     } else if (durationSeconds <= 30) {
-      width = minWidth + 9 * 5.4 + (durationSeconds - 10) * 2.8;
+      width = minWidth + 9 * 6.4 + (durationSeconds - 10) * 3.2;
     } else {
-      width = minWidth + 9 * 5.4 + 20 * 2.8 + (durationSeconds - 30) * 1.9;
+      width = minWidth + 9 * 6.4 + 20 * 3.2 + (durationSeconds - 30) * 2.0;
     }
-    return width.clamp(minWidth, 236.0);
+    return width.clamp(minWidth, 268.0);
   }
 
   int _resolveDurationMs() {
@@ -366,16 +343,6 @@ class VoiceMessageBubble extends ConsumerWidget {
       return fromSeconds;
     }
     return 1000;
-  }
-
-  String? _statusLabelText() {
-    if (message.status == MessageStatus.sending) {
-      return '发送中';
-    }
-    if (message.status == MessageStatus.failed) {
-      return '发送失败';
-    }
-    return null;
   }
 
   bool _hasSendErrorOrLoading() {

@@ -291,8 +291,13 @@ bool _shouldHighlightPreview(Conversation conversation, String tokenText) {
   if (_isNoticePreview(tokenText)) {
     return true;
   }
+  final normalizedPreview = conversation.lastMessagePreview.trimLeft();
+  final isExplicitSelfPreview =
+      conversation.lastMessageIsSelf ||
+      normalizedPreview.startsWith('我:') ||
+      normalizedPreview.startsWith('Me:');
   return conversation.lastMessageType != MessageType.text &&
-      !conversation.lastMessageIsSelf;
+      !isExplicitSelfPreview;
 }
 
 String _previewText(AppLocalizations strings, Conversation conversation) {
