@@ -1240,6 +1240,7 @@ public class ImMessageServiceImpl implements ImMessageService {
         MentionParseResult mentionParsed = parseMentions(sendReqVO != null ? sendReqVO.getMentions() : null);
         if (ImConversationTypeEnum.isGroup(chat.getChatType())) {
             List<Long> memberIds = imGroupService.getGroupMemberIds(chat.getGroupId());
+            String senderDisplayName = resolveConversationPreviewSenderName(senderId);
             Map<Long, Long> cursorVerMap;
             try {
                 cursorVerMap = cursorVersionService.allocateNextCursorVersions(tenantId, memberIds);
@@ -1252,8 +1253,10 @@ public class ImMessageServiceImpl implements ImMessageService {
             for (Long memberId : memberIds) {
                 ImChatUserDO chatUser = ensureChatUser(memberId, chat.getId());
                 boolean isSender = Objects.equals(memberId, senderId);
+                String finalPreview = buildGroupConversationPreview(
+                        lastMessageContent, isSender, senderDisplayName, senderId);
                 chatUserMapper.updateLastMessageAndIncrementUnread(
-                        chatUser.getId(), lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageTime,
+                        chatUser.getId(), lastMessageId, lastMessageSequence, dbMessageType, finalPreview, lastMessageTime,
                         isSender ? 0 : 1,
                         Boolean.TRUE.equals(chatUser.getNoDisturb()));
 
@@ -1286,7 +1289,7 @@ public class ImMessageServiceImpl implements ImMessageService {
                     conversationUserStateMapper.upsertAfterMessage(
                             tenantId, chat.getId(), memberId, cursorVer,
                             unreadDelta, lastReadSeq, lastReadTime,
-                            lastMessageId, lastMessageSequence, dbMessageType, lastMessageContent, lastMessageHasAtMe, lastMessageTime);
+                            lastMessageId, lastMessageSequence, dbMessageType, finalPreview, lastMessageHasAtMe, lastMessageTime);
                 } catch (Exception e) {
                     log.warn("[ImMessageService] 写入会话-用户态失败(群消息), chatId: {}, memberId: {}, error: {}",
                             chat.getId(), memberId, e.getMessage());
@@ -1369,6 +1372,35 @@ public class ImMessageServiceImpl implements ImMessageService {
             pushMessageToUser(receiverId, chat.getId(), lastMessageId, lastMessageSequence, finalRev,
                     senderId, sendReqVO, effectiveGroupId);
         }
+    }
+
+    private String resolveConversationPreviewSenderName(Long senderId) {
+        if (senderId == null || senderId <= 0) {
+            return "";
+        }
+        try {
+            AdminUserDO sender = userMapper.selectById(senderId);
+            if (sender != null && StrUtil.isNotBlank(sender.getNickname())) {
+                return sender.getNickname().trim();
+            }
+        } catch (Exception ignore) {
+            // ignore
+        }
+        return "";
+    }
+
+    private String buildGroupConversationPreview(String basePreview, boolean isSender,
+                                                 String senderDisplayName, Long senderId) {
+        String preview = StrUtil.nullToEmpty(basePreview).trim();
+        if (preview.isEmpty()) {
+            return preview;
+        }
+        String prefix = isSender
+                ? "我"
+                : (StrUtil.isNotBlank(senderDisplayName)
+                ? senderDisplayName
+                : String.valueOf(senderId != null ? senderId : 0L));
+        return prefix + ":" + preview;
     }
 
     /**

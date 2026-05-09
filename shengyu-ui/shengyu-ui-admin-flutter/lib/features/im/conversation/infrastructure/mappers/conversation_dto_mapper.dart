@@ -23,6 +23,19 @@ abstract final class ConversationDtoMapper {
           : dto.lastReadSequence,
       lastMessagePreview: dto.lastMessagePreview,
       lastMessageType: dto.lastMessageType,
+      lastMessageSenderName: dto.lastMessageSenderName.isEmpty
+          ? null
+          : dto.lastMessageSenderName,
+      lastMessageIsSelf: dto.lastMessageIsSelf,
+      lastMessageCustomType: dto.lastMessageCustomType.isEmpty
+          ? null
+          : dto.lastMessageCustomType,
+      lastMessageFileName: dto.lastMessageFileName.isEmpty
+          ? null
+          : dto.lastMessageFileName,
+      lastMessageSystemEventKey: dto.lastMessageSystemEventKey.isEmpty
+          ? null
+          : dto.lastMessageSystemEventKey,
       lastMessageStatus: dto.lastMessageStatus,
       lastMessageHasAtMe: dto.lastMessageHasAtMe,
       groupMemberCount: dto.groupMemberCount,

@@ -78,6 +78,7 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
             chatId: chatId,
             title: pageState.chatTitle ?? pageState.entryArgs.title ?? '',
             conversationType: pageState.entryArgs.conversationType,
+            targetId: pageState.entryArgs.targetId,
             messageId: effectiveMessage.messageId,
             messageSequence: effectiveMessage.sequence,
             preview: ref
@@ -93,6 +94,11 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
                   senderName: effectiveMessage.senderName,
                 ),
             messageType: effectiveMessage.type,
+            senderName: effectiveMessage.senderName,
+            isSelf: effectiveMessage.isOutgoing,
+            customType: effectiveMessage.extra.customType,
+            fileName: effectiveMessage.extra.fileName,
+            systemEventKey: effectiveMessage.extra.systemEventKey,
             messageStatus: effectiveMessage.status,
             updatedAt: effectiveMessage.sentAt,
             resetUnread: true,
@@ -112,12 +118,14 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
         final messageId = effectiveMessage.messageId.trim();
         if (messageId.isNotEmpty && messageId != '0') {
           unawaited(
-            ref.read(socketOutboundSenderProvider).sendReadReceiptIfConnected(
-              senderId: currentUserId,
-              receiverId: senderId,
-              tenantId: ref.read(authSessionProvider).tenantId,
-              messageIds: <String>[messageId],
-            ),
+            ref
+                .read(socketOutboundSenderProvider)
+                .sendReadReceiptIfConnected(
+                  senderId: currentUserId,
+                  receiverId: senderId,
+                  tenantId: ref.read(authSessionProvider).tenantId,
+                  messageIds: <String>[messageId],
+                ),
           );
         }
       }
@@ -202,6 +210,7 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
             chatId: chatId,
             title: pageState.chatTitle ?? pageState.entryArgs.title ?? '',
             conversationType: pageState.entryArgs.conversationType,
+            targetId: pageState.entryArgs.targetId,
             messageId: effectiveRecalled.messageId,
             messageSequence: effectiveRecalled.sequence,
             preview: ref
@@ -217,6 +226,11 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
                   senderName: effectiveRecalled.senderName,
                 ),
             messageType: effectiveRecalled.type,
+            senderName: effectiveRecalled.senderName,
+            isSelf: effectiveRecalled.isOutgoing,
+            customType: effectiveRecalled.extra.customType,
+            fileName: effectiveRecalled.extra.fileName,
+            systemEventKey: effectiveRecalled.extra.systemEventKey,
             messageStatus: effectiveRecalled.status,
             updatedAt: effectiveRecalled.sentAt,
             resetUnread: true,
@@ -237,7 +251,9 @@ void _handleChatSocketEvent(Ref ref, String chatId, ImSocketEvent event) {
         final groupId = entryArgs.targetId?.trim() ?? '';
         if (groupId.isNotEmpty) {
           unawaited(
-            ref.read(conversationListControllerProvider.notifier).syncIncrementally(),
+            ref
+                .read(conversationListControllerProvider.notifier)
+                .syncIncrementally(),
           );
           final args = GroupContextArgs(groupId: groupId, groupName: '');
           unawaited(
@@ -578,7 +594,9 @@ void _scheduleDirectPresenceRefresh(
   _singleChatPresenceRefreshTimers[chatId] = Timer(delay, () async {
     _singleChatPresenceRefreshTimers.remove(chatId);
     try {
-      await ref.read(conversationListControllerProvider.notifier).syncIncrementally();
+      await ref
+          .read(conversationListControllerProvider.notifier)
+          .syncIncrementally();
     } catch (_) {
       // Keep silent to match old page presence refresh compensation.
     }

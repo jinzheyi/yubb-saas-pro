@@ -17,6 +17,11 @@ class ConversationDto {
     required this.lastReadSequence,
     required this.lastMessagePreview,
     required this.lastMessageType,
+    required this.lastMessageSenderName,
+    required this.lastMessageIsSelf,
+    required this.lastMessageCustomType,
+    required this.lastMessageFileName,
+    required this.lastMessageSystemEventKey,
     required this.lastMessageStatus,
     required this.lastMessageHasAtMe,
     required this.groupMemberCount,
@@ -43,6 +48,11 @@ class ConversationDto {
   final String lastReadSequence;
   final String lastMessagePreview;
   final MessageType lastMessageType;
+  final String lastMessageSenderName;
+  final bool lastMessageIsSelf;
+  final String lastMessageCustomType;
+  final String lastMessageFileName;
+  final String lastMessageSystemEventKey;
   final MessageStatus lastMessageStatus;
   final bool lastMessageHasAtMe;
   final int groupMemberCount;
@@ -115,6 +125,31 @@ class ConversationDto {
           json['content']?.toString() ??
           '',
       lastMessageType: _parseMessageType(json['lastMessageType']?.toString()),
+      lastMessageSenderName:
+          json['lastMessageSenderName']?.toString() ??
+          json['senderName']?.toString() ??
+          json['senderNickname']?.toString() ??
+          json['nickname']?.toString() ??
+          json['userName']?.toString() ??
+          '',
+      lastMessageIsSelf:
+          _parseBool(json['lastMessageIsSelf']) ||
+          _parseBool(json['isSelf']) ||
+          _parseBool(json['isOutgoing']) ||
+          _parseBool(json['fromSelf']) ||
+          _parseBool(json['selfSend']),
+      lastMessageCustomType:
+          json['lastMessageCustomType']?.toString() ??
+          json['customType']?.toString() ??
+          '',
+      lastMessageFileName:
+          json['lastMessageFileName']?.toString() ??
+          json['fileName']?.toString() ??
+          '',
+      lastMessageSystemEventKey:
+          json['lastMessageSystemEventKey']?.toString() ??
+          json['systemEventKey']?.toString() ??
+          '',
       lastMessageStatus: _parseMessageStatus(
         json['lastMessageStatus']?.toString(),
       ),

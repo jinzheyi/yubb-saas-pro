@@ -9,6 +9,7 @@ import 'package:shengyu_ui_admin_im/shared/utils/im_avatar.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_text.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/conversation_type.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_type.dart';
+import 'package:shengyu_ui_admin_im/shared/services/message_preview_formatter.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
 class ConversationTile extends StatefulWidget {
@@ -236,7 +237,10 @@ List<_PreviewToken> _buildPreviewTokens(
   final matches = RegExp(r'\[[\u4e00-\u9fa5\w]+\]').allMatches(preview);
   if (matches.isEmpty) {
     return <_PreviewToken>[
-      _PreviewToken(text: preview, isNotice: _isNoticePreview(preview)),
+      _PreviewToken(
+        text: preview,
+        isNotice: _shouldHighlightPreview(conversation, preview),
+      ),
     ];
   }
 
@@ -245,31 +249,79 @@ List<_PreviewToken> _buildPreviewTokens(
   for (final match in matches) {
     if (match.start > cursor) {
       final text = preview.substring(cursor, match.start);
-      tokens.add(_PreviewToken(text: text, isNotice: _isNoticePreview(text)));
+      tokens.add(
+        _PreviewToken(
+          text: text,
+          isNotice: _shouldHighlightPreview(conversation, text),
+        ),
+      );
     }
     final text = match.group(0) ?? '';
     if (text.isNotEmpty) {
-      tokens.add(_PreviewToken(text: text, isNotice: _isNoticePreview(text)));
+      tokens.add(
+        _PreviewToken(
+          text: text,
+          isNotice: _shouldHighlightPreview(conversation, text),
+        ),
+      );
     }
     cursor = match.end;
   }
   if (cursor < preview.length) {
     final text = preview.substring(cursor);
-    tokens.add(_PreviewToken(text: text, isNotice: _isNoticePreview(text)));
+    tokens.add(
+      _PreviewToken(
+        text: text,
+        isNotice: _shouldHighlightPreview(conversation, text),
+      ),
+    );
   }
   return tokens;
 }
 
 bool _isNoticePreview(String preview) {
   final normalized = preview.trim();
-  return normalized == '[群公告更新]' || normalized == '[Notice Updated]';
+  return normalized == '[群公告更新]' ||
+      normalized == '[Notice Updated]' ||
+      normalized.startsWith('系统信息:') ||
+      normalized.startsWith('System:');
+}
+
+bool _shouldHighlightPreview(Conversation conversation, String tokenText) {
+  if (_isNoticePreview(tokenText)) {
+    return true;
+  }
+  return conversation.lastMessageType != MessageType.text &&
+      !conversation.lastMessageIsSelf;
 }
 
 String _previewText(AppLocalizations strings, Conversation conversation) {
-  final preview = conversation.lastMessagePreview.trim().replaceAll(
+  final rawPreview = conversation.lastMessagePreview.trim().replaceAll(
     RegExp(r'\r?\n+'),
     ' ',
   );
+  final canFormatGroupPreview =
+      conversation.conversationType != ConversationType.group ||
+      conversation.lastMessageType == MessageType.system ||
+      conversation.lastMessageIsSelf ||
+      (conversation.lastMessageSenderName?.trim().isNotEmpty ?? false);
+  final preview =
+      (canFormatGroupPreview
+              ? MessagePreviewFormatter(
+                  strings.localeName,
+                ).formatConversationPreview(
+                  type: conversation.lastMessageType,
+                  content: conversation.lastMessagePreview,
+                  customType: conversation.lastMessageCustomType,
+                  fileName: conversation.lastMessageFileName,
+                  systemEventKey: conversation.lastMessageSystemEventKey,
+                  conversationType: conversation.conversationType,
+                  isSelf: conversation.lastMessageIsSelf,
+                  senderName: conversation.lastMessageSenderName,
+                )
+              : rawPreview)
+          .trim()
+          .replaceAll(RegExp(r'\r?\n+'), ' ');
   if (preview.isNotEmpty) {
     return preview.length > 100 ? '${preview.substring(0, 100)}...' : preview;
   }

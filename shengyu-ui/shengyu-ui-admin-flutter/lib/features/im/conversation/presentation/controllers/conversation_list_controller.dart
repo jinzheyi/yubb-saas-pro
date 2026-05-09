@@ -82,13 +82,23 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     String? messageSequence,
     required String preview,
     required MessageType messageType,
+    String? senderName,
+    bool isSelf = false,
+    String? customType,
+    String? fileName,
+    String? systemEventKey,
     required MessageStatus messageStatus,
     required DateTime updatedAt,
     bool resetUnread = false,
     bool incrementUnread = false,
   }) {
     final items = [...state.conversations];
-    final index = items.indexWhere((item) => item.chatId == chatId);
+    final index = _findConversationIndex(
+      items,
+      chatId: chatId,
+      targetId: targetId,
+      conversationType: conversationType,
+    );
     final unreadCount = index >= 0
         ? (resetUnread
               ? 0
@@ -112,6 +122,14 @@ class ConversationListController extends StateNotifier<ConversationListState> {
                 : items[index].lastMessageSequence,
             lastMessagePreview: preview,
             lastMessageType: messageType,
+            lastMessageSenderName:
+                senderName ?? items[index].lastMessageSenderName,
+            lastMessageIsSelf: isSelf,
+            lastMessageCustomType:
+                customType ?? items[index].lastMessageCustomType,
+            lastMessageFileName: fileName ?? items[index].lastMessageFileName,
+            lastMessageSystemEventKey:
+                systemEventKey ?? items[index].lastMessageSystemEventKey,
             lastMessageStatus: messageStatus,
             updatedAt: updatedAt,
             unreadCount: unreadCount,
@@ -132,6 +150,11 @@ class ConversationListController extends StateNotifier<ConversationListState> {
             lastReadSequence: null,
             lastMessagePreview: preview,
             lastMessageType: messageType,
+            lastMessageSenderName: senderName,
+            lastMessageIsSelf: isSelf,
+            lastMessageCustomType: customType,
+            lastMessageFileName: fileName,
+            lastMessageSystemEventKey: systemEventKey,
             lastMessageStatus: messageStatus,
             lastMessageHasAtMe: false,
             groupMemberCount: 0,
@@ -151,7 +174,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     }
     state = state.copyWith(
       status: ConversationListStatus.ready,
-      conversations: _sortConversations(items),
+      conversations: _sortConversations(_dedupeConversations(items)),
     );
   }
 
@@ -188,7 +211,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
       items.add(appliedIncoming.copyWith(unreadCount: unreadCount));
       state = state.copyWith(
         status: ConversationListStatus.ready,
-        conversations: _sortConversations(items),
+        conversations: _sortConversations(_dedupeConversations(items)),
       );
       return;
     }
@@ -214,8 +237,24 @@ class ConversationListController extends StateNotifier<ConversationListState> {
         appliedIncoming.lastReadSequence,
         existing.lastReadSequence,
       ),
-      lastMessagePreview: preview,
+      lastMessagePreview: _preferConversationPreview(
+        existing,
+        appliedIncoming,
+        preview,
+      ),
       lastMessageType: appliedIncoming.lastMessageType,
+      lastMessageSenderName:
+          appliedIncoming.lastMessageSenderName ??
+          existing.lastMessageSenderName,
+      lastMessageIsSelf: appliedIncoming.lastMessageIsSelf,
+      lastMessageCustomType:
+          appliedIncoming.lastMessageCustomType ??
+          existing.lastMessageCustomType,
+      lastMessageFileName:
+          appliedIncoming.lastMessageFileName ?? existing.lastMessageFileName,
+      lastMessageSystemEventKey:
+          appliedIncoming.lastMessageSystemEventKey ??
+          existing.lastMessageSystemEventKey,
       lastMessageStatus: appliedIncoming.lastMessageStatus,
       lastMessageHasAtMe: appliedIncoming.lastMessageHasAtMe,
       groupMemberCount: appliedIncoming.groupMemberCount,
@@ -231,7 +270,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     );
     state = state.copyWith(
       status: ConversationListStatus.ready,
-      conversations: _sortConversations(items),
+      conversations: _sortConversations(_dedupeConversations(items)),
     );
   }
 
@@ -434,7 +473,7 @@ class ConversationListController extends StateNotifier<ConversationListState> {
     final items = incoming
         .where((item) => !item.deletedByUser)
         .toList(growable: true);
-    return _sortConversations(items);
+    return _sortConversations(_dedupeConversations(items));
   }
 
   List<Conversation> _mergeSyncedConversations({
@@ -479,8 +518,24 @@ class ConversationListController extends StateNotifier<ConversationListState> {
           conversation.lastReadSequence,
           existing.lastReadSequence,
         ),
-        lastMessagePreview: conversation.lastMessagePreview,
+        lastMessagePreview: _preferConversationPreview(
+          existing,
+          conversation,
+          conversation.lastMessagePreview,
+        ),
         lastMessageType: conversation.lastMessageType,
+        lastMessageSenderName:
+            conversation.lastMessageSenderName ??
+            existing.lastMessageSenderName,
+        lastMessageIsSelf: conversation.lastMessageIsSelf,
+        lastMessageCustomType:
+            conversation.lastMessageCustomType ??
+            existing.lastMessageCustomType,
+        lastMessageFileName:
+            conversation.lastMessageFileName ?? existing.lastMessageFileName,
+        lastMessageSystemEventKey:
+            conversation.lastMessageSystemEventKey ??
+            existing.lastMessageSystemEventKey,
         lastMessageStatus: conversation.lastMessageStatus,
         lastMessageHasAtMe: conversation.lastMessageHasAtMe,
         groupMemberCount: conversation.groupMemberCount,
@@ -494,7 +549,177 @@ class ConversationListController extends StateNotifier<ConversationListState> {
         lastActiveTime: conversation.lastActiveTime ?? existing.lastActiveTime,
       );
     }
-    return _sortConversations(items);
+    return _sortConversations(_dedupeConversations(items));
+  }
+
+  int _findConversationIndex(
+    List<Conversation> items, {
+    required String chatId,
+    String? targetId,
+    ConversationType? conversationType,
+  }) {
+    final normalizedChatId = chatId.trim();
+    if (normalizedChatId.isNotEmpty) {
+      final byChatId = items.indexWhere(
+        (item) => item.chatId == normalizedChatId,
+      );
+      if (byChatId >= 0) {
+        return byChatId;
+      }
+    }
+    final normalizedTargetId = targetId?.trim() ?? '';
+    if (normalizedTargetId.isNotEmpty && conversationType != null) {
+      return items.indexWhere(
+        (item) =>
+            (item.targetId?.trim() ?? '') == normalizedTargetId &&
+            item.conversationType == conversationType,
+      );
+    }
+    return -1;
+  }
+
+  List<Conversation> _dedupeConversations(List<Conversation> items) {
+    if (items.length < 2) {
+      return items;
+    }
+    final ordered = [...items];
+    final byIdentity = <String, Conversation>{};
+    for (final item in ordered) {
+      final key = _conversationIdentityKey(item);
+      final existing = byIdentity[key];
+      if (existing == null) {
+        byIdentity[key] = item;
+        continue;
+      }
+      byIdentity[key] = _mergeDuplicateConversation(existing, item);
+    }
+    return byIdentity.values.toList(growable: true);
+  }
+
+  String _conversationIdentityKey(Conversation item) {
+    final targetId = item.targetId?.trim() ?? '';
+    if (targetId.isNotEmpty && targetId != '0') {
+      return '${item.conversationType.name}:$targetId';
+    }
+    return 'chat:${item.chatId.trim()}';
+  }
+
+  Conversation _mergeDuplicateConversation(
+    Conversation left,
+    Conversation right,
+  ) {
+    final preferred = right.updatedAt.isAfter(left.updatedAt) ? right : left;
+    final fallback = identical(preferred, right) ? left : right;
+    final mergedPreview = _preferConversationPreview(
+      preferred,
+      fallback,
+      preferred.lastMessagePreview,
+    );
+    return preferred.copyWith(
+      chatId: preferred.chatId.trim().isNotEmpty
+          ? preferred.chatId
+          : fallback.chatId,
+      title: preferred.title.trim().isNotEmpty
+          ? preferred.title
+          : fallback.title,
+      conversationVersion:
+          preferred.conversationVersion?.trim().isNotEmpty == true
+          ? preferred.conversationVersion
+          : fallback.conversationVersion,
+      targetId: preferred.targetId?.trim().isNotEmpty == true
+          ? preferred.targetId
+          : fallback.targetId,
+      targetAvatar: preferred.targetAvatar?.trim().isNotEmpty == true
+          ? preferred.targetAvatar
+          : fallback.targetAvatar,
+      avatarText: preferred.avatarText?.trim().isNotEmpty == true
+          ? preferred.avatarText
+          : fallback.avatarText,
+      avatarBg: preferred.avatarBg?.trim().isNotEmpty == true
+          ? preferred.avatarBg
+          : fallback.avatarBg,
+      lastMessageId: preferred.lastMessageId ?? fallback.lastMessageId,
+      lastMessageSequence: _maxSeq(
+        preferred.lastMessageSequence,
+        fallback.lastMessageSequence,
+      ),
+      lastReadSequence: _maxSeq(
+        preferred.lastReadSequence,
+        fallback.lastReadSequence,
+      ),
+      lastMessagePreview: mergedPreview,
+      lastMessageType: preferred.lastMessageType,
+      lastMessageSenderName:
+          preferred.lastMessageSenderName ?? fallback.lastMessageSenderName,
+      lastMessageIsSelf: preferred.lastMessageIsSelf,
+      lastMessageCustomType:
+          preferred.lastMessageCustomType ?? fallback.lastMessageCustomType,
+      lastMessageFileName:
+          preferred.lastMessageFileName ?? fallback.lastMessageFileName,
+      lastMessageSystemEventKey:
+          preferred.lastMessageSystemEventKey ??
+          fallback.lastMessageSystemEventKey,
+      lastMessageStatus: preferred.lastMessageStatus,
+      lastMessageHasAtMe:
+          preferred.lastMessageHasAtMe || fallback.lastMessageHasAtMe,
+      groupMemberCount: math.max(
+        preferred.groupMemberCount,
+        fallback.groupMemberCount,
+      ),
+      updatedAt: preferred.updatedAt.isAfter(fallback.updatedAt)
+          ? preferred.updatedAt
+          : fallback.updatedAt,
+      unreadCount: math.max(preferred.unreadCount, fallback.unreadCount),
+      isPinned: preferred.isPinned || fallback.isPinned,
+      isMuted: preferred.isMuted || fallback.isMuted,
+      online: preferred.online || fallback.online,
+      onlineDeviceTypes: preferred.onlineDeviceTypes.isNotEmpty
+          ? preferred.onlineDeviceTypes
+          : fallback.onlineDeviceTypes,
+      lastActiveTime:
+          math.max(
+                preferred.lastActiveTime ?? 0,
+                fallback.lastActiveTime ?? 0,
+              ) >
+              0
+          ? math.max(
+              preferred.lastActiveTime ?? 0,
+              fallback.lastActiveTime ?? 0,
+            )
+          : null,
+    );
+  }
+
+  String _preferConversationPreview(
+    Conversation existing,
+    Conversation incoming,
+    String candidate,
+  ) {
+    if (candidate.trim().isEmpty) {
+      return existing.lastMessagePreview;
+    }
+    final sameMessage =
+        (existing.lastMessageId?.trim().isNotEmpty == true &&
+            existing.lastMessageId == incoming.lastMessageId) ||
+        ((existing.lastMessageSequence?.trim().isNotEmpty ?? false) &&
+            existing.lastMessageSequence == incoming.lastMessageSequence);
+    if (!sameMessage || incoming.conversationType != ConversationType.group) {
+      return candidate;
+    }
+    final existingPreview = existing.lastMessagePreview.trim();
+    final incomingPreview = candidate.trim();
+    if (_looksAttributedGroupPreview(existingPreview) &&
+        !_looksAttributedGroupPreview(incomingPreview)) {
+      return existingPreview;
+    }
+    return candidate;
+  }
+
+  bool _looksAttributedGroupPreview(String preview) {
+    if (preview.isEmpty) {
+      return false;
+    }
+    return preview.contains(': ') || preview.contains('：');
   }
 
   bool _shouldApplySnapshot(Conversation existing, Conversation incoming) {

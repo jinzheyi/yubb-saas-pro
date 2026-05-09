@@ -471,6 +471,7 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       chatId: message.chatId,
       title: chatTitle,
       conversationType: entryArgs.conversationType,
+      targetId: entryArgs.targetId,
       messageId: message.messageId,
       messageSequence: message.sequence,
       preview: _messagePreviewFormatter.formatConversationPreview(
@@ -484,10 +485,14 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
         senderName: message.senderName,
       ),
       messageType: message.type,
+      senderName: message.senderName,
+      isSelf: message.isOutgoing,
+      customType: message.extra.customType,
+      fileName: message.extra.fileName,
+      systemEventKey: message.extra.systemEventKey,
       messageStatus: message.status,
       updatedAt: message.sentAt,
       resetUnread: true,
     );
   }
-
 }

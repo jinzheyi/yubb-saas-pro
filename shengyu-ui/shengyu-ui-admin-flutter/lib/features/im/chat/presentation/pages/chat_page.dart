@@ -153,6 +153,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   bool _voicePlayedSyncInFlight = false;
   bool _voicePlayedCompensateInFlight = false;
   bool _isTimelineAtBottom = true;
+  bool _keepBottomOnNextLayout = false;
   double _lastViewInsetsBottom = 0;
   late final ScrollController _timelineScrollController;
   final Map<String, _ReadReceiptSummaryCacheEntry> _readReceiptSummaryCache =
@@ -164,6 +165,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
   final Set<String> _transientSystemNotifyKeys = <String>{};
   double _lastTimelineScrollTop = 0;
   int _lastHistoryLoadTriggerAt = 0;
+  bool _initialBottomAlignmentPending = true;
   final Map<String, _TypingEntry> _typingEntries = <String, _TypingEntry>{};
 
   @override
@@ -232,6 +234,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (!mounted || next.messages.isEmpty) {
       return;
     }
+    if (_initialBottomAlignmentPending &&
+        widget.args.entryMode != ChatEntryMode.anchor &&
+        widget.args.entryMode != ChatEntryMode.restore) {
+      _ensureInitialBottomVisibility();
+    }
     if (previous == null || previous.messages.isEmpty) {
       return;
     }
@@ -268,12 +275,14 @@ class _ChatPageState extends ConsumerState<ChatPage>
   Widget build(BuildContext context) {
     final viewInsetsBottom = MediaQuery.of(context).viewInsets.bottom;
     if (viewInsetsBottom != _lastViewInsetsBottom) {
+      final shouldKeepBottom = _isTimelineAtBottom || _keepBottomOnNextLayout;
       _lastViewInsetsBottom = viewInsetsBottom;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_isTimelineAtBottom) {
+        if (!mounted || !shouldKeepBottom) {
           return;
         }
         _scrollTimelineToBottom();
+        _keepBottomOnNextLayout = false;
       });
     }
     ref.watch(chatRealtimeBindingProvider(widget.args.chatId));
@@ -426,9 +435,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
       onVoicePressEnd: _finishVoiceRecording,
       onVoicePressCancel: _cancelVoiceRecording,
       onTapEmoji: () {
+        final shouldKeepBottom = _isTimelineAtBottom;
         setState(() {
           _isEmojiPanelVisible = !_isEmojiPanelVisible;
           _isVoiceMode = false;
+          _keepBottomOnNextLayout = shouldKeepBottom;
           if (_isEmojiPanelVisible) {
             _isMorePanelVisible = false;
           }
@@ -438,6 +449,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
         }
         if (_isEmojiPanelVisible) {
           _composerFocusNode.unfocus();
+        }
+        if (shouldKeepBottom) {
+          _scheduleBottomStick();
         }
       },
       onSend: (value) async {
@@ -485,8 +499,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
         }
       },
       onOpenAttachmentMenu: () {
+        final shouldKeepBottom = _isTimelineAtBottom;
         setState(() {
           _isMorePanelVisible = !_isMorePanelVisible;
+          _keepBottomOnNextLayout = shouldKeepBottom;
           if (_isMorePanelVisible) {
             _isEmojiPanelVisible = false;
           }
@@ -494,6 +510,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
         if ((_isMorePanelVisible || _isEmojiPanelVisible) &&
             _isMentionPanelVisible) {
           _closeMentionPanel();
+        }
+        if (shouldKeepBottom) {
+          _scheduleBottomStick();
         }
       },
     );
@@ -3966,6 +3985,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
             chatId: widget.args.chatId,
             title: pageState.chatTitle ?? pageState.entryArgs.title ?? '',
             conversationType: pageState.entryArgs.conversationType,
+            targetId: pageState.entryArgs.targetId,
             messageId: recalled.messageId,
             messageSequence: recalled.sequence,
             preview: ref
@@ -3981,6 +4001,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
                   senderName: recalled.senderName,
                 ),
             messageType: recalled.type,
+            senderName: recalled.senderName,
+            isSelf: recalled.isOutgoing,
+            customType: recalled.extra.customType,
+            fileName: recalled.extra.fileName,
+            systemEventKey: recalled.extra.systemEventKey,
             messageStatus: recalled.status,
             updatedAt: recalled.sentAt,
             resetUnread: true,
@@ -4282,12 +4307,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
     final isAnchorEntry =
         entryMode == ChatEntryMode.anchor || entryMode == ChatEntryMode.restore;
     if (!isAnchorEntry) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-        _scrollTimelineToBottom();
-      });
+      _ensureInitialBottomVisibility();
       return;
     }
     if (viewport?.anchorFound == false) {
@@ -4295,24 +4315,14 @@ class _ChatPageState extends ConsumerState<ChatPage>
         context,
         ref.read(appStringsProvider).chatAnchorFallback,
       );
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-        _scrollTimelineToBottom();
-      });
+      _ensureInitialBottomVisibility();
       return;
     }
     final targetId = widget.args.highlightedMessageId?.trim().isNotEmpty == true
         ? widget.args.highlightedMessageId!.trim()
         : widget.args.anchorMessageId?.trim() ?? '';
     if (targetId.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-        _scrollTimelineToBottom();
-      });
+      _ensureInitialBottomVisibility();
       return;
     }
     Future<void>.delayed(const Duration(milliseconds: 300), () async {
@@ -4321,6 +4331,37 @@ class _ChatPageState extends ConsumerState<ChatPage>
       }
       await _scrollToMessageKey(targetId);
     });
+  }
+
+  void _ensureInitialBottomVisibility() {
+    const delays = <int>[0, 60, 180, 320, 520, 760];
+    for (final delay in delays) {
+      Future<void>.delayed(Duration(milliseconds: delay), () {
+        if (!mounted) {
+          return;
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          _scrollTimelineToBottom(forceJump: delay == 0);
+          _settleInitialBottomAlignment();
+        });
+      });
+    }
+  }
+
+  void _settleInitialBottomAlignment() {
+    if (!_initialBottomAlignmentPending ||
+        !_timelineScrollController.hasClients) {
+      return;
+    }
+    final position = _timelineScrollController.position;
+    final distanceToBottom = position.maxScrollExtent - position.pixels;
+    if (distanceToBottom <= 4) {
+      _initialBottomAlignmentPending = false;
+      _isTimelineAtBottom = true;
+    }
   }
 
   Future<void> _openQuotedMessage(String quotedMessageId) async {
@@ -4787,19 +4828,43 @@ class _ChatPageState extends ConsumerState<ChatPage>
     });
   }
 
-  void _scrollTimelineToBottom() {
+  void _scrollTimelineToBottom({bool forceJump = false}) {
     if (!_timelineScrollController.hasClients) {
       return;
     }
     final position = _timelineScrollController.position;
     if ((position.maxScrollExtent - position.pixels).abs() <= 1) {
+      _settleInitialBottomAlignment();
       return;
     }
-    _timelineScrollController.animateTo(
-      position.maxScrollExtent,
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-    );
+    if (forceJump) {
+      _timelineScrollController.jumpTo(position.maxScrollExtent);
+      _settleInitialBottomAlignment();
+      return;
+    }
+    _timelineScrollController
+        .animateTo(
+          position.maxScrollExtent,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+        )
+        .whenComplete(_settleInitialBottomAlignment);
+  }
+
+  void _scheduleBottomStick() {
+    for (final delay in const <int>[0, 60, 180, 320]) {
+      Future<void>.delayed(Duration(milliseconds: delay), () {
+        if (!mounted) {
+          return;
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          _scrollTimelineToBottom(forceJump: delay == 0);
+        });
+      });
+    }
   }
 
   void _handleTimelineScroll() {
@@ -5184,6 +5249,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
           chatId: localMessage.chatId,
           title: ref.read(chatControllerProvider).chatTitle ?? '',
           conversationType: widget.args.conversationType,
+          targetId: widget.args.targetId,
           messageId: retryKey,
           messageSequence: localMessage.sequence,
           preview: ref
@@ -5199,6 +5265,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
                 senderName: localMessage.senderName,
               ),
           messageType: localMessage.type,
+          senderName: localMessage.senderName,
+          isSelf: localMessage.isOutgoing,
+          customType: localMessage.extra.customType,
+          fileName: localMessage.extra.fileName,
+          systemEventKey: localMessage.extra.systemEventKey,
           messageStatus: MessageStatus.sending,
           updatedAt: DateTime.now(),
           resetUnread: true,
@@ -5258,6 +5329,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
             chatId: normalizedSent.chatId,
             title: ref.read(chatControllerProvider).chatTitle ?? '',
             conversationType: widget.args.conversationType,
+            targetId: widget.args.targetId,
             messageId: normalizedSent.messageId,
             messageSequence: normalizedSent.sequence,
             preview: ref
@@ -5273,6 +5345,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
                   senderName: normalizedSent.senderName,
                 ),
             messageType: normalizedSent.type,
+            senderName: normalizedSent.senderName,
+            isSelf: normalizedSent.isOutgoing,
+            customType: normalizedSent.extra.customType,
+            fileName: normalizedSent.extra.fileName,
+            systemEventKey: normalizedSent.extra.systemEventKey,
             messageStatus: normalizedSent.status,
             updatedAt: normalizedSent.sentAt,
             resetUnread: true,

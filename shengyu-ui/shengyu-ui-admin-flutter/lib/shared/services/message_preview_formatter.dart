@@ -80,8 +80,11 @@ class MessagePreviewFormatter {
       fileName: fileName,
       systemEventKey: systemEventKey,
     );
-    if (conversationType != ConversationType.group ||
-        type == MessageType.system) {
+    if (type == MessageType.system) {
+      final systemLabel = _isZh ? '系统信息' : 'System';
+      return summary.isEmpty ? systemLabel : '$systemLabel:$summary';
+    }
+    if (conversationType != ConversationType.group) {
       return summary;
     }
     final prefix = isSelf
@@ -89,7 +92,7 @@ class MessagePreviewFormatter {
         : ((senderName ?? '').trim().isNotEmpty
               ? (senderName ?? '').trim()
               : (_isZh ? '未知' : 'Unknown'));
-    return '$prefix: $summary';
+    return '$prefix:$summary';
   }
 
   String _systemEventPreview(String? systemEventKey) {

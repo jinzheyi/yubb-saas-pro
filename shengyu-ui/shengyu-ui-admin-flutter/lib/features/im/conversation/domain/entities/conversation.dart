@@ -17,6 +17,11 @@ class Conversation {
     this.lastReadSequence,
     required this.lastMessagePreview,
     required this.lastMessageType,
+    this.lastMessageSenderName,
+    this.lastMessageIsSelf = false,
+    this.lastMessageCustomType,
+    this.lastMessageFileName,
+    this.lastMessageSystemEventKey,
     required this.lastMessageStatus,
     this.lastMessageHasAtMe = false,
     this.groupMemberCount = 0,
@@ -43,6 +48,11 @@ class Conversation {
   final String? lastReadSequence;
   final String lastMessagePreview;
   final MessageType lastMessageType;
+  final String? lastMessageSenderName;
+  final bool lastMessageIsSelf;
+  final String? lastMessageCustomType;
+  final String? lastMessageFileName;
+  final String? lastMessageSystemEventKey;
   final MessageStatus lastMessageStatus;
   final bool lastMessageHasAtMe;
   final int groupMemberCount;
@@ -69,6 +79,11 @@ class Conversation {
     String? lastReadSequence,
     String? lastMessagePreview,
     MessageType? lastMessageType,
+    String? lastMessageSenderName,
+    bool? lastMessageIsSelf,
+    String? lastMessageCustomType,
+    String? lastMessageFileName,
+    String? lastMessageSystemEventKey,
     MessageStatus? lastMessageStatus,
     bool? lastMessageHasAtMe,
     int? groupMemberCount,
@@ -95,6 +110,14 @@ class Conversation {
       lastReadSequence: lastReadSequence ?? this.lastReadSequence,
       lastMessagePreview: lastMessagePreview ?? this.lastMessagePreview,
       lastMessageType: lastMessageType ?? this.lastMessageType,
+      lastMessageSenderName:
+          lastMessageSenderName ?? this.lastMessageSenderName,
+      lastMessageIsSelf: lastMessageIsSelf ?? this.lastMessageIsSelf,
+      lastMessageCustomType:
+          lastMessageCustomType ?? this.lastMessageCustomType,
+      lastMessageFileName: lastMessageFileName ?? this.lastMessageFileName,
+      lastMessageSystemEventKey:
+          lastMessageSystemEventKey ?? this.lastMessageSystemEventKey,
       lastMessageStatus: lastMessageStatus ?? this.lastMessageStatus,
       lastMessageHasAtMe: lastMessageHasAtMe ?? this.lastMessageHasAtMe,
       groupMemberCount: groupMemberCount ?? this.groupMemberCount,

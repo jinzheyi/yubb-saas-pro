@@ -764,11 +764,8 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
                 List<Long> memberIds = imGroupService.getGroupMemberIds(header.getGroupId());
                 for (Long memberId : memberIds) {
                     boolean isSender = memberId.equals(header.getSenderId());
-                    String finalPreview = lastMessageContent;
-                    String prefix = isSender ? "我" : (StrUtil.isNotBlank(senderName) ? senderName : String.valueOf(header.getSenderId()));
-                    if (StrUtil.isNotBlank(prefix) && StrUtil.isNotBlank(basePreview)) {
-                        finalPreview = truncateContent(prefix + ": " + basePreview);
-                    }
+                    String finalPreview = buildGroupConversationPreview(
+                            basePreview, isSender, senderName, header.getSenderId());
                     ImChatUserDO chatUser = ensureChatUser(memberId, chatId);
                     chatUserMapper.updateLastMessageAndIncrementUnread(
                             chatUser.getId(),
@@ -1089,6 +1086,20 @@ public class SystemMessageStorageServiceImpl implements MessageStorageService {
             return content.substring(0, 100) + "...";
         }
         return content;
+    }
+
+    private String buildGroupConversationPreview(String basePreview, boolean isSender,
+                                                 String senderName, Long senderId) {
+        String preview = StrUtil.nullToEmpty(basePreview).trim();
+        if (preview.isEmpty()) {
+            return truncateContent(preview);
+        }
+        String prefix = isSender
+                ? "我"
+                : (StrUtil.isNotBlank(senderName)
+                ? senderName.trim()
+                : String.valueOf(senderId != null ? senderId : 0L));
+        return truncateContent(prefix + ":" + preview);
     }
 
     /**
