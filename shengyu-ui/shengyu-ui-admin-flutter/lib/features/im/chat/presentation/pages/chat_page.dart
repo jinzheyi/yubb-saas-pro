@@ -2295,6 +2295,31 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   Future<void> _replayVoicePlayback(Message message) async {
+    final messageKey = message.clientMessageId ?? message.messageId;
+    if (messageKey.isNotEmpty &&
+        (_activePlayingVoiceMessageId == messageKey ||
+            _activePausedVoiceMessageId == messageKey)) {
+      final playback = ref.read(audioPlaybackServiceProvider);
+      try {
+        await playback.seek(Duration.zero);
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _activePlayingVoiceMessageId = messageKey;
+          _activePausedVoiceMessageId = null;
+          _activeVoicePlaybackProgressMs = 0;
+          _activeVoicePlaybackDurationMs =
+              message.extra.durationMs ??
+              ((message.extra.duration ?? 1).clamp(1, 60) * 1000);
+        });
+        await playback.play();
+        _markVoicePlayedOnOpen(message);
+        return;
+      } catch (_) {
+        // fallback to full reload path
+      }
+    }
     await _playVoicePlayback(message);
   }
 

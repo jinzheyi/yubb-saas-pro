@@ -56,7 +56,7 @@ class VoiceMessageBubble extends ConsumerWidget {
     final primaryTextColor = message.isOutgoing
         ? const Color(0xFF0F4AA3)
         : const Color(0xFF202531);
-    final waveColor = isPlaying
+    final waveColor = isPlaying || isPaused
         ? (message.isOutgoing
               ? const Color(0xFF0F4AA3)
               : const Color(0xFF1677FF))
@@ -105,8 +105,8 @@ class VoiceMessageBubble extends ConsumerWidget {
                   child: Container(
                     width: bubbleWidth,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 9,
+                      horizontal: 12,
+                      vertical: 8,
                     ),
                     decoration: BoxDecoration(
                       color: bubbleBackground,
@@ -134,6 +134,7 @@ class VoiceMessageBubble extends ConsumerWidget {
                           _buildIconButton(
                             icon: controlIcon,
                             color: controlColor,
+                            filled: isPlaying || isPaused,
                             onTap: () {
                               if (isPlaying) {
                                 onPauseMessage?.call(message);
@@ -172,39 +173,52 @@ class VoiceMessageBubble extends ConsumerWidget {
                         ),
                         const SizedBox(width: 6),
                         Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              Flexible(
-                                flex: 0,
-                                child: Text(
-                                  durationLabel,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: primaryTextColor,
-                                  ),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final availableWidth = constraints.maxWidth;
+                              final canShowProgress =
+                                  (isPlaying || isPaused) &&
+                                  availableWidth >= 72;
+                              final textWidget = Text(
+                                durationLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: primaryTextColor,
                                 ),
-                              ),
-                              if (isPlaying || isPaused) ...[
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(3),
-                                    child: LinearProgressIndicator(
-                                      minHeight: 3,
-                                      value: _progressValue(durationMs),
-                                      backgroundColor: progressTrackColor,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        progressColor,
+                              );
+                              if (availableWidth < 44) {
+                                return Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: textWidget,
+                                );
+                              }
+                              return Row(
+                                mainAxisSize: MainAxisSize.max,
+                                children: [
+                                  Flexible(child: textWidget),
+                                  if (canShowProgress) ...[
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(3),
+                                        child: LinearProgressIndicator(
+                                          minHeight: 3,
+                                          value: _progressValue(durationMs),
+                                          backgroundColor: progressTrackColor,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                progressColor,
+                                              ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                              ] else
-                                const Spacer(),
-                            ],
+                                  ],
+                                ],
+                              );
+                            },
                           ),
                         ),
                         if (canReplay) ...[
@@ -212,6 +226,7 @@ class VoiceMessageBubble extends ConsumerWidget {
                           _buildIconButton(
                             icon: AppIconKind.refresh,
                             color: controlColor,
+                            filled: isPlaying || isPaused,
                             onTap: () => onReplayMessage?.call(message),
                           ),
                         ],
@@ -299,38 +314,41 @@ class VoiceMessageBubble extends ConsumerWidget {
   Widget _buildIconButton({
     required AppIconKind icon,
     required Color color,
+    required bool filled,
     required VoidCallback? onTap,
   }) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 24,
-        height: 24,
+        width: 22,
+        height: 22,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: message.isOutgoing
-              ? const Color(0x26FFFFFF)
-              : const Color(0xFFF4F7FB),
-          borderRadius: BorderRadius.circular(12),
+          color: filled
+              ? (message.isOutgoing
+                    ? const Color(0x30FFFFFF)
+                    : const Color(0xFFEAF2FF))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
         ),
-        child: AppIcon(icon, size: 14, color: color),
+        child: AppIcon(icon, size: 13, color: color),
       ),
     );
   }
 
   double _bubbleWidth(int durationMs) {
     final durationSeconds = (durationMs / 1000).round().clamp(1, 60);
-    const minWidth = 148.0;
+    const minWidth = 136.0;
     double width;
     if (durationSeconds <= 10) {
-      width = minWidth + (durationSeconds - 1) * 6.4;
+      width = minWidth + (durationSeconds - 1) * 6.0;
     } else if (durationSeconds <= 30) {
-      width = minWidth + 9 * 6.4 + (durationSeconds - 10) * 3.2;
+      width = minWidth + 9 * 6.0 + (durationSeconds - 10) * 2.8;
     } else {
-      width = minWidth + 9 * 6.4 + 20 * 3.2 + (durationSeconds - 30) * 2.0;
+      width = minWidth + 9 * 6.0 + 20 * 2.8 + (durationSeconds - 30) * 1.8;
     }
-    return width.clamp(minWidth, 268.0);
+    return width.clamp(minWidth, 248.0);
   }
 
   int _resolveDurationMs() {
