@@ -23,7 +23,14 @@ class MessageRemoteDataSource {
 
   final Dio dio;
 
-  Future<MessageDto> _resolveSendMessageDto(Object? responseBody) async {
+  Future<MessageDto> _resolveSendMessageDto(
+    Object? responseBody, {
+    required String chatId,
+    required String clientMessageId,
+    required int messageType,
+    required String content,
+    String? extra,
+  }) async {
     final result = ApiResult.fromJson<Object?>(
       responseBody as Map<String, dynamic>,
       dataParser: (raw) => raw,
@@ -45,7 +52,14 @@ class MessageRemoteDataSource {
       );
     }
     final messageId = _extractSentMessageId(raw);
-    return _buildAcceptedSendAckDto(messageId);
+    return _buildAcceptedSendAckDto(
+      messageId,
+      chatId: chatId,
+      clientMessageId: clientMessageId,
+      messageType: messageType,
+      content: content,
+      extra: extra,
+    );
   }
 
   String? _extractSentMessageId(Object? raw) {
@@ -63,21 +77,29 @@ class MessageRemoteDataSource {
     return text;
   }
 
-  MessageDto _buildAcceptedSendAckDto(String? messageId) {
+  MessageDto _buildAcceptedSendAckDto(
+    String? messageId, {
+    required String chatId,
+    required String clientMessageId,
+    required int messageType,
+    required String content,
+    String? extra,
+  }) {
     final now = DateTime.now().millisecondsSinceEpoch;
     return MessageDto.fromJson(<String, dynamic>{
       'id': messageId ?? '',
       'messageId': messageId ?? '',
-      'status': 'sending',
-      'type': 'text',
-      'content': '',
+      'status': 'sent',
+      'messageType': messageType,
+      'content': content,
       'createdAt': now,
       'sentAt': now,
-      'chatId': '',
+      'chatId': chatId,
       'senderId': '',
       'senderName': '',
       'isOutgoing': true,
-      'clientMessageId': '',
+      'clientMessageId': clientMessageId,
+      if (extra != null && extra.trim().isNotEmpty) 'extra': extra,
     });
   }
 
@@ -210,7 +232,14 @@ class MessageRemoteDataSource {
         if (quoteInfo != null) 'quoteMessageId': quoteInfo.messageId,
       },
     );
-    return _resolveSendMessageDto(response.data);
+    return _resolveSendMessageDto(
+      response.data,
+      chatId: chatId,
+      clientMessageId: clientMessageId,
+      messageType: isQuoteReply ? 205 : 1,
+      content: contentPayload,
+      extra: extraPayload,
+    );
   }
 
   Future<MessageDto> sendImageMessage({
@@ -249,7 +278,14 @@ class MessageRemoteDataSource {
         'extra': extra,
       },
     );
-    return _resolveSendMessageDto(response.data);
+    return _resolveSendMessageDto(
+      response.data,
+      chatId: chatId,
+      clientMessageId: clientMessageId,
+      messageType: 2,
+      content: url,
+      extra: extra,
+    );
   }
 
   Future<MessageDto> sendVideoMessage({
@@ -291,7 +327,14 @@ class MessageRemoteDataSource {
         'extra': extra,
       },
     );
-    return _resolveSendMessageDto(response.data);
+    return _resolveSendMessageDto(
+      response.data,
+      chatId: chatId,
+      clientMessageId: clientMessageId,
+      messageType: 4,
+      content: url,
+      extra: extra,
+    );
   }
 
   Future<MessageDto> sendVoiceMessage({
@@ -332,7 +375,14 @@ class MessageRemoteDataSource {
         'extra': extra,
       },
     );
-    return _resolveSendMessageDto(response.data);
+    return _resolveSendMessageDto(
+      response.data,
+      chatId: chatId,
+      clientMessageId: clientMessageId,
+      messageType: 3,
+      content: url,
+      extra: extra,
+    );
   }
 
   Future<MessageDto> sendFileMessage({
@@ -369,7 +419,14 @@ class MessageRemoteDataSource {
         'extra': extra,
       },
     );
-    return _resolveSendMessageDto(response.data);
+    return _resolveSendMessageDto(
+      response.data,
+      chatId: chatId,
+      clientMessageId: clientMessageId,
+      messageType: 5,
+      content: url,
+      extra: extra,
+    );
   }
 
   Future<MessageDto> sendContactCardMessage({
@@ -403,7 +460,14 @@ class MessageRemoteDataSource {
         'clientMessageId': clientMessageId,
       },
     );
-    return _resolveSendMessageDto(response.data);
+    return _resolveSendMessageDto(
+      response.data,
+      chatId: chatId,
+      clientMessageId: clientMessageId,
+      messageType: 9,
+      content: contentRaw,
+      extra: contentRaw,
+    );
   }
 
   Future<MessageDto> sendLocationMessage({
@@ -441,7 +505,14 @@ class MessageRemoteDataSource {
         'clientMessageId': clientMessageId,
       },
     );
-    return _resolveSendMessageDto(response.data);
+    return _resolveSendMessageDto(
+      response.data,
+      chatId: chatId,
+      clientMessageId: clientMessageId,
+      messageType: 6,
+      content: preview,
+      extra: extraRaw,
+    );
   }
 
   Future<MessageDto> sendStickerMessage({
@@ -479,7 +550,14 @@ class MessageRemoteDataSource {
         'clientMessageId': clientMessageId,
       },
     );
-    return _resolveSendMessageDto(response.data);
+    return _resolveSendMessageDto(
+      response.data,
+      chatId: chatId,
+      clientMessageId: clientMessageId,
+      messageType: 8,
+      content: '[动画表情]',
+      extra: contentRaw,
+    );
   }
 
   Future<void> markConversationRead({required String chatId}) async {

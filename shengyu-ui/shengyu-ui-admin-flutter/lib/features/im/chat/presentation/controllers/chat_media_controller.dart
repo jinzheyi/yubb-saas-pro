@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/router/route_args/chat_entry_args.dart';
 import 'package:shengyu_ui_admin_im/core/error/app_error_mapper.dart';
+import 'package:shengyu_ui_admin_im/core/platform/local_uri_bytes_loader.dart';
 import 'package:shengyu_ui_admin_im/core/platform/media_picker_service.dart';
 import 'package:shengyu_ui_admin_im/core/platform/picked_file.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/application/coordinators/chat_upload_coordinator.dart';
@@ -10,6 +13,7 @@ import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/chat_upload
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_purpose.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_scope.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_task.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/controllers/chat_timeline_controller.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/states/chat_media_state.dart';
 import 'package:shengyu_ui_admin_im/features/im/conversation/presentation/controllers/conversation_list_controller.dart';
@@ -143,10 +147,28 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
 
     state = state.copyWith(isPicking: true, error: null);
     try {
-      await _uploadExistingMessage(
+      final execution = await _uploadExistingMessage(
         message: failedMessage,
         entryArgs: entryArgs,
         purpose: purpose,
+        onTaskChanged: (task) =>
+            _applyUploadTaskToLocalMessage(retryKey, failedMessage, task),
+      );
+      final resolvedMessage = _resolveUploadedMessage(
+        base: failedMessage,
+        incoming: execution.message,
+        uploadedFileId: execution.task.uploadedFileId,
+        uploadedUrl: execution.task.uploadedUrl,
+        checksum: execution.task.checksum,
+      );
+      _timelineController.replaceSingleMessage(
+        clientMessageId: retryKey,
+        message: resolvedMessage,
+      );
+      _patchConversation(
+        message: resolvedMessage,
+        chatTitle: chatTitle,
+        entryArgs: entryArgs,
       );
       state = state.copyWith(isPicking: false, error: null);
       return true;
@@ -193,14 +215,18 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
         picked: picked,
         purpose: resolvedPurpose,
       );
-      _timelineController.appendSingleMessage(optimisticMessage);
+      final localOptimisticMessage = optimisticMessage;
+      final optimisticKey =
+          localOptimisticMessage.clientMessageId ??
+          localOptimisticMessage.messageId;
+      _timelineController.appendSingleMessage(localOptimisticMessage);
       _patchConversation(
-        message: optimisticMessage,
+        message: localOptimisticMessage,
         chatTitle: chatTitle,
         entryArgs: entryArgs,
       );
 
-      await _uploadByPurpose(
+      final execution = await _uploadByPurpose(
         purpose: resolvedPurpose,
         _buildUploadInput(
           purpose: resolvedPurpose,
@@ -209,8 +235,29 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
           displayName: _displayNameForPickedFile(picked, resolvedPurpose),
           mimeType: _mimeTypeForPickedFile(picked, resolvedPurpose),
           fileSize: picked.size,
+          bytes: picked.bytes,
         ),
-        (_) {},
+        (task) => _applyUploadTaskToLocalMessage(
+          optimisticKey,
+          localOptimisticMessage,
+          task,
+        ),
+      );
+      final resolvedMessage = _resolveUploadedMessage(
+        base: localOptimisticMessage,
+        incoming: execution.message,
+        uploadedFileId: execution.task.uploadedFileId,
+        uploadedUrl: execution.task.uploadedUrl,
+        checksum: execution.task.checksum,
+      );
+      _timelineController.replaceSingleMessage(
+        clientMessageId: optimisticKey,
+        message: resolvedMessage,
+      );
+      _patchConversation(
+        message: resolvedMessage,
+        chatTitle: chatTitle,
+        entryArgs: entryArgs,
       );
       await _saveGroupFileIfNeeded(entryArgs: entryArgs, picked: picked);
       state = state.copyWith(isPicking: false, error: null);
@@ -281,8 +328,10 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
     required Message message,
     required ChatEntryArgs entryArgs,
     required UploadPurpose purpose,
-  }) {
+    required void Function(dynamic task) onTaskChanged,
+  }) async {
     final scope = _resolveScope(entryArgs);
+    final retryBytes = await _resolveRetryBytes(message.extra.localPath);
     final input = _buildUploadInput(
       purpose: purpose,
       scope: scope,
@@ -290,19 +339,20 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       displayName: _displayNameFor(message),
       mimeType: _mimeTypeFor(message),
       fileSize: message.extra.fileSize ?? 0,
+      bytes: retryBytes,
     );
     return switch (purpose) {
       UploadPurpose.chatImage => _chatUploadCoordinator.uploadImage(
         input: input,
-        onTaskChanged: (_) {},
+        onTaskChanged: onTaskChanged,
       ),
       UploadPurpose.chatVideo => _chatUploadCoordinator.uploadVideo(
         input: input,
-        onTaskChanged: (_) {},
+        onTaskChanged: onTaskChanged,
       ),
       _ => _chatUploadCoordinator.uploadFile(
         input: input,
-        onTaskChanged: (_) {},
+        onTaskChanged: onTaskChanged,
       ),
     };
   }
@@ -376,6 +426,7 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
     required String displayName,
     required String mimeType,
     required int fileSize,
+    Uint8List? bytes,
   }) {
     return ChatUploadInput(
       purpose: purpose,
@@ -384,7 +435,23 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       displayName: displayName,
       mimeType: mimeType,
       fileSize: fileSize,
+      bytes: bytes,
     );
+  }
+
+  Future<Uint8List?> _resolveRetryBytes(String? localPath) async {
+    final normalized = localPath?.trim() ?? '';
+    if (normalized.isEmpty) {
+      return null;
+    }
+    if (!normalized.startsWith('blob:') && !normalized.startsWith('data:')) {
+      return null;
+    }
+    try {
+      return await loadLocalUriBytes(normalized);
+    } catch (_) {
+      return null;
+    }
   }
 
   String _displayNameFor(Message message) {
@@ -460,6 +527,108 @@ class ChatMediaController extends StateNotifier<ChatMediaState> {
       return 'video/*';
     }
     return 'application/octet-stream';
+  }
+
+  Message _resolveUploadedMessage({
+    required Message base,
+    required Message incoming,
+    String? uploadedFileId,
+    String? uploadedUrl,
+    String? checksum,
+  }) {
+    final resolvedStatus = incoming.status == MessageStatus.sending
+        ? MessageStatus.sent
+        : incoming.status;
+    final resolvedContent = incoming.content.trim().isNotEmpty
+        ? incoming.content
+        : (uploadedUrl?.trim().isNotEmpty == true
+              ? uploadedUrl!.trim()
+              : base.content);
+    return incoming.copyWith(
+      chatId: incoming.chatId.isNotEmpty ? incoming.chatId : base.chatId,
+      senderId: incoming.senderId.isNotEmpty
+          ? incoming.senderId
+          : base.senderId,
+      senderName: incoming.senderName.isNotEmpty
+          ? incoming.senderName
+          : base.senderName,
+      sentAt: incoming.sentAt.millisecondsSinceEpoch > 0
+          ? incoming.sentAt
+          : base.sentAt,
+      isOutgoing: incoming.isOutgoing || base.isOutgoing,
+      clientMessageId: incoming.clientMessageId ?? base.clientMessageId,
+      status: resolvedStatus,
+      content: resolvedContent,
+      extra: base.extra.copyWith(
+        fileId: incoming.extra.fileId?.trim().isNotEmpty == true
+            ? incoming.extra.fileId
+            : uploadedFileId,
+        fileUrl: incoming.extra.fileUrl?.trim().isNotEmpty == true
+            ? incoming.extra.fileUrl
+            : uploadedUrl,
+        thumbnailUrl: incoming.extra.thumbnailUrl?.trim().isNotEmpty == true
+            ? incoming.extra.thumbnailUrl
+            : uploadedUrl,
+        md5: incoming.extra.md5?.trim().isNotEmpty == true
+            ? incoming.extra.md5
+            : checksum,
+        fileName: incoming.extra.fileName?.trim().isNotEmpty == true
+            ? incoming.extra.fileName
+            : base.extra.fileName,
+        fileType: incoming.extra.fileType?.trim().isNotEmpty == true
+            ? incoming.extra.fileType
+            : base.extra.fileType,
+        fileSize: (incoming.extra.fileSize ?? 0) > 0
+            ? incoming.extra.fileSize
+            : base.extra.fileSize,
+        width: (incoming.extra.width ?? 0) > 0
+            ? incoming.extra.width
+            : base.extra.width,
+        height: (incoming.extra.height ?? 0) > 0
+            ? incoming.extra.height
+            : base.extra.height,
+      ),
+    );
+  }
+
+  void _applyUploadTaskToLocalMessage(
+    String clientMessageId,
+    Message fallbackMessage,
+    UploadTask task,
+  ) {
+    if (clientMessageId.trim().isEmpty) {
+      return;
+    }
+    final uploadedFileId = task.uploadedFileId?.toString().trim() ?? '';
+    final uploadedUrl = task.uploadedUrl?.toString().trim() ?? '';
+    final checksum = task.checksum?.toString().trim() ?? '';
+    if (uploadedFileId.isEmpty && uploadedUrl.isEmpty && checksum.isEmpty) {
+      return;
+    }
+    final current =
+        _timelineController.findByAnyMessageId(clientMessageId) ??
+        fallbackMessage;
+    final currentContent = current.content.trim();
+    final nextContent =
+        uploadedUrl.isNotEmpty && currentContent.startsWith('blob:')
+        ? uploadedUrl
+        : current.content;
+    _timelineController.replaceSingleMessage(
+      clientMessageId: clientMessageId,
+      message: current.copyWith(
+        content: nextContent,
+        extra: current.extra.copyWith(
+          fileId: uploadedFileId.isNotEmpty
+              ? uploadedFileId
+              : current.extra.fileId,
+          fileUrl: uploadedUrl.isNotEmpty ? uploadedUrl : current.extra.fileUrl,
+          thumbnailUrl: uploadedUrl.isNotEmpty
+              ? uploadedUrl
+              : current.extra.thumbnailUrl,
+          md5: checksum.isNotEmpty ? checksum : current.extra.md5,
+        ),
+      ),
+    );
   }
 
   void _patchConversation({

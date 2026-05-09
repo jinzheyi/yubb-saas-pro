@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/chat_image_provider_resolver.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_media_content_resolver.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/emoji/chat_emoji_catalog.dart';
@@ -49,10 +48,12 @@ class StickerMessageBubble extends StatelessWidget {
             })(),
           ];
     final imageProvider = localPath != null && localPath.isNotEmpty
-        ? FileImage(File(localPath)) as ImageProvider
+        ? resolveChatImageProvider(localPath: localPath)
         : (emojiAssets.isNotEmpty
               ? AssetImage(emojiAssets.first) as ImageProvider
-              : (!isEmoji && url.trim().isNotEmpty ? NetworkImage(url) : null));
+              : (!isEmoji
+                    ? resolveChatImageProvider(remoteUrl: url.trim())
+                    : null));
 
     return Column(
       crossAxisAlignment: message.isOutgoing

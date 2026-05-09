@@ -222,6 +222,13 @@ class ChatMorePanel extends StatelessWidget {
         iconColor: const Color(0xFF2F6BFF),
       ),
       _AttachmentAction(
+        action: ChatMorePanelAction.video,
+        icon: AppIconKind.video,
+        label: strings.favoriteDetailTypeVideo,
+        color: const Color(0xFFFFF2DE),
+        iconColor: const Color(0xFFFFA940),
+      ),
+      _AttachmentAction(
         action: ChatMorePanelAction.location,
         icon: AppIconKind.location,
         label: strings.chatMoreActionLocation,
@@ -759,6 +766,7 @@ class _ChatEmojiStickerPanelState extends State<ChatEmojiStickerPanel> {
         localUri: picked.path,
         displayName: picked.name.trim().isEmpty ? 'sticker' : picked.name,
         mimeType: picked.mimeType,
+        bytes: picked.bytes,
       );
       final uploaded = await widget.stickerRepository.uploadSticker(
         fileId: upload.file.fileId,

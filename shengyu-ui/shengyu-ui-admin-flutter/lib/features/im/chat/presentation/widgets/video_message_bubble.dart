@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/chat_image_provider_resolver.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_media_content_resolver.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
@@ -40,10 +39,10 @@ class VideoMessageBubble extends ConsumerWidget {
         : (message.extra.fileUrl?.trim().isNotEmpty == true
               ? message.extra.fileUrl!.trim()
               : extractMediaUrlFromRawContent(message.content));
-    final localPath = message.extra.localPath;
-    final imageProvider = localPath != null && localPath.isNotEmpty
-        ? FileImage(File(localPath)) as ImageProvider
-        : (previewUrl.isNotEmpty ? NetworkImage(previewUrl) : null);
+    final imageProvider = resolveChatImageProvider(
+      localPath: message.extra.localPath,
+      remoteUrl: previewUrl,
+    );
 
     return Column(
       crossAxisAlignment: message.isOutgoing

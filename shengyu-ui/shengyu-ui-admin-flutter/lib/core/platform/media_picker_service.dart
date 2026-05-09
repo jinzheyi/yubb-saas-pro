@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:shengyu_ui_admin_im/core/platform/picked_file.dart';
 
@@ -50,19 +52,24 @@ class FilePickerMediaPickerService implements MediaPickerService {
 
   PickedFile? _map(FilePickerResult? result) {
     final file = result?.files.singleOrNull;
-    final path = file?.path;
-    if (file == null || path == null || path.isEmpty) {
+    if (file == null) {
+      return null;
+    }
+    final bytes = file.bytes;
+    final path = file.path ?? '';
+    if (path.isEmpty && (bytes == null || bytes.isEmpty)) {
       return null;
     }
     return PickedFile(
       path: path,
       name: file.name,
-      mimeType: _resolveMimeType(file.extension ?? ''),
-      size: file.size,
+      mimeType: _resolveMimeType(file.extension ?? '', bytes: bytes),
+      size: file.size > 0 ? file.size : (bytes?.lengthInBytes ?? 0),
+      bytes: bytes,
     );
   }
 
-  String _resolveMimeType(String extension) {
+  String _resolveMimeType(String extension, {Uint8List? bytes}) {
     switch (extension.toLowerCase()) {
       case 'png':
         return 'image/png';
@@ -102,7 +109,9 @@ class FilePickerMediaPickerService implements MediaPickerService {
       case 'txt':
         return 'text/plain';
       default:
-        return 'application/octet-stream';
+        return bytes != null && bytes.isNotEmpty
+            ? 'application/octet-stream'
+            : 'application/octet-stream';
     }
   }
 }

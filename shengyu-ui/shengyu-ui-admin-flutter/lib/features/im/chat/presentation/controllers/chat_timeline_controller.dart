@@ -92,14 +92,7 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
 
   void appendSingleMessage(Message message) {
     final index = state.messages.indexWhere(
-      (item) =>
-          item.messageId == message.messageId ||
-          (item.clientMessageId != null &&
-              message.clientMessageId != null &&
-              item.clientMessageId == message.clientMessageId) ||
-          (item.sequence != null &&
-              message.sequence != null &&
-              item.sequence == message.sequence),
+      (item) => _isSameMessage(item, message),
     );
     if (index >= 0) {
       final previous = state.messages[index];
@@ -394,21 +387,80 @@ class ChatTimelineController extends StateNotifier<ChatTimelineState> {
 
   Message? _findMatchingMessage(List<Message> items, Message target) {
     for (final item in items) {
-      if (item.messageId.isNotEmpty && item.messageId == target.messageId) {
-        return item;
-      }
-      if (item.clientMessageId != null &&
-          target.clientMessageId != null &&
-          item.clientMessageId == target.clientMessageId) {
-        return item;
-      }
-      if (item.sequence != null &&
-          target.sequence != null &&
-          item.sequence == target.sequence) {
+      if (_isSameMessage(item, target)) {
         return item;
       }
     }
     return null;
+  }
+
+  bool _isSameMessage(Message previous, Message next) {
+    if (previous.messageId.isNotEmpty && previous.messageId == next.messageId) {
+      return true;
+    }
+    if (previous.clientMessageId != null &&
+        next.clientMessageId != null &&
+        previous.clientMessageId == next.clientMessageId) {
+      return true;
+    }
+    if (previous.sequence != null &&
+        next.sequence != null &&
+        previous.sequence == next.sequence) {
+      return true;
+    }
+    return _isLikelySameOutgoingMediaMessage(previous, next);
+  }
+
+  bool _isLikelySameOutgoingMediaMessage(Message previous, Message next) {
+    if (!previous.isOutgoing || !next.isOutgoing) {
+      return false;
+    }
+    if (previous.chatId.trim() != next.chatId.trim()) {
+      return false;
+    }
+    if (previous.type != next.type || !_isMediaLike(previous.type)) {
+      return false;
+    }
+    final previousFileId = previous.extra.fileId?.trim() ?? '';
+    final nextFileId = next.extra.fileId?.trim() ?? '';
+    if (previousFileId.isNotEmpty &&
+        nextFileId.isNotEmpty &&
+        previousFileId == nextFileId) {
+      return true;
+    }
+    final previousUrl = _normalizedMediaUrl(previous);
+    final nextUrl = _normalizedMediaUrl(next);
+    if (previousUrl.isEmpty || nextUrl.isEmpty || previousUrl != nextUrl) {
+      return false;
+    }
+    final deltaSeconds = previous.sentAt
+        .difference(next.sentAt)
+        .inSeconds
+        .abs();
+    return deltaSeconds <= 120;
+  }
+
+  bool _isMediaLike(MessageType type) {
+    return type == MessageType.image ||
+        type == MessageType.video ||
+        type == MessageType.file ||
+        type == MessageType.sticker;
+  }
+
+  String _normalizedMediaUrl(Message message) {
+    final fileUrl = message.extra.fileUrl?.trim() ?? '';
+    if (fileUrl.isNotEmpty && !fileUrl.startsWith('blob:')) {
+      return fileUrl;
+    }
+    final thumbnailUrl = message.extra.thumbnailUrl?.trim() ?? '';
+    if (thumbnailUrl.isNotEmpty && !thumbnailUrl.startsWith('blob:')) {
+      return thumbnailUrl;
+    }
+    final content = message.content.trim();
+    if (content.isNotEmpty && !content.startsWith('blob:')) {
+      return content;
+    }
+    return '';
   }
 
   Message _mergeMessage(Message previous, Message next) {

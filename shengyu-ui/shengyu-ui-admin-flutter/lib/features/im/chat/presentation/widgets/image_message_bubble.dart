@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
+import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/chat_image_provider_resolver.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_media_content_resolver.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
@@ -40,10 +39,13 @@ class ImageMessageBubble extends ConsumerWidget {
         : (message.extra.fileUrl?.trim().isNotEmpty == true
               ? message.extra.fileUrl!.trim()
               : extractMediaUrlFromRawContent(message.content));
-    final localPath = message.extra.localPath;
-    final imageProvider = localPath != null && localPath.isNotEmpty
-        ? FileImage(File(localPath)) as ImageProvider
-        : (imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null);
+    final imageProvider = resolveChatImageProvider(
+      localPath: message.extra.localPath,
+      remoteUrl: imageUrl,
+    );
+    final width = message.extra.width ?? 0;
+    final height = message.extra.height ?? 0;
+    final aspectRatio = width > 0 && height > 0 ? width / height : 1;
 
     return Column(
       crossAxisAlignment: message.isOutgoing
@@ -61,42 +63,52 @@ class ImageMessageBubble extends ConsumerWidget {
           child: InkWell(
             onTap: () => onOpenMessage(message),
             borderRadius: BorderRadius.circular(8),
-            child: Container(
+            child: SizedBox(
               width: 150,
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(8),
-                  topRight: const Radius.circular(8),
-                  bottomLeft: Radius.circular(message.isOutgoing ? 8 : 4),
-                  bottomRight: Radius.circular(message.isOutgoing ? 4 : 8),
-                ),
-                image: imageProvider == null
-                    ? null
-                    : DecorationImage(image: imageProvider, fit: BoxFit.cover),
-              ),
-              clipBehavior: Clip.antiAlias,
-              alignment: Alignment.center,
-              child: imageProvider == null
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AppIcon(
-                          AppIconKind.image,
-                          size: 30,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          strings.chatImagePlaceholder,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: theme.colorScheme.onSurfaceVariant,
+              child: AspectRatio(
+                aspectRatio: aspectRatio <= 0
+                    ? 1
+                    : aspectRatio.clamp(0.6, 1.6).toDouble(),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F4FA),
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(8),
+                      topRight: const Radius.circular(8),
+                      bottomLeft: Radius.circular(message.isOutgoing ? 8 : 4),
+                      bottomRight: Radius.circular(message.isOutgoing ? 4 : 8),
+                    ),
+                    image: imageProvider == null
+                        ? null
+                        : DecorationImage(
+                            image: imageProvider,
+                            fit: BoxFit.cover,
                           ),
-                        ),
-                      ],
-                    )
-                  : null,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  alignment: Alignment.center,
+                  child: imageProvider == null
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AppIcon(
+                              AppIconKind.image,
+                              size: 30,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              strings.chatImagePlaceholder,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        )
+                      : null,
+                ),
+              ),
             ),
           ),
         ),

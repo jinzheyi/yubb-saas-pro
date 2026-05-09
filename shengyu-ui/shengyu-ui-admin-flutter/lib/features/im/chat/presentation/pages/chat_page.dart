@@ -358,14 +358,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
       currentUserId: currentUserId,
     );
     final timelineMessageKeys = <String, GlobalKey>{
-      for (final message in timelineState.messages) ...{
-        if (message.messageId.trim().isNotEmpty)
-          message.messageId.trim(): _ensureMessageItemKey(message.messageId),
-        if (message.clientMessageId?.trim().isNotEmpty == true)
-          message.clientMessageId!.trim(): _ensureMessageItemKey(
-            message.clientMessageId!,
-          ),
-      },
+      for (var index = 0; index < timelineState.messages.length; index++)
+        _messageRenderKey(
+          timelineState.messages[index],
+          index,
+        ): _ensureMessageItemKey(
+          _messageRenderKey(timelineState.messages[index], index),
+        ),
     };
     final filteredMentionMembers = _filterMentionMembers(
       members: groupMembers,
@@ -3887,6 +3886,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
             : message.content.trim();
         if (fileId.isEmpty && url.isNotEmpty) {
           final session = ref.read(authSessionProvider);
+          final uploadBytes =
+              (kIsWeb && (url.startsWith('blob:') || url.startsWith('data:')))
+              ? await loadLocalUriBytes(url)
+              : null;
           final upload = await ref
               .read(fileRepositoryProvider)
               .uploadAndCreateFile(
@@ -3901,6 +3904,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
                   rawPath: url,
                   fallback: message.extra.mimeType?.trim() ?? '',
                 ),
+                bytes: uploadBytes,
               );
           fileId = upload.file.fileId;
           url = upload.file.url;
@@ -4476,34 +4480,42 @@ class _ChatPageState extends ConsumerState<ChatPage>
   }
 
   GlobalKey? _resolveMessageItemKey(String messageId) {
-    final direct = _messageItemKeys[messageId];
-    if (direct != null) {
-      return direct;
-    }
     final messages = ref.read(chatTimelineControllerProvider).messages;
-    final matched = messages.where(
-      (item) =>
-          item.messageId == messageId || item.clientMessageId == messageId,
-    );
-    for (final item in matched) {
-      final byMessageId = _messageItemKeys[item.messageId];
-      if (byMessageId != null) {
-        return byMessageId;
-      }
-      final clientId = item.clientMessageId?.trim() ?? '';
-      if (clientId.isNotEmpty) {
-        final byClientId = _messageItemKeys[clientId];
-        if (byClientId != null) {
-          return byClientId;
+    for (var index = 0; index < messages.length; index++) {
+      final item = messages[index];
+      if (item.messageId == messageId || item.clientMessageId == messageId) {
+        final renderKey = _messageRenderKey(item, index);
+        final resolved = _messageItemKeys[renderKey];
+        if (resolved != null) {
+          return resolved;
         }
       }
     }
     return null;
   }
 
-  GlobalKey _ensureMessageItemKey(String messageId) {
-    final normalized = messageId.trim();
+  GlobalKey _ensureMessageItemKey(String messageKey) {
+    final normalized = messageKey.trim();
     return _messageItemKeys.putIfAbsent(normalized, GlobalKey.new);
+  }
+
+  String _messageRenderKey(Message message, int index) {
+    final messageId = message.messageId.trim();
+    final clientMessageId = message.clientMessageId?.trim() ?? '';
+    final sequence = message.sequence?.trim() ?? '';
+    if (sequence.isNotEmpty) {
+      return 'seq:$sequence#$index';
+    }
+    if (messageId.isNotEmpty && clientMessageId.isNotEmpty) {
+      return 'mid:$messageId|cid:$clientMessageId#$index';
+    }
+    if (messageId.isNotEmpty) {
+      return 'mid:$messageId#$index';
+    }
+    if (clientMessageId.isNotEmpty) {
+      return 'cid:$clientMessageId#$index';
+    }
+    return 'idx:$index@${message.sentAt.microsecondsSinceEpoch}';
   }
 
   bool _handleGroupLifecycleRequestError(
@@ -6494,6 +6506,7 @@ class _EmojiStickerPickerSheetState extends State<_EmojiStickerPickerSheet> {
         localUri: picked.path,
         displayName: picked.name.trim().isEmpty ? 'sticker' : picked.name,
         mimeType: picked.mimeType,
+        bytes: picked.bytes,
       );
       final uploaded = await widget.stickerRepository.uploadSticker(
         fileId: upload.file.fileId,

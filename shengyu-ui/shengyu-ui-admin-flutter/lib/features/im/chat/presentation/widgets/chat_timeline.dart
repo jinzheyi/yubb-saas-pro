@@ -115,14 +115,10 @@ class ChatTimeline extends StatelessWidget {
                           .inMinutes
                           .abs() >=
                       5;
+              final renderKey = _messageRenderKey(message, messageIndex);
 
               return Column(
-                key:
-                    messageItemKeys[_messageSelectionKey(message)] ??
-                    messageItemKeys[message.messageId] ??
-                    (message.clientMessageId == null
-                        ? null
-                        : messageItemKeys[message.clientMessageId!]),
+                key: messageItemKeys[renderKey],
                 children: [
                   if (shouldShowTime)
                     Padding(
@@ -645,6 +641,25 @@ String _messageSelectionKey(Message message) {
     return messageId;
   }
   return message.clientMessageId?.trim() ?? '';
+}
+
+String _messageRenderKey(Message message, int index) {
+  final messageId = message.messageId.trim();
+  final clientMessageId = message.clientMessageId?.trim() ?? '';
+  final sequence = message.sequence?.trim() ?? '';
+  if (sequence.isNotEmpty) {
+    return 'seq:$sequence#$index';
+  }
+  if (messageId.isNotEmpty && clientMessageId.isNotEmpty) {
+    return 'mid:$messageId|cid:$clientMessageId#$index';
+  }
+  if (messageId.isNotEmpty) {
+    return 'mid:$messageId#$index';
+  }
+  if (clientMessageId.isNotEmpty) {
+    return 'cid:$clientMessageId#$index';
+  }
+  return 'idx:$index@${message.sentAt.microsecondsSinceEpoch}';
 }
 
 class _SystemMessage extends StatelessWidget {

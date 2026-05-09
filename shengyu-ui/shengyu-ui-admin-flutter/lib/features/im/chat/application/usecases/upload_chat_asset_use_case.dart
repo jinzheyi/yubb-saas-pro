@@ -18,6 +18,7 @@ class UploadChatAssetUseCase {
       localUri: input.localUri,
       displayName: input.displayName,
       mimeType: input.mimeType,
+      bytes: input.bytes,
     );
   }
 }
