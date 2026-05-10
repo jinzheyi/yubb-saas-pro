@@ -4,6 +4,7 @@ import 'package:shengyu_ui_admin_im/app/l10n/app_strings.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/message.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/presentation/utils/message_media_content_resolver.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
+import 'package:shengyu_ui_admin_im/shared/icons/shengyu_icon_font.dart';
 import 'package:shengyu_ui_admin_im/shared/enums/message_status.dart';
 import 'package:shengyu_ui_admin_im/shared/widgets/app_icon.dart';
 
@@ -37,6 +38,7 @@ class FileMessageBubble extends ConsumerWidget {
         ? const Color(0xFF2F6BFF)
         : Colors.white;
     final displayName = _displayName(strings);
+    final fileIconSpec = _resolveFileIconSpec();
 
     return Column(
       crossAxisAlignment: message.isOutgoing
@@ -113,12 +115,16 @@ class FileMessageBubble extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  AppIcon(
-                    AppIconKind.file,
-                    size: 44,
-                    color: message.isOutgoing
-                        ? const Color(0xFFE4EDFF)
-                        : const Color(0xFF246BFD),
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Center(
+                      child: Icon(
+                        fileIconSpec.icon,
+                        size: 44,
+                        color: fileIconSpec.color,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -205,6 +211,198 @@ class FileMessageBubble extends ConsumerWidget {
     }
     return strings.chatMediaFileFallback;
   }
+
+  _ChatFileIconSpec _resolveFileIconSpec() {
+    final fileName = message.extra.fileName?.trim() ?? '';
+    final mimeType = _fileMimeType;
+    final extension = _fileExtension(fileName);
+
+    if (mimeType.isNotEmpty) {
+      if (mimeType.contains('ms-excel') || mimeType.contains('spreadsheetml')) {
+        return const _ChatFileIconSpec(
+          icon: ShengyuIconFont.fileSpreadsheet,
+          color: Color(0xFF34C759),
+        );
+      }
+      if (mimeType.contains('msword') ||
+          mimeType.contains('wordprocessingml')) {
+        return const _ChatFileIconSpec(
+          icon: ShengyuIconFont.fileWord,
+          color: Color(0xFF3370FF),
+        );
+      }
+      if (mimeType.contains('ms-powerpoint') ||
+          mimeType.contains('presentationml')) {
+        return const _ChatFileIconSpec(
+          icon: ShengyuIconFont.filePresentation,
+          color: Color(0xFFFF9500),
+        );
+      }
+      if (mimeType == 'application/pdf') {
+        return const _ChatFileIconSpec(
+          icon: ShengyuIconFont.filePdf,
+          color: Color(0xFFF54A45),
+        );
+      }
+    }
+
+    if (mimeType.startsWith('image/') || _isImageExtension(extension)) {
+      return const _ChatFileIconSpec(
+        icon: ShengyuIconFont.fileImage,
+        color: Color(0xFFFFB020),
+      );
+    }
+    if (mimeType.startsWith('video/') || _isVideoExtension(extension)) {
+      return const _ChatFileIconSpec(
+        icon: ShengyuIconFont.fileVideo,
+        color: Color(0xFF8A5CF6),
+      );
+    }
+    if (mimeType.startsWith('audio/') || _isAudioExtension(extension)) {
+      return const _ChatFileIconSpec(
+        icon: ShengyuIconFont.fileAudio,
+        color: Color(0xFFFF9500),
+      );
+    }
+    if (extension == 'html' || extension == 'htm') {
+      return const _ChatFileIconSpec(
+        icon: ShengyuIconFont.fileHtml,
+        color: Color(0xFFFF6A00),
+      );
+    }
+    if (extension == 'sql') {
+      return const _ChatFileIconSpec(
+        icon: ShengyuIconFont.wenjianleixing,
+        color: Color(0xFF8F959E),
+      );
+    }
+    if (extension == 'pdf') {
+      return const _ChatFileIconSpec(
+        icon: ShengyuIconFont.filePdf,
+        color: Color(0xFFF54A45),
+      );
+    }
+    if (_isWordExtension(extension)) {
+      return const _ChatFileIconSpec(
+        icon: ShengyuIconFont.fileWord,
+        color: Color(0xFF3370FF),
+      );
+    }
+    if (_isExcelExtension(extension)) {
+      return const _ChatFileIconSpec(
+        icon: ShengyuIconFont.fileSpreadsheet,
+        color: Color(0xFF34C759),
+      );
+    }
+    if (_isPptExtension(extension)) {
+      return const _ChatFileIconSpec(
+        icon: ShengyuIconFont.filePresentation,
+        color: Color(0xFFFF9500),
+      );
+    }
+    if (_isZipExtension(extension)) {
+      return const _ChatFileIconSpec(
+        icon: ShengyuIconFont.fileZip,
+        color: Color(0xFF586C76),
+      );
+    }
+    if (_isTextExtension(extension)) {
+      return const _ChatFileIconSpec(
+        icon: ShengyuIconFont.zhuyaolunwenzhuzuo,
+        color: Color(0xFF4A90E2),
+      );
+    }
+    return const _ChatFileIconSpec(
+      icon: ShengyuIconFont.wentigenzong,
+      color: Color(0xFFC7CBD1),
+    );
+  }
+
+  String get _fileMimeType {
+    final primary = message.extra.mimeType?.trim().toLowerCase() ?? '';
+    if (primary.isNotEmpty) {
+      return primary;
+    }
+    return message.extra.fileType?.trim().toLowerCase() ?? '';
+  }
+
+  String _fileExtension(String fileName) {
+    final lastDot = fileName.lastIndexOf('.');
+    if (lastDot < 0 || lastDot == fileName.length - 1) {
+      return '';
+    }
+    return fileName.substring(lastDot + 1).toLowerCase();
+  }
+
+  bool _isImageExtension(String ext) => const <String>[
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'bmp',
+    'webp',
+    'svg',
+    'heic',
+  ].contains(ext);
+
+  bool _isVideoExtension(String ext) => const <String>[
+    'mp4',
+    'mov',
+    'avi',
+    'mkv',
+    'webm',
+    'm4v',
+    '3gp',
+    'flv',
+  ].contains(ext);
+
+  bool _isAudioExtension(String ext) => const <String>[
+    'mp3',
+    'wav',
+    'aac',
+    'm4a',
+    'ogg',
+    'flac',
+    'amr',
+  ].contains(ext);
+
+  bool _isZipExtension(String ext) => const <String>[
+    'zip',
+    'rar',
+    '7z',
+    'tar',
+    'gz',
+    'bz2',
+    'xz',
+  ].contains(ext);
+
+  bool _isWordExtension(String ext) =>
+      const <String>['doc', 'docx', 'dot', 'dotx'].contains(ext);
+
+  bool _isExcelExtension(String ext) =>
+      const <String>['xls', 'xlsx', 'csv'].contains(ext);
+
+  bool _isPptExtension(String ext) =>
+      const <String>['ppt', 'pptx', 'pps', 'ppsx'].contains(ext);
+
+  bool _isTextExtension(String ext) => const <String>[
+    'txt',
+    'log',
+    'md',
+    'json',
+    'xml',
+    'yml',
+    'yaml',
+    'ini',
+    'conf',
+  ].contains(ext);
+}
+
+class _ChatFileIconSpec {
+  const _ChatFileIconSpec({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
 }
 
 class _OutgoingStatusRow extends StatelessWidget {
