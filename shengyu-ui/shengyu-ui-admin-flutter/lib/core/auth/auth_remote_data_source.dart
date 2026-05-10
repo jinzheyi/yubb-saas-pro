@@ -41,9 +41,18 @@ class AuthRemoteDataSource {
     return result.requireData();
   }
 
-  Future<AuthTokenDto> refreshToken({required String refreshToken}) async {
+  Future<AuthTokenDto> refreshToken({
+    required String refreshToken,
+    String? tenantId,
+  }) async {
     final response = await _dio.post(
       '/system/auth/refresh-token?refreshToken=$refreshToken',
+      options: Options(
+        headers: _buildPermissionHeaders(
+          path: '/system/auth/refresh-token',
+          tenantId: tenantId,
+        ),
+      ),
     );
     final result = ApiResult.fromJson<AuthTokenDto>(
       response.data as Map<String, dynamic>,

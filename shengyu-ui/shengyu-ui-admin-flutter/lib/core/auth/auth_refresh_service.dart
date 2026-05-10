@@ -21,6 +21,7 @@ class AuthRefreshService {
 
     final token = await _remoteDataSource.refreshToken(
       refreshToken: current.refreshToken,
+      tenantId: current.tenantId,
     );
     final permissionInfo = await _remoteDataSource.getPermissionInfoWithSession(
       accessToken: token.accessToken,

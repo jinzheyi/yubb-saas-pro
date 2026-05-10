@@ -80,7 +80,6 @@ abstract final class AppConfig {
     '/system/captcha/',
     '/system/auth/login',
     '/system/auth/sms-login',
-    '/system/auth/refresh-token',
     '/system/tenant/get-id-by-name',
   ];
 
