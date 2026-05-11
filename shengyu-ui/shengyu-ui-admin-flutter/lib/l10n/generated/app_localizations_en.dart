@@ -1188,6 +1188,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserOpenExternalFailed => 'Failed to open externally';
 
   @override
+  String get browserFileLoadingTitle => 'Preparing document preview';
+
+  @override
+  String get browserFileLoadingDesc =>
+      'Document conversion or loading may take a moment.';
+
+  @override
+  String get browserFileFailedTitle => 'Document preview failed';
+
+  @override
+  String get browserFileFailedDesc =>
+      'This document cannot be previewed in-app right now. You can retry or open it externally.';
+
+  @override
   String get favoriteStatusDeleted => 'Original message deleted';
 
   @override
@@ -1839,7 +1853,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filePreviewTitle => 'File Preview';
 
   @override
+  String get filePreviewForward => 'Forward';
+
+  @override
+  String get filePreviewPreview => 'Preview';
+
+  @override
   String get filePreviewDownload => 'Download';
+
+  @override
+  String get filePreviewPreviewUnavailable =>
+      'This file cannot be previewed right now';
+
+  @override
+  String get filePreviewDownloadStarted => 'Download started';
+
+  @override
+  String get filePreviewDownloadFailed => 'Download failed';
+
+  @override
+  String get filePreviewForwardUnsupported =>
+      'This file cannot be forwarded right now';
 
   @override
   String get filePreviewModePdf => 'PDF Preview';

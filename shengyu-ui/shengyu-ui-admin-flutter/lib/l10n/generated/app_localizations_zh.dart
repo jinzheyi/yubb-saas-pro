@@ -1170,6 +1170,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserOpenExternalFailed => '外部打开失败';
 
   @override
+  String get browserFileLoadingTitle => '正在准备文档预览';
+
+  @override
+  String get browserFileLoadingDesc => '文档转换或加载可能需要一点时间，请稍候。';
+
+  @override
+  String get browserFileFailedTitle => '文档预览失败';
+
+  @override
+  String get browserFileFailedDesc => '当前文档暂时无法在应用内完成预览，你可以重试或改用外部打开。';
+
+  @override
   String get favoriteStatusDeleted => '原消息已删除';
 
   @override
@@ -1804,7 +1816,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get filePreviewTitle => '文件预览';
 
   @override
+  String get filePreviewForward => '转发';
+
+  @override
+  String get filePreviewPreview => '预览';
+
+  @override
   String get filePreviewDownload => '下载';
+
+  @override
+  String get filePreviewPreviewUnavailable => '当前文件暂不支持预览';
+
+  @override
+  String get filePreviewDownloadStarted => '已开始下载';
+
+  @override
+  String get filePreviewDownloadFailed => '下载失败';
+
+  @override
+  String get filePreviewForwardUnsupported => '当前文件暂不支持转发';
 
   @override
   String get filePreviewModePdf => 'PDF 预览';

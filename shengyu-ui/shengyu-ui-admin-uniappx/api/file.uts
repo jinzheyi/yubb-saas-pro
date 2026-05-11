@@ -9,8 +9,13 @@ export type FilePresignedGetUrlRespVO = {
 
 export type FileOpenStrategyRespVO = {
   action: 'PREVIEW' | 'DOWNLOAD'
+  renderStrategy?: string
+  contentType?: string
   previewUrl?: string
+  viewerUrl?: string
+  convertedPdfUrl?: string
   downloadUrl: string
+  expiresAt?: number
   unstable?: boolean
   message?: string
 }

@@ -2305,6 +2305,30 @@ abstract class AppLocalizations {
   /// **'Failed to open externally'**
   String get browserOpenExternalFailed;
 
+  /// No description provided for @browserFileLoadingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing document preview'**
+  String get browserFileLoadingTitle;
+
+  /// No description provided for @browserFileLoadingDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Document conversion or loading may take a moment.'**
+  String get browserFileLoadingDesc;
+
+  /// No description provided for @browserFileFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Document preview failed'**
+  String get browserFileFailedTitle;
+
+  /// No description provided for @browserFileFailedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'This document cannot be previewed in-app right now. You can retry or open it externally.'**
+  String get browserFileFailedDesc;
+
   /// No description provided for @favoriteStatusDeleted.
   ///
   /// In en, this message translates to:
@@ -3440,11 +3464,47 @@ abstract class AppLocalizations {
   /// **'File Preview'**
   String get filePreviewTitle;
 
+  /// No description provided for @filePreviewForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Forward'**
+  String get filePreviewForward;
+
+  /// No description provided for @filePreviewPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get filePreviewPreview;
+
   /// No description provided for @filePreviewDownload.
   ///
   /// In en, this message translates to:
   /// **'Download'**
   String get filePreviewDownload;
+
+  /// No description provided for @filePreviewPreviewUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This file cannot be previewed right now'**
+  String get filePreviewPreviewUnavailable;
+
+  /// No description provided for @filePreviewDownloadStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Download started'**
+  String get filePreviewDownloadStarted;
+
+  /// No description provided for @filePreviewDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed'**
+  String get filePreviewDownloadFailed;
+
+  /// No description provided for @filePreviewForwardUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This file cannot be forwarded right now'**
+  String get filePreviewForwardUnsupported;
 
   /// No description provided for @filePreviewModePdf.
   ///

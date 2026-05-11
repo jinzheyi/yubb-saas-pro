@@ -289,7 +289,9 @@ class _GroupFilesPageState extends ConsumerState<GroupFilesPage> {
             .read(fileRepositoryProvider)
             .getPresignedGetUrl(fileId: fileId);
       }
-      await ref.read(fileDownloadServiceProvider).download(uri);
+      await ref
+          .read(fileDownloadServiceProvider)
+          .download(uri, suggestedFileName: item.fileName);
       if (!mounted) {
         return;
       }

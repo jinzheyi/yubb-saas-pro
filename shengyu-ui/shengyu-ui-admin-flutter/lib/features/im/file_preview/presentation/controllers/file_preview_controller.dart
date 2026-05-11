@@ -70,10 +70,11 @@ class FilePreviewController extends StateNotifier<FilePreviewState> {
     if (uri == null) {
       return;
     }
+    final fileName = _resolveSuggestedFileName();
 
     state = state.copyWith(pendingAction: FilePreviewAction.downloading);
     try {
-      await _downloadService.download(uri);
+      await _downloadService.download(uri, suggestedFileName: fileName);
     } finally {
       state = state.copyWith(pendingAction: FilePreviewAction.none);
     }
@@ -116,5 +117,17 @@ class FilePreviewController extends StateNotifier<FilePreviewState> {
         descriptor?.previewUrl ??
         descriptor?.convertedPdfUrl ??
         descriptor?.viewerUrl;
+  }
+
+  String? _resolveSuggestedFileName() {
+    final descriptorName = state.descriptor?.fileName.trim() ?? '';
+    if (descriptorName.isNotEmpty) {
+      return descriptorName;
+    }
+    final argsName = state.args?.fileName.trim() ?? '';
+    if (argsName.isNotEmpty) {
+      return argsName;
+    }
+    return null;
   }
 }

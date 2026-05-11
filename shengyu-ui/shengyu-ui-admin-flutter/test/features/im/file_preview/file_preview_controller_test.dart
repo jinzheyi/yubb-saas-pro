@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shengyu_ui_admin_im/features/im/chat/domain/entities/upload_purpose.dart';
@@ -73,6 +73,8 @@ class _FakeFileRepository implements FileRepository {
     required String localUri,
     required String displayName,
     required String mimeType,
+    Uint8List? bytes,
+    int? maxSize,
   }) {
     throw UnimplementedError();
   }
@@ -89,7 +91,7 @@ class _FakeFileDownloadService implements FileDownloadService {
   const _FakeFileDownloadService();
 
   @override
-  Future<File> download(Uri uri) {
+  Future<void> download(Uri uri, {String? suggestedFileName}) {
     throw UnimplementedError();
   }
 }

@@ -438,7 +438,9 @@ class _ChatMediaPageState extends ConsumerState<ChatMediaPage> {
       if (url.isEmpty) {
         throw StateError('missing file url');
       }
-      await ref.read(fileDownloadServiceProvider).download(Uri.parse(url));
+      await ref
+          .read(fileDownloadServiceProvider)
+          .download(Uri.parse(url), suggestedFileName: item.fileName);
       if (!mounted) {
         return;
       }

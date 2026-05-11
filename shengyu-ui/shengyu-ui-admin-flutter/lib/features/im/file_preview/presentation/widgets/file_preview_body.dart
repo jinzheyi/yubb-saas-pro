@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
@@ -5,6 +6,7 @@ import 'package:shengyu_ui_admin_im/features/im/file_preview/domain/entities/fil
 import 'package:shengyu_ui_admin_im/features/im/file_preview/presentation/states/file_preview_state.dart';
 import 'package:shengyu_ui_admin_im/l10n/generated/app_localizations.dart';
 import 'package:video_player/video_player.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class FilePreviewBody extends StatelessWidget {
   const FilePreviewBody({super.key, required this.state});
@@ -42,10 +44,7 @@ class FilePreviewBody extends StatelessWidget {
               errorBuilder: (context, error, stackTrace) {
                 return _FallbackDetail(
                   fileName: fileName,
-                  strategyLabel: _strategyLabel(
-                    strings,
-                    plan?.renderStrategy,
-                  ),
+                  strategyLabel: _strategyLabel(strings, plan?.renderStrategy),
                   detailText: detailText,
                 );
               },
@@ -55,6 +54,13 @@ class FilePreviewBody extends StatelessWidget {
       ),
       FileRenderStrategy.nativeVideo => _VideoPreview(url: resolvedUrl),
       FileRenderStrategy.nativeAudio => _AudioPreview(url: resolvedUrl),
+      FileRenderStrategy.nativePdf ||
+      FileRenderStrategy.serverConvertedPdf ||
+      FileRenderStrategy.serverConvertedHtml ||
+      FileRenderStrategy.embeddedOfficeViewer => _WebDocumentPreview(
+        url: resolvedUrl,
+        fallbackDetailText: detailText,
+      ),
       FileRenderStrategy.nativeText => _RemoteTextPreview(
         url: resolvedUrl,
         selectable: true,
@@ -95,6 +101,94 @@ class FilePreviewBody extends StatelessWidget {
   }
 }
 
+class _WebDocumentPreview extends StatelessWidget {
+  const _WebDocumentPreview({
+    required this.url,
+    required this.fallbackDetailText,
+  });
+
+  final String url;
+  final String fallbackDetailText;
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.trim().isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: SelectableText(fallbackDetailText),
+      );
+    }
+    if (kIsWeb ||
+        (defaultTargetPlatform != TargetPlatform.android &&
+            defaultTargetPlatform != TargetPlatform.iOS &&
+            defaultTargetPlatform != TargetPlatform.macOS)) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: SelectableText(fallbackDetailText),
+      );
+    }
+    return _PlatformWebView(url: url);
+  }
+}
+
+class _PlatformWebView extends StatefulWidget {
+  const _PlatformWebView({required this.url});
+
+  final String url;
+
+  @override
+  State<_PlatformWebView> createState() => _PlatformWebViewState();
+}
+
+class _PlatformWebViewState extends State<_PlatformWebView> {
+  late final WebViewController _controller;
+  var _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (_) {
+            if (!mounted) {
+              return;
+            }
+            setState(() {
+              _loading = true;
+            });
+          },
+          onPageFinished: (_) {
+            if (!mounted) {
+              return;
+            }
+            setState(() {
+              _loading = false;
+            });
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(widget.url));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(child: WebViewWidget(controller: _controller)),
+        if (_loading)
+          const Positioned.fill(
+            child: ColoredBox(
+              color: Colors.white,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _FallbackDetail extends StatelessWidget {
   const _FallbackDetail({
     required this.fileName,
@@ -122,10 +216,7 @@ class _FallbackDetail extends StatelessWidget {
 }
 
 class _RemoteTextPreview extends StatelessWidget {
-  const _RemoteTextPreview({
-    required this.url,
-    required this.selectable,
-  });
+  const _RemoteTextPreview({required this.url, required this.selectable});
 
   final String url;
   final bool selectable;
@@ -150,9 +241,7 @@ class _RemoteTextPreview extends StatelessWidget {
         final text = snapshot.data ?? '';
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          child: selectable
-              ? SelectableText(text)
-              : Text(text),
+          child: selectable ? SelectableText(text) : Text(text),
         );
       },
     );
@@ -376,7 +465,9 @@ class _VideoPreviewState extends State<_VideoPreview> {
       return const Center(child: CircularProgressIndicator());
     }
     final controller = _controller;
-    if (_errorText != null || controller == null || !controller.value.isInitialized) {
+    if (_errorText != null ||
+        controller == null ||
+        !controller.value.isInitialized) {
       return Padding(
         padding: const EdgeInsets.all(16),
         child: SelectableText(_errorText ?? ''),

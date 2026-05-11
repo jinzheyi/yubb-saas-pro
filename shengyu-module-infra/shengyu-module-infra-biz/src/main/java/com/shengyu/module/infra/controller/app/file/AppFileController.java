@@ -38,6 +38,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 import static com.shengyu.framework.common.pojo.CommonResult.success;
 import static com.shengyu.framework.common.exception.enums.GlobalErrorCodeConstants.BAD_REQUEST;
@@ -194,6 +195,8 @@ public class AppFileController {
         }
 
         String downloadUrl = fileService.presignGetUrl(fileDO.getUrl(), seconds);
+        long expiresAt = LocalDateTime.now().plusSeconds(seconds)
+                .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 
         String ext = "";
         String name = fileDO.getName();
@@ -204,36 +207,87 @@ public class AppFileController {
             }
         }
 
-        boolean previewable = isKkPreviewableExt(ext);
-        boolean unstable = isUnstableKkPreviewExt(ext);
-
         AppFileOpenStrategyRespVO respVO = new AppFileOpenStrategyRespVO();
         respVO.setDownloadUrl(downloadUrl);
-        respVO.setUnstable(unstable);
+        respVO.setExpiresAt(expiresAt);
+        respVO.setContentType(fileDO.getType());
 
-        if (!previewable) {
-            respVO.setAction("DOWNLOAD");
-            respVO.setMessage("该文件暂不支持在线预览，将为你下载打开");
-            return success(respVO);
-        }
-
-        String previewUrl = buildKkPreviewUrl(downloadUrl);
-        if (previewUrl == null || previewUrl.isEmpty()) {
-            respVO.setAction("DOWNLOAD");
-            respVO.setMessage("预览链接生成失败，将为你下载打开");
-            return success(respVO);
-        }
-
-        // 探测 kkFileView 是否真实可预览，避免跳转错误页
-        if (!probeKkPreviewable(previewUrl)) {
-            respVO.setAction("DOWNLOAD");
-            respVO.setMessage("该文件在线预览失败，将为你下载打开");
-            return success(respVO);
-        }
-
-        respVO.setAction("PREVIEW");
-        respVO.setPreviewUrl(previewUrl);
+        populateOpenStrategy(respVO, fileDO, downloadUrl, ext);
         return success(respVO);
+    }
+
+    private void populateOpenStrategy(
+            AppFileOpenStrategyRespVO respVO,
+            FileDO fileDO,
+            String downloadUrl,
+            String ext
+    ) {
+        String mimeType = StrUtil.blankToDefault(fileDO.getType(), "").trim().toLowerCase(Locale.ROOT);
+        String normalizedExt = StrUtil.blankToDefault(ext, "").trim().toLowerCase(Locale.ROOT);
+
+        if (isImageFile(normalizedExt, mimeType)) {
+            respVO.setAction("PREVIEW");
+            respVO.setRenderStrategy("native_image");
+            respVO.setPreviewUrl(downloadUrl);
+            return;
+        }
+        if (isVideoFile(normalizedExt, mimeType)) {
+            respVO.setAction("PREVIEW");
+            respVO.setRenderStrategy("native_video");
+            respVO.setPreviewUrl(downloadUrl);
+            return;
+        }
+        if (isAudioFile(normalizedExt, mimeType)) {
+            respVO.setAction("PREVIEW");
+            respVO.setRenderStrategy("native_audio");
+            respVO.setPreviewUrl(downloadUrl);
+            return;
+        }
+        if (isMarkdownFile(normalizedExt, mimeType)) {
+            respVO.setAction("PREVIEW");
+            respVO.setRenderStrategy("native_markdown");
+            respVO.setPreviewUrl(downloadUrl);
+            return;
+        }
+        if (isTextFile(normalizedExt, mimeType)) {
+            respVO.setAction("PREVIEW");
+            respVO.setRenderStrategy("native_text");
+            respVO.setPreviewUrl(downloadUrl);
+            return;
+        }
+        if (isPdfFile(normalizedExt, mimeType)) {
+            respVO.setAction("PREVIEW");
+            respVO.setRenderStrategy("native_pdf");
+            respVO.setPreviewUrl(downloadUrl);
+            respVO.setConvertedPdfUrl(downloadUrl);
+            return;
+        }
+        if (isOfficeFile(normalizedExt)) {
+            String previewUrl = buildKkPreviewUrl(downloadUrl);
+            if (StrUtil.isBlank(previewUrl)) {
+                respVO.setAction("DOWNLOAD");
+                respVO.setRenderStrategy("download_only");
+                respVO.setMessage("预览链接生成失败，将为你下载打开");
+                return;
+            }
+            boolean unstable = isUnstableKkPreviewExt(normalizedExt);
+            boolean probeSuccess = probeKkPreviewable(previewUrl);
+            respVO.setAction("PREVIEW");
+            respVO.setRenderStrategy("embedded_office_viewer");
+            respVO.setPreviewUrl(previewUrl);
+            respVO.setViewerUrl(previewUrl);
+            respVO.setUnstable(unstable || !probeSuccess);
+            if (!probeSuccess) {
+                respVO.setMessage("在线预览服务响应不稳定，若预览失败请改用下载或外部打开");
+            } else if (unstable) {
+                respVO.setMessage("该文件在线预览可能存在兼容性波动");
+            }
+            return;
+        }
+
+        respVO.setAction("DOWNLOAD");
+        respVO.setRenderStrategy("download_only");
+        respVO.setMessage("该文件暂不支持在线预览，将为你下载打开");
     }
 
     private String buildKkPreviewUrl(String sourceUrl) {
@@ -251,15 +305,51 @@ public class AppFileController {
         }
     }
 
-    private static boolean isKkPreviewableExt(String ext) {
+    private static boolean isOfficeFile(String ext) {
         if (ext == null || ext.isEmpty()) {
             return false;
         }
-        return "pdf".equals(ext)
-                || "doc".equals(ext) || "docx".equals(ext)
+        return "doc".equals(ext) || "docx".equals(ext)
                 || "xls".equals(ext) || "xlsx".equals(ext)
                 || "ppt".equals(ext) || "pptx".equals(ext)
-                || "txt".equals(ext);
+                || "odt".equals(ext) || "ods".equals(ext) || "odp".equals(ext);
+    }
+
+    private static boolean isPdfFile(String ext, String mimeType) {
+        return "pdf".equals(ext) || mimeType.contains("pdf");
+    }
+
+    private static boolean isImageFile(String ext, String mimeType) {
+        return mimeType.startsWith("image/")
+                || "jpg".equals(ext) || "jpeg".equals(ext) || "png".equals(ext)
+                || "gif".equals(ext) || "webp".equals(ext) || "bmp".equals(ext)
+                || "svg".equals(ext);
+    }
+
+    private static boolean isVideoFile(String ext, String mimeType) {
+        return mimeType.startsWith("video/")
+                || "mp4".equals(ext) || "mov".equals(ext) || "m4v".equals(ext)
+                || "webm".equals(ext) || "avi".equals(ext) || "mkv".equals(ext);
+    }
+
+    private static boolean isAudioFile(String ext, String mimeType) {
+        return mimeType.startsWith("audio/")
+                || "mp3".equals(ext) || "wav".equals(ext) || "aac".equals(ext)
+                || "m4a".equals(ext) || "ogg".equals(ext) || "flac".equals(ext);
+    }
+
+    private static boolean isMarkdownFile(String ext, String mimeType) {
+        return "md".equals(ext) || "markdown".equals(ext)
+                || "text/markdown".equals(mimeType);
+    }
+
+    private static boolean isTextFile(String ext, String mimeType) {
+        return mimeType.startsWith("text/")
+                || "txt".equals(ext) || "log".equals(ext) || "json".equals(ext)
+                || "xml".equals(ext) || "yaml".equals(ext) || "yml".equals(ext)
+                || "csv".equals(ext) || "java".equals(ext) || "kt".equals(ext)
+                || "js".equals(ext) || "ts".equals(ext) || "dart".equals(ext)
+                || "py".equals(ext) || "go".equals(ext) || "sql".equals(ext);
     }
 
     private static boolean isUnstableKkPreviewExt(String ext) {
