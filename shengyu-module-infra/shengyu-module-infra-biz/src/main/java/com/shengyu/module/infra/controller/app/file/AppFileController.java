@@ -14,6 +14,7 @@ import com.shengyu.module.infra.controller.platform.file.vo.file.FilePresignedUr
 import com.shengyu.module.infra.dal.dataobject.file.FileDO;
 import com.shengyu.module.infra.dal.mysql.file.FileMapper;
 import com.shengyu.module.infra.enums.ErrorCodeConstants;
+import com.shengyu.module.infra.framework.filepreview.config.ImFilePreviewProperties;
 import com.shengyu.module.infra.service.file.FileService;
 import com.shengyu.module.infra.service.file.VideoThumbnailService;
 import cn.hutool.http.HttpRequest;
@@ -33,6 +34,7 @@ import javax.validation.Valid;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -76,8 +78,8 @@ public class AppFileController {
     @Resource
     private VideoThumbnailService videoThumbnailService;
 
-    @org.springframework.beans.factory.annotation.Value("${kkfileview.base-url:http://127.0.0.1:48090}")
-    private String kkFileViewBaseUrl;
+    @Resource
+    private ImFilePreviewProperties filePreviewProperties;
 
     @PostMapping("/upload")
     @Operation(summary = "上传文件")
@@ -263,6 +265,13 @@ public class AppFileController {
             return;
         }
         if (isOfficeFile(normalizedExt)) {
+            ImFilePreviewProperties.Kkfileview kkfileview = filePreviewProperties.getKkfileview();
+            if (!kkfileview.isEnabled()) {
+                respVO.setAction("DOWNLOAD");
+                respVO.setRenderStrategy("download_only");
+                respVO.setMessage("当前环境未启用在线预览服务，将为你下载打开");
+                return;
+            }
             String previewUrl = buildKkPreviewUrl(downloadUrl);
             if (StrUtil.isBlank(previewUrl)) {
                 respVO.setAction("DOWNLOAD");
@@ -292,16 +301,42 @@ public class AppFileController {
 
     private String buildKkPreviewUrl(String sourceUrl) {
         try {
-            String raw = sourceUrl == null ? "" : sourceUrl;
+            String raw = rewriteKkSourceUrl(sourceUrl);
             String b64 = Base64.getEncoder().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
             String encoded = URLEncoder.encode(b64, StandardCharsets.UTF_8.name());
-            String base = kkFileViewBaseUrl;
+            String base = StrUtil.blankToDefault(filePreviewProperties.getKkfileview().getBaseUrl(), "");
             if (base.endsWith("/")) {
                 base = base.substring(0, base.length() - 1);
             }
             return base + "/onlinePreview?url=" + encoded;
         } catch (Exception e) {
             return "";
+        }
+    }
+
+    private String rewriteKkSourceUrl(String sourceUrl) {
+        String raw = sourceUrl == null ? "" : sourceUrl;
+        String overrideBase = StrUtil.blankToDefault(
+                filePreviewProperties.getKkfileview().getSourceBaseUrl(), "").trim();
+        if (raw.isEmpty() || overrideBase.isEmpty()) {
+            return raw;
+        }
+        try {
+            URI sourceUri = URI.create(raw);
+            URI overrideUri = URI.create(overrideBase);
+            return new URI(
+                    overrideUri.getScheme(),
+                    overrideUri.getUserInfo(),
+                    overrideUri.getHost(),
+                    overrideUri.getPort(),
+                    sourceUri.getPath(),
+                    sourceUri.getQuery(),
+                    sourceUri.getFragment()
+            ).toString();
+        } catch (Exception e) {
+            log.warn("[rewriteKkSourceUrl][sourceUrl({}) overrideBase({}) error({})]",
+                    sourceUrl, overrideBase, e.getMessage());
+            return raw;
         }
     }
 

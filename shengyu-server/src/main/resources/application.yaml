@@ -58,6 +58,25 @@ im:
       retention-days: 90
       batch-size: 1000
       max-batches-per-run: 20
+  file-preview:
+    kkfileview:
+      # 是否启用 Office 在线预览策略
+      enabled: ${IM_KKFILEVIEW_ENABLED:true}
+      # 是否在应用启动时同步拉起 kkFileView 进程
+      auto-start: ${IM_KKFILEVIEW_AUTO_START:true}
+      # kkFileView 对外访问地址，建议与前端可访问地址保持一致
+      base-url: ${IM_KKFILEVIEW_BASE_URL:http://127.0.0.1:48090}
+      # kkFileView 从服务端拉取原文件时使用的基地址
+      # Docker on macOS/Windows 可优先尝试 http://host.docker.internal:48080
+      source-base-url: ${IM_KKFILEVIEW_SOURCE_BASE_URL:http://host.docker.internal:48080}
+      # 示例:
+      # 1) 本机 jar: java -jar /opt/kkfileview/kkFileView.jar --server.port=48090
+      # 2) Docker: docker run --rm -p 48090:8012 keking/kkfileview:4.4.0
+      startup-command: ${IM_KKFILEVIEW_STARTUP_COMMAND:docker run --rm -p 48090:8012 keking/kkfileview:4.4.0}
+      working-directory: ${IM_KKFILEVIEW_WORKING_DIRECTORY:}
+      startup-timeout-seconds: ${IM_KKFILEVIEW_STARTUP_TIMEOUT_SECONDS:45}
+      ready-check-interval-millis: ${IM_KKFILEVIEW_READY_CHECK_INTERVAL_MILLIS:1000}
+      stop-on-shutdown: ${IM_KKFILEVIEW_STOP_ON_SHUTDOWN:true}
 
 --- #################### 接口文档配置 ####################
 

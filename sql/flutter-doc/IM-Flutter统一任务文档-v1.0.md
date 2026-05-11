@@ -13901,7 +13901,8 @@ export function exportAppUpgradeLog(params: AppUpgradeLogPageReqVO): Promise<Blo
 
 - `其余功能模块真实接口依据、VO 字段、页面消费口径查漏`：继续收敛到低优先补充页与字段一致性核对：`in_progress`
 - `chat_page.dart + file_preview_page.dart + file_download_service.dart` 文件消息详情页按微信式交互补齐“预览 / 下载 / 转发”，并把下载/预览实现收口到多端能力抽象：`pending`
-- `open-strategy` 的真实 `xlsx/pptx/docx` 返回体联调核验与 kkFileView/对象存储响应头一致性确认：`pending`
+- `open-strategy` 的真实 `xlsx/pptx/docx` 返回体联调核验与 kkFileView/对象存储响应头一致性确认：`in_progress`
+- `im.file-preview.kkfileview` 配置落到 IM 模块，并新增服务端可选自动拉起 kkFileView 进程能力（`enabled/auto-start/base-url/startup-command/working-directory/stop-on-shutdown`）：`completed`
 - 音视频通话专题“接口入参/出参示例 JSON + 状态机迁移表最终版”：`completed`
 - 音视频通话专题补“当前 Flutter 实现与统一协议差异收口表”：`completed`
 - 音视频通话专题补到 `repository contract + remote/socket datasource + provider` 差异收口：`completed`
